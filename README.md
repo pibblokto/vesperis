@@ -1,5 +1,9 @@
 # Vesperis
 
+<img width="1074" height="661" alt="зображення" src="https://github.com/user-attachments/assets/0ddfabf4-8f5b-4e0d-a10a-a638a07d64ca" />
+
+
+
 A first-person, goal-less space exploration game, heavily inspired by
 Alessandro Ghignola's *Noctis IV* (2001). Vesperis is vibe coded: the whole
 thing was written with an AI coding agent, from the software renderer to the
