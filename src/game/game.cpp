@@ -1,0 +1,496 @@
+// Game orchestration core: construction, settings, the frame loop, global keys, test hooks.
+// autopilot.cpp, hud.cpp, landing_map.cpp, game_states.cpp and persistence.cpp hold the rest.
+#include "game.h"
+#include <chrono>
+#include <cstdlib>
+#include <cstdio>
+#include "ui.h"
+#include "core/rng.h"
+#include <cmath>
+#include <cstdio>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <ctime>
+#include "core/png.h"
+#include "core/fs.h"
+
+Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
+    canvas.px = rgbBuf.data(); canvas.w = FBW; canvas.h = FBH;
+    spaceR.proj = Proj::fromHFov(70);
+    cabinGrain.generate(0x5A1D, 5, 1);
+    newGame();
+    applySettings();
+    state = GameState::TITLE;
+}
+
+void Game::loadFromDisk() {
+    settings.load(settingsPath);
+    applySettings();
+    guide.load(guidePath);
+    guide.genVersion = GEN_VERSION;
+    hasSave = loadNewest();
+    if (!hasSave) newGame();
+    state = GameState::TITLE;
+}
+
+void Game::applySettings() {
+    settings.clampAll();
+    setHudScheme(settings.hudColor);   // M6-01
+    // resolution (M10-01): the framebuffer, the RGB output and every projection follow the scale
+    setFramebufferScale(settings.renderScale);
+    int S = FB_SCALE;
+    g_mushKernel = settings.mushMode == 0 ? S + 1 : (settings.mushMode == 1 ? S + 2 : (settings.mushMode == 2 ? std::max(2, S) : std::max(2, S - 1)));
+    if ((int)rgbBuf.size() != FBW * FBH || (int)fb.idx.size() != FBW * FBH) {
+        fb = Framebuffer();
+        rgbBuf.assign((size_t)FBW * FBH, 0);
+    }
+    canvas.px = rgbBuf.data(); canvas.w = FBW; canvas.h = FBH; canvas.scale = S;
+    spaceR.proj = Proj::fromHFov(settings.fovDeg);
+    surf.setFov(settings.fovDeg);
+    surf.mouseSens = settings.mouseSensitivity;
+    surf.shadingMode = settings.shadingMode;
+    surf.sprintToggleMode = settings.sprintToggle;
+    surf.sprintMultiplier = settings.sprintSpeed;
+    surf.invertY = settings.invertY;
+    audio.master = settings.masterVolume;
+}
+
+bool Game::mouseCaptureWanted() const {
+    return state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::STAR_MAP;
+}
+
+void Game::status(const std::string& m, double secs) { statusMsg = m; statusUntil = realTime + secs; }
+
+std::string Game::epocString() const {
+    double secs = t;
+    int epoc = 6011 + (int)(secs / 1e9);
+    int sinister = (int)std::fmod(secs / 1e6, 1000.0);
+    int medius = (int)std::fmod(secs / 1e3, 1000.0);
+    return fmt("EPOC %d:%03d.%03d", epoc, sinister, medius);
+}
+
+std::string Game::epocFullString() const {
+    double secs = t;
+    int epoc = 6011 + (int)(secs / 1e9);
+    int sinister = (int)std::fmod(secs / 1e6, 1000.0);
+    int medius = (int)std::fmod(secs / 1e3, 1000.0);
+    int dexter = (int)std::fmod(secs, 1000.0);
+    return fmt("EPOC %d:%03d.%03d.%03d", epoc, sinister, medius, dexter);
+}
+
+double Game::wallClockT() {
+    // the original ran on the real clock: here game time 3.6e6 s (a fresh expedition) is 2026-01-01 00:00 UTC
+    double unixNow = (double)std::time(nullptr);
+    return 3.6e6 + (unixNow - 1767225600.0);
+}
+
+std::string Game::distanceString(double km) const {
+    if (km < 1e5) return fmt("%.0f KM", km);
+    if (km < 1e8) return fmt("%.2f MKM", km / 1e6);
+    return fmt("%.3f LY", km / SECTOR_KM);
+}
+
+// N0-01 (B-201): a comet's speed and where it is on its plunge; mean anomaly below PI means it has passed periapsis
+std::string Game::cometMotionString(int bi) const {
+    const Body& b = sys.bodies[bi];
+    double spd = length(sys.bodyVel(bi, t));
+    double M = sys.meanAnomaly(bi, t);
+    double P = std::fabs(b.orbitPeriod);
+    auto hours = [](double s) { return s > 48 * 3600 ? fmt("%.0f D", s / 86400) : fmt("%.1f H", s / 3600); };
+    if (M < PI) return fmt("%.0f KM/S, RECEDING, APOAPSIS IN %s", spd, hours((PI - M) / TAU * P).c_str());
+    return fmt("%.0f KM/S, PERIAPSIS IN %s", spd, hours((TAU - M) / TAU * P).c_str());
+}
+
+const char* Game::shortPlan(int plan) {
+    static const char* names[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "CRAWLER", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER"};
+    return plan >= 0 && plan < PLAN_COUNT ? names[plan] : "?";
+}
+
+bool Game::testDriveSetup() {
+    if (state != GameState::SURFACE || !surf.valid) return false;
+    surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
+    if (!surf.buggy.deployed && !surf.deployBuggy()) return false;
+    surf.buggy.unfold = 1;
+    surf.player.x = surf.buggy.x + 1.5; surf.player.z = surf.buggy.z;
+    return surf.inBuggy || surf.toggleBuggy();
+}
+
+double Game::testDriveOpen() {
+    if (!surf.valid) return 0;
+    double x, z, heading;
+    double run = surf.findOpenRun(x, z, heading);
+    surf.buggy.x = x; surf.buggy.z = z; surf.buggy.y = surf.site.surfaceHeight(x, z); surf.buggy.heading = heading; surf.buggy.speed = 0;
+    surf.buggy.tracks.clear(); surf.buggy.trackHead = 0;
+    surf.player.x = x; surf.player.z = z; surf.player.y = surf.buggy.y; surf.player.yaw = heading;
+    return run;
+}
+
+void Game::newGame() {
+    t = 3.6e6;
+    timeWarp = 1;
+    // find a pleasant home system: a yellow/orange star with a felisian planet
+    Star best; bool found = false;
+    int bestScore = -1;
+    for (int64_t x = 176; x < 196 && bestScore < 100; x++)
+        for (int64_t z = 36; z < 56; z++) {
+            Star s;
+            if (!starInSector(x, 0, z, s)) continue;
+            if (s.cls != STAR_YELLOW && s.cls != STAR_ORANGE) continue;
+            StarSystem ss; ss.generate(s);
+            int score = 0;
+            for (auto& b : ss.bodies) { if (b.type == PT_FELISIAN && b.parent < 0) score += 50; if (b.parent < 0) score += 3; if (b.rings) score += 5; }
+            if (score > bestScore) { bestScore = score; best = s; found = true; }
+        }
+    if (!found) starInSector(180, 0, 40, best);
+    sys.generate(best);
+    ship = ShipState();
+    // park at the first felisian planet (or the second planet)
+    int target = -1;
+    for (auto& b : sys.bodies) if (b.type == PT_FELISIAN && b.parent < 0) { target = b.index; break; }
+    if (target < 0 && sys.bodies.size() > 1) target = 1;
+    if (target < 0 && !sys.bodies.empty()) target = 0;
+    if (target >= 0) {
+        const Body& b = sys.bodies[target];
+        Vec3 bp = sys.bodyPos(target, t);
+        Vec3 toStar = normalize(sys.star.pos - bp);
+        Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
+        ship.parkDir = normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0));
+        ship.parkDist = b.radiusKm * (b.rings ? std::max(3.5, b.ringOuter + 1.3) : 3.5);
+        ship.parkedBody = target;
+        ship.localTarget = target;
+        ship.mode = ShipState::PARKED;
+        ship.pos = bp + ship.parkDir * ship.parkDist;
+        Vec3 fwd = normalize(bp - ship.pos);
+        ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
+    } else {
+        ship.pos = sys.star.pos + Vec3(0, 0, -sys.star.radiusKm * 40);
+        ship.mode = ShipState::STANDBY;
+    }
+    nb.update(ship.pos);
+    surf.valid = false;
+    state = GameState::SPACE;
+    status("STARDRIFTER READY - H FOR HELP", 6);
+}
+
+void Game::handleGlobalKeys(const Input& in) {
+    // every F-key function has a letter or control-key twin: Mac laptops give the top row to
+    // brightness and volume unless Fn is held (bug B-002)
+    if (in.wasPressed(KEY_F12) || (in.wasPressed(KEY_P) && !in.ctrl() && !in.alt())) wantsScreenshot = true;
+    if (in.wasPressed(KEY_F11) || (in.ctrl() && in.wasPressed(KEY_F)) || (in.alt() && in.wasPressed(KEY_ENTER))) wantsFullscreenToggle = true;
+    if (in.wasPressed(KEY_F10) || (in.ctrl() && in.wasPressed(KEY_K))) { settings.scanlines = !settings.scanlines; settings.save(settingsPath); status(settings.scanlines ? "SCANLINES ON" : "SCANLINES OFF", 2); }
+    // M6-05 photo tools
+    bool scene = state == GameState::SPACE || state == GameState::SURFACE;
+    if (in.ctrl() && in.wasPressed(KEY_P) && !in.shift() && scene) togglePhotoMode();
+    if (in.ctrl() && in.wasPressed(KEY_P) && in.shift() && scene) wantsPanorama = true;
+    if (in.ctrl() && in.wasPressed(KEY_R) && scene) toggleRecording();
+}
+
+void Game::togglePhotoMode() {
+    photoMode = !photoMode;
+    if (state == GameState::SURFACE && surf.valid) { if (photoMode) surf.enterFreeCam(); else surf.leaveFreeCam(); }
+    status(photoMode ? (state == GameState::SURFACE ? "PHOTO MODE: FREE CAMERA (W A S D, SPACE/C, SHIFT FAST) - CTRL+P ENDS" : "PHOTO MODE - CTRL+P ENDS") : "PHOTO MODE OFF", 4);
+}
+
+void Game::toggleRecording() {
+    recording = !recording;
+    if (recording) {
+        makeDir(moviesDir);
+        if (recFixedTake) recTake = 1; else do { recTake++; } while (fileExists(fmt("%s/take_%03d", moviesDir.c_str(), recTake)));
+        makeDir(fmt("%s/take_%03d", moviesDir.c_str(), recTake));
+        recFrame = 0;
+        status(fmt("RECORDING TO %s/TAKE_%03d - CTRL+R STOPS", upper(moviesDir).c_str(), recTake), 4);
+    } else status(fmt("RECORDING STOPPED: %d FRAMES", recFrame), 3);
+}
+
+bool Game::recordFrame() {
+    if (!recording) return false;
+    std::string fn = fmt("%s/take_%03d/frame_%05d.png", moviesDir.c_str(), recTake, recFrame++);
+    return writePNG(fn.c_str(), rgbBuf.data(), FBW, FBH);
+}
+
+// M6-05: three views at yaw -fov, 0, +fov stitched side by side, the HUD off
+void Game::renderPanorama(std::vector<uint32_t>& out, int& w, int& h) {
+    w = FBW * 3; h = FBH;
+    out.assign((size_t)w * h, 0);
+    bool wasPhoto = photoMode;
+    photoMode = true;
+    double fov = settings.fovDeg * DEG;
+    for (int k = -1; k <= 1; k++) {
+        double off = k * fov;
+        if (state == GameState::SURFACE && surf.valid) {
+            if (surf.freeCam) surf.freeYaw += off; else surf.player.yaw += off;
+            renderSurfaceScene();
+            if (surf.freeCam) surf.freeYaw -= off; else surf.player.yaw -= off;
+        } else {
+            ship.yaw += off;
+            renderSpace();
+            ship.yaw -= off;
+        }
+        for (int y = 0; y < FBH; y++) memcpy(&out[(size_t)y * w + (k + 1) * FBW], &rgbBuf[(size_t)y * FBW], FBW * sizeof(uint32_t));
+    }
+    photoMode = wasPhoto;
+    wantsPanorama = false;
+}
+
+void Game::frame(const Input& in, double realDt) {
+    if (realDt > 0.1) realDt = 0.1;
+    realTime += realDt;
+    lastRealDt = realDt;
+    if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
+    if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
+    if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
+    if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
+    bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
+                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE;
+    if (in.wasPressed(KEY_T) && simulating) {
+        if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
+        else if (in.ctrl()) { timeLapse = true; timeLapseUntil = realTime + 25; timeWarp = 600; status("TIME-LAPSE X600 FOR 25 S", 3); }   // M5-06
+        else { timeLapse = false; timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); }
+    }
+    if (timeLapse && realTime >= timeLapseUntil) { timeLapse = false; timeWarp = 1; status("TIME-LAPSE OVER - X1", 2); }
+    double dt = realDt * (simulating ? timeWarp : 0);
+    if (simulating) { if (settings.clockMode == 1) t = wallClockT(); else t += dt; }   // M5-05
+    if (simulating) { autosaveTimer += realDt; if (autosaveTimer >= 300) { autosave(); autosaveTimer = 0; } }
+    // state logic
+    switch (state) {
+        case GameState::TITLE:
+            titleYaw += realDt * 0.04;
+            titleIdle += realDt; attractT += realDt;   // M6-06
+            { bool any = std::fabs(in.mouseDx) + std::fabs(in.mouseDy) > 0; for (int k = 0; k < KEY_MAX && !any; k++) any = in.pressed[k]; if (any) titleIdle = 0; }
+            if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; helpPage = 2; state = GameState::HELP; }   // credits
+            updateShipMotion(realDt);
+            if (enterKey(in)) {
+                state = (returnState == GameState::SURFACE && surf.valid) ? GameState::SURFACE : GameState::SPACE;
+                status(state == GameState::SURFACE ? "EXPEDITION RESUMED ON THE SURFACE - H FOR HELP" : "STARDRIFTER READY - H FOR HELP", 6);
+                if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC THE F KEYS NEED FN: USE H, I, P, CTRL+S, CTRL+L, CTRL+K, CTRL+F"; statusNextSecs = 7; }
+            }
+            if (in.wasPressed(KEY_N) && hasSave) { newGame(); state = GameState::SPACE; }
+            if (helpKey(in)) { returnState = GameState::TITLE; helpPage = 0; state = GameState::HELP; }
+            if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
+            break;
+        case GameState::SPACE:
+            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }
+            if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; break; }
+            if (saveKey(in)) { saveSlot(currentSlot); break; }
+            if (loadKey(in)) { loadSlot(currentSlot); break; }
+            updateSpace(in, dt, realDt);
+            break;
+        case GameState::LANDING_MAP:
+            updateLandingMap(in, dt);
+            break;
+        case GameState::DESCENT:
+        case GameState::ASCENT:
+            if (saveKey(in)) { saveSlot(currentSlot); break; }
+            { auto t0 = std::chrono::steady_clock::now(); updateDescentAscent(in, dt, realDt); if (std::getenv("VESPERIS_TRACE") && transT < 0.05) fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count()); }
+            break;
+        case GameState::SURFACE:
+            if (in.wasPressed(KEY_ESCAPE)) { returnState = state; menuSel = 0; state = GameState::MENU; break; }
+            if (helpKey(in)) { returnState = state; helpPage = 1; state = GameState::HELP; break; }
+            if (saveKey(in)) { saveSlot(currentSlot); break; }
+            if (loadKey(in)) { loadSlot(currentSlot); break; }
+            if (photoMode) { surf.updateFreeCam(realDt, in); updateShipMotion(dt); break; }   // M6-05
+            updateSurface(in, dt, realDt);
+            break;
+        case GameState::HELP: {
+            bool any = false;
+            for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
+            if (in.wasPressed(KEY_SPACE) && helpPage < 2) helpPage = 1 - helpPage;
+            else if (any) state = returnState;
+            break;
+        }
+        case GameState::MENU:
+            if (in.wasPressed(KEY_UP)) menuSel = (menuSel + 6) % 7;
+            if (in.wasPressed(KEY_DOWN)) menuSel = (menuSel + 1) % 7;
+            if (in.wasPressed(KEY_ESCAPE)) state = returnState;
+            if (enterKey(in)) {
+                switch (menuSel) {
+                    case 0: state = returnState; break;
+                    case 1: openSlots(false); break;
+                    case 2: openSlots(true); break;
+                    case 3: settingsSel = 0; state = GameState::SETTINGS; break;
+                    case 4: helpPage = returnState == GameState::SURFACE ? 1 : 0; state = GameState::HELP; break;
+                    case 5: newGame(); break;
+                    case 6: autosave(); wantsQuit = true; break;
+                }
+            }
+            break;
+        case GameState::SETTINGS:
+            updateSettingsScreen(in);
+            break;
+        case GameState::KEYS:
+            updateKeysScreen(in);
+            break;
+        case GameState::SLOTS:
+            updateSlots(in);
+            break;
+        case GameState::GUIDE: updateGuideMenu(in); break;
+        case GameState::TEXT_ENTRY: updateTextEntry(in); break;
+        case GameState::STAR_MAP: updateStarMap(in); updateShipMotion(dt); break;
+        case GameState::LOG: updateLog(in); break;
+        case GameState::STATS: { bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true; if (any) state = guideReturn; break; }
+        case GameState::GALLERY: updateGallery(in); break;
+        case GameState::SHIPSCREEN: updateShipScreen(in); updateShipMotion(dt); break;
+        case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
+        case GameState::SECTOR_MAP: updateSectorMap(in); break;
+        case GameState::SYSTEM_LIST: {
+            int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // O3: the belts follow the bodies
+            if (n == 0) { state = GameState::SPACE; break; }
+            if (in.wasPressed(KEY_UP)) listSel = (listSel + n - 1) % n;
+            if (in.wasPressed(KEY_DOWN)) listSel = (listSel + 1) % n;
+            if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_TAB)) state = GameState::SPACE;
+            auto pick = [&]() { if (listSel < nb) { ship.localTarget = listSel; ship.targetBelt = -1; } else { ship.localTarget = -1; ship.targetBelt = listSel - nb; } };
+            if (in.wasPressed(KEY_L)) { pick(); state = GameState::SPACE; status(fmt("LOCAL TARGET: %s", upper(localTargetLabel()).c_str()), 4); }
+            if (enterKey(in)) { pick(); state = GameState::SPACE; if (listSel < nb) startApproach(listSel); else startApproachBelt(listSel - nb); }
+            break;
+        }
+        case GameState::DATA: {
+            bool any = false;
+            for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
+            if (any) state = returnState;
+            break;
+        }
+    }
+    // rendering
+    switch (state) {
+        case GameState::TITLE: renderSpace(); renderTitle(); break;
+        case GameState::SPACE: renderSpace(); if (!photoMode) renderSpaceHUD(); break;
+        case GameState::LANDING_MAP: renderLandingMap(); break;
+        case GameState::DESCENT:
+        case GameState::ASCENT: renderSurfaceScene(); drawVisor(HUD_DIM); drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER); break;
+        case GameState::SURFACE: renderSurfaceScene(); if (!photoMode) renderSurfaceHUD(); break;
+        case GameState::HELP:
+        case GameState::MENU:
+        case GameState::SETTINGS:
+        case GameState::SLOTS:
+        case GameState::GUIDE:
+        case GameState::TEXT_ENTRY:
+        case GameState::STAR_MAP:
+        case GameState::LOG:
+        case GameState::STATS:
+        case GameState::GALLERY:
+        case GameState::SHIPSCREEN:
+        case GameState::CONSOLE:
+        case GameState::SECTOR_MAP:
+        case GameState::SYSTEM_LIST:
+        case GameState::DATA:
+        case GameState::KEYS:
+            if (returnState == GameState::SURFACE || (surf.valid && returnState == GameState::SURFACE)) renderSurfaceScene();
+            else if (returnState == GameState::TITLE) { renderSpace(); renderTitle(); }
+            else renderSpace();
+            if (state == GameState::HELP) renderHelp();
+            else if (state == GameState::MENU) renderMenu();
+            else if (state == GameState::SETTINGS) renderSettings();
+            else if (state == GameState::KEYS) renderKeysScreen();
+            else if (state == GameState::SLOTS) renderSlots();
+            else if (state == GameState::GUIDE) renderGuideMenu();
+            else if (state == GameState::TEXT_ENTRY) renderTextEntry();
+            else if (state == GameState::STAR_MAP) renderStarMap();
+            else if (state == GameState::LOG) renderLog();
+            else if (state == GameState::STATS) renderStats();
+            else if (state == GameState::GALLERY) renderGallery();
+            else if (state == GameState::SHIPSCREEN) renderShipScreen();
+            else if (state == GameState::CONSOLE) renderConsole();
+            else if (state == GameState::SECTOR_MAP) renderSectorMap();
+            else if (state == GameState::SYSTEM_LIST) renderSystemList();
+            else renderDataSheet();
+            break;
+    }
+}
+
+void Game::testAimAtNearestStar() {
+    const Star* best = nullptr; double bd = 1e300;
+    for (const Star& s : nb.stars) {
+        if (sys.valid && s.seed == sys.star.seed) continue;
+        double d = length2(s.pos - ship.pos);
+        if (d < bd) { bd = d; best = &s; }
+    }
+    if (!best) return;
+    Vec3 fwd = normalize(best->pos - ship.pos);
+    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
+}
+
+void Game::testAimAtBody(int body) {
+    if (body < 0 || body >= (int)sys.bodies.size()) return;
+    Vec3 fwd = normalize(sys.bodyPos(body, t) - ship.pos);
+    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
+}
+
+int Game::testLandableBody() const {
+    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0 && b.type != PT_COMET) return b.index;   // O6-03: the flow's buggy steps need gravity (a comet came first since GEN 9)
+    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.type != PT_COMET) return b.index;
+    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0) return b.index;
+    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable) return b.index;
+    return -1;
+}
+
+void Game::testParkAt(const Star& s, int body) {
+    arriveAtStar(s, Vec3(0, 0, -1));
+    if (body < 0 || body >= (int)sys.bodies.size()) return;
+    const Body& b = sys.bodies[body];
+    Vec3 bp = sys.bodyPos(body, t);
+    Vec3 toStar = normalize(sys.star.pos - bp);
+    Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
+    ship.parkDir = normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0));
+    ship.parkDist = parkDistanceFor(b);
+    ship.parkedBody = body; ship.localTarget = body; ship.mode = ShipState::PARKED;
+    ship.pos = bp + ship.parkDir * ship.parkDist;
+    Vec3 fwd = normalize(bp - ship.pos);
+    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
+    nb.update(ship.pos);
+    state = GameState::SPACE;
+    if (PLANET_TYPES[b.type].landable) beginLanding();
+}
+
+std::string Game::testBeltDraw() const {
+    int n3 = 0, x0 = 1 << 30, x1 = -1, y0 = 1 << 30, y1 = -1;
+    for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) { Pix p = fb.idx[y * FBW + x]; if (bankOf(p) == 20 && intenOf(p) > 0) { n3++; x0 = std::min(x0, x); x1 = std::max(x1, x); y0 = std::min(y0, y); y1 = std::max(y1, y); } }
+    int a, b; const_cast<Game*>(this)->choosePaletteBodies(a, b);
+    BeltRock rk; std::string where = "no rock";
+    if (beltRockNow(rk)) { Vec3 v = viewBasis() * (rk.pos - ship.pos); Vec3 f = normalize(rk.pos - ship.pos); where = fmt("rock at view (%.0f, %.0f, %.0f) km, %.1f km across, ship %.0f km off; ship yaw %.2f pitch %.2f, rock yaw %.2f pitch %.2f, cabin %.2f/%.2f", v.x, v.y, v.z, 2 * rk.radiusKm, length(rk.pos - ship.pos), ship.yaw, ship.pitch, std::atan2(f.x, f.z), std::asin(clampd(f.y, -1, 1)), cabin.yaw, cabin.pitch); }
+    return fmt("rocks drawn %d (%d meshes), bank-20 pixels %d in x %d..%d y %d..%d, palette bodies %d/%d, cabin %d; %s", spaceR.lastBeltRocks, spaceR.lastBeltMeshes, n3, x0, x1, y0, y1, a, b, (int)settings.cabin, where.c_str());
+}
+
+void Game::testParkAtBelt(const Star& s, int k) {
+    arriveAtStar(s, Vec3(0, 0, -1));
+    if (k < 0 || k >= (int)sys.belts.size()) return;
+    startApproachBelt(k);
+    ship.flightDur = 0.001;   // the next frame completes the approach
+    state = GameState::SPACE;
+}
+
+std::string Game::testHealth() const {
+    auto bad = [](double v) { return !std::isfinite(v); };
+    std::string r;
+    if (bad(ship.pos.x) || bad(ship.pos.y) || bad(ship.pos.z)) r += "ship.pos ";
+    if (bad(ship.yaw) || bad(ship.pitch)) r += "ship.angles ";
+    if (bad(t) || bad(timeWarp) || bad(realTime)) r += "time ";
+    if (surf.valid && (bad(surf.player.x) || bad(surf.player.y) || bad(surf.player.z) || bad(surf.player.yaw) || bad(surf.player.pitch))) r += "player ";
+    if (surf.valid && (bad(surf.capsuleX) || bad(surf.capsuleZ))) r += "capsule ";
+    return r;
+}
+
+void Game::testTypeText(const std::string& s) {
+    Input in;
+    for (char c : s) {
+        in.newFrame();
+        int k = c == ' ' ? KEY_SPACE : (c == '-' ? KEY_MINUS : (c >= '0' && c <= '9' ? KEY_0 + (c - '0') : KEY_A + (toupper((unsigned char)c) - 'A')));
+        in.pressed[k] = true; in.down[k] = true;
+        frame(in, 1.0 / 30);
+    }
+    in.newFrame(); in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true; frame(in, 1.0 / 30);
+}
+
+std::string Game::testBuggyInfo() const {
+    const Buggy& b = surf.buggy;
+    return fmt("deployed=%d in=%d speed=%.1f m/s heading=%.0f odometer=%.0f m tracks=%zu chase=%d", (int)b.deployed, (int)surf.inBuggy, b.speed, wrap2pi(b.heading) / DEG, b.odometer, b.tracks.size(), (int)surf.chaseCam);
+}
+
+std::string Game::testDebugInfo() const {
+    std::string r = fmt("mode=%d parked=%d local=%d belt=%d/%d yaw=%.2f pitch=%.2f", (int)ship.mode, ship.parkedBody, ship.localTarget, ship.targetBelt, ship.parkedBelt, ship.yaw, ship.pitch);
+    if (ship.parkedBody >= 0 && ship.parkedBody < (int)sys.bodies.size()) {
+        Vec3 fwd = normalize(sys.bodyPos(ship.parkedBody, t) - ship.pos);
+        r += fmt(" bodyYaw=%.2f bodyPitch=%.2f dist=%.0f R=%.0f", std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)), length(sys.bodyPos(ship.parkedBody, t) - ship.pos), sys.bodies[ship.parkedBody].radiusKm);
+    }
+    return r;
+}

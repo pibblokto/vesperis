@@ -1,0 +1,35 @@
+# Plan: living worlds II (N2 vegetation, N3 creatures)
+
+## Where it stands
+
+**Vegetation** (`SurfaceView::drawObjects`, `docs/reference/06-surface.md` "Objects"): trees only where `veg > 0.25` on forest and grass materials, `veg x 3.6 x u` per 16 m cell (up to about 140 per hectare), height 4-13 m scaled by gravity, a one-pixel trunk line and 3-5 blobs of sprayed points (14 points each within 40 m, single dots beyond 300 m), five families that change the blob layout; bushes within 200 m, grass tufts within 45 m as short swaying lines, cacti and tundra cushions since M4-04. No undergrowth, no forest floor, no clearings, one `vegColor` per world, no colour variation between trees, no branches, canopies that read as yellow-green sprays (the flow frames `surf_FELISIAN_noon.png`). Biomes exist in the data (`BIO_*`, M9-05) but on the ground they only change the tree count and the family.
+
+**Creatures** (`updateLife`, `drawLife`): per site 3-9 grazers and crawlers in 1-3 herds, 1-3 flocks of 6-19 birds, night eye glints, fins. Grazers are boxes with four line legs and a line head, crawlers longer boxes with a tail line, birds two flapping lines, fins triangles. Behaviours: wander with random headings, keep within 40 m of the herd centre, step aside, flee within 12 m, flocks land to rest. No species, no animation beyond leg swing and flap, no reaction to the buggy, no sounds except the generic bird chirps.
+
+## Vegetation design (N2)
+
+**Trees.** A tree is a trunk (a tapered quad strip, 2-4 branch lines to the canopy anchors), a canopy of 8-20 overlapping leaf blobs (each a spray of points as today, but placed on a silhouette and shaded in three tones: the crown lit by the sun, the sides mid, the underside dark), a per-tree hue jitter of a few degrees and a size jitter. Seven silhouettes: dome (broadleaf), cone (conifer), umbrella (flat crown on a tall trunk), tiered giant (three canopy layers, 2.4x height), fibrous stalk (tufts on stalks), fern tree (arching fronds as line sprays), mushroom tree (cap on a thick stem, cave-like underside). Two families per world plus biome overrides (taiga cones, savanna umbrellas, wetland fern trees, tropical giants). Within 40 m the full spray; 40-300 m the blobs only; 300-1500 m 2-4 blob impostors; beyond, dots and the terrain colour.
+
+**Forest structure.** Density and height from `veg` and moisture with a clearing mask (worley cells with low `veg` inside), smaller trees at the edge, 3% dead trees (bare trunks with branch lines, grey) and fallen logs (cylinders, colliders), the forest floor darker and browner as canopy density rises (a ground colour shift from the canopy density field, the same one that places trees, so the shade under a forest is where the trees are), leaf litter grain on the meso tile. Tree blob shadows sized by the canopy; cast shadows already darken the floor at low sun.
+
+**Undergrowth and meadows.** Per biome: temperate and tropical forests get ferns (arching line sprays), bushes with berry points and mushrooms; grassland gets tall swaying grass patches within 60 m (quads in the wind field), flower points in spring/summer (colour from the family palette); savanna gets scattered umbrella trees and dry grass; wetlands get reeds and cattail stalks, lily pads on still water, fireflies at dusk; deserts get cacti, succulents and dry shrubs; tundra gets lichen crusts and cushions; shores get kelp seen through shallow water and driftwood. Each is a small object type with its own density function, distance cutoff and a spray/quad drawer.
+
+**Colour and season.** Family palettes (greens, blue-greens, purples, reds); `season` (M9-09) shifts deciduous families toward autumn colours and drops the canopy density in winter at high latitudes; spring adds flowers. At night canopies go to the darkest stop and stand black against the sky.
+
+**Budget.** Forest views at 2x under 6 ms: sprays scale with screen size (already), impostors beyond 300 m, no per-point shadows. `bench` gets a "forest" scene.
+
+## Creature design (N3)
+
+**Bestiary per world.** `Bestiary::make(body)` (deterministic from the seed) gives a felisian world 2-4 land species, 1-2 flyers, 1 swimmer, 0-1 nocturnal species; each species: a body plan (quadruped browser, long-necked browser, low hexapod crawler, hopper, biped strider, giant walker), size 0.3-8 m, gait, colours and a pattern (stripes, spots, countershading) from the biome palette, a call (synth parameters), a habitat (grassland, forest edge, wetland, shore, desert), a diet spot (grass, canopy, water), activity (day, night, dusk), a temperament (shy, curious, indifferent), and a name seed (the guide lets you name it; the log records the first sighting; a creatures-seen statistic).
+
+**Bodies and animation.** Segments: spine as 3-5 capsules (quads with a lit/shaded split), neck and head, tail, legs with two joints each (upper, lower, foot), ears, horns or crests as silhouette lines, eyes as bright points. Gait cycles by plan and speed: walk, trot, gallop for quadrupeds (leg phase offsets), hop for hoppers (a ballistic arc), a wave for crawlers, a stride for bipeds; feet placed on the terrain height (no floating, no sinking). Idle: breathing, head turns, tail swish; graze: head down for 3-8 s then up; drink at water edges (head down over water); rest: lying (body lowered, legs folded); alert: head up, frozen; flee: gallop away from the threat. Flyers: flap and glide cycles, banking in turns, landing on the ground or in a tree (perch points on canopies), take-off runs; swimmers: a fin and a back arc breaking the surface, dives, occasional breaches.
+
+**Behaviours.** Herds with a leader (the others keep 3-12 m and follow its heading with noise), grazing paths along grass toward water in the afternoon, drinking, resting at midday or at night (nocturnal species reversed), alert then flee with a call when the explorer comes within 25 m (the buggy triggers it at 60 m and causes a stampede), curious species approach to 10 m and stop, giants ignore everything; flocks feed on the ground by day, settle in trees at dusk and take off at dawn; insect swarms near water at dusk as point clouds with a hum. Density: something living within 200 m on 70% of temperate and tropical felisian landings, less in deserts and tundra, nothing on ice; the landing map's strip names the likely species. Tracks in sand and snow behind walkers.
+
+**Sounds.** Per-species calls from the synth (chirp, low, hoot, click families with pitch and rhythm from the seed), alarm calls on flee, hoof and paw steps within 15 m, the insect hum.
+
+**Budget.** Creatures within 350 m only, segments as quads: a herd of ten at 20 m under 0.5 ms.
+
+## Tests
+
+`scene felisian_forest`, `scene biome_<name>` sheets; `vesperis_test bestiary` prints species per world and checks determinism; `flow` approaches a herd and logs alert, flee and the call; a survey over 300 felisian sites for encounter density; `bench` forest and herd scenes under budget; `regress` frame hashes re-blessed with the reason.

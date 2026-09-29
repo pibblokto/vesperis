@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VESPERIS</title>
+<style>
+  body { margin: 0; background: #000; color: #8fe0a0; font: 14px monospace; display: flex; flex-direction: column; align-items: center; }
+  canvas { display: block; width: 100vw; max-width: 1280px; aspect-ratio: 16 / 10; image-rendering: pixelated; background: #000; }
+  p { max-width: 80ch; padding: 0 16px; }
+</style>
+</head>
+<body>
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<p>Click the picture to capture the mouse. The expedition, the guide and the settings live in the browser's storage for this page (IndexedDB); screenshots (P) land in the virtual file system and cannot be saved from the page.</p>
+<script>
+  var Module = {
+    canvas: document.getElementById('canvas'),
+    preRun: [function () {
+      // the working directory persists through IDBFS: mount it and load what was saved last time
+      FS.mkdir('/work'); FS.mount(IDBFS, {}, '/work'); Module.addRunDependency('idbfs');
+      FS.syncfs(true, function () { FS.chdir('/work'); Module.removeRunDependency('idbfs'); });
+      setInterval(function () { FS.syncfs(false, function () {}); }, 15000);
+    }],
+    print: function (t) { console.log(t); }
+  };
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>
