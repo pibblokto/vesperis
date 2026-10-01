@@ -489,6 +489,12 @@ void Game::renderDataSheet() {
         line(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
     }
     line(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", PLANET_TYPES[b.type].atmosphere ? "YES" : "NONE", b.moonCount, b.rings ? "   RINGS" : "", PLANET_TYPES[b.type].landable ? "YES" : "NO"), PLANET_TYPES[b.type].landable ? HUD_GREEN : HUD_RED);
+    {   // R-402: the magnetic field and what it means for the nights (the star's class counts too)
+        int mc = magneticClass(magneticField(b));
+        double quiet = auroraPotentialAt(sys, b, 0), peak = auroraPotentialAt(sys, b, 1);
+        const char* hint = quiet > 0.15 ? "   AURORAE ON MOST NIGHTS" : (peak > 0.3 ? "   AURORAE IN STORMS" : (peak > 0.12 ? "   A FAINT AURORA IN A GREAT STORM" : ""));
+        line(fmt("MAGNETIC    %s%s", MAGNETIC_CLASS_NAMES[mc], hint), HUD_GREEN);
+    }
     y += 3;
     // M5-06 seasons readout, M5-09 what is up in the sky (surface only)
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {

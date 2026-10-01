@@ -167,3 +167,15 @@ struct StarSystem {
     // M5-03: (E - e sin E = M) solved by Newton; returns the true anomaly, r/a in rOverA
     static double trueAnomaly(double meanAnomaly, double ecc, double& rOverA);
 };
+
+// R-402: a world's magnetic field (0..1), hashed from its seed and biased by its spin and size (the dynamo of a big, fast-spinning
+// world; a locked world has little): a derived property, so no system changes. Classes: 0 none, 1 weak, 2 moderate, 3 strong
+double magneticField(const Body& b);
+int magneticClass(double mag);
+extern const char* const MAGNETIC_CLASS_NAMES[4];
+// R-402: the star's weather, 0..1: storms over days with substorms over hours; and a world's auroral potential (0..1 before the
+// latitude, the darkness and the night's own variation): the star's activity by class, the steady glow a strong field keeps
+// and what the storm drives. `auroraPotentialAt` takes the storm level itself (0 a quiet night, 1 a great storm)
+double auroralStorm(const Star& s, double t);
+double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm);
+double auroraPotential(const StarSystem& sys, const Body& b, double t);

@@ -1222,7 +1222,8 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                 if (type >= 0 && b.type != type) continue;
                 if (type < 0 && (!PLANET_TYPES[b.type].landable || b.type == PT_COMET)) continue;   // R-307: a trait scene on any world
                 double lon = 0.7 + bi * 0.3, latUse = latDeg * DEG;
-                if (wantMat == -41) latUse = SurfaceView::auroraOvalLat(b.seed) * DEG;   // B-403: right under the auroral oval
+                if (wantMat == -41) latUse = SurfaceView::auroraOvalLat(b) * DEG;   // B-403: right under the auroral oval
+                if (wantMat == -42) latUse = (SurfaceView::auroraOvalLat(b) - 1) * DEG;   // R-402: the main curtain a degree poleward: overhead and across the sky
                 BodyGen g = BodyGen::make(b);
                 if (wantMat == -36 && !g.hasTrait(TR_GEYSERS)) continue;
                 // O6-03: the scans below sample a whole planet at 16 m: without the drainage (a tile per sample); the river and lake
@@ -1230,6 +1231,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                 struct DrainOff { bool was; DrainOff() : was(drainageEnabled()) { setDrainageEnabled(false); } ~DrainOff() { setDrainageEnabled(was); } } drainOff;
                 bool lookAtWater = false;
                 double faceYawOut = 1e9, facePitchOut = 1e9;   // R-307: a scene finder may choose the view's direction
+                double t0Use = 1000.0;   // R-402: the aurora scenes choose the night of the month with the strongest potential
                 if (wantMat == MAT_SAND) {
                     // a beach: sand near the sea level, the view turned toward the water
                     bool found = false;
@@ -1275,13 +1277,21 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                     if (!found) continue;
                 } else if (wantMat <= -40 && wantMat >= -42) {
                     // B-403: the aurora scenes: any site of the type at the latitude asked (the star was chosen above); -42 wants a
-                    // clear-air world with another body of the system (a moon, the parent) at least 0.6 degrees across in the
-                    // poleward half of the sky, 17-37 degrees up (where this latitude's curtains hang) at the darkest hour, the
-                    // biggest of them, and faces it
-                    if (wantMat == -42) {
-                        if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
+                    // clear-air world with another body of the system (a moon, the parent) at least 0.6 degrees across and 35-65
+                    // degrees up at the darkest hour (the main curtain hangs overhead there), the biggest of them, and faces it
+                    if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
+                    {   // R-402: a night with curtains: of the next thirty nights, the darkest hour with the strongest potential, over 0.45
                         SurfaceSite probe; probe.init(&sys, bi, latUse, lon, 1000.0);
-                        double tp = findTime(probe, alt, 1000.0);
+                        double bestPot = 0, period = std::fabs(b.rotPeriod);
+                        for (int dd = 0; dd < 30; dd++) {
+                            double t0 = 1000.0 + dd * period, pot = auroraPotential(sys, b, findTime(probe, alt, t0));
+                            if (pot > bestPot) { bestPot = pot; t0Use = t0; }
+                        }
+                        if (bestPot < 0.45) continue;
+                    }
+                    if (wantMat == -42) {
+                        SurfaceSite probe; probe.init(&sys, bi, latUse, lon, t0Use);
+                        double tp = findTime(probe, alt, t0Use);
                         Vec3 obs = probe.worldPos(tp, 0, 0, 0);
                         Mat3 L = probe.localFrame(tp);
                         double bestR = 0; int bestJ = -1; Vec3 bestDl;
@@ -1291,7 +1301,8 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             double dist = std::max(length(dW), 1.0), ang = sys.bodies[bj].radiusKm / dist;
                             Vec3 dl = L * (dW / dist);
                             double hl = std::sqrt(std::max(1e-9, 1 - dl.y * dl.y));
-                            if (ang < 0.005 || dl.y < 0.3 || dl.y > 0.6 || dl.z * (latUse >= 0 ? 1 : -1) < 0.5 * hl || ang < bestR) continue;
+                            (void)hl;
+                            if (ang < 0.005 || dl.y < 0.57 || dl.y > 0.9 || ang < bestR) continue;
                             bestR = ang; bestJ = bj; bestDl = dl;
                         }
                         if (bestJ < 0) continue;
@@ -1313,7 +1324,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                         }
                         printf("  %s: %s in the sky, %.1f deg across, %.0f deg up, %.0f deg from the pole, aurora over %d%% of its surroundings\n", b.name.c_str(), PLANET_TYPES[sys.bodies[bestJ].type].name, 2 * bestR / DEG, std::asin(bestDl.y) / DEG,
                                std::acos(clampd(bestDl.z * (latUse >= 0 ? 1 : -1) / std::sqrt(std::max(1e-9, 1 - bestDl.y * bestDl.y)), -1, 1)) / DEG, disc ? 100 * over / disc : 0);
-                        if (disc == 0 || over < disc / 5) continue;
+                        if (disc == 0 || over < disc / 12) continue;
                         faceYawOut = yaw; facePitchOut = pitchB;
                     }
                 } else if (wantMat <= -30) {
@@ -1450,8 +1461,8 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                         }
                 }
                 setDrainageEnabled(drainOff.was);   // O6-03: the site samples the real ground
-                sv.init(&sys, bi, latUse, lon, 1000.0);
-                double t = findTime(sv.site, alt, 1000.0);
+                sv.init(&sys, bi, latUse, lon, t0Use);
+                double t = findTime(sv.site, alt, t0Use);
                 sv.init(&sys, bi, latUse, lon, t);
                 SunInfo si = sv.site.sun(t);
                 sv.player.yaw = faceYawOut < 1e8 ? faceYawOut : si.azimuth + yawOff;
@@ -1584,7 +1595,7 @@ static const CmpScene CMP_SCENES[] = {
     {"comet_night", PT_COMET, 10, -30 * DEG, PI, 0.35},     // and at night, looking away from the sun: the tail overhead
     // B-403: the aurora: a thin-atmosphere world round a pulsar or a blue giant, 64 degrees of latitude, the darkest hour,
     // facing the pole (the sun's azimuth at its lowest), and the same looking straight up
-    {"thinatmo_aurora", PT_THINATMO, 64, -30 * DEG, 0.0, 0.25, -40},
+    {"thinatmo_aurora", PT_THINATMO, 58, -30 * DEG, 0.0, 0.25, -40},
     {"thinatmo_aurora_zenith", PT_THINATMO, 64, -30 * DEG, 0.0, 1.5, -41},
     {"aurora_moon", -1, 64, -30 * DEG, 0.0, 0.25, -42},   // any clear-air world with a moon or the parent in the poleward sky at the curtains' height, facing it: its night side shows the curtains in front
 };
@@ -3022,6 +3033,30 @@ static int testUnit() {
             }
         }
     }
+    {   // R-402: magnetic fields and the star's storms: every class occurs; at the oval, a strong field round an active star keeps an
+        // aurora on most nights (over the HUD's 0.15), a weak field has one rarely; the storms come and go
+        int cls[4] = {0, 0, 0, 0}, n = 0, strongN = 0, weakN = 0, stormy = 0, nights = 0;
+        double strongLit = 0, weakLit = 0;
+        for (int64_t x = 150; x < 200; x++)
+            for (int64_t z = 20; z < 70; z++) {
+                Star s; if (!starInSector(x, 0, z, s)) continue;
+                StarSystem sys; sys.generate(s);
+                for (int d = 0; d < 20; d++) { nights++; if (auroralStorm(s, d * 86400.0 + 500) > 0.3) stormy++; }
+                for (const Body& b : sys.bodies) {
+                    if (!PLANET_TYPES[b.type].landable || b.type == PT_COMET) continue;
+                    double m = magneticField(b); cls[magneticClass(m)]++; n++;
+                    if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
+                    int lit = 0; for (int d = 0; d < 60; d++) if (auroraPotential(sys, b, d * 86400.0 + 1000) > 0.15) lit++;
+                    bool active = s.cls == STAR_PULSAR || s.cls == STAR_BLUE_GIANT;
+                    if (m >= 0.6 && active) { strongLit += lit / 60.0; strongN++; }
+                    else if (m >= 0.08 && m < 0.3) { weakLit += lit / 60.0; weakN++; }
+                }
+            }
+        check("magnetic field: every class occurs", n > 50 && cls[0] > 0 && cls[1] > 0 && cls[2] > 0 && cls[3] > 0, fmt("of %d worlds: none %d, weak %d, moderate %d, strong %d", n, cls[0], cls[1], cls[2], cls[3]));
+        check("storms on some nights, not most", nights > 0 && stormy > nights / 20 && stormy < nights / 2, fmt("%d of %d nights over 0.3", stormy, nights));
+        check("strong field, active star: most nights", strongN > 0 && strongLit / strongN > 0.7, fmt("%.0f%% of nights lit over %d worlds", strongN ? 100 * strongLit / strongN : 0.0, strongN));
+        check("weak field: rarely", weakN > 0 && weakLit / weakN < 0.25, fmt("%.0f%% of nights lit over %d worlds", weakN ? 100 * weakLit / weakN : 0.0, weakN));
+    }
     printf("unit: %d failures\n", fails);
     return fails;
 }
@@ -3753,8 +3788,9 @@ int main(int argc, char** argv) {
             saveFB(fb, fn.c_str());
             printf("%s -> %s (sun alt %.1f)\n", sc.name, fn.c_str(), sv.env.sun.altitude / DEG);
             if (sc.wantMat <= -40 && sc.wantMat >= -42)   // B-403: the aurora's numbers
-                printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora, STAR_CLASSES[sys.star.cls].name, sv.env.latDeg,
-                       SurfaceView::auroraOvalLat(sys.bodies[sv.site.body].seed), sv.lastAuroraP0, sv.site.R / 1000.0, sv.env.skyBrightness, sv.env.cloudCover, sv.flocks.size());
+                printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), field %.2f (%s), storm %.2f, R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora, STAR_CLASSES[sys.star.cls].name, sv.env.latDeg,
+                       SurfaceView::auroraOvalLat(sys.bodies[sv.site.body]), sv.lastAuroraP0, magneticField(sys.bodies[sv.site.body]), MAGNETIC_CLASS_NAMES[magneticClass(magneticField(sys.bodies[sv.site.body]))], sv.env.auroraStorm,
+                       sv.site.R / 1000.0, sv.env.skyBrightness, sv.env.cloudCover, sv.flocks.size());
             if (sc.wantMat == -3 || sc.wantMat == -5 || sc.wantMat == -6 || sc.wantMat == -7)   // N3: the herd's states and the cost of life
                 printf("  herd: %s; life update %.2f ms, draw %.2f ms\n", sv.testHerdStates().c_str(), sv.lastLifeMs[0], sv.lastLifeMs[1]);
             if (sc.wantMat == -4 || sc.wantMat <= -10) {   // N2: what the vegetation did

@@ -51,6 +51,7 @@ std::string describeBody(const Body& b, const BodyGen& g) {
     if (b.tempK > 500) s += ", scorched by its star";
     else if (b.tempK < 120) s += ", deep in the cold";
     if (b.rings) s += ", wearing a ring system";
+    if (magneticClass(magneticField(b)) == 3 && PLANET_TYPES[b.type].atmosphere && !hasOpaqueDeck(b.type)) s += ", its poles crowned with aurorae";   // R-402
     if (b.moonCount >= 3) s += ", with a family of moons";
     if (b.ecc > 0.15) s += ", on a markedly oval orbit";
     if (b.parent < 0 && std::fabs(1.0 - b.rotPeriod / b.orbitPeriod) < 0.02) s += ", one face forever toward the sun";

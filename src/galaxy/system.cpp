@@ -638,3 +638,33 @@ std::string StarSystem::bodyLabel(int i) const {
     if (b.doublePlanet && b.parent >= 0) return b.name + " (" + PLANET_TYPES[b.type].name + ", twin planet)";
     return b.name + " (" + PLANET_TYPES[b.type].name + (b.parent >= 0 ? (bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
 }
+
+// R-402: the magnetic field, the star's storms and the aurora they make
+const char* const MAGNETIC_CLASS_NAMES[4] = {"NONE", "WEAK", "MODERATE", "STRONG"};
+
+double magneticField(const Body& b) {
+    double u = unitFromHash(hashCombine(b.seed, 0x3A6F));
+    double hours = std::fabs(b.rotPeriod) / 3600.0;
+    double spin = clampd(1.4 - 0.8 * std::log10(std::max(hours, 1.0)), 0, 1);   // 1 under 3 h, 0.6 at 10 h, 0.3 at a day, 0 past 56 h
+    double size = clampd((b.radiusKm - 1500) / 5000.0, 0, 1);
+    return clampd(0.9 * u + 0.3 * spin + 0.25 * size - 0.35 - (b.locked ? 0.3 : 0.0), 0, 1);
+}
+
+int magneticClass(double mag) { return mag < 0.08 ? 0 : (mag < 0.3 ? 1 : (mag < 0.6 ? 2 : 3)); }
+
+double auroralStorm(const Star& s, double t) {
+    double slow = gnoise2(t / 2.6e5, 1.7, s.seed ^ 0xA5A5), fast = gnoise2(t / 1.5e4, 4.1, s.seed ^ 0x5A5A);   // three days; four hours
+    return clampd((0.5 + 0.5 * slow + 0.2 * fast - 0.58) / 0.3, 0, 1);
+}
+
+double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm) {
+    if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) return 0;
+    int cls = sys.star.cls;
+    double activity = cls == STAR_BLUE_GIANT ? 1.0 : (cls == STAR_PULSAR ? 0.9 : (cls == STAR_ORANGE ? 0.55 : (cls == STAR_YELLOW ? 0.45 : 0.2)));
+    double mag = magneticField(b);
+    double steady = 0.6 * smoothstep(0.5, 1.0, mag);                                            // a strong field keeps a glow every night
+    double driven = std::pow(storm, 0.7) * smoothstep(0.03, 0.4, mag) * (0.7 + 0.3 * mag);     // the storm lights the rest
+    return activity * clampd(steady + driven, 0, 1);
+}
+
+double auroraPotential(const StarSystem& sys, const Body& b, double t) { return auroraPotentialAt(sys, b, auroralStorm(sys.star, t)); }

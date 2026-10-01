@@ -739,11 +739,13 @@ void SurfaceView::computeEnvironment(double t) {
         double fogN = gnoise2(t / 1500.0 + player.x / 4000.0, player.z / 4000.0, site.gen.seed + 33);
         env.fogBank = clampd((fogN - 0.45) / 0.25, 0, 1) * (1 - env.rain) * clampd(1 - std::fabs(env.temperatureC - 8) / 25.0, 0, 1);
     }
-    env.aurora = 0;
-    if (site.atmosphere && !hasOpaqueDeck(b.type) && std::fabs(env.latDeg) > 52) {
-        int cls = site.sys->star.cls;
-        double activity = cls == STAR_BLUE_GIANT ? 1.0 : (cls == STAR_PULSAR ? 0.9 : (cls == STAR_ORANGE ? 0.35 : (cls == STAR_YELLOW ? 0.25 : 0.1)));
-        env.aurora = activity * smoothstep(52, 68, std::fabs(env.latDeg)) * (1 - env.skyBrightness) * (0.5 + 0.5 * gnoise2(t / 600.0, 8.8, site.gen.seed + 44));
+    env.aurora = 0; env.auroraStorm = 0;
+    if (site.atmosphere && !hasOpaqueDeck(b.type) && std::fabs(env.latDeg) > 40) {
+        // R-402: the night's potential (the star's class, the world's magnetic field, the star's storm), the latitude ramp
+        // pushed equatorward by the storm, the darkness, and the night's own slow variation
+        env.auroraStorm = auroralStorm(site.sys->star, t);
+        double latLo = 52 - 10 * env.auroraStorm;
+        env.aurora = auroraPotential(*site.sys, b, t) * smoothstep(latLo, latLo + 16, std::fabs(env.latDeg)) * (1 - env.skyBrightness) * (0.6 + 0.4 * gnoise2(t / 600.0, 8.8, site.gen.seed + 44));
     }
     if (lastWindUpdate < 0 || t - lastWindUpdate > 2.0) {
         // B-206: the wind is set from scratch here (base by type, a slow gust term, rain, the dust storm's x3.5);
@@ -1242,6 +1244,22 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
 // The buggy (M8-06): arcade driving on the height field
 // ---------------------------------------------------------------------------
 
+// R-402: the aurora's colours per world: the lower curtain's and its tops', by the air and a hash (oxygen airs green with red or
+// violet tops, as on Earth; thin air green or teal under violet; a desert's lime under pink; a sulphurous sky blue under
+// magenta; an acid sky gold under orange)
+static void auroraColours(const Body& b, RGB& low, RGB& high) {
+    double u = unitFromHash(hashCombine(b.seed, 0xA0C));
+    const RGB green(0.1f, 0.45f, 0.2f), teal(0.1f, 0.42f, 0.36f), lime(0.3f, 0.5f, 0.12f), blue(0.15f, 0.3f, 0.7f), gold(0.55f, 0.48f, 0.12f);
+    const RGB red(0.55f, 0.12f, 0.16f), violet(0.4f, 0.18f, 0.6f), pink(0.6f, 0.22f, 0.4f), magenta(0.6f, 0.12f, 0.5f), orange(0.7f, 0.3f, 0.08f);
+    switch (b.type) {
+        case PT_THINATMO: low = u < 0.5 ? green : teal; high = violet; break;
+        case PT_DESERT: low = u < 0.5 ? lime : green; high = pink; break;
+        case PT_TECTONIC: low = blue; high = magenta; break;
+        case PT_ACIDIC: low = gold; high = orange; break;
+        default: low = u < 0.7 ? green : (u < 0.85 ? teal : lime); high = u < 0.6 ? red : (u < 0.85 ? violet : pink); break;
+    }
+}
+
 void SurfaceView::setupPalette(Framebuffer& fb) {
     SurfaceLook L = lookFor(site.gen, site.sys->star);
     double day = env.skyBrightness;
@@ -1320,9 +1338,13 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         RGB f2 = (ph < 0 && ph >= -0.6) ? lerp(site.gen.vegColor, RGB(0.85f, 0.5f, 0.12f), 0.65f) * lerp(site.sys->star.color, white, 0.5f) : L.flora2;
         matRamp(5, f2);
     }
-    // M4-06 aurora; B-403: its dark end is the night sky's own colour, so the curtains fade into the sky without a hue edge (a thin
-    // atmosphere's night sky is brown, and black-green against it cut the curtains' faint top into patches)
-    setRamp(fb.pal, 11, {{0, zen}, {10, lerp(zen, RGB(0.1f, 0.45f, 0.2f), 0.4f)}, {30, RGB(0.1f, 0.45f, 0.2f)}, {63, RGB(0.35f, 1.0f, 0.5f)}});
+    {   // M4-06 aurora: bank 11 its lower colour, bank 21 (R-402) its tops' colour, per world; B-403: their dark end is the night
+        // sky's own colour, so the curtains fade into the sky without a hue edge (a thin atmosphere's night sky is brown, and
+        // black-green against it cut the curtains' faint top into patches)
+        RGB low, high; auroraColours(site.sys->bodies[site.body], low, high);
+        setRamp(fb.pal, 11, {{0, zen}, {10, lerp(zen, low, 0.4f)}, {30, low}, {63, lerp(low, white, 0.55f)}});
+        setRamp(fb.pal, 21, {{0, zen}, {10, lerp(zen, high, 0.4f)}, {30, high}, {63, lerp(high, white, 0.45f)}});
+    }
     {   // B-315 bank 16: bark, a brown of the planet's own (toward the second flora colour); bank 17: cut wood, pale. The
         // trunks used to sit on the ground bank, whose dark stops take the sky's colour: black trunks, grey-blue branches
         RGB bark = lerp(RGB(0.36f, 0.25f, 0.15f), site.gen.vegColor2 * 0.55f, 0.3f);
@@ -2034,24 +2056,26 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // the night sky. It used to be five lobes of azimuth, opaque and hard-edged, which met in a flower at the zenith.
     const bool auroraOn = aurora > 0.02 && day < 0.4;
     if (auroraOn) {
-        auroraGrid.assign(GX * GY, 0.f);
+        auroraGrid.assign(GX * GY * 2, 0.f);
         const double Rkm = site.R / 1000.0, kmDeg = Rkm * DEG;
         const double pole = env.latDeg >= 0 ? 1.0 : -1.0;
-        // km poleward of the site to the oval's centre, kept within sight on every world, the oval drifting over five minutes
-        const double P0 = clampd((auroraOvalLat(site.gen.seed) - std::fabs(env.latDeg)) * kmDeg, -120.0, 450.0) + 30.0 * std::sin(t / 310.0);
+        const double storm = env.auroraStorm;
+        // km poleward of the site to the oval's centre (nearer the pole on a strong field, pushed equatorward by a storm), kept
+        // within sight on every world, drifting over five minutes
+        const double P0 = clampd((auroraOvalLat(b) - 6 * storm - std::fabs(env.latDeg)) * kmDeg, -120.0, 450.0) + 30.0 * std::sin(t / 310.0);
         lastAuroraP0 = P0;
-        // the profile in height: f(u) = u / H^2 exp(-u / H), u = height - h0, its peak at h0 + H, most of it (85%) with H = 24 km
-        // and a faint tail (15%) with H = 70 km reaching 400 km, so the top of a curtain fades out slowly; G is its integral from the ground
+        // the profile in height, in two parts: the lower curtain f(u) = u / H^2 exp(-u / H), u = height - h0, its peak at h0 + H
+        // (H 24 km: nothing under 90 km, a bright border at 114, gone by 200), in bank 11's colour; and the tops, the same shape
+        // with H 70 km reaching 400 km, in bank 21's. G is a part's integral from the ground
         const double h0 = 90.0, H = 24.0, H2 = 70.0;
-        auto G = [&](double h) {
-            double u = h - h0;
-            if (u <= 0) return 0.0;
-            return 1.0 - 0.85 * std::exp(-u / H) * (1 + u / H) - 0.15 * std::exp(-u / H2) * (1 + u / H2);
-        };
+        auto G = [](double u, double Hk) { return u <= 0 ? 0.0 : 1.0 - std::exp(-u / Hk) * (1 + u / Hk); };
         struct Sheet { double off, w, gain, ph; };
-        const Sheet sheets[3] = {{0, 8, 1.0, 0.0}, {150, 6, 0.5, 2.1}, {-110, 5, 0.6, 4.2}};   // km from the centre, half-thickness, gain, phase
+        // km from the centre, half-thickness, gain, phase: a storm brings the outer sheets up
+        const Sheet sheets[3] = {{0, 5, 1.0, 0.0}, {150, 4, 0.3 + 0.4 * storm, 2.1}, {-110, 3.5, 0.25 + 0.5 * storm, 4.2}};
         const double camKmX = camPos.x / 1000.0, camKmZ = camPos.z / 1000.0;
         const double hPeak = h0 + H;
+        // the tops: faint on a quiet night, their colour taking over the heights in a storm, more on some worlds than others
+        const double topGain = (0.25 + 0.75 * storm) * (0.6 + 0.8 * unitFromHash(hashCombine(site.gen.seed, 0xA0D)));
         parallelFor(GY, 4, [&](int gy0, int gy1) {
         for (int gy = gy0; gy < gy1; gy++)
             for (int gx = 0; gx < GX; gx++) {
@@ -2066,22 +2090,25 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 double climb = el + 2 * a * sPeak;
                 double dz = d.z * pole;   // the ray's rate of going poleward
                 if (std::fabs(dz) < 1e-4) dz = dz < 0 ? -1e-4 : 1e-4;
-                double sum = 0;
-                // the light along the ray through a slab |P - Pf| < w: the profile's integral between the heights where the ray
-                // enters and leaves it, over the climb
-                auto slab = [&](double Pf, double w) {
+                // the light along the ray through a slab |P - Pf| < w, both parts: the profiles' integrals between the heights
+                // where the ray enters and leaves it, over the climb
+                auto slab = [&](double Pf, double w, double wgt, double& low, double& top) {
                     double sA = (Pf - w) / dz, sB = (Pf + w) / dz;
                     if (sA > sB) std::swap(sA, sB);
-                    if (sB <= 0) return 0.0;   // the slab lies behind
-                    if (sA < 0) sA = 0;        // the ray starts inside it
-                    return (G(sB * el + sB * sB * a) - G(sA * el + sA * sA * a)) / climb;
+                    if (sB <= 0) return;      // the slab lies behind
+                    if (sA < 0) sA = 0;       // the ray starts inside it
+                    double uA = sA * el + sA * sA * a - h0, uB = sB * el + sB * sB * a - h0;
+                    low += wgt * (G(uB, H) - G(uA, H)) / climb;
+                    top += wgt * (G(uB, H2) - G(uA, H2)) / climb;
                 };
                 double E = sPeak * d.x + camKmX;   // km east along the sheets where the ray reaches the border's height
+                double sumLow = 0, sumTop = 0;
                 for (const Sheet& sh : sheets) {
                     double Pc = P0 + sh.off - camKmZ * pole;
                     double Pf = Pc + 14 * std::sin(E / 45.0 + t * 0.07 + sh.ph) + 6 * std::sin(E / 16.0 - t * 0.11 + 2 * sh.ph);   // the folds
-                    double light = 0.45 * slab(Pf, sh.w) + 0.35 * slab(Pf, 1.8 * sh.w) + 0.2 * slab(Pf, 3.0 * sh.w);   // a dense core in thinner envelopes: soft edges
-                    if (light < 1e-4) continue;
+                    double low = 0, top = 0;   // a dense core in thinner envelopes: soft edges
+                    slab(Pf, sh.w, 0.5, low, top); slab(Pf, 1.7 * sh.w, 0.3, low, top); slab(Pf, 2.6 * sh.w, 0.2, low, top);
+                    if (low + top < 1e-4) continue;
                     // the rays: two octaves of noise along the sheet, read where the ray crosses it (so from under a curtain they
                     // converge toward the zenith), strong on a sheet near by, a far arc a smooth band; a ray running along the
                     // sheet passes many of them and sees their average
@@ -2089,12 +2116,17 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     double rayAmp = 0.7 * clampd(1.3 - sPeak / 450.0, 0.2, 1.0) * clampd(1.2 - sh.w * std::fabs(d.x / dz) / 20.0, 0.25, 1.0);
                     double n = 0.5 + 0.67 * (gnoise2(Er / 12.0, t / 40.0 + sh.ph, site.gen.seed + 46) + 0.5 * gnoise2(Er / 4.5, t / 25.0 + sh.ph, site.gen.seed + 47));
                     double rays = 1 - rayAmp * (1 - clampd(n, 0, 1));
-                    double patch = 0.7 + 0.3 * std::sin(E / 170.0 + t / 50.0 + sh.ph);
+                    // the patches: a slow noise along the sheet thins it to a fifth here and there; a breathing over seventeen seconds
+                    double patch = 0.2 + 0.8 * std::pow(clampd(0.5 + 0.67 * gnoise2(E / 260.0, t / 120.0 + sh.ph, site.gen.seed + 48), 0, 1), 1.4);
                     double breath = 0.7 + 0.3 * std::sin(t / 17.0 + sh.ph);
-                    sum += sh.gain * light * rays * patch * breath;
+                    double m = sh.gain * rays * patch * breath;
+                    sumLow += m * low; sumTop += m * top * topGain;
                 }
-                sum *= (1 - env.rain) * (1 - env.dust);   // rain and a dust storm take it away, as the rain takes the stars (the night clouds hide neither: KI-336)
-                if (sum > 1e-4) auroraGrid[gy * GX + gx] = (float)(44.0 * (1 - std::exp(-4.0 * aurora * sum)));   // a soft knee: the sheets seen along their length saturate, a steep crossing stays faint
+                double sum = (sumLow + sumTop) * (1 - env.rain) * (1 - env.dust);   // rain and a dust storm take it away, as the rain takes the stars (the night clouds hide neither: KI-336)
+                if (sum > 1e-4) {
+                    auroraGrid[(gy * GX + gx) * 2] = (float)(44.0 * (1 - std::exp(-4.0 * aurora * sum)));   // a soft knee: the sheets seen along their length saturate, a steep crossing stays faint
+                    auroraGrid[(gy * GX + gx) * 2 + 1] = (float)(sumTop / (sumLow + sumTop));                  // the tops' share: the colour
+                }
             }
         });
     }
@@ -2245,23 +2277,26 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         drawStarField(fb, stars, obs, cam, proj, starScale * 0.85, 4, false, fb.idx.data(), 22.0, 0, Vec3(), site.atmosphere ? 1.0 : 0.0, t);
     }
     // B-403: the aurora over the sky pixels, after the bodies and the stars: the grid's value interpolated per pixel, written
-    // in bank 11 where it beats the pixel's own shade on the sky bank. The stars (bank 4) show through it; a sky body's lit
-    // disc is brighter than it and stays, its night side (depth only, the sky's own pixel) shows it in front: the curtains
-    // hang 100-250 km up, far under any moon or parent
+    // in bank 11 (or 21 where the tops' colour has the greater share) where it beats the pixel's own shade on the sky bank. The
+    // stars (bank 4) show through it; a sky body's lit disc is brighter than it and stays, its night side (depth only, the
+    // sky's own pixel) shows it in front: the curtains hang 100-250 km up, far under any moon or parent
     if (auroraOn) {
         parallelFor(rowsTotal, 40, [&](int rb, int re) {
         for (int y = rb * step; y < re * step && y < FBH; y += step) {
             int gy = y / CELL;
             double fy = (y - gy * CELL) / (double)CELL;
-            const float* r0 = &auroraGrid[gy * GX];
-            const float* r1 = &auroraGrid[(gy + 1) * GX];
+            const float* r0 = &auroraGrid[gy * GX * 2];
+            const float* r1 = &auroraGrid[(gy + 1) * GX * 2];
             for (int x = 0; x < FBW; x += step) {
                 int gx = x / CELL;
-                float c00 = r0[gx], c10 = r0[gx + 1], c01 = r1[gx], c11 = r1[gx + 1];
+                float c00 = r0[gx * 2], c10 = r0[gx * 2 + 2], c01 = r1[gx * 2], c11 = r1[gx * 2 + 2];
                 if (c00 <= 0 && c10 <= 0 && c01 <= 0 && c11 <= 0) continue;
                 double fx = (x - gx * CELL) / (double)CELL;
-                double av = (c00 * (1 - fx) + c10 * fx) * (1 - fy) + (c01 * (1 - fx) + c11 * fx) * fy;
+                double w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+                double av = c00 * w00 + c10 * w10 + c01 * w01 + c11 * w11;
                 if (av < 0.5) continue;
+                double tops = (c00 * r0[gx * 2 + 1] * w00 + c10 * r0[gx * 2 + 3] * w10 + c01 * r1[gx * 2 + 1] * w01 + c11 * r1[gx * 2 + 3] * w11) / av;
+                int bank = tops > 0.5 ? 21 : 11;
                 for (int yy = y; yy < y + step && yy < FBH; yy++)
                     for (int xx = x; xx < x + step && xx < FBW; xx++) {
                         int o = yy * FBW + xx;
@@ -2269,7 +2304,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                         if (bankOf(p) != 1) continue;
                         double sky = shadeOf(p), ae = av * smoothstep(26.0, 6.0, sky);   // the twilight glow washes it out smoothly rather than cutting holes in it
                         if (sky >= ae) continue;
-                        p = pix(11, ae);
+                        p = pix(bank, ae);
                     }
             }
         }

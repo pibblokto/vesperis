@@ -497,7 +497,7 @@ void Game::renderSurfaceHUD() {
         if (e.hail > 0.05) envl2 += "  HAIL";
         if (e.dust > 0.05) envl2 += fmt("  DUST %.0f%%", e.dust * 100);   // B-206: "DUST STORM" ran into the stamina bar
         if (e.fogBank > 0.3) envl2 += "  FOG";
-        if (e.aurora > 0.15 && e.skyBrightness < 0.4) envl2 += "  AURORA";
+        if (e.aurora > 0.15 && e.skyBrightness < 0.4) envl2 += e.auroraStorm > 0.7 ? "  AURORA STORM" : "  AURORA";   // R-402
         drawTextShadow(canvas, 8, UH - 24, envl2.c_str(), HUD_GREEN, HUD_SHADOW);
         drawTextShadow(canvas, UW - 8 - textWidth(cap.c_str()), UH - 32, cap.c_str(), e.nearCapsule ? HUD_AMBER : HUD_CYAN, HUD_SHADOW);
         drawTextShadow(canvas, 8, 16, fmt("SECTOR %s", sectorName(e.latDeg, e.lonDeg).c_str()).c_str(), HUD_DIM, HUD_SHADOW);   // O2 (R-301)

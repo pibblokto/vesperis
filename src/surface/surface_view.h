@@ -100,6 +100,7 @@ struct SurfaceEnvironment {
     double fogBank = 0;         // 0..1 fog patch
     double hail = 0;            // 0..1
     double aurora = 0;          // 0..1 strength of the aurora tonight
+    double auroraStorm = 0;     // R-402: the star's storm tonight, 0..1
     double ringShadow = 0;      // O0-01: the world's ring between the site and the sun (0..0.85)
     double cometActivity = 0;   // O4: on a comet, how hard the nucleus vents (0 far from the star .. 1 at periapsis)
 };
@@ -238,7 +239,7 @@ public:
     double hoofLevel = 0;                          // hoof and paw steps of moving animals within 20 m, 0..1
     double lastLifeMs[2] = {0, 0};                 // update, draw (bench)
     double lastAuroraP0 = 0;   // B-403: km poleward of the site to the auroral oval's centre at the last frame (diagnostics)
-    static double auroraOvalLat(uint64_t seed) { return 63.0 + 6.0 * unitFromHash(hashCombine(seed, 0xA17)); }   // B-403: the auroral oval's latitude on a world
+    static double auroraOvalLat(const Body& b) { return 59.0 + 8.0 * magneticField(b) + 6.0 * (unitFromHash(hashCombine(b.seed, 0xA17)) - 0.5); }   // B-403/R-402: the auroral oval's latitude on a world: nearer the pole on a strong field
     bool testGotoHerd(double dist);                // stand south of herd 0, facing it
     std::string testHerdStates() const;            // "GRAZING 3 FLEEING 2 (calls 1)"
     bool projectPoint(double x, double y, double z, double& sx, double& sy) const;   // world -> framebuffer pixels
@@ -275,7 +276,7 @@ private:
     void buildLooks();
     std::vector<Vec3> dirLUT;
     std::vector<float> cloudGrid;
-    std::vector<float> auroraGrid;   // B-403: the aurora's shade per cell of the cloud grid, drawn over the sky after the stars
+    std::vector<float> auroraGrid;   // B-403: per cell of the cloud grid, the aurora's shade and its tops' share (the colour), drawn over the sky after the stars
     double lastWindUpdate = -1;
     double windDriftX = 0, windDriftZ = 0, lastEnvT = -1;   // B-206: the clouds' drift integrates the wind over time (metres)
     double lightningFlash = 0;
