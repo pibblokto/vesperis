@@ -237,6 +237,8 @@ public:
     int callsFired = 0;
     double hoofLevel = 0;                          // hoof and paw steps of moving animals within 20 m, 0..1
     double lastLifeMs[2] = {0, 0};                 // update, draw (bench)
+    double lastAuroraP0 = 0;   // B-403: km poleward of the site to the auroral oval's centre at the last frame (diagnostics)
+    static double auroraOvalLat(uint64_t seed) { return 63.0 + 6.0 * unitFromHash(hashCombine(seed, 0xA17)); }   // B-403: the auroral oval's latitude on a world
     bool testGotoHerd(double dist);                // stand south of herd 0, facing it
     std::string testHerdStates() const;            // "GRAZING 3 FLEEING 2 (calls 1)"
     bool projectPoint(double x, double y, double z, double& sx, double& sy) const;   // world -> framebuffer pixels
@@ -273,6 +275,7 @@ private:
     void buildLooks();
     std::vector<Vec3> dirLUT;
     std::vector<float> cloudGrid;
+    std::vector<float> auroraGrid;   // B-403: the aurora's shade per cell of the cloud grid, drawn over the sky after the stars
     double lastWindUpdate = -1;
     double windDriftX = 0, windDriftZ = 0, lastEnvT = -1;   // B-206: the clouds' drift integrates the wind over time (metres)
     double lightningFlash = 0;

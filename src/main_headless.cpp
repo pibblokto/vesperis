@@ -1216,18 +1216,20 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
             Star s;
             if (!starInSector(x, 0, z, s)) continue;
             sys.generate(s);
+            if (wantMat <= -40 && wantMat >= -42 && sys.star.cls != STAR_PULSAR && sys.star.cls != STAR_BLUE_GIANT) continue;   // B-403: an active star
             for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
                 const Body& b = sys.bodies[bi];
                 if (type >= 0 && b.type != type) continue;
                 if (type < 0 && (!PLANET_TYPES[b.type].landable || b.type == PT_COMET)) continue;   // R-307: a trait scene on any world
                 double lon = 0.7 + bi * 0.3, latUse = latDeg * DEG;
+                if (wantMat == -41) latUse = SurfaceView::auroraOvalLat(b.seed) * DEG;   // B-403: right under the auroral oval
                 BodyGen g = BodyGen::make(b);
                 if (wantMat == -36 && !g.hasTrait(TR_GEYSERS)) continue;
                 // O6-03: the scans below sample a whole planet at 16 m: without the drainage (a tile per sample); the river and lake
                 // finders (-21, -22) scan the flood's own cells instead (`drainageStats`) and turn it back on for the fine samples
                 struct DrainOff { bool was; DrainOff() : was(drainageEnabled()) { setDrainageEnabled(false); } ~DrainOff() { setDrainageEnabled(was); } } drainOff;
                 bool lookAtWater = false;
-                double faceYawOut = 1e9;   // R-307: a scene finder may choose the view's direction
+                double faceYawOut = 1e9, facePitchOut = 1e9;   // R-307: a scene finder may choose the view's direction
                 if (wantMat == MAT_SAND) {
                     // a beach: sand near the sea level, the view turned toward the water
                     bool found = false;
@@ -1271,6 +1273,49 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             }
                         }
                     if (!found) continue;
+                } else if (wantMat <= -40 && wantMat >= -42) {
+                    // B-403: the aurora scenes: any site of the type at the latitude asked (the star was chosen above); -42 wants a
+                    // clear-air world with another body of the system (a moon, the parent) at least 0.6 degrees across in the
+                    // poleward half of the sky, 17-37 degrees up (where this latitude's curtains hang) at the darkest hour, the
+                    // biggest of them, and faces it
+                    if (wantMat == -42) {
+                        if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
+                        SurfaceSite probe; probe.init(&sys, bi, latUse, lon, 1000.0);
+                        double tp = findTime(probe, alt, 1000.0);
+                        Vec3 obs = probe.worldPos(tp, 0, 0, 0);
+                        Mat3 L = probe.localFrame(tp);
+                        double bestR = 0; int bestJ = -1; Vec3 bestDl;
+                        for (int bj = 0; bj < (int)sys.bodies.size(); bj++) {
+                            if (bj == bi || sys.bodies[bj].type == PT_COMPANION) continue;
+                            Vec3 dW = sys.bodyPos(bj, tp) - obs;
+                            double dist = std::max(length(dW), 1.0), ang = sys.bodies[bj].radiusKm / dist;
+                            Vec3 dl = L * (dW / dist);
+                            double hl = std::sqrt(std::max(1e-9, 1 - dl.y * dl.y));
+                            if (ang < 0.005 || dl.y < 0.3 || dl.y > 0.6 || dl.z * (latUse >= 0 ? 1 : -1) < 0.5 * hl || ang < bestR) continue;
+                            bestR = ang; bestJ = bj; bestDl = dl;
+                        }
+                        if (bestJ < 0) continue;
+                        // the curtains must be in front of it: a trial frame, counting aurora pixels within 1.6 radii of its centre
+                        double yaw = std::atan2(bestDl.x, bestDl.z), pitchB = std::asin(bestDl.y) - 0.08;
+                        sv.init(&sys, bi, latUse, lon, tp);
+                        nb.update(sv.site.worldPos(tp, 0, 0, 0));
+                        sv.player.yaw = yaw; sv.player.pitch = pitchB;
+                        Input in; sv.update(0.016, in, tp, false);
+                        SpaceRenderer srTrial; Framebuffer fb; sv.render(fb, tp, nb.stars, srTrial, 1.0);
+                        double sx, sy; int over = 0, disc = 0;
+                        if (sv.projectPoint(sv.player.x + bestDl.x * 1e5, sv.player.y + 1.65 + bestDl.y * 1e5, sv.player.z + bestDl.z * 1e5, sx, sy)) {
+                            double rpx = 1.6 * bestR * sv.proj.f;
+                            for (int y = std::max(0, (int)(sy - rpx)); y < std::min(FBH, (int)(sy + rpx) + 1); y++)
+                                for (int x = std::max(0, (int)(sx - rpx)); x < std::min(FBW, (int)(sx + rpx) + 1); x++) {
+                                    if ((x - sx) * (x - sx) + (y - sy) * (y - sy) > rpx * rpx) continue;
+                                    disc++; if (bankOf(fb.idx[y * FBW + x]) == 11) over++;
+                                }
+                        }
+                        printf("  %s: %s in the sky, %.1f deg across, %.0f deg up, %.0f deg from the pole, aurora over %d%% of its surroundings\n", b.name.c_str(), PLANET_TYPES[sys.bodies[bestJ].type].name, 2 * bestR / DEG, std::asin(bestDl.y) / DEG,
+                               std::acos(clampd(bestDl.z * (latUse >= 0 ? 1 : -1) / std::sqrt(std::max(1e-9, 1 - bestDl.y * bestDl.y)), -1, 1)) / DEG, disc ? 100 * over / disc : 0);
+                        if (disc == 0 || over < disc / 5) continue;
+                        faceYawOut = yaw; facePitchOut = pitchB;
+                    }
                 } else if (wantMat <= -30) {
                     // R-307: the new types' scenes: -30 a stained crack (europan), -31 a lava fissure (tectonic), -32 dunes
                     // (desert), -33 / -35 the shore of a methane or an acid sea, -34 a rayed plain (bombarded)
@@ -1410,7 +1455,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                 sv.init(&sys, bi, latUse, lon, t);
                 SunInfo si = sv.site.sun(t);
                 sv.player.yaw = faceYawOut < 1e8 ? faceYawOut : si.azimuth + yawOff;
-                sv.player.pitch = pitch;
+                sv.player.pitch = facePitchOut < 1e8 ? facePitchOut : pitch;
                 if (wantMat == -2) {
                     // stand 60 m west of the nearest ruin of this world (M4-07); the grid is in latitude/longitude
                     bool found = false;
@@ -1537,6 +1582,11 @@ static const CmpScene CMP_SCENES[] = {
     {"icy_noon", PT_ICY, 12, 40 * DEG, 0.3, 0.05},
     {"comet_day", PT_COMET, 10, 40 * DEG, 0.4, 0.05},       // O4 (R-303): the nucleus by day, jets on the sunlit ground
     {"comet_night", PT_COMET, 10, -30 * DEG, PI, 0.35},     // and at night, looking away from the sun: the tail overhead
+    // B-403: the aurora: a thin-atmosphere world round a pulsar or a blue giant, 64 degrees of latitude, the darkest hour,
+    // facing the pole (the sun's azimuth at its lowest), and the same looking straight up
+    {"thinatmo_aurora", PT_THINATMO, 64, -30 * DEG, 0.0, 0.25, -40},
+    {"thinatmo_aurora_zenith", PT_THINATMO, 64, -30 * DEG, 0.0, 1.5, -41},
+    {"aurora_moon", -1, 64, -30 * DEG, 0.0, 0.25, -42},   // any clear-air world with a moon or the parent in the poleward sky at the curtains' height, facing it: its night side shows the curtains in front
 };
 
 
@@ -3702,6 +3752,9 @@ int main(int argc, char** argv) {
             std::string fn = std::string("shots/tests/scene_") + sc.name + ".png";
             saveFB(fb, fn.c_str());
             printf("%s -> %s (sun alt %.1f)\n", sc.name, fn.c_str(), sv.env.sun.altitude / DEG);
+            if (sc.wantMat <= -40 && sc.wantMat >= -42)   // B-403: the aurora's numbers
+                printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora, STAR_CLASSES[sys.star.cls].name, sv.env.latDeg,
+                       SurfaceView::auroraOvalLat(sys.bodies[sv.site.body].seed), sv.lastAuroraP0, sv.site.R / 1000.0, sv.env.skyBrightness, sv.env.cloudCover, sv.flocks.size());
             if (sc.wantMat == -3 || sc.wantMat == -5 || sc.wantMat == -6 || sc.wantMat == -7)   // N3: the herd's states and the cost of life
                 printf("  herd: %s; life update %.2f ms, draw %.2f ms\n", sv.testHerdStates().c_str(), sv.lastLifeMs[0], sv.lastLifeMs[1]);
             if (sc.wantMat == -4 || sc.wantMat <= -10) {   // N2: what the vegetation did
