@@ -10,6 +10,8 @@
 
 `SECTOR_KM = 1.5e10`. Sector index of a coordinate: `floor(km / SECTOR_KM)`. The HUD shows one sector as one "LY" (`distanceString` prints km, Mkm or LY). `StarNeighborhood` scans a cube of radius 10 sectors around the ship whenever the ship's sector changes.
 
+The galactic centre is not the origin (G-01, 2026-10-01): sector coordinates are heliocentric like the real galactic frame, and the centre sits at sector (12000, 0, -5500), 13,050 ly from the home sectors at yaw 115 degrees; `galaxyTerms` measures the radius and the arm phase from there, so every scan and pin of the harness and the new-game search kept their coordinates when the galaxy grew to 200 billion stars (`04-galaxy-and-systems.md`).
+
 **Surface sectors (O2, R-301)** are the 1 x 1 degree cells of a world's latitude/longitude grid, named `LON:LAT` with the longitude index 0..359 counted from 180 W and the latitude index 0..179 from 90 S (`sectorIndexOf`, `sectorName` in `game/ui.h`; on a 6000 km world a sector is 105 km square at the equator). The landing map, its zoom (`Z`), the surface HUD and the sector map all use these names; crossing into another sector on the ground is announced and logged. The old landing-map readout (360 x 120 cells) is gone.
 
 ## Body frames

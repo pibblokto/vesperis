@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <algorithm>
 
+static constexpr double BAND_SHADES = 24.0;   // G-03: the galactic band at full brightness, in shades of bank 0 (the ramp's dim blue-grey stop is at 20): the bulge 21, the plane 8-10
+
 int SpaceRenderer::dbgX = -1, SpaceRenderer::dbgY = -1;
 
 double SpaceRenderer::lightFactor(double luminosity, double distKm) { return StarSystem::starLightFactor(luminosity, distKm); }
@@ -723,7 +725,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
     // M1-09: the galactic backdrop, a faint band of unresolved stars (rebuilt when the ship moved)
     if (!c.vimana) {
         Vec3 obs = c.shipPos / SECTOR_KM;
-        if (!bandValid || length(obs - bandPos) > 3.0) { buildGalaxyBand(obs, bandMap, 64, 32); bandPos = obs; bandValid = true; }
+        if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; }   // G-03: rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
         Mat3 camT = c.cam.transposed();
         double invf = 1.0 / proj.f;
         const int step = 2;
@@ -734,8 +736,8 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
                 for (int x = 0; x < FBW; x += step) {
                     Vec3 d = normalize(Vec3((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0));
                     Vec3 dw = camT * d;
-                    double band = sampleGalaxyBand(bandMap, 64, 32, dw);
-                    Pix pv = pix(0, band * band * 9.0);
+                    double band = sampleGalaxyBand(bandMap, BAND_MAP_W, BAND_MAP_H, dw);
+                    Pix pv = pix(0, band * BAND_SHADES);   // G-03: the map is the brightness itself
                     if (nebN) {
                         int tone;
                         double g = nebulaGlow(nebP, nebN, dw, tone);

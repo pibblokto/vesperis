@@ -1,8 +1,17 @@
 # Plan: a galaxy of two hundred billion stars
 
-Status: proposed 2026-09-30, not scheduled. A generation bump (every star moves): do it
-together with the new star classes (`PLAN-star-classes.md`) in one bump, and before
-players have expeditions worth keeping.
+Status: proposed 2026-09-30. **G-01 done 2026-10-01 (generation 11)**: the constants live in
+`galaxy/starfield.h`; the implemented values differ from the table below (disc peak 0.68, four
+logarithmic arms of 12 degrees pitch instead of two Archimedean ones, and the centre at sector
+(12000, 0, -5500) with home kept at its sectors, so the harness scans and pins kept their
+coordinates). **G-02 done 2026-10-01**: 145 globulars in a halo distribution and open clusters along
+the arms replace the knots, the bulge region reaches 2,600 ly, the home star is pinned (Heilya, sector
+195 0 46) with the search as the fallback. **G-03 done 2026-10-01**: the band integrates the starlight behind
+the dust on a fixed exposure (a 128 x 64 map, the rift at the core, the night sky on the ground shows it in its own
+bank) and the star-forming regions are complexes 42 ly apart on average, none in home's sky. **G-04 done 2026-10-01**:
+the mountain site re-pinned, the scene finders get the light they ask for (seasons, binaries, locked worlds), the flow
+flies again (the lock in the cabin, a land site, a living world), `regress` re-blessed. The star classes
+(`PLAN-star-classes.md`) share the bump.
 
 ## Target
 

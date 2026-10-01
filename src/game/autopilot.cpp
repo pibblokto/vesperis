@@ -74,6 +74,7 @@ void Game::cycleTargetStar() {
     targetCycle = (targetCycle + 1) % (int)near.size();
     Vec3 fwd = normalize(near[targetCycle]->pos - ship.pos);
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
+    cabin.yaw = 0; cabin.pitch = 0;   // G-04: the view faces the star as X faces the local target; turned in the cabin, the lock never found it
     audio.beep = 4;
 }
 

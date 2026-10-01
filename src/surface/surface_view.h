@@ -358,7 +358,6 @@ private:
     double lastT = 0;
     // M10-14 galactic band: integrated star density over galactic directions (lon x lat map)
     std::vector<float> bandMap;
-    static constexpr int BAND_W = 64, BAND_H = 32;
     NebulaPatch nebP[16]; int nebN = 0;   // N5-01
     void buildBandMap();
     double bandAt(const Vec3& dirWorld) const;

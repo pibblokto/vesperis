@@ -1,5 +1,6 @@
 // Save slots, autosave and the save file format (M0-04).
 #include "game.h"
+#include "core/fs.h"
 #include "ui.h"
 #include "core/rng.h"
 #include <cmath>
@@ -42,7 +43,8 @@ bool Game::autosave() {
 }
 
 bool Game::loadSlot(int n) {
-    if (!load(slotPath(n))) { status(n == 0 ? "NO AUTOSAVE" : fmt("SLOT %d IS EMPTY", n), 3); audio.beep = 3; return false; }
+    if (!fileExists(slotPath(n))) { status(n == 0 ? "NO AUTOSAVE" : fmt("SLOT %d IS EMPTY", n), 3); audio.beep = 3; return false; }
+    if (!load(slotPath(n))) { audio.beep = 3; return false; }   // load says why (G-01: a star gone with the galaxy)
     if (n > 0) currentSlot = n;
     status(n == 0 ? "AUTOSAVE LOADED" : fmt("EXPEDITION LOADED FROM SLOT %d", n), 3);
     return true;
@@ -165,7 +167,7 @@ bool Game::load(const std::string& path) {
     if (!f) return false;
     std::string line;
     std::getline(f, line);
-    if (line.rfind("vesperis-save", 0) != 0) return false;   // versions 1 and 2 share the keys below
+    if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
     int onSurface = 0, siteBody = -1; double slat = 0, slon = 0, px = 0, pz = 0, pyaw = 0, ppitch = 0, capx = 0, capz = 0;
@@ -198,7 +200,10 @@ bool Game::load(const std::string& path) {
         else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; cab.onRoof = cr != 0; }
     }
     Star s;
-    if (!starInSector(sx, sy, sz, s, true)) return false;
+    if (!starInSector(sx, sy, sz, s, true)) {   // G-01: the galaxy of generation 11 keeps about half of the old stars near home
+        status(fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - ITS STAR IS GONE", gen, GEN_VERSION), 8);
+        return false;
+    }
     t = nt; timeWarp = warp;
     sys.generate(s);
     sys.valid = valid != 0;
@@ -236,6 +241,7 @@ bool Game::load(const std::string& path) {
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
     hasSave = true;
     autosaveTimer = 0;
-    if (gen < GEN_VERSION) { statusNext = fmt("WORLDS WERE REGENERATED SINCE THIS SAVE (GEN %d, NOW %d) - STARS ARE WHERE THEY WERE", gen, GEN_VERSION); statusNextSecs = 8; }
+    if (gen < 11) { statusNext = fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - THIS STAR IS STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }   // G-01
+    else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS WERE REGENERATED SINCE THIS SAVE (GEN %d, NOW %d) - STARS ARE WHERE THEY WERE", gen, GEN_VERSION); statusNextSecs = 8; }
     return true;
 }

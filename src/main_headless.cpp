@@ -4,6 +4,7 @@
 #include "core/raster.h"
 #include "core/font.h"
 #include "core/png.h"
+#include "core/parallel.h"
 #include "core/fs.h"
 #include "galaxy/starfield.h"
 #include "galaxy/system.h"
@@ -22,8 +23,9 @@
 
 static int g_testScale = 1;
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
-static constexpr double PIN_MOUNTAIN_LAT = -47.733, PIN_MOUNTAIN_LON = -43.747;   // `scale=N` on the command line renders every Game-based mode at that scale
+static constexpr double PIN_MOUNTAIN_LAT = -41.674, PIN_MOUNTAIN_LON = -127.807;   // G-04: re-pinned (the GEN 10 pin had become a flat ice sheet; of the six mountain candidates this one has a steady slope for `descent`)   // `scale=N` on the command line renders every Game-based mode at that scale
 
+static bool galaxySkyFrames(double coreLon);   // G-03, defined with the space renderer below
 static double nowSec() {
     using namespace std::chrono;
     return duration_cast<duration<double>>(steady_clock::now().time_since_epoch()).count();
@@ -77,6 +79,252 @@ static void testStars() {
                    std::fabs(b.rotPeriod) / 3600, b.axialTilt / DEG, b.tempK, b.moonCount, b.rings ? "rings" : "");
         shown++;
     }
+}
+
+// ---- the galaxy (G-01) ------------------------------------------------------------------------
+// `galaxy`: the density function of PLAN-galaxy-scale.md in numbers. The midplane profile along the radius (the arm
+// crest and the gap at each radius, the scale height, the region at the crest), the star count by a numerical
+// integration over the disc with the regions' shares, the home sectors (density, region, the stars of the new-game
+// search and the star the game picks, the neighbourhood within ten light years) and two column-density maps:
+// `shots/tests/galaxy_faceon.png` (110,000 ly across, home ringed in green) and `galaxy_edgeon.png` (the same width,
+// 5,500 ly tall: the vertical axis stretched ten times).
+static void runGalaxy() {
+    printf("galaxy: centre at sector %+.0f 0 %+.0f; disc scale %.0f ly, peak %.2f; thickness %.0f + %.0f e^(-r/%.0f); bulge %.0f ly, peak %.2f; %d arms; cap %.2f\n",
+           GALAXY_CENTRE_SX, GALAXY_CENTRE_SZ, GALAXY_DISC_SCALE, GALAXY_DISC_PEAK, GALAXY_THICK_FAR, GALAXY_THICK_NEAR, GALAXY_THICK_SCALE,
+           GALAXY_BULGE_R, GALAXY_BULGE_PEAK, GALAXY_ARMS, GALAXY_CAP);
+    const double hx = 185, hz = 45;   // the centre of the new-game search (Game::newGame: sectors 176..196 x 36..56)
+    GalaxyTerms gh = galaxyTerms(hx, 0, hz);
+    double bearing = std::atan2(GALAXY_CENTRE_SX - hx, GALAXY_CENTRE_SZ - hz) / DEG;
+    if (bearing < 0) bearing += 360;
+    printf("home (sector %.0f 0 %.0f): %.0f ly from the centre, the core at bearing %.0f (yaw, 0 = +z); density %.3f = disc %.3f x (0.55 + 0.6 x arm %.2f) + bulge %.5f; scale height %.0f ly; %s\n",
+           hx, hz, gh.r, bearing, galaxyDensity(hx, 0, hz), gh.disk, gh.arm, gh.bulge, gh.h, REGION_NAMES[galaxyRegion((int64_t)hx, 0, (int64_t)hz)]);
+    // the profile along the radius: the densest and the thinnest angle at each radius, without the cluster knots
+    auto smooth = [](double x, double y, double z) { GalaxyTerms g = galaxyTerms(x, y, z); return std::min(GALAXY_CAP, g.disk * (0.55 + 0.6 * g.arm) + g.bulge); };
+    printf("  radius ly  height ly    crest      gap    bulge  region at the crest\n");
+    const double radii[] = {0, 1000, 2500, 4000, 5000, 7500, 10000, 12500, 13050, 15000, 20000, 25000, 30000, 40000, 50000};
+    for (double r : radii) {
+        double mx = 0, mn = 9, mxAng = 0;
+        for (int ia = 0; ia < 720; ia++) {
+            double ang = ia / 720.0 * TAU;
+            double d = smooth(GALAXY_CENTRE_SX + r * std::cos(ang), 0, GALAXY_CENTRE_SZ + r * std::sin(ang));
+            if (d > mx) { mx = d; mxAng = ang; }
+            if (d < mn) mn = d;
+        }
+        GalaxyTerms g = galaxyTerms(GALAXY_CENTRE_SX + r, 0, GALAXY_CENTRE_SZ);
+        int64_t cx = (int64_t)std::floor(GALAXY_CENTRE_SX + r * std::cos(mxAng)), cz = (int64_t)std::floor(GALAXY_CENTRE_SZ + r * std::sin(mxAng));
+        printf("  %9.0f  %9.0f  %7.4f  %7.4f  %7.4f  %s\n", r, g.h, mx, mn, g.bulge, REGION_NAMES[galaxyRegion(cx, 0, cz)]);
+    }
+    // the count: cylindrical shells of 100 ly, 64 angles, 25 ly steps in height out to six scale heights (three bulge radii at least)
+    const int NR = 600, NA = 64; const double dr = 100, dy = 25;
+    std::vector<double> shell((size_t)NR * (REGION_COUNT + 1), 0.0);
+    parallelFor(NR, 4, [&](int b, int e) {
+        for (int ir = b; ir < e; ir++) {
+            double r = (ir + 0.5) * dr;
+            double ymax = std::max(6.0 * galaxyTerms(GALAXY_CENTRE_SX + r, 0, GALAXY_CENTRE_SZ).h, 3.0 * GALAXY_BULGE_R);
+            double* acc = &shell[(size_t)ir * (REGION_COUNT + 1)];
+            for (double y = dy / 2; y < ymax; y += dy)
+                for (int ia = 0; ia < NA; ia++) {
+                    double ang = (ia + 0.5) / NA * TAU;
+                    double x = GALAXY_CENTRE_SX + r * std::cos(ang), z = GALAXY_CENTRE_SZ + r * std::sin(ang);
+                    double w = galaxyDensity(x, y, z) * dy * 2 * (TAU * r * dr / NA);   // both sides of the plane
+                    acc[0] += w;
+                    acc[1 + galaxyRegion((int64_t)std::floor(x), (int64_t)std::floor(y), (int64_t)std::floor(z))] += w;
+                }
+        }
+    });
+    double total = 0, byRegion[REGION_COUNT] = {0}, within[4] = {0};   // within 5,000 / 13,050 / 25,000 / 50,000 ly
+    for (int ir = 0; ir < NR; ir++) {
+        const double* acc = &shell[(size_t)ir * (REGION_COUNT + 1)];
+        total += acc[0];
+        for (int k = 0; k < REGION_COUNT; k++) byRegion[k] += acc[1 + k];
+        double r = (ir + 0.5) * dr;
+        if (r < 5000) within[0] += acc[0];
+        if (r < gh.r) within[1] += acc[0];
+        if (r < 25000) within[2] += acc[0];
+        if (r < 50000) within[3] += acc[0];
+    }
+    printf("stars: %.1f billion (%.0f%% within 5,000 ly, %.0f%% inside home's radius, %.0f%% within 25,000, %.1f%% beyond 50,000)\n", total / 1e9,
+           100 * within[0] / total, 100 * within[1] / total, 100 * within[2] / total, 100 * (1 - within[3] / total));
+    printf("  by region:"); for (int k = 0; k < REGION_COUNT; k++) printf("  %s %.1f%%", REGION_NAMES[k], 100 * byRegion[k] / total); printf("\n");
+    // G-02: the clusters: every globular of the galaxy (the cells within 60,000 ly of the centre), the open clusters within 1,500 ly of home
+    Vec3 homeS(hx + 0.5, 0.5, hz + 0.5);
+    struct Knot { double dist; Vec3 c; double R; };
+    std::vector<Knot> globs, opens;
+    int globBins[4] = {0};
+    for (int64_t cx = -30; cx < 30; cx++) for (int64_t cy = -30; cy < 30; cy++) for (int64_t cz = -30; cz < 30; cz++) {
+        Vec3 c; double R;
+        if (!globularInCell(cx, cy, cz, c, R)) continue;
+        double rc = length(c - Vec3(GALAXY_CENTRE_SX, 0, GALAXY_CENTRE_SZ));
+        globBins[rc < 5000 ? 0 : (rc < 10000 ? 1 : (rc < 20000 ? 2 : 3))]++;
+        globs.push_back({length(c - homeS), c, R});
+    }
+    std::sort(globs.begin(), globs.end(), [](const Knot& a, const Knot& b) { return a.dist < b.dist; });
+    printf("globular clusters: %zu (%d within 5,000 ly of the centre, %d to 10,000, %d to 20,000, %d beyond)", globs.size(), globBins[0], globBins[1], globBins[2], globBins[3]);
+    for (size_t k = 0; k < globs.size() && k < 3; k++) printf("%s %.0f ly from home at sector %.0f %.0f %.0f, %.0f ly across, ~%.0f stars", k ? ";" : "; the nearest:", globs[k].dist, globs[k].c.x, globs[k].c.y, globs[k].c.z, 2 * globs[k].R, 9.57 * std::pow(globs[k].R / 2, 3));
+    printf("\n");
+    {
+        int64_t ox = (int64_t)std::floor((hx - GALAXY_CENTRE_SX) / OPEN_CLUSTER_CELL), oy = 0, oz = (int64_t)std::floor((hz - GALAXY_CENTRE_SZ) / OPEN_CLUSTER_CELL);
+        for (int64_t cx = ox - 15; cx <= ox + 15; cx++) for (int64_t cy = oy - 8; cy <= oy + 8; cy++) for (int64_t cz = oz - 15; cz <= oz + 15; cz++) {
+            Vec3 c; double R;
+            if (!openClusterInCell(cx, cy, cz, c, R)) continue;
+            double d = length(c - homeS);
+            if (d < 1500) opens.push_back({d, c, R});
+        }
+        std::sort(opens.begin(), opens.end(), [](const Knot& a, const Knot& b) { return a.dist < b.dist; });
+        printf("open clusters within 1,500 ly of home: %zu", opens.size());
+        for (size_t k = 0; k < opens.size() && k < 3; k++) printf("%s %.0f ly away at sector %.0f %.0f %.0f, %.0f ly across, ~%.0f stars", k ? ";" : "; the nearest:", opens[k].dist, opens[k].c.x, opens[k].c.y, opens[k].c.z, 2 * opens[k].R, 9.57 * std::pow(opens[k].R / 2, 3));
+        printf("\n");
+    }
+    // the class mix per region: a cube of 15 sectors round a point of each region, the stars of that region's sectors only
+    auto mix = [&](const char* label, int want, double px, double py, double pz) {
+        int sectors = 0, stars = 0, cls[STAR_CLASS_COUNT] = {0};
+        int64_t x0 = (int64_t)std::floor(px), y0 = (int64_t)std::floor(py), z0 = (int64_t)std::floor(pz);
+        for (int64_t x = x0 - 7; x <= x0 + 7; x++) for (int64_t y = y0 - 7; y <= y0 + 7; y++) for (int64_t z = z0 - 7; z <= z0 + 7; z++) {
+            if (galaxyRegion(x, y, z) != want) continue;
+            sectors++;
+            Star st; if (!starInSector(x, y, z, st, false)) continue;
+            stars++; cls[st.cls]++;
+        }
+        printf("  %-19s at %6.0f %5.0f %6.0f: %4d of %4d sectors hold a star (%4.1f%%)", label, px, py, pz, stars, sectors, sectors ? 100.0 * stars / sectors : 0.0);
+        for (int i = 0; i < STAR_CLASS_COUNT; i++) printf("  %s %2.0f%%", STAR_CLASSES[i].code, stars ? 100.0 * cls[i] / stars : 0.0);
+        printf("\n");
+    };
+    printf("the class mix by region (a cube of 15 sectors round a point of each):\n");
+    mix("GALACTIC CORE", REGION_CORE, GALAXY_CENTRE_SX + 300, 0, GALAXY_CENTRE_SZ);
+    for (int ia = 0; ia < 72; ia++) {   // the bulge where its term beats the disc's: an angle between the arms at 2,000 ly
+        double ang = ia / 72.0 * TAU, bx = GALAXY_CENTRE_SX + 2000 * std::cos(ang), bz = GALAXY_CENTRE_SZ + 2000 * std::sin(ang);
+        if (galaxyRegion((int64_t)std::floor(bx), 0, (int64_t)std::floor(bz)) == REGION_BULGE) { mix("THE BULGE", REGION_BULGE, bx, 0, bz); break; }
+    }
+    mix("SPIRAL ARM", REGION_ARM, hx, 0, hz);
+    {   // the gap beside home's arm: the thinnest angle at home's radius
+        double best = 9, bAng = 0;
+        for (int ia = 0; ia < 720; ia++) { double ang = ia / 720.0 * TAU; double a = galaxyTerms(GALAXY_CENTRE_SX + gh.r * std::cos(ang), 0, GALAXY_CENTRE_SZ + gh.r * std::sin(ang)).arm; if (a < best) { best = a; bAng = ang; } }
+        mix("THE DISK", REGION_DISK, GALAXY_CENTRE_SX + gh.r * std::cos(bAng), 0, GALAXY_CENTRE_SZ + gh.r * std::sin(bAng));
+    }
+    mix("THE HALO", REGION_HALO, hx, 1500, hz);
+    if (!globs.empty()) mix("GLOBULAR CLUSTER", REGION_CLUSTER, globs[0].c.x, globs[0].c.y, globs[0].c.z);
+    if (!opens.empty()) mix("OPEN CLUSTER", REGION_OPEN, opens[0].c.x, opens[0].c.y, opens[0].c.z);
+    {   // a star-forming cell near home
+        bool found = false;
+        for (int64_t x = (int64_t)hx - 200; x <= (int64_t)hx + 200 && !found; x += 7) for (int64_t z = (int64_t)hz - 200; z <= (int64_t)hz + 200 && !found; z += 7)
+            if (galaxyRegion(x, 0, z) == REGION_NEBULA) { mix("STAR-FORMING REGION", REGION_NEBULA, (double)x, 0, (double)z); found = true; }
+        if (!found) printf("  no star-forming cell within 200 ly of home\n");
+    }
+    // the home sectors: the new-game search and the star the game picks (Game::newGame's score)
+    int stars = 0, cls[STAR_CLASS_COUNT] = {0}, reg[REGION_COUNT] = {0};
+    Star best; int bestScore = -1; bool found = false;
+    for (int64_t x = 176; x < 196; x++)
+        for (int64_t z = 36; z < 56; z++) {
+            reg[galaxyRegion(x, 0, z)]++;
+            Star s; if (!starInSector(x, 0, z, s)) continue;
+            stars++; cls[s.cls]++;
+            if (bestScore >= 100 || (s.cls != STAR_YELLOW && s.cls != STAR_ORANGE)) continue;   // the game stops at the first column with a living world (score 100)
+            StarSystem ss; ss.generate(s);
+            int score = 0;
+            for (auto& b : ss.bodies) { if (b.type == PT_FELISIAN && b.parent < 0) score += 50; if (b.parent < 0) score += 3; if (b.rings) score += 5; }
+            if (score > bestScore) { bestScore = score; best = s; found = true; }
+        }
+    printf("the new-game search (400 sectors): %d stars;", stars);
+    for (int i = 0; i < STAR_CLASS_COUNT; i++) printf(" %s %d", STAR_CLASSES[i].code, cls[i]);
+    printf("; regions:"); for (int k = 0; k < REGION_COUNT; k++) if (reg[k]) printf(" %s %d", REGION_NAMES[k], reg[k]); printf("\n");
+    {   // G-02: the pinned home star, and the search's own pick (the fallback)
+        Star hs; bool ok = starInSector(HOME_SX, HOME_SY, HOME_SZ, hs);
+        if (ok) printf("  the home star is pinned at sector %lld %lld %lld: %s (%s, exists while the density stays above %.3f)\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ, hs.name.c_str(), STAR_CLASSES[hs.cls].name, unitFromHash(sectorSeed(HOME_SX, HOME_SY, HOME_SZ)));
+        else printf("  the pinned home sector %lld %lld %lld holds NO star: the game falls back to the search\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ);
+    }
+    if (found) printf("  the search's own pick would be %s at sector %lld 0 %lld (%s, score %d, exists while the density stays above %.3f)\n", best.name.c_str(), (long long)best.sx, (long long)best.sz, STAR_CLASSES[best.cls].name, bestScore, unitFromHash(sectorSeed(best.sx, best.sy, best.sz)));
+    else printf("  no yellow or orange star with a living world there: the search falls back to sector 180 0 40\n");
+    // the neighbourhood: the cube StarNeighborhood scans, the nearest-neighbour distances, the stars within ten light years
+    StarNeighborhood nb; Vec3 homeKm((hx + 0.5) * SECTOR_KM, 0.5 * SECTOR_KM, (hz + 0.5) * SECTOR_KM); nb.update(homeKm);
+    int near10 = 0; double nnSum = 0; int nnN = 0;
+    for (const Star& a : nb.stars) {
+        if (length(a.pos - homeKm) < 10 * SECTOR_KM) near10++;
+        if (std::llabs(a.sx - (int64_t)hx) > 5 || std::llabs(a.sy) > 5 || std::llabs(a.sz - (int64_t)hz) > 5) continue;   // the inner cube: every neighbour is in the scan
+        double bd = 1e300;
+        for (const Star& b : nb.stars) { if (&a == &b) continue; bd = std::min(bd, length2(a.pos - b.pos)); }
+        nnSum += std::sqrt(bd) / SECTOR_KM; nnN++;
+    }
+    NebulaPatch np[16]; int nn = nebulaPatches(Vec3(hx + 0.5, 0.5, hz + 0.5), np, 16);
+    printf("the neighbourhood: %zu stars in the 21-sector cube (%.1f%% of its sectors), %d within 10 ly of home, the nearest star %.2f ly away on average, %d nebula patches in home's sky\n",
+           nb.stars.size(), 100.0 * nb.stars.size() / (21.0 * 21 * 21), near10, nnN ? nnSum / nnN : 0.0, nn);
+    {   // G-03: the star-forming complexes within 300 ly of home, and the nearest
+        int nComplex = 0; double nearest = 1e9; Vec3 nearC;
+        for (int64_t cz = (int64_t)std::floor((hz - 300) / NEBULA_CELL); cz <= (int64_t)std::floor((hz + 300) / NEBULA_CELL); cz++)
+            for (int64_t cx = (int64_t)std::floor((hx - 300) / NEBULA_CELL); cx <= (int64_t)std::floor((hx + 300) / NEBULA_CELL); cx++) {
+                Vec3 c; if (!nebulaInCell(cx, cz, c)) continue;
+                double dd = length(c - Vec3(hx + 0.5, 0.5, hz + 0.5)); if (dd > 300) continue;
+                nComplex++; if (dd < nearest) { nearest = dd; nearC = c; }
+            }
+        printf("  star-forming complexes within 300 ly of home: %d (one per %.0f ly of the arm's plane on average); the nearest %.0f ly away at sector %lld %lld %lld, its patches in sight from %.0f ly\n",
+               nComplex, nComplex ? std::sqrt(PI * 300 * 300 / nComplex) : 0.0, nearest, (long long)std::floor(nearC.x), (long long)std::floor(nearC.y), (long long)std::floor(nearC.z), NEBULA_SEEN);
+    }
+    {   // G-03: the band from home: the columns of starlight and the dust in the named directions, the map's cost, its picture and the sky from the ship
+        Vec3 obs(hx + 0.5, 0.5, hz + 0.5);
+        double coreLon = std::atan2(GALAXY_CENTRE_SZ - obs.z, GALAXY_CENTRE_SX - obs.x);
+        struct D { const char* name; double lon, lat; } dirs[] = {{"the core, in the plane", coreLon, 0}, {"the core, 4 degrees above", coreLon, 4 * DEG}, {"the core, 12 above", coreLon, 12 * DEG}, {"along the arm", coreLon + PI / 2, 0}, {"the anticentre", coreLon + PI, 0}, {"the anticentre, 10 above", coreLon + PI, 10 * DEG}, {"30 degrees up", coreLon + PI, 30 * DEG}, {"the pole", 0, 0.5 * PI - 1e-6}};
+        printf("the band from home (the column of starlight in stars per square light year, the dust's optical depth, the brightness 0..1):\n");
+        for (const D& dd : dirs) {
+            Vec3 d(std::cos(dd.lat) * std::cos(dd.lon), std::sin(dd.lat), std::cos(dd.lat) * std::sin(dd.lon));
+            double tau, col = galaxyColumn(obs, d, tau);
+            printf("  %-28s column %7.0f  tau %5.2f  brightness %.2f\n", dd.name, col, tau, bandToneOf(col));
+        }
+        std::vector<float> band; double tb0 = nowSec();
+        buildGalaxyBand(obs, band, BAND_MAP_W, BAND_MAP_H);
+        printf("  the %d x %d map builds in %.1f ms (%d threads)\n", BAND_MAP_W, BAND_MAP_H, (nowSec() - tb0) * 1000, parallelThreads());
+        // the profile along the plane every 30 degrees from the core, and by latitude at the core and the anticentre
+        printf("  along the plane from the core:"); for (int k = 0; k < 12; k++) { double lon = coreLon + k * 30 * DEG; printf(" %d:%.2f", k * 30, sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, Vec3(std::cos(lon), 0, std::sin(lon)))); } printf("\n");
+        for (int a = 0; a < 2; a++) {
+            double lon = coreLon + a * PI; printf("  by latitude at the %s:", a ? "anticentre" : "core");
+            for (double lat : {0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 60.0, 90.0}) printf(" %.0f:%.2f", lat, sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, Vec3(std::cos(lat * DEG) * std::cos(lon), std::sin(lat * DEG), std::cos(lat * DEG) * std::sin(lon))));
+            printf("\n");
+        }
+        {   // the whole sky as the game samples it, 720 x 360, the core at the centre
+            const int BW = 720, BH = 360; std::vector<uint32_t> bimg((size_t)BW * BH);
+            for (int j = 0; j < BH; j++)
+                for (int i = 0; i < BW; i++) {
+                    double lon = coreLon + ((i + 0.5) / BW - 0.5) * TAU, lat = (0.5 - (j + 0.5) / BH) * PI;
+                    int g = clampi((int)(255 * sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, Vec3(std::cos(lat) * std::cos(lon), std::sin(lat), std::cos(lat) * std::sin(lon)))), 0, 255);
+                    bimg[(size_t)j * BW + i] = 0xFF000000u | (uint32_t)g << 16 | (uint32_t)g << 8 | (uint32_t)g;
+                }
+            writePNG("shots/tests/galaxy_band.png", bimg.data(), BW, BH);
+        }
+        if (galaxySkyFrames(coreLon)) printf("  shots/tests/galaxy_band.png (the sky as the game samples the map, the core at the centre), galaxy_sky_core/arm/anticentre.png (from above the home star)\n");
+    }
+    // the maps: column densities through the disc, log-toned
+    const int W = 400, H = 400; const double half = 55000;
+    std::vector<uint32_t> img((size_t)W * H);
+    auto grey = [](double v) { int g = clampi((int)(255 * v), 0, 255); return 0xFF000000u | (uint32_t)g << 16 | (uint32_t)g << 8 | (uint32_t)g; };
+    parallelFor(H, 4, [&](int b, int e) {
+        for (int j = b; j < e; j++)
+            for (int i = 0; i < W; i++) {
+                double x = GALAXY_CENTRE_SX + ((i + 0.5) / W * 2 - 1) * half, z = GALAXY_CENTRE_SZ + ((j + 0.5) / H * 2 - 1) * half;
+                double col = 0;
+                for (double y = -3000; y <= 3000; y += 100) col += galaxyDensity(x, y, z) * 100;
+                img[(size_t)j * W + i] = grey(std::log1p(col / 40) / std::log1p(1200 / 40.0));
+            }
+    });
+    {
+        int hi = (int)((hx - GALAXY_CENTRE_SX + half) / (2 * half) * W), hj = (int)((hz - GALAXY_CENTRE_SZ + half) / (2 * half) * H);
+        for (int a = 0; a < 48; a++) { int x = hi + (int)std::lround(5 * std::cos(a / 48.0 * TAU)), y = hj + (int)std::lround(5 * std::sin(a / 48.0 * TAU)); if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF00FF00u; }
+        for (const Knot& g : globs) {   // G-02: the globulars as orange dots
+            int gi = (int)((g.c.x - GALAXY_CENTRE_SX + half) / (2 * half) * W), gj = (int)((g.c.z - GALAXY_CENTRE_SZ + half) / (2 * half) * H);
+            for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { int x = gi + dx, y = gj + dy; if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF2090FFu; }
+        }
+        writePNG("shots/tests/galaxy_faceon.png", img.data(), W, H);
+    }
+    const int EH = 100; const double ehalf = 2750;
+    std::vector<uint32_t> edge((size_t)W * EH);
+    parallelFor(EH, 2, [&](int b, int e) {
+        for (int j = b; j < e; j++)
+            for (int i = 0; i < W; i++) {
+                double x = GALAXY_CENTRE_SX + ((i + 0.5) / W * 2 - 1) * half, y = ((j + 0.5) / EH * 2 - 1) * ehalf;
+                double col = 0;
+                for (double z = -half; z <= half; z += 250) col += galaxyDensity(x, y, GALAXY_CENTRE_SZ + z) * 250;
+                edge[(size_t)j * W + i] = grey(std::log1p(col / 50) / std::log1p(10000 / 50.0));
+            }
+    });
+    writePNG("shots/tests/galaxy_edgeon.png", edge.data(), W, EH);
+    printf("maps: shots/tests/galaxy_faceon.png (110,000 ly across, home ringed), galaxy_edgeon.png (5,500 ly tall, stretched x10)\n");
 }
 
 static void renderMaps() {
@@ -136,6 +384,26 @@ static void saveFB(Framebuffer& fb, const char* path, double gain = 1.0) {
     std::vector<uint32_t> rgbBuf(FBW * FBH);
     fb.toRGB(rgbBuf.data(), gain);
     writePNG(path, rgbBuf.data(), FBW, FBH);
+}
+
+// G-03: the sky from a ship above the home star, toward the core, along the arm and toward the anticentre (`galaxy`)
+static bool galaxySkyFrames(double coreLon) {
+    Star hs; if (!starInSector(HOME_SX, HOME_SY, HOME_SZ, hs)) return false;
+    StarSystem hsys; hsys.generate(hs);
+    double dd = std::max(hs.radiusKm * STAR_CLASSES[hs.cls].firstOrbitMult, STAR_CLASSES[hs.cls].minFirstOrbitKm);
+    Vec3 shipPos = hs.pos + Vec3(0, dd, 0);   // above the star: no sun in the frames
+    StarNeighborhood snb; snb.update(shipPos);
+    SpaceRenderer ssr;
+    struct V { const char* name; double lon; } views[] = {{"core", coreLon}, {"arm", coreLon + PI / 2}, {"anticentre", coreLon + PI}};
+    for (const V& v : views) {
+        Framebuffer fb; SpaceContext c;
+        c.sys = &hsys; c.stars = &snb.stars; c.t = 1234.0; c.shipPos = shipPos;
+        c.cam = cameraBasis(std::atan2(std::cos(v.lon), std::sin(v.lon)), 0);   // the heading of a longitude measured from +x toward +z
+        ssr.setupPalette(fb, &hsys, -1, -1, 1.0);
+        ssr.render(fb, c); fb.mush(2);
+        saveFB(fb, (std::string("shots/tests/galaxy_sky_") + v.name + ".png").c_str());
+    }
+    return true;
 }
 
 // maps are generated on worker threads (M9-15): the tests wait for the ones they are about to draw
@@ -411,16 +679,33 @@ static void renderSpace() {
 #include "surface/surface_view.h"
 #include "core/input.h"
 
-// find a time when the sun altitude at the site is close to the target (radians)
-static double findTime(SurfaceSite& site, double targetAlt, double t0) {
+// find a time when the sun's altitude at the site is close to the target (radians): over one rotation from t0, and when that
+// misses by over a degree (G-04: a season without that light at this latitude, a polar day) over eleven more epochs spread
+// through the year (the parent's for a moon); `errOut` is the miss, so a finder can tell a world locked to its star (the sun
+// never moves: another longitude) from a latitude that never sees that light
+// G-04: the altitude of the light the scene is lit by: round a binary, the two suns blended by their strength above the horizon
+// as `SurfaceView::computeEnvironment` blends them (the finders used to match the primary alone: a "night" under the companion)
+static double effectiveSunAlt(const SurfaceSite& site, double t) {
+    SunInfo s1 = site.sun(t), s2;
+    if (!site.sun2(t, s2)) return s1.altitude;
+    double w1 = s1.lightFactor * smoothstep(-0.12, 0.05, s1.dirLocal.y), w2 = s2.lightFactor * smoothstep(-0.12, 0.05, s2.dirLocal.y);
+    if (w1 + w2 < 1e-6 || w2 / (w1 + w2) <= 0.02) return s1.altitude;
+    return std::asin(clampd(normalize(s1.dirLocal * w1 + s2.dirLocal * w2).y, -1, 1));
+}
+static double findTime(SurfaceSite& site, double targetAlt, double t0, double* errOut = nullptr) {
+    const Body& b = site.sys->bodies[site.body];
+    double period = std::fabs(b.rotPeriod), year = b.parent >= 0 ? site.sys->bodies[b.parent].orbitPeriod : b.orbitPeriod;
     double best = t0, bestErr = 1e9;
-    double period = std::fabs(site.sys->bodies[site.body].rotPeriod);
-    for (int i = 0; i < 720; i++) {
-        double t = t0 + period * i / 720.0;
-        double alt = site.sun(t).altitude;
-        double err = std::fabs(alt - targetAlt);
-        if (err < bestErr) { bestErr = err; best = t; }
-    }
+    auto scanDay = [&](double from) {
+        for (int i = 0; i < 720; i++) {
+            double t = from + period * i / 720.0;
+            double err = std::fabs(effectiveSunAlt(site, t) - targetAlt);
+            if (err < bestErr) { bestErr = err; best = t; }
+        }
+    };
+    scanDay(t0);
+    for (int k = 1; k < 12 && bestErr > 1.0 * DEG; k++) scanDay(t0 + year * k / 12.0);
+    if (errOut) *errOut = bestErr;
     return best;
 }
 
@@ -499,6 +784,58 @@ static void renderSurface(int onlyType) {
 static void applyTestScale(Game& g) { g.settings.renderScale = g_testScale; g.applySettings(); }
 
 static bool firstBodyOfType(int type, StarSystem& sysOut, int& biOut);   // O6-03: the first body of a type in the scan region (defined with forTypeBodies below)
+// G-02: `home`: the candidates of the new-game search (yellow or orange stars with a living planet in sectors 176..196 x
+// 36..56), each parked at its first living planet with the landing map open as a new game does, timed until the default
+// site's drainage tiles are in the cache (the bench's descent budget, KI-338); prints what the pick needs: no nebula
+// patches in the sky, tiles under 2.5 s, a temperate world, the score, and the sector to pin in Game::newGame.
+static void runHome() {
+    struct Cand { Star s; int body; int score; double tempK, radiusKm; int rings, moons, nebula; double tiles; };
+    std::vector<Cand> cands;
+    for (int64_t x = 176; x < 196; x++)
+        for (int64_t z = 36; z < 56; z++) {
+            Star st; if (!starInSector(x, 0, z, st)) continue;
+            if (st.cls != STAR_YELLOW && st.cls != STAR_ORANGE) continue;
+            StarSystem ss; ss.generate(st);
+            Cand c; c.s = st; c.body = -1; c.score = 0; c.rings = 0; c.moons = 0;
+            for (auto& b : ss.bodies) {
+                if (b.type == PT_FELISIAN && b.parent < 0) { c.score += 50; if (c.body < 0) { c.body = b.index; c.tempK = b.tempK; c.radiusKm = b.radiusKm; c.rings = b.rings ? 1 : 0; c.moons = b.moonCount; } }
+                if (b.parent < 0) c.score += 3;
+                if (b.rings) c.score += 5;
+            }
+            if (c.body < 0) continue;
+            NebulaPatch np[16]; c.nebula = nebulaPatches(Vec3(x + 0.5, 0.5, z + 0.5), np, 16);
+            Game game;
+            game.savePrefix = "shots/tests/home_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/home_guide.txt";
+            game.newGame();
+            game.settings.renderScale = 1; game.applySettings();
+            game.testParkAt(st, c.body);
+            Input in;
+            in.pressed[KEY_C] = true; in.down[KEY_C] = true; game.frame(in, 1.0 / 60); in.newFrame(); in.down[KEY_C] = false;
+            double t0 = nowSec();
+            while (nowSec() - t0 < 8.0 && !game.testDrainageReady()) { game.frame(in, 1.0 / 60); in.newFrame(); }
+            c.tiles = nowSec() - t0;
+            cands.push_back(c);
+            printf("  %-14s %3lld 0 %3lld  %-12s score %3d  %s R %4.0f km  %3.0f K  rings %d moons %d  nebula patches %d  tiles %.1f s%s  u %.3f%s\n", st.name.c_str(), (long long)x, (long long)z, STAR_CLASSES[st.cls].name, c.score,
+                   ss.bodies[c.body].name.c_str(), c.radiusKm, c.tempK + 33, c.rings, c.moons, c.nebula, c.tiles, c.tiles >= 8.0 ? " (not ready)" : "", unitFromHash(sectorSeed(x, 0, z)),
+                   x == HOME_SX && z == HOME_SZ ? "  <- pinned" : "");
+        }
+    // the pick: a yellow star first, two living worlds, the first of them temperate (275-320 K at the surface), its tiles under
+    // a second, the fewest nebula patches (every candidate of the region has some: the arm's star-forming cells), then the score;
+    // the sector hash against the density says how safe the pin is
+    const Cand* best = nullptr;
+    auto rank = [](const Cand& c) { return (c.s.cls == STAR_YELLOW ? 1000 : 0) + (c.score >= 100 ? 500 : 0) - 40 * c.nebula + c.score; };
+    for (const Cand& c : cands) {
+        if (c.tiles >= 1.0 || c.tempK + 33 < 275 || c.tempK + 33 > 320) continue;
+        if (!best || rank(c) > rank(*best)) best = &c;
+    }
+    if (best) {
+        double u = unitFromHash(sectorSeed(best->s.sx, 0, best->s.sz)), dens = galaxyDensity((double)best->s.sx, 0, (double)best->s.sz);
+        printf("home: pin sector %lld 0 %lld (%s, score %d, its world %.0f K at the surface, tiles %.1f s, %d nebula patches, exists while the density stays above %.3f; it is %.3f here%s)%s\n", (long long)best->s.sx, (long long)best->s.sz, best->s.name.c_str(), best->score, best->tempK + 33, best->tiles, best->nebula, u, dens,
+               u > 0.8 * dens ? ": a thin margin, the fallback search takes over if the galaxy is retuned" : "", best->s.sx == HOME_SX && best->s.sz == HOME_SZ ? ", as pinned" : ", NOT the pinned one");
+    }
+    else printf("home: no candidate passes (tiles under a second, a world of 275-320 K)\n");
+}
+
 static void runGameFlow() {
     Game game;
     game.savePrefix = "shots/tests/test_save";
@@ -545,16 +882,18 @@ static void runGameFlow() {
     press(KEY_ENTER); run(0.2);
     press(KEY_V); run(3.0); shot("vimana");
     run(12.0); shot("arrived");
-    int lb = game.testLandableBody();
-    printf("landable body %d of %s\n", lb, game.testBodyTypes().c_str());
+    int lb = game.testLandableBody(); bool parkedByTest = false;
+    printf("landable body %d of %s (the generator calls this star %s)\n", lb, game.testBodyTypes().c_str(), game.testStarGenName().c_str());
     if (lb >= 0 && game.testBodyType(lb) == PT_COMET) {
         // O6-03: the nearest system holds nothing but comets since GEN 9; the walk, the buggy and the water below need a world
         // with gravity: park at the first felisian world of the scan instead (the approach frames come from the comet section)
         StarSystem fs; int fb = -1;
-        if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); printf("  only comets here: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
+        if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); parkedByTest = true; printf("  only comets here: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
     }
     if (lb >= 0) {
-        if (game.testBodyType(lb) != PT_FELISIAN || game.testStarGenName().find("Skeatoltdos") == std::string::npos) {
+        // G-01: approach unless the test parked the ship itself (the old check compared the star's generated name with
+        // the scan's first felisian system, Skeatoltdos, which the comet case parks at; a pinned name breaks with the galaxy)
+        if (!parkedByTest) {
             game.testAimAtBody(lb);
             press(KEY_TAB); run(0.1);
             for (int i = 0; i < lb; i++) press(KEY_DOWN);
@@ -562,10 +901,17 @@ static void runGameFlow() {
             run(9.0); shot("orbit"); printf("  %s\n", game.testDebugInfo().c_str());
             press(KEY_C); run(0.2);
         }
+        if (game.testBodyType(lb) != PT_FELISIAN) {
+            // G-04: the landing below (the walk, the herd, the water) wants a living world: the arrival's world gave the approach
+            // frames; park at the scan's first felisian world now (the pinned home's nearest star holds none)
+            StarSystem fs; int fb = -1;
+            if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); printf("  no living world at this star: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
+        }
         shot("landing_map");
         press(KEY_R); run(0.1); shot("landing_map2");
         press(KEY_Z); run(0.3); shot("landing_zoom"); press(KEY_Z); run(0.1);   // O2 (R-301): the sector zoom
         press(KEY_J); run(0.1); shot("landing_sky");   // M5-09
+        game.testLandSite(); run(0.1);   // G-04: a lit land site from the body's seed (J leaves the cursor under the moon: in the sea at Heilya II; R is seeded by the clock)
         press(KEY_ENTER); run(2.0); shot("descent");
         game.currentSlot = 2; in.down[KEY_LEFT_CONTROL] = true; press(KEY_S); in.down[KEY_LEFT_CONTROL] = false;   // save mid-descent to slot 2
         game.currentSlot = 1;
@@ -1232,6 +1578,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                 bool lookAtWater = false;
                 double faceYawOut = 1e9, facePitchOut = 1e9;   // R-307: a scene finder may choose the view's direction
                 double t0Use = 1000.0;   // R-402: the aurora scenes choose the night of the month with the strongest potential
+                bool placed = false;     // G-04: the finder chose the spot (or the longitude matters): the light must come from the time alone
                 if (wantMat == MAT_SAND) {
                     // a beach: sand near the sea level, the view turned toward the water
                     bool found = false;
@@ -1254,7 +1601,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             if (best >= 6) { lon = ln; latUse = la * DEG; found = true; }
                         }
                     if (!found) continue;
-                    lookAtWater = true;
+                    lookAtWater = true; placed = true;
                 } else if (wantMat == -36) {
                     // R-307: a geyser basin: the first sinter sample of the scan, then the nearest vent of `geyserVents` that stands on
                     // sinter; the site 150 m from it, facing it
@@ -1275,6 +1622,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             }
                         }
                     if (!found) continue;
+                    placed = true;
                 } else if (wantMat <= -40 && wantMat >= -42) {
                     // B-403: the aurora scenes: any site of the type at the latitude asked (the star was chosen above); -42 wants a
                     // clear-air world with another body of the system (a moon, the parent) at least 0.6 degrees across and 35-65
@@ -1325,7 +1673,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                         printf("  %s: %s in the sky, %.1f deg across, %.0f deg up, %.0f deg from the pole, aurora over %d%% of its surroundings\n", b.name.c_str(), PLANET_TYPES[sys.bodies[bestJ].type].name, 2 * bestR / DEG, std::asin(bestDl.y) / DEG,
                                std::acos(clampd(bestDl.z * (latUse >= 0 ? 1 : -1) / std::sqrt(std::max(1e-9, 1 - bestDl.y * bestDl.y)), -1, 1)) / DEG, disc ? 100 * over / disc : 0);
                         if (disc == 0 || over < disc / 12) continue;
-                        faceYawOut = yaw; facePitchOut = pitchB;
+                        faceYawOut = yaw; facePitchOut = pitchB; placed = true;
                     }
                 } else if (wantMat <= -30) {
                     // R-307: the new types' scenes: -30 a stained crack (europan), -31 a lava fissure (tectonic), -32 dunes
@@ -1365,7 +1713,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             }
                         }
                     if (!found) continue;
-                    lookAtWater = wantMat == -33 || wantMat == -35;
+                    lookAtWater = wantMat == -33 || wantMat == -35; placed = true;
                     if (faceYaw < 1e8) faceYawOut = faceYaw;
                 } else if (wantMat <= -10 && wantMat != -21 && wantMat != -22) {
                     // N2: a site of one biome (wantMat = -10 - biome), on land
@@ -1378,6 +1726,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             if (ss.biome == wantBio && ss.material != MAT_WATER && ss.water < -1e8) { lon = ln; latUse = la * DEG; found = true; }
                         }
                     if (!found) continue;
+                    placed = true;
                 } else if (wantMat == -21 || wantMat == -22) {
                     // B-320: inland water: the first river (-21) or lake (-22) of the scan (`SurfaceSample::waterKind`), then
                     // the nearest dry land round it, 20-300 m out; the site stands there facing the water
@@ -1422,7 +1771,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                     (void)noLand;
                     setDrainageEnabled(false);
                     if (!found) continue;
-                    lookAtWater = true;
+                    lookAtWater = true; placed = true;
                 } else if (wantMat == -3 || wantMat == -5 || wantMat == -6 || wantMat == -8 || wantMat == -9) {
                     // N3/N4: open grassland, so a herd or the buggy can be seen
                     bool found = false;
@@ -1433,6 +1782,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                             if (ss.material == MAT_GRASS && (ss.biome == BIO_GRASSLAND || ss.biome == BIO_SAVANNA) && ss.height > 2) { lon = ln; latUse = la * DEG; found = true; }
                         }
                     if (!found) continue;
+                    placed = true;
                 } else if (wantMat == -4) {
                     // N2: deep forest (dense vegetation), for the coverage and the bench
                     bool found = false;
@@ -1440,16 +1790,26 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                         for (int k = 0; k < 360 && !found; k++) {
                             double ln = k * TAU / 360;
                             SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
-                            if (ss.material == MAT_FOREST && ss.veg > 0.75 && ss.height > 5) { lon = ln; latUse = la * DEG; found = true; }
+                            if (ss.material != MAT_FOREST || ss.veg <= 0.75 || ss.height <= 5) continue;
+                            // G-04: the eight samples 100 m round it as well: the scan's first dense cell stood at a wood's edge (a fifth of the ground under canopy)
+                            int dense = 0; double Rm = b.radiusKm * 1000.0;
+                            for (int j = -1; j <= 1; j++)
+                                for (int i = -1; i <= 1; i++) {
+                                    if (!i && !j) continue;
+                                    SurfaceSample s2 = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG + j * 100.0 / Rm, ln + i * 100.0 / (Rm * std::cos(la * DEG))), 16);
+                                    if (s2.material == MAT_FOREST && s2.veg > 0.75) dense++;
+                                }
+                            if (dense >= 8) { lon = ln; latUse = la * DEG; found = true; }
                         }
                     if (!found) continue;
+                    placed = true;
                 } else if (b.type == PT_FELISIAN) {
                     bool found = false;
                     for (double la = latDeg; la < latDeg + 30 && !found; la += 2)
                         for (int k = 0; k < 256 && !found; k++) {
                             double ln = k * TAU / 256;
                             SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
-                            if (ss.material == MAT_FOREST && ss.height > 20) { lon = ln; latUse = la * DEG; found = true; }
+                            if (ss.material == MAT_FOREST && ss.height > 20) { lon = ln; latUse = la * DEG; found = true; placed = true; }
                         }
                 }
                 if (b.type == PT_MOLTEN) {
@@ -1457,16 +1817,32 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                     for (double la = latDeg; la < latDeg + 20 && !found; la += 0.02)
                         for (double ln = 0; ln < TAU && !found; ln += 0.0006) {
                             SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
-                            if (ss.material == MAT_LAVA && ss.glow > 0.9) { lon = ln + 400.0 / (b.radiusKm * 1000.0); latUse = la * DEG; found = true; }
+                            if (ss.material == MAT_LAVA && ss.glow > 0.9) { lon = ln + 400.0 / (b.radiusKm * 1000.0); latUse = la * DEG; found = true; placed = true; }
                         }
                 }
                 setDrainageEnabled(drainOff.was);   // O6-03: the site samples the real ground
                 sv.init(&sys, bi, latUse, lon, t0Use);
-                double t = findTime(sv.site, alt, t0Use);
+                double sunErr = 0, t = findTime(sv.site, alt, t0Use, &sunErr);
+                if (sunErr > 1.0 * DEG && !placed) {
+                    // G-04: a world locked to its star has one longitude with that light (the scan's first cratered world, the regress's
+                    // cratered_noon, kept its night side): the longitude whose sun stands nearest the target, then the time there
+                    double bestLon = lon;
+                    for (int k = 0; k < 72; k++) {
+                        double ln = k * TAU / 72; SurfaceSite probe; probe.init(&sys, bi, latUse, ln, t);
+                        double e2 = std::fabs(effectiveSunAlt(probe, t) - alt);
+                        if (e2 < sunErr) { sunErr = e2; bestLon = ln; }
+                    }
+                    if (bestLon != lon) { lon = bestLon; sv.init(&sys, bi, latUse, lon, t0Use); t = findTime(sv.site, alt, t0Use, &sunErr); }
+                }
+                if (sunErr > 3.0 * DEG) {   // no such light at this latitude in any season: the next body
+                    printf("  %s: the light never stands at %.0f degrees at latitude %.0f (closest %.0f): skipped\n", b.name.c_str(), alt / DEG, latUse / DEG, effectiveSunAlt(sv.site, t) / DEG);
+                    continue;
+                }
                 sv.init(&sys, bi, latUse, lon, t);
                 SunInfo si = sv.site.sun(t);
                 sv.player.yaw = faceYawOut < 1e8 ? faceYawOut : si.azimuth + yawOff;
                 sv.player.pitch = facePitchOut < 1e8 ? facePitchOut : pitch;
+                printf("  site: %s of %s (sector %lld 0 %lld), lat %.2f lon %.2f, the light at %.1f degrees (%.0f asked)\n", b.name.c_str(), s.name.c_str(), (long long)x, (long long)z, latUse / DEG, lon / DEG, effectiveSunAlt(sv.site, t) / DEG, alt / DEG);
                 if (wantMat == -2) {
                     // stand 60 m west of the nearest ruin of this world (M4-07); the grid is in latitude/longitude
                     bool found = false;
@@ -1534,6 +1910,10 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                 nb.update(sv.site.worldPos(t, 0, 0, 0));
                 Input in;
                 sv.update(0.016, in, t, false);
+                if (wantMat == -4) {   // G-04: the canopy the scene's check wants (three fifths of the forest ground within 200 m), or the next world: a temperate family covers a fifth
+                    double cov = sv.testCanopyCoverage(200);
+                    if (cov < 0.6) { printf("  %s: %.0f%% of the forest ground under canopy at its densest wood: the next world\n", b.name.c_str(), cov * 100); continue; }
+                }
                 tOut = t;
                 return true;
             }
@@ -1694,7 +2074,7 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
                 fb.mush(2);
                 uint64_t h = fnv(FNV0, fb.idx.data(), fb.idx.size() * sizeof(Pix));
                 lines.push_back({std::string("scene_") + name, h});
-                notes.push_back(std::string("frame of scene ") + name + " at 1x");
+                notes.push_back(std::string("frame of scene ") + name + " at 1x (" + sys.bodies[sv.site.body].name + ")");
             }
         for (int64_t x = 150; x < 300; x++) {
             bool done = false;
@@ -2147,7 +2527,7 @@ static int runBench(bool check) {
     press(KEY_ENTER);
     for (int s = 1; s <= 4; s++) { game.settings.renderScale = s; game.applySettings(); double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60); if (s == 2) space2x = ms; }
     game.settings.renderScale = 1; game.applySettings();
-    press(KEY_C); press(KEY_R);
+    press(KEY_C);   // G-02: no R: it picked a random lit site seeded by the clock, whose tiles took 0.4-3.2 s by luck (KI-338); the default site is the measure
     {   // O6-03: a player looks at the map for a moment; the drainage tiles of the site are computed meanwhile (up to 3 s here)
         int waited = 0; double tw0 = nowSec();
         for (; nowSec() - tw0 < 3.0 && !game.testDrainageReady(); waited++) { game.frame(in, 1.0 / 60); in.newFrame(); }
@@ -2781,7 +3161,11 @@ static int testUnit() {
     {
         Star cs; StarSystem csys; int ck = -1;
         for (int64_t x = 150; x < 320 && ck < 0; x++)
-            for (int64_t z = 20; z < 140 && ck < 0; z++) { if (!starInSector(x, 0, z, cs)) continue; csys.generate(cs); if (csys.companion >= 0) ck = csys.companion; }
+            for (int64_t z = 20; z < 140 && ck < 0; z++) {
+                if (!starInSector(x, 0, z, cs)) continue;
+                NebulaPatch np[16]; if (nebulaPatches(Vec3(x + 0.5, 0.5, z + 0.5), np, 16) > 0) continue;   // G-01: a sky without nebula patches, which would raise the mean shade (the test measures the companion's flood)
+                csys.generate(cs); if (csys.companion >= 0) ck = csys.companion;
+            }
         check("a system with a companion star found", ck >= 0);
         if (ck >= 0) {
             SpaceRenderer sr; StarNeighborhood nb; double t = 3000.0;
@@ -2812,8 +3196,9 @@ static int testUnit() {
             writePNG("shots/tests/unit_companion_swing.png", strip.data(), FBW * 4, FBH);
             check("the companion ahead is a disc of the expected size", frac[0] > 0.5 * expect && frac[0] < 1.6 * expect, fmt("%.1f%% of the frame, expected %.1f%%", frac[0] * 100, expect * 100));
             check("the companion 70 deg off axis leaves no disc", frac[1] == 0 && mean[1] < 8, fmt("disc %.2f%%, mean shade %.1f", frac[1] * 100, mean[1]));
-            check("the companion beside the camera (95 deg) does not flood", frac[2] == 0 && mean[2] < 6, fmt("disc %.2f%%, mean shade %.1f", frac[2] * 100, mean[2]));
-            check("the companion behind (150 deg) does not flood", frac[3] == 0 && mean[3] < 4, fmt("disc %.2f%%, mean shade %.1f", frac[3] * 100, mean[3]));
+            // G-01: measured against the 70-degree frame, so the galaxy band's own brightness (now the whole disc, by direction) does not count
+            check("the companion beside the camera (95 deg) does not flood", frac[2] == 0 && mean[2] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[2] * 100, mean[2], mean[1]));
+            check("the companion behind (150 deg) does not flood", frac[3] == 0 && mean[3] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[3] * 100, mean[3], mean[1]));
         }
     }
     // B-312: a big ringed globe whose centre lies outside the frame to the left or the right still shows its limb (its
@@ -3164,12 +3549,12 @@ static bool firstBodyOfType(int type, StarSystem& sysOut, int& biOut) {
 // the pinned felisian mountain site (grade 0.12 .. 0.45, no water), driven at full throttle: it must stay on its wheels
 // (under a tenth of the frames airborne, at most two landings) and get to the bottom fast. It used to launch every time
 // the ground dropped faster than 3 m/s, land with a thump and 15% of its speed gone, and launch again: a ladder.
-static int runDescent() {
+static int runDescent(double latDeg = PIN_MOUNTAIN_LAT, double lonDeg = PIN_MOUNTAIN_LON) {   // G-04: `descent [latDeg lonDeg]` tries another site of the world
     std::vector<StarSystem> systems; std::vector<int> bodyOf;
     forTypeBodies(PT_FELISIAN, 1, false, [&](const StarSystem& sys, int bi) { systems.push_back(sys); bodyOf.push_back(bi); });
     if (systems.empty()) { printf("descent: no felisian body\n"); return 1; }
     const StarSystem& sys = systems[0]; int bi = bodyOf[0];
-    double lat = PIN_MOUNTAIN_LAT * DEG, lon = PIN_MOUNTAIN_LON * DEG;   // the landforms review site "felisian_mountains"
+    double lat = latDeg * DEG, lon = lonDeg * DEG;   // the landforms review site "felisian_mountains"
     SurfaceView sv; sv.init(&sys, bi, lat, lon, 1000.0);
     double t = findTime(sv.site, 35 * DEG, 1000.0);
     sv.init(&sys, bi, lat, lon, t);
@@ -3184,11 +3569,25 @@ static int runDescent() {
                 double h0 = sv.site.groundHeight(sx, sz), h1 = sv.site.groundHeight(sx + hx * LEN, sz + hz * LEN);
                 double grade = (h0 - h1) / LEN;
                 if (grade < 0.12 || grade > 0.45 || grade <= bestGrade) continue;
-                bool ok = true; double hp = h0;
-                for (double d = 10; d <= LEN + 30 && ok; d += 10) {
+                bool ok = true; double hp = h0, hpp = h0;
+                std::vector<SurfaceView::Collider> cols;
+                // G-04: every 2 m (10 m steps let a ledge through: the buggy launched from it), from the start itself (a rock
+                // beside the start held it for ten seconds); no step up over 0.3 m, none down over 1.6 m (a cliff), a steady
+                // grade (the profile bends under 0.5 m per 2 m step: the GEN 10 slopes are broken ground, and a bump of a metre
+                // at 100 km/h is a jump, not the ladder B-307 tested), no water
+                for (double d = 0; d <= LEN + 30 && ok; d += 2) {
                     double x = sx + hx * d, z = sz + hz * d, hh = sv.site.groundHeight(x, z);
-                    if (hh > hp + 0.3 || hh < sv.site.waterAt(x, z) + 0.5) ok = false;
-                    hp = hh;
+                    if (hh > hp + 0.3 || hh < hp - 1.6 || hh < sv.site.waterAt(x, z) + 0.5) ok = false;
+                    if (d >= 4 && std::fabs(hpp - 2 * hp + hh) > 0.5) ok = false;
+                    hpp = hp; hp = hh;
+                    // G-04: no rock over 0.9 m, trunk, log or ruin within 3 m of the line, as `findOpenRun` asks (an alpine
+                    // site's boulders stopped the buggy at 37 m); small rocks are bumps the wheels ride over
+                    sv.collectColliders(x, z, cols);
+                    for (const SurfaceView::Collider& c : cols) {
+                        if (c.kind == 0 && c.r < 0.72) continue;
+                        double dx = c.x - x, dz = c.z - z, along = dx * hx + dz * hz, across = -dx * hz + dz * hx;
+                        if (std::fabs(along) < 9 && std::fabs(across) < 3 + c.r) { ok = false; break; }
+                    }
                 }
                 if (ok) { bx = sx; bz = sz; bh = h; bestGrade = grade; }
             }
@@ -3202,10 +3601,12 @@ static int runDescent() {
     Input in;
     int frames = 0, air = 0, landings = 0; bool wasAir = false; double along = 0, sumSpeed = 0, arriveT = -1, thumps = 0;
     double hx = std::sin(bh), hz = std::cos(bh);
+    std::string trace;   // G-04: where it got every two seconds (along, across, speed, heading error), to see a stall
     for (int i = 0; i < 60 * 25 && along < LEN; i++) {
         in.newFrame(); in.down[KEY_W] = true;
         double err = wrapAngle(bh - sv.buggy.heading);
         if (std::fabs(err) > 3 * DEG) in.down[err > 0 ? KEY_D : KEY_A] = true;
+        if (i % 120 == 0) trace += fmt(" %ds: %.0f/%.0f m %.1f m/s %+.0f deg%s;", i / 60, along, (sv.buggy.x - bx) * hz - (sv.buggy.z - bz) * hx, sv.buggy.speed, err / DEG, sv.buggy.airborne ? " air" : "");
         sv.update(1.0 / 60, in, t + i / 60.0, true);
         frames++;
         if (sv.buggy.airborne) air++;
@@ -3221,6 +3622,7 @@ static int runDescent() {
     printf("descent: grade %.2f over %.0f m from (%.0f, %.0f); %.1f s to the bottom, mean %.1f m/s, airborne %.0f%% of the frames, %d landings, worst thump %.2f\n",
            bestGrade, LEN, bx, bz, arriveT, meanSpeed, airFrac * 100, landings, thumps);
     printf("descent: %s\n", ok ? "ok (on its wheels, under 10%% airborne, at most two landings)" : "FAIL");
+    if (!ok) printf("  trace:%s\n", trace.c_str());
     return ok ? 0 : 1;
 }
 // hashed land sites of a body between 60 S and 60 N (water when a world has no land within 50 draws)
@@ -3596,7 +3998,7 @@ static const LandformSite LANDFORM_SITES[] = {
     {"thinatmo_hills", PT_THINATMO, false, 1, 44.433, 135.970},
     {"cratered_moon", PT_CRATERED, true, 1, 43.934, -41.488},
 };
-static void renderLandformSites() {
+static void renderLandformSites(bool search) {   // G-04: `landforms sites search` lists six candidates of each site's class on its world (as a 0/0 pin does)
     SpaceRenderer sr; StarNeighborhood nb;
     setFramebufferScale(1);
     for (const LandformSite& L : LANDFORM_SITES) {
@@ -3605,17 +4007,17 @@ static void renderLandformSites() {
         if (systems.empty()) { printf("%s: no body\n", L.name); continue; }
         const StarSystem& sys = systems[0]; int bi = bodyOf[0];
         double lat = L.latDeg * DEG, lon = L.lonDeg * DEG;
-        if (L.latDeg == 0 && L.lonDeg == 0) {
+        if (search || (L.latDeg == 0 && L.lonDeg == 0)) {
             std::vector<std::pair<double, double>> sites;
             landSitesOf(sys, bi, 0x51, 400, sites);
-            bool found = false;
+            bool found = false; int listed = 0;
             for (auto& s : sites) {
                 SurfaceSite st; st.init(&sys, bi, s.first, s.second, 1000.0);
                 SiteMetrics m = measureSite(st, false);
                 if (m.cls != L.wantCls || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;
-                lat = s.first; lon = s.second; found = true;
-                printf("%s: pin lat %.3f lon %.3f (%s)\n", L.name, lat / DEG, lon / DEG, CLASS_NAMES[m.cls]);
-                break;
+                if (!found) { lat = s.first; lon = s.second; found = true; }
+                printf("%s: %s lat %.3f lon %.3f (%s, %s)\n", L.name, found && listed == 0 ? "pin" : "or ", s.first / DEG, s.second / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material]);   // G-04: the first six candidates, for `descent lat lon`
+                if (++listed >= 6) break;
             }
             if (!found) { printf("%s: no site of class %s found\n", L.name, CLASS_NAMES[L.wantCls]); continue; }
         }
@@ -4109,7 +4511,7 @@ int main(int argc, char** argv) {
     if (mode == "consistency") { runConsistency(); return 0; }
     if (mode == "bestiary") return runBestiary();
     if (mode == "drive") return runDrive();
-    if (mode == "descent") return runDescent();   // B-307
+    if (mode == "descent") return runDescent(argc > 3 ? atof(argv[2]) : PIN_MOUNTAIN_LAT, argc > 3 ? atof(argv[3]) : PIN_MOUNTAIN_LON);   // B-307; G-04: `descent [latDeg lonDeg]`
     if (mode == "stability") { if (argc > 4) setFramebufferScale(atoi(argv[4])); return runStability(argc > 2 ? argv[2] : nullptr, argc > 3 ? atof(argv[3]) : 0.0); }   // B-309; B-313: `stability <scene> [metres per frame] [scale]`
     if (mode == "encounters") { runEncounters(argc > 2 ? atoi(argv[2]) : 300); return 0; }
     if (mode == "settings") { testSettings(); return 0; }
@@ -4117,6 +4519,8 @@ int main(int argc, char** argv) {
     if (mode == "fuzz") return runFuzz(argc > 2 ? atoi(argv[2]) : 10000);
     if (mode == "reanchor") { testReanchor(); return 0; }
     if (mode == "survey") { runSurvey(argc > 2 ? atoi(argv[2]) : 2000); return 0; }
+    if (mode == "galaxy") { runGalaxy(); return 0; }   // G-01
+    if (mode == "home") { runHome(); return 0; }   // G-02
     if (mode == "audio") { testAudio(); return 0; }
     if (mode == "seasons") { testSeasons(); return 0; }
     if (mode == "input") return testInput();
@@ -4124,7 +4528,7 @@ int main(int argc, char** argv) {
     if (mode == "terrain") { if (argc > 2) g_terrainType = atoi(argv[2]); return runTerrainStats(); }
     if (mode == "landforms") {   // O6-01: `landforms sites` (the fixed review sites) or `landforms <type> [flat|hills|mountains]`
         std::string a = argc > 2 ? argv[2] : "3";
-        if (a == "sites") { renderLandformSites(); return 0; }
+        if (a == "sites") { renderLandformSites(argc > 3 && std::string(argv[3]) == "search"); return 0; }
         int cls = -1;
         if (argc > 3) { std::string c = argv[3]; cls = c == "flat" ? 0 : (c == "hills" ? 1 : (c == "mountains" ? 2 : -1)); }
         renderLandforms(atoi(a.c_str()), cls);

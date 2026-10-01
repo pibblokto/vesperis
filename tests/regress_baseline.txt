@@ -1,23 +1,23 @@
 # vesperis determinism baseline; regenerate with ./vesperis_test regress bless
-system_0 eb698f1f50b8c7c6  # Brooshaing (3 bodies)
-map_0 6b71ea6101c638  # Brooshaing I ICY
-site_0 a968707dc6d4cd73  # Brooshaing I profile at 0.3 rad N 0.7 rad E
-map_1 d5f0374600e1f5ef  # Brooshaing II METAL
-site_1 b9d31ab4d0eb34c1  # Brooshaing II profile at 0.3 rad N 0.7 rad E
-map_2 ee995be0a36991fc  # Brooshaing I-a BOMBARDED
-site_2 4980f492ddd1bd7c  # Brooshaing I-a profile at 0.3 rad N 0.7 rad E
-system_1 5b93e99a8295a335  # Gezhaugreix (6 bodies)
-map_3 ad0c8121e761c2a8  # Gezhaugreix I QUARTZ
-map_4 69f52a51b4ba5bb0  # Gezhaugreix II THIN ATMOSPHERE
-map_5 ce1468e99c1029c5  # Gezhaugreix III EUROPAN
-map_6 dbc642e3492e1b3  # Gezhaugreix IV ICY
-map_7 44c59a4ac984c7ba  # Gezhaugreix I-a THIN ATMOSPHERE
-map_8 f68fb7b17fc2ac69  # Gezhaugreix II-a ICY
-system_2 660793081e2aa1f7  # Skeatoltdos (16 bodies)
-map_9 5e965071fac41134  # Skeatoltdos I CRATERED
-system_3 89700a9192798a3  # Eyshiobriar (8 bodies)
-system_4 f31150b64cd5939c  # Braiyeyvarn (8 bodies)
-scene_felisian_shore cf0f1e4fbd31e8c7  # frame of scene felisian_shore at 1x
-scene_cratered_noon 25439ac6b077275e  # frame of scene cratered_noon at 1x
-scene_molten_night d96502ce1682946b  # frame of scene molten_night at 1x
-space_S00 2d66198ae7f4b2e3  # space frame from the first orbit of Eyshiobriar
+system_0 becf11a48cbcde76  # Lathyari (3 bodies)
+map_0 6b71ea6101c638  # Lathyari I ICY
+site_0 a968707dc6d4cd73  # Lathyari I profile at 0.3 rad N 0.7 rad E
+map_1 d5f0374600e1f5ef  # Lathyari II METAL
+site_1 b9d31ab4d0eb34c1  # Lathyari II profile at 0.3 rad N 0.7 rad E
+map_2 ee995be0a36991fc  # Lathyari I-a BOMBARDED
+site_2 4980f492ddd1bd7c  # Lathyari I-a profile at 0.3 rad N 0.7 rad E
+system_1 709edcbd27d3f3cf  # Seapheeseeri (6 bodies)
+map_3 ad0c8121e761c2a8  # Seapheeseeri I QUARTZ
+map_4 69f52a51b4ba5bb0  # Seapheeseeri II THIN ATMOSPHERE
+map_5 ce1468e99c1029c5  # Seapheeseeri III EUROPAN
+map_6 dbc642e3492e1b3  # Seapheeseeri IV ICY
+map_7 44c59a4ac984c7ba  # Seapheeseeri I-a THIN ATMOSPHERE
+map_8 f68fb7b17fc2ac69  # Seapheeseeri II-a ICY
+system_2 27c0c80f1c611968  # Wyariothmai (16 bodies)
+map_9 5e965071fac41134  # Wyariothmai I CRATERED
+system_3 39b702c36874a1b1  # Iaphiath (7 bodies)
+system_4 bedf0fd130b760cf  # Feeyeithis (25 bodies)
+scene_felisian_shore cf0f1e4fbd31e8c7  # frame of scene felisian_shore at 1x (Wyariothmai II-a)
+scene_cratered_noon 93fd303b1d637443  # frame of scene cratered_noon at 1x (Wyariothmai I)
+scene_molten_night a3553d890c1c8398  # frame of scene molten_night at 1x (Henaliolyen III-a)
+space_S00 734e0fd01bf8a3cd  # space frame from the first orbit of Feeyeithis

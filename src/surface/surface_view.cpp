@@ -255,10 +255,10 @@ void SurfaceView::updateNearRing(double dt) {
 // The galaxy seen from inside, integrated once per landing (shared code in galaxy/starfield).
 void SurfaceView::buildBandMap() {
     Vec3 obs = site.worldPos(0, 0, 0, 0) / SECTOR_KM;
-    buildGalaxyBand(obs, bandMap, BAND_W, BAND_H);
+    buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H);
     nebN = nebulaPatches(obs, nebP, 16);   // N5-01
 }
-double SurfaceView::bandAt(const Vec3& d) const { return sampleGalaxyBand(bandMap, BAND_W, BAND_H, d); }
+double SurfaceView::bandAt(const Vec3& d) const { return sampleGalaxyBand(bandMap, BAND_MAP_W, BAND_MAP_H, d); }
 
 void SurfaceView::relocateCapsule(double x, double z) {
     capsuleX = x; capsuleZ = z;
@@ -1354,6 +1354,12 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     if (site.gen.type == PT_COMET) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {18, RGB(0.10f, 0.14f, 0.30f)}, {40, RGB(0.32f, 0.48f, 0.85f)}, {63, RGB(0.7f, 0.8f, 1.0f)}});   // O4 bank 15: the ion tail overhead
     // bank 4: stars (their own ramp, no longer borrowed from the ground)
     setRamp(fb.pal, 4, {{0, RGB(0, 0, 0)}, {40, RGB(0.55f, 0.57f, 0.66f)}, {63, RGB(0.88f, 0.9f, 0.97f)}});
+    {   // G-03 bank 22: the galactic band and the nebula patches, the unresolved starlight, laid over the sky at night by
+        // `drawBand`: from the night sky's own colour at the dark end (no hue edge where it fades into the sky) to a pale
+        // star-grey, a little of the horizon's tint through an atmosphere
+        RGB pale = lerp(RGB(0.55f, 0.57f, 0.66f), hor, site.atmosphere ? 0.25f : 0.0f);
+        setRamp(fb.pal, 22, {{0, site.atmosphere ? zen : RGB(0, 0, 0)}, {40, pale}, {63, lerp(pale, white, 0.4f)}});
+    }
     // sky bank: zenith .. horizon .. glow .. sun/star white
     if (site.atmosphere) {
         setRamp(fb.pal, 1, {{0, zen}, {40, hor}, {50, glow}, {56, lerp(glow, sunC, 0.6f)}, {63, sunC}});
@@ -2155,7 +2161,6 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     const bool comet = b.type == PT_COMET && env.cometActivity > 0.02;
     const double act = env.cometActivity;
     double knotT[5]; for (int k = 0; k < 5; k++) knotT[k] = SpaceRenderer::cometKnot(k, t);
-    double bandGain = venus ? 0 : 7.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) : 1.0);
     int rowsTotal = (FBH + step - 1) / step;
     parallelFor(rowsTotal, 40, [&](int rb, int re) {
     for (int y = rb * step; y < re * step && y < FBH; y += step) {
@@ -2164,12 +2169,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             Vec3 d = camT * dirLUT[o];
             double el = d.y;
             double v;
-            double band = bandGain > 0 ? bandAt(toWorld * d) : 0;
-            if (nebN && bandGain > 0) { int tone; band = std::max(band, 0.9 * nebulaGlow(nebP, nebN, toWorld * d, tone)); }   // N5-01: nebula patches at night
             double tailV = 0;
             if (!site.atmosphere) {
                 double cosSun = dot(d, sd);
-                v = std::pow(std::max(0.0, cosSun), 300.0) * 22 + band * band * bandGain;
+                v = std::pow(std::max(0.0, cosSun), 300.0) * 22;
                 if (twoSuns) v += std::pow(std::max(0.0, dot(d, sd2)), 300.0) * 22 * sun2Up;
                 if (comet) {
                     double cs = std::max(0.0, cosSun);
@@ -2207,7 +2210,6 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     double opp = -(d.x * sdh.x + d.z * sdh.z);
                     if (opp > 0.5) v *= 1 - 0.28 * wedge * (opp - 0.5) / 0.5 * (1 - el / 0.12);
                 }
-                v += band * band * bandGain * (el > 0 ? 1.0 : 0.0);
                 if (clouds) {
                     int gx = x / CELL, gy = y / CELL;
                     double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
@@ -2276,6 +2278,47 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         Vec3 obs = site.worldPos(t, player.x, player.z, camPos.y / 1000.0);
         drawStarField(fb, stars, obs, cam, proj, starScale * 0.85, 4, false, fb.idx.data(), 22.0, 0, Vec3(), site.atmosphere ? 1.0 : 0.0, t);
     }
+    // G-03: the galactic band (and the nebula patches, N5-01) over the sky pixels, after the bodies and the stars, as the aurora
+    // below: the map's brightness in bank 22, hidden by the clouds, written where its light beats the sky pixel's own (both
+    // read from the palette, since the two ramps differ); a star in front keeps its pixel, a sky body's disc is brighter.
+    // The band used to be added to the sky's value in the sky bank, whose night ramp is too dark to show it.
+    const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) : 1.0);   // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
+    if (bandGain > 0.05) {
+        double lumSky[64], lumBand[64];
+        for (int k = 0; k < 64; k++) {
+            const uint8_t* c1 = &fb.pal[(1 * 64 + k) * 3]; lumSky[k] = 0.2126 * c1[0] + 0.7152 * c1[1] + 0.0722 * c1[2];
+            const uint8_t* c2 = &fb.pal[(22 * 64 + k) * 3]; lumBand[k] = 0.2126 * c2[0] + 0.7152 * c2[1] + 0.0722 * c2[2];
+        }
+        parallelFor(rowsTotal, 40, [&](int rb, int re) {
+        for (int y = rb * step; y < re * step && y < FBH; y += step) {
+            for (int x = 0; x < FBW; x += step) {
+                int o = y * FBW + x;
+                if (bankOf(fb.idx[o]) != 1) continue;
+                Vec3 d = camT * dirLUT[o];
+                if (d.y <= 0) continue;
+                Vec3 dW = toWorld * d;
+                double band = bandAt(dW);
+                if (nebN) { int tone; band = std::max(band, 0.9 * nebulaGlow(nebP, nebN, dW, tone)); }
+                double bs = band * bandGain;
+                if (clouds) {   // the clouds hide it
+                    int gx = x / CELL, gy = y / CELL;
+                    double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
+                    double dens = (cloudGrid[(gy * GX + gx) * 2] * (1 - fx) + cloudGrid[(gy * GX + gx + 1) * 2] * fx) * (1 - fy) + (cloudGrid[((gy + 1) * GX + gx) * 2] * (1 - fx) + cloudGrid[((gy + 1) * GX + gx + 1) * 2] * fx) * fy;
+                    bs *= 1 - dens;
+                }
+                if (bs < 1.5) continue;   // the wings would only lift the sky by a level or two: leave the sky bank its pixels
+                int bi = std::min(63, (int)bs);
+                Pix pv = pix(22, bs);
+                for (int yy = y; yy < y + step && yy < FBH; yy++)
+                    for (int xx = x; xx < x + step && xx < FBW; xx++) {
+                        Pix& p = fb.idx[yy * FBW + xx];
+                        if (bankOf(p) != 1 || lumBand[bi] <= lumSky[std::min(63, intenOf(p) / INTEN_PER_SHADE)]) continue;
+                        p = pv;
+                    }
+            }
+        }
+        });
+    }
     // B-403: the aurora over the sky pixels, after the bodies and the stars: the grid's value interpolated per pixel, written
     // in bank 11 (or 21 where the tops' colour has the greater share) where it beats the pixel's own shade on the sky bank. The
     // stars (bank 4) show through it; a sky body's lit disc is brighter than it and stays, its night side (depth only, the
@@ -2301,8 +2344,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     for (int xx = x; xx < x + step && xx < FBW; xx++) {
                         int o = yy * FBW + xx;
                         Pix& p = fb.idx[o];
-                        if (bankOf(p) != 1) continue;
-                        double sky = shadeOf(p), ae = av * smoothstep(26.0, 6.0, sky);   // the twilight glow washes it out smoothly rather than cutting holes in it
+                        if (bankOf(p) != 1 && bankOf(p) != 22) continue;   // G-03: over the galactic band's pixels too (its ramp is as bright per shade)
+                        double sky = shadeOf(p), ae = bankOf(p) == 1 ? av * smoothstep(26.0, 6.0, sky) : av;   // the twilight glow washes it out smoothly rather than cutting holes in it
                         if (sky >= ae) continue;
                         p = pix(bank, ae);
                     }

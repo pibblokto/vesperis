@@ -3,7 +3,7 @@
 ## States (`GameState`)
 
 ```
-TITLE -> SPACE (Enter, or SURFACE when a loaded save was on the surface) ; N starts a new expedition
+TITLE -> SPACE (Enter, or SURFACE when a loaded save was on the surface) ; N starts a new expedition (G-02: parked at the first living world of the pinned home star, `HOME_SX/SY/SZ` in `galaxy/starfield.h`, Heilya at sector 195 0 46; the search of sectors 176..196 x 36..56 for a yellow or orange star with a living world is the fallback when a generation change takes it away)
 SPACE -> LANDING_MAP (C, parked at a landable body) -> DESCENT (Enter) -> SURFACE -> ASCENT (Q/E at the capsule) -> SPACE
 SPACE/SURFACE -> HELP (H, ?, F1), MENU (Esc), DATA (I, F2); SPACE -> SYSTEM_LIST (Tab); MENU -> SETTINGS, SLOTS (save/load pickers)
 ```
@@ -14,7 +14,7 @@ SPACE/SURFACE -> HELP (H, ?, F1), MENU (Esc), DATA (I, F2); SPACE -> SYSTEM_LIST
 
 Modes: `STANDBY` (free in a system or deep space), `VIMANA` (interstellar flight), `APPROACH` (fine approach), `PARKED` (following a body, optionally orbiting).
 
-* Remote target: `R` toggles crosshair mode; the star nearest to the crosshair within 14 px is named live; Enter/click locks it (`lockRemoteTarget`). The current star is refused. While aiming the star field is amplified x1.5, the six nearest stars carry diamond markers with name and distance (LY), and `N` cycles the crosshair through them (`cycleTargetStar`). `F` toggles the field amplificator at any time (M1-10); arrival from a Vimana flight flashes the palette (`arrivalFlash`).
+* Remote target: `R` toggles crosshair mode; the star nearest to the crosshair within 14 px is named live; Enter/click locks it (`lockRemoteTarget`). The current star is refused. `N` turns the ship to the next nearest star and (G-04) faces the cabin view forward as `X` does, so the lock finds it: in the cabin the view kept its own yaw and `Enter` missed the star the ship pointed at. While aiming the star field is amplified x1.5, the six nearest stars carry diamond markers with name and distance (LY), and `N` cycles the crosshair through them (`cycleTargetStar`). `F` toggles the field amplificator at any time (M1-10); arrival from a Vimana flight flashes the palette (`arrivalFlash`).
 * Vimana: `V` starts a flight (`flightFrom`, `flightTo`, real-time duration `7 + 2 sqrt(LY)`); the system is unloaded (`sys.valid = false`) during flight; arrival regenerates the target system and parks the ship in standby facing the star. `V` again aborts and reloads the nearest star's system.
 * Local target: `L` picks the body under the crosshair (within 18 px of its disc) or cycles; click also picks; `Tab` opens the list (`Enter` approaches, `L` targets). `X` centres the view on it.
 * Approach: `startApproach(body)` chooses a parking direction on the lit side, offset sideways and slightly above the orbital plane; `updateShipMotion` moves with smoothstep easing and turns the view.

@@ -129,9 +129,15 @@ double Game::testDriveOpen() {
 void Game::newGame() {
     t = 3.6e6;
     timeWarp = 1;
-    // find a pleasant home system: a yellow/orange star with a felisian planet
+    // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
+    // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
+    // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
     Star best; bool found = false;
     int bestScore = -1;
+    if (starInSector(HOME_SX, HOME_SY, HOME_SZ, best) && (best.cls == STAR_YELLOW || best.cls == STAR_ORANGE)) {
+        StarSystem hs; hs.generate(best);
+        for (auto& b : hs.bodies) if (b.type == PT_FELISIAN && b.parent < 0) { found = true; bestScore = 100; break; }
+    }
     for (int64_t x = 176; x < 196 && bestScore < 100; x++)
         for (int64_t z = 36; z < 56; z++) {
             Star s;
@@ -414,6 +420,26 @@ void Game::testAimAtBody(int body) {
     if (body < 0 || body >= (int)sys.bodies.size()) return;
     Vec3 fwd = normalize(sys.bodyPos(body, t) - ship.pos);
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
+}
+
+void Game::testLandSite() {
+    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return;
+    const PlanetMap& m = spaceR.mapFor(sys.bodies[landBody]);
+    Mat3 frame = sys.bodyFrame(landBody, t);
+    Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
+    for (int pass = 0; pass < 2; pass++) {   // grassland first (the herd), then any land
+        Rng r(sys.bodies[landBody].seed ^ 0x1A4DULL);
+        for (int k = 0; k < 400; k++) {
+            double la = r.range(-60 * DEG, 60 * DEG), lo = r.range(-PI, PI);
+            if (dot(StarSystem::bodyFromLatLon(la, lo), sunB) < 0.3) continue;
+            if (pass == 0 && m.materialAt(lo, la) != MAT_GRASS) continue;
+            bool land = true;   // the texel and its neighbours two degrees out: a coast or a lake shore is still a swim
+            for (int j = -1; j <= 1 && land; j++)
+                for (int i = -1; i <= 1 && land; i++)
+                    if (m.materialAt(lo + i * 2 * DEG, la + j * 2 * DEG) == MAT_WATER) land = false;
+            if (land) { landLat = la; landLon = lo; return; }
+        }
+    }
 }
 
 int Game::testLandableBody() const {

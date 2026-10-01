@@ -126,6 +126,7 @@ public:
     void setState(GameState s) { state = s; }
     void testAimAtNearestStar();
     void testAimAtBody(int body);
+    void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon)
     int testLandableBody() const;
     void testParkAt(const Star& s, int body);   // arrive at a star, park at a body, open the landing map
     void testParkAtBelt(const Star& s, int k);  // O3: arrive at a star and park beside a rock of belt k at once
