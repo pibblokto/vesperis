@@ -84,6 +84,7 @@ SurfaceLook lookFor(const BodyGen& g, const Star& star) {
     // bank 2 (secondary): water where there is a sea, lava on hot worlds, else the bright crystal/ejecta tint
     if (g.type == PT_FELISIAN || g.type == PT_OCEAN || g.liquidLevel > -1e8) L.secondary = m[MAT_WATER];
     else if (isLavaWorld(g.type)) L.secondary = m[MAT_LAVA];
+    else if (g.hasTrait(TR_GLASSED)) L.secondary = m[MAT_GLASS];   // S-03: the sheets of glass own bank 2 (the family's rep is the water the palette coloured as glass)
     else if (g.type == PT_QUARTZ || g.type == PT_CARBON) L.secondary = lerp(m[MAT_QUARTZ], white, 0.4f);
     else L.secondary = lerp(L.ground, white, 0.5f);
     // bank 3 (tertiary): the forest on living worlds, elsewhere boulders a shade lighter than the ground
@@ -678,7 +679,7 @@ void SurfaceView::computeEnvironment(double t) {
     const Body& b = site.sys->bodies[site.body];
     env.sun = site.sun(t);
     env.sunDisc = env.sun;
-    env.lightColor = site.sys->star.color;
+    env.lightColor = env.sun.color;   // the star's colour (S-01: whiter in a red dwarf's flare)
     env.hasSun2 = site.sun2(t, env.sun2);
     env.sun2Share = 0;
     double sinAlt = env.sun.dirLocal.y;
@@ -697,7 +698,7 @@ void SurfaceView::computeEnvironment(double t) {
                 env.sun.azimuth = wrap2pi(std::atan2(dir.x, dir.z));
                 env.sun.lightFactor = env.sunDisc.lightFactor * (1 - env.sun2Share) + (env.sunDisc.lightFactor + env.sun2.lightFactor) * env.sun2Share;
                 env.sun.eclipse = env.sunDisc.eclipse * (1 - env.sun2Share);
-                env.lightColor = lerp(site.sys->star.color, env.sun2.color, (float)env.sun2Share);
+                env.lightColor = lerp(env.sunDisc.color, env.sun2.color, (float)env.sun2Share);
             }
         }
         double day2 = site.atmosphere ? smoothstep(-0.12, 0.2, env.sun2.dirLocal.y) * clampd(env.sun2.lightFactor / std::max(env.sunDisc.lightFactor, 0.05), 0, 1) : 0.0;
@@ -740,6 +741,7 @@ void SurfaceView::computeEnvironment(double t) {
         env.fogBank = clampd((fogN - 0.45) / 0.25, 0, 1) * (1 - env.rain) * clampd(1 - std::fabs(env.temperatureC - 8) / 25.0, 0, 1);
     }
     env.aurora = 0; env.auroraStorm = 0;
+    env.flare = starFlare(site.sys->star, t);   // S-01: a red dwarf's flare opens the exposure (setupPalette) and is a storm of its own (auroralStorm)
     if (site.atmosphere && !hasOpaqueDeck(b.type) && std::fabs(env.latDeg) > 40) {
         // R-402: the night's potential (the star's class, the world's magnetic field, the star's storm), the latitude ramp
         // pushed equatorward by the storm, the darkness, and the night's own slow variation
@@ -1003,6 +1005,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
             int nrocks = (int)(rd * 2.0 * hash01(h));
             if (type == PT_FELISIAN && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
             if (tv.material == MAT_SAND || tv.material == MAT_WATER || lava) nrocks = 0;
+            if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
             for (int i = 0; i < nrocks; i++) {
                 uint64_t hr = mix64(h + 17 * (i + 1));
                 double rx = cx * cs + hash01(hr) * cs, rz = cz * cs + hash01(mix64(hr + 1)) * cs;
@@ -1280,7 +1283,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     hor = hor * (float)rainDim; zen = zen * (float)rainDim;
     RGB fog = site.atmosphere ? hor : lerp(L.ground, white, 0.55f);
     RGB glow = lerp(hor, starC, 0.5f);
-    RGB sunC = site.atmosphere ? lerp(starC, white, 0.6f) : lerp(site.sys->star.color, white, 0.35f);
+    RGB sunC = site.atmosphere ? lerp(starC, white, 0.6f) : lerp(env.sunDisc.color, white, 0.35f);
     if (env.hasSun2) {   // M5-01 bank 12: the companion's disc and glow in its own colour
         RGB kc = env.sun2.color;
         RGB kd = site.atmosphere ? lerp(lerp(kc, white, 0.5f), white, 0.6f) : lerp(kc, white, 0.35f);
@@ -1290,7 +1293,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         RGB g = site.sys->bodies[env.moonBody].color;
         setRamp(fb.pal, 13, {{0, RGB(0, 0, 0)}, {14, g * 0.4f}, {34, g}, {50, lerp(g, RGB(1, 0.55f, 0.25f), 0.6f)}, {63, RGB(1, 0.8f, 0.5f)}});
     }
-    float lf = (float)clampd(env.sun.lightFactor, 0.5, 1.15);
+    float lf = (float)clampd(env.sun.lightFactor, 0.5, 1.15 * (1 + 0.25 * env.flare));   // S-01: a flare opens the exposure a quarter past its clamp
     // M10-07: the dark end of a material ramp takes the sky's colour (hemisphere light), the lit end
     // is warmed at sunset by the low sun, and an overcast sky flattens the contrast
     RGB skyLight = lerp(zen, hor, 0.5f);
@@ -1358,6 +1361,10 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         // `drawBand`: from the night sky's own colour at the dark end (no hue edge where it fades into the sky) to a pale
         // star-grey, a little of the horizon's tint through an atmosphere
         RGB pale = lerp(RGB(0.55f, 0.57f, 0.66f), hor, site.atmosphere ? 0.25f : 0.0f);
+        if (site.sys->star.cls == STAR_PROTOSTAR) {   // S-04: the sky's glow takes the protostar's cloud's tone
+            int tone = starNebulaTone(site.sys->star);
+            pale = lerp(pale, tone == 0 ? RGB(0.45f, 0.55f, 0.85f) : (tone == 1 ? RGB(0.85f, 0.50f, 0.45f) : RGB(0.70f, 0.70f, 0.75f)), 0.6f);
+        }
         setRamp(fb.pal, 22, {{0, site.atmosphere ? zen : RGB(0, 0, 0)}, {40, pale}, {63, lerp(pale, white, 0.4f)}});
     }
     // sky bank: zenith .. horizon .. glow .. sun/star white
@@ -1511,11 +1518,11 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     }
     // M10-10 quantised speculars on ice, quartz and snow
     double spec = 0;
-    if ((tv.material == MAT_ICE || tv.material == MAT_QUARTZ || tv.material == MAT_SNOW || tv.material == MAT_METAL) && sunUp > 0.05) {
+    if ((tv.material == MAT_ICE || tv.material == MAT_QUARTZ || tv.material == MAT_SNOW || tv.material == MAT_METAL || tv.material == MAT_GLASS) && sunUp > 0.05) {
         Vec3 toCam = normalize(Vec3(camPos.x - x, camPos.y - h, camPos.z - z));
         Vec3 half = normalize(toCam + sd);
         double sp = std::pow(std::max(0.0, dot(nrm, half)), 48.0) * sunUp * lf;
-        spec = sp > 0.55 ? 12 : (sp > 0.25 ? 6 : 0);
+        spec = sp > 0.55 ? (tv.material == MAT_GLASS ? 18 : 12) : (sp > 0.25 ? (tv.material == MAT_GLASS ? 9 : 6) : 0);   // S-03: the glass's glint is brighter
     }
     double shade;
     if (tv.material == MAT_LAVA) {
@@ -2283,6 +2290,9 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // read from the palette, since the two ramps differ); a star in front keeps its pixel, a sky body's disc is brighter.
     // The band used to be added to the sky's value in the sky bank, whose night ramp is too dark to show it.
     const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) : 1.0);   // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
+    NebulaPatch nebAll[18]; int nebAllN = nebN;   // S-04: the field's patches and a protostar's own cloud round the star's direction now
+    for (int k = 0; k < nebN; k++) nebAll[k] = nebP[k];
+    nebAllN += starNebulaPatches(site.sys->star, normalize(site.sys->star.pos - site.sys->bodyPos(site.body, t)), nebAll + nebAllN);
     if (bandGain > 0.05) {
         double lumSky[64], lumBand[64];
         for (int k = 0; k < 64; k++) {
@@ -2298,7 +2308,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 if (d.y <= 0) continue;
                 Vec3 dW = toWorld * d;
                 double band = bandAt(dW);
-                if (nebN) { int tone; band = std::max(band, 0.9 * nebulaGlow(nebP, nebN, dW, tone)); }
+                if (nebAllN) { int tone; band = std::max(band, 0.9 * nebulaGlow(nebAll, nebAllN, dW, tone)); }
                 double bs = band * bandGain;
                 if (clouds) {   // the clouds hide it
                     int gx = x / CELL, gy = y / CELL;
@@ -2392,13 +2402,14 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             double haze = site.atmosphere ? (0.6 + 0.4 * env.cloudCover) : 0.0;
             if (sinAltD > -0.05 || !site.atmosphere) {
                 double sunI = inten * (site.atmosphere ? clampd(0.55 + 0.45 * smoothstep(-0.05, 0.1, sinAltD), 0, 1) : 1.0);
-                SpaceRenderer::drawSun(fb, site.sys->star, v, env.sunDisc.angularRadius, t, sunI, 1, site.atmosphere, haze, true, proj);   // B-308: by angle
+                Vec3 discUp = camLocal * (site.localFrame(t) * Vec3(0, 1, 0));   // S-04: the orbital plane's normal, for a protostar's disc
+                SpaceRenderer::drawSun(fb, site.sys->star, v, env.sunDisc.angularRadius, t, sunI, 1, site.atmosphere, haze, true, proj, &discUp);   // B-308: by angle
                 if (v.z <= 0.001) return;   // the eclipse glow and the flare need the projected centre
                 double sx = proj.cx + proj.f * v.x / v.z, sy = proj.cy - proj.f * v.y / v.z;
                 double rpx = proj.f * std::tan(env.sunDisc.angularRadius) / v.z;
                 // B-309: the veiling glare over the finished picture (drawVeil), from the sun's place and brightness
                 sunSx = sx; sunSy = sy; sunRpx = rpx;
-                sunVeil = sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7);
+                sunVeil = site.sys->star.cls == STAR_BLACK_HOLE ? 0.0 : sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7);   // S-06: no glare from a hole
                 if (env.sunDisc.eclipse > 0.3 && !venus) {
                     double r = std::max(rpx, 1.5 * FB_SCALE), e = env.sunDisc.eclipse;
                     fb.glowDisc(sx, sy, r * 4.0, r * 1.05, (int)(34 * e * e), 1, true);
@@ -2408,7 +2419,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 bool centreFree = ix >= 0 && iy >= 0 && ix < FBW && iy < FBH && fb.invz[iy * FBW + ix] <= 1e-12f;
                 // M1-03 lens flare, dimmed by haze and rain, only with the sun well up and unobstructed
                 double flareI = sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.5 * env.cloudCover) * (1 - env.rain) * smoothstep(0.0, 0.15, sinAltD) : 0.8);
-                if (!venus && centreFree && flareI > 0.05) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, 1, proj);
+                if (!venus && centreFree && flareI > 0.05 && site.sys->star.cls != STAR_BLACK_HOLE) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, 1, proj);   // S-06: nor a flare
             }
         }
     }
@@ -2492,6 +2503,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
             int nrocks = (int)(rd * 2.0 * hash01(h));
             if (type == PT_FELISIAN && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
             if (tv.material == MAT_SAND || tv.material == MAT_WATER || lava) nrocks = 0;
+            if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
             lastRocksCandidates += nrocks;
             for (int i = 0; i < nrocks; i++) {
                 uint64_t hr = mix64(h + 17 * (i + 1));

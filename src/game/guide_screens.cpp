@@ -342,7 +342,7 @@ void Game::targetHome() {
 // ---------------------------------------------------------------------------
 
 void Game::openStarMap() {
-    mapYaw = 0.6; mapPitch = 0.5; mapZoom = 1.0; mapClassMask = 63;
+    mapYaw = 0.6; mapPitch = 0.5; mapZoom = 1.0; mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
     state = GameState::STAR_MAP;
 }
 
@@ -356,8 +356,16 @@ void Game::updateStarMap(const Input& in) {
     mapPitch = clampd(mapPitch, -1.4, 1.4);
     if (in.wheel > 0 || in.wasPressed(KEY_EQUAL)) mapZoom = std::min(4.0, mapZoom * 1.25);
     if (in.wheel < 0 || in.wasPressed(KEY_MINUS)) mapZoom = std::max(0.5, mapZoom / 1.25);
-    for (int c = 0; c < STAR_CLASS_COUNT; c++) if (in.wasPressed(KEY_1 + c)) mapClassMask ^= (1 << c);
-    if (in.wasPressed(KEY_0)) mapClassMask = 63;
+    // S-02: the class filter cycles through ALL and every class of the table (C forward, X back), whatever their number;
+    // 0 shows all. Keys 1-9 toggled S00-S08 until S-01's tenth class had no key
+    if (in.wasPressed(KEY_C) || in.wasPressed(KEY_X)) {
+        int cur = -1;   // -1 all, else the one class shown
+        for (int c = 0; c < STAR_CLASS_COUNT; c++) if (mapClassMask == (1 << c)) cur = c;
+        int n = STAR_CLASS_COUNT + 1;
+        cur = ((cur + 1 + (in.wasPressed(KEY_C) ? 1 : -1)) % n + n) % n - 1;
+        mapClassMask = cur < 0 ? (1 << STAR_CLASS_COUNT) - 1 : (1 << cur);
+    }
+    if (in.wasPressed(KEY_0)) mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_M)) { state = GameState::SPACE; return; }
     if ((enterKey(in) || in.mousePressed[0]) && mapPick >= 0 && mapPick < (int)nb.stars.size()) {
         Star full; starInSector(nb.stars[mapPick].sx, nb.stars[mapPick].sy, nb.stars[mapPick].sz, full, true);
@@ -423,9 +431,10 @@ void Game::renderStarMap() {
     drawLineRGB(canvas, cx - 8, cy, cx - 3, cy, HUD_DIM); drawLineRGB(canvas, cx + 3, cy, cx + 8, cy, HUD_DIM);
     drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, HUD_DIM); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, HUD_DIM);
     drawText(canvas, 6, 4, fmt("STAR MAP  %d STARS WITHIN 10 LY  ZOOM %.1fX", (int)order.size(), mapZoom).c_str(), HUD_AMBER);
-    std::string filt = "CLASSES:";
-    for (int c = 0; c < STAR_CLASS_COUNT; c++) filt += std::string(" ") + ((mapClassMask >> c) & 1 ? STAR_CLASSES[c].code : "---");
-    drawText(canvas, 6, 13, filt.c_str(), HUD_DIM);
+    int solo = -1;   // S-02: the filter shows all or one class (the legend of every code outgrew the line at ten classes)
+    for (int c = 0; c < STAR_CLASS_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
+    std::string filt = solo < 0 ? "CLASSES: ALL" : fmt("CLASS: %s %s", STAR_CLASSES[solo].code, STAR_CLASSES[solo].name);
+    drawText(canvas, 6, 13, filt.c_str(), solo < 0 ? HUD_DIM : HUD_AMBER);
     if (mapPick >= 0 && pickD < 40) {
         const Star& s = nb.stars[mapPick];
         Star full; starInSector(s.sx, s.sy, s.sz, full, true);
@@ -434,7 +443,7 @@ void Game::renderStarMap() {
         std::string card = fmt("%s  %s %s  %.2f LY%s", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, ly, guide.visited.count(key) ? "  VISITED" : "");
         drawTextCentered(canvas, UW / 2, UH - 24, card.c_str(), nameIsForeign(key) ? HUD_CYAN : HUD_WHITE);
     }
-    drawTextCentered(canvas, UW / 2, UH - 12, "MOUSE/ARROWS TURN  WHEEL/+/- ZOOM  1-6 CLASSES  ENTER TARGET  ESC", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 12, "MOUSE/WHEEL TURN/ZOOM  C/X CLASS  0 ALL  ENTER TARGET", HUD_DIM);   // S-02: 53 characters, the width of the frame
 }
 
 // ---------------------------------------------------------------------------
@@ -479,8 +488,9 @@ void Game::renderStats() {
     line("DISCOVERY STATISTICS", HUD_AMBER); y += 4;
     line(fmt("SYSTEMS VISITED       %d", (int)guide.visited.size()), HUD_GREEN);
     line(fmt("WORLDS LANDED ON      %d", (int)guide.landed.size()), HUD_GREEN);
+    line(fmt("STAR CLASSES SEEN     %d/%d", (int)guide.classesSeen.size(), STAR_CLASS_COUNT), HUD_GREEN);
     std::string cls; for (int c : guide.classesSeen) cls += std::string(STAR_CLASSES[c].code) + " ";
-    line(fmt("STAR CLASSES SEEN     %d/%d  %s", (int)guide.classesSeen.size(), STAR_CLASS_COUNT, cls.c_str()), HUD_GREEN);
+    { std::vector<std::string> rows = wrapText(cls, 48); for (size_t k = 0; k < rows.size() && k < 2; k++) line("  " + rows[k], HUD_DIM); }   // S-02: the codes on their own line (two past twelve classes), like the world types; ten of them overran the count's line
     std::string types; for (int c : guide.typesSeen) types += std::string(shortType(c)) + " ";
     line(fmt("WORLD TYPES WALKED    %d/%d", (int)guide.typesSeen.size(), landableTypeCount()), HUD_GREEN);
     line("  " + trunc(types, 48), HUD_DIM);

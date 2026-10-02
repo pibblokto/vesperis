@@ -13,11 +13,11 @@ map_5 ce1468e99c1029c5  # Seapheeseeri III EUROPAN
 map_6 dbc642e3492e1b3  # Seapheeseeri IV ICY
 map_7 44c59a4ac984c7ba  # Seapheeseeri I-a THIN ATMOSPHERE
 map_8 f68fb7b17fc2ac69  # Seapheeseeri II-a ICY
-system_2 27c0c80f1c611968  # Wyariothmai (16 bodies)
-map_9 5e965071fac41134  # Wyariothmai I CRATERED
+system_2 a84bfab57eff80dd  # Wyariothmai (10 bodies)
+map_9 bd722cdd6d85c105  # Wyariothmai I FELISIAN
 system_3 39b702c36874a1b1  # Iaphiath (7 bodies)
-system_4 bedf0fd130b760cf  # Feeyeithis (25 bodies)
-scene_felisian_shore cf0f1e4fbd31e8c7  # frame of scene felisian_shore at 1x (Wyariothmai II-a)
-scene_cratered_noon 93fd303b1d637443  # frame of scene cratered_noon at 1x (Wyariothmai I)
-scene_molten_night a3553d890c1c8398  # frame of scene molten_night at 1x (Henaliolyen III-a)
-space_S00 734e0fd01bf8a3cd  # space frame from the first orbit of Feeyeithis
+system_4 e1033db1a26bdd07  # Feeyeithis (11 bodies)
+scene_felisian_shore 311e5d51c487ed49  # frame of scene felisian_shore at 1x (Feeyeithis II)
+scene_cratered_noon 2976e95b0858f645  # frame of scene cratered_noon at 1x (Wyariothmai IV)
+scene_molten_night e8d799b5c8556614  # frame of scene molten_night at 1x (Shiesaimiori I)
+space_S00 94d6e6d85e491996  # space frame from the first orbit of Salyiesesh

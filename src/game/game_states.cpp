@@ -408,9 +408,11 @@ void Game::renderSystemList() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     std::string head = fmt("SYSTEM ANALYZER - %s (%s)", trunc(upper(starNameOf(sys.star)), 16).c_str(), sys.classString().c_str());
     drawText(canvas, 8, 6, head.c_str(), HUD_AMBER);
-    drawText(canvas, 8, 15, trunc(upper(STAR_CLASSES[sys.star.cls].description), 50).c_str(), HUD_DIM);
+    std::vector<std::string> desc = wrapText(upper(STAR_CLASSES[sys.star.cls].description), 50);   // S-02: the long rows wrap onto a second line (they were cut at 50 characters)
+    for (size_t k = 0; k < desc.size() && k < 2; k++) drawText(canvas, 8, 15 + 8 * (int)k, desc[k].c_str(), HUD_DIM);
+    int listY = desc.size() > 1 ? 32 : 28;
     int n = (int)sys.bodies.size();
-    int rows = 17;
+    int rows = desc.size() > 1 ? 16 : 17;
     if (listSel < listScroll) listScroll = listSel;
     if (listSel >= listScroll + rows) listScroll = listSel - rows + 1;   // O3: the belts count as rows after the bodies
     for (int r = 0; r < rows; r++) {
@@ -422,8 +424,8 @@ void Game::renderSystemList() {
                                distanceString(d).c_str(), b.rings ? " R" : "", b.moonCount ? fmt(" %dM", b.moonCount).c_str() : "");
         if (b.type == PT_COMET) line += fmt(" %.0f KM/S", length(sys.bodyVel(i, t)));   // N0-01: comets are the only bodies that visibly hurry
         uint32_t col = i == listSel ? HUD_WHITE : (i == ship.localTarget ? HUD_AMBER : (PLANET_TYPES[b.type].landable ? HUD_GREEN : HUD_DIM));
-        drawText(canvas, 14, 28 + r * 9, line.c_str(), col);
-        if (i == listSel) drawText(canvas, 6, 28 + r * 9, ">", HUD_AMBER);
+        drawText(canvas, 14, listY + r * 9, line.c_str(), col);
+        if (i == listSel) drawText(canvas, 6, listY + r * 9, ">", HUD_AMBER);
     }
     // M9-12 belts after the bodies; O3: selectable like the bodies (Enter approaches, L targets)
     for (size_t k = 0; k < sys.belts.size(); k++) {
@@ -431,8 +433,8 @@ void Game::renderSystemList() {
         if (r < 0 || r >= rows) continue;
         const Belt& bl = sys.belts[k];
         uint32_t col = n + (int)k == listSel ? HUD_WHITE : (ship.targetBelt == (int)k ? HUD_AMBER : HUD_DIM);
-        drawText(canvas, 14, 28 + r * 9, fmt("%-18.18s %-10s %s - %s", upper(beltNameOf((int)k)).c_str(), "BELT", distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str()).c_str(), col);
-        if (n + (int)k == listSel) drawText(canvas, 6, 28 + r * 9, ">", HUD_AMBER);
+        drawText(canvas, 14, listY + r * 9, fmt("%-18.18s %-10s %s - %s", upper(beltNameOf((int)k)).c_str(), "BELT", distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str()).c_str(), col);
+        if (n + (int)k == listSel) drawText(canvas, 6, listY + r * 9, ">", HUD_AMBER);
     }
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN SELECT  ENTER APPROACH  L TARGET  ESC CLOSE", HUD_DIM);
 }

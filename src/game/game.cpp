@@ -1,6 +1,7 @@
 // Game orchestration core: construction, settings, the frame loop, global keys, test hooks.
 // autopilot.cpp, hud.cpp, landing_map.cpp, game_states.cpp and persistence.cpp hold the rest.
 #include "game.h"
+#include "galaxy/drainage.h"
 #include <chrono>
 #include <cstdlib>
 #include <cstdio>
@@ -427,9 +428,12 @@ void Game::testLandSite() {
     const PlanetMap& m = spaceR.mapFor(sys.bodies[landBody]);
     Mat3 frame = sys.bodyFrame(landBody, t);
     Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
+    double anyLat = 1e9, anyLon = 0;
+    setDrainageEnabled(false);   // S-01: the level check probes the relief without the rivers' tiles (a tile per probe would cost seconds)
     for (int pass = 0; pass < 2; pass++) {   // grassland first (the herd), then any land
         Rng r(sys.bodies[landBody].seed ^ 0x1A4DULL);
-        for (int k = 0; k < 400; k++) {
+        int probed = 0;
+        for (int k = 0; k < 400 && probed < 24; k++) {
             double la = r.range(-60 * DEG, 60 * DEG), lo = r.range(-PI, PI);
             if (dot(StarSystem::bodyFromLatLon(la, lo), sunB) < 0.3) continue;
             if (pass == 0 && m.materialAt(lo, la) != MAT_GRASS) continue;
@@ -437,9 +441,14 @@ void Game::testLandSite() {
             for (int j = -1; j <= 1 && land; j++)
                 for (int i = -1; i <= 1 && land; i++)
                     if (m.materialAt(lo + i * 2 * DEG, la + j * 2 * DEG) == MAT_WATER) land = false;
-            if (land) { landLat = la; landLon = lo; return; }
+            if (!land) continue;
+            if (anyLat > 1e8) { anyLat = la; anyLon = lo; }
+            SurfaceSite probe; probe.init(&sys, landBody, la, lo, t); probed++;   // S-01: level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
+            if (siteSlope(probe) < 0.1) { setDrainageEnabled(true); landLat = la; landLon = lo; return; }
         }
     }
+    setDrainageEnabled(true);
+    if (anyLat < 1e8) { landLat = anyLat; landLon = anyLon; }
 }
 
 int Game::testLandableBody() const {

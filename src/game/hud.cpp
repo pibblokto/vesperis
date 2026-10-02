@@ -183,6 +183,10 @@ void Game::renderSpaceHUD() {
         if (cls == STAR_PULSAR) danger = 4e7 / d;
         else if (cls == STAR_WHITE_DWARF) danger = 1.2e7 / d;
         else if (cls == STAR_BLUE_GIANT) danger = 1.5e8 / d;
+        else if (cls == STAR_BLUE_WHITE) danger = 3.5e7 / d;   // S-01: the ultraviolet of a hot star, hazardous inside its first orbit
+        else if (cls == STAR_NEUTRON) danger = 3e7 / d;   // S-03: the x-ray glare of a neutron star
+        else if (cls == STAR_WOLF_RAYET) danger = 5e8 / d;   // S-05: the whole system is inside the hazard (a hull exposure to 5e8 km, high beyond)
+        else if (cls == STAR_BLACK_HOLE) danger = 6e7 / d;   // S-06: the x-rays of the disc
         if (danger > 0.4) {
             bool blink = std::fmod(realTime, 1.0) < 0.6;
             const char* msg = danger > 1.0 ? "!! RADIATION HAZARD - HULL EXPOSURE !!" : "RADIATION: HIGH - KEEP DISTANCE";

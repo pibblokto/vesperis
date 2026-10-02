@@ -81,6 +81,7 @@ struct Body {
     bool doublePlanet = false;    // M5-09: one half of a double planet (both halves carry the flag)
     bool locked = false;          // M5-08: one face toward its star; lockedDir is the sub-stellar direction in the body frame
     Vec3 lockedDir;
+    bool glassed = false;         // S-03: a survivor of the supernova that left its neutron star: the surface fused to glass (`BodyGen::make` puts TR_GLASSED first)
 };
 
 // M9-12 asteroid belt in an orbit gap. O3 (R-302): the belt is a place the Stardrifter can fly to; its rocks are
@@ -177,5 +178,8 @@ extern const char* const MAGNETIC_CLASS_NAMES[4];
 // latitude, the darkness and the night's own variation): the star's activity by class, the steady glow a strong field keeps
 // and what the storm drives. `auroraPotentialAt` takes the storm level itself (0 a quiet night, 1 a great storm)
 double auroralStorm(const Star& s, double t);
+// S-02: the star's activity by class (0..1), the one table the aurora reads (R-402, S-01): a star of 0.7 and over is "active"
+// (the pulsar, the blue giant, the blue-white star, the red dwarf with its flares, the neutron star)
+double starActivity(int cls);
 double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm);
 double auroraPotential(const StarSystem& sys, const Body& b, double t);

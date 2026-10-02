@@ -3,7 +3,7 @@
 The ideas in this directory, cut into milestones with ids to reference in requests, bug
 reports and `PROGRESS.md` ("proceed with C-02"). Each item names the section of its
 document. Sizes: S (an afternoon), M (a day or two), L (a week), XL (a milestone of its own).
-Order is a suggestion. Done: G-01 to G-04 (2026-10-01, generation 11; `docs/iteration-3/plans/PROGRESS.md`).
+Order is a suggestion. Done: G-01 to G-04 and S-01 (2026-10-01), S-02 to S-06 (2026-10-02), all generation 11 (`docs/iteration-3/plans/PROGRESS.md`).
 
 ## G: the galaxy (`PLAN-galaxy-scale.md`) — one generation bump with S
 

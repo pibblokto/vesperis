@@ -20,5 +20,6 @@
 | B-316 | No animals to be seen, only the odd flock of birds | S3 | resolved 2026-09-28 (O9-06), `resolved/` |
 | B-317 | A moon in the sky stands in the ground when boarding the capsule | S3 | resolved 2026-09-28 (O9-02), `resolved/` |
 | B-403 | Green blobs moving in the night sky of a high-latitude site round a pulsar (the aurora) | S2 | resolved 2026-10-01, `resolved/` |
+| B-404 | The ground changes colour in front of you: a brown band ends a hundred metres out and moves along (the materials followed the rings' scale fades) | S2 | resolved 2026-10-01, `resolved/` |
 
 `KNOWN-ISSUES.md` lists what stays open. New reports: copy `TEMPLATE.md` to `B-3NN-short-title.md`.

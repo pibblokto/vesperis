@@ -20,10 +20,11 @@
 #include <sys/stat.h>
 #include <sstream>
 #include <cmath>
+#include <map>
 
 static int g_testScale = 1;
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
-static constexpr double PIN_MOUNTAIN_LAT = -41.674, PIN_MOUNTAIN_LON = -127.807;   // G-04: re-pinned (the GEN 10 pin had become a flat ice sheet; of the six mountain candidates this one has a steady slope for `descent`)   // `scale=N` on the command line renders every Game-based mode at that scale
+static constexpr double PIN_MOUNTAIN_LAT = -48.030, PIN_MOUNTAIN_LON = 152.547;   // S-01: re-pinned on Wyariothmai I, the day side of a world locked to its red dwarf (the G-04 pin's world, Wyariothmai III, is an ocean world since the star was claimed; of the five lit mountain candidates this one has a steady slope for `descent`)   // `scale=N` on the command line renders every Game-based mode at that scale
 
 static bool galaxySkyFrames(double coreLon);   // G-03, defined with the space renderer below
 static double nowSec() {
@@ -365,7 +366,7 @@ static void renderMaps() {
                         double h = m.height[i];
                         int hv = clampi((int)(128 + h / 40.0), 0, 255);
                         uint32_t hc = rgb(hv, hv, hv);
-                        static const uint32_t matCol[MAT_COUNT] = {rgb(120, 110, 100), rgb(220, 200, 140), rgb(90, 160, 60), rgb(30, 90, 30), rgb(240, 240, 250), rgb(20, 50, 140), rgb(255, 120, 20), rgb(200, 220, 255), rgb(255, 255, 255), rgb(240, 220, 235), rgb(60, 55, 55), rgb(160, 130, 110), rgb(200, 180, 140), rgb(120, 115, 112), rgb(230, 200, 90), rgb(40, 40, 42), rgb(236, 233, 224)};
+                        static const uint32_t matCol[MAT_COUNT] = {rgb(120, 110, 100), rgb(220, 200, 140), rgb(90, 160, 60), rgb(30, 90, 30), rgb(240, 240, 250), rgb(20, 50, 140), rgb(255, 120, 20), rgb(200, 220, 255), rgb(255, 255, 255), rgb(240, 220, 235), rgb(60, 55, 55), rgb(160, 130, 110), rgb(200, 180, 140), rgb(120, 115, 112), rgb(230, 200, 90), rgb(40, 40, 42), rgb(236, 233, 224), rgb(30, 42, 36)};
                         uint32_t mc = matCol[m.material[i]];
                         img[PlanetMap::W * PlanetMap::H + i] = (xx < PlanetMap::W / 2) ? hc : mc;
                     }
@@ -444,6 +445,32 @@ static void renderSpace() {
             saveFB(fb, fn.c_str());
             printf("sun %s %s R=%.0f d=%.3g\n", STAR_CLASSES[s.cls].code, s.name.c_str(), s.radiusKm, d);
         }
+    // S-06: the first black hole with a companion, from 20 degrees above the plane of its worlds at six tenths of the first orbit:
+    // the shadow, the disc arching over and under it, the bent stars and the companion's stream into the disc
+    for (int64_t x = 150; x < 300; x++) {
+        bool got = false;
+        for (int64_t z = 20; z < 120 && !got; z++) {
+            Star s;
+            if (!starInSector(x, 0, z, s) || s.cls != STAR_BLACK_HOLE) continue;
+            StarSystem sys; sys.generate(s);
+            if (sys.companion < 0) continue;
+            got = true;
+            double d = STAR_CLASSES[s.cls].minFirstOrbitKm * 0.6;
+            Vec3 shipPos = s.pos + Vec3(0, 0.34 * d, -0.94 * d);
+            nb.update(shipPos);
+            Framebuffer fb;
+            SpaceContext c;
+            c.sys = &sys; c.stars = &nb.stars; c.t = 1234.0; c.shipPos = shipPos;
+            c.cam = cameraBasis(0, -0.35);
+            sr.setupPalette(fb, &sys, -1, -1, 1.0);
+            sr.render(fb, c);
+            fb.mush(2);
+            saveFB(fb, "shots/tests/space_black_hole.png");
+            const Body& k = sys.bodies[sys.companion];
+            printf("black hole %s with a companion (%s, %.3g km out, %d bodies, %d belts): shots/tests/space_black_hole.png\n", s.name.c_str(), STAR_CLASSES[k.starClass].name, k.orbitRadiusKm, (int)sys.bodies.size(), (int)sys.belts.size());
+        }
+        if (got) break;
+    }
     // 2) planet globes: one per type, parked view
     bool doneT[PT_COUNT] = {false};
     int remT = PT_COUNT;
@@ -784,6 +811,11 @@ static void renderSurface(int onlyType) {
 static void applyTestScale(Game& g) { g.settings.renderScale = g_testScale; g.applySettings(); }
 
 static bool firstBodyOfType(int type, StarSystem& sysOut, int& biOut);   // O6-03: the first body of a type in the scan region (defined with forTypeBodies below)
+static void landSitesOf(const StarSystem& sys, int bi, uint64_t salt, int n, std::vector<std::pair<double, double>>& out);   // random land sites of a body (defined below)
+// B-404: the share of points round (lat, lon) whose material differs between the 4 and 16 m samples (out[0]) and the 16
+// and 64 m samples (out[1]) of the planet function, over a square of +-halfM at stepM; the mode `matlod` measures all
+// five ring scales, the unit test guards the walked rings' agreement with this
+static void materialAgreement(const StarSystem& sys, int bi, double lat, double lon, double halfM, double stepM, double out[2]);
 // G-02: `home`: the candidates of the new-game search (yellow or orange stars with a living planet in sectors 176..196 x
 // 36..56), each parked at its first living planet with the landing map open as a new game does, timed until the default
 // site's drainage tiles are in the cache (the bench's descent budget, KI-338); prints what the pick needs: no nebula
@@ -1562,7 +1594,11 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
             Star s;
             if (!starInSector(x, 0, z, s)) continue;
             sys.generate(s);
-            if (wantMat <= -40 && wantMat >= -42 && sys.star.cls != STAR_PULSAR && sys.star.cls != STAR_BLUE_GIANT) continue;   // B-403: an active star
+            if (wantMat <= -40 && wantMat >= -42 && starActivity(sys.star.cls) < 0.7) continue;   // B-403: an active star (S-02: the activity table, so every class that drives the nights counts)
+            if (wantMat == -43 && sys.star.cls != STAR_NEUTRON) continue;   // S-03: a glassed world belongs to a neutron star
+            if (wantMat == -44 && sys.star.cls != STAR_PROTOSTAR) continue;   // S-04: a world of a protostar
+            if (wantMat == -45 && sys.star.cls != STAR_WOLF_RAYET) continue;   // S-05: a world of a Wolf-Rayet star
+            if (wantMat == -46 && sys.star.cls != STAR_BLACK_HOLE) continue;   // S-06: a world of a black hole
             for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
                 const Body& b = sys.bodies[bi];
                 if (type >= 0 && b.type != type) continue;
@@ -1675,7 +1711,7 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                         if (disc == 0 || over < disc / 12) continue;
                         faceYawOut = yaw; facePitchOut = pitchB; placed = true;
                     }
-                } else if (wantMat <= -30) {
+                } else if (wantMat <= -30 && wantMat != -43 && wantMat != -44 && wantMat != -45 && wantMat != -46) {   // S-03: -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
                     // R-307: the new types' scenes: -30 a stained crack (europan), -31 a lava fissure (tectonic), -32 dunes
                     // (desert), -33 / -35 the shore of a methane or an acid sea, -34 a rayed plain (bombarded)
                     int mat = wantMat == -30 ? MAT_DUST : (wantMat == -31 ? MAT_LAVA : (wantMat == -32 ? MAT_SAND : MAT_WATER));
@@ -1715,8 +1751,23 @@ static bool setupSceneForType(int type, double latDeg, double alt, double yawOff
                     if (!found) continue;
                     lookAtWater = wantMat == -33 || wantMat == -35; placed = true;
                     if (faceYaw < 1e8) faceYawOut = faceYaw;
-                } else if (wantMat <= -10 && wantMat != -21 && wantMat != -22) {
-                    // N2: a site of one biome (wantMat = -10 - biome), on land
+                } else if (wantMat == -43) {
+                    // S-03: a glassed world: the first glass sheet of the scan at 16 m with glass on the eight samples 100 m round it
+                    if (!g.hasTrait(TR_GLASSED)) continue;
+                    bool found = false; double Rm = b.radiusKm * 1000.0;
+                    for (double la = latDeg; la < latDeg + 40 && !found; la += 1.0)
+                        for (int k = 0; k < 360 && !found; k++) {
+                            double ln = k * TAU / 360;
+                            if (sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16).material != MAT_GLASS) continue;
+                            int glassy = 0;
+                            for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) if (sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG + j * 100.0 / Rm, ln + i * 100.0 / (Rm * std::cos(la * DEG))), 16).material == MAT_GLASS) glassy++;
+                            if (glassy >= 9) { lon = ln; latUse = la * DEG; found = true; }
+                        }
+                    if (!found) continue;
+                    placed = true;
+                } else if (wantMat <= -10 && wantMat > -21) {
+                    // N2: a site of one biome (wantMat = -10 - biome), on land (S-04: the codes under -21 are the other finders', and
+                    // -44 wants the type's default spot: this branch swallowed it and found no biome 34)
                     int wantBio = -10 - wantMat;
                     bool found = false;
                     for (double la = latDeg; la < latDeg + 34 && !found; la += 1.5)
@@ -1978,6 +2029,10 @@ static const CmpScene CMP_SCENES[] = {
     {"thinatmo_aurora", PT_THINATMO, 58, -30 * DEG, 0.0, 0.25, -40},
     {"thinatmo_aurora_zenith", PT_THINATMO, 64, -30 * DEG, 0.0, 1.5, -41},
     {"aurora_moon", -1, 64, -30 * DEG, 0.0, 0.25, -42},   // any clear-air world with a moon or the parent in the poleward sky at the curtains' height, facing it: its night side shows the curtains in front
+    {"neutron_glass", -1, 15, 25 * DEG, 0.6, -0.03, -43},   // S-03: standing on a glass sheet of a neutron star's glassed world, the star low and off to the side for its glints
+    {"protostar_night", -1, 20, -12 * DEG, 0.0, 0.12, -44},   // S-04: any world of a protostar, the star 12 degrees under the horizon, facing it: the cloud's glow and the disc's band over the horizon
+    {"wolf_rayet_day", -1, 10, 38 * DEG, 0.5, 0.35, -45},   // S-05: any world of a Wolf-Rayet star at the type's default spot, the star 38 degrees up and 29 off the view, looking 20 up: the shell's ring round the blinding sun over a bare plain
+    {"black_hole_sky", -1, 10, 30 * DEG, 0.4, 0.3, -46},   // S-06: any world of a black hole at the type's default spot, the hole 30 degrees up and 23 off the view, looking 17 up: the shadow, the disc and the bent stars over a bare plain
 };
 
 
@@ -2940,6 +2995,21 @@ static int testUnit() {
         check("gnoise3d value equals gnoise3", worstV < 1e-12, "worst " + std::to_string(worstV));
         check("gnoise3d gradient by finite differences", worst < 1e-5, "worst " + std::to_string(worst));
     }
+    {   // B-404: the walked rings (4, 16 and 64 m) decide the same materials: a material follows no faded value, so no
+        // patch ends at a ring's edge in front of the explorer (the europan stain, the lava tongues, the cliffs' rock).
+        // The felisian and desert allowances are the drainage's lines, a cell and a half wide at every scale (KI-341)
+        struct Want { int type; double max4, max16; };
+        static const Want wants[] = {{PT_EUROPAN, 0.05, 0.05}, {PT_VOLCANIC, 0.2, 0.2}, {PT_DESERT, 0.6, 5.0}, {PT_FELISIAN, 0.6, 6.0}};
+        for (const Want& w : wants) {
+            StarSystem sys; int bi;
+            if (!firstBodyOfType(w.type, sys, bi)) { check("B-404 materials agree across the rings", false, std::string(PLANET_TYPES[w.type].name) + ": no body"); continue; }
+            std::vector<std::pair<double, double>> sites; landSitesOf(sys, bi, 0x4A, 2, sites);
+            double worst[2] = {0, 0};
+            for (auto& st : sites) { double o[2]; materialAgreement(sys, bi, st.first, st.second, 1500.0, 100.0, o); worst[0] = std::max(worst[0], o[0]); worst[1] = std::max(worst[1], o[1]); }
+            char buf[200]; snprintf(buf, sizeof buf, "%s (%s): 4/16 %.2f%% of %.2f, 16/64 %.2f%% of %.2f", PLANET_TYPES[w.type].name, sys.bodies[bi].name.c_str(), worst[0], w.max4, worst[1], w.max16);
+            check("B-404 materials agree across the rings", worst[0] <= w.max4 && worst[1] <= w.max16, buf);
+        }
+    }
     {   // O6-02: the relief spectrum is deterministic and its analytic slope tracks the finite difference of its height
         Body b; b.type = PT_FELISIAN; b.seed = 0xC0FFEEULL; b.radiusKm = 5000; b.tempK = 285; b.color = RGB(0.3f, 0.5f, 0.4f);
         BodyGen g = BodyGen::make(b);
@@ -3432,7 +3502,7 @@ static int testUnit() {
                     double m = magneticField(b); cls[magneticClass(m)]++; n++;
                     if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
                     int lit = 0; for (int d = 0; d < 60; d++) if (auroraPotential(sys, b, d * 86400.0 + 1000) > 0.15) lit++;
-                    bool active = s.cls == STAR_PULSAR || s.cls == STAR_BLUE_GIANT;
+                    bool active = starActivity(s.cls) >= 0.7;   // S-01: activity 0.7 and over; S-02: from the table
                     if (m >= 0.6 && active) { strongLit += lit / 60.0; strongN++; }
                     else if (m >= 0.08 && m < 0.3) { weakLit += lit / 60.0; weakN++; }
                 }
@@ -3441,6 +3511,195 @@ static int testUnit() {
         check("storms on some nights, not most", nights > 0 && stormy > nights / 20 && stormy < nights / 2, fmt("%d of %d nights over 0.3", stormy, nights));
         check("strong field, active star: most nights", strongN > 0 && strongLit / strongN > 0.7, fmt("%.0f%% of nights lit over %d worlds", strongN ? 100 * strongLit / strongN : 0.0, strongN));
         check("weak field: rarely", weakN > 0 && weakLit / weakN < 0.25, fmt("%.0f%% of nights lit over %d worlds", weakN ? 100 * weakLit / weakN : 0.0, weakN));
+    }
+    {   // S-01: the star classes. The varieties take their share of the families near home (red dwarfs the commonest class, every class present)
+        int n = 0, cls[STAR_CLASS_COUNT] = {0};
+        for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (starInSector(x, y, z, s, false)) { n++; cls[s.cls]++; } }
+        int most = 0; bool all = true; std::string mixs;
+        for (int i = 0; i < STAR_CLASS_COUNT; i++) { if (cls[i] > cls[most]) most = i; if (cls[i] == 0) all = false; mixs += fmt("%s %.0f%% ", STAR_CLASSES[i].code, n ? 100.0 * cls[i] / n : 0.0); }
+        check("star classes: red dwarfs the commonest", n > 1000 && most == STAR_RED_DWARF && cls[STAR_RED_DWARF] > n / 4 && cls[STAR_RED_DWARF] < n / 2, fmt("%d stars: %s", n, mixs.c_str()));
+        check("star classes: every class near home", all, mixs);
+        // the red dwarf's flares: several a day, a minute each, the same at the same time
+        Star rd; bool found = false;
+        for (int64_t x = 150; x < 200 && !found; x++) for (int64_t z = 20; z < 70 && !found; z++) if (starInSector(x, 0, z, rd, false) && rd.cls == STAR_RED_DWARF) found = true;
+        int samples = 0, flaring = 0, flares = 0; double peak = 0; bool det = true, was = false;
+        for (double t = 0; t < 10 * 86400.0 && found; t += 2) {
+            double f = starFlare(rd, t); samples++;
+            if (f != starFlare(rd, t)) det = false;
+            bool on = f > 0.3; if (on) flaring++; if (on && !was) flares++; was = on;
+            peak = std::max(peak, f);
+        }
+        check("red dwarf flares: several a day", found && det && flares >= 50 && flares <= 200 && flaring < samples / 15 && flaring > samples / 500, fmt("%d flares in ten days, %.1f%% of the time over 0.3, peak %.2f", flares, samples ? 100.0 * flaring / samples : 0.0, peak));
+        // the red dwarf's near worlds keep one face to it; a carbon star's worlds are carbon more often than a yellow star's
+        int rdWorlds = 0, rdLocked = 0, csSys = 0, csCarbon = 0, ySys = 0, yCarbon = 0;
+        for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
+            Star s; if (!starInSector(x, 0, z, s, false)) continue;
+            if (s.cls != STAR_RED_DWARF && s.cls != STAR_CARBON && s.cls != STAR_YELLOW) continue;
+            StarSystem sys; sys.generate(s);
+            bool carbon = false; for (auto& b : sys.bodies) if (b.type == PT_CARBON) carbon = true;
+            if (s.cls == STAR_RED_DWARF) { int k = 0; for (auto& b : sys.bodies) { if (b.parent >= 0 || b.type == PT_COMET || b.type == PT_COMPANION) continue; if (k++ < 3) { rdWorlds++; if (b.locked) rdLocked++; } } }
+            else if (s.cls == STAR_CARBON) { csSys++; if (carbon) csCarbon++; }
+            else { ySys++; if (carbon) yCarbon++; }
+        }
+        check("red dwarf: near worlds locked", rdWorlds > 30 && rdLocked > rdWorlds * 0.7, fmt("%d of %d", rdLocked, rdWorlds));
+        check("carbon star: carbon worlds", csSys > 5 && ySys > 5 && (double)csCarbon / csSys > 2.0 * (double)yCarbon / ySys, fmt("%d of %d systems against %d of %d round yellow stars", csCarbon, csSys, yCarbon, ySys));
+    }
+    {   // S-03: the neutron star. A share of the pulsars near home; its systems keep no living, cloudy, oceanic, quartz or giant world
+        // and most of those with planets have a glassed outer survivor; on such a world the glass covers 15-85% of the land at 16 m
+        // and the 512 m ring (the sheets do not follow the rings' fades, B-404); every neutron star of the scan is described
+        int ns = 0, bad = 0, withPlanets = 0, glassedSys = 0, belts = 0;
+        std::vector<Body> glassedBodies;   // the first five, for the sheets' share
+        for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
+            Star s; if (!starInSector(x, 0, z, s, false) || s.cls != STAR_NEUTRON) continue;
+            StarSystem sys; sys.generate(s); ns++; belts += (int)sys.belts.size();
+            bool planets = false, glassed = false;
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& b = sys.bodies[bi];
+                if (b.type == PT_COMET || b.type == PT_COMPANION || (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION)) continue;   // a companion's worlds are its own class's
+                if (b.type == PT_FELISIAN || b.type == PT_VENUSIAN || b.type == PT_GASGIANT || b.type == PT_OCEAN || b.type == PT_QUARTZ || b.type == PT_ACIDIC) bad++;
+                if (b.parent < 0) planets = true;
+                if (b.glassed) { glassed = true; if (glassedBodies.size() < 5) glassedBodies.push_back(b); }
+            }
+            if (planets) withPlanets++;
+            if (glassed) glassedSys++;
+        }
+        check("neutron stars: some near home, none with a living or giant world", ns >= 5 && bad == 0, fmt("%d stars, %d such worlds, %d belts", ns, bad, belts));
+        check("neutron stars: a glassed survivor in most systems with planets", withPlanets > 0 && glassedSys >= withPlanets * 0.6, fmt("%d of %d systems with planets", glassedSys, withPlanets));
+        {   // the sheets: over the first five glassed worlds a share of the land between 15 and 85% on average (a crater-saturated small
+            // world keeps little flat ground, a metal world half), and on each the same share at 512 m within 8 points
+            double sum16 = 0, worst = 0; std::string names;
+            for (const Body& gb : glassedBodies) {
+                BodyGen g = BodyGen::make(gb);
+                int land16 = 0, glass16 = 0, land512 = 0, glass512 = 0;
+                for (int k = 0; k < 2000; k++) {
+                    double u1 = unitFromHash(hash2i(k, 1, 0x61A5ULL)), u2 = unitFromHash(hash2i(k, 2, 0x61A5ULL));
+                    Vec3 unit = StarSystem::bodyFromLatLon(std::asin(2 * u1 - 1), u2 * TAU);
+                    SurfaceSample a = sampleSurface(g, unit, 16), b2 = sampleSurface(g, unit, 512);
+                    if (a.material != MAT_WATER) { land16++; if (a.material == MAT_GLASS) glass16++; }
+                    if (b2.material != MAT_WATER) { land512++; if (b2.material == MAT_GLASS) glass512++; }
+                }
+                double sh16 = land16 ? (double)glass16 / land16 : 0, sh512 = land512 ? (double)glass512 / land512 : 0;
+                if (!g.hasTrait(TR_GLASSED)) worst = 1;
+                sum16 += sh16; worst = std::max(worst, std::fabs(sh16 - sh512));
+                names += fmt("%s%s %.0f/%.0f%%", names.empty() ? "" : ", ", PLANET_TYPES[gb.type].name, 100 * sh16, 100 * sh512);
+            }
+            double mean = glassedBodies.empty() ? 0 : sum16 / glassedBodies.size();
+            check("glassed worlds: sheets over 15-85% of the land, the same at 512 m", glassedBodies.size() >= 3 && mean > 0.15 && mean < 0.85 && worst < 0.08,
+                  fmt("%zu worlds, %.0f%% of the land on average, the 16 m and 512 m shares %.0f points apart at most (%s)", glassedBodies.size(), 100 * mean, 100 * worst, names.c_str()));
+        }
+    }
+    {   // S-04: the protostar. A trickle along the arm (a few near home), a large share of the yellow family in a star-forming complex;
+        // its systems are belts with at most two young worlds and no evolved one; its cloud glows toward the star from its worlds
+        int armY = 0, armP = 0, nebY = 0, nebP = 0, ps = 0, withBelt = 0, evolved = 0, worlds = 0; bool nebFound = false;
+        for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (!starInSector(x, y, z, s, false)) continue; if (s.cls == STAR_YELLOW) armY++; if (s.cls == STAR_PROTOSTAR) armP++; }
+        for (int64_t x = HOME_SX - 200; x <= HOME_SX + 200 && !nebFound; x += 7) for (int64_t z = HOME_SZ - 200; z <= HOME_SZ + 200 && !nebFound; z += 7) {
+            if (galaxyRegion(x, 0, z) != REGION_NEBULA) continue;
+            nebFound = true;
+            for (int64_t dx = -7; dx <= 7; dx++) for (int64_t dy = -7; dy <= 7; dy++) for (int64_t dz = -7; dz <= 7; dz++) {
+                if (galaxyRegion(x + dx, dy, z + dz) != REGION_NEBULA) continue;
+                Star s; if (!starInSector(x + dx, dy, z + dz, s, false)) continue;
+                if (s.cls == STAR_YELLOW) nebY++; if (s.cls == STAR_PROTOSTAR) nebP++;
+            }
+        }
+        double glow = 0; std::string first;
+        for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
+            Star s; if (!starInSector(x, 0, z, s, false) || s.cls != STAR_PROTOSTAR) continue;
+            StarSystem sys; sys.generate(s); ps++;
+            if (!sys.belts.empty()) withBelt++;
+            for (const Body& b : sys.bodies) {
+                if (b.type == PT_COMET || b.type == PT_COMPANION || (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION)) continue;
+                worlds++;
+                if (b.type == PT_FELISIAN || b.type == PT_VENUSIAN || b.type == PT_QUARTZ || b.type == PT_OCEAN || b.type == PT_ACIDIC || b.type == PT_DESERT || b.type == PT_HYDROCARBON || b.type == PT_EUROPAN) evolved++;
+                if (first.empty() && b.parent < 0) {
+                    NebulaPatch np[4]; int nn = starNebulaPatches(s, Vec3(0, 0, 1), np); int tone;
+                    glow = nebulaGlow(np, nn, Vec3(0.3, 0.1, 0.95), tone);   // a fifth of a radian from the star
+                    first = fmt("%s (%d patches, tone %d)", PLANET_TYPES[b.type].name, nn, tone);
+                }
+            }
+        }
+        check("protostars: a trickle in the arm, half the yellow family in a complex", armP > 0 && armP < armY / 10 && nebFound && nebP > nebY / 2, fmt("near home %d against %d yellow stars; in the complex %d against %d", armP, armY, nebP, nebY));
+        check("protostars: belts and young worlds only", ps >= 3 && withBelt >= ps * 0.85 && evolved == 0, fmt("%d stars, %d with a belt, %d worlds, %d evolved", ps, withBelt, worlds, evolved));
+        check("protostar: its cloud glows round it", !first.empty() && glow > 0.4, fmt("glow %.2f a fifth of a radian from the star, the first world %s", glow, first.c_str()));
+    }
+    {   // S-05: the Wolf-Rayet star. A share of the blue giants that stayed near home (rare; none in a globular), systems of few
+        // bare worlds under a wind that stripped every atmosphere, and the shell of shed gas drawn as a ring round the sun
+        int armB = 0, armW = 0, globN = 0, globW = 0, ws = 0, worlds = 0, aired = 0, bomb = 0, withPlanets = 0, withBelt = 0, giants = 0;
+        for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (!starInSector(x, y, z, s, false)) continue; if (s.cls == STAR_BLUE_GIANT) armB++; if (s.cls == STAR_WOLF_RAYET) armW++; }
+        for (int64_t x = 485; x <= 499; x++) for (int64_t y = -5854; y <= -5840; y++) for (int64_t z = 2374; z <= 2388; z++) {   // the nearest globular (`galaxy`), only its own sectors
+            if (galaxyRegion(x, y, z) != REGION_CLUSTER) continue;
+            Star s; if (!starInSector(x, y, z, s, false)) continue;
+            globN++; if (s.cls == STAR_WOLF_RAYET) globW++;
+        }
+        Star w; bool found = false;
+        for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
+            Star s; if (!starInSector(x, 0, z, s, false) || s.cls != STAR_WOLF_RAYET) continue;
+            if (!found) { starInSector(x, 0, z, w, true); found = true; }
+            StarSystem sys; sys.generate(s); ws++;
+            bool any = false, hasBomb = false;
+            for (const Body& b : sys.bodies) {
+                if (b.type == PT_COMET || b.type == PT_COMPANION || (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION)) continue;
+                worlds++; any = true;
+                if (b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR) giants++;
+                else if (PLANET_TYPES[b.type].atmosphere) aired++;
+                if (b.type == PT_BOMBARDED) hasBomb = true;
+            }
+            if (any) { withPlanets++; if (hasBomb) bomb++; }
+            if (!sys.belts.empty()) withBelt++;
+        }
+        check("Wolf-Rayet stars: rare in the arm, none in a globular", armW > 0 && armW * 2 < armB && globN > 100 && globW == 0, fmt("near home %d against %d blue giants; %d of the globular's %d stars", armW, armB, globW, globN));
+        check("Wolf-Rayet stars: bare worlds only, bombarded in most systems", ws >= 3 && aired == 0 && bomb * 2 >= withPlanets, fmt("%d stars, %d worlds (%d giants), %d with an atmosphere, bombarded in %d of %d systems with planets, %d with a belt", ws, worlds, giants, aired, bomb, withPlanets, withBelt));
+        // the shell: the sun rendered straight ahead as from the second orbit; the shade along a radius peaks at the ring (five radii)
+        // over the glow's skirt either side of it
+        Framebuffer fb; fb.clear(); fb.clearDepth();
+        Proj pj = Proj::fromHFov(60);
+        const double angR = 0.03; Vec3 up(0, 1, 0);
+        if (found) SpaceRenderer::drawSun(fb, w, Vec3(0, 0, 1), angR, 1234.0, 1.0, 1, false, 0, false, pj, &up);
+        auto radial = [&](double mult) { double r = pj.f * std::tan(angR * mult), sum = 0; int n = 0; for (int k = 0; k < 360; k += 15) { int x = (int)(pj.cx + r * std::cos(k * DEG)), y = (int)(pj.cy + r * std::sin(k * DEG)); if (x < 0 || y < 0 || x >= FBW || y >= FBH) continue; sum += shadeOf(fb.at(x, y)); n++; } return n ? sum / n : 0.0; };
+        double atRing = radial(5.0), inside = radial(3.2), outside = radial(7.0);
+        check("Wolf-Rayet star: the shell's ring round the sun", found && atRing > inside + 3 && atRing > outside + 3, fmt("shade %.1f at 5 radii, %.1f at 3.2, %.1f at 7 (%s)", atRing, inside, outside, found ? w.name.c_str() : "no star"));
+    }
+    {   // S-06: the black hole. A share of the pulsars that stayed, most in the core; systems of rubble and rocks with a close companion
+        // in half; and the lens: a star right behind the hole becomes an Einstein ring, the shadow is black, the far sky untouched
+        int armP = 0, armB = 0, armN = 0, coreN = 0, coreB = 0, bs = 0, worlds = 0, bad = 0, comps = 0, closeComps = 0, withBelt = 0;
+        for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (!starInSector(x, y, z, s, false)) continue; armN++; if (s.cls == STAR_PULSAR) armP++; if (s.cls == STAR_BLACK_HOLE) armB++; }
+        for (int64_t x = 12293; x <= 12307; x++) for (int64_t y = -7; y <= 7; y++) for (int64_t z = -5507; z <= -5493; z++) {   // the core cube of `galaxy`
+            if (galaxyRegion(x, y, z) != REGION_CORE) continue;
+            Star s; if (!starInSector(x, y, z, s, false)) continue;
+            coreN++; if (s.cls == STAR_BLACK_HOLE) coreB++;
+        }
+        Star bh; bool found = false;
+        for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
+            Star s; if (!starInSector(x, 0, z, s, false) || s.cls != STAR_BLACK_HOLE) continue;
+            if (!found) { starInSector(x, 0, z, bh, true); found = true; }
+            StarSystem sys; sys.generate(s); bs++;
+            for (const Body& b : sys.bodies) {
+                if (b.type == PT_COMET || (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION)) continue;
+                if (b.type == PT_COMPANION) { comps++; if (b.orbitRadiusKm < 1e8) closeComps++; continue; }
+                worlds++;
+                if (PLANET_TYPES[b.type].atmosphere || b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR || b.type == PT_MOLTEN) bad++;
+            }
+            if (!sys.belts.empty()) withBelt++;
+        }
+        double armShare = armN ? (double)armB / armN : 0, coreShare = coreN ? (double)coreB / coreN : 0;
+        check("black holes: a few near home, several times as many in the core", armB > 0 && armB * 4 < armP && coreN > 1000 && coreShare > 2.5 * armShare, fmt("near home %d against %d pulsars (%.2f%% of %d stars); in the core %d of %d (%.2f%%)", armB, armP, 100 * armShare, armN, coreB, coreN, 100 * coreShare));
+        check("black holes: rocks, rubble and a close companion", bs >= 3 && bad == 0 && comps > 0 && closeComps == comps && withBelt * 2 >= bs, fmt("%d stars, %d worlds, %d with an air, a giant or lava, %d companions (%d close), %d with a belt", bs, worlds, bad, comps, closeComps, withBelt));
+        // the lens: a star dot straight behind the hole and the sky dark elsewhere; after the hole the dot is a ring at the Einstein
+        // angle, the shadow is black and the sky outside the region keeps its dark
+        Framebuffer fb; fb.clear(); fb.clearDepth();
+        Proj pj = Proj::fromHFov(60);
+        const double angR = 0.02, thE = std::sqrt(angR);
+        int cx = (int)pj.cx, cy = (int)pj.cy;
+        for (int dy = -2 * FB_SCALE; dy <= 2 * FB_SCALE; dy++) for (int dx = -2 * FB_SCALE; dx <= 2 * FB_SCALE; dx++) fb.at(cx + dx, cy + dy) = pix(0, 60);   // a dot of two logical pixels' radius
+        Vec3 up(0, 1, 0);   // the disc edge-on, a line along x through the hole: the ring samples on that axis are skipped (the disc is opaque)
+        auto t0 = std::chrono::steady_clock::now();
+        if (found) SpaceRenderer::drawSun(fb, bh, Vec3(0, 0, 1), angR, 1234.0, 1.0, 1, false, 0, false, pj, &up);
+        double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        int ringLit = 0, ringN = 0; double rE = pj.f * std::tan(thE);
+        auto maxAround = [&](int x, int y) { double m = 0; for (int dy = -FB_SCALE; dy <= FB_SCALE; dy++) for (int dx = -FB_SCALE; dx <= FB_SCALE; dx++) { int xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= FBW || yy >= FBH) continue; m = std::max(m, shadeOf(fb.at(xx, yy))); } return m; };
+        for (int k = 30; k < 360; k += 30) { if (k == 180) continue; int x = (int)(pj.cx + rE * std::cos(k * DEG)), y = (int)(pj.cy + rE * std::sin(k * DEG)); if (x < 0 || y < 0 || x >= FBW || y >= FBH) continue; ringN++; if (maxAround(x, y) > 30) ringLit++; }
+        double centre = shadeOf(fb.at(cx, cy)), shadowEdge = shadeOf(fb.at(cx + (int)(pj.f * std::tan(2.2 * angR)), cy));
+        double far = shadeOf(fb.at(cx + (int)(pj.f * std::tan(3.0 * thE)), cy));
+        check("black hole: the star behind it becomes an Einstein ring, the shadow black", found && ringN >= 8 && ringLit >= ringN - 1 && centre < 1 && shadowEdge < 1 && far < 1, fmt("%d of %d ring samples lit, the centre %.1f, the shadow's edge %.1f, far %.1f; %.1f ms at %dx (%s)", ringLit, ringN, centre, shadowEdge, far, ms, FB_SCALE, found ? bh.name.c_str() : "no black hole"));
     }
     printf("unit: %d failures\n", fails);
     return fails;
@@ -3638,6 +3897,19 @@ static void landSitesOf(const StarSystem& sys, int bi, uint64_t salt, int n, std
         }
         out.push_back({lat, lon});
     }
+}
+
+static void materialAgreement(const StarSystem& sys, int bi, double lat, double lon, double halfM, double stepM, double out[2]) {
+    SurfaceSite st; st.init(&sys, bi, lat, lon, 1000.0);
+    drainagePrefetch(st.gen, st.up0, halfM * 1.5 + 3000.0, false);
+    int N = (int)std::floor(halfM / stepM), W = 2 * N + 1; long n = 0, d[2] = {0, 0};
+    for (int iz = 0; iz < W; iz++)
+        for (int ix = 0; ix < W; ix++) {
+            Vec3 u = st.unitAt((ix - N) * stepM, (iz - N) * stepM);
+            int m4 = sampleSurface(st.gen, u, 4).material, m16 = sampleSurface(st.gen, u, 16).material, m64 = sampleSurface(st.gen, u, 64).material;
+            n++; if (m4 != m16) d[0]++; if (m16 != m64) d[1]++;
+        }
+    out[0] = 100.0 * d[0] / std::max(1L, n); out[1] = 100.0 * d[1] / std::max(1L, n);
 }
 
 // The targets of section 2 of the plan per class; `later` names the item that owns a target that is not part of the
@@ -3994,9 +4266,9 @@ static void renderLandforms(int type, int wantCls) {
 struct LandformSite { const char* name; int type; bool moon; int wantCls; double latDeg, lonDeg; };
 static const LandformSite LANDFORM_SITES[] = {
     {"felisian_mountains", PT_FELISIAN, false, 2, PIN_MOUNTAIN_LAT, PIN_MOUNTAIN_LON},   // pinned 2026-09-27 on the generation-5 function; O6-03: re-pinned on the GEN 10 bodies (the type table of GEN 9 had moved every world)
-    {"felisian_plain", PT_FELISIAN, false, 0, 7.424, 75.762},
+    {"felisian_plain", PT_FELISIAN, false, 0, -55.154, -122.371},   // S-01: re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
     {"thinatmo_hills", PT_THINATMO, false, 1, 44.433, 135.970},
-    {"cratered_moon", PT_CRATERED, true, 1, 43.934, -41.488},
+    {"cratered_moon", PT_CRATERED, true, 1, -13.184, 175.712},   // S-01: re-pinned on Wyariothmai II-a, the scan's first cratered moon since the claim (43.934 / -41.488 before)
 };
 static void renderLandformSites(bool search) {   // G-04: `landforms sites search` lists six candidates of each site's class on its world (as a 0/0 pin does)
     SpaceRenderer sr; StarNeighborhood nb;
@@ -4013,6 +4285,7 @@ static void renderLandformSites(bool search) {   // G-04: `landforms sites searc
             bool found = false; int listed = 0;
             for (auto& s : sites) {
                 SurfaceSite st; st.init(&sys, bi, s.first, s.second, 1000.0);
+                if (sys.bodies[bi].locked && st.sun(1000.0).altitude < 10 * DEG) continue;   // S-01: a world locked to its star has a day side and a night side for good: the sheets and the stability frames want the light
                 SiteMetrics m = measureSite(st, false);
                 if (m.cls != L.wantCls || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;
                 if (!found) { lat = s.first; lon = s.second; found = true; }
@@ -4360,6 +4633,80 @@ int main(int argc, char** argv) {
             saveFB(fb, "shots/tests/spot_stand.png");
             printf("-> shots/tests/spot_stand.png\n");
         }
+        return 0;
+    }
+    if (mode == "matlod") {   // B-404: the planet function's materials (and heights) at the five ring scales, point by point.
+        // `matlod [all|<type>] [bodies] [sites] [halfKm] [stepM]` over random land sites, or `matlod spot <sx> <sy> <sz> <body>
+        // <latDeg> <lonDeg> [halfKm] [stepM]` round one place: the share of points whose material differs between
+        // neighbouring scales (4/16, 16/64, 64/512, 512/2048 m), the pairs that differ, and the rms height difference
+        static const double SCALES[5] = {4, 16, 64, 512, 2048};
+        static const char* STEPS[4] = {"4/16", "16/64", "64/512", "512/2k"};
+        struct Agg { long n = 0; long diff[4] = {0, 0, 0, 0}; double h2[4] = {0, 0, 0, 0}; std::map<std::pair<int, int>, long> pairs[4]; };
+        auto measure = [&](const StarSystem& sys, int bi, double lat, double lon, double halfM, double stepM, Agg& a) {
+            SurfaceSite st; st.init(&sys, bi, lat, lon, 1000.0);
+            drainagePrefetch(st.gen, st.up0, halfM * 1.5 + 3000.0, false);
+            int N = (int)std::floor(halfM / stepM), W = 2 * N + 1;
+            std::vector<uint8_t> mat((size_t)W * W * 5); std::vector<float> hgt((size_t)W * W * 5);
+            parallelFor(W, 2, [&](int b, int e) {
+                for (int iz = b; iz < e; iz++)
+                    for (int ix = 0; ix < W; ix++) {
+                        Vec3 u = st.unitAt((ix - N) * stepM, (iz - N) * stepM);
+                        for (int k = 0; k < 5; k++) { SurfaceSample s = sampleSurface(st.gen, u, SCALES[k]); size_t i = ((size_t)iz * W + ix) * 5 + k; mat[i] = (uint8_t)s.material; hgt[i] = (float)s.height; }
+                    }
+            });
+            for (size_t i = 0; i < (size_t)W * W; i++) {
+                a.n++;
+                for (int k = 0; k < 4; k++) {
+                    int ma = mat[i * 5 + k], mb = mat[i * 5 + k + 1];
+                    if (ma != mb) { a.diff[k]++; a.pairs[k][{ma, mb}]++; }
+                    double dh = hgt[i * 5 + k] - hgt[i * 5 + k + 1]; a.h2[k] += dh * dh;
+                }
+            }
+        };
+        auto report = [&](const std::string& name, const Agg& a) {
+            if (!a.n) { printf("%-18s no sites\n", name.c_str()); return; }
+            printf("%-18s %7ld pts |", name.c_str(), a.n);
+            for (int k = 0; k < 4; k++) printf("  %s %5.2f%% (h %5.1f m)", STEPS[k], 100.0 * a.diff[k] / a.n, std::sqrt(a.h2[k] / a.n));
+            printf("\n");
+            for (int k = 0; k < 4; k++) {
+                if (!a.diff[k]) continue;
+                std::vector<std::pair<long, std::pair<int, int>>> v; for (auto& kv : a.pairs[k]) v.push_back({kv.second, kv.first});
+                std::sort(v.rbegin(), v.rend());
+                printf("    %-7s", STEPS[k]);
+                for (size_t j = 0; j < v.size() && j < 4; j++) printf("  %s>%s %.2f%%", MATERIAL_NAMES[v[j].second.first], MATERIAL_NAMES[v[j].second.second], 100.0 * v[j].first / a.n);
+                printf("\n");
+            }
+        };
+        if (argc > 2 && std::string(argv[2]) == "spot") {
+            if (argc < 9) { printf("matlod spot <sx> <sy> <sz> <body> <latDeg> <lonDeg> [halfKm] [stepM]\n"); return 1; }
+            Star s; if (!starInSector(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), s)) { printf("no star\n"); return 1; }
+            StarSystem sys; sys.generate(s);
+            int bi = atoi(argv[6]); if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
+            double halfM = (argc > 9 ? atof(argv[9]) : 3.0) * 1000.0, stepM = argc > 10 ? atof(argv[10]) : 50.0;
+            Agg a; measure(sys, bi, atof(argv[7]) * DEG, atof(argv[8]) * DEG, halfM, stepM, a);
+            report(sys.bodies[bi].name + " " + PLANET_TYPES[sys.bodies[bi].type].name, a);
+            return 0;
+        }
+        int only = -1;
+        if (argc > 2 && std::string(argv[2]) != "all") for (int k = 0; k < PT_COUNT; k++) { std::string nm = PLANET_TYPES[k].name; for (char& ch : nm) ch = ch == ' ' ? '_' : (char)tolower(ch); if (nm == argv[2]) only = k; }
+        int bodies = argc > 3 ? atoi(argv[3]) : 3, perBody = argc > 4 ? atoi(argv[4]) : 4;
+        double halfM = (argc > 5 ? atof(argv[5]) : 3.0) * 1000.0, stepM = argc > 6 ? atof(argv[6]) : 75.0;
+        Agg all;
+        for (int type = 0; type < PT_COUNT; type++) {
+            if (!PLANET_TYPES[type].landable || (only >= 0 && type != only)) continue;
+            Agg a;
+            forTypeBodies(type, bodies, false, [&](const StarSystem& sys, int bi) {
+                std::vector<std::pair<double, double>> sites; landSitesOf(sys, bi, 0x4A, perBody, sites);
+                Agg b;
+                for (auto& st : sites) measure(sys, bi, st.first, st.second, halfM, stepM, b);
+                std::string tr = traitList(BodyGen::make(sys.bodies[bi]));
+                printf("  %-26s %s: 16/64 %.2f%%  64/512 %.2f%%  512/2k %.2f%%\n", sys.bodies[bi].name.c_str(), tr.empty() ? "-" : tr.c_str(), 100.0 * b.diff[1] / std::max(1L, b.n), 100.0 * b.diff[2] / std::max(1L, b.n), 100.0 * b.diff[3] / std::max(1L, b.n));
+                a.n += b.n; for (int k = 0; k < 4; k++) { a.diff[k] += b.diff[k]; a.h2[k] += b.h2[k]; for (auto& kv : b.pairs[k]) a.pairs[k][kv.first] += kv.second; }
+            });
+            report(PLANET_TYPES[type].name, a);
+            all.n += a.n; for (int k = 0; k < 4; k++) { all.diff[k] += a.diff[k]; all.h2[k] += a.h2[k]; for (auto& kv : a.pairs[k]) all.pairs[k][kv.first] += kv.second; }
+        }
+        if (only < 0) report("ALL", all);
         return 0;
     }
     if (mode == "landmarks") {   // O6-06: the sights round random land sites of a type (default felisian): kinds, the share of sites with one within 10 km, the cost of a cell

@@ -46,14 +46,25 @@ int pickPlanetType(Rng& rng, double tempK, int starClass, bool isMoon, int paren
     else if (tempK > 120) { w[PT_THINATMO] = 18; w[PT_ICY] = 18; w[PT_GASGIANT] = 28; w[PT_ROCKY] = 12; w[PT_CRATERED] = 10; w[PT_QUARTZ] = 5; w[PT_HYDROCARBON] = 11; w[PT_EUROPAN] = 12; w[PT_BOMBARDED] = 3; }
     else { w[PT_ICY] = 32; w[PT_GASGIANT] = 34; w[PT_CRATERED] = 16; w[PT_ROCKY] = 7; w[PT_CARBON] = 6; w[PT_EUROPAN] = 14; w[PT_HYDROCARBON] = 6; w[PT_BOMBARDED] = 4; }   // M9-16 tuning
     if (tempK <= 205) w[PT_SUBSTELLAR] = 4;   // M5-02: brown dwarfs live in the cold outer system
-    if (starClass == STAR_WHITE_DWARF || starClass == STAR_PULSAR) {
+    if (starClass == STAR_WHITE_DWARF || starClass == STAR_PULSAR || starClass == STAR_NEUTRON || starClass == STAR_BLACK_HOLE) {   // S-06: a black hole's are the dead stars' and less
         w[PT_FELISIAN] = 0; w[PT_VENUSIAN] = 0; w[PT_QUARTZ] = 0; w[PT_OCEAN] = 0; w[PT_THINATMO] *= 0.3;
         w[PT_DESERT] *= 0.2; w[PT_ACIDIC] = 0; w[PT_HYDROCARBON] *= 0.3;   // R-307: the dead star stripped the thick airs
         w[PT_CRATERED] += 20; w[PT_ICY] += 15; w[PT_CARBON] += 8; w[PT_METAL] += 6; w[PT_BOMBARDED] += 6;
         if (starClass == STAR_PULSAR) { w[PT_GASGIANT] *= 0.3; w[PT_MOLTEN] *= 0.3; }
+        if (starClass == STAR_NEUTRON) { w[PT_GASGIANT] = 0; w[PT_SUBSTELLAR] *= 0.3; w[PT_MOLTEN] *= 0.3; w[PT_HYDROCARBON] = 0; w[PT_EUROPAN] *= 0.5; w[PT_METAL] += 14; w[PT_BOMBARDED] += 8; w[PT_ROCKY] *= 1.3; }   // S-03: the survivors of the supernova: bare cores, captured rocks; no giant kept its envelope
+        if (starClass == STAR_BLACK_HOLE) { w[PT_GASGIANT] = 0; w[PT_SUBSTELLAR] *= 0.5; w[PT_MOLTEN] = 0; w[PT_THINATMO] = 0; w[PT_DESERT] = 0; w[PT_HYDROCARBON] = 0; w[PT_EUROPAN] *= 0.5; w[PT_CRATERED] += 10; w[PT_ROCKY] *= 1.3; w[PT_METAL] += 10; w[PT_BOMBARDED] += 6; }   // S-06: wandering rocks and ice, nothing with an air
+    }
+    if (starClass == STAR_PROTOSTAR) {   // S-04: worlds still forming: molten and bombarded, no air or sea had time to come, no giant has finished gathering
+        w[PT_FELISIAN] = 0; w[PT_VENUSIAN] = 0; w[PT_QUARTZ] = 0; w[PT_OCEAN] = 0; w[PT_ACIDIC] = 0; w[PT_DESERT] = 0; w[PT_HYDROCARBON] = 0; w[PT_EUROPAN] = 0;
+        w[PT_THINATMO] *= 0.3; w[PT_GASGIANT] *= 0.2; w[PT_SUBSTELLAR] *= 0.5; w[PT_ICY] *= 0.6; w[PT_ROCKY] *= 1.2;
+        w[PT_MOLTEN] += 25; w[PT_BOMBARDED] += 20; w[PT_TECTONIC] += 4;
     }
     if (starClass == STAR_RED_GIANT) { w[PT_FELISIAN] *= 0.25; w[PT_MOLTEN] *= 1.5; }
     if (starClass == STAR_BLUE_GIANT) { w[PT_FELISIAN] *= 0.5; }
+    // S-01: the varieties' worlds
+    if (starClass == STAR_BLUE_WHITE) { w[PT_FELISIAN] *= 0.6; w[PT_ROCKY] *= 1.4; w[PT_CRATERED] *= 1.3; w[PT_ICY] *= 1.3; w[PT_THINATMO] *= 1.2; }   // bare rock and ice under the ultraviolet
+    if (starClass == STAR_ORANGE_GIANT) { w[PT_FELISIAN] *= 0.5; w[PT_OCEAN] *= 2.0; w[PT_EUROPAN] *= 1.5; w[PT_MOLTEN] *= 1.3; w[PT_ICY] *= 0.7; }   // the thawed ice worlds of an old star
+    if (starClass == STAR_CARBON) { w[PT_FELISIAN] *= 0.2; w[PT_CARBON] = w[PT_CARBON] * 3 + 10; w[PT_METAL] *= 1.3; }   // the soot falls on every world
     if (isMoon) {
         // M9-16: moons draw from their own table: fewer identical icy moons, more rocky and thin-air ones
         w[PT_GASGIANT] = 0; w[PT_SUBSTELLAR] = 0; w[PT_OCEAN] *= 0.3;
@@ -62,6 +73,12 @@ int pickPlanetType(Rng& rng, double tempK, int starClass, bool isMoon, int paren
         if (parentType != PT_GASGIANT) { w[PT_FELISIAN] *= 0.15; w[PT_QUARTZ] *= 0.3; } else { w[PT_FELISIAN] *= 0.6; w[PT_THINATMO] *= 1.4; w[PT_VOLCANIC] = 14; w[PT_EUROPAN] *= 2.0; w[PT_TECTONIC] += 6; }   // R-307: tides heat a giant's inner moons
         w[PT_CRATERED] *= 1.4; w[PT_ICY] *= 0.9; w[PT_ROCKY] *= 1.5; w[PT_MOLTEN] *= 0.7;
         w[PT_DESERT] *= 0.3; w[PT_ACIDIC] *= 0.3; w[PT_HYDROCARBON] *= 0.5; w[PT_BOMBARDED] *= 1.5;
+    }
+    if (starClass == STAR_WOLF_RAYET) {   // S-05: the wind stripped every atmosphere and sublimed the near ice; what is left is bare, cratered and bombarded
+        // (after the moon rule, which offers a giant's moons a tectonic sky)
+        for (int t = 0; t < PT_COUNT; t++) if (PLANET_TYPES[t].atmosphere && t != PT_GASGIANT && t != PT_SUBSTELLAR) w[t] = 0;
+        w[PT_GASGIANT] *= 0.4; w[PT_SUBSTELLAR] *= 0.5; w[PT_EUROPAN] *= 0.3; w[PT_ICY] *= 0.5; w[PT_CARBON] *= 0.5;
+        w[PT_BOMBARDED] += 25; w[PT_CRATERED] *= 1.5; w[PT_ROCKY] *= 1.3; w[PT_METAL] += 8; w[PT_MOLTEN] += 5;
     }
     if (sizeRand < 0.3) { w[PT_GASGIANT] *= 0.2; w[PT_SUBSTELLAR] *= 0.2; }
     return rng.pick(w, PT_COUNT);
@@ -119,17 +136,26 @@ void StarSystem::generate(const Star& s) {
     Rng rng(s.seed ^ 0x51A7E11ULL);
     int np = (rng.irange(ci.maxPlanets + 1) + rng.irange(ci.maxPlanets + 1) + 1) / 2;
     if (s.cls == STAR_PULSAR && rng.chance(0.3)) np = 0;
+    if (s.cls == STAR_NEUTRON && rng.chance(0.25)) np = 0;   // S-03: a quarter of the neutron stars keep nothing but debris
+    if (s.cls == STAR_PROTOSTAR && rng.chance(0.35)) np = 0;   // S-04: a third of the protostars have no world yet, only the disc
+    if (s.cls == STAR_WOLF_RAYET && rng.chance(0.4)) np = 0;   // S-05: two Wolf-Rayet systems in five are rubble
+    if (s.cls == STAR_BLACK_HOLE && rng.chance(0.5)) np = 0;   // S-06: half the black holes keep nothing but rubble
     // orbit radii: Kepler-like accumulation as in the original, limited beyond the 8th orbit
     double key = std::max(s.radiusKm * ci.firstOrbitMult, ci.minFirstOrbitKm) * (0.8 + 0.5 * rng.uni());
+    // S-05: a Wolf-Rayet star keeps, two times in five, one giant far out beyond its bare worlds (its zones within four orbits are
+    // too hot for one to form), the last body at 2.5-3.5 times the next orbit's key: its envelope streams away in the wind
+    int farGiant = (s.cls == STAR_WOLF_RAYET && rng.chance(0.45)) ? np : -1;
+    if (farGiant >= 0) np++;
     for (int n = 0; n < np; n++) {
         Body b;
         b.index = (int)bodies.size();
         b.parent = -1;
         b.seed = hashCombine(s.seed, 1000 + n);
+        if (n == farGiant) key *= 2.5 + rng.uni();
         b.orbitRadiusKm = key * (1.0 + rng.sym(0.08));
         b.tempK = equilibriumTemp(s.luminosity, b.orbitRadiusKm);
         double sizeRand = rng.uni();
-        b.type = pickPlanetType(rng, b.tempK, s.cls, false, -1, sizeRand);
+        b.type = n == farGiant ? PT_GASGIANT : pickPlanetType(rng, b.tempK, s.cls, false, -1, sizeRand);
         const PlanetTypeInfo& pt = PLANET_TYPES[b.type];
         b.radiusKm = pt.minRadiusKm + (pt.maxRadiusKm - pt.minRadiusKm) * sizeRand;
         double densityRel = b.type == PT_GASGIANT ? 0.25 : ((b.type == PT_ICY || b.type == PT_EUROPAN) ? 0.55 : (b.type == PT_SUBSTELLAR ? 0.9 : 1.0));
@@ -140,10 +166,11 @@ void StarSystem::generate(const Star& s) {
         b.orbitPhase0 = rng.range(0, TAU);
         b.orbitIncl = rng.sym(4 * DEG) * (1 + rng.uni());
         b.orbitNode = rng.range(0, TAU);
-        // rotation: inner planets tend to be tidally locked
-        if (n == 0 && rng.chance(0.5)) b.rotPeriod = b.orbitPeriod;
+        // rotation: inner planets tend to be tidally locked (S-01: a red dwarf's first three nearly always; their orbits are rounded below)
+        bool lockedNear = s.cls == STAR_RED_DWARF ? (n < 3 && rng.chance(0.9)) : (n == 0 && rng.chance(0.5));
+        if (lockedNear) b.rotPeriod = b.orbitPeriod;
         else b.rotPeriod = 1200 + 12000 * rng.uni() * rng.uni();
-        if (rng.chance(0.08)) b.rotPeriod = -b.rotPeriod;   // retrograde
+        if (rng.chance(0.08) && !(lockedNear && s.cls == STAR_RED_DWARF)) b.rotPeriod = -b.rotPeriod;   // retrograde (S-01: not a red dwarf's locked world)
         b.rotPhase0 = rng.range(0, TAU);
         double tiltRoll = rng.uni();
         b.axialTilt = tiltRoll < 0.6 ? rng.range(0, 12 * DEG) : (tiltRoll < 0.93 ? rng.range(12 * DEG, 35 * DEG) : rng.range(35 * DEG, 95 * DEG));
@@ -157,16 +184,34 @@ void StarSystem::generate(const Star& s) {
             b.ecc = er.chance(0.6) ? er.range(0, 0.06) : (er.chance(0.8) ? er.range(0.06, 0.15) : er.range(0.15, 0.3));
             b.argPeri = er.range(0, TAU);
         }
+        if (s.cls == STAR_RED_DWARF && n < 3) b.ecc *= 0.3;   // S-01: the tides of a red dwarf round the near orbits, so the locked face holds (M5-08 asks for e <= 0.05)
         b.name = s.name + " " + romanNumeral(n + 1);
         bodies.push_back(b);
         double next = b.orbitRadiusKm * (1.32 + 0.45 * rng.uni());   // M9-16: tighter spacing, more worlds in the temperate band
         if (b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR) next *= 1.25;
         key = n < 8 ? next : b.orbitRadiusKm * (1.18 + 0.12 * rng.uni());
     }
-    // M9-12 asteroid belts in wide gaps (and sometimes beyond the last planet)
+    if (s.cls == STAR_NEUTRON) {   // S-03: the blast fused the surfaces of the outermost one or two survivors (the near ones were vaporised; ice took none)
+        int want = unitFromHash(mix64(s.seed ^ 0x61A55ULL)) < 0.5 ? 2 : 1, marked = 0;
+        for (int n = (int)bodies.size() - 1; n >= 0 && marked < want; n--) {
+            int ty = bodies[n].type;
+            if (ty == PT_CRATERED || ty == PT_ROCKY || ty == PT_METAL || ty == PT_BOMBARDED || ty == PT_THINATMO || ty == PT_DESERT || ty == PT_CARBON) { bodies[n].glassed = true; marked++; }
+        }
+    }
+    // M9-12 asteroid belts in wide gaps (and sometimes beyond the last planet); S-03: a neutron star's system is mostly debris;
+    // S-04: a protostar's is the disc itself: a belt inside the first orbit, one in nearly every gap and one beyond
+    if (s.cls == STAR_PROTOSTAR && !bodies.empty() && rng.chance(0.7)) {
+        Belt bl;
+        bl.innerKm = std::max(bodies[0].orbitRadiusKm * 0.45, s.radiusKm * 3.0); bl.outerKm = bodies[0].orbitRadiusKm * 0.8;
+        double mid = 0.5 * (bl.innerKm + bl.outerKm);
+        bl.period = ORBIT_K * std::pow(mid, 1.5) / std::sqrt(s.massFactor);
+        bl.phase0 = rng.range(0, TAU);
+        bl.name = s.name + " belt " + romanNumeral((int)belts.size() + 1);
+        belts.push_back(bl);
+    }
     for (int n = 0; n + 1 < (int)bodies.size(); n++) {
         double r0 = bodies[n].orbitRadiusKm, r1 = bodies[n + 1].orbitRadiusKm;
-        if ((r1 / r0 > 1.65 && rng.chance(0.55)) || rng.chance(0.12)) {
+        if ((r1 / r0 > 1.65 && rng.chance(0.55)) || rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.5 : (s.cls == STAR_PROTOSTAR ? 0.9 : (s.cls == STAR_WOLF_RAYET ? 0.35 : 0.12)))) {   // S-05: the rubble of the stripped worlds; S-06: a black hole's like a neutron star's
             Belt bl;
             bl.innerKm = r0 * 1.22; bl.outerKm = r1 * 0.82;
             double mid = 0.5 * (bl.innerKm + bl.outerKm);
@@ -176,9 +221,9 @@ void StarSystem::generate(const Star& s) {
             belts.push_back(bl);
         }
     }
-    if (!bodies.empty() && rng.chance(0.3)) {
+    if ((!bodies.empty() || s.cls == STAR_NEUTRON || s.cls == STAR_PROTOSTAR || s.cls == STAR_WOLF_RAYET || s.cls == STAR_BLACK_HOLE) && rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.75 : (s.cls == STAR_PROTOSTAR ? 0.95 : (s.cls == STAR_WOLF_RAYET ? 0.5 : 0.3)))) {
         Belt bl;
-        double last = bodies.back().orbitRadiusKm;
+        double last = bodies.empty() ? ci.minFirstOrbitKm * 2.0 : bodies.back().orbitRadiusKm;   // S-03: a neutron star without worlds keeps its debris; S-04: a protostar's disc
         bl.innerKm = last * 1.5; bl.outerKm = last * 2.2;
         double mid = 0.5 * (bl.innerKm + bl.outerKm);
         bl.period = ORBIT_K * std::pow(mid, 1.5) / std::sqrt(s.massFactor);
@@ -343,10 +388,10 @@ void StarSystem::generate(const Star& s) {
     // M5-01 companion stars: a second sun as a body, close in (the planets circle both) or far out with worlds of its own
     {
         Rng kr(s.seed ^ 0xB1A2ULL);
-        static const double pMultiple[STAR_CLASS_COUNT] = {0.18, 0.2, 0.28, 0.12, 0.24, 0.15};
+        static const double pMultiple[STAR_CLASS_COUNT] = {0.18, 0.2, 0.28, 0.12, 0.24, 0.15, 0.22, 0.26, 0.14, 0.1, 0.2, 0.35, 0.4, 0.5};   // S-01: the varieties' chances; S-03: the neutron star's; S-04: young stars come in pairs; S-05: most Wolf-Rayet stars have one; S-06: half the black holes drink a companion
         if (kr.chance(pMultiple[s.cls]) && (int)bodies.size() < 56) {
-            double w[STAR_CLASS_COUNT] = {1.0, 1.6, s.cls == STAR_BLUE_GIANT ? 0.6 : 0.0, 0.15, 0.9, 0.05};
-            int cls = kr.pick(w, STAR_CLASS_COUNT);
+            double w[STAR_CLASS_COUNT] = {1.0, 1.6, (s.cls == STAR_BLUE_GIANT || s.cls == STAR_BLUE_WHITE || s.cls == STAR_WOLF_RAYET) ? 0.6 : 0.0, s.cls == STAR_BLACK_HOLE ? 0.0 : 0.15, 0.9, 0.05};   // S-06: a black hole's companion is close, never a giant   // the families; a variety takes its share below
+            int cls = starVariety(kr.pick(w, STAR_CLASS_COUNT), galaxyRegion(s.sx, s.sy, s.sz), hashCombine(s.seed, 901));   // S-01
             const StarClassInfo& cc = STAR_CLASSES[cls];
             Body k;
             k.index = (int)bodies.size();
@@ -362,7 +407,7 @@ void StarSystem::generate(const Star& s) {
             k.tempK = 5000;
             double firstOrbit = bodies.empty() || bodies[0].type == PT_COMET ? ci.minFirstOrbitKm : bodies[0].orbitRadiusKm;
             double closeR = (s.radiusKm + k.radiusKm) * (3.0 + 3.0 * kr.uni());
-            bool close = kr.chance(0.35) && closeR < 0.4 * firstOrbit;
+            bool close = (kr.chance(0.35) && closeR < 0.4 * firstOrbit) || s.cls == STAR_BLACK_HOLE;   // S-06: a black hole's companion is close, being drawn out
             k.orbitRadiusKm = close ? closeR : outerOrbitKm() * (2.5 + 5.0 * kr.uni());
             k.orbitPeriod = ORBIT_K * std::pow(k.orbitRadiusKm, 1.5) / std::sqrt(s.massFactor + cc.massFactor);
             k.orbitPhase0 = kr.range(0, TAU);
@@ -654,13 +699,29 @@ int magneticClass(double mag) { return mag < 0.08 ? 0 : (mag < 0.3 ? 1 : (mag < 
 
 double auroralStorm(const Star& s, double t) {
     double slow = gnoise2(t / 2.6e5, 1.7, s.seed ^ 0xA5A5), fast = gnoise2(t / 1.5e4, 4.1, s.seed ^ 0x5A5A);   // three days; four hours
-    return clampd((0.5 + 0.5 * slow + 0.2 * fast - 0.58) / 0.3, 0, 1);
+    double storm = clampd((0.5 + 0.5 * slow + 0.2 * fast - 0.58) / 0.3, 0, 1);
+    return s.cls == STAR_RED_DWARF ? std::max(storm, 0.8 * starFlare(s, t)) : storm;   // S-01: a red dwarf's flare is a storm of its own
+}
+
+double starActivity(int cls) {   // S-01: flare stars and hot stars drive the nights; S-03: the neutron star's x-rays nearly as much as the pulsar's beams
+    switch (cls) {
+        case STAR_BLUE_GIANT: return 1.0;
+        case STAR_PULSAR: return 0.9;
+        case STAR_NEUTRON: return 0.85;
+        case STAR_PROTOSTAR: return 0.9;   // S-04: a young star's wind and flares
+        case STAR_WOLF_RAYET: return 1.0;   // S-05: the wind that strips its worlds
+        case STAR_BLACK_HOLE: return 0.9;   // S-06: the disc's x-rays
+        case STAR_RED_DWARF: return 0.8;
+        case STAR_BLUE_WHITE: return 0.7;
+        case STAR_ORANGE: return 0.55;
+        case STAR_YELLOW: return 0.45;
+        default: return 0.2;
+    }
 }
 
 double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm) {
     if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) return 0;
-    int cls = sys.star.cls;
-    double activity = cls == STAR_BLUE_GIANT ? 1.0 : (cls == STAR_PULSAR ? 0.9 : (cls == STAR_ORANGE ? 0.55 : (cls == STAR_YELLOW ? 0.45 : 0.2)));
+    double activity = starActivity(sys.star.cls);   // S-02: the one table
     double mag = magneticField(b);
     double steady = 0.6 * smoothstep(0.5, 1.0, mag);                                            // a strong field keeps a glow every night
     double driven = std::pow(storm, 0.7) * smoothstep(0.03, 0.4, mag) * (0.7 + 0.3 * mag);     // the storm lights the rest

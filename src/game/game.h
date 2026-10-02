@@ -126,7 +126,7 @@ public:
     void setState(GameState s) { state = s; }
     void testAimAtNearestStar();
     void testAimAtBody(int body);
-    void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon)
+    void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
     int testLandableBody() const;
     void testParkAt(const Star& s, int body);   // arrive at a star, park at a body, open the landing map
     void testParkAtBelt(const Star& s, int k);  // O3: arrive at a star and park beside a rock of belt k at once
@@ -232,7 +232,7 @@ private:
     double autosaveTimer = 0;
     int listSel = 0, listScroll = 0;
     // M3 guide screens
-    int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = 63;
+    int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
     GameState guideReturn = GameState::SPACE;
     std::string textPrompt, textBuffer;
     double mapYaw = 0, mapPitch = 0, mapZoom = 1;

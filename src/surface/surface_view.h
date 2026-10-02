@@ -101,6 +101,7 @@ struct SurfaceEnvironment {
     double hail = 0;            // 0..1
     double aurora = 0;          // 0..1 strength of the aurora tonight
     double auroraStorm = 0;     // R-402: the star's storm tonight, 0..1
+    double flare = 0;           // S-01: a red dwarf's flare now, 0..1 (the exposure opens past its clamp by it)
     double ringShadow = 0;      // O0-01: the world's ring between the site and the sun (0..0.85)
     double cometActivity = 0;   // O4: on a comet, how hard the nucleus vents (0 far from the star .. 1 at periapsis)
 };

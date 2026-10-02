@@ -14,6 +14,14 @@ enum StarClass {
     STAR_RED_GIANT,      // S03 red giant, enormous dim red disc
     STAR_WHITE_DWARF,    // S04 white dwarf, tiny bright remnant, frozen worlds
     STAR_PULSAR,         // S05 pulsar, spinning neutron star, pulsing radiation
+    STAR_RED_DWARF,      // S06 red dwarf (S-01): the commonest star, small and dim; its near worlds keep one face to it; flares
+    STAR_BLUE_WHITE,     // S07 blue-white star (S-01): between the yellow star and the blue giant; a wide system of rock and ice
+    STAR_ORANGE_GIANT,   // S08 orange giant (S-01): an old star grown large, amber light, the warm zone out among the ice worlds
+    STAR_CARBON,         // S09 carbon star (S-01): a dim ruby giant in its own soot, ember light, carbon worlds
+    STAR_NEUTRON,        // S10 neutron star (S-03): the pulsar's quiet sibling, a point of white light and x-ray glare; a system of survivors, the outer ones glassed
+    STAR_PROTOSTAR,      // S11 protostar (S-04): a young star in its cloud, a soft orange disc in a wide glow with its dust disc seen edge-on; belts rather than worlds; the sky full of the nebula
+    STAR_WOLF_RAYET,     // S12 Wolf-Rayet star (S-05): a massive star blowing off its outer layers, blinding inside the ring of the shell it shed; a wind that strips its few worlds bare; radiation over the whole system
+    STAR_BLACK_HOLE,     // S13 black hole (S-06): no light of its own: a shadow in the sky ringed by the bent light of the stars behind it, an accretion disc, a jet on some; survivors only, a companion drawn out
     STAR_CLASS_COUNT
 };
 
@@ -27,7 +35,7 @@ struct StarClassInfo {
     double luminosity;     // relative to the yellow star
     double massFactor;     // relative to the yellow star (orbital periods)
     int maxPlanets;
-    double rarity;         // relative weight
+    double rarity;         // relative weight of a family in the pick; 0 for a variety (S-01: it takes a share of its family through starVariety)
     double firstOrbitMult; // first orbit radius in star radii
     double minFirstOrbitKm;
 };
@@ -105,8 +113,28 @@ bool nebulaInCell(int64_t cx, int64_t cz, Vec3& centre);   // the complex of a c
 struct NebulaPatch { Vec3 dir; double radius = 0.1; int tone = 2; double inten = 0.5; };
 int nebulaPatches(const Vec3& obsSectors, NebulaPatch* out, int maxN);
 double nebulaGlow(const NebulaPatch* p, int n, const Vec3& dir, int& tone);
+// S-04: a protostar's own cloud, as two patches round the direction to the star (a bright one of 1.1 rad, a faint one over
+// the whole sky), in the tone of `starNebulaTone` (0 blue, 1 red, 2 white, by the star's seed); 0 patches for every other class
+int starNebulaPatches(const Star& s, const Vec3& dirToStar, NebulaPatch* out);
+int starNebulaTone(const Star& s);
 double sampleGalaxyBand(const std::vector<float>& map, int W, int H, const Vec3& dir);
 bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName = true);
+// S-01 (2026-10-01): the varieties. The pick draws one of the six families with the rarity weights (the same draw as at
+// G-01, so every star kept its family); a hash of its own then turns a share of a family's stars into one of its
+// varieties, by region: red dwarfs out of the yellow and orange families (more in the old populations), blue-white
+// stars out of the blue giants (more where stars form), orange giants and carbon stars out of the red giants (more in
+// the bulge and the clusters). A new variety claims its share and leaves every other star as it was, so the pinned
+// sites, the home star and the regress hold unless one of their stars is claimed. S-03: the neutron star takes a share of
+// the pulsars (more in the old populations). S-04: the protostar out of the stars that stayed yellow where stars form.
+// S-05: the Wolf-Rayet star out of the blue giants that stayed (a fifth along the arms and where stars form, fewer in the
+// core, the bulge and the disc, none in the halo or a globular: no massive star is old). S-06: the black hole out of the
+// pulsars that stayed (a quarter in the core, a fifth in the bulge, one in seven in a globular, one in ten in the halo, one in
+// sixteen in the arms and the disc, one in thirty where stars form).
+int starVariety(int family, int region, uint64_t hash);
+// S-01: a red dwarf's flare at time t, 0..1 (its light doubles at 1): about one every FLARE_CELL / 0.4 seconds, rising in
+// six seconds and fading over forty, hashed per cell of FLARE_CELL; 0 for every other class
+constexpr double FLARE_CELL = 3000;
+double starFlare(const Star& s, double t);
 
 // Cache of the stars around a position (a cube of sectors), refreshed when the
 // centre sector changes.

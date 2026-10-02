@@ -11,7 +11,8 @@
 
 enum Material {
     MAT_ROCK = 0, MAT_SAND, MAT_GRASS, MAT_FOREST, MAT_SNOW, MAT_WATER, MAT_LAVA, MAT_ICE, MAT_CLOUD, MAT_QUARTZ,
-    MAT_BASALT, MAT_DUST, MAT_GAS, MAT_METAL, MAT_SULPHUR, MAT_GRAPHITE, MAT_SALT, MAT_COUNT   // R-305: salt (playas, sinter)
+    MAT_BASALT, MAT_DUST, MAT_GAS, MAT_METAL, MAT_SULPHUR, MAT_GRAPHITE, MAT_SALT,   // R-305: salt (playas, sinter)
+    MAT_GLASS, MAT_COUNT   // S-03: the fused ground of a glassed world (family water: bank 2 in the glass's colour)
 };
 
 // R-304: the traits of a body: up to three, drawn by type from the seed; each changes the ground, the water, the climate,
@@ -23,6 +24,7 @@ enum Trait {
     TR_YARDANGS, TR_ERG, TR_SALT_FLATS, TR_TRAPS, TR_GREAT_BASIN, TR_CORONAE, TR_SPIRES, TR_GEYSERS,
     TR_ARCHIPELAGO, TR_PANGAEA, TR_LAKELAND, TR_SNOWBALL, TR_EXOTIC_SEAS, TR_STORMS, TR_HAZE,
     TR_GIANT_FLORA, TR_LUMINOUS_FLORA, TR_DEAD_FOREST, TR_RED_SOIL, TR_BLACK_SAND, TR_CHALK,
+    TR_GLASSED,   // S-03: never drawn; the generator gives it to a neutron star's outer survivors (`Body::glassed`): the flats fused into sheets of glass
     TR_COUNT
 };
 extern const char* TRAIT_NAMES[TR_COUNT];

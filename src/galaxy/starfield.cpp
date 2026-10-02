@@ -19,6 +19,28 @@ const StarClassInfo STAR_CLASSES[STAR_CLASS_COUNT] = {
      RGB(0.86f, 0.90f, 1.00f), 9.0e3, 0.30, 0.02, 0.8, 4, 14, 1, 6.0e6},
     {"S05", "PULSAR", "tiny pulsar object, unsafe, high radiation, strong gravity; pulsing light.",
      RGB(0.62f, 0.62f, 1.00f), 2.0e4, 0.20, 0.05, 1.6, 3, 8, 1, 1.0e7},
+    // S-01: the varieties, rarity 0 (each takes a share of its family through starVariety, not a weight of its own)
+    {"S06", "RED DWARF", "small, dim red star, the commonest kind; near worlds keep one face to it; flares.",
+     RGB(1.00f, 0.50f, 0.32f), 2.6e5, 0.30, 0.06, 0.4, 6, 0, 12, 3.0e6},
+    {"S07", "BLUE-WHITE STAR", "hot, bright, short-lived star; wide systems of bare rock and ice; hard ultraviolet.",
+     RGB(0.82f, 0.87f, 1.00f), 1.3e6, 0.30, 8.0, 2.0, 12, 0, 16, 1.6e7},
+    {"S08", "ORANGE GIANT", "old star grown large, warm amber light; inner worlds scorched, temperate ones among the ice.",
+     RGB(1.00f, 0.66f, 0.34f), 8.0e6, 0.35, 12.0, 1.2, 7, 0, 6, 5.0e7},
+    {"S09", "CARBON STAR", "dim ruby giant in its own soot; ember light, a hazy sky; carbon worlds.",
+     RGB(1.00f, 0.38f, 0.20f), 3.0e7, 0.40, 9.0, 1.3, 5, 0, 6, 1.8e8},
+    // S-03: the neutron star, a share of the pulsar family; its light is a point, its hazard the x-rays, its worlds the survivors
+    {"S10", "NEUTRON STAR", "collapsed star, a point of white light; x-ray glare; only survivors: bare cores, captured rocks, worlds of glass.",
+     RGB(0.72f, 0.80f, 1.00f), 1.4e4, 0.20, 0.03, 1.5, 3, 0, 1, 1.5e7},
+    // S-04: the protostar, a share of the yellow family where stars form; a soft orange star in its cloud, a disc of dust, belts
+    {"S11", "PROTOSTAR", "young star still condensing from its cloud; a dusty disc seen edge-on, belts and a few molten worlds; the nebula's glow all over the sky.",
+     RGB(1.00f, 0.60f, 0.36f), 2.0e6, 0.30, 1.5, 0.8, 2, 0, 12, 1.5e7},
+    // S-05: the Wolf-Rayet star, a share of the blue giants that stayed: blinding inside the shell it has shed, a wind that strips its worlds, radiation everywhere
+    {"S12", "WOLF-RAYET STAR", "massive star blowing off its outer layers; blinding blue-white inside a ring of shed gas; a wind that strips atmospheres, radiation everywhere; few bare and bombarded worlds.",
+     RGB(0.78f, 0.84f, 1.00f), 3.5e6, 0.35, 180.0, 16.0, 4, 0, 14, 7.0e7},
+    // S-06: the black hole, a share of the pulsars that stayed: no light but its disc's (the radius is the stylised Schwarzschild radius the
+    // renderer draws from, the mass is the real thing), its worlds the survivors, a companion drawn out
+    {"S13", "BLACK HOLE", "collapsed star of no light at all: a hole in the sky ringed by the bent light of the stars behind it, a glowing disc where it feeds; survivors only: wandering rocks, a companion drawn out.",
+     RGB(1.00f, 0.88f, 0.70f), 3.0e5, 0.30, 0.03, 40.0, 3, 0, 40, 2.0e7},
 };
 
 // G-03: the dust. A thinner disc than the stars' (two fifths of their scale height), denser in the arms, in clouds of
@@ -163,6 +185,19 @@ double nebulaGlow(const NebulaPatch* p, int n, const Vec3& dir, int& tone) {
     return best;
 }
 
+int starNebulaTone(const Star& s) {
+    double u = unitFromHash(mix64(s.seed ^ 0x4EB1ULL));
+    return u < 0.4 ? 0 : (u < 0.75 ? 1 : 2);
+}
+
+int starNebulaPatches(const Star& s, const Vec3& dirToStar, NebulaPatch* out) {
+    if (s.cls != STAR_PROTOSTAR) return 0;
+    int tone = starNebulaTone(s);
+    out[0].dir = dirToStar; out[0].radius = 1.1; out[0].tone = tone; out[0].inten = 0.8;          // the cloud lit round the star
+    out[1].dir = dirToStar; out[1].radius = PI - 0.01; out[1].tone = tone; out[1].inten = 0.3;    // its faint light over the whole sky
+    return 2;
+}
+
 // G-01: the density function. An exponential disc of scale length 8,000 ly whose thickness grows toward the centre, a
 // gaussian bulge, four logarithmic arms of 12 degrees pitch that modulate the disc between 0.55 and 1.15 of its value
 // (squared cosine: narrow crests, wide gaps), the hashed cluster knots, and the cap of one star per sector. The
@@ -246,6 +281,53 @@ int galaxyRegion(int64_t sx, int64_t sy, int64_t sz) {
     return REGION_DISK;
 }
 
+int starVariety(int family, int region, uint64_t hash) {
+    double u = unitFromHash(hash);
+    bool old = region == REGION_CORE || region == REGION_BULGE || region == REGION_HALO || region == REGION_CLUSTER;   // the old populations
+    bool young = region == REGION_NEBULA || region == REGION_OPEN;                                                      // where stars form
+    switch (family) {
+        case STAR_YELLOW: {
+            if (u < (old ? 0.5 : (young ? 0.35 : 0.4))) return STAR_RED_DWARF;
+            // S-04: the protostars, out of the stars that stayed yellow, by a hash of their own: half of them in a star-forming
+            // complex, a fifth in an open cluster, one in fifty along the arms (the clouds of the arms), none elsewhere
+            double ps = region == REGION_NEBULA ? 0.5 : (region == REGION_OPEN ? 0.2 : (region == REGION_ARM ? 0.02 : 0.0));
+            return ps > 0 && unitFromHash(mix64(hash ^ 0x9A07ULL)) < ps ? STAR_PROTOSTAR : family;
+        }
+        case STAR_ORANGE: return u < (old ? 0.85 : (young ? 0.65 : 0.75)) ? STAR_RED_DWARF : family;
+        case STAR_BLUE_GIANT: {
+            if (u < (old ? 0.3 : (young ? 0.65 : (region == REGION_ARM ? 0.6 : 0.5)))) return STAR_BLUE_WHITE;
+            // S-05: the Wolf-Rayet stars, out of the blue giants that stayed, by a hash of their own: a fifth along the arms and where
+            // stars form, a tenth in the core, one in twenty in the bulge and the disc, none in the halo or a globular (no massive star is old)
+            double ws = (region == REGION_ARM || region == REGION_NEBULA || region == REGION_OPEN) ? 0.2 : (region == REGION_CORE ? 0.1 : ((region == REGION_BULGE || region == REGION_DISK) ? 0.05 : 0.0));
+            return ws > 0 && unitFromHash(mix64(hash ^ 0x3E5FULL)) < ws ? STAR_WOLF_RAYET : family;
+        }
+        case STAR_RED_GIANT: { double og = old ? 0.4 : 0.3, cs = old ? 0.2 : 0.1; return u < og ? STAR_ORANGE_GIANT : (u < og + cs ? STAR_CARBON : family); }
+        case STAR_PULSAR: {
+            if (u < (old ? 0.55 : 0.35)) return STAR_NEUTRON;   // S-03: the quiet remnants, more among the old stars of the core, the bulge and the globulars
+            // S-06: the black holes, out of the pulsars that stayed, by a hash of their own: a quarter in the core, a fifth in the bulge,
+            // one in seven in a globular, one in ten in the halo, one in sixteen in the arms and the disc, one in thirty where stars form
+            double bs = region == REGION_CORE ? 0.25 : (region == REGION_BULGE ? 0.2 : (region == REGION_CLUSTER ? 0.15 : (region == REGION_HALO ? 0.1 : (young ? 0.03 : 0.06))));
+            return unitFromHash(mix64(hash ^ 0x8B1EULL)) < bs ? STAR_BLACK_HOLE : family;
+        }
+        default: return family;
+    }
+}
+
+double starFlare(const Star& s, double t) {
+    if (s.cls != STAR_RED_DWARF) return 0;
+    double best = 0;
+    int64_t cell = (int64_t)std::floor(t / FLARE_CELL);
+    for (int64_t c = cell - 1; c <= cell; c++) {   // the last cell's flare may still be fading
+        uint64_t h = hash2i(c, 0, s.seed ^ 0xF1A2EULL);
+        if (unitFromHash(h) > 0.4) continue;
+        double t0 = c * FLARE_CELL + unitFromHash(mix64(h)) * (FLARE_CELL - 90), amp = 0.6 + 0.8 * unitFromHash(mix64(h ^ 0x9E3779B97F4A7C15ULL));
+        double dt = t - t0;
+        if (dt < 0 || dt > 240) continue;
+        best = std::max(best, amp * (dt < 6 ? dt / 6 : std::exp(-(dt - 6) / 40)));
+    }
+    return best;
+}
+
 bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) {
     uint64_t seed = sectorSeed(sx, sy, sz);
     double d = galaxyDensity((double)sx, (double)sy, (double)sz);
@@ -269,7 +351,7 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
         case REGION_ARM: w[STAR_BLUE_GIANT] *= 1.6; break;
         default: break;
     }
-    out.cls = rng.pick(w, STAR_CLASS_COUNT);
+    out.cls = starVariety(rng.pick(w, STAR_CLASS_COUNT), region, mix64(seed ^ 0x5A11E7ULL));   // S-01: the family by weight, then its variety by a hash of its own (mixed: the seed's own uniform is the existence test, under the density)
     const StarClassInfo& ci = STAR_CLASSES[out.cls];
     double rv = 1.0 + rng.sym(ci.radiusVar);
     out.radiusKm = ci.radiusKm * rv;

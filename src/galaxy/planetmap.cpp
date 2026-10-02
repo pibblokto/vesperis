@@ -4,11 +4,11 @@
 #include <cmath>
 
 const char* MATERIAL_NAMES[MAT_COUNT] = {"ROCK", "SAND", "GRASS", "FOREST", "SNOW", "WATER", "LAVA", "ICE", "CLOUD",
-                                         "QUARTZ", "BASALT", "DUST", "GAS", "IRON", "SULPHUR", "GRAPHITE", "SALT"};
+                                         "QUARTZ", "BASALT", "DUST", "GAS", "IRON", "SULPHUR", "GRAPHITE", "SALT", "GLASS"};
 const char* TRAIT_NAMES[TR_COUNT] = {"", "CANYON LANDS", "BADLANDS", "KARST TOWERS", "GREAT RIFT", "ESCARPMENTS", "GLACIATED", "INSELBERGS", "CINDER FIELDS", "CHAOS TERRAIN", "PATTERNED GROUND",
                                      "YARDANGS", "DUNE SEAS", "SALT FLATS", "TRAP TERRACES", "GREAT BASIN", "CORONAE", "SPIRE FIELDS", "GEYSER BASINS",
                                      "ARCHIPELAGO", "PANGAEA", "LAKE COUNTRY", "SNOWBALL", "EXOTIC SEAS", "STORM WORLD", "HAZE",
-                                     "GIANT FLORA", "LUMINOUS FLORA", "DEAD FORESTS", "RED SOILS", "BLACK SANDS", "CHALK LANDS"};
+                                     "GIANT FLORA", "LUMINOUS FLORA", "DEAD FORESTS", "RED SOILS", "BLACK SANDS", "CHALK LANDS", "GLASSED"};
 const char* traitPhrase(int t) {
     switch (t) {
         case TR_CANYONS: return ", cut by canyons"; case TR_MESAS: return ", its dry country carved into mesas and buttes"; case TR_KARST: return ", stone towers rising from its wet lowlands";
@@ -21,6 +21,7 @@ const char* traitPhrase(int t) {
         case TR_SNOWBALL: return ", frozen down to the middle latitudes"; case TR_EXOTIC_SEAS: return ", seas of something that is not water"; case TR_STORMS: return ", storms that never end";
         case TR_HAZE: return ", under a thick haze"; case TR_GIANT_FLORA: return ", flora of giant size"; case TR_LUMINOUS_FLORA: return ", flora that glows at night";
         case TR_DEAD_FOREST: return ", its forests dead and grey"; case TR_RED_SOIL: return ", red soils"; case TR_BLACK_SAND: return ", black sands"; case TR_CHALK: return ", chalk-white ground";
+        case TR_GLASSED: return ", its plains fused to glass by the blast that made its star";   // S-03
         default: return "";
     }
 }
@@ -51,6 +52,7 @@ bool traitEligible(int type, int t) {
         case TR_STORMS: return type == PT_FELISIAN || type == PT_OCEAN || type == PT_VENUSIAN || type == PT_THINATMO || type == PT_DESERT || type == PT_HYDROCARBON || type == PT_ACIDIC;
         case TR_HAZE: return type == PT_FELISIAN || type == PT_THINATMO || type == PT_QUARTZ || type == PT_OCEAN || type == PT_DESERT || type == PT_ACIDIC;
         case TR_RED_SOIL: case TR_BLACK_SAND: case TR_CHALK: return type == PT_FELISIAN || type == PT_THINATMO || type == PT_ROCKY || type == PT_DESERT || type == PT_TECTONIC || type == PT_ACIDIC;
+        case TR_GLASSED: return false;   // S-03: never drawn by the hash; `StarSystem::generate` marks a neutron star's outer survivors and `BodyGen::make` reads the mark
         default: return false;
     }
 }
@@ -86,6 +88,23 @@ inline int octs(double wavelengthKm, double detailM) {
 inline bool scaleVisible(double cellKm, double detailM) { return cellKm * 1000.0 >= detailM * 3.0; }
 // Amplitude multiplier that fades out features smaller than the sampling scale.
 inline double lodFade(double wavelengthKm, double detailM) { return smoothstep(4.0, 12.0, wavelengthKm * 1000.0 / detailM); }
+// B-404: a shaped feature of a known width (a mesa, a tongue, a tower, a trench: one thing, not a periodic pattern) is
+// drawn when it spans a few samples: full at four, gone under one and a half (O6-04's rule for the plains' knobs).
+// `lodFade`'s twelve samples per wavelength guard noise against aliasing; on the landforms it hid every shaped feature
+// from the ring that could have drawn it
+inline double featFade(double widthKm, double detailM) { return smoothstep(1.5, 4.0, widthKm * 1000.0 / detailM); }
+// B-404: a material is decided by the unfaded feature wherever its patch covers at least a quarter of a cell of the
+// sampling scale, so every ring that can draw a patch at all draws the same one (a line narrower than a cell comes out
+// as a chain of cells with gaps, which is what a line looks like at that scale; a half-cell rule ended the icy worlds'
+// 200 m crack lines and the chaos cracks at the 512 m ring, where they used to reach 13 km); a narrower patch is the
+// coarser ring's surroundings, and the world map (texels of 11-44 km) takes nothing under a few kilometres. A material
+// must never follow a faded value: the fade differs between the rings, and a threshold on it put a patch in one ring
+// and not in the next, its edge sweeping along with the explorer (the europan stain of B-404, the lava tongues, the
+// cliffs' rock and scree, the ergs' sand, the landforms' walls)
+// The world map's texels (11-44 km; the drainage stops at 2100 m, the far ring is 2048) take only a patch that spans
+// half of one: a texel stands for a world-sized area, and the trap terraces' risers (2 km) on a 7 km texel came out as
+// scattered dots; the icy worlds' great crack lines (7-20 km) stay the dotted net the globe always showed
+inline bool matVisible(double widthKm, double detailM) { return widthKm * 1000.0 >= (detailM > 2100.0 ? 0.5 : 0.25) * detailM; }
 
 struct FeatureHit {
     double d;        // chord distance from centre, km
@@ -227,10 +246,11 @@ LavaOut lavaFlows(const Vec3& p, double R, double cellKm, double density, uint64
             double wAng = 0.075 * (1.0 - 0.6 * (x - 1) / len);   // the tongue's half-width in radians of azimuth at this distance
             if (x > 1 + len || std::fabs(da) > wAng * 1.6) continue;
             double y = da / wAng;
-            double prof = std::max(0.0, 1 - std::pow(std::fabs(y), 4.0)) * lodFade(r * wAng * 2, detailM);
+            double shape = std::max(0.0, 1 - std::pow(std::fabs(y), 4.0));
             double tip = smoothstep(1 + len, 1 + len - 0.8, x);
-            o.dh += thick * prof * tip;
-            o.flow = std::max(o.flow, prof * tip);
+            double widthKm = 2 * wAng * x * r;   // the tongue's width here
+            o.dh += thick * shape * tip * featFade(widthKm, detailM);                   // B-404: the relief by the tongue's own width (it faded by `lodFade` of the foot's: half there in the 64 m ring, gone at 512)
+            if (matVisible(widthKm, detailM)) o.flow = std::max(o.flow, shape * tip);   // the material by the unfaded tongue wherever it spans half a cell
         }
         {   // the pit chain
             uint64_t hk = mix64(hc + 77);
@@ -240,10 +260,11 @@ LavaOut lavaFlows(const Vec3& p, double R, double cellKm, double density, uint64
                 double along = (x - 1) / len;   // 0..1 along the chain
                 int n = 4 + (int)(unitFromHash(mix64(hk + 2)) * 4);
                 double s = along * n, q = std::floor(s), fr = s - q;
-                double pr = (unitFromHash(mix64(hk + 10 + (uint64_t)q)) < 0.75 ? 1.0 : 0.0) * lodFade(r * 0.05, detailM);
+                double pr = unitFromHash(mix64(hk + 10 + (uint64_t)q)) < 0.75 ? 1.0 : 0.0;
                 double dx = (fr - 0.5) * 2, dy = da / 0.05;
                 double rr = dx * dx + dy * dy;
-                if (rr < 1) { double bowl = (1 - rr) * (1 - rr) * pr; o.dh -= (6.0 + 6.0 * unitFromHash(mix64(hk + 3))) * bowl; o.pit = std::max(o.pit, bowl); }
+                double pitKm = 0.1 * x * r;   // a pit's width (B-404: its own fade, the material wherever it spans half a cell)
+                if (rr < 1) { double bowl = (1 - rr) * (1 - rr) * pr; o.dh -= (6.0 + 6.0 * unitFromHash(mix64(hk + 3))) * bowl * featFade(pitKm, detailM); if (matVisible(pitKm, detailM)) o.pit = std::max(o.pit, bowl); }
             }
         }
     });
@@ -315,7 +336,8 @@ inline double warpedFbm(const Vec3& p, double wl, uint64_t seed, int oct, double
 // sediment); the coordinate is folded twice by low-frequency noise so ridges curve. Every octave fades with `lodFade`
 // and the weights depend only on the coarser octaves, so the map, the far ring and the ground add the same terms at
 // their own scales. Returns metres and the gradient of the sum on the tangent plane (rise over run).
-struct ReliefSum { double h = 0; double slope = 0; double hCoarse = 0; Vec3 gradT; };   // B-320: hCoarse = the octaves of 2 km and longer, with the floor; O6-04: gradT = the gradient on the tangent plane, rise over run, uphill
+struct ReliefSum { double h = 0; double slope = 0; double hCoarse = 0; Vec3 gradT; double hM = 0, slopeM = 0; Vec3 gradM; };   // B-320: hCoarse = the octaves of 2 km and longer, with the floor; O6-04: gradT = the gradient on the tangent plane, rise over run, uphill; B-404: hM, slopeM, gradM = the material chain, the octaves of MAT_WL_KM and longer unfaded at every sampling scale
+constexpr double MAT_WL_KM = 0.048;   // B-404: the material chain's finest octave: 48 m, the twelve samples of the 4 m ring, so the ground underfoot keeps its look and every coarser ring decides its materials by the same slope
 ReliefSum reliefSum(const Vec3& p, const Vec3& unit, const BodyGen& g, double a0, double ridge, uint64_t seed, double detailM) {
     ReliefSum r;
     if (a0 <= 0) return r;
@@ -335,32 +357,46 @@ ReliefSum reliefSum(const Vec3& p, const Vec3& unit, const BodyGen& g, double a0
     }
     double wl = wl0, amp = a0 / (1 + 1.2 * ridge);   // ridged octaves carry about twice the slope of rolling ones: the grade stays the type's
     const double gain = std::pow(2.0, -g.reliefH);
-    Vec3 grad(0, 0, 0);   // of the sum so far, metres per km
+    Vec3 grad(0, 0, 0), gradM(0, 0, 0);   // of the sum so far, metres per km; B-404: of the material chain
     for (int i = 0; i < 12; i++) {
         double fade = lodFade(wl, detailM);
-        if (fade <= 0) break;
+        bool matOct = wl >= MAT_WL_KM;   // B-404: the material chain takes every octave down to 48 m, whatever the sampling scale
+        if (fade <= 0 && !matOct) break;
         Vec3 gn;
         double n = gnoise3d(q.x / wl + i * 17.3, q.y / wl + i * 9.1, q.z / wl + i * 3.7, seed + i * 7919, gn);
         double a = std::fabs(n), sg = n < 0 ? -1.0 : 1.0;
         double rw = ridge * clampd(1.0 - i * 0.22, 0.0, 1.0);   // the ridges are the first octaves' (the range and its spurs); the flanks roll
         double v = n + (2.0 * (1 - a) * (1 - a) - 1.0 - n) * rw;
         Vec3 gv = gn + (gn * (-4.0 * (1 - a) * sg) - gn) * rw;
-        Vec3 gt = grad - unit * dot(grad, unit);
-        double w = fade / (1 + g.reliefErosion * length2(gt) * 1e-6);
-        if (i > 0) w *= 1 + (clampd(0.4 + r.h / (0.9 * a0), 0.08, 1.0) - 1) * g.reliefHybrid;
-        r.h += amp * w * v;
-        if (wl >= 1.9) r.hCoarse = r.h;
-        grad += gv * (amp * w / wl);
+        if (fade > 0) {
+            Vec3 gt = grad - unit * dot(grad, unit);
+            double w = fade / (1 + g.reliefErosion * length2(gt) * 1e-6);
+            if (i > 0) w *= 1 + (clampd(0.4 + r.h / (0.9 * a0), 0.08, 1.0) - 1) * g.reliefHybrid;
+            r.h += amp * w * v;
+            if (wl >= 1.9) r.hCoarse = r.h;
+            grad += gv * (amp * w / wl);
+        }
+        if (matOct) {   // the same recursion unfaded: identical in every ring, since the weights read only the chain's own coarser octaves
+            Vec3 gt = gradM - unit * dot(gradM, unit);
+            double w = 1.0 / (1 + g.reliefErosion * length2(gt) * 1e-6);
+            if (i > 0) w *= 1 + (clampd(0.4 + r.hM / (0.9 * a0), 0.08, 1.0) - 1) * g.reliefHybrid;
+            r.hM += amp * w * v;
+            gradM += gv * (amp * w / wl);
+        }
         wl *= 0.5; amp *= gain;
     }
     {   // a soft sediment floor: below -0.05 a0 the ground keeps a tenth of its depth (filled valleys and basins); C1 at the floor
         const double f = -0.05 * a0, k = 0.08 * a0;
         if (r.h < f) { double d = f - r.h, e = std::exp(-d / k); r.h = f - (0.1 * d + 0.9 * k * (1 - e)); grad *= 0.1 + 0.9 * e; }
         if (r.hCoarse < f) { double d = f - r.hCoarse, e = std::exp(-d / k); r.hCoarse = f - (0.1 * d + 0.9 * k * (1 - e)); }
+        if (r.hM < f) { double d = f - r.hM, e = std::exp(-d / k); r.hM = f - (0.1 * d + 0.9 * k * (1 - e)); gradM *= 0.1 + 0.9 * e; }
     }
     Vec3 gt = grad - unit * dot(grad, unit);
     r.slope = length(gt) * 1e-3;
     r.gradT = gt * 1e-3;
+    Vec3 gtM = gradM - unit * dot(gradM, unit);
+    r.slopeM = length(gtM) * 1e-3;
+    r.gradM = gtM * 1e-3;
     return r;
 }
 // the amplitude of the relief sum from the mountain intensity `rel` (0..1) and the hill country field `hillsF` (0..1)
@@ -378,19 +414,24 @@ CliffOut cliffBands(const Vec3& p, const BodyGen& g, double h, double slope, dou
     if (zone < 0.01 || slope < 0.2) return o;
     double step = g.cliffStep;
     double run = step / std::max(slope, 0.05);
-    double fade = smoothstep(1.5, 4.0, run / detailM) * zone * smoothstep(0.22, 0.32, slope);
-    if (fade <= 0.001) return o;
+    double on = zone * smoothstep(0.22, 0.32, slope);   // B-404: the band's strength, free of the sampling scale (`slope` is the material chain's)
+    if (on <= 0.001) return o;
     double n = 0.5 + 0.5 * gnoise3(p / 1.2 + Vec3(2.7, 9.1, 4.3), g.sC + 0xC1F);
     double amount = smoothstep(1.0 - g.cliffAmount - 0.08, 1.0 - g.cliffAmount + 0.08, n);
-    fade *= amount;
-    if (fade <= 0.001) return o;
+    on *= amount;
+    if (on <= 0.001) return o;
+    double fade = on * smoothstep(1.5, 4.0, run / detailM);   // the relief: a band's run must span a few samples
+    bool mat = matVisible(0.1 * run / 1000.0, detailM);      // B-404: the riser (a tenth of the run) decides the rock and the scree wherever it spans half a cell: the same cells in every ring that can draw it (it used to follow `fade`, and the rock came and went with the ring)
+    if (fade <= 0.001 && !mat) return o;
     double q = std::floor(h / step), f = h / step - q;
     // the band's rise: a bench (35% of it at 0.29 x the slope), the talus (20% at 1.4 x), the riser (20% at 2.75 x: over
     // 1:1 from a 1:2.7 hillside on) and the rounded top (25% at 0.28 x)
     double pr = 0.10 * smoothstep(0.0, 0.35, f) + 0.28 * smoothstep(0.35, 0.55, f) + 0.55 * smoothstep(0.55, 0.75, f) + 0.07 * smoothstep(0.75, 1.0, f);
     o.dh = ((q + pr) * step - h) * fade;
-    o.cliff = fade * smoothstep(0.55, 0.6, f) * smoothstep(0.75, 0.7, f);
-    o.talus = fade * smoothstep(0.3, 0.38, f) * smoothstep(0.6, 0.52, f);
+    if (mat) {
+        o.cliff = on * smoothstep(0.55, 0.6, f) * smoothstep(0.75, 0.7, f);
+        o.talus = on * smoothstep(0.3, 0.38, f) * smoothstep(0.6, 0.52, f);
+    }
     return o;
 }
 // O6-04: the plains broken: hummocks a metre and a half high at 200 m and half a metre at 80 m, low outcrops (knobs of
@@ -404,20 +445,19 @@ double plainRelief(const Vec3& p, const BodyGen& g, double mask, double gullies,
     if (f2 > 0) h += 2.0 * gnoise3(p / 0.12 + Vec3(5.2, 1.7, 2.9), g.sB + 96) * f2;
     if (f3 > 0) h += 0.5 * gnoise3(p / 0.05 + Vec3(2.2, 4.7, 0.9), g.sB + 98) * f3;
     // the shaped features fade by their own size against the sampling scale (a knob of 40 m is three cells at 16 m and
-    // drawn, where the octave rule would hide it): full when they span four samples
-    auto featFade = [&](double wlKm) { return smoothstep(1.5, 4.0, wlKm * 1000.0 / detailM); };
+    // drawn, where the octave rule would hide it): full when they span four samples (`featFade`, shared since B-404)
     if (scaleVisible(0.1, detailM)) {   // the outcrops: knobs 3-7 m high and 35-70 m across on two fifths of the 100 m cells
         Worley3 w = worley3(p / 0.1, g.sB + 97);
         if (unitFromHash(mix64(w.id1 + 3)) < 0.4) {
             double r = 0.35 * (0.5 + 0.5 * unitFromHash(mix64(w.id1 + 4)));
             double x = w.f1 / r;
-            if (x < 1) h += (3.0 + 4.0 * unitFromHash(mix64(w.id1 + 5))) * std::pow(1 - x, 1.4) * featFade(2 * r * 0.1);
+            if (x < 1) h += (3.0 + 4.0 * unitFromHash(mix64(w.id1 + 5))) * std::pow(1 - x, 1.4) * featFade(2 * r * 0.1, detailM);
         }
     }
     if (gullies > 0 && scaleVisible(0.2, detailM)) {   // gullies and cracks 50 m wide and 3 m deep along the boundaries of 200 m cells
         Worley3 w = worley3(p / 0.2, g.sB + 92);
         double d = (w.f2 - w.f1) * 100.0;
-        h -= 3.0 * gullies * (1 - smoothstep(0.0, 25.0, d)) * featFade(0.05);
+        h -= 3.0 * gullies * (1 - smoothstep(0.0, 25.0, d)) * featFade(0.05, detailM);
     }
     return h * mask;
 }
@@ -451,7 +491,7 @@ const char* reliefClass(double slope) { return slope < 0.05 ? "FLAT" : (slope < 
 
 int matFamily(int material) {
     switch (material) {
-        case MAT_WATER: return FAM_WATER;
+        case MAT_WATER: case MAT_GLASS: return FAM_WATER;   // S-03: the glass takes the water family's bank (bank 2, the secondary) in the glass's colour; a glassed world has no sea
         case MAT_FOREST: return FAM_FOREST;
         case MAT_GRASS: return FAM_GRASS;
         case MAT_SAND: case MAT_DUST: case MAT_SULPHUR: case MAT_QUARTZ: return FAM_SAND;
@@ -508,6 +548,7 @@ static void materialPalette(BodyGen& g) {
     m[MAT_GRAPHITE] = lerp(graphite, base, 0.3f);
     m[MAT_GAS] = base;
     m[MAT_SALT] = lerp(RGB(0.93f, 0.92f, 0.87f), base, 0.08f);   // R-305: playas and sinter
+    m[MAT_GLASS] = RGB(0.50f, 0.66f, 0.52f);   // S-03: pale green glass (the glassed worlds set their own below)
     switch (g.type) {
         case PT_FELISIAN:   // the base hue is the blend seen from afar; the ground is rock and sand, not teal
             m[MAT_ROCK] = lerp(RGB(0.52f, 0.46f, 0.38f), base, 0.2f);
@@ -541,6 +582,12 @@ static void materialPalette(BodyGen& g) {
     if (g.hasTrait(TR_BLACK_SAND)) { RGB blk(0.13f, 0.12f, 0.13f); m[MAT_SAND] = lerp(m[MAT_SAND], blk, 0.8f); m[MAT_DUST] = lerp(m[MAT_DUST], blk, 0.7f); m[MAT_ROCK] = lerp(m[MAT_ROCK], blk, 0.35f); }
     if (g.hasTrait(TR_CHALK)) { RGB chalk(0.9f, 0.88f, 0.8f); m[MAT_ROCK] = lerp(m[MAT_ROCK], chalk, 0.6f); m[MAT_SAND] = lerp(m[MAT_SAND], chalk, 0.5f); m[MAT_DUST] = lerp(m[MAT_DUST], chalk, 0.6f); }
     if (g.hasTrait(TR_EXOTIC_SEAS)) m[MAT_WATER] = g.type == PT_CARBON ? RGB(0.07f, 0.06f, 0.06f) : (g.type == PT_ICY ? RGB(0.32f, 0.28f, 0.42f) : RGB(0.42f, 0.28f, 0.08f));   // tar, brine, methane
+    if (g.hasTrait(TR_GLASSED)) {   // S-03: the sheets of pale green glass take the water family's colour (the globe, the maps and bank 2 read it); the ground round them is scorched
+        RGB glass = lerp(RGB(0.50f, 0.66f, 0.52f), base, 0.2f), scorched(0.26f, 0.23f, 0.21f);
+        m[MAT_GLASS] = glass; m[MAT_WATER] = glass;
+        m[MAT_ROCK] = lerp(m[MAT_ROCK], scorched, 0.45f); m[MAT_DUST] = lerp(m[MAT_DUST], scorched, 0.45f); m[MAT_SAND] = lerp(m[MAT_SAND], scorched, 0.4f);
+        m[MAT_BASALT] = lerp(m[MAT_BASALT], scorched, 0.3f); m[MAT_METAL] = lerp(m[MAT_METAL], scorched, 0.3f); m[MAT_GRAPHITE] = lerp(m[MAT_GRAPHITE], scorched, 0.2f);
+    }
 }
 
 BodyGen BodyGen::make(const Body& b, double season) {
@@ -767,6 +814,11 @@ BodyGen BodyGen::make(const Body& b, double season) {
             }
             if (ok) g.traits[got++] = t;
         }
+        if (b.glassed) {   // S-03: a survivor of its neutron star's supernova: the glass comes first and the exotic seas boiled off (the glass owns bank 2)
+            int keep[3] = {0, 0, 0}, nk = 0;
+            for (int k = 0; k < 3 && nk < 2; k++) if (g.traits[k] && g.traits[k] != TR_EXOTIC_SEAS) keep[nk++] = g.traits[k];
+            g.traits[0] = TR_GLASSED; g.traits[1] = keep[0]; g.traits[2] = keep[1];
+        }
         for (int k = 0; k < 3; k++) switch (g.traits[k]) {
             case TR_ARCHIPELAGO: g.seaLevel += 0.3; g.islandDensity = 0.5; break;
             case TR_PANGAEA: g.contScale = 1.8; g.seaLevel -= 0.05; break;
@@ -845,7 +897,7 @@ namespace {
 // the ground alone (spires, polygons, terraces, crevasses), `flatten` melts the ground into the smooth ground by that
 // fraction, `flatOffset` metres off it (playas, glaciers); `mat`/`albedo` override the material where set. Every term
 // fades with the sampling scale (`lodFade`, `scaleVisible`) so the map, the far rings and the ground agree
-struct LandCtx { double landMask = 1, moist = 0.15, relief0 = 0, h = 0, hS = 0, T = 15; };
+struct LandCtx { double landMask = 1, moist = 0.15, relief0 = 0, h = 0, hS = 0, T = 15, hM = 0, slope = 0; };   // B-404: hM = the ground on the material chain's relief, slope = that chain's slope (the same in every ring)
 struct LandOut { double dhSmooth = 0, dhFine = 0, flatten = 0, flatOffset = 0; int mat = -1; double albedo = -1; double glacier = 0, riftFloor = 0; double mark = 0; };   // mark: 1 where the landform is at its most distinctive (the galleries)
 void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detailM, const LandCtx& c, LandOut& o) {
     if (!g.traits[0]) return;
@@ -863,21 +915,23 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // a province of dry, flat, raised ground incised by a network of canyons (worley boundaries at 20 km, 0.6-1.3 km
             // wide, 150-600 m deep) and their side canyons (5 km, a third as wide and deep); the walls step down in three terraces
             double mask = land * prov(1, 0.1, 0.4) * smoothstep(0.45, 0.25, c.moist) * smoothstep(0.4, 0.2, c.relief0) * smoothstep(30, 150, c.hS);
-            if (mask < 0.01 || !scaleVisible(0.3, detailM)) break;
+            double w1 = 0.3 + 0.35 * tu(2), w2 = 0.1 + 0.12 * tu(3);   // the half-widths, km
+            if (mask < 0.01 || (featFade(w1 * 2, detailM) <= 0 && !matVisible(w1, detailM))) break;   // B-404: by the canyons' own width (the 512 m ring draws them, coarsely; it was `scaleVisible(0.3)`: nothing beyond the 64 m ring)
             double depth = (150 + 450 * tu(1)) * mask;
             double wallness = 0;
             auto cut = [&](double cellKm, uint64_t seed, double width, double dep) {
-                double f = lodFade(width * 2, detailM);
-                if (f <= 0) return 0.0;
+                double f = featFade(width * 2, detailM);
+                bool mv = matVisible(width, detailM);   // the walls' rock wherever a side spans half a cell
+                if (f <= 0 && !mv) return 0.0;
                 Worley3 w = worley3(p / cellKm, seed);
                 double d = (w.f2 - w.f1) * cellKm * 0.5;   // km from the boundary
                 double tt = clampd(1 - d / width, 0, 1);    // 1 at the centre line
                 double s = tt * 3, k = std::floor(s), fr = s - k;
                 double prof = tt >= 1 ? 1.0 : (k + smoothstep(0.25, 0.75, fr)) / 3;
-                if (prof > 0.03 && prof < 0.97) wallness = std::max(wallness, 1.0);
+                if (mv && prof > 0.03 && prof < 0.97) wallness = std::max(wallness, 1.0);
                 return -dep * prof * f;
             };
-            o.dhSmooth += cut(20.0, g.sE + 210, 0.3 + 0.35 * tu(2), depth) + cut(5.0, g.sE + 211, 0.1 + 0.12 * tu(3), depth * 0.4);
+            o.dhSmooth += cut(20.0, g.sE + 210, w1, depth) + cut(5.0, g.sE + 211, w2, depth * 0.4);
             if (wallness > 0 && mask > 0.5) { setMat(MAT_ROCK, 0.42); o.mark = 1; }
             break;
         }
@@ -885,31 +939,32 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // badlands: flat-topped mesas 0.8-1.6 km across and 40-160 m high on half the cells of a 1.4 km grid, buttes and
             // hoodoos on a sixth, steep rims with a talus foot, in a dry flat province
             double mask = land * prov(2, 0.1, 0.35) * smoothstep(0.5, 0.3, c.moist) * smoothstep(0.4, 0.15, c.relief0);
-            if (mask < 0.01 || !scaleVisible(1.4, detailM)) break;
-            double f = lodFade(1.4, detailM);
+            if (mask < 0.01 || (featFade(1.1, detailM) <= 0 && !matVisible(0.11, detailM))) break;   // B-404: by the biggest cap's width and its rim
             Worley3 w = worley3(p / 1.4, g.sE + 220);
             double u = unitFromHash(mix64(w.id1 + 7));
-            double dh = 0, prof = 0;
+            double dh = 0; bool rim = false;
             if (u < 0.5) {
                 double capH = 60 + 160 * unitFromHash(mix64(w.id1 + 8)), rad = 0.3 + 0.25 * unitFromHash(mix64(w.id1 + 9));
                 double x = w.f1 / rad;
-                prof = x < 0.8 ? 1.0 : (x < 1.0 ? 1 - 0.85 * smoothstep(0.8, 1.0, x) : 0.15 * std::max(0.0, 1 - (x - 1) / 0.5));
-                dh = capH * prof;
+                double prof = x < 0.8 ? 1.0 : (x < 1.0 ? 1 - 0.85 * smoothstep(0.8, 1.0, x) : 0.15 * std::max(0.0, 1 - (x - 1) / 0.5));
+                dh = capH * prof * featFade(2 * rad, detailM);                              // a cap's own fade
+                rim = prof > 0.05 && prof < 0.95 && matVisible(0.2 * rad, detailM);   // the steep rim, a fifth of the radius wide
             } else if (u < 0.66) {
                 double capH = 30 + 90 * unitFromHash(mix64(w.id1 + 8)), rad = 0.06 + 0.06 * unitFromHash(mix64(w.id1 + 9));
                 double x = w.f1 / rad;
-                prof = x < 0.7 ? 1.0 : (x < 1 ? 1 - 0.9 * smoothstep(0.7, 1.0, x) : 0.1 * std::max(0.0, 1 - (x - 1) / 0.6));
-                dh = capH * prof;
+                double prof = x < 0.7 ? 1.0 : (x < 1 ? 1 - 0.9 * smoothstep(0.7, 1.0, x) : 0.1 * std::max(0.0, 1 - (x - 1) / 0.6));
+                dh = capH * prof * featFade(2 * rad, detailM);
+                rim = prof > 0.05 && prof < 0.95 && matVisible(0.3 * rad, detailM);
             }
-            o.dhSmooth += dh * mask * f;
-            if (prof > 0.05 && prof < 0.95 && mask > 0.5) { setMat(MAT_ROCK, 0.4); o.mark = 1; }
+            o.dhSmooth += dh * mask;
+            if (rim && mask > 0.5) { setMat(MAT_ROCK, 0.4); o.mark = 1; }
             break;
         }
         case TR_KARST: {
             // tower karst: steep towers 50-210 m tall and 70-250 m across, half the cells of a 500 m grid, in warm wet
             // lowlands; sinkholes 60-160 m across between them
             double mask = land * prov(3, 0.1, 0.4) * smoothstep(0.45, 0.6, c.moist) * smoothstep(8, 16, c.T) * smoothstep(0.35, 0.15, c.relief0) * smoothstep(5, 30, c.hS) * smoothstep(900, 500, c.hS);
-            if (mask < 0.01 || !scaleVisible(0.5, detailM)) break;
+            if (mask < 0.01 || (featFade(0.25, detailM) <= 0 && !matVisible(0.07, detailM))) break;   // B-404: by the biggest tower and its walls
             double dh = 0; bool wall = false;
             visitFeatures(p, R, 0.5, 0.55, g.sE + 230, 0.5, [&](const FeatureHit& f) {
                 double r = 0.035 + 0.09 * f.u[3], x = f.d / r;
@@ -917,15 +972,15 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
                 double hgt = 50 + 160 * f.u[4];
                 double prof = x < 1 ? (1 - smoothstep(0.62, 1.0, x)) * (0.75 + 0.25 * std::cos(x * PI * 0.5)) : 0.0;   // a rounded top, walls over the outer 38%
                 prof += 0.06 * clampd((1.15 - x) / 0.15, 0, 1) * (x > 1 ? 1 : 0) + (x < 1 ? 0.06 : 0);
-                dh += hgt * prof;
-                if (x > 0.5 && x < 1.05) wall = true;
+                dh += hgt * prof * featFade(2 * r, detailM);   // a tower's own fade
+                if (x > 0.5 && x < 1.05 && matVisible(0.55 * r, detailM)) wall = true;   // the walls, the outer 55% of the radius
             });
             visitFeatures(p, R, 0.45, 0.3, g.sE + 231, 0.4, [&](const FeatureHit& f) {
                 double r = 0.03 + 0.05 * f.u[3], x = f.d / r;
                 if (x >= 1) return;
-                dh -= (8 + 25 * f.u[4]) * (1 - x * x) * (1 - x * x);
+                dh -= (8 + 25 * f.u[4]) * (1 - x * x) * (1 - x * x) * featFade(2 * r, detailM);
             });
-            o.dhSmooth += dh * mask * lodFade(0.5, detailM);
+            o.dhSmooth += dh * mask;
             if (wall && mask > 0.5) { setMat(MAT_ROCK, 0.45); o.mark = 1; }
             break;
         }
@@ -972,8 +1027,8 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // lies below it, crevassed (`glacier` sets the ice); fjords come from the river layer on living worlds
             double cold = smoothstep(2, -5, c.T) * smoothstep(0.15, 0.4, c.relief0) * land;
             if (cold < 0.01) break;
-            double glac = cold * smoothstep(-8, 25, c.hS - c.h);
-            if (glac < 0.02) break;
+            double glac = cold * smoothstep(-8, 25, c.hS - c.hM);   // B-404: the valley's depth on the material chain, the same in every ring
+            if (glac < 0.02 || !matVisible(0.5, detailM)) break;     // a tongue is half a kilometre wide: the rings to 512 m carry it, the far ring and the map read the smooth ground alone
             if (scaleVisible(0.04, detailM)) { Worley3 w = worley3(p / 0.05, g.sE + 270); o.dhFine -= 3.0 * (1 - smoothstep(0.02, 0.08, w.f2 - w.f1)) * glac; }
             o.flatten = std::max(o.flatten, glac); o.flatOffset = -6;
             o.glacier = std::max(o.glacier, glac);
@@ -983,17 +1038,17 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_INSELBERGS: {
             // lone steep mountains 150-500 m tall and 0.8-3 km across on the plains, one per 25 km cell in three
             double mask = land * smoothstep(0.35, 0.15, c.relief0);
-            if (mask < 0.01 || !scaleVisible(2.0, detailM)) break;
+            if (mask < 0.01 || (featFade(3.2, detailM) <= 0 && !matVisible(1.1, detailM))) break;   // B-404: by the biggest mountain (the 512 m ring draws the big ones; `lodFade(2.0)` drew none beyond the 64 m ring)
             double dh = 0; bool rock = false;
             visitFeatures(p, R, 25.0, 0.3, g.sE + 280, 0.12, [&](const FeatureHit& f) {
                 double r = 0.4 + 1.2 * f.u[3], x = f.d / r;
                 if (x >= 1.2) return;
                 double hgt = 150 + 350 * f.u[4];
                 double prof = x < 1 ? smoothstep(1.0, 0.5, x) * (0.7 + 0.3 * std::cos(x * PI * 0.5)) + 0.06 : 0.06 * (1.2 - x) / 0.2;
-                dh += hgt * prof;
-                if (x > 0.35 && x < 1.05) rock = true;
+                dh += hgt * prof * featFade(2 * r, detailM);   // a mountain's own fade
+                if (x > 0.35 && x < 1.05 && matVisible(0.7 * r, detailM)) rock = true;
             });
-            o.dhSmooth += dh * mask * lodFade(2.0, detailM);
+            o.dhSmooth += dh * mask;
             if (rock && mask > 0.5) { setMat(MAT_ROCK, 0.42); o.mark = 1; }
             break;
         }
@@ -1003,24 +1058,24 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             double mask = land * prov(4, 0.25, 0.5);
             if (mask < 0.01) break;
             double dh = 0; bool dark = false;
-            if (scaleVisible(2.5, detailM)) {
+            if (featFade(1.0, detailM) > 0 || matVisible(1.0, detailM)) {   // B-404: the cones by their width (0.6-1.5 km), the dark cinder wherever one spans half a cell
                 bool cal = false;
-                double cones = volcanoField(p, R, 2.5, 0.45, g.sE + 290, 140.0, cal) * lodFade(2.5, detailM);
-                dh += cones;
-                if (cones > 15) dark = true;
+                double cones = volcanoField(p, R, 2.5, 0.45, g.sE + 290, 140.0, cal);
+                dh += cones * featFade(1.0, detailM);
+                if (cones > 15 && matVisible(1.0, detailM)) dark = true;
             }
-            if (scaleVisible(5.0, detailM)) {
+            if (featFade(5.0, detailM) > 0 || matVisible(5.0, detailM)) {   // the sheets: cells of 5 km
                 Worley3 w = worley3(p / 5.0, g.sE + 291);
                 if (unitFromHash(mix64(w.id1 + 3)) < 0.35) {
                     double edge = smoothstep(0.0, 0.12, w.f2 - w.f1);
                     double ropy = scaleVisible(0.02, detailM) ? 1.5 * ridged3(p / 0.03, g.sE + 292, 2) : 0.0;
-                    dh += (6.0 + ropy) * edge;
-                    if (edge > 0.5) dark = true;
+                    dh += (6.0 + ropy) * edge * featFade(5.0, detailM);
+                    if (edge > 0.5 && matVisible(5.0, detailM)) dark = true;
                 }
             }
-            if (scaleVisible(0.9, detailM)) {
+            if (scaleVisible(0.9, detailM)) {   // the pit chains, 144 m across
                 Worley3 w = worley3(p / 0.9, g.sE + 293);
-                if (unitFromHash(mix64(w.id1 + 5)) < 0.15 && w.f1 < 0.08) dh -= 12.0 * (1 - w.f1 / 0.08) * (1 - w.f1 / 0.08);
+                if (unitFromHash(mix64(w.id1 + 5)) < 0.15 && w.f1 < 0.08) dh -= 12.0 * (1 - w.f1 / 0.08) * (1 - w.f1 / 0.08) * featFade(0.144, detailM);
             }
             o.dhSmooth += dh * mask;
             if (dark && mask > 0.5) { setMat(MAT_BASALT, 0.15); o.mark = 1; }
@@ -1028,8 +1083,9 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         }
         case TR_CHAOS: {
             // the crust broken into tilted blocks 2-6 km across, lifted or dropped by up to 80 m, cracks 90 m deep between
-            if (!scaleVisible(4.0, detailM)) break;
-            double f = lodFade(4.0, detailM);
+            double f = featFade(4.0, detailM), fc = featFade(0.24, detailM);   // B-404: the blocks by their size, the cracks (240 m wide, 90 m deep) by theirs
+            bool mv = matVisible(0.24, detailM);
+            if (f <= 0 && !mv) break;
             Worley3 w = worley3(p / 4.0, g.sE + 300);
             uint64_t id = w.id1;
             double lift = (unitFromHash(mix64(id + 1)) - 0.5) * 160;
@@ -1037,9 +1093,8 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             double slope = 0.02 + 0.05 * unitFromHash(mix64(id + 5));
             double dh = lift + dot(p - w.c1 * 4.0, tilt) * slope * 1000.0;
             double crack = 1 - smoothstep(0.03, 0.09, w.f2 - w.f1);
-            dh -= 90 * crack;
-            o.dhSmooth += dh * f * land;
-            if (crack > 0.5) { setMat(MAT_ROCK, 0.3); o.mark = 1; }
+            o.dhSmooth += (dh * f - 90 * crack * fc) * land;
+            if (crack > 0.5 && mv) { setMat(MAT_ROCK, 0.3); o.mark = 1; }
             break;
         }
         case TR_POLYGONS: {
@@ -1073,8 +1128,9 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // a sea of giant dunes: draa 1-2.5 km apart and 40-120 m high across the wind in the dry lowlands, sand
             double mask = land * smoothstep(0.34, 0.2, c.moist) * smoothstep(0.35, 0.15, c.relief0) * smoothstep(900, 400, c.hS);
             if (mask < 0.01) break;
+            if (mask > 0.5) { setMat(MAT_SAND, g.type == PT_FELISIAN ? 0.6 : -1.0); o.mark = mask; }   // B-404: the sand sea is kilometres across: sand in every ring and on the maps, whether or not its draa can show (the sand used to go with the draa: dust beyond the 64 m ring); an airless or dry type keeps its own albedo under it, so its globe keeps its mottling (a flat 0.6 made a dune-sea world one yellow ball)
             double wl = 1.0 + 1.5 * tu(11), amp = 40 + 80 * tu(12);
-            double f = lodFade(wl, detailM);
+            double f = lodFade(wl, detailM);   // the draa are a periodic pattern: the octave rule (KI-311)
             if (f <= 0) break;
             Vec3 dd = normalize(Vec3(std::cos(g.windAngle), std::sin(g.windAngle), 0.15 * std::sin(g.windAngle * 2)));
             Vec3 dp = normalize(cross(dd, unit));
@@ -1082,17 +1138,17 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             double bend = fbm3(p / 8.0, g.sE + 330, 2) * 3.0;
             double v = std::pow(0.5 + 0.5 * std::sin(along + bend + 0.5 * std::sin(across * 0.7)), 1.6);
             o.dhSmooth += amp * v * mask * f;
-            if (mask > 0.5) { setMat(MAT_SAND, 0.6); o.mark = mask; }
             break;
         }
         case TR_SALT_FLATS: {
             // white playas in the closed basins of dry country: dead flat three metres under the smooth ground, cracked into
             // polygons a dozen metres across
-            double basin = smoothstep(-0.2, -0.45, fbm3(p / 5.0, g.sB, 3) * lodFade(5.0, detailM));
+            if (!matVisible(2.5, detailM)) break;   // B-404: the playas (a few kilometres across, the lows of the 5 km basin noise) unfaded wherever one spans half a cell: every ring carries them, the world map does not (the noise would alias on its texels)
+            double basin = smoothstep(-0.2, -0.45, fbm3(p / 5.0, g.sB, 3));
             double mask = land * basin * smoothstep(0.34, 0.2, c.moist) * smoothstep(0.25, 0.1, c.relief0) * smoothstep(700, 300, c.hS);
             if (mask < 0.01) break;
             o.flatten = std::max(o.flatten, mask); o.flatOffset = -3;
-            if (scaleVisible(0.005, detailM)) { Worley3 w = worley3(p / 0.012, g.sE + 340); o.dhFine += 0.15 * (1 - smoothstep(0.0, 0.5, (w.f2 - w.f1) * 12)) * mask; }
+            if (scaleVisible(0.012, detailM)) { Worley3 w = worley3(p / 0.012, g.sE + 340); o.dhFine += 0.15 * (1 - smoothstep(0.0, 0.5, (w.f2 - w.f1) * 12)) * mask; }   // the cracks: polygons of 12 m, the 4 m ring's (B-404: gated at 5 m before, under every ring)
             if (mask > 0.6) { setMat(MAT_SALT, 0.9); o.mark = mask; }
             break;
         }
@@ -1100,13 +1156,15 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // stepped terraces of old lava sheets: the ground quantised into steps of 40-90 m with steep risers, in a province
             double mask = land * prov(6, 0.2, 0.45);
             if (mask < 0.01) break;
-            double f = lodFade(1.5, detailM);
-            if (f <= 0) break;
             double step = 40 + 50 * tu(13);
+            double run = step / std::max(c.slope, 0.02);        // B-404: a terrace's run in metres on the material chain's slope
+            double f = featFade(run / 1000.0, detailM);          // the relief where a terrace spans a few samples (it was `lodFade(1.5)`: none beyond the 64 m ring)
+            bool mv = matVisible(0.4 * run / 1000.0, detailM);   // the riser, 40% of the run, decides the basalt wherever it spans half a cell
+            if (f <= 0 && !mv) break;
             double q = std::floor(c.h / step) * step, fr = (c.h - q) / step;
             double terr = q + step * smoothstep(0.3, 0.7, fr);
             o.dhFine += (terr - c.h) * mask * f;
-            if (fr > 0.3 && fr < 0.7 && mask > 0.5) { setMat(MAT_BASALT, 0.22); o.mark = 1; }
+            if (mv && fr > 0.3 && fr < 0.7 && mask > 0.5) { setMat(MAT_BASALT, 0.22); o.mark = 1; }
             break;
         }
         case TR_GREAT_BASIN: {
@@ -1147,7 +1205,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_SPIRES: {
             if (g.type == PT_QUARTZ || g.type == PT_CARBON) {   // crystal spires 10-35 m tall in fields
                 double mask = prov(7, 0.2, 0.45);
-                if (mask < 0.01 || !scaleVisible(0.01, detailM)) break;
+                if (mask < 0.01 || detailM > 5) break;   // the 4 m ring's, like the ice spires (B-404: `scaleVisible(0.01)` wanted a 3 m sample, so no ring ever drew them; the crystal landmarks stood on bare ground)
                 Worley3 w = worley3(p / 0.05, g.sE + 360);
                 if (unitFromHash(mix64(w.id1 + 2)) < 0.4) {
                     double r = 0.006 + 0.006 * unitFromHash(mix64(w.id1 + 3));
@@ -1166,18 +1224,30 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_GEYSERS: {
             // geyser basins: sinter mounds 12 m high and 0.3-0.9 km across with 1.6 m terraces and a pool at the vent, pale crusts
             double mask = land * smoothstep(0.3, 0.1, c.relief0);
-            if (mask < 0.01 || !scaleVisible(1.0, detailM)) break;
+            if (mask < 0.01 || (featFade(1.8, detailM) <= 0 && !matVisible(1.8, detailM))) break;   // B-404: by the biggest basin
             double dh = 0; bool sinter = false;
             visitFeatures(p, R, 20.0, 0.35, g.sE + 370, 0.1, [&](const FeatureHit& f) {
                 double r = 0.3 + 0.6 * f.u[3], x = f.d / r;
                 if (x >= 1.0) return;
                 double mound = 12.0 * (1 - x * x);
                 double terr = std::floor(mound / 1.6) * 1.6 + 1.6 * smoothstep(0.3, 0.7, std::fmod(mound, 1.6) / 1.6);
-                dh += terr * (0.6 + 0.4 * f.u[4]) + (x < 0.12 ? -3.0 * (1 - x / 0.12) : 0.0);
-                sinter = true;
+                dh += (terr * (0.6 + 0.4 * f.u[4]) + (x < 0.12 ? -3.0 * (1 - x / 0.12) : 0.0)) * featFade(2 * r, detailM);   // a mound's own fade
+                if (matVisible(2 * r, detailM)) sinter = true;   // the crust wherever the mound spans half a cell
             });
-            o.dhFine += dh * mask * lodFade(1.0, detailM);
+            o.dhFine += dh * mask;
             if (sinter && mask > 0.5) { setMat(MAT_SALT, 0.85); o.mark = 1; }
+            break;
+        }
+        case TR_GLASSED: {
+            // S-03: the blast that made the neutron star melted the surface; the melt pooled on the flats and lows and froze into
+            // sheets of dark glass (the fine relief gone, ripples of a metre frozen in), the slopes and highs are scorched rock.
+            // The mask reads the land, a province of about half the world and the material chain's slope and relief, all the same
+            // in every ring and on the map (B-404), so a sheet is a sheet at every distance; the ripples alone fade by the ring
+            double mask = land * prov(19, -0.45, -0.1) * smoothstep(0.25, 0.08, c.slope) * smoothstep(0.5, 0.25, c.relief0);
+            if (mask < 0.01) break;
+            o.flatten = std::max(o.flatten, 0.85 * mask);   // the fine relief melted into the smooth ground
+            o.dhFine += mask * (0.5 * fbm3(p / 0.05, g.sE + 291, 2) * lodFade(0.05, detailM) + 1.5 * fbm3(p / 0.25, g.sE + 292, 2) * lodFade(0.25, detailM));   // frozen ripples and swells
+            if (mask > 0.5) { setMat(MAT_GLASS, 0.42); o.mark = mask > 0.8 ? 1 : 0; }   // pale green glass (trinitite, not obsidian: a dark sheet under a dim star was a black screen)
             break;
         }
         default: break;
@@ -1194,6 +1264,7 @@ struct FelGround {
     double h = 0, hS = 0, moist = 0.5, landMask = 0, relief0 = 0, hills = 0, slope = 0;
     double cliff = 0, talus = 0;   // O6-04: on a cliff band's riser, on its talus
     Vec3 gradT;                    // O6-04: the relief's gradient on the tangent plane (rise over run, uphill)
+    double slopeM = 0; Vec3 gradM; // B-404: the material chain's slope and gradient (the same in every ring): the materials read these
     bool caldera = false;
     LandOut land;   // R-305: the traits' landforms here
 };
@@ -1266,16 +1337,16 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     }
     ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf) * (0.05 + 0.95 * landMask), g.reliefRidge * (0.4 + 0.6 * rel), g.sB + 7, detailM);
     double hS = h + rf.hCoarse;
-    h += rf.h;
+    double hRel = h; h += rf.h;
     {   // O6-04: cliff bands on the steep ground of the massifs and the chains
-        CliffOut co = cliffBands(p, g, h, rf.slope, smoothstep(0.12, 0.4, relief0) * landMask, detailM);
+        CliffOut co = cliffBands(p, g, h, rf.slopeM, smoothstep(0.12, 0.4, relief0) * landMask, detailM);   // B-404: on the material chain's slope
         h += co.dh; o.cliff = co.cliff; o.talus = co.talus;
     }
     // R-306 / O6-04: the plains' own small relief, so flat country is not a billiard table underfoot (the shared term:
     // hummocks, outcrops, and gullies where it rains)
     h += plainRelief(p, g, 1.6 * smoothstep(0.3, 0.1, relief0) * landMask, smoothstep(0.28, 0.42, moist) * (0.7 + 0.8 * moist), detailM);   // O6-07: x1.6: the floodplains of O6-03 are flat, and the flat class keeps a 1% median grade
     {   // R-305: the traits' landforms, cut into the smooth ground too (rivers and lakes follow them)
-        LandCtx lc; lc.landMask = landMask; lc.moist = moist; lc.relief0 = relief0; lc.h = h; lc.hS = hS; lc.T = climateTempC(g, std::fabs(lat) / DEG, hS, 0, 0);
+        LandCtx lc; lc.landMask = landMask; lc.moist = moist; lc.relief0 = relief0; lc.h = h; lc.hS = hS; lc.T = climateTempC(g, std::fabs(lat) / DEG, hS, 0, 0); lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
         landformsAt(g, p, unit, detailM, lc, o.land);
         h += (hS - h) * o.land.flatten;
         double dS = o.land.dhSmooth + o.land.flatOffset * o.land.flatten;
@@ -1332,15 +1403,15 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
             visitFeatures(p, R, 3.0, 0.35, g.sE + 380, 0.25, [&](const FeatureHit& f) {
                 double r = 0.3 + 0.3 * f.u[3], x = f.d / r;
                 if (x >= 1) return;
-                bite += (60 + 90 * f.u[4]) * std::max(0.0, 1 - x * x) * (1 - 0.5 * smoothstep(0.7, 1.0, x));
+                bite += (60 + 90 * f.u[4]) * std::max(0.0, 1 - x * x) * (1 - 0.5 * smoothstep(0.7, 1.0, x)) * featFade(2 * r, detailM);   // B-404: a cirque's own fade
             });
-            h -= bite * high * lodFade(0.6, detailM);
-            hS -= bite * high * lodFade(0.6, detailM) * 0.7;
+            h -= bite * high;
+            hS -= bite * high * 0.7;
         }
     }
     // dune seas (M9-08) in dry lowlands
     if (moist < 0.28 && h > 5 && h < 700 && relief0 < 0.3) h += duneField(p, g, lat, 6.0 + 16.0 * (0.28 - moist) / 0.28, detailM) * (1 - smoothstep(0.24, 0.28, moist));
-    o.h = h; o.hS = hS; o.moist = moist; o.landMask = landMask; o.relief0 = relief0; o.hills = hills; o.slope = rf.slope; o.gradT = rf.gradT; o.caldera = caldera;
+    o.h = h; o.hS = hS; o.moist = moist; o.landMask = landMask; o.relief0 = relief0; o.hills = hills; o.slope = rf.slope; o.gradT = rf.gradT; o.slopeM = rf.slopeM; o.gradM = rf.gradM; o.caldera = caldera;
 }
 
 // O6-03: lakes are no longer features with a level of their own. The 7 km lake cells of B-320 dig bowls into the ground
@@ -1467,18 +1538,18 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     double lf = absLatDeg / 85.0;
     double snowLine = g.snowLine * std::max(0.0, 1.0 - lf * lf) - 900.0 * winter;
     // O6-04: the slope's aspect: a flank facing the equator keeps its snow line up to 8% higher, a shaded one lower
-    double steep = clampd(o.slope * (1 + 1.6 * o.cliff), 0, 4);
+    double steep = clampd(o.slopeM * (1 + 1.6 * o.cliff), 0, 4);   // B-404: the material chain's slope: the rock and the scree sit on the same cells in every ring
     {
         Vec3 pole(0, 0, 1);
         Vec3 north = pole - unit * unit.z;
         double nl = length(north);
-        if (nl > 1e-6 && o.slope > 0.02) {
+        if (nl > 1e-6 && o.slopeM > 0.02) {
             Vec3 eq = north / nl * (lat >= 0 ? -1.0 : 1.0);   // toward the equator
-            double facing = dot(normalize(o.gradT * -1.0), eq) * clampd(o.slope / 0.3, 0, 1);   // downhill toward the equator: sun-facing
+            double facing = dot(normalize(o.gradM * -1.0), eq) * clampd(o.slopeM / 0.3, 0, 1);   // downhill toward the equator: sun-facing (B-404: the material chain's)
             snowLine *= 1.0 + 0.08 * facing;
         }
     }
-    moist -= 0.12 * smoothstep(0.25, 0.5, o.slope) * smoothstep(0.3, 0.6, relief0);   // O6-04: the ridges are the dry ground (the valley floors gained above)
+    moist -= 0.12 * smoothstep(0.25, 0.5, o.slopeM) * smoothstep(0.3, 0.6, relief0);   // O6-04: the ridges are the dry ground (the valley floors gained above); B-404: the material chain's slope
     // B-320: inland water. A river is a ribbon cut into the smooth ground along a hashed network (worley cell boundaries
     // at 80 km): across its floodplain the fine relief melts into `hS`, the channel is carved 2.5-11.5 m into it and the
     // water lies a metre under the smooth ground, flat across the ribbon and following the valley along it; the plane
@@ -1639,10 +1710,19 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         massif = smoothstep(0.2, 0.6, rg(std::min(110.0, R * 0.3), g.sC + 6, 3));
         hillsF = smoothstep(-0.15, 0.45, fb(std::min(R * 0.06, 400.0), g.sB + 6, 3));
     }
-    auto crackAt = [&](double cellKm, uint64_t seed, double width, double strength) -> double {
-        if (!scaleVisible(cellKm, detailM)) return 0.0;
+    // crack lines on the boundaries of worley cells: `h` is the faded value for the relief, `m` the unfaded one for the
+    // material wherever a line (`width` cells wide) spans half a sample (B-404: the icy worlds' rock cracks and the
+    // molten worlds' lava lines used to follow the fade and end at a ring's edge)
+    struct Crack { double h = 0, m = 0; };
+    auto crackAt = [&](double cellKm, uint64_t seed, double width, double strength) -> Crack {
+        Crack c;
+        bool hv = scaleVisible(cellKm, detailM), mv = matVisible(width * cellKm, detailM);
+        if (!hv && !mv) return c;
         Worley3 w = worley3(p / cellKm, seed);
-        return strength * (1 - smoothstep(width * 0.5, width * 1.5, w.f2 - w.f1)) * lodFade(cellKm, detailM);
+        double v = strength * (1 - smoothstep(width * 0.5, width * 1.5, w.f2 - w.f1));
+        if (hv) c.h = v * lodFade(cellKm, detailM);
+        if (mv) c.m = v;
+        return c;
     };
 
     LandOut lo;   // R-305: the traits' landforms of this point (the felisian layer keeps its own)
@@ -1663,8 +1743,8 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double relief0 = clampd(rel + 0.25 * hf, 0, 1);
         // the cliffs' country: the massifs, and steep ground anywhere at seven tenths (a thin-atmosphere world's
         // mountains are hill-zone spectrum on a big base term, `rel` near 0: they had 0.1% of cliffs against 3-8)
-        double cliffZone = std::max(smoothstep(0.12, 0.4, relief0), 0.7 * smoothstep(0.3, 0.5, rf.slope));
-        CliffOut co = cliffBands(p, g, h, rf.slope, cliffZone, detailM);
+        double cliffZone = std::max(smoothstep(0.12, 0.4, relief0), 0.7 * smoothstep(0.3, 0.5, rf.slopeM));   // B-404: on the material chain's slope
+        CliffOut co = cliffBands(p, g, h, rf.slopeM, cliffZone, detailM);
         h += co.dh; cliffV = std::max(cliffV, co.cliff); talusV = std::max(talusV, co.talus);
         h += plainRelief(p, g, plainK * smoothstep(0.3, 0.1, relief0), gullyK, detailM);
     };
@@ -1679,10 +1759,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         // O6-02: rolling highlands between the maria (the 20 km hills and the 400 m detail of generation 5 are gone)
         double rel = (1 - mare) * massif, hf = std::max(hillsF, 0.6 * (1 - mare));
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf) * (1 - 0.7 * mare), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1711,10 +1791,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * 1600.0 + roughL * g.mountainAmp * 0.5;
         double zone = smoothstep(0.45, 0.85, roughL), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: the rough belts carry the relief spectrum
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1724,12 +1804,12 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         h += lf.dh;
         s.height = h;
         s.relief = clampd(roughL + 0.5 * rel + 0.5 * rf.slope, 0, 1);
-        double crack = crackAt(12.0, g.sF, 0.05, 1.0);
+        Crack crack = crackAt(12.0, g.sF, 0.05, 1.0);
         if (h < g.lavaLevel || caldera) {
             s.material = MAT_LAVA; s.glow = 1.0; s.albedo = 1.0;
             if (h < g.lavaLevel) s.height = g.lavaLevel;
-        } else if (crack > 0.5 && h < g.lavaLevel + 900) {
-            s.material = MAT_LAVA; s.glow = 0.75; s.albedo = 0.9; s.height = h - 6.0 * crack;
+        } else if (crack.m > 0.5 && h < g.lavaLevel + 900) {
+            s.material = MAT_LAVA; s.glow = 0.75; s.albedo = 0.9; s.height = h - 6.0 * crack.h;
         } else if (lf.flow > 0.4 || lf.pit > 0.3) {
             s.material = MAT_BASALT; s.albedo = 0.09 + 0.03 * (1 - lf.flow); s.glow = lf.pit > 0.6 ? 0.25 : 0.0;   // fresh flows, the tubes' skylights glowing
         } else {
@@ -1743,10 +1823,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         { double chainR = rg(45.0, g.sC + 2, 6); h += tec.chain * (chainR * chainR * g.chainAmp * 0.7) - tec.rift * 800.0 + tec.ridge * 400.0; }
         double zone = clampd(smoothstep(0.1, 0.6, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: tesserae on the highlands and along the chains
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1770,10 +1850,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         }
         double zone = clampd(smoothstep(0.3, 0.7, creaseL) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: creased ridges (the 20 km crease, the 4 km hills and the detail are gone)
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1804,10 +1884,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double zone = clampd(mtnMask + 0.8 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);
         double relief0 = clampd(rel + 0.25 * hf, 0, 1);
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1827,7 +1907,7 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double capEdge = g.iceCapLat + 5.0 * gnoise3(p / (R * 0.15), g.sF + 7);
         if (absLatDeg > capEdge) { s.material = MAT_ICE; s.albedo = 0.85; }
         else if (DA.playa > 0.3) { s.material = MAT_DUST; s.albedo = 0.56 + 0.06 * base; }   // O6-03: a dust flat in a closed basin
-        else if (s.relief > 0.6 && h > 1500) { s.material = MAT_ROCK; s.albedo = 0.35; }
+        else if (relief0 + 0.5 * rf.slopeM > 0.6 && h > 1500) { s.material = MAT_ROCK; s.albedo = 0.35; }   // B-404: the material chain's slope, not `s.relief` (whose slope is the ring's own)
         else if (shield > 400 || shieldCal) { s.material = MAT_BASALT; s.albedo = 0.22 + 0.06 * base; }
         else { s.material = MAT_DUST; s.albedo = 0.42 + 0.12 * base + 0.10 * clampd(rimBright, 0, 1) - 0.12 * canyon + 0.25 * clampd(cm.rays, 0, 1) - 0.1 * clampd(cm.flooded, 0, 1); }
         break;
@@ -1838,16 +1918,15 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp;
         double zone = smoothstep(0.1, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: ridged uplands on the high ground (the 6 km hills and the detail are gone)
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
-        double crack = crackAt(R * 0.15, g.sF, g.fractureWidth, 1.0);
-        crack = std::max(crack, crackAt(12.0, g.sF + 3, g.fractureWidth, 0.8));
-        crack = std::max(crack, crackAt(1.2, g.sF + 5, g.fractureWidth * 1.3, 0.6));
+        Crack c1 = crackAt(R * 0.15, g.sF, g.fractureWidth, 1.0), c2 = crackAt(12.0, g.sF + 3, g.fractureWidth, 0.8), c3 = crackAt(1.2, g.sF + 5, g.fractureWidth * 1.3, 0.6);
+        double crack = std::max(c1.h, std::max(c2.h, c3.h)), crackM = std::max(c1.m, std::max(c2.m, c3.m));   // B-404: the relief by the faded lines, the rock by the unfaded ones
         h -= crack * 60.0;
         h += crater(R * 0.15, g.craterDensity, 0.5);
         h += crater(6.0, g.craterDensity, 0.4);
@@ -1858,8 +1937,8 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         if (scaleVisible(25.0, detailM)) { double cv = domeField(p, R, 25.0, 0.12, g.sD + 21, 0.25, 140.0, 0.0); h += cv; fresh += cv / 140.0; }
         if (scaleVisible(2.0, detailM)) fresh += domeField(p, R, 2.0, 0.08, g.sD + 22, 0.15, 1.0, 0.0);
         s.height = h;
-        s.material = crack > 0.55 ? MAT_ROCK : MAT_ICE;
-        s.albedo = (0.72 + 0.12 * base) * (1 - 0.5 * crack) + 0.1 * clampd(rimBright, 0, 1) + 0.15 * clampd(fresh, 0, 1) + 0.2 * clampd(cm.rays, 0, 1);
+        s.material = crackM > 0.55 ? MAT_ROCK : MAT_ICE;
+        s.albedo = (0.72 + 0.12 * base) * (1 - 0.5 * crackM) + 0.1 * clampd(rimBright, 0, 1) + 0.15 * clampd(fresh, 0, 1) + 0.2 * clampd(cm.rays, 0, 1);
         s.relief = clampd(crack + 0.5 * rel + 0.5 * rf.slope, 0, 1);
         break;
     }
@@ -1868,10 +1947,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp;
         double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: rounded mounds (ridge near 0, low ground smoothed; the 3.5 km rounded hills are gone)
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1920,23 +1999,30 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * 60.0;
         double zone = smoothstep(0.3, 0.7, base), rel = zone * massif * 0.3, hf = hillsF * 0.3;
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
         double stain = 0, band = 0;
         auto lineae = [&](double cellKm, double ridgeM, double troughM, double spanM, uint64_t seed, double fadeKm) {
-            if (!scaleVisible(fadeKm, detailM)) return;
+            // B-404: the ridges fade with the sampling scale as before; the stain (three spans wide: the dust) is unfaded
+            // wherever it spans half a cell, so the three sets' brown bands lie on the same ground in every ring (they
+            // used to follow the fade: the 6 km set's bands ended at the near ring's edge, the 40 km set's at the 16 m ring's)
+            double f = featFade(spanM * 4.0 / 1000.0, detailM);   // the double ridge and its trough, four spans wide (it was `lodFade(fadeKm)`: the 12 m ridges stood at 41% in the 16 m ring)
+            bool mv = matVisible(spanM * 3.0 / 1000.0, detailM);
+            (void)fadeKm;
+            if (f <= 0 && !mv) return;
             Worley3 w = worley3(p / cellKm, seed);
             double dm = (w.f2 - w.f1) * cellKm * 500.0;   // metres from the line (half the difference of the two distances)
-            double f = lodFade(fadeKm, detailM);
-            double rim = std::exp(-std::pow((dm - spanM) / (spanM * 0.45), 2.0));
-            double trough = std::exp(-std::pow(dm / (spanM * 0.6), 2.0));
-            h += (ridgeM * rim - troughM * trough) * f;
-            stain = std::max(stain, smoothstep(spanM * 2.2, spanM * 0.8, dm) * f);
+            if (f > 0) {
+                double rim = std::exp(-std::pow((dm - spanM) / (spanM * 0.45), 2.0));
+                double trough = std::exp(-std::pow(dm / (spanM * 0.6), 2.0));
+                h += (ridgeM * rim - troughM * trough) * f;
+            }
+            if (mv) stain = std::max(stain, smoothstep(spanM * 2.2, spanM * 0.8, dm));
         };
         {   // the great lineae stain a band 6-16 km wide (what a globe shows of them), the ridges themselves are the first set below
             Worley3 w = worley3(p / (R * 0.25), g.sF + 1);
@@ -1951,7 +2037,7 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         if (chaosMask > 0 && scaleVisible(3.0, detailM)) {
             Worley3 cw = worley3(p / 3.0, g.sF + 9);
             double edge = smoothstep(0.02, 0.07, cw.f2 - cw.f1);
-            h += chaosMask * edge * (60.0 * unitFromHash(cw.id1) - 30.0) * lodFade(3.0, detailM);
+            h += chaosMask * edge * (60.0 * unitFromHash(cw.id1) - 30.0) * featFade(3.0, detailM);   // B-404: the rafts by their own size (the 512 m ring draws them)
         }
         h += crater(R * 0.1, 0.05, 0.4);
         h += crater(2.0, 0.08, 0.3);
@@ -1969,10 +2055,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp * 0.6 + tec.uplift * 700.0;
         double zone = clampd(smoothstep(0.1, 0.6, base) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -1982,13 +2068,12 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double rift = smoothstep(11000.0, 7000.0, dRift);
         h += (hS - 800.0 - h) * rift;
         double lava = 0, fresh = 0;
-        if (rift > 0.5 && scaleVisible(5.0, detailM)) {   // the fissures: trenches 30 m deep on 5 km cells, lava along their axes
+        if (rift > 0.5 && (scaleVisible(5.0, detailM) || matVisible(1.0, detailM))) {   // the fissures: trenches 30 m deep and 400 m wide on 5 km cells, lava along their axes (100 m), fresh basalt and sulphur crusts round them (1-1.3 km); B-404: each by its own width
             Worley3 fw = worley3(p / 5.0, g.sF + 6);
             double dm = (fw.f2 - fw.f1) * 2500.0;
-            double f = lodFade(5.0, detailM);
-            h -= 30.0 * smoothstep(220.0, 40.0, dm) * f;
-            lava = smoothstep(90.0, 50.0, dm) * rift;
-            fresh = smoothstep(700.0, 150.0, dm) * rift;
+            h -= 30.0 * smoothstep(220.0, 40.0, dm) * featFade(0.44, detailM);
+            if (matVisible(0.14, detailM)) lava = smoothstep(90.0, 50.0, dm) * rift;
+            if (matVisible(1.0, detailM)) fresh = smoothstep(700.0, 150.0, dm) * rift;
         }
         bool caldera = false;
         if (scaleVisible(R * 0.2, detailM)) h += volcanoField(p, R, R * 0.2, g.volcanoes * 0.5, g.sD, 2200.0, caldera) * lodFade(R * 0.2, detailM);
@@ -2015,10 +2100,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double zone = clampd(smoothstep(0.2, 0.7, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.5 * zone);
         double relief0 = clampd(rel + 0.25 * hf, 0, 1);
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         double hS = h - (rf.h - rf.hCoarse);
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -2054,14 +2139,14 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * 700.0 + 130.0 - 170.0 * smoothstep(50.0, 75.0, absLatDeg);
         double zone = smoothstep(0.2, 0.7, base), rel = zone * massif * 0.6, hf = std::max(hillsF, 0.5 * zone);
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
-        double chan = crackAt(30.0, g.sF + 4, 0.06, 1.0);   // channels: shallow valleys on 30 km cells, deeper toward the sea
+        double chan = crackAt(30.0, g.sF + 4, 0.06, 1.0).h;   // channels: shallow valleys on 30 km cells, deeper toward the sea
         h -= chan * 25.0 * smoothstep(400.0, 50.0, h);
         double dunes = smoothstep(35.0, 20.0, absLatDeg) * smoothstep(0.0, 0.3, fb(R * 0.12, g.sG + 5, 3)) * smoothstep(300.0, 60.0, h) * smoothstep(0.0, 20.0, h);
         if (dunes > 0.05) h += duneField(p, g, lat, g.duneAmp, detailM) * dunes;
@@ -2082,10 +2167,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp * 0.6;
         double zone = smoothstep(0.2, 0.6, base), rel = zone * massif * 0.7, hf = std::max(hillsF, 0.5 * zone);
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -2111,10 +2196,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double zone = clampd(smoothstep(0.1, 0.6, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.5 * zone);
         double relief0 = clampd(rel + 0.25 * hf, 0, 1);
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -2139,10 +2224,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp;
         double zone = smoothstep(-0.2, 0.5, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: sharp iron ridges (the 30 km crease and the 4 km hills are gone)
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -2165,10 +2250,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp * 0.5;
         double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02 (the 5 km hills and the detail are gone)
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }
@@ -2197,10 +2282,10 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double h = base * g.mountainAmp;
         double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02 (the 6 km hills and the detail are gone)
         ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf), g.reliefRidge, g.sB + 7, detailM);
-        h += rf.h;
+        double hRel = h; h += rf.h;
         shape(h, rf, rel, hf);   // O6-04
         {   // R-305: the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15;
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
             landformsAt(g, p, unit, detailM, lc, lo);
             h += (lc.hS - h) * lo.flatten + lo.dhSmooth + lo.dhFine + lo.flatOffset * lo.flatten;
         }

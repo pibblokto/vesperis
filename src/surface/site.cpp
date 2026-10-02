@@ -132,7 +132,8 @@ SunInfo SurfaceSite::sun(double t) const {
     si.altitude = std::asin(clampd(si.dirLocal.y, -1, 1));
     si.azimuth = wrap2pi(std::atan2(si.dirLocal.x, si.dirLocal.z));
     double dist = length(sys->star.pos - bp);
-    si.lightFactor = std::max(0.62, SpaceRenderer::lightFactor(sys->star.luminosity, dist));
+    double flare = starFlare(sys->star, t);   // S-01: a red dwarf's flare doubles its light for a minute and whitens it: a quarter more light past the exposure clamp (its near worlds sit at the clamp already)
+    si.lightFactor = std::max(0.62, SpaceRenderer::lightFactor(sys->star.luminosity, dist)) * (1 + 0.25 * flare);
     si.angularRadius = std::asin(clampd(sys->star.radiusKm / dist, 0, 1));
     // M1-08: other bodies between the site and the star cover part of its disc
     si.eclipse = 0;
@@ -175,7 +176,7 @@ SunInfo SurfaceSite::sun(double t) const {
     double subLon = std::atan2(sunBody.y, sunBody.x);
     double ha = wrapAngle(lon0 - subLon);   // hour angle, 0 = noon
     si.dayFraction = wrap2pi(ha + PI) / TAU;
-    si.color = sys->star.color;
+    si.color = flare > 0 ? lerp(sys->star.color, RGB(1, 1, 1), (float)(0.35 * std::min(1.0, flare))) : sys->star.color;
     return si;
 }
 
