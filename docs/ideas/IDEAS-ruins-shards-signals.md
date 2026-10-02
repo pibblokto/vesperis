@@ -186,3 +186,47 @@ connected rather than sampled.
   sandblasted and half-buried, on an ice world sealed in the glacier. The same generated
   building eroded by the world's own climate model, so the ruin tells you how long ago
   without a number.
+
+## 5. Decided 2026-10-02, at the start of the C series
+
+* **Ruins get a lot more variety, with interiors.** Not one structure per cell but settlements: hamlets, villages and
+  towns of houses, halls, towers, rotundas, gates, platforms, colonnades, stelae and town walls, each house a room with a
+  doorway, a window, an inner wall and (where the culture built them) a roof, decayed to its own degree, in a style the
+  whole world shares. C-01 builds the first version (`galaxy/ruins.*`); C-08 (ruins that read the world) and the
+  weathering by age build on it.
+* **Not every desert is post-apocalyptic.** The "had a civilisation" trait is one desert world in eight (and one felisian
+  world in eight); the other deserts are deserts and nothing more. Only a trait desert keeps its dry seas and old rivers.
+* **The grammar is built (C-02, 2026-10-02).** `galaxy/shards.*` and `vesperis_test shards`: fifty shards a world, the names
+  recurring, the vocabulary from the world's data, the tone by world type and by the shard's age (a desert's darken into a
+  timeline that closes). Judged on paper before any audio, as section 1 asked; `docs/reference/12-civilisations.md`.
+* **The shards are in the ruins (C-03, 2026-10-02).** A few per settlement on the floors of the rooms and at the stelae, a
+  dark slab with a glint, taken with `E`; the log and the statistics record them. Fifty a world in copies, and a copy of one
+  the explorer has is gone everywhere on the world, so there is nothing to find twice. Decoding is C-06.
+* **The decoding (C-06, 2026-10-02).** A decoder on the cabin's back wall (the flight computer and the guide menu reach it
+  too): the worlds, a world's shards by their years, a shard's text with the words not learnt yet dim in the people's own
+  tongue and the names amber. The language is learnt from the shards held of that world, the words its fifty use most
+  first: a third with one, all with ten ("a language you learn", section 4); a reading the computer has not done at the
+  current share takes a few seconds of the words resolving, and a shard re-read after more were found decodes again with
+  fewer gaps. C-02's damage went: the whole text is what ten shards give. The voice is C-05's.
+* **The music (C-04, 2026-10-02).** Twelve to eighteen of a world's fifty shards are pieces of music ("either a spoken
+  monologue or a piece of music"). A world's tradition (`galaxy/music.*`): a scale of five to nine notes from its own
+  tuning (an equal division of 5-24 steps or just ratios; the octave, now and then stretched or narrow, rarely the
+  twelfth), a cycle of beats in twos and threes, a wandering tempo, two or three synthesised timbres leaning the way the
+  people's names sound, an ornament rule, a second voice, a drone, a drum. A piece is statement, variation, answer,
+  return and a close, its form by the shard's tone (a dance, a lullaby, a hymn, a lament, a march, the last song). It
+  plays on the decoder screen with its notes drawn as a roll the playhead crosses, and `N` names it ("music can be
+  listened to and named"). Hearing a piece needs no language: it is whole from the first.
+* **The signal radar (C-07, 2026-10-02).** Built as section 2 asked: the transmitters are a property of the galaxy (hashed The user's second call after playing ("the sounds for signal are PERFECT ... give MORE sounds for signals, greater variety in that cosmic horror direction"): a people's broadcast is a walk of programmes (voices, whispers, a chant, a numbers station, a loop, a beacon, data bursts, a bell, a siren, a murmur of voices, the piece rarely and slowed), each world with a character of its own, every natural signal with parameters from its seed, and events in the static (`12-civilisations.md`, "More of it, and no two alike").
+  sectors, a few per cube of 32, whose star transmits when it has a people's world; one or two within 200 ly on the arm, the
+  salt pinned so the start hears three), the sweep is a radar camera entered from the cabin (the user's call on the first
+  build) with a meter of three lobes over the static and a scope, a hold of a few seconds locks, the readout names the system
+  only (never the world or what sent it: the sound tells), the distance is the age, Enter locks the star and flies there. "A signal could even be a shard heard from afar":
+  a people's world in the beam is heard before the lock, its recording on the air (a voice or a piece, through the receiver's
+  band and static), and the shard found later that the radar caught says so. The non-civilisation signals of section 3 are
+  in: pulsars, comets outgassing, magnetospheres. `docs/reference/12-civilisations.md`.
+* **The voice (C-05, 2026-10-02).** A text shard "plays as alien speech, with a decoded text of what is said": the
+  people's words (the C-06 tongue's, so the spoken words are the written ones) in a voice of the world's (`galaxy/voice.*`:
+  a pitch, a rate, a tract, breath, roughness, a nasal murmur, a tremor, a second tone, a stress rule, a sentence melody,
+  tones, clicks, rolled r's), through a formant synthesiser in the ship's synth ("formant-like synthesis: breathy, clicky,
+  tonal"). The speech carries each word's span, so the decoder's words resolve as they are spoken and the word being
+  spoken is underlined: "speech and decoded text come from the same seed, so they agree" word for word.

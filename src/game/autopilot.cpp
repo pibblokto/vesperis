@@ -19,6 +19,7 @@ void Game::arriveAtStar(const Star& s, const Vec3& fromDir) {
     ship.localTarget = -1;
     ship.targetBelt = -1; ship.parkedBelt = -1;   // O3
     ship.hasRemote = false;
+    radarOff();   // C-07: the signals are scanned afresh here
     double firstOrbit = sys.bodies.empty() ? full.radiusKm * 30 : sys.bodies[0].orbitRadiusKm;
     ship.pos = full.pos + fromDir * std::max(full.radiusKm * 25.0, firstOrbit * 0.55);
     Vec3 fwd = normalize(full.pos - ship.pos);
@@ -260,8 +261,8 @@ void Game::choosePaletteBodies(int& a, int& b) {
 }
 
 void Game::updateSpace(const Input& in, double dt, double realDt) {
-    if (settings.cabin) updateCabin(in, realDt);   // M2: the mouse turns the explorer's head, the arrows the ship
-    else {
+    if (settings.cabin && !radar.on) updateCabin(in, realDt);   // M2: the mouse turns the explorer's head, the arrows the ship
+    else {   // the cockpit view; C-07: in the radar camera the mouse turns the ship, the camera being the ship's
         ship.yaw += in.mouseDx * 0.0032 * settings.mouseSensitivity;
         ship.pitch -= in.mouseDy * 0.0032 * settings.mouseSensitivity * (settings.invertY ? -1 : 1);
     }
@@ -283,6 +284,8 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     }
     if (ship.targeting && in.wasPressed(KEY_N)) cycleTargetStar();
     if (ship.targeting && (enterKey(in) || in.mousePressed[0])) lockRemoteTarget();
+    if (in.wasPressed(KEY_B) && !in.ctrl()) radarToggle();   // C-07: the signal radar
+    bool radarEnter = updateRadar(in, realDt);              // C-07: the sweep, the hold, the lock; true when Enter accepted a lock
     if (in.wasPressed(KEY_V)) toggleVimana();
     bool inSystem = sys.valid && !sys.bodies.empty() && ship.mode != ShipState::VIMANA;
     if (in.wasPressed(KEY_L) && !in.ctrl()) {
@@ -301,7 +304,7 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
         }
     }
     if (in.wasPressed(KEY_TAB) && inSystem) { listSel = ship.targetBelt >= 0 ? (int)sys.bodies.size() + ship.targetBelt : std::max(0, ship.localTarget); returnState = GameState::SPACE; state = GameState::SYSTEM_LIST; }
-    if (enterKey(in) && !wasTargeting && inSystem && ship.mode != ShipState::APPROACH) {
+    if (enterKey(in) && !wasTargeting && !radarEnter && inSystem && ship.mode != ShipState::APPROACH) {
         if (ship.targetBelt >= 0) startApproachBelt(ship.targetBelt);
         else if (ship.localTarget >= 0) startApproach(ship.localTarget);
     }
@@ -326,7 +329,7 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_C)) deployCapsule();
     if (dataKey(in) && inSystem) { returnState = GameState::SPACE; state = GameState::DATA; }
     updateShipMotion(dt);
-    audio.hum = 0.6;
+    audio.hum = radar.on ? 0.25 : 0.6;   // C-07: the hum under the receiver's static
     audio.engine = ship.mode == ShipState::VIMANA ? 0.9 : (ship.mode == ShipState::APPROACH ? 0.35 : 0.0);
     audio.wind = 0; audio.rain = 0; audio.lava = 0;
 }

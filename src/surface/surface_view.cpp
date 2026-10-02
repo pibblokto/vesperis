@@ -212,10 +212,13 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     player.yaw = 0.3; player.pitch = 0.0;
     player.onGround = true;
     buggy = Buggy(); inBuggy = false; chaseCam = false;   // B-205: no buggy carries over to a new landing
+    drone = Drone(); inDrone = false;                      // R-403: nor a drone
     lastWindUpdate = -1; lastEnvT = -1;
     prefetchStage = 0; prefetchRing = 0;
     for (int m = 0; m < MAT_COUNT; m++) mesoBuilt[m] = false;
     footprints.clear(); footHead = 0; stepAccum = 0; lastStepX = 6; lastStepZ = -4;
+    ruinCells.clear(); culture = cultureOf(site.gen);   // C-01
+    shardsFound.clear(); nearShard = NearShard();   // C-03 (the game refills the set from the guide after this)
     trail.clear(); hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
     tick("capsule+misc");
     findLandmarks();   // O6-06
@@ -441,44 +444,136 @@ bool SurfaceView::projectPoint(double x, double y, double z, double& sx, double&
 
 // M4-07: ruins on a jittered 2 km latitude/longitude grid of habitable and quartz worlds, so a ruin
 // stays where it is whatever the landing site or the anchor of the local frame; the giant cube is rare.
+// C-01: the grid, the draw and the settlements live in `galaxy/ruins.*`; the view keeps a cache per cell in local metres.
 void SurfaceView::ruinCellAt(double x, double z, int& gLat, int& gLon) const {
     double lat, lon;
     site.latLonAt(x, z, lat, lon);
-    double dLat = 2000.0 / site.R;
-    gLat = (int)std::floor(lat / dLat);
-    double dLon = dLat / std::max(std::cos((gLat + 0.5) * dLat), 0.05);
-    gLon = (int)std::floor(lon / dLon);
+    ruinCellOf(site.gen, lat, lon, gLat, gLon);
+}
+
+const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
+    int nLon = std::max(1, ruinCellsAround(site.gen, gLat));
+    int gl = ((gLon % nLon) + nLon) % nLon;
+    uint64_t key = hash2i(gLat, gl, 0x5E77ULL);
+    auto it = ruinCells.find(key);
+    if (it != ruinCells.end()) return &it->second;
+    RuinCell& c = ruinCells[key];
+    c.has = ruinOfCell(site.gen, gLat, gl, c.spec, true);
+    if (c.has && c.spec.kind == RK_SETTLEMENT) { DrainageOff off; c.has = ruinSiteOk(site.gen, c.spec); }   // the slope and the sea, without building tiles (the water's own check is at the draw)
+    if (c.has) {
+        Ruin& r = c.r;
+        site.localAt(StarSystem::bodyFromLatLon(c.spec.lat, c.spec.lon), r.x, r.z);
+        r.heading = c.spec.heading; r.kind = c.spec.kind; r.style = c.spec.style; r.size = c.spec.size; r.spec = &c.spec;
+        if (c.spec.kind == RK_SETTLEMENT) { for (int l = 0; l < 3; l++) ruinElements(c.spec, culture, l, c.elems[l]); shardSitesOf(c.spec, culture, c.shards); }   // C-03: and its shards
+    }
+    return &c;
 }
 
 bool SurfaceView::ruinAt(int gLat, int gLon, Ruin& r) const {
-    int type = site.gen.type;
-    if (type != PT_FELISIAN && type != PT_QUARTZ && type != PT_OCEAN) return false;
-    double dLat = 2000.0 / site.R;
-    double latc = (gLat + 0.5) * dLat;
-    if (std::fabs(latc) > PI / 2 - dLat) return false;
-    double dLon = dLat / std::max(std::cos(latc), 0.05);
-    int nLon = (int)std::ceil(TAU / dLon);
-    int gl = ((gLon % nLon) + nLon) % nLon;
-    uint64_t h = hash2i(gLat, gl, site.gen.seed ^ 0x2711);
-    if (hash01(h) > 0.05) return false;
-    double lat = (gLat + 0.2 + 0.6 * hash01(mix64(h + 1))) * dLat;
-    double lon = (gl + 0.2 + 0.6 * hash01(mix64(h + 2))) * dLon;
-    site.localAt(StarSystem::bodyFromLatLon(lat, lon), r.x, r.z);
-    r.heading = hash01(mix64(h + 3)) * TAU;
-    r.kind = hash01(mix64(h + 4)) < 0.033 ? 4 : (int)(hash01(mix64(h + 5)) * 4);
-    r.style = (int)(hash01(mix64(h + 6)) * 3);
-    r.size = r.kind == 4 ? 40.0 : 6.0 + 8.0 * hash01(mix64(h + 7));
+    const RuinCell* c = ruinCell(gLat, gLon);
+    if (!c->has) return false;
+    r = c->r;
     return true;
 }
 
+// C-01: a settlement's pieces (`ruinElements`) as boxes and domes on the ground at their own foot, the far side of every box
+// culled, lit like the rocks, fogged; whole within 300 m of its edge, the walls as one box each within a kilometre, one box
+// per building to four kilometres. Near pieces stand on the drawn ground (`groundHeight`, so the walls meet what the feet
+// walk on and nothing floats as the near ring blends); the far ones on the planet function at 64 m, read once per cell
+void SurfaceView::drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell& cell, double dist) {
+    const RuinSpec& sp = *r.spec;
+    double R = sp.size;
+    if (dist - R > 4000) return;
+    int lod = dist < 300 + R ? 0 : (dist < 1000 + R ? 1 : 2);
+    if (lod == 2 && !cell.baseDone) {
+        DrainageOff off;   // no tile is built for a far town
+        cell.base.resize(sp.buildings.size());
+        for (size_t i = 0; i < sp.buildings.size(); i++) cell.base[i] = site.sampleAt(r.x + sp.buildings[i].x, r.z + sp.buildings[i].z, 64).h;
+        cell.baseDone = true;
+    }
+    const std::vector<RuinElem>& el = cell.elems[lod];
+    const Vec3& sd = env.sun.dirLocal;
+    double sunUp = smoothstep(-0.03, 0.06, sd.y), lf = env.sun.lightFactor;
+    double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
+    RasterParams rp; rp.bank = culture.family == 1 ? 9 : 0;
+    if (culture.style == 1) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }
+    double fwx = camLocal.m[2][0], fwz = camLocal.m[2][2];   // the camera's forward on the ground
+    auto face = [&](Vec3 a, Vec3 b, Vec3 c, Vec3 d, double fog) {
+        Vec3 n = normalize(cross(b - a, d - a));
+        if (dot(n, a - camPos) > 0) return;   // the far side
+        double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y));   // a wall takes more of the sky's light than a rock's flank
+        double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+        double shade = 46 * std::pow(light, 0.6);
+        shade += (63 - shade) * fog;
+        RVert q[4]; Vec3 pts[4] = {a, b, c, d};
+        for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].y * 0.5; q[k].v = pts[k].z + pts[k].y * 0.5; }
+        rasterPolygon(fb, q, 4, rp, proj);
+    };
+    auto box = [&](Vec3 c, double hx, double hy, double hz, double heading, double fog) {   // c the base's centre, hy the height
+        Vec3 f(std::sin(heading), 0, std::cos(heading)), s(std::cos(heading), 0, -std::sin(heading));
+        Vec3 p[8];
+        for (int i = 0; i < 8; i++) p[i] = c + f * ((i & 1) ? hz : -hz) + s * ((i & 2) ? hx : -hx) + Vec3(0, (i & 4) ? hy : 0, 0);
+        face(p[4], p[5], p[7], p[6], fog); face(p[0], p[1], p[5], p[4], fog); face(p[2], p[6], p[7], p[3], fog); face(p[1], p[3], p[7], p[5], fog); face(p[0], p[4], p[6], p[2], fog);
+    };
+    for (const RuinElem& e : el) {
+        double ex = r.x + e.x, ez = r.z + e.z;
+        double ddx = ex - camPos.x, ddz = ez - camPos.z, d = std::sqrt(ddx * ddx + ddz * ddz);
+        double ext = 2 * std::max(std::max(e.hx, e.hz), (e.y1 - e.y0) * 0.5);
+        if (d > 5 && ext / d * proj.f < 1.2) continue;
+        if (d > ext + 2 && ddx * fwx + ddz * fwz < -ext) continue;   // behind the camera
+        double gy;
+        if (lod < 2) { gy = site.groundHeight(ex, ez); double w = site.waterAt(ex, ez); if (w > -1e8 && gy < w) continue; }
+        else gy = cell.base[e.building < 0 ? 0 : e.building];
+        double fog = 1 - std::exp(-d / env.fogDistance);
+        bool onGround = e.y0 < 0.01;
+        double y0 = gy + e.y0 - (onGround ? 1.0 : 0), hy = (e.y1 - e.y0) + (onGround ? 1.0 : 0);
+        if (e.shape == 0) {
+            box(Vec3(ex, y0, ez), e.hx, hy, e.hz, e.heading, fog);
+            if (e.glyphs && d < 70 && lod == 0) {   // a line of glyphs cut into the front face: the three low bits of each letter of the star's name as strokes
+                const std::string& nm = site.sys->star.name;
+                Vec3 f(std::sin(e.heading), 0, std::cos(e.heading)), s(std::cos(e.heading), 0, -std::sin(e.heading));
+                double wall = e.y1 - e.y0, width = 2 * e.hx * 0.8, rowY = gy + e.y0 + std::min(wall * 0.55, 1.6), gh = std::min(0.12 * wall, 0.35);
+                Vec3 origin = Vec3(ex, rowY, ez) + f * (e.hz + 0.02) - s * (width * 0.5);
+                double step = width / (double)std::max<size_t>(1, std::min<size_t>(nm.size(), 14));
+                for (size_t i = 0; i < nm.size() && i < 14; i++) {
+                    int code = (unsigned char)nm[i];
+                    for (int seg = 0; seg < 3; seg++) {
+                        if (!((code >> seg) & 1)) continue;
+                        Vec3 p0 = origin + s * (i * step + seg * step * 0.3) + Vec3(0, seg * gh * 0.4, 0), p1 = p0 + Vec3(0, gh, 0) + s * (step * 0.15);
+                        RVert a, b; Vec3 va = toView(p0.x, p0.y, p0.z), vb = toView(p1.x, p1.y, p1.z);
+                        a.x = va.x; a.y = va.y; a.z = va.z; a.shade = 18; b.x = vb.x; b.y = vb.y; b.z = vb.z; b.shade = 18;
+                        rasterLine3(fb, a, b, rp.bank, proj, true, 1);
+                    }
+                }
+            }
+        } else {   // a dome: bands of quads, the top ones gone where it fell in
+            Vec3 base(ex, gy + e.y0, ez);
+            double rr = e.hx;
+            int keep = e.broken > 0 ? (int)std::floor(4 * (1 - e.broken)) : 4;
+            for (int eb = 0; eb < keep; eb++)
+                for (int a = 0; a < 10; a++) {
+                    double e0 = eb * PI / 8, e1 = (eb + 1) * PI / 8, a0 = a * TAU / 10, a1 = (a + 1) * TAU / 10;
+                    Vec3 pts[4] = {Vec3(std::cos(a0) * std::cos(e0), std::sin(e0), std::sin(a0) * std::cos(e0)), Vec3(std::cos(a1) * std::cos(e0), std::sin(e0), std::sin(a1) * std::cos(e0)),
+                                   Vec3(std::cos(a1) * std::cos(e1), std::sin(e1), std::sin(a1) * std::cos(e1)), Vec3(std::cos(a0) * std::cos(e1), std::sin(e1), std::sin(a0) * std::cos(e1))};
+                    face(base + pts[0] * rr, base + pts[3] * rr, base + pts[2] * rr, base + pts[1] * rr, fog);
+                }
+        }
+        lastRuinElems++;
+    }
+}
+
 void SurfaceView::drawRuins(Framebuffer& fb, double t) {
-    if (site.gen.type != PT_FELISIAN && site.gen.type != PT_QUARTZ && site.gen.type != PT_OCEAN) return;
+    lastRuinMs = 0; lastRuinElems = 0;
+    if (!worldHasRuins(site.gen)) return;
+    auto tr0 = std::chrono::steady_clock::now();
     const Vec3& sd = env.sun.dirLocal;
     double sunUp = smoothstep(-0.03, 0.06, sd.y);
     double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
-    forNearbyRuins(camPos.x, camPos.z, [&](const Ruin& r) {
+    forNearbyRuins(camPos.x, camPos.z, worldHadCivilisation(site.gen) ? 2 : 1, [&](const Ruin& r, const RuinCell& cell, int ring) {
+        double dist = std::sqrt((r.x - camPos.x) * (r.x - camPos.x) + (r.z - camPos.z) * (r.z - camPos.z));
+        if (r.kind == RK_SETTLEMENT) { drawSettlement(fb, r, cell, dist); return; }
+        if (ring > 1) return;   // the monoliths as M4-07 drew them: the 3 x 3 cells, within 1.8 km
         {
-            double dist = std::sqrt((r.x - camPos.x) * (r.x - camPos.x) + (r.z - camPos.z) * (r.z - camPos.z));
             if (dist > 1800 || r.size / dist * proj.f < 1.5) return;
             TerrainVertex tvr = site.sampleAt(r.x, r.z, 16);   // analytic: far ruins must not thrash the terrain cache
             double gy = tvr.h;
@@ -545,6 +640,7 @@ void SurfaceView::drawRuins(Framebuffer& fb, double t) {
             }
         }
     });
+    lastRuinMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
 }
 
 // M8-06: the buggy as a low box on four octagonal wheels, with a roll bar, an antenna light,
@@ -599,6 +695,7 @@ void SurfaceView::reanchor() {
     site.latLonAt(player.x, player.z, lat, lon);
     Vec3 capU = site.unitAt(capsuleX, capsuleZ);
     Vec3 bugU = site.unitAt(buggy.x, buggy.z);
+    Vec3 drnU = site.unitAt(drone.x, drone.z);   // R-403
     Vec3 wpU = site.unitAt(wpX, wpZ);   // B-303: the waypoint and the trail move with the frame too
     std::vector<Vec3> trailU; trailU.reserve(trail.size());
     for (const auto& tp : trail) trailU.push_back(site.unitAt(tp.first, tp.second));
@@ -619,6 +716,7 @@ void SurfaceView::reanchor() {
     site.localAt(wpU, wpX, wpZ);
     for (size_t i = 0; i < trail.size(); i++) { double tx, tz; site.localAt(trailU[i], tx, tz); trail[i] = {(float)tx, (float)tz}; }
     siteEpoch++;
+    ruinCells.clear();   // C-01: the cells' local metres moved with the frame
     if (buggy.deployed) {   // the buggy moves with the frame too (B-205); a driven buggy is where the player is
         if (inBuggy) { buggy.x = 0; buggy.z = 0; }
         else { double bx, bz; site.localAt(bugU, bx, bz); buggy.x = bx; buggy.z = bz; }
@@ -626,6 +724,12 @@ void SurfaceView::reanchor() {
         buggy.y = site.surfaceHeight(buggy.x, buggy.z);
         buggy.groundY = -1e9;   // B-307: the contact height is in the old frame
         buggy.tracks.clear(); buggy.trackHead = 0; buggy.puffs.clear();
+    }
+    if (drone.deployed) {   // R-403: the drone too; a flown drone is where the player is, at its height
+        if (inDrone) { drone.x = 0; drone.z = 0; }
+        else { double dx, dz; site.localAt(drnU, dx, dz); drone.x = dx; drone.z = dz; drone.y = site.surfaceHeight(dx, dz); }
+        drone.heading = wrap2pi(drone.heading + dyaw);
+        drone.puffs.clear();
     }
     double ground = site.surfaceHeight(0, 0);
     if (player.y < ground) player.y = ground;
@@ -846,14 +950,78 @@ void SurfaceView::computeEnvironment(double t) {
     env.capsuleDist = std::sqrt(dx * dx + dz * dz);
     env.capsuleBearing = wrap2pi(std::atan2(dx, dz));
     env.nearCapsule = env.capsuleDist < 7.0;
+    findNearShard();   // C-03
+}
+
+// C-03: the nearest shard the explorer does not have within 2.2 m, on this floor (within 2 m of height), for E and the HUD
+void SurfaceView::findNearShard() {
+    nearShard = NearShard();
+    if (inVehicle() || !worldHadCivilisation(site.gen)) return;
+    double best = 2.2;
+    forNearbyRuins(player.x, player.z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT) return;
+        for (const ShardSite& s : cell.shards) {
+            if (shardsFound.count(s.index)) continue;
+            double x = r.x + s.x, z = r.z + s.z, d = std::sqrt((x - player.x) * (x - player.x) + (z - player.z) * (z - player.z));
+            if (d >= best) continue;
+            if (std::fabs(site.groundHeight(x, z) - player.y) > 2.0) continue;
+            best = d; nearShard.index = s.index; nearShard.place = s.place; nearShard.sclass = cell.spec.sclass; nearShard.x = x; nearShard.z = z; nearShard.dist = d;
+        }
+    });
+}
+
+// C-03: the shards of the settlements round the camera: a slab of dark glass (0.36 x 0.24 m, 6 cm thick) on the floor of a
+// room or at a stela's foot, lit like the walls but never pale, and over it a point of light that pulses (the stars' bank),
+// drawn within 250 m behind the depth test, so a glint through a doorway or over a fallen wall is what gives one away; the
+// ones the explorer has are gone
+void SurfaceView::drawShards(Framebuffer& fb, double t) {
+    lastShardsDrawn = 0;
+    if (!worldHadCivilisation(site.gen)) return;
+    const Vec3& sd = env.sun.dirLocal;
+    double sunUp = smoothstep(-0.03, 0.06, sd.y), lf = env.sun.lightFactor;
+    double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
+    RasterParams rp; rp.bank = 7;
+    forNearbyRuins(camPos.x, camPos.z, 2, [&](const Ruin& r, const RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT) return;
+        for (const ShardSite& s : cell.shards) {
+            if (shardsFound.count(s.index)) continue;
+            double x = r.x + s.x, z = r.z + s.z;
+            double dx = x - camPos.x, dz = z - camPos.z, d = std::sqrt(dx * dx + dz * dz);
+            if (d > 250) continue;
+            double gy = site.groundHeight(x, z), w = site.waterAt(x, z);
+            if (w > -1e8 && gy < w) continue;
+            double fog = 1 - std::exp(-d / env.fogDistance);
+            if (d < 60) {   // the slab: its top and its four sides, the far ones culled
+                Vec3 f(std::sin(s.heading), 0, std::cos(s.heading)), sx(std::cos(s.heading), 0, -std::sin(s.heading)), c(x, gy, z);
+                const double hx = 0.18, hz = 0.12, hy = 0.06;
+                Vec3 p[8];
+                for (int i = 0; i < 8; i++) p[i] = c + f * ((i & 1) ? hz : -hz) + sx * ((i & 2) ? hx : -hx) + Vec3(0, (i & 4) ? hy : 0, 0);
+                auto face = [&](Vec3 a, Vec3 b, Vec3 cc, Vec3 dd) {
+                    Vec3 n = normalize(cross(b - a, dd - a));
+                    if (dot(n, a - camPos) > 0) return;
+                    double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+                    double shade = 4 + 10 * light;   // bank 7 reaches a mid grey by 20: the slab stays under 0.3 of white, darker than the walls
+                    shade += (63 - shade) * fog;
+                    RVert q[4]; Vec3 pts[4] = {a, b, cc, dd};
+                    for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; }
+                    rasterPolygon(fb, q, 4, rp, proj);
+                };
+                face(p[4], p[5], p[7], p[6]); face(p[0], p[1], p[5], p[4]); face(p[2], p[6], p[7], p[3]); face(p[1], p[3], p[7], p[5]); face(p[0], p[4], p[6], p[2]);
+            }
+            double pulse = 0.5 + 0.5 * std::sin(t * 2.6 + s.index * 1.7);
+            Vec3 v = toView(x, gy + 0.12, z);
+            if (v.z > NEAR_Z) { RVert q; q.x = v.x; q.y = v.y; q.z = v.z; q.shade = 48 + 15 * pulse; rasterPoint3(fb, q, 4, proj, true, d < 40 ? 2 : 1); }
+            lastShardsDrawn++;
+        }
+    });
 }
 
 // M6-05: the free camera starts where the eye is and flies with W A S D (Space up, C down, Shift fast)
 void SurfaceView::enterFreeCam() {
     freeCam = true;
     freePos = camPos;
-    freeYaw = inBuggy && chaseCam ? buggy.heading : player.yaw;
-    freePitch = inBuggy && chaseCam ? -12 * DEG : player.pitch;
+    freeYaw = inVehicle() && chaseCam ? (inBuggy ? buggy.heading : drone.heading) : player.yaw;
+    freePitch = inVehicle() && chaseCam ? -12 * DEG : player.pitch;
 }
 
 void SurfaceView::updateFreeCam(double dt, const Input& in) {
@@ -881,6 +1049,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     if (dt > 0.1) dt = 0.1;
     updateNearRing(dt);   // O6-02: before the movement, so the ground underfoot is the ground drawn
     if (inBuggy) updateBuggy(dt, in, t);
+    else if (inDrone) updateDrone(dt, in, t);   // R-403
     else updateWalking(dt, in, t, controlsEnabled);
     prefetchAhead();   // M7-01
     collectLandmarks();   // O6-06
@@ -891,6 +1060,15 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     if (!inBuggy && buggy.deployed) {
         buggy.speed *= std::exp(-dt * 2.0);
         buggy.y = site.surfaceHeight(buggy.x, buggy.z);
+    }
+    // R-403: the drone's downwash settles, an unfolding drone keeps unfolding, a parked one sits on the ground with its pods winding down
+    for (auto& p : drone.puffs) p.age += (float)dt;
+    drone.puffs.erase(std::remove_if(drone.puffs.begin(), drone.puffs.end(), [](const Buggy::Puff& p) { return p.age > 1.5f; }), drone.puffs.end());
+    if (drone.deployed && drone.unfold < 1) drone.unfold = std::min(1.0, drone.unfold + dt / 2.0);
+    if (!inDrone && drone.deployed) {
+        drone.y = site.surfaceHeight(drone.x, drone.z); drone.landed = true; drone.speed = 0; drone.vy = 0;
+        drone.rotor *= std::exp(-dt * 0.8); drone.fanSpin += dt * TAU * (2.0 + 22.0 * drone.rotor);
+        drone.vibration *= std::exp(-dt * 4); drone.jolt *= std::exp(-dt * 5);
     }
     {   // KI-007: keep the local frame close: 50 km on a planet, a third of the radius on a small body (O4)
         double reach = std::min(50e3, 0.35 * site.R);
@@ -992,8 +1170,32 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
     double cs = 16;
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0));
     int pcx = (int)std::floor(x / cs), pcz = (int)std::floor(z / cs);
-    if (site.gen.type == PT_FELISIAN || site.gen.type == PT_QUARTZ || site.gen.type == PT_OCEAN)   // ruins (M4-07) as one cylinder each
-        forNearbyRuins(x, z, [&](const Ruin& r) { out.push_back({r.x, r.z, r.kind == 3 ? r.size * 0.15 : r.size * 0.55, 3}); });
+    // ruins (M4-07) as one cylinder each; C-01: a settlement's standing pieces as rows of discs along their walls (within 40 m)
+    forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT) {
+            double gy = site.groundHeight(r.x, r.z), top = r.kind == 0 ? r.size * 0.7 : (r.kind == 2 ? r.size * 0.5 : (r.kind == 3 ? 1.5 : r.size));
+            out.push_back({r.x, r.z, r.kind == 3 ? r.size * 0.15 : r.size * 0.55, 3, gy, gy + top});
+            return;
+        }
+        double dcx = r.x - x, dcz = r.z - z;
+        if (dcx * dcx + dcz * dcz > (r.size + 45) * (r.size + 45)) return;
+        for (const RuinElem& e : cell.elems[0]) {
+            if (e.shape != 0 || e.part == 4 || e.y0 > 1.2 || e.y1 < 0.9) continue;
+            double ex = r.x + e.x, ez = r.z + e.z, reach = 40 + e.hx + e.hz;
+            if ((ex - x) * (ex - x) + (ez - z) * (ez - z) > reach * reach) continue;
+            double hx = e.hx, hz = e.hz, heading = e.heading, gy = site.groundHeight(ex, ez);   // the piece's feet where it is drawn
+            if (hz > hx) { std::swap(hx, hz); heading += PI / 2; }
+            double rr = clampd(hz, 0.2, 0.6), ax = std::cos(heading), az = -std::sin(heading), bx = std::sin(heading), bz = std::cos(heading);
+            int n = std::max(1, (int)std::ceil(hx / rr)), m = std::max(1, (int)std::ceil(hz / rr));
+            for (int i = 0; i < n; i++) {
+                double ta = n > 1 ? -hx + rr + (2 * hx - 2 * rr) * i / (n - 1) : 0;
+                for (int j = 0; j < m; j++) {
+                    double tb = m > 1 ? -hz + rr + (2 * hz - 2 * rr) * j / (m - 1) : 0;
+                    out.push_back({ex + ax * ta + bx * tb, ez + az * ta + bz * tb, rr, 3, gy + e.y0, gy + e.y1});
+                }
+            }
+        }
+    });
     for (int cz = pcz - 1; cz <= pcz + 1; cz++)
         for (int cx = pcx - 1; cx <= pcx + 1; cx++) {
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
@@ -1013,13 +1215,13 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
                 if (size < 0.6) continue;   // stepped over
                 double gy = site.groundHeight(rx, rz);
                 if (gy < site.waterAt(rx, rz)) continue;
-                out.push_back({rx, rz, size * 0.8, 0});
+                out.push_back({rx, rz, size * 0.8, 0, gy - size * 0.15, gy + size * 1.15});   // the peak stands up to 1.3 sizes over a base sunk 0.15
             }
             // N2: trunks and fallen logs from the same enumerators that draw them
-            forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + T.h * 0.02, 1}); });
+            forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + T.h * 0.02, 1, T.gy - 0.3, T.gy + T.h}); });
             forLogs(cx, cz, [&](const LogInst& L) {
-                double dx = std::sin(L.heading), dz = std::cos(L.heading);
-                for (int k = -1; k <= 1; k++) out.push_back({L.x + dx * L.len * 0.33 * k, L.z + dz * L.len * 0.33 * k, L.radius + 0.35, 2});
+                double dx = std::sin(L.heading), dz = std::cos(L.heading), lg = site.groundHeight(L.x, L.z);
+                for (int k = -1; k <= 1; k++) out.push_back({L.x + dx * L.len * 0.33 * k, L.z + dz * L.len * 0.33 * k, L.radius + 0.35, 2, lg - 1.0, lg + 2 * L.radius + 0.6});
             });
         }
     (void)treeScale;
@@ -1028,7 +1230,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
 // B within 10 m of the capsule: a new buggy unfolds beside it; a buggy already out, wherever it was left, is scrapped
 // (R-204: you can always redeploy)
 bool SurfaceView::deployBuggy() {
-    if (inBuggy) return false;
+    if (inVehicle()) return false;
     if (site.escapeVelocity < 30) return false;   // O4: on a comet the buggy would float off at the first bump
     double dx = capsuleX - player.x, dz = capsuleZ - player.z;
     if (dx * dx + dz * dz > 10.0 * 10.0) return false;
@@ -1055,7 +1257,7 @@ bool SurfaceView::toggleBuggy() {
         player.yaw = buggy.heading;
         return true;
     }
-    if (!buggy.deployed || buggy.unfold < 1 || buggyDist() > 3.5) return false;
+    if (inDrone || !buggy.deployed || buggy.unfold < 1 || buggyDist() > 3.5) return false;
     inBuggy = true;
     player.autoWalk = 0; player.sprinting = false; player.crouch = false; player.hindLegs = false;
     player.yaw = buggy.heading; player.pitch = 0;
@@ -1123,7 +1325,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     double groundHere = site.groundHeight(p.x, p.z);
     double waterHere = site.waterAt(p.x, p.z);
     double depthHere = waterHere > -1e8 ? clampd(waterHere - groundHere, 0, 1.2) : 0;
-    if (!p.swimming && depthHere > 0) speed *= 1.0 - 0.55 * depthHere / 1.2;
+    if (!p.swimming && p.onGround && depthHere > 0) speed *= 1.0 - 0.55 * depthHere / 1.2;   // B-406: wading, not flying over
     double accel = p.onGround ? (gRel > 1.5 ? 6.0 : 10.0) : (g < 3.0 ? 4.0 : 2.0);   // air control (M8-09)
     if (p.jetOn) accel = 6.0;
     double k = 1 - std::exp(-dt * accel);
@@ -1135,9 +1337,11 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         p.vy = std::sqrt(2 * g * hJump);
         p.onGround = false;
     }
-    // jetpack (M8-03): hold Space in the air; heat limits continuous burns
+    // jetpack (M8-03): hold Space in the air; heat limits continuous burns. B-406: it fires from the water's surface too (afloat,
+    // not diving), so a lake is crossed and left by air; it used to be a trap
     p.jetOn = false;
-    if (controlsEnabled && in.isDown(KEY_SPACE) && !p.onGround && !p.swimming && p.jetHeat < 100 && p.altAboveGround < 300) {
+    bool afloat = p.swimming && !p.diving && !p.underwater;
+    if (controlsEnabled && in.isDown(KEY_SPACE) && (!p.onGround || afloat) && (!p.swimming || afloat) && p.jetHeat < 100 && p.altAboveGround < 300) {
         p.jetOn = true;
         p.vy += (g + 3.0) * dt;
         double vcap = site.escapeVelocity < 30 ? 0.35 * site.escapeVelocity : 12.0;   // O4: never toward escape velocity
@@ -1179,6 +1383,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         static std::vector<Collider> cols;
         collectColliders(nx, nz, cols);
         for (const Collider& c : cols) {
+            if (p.y > c.y1 - 0.1 || p.y + 1.6 < c.y0) continue;   // B-405: risen above it (the jetpack, a slope) or under it
             double dx = nx - c.x, dz = nz - c.z;
             double d2 = dx * dx + dz * dz, rr = c.r + 0.35;
             if (d2 < rr * rr && d2 > 1e-9) {
@@ -1209,10 +1414,15 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     }
     double ground = site.groundHeight(p.x, p.z);
     double water = site.waterAt(p.x, p.z);
-    p.swimming = false;
-    double floor = ground;
-    if (water > -1e8 && ground < water - 0.4) { floor = p.diving ? std::max(ground, water - 3.5) : water - 1.15; p.swimming = true; }
+    // B-406 (2026-10-02): deep water is swum once the body is down at its surface; above it the air is the air, so the jetpack
+    // flies over a lake (the old rule made the explorer swim the moment the ground under them was 0.4 m under water, whatever
+    // their height: a jet over the shore was pulled down to the float level)
+    bool deep = water > -1e8 && ground < water - 0.4;
+    double floatY = water - 1.15;
+    double floor = deep ? (p.diving ? std::max(ground, water - 3.5) : floatY) : ground;
     p.y += p.vy * dt;
+    bool wasSwimming = p.swimming;
+    p.swimming = deep && (p.y <= floatY + 0.3 || (wasSwimming && !p.jetOn && p.y <= floatY + 0.6));
     bool wasOnGround = p.onGround;
     if (p.y <= floor) {
         if (!wasOnGround && !p.swimming && p.vy < -3.0) p.landDip = std::min(0.4, -p.vy * 0.045 * (gRel > 1.5 ? 1.4 : 1.0));   // landing dip (M8-01)
@@ -1225,7 +1435,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     if (p.swimming) {
         p.onGround = true;
         if (p.diving) { p.vy = std::max(p.vy, -1.5); p.y = std::max(p.y - 1.5 * dt, std::max(ground + 0.3, water - 3.5)); }
-        else { p.vy = std::max(p.vy, -1.0); p.y += (floor - p.y) * (1 - std::exp(-dt * 4)); }
+        else if (!p.jetOn) { p.vy = std::max(p.vy, -1.0); p.y += (floor - p.y) * (1 - std::exp(-dt * 4)); }   // B-406: the jet lifts out of the water
     }
     p.underwater = p.swimming && water > -1e8 && (p.y + p.eyeHeight < water - 0.05);
     p.altAboveGround = std::max(0.0, p.y - ground);
@@ -1493,6 +1703,12 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double rx = x - buggy.x, rz = z - buggy.z;
         double f = rx * hx + rz * hz, l = std::fabs(-rx * hz + rz * hx);
         if (f > 0 && f < 25 && l < 0.35 * f + 1.5) light += 0.55 * (1 - f / 25) * (1 - sunUp);
+    }
+    if (drone.deployed && drone.lights && drone.altAboveGround < 30) {   // R-403: the drone's bar lights a pool under and ahead of it when it flies low
+        double hx = std::sin(drone.heading), hz = std::cos(drone.heading);
+        double rx = x - drone.x, rz = z - drone.z;
+        double f = rx * hx + rz * hz, l = std::fabs(-rx * hz + rz * hx), reach = 25 + drone.altAboveGround;
+        if (f > -4 && f < reach && l < 0.35 * (f + 4) + 1.5) light += 0.5 * (1 - (f + 4) / (reach + 4)) * (1 - drone.altAboveGround / 30) * (1 - sunUp);
     }
     if (sunUp < 0.9) {
         double bdx = x - capsuleX, bdz = z - capsuleZ;
@@ -2960,6 +3176,26 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
             pitch = player.pitch + buggy.pitch * std::cos(look) - buggy.roll * std::sin(look) + amp * 0.45 * std::sin(t * TAU * 9.1) + buggy.jolt * 0.03;
             roll = buggy.roll * std::cos(look);
         }
+    } else if (inDrone) {   // R-403
+        double hx = std::sin(drone.heading), hz = std::cos(drone.heading);
+        if (chaseCam) {
+            camX = drone.x - hx * 7.0; camZ = drone.z - hz * 7.0;
+            eyeY = std::max(drone.y + 2.8, site.groundHeight(camX, camZ) + 1.0);
+            yaw = drone.heading;
+            pitch = -14 * DEG;
+        } else {
+            // the nose camera on a gimbal: it pans within the pod's range and tilts, the hull's bank and nose stay out of the
+            // picture; the pods' buzz is a faster, smaller tremor than the buggy's road, and a thump dips it
+            Vec3 mount = droneCameraMount();
+            double look = clampd(wrapAngle(player.yaw - drone.heading), -CAM_PAN, CAM_PAN);
+            double amp = clampd(drone.vibration, 0, 3) * 0.003;
+            double tremor = amp * (std::sin(t * TAU * 23.0) + 0.5 * std::sin(t * TAU * 31.7));
+            camX = mount.x; camZ = mount.z;
+            eyeY = mount.y + tremor - drone.jolt * 0.05;
+            yaw = wrap2pi(drone.heading + look);
+            pitch = player.pitch + amp * 0.4 * std::sin(t * TAU * 19.3) + drone.jolt * 0.03;
+            roll = 0;
+        }
     } else {
         // head sway: a small lateral offset along the right vector
         camX += std::cos(player.yaw) * player.bobX; camZ -= std::sin(player.yaw) * player.bobX;
@@ -3047,14 +3283,16 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     }
     { static const char* skipEnv2 = std::getenv("VESPERIS_SKIP"); if (site.hasWater && !(skipEnv2 && std::strstr(skipEnv2, "refl"))) drawReflections(fb); }
     drawFootprints(fb);
-    if (cameraOverrideAlt < 0 && !inBuggy) drawBlobShadow(fb, player.x, player.z, 0.32, 1.7);
+    if (cameraOverrideAlt < 0 && !inVehicle()) drawBlobShadow(fb, player.x, player.z, 0.32, 1.7);
     drawWaypointLine(fb);
     drawObjects(fb, t);
     section(3);
     drawFlora(fb, t);
     section(4);
     drawRuins(fb, t);
+    drawShards(fb, t);   // C-03: after the walls, so the depth test hides what lies behind them
     if (buggy.deployed) drawBuggy(fb, t);
+    if (drone.deployed) drawDrone(fb, t);   // R-403
     drawLife(fb, t);
     if (cameraOverrideAlt < 0) drawCapsule(fb, t);   // B-322: while the capsule flies (the descent, the ascent) it is not on the ground: its beacon beam, seen from above, cut a bright line across the land
     drawWeather(fb, t);

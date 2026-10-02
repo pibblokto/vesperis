@@ -8,7 +8,7 @@ const char* MATERIAL_NAMES[MAT_COUNT] = {"ROCK", "SAND", "GRASS", "FOREST", "SNO
 const char* TRAIT_NAMES[TR_COUNT] = {"", "CANYON LANDS", "BADLANDS", "KARST TOWERS", "GREAT RIFT", "ESCARPMENTS", "GLACIATED", "INSELBERGS", "CINDER FIELDS", "CHAOS TERRAIN", "PATTERNED GROUND",
                                      "YARDANGS", "DUNE SEAS", "SALT FLATS", "TRAP TERRACES", "GREAT BASIN", "CORONAE", "SPIRE FIELDS", "GEYSER BASINS",
                                      "ARCHIPELAGO", "PANGAEA", "LAKE COUNTRY", "SNOWBALL", "EXOTIC SEAS", "STORM WORLD", "HAZE",
-                                     "GIANT FLORA", "LUMINOUS FLORA", "DEAD FORESTS", "RED SOILS", "BLACK SANDS", "CHALK LANDS", "GLASSED"};
+                                     "GIANT FLORA", "LUMINOUS FLORA", "DEAD FORESTS", "RED SOILS", "BLACK SANDS", "CHALK LANDS", "GLASSED", "DEAD CIVILISATION"};
 const char* traitPhrase(int t) {
     switch (t) {
         case TR_CANYONS: return ", cut by canyons"; case TR_MESAS: return ", its dry country carved into mesas and buttes"; case TR_KARST: return ", stone towers rising from its wet lowlands";
@@ -22,6 +22,7 @@ const char* traitPhrase(int t) {
         case TR_HAZE: return ", under a thick haze"; case TR_GIANT_FLORA: return ", flora of giant size"; case TR_LUMINOUS_FLORA: return ", flora that glows at night";
         case TR_DEAD_FOREST: return ", its forests dead and grey"; case TR_RED_SOIL: return ", red soils"; case TR_BLACK_SAND: return ", black sands"; case TR_CHALK: return ", chalk-white ground";
         case TR_GLASSED: return ", its plains fused to glass by the blast that made its star";   // S-03
+        case TR_CIVILISATION: return ", the ruins of a people that is gone";   // C-01
         default: return "";
     }
 }
@@ -53,6 +54,7 @@ bool traitEligible(int type, int t) {
         case TR_HAZE: return type == PT_FELISIAN || type == PT_THINATMO || type == PT_QUARTZ || type == PT_OCEAN || type == PT_DESERT || type == PT_ACIDIC;
         case TR_RED_SOIL: case TR_BLACK_SAND: case TR_CHALK: return type == PT_FELISIAN || type == PT_THINATMO || type == PT_ROCKY || type == PT_DESERT || type == PT_TECTONIC || type == PT_ACIDIC;
         case TR_GLASSED: return false;   // S-03: never drawn by the hash; `StarSystem::generate` marks a neutron star's outer survivors and `BodyGen::make` reads the mark
+        case TR_CIVILISATION: return false;   // C-01: never drawn by the trait draw; `BodyGen::make` decides it by a hash of its own, so no other world's traits move
         default: return false;
     }
 }
@@ -818,6 +820,17 @@ BodyGen BodyGen::make(const Body& b, double season) {
             int keep[3] = {0, 0, 0}, nk = 0;
             for (int k = 0; k < 3 && nk < 2; k++) if (g.traits[k] && g.traits[k] != TR_EXOTIC_SEAS) keep[nk++] = g.traits[k];
             g.traits[0] = TR_GLASSED; g.traits[1] = keep[0]; g.traits[2] = keep[1];
+        }
+        if ((b.type == PT_FELISIAN || b.type == PT_DESERT) && unitFromHash(mix64(b.seed ^ 0xC1D1ULL)) < 0.125) {   // C-01: a people lived here (one world in eight of the two
+            // types, by a hash of its own, so the other worlds keep their traits): the trait goes first (after the glass), the third trait drops
+            int keep[3] = {0, 0, 0}, nk = 0;
+            for (int k = 0; k < 3 && nk < 2; k++) if (g.traits[k] && g.traits[k] != TR_CIVILISATION) keep[nk++] = g.traits[k];
+            if (keep[0] == TR_GLASSED) { g.traits[0] = TR_GLASSED; g.traits[1] = TR_CIVILISATION; g.traits[2] = keep[1]; }
+            else { g.traits[0] = TR_CIVILISATION; g.traits[1] = keep[0]; g.traits[2] = keep[1]; }
+            if (b.type == PT_DESERT) {   // the post-apocalyptic desert: its seas stood at a level of their own and its rivers ran to them
+                g.oldSeaM = -120.0 + 220.0 * tu(22);
+                g.riverDensity = std::max(g.riverDensity, 0.8);
+            }
         }
         for (int k = 0; k < 3; k++) switch (g.traits[k]) {
             case TR_ARCHIPELAGO: g.seaLevel += 0.3; g.islandDensity = 0.5; break;
@@ -2110,24 +2123,40 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double canyonN = rg(R * 0.3, g.sF, 2);
         double canyon = std::pow(clampd(canyonN, 0, 1), 8.0);
         h -= canyon * 900.0;
-        if (relief0 < 0.4 && h > 100) {   // mesas: the dry flats terrace (M9-03's rule)
+        double oldSea = 0, seaDepth = 0, bedH = 0;   // C-01: a dead world's seas, dry: the bed a sediment floor keeping a tenth of the relief, deeper offshore
+        if (g.oldSeaM > -1e8) {            // (a canyon under the level was a sound of the sea), the old shore a bench of beach ridges a few metres
+            double hC = hRel - canyon * 900.0;   // over the level (the coastal flats the people lived on). The level cuts the coarse ground with its
+            oldSea = smoothstep(g.oldSeaM + 1.5, g.oldSeaM - 1.5, hC);   // canyons in a band of 3 m: the shore is a low scarp, not a ramp
+            seaDepth = std::max(0.0, g.oldSeaM - hC);
+            if (oldSea > 0) { bedH = g.oldSeaM - 7.0 - seaDepth * 0.35 + rf.h * 0.1; h += (bedH - h) * oldSea; hS += (bedH - hS) * oldSea; }
+            double over = hC - g.oldSeaM;
+            if (over > 0.0 && over < 40.0) { double bench = g.oldSeaM + 3.0 + 0.15 * rf.h; h += (bench - h) * 0.7 * smoothstep(40.0, 15.0, over); }
+            canyon *= 1 - oldSea;   // the material's reading: no canyon walls on the bed
+        }
+        if (relief0 < 0.4 && h > 100 && oldSea < 0.5) {   // mesas: the dry flats terrace (M9-03's rule)
             double step = 45.0, q = std::floor(h / step) * step, f = (h - q) / step;
             double terr = q + step * smoothstep(0.35, 0.65, f);
             h += (terr - h) * (1 - smoothstep(0.25, 0.4, relief0)) * smoothstep(-0.1, 0.3, fb(R * 0.12, g.sC + 4, 3));
         }
-        double basin = smoothstep(0.1, 0.5, -fb(R * 0.1, g.sG + 2, 3)) * (1 - smoothstep(300.0, 700.0, h)) * (1 - relief0);
+        double basin = smoothstep(0.1, 0.5, -fb(R * 0.1, g.sG + 2, 3)) * (1 - smoothstep(300.0, 700.0, h)) * (1 - relief0) * (1 - 0.7 * oldSea);
         double salt = 0;
         if (basin > 0.7 && h < 80) { double pan = smoothstep(0.7, 0.9, basin); h += (hS - 4.0 - h) * pan; salt = pan; }
         if (basin > 0.2 && salt < 0.5) h += duneField(p, g, lat, g.duneAmp * (0.6 + 0.4 * basin), detailM) * smoothstep(0.2, 0.5, basin);
         h += crater(R * 0.1, g.craterDensity * 0.35, 0.35);
         h += crater(3.0, g.craterDensity * 0.6, 0.3);
-        applyDrainage(g, unit, detailM, h, &hS, rf.slope, false, false, 0.5, DA);   // O6-03: wadis, and playas in the closed basins
+        applyDrainage(g, unit, detailM, h, &hS, rf.slope, false, false, g.oldSeaM > -1e8 ? 0.75 : 0.5, DA);   // O6-03: wadis, and playas in the closed basins (C-01: a dead world's rivers ran wetter: a denser net)
+        if (oldSea > 0) h += (bedH - h) * oldSea;   // C-01: the bed again: a wadi's valley reaching down over the shore lifted the bed toward its banks, and the craters and dunes are the sea's silt now
         s.height = h;
         if (salt > 0.5 || DA.playa > 0.3) { s.material = MAT_SALT; s.albedo = 0.85; }
         else if (DA.bed > 0.4) { s.material = MAT_SAND; s.albedo = 0.6 + 0.1 * base; }   // the wadi's bed
         else if (basin > 0.5) { s.material = MAT_SAND; s.albedo = 0.6 + 0.1 * base; }
         else if (relief0 > 0.5 || canyon > 0.3) { s.material = MAT_ROCK; s.albedo = 0.4 + 0.1 * base; }
         else { s.material = MAT_DUST; s.albedo = 0.46 + 0.12 * base + 0.1 * clampd(rimBright, 0, 1); }
+        if (oldSea > 0.5 && DA.bed < 0.4) {   // C-01: the seabed's silt, the last brine's salt in the deeps; the old beaches along the shore
+            if (seaDepth > 420.0 + 150.0 * fb(R * 0.05, g.sG + 9, 2)) { s.material = MAT_SALT; s.albedo = 0.82; }
+            else { s.material = MAT_ROCK; s.albedo = 0.36 + 0.05 * base; }   // the silt crust of the floor: the rock's brown, darker than the hamada
+        } else if (g.oldSeaM > -1e8 && oldSea < 0.5 && hRel - canyon * 900.0 - g.oldSeaM < 6.0 && DA.bed < 0.4 && salt < 0.5) { s.material = MAT_SAND; s.albedo = 0.62; }
+        s.oldSea = oldSea;
         s.relief = clampd(relief0 + 0.5 * rf.slope + canyon, 0, 1);
         break;
     }

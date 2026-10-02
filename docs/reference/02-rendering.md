@@ -59,7 +59,7 @@ Surface (`SurfaceView::setupPalette`, colours from `lookFor(gen, star)`):
 | 3 | forest on living worlds (trees and bushes too); elsewhere boulders a shade lighter than the ground |
 | 4 | stars: black -> grey-blue -> star white (before M10-03 stars borrowed the ground ramp and came out ground-coloured) |
 | 5 | the second flora family's colour (`BodyGen::vegColor2`), and the autumn colour of deciduous trees in the cold shoulder seasons; berries and half the flowers (N2-05) |
-| 6 | the buggy's hull, the ship's grey-blue `0.52, 0.55, 0.6` through the material ramp (N4-01) |
+| 6 | the buggy's and the drone's hulls, the ship's grey-blue `0.52, 0.55, 0.6` through the material ramp (N4-01, R-403) |
 | 7 | chrome: cage tubes, rims, spokes, dial rings {0 black, 20 grey, 44 light grey, 63 white} (N4-01) |
 | 8 | snow family on every type: snow, ice (bank 2 stays water only, which the reflection pass relies on) (N1-03) |
 | 9 | sand family: sand, dust, sulphur, quartz (N1-03); also mushrooms and lichen points (N2) |

@@ -1,5 +1,6 @@
 #include "landmarks.h"
 #include "drainage.h"
+#include "ruins.h"
 #include "core/noise.h"
 #include <cmath>
 #include <map>
@@ -302,37 +303,35 @@ bool landmarkOfCellUncached(const BodyGen& g, int ci, int cj, Landmark& out, boo
             return true;
         }
     }
-    // 7. the ruins of the old ones (M4-07's grid of 2 km cells, one in twenty, on felisian, quartz and ocean worlds): the
-    // biggest of the cell, a walk's destination on the plains
-    if ((g.type == PT_FELISIAN || g.type == PT_QUARTZ) && !(hiH - mean >= 90 && hiH > 0 && hiH - mean >= 150)) {
-        double dLat = 2000.0 / (g.R * 1000.0);   // the ruins' grid (M4-07): 2 km cells of latitude and longitude
+    // 7. the ruins of the old ones (M4-07's grid of 2 km cells, one in twenty, on felisian, quartz and ocean worlds) and,
+    // on a world that had a civilisation (C-01, `galaxy/ruins.*`), its settlements: the biggest of the cell (a town before a
+    // village before a hamlet before a monolith), a walk's destination on the plains
+    if ((g.type == PT_FELISIAN || g.type == PT_QUARTZ || worldHadCivilisation(g)) && !(hiH - mean >= 90 && hiH > 0 && hiH - mean >= 150)) {
+        double dLat = ruinCellLat(g);   // the ruins' grid (M4-07): 2 km cells of latitude and longitude
         int gLat0 = (int)std::floor((lat0 - half / (g.R * 1000.0)) / dLat), gLat1 = (int)std::floor((lat0 + half / (g.R * 1000.0)) / dLat);
-        double bestSize = 0; Vec3 bestU;
+        double bestSize = 0; Vec3 bestU; RuinSpec bestSpec;
         for (int gLat = gLat0; gLat <= gLat1; gLat++) {
             double latc = (gLat + 0.5) * dLat;
             if (std::fabs(latc) > PI / 2 - dLat) continue;
             double dLon = dLat / std::max(std::cos(latc), 0.05);
-            int nLon = (int)std::ceil(TAU / dLon);
             double lonC; { double la; StarSystem::latLonFromBody(c, la, lonC); }
             double lonHalf = half / (g.R * 1000.0) / std::max(std::cos(lat0), 0.05);
             int gLon0 = (int)std::floor((lonC - lonHalf) / dLon), gLon1 = (int)std::floor((lonC + lonHalf) / dLon);
             for (int gLon = gLon0; gLon <= gLon1; gLon++) {
-                int gl = ((gLon % nLon) + nLon) % nLon;
-                uint64_t h = hash2i(gLat, gl, g.seed ^ 0x2711);
-                if (unitFromHash(h) > 0.05) continue;
-                double lat = (gLat + 0.2 + 0.6 * unitFromHash(mix64(h + 1))) * dLat, lon = (gl + 0.2 + 0.6 * unitFromHash(mix64(h + 2))) * dLon;
-                Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
+                RuinSpec spec;
+                if (!ruinOfCell(g, gLat, gLon, spec, false)) continue;
+                Vec3 u = StarSystem::bodyFromLatLon(spec.lat, spec.lon);
                 int ci2, cj2; landmarkCellOf(g, u, ci2, cj2);
                 if (ci2 != ci || cj2 != cj) continue;
-                int kind = unitFromHash(mix64(h + 4)) < 0.033 ? 4 : (int)(unitFromHash(mix64(h + 5)) * 4);
-                double size = kind == 4 ? 40.0 : 6.0 + 8.0 * unitFromHash(mix64(h + 7));
-                SurfaceSample s = sampleSurface(g, u, 64.0);
-                if (s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water)) continue;
-                if (size > bestSize) { bestSize = size; bestU = u; }
+                double size = spec.kind == RK_SETTLEMENT ? 1000.0 * settlementRank(spec.sclass) + 500.0 + spec.size : spec.size;
+                if (size <= bestSize || !ruinSiteOk(g, spec)) continue;
+                bestSize = size; bestU = u; bestSpec = spec;
             }
         }
         if (bestSize > 0) {
-            out.kind = LM_RUIN; out.unit = bestU; out.radiusM = 60; out.prominenceM = bestSize; out.heightM = sampleSurface(g, bestU, 16.0).height;
+            bool settlement = bestSpec.kind == RK_SETTLEMENT;
+            out.kind = LM_RUIN; out.unit = bestU; out.radiusM = settlement ? bestSpec.size : 60; out.prominenceM = settlement ? 2 * bestSpec.size : bestSpec.size;
+            out.sub = settlement ? bestSpec.sclass + 1 : 0; out.heightM = sampleSurface(g, bestU, 16.0).height;
             out.name = nameOf(out.kind, id);
             return true;
         }

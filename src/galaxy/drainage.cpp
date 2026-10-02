@@ -80,6 +80,7 @@ uint64_t genKey(const BodyGen& g) {
     h = hashD(h, g.tempBias); h = hashD(h, g.riverDensity); h = hashD(h, g.lakeDensity); h = hashD(h, g.liquidLevel); h = hashD(h, g.contScale); h = hashD(h, g.islandDensity);
     h = hashD(h, g.reliefWl0); h = hashD(h, g.reliefH); h = hashD(h, g.reliefRidge); h = hashD(h, g.reliefWarp); h = hashD(h, g.reliefErosion); h = hashD(h, g.reliefHybrid);
     h = hashD(h, g.reliefFlat); h = hashD(h, g.reliefHill); h = hashD(h, g.reliefMtn); h = hashD(h, g.snowLine); h = hashD(h, g.volcanoes); h = hashD(h, g.boulderDensity);
+    h = hashD(h, g.oldSeaM);   // C-01
     h = mix64(h ^ g.sA) ^ mix64(g.sB + 1) ^ mix64(g.sC + 2) ^ mix64(g.sD + 3) ^ mix64(g.sE + 4) ^ mix64(g.sF + 5) ^ mix64(g.sG + 6);
     h = mix64(h ^ (uint64_t)(g.tectonic ? 1 : 0) ^ (uint64_t)(g.locked ? 2 : 0) ^ (uint64_t)g.duneStyle * 16);
     if (g.locked) { h = hashD(h, g.lockedDir.x); h = hashD(h, g.lockedDir.y); h = hashD(h, g.lockedDir.z); }
@@ -88,6 +89,7 @@ uint64_t genKey(const BodyGen& g) {
 
 inline bool isSeaSample(const BodyGen& g, const SurfaceSample& s) {
     if (g.type == PT_FELISIAN) return s.biome == BIO_OCEAN;
+    if (g.oldSeaM > -1e8) return s.oldSea > 0.5;   // C-01: a dead desert world's rivers ran to its seas: the dry bed is the flood's outlet, so the wadis end at the old shore
     return g.liquidLevel > -1e8 && s.material == MAT_WATER && s.water > -1e8 && std::fabs(s.water - g.liquidLevel) < 0.01;
 }
 

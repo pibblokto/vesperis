@@ -34,7 +34,7 @@ std::string describeBody(const Body& b, const BodyGen& g) {
         case PT_COMET: s += "mountain of ice and dust that grows a tail each time it dives past the star"; break;
         case PT_EUROPAN: s += r.chance(0.5) ? "shell of ice over a hidden ocean, its cracks stained red and venting water into space" : "ice moon of long double ridges and broken rafts, geysers rising from the cracks"; break;
         case PT_TECTONIC: s += r.chance(0.5) ? "restless world of rift valleys, fissures running with lava and ground that never stops shaking" : "world torn by its own crust, fountains of lava along the rifts under a sulphur sky"; break;
-        case PT_DESERT: s += r.chance(0.5) ? "dry world of dune seas, mesas and salt pans under a dusty sky" : "desert world of canyons and ergs, dust devils crossing its plains"; break;
+        case PT_DESERT: s += g.hasTrait(TR_CIVILISATION) ? "world of dry seabeds and dead river courses under a dusty sky, salt where its seas were" : (r.chance(0.5) ? "dry world of dune seas, mesas and salt pans under a dusty sky" : "desert world of canyons and ergs, dust devils crossing its plains"); break;   // C-01
         case PT_HYDROCARBON: s += "cold world under an orange haze, seas of methane and dunes of tar"; break;
         case PT_BOMBARDED: s += "young airless world under a rain of meteorites, its craters fresh and rayed"; break;
         case PT_ACIDIC: s += r.chance(0.5) ? "corrosive world of acid seas and bleached karst under a yellow-green sky" : "world whose rain eats the rock, sulphur crusts along its acid shores"; break;

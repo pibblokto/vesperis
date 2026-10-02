@@ -5,6 +5,9 @@
 #include "core/input.h"
 #include "galaxy/starfield.h"
 #include "galaxy/system.h"
+#include "galaxy/music.h"
+#include "galaxy/voice.h"
+#include "galaxy/signals.h"
 #include "space/space_view.h"
 #include "surface/surface_view.h"
 #include "audio.h"
@@ -15,7 +18,7 @@
 #include <cmath>
 
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
-                       GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS };
+                       GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS };
 
 // M2: the explorer inside the Stardrifter
 struct Cabin {
@@ -100,6 +103,23 @@ public:
     std::string landmarkName(const Landmark& L) const;         // the explorer's name for it, else empty (R-401)
     std::string landmarkLabel(const Landmark& L) const;        // "<name> - PEAK" or "UNNAMED PEAK"
     void noteLandmarks();                                      // the first sight within a kilometre goes to the log
+    std::string shardKey(int index) const;                     // C-03: "<body key>/S<index>" on the surface's body
+    void syncShards();                                         // C-03: the view hides this world's shards the guide already holds
+    void takeShard();                                          // C-03: E at a shard: the guide, the log, the status
+    bool shardsPending() const;                                // C-06: a shard the decoder has not read at its world's current share (the decoder's screen glows)
+    std::string testShardsInfo() const;
+    std::string testRadarInfo() const;         // C-07: the radar's state for the harness
+    bool testAimAtSignal(int which);           // C-07: turn the ship (the cabin view forward) onto signal `which` of the radar's list (far first, then local)
+    int testRadarSignals() const { return (int)radar.all.size(); }
+    int testRadarLocked() const { return radar.locked; }
+    int testRadarKind(int which) const { return which >= 0 && which < (int)radar.all.size() ? radar.all[which].kind : -1; }
+    int testRadarProgramme() const { return radar.prog.kind; }   // the programme on the air (RP_*, -1 none)
+    bool testRadarLocal(int which) const { return which >= 0 && which < (int)radar.all.size() && radar.all[which].local; }
+    bool testRadarOn() const { return radar.on; }
+    bool testRadarSector(int which, int64_t& sx, int64_t& sy, int64_t& sz) const { if (which < 0 || which >= (int)radar.all.size()) return false; sx = radar.all[which].star.sx; sy = radar.all[which].star.sy; sz = radar.all[which].star.sz; return true; }
+    bool testCivilisedHere() const;    // C-07: a people's world in the system the ship is at
+    bool testShardsOpenIndex(int idx);   // C-04: at the world's list, opens the shard of that index (a piece plays)
+    int testShardsLevel() const { return shardsLevel; }                        // C-06: the decoder's state for the harness
     std::vector<Landmark> zoomLandmarks;                       // the landing zoom's sights (built with the zoom)
     int testLandmarksHere() const { return (int)surf.landmarks.size(); }
     bool nameIsForeign(const std::string& key) const;
@@ -153,6 +173,14 @@ public:
     double testPlayerAlt() const { return surf.player.altAboveGround; }
     void testWalkToBuggy() { if (surf.buggy.deployed) { surf.player.x = surf.buggy.x + 1.5; surf.player.z = surf.buggy.z; } }
     std::string testBuggyInfo() const;
+    // R-403: the drone
+    void testWalkToDrone() { if (surf.drone.deployed) { surf.player.x = surf.drone.x + 1.5; surf.player.z = surf.drone.z; } }
+    std::string testDroneInfo() const;
+    double testDroneSpeed() const { return std::fabs(surf.drone.speed); }
+    double testDroneAlt() const { return surf.drone.altAboveGround; }
+    bool testDroneLanded() const { return surf.drone.landed; }
+    bool testFlySetup(double altM);   // deploy the drone beside the capsule, get in, lift it to altM over the ground (for the bench)
+    void testSetPitch(double p) { surf.player.pitch = p; }
     std::string testRangeInfo() const { return "range=" + std::to_string((int)surf.lastRange) + " water=" + std::to_string((int)surf.lastRangeWater); }   // O1
     int testParkedBelt() const { return ship.parkedBelt; }                                                                  // O3
     std::string testBeltDraw() const;   // O3: rocks drawn last frame and the bank-20 pixels in the framebuffer
@@ -164,8 +192,8 @@ public:
     bool testDrainageReady() const;   // O6-03: the drainage tiles of the landing site are in the cache
     int testBodyType(int bi) const { return bi >= 0 && bi < (int)sys.bodies.size() ? sys.bodies[bi].type : -1; }
     std::string testBodyTypes() const { std::string r; for (auto& b : sys.bodies) r += std::to_string(b.index) + ":" + PLANET_TYPES[b.type].name + (b.parent >= 0 ? "(moon) " : " "); return r; }
-    void testCabinGoto(double x, double z, double yaw) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = 0; }
-    int testCabinFacing() const { return cabin.facing; }
+    void testCabinGoto(double x, double z, double yaw, double pitch = 0) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = pitch; }
+    int testCabinFacing() const { return cabin.facing; }   // 7 is the shard decoder (C-06)
     int testLogEntries() const { return (int)guide.log.size(); }
     Framebuffer fb;
 
@@ -240,6 +268,7 @@ private:
     std::vector<uint32_t> galleryPix; int galleryW = 0, galleryH = 0; bool galleryOk = false; std::string galleryCaption;
     double walkMax = 0, lastWalkX = 0, lastWalkZ = 0, lastOdometer = 0;
     double drivenLanding = 0;     // metres driven this landing, over every buggy deployed (the launch log)
+    double flownLanding = 0;      // R-403: metres flown this landing
     bool visitNoted = false;
     // M2 cabin
     Cabin cabin;
@@ -254,6 +283,51 @@ private:
     void renderCabinHUD();
     void updateShipScreen(const Input& in); void renderShipScreen();
     void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in); void renderConsole();
+    // C-06 the shard decoder (game/shards_screen.cpp): the worlds the guide holds shards of, the one open with its fifty and its language, the shard on the screen
+    struct ShardWorld { std::string key; bool valid = false; StarSystem sys; int body = -1; Lore lore; Tongue tongue; Language lang; std::vector<Shard> shards;
+                        Tradition tradition; std::vector<int> pieceForm; std::vector<double> pieceSeconds; Piece piece;    // C-04: its music, the forms of its pieces, the piece on the screen
+                        Voice voice; Speech speech; };                                                                   // C-05: its voice and the shard on the screen spoken
+    ShardWorld shardWorld;
+    std::vector<std::string> shardWorldKeys;
+    std::vector<int> shardHeld;                  // the open world's shards held, in the order of their years
+    int shardsLevel = 0, shardWorldSel = 0, shardSel = 0;
+    std::vector<DecodedWord> shardWords;         // the shard on the screen as the computer reads it
+    bool shardFresh = false;                     // C-05: a first reading at this share: the words resolve as the recording speaks them, and its end reads the shard
+    double speechT = -1, speechSyncT = -1; bool speechPaused = false;   // C-05: the game's own clock into the speech (synced to the synth's when it runs), paused
+    void startSpeech(); void stopSpeech(); bool speechEnded() const; void markShardRead();
+    // C-04 a piece on the screen: the game's own clock into it (synced to the synth's beat when the synth runs), paused, the shard being named
+    double pieceT = -1, pieceSyncBeat = -1, humBeforePiece = -1; bool piecePaused = false;
+    std::string textShardKey;
+    void startPiece(); void stopPiece(); double pieceBeatNow() const; bool pieceEnded() const;
+    bool openShardWorld(const std::string& key);
+    bool buildShardWorld(ShardWorld& w, const Star& s, int bi);   // C-07: a world's shards, language, voice and tradition, for the decoder and the radar alike
+    // C-07 the signal radar (game/radar.cpp): switched on in space, the receiver follows the view; the far signals are scanned
+    // once per sector of the ship, the system's own every frame; the meter reads the beam's gains over the static, a hold within
+    // three degrees locks, Enter on a lock targets the source
+    struct RadarState {
+        bool on = false;
+        std::vector<Signal> far, local, all;    // the transmitters and loud pulsars within reach of the scan's sector; the system's own; both with this frame's directions
+        std::vector<double> gain, angle;        // per entry of `all`: the beam's gain times the strength, and the angle off the beam
+        int64_t scanSx = 1 << 30, scanSy = 0, scanSz = 0; int scanCells = 0; double scanMs = 0;
+        double reading = 0, noiseWalk = 0, traceAccum = 0;
+        std::vector<float> trace;               // the meter's last four seconds, for the scope
+        int best = -1; double bestGain = 0, bestAngle = 0;
+        double holdT = 0, lockSecs = 3;         // the hold within the lock's cone, and what it needs
+        int locked = -1; uint64_t lockedSeed = 0; int lockedKind = -1; double lostT = 0;
+        double clarity = 0;                     // how much of the signal comes through the static (the synth's radarSignal)
+        ShardWorld world; uint64_t worldSeed = 0;   // the people's world in the beam, built once
+        int shard = -1; double contentT = -1, contentSecs = 0; bool contentMusic = false; double awayT = 0;
+        Programme prog; int loopI = 0; double loopAt = 0;   // the programme on the air (galaxy/signals.h), the repeat a loop or a numbers station is at and when it began
+        Rng rng{0x5161};
+    };
+    RadarState radar;
+    void radarToggle(); void radarOff(); void radarScan(); bool updateRadar(const Input& in, double realDt);
+    void renderRadarCamera();           // the camera's frame over the picture: the scope, the cone, the readout
+    void radarCameraFeed(Framebuffer& fb);   // the picture as the radar camera gives it (the palette cold, static by the clarity), before the mush
+    void radarLock(int idx); void radarAccept(); void radarStartContent(const Signal& s, bool next); void radarRepeatContent(); void radarStopContent();
+    int shardsHeldOf(const std::string& key) const;
+    std::string worldNameOfKey(const std::string& key) const;
+    void openShards(); void openShard(int sel); void updateShards(const Input& in, double realDt); void renderShards(); void renderPiece();
     void deployCapsule(); void toggleVimana();
     // M4-02 sector map, M4-10 vision modes
     int visionMode = 0;

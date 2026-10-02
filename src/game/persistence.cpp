@@ -155,6 +155,7 @@ bool Game::save(const std::string& path) {
         f << "capsule " << surf.capsuleX << " " << surf.capsuleZ << "\n";
         if (state == GameState::DESCENT || state == GameState::ASCENT) f << "phase " << (int)state << " " << transT << "\n";
         f << "buggy " << (surf.buggy.deployed ? 1 : 0) << " " << surf.buggy.x << " " << surf.buggy.z << " " << surf.buggy.heading << " " << surf.buggy.odometer << " " << (surf.inBuggy ? 1 : 0) << "\n";
+        f << "drone " << (surf.drone.deployed ? 1 : 0) << " " << surf.drone.x << " " << surf.drone.z << " " << surf.drone.heading << " " << surf.drone.odometer << " " << (surf.inDrone ? 1 : 0) << "\n";   // R-403: a drone saved in flight loads landed where it was
         f << "waypoint " << (surf.hasWaypoint ? 1 : 0) << " " << surf.wpX << " " << surf.wpZ << "\n";
         f << "stamina " << surf.player.stamina << "\n";
     }
@@ -168,11 +169,13 @@ bool Game::load(const std::string& path) {
     std::string line;
     std::getline(f, line);
     if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
+    radarOff(); radar = RadarState();   // C-07: the radar is not saved
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
     int onSurface = 0, siteBody = -1; double slat = 0, slon = 0, px = 0, pz = 0, pyaw = 0, ppitch = 0, capx = 0, capz = 0;
     int phase = -1; double phaseT = 0;
     int bugDep = 0, bugIn = 0, wpHas = 0; double bugX = 0, bugZ = 0, bugH = 0, bugOdo = 0, wpx = 0, wpz = 0, stam = 100;
+    int drDep = 0, drIn = 0; double drX = 0, drZ = 0, drH = 0, drOdo = 0;   // R-403
     int gen = 1;
     Cabin cab; int cl = 1, cd = 0, cr = 0;
     ShipState ns;
@@ -194,6 +197,7 @@ bool Game::load(const std::string& path) {
         else if (key == "capsule") is >> capx >> capz;
         else if (key == "phase") is >> phase >> phaseT;
         else if (key == "buggy") is >> bugDep >> bugX >> bugZ >> bugH >> bugOdo >> bugIn;
+        else if (key == "drone") is >> drDep >> drX >> drZ >> drH >> drOdo >> drIn;
         else if (key == "waypoint") is >> wpHas >> wpx >> wpz;
         else if (key == "stamina") is >> stam;
         else if (key == "gen") is >> gen;
@@ -223,10 +227,15 @@ bool Game::load(const std::string& path) {
     lastSecX = lastSecY = -1; landZoom = 0; sectorImgEpoch = -1;   // O2, B-303
     if (onSurface && siteBody >= 0 && siteBody < (int)sys.bodies.size()) {
         surf.init(&sys, siteBody, slat, slon, t);
+        syncShards();   // C-03
         surf.player.x = px; surf.player.z = pz; surf.player.yaw = pyaw; surf.player.pitch = ppitch;
         surf.player.y = surf.site.surfaceHeight(px, pz);
         surf.relocateCapsule(capx, capz);
         if (bugDep) { surf.buggy = Buggy(); surf.buggy.deployed = true; surf.buggy.unfold = 1; surf.buggy.x = bugX; surf.buggy.z = bugZ; surf.buggy.heading = bugH; surf.buggy.odometer = bugOdo; surf.buggy.y = surf.site.surfaceHeight(bugX, bugZ); if (bugIn) surf.toggleBuggy(); }
+        if (drDep) {   // R-403: on the ground where it was, landed; the explorer back in it if they were
+            surf.drone = Drone(); surf.drone.deployed = true; surf.drone.unfold = 1; surf.drone.x = drX; surf.drone.z = drZ; surf.drone.heading = drH; surf.drone.odometer = drOdo; surf.drone.y = surf.site.surfaceHeight(drX, drZ); surf.drone.landed = true;
+            if (drIn && !surf.inBuggy) { surf.player.x = drX; surf.player.z = drZ; surf.toggleDrone(); }
+        }
         surf.hasWaypoint = wpHas != 0; surf.wpX = wpx; surf.wpZ = wpz;
         surf.player.stamina = clampd(stam, 0, 100);
         state = GameState::SURFACE;

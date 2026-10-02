@@ -13,7 +13,7 @@
 #include <sstream>
 
 namespace {
-const char* GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "NAME THE NEAREST LANDMARK", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS",
+const char* GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "NAME THE NEAREST LANDMARK", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",
                              "TARGET A STAR BY NAME", "TARGET BY COORDINATES", "RETURN TO THE PREVIOUS STAR", "TARGET THE HOME STAR",
                              "SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", "BACK"};
 const int GUIDE_N = (int)(sizeof(GUIDE_ITEMS) / sizeof(GUIDE_ITEMS[0]));
@@ -114,7 +114,7 @@ void Game::noteLandmarks() {
             case LM_CRATER: what = fmt("A CRATER %.1f KM ACROSS, %.0f M DEEP", 2 * L.lm.radiusM / 1000.0, L.lm.prominenceM); break;
             case LM_GEYSERS: what = fmt("A GEYSER FIELD %.1f KM ACROSS", 2 * L.lm.radiusM / 1000.0); break;
             case LM_LAKE: what = fmt("A LAKE %.1f KM ACROSS AT %.0f M", 2 * L.lm.radiusM / 1000.0, L.lm.heightM); break;
-            case LM_RUIN: what = fmt("RUINS OF THE OLD ONES, %.0f M ACROSS", L.lm.prominenceM); break;
+            case LM_RUIN: what = L.lm.sub == 4 ? fmt("A LONE MONUMENT OF THE OLD PEOPLE, %.0f M ACROSS", L.lm.prominenceM) : (L.lm.sub ? fmt("THE RUINS OF A %s, %.0f M ACROSS", L.lm.sub == 1 ? "HAMLET" : (L.lm.sub == 2 ? "VILLAGE" : "TOWN"), L.lm.prominenceM) : fmt("RUINS OF THE OLD ONES, %.0f M ACROSS", L.lm.prominenceM)); break;   // C-01
             default: what = "A FIELD OF CRYSTAL SPIRES"; break;
         }
         double edge = std::max(0.0, d - L.lm.radiusM);
@@ -123,6 +123,30 @@ void Game::noteLandmarks() {
         status(fmt("LANDMARK: %s", landmarkLabel(L.lm).c_str()), 5);
         audio.beep = 4;
     }
+}
+
+// C-03: a shard taken with E goes to the guide ("shard <body key>/S<index>"), the log and the status; the view then hides
+// every copy of it on this world (`SurfaceView::shardsFound`, refilled at a landing and a load), so what still glints is new
+std::string Game::shardKey(int index) const {
+    return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.valid ? surf.site.body : ship.localTarget) + "/S" + std::to_string(index);
+}
+void Game::syncShards() {
+    surf.shardsFound.clear();
+    if (!surf.valid && surf.site.body < 0) return;
+    std::string prefix = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body) + "/S";
+    for (const std::string& k : guide.shards) if (k.compare(0, prefix.size(), prefix) == 0) surf.shardsFound.insert(atoi(k.c_str() + prefix.size()));
+}
+void Game::takeShard() {
+    const SurfaceView::NearShard ns = surf.nearShard;
+    if (ns.index < 0 || ns.index >= SHARDS_PER_WORLD) return;
+    guide.shards.insert(shardKey(ns.index));
+    syncShards();
+    int here = (int)surf.shardsFound.size();
+    const char* where = ns.sclass == SC_MONUMENT ? "A LONE MONUMENT" : (ns.sclass == SC_HAMLET ? "A HAMLET" : (ns.sclass == SC_VILLAGE ? "A VILLAGE" : "A TOWN"));
+    bool caught = guide.heard.count(shardKey(ns.index)) > 0;   // C-07: a recording the radar heard from afar
+    logEvent("SHARD", fmt("A SHARD OF THE OLD PEOPLE TAKEN FROM %s IN THE RUINS OF %s ON %s (%d OF %d FOUND THERE)%s", SHARD_PLACE_NAMES[ns.place], where, upper(bodyNameOf(surf.site.body)).c_str(), here, SHARDS_PER_WORLD, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
+    status(caught ? fmt("A SHARD OF THE OLD PEOPLE - THE RECORDING THE RADAR CAUGHT (%d OF %d)", here, SHARDS_PER_WORLD) : fmt("A SHARD OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", here, SHARDS_PER_WORLD), 5);
+    audio.beep = 1;
 }
 
 void Game::logEvent(const std::string& kind, const std::string& text) {
@@ -185,22 +209,23 @@ void Game::updateGuideMenu(const Input& in) {
         case 5: logPage = 0; state = GameState::LOG; break;
         case 6: openGallery(); break;
         case 7: state = GameState::STATS; break;
-        case 8: if (!onSurface) beginTextEntry("STAR NAME", 4, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 9: if (!onSurface) beginTextEntry("SECTOR X Y Z", 5, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 10: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 11: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 12: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
-        case 13: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt"; status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5); state = guideReturn; break; }
-        case 14: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_inbox.txt"; int n = guide.importInbox(p); if (n < 0) status(fmt("NO INBOX FILE (%s)", upper(p).c_str()), 5); else { guide.save(guidePath); status(fmt("%d NEW NAMES FROM THE INBOX", n), 5); } state = guideReturn; break; }
+        case 8: if (!onSurface) openShards(); else status("THE SHARDS ARE READ ON THE SHIP", 3); break;   // C-06
+        case 9: if (!onSurface) beginTextEntry("STAR NAME", 4, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 10: if (!onSurface) beginTextEntry("SECTOR X Y Z", 5, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 11: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 12: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 13: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
+        case 14: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt"; status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5); state = guideReturn; break; }
+        case 15: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_inbox.txt"; int n = guide.importInbox(p); if (n < 0) status(fmt("NO INBOX FILE (%s)", upper(p).c_str()), 5); else { guide.save(guidePath); status(fmt("%d NEW NAMES FROM THE INBOX", n), 5); } state = guideReturn; break; }
         default: state = guideReturn; break;
     }
 }
 
 void Game::renderGuideMenu() {
-    const int top = 20, bottom = UH - 18, y0 = top + 20;
+    const int top = 10, bottom = UH - 6, y0 = top + 18;   // C-06: seventeen items at 9 px; the box grew with them (sixteen already ran into the footer)
     blendRectRGB(canvas, 40, top, UW - 40, bottom, rgb(0, 0, 0), 215);
     drawRectRGB(canvas, 40, top, UW - 40, bottom, HUD_DIM);
-    drawTextCentered(canvas, UW / 2, top + 7, "THE GUIDE", HUD_AMBER);
+    drawTextCentered(canvas, UW / 2, top + 6, "THE GUIDE", HUD_AMBER);
     for (int i = 0; i < GUIDE_N; i++) {
         int y = y0 + i * 9;
         bool sel = i == guideSel;
@@ -256,6 +281,13 @@ void Game::updateTextEntry(const Input& in) {
             guide.names[landmarkKey(L->lm)] = text; guide.landmarksSeen.insert(landmarkKey(L->lm)); guide.save(guidePath);
             status(fmt("THE %s IS NOW CALLED %s", LANDMARK_KIND_NAMES[L->lm.kind], text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED THE %s %s", LANDMARK_KIND_NAMES[L->lm.kind], text.c_str()));
+            break;
+        }
+        case 7: {   // C-04: the piece's name (the shard on the decoder screen)
+            if (text.empty() || textShardKey.empty()) return;
+            guide.names[textShardKey] = text; guide.save(guidePath);
+            status(fmt("THE PIECE IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED A PIECE OF THE OLD PEOPLE'S MUSIC %s", text.c_str()));
             break;
         }
         case 5: {
@@ -497,11 +529,11 @@ void Game::renderStats() {
     line(fmt("FURTHEST FROM HOME    %.2f LY", guide.furthestFromHomeLY), HUD_GREEN);
     line(fmt("LONGEST WALK          %.2f KM FROM THE CAPSULE", guide.longestWalkM / 1000.0), HUD_GREEN);
     line(fmt("HIGHEST POINT REACHED %.0f M", guide.highestPointM), HUD_GREEN);
-    line(fmt("DISTANCE ON FOOT      %.1f KM", guide.totalWalkedM / 1000.0), HUD_GREEN);
-    line(fmt("DISTANCE DRIVEN       %.1f KM", guide.totalDrivenM / 1000.0), HUD_GREEN);
+    line(fmt("FOOT, DRIVEN, FLOWN   %.1f / %.1f / %.1f KM", guide.totalWalkedM / 1000.0, guide.totalDrivenM / 1000.0, guide.totalFlownM / 1000.0), HUD_GREEN);   // C-03: one line, the shards took the other; R-403: the drone's kilometres
+    line(fmt("SHARDS TAKEN          %d FROM %d WORLD%s   DECODED %d", (int)guide.shards.size(), guide.shardWorlds(), guide.shardWorlds() == 1 ? "" : "S", (int)guide.decoded.size()), HUD_GREEN);   // C-03; C-06: read on the ship
     line(fmt("NAMES GIVEN           %d   FROM OTHERS %d", (int)guide.names.size(), (int)guide.inbox.size()), HUD_GREEN);
     line(fmt("LOG ENTRIES           %d   PHOTOGRAPHS %d", (int)guide.log.size(), guide.screenshots), HUD_GREEN);
-    line(fmt("CREATURES SIGHTED     %d SPECIES", guide.creaturesSeen), HUD_GREEN);   // N3-01
+    line(fmt("CREATURES SIGHTED     %d SPECIES   SIGNALS HEARD %d", guide.creaturesSeen, (int)guide.signals.size()), HUD_GREEN);   // N3-01; C-07: the radar's locks
     line(fmt("LONGEST DRIVE         %.2f KM   TOP SPEED %.0f KM/H", guide.longestDriveM / 1000.0, guide.topSpeedKmh), HUD_GREEN);   // N4-05
     int64_t hx, hy, hz;
     if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) { Star h; if (starInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN); }

@@ -31,6 +31,10 @@ bool Guide::load(const std::string& path) {
         } else if (key == "visited") { std::string k; is >> k; visited.insert(k); }
         else if (key == "landed") { std::string k; is >> k; landed.insert(k); }
         else if (key == "landmark") { std::string k; is >> k; landmarksSeen.insert(k); }
+        else if (key == "shard") { std::string k; is >> k; shards.insert(k); }   // C-03
+        else if (key == "decoded") { std::string k; int n = 0; is >> k >> n; decoded[k] = n; }   // C-06
+        else if (key == "signal") { std::string k; int n = 0; is >> k >> n; signals[k] = n; }   // C-07
+        else if (key == "heard") { std::string k; is >> k; heard.insert(k); }   // C-07
         else if (key == "class") { int c; is >> c; classesSeen.insert(c); }
         else if (key == "type") { int c; is >> c; typesSeen.insert(c); }
         else if (key == "history") { std::string k; is >> k; history.push_back(k); }
@@ -44,7 +48,7 @@ bool Guide::load(const std::string& path) {
         else if (key == "stat") {
             std::string n; double v; is >> n >> v;
             if (n == "furthest") furthestFromHomeLY = v; else if (n == "walk") longestWalkM = v; else if (n == "highest") highestPointM = v;
-            else if (n == "walked") totalWalkedM = v; else if (n == "driven") totalDrivenM = v; else if (n == "screenshots") screenshots = (int)v;
+            else if (n == "walked") totalWalkedM = v; else if (n == "driven") totalDrivenM = v; else if (n == "flown") totalFlownM = v; else if (n == "screenshots") screenshots = (int)v;
             else if (n == "creatures") creaturesSeen = (int)v; else if (n == "topspeed") topSpeedKmh = v; else if (n == "longestdrive") longestDriveM = v;
         }
     }
@@ -63,11 +67,15 @@ bool Guide::save(const std::string& path) const {
     for (auto& k : visited) f << "visited " << k << "\n";
     for (auto& k : landed) f << "landed " << k << "\n";
     for (auto& k : landmarksSeen) f << "landmark " << k << "\n";
+    for (auto& k : shards) f << "shard " << k << "\n";   // C-03
+    for (auto& kv : decoded) f << "decoded " << kv.first << " " << kv.second << "\n";   // C-06
+    for (auto& kv : signals) f << "signal " << kv.first << " " << kv.second << "\n";   // C-07
+    for (auto& k : heard) f << "heard " << k << "\n";   // C-07
     for (int c : classesSeen) f << "class " << c << "\n";
     for (int c : typesSeen) f << "type " << c << "\n";
     for (auto& k : history) f << "history " << k << "\n";
     f << "stat furthest " << furthestFromHomeLY << "\nstat walk " << longestWalkM << "\nstat highest " << highestPointM
-      << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM << "\n";
+      << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM << "\nstat flown " << totalFlownM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM << "\n";
     for (auto& e : log) f << "log " << e.t << " " << e.kind << " " << e.text << "\n";
     return true;
 }
@@ -81,6 +89,12 @@ int Guide::importInbox(const std::string& path) {
         if (inbox[kv.first] != kv.second) { inbox[kv.first] = kv.second; n++; }
     }
     return n;
+}
+
+int Guide::shardWorlds() const {   // C-03: the distinct body keys before "/S"
+    std::set<std::string> worlds;
+    for (const std::string& k : shards) { size_t p = k.rfind("/S"); if (p != std::string::npos) worlds.insert(k.substr(0, p)); }
+    return (int)worlds.size();
 }
 
 void Guide::addLog(double t, const std::string& kind, const std::string& text) {

@@ -96,6 +96,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         transT = 0;
         fade = 0;
         surf.init(&sys, landBody, landLat, landLon, t);
+        syncShards();   // C-03
         surf.cameraOverrideAlt = 1800;
         surf.cameraOverridePitch = -60 * DEG;
         surf.player.yaw = wrap2pi(landLon + 1.0);
@@ -214,7 +215,7 @@ void Game::buildLandingZoom() {
     mapRampsFor(b, ramps, lf, atmo);
     // O6-06: the sights of the window (the grid cells the window touches)
     landmarksNear(g, b.name, StarSystem::bodyFromLatLon(zoomLat, zoomLon), std::max(zoomHalfLat, zoomHalfLon * std::cos(zoomLat)) * b.radiusKm * 1000.0 * 1.2, zoomLandmarks, false);   // the tiles built so far: the zoom must not compute any
-    std::sort(zoomLandmarks.begin(), zoomLandmarks.end(), [](const Landmark& a, const Landmark& b2) { return a.prominenceM * (a.kind == LM_RUIN ? 0.05 : 1.0) > b2.prominenceM * (b2.kind == LM_RUIN ? 0.05 : 1.0); });   // the sights worth a name first
+    std::sort(zoomLandmarks.begin(), zoomLandmarks.end(), [](const Landmark& a, const Landmark& b2) { return a.prominenceM * (a.kind == LM_RUIN && !a.sub ? 0.05 : 1.0) > b2.prominenceM * (b2.kind == LM_RUIN && !b2.sub ? 0.05 : 1.0); });   // the sights worth a name first
     auto hAt = [&](int x, int y) { x = clampi(x, 0, ZW - 1); y = clampi(y, 0, ZH - 1); return (double)hs[y * ZW + x]; };
     double sum2 = 0; int cnt = 0;
     for (int y = 0; y < ZH; y += 2)

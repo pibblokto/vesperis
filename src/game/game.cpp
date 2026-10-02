@@ -110,6 +110,7 @@ const char* Game::shortPlan(int plan) {
 
 bool Game::testDriveSetup() {
     if (state != GameState::SURFACE || !surf.valid) return false;
+    if (surf.inDrone) { surf.drone.landed = true; surf.drone.y = surf.site.surfaceHeight(surf.drone.x, surf.drone.z); surf.toggleDrone(); }   // R-403: out of a flying drone first
     surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
     if (!surf.buggy.deployed && !surf.deployBuggy()) return false;
     surf.buggy.unfold = 1;
@@ -130,6 +131,7 @@ double Game::testDriveOpen() {
 void Game::newGame() {
     t = 3.6e6;
     timeWarp = 1;
+    radarOff(); radar = RadarState();   // C-07
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -247,9 +249,12 @@ void Game::frame(const Input& in, double realDt) {
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
+    if (audio.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the music plays on the decoder screen only (C-07: or through the radar)
+    if (audio.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                     // C-05: the voice too
+    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP)) radarOff();   // C-07: a ship's instrument, off the ship
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
     bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
-                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE;
+                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS;
     if (in.wasPressed(KEY_T) && simulating) {
         if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
         else if (in.ctrl()) { timeLapse = true; timeLapseUntil = realTime + 25; timeWarp = 600; status("TIME-LAPSE X600 FOR 25 S", 3); }   // M5-06
@@ -277,7 +282,7 @@ void Game::frame(const Input& in, double realDt) {
             if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
             break;
         case GameState::SPACE:
-            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }
+            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); } else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }   // C-07: Esc leaves the radar camera
             if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; break; }
             if (saveKey(in)) { saveSlot(currentSlot); break; }
             if (loadKey(in)) { loadSlot(currentSlot); break; }
@@ -339,6 +344,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::GALLERY: updateGallery(in); break;
         case GameState::SHIPSCREEN: updateShipScreen(in); updateShipMotion(dt); break;
         case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
+        case GameState::SHARDS: updateShards(in, realDt); updateShipMotion(dt); break;   // C-06
         case GameState::SECTOR_MAP: updateSectorMap(in); break;
         case GameState::SYSTEM_LIST: {
             int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // O3: the belts follow the bodies
@@ -382,6 +388,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::SYSTEM_LIST:
         case GameState::DATA:
         case GameState::KEYS:
+        case GameState::SHARDS:
             if (returnState == GameState::SURFACE || (surf.valid && returnState == GameState::SURFACE)) renderSurfaceScene();
             else if (returnState == GameState::TITLE) { renderSpace(); renderTitle(); }
             else renderSpace();
@@ -391,13 +398,14 @@ void Game::frame(const Input& in, double realDt) {
             else if (state == GameState::KEYS) renderKeysScreen();
             else if (state == GameState::SLOTS) renderSlots();
             else if (state == GameState::GUIDE) renderGuideMenu();
-            else if (state == GameState::TEXT_ENTRY) renderTextEntry();
+            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); renderTextEntry(); }   // C-04: naming a piece, over the decoder
             else if (state == GameState::STAR_MAP) renderStarMap();
             else if (state == GameState::LOG) renderLog();
             else if (state == GameState::STATS) renderStats();
             else if (state == GameState::GALLERY) renderGallery();
             else if (state == GameState::SHIPSCREEN) renderShipScreen();
             else if (state == GameState::CONSOLE) renderConsole();
+            else if (state == GameState::SHARDS) renderShards();   // C-06
             else if (state == GameState::SECTOR_MAP) renderSectorMap();
             else if (state == GameState::SYSTEM_LIST) renderSystemList();
             else renderDataSheet();
@@ -514,6 +522,24 @@ void Game::testTypeText(const std::string& s) {
         frame(in, 1.0 / 30);
     }
     in.newFrame(); in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true; frame(in, 1.0 / 30);
+}
+
+std::string Game::testDroneInfo() const {   // R-403
+    const Drone& d = surf.drone;
+    return fmt("deployed=%d in=%d landed=%d speed=%.1f m/s alt=%.0f m vs=%+.1f heading=%.0f odometer=%.0f m rotor=%.2f chase=%d", (int)d.deployed, (int)surf.inDrone, (int)d.landed, d.speed, d.altAboveGround, d.vy, wrap2pi(d.heading) / DEG, d.odometer, d.rotor, (int)surf.chaseCam);
+}
+
+bool Game::testFlySetup(double altM) {   // R-403
+    if (state != GameState::SURFACE || !surf.valid) return false;
+    if (surf.inBuggy) surf.toggleBuggy();
+    surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
+    if (!surf.drone.deployed && !surf.deployDrone()) return false;
+    surf.drone.unfold = 1;
+    surf.player.x = surf.drone.x + 1.5; surf.player.z = surf.drone.z;
+    if (!surf.inDrone && !surf.toggleDrone()) return false;
+    surf.drone.landed = false; surf.drone.rotor = 0.8; surf.drone.y = surf.site.surfaceHeight(surf.drone.x, surf.drone.z) + altM; surf.drone.altAboveGround = altM;
+    surf.player.y = surf.drone.y;
+    return true;
 }
 
 std::string Game::testBuggyInfo() const {
