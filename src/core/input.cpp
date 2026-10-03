@@ -1,5 +1,6 @@
 // Key names, the physical-to-logical key map (M6-02) and the gamepad-to-keys mapping.
 #include "input.h"
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
