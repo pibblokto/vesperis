@@ -16,6 +16,7 @@
 #include "game.h"
 #include "ui.h"
 #include "core/rng.h"
+#include <cstdlib>
 #include <algorithm>
 #include <array>
 #include <cmath>

@@ -5,6 +5,7 @@
 #include "ui.h"
 #include "core/png.h"
 #include "core/rng.h"
+#include <cstdlib>
 #include <cmath>
 #include <cstdio>
 #include <algorithm>

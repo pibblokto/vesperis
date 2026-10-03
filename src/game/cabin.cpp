@@ -5,6 +5,7 @@
 #include "game.h"
 #include "ui.h"
 #include "core/rng.h"
+#include <cstdlib>
 #include <cmath>
 #include <cstdio>
 #include <sstream>
