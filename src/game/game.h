@@ -5,6 +5,10 @@
 #include "core/input.h"
 #include "galaxy/starfield.h"
 #include "galaxy/system.h"
+#include "galaxy/music.h"
+#include "galaxy/voice.h"
+#include "galaxy/signals.h"
+#include "galaxy/charts.h"
 #include "space/space_view.h"
 #include "surface/surface_view.h"
 #include "audio.h"
@@ -12,10 +16,11 @@
 #include "guide.h"
 #include <string>
 #include <vector>
+#include <set>
 #include <cmath>
 
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
-                       GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS };
+                       GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS };
 
 // M2: the explorer inside the Stardrifter
 struct Cabin {
@@ -100,6 +105,31 @@ public:
     std::string landmarkName(const Landmark& L) const;         // the explorer's name for it, else empty (R-401)
     std::string landmarkLabel(const Landmark& L) const;        // "<name> - PEAK" or "UNNAMED PEAK"
     void noteLandmarks();                                      // the first sight within a kilometre goes to the log
+    std::string shardKey(int index) const;                     // C-03: "<body key>/S<index>" on the surface's body
+    void syncShards();                                         // C-03: the view hides this world's shards the guide already holds
+    std::set<uint64_t> roadsMet;                               // C-09: the old roads met on this landing (a status and a log line the first time on each)
+    void takeShard();                                          // C-03: E at a shard: the guide, the log, the status
+    std::string graveKey(uint64_t id) const;                   // C-12: "<body key>/G<id>" on the surface's body
+    bool shardsPending() const;                                // C-06: a shard the decoder has not read at its world's current share (the decoder's screen glows)
+    std::string testShardsInfo() const;
+    std::string testRadarInfo() const;         // C-07: the radar's state for the harness
+    bool testAimAtSignal(int which);           // C-07: turn the ship (the cabin view forward) onto signal `which` of the radar's list (far first, then local)
+    int testRadarSignals() const { return (int)radar.all.size(); }
+    int testRadarLocked() const { return radar.locked; }
+    int testRadarKind(int which) const { return which >= 0 && which < (int)radar.all.size() ? radar.all[which].kind : -1; }
+    int testRadarProgramme() const { return radar.prog.kind; }   // the programme on the air (RP_*, -1 none)
+    bool testRadarLocal(int which) const { return which >= 0 && which < (int)radar.all.size() && radar.all[which].local; }
+    bool testRadarOn() const { return radar.on; }
+    bool testRadarSector(int which, int64_t& sx, int64_t& sy, int64_t& sz) const { if (which < 0 || which >= (int)radar.all.size()) return false; sx = radar.all[which].star.sx; sy = radar.all[which].star.sy; sz = radar.all[which].star.sz; return true; }
+    bool testCivilisedHere() const;    // C-07: a people's world in the system the ship is at
+    bool testShardsOpenIndex(int idx);   // C-04: at the world's list, opens the shard of that index (a piece plays)
+    int testShardsLevel() const { return shardsLevel; }                        // C-06: the decoder's state for the harness
+    std::string testChartInfo() const;         // C-10: the chart on the screen and the one held up
+    bool testAimAtChartMark(int figure = -1);  // C-10: turn the ship onto the held chart's marked star (or onto figure `figure`'s brightest star)
+    bool testRemote(int64_t& sx, int64_t& sy, int64_t& sz) const { if (!ship.hasRemote) return false; sx = ship.remote.sx; sy = ship.remote.sy; sz = ship.remote.sz; return true; }
+    int testChartLines() const { return chartLinesDrawn; }
+    bool testChartUp() const { return chartUp; }
+    int testChartStarsInSky() const { int n = 0; for (const ChartStar& c : chartHeld.stars) for (const Star& s : nb.stars) if (s.seed == c.star.seed) { n++; break; } return n; }   // of the held chart's stars, how many the sky here draws
     std::vector<Landmark> zoomLandmarks;                       // the landing zoom's sights (built with the zoom)
     int testLandmarksHere() const { return (int)surf.landmarks.size(); }
     bool nameIsForeign(const std::string& key) const;
@@ -126,6 +156,18 @@ public:
     void setState(GameState s) { state = s; }
     void testAimAtNearestStar();
     void testAimAtBody(int body);
+    int testZoomRoads() const { return (int)zoomRoads.size(); }   // C-09: the roads drawn on the zoom
+    std::string testRoadInfo() const;                             // C-09: the site's roads, the road under the explorer, the roads met, the zoom's lines
+    void testBuildZoom() { buildLandingZoom(); }
+    bool testWalkToRoad(double withinM = 400);                    // C-09: the explorer set on the nearest road's centre line
+    std::string testGraveInfo() const;                            // C-12: the grave within reach, the guide's graves, the last log line
+    bool testWalkToShard();                                       // C-13: the explorer set a metre from the nearest settlement's first shard the guide does not hold
+    void importInboxFile();                                       // C-14: the guide menu's "import an inbox file" (the harness calls it too): a friend's export beside the guide
+    int testPeoples() const { return surf.peoples; }              // C-13: the peoples of the world under the feet
+    int testNearShardIndex() const { return surf.nearShard.index; }   // C-13: the shard within reach (its world index), -1 none
+    bool testWalkToGrave();                                       // C-12: the explorer set a metre in front of the nearest settlement's first grave, facing it
+    void testLandCursor(double latDeg, double lonDeg) { landLat = latDeg * DEG; landLon = lonDeg * DEG; }   // C-09: the landing map's cursor
+    void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
     int testLandableBody() const;
     void testParkAt(const Star& s, int body);   // arrive at a star, park at a body, open the landing map
     void testParkAtBelt(const Star& s, int k);  // O3: arrive at a star and park beside a rock of belt k at once
@@ -152,6 +194,14 @@ public:
     double testPlayerAlt() const { return surf.player.altAboveGround; }
     void testWalkToBuggy() { if (surf.buggy.deployed) { surf.player.x = surf.buggy.x + 1.5; surf.player.z = surf.buggy.z; } }
     std::string testBuggyInfo() const;
+    // R-403: the drone
+    void testWalkToDrone() { if (surf.drone.deployed) { surf.player.x = surf.drone.x + 1.5; surf.player.z = surf.drone.z; } }
+    std::string testDroneInfo() const;
+    double testDroneSpeed() const { return std::fabs(surf.drone.speed); }
+    double testDroneAlt() const { return surf.drone.altAboveGround; }
+    bool testDroneLanded() const { return surf.drone.landed; }
+    bool testFlySetup(double altM);   // deploy the drone beside the capsule, get in, lift it to altM over the ground (for the bench)
+    void testSetPitch(double p) { surf.player.pitch = p; }
     std::string testRangeInfo() const { return "range=" + std::to_string((int)surf.lastRange) + " water=" + std::to_string((int)surf.lastRangeWater); }   // O1
     int testParkedBelt() const { return ship.parkedBelt; }                                                                  // O3
     std::string testBeltDraw() const;   // O3: rocks drawn last frame and the bank-20 pixels in the framebuffer
@@ -163,8 +213,8 @@ public:
     bool testDrainageReady() const;   // O6-03: the drainage tiles of the landing site are in the cache
     int testBodyType(int bi) const { return bi >= 0 && bi < (int)sys.bodies.size() ? sys.bodies[bi].type : -1; }
     std::string testBodyTypes() const { std::string r; for (auto& b : sys.bodies) r += std::to_string(b.index) + ":" + PLANET_TYPES[b.type].name + (b.parent >= 0 ? "(moon) " : " "); return r; }
-    void testCabinGoto(double x, double z, double yaw) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = 0; }
-    int testCabinFacing() const { return cabin.facing; }
+    void testCabinGoto(double x, double z, double yaw, double pitch = 0) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = pitch; }
+    int testCabinFacing() const { return cabin.facing; }   // 7 is the shard decoder (C-06)
     int testLogEntries() const { return (int)guide.log.size(); }
     Framebuffer fb;
 
@@ -192,6 +242,8 @@ private:
     double zoomLat = 1e9, zoomLon = 1e9, zoomHalfLat = 0, zoomHalfLon = 0;
     bool zoomDry = false; double zoomPrefetchT = -1e9;   // O6-03: the zoom was drawn without the drainage (its tiles were not built); rebuilt when they are
     uint64_t zoomSeed = 0;
+    std::vector<std::vector<std::pair<float, float>>> zoomRoads;   // C-09: the old roads of the window (texel coordinates), drawn as faint lines over it
+    double zoomRoadsMs = 0;                                          // C-09: what the window's network cost at the last build
     void buildLandingZoom();
     bool landingZoomAllowed() const;
     // O0-04 (B-306): the shadows of moons, the parent and the rings on the landing map and its zoom, as the globe shows them
@@ -231,7 +283,7 @@ private:
     double autosaveTimer = 0;
     int listSel = 0, listScroll = 0;
     // M3 guide screens
-    int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = 63;
+    int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
     GameState guideReturn = GameState::SPACE;
     std::string textPrompt, textBuffer;
     double mapYaw = 0, mapPitch = 0, mapZoom = 1;
@@ -239,6 +291,7 @@ private:
     std::vector<uint32_t> galleryPix; int galleryW = 0, galleryH = 0; bool galleryOk = false; std::string galleryCaption;
     double walkMax = 0, lastWalkX = 0, lastWalkZ = 0, lastOdometer = 0;
     double drivenLanding = 0;     // metres driven this landing, over every buggy deployed (the launch log)
+    double flownLanding = 0;      // R-403: metres flown this landing
     bool visitNoted = false;
     // M2 cabin
     Cabin cabin;
@@ -253,6 +306,72 @@ private:
     void renderCabinHUD();
     void updateShipScreen(const Input& in); void renderShipScreen();
     void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in); void renderConsole();
+    // C-06 the shard decoder (game/shards_screen.cpp): the worlds the guide holds shards of, the one open with its fifty and its language, the shard on the screen
+    struct ShardWorld { std::string key; bool valid = false; StarSystem sys; int body = -1; Lore lore; Tongue tongue; Language lang; std::vector<Shard> shards;
+                        int which = 0, peoples = 1, base = 0;   // C-13: which of the world's peoples this is, how many the world had, the guide index of this people's first shard (its fifty count from zero here)
+                        Tradition tradition; std::vector<int> pieceForm; std::vector<double> pieceSeconds; Piece piece;    // C-04: its music, the forms of its pieces, the piece on the screen
+                        Voice voice; Speech speech;                                                                      // C-05: its voice and the shard on the screen spoken
+                        StarChart chart; };                                                                              // C-10: the chart on the screen
+    ShardWorld shardWorld;
+    std::vector<std::string> shardWorldKeys, shardWorldLabels; std::vector<int> shardWorldWhich;   // C-13: an entry a people whose shards are held, labelled with the people's name where the world had two
+    std::vector<int> shardHeld;                  // the open world's shards held, in the order of their years
+    int shardsLevel = 0, shardWorldSel = 0, shardSel = 0;
+    std::vector<DecodedWord> shardWords;         // the shard on the screen as the computer reads it
+    bool shardFresh = false;                     // C-05: a first reading at this share: the words resolve as the recording speaks them, and its end reads the shard
+    double speechT = -1, speechSyncT = -1; bool speechPaused = false;   // C-05: the game's own clock into the speech (synced to the synth's when it runs), paused
+    void startSpeech(); void stopSpeech(); bool speechEnded() const; void markShardRead();
+    // C-04 a piece on the screen: the game's own clock into it (synced to the synth's beat when the synth runs), paused, the shard being named
+    double pieceT = -1, pieceSyncBeat = -1, humBeforePiece = -1; bool piecePaused = false;
+    std::string textShardKey;
+    void startPiece(); void stopPiece(); double pieceBeatNow() const; bool pieceEnded() const;
+    bool openShardWorld(const std::string& key, int which = 0);
+    bool buildShardWorld(ShardWorld& w, const Star& s, int bi, int which = 0);   // C-07: a world's shards, language, voice and tradition, for the decoder and the radar alike
+    // C-10 the star charts (galaxy/charts.h): a chart shard draws itself on the decoder (a first reading at this share over
+    // CHART_READ_S seconds, the stars, then the figures, then their names), Enter targets the star it marks, O holds it up to the
+    // sky: the figures' lines are drawn between the real stars on the space view and the surface's night sky from wherever the
+    // ship is, with the marked star's diamond, until it is put down
+    static constexpr double CHART_READ_S = 4.0;
+    double chartT = -1;                              // the reading's clock (-1 none)
+    StarChart chartHeld; bool chartUp = false; std::string chartHeldKey, chartHeldPeople; int chartHeldIndex = -1;
+    std::vector<std::string> chartHeldLabels;        // the figures' names as the computer read them when the chart was held up
+    int chartLinesDrawn = 0;                         // the figures' lines on the screen last frame (the harness)
+    void renderChart();
+    void drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, const Mat3* localFrame);   // `localFrame`: on the surface, to keep the lines above the horizon
+    std::string figureLabel(const std::string& name, int held) const;   // "the hunter" as the computer reads it with that many shards of the world held
+    void holdChart(bool up);
+    // C-07 the signal radar (game/radar.cpp): switched on in space, the receiver follows the view; the far signals are scanned
+    // once per sector of the ship, the system's own every frame; the meter reads the beam's gains over the static, a hold within
+    // three degrees locks, Enter on a lock targets the source
+    struct RadarState {
+        bool on = false;
+        std::vector<Signal> far, local, all;    // the transmitters and loud pulsars within reach of the scan's sector; the system's own; both with this frame's directions
+        std::vector<double> gain, angle;        // per entry of `all`: the beam's gain times the strength, and the angle off the beam
+        int64_t scanSx = 1 << 30, scanSy = 0, scanSz = 0; int scanCells = 0; double scanMs = 0;
+        double reading = 0, noiseWalk = 0, traceAccum = 0;
+        std::vector<float> trace;               // the meter's last four seconds, for the scope
+        int best = -1; double bestGain = 0, bestAngle = 0;
+        double holdT = 0, lockSecs = 3;         // the hold within the lock's cone, and what it needs
+        int locked = -1; uint64_t lockedSeed = 0; int lockedKind = -1; double lostT = 0;
+        double clarity = 0;                     // how much of the signal comes through the static (the synth's radarSignal)
+        ShardWorld world; uint64_t worldSeed = 0; int worldWhich = -1;   // the people's world in the beam, built once (C-13: once per people on the air)
+        int shard = -1; double contentT = -1, contentSecs = 0; bool contentMusic = false; double awayT = 0;
+        Programme prog; int loopI = 0; double loopAt = 0;   // the programme on the air (galaxy/signals.h), the repeat a loop or a numbers station is at and when it began
+        Rng rng{0x5161};
+    };
+    RadarState radar;
+    void radarToggle(); void radarOff(); void radarScan(); bool updateRadar(const Input& in, double realDt);
+    void renderRadarCamera();           // the camera's frame over the picture: the scope, the cone, the readout
+    void radarCameraFeed(Framebuffer& fb);   // the picture as the radar camera gives it (the palette cold, static by the clarity), before the mush
+    void radarLock(int idx); void radarAccept(); void radarStartContent(const Signal& s, bool next); void radarRepeatContent(); void radarStopContent();
+    int shardsHeldOf(const std::string& key, int which = 0) const;   // C-13: of that people's fifty (C-14: the explorer's own and the lent)
+    int lentOf(const std::string& key, int which = 0) const;         // C-14: how many of that people's fifty are lent and not taken
+    bool shardLent(int local) const;                                 // C-14: the open people's shard is a friend's (lent by the inbox, not taken since)
+    const std::string* shardNameOf(const std::string& key, bool& foreign) const;   // C-14: a piece's name, the explorer's own or the inbox's (`foreign`); null when none
+    std::string heldShardKey(int local) const;      // C-13: the guide's key of the open people's shard (its world index)
+    std::string endedKey() const;                   // C-13: the open people's record in `Guide::ended` (the second people's under "/P1")
+    std::string shardWorldTitle(int maxName) const; // C-13: the world's name, and the people's where the world had two
+    std::string worldNameOfKey(const std::string& key) const;
+    void openShards(); void openShard(int sel); void updateShards(const Input& in, double realDt); void renderShards(); void renderPiece();
     void deployCapsule(); void toggleVimana();
     // M4-02 sector map, M4-10 vision modes
     int visionMode = 0;

@@ -65,7 +65,7 @@ int variantsOf(int material) {
 bool materialHasMesoTile(int material) {
     switch (material) {
         case MAT_SAND: case MAT_DUST: case MAT_ROCK: case MAT_BASALT: case MAT_ICE: case MAT_SNOW:
-        case MAT_GRASS: case MAT_FOREST: case MAT_QUARTZ: case MAT_METAL: case MAT_SULPHUR: case MAT_GRAPHITE: case MAT_SALT: return true;
+        case MAT_GRASS: case MAT_FOREST: case MAT_QUARTZ: case MAT_METAL: case MAT_SULPHUR: case MAT_GRAPHITE: case MAT_SALT: case MAT_GLASS: return true;
         default: return false;
     }
 }
@@ -95,6 +95,7 @@ const char* mesoVariantName(int material, int variant) {
         {"CRUSTY", "LOBES", ""},                     // sulphur
         {"FLAKY", "SOOTY", ""},                      // graphite
         {"POLYGONS", "", ""},                        // salt (R-305)
+        {"RIPPLED", "", ""},                         // glass (S-03)
     };
     if (material < 0 || material >= MAT_COUNT || variant < 0 || variant > 2) return "";
     return names[material][variant];
@@ -321,6 +322,13 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
                     pworley(x, y, 9, sA, f1, f2, id);
                     v += (double)((int)(id % 5) - 2) * 1.5 + 4.0 * (1 - clampd(f1 / 0.5, 0, 1));
                     if (f2 - f1 < 0.07) v -= 12 * (1 - (f2 - f1) / 0.07);
+                    break;
+                }
+                case MAT_GLASS: {   // S-03: a melt frozen in ripples, pocked with bubble pits, a few hairline cracks
+                    v += 4 * pvalue(x, y, 7, sA) + 2 * pvalue(x, y, 19, sB);
+                    pworley(x, y, 16, sC, f1, f2, id);
+                    if (f1 < 0.1 && (id % 3) == 0) v -= 7 * (1 - f1 / 0.1);
+                    if (f2 - f1 < 0.025 && (id % 5) == 0) v -= 5;
                     break;
                 }
                 case MAT_QUARTZ: {

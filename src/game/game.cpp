@@ -1,6 +1,8 @@
 // Game orchestration core: construction, settings, the frame loop, global keys, test hooks.
 // autopilot.cpp, hud.cpp, landing_map.cpp, game_states.cpp and persistence.cpp hold the rest.
 #include "game.h"
+#include "galaxy/roads.h"
+#include "galaxy/drainage.h"
 #include <chrono>
 #include <cstdlib>
 #include <cstdio>
@@ -109,6 +111,7 @@ const char* Game::shortPlan(int plan) {
 
 bool Game::testDriveSetup() {
     if (state != GameState::SURFACE || !surf.valid) return false;
+    if (surf.inDrone) { surf.drone.landed = true; surf.drone.y = surf.site.surfaceHeight(surf.drone.x, surf.drone.z); surf.toggleDrone(); }   // R-403: out of a flying drone first
     surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
     if (!surf.buggy.deployed && !surf.deployBuggy()) return false;
     surf.buggy.unfold = 1;
@@ -129,9 +132,17 @@ double Game::testDriveOpen() {
 void Game::newGame() {
     t = 3.6e6;
     timeWarp = 1;
-    // find a pleasant home system: a yellow/orange star with a felisian planet
+    radarOff(); radar = RadarState();   // C-07
+    chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10
+    // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
+    // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
+    // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
     Star best; bool found = false;
     int bestScore = -1;
+    if (starInSector(HOME_SX, HOME_SY, HOME_SZ, best) && (best.cls == STAR_YELLOW || best.cls == STAR_ORANGE)) {
+        StarSystem hs; hs.generate(best);
+        for (auto& b : hs.bodies) if (b.type == PT_FELISIAN && b.parent < 0) { found = true; bestScore = 100; break; }
+    }
     for (int64_t x = 176; x < 196 && bestScore < 100; x++)
         for (int64_t z = 36; z < 56; z++) {
             Star s;
@@ -240,9 +251,12 @@ void Game::frame(const Input& in, double realDt) {
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
+    if (audio.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the music plays on the decoder screen only (C-07: or through the radar)
+    if (audio.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                     // C-05: the voice too
+    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP)) radarOff();   // C-07: a ship's instrument, off the ship
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
     bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
-                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE;
+                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS;
     if (in.wasPressed(KEY_T) && simulating) {
         if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
         else if (in.ctrl()) { timeLapse = true; timeLapseUntil = realTime + 25; timeWarp = 600; status("TIME-LAPSE X600 FOR 25 S", 3); }   // M5-06
@@ -270,7 +284,7 @@ void Game::frame(const Input& in, double realDt) {
             if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
             break;
         case GameState::SPACE:
-            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }
+            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); } else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }   // C-07: Esc leaves the radar camera
             if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; break; }
             if (saveKey(in)) { saveSlot(currentSlot); break; }
             if (loadKey(in)) { loadSlot(currentSlot); break; }
@@ -332,6 +346,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::GALLERY: updateGallery(in); break;
         case GameState::SHIPSCREEN: updateShipScreen(in); updateShipMotion(dt); break;
         case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
+        case GameState::SHARDS: updateShards(in, realDt); updateShipMotion(dt); break;   // C-06
         case GameState::SECTOR_MAP: updateSectorMap(in); break;
         case GameState::SYSTEM_LIST: {
             int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // O3: the belts follow the bodies
@@ -375,6 +390,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::SYSTEM_LIST:
         case GameState::DATA:
         case GameState::KEYS:
+        case GameState::SHARDS:
             if (returnState == GameState::SURFACE || (surf.valid && returnState == GameState::SURFACE)) renderSurfaceScene();
             else if (returnState == GameState::TITLE) { renderSpace(); renderTitle(); }
             else renderSpace();
@@ -384,13 +400,14 @@ void Game::frame(const Input& in, double realDt) {
             else if (state == GameState::KEYS) renderKeysScreen();
             else if (state == GameState::SLOTS) renderSlots();
             else if (state == GameState::GUIDE) renderGuideMenu();
-            else if (state == GameState::TEXT_ENTRY) renderTextEntry();
+            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); renderTextEntry(); }   // C-04: naming a piece, over the decoder
             else if (state == GameState::STAR_MAP) renderStarMap();
             else if (state == GameState::LOG) renderLog();
             else if (state == GameState::STATS) renderStats();
             else if (state == GameState::GALLERY) renderGallery();
             else if (state == GameState::SHIPSCREEN) renderShipScreen();
             else if (state == GameState::CONSOLE) renderConsole();
+            else if (state == GameState::SHARDS) renderShards();   // C-06
             else if (state == GameState::SECTOR_MAP) renderSectorMap();
             else if (state == GameState::SYSTEM_LIST) renderSystemList();
             else renderDataSheet();
@@ -414,6 +431,58 @@ void Game::testAimAtBody(int body) {
     if (body < 0 || body >= (int)sys.bodies.size()) return;
     Vec3 fwd = normalize(sys.bodyPos(body, t) - ship.pos);
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
+}
+
+std::string Game::testRoadInfo() const {   // C-09
+    std::string s = fmt("zoom roads %d (%.0f ms); site roads %zu (%.1f ms, %s, wear %.2f)", (int)zoomRoads.size(), zoomRoadsMs, surf.site.roads.size(), surf.site.roadsMs, surf.site.roadCultures[0].paved ? "paved" : "beaten", surf.site.roadCultures[0].roadWear);
+    double d, along, hd; const SiteRoad* rd;
+    if (!surf.site.roads.empty() && surf.site.roadAt(surf.player.x, surf.player.z, 30, d, along, hd, rd))
+        s += fmt("; the nearest road %.1f m off (half %.1f), %.0f m along, heading %.0f, left %.2f, cover at the feet %.2f", d, rd->half, along, wrap2pi(hd) / DEG, roadLeft(rd->id, along, rd->wear), surf.site.roadCover(surf.player.x, surf.player.z));
+    else s += "; no road within 30 m";
+    s += fmt("; roads met %zu", roadsMet.size());
+    return s;
+}
+
+bool Game::testWalkToRoad(double withinM) {   // C-09
+    double d, along, hd; const SiteRoad* rd;
+    if (surf.site.roads.empty() || !surf.site.roadAt(surf.player.x, surf.player.z, withinM, d, along, hd, rd)) return false;
+    double bestD = 1e9, bx = 0, bz = 0;   // the nearest point of its centre line
+    for (size_t i = 0; i + 1 < rd->x.size(); i++) {
+        double ax = rd->x[i], az = rd->z[i], ex = rd->x[i + 1] - ax, ez = rd->z[i + 1] - az, L2 = ex * ex + ez * ez;
+        double t = L2 > 1e-9 ? clampd(((surf.player.x - ax) * ex + (surf.player.z - az) * ez) / L2, 0, 1) : 0;
+        double qx = ax + ex * t, qz = az + ez * t, dd = std::hypot(surf.player.x - qx, surf.player.z - qz);
+        if (dd < bestD) { bestD = dd; bx = qx; bz = qz; }
+    }
+    surf.player.x = bx; surf.player.z = bz; surf.player.y = surf.site.surfaceHeight(bx, bz); surf.player.yaw = hd; surf.player.vx = surf.player.vz = 0;
+    return true;
+}
+
+void Game::testLandSite() {
+    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return;
+    const PlanetMap& m = spaceR.mapFor(sys.bodies[landBody]);
+    Mat3 frame = sys.bodyFrame(landBody, t);
+    Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
+    double anyLat = 1e9, anyLon = 0;
+    setDrainageEnabled(false);   // S-01: the level check probes the relief without the rivers' tiles (a tile per probe would cost seconds)
+    for (int pass = 0; pass < 2; pass++) {   // grassland first (the herd), then any land
+        Rng r(sys.bodies[landBody].seed ^ 0x1A4DULL);
+        int probed = 0;
+        for (int k = 0; k < 400 && probed < 24; k++) {
+            double la = r.range(-60 * DEG, 60 * DEG), lo = r.range(-PI, PI);
+            if (dot(StarSystem::bodyFromLatLon(la, lo), sunB) < 0.3) continue;
+            if (pass == 0 && m.materialAt(lo, la) != MAT_GRASS) continue;
+            bool land = true;   // the texel and its neighbours two degrees out: a coast or a lake shore is still a swim
+            for (int j = -1; j <= 1 && land; j++)
+                for (int i = -1; i <= 1 && land; i++)
+                    if (m.materialAt(lo + i * 2 * DEG, la + j * 2 * DEG) == MAT_WATER) land = false;
+            if (!land) continue;
+            if (anyLat > 1e8) { anyLat = la; anyLon = lo; }
+            SurfaceSite probe; probe.init(&sys, landBody, la, lo, t); probed++;   // S-01: level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
+            if (siteSlope(probe) < 0.1) { setDrainageEnabled(true); landLat = la; landLon = lo; return; }
+        }
+    }
+    setDrainageEnabled(true);
+    if (anyLat < 1e8) { landLat = anyLat; landLon = anyLon; }
 }
 
 int Game::testLandableBody() const {
@@ -481,6 +550,24 @@ void Game::testTypeText(const std::string& s) {
     in.newFrame(); in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true; frame(in, 1.0 / 30);
 }
 
+std::string Game::testDroneInfo() const {   // R-403
+    const Drone& d = surf.drone;
+    return fmt("deployed=%d in=%d landed=%d speed=%.1f m/s alt=%.0f m vs=%+.1f heading=%.0f odometer=%.0f m rotor=%.2f chase=%d", (int)d.deployed, (int)surf.inDrone, (int)d.landed, d.speed, d.altAboveGround, d.vy, wrap2pi(d.heading) / DEG, d.odometer, d.rotor, (int)surf.chaseCam);
+}
+
+bool Game::testFlySetup(double altM) {   // R-403
+    if (state != GameState::SURFACE || !surf.valid) return false;
+    if (surf.inBuggy) surf.toggleBuggy();
+    surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
+    if (!surf.drone.deployed && !surf.deployDrone()) return false;
+    surf.drone.unfold = 1;
+    surf.player.x = surf.drone.x + 1.5; surf.player.z = surf.drone.z;
+    if (!surf.inDrone && !surf.toggleDrone()) return false;
+    surf.drone.landed = false; surf.drone.rotor = 0.8; surf.drone.y = surf.site.surfaceHeight(surf.drone.x, surf.drone.z) + altM; surf.drone.altAboveGround = altM;
+    surf.player.y = surf.drone.y;
+    return true;
+}
+
 std::string Game::testBuggyInfo() const {
     const Buggy& b = surf.buggy;
     return fmt("deployed=%d in=%d speed=%.1f m/s heading=%.0f odometer=%.0f m tracks=%zu chase=%d", (int)b.deployed, (int)surf.inBuggy, b.speed, wrap2pi(b.heading) / DEG, b.odometer, b.tracks.size(), (int)surf.chaseCam);
@@ -493,4 +580,40 @@ std::string Game::testDebugInfo() const {
         r += fmt(" bodyYaw=%.2f bodyPitch=%.2f dist=%.0f R=%.0f", std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)), length(sys.bodyPos(ship.parkedBody, t) - ship.pos), sys.bodies[ship.parkedBody].radiusKm);
     }
     return r;
+}
+
+std::string Game::testGraveInfo() const {   // C-12
+    const SurfaceView::NearGrave& ng = surf.nearGrave;
+    std::string last = guide.log.empty() ? std::string("-") : guide.log.back().kind + ": " + guide.log.back().text;
+    return fmt("grave: %s; %zu graves in the guide; last log: %s", ng.k >= 0 ? fmt("%s (%.1f m, %s)", ng.line.c_str(), ng.dist, SETTLEMENT_CLASS_NAMES[ng.sclass]).c_str() : "none within reach", guide.graves.size(), last.c_str());
+}
+bool Game::testWalkToGrave() {   // C-12: a metre in front of the nearest settlement's first stone, facing it
+    if (!surf.valid || surf.inVehicle()) return false;
+    bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
+    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT || cell.graves.empty()) return;
+        const Grave& g = cell.graves[0];
+        double x = r.x + g.x, z = r.z + g.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
+        if (d < bestD) { bestD = d; sx = x + std::sin(g.heading); sz = z + std::cos(g.heading); yaw = g.heading + PI; found = true; }
+    });
+    if (!found) return false;
+    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz); surf.player.yaw = yaw; surf.player.pitch = -0.35;
+    return true;
+}
+
+bool Game::testWalkToShard() {   // C-13: a metre from the nearest settlement's first shard not yet taken, facing it
+    if (!surf.valid || surf.inVehicle()) return false;
+    bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
+    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT) return;
+        for (const ShardSite& st : cell.shards) {
+            if (surf.shardsFound.count(st.index)) continue;
+            double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
+            if (d < bestD) { bestD = d; sx = x + std::sin(st.heading); sz = z + std::cos(st.heading); yaw = st.heading + PI; found = true; }
+            break;
+        }
+    });
+    if (!found) return false;
+    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz); surf.player.yaw = yaw; surf.player.pitch = -0.5;
+    return true;
 }

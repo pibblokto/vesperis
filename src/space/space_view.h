@@ -55,6 +55,13 @@ public:
     // M5-07/N0-01: a comet's coma, its ion tail with streaming knots, its curved dust tail and, when the
     // nucleus is a disc of `nucleusRpx` pixels, jets from its sunlit side (the nucleus is drawn by drawGlobe)
     void drawCometTail(Framebuffer& fb, const SpaceContext& c, int bi, int bank, double nucleusRpx = 0);
+    // S-05: a gas giant (or a substellar object) of a Wolf-Rayet star, its envelope streaming away from the star in the wind
+    void drawStrippedTail(Framebuffer& fb, const SpaceContext& c, int bi, int bank);
+    // S-06: a black hole's companion being drawn out: its gas streams from the limb facing the hole into the disc
+    void drawAccretionStream(Framebuffer& fb, const SpaceContext& c, int bi, int bank);
+    // S-06: the black hole in place of a sun: the shadow, the lensed sky behind it, the accretion disc and the jet
+    static void drawBlackHole(Framebuffer& fb, const Star& star, const Vec3& dirView, double angR, double t, double intensity,
+                              int bank, bool depthTest, const Proj& pj, const Vec3* discUp);
     // N0-01: position (0..1 along the ion tail) of knot k at time t; one traversal every 40 s
     static double cometKnot(int k, double t);
     // Palette banks: 0 = stars (white), 1 = sun, 2 = body A (rock family), 3 = body B (rock), 6/7 = their water,
@@ -80,8 +87,9 @@ public:
     void drawSkyBodies(Framebuffer& fb, const SpaceContext& c);
     // Sun disc and glow shared with the surface view, drawn by angle (B-308): `dirView` is the unit direction to the
     // star in view space, `angR` its angular radius (may be tiny: under 0.8 px it is a point).
+    // S-04: `discUp`, the orbital plane's normal in view space, lets a protostar draw its dust disc as a band along the plane
     static void drawSun(Framebuffer& fb, const Star& star, const Vec3& dirView, double angR, double t,
-                        double intensity, int bank, bool atmosphere, double atmosHaze, bool depthTest, const Proj& pj);
+                        double intensity, int bank, bool atmosphere, double atmosHaze, bool depthTest, const Proj& pj, const Vec3* discUp = nullptr);
     static double lightFactor(double luminosity, double distKm);
     // M1-03: flare discs along the line from the sun through the screen centre.
     static void drawLensFlare(Framebuffer& fb, double sx, double sy, double sunRadiusPx, double intensity, int bank, const Proj& pj);

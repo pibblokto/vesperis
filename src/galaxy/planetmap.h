@@ -11,7 +11,8 @@
 
 enum Material {
     MAT_ROCK = 0, MAT_SAND, MAT_GRASS, MAT_FOREST, MAT_SNOW, MAT_WATER, MAT_LAVA, MAT_ICE, MAT_CLOUD, MAT_QUARTZ,
-    MAT_BASALT, MAT_DUST, MAT_GAS, MAT_METAL, MAT_SULPHUR, MAT_GRAPHITE, MAT_SALT, MAT_COUNT   // R-305: salt (playas, sinter)
+    MAT_BASALT, MAT_DUST, MAT_GAS, MAT_METAL, MAT_SULPHUR, MAT_GRAPHITE, MAT_SALT,   // R-305: salt (playas, sinter)
+    MAT_GLASS, MAT_COUNT   // S-03: the fused ground of a glassed world (family water: bank 2 in the glass's colour)
 };
 
 // R-304: the traits of a body: up to three, drawn by type from the seed; each changes the ground, the water, the climate,
@@ -23,6 +24,8 @@ enum Trait {
     TR_YARDANGS, TR_ERG, TR_SALT_FLATS, TR_TRAPS, TR_GREAT_BASIN, TR_CORONAE, TR_SPIRES, TR_GEYSERS,
     TR_ARCHIPELAGO, TR_PANGAEA, TR_LAKELAND, TR_SNOWBALL, TR_EXOTIC_SEAS, TR_STORMS, TR_HAZE,
     TR_GIANT_FLORA, TR_LUMINOUS_FLORA, TR_DEAD_FOREST, TR_RED_SOIL, TR_BLACK_SAND, TR_CHALK,
+    TR_GLASSED,   // S-03: never drawn; the generator gives it to a neutron star's outer survivors (`Body::glassed`): the flats fused into sheets of glass
+    TR_CIVILISATION,   // C-01: never drawn by the trait draw; `BodyGen::make` gives it to one felisian or desert world in eight by a hash of its own: a people lived here and is gone (its ruins, `galaxy/ruins.*`; a desert's old seas and rivers, `oldSeaM`)
     TR_COUNT
 };
 extern const char* TRAIT_NAMES[TR_COUNT];
@@ -67,6 +70,7 @@ struct SurfaceSample {
     double shore = 1e9;     // B-322: signed distance to the water's edge in metres where the water is a feature with an outline (rivers,
                             // lakes): negative in the water, positive on the bank; 1e9 unknown (the sea, pools: the height over the level stands in)
     double scree = 0;       // O6-04: 0..1 loose rock: the talus at a cliff's foot, the steep flanks (boulder fields, no flora)
+    double oldSea = 0;      // C-01: 0..1 the dry bed of a dead desert world's sea (the drainage's outlet, the finders' shore)
 };
 
 struct BodyGen {
@@ -108,6 +112,7 @@ struct BodyGen {
     double liquidLevel = -1e9;   // R-304 (TR_EXOTIC_SEAS): the level of a liquid that is not water (metres); -1e9 none
     double contScale = 1;        // R-304 (TR_PANGAEA): the continent field's wavelength factor
     double islandDensity = 0.18; // R-304 (TR_ARCHIPELAGO): the volcanic islands' density
+    double oldSeaM = -1e9;       // C-01 (TR_CIVILISATION on a desert): the level its seas stood at (metres), dry now; -1e9 none
     int floraFamily = 0, floraFamily2 = 0;   // N2-01 silhouettes: 0 dome, 1 cone, 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree; B-315: 7 weeping, 8 candelabra, 9 spire
     bool locked = false;    // M5-08: one face toward the star; the climate follows the sub-stellar point
     Vec3 lockedDir;         // body-frame unit vector of the sub-stellar point

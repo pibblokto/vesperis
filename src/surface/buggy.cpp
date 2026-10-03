@@ -97,6 +97,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
         static std::vector<Collider> cols;
         collectColliders(nx, nz, cols);
         for (const Collider& c : cols) {
+            if (c.y1 < b.y + 0.3 || c.y0 > b.y + 2.2) continue;   // B-405: buried below the wheels (a wall's foot on the slope above) or overhead
             double dx = nx - c.x, dz = nz - c.z, rr = c.r + 1.0;
             double d2 = dx * dx + dz * dz;
             if (d2 < rr * rr && d2 > 1e-9) {
@@ -216,6 +217,7 @@ double SurfaceView::findOpenRun(double& ox, double& oz, double& heading) {
             collectColliders(px, pz, cols);
             for (const Collider& c : cols) {
                 if (c.kind == 0 && c.r < 0.72) continue;
+                if (c.y1 < tv.h + 0.3) continue;   // B-405: nothing stands above the ground here
                 double dx = c.x - px, dz = c.z - pz;
                 double along = dx * sx + dz * cz, across = -dx * cz + dz * sx;
                 if (std::fabs(along) < 9 && std::fabs(across) < 3 + c.r) return d;
@@ -267,6 +269,19 @@ void SurfaceView::cameraFeed(Framebuffer& fb, double t) {
     }
 }
 
+// N4-04: the dust, snow or mud thrown up by the wheels (and, R-403, by the drone's downwash): points rising as they age
+void SurfaceView::drawPuffs(Framebuffer& fb, const std::vector<Buggy::Puff>& puffs) {
+    for (const Buggy::Puff& pf : puffs) {
+        double a = 1 - pf.age / 1.5;
+        Vec3 v = toView(pf.x, pf.y + pf.age * (pf.kind == 2 ? 0.9 : 0.6), pf.z);
+        if (v.z < NEAR_Z) continue;
+        RVert q; q.x = v.x; q.y = v.y; q.z = v.z;
+        int bank = pf.kind == 1 ? 8 : (pf.kind == 2 ? 0 : 9);
+        q.shade = pf.kind == 2 ? 10 + 8 * a : 30 + 14 * env.skyBrightness * a;
+        rasterPoint3(fb, q, bank, proj, true, a > 0.5 ? 2 : 1);
+    }
+}
+
 void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
     const Buggy& b = buggy;
     if (inBuggy && !chaseCam) return;   // from inside you see the nose camera's picture, never the hull (R-204)
@@ -287,15 +302,7 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
             for (int m = 0; m < 4; m++) { Vec3 v = toView(tr.x + ax[m], site.groundHeight(tr.x + ax[m], tr.z + az[m]) + 0.06, tr.z + az[m]); q[m].x = v.x; q[m].y = v.y; q[m].z = v.z; q[m].shade = 0; }
             rasterPolygon(fb, q, 4, rt, proj);
         }
-        for (const Buggy::Puff& pf : b.puffs) {
-            double a = 1 - pf.age / 1.5;
-            Vec3 v = toView(pf.x, pf.y + pf.age * (pf.kind == 2 ? 0.9 : 0.6), pf.z);
-            if (v.z < NEAR_Z) continue;
-            RVert q; q.x = v.x; q.y = v.y; q.z = v.z;
-            int bank = pf.kind == 1 ? 8 : (pf.kind == 2 ? 0 : 9);
-            q.shade = pf.kind == 2 ? 10 + 8 * a : 30 + 14 * env.skyBrightness * a;
-            rasterPoint3(fb, q, bank, proj, true, a > 0.5 ? 2 : 1);
-        }
+        drawPuffs(fb, b.puffs);
     }
     double sc = 0.3 + 0.7 * b.unfold;   // the hull grows out of its folded state
     if (b.unfold < 1) drawBlobShadow(fb, b.x, b.z, 1.2 * b.unfold, 0.6); else drawBlobShadow(fb, b.x, b.z, 1.5, 0.8);

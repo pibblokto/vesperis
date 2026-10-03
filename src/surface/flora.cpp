@@ -75,11 +75,36 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);   // R-304
     double f = seasonPhaseLocal();
     double deadChance = site.gen.hasTrait(TR_DEAD_FOREST) ? 0.6 : 0.03;   // R-304: a dying world
+    // C-01: no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone)
+    const RuinCell* near[4]; int nNear = 0;
+    if (worldHadCivilisation(site.gen))
+        forNearbyRuins(cx * cs + 8, cz * cs + 8, 1, [&](const Ruin& r, const RuinCell& c, int) {
+            if (r.kind != RK_SETTLEMENT || nNear >= 4) return;
+            double dx = r.x - (cx * cs + 8), dz = r.z - (cz * cs + 8);
+            if (dx * dx + dz * dz < (r.size + 50) * (r.size + 50)) near[nNear++] = &c;
+        });
     for (int i = 0; i < n; i++) {
         uint64_t ht = mix64(h + 41 * (uint64_t)(i + 1));
         TreeInst T;
         T.seed = ht;
         T.x = cx * cs + h01(ht) * cs; T.z = cz * cs + h01(mix64(ht + 1)) * cs;
+        if (!site.roads.empty() && site.roadCover(T.x, T.z) > 0.3) continue;   // C-09: nothing grows on the road's bed
+        if (nNear) {
+            bool skip = false;
+            for (int q = 0; q < nNear && !skip; q++) {
+                const Ruin& r = near[q]->r;
+                double dx = T.x - r.x, dz = T.z - r.z;
+                if (dx * dx + dz * dz > (r.size + 40) * (r.size + 40)) continue;
+                if (std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond
+                for (const Building& bd : near[q]->spec.buildings) {
+                    double ex = dx - bd.x, ez = dz - bd.z;
+                    double lx = ex * std::cos(bd.heading) - ez * std::sin(bd.heading), lz = ex * std::sin(bd.heading) + ez * std::cos(bd.heading);
+                    if (std::fabs(lx) < bd.hw + 1.5 && std::fabs(lz) < bd.hd + 1.5) { skip = true; break; }
+                }
+                if (!skip && dx * dx + dz * dz < r.size * r.size && h01(mix64(ht + 21)) < 0.67) skip = true;
+            }
+            if (skip) continue;
+        }
         bool second = h01(mix64(ht + 9)) < 0.3;
         T.fam = second ? site.gen.floraFamily2 : site.gen.floraFamily;
         switch (tv.biome) {   // biome overrides (B-315: the cold and the dry choose per planet between two silhouettes)
@@ -127,6 +152,8 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     L.heading = h01(mix64(L.seed + 2)) * TAU;
     L.len = 3.5 + 6 * h01(mix64(L.seed + 3));
     L.radius = 0.25 + 0.35 * h01(mix64(L.seed + 4)) * h01(mix64(L.seed + 6));   // most are slim, a few are giants
+    { const RuinCell* near[4]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
+    if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // C-09: nor across the road
     fn(L);
 }
 

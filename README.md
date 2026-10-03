@@ -20,6 +20,17 @@ The picture is rendered in software at 320x200 (scaled up 1x-4x) through
 palette intensity ramps and a soft smoothing filter, in the spirit of the
 original.
 
+Since 1.1.0 the galaxy has the proportions of ours (200 billion stars in a
+disc with a bulge, arms, globular and open clusters, the band of the Milky Way
+in every sky), fourteen kinds of star (red dwarfs that flare, neutron stars,
+protostars, Wolf-Rayet stars, black holes among them) and dead peoples: one
+desert or felisian world in eight once had a civilisation, whose ruins, roads
+and graves read the terrain they stood on, and whose recordings, taken from the
+ruins and decoded on the ship, are texts, music and star charts in a language,
+a voice and a musical tradition of the world's own. A signal radar on the ship
+points at the worlds that still transmit. Saves from 1.0.0 load, but the galaxy
+was rebuilt: a saved star may be gone.
+
 ## Playing
 
 Download the build for your machine from the
@@ -80,6 +91,8 @@ In space:
 | `F` | Field amplificator (brighter star field) |
 | `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import) / star map / expedition log |
 | `C` | Deploy the surface capsule (from orbit around a landable world) |
+| `B` | The signal radar (the sweep, lock a signal, its distance and age) |
+| `E` at the cabin's back wall | The shard decoder: read, hear and play what the ruins held, name a piece with `N` |
 | `I` (`F2`) | Data sheet of the local target |
 | `T` | Time warp x1 / x10 / x100 / x1000 / x10000 |
 | `Ctrl+S` / `Ctrl+L` (`F5` / `F9`) | Save / load |
@@ -111,7 +124,7 @@ On the surface:
 | `Ctrl` | Dive while swimming |
 | `B` | Unfold a buggy next to the capsule; `E` gets in and out; `W/S` drive, `A/D` steer, `Space` brake; `V` outside view |
 | `M` | Set a waypoint on the spot under the crosshair, or clear it |
-| `Q` / `E` | Board the capsule when standing next to it (return to orbit) |
+| `Q` / `E` | Board the capsule when standing next to it (return to orbit); `E` also takes a shard from a ruin |
 | `K` | Call the capsule to your position |
 | `N` | Sector map (2 km to 2048 km wide, `+`/`-` zoom, `M` places the waypoint); the sights you have found appear on it |
 | `G` | The GUIDE: name the world or the nearest landmark, write a note |

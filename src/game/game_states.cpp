@@ -15,9 +15,9 @@ const int SETTINGS_ITEMS = 19;   // plus BACK (N5-05 added KEY BINDINGS)
 struct KeyAction { int key; const char* label; };
 static const KeyAction KEY_ACTIONS[] = {
     {KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"}, {KEY_LEFT_SHIFT, "SPRINT"},
-    {KEY_E, "USE / BUGGY"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "UNFOLD BUGGY"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
+    {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
     {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "TIME WARP"}, {KEY_R, "AIM AT A STAR"},
-    {KEY_L, "LOCAL TARGET"}, {KEY_TAB, "ANALYZER"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP."}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
+    {KEY_L, "LOCAL TARGET"}, {KEY_TAB, "ANALYZER"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 
 }
@@ -43,7 +43,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
                 logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), PLANET_TYPES[lb.type].name,
                                         std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S", std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W",
                                         surf.env.temperatureC, surf.env.pressureAtm, lb.gravity / 9.8, surf.env.sun.altitude > 0 ? "DAY" : "NIGHT"));
-                walkMax = 0; lastWalkX = surf.player.x; lastWalkZ = surf.player.z; lastOdometer = 0; drivenLanding = 0;
+                walkMax = 0; lastWalkX = surf.player.x; lastWalkZ = surf.player.z; lastOdometer = 0; drivenLanding = 0; flownLanding = 0;
                 sectorIndexOf(surf.env.latDeg, surf.env.lonDeg, lastSecX, lastSecY);   // O2: the landing sector is not "entered"
             }
         }
@@ -59,7 +59,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
             fade = 1;
             surf.cameraOverrideAlt = -1;
             status("BACK ABOARD THE STARDRIFTER", 4);
-            logEvent("LAUNCH", fmt("LEFT %s, LONGEST WALK %.0f M, DROVE %.0f M", upper(bodyNameOf(surf.site.body)).c_str(), walkMax, drivenLanding));
+            logEvent("LAUNCH", fmt("LEFT %s, LONGEST WALK %.0f M, DROVE %.0f M%s", upper(bodyNameOf(surf.site.body)).c_str(), walkMax, drivenLanding, flownLanding > 0 ? fmt(", FLEW %.0f M", flownLanding).c_str() : ""));   // R-403
         }
         audio.engine = 0.6 * u; audio.hum = 0.3;
     }
@@ -74,7 +74,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     {
         double dxs = surf.player.x - lastWalkX, dzs = surf.player.z - lastWalkZ;
         double step = std::sqrt(dxs * dxs + dzs * dzs);
-        if (step < 50) { if (surf.inBuggy) { guide.totalDrivenM += step; drivenLanding += step; } else guide.totalWalkedM += step; }
+        if (step < 50) { if (surf.inBuggy) { guide.totalDrivenM += step; drivenLanding += step; } else if (surf.inDrone) { guide.totalFlownM += step; flownLanding += step; } else guide.totalWalkedM += step; }   // R-403: flown apart
         lastWalkX = surf.player.x; lastWalkZ = surf.player.z;
         if (surf.env.capsuleDist > walkMax) walkMax = surf.env.capsuleDist;
         if (walkMax > guide.longestWalkM) guide.longestWalkM = walkMax;
@@ -87,25 +87,47 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
             lastSecX = sx; lastSecY = sy;
             const TerrainVertex& tvh = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16));
             status(fmt("ENTERING SECTOR %03d:%03d - %s%s", sx, sy, MATERIAL_NAMES[tvh.material], tvh.biome ? (std::string(", ") + BIOME_NAMES[tvh.biome]).c_str() : ""), 4);
-            logEvent("SECTOR", fmt("ENTERED %03d:%03d OF %s %s", sx, sy, upper(bodyNameOf(surf.site.body)).c_str(), surf.inBuggy ? "BY BUGGY" : "ON FOOT"));
+            logEvent("SECTOR", fmt("ENTERED %03d:%03d OF %s %s", sx, sy, upper(bodyNameOf(surf.site.body)).c_str(), surf.inBuggy ? "BY BUGGY" : (surf.inDrone ? "BY DRONE" : "ON FOOT")));
             audio.beep = 4;
         }
+    }
+    if (!surf.site.roads.empty() && !(surf.inDrone && !surf.drone.landed)) {   // C-09: an old road under the feet or the wheels: a status and a log line the first time on each
+        double d, along, hd; const SiteRoad* rd;
+        if (surf.site.roadAt(surf.player.x, surf.player.z, 12, d, along, hd, rd) && d < rd->half + 1.0 && roadLeft(rd->id, along, rd->wear) > 0.3 && roadsMet.insert(rd->id).second) {
+            std::string way = fmt("%s TO %s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));
+            status(fmt("AN OLD ROAD RUNS HERE, %s", way.c_str()), 4);
+            logEvent("ROAD", fmt("AN OLD ROAD ON %s, %s, UNDER THE %s", upper(bodyNameOf(surf.site.body)).c_str(), way.c_str(), surf.inBuggy ? "WHEELS" : "FEET"));
+        }
+    }
+    if (surf.nearGrave.k >= 0 && guide.graves.insert(graveKey(surf.nearGrave.id)).second) {   // C-12: a grave within reach is read once into the guide, like a landmark: a status and a log line
+        std::string what = upper(surf.nearGrave.line);
+        const char* where = surf.nearGrave.sclass == SC_MONUMENT ? "A LONE MONUMENT" : (surf.nearGrave.sclass == SC_HAMLET ? "A HAMLET" : (surf.nearGrave.sclass == SC_VILLAGE ? "A VILLAGE" : "A TOWN"));
+        status(fmt("A GRAVE: %s", what.c_str()), 5);
+        logEvent("GRAVE", fmt("A GRAVE OUTSIDE %s ON %s: %s", where, upper(bodyNameOf(surf.site.body)).c_str(), what.c_str()));
+        audio.beep = 4;
     }
     noteLandmarks();   // O6-06
     if (in.wasPressed(KEY_G) && !in.ctrl()) { openGuide(); return; }
     if (in.wasPressed(KEY_J) && !in.ctrl()) { guideReturn = GameState::SURFACE; returnState = GameState::SURFACE; logPage = 0; state = GameState::LOG; return; }
-    // M8-06: E enters or leaves the buggy when it is close, otherwise boards the capsule
+    // M8-06: E enters or leaves the buggy when it is close, otherwise boards the capsule; R-403: the drone the same, on the ground
     if (in.wasPressed(KEY_E) && !in.ctrl()) {
-        if (surf.inBuggy) { guide.longestDriveM = std::max(guide.longestDriveM, surf.buggy.odometer); surf.toggleBuggy(); status(fmt("OUT OF THE BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4); audio.beep = 4; }
+        if (surf.inDrone) {
+            double trip = surf.drone.odometer, top = surf.drone.topSpeed;
+            if (surf.toggleDrone()) { status(fmt("OUT OF THE DRONE - %.2f KM FLOWN, TOP %.0f KM/H", trip / 1000.0, top * 3.6), 4); audio.beep = 4; }
+            else { status("LAND FIRST - HOLD SHIFT TO COME DOWN", 4); audio.beep = 3; }
+        }
+        else if (surf.inBuggy) { guide.longestDriveM = std::max(guide.longestDriveM, surf.buggy.odometer); surf.toggleBuggy(); status(fmt("OUT OF THE BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4); audio.beep = 4; }
         else if (surf.buggy.deployed && surf.buggyDist() <= 3.5) { if (surf.toggleBuggy()) { status("NOSE CAMERA: W/S A/D DRIVE  SPACE BRAKE  V VIEW  E OUT", 5); audio.beep = 4; } }
+        else if (surf.drone.deployed && surf.droneDist() <= 3.5) { if (surf.toggleDrone()) { status("NOSE CAMERA: SPACE LIFTS OFF  W/S THRUST  A/D TURN  SHIFT DOWN", 5); audio.beep = 4; } else { status("THE DRONE IS STILL UNFOLDING", 3); audio.beep = 3; } }   // R-403
+        else if (surf.nearShard.index >= 0) takeShard();   // C-03
         else if (surf.env.nearCapsule) { state = GameState::ASCENT; transT = 0; audio.beep = 2; autosave(); }
         else { status(fmt("CAPSULE IS %.0f M AWAY (%s) - FOLLOW THE BEACON, OR PRESS K TO CALL IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); audio.beep = 3; }
     }
-    if (in.wasPressed(KEY_Q) && !surf.inBuggy) {
+    if (in.wasPressed(KEY_Q) && !surf.inVehicle()) {
         if (surf.env.nearCapsule) { state = GameState::ASCENT; transT = 0; audio.beep = 2; autosave(); }
         else { status(fmt("CAPSULE IS %.0f M AWAY (%s) - FOLLOW THE BEACON, OR PRESS K TO CALL IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); audio.beep = 3; }
     }
-    if (in.wasPressed(KEY_B) && !in.ctrl() && !surf.inBuggy) {
+    if (in.wasPressed(KEY_B) && !in.ctrl() && !surf.inVehicle()) {
         // R-204: B at the capsule always unfolds a new buggy; the old one, wherever it was left, is scrapped
         bool had = surf.buggy.deployed; double oldDist = surf.buggyDist();
         if (surf.site.escapeVelocity < 30) { status("TOO LITTLE GRAVITY FOR THE BUGGY - IT WOULD FLOAT OFF AT THE FIRST BUMP", 4); audio.beep = 3; }   // O4: a comet
@@ -113,8 +135,15 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         else if (had) { status(fmt("THE BUGGY IS %.0f M AWAY - B AT THE CAPSULE UNFOLDS A NEW ONE", oldDist), 4); audio.beep = 3; }
         else { status("DEPLOY THE BUGGY WITHIN 10 M OF THE CAPSULE", 4); audio.beep = 3; }
     }
-    if (in.wasPressed(KEY_V) && surf.inBuggy) { surf.chaseCam = !surf.chaseCam; audio.beep = 4; }
-    if (in.wasPressed(KEY_V) && !surf.inBuggy && !in.ctrl()) {   // M4-10 vision modes
+    if (in.wasPressed(KEY_F) && !in.ctrl() && !surf.inVehicle()) {   // R-403: F at the capsule unfolds a new drone; the old one, wherever it was left, is scrapped
+        bool had = surf.drone.deployed; double oldDist = surf.droneDist();
+        if (surf.site.escapeVelocity < 30) { status("TOO LITTLE GRAVITY FOR THE DRONE - AT SPEED IT WOULD LEAVE THE WORLD", 4); audio.beep = 3; }
+        else if (surf.deployDrone()) { status(had ? fmt("NEW DRONE UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "DRONE UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5); audio.beep = 1; }
+        else if (had) { status(fmt("THE DRONE IS %.0f M AWAY - F AT THE CAPSULE UNFOLDS A NEW ONE", oldDist), 4); audio.beep = 3; }
+        else { status("DEPLOY THE DRONE WITHIN 10 M OF THE CAPSULE", 4); audio.beep = 3; }
+    }
+    if (in.wasPressed(KEY_V) && surf.inVehicle()) { surf.chaseCam = !surf.chaseCam; audio.beep = 4; }
+    if (in.wasPressed(KEY_V) && !surf.inVehicle() && !in.ctrl()) {   // M4-10 vision modes
         static const char* names[] = {"NORMAL VISION", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
         visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = 4;
     }
@@ -140,8 +169,9 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_K) && !in.ctrl()) {
         // B-205: the capsule always comes, wherever the buggy is; a buggy left far away is replaced with B
         surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
-        bool farBuggy = surf.buggy.deployed && !surf.inBuggy && surf.buggyDist() > 50;
-        status(farBuggy ? fmt("CAPSULE RECALLED - THE BUGGY IS %.0f M AWAY, B UNFOLDS A NEW ONE", surf.buggyDist()) : "CAPSULE RECALLED TO YOUR POSITION", 4);
+        bool farBuggy = surf.buggy.deployed && !surf.inBuggy && surf.buggyDist() > 50, farDrone = surf.drone.deployed && !surf.inDrone && surf.droneDist() > 50;
+        status(farBuggy ? fmt("CAPSULE RECALLED - THE BUGGY IS %.0f M AWAY, B UNFOLDS A NEW ONE", surf.buggyDist())
+                        : (farDrone ? fmt("CAPSULE RECALLED - THE DRONE IS %.0f M AWAY, F UNFOLDS A NEW ONE", surf.droneDist()) : "CAPSULE RECALLED TO YOUR POSITION"), 4);   // R-403
         audio.beep = 1;
     }
     if (dataKey(in)) { returnState = GameState::SURFACE; state = GameState::DATA; }   // B-006: the sheet must return to the surface
@@ -155,10 +185,18 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         if (surf.buggy.thud > 0) { audio.thud = surf.buggy.thud; surf.buggy.thud = 0; }
         if (surf.inBuggy) guide.topSpeedKmh = std::max(guide.topSpeedKmh, av * 3.6);
     }
+    {   // R-403: the drone's pods, heard from inside and, fading over 80 m, from outside
+        const Drone& d = surf.drone;
+        double near = surf.inDrone ? 1.0 : (d.deployed ? clampd(1 - surf.droneDist() / 80.0, 0, 1) * 0.6 : 0.0);
+        audio.rotor = d.deployed ? d.rotor * near : 0;
+        audio.rotorPitch = clampd(0.5 * std::fabs(d.speed) / SurfaceView::DRONE_TOP_SPEED + 0.5 * std::max(0.0, d.vy) / 15.0, 0, 1);
+        if (d.thud > 0) { audio.thud = std::max(audio.thud, d.thud); surf.drone.thud = 0; }
+    }
     audio.breath = surf.player.stamina < 60 ? (60 - surf.player.stamina) / 60.0 : 0;
     audio.wind = surf.site.atmosphere ? clampd(surf.env.windKnots / 35.0, 0.08, 1.0) * clampd(surf.env.pressureAtm * 3, 0.15, 1.0) : 0;
     if (surf.player.altAboveGround > 20) audio.wind = std::min(1.0, audio.wind + surf.player.altAboveGround / 300.0);
     if (surf.inBuggy && surf.site.atmosphere) audio.wind = std::min(1.0, audio.wind + 0.5 * std::fabs(surf.buggy.speed) / 50.0);   // N4-04 the wind of speed
+    if (surf.inDrone && surf.site.atmosphere) audio.wind = std::min(1.0, audio.wind + 0.6 * std::fabs(surf.drone.speed) / SurfaceView::DRONE_TOP_SPEED);   // R-403
     // M4-09 sound per world: the wind's family, surf near water, birds by day, a footstep per stride
     {
         int mat = surf.stepMaterial = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16)).material;
@@ -166,9 +204,9 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         for (int k = 0; k < 4 && !waterNear; k++) { double a = k * PI / 2; waterNear = surf.site.waterAt(surf.player.x + std::cos(a) * 30, surf.player.z + std::sin(a) * 30) > -1e8; }
         audio.windTone = waterNear ? 0.25 : (mat == MAT_SAND || mat == MAT_DUST ? 0.6 : (std::fabs(surf.site.groundHeight(surf.player.x + 40, surf.player.z) - surf.site.groundHeight(surf.player.x - 40, surf.player.z)) > 12 ? 1.0 : 0.5));
         audio.surf = waterNear && surf.site.hasWater ? 0.6 : 0;
-        audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inBuggy) ? 0.6 : 0;
+        audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inVehicle()) ? 0.6 : 0;
         double stride = std::floor(surf.player.stridePhase);
-        if (stride != surf.stepPhase && surf.player.onGround && !surf.inBuggy) {
+        if (stride != surf.stepPhase && surf.player.onGround && !surf.inVehicle()) {
             surf.stepPhase = stride;
             audio.step = surf.player.swimming ? 3 : ((mat == MAT_SAND || mat == MAT_SNOW || mat == MAT_GRASS || mat == MAT_DUST || mat == MAT_FOREST) ? 1 : 2);
             audio.stepGain = surf.player.sprinting ? 0.8 : 0.5;
@@ -180,7 +218,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
             const TerrainVertex& tvp = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16));
             if (tvp.material == MAT_FOREST || tvp.material == MAT_GRASS) {
                 double dens = surf.canopyDensityAt(surf.player.x, surf.player.z, tvp.veg) * (tvp.material == MAT_FOREST ? 1.0 : 0.35);
-                bool moving = std::fabs(surf.player.vx) + std::fabs(surf.player.vz) > 0.5 && surf.player.onGround && !surf.inBuggy;
+                bool moving = std::fabs(surf.player.vx) + std::fabs(surf.player.vz) > 0.5 && surf.player.onGround && !surf.inVehicle();
                 audio.leaves = clampd(dens * (0.25 + clampd(surf.env.windKnots / 20.0, 0, 1)) + (moving && tvp.material == MAT_FOREST ? 0.25 * dens : 0), 0, 1);
             }
         }
@@ -217,7 +255,8 @@ void Game::renderHelp() {
     static const char* page0[] = {
         "STARDRIFTER - FLIGHT CONTROL", "",
         "MOUSE LOOKS, W A S D WALK IN THE CABIN, ARROWS TURN",
-        "THE SHIP; E USES A CONSOLE, A SCREEN OR THE CAPSULE",
+        "THE SHIP; E USES A CONSOLE, A SCREEN, THE SHARD",
+        "DECODER (BACK WALL) OR THE CAPSULE",
         "U LIGHT  Y GLASS HULL  PGUP/PGDN ROOF DECK",
         "R             AIM AT A STAR (ENTER LOCKS THE TARGET)",
         "N             (WHILE AIMING) NEXT NEAREST STAR",
@@ -226,13 +265,13 @@ void Game::renderHelp() {
         "TAB           SOLAR SYSTEM ANALYZER (BODIES AND BELTS)",
         "ENTER         FINE APPROACH TO THE LOCAL TARGET",
         "X             CENTER VIEW ON THE LOCAL TARGET",
+        "B             RADAR CAMERA: SWEEP, HOLD A RISE, ENTER FLIES",
         "O             ORBIT / FIXED POINT CHASE   F  FIELD AMP.",
-        "G / M / J     GUIDE MENU / STAR MAP / EXPEDITION LOG",
-        "C             DEPLOY SURFACE CAPSULE (Z ZOOMS THE MAP)",
+        "G / M / J     GUIDE / STAR MAP / LOG   C  THE CAPSULE",
         "I             DATA SHEET   T  TIME WARP (ORBITS MOVE)",
         "CTRL+S / L    SAVE / LOAD         P  SCREENSHOT",
         "CTRL+K / F    SCANLINES / FULLSCREEN   ESC MENU",
-        "F1 F2 F5 F9 F10 F11 F12 DO THE SAME (MAC: HOLD FN)", "",
+        "F1 F2 F5 F9 F10 F11 F12 DO THE SAME (MAC: HOLD FN)",
         "PAGE 1/2 - SPACE: NEXT PAGE, ANY OTHER KEY: CLOSE"};
     static const char* page1[] = {
         "SURFACE EXPLORATION", "",
@@ -241,17 +280,19 @@ void Game::renderHelp() {
         "SPACE         JUMP; HOLD IN THE AIR: JETPACK",
         "1-9 / 0       AUTOWALK SPEED / STOP    C CROUCH",
         "Z (HOLD)      STAND TALL    CTRL (SWIMMING) DIVE",
-        "B             UNFOLD A (NEW) BUGGY AT THE CAPSULE",
-        "E             ENTER / LEAVE THE BUGGY, OR BOARD",
-        "              THE CAPSULE NEXT TO IT (ALSO Q)",
-        "  IN THE BUGGY: W/S DRIVE  A/D STEER  SPACE BRAKE",
-        "  MOUSE PANS THE NOSE CAMERA 70 DEG  V OUTSIDE VIEW",
+        "B / F         A (NEW) BUGGY / DRONE AT THE CAPSULE",
+        "E             GET IN / OUT, TAKE A SHARD, OR BOARD",
+        "              THE CAPSULE (Q TOO)",
+        "  BUGGY: W/S DRIVE  A/D STEER  SPACE BRAKE  V VIEW",
+        "  DRONE: SPACE LIFTS OFF  W/S THRUST  A/D TURN",
+        "         SPACE / SHIFT CLIMB, DESCEND, LAND  V VIEW",
+        "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
         "M             WAYPOINT UNDER THE CROSSHAIR / CLEAR IT",
         "K             CALL THE CAPSULE TO YOUR POSITION",
         "I (F2)        ENVIRONMENT DATA   T  TIME WARP",
         "CTRL+S        SAVE  P SCREENSHOT  H HELP  ESC MENU",
         "N             SECTOR MAP (+/- ZOOM, M WAYPOINT)",
-        "G             THE GUIDE: NAME THE WORLD OR A LANDMARK", "",
+        "G             THE GUIDE: NAME THE WORLD OR A LANDMARK",
         "PAGE 2/2 - SPACE: PREVIOUS PAGE, ANY OTHER KEY: CLOSE"};
     static const char* page2[] = {
         "CREDITS", "",
@@ -408,9 +449,11 @@ void Game::renderSystemList() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     std::string head = fmt("SYSTEM ANALYZER - %s (%s)", trunc(upper(starNameOf(sys.star)), 16).c_str(), sys.classString().c_str());
     drawText(canvas, 8, 6, head.c_str(), HUD_AMBER);
-    drawText(canvas, 8, 15, trunc(upper(STAR_CLASSES[sys.star.cls].description), 50).c_str(), HUD_DIM);
+    std::vector<std::string> desc = wrapText(upper(STAR_CLASSES[sys.star.cls].description), 50);   // S-02: the long rows wrap onto a second line (they were cut at 50 characters)
+    for (size_t k = 0; k < desc.size() && k < 2; k++) drawText(canvas, 8, 15 + 8 * (int)k, desc[k].c_str(), HUD_DIM);
+    int listY = desc.size() > 1 ? 32 : 28;
     int n = (int)sys.bodies.size();
-    int rows = 17;
+    int rows = desc.size() > 1 ? 16 : 17;
     if (listSel < listScroll) listScroll = listSel;
     if (listSel >= listScroll + rows) listScroll = listSel - rows + 1;   // O3: the belts count as rows after the bodies
     for (int r = 0; r < rows; r++) {
@@ -422,8 +465,8 @@ void Game::renderSystemList() {
                                distanceString(d).c_str(), b.rings ? " R" : "", b.moonCount ? fmt(" %dM", b.moonCount).c_str() : "");
         if (b.type == PT_COMET) line += fmt(" %.0f KM/S", length(sys.bodyVel(i, t)));   // N0-01: comets are the only bodies that visibly hurry
         uint32_t col = i == listSel ? HUD_WHITE : (i == ship.localTarget ? HUD_AMBER : (PLANET_TYPES[b.type].landable ? HUD_GREEN : HUD_DIM));
-        drawText(canvas, 14, 28 + r * 9, line.c_str(), col);
-        if (i == listSel) drawText(canvas, 6, 28 + r * 9, ">", HUD_AMBER);
+        drawText(canvas, 14, listY + r * 9, line.c_str(), col);
+        if (i == listSel) drawText(canvas, 6, listY + r * 9, ">", HUD_AMBER);
     }
     // M9-12 belts after the bodies; O3: selectable like the bodies (Enter approaches, L targets)
     for (size_t k = 0; k < sys.belts.size(); k++) {
@@ -431,8 +474,8 @@ void Game::renderSystemList() {
         if (r < 0 || r >= rows) continue;
         const Belt& bl = sys.belts[k];
         uint32_t col = n + (int)k == listSel ? HUD_WHITE : (ship.targetBelt == (int)k ? HUD_AMBER : HUD_DIM);
-        drawText(canvas, 14, 28 + r * 9, fmt("%-18.18s %-10s %s - %s", upper(beltNameOf((int)k)).c_str(), "BELT", distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str()).c_str(), col);
-        if (n + (int)k == listSel) drawText(canvas, 6, 28 + r * 9, ">", HUD_AMBER);
+        drawText(canvas, 14, listY + r * 9, fmt("%-18.18s %-10s %s - %s", upper(beltNameOf((int)k)).c_str(), "BELT", distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str()).c_str(), col);
+        if (n + (int)k == listSel) drawText(canvas, 6, listY + r * 9, ">", HUD_AMBER);
     }
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN SELECT  ENTER APPROACH  L TARGET  ESC CLOSE", HUD_DIM);
 }
@@ -489,6 +532,12 @@ void Game::renderDataSheet() {
         line(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
     }
     line(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", PLANET_TYPES[b.type].atmosphere ? "YES" : "NONE", b.moonCount, b.rings ? "   RINGS" : "", PLANET_TYPES[b.type].landable ? "YES" : "NO"), PLANET_TYPES[b.type].landable ? HUD_GREEN : HUD_RED);
+    {   // R-402: the magnetic field and what it means for the nights (the star's class counts too)
+        int mc = magneticClass(magneticField(b));
+        double quiet = auroraPotentialAt(sys, b, 0), peak = auroraPotentialAt(sys, b, 1);
+        const char* hint = quiet > 0.15 ? "   AURORAE ON MOST NIGHTS" : (peak > 0.3 ? "   AURORAE IN STORMS" : (peak > 0.12 ? "   A FAINT AURORA IN A GREAT STORM" : ""));
+        line(fmt("MAGNETIC    %s%s", MAGNETIC_CLASS_NAMES[mc], hint), HUD_GREEN);
+    }
     y += 3;
     // M5-06 seasons readout, M5-09 what is up in the sky (surface only)
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {

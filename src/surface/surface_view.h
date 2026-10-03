@@ -9,7 +9,11 @@
 #include "textures.h"
 #include "bestiary.h"
 #include "galaxy/landmarks.h"
+#include "galaxy/ruins.h"
+#include "galaxy/shards.h"
+#include "galaxy/graves.h"
 #include <set>
+#include <unordered_map>
 #include <string>
 #include <vector>
 #include <thread>
@@ -69,6 +73,25 @@ struct Buggy {
     double jolt = 0;                   // N4-06: a decaying dip of the nose camera after a thump (smooth, never random)
 };
 
+// R-403 (2026-10-02): the drone. A second vehicle carried by the capsule, built like the buggy (one closed hull with the
+// sensor band, the camera pod on the nose, the mast; four ducted thrust pods on arms instead of wheels, two skids) and
+// flown through its nose camera (`SurfaceView::render`, `cameraFeed`): `F` unfolds it at the capsule, `E` gets in, Space
+// lifts it, W/S thrust fore and aft to 320 km/h, A/D turn (the hull banks), Space/Shift climb and descend, Shift onto the
+// ground lands it; the camera's gimbal keeps the picture level. The ruins are hours away by buggy and minutes by air
+struct Drone {
+    bool deployed = false;
+    double x = 0, z = 0, y = 0, heading = 0, speed = 0, vy = 0, pitch = 0, roll = 0, steer = 0;
+    double odometer = 0, vibration = 0, unfold = 0, topSpeed = 0, flightT = 0;
+    bool landed = true, lights = false, ceiling = false;
+    double altAboveGround = 0;   // metres from the skids to the ground (or the water) below
+    double rotor = 0;            // 0..1 the pods' spin (idle on the ground, full in a climb at speed): the sound and the fans' blur
+    double fanSpin = 0;          // radians, the drawn fans
+    double thud = 0, jolt = 0;   // a landing or a collision for the synth and a dip of the camera (consumed by the game, as the buggy's)
+    double bumpT = 0;
+    std::vector<Buggy::Puff> puffs;   // the downwash's dust, snow or spray when hovering low
+    double puffAccum = 0;
+};
+
 struct SurfaceEnvironment {
     SunInfo sun;                // the light used for shading: the primary, or both suns blended (M5-01)
     SunInfo sunDisc;            // the primary star as seen (its disc, flares, eclipses)
@@ -100,6 +123,8 @@ struct SurfaceEnvironment {
     double fogBank = 0;         // 0..1 fog patch
     double hail = 0;            // 0..1
     double aurora = 0;          // 0..1 strength of the aurora tonight
+    double auroraStorm = 0;     // R-402: the star's storm tonight, 0..1
+    double flare = 0;           // S-01: a red dwarf's flare now, 0..1 (the exposure opens past its clamp by it)
     double ringShadow = 0;      // O0-01: the world's ring between the site and the sun (0..0.85)
     double cometActivity = 0;   // O4: on a comet, how hard the nucleus vents (0 far from the star .. 1 at periapsis)
 };
@@ -156,11 +181,12 @@ struct TreeLook {
     double droop = 0;      // 0..1, the clusters hang (weeping) or the fronds arch
 };
 struct LogInst { double x = 0, z = 0, heading = 0, len = 6, radius = 0.4; uint64_t seed = 0; };
-// M4-07 a ruin or monolith
+// M4-07 a ruin or monolith; C-01 a settlement's cell (`galaxy/ruins.*`)
 struct Ruin {
     double x, z, heading, size;
-    int kind;    // 0 columns, 1 cube, 2 dome, 3 walls, 4 the giant cube
+    int kind;    // RuinKind: 0 columns, 1 cube, 2 dome, 3 walls, 4 the giant cube, 5 a settlement
     int style;   // 0 smooth, 1 striated, 2 glowing lines
+    const RuinSpec* spec = nullptr;   // C-01: the settlement's layout (the cell cache's)
 };
 
 class SurfaceView {
@@ -192,16 +218,57 @@ public:
     double sprintMultiplier = 3.2;   // settings: sprint speed factor on 1 g
     Buggy buggy;
     bool inBuggy = false, chaseCam = false;
+    Drone drone;                    // R-403
+    bool inDrone = false;
+    bool inVehicle() const { return inBuggy || inDrone; }
     bool hasWaypoint = false;
     double wpX = 0, wpZ = 0;
-    struct Collider { double x, z, r; int kind = 0; };   // kind: 0 rock, 1 trunk, 2 log, 3 ruin
+    // kind: 0 rock, 1 trunk, 2 log, 3 ruin; y0..y1 the span it blocks (absolute metres): what has risen above a wall's top
+    // clears it (B-405: the jetpack met every wall of a town as an invisible one, whatever its height)
+    struct Collider { double x, z, r; int kind = 0; double y0 = -1e9, y1 = 1e9; };
     void collectColliders(double x, double z, std::vector<Collider>& out);   // rocks and trunks near (x, z)
     bool ruinAt(int gLat, int gLon, Ruin& r) const;   // M4-07: the ruin of a 2 km latitude/longitude cell, in local metres
     void ruinCellAt(double x, double z, int& gLat, int& gLon) const;
-    template <class F> void forNearbyRuins(double x, double z, F fn) const {
-        int gLat, gLon;
-        ruinCellAt(x, z, gLat, gLon);
-        for (int dl = -1; dl <= 1; dl++) { int gl2; ruinCellAt(x, z, gl2, gLon); (void)gl2; double lat, lon; site.latLonAt(x, z, lat, lon); double dLat = 2000.0 / site.R; double latc = (gLat + dl + 0.5) * dLat; double dLon = dLat / std::max(std::cos(latc), 0.05); int g2 = (int)std::floor(lon / dLon); for (int dd = -1; dd <= 1; dd++) { Ruin r; if (ruinAt(gLat + dl, g2 + dd, r)) fn(r); } }
+    // C-01: the ruins of the cells round the site, each built once from `ruinOfCell` (a town's layout is not cheap) with its
+    // pieces at the three levels of detail; cleared at a landing or a re-anchor (the local metres change)
+    struct RuinCell { bool has = false; Ruin r; RuinSpec spec; std::vector<RuinElem> elems[3]; std::vector<ShardSite> shards; std::vector<Grave> graves; mutable std::vector<float> base; mutable bool baseDone = false; };   // C-03: the settlement's shards; C-12: its graves (their stones among the pieces of lod 0)
+    mutable std::unordered_map<uint64_t, RuinCell> ruinCells;
+    Culture cultures[2]; int peoples = 1;           // C-01: the world's, set at init; C-13: one a people (a settlement's is `cultures[spec.people]`)
+    Lore lores[2];                                  // C-12: the world's names, span and calendar (`loreQuick`, no chart marks), for the graves; empty on a world without a people; C-13: one a people
+    double lastRuinMs = 0; int lastRuinElems = 0;   // tests: the ruins' draw time and the pieces drawn
+    double roadBuildX = 0, roadBuildZ = 0;          // C-09: where the site's roads were last grown (`SurfaceSite::ensureRoads`)
+    const RuinCell* ruinCell(int gLat, int gLon) const;
+    // C-08 (KI-345): the settlements within reach of a point (at most four, within their radius plus 50 m) and whether a point lies in
+    // one of their buildings (its rectangle plus a margin): the rocks, the logs and the rock colliders keep out of the rooms
+    int settlementsNear(double x, double z, const RuinCell* near[4]) const;
+    static bool inSettlementBuilding(const RuinCell& c, double x, double z, double margin);
+    void drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell& cell, double dist);
+    // C-03: the shards (`galaxy/shards.h`): the world's the explorer already has (the game fills it from the guide at a landing
+    // and a load; every copy of one is then neither drawn nor offered), the one within reach this frame (E takes it), the draw
+    std::set<int> shardsFound;
+    struct NearShard { int index = -1; int place = 0; int sclass = 0; double x = 0, z = 0, dist = 0; };
+    NearShard nearShard;
+    void findNearShard();
+    void drawShards(Framebuffer& fb, double t);
+    // C-12: the grave within 2.2 m of the explorer this frame (the stone's name and years as the HUD reads them; the game records it in the guide the first time)
+    struct NearGrave { int k = -1; uint64_t id = 0; int sclass = 0; std::string line, hud; double x = 0, z = 0, dist = 0; };   // `line` "Thaelu, years 140 to 212 of Kethra" (the log), `hud` "Thaelu, 140-212"
+    NearGrave nearGrave;
+    void findNearGrave();
+    int lastShardsDrawn = 0;
+    // the ruins of the cells within `reach` cells of (x, z): fn(ruin, cell, ring), ring the cell's distance in cells
+    template <class F> void forNearbyRuins(double x, double z, int reach, F fn) const {
+        if (!worldHasRuins(site.gen)) return;
+        double lat, lon; site.latLonAt(x, z, lat, lon);
+        double dLat = ruinCellLat(site.gen);
+        int gLat = (int)std::floor(lat / dLat);
+        for (int dl = -reach; dl <= reach; dl++) {
+            int row = gLat + dl;
+            double latc = (row + 0.5) * dLat;
+            if (std::fabs(latc) > PI / 2 - dLat) continue;
+            double dLon = dLat / std::max(std::cos(latc), 0.05);
+            int g2 = (int)std::floor(lon / dLon);
+            for (int dd = -reach; dd <= reach; dd++) { const RuinCell* c = ruinCell(row, g2 + dd); if (c->has) fn(c->r, *c, std::max(std::abs(dl), std::abs(dd))); }
+        }
     }
     // N2 vegetation: every tree and log of a 16 m cell, deterministic; the canopy density field (veg x clearings)
     void forTrees(int cx, int cz, const std::function<void(const TreeInst&)>& fn);
@@ -237,6 +304,8 @@ public:
     int callsFired = 0;
     double hoofLevel = 0;                          // hoof and paw steps of moving animals within 20 m, 0..1
     double lastLifeMs[2] = {0, 0};                 // update, draw (bench)
+    double lastAuroraP0 = 0;   // B-403: km poleward of the site to the auroral oval's centre at the last frame (diagnostics)
+    static double auroraOvalLat(const Body& b) { return 59.0 + 8.0 * magneticField(b) + 6.0 * (unitFromHash(hashCombine(b.seed, 0xA17)) - 0.5); }   // B-403/R-402: the auroral oval's latitude on a world: nearer the pole on a strong field
     bool testGotoHerd(double dist);                // stand south of herd 0, facing it
     std::string testHerdStates() const;            // "GRAZING 3 FLEEING 2 (calls 1)"
     bool projectPoint(double x, double y, double z, double& sx, double& sy) const;   // world -> framebuffer pixels
@@ -250,6 +319,13 @@ public:
     Vec3 buggyCameraMount() const;                // the nose camera's lens in local metres
     void cameraFeed(Framebuffer& fb, double t);   // the CCTV look of the nose camera's picture (after the mush, before the RGB conversion)
     double buggyDist() const { return std::sqrt((buggy.x - player.x) * (buggy.x - player.x) + (buggy.z - player.z) * (buggy.z - player.z)); }
+    // R-403: the drone (`surface/drone.cpp`): `F` near the capsule unfolds a new one (any old one is scrapped), `E` on the ground gets in or out
+    bool deployDrone();
+    bool toggleDrone();
+    static constexpr double DRONE_TILT_DOWN = 60 * DEG, DRONE_TILT_UP = 25 * DEG;   // the drone's camera tilts further down: the ground is what you look for
+    static constexpr double DRONE_TOP_SPEED = 320.0 / 3.6, DRONE_CEILING = 400.0;    // m/s; metres above the ground
+    Vec3 droneCameraMount() const;
+    double droneDist() const { return std::sqrt((drone.x - player.x) * (drone.x - player.x) + (drone.z - player.z) * (drone.z - player.z)); }
     // O1 (B-302): the rangefinder: march the camera's line of sight over the terrain caches; returns the distance to the
     // ground (or the water) it hits within maxDist, -1 for the sky. The last frame's answer is kept for the HUD and for M
     double rangeToGround(double maxDist, double& hitX, double& hitZ, bool& water);
@@ -273,6 +349,7 @@ private:
     void buildLooks();
     std::vector<Vec3> dirLUT;
     std::vector<float> cloudGrid;
+    std::vector<float> auroraGrid;   // B-403: per cell of the cloud grid, the aurora's shade and its tops' share (the colour), drawn over the sky after the stars
     double lastWindUpdate = -1;
     double windDriftX = 0, windDriftZ = 0, lastEnvT = -1;   // B-206: the clouds' drift integrates the wind over time (metres)
     double lightningFlash = 0;
@@ -354,7 +431,6 @@ private:
     double lastT = 0;
     // M10-14 galactic band: integrated star density over galactic directions (lon x lat map)
     std::vector<float> bandMap;
-    static constexpr int BAND_W = 64, BAND_H = 32;
     NebulaPatch nebP[16]; int nebN = 0;   // N5-01
     void buildBandMap();
     double bandAt(const Vec3& dirWorld) const;
@@ -365,6 +441,10 @@ private:
     void updateBuggy(double dt, const Input& in, double t);
     void drawBuggy(Framebuffer& fb, double t);
     void buggyFrame(Vec3& fwdT, Vec3& sideT, Vec3& upT) const;   // the hull's axes with its pitch and roll
+    void drawPuffs(Framebuffer& fb, const std::vector<Buggy::Puff>& puffs);   // the dust, snow and spray thrown up (the buggy's wheels, the drone's downwash)
+    void updateDrone(double dt, const Input& in, double t);   // R-403
+    void drawDrone(Framebuffer& fb, double t);
+    void droneFrame(Vec3& fwdT, Vec3& sideT, Vec3& upT) const;
 public:
     double findOpenRun(double& x, double& z, double& heading);   // N4: open ground within 800 m of the explorer and its longest clear run (metres)
 private:

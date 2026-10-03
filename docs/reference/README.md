@@ -13,5 +13,6 @@ Read in order the first time; afterwards jump to the topic you need.
 9. `09-cookbook.md` — step-by-step recipes for common changes.
 10. `10-decisions.md` — decision log with rationale.
 11. `11-original-noctis-notes.md` — what the original did (from its source and manuals), what was replicated.
+12. `12-civilisations.md` — the dead peoples' worlds, their ruins and their shards (the C series): the trait, the settlements, the story grammar.
 
 Keep these in sync with the code: when a constant or a rule changes, update the note in the same change.

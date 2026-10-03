@@ -34,7 +34,7 @@ std::string describeBody(const Body& b, const BodyGen& g) {
         case PT_COMET: s += "mountain of ice and dust that grows a tail each time it dives past the star"; break;
         case PT_EUROPAN: s += r.chance(0.5) ? "shell of ice over a hidden ocean, its cracks stained red and venting water into space" : "ice moon of long double ridges and broken rafts, geysers rising from the cracks"; break;
         case PT_TECTONIC: s += r.chance(0.5) ? "restless world of rift valleys, fissures running with lava and ground that never stops shaking" : "world torn by its own crust, fountains of lava along the rifts under a sulphur sky"; break;
-        case PT_DESERT: s += r.chance(0.5) ? "dry world of dune seas, mesas and salt pans under a dusty sky" : "desert world of canyons and ergs, dust devils crossing its plains"; break;
+        case PT_DESERT: s += g.hasTrait(TR_CIVILISATION) ? "world of dry seabeds and dead river courses under a dusty sky, salt where its seas were" : (r.chance(0.5) ? "dry world of dune seas, mesas and salt pans under a dusty sky" : "desert world of canyons and ergs, dust devils crossing its plains"); break;   // C-01
         case PT_HYDROCARBON: s += "cold world under an orange haze, seas of methane and dunes of tar"; break;
         case PT_BOMBARDED: s += "young airless world under a rain of meteorites, its craters fresh and rayed"; break;
         case PT_ACIDIC: s += r.chance(0.5) ? "corrosive world of acid seas and bleached karst under a yellow-green sky" : "world whose rain eats the rock, sulphur crusts along its acid shores"; break;
@@ -51,6 +51,7 @@ std::string describeBody(const Body& b, const BodyGen& g) {
     if (b.tempK > 500) s += ", scorched by its star";
     else if (b.tempK < 120) s += ", deep in the cold";
     if (b.rings) s += ", wearing a ring system";
+    if (magneticClass(magneticField(b)) == 3 && PLANET_TYPES[b.type].atmosphere && !hasOpaqueDeck(b.type)) s += ", its poles crowned with aurorae";   // R-402
     if (b.moonCount >= 3) s += ", with a family of moons";
     if (b.ecc > 0.15) s += ", on a markedly oval orbit";
     if (b.parent < 0 && std::fabs(1.0 - b.rotPeriod / b.orbitPeriod) < 0.02) s += ", one face forever toward the sun";
@@ -69,10 +70,18 @@ std::string describeStar(const Star& s) {
         case STAR_RED_GIANT: d = "A swollen red giant that has already eaten its inner planets"; break;
         case STAR_WHITE_DWARF: d = "A white dwarf, the dense ember of a dead star, lighting frozen worlds"; break;
         case STAR_PULSAR: d = "A pulsar, a spinning corpse whose beams sweep the system"; break;
+        case STAR_RED_DWARF: d = r.chance(0.5) ? "A red dwarf, small and cool, its near worlds turning one face to it" : "A red dwarf, the commonest star there is, given to sudden flares"; break;   // S-01
+        case STAR_BLUE_WHITE: d = "A blue-white star, hot and short-lived, its wide system bare under the ultraviolet"; break;
+        case STAR_ORANGE_GIANT: d = "An orange giant, an old star grown large, its warmth reaching out among what were ice worlds"; break;
+        case STAR_CARBON: d = "A carbon star, a ruby giant wrapped in its own soot, every world under its ember light"; break;
+        case STAR_NEUTRON: d = r.chance(0.5) ? "A neutron star, the quiet corpse of a supernova, a point of white light over what survived it" : "A neutron star, faint to the eye and fierce in x-rays, its outer worlds glassed by the blast that made it"; break;   // S-03
+        case STAR_PROTOSTAR: d = r.chance(0.5) ? "A protostar, not yet done being born, wrapped in the cloud it fell out of, its disc of dust seen edge-on" : "A young star still gathering itself, its light soft through the dust of the disc that will be its worlds"; break;   // S-04
+        case STAR_WOLF_RAYET: d = r.chance(0.5) ? "A Wolf-Rayet star, a massive star blowing itself away, blinding inside the ring of gas it has shed" : "A Wolf-Rayet star, its wind stripping what is left of its worlds, the shell it threw off a ring round it in the sky"; break;   // S-05
+        case STAR_BLACK_HOLE: d = "A black hole of " + std::to_string((int)(s.massFactor + 0.5)) + " suns' mass, " + (r.chance(0.5) ? "a hole in the sky ringed by the bent light of the stars behind it" : "dark but for the disc of gas it drinks, the stars behind it drawn into arcs"); break;   // S-06
         default: d = "A star"; break;
     }
     if (s.luminosity > 30) d += ", fiercely bright";
-    else if (s.luminosity < 0.2) d += ", dim";
+    else if (s.luminosity < 0.2 && s.cls != STAR_RED_DWARF && s.cls != STAR_CARBON && s.cls != STAR_NEUTRON && s.cls != STAR_BLACK_HOLE) d += ", dim";   // S-01: the class says so already
     return d + ".";
 }
 

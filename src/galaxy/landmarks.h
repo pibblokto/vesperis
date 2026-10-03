@@ -21,6 +21,7 @@ struct Landmark {
     double heightM = 0;     // the ground at the centre (the peak's height; a crater's floor)
     double prominenceM = 0; // a peak's rise over the cell, a mesa's cap over the plain, a crater's depth
     uint64_t id = 0;        // hash of the cell and the body: stable
+    int sub = 0;            // C-01: LM_RUIN: 0 a monolith of the old ones, 1 a hamlet, 2 a village, 3 a town (`SettlementClass` + 1)
     std::string name;       // generated: "MOUNT KEIRA", "CRATER ANSHE", ...
 };
 

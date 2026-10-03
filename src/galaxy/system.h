@@ -7,7 +7,7 @@
 
 // Bumped whenever a generator changes what a star, system or surface looks like (M9-17).
 // Star positions are integer hashes and never move; saves and guides record the version.
-constexpr int GEN_VERSION = 10;   // 10: O6-03..O6-06 drainage (rivers routed downhill by a flood of the ground, lakes at the fill levels of real basins, valleys carved to the rivers), the landform library (cliff bands, broken plains, scree, coasts by exposure, cirques and fjords, lava tongues, slip-face dunes, crater terraces) and the landmarks (heights, water and materials change on every solid surface; systems and star positions do not); 9: B-322 the ocean worlds' floes rise from a shelf sea through an ice foot, river and lake banks stand over their plane (heights change on ocean worlds and along felisian water; systems do not); 8: B-321 the felisian greenhouse (+33 K over the equilibrium temperature: biomes, ice caps and water move on every living world), B-320 rivers and lakes rebuilt, R-304/R-305 planet traits and landforms (every solid surface changes; systems and star positions do not); 7: B-314 the first moon at 4.5 radii and outside the rings (moon orbits and periods change; surfaces do not); 6: O6-02 the relief spectrum (every solid surface changes shape; systems and star positions do not); 5: O0-01 rings on 12% of solid planets; 4: N5-03 gas giant storm term; 3: M5 astronomy
+constexpr int GEN_VERSION = 11;   // 11: G-01 the galaxy of 200 billion stars (`galaxyDensity`: every star's existence, class and name can change; the whole G/S series of 1.1.0 is this one bump); 10: O6-03..O6-06 drainage (rivers routed downhill by a flood of the ground, lakes at the fill levels of real basins, valleys carved to the rivers), the landform library (cliff bands, broken plains, scree, coasts by exposure, cirques and fjords, lava tongues, slip-face dunes, crater terraces) and the landmarks (heights, water and materials change on every solid surface; systems and star positions do not); 9: B-322 the ocean worlds' floes rise from a shelf sea through an ice foot, river and lake banks stand over their plane (heights change on ocean worlds and along felisian water; systems do not); 8: B-321 the felisian greenhouse (+33 K over the equilibrium temperature: biomes, ice caps and water move on every living world), B-320 rivers and lakes rebuilt, R-304/R-305 planet traits and landforms (every solid surface changes; systems and star positions do not); 7: B-314 the first moon at 4.5 radii and outside the rings (moon orbits and periods change; surfaces do not); 6: O6-02 the relief spectrum (every solid surface changes shape; systems and star positions do not); 5: O0-01 rings on 12% of solid planets; 4: N5-03 gas giant storm term; 3: M5 astronomy
 
 enum PlanetType {
     PT_MOLTEN = 0,   // internally hot, lava lakes, no atmosphere
@@ -81,6 +81,7 @@ struct Body {
     bool doublePlanet = false;    // M5-09: one half of a double planet (both halves carry the flag)
     bool locked = false;          // M5-08: one face toward its star; lockedDir is the sub-stellar direction in the body frame
     Vec3 lockedDir;
+    bool glassed = false;         // S-03: a survivor of the supernova that left its neutron star: the surface fused to glass (`BodyGen::make` puts TR_GLASSED first)
 };
 
 // M9-12 asteroid belt in an orbit gap. O3 (R-302): the belt is a place the Stardrifter can fly to; its rocks are
@@ -167,3 +168,18 @@ struct StarSystem {
     // M5-03: (E - e sin E = M) solved by Newton; returns the true anomaly, r/a in rOverA
     static double trueAnomaly(double meanAnomaly, double ecc, double& rOverA);
 };
+
+// R-402: a world's magnetic field (0..1), hashed from its seed and biased by its spin and size (the dynamo of a big, fast-spinning
+// world; a locked world has little): a derived property, so no system changes. Classes: 0 none, 1 weak, 2 moderate, 3 strong
+double magneticField(const Body& b);
+int magneticClass(double mag);
+extern const char* const MAGNETIC_CLASS_NAMES[4];
+// R-402: the star's weather, 0..1: storms over days with substorms over hours; and a world's auroral potential (0..1 before the
+// latitude, the darkness and the night's own variation): the star's activity by class, the steady glow a strong field keeps
+// and what the storm drives. `auroraPotentialAt` takes the storm level itself (0 a quiet night, 1 a great storm)
+double auroralStorm(const Star& s, double t);
+// S-02: the star's activity by class (0..1), the one table the aurora reads (R-402, S-01): a star of 0.7 and over is "active"
+// (the pulsar, the blue giant, the blue-white star, the red dwarf with its flares, the neutron star)
+double starActivity(int cls);
+double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm);
+double auroraPotential(const StarSystem& sys, const Body& b, double t);
