@@ -88,6 +88,7 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         TreeInst T;
         T.seed = ht;
         T.x = cx * cs + h01(ht) * cs; T.z = cz * cs + h01(mix64(ht + 1)) * cs;
+        if (!site.roads.empty() && site.roadCover(T.x, T.z) > 0.3) continue;   // C-09: nothing grows on the road's bed
         if (nNear) {
             bool skip = false;
             for (int q = 0; q < nNear && !skip; q++) {
@@ -151,6 +152,8 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     L.heading = h01(mix64(L.seed + 2)) * TAU;
     L.len = 3.5 + 6 * h01(mix64(L.seed + 3));
     L.radius = 0.25 + 0.35 * h01(mix64(L.seed + 4)) * h01(mix64(L.seed + 6));   // most are slim, a few are giants
+    { const RuinCell* near[4]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
+    if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // C-09: nor across the road
     fn(L);
 }
 

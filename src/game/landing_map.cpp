@@ -1,5 +1,8 @@
 // The landing map: site selection on the body's planet map (B-004 relief shading).
 #include "game.h"
+#include "galaxy/roads.h"
+#include <chrono>
+#include "galaxy/ruins.h"
 #include "galaxy/drainage.h"
 
 namespace { const int MAP_LW = 256, MAP_LH = 128; }   // logical size of the map frame
@@ -95,8 +98,12 @@ void Game::updateLandingMap(const Input& in, double dt) {
         state = GameState::DESCENT;
         transT = 0;
         fade = 0;
+        {   // C-08 (KI-345): the capsule sets down outside a settlement's walls
+            double la = landLat, lo = landLon;
+            if (settlementClearance(BodyGen::make(sys.bodies[landBody]), la, lo)) { landLat = la; landLon = lo; status("THE CAPSULE KEEPS OUTSIDE THE RUINS", 4); }
+        }
         surf.init(&sys, landBody, landLat, landLon, t);
-        syncShards();   // C-03
+        syncShards(); roadsMet.clear();   // C-03; C-09
         surf.cameraOverrideAlt = 1800;
         surf.cameraOverridePitch = -60 * DEG;
         surf.player.yaw = wrap2pi(landLon + 1.0);
@@ -229,6 +236,22 @@ void Game::buildLandingZoom() {
             zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade);
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
+    zoomRoads.clear(); zoomRoadsMs = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
+    if (worldHadCivilisation(g)) {
+        auto tr0 = std::chrono::steady_clock::now();
+        std::vector<Road> rs; roadsNear(g, zoomCentre, zoomRadiusM, rs, true);
+        zoomRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
+        for (const Road& r : rs) {
+            if (std::max(settlementRank(r.a.sclass), settlementRank(r.b.sclass)) < 2) continue;   // the roads of the villages and the towns: a lane between two hamlets is not seen from orbit, and the whole web was a honeycomb over the land
+            std::vector<std::pair<float, float>> poly; float lx = 0, ly = 0;
+            for (size_t k = 0; k < r.pts.size(); k++) {
+                double la, lo; StarSystem::latLonFromBody(r.pts[k], la, lo);
+                float x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW), y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH);
+                if (poly.empty() || k + 1 == r.pts.size() || std::hypot(x - lx, y - ly) >= 0.7f) { poly.push_back({x, y}); lx = x; ly = y; }
+            }
+            if (poly.size() >= 2) zoomRoads.push_back(poly);
+        }
+    }
 }
 
 // O0-04 (B-306): the shadow on the day side of the landing map: moons and the parent between a texel and the star (as
@@ -360,6 +383,20 @@ void Game::renderLandingMap() {
                 if (zoomEmissive[i]) l = std::max(l, 0.95);
                 uint32_t c = zoomImg[i];
                 row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+            }
+        }
+        for (const auto& poly : zoomRoads) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light
+            int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
+            double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
+            uint32_t c = zoomImg[i]; l *= 0.7;
+            uint32_t col = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+            // a hairline in the frame's own pixels (a logical line would be a block S wide: the grid's weight, not a faint road)
+            const int X0 = ox * S, Y0 = oy * S, X1 = (ox + MAP_LW) * S, Y1 = (oy + MAP_LH) * S;
+            for (size_t k = 0; k + 1 < poly.size(); k++) {
+                int x0 = (int)((ox + poly[k].first) * S), y0 = (int)((oy + poly[k].second) * S), x1 = (int)((ox + poly[k + 1].first) * S), y1 = (int)((oy + poly[k + 1].second) * S);
+                if (x0 < X0 || x1 < X0 || x0 >= X1 || x1 >= X1 || y0 < Y0 || y1 < Y0 || y0 >= Y1 || y1 >= Y1) continue;
+                int steps = std::max(std::abs(x1 - x0), std::abs(y1 - y0));
+                for (int q = 0; q <= steps; q++) { int x = x0 + (steps ? (x1 - x0) * q / steps : 0), y = y0 + (steps ? (y1 - y0) * q / steps : 0); canvas.px[(size_t)y * FBW + x] = col; }
             }
         }
     } else {

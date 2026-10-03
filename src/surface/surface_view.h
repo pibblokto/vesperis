@@ -11,6 +11,7 @@
 #include "galaxy/landmarks.h"
 #include "galaxy/ruins.h"
 #include "galaxy/shards.h"
+#include "galaxy/graves.h"
 #include <set>
 #include <unordered_map>
 #include <string>
@@ -230,11 +231,17 @@ public:
     void ruinCellAt(double x, double z, int& gLat, int& gLon) const;
     // C-01: the ruins of the cells round the site, each built once from `ruinOfCell` (a town's layout is not cheap) with its
     // pieces at the three levels of detail; cleared at a landing or a re-anchor (the local metres change)
-    struct RuinCell { bool has = false; Ruin r; RuinSpec spec; std::vector<RuinElem> elems[3]; std::vector<ShardSite> shards; mutable std::vector<float> base; mutable bool baseDone = false; };   // C-03: the settlement's shards
+    struct RuinCell { bool has = false; Ruin r; RuinSpec spec; std::vector<RuinElem> elems[3]; std::vector<ShardSite> shards; std::vector<Grave> graves; mutable std::vector<float> base; mutable bool baseDone = false; };   // C-03: the settlement's shards; C-12: its graves (their stones among the pieces of lod 0)
     mutable std::unordered_map<uint64_t, RuinCell> ruinCells;
-    Culture culture;                                // C-01: the world's, set at init
+    Culture cultures[2]; int peoples = 1;           // C-01: the world's, set at init; C-13: one a people (a settlement's is `cultures[spec.people]`)
+    Lore lores[2];                                  // C-12: the world's names, span and calendar (`loreQuick`, no chart marks), for the graves; empty on a world without a people; C-13: one a people
     double lastRuinMs = 0; int lastRuinElems = 0;   // tests: the ruins' draw time and the pieces drawn
+    double roadBuildX = 0, roadBuildZ = 0;          // C-09: where the site's roads were last grown (`SurfaceSite::ensureRoads`)
     const RuinCell* ruinCell(int gLat, int gLon) const;
+    // C-08 (KI-345): the settlements within reach of a point (at most four, within their radius plus 50 m) and whether a point lies in
+    // one of their buildings (its rectangle plus a margin): the rocks, the logs and the rock colliders keep out of the rooms
+    int settlementsNear(double x, double z, const RuinCell* near[4]) const;
+    static bool inSettlementBuilding(const RuinCell& c, double x, double z, double margin);
     void drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell& cell, double dist);
     // C-03: the shards (`galaxy/shards.h`): the world's the explorer already has (the game fills it from the guide at a landing
     // and a load; every copy of one is then neither drawn nor offered), the one within reach this frame (E takes it), the draw
@@ -243,6 +250,10 @@ public:
     NearShard nearShard;
     void findNearShard();
     void drawShards(Framebuffer& fb, double t);
+    // C-12: the grave within 2.2 m of the explorer this frame (the stone's name and years as the HUD reads them; the game records it in the guide the first time)
+    struct NearGrave { int k = -1; uint64_t id = 0; int sclass = 0; std::string line, hud; double x = 0, z = 0, dist = 0; };   // `line` "Thaelu, years 140 to 212 of Kethra" (the log), `hud` "Thaelu, 140-212"
+    NearGrave nearGrave;
+    void findNearGrave();
     int lastShardsDrawn = 0;
     // the ruins of the cells within `reach` cells of (x, z): fn(ruin, cell, ring), ring the cell's distance in cells
     template <class F> void forNearbyRuins(double x, double z, int reach, F fn) const {

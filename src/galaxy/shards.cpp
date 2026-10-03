@@ -3,10 +3,12 @@
 // a slot (a lore name has one entry, a vocabulary slot several, a slot's entry may hold marks of its own), `[a|b|c]`
 // draws one alternative. Everything is drawn from the shard's own `Rng`, so a shard is the same text every time.
 #include "shards.h"
+#include "charts.h"   // C-10: the charts' marks and the chart a caption names
 #include "../core/rng.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <map>
 
 const char* const SHARD_TONE_NAMES[ST_TONE_COUNT] = {"ordinary", "elegy", "warning", "the end"};
@@ -78,7 +80,7 @@ std::string tidy(const std::string& in) {
 }
 
 // a kind's `until` (desert worlds only): the last age it is told at, for what speaks of living water
-struct Kind { const char* name; int tone; int world; double w; double until; std::vector<const char*> tpl; };   // world 0 both, 1 felisian, 2 desert
+struct Kind { const char* name; int tone; int world; double w; double until; std::vector<const char*> tpl; bool other = false; };   // world 0 both, 1 felisian, 2 desert; C-13: `other` only where the world had a second people
 
 const std::vector<Kind>& kinds() {
     static const std::vector<Kind> K = {
@@ -206,6 +208,21 @@ const std::vector<Kind>& kinds() {
             "No child was born in {city} [this year, or last|this year, or the year before|in {n} years]. The {crop} is good; {river} is full; it is only us. The houses on the hill stand empty. I keep the gate open in case.",
             "The last of the {people}, {kin} says, and laughs, because what else. We cut the year in the lintel anyway, {yearn} and one. {skyone} is up. The {animal} do not know anything is wrong, and they are right.",
             "I am old and the {work} is done and nobody will need it. {god}, you kept {city} {yearn} years. Keep the {tree}, keep {river}, keep the {animal}. They were always more yours than ours."}},
+        // C-13: the other people of a world of two (`Lore::other`): traders, a buried stranger, their words, their silence, their want, their end
+        {"the other people", ST_ORDINARY, 0, 1.2, 1, {
+            "Traders of the {other} came over {mountain} with {trade} and {n} of their {animal}. They speak as if through a wall, but {kin} can follow them. We gave them {offering} and the good hall.",
+            "{child} asked why the {other} do not pray to {god}. I said they have their own, on the far side of the water. {he} asked if theirs is listening. I said ours is, and we went in.",
+            "A boat of the {other} at {water}, the first since {festival}. They brought {trade} and a child who had never seen {skyone} so low. {kin} laughed and gave {him} bread.",
+            "One of the {other} died on the road home and we buried {him} by our gate. Their stones face the other way; we set {his} so. {founder} would have done the same, {kin} says.",
+            "The {other} count the year from a different stone and call {star} by another name. {child} wants to learn their words. I said learn ours first. {he} is learning both."}, true},
+        {"the other people", ST_ELEGY, 0, 0.8, 1, {
+            "No one has come from the {other} since {season} before last. {kin} says the road over {mountain} is grown shut. I say they are busy. Nobody says what we think.",
+            "We lit the fire on the headland for the {other}, as every year at {festival}. No fire answered from their shore. {child} asked if they had forgotten. I said the night was thick."}, true},
+        {"the other people", ST_WARNING, 0, 0.8, 1, {
+            "Word from the {other}: their {waterkind} is failing too. They are coming here, or going to the mountains, nobody knows which. {god}, we cannot feed them. We cannot turn them away.",
+            "The {other} have sent {n} families over {mountain} and want land by {river}. The council sat all night. {kin} says give it; the old ones say no. I say they will not be the last to ask."}, true},
+        {"the last", ST_END, 0, 1.0, 1, {
+            "{otherfate} I set this in the wall by {founder}'s mark so that someone knows the {people} were here. {god}, we were here."}, true},
     };
     return K;
 }
@@ -232,6 +249,11 @@ void buildGrammar(const StarSystem& sys, const Body& b, const BodyGen& g, const 
     bool desert = L.desert;
     G.set("people", {L.people}); G.set("god", {L.god}); G.set("river", {L.river}); G.set("mountain", {L.mountain}); G.set("sea", {L.sea});
     G.set("city", {L.city}); G.set("city2", {L.city2}); G.set("founder", {L.founder}); G.set("star", {L.star}); G.set("festival", {L.festival});
+    // C-13: the other people of the world and their fate (the "other" kinds alone use them; a world of one people never draws those)
+    G.set("other", {L.other.empty() ? std::string("the others") : L.other});
+    G.set("otherfate", {L.otherFate < 0 ? "The fires of the {other} went out {n} years before ours. We went to see; their gate stood open. Now it is ours that stands open."
+                        : (L.otherFate > 0 ? "The {other} still light their fires across the water. {kin} says they will come for what we leave. Let them. Someone should."
+                                           : "The {other} are quiet on their side of the water. {kin} says they sent a boat; it did not come. We are the last on both shores.")});
     // the sun: the class of the star the world circles (a companion's world has the companion's)
     int cls = sys.star.cls;
     if (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION) cls = sys.bodies[b.parent].starClass;
@@ -319,14 +341,16 @@ void buildGrammar(const StarSystem& sys, const Body& b, const BodyGen& g, const 
     G.set("yearn", {yr <= 12 ? numberWord(yr) : std::to_string(yr)});
 }
 
+// C-12: the end's tone is the last recording's alone (`lastShardOf`); the late shards that drew it before are warnings on a
+// desert and elegies on a felisian world, so one shard of a world closes its record (one draw either way: the stream stays)
 int pickTone(bool desert, double age, Rng& rng) {
     double w[ST_TONE_COUNT];
     if (desert) {
-        if (age > 0.85) { w[0] = 0.08; w[1] = 0.02; w[2] = 0.15; w[3] = 0.75; }
+        if (age > 0.85) { w[0] = 0.2; w[1] = 0.1; w[2] = 0.7; w[3] = 0; }
         else if (age >= 0.3) { w[0] = 0.37; w[1] = 0.08; w[2] = 0.55; w[3] = 0; }
         else { w[0] = 0.84; w[1] = 0.08; w[2] = 0.08; w[3] = 0; }
     } else {
-        if (age > 0.9) { w[0] = 0.3; w[1] = 0.1; w[2] = 0.1; w[3] = 0.5; }
+        if (age > 0.9) { w[0] = 0.5; w[1] = 0.35; w[2] = 0.15; w[3] = 0; }
         else { w[0] = 0.83; w[1] = 0.12; w[2] = 0.05; w[3] = 0; }
     }
     return rng.pick(w, ST_TONE_COUNT);
@@ -334,8 +358,9 @@ int pickTone(bool desert, double age, Rng& rng) {
 
 }   // namespace
 
-Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g) {
-    Lore L;
+namespace {
+// the names and the span: the lore's own draws (C-10 reads the people's name alone for the peoples a chart names)
+void loreNames(const BodyGen& g, Lore& L) {
     Rng rng(g.seed ^ 0x10BE5ULL);
     double sw[3] = {0.4, 0.3, 0.3};
     L.style = rng.pick(sw, 3);
@@ -349,13 +374,72 @@ Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g) {
     };
     L.people = name(); L.god = name(); L.river = name(); L.mountain = name(); L.sea = name(); L.city = name(); L.city2 = name();
     L.founder = name(); L.moon = name(); L.star = name(); L.festival = name();
+    L.spanYears = 150 + (int)(450 * rng.uni());
+}
+}
+
+// C-12: the calendar. The day is the world's turn and the year its orbit (`yearDays` their ratio); the month is the nearest
+// moon's round in those days where a moon rounds in three days at least and twice within the year. A world whose day is a quarter
+// of its year or more (a locked world: its day is its year) counts no days: moons alone when it has one to count by, else years
+namespace { void calendarOf(const StarSystem& sys, const Body& b, Lore& L) {
     L.dayHours = std::fabs(b.rotPeriod) / 3600.0;
     L.yearDays = b.orbitPeriod / std::max(std::fabs(b.rotPeriod), 1.0);
     L.moons = b.moonCount;
+    double nearest = 1e18;
+    for (const Body& m : sys.bodies) if (m.parent == b.index && m.orbitPeriod > 0 && m.orbitPeriod < nearest) nearest = m.orbitPeriod;
+    bool days = L.yearDays >= 4;
+    L.monthDays = 0; L.months = 0;
+    if (nearest < 1e17) {
+        if (days) { int md = (int)std::lround(nearest / std::max(std::fabs(b.rotPeriod), 1.0)); if (md >= 3 && md * 2 <= L.yearDays) { L.monthDays = md; L.months = (int)std::floor(L.yearDays / md); } }
+        else { int mo = (int)std::floor(b.orbitPeriod / nearest); if (mo >= 2) L.months = mo; }
+    }
+    L.calendar = days ? (L.months > 0 ? 1 : 0) : (L.months > 0 ? 2 : 3);
+} }
+
+Lore loreQuick(const StarSystem& sys, const Body& b, const BodyGen& g, int which) {
+    Lore L;
+    L.peoples = peoplesOf(g) > 1 ? 2 : 1;   // C-13: a world without the trait is read as one people (the harness's "what it would have said")
+    L.which = which > 0 && L.peoples > 1 ? 1 : 0;
+    const BodyGen pg = peopleGen(g, L.which);
+    L.seed = pg.seed;
+    loreNames(pg, L);
+    calendarOf(sys, b, L);
     L.desert = b.type == PT_DESERT;
-    L.spanYears = 150 + (int)(450 * rng.uni());
-    (void)sys;
+    L.last = lastShardOf(pg);
+    if (L.peoples > 1) {   // C-13: the other people by name, and whether they ended before this people, with them or after
+        L.other = peopleNameOf(peopleGen(g, 1 - L.which));
+        if (!peoplesEndedTogether(g)) L.otherFate = cultureOf(g, 1 - L.which).ageYears > cultureOf(g, L.which).ageYears ? -1 : 1;
+    }
     return L;
+}
+
+Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g, int which) {
+    Lore L = loreQuick(sys, b, g, which);
+    BodyGen pg = g; pg.seed = L.seed;   // C-13: the people's draws
+    chartMarksOf(sys, b, pg, L.marks);   // C-10: the stars their charts mark (the sky scanned once, a few milliseconds)
+    return L;
+}
+
+std::string peopleNameOf(const BodyGen& g) { Lore L; loreNames(g, L); return L.people; }
+int loreStyleOf(const BodyGen& g) { Rng rng(g.seed ^ 0x10BE5ULL); double sw[3] = {0.4, 0.3, 0.3}; return rng.pick(sw, 3); }   // C-12: `loreNames`' first draw
+std::string personName(int style, uint64_t seed) { Rng rng(seed); return shortName(rng, style, 9); }   // C-12
+
+std::string shardDate(const Lore& L, const Shard& s) {   // C-12
+    std::string d = "year " + std::to_string(s.year) + " of " + L.city;
+    if (L.calendar == 1) d += ", moon " + std::to_string(s.month) + ", day " + std::to_string(s.day);
+    else if (L.calendar == 0) d += ", day " + std::to_string(s.day);
+    else if (L.calendar == 2) d += ", moon " + std::to_string(s.month);
+    return d;
+}
+std::string calendarLine(const Lore& L) {   // C-12: no unit of ours: their day is their own
+    char buf[120];
+    switch (L.calendar) {
+        case 1: { int over = (int)std::lround(L.yearDays) - L.months * L.monthDays; if (over > 0) snprintf(buf, sizeof buf, "year: %d moons of %d days and %d over", L.months, L.monthDays, over); else snprintf(buf, sizeof buf, "year: %d moons of %d days", L.months, L.monthDays); break; }
+        case 0: snprintf(buf, sizeof buf, "year: %.0f days   %s", L.yearDays, L.moons > 0 ? "the moon too quick to count" : "no moon to count by"); break;
+        case 2: snprintf(buf, sizeof buf, "year: %d moons   the day is the year", L.months); break;
+        default: snprintf(buf, sizeof buf, "the day is the year   no moon: years alone"); break;
+    }
+    return buf;
 }
 
 int shardKindCount() { return (int)kinds().size(); }
@@ -367,33 +451,98 @@ int shardWords(const std::string& text) {
     return n;
 }
 
-// C-04: twelve to eighteen of a world's fifty are music, which ones by a shuffle of the fifty from the world's seed
+// C-04: twelve to eighteen of a world's fifty are music, which ones by a shuffle of the fifty from the world's seed; C-10:
+// the three to five after them in the same shuffle are star charts, so the music stayed where C-04 put it
+namespace { void shardShuffle(const BodyGen& g, int* order) {
+    for (int i = 0; i < SHARDS_PER_WORLD; i++) order[i] = i;
+    Rng rng(mix64(g.seed ^ 0x3C04C1ULL));
+    for (int i = SHARDS_PER_WORLD - 1; i > 0; i--) std::swap(order[i], order[rng.irange(i + 1)]);
+} }
 int musicShardsOf(const BodyGen& g) { return 12 + (int)(mix64(g.seed ^ 0x3C04C0ULL) % 7); }
 bool shardIsMusic(const BodyGen& g, int index) {
     if (index < 0 || index >= SHARDS_PER_WORLD) return false;
-    int order[SHARDS_PER_WORLD]; for (int i = 0; i < SHARDS_PER_WORLD; i++) order[i] = i;
-    Rng rng(mix64(g.seed ^ 0x3C04C1ULL));
-    for (int i = SHARDS_PER_WORLD - 1; i > 0; i--) std::swap(order[i], order[rng.irange(i + 1)]);
+    int order[SHARDS_PER_WORLD]; shardShuffle(g, order);
     int count = musicShardsOf(g);
     for (int i = 0; i < count; i++) if (order[i] == index) return true;
     return false;
 }
+int chartShardsOf(const BodyGen& g) { return 3 + (int)(mix64(g.seed ^ 0xC4A27ULL) % 3); }
+int chartIndexOf(const BodyGen& g, int index) {
+    if (index < 0 || index >= SHARDS_PER_WORLD) return -1;
+    int order[SHARDS_PER_WORLD]; shardShuffle(g, order);
+    int music = musicShardsOf(g), charts = chartShardsOf(g);
+    for (int i = 0; i < charts; i++) if (order[music + i] == index) return i;
+    return -1;
+}
+bool shardIsChart(const BodyGen& g, int index) { return chartIndexOf(g, index) >= 0; }
+uint64_t chartSeedOf(const BodyGen& g, int index) { return mix64(g.seed ^ 0xC4A28ULL ^ ((uint64_t)(index + 1) * 0x9E3779B97F4A7C15ULL)); }
+
+// C-12: the last recording: of the text shards (the music and the charts left out) the one whose age draw is the greatest
+// (`shardOf`'s first draw of the shard's seed); `shardOf` sets its age to 1, so it is the latest of all fifty, and its tone the end
+int lastShardOf(const BodyGen& g) {
+    int order[SHARDS_PER_WORLD]; shardShuffle(g, order);
+    bool skip[SHARDS_PER_WORLD] = {};
+    int taken = musicShardsOf(g) + chartShardsOf(g);
+    for (int i = 0; i < taken; i++) skip[order[i]] = true;
+    int best = -1; double bestAge = -1;
+    uint64_t base = mix64(g.seed ^ 0x5A4D5ULL);
+    for (int i = 0; i < SHARDS_PER_WORLD; i++) {
+        if (skip[i]) continue;
+        Rng rng(base + (uint64_t)i * 0x9E3779B97F4A7C15ULL);
+        double age = rng.uni();
+        if (age > bestAge) { bestAge = age; best = i; }
+    }
+    return best;
+}
 
 Shard shardOf(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L, int index) {
     Shard s;
-    s.seed = mix64(g.seed ^ 0x5A4D5ULL) + (uint64_t)index * 0x9E3779B97F4A7C15ULL;
+    BodyGen pg = g; pg.seed = loreSeed(g, L);   // C-13: the people's draws, whichever generator the caller holds
+    s.seed = mix64(pg.seed ^ 0x5A4D5ULL) + (uint64_t)index * 0x9E3779B97F4A7C15ULL;
     Rng rng(s.seed);
     s.age = rng.uni();
+    s.last = index == (L.last >= 0 ? L.last : lastShardOf(pg));   // C-12: the last recording: the latest of all, the end's tone
+    if (s.last) s.age = 1.0;
     s.year = 1 + (int)std::lround(s.age * L.spanYears);
+    {   // C-12: the date within the year, from the seed and not the stream (the texts stayed where C-02 left them)
+        uint64_t h = mix64(s.seed ^ 0xCA1E0ULL);
+        if (L.months > 0) s.month = 1 + (int)(h % (uint64_t)L.months);
+        int days = L.calendar == 1 ? L.monthDays : (L.calendar == 0 ? std::max(1, (int)std::lround(L.yearDays)) : 0);
+        if (days > 0) s.day = 1 + (int)((h >> 24) % (uint64_t)days);
+    }
     Grammar G;
     buildGrammar(sys, b, g, L, s.age, rng, G);
     s.tone = pickTone(L.desert, s.age, rng);
-    s.music = shardIsMusic(g, index);   // C-04: a piece of music (the tone stays, the piece's form follows it)
+    if (s.last) s.tone = ST_END;   // C-12
+    s.music = shardIsMusic(pg, index);   // C-04: a piece of music (the tone stays, the piece's form follows it)
     if (s.music) return s;
+    s.chart = shardIsChart(pg, index);   // C-10: a star chart: the caption names its figures and the star it marks, the tone colours the frame
+    if (s.chart) {
+        s.kind = -1;
+        StarChart ch;
+        if (chartOf(sys, b, pg, L, index, ch)) {
+            std::vector<std::string> names; std::string inFig;
+            for (const ChartFigure& f : ch.figures) { names.push_back(f.name); for (int k : f.stars) if (k == ch.markStar) inFig = ", in " + f.name; }
+            G.set("figs", {names.empty() ? std::string("no figure we know") : chartFigureList(names)});
+            G.set("other", {ch.mark.people.empty() ? std::string("others") : ch.mark.people});
+            G.set("infig", {inFig});
+            int named = 0; for (int j = 0; j < ch.which; j++) if (L.marks[j].how == 0) named++;   // the first star of no people is the one the lore names
+            static const char* NAMED[4] = {"{star}, the brightest of our nights{infig}", "the star that rises before {festival}{infig}", "the star that stands over {mountain} at midwinter{infig}", "the star {founder} steered by{infig}"};
+            G.set("mark", {ch.mark.how == 2 ? "the star the voices come from{infig}: the hearth of the {other}" : (ch.mark.how == 1 ? "the star of the {other}{infig}: they are there as we are here" : NAMED[std::min(named, 3)])});
+            s.child = ch.mark.people;   // the other people's name: kept as it is by the decoder
+            static const char* TPL[ST_TONE_COUNT] = {
+                "The sky over {city} [at {festival}|on the longest night|in {season}]: {figs}. We marked {mark}.",
+                "The stars {founder} knew over {city}: {figs}. [{kin} could name them all|The children learn them still]. We marked {mark}.",
+                "[The sky as we drew it this year|What is still over {city} at night]: {figs}. We marked {mark}, so that it is not lost.",
+                "The last sky we drew: {figs}. We marked {mark}, so that someone will know where we looked."};
+            s.text = tidy(G.expand(TPL[s.tone], rng, 0));
+        }
+        return s;
+    }
     const auto& K = kinds();
     std::vector<int> cand; std::vector<double> w;
     int world = L.desert ? 2 : 1;
-    for (int k = 0; k < (int)K.size(); k++) if (K[k].tone == s.tone && (K[k].world == 0 || K[k].world == world) && (!L.desert || s.age <= K[k].until)) { cand.push_back(k); w.push_back(K[k].w); }
+    for (int k = 0; k < (int)K.size(); k++) if (K[k].tone == s.tone && (K[k].world == 0 || K[k].world == world) && (!L.desert || s.age <= K[k].until) && (!K[k].other || !L.other.empty())) { cand.push_back(k); w.push_back(K[k].w); }   // C-13: the "other" kinds where the world had two peoples
     if (cand.empty()) for (int k = 0; k < (int)K.size(); k++) if (K[k].tone == ST_ORDINARY) { cand.push_back(k); w.push_back(K[k].w); }
     s.kind = cand[rng.pick(w.data(), (int)w.size())];
     const Kind& kd = K[s.kind];
@@ -508,7 +657,7 @@ void shardSitesOf(const RuinSpec& r, const Culture& c, std::vector<ShardSite>& o
             if (!clear) continue;
             ShardSite s; s.building = bi; s.place = place; s.x = x; s.z = z; s.heading = b.heading + rng.sym(0.5);
             for (int tries = 0; tries < 50; tries++) {
-                s.index = rng.irange(SHARDS_PER_WORLD);
+                s.index = shardWorldIndex(r.people, rng.irange(SHARDS_PER_WORLD));   // C-13: from the settlement's people's fifty
                 bool dup = false; for (const ShardSite& o : out) if (o.index == s.index) dup = true;
                 if (!dup) break;
             }
@@ -554,7 +703,7 @@ bool allDigits(const std::string& s) { if (s.empty()) return false; for (unsigne
 
 Tongue tongueOf(const BodyGen& g, const Lore& L) {
     Tongue T;
-    T.seed = mix64(g.seed ^ 0x70A6E5ULL);
+    T.seed = mix64(loreSeed(g, L) ^ 0x70A6E5ULL);   // C-13: the people's
     Rng rng(T.seed);
     int st = L.style < 0 || L.style > 2 ? 0 : L.style;
     auto draw = [&](const std::vector<std::string>& pool, int n, std::vector<std::string>& out) {
@@ -590,6 +739,7 @@ std::string tongueWord(const Tongue& T, const std::string& word, int attempt) {
 void languageOf(const Lore& L, const std::vector<Shard>& fifty, const Tongue& T, Language& out) {
     out = Language();
     for (const std::string& nm : {L.people, L.god, L.river, L.mountain, L.sea, L.city, L.city2, L.founder, L.moon, L.star, L.festival}) out.names.insert(lowerOf(nm));
+    if (!L.other.empty()) out.names.insert(lowerOf(L.other));   // C-13: the other people's name, kept as it is
     for (const Shard& s : fifty) if (!s.child.empty()) out.names.insert(lowerOf(s.child));
     std::map<std::string, int> count;
     for (const Shard& s : fifty) {

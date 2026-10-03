@@ -75,6 +75,7 @@ void Game::drawCommonHUD() {
 void Game::renderSpaceHUD() {
     if (radar.on) { renderRadarCamera(); drawCommonHUD(); return; }   // C-07: the radar camera's own frame
     drawVisor(HUD_DIM);
+    if (chartUp && ship.mode != ShipState::VIMANA) drawChartOverlay(viewBasis(), ship.pos, spaceR.proj, nullptr);   // C-10: the chart held up to the sky
     std::string sysName = sys.valid ? trunc(upper(starNameOf(sys.star)), 26) : "INTERSTELLAR SPACE";
     drawTextShadow(canvas, 8, 8, sysName.c_str(), HUD_GREEN, HUD_SHADOW);
     drawTextShadow(canvas, UW - 8 - textWidth(epocString().c_str()), 8, epocString().c_str(), HUD_GREEN, HUD_SHADOW);
@@ -445,6 +446,10 @@ void Game::renderSectorMap() {
 }
 
 void Game::renderSurfaceHUD() {
+    if (chartUp && !photoMode && surf.env.skyBrightness < 0.5) {   // C-10: the chart held up to the night sky, the figures kept above the horizon
+        Mat3 lf = surf.site.localFrame(t);
+        drawChartOverlay(surf.testCamWorld(t), surf.site.worldPos(t, surf.player.x, surf.player.z, 0.002), surf.proj, &lf);
+    }
     drawVisor(HUD_DIM);
     const SurfaceEnvironment& e = surf.env;
     // (B-309: the visor glint arcs of N5-02 are gone; their angle spun whenever the sun sat near the screen centre
@@ -508,6 +513,7 @@ void Game::renderSurfaceHUD() {
         drawTextShadow(canvas, 8, UH - 24, envl2.c_str(), HUD_GREEN, HUD_SHADOW);
         drawTextShadow(canvas, UW - 8 - textWidth(cap.c_str()), UH - 32, cap.c_str(), e.nearCapsule ? HUD_AMBER : HUD_CYAN, HUD_SHADOW);
         if (surf.nearShard.index >= 0) drawTextShadow(canvas, UW - 8 - textWidth("A SHARD HERE - E"), UH - 40, "A SHARD HERE - E", HUD_AMBER, HUD_SHADOW);   // C-03
+        if (surf.nearGrave.k >= 0) { std::string gl = fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()); drawTextShadow(canvas, UW - 8 - textWidth(gl.c_str()), UH - 56, gl.c_str(), HUD_AMBER, HUD_SHADOW); }   // C-12: the stone's name and years
         drawTextShadow(canvas, 8, 16, fmt("SECTOR %s", sectorName(e.latDeg, e.lonDeg).c_str()).c_str(), HUD_DIM, HUD_SHADOW);   // O2 (R-301)
         {   // B-321: the suit's life sensor: the nearest herd or flock within 1.5 km, its bearing and distance (`X` still brackets what is in view)
             double best = 1e9, bx = 0, bz = 0; bool flock = false;
@@ -516,6 +522,13 @@ void Game::renderSurfaceHUD() {
             if (best < 1500) {
                 std::string life = best < 25 ? "LIFE HERE" : fmt("LIFE %s %s%s", metresString(best).c_str(), compassName(wrap2pi(std::atan2(bx, bz))), flock ? " (FLYERS)" : "");
                 drawTextShadow(canvas, UW - 8 - textWidth(life.c_str()), UH - 40, life.c_str(), HUD_CYAN, HUD_SHADOW);
+            }
+        }
+        if (!surf.site.roads.empty()) {   // C-09: the old road under the feet and the way it runs
+            double d, along, hd; const SiteRoad* rd;
+            if (surf.site.roadAt(pl.x, pl.z, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3) {
+                std::string rl = fmt("OLD ROAD %s-%s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));
+                drawTextShadow(canvas, UW - 8 - textWidth(rl.c_str()), UH - 48, rl.c_str(), HUD_CYAN, HUD_SHADOW);
             }
         }
     }
@@ -621,6 +634,11 @@ void Game::renderSurfaceHUD() {
         drawTextShadow(canvas, 8, UH - 48, fmt("%3.0f", kmh).c_str(), fc, HUD_SHADOW, 2);
         drawTextShadow(canvas, 8 + textWidth("000", 2) + 4, UH - 42, "KM/H", fd, HUD_SHADOW);
         drawTextShadow(canvas, 8, UH - 32, fmt("GEAR %d%s", b.gear + 1, b.speed < -0.2 ? "  REVERSE" : "").c_str(), HUD_GREEN, HUD_SHADOW);
+        if (!surf.site.roads.empty()) {   // C-09: the old road under the wheels and the way it runs
+            double d, along, hd; const SiteRoad* rd;
+            if (surf.site.roadAt(b.x, b.z, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3)
+                drawTextShadow(canvas, 8, UH - 58, fmt("OLD ROAD %s-%s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI))).c_str(), HUD_CYAN, HUD_SHADOW);
+        }
         drawTextShadow(canvas, 8, UH - 24, fmt("TRIP %.2f KM", b.odometer / 1000.0).c_str(), HUD_GREEN, HUD_SHADOW);
         {   // the steering bar
             int cx = UW / 2, y = UH - 28;

@@ -59,7 +59,7 @@ Timbre makeTimbre(int family, Rng& rng) {
 }   // namespace
 
 Tradition traditionOf(const BodyGen& g, const Lore& L) {
-    Tradition T; T.seed = mix64(g.seed ^ 0x3C04A1ULL);
+    Tradition T; T.seed = mix64(loreSeed(g, L) ^ 0x3C04A1ULL);   // C-13: the people's
     Rng rng(T.seed);
     // the period: the octave, now and then a stretched or a narrow one, rarely the twelfth
     double pr = rng.uni();

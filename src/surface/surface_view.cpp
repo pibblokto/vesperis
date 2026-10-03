@@ -182,6 +182,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     tick("start");
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
+    site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // C-09: the old roads round the site, before anything samples the ground
     tick("site");
     grain.generate(site.gen.seed ^ 0x77, 9, 1);
     grainFine.generate(site.gen.seed ^ 0x99, 4, 0);
@@ -217,7 +218,12 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     prefetchStage = 0; prefetchRing = 0;
     for (int m = 0; m < MAT_COUNT; m++) mesoBuilt[m] = false;
     footprints.clear(); footHead = 0; stepAccum = 0; lastStepX = 6; lastStepZ = -4;
-    ruinCells.clear(); culture = cultureOf(site.gen);   // C-01
+    ruinCells.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;   // C-01; C-13: the world's peoples, each with a culture and a lore
+    for (int k = 0; k < 2; k++) {
+        cultures[k] = k < peoples ? cultureOf(site.gen, k) : Culture();
+        lores[k] = worldHadCivilisation(site.gen) && k < peoples ? loreQuick(*site.sys, site.sys->bodies[site.body], site.gen, k) : Lore();   // C-12: for the graves' names and years
+    }
+    nearGrave = NearGrave();
     shardsFound.clear(); nearShard = NearShard();   // C-03 (the game refills the set from the guide after this)
     trail.clear(); hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
     tick("capsule+misc");
@@ -464,7 +470,10 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
         Ruin& r = c.r;
         site.localAt(StarSystem::bodyFromLatLon(c.spec.lat, c.spec.lon), r.x, r.z);
         r.heading = c.spec.heading; r.kind = c.spec.kind; r.style = c.spec.style; r.size = c.spec.size; r.spec = &c.spec;
-        if (c.spec.kind == RK_SETTLEMENT) { for (int l = 0; l < 3; l++) ruinElements(c.spec, culture, l, c.elems[l]); shardSitesOf(c.spec, culture, c.shards); }   // C-03: and its shards
+        if (c.spec.kind == RK_SETTLEMENT) {   // C-03: and its shards; C-12: and its graves, their stones drawn with the pieces; C-13: in its people's culture and lore
+            const Culture& cu = cultures[c.spec.people == 1 && peoples > 1 ? 1 : 0]; const Lore& lo = lores[c.spec.people == 1 && peoples > 1 ? 1 : 0];
+            for (int l = 0; l < 3; l++) ruinElements(c.spec, cu, l, c.elems[l]); shardSitesOf(c.spec, cu, c.shards); gravesOf(lo, c.spec, cu, c.graves); graveElements(c.graves, 0, c.elems[0]);
+        }
     }
     return &c;
 }
@@ -474,6 +483,27 @@ bool SurfaceView::ruinAt(int gLat, int gLon, Ruin& r) const {
     if (!c->has) return false;
     r = c->r;
     return true;
+}
+
+int SurfaceView::settlementsNear(double x, double z, const RuinCell* near[4]) const {
+    int n = 0;
+    if (!worldHadCivilisation(site.gen)) return 0;
+    forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& c, int) {
+        if (r.kind != RK_SETTLEMENT || n >= 4) return;
+        double dx = r.x - x, dz = r.z - z;
+        if (dx * dx + dz * dz < (r.size + 50) * (r.size + 50)) near[n++] = &c;
+    });
+    return n;
+}
+bool SurfaceView::inSettlementBuilding(const RuinCell& c, double x, double z, double margin) {
+    double dx = x - c.r.x, dz = z - c.r.z;
+    if (dx * dx + dz * dz > (c.r.size + 40) * (c.r.size + 40)) return false;
+    for (const Building& bd : c.spec.buildings) {
+        double ex = dx - bd.x, ez = dz - bd.z;
+        double lx = ex * std::cos(bd.heading) - ez * std::sin(bd.heading), lz = ex * std::sin(bd.heading) + ez * std::cos(bd.heading);
+        if (std::fabs(lx) < bd.hw + margin && std::fabs(lz) < bd.hd + margin) return true;
+    }
+    return false;
 }
 
 // C-01: a settlement's pieces (`ruinElements`) as boxes and domes on the ground at their own foot, the far side of every box
@@ -495,8 +525,11 @@ void SurfaceView::drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell&
     const Vec3& sd = env.sun.dirLocal;
     double sunUp = smoothstep(-0.03, 0.06, sd.y), lf = env.sun.lightFactor;
     double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
+    const Culture& culture = cultures[sp.people == 1 && peoples > 1 ? 1 : 0];   // C-13: the settlement's people's
     RasterParams rp; rp.bank = culture.family == 1 ? 9 : 0;
     if (culture.style == 1) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }
+    RasterParams rpSand; rpSand.bank = 9;   // C-08: the drifts against the walls
+    const RasterParams* rpUse = &rp;
     double fwx = camLocal.m[2][0], fwz = camLocal.m[2][2];   // the camera's forward on the ground
     auto face = [&](Vec3 a, Vec3 b, Vec3 c, Vec3 d, double fog) {
         Vec3 n = normalize(cross(b - a, d - a));
@@ -507,7 +540,7 @@ void SurfaceView::drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell&
         shade += (63 - shade) * fog;
         RVert q[4]; Vec3 pts[4] = {a, b, c, d};
         for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].y * 0.5; q[k].v = pts[k].z + pts[k].y * 0.5; }
-        rasterPolygon(fb, q, 4, rp, proj);
+        rasterPolygon(fb, q, 4, *rpUse, proj);
     };
     auto box = [&](Vec3 c, double hx, double hy, double hz, double heading, double fog) {   // c the base's centre, hy the height
         Vec3 f(std::sin(heading), 0, std::cos(heading)), s(std::cos(heading), 0, -std::sin(heading));
@@ -522,8 +555,9 @@ void SurfaceView::drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell&
         if (d > 5 && ext / d * proj.f < 1.2) continue;
         if (d > ext + 2 && ddx * fwx + ddz * fwz < -ext) continue;   // behind the camera
         double gy;
-        if (lod < 2) { gy = site.groundHeight(ex, ez); double w = site.waterAt(ex, ez); if (w > -1e8 && gy < w) continue; }
+        if (lod < 2) { gy = site.groundHeight(ex, ez); double w = site.waterAt(ex, ez); if (w > -1e8 && gy < w) { if (e.part != 6) continue; gy = w; } }   // C-08: the harbour works stand in the water, their foot at its level
         else gy = cell.base[e.building < 0 ? 0 : e.building];
+        rpUse = e.part == 7 ? &rpSand : &rp;
         double fog = 1 - std::exp(-d / env.fogDistance);
         bool onGround = e.y0 < 0.01;
         double y0 = gy + e.y0 - (onGround ? 1.0 : 0), hy = (e.y1 - e.y0) + (onGround ? 1.0 : 0);
@@ -703,6 +737,7 @@ void SurfaceView::reanchor() {
     const StarSystem* sys = site.sys;
     int body = site.body;
     site.init(sys, body, lat, lon, lastT);
+    site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // C-09: the roads in the new frame's metres
     double cx, cz;
     site.localAt(capU, cx, cz);
     // headings are measured from local north, which turns with the meridians
@@ -951,6 +986,7 @@ void SurfaceView::computeEnvironment(double t) {
     env.capsuleBearing = wrap2pi(std::atan2(dx, dz));
     env.nearCapsule = env.capsuleDist < 7.0;
     findNearShard();   // C-03
+    findNearGrave();   // C-12
 }
 
 // C-03: the nearest shard the explorer does not have within 2.2 m, on this floor (within 2 m of height), for E and the HUD
@@ -966,6 +1002,22 @@ void SurfaceView::findNearShard() {
             if (d >= best) continue;
             if (std::fabs(site.groundHeight(x, z) - player.y) > 2.0) continue;
             best = d; nearShard.index = s.index; nearShard.place = s.place; nearShard.sclass = cell.spec.sclass; nearShard.x = x; nearShard.z = z; nearShard.dist = d;
+        }
+    });
+}
+
+// C-12: the nearest grave within 2.2 m of the explorer on foot, for the HUD and the guide
+void SurfaceView::findNearGrave() {
+    nearGrave = NearGrave();
+    if (inVehicle() || !worldHadCivilisation(site.gen)) return;
+    double best = 2.2;
+    forNearbyRuins(player.x, player.z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT) return;
+        for (size_t k = 0; k < cell.graves.size(); k++) {
+            const Grave& g = cell.graves[k];
+            double x = r.x + g.x, z = r.z + g.z, d = std::sqrt((x - player.x) * (x - player.x) + (z - player.z) * (z - player.z));
+            if (d >= best) continue;
+            best = d; nearGrave.k = (int)k; nearGrave.id = g.id; nearGrave.sclass = cell.spec.sclass; nearGrave.line = graveLine(lores[cell.spec.people == 1 && peoples > 1 ? 1 : 0], g); nearGrave.hud = g.name + (g.born > 0 ? ", " + std::to_string(g.born) + "-" + std::to_string(g.died) : ", to " + std::to_string(g.died)); nearGrave.x = x; nearGrave.z = z; nearGrave.dist = d;
         }
     });
 }
@@ -1073,6 +1125,10 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     {   // KI-007: keep the local frame close: 50 km on a planet, a third of the radius on a small body (O4)
         double reach = std::min(50e3, 0.35 * site.R);
         if (player.x * player.x + player.z * player.z > reach * reach) reanchor();
+    }
+    if (!site.roadCells.empty()) {   // C-09: the roads grow with the explorer: two cells from the last build, the next block (the worker joined first: the vertices read the list)
+        double dx = player.x - roadBuildX, dz = player.z - roadBuildZ, two = 2 * ruinCellLat(site.gen) * site.R;
+        if (dx * dx + dz * dz > two * two) { joinAhead(); site.ensureRoads(player.x, player.z); roadBuildX = player.x; roadBuildZ = player.z; }
     }
     if (t - drainCheckT > 3.0) {   // O6-03: the drainage tiles the far ring will reach next, computed ahead on their own thread
         drainCheckT = t;
@@ -1201,6 +1257,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
             const TerrainVertex& tv = site.lod0.at(cx, cz);
             bool lava = tv.material == MAT_LAVA;
+            const RuinCell* near[4]; int nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);   // C-08: as the drawing keeps them out
             double rd = rockDensity;
             if (type == PT_FELISIAN && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
             rd *= 1 + 5.0 * tv.scree / 255.0;   // O6-04: boulder fields on the scree under the cliffs
@@ -1213,6 +1270,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
                 double rx = cx * cs + hash01(hr) * cs, rz = cz * cs + hash01(mix64(hr + 1)) * cs;
                 double size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // O6-04: bigger on the scree
                 if (size < 0.6) continue;   // stepped over
+                { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], rx, rz, 1.0); if (in) continue; }
                 double gy = site.groundHeight(rx, rz);
                 if (gy < site.waterAt(rx, rz)) continue;
                 out.push_back({rx, rz, size * 0.8, 0, gy - size * 0.15, gy + size * 1.15});   // the peak stands up to 1.3 sizes over a base sunk 0.15
@@ -2712,6 +2770,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
             const TerrainVertex& tv = site.lod0.at(cx, cz);
             bool lava = tv.material == MAT_LAVA;
+            const RuinCell* near[4]; int nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);   // C-08: no rock in a room
             // rocks
             double rd = rockDensity;
             if (type == PT_FELISIAN && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
@@ -2727,6 +2786,8 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                 double size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // O6-04: bigger on the scree
                 double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
                 if (size / dist * proj.f < 0.8) continue;
+                { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], rx, rz, 1.0); if (in) continue; }
+                if (!site.roads.empty() && site.roadCover(rx, rz) > 0.3) continue;   // C-09: no rock on the road's bed
                 double gy = site.groundHeight(rx, rz);
                 if (gy < site.waterAt(rx, rz)) continue;
                 double a0 = hash01(mix64(hr + 3)) * TAU;

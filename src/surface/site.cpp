@@ -1,4 +1,6 @@
 #include "site.h"
+#include "core/parallel.h"
+#include <chrono>
 #include "space/space_view.h"
 #include <cmath>
 
@@ -29,7 +31,95 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
     t.water = (float)s.water;
     t.shore = (float)s.shore;
     t.scree = (uint8_t)clampi((int)(s.scree * 255 + 0.5), 0, 255);
+    if (!roads.empty() && detailM <= 100) {   // C-09: an old road through this vertex (the coarse rings see nothing: a seven-metre road is a hundredth of their cells)
+        double d, along, hd; const SiteRoad* rd;
+        if (roadAt(x, z, 0.5 * detailM + 8.0, d, along, hd, rd)) {
+            double half = rd->half;
+            double overlap = clampd(half + 0.5 * detailM - d, 0, std::min(2 * half, detailM));   // the road's share of the footprint: a box across it
+            double cover = overlap / detailM * roadLeft(rd->id, along, rd->wear);                   // less what the wear took
+            if (cover > 0.002) {
+                t.road = (uint8_t)clampi((int)(cover * 255 + 0.5), 1, 255);
+                bool dry = t.material != MAT_WATER && t.material != MAT_ICE && t.material != MAT_SNOW && t.material != MAT_LAVA && t.material != MAT_GLASS && !(t.water > -1e8f && t.h < t.water + 0.3f);
+                double maxCover = std::min(1.0, 2 * half / detailM);
+                if (dry && detailM <= 24 && cover >= 0.5 * maxCover) {   // on the bed (the fine rings): the paving, or the beaten earth, bare and darker
+                    int fam = matFamily(t.material);
+                    if (rd->paved) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.75f : 0.9f; }   // the paving: the rock family (on rock ground, darker stone)
+                    else if (fam == FAM_GRASS || fam == FAM_FOREST) { t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.85f; }   // the beaten track: bare earth through the green
+                    else { if (t.material == MAT_SAND) t.material = MAT_DUST; t.albedo *= 0.5f; }   // beaten sand is packed and dark (the dust tile: no ripples), beaten rock darker; a fifth less read as the sand's own patches
+                    t.veg *= 0.1f;
+                } else if (dry) {   // the line from the air (the 64 m ring): the tone, darker the more of the footprint it holds
+                    double k = std::min(1.0, cover * std::max(1.0, detailM / 16.0));
+                    t.albedo *= (float)(1 - 0.28 * k);
+                    t.veg *= (float)(1 - 0.8 * k);
+                }
+            }
+        }
+    }
     return t;
+}
+
+// C-09: the roads of the site. Walked once per pair from the cells looked at so far (`RoadNodeCache`), kept in local metres
+// with the metres along each for the wear's gaps; `roadAt` is the nearest road's segment within reach (the bounds first, so
+// a vertex far from every road costs a few comparisons)
+void SurfaceSite::clearRoads() { roads.clear(); roadIds.clear(); roadCells.clear(); roadNodes.reset(&gen); roadsMs = 0; }
+
+void SurfaceSite::ensureRoads(double x, double z) {
+    if (!worldHadCivilisation(gen)) return;
+    auto t0 = std::chrono::steady_clock::now();
+    if (roadCells.empty()) { roadCultures[0] = cultureOf(gen, 0); roadCultures[1] = peoplesOf(gen) > 1 ? cultureOf(gen, 1) : roadCultures[0]; roadNodes.reset(&gen); }   // C-13: each people's
+    double lat, lon; latLonAt(x, z, lat, lon);
+    int gLat0, gLon0; ruinCellOf(gen, lat, lon, gLat0, gLon0);
+    std::vector<RoadPair> pairs;
+    for (int dl = -ROAD_BLOCK; dl <= ROAD_BLOCK; dl++)
+        for (int dn = -ROAD_BLOCK; dn <= ROAD_BLOCK; dn++) {
+            if (!roadCells.insert(roadCellKey(gen, gLat0 + dl, gLon0 + dn)).second) continue;
+            roadNodes.pairsOf(gLat0 + dl, gLon0 + dn, pairs);
+        }
+    std::vector<RoadPair> todo;
+    for (const RoadPair& p : pairs) if (roadIds.insert(p.id).second) todo.push_back(p);
+    std::vector<Road> rs(todo.size()); std::vector<char> ok(todo.size(), 0);
+    auto walkRange = [&](int i0, int i1) { for (int i = i0; i < i1; i++) ok[i] = roadWay(gen, roadCultures[roadPeopleOf(todo[i].a, todo[i].b)], todo[i].a, todo[i].b, rs[i]) ? 1 : 0; };   // C-13: built as its people built
+    if (todo.size() > 4) parallelFor((int)todo.size(), 2, walkRange); else walkRange(0, (int)todo.size());
+    for (size_t i = 0; i < todo.size(); i++) {
+        if (!ok[i]) continue;
+        const Road& r = rs[i];
+        SiteRoad sr; sr.id = r.id; sr.half = (float)r.halfWidth; sr.paved = roadCultures[r.people].paved; sr.wear = (float)roadCultures[r.people].roadWear;   // C-13
+        double along = 0, px = 0, pz = 0;
+        for (size_t k = 0; k < r.pts.size(); k++) {
+            double rx, rz; localAt(r.pts[k], rx, rz);
+            if (k) along += std::hypot(rx - px, rz - pz);
+            sr.x.push_back((float)rx); sr.z.push_back((float)rz); sr.along.push_back((float)along);
+            if (!k) { sr.x0 = sr.x1 = (float)rx; sr.z0 = sr.z1 = (float)rz; }
+            sr.x0 = std::min(sr.x0, (float)rx); sr.x1 = std::max(sr.x1, (float)rx); sr.z0 = std::min(sr.z0, (float)rz); sr.z1 = std::max(sr.z1, (float)rz);
+            px = rx; pz = rz;
+        }
+        roads.push_back(std::move(sr));
+    }
+    roadsMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+}
+
+bool SurfaceSite::roadAt(double x, double z, double within, double& dist, double& along, double& heading, const SiteRoad*& road) const {
+    double best = within; road = nullptr;
+    for (const SiteRoad& r : roads) {
+        if (x < r.x0 - within || x > r.x1 + within || z < r.z0 - within || z > r.z1 + within) continue;
+        for (size_t i = 0; i + 1 < r.x.size(); i++) {
+            double ax = r.x[i], az = r.z[i], bx = r.x[i + 1], bz = r.z[i + 1];
+            if (std::min(ax, bx) > x + best || std::max(ax, bx) < x - best || std::min(az, bz) > z + best || std::max(az, bz) < z - best) continue;
+            double dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz;
+            double t = L2 > 1e-9 ? clampd(((x - ax) * dx + (z - az) * dz) / L2, 0, 1) : 0;
+            double d = std::hypot(x - (ax + dx * t), z - (az + dz * t));
+            if (d < best) { best = d; road = &r; along = r.along[i] + t * (r.along[i + 1] - r.along[i]); heading = std::atan2(dx, dz); }
+        }
+    }
+    dist = best;
+    return road != nullptr;
+}
+
+double SurfaceSite::roadCover(double x, double z) const {
+    if (roads.empty()) return 0;
+    double d, along, hd; const SiteRoad* r;
+    if (!roadAt(x, z, 10.0, d, along, hd, r)) return 0;
+    return roadLeft(r->id, along, r->wear) * clampd(r->half + 1.0 - d, 0, 1);
 }
 
 double vertexShore(TerrainCache& c, int cx, int cz) {

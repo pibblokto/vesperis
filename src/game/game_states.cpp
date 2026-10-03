@@ -91,6 +91,21 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
             audio.beep = 4;
         }
     }
+    if (!surf.site.roads.empty() && !(surf.inDrone && !surf.drone.landed)) {   // C-09: an old road under the feet or the wheels: a status and a log line the first time on each
+        double d, along, hd; const SiteRoad* rd;
+        if (surf.site.roadAt(surf.player.x, surf.player.z, 12, d, along, hd, rd) && d < rd->half + 1.0 && roadLeft(rd->id, along, rd->wear) > 0.3 && roadsMet.insert(rd->id).second) {
+            std::string way = fmt("%s TO %s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));
+            status(fmt("AN OLD ROAD RUNS HERE, %s", way.c_str()), 4);
+            logEvent("ROAD", fmt("AN OLD ROAD ON %s, %s, UNDER THE %s", upper(bodyNameOf(surf.site.body)).c_str(), way.c_str(), surf.inBuggy ? "WHEELS" : "FEET"));
+        }
+    }
+    if (surf.nearGrave.k >= 0 && guide.graves.insert(graveKey(surf.nearGrave.id)).second) {   // C-12: a grave within reach is read once into the guide, like a landmark: a status and a log line
+        std::string what = upper(surf.nearGrave.line);
+        const char* where = surf.nearGrave.sclass == SC_MONUMENT ? "A LONE MONUMENT" : (surf.nearGrave.sclass == SC_HAMLET ? "A HAMLET" : (surf.nearGrave.sclass == SC_VILLAGE ? "A VILLAGE" : "A TOWN"));
+        status(fmt("A GRAVE: %s", what.c_str()), 5);
+        logEvent("GRAVE", fmt("A GRAVE OUTSIDE %s ON %s: %s", where, upper(bodyNameOf(surf.site.body)).c_str(), what.c_str()));
+        audio.beep = 4;
+    }
     noteLandmarks();   // O6-06
     if (in.wasPressed(KEY_G) && !in.ctrl()) { openGuide(); return; }
     if (in.wasPressed(KEY_J) && !in.ctrl()) { guideReturn = GameState::SURFACE; returnState = GameState::SURFACE; logPage = 0; state = GameState::LOG; return; }

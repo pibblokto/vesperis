@@ -101,6 +101,6 @@ add_test(NAME bench COMMAND vesperis_test bench check WORKING_DIRECTORY ${CMAKE_
 
 # M6-03 packaging: `cpack -B build-cmake` after a build produces a zip (a drag-and-drop bundle on macOS via packaging/make_app.sh)
 set(CPACK_PACKAGE_NAME "vesperis")
-set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VERSION "1.1.0")
 set(CPACK_GENERATOR "ZIP")
 include(CPack)

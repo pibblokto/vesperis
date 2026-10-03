@@ -9,12 +9,14 @@
 #pragma once
 #include "planetmap.h"
 #include <vector>
+#include <string>
 #include <cstdint>
 
 enum RuinKind { RK_COLUMNS = 0, RK_CUBE, RK_DOME, RK_WALLS, RK_GIANT_CUBE, RK_SETTLEMENT };
 enum SettlementClass { SC_HAMLET = 0, SC_VILLAGE, SC_TOWN, SC_MONUMENT };   // a monument: one building alone (a dead desert world's, in the cells the old ones' monoliths take elsewhere)
 enum SettlementPlan { SP_CLUSTER = 0, SP_STREET, SP_RADIAL, SP_GRID, SP_LONE };
-enum BuildingKind { BK_HOUSE = 0, BK_HALL, BK_TOWER, BK_ROTUNDA, BK_GATE, BK_PLATFORM, BK_COLONNADE, BK_STELA, BK_RUBBLE, BK_WALL, BK_COUNT };
+enum BuildingKind { BK_HOUSE = 0, BK_HALL, BK_TOWER, BK_ROTUNDA, BK_GATE, BK_PLATFORM, BK_COLONNADE, BK_STELA, BK_RUBBLE, BK_WALL,
+                    BK_QUAY, BK_MOLE, BK_BOLLARD, BK_TERRACE, BK_CISTERN, BK_WINDWALL, BK_CAIRN, BK_COUNT };   // C-08: what the terrain asked for
 extern const char* const SETTLEMENT_CLASS_NAMES[4];   // "HAMLET", "VILLAGE", "TOWN", "MONUMENT"
 extern const char* const BUILDING_KIND_NAMES[BK_COUNT];
 
@@ -28,8 +30,29 @@ struct Culture {
     int plan = SP_GRID;     // the towns' plan: a grid of streets or rings round the centre
     bool towers = true;     // the culture built towers
     double buried = 0;      // how deep its walls sank into the ground (metres at full decay): a desert's drifted sand
+    // C-08 weathering by age: how long ago the people ended (years, 200 to 40,000, log-uniform from the seed) and how wet the
+    // world is (0 a desert .. 1 a rainy felisian); the base decay is theirs now (`decayOf`), the sand drifts grow with the age
+    double ageYears = 2000, wet = 0.5;
+    // C-09 the roads (`galaxy/roads.*`): half the width (metres, 2.5-4; broader between towns), paved with stone (the rock
+    // family's material) or beaten (the ground's own, bare and darker), and the share of their length that is gone (the
+    // age's and the rain's: a tenth of a young desert people's, over half of a twenty-millennia people's on a wet world)
+    double roadHalf = 3; bool paved = true; double roadWear = 0.2;
+    int people = 0;         // C-13: which of the world's peoples this is (0 the first; 1 the second, where the world had two)
 };
-Culture cultureOf(const BodyGen& g);
+// C-13: the peoples of a world. One world in five of those that had a civilisation had two, each with a culture, a lore, a
+// tongue, a voice, a music and fifty recordings of its own: `peopleGen` is the generator a people's draws read (the world's
+// own for the first people, the world's with its seed mixed for the second, so every draw of C-01..C-12 that read the body's
+// seed is the people's; it is never handed to the planet function: the terrain is the world's). The two lived on either side
+// of a great circle (`peopleDivide`): of twelve drawn from the seed the one that crosses the least land, so where the world has
+// two continents the divide runs through the sea between them; `peopleAt` says whose side a point is. Whether they ended
+// together is a coin of the world's (`peoplesEndedTogether`): the second people's age is then the first's
+int peoplesOf(const BodyGen& g);                          // 0 without the trait, else 1 or 2
+BodyGen peopleGen(const BodyGen& g, int people);          // the generator a people's draws read
+Vec3 peopleDivide(const BodyGen& g);                      // the pole of the great circle between the two (the first people's side is dot >= 0); found once a world and kept
+int peopleAt(const BodyGen& g, double lat, double lon);   // which people lived at a point (0 on a world of one)
+bool peoplesEndedTogether(const BodyGen& g);              // one catastrophe for both
+Culture cultureOf(const BodyGen& g, int people = 0);      // a people's culture (C-13: the second's by its own draws, its age the first's when they ended together)
+double decayOf(double ageYears, double wet);   // 0.05..0.95: a village of two centuries stands, one of thirty millennia is foundations
 
 struct Building {
     int kind = BK_HOUSE;
@@ -53,6 +76,19 @@ struct RuinElem {
     double broken = 0;      // a dome: the share of its height that fell (0 whole)
     int building = -1;
 };
+// C-08: what the terrain round a settlement says (`readSite`: samples of the planet function at 64 m, no tile built), read once
+// when the layout is made and kept with it: the harbour, the terraces, the cisterns, the wind walls and the cairns come from it
+struct SiteRead {
+    double slope = 0;       // the grade across the settlement (rise over run) and the heading the ground falls toward
+    double downhill = 0;
+    double shoreDist = 1e9; // metres from the centre to the nearest water (the sea, a lake, a river) or a dead desert's old sea; 1e9 none within reach
+    double shoreDir = 0;    // the heading toward it
+    bool shoreDry = false;  // the shore is the old sea's (dry now)
+    double relief = 0;      // the planet function's mountain-ness at the centre (0..1)
+    double ridgeDir = 0;    // the heading of the highest ground round the settlement
+    double wind = 0;        // the prevailing wind's heading here (where it blows from), from the world's wind angle, the hemisphere and the band
+    bool desert = false;
+};
 struct RuinSpec {
     int kind = RK_CUBE;     // RuinKind
     int style = 0;          // 0 smooth, 1 striated, 2 glowing lines (the monoliths' styles; a settlement's is its culture's)
@@ -60,10 +96,13 @@ struct RuinSpec {
     double lat = 0, lon = 0;   // the centre (radians)
     double heading = 0;
     uint64_t seed = 0;
+    int people = 0;         // C-13: which of the world's peoples lived here (`peopleAt`): its culture, its lore, the fifty its shards are from
     int sclass = 0;         // SettlementClass
     int plan = 0;           // SettlementPlan
     bool walled = false;    // a town wall round it
     std::vector<Building> buildings;
+    SiteRead site;          // C-08: what the terrain said
+    bool harbour = false, terraced = false, cistern = false, windwall = false, cairns = false;   // C-08: the features it got
 };
 bool worldHasRuins(const BodyGen& g);   // felisian, quartz and ocean worlds (the old ones) and the civilisations' worlds
 inline bool worldHadCivilisation(const BodyGen& g) { return g.hasTrait(TR_CIVILISATION); }
@@ -75,10 +114,17 @@ double ruinCellLat(const BodyGen& g);   // the grid's cell size in radians of la
 // A civilisation's settlements rank town, village, hamlet, monument for the finders
 // `withBuildings` false leaves the settlement's layout out (the landmark finder needs the class and the radius alone)
 bool ruinOfCell(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool withBuildings = true);
+SiteRead readSite(const BodyGen& g, const RuinSpec& r);   // C-08: the terrain round a settlement (its centre, heading and radius must be set)
+std::string featureList(const RuinSpec& r);               // C-08: "a harbour, terraces" for the harness and the finders ("" none)
+// C-08 (KI-345): a landing point inside a settlement's radius plus `marginM` is moved out radially to that distance (the capsule
+// sets down outside the walls); true when it moved. Reads the cell and its eight neighbours without their layouts
+bool settlementClearance(const BodyGen& g, double& lat, double& lon, double marginM = 30);
 inline int settlementRank(int sclass) { return sclass == SC_MONUMENT ? 0 : sclass + 1; }
 // the ground allows it: not under water, and a settlement not across a slope steeper than a quarter (five samples of the
 // planet function at 64 m)
 bool ruinSiteOk(const BodyGen& g, const RuinSpec& r);
+// C-12: a point of the settlement lies outside every building's footprint widened by `margin` (the graves' ground)
+bool settlementClear(const RuinSpec& r, double x, double z, double margin);
 // the drawn pieces of a settlement at a level of detail: 0 whole (the walls with their doorways and windows, the roofs, the
 // columns, the rubble), 1 the walls as one box each, 2 one box per building
 void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<RuinElem>& out);

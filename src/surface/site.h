@@ -4,8 +4,10 @@
 #pragma once
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
+#include "galaxy/roads.h"
 #include <vector>
 #include <algorithm>
+#include <unordered_set>
 
 struct TerrainVertex {
     float h = 0;         // metres, relative to reference level
@@ -17,7 +19,18 @@ struct TerrainVertex {
     float water = -1e9f;   // local water surface height (sea, lake, river), M9-04
     float shore = 1e9f;    // B-322: signed distance to the water's edge (metres, negative in the water), 1e9 unknown
     uint8_t scree = 0;     // O6-04: loose rock 0..255 (boulder fields under the cliffs)
+    uint8_t road = 0;      // C-09: an old road's share of this vertex's footprint (0..255), what the wear left of it
     int32_t cx = 0x7fffffff, cz = 0x7fffffff;   // tags
+};
+
+// C-09: an old road of the site in local metres (`SurfaceSite::ensureRoads`): its centre line, the metres along it at each
+// point, its half width and its bounds
+struct SiteRoad {
+    uint64_t id = 0;
+    float half = 3;
+    bool paved = true; float wear = 0.2f;   // C-13: the builders' (a road between two peoples' settlements is the bigger settlement's people's)
+    std::vector<float> x, z, along;
+    float x0 = 0, z0 = 0, x1 = 0, z1 = 0;
 };
 
 // B-322: the water's edge on the mesh. A cell whose corners lie on both sides of the edge is drawn as pieces cut along the
@@ -88,6 +101,27 @@ struct SurfaceSite {
     bool smallBody = false;      // O4: R under 300 km (comets): exact sphere geometry, no far ring, no floor
     double escapeVelocity = 1e9; // m/s, sqrt(2 g R)
     std::vector<float> ringProf; // O0-01: the ring's density profile when the body has rings (else empty)
+    // C-09: the old roads within the near rings (`galaxy/roads.*`), in local metres, with the culture's paving and wear. The
+    // view builds them after `init` (and again at a reanchor); a probe site does not, so its vertices carry no road.
+    // `sampleAt` draws them into the vertices: the road's share of the footprint (`TerrainVertex::road`), the paving as the
+    // material on the fine rings, the ground bare and darker, the tone alone on the coarse ones
+    std::vector<SiteRoad> roads;
+    double roadsMs = 0;
+    std::unordered_set<uint64_t> roadIds, roadCells;   // the roads walked and the cells whose pairs were listed
+    RoadNodeCache roadNodes;
+    Culture roadCultures[2];                           // C-13: the world's peoples' (one, or two), each road built as its people built
+    void clearRoads();
+    // the roads of the cells within ROAD_BLOCK cells of a point, added to what is built (the view calls it at `init`, at a
+    // reanchor and when the explorer has moved two cells from the last call, with its worker joined: the vertices read the
+    // list on the render threads and nothing may grow it under them)
+    static constexpr int ROAD_BLOCK = 5;
+    void ensureRoads(double x, double z);
+    // the nearest road within `within` metres of a point: its distance, the metres along it, its heading there (radians
+    // from north, either way) and the road; false when none
+    bool roadAt(double x, double z, double within, double& dist, double& along, double& heading, const SiteRoad*& road) const;
+    // 0..1: the road's bed at a point (within its half width, what the wear left; fading over a metre beyond), for the
+    // flora, the rocks and the explorer's feet
+    double roadCover(double x, double z) const;
 
     void init(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);   // t: the season (M9-09)
     double season = 0;

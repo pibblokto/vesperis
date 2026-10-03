@@ -56,7 +56,7 @@ void parsePhones(const std::string& word, std::vector<int>& out) {
 // the voice from the body's seed, leaning with the names' style: hard names (1) sit lower and rougher and click and roll more,
 // flowing names (2) run quicker and breathier and tremble more; the inventory is the sounds the tongue's pools spell
 Voice voiceOf(const BodyGen& g, const Lore& L, const Tongue& T) {
-    Voice V; V.seed = mix64(g.seed ^ 0x3C05A1ULL);
+    Voice V; V.seed = mix64(loreSeed(g, L) ^ 0x3C05A1ULL);   // C-13: the people's
     Rng rng(V.seed);
     int st = L.style < 0 || L.style > 2 ? 0 : L.style;
     double oct = rng.uni() * 1.75;                                   // 85 to 286 Hz

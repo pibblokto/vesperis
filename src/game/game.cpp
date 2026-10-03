@@ -1,6 +1,7 @@
 // Game orchestration core: construction, settings, the frame loop, global keys, test hooks.
 // autopilot.cpp, hud.cpp, landing_map.cpp, game_states.cpp and persistence.cpp hold the rest.
 #include "game.h"
+#include "galaxy/roads.h"
 #include "galaxy/drainage.h"
 #include <chrono>
 #include <cstdlib>
@@ -132,6 +133,7 @@ void Game::newGame() {
     t = 3.6e6;
     timeWarp = 1;
     radarOff(); radar = RadarState();   // C-07
+    chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -431,6 +433,30 @@ void Game::testAimAtBody(int body) {
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
 }
 
+std::string Game::testRoadInfo() const {   // C-09
+    std::string s = fmt("zoom roads %d (%.0f ms); site roads %zu (%.1f ms, %s, wear %.2f)", (int)zoomRoads.size(), zoomRoadsMs, surf.site.roads.size(), surf.site.roadsMs, surf.site.roadCultures[0].paved ? "paved" : "beaten", surf.site.roadCultures[0].roadWear);
+    double d, along, hd; const SiteRoad* rd;
+    if (!surf.site.roads.empty() && surf.site.roadAt(surf.player.x, surf.player.z, 30, d, along, hd, rd))
+        s += fmt("; the nearest road %.1f m off (half %.1f), %.0f m along, heading %.0f, left %.2f, cover at the feet %.2f", d, rd->half, along, wrap2pi(hd) / DEG, roadLeft(rd->id, along, rd->wear), surf.site.roadCover(surf.player.x, surf.player.z));
+    else s += "; no road within 30 m";
+    s += fmt("; roads met %zu", roadsMet.size());
+    return s;
+}
+
+bool Game::testWalkToRoad(double withinM) {   // C-09
+    double d, along, hd; const SiteRoad* rd;
+    if (surf.site.roads.empty() || !surf.site.roadAt(surf.player.x, surf.player.z, withinM, d, along, hd, rd)) return false;
+    double bestD = 1e9, bx = 0, bz = 0;   // the nearest point of its centre line
+    for (size_t i = 0; i + 1 < rd->x.size(); i++) {
+        double ax = rd->x[i], az = rd->z[i], ex = rd->x[i + 1] - ax, ez = rd->z[i + 1] - az, L2 = ex * ex + ez * ez;
+        double t = L2 > 1e-9 ? clampd(((surf.player.x - ax) * ex + (surf.player.z - az) * ez) / L2, 0, 1) : 0;
+        double qx = ax + ex * t, qz = az + ez * t, dd = std::hypot(surf.player.x - qx, surf.player.z - qz);
+        if (dd < bestD) { bestD = dd; bx = qx; bz = qz; }
+    }
+    surf.player.x = bx; surf.player.z = bz; surf.player.y = surf.site.surfaceHeight(bx, bz); surf.player.yaw = hd; surf.player.vx = surf.player.vz = 0;
+    return true;
+}
+
 void Game::testLandSite() {
     if (landBody < 0 || landBody >= (int)sys.bodies.size()) return;
     const PlanetMap& m = spaceR.mapFor(sys.bodies[landBody]);
@@ -554,4 +580,40 @@ std::string Game::testDebugInfo() const {
         r += fmt(" bodyYaw=%.2f bodyPitch=%.2f dist=%.0f R=%.0f", std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)), length(sys.bodyPos(ship.parkedBody, t) - ship.pos), sys.bodies[ship.parkedBody].radiusKm);
     }
     return r;
+}
+
+std::string Game::testGraveInfo() const {   // C-12
+    const SurfaceView::NearGrave& ng = surf.nearGrave;
+    std::string last = guide.log.empty() ? std::string("-") : guide.log.back().kind + ": " + guide.log.back().text;
+    return fmt("grave: %s; %zu graves in the guide; last log: %s", ng.k >= 0 ? fmt("%s (%.1f m, %s)", ng.line.c_str(), ng.dist, SETTLEMENT_CLASS_NAMES[ng.sclass]).c_str() : "none within reach", guide.graves.size(), last.c_str());
+}
+bool Game::testWalkToGrave() {   // C-12: a metre in front of the nearest settlement's first stone, facing it
+    if (!surf.valid || surf.inVehicle()) return false;
+    bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
+    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT || cell.graves.empty()) return;
+        const Grave& g = cell.graves[0];
+        double x = r.x + g.x, z = r.z + g.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
+        if (d < bestD) { bestD = d; sx = x + std::sin(g.heading); sz = z + std::cos(g.heading); yaw = g.heading + PI; found = true; }
+    });
+    if (!found) return false;
+    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz); surf.player.yaw = yaw; surf.player.pitch = -0.35;
+    return true;
+}
+
+bool Game::testWalkToShard() {   // C-13: a metre from the nearest settlement's first shard not yet taken, facing it
+    if (!surf.valid || surf.inVehicle()) return false;
+    bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
+    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        if (r.kind != RK_SETTLEMENT) return;
+        for (const ShardSite& st : cell.shards) {
+            if (surf.shardsFound.count(st.index)) continue;
+            double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
+            if (d < bestD) { bestD = d; sx = x + std::sin(st.heading); sz = z + std::cos(st.heading); yaw = st.heading + PI; found = true; }
+            break;
+        }
+    });
+    if (!found) return false;
+    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz); surf.player.yaw = yaw; surf.player.pitch = -0.5;
+    return true;
 }

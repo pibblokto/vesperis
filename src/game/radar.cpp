@@ -14,6 +14,7 @@
 #include "ui.h"
 #include "galaxy/planetmap.h"
 #include "galaxy/ruins.h"
+#include "core/rng.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -54,18 +55,23 @@ void Game::radarScan() {
 void Game::radarStartContent(const Signal& s, bool next) {
     RadarState& r = radar;
     if (s.kind != SIG_PEOPLE || s.body < 0) return;
-    if (r.worldSeed != s.seed) {   // built once per world; a world that fails to build is not tried again every frame
+    auto build = [&](int which) {   // built once per world and people; a world that fails to build is not tried again every frame
         r.world.key = Guide::bodyKey(s.star.sx, s.star.sy, s.star.sz, s.body);
         Star full = s.star; if (full.name.empty()) starInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
-        buildShardWorld(r.world, full, s.body);
-        r.worldSeed = s.seed; r.shard = -1;
-    }
+        buildShardWorld(r.world, full, s.body, which);
+        r.worldSeed = s.seed; r.worldWhich = which;
+    };
+    if (r.worldSeed != s.seed) { build(0); r.shard = -1; }
     if (!r.world.valid) { r.contentT = -1; return; }
     audio.piece = nullptr; audio.tradition = nullptr; audio.speech = nullptr; audio.voice = nullptr; audio.pieceSpeed = 1;
-    int idx = next && r.shard >= 0 ? nextTransmittedShard(s.seed, r.shard) : transmittedShard(s.seed, t);
-    if (idx < 0 || idx >= (int)r.world.shards.size()) return;
+    int slot = next && r.shard >= 0 ? nextTransmittedShard(s.seed, shardLocalOf(r.shard)) : transmittedShard(s.seed, t);
+    if (slot < 0 || slot >= SHARDS_PER_WORLD) return;
+    // C-13: a world of two peoples has both on the air, the slot's people by a coin of the slot's; the world's machines are one set
+    int which = r.world.peoples > 1 && (mix64(s.seed ^ ((uint64_t)(slot + 1) * 0x9E3779B97F4A7C15ULL) ^ 0xC13A1ULL) & 1) ? 1 : 0;
+    if (which != r.worldWhich) { build(which); if (!r.world.valid) { r.contentT = -1; return; } }
+    int idx = shardWorldIndex(which, slot);   // the world index: the guide's `heard` key and the programme's slot
     r.shard = idx;
-    const Shard& sh = r.world.shards[idx];
+    const Shard& sh = r.world.shards[slot];
     std::vector<DecodedWord> words;
     if (!sh.music) decodeShard(sh, r.world.lang, r.world.tongue, SHARDS_PER_WORLD, words);
     programmeFor(s.seed, idx, sh.music, sh.year, r.world.voice, r.world.tongue, words, r.prog);
@@ -95,7 +101,7 @@ void Game::radarRepeatContent() {
     if (r.contentT - r.loopAt < r.world.speech.seconds + r.prog.gap) return;
     r.loopI++; r.loopAt = r.contentT;
     std::vector<DecodedWord> words; programmeRepeatWords(r.prog, r.loopI, r.world.tongue, words);
-    const Shard& sh = r.world.shards[r.shard];
+    const Shard& sh = r.world.shards[shardLocalOf(r.shard)];
     audio.speech = nullptr;   // the synth drops the old one before the words move
     speechOf(r.prog.voice, words, sh.seed ^ (uint64_t)(r.loopI * 0x9E37), r.world.speech);
     audio.speech = &r.world.speech; audio.speechStart = true; audio.speechDone = false; audio.speechT = -1;
