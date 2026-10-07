@@ -2,6 +2,7 @@
 #include "game.h"
 #include "ui.h"
 #include "core/rng.h"
+#include <cstdlib>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -57,6 +58,33 @@ void Game::lockRemoteTarget() {
     audio.beep = 1;
 }
 
+// R-407: the crosshair's direction in the world: the view's forward (the cabin's head turn on the ship's attitude), the way the
+// aim names and locks its stars
+Vec3 Game::aimDirection() const { return normalize(viewBasis().transposed() * Vec3(0, 0, 1)); }
+
+// R-407 (the user's request of 2026-10-07: "fly stardrifter in any direction you want for any number of light years ... break the
+// loop with just saying 'now I jump 400 light years in that direction' and boom"): the star nearest the end of the line becomes the
+// remote target and the Vimana flies at once; where the end lies in the void the jump comes back along the line to the first stars
+void Game::startJump(double ly, const Vec3& dir) {
+    if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return; }
+    ly = clampd(ly, 1, JUMP_MAX_LY);
+    Star dest; double shortLy = 0;
+    if (!jumpTarget(ship.pos, dir, ly, dest, shortLy, sys.valid ? sys.star.seed : 0)) { status("NO STAR TO COME OUT AT ALONG THAT LINE", 4); audio.beep = 3; return; }
+    Star full; starInSector(dest.sx, dest.sy, dest.sz, full, true);
+    const std::string from = sys.valid ? upper(starNameOf(sys.star)) : std::string("DEEP SPACE");
+    const std::string way = galacticHeading(ship.pos / SECTOR_KM, dir);
+    ship.targeting = false; jumpDigits.clear();
+    setRemoteStar(full);
+    if (!ship.hasRemote || ship.remote.seed != full.seed) return;   // refused (the current star: `jumpTarget` leaves it out already)
+    const double flyLy = length(full.pos - ship.pos) / SECTOR_KM;
+    logEvent("JUMP", fmt("%.0f LY %s FROM %s TO PARSIS %+lld %+lld %+lld, %s%s", ly, way.c_str(), from.c_str(), (long long)full.sx, (long long)full.sy, (long long)full.sz,
+                         REGION_NAMES[galaxyRegion(full.sx, full.sy, full.sz)], shortLy > 0 ? fmt(" (%.0f LY SHORT: THE VOID)", shortLy).c_str() : ""));
+    toggleVimana();
+    if (ship.mode != ShipState::VIMANA) return;
+    if (shortLy > 0) status(fmt("NO STARS OUT THERE - THE JUMP ENDS %.0f LY SHORT", shortLy), 6);
+    else status(fmt("VIMANA JUMP OF %.0f LY: A STAR %.0f LY AWAY", ly, flyLy), 6);
+}
+
 void Game::nearestStars(int n, std::vector<const Star*>& out) const {
     std::vector<std::pair<double, const Star*>> all;
     for (const Star& s : nb.stars) {
@@ -100,6 +128,7 @@ void Game::startApproach(int body) {
     if (ship.mode == ShipState::PARKED && ship.parkedBody == body) { status("ALREADY IN ORBIT", 3); return; }
     const Body& b = sys.bodies[body];
     ship.localTarget = body;
+    ship.targetBelt = -1; ship.parkedBelt = -1;   // B-410: a body's approach leaves the belt (its parking put the ship back beside its rock at the end)
     ship.mode = ShipState::APPROACH;
     ship.flightFrom = ship.pos;
     ship.flightT = 0;
@@ -220,7 +249,7 @@ void Game::updateShipMotion(double dt) {
                 ship.parkedBody = ship.localTarget;
                 const Body& b = sys.bodies[ship.parkedBody];
                 status(fmt("IN ORBIT: %s - %s%s", upper(bodyNameOf(ship.parkedBody)).c_str(), PLANET_TYPES[b.type].name,
-                           PLANET_TYPES[b.type].landable ? " - C TO DEPLOY CAPSULE" : " - NOT LANDABLE"), 8);
+                           PLANET_TYPES[b.type].landable ? " - C TO DEPLOY CAPSULE" : (isProbeGiant(b.type) ? " - C LAUNCHES A PROBE" : " - NOT LANDABLE")), 8);   // X-01
                 logEvent("ORBIT", fmt("%s, %s, R %.0f KM, %.2f G%s", upper(bodyNameOf(ship.parkedBody)).c_str(), PLANET_TYPES[b.type].name, b.radiusKm, b.gravity / 9.8, b.rings ? ", RINGS" : ""));
                 audio.beep = 2;
             }
@@ -234,7 +263,9 @@ void Game::updateShipMotion(double dt) {
             }
             if (ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size()) { ship.mode = ShipState::STANDBY; break; }
             const Body& b = sys.bodies[ship.parkedBody];
-            if (ship.orbiting) {
+            if (tele.on && tele.frameBody != ship.parkedBody) telescopeHoldFrame();   // R-405: the telescope out as the ship arrives at a parking: the frame taken now
+            if (telescopeStabilised()) ship.parkDir = normalize(sys.bodyFrame(ship.parkedBody, t).transposed() * tele.parkBF);   // R-405: the stabiliser holds the ship over its ground (the lap held off)
+            else if (ship.orbiting) {
                 double rate = TAU / (600.0 + 200.0 * b.radiusKm / 6000.0);   // one lap in ~10-20 minutes at x1
                 Mat3 rot = Mat3::axisAngle(b.spinAxis, rate * dt);
                 ship.parkDir = normalize(rot * ship.parkDir);
@@ -244,6 +275,29 @@ void Game::updateShipMotion(double dt) {
         }
         default: break;
     }
+}
+
+// R-405: the parked ship carried round its world by the arrows with Shift held: east and west along its parallel (about the
+// spin axis), north and south along its meridian within 85 degrees of the poles, twenty degrees a second (a lap in eighteen
+// seconds); the ship's attitude turns with it, so the world stays where it was in the window and its ground streams past.
+// The status reads the ground under the ship meanwhile
+void Game::orbitShip(double east, double north, double dt) {
+    if (!sys.valid || ship.mode != ShipState::PARKED || ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size() || ship.parkedBelt >= 0) return;
+    if (east == 0 && north == 0) return;
+    const double RATE = 20 * DEG;
+    Mat3 bf = sys.bodyFrame(ship.parkedBody, t);
+    Vec3 p = normalize(bf * ship.parkDir);
+    double lat, lon; StarSystem::latLonFromBody(p, lat, lon);
+    double dlon = east * RATE * dt, dlat = clampd(lat + north * RATE * dt, -85 * DEG, 85 * DEG) - lat;
+    Mat3 rot = Mat3::axisAngle(Vec3(0, 0, 1), dlon);   // the body frame's z is the spin axis
+    Vec3 meridian = cross(p, Vec3(0, 0, 1));            // the axis that carries p toward the pole
+    if (dlat != 0 && length(meridian) > 1e-6) rot = rot * Mat3::axisAngle(meridian, dlat);
+    Mat3 rotW = bf.transposed() * rot * bf;
+    ship.parkDir = normalize(rotW * ship.parkDir);
+    Vec3 fwd = normalize(rotW * Vec3(std::sin(ship.yaw) * std::cos(ship.pitch), std::sin(ship.pitch), std::cos(ship.yaw) * std::cos(ship.pitch)));
+    ship.yaw = wrap2pi(std::atan2(fwd.x, fwd.z)); ship.pitch = clampd(std::asin(clampd(fwd.y, -1, 1)), -89 * DEG, 89 * DEG);
+    StarSystem::latLonFromBody(normalize(bf * ship.parkDir), lat, lon);
+    status(fmt("OVER %.1f%c %s  %.1f%c %s", std::fabs(lat / DEG), CH_DEGREE, lat >= 0 ? "N" : "S", std::fabs(lon / DEG), CH_DEGREE, lon >= 0 ? "E" : "W"), 1);
 }
 
 void Game::choosePaletteBodies(int& a, int& b) {
@@ -258,32 +312,50 @@ void Game::choosePaletteBodies(int& a, int& b) {
     double minAng = 1.2 / spaceR.proj.f;
     if (sa < minAng) a = -1;
     if (sb < minAng) b = -1;
+    // W-06: the telescope's target (tracked, else under the reticle) is drawn in its own colours whatever its size
+    int want = tele.on ? (tele.track >= 0 ? tele.track : tele.target) : -1;
+    if (want >= 0 && want < (int)sys.bodies.size() && want != a) { b = a; a = want; }
 }
 
 void Game::updateSpace(const Input& in, double dt, double realDt) {
-    if (settings.cabin && !radar.on) updateCabin(in, realDt);   // M2: the mouse turns the explorer's head, the arrows the ship
-    else {   // the cockpit view; C-07: in the radar camera the mouse turns the ship, the camera being the ship's
-        ship.yaw += in.mouseDx * 0.0032 * settings.mouseSensitivity;
-        ship.pitch -= in.mouseDy * 0.0032 * settings.mouseSensitivity * (settings.invertY ? -1 : 1);
+    if (in.wasPressed(KEY_Z) && !in.ctrl()) telescopeToggle();   // W-06: the telescope
+    if (tele.on) updateTelescope(in, realDt);   // W-06: the mouse and the arrows steer the telescope at a rate that falls with the magnification
+    else {
+        if (settings.cabin && !radar.on) updateCabin(in, realDt);   // M2: the mouse turns the explorer's head, the arrows the ship
+        else {   // the cockpit view; C-07: in the radar camera the mouse turns the ship, the camera being the ship's
+            ship.yaw += in.mouseDx * 0.0032 * settings.mouseSensitivity;
+            ship.pitch -= in.mouseDy * 0.0032 * settings.mouseSensitivity * (settings.invertY ? -1 : 1);
+        }
+        bool orbitKeys = in.shift() && !in.ctrl() && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0;   // R-405: Shift+arrows carry the parked ship round its world
+        if (orbitKeys) orbitShip((in.isDown(KEY_RIGHT) ? 1 : 0) - (in.isDown(KEY_LEFT) ? 1 : 0), (in.isDown(KEY_UP) ? 1 : 0) - (in.isDown(KEY_DOWN) ? 1 : 0), realDt);
+        else {
+            if (in.isDown(KEY_LEFT)) ship.yaw -= 1.2 * realDt;
+            if (in.isDown(KEY_RIGHT)) ship.yaw += 1.2 * realDt;
+            if (in.isDown(KEY_UP)) ship.pitch += 0.8 * realDt;
+            if (in.isDown(KEY_DOWN)) ship.pitch -= 0.8 * realDt;
+        }
+        ship.pitch = clampd(ship.pitch, -89 * DEG, 89 * DEG);
+        ship.yaw = wrap2pi(ship.yaw);
     }
-    if (in.isDown(KEY_LEFT)) ship.yaw -= 1.2 * realDt;
-    if (in.isDown(KEY_RIGHT)) ship.yaw += 1.2 * realDt;
-    if (in.isDown(KEY_UP)) ship.pitch += 0.8 * realDt;
-    if (in.isDown(KEY_DOWN)) ship.pitch -= 0.8 * realDt;
-    ship.pitch = clampd(ship.pitch, -89 * DEG, 89 * DEG);
-    ship.yaw = wrap2pi(ship.yaw);
     const bool wasTargeting = ship.targeting;
 
     if (in.wasPressed(KEY_R)) {
         if (ship.mode == ShipState::VIMANA) status("CANNOT TARGET DURING VIMANA FLIGHT", 3);
         else {
             ship.targeting = !ship.targeting;
-            targetCycle = -1;
-            status(ship.targeting ? "AIM: N NEXT NEAREST STAR, ENTER LOCKS, R CANCELS" : "TARGETING CANCELLED", 4);
+            targetCycle = -1; jumpDigits.clear();
+            status(ship.targeting ? "AIM: ENTER LOCKS A STAR - OR TYPE LIGHT YEARS TO JUMP" : "TARGETING CANCELLED", 4);
         }
     }
+    if (!ship.targeting) jumpDigits.clear();
+    if (ship.targeting) {   // R-407: the digits typed in the aim make a jump's light years (a leading zero is no digit)
+        for (int k = KEY_0; k <= KEY_9; k++)
+            if (in.wasPressed(k) && jumpDigits.size() < 6 && !(jumpDigits.empty() && k == KEY_0)) { jumpDigits += (char)('0' + (k - KEY_0)); audio.beep = 4; }
+        if (!jumpDigits.empty() && std::atof(jumpDigits.c_str()) > JUMP_MAX_LY) jumpDigits = fmt("%.0f", JUMP_MAX_LY);
+        if (in.wasPressed(KEY_BACKSPACE) && !jumpDigits.empty()) jumpDigits.pop_back();
+    }
     if (ship.targeting && in.wasPressed(KEY_N)) cycleTargetStar();
-    if (ship.targeting && (enterKey(in) || in.mousePressed[0])) lockRemoteTarget();
+    if (ship.targeting && (enterKey(in) || in.mousePressed[0])) { if (!jumpDigits.empty()) startJump(std::atof(jumpDigits.c_str()), aimDirection()); else lockRemoteTarget(); }
     if (in.wasPressed(KEY_B) && !in.ctrl()) radarToggle();   // C-07: the signal radar
     bool radarEnter = updateRadar(in, realDt);              // C-07: the sweep, the hold, the lock; true when Enter accepted a lock
     if (in.wasPressed(KEY_V)) toggleVimana();
@@ -304,7 +376,7 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
         }
     }
     if (in.wasPressed(KEY_TAB) && inSystem) { listSel = ship.targetBelt >= 0 ? (int)sys.bodies.size() + ship.targetBelt : std::max(0, ship.localTarget); returnState = GameState::SPACE; state = GameState::SYSTEM_LIST; }
-    if (enterKey(in) && !wasTargeting && !radarEnter && inSystem && ship.mode != ShipState::APPROACH) {
+    if (enterKey(in) && !wasTargeting && !radarEnter && !tele.on && inSystem && ship.mode != ShipState::APPROACH) {   // W-06: in the telescope Enter tracks
         if (ship.targetBelt >= 0) startApproachBelt(ship.targetBelt);
         else if (ship.localTarget >= 0) startApproach(ship.localTarget);
     }

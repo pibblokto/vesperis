@@ -1,8 +1,13 @@
 #include "space_view.h"
+#include "galaxy/probe.h"
+#include "galaxy/fronts.h"
+#include "galaxy/nights.h"   // W-04: the earthshine
 #include "core/noise.h"
 #include "core/rng.h"
 #include "core/parallel.h"
+#include "galaxy/drainage.h"
 #include <cmath>
+#include <atomic>
 #include <cstdio>
 #include <algorithm>
 
@@ -91,6 +96,34 @@ const BodyGen& SpaceRenderer::genFor(const Body& b) {
     auto it = gens.find(b.seed);
     if (it != gens.end()) return it->second;
     return gens.emplace(b.seed, BodyGen::make(b, curSeason[b.index < 64 ? b.index : 0])).first->second;
+}
+
+void SpaceRenderer::frontCoarse(FrontMap& fm) {   // W-03: the blocks that hold a band, each nonzero texel marking its block and its neighbours'
+    const int W = PlanetMap::W, H = PlanetMap::H, B = FRONT_BLOCK, CW = W / B, CH = H / B;
+    fm.coarse.assign((size_t)CW * CH, 0);
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++) {
+            if (!fm.cloud[(size_t)y * W + x]) continue;
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++) {
+                    int yy = clampi(y + dy, 0, H - 1), xx = ((x + dx) % W + W) % W;
+                    fm.coarse[(size_t)(yy / B) * CW + xx / B] = 1;
+                }
+        }
+}
+
+const SpaceRenderer::FrontMap* SpaceRenderer::frontsFor(const Body& b, double t) {   // W-03
+    if (!worldHasFronts(b)) return nullptr;
+    for (FrontMap& fc : frontMaps)
+        if (fc.seed == b.seed && !fc.cloud.empty()) {
+            if (std::fabs(t - fc.t) > 240) { buildFrontMap(b, t, PlanetMap::W, PlanetMap::H, fc.cloud); frontCoarse(fc); fc.t = t; }
+            return &fc;
+        }
+    FrontMap& fc = frontMaps[frontMapNext]; frontMapNext = (frontMapNext + 1) % 4;
+    fc.seed = b.seed; fc.t = t;
+    buildFrontMap(b, t, PlanetMap::W, PlanetMap::H, fc.cloud);
+    frontCoarse(fc);
+    return &fc;
 }
 
 SpaceRenderer::~SpaceRenderer() {
@@ -528,6 +561,254 @@ static void ringBox(const Vec3& c, const Vec3& axisV, double ringR1, const Proj&
     y0 = std::max(0, (int)std::floor(yl - my)); y1 = std::min(FBH - 1, (int)std::ceil(yh + my));
 }
 
+// ---------------------------------------------------------------------------
+// W-06: the telescope's plate (see space_view.h)
+// ---------------------------------------------------------------------------
+
+constexpr int DetailPlate::BLOCKS[4];
+
+double DetailPlate::progress() const {
+    if (!valid()) return 0;
+    if (done()) return 1;
+    static const double cum[5] = {0, 1.0 / 64, 4.0 / 64, 16.0 / 64, 1.0};
+    int L = BLOCKS[pass], bw = (W + L - 1) / L, bh = (H + L - 1) / L;
+    return cum[pass] + (cum[pass + 1] - cum[pass]) * (double)next / std::max(1, bw * bh);
+}
+
+Vec3 SpaceRenderer::plateCellUnit(const DetailPlate& p, int i, int j) {
+    double a = (i - p.W * 0.5 + 0.5) * p.texel, b = (j - p.H * 0.5 + 0.5) * p.texel, r2 = a * a + b * b;
+    if (r2 >= 0.9999) return Vec3(0, 0, 0);
+    return normalize(p.u0 * std::sqrt(1 - r2) + p.e1 * a + p.e2 * b);
+}
+
+namespace {
+// a body-frame point turned about the spin axis (the jets' and the clouds' drift are turns of the lookup, the plate being fixed)
+inline Vec3 rotZ(const Vec3& v, double ang) { double cs = std::cos(ang), sn = std::sin(ang); return Vec3(v.x * cs - v.y * sn, v.x * sn + v.y * cs, v.z); }
+// the plate's cell under a body-frame point: the cell coordinates (a cell's centre at integer fx, fy), the nearest cell,
+// filled and on the sphere, else no hit
+struct PlateHit { const DetailPlate* p = nullptr; double fx = 0, fy = 0; int in = 0, jn = 0; bool ok = false; };
+inline PlateHit plateFind(const DetailPlate& p, const Vec3& bf) {
+    PlateHit h;
+    if (dot(bf, p.u0) <= 0.02) return h;
+    double fx = dot(bf, p.e1) / p.texel + p.W * 0.5 - 0.5, fy = dot(bf, p.e2) / p.texel + p.H * 0.5 - 0.5;
+    if (!(fx >= 0 && fy >= 0 && fx < p.W - 1 && fy < p.H - 1)) return h;
+    h.fx = fx; h.fy = fy; h.in = (int)(fx + 0.5); h.jn = (int)(fy + 0.5);
+    size_t o = (size_t)h.jn * p.W + h.in;
+    if (!p.level[o] || p.material[o] == 255) return h;
+    h.p = &p; h.ok = true;
+    return h;
+}
+// the four samples round the point at the nearest cell's block step (a coarse pass interpolates between the blocks'
+// own samples, so the picture is smooth at every pass), all filled and on the sphere, else false
+inline bool plateQuad(const PlateHit& h, size_t o[4], double& tx, double& ty) {
+    const DetailPlate& p = *h.p;
+    int L = p.level[(size_t)h.jn * p.W + h.in];
+    double u = h.fx / L, v = h.fy / L;
+    int m = (int)std::floor(u), n = (int)std::floor(v);
+    tx = u - m; ty = v - n;
+    int i0 = m * L, i1 = i0 + L, j0 = n * L, j1 = j0 + L;
+    if (i0 < 0 || j0 < 0 || i1 >= p.W || j1 >= p.H) return false;
+    o[0] = (size_t)j0 * p.W + i0; o[1] = o[0] + L; o[2] = (size_t)j1 * p.W + i0; o[3] = o[2] + L;
+    for (int k = 0; k < 4; k++) if (!p.level[o[k]] || p.material[o[k]] == 255) return false;
+    return true;
+}
+inline double plateLerp4(const std::vector<uint8_t>& v, const size_t o[4], double tx, double ty) {
+    double a = v[o[0]] + (v[o[1]] - v[o[0]]) * tx, b = v[o[2]] + (v[o[3]] - v[o[2]]) * tx;
+    return (a + (b - a) * ty) / 255.0;
+}
+inline double plateAlbedo(const PlateHit& h) { size_t o[4]; double tx, ty; if (plateQuad(h, o, tx, ty)) return plateLerp4(h.p->albedo, o, tx, ty); return h.p->albedo[(size_t)h.jn * h.p->W + h.in] / 255.0; }
+inline double plateCloud(const PlateHit& h) { size_t o[4]; double tx, ty; if (plateQuad(h, o, tx, ty)) return plateLerp4(h.p->cloud, o, tx, ty); return h.p->cloud[(size_t)h.jn * h.p->W + h.in] / 255.0; }
+inline double plateVeg(const PlateHit& h) { return h.p->veg[(size_t)h.jn * h.p->W + h.in] / 255.0; }
+inline int plateMaterial(const PlateHit& h) { return h.p->material[(size_t)h.jn * h.p->W + h.in]; }
+// the slopes (rise over run) along e1 and e2 over the nearest cell's block step
+inline void plateSlopes(const PlateHit& h, double& ga, double& gb) {
+    const DetailPlate& p = *h.p;
+    size_t on = (size_t)h.jn * p.W + h.in;
+    int L = p.level[on];
+    double h0 = p.height[on];
+    auto hAt = [&](int i, int j) { size_t o = (size_t)j * p.W + i; return p.level[o] && p.material[o] != 255 ? (double)p.height[o] : h0; };
+    int iL = std::max(0, h.in - L), iR = std::min(p.W - 1, h.in + L), jD = std::max(0, h.jn - L), jU = std::min(p.H - 1, h.jn + L);
+    ga = iR > iL ? (hAt(iR, h.jn) - hAt(iL, h.jn)) / ((iR - iL) * p.texelM) : 0.0;
+    gb = jU > jD ? (hAt(h.in, jU) - hAt(h.in, jD)) / ((jU - jD) * p.texelM) : 0.0;
+}
+}
+
+void SpaceRenderer::plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket, const Vec3& u0, const Vec3& e1, const Vec3& e2, double texel, double R, double cloudDrift, double halfA, double halfB) {
+    plateBegun++;
+    p = DetailPlate();
+    p.body = bi; p.seed = seed; p.seasonBucket = bucket; p.u0 = u0; p.e1 = e1; p.e2 = e2;
+    int W = (int)std::ceil(2 * halfA / texel) + 2, H = (int)std::ceil(2 * halfB / texel) + 2;
+    const double CAP = 900000;   // cells: 2x's frame with its margin and an oblique view's stretch (3x and 4x read it at 2x's step); a wider field (the limb at a deep power) takes a coarser step
+    if ((double)W * H > CAP) { double sc = std::sqrt(CAP / ((double)W * H)); texel /= sc; W = (int)std::ceil(2 * halfA / texel) + 2; H = (int)std::ceil(2 * halfB / texel) + 2; }
+    W = std::max(8, (W + 7) / 8 * 8); H = std::max(8, (H + 7) / 8 * 8);
+    p.W = W; p.H = H; p.texel = texel; p.texelM = texel * R * 1000.0;
+    size_t n = (size_t)W * H;
+    p.height.assign(n, 0.f); p.material.assign(n, 0); p.albedo.assign(n, 0); p.cloud.assign(n, 0); p.veg.assign(n, 0); p.level.assign(n, 0); p.exact.assign(n, 0);
+    p.cloudDrift0 = cloudDrift;
+    p.radiusM = 0.5 * std::sqrt((double)W * W + (double)H * H) * p.texelM;
+}
+
+// the build: the block passes in order, the blocks of a pass in rows, `budget` samples at most (0: all of it)
+void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
+    long left = budget > 0 ? budget : (1L << 40);
+    while (!p.done() && left > 0) {
+        int L = DetailPlate::BLOCKS[p.pass];
+        int bw = (p.W + L - 1) / L, bh = (p.H + L - 1) / L, nBlocks = bw * bh;
+        if (p.next >= nBlocks) { p.pass++; p.next = 0; continue; }
+        int count = (int)std::min<long>(nBlocks - p.next, left), first = p.next;
+        std::atomic<long> taken{0};
+        bool noDrain = p.noDrainage;
+        parallelFor(count, 32, [&](int k0, int k1) {
+            DrainageOff off(noDrain);
+            long mine = 0;
+            for (int k = k0; k < k1; k++) {
+                int blk = first + k, i = (blk % bw) * L, j = (blk / bw) * L;
+                size_t o = (size_t)j * p.W + i;
+                if (!p.exact[o]) {
+                    double a = (i - p.W * 0.5 + 0.5) * p.texel, b = (j - p.H * 0.5 + 0.5) * p.texel, r2 = a * a + b * b;
+                    if (r2 < 0.9999) {
+                        Vec3 u = normalize(p.u0 * std::sqrt(1 - r2) + p.e1 * a + p.e2 * b);
+                        SurfaceSample s = sampleSurface(g, u, p.texelM);
+                        double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
+                        double alb = s.albedo;
+                        if (g.type == PT_GASGIANT && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));   // M9-10: the polar vortex, as the map has it
+                        p.height[o] = (float)s.height; p.material[o] = (uint8_t)s.material;
+                        p.albedo[o] = (uint8_t)clampi((int)(alb * 255 + 0.5), 0, 255);
+                        p.veg[o] = (uint8_t)clampi((int)(s.veg * 255 + 0.5), 0, 255);
+                        p.cloud[o] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon + p.cloudDrift0, lat) * 255 + 0.5), 0, 255);
+                        mine++;
+                    } else p.material[o] = 255;   // off the sphere
+                    p.exact[o] = 1;
+                }
+                p.level[o] = (uint8_t)L;
+                int i1 = std::min(i + L, p.W), j1 = std::min(j + L, p.H);
+                for (int jj = j; jj < j1; jj++)
+                    for (int ii = i; ii < i1; ii++) {
+                        size_t q = (size_t)jj * p.W + ii;
+                        if (q == o || p.exact[q]) continue;
+                        p.height[q] = p.height[o]; p.material[q] = p.material[o]; p.albedo[q] = p.albedo[o]; p.cloud[q] = p.cloud[o]; p.veg[q] = p.veg[o]; p.level[q] = (uint8_t)L;
+                    }
+            }
+            taken += mine;
+        });
+        p.samples += taken; plateSamplesFrame += taken; p.next += count; left -= count;
+    }
+}
+
+// every frame: the plate the eyepiece needs for `c.detailBody` at the aim point's footprint; the current plate kept while it
+// fits (the body, the season, the step within a quarter, the field inside it: the whole near hemisphere when it holds it,
+// within forty degrees of its centre), else the other slot checked for a fit (a step out after a step in), else a new
+// plate begun in the other slot (the old one staying as the fallback); then the build within the budget
+void SpaceRenderer::updatePlate(const SpaceContext& c) {
+    plateSamplesFrame = 0;
+    int bi = c.detailBody;
+    if (!c.sys || !c.sys->valid || c.skyMode || bi < 0 || bi >= (int)c.sys->bodies.size()) return;
+    const StarSystem& sys = *c.sys;
+    const Body& b = sys.bodies[bi];
+    if (b.type == PT_COMPANION) return;
+    Vec3 posW = sys.bodyPos(bi, c.t), cv = c.cam * (posW - c.shipPos);
+    double dist = length(cv), R = b.radiusKm;
+    if (cv.z <= 0 || dist <= R * 1.0001) return;
+    double angR = std::asin(clampd(R / dist, 0, 1)), rpx = proj.f * std::tan(angR) * (dist / cv.z);
+    double texelPx = FB_SCALE >= 3 ? FB_SCALE * 0.5 : 1.0;   // at 3x and 4x the plate is 2x's: the mush melts the rest
+    if (rpx < 8 * texelPx) return;   // a dot: the map is enough
+    // the aim point: where the central ray meets the sphere, else the point of the sphere nearest the ray (the limb beside the reticle)
+    double perp2 = cv.x * cv.x + cv.y * cv.y;
+    Vec3 nV; double dHit;
+    if (perp2 < R * R) { double tHit = cv.z - std::sqrt(R * R - perp2); nV = (Vec3(0, 0, tHit) - cv) / R; dHit = tHit; }
+    else { nV = normalize(Vec3(0, 0, cv.z) - cv); dHit = length(cv + nV * R); }
+    Mat3 frame = sys.bodyFrame(bi, c.t), camT = c.cam.transposed();
+    Vec3 u0 = normalize(frame * (camT * nV));
+    double texel = (dHit / proj.f) * texelPx / R;   // a pixel's footprint at the aim point, in radii
+    if (texel * R * 1000.0 >= 0.75 * TAU * R * 1000.0 / PlanetMap::W) return;   // the map's texel is finer than the eyepiece's: the map serves (a disc under about 80 px at 1x)
+    // the axes along the screen's (the field then lies along the grid); a degenerate one (the limb beside the reticle seen
+    // edge-on) falls back on the spin axis
+    Vec3 ex = frame * (camT * Vec3(1, 0, 0)); ex = ex - u0 * dot(ex, u0);
+    if (length(ex) < 0.3) { Vec3 ax = std::fabs(u0.z) < 0.9 ? Vec3(0, 0, 1) : Vec3(1, 0, 0); ex = cross(ax, u0); }
+    Vec3 e1 = normalize(ex), e2 = cross(u0, e1);
+    // the field's points on the sphere (the corners, the edges' middles, the centre): where the pixel's ray meets it, else
+    // the point of the sphere nearest the ray (the limb beside it), in the body's frame; the plate must hold them all, so an
+    // oblique view (the ground stretched along one axis) and the field's own turn are sized for, and a limb point counts
+    // only up to two and a half fields (looking past the limb must not ask for the hemisphere at a fine step)
+    struct FieldPt { Vec3 n; bool hit; };
+    FieldPt fp[9]; int nfp = 0;
+    const double pxs[3] = {0.5, FBW - 0.5, FBW * 0.5}, pys[3] = {0.5, FBH - 0.5, FBH * 0.5};
+    for (int iy = 0; iy < 3; iy++)
+        for (int ix = 0; ix < 3; ix++) {
+            Vec3 d = normalize(Vec3((pxs[ix] - proj.cx) / proj.f, -(pys[iy] - proj.cy) / proj.f, 1.0));
+            double tc = dot(d, cv), perp2 = dot(cv, cv) - tc * tc;
+            bool hit = tc > 0 && perp2 < R * R;
+            Vec3 nV = hit ? (d * (tc - std::sqrt(R * R - perp2)) - cv) / R : normalize(d * std::max(tc, 0.0) - cv);
+            fp[nfp++] = {normalize(frame * (camT * nV)), hit};
+        }
+    double needA = 0.5 * FBW / texelPx * texel, needB = 0.5 * FBH / texelPx * texel;   // the field's half extent in radii, face on
+    auto extent = [&](const Vec3& ea, const Vec3& eb, double& extA, double& extB) {
+        extA = 0; extB = 0;
+        for (int k = 0; k < nfp; k++) {
+            double a = std::fabs(dot(fp[k].n, ea)), b = std::fabs(dot(fp[k].n, eb));
+            if (!fp[k].hit) { a = std::min(a, 2.5 * needA); b = std::min(b, 2.5 * needB); }
+            extA = std::max(extA, a); extB = std::max(extB, b);
+        }
+    };
+    int bucket = bi < 64 ? seasonBucket[bi] : 0;
+    const BodyGen& g = genFor(b);
+    double cloudDrift = c.t * TAU / (b.rotPeriod * 3.7) + 1.0;
+    auto fits = [&](const DetailPlate& p) {
+        if (!p.valid() || p.body != bi || p.seed != b.seed || p.seasonBucket != bucket || std::fabs(p.texel / texel - 1) >= 0.25) return false;
+        if (dot(u0, p.u0) <= 0.77) return false;   // the aim within forty degrees of the plate's centre
+        double extA, extB; extent(p.e1, p.e2, extA, extB);
+        if (extA > 0.5 * p.W * p.texel || extB > 0.5 * p.H * p.texel) return false;   // the field left the plate
+        for (int k = 0; k < nfp; k++) if (fp[k].hit && dot(fp[k].n, p.u0) <= 0.05) return false;
+        if (p.noDrainage && p.drainageWanted && drainageReady(g, p.u0, p.radiusM)) return false;   // the rivers' tiles are in: again with them
+        return true;
+    };
+    if (!fits(plates[plateCur])) {
+        if (fits(plates[1 - plateCur])) plateCur = 1 - plateCur;
+        else {
+            plateCur = 1 - plateCur;
+            DetailPlate& q = plates[plateCur];
+            double extA, extB; extent(e1, e2, extA, extB);
+            plateBegin(q, bi, b.seed, bucket, u0, e1, e2, texel, R, cloudDrift, std::min(1.0, extA * 1.25 + 4 * texel), std::min(1.0, extB * 1.25 + 4 * texel));
+            // the rivers and the lakes: their tiles for the plate's ground when the step is under the drainage's own limit and
+            // the ground is a few tiles (a hemisphere at 1500 m a step would be a hundred); built now for a photo or a harness
+            // frame, in the background otherwise (the plate sampled without them meanwhile and begun again when they are in)
+            q.drainageWanted = typeHasDrainage(b.type) && q.texelM < 2048 && q.radiusM <= 200000 && drainageEnabled();
+            q.noDrainage = !q.drainageWanted;   // a wider plate samples without the drainage outright: a sample would build its tile (a second each) on the spot
+            if (q.drainageWanted && !drainageReady(g, u0, q.radiusM)) {
+                if (c.detailBudget <= 0) drainagePrefetch(g, u0, q.radiusM, false);
+                else { drainagePrefetch(g, u0, q.radiusM, true); q.noDrainage = true; }
+            }
+        }
+    }
+    plateFill(plates[plateCur], g, c.detailBudget);
+}
+
+std::string SpaceRenderer::plateInfo() const {
+    const DetailPlate& p = plates[plateCur];
+    if (!p.valid()) return "no plate";
+    char buf[320];
+    int L = p.done() ? 1 : DetailPlate::BLOCKS[p.pass];
+    snprintf(buf, sizeof buf, "plate: body %d, %d x %d cells of %.0f m (%.3g radii), %s, %ld samples, %.0f%%%s", p.body, p.W, p.H, p.texelM, p.texel,
+             p.done() ? "done" : (std::string("blocks of ") + std::to_string(L) + " " + std::to_string(p.next) + "/" + std::to_string(((p.W + L - 1) / L) * ((p.H + L - 1) / L))).c_str(),
+             p.samples, 100 * p.progress(), p.noDrainage && p.drainageWanted ? ", no rivers yet" : "");
+    std::string s = buf;
+    if (p.samples > 0) {   // the heights' range and the slopes over the cells' own step (rise over run), for the harness
+        double lo = 1e18, hi = -1e18, sl = 0; long n = 0;
+        for (int j = 1; j < p.H - 1; j++)
+            for (int i = 1; i < p.W - 1; i++) {
+                size_t o = (size_t)j * p.W + i;
+                if (!p.exact[o] || p.material[o] == 255) continue;
+                lo = std::min(lo, (double)p.height[o]); hi = std::max(hi, (double)p.height[o]);
+                int L = p.level[o];
+                if (i + L < p.W && p.exact[(size_t)j * p.W + i + L] && p.material[(size_t)j * p.W + i + L] != 255) { sl += std::fabs(p.height[(size_t)j * p.W + i + L] - p.height[o]) / (L * p.texelM); n++; }
+            }
+        if (n) { snprintf(buf, sizeof buf, ", heights %.0f..%.0f m, mean slope %.3f", lo, hi, sl / n); s += buf; }
+    }
+    const DetailPlate& q = plates[1 - plateCur];
+    if (q.valid() && q.body == p.body && q.seed == p.seed) { snprintf(buf, sizeof buf, "; the previous %d x %d at %.0f m, %.0f%%", q.W, q.H, q.texelM, 100 * q.progress()); s += buf; }
+    return s;
+}
+
 void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, int bank, BodyScreenInfo& info) {
     const StarSystem& sys = *c.sys;
     const Body& b = sys.bodies[bi];
@@ -600,8 +881,22 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     const BodyGen& bgen = genFor(b);
     Mat3 frame = sys.bodyFrame(bi, c.t);
     Mat3 camT = c.cam.transposed();
+    Mat3 frameT = frame.transposed();
+    // W-06: the telescope's plates for this body (the current, then the previous as the fallback), their axes in the world
+    // and the weight of their relief shading (the map's is 5 over its 50 km, where the function's slopes are a few
+    // thousandths; a plate's slopes at a few hundred metres are a tenth, so the weight runs from 2.5 there to 6 at 1.5 km)
+    const DetailPlate* pl[2] = {nullptr, nullptr}; Vec3 plE1W[2], plE2W[2]; double plK[2] = {0, 0}; int npl = 0;
+    if (bi == c.detailBody && !c.skyMode)
+        for (int k = 0; k < 2; k++) {
+            const DetailPlate& q = plates[k == 0 ? plateCur : 1 - plateCur];
+            if (!q.valid() || q.body != bi || q.seed != b.seed || q.samples <= 0) continue;
+            pl[npl] = &q; plE1W[npl] = frameT * q.e1; plE2W[npl] = frameT * q.e2; plK[npl] = 2.5 + 3.5 * smoothstep(200.0, 1500.0, q.texelM); npl++;
+        }
     bool atmosphere = pt.atmosphere;
     double bubble = atmosphere ? 1.045 : 1.0;
+    const FrontMap* fmap = (atmosphere && !hasOpaqueDeck(b.type) && worldHasFronts(b)) ? frontsFor(b, c.t) : nullptr;   // W-03: the fronts' bands
+    const int frontCW = PlanetMap::W / FRONT_BLOCK, frontCH = PlanetMap::H / FRONT_BLOCK;
+    const bool dustFronts = b.type == PT_DESERT || b.type == PT_THINATMO;
     // B-312: the box is the exact screen extent of the sphere (its projection is a conic that reaches farther from the
     // projected centre the nearer the centre is to the edge of the view: a box of radius rpx round the centre cut the
     // limb off, and a huge parent vanished from a moon's sky as soon as its centre left the frame to the left or the
@@ -609,6 +904,13 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     int x0, x1, y0, y1;
     sphereBox(cv, R * bubble, proj, x0, x1, y0, y1);
     double ambient = atmosphere ? 0.10 : 0.05;
+    // W-04: the earthshine: a moon's night side lit by its parent's day side (`bodyShineAt`, the light the ground's planetshine
+    // reads at night), so a thin crescent shows the rest of its disc faintly and a moon's night seen from space is its parent's
+    double shineP = 0; Vec3 shineDirW;
+    if (b.parent >= 0 && b.parent < (int)sys.bodies.size()) {
+        shineP = bodyShineAt(sys, b.parent, posW, c.t, lf);
+        shineDirW = normalize(sys.bodyPos(b.parent, c.t) - posW);
+    }
     double cloudDrift = c.t * TAU / (b.rotPeriod * 3.7) + 1.0;
     double R2 = R * R;
     double c2 = dot(cv, cv);
@@ -676,34 +978,65 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 Vec3 bf = frame * nW;
                 double lat = std::asin(clampd(bf.z, -1, 1));
                 double lon = std::atan2(bf.y, bf.x);
-                if (b.type == PT_GASGIANT) lon += TAU * c.t / b.rotPeriod * 0.06 * std::sin(lat * bgen.bandCount);   // M9-10 zonal jets
-                double alb = haveMap ? map.albedoAt(lon, lat) : pt.albedo;
-                int mat = haveMap ? map.materialAt(lon, lat) : MAT_ROCK;
-                if (haveMap && b.type == PT_GASGIANT) {   // N5-03 (M9-10): storms grow and fade over about a day, band by band
-                    double st = map.veg[map.texelIndex(lon, lat)] / 255.0;
+                double jet = giantJetTurn(b, bgen.bandCount, lat, c.t);   // M9-10 zonal jets (X-02: galaxy/probe.h, the descent reads the same)
+                lon += jet;
+                // W-06: the plate's cell under this point (the point turned by the jet, the plate being body-fixed): the
+                // current plate first, the previous where the current has no cell yet, the map where neither has
+                Vec3 bfG = jet != 0.0 ? rotZ(bf, jet) : bf;
+                PlateHit ph; int phk = -1;
+                for (int k = 0; k < npl && !ph.ok; k++) { ph = plateFind(*pl[k], bfG); if (ph.ok) phk = k; }
+                double alb = ph.ok ? plateAlbedo(ph) : (haveMap ? map.albedoAt(lon, lat) : pt.albedo);
+                int mat = ph.ok ? plateMaterial(ph) : (haveMap ? map.materialAt(lon, lat) : MAT_ROCK);
+                if ((ph.ok || haveMap) && b.type == PT_GASGIANT) {   // N5-03 (M9-10): storms grow and fade over about a day, band by band
+                    double st = ph.ok ? plateVeg(ph) : map.veg[map.texelIndex(lon, lat)] / 255.0;
                     if (st > 0.01) {
                         double gain = 0.55 + 0.45 * std::sin(c.t / 86400.0 * 0.9 + lat * 4.0 + (double)(b.seed & 255) * 0.02);
                         alb = clampd(alb - 0.35 * st + 0.35 * st * gain, 0.22, 1.0);
                     }
                 }
-                if (haveMap && b.type != PT_GASGIANT && !c.skyMode) {
+                if (b.type != PT_GASGIANT && !c.skyMode) {
                     // M9-15 relief shading: slopes facing the star brighten, slopes facing away darken
-                    Vec3 east = normalize(cross(b.spinAxis, nW)), north = cross(nW, east);
-                    double sE = dot(starDirW, east), sN = dot(starDirW, north);
-                    double dl = 0.7 * TAU / PlanetMap::W;
-                    double hE = map.heightAt(lon + dl, lat) - map.heightAt(lon - dl, lat);
-                    double hN = map.heightAt(lon, std::min(PI * 0.5, lat + dl)) - map.heightAt(lon, std::max(-PI * 0.5, lat - dl));
-                    double run = 2 * dl * R * 1000.0;
-                    lit = clampd(lit + 5.0 * (hE * sE + hN * sN) / run, -1, 1);
+                    // B-407 (2026-10-06): a surface rising toward the star tilts its normal away from it (a ramp rising east
+                    // faces west), so the slope's term is taken off `lit`; M9-15 added it, and ridges were lit from the wrong side
+                    if (ph.ok) {   // W-06: from the plate's heights along its axes, the rim's foreshortening taken out, held within +-0.7
+                        double ga, gb; plateSlopes(ph, ga, gb);
+                        double cc = clampd(dot(bfG, ph.p->u0), 0.05, 1.0);
+                        lit = clampd(lit - clampd(plK[phk] * cc * (ga * dot(starDirW, plE1W[phk]) + gb * dot(starDirW, plE2W[phk])), -0.7, 0.7), -1, 1);
+                    } else if (haveMap) {
+                        Vec3 east = normalize(cross(b.spinAxis, nW)), north = cross(nW, east);
+                        double sE = dot(starDirW, east), sN = dot(starDirW, north);
+                        double dl = 0.7 * TAU / PlanetMap::W;
+                        double hE = map.heightAt(lon + dl, lat) - map.heightAt(lon - dl, lat);
+                        double hN = map.heightAt(lon, std::min(PI * 0.5, lat + dl)) - map.heightAt(lon, std::max(-PI * 0.5, lat - dl));
+                        double run = 2 * dl * R * 1000.0;
+                        lit = clampd(lit - 5.0 * (hE * sE + hN * sN) / run, -1, 1);
+                    }
                 }
                 double shade = ambient + (1 - ambient) * smoothstep(-0.08, 0.25, lit) * std::max(0.0, lit * 0.6 + 0.4 * std::max(0.0, lit));
                 shade = ambient + (1 - ambient) * clampd(lit * 1.1 + 0.05, 0, 1) * lf;
+                // W-04: the parent's light past the terminator (it fades in over the first tenth, where the sun's own fades out)
+                double earth = shineP > 0.002 && lit < 0 ? (1 - ambient) * 0.6 * shineP * std::max(0.0, dot(nW, shineDirW)) * smoothstep(0.0, -0.1, lit) : 0.0;
+                if (earth > 0 && !c.skyMode) shade += earth;
                 if (b.type == PT_SUBSTELLAR) shade = std::max(shade, bgen.selfGlow * (0.3 + 0.7 * alb));   // M5-02: it glows on its own, bands and all
                 double v = exposureStop(alb, shade, atmosphere);   // N1-05: the ground's exposure rule
                 if (mat == MAT_LAVA) v = std::max(v, 50.0 + 10.0 * alb);
                 bool cloudy = false;
                 if (atmosphere) {
-                    double cl = haveMap ? map.cloudAt(lon + cloudDrift, lat) : 0.0;
+                    double cl = 0.0; bool gotCl = false;
+                    for (int k = 0; k < npl && !gotCl; k++) {   // W-06: the plate's cloud, the point turned by the drift since the build
+                        PlateHit pc = plateFind(*pl[k], rotZ(bf, jet + cloudDrift - pl[k]->cloudDrift0));
+                        if (pc.ok) { cl = plateCloud(pc); gotCl = true; }
+                    }
+                    if (!gotCl) cl = haveMap ? map.cloudAt(lon + cloudDrift, lat) : 0.0;
+                    if (fmap) {   // W-03: a front's band over the pattern (body-fixed moving features: no drift); a dust front is a haze in the ground's own bank
+                        double u = (lon + PI) * (1.0 / TAU); if (u < 0) u += 1; else if (u >= 1) u -= 1;
+                        int bx = std::min(frontCW - 1, (int)(u * frontCW)), by = clampi((int)((0.5 - lat / PI) * frontCH), 0, frontCH - 1);
+                        if (fmap->coarse[(size_t)by * frontCW + bx]) {
+                            double fc = frontMapAt(fmap->cloud, PlanetMap::W, PlanetMap::H, lon, lat);
+                            if (dustFronts) v = v + (63.0 * 0.8 * shade - v) * fc * 0.7;
+                            else cl = std::max(cl, fc);
+                        }
+                    }
                     if (hasOpaqueDeck(b.type)) { v = 63.0 * (0.6 + 0.4 * cl) * shade; }
                     else if (b.type == PT_GASGIANT) { v = 63.0 * std::pow(alb, 0.7) * shade * 1.05; }
                     else { v = v + (63.0 * 0.92 * shade - v) * cl; cloudy = cl > 0.6; }
@@ -723,6 +1056,10 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                         // except a substellar object, whose glow shows through the night (M5-02)
                         if (b.type == PT_SUBSTELLAR) fb.idx[o] = pix(13, 16 + 28 * clampd(lv, 0, 1));   // bank 13: its own dull red glow
                         else if (lit > -0.03) fb.idx[o] = pix(bank, 43 + 20 * clampd(lv * 1.15, 0.05, 1.0));
+                        else if (earth > 0.0005) {   // W-04: the earthshine, just over the black of the sky bank and under the lit side's 43, where it beats the sky there
+                            double ev = 30 + 0.45 * exposureStop(alb, earth, false);
+                            if (ev > shadeOf(fb.idx[o])) fb.idx[o] = pix(bank, std::min(42.0, ev));
+                        }
                         fb.invz[o] = (float)iz;
                     }
                 } else if (iz > fb.invz[o]) {
@@ -865,6 +1202,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
             drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), inten * 0.7, 1, proj);
         }
     }
+    updatePlate(c);   // W-06: the telescope's plate of its body, kept, begun or built on within the budget
     // bodies sorted far to near so nearer globes overwrite (depth buffer handles the rest)
     std::vector<std::pair<double, int>> order;
     for (int i = 0; i < (int)sys.bodies.size(); i++) {
@@ -875,6 +1213,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
     bodyInfo.resize(sys.bodies.size());
     for (auto& pr : order) {
         int i = pr.second;
+        if (i == c.excludeBody) continue;   // X-02: the probe's sky draws the space beyond a giant's air without the giant
         int bank = (i == c.bankBodyA) ? 2 : (i == c.bankBodyB ? 3 : 0);
         drawGlobe(fb, c, i, bank, bodyInfo[i]);
     }
@@ -1193,9 +1532,9 @@ void SpaceRenderer::drawCometTail(Framebuffer& fb, const SpaceContext& c, int bi
     const Body& b = sys.bodies[bi];
     Vec3 posW = sys.bodyPos(bi, c.t);
     double dStar = length(posW - sys.star.pos);
-    double refKm = sys.bodies.empty() ? AU_GAME_KM : std::max(AU_GAME_KM * 0.5, sys.bodies[0].type == PT_COMET ? AU_GAME_KM : sys.bodies[0].orbitRadiusKm);
-    double activity = clampd((refKm * 1.6 / dStar) * (refKm * 1.6 / dStar), 0, 1);
+    double activity = cometActivityAt(sys, dStar);
     if (activity < 0.02) return;
+    double refKm = cometRefKm(sys);   // the tail's length
     double dark = c.skyMode ? c.skyDark : 1.0;
     if (dark < 0.05) return;
     Vec3 away = normalize(posW - sys.star.pos);

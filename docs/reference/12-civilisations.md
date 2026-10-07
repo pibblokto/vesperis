@@ -12,7 +12,7 @@ tongue, a voice, a music and fifty recordings of its own.
 `mix64(seed ^ 0xC1D1)` falls under 0.125, first among its traits (after the glass), so no other world's traits move.
 A trait desert keeps the level its seas stood at (`BodyGen::oldSeaM`, -120..100 m) and a river density of 0.8 at
 least: dry seabeds with salt in the deeps, old channels, a shore band. Every other desert is a desert and nothing more.
-`worldHadCivilisation(g)` (`galaxy/ruins.h`) is the one question the ruins, the landmarks, the harness and the shards ask.
+`worldHadCivilisation(g)` (`galaxy/ruins.h`) is the one question the ruins, the landmarks, the harness and the shards ask. Since R-408 (2026-10-07) the surface scanner's RUINS mode hears every settlement and monolith within 40 km (`ruinsNear`) and points to the nearest one the explorer has not marked; the explorer marks and names what they find (`07-game-flow-and-controls.md`).
 
 ## The settlements (C-01)
 

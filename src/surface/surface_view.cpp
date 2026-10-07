@@ -227,11 +227,13 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     shardsFound.clear(); nearShard = NearShard();   // C-03 (the game refills the set from the guide after this)
     trail.clear(); hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
     tick("capsule+misc");
-    findLandmarks();   // O6-06
-    tick("landmarks");
+    joinScan(); echoes.clear(); scanned = false;   // R-408: the last site's echoes are gone; the scanner asks again
+    tick("scan");
     spawnLife(lat, lon);   // N3: herds and flocks from the world's bestiary
     tick("life");
     buildBandMap();
+    meteorShowersOf(*sys, bodyIndex, showers);   // W-04
+    zodiDust = zodiacalDust(*sys, bodyIndex);
     computeEnvironment(t);
     tick("band+env");
     valid = true;
@@ -775,43 +777,43 @@ void SurfaceView::reanchor() {
     vcN.assign((size_t)1 << 16, VtxCache());
     computeRings();
     drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);   // O6-03
-    findLandmarks();   // O6-06: the same sights, in the new frame
+    for (ScanEcho& e : echoes) site.localAt(e.lm.unit, e.x, e.z);   // R-408: the same echoes, in the new frame (a scan under way is taken in it)
     flocks.clear(); critters.clear(); herds.clear(); habitatT = -1e9;   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs)
     prefetchStage = 0; prefetchRing = 0;
 }
 
-// O6-06: the sights within the drawn disc plus a cell (`landmarksNear` searches the 14 km grid cells, a few milliseconds
-// each and cached), on a thread of its own: the HUD and the maps show them once `collectLandmarks` has them
-void SurfaceView::findLandmarks() {
-    joinLandmarks();
-    landmarks.clear();
+// R-408: the scanner's search on a thread of its own (a scan of 40 km reads a few dozen cells of 14 km, a few milliseconds each and
+// cached, the lakes' drainage tiles built as needed, and a thousand cells of the ruins' grid): the HUD and the map read the echoes
+// once `collectScan` has them; a new landing clears them, a re-anchor moves them into the new frame
+void SurfaceView::startScan() {
+    joinScan();
     if (!site.sys) return;
-    BodyGen g = site.gen; std::string name = site.sys->bodies[site.body].name; Vec3 up = site.up0; double radius = drawRadiusM() + 8000.0;
-    std::vector<Landmark>* out = &landmarkOut; std::atomic<bool>* busy = &landmarkBusy;
-    landmarkOut.clear();
-    landmarkBusy.store(true);
-    landmarkThread = std::thread([g, name, up, radius, out, busy]() { landmarksNear(g, name, up, radius, *out); busy->store(false, std::memory_order_release); });
+    BodyGen g = site.gen;
+    Vec3 at = site.unitAt(player.x, player.z);
+    scanU = at;
+    std::vector<Landmark>* out = &scanOut; std::atomic<bool>* busy = &scanBusy; double* ms = &scanOutMs;
+    scanOut.clear();
+    scanBusy.store(true);
+    scanThread = std::thread([g, at, out, busy, ms]() {
+        auto t0 = std::chrono::steady_clock::now();
+        std::vector<Landmark> cells, ruins;
+        sightsNear(g, at, SCAN_RANGE, sightKindsOf(g) & ~(1u << LM_RUIN), cells);
+        ruinsNear(g, at, SCAN_RANGE, ruins);
+        *out = cells; out->insert(out->end(), ruins.begin(), ruins.end());
+        *ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        busy->store(false, std::memory_order_release);
+    });
 }
-void SurfaceView::collectLandmarks() {
-    if (!landmarkThread.joinable() || landmarkBusy.load(std::memory_order_acquire)) return;
-    landmarkThread.join();
-    landmarks.clear();
-    for (const Landmark& L : landmarkOut) { SiteLandmark sl; sl.lm = L; site.localAt(L.unit, sl.x, sl.z); landmarks.push_back(sl); }
-    landmarkOut.clear();
+void SurfaceView::collectScan() {
+    if (!scanThread.joinable() || scanBusy.load(std::memory_order_acquire)) return;
+    scanThread.join();
+    echoes.clear();
+    for (const Landmark& L : scanOut) { ScanEcho e; e.lm = L; site.localAt(L.unit, e.x, e.z); echoes.push_back(e); }
+    scanOut.clear(); scanned = true; scanMs = scanOutMs;
 }
-void SurfaceView::joinLandmarks() {
-    if (landmarkThread.joinable()) landmarkThread.join();
-    landmarkBusy.store(false); landmarkOut.clear();
-}
-const SurfaceView::SiteLandmark* SurfaceView::landmarkAt(double x, double z) const {
-    const SiteLandmark* best = nullptr; double bd = 1e18;
-    for (const SiteLandmark& s : landmarks) { double d2 = (s.x - x) * (s.x - x) + (s.z - z) * (s.z - z); if (d2 < s.lm.radiusM * s.lm.radiusM && d2 < bd) { bd = d2; best = &s; } }
-    return best;
-}
-const SurfaceView::SiteLandmark* SurfaceView::nearestLandmark(double x, double z, double maxDist) const {
-    const SiteLandmark* best = nullptr; double bd = maxDist * maxDist;
-    for (const SiteLandmark& s : landmarks) { double d2 = (s.x - x) * (s.x - x) + (s.z - z) * (s.z - z); if (d2 < bd) { bd = d2; best = &s; } }
-    return best;
+void SurfaceView::joinScan() {
+    if (scanThread.joinable()) scanThread.join();
+    scanBusy.store(false); scanOut.clear();
 }
 
 void SurfaceView::computeEnvironment(double t) {
@@ -860,20 +862,50 @@ void SurfaceView::computeEnvironment(double t) {
         cloud = clampd(cloud * 1.3 + 0.25 * gnoise2(t / 900.0, site.gen.seed & 1023, site.gen.seed), 0, 1);
     }
     if (hasOpaqueDeck(b.type)) cloud = 1;
+    env.cloudPattern = cloud;
+    // W-03: the fronts. The world's fronts alive now (`frontsOf`, listed again every two minutes: a birth ramps up over
+    // hours), their weather at the place (`frontWeatherAt`: the same function the globe's overlay and the forecast read),
+    // and the nearest one's line in local metres for the sky, the ground's shadows and the wall of rain
+    FrontWeather fw;
+    localFront.on = false;
+    if (site.atmosphere && !hasOpaqueDeck(b.type) && worldHasFronts(b)) {
+        if (frontsSeed != b.seed || frontsT < -1e17 || std::fabs(t - frontsT) > 120) { frontsOf(b, t, fronts, 0); frontsT = t; frontsSeed = b.seed; }
+        Vec3 u = site.unitAt(player.x, player.z);
+        frontWeatherAt(fronts, u, t, site.R, fw);
+        if (fw.nearest >= 0) {
+            const Front& f = fronts[fw.nearest];
+            Vec3 c, n; frontAt(f, t, c, n);
+            Vec3 nt = n - u * dot(n, u);   // the motion along the ground here
+            double nx = dot(nt, site.east0), nz = dot(nt, site.north0), L = std::sqrt(nx * nx + nz * nz);
+            if (L > 1e-9) {
+                localFront.on = true; localFront.nx = nx / L; localFront.nz = nz / L;
+                localFront.x0 = player.x; localFront.z0 = player.z; localFront.ahead0 = fw.nearestAhead;
+                localFront.width = f.width; localFront.gain = fw.nearestGain; localFront.tex = fw.nearestTex; localFront.strength = f.strength; localFront.dust = f.dust;
+                localFront.rainVis = f.dust ? 400 : 1500;
+            }
+        }
+    }
+    env.frontCloud = fw.cloud; env.frontRain = fw.precip; env.frontCold = fw.cold; env.frontAhead = fw.nearest >= 0 ? fw.nearestAhead : 1e18;
+    cloud = std::max(cloud, fw.cloud);
     env.cloudCover = cloud;
-    env.rain = (b.type == PT_FELISIAN && cloud > 0.72) ? clampd((cloud - 0.72) / 0.25, 0, 1) : 0;
-    if (b.type == PT_ACIDIC) env.rain = cloud > 0.6 ? clampd((cloud - 0.6) / 0.3, 0, 1) : 0;   // R-307: the acid rains often
+    double cloudP = env.cloudPattern;   // the pattern's cloud rains by its own rule; a front's band rains from its line, not from its first cloud
+    env.rain = (b.type == PT_FELISIAN && cloudP > 0.72) ? clampd((cloudP - 0.72) / 0.25, 0, 1) : 0;
+    if (b.type == PT_ACIDIC) env.rain = cloudP > 0.6 ? clampd((cloudP - 0.6) / 0.3, 0, 1) : 0;   // R-307: the acid rains often
     if (b.type == PT_HYDROCARBON) { double dz = gnoise2(t / 1800.0, 2.3, site.gen.seed + 27); env.rain = clampd((dz - 0.45) / 0.3, 0, 0.5); }   // a methane drizzle now and then
+    if (b.type == PT_FELISIAN || b.type == PT_OCEAN || b.type == PT_ACIDIC) env.rain = std::max(env.rain, fw.precip);   // W-03: the front's rain
     // M4-06: the same clouds snow when it is cold; thin air raises dust storms; fog banks drift by
     env.snow = 0; env.dust = 0; env.fogBank = 0; env.hail = 0;
-    if ((b.type == PT_FELISIAN || b.type == PT_OCEAN) && cloud > 0.62) {
-        double precip = clampd((cloud - 0.62) / 0.3, 0, 1);
-        if (env.temperatureC < -1) { env.snow = precip; env.rain = 0; }
-        else if (env.temperatureC < 8 && precip > 0.8) env.hail = (precip - 0.8) / 0.2;
+    if (b.type == PT_FELISIAN || b.type == PT_OCEAN) {
+        double precip = std::max(cloudP > 0.62 ? clampd((cloudP - 0.62) / 0.3, 0, 1) : 0.0, fw.precip);
+        if (precip > 0) {
+            if (env.temperatureC < -1) { env.snow = precip; env.rain = 0; }
+            else if (env.temperatureC < 8 && precip > 0.8) env.hail = (precip - 0.8) / 0.2;
+        }
     }
     if (b.type == PT_THINATMO || b.type == PT_DESERT) {
         double storm = gnoise2(t / 2400.0, 5.1, site.gen.seed + 21);
         env.dust = clampd((storm - (b.type == PT_DESERT ? 0.45 : 0.35)) / 0.3, 0, 1);   // the storm's wind is applied with the wind update below (B-206); R-307: rarer on a desert world
+        env.dust = std::max(env.dust, fw.precip);   // W-03: a dust front
     }
     if (b.type == PT_FELISIAN || b.type == PT_OCEAN) {
         double fogN = gnoise2(t / 1500.0 + player.x / 4000.0, player.z / 4000.0, site.gen.seed + 33);
@@ -893,8 +925,14 @@ void SurfaceView::computeEnvironment(double t) {
         // it used to be multiplied by the storm factor every frame between these updates and ran away to 1e13 knots
         lastWindUpdate = t;
         double base = site.atmosphere ? (b.type == PT_THINATMO ? 25 : (b.type == PT_VENUSIAN ? 4 : (b.type == PT_DESERT ? 18 : (b.type == PT_HYDROCARBON ? 3 : 10)))) : 0;
-        env.windKnots = base * (0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust);
+        env.windKnots = base * (0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // W-03: the wind rises ahead of a front
         env.windDir = wrap2pi(1.7 + 2.0 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6));
+        if (fw.windWeight > 0.01) {   // W-03: the front's wind takes over by its weight: along its line ahead of it, with its motion behind
+            double fx = dot(fw.windTo, site.east0), fz = dot(fw.windTo, site.north0);
+            double w = clampd(fw.windWeight, 0, 1);
+            double vx = (1 - w) * std::sin(env.windDir) + w * fx, vz = (1 - w) * std::cos(env.windDir) + w * fz;
+            if (vx * vx + vz * vz > 1e-6) env.windDir = wrap2pi(std::atan2(vx, vz));
+        }
     }
     // the clouds' drift (sky layers and ground shadows) integrates the wind: 0.5 m per knot-second. It used to be
     // `wind x 0.5 x t`, which jumped by tens of kilometres whenever the wind changed (the sun flickering, B-206)
@@ -929,7 +967,7 @@ void SurfaceView::computeEnvironment(double t) {
     if (b.type != PT_FELISIAN) base -= 6.5 * (player.y / 1000.0);
     if (b.type == PT_MOLTEN) base += 180;
     if (b.type == PT_VOLCANIC) base += 60;
-    env.temperatureC = std::max(base, -270.0);
+    env.temperatureC = std::max(base - fw.cold, -270.0);   // W-03: the cold behind a front
     switch (b.type) {
         case PT_FELISIAN: env.pressureAtm = 0.7 + 0.6 * hash01(site.gen.seed); break;
         case PT_VENUSIAN: env.pressureAtm = 60 + 35 * hash01(site.gen.seed); break;
@@ -944,15 +982,14 @@ void SurfaceView::computeEnvironment(double t) {
     }
     env.pressureAtm *= std::exp(-player.y / 8000.0);
     SurfaceLook L = lookFor(site.gen, site.sys->star);
-    env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank);
+    env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);   // W-03: a front's squall closes the view further
     // O4: a comet vents harder the closer it dives to its star (the same activity as the tail seen from space);
     // the dust of the coma hangs over the ground
     env.cometActivity = 0;
     if (b.type == PT_COMET) {
         const StarSystem& S = *site.sys;
         double dStar = length(S.bodyPos(site.body, t) - S.star.pos);
-        double refKm = S.bodies.empty() ? AU_GAME_KM : std::max(AU_GAME_KM * 0.5, S.bodies[0].type == PT_COMET ? AU_GAME_KM : S.bodies[0].orbitRadiusKm);
-        env.cometActivity = clampd((refKm * 1.6 / dStar) * (refKm * 1.6 / dStar), 0, 1);
+        env.cometActivity = cometActivityAt(S, dStar);
         env.fogDistance *= 1 - 0.85 * env.cometActivity;
     }
     if (player.underwater) env.fogDistance = 22;
@@ -969,12 +1006,8 @@ void SurfaceView::computeEnvironment(double t) {
             double dist = length(rel);
             Vec3 dirL = L * (rel / dist);
             if (dirL.y < 0.02) continue;
-            double angR = std::asin(clampd(ob.radiusKm / dist, 0, 1));
-            double phase = 0.5 * (1 + dot(normalize(site.sys->star.pos - bp), normalize(sitePos - bp)));
-            double illum = phase * PLANET_TYPES[ob.type].albedo * (angR / (5 * DEG)) * (angR / (5 * DEG)) * env.sun.lightFactor;
+            double illum = bodyShineAt(*site.sys, bi, sitePos, t, env.sun.lightFactor);   // W-04: the formula a moon's earthshine reads too
             bool glowing = ob.type == PT_SUBSTELLAR;
-            if (glowing) illum = std::max(illum, 0.3 * clampd(ob.luminosity / 0.003, 0.55, 1.0) * (angR / (4 * DEG)) * (angR / (4 * DEG)));   // M5-02: warm light of its own
-            illum = std::min(0.5, illum);
             if (illum > env.moonLight) {
                 env.moonLight = illum; env.moonBody = bi; env.moonDir = dirL;
                 env.moonColor = glowing ? lerp(ob.color, RGB(1, 0.7f, 0.45f), 0.4f) : lerp(ob.color * lerp(site.sys->star.color, RGB(1, 1, 1), 0.5f), RGB(1, 1, 1), 0.35f);
@@ -1104,7 +1137,11 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     else if (inDrone) updateDrone(dt, in, t);   // R-403
     else updateWalking(dt, in, t, controlsEnabled);
     prefetchAhead();   // M7-01
-    collectLandmarks();   // O6-06
+    collectScan();   // R-408
+    if (scanWanted && !scanBusy.load(std::memory_order_acquire)) {   // R-408: the scanner on: a first scan, and another every SCAN_STEP
+        double sx = 0, sz = 0; if (scanned) site.localAt(scanU, sx, sz);
+        if (!scanned || std::hypot(player.x - sx, player.z - sz) > SCAN_STEP) startScan();
+    }
     // buggy dust settles, an unfolding buggy keeps unfolding
     for (auto& p : buggy.puffs) p.age += (float)dt;
     buggy.puffs.erase(std::remove_if(buggy.puffs.begin(), buggy.puffs.end(), [](const Buggy::Puff& p) { return p.age > 1.5f; }), buggy.puffs.end());
@@ -1547,7 +1584,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         hor = lerp(hor, sunsetC, (float)(sunset * 0.8));
         zen = lerp(zen, sunsetC * 0.4f, (float)(sunset * 0.25));
     }
-    double rainDim = 1 - 0.35 * env.rain;
+    double rainDim = (1 - 0.35 * env.rain) * (1 - 0.3 * env.frontCloud);   // W-03: a front's deck is a storm's: the sky's colours dim under it
     hor = hor * (float)rainDim; zen = zen * (float)rainDim;
     RGB fog = site.atmosphere ? hor : lerp(L.ground, white, 0.55f);
     RGB glow = lerp(hor, starC, 0.5f);
@@ -1633,7 +1670,15 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             int tone = starNebulaTone(site.sys->star);
             pale = lerp(pale, tone == 0 ? RGB(0.45f, 0.55f, 0.85f) : (tone == 1 ? RGB(0.85f, 0.50f, 0.45f) : RGB(0.70f, 0.70f, 0.75f)), 0.6f);
         }
-        setRamp(fb.pal, 22, {{0, site.atmosphere ? zen : RGB(0, 0, 0)}, {40, pale}, {63, lerp(pale, white, 0.4f)}});
+        // B-408: an airless sky lies in this bank all over, and the sun's disc and glow are drawn in it (`drawSky`): the band's
+        // own shades (under 20) keep the star-grey, the glow round the sun turns to the sun's colour above them, and from 55 up
+        // the stops are the sky bank's, so the disc is the colour it was
+        if (site.atmosphere || site.sys->star.cls == STAR_PROTOSTAR) setRamp(fb.pal, 22, {{0, site.atmosphere ? zen : RGB(0, 0, 0)}, {40, pale}, {63, lerp(pale, white, 0.4f)}});
+        else {
+            auto lumOf = [](RGB c) { return 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b; };
+            RGB sunN = sunC * (lumOf(pale) / std::max(0.05f, lumOf(sunC)));   // the sun's hue at the pale grey's light
+            setRamp(fb.pal, 22, {{0, RGB(0, 0, 0)}, {20, pale * 0.5f}, {40, lerp(pale, sunN, 0.7f)}, {55, sunC * 0.9f}, {60, sunC}, {63, lerp(sunC, white, 0.45f)}});
+        }
     }
     // sky bank: zenith .. horizon .. glow .. sun/star white
     if (site.atmosphere) {
@@ -1642,6 +1687,15 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         if (day < 0.5) {
             RGB starWhite = RGB(0.8f, 0.82f, 0.9f);
             setRamp(fb.pal, 1, {{0, zen}, {36, hor}, {44, lerp(hor, starWhite, 0.25f)}, {54, lerp(hor, starWhite, (float)(0.6 + 0.3 * day))}, {63, lerp(starWhite, sunC, (float)day)}});
+        }
+        // W-03 bank 23: a front's deck and the rain under it. The sky bank runs from the zenith's colour to the horizon's, and on
+        // a world whose two are close (a red dwarf's mauve) nothing drawn in it can be dark; this ramp shares the sky's stops
+        // from the horizon up (the lit tops look the same in either bank) and goes down to a storm's grey instead of the zenith
+        {
+            RGB stormGrey = RGB(0.40f, 0.40f, 0.44f) * (float)rainDim;
+            RGB g1 = lerp(zen, stormGrey, (float)day), g0 = g1 * 0.6f;
+            if (day < 0.5) setRamp(fb.pal, 23, {{0, g0}, {18, g1}, {36, hor}, {44, lerp(hor, RGB(0.8f, 0.82f, 0.9f), 0.25f)}, {54, lerp(hor, RGB(0.8f, 0.82f, 0.9f), (float)(0.6 + 0.3 * day))}, {63, lerp(RGB(0.8f, 0.82f, 0.9f), sunC, (float)day)}});
+            else setRamp(fb.pal, 23, {{0, g0}, {18, g1}, {36, lerp(g1, hor, 0.8f)}, {40, hor}, {50, glow}, {56, lerp(glow, sunC, 0.6f)}, {63, sunC}});
         }
     } else {
         RGB grey(0.42f, 0.43f, 0.48f);
@@ -1750,7 +1804,9 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double up = (2600.0 - h) / sd.y;
         double px = x + sd.x * up + cloudWx, pz = z + sd.z * up + cloudWz;
         double n = 0.5 + 0.5 * fbm2(px / 1800.0, pz / 1800.0, site.gen.seed + 77, 3, 2.2, 0.55);
-        sunTerm *= 1 - 0.55 * smoothstep(cloudThr, cloudThr + 0.18, n);
+        double thr = cloudThr;
+        if (localFront.on) thr = 1.0 - std::max(env.cloudPattern, localFront.cloud(x + sd.x * up, z + sd.z * up)) * 0.75;   // W-03: the front's deck shadows the ground under it
+        sunTerm *= 1 - 0.55 * smoothstep(thr, thr + 0.18, n);
     }
     double light = ambient + (1 - ambient) * sunTerm;
     // M10-09 secondary lights: planetshine at night, the capsule beacon pool, lava glow
@@ -1832,7 +1888,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double toSun = dot(Vec3(x - camPos.x, h - camPos.y, z - camPos.z) / dist, sd);
         fogD *= (1 - 0.35 * std::max(0.0, toSun) * sunUp) * (1 + 0.25 * std::max(0.0, -toSun)) * (1 - 0.25 * cloud);
     }
-    double fog = 1 - std::exp(-dist / fogD);
+    double fog = 1 - std::exp(-(dist / fogD + rainWall(x, z, dist)));   // W-03: the wall of rain between the camera and this ground
     shade = shade + (63 - shade) * fog;
     if (shOk) shade += (shC - shade) * morph;   // B-313: onto the coarser ring's shade at the edge
     vc.v.x = vv.x; vc.v.y = vv.y; vc.v.z = vv.z;
@@ -1931,8 +1987,8 @@ void SurfaceView::testRingSeams(double seam[4], double raw[4]) {
 // The ground beyond the last terrain ring, out to the horizon: the sea, or a plain 300 m under the lowest far cell. O1: a
 // fan of rings that follows the curvature (toView), from just inside the far ring's edge to ten times its radius, so
 // from a mountain the sea or the plain really dips under the horizon instead of a flat plate hanging at eye level.
-void SurfaceView::drawFloor(Framebuffer& fb) {
-    if (site.smallBody) return;   // O4: a small body's terrain disc reaches past its own horizon
+double SurfaceView::floorHeight() {
+    if (site.smallBody) return 0;
     TerrainCache& far = ringR[3] ? site.lod3 : site.lod2;
     int farR = ringR[3] ? ringR[3] : ringR[2];
     double cs = far.cellSize;
@@ -1946,6 +2002,15 @@ void SurfaceView::drawFloor(Framebuffer& fb) {
         }
     double h = hmin - 300.0;
     if (site.hasWater) h = site.seaLevel;
+    return h;
+}
+
+void SurfaceView::drawFloor(Framebuffer& fb) {
+    if (site.smallBody) return;   // O4: a small body's terrain disc reaches past its own horizon
+    TerrainCache& far = ringR[3] ? site.lod3 : site.lod2;
+    int farR = ringR[3] ? ringR[3] : ringR[2];
+    double cs = far.cellSize;
+    double h = floorH;
     int ty = site.gen.type;
     uint8_t bank = site.hasWater ? 2 : ((ty == PT_ICY || ty == PT_EUROPAN) ? 8 : ((ty == PT_CRATERED || ty == PT_THINATMO || ty == PT_QUARTZ || ty == PT_VOLCANIC || ty == PT_DESERT || ty == PT_BOMBARDED) ? 9 : 0));   // N1-03: the dominant family
     double shade = site.atmosphere ? 63 : 8;
@@ -2242,7 +2307,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
                         double fres = 0.04 + 0.96 * std::pow(1 - cosT, 4.0);
                         double body = 24 + (1 - depth / 8) * 8, skyR = 55;
                         double base = body + (skyR - body) * fres + glint + wave * (0.5 + 0.5 * clampd(env.windKnots / 15.0, 0, 1));
-                        double fog = 1 - std::exp(-dist / env.fogDistance);
+                        double fog = 1 - std::exp(-(dist / env.fogDistance + rainWall(x, z, dist)));   // W-03
                         w[i].x = vv.x; w[i].y = vv.y; w[i].z = vv.z;
                         w[i].shade = base + (63 - base) * fog;
                         w[i].u = x + t * 0.7; w[i].v = z + t * 0.4;
@@ -2291,13 +2356,13 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     if (wedge < 0) wedge = 0;
     Vec3 sdh = normalize(Vec3(sd.x, 0, sd.z + 1e-9));
     // cloud grid
-    bool clouds = site.atmosphere && L.cloudsLayer && env.cloudCover > 0.03;
+    bool clouds = site.atmosphere && L.cloudsLayer && (env.cloudCover > 0.03 || localFront.on);   // W-03: a front's deck in view counts
     double aurora = env.aurora;
     const int CELL = 4 * FB_SCALE;
     const int GX = FBW / CELL + 1, GY = FBH / CELL + 1;
     if (clouds) {
-        cloudGrid.assign(GX * GY * 2, 0.f);
-        double thr = 1.0 - env.cloudCover * 0.75;
+        cloudGrid.assign(GX * GY * 3, 0.f);   // per cell: the density, the index, and (W-03) the share that is a front's deck
+        double thrP = 1.0 - env.cloudPattern * 0.75;   // W-03: the pattern's threshold; a front's deck is read per cell from its line
         double wx = windDriftX, wz = windDriftZ;
         // two layers (M10-14): low cumulus at 2600 m with lit tops and shaded bases, high thin veils at 6000 m
         for (int gy = 0; gy < GY; gy++)
@@ -2305,12 +2370,20 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 int px = std::min(gx * CELL, FBW - 1), py = std::min(gy * CELL, FBH - 1);
                 Vec3 d = camT * dirLUT[py * FBW + px];
                 double el = d.y;
-                float dens = 0, idx = 0;
+                float dens = 0, idx = 0, storm = 0;
                 if (el > 0.012) {
                     double tt = 2600.0 / el;
                     double x = camPos.x + d.x * tt + wx, z = camPos.z + d.z * tt + wz;
+                    double thr = thrP, lp = 0, veil = 0, fcl = 0;
+                    if (localFront.on) {   // W-03: the front's deck where this cell's ray meets the layer (the band moves with the front, its texture with the wind), and its veil ahead
+                        double xw = camPos.x + d.x * tt, zw = camPos.z + d.z * tt;
+                        fcl = localFront.cloud(xw, zw);
+                        thr = 1.0 - std::max(env.cloudPattern, fcl) * 0.75;
+                        lp = localFront.precip(xw, zw);
+                        veil = localFront.veil(xw, zw);
+                    }
                     double n = 0.5 + 0.5 * fbm2(x / 1800.0, z / 1800.0, site.gen.seed + 77, 4, 2.2, 0.55);
-                    double dLow = smoothstep(thr, thr + 0.18, n) * smoothstep(0.012, 0.09, el);
+                    double dLow = smoothstep(thr, thr + 0.18, n) * smoothstep(0.012, 0.09 - 0.05 * clampd(fcl, 0, 1), el);   // W-03: a front's solid deck is drawn nearer the horizon (a dark band over it when the wall is far)
                     double cosSun = dot(d, sd);
                     // denser toward the sun means this part of the cloud is its shaded underside
                     double nSun = 0.5 + 0.5 * fbm2((x + sd.x * 260) / 1800.0, (z + sd.z * 260) / 1800.0, site.gen.seed + 77, 3, 2.2, 0.55);
@@ -2322,15 +2395,18 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     double th = 6000.0 / el;
                     double hx = camPos.x + d.x * th + wx * 0.4, hz = camPos.z + d.z * th + wz * 0.4;
                     double nh = 0.5 + 0.5 * fbm2(hx / 4200.0 + 31.0, hz / 4200.0, site.gen.seed + 78, 3, 2.0, 0.5);
-                    double dHigh = smoothstep(thr + 0.05, thr + 0.3, nh) * 0.4 * smoothstep(0.012, 0.06, el);
+                    double thrH = thr + 0.05 - 0.35 * veil;   // W-03: the milky veil hundreds of kilometres ahead of a front
+                    double dHigh = smoothstep(thrH, thr + 0.3, nh) * (0.4 + 0.3 * veil) * smoothstep(0.012, 0.06, el);
                     double idxHigh = day * (38 + 6 * cosSun) + (1 - day) * 5;
                     double dAll = dLow + dHigh * (1 - dLow);
                     dens = (float)dAll;
+                    storm = (float)(clampd(fcl * 1.5, 0, 1) * (dAll > 1e-6 ? dLow / dAll : 0.0));   // W-03: the deck's share of the cell (the veil is the sky's)
                     idx = (float)(dAll > 1e-6 ? (idxLow * dLow + idxHigh * dHigh * (1 - dLow)) / dAll : 0);
-                    if (env.rain > 0) idx *= (float)(1 - 0.35 * env.rain);
+                    { double rr = std::max(env.rain, lp); if (rr > 0 || fcl > 0) idx *= (float)std::max(0.3, 1 - 0.35 * rr - 0.35 * fcl - 0.1 * lp); }   // W-03: a front's deck is dark underneath, darker over its rain (without a front: the rain's 0.35 as before)
                 }
-                cloudGrid[(gy * GX + gx) * 2] = dens;
-                cloudGrid[(gy * GX + gx) * 2 + 1] = idx;
+                cloudGrid[(gy * GX + gx) * 3] = dens;
+                cloudGrid[(gy * GX + gx) * 3 + 1] = idx;
+                cloudGrid[(gy * GX + gx) * 3 + 2] = storm;
             }
     }
     // B-403: the aurora as curtains. Three sheets of light hang 90-250 km up along the auroral oval, which lies a few degrees
@@ -2442,6 +2518,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     const bool comet = b.type == PT_COMET && env.cometActivity > 0.02;
     const double act = env.cometActivity;
     double knotT[5]; for (int k = 0; k < 5; k++) knotT[k] = SpaceRenderer::cometKnot(k, t);
+    // W-03: the wall of rain (or dust) under a front's deck: toward the band the haze thickens to the horizon's grey between
+    // the horizon and the cloud base, by the rain the ray crosses (`LocalFront::wall`, the same box the ground is fogged by)
+    const bool curtain = site.atmosphere && localFront.on;
+    const double curtainV = day * 20 + (1 - day) * 3;   // a dark wall of the sky's own colour, between the zenith's and the horizon's
     int rowsTotal = (FBH + step - 1) / step;
     parallelFor(rowsTotal, 40, [&](int rb, int re) {
     for (int y = rb * step; y < re * step && y < FBH; y += step) {
@@ -2450,7 +2530,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             Vec3 d = camT * dirLUT[o];
             double el = d.y;
             double v;
-            double tailV = 0;
+            double tailV = 0, stormW = 0;   // W-03: how much of the pixel is a front's deck or its rain (bank 23 past a half)
             if (!site.atmosphere) {
                 double cosSun = dot(d, sd);
                 v = std::pow(std::max(0.0, cosSun), 300.0) * 22;
@@ -2494,13 +2574,23 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 if (clouds) {
                     int gx = x / CELL, gy = y / CELL;
                     double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
-                    const float* c00 = &cloudGrid[(gy * GX + gx) * 2];
-                    const float* c10 = &cloudGrid[(gy * GX + gx + 1) * 2];
-                    const float* c01 = &cloudGrid[((gy + 1) * GX + gx) * 2];
-                    const float* c11 = &cloudGrid[((gy + 1) * GX + gx + 1) * 2];
+                    const float* c00 = &cloudGrid[(gy * GX + gx) * 3];
+                    const float* c10 = &cloudGrid[(gy * GX + gx + 1) * 3];
+                    const float* c01 = &cloudGrid[((gy + 1) * GX + gx) * 3];
+                    const float* c11 = &cloudGrid[((gy + 1) * GX + gx + 1) * 3];
                     double dens = (c00[0] * (1 - fx) + c10[0] * fx) * (1 - fy) + (c01[0] * (1 - fx) + c11[0] * fx) * fy;
                     double ci = (c00[1] * (1 - fx) + c10[1] * fx) * (1 - fy) + (c01[1] * (1 - fx) + c11[1] * fx) * fy;
                     v = v + (ci - v) * dens;
+                    stormW = ((c00[2] * (1 - fx) + c10[2] * fx) * (1 - fy) + (c01[2] * (1 - fx) + c11[2] * fx) * fy) * dens;   // W-03
+                }
+                if (curtain && el < 0.45) {   // over the clouds: the rain hangs in front of the deck's base, up to where the ray meets it
+                    double hl = std::sqrt(d.x * d.x + d.z * d.z);
+                    if (hl > 1e-6) {
+                        double g2 = (d.x * localFront.nx + d.z * localFront.nz) / hl;   // metres ahead per metre of ground travelled
+                        double reach = el > 0.012 ? std::min(2600.0 / el * hl, 60000.0) : 60000.0;   // the ground distance to the cloud base, or far
+                        double ext = localFront.wall(localFront.ahead0, localFront.ahead0 + g2 * reach, reach / hl, env.frontRain);
+                        if (ext > 1e-4) { double e = 1 - std::exp(-ext); v = v + (curtainV - v) * e; stormW = std::max(stormW, e); }
+                    }
                 }
             }
             if (ringArc && el > 0.0) {
@@ -2530,7 +2620,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     }
                 }
             }
-            Pix pv = pix(1, clampd(v, 0, 51.0));
+            Pix pv = pix(stormW > 0.5 ? 23 : 1, clampd(v, 0, 51.0));   // W-03: a front's deck in the storm bank
             if (tailV > v) pv = pix(15, clampd(tailV, 0, 50));   // O4: the comet's tail in its own blue bank
             if (step == 1) fb.idx[o] = pv;
             else {
@@ -2563,15 +2653,55 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // below: the map's brightness in bank 22, hidden by the clouds, written where its light beats the sky pixel's own (both
     // read from the palette, since the two ramps differ); a star in front keeps its pixel, a sky body's disc is brighter.
     // The band used to be added to the sky's value in the sky bank, whose night ramp is too dark to show it.
+    // B-408: an airless sky is the band's bank all over, the sky's own light (a comet's coma, the halo round the sun) carried
+    // into it by its light. The suns' glows add on what lies under them in the pixel's bank: they lit the band's pixels in the
+    // band's ramp and the sky's in the sky's, which is black under shade 30, so where the band's patch ended the glow round a
+    // sun had a hard edge (a pale wedge with straight sides across the sun of a comet); now it lands on one bank
+    // whatever lies behind it. It reaches down to the horizon of the drawn ground, not to the horizontal (where it ended in a
+    // straight edge across the sky of a small body, whose sky shows under the horizontal all round), and lies behind the bodies
     const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) : 1.0);   // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
     NebulaPatch nebAll[18]; int nebAllN = nebN;   // S-04: the field's patches and a protostar's own cloud round the star's direction now
     for (int k = 0; k < nebN; k++) nebAll[k] = nebP[k];
     nebAllN += starNebulaPatches(site.sys->star, normalize(site.sys->star.pos - site.sys->bodyPos(site.body, t)), nebAll + nebAllN);
+    double bandMinEl = -1.0;
+    if (!site.smallBody) { double c = (site.R + floorH) / (site.R + std::max(camPos.y, floorH)); bandMinEl = -std::sqrt(std::max(0.0, 1 - c * c)); }
+    // W-04: the zodiacal light, the dust of a young system or a near belt lit by the sun (`zodiacalLight`: a cone along the plane
+    // of the worlds from the sun, the faint patch opposite it), added to the band's light as the band is drawn and faded by day
+    // as the band is; smooth, so it is read on the cell grid and interpolated
+    const bool zodiOn = zodiDust >= ZODIACAL_MIN_DUST && bandGain > 0.05;
+    if (zodiOn) {
+        zodiGrid.assign(GX * GY, 0.f);
+        const Vec3 sunW = toWorld * env.sunDisc.dirLocal;
+        const double gain = bandGain * zodiDust;
+        for (int gy = 0; gy < GY; gy++)
+            for (int gx = 0; gx < GX; gx++) {
+                int px = std::min(gx * CELL, FBW - 1), py = std::min(gy * CELL, FBH - 1);
+                Vec3 dW = toWorld * (camT * dirLUT[py * FBW + px]);
+                zodiGrid[gy * GX + gx] = (float)(gain * zodiacalLight(dW, sunW));
+            }
+    }
+    const bool airless = !site.atmosphere;
     if (bandGain > 0.05) {
         double lumSky[64], lumBand[64];
         for (int k = 0; k < 64; k++) {
             const uint8_t* c1 = &fb.pal[(1 * 64 + k) * 3]; lumSky[k] = 0.2126 * c1[0] + 0.7152 * c1[1] + 0.0722 * c1[2];
             const uint8_t* c2 = &fb.pal[(22 * 64 + k) * 3]; lumBand[k] = 0.2126 * c2[0] + 0.7152 * c2[1] + 0.0722 * c2[2];
+        }
+        // airless: the intensity in the band's bank with the light of each intensity in the sky's (both ramps rise from black;
+        // the halo the airless sky draws round a sun is no light of a hole's)
+        std::vector<int> skyToBand;
+        const double cosDisc1 = site.sys->star.cls == STAR_BLACK_HOLE ? 2.0 : std::cos(env.sunDisc.angularRadius), cosDisc2 = std::cos(env.sun2.angularRadius);   // a hole has no disc (and its lens shows what lies behind it)
+        if (airless) {
+            skyToBand.assign(INTEN_MASK + 1, 0);
+            auto lumAt = [](const double* lum, double sh) { int k = std::min(62, (int)sh); return lum[k] + (lum[k + 1] - lum[k]) * std::min(1.0, sh - k); };
+            const bool ownLight = site.sys->star.cls != STAR_BLACK_HOLE;
+            int k = 0;
+            for (int i = 0; i <= INTEN_MASK && ownLight; i++) {
+                double L = lumAt(lumSky, std::min(63.0, i / (double)INTEN_PER_SHADE));
+                while (k < 62 && lumBand[k + 1] < L) k++;
+                double f = lumBand[k + 1] > lumBand[k] ? clampd((L - lumBand[k]) / (lumBand[k + 1] - lumBand[k]), 0, 1) : 0.0;
+                skyToBand[i] = (int)((k + f) * INTEN_PER_SHADE + 0.5);
+            }
         }
         parallelFor(rowsTotal, 40, [&](int rb, int re) {
         for (int y = rb * step; y < re * step && y < FBH; y += step) {
@@ -2579,16 +2709,33 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 int o = y * FBW + x;
                 if (bankOf(fb.idx[o]) != 1) continue;
                 Vec3 d = camT * dirLUT[o];
-                if (d.y <= 0) continue;
+                if (d.y <= bandMinEl) continue;
                 Vec3 dW = toWorld * d;
                 double band = bandAt(dW);
                 if (nebAllN) { int tone; band = std::max(band, 0.9 * nebulaGlow(nebAll, nebAllN, dW, tone)); }
                 double bs = band * bandGain;
+                if (zodiOn) {   // W-04
+                    int gx = x / CELL, gy = y / CELL;
+                    double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
+                    const float* z0 = &zodiGrid[gy * GX + gx]; const float* z1 = z0 + GX;
+                    bs += (z0[0] * (1 - fx) + z0[1] * fx) * (1 - fy) + (z1[0] * (1 - fx) + z1[1] * fx) * fy;
+                }
                 if (clouds) {   // the clouds hide it
                     int gx = x / CELL, gy = y / CELL;
                     double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
-                    double dens = (cloudGrid[(gy * GX + gx) * 2] * (1 - fx) + cloudGrid[(gy * GX + gx + 1) * 2] * fx) * (1 - fy) + (cloudGrid[((gy + 1) * GX + gx) * 2] * (1 - fx) + cloudGrid[((gy + 1) * GX + gx + 1) * 2] * fx) * fy;
+                    double dens = (cloudGrid[(gy * GX + gx) * 3] * (1 - fx) + cloudGrid[(gy * GX + gx + 1) * 3] * fx) * (1 - fy) + (cloudGrid[((gy + 1) * GX + gx) * 3] * (1 - fx) + cloudGrid[((gy + 1) * GX + gx + 1) * 3] * fx) * fy;
                     bs *= 1 - dens;
+                }
+                if (airless) {   // B-408: every sky pixel, the band added to the sky's own light
+                    // but those a sun's disc covers: its disc is never dimmer than the sky round it, read from the shade there
+                    if (dot(d, env.sunDisc.dirLocal) > cosDisc1 || (env.hasSun2 && dot(d, env.sun2.dirLocal) > cosDisc2)) continue;
+                    for (int yy = y; yy < y + step && yy < FBH; yy++)
+                        for (int xx = x; xx < x + step && xx < FBW; xx++) {
+                            Pix& p = fb.idx[yy * FBW + xx];
+                            if (bankOf(p) != 1 || fb.invz[yy * FBW + xx] > 1e-12f) continue;
+                            p = pixI(22, std::min(INTEN_MASK, skyToBand[intenOf(p)] + (int)(bs * INTEN_PER_SHADE + 0.5)));
+                        }
+                    continue;
                 }
                 if (bs < 1.5) continue;   // the wings would only lift the sky by a level or two: leave the sky bank its pixels
                 int bi = std::min(63, (int)bs);
@@ -2597,6 +2744,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     for (int xx = x; xx < x + step && xx < FBW; xx++) {
                         Pix& p = fb.idx[yy * FBW + xx];
                         if (bankOf(p) != 1 || lumBand[bi] <= lumSky[std::min(63, intenOf(p) / INTEN_PER_SHADE)]) continue;
+                        if (fb.invz[yy * FBW + xx] > 1e-12f) continue;   // B-408: behind every body, as the stars (a night side is the sky's own pixel with its depth)
                         p = pv;
                     }
             }
@@ -2654,6 +2802,18 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             if (va.z > 0.05 && vb.z > 0.05) rasterLine3(fb, ra, rb, 4, proj, true, 1);
         }
     }
+    // W-04: a meteor shower's streaks (`showerMeteorsAt`), drawn as the sporadic ones in the stars' bank
+    if (starScale > 0.3 && !venus && !showers.empty()) {
+        std::vector<ShowerMeteor> ms; showerMeteorsAt(t, ms);
+        for (const ShowerMeteor& m : ms) {
+            Vec3 va = camLocal * m.tail, vb = camLocal * m.head;
+            if (va.z <= 0.05 || vb.z <= 0.05 || m.bright * starScale <= 4) continue;
+            RVert ra, rb;
+            ra.x = va.x * 900; ra.y = va.y * 900; ra.z = va.z * 900; ra.shade = 0.55 * m.bright * starScale;
+            rb.x = vb.x * 900; rb.y = vb.y * 900; rb.z = vb.z * 900; rb.shade = m.bright * starScale;
+            rasterLine3(fb, ra, rb, 4, proj, true, 1);
+        }
+    }
     // M5-01: the companion sun's disc, in its own colour (bank 12), drawn first so the primary's flare wins
     if (twoSuns) {
         Vec3 v = camLocal * sd2;
@@ -2677,7 +2837,9 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             if (sinAltD > -0.05 || !site.atmosphere) {
                 double sunI = inten * (site.atmosphere ? clampd(0.55 + 0.45 * smoothstep(-0.05, 0.1, sinAltD), 0, 1) : 1.0);
                 Vec3 discUp = camLocal * (site.localFrame(t) * Vec3(0, 1, 0));   // S-04: the orbital plane's normal, for a protostar's disc
-                SpaceRenderer::drawSun(fb, site.sys->star, v, env.sunDisc.angularRadius, t, sunI, 1, site.atmosphere, haze, true, proj, &discUp);   // B-308: by angle
+                // B-408: on an airless sky in the band's bank, which the sky lies in (a hole's disc and a protostar's keep the sky bank's colours)
+                const int sunBank = !site.atmosphere && site.sys->star.cls != STAR_BLACK_HOLE && site.sys->star.cls != STAR_PROTOSTAR ? 22 : 1;
+                SpaceRenderer::drawSun(fb, site.sys->star, v, env.sunDisc.angularRadius, t, sunI, sunBank, site.atmosphere, haze, true, proj, &discUp);   // B-308: by angle
                 if (v.z <= 0.001) return;   // the eclipse glow and the flare need the projected centre
                 double sx = proj.cx + proj.f * v.x / v.z, sy = proj.cy - proj.f * v.y / v.z;
                 double rpx = proj.f * std::tan(env.sunDisc.angularRadius) / v.z;
@@ -2686,15 +2848,57 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 sunVeil = site.sys->star.cls == STAR_BLACK_HOLE ? 0.0 : sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7);   // S-06: no glare from a hole
                 if (env.sunDisc.eclipse > 0.3 && !venus) {
                     double r = std::max(rpx, 1.5 * FB_SCALE), e = env.sunDisc.eclipse;
-                    fb.glowDisc(sx, sy, r * 4.0, r * 1.05, (int)(34 * e * e), 1, true);
-                    fb.glowDisc(sx, sy, r * 9.0, r * 1.1, (int)(10 * e * e), 1, true);
+                    fb.glowDisc(sx, sy, r * 4.0, r * 1.05, (int)(34 * e * e), sunBank, true);
+                    fb.glowDisc(sx, sy, r * 9.0, r * 1.1, (int)(10 * e * e), sunBank, true);
                 }
                 int ix = (int)sx, iy = (int)sy;
                 bool centreFree = ix >= 0 && iy >= 0 && ix < FBW && iy < FBH && fb.invz[iy * FBW + ix] <= 1e-12f;
                 // M1-03 lens flare, dimmed by haze and rain, only with the sun well up and unobstructed
                 double flareI = sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.5 * env.cloudCover) * (1 - env.rain) * smoothstep(0.0, 0.15, sinAltD) : 0.8);
-                if (!venus && centreFree && flareI > 0.05 && site.sys->star.cls != STAR_BLACK_HOLE) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, 1, proj);   // S-06: nor a flare
+                if (!venus && centreFree && flareI > 0.05 && site.sys->star.cls != STAR_BLACK_HOLE) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, sunBank, proj);   // S-06: nor a flare
             }
+        }
+    }
+}
+
+// W-04: the shower meteors alight at t. While a stream is active (`showerActivity`) meteors light up round its radiant (fixed
+// among the stars: the system's axes through the local frame, so it rises and sets with them) and run away from it, up to
+// SHOWER_PEAK_PER_MIN a minute at the peak with the radiant overhead (the rate times the sine of its altitude; none while it
+// is under the horizon). Quarter-second slots hashed with the stream decide each one, so the sky is the same at a time; the
+// nearer the radiant the shorter the path (it comes at you), a quick fade in and a slower one out, faster streams brighter
+void SurfaceView::showerMeteorsAt(double t, std::vector<ShowerMeteor>& out) const {
+    out.clear();
+    if (showers.empty()) return;
+    Mat3 Lw = site.localFrame(t);
+    for (int k = 0; k < (int)showers.size(); k++) {
+        const MeteorShower& s = showers[k];
+        double act = showerActivity(s, t);
+        if (act < 0.004) continue;
+        Vec3 rad = Lw * s.radiant;
+        if (rad.y <= 0.02) continue;
+        double perSec = SHOWER_PEAK_PER_MIN / 60.0 * act * rad.y;
+        const double SLOT = 0.25, LIFE = 1.0;
+        Vec3 e1 = normalize(cross(rad, std::fabs(rad.y) < 0.9 ? Vec3(0, 1, 0) : Vec3(1, 0, 0)));
+        Vec3 e2 = cross(rad, e1);
+        int64_t s0 = (int64_t)std::floor((t - LIFE) / SLOT), s1 = (int64_t)std::floor(t / SLOT);
+        for (int64_t sl = s0; sl <= s1; sl++) {
+            Rng r(mix64((uint64_t)sl * 0x9E3779B97F4A7C15ULL) ^ mix64((uint64_t)s.comet + 0x5A0EULL) ^ site.gen.seed);
+            if (!r.chance(std::min(0.9, perSec * SLOT))) continue;
+            double start = (sl + r.uni()) * SLOT, life = 0.3 + 0.6 * r.uni(), age = t - start;
+            if (age < 0 || age > life) continue;
+            double th0 = r.range(6, 70) * DEG, psi = r.uni() * TAU;
+            double rate = r.range(16, 34) * DEG * (0.35 + 0.65 * std::sin(th0 + 0.3));   // radians a second along the sky
+            double f = age / life;
+            double head = th0 + rate * age, tail = std::max(th0, head - rate * 0.35);
+            Vec3 side = e1 * std::cos(psi) + e2 * std::sin(psi);
+            ShowerMeteor m;
+            m.tail = rad * std::cos(tail) + side * std::sin(tail);
+            m.head = rad * std::cos(head) + side * std::sin(head);
+            if (m.tail.y < 0 && m.head.y < 0) continue;
+            double fade = smoothstep(0.0, 0.25, f) * (1 - smoothstep(0.7, 1.0, f));
+            m.bright = r.range(42, 62) * (0.6 + 0.4 * std::min(1.0, s.speedKms / 120.0)) * fade;
+            m.shower = k;
+            out.push_back(m);
         }
     }
 }
@@ -3285,7 +3489,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     lastT = t;
     {
         SurfaceLook L = lookFor(site.gen, site.sys->star);
-        cloudShadows = site.atmosphere && L.cloudsLayer && env.cloudCover > 0.03 && !hasOpaqueDeck(site.gen.type);
+        cloudShadows = site.atmosphere && L.cloudsLayer && (env.cloudCover > 0.03 || localFront.on) && !hasOpaqueDeck(site.gen.type);   // W-03: a front's deck in reach counts
         cloudThr = 1.0 - env.cloudCover * 0.75;
         cloudWx = windDriftX; cloudWz = windDriftZ;
     }
@@ -3295,6 +3499,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     setupPalette(fb);
     if (fade < 1) scalePalette(fb.pal, fade);
     fb.clearDepth();
+    floorH = floorHeight();   // B-408: the sky's galactic band reaches down to its horizon
     drawSky(fb, t, stars, sr);
     section(0);
     { auto tf0 = std::chrono::steady_clock::now(); drawFloor(fb); static const bool traceF = std::getenv("VESPERIS_TRACE") != nullptr; if (traceF && frameStamp <= 3) fprintf(stderr, "    floor %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tf0).count()); }

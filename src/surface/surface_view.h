@@ -11,6 +11,8 @@
 #include "galaxy/landmarks.h"
 #include "galaxy/ruins.h"
 #include "galaxy/shards.h"
+#include "galaxy/fronts.h"
+#include "galaxy/nights.h"
 #include "galaxy/graves.h"
 #include <set>
 #include <unordered_map>
@@ -127,6 +129,39 @@ struct SurfaceEnvironment {
     double flare = 0;           // S-01: a red dwarf's flare now, 0..1 (the exposure opens past its clamp by it)
     double ringShadow = 0;      // O0-01: the world's ring between the site and the sun (0..0.85)
     double cometActivity = 0;   // O4: on a comet, how hard the nucleus vents (0 far from the star .. 1 at periapsis)
+    // W-03: the fronts at the place: the pattern's cloud alone, the fronts' cloud, their rain (or dust) and cold here, and the
+    // nearest front's line (metres ahead of the place, positive while it has not come; 1e18 none within reach)
+    double cloudPattern = 0, frontCloud = 0, frontRain = 0, frontCold = 0, frontAhead = 1e18;
+};
+
+// W-03: the nearest front's line in the site's own metres. `ahead(x, z)` is the distance ahead of its rain line (positive
+// where the front has not come yet), so the sky's deck, the ground's cloud shadow, the wall of rain and the curtain under
+// the deck are all read from one line, the same line the forecast and the almanac time
+struct LocalFront {
+    bool on = false;
+    double nx = 0, nz = 0;               // the front's motion in local metres (unit)
+    double x0 = 0, z0 = 0, ahead0 = 0;   // the player's place and the distance ahead there
+    double width = 1, gain = 1, strength = 1;   // the band's scale, the life x lateral gain, the peak precipitation before the gain
+    double tex = 1;                      // the band's texture at the place (the deck's outer parts thin by it; its core and the rain do not)
+    bool dust = false;
+    double rainVis = 1500;               // the visibility inside the band's rain (dust: 400 m)
+    double ahead(double x, double z) const { return ahead0 + (x - x0) * nx + (z - z0) * nz; }
+    double cloud(double x, double z) const { return on ? frontCloudAt(ahead(x, z) / width, tex) * gain : 0.0; }
+    double veil(double x, double z) const { return on ? frontVeilProfile(ahead(x, z) / width) * gain : 0.0; }
+    double precip(double x, double z) const { return on ? frontRainProfile(ahead(x, z) / width) * strength * gain : 0.0; }
+    // the extinction of a ray between two distances ahead (the rain as a box from the line to its end, at three quarters
+    // of the peak, less the rain already in the fog at the camera), per the ray's length
+    double wall(double sCam, double sP, double dist, double rainCam) const {
+        if (!on) return 0;
+        double rho = 0.75 * strength * gain - rainCam;
+        if (rho <= 0.01) return 0;
+        double s0 = FRONT_RAIN_END * width, s1 = 0;
+        double lo = std::max(std::min(sCam, sP), s0), hi = std::min(std::max(sCam, sP), s1);
+        if (hi <= lo) return 0;
+        double span = std::fabs(sP - sCam);
+        double frac = span < 1 ? ((sCam >= s0 && sCam <= s1) ? 1.0 : 0.0) : (hi - lo) / span;
+        return frac * dist * rho / rainVis;
+    }
 };
 
 struct Flock {
@@ -199,6 +234,9 @@ public:
     SurfaceSite site;
     Player player;
     SurfaceEnvironment env;
+    LocalFront localFront;   // W-03: the nearest front's line here (the sector map draws it; the sky, the ground and the fog read it)
+    // W-03: the extra extinction of the ray from the camera to a point: the wall of rain (or dust) of the front between them
+    double rainWall(double x, double z, double dist) const { return localFront.on ? localFront.wall(localFront.ahead0, localFront.ahead(x, z), dist, env.frontRain) : 0.0; }
     double capsuleX = 0, capsuleZ = 0, capsuleY = 0;
     double cameraOverrideAlt = -1;   // >=0 during descent/ascent: camera altitude above ground
     // M6-05 photo mode: a free camera detached from the explorer
@@ -331,6 +369,11 @@ public:
     double rangeToGround(double maxDist, double& hitX, double& hitZ, bool& water);
     double lastRange = -1, lastRangeX = 0, lastRangeZ = 0; bool lastRangeWater = false;
     bool viewUnderwater = false;   // B-322: the eye is under the drawn water surface this frame (the palette and the fog follow it)
+    std::vector<MeteorShower> showers;   // W-04: the world's meteor showers (`meteorShowersOf`, once a landing)
+    double zodiDust = 0;                 // W-04: the dust of the world's sky for the zodiacal light (`zodiacalDust`, once a landing)
+    // W-04: the shower meteors alight at t: their tail and head as local unit directions and the head's brightness (shades)
+    struct ShowerMeteor { Vec3 tail, head; double bright = 0; int shower = 0; };
+    void showerMeteorsAt(double t, std::vector<ShowerMeteor>& out) const;
     double drawRadiusM() const { return ringR[3] ? ringR[3] * 2048.0 : (ringR[2] ? ringR[2] * 512.0 : ringR[1] * 64.0); }   // how far the terrain is drawn
 
     void init(const StarSystem* sys, int bodyIndex, double lat, double lon, double t);
@@ -354,6 +397,9 @@ private:
     double windDriftX = 0, windDriftZ = 0, lastEnvT = -1;   // B-206: the clouds' drift integrates the wind over time (metres)
     double lightningFlash = 0;
     Rng weatherRng{1};
+    std::vector<Front> fronts; double frontsT = -1e18; uint64_t frontsSeed = 0;   // W-03: the world's fronts alive now (listed again every two minutes)
+    std::vector<float> zodiGrid;         // W-04: the zodiacal light on the sky's cell grid this frame (shades), interpolated per pixel
+
     Mat3 camLocal;            // local -> view
     Vec3 camPos;              // local metres (x, y=eye height abs, z)
     double invTwoR = 0;       // 1 / (2 R): the curvature drop per metre squared (planets)
@@ -376,7 +422,7 @@ private:
     void prefetchAhead();
     void joinAhead();
 public:
-    ~SurfaceView() { joinAhead(); joinLandmarks(); }
+    ~SurfaceView() { joinAhead(); joinScan(); }
     SurfaceView() = default;
     SurfaceView(const SurfaceView&) = delete;
     SurfaceView& operator=(const SurfaceView&) = delete;
@@ -405,15 +451,19 @@ public:
     std::vector<std::pair<float, float>> trail;
     int siteEpoch = 0;   // B-303: counts landings and re-anchors, so cached maps of the site (the sector map image) know to rebuild
     double drainCheckT = -1e9;   // O6-03: when the drainage tiles ahead were last checked
-    // O6-06: the landmarks within the drawn disc (and a little beyond), in local metres; found at a landing and a re-anchor
-    struct SiteLandmark { Landmark lm; double x = 0, z = 0; };
-    std::vector<SiteLandmark> landmarks;
-    void findLandmarks();          // starts the search on a thread of its own (a landing's first frame must not wait for 80 cells)
-    void collectLandmarks();       // the main thread takes a finished search (update)
-    void joinLandmarks();
-    std::thread landmarkThread; std::atomic<bool> landmarkBusy{false}; std::vector<Landmark> landmarkOut;
-    const SiteLandmark* landmarkAt(double x, double z) const;                 // the landmark whose extent holds the point (the crosshair's hit)
-    const SiteLandmark* nearestLandmark(double x, double z, double maxDist) const;
+    // R-408: the surface scanner's echoes: every sight the world can hold within SCAN_RANGE of the scan's centre (the cells' kinds
+    // by `sightsNear`, every ruin by `ruinsNear`), searched on a thread of their own while the game wants them (`scanWanted`: the
+    // scanner is on) at a landing, after a re-anchor and when the explorer has gone SCAN_STEP from the last centre; in local metres
+    struct ScanEcho { Landmark lm; double x = 0, z = 0; };
+    static constexpr double SCAN_RANGE = 40000, SCAN_STEP = 5000;
+    std::vector<ScanEcho> echoes;
+    bool scanWanted = false, scanned = false;   // the game's wish; a scan has come in for this site
+    Vec3 scanU;                                 // where the last scan was asked (body-frame unit: a re-anchor keeps it)
+    double scanMs = 0;                          // what the last scan cost on its thread
+    void startScan();              // the search of the sights round the explorer, on a thread of its own
+    void collectScan();            // the main thread takes a finished scan (update)
+    void joinScan();
+    std::thread scanThread; std::atomic<bool> scanBusy{false}; std::vector<Landmark> scanOut; double scanOutMs = 0;
 private:
     struct Footprint { float x, z, heading; };
     std::vector<Footprint> footprints;
@@ -469,6 +519,8 @@ private:
     void buildDirLUT();
     void drawSky(Framebuffer& fb, double t, const std::vector<Star>& stars, SpaceRenderer& sr);
     void drawFloor(Framebuffer& fb);
+    double floorHeight();   // the floor's height beyond the last ring: the sea, or 300 m under the lowest far cell (0 on a small body)
+    double floorH = 0;      // B-408: this frame's, for the floor and the galactic band's horizon
     // B-310: the terrain is drawn in parallel bands of rows: warmTerrainLOD fills the vertex cache and the material tiles
     // serially, then every band thread draws all rings clipped to its rows (drawTerrainLOD with bandY0/bandY1 skips
     // cells wholly outside the band), reading only. The frame is identical to the serial loop's.

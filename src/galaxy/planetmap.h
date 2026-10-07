@@ -92,6 +92,12 @@ struct BodyGen {
     double boulderDensity = 0.3;
     double volcanoes = 0.4;
     double bandCount = 8;   // gas giants
+    // X-03 (GEN 12): a giant's character on its globe (hashed, the rng stream stays): the share of the storms' cells that hold a
+    // storm (the plain giant's 0.15), the bands' contrast (an ice giant's faint under its haze), and a great storm, an oval the size
+    // of a moon at its own latitude (its centre in the pattern's frame, its semi-axes in radians of arc east and north, +1 bright
+    // or -1 dark); `giantJetAt` (galaxy/probe.h) turns it whole with its own latitude's jet
+    double stormShare = 0.15, bandContrast = 1;
+    bool gsOn = false; double gsLat = 0, gsLon = 0, gsA = 0.1, gsB = 0.06, gsTone = 1;
     RGB color, color2;      // primary/secondary tints
     RGB skyTint;            // for atmospheres
     RGB vegColor;           // vegetation (felisian)
@@ -155,6 +161,9 @@ std::string seasonName(double season, double latRad, double axialTilt);
 
 // unit: body-frame unit vector. detailMeters: smallest feature scale to include.
 SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailMeters);
+// X-04: a giant's storm cell at a point of its globe (body frame, unit): the storm term its branch of `sampleSurface` paints
+// (0 where none) and the cell's id (`id`: 0 where none), by which a storm the probe fell into keeps the explorer's name
+double giantStormCell(const BodyGen& g, const Vec3& unit, uint64_t* id = nullptr);
 // O6-02: the relief spectrum alone at a point (metres, and the slope of the sum as rise over run), for tests
 struct Relief { double h = 0, slope = 0; };
 Relief reliefAt(const BodyGen& g, const Vec3& unit, double a0, double ridge, double detailMeters);

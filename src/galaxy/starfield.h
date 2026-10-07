@@ -146,6 +146,19 @@ struct StarNeighborhood {
     // nearest star to a position (or nullptr)
     const Star* nearest(const Vec3& posKm, double* distOut = nullptr) const;
 };
+// R-407 (2026-10-07): a jump of any length. `nearestStarTo` is the star nearest a point (km) in the cube of `radius` sectors round
+// it (`skipSeed` left out: the star the ship is at), false when the cube holds none. `jumpTarget` is where a jump of `ly` light
+// years along `dir` (a unit vector) from `fromKm` comes out: the star nearest the end of the line; where the end lies in the void
+// (above the disc, beyond its rim) the star nearest the first point back along the line where the stars are dense enough to hold
+// one (`shortLy`: how far short of the end), false when not even the ship's own neighbourhood holds another star
+constexpr double JUMP_MAX_LY = 100000;
+bool nearestStarTo(const Vec3& posKm, int radius, Star& out, uint64_t skipSeed = 0);
+bool jumpTarget(const Vec3& fromKm, const Vec3& dir, double ly, Star& out, double& shortLy, uint64_t skipSeed = 0);
+// the way a direction runs in the galaxy from a place (sector units): COREWARD, RIMWARD, ALONG THE DISC, NORTH or SOUTH OUT OF THE DISC
+std::string galacticHeading(const Vec3& fromSectors, const Vec3& dir);
+// the length of a Vimana flight in real seconds: 7 + 2 sqrt(ly) to 100 ly (27 s), then 6 s for every doubling (R-407: a crossing
+// of the galaxy in 87 s, not ten minutes)
+double vimanaSeconds(double ly);
 std::string generateName(uint64_t seed, int style = 0);   // style 0 plain, 1 hard (core/halo), 2 flowing (arms/nebulae)
 std::string romanNumeral(int n);
 inline uint64_t sectorSeed(int64_t sx, int64_t sy, int64_t sz) { return hash3i(sx, sy, sz, 0x5EED5EEDULL); }

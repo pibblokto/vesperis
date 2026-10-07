@@ -220,9 +220,6 @@ void Game::buildLandingZoom() {
     });
     MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
-    // O6-06: the sights of the window (the grid cells the window touches)
-    landmarksNear(g, b.name, StarSystem::bodyFromLatLon(zoomLat, zoomLon), std::max(zoomHalfLat, zoomHalfLon * std::cos(zoomLat)) * b.radiusKm * 1000.0 * 1.2, zoomLandmarks, false);   // the tiles built so far: the zoom must not compute any
-    std::sort(zoomLandmarks.begin(), zoomLandmarks.end(), [](const Landmark& a, const Landmark& b2) { return a.prominenceM * (a.kind == LM_RUIN && !a.sub ? 0.05 : 1.0) > b2.prominenceM * (b2.kind == LM_RUIN && !b2.sub ? 0.05 : 1.0); });   // the sights worth a name first
     auto hAt = [&](int x, int y) { x = clampi(x, 0, ZW - 1); y = clampi(y, 0, ZH - 1); return (double)hs[y * ZW + x]; };
     double sum2 = 0; int cnt = 0;
     for (int y = 0; y < ZH; y += 2)
@@ -344,6 +341,12 @@ uint32_t Game::testLandingMapTexel(int tx, int ty, bool clouds) {
     return mapBase[ty * PlanetMap::W + tx];
 }
 
+double Game::testFrontBandAt(double latDeg, double lonDeg) {   // W-03
+    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return 0;
+    const SpaceRenderer::FrontMap* fm = spaceR.frontsFor(sys.bodies[landBody], t);
+    return fm ? frontMapAt(fm->cloud, PlanetMap::W, PlanetMap::H, lonDeg * DEG, latDeg * DEG) : 0.0;
+}
+
 // N1-06: the relief class the landing map would print at a site
 const char* Game::testReliefClass(double lat, double lon) {
     probeSite.init(&sys, landBody, lat, lon, t);
@@ -371,6 +374,18 @@ void Game::renderLandingMap() {
     }
     refreshMapShadows(unitLUT);   // O0-04: the moons', the parent's and the rings' shadows on the day side
     const int PW = MAP_LW * S, PH = MAP_LH * S;
+    // W-03: the fronts' bands (the same overlay the globe draws), under the cloud filter like the pattern's cloud
+    const SpaceRenderer::FrontMap* fmc = mapClouds && PLANET_TYPES[b.type].atmosphere && !hasOpaqueDeck(b.type) ? spaceR.frontsFor(b, t) : nullptr;
+    const std::vector<uint8_t>* fm = fmc ? &fmc->cloud : nullptr;
+    if (fm && landZoom && !zoomUnit.empty() && (zoomFront.size() != zoomUnit.size() || std::fabs(t - zoomFrontT) > 240 || zoomFrontLat != zoomLat || zoomFrontLon != zoomLon)) {
+        zoomFront.resize(zoomUnit.size()); zoomFrontT = t; zoomFrontLat = zoomLat; zoomFrontLon = zoomLon;
+        for (size_t i = 0; i < zoomUnit.size(); i++) { double la, lo; StarSystem::latLonFromBody(zoomUnit[i], la, lo); zoomFront[i] = (uint8_t)(frontMapAt(*fm, PlanetMap::W, PlanetMap::H, lo, la) * 255 + 0.5); }
+    }
+    auto withFront = [&](uint32_t c, double fc) {   // the band whitens the texel as the cloud filter does
+        double r = c & 255, gg = (c >> 8) & 255, bl = (c >> 16) & 255;
+        fc *= 0.6; r += (245 - r) * fc; gg += (245 - gg) * fc; bl += (250 - bl) * fc;
+        return rgb((int)r, (int)gg, (int)bl);
+    };
     if (landZoom && !zoomImg.empty()) {
         // O2: the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map
         for (int py = 0; py < PH; py++) {
@@ -382,6 +397,7 @@ void Game::renderLandingMap() {
                 double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
                 if (zoomEmissive[i]) l = std::max(l, 0.95);
                 uint32_t c = zoomImg[i];
+                if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
                 row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
             }
         }
@@ -411,6 +427,7 @@ void Game::renderLandingMap() {
                 double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
                 if (mapEmissive[i]) l = std::max(l, 0.95);
                 uint32_t c = mapBase[i];
+                if (fm && (*fm)[i]) c = withFront(c, (*fm)[i] / 255.0);
                 row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
             }
         }
@@ -445,17 +462,16 @@ void Game::renderLandingMap() {
         }
         int named = 0;
         struct LabelBox { int x0, y0, x1, y1; }; std::vector<LabelBox> labels;   // no name over another's, nor over the map's own text
-        for (const Landmark& L : zoomLandmarks) {   // O6-06, B-401: the sights already found on foot (a glyph each), the eight nearest of the explorer's names
-            std::string key = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, landBody) + "/L" + std::to_string((unsigned long long)(L.id & 0xffffffffULL));
-            if (!guide.landmarksSeen.count(key)) continue;
-            double lla, llo; StarSystem::latLonFromBody(L.unit, lla, llo);
-            int lx = ox + (int)((wrapAngle(llo - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW), ly = oy + (int)((0.5 - (lla - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
+        const std::string bkey = worldKeyOf(landBody);
+        for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world (a glyph each, a friend's in cyan), eight names at most
+            if (m.body != bkey) continue;
+            int lx = ox + (int)((wrapAngle(m.lon - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW), ly = oy + (int)((0.5 - (m.lat - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
             if (lx < ox + 1 || ly < oy + 1 || lx >= ox + MAP_LW - 1 || ly >= oy + MAP_LH - 1) continue;
-            auto it = guide.names.find(key);
-            uint32_t lc = HUD_WHITE;
-            drawText(canvas, lx - 2, ly - 3, LANDMARK_KIND_SYMBOLS[L.kind], lc);
-            if (it != guide.names.end() && named < 8 && lx + 60 < ox + MAP_LW && ly - 3 > oy + 8 && ly + 5 < oy + MAP_LH - 8) {
-                std::string nm = trunc(it->second, 14);
+            const uint32_t lc = m.lent ? HUD_CYAN : HUD_WHITE;
+            if (m.kind < LM_COUNT) drawText(canvas, lx - 2, ly - 3, LANDMARK_KIND_SYMBOLS[m.kind], lc);
+            else { drawLineRGB(canvas, lx - 2, ly, lx, ly - 2, lc); drawLineRGB(canvas, lx, ly - 2, lx + 2, ly, lc); drawLineRGB(canvas, lx + 2, ly, lx, ly + 2, lc); drawLineRGB(canvas, lx, ly + 2, lx - 2, ly, lc); }
+            if (!m.name.empty() && named < 8 && lx + 60 < ox + MAP_LW && ly - 3 > oy + 8 && ly + 5 < oy + MAP_LH - 8) {
+                std::string nm = trunc(upper(m.name), 14);
                 LabelBox bx{lx + 5, ly - 3, lx + 5 + textWidth(nm.c_str()), ly + 4};
                 bool clear = true;
                 for (const LabelBox& o2 : labels) if (bx.x0 < o2.x1 + 2 && bx.x1 + 2 > o2.x0 && bx.y0 < o2.y1 + 1 && bx.y1 + 1 > o2.y0) { clear = false; break; }
@@ -466,6 +482,12 @@ void Game::renderLandingMap() {
         cy = oy + (int)((0.5 - (landLat - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
     } else {
         cx = ox + (int)((wrap2pi(landLon + PI) / TAU) * MAP_LW); cy = oy + (int)((0.5 - landLat / PI) * MAP_LH);
+        const std::string bkey = worldKeyOf(landBody);
+        for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world, a dot each (Z zooms in on them)
+            if (m.body != bkey) continue;
+            int mx = ox + (int)((wrap2pi(m.lon + PI) / TAU) * MAP_LW), my = oy + (int)((0.5 - m.lat / PI) * MAP_LH);
+            fillRectRGB(canvas, mx - 1, my - 1, mx + 1, my + 1, rgb(0, 0, 0)); fillRectRGB(canvas, mx, my, mx, my, m.lent ? HUD_CYAN : HUD_WHITE);
+        }
     }
     cx = clampi(cx, ox, ox + MAP_LW - 1); cy = clampi(cy, oy, oy + MAP_LH - 1);
     drawLineRGB(canvas, ox, cy, ox + MAP_LW - 1, cy, rgb(255, 255, 255));

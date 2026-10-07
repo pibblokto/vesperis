@@ -135,7 +135,7 @@ bool Game::save(const std::string& path) {
     f << "saved " << (long long)std::time(nullptr) << "\n";
     f << "name " << (sys.valid ? starNameOf(sys.star) : std::string("deep space")) << "\n";
     f << "t " << t << "\n";
-    f << "warp " << timeWarp << "\n";
+    f << "warp " << (almanacRunning ? 1.0 : timeWarp) << "\n";   // W-01: a run in progress is not saved (it would load as a bare warp)
     f << "star " << sys.star.sx << " " << sys.star.sy << " " << sys.star.sz << " " << (sys.valid ? 1 : 0) << "\n";
     f << "ship " << ship.pos.x << " " << ship.pos.y << " " << ship.pos.z << " " << ship.yaw << " " << ship.pitch << "\n";
     f << "mode " << (int)ship.mode << " " << ship.parkedBody << " " << ship.localTarget << " " << (ship.orbiting ? 1 : 0) << "\n";
@@ -143,10 +143,19 @@ bool Game::save(const std::string& path) {
     f << "belt " << ship.targetBelt << " " << ship.parkedBelt << " " << ship.rockIr << " " << ship.rockIa << " " << ship.rockIy << " " << ship.rockM << " " << ship.rockDist << "\n";   // O3
     f << "remote " << (ship.hasRemote ? 1 : 0) << " " << ship.remote.sx << " " << ship.remote.sy << " " << ship.remote.sz << "\n";
     f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (cabin.onRoof ? 1 : 0) << "\n";
+    if (probe.active && probe.endClock < 0 && probeHere())   // X-01: a falling probe (a last frame held is not kept)
+        f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " " << probe.startRel.y << " " << probe.startRel.z << " "
+          << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw << " " << probe.descYaw << " " << probe.camYaw << " " << probe.camPitch << " " << (probe.tornNoted ? 1 : 0) << " " << (state == GameState::PROBE ? 1 : 0)
+          << " " << probe.id << " " << probe.notes << " " << probe.stormKind << " " << (probe.stormKey.empty() ? "-" : probe.stormKey) << "\n";   // X-04: its number, what it logged, its storm
+    if (probe.active && probe.endClock < 0 && probeHere()) {   // X-04: the tracks so far (the recording goes on after a load)
+        f << "probetrack " << probe.camTrack.size(); for (double v : probe.camTrack) f << " " << v;
+        f << " " << probe.timeTrack.size(); for (double v : probe.timeTrack) f << " " << v;
+        f << "\n";
+    }
     // where the explorer is: on the surface in the surface states, and in every overlay state (menus, guide screens,
     // the title after a load, ...) when the overlay returns to the surface. The title was missing here, so closing
     // the window on the title (or `--frames`) autosaved the expedition as "in space" and lost the landing (2026-09-27)
-    bool inPlay = state == GameState::SPACE || state == GameState::LANDING_MAP || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT;
+    bool inPlay = state == GameState::SPACE || state == GameState::LANDING_MAP || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::PROBE;
     bool onSurface = surf.valid && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || (!inPlay && returnState == GameState::SURFACE));
     f << "surface " << (onSurface ? 1 : 0) << "\n";
     if (onSurface) {
@@ -170,7 +179,9 @@ bool Game::load(const std::string& path) {
     std::getline(f, line);
     if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
     radarOff(); radar = RadarState();   // C-07: the radar is not saved
+    telescopeOff();                     // W-06: nor the telescope
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10: nor the chart held up
+    probe = ProbeState();                                    // X-01: a falling probe comes back from its own line below
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
     int onSurface = 0, siteBody = -1; double slat = 0, slon = 0, px = 0, pz = 0, pyaw = 0, ppitch = 0, capx = 0, capz = 0;
@@ -179,6 +190,7 @@ bool Game::load(const std::string& path) {
     int drDep = 0, drIn = 0; double drX = 0, drZ = 0, drH = 0, drOdo = 0;   // R-403
     int gen = 1;
     Cabin cab; int cl = 1, cd = 0, cr = 0;
+    ProbeState np; int npTorn = 0, npWatch = 0; bool npHas = false;   // X-01
     ShipState ns;
     double nt = t, warp = 1;
     while (std::getline(f, line)) {
@@ -203,13 +215,26 @@ bool Game::load(const std::string& path) {
         else if (key == "stamina") is >> stam;
         else if (key == "gen") is >> gen;
         else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; cab.onRoof = cr != 0; }
+        else if (key == "probe") {
+            is >> np.body >> np.starSeed >> np.aimLat >> np.aimLon >> np.clock >> np.launchT >> np.startRel.x >> np.startRel.y >> np.startRel.z >> np.flight.chuteOpen >> np.flight.chuteClose >> np.flight.crushBar
+               >> np.seed >> np.headYaw >> np.descYaw >> np.camYaw >> np.camPitch >> npTorn >> npWatch;
+            npHas = !is.fail();
+            std::string sk;   // X-04 (a save before it has none)
+            if (npHas && is >> np.id >> np.notes >> np.stormKind >> sk) np.stormKey = sk == "-" ? std::string() : sk;
+        } else if (key == "probetrack") {   // X-04
+            size_t n = 0;
+            is >> n; for (size_t i = 0; i < n && i < 400000 && is; i++) { double v; is >> v; np.camTrack.push_back(v); }
+            is >> n; for (size_t i = 0; i < n && i < 400000 && is; i++) { double v; is >> v; np.timeTrack.push_back(v); }
+            if (np.camTrack.size() % 3) np.camTrack.clear();
+            if (np.timeTrack.size() % 2) np.timeTrack.clear();
+        }
     }
     Star s;
     if (!starInSector(sx, sy, sz, s, true)) {   // G-01: the galaxy of generation 11 keeps about half of the old stars near home
         status(fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - ITS STAR IS GONE", gen, GEN_VERSION), 8);
         return false;
     }
-    t = nt; timeWarp = warp;
+    t = nt; timeWarp = warp; almanacRunning = false;   // W-01
     sys.generate(s);
     sys.valid = valid != 0;
     ship = ns;
@@ -222,6 +247,7 @@ bool Game::load(const std::string& path) {
     if (hasRemote && starInSector(rx, ry, rz, ship.remote, true)) ship.hasRemote = true;
     if (ship.targetBelt >= (int)sys.belts.size()) ship.targetBelt = -1;   // O3
     if (ship.parkedBelt >= (int)sys.belts.size()) ship.parkedBelt = -1;
+    if (ship.parkedBody >= 0 && ship.parkedBelt >= 0) { ship.parkedBelt = -1; ship.targetBelt = -1; }   // B-410: a save made with both parks at the body its approach reached
     if (ship.mode == ShipState::PARKED && ship.parkedBody < 0 && ship.parkedBelt < 0) ship.mode = ShipState::STANDBY;
     nb.update(ship.pos);
     surf.valid = false;
@@ -248,9 +274,19 @@ bool Game::load(const std::string& path) {
             fade = state == GameState::DESCENT ? 0 : 1;
         }
     } else state = GameState::SPACE;
+    if (npHas && state == GameState::SPACE && sys.valid && sys.star.seed == np.starSeed && ship.mode == ShipState::PARKED && ship.parkedBody == np.body && np.body >= 0 &&
+        np.body < (int)sys.bodies.size() && isProbeGiant(sys.bodies[np.body].type)) {   // X-01: the probe falls on from where it was
+        probe = np; probe.active = true; probe.tornNoted = npTorn != 0;
+        probe.atm = giantAtmosphereOf(sys, np.body);
+        probe.prevClock = probe.prevCamClock = probe.prevHoleClock = probe.clock; probe.prevT = t; probe.prevPace = -1;   // X-04: the tracks go on from here
+        probe.prevYaw = probe.camYaw; probe.prevPitch = probe.camPitch;
+        if (probe.id <= 0) probe.id = std::max(1, guide.probesSent);
+        if (npWatch) state = GameState::PROBE;
+    }
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
     hasSave = true;
     autosaveTimer = 0;
+    migrateLandmarkNames();   // R-408: the sights named in this system before are marks now
     if (gen < 11) { statusNext = fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - THIS STAR IS STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }   // G-01
     else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS WERE REGENERATED SINCE THIS SAVE (GEN %d, NOW %d) - STARS ARE WHERE THEY WERE", gen, GEN_VERSION); statusNextSecs = 8; }
     return true;

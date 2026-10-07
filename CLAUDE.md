@@ -39,9 +39,9 @@ settings, audio), `src/platform_raylib.cpp`, `src/main_headless.cpp` (the harnes
   platform layer behind `src/platform.h` is the only place.
 * One code path: no prototype or HD variants lingering in the tree; experiments live in a
   scratch build and are removed once the decision is recorded in `10-decisions.md`.
-* Names: nothing has a name until the explorer gives one (`starNameOf`, `bodyNameOf`,
-  `landmarkName` return the guide's name or UNKNOWN; generated names stay internal).
-* Maps show only sights already found (`guide.landmarksSeen`).
+* Names: nothing has a name until the explorer gives one (`starNameOf`, `bodyNameOf`
+  return the guide's name or UNKNOWN; generated names stay internal).
+* Maps show only what the explorer marked (`guide.marks`); the scanner hints, it never names.
 * Keep the UI terse: the title screen is the name and the choices; no feature blurbs.
 * Work per milestone and wait for the user's "proceed" before starting the next one.
 

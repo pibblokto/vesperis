@@ -460,6 +460,66 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
     return radarLvl * (dry + 0.55 * rdEchoLp);
 }
 
+// X-01: the probe's relay. The link is a soft hiss with a tick a second while the probe is in space; the air a rush whose
+// brightness and level follow the stage; the entry a roar with a crackle; the chute a flutter on the rush; below the first deck a
+// rumble deepening and, past half the depth, the hull's groans; a thunderclap muffled through the relay; at the end only the hiss
+// of the lost signal. Everything through the relay's level (`prLvl`)
+double AudioSynth::probeSample(double dt, AudioState& st) {
+    if (st.probeThunder > 0) { prThunT = 0; prThunAmp = st.probeThunder; st.probeThunder = 0; }
+    float n = noise();
+    double s = 0;
+    prHp += (n - prHp) * 0.35; double hiss = n - prHp;   // a high band of white noise
+    if (st.probeLost) {
+        prCrackle -= dt;
+        double crack = 0;
+        if (prCrackle <= 0) { crack = 0.5 * noise(); prCrackle = 0.02 + 0.3 * (0.5 + 0.5 * noise()); }
+        return prLvl * (0.11 * hiss + 0.05 * crack);
+    }
+    double statik = 1 - st.probeSignal;
+    s += (0.012 + 0.05 * statik * statik) * hiss;
+    if (st.probeStage <= 1) {   // in space: the telemetry's tick
+        prTick += dt;
+        if (prTick >= 1.0) prTick -= 1.0;
+        if (prTick < 0.008) s += 0.05 * std::sin(6.2831853 * 1600 * prTick);
+    }
+    double cut = 0.02 + 0.10 * st.probeWind * (1 - 0.6 * st.probeDepth);   // the air's rush, darker as it deepens
+    prWindLp += (n - prWindLp) * cut; prWindLp2 += (prWindLp - prWindLp2) * cut;
+    double gust = 0.75 + 0.25 * std::sin(lfo * 6.2831853 * 0.6) * std::sin(lfo * 6.2831853 * 0.17 + 1.1);
+    double flutter = st.probeChute > 0 ? 0.55 + 0.45 * std::sin(prChutePh += dt * 6.2831853 * 7.3) : 1.0;
+    s += st.probeWind * 0.55 * prWindLp2 * gust * flutter;
+    if (st.probeHeat > 0.01) {   // the entry: a roar and a crackle
+        prHeatLp1 += (n - prHeatLp1) * 0.03; prHeatLp2 += (prHeatLp1 - prHeatLp2) * 0.03;
+        double crack = (0.5 + 0.5 * noise()) < 0.004 * st.probeHeat ? noise() * 0.6 : 0.0;
+        s += st.probeHeat * (1.1 * prHeatLp2 + 0.12 * prHeatLp1 + crack);
+    }
+    if (st.probeDepth > 0.01) {   // the deep: a rumble, and the hull's groans past half the depth
+        prRum1 += (n - prRum1) * 0.006; prRum2 += (prRum1 - prRum2) * 0.006;
+        s += st.probeDepth * 1.6 * prRum2;
+        if (st.probeDepth > 0.5) {
+            prCreakNext -= dt;
+            if (prCreakNext <= 0 && prCreakT < 0) { prCreakT = 0; prCreakF = 70 + 40 * (0.5 + 0.5 * noise()); prCreakNext = 2.5 + 6 * (0.5 + 0.5 * noise()) / st.probeDepth; }
+            if (prCreakT >= 0) {
+                double dur = 0.7;
+                if (prCreakT < dur) {
+                    double env = std::sin(prCreakT / dur * 3.14159) * (0.7 + 0.3 * std::sin(prCreakT * 90));
+                    prCreakPh += dt * prCreakF * (1 - 0.35 * prCreakT / dur);
+                    s += st.probeDepth * 0.09 * env * (std::sin(prCreakPh * 6.2831853) + 0.4 * std::sin(prCreakPh * 6.2831853 * 2.7));
+                    prCreakT += dt;
+                } else prCreakT = -1;
+            }
+        }
+    }
+    if (prThunT >= 0) {   // thunder through the relay: a band of the roar, a sharp front and a long tail
+        if (prThunT < 2.2) {
+            prThunLp1 += (n - prThunLp1) * 0.05; prThunLp2 += (prThunLp1 - prThunLp2) * 0.05;
+            double env = std::exp(-prThunT * 1.8) * (prThunT < 0.03 ? prThunT / 0.03 : 1.0);
+            s += prThunAmp * 2.2 * env * prThunLp2;
+            prThunT += dt;
+        } else prThunT = -1;
+    }
+    return prLvl * s;
+}
+
 void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
     double dt = 1.0 / sr;
     if (st.beep > 0) { beepT = 0; beepKind = st.beep; st.beep = 0; }
@@ -607,6 +667,8 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
             }
             s += m;
         }
+        prLvl += (st.probe - prLvl) * k * 2;   // X-01 the probe's relay
+        if (prLvl > 0.003 || st.probeThunder > 0) s += probeSample(dt, st);
         if (radarLvl > 0.005) s += radarSample(dt, st);   // C-07 the receiver (the radar camera)
         else { rdContent = 0; rdEvT = -1; rdEvNext = 6 + 8 * (0.5 + 0.5 * noise()); rdClock = 0; }
         // beep

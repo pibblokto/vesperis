@@ -11,6 +11,9 @@
 #include "galaxy/planetmap.h"
 #include "galaxy/drainage.h"
 #include "galaxy/landmarks.h"
+#include "galaxy/almanac.h"
+#include "galaxy/fronts.h"
+#include "galaxy/nights.h"   // W-04
 #include "galaxy/ruins.h"
 #include "galaxy/shards.h"
 #include "galaxy/music.h"
@@ -37,6 +40,8 @@ static int takePeopleArg(int& argc, char** argv);
 static int g_testScale = 1;
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
 static constexpr double PIN_MOUNTAIN_LAT = -48.030, PIN_MOUNTAIN_LON = 152.547;   // S-01: re-pinned on Wyariothmai I, the day side of a world locked to its red dwarf (the G-04 pin's world, Wyariothmai III, is an ocean world since the star was claimed; of the five lit mountain candidates this one has a steady slope for `descent`)   // `scale=N` on the command line renders every Game-based mode at that scale
+static constexpr double PIN_PLAIN_LAT = -55.154, PIN_PLAIN_LON = -122.371;   // W-03: the pinned felisian plain (`felisian_plain` of `landforms sites`, S-01's re-pin on Wyariothmai I's day side): the fronts' scenes, frames and checks stand on it
+static constexpr double PIN_FRONT_LAT = -26.555, PIN_FRONT_LON = 166.809;   // W-03: the fronts' scenes' site on the same world: flat land by day under a clear pattern sky with a strong front coming (0/0: search and print what to pin)
 
 static bool galaxySkyFrames(double coreLon);   // G-03, defined with the space renderer below
 static double nowSec() {
@@ -430,6 +435,9 @@ static void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only = -1) {
 
 static uint64_t fnv(uint64_t h, const void* p, size_t n);
 
+static void renderTelescopeFrames(SpaceRenderer& sr, StarNeighborhood& nb);   // W-06, below
+static void renderFrontFrames(SpaceRenderer& sr, StarNeighborhood& nb);       // W-03, below
+static bool pinnedPlainFront(StarSystem& sys, int& bi, double t0, FrontForecast& fc, double window = 60 * 86400.0);   // W-03, with the scene finders
 static void renderSpace() {
     SpaceRenderer sr;
     StarNeighborhood nb;
@@ -712,6 +720,204 @@ static void renderSpace() {
                     cometDone = true;
                 }
         }
+    renderTelescopeFrames(sr, nb);   // W-06
+    renderFrontFrames(sr, nb);       // W-03
+}
+
+// W-06: a frame through the telescope: the view from `shipPos` on `aim`, magnified `zoom` times (the focal length multiplied,
+// as the game does); the body's disc radius in pixels is returned through `rpxOut` for the body `bankA`
+// `plate`: the body `bankA` through the plate (the planet function at the eyepiece's footprint, read out whole before the frame: the
+// user's review of W-06), else the world map alone (the eyepiece before the review, for the comparison)
+static double telescopeFrame(SpaceRenderer& sr, StarNeighborhood& nb, StarSystem& sys, double t, const Vec3& shipPos, const Vec3& aim, double zoom, int bankA, int bankB, const char* file, double* rpxOut = nullptr, bool plate = true) {
+    nb.update(shipPos);
+    Vec3 fwd = normalize(aim - shipPos);
+    Framebuffer fb; SpaceContext c;
+    c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)));
+    c.bankBodyA = bankA; c.bankBodyB = bankB; c.starIntensity = 1.5;
+    c.detailBody = plate ? bankA : -1; c.detailBudget = 0;
+    if (bankA >= 0) warmMaps(sr, sys, bankA);
+    if (bankB >= 0) warmMaps(sr, sys, bankB);
+    Proj saved = sr.proj; sr.proj = Proj::fromHFov(70); sr.proj.f *= zoom;
+    sr.setupPalette(fb, &sys, bankA, bankB, 1.0);
+    double t0 = nowSec(); sr.render(fb, c); double ms = (nowSec() - t0) * 1000;
+    fb.mush(2); saveFB(fb, file);
+    if (rpxOut) *rpxOut = bankA >= 0 && bankA < (int)sr.bodyInfo.size() ? sr.bodyInfo[bankA].radiusPx : 0;
+    if (plate) printf("  %s (%.1f ms with the build)\n", sr.plateInfo().c_str(), ms);
+    sr.proj = saved;
+    return ms;
+}
+// the ground a telescope's ground frame looks at: the highest point (land on a world with seas) within sixty degrees of the
+// sub-ship point, the nearer the better
+static bool telescopeGroundPoint(SpaceRenderer& sr, const StarSystem& sys, int bi, double t, const Vec3& ship, double& latOut, double& lonOut) {
+    const Body& b = sys.bodies[bi];
+    const PlanetMap& m = sr.mapFor(b);
+    Mat3 frame = sys.bodyFrame(bi, t);
+    Vec3 sub = normalize(frame * (ship - sys.bodyPos(bi, t)));
+    double best = -1e18; bool found = false;
+    for (int y = 1; y < PlanetMap::H - 1; y += 2)
+        for (int x = 0; x < PlanetMap::W; x += 2) {
+            int i = y * PlanetMap::W + x;
+            if (matFamily(m.material[i]) == FAM_WATER || m.material[i] == MAT_ICE) continue;
+            double lat = (0.5 - (y + 0.5) / PlanetMap::H) * PI, lon = ((x + 0.5) / PlanetMap::W) * TAU - PI;
+            double cc = dot(StarSystem::bodyFromLatLon(lat, lon), sub);
+            if (cc < 0.5) continue;   // within sixty degrees of the sub-ship point
+            double score = m.height[i] + 1500 * cc;
+            if (score > best) { best = score; latOut = lat; lonOut = lon; found = true; }
+        }
+    return found;
+}
+// the power of two that shows a disc of `angR` (radians) `share` of the frame's height tall, within x2..x1024
+static double telescopeFit(double angR, double share) {
+    double rpx1 = (FBW * 0.5) / std::tan(35 * DEG) * std::tan(angR);
+    double want = share * FBH * 0.5 / std::max(rpx1, 1e-9);
+    int step = (int)std::lround(std::log2(std::max(want, 2.0)));
+    return (double)(1 << std::max(1, std::min(10, step)));
+}
+
+// W-06: four frames through the telescope: a moon from its giant's parking, the ringed giant from the innermost planet's
+// parking, the companion sun from the primary's first orbit, a comet near periapsis from the first planet; each at the
+// power of two that fits it, the disc measured against the plain view's (the magnification must multiply it exactly)
+static void renderTelescopeFrames(SpaceRenderer& sr, StarNeighborhood& nb) {
+    auto parkAt = [](const StarSystem& sys, int bi, double t) {
+        const Body& b = sys.bodies[bi];
+        Vec3 bp = sys.bodyPos(bi, t);
+        Vec3 toStar = normalize(sys.star.pos - bp), side = normalize(cross(toStar, Vec3(0, 1, 0)));
+        return bp + normalize(toStar * 0.6 + side * 0.8 + Vec3(0, 0.25, 0)) * (b.radiusKm * (b.rings ? std::max(3.5, b.ringOuter + 1.3) : 3.5));
+    };
+    auto firstPlanet = [](const StarSystem& sys, int except) {
+        for (int j = 0; j < (int)sys.bodies.size(); j++) if (j != except && sys.bodies[j].parent < 0 && sys.bodies[j].type != PT_COMET && sys.bodies[j].type != PT_COMPANION) return j;
+        return -1;
+    };
+    auto lastPlanet = [](const StarSystem& sys, int except) {
+        for (int j = (int)sys.bodies.size() - 1; j >= 0; j--) if (j != except && sys.bodies[j].parent < 0 && sys.bodies[j].type != PT_COMET && sys.bodies[j].type != PT_COMPANION) return j;
+        return -1;
+    };
+    bool moonDone = false, companionDone = false, cometDone = false, worldDone = false;
+    for (int64_t x = 150; x < 340 && !(moonDone && companionDone && cometDone && worldDone); x++)
+        for (int64_t z = 20; z < 160 && !(moonDone && companionDone && cometDone && worldDone); z++) {
+            Star s;
+            if (!starInSector(x, 0, z, s)) continue;
+            StarSystem sys; sys.generate(s);
+            const double t = 7000.0;
+            if (!worldDone)   // a living world from its own parking: the disc at the power that fits it, then a patch of its ground at x256 (rivers, coasts, forests from the function)
+                for (int bi = 0; bi < (int)sys.bodies.size() && !worldDone; bi++) {
+                    const Body& w = sys.bodies[bi];
+                    if (w.type != PT_FELISIAN || w.parent >= 0) continue;
+                    Vec3 ship = parkAt(sys, bi, t), wp = sys.bodyPos(bi, t);
+                    double dist = length(wp - ship), angR = std::asin(clampd(w.radiusKm / dist, 0, 1));
+                    double zoom = telescopeFit(angR, 0.8), rz = 0;
+                    telescopeFrame(sr, nb, sys, t, ship, wp, zoom, bi, -1, "shots/tests/telescope_world_map.png", &rz, false);
+                    double ms = telescopeFrame(sr, nb, sys, t, ship, wp, zoom, bi, -1, "shots/tests/telescope_world.png", &rz);
+                    printf("telescope world: %s (%s, R %.0f km) from its parking, %.0f km off: x%.0f, disc %.0f px, %.1f ms -> shots/tests/telescope_world.png (telescope_world_map.png: the map alone)\n",
+                           w.name.c_str(), PLANET_TYPES[w.type].name, w.radiusKm, dist, zoom, rz, ms);
+                    double glat = 0, glon = 0; Vec3 aim = wp;
+                    if (telescopeGroundPoint(sr, sys, bi, t, ship, glat, glon)) aim = sys.surfacePointWorld(bi, t, glat, glon, 0);
+                    telescopeFrame(sr, nb, sys, t, ship, aim, 64, bi, -1, "shots/tests/telescope_world_land_map.png", &rz, false);
+                    double ms1 = telescopeFrame(sr, nb, sys, t, ship, aim, 64, bi, -1, "shots/tests/telescope_world_land.png", &rz);
+                    double footprint = (dist - w.radiusKm) * 1000.0 / ((FBW * 0.5) / std::tan(35 * DEG));
+                    printf("telescope world land: its high ground at %.1f N %.1f E at x64 (%.0f m a pixel), %.1f ms -> shots/tests/telescope_world_land.png (telescope_world_land_map.png: the map alone)\n", glat / DEG, glon / DEG, footprint / 64, ms1);
+                    double ms2 = telescopeFrame(sr, nb, sys, t, ship, aim, 256, bi, -1, "shots/tests/telescope_world_ground.png", &rz);
+                    printf("telescope world ground: the same ground at x256 (%.0f m a pixel), %.1f ms -> shots/tests/telescope_world_ground.png\n", footprint / 256, ms2);
+                    double ms3 = telescopeFrame(sr, nb, sys, t, ship, aim, 1024, bi, -1, "shots/tests/telescope_world_close.png", &rz);
+                    printf("telescope world close: the same ground at x1024 (%.0f m a pixel), %.1f ms -> shots/tests/telescope_world_close.png\n", footprint / 1024, ms3);
+                    worldDone = true;
+                }
+            if (!moonDone)
+                for (int bi = 0; bi < (int)sys.bodies.size() && !moonDone; bi++) {
+                    const Body& g = sys.bodies[bi];
+                    if (g.type != PT_GASGIANT || !g.rings || g.parent >= 0) continue;
+                    int moon = -1;
+                    for (int j = 0; j < (int)sys.bodies.size(); j++) if (sys.bodies[j].parent == bi && (moon < 0 || sys.bodies[j].radiusKm > sys.bodies[moon].radiusKm)) moon = j;
+                    if (moon < 0) continue;
+                    Vec3 ship = parkAt(sys, bi, t), mp = sys.bodyPos(moon, t);
+                    double dist = length(mp - ship), angR = std::asin(clampd(sys.bodies[moon].radiusKm / dist, 0, 1));
+                    double zoom = telescopeFit(angR, 0.55), r1 = 0, rz = 0;
+                    telescopeFrame(sr, nb, sys, t, ship, mp, 1.0, moon, bi, "shots/tests/telescope_moon_plain.png", &r1, false);
+                    double ms = telescopeFrame(sr, nb, sys, t, ship, mp, zoom, moon, bi, "shots/tests/telescope_moon.png", &rz);
+                    printf("telescope moon: %s (%s, R %.0f km) of the ringed giant %s from its parking, %.0f km off, %.2f deg across: x%.0f fits it, disc %.1f px (%.1f at x1: %s), %.1f ms -> shots/tests/telescope_moon.png\n",
+                           sys.bodies[moon].name.c_str(), PLANET_TYPES[sys.bodies[moon].type].name, sys.bodies[moon].radiusKm, g.name.c_str(), dist, 2 * angR / DEG, zoom, rz, r1, std::fabs(rz - zoom * r1) < 0.02 * rz ? "the magnification exact" : "NOT THE MAGNIFICATION (FAIL)", ms);
+                    {   // the same moon four times closer, the map alone and through the plate, and its ground at x1024 (the plate's step against the map's)
+                        double z4 = std::min(1024.0, zoom * 4);
+                        telescopeFrame(sr, nb, sys, t, ship, mp, z4, moon, bi, "shots/tests/telescope_moon_near_map.png", &rz, false);
+                        double ms4 = telescopeFrame(sr, nb, sys, t, ship, mp, z4, moon, bi, "shots/tests/telescope_moon_near.png", &rz);
+                        printf("telescope moon near: the same moon at x%.0f, disc %.0f px, %.1f ms -> shots/tests/telescope_moon_near.png (telescope_moon_near_map.png: the map alone)\n", z4, rz, ms4);
+                        // the moon's ground from the moon's own parking (from the giant's, 3.7 km a pixel at x1024 is above the function's relief): its high
+                        // ground within sixty degrees of the sub-ship point at the power that puts a pixel near 80 m
+                        Vec3 shipM = parkAt(sys, moon, t);
+                        double footprint1 = (length(sys.bodyPos(moon, t) - shipM) - sys.bodies[moon].radiusKm) * 1000.0 / ((FBW * 0.5) / std::tan(35 * DEG));   // metres a pixel at x1
+                        int step = (int)std::lround(std::log2(std::max(2.0, footprint1 / 80.0)));
+                        double zg = (double)(1 << std::max(1, std::min(10, step)));
+                        double glat = 0, glon = 0; Vec3 aim = mp;
+                        if (telescopeGroundPoint(sr, sys, moon, t, shipM, glat, glon)) aim = sys.surfacePointWorld(moon, t, glat, glon, 0);
+                        telescopeFrame(sr, nb, sys, t, shipM, aim, zg, moon, bi, "shots/tests/telescope_ground_map.png", &rz, false);
+                        double msg = telescopeFrame(sr, nb, sys, t, shipM, aim, zg, moon, bi, "shots/tests/telescope_ground.png", &rz);
+                        printf("telescope ground: the same moon from its own parking at x%.0f (%.0f m a pixel) on its high ground at %.1f N %.1f E, %.1f ms -> shots/tests/telescope_ground.png (telescope_ground_map.png: the map alone)\n", zg, footprint1 / zg, glat / DEG, glon / DEG, msg);
+                    }
+                    int from = firstPlanet(sys, bi);
+                    if (from >= 0) {   // the giant with its rings from across the system
+                        Vec3 ship2 = parkAt(sys, from, t), gp = sys.bodyPos(bi, t);
+                        double d2 = length(gp - ship2), angRings = std::asin(clampd(g.ringOuter * g.radiusKm / d2, 0, 1));
+                        double zoom2 = telescopeFit(angRings, 0.6), rg = 0;
+                        double ms2 = telescopeFrame(sr, nb, sys, t, ship2, gp, zoom2, bi, from, "shots/tests/telescope_giant.png", &rg);
+                        printf("telescope giant: %s from the parking of %s, %.3g km off (%.2f deg across, the rings %.2f): x%.0f, disc %.1f px, %.1f ms -> shots/tests/telescope_giant.png\n",
+                               g.name.c_str(), sys.bodies[from].name.c_str(), d2, 2 * std::asin(clampd(g.radiusKm / d2, 0, 1)) / DEG, 2 * angRings / DEG, zoom2, rg, ms2);
+                    } else printf("telescope giant: %s has no planet to look from\n", g.name.c_str());
+                    moonDone = true;
+                }
+            if (!companionDone && sys.companion >= 0) {
+                const Body& k = sys.bodies[sys.companion];
+                double d = std::max(s.radiusKm * STAR_CLASSES[s.cls].firstOrbitMult, STAR_CLASSES[s.cls].minFirstOrbitKm);
+                Vec3 ship = s.pos + Vec3(0, 0, -d), kp = sys.bodyPos(sys.companion, t);
+                double dist = length(kp - ship), angR = std::asin(clampd(k.radiusKm / dist, 0, 1));
+                double zoom = telescopeFit(angR, 0.35), rz = 0;
+                double ms = telescopeFrame(sr, nb, sys, t, ship, kp, zoom, sys.companion, -1, "shots/tests/telescope_companion.png", &rz);
+                printf("telescope companion: %s's %s (R %.0f km) from the first orbit, %.3g km off, %.3f deg across: x%.0f, disc %.1f px, %.1f ms -> shots/tests/telescope_companion.png\n",
+                       s.name.c_str(), STAR_CLASSES[k.starClass].name, k.radiusKm, dist, 2 * angR / DEG, zoom, rz, ms);
+                companionDone = true;
+            }
+            if (!cometDone)
+                for (int bi = 0; bi < (int)sys.bodies.size() && !cometDone; bi++) {
+                    const Body& b = sys.bodies[bi];
+                    if (b.type != PT_COMET) continue;
+                    int from = lastPlanet(sys, bi);   // from the outermost planet: the comet at its star is a telescope's object, not the window's
+                    if (from < 0) continue;
+                    double tp = (TAU - b.orbitPhase0) / TAU * b.orbitPeriod + 0.08 * b.orbitPeriod;   // a little past periapsis: the tail streams away from the star
+                    Vec3 ship = parkAt(sys, from, tp), cp = sys.bodyPos(bi, tp);
+                    double dist = length(cp - ship);
+                    double refKm = sys.bodies[0].type == PT_COMET ? AU_GAME_KM : sys.bodies[0].orbitRadiusKm;
+                    double field = 0.8 * (refKm * 0.5) / dist;   // the coma and the first part of the tail (its length as the comet frame draws it) in the frame
+                    int step = (int)std::floor(std::log2(std::max(std::tan(35 * DEG) / std::tan(std::min(field, 1.2) * 0.5), 2.0)));
+                    double zoom = (double)(1 << std::max(1, std::min(10, step))), rz = 0;
+                    double ms = telescopeFrame(sr, nb, sys, tp, ship, cp, zoom, bi, from, "shots/tests/telescope_comet.png", &rz);
+                    printf("telescope comet: %s from the parking of %s, %.3g km off, %.3g km from its star: x%.0f, nucleus %.2f px, %.1f ms -> shots/tests/telescope_comet.png\n",
+                           b.name.c_str(), sys.bodies[from].name.c_str(), dist, length(cp - s.pos), zoom, rz, ms);
+                    cometDone = true;
+                }
+        }
+    if (!moonDone) printf("telescope moon: no ringed giant with a moon in the scanned sectors\n");
+    if (!worldDone) printf("telescope world: no living world in the scanned sectors\n");
+    if (!companionDone) printf("telescope companion: no binary in the scanned sectors\n");
+    if (!cometDone) printf("telescope comet: none in the scanned sectors\n");
+}
+
+// W-03: the pinned plain's world from a parking over the plain an hour before a front's line reaches it, at x1 and x4: the
+// fronts' bands on the globe (the same overlay the landing map draws), the plain under the centre of the disc
+static void renderFrontFrames(SpaceRenderer& sr, StarNeighborhood& nb) {
+    StarSystem sys; int bi = -1; FrontForecast fc;
+    if (!pinnedPlainFront(sys, bi, 1000.0, fc)) { printf("fronts: no front reaches the pinned plain by day within sixty days\n"); return; }
+    const Body& b = sys.bodies[bi];
+    double t = fc.tArrive - 3600;
+    Vec3 up = sys.bodyFrame(bi, t).transposed() * StarSystem::bodyFromLatLon(PIN_PLAIN_LAT * DEG, PIN_PLAIN_LON * DEG);
+    Vec3 ship = sys.bodyPos(bi, t) + up * (b.radiusKm * 3.5);
+    double rpx = 0;
+    double ms1 = telescopeFrame(sr, nb, sys, t, ship, sys.bodyPos(bi, t), 1, bi, -1, "shots/tests/space_fronts.png", &rpx, false);
+    double ms4 = telescopeFrame(sr, nb, sys, t, ship, sys.bodyPos(bi, t), 4, bi, -1, "shots/tests/space_fronts_x4.png", nullptr, false);
+    std::vector<Front> fs; frontsOf(b, t, fs, 0); int alive = 0; for (const Front& f : fs) if (frontLife(f, t) > 0) alive++;
+    const SpaceRenderer::FrontMap* fm = sr.frontsFor(b, t);
+    double band = fm ? frontMapAt(fm->cloud, PlanetMap::W, PlanetMap::H, PIN_PLAIN_LON * DEG, PIN_PLAIN_LAT * DEG) : 0;
+    int covered = 0; if (fm) for (uint8_t v : fm->cloud) if (v > 128) covered++;
+    printf("fronts: %s (%s, R %.0f km, %d slots): %d fronts alive at t %.0f, bands over %.1f%% of the map, %.2f over the plain an hour before the line (from the %s, strength %.2f); disc %.0f px at x1 (%.1f ms), x4 %.1f ms -> shots/tests/space_fronts.png, space_fronts_x4.png\n",
+           b.name.c_str(), PLANET_TYPES[b.type].name, b.radiusKm, frontSlots(b), alive, t, fm ? 100.0 * covered / fm->cloud.size() : 0.0, band, frontCompass(fc.fromBearing), fc.strength, rpx, ms1, ms4);
 }
 
 // ---- surface tests ------------------------------------------------------------
@@ -995,8 +1201,42 @@ static void runGameFlow() {
     }
     press(KEY_PAGE_UP); run(0.3); shot("roof"); press(KEY_PAGE_DOWN); run(0.1);
     press(KEY_Y); press(KEY_U); game.testCabinGoto(0.4, -1.6, 0.3); run(0.6); shot("cabin_glass"); press(KEY_Y); press(KEY_U); run(0.1);
+    game.testCabinGoto(0.0, 0.2, PI, -0.42); run(0.2); shot("cabin_back");   // R-404: the back wall's three sets in their colours (the decoder, the radar, the telescope), the head bent to the desks
+    game.testCabinGoto(1.55, -0.95, PI, -0.6); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());   // W-06: the telescope's set, from where its screen is in the frame
+    press(KEY_E); run(0.3); shot("telescope_set"); printf("  from the set: %s\n", game.testTelescopeInfo().c_str()); press(KEY_Z); run(0.1);
     press(KEY_TAB); run(0.1); shot("list"); press(KEY_ESCAPE);
     press(KEY_I); run(0.1); shot("data"); press(KEY_SPACE);
+    in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_ship"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // W-01: the system's events from the parking
+    {   // W-06: the telescope: the parked world at x2 (tracked from the start), the widest other body tracked at the power that fits it, named, photographed (the gallery's first picture)
+        game.testAimAtBody(game.testParkedBody()); press(KEY_Z); run(0.3); shot("telescope"); printf("  %s\n", game.testTelescopeInfo().c_str());
+        int other = game.testTelescopePick();
+        if (other >= 0) {
+            press(KEY_ENTER); game.testAimAtBody(other); run(0.1); press(KEY_ENTER); run(0.1);   // let the world go, aim at the other body, track it
+            double sx, sy, rpx;
+            for (int i = 0; i < 9 && game.testBodyScreen(other, sx, sy, rpx) && 2 * rpx * 2 < 0.5 * FBH; i++) { press(KEY_EQUAL); run(0.05); }
+            run(0.3); shot("telescope_moon"); printf("  %s\n", game.testTelescopeInfo().c_str());
+            int steps = 0;   // deeper until the eyepiece's step is finer than the map's texel and the plate begins (a small far moon needs a few)
+            while (game.testTelescopePlateProgress() < 0 && steps < 6) { press(KEY_EQUAL); run(0.05); steps++; }
+            printf("  %d steps deeper: %s\n", steps, game.testTelescopePlate().c_str());
+            game.testTelescopeSettle(); shot("telescope_plate"); printf("  settled: %s\n  %s\n", game.testTelescopePlate().c_str(), game.testTelescopeInfo().c_str());   // the plate read out whole: the moon's ground from the function
+            for (int i = 0; i < 2; i++) { press(KEY_EQUAL); run(0.05); }
+            game.testTelescopeSettle(); shot("telescope_plate_deep"); printf("  two steps deeper, settled: %s\n  %s\n", game.testTelescopePlate().c_str(), game.testTelescopeInfo().c_str());
+            for (int i = 0; i < steps + 2; i++) { press(KEY_MINUS); run(0.05); }
+            press(KEY_N); run(0.1); shot("telescope_name"); game.testTypeText("THE NEAR MOON"); run(0.2); shot("telescope_named"); printf("  named: %s\n", game.testTelescopeLine(true).c_str());   // the typing ends with Enter
+        }
+        press(KEY_P); run(0.05);
+        if (game.wantsScreenshot) {   // the photo as the platform takes it: the frame and the caption beside it
+            game.wantsScreenshot = false; mkdir("shots/tests/test_gallery", 0755);
+            writePNG("shots/tests/test_gallery/screenshot_1.png", game.output(), FBW, FBH);
+            { FILE* sc = fopen("shots/tests/test_gallery/screenshot_1.txt", "w"); if (sc) { fprintf(sc, "%s\n", game.screenshotCaption().c_str()); fclose(sc); } }
+            game.noteScreenshot();
+            printf("  photo: %s\n", game.screenshotCaption().c_str());
+        }
+        press(KEY_Z); run(0.1); printf("  stowed: %s\n", game.testTelescopeInfo().c_str());
+        game.testAimAtBody(game.testParkedBody()); game.testCabinGoto(0.0, -1.0, 0.0, 0.0); run(0.2);   // R-405: a second of Shift+Right carries the ship round the world, the world kept in the window (after the telescope, whose moon is lit from the parking it had)
+        in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(1.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false;
+        shot("orbit_turn"); printf("  Shift+Right for a second: '%s'\n", game.testStatus().c_str());
+    }
     press(KEY_H); run(0.1); shot("help"); press(KEY_ESCAPE);
     press(KEY_O); run(0.5);
     {   // C-07: the signal radar: on at the start, a sweep of the sky (the scope filling), the view turned onto the first people's
@@ -1052,6 +1292,7 @@ static void runGameFlow() {
         }
         shot("landing_map");
         press(KEY_R); run(0.1); shot("landing_map2");
+        in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_site"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // W-01: the cursor's site
         press(KEY_Z); run(0.3); shot("landing_zoom"); press(KEY_Z); run(0.1);   // O2 (R-301): the sector zoom
         press(KEY_J); run(0.1); shot("landing_sky");   // M5-09
         game.testLandSite(); run(0.1);   // G-04: a lit land site from the body's seed (J leaves the cursor under the moon: in the sea at Heilya II; R is seeded by the clock)
@@ -1060,6 +1301,7 @@ static void runGameFlow() {
         game.currentSlot = 1;
         run(6.0); shot("surface");
         printf("  %s\n", game.testRangeInfo().c_str());   // O1: the rangefinder
+        printf("  fronts: %s\n", game.testFrontInfo().c_str());   // W-03: the forecast at the feet
         in.down[KEY_W] = true; run(3.0); in.down[KEY_W] = false;
         in.mouseDx = 400; game.frame(in, 1.0 / 30); in.newFrame();
         run(0.5); shot("surface2");
@@ -1138,6 +1380,19 @@ static void runGameFlow() {
         shot("sectormap_wide"); printf("  %s\n", game.testMarksInfo().c_str());
         for (int i = 0; i < 5; i++) press(KEY_EQUAL);
         press(KEY_ESCAPE);
+        {   // R-408: the scanner (R) through the world's modes to the first, its lines and the compass's mark; a mark at the crosshair (L), then
+            // the sector map with the mark and the echoes; the mark removed again from the map (Delete twice) so the flow's guide stays as it was
+            press(KEY_R);
+            for (int i = 0; i < 30 * 30 && !game.testScanned(); i++) { game.frame(in, 1.0 / 30); in.newFrame(); }
+            run(0.2); shot("scan_hud"); printf("  scanner: %s\n", game.testScanInfo().c_str());
+            press(KEY_L); game.testTypeText("FLOW MARK"); run(0.3); shot("scan_marked");
+            press(KEY_N); run(0.2); shot("scan_map");
+            int fm = -1; for (int i = 0; i < (int)game.guide.marks.size(); i++) if (game.guide.marks[i].name == "FLOW MARK") fm = i;
+            if (fm >= 0) { double mx, mz; game.testMarkLocal(fm, mx, mz); game.testMapCursor(mx, mz); press(KEY_DELETE); press(KEY_DELETE); }
+            printf("  the mark placed at the crosshair %s, removed from the map %s\n", fm >= 0 ? "yes" : "NO", fm >= 0 && (int)game.guide.marks.size() == fm ? "yes" : "no");
+            press(KEY_ESCAPE);
+            while (game.testScanMode() >= 0) press(KEY_R);   // the scanner off again
+        }
         press(KEY_X); run(0.2); shot("creatures");
         // N3-03: walk up to the first herd and log how it reacts
         if (game.testGotoHerd(34)) {
@@ -1158,8 +1413,15 @@ static void runGameFlow() {
         in.down[KEY_LEFT_CONTROL] = true; press(KEY_R); in.down[KEY_LEFT_CONTROL] = false; run(0.1);
         in.down[KEY_LEFT_CONTROL] = true; press(KEY_R); in.down[KEY_LEFT_CONTROL] = false;
         printf("recorder: take %d, %d frames%s\n", game.recTake, game.recFrame, game.recFrame >= 3 ? " (ok)" : " FAIL");
-        in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.5); shot("timelapse");   // M5-06
-        press(KEY_T); run(0.1);   // back to x1
+        {   // W-01: the almanac under the feet, Enter on its first event, the run watched until the clock lands on it (the time-lapse frame of M5-06 was here)
+            in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac"); printf("  %s\n", game.testAlmanacInfo().c_str());
+            press(KEY_ENTER); run(0.3); shot("almanac_run");
+            double target = game.testAlmanacTarget(), tStart = game.gameTime(), peak = 0; int frames = 0;
+            while (game.testAlmanacRunning() && frames++ < 30 * 300) { game.frame(in, 1.0 / 30); in.newFrame(); peak = std::max(peak, game.testTimeWarp()); }
+            double off = game.gameTime() - target, warpAfter = game.testTimeWarp();
+            run(0.2); shot("almanac_arrived");
+            printf("  the run: %.0f s of game time in %d frames at a peak of x%.0f, %.3f s off the event, warp x%.0f, '%s'\n", target - tStart, frames, peak, off, warpAfter, game.testStatus().c_str());
+        }
         press(KEY_V); press(KEY_V); run(0.1); shot("supervision"); press(KEY_V); press(KEY_V); press(KEY_V);
         // M3: a note, the log, the statistics and the gallery
         press(KEY_G); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); game.testTypeText("STRANGE RED TREES HERE"); run(0.1);
@@ -1172,7 +1434,7 @@ static void runGameFlow() {
         printf("  log entries: %d\n", game.testLogEntries());
         for (int i = 0; i < 3; i++) press(KEY_T);
         run(4.0); shot("surface3");
-        press(KEY_I); run(0.1); shot("surface_data"); press(KEY_SPACE);
+        press(KEY_I); run(0.1); shot("surface_data"); printf("  fronts: %s\n", game.testFrontInfo().c_str()); press(KEY_SPACE);   // W-03: the data sheet's FORECAST line
         press(KEY_ESCAPE); run(0.1); shot("menu");
         press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("settings"); press(KEY_ESCAPE); press(KEY_ESCAPE);
         press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("slots"); press(KEY_ENTER); run(0.1);   // menu > save > slot 1
@@ -1246,6 +1508,48 @@ static void runGameFlow() {
             }
         if (!found) printf("belt: none found\n");
     }
+    {   // X-01: the probe. Park at the first gas giant of the scan, the telescope's reticle on its disc; C sends the probe to the ground
+        // under it and the screen is its camera: the fall, the entry, the clouds, the chute; saved in the descent to slot 3 (the newest
+        // save: the load below resumes it); Esc to the cabin with it falling (the space HUD's line), C back to it, Shift held a second
+        // (R-406), a flash between the decks (X-02); on to the end, the last frame held under the hiss, Enter gives control back
+        Star gs; int gi = -1;
+        for (int64_t x = 150; x < 200 && gi < 0; x++) for (int64_t z = 20; z < 80 && gi < 0; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem gsys; gsys.generate(s);
+            for (int i = 0; i < (int)gsys.bodies.size(); i++) if (gsys.bodies[i].type == PT_GASGIANT) { gs = s; gi = i; break; }
+        }
+        if (gi >= 0) {
+            game.testParkAt(gs, gi); run(0.3);
+            game.testAimAtBody(gi); press(KEY_Z); in.down[KEY_UP] = true; run(0.25); in.down[KEY_UP] = false; run(0.2); shot("probe_aim"); printf("  %s\n", game.testTelescopeInfo().c_str());
+            press(KEY_C); run(2.0); shot("probe_fall"); printf("  C: '%s'; %s\n", game.testStatus().c_str(), game.testProbeInfo().c_str());
+            game.testProbeSkip(PROBE_FALL_S + 5); run(0.1); shot("probe_entry");
+            game.testProbeSkip(probeDescentStart() + 60); run(0.1); shot("probe_clouds"); printf("  %s\n", game.testProbeInfo().c_str());
+            game.testProbeSkip(probeDescentStart() + 115); press(KEY_SPACE); run(0.5); shot("probe_chute"); printf("  Space: '%s'; %s\n", game.testStatus().c_str(), game.testProbeInfo().c_str());
+            game.currentSlot = 3; in.down[KEY_LEFT_CONTROL] = true; press(KEY_S); in.down[KEY_LEFT_CONTROL] = false; game.currentSlot = 1;   // saved in the descent
+            press(KEY_ESCAPE); run(0.3); shot("probe_cabin"); printf("  Esc: state %d, '%s'\n", (int)game.state, game.testStatus().c_str());
+            press(KEY_C); run(0.2); printf("  C again: state %d (24 the probe's screen)\n", (int)game.state);
+            {   // R-406: Shift held a second runs the relay's clock eight seconds; X-02: the clear band between the decks, a flash in its floor
+                double c0 = game.testProbeClock(); in.down[KEY_LEFT_SHIFT] = true; run(1.0); shot("probe_fast"); in.down[KEY_LEFT_SHIFT] = false;
+                printf("  Shift held a second (R-406): the clock %.1f -> %.1f s\n", c0, game.testProbeClock());
+                double cb = -1;
+                for (double c = game.testProbeClock(); c < game.testProbeEndClock() && cb < 0; c += 1.0 / 30) if (game.testProbeStageAt(c) == PS_BETWEEN && game.testProbeFlash(c) > 0.3) cb = c;
+                if (cb > 0) { game.testProbeSkip(cb - 1.0 / 30); run(1.0 / 30); shot("probe_between"); printf("  %s\n  %s\n", game.testProbeInfo().c_str(), game.testProbeViewInfo().c_str()); }
+            }
+            game.testProbeSkip(1e6); run(0.3); shot("probe_lost"); printf("  the end: %s; log: %s\n", game.testProbeInfo().c_str(), game.guide.log.empty() ? "-" : game.guide.log.back().text.c_str());
+            press(KEY_ENTER); run(0.2); printf("  Enter: state %d, probe %s, '%s'\n", (int)game.state, game.testProbeActive() ? "STILL ACTIVE" : "let go", game.testStatus().c_str());
+            // X-04: what came back. The gallery's newest item is its recording (its final image); Enter plays it on the screen, the
+            // arrows go down it by depth; the statistics count it; the giant's data sheet draws its profile
+            press(KEY_G); for (int i = 0; i < 5; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.2); shot("probe_gallery");   // R-408: the menu lost its landmark row
+            printf("  gallery (X-04): %d items, the newest %s; '%s'\n", game.testGalleryItems(), game.testGalleryRec(game.testGallerySel()) >= 0 ? "the probe's recording" : "A PHOTOGRAPH", game.guide.probes.empty() ? "no record" : game.guide.probes.back().body.c_str());
+            press(KEY_ENTER); run(2.0); shot("probe_recording"); printf("  Enter: state %d (25 the recording), clock %.1f s, '%s'\n", (int)game.state, game.testRecordingClock(), game.testStatus().c_str());
+            in.down[KEY_RIGHT] = true; run(1.4); in.down[KEY_RIGHT] = false; run(0.1); shot("probe_recording_deep"); printf("  Right held: clock %.1f s\n", game.testRecordingClock());
+            press(KEY_ESCAPE); run(0.1); press(KEY_ESCAPE); run(0.1);
+            press(KEY_G); for (int i = 0; i < 6; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("probe_stats");
+            printf("  statistics (X-04): %d probes sent, the deepest %.0f km\n", game.guide.probesSent, game.guide.deepestProbeKm());
+            press(KEY_ESCAPE); run(0.1);
+            press(KEY_I); run(0.1); press(KEY_RIGHT); run(0.1); shot("probe_profile"); press(KEY_ESCAPE); run(0.1);
+        } else printf("probe: no gas giant in the scan\n");
+    }
     {   // C-09: the old roads on the landing zoom of Aieliaalas II (the test world's land region at 12 N 4.22 E): the network's faint lines over the window
         Star as; if (starInSector(151, 0, 25, as, true)) {
             game.testParkAt(as, 1); run(0.3);
@@ -1258,8 +1562,9 @@ static void runGameFlow() {
     g2.guide.load(g2.guidePath);
     printf("load: %d (newest -> slot %d, state %d)\n", (int)g2.loadNewest(), g2.currentSlot, (int)g2.state);
     printf("  guide reloaded: %zu names, %d log entries, %zu shards and %zu decoded, star '%s'\n", g2.guide.names.size(), g2.testLogEntries(), g2.guide.shards.size(), g2.guide.decoded.size(), g2.testStarName().c_str());   // C-06: the decoded lines round-trip
-    g2.frame(in, 1.0 / 30);
+    for (int i = 0; i < 30; i++) { g2.frame(in, 1.0 / 30); in.newFrame(); }
     writePNG("shots/tests/flow_loaded.png", g2.output(), FBW, FBH);
+    printf("  the newest save is the probe's (X-01): state %d, %s\n", (int)g2.state, g2.testProbeInfo().c_str());
     Game g3; g3.savePrefix = "shots/tests/test_save"; g3.settingsPath = "shots/tests/test_settings.txt"; g3.guidePath = "shots/tests/test_guide.txt";
     bool ok3 = g3.loadSlot(2);
     int st0 = (int)g3.state;
@@ -1734,9 +2039,32 @@ static int runRegress(bool bless) {
 
 // ---- look comparison across resolution scales (M10-02) ---------------------------------
 static bool setupPinnedMountainScene(double alt, double yawOff, double pitch, SurfaceView& sv, StarSystem& sys, StarNeighborhood& nb, double& tOut);
+// W-03: the first felisian world's pinned plain and the first front worth a scene that reaches it after t0: a strong one (the
+// peak rain over a half) arriving by day (the sun over ten degrees); false when none within the window
+static bool pinnedPlainFront(StarSystem& sys, int& bi, double t0, FrontForecast& fc, double window) {
+    if (!firstBodyOfType(PT_FELISIAN, sys, bi)) return false;
+    const Body& b = sys.bodies[bi];
+    std::vector<FrontForecast> list; frontsAhead(b, StarSystem::bodyFromLatLon(PIN_PLAIN_LAT * DEG, PIN_PLAIN_LON * DEG), t0, window, list);
+    SurfaceSite probe; probe.init(&sys, bi, PIN_PLAIN_LAT * DEG, PIN_PLAIN_LON * DEG, t0);
+    for (const FrontForecast& f : list) {
+        if (f.tArrive < t0 || f.strength * f.gain < 0.5) continue;
+        if (probe.sun(f.tArrive).altitude < 10 * DEG) continue;
+        fc = f; return true;
+    }
+    return false;
+}
+static std::string surfaceFrontInfo(const SurfaceView& sv) {   // W-03: the fronts' numbers at the feet
+    const SurfaceEnvironment& e = sv.env;
+    return fmt("line %s, ahead %s, cloud %.2f (pattern %.2f), rain %.2f, snow %.2f, cold %.1f C, wind %.0f kt, temp %+.1f C, fog %.0f m, sky %.2f", sv.localFront.on ? "on" : "off",
+               e.frontAhead < 1e17 ? fmt("%.1f km", e.frontAhead / 1000).c_str() : "none", e.frontCloud, e.cloudPattern, e.frontRain, e.snow, e.frontCold, e.windKnots, e.temperatureC, e.fogDistance, e.skyBrightness);
+}
+static bool setupFrontScene(int stage, double pitch, SurfaceView& sv, StarSystem& sys, StarNeighborhood& nb, double& tOut);   // W-03, with the pinned sites below
+static bool setupNightScene(int which, SurfaceView& sv, StarSystem& sys, StarNeighborhood& nb, double& tOut);   // W-04: the shower, the zodiacal light, the earthshine, the moonlit night
 static bool setupSceneForType(int type, double latDeg, double alt, double yawOff, double pitch, SurfaceView& sv, StarSystem& sys,
                               StarNeighborhood& nb, double& tOut, int wantMat = -1) {
     if (wantMat == -20) return setupPinnedMountainScene(alt, yawOff, pitch, sv, sys, nb, tOut);   // B-313: the pinned mountain site of the O6 review
+    if (wantMat <= -60 && wantMat >= -63) return setupFrontScene(-60 - wantMat, pitch, sv, sys, nb, tOut);   // W-03: the fronts' scenes on the pinned plain
+    if (wantMat <= -64 && wantMat >= -67) return setupNightScene(-64 - wantMat, sv, sys, nb, tOut);   // W-04
     for (int64_t x = 150; x < 320; x++)
         for (int64_t z = 20; z < 140; z++) {
             Star s;
@@ -2329,6 +2657,17 @@ static const CmpScene CMP_SCENES[] = {
     {"geyser_basin", -1, 10, 40 * DEG, 0.0, 0.0, -36},   // R-307: 150 m from a geyser basin's vent on any world with the trait, facing it; `warm` waits for its jet
     {"felisian_sunset", PT_FELISIAN, 12, 4 * DEG, 0.0, 0.05},
     {"felisian_mountains", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.02, -20},   // B-313: the pinned mountain review site of O6, facing its highest ground
+    {"front_far", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, -60},        // W-03: the fronts' site (`PIN_FRONT_*`, flat land under a clear sky) facing the next front when its deck's solid wall is 18 km off
+    {"front_arriving", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, -61},   // four minutes before: the wall over the near ground, the wind up, the light down
+    {"front_through", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, -62},    // at the rain's peak, 25 km behind the line
+    {"front_behind", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, -63},     // an hour after the rain's end, facing where it came from: the sky clearing behind it, the cold
+    // W-04: the nights (each searched for near home in a fixed order and printed): a shower at its peak under its radiant, the
+    // zodiacal cone over where the sun set, a crescent moon with the earthshine on the rest of its disc, a moon's ground under its
+    // full parent at midnight with the hills' shadows
+    {"meteor_shower", -1, 0, 0, 0.0, 0.0, -64},
+    {"zodiacal_light", -1, 0, 0, 0.0, 0.0, -65},
+    {"earthshine", -1, 0, 0, 0.0, 0.0, -66},
+    {"moonlit_night", -1, 0, 0, 0.0, 0.0, -67},
     {"cratered_noon", PT_CRATERED, 12, 45 * DEG, 0.0, 0.0},
     {"thinatmo_sunset", PT_THINATMO, 12, 4 * DEG, 0.0, 0.05},
     {"molten_night", PT_MOLTEN, 12, -40 * DEG, 0.5, 0.15},
@@ -2904,6 +3243,15 @@ static int runBench(bool check) {
     };
     press(KEY_ENTER);
     for (int s = 1; s <= 4; s++) { game.settings.renderScale = s; game.applySettings(); double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60); if (s == 2) space2x = ms; }
+    double telescope2x = 0;
+    {   // W-06: the telescope at its deepest magnification on the parked world (the globe fills the frame), 2x
+        game.settings.renderScale = 2; game.applySettings();
+        game.testAimAtBody(game.testParkedBody()); press(KEY_Z); for (int i = 0; i < 9; i++) press(KEY_EQUAL);
+        telescope2x = bench("telescope 2x", 60);
+        printf("  %s\n  %s\n", game.testTelescopeInfo().c_str(), game.testTelescopePlate().c_str());
+        writePNG("shots/tests/bench_telescope.png", game.output(), FBW, FBH);
+        press(KEY_Z);
+    }
     game.settings.renderScale = 1; game.applySettings();
     press(KEY_C);   // G-02: no R: it picked a random lit site seeded by the clock, whose tiles took 0.4-3.2 s by luck (KI-338); the default site is the measure
     {   // O6-03: a player looks at the map for a moment; the drainage tiles of the site are computed meanwhile (up to 3 s here)
@@ -3055,7 +3403,43 @@ static int runBench(bool check) {
                 found = true;
             }
     }
+    double probe2x = 0;
+    {   // X-02: the probe's camera at 2x on the ringed test giant: over the ammonia deck (its tops rushing up, the panorama's
+        // longest marches) and between the decks (two panoramas and the lamp); the worse of the two
+        Star ps;
+        if (starInSector(150, 0, 106, ps, true)) {
+            game.settings.renderScale = 2; game.applySettings();
+            game.testParkAt(ps, 5);
+            Input in6;
+            for (int i = 0; i < 10; i++) { game.frame(in6, 1.0 / 60); in6.newFrame(); }
+            in6.pressed[KEY_C] = true; in6.down[KEY_C] = true; game.frame(in6, 1.0 / 60); in6.newFrame(); in6.down[KEY_C] = false;
+            if (game.testProbeActive()) {
+                double endC = game.testProbeEndClock(), fromHaze = -1, fromBetween = -1, toBetween = -1, toHaze = -1;
+                bool betweenDone = false;
+                for (double c = 0; c <= endC; c += 0.25) {
+                    int st2 = game.testProbeStageAt(c);
+                    if (st2 == PS_HAZE) { if (fromHaze < 0) fromHaze = c; toHaze = c; }
+                    if (st2 == PS_BETWEEN && !betweenDone) { if (fromBetween < 0) fromBetween = c; toBetween = c; }   // X-03: the first clear band
+                    else if (fromBetween >= 0) betweenDone = true;
+                }
+                const double at[2] = {fromHaze + (toHaze - fromHaze) * 0.8, fromBetween + (toBetween - fromBetween) * 0.5};
+                const char* what[2] = {"over the deck", "between the decks"};
+                for (int k = 0; k < 2; k++) {
+                    game.testProbeSkip(at[k]);
+                    for (int i = 0; i < 5; i++) { game.frame(in6, 1.0 / 60); in6.newFrame(); }
+                    double sum = 0, worst = 0;
+                    for (int i = 0; i < 60; i++) { double t0 = nowSec(); game.frame(in6, 1.0 / 60); in6.newFrame(); double ms = (nowSec() - t0) * 1000; sum += ms; worst = std::max(worst, ms); }
+                    printf("probe 2x     %.2f ms/frame, worst %.1f ms (%s: %s)\n", sum / 60, worst, what[k], game.testProbeViewInfo().c_str());
+                    if (k == 0) writePNG("shots/tests/bench_probe.png", game.output(), FBW, FBH);
+                    probe2x = std::max(probe2x, sum / 60);
+                }
+            } else printf("probe 2x     no probe launched ('%s')\n", game.testStatus().c_str());
+            game.settings.renderScale = 1; game.applySettings();
+        }
+    }
     budget("space 2x", space2x, 12);
+    budget("telescope 2x", telescope2x, 16);   // W-06: the deepest magnification, the globe over the whole frame
+    budget("probe 2x", probe2x, 16);           // X-02: the descent's camera over the deck and between the decks
     budget("surface 2x", surface2x, 16);
     budget("descent first", descentFirst, 80);   // O6-03: the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in
     budget("sprint worst", runWorst, 40);
@@ -3378,6 +3762,483 @@ static bool firstPeopleWorld(PeopleWorld& w, Signal* sigOut = nullptr) {
         if (peopleWorldOf(named, sg.body, w)) { if (sigOut) *sigOut = sg; return true; }
     }
     return false;
+}
+
+// ---- W-01: the almanac -------------------------------------------------------------------------------------------
+// The three test places: a landable moon of a ringed gas giant, a locked world with a moon, and a plain world (tilted,
+// unlocked, with an atmosphere and a moon), the first of each in the scan; latitude 12, longitude 0.5 rad, the start's
+// clock. `almanac` prints their lists (and a ship's at the giant), `unit` re-reads every event with the site's own sun
+// and frame at the time given.
+struct AlmanacTestPlace { StarSystem sys; int body = -1; double latDeg = 12, lonDeg = 0.5 / DEG; const char* what = ""; };
+static void almanacTestPlaces(std::vector<AlmanacTestPlace>& out) {
+    AlmanacTestPlace moon, locked, plain; bool fm = false, fl = false, fp = false;
+    for (int64_t x = 150; x < 340 && !(fm && fl && fp); x++)
+        for (int64_t z = 20; z < 160 && !(fm && fl && fp); z++) {
+            Star s; if (!starInSector(x, 0, z, s)) continue;
+            StarSystem sys; sys.generate(s);
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!PLANET_TYPES[b.type].landable || b.type == PT_COMET) continue;
+                if (!fm && b.parent >= 0 && sys.bodies[b.parent].type == PT_GASGIANT && sys.bodies[b.parent].rings) { moon.sys = sys; moon.body = bi; moon.what = "a moon of a ringed giant"; fm = true; }
+                if (!fl && b.parent < 0 && b.locked && b.moonCount > 0) { locked.sys = sys; locked.body = bi; locked.what = "a locked world"; fl = true; }
+                if (!fp && b.parent < 0 && !b.locked && b.moonCount > 0 && b.axialTilt > 2 * DEG && PLANET_TYPES[b.type].atmosphere) { plain.sys = sys; plain.body = bi; plain.what = "a plain world"; fp = true; }
+            }
+        }
+    if (fm) out.push_back(moon);
+    if (fl) out.push_back(locked);
+    if (fp) out.push_back(plain);
+}
+static AlmanacPlace almanacGroundPlace(const SurfaceSite& site, double t) {
+    AlmanacPlace p; p.sys = site.sys; p.t = t; p.ground = true; p.body = site.body; p.lat = site.lat0; p.lon = site.lon0; p.atmosphere = site.atmosphere; p.ringProf = site.ringProf; p.window = 5 * 86400.0;
+    return p;
+}
+static AlmanacPlace almanacShipPlace(const StarSystem& sys, int body, double t) {   // parked as `Game::testParkAt` parks, the orbit's lap on
+    AlmanacPlace p; p.sys = &sys; p.t = t; p.ground = false; p.body = body; p.window = 30 * 86400.0;
+    const Body& b = sys.bodies[body];
+    Vec3 bp = sys.bodyPos(body, t), toStar = normalize(sys.star.pos - bp), side = normalize(cross(toStar, Vec3(0, 1, 0)));
+    p.parkDir = normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0)); p.parkDist = Game::parkDistanceFor(b); p.orbiting = true;
+    p.pos = bp + p.parkDir * p.parkDist;
+    return p;
+}
+static void printAlmanac(const AlmanacPlace& p, const std::vector<AlmanacEvent>& ev) {
+    const StarSystem& sys = *p.sys;
+    auto name = [&](int j) { return sys.bodies[j].name; };
+    if (p.ground) {
+        const Body& b = sys.bodies[p.body];
+        std::string of = b.parent >= 0 ? fmt(", moon of %s%s", sys.bodies[b.parent].name.c_str(), sys.bodies[b.parent].rings ? " (ringed)" : "") : "";
+        double angR, alt = almanacSunAltitude(p, p.t, &angR);
+        printf("the almanac of %s (%s%s%s%s%s) at %.1f %s %.1f %s, t %.0f: the sun at %+.1f deg, %d moon%s, day %.1f h, year %.1f h\n", b.name.c_str(), PLANET_TYPES[b.type].name, of.c_str(),
+               b.locked ? ", locked" : "", b.rings ? ", rings" : "", PLANET_TYPES[b.type].atmosphere ? "" : ", airless", std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W",
+               p.t, alt / DEG, b.moonCount, b.moonCount == 1 ? "" : "s", std::fabs(b.rotPeriod) / 3600, std::fabs(b.orbitPeriod) / 3600);
+    } else printf("the almanac from the ship %s, t %.0f\n", p.body >= 0 ? fmt("parked at %s (%s, %d moons)", sys.bodies[p.body].name.c_str(), PLANET_TYPES[sys.bodies[p.body].type].name, sys.bodies[p.body].moonCount).c_str() : "in deep space", p.t);
+    for (const AlmanacEvent& e : ev) printf("  in %-12s %s\n", countdownString(e.t - p.t).c_str(), almanacLabel(e, sys, name, " deg").c_str());
+    if (ev.empty()) printf("  nothing within the window\n");
+}
+// W-04: the meteor showers: `showers` scans the systems near home (how many worlds have one, the strongest), `showers <sx> <sy>
+// <sz> <body>` lists one world's (the comet, the stream's strength, the orbits' least distance, the peak, its width, the radiant)
+static void printShower(const StarSystem& sys, const MeteorShower& s, double t) {
+    double tp = showerPeakAfter(s, t);
+    double ra = std::atan2(s.radiant.z, s.radiant.x) / DEG, dec = std::asin(clampd(s.radiant.y, -1, 1)) / DEG;
+    printf("  %-22s strength %.2f (%.0f a minute at the peak), orbits %.0f km apart (%.2f%% of the world's orbit), the year %.1f h, the next peak in %.1f h, width %.0f min, the radiant at %.1f / %+.1f (ecliptic), %.1f km/s\n",
+           sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.moidKm, 100 * s.moidKm / sys.bodies[s.world].orbitRadiusKm,
+           s.period / 3600, (tp - t) / 3600, s.sigma / 60, ra, dec, s.speedKms);
+}
+
+static int runShowers(int argc, char** argv) {
+    double t = 3.6e6;
+    if (argc >= 6) {
+        Star st; if (!starInSector(atoll(argv[2]), atoll(argv[3]), atoll(argv[4]), st, true)) { printf("no star\n"); return 1; }
+        StarSystem sys; sys.generate(st);
+        int bi = atoi(argv[5]);
+        if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
+        std::vector<MeteorShower> sh; double t0 = nowSec(); meteorShowersOf(sys, bi, sh);
+        printf("%s (%s): %zu shower%s [%.1f ms]\n", sys.bodies[bi].name.c_str(), PLANET_TYPES[sys.bodies[bi].type].name, sh.size(), sh.size() == 1 ? "" : "s", (nowSec() - t0) * 1000);
+        for (const MeteorShower& s : sh) printShower(sys, s, t);
+        return 0;
+    }
+    int systems = 0, withComets = 0, worlds = 0, worldsWith = 0, showers = 0; double ms = 0;
+    struct Ex { double strength; int64_t sx, sz; int body; std::string name; };
+    std::vector<Ex> best;
+    for (int64_t x = 150; x < 200; x++)
+        for (int64_t z = 20; z < 80; z++) {
+            Star st; if (!starInSector(x, 0, z, st)) continue;
+            StarSystem sys; sys.generate(st); systems++;
+            bool comet = false; for (const Body& b : sys.bodies) if (b.type == PT_COMET) comet = true;
+            if (comet) withComets++;
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& b = sys.bodies[bi];
+                if (b.parent >= 0 || b.type == PT_COMET || b.type == PT_COMPANION) continue;
+                worlds++;
+                std::vector<MeteorShower> sh; double t0 = nowSec(); meteorShowersOf(sys, bi, sh); ms += (nowSec() - t0) * 1000;
+                if (sh.empty()) continue;
+                worldsWith++; showers += (int)sh.size();
+                best.push_back({sh[0].strength, x, z, bi, b.name});
+            }
+        }
+    std::sort(best.begin(), best.end(), [](const Ex& a, const Ex& b) { return a.strength > b.strength; });
+    printf("showers near home: %d systems (%d with comets), %d planets, %d with a shower (%.1f%%), %d showers; %.2f ms a world\n",
+           systems, withComets, worlds, worldsWith, 100.0 * worldsWith / std::max(1, worlds), showers, ms / std::max(1, worlds));
+    for (int i = 0; i < (int)best.size() && i < 12; i++) {
+        Star st; starInSector(best[i].sx, 0, best[i].sz, st); StarSystem sys; sys.generate(st);
+        std::vector<MeteorShower> sh; meteorShowersOf(sys, best[i].body, sh);
+        printf("%s (sector %lld 0 %lld, body %d, %s):\n", best[i].name.c_str(), (long long)best[i].sx, (long long)best[i].sz, best[i].body, PLANET_TYPES[sys.bodies[best[i].body].type].name);
+        for (const MeteorShower& s : sh) printShower(sys, s, t);
+    }
+    return 0;
+}
+
+// X-03: a descent's layers along its clock: runs of a stage and its deck (the deck the probe is in, or the one over a clear
+// band), each named for the frames ("ammonia", "water", "1" for the band under the first deck)
+struct LayerRun { int stage = 0, deck = -1; double from = 0, to = 0; std::string tag; };
+static std::vector<LayerRun> probeLayerRuns(const Game& game, double endC) {
+    std::vector<LayerRun> runs;
+    const GiantAtmosphere& a = game.testProbeAtm();
+    for (double c = 0; c <= endC + 0.5; c += 0.25) {
+        const int st = game.testProbeStageAt(c);
+        const double bar = game.testProbeBarAt(c);
+        const int dk = st == PS_DECK1 || st == PS_DECK2 ? giantDeckAt(a, bar) : (st == PS_BETWEEN ? giantDeckAbove(a, bar) : -1);
+        if (runs.empty() || runs.back().stage != st || runs.back().deck != dk) {
+            LayerRun r; r.stage = st; r.deck = dk; r.from = r.to = c;
+            if (dk >= 0 && st != PS_BETWEEN) { r.tag = CLOUD_SPECIES[a.species[dk]].name; r.tag = r.tag.substr(r.tag.find_last_of(' ') + 1); }
+            else if (dk >= 0) r.tag = std::to_string(dk + 1);
+            runs.push_back(r);
+        } else runs.back().to = c;
+    }
+    return runs;
+}
+static void printProbeLayers(const Game& game, const std::vector<LayerRun>& runs, double aimLat) {
+    const GiantAtmosphere& a = game.testProbeAtm();
+    for (const LayerRun& r : runs) {
+        const double bar = game.testProbeBarAt(r.from);
+        const char* name = r.stage >= PS_ABOVE && r.stage <= PS_DEEP && bar > 0 ? giantStageName(a, bar) : PROBE_STAGE_NAMES[r.stage];
+        printf("  %-22s from %5.1f s to %5.1f s, %9.6f bar, %s %6.1f km, %5.0f K, wind %+5.0f m/s\n", name, r.from, r.to, bar, giantAltitudeKm(a, std::max(bar, 1e-9)) >= 0 ? "alt  " : "depth",
+               std::fabs(bar > 0 ? giantAltitudeKm(a, bar) : 0.0), bar > 0 ? giantTemperatureK(a, bar) : 0.0, giantWindEast(a, aimLat, bar));   // at the aim's latitude
+    }
+}
+
+// X-01: `probe [<sx> <sy> <sz> <body>] [wav] [chute]`: a giant's air and a probe's fall into it. The giant (the first gas giant of the
+// scan when none is given) and its numbers, the stages with their clocks, pressures, heights, temperatures and winds; a `Game`
+// parks at it, sends a probe to the ground under the ship and renders a frame in each stage (`shots/tests/probe_<n>_<stage>.png`,
+// timed, with the picture's layers and costs under it) and the last frame held; `chute` opens the chute in the upper haze first;
+// `night` carries the ship round to the night side first (Shift+Right, R-405); `wav` writes the relay's sound in each stage.
+// X-02: `probe stages [night]` does it for the two test giants (X-02's "each stage on two giants": Thilawiane II, pale and
+// unringed, and Wailie VI, orange-brown and ringed), with a look up at the rings and the cirrus and a lightning channel, into
+// `probe_stages_[night_]<A|B>_<n>_<stage>.png`
+static int runProbe(int argc, char** argv) {
+    bool wav = false, chute = false, night = false, stagesMode = false; std::vector<long long> nums;
+    for (int i = 2; i < argc; i++) { std::string a = argv[i]; if (a == "wav") wav = true; else if (a == "chute") chute = true; else if (a == "night") night = true; else if (a == "stages") stagesMode = true; else nums.push_back(atoll(argv[i])); }
+    struct Target { Star st; StarSystem sys; int bi = -1; std::string tag; };
+    std::vector<Target> targets;
+    if (stagesMode) {
+        const long long pins[2][4] = {{150, 0, 66, 2}, {150, 0, 106, 5}};
+        for (int k = 0; k < 2; k++) { Target t; if (starInSector(pins[k][0], pins[k][1], pins[k][2], t.st, true)) { t.sys.generate(t.st); t.bi = (int)pins[k][3]; t.tag = k ? "B" : "A"; targets.push_back(t); } }
+    } else {
+        Target t;
+        if (nums.size() >= 4) { if (starInSector(nums[0], nums[1], nums[2], t.st, true)) { t.sys.generate(t.st); t.bi = (int)nums[3]; } }
+        else {
+            for (int64_t x = 150; x < 320 && t.bi < 0; x++) for (int64_t z = 20; z < 140 && t.bi < 0; z++) {
+                Star s; if (!starInSector(x, 0, z, s, true)) continue;
+                StarSystem ss; ss.generate(s);
+                for (int i = 0; i < (int)ss.bodies.size(); i++) if (ss.bodies[i].type == PT_GASGIANT) { t.st = s; t.sys = ss; t.bi = i; break; }
+            }
+        }
+        targets.push_back(t);
+    }
+    Game game;
+    game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/test_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+    applyTestScale(game);
+    Input in;
+    auto run = [&](double seconds) { int n = std::max(1, (int)(seconds * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+    auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+    AudioSynth synth;
+    for (Target& tg : targets) {
+    Star& st = tg.st; StarSystem& sys = tg.sys; int bi = tg.bi;
+    if (bi < 0 || bi >= (int)sys.bodies.size() || !isProbeGiant(sys.bodies[bi].type)) { printf("probe: no giant there\n"); return 1; }
+    const Body& b = sys.bodies[bi];
+    GiantAtmosphere a = giantAtmosphereOf(sys, bi);
+    { RGB mc = BodyGen::make(b).matColor[familyRep(b.type, FAM_ROCK)];
+    printf("probe: %s body %d (%lld %lld %lld), %s, R %.0f km, g %.1f m/s2, T(1 bar) %.0f K, wind %.0f m/s at the strongest band, %.1f bands%s, colour %.2f %.2f %.2f\n", sys.star.name.c_str(), bi, (long long)st.sx, (long long)st.sy, (long long)st.sz,
+           PLANET_TYPES[b.type].name, b.radiusKm, a.gravity, a.t1K, a.windPeak, a.bandCount, b.rings ? ", rings" : "", mc.r, mc.g, mc.b); }
+    game.testParkAt(st, bi); run(0.3);
+    if (night) { in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(8.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false; run(0.1); printf("  carried round: '%s'\n", game.testStatus().c_str()); }
+    press(KEY_C); run(0.1);
+    if (!game.testProbeActive()) { printf("probe: C launched nothing: '%s'\n", game.testStatus().c_str()); return 1; }
+    printf("  launched: '%s'; %s\n", game.testStatus().c_str(), game.testProbeInfo().c_str());
+    // the layers' clocks (X-03: each deck by its cloud, the clear bands between them)
+    double endC = game.testProbeEndClock();
+    std::vector<LayerRun> runs = probeLayerRuns(game, endC);
+    std::vector<double> from(PS_COUNT, -1), to(PS_COUNT, -1);
+    for (const LayerRun& r : runs) { if (from[r.stage] < 0) from[r.stage] = r.from; to[r.stage] = r.to; }
+    double aimLat = 0, aimLon = 0; game.testProbeAimed(aimLat, aimLon);
+    printProbeLayers(game, runs, aimLat);
+    struct Shot { double c; std::string name; };
+    std::vector<Shot> shots = {{3, "fall_start"}, {24, "fall"}, {PROBE_FALL_S + 5.5, "entry"}, {from[PS_ABOVE] + 6, "above_high"}};
+    if (stagesMode) shots = {{PROBE_FALL_S + 10.5, "entry_late"}, {from[PS_ABOVE] + 6, "above_high"}};
+    auto mid = [&](int s2, double u) { return from[s2] + (to[s2] - from[s2]) * u; };
+    // the crossfade's end and the stages' middles
+    for (double c = from[PS_ABOVE]; c < to[PS_ABOVE]; c += 0.25) if (game.testProbeBarAt(c) > 0.06) { shots.push_back({c, "above"}); break; }
+    if (stagesMode) shots.push_back({mid(PS_ABOVE, 0.75), "above_sky"});   // looking up: the rings' arc, the moons, the stars over the limb
+    if (stagesMode) for (double c = from[PS_HAZE]; c < to[PS_HAZE]; c += 0.25) if (game.testProbeBarAt(c) > std::min(0.34, game.testProbeAtm().top[0] * 0.8)) { shots.push_back({c, "cirrus"}); break; }   // just under the cirrus, looking up at it
+    if (from[PS_HAZE] >= 0) { shots.push_back({mid(PS_HAZE, 0.5), "haze"}); if (stagesMode) shots.push_back({mid(PS_HAZE, 0.92), "haze_low"}); }
+    bool lit = false;
+    for (const LayerRun& r : runs) {
+        const double rm = r.from + (r.to - r.from) * 0.5;
+        if (r.stage == PS_DECK1 || r.stage == PS_DECK2) {
+            shots.push_back({r.from + (r.to - r.from) * (r.stage == PS_DECK1 ? 0.5 : 0.3), "deck_" + r.tag});
+            if (r.stage == PS_DECK1) shots.push_back({r.from + (r.to - r.from) * 0.95, "deck_" + r.tag + "_base"});
+        } else if (r.stage == PS_BETWEEN) {
+            shots.push_back({rm, "between_" + r.tag});
+            if (!lit) {   // a flash in the floor, and one with a channel
+                for (double c = rm + 0.5; c < r.to; c += 1.0 / 30) if (game.testProbeFlash(c) > 0.3) { shots.push_back({c, "lightning"}); lit = true; break; }
+                if (stagesMode) for (double c = r.from + (r.to - r.from) * 0.3; c < r.to; c += 1.0 / 30) if (game.testProbeFlash(c) > 0.3 && game.testProbeBolt(c)) { shots.push_back({c, "bolt"}); break; }
+            }
+        } else if (r.stage == PS_DEEP) shots.push_back({rm, "deep"});
+    }
+    std::sort(shots.begin(), shots.end(), [](const Shot& x, const Shot& y) { return x.c < y.c; });
+    int k = 0;
+    for (const Shot& sh : shots) {
+        if (sh.c <= game.testProbeClock()) continue;
+        if (chute && sh.c >= mid(PS_HAZE, 0.3) && game.testProbeClock() < mid(PS_HAZE, 0.3)) { game.testProbeSkip(mid(PS_HAZE, 0.3)); game.testProbeChute(); printf("  the chute opened: %s\n", game.testProbeInfo().c_str()); }
+        game.testProbeSkip(sh.c - 1.0 / 30);
+        bool up = sh.name == "above_sky" || sh.name == "cirrus";
+        if (up) game.testProbeLook(0, sh.name == "cirrus" ? 34 * DEG : 48 * DEG);
+        auto t0 = std::chrono::steady_clock::now();
+        game.frame(in, 1.0 / 30); in.newFrame();
+        double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        if (up) game.testProbeLook(0, 0);
+        std::string fn = stagesMode ? fmt("shots/tests/probe_stages_%s%s_%02d_%s.png", night ? "night_" : "", tg.tag.c_str(), k++, sh.name.c_str()) : fmt("shots/tests/probe_%s%02d_%s.png", night ? "night_" : "", k++, sh.name.c_str());
+        writePNG(fn.c_str(), game.output(), FBW, FBH);
+        printf("  %-12s %.1f ms  %s -> %s\n               %s\n", sh.name.c_str(), ms, game.testProbeInfo().c_str(), fn.c_str(), game.testProbeViewInfo().c_str());
+        if (wav) {
+            std::vector<int16_t> pcm; AudioState as = game.audio; as.master = 1.0;
+            RenderStats r = renderReceiver(synth, as, 4.0, &pcm, [&](double) { as.probeThunder = 0; });
+            std::string wf = fmt("shots/tests/probe_%s.wav", sh.name.c_str()); writeWav16(wf, pcm, 22050);
+            printf("    sound: rms %.3f peak %.3f clip %d nan %d -> %s\n", r.rms, r.peak, r.clip, r.nan, wf.c_str());
+        }
+    }
+    game.testProbeSkip(game.testProbeEndClock() + 1); run(0.5);
+    if (!stagesMode) writePNG(fmt("shots/tests/probe_%s%02d_lost.png", night ? "night_" : "", k).c_str(), game.output(), FBW, FBH);
+    printf("  the end: %s; state %d; '%s'\n", game.testProbeInfo().c_str(), (int)game.state, game.testStatus().c_str());
+    if (wav) { std::vector<int16_t> pcm; AudioState as = game.audio; as.master = 1.0; RenderStats r = renderReceiver(synth, as, 4.0, &pcm); writeWav16("shots/tests/probe_lost.wav", pcm, 22050); printf("    the hiss: rms %.3f peak %.3f -> shots/tests/probe_lost.wav\n", r.rms, r.peak); }
+    press(KEY_ESCAPE); run(0.2);
+    printf("  Esc: state %d, probe %s; '%s'\n", (int)game.state, game.testProbeActive() ? "STILL ACTIVE" : "let go", game.testStatus().c_str());
+    }
+    return 0;
+}
+
+// X-03: `probe giants`: the character of the first twenty giants of the scan (the probe mode's, sectors 150-319 by 20-139), then
+// a hot young giant, an ice giant and a brown dwarf of the scan rendered at the same stages (over the clouds, the first clear band,
+// the deep; the brown dwarf on its night side too: its glow alone), into `probe_giants_<hot|ice|brown>_<stage>.png`, and the
+// rare sights where the scan has them (`probe_giants_<storm|aurora|hole|hail|sight>_*.png`): a great storm's wall, the aurora's
+// curtains on a night side, a descent down a clear-air hole, diamond hail in the lamp, and the rare giant's sight
+static int runProbeGiants() {
+    struct G { int64_t sx, sz; int bi; GiantAtmosphere a; std::string name; };
+    std::vector<G> all;
+    for (int64_t x = 150; x < 320 && all.size() < 600; x++)
+        for (int64_t z = 20; z < 140 && all.size() < 600; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem ss; ss.generate(s);
+            for (int i = 0; i < (int)ss.bodies.size(); i++) if (isProbeGiant(ss.bodies[i].type)) all.push_back({x, z, i, giantAtmosphereOf(ss, i), ss.bodies[i].name});
+        }
+    printf("probe giants: the first twenty of the scan\n");
+    for (int i = 0; i < 20 && i < (int)all.size(); i++) printf("%2d %s (sector %lld 0 %lld, body %d): %s\n", i + 1, all[i].name.c_str(), (long long)all[i].sx, (long long)all[i].sz, all[i].bi, giantCharacterText(all[i].a).c_str());
+    int counts[3] = {0, 0, 0}, decks[4] = {0, 0, 0, 0}, young = 0, storms = 0, holes = 0, hail = 0, sight = 0;
+    for (const G& g : all) { counts[g.a.ch.kind]++; decks[g.a.decks]++; young += g.a.ch.young; storms += g.a.ch.greatStorm; holes += g.a.ch.holes > 0; hail += g.a.ch.hail; sight += g.a.ch.sight; }
+    printf("of %zu giants: %d gas giants (%d young), %d ice giants, %d brown dwarfs; 1/2/3 decks %d/%d/%d; a great storm on %d, holes on %d, hail on %d, the sight on %d\n", all.size(), counts[0], young, counts[1], counts[2],
+           decks[1], decks[2], decks[3], storms, holes, hail, sight);
+    const G* hot = nullptr; const G* ice = nullptr; const G* bd = nullptr;
+    const G* gs = nullptr; const G* au = nullptr; const G* ho = nullptr; const G* ha = nullptr; const G* si = nullptr;
+    for (const G& g : all) {
+        const GiantCharacter& c = g.a.ch;
+        if (c.kind == GK_GAS && c.young && g.a.decks >= 2 && (!hot || c.heat > hot->a.ch.heat)) hot = &g;
+        if (c.kind == GK_ICE && g.a.decks >= 2 && !ice) ice = &g;
+        if (c.kind == GK_BROWN && g.a.decks >= 2 && !bd) bd = &g;
+        if (c.greatStorm && c.kind == GK_GAS && !gs) gs = &g;
+        if (c.kind == GK_GAS && (!au || c.aurora > au->a.ch.aurora)) au = &g;
+        if (c.holes > 0 && c.kind == GK_GAS && g.a.decks >= 2 && !ho) { GiantDecks D; D.init(g.a, nullptr, 1); if (D.holeable(0)) ho = &g; }
+        if (c.hail && !ha) ha = &g;
+        if (c.sight && !si) si = &g;
+    }
+    Game game;
+    game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/test_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+    applyTestScale(game);
+    Input in;
+    auto run = [&](double seconds) { int n = std::max(1, (int)(seconds * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+    auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+    // the sub-solar point of a body in its own frame now (its latitude and longitude)
+    auto subSolar = [&](int bi, double& lat, double& lon) {
+        const StarSystem& sys = game.testSystem(); const double t = game.testGameTime();
+        StarSystem::latLonFromBody(normalize(sys.bodyFrame(bi, t) * normalize(sys.star.pos - sys.bodyPos(bi, t))), lat, lon);
+    };
+    // park at a giant and send a probe (to an aim when one is given)
+    auto launch = [&](const G& g, bool aimed, double lat, double lon) {
+        Star st; starInSector(g.sx, 0, g.sz, st, true);
+        if (game.testProbeActive()) game.testProbeRelease();
+        game.testParkAt(st, g.bi); run(0.3);
+        game.testAimOverride = aimed; game.testAimLat = lat; game.testAimLon = lon;
+        press(KEY_C); run(0.1);
+        game.testAimOverride = false;
+        if (!game.testProbeActive()) { printf("  no probe into %s: '%s'\n", g.name.c_str(), game.testStatus().c_str()); return false; }
+        printf("%s (sector %lld 0 %lld, body %d): %s\n  %s\n", g.name.c_str(), (long long)g.sx, (long long)g.sz, g.bi, game.testProbeInfo().c_str(), giantCharacterText(game.testProbeAtm()).c_str());
+        return true;
+    };
+    auto shoot = [&](const std::string& tag, double c, double look) {
+        if (c < 0) { printf("  %-22s none on this giant\n", tag.c_str()); return; }
+        game.testProbeSkip(c - 1.0 / 30);
+        if (look != 0) game.testProbeLook(0, look);
+        auto t0 = std::chrono::steady_clock::now();
+        game.frame(in, 1.0 / 30); in.newFrame();
+        double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        if (look != 0) game.testProbeLook(0, 0);
+        std::string fn = "shots/tests/probe_giants_" + tag + ".png";
+        writePNG(fn.c_str(), game.output(), FBW, FBH);
+        printf("  %-22s %.1f ms %s -> %s\n                         %s\n", tag.c_str(), ms, game.testProbeInfo().c_str(), fn.c_str(), game.testProbeViewInfo().c_str());
+    };
+    auto runsAt = [&](int stage, double u) { std::vector<LayerRun> runs = probeLayerRuns(game, game.testProbeEndClock()); for (const LayerRun& r : runs) if (r.stage == stage) return r.from + (r.to - r.from) * u; return -1.0; };
+    // the same stages on the three kinds
+    const G* three[3] = {hot, ice, bd};
+    const char* names[3] = {"hot", "ice", "brown"};
+    for (int q = 0; q < 3; q++) {
+        if (!three[q]) { printf("no %s giant in the scan\n", names[q]); continue; }
+        if (!launch(*three[q], false, 0, 0)) continue;
+        printProbeLayers(game, probeLayerRuns(game, game.testProbeEndClock()), 0);
+        shoot(std::string(names[q]) + "_above", runsAt(PS_ABOVE, 0.75), 0);
+        shoot(std::string(names[q]) + "_deck", runsAt(PS_DECK1, 0.5), 0);
+        shoot(std::string(names[q]) + "_between", runsAt(PS_BETWEEN, 0.5), 0);
+        shoot(std::string(names[q]) + "_deep", runsAt(PS_DEEP, 0.4), 0);
+    }
+    if (bd) {   // the brown dwarf's night side: its glow alone
+        double la, lo; Star st; starInSector(bd->sx, 0, bd->sz, st, true); game.testParkAt(st, bd->bi); run(0.2); subSolar(bd->bi, la, lo);
+        if (launch(*bd, true, -0.3 * la + 10 * DEG, lo + PI)) { shoot("brown_night_above", runsAt(PS_ABOVE, 0.75), 0); shoot("brown_night_between", runsAt(PS_BETWEEN, 0.5), 0); }
+    }
+    if (gs) {   // a great storm's wall: aimed just inside its northern edge, the camera turned to the wall
+        Star st; starInSector(gs->sx, 0, gs->sz, st, true);
+        StarSystem ss; ss.generate(st);
+        const Body& b = ss.bodies[gs->bi]; BodyGen g = BodyGen::make(b);
+        game.testParkAt(st, gs->bi); run(0.2);
+        for (int q = 0; q < 48; q++) {   // the time the storm's side faces the sun (the giant turned under it by the warp)
+            const double tt = game.testGameTime();
+            const Vec3 us = StarSystem::bodyFromLatLon(g.gsLat, g.gsLon - giantJetTurn(b, g.bandCount, g.gsLat, tt));
+            if (dot(us, normalize(ss.bodyFrame(gs->bi, tt) * normalize(ss.star.pos - ss.bodyPos(gs->bi, tt)))) > 0.6) break;
+            game.testAdvanceTime(std::fabs(b.rotPeriod) / 48); run(0.05);
+        }
+        const double t = game.testGameTime(), lon = wrapAngle(g.gsLon - giantJetTurn(b, g.bandCount, g.gsLat, t));
+        if (launch(*gs, true, g.gsLat + (g.gsLat >= 0 ? 1 : -1) * 0.975 * g.gsB, lon)) {
+            shoot("storm_above_high", runsAt(PS_ABOVE, 0.3), 0); shoot("storm_above", runsAt(PS_ABOVE, 0.8), 0); shoot("storm_haze", runsAt(PS_HAZE, 0.6), 0);
+        }
+        if (launch(*gs, true, g.gsLat, lon)) shoot("storm_inside", runsAt(PS_ABOVE, 0.8), 0);
+        // the globe from its parking and through the telescope: the oval the probe fell into (GEN 12: the planet function's)
+        game.testProbeRelease(); game.testParkAt(st, gs->bi); run(0.3);
+        game.testAimAtBody(gs->bi); run(0.1);
+        writePNG("shots/tests/probe_giants_globe_storm.png", game.output(), FBW, FBH);
+        press(KEY_Z); run(0.3); for (int i = 0; i < 2; i++) { press(KEY_EQUAL); run(0.05); }
+        run(0.5); writePNG("shots/tests/probe_giants_globe_storm_tele.png", game.output(), FBW, FBH);
+        press(KEY_Z); run(0.1);
+        printf("  the globe from its parking and at x8: probe_giants_globe_storm[_tele].png\n");
+    }
+    if (ice) {   // an ice giant's globe: its faint bands, its few storms
+        Star st; starInSector(ice->sx, 0, ice->sz, st, true);
+        game.testProbeRelease(); game.testParkAt(st, ice->bi); run(0.3); game.testAimAtBody(ice->bi); run(0.1);
+        press(KEY_Z); run(0.3); run(0.5); writePNG("shots/tests/probe_giants_globe_ice_tele.png", game.output(), FBW, FBH); press(KEY_Z); run(0.1);
+    }
+    if (au) {   // the aurora: on the night side, a little equatorward of the oval round the nearer magnetic pole, looking up toward it
+        Star st; starInSector(au->sx, 0, au->sz, st, true); game.testParkAt(st, au->bi); run(0.2);
+        double sla, slo; subSolar(au->bi, sla, slo);
+        const GiantCharacter& c = au->a.ch;
+        Vec3 pole = StarSystem::bodyFromLatLon(PI / 2 - c.magColat, c.magLon), anti = StarSystem::bodyFromLatLon(-sla, slo + PI);
+        if (dot(pole, anti) < 0) pole = pole * -1.0;
+        const double want = c.ovalRad + 1200 / game.testSystem().bodies[au->bi].radiusKm;   // 1,200 km equatorward of the oval, toward the night
+        const Vec3 toward = normalize(anti - pole * dot(anti, pole));
+        double la, lo;
+        StarSystem::latLonFromBody(normalize(pole * std::cos(want) + toward * std::sin(want)), la, lo);
+        if (launch(*au, true, la, lo)) { shoot("aurora_above", runsAt(PS_ABOVE, 0.75), 0); shoot("aurora_up", runsAt(PS_ABOVE, 0.8), 25 * DEG); }
+    }
+    if (ho) {   // a descent down a clear-air hole: relaunched until one falls through one
+        bool fell = false;
+        for (int tries = 0; tries < 12 && !fell; tries++) { if (!launch(*ho, false, 0, 0)) break; fell = game.testProbeHolePath(); if (!fell) run(0.5); }
+        if (fell) {
+            shoot("hole_above", runsAt(PS_ABOVE, 0.85), 0); shoot("hole_haze", runsAt(PS_HAZE, 0.7), 0);
+            const GiantAtmosphere& a = game.testProbeAtm();
+            double c1 = -1; for (double c = probeDescentStart(); c < game.testProbeEndClock(); c += 0.25) if (game.testProbeBarAt(c) > std::sqrt(a.top[0] * a.base[0])) { c1 = c; break; }
+            shoot("hole_shaft", c1, 0); shoot("hole_shaft_up", c1, 60 * DEG);
+        } else printf("  no descent of %s fell through a hole\n", ho->name.c_str());
+    }
+    if (ha && launch(*ha, false, 0, 0)) shoot("hail_deep", runsAt(PS_DEEP, 0.15), 0);
+    if (si && launch(*si, false, 0, 0)) { const double sc = game.testProbeSightClock(); shoot("sight", sc, 0); shoot("sight_after", sc > 0 ? sc + 3 : -1, 0); }
+    return 0;
+}
+
+// X-02: `probe stability [scale]`: 16 frames a thirtieth of a second apart at three places of the ammonia deck stage on the
+// ringed test giant (its tops rushing up, just inside, the clear band under it), the camera's shake and the link's static
+// off: the mean change of a pixel's light per frame and the share that jumps by over 40 (the clouds' own flicker).
+// B-409: and a brown dwarf's (Weesies I's) first deck at its base, the fog lit from under it by the deep's glow
+static int runProbeStability() {
+    Game game;
+    game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/test_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+    applyTestScale(game);
+    Input in;
+    auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+    auto lum = [](uint32_t c) { return 0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255); };
+    int bad = 0;
+    const long long pins[2][4] = {{150, 0, 106, 5}, {150, 0, 73, 0}};
+    for (int g = 0; g < 2; g++) {
+    Star st; if (!starInSector(pins[g][0], pins[g][1], pins[g][2], st, true)) { printf("no star\n"); return 1; }
+    if (g) game.testProbeRelease();
+    game.testParkAt(st, (int)pins[g][3]);
+    for (int i = 0; i < 9; i++) { game.frame(in, 1.0 / 30); in.newFrame(); }
+    press(KEY_C);
+    if (!game.testProbeActive()) { printf("probe stability: no probe\n"); return 1; }
+    game.testProbeQuiet = true;
+    double endC = game.testProbeEndClock();
+    std::vector<LayerRun> runs = probeLayerRuns(game, endC);
+    auto at = [&](int stage, double u) { for (const LayerRun& r : runs) if (r.stage == stage) return r.from + (r.to - r.from) * u; return -1.0; };   // the stage's first run
+    struct Spot { double c; const char* name; };
+    std::vector<Spot> spots = {{at(PS_HAZE, 0.85), "tops"}, {at(PS_DECK1, 0.12), "inside"}, {at(PS_BETWEEN, 0.4), "between"}};
+    if (g) spots = {{at(PS_DECK1, 0.95), "glow"}};
+    for (const Spot& sp : spots) {
+        if (sp.c < 0) { printf("probe stability %-8s: no such stage on this giant\n", sp.name); continue; }
+        game.testProbeSkip(sp.c);
+        const int N = 16;
+        std::vector<uint32_t> prev, cur((size_t)FBW * FBH);
+        std::vector<double> heat((size_t)FBW * FBH, 0);
+        double sum = 0; long pops = 0;
+        for (int k = 0; k < N; k++) {
+            game.frame(in, 1.0 / 30); in.newFrame();
+            std::memcpy(cur.data(), game.output(), cur.size() * 4);
+            if (!prev.empty()) for (size_t i = 0; i < cur.size(); i++) { double d = std::fabs(lum(cur[i]) - lum(prev[i])); heat[i] += d; sum += d; if (d > 40) pops++; }
+            prev = cur;
+        }
+        double mean = sum / ((double)cur.size() * (N - 1)), popShare = 100.0 * pops / ((double)cur.size() * (N - 1));
+        std::vector<uint32_t> sheet((size_t)FBW * 2 * FBH);
+        for (int y = 0; y < FBH; y++)
+            for (int x = 0; x < FBW; x++) {
+                sheet[(size_t)y * FBW * 2 + x] = prev[(size_t)y * FBW + x];
+                int v = (int)std::min(255.0, heat[(size_t)y * FBW + x] / (N - 1) * 8.0);
+                sheet[(size_t)y * FBW * 2 + FBW + x] = 0xFF000000u | ((uint32_t)v << 16) | ((uint32_t)v << 8) | (uint32_t)v;
+            }
+        std::string fn = fmt("shots/tests/probe_stability_%s.png", sp.name);
+        writePNG(fn.c_str(), sheet.data(), FBW * 2, FBH);
+        bool ok = popShare < 0.5;
+        if (!ok) bad++;
+        printf("probe stability %-8s %s: mean |dL| %.2f a frame, %.3f%% of the pixels jump over 40 -> %s (%s)\n", sp.name, game.testProbeInfo().c_str(), mean, popShare, fn.c_str(), ok ? "steady" : "FLICKERS");
+    }
+    }
+    return bad ? 1 : 0;
+}
+
+static int runAlmanac(int argc, char** argv) {   // `almanac [<sx> <sy> <sz> <body> [latDeg lonDeg [t [ship]]]]`
+    double t = 3.6e6;
+    if (argc >= 6) {
+        int64_t sx = atoll(argv[2]), sy = atoll(argv[3]), sz = atoll(argv[4]); int body = atoi(argv[5]);
+        double latDeg = argc > 7 ? atof(argv[6]) : 12, lonDeg = argc > 7 ? atof(argv[7]) : 0.5 / DEG;
+        if (argc > 8) t = atof(argv[8]);
+        bool shipView = argc > 9 && std::string(argv[9]) == "ship";
+        Star s; if (!starInSector(sx, sy, sz, s, true)) { printf("no star at %lld %lld %lld\n", (long long)sx, (long long)sy, (long long)sz); return 1; }
+        StarSystem sys; sys.generate(s);
+        if (body < 0 || body >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", body, sys.bodies.size()); return 1; }
+        AlmanacPlace p; SurfaceSite site;
+        if (shipView || !PLANET_TYPES[sys.bodies[body].type].landable) p = almanacShipPlace(sys, body, t);
+        else { site.init(&sys, body, latDeg * DEG, lonDeg * DEG, t); p = almanacGroundPlace(site, t); }
+        std::vector<AlmanacEvent> ev; double t0 = nowSec(); almanacOf(p, ev);
+        printf("[%.1f ms]\n", (nowSec() - t0) * 1000);
+        printAlmanac(p, ev);
+        return 0;
+    }
+    std::vector<AlmanacTestPlace> places; almanacTestPlaces(places);
+    for (AlmanacTestPlace& tp : places) {
+        SurfaceSite site; site.init(&tp.sys, tp.body, tp.latDeg * DEG, tp.lonDeg * DEG, t);
+        AlmanacPlace p = almanacGroundPlace(site, t);
+        std::vector<AlmanacEvent> ev; double t0 = nowSec(); almanacOf(p, ev);
+        printf("[%s: %s (sector %lld 0 %lld), %.1f ms]\n", tp.what, tp.sys.star.name.c_str(), (long long)tp.sys.star.sx, (long long)tp.sys.star.sz, (nowSec() - t0) * 1000);
+        printAlmanac(p, ev);
+    }
+    if (!places.empty() && places[0].sys.bodies[places[0].body].parent >= 0) {
+        AlmanacPlace p = almanacShipPlace(places[0].sys, places[0].sys.bodies[places[0].body].parent, t);
+        std::vector<AlmanacEvent> ev; double t0 = nowSec(); almanacOf(p, ev);
+        printf("[the ship at the giant, %.1f ms]\n", (nowSec() - t0) * 1000);
+        printAlmanac(p, ev);
+    }
+    return 0;
 }
 
 static int testUnit() {
@@ -4079,6 +4940,196 @@ static int testUnit() {
                 check("rocks are found round a rock after the rings sheared", ok0 && near >= 5, std::to_string(near) + " within three cells");
             }
         }
+    }
+    {   // B-410: a planet approached from a belt's parking parks at the planet. The approach kept the belt's parking, so at its end the
+        // parked ship was put back beside its rock; the flight computer's next target kept the belt targeted, so its approach flew to the rock
+        Star bs; StarSystem bsys; int pi = -1;
+        for (int64_t x = 150; x < 320 && pi < 0; x++)
+            for (int64_t z = 20; z < 140 && pi < 0; z++) {
+                if (!starInSector(x, 0, z, bs)) continue;
+                bsys.generate(bs);
+                if (bsys.belts.empty()) continue;
+                for (int i = 0; i < (int)bsys.bodies.size() && pi < 0; i++) if (bsys.bodies[i].parent < 0 && bsys.bodies[i].type != PT_COMPANION) pi = i;
+            }
+        Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        game.newGame(); game.setState(GameState::SPACE);
+        Input gi;
+        auto run = [&](double secs) { int n = (int)(secs * 30); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+        auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+        auto parkedAt = [&](int body, std::string& why) {   // waits for the parking, then checks the ship holds it over two seconds
+            for (int i = 0; i < 30 * 20 && game.testDebugInfo().find("mode=3 ") == std::string::npos; i++) run(1.0 / 30);
+            run(2.0);
+            const StarSystem& S = game.testSystem();
+            double d = length(game.testShipPos() - S.bodyPos(body, game.testGameTime())), r = S.bodies[body].radiusKm;
+            why = fmt("%s, %.1f radii from it", game.testDebugInfo().c_str(), d / r);
+            return game.testParkedBody() == body && game.testParkedBelt() < 0 && d < 30 * r;
+        };
+        bool inBelt = false, listOk = false, computerOk = false; std::string w1, w2;
+        if (pi >= 0) {
+            game.testParkAtBelt(bs, 0); run(0.3);
+            inBelt = game.testParkedBelt() == 0;
+            press(KEY_TAB); for (int i = 0; i < (int)bsys.bodies.size() - pi; i++) press(KEY_UP);   // the list opens on the belt's row, after the bodies
+            press(KEY_ENTER);
+            listOk = parkedAt(pi, w1);
+            game.testParkAtBelt(bs, 0); run(0.3);
+            game.setState(GameState::SHIPSCREEN); game.testShipScreenRow(0, 2); press(KEY_ENTER);   // LOCAL TARGET: NEXT BODY (from none: the first)
+            game.setState(GameState::SHIPSCREEN); game.testShipScreenRow(0, 4); press(KEY_ENTER);   // FINE APPROACH TO THE LOCAL TARGET
+            computerOk = parkedAt(0, w2);
+        }
+        check("a planet approached from a belt keeps its parking (B-410)", pi >= 0 && inBelt && listOk && computerOk,
+              fmt("%s %lld %lld body %d: from the list %s (%s); from the flight computer %s (%s)", bs.name.c_str(), (long long)bs.sx, (long long)bs.sz, pi, listOk ? "ok" : "PULLED BACK", w1.c_str(), computerOk ? "ok" : "PULLED BACK", w2.c_str()));
+    }
+    {   // R-407: a jump of any length along the aim. From home the aim (R), 4 0 0 typed and Enter: the star nearest the line's end becomes the
+        // remote target, the Vimana flies at once (its length by `vimanaSeconds`) and the ship comes out at that star; a jump north out of
+        // the disc comes back along the line to the first stars; the aim's markers say the distance where the star has no name, VISITED
+        // where the ship has been
+        Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        game.newGame(); game.setState(GameState::SPACE);
+        Input gi;
+        auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+        auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+        run(0.3);
+        const Vec3 p0 = game.testShipPos();
+        const std::string home = game.testStarGenName();
+        press(KEY_R); press(KEY_4); press(KEY_0); press(KEY_0); run(0.1);
+        const Vec3 dir = game.testAimDirection(), end = p0 + dir * (400.0 * SECTOR_KM);
+        writePNG("shots/tests/unit_r407_aim.png", game.output(), FBW, FBH);
+        const std::string typed = game.testJumpDigits();
+        int64_t rx = 0, ry = 0, rz = 0;
+        press(KEY_ENTER);
+        const bool remote = game.testRemote(rx, ry, rz), flying = game.testDebugInfo().find("mode=1 ") != std::string::npos;
+        Star dest; starInSector(rx, ry, rz, dest, false);
+        const double offEnd = length(dest.pos - end) / SECTOR_KM, flyLy = length(dest.pos - p0) / SECTOR_KM, dur = game.testFlightDur();
+        bool logged = false; for (const LogEntry& e : game.guide.log) if (e.kind == "JUMP" && e.text.find("400 LY") != std::string::npos) logged = true;
+        run(dur + 1.0);
+        const bool arrived = game.testSystem().valid && game.testSystem().star.sx == rx && game.testSystem().star.sy == ry && game.testSystem().star.sz == rz;
+        check("a jump of 400 ly along the aim (R-407)", typed == "400" && remote && flying && offEnd < 8 && std::fabs(dur - vimanaSeconds(flyLy)) < 0.5 && logged && arrived,
+              fmt("typed '%s', from %s to sector %lld %lld %lld, %.1f ly from the line's end, %.1f ly flown in %.1f s; logged %d, arrived %d", typed.c_str(), home.c_str(), (long long)rx, (long long)ry, (long long)rz, offEnd, flyLy, dur, logged, arrived));
+        Star up; double shortLy = 0;
+        const bool upOk = jumpTarget(game.testShipPos(), Vec3(0, 1, 0), 3000, up, shortLy, 0);
+        const bool upShort = upOk && shortLy > 100 && up.sy < 2950 && up.sy > 1000;
+        Star far; double farShort = 0;
+        const bool coreOk = jumpTarget(p0, normalize(Vec3(GALAXY_CENTRE_SX * SECTOR_KM, 0, GALAXY_CENTRE_SZ * SECTOR_KM) - p0), 13000, far, farShort, 0) && galaxyRegion(far.sx, far.sy, far.sz) == REGION_CORE;
+        check("a jump into the void comes back to the stars", upShort && coreOk && vimanaSeconds(100) == 27.0 && std::fabs(vimanaSeconds(100000) - 86.8) < 0.1,
+              fmt("3000 ly north: a star at height %lld, %.0f ly short; 13000 ly coreward: %s; flights of 100 and 100,000 ly %.1f and %.1f s", (long long)up.sy, shortLy, REGION_NAMES[galaxyRegion(far.sx, far.sy, far.sz)], vimanaSeconds(100), vimanaSeconds(100000)));
+        // the aim's labels: the nearest stars of the arrival's neighbourhood, unnamed and unvisited, then the home star (visited)
+        int unnamed = 0, bare = 0; std::string sample;
+        for (const Star& s : game.testNeighborhood().stars) {
+            if (unnamed >= 6) break;
+            if (game.testSystem().valid && s.seed == game.testSystem().star.seed) continue;
+            std::string l = game.testAimLabel(s); unnamed++;
+            if (l.find("UNKNOWN") == std::string::npos && l.find(" LY") != std::string::npos) bare++;
+            if (sample.empty()) sample = l;
+        }
+        Star homeStar; Guide::parseStarKey(game.guide.home, rx, ry, rz); starInSector(rx, ry, rz, homeStar, false);
+        const std::string homeLabel = game.testAimLabel(homeStar);
+        check("the aim's markers name no UNKNOWN, say VISITED", unnamed == 6 && bare == 6 && homeLabel.find("VISITED") != std::string::npos,
+              fmt("%d of %d bare ('%s'); home '%s'", bare, unnamed, sample.c_str(), homeLabel.c_str()));
+    }
+    {   // R-408: the sights by kind and the explorer's marks. On Aieliaalas II (a people's world): the cells round a mountain place give lakes
+        // that are water where they are heard (a playa or a frozen basin is no lake) and peaks over the ground round them; a sight named under O6-06 (`<world>/L<id>`) becomes a mark where it
+        // stands at the arrival; on the ground the scanner (R) hears the ruins, the nearest heard within 8% of its distance; a mark placed on
+        // it from the map's cursor leaves it out (the next ruin is the nearest), Shift+R takes it in again; the map's Enter renames, Delete
+        // twice removes, M puts the waypoint at the cursor; L marks the rangefinder's spot; the marks go through the guide and lend
+        Star ws; StarSystem wsys; const bool haveWorld = starInSector(151, 0, 25, ws, true);
+        if (haveWorld) wsys.generate(ws);
+        const BodyGen g = haveWorld && wsys.bodies.size() > 1 ? BodyGen::make(wsys.bodies[1]) : BodyGen();
+        const Vec3 hill = StarSystem::bodyFromLatLon(-30 * DEG, -100 * DEG);
+        std::vector<Landmark> sights;
+        if (haveWorld) sightsNear(g, hill, 40000.0, sightKindsOf(g) & ~(1u << LM_RUIN), sights);
+        int lakes = 0, wet = 0, peaks = 0, tops = 0;
+        for (const Landmark& L : sights) {
+            if (L.kind == LM_LAKE) { lakes++; SurfaceSample sm = sampleSurface(g, L.unit, 64.0); if (sm.material == MAT_WATER || (sm.water > -1e8 && sm.height < sm.water + 0.5)) wet++; }
+            if (L.kind == LM_PEAK) {
+                peaks++; bool top = true;
+                Vec3 e = normalize(cross(Vec3(0, 0, 1), L.unit)), n = cross(L.unit, e);
+                for (int k = 0; k < 8 && top; k++) { double a = k * PI / 4; if (sampleSurface(g, normalize(L.unit + (e * std::cos(a) + n * std::sin(a)) * (400.0 / (g.R * 1000.0))), 64.0).height > L.heightM + 5) top = false; }
+                if (top) tops++;
+            }
+        }
+        check("the sights by kind: lakes are water, peaks the tops (R-408)", lakes >= 3 && wet * 5 >= lakes * 4 && peaks >= 3 && tops * 4 >= peaks * 3,   // a summit of the 500 m scan on a ridge can have higher ground 400 m along it
+              fmt("within 40 km of 30 S 100 W: %d lakes (%d of them water), %d peaks (%d over the ground 400 m round)", lakes, wet, peaks, tops));
+        // a legacy name: the O6-06 landmark of the place's cell (else of the nearest cell holding one), named as the explorer would have named it
+        Landmark legacy; std::string legacyKey;
+        if (haveWorld) {
+            int ci0, cj0; landmarkCellOf(g, hill, ci0, cj0);
+            for (int d = 0; d < 4 && legacyKey.empty(); d++)
+                for (int di = -d; di <= d && legacyKey.empty(); di++)
+                    for (int dj = -d; dj <= d && legacyKey.empty(); dj++) {
+                        if (std::max(std::abs(di), std::abs(dj)) != d) continue;
+                        CellSights S; Landmark L;
+                        if (sightsOfCell(g, ci0 + di, cj0 + dj, S) && legacyLandmarkOf(S, L)) { legacy = L; legacyKey = Guide::bodyKey(ws.sx, ws.sy, ws.sz, 1) + "/L" + std::to_string((unsigned long long)(L.id & 0xffffffffULL)); }
+                    }
+        }
+        remove("shots/tests/test_r408_guide.txt");
+        Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_r408_guide.txt";
+        game.newGame(); game.setState(GameState::SPACE);
+        Input gi;
+        auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+        auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+        auto shiftPress = [&](int key) { gi.down[KEY_LEFT_SHIFT] = true; press(key); gi.down[KEY_LEFT_SHIFT] = false; };
+        run(0.2);
+        if (!legacyKey.empty()) game.guide.names[legacyKey] = "City of tests";
+        game.testParkAt(ws, 1); run(0.2);
+        for (int i = 0; i < 30 * 15 && !legacyKey.empty() && game.guide.names.count(legacyKey); i++) run(1.0 / 30);   // the cells are found on a thread
+        bool migrated = false; double mLat, mLon; StarSystem::latLonFromBody(legacy.unit, mLat, mLon);
+        for (const SurfaceMark& m : game.guide.marks) if (m.name == "City of tests" && m.kind == legacy.kind && std::fabs(m.lat - mLat) < 1e-9 && std::fabs(m.lon - mLon) < 1e-9 && !m.lent) migrated = true;
+        check("a sight named before is a mark where it stands", !legacyKey.empty() && migrated && !game.guide.names.count(legacyKey),
+              fmt("%s (%s): %s; the old name %s", legacyKey.c_str(), LANDMARK_KIND_NAMES[legacy.kind], migrated ? "a mark where it stands" : "NO MARK", game.guide.names.count(legacyKey) ? "STILL THERE" : "gone"));
+        // the scanner on the ground
+        game.testLandSite(); run(0.2); press(KEY_ENTER); run(8.5);
+        const bool landed = game.state == GameState::SURFACE;
+        press(KEY_R);
+        for (int i = 0; i < 30 * 30 && !game.testScanned(); i++) run(1.0 / 30);
+        run(0.1);
+        const int ruins = game.testEchoes(LM_RUIN), mode = game.testScanMode();
+        double ex = 0, ez = 0, er = 0; const bool heard = game.testEchoTrue(ex, ez, er);
+        const double px = game.testPlayerX(), pz = game.testPlayerZ(), dist = std::hypot(ex - px, ez - pz);
+        const std::string info1 = game.testScanInfo();
+        double hx = 0, hz = 0; sscanf(info1.c_str() + std::max<size_t>(0, info1.find("heard at ") == std::string::npos ? 0 : info1.find("heard at ") + 9), "%lf %lf", &hx, &hz);
+        const bool close = heard && std::hypot(hx - ex, hz - ez) <= 0.08 * dist + 1;
+        writePNG("shots/tests/unit_r408_scan.png", game.output(), FBW, FBH);
+        // a mark on it from the map's cursor: the next ruin is the nearest; Shift+R takes the marked in again
+        press(KEY_N); run(0.1); game.testMapCursor(ex, ez); run(0.1);
+        press(KEY_ENTER); game.testTypeText("FIRST RUIN"); run(0.1);
+        writePNG("shots/tests/unit_r408_map.png", game.output(), FBW, FBH);
+        double ex2 = 0, ez2 = 0, er2 = 0; const bool next = game.testEchoTrue(ex2, ez2, er2) && std::hypot(ex2 - ex, ez2 - ez) > 300;
+        shiftPress(KEY_R); run(0.1);
+        double ex3 = 0, ez3 = 0, er3 = 0; const bool back = game.testEchoTrue(ex3, ez3, er3) && std::hypot(ex3 - ex, ez3 - ez) < 1;
+        shiftPress(KEY_R); run(0.1);
+        int firstMark = -1; for (int i = 0; i < (int)game.guide.marks.size(); i++) if (game.guide.marks[i].name == "FIRST RUIN") firstMark = i;
+        const bool placed = firstMark >= 0 && game.guide.marks[firstMark].kind == LM_RUIN;
+        // the map: Enter on the mark renames it, Delete twice removes it, M puts the waypoint at the cursor
+        press(KEY_ENTER); for (int i = 0; i < 12; i++) press(KEY_BACKSPACE); game.testTypeText("SECOND NAME"); run(0.1);   // the entry holds the old name
+        bool renamed = false; for (const SurfaceMark& m : game.guide.marks) if (m.name == "SECOND NAME") renamed = true;
+        const size_t before = game.guide.marks.size();
+        press(KEY_DELETE); run(0.1); const bool armed = game.guide.marks.size() == before;
+        press(KEY_DELETE); run(0.1); const bool removed = game.guide.marks.size() == before - 1;
+        press(KEY_M); run(0.1); const bool waypoint = game.testMarksInfo().find("waypoint=1") != std::string::npos;
+        press(KEY_ESCAPE); run(0.1);
+        // L: a mark at the rangefinder's spot
+        game.testSetPitch(-0.25); run(0.3);
+        const double rx = game.testRangeX(), rz = game.testRangeZ(), range = game.testRange();
+        press(KEY_L); game.testTypeText("LOOKOUT"); run(0.1);
+        bool looked = false;
+        for (const SurfaceMark& m : game.guide.marks) if (m.name == "LOOKOUT") { double la, lo; game.testLatLonAt(rx, rz, la, lo); looked = std::fabs(la - m.lat) < 1e-7 && std::fabs(lo - m.lon) < 1e-7; }
+        check("the scanner hears the ruins, the marked left out (R-408)", landed && mode == LM_RUIN && ruins > 10 && heard && dist < 40000 && close && placed && next && back,
+              fmt("%d ruins heard; the nearest %.0f m off, heard %.0f m from it; marked from the map: %s, the next nearest %s, taken in again %s", ruins, dist, std::hypot(hx - ex, hz - ez), placed ? "yes" : "NO", next ? fmt("%.0f m off", std::hypot(ex2 - px, ez2 - pz)).c_str() : "THE SAME", back ? "yes" : "NO"));
+        check("the map's cursor renames, removes, waypoints; L marks", renamed && armed && removed && waypoint && range > 0 && looked,
+              fmt("renamed %d, armed %d, removed %d, waypoint %d; L at %.0f m: %s", renamed, armed, removed, waypoint, range, looked ? "marked there" : "NOT there"));
+        // the guide: the marks saved and read back; lent to a friend, not lent on
+        game.guide.save("shots/tests/test_r408_export.txt");
+        Guide back2; back2.load("shots/tests/test_r408_export.txt");
+        bool same = back2.marks.size() == game.guide.marks.size();
+        for (size_t i = 0; same && i < back2.marks.size(); i++) { const SurfaceMark &a = back2.marks[i], &b = game.guide.marks[i]; same = a.body == b.body && a.name == b.name && a.kind == b.kind && std::fabs(a.lat - b.lat) < 1e-9 && std::fabs(a.lon - b.lon) < 1e-9 && a.lent == b.lent; }
+        Guide friendG; int got = 0; friendG.importInbox("shots/tests/test_r408_export.txt", nullptr, nullptr, &got);
+        int again = 0; friendG.importInbox("shots/tests/test_r408_export.txt", nullptr, nullptr, &again);
+        bool allLent = true; for (const SurfaceMark& m : friendG.marks) if (!m.lent) allLent = false;
+        friendG.save("shots/tests/test_r408_friend.txt");
+        Guide third; int on = 0; third.importInbox("shots/tests/test_r408_friend.txt", nullptr, nullptr, &on);
+        check("the marks go through the guide and lend", same && got == (int)game.guide.marks.size() && again == 0 && allLent && on == 0,
+              fmt("%zu marks read back %s; lent %d (again %d), all cyan %d; lent on %d", back2.marks.size(), same ? "the same" : "DIFFERENT", got, again, allLent, on));
+        remove("shots/tests/test_r408_guide.txt"); remove("shots/tests/test_r408_export.txt"); remove("shots/tests/test_r408_friend.txt");
     }
     {   // R-402: magnetic fields and the star's storms: every class occurs; at the oval, a strong field round an active star keeps an
         // aurora on most nights (over the HUD's 0.15), a weak field has one rarely; the storms come and go
@@ -5346,6 +6397,835 @@ static int testUnit() {
         }
         check("shards: every people's world near home reads clean", worlds >= 10 && bad == 0, fmt("%d worlds of sectors 150-160 x 20-80, %d shards of %d with a mark left or out of length", worlds, bad, worlds * 12));
     }
+    {   // W-01: the almanac. On the three test places every event listed is where the geometry says: the site's own sun and
+        // frame (`SurfaceSite::sun`, `localFrame`, `worldPos`) re-read at the time given, with the crossing's direction and the
+        // extremum's neighbours; from the ship parked at the giant the same with the autopilot's lap; then a game runs to one
+        std::vector<AlmanacTestPlace> places; almanacTestPlaces(places);
+        check("almanac: the three test places", places.size() == 3, fmt("%zu found", places.size()));
+        const double t0 = 3.6e6;
+        auto genName = [](const StarSystem& sys) { return [&sys](int j) { return sys.bodies[j].name; }; };
+        for (AlmanacTestPlace& tp : places) {
+            const StarSystem& sys = tp.sys; int bi = tp.body;
+            SurfaceSite site; site.init(&sys, bi, tp.latDeg * DEG, tp.lonDeg * DEG, t0);
+            AlmanacPlace p = almanacGroundPlace(site, t0);
+            std::vector<AlmanacEvent> ev; double ms0 = nowSec(); almanacOf(p, ev); double ms = (nowSec() - ms0) * 1000;
+            int kinds[AL_COUNT] = {0}; int bad = 0; std::string why;
+            auto altOf = [&](int j, double T, double& angR) {   // a body over the site's horizon, as the sky draws it
+                Mat3 L = site.localFrame(T); Vec3 rel = sys.bodyPos(j, T) - site.worldPos(T, 0, 0, 0); double d = length(rel);
+                angR = std::asin(clampd(sys.bodies[j].radiusKm / d, 0, 1)); return std::asin(clampd((L * (rel / d)).y, -1, 1));
+            };
+            auto litOf = [&](int j, double T) { Vec3 bp = sys.bodyPos(j, T); return 0.5 * (1 + dot(normalize(sys.star.pos - bp), normalize(sys.bodyPos(bi, T) - bp))); };
+            for (const AlmanacEvent& e : ev) {
+                double T = e.t, err = 0; bool ok = true; kinds[e.kind]++;
+                switch (e.kind) {
+                    case AL_SUNRISE: case AL_SUNSET: { SunInfo s = site.sun(T), sb = site.sun(T - 20), sa = site.sun(T + 20); err = std::fabs(s.altitude + s.angularRadius); ok = err < 2e-5 && ((sa.altitude > sb.altitude) == (e.kind == AL_SUNRISE)); break; }
+                    case AL_NOON: { SunInfo s = site.sun(T); double q = std::fabs(sys.bodies[bi].rotPeriod) / 4; err = std::fabs(s.dayFraction - 0.5); ok = err < 1e-6 && s.altitude > site.sun(T - q).altitude && s.altitude > site.sun(T + q).altitude; break; }
+                    case AL_DUSK: case AL_DAWN: { SunInfo s = site.sun(T), sb = site.sun(T - 20), sa = site.sun(T + 20); err = std::fabs(std::sin(s.altitude) + 0.12); ok = err < 2e-5 && ((sa.altitude > sb.altitude) == (e.kind == AL_DAWN)); break; }
+                    case AL_RISE: case AL_SET: { double ar, arb, ara, a = altOf(e.body, T, ar), ab = altOf(e.body, T - 20, arb), aa = altOf(e.body, T + 20, ara); err = std::fabs(a + ar); ok = err < 2e-5 && ((aa > ab) == (e.kind == AL_RISE)); break; }
+                    case AL_FULL: case AL_NEW: { double d = 0.01 * std::fabs(sys.bodies[e.body].orbitPeriod), k = litOf(e.body, T), kb = litOf(e.body, T - d), ka = litOf(e.body, T + d); err = std::fabs(k - e.value); ok = err < 1e-6 && (e.kind == AL_FULL ? (k >= kb && k >= ka) : (k <= kb && k <= ka)); break; }
+                    case AL_ECLIPSE: { SunInfo s = site.sun(T); err = std::fabs(s.eclipse - e.value); ok = err < 1e-6 && s.eclipse > 0 && s.eclipse >= site.sun(T - 30).eclipse && s.eclipse >= site.sun(T + 30).eclipse; break; }
+                    case AL_RING_SHADOW: ok = site.sun(T - 30).ringShadow < 1e-4 && site.sun(T + 30).ringShadow >= 1e-4; break;
+                    case AL_RING_CLEAR: ok = site.sun(T - 30).ringShadow >= 1e-4 && site.sun(T + 30).ringShadow < 1e-4; break;
+                    case AL_PERIAPSIS: { double M = sys.meanAnomaly(e.body, T); err = std::min(M, TAU - M); ok = err < 1e-6; break; }
+                    case AL_APOAPSIS: err = std::fabs(sys.meanAnomaly(e.body, T) - PI); ok = err < 1e-6; break;
+                    case AL_FRONT: case AL_FRONT_CLEAR: {   // W-03: the ground's own rain (or dust) is zero on one side of the moment and above zero on the other
+                        std::vector<Front> fs; frontsOf(sys.bodies[bi], T, fs, 0); FrontWeather wb, wa;
+                        Vec3 u = StarSystem::bodyFromLatLon(site.lat0, site.lon0);
+                        frontWeatherAt(fs, u, T - 20, site.R, wb); frontWeatherAt(fs, u, T + 20, site.R, wa);
+                        ok = e.kind == AL_FRONT ? (wb.precip == 0 && wa.precip > 0) : (wb.precip > 0 && wa.precip == 0); err = std::min(wb.precip, wa.precip); break;
+                    }
+                    default: ok = false; break;
+                }
+                if (!ok) { bad++; why += fmt(" [%s at +%.0f s, err %.2e]", almanacLabel(e, sys, genName(sys), " deg").c_str(), T - t0, err); }
+            }
+            std::string counts = fmt("sun %d/%d/%d twilight %d/%d rises %d sets %d full %d new %d eclipses %d ring %d/%d comets %d/%d", kinds[AL_SUNRISE], kinds[AL_SUNSET], kinds[AL_NOON], kinds[AL_DAWN], kinds[AL_DUSK],
+                                     kinds[AL_RISE], kinds[AL_SET], kinds[AL_FULL], kinds[AL_NEW], kinds[AL_ECLIPSE], kinds[AL_RING_SHADOW], kinds[AL_RING_CLEAR], kinds[AL_PERIAPSIS], kinds[AL_APOAPSIS]);
+            bool plain = std::string(tp.what) == "a plain world";
+            bool enough = plain ? (kinds[AL_SUNRISE] && kinds[AL_SUNSET] && kinds[AL_NOON] && kinds[AL_DAWN] && kinds[AL_DUSK] && kinds[AL_RISE] && kinds[AL_SET] && kinds[AL_FULL] && kinds[AL_NEW]) : !ev.empty();
+            check(fmt("almanac: %s", tp.what).c_str(), bad == 0 && enough, fmt("%s of %s (%lld 0 %lld): %zu events in %.1f ms: %s%s", sys.bodies[bi].name.c_str(), sys.star.name.c_str(), (long long)sys.star.sx, (long long)sys.star.sz, ev.size(), ms, counts.c_str(), why.c_str()));
+        }
+        if (!places.empty() && places[0].sys.bodies[places[0].body].parent >= 0) {   // the ship parked at the ringed giant
+            const StarSystem& sys = places[0].sys; int B = sys.bodies[places[0].body].parent;
+            AlmanacPlace p = almanacShipPlace(sys, B, t0);
+            std::vector<AlmanacEvent> ev; double ms0 = nowSec(); almanacOf(p, ev); double ms = (nowSec() - ms0) * 1000;
+            auto shipAt = [&](double T) { Vec3 dir = normalize(Mat3::axisAngle(sys.bodies[B].spinAxis, TAU / (600.0 + 200.0 * sys.bodies[B].radiusKm / 6000.0) * (T - t0)) * p.parkDir); return sys.bodyPos(B, T) + dir * p.parkDist; };   // the autopilot's lap
+            auto sepOf = [&](int a, int b, double T) { Vec3 S = shipAt(T); return std::acos(clampd(dot(normalize(sys.bodyPos(a, T) - S), normalize(sys.bodyPos(b, T) - S)), -1, 1)); };
+            auto angOf = [&](int a, double T) { return std::asin(clampd(sys.bodies[a].radiusKm / length(sys.bodyPos(a, T) - shipAt(T)), 0, 1)); };
+            auto gapOf = [&](int axis, int point, double T, double reach) {   // the landing map's shadow rule: the point's centre against the line from the star through `axis`, beyond it
+                Vec3 A = sys.bodyPos(axis, T), u = normalize(A - sys.star.pos), r = sys.bodyPos(point, T) - A; double along = dot(r, u);
+                return (along > 0 ? std::sqrt(std::max(0.0, length2(r) - along * along)) : length(r)) - reach;
+            };
+            auto sunSep = [&](int j, double T, double& rs, double& rb) { Vec3 S = shipAt(T); Vec3 ds = sys.star.pos - S, db = sys.bodyPos(j, T) - S; rs = std::asin(clampd(sys.star.radiusKm / length(ds), 0, 1)); rb = std::asin(clampd(sys.bodies[j].radiusKm / length(db), 0, 1)); return std::acos(clampd(dot(normalize(ds), normalize(db)), -1, 1)); };
+            int kinds[AL_COUNT] = {0}; int bad = 0; std::string why;
+            for (const AlmanacEvent& e : ev) {
+                double T = e.t, err = 0; bool ok = true; kinds[e.kind]++;
+                switch (e.kind) {
+                    case AL_TRANSIT: case AL_OCCULTATION: {
+                        double f = sepOf(e.body, e.body2, T) - angOf(e.body, T) - angOf(e.body2, T), fa = sepOf(e.body, e.body2, T + 30) - angOf(e.body, T + 30) - angOf(e.body2, T + 30);
+                        Vec3 S = shipAt(T); bool front = length(sys.bodyPos(e.body, T) - S) < length(sys.bodyPos(e.body2, T) - S);
+                        err = std::fabs(f); ok = err < 1e-5 && fa < 0 && front == (e.kind == AL_TRANSIT); break;
+                    }
+                    case AL_SHADOW: { double R = sys.bodies[e.body2].radiusKm + sys.bodies[e.body].radiusKm; ok = gapOf(e.body, e.body2, T - 30, R) > 0 && gapOf(e.body, e.body2, T + 30, R) < 0; err = std::fabs(gapOf(e.body, e.body2, T, R)); break; }
+                    case AL_ECLIPSED: { double R = sys.bodies[e.body2].radiusKm; ok = gapOf(e.body2, e.body, T - 30, R) > 0 && gapOf(e.body2, e.body, T + 30, R) < 0; err = std::fabs(gapOf(e.body2, e.body, T, R)); break; }
+                    case AL_CONJUNCTION: {   // read from the parked body's centre (the lap would put a minimum into every orbit)
+                        auto sepC = [&](double T2) { Vec3 S = sys.bodyPos(B, T2); return std::acos(clampd(dot(normalize(sys.bodyPos(e.body, T2) - S), normalize(sys.bodyPos(e.body2, T2) - S)), -1, 1)); };
+                        double d = 0.005 * std::min(std::fabs(sys.bodies[e.body].orbitPeriod), std::fabs(sys.bodies[e.body2].orbitPeriod)), s = sepC(T); err = std::fabs(s - e.value); ok = err < 1e-6 && s < 2 * DEG && s <= sepC(T - d) && s <= sepC(T + d); break; }
+                    case AL_SUN_TRANSIT: { double rs, rb, th = sunSep(e.body, T, rs, rb), r2, r3, th2 = sunSep(e.body, T + 20, r2, r3); err = std::fabs(th - rs - rb); ok = err < 1e-5 && th2 < r2 + r3; break; }
+                    case AL_PERIAPSIS: { double M = sys.meanAnomaly(e.body, T); err = std::min(M, TAU - M); ok = err < 1e-6; break; }
+                    case AL_APOAPSIS: err = std::fabs(sys.meanAnomaly(e.body, T) - PI); ok = err < 1e-6; break;
+                    default: ok = false; break;
+                }
+                if (!ok) { bad++; why += fmt(" [%s at +%.0f s, err %.2e]", almanacLabel(e, sys, genName(sys), " deg").c_str(), T - t0, err); }
+            }
+            check("almanac: from the ship at the giant", bad == 0 && (kinds[AL_TRANSIT] || kinds[AL_OCCULTATION] || kinds[AL_SHADOW] || kinds[AL_ECLIPSED]),
+                  fmt("%s (%d moons): %zu events in %.1f ms: across %d behind %d shadow %d eclipsed %d meetings %d sun %d comets %d/%d%s", sys.bodies[B].name.c_str(), sys.bodies[B].moonCount, ev.size(), ms,
+                      kinds[AL_TRANSIT], kinds[AL_OCCULTATION], kinds[AL_SHADOW], kinds[AL_ECLIPSED], kinds[AL_CONJUNCTION], kinds[AL_SUN_TRANSIT], kinds[AL_PERIAPSIS], kinds[AL_APOAPSIS], why.c_str()));
+        }
+        if (places.size() == 3) {   // the run: on the plain world's surface the clock lands on the first event (within a second), the free row runs for an hour, T stops a run
+            Game game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
+            applyTestScale(game);
+            Input in;
+            auto press = [&](int key, bool ctrl = false) { in.down[KEY_LEFT_CONTROL] = ctrl; in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; in.down[KEY_LEFT_CONTROL] = false; };
+            auto run = [&](double s) { for (int i = 0; i < (int)(s * 30); i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+            const AlmanacTestPlace& tp = places[2];
+            press(KEY_ENTER); run(0.1);
+            game.testParkAt(tp.sys.star, tp.body); run(0.3);
+            press(KEY_T, true); run(0.1);
+            int mapEvents = game.testAlmanacEvents(); std::string mapInfo = game.testAlmanacInfo();
+            press(KEY_ESCAPE); run(0.1);
+            game.testLandSite(); press(KEY_ENTER); run(8.0);
+            bool onSurface = game.state == GameState::SURFACE;
+            press(KEY_T, true); run(0.1);
+            int n = game.testAlmanacEvents(); std::string info = game.testAlmanacInfo();
+            bool opened = game.state == GameState::ALMANAC && game.testAlmanacSelect(-1);
+            press(KEY_ENTER);
+            double target = game.testAlmanacTarget(), tStart = game.gameTime(), peak = 0; int frames = 0;
+            while (game.testAlmanacRunning() && frames++ < 30 * 300) { game.frame(in, 1.0 / 30); in.newFrame(); peak = std::max(peak, game.testTimeWarp()); }
+            double err = game.gameTime() - target;
+            check("almanac: the run lands on the event", onSurface && opened && n > 0 && mapEvents > 0 && !game.testAlmanacRunning() && std::fabs(err) < 1.0 && game.testTimeWarp() == 1,
+                  fmt("%d events at the map's cursor, %d under the feet (%s); the first, %.0f s ahead, reached in %d frames at a peak of x%.0f, %.3f s off, warp x%.0f, '%s'", mapEvents, n, info.c_str(), target - tStart, frames, peak, err, game.testTimeWarp(), game.testStatus().c_str()));
+            press(KEY_T, true); run(0.1); press(KEY_UP); press(KEY_ENTER);   // the last row is the free one: an hour by default
+            target = game.testAlmanacTarget(); tStart = game.gameTime(); frames = 0;
+            while (game.testAlmanacRunning() && frames++ < 30 * 120) { game.frame(in, 1.0 / 30); in.newFrame(); }
+            check("almanac: the free row runs for an hour", std::fabs(target - tStart - 3600) < 1e-6 && !game.testAlmanacRunning() && std::fabs(game.gameTime() - target) < 1.0,
+                  fmt("%.0f s asked, %.3f s off after %d frames, '%s'", target - tStart, game.gameTime() - target, frames, game.testStatus().c_str()));
+            press(KEY_T, true); run(0.1); press(KEY_UP); press(KEY_ENTER); run(0.3);
+            bool wasRunning = game.testAlmanacRunning(); press(KEY_T); run(0.1);
+            check("almanac: T stops a run", wasRunning && !game.testAlmanacRunning() && game.testTimeWarp() == 1, fmt("'%s'", game.testStatus().c_str()));
+            remove("shots/tests/unit_guide.txt");
+        }
+    }
+    {   // W-06: the telescope in a game parked at the home world: the magnification multiplies the disc exactly, the world is tracked
+        // from the start and held on the reticle while the ship orbits, the mouse steers the offset at the rate of the magnification,
+        // Enter lets go, N names what the reticle rests on, the photo's caption says so, the sun is read by its class, Z stows
+        Game game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
+        applyTestScale(game);
+        Input in;
+        auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+        auto run = [&](double s) { for (int i = 0; i < (int)(s * 30); i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+        press(KEY_ENTER); run(0.3);
+        int B = game.testParkedBody();
+        game.testAimAtBody(B); run(0.1);
+        double sx0 = 0, sy0 = 0, r0 = 0, sx = 0, sy = 0, r = 0;
+        bool front0 = game.testBodyScreen(B, sx0, sy0, r0);
+        press(KEY_Z); run(0.1);
+        game.testBodyScreen(B, sx, sy, r);
+        std::string line = game.testTelescopeLine();
+        check("telescope: x2 doubles the disc and tracks the world", B >= 0 && front0 && game.testTelescopeOn() && game.testTelescopeZoom() == 2 && std::fabs(r / r0 - 2) < 0.01 && game.testTelescopeTrack() == B && game.testTelescopeTarget() == B && line.rfind("UNKNOWN", 0) == 0 && line.size() <= 52,
+              fmt("body %d: disc %.1f px at x1, %.1f at x2; %s", B, r0, r, game.testTelescopeInfo().c_str()));
+        press(KEY_EQUAL); run(2.0); game.testBodyScreen(B, sx, sy, r);   // x4: the disc still under twice the frame, the centre tracked
+        double drift = std::sqrt((sx - FBW / 2.0) * (sx - FBW / 2.0) + (sy - FBH / 2.0) * (sy - FBH / 2.0));
+        check("telescope: the stabiliser holds the world on the reticle", game.testTelescopeTrack() == B && game.testTelescopeStabilised() && drift < 1.5 * FB_SCALE, fmt("centre %.2f px off after 2 s at x4; %s", drift, game.testTelescopeInfo().c_str()));
+        for (int i = 0; i < 2; i++) press(KEY_EQUAL);
+        run(0.1); game.testBodyScreen(B, sx, sy, r);
+        check("telescope: the steps are powers of two", game.testTelescopeZoom() == 16 && std::fabs(r / r0 - 16) < 0.01, fmt("x%.0f, disc %.1f px (%.1f at x1)", game.testTelescopeZoom(), r, r0));
+        {   // R-405, the stabiliser: at a deep power the ground under the reticle and the ground under the ship both stay where they are (no lap, no turn of the world under the ship), and no plate is begun again
+            double glat = 0, glon = 0, slat0 = 0, slon0 = 0; bool g0 = game.testTelescopeGround(glat, glon), s0 = game.testSubShip(slat0, slon0);
+            double sxc = 0, syc = 0, rc = 0; game.testBodyScreen(B, sxc, syc, rc);   // the centre as it stands (the lap carried it a pixel off the reticle in the 0.1 s between the aim and Z)
+            long begun0 = game.testPlateBegun();
+            run(2.0); game.testBodyScreen(B, sx, sy, r);
+            double gx = 0, gy = 0, slat1 = 0, slon1 = 0; bool gs = game.testGroundScreen(B, glat, glon, gx, gy); game.testSubShip(slat1, slon1);
+            double gdrift = std::sqrt((gx - FBW / 2.0) * (gx - FBW / 2.0) + (gy - FBH / 2.0) * (gy - FBH / 2.0)), cdrift = std::sqrt((sx - sxc) * (sx - sxc) + (sy - syc) * (sy - syc));
+            double smove = std::acos(clampd(dot(StarSystem::bodyFromLatLon(slat0, slon0), StarSystem::bodyFromLatLon(slat1, slon1)), -1, 1)) / DEG;
+            check("telescope: the stabiliser holds the ground under the reticle and the ship over its ground", game.testTelescopeTrack() == B && game.testTelescopeStabilised() && g0 && s0 && gs && gdrift < 0.1 && cdrift < 0.5 * FB_SCALE && smove < 1e-5 && game.testPlateBegun() == begun0,
+                  fmt("after 2 s at x16 the ground under the reticle is %.3f px off, the world's centre moved %.2f px, the ship %.2e deg off its ground, %ld plates begun; %s", gdrift, cdrift, smove, game.testPlateBegun() - begun0, game.testTelescopeInfo().c_str()));
+        }
+        double sxb = 0, syb = 0, rb = 0; game.testBodyScreen(B, sxb, syb, rb);   // the centre before the move
+        in.mouseDx = 100; game.frame(in, 1.0 / 30); in.newFrame(); run(0.05);
+        double sx1 = 0, sy1 = 0, r1 = 0; game.testBodyScreen(B, sx1, sy1, r1);
+        double expYaw = 100 * 0.0032 * game.settings.mouseSensitivity / 16, f16 = (FBW * 0.5) / std::tan(game.settings.fovDeg * 0.5 * DEG) * 16;
+        double expPx = f16 * std::tan(expYaw);
+        check("telescope: the mouse steers at the rate of the magnification", std::fabs(std::fabs(sx1 - sxb) - expPx) < 0.05 * expPx + 1.5,
+              fmt("100 counts at x16: %.4f rad expected, the world's centre moved %.1f px (%.1f expected); %s", expYaw, sx1 - sxb, expPx, game.testTelescopeInfo().c_str()));
+        double sxe = 0, sye = 0, re = 0; game.testBodyScreen(B, sxe, sye, re);
+        press(KEY_ENTER); run(2.0); game.testBodyScreen(B, sx, sy, r);
+        double drift2 = std::sqrt((sx - sxe) * (sx - sxe) + (sy - sye) * (sy - sye));
+        check("telescope: Enter lets go and the stabiliser still holds the view", game.testTelescopeTrack() == -1 && game.testTelescopeStabilised() && drift2 < 0.5 * FB_SCALE, fmt("centre %.2f px moved after 2 s untracked; %s", drift2, game.testTelescopeInfo().c_str()));
+        game.testAimAtBody(B); run(0.1);
+        press(KEY_N); bool entry = game.state == GameState::TEXT_ENTRY;
+        game.testTypeText("HOMEWORLD"); run(0.1);   // the typing ends with Enter
+        line = game.testTelescopeLine();
+        std::string caption = game.screenshotCaption();
+        check("telescope: N names the target and the photo says so", entry && game.state == GameState::SPACE && line.rfind("HOMEWORLD", 0) == 0 && caption.rfind("THROUGH THE TELESCOPE X16: HOMEWORLD", 0) == 0 && line.size() <= 52,
+              fmt("'%s'; caption '%s'", line.c_str(), caption.c_str()));
+        game.testAimAtSun(); run(0.1);
+        line = game.testTelescopeLine();
+        check("telescope: the sun on the reticle", game.testTelescopeTarget() == -2 && line.find("STAR") != std::string::npos && line.size() <= 52, fmt("target %d '%s'", game.testTelescopeTarget(), line.c_str()));
+        press(KEY_Z); run(0.1); game.testAimAtBody(B); run(0.1); game.testBodyScreen(B, sx, sy, r);
+        check("telescope: Z stows and the view is the setting's again", !game.testTelescopeOn() && std::fabs(r / r0 - 1) < 0.01, fmt("disc %.1f px (%.1f before); %s", r, r0, game.testTelescopeInfo().c_str()));
+        {   // R-405: stowed, the lap goes on from where the ship is; with Shift held the arrows carry the parked ship round its world (east along the parallel, north along the meridian, twenty degrees a second) with the world kept in the window; the telescope opened then holds the side faced
+            Vec3 pd0 = game.testParkDir(); run(1.0); Vec3 pd1 = game.testParkDir();
+            double lapDeg = std::acos(clampd(dot(pd0, pd1), -1, 1)) / DEG;
+            check("telescope: stowed, the lap goes on", lapDeg > 0.2, fmt("the parking moved %.2f deg in a second", lapDeg));
+            press(KEY_O); run(0.05);   // the fixed-point chase: the parking still but for the keys
+            game.testAimAtBody(B); run(0.1);
+            double sxA = 0, syA = 0, rA = 0; game.testBodyScreen(B, sxA, syA, rA);
+            Vec3 pdA = game.testParkDir(), ax = game.testSpinAxis(B);
+            in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(1.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false;
+            Vec3 pdB = game.testParkDir();
+            Vec3 pa = normalize(pdA - ax * dot(pdA, ax)), pb = normalize(pdB - ax * dot(pdB, ax));
+            double turned = std::atan2(dot(cross(pa, pb), ax), dot(pa, pb)) / DEG;
+            double sxB = 0, syB = 0, rB = 0; game.testBodyScreen(B, sxB, syB, rB);
+            double kept = std::sqrt((sxB - sxA) * (sxB - sxA) + (syB - syA) * (syB - syA));
+            std::string over = game.testStatus();
+            check("telescope: Shift+Right carries the ship round the world, the world kept in the window", std::fabs(turned - 20) < 0.5 && kept < 1.5 * FB_SCALE && over.rfind("OVER ", 0) == 0,
+                  fmt("a second of Shift+Right: %.2f deg east round the spin axis, the world's centre moved %.2f px, '%s'", turned, kept, over.c_str()));
+            double slatB = 0, slonB = 0, slatC = 0, slonC = 0; game.testSubShip(slatB, slonB);
+            in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_UP] = true; run(1.0); in.down[KEY_UP] = false; in.down[KEY_LEFT_SHIFT] = false;
+            game.testSubShip(slatC, slonC);
+            check("telescope: Shift+Up carries the ship north", std::fabs((slatC - slatB) / DEG - 20) < 0.5, fmt("a second of Shift+Up: from %.1f to %.1f deg of latitude", slatB / DEG, slatC / DEG));
+            game.testAimAtBody(B); run(0.1);
+            press(KEY_Z); run(0.05);
+            double slatD = 0, slonD = 0, slatE = 0, slonE = 0; game.testSubShip(slatD, slonD);
+            run(1.0); game.testSubShip(slatE, slonE); game.testBodyScreen(B, sx, sy, r);
+            double smove = std::acos(clampd(dot(StarSystem::bodyFromLatLon(slatD, slonD), StarSystem::bodyFromLatLon(slatE, slonE)), -1, 1)) / DEG;
+            double cdrift = std::sqrt((sx - FBW / 2.0) * (sx - FBW / 2.0) + (sy - FBH / 2.0) * (sy - FBH / 2.0));
+            check("telescope: opened after the turn, it holds the side faced", game.testTelescopeStabilised() && game.testTelescopeTrack() == B && smove < 1e-5 && cdrift < 0.5 * FB_SCALE,
+                  fmt("over %.1f %.1f, %.2e deg off after a second, the world's centre %.2f px off; %s", slatD / DEG, slonD / DEG, smove, cdrift, game.testTelescopeInfo().c_str()));
+            press(KEY_Z); run(0.05); press(KEY_O); run(0.05);   // stowed, the orbit mode again
+        }
+        {   // the user's review: the plate. The eyepiece's body gets the planet function sampled at the eyepiece's own footprint,
+            // built within a budget of samples a frame (the first frame coarse, the plate whole after some), its cells the function's
+            // own numbers; a zoom step begins a finer plate and keeps the last as the fallback; P reads the plate out whole for the photo
+            press(KEY_Z); run(0.05);   // the home world again at x16 (the step survives a stow: the plate of x16 is still held), tracked
+            press(KEY_EQUAL);          // x32: a power never used, so a plate of its own begins in this frame
+            double prog0 = game.testTelescopePlateProgress();
+            std::string info0 = game.testTelescopePlate();
+            double mapTexelM = TAU * game.testBodyRadiusKm(B) * 1000.0 / PlanetMap::W;
+            check("telescope: the plate begins coarse within its first frame", prog0 > 0 && prog0 < 1 && info0.find("blocks of") != std::string::npos, fmt("%.0f%% after one frame at x%.0f: %s", prog0 * 100, game.testTelescopeZoom(), info0.c_str()));
+            run(2.0);
+            double prog1 = game.testTelescopePlateProgress();
+            std::string info1 = game.testTelescopePlate();
+            double maxAlb = 0, maxH = 0; int matMiss = 0;
+            game.testPlateCheck(40, maxAlb, matMiss, maxH);
+            size_t at = info1.find(" cells of "); double texelM = at != std::string::npos ? atof(info1.c_str() + at + 10) : 0;
+            check("telescope: the plate is whole within two seconds and finer than the world map", prog1 >= 1 && texelM > 0 && texelM < mapTexelM * 0.5, fmt("%.0f%%, %.0f m a cell against the map's %.0f: %s", prog1 * 100, texelM, mapTexelM, info1.c_str()));
+            check("telescope: the plate's cells are the planet function's own numbers", matMiss == 0 && maxAlb < 0.003 && maxH < 0.01, fmt("40 cells sampled again: albedo off by %.4f at most, %d materials differ, heights by %.3f m", maxAlb, matMiss, maxH));
+            press(KEY_EQUAL); run(0.05);   // x64: a finer plate begins, the x32 one the fallback
+            std::string info2 = game.testTelescopePlate();
+            double prog2 = game.testTelescopePlateProgress();
+            check("telescope: a zoom step begins a finer plate and keeps the last as the fallback", prog2 < 1 && info2.find("the previous") != std::string::npos && info2.find("100%") != std::string::npos, fmt("%.0f%%: %s", prog2 * 100, info2.c_str()));
+            press(KEY_P); double prog3 = game.testTelescopePlateProgress(); bool photo = game.wantsScreenshot; game.wantsScreenshot = false;
+            check("telescope: P reads the plate out whole for the photo", photo && prog3 >= 1, fmt("%.0f%% after the P frame: %s", prog3 * 100, game.testTelescopePlate().c_str()));
+            press(KEY_Z); run(0.05);
+        }
+        {   // the user's review: the telescope's own set on the cabin's back wall (E looks through it), and R-404: every computer in its own colour
+            game.testCabinGoto(1.55, -1.2, PI); run(0.2);
+            int facing = game.testCabinFacing();
+            press(KEY_E); run(0.1); bool on = game.testTelescopeOn();
+            press(KEY_Z); run(0.05);
+            check("cabin: the telescope's set on the back wall, E looks through it", facing == 9 && on && !game.testTelescopeOn(), fmt("facing %d, E: %s, Z: %s", facing, on ? "the eye at the eyepiece" : "nothing", game.testTelescopeOn() ? "still on" : "stowed"));
+            double minDist = 0; int n = game.testScreenColours(minDist);
+            check("cabin: every computer in a colour of its own", n == 8 && minDist > 0.3, fmt("%d computers, the nearest two %.2f apart in RGB", n, minDist));
+        }
+        remove("shots/tests/unit_guide.txt");
+    }
+    {   // W-03: the fronts. On the pinned plain of the first felisian world the next front's forecast is the moment the ground's own
+        // rain begins (the front's rain zero twenty seconds before the time given and above zero twenty after, the other way round
+        // at the clearing), the almanac lists the same two moments, the map's band (the globe's overlay) agrees with the ground's
+        // cloud under it, and a game landed there reads the forecast on its data sheet with the front's line on its sector map
+        StarSystem sys; int bi = -1; FrontForecast fc;
+        const double t0 = 3.6e6;
+        bool found = pinnedPlainFront(sys, bi, t0, fc, 10 * 86400.0);
+        check("fronts: a front reaches the pinned plain within ten days", found, found ? fmt("%s: from the %s in %s, strength %.2f, gain %.2f, %s of rain", sys.bodies[bi].name.c_str(), frontCompass(fc.fromBearing), countdownString(fc.tArrive - t0).c_str(), fc.strength, fc.gain, countdownString(fc.tClear - fc.tArrive).c_str()) : "none");
+        if (found) {
+            const Body& b = sys.bodies[bi];
+            SurfaceView sv;
+            sv.init(&sys, bi, PIN_PLAIN_LAT * DEG, PIN_PLAIN_LON * DEG, fc.tArrive - 60);
+            auto envAt = [&](double T) { Input in; sv.update(0.016, in, T, false); return sv.env; };
+            SurfaceEnvironment eb = envAt(fc.tArrive - 20), ea = envAt(fc.tArrive + 20), ec = envAt(fc.tArrive + 1800), e0 = envAt(fc.tArrive);
+            check("fronts: the forecast's arrival is the moment the rain begins", eb.frontRain == 0 && ea.frontRain > 0 && std::fabs(e0.frontAhead) < 50 && eb.frontCloud > 0.5 && ec.frontRain > 0.2,
+                  fmt("the line %.1f m from the place at the time given; 20 s before: rain %.4f, cloud %.2f, wind %.0f kt, temp %+.1f C; 20 s after: rain %.1e; 30 min after: rain %.2f, temp %+.1f C, fog %.0f m", e0.frontAhead, eb.frontRain, eb.frontCloud, eb.windKnots, eb.temperatureC, ea.frontRain, ec.frontRain, ec.temperatureC, ec.fogDistance));
+            SurfaceEnvironment cb = envAt(fc.tClear - 20), ca = envAt(fc.tClear + 20);
+            check("fronts: the clearing is the moment the rain ends", cb.frontRain > 0 && ca.frontRain == 0, fmt("20 s before the clearing: rain %.1e; 20 s after: %.1e, cold %.1f C, cloud %.2f", cb.frontRain, ca.frontRain, ca.frontCold, ca.frontCloud));
+            AlmanacPlace p = almanacGroundPlace(sv.site, t0); p.window = 10 * 86400.0;
+            std::vector<AlmanacEvent> ev; almanacOf(p, ev);
+            double dA = 1e9, dC = 1e9; std::string label;
+            for (const AlmanacEvent& e : ev) {
+                if (e.kind == AL_FRONT && std::fabs(e.t - fc.tArrive) < dA) { dA = std::fabs(e.t - fc.tArrive); label = almanacLabel(e, sys, [&](int j) { return sys.bodies[j].name; }, " deg"); }
+                if (e.kind == AL_FRONT_CLEAR) dC = std::min(dC, std::fabs(e.t - fc.tClear));
+            }
+            check("fronts: the almanac lists the arrival and the clearing", dA < 1e-3 && dC < 1e-3, fmt("'%s' %.1e s off the forecast, the clearing %.1e s off; %zu events in ten days", label.c_str(), dA, dC, ev.size()));
+            double tBand = fc.tArrive - 3600;
+            std::vector<uint8_t> fm; buildFrontMap(b, tBand, PlanetMap::W, PlanetMap::H, fm);
+            double band = frontMapAt(fm, PlanetMap::W, PlanetMap::H, PIN_PLAIN_LON * DEG, PIN_PLAIN_LAT * DEG);
+            SurfaceEnvironment em = envAt(tBand);
+            int covered = 0; for (uint8_t v : fm) if (v > 128) covered++;
+            // the texel over the plain against the ground's own function at that texel's centre (the overlay is the function on the
+            // map's grid), and the bilinear read at the plain against the ground within what 73 km texels can hold of a 10 km wall edge
+            int tx = (int)((wrap2pi(PIN_PLAIN_LON * DEG + PI) / TAU) * PlanetMap::W), ty = (int)((0.5 - PIN_PLAIN_LAT * DEG / PI) * PlanetMap::H);
+            double latC = (0.5 - (ty + 0.5) / PlanetMap::H) * PI, lonC = ((tx + 0.5) / PlanetMap::W) * TAU - PI;
+            std::vector<Front> fsB; frontsOf(b, tBand, fsB, 0); FrontWeather wC; frontWeatherAt(fsB, StarSystem::bodyFromLatLon(latC, lonC), tBand, b.radiusKm * 1000.0, wC);
+            double texel = fm[(size_t)ty * PlanetMap::W + tx] / 255.0;
+            check("fronts: the map's band and the ground agree", band > 0.5 && std::fabs(texel - wC.cloud) < 1.5 / 255 && std::fabs(band - em.frontCloud) < 0.4,
+                  fmt("the texel over the plain reads %.3f, the function at its centre %.3f; the overlay read at the plain %.2f an hour before the line, the ground's front cloud there %.2f (the pattern's %.2f); bands over %.1f%% of the map", texel, wC.cloud, band, em.frontCloud, em.cloudPattern, 100.0 * covered / fm.size()));
+            Game game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
+            applyTestScale(game);
+            Input in;
+            auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+            auto run = [&](double s) { for (int i = 0; i < (int)(s * 30); i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+            press(KEY_ENTER); run(0.3);
+            game.testParkAt(sys.star, bi); run(0.3);
+            game.testSetTime(tBand); game.testLandCursor(PIN_PLAIN_LAT, PIN_PLAIN_LON); run(0.2);
+            double bandG = game.testFrontBandAt(PIN_PLAIN_LAT, PIN_PLAIN_LON);
+            press(KEY_ENTER); run(8.0);
+            bool onSurface = game.state == GameState::SURFACE;
+            run(0.5);
+            std::string line = game.testForecastLine(), info = game.testFrontInfo();
+            press(KEY_N); run(0.1); bool mapUp = game.state == GameState::SECTOR_MAP; press(KEY_ESCAPE);
+            check("fronts: the data sheet forecasts the front, the sector map draws its line", onSurface && bandG > 0.5 && line.rfind("RAIN FROM THE ", 0) == 0 && line.find(frontCompass(fc.fromBearing)) != std::string::npos && info.find("line on") != std::string::npos && mapUp,
+                  fmt("the map's band %.2f at the cursor; '%s'; %s", bandG, line.c_str(), info.c_str()));
+            remove("shots/tests/unit_guide.txt");
+        }
+    }
+    {   // W-04: a shower peaks when the world is at the point of its orbit nearest the comet's: the world there at the peak's
+        // time, its distance to the comet's orbit the two orbits' least there and more a few widths either side; the almanac
+        // gives the same peak
+        int tested = 0, bad = 0; std::string why;
+        for (int64_t x = 150; x < 200 && tested < 12; x++)
+            for (int64_t z = 20; z < 80 && tested < 12; z++) {
+                Star st; if (!starInSector(x, 0, z, st)) continue;
+                StarSystem sys; sys.generate(st);
+                for (int bi = 0; bi < (int)sys.bodies.size() && tested < 12; bi++) {
+                    if (sys.bodies[bi].parent >= 0) continue;
+                    std::vector<MeteorShower> sh; meteorShowersOf(sys, bi, sh);
+                    for (const MeteorShower& sw : sh) {
+                        tested++;
+                        const Body& W = sys.bodies[sw.world];
+                        double tp = showerPeakAfter(sw, 3.6e6);
+                        Vec3 at = sys.bodyPos(sw.world, tp) - sys.star.pos;
+                        double off = length(at - sw.worldKm) / W.orbitRadiusKm;
+                        double d0 = orbitDistanceKm(sys.bodies[sw.comet], at);
+                        double dm = orbitDistanceKm(sys.bodies[sw.comet], sys.bodyPos(sw.world, tp - 3 * sw.sigma) - sys.star.pos), dp = orbitDistanceKm(sys.bodies[sw.comet], sys.bodyPos(sw.world, tp + 3 * sw.sigma) - sys.star.pos);
+                        AlmanacPlace pl; pl.sys = &sys; pl.t = tp - 3600; pl.window = 7200; pl.ground = true; pl.body = bi; pl.lat = 0.3; pl.lon = 1.1;
+                        std::vector<AlmanacEvent> ev; almanacOf(pl, ev);
+                        double dAl = 1e18; for (const AlmanacEvent& e : ev) if (e.kind == AL_SHOWER && e.body == sw.comet) dAl = std::min(dAl, std::fabs(e.t - tp));
+                        bool ok = off < 2e-3 && std::fabs(d0 - sw.moidKm) < 0.01 * W.orbitRadiusKm && dm > d0 && dp > d0 && dAl < 1.0;
+                        if (!ok) { bad++; why += fmt("%s/%s: off %.4f, d %.0f (moid %.0f), either side %.0f %.0f, almanac %.1f s; ", W.name.c_str(), sys.bodies[sw.comet].name.c_str(), off, d0, sw.moidKm, dm, dp, dAl); }
+                    }
+                }
+            }
+        check("showers: the peak is the orbits' crossing (W-04)", tested >= 10 && bad == 0, fmt("%d showers, %d wrong %s", tested, bad, why.c_str()));
+    }
+    {   // W-04: the streaks of the shower scene: dozens over four minutes at the peak, none eight widths off it, each running away from
+        // the radiant along a great circle through it
+        StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0;
+        bool have = setupNightScene(0, sv, sys, nb, t);
+        int atPeak = 0, offPeak = 0, wrong = 0;
+        if (have && !sv.showers.empty()) {
+            const MeteorShower& sw = sv.showers[0];
+            double tp = showerPeakAfter(sw, t - 0.5 * sw.period);
+            for (double T = tp - 120; T <= tp + 120; T += 0.1) {
+                Vec3 rad = sv.site.localFrame(T) * sw.radiant;   // the sky turns: the radiant's place now
+                std::vector<SurfaceView::ShowerMeteor> ms; sv.showerMeteorsAt(T, ms);
+                for (auto& m : ms) {
+                    atPeak++;
+                    Vec3 c = cross(m.tail, m.head);
+                    if (dot(m.head, rad) > dot(m.tail, rad) + 1e-9 || (length(c) > 1e-9 && std::fabs(dot(c / length(c), rad)) > 1e-3)) wrong++;
+                }
+            }
+            for (double T = tp + 8 * sw.sigma; T <= tp + 8 * sw.sigma + 240; T += 0.1) {
+                std::vector<SurfaceView::ShowerMeteor> ms; sv.showerMeteorsAt(T, ms);
+                offPeak += (int)ms.size();
+            }
+        }
+        check("showers: streaks from the radiant (W-04)", have && atPeak >= 300 && offPeak == 0 && wrong == 0, fmt("%d streak-frames over the peak's four minutes at ten a second, %d eight widths after it, %d not running from the radiant", atPeak, offPeak, wrong));
+    }
+    {   // W-04: the zodiacal light: brighter on the plane than off it, falling away from the sun, the faint patch opposite it; dust from
+        // a young star and a near belt, none in most systems
+        Vec3 sun(1, 0, 0);
+        auto at = [&](double elDeg, double latDeg) { double e = elDeg * DEG, b = latDeg * DEG; return zodiacalLight(Vec3(std::cos(e) * std::cos(b), std::sin(b), std::sin(e) * std::cos(b)), sun); };
+        bool shape = at(30, 0) > 2 * at(30, 25) && at(30, 0) > at(60, 0) && at(60, 0) > at(90, 0) && at(180, 0) > 1.5 * at(150, 0) && at(180, 0) > 1.5 * at(180, 15);
+        int sys0 = 0, dusty = 0, young = 0, youngDusty = 0;
+        for (int64_t x = 150; x < 200; x++)
+            for (int64_t z = 20; z < 80; z++) {
+                Star st; if (!starInSector(x, 0, z, st)) continue;
+                StarSystem sys; sys.generate(st);
+                if (sys.bodies.empty()) continue;
+                sys0++;
+                if (zodiacalDust(sys, 0) >= ZODIACAL_MIN_DUST) dusty++;
+                if (sys.star.cls == STAR_PROTOSTAR || sys.star.cls == STAR_BLUE_GIANT) { young++; if (zodiacalDust(sys, 0) >= ZODIACAL_MIN_DUST) youngDusty++; }
+            }
+        check("zodiacal light: the cone and its dust (W-04)", shape && young > 0 && youngDusty == young && dusty < sys0 * 0.8 && dusty > sys0 * 0.05,
+              fmt("on the plane at 30 deg %.3f, 25 deg off it %.3f, at 60 %.3f, 90 %.3f, 150 %.3f, opposite %.3f; %d of %d systems dusty, %d of %d young ones", at(30, 0), at(30, 25), at(60, 0), at(90, 0), at(150, 0), at(180, 0), dusty, sys0, youngDusty, young));
+    }
+    {   // W-04: the earthshine: on the earthshine scene's crescent the disc's night side is drawn, under the lit side's 43 and over the
+        // sky's black
+        StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0; SpaceRenderer sr;
+        bool have = setupNightScene(2, sv, sys, nb, t);
+        int night = 0, lit = 0, disc = 0;
+        if (have) {
+            Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0);
+            int moon = -1; double rMax = 0;
+            for (int j = 0; j < (int)sr.bodyInfo.size(); j++) if (sr.bodyInfo[j].radiusPx > rMax && sr.bodyInfo[j].inFront) { rMax = sr.bodyInfo[j].radiusPx; moon = j; }
+            if (moon >= 0) {
+                const BodyScreenInfo& bi = sr.bodyInfo[moon];
+                for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) {
+                    double dx = x + 0.5 - bi.sx, dy = y + 0.5 - bi.sy;
+                    if (dx * dx + dy * dy > 0.8 * bi.radiusPx * bi.radiusPx || fb.invz[y * FBW + x] <= 0) continue;
+                    disc++;
+                    Pix p = fb.idx[y * FBW + x];
+                    if (bankOf(p) != 1) continue;
+                    if (shadeOf(p) >= 30 && shadeOf(p) < 43) night++; else if (shadeOf(p) >= 43) lit++;
+                }
+            }
+        }
+        check("earthshine: a crescent's night side (W-04)", have && disc > 0 && night > disc / 3 && lit > 0, fmt("%d pixels of the disc: %d in the earthshine's 30-42, %d lit", disc, night, lit));
+    }
+    {   // X-01: the probe's air and clock on the first giants of the scan: the height falls and the temperature rises with the pressure
+        // below the tropopause, the one-bar level is at height zero, the stages follow in their order along the clock to the end, which
+        // comes at the hull's pressure or the heat's, and the chute holds the pressure's growth to a quarter of its pace over its span
+        int giants = 0, bad = 0; std::string why;
+        auto clockAt = [](const ProbeFlight& ff, double bar) { double lo = probeDescentStart(), hi = 1e5; for (int i = 0; i < 80; i++) { double m = 0.5 * (lo + hi); if (probeBarAt(ff, m) < bar) lo = m; else hi = m; } return 0.5 * (lo + hi); };
+        for (int64_t x = 150; x < 200 && giants < 16; x++) for (int64_t z = 20; z < 80 && giants < 16; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem sys; sys.generate(s);
+            for (const Body& b : sys.bodies) {
+                if (!isProbeGiant(b.type) || giants >= 16) continue;
+                giants++;
+                GiantAtmosphere a = giantAtmosphereOf(sys, b.index);
+                ProbeFlight f; f.crushBar = probeCrushBar(b.seed);
+                bool ok = a.valid; std::string w;
+                double zPrev = 1e9, tPrev = 0;
+                for (double lp = std::log(1e-6); lp < std::log(40.0); lp += 0.1) {
+                    double p = std::exp(lp), zz = giantAltitudeKm(a, p), tt = giantTemperatureK(a, p);
+                    if (zz >= zPrev) { ok = false; w = "height"; }
+                    if (p > a.tropoBar * 1.01 && tt <= tPrev) { ok = false; w = "temperature"; }
+                    zPrev = zz; tPrev = tt;
+                }
+                if (std::fabs(giantAltitudeKm(a, 1.0)) > 1e-9) { ok = false; w = "one bar"; }
+                int last = -1, lastLayer = -1; double endC = probeEndClock(a, f);
+                for (double c = 0; c < endC + 1; c += 0.5) {   // X-03: the layers in order (a stage comes back between three decks)
+                    int st = probeStageAt(a, f, c);
+                    if (st >= PS_ABOVE && st <= PS_DEEP) { int ly = giantLayerAt(a, probeBarAt(f, c)); if (ly < lastLayer) { ok = false; w = "order"; } lastLayer = ly; }
+                    else if (st < last && st != PS_END) { ok = false; w = "order"; }
+                    last = st;
+                }
+                if (last != PS_END) { ok = false; w = "no end"; }
+                double endBar = probeBarAt(f, endC), want = probeEndBar(a, f);
+                if (std::fabs(endBar - want) > 1e-6 * want || (want < f.crushBar * 0.999 && giantTemperatureK(a, want) < a.heatK * 0.999)) { ok = false; w = "the end"; }
+                double c4 = clockAt(f, 0.4);
+                ProbeFlight fc = f; fc.chuteOpen = c4; fc.chuteClose = probeChuteCloseAt(f, c4);
+                double free12 = clockAt(f, 1.2) - c4, chute12 = clockAt(fc, 1.2) - c4;
+                if (std::fabs(chute12 / free12 - PROBE_CHUTE_SLOW) > 0.01 || std::fabs(probeBarAt(fc, fc.chuteClose) / (0.4 * PROBE_CHUTE_SPAN) - 1) > 0.01) { ok = false; w = fmt("the chute %.2f x", chute12 / free12); }
+                if (!ok) { bad++; if (why.empty()) why = fmt("(%s body %d: %s)", s.name.c_str(), b.index, w.c_str()); }
+            }
+        }
+        check("probe: the giant's air and the clock (X-01)", giants >= 10 && bad == 0, fmt("%d giants, %d wrong %s", giants, bad, why.c_str()));
+    }
+    {   // X-01: a probe in a game. Parked at a giant with the telescope's reticle on its disc, C sends the probe to the ground under the
+        // reticle and the screen becomes its camera; saved in the descent and loaded, it falls on from the same clock on its screen; the
+        // ship leaving its parking cuts the relay; a second probe falls to its end, the last frame held until Enter gives control back
+        Game game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
+        applyTestScale(game);
+        Input in;
+        auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+        auto run = [&](double s) { for (int i = 0; i < (int)(s * 30); i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+        Star gs; int gi = -1, other = -1;
+        for (int64_t x = 150; x < 200 && gi < 0; x++) for (int64_t z = 20; z < 80 && gi < 0; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem sys; sys.generate(s);
+            for (int i = 0; i < (int)sys.bodies.size(); i++) if (sys.bodies[i].type == PT_GASGIANT) { gs = s; gi = i; other = i == 0 ? 1 : 0; break; }
+        }
+        bool aimOk = false, launched = false, resumed = false, cut = false, ended = false, back = false, fastOk = false; std::string d1, d2, d3, dFast;
+        if (gi >= 0) {
+            game.testParkAt(gs, gi); run(0.3);
+            game.testAimAtBody(gi); press(KEY_Z); in.down[KEY_RIGHT] = true; run(0.3); in.down[KEY_RIGHT] = false; run(0.1);
+            double tl = 0, tn = 0, pl = 0, pn = 0, sl = 0, sn = 0;
+            bool onDisc = game.testTelescopeGround(tl, tn); game.testSubShip(sl, sn);
+            press(KEY_C); run(0.1);
+            launched = game.testProbeActive() && game.state == GameState::PROBE && !game.testTelescopeOn();
+            game.testProbeAimed(pl, pn);
+            double off = std::acos(clampd(dot(StarSystem::bodyFromLatLon(tl, tn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG, offShip = std::acos(clampd(dot(StarSystem::bodyFromLatLon(sl, sn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG;
+            aimOk = onDisc && off < 0.3 && offShip > 2;
+            d1 = fmt("the probe sent %.3f deg from the reticle's ground (%.1f deg from under the ship)", off, offShip);
+            {   // R-406: a second watched plainly, a second with Shift held
+                double ca = game.testProbeClock(); run(1.0);
+                double cb = game.testProbeClock(); in.down[KEY_LEFT_SHIFT] = true; run(1.0); in.down[KEY_LEFT_SHIFT] = false;
+                double cc = game.testProbeClock(); run(0.5);
+                double cd = game.testProbeClock();
+                double plain = cb - ca, fast = cc - cb, after = (cd - cc) / 0.5;
+                fastOk = plain > 0.9 && plain < 1.1 && std::fabs(fast / plain - 8) < 0.4 && after < 1.15;
+                dFast = fmt("a second plain %.2f s, with Shift %.2f s (x%.2f), after it %.2f s a second", plain, fast, fast / std::max(plain, 1e-9), after);
+            }
+            game.testProbeSkip(probeDescentStart() + 80); run(0.1);
+            double c0 = game.testProbeClock(); int st0 = game.testProbeStage(); double bar0 = game.testProbeBar();
+            game.currentSlot = 1; in.down[KEY_LEFT_CONTROL] = true; press(KEY_S); in.down[KEY_LEFT_CONTROL] = false;
+            run(1.0);
+            bool loaded = game.loadSlot(1);
+            resumed = loaded && game.testProbeActive() && game.state == GameState::PROBE && std::fabs(game.testProbeClock() - c0) < 0.1 && game.testProbeStage() == st0;
+            d2 = fmt("saved at %.2f s (%s, %.3f bar), loaded at %.2f s, state %d", c0, PROBE_STAGE_NAMES[std::max(0, st0)], bar0, game.testProbeClock(), (int)game.state);
+            game.testParkAt(gs, other); run(0.1);   // the ship leaves the giant
+            cut = !game.testProbeActive() && !game.guide.log.empty() && game.guide.log.back().text.find("CUT") != std::string::npos;
+            game.testParkAt(gs, gi); run(0.3); press(KEY_C); run(0.1);
+            game.testProbeSkip(1e6); run(0.2);
+            ended = game.testProbeEnded() && game.state == GameState::PROBE && !game.guide.log.empty() && game.guide.log.back().text.find("LOST IN") != std::string::npos;
+            d3 = game.testProbeInfo();
+            press(KEY_ENTER); run(0.1);
+            back = game.state == GameState::SPACE && !game.testProbeActive();
+        }
+        check("probe: aimed by the telescope (X-01)", gi >= 0 && launched && aimOk, d1);
+        check("probe: Shift runs the relay's clock x8 (R-406)", fastOk, dFast);
+        check("probe: saved and resumed in the descent (X-01)", resumed, d2);
+        check("probe: leaving cuts the relay; the end (X-01)", cut && ended && back, fmt("cut %d, ended %d, back %d; %s", (int)cut, (int)ended, (int)back, d3.c_str()));
+    }
+    {   // X-02: the descent's clouds read the globe. On the first giants of the scan, round three aim points each: the bands are the
+        // globe's own (the planet function at the jets' drift of the time, against the world map's albedo there, which smooths it
+        // over its texels), and the decks keep their order everywhere (the ammonia deck's top over its base, its base over the
+        // water deck's towers, the water deck's top over its base)
+        int giants = 0, badBands = 0, badDecks = 0, points = 0; double worst = 0; std::string why;
+        for (int64_t x = 150; x < 200 && giants < 6; x++) for (int64_t z = 20; z < 80 && giants < 6; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem sys; sys.generate(s);
+            for (const Body& b : sys.bodies) {
+                if (!isProbeGiant(b.type) || giants >= 6) continue;
+                giants++;
+                BodyGen g = BodyGen::make(b);
+                GiantAtmosphere a = giantAtmosphereOf(sys, b.index);
+                PlanetMap map; map.generate(g);
+                for (int k = 0; k < 3; k++) {
+                    uint64_t h = mix64(b.seed ^ (0xB4D5ULL + k));
+                    double lat = (unitFromHash(h) - 0.5) * 140 * DEG, lon = (unitFromHash(mix64(h ^ 1)) - 0.5) * TAU, t = 3.6e6 + 1e5 * k;
+                    const int n = 9; const double half = 1600;
+                    GiantBands B = giantBandsOf(b, g, lat, lon, t, half, n);
+                    Vec3 c0 = StarSystem::bodyFromLatLon(lat, lon), e0 = normalize(cross(Vec3(0, 0, 1), c0)), n0 = cross(c0, e0);
+                    for (int j = 0; j < n; j++) for (int i = 0; i < n; i++) {
+                        double px = -half + i * 2 * half / (n - 1), pz = -half + j * 2 * half / (n - 1);
+                        double la, lo; StarSystem::latLonFromBody(normalize(c0 * b.radiusKm + e0 * px + n0 * pz), la, lo);
+                        double globe = map.albedoAt(lo + giantJetAt(b, g, la, lo, t), la), al, st; B.at(px, pz, al, st);
+                        worst = std::max(worst, std::fabs(globe - al)); points++;
+                        if (std::fabs(globe - al) > 0.1) { badBands++; if (why.empty()) why = fmt("%s body %d: %.2f against the globe's %.2f", s.name.c_str(), b.index, al, globe); }
+                    }
+                    GiantDecks D; D.init(a, &B, h);
+                    for (int q = 0; q < 300; q++) {   // X-03: every deck of the giant's, one to three
+                        double px = (unitFromHash(mix64(h ^ (q * 2 + 7))) - 0.5) * 2 * half, pz = (unitFromHash(mix64(h ^ (q * 2 + 8))) - 0.5) * 2 * half;
+                        for (int k = 0; k < D.n; k++) {
+                            double tk = D.top(k, px, pz, 0), bk = D.base(k, px, pz, 0), tn = k + 1 < D.n ? D.top(k + 1, px, pz, 0) : -1e9;
+                            if (!(tk > bk + 0.5 * D.sh && bk > tn + 0.3 * D.sh)) { badDecks++; if (why.empty()) why = fmt("%s body %d deck %d: %.1f %.1f, next %.1f km (sh %.2f)", s.name.c_str(), b.index, k, tk, bk, tn, D.sh); }
+                        }
+                    }
+                }
+            }
+        }
+        check("probe: the clouds are the globe's bands (X-02)", giants >= 4 && badBands == 0, fmt("%d giants, %d points, worst %.3f; %s", giants, points, worst, why.c_str()));
+        check("probe: the decks keep their order (X-02)", giants >= 4 && badDecks == 0, fmt("%d giants, %d out of order; %s", giants, badDecks, why.c_str()));
+    }
+    {   // X-03: every giant its own character, on the first 300 giants of the scan: one to three decks, each where the adiabat
+        // crosses its cloud's temperature (the abundance's shift), from the top down with a clear band between; the kinds as
+        // defined (an ice giant a small blue gas giant, a brown dwarf the substellar type) and all three among them; a brown
+        // dwarf's glow over every gas giant's, a young giant's over the old ones' on the whole; the decks' counts all used
+        int giants = 0, bad = 0, kinds[3] = {0, 0, 0}, decks[4] = {0, 0, 0, 0}; double glowYoung = 0, glowOld = 0, glowBrownMin = 1e9, glowGasMax = 0; int nYoung = 0, nOld = 0;
+        std::string why;
+        for (int64_t x = 150; x < 320 && giants < 300; x++) for (int64_t z = 20; z < 140 && giants < 300; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem sys; sys.generate(s);
+            for (int bi = 0; bi < (int)sys.bodies.size() && giants < 300; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!isProbeGiant(b.type)) continue;
+                giants++;
+                const GiantAtmosphere a = giantAtmosphereOf(sys, bi);
+                const GiantCharacter& c = a.ch;
+                kinds[c.kind]++; decks[std::min(3, std::max(0, a.decks))]++;
+                std::string w;
+                if (a.decks < 1 || a.decks > GIANT_MAX_DECKS) w = fmt("%d decks", a.decks);
+                for (int k = 0; k < a.decks && w.empty(); k++) {
+                    if (!(a.top[k] < a.base[k] && (k == 0 || a.top[k] >= a.base[k - 1] * 1.249))) w = fmt("deck %d %.3f-%.3f bar", k, a.top[k], a.base[k]);
+                    const double want = CLOUD_SPECIES[a.species[k]].condK * std::pow(c.abundance, 0.6 * 0.286), got = giantTemperatureK(a, a.base[k]);
+                    const double reach = std::min(32.0, std::pow(a.heatK / a.t1K, 1 / 0.286));
+                    const bool fallback = a.decks == 1 && a.species[0] == CS_SALT && std::fabs(a.base[0] - 0.8 * reach) < 1e-6 * reach;   // nothing condenses within the reach: the salts' haze over the end
+                    if (w.empty() && !fallback && std::fabs(got / want - 1) > 0.02 && a.base[k] < 31.9) w = fmt("deck %d (%s) base at %.0f K, its cloud's %.0f", k, CLOUD_SPECIES[a.species[k]].name, got, want);
+                }
+                const bool ice = isIceGiant(b);
+                if (w.empty() && (c.kind == GK_ICE) != ice) w = "the ice giant's rule";
+                if (w.empty() && (c.kind == GK_BROWN) != (b.type == PT_SUBSTELLAR)) w = "the brown dwarf's kind";
+                if (c.kind == GK_BROWN) glowBrownMin = std::min(glowBrownMin, c.glow); else if (c.kind == GK_GAS) glowGasMax = std::max(glowGasMax, c.glow);
+                if (c.kind == GK_GAS) { if (c.young) { glowYoung += c.glow; nYoung++; } else { glowOld += c.glow; nOld++; } }
+                if (!w.empty()) { bad++; if (why.empty()) why = fmt("(%s %s: %s)", s.name.c_str(), b.name.c_str(), w.c_str()); }
+            }
+        }
+        const bool kindsOk = kinds[0] > 0 && kinds[1] > 0 && kinds[2] > 0 && glowBrownMin > glowGasMax && nYoung > 0 && glowYoung / nYoung > 3 * glowOld / std::max(1, nOld) && decks[1] > 0 && decks[2] > 0 && decks[3] > 0;
+        check("probe: every giant its own decks and kind (X-03)", giants >= 250 && bad == 0 && kindsOk,
+              fmt("%d giants (%d gas, %d ice, %d brown; 1/2/3 decks %d/%d/%d), %d wrong %s; glow brown >= %.2f, gas <= %.2f, young %.3f, old %.3f", giants, kinds[0], kinds[1], kinds[2], decks[1], decks[2], decks[3], bad, why.c_str(),
+                  glowBrownMin, glowGasMax, glowYoung / std::max(1, nYoung), glowOld / std::max(1, nOld)));
+    }
+    {   // X-03: a great storm is the globe's (GEN 12): the planet function's oval differs from the bands round it by its tone, the
+        // descent's bands sampled at the storm see the same albedo as the map, its turn keeps it whole a day later (every point of
+        // it carried by the jet at its centre's latitude), and the deck stands on its dome and higher on its wall
+        int storms = 0, bad = 0; std::string why;
+        for (int64_t x = 150; x < 320 && storms < 6; x++) for (int64_t z = 20; z < 140 && storms < 6; z++) {
+            Star s; if (!starInSector(x, 0, z, s, true)) continue;
+            StarSystem sys; sys.generate(s);
+            for (int bi = 0; bi < (int)sys.bodies.size() && storms < 6; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (b.type != PT_GASGIANT) continue;
+                const BodyGen g = BodyGen::make(b);
+                if (!g.gsOn) continue;
+                storms++;
+                std::string w;
+                const SurfaceSample in = sampleSurface(g, StarSystem::bodyFromLatLon(g.gsLat, g.gsLon), 1000.0);
+                double outside = 0; int no = 0;
+                for (int q = 0; q < 16; q++) { double ang = q * TAU / 16; outside += sampleSurface(g, StarSystem::bodyFromLatLon(g.gsLat + 1.6 * g.gsB * std::sin(ang), g.gsLon + 1.6 * g.gsA / std::cos(g.gsLat) * std::cos(ang)), 1000.0).albedo; no++; }
+                outside /= no;
+                if ((in.albedo - outside) * g.gsTone < 0.05) w = fmt("its albedo %.2f against %.2f round it (tone %+.0f)", in.albedo, outside, g.gsTone);
+                const double t = 3.6e6, t2 = t + 86400;
+                const double lonC = g.gsLon - giantJetTurn(b, g.bandCount, g.gsLat, t), lonC2 = g.gsLon - giantJetTurn(b, g.bandCount, g.gsLat, t2);
+                for (int q = 0; q < 8 && w.empty(); q++) {   // its rim a day later, where the pattern carried its centre
+                    double ang = q * TAU / 8, la = g.gsLat + 0.8 * g.gsB * std::sin(ang), dlo = 0.8 * g.gsA / std::cos(g.gsLat) * std::cos(ang);
+                    double m1 = wrapAngle(lonC + dlo + giantJetAt(b, g, la, lonC + dlo, t) - g.gsLon), m2 = wrapAngle(lonC2 + dlo + giantJetAt(b, g, la, lonC2 + dlo, t2) - g.gsLon);
+                    if (std::fabs(m1 - dlo) > 1e-6 || std::fabs(m2 - dlo) > 1e-6) w = fmt("its rim slips by %.4f rad a day", std::fabs(m2 - dlo));
+                }
+                if (w.empty()) {   // the descent aimed at its centre
+                    GiantBands B = giantBandsOf(b, g, g.gsLat, lonC, t, 1600, 9);
+                    double al, st; B.at(0, 0, al, st);
+                    if (!B.gsOn || std::fabs(al - in.albedo) > 0.08 || B.greatStormAt(0, 0) > 0.05) w = fmt("the descent's bands %.2f against the globe's %.2f (its oval %s, d %.2f)", al, in.albedo, B.gsOn ? "on" : "off", B.greatStormAt(0, 0));
+                    else {
+                        GiantAtmosphere a = giantAtmosphereOf(sys, bi);
+                        GiantDecks D; D.init(a, &B, 7);
+                        const double dome = D.lift(0, 0, 0) - (4.0 * (al - 0.55) + 4.5 * st) * D.sh;
+                        double crest = -1e9;
+                        for (double u = 0.9; u < 1.06; u += 0.002) {   // along the oval's east axis to its rim
+                            const double xx = B.gsX + B.gsEx * u * B.gsAKm, zz = B.gsZ + B.gsEz * u * B.gsAKm;
+                            double a2, s2; B.at(xx, zz, a2, s2);
+                            crest = std::max(crest, D.lift(0, xx, zz) - (4.0 * (a2 - 0.55) + 4.5 * s2) * D.sh);
+                        }
+                        if (dome < 5 * D.sh || crest < dome + 8 * D.sh) w = fmt("its dome %.1f km and wall's crest %.1f km (sh %.2f)", dome, crest, D.sh);
+                    }
+                }
+                if (!w.empty()) { bad++; if (why.empty()) why = fmt("(%s %s: %s)", s.name.c_str(), b.name.c_str(), w.c_str()); }
+            }
+        }
+        check("probe: the great storm is the globe's (X-03)", storms >= 4 && bad == 0, fmt("%d great storms, %d wrong %s", storms, bad, why.c_str()));
+    }
+    {   // B-409: no giant's picture black, nor all one clipped colour. A giant with one deck (one in eight: Sashihene VIII, an ice
+        // giant with the water deck alone) went black from its deck's top down: the deck's base was tinted by a smoothstep whose
+        // edges were one (0/0, a NaN through the air's and the fog's colours); a brown dwarf's fog clipped to a flat orange at its
+        // first deck's base. Giants of each kind with one deck and with more, without the HUD and the static: each deck's middle
+        // and base and the deep, the frame's mean light over a floor and its clipped share under a ceiling
+        Game game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
+        applyTestScale(game);
+        game.testProbeQuiet = true; game.photoMode = true;
+        Input in;
+        auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+        auto run = [&](double s) { for (int i = 0; i < (int)(s * 30); i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+        const long long pins[][4] = {{139, -105, -43, 8}, {153, 0, 32, 0}, {150, 0, 73, 1}, {150, 0, 73, 0}, {150, 0, 106, 5}};   // one deck: an ice giant, a gas giant, a brown dwarf; two and three
+        int giants = 0, oneDeck = 0, frames = 0, bad = 0; double darkest = 1e9, clipMost = 0; std::string why;
+        for (const auto& pin : pins) {
+            Star st; if (!starInSector(pin[0], pin[1], pin[2], st, true)) continue;
+            StarSystem sys; sys.generate(st);
+            const int bi = (int)pin[3];
+            if (bi >= (int)sys.bodies.size() || !isProbeGiant(sys.bodies[bi].type)) continue;
+            game.testParkAt(st, bi); run(0.3); press(KEY_C); run(0.1);
+            if (!game.testProbeActive()) continue;
+            giants++; oneDeck += game.testProbeAtm().decks == 1;
+            std::vector<std::pair<double, std::string>> at;
+            for (const LayerRun& r : probeLayerRuns(game, game.testProbeEndClock())) {
+                if (r.stage == PS_DECK1 || r.stage == PS_DECK2) { at.push_back({r.from + (r.to - r.from) * 0.5, r.tag}); at.push_back({r.from + (r.to - r.from) * 0.95, r.tag + " base"}); }
+                else if (r.stage == PS_DEEP) at.push_back({r.from + (r.to - r.from) * 0.5, "deep"});
+            }
+            for (const auto& [c, tag] : at) {
+                if (c <= game.testProbeClock()) continue;
+                game.testProbeSkip(c - 1.0 / 30); game.frame(in, 1.0 / 30); in.newFrame();
+                const uint32_t* px = game.output(); const size_t n = (size_t)FBW * FBH; size_t clipped = 0; double sum = 0;
+                for (size_t i = 0; i < n; i++) {
+                    const int r = px[i] & 255, g = (px[i] >> 8) & 255, b = (px[i] >> 16) & 255;
+                    sum += 0.3 * r + 0.59 * g + 0.11 * b; clipped += std::max(r, std::max(g, b)) >= 250;
+                }
+                const double mean = sum / n, clip = (double)clipped / n;
+                frames++; darkest = std::min(darkest, mean); clipMost = std::max(clipMost, clip);
+                if (mean < 8 || clip > 0.4) { bad++; if (why.size() < 300) why += fmt("; %s body %d %s: mean %.1f, clipped %.0f%%", sys.star.name.c_str(), bi, tag.c_str(), mean, clip * 100); }
+            }
+            game.testProbeRelease(); run(0.1);
+        }
+        check("probe: no giant's picture black or clipped flat (B-409)", giants == 5 && oneDeck == 3 && frames >= 20 && bad == 0,
+              fmt("%d giants (%d with one deck), %d frames, %d wrong; darkest mean %.1f, most clipped %.0f%%%s", giants, oneDeck, frames, bad, darkest, clipMost * 100, why.c_str()));
+    }
+    {   // X-04: what comes back. A probe into Wailie VI (150 0 106 body 5), its camera turned on the way, to its end: the record in the
+        // guide (the tracks, the profile, the layers it found) and its final image beside the photographs; the guide read back and
+        // exported to a friend (C-14's lending): every number the same, the lent one marked and not lent on. The recording from the
+        // gallery: its frame at a clock is the live frame of that clock (the descent drawn again), the arrows go deeper. A second and a
+        // third probe at other places: their profiles differ; the statistics count three
+        mkdir("shots/tests/test_x04", 0755);
+        for (const char* f : {"shots/tests/test_x04/guide.txt", "shots/tests/test_x04/probe_1.png", "shots/tests/test_x04/export.txt", "shots/tests/test_x04/friend.txt"}) remove(f);
+        Game game; game.savePrefix = "shots/tests/test_x04/save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_x04/guide.txt";
+        game.shotsDir = "shots/tests/test_x04"; game.testProbeQuiet = true;
+        game.newGame(); game.setState(GameState::SPACE);
+        Input gi;
+        auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+        auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+        auto lum = [](uint32_t c) { return 0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255); };
+        Star st; bool have = starInSector(150, 0, 106, st, true);
+        std::vector<uint32_t> live; const double cLive = 160;
+        if (have) {
+            game.testParkAt(st, 5); run(0.3);
+            press(KEY_C); run(0.2);
+            game.testProbeSkip(70); run(0.1); game.testProbeLookAt(0.5, -0.1); run(0.3);
+            game.testProbeSkip(120); game.testProbeLookAt(-0.3, 0.05); run(0.1);
+            game.testProbeSkip(cLive - 1.0 / 30); game.photoMode = true; run(1.0 / 30); live.assign(game.output(), game.output() + (size_t)FBW * FBH); game.photoMode = false;
+            game.testProbeSkip(1e6); run(0.2);
+            press(KEY_ESCAPE); run(0.1);
+        }
+        const ProbeRecord* r = game.guide.probes.empty() ? nullptr : &game.guide.probes.back();
+        const bool kept = r && r->id == 1 && r->endCause == 1 && r->profile.size() >= 20 && r->layers.size() >= 9 && r->cam.size() >= 12 && r->time.size() >= 4 && fileExists("shots/tests/test_x04/probe_1.png");
+        auto near = [](double x, double y) { return std::fabs(x - y) <= 1e-7 * std::max(1.0, std::fabs(x)); };
+        auto same = [&](const ProbeRecord& a, const ProbeRecord& b) {
+            if (a.id != b.id || a.body != b.body || a.seed != b.seed || a.storm != b.storm || a.endCause != b.endCause || a.gen != b.gen) return false;
+            const double x[] = {a.launchT, a.aimLat, a.aimLon, a.startX, a.startY, a.startZ, a.headYaw, a.descYaw, a.chuteOpen, a.chuteClose, a.crushBar, a.endClock, a.endBar, a.endKm, a.endK};
+            const double y[] = {b.launchT, b.aimLat, b.aimLon, b.startX, b.startY, b.startZ, b.headYaw, b.descYaw, b.chuteOpen, b.chuteClose, b.crushBar, b.endClock, b.endBar, b.endKm, b.endK};
+            for (int i = 0; i < 15; i++) if (!near(x[i], y[i])) return false;
+            if (a.cam.size() != b.cam.size() || a.time.size() != b.time.size() || a.layers.size() != b.layers.size() || a.profile.size() != b.profile.size()) return false;
+            for (size_t i = 0; i < a.cam.size(); i++) if (!near(a.cam[i], b.cam[i])) return false;
+            for (size_t i = 0; i < a.time.size(); i++) if (!near(a.time[i], b.time[i])) return false;
+            for (size_t i = 0; i < a.layers.size(); i++) if (!near(a.layers[i], b.layers[i])) return false;
+            for (size_t i = 0; i < a.profile.size(); i++) {
+                const ProbeSample &p = a.profile[i], &q = b.profile[i];
+                if (!near(p.clock, q.clock) || !near(p.bar, q.bar) || !near(p.tempK, q.tempK) || !near(p.windE, q.windE) || !near(p.light, q.light) || p.layer != q.layer || p.flashes != q.flashes) return false;
+            }
+            return true;
+        };
+        Guide back; const bool loaded = back.load(game.guidePath);
+        const bool readBack = loaded && r && back.probes.size() == 1 && same(*r, back.probes[0]) && !back.probes[0].lent && back.probesSent == 1;
+        game.guide.save("shots/tests/test_x04/export.txt");   // the guide's export
+        Guide fr; int lentN = 0, probesN = 0, onN = -1;
+        const int names = fr.importInbox("shots/tests/test_x04/export.txt", &lentN, &probesN);
+        const bool lentOk = names >= 0 && probesN == 1 && fr.probes.size() == 1 && r && same(*r, fr.probes[0]) && fr.probes[0].lent && fr.deepestProbeKm() == 0;
+        fr.save("shots/tests/test_x04/friend.txt");
+        { Guide third; third.importInbox("shots/tests/test_x04/friend.txt", nullptr, &onN); }   // a lent recording is not lent on
+        std::string why;
+        if (r) {
+            why = fmt("probe %d: %zu samples, %zu layers, %zu camera keys, %zu clock keys, end %.0f km", r->id, r->profile.size(), r->layers.size() / 3, r->cam.size() / 3, r->time.size() / 2, r->endKm);
+            for (size_t i = 0; i + 2 < r->layers.size(); i += 3) why += (i ? ", " : "; ") + giantLayerName(game.testProbeAtm().valid ? game.testProbeAtm() : giantAtmosphereOf(game.testSystem(), 5), (int)r->layers[i], true);
+        }
+        check("probe: a recording and its profile kept, read back and lent (X-04)", have && kept && readBack && lentOk && onN == 0,
+              why + fmt("; kept %d, read back %d, lent %d (%d recordings), lent on %d", kept, readBack, lentOk, probesN, onN));
+        // the recording from the gallery: the newest item; its frame at the live clock against the live frame; the arrows go deeper
+        int newest = -2; double diff = 1e9, frac = 1, lumMean = 0, cDeep = -1; bool playing = false;
+        if (r) {
+            game.testOpenGallery(); run(0.05);
+            newest = game.testGalleryRec(game.testGallerySel());
+            press(KEY_ENTER); run(0.05);
+            playing = game.state == GameState::RECORDING;
+            game.testRecordingSeek(cLive, false); game.photoMode = true; run(1.0 / 30); game.photoMode = false;
+            const uint32_t* o = game.output();
+            double sum = 0; size_t big = 0, n = (size_t)FBW * FBH;
+            for (size_t i = 0; i < n && live.size() == n; i++) { const double d = std::fabs(lum(o[i]) - lum(live[i])); sum += d; if (d > 30) big++; lumMean += lum(o[i]) / n; }
+            if (live.size() == n) { diff = sum / n; frac = (double)big / n; }
+            writePNG("shots/tests/unit_x04_recording.png", o, FBW, FBH);
+            gi.down[KEY_RIGHT] = true; run(1.0); gi.down[KEY_RIGHT] = false; run(1.0 / 30);
+            cDeep = game.testRecordingClock();
+            press(KEY_ESCAPE); run(0.05);
+        }
+        check("probe: the recording plays from the gallery as it fell (X-04)", newest == 0 && playing && diff < 2.0 && frac < 0.01 && lumMean > 8 && cDeep > cLive + 20 && game.state == GameState::GALLERY,
+              fmt("the gallery's newest %d, playing %d; its frame at %.0f s against the live one: %.2f levels a pixel, %.2f%% over 30 (mean %.0f); a second of Right: %.0f s", newest, playing, cLive, diff, frac * 100, lumMean, cDeep));
+        // two more probes into the giant at other places
+        press(KEY_ESCAPE); run(0.05);
+        for (int k = 0; k < 2 && have; k++) {
+            game.testParkAt(st, 5); game.setState(GameState::SPACE); run(0.2);
+            game.testAimOverride = true; game.testAimLat = (k ? 36 : 4) * DEG; game.testAimLon = (k ? 70 : -20) * DEG;
+            press(KEY_C); run(0.1); game.testAimOverride = false;
+            game.testProbeSkip(1e6); run(0.1); press(KEY_ESCAPE); run(0.05);
+        }
+        double dw = 0, dTop = 0; int matched = 0;
+        if (game.guide.probes.size() == 3) {
+            const ProbeRecord &a = game.guide.probes[1], &b = game.guide.probes[2];
+            for (const ProbeSample& p : a.profile) for (const ProbeSample& q : b.profile) if (std::fabs(std::log(p.bar / q.bar)) < 1e-3) { matched++; dw = std::max(dw, std::fabs(p.windE - q.windE)); }
+            for (size_t i = 0; i + 2 < a.layers.size(); i += 3) for (size_t j = 0; j + 2 < b.layers.size(); j += 3)
+                if (a.layers[i] == 2 && b.layers[j] == 2) dTop = std::fabs(std::log(a.layers[i + 1] / b.layers[j + 1]));   // where each met the first deck's top
+        }
+        check("probe: two places of one giant, two profiles (X-04)", game.guide.probes.size() == 3 && matched >= 20 && (dw > 10 || dTop > 0.02) && game.guide.probesSent == 3 && game.guide.deepestProbeKm() > 50,
+              fmt("%zu records, %d depths matched, the wind %.0f m/s apart at most, the first deck's top %.1f%% apart; sent %d, the deepest %.0f km", game.guide.probes.size(), matched, dw, dTop * 100, game.guide.probesSent, game.guide.deepestProbeKm()));
+    }
+    {   // X-04: what a probe crosses goes to the log with its depth, once: the great storm (named on the probe's screen: the name in the
+        // guide and the log), its wall from outside, the aurora's curtains, a clear-air hole, diamond hail
+        struct G { int64_t sx, sz; int bi; GiantAtmosphere a; };
+        std::vector<G> all;
+        for (int64_t x = 150; x < 320 && all.size() < 600; x++)
+            for (int64_t z = 20; z < 140 && all.size() < 600; z++) {
+                Star s; if (!starInSector(x, 0, z, s, true)) continue;
+                StarSystem ss; ss.generate(s);
+                for (int i = 0; i < (int)ss.bodies.size(); i++) if (isProbeGiant(ss.bodies[i].type)) all.push_back({x, z, i, giantAtmosphereOf(ss, i)});
+            }
+        const G* gs = nullptr; const G* au = nullptr; const G* ho = nullptr; const G* ha = nullptr;
+        for (const G& g : all) {
+            const GiantCharacter& c = g.a.ch;
+            if (c.greatStorm && c.kind == GK_GAS && !gs) gs = &g;
+            if (c.kind == GK_GAS && (!au || c.aurora > au->a.ch.aurora)) au = &g;
+            if (c.holes > 0 && c.kind == GK_GAS && g.a.decks >= 2 && !ho) { GiantDecks D; D.init(g.a, nullptr, 1); if (D.holeable(0)) ho = &g; }
+            if (c.hail && !ha) ha = &g;
+        }
+        remove("shots/tests/test_x04/guide.txt");
+        Game game; game.savePrefix = "shots/tests/test_x04/save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_x04/guide.txt";
+        game.shotsDir = "shots/tests/test_x04"; game.testProbeQuiet = true;
+        game.newGame(); game.setState(GameState::SPACE);
+        Input gi;
+        auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+        auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+        auto launch = [&](const G& g, bool aimed, double lat, double lon) {
+            Star st; starInSector(g.sx, 0, g.sz, st, true);
+            if (game.testProbeActive()) game.testProbeRelease();
+            game.testParkAt(st, g.bi); game.setState(GameState::SPACE); run(0.2);
+            game.testAimOverride = aimed; game.testAimLat = lat; game.testAimLon = lon;
+            press(KEY_C); run(0.05); game.testAimOverride = false;
+            return game.testProbeActive();
+        };
+        std::string named;
+        auto fall = [&](bool nameIt) {   // in steps (the log's crossings are looked for each frame), the storm named on the way
+            const double endC = game.testProbeEndClock();
+            for (double c = 55; c < endC; c += 4) {
+                game.testProbeSkip(c); run(1.0 / 30);
+                if (nameIt && c > 100) { press(KEY_N); run(1.0 / 30); game.testTypeText("RED EYE"); run(1.0 / 30); named = game.testStatus(); nameIt = false; }
+            }
+            game.testProbeSkip(1e6); run(0.05); press(KEY_ESCAPE); run(0.05);
+        };
+        if (gs) {
+            Star st; starInSector(gs->sx, 0, gs->sz, st, true);
+            StarSystem ss; ss.generate(st);
+            const Body& b = ss.bodies[gs->bi]; BodyGen g = BodyGen::make(b);
+            game.testParkAt(st, gs->bi); run(0.1);
+            const double lon = wrapAngle(g.gsLon - giantJetTurn(b, g.bandCount, g.gsLat, game.testGameTime()));
+            if (launch(*gs, true, g.gsLat, lon)) fall(true);
+            if (launch(*gs, true, g.gsLat + (g.gsLat >= 0 ? 1 : -1) * 1.15 * g.gsB, lon)) fall(false);
+        }
+        if (au) {
+            Star st; starInSector(au->sx, 0, au->sz, st, true); game.testParkAt(st, au->bi); run(0.1);
+            const StarSystem& sys = game.testSystem(); const double t = game.testGameTime();
+            double sla, slo; StarSystem::latLonFromBody(normalize(sys.bodyFrame(au->bi, t) * normalize(sys.star.pos - sys.bodyPos(au->bi, t))), sla, slo);
+            const GiantCharacter& c = au->a.ch;
+            Vec3 pole = StarSystem::bodyFromLatLon(PI / 2 - c.magColat, c.magLon), anti = StarSystem::bodyFromLatLon(-sla, slo + PI);
+            if (dot(pole, anti) < 0) pole = pole * -1.0;
+            const double want = c.ovalRad + 1200 / sys.bodies[au->bi].radiusKm;
+            double la, lo; StarSystem::latLonFromBody(normalize(pole * std::cos(want) + normalize(anti - pole * dot(anti, pole)) * std::sin(want)), la, lo);
+            if (launch(*au, true, la, lo)) fall(false);
+        }
+        if (ho) for (int k = 0; k < 10; k++) { if (!launch(*ho, true, (5 + 7 * k) * DEG, (40 * k) * DEG)) break; if (game.testProbeHolePath()) { fall(false); break; } }
+        if (ha && launch(*ha, false, 0, 0)) fall(false);
+        int counts[5] = {0, 0, 0, 0, 0}; bool depths = true;
+        const char* what[5] = {"FELL INTO RED EYE, THE GREAT STORM", "SAW THE WALL OF THE GREAT STORM", "SAW THE AURORA'S CURTAINS", "FELL THROUGH A CLEAR-AIR HOLE", "MET DIAMOND HAIL"};
+        for (const LogEntry& e : game.guide.log) for (int k = 0; k < 5; k++) if (e.kind == "PROBE" && e.text.find(what[k]) != std::string::npos) { counts[k]++; if (k != 1 && k != 2 && e.text.find(" ATM, ") == std::string::npos) depths = false; }
+        const std::string stormKey = game.guide.probes.empty() ? std::string() : game.guide.probes[0].storm;
+        const bool nameKept = !stormKey.empty() && game.guide.names.count(stormKey) && game.guide.names[stormKey] == "RED EYE";
+        check("probe: what it crosses goes to the log with its depth (X-04)", gs && au && ho && ha && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 1 && counts[4] == 1 && depths && nameKept,
+              fmt("storm %d, wall %d, aurora %d, hole %d, hail %d (each once), depths %d; the storm '%s' named: '%s'", counts[0], counts[1], counts[2], counts[3], counts[4], depths, stormKey.c_str(), named.c_str()));
+    }
     printf("unit: %d failures\n", fails);
     return fails;
 }
@@ -5753,6 +7633,224 @@ static bool setupPinnedMountainScene(double alt, double yawOff, double pitch, Su
     Input in; sv.update(0.016, in, t, false);
     tOut = t;
     return true;
+}
+
+// W-03: the fronts' scenes' site: on the first felisian world a flat land site by day under a clear pattern sky (the deck must
+// be seen coming), with a strong front (the peak rain over a half) reaching it within thirty days; the pin, or a search of the
+// hashed land sites printed to pin
+static bool frontSceneSite(StarSystem& sys, int& bi, double& lat, double& lon, FrontForecast& fc) {
+    if (!firstBodyOfType(PT_FELISIAN, sys, bi)) return false;
+    const Body& b = sys.bodies[bi];
+    const double t0 = 1000.0;
+    BodyGen g = BodyGen::make(b);
+    auto patternCloud = [&](double la, double lo, double T) {   // `computeEnvironment`'s pattern cloud
+        double drift = T * TAU / (std::fabs(b.rotPeriod) * 3.7) + 1.0;
+        return clampd(sampleCloudPattern(g, lo + drift, la) * 1.3 + 0.25 * gnoise2(T / 900.0, g.seed & 1023, g.seed), 0, 1);
+    };
+    auto frontOf = [&](double la, double lo, FrontForecast& out) {
+        std::vector<FrontForecast> list; frontsAhead(b, StarSystem::bodyFromLatLon(la, lo), t0, 30 * 86400.0, list);
+        SurfaceSite probe; probe.init(&sys, bi, la, lo, t0);
+        for (const FrontForecast& f : list) {
+            if (f.tArrive < t0 || f.strength * f.gain < 0.5) continue;
+            if (probe.sun(f.tArrive).altitude < 15 * DEG || probe.sun(f.tClear + 3600).altitude < 10 * DEG) continue;
+            if (patternCloud(la, lo, f.tArrive - 4 * 3600) > 0.3 || patternCloud(la, lo, f.tArrive) > 0.3 || patternCloud(la, lo, f.tClear + 3600) > 0.3) continue;
+            out = f; return true;
+        }
+        return false;
+    };
+    if (PIN_FRONT_LAT != 0 || PIN_FRONT_LON != 0) { lat = PIN_FRONT_LAT * DEG; lon = PIN_FRONT_LON * DEG; return frontOf(lat, lon, fc); }
+    std::vector<std::pair<double, double>> sites; landSitesOf(sys, bi, 0x3F, 300, sites);
+    int measured = 0;
+    for (auto& sl : sites) {
+        FrontForecast f;
+        if (!frontOf(sl.first, sl.second, f)) continue;
+        SurfaceSite st; st.init(&sys, bi, sl.first, sl.second, t0);
+        SiteMetrics m = measureSite(st, false);
+        measured++;
+        if (m.cls > 1 || m.relief16k < 150 || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;   // open ground with hills in the distance (the wall must come over something)
+        lat = sl.first; lon = sl.second; fc = f;
+        printf("  front scene site: pin lat %.3f lon %.3f (%s, %s, %.0f m of relief over 16 km; the front from the %s at t %.0f, strength %.2f, the pattern's cloud %.2f)\n", lat / DEG, lon / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material], m.relief16k, frontCompass(f.fromBearing), f.tArrive, f.strength, patternCloud(lat, lon, f.tArrive));
+        return true;
+    }
+    printf("  front scene site: none of %zu sites (%d measured)\n", sites.size(), measured);
+    return false;
+}
+// W-03: the fronts' scenes: the site facing where the front comes from, when the deck's solid wall is 18 km off (0), four
+// minutes before its line (1), at the rain's peak 25 km behind it (2), and an hour after the rain's end (3), the sky clearing
+static bool setupFrontScene(int stage, double pitch, SurfaceView& sv, StarSystem& sys, StarNeighborhood& nb, double& tOut) {
+    int bi = -1; double lat = 0, lon = 0; FrontForecast fc;
+    if (!frontSceneSite(sys, bi, lat, lon, fc)) { printf("  no site with a front for the scene\n"); return false; }
+    const Body& b = sys.bodies[bi];
+    std::vector<Front> fs; frontsOf(b, fc.tArrive, fs, 0); const Front* f = nullptr;
+    for (const Front& q : fs) if (q.slot == fc.slot && q.epoch == fc.epoch) f = &q;
+    Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
+    double tFar = fc.tArrive - 3 * 3600, tPeak = fc.tArrive + 20 * 60;
+    if (f) {
+        double R = b.radiusKm * 1000, want = 90e3 * f->width + 18e3;   // the deck's solid wall 18 km off
+        for (double T = fc.tArrive; T > fc.tArrive - 12 * 3600; T -= 60) { double ah, al; frontDistance(*f, T, u, R, ah, al); if (ah >= want) { tFar = T; break; } }
+        for (double T = fc.tArrive; T < fc.tClear; T += 60) { double ah, al; frontDistance(*f, T, u, R, ah, al); if (ah <= -25e3 * f->width) { tPeak = T; break; } }   // the rain's peak
+    }
+    double t = stage == 0 ? tFar : stage == 1 ? fc.tArrive - 4 * 60 : stage == 2 ? tPeak : fc.tClear + 60 * 60;
+    sv.init(&sys, bi, lat, lon, t);
+    nb.update(sv.site.worldPos(t, 0, 0, 0));
+    sv.player.yaw = fc.fromBearing; sv.player.pitch = pitch;
+    sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
+    Input in; sv.update(0.016, in, t, false);
+    printf("  %s at %.3f %.3f: the front from the %s reaches it at t %.0f (strength %.2f, gain %.2f, width %.2f), its rain ends at t %.0f; the frame at t %.0f (%+.0f min from the line), facing %.0f deg\n",
+           b.name.c_str(), lat / DEG, lon / DEG, frontCompass(fc.fromBearing), fc.tArrive, fc.strength, fc.gain, f ? f->width : 0.0, fc.tClear, t, (t - fc.tArrive) / 60, sv.player.yaw / DEG);
+    tOut = t;
+    return true;
+}
+
+// W-04: the night scenes, each searched for near home in a fixed order (the systems of sectors 150..200 x 20..80, the bodies in
+// order), the place and the moment printed:
+// 0 the shower: the first landable world with an atmosphere and a stream of 0.7 or more, at its first peak after t 1000, on the land
+//   site where the radiant stands highest with the sun 18 degrees down and the pattern's sky clear, facing the radiant's
+//   azimuth and looking 22 degrees under it, the frame at the moment of the peak's four minutes with the most streaks in view
+// 1 the zodiacal light: the first landable world with an atmosphere and zodiacal dust of 0.7 or more, on a land site within 20
+//   degrees of the equator where the sun stands 20 degrees under the western horizon at t 1000, facing where it set, 12 degrees up
+// 2 the earthshine: the first landable planet with a moon of a degree or more across, at the first moment the moon is a crescent
+//   (25-50 degrees from the sun) high on a land site with the sun 12-20 degrees down, facing the moon
+// 3 the moonlit night: the first landable moon of a gas giant whose parent is near full at the moon's midnight (the sun and the
+//   parent more than 150 degrees apart), on a land site of 350 m of relief or more where the parent stands 6-14 degrees up, facing
+//   it: M10-09's planetshine, the light `bodyShineAt` gives the ground and the earthshine alike
+static double altAt(const StarSystem& sys, int bi, double lat, double lon, double t, const Vec3& dirW) {
+    Vec3 up = sys.bodyFrame(bi, t).transposed() * StarSystem::bodyFromLatLon(lat, lon);
+    return std::asin(clampd(dot(up, dirW), -1, 1));
+}
+static Vec3 siteKm(const StarSystem& sys, int bi, double lat, double lon, double t) {
+    return sys.bodyPos(bi, t) + (sys.bodyFrame(bi, t).transposed() * StarSystem::bodyFromLatLon(lat, lon)) * sys.bodies[bi].radiusKm;
+}
+static void faceDir(SurfaceView& sv, double t, const Vec3& dirW, double pitchUnder) {   // pitchUnder < 0: the azimuth only, 12 degrees up
+    Vec3 l = sv.site.localFrame(t) * dirW;
+    sv.player.yaw = std::atan2(l.x, l.z);
+    sv.player.pitch = pitchUnder < 0 ? 12 * DEG : clampd(std::asin(clampd(l.y, -1, 1)) - pitchUnder, -0.6, 60 * DEG);
+}
+static bool setupNightScene(int which, SurfaceView& sv, StarSystem& sysOut, StarNeighborhood& nb, double& tOut) {
+    const double t0 = 1000;
+    for (int64_t x = 150; x < 200; x++)
+        for (int64_t z = 20; z < 80; z++) {
+            Star st; if (!starInSector(x, 0, z, st)) continue;
+            StarSystem sys; sys.generate(st);
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& B = sys.bodies[bi];
+                if (!PLANET_TYPES[B.type].landable) continue;
+                const bool atm = PLANET_TYPES[B.type].atmosphere;
+                BodyGen g = BodyGen::make(B);
+                auto clearSky = [&](double la, double lo, double T) {   // `computeEnvironment`'s pattern cloud (W-03's front scene)
+                    if (!atm) return true;
+                    double drift = T * TAU / (std::fabs(B.rotPeriod) * 3.7) + 1.0;
+                    return clampd(sampleCloudPattern(g, lo + drift, la) * 1.3 + 0.25 * gnoise2(T / 900.0, g.seed & 1023, g.seed), 0, 1) < 0.25;
+                };
+                double bestLat = 0, bestLon = 0, bestT = 0, bestScore = -1e9; Vec3 faceW; double under = 0; std::string what;
+                std::vector<std::pair<double, double>> sites;
+                if (which == 0) {
+                    if (B.parent >= 0 || !atm) continue;
+                    std::vector<MeteorShower> sh; meteorShowersOf(sys, bi, sh);
+                    if (sh.empty() || sh[0].strength < 0.7) continue;
+                    const MeteorShower& s = sh[0];
+                    double tp = showerPeakAfter(s, t0);
+                    Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, tp));
+                    { DrainageOff off; landSitesOf(sys, bi, 0x5A0E, 400, sites); }
+                    for (auto& p : sites) {
+                        double ra = altAt(sys, bi, p.first, p.second, tp, s.radiant), sa = altAt(sys, bi, p.first, p.second, tp, sunW);
+                        if (sa > -18 * DEG || !clearSky(p.first, p.second, tp)) continue;
+                        if (ra > bestScore) { bestScore = ra; bestLat = p.first; bestLon = p.second; bestT = tp; }
+                    }
+                    if (bestScore < 35 * DEG) continue;
+                    faceW = s.radiant; under = 22 * DEG;
+                    what = fmt("the shower of %s (strength %.2f, %.0f a minute at the peak, width %.0f min) at its peak t %.0f, the radiant %.0f deg up", sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.sigma / 60, tp, bestScore / DEG);
+                } else if (which == 1) {
+                    if (!atm || zodiacalDust(sys, bi) < 0.7 || sys.companion >= 0) continue;   // a second sun up would keep the sky lit
+                    Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, t0));
+                    { DrainageOff off; landSitesOf(sys, bi, 0x20D1, 600, sites); }
+                    for (auto& p : sites) {
+                        if (std::fabs(p.first) > 20 * DEG) continue;
+                        double sa = altAt(sys, bi, p.first, p.second, t0, sunW), sLater = altAt(sys, bi, p.first, p.second, t0 + 60, sunW);
+                        if (sLater > sa || !clearSky(p.first, p.second, t0)) continue;   // the evening: the sun going down
+                        double sc = -std::fabs(sa + 20 * DEG);
+                        if (sc > bestScore) { bestScore = sc; bestLat = p.first; bestLon = p.second; bestT = t0; }
+                    }
+                    if (bestScore < -3 * DEG) continue;
+                    faceW = sunW; under = -1;   // where it set, looking 12 degrees up
+                    what = fmt("the zodiacal dust %.2f (%s, %zu belts), the sun %.1f deg down", zodiacalDust(sys, bi), STAR_CLASSES[sys.star.cls].name, sys.belts.size(), -altAt(sys, bi, bestLat, bestLon, bestT, sunW) / DEG);
+                } else if (which == 2) {
+                    if (B.parent >= 0 || B.moonCount == 0) continue;
+                    int moon = -1;
+                    for (int j = 0; j < (int)sys.bodies.size(); j++) {
+                        const Body& M = sys.bodies[j];
+                        if (M.parent != bi) continue;
+                        if (std::asin(clampd(M.radiusKm / (M.orbitRadiusKm - B.radiusKm), 0, 1)) >= 1.0 * DEG) { moon = j; break; }
+                    }
+                    if (moon < 0) continue;
+                    double P = std::fabs(sys.bodies[moon].orbitPeriod);
+                    { DrainageOff off; landSitesOf(sys, bi, 0xEA27, 300, sites); }
+                    for (double T = t0; T < t0 + 2 * P && bestScore < 0; T += P / 240) {
+                        Vec3 bp = sys.bodyPos(bi, T), mp = sys.bodyPos(moon, T);
+                        Vec3 sunW = normalize(sys.star.pos - bp), moonW = normalize(mp - bp);
+                        double el = std::acos(clampd(dot(sunW, moonW), -1, 1));
+                        if (el < 25 * DEG || el > 50 * DEG) continue;
+                        for (auto& p : sites) {
+                            double sa = altAt(sys, bi, p.first, p.second, T, sunW);
+                            if (sa > -12 * DEG || sa < -20 * DEG || !clearSky(p.first, p.second, T)) continue;
+                            Vec3 toMoon = normalize(mp - siteKm(sys, bi, p.first, p.second, T));
+                            double ma = altAt(sys, bi, p.first, p.second, T, toMoon);
+                            if (ma > 12 * DEG && ma > bestScore) { bestScore = ma; bestLat = p.first; bestLon = p.second; bestT = T; }
+                        }
+                    }
+                    if (bestScore < 12 * DEG) continue;
+                    faceW = normalize(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)); under = 6 * DEG;
+                    Vec3 bp = sys.bodyPos(bi, bestT);
+                    what = fmt("%s %.0f deg from the sun, %.0f deg up, %.1f deg across", sys.bodies[moon].name.c_str(), std::acos(clampd(dot(normalize(sys.star.pos - bp), normalize(sys.bodyPos(moon, bestT) - bp)), -1, 1)) / DEG, bestScore / DEG,
+                               2 * std::asin(clampd(sys.bodies[moon].radiusKm / length(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)), 0, 1)) / DEG);
+                } else {
+                    if (B.parent < 0 || sys.bodies[B.parent].type != PT_GASGIANT) continue;
+                    double P = std::fabs(B.orbitPeriod);
+                    { DrainageOff off; landSitesOf(sys, bi, 0x300E, 400, sites); }
+                    for (double T = t0; T < t0 + 2 * P && bestScore < 0; T += P / 360) {
+                        Vec3 bp = sys.bodyPos(bi, T), pp = sys.bodyPos(B.parent, T);
+                        Vec3 sunW = normalize(sys.star.pos - bp), parW = normalize(pp - bp);
+                        if (dot(sunW, parW) > std::cos(150 * DEG)) continue;
+                        for (auto& p : sites) {
+                            double pa = altAt(sys, bi, p.first, p.second, T, parW), sa = altAt(sys, bi, p.first, p.second, T, sunW);
+                            if (sa > -15 * DEG || pa < 6 * DEG || pa > 14 * DEG) continue;   // a low parent, in the frame over the horizon
+                            DrainageOff off;
+                            SurfaceSite probe; probe.init(&sys, bi, p.first, p.second, T);
+                            SiteMetrics m = measureSite(probe, false);
+                            if (m.relief16k < 350 || m.material == MAT_WATER) continue;
+                            bestScore = m.relief16k; bestLat = p.first; bestLon = p.second; bestT = T; break;
+                        }
+                    }
+                    if (bestScore < 0) continue;
+                    Vec3 parW = normalize(sys.bodyPos(B.parent, bestT) - sys.bodyPos(bi, bestT));
+                    faceW = parW; under = 4 * DEG;   // toward the parent, low over the horizon
+                    what = fmt("under %s, %.0f deg up, the shine %.2f, %.0f m of relief over 16 km", sys.bodies[B.parent].name.c_str(), altAt(sys, bi, bestLat, bestLon, bestT, parW) / DEG,
+                               bodyShineAt(sys, B.parent, siteKm(sys, bi, bestLat, bestLon, bestT), bestT, 1.0), bestScore);
+                }
+                sysOut = sys;
+                sv.init(&sysOut, bi, bestLat, bestLon, bestT);
+                nb.update(sv.site.worldPos(bestT, 0, 0, 0));
+                faceDir(sv, bestT, faceW, under);
+                if (which == 0) {   // the moment of the peak's four minutes with the most streaks in view
+                    Vec3 view(std::sin(sv.player.yaw) * std::cos(sv.player.pitch), std::sin(sv.player.pitch), std::cos(sv.player.yaw) * std::cos(sv.player.pitch));
+                    int most = -1; double tp = bestT;
+                    for (double T = tp - 120; T <= tp + 120; T += 1.0 / 30) {
+                        std::vector<SurfaceView::ShowerMeteor> ms; sv.showerMeteorsAt(T, ms);
+                        int n = 0; for (auto& m : ms) if (dot(m.head, view) > std::cos(25 * DEG) && m.bright > 20) n++;
+                        if (n > most) { most = n; bestT = T; }
+                    }
+                    what += fmt(", %d streaks in view at t %.2f", most, bestT);
+                }
+                sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
+                Input in; sv.update(0.016, in, bestT, false);
+                printf("  %s (%s, sector %lld 0 %lld, body %d) at %.3f %.3f, t %.2f: %s; facing %.0f deg, pitch %.0f\n", B.name.c_str(), PLANET_TYPES[B.type].name, (long long)x, (long long)z, bi,
+                       bestLat / DEG, bestLon / DEG, bestT, what.c_str(), sv.player.yaw / DEG, sv.player.pitch / DEG);
+                tOut = bestT;
+                return true;
+            }
+        }
+    printf("  no place for the night scene %d\n", which);
+    return false;
 }
 
 // R-304/R-305: `traits [name]`: for every landform trait the first body that carries it, the spot on it where the landform
@@ -6524,7 +8622,7 @@ static void renderLandforms(int type, int wantCls) {
 struct LandformSite { const char* name; int type; bool moon; int wantCls; double latDeg, lonDeg; };
 static const LandformSite LANDFORM_SITES[] = {
     {"felisian_mountains", PT_FELISIAN, false, 2, PIN_MOUNTAIN_LAT, PIN_MOUNTAIN_LON},   // pinned 2026-09-27 on the generation-5 function; O6-03: re-pinned on the GEN 10 bodies (the type table of GEN 9 had moved every world)
-    {"felisian_plain", PT_FELISIAN, false, 0, -55.154, -122.371},   // S-01: re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
+    {"felisian_plain", PT_FELISIAN, false, 0, PIN_PLAIN_LAT, PIN_PLAIN_LON},   // S-01: re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
     {"thinatmo_hills", PT_THINATMO, false, 1, 44.433, 135.970},
     {"cratered_moon", PT_CRATERED, true, 1, -13.184, 175.712},   // S-01: re-pinned on Wyariothmai II-a, the scan's first cratered moon since the claim (43.934 / -41.488 before)
 };
@@ -6720,6 +8818,29 @@ int main(int argc, char** argv) {
             std::string fn = std::string("shots/tests/scene_") + sc.name + ".png";
             saveFB(fb, fn.c_str());
             printf("%s -> %s (sun alt %.1f)\n", sc.name, fn.c_str(), sv.env.sun.altitude / DEG);
+            if (sc.wantMat <= -60 && sc.wantMat >= -63) printf("  front: %s\n", surfaceFrontInfo(sv).c_str());   // W-03
+            if (sc.wantMat == -64) {   // W-04: twenty seconds of the shower in one picture (each pixel its brightest), the streaks fanning from the radiant
+                std::vector<uint32_t> acc(FBW * FBH, 0xFF000000u), one(FBW * FBH);
+                int streaks = 0;
+                for (int k = 0; k < 200; k++) {
+                    double T = t - 10 + k * 0.1;
+                    Input in4; sv.update(0.1, in4, T, false);
+                    std::vector<SurfaceView::ShowerMeteor> ms; sv.showerMeteorsAt(T, ms); streaks += (int)ms.size();
+                    Framebuffer f4; sv.render(f4, T, nb.stars, sr, 1.0); f4.mush(2);
+                    f4.toRGB(one.data(), 1.0);
+                    for (int i = 0; i < FBW * FBH; i++) {
+                        uint32_t a = acc[i], b = one[i];
+                        uint32_t r = std::max(a & 0xFF, b & 0xFF), g = std::max((a >> 8) & 0xFF, (b >> 8) & 0xFF), bl = std::max((a >> 16) & 0xFF, (b >> 16) & 0xFF);
+                        acc[i] = 0xFF000000u | (bl << 16) | (g << 8) | r;
+                    }
+                }
+                std::string fn4 = std::string("shots/tests/scene_") + sc.name + "_20s.png";
+                writePNG(fn4.c_str(), acc.data(), FBW, FBH);
+                printf("  twenty seconds (%d streak-frames alight in the sky) -> %s\n", streaks, fn4.c_str());
+            }
+            if (sc.wantMat <= -64 && sc.wantMat >= -67)   // W-04: the night's lights
+                printf("  night: the moonlight %.2f from %s at %.0f deg (sun %.1f deg), the zodiacal dust %.2f, %zu shower%s (activity %.2f)\n", sv.env.moonLight, sv.env.moonBody >= 0 ? sys.bodies[sv.env.moonBody].name.c_str() : "none",
+                       std::asin(clampd(sv.env.moonDir.y, -1, 1)) / DEG, sv.env.sun.altitude / DEG, sv.zodiDust, sv.showers.size(), sv.showers.size() == 1 ? "" : "s", sv.showers.empty() ? 0.0 : showerActivity(sv.showers[0], t));
             if (sc.wantMat <= -40 && sc.wantMat >= -42)   // B-403: the aurora's numbers
                 printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), field %.2f (%s), storm %.2f, R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora, STAR_CLASSES[sys.star.cls].name, sv.env.latDeg,
                        SurfaceView::auroraOvalLat(sys.bodies[sv.site.body]), sv.lastAuroraP0, magneticField(sys.bodies[sv.site.body]), MAGNETIC_CLASS_NAMES[magneticClass(magneticField(sys.bodies[sv.site.body]))], sv.env.auroraStorm,
@@ -6971,39 +9092,47 @@ int main(int argc, char** argv) {
         if (only < 0) report("ALL", all);
         return 0;
     }
-    if (mode == "landmarks") {   // O6-06: the sights round random land sites of a type (default felisian): kinds, the share of sites with one within 10 km, the cost of a cell
+    if (mode == "landmarks") {   // O6-06, R-408: the sights round random land sites of a type (default felisian): each kind's share of sites with one within 10 km (the
+        // cells' sights by `sightsNear`, every ruin by `ruinsNear`), the cost of a cell and of the scanner's whole scan of 40 km
         int type = PT_FELISIAN;
         if (argc > 2) for (int k = 0; k < PT_COUNT; k++) { std::string nm = PLANET_TYPES[k].name; for (char& ch : nm) ch = ch == ' ' ? '_' : (char)tolower(ch); if (nm == argv[2]) type = k; }
-        int sites = 0, within10 = 0, kinds[LM_COUNT] = {0}; double cellMs = 0; int cells = 0;
+        int sites = 0, within10[LM_COUNT] = {0}, kinds[LM_COUNT] = {0}, anyNear = 0; double cellMs = 0, scanMs = 0, scanMax = 0; int cells = 0, scans = 0;
         forTypeBodies(type, 3, false, [&](const StarSystem& sys, int bi) {
             const Body& b = sys.bodies[bi];
             BodyGen g = BodyGen::make(b);
             std::vector<std::pair<double, double>> ls; landSitesOf(sys, bi, 0x1A, 8, ls);
             for (auto& st : ls) {
                 Vec3 u = StarSystem::bodyFromLatLon(st.first, st.second);
-                std::vector<Landmark> found;
+                std::vector<Landmark> found, ruins;
                 double t0 = nowSec();
-                landmarksNear(g, b.name, u, 10000.0, found);
+                sightsNear(g, u, 10000.0, sightKindsOf(g) & ~(1u << LM_RUIN), found);
                 double dt = (nowSec() - t0) * 1e3;
-                int ci, cj; landmarkCellOf(g, u, ci, cj);
+                ruinsNear(g, u, 10000.0, ruins); found.insert(found.end(), ruins.begin(), ruins.end());
                 double cellDeg = landmarkCellDeg(g);
                 int nCells = (int)std::ceil(20000.0 / (cellDeg * DEG * g.R * 1000.0) + 1); nCells *= nCells;
                 cellMs += dt; cells += nCells;
                 sites++;
-                bool near = false;
+                bool near[LM_COUNT] = {false};
                 for (const Landmark& L : found) {
                     kinds[L.kind]++;
                     double dlat, dlon; StarSystem::latLonFromBody(L.unit, dlat, dlon);
                     double d = std::acos(clampd(dot(L.unit, u), -1, 1)) * g.R * 1000.0;
-                    if (d < 10000.0) near = true;
-                    if (sites <= 3) printf("  %-16s %s %-14s %+.3f %+.3f  h %.0f m, prominence %.0f m, radius %.0f m, %.1f km off\n", b.name.c_str(), LANDMARK_KIND_SYMBOLS[L.kind], L.name.c_str(), dlat / DEG, dlon / DEG, L.heightM, L.prominenceM, L.radiusM, d / 1000.0);
+                    if (d < 10000.0) near[L.kind] = true;
+                    if (sites <= 2) printf("  %-16s %s %-12s %+.3f %+.3f  h %.0f m, prominence %.0f m, radius %.0f m, %.1f km off\n", b.name.c_str(), LANDMARK_KIND_SYMBOLS[L.kind], LANDMARK_KIND_NAMES[L.kind], dlat / DEG, dlon / DEG, L.heightM, L.prominenceM, L.radiusM, d / 1000.0);
                 }
-                if (near) within10++;
+                bool any = false; for (int k = 0; k < LM_COUNT; k++) { if (near[k]) { within10[k]++; any = true; } }
+                if (any) anyNear++;
+                if (scans < 4) {   // the scanner's whole search (40 km, every kind), as its thread runs it
+                    double s0 = nowSec(); std::vector<Landmark> a, r2;
+                    sightsNear(g, u, 40000.0, sightKindsOf(g) & ~(1u << LM_RUIN), a); ruinsNear(g, u, 40000.0, r2);
+                    double ms = (nowSec() - s0) * 1e3; scanMs += ms; scanMax = std::max(scanMax, ms); scans++;
+                }
             }
         });
-        printf("landmarks (%s): %d sites, %d (%.0f%%) with a landmark within 10 km; kinds:", PLANET_TYPES[type].name, sites, within10, sites ? 100.0 * within10 / sites : 0.0);
-        for (int k = 0; k < LM_COUNT; k++) printf(" %s %d", LANDMARK_KIND_NAMES[k], kinds[k]);
-        printf("; %.2f ms per grid cell searched (%d searched: scan %.1f ms, lakes %.1f ms each)\n", cells ? cellMs / cells : 0.0, landmarkCellsSearched(), landmarkCellsSearched() ? landmarkScanMs(0) / landmarkCellsSearched() : 0.0, landmarkCellsSearched() ? landmarkScanMs(1) / landmarkCellsSearched() : 0.0);
+        printf("sights (%s): %d sites, %d (%.0f%%) with one within 10 km; sites with each kind within 10 km:", PLANET_TYPES[type].name, sites, anyNear, sites ? 100.0 * anyNear / sites : 0.0);
+        for (int k = 0; k < LM_COUNT; k++) printf(" %s %d", LANDMARK_KIND_NAMES[k], within10[k]);
+        printf("; found:"); for (int k = 0; k < LM_COUNT; k++) printf(" %d", kinds[k]);
+        printf("\n  %.2f ms per grid cell (%d searched: scan %.1f ms, lakes %.1f ms each); the scanner's 40 km: %.0f ms average, %.0f ms at most (%d scans)\n", cells ? cellMs / cells : 0.0, landmarkCellsSearched(), landmarkCellsSearched() ? landmarkScanMs(0) / landmarkCellsSearched() : 0.0, landmarkCellsSearched() ? landmarkScanMs(1) / landmarkCellsSearched() : 0.0, scans ? scanMs / scans : 0.0, scanMax, scans);
         return 0;
     }
     if (mode == "drain") {   // O6-03: the flood round the first land sites of a type (default felisian): the tile's cost, its channels, lakes and monotony, and the sample cost with and without it
@@ -7155,6 +9284,11 @@ int main(int argc, char** argv) {
     if (mode == "signals") return runSignals(argc, argv);   // C-07
     if (mode == "shards") return runShards(argc, argv);   // C-02
     if (mode == "charts") return runCharts(argc, argv);   // C-10
+    if (mode == "almanac") return runAlmanac(argc, argv);   // W-01
+    if (mode == "showers") return runShowers(argc, argv);   // W-04
+    if (mode == "probe" && argc > 2 && std::string(argv[2]) == "stability") return runProbeStability();
+    if (mode == "probe" && argc > 2 && std::string(argv[2]) == "giants") return runProbeGiants();   // X-03
+    if (mode == "probe") return runProbe(argc, argv);       // X-01
     if (mode == "surface") { renderSurface(argc > 2 ? atoi(argv[2]) : -1); return 0; }
     if (mode == "stars") testStars();
     else if (mode == "maps") renderMaps();

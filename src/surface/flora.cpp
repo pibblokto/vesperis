@@ -239,7 +239,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     double lf = env.sun.lightFactor;
     double ambient = 0.12 + 0.2 * env.skyBrightness;
     double fogD = env.fogDistance;
-    auto fogShade = [&](double shade, double dist) { double f = 1 - std::exp(-dist / fogD); return shade + (63 - shade) * f; };
+    double wallHere = 0;   // W-03: the wall of rain between the camera and the tree or the cell being drawn (`rainWall`, set per tree and per cell)
+    auto fogShade = [&](double shade, double dist) { double f = 1 - std::exp(-(dist / fogD + wallHere)); return shade + (63 - shade) * f; };
     double light = ambient + (1 - ambient) * sunUp * lf;
     double leafBase = 48 * std::pow(light, 0.7);
     if (site.gen.hasTrait(TR_LUMINOUS_FLORA)) leafBase = std::max(leafBase, 40 * clampd((0.45 - env.skyBrightness) / 0.45, 0, 1));   // R-304: the canopies glow at night
@@ -284,7 +285,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         Vec3 cV = toView(bx, by, bz);
         if (cV.z < NEAR_Z + 0.02) return;
         double pxR = rb * proj.f / cV.z;   // framebuffer pixels
-        double fogF = 1 - std::exp(-dist / fogD);
+        double fogF = 1 - std::exp(-(dist / fogD + wallHere));
         if (pxR < 0.6 * S) {   // a speck
             RVert p; p.x = cV.x; p.y = cV.y; p.z = cV.z; p.shade = leafBase * tone0 * 0.8; p.shade += (63 - p.shade) * fogF;
             if (rasterPoint3(fb, p, bank, proj, true, 1)) { double sx, sy; if (::projectPoint(p, proj, sx, sy)) { int tx = (int)(sx / TILE), ty = (int)(sy / TILE); if (tx >= 0 && ty >= 0 && tx < TX && ty < TY) cov[ty * TX + tx] += 1; } }
@@ -392,6 +393,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     };
     // ---- trees (the frame's list, near to far; only those whose rows reach this band)
     auto drawTree = [&](const TreeInst& T, double dist) {
+        wallHere = rainWall(T.x, T.z, dist);
         double rPx = T.r / dist * proj.f / FB_SCALE;   // 1x pixels
         double cx = T.x + T.lx, cz = T.z + T.lz;       // the canopy's centre
         bool counts = inBand(cx, T.gy + T.cy, cz);
@@ -601,6 +603,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     }
     section(0);
     for (const FloraCell& cr : cells) {
+        wallHere = rainWall((cr.cx + 0.5) * cs, (cr.cz + 0.5) * cs, cr.d);
         {
             int cx = cr.cx, cz = cr.cz;
             double cellDist = cr.d;

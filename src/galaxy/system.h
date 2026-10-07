@@ -7,7 +7,7 @@
 
 // Bumped whenever a generator changes what a star, system or surface looks like (M9-17).
 // Star positions are integer hashes and never move; saves and guides record the version.
-constexpr int GEN_VERSION = 11;   // 11: G-01 the galaxy of 200 billion stars (`galaxyDensity`: every star's existence, class and name can change; the whole G/S series of 1.1.0 is this one bump); 10: O6-03..O6-06 drainage (rivers routed downhill by a flood of the ground, lakes at the fill levels of real basins, valleys carved to the rivers), the landform library (cliff bands, broken plains, scree, coasts by exposure, cirques and fjords, lava tongues, slip-face dunes, crater terraces) and the landmarks (heights, water and materials change on every solid surface; systems and star positions do not); 9: B-322 the ocean worlds' floes rise from a shelf sea through an ice foot, river and lake banks stand over their plane (heights change on ocean worlds and along felisian water; systems do not); 8: B-321 the felisian greenhouse (+33 K over the equilibrium temperature: biomes, ice caps and water move on every living world), B-320 rivers and lakes rebuilt, R-304/R-305 planet traits and landforms (every solid surface changes; systems and star positions do not); 7: B-314 the first moon at 4.5 radii and outside the rings (moon orbits and periods change; surfaces do not); 6: O6-02 the relief spectrum (every solid surface changes shape; systems and star positions do not); 5: O0-01 rings on 12% of solid planets; 4: N5-03 gas giant storm term; 3: M5 astronomy
+constexpr int GEN_VERSION = 12;   // 12: X-03 the giants' character on the globe (each giant's share of storms, an ice giant's faint bands, a great storm on one giant in four: the gas giants' and brown dwarfs' globes change; systems, stars and every solid surface do not); 11: G-01 the galaxy of 200 billion stars (`galaxyDensity`: every star's existence, class and name can change; the whole G/S series of 1.1.0 is this one bump); 10: O6-03..O6-06 drainage (rivers routed downhill by a flood of the ground, lakes at the fill levels of real basins, valleys carved to the rivers), the landform library (cliff bands, broken plains, scree, coasts by exposure, cirques and fjords, lava tongues, slip-face dunes, crater terraces) and the landmarks (heights, water and materials change on every solid surface; systems and star positions do not); 9: B-322 the ocean worlds' floes rise from a shelf sea through an ice foot, river and lake banks stand over their plane (heights change on ocean worlds and along felisian water; systems do not); 8: B-321 the felisian greenhouse (+33 K over the equilibrium temperature: biomes, ice caps and water move on every living world), B-320 rivers and lakes rebuilt, R-304/R-305 planet traits and landforms (every solid surface changes; systems and star positions do not); 7: B-314 the first moon at 4.5 radii and outside the rings (moon orbits and periods change; surfaces do not); 6: O6-02 the relief spectrum (every solid surface changes shape; systems and star positions do not); 5: O0-01 rings on 12% of solid planets; 4: N5-03 gas giant storm term; 3: M5 astronomy
 
 enum PlanetType {
     PT_MOLTEN = 0,   // internally hot, lava lakes, no atmosphere
@@ -48,6 +48,9 @@ extern const PlanetTypeInfo PLANET_TYPES[PT_COUNT];
 // R-307: the type groups the renderers branch on
 inline bool hasOpaqueDeck(int t) { return t == PT_VENUSIAN || t == PT_HYDROCARBON; }   // the globe and the sky are one cloud or haze deck; no sun disc, no cast shadows
 inline bool isLavaWorld(int t) { return t == PT_MOLTEN || t == PT_VOLCANIC || t == PT_TECTONIC; }   // bank 2 is lava, the ground glows by it, eruptions
+// X-03: an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves
+struct Body;
+bool isIceGiant(const Body& b);
 inline int landableTypeCount() { int n = 0; for (int i = 0; i < PT_COUNT; i++) if (PLANET_TYPES[i].landable) n++; return n; }
 
 struct Body {
@@ -168,6 +171,11 @@ struct StarSystem {
     // M5-03: (E - e sin E = M) solved by Newton; returns the true anomaly, r/a in rOverA
     static double trueAnomaly(double meanAnomaly, double ecc, double& rOverA);
 };
+
+// O4/M5-07: a comet's activity at distKm from its star (0..1, the square of a reference orbit over the distance): the tail and
+// the coma seen from space, the vents and the coma on the ground, and W-04's showers (the stream it sheds) read it
+double cometActivityAt(const StarSystem& sys, double distKm);
+double cometRefKm(const StarSystem& sys);   // its reference orbit: the first planet's (half an AU at least), an AU without planets
 
 // R-402: a world's magnetic field (0..1), hashed from its seed and biased by its spin and size (the dynamo of a big, fast-spinning
 // world; a locked world has little): a derived property, so no system changes. Classes: 0 none, 1 weak, 2 moderate, 3 strong

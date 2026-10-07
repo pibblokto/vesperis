@@ -11,9 +11,12 @@ Order is a suggestion.
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
 B-403 to B-406 (`docs/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0` shipped in that release, `1.2.0` is for the next one.
+column: `1.1.0` or `1.2.0` shipped in that release, `1.3.0` is for the next one.
 
-**Left for 1.2.0 and later:** C-11 (skipped under KI-347), S-07, the W, P, L, X and K series.
+**Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
+W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
+
+**Left for 1.3.0 and later:** the V series (the surface picture, parked), C-11 (skipped under KI-347), S-07, W-02, W-05, the P, L and K series.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -36,7 +39,7 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | S-04 | Protostar (nebula sky, dust and belts, accretion disc) | M | 1.1.0 |
 | S-05 | Wolf-Rayet star (shell ring in the sky, stripping wind, radiation) | M | 1.1.0 |
 | S-06 | Black hole: lensing, accretion ring, drawn-out companion, survivor rocks | XL | 1.1.0 |
-| S-07 | Later rows when wanted: yellow supergiant, magnetar, T Tauri, white dwarf pair | S each | 1.2.0 or later |
+| S-07 | Later rows when wanted: yellow supergiant, magnetar, T Tauri, white dwarf pair | S each | 1.3.0 or later |
 
 ## C: civilisations (`IDEAS-ruins-shards-signals.md`)
 
@@ -52,7 +55,7 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | C-08 | Ruins that read the world: harbours, terraces, cisterns and walls from the terrain; weathering by age | L | 1.1.0 |
 | C-09 | Roads that still go somewhere: faint lines in the terrain, on the landing zoom, between ruins | M | 1.1.0 |
 | C-10 | Star charts as shards: the culture's sky overlaid on yours, pointing at other dead worlds | M | 1.1.0 |
-| C-11 | Instruments as artefacts, playable from the cabin | S | 1.2.0 (KI-347) |
+| C-11 | Instruments as artefacts, playable from the cabin | S | 1.3.0 (KI-347) |
 | C-12 | Graves and names; a culture's calendar and the timeline; the last recording per world | M | 1.1.0 |
 | C-13 | Cultures per world: none, one or (rarely) two | S | 1.1.0 |
 | C-14 | Lending: decoded shards travel with the guide export, credited in cyan | S | 1.1.0 |
@@ -60,16 +63,30 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 Order: C-01, C-02 (judge the text before any audio), C-03, C-06, C-04, C-05, C-07, then
 C-08 and C-10 as the pair that connects the galaxy, the rest as wanted.
 
+## V: the surface picture (`IDEAS-surface-picture.md`) — the rendering polish asked for after C-09
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| V-01 | Continuous LOD: nested rings geomorphed everywhere, one shading and one set of material tiles at every distance, no cell popping, no shore steps | XL | 1.3.0 |
+| V-02 | Normals from the planet function's gradient, ambient by slope and sky, a finer intensity ramp | M | 1.3.0 |
+| V-03 | Aerial perspective: height-aware per-pixel fog shared by every pass, a horizon haze band, scattering toward the sun | M | 1.3.0 |
+| V-04 | Flora and rock LOD: distance-faded instancing, billboards far out, forests that do not shimmer | L | 1.3.0 |
+| V-05 | Ground texture to the horizon: the meso tiles at coarser octaves on every ring, the macro tone at all scales | M | 1.3.0 |
+| V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | 1.3.0 |
+| V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | 1.3.0 |
+
+V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this series, or GPU rendering through raylib) is to be discussed before any of it starts.
+
 ## W: the world and the sky (`IDEAS-world-and-sky.md`)
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| W-01 | The time-lapse as an almanac menu: upcoming events with countdowns, run-to-it with a slowdown at the end; orbital events on the ship | M | 1.2.0 |
-| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.2.0 |
-| W-03 | Weather that arrives: fronts with position, heading and speed; visible from orbit, on the map and on the ground; the data sheet forecast | L | 1.2.0 |
-| W-04 | Nights: aurorae, meteor showers from comet orbits, zodiacal light, ring and moon shadows, earthshine | M | 1.2.0 |
-| W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | 1.2.0 |
-| W-06 | The telescope on the ship: zoom, reticle, drift, photo mode | M | 1.2.0 |
+| W-01 | The time-lapse as an almanac menu: upcoming events with countdowns, run-to-it with a slowdown at the end; orbital events on the ship | M | 1.2.0, done 2026-10-06 |
+| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.3.0 |
+| W-03 | Weather that arrives: fronts with position, heading and speed; visible from orbit, on the map and on the ground; the data sheet forecast | L | 1.2.0, done 2026-10-06 |
+| W-04 | Nights: aurorae, meteor showers from comet orbits, zodiacal light, ring and moon shadows, earthshine | M | 1.2.0, done 2026-10-07 |
+| W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | 1.3.0 |
+| W-06 | The telescope on the ship: zoom, reticle, drift, photo mode | M | 1.2.0, done 2026-10-06, reworked the same day on review (the plate, the set, R-404), then R-405 (the stabiliser, the orbit keys) |
 
 W-01 first: it makes every other timed event (W-02..W-04) something you can witness.
 
@@ -77,37 +94,37 @@ W-01 first: it makes every other timed event (W-02..W-04) something you can witn
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| P-01 | Tidally locked eyeball world (with S-01's red dwarfs) | L | 1.2.0 or later |
-| P-02 | Ammonia world | M | 1.2.0 or later |
-| P-03 | Salt world | M | 1.2.0 or later |
-| P-04 | Glass world | M | 1.2.0 or later |
-| P-05 | Fungal world | L | 1.2.0 or later |
-| P-06 | Rogue-captured world | M | 1.2.0 or later |
-| P-07 | Chthonian world | M | 1.2.0 or later |
-| P-08 | Shattered world | L | 1.2.0 or later |
-| P-09 | Supercritical world (landable at the poles or not at all) | M | 1.2.0 or later |
-| P-10 | Iron rain world | M | 1.2.0 or later |
-| P-11 | Shepherd moon in a ring (a place, not a type) | M | 1.2.0 or later |
-| P-12 | Pelagic world with a single island | S | 1.2.0 or later |
+| P-01 | Tidally locked eyeball world (with S-01's red dwarfs) | L | 1.3.0 or later |
+| P-02 | Ammonia world | M | 1.3.0 or later |
+| P-03 | Salt world | M | 1.3.0 or later |
+| P-04 | Glass world | M | 1.3.0 or later |
+| P-05 | Fungal world | L | 1.3.0 or later |
+| P-06 | Rogue-captured world | M | 1.3.0 or later |
+| P-07 | Chthonian world | M | 1.3.0 or later |
+| P-08 | Shattered world | L | 1.3.0 or later |
+| P-09 | Supercritical world (landable at the poles or not at all) | M | 1.3.0 or later |
+| P-10 | Iron rain world | M | 1.3.0 or later |
+| P-11 | Shepherd moon in a ring (a place, not a type) | M | 1.3.0 or later |
+| P-12 | Pelagic world with a single island | S | 1.3.0 or later |
 
 ## L: looks and effects (`IDEAS-planet-kinds-and-looks.md`, second list)
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| L-01 | Atmospheric scattering with distance and altitude | L | 1.2.0 or later |
-| L-02 | Cloud shadows moving over the ground | M | 1.2.0 or later |
-| L-03 | Wet ground after rain: darker material, puddles, gullies running | M | 1.2.0 or later |
-| L-04 | Snow and frost by time of day and season | M | 1.2.0 or later |
-| L-05 | Dust and sand in the air: haze, streaming crests, deposits | M | 1.2.0 or later |
-| L-06 | Material detail by distance: pebbles, cracked mud, ripples, moss | L | 1.2.0 or later |
-| L-07 | Volumetric light: rays, shafts, plume glow | L | 1.2.0 or later |
-| L-08 | Wind on vegetation and water | M | 1.2.0 or later |
-| L-09 | Heat shimmer | S | 1.2.0 or later |
-| L-10 | Bioluminescence as a trait | M | 1.2.0 or later |
-| L-11 | Ring light and planetshine on the ground | M | 1.2.0 or later |
-| L-12 | Palette moods per world | S | 1.2.0 or later |
-| L-13 | Weathering on the capsule and the buggy | M | 1.2.0 or later |
-| L-14 | Ground fog and mist | M | 1.2.0 or later |
+| L-01 | Atmospheric scattering with distance and altitude | L | 1.3.0 or later |
+| L-02 | Cloud shadows moving over the ground | M | 1.3.0 or later |
+| L-03 | Wet ground after rain: darker material, puddles, gullies running | M | 1.3.0 or later |
+| L-04 | Snow and frost by time of day and season | M | 1.3.0 or later |
+| L-05 | Dust and sand in the air: haze, streaming crests, deposits | M | 1.3.0 or later |
+| L-06 | Material detail by distance: pebbles, cracked mud, ripples, moss | L | 1.3.0 or later |
+| L-07 | Volumetric light: rays, shafts, plume glow | L | 1.3.0 or later |
+| L-08 | Wind on vegetation and water | M | 1.3.0 or later |
+| L-09 | Heat shimmer | S | 1.3.0 or later |
+| L-10 | Bioluminescence as a trait | M | 1.3.0 or later |
+| L-11 | Ring light and planetshine on the ground | M | 1.3.0 or later |
+| L-12 | Palette moods per world | S | 1.3.0 or later |
+| L-13 | Weathering on the capsule and the buggy | M | 1.3.0 or later |
+| L-14 | Ground fog and mist | M | 1.3.0 or later |
 
 L-01 and L-02 first: they change every frame on every world.
 
@@ -115,27 +132,27 @@ L-01 and L-02 first: they change every frame on every world.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| X-01 | Launch and relay flow from orbit, the cabin screen, aiming, the parachute stage, the end | M | 1.2.0 or later |
-| X-02 | The descent's stages: above the clouds, haze, the ammonia deck as terrain, between decks, the water deck | XL | 1.2.0 or later |
-| X-03 | Per-giant character: decks, storms, lightning, glow, aurorae, rare features; brown dwarfs and ice giants | M | 1.2.0 or later |
-| X-04 | What comes back: the recording in the gallery, the final image, the depth profile on the data sheet, log events and statistics, export | M | 1.2.0 or later |
+| X-01 | Launch and relay flow from orbit, the cabin screen, aiming, the parachute stage, the end | M | 1.2.0, done 2026-10-07 |
+| X-02 | The descent's stages: above the clouds, haze, the ammonia deck as terrain, between decks, the water deck | XL | 1.2.0, done 2026-10-07 (with R-406, Shift runs the probe x8) |
+| X-03 | Per-giant character: decks, storms, lightning, glow, aurorae, rare features; brown dwarfs and ice giants | M | 1.2.0, done 2026-10-07 (generation 12) |
+| X-04 | What comes back: the recording in the gallery, the final image, the depth profile on the data sheet, log events and statistics, export | M | 1.2.0, done 2026-10-07 |
 
 ## K: caves (`IDEAS-caves.md`) — after the G/S bump
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| K-01 | Design answers to the open questions (finding, darkness, life, the buggy, the map) | S | 1.2.0 or later |
-| K-02 | Placement: `LM_CAVE` through the landmark grid; sinkholes and springs from the drainage on karst worlds; lava-tube, sea, ice and collapse variants | M | 1.2.0 or later |
-| K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | 1.2.0 or later |
-| K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | 1.2.0 or later |
-| K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | 1.2.0 or later |
+| K-01 | Design answers to the open questions (finding, darkness, life, the buggy, the map) | S | 1.3.0 or later |
+| K-02 | Placement: `LM_CAVE` through the landmark grid; sinkholes and springs from the drainage on karst worlds; lava-tube, sea, ice and collapse variants | M | 1.3.0 or later |
+| K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | 1.3.0 or later |
+| K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | 1.3.0 or later |
+| K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | 1.3.0 or later |
 
 ## Suggested order for 1.2.0
 
 1.1.0 shipped the G and S bump, the C series but C-11, and the aurora's two items. For 1.2.0:
 
-1. The rendering polish the user asked about after C-14 (continuous LOD, flora LOD, analytic
-   normals, aerial perspective, tiles to the horizon, water and sky), to be cut into milestones.
+1. The V series (the surface picture: V-01 the continuous LOD first, then V-02, V-03, V-04, V-05,
+   V-06, V-07), the rendering polish the user asked for after C-09.
 2. W-01 (the almanac), then W-02 and W-04: cheap and visible on every world.
 3. C-11 (the instruments) once KI-347 is settled; the texts of C-02 once judged on paper.
 4. Then by appetite: the probe (X), caves (K), the planet kinds (P) and the looks (L).

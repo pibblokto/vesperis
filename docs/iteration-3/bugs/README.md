@@ -23,5 +23,9 @@
 | B-404 | The ground changes colour in front of you: a brown band ends a hundred metres out and moves along (the materials followed the rings' scale fades) | S2 | resolved 2026-10-01, `resolved/` |
 | B-405 | Invisible walls in a town: the jetpack cannot fly over a low wall (the colliders had no height) | S2 | resolved 2026-10-02, `resolved/` |
 | B-406 | The water pulls the jetpack in: you cannot fly over a lake (swimming was decided from the ground under you, whatever your height) | S2 | resolved 2026-10-02, `resolved/` |
+| B-407 | The globe's relief is lit from the wrong side: M9-15's slope term was added to the star's cosine where ground rising toward the star faces away from it (found by the telescope's plate, which copied it) | S4 | resolved 2026-10-06, `resolved/` |
+| B-408 | A pale wedge with straight edges round the sun of a comet: the sun's glow lit the galactic band's bank over the band's patch and the airless sky's (black under shade 30) beside it, the band stopped at the horizontal, and the mush rimmed the band's edges against the coma | S2 | resolved 2026-10-07, `resolved/` |
+| B-409 | The probe's picture goes black in the clouds of a giant with one deck: its base was tinted by a smoothstep with equal edges (0/0, a NaN through the air's and the fog's colours); with it, a brown dwarf's fog clipped flat at its deck's base | S2 | resolved 2026-10-07, `resolved/` |
+| B-410 | A planet approached from a belt pulls the ship back to the belt: the approach kept the belt's parking, which wins over the body's at the approach's end; the flight computer's next body kept the belt targeted | S2 | resolved 2026-10-07, `resolved/` |
 
 `KNOWN-ISSUES.md` lists what stays open. New reports: copy `TEMPLATE.md` to `B-3NN-short-title.md`.
