@@ -111,6 +111,7 @@ inline double clampd(double v, double lo, double hi) { return v < lo ? lo : (v >
 inline int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 inline double lerpd(double a, double b, double t) { return a + (b - a) * t; }
 inline double smoothstep(double e0, double e1, double x) {
+    if (e1 == e0) return x < e0 ? 0.0 : 1.0;   // B-409: equal edges are a step (0/0 was a NaN, a black picture)
     double t = clampd((x - e0) / (e1 - e0), 0.0, 1.0);
     return t * t * (3 - 2 * t);
 }

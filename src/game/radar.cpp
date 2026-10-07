@@ -26,6 +26,7 @@ const double LOCK_CONE = 3 * DEG, KEEP_CONE = 8 * DEG;
 void Game::radarToggle() {
     if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); audio.beep = 4; return; }
     if (ship.mode == ShipState::VIMANA) { status("NOTHING IS HEARD IN THE FLIGHT - THE RADAR WAITS FOR THE ARRIVAL", 4); audio.beep = 3; return; }
+    if (tele.on) telescopeOff();   // W-06: one instrument at the window at a time
     radar.on = true; radar.holdT = 0; radar.locked = -1; radar.lostT = 0; radar.reading = 0; radar.trace.clear(); radar.clarity = 0; radar.best = -1;
     cabin.yaw = 0; cabin.pitch = 0;   // the camera is the ship's: the view is its attitude, turned with the mouse
     radarScan();
@@ -130,7 +131,7 @@ void Game::radarLock(int idx) {
     (void)content;
     if (fresh) logEvent("SIGNAL", fmt("%s, SECTOR %lld %lld %lld", what.c_str(), (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz));
     else guide.save(guidePath);
-    status(s.local ? "A SIGNAL LOCKED - ENTER APPROACHES ITS SOURCE" : "A SIGNAL LOCKED - ENTER FLIES TO ITS STAR", 6);
+    status(s.local ? "A SIGNAL LOCKED - ENTER APPROACHES ITS SOURCE" : (guide.visited.count(starKeyOf(full)) ? "A SIGNAL LOCKED - ITS STAR WAS VISITED, ENTER FLIES" : "A SIGNAL LOCKED - ENTER FLIES TO ITS STAR"), 6);   // R-407
     audio.beep = 1;
 }
 
@@ -345,7 +346,7 @@ void Game::renderRadarCamera() {
             l3 = "ENTER APPROACHES IT";
         } else {
             Star full = s.star; if (full.name.empty()) starInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
-            l1 = fmt("A SIGNAL FROM %s (%s)  %.0f LY", trunc(upper(starNameOf(full)), 16).c_str(), STAR_CLASSES[full.cls].code, s.distLy);
+            l1 = fmt("A SIGNAL FROM %s (%s)  %.0f LY%s", trunc(upper(starNameOf(full)), 16).c_str(), STAR_CLASSES[full.cls].code, s.distLy, guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");   // R-407: a loop back to a system seen says so
             l2 = fmt("SECTOR %lld %lld %lld - THE SIGNAL IS %.0f YEARS OLD", (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz, s.distLy);
             l3 = "ENTER LOCKS THE STAR AND FLIES THERE";
         }

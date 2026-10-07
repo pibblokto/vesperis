@@ -592,6 +592,26 @@ static void materialPalette(BodyGen& g) {
     }
 }
 
+// X-03 (GEN 12): a giant's character on its globe, hashed from its seed (the rng stream stays): its share of storms (most
+// between a twentieth and a quarter of the storm cells, an ice giant's a few hundredths, a brown dwarf's a tenth or so), an
+// ice giant's bands faint under its methane haze, and one giant in four a great storm (an ice giant's dark like a Neptune's,
+// a brown dwarf's one in six): an oval of 10,000-24,000 km at 12-40 degrees of latitude, half to three quarters as tall as long
+static void giantGlobe(const Body& b, BodyGen& g) {
+    const bool ice = isIceGiant(b), bd = b.type == PT_SUBSTELLAR;
+    const double u = unitFromHash(mix64(b.seed ^ 0x57A2ULL));
+    g.stormShare = ice ? 0.02 + 0.04 * u : (bd ? 0.07 + 0.12 * u : 0.04 + 0.24 * std::pow(u, 1.3));
+    g.bandContrast = ice ? 0.45 + 0.2 * unitFromHash(mix64(b.seed ^ 0x57A3ULL)) : 1.0;
+    const uint64_t h = mix64(b.seed ^ 0x6A57ULL);
+    g.gsOn = unitFromHash(h) < (bd ? 0.17 : 0.25);
+    if (!g.gsOn) return;
+    const double aKm = std::min(5000 + 7000 * unitFromHash(mix64(h ^ 1)), 0.2 * b.radiusKm);
+    g.gsA = aKm / b.radiusKm;
+    g.gsB = g.gsA * (0.5 + 0.22 * unitFromHash(mix64(h ^ 2)));
+    g.gsLat = (12 + 28 * unitFromHash(mix64(h ^ 3))) * DEG * (unitFromHash(mix64(h ^ 4)) < 0.5 ? -1 : 1);
+    g.gsLon = (unitFromHash(mix64(h ^ 5)) - 0.5) * TAU;
+    g.gsTone = ice || bd ? -1 : (unitFromHash(mix64(h ^ 6)) < 0.6 ? 1 : -1);
+}
+
 BodyGen BodyGen::make(const Body& b, double season) {
     BodyGen g;
     g.type = b.type;
@@ -685,10 +705,12 @@ BodyGen BodyGen::make(const Body& b, double season) {
         case PT_GASGIANT:
             g.bandCount = 5 + 9 * rng.uni();
             g.color2 = RGB(b.color.r * 0.7f, b.color.g * 0.7f, b.color.b * 0.8f);
+            giantGlobe(b, g);
             break;
         case PT_SUBSTELLAR:   // M5-02: fewer, broader bands
             g.bandCount = 3 + 5 * rng.uni();
             g.color2 = RGB(b.color.r * 0.5f, b.color.g * 0.4f, b.color.b * 0.4f);
+            giantGlobe(b, g);
             break;
         case PT_COMET:        // M5-07: a battered icy hill
             g.mountainAmp = 150 + 250 * rng.uni();
@@ -1690,6 +1712,15 @@ void geyserVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& ou
         out.push_back(v);
     });
 }
+double giantStormCell(const BodyGen& g, const Vec3& unit, uint64_t* id) {
+    Vec3 q = (unit * g.R) / (g.R * 0.12);   // the branch's arithmetic, to the bit
+    q.z *= 2.5;
+    Worley3 w = worley3(q, g.sC);
+    const bool on = unitFromHash(w.id1) > 1 - g.stormShare && w.f1 < 0.4;
+    if (id) *id = on ? w.id1 : 0;
+    return on ? 1 - smoothstep(0.15, 0.4, w.f1) : 0;
+}
+
 SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) {
     SurfaceSample s;
     const double R = g.R;
@@ -2334,16 +2365,25 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         double turb = fbm3(p / (R * 0.18), g.sA, 4) * 0.35;
         double turb2 = fbm3(p / (R * 0.06), g.sB, 2) * 0.05;
         double l = lat + turb + turb2;
-        double bands = 0.5 + 0.28 * std::sin(l * g.bandCount) + 0.15 * std::sin(l * g.bandCount * 2.3 + 1.0) +
-                       0.08 * std::sin(l * g.bandCount * 5.1 + 2.0);
-        Vec3 q = p / (R * 0.12);
-        q.z *= 2.5;
-        Worley3 w = worley3(q, g.sC);
-        double storm = (unitFromHash(w.id1) > 0.85) ? (1 - smoothstep(0.15, 0.4, w.f1)) : 0;
+        double bands = 0.5 + g.bandContrast * (0.28 * std::sin(l * g.bandCount) + 0.15 * std::sin(l * g.bandCount * 2.3 + 1.0) +
+                       0.08 * std::sin(l * g.bandCount * 5.1 + 2.0));   // X-03: an ice giant's faint
+        double storm = giantStormCell(g, unit);   // X-03: the giant's own share
         s.height = 0;
         s.material = MAT_GAS;
         s.albedo = clampd(bands + 0.35 * storm, 0.22, 1.0);
         s.veg = storm;   // N5-03: the storm term kept apart (the map's veg channel) so the globe can let storms grow and fade with time
+        if (g.gsOn) {   // X-03: the great storm (in the albedo, not the storm term: it does not fade), its bands swirled round its centre
+            const double lon = std::atan2(unit.y, unit.x);
+            const double ex = wrapAngle(lon - g.gsLon) * std::cos(g.gsLat) / g.gsA, ey = (lat - g.gsLat) / g.gsB, d = std::sqrt(ex * ex + ey * ey);
+            if (d < 1.6) {
+                const double th = std::atan2(ey, ex) + 2.8 * std::pow(std::max(0.0, 1 - d), 1.5);   // the inner parts turned further round
+                const double sw = fbm3(Vec3(3.2 * d * std::cos(th), 3.2 * d * std::sin(th), 7.7), g.sE, 3);
+                const double core = 1 - smoothstep(0.82, 1.0, d), collar = std::exp(-((d - 1.0) / 0.075) * ((d - 1.0) / 0.075));
+                const double inner = clampd(0.5 + g.gsTone * (0.24 + 0.08 * (1 - d)) + 0.16 * sw, 0.22, 1.0);
+                s.albedo = clampd(s.albedo + (inner - s.albedo) * core - 0.16 * g.gsTone * collar * (1 - core), 0.22, 1.0);
+                s.veg *= smoothstep(1.0, 1.4, d);   // no small storm inside the great one
+            }
+        }
         break;
     }
     }

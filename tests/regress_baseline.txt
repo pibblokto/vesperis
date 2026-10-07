@@ -18,6 +18,6 @@ map_9 bd722cdd6d85c105  # Wyariothmai I FELISIAN
 system_3 39b702c36874a1b1  # Iaphiath (7 bodies)
 system_4 e1033db1a26bdd07  # Feeyeithis (11 bodies)
 scene_felisian_shore 311e5d51c487ed49  # frame of scene felisian_shore at 1x (Feeyeithis II)
-scene_cratered_noon 2976e95b0858f645  # frame of scene cratered_noon at 1x (Wyariothmai IV)
-scene_molten_night e8d799b5c8556614  # frame of scene molten_night at 1x (Shiesaimiori I)
+scene_cratered_noon ad3fe0e0797463ac  # frame of scene cratered_noon at 1x (Wyariothmai IV)
+scene_molten_night aef54d9b0eceaf40  # frame of scene molten_night at 1x (Shiesaimiori I)
 space_S00 94d6e6d85e491996  # space frame from the first orbit of Salyiesesh

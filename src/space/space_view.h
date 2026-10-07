@@ -13,6 +13,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <string>
 
 struct BodyScreenInfo {
     int body = -1;
@@ -44,6 +45,40 @@ struct SpaceContext {
     bool skyMode = false;     // draw into a sky: bank 1, keep brighter existing pixels
     double starIntensity = 1; // field amplification (targeting mode)
     double skyDark = 1;       // sky mode: 1 at night, 0 by day (comet tails and wandering stars fade in daylight)
+    // W-06 (the user's review): the body the telescope's plate is built for (-1 none) and the samples a frame the
+    // build may take (0: the whole plate now, for a photo or a harness frame)
+    int detailBody = -1;
+    int detailBudget = 8000;
+};
+
+// W-06 (the user's review, 2026-10-06): the telescope's plate. The world map (512 x 256 texels, 11-44 km each) is the
+// planet function sampled coarsely; at the eyepiece's powers a texel spans pixels and the globe blurs. The plate is the
+// same function sampled again at the eyepiece's own footprint: a body-fixed patch round the aim point, an orthographic
+// grid in the body's frame (`u0` the centre, `e1`/`e2` the axes, `texel` the step in radii: a = dot(p, e1), b = dot(p, e2),
+// the point at sqrt(1 - a^2 - b^2) u0 + a e1 + b e2), each cell the planet function at `texelM` metres of detail (the
+// height, the material, the albedo, the storms, the cloud pattern at the drift of the build). Built progressively in
+// blocks of 8, 4, 2 and 1 texels (a block's origin stands for the block until its cells are sampled themselves) within a
+// budget of samples a frame, so the picture forms at once and sharpens over a second; `drawGlobe` reads it in place of
+// the map wherever a cell is filled, the map standing in elsewhere; the previous plate is kept as the fallback while a
+// new one builds (a zoom step, the aim leaving the plate, the rivers' tiles arriving). Body-fixed, it survives the body's
+// turn and the ship's orbit: the lookup turns the point, not the plate.
+struct DetailPlate {
+    int body = -1; uint64_t seed = 0; int seasonBucket = -1;
+    Vec3 u0, e1, e2;
+    double texel = 0, texelM = 0;
+    int W = 0, H = 0;
+    std::vector<float> height;
+    std::vector<uint8_t> material, albedo, cloud, veg, level, exact;   // level: the block size a cell's values came from (0 unfilled); exact: the cell holds its own sample
+    double cloudDrift0 = 0;    // the cloud drift (radians of longitude) the cells were sampled with
+    int pass = 0, next = 0;    // the block size pass (0..3: 8, 4, 2, 1; 4 done) and the next block of it
+    bool noDrainage = false;   // sampled without the rivers and lakes (their tiles were not built yet)
+    bool drainageWanted = false;
+    double radiusM = 0;        // the ground radius the plate covers (what the drainage prefetch is asked for)
+    long samples = 0;
+    static constexpr int BLOCKS[4] = {8, 4, 2, 1};
+    bool valid() const { return W > 0; }
+    bool done() const { return pass >= 4; }
+    double progress() const;   // 0..1 by the samples' share
 };
 
 class SpaceRenderer {
@@ -76,10 +111,18 @@ public:
     const PlanetMap& mapFor(const Body& b);          // synchronous: waits for a background generation
     const PlanetMap* mapIfReady(const Body& b);      // starts a background generation, nullptr until ready (M9-15)
     const BodyGen& genFor(const Body& b);
+    // W-03: the fronts' cloud at t on the map's grid (`buildFrontMap`), for the globe and the landing map; nullptr for a world
+    // without fronts; built again when the clock has moved four minutes (a front moves a texel in an hour). `coarse` flags the
+    // 16 x 16 texel blocks that hold any band (a texel's neighbours counted), so a globe pixel off every band costs one byte
+    struct FrontMap { uint64_t seed = 0; double t = -1e18; std::vector<uint8_t> cloud, coarse; };
+    static constexpr int FRONT_BLOCK = 16;
+    const FrontMap* frontsFor(const Body& b, double t);
     ~SpaceRenderer();
     // M9-09: maps and generators follow the season; call before rendering a system at time t
     void setSeason(const StarSystem& sys, double t);
 private:
+    FrontMap frontMaps[4]; int frontMapNext = 0;
+    static void frontCoarse(FrontMap& fm);
     double curSeason[64] = {0};
     int seasonBucket[64] = {0};
 public:
@@ -118,4 +161,18 @@ private:
     void drawBeltRocks(Framebuffer& fb, const SpaceContext& c, int k);   // O3 (R-302): the rocks around a ship inside belt k (bank 20)
 public:
     int lastBeltRocks = 0, lastBeltMeshes = 0;   // bench: rocks drawn last frame (points and meshes)
+    // W-06: the telescope's plates: the current one and the previous (the fallback while the current builds)
+    DetailPlate plates[2];
+    int plateCur = 0;
+    long plateSamplesFrame = 0;                 // samples taken by the last render
+    long plateBegun = 0;                        // plates begun since the start (the harness reads it: the stabiliser begins none while it holds)
+    void updatePlate(const SpaceContext& c);    // called by `render` before the globes: keeps, restarts or fills the plate
+    const DetailPlate& plate() const { return plates[plateCur]; }
+    double plateProgress() const { return plates[plateCur].valid() ? plates[plateCur].progress() : 0; }
+    std::string plateInfo() const;
+    // the plate's cell centre as a body-frame unit vector (the harness recomputes the function there)
+    static Vec3 plateCellUnit(const DetailPlate& p, int i, int j);
+private:
+    void plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket, const Vec3& u0, const Vec3& e1, const Vec3& e2, double texel, double R, double cloudDrift, double halfA, double halfB);
+    void plateFill(DetailPlate& p, const BodyGen& g, int budget);
 };

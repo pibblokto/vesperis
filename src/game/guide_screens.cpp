@@ -4,17 +4,19 @@
 #include "game.h"
 #include "ui.h"
 #include "core/png.h"
+#include "core/fs.h"
 #include "core/rng.h"
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
 #include <algorithm>
 #include <dirent.h>
+#include <sys/stat.h>
 #include <fstream>
 #include <sstream>
 
 namespace {
-const char* GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "NAME THE NEAREST LANDMARK", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",
+const char* GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",   // R-408: the sights are marked on the sector map (N), not named here
                              "TARGET A STAR BY NAME", "TARGET BY COORDINATES", "RETURN TO THE PREVIOUS STAR", "TARGET THE HOME STAR",
                              "SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", "BACK"};
 const int GUIDE_N = (int)(sizeof(GUIDE_ITEMS) / sizeof(GUIDE_ITEMS[0]));
@@ -82,48 +84,17 @@ std::string Game::screenshotCaption() const {
                     std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", PLANET_TYPES[sys.bodies[surf.site.body].type].name);
     else if (sys.valid) where = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 ? fmt("IN ORBIT OF %s", upper(bodyNameOf(ship.parkedBody)).c_str()) : fmt("SYSTEM %s (%s)", upper(starNameOf(sys.star)).c_str(), STAR_CLASSES[sys.star.cls].code);
     else where = "INTERSTELLAR SPACE";
-    return where + "  " + epocString();
-}
-
-std::string Game::landmarkKey(const Landmark& L) const {
-    return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.valid ? surf.site.body : ship.localTarget) + "/L" + std::to_string((unsigned long long)(L.id & 0xffffffffULL));
-}
-std::string Game::landmarkName(const Landmark& L) const {   // the explorer's name, else empty (R-401: the generated one is never shown)
-    auto it = guide.names.find(landmarkKey(L));
-    return it != guide.names.end() ? it->second : std::string();
-}
-std::string Game::landmarkLabel(const Landmark& L) const {   // "MY PEAK - PEAK", or "UNNAMED PEAK"
-    std::string n = landmarkName(L);
-    return n.empty() ? std::string("UNNAMED ") + LANDMARK_KIND_NAMES[L.kind] : n + " - " + LANDMARK_KIND_NAMES[L.kind];
-}
-// O6-06: the first sight of a landmark within a kilometre of the explorer (or the buggy) is written into the log with its
-// generated name; the guide keeps the set, so a return finds it known
-void Game::noteLandmarks() {
-    if (!surf.valid) return;
-    double px = surf.inBuggy ? surf.buggy.x : surf.player.x, pz = surf.inBuggy ? surf.buggy.z : surf.player.z;
-    for (const SurfaceView::SiteLandmark& L : surf.landmarks) {
-        double d = std::sqrt((L.x - px) * (L.x - px) + (L.z - pz) * (L.z - pz));
-        if (d > 1000.0 + L.lm.radiusM) continue;
-        std::string key = landmarkKey(L.lm);
-        if (guide.landmarksSeen.count(key)) continue;
-        guide.landmarksSeen.insert(key);
-        std::string what;
-        switch (L.lm.kind) {
-            case LM_PEAK: what = fmt("A PEAK OF %.0f M, %.0f M OVER ITS COUNTRY", L.lm.heightM, L.lm.prominenceM); break;
-            case LM_MESA: what = fmt("A MESA %.1f KM ACROSS, %.0f M HIGH", 2 * L.lm.radiusM / 1000.0, L.lm.prominenceM); break;
-            case LM_CANYON: what = fmt("THE RIM OF A CANYON %.0f M DEEP", L.lm.prominenceM); break;
-            case LM_CRATER: what = fmt("A CRATER %.1f KM ACROSS, %.0f M DEEP", 2 * L.lm.radiusM / 1000.0, L.lm.prominenceM); break;
-            case LM_GEYSERS: what = fmt("A GEYSER FIELD %.1f KM ACROSS", 2 * L.lm.radiusM / 1000.0); break;
-            case LM_LAKE: what = fmt("A LAKE %.1f KM ACROSS AT %.0f M", 2 * L.lm.radiusM / 1000.0, L.lm.heightM); break;
-            case LM_RUIN: what = L.lm.sub == 4 ? fmt("A LONE MONUMENT OF THE OLD PEOPLE, %.0f M ACROSS", L.lm.prominenceM) : (L.lm.sub ? fmt("THE RUINS OF A %s, %.0f M ACROSS", L.lm.sub == 1 ? "HAMLET" : (L.lm.sub == 2 ? "VILLAGE" : "TOWN"), L.lm.prominenceM) : fmt("RUINS OF THE OLD ONES, %.0f M ACROSS", L.lm.prominenceM)); break;   // C-01
-            default: what = "A FIELD OF CRYSTAL SPIRES"; break;
-        }
-        double edge = std::max(0.0, d - L.lm.radiusM);
-        std::string given = landmarkName(L.lm);
-        logEvent("LANDMARK", fmt("%s%s, %.0f M %s ON %s", given.empty() ? "" : (given + ", ").c_str(), what.c_str(), L.lm.radiusM > 300 ? edge : d, L.lm.radiusM > 300 ? "FROM ITS EDGE" : "AWAY", upper(bodyNameOf(surf.site.body)).c_str()));
-        status(fmt("LANDMARK: %s", landmarkLabel(L.lm).c_str()), 5);
-        audio.beep = 4;
+    if (state == GameState::PROBE && probe.active) where = probeCaption() + " - " + where;   // X-01: what the probe's camera shows and where
+    if (state == GameState::RECORDING && replay.rec >= 0 && replay.rec < (int)guide.probes.size()) {   // X-04: a recording's frame
+        const ProbeRecord& r = guide.probes[replay.rec];
+        const double c = std::min(replay.clock, r.endClock);
+        where = fmt("THE RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0), probeBarAt(ProbeFlight{r.chuteOpen, r.chuteClose, r.crushBar}, c) * 0.98692) + " - " + where;
     }
+    if (tele.on && state == GameState::SPACE) {   // W-06: a photo through the telescope names what the reticle rests on
+        std::string line = telescopeTargetLine(true);
+        where = fmt("THROUGH THE TELESCOPE X%.0f: %s", telescopeZoom(), line.empty() ? "THE SKY" : line.c_str()) + " - " + where;
+    }
+    return where + "  " + epocString();
 }
 
 // C-03: a shard taken with E goes to the guide ("shard <body key>/S<index>"), the log and the status; the view then hides
@@ -157,15 +128,21 @@ void Game::takeShard() {
 // and read lent to the decoder (`Guide::lent`: read there in cyan, counted in the world's language, never taken: the ruins keep them)
 void Game::importInboxFile() {
     std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_inbox.txt";
-    int lentN = 0, n = guide.importInbox(p, &lentN);
+    int lentN = 0, probesN = 0, marksN = 0, n = guide.importInbox(p, &lentN, &probesN, &marksN);
     if (n < 0) { status(fmt("NO INBOX FILE (%s)", upper(p).c_str()), 5); return; }
     guide.save(guidePath);
+    if (marksN > 0) { marksVersion++; logEvent("INBOX", fmt("%d MARK%s LENT BY THE INBOX, ON THE MAPS IN CYAN", marksN, marksN == 1 ? "" : "S")); }   // R-408: a friend's marks
+    if (probesN > 0) logEvent("INBOX", fmt("%d PROBE RECORDING%s LENT BY THE INBOX, IN THE GALLERY", probesN, probesN == 1 ? "" : "S"));   // X-04: a friend's descents
     if (lentN > 0) {
         std::set<std::string> worlds;
         for (const std::string& k : guide.lent) { size_t q = k.rfind("/S"); if (q != std::string::npos) worlds.insert(k.substr(0, q)); }
         logEvent("INBOX", fmt("%d SHARDS OF %d WORLD%s LENT BY THE INBOX, TO READ ON THE DECODER", lentN, (int)worlds.size(), worlds.size() == 1 ? "" : "S"));
-        status(fmt("%d NEW NAMES AND %d LENT SHARDS FROM THE INBOX", n, lentN), 5);
-    } else status(fmt("%d NEW NAMES FROM THE INBOX", n), 5);
+    }
+    std::string got = fmt("INBOX: %d NAMES", n);   // 50 characters at most with all four
+    if (lentN > 0) got += fmt(", %d SHARDS", lentN);
+    if (probesN > 0) got += fmt(", %d RECORDINGS", probesN);
+    if (marksN > 0) got += fmt(", %d MARKS", marksN);
+    status(got, 5);
 }
 
 void Game::logEvent(const std::string& kind, const std::string& text) {
@@ -175,6 +152,7 @@ void Game::logEvent(const std::string& kind, const std::string& text) {
 
 void Game::noteVisit() {
     if (!sys.valid) return;
+    migrateLandmarkNames();   // R-408: the sights named here before are marks now
     std::string key = starKeyOf(sys.star);
     guide.visited.insert(key);
     guide.classesSeen.insert(sys.star.cls);
@@ -218,24 +196,18 @@ void Game::updateGuideMenu(const Input& in) {
             else status("NO LOCAL TARGET TO NAME", 3);
             break;
         }
-        case 3: {   // O6-06: the nearest landmark within 12 km, once seen (logged) or standing on it
-            const SurfaceView::SiteLandmark* L = onSurface && surf.valid ? surf.nearestLandmark(surf.player.x, surf.player.z, 12000.0) : nullptr;
-            if (!L) { status(onSurface ? "NO LANDMARK WITHIN 12 KM" : "LANDMARKS ARE NAMED ON THE GROUND", 3); break; }
-            beginTextEntry(fmt("NAME THE %s", LANDMARK_KIND_NAMES[L->lm.kind]), 6, landmarkName(L->lm));
-            break;
-        }
-        case 4: beginTextEntry("NOTE FOR THE LOG", 3, ""); break;
-        case 5: logPage = 0; state = GameState::LOG; break;
-        case 6: openGallery(); break;
-        case 7: state = GameState::STATS; break;
-        case 8: if (!onSurface) openShards(); else status("THE SHARDS ARE READ ON THE SHIP", 3); break;   // C-06
-        case 9: if (!onSurface) beginTextEntry("STAR NAME", 4, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 10: if (!onSurface) beginTextEntry("SECTOR X Y Z", 5, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 11: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 12: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 13: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
-        case 14: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt"; status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5); state = guideReturn; break; }
-        case 15: importInboxFile(); state = guideReturn; break;   // C-14: the names into the inbox, the friend's read shards lent
+        case 3: beginTextEntry("NOTE FOR THE LOG", 3, ""); break;
+        case 4: logPage = 0; state = GameState::LOG; break;
+        case 5: openGallery(); break;
+        case 6: state = GameState::STATS; break;
+        case 7: if (!onSurface) openShards(); else status("THE SHARDS ARE READ ON THE SHIP", 3); break;   // C-06
+        case 8: if (!onSurface) beginTextEntry("STAR NAME", 4, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 9: if (!onSurface) beginTextEntry("SECTOR X Y Z", 5, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 10: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 11: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 12: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
+        case 13: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt"; status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5); state = guideReturn; break; }
+        case 14: importInboxFile(); state = guideReturn; break;   // C-14: the names into the inbox, the friend's read shards lent
         default: state = guideReturn; break;
     }
 }
@@ -250,7 +222,6 @@ void Game::renderGuideMenu() {
         bool sel = i == guideSel;
         std::string label = GUIDE_ITEMS[i];
         if (i == 2 && sys.valid) { int bi = guideReturn == GameState::SURFACE && surf.valid ? surf.site.body : ship.localTarget; if (bi >= 0 && bi < (int)sys.bodies.size() && bodyNamed(bi)) label = "RENAME " + trunc(upper(bodyNameOf(bi)), 22); }
-        if (i == 3 && guideReturn == GameState::SURFACE && surf.valid) { const SurfaceView::SiteLandmark* L = surf.nearestLandmark(surf.player.x, surf.player.z, 12000.0); if (L) label = landmarkName(L->lm).empty() ? std::string("NAME THE ") + LANDMARK_KIND_NAMES[L->lm.kind] : "RENAME " + trunc(landmarkName(L->lm), 22); }
         if (i == 1 && sys.valid && starNamed(sys.star)) label = "RENAME " + trunc(upper(starNameOf(sys.star)), 22);
         drawText(canvas, 56, y, label.c_str(), sel ? HUD_WHITE : HUD_GREEN);
         if (sel) drawText(canvas, 46, y, ">", HUD_AMBER);
@@ -269,7 +240,8 @@ void Game::updateTextEntry(const Input& in) {
     if (in.wasPressed(KEY_MINUS) && textBuffer.size() < 28) textBuffer += '-';
     if (in.wasPressed(KEY_PERIOD) && textBuffer.size() < 28) textBuffer += '.';
     if (in.wasPressed(KEY_BACKSPACE) && !textBuffer.empty()) textBuffer.pop_back();
-    if (in.wasPressed(KEY_ESCAPE)) { state = guideReturn; return; }
+    if (textKind == 6 && in.wasPressed(KEY_TAB)) { textMarkKind = (textMarkKind + 1) % (MARK_PLACE + 1); audio.beep = 4; }   // R-408: what the mark marks
+    if (in.wasPressed(KEY_ESCAPE)) { state = guideReturn; textMark = -1; return; }
     if (!in.wasPressed(KEY_ENTER)) return;
     std::string text = textBuffer;
     while (!text.empty() && text.back() == ' ') text.pop_back();
@@ -281,25 +253,34 @@ void Game::updateTextEntry(const Input& in) {
             status(fmt("THE STAR IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", "NAMED THE STAR " + text);
             break;
-        case 2:
-            if (text.empty() || !sys.valid) return;
+        case 2: {
+            if (text.empty() || !sys.valid || textBody < 0 || textBody >= (int)sys.bodies.size()) return;
             guide.names[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, textBody)] = text; guide.save(guidePath);
-            status(fmt("THE WORLD IS NOW CALLED %s", text.c_str()), 4);
-            logEvent("NOTE", "NAMED A WORLD " + text);
+            const Body& b = sys.bodies[textBody];   // W-06: the telescope names moons, comets and the second sun too
+            const char* what = b.type == PT_COMPANION ? "SECOND SUN" : (b.type == PT_COMET ? "COMET" : (b.parent >= 0 ? "MOON" : "WORLD"));
+            status(fmt("THE %s IS NOW CALLED %s", what, text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED A %s %s", what, text.c_str()));
             break;
+        }
+        case 8: {   // W-06: a star of the neighbourhood seen through the telescope
+            if (text.empty()) return;
+            guide.names[starKeyOf(textStar)] = text; guide.save(guidePath);
+            status(fmt("THE STAR IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", "NAMED A STAR IN THE SKY " + text);
+            break;
+        }
         case 3:
             if (text.empty()) return;
             logEvent("NOTE", text);
             status("NOTE WRITTEN IN THE LOG", 3);
             break;
         case 4: targetStarByName(text); break;
-        case 6: {   // O6-06: the landmark's name (the nearest, as offered by the menu)
-            if (text.empty() || !surf.valid) return;
-            const SurfaceView::SiteLandmark* L = surf.nearestLandmark(surf.player.x, surf.player.z, 12000.0);
-            if (!L) return;
-            guide.names[landmarkKey(L->lm)] = text; guide.landmarksSeen.insert(landmarkKey(L->lm)); guide.save(guidePath);
-            status(fmt("THE %s IS NOW CALLED %s", LANDMARK_KIND_NAMES[L->lm.kind], text.c_str()), 4);
-            logEvent("NOTE", fmt("NAMED THE %s %s", LANDMARK_KIND_NAMES[L->lm.kind], text.c_str()));
+        case 6: finishMark(text); break;   // R-408: a mark placed or renamed (an empty name places an unnamed one)
+        case 9: {   // X-04: the storm a probe fell into (its screen, its recording)
+            if (text.empty() || textStormKey.empty()) return;
+            guide.names[textStormKey] = text; guide.save(guidePath);
+            status(fmt("THE STORM IS NOW CALLED %s", text.c_str()), 4);
+            logEvent("NOTE", fmt("NAMED A STORM %s", text.c_str()));
             break;
         }
         case 7: {   // C-04: the piece's name (the shard on the decoder screen)
@@ -323,17 +304,30 @@ void Game::updateTextEntry(const Input& in) {
 
 void Game::renderTextEntry() {
     const int top = 70, bottom = 130;
-    blendRectRGB(canvas, 30, top, UW - 30, bottom, rgb(0, 0, 0), 225);
-    drawRectRGB(canvas, 30, top, UW - 30, bottom, HUD_DIM);
+    blendRectRGB(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // R-408: as wide as its last line (it ran past the box)
+    drawRectRGB(canvas, 6, top, UW - 6, bottom, HUD_DIM);
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
     std::string shown = textBuffer + (std::fmod(realTime, 0.8) < 0.4 ? "_" : " ");
     drawTextCentered(canvas, UW / 2, top + 26, shown.c_str(), HUD_WHITE);
+    if (textKind == 6) {   // R-408: what the mark marks, its glyph on the maps
+        std::string k = textMarkKind < LM_COUNT ? fmt("%s %s", LANDMARK_KIND_SYMBOLS[textMarkKind], LANDMARK_KIND_NAMES[textMarkKind]) : std::string("A PLACE");
+        drawTextCentered(canvas, UW / 2, top + 38, fmt("MARKS %s - TAB CHANGES", k.c_str()).c_str(), HUD_CYAN);
+    }
     drawTextCentered(canvas, UW / 2, bottom - 12, "LETTERS, DIGITS, SPACE, -   ENTER OK   ESC CANCEL", HUD_DIM);
 }
 
 // ---------------------------------------------------------------------------
 // targets by name, coordinates, history, home
 // ---------------------------------------------------------------------------
+
+// R-407: the names the explorer gave to a star's worlds (its key's bodies, not the sights, storms or pieces under them)
+std::vector<std::string> Game::worldNamesAt(const std::string& starKey) const {
+    std::vector<std::string> out;
+    const std::string pre = starKey + "/";
+    for (auto it = guide.names.lower_bound(pre); it != guide.names.end() && it->first.compare(0, pre.size(), pre) == 0; ++it)
+        if (it->first.find('/', pre.size()) == std::string::npos) out.push_back(it->second);
+    return out;
+}
 
 void Game::setRemoteStar(const Star& s) {
     if (sys.valid && s.seed == sys.star.seed) { status("THAT IS THE CURRENT STAR", 3); audio.beep = 3; return; }
@@ -475,6 +469,10 @@ void Game::renderStarMap() {
         if (ship.hasRemote && s.seed == ship.remote.seed) drawRectRGB(canvas, sx - 5, sy - 5, sx + 5, sy + 5, HUD_CYAN);
         if (haveHome && s.sx == hx && s.sy == hy && s.sz == hz) { drawLineRGB(canvas, sx - 5, sy, sx, sy - 5, HUD_AMBER); drawLineRGB(canvas, sx, sy - 5, sx + 5, sy, HUD_AMBER); drawLineRGB(canvas, sx + 5, sy, sx, sy + 5, HUD_AMBER); drawLineRGB(canvas, sx, sy + 5, sx - 5, sy, HUD_AMBER); }
         if (guide.names.count(key) || guide.inbox.count(key)) drawText(canvas, sx + 5, sy - 3, trunc(upper(starNameOf(s)), 12).c_str(), nameIsForeign(key) ? HUD_CYAN : HUD_GREEN);
+        else if (guide.visited.count(key) && !current) {   // R-407: an unnamed star the ship has been to, by a world named there
+            std::vector<std::string> w = worldNamesAt(key);
+            if (!w.empty()) drawText(canvas, sx + 5, sy - 3, ("(" + trunc(upper(w[0]), 10) + ")").c_str(), HUD_DIM);
+        }
         double dd = std::sqrt((double)(sx - cx) * (sx - cx) + (double)(sy - cy) * (sy - cy));
         if (dd < pickD && !current) { pickD = dd; mapPick = pr.second; }
     }
@@ -486,6 +484,13 @@ void Game::renderStarMap() {
     for (int c = 0; c < STAR_CLASS_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
     std::string filt = solo < 0 ? "CLASSES: ALL" : fmt("CLASS: %s %s", STAR_CLASSES[solo].code, STAR_CLASSES[solo].name);
     drawText(canvas, 6, 13, filt.c_str(), solo < 0 ? HUD_DIM : HUD_AMBER);
+    {   // R-407 (the user's "green marker stars as unknown"): what the marks mean
+        const int hw = textWidth("HOME"), vw = textWidth("VISITED");
+        const int hText = UW - 6 - hw, hx = hText - 6, vText = hx - 12 - vw, bx = vText - 10, y = 13;
+        drawRectRGB(canvas, bx, y, bx + 6, y + 6, rgb(90, 150, 110)); drawText(canvas, vText, y, "VISITED", HUD_DIM);
+        drawLineRGB(canvas, hx - 3, y + 3, hx, y, HUD_AMBER); drawLineRGB(canvas, hx, y, hx + 3, y + 3, HUD_AMBER); drawLineRGB(canvas, hx + 3, y + 3, hx, y + 6, HUD_AMBER); drawLineRGB(canvas, hx, y + 6, hx - 3, y + 3, HUD_AMBER);
+        drawText(canvas, hText, y, "HOME", HUD_DIM);
+    }
     if (mapPick >= 0 && pickD < 40) {
         const Star& s = nb.stars[mapPick];
         Star full; starInSector(s.sx, s.sy, s.sz, full, true);
@@ -493,6 +498,11 @@ void Game::renderStarMap() {
         double ly = length(full.pos - ship.pos) / SECTOR_KM;
         std::string card = fmt("%s  %s %s  %.2f LY%s", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, ly, guide.visited.count(key) ? "  VISITED" : "");
         drawTextCentered(canvas, UW / 2, UH - 24, card.c_str(), nameIsForeign(key) ? HUD_CYAN : HUD_WHITE);
+        std::vector<std::string> w = worldNamesAt(key);   // R-407: the worlds named there
+        if (!w.empty()) {
+            std::string names; for (const std::string& n : w) names += (names.empty() ? "" : ", ") + upper(n);
+            drawTextCentered(canvas, UW / 2, UH - 33, trunc("YOUR WORLDS THERE: " + names, 52).c_str(), HUD_GREEN);
+        }
     }
     drawTextCentered(canvas, UW / 2, UH - 12, "MOUSE/WHEEL TURN/ZOOM  C/X CLASS  0 ALL  ENTER TARGET", HUD_DIM);   // S-02: 53 characters, the width of the frame
 }
@@ -555,56 +565,87 @@ void Game::renderStats() {
     line(fmt("NAMES GIVEN           %d   FROM OTHERS %d", (int)guide.names.size(), (int)guide.inbox.size()), HUD_GREEN);
     line(fmt("LOG ENTRIES           %d   PHOTOGRAPHS %d", (int)guide.log.size(), guide.screenshots), HUD_GREEN);
     line(fmt("CREATURES SIGHTED     %d SPECIES   SIGNALS HEARD %d", guide.creaturesSeen, (int)guide.signals.size()), HUD_GREEN);   // N3-01; C-07: the radar's locks
+    sub(guide.probesSent ? fmt("  PROBES SENT %d   DEEPEST DESCENT %.0f KM", guide.probesSent, guide.deepestProbeKm()) : std::string("  PROBES SENT 0"));   // X-04
     line(fmt("LONGEST DRIVE         %.2f KM   TOP SPEED %.0f KM/H", guide.longestDriveM / 1000.0, guide.topSpeedKmh), HUD_GREEN);   // N4-05
     int64_t hx, hy, hz;
     if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) { Star h; if (starInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN); }
     drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
 }
 
+// X-04: the photographs and the probes' recordings (each by its final image: shots/probe_<n>.png, a lent one drawn), in the order
+// they were taken: a photograph by its file's time, a recording by the time it came back (a lent one: its lending)
 void Game::openGallery() {
-    galleryFiles.clear();
+    galleryItems.clear();
+    std::vector<GalleryItem> photos, recs;
     std::string dir = shotsDir;
     DIR* d = opendir(dir.c_str());
     if (d) {
         struct dirent* ent;
         while ((ent = readdir(d)) != nullptr) {
             std::string n = ent->d_name;
-            if (n.rfind("screenshot_", 0) == 0 && n.size() > 4 && n.substr(n.size() - 4) == ".png") galleryFiles.push_back(dir + "/" + n);
+            if (n.rfind("screenshot_", 0) == 0 && n.size() > 4 && n.substr(n.size() - 4) == ".png") {
+                GalleryItem g; g.file = dir + "/" + n;
+                struct stat st;
+                if (stat(g.file.c_str(), &st) == 0) g.when = (long long)st.st_mtime;
+                photos.push_back(g);
+            }
         }
         closedir(d);
     }
-    std::sort(galleryFiles.begin(), galleryFiles.end(), [](const std::string& a, const std::string& b) {
+    std::sort(photos.begin(), photos.end(), [](const GalleryItem& a, const GalleryItem& b) {
         auto num = [](const std::string& s) { size_t p = s.rfind("screenshot_"); return atoi(s.c_str() + p + 11); };
-        return num(a) < num(b);
+        return num(a.file) < num(b.file);
     });
-    gallerySel = (int)galleryFiles.size() - 1;
+    for (int i = 0; i < (int)guide.probes.size(); i++) {
+        const ProbeRecord& r = guide.probes[i];
+        GalleryItem g; g.rec = i; g.when = r.saved;
+        if (!r.lent) { std::string f = fmt("%s/probe_%d.png", dir.c_str(), r.id); if (fileExists(f)) g.file = f; }
+        recs.push_back(g);
+    }
+    std::stable_sort(recs.begin(), recs.end(), [](const GalleryItem& a, const GalleryItem& b) { return a.when < b.when; });
+    size_t i = 0, j = 0;
+    while (i < photos.size() || j < recs.size()) galleryItems.push_back(j >= recs.size() || (i < photos.size() && photos[i].when <= recs[j].when) ? photos[i++] : recs[j++]);
+    gallerySel = (int)galleryItems.size() - 1;
     galleryLoaded = -1;
     state = GameState::GALLERY;
 }
 
 void Game::updateGallery(const Input& in) {
-    int n = (int)galleryFiles.size();
+    int n = (int)galleryItems.size();
     if (n > 0) {
         if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) gallerySel = (gallerySel + n - 1) % n;
         if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) gallerySel = (gallerySel + 1) % n;
+    }
+    if (n > 0 && enterKey(in) && galleryItems[gallerySel].rec >= 0) {   // X-04: a recording plays on the ship's screen
+        if (guideReturn == GameState::SURFACE) { status("THE RECORDINGS PLAY ON THE SHIP'S SCREEN", 3); audio.beep = 3; }
+        else openRecording(galleryItems[gallerySel].rec);
+        return;
     }
     if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) state = guideReturn;
 }
 
 void Game::renderGallery() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 235);
-    int n = (int)galleryFiles.size();
+    int n = (int)galleryItems.size();
     if (n == 0) { drawTextCentered(canvas, UW / 2, 90, "NO PHOTOGRAPHS YET - P TAKES ONE", HUD_DIM); drawTextCentered(canvas, UW / 2, UH - 10, "ESC CLOSE", HUD_DIM); return; }
+    gallerySel = clampi(gallerySel, 0, n - 1);
+    const GalleryItem& it = galleryItems[gallerySel];
+    const ProbeRecord* rec = it.rec >= 0 && it.rec < (int)guide.probes.size() ? &guide.probes[it.rec] : nullptr;
     if (galleryLoaded != gallerySel) {
         galleryLoaded = gallerySel;
-        galleryOk = readPNG(galleryFiles[gallerySel].c_str(), galleryPix, galleryW, galleryH);
         galleryCaption.clear();
-        std::string side = galleryFiles[gallerySel].substr(0, galleryFiles[gallerySel].size() - 4) + ".txt";
-        std::ifstream f(side);
-        if (f) std::getline(f, galleryCaption);
+        if (!it.file.empty()) galleryOk = readPNG(it.file.c_str(), galleryPix, galleryW, galleryH);
+        else if (rec) { recordingPoster(it.rec, galleryPix); galleryW = FBW; galleryH = FBH; galleryOk = galleryPix.size() == (size_t)FBW * FBH; }   // a lent recording: its last frame drawn
+        else galleryOk = false;
+        if (rec) galleryCaption = recordLine(*rec);
+        else {
+            std::string side = it.file.substr(0, it.file.size() - 4) + ".txt";
+            std::ifstream f(side);
+            if (f) std::getline(f, galleryCaption);
+        }
     }
     // the picture scaled into a 256x160 logical frame
-    const int fx = 32, fy = 12, fw = 256, fh = 160;
+    const int fx = 32, fy = 8, fw = 256, fh = 160;   // X-04: four up, the caption's second line clear of the keys
     int S = FB_SCALE;
     if (galleryOk && galleryW > 0) {
         for (int y = 0; y < fh * S; y++)
@@ -613,8 +654,14 @@ void Game::renderGallery() {
                 canvas.px[(size_t)(fy * S + y) * FBW + fx * S + x] = galleryPix[(size_t)sy * galleryW + sx];
             }
     } else drawTextCentered(canvas, UW / 2, 90, "CANNOT READ THIS FILE", HUD_RED);
-    drawRectRGB(canvas, fx - 1, fy - 1, fx + fw, fy + fh, HUD_DIM);
-    std::string name = galleryFiles[gallerySel].substr(galleryFiles[gallerySel].rfind('/') + 1);
+    drawRectRGB(canvas, fx - 1, fy - 1, fx + fw, fy + fh, rec ? (rec->lent ? HUD_CYAN : HUD_AMBER) : HUD_DIM);
+    if (rec) {
+        drawText(canvas, fx, fy + fh + 4, fmt("%d/%d  %s%s", gallerySel + 1, n, recordTitle(*rec).c_str(), rec->lent ? "  LENT" : "").c_str(), rec->lent ? HUD_CYAN : HUD_AMBER);
+        drawText(canvas, fx, fy + fh + 13, trunc(galleryCaption, 42).c_str(), HUD_GREEN);
+        drawTextCentered(canvas, UW / 2, UH - 8, "LEFT/RIGHT BROWSE  ENTER PLAYS  ESC CLOSE", HUD_DIM);
+        return;
+    }
+    std::string name = it.file.substr(it.file.rfind('/') + 1);
     drawText(canvas, fx, fy + fh + 4, fmt("%d/%d  %s", gallerySel + 1, n, upper(name).c_str()).c_str(), HUD_AMBER);
     drawText(canvas, fx, fy + fh + 13, trunc(galleryCaption, 42).c_str(), HUD_GREEN);
     drawTextCentered(canvas, UW / 2, UH - 8, "LEFT/RIGHT BROWSE   ESC CLOSE", HUD_DIM);

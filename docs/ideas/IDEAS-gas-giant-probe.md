@@ -85,3 +85,34 @@ The cloud-deck rendering is the real work: cloud tops as terrain is a known tric
 but being inside a deck with light coming through it is new. The rest reuses the capsule
 flow, the sky renderer, the frame recorder, the data sheet and the gallery. A milestone
 comparable to the drainage work, paying off on every gas giant in a galaxy with many.
+
+## Decided
+
+* X-01 (2026-10-07): unlimited probes, one falling at a time (the user's answer at the milestone's start). The probe goes
+  to the ground under the telescope's reticle (else under the ship), launched with the capsule's key; the cabin's landing
+  screen relays it; the fall runs on real time (the warp turns the sky, not the fall); the ship holds its parking or the
+  relay is cut; a falling probe is saved. The pace is the game's compression: seven or eight minutes falling free, about
+  four more with the chute, not twenty. `10-decisions.md` has the rest.
+* X-02 (2026-10-07): the stages drawn from fields of the decks round the aim point (the globe's bands sampled at the launch
+  lift the zones and drop the belts; cloud streets, convection cells, billows and thunderheads with anvils on the tops,
+  pouches under the bases, layers and caverns inside), seen as panoramas marched outward from the probe and as a fog
+  marched along the rays inside a deck, composited in RGB over the space renderer's sky (stars, the sun, the moons) with
+  the rings' arc, the cirrus racing on the jet in the band's colour, the lightning lighting a tower from within and
+  sometimes a channel through the clear band, the lamp's cone in the water deck and the deep. The pace stayed; Shift
+  runs it eight times as fast (R-406, the user's request on playing X-01). The storm's wall waits for X-03's storms.
+  `10-decisions.md` has the rest.
+* X-03 (2026-10-07): each giant its own. The decks are where the giant's adiabat crosses each cloud's condensation temperature
+  (methane, hydrogen sulphide, ammonia, ammonium hydrosulphide, water, the salts; one to three within reach), so a warm giant's
+  are high and few and a cold one's deep with methane on top; an ice giant is a small blue giant (a quieter fall, its methane's
+  blue light, its aurorae off the pole), a brown dwarf is lit from under its clouds; a young giant's deep glows dull red. The
+  storms are the globe's (each giant's share; a great storm of 10,000-24,000 km on one giant in four, its wall in the descent:
+  generation 12), the aurora's curtains hang over the clouds near the oval, a clear-air hole (a shaft to the next deck) and
+  diamond hail are rare, and on one giant in forty something large and pale passes the lamp once in the deep, never named.
+  `10-decisions.md` has the rest.
+* X-04 (2026-10-07): what comes back. The recording is the descent drawn again: the ship keeps the probe's numbers, the explorer's turns
+  of its camera and the game's clock along the fall, so the gallery plays it on the ship's screen (the readouts, the relay's sound, the
+  viewer free to look round, scrubbed by depth on a bar of the layers it found), wherever the ship is; its final image is written beside
+  the photographs. The profile is kept as measured (pressure, temperature, wind, light, lightning; the layers named by what the probe
+  found at its place) and drawn on the giant's data sheet, the giant's other probes dim beside it; the log keeps the storm, the great
+  storm's wall, the aurora, a hole and hail with their depths (never the sight); `N` names the storm it fell into; the statistics count
+  the probes sent and the deepest descent; the guide's export lends the recordings like the shards. `10-decisions.md` has the rest.

@@ -57,6 +57,11 @@ struct AudioState {
     // people's transmission carries (RP_*, galaxy/signals.h; -1 none: the carrier alone) and the signal's seed, from which the
     // synth draws the signal's own voice (no two pulsars thump alike) and the machines' patterns; `pieceSpeed` slows the piece
     int radarVoice = -1; uint64_t radarSeed = 0; double pieceSpeed = 1;
+    // X-01 the probe's relay: how much of it is heard (1 on the probe's screen, a murmur from the landing screen in the cabin), the
+    // stage (PS_*), the air's rush (0..1), the entry's heat, the chute's flutter, the depth (0..1: the dark's rumble and the hull's
+    // creaks), the link (1 clear .. 0 failing: the static), a thunderclap's strength (one-shot) and the loss of signal (the hiss)
+    double probe = 0, probeWind = 0, probeHeat = 0, probeChute = 0, probeDepth = 0, probeSignal = 1, probeThunder = 0;
+    int probeStage = 0; bool probeLost = false;
 };
 
 class AudioSynth {
@@ -108,6 +113,11 @@ private:
     double rdCueT = -1, rdCuePh = 0, rdCueLp = 0;   // the cue at a speech's start: a numbers station's chime, a loop's relay
     double rdChantAmp = 0, rdChantPh[3] = {0, 0, 0}, rdNumPh = 0, rdLoopPh = 0, rdWhBr = 0;
     std::vector<float> rdWow; size_t rdWowI = 0; double rdWowT = 0;
+    // X-01 the probe's relay: the link's hiss and ticks, the air's rush, the entry's roar and crackle, the chute's flutter, the deep's
+    // rumble, the hull's creaks, the thunder through the relay
+    double prLvl = 0, prHp = 0, prWindLp = 0, prWindLp2 = 0, prHeatLp1 = 0, prHeatLp2 = 0, prRum1 = 0, prRum2 = 0, prTick = 0, prChutePh = 0;
+    double prCreakT = -1, prCreakNext = 5, prCreakPh = 0, prCreakF = 80, prThunT = -1, prThunAmp = 0, prThunLp1 = 0, prThunLp2 = 0, prCrackle = 0;
+    double probeSample(double dt, AudioState& st);
     double beepT = -1; int beepKind = 0;
     // C-04 the music: ten voices, each a note of a timbre, and the piece's clock in beats
     struct MVoice { bool on = false; double t = 0, gate = 0, f = 0, fFrom = 0, vel = 0, lp = 0, lastEnv = 0; double ph[6] = {0, 0, 0, 0, 0, 0}; const Timbre* tb = nullptr; int kind = -1; };

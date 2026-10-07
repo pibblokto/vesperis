@@ -432,6 +432,51 @@ void StarNeighborhood::update(const Vec3& posKm) {
             }
 }
 
+bool nearestStarTo(const Vec3& p, int radius, Star& out, uint64_t skipSeed) {
+    int64_t cx = sectorOf(p.x), cy = sectorOf(p.y), cz = sectorOf(p.z);
+    double best = 1e300; bool found = false;
+    for (int64_t x = cx - radius; x <= cx + radius; x++)
+        for (int64_t y = cy - radius; y <= cy + radius; y++)
+            for (int64_t z = cz - radius; z <= cz + radius; z++) {
+                Star s;
+                if (!starInSector(x, y, z, s, false) || (skipSeed && s.seed == skipSeed)) continue;
+                double d = length2(s.pos - p);
+                if (d < best) { best = d; out = s; found = true; }
+            }
+    return found;
+}
+
+// the end of the line first; a cube of 21 sectors is searched (1.4 ms at home) only where the density says it holds half a star or
+// more, else the point comes back ten light years and the density is asked again (70 ns): a jump out of the disc costs a few
+// thousand questions at most
+bool jumpTarget(const Vec3& from, const Vec3& dir, double ly, Star& out, double& shortLy, uint64_t skipSeed) {
+    ly = clampd(ly, 0, JUMP_MAX_LY);
+    const int R = 10;
+    const double cube = (2.0 * R + 1) * (2.0 * R + 1) * (2.0 * R + 1);
+    for (double back = 0;; back = std::min(ly, back + 10)) {
+        Vec3 q = from + dir * ((ly - back) * SECTOR_KM);
+        bool last = back >= ly;
+        if (last || galaxyDensity(q.x / SECTOR_KM, q.y / SECTOR_KM, q.z / SECTOR_KM) * cube >= 0.5) {
+            if (nearestStarTo(q, R, out, skipSeed)) { shortLy = back; return true; }
+        }
+        if (last) return false;
+    }
+}
+
+std::string galacticHeading(const Vec3& from, const Vec3& dir) {
+    if (dir.y > 0.766) return "NORTH OUT OF THE DISC";   // fifty degrees out of the plane
+    if (dir.y < -0.766) return "SOUTH OUT OF THE DISC";
+    double hl = std::sqrt(dir.x * dir.x + dir.z * dir.z), cx = GALAXY_CENTRE_SX - from.x, cz = GALAXY_CENTRE_SZ - from.z, cl = std::sqrt(cx * cx + cz * cz);
+    if (hl < 1e-9 || cl < 1e-9) return "ALONG THE DISC";
+    double c = (dir.x * cx + dir.z * cz) / (hl * cl);
+    return c > 0.707 ? "COREWARD" : (c < -0.707 ? "RIMWARD" : "ALONG THE DISC");
+}
+
+double vimanaSeconds(double ly) {
+    ly = std::max(0.0, ly);
+    return ly <= 100 ? 7.0 + 2.0 * std::sqrt(ly) : 27.0 + 6.0 * std::log2(ly / 100.0);
+}
+
 const Star* StarNeighborhood::nearest(const Vec3& posKm, double* distOut) const {
     const Star* best = nullptr;
     double bd = 1e300;

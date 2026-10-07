@@ -687,6 +687,17 @@ std::string StarSystem::bodyLabel(int i) const {
 // R-402: the magnetic field, the star's storms and the aurora they make
 const char* const MAGNETIC_CLASS_NAMES[4] = {"NONE", "WEAK", "MODERATE", "STRONG"};
 
+bool isIceGiant(const Body& b) { return b.type == PT_GASGIANT && b.radiusKm < 45000 && b.color.b > b.color.r + 0.05f; }
+
+double cometRefKm(const StarSystem& sys) {
+    return sys.bodies.empty() ? AU_GAME_KM : std::max(AU_GAME_KM * 0.5, sys.bodies[0].type == PT_COMET ? AU_GAME_KM : sys.bodies[0].orbitRadiusKm);
+}
+
+double cometActivityAt(const StarSystem& sys, double distKm) {
+    double refKm = cometRefKm(sys);
+    return clampd((refKm * 1.6 / distKm) * (refKm * 1.6 / distKm), 0, 1);
+}
+
 double magneticField(const Body& b) {
     double u = unitFromHash(hashCombine(b.seed, 0x3A6F));
     double hours = std::fabs(b.rotPeriod) / 3600.0;

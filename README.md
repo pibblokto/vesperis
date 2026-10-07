@@ -31,6 +31,16 @@ a voice and a musical tradition of the world's own. A signal radar on the ship
 points at the worlds that still transmit. Saves from 1.0.0 load, but the galaxy
 was rebuilt: a saved star may be gone.
 
+1.2.0 adds time and witness: an almanac of the coming events (sunrises, eclipses,
+moonrises, a front's arrival, a meteor shower's peak) that runs the clock to
+them; a telescope on the ship; weather fronts that move and arrive; nights with
+meteor showers, the zodiacal light and earthshine; and probes dropped into gas
+giants, each giant with its own decks, storms and glow, whose descents come back
+as recordings in the gallery and profiles on the data sheet. The Vimana jumps
+any number of light years along the aim, and on the ground a scanner points to
+ruins, lakes, peaks and the other sights while the explorer marks and names
+what they find on the sector map. The giants were regenerated (generation 12).
+
 ## Playing
 
 Download the build for your machine from the
@@ -81,20 +91,21 @@ In space:
 | Key | Action |
 | --- | --- |
 | Mouse / arrows | Look around |
-| `R` | Remote target: aim at a star, `Enter` or click to lock; `N` cycles the nearest stars |
+| `R` | Remote target: aim at a star, `Enter` or click to lock; `N` cycles the nearest stars; type light years and `Enter` to jump that far along the aim |
 | `V` | Vimana flight to the remote target (`V` again aborts) |
 | `L` / click | Local target: next body, then the asteroid belts / the body under the crosshair |
 | `Tab` | Solar system analyzer (bodies and belts; `Enter` approaches, `L` targets) |
 | `Enter` | Fine approach to the local target |
 | `X` | Center the view on the local target |
-| `O` | Toggle orbit / fixed point chase |
+| `Z` | The telescope (zoom, the reticle, photographs) |
+| `O` | Toggle orbit / fixed point chase; `Shift`+arrows carry the parked ship round its world |
 | `F` | Field amplificator (brighter star field) |
 | `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import) / star map / expedition log |
-| `C` | Deploy the surface capsule (from orbit around a landable world) |
+| `C` | Deploy the surface capsule (from orbit around a landable world), or drop a probe into a gas giant |
 | `B` | The signal radar (the sweep, lock a signal, its distance and age) |
 | `E` at the cabin's back wall | The shard decoder: read, hear and play what the ruins held, name a piece with `N` |
 | `I` (`F2`) | Data sheet of the local target |
-| `T` | Time warp x1 / x10 / x100 / x1000 / x10000 |
+| `T` / `Ctrl+T` | Time warp x1 / x10 / x100 / x1000 / x10000 / the almanac |
 | `Ctrl+S` / `Ctrl+L` (`F5` / `F9`) | Save / load |
 | `Ctrl+P` / `Ctrl+Shift+P` / `Ctrl+R` | Photo mode / panorama / frame recorder to `movies/` |
 | `Ctrl+K` / `Ctrl+F` / `P` (`F10` / `F11` / `F12`) | Scanlines / fullscreen (also `Alt+Enter`) / screenshot (saved in `shots/`) |
@@ -123,15 +134,18 @@ On the surface:
 | `C` / `Z` | Crouch / stand tall (hold) |
 | `Ctrl` | Dive while swimming |
 | `B` | Unfold a buggy next to the capsule; `E` gets in and out; `W/S` drive, `A/D` steer, `Space` brake; `V` outside view |
+| `F` | Launch the drone from the capsule (`Space` lifts off, `W/S` thrust, `A/D` turn) |
 | `M` | Set a waypoint on the spot under the crosshair, or clear it |
 | `Q` / `E` | Board the capsule when standing next to it (return to orbit); `E` also takes a shard from a ruin |
 | `K` | Call the capsule to your position |
-| `N` | Sector map (2 km to 2048 km wide, `+`/`-` zoom, `M` places the waypoint); the sights you have found appear on it |
-| `G` | The GUIDE: name the world or the nearest landmark, write a note |
+| `R` / `Shift+R` | The scanner: ruins, lakes, peaks, craters, canyons, mesas, geysers, crystals, off / leave out or take in what you have marked |
+| `L` | Mark the spot under the crosshair and name it |
+| `N` | Sector map (2 km to 2048 km wide): a cursor (arrows or mouse), `Enter` marks or renames, `Delete` twice removes, `M` places the waypoint, `Tab` the next mark, `+`/`-` zoom |
+| `G` | The GUIDE: name the world, write a note |
 | `V` | Vision modes |
 | `X` | Highlight nearby creatures |
 | `I` (`F2`) | Environment data sheet |
-| `T` / `Ctrl+T` | Time warp / a 25 s time-lapse |
+| `T` / `Ctrl+T` | Time warp / the almanac |
 | `Ctrl+S` / `Ctrl+L` | Save / load |
 
 The expedition is saved to `vesperis_save.txt` in the working directory when

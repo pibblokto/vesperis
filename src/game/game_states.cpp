@@ -15,9 +15,9 @@ const int SETTINGS_ITEMS = 19;   // plus BACK (N5-05 added KEY BINDINGS)
 struct KeyAction { int key; const char* label; };
 static const KeyAction KEY_ACTIONS[] = {
     {KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"}, {KEY_LEFT_SHIFT, "SPRINT"},
-    {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
-    {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "TIME WARP"}, {KEY_R, "AIM AT A STAR"},
-    {KEY_L, "LOCAL TARGET"}, {KEY_TAB, "ANALYZER"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
+    {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
+    {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"}, {KEY_R, "AIM / SCANNER"},
+    {KEY_L, "TARGET / MARK"}, {KEY_TAB, "ANALYZER"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 
 }
@@ -106,7 +106,11 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         logEvent("GRAVE", fmt("A GRAVE OUTSIDE %s ON %s: %s", where, upper(bodyNameOf(surf.site.body)).c_str(), what.c_str()));
         audio.beep = 4;
     }
-    noteLandmarks();   // O6-06
+    if (in.wasPressed(KEY_R) && !in.ctrl()) { if (in.shift()) scanToggleSkip(); else scanCycle(); }   // R-408: the scanner
+    if (in.wasPressed(KEY_L) && !in.ctrl()) {   // R-408: a mark at what the crosshair rests on (the rangefinder's spot), else at the feet
+        if (surf.lastRange > 0) beginMark(surf.lastRangeX, surf.lastRangeZ); else beginMark(surf.player.x, surf.player.z);
+        return;
+    }
     if (in.wasPressed(KEY_G) && !in.ctrl()) { openGuide(); return; }
     if (in.wasPressed(KEY_J) && !in.ctrl()) { guideReturn = GameState::SURFACE; returnState = GameState::SURFACE; logPage = 0; state = GameState::LOG; return; }
     // M8-06: E enters or leaves the buggy when it is close, otherwise boards the capsule; R-403: the drone the same, on the ground
@@ -147,7 +151,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         static const char* names[] = {"NORMAL VISION", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
         visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = 4;
     }
-    if (in.wasPressed(KEY_N) && !in.ctrl()) { returnState = GameState::SURFACE; state = GameState::SECTOR_MAP; audio.beep = 4; return; }   // M4-02
+    if (in.wasPressed(KEY_N) && !in.ctrl()) { returnState = GameState::SURFACE; state = GameState::SECTOR_MAP; mapCurX = surf.player.x; mapCurZ = surf.player.z; mapDelMark = -1; audio.beep = 4; return; }   // M4-02; R-408: the cursor on the explorer
     if (in.wasPressed(KEY_X) && !in.ctrl()) { surf.highlightUntil = realTime + 4.0; status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3); }   // M4-05/N3-06
     // N3: first sightings go to the log and the statistics
     for (const std::string& sg : surf.sightings) {
@@ -231,6 +235,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         audio.insects = (surf.site.gen.type == PT_FELISIAN && waterNear2 && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
     }
     audio.rain = std::max(surf.env.rain, surf.env.hail);
+    updateForecast();   // W-03
     if (surf.env.dust > 0.05) audio.wind = std::min(1.0, audio.wind + 0.8 * surf.env.dust);
     if (surf.eruptionCue > 0) { audio.thunder = 0.6; surf.eruptionCue = 0; }
     audio.lava = surf.site.gen.type == PT_MOLTEN ? 0.4 : (surf.site.gen.type == PT_TECTONIC ? 0.35 + 0.6 * surf.quake : 0);   // R-307: the tectonic world rumbles, more so in a quake
@@ -258,17 +263,17 @@ void Game::renderHelp() {
         "THE SHIP; E USES A CONSOLE, A SCREEN, THE SHARD",
         "DECODER (BACK WALL) OR THE CAPSULE",
         "U LIGHT  Y GLASS HULL  PGUP/PGDN ROOF DECK",
-        "R             AIM AT A STAR (ENTER LOCKS THE TARGET)",
-        "N             (WHILE AIMING) NEXT NEAREST STAR",
+        "R             AIM AT A STAR: N NEXT, ENTER LOCKS IT",
+        "R, DIGITS, ENTER  JUMP THAT MANY LY ALONG THE AIM",
         "V             VIMANA FLIGHT TO THE REMOTE TARGET",
-        "L / CLICK     LOCAL TARGET: BODIES, THEN BELTS / CLICK",
-        "TAB           SOLAR SYSTEM ANALYZER (BODIES AND BELTS)",
+        "L / CLICK     LOCAL TARGET: BODIES, THEN BELTS",
+        "TAB           THE ANALYZER: BODIES AND BELTS",
         "ENTER         FINE APPROACH TO THE LOCAL TARGET",
-        "X             CENTER VIEW ON THE LOCAL TARGET",
-        "B             RADAR CAMERA: SWEEP, HOLD A RISE, ENTER FLIES",
-        "O             ORBIT / FIXED POINT CHASE   F  FIELD AMP.",
-        "G / M / J     GUIDE / STAR MAP / LOG   C  THE CAPSULE",
-        "I             DATA SHEET   T  TIME WARP (ORBITS MOVE)",
+        "X  CENTER ON TARGET   Z  TELESCOPE   F  FIELD AMP.",
+        "B             THE RADAR: HOLD A RISE, ENTER FLIES",
+        "O  ORBIT / CHASE   SHIFT+ARROWS  ROUND THE WORLD",
+        "G / M / J  GUIDE/STAR MAP/LOG  C CAPSULE / PROBE",
+        "I  DATA SHEET  T  TIME WARP  CTRL+T  THE ALMANAC",
         "CTRL+S / L    SAVE / LOAD         P  SCREENSHOT",
         "CTRL+K / F    SCANLINES / FULLSCREEN   ESC MENU",
         "F1 F2 F5 F9 F10 F11 F12 DO THE SAME (MAC: HOLD FN)",
@@ -281,19 +286,18 @@ void Game::renderHelp() {
         "1-9 / 0       AUTOWALK SPEED / STOP    C CROUCH",
         "Z (HOLD)      STAND TALL    CTRL (SWIMMING) DIVE",
         "B / F         A (NEW) BUGGY / DRONE AT THE CAPSULE",
-        "E             GET IN / OUT, TAKE A SHARD, OR BOARD",
-        "              THE CAPSULE (Q TOO)",
+        "E             IN/OUT, A SHARD, THE CAPSULE (Q TOO)",
         "  BUGGY: W/S DRIVE  A/D STEER  SPACE BRAKE  V VIEW",
         "  DRONE: SPACE LIFTS OFF  W/S THRUST  A/D TURN",
         "         SPACE / SHIFT CLIMB, DESCEND, LAND  V VIEW",
         "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
-        "M             WAYPOINT UNDER THE CROSSHAIR / CLEAR IT",
-        "K             CALL THE CAPSULE TO YOUR POSITION",
-        "I (F2)        ENVIRONMENT DATA   T  TIME WARP",
-        "CTRL+S        SAVE  P SCREENSHOT  H HELP  ESC MENU",
-        "N             SECTOR MAP (+/- ZOOM, M WAYPOINT)",
-        "G             THE GUIDE: NAME THE WORLD OR A LANDMARK",
-        "PAGE 2/2 - SPACE: PREVIOUS PAGE, ANY OTHER KEY: CLOSE"};
+        "M  WAYPOINT AT THE CROSSHAIR   K  CALL THE CAPSULE",
+        "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
+        "L             MARK WHERE THE CROSSHAIR RESTS",
+        "N             MAP: CURSOR, ENTER MARKS, +/- ZOOM",
+        "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
+        "CTRL+S  SAVE  P PHOTO  G GUIDE  H HELP  ESC MENU",
+        "PAGE 2/2 - SPACE: PREVIOUS PAGE, OTHER KEYS: CLOSE"};
     static const char* page2[] = {
         "CREDITS", "",
         "VESPERIS",
@@ -480,7 +484,43 @@ void Game::renderSystemList() {
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN SELECT  ENTER APPROACH  L TARGET  ESC CLOSE", HUD_DIM);
 }
 
+// W-03: the forecast at the feet
+void Game::updateForecast() {
+    if (!surf.valid || !sys.valid || surf.site.body < 0 || surf.site.body >= (int)sys.bodies.size()) return;
+    const Body& b = sys.bodies[surf.site.body];
+    if (!worldHasFronts(b)) { forecast.clear(); forecastBody = surf.site.body; forecastT = t; return; }
+    if (forecastBody == surf.site.body && (std::fabs(t - forecastT) < 30 || realTime - forecastReal < 0.5)) return;   // thirty seconds of game time, and twice a second of ours under a warp
+    frontsAhead(b, surf.site.unitAt(surf.player.x, surf.player.z), t, 5 * 86400.0, forecast);
+    forecastBody = surf.site.body; forecastT = t; forecastReal = realTime;
+}
+
+std::string Game::forecastLine() const {
+    if (!surf.valid || !sys.valid || surf.site.body < 0 || surf.site.body >= (int)sys.bodies.size()) return "";
+    const Body& b = sys.bodies[surf.site.body];
+    if (!worldHasFronts(b)) return "";
+    for (const FrontForecast& f : forecast) {
+        if (f.tClear <= t) continue;
+        if (f.tArrive <= t) return fmt("IN A %sFRONT, CLEARING IN %s", f.dust ? "DUST " : "", countdownString(f.tClear - t).c_str());
+        const char* what = f.dust ? "DUST" : (b.type == PT_QUARTZ ? "A FRONT" : (surf.env.temperatureC < -1 ? "SNOW" : "RAIN"));
+        return fmt("%s FROM THE %s IN %s", what, frontCompass(f.fromBearing), countdownString(f.tArrive - t).c_str());
+    }
+    return "NO FRONT WITHIN 5 DAYS";
+}
+
+std::string Game::testFrontInfo() const {
+    if (!surf.valid) return "no surface";
+    const SurfaceEnvironment& e = surf.env;
+    return fmt("forecast '%s'; line %s, ahead %s, cloud %.2f (pattern %.2f), rain %.2f, cold %.1f C, wind %.0f kt %s, temp %+.0f C, fog %.0f m",
+               forecastLine().c_str(), surf.localFront.on ? "on" : "off", e.frontAhead < 1e17 ? fmt("%.1f km", e.frontAhead / 1000).c_str() : "none",
+               e.frontCloud, e.cloudPattern, e.frontRain, e.frontCold, e.windKnots, compassName(e.windDir), e.temperatureC, e.fogDistance);
+}
+
 void Game::renderDataSheet() {
+    if (dataPage > 0) {   // X-04: a probe's profile
+        const std::vector<int> pr = dataProbes();
+        if (dataPage <= (int)pr.size()) { renderProbeProfile(pr[dataPage - 1]); return; }
+        dataPage = 0;
+    }
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     int bi = state == GameState::DATA && surf.valid && returnState == GameState::SURFACE ? surf.site.body : ship.localTarget;
     int y = 10;
@@ -507,7 +547,7 @@ void Game::renderDataSheet() {
         line(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
         line(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
         for (const std::string& ww : wrapText(upper(describeStar(sys.star)), 50)) line(ww, HUD_DIM);
-        drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, "T THE ALMANAC  ANY OTHER KEY CLOSES", HUD_DIM);
         return;
     }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { drawTextCentered(canvas, UW / 2, 90, "NO LOCAL TARGET", HUD_DIM); return; }
@@ -559,6 +599,8 @@ void Game::renderDataSheet() {
         auto hours = [&](double secs) { return secs < 0 ? std::string("-") : (secs > 48 * 3600 ? fmt("%.0f D", secs / 86400) : fmt("%.0f H", secs / 3600)); };
         if (b.axialTilt > 0.5 * DEG) line(fmt("SEASON      DECL %+.1f%c  %s  EQUINOX IN %s  SOLSTICE IN %s", dec / DEG, CH_DEGREE, dayLen.c_str(), hours(toEq).c_str(), hours(toSol).c_str()), HUD_AMBER);
         else line(fmt("SEASON      NONE (NO TILT)  %s", dayLen.c_str()), HUD_AMBER);
+        bool forecastShown = false;
+        { std::string fc = forecastLine(); if (!fc.empty()) { line(fmt("FORECAST    %s", fc.c_str()), HUD_AMBER); forecastShown = true; } }   // W-03
         std::string sky;
         int nsky = 0;
         Mat3 L = surf.site.localFrame(t);
@@ -585,12 +627,12 @@ void Game::renderDataSheet() {
                 life += (life.empty() ? "" : ", ") + upper(sp.name) + (surf.seenSpecies.count(i) ? "*" : "") + " (" + shortPlan(sp.plan) + ")";
             }
             std::vector<std::string> ws = wrapText("LIFE        " + life, 52);
-            for (size_t w = 0; w < ws.size() && w < 3; w++) line(ws[w], HUD_AMBER);
+            for (size_t w = 0; w < ws.size() && w < (forecastShown ? 2u : 3u); w++) line(ws[w], HUD_AMBER);   // W-03: the forecast takes the third life line's row (the sheet was already past the frame on a world of many species)
         }
     }
     if (settings.clockMode == 1) line("CLOCK       REAL TIME (UTC)", HUD_DIM);
     line(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
     line(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
     for (const std::string& w : wrapText(upper(describeStar(sys.star)), 50)) line(w, HUD_DIM);
-    drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
+    drawTextCentered(canvas, UW / 2, UH - 10, dataProbes().empty() ? "T THE ALMANAC  ANY OTHER KEY CLOSES" : "T THE ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES", HUD_DIM);   // X-04: a giant's probes
 }

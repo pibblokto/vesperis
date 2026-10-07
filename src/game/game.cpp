@@ -17,6 +17,8 @@
 #include "core/png.h"
 #include "core/fs.h"
 
+Game::~Game() { if (migrateThread.joinable()) migrateThread.join(); }
+
 Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
     canvas.px = rgbBuf.data(); canvas.w = FBW; canvas.h = FBH;
     spaceR.proj = Proj::fromHFov(70);
@@ -59,13 +61,14 @@ void Game::applySettings() {
 }
 
 bool Game::mouseCaptureWanted() const {
-    return state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::STAR_MAP;
+    return state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::STAR_MAP || state == GameState::SECTOR_MAP;   // R-408: the mouse moves the map's cursor
 }
 
 void Game::status(const std::string& m, double secs) { statusMsg = m; statusUntil = realTime + secs; }
 
-std::string Game::epocString() const {
-    double secs = t;
+std::string Game::epocString() const { return epocOf(t); }
+
+std::string Game::epocOf(double secs) {
     int epoc = 6011 + (int)(secs / 1e9);
     int sinister = (int)std::fmod(secs / 1e6, 1000.0);
     int medius = (int)std::fmod(secs / 1e3, 1000.0);
@@ -132,8 +135,11 @@ double Game::testDriveOpen() {
 void Game::newGame() {
     t = 3.6e6;
     timeWarp = 1;
+    almanacRunning = false;   // W-01
+    telescopeOff(); tele = TelescopeState();   // W-06
     radarOff(); radar = RadarState();   // C-07
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10
+    probe = ProbeState();   // X-01: a new expedition sends nothing
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -191,7 +197,7 @@ void Game::handleGlobalKeys(const Input& in) {
     if (in.wasPressed(KEY_F11) || (in.ctrl() && in.wasPressed(KEY_F)) || (in.alt() && in.wasPressed(KEY_ENTER))) wantsFullscreenToggle = true;
     if (in.wasPressed(KEY_F10) || (in.ctrl() && in.wasPressed(KEY_K))) { settings.scanlines = !settings.scanlines; settings.save(settingsPath); status(settings.scanlines ? "SCANLINES ON" : "SCANLINES OFF", 2); }
     // M6-05 photo tools
-    bool scene = state == GameState::SPACE || state == GameState::SURFACE;
+    bool scene = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::PROBE || state == GameState::RECORDING;   // X-01: the probe's camera too; X-04: a recording
     if (in.ctrl() && in.wasPressed(KEY_P) && !in.shift() && scene) togglePhotoMode();
     if (in.ctrl() && in.wasPressed(KEY_P) && in.shift() && scene) wantsPanorama = true;
     if (in.ctrl() && in.wasPressed(KEY_R) && scene) toggleRecording();
@@ -253,19 +259,29 @@ void Game::frame(const Input& in, double realDt) {
     if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
     if (audio.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the music plays on the decoder screen only (C-07: or through the radar)
     if (audio.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                     // C-05: the voice too
-    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP)) radarOff();   // C-07: a ship's instrument, off the ship
+    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE)) radarOff();   // C-07: a ship's instrument, off the ship
+    if (tele.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE)) telescopeOff();   // W-06: stowed off the window
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
+    collectMigration();   // R-408: the named sights found on the thread become marks
     bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
-                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS;
+                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS || state == GameState::PROBE;
     if (in.wasPressed(KEY_T) && simulating) {
-        if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
-        else if (in.ctrl()) { timeLapse = true; timeLapseUntil = realTime + 25; timeWarp = 600; status("TIME-LAPSE X600 FOR 25 S", 3); }   // M5-06
-        else { timeLapse = false; timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); }
+        if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }   // W-01: the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
+        else if (almanacRunning) almanacStop(false);
+        else if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
+        else { timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); }
     }
-    if (timeLapse && realTime >= timeLapseUntil) { timeLapse = false; timeWarp = 1; status("TIME-LAPSE OVER - X1", 2); }
+    if (almanacRunning && settings.clockMode == 1) almanacStop(false);   // W-01: the wall clock cannot be run
+    bool running = almanacRunning && simulating && state != GameState::ALMANAC;
+    if (running) timeWarp = almanacWarpFor(almanacRunT - t);   // W-01: the run's warp falls as the moment nears
     double dt = realDt * (simulating ? timeWarp : 0);
+    bool arrived = running && dt >= almanacRunT - t;
+    if (arrived) dt = std::max(0.0, almanacRunT - t);   // the clock lands on the event
     if (simulating) { if (settings.clockMode == 1) t = wallClockT(); else t += dt; }   // M5-05
+    if (arrived) almanacStop(true);
     if (simulating) { autosaveTimer += realDt; if (autosaveTimer >= 300) { autosave(); autosaveTimer = 0; } }
+    probe.fast = state == GameState::PROBE && in.shift() && probe.endClock < 0;   // R-406: Shift held on the probe's screen, this frame's clock x8
+    if (simulating) updateProbe(realDt);   // X-01: the probe falls on the relay's clock (real time) wherever the explorer is aboard
     // state logic
     switch (state) {
         case GameState::TITLE:
@@ -284,7 +300,7 @@ void Game::frame(const Input& in, double realDt) {
             if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
             break;
         case GameState::SPACE:
-            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); } else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }   // C-07: Esc leaves the radar camera
+            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); } else if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); } else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }   // C-07: Esc leaves the radar camera; W-06: and the telescope
             if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; break; }
             if (saveKey(in)) { saveSlot(currentSlot); break; }
             if (loadKey(in)) { loadSlot(currentSlot); break; }
@@ -348,6 +364,9 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
         case GameState::SHARDS: updateShards(in, realDt); updateShipMotion(dt); break;   // C-06
         case GameState::SECTOR_MAP: updateSectorMap(in); break;
+        case GameState::ALMANAC: updateAlmanac(in); break;   // W-01
+        case GameState::PROBE: updateProbeScreen(in, dt, realDt); break;   // X-01
+        case GameState::RECORDING: updateRecording(in, realDt); break;     // X-04
         case GameState::SYSTEM_LIST: {
             int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // O3: the belts follow the bodies
             if (n == 0) { state = GameState::SPACE; break; }
@@ -360,12 +379,16 @@ void Game::frame(const Input& in, double realDt) {
             break;
         }
         case GameState::DATA: {
+            if (in.wasPressed(KEY_T) && dataPage == 0) { openAlmanac(); break; }   // W-01: the sheet opens the almanac of the place
+            const int pages = 1 + (int)dataProbes().size();   // X-04: a giant's sheet, then its probes' profiles
+            if (pages > 1 && (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_LEFT))) { dataPage = (dataPage + (in.wasPressed(KEY_RIGHT) ? 1 : pages - 1)) % pages; break; }
             bool any = false;
             for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-            if (any) state = returnState;
+            if (any) { state = returnState; dataPage = 0; }
             break;
         }
     }
+    probeAudio();   // X-01: the relay's sound for this frame
     // rendering
     switch (state) {
         case GameState::TITLE: renderSpace(); renderTitle(); break;
@@ -374,6 +397,11 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::DESCENT:
         case GameState::ASCENT: renderSurfaceScene(); drawVisor(HUD_DIM); drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER); break;
         case GameState::SURFACE: renderSurfaceScene(); if (!photoMode) renderSurfaceHUD(); break;
+        case GameState::PROBE: renderProbe(); break;   // X-01: the probe's camera
+        case GameState::RECORDING: renderRecording(); break;   // X-04: a probe's recording
+        case GameState::ALMANAC:   // W-01: over the scene it was opened from (the landing map keeps its picture)
+            if (almanacScene == 2) renderLandingMap(); else if (almanacScene == 1 && surf.valid) renderSurfaceScene(); else renderSpace();
+            renderAlmanac(); break;
         case GameState::HELP:
         case GameState::MENU:
         case GameState::SETTINGS:
@@ -391,6 +419,11 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::DATA:
         case GameState::KEYS:
         case GameState::SHARDS:
+            if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // X-04: naming the storm over the probe's screen
+                if (guideReturn == GameState::PROBE) renderProbe(); else renderRecording();
+                renderTextEntry();
+                break;
+            }
             if (returnState == GameState::SURFACE || (surf.valid && returnState == GameState::SURFACE)) renderSurfaceScene();
             else if (returnState == GameState::TITLE) { renderSpace(); renderTitle(); }
             else renderSpace();
@@ -400,7 +433,7 @@ void Game::frame(const Input& in, double realDt) {
             else if (state == GameState::KEYS) renderKeysScreen();
             else if (state == GameState::SLOTS) renderSlots();
             else if (state == GameState::GUIDE) renderGuideMenu();
-            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); renderTextEntry(); }   // C-04: naming a piece, over the decoder
+            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); else if (guideReturn == GameState::SECTOR_MAP) renderSectorMap(); renderTextEntry(); }   // C-04: naming a piece, over the decoder; R-408: a mark, over the map
             else if (state == GameState::STAR_MAP) renderStarMap();
             else if (state == GameState::LOG) renderLog();
             else if (state == GameState::STATS) renderStats();
