@@ -1,0 +1,373 @@
+R"VG(
+# modern7.vg (H-04, the second pass): the lyrics of a song on a disc. A verse is a couplet: a scene of that people's town (its trams and
+# quarters, its feasts, its food sold from carts, its river, its crafts) and an image to answer it, each line made of parts; the chorus is
+# the song's own and comes back (`keep`), each people with its own few (`people=5`): one people sings of its river, another of its
+# sacred colour, a third of its trams.
+
+genre.lyrics (words=30..90)
+  {ly.verse}\n{ly.chorus}\n{ly.verse}\n{ly.chorus}
+  {ly.verse}\n{ly.chorus}\n{ly.bridge}\n{ly.chorus}
+  {ly.verse}\n{ly.verse}\n{ly.chorus}
+  {ly.verse}\n{ly.chorus}\n{ly.verse}\n{ly.bridge}\n{ly.chorus}
+
+ly.verse
+  (4) {ly.a}\n{ly.b}
+  (once stage>=1) They say the water's going, they say a lot of things,\nI say hold on to me, {ly.hold},
+  (once stage>=1) They're closing the line to the outer towns,\nand your {ly.kin} is still out there with the {herd},
+
+# ---- the scene ----------------------------------------------------------------------------------------------------------------
+
+ly.a (share=0.6)
+  I met you {ly.where} {ly.when},
+  We grew up {ly.grew},
+  There's a {msg.transit} out of {$home} {ly.every},
+  My {ly.kin} said the {crop} was {ly.better} then,
+  You wore your {colour.any} {garment.n} to {feast.custom},
+  The {bird} came back to the {ly.roofs} of {$home},
+  Your {ly.kin} sold {food} from a {ly.cart} on {streets.of},
+  We used to {ly.swim} in {river} when the {ly.summers} were long,
+  I learned the {craft} from my {ly.kin}'s hands,
+  We danced till the {fuel} ran out {ly.inwhere},
+  They shut the {craft} works on a morning in {season.now},
+  I keep your old {vessel.one.n} on the {ly.shelf},
+  Down where {river} runs under the {ly.road},
+  We sat on the steps of {holyplace} {ly.howlong},
+  You left your {garment.n} on the {msg.transit} {ly.when},
+  We drank {drink} on the roof {ly.when},
+  My {ly.kin} kept {herd} on the hill above {$home},
+  The {craft} works whistle blew at {ly.hour},
+  You came back from {$seat} with {ly.brought},
+  We stood in the queue for {food} {ly.when},
+  They painted the doors {colour.any} {ly.when},
+  I counted the {bird} on the wires {ly.when},
+  You played {instrument} at {feast.custom},
+  The rain came down on {streets.of} {ly.when},
+  We hid from {weather} in {ly.hide},
+  (has:$home.quarter) They're playing {instrument} down in {$home.quarter},
+  (has:$home.landmark) There's a light still on in {$home.landmark},
+  (has:$home.landmark) I wrote your name in {colour.any} paint by {$home.landmark},
+  (inv.radio=1) The radio's playing the {festival} songs {ly.again},
+ly.where (people=5)
+  on the station steps
+  at the dance hall
+  by the {msg.shop}
+  under {skyone}
+  outside the {craft} works
+  on the last {msg.transit}
+  at {feast.custom}
+  on the bridge over {river}
+  in the rain on {streets.of}
+  behind the {craft} sheds
+  at the {drink} house
+  where the {herd} come down
+ly.when (people=4)
+  in {season.now}
+  the year the {crop} failed
+  before the war
+  when we were seventeen
+  the night of the {festival} fires
+  on the coldest day
+  a long time ago
+  when the lights went out
+ly.grew (people=4)
+  on the {ly.edge} side of {city}
+  above the {craft} works
+  down by {river}
+  where the road ends and the {ly.dark} begins
+  in {houses} past the {msg.shop}
+  under the {roofs} of {$home}
+ly.edge (people=3)
+  north
+  river
+  cold
+  wrong
+  far
+ly.dark (people=2)
+  dark
+  fields
+  quiet
+  {land}
+ly.every (people=3)
+  every night, and every night I'm not on it
+  at midnight
+  at first light
+  every rest day
+  twice a day, and it never waits
+ly.kin (people=3)
+  mother
+  father
+  grandmother
+  grandfather
+  aunt
+  uncle
+ly.better (people=2)
+  taller
+  sweeter
+  cheaper
+  greener
+ly.roofs (people=2)
+  roofs
+  wires
+  chimneys
+  towers
+ly.cart (people=2)
+  cart
+  barrow
+  stall
+  window
+ly.swim (people=2)
+  swim
+  fish
+  wade
+  (cold=1) skate
+ly.summers (people=2)
+  summers
+  evenings
+  days
+ly.inwhere (people=2)
+  in the stove
+  at the dance hall
+  in the yard
+ly.shelf (people=2)
+  windowsill
+  shelf by the door
+  kitchen table
+ly.road (people=2)
+  road
+  bridge
+  old wall
+  (inv.railway=1) railway
+ly.howlong (people=2)
+  all night
+  till the bells
+  until they threw us out
+ly.again (people=2)
+  again
+  all night
+  too loud
+
+# ---- the answer ----------------------------------------------------------------------------------------------------------------
+
+ly.b (share=0.6)
+  you were laughing at something {ly.someone} didn't {ly.see},
+  the {fruit} were ripe and so were we,
+  and the {bird} were singing like they {ly.knew},
+  I can still smell the {food} on the {ly.stairs},
+  and {instrument} was always out of tune,
+  you said {proverb}, and I {ly.laughed},
+  and I never told you, and I never {ly.will},
+  the lamps were {colour.any} and so was {ly.sky},
+  and nobody came to tell us to go {ly.home},
+  and the {ly.wx} came in like it owned the {ly.place},
+  I still have the {ly.kept} and the {garment.n},
+  and the {ly.olds} shook their heads at {ly.us},
+  we had nothing, and we had {ly.all},
+  you swore {oath} that you'd {ly.stay},
+  you were going {ly.otherway}, {ly.always},
+  and the {msg.transit} went by {ly.full},
+  and your {ly.kin} said {ly.said},
+  and the {crop} grew tall where the old {ly.oldthing} stood,
+  and I swore {oath} I'd {ly.swore} by {festival},
+  and the whole of {streets.of} heard,
+  and {skyone} looked down and {ly.looked},
+  and the {herd} came home without us,
+  we were young and the {drink} was cheap,
+  and the smoke of the {craft} works was {ly.smoke},
+  and I learned your name from the {ly.learnt},
+  (inv.radio=1) you had the radio on and the window {ly.down},
+ly.wx
+  wind
+  cold
+  (desert=0) rain
+  (desert=0) fog
+  (desert=0 cold=1) snow
+  (desert=1) dust
+ly.otherway (people=2)
+  the other way
+  to {$seat}
+  home to your {ly.kin}
+  down to the {msg.shop}
+  out past {town.edge}
+ly.olds (people=2)
+  old ones
+  men on the bench
+  women at the {watersrc.n}
+  neighbours
+  {craft} workers
+ly.someone (people=2)
+  I
+  your {ly.kin}
+  the driver
+  nobody
+ly.hour (people=2)
+  six
+  noon
+  the end of the shift
+  midnight
+ly.brought (people=2)
+  a {garment.n} and a story
+  nothing but a cough
+  a ring and no money
+  a radio and a new name
+ly.hide (people=2)
+  the doorway of the {msg.shop}
+  the shelter by the station
+  your {ly.kin}'s kitchen
+  the back of the {craft} works
+ly.full (people=2)
+  full of strangers
+  empty
+  singing
+  without us
+ly.said (people=2)
+  we'd never last
+  nothing at all
+  to come in now
+  what everybody says
+ly.oldthing (people=2)
+  houses
+  walls
+  mill
+  school
+ly.swore (people=2)
+  be gone
+  have money
+  be somebody
+  come back
+ly.looked (people=2)
+  said nothing
+  looked away
+  knew
+ly.smoke (people=2)
+  in our hair
+  in the sky
+  everywhere
+ly.learnt (people=2)
+  wall
+  radio
+  priest
+  papers
+ly.see (people=2)
+  see
+  hear
+  understand
+ly.knew (people=2)
+  knew
+  meant it
+  were paid to
+ly.stairs (people=2)
+  stairs
+  street
+  coat you left
+ly.laughed (people=2)
+  laughed
+  believed you
+  wrote it down
+ly.will (people=2)
+  will
+  could
+  did
+ly.sky (people=2)
+  the sky
+  the river
+  your coat
+ly.home (people=2)
+  home
+  to bed
+  away
+ly.place (people=2)
+  place
+  street
+  town
+ly.kept (people=2)
+  ticket
+  letter
+  ring
+  key
+ly.us (people=2)
+  us
+  the band
+  the both of us
+ly.all (people=2)
+  all of it
+  the river
+  the night
+  each other
+ly.stay (people=2)
+  stay
+  come back
+  write
+ly.always (people=2)
+  as usual
+  as always
+  and so was I
+ly.down (people=2)
+  down
+  open
+  wide
+
+ly.hold
+  {ly.holdx}
+ly.holdx (people=2)
+  as long as there's light
+  till the trains come back
+  and don't let go
+
+ly.bridge (share=0.7)
+  And if you go to {$seat}, {ly.br1},
+  And if they ask you where I am, say {death.went},
+  Somebody's burning {fuel} in the yard below, {ly.br2},
+  Everybody leaves {$home} {ly.br3},
+  We'll take the {msg.transit} to the end of the line, {ly.br2},
+  Nobody sings the old {festival} songs {ly.br4},
+  They say the {craft} works will open again {ly.br5},
+  My {ly.kin} is waiting by the {ly.road} {ly.br4},
+ly.br4 (people=2)
+  any more
+  but you
+  the way we did
+ly.br5 (people=2)
+  in {season.next}
+  when the money comes
+  but they always say that
+ly.br1 (people=2)
+  don't look back for me
+  bring me back some {food}
+  say hello to the river
+ly.br2 (people=2)
+  and I don't mind
+  and nobody minds
+  and it smells like home
+ly.br3 (people=2)
+  in the end
+  sooner or later
+  one way or another
+
+# ---- the chorus ---------------------------------------------------------------------------------------------------------------
+
+ly.chorus (formula keep people=5)
+  and {skyone} over us, and nothing to do but stay.
+  oh {city}, {city}, you never let me go.
+  so dance, dance, before the lights go out.
+  {endear}, {endear}, come home before {season.next}.
+  and {river} runs on, and we run on with it.
+  {colour.holy} like the doors of {city}, {colour.holy} like the morning.
+  hold on, hold on, the {msg.transit}'s coming.
+  and the {bird} know the way, and so do I.
+  {exclaim}, {exclaim}, what a night it was.
+  sing it for {festival}, sing it for me.
+  and all the lamps of {city} are lit for you.
+  the {herd} are home, and so are you, la, la.
+  and the {craft} works hum, and the night goes on.
+  {food} on the table and you at the door.
+  under {roofs}, under {roofs}, we'll be all right.
+  oh {city}, my {city}, {weather} and all.
+  turn it up, turn it up, they're playing our song.
+  {instrument} and a full moon, and the night is ours.
+  wait for me at {holyplace}, wait for me.
+  {crop} in the fields and the {bird} in the air.
+  and the years go by like {msg.transit:pl}.
+  every {festival} I think of you.
+  come back to {city}, come back.
+  hey, hey, {fuel} on the fire.
+)VG"

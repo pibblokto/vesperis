@@ -44,7 +44,10 @@ struct ProbeRecord {
 
 // R-408: a mark the explorer placed on a world (the sector map's cursor, or `L` at what the crosshair rests on), named or not; the
 // maps, the HUD and the scanner (which leaves the marked sights out) read them. `mark` lines; a friend's travel lent (C-14)
-constexpr int MARK_PLACE = 8;   // a mark's kind when it marks a place, not one of the sights' (galaxy/landmarks.h's LM_COUNT)
+constexpr int MARK_PLACE = 9;   // a mark's kind when it marks a place, not one of the sights' (galaxy/landmarks.h's LM_COUNT; T-03: 8 is a work's, LM_WORK.
+                                // The guide's file keeps R-408's numbers: 8 a place, 9 a work, `markKindToFile`/`markKindFromFile`)
+inline int markKindToFile(int kind) { return kind == MARK_PLACE ? 8 : (kind == MARK_PLACE - 1 ? 9 : kind); }
+inline int markKindFromFile(int k) { return k == 8 ? MARK_PLACE : (k == 9 ? MARK_PLACE - 1 : k); }
 struct SurfaceMark {
     std::string body;            // the world's key
     double lat = 0, lon = 0;     // radians, the body's frame
@@ -54,6 +57,15 @@ struct SurfaceMark {
     long long when = 0;          // placed (the wall clock)
 };
 
+// G-06: a mark the explorer placed on the galaxy chart (`L` at its cursor: a void, a cluster, a stretch of arm), named or not; the chart
+// draws it with its name and `N` steps to it. `gmark` lines; a friend's lent like R-408's (C-14)
+struct GalaxyMark {
+    double x = 0, y = 0, z = 0;   // the place (sector units, light years; y over the plane)
+    std::string name;             // the explorer's ("" unnamed)
+    bool lent = false;            // a friend's, from the inbox
+    long long when = 0;           // placed (the wall clock)
+};
+
 struct Guide {
     std::map<std::string, std::string> names;     // key -> name (yours)
     std::map<std::string, std::string> inbox;     // key -> name (from imported guides)
@@ -61,6 +73,7 @@ struct Guide {
     std::set<std::string> visited;                // star keys
     std::set<std::string> landed;                 // body keys
     std::vector<SurfaceMark> marks;               // R-408: the explorer's marks on the worlds (and the friends' lent ones)
+    std::vector<GalaxyMark> galaxyMarks;          // G-06: the explorer's marks of the galaxy (and the friends' lent ones)
     std::set<std::string> shards;                 // C-03: "<body key>/S<index>" of every shard taken from a ruin (`shard` lines)
     int shardWorlds() const;                      // C-03: how many worlds they come from
     std::map<std::string, int> decoded;           // C-06: a shard read on the ship's decoder -> how many of its world's shards the language had then (`decoded` lines)
@@ -68,11 +81,13 @@ struct Guide {
     std::set<std::string> heard;                  // C-07: "<body key>/S<index>" of every recording heard on the radar (`heard` lines): taken from the ruins, it is the one the radar caught
     std::set<std::string> graves;                 // C-12: "<body key>/G<id>" of every grave read in the ruins (`grave` lines), like the landmarks
     std::set<std::string> ended;                  // C-12: the worlds whose last recording the decoder read (`ended` lines): their timeline closed
+    std::set<std::string> instruments;            // C-11: "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; galaxy/instruments.h's ids): kept in the cabin's case
     std::set<std::string> lent;                   // C-14: "<body key>/S<index>" of the shards a friend's inbox file lent (the ones they found and read; `lent` lines): read on the decoder in cyan, never taken, the ruins still hold them
     bool isLent(const std::string& key) const { return lent.count(key) && !shards.count(key); }   // C-14: a friend's, not yet the explorer's own
     int lentCount() const;                        // C-14: how many are lent and not taken since
     std::set<int> classesSeen, typesSeen;
     std::vector<std::string> history;             // previous stars, oldest first (max 20)
+    std::vector<std::string> route;               // G-05: the stars arrived at, in order (`route` lines; the galaxy chart draws the way between them; an older guide has none)
     std::string home;                             // star key
     double furthestFromHomeLY = 0, longestWalkM = 0, highestPointM = 0, totalWalkedM = 0, totalDrivenM = 0;
     double totalFlownM = 0;   // R-403: by drone
@@ -84,6 +99,10 @@ struct Guide {
     int creaturesSeen = 0;   // N3-01: first sightings of species (per landing)
     double topSpeedKmh = 0, longestDriveM = 0;   // N4-05: the buggy's records
     int genVersion = 0;      // generation version the guide was last saved with (M9-17)
+    // T-04: the shards' keys are a people's records at people x 1000 + index (galaxy/records.h's `shardWorldIndex`); a guide saved before
+    // (no `records 2` line) had C-13's second people at 50 + index, moved here when it is loaded: the shards found are kept by their index (the
+    // counts and the language kept, the contents the records' now), `migratedShards` how many of the explorer's own were (the game says so once)
+    int migratedShards = 0;
 
     static std::string starKey(int64_t sx, int64_t sy, int64_t sz);
     static std::string bodyKey(int64_t sx, int64_t sy, int64_t sz, int body);
@@ -93,8 +112,10 @@ struct Guide {
     // merge names from another guide file into the inbox (your own names win); C-14: and lend the shards that guide found and read
     // (its `shard` keys with a `decoded` line, not its own lent ones), `lentOut` how many are new; -1 when the file cannot be read
     // X-04: and the probes' recordings it holds (its own, not those lent to it), `probesOut` how many are new; R-408: and its marks
-    // (its own, not those lent to it, nor one standing where a mark of the explorer's or an earlier loan does), `marksOut`
-    int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr);
+    // (its own, not those lent to it, nor one standing where a mark of the explorer's or an earlier loan does), `marksOut`; G-06: and its
+    // marks of the galaxy likewise (one within a light year of a mark already there is the same place), `galaxyOut`
+    int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr, int* galaxyOut = nullptr);
     void addLog(double t, const std::string& kind, const std::string& text);
     void pushHistory(const std::string& key);
+    void pushRoute(const std::string& key);       // G-05: an arrival (a star the route already ends at is not added again)
 };

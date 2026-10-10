@@ -1,5 +1,6 @@
 // Scene rendering entry points and the HUD overlays for space and surface.
 #include "game.h"
+#include "galaxy/plan.h"
 #include <array>
 #include "ui.h"
 #include "core/rng.h"
@@ -48,6 +49,7 @@ void Game::renderSpace() {
         double u = clampd(ship.flightT / ship.flightDur, 0, 1);
         c.vimanaSpeed = std::sin(u * PI);
         c.vimanaDirView = c.cam * normalize(ship.flightTo - ship.flightFrom);
+        c.flightFrom = ship.flightFrom; c.flightTo = ship.flightTo; c.flightT = ship.flightT; c.flightDur = ship.flightDur;   // G-07: the band built ahead along the line
     }
     c.bankBodyA = a; c.bankBodyB = b;
     c.starIntensity = (ship.targeting || fieldAmp || radar.on || tele.on) ? 1.5 : 1.0;   // field amplification while aiming or by choice; C-07: the radar camera sees the stars amplified; W-06: the telescope gathers light
@@ -59,6 +61,15 @@ void Game::renderSpace() {
     if (radar.on && !titleCam) radarCameraFeed(fb);   // C-07
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // M1-10 arrival flash
+}
+
+// G-07: the galaxy page in a flight draws no scene, so the band's keyframes are kept building here (a share a frame), or closing the
+// page would build one whole at once
+void Game::keepFlightBand() {
+    if (ship.mode != ShipState::VIMANA) return;
+    SpaceContext c;
+    c.vimana = true; c.flightFrom = ship.flightFrom; c.flightTo = ship.flightTo; c.flightT = ship.flightT; c.flightDur = ship.flightDur;
+    spaceR.flightBand(c);
 }
 
 void Game::drawVisor(uint32_t col) {
@@ -94,6 +105,11 @@ void Game::renderSpaceHUD() {
     std::string line2 = sys.valid ? sys.classString() + "   " + coords : coords;
     line2 += std::string("  ") + REGION_NAMES[galaxyRegion(sectorOf(ship.pos.x), sectorOf(ship.pos.y), sectorOf(ship.pos.z))];
     drawTextShadow(canvas, 8, 16, line2.c_str(), HUD_DIM, HUD_SHADOW);
+    if (player.playing >= 0 && player.playing < (int)player.items.size()) {   // C-11: the ship's player, under the system's lines
+        const uint32_t col = player.held || player.paused || player.waiting ? HUD_DIM : HUD_GREEN;
+        drawRecordKindGlyph(canvas, 8, 24, player.items[player.playing].music ? RC_MUSIC : RC_TEXT, col);
+        drawTextShadow(canvas, 17, 24, playerHudLine().c_str(), col, HUD_SHADOW);
+    }
     // mode
     const char* modeName = "STANDBY";
     if (ship.mode == ShipState::VIMANA) modeName = "VIMANA FLIGHT";
@@ -503,7 +519,7 @@ void Game::renderSectorMap() {
             double hx, hz; echoHeardAt(*heard[i].second, hx, hz);
             if (!mark(hx, hz, sx, sy)) continue;
             if (i == 0) { drawRectRGB(canvas, sx - 3, sy - 3, sx + 3, sy + 3, HUD_CYAN); fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, HUD_CYAN); }
-            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == 2 || L.sub == 3) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town)
+            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == 2 || L.sub == 3 || L.sub >= 5) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town, T-01's cities)
         }
     }
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
@@ -561,7 +577,7 @@ void Game::renderSectorMap() {
     {   // R-408: the scanner
         if (scanMode < 0) drawText(canvas, tx, oy + 80, "R SCANNER OFF", HUD_DIM);
         else {
-            static const char* MODES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS"};
+            static const char* MODES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
             drawText(canvas, tx, oy + 80, fmt("SCAN %s", MODES[scanMode]).c_str(), HUD_CYAN);
             double hx, hz; const SurfaceView::ScanEcho* e = scanModeHere(scanMode) && surf.scanned ? scanNearest(hx, hz) : nullptr;
             if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 89, "NONE ON THIS WORLD", HUD_DIM);
@@ -652,7 +668,13 @@ void Game::renderSurfaceHUD() {
         if (e.aurora > 0.15 && e.skyBrightness < 0.4) envl2 += e.auroraStorm > 0.7 ? "  AURORA STORM" : "  AURORA";   // R-402
         drawTextShadow(canvas, 8, UH - 24, envl2.c_str(), HUD_GREEN, HUD_SHADOW);
         drawTextShadow(canvas, UW - 8 - textWidth(cap.c_str()), UH - 32, cap.c_str(), e.nearCapsule ? HUD_AMBER : HUD_CYAN, HUD_SHADOW);
-        if (surf.nearShard.index >= 0) drawTextShadow(canvas, UW - 8 - textWidth("A SHARD HERE - E"), UH - 40, "A SHARD HERE - E", HUD_AMBER, HUD_SHADOW);   // C-03
+        if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) {   // C-11: an instrument, the nearer
+            const std::string t = surf.nearInstrument.name + " - E";
+            drawTextShadow(canvas, UW - 8 - textWidth(t.c_str()), UH - 48, t.c_str(), HUD_AMBER, HUD_SHADOW);
+        } else if (surf.nearShard.index >= 0) {   // C-03; T-04: the object ("A CODEX - E", "A PAINTED WALL - E"), a row over the sun's line (its ELEV ran under it)
+            const std::string t = std::string(RECORD_MEDIUM_HUD[clampi(surf.nearShard.medium, 0, RM_COUNT - 1)]) + " - E";
+            drawTextShadow(canvas, UW - 8 - textWidth(t.c_str()), UH - 48, t.c_str(), HUD_AMBER, HUD_SHADOW);
+        }
         if (surf.nearGrave.k >= 0) { std::string gl = fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()); drawTextShadow(canvas, UW - 8 - textWidth(gl.c_str()), UH - 56, gl.c_str(), HUD_AMBER, HUD_SHADOW); }   // C-12: the stone's name and years
         drawTextShadow(canvas, 8, 16, fmt("SECTOR %s", sectorName(e.latDeg, e.lonDeg).c_str()).c_str(), HUD_DIM, HUD_SHADOW);   // O2 (R-301)
         {   // B-321: the suit's life sensor: the nearest herd or flock within 1.5 km, its bearing and distance (`X` still brackets what is in view)
@@ -667,7 +689,7 @@ void Game::renderSurfaceHUD() {
         if (!surf.site.roads.empty()) {   // C-09: the old road under the feet and the way it runs
             double d, along, hd; const SiteRoad* rd;
             if (surf.site.roadAt(pl.x, pl.z, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3) {
-                std::string rl = fmt("OLD ROAD %s-%s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));
+                std::string rl = fmt("OLD %s %s-%s", NET_KIND_HUD[clampi(rd->kind, 0, NK_COUNT - 1)], compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));   // T-01: its kind
                 drawTextShadow(canvas, UW - 8 - textWidth(rl.c_str()), UH - 48, rl.c_str(), HUD_CYAN, HUD_SHADOW);
             }
         }
@@ -777,7 +799,7 @@ void Game::renderSurfaceHUD() {
         if (!surf.site.roads.empty()) {   // C-09: the old road under the wheels and the way it runs
             double d, along, hd; const SiteRoad* rd;
             if (surf.site.roadAt(b.x, b.z, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3)
-                drawTextShadow(canvas, 8, UH - 58, fmt("OLD ROAD %s-%s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI))).c_str(), HUD_CYAN, HUD_SHADOW);
+                drawTextShadow(canvas, 8, UH - 58, fmt("OLD %s %s-%s", NET_KIND_HUD[clampi(rd->kind, 0, NK_COUNT - 1)], compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI))).c_str(), HUD_CYAN, HUD_SHADOW);
         }
         drawTextShadow(canvas, 8, UH - 24, fmt("TRIP %.2f KM", b.odometer / 1000.0).c_str(), HUD_GREEN, HUD_SHADOW);
         {   // the steering bar

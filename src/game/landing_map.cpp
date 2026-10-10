@@ -1,6 +1,8 @@
 // The landing map: site selection on the body's planet map (B-004 relief shading).
 #include "game.h"
 #include "galaxy/roads.h"
+#include "galaxy/plan.h"
+#include "galaxy/buildings.h"
 #include <chrono>
 #include "galaxy/ruins.h"
 #include "galaxy/drainage.h"
@@ -24,6 +26,7 @@ void Game::beginLanding() {
     StarSystem::latLonFromBody(bf, landLat, landLon);
     landLat = clampd(landLat, -85 * DEG, 85 * DEG);
     spaceR.mapFor(sys.bodies[landBody]);
+    worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // T-01 (already on its way since the approach)
     drainLat = 1e9; drainLon = 1e9;   // O6-03: the map's first update prefetches the drainage of the default site
     landZoom = 0;   // O2: start from the whole world
     state = GameState::LANDING_MAP;
@@ -233,21 +236,53 @@ void Game::buildLandingZoom() {
             zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade);
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
-    zoomRoads.clear(); zoomRoadsMs = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
+    zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
     if (worldHadCivilisation(g)) {
         auto tr0 = std::chrono::steady_clock::now();
+        auto texel = [&](const Vec3& u, float& x, float& y) { double la, lo; StarSystem::latLonFromBody(u, la, lo); x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW); y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH); };
+        auto addLine = [&](const std::vector<Vec3>& pts, int kind) {
+            std::vector<std::pair<float, float>> poly; float lx = 0, ly = 0;
+            for (size_t k = 0; k < pts.size(); k++) {
+                float x, y; texel(pts[k], x, y);
+                if (poly.empty() || k + 1 == pts.size() || std::hypot(x - lx, y - ly) >= 0.7f) { poly.push_back({x, y}); lx = x; ly = y; }
+            }
+            if (poly.size() >= 2) { zoomRoads.push_back(poly); zoomRoadKinds.push_back(kind); }
+        };
         std::vector<Road> rs; roadsNear(g, zoomCentre, zoomRadiusM, rs, true);
-        zoomRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
         for (const Road& r : rs) {
             if (std::max(settlementRank(r.a.sclass), settlementRank(r.b.sclass)) < 2) continue;   // the roads of the villages and the towns: a lane between two hamlets is not seen from orbit, and the whole web was a honeycomb over the land
-            std::vector<std::pair<float, float>> poly; float lx = 0, ly = 0;
-            for (size_t k = 0; k < r.pts.size(); k++) {
-                double la, lo; StarSystem::latLonFromBody(r.pts[k], la, lo);
-                float x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW), y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH);
-                if (poly.empty() || k + 1 == r.pts.size() || std::hypot(x - lx, y - ly) >= 0.7f) { poly.push_back({x, y}); lx = x; ly = y; }
-            }
-            if (poly.size() >= 2) zoomRoads.push_back(poly);
+            addLine(r.pts, NK_ROAD);
         }
+        // T-01: the world plan's ways through the window (their waypoints: a leg's walk wanders less than a texel) and its places' cores,
+        // each a disc of its built ground over the map (the core's share of a texel, darkened by the years: what the ground holds)
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
+        std::vector<PlanEdgeRef> es; planEdgesNear(*P, zoomCentre, zoomRadiusM, es);
+        for (const PlanEdgeRef& r : es) if (r.e->kind != NK_SEA) addLine(planEdgeWay(g, *P, r), r.e->kind);
+        std::vector<const PlanPlace*> ps; planPlacesNear(*P, zoomCentre, zoomRadiusM, ps);
+        MatRamp ramps2[MAT_COUNT]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
+        const uint32_t rock = mapColor(ramps2, familyRep(g.type, FAM_ROCK), 0.45, lf2, atmo2, 1.0);
+        for (const PlanPlace* p : ps) {
+            const Culture cu = cultureOf(g, p->people);
+            const RGB pc = cu.palette.colour[0];
+            const double rr = (rock & 255) * 0.5 + pc.r * 140, gg = ((rock >> 8) & 255) * 0.5 + pc.g * 140, bb = ((rock >> 16) & 255) * 0.5 + pc.b * 140;
+            const double standing = 0.75 - 0.45 * cu.decay;
+            float cx, cy; texel(p->unit, cx, cy);
+            const double rT = p->radiusM / texelM;
+            bool any = false;
+            for (int y = (int)std::floor(cy - rT - 1); y <= (int)std::ceil(cy + rT + 1); y++)
+                for (int x = (int)std::floor(cx - rT - 1); x <= (int)std::ceil(cx + rT + 1); x++) {
+                    if (x < 0 || x >= ZW || y < 0 || y >= ZH) continue;
+                    const double d = std::hypot(x + 0.5 - cx, y + 0.5 - cy);
+                    const double f = clampd(rT + 0.5 - d, 0, 1) * std::min(1.0, PI * rT * rT) * standing;   // the disc's share of the texel (a core under a texel its area's)
+                    if (f <= 0.01) continue;
+                    uint32_t& c = zoomImg[y * ZW + x];
+                    const double r0 = c & 255, g0 = (c >> 8) & 255, b0 = (c >> 16) & 255;
+                    c = rgb(clampi((int)(r0 + (rr - r0) * f), 0, 255), clampi((int)(g0 + (gg - g0) * f), 0, 255), clampi((int)(b0 + (bb - b0) * f), 0, 255));
+                    any = true;
+                }
+            if (any) zoomCores++;
+        }
+        zoomRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
     }
 }
 
@@ -401,11 +436,18 @@ void Game::renderLandingMap() {
                 row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
             }
         }
-        for (const auto& poly : zoomRoads) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light
+        for (size_t ri = 0; ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light
+            const auto& poly = zoomRoads[ri];
             int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
             double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
-            uint32_t c = zoomImg[i]; l *= 0.7;
-            uint32_t col = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+            uint32_t c = zoomImg[i];
+            // T-01: by its kind: a path fainter, a railway darker, a highway and a maglev's pylons pale, a canal's channel blue-dark
+            const int kind = ri < zoomRoadKinds.size() ? zoomRoadKinds[ri] : NK_ROAD;
+            static const double KL[NK_COUNT] = {0.85, 0.7, 0.5, 0.6, 1.3, 1.25, 1.0};
+            l *= KL[clampi(kind, 0, NK_COUNT - 1)];
+            double cr = (c & 255) * l, cg = ((c >> 8) & 255) * l, cb = ((c >> 16) & 255) * l;
+            if (kind == NK_CANAL) { cr *= 0.75; cg *= 0.85; cb = std::min(255.0, cb * 1.3 + 12); }
+            uint32_t col = rgb(clampi((int)cr, 0, 255), clampi((int)cg, 0, 255), clampi((int)cb, 0, 255));
             // a hairline in the frame's own pixels (a logical line would be a block S wide: the grid's weight, not a faint road)
             const int X0 = ox * S, Y0 = oy * S, X1 = (ox + MAP_LW) * S, Y1 = (oy + MAP_LH) * S;
             for (size_t k = 0; k + 1 < poly.size(); k++) {

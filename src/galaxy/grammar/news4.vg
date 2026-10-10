@@ -1,0 +1,254 @@
+R"VG(
+# news4.vg (H-04's second pass): the everyday in the news's register (the history's quiet years: `$e.what` is the kind's word): fairs,
+# fires, storms, the plagues of the fields, wonders, games. A headline, a lead by what it was, a detail, now and then a close.
+
+# ---- a fair --------------------------------------------------------------------------------------------------------------------
+news.fair
+  {news.h.fair}\n{news.fair.m} {news.fair.x}
+news.h.fair
+  The fair at {$e.place}
+  {$e.place} fair
+  Market week at {$e.place}
+  ($e.what=horses|$e.what=beasts) The beast fair
+news.fair.m
+  The {news.fair.what} fair at {$e.place} drew {#$e.value:about} this year, {news.fair.how}.
+  {#$e.value:about} came to {$e.place} for the fair, and {news.fair.how2}.
+  ($e.what=beasts|$e.what=horses) At the beast fair at {$e.place} the {herd} fetched {n} {coin} a head, and a {beast} with a ribbon fetched more.
+  ($e.what=grain) The {crop} fair at {$e.place} opened with the prices low and closed with them lower.
+  ($e.what=fish) The fish fair at {$e.place}: {fish} by the cartload, and the smell of it as far as the hills.
+  ($e.what=books) The book fair at {$e.place} sold {#$e.value:about} books, some of them to people who will read them.
+  ($e.what=flowers) The flower fair at {$e.place} filled {town.open} with {colour.any} and the streets with visitors.
+news.fair.what
+  ($e.what=beasts) beast
+  ($e.what=cloth) cloth
+  ($e.what=salt) salt
+  ($e.what=grain) {crop}
+  ($e.what=pots) pot
+  ($e.what=iron) iron
+  ($e.what=wine) wine
+  ($e.what=fish) fish
+  ($e.what=furs) fur
+  ($e.what=gathering) old
+  ($e.what=horses) horse
+  ($e.what=books) book
+  ($e.what=machines) machine
+  ($e.what=flowers) flower
+news.fair.how
+  more than last year and fewer than the innkeepers hoped
+  the most since the founding, the organisers say
+  in spite of the {news.weather.x}
+  and the stalls ran from {town.open} to the river
+news.fair.how2
+  the inns of {$e.place} have not a bed between them
+  the pickpockets of three towns came with them
+  the {craft} stalls sold out by the second day
+  there was dancing until the watch stopped it
+news.fair.x
+  The {ind.sport} drew the biggest crowds.
+  Three {herd} escaped and were caught in the porch of {holyplace}.
+  Next year's fair will be a day longer, the council promises.
+  The traders from over the hills paid in their own coin, and were not thanked for it.
+  (has:$e.place.landmark) The stalls stood all along {$e.place.landmark}, as they have since the old days.
+  The {craft} stalls sold out by noon, and the {food} by evening.
+news.weather.x
+  rain
+  heat
+  wind
+  mud
+
+# ---- a fire --------------------------------------------------------------------------------------------------------------------
+news.fire
+  (medium=printed) {news.h.fire}\n{news.fire.m} {news.fire.cause} {news.fire.x}
+  {news.h.fire}\n{news.fire.m} {news.fire.cause}
+  {news.h.fire}\n{news.fire.m} {news.fire.x}
+news.h.fire
+  Fire at {$e.place}
+  {$e.place} burns
+  Night of fire at {$e.place}
+  ($e.what=half) The great fire at {$e.place}
+  ($e.what=granary|$e.what=market|$e.what=temple|$e.what=mill|$e.what=library|$e.what=harbour|$e.what=palace) The {$e.what} burns
+  ($e.what=works) Fire at the works
+  ($e.what=forest|$e.what=grass) Fire in the hills
+news.fire.m
+  ($e.what=street) Fire broke out [in the night|before dawn|at the noon meal] in a street of {$e.place} and took {#$e.value|house} before the bucket chains could stop it.
+  ($e.what=street has:$e.place.quarter) A fire in {$e.place.quarter} of {$e.place} burned {#$e.value|house} to the ground.
+  ($e.what=half) Half of {$e.place} is in ashes; the fire burned for {n} days and took {#$e.value:about} houses.
+  ($e.what=granary) The granary at {$e.place} burned with all the {crop} in it, and the town will be short until the harvest.
+  ($e.what=market) The market hall of {$e.place} has burned down, with the stalls and most of the {vessel} of the traders.
+  ($e.what=temple) {holyplace} at {$e.place} was gutted by fire; the roof fell in at midnight.
+  ($e.what=mill) The mill at {$e.place} caught fire from its own stones, as mills will, and burned with the {crop} in it.
+  ($e.what=library) The library at {$e.place} burned; {#$e.value:about} books are lost, and some say the only copies.
+  ($e.what=harbour) Fire swept the harbour at {$e.place} and took the warehouses and {n} boats with them.
+  ($e.what=palace) Fire in the palace at {$e.place}; the household was got out, and the furniture was not.
+  ($e.what=works) The {craft} works at {$e.place} burned to the walls; {#$e.value|family} are without wages.
+  ($e.what=forest) The {tree} above {$e.place} have been burning for a week, and the smoke is over the town.
+  ($e.what=grass) The grass is on fire on the hills above {$e.place}, and the farms are cutting breaks.
+  ($e.what=tower) Fire in one of the towers of {$e.place}; the stairs were full of smoke and the lifts stopped.
+  ($e.what=camp) Fire went through the camp at {$e.place} and took {#$e.value|tent}.
+news.fire.cause
+  The cause is said to be a lamp left burning in a {ind.ct.trade}'s shop.
+  It began, they say, in a bakehouse oven, among the {food}.
+  A spark from the {fuel} stove of a {news.fire.trade} is blamed.
+  (inv.railway=1) Sparks from a passing engine are blamed, which the railway denies.
+  Lightning struck the roof at the second hour.
+  Nobody yet knows how it started, and several people are sure.
+  ($e.what!=forest $e.what!=grass) Arson is suspected; a man has been taken in for questioning.
+news.fire.trade
+  baker
+  dyer
+  smith
+  potter
+  glassblower
+news.fire.x
+  The fire company's new pump arrived from {city} an hour after it was needed.
+  A collection for the burnt-out has been opened at the offices of this paper; {n} {coin} on the first day.
+  The families without a roof are sleeping in {holyplace} and the school.
+  Nobody was killed, which the town is calling luck and the fire company is calling the fire company.
+  The council is to forbid {roofs} of {material} within the walls, again.
+  The {herd} were driven out through {streets.of} ahead of the flames.
+
+# ---- a storm --------------------------------------------------------------------------------------------------------------------
+news.storm
+  {news.h.storm}\n{news.storm.m} {news.storm.x}
+news.h.storm
+  Storm
+  ($e.what=hail) Hail
+  ($e.what=snow) Snow
+  ($e.what=dust) Dust
+  ($e.what=sea) Gale on the coast
+  ($e.what=wind) The great wind
+  (has:$e.place) Storm at {$e.place}
+news.storm.m
+  ($e.what=wind) A wind out of the {news.dest.x} took roofs off at {news.storm.where} and laid the {crop} flat.
+  ($e.what=wind) The wind at {news.storm.where} blew for {n} days and took the {roofs} off half the town, and a {beast} that has not been seen since.
+  ($e.what=hail) Hail the size of {news.hail.size} fell on {news.storm.where} for half an hour; the {fruit} are lost and the glaziers are busy.
+  ($e.what=snow) Snow fell for {n} days at {news.storm.where}, and the roads are shut until it goes.
+  ($e.what=snow) The snow at {news.storm.where} lies to the windowsills, and the {herd} are being fed by hand {time.of}.
+  ($e.what=dust) A wall of dust came over {news.storm.where} at noon, and it was night until evening.
+  ($e.what=sea) The gale drove the sea over the wall at {news.storm.where}, and {n} boats were lost at their moorings.
+  ($e.what=sea) The sea came up the streets of {news.storm.where} in the gale, as far as {news.storm.reach}, and took {n} boats and a good many {vessel}.
+  ($e.what=lightning) A storm of lightning over {news.storm.where} struck {holyplace} and {n} houses.
+  ($e.what=rain) The rain came down at {news.storm.where} as if it had been saved up, and the streets were rivers by evening.
+  ($e.value>0) The storm over {news.storm.where} killed {#$e.value}, most of them caught on the roads.
+news.storm.where
+  (has:$e.place) {$e.place}
+  (!has:$e.place) the south
+  (!has:$e.place) the hill towns
+news.hail.size
+  peas
+  {fruit}
+  a child's fist
+news.storm.x
+  The old people say they have seen worse, and are asked when.
+  The {herd} were got under cover in time, mostly.
+  The almanac had promised fair weather for {festival}.
+  The council will pay for the roof of {news.roofof}; the rest of the town is on its own.
+  ($e.value>0) The dead will be buried together at {deadplace}.
+  The {fruit} are on the ground and the {crop} flat, and the farmers out counting.
+news.dest.x
+  north
+  south
+  east
+  west
+  hills
+
+# ---- the plagues of the fields --------------------------------------------------------------------------------------------------
+news.pest
+  {news.h.pest}\n{news.pest.m} {news.pest.x}
+news.h.pest
+  ($e.what=locusts) Locusts
+  ($e.what=blight|$e.what=mildew) Blight in the fields
+  ($e.what=murrain) Sickness in the herds
+  ($e.what=rats) Rats
+  ($e.what=worm) The worm in the {crop}
+  ($e.what=wolves) Wolves
+  ($e.what=mites) The mites
+news.pest.m
+  ($e.what=locusts) A cloud of locusts came down on the fields round {$e.place} and left nothing standing but the fences.
+  ($e.what=blight) The blight has reached the {crop} at {$e.place}, and the fields stink.
+  ($e.what=mildew) Mildew has spoiled the {crop2} round {$e.place}, and the growers are burning what is left.
+  ($e.what=murrain) The {herd} round {$e.place} are dying of a sickness nobody can name; {nbig} are dead.
+  ($e.what=rats) The rats of {$e.place} have got into the granaries, and the council is paying {n} {smallcoin} a tail.
+  ($e.what=worm) The worm is in the {crop} at {$e.place}; what is not eaten is not worth the cutting.
+  ($e.what=wolves) Wolves have come down from {mountain} to the farms round {$e.place}, and taken {n} of the {herd}.
+  ($e.what=mites) The mites are in the stores at {$e.place}, and everything has to be sorted by hand.
+news.pest.x
+  The farmers ask what the council means to do.
+  The prices of {crop} have risen at the news.
+  The priests of {holyplace} have blessed the fields, and the farmers have bought poison.
+  ($e.what=rats|$e.what=mites) The {beast} of every house has been called to duty.
+  It is the worst in {n} years, the farmers say, and they keep count.
+  The {bird} have come down to the fields to feast, and are the only ones pleased.
+
+# ---- a wonder ------------------------------------------------------------------------------------------------------------------
+news.wonder
+  {news.h.wonder}\n{news.wonder.m} {news.wonder.x}
+news.h.wonder
+  A curiosity
+  A wonder at {$e.place}
+  Strange news from {$e.place}
+news.wonder.m
+  ($e.what=calf) A calf with two heads has been born at {$e.place}; both heads are said to be hungry.
+  ($e.what=fish) A fish the length of {news.fish.len} has been taken in the river at {$e.place}, and is being shown for {n} {smallcoin}.
+  ($e.what=hoard) Workmen digging a drain at {$e.place} have found a pot of old coins, which the council and the workmen both claim.
+  ($e.what=stone) A stone fell from the sky at {$e.place} in the night and is still warm, the farmer says, who will not sell it.
+  ($e.what=rain) Red rain fell on {$e.place}; the washing will never be the same.
+  ($e.what=spring) The spring at {$e.place} has run warm since {season.now} began, and people come from {city} to bathe in it.
+  ($e.what=beast) A white {beast} has been seen in the woods near {$e.place}, and the hunters have been asked to leave it be.
+  ($e.what=bones) Bones of a beast larger than any now living have been dug out of the clay at {$e.place}.
+  ($e.what=twins) Three children at one birth at {$e.place}; mother and all three are well, the father less so.
+  ($e.what=tree) The old {tree.n} at {$e.place} has flowered in {season.now}, out of all season.
+  ($e.what=bell) The bell of {holyplace} at {$e.place} rang by itself at midnight, and the ringer swears he was asleep.
+  ($e.what=ruin) Under a field at {$e.place} the plough has struck the walls of a town older than any we know of.
+  ($e.what=signal) The observatory at {$e.place} reports a signal from the sky that repeats, and will not say more.
+news.fish.len
+  a man
+  a cart
+  a rowing boat
+news.wonder.x
+  Crowds have gone out to see it, with {food} and children.
+  The learned of {city} have been sent for.
+  Some are saying it means something; nobody agrees what.
+  This paper reports it and draws no conclusions.
+  The priests of {holyplace} have been asked, and have said it is a matter for {god}.
+
+# ---- games -------------------------------------------------------------------------------------------------------------------
+news.games
+  {news.h.games}\n{news.games.m} {news.games.x}
+news.h.games
+  The games at {$e.place}
+  ($e.what=race|$e.what=horses|$e.what=boats|$e.what=swimming) The races
+  ($e.what=song) The singing contest
+  (has:$e.a) Victory for {$e.a:name}
+news.games.m
+  (has:$e.a) {$e.a:full} of {$e.a.home} won the {news.games.what} at {$e.place} before a crowd of thousands.
+  (has:$e.a) The {news.games.what} at {$e.place} went to {$e.a:name}, who is {#$e.a.age} and had never won anything before.
+  The {news.games.what} at {$e.place} went to the {$e.place} side, after a dispute about the rules that lasted longer than the games.
+  The {news.games.what} at {$e.place} drew the whole town and half the next.
+news.games.what
+  ($e.what=race) foot races
+  ($e.what=wrestling) wrestling
+  ($e.what=archery) archery
+  ($e.what=boats) boat races
+  ($e.what=ball) ball games
+  ($e.what=song) singing
+  ($e.what=horses) horse races
+  ($e.what=chess) board games
+  ($e.what=swimming) swimming races
+news.games.x
+  The prize was a {colour.holy} ribbon and {n} {coin}.
+  There was {drink} afterwards, and then there was a second contest nobody had planned.
+  (has:$e.a) {$e.a:name} has been carried round {town.open} twice and asked to make a speech, and declined both times.
+  The losers have asked for a return match at {festival}.
+  The {herd} on the far field watched the whole thing and were not impressed.
+news.storm.reach
+  {holyplace}
+  the market
+  the second street
+  the steps of the school
+news.roofof
+  the school
+  {holyplace}
+  the hall
+  the station
+)VG"

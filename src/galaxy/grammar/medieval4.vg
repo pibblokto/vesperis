@@ -1,0 +1,125 @@
+R"VG(
+# medieval4.vg (H-04; the second pass 2026-10-10): the decree, the rule's law: who gives it, why (the year's trouble, or a law the
+# history made: `@event law med.dec`, by what it ruled on), its clauses in the people's own goods, places and coin, its seal.
+
+@root med.dec.*
+
+# ---- the decree: the rule's law ------------------------------------------------------------------------------------------
+
+genre.decree (words=33..108)
+  {decree.head} {decree.because} {decree.clauses} {decree.close}
+  (1.5) {decree.head} {@event law med.dec 25} {decree.clauses} {decree.close}
+
+decree.head (formula)
+  (has:$ruler) {$ruler:full}, holding the rule at {$seat}, to all the {people}:
+  (has:$ruler.epithet) {$ruler:full} {$ruler.epithet}, at {$seat}, to the {people}:
+  (gov=council) The elders of {$seat} to all the {people}:
+  (gov=theocracy) The priests of {god}, at {$seat}, to all who keep the faith:
+  (gov=republic|gov=assembly) {ruler.the} of {city} to all the {people}:
+  By order of {ruler.the}, at {$seat}, in the {#year:ord} year of {city}:
+  Heard at {$seat} and cut in {walls.of}, the {#year:ord} year of {city}:
+  To the houses of {$home} and the villages about it, from {ruler.the}:
+
+decree.because
+  (3 famine=1) Because the stores are low and the hungry are on the roads, {=.why:famine}
+  (3 sick=1) Because the sickness is in the towns, {=.why:sick}
+  (3 war=1) Because the land is at war, {=.why:war}
+  (3 stage>=1) Because the times are hard and harder each year, {=.why:hard}
+  (harvest>=3) Because {god} has given a good year, {=.why:good}
+  Because it is right and has always been so, {=.why:custom}
+  Because the old ways are being forgotten, {=.why:custom}
+  Because there have been quarrels over {watersrc}, {=.why:water}
+  Because the market at {$seat} has been cheated, {=.why:market}
+  Because the roads to {city2} are a disgrace, {=.why:roads}
+  Because the {herd} have been straying into the {crop}, {=.why:herds}
+  Because there have been fires in {$home}, {=.why:fire}
+
+# a law the history made (`@event law med.dec 25`): the reason by what it ruled on ($e.what), its clauses the same way
+med.dec.law
+  ($e.what=measures) Because the {vessel} of the market have grown smaller and the prices larger, {=.why:market}
+  ($e.what=tax) Because the treasury at {$seat} is empty and the walls are not mended, {=.why:tax}
+  ($e.what=water) Because there have been quarrels over {watersrc}, {=.why:water}
+  ($e.what=tolls) Because the roads are mended by some and used by all, {=.why:roads}
+  ($e.what=curfew) Because of what is done in the streets after dark, {=.why:curfew}
+  ($e.what=coin) Because the old coins are clipped and the new ones are lighter, {=.why:coin}
+  ($e.what=inheritance) Because of the quarrels of heirs, which fill the courts and empty the fields, {=.why:heirs}
+  ($e.what=drink) Because of the {drink>.dr}, and what the {.dr} does to the young of {$home}, {=.why:drink}
+  ($e.what=weapons) Because blood has been spilt in the market over nothing, {=.why:weapons}
+  ($e.what=census) Because {ruler.the} would know how many we are, {=.why:census}
+  ($e.what=calendar) Because the feasts have drifted and {festival} falls in the wrong season, {=.why:calendar}
+  ($e.what=dogs) Because of the dogs of {$home}, which are more than the people, {=.why:dogs}
+  ($e.what=forests) Because the {tree} on {mountain} are cut faster than they grow, {=.why:forests}
+  ($e.what=school|$e.what=hours|$e.what=noise|$e.what=rations) Because it has been asked for, and is right, {=.why:custom}
+med.dec.none
+  {decree.because}
+
+decree.clauses
+  {decree.c} {decree.c} {decree.c}.
+  {decree.c} {decree.c}.
+  (0.6) {decree.c} {decree.c} {decree.c} {decree.c}.
+
+decree.c
+  (6 once .why=famine) no {crop} is to leave {city} by road or river;
+  (6 once .why=famine) the granaries are to be opened on the {#number:ord} day of each moon, a {med.unit} to a house;
+  (6 once .why=famine) whoever hides {crop} from the count loses all of it;
+  (6 once .why=sick) no stranger is to sleep inside the town;
+  (6 once .why=sick) the dead are to be {buried} the same day, and their bedding burnt;
+  (6 once .why=sick) the {craft} is to stop until the bells are rung for the end of it;
+  (6 once .why=war) every house is to send one of its own to the levy;
+  (6 once .why=war) the smiths are to make spears and nothing else until the peace;
+  (6 once .why=war) the {herd} of the border villages are to be driven into the town;
+  (6 once .why=water) {watersrc} is to be shared by turns, each house its hour;
+  (6 once .why=water) no one is to water the {herd} at {watersrc} before noon;
+  (6 once .why=water) whoever fouls {watersrc} is to clean it, and pay;
+  (6 once .why=hard) every house is to give up a tenth of its stores to the common granary;
+  (6 once .why=good) the tithe this year is a fifth, for the years that will not be good;
+  (6 once .why=market) the {vessel} of the market are to be sealed at {hall} and checked at each new moon;
+  (6 once .why=market) whoever sells {crop} short is to stand by the gate with the short measure round the neck;
+  (6 once .why=roads) every town is to mend the road as far as the next town's stone;
+  (6 once .why=roads) the toll is {#n} {smallcoin} a cart and nothing a walker;
+  (6 once .why=herds) the {herd} are to be penned at night and belled by day;
+  (6 once .why=herds) a beast found in the {crop} is the field's owner's until it is paid for;
+  (6 once .why=fire) no fire is to be lit under a roof of {material} after lamp-lighting;
+  (6 once .why=fire) every house is to keep a {vessel.one.n} of water by the door;
+  (6 once .why=tax) every house is to pay {#n} {coin} at {festival}, and the poor half;
+  (6 once .why=tax) the tax is to be paid in {crop} where there is no coin;
+  (6 once .why=curfew) the gates are to be shut at dusk and the streets cleared at the second bell;
+  (6 once .why=curfew) a lamp is to be carried by whoever walks after dark;
+  (6 once .why=coin) the clipped coins are to be brought to {hall} and weighed;
+  (6 once .why=coin) the {coin} of {city} is to be taken in every market at its weight;
+  (6 once .why=heirs) the eldest is to have the house, and the rest the {herd}, shared by lot;
+  (6 once .why=heirs) a widow keeps the house while she lives;
+  (6 once .why=drink has:.dr) no {.dr} is to be sold on the rest day;
+  (6 once .why=drink) whoever is found drunk at {holyplace} pays for the lamps for a {med.dec.span};
+  (6 once .why=weapons) no blade longer than a hand is to be carried in the market;
+  (6 once .why=census) every house is to be counted by the scribes before {festival}, the children too;
+  (6 once .why=census) whoever is not counted is not fed from the granary;
+  (6 once .why=calendar) {festival} is to be kept from now on in {season.next}, as it was in the beginning;
+  (6 once .why=dogs) a dog without an owner is to be driven beyond {town.edge};
+  (6 once .why=forests) no {tree.n} is to be cut on {mountain} without leave;
+  (6 once .why=forests) for every {tree.n} cut, two are to be planted;
+  (once) {festival} is to be kept for {#number|day}, and no work done on them;
+  (once) a stranger who asks for bread is to be given it;
+  (once) the roads are to be mended by the towns they pass;
+  (once) the tithe is a tenth of the {crop} and a tenth of the {herd};
+  (once) no one is to build within a spear's throw of {town.edge};
+  (once) the scribes are to keep the count of every birth and every death;
+  (once) the old custom of {feast.custom} is to be kept as it was;
+  (once) no house is to be roofed in anything but {material};
+  (once) the {craft} of {$home} is to be sold only in the market;
+  (once stage>=1) no one is to leave the land without leave from {ruler.the};
+  (once stage>=2) every house is to give up its stores to the common granary;
+
+med.dec.span
+  month
+  season
+  year
+
+decree.close (formula)
+  Let it be cut in stone and read in every market.
+  So it is ordered. {god.keep}.
+  Who breaks this pays a tenth of all they have.
+  Given at {$seat}, in {season.now}.
+  Read aloud at {town.open} on the next three market days.
+  Sealed at {hall}. Let no one say they were not told.
+)VG"

@@ -1,0 +1,365 @@
+R"VG(
+# futuristic.vg (H-04; the second pass 2026-10-10): the machine's log (drives and crystals): a day of the habitat's keeping in the log's
+# register (`@news public log`), its lines composed of parts that are the people's own: the systems it keeps (by the ruins' plan, its
+# links, its light, its land: a terraced people's log keeps the terraces), the residents' requests and the answers, what they did
+# (their feasts, their crafts, their herds kept for the old times' sake), the counts, the weather outside, the decline. Each people
+# keeps its own share of every part (`fut.` pools, futuristic5.vg), so two peoples' machines never log the same day.
+
+@root ar.life.* memorial.*
+
+# ---- the machine's log ------------------------------------------------------------------------------------------------------
+
+genre.mlog (words=21..160)
+  {ml.head}\n{log.t1} {ml.line}\n{log.t2} {@news public log}\n{log.t3} {ml.line}\n{log.t4} {ml.line}\n{log.t5} {ml.line}
+  {ml.head}\n{log.t1} {@news public log}\n{log.t2} {ml.line}\n{log.t4} {ml.line}\n{log.t5} {ml.line}
+  {ml.head}\n{log.t1} {ml.line}\n{log.t2} {ml.line}\n{log.t3} {@news public log}\n{log.t5} {ml.line}
+  {ml.head}\n{log.t2} {ml.line}\n{log.t3} {ml.line}\n{log.t4} {ml.line}\n{log.t5} {@news public log}
+
+ml.head (formula people=3)
+  (has:mind) Log of {mind}, node at {$home}. Cycle {#year:digits}.
+  Systems log, {$home}. Cycle {#year:digits}.
+  {$home}, the keeping log, cycle {#year:digits}, {season.now}.
+  The house log of {$home}, cycle {#year:digits}.
+  (has:$home.quarter) Log, {$home}, {$home.quarter}. Cycle {#year:digits}.
+  (has:day) The {~log} of {$home}: cycle {#year:digits}, the {#day:ord} day.
+  {$home} keeping record. Cycle {#year:digits}. {season.now}.
+  Day log of the habitat at {$home}, cycle {#year:digits}.
+  Watch log, {$home}, cycle {#year:digits}, {season.now}.
+
+ml.line
+  (3 once) {fut.maint}
+  (2 once) {fut.maint}
+  (2 once) {fut.ask}
+  (1.5 once) {fut.obs}
+  (1 once) {fut.count}
+  (1 once) {fut.outside}
+  (1 once) {fut.pens}
+  (0.8 once) {fut.rite}
+  (1.5 once stage>=1) {fut.decline}
+
+# a system kept: what was done to it, and how it went
+fut.maint
+  (3) {fut.did} {fut.sys}. {fut.result}
+  (2) {fut.sys}: {fut.did.short}. {fut.result}
+  (1) {fut.did} {fut.sys}, {fut.cause}. {fut.result}
+  (1) {fut.did} {fut.sys} {fut.when.past}. {fut.result}
+  (1) {fut.sys} {fut.state}. {fut.did.short}. {fut.result}
+
+fut.did (share=0.6)
+  Maintenance completed on
+  Inspection of
+  A fault cleared in
+  Power rerouted to
+  A leak sealed in
+  Filters changed in
+  A noise traced in
+  A sensor replaced in
+  Stores counted in
+  Repainting of
+  A draught stopped in
+  A crack mended in
+  Routine cleaning of
+  The night schedule changed for
+  The alarms tested in
+  The lighting adjusted in
+  The old wiring traced in
+  The doors serviced in
+  Pressure checked in
+  A spill cleaned up in
+  A drill held in
+  The heat raised in
+  Dust cleared from
+  The {~bolts} replaced in
+fut.did.short
+  cleaned
+  inspected
+  repaired
+  tested
+  repainted
+  sealed
+  rewired
+  counted
+  serviced
+  aired
+  reset
+  checked twice
+
+fut.cause
+  at the residents' request
+  before {festival}
+  after {weather.now}
+  because the children found it first
+  for the {nth} time this cycle
+  on the old schedule, which nobody remembers making
+  a cycle late
+  ahead of {season.next}
+  while {fut.res.lc} were at {feast.custom}
+
+fut.state
+  ran warm overnight
+  made a sound like {fut.sound}
+  stopped for {#n|minute}
+  was found open
+  smelled of {fut.smell}
+  dripped onto the {fut.floor}
+  flickered {fut.when.past}
+  was reported cold by {#n|resident}
+
+fut.result (share=0.75)
+  No faults.
+  Within limits.
+  One part replaced.
+  Logged for review.
+  Nothing wrong after all.
+  The {fut.block} were not disturbed, which is the aim.
+  The {fut.block} were disturbed, and said so, at length.
+  Nobody in the {fut.block} noticed, which is the aim.
+  The fault was {fut.culprit}. Removed.
+  Done twice; the first time the {craft} workshop said it was not right.
+  {#n|resident} from the {fut.block} watched and offered advice.
+  Three hours, most of them waiting for a part from the {craft} workshop.
+  The part was older than the {tree} on the slopes.
+  It will need doing again before the {bird} come back.
+  Finished {fut.when.past}.
+  The old way worked better, the {craft} workshop says. Noted.
+  The repair is not pretty. It holds, like the old {walls.of}.
+  Cost: {#n:words} hours, one argument and a pot of {drink}.
+  A child helped. The child's work, a row of {motif.over}, has been left in place.
+  The {~guild} were thanked with {food}.
+  Recorded in the {~book} as well as here.
+  Another layer of paint on the old ones; {motif.over} still show through.
+  The {craft} workshop was consulted, at length.
+  The {herd} were moved out first and back in after, complaining.
+  Done to the sound of {instrument} from the {fut.common}.
+  The old ones said it was done better before the {fut.green} were planted. Possibly.
+  Paid for with {food} for the workers, as the custom is.
+  A {colour.holy} mark painted on it, to show it is done.
+
+fut.culprit
+  a {beast} in the ducts
+  a nest of {bird}
+  a piece from {fut.game} in the vent
+  a {vessel.one.n} wedged in the valve
+  dust from {land}
+  frost on the intake
+  a seal older than the habitat
+  a wrong setting, made by me
+
+fut.sound
+  {bird}
+  a {beast} in the walls
+  rain on {roofs}
+  someone humming
+  {instrument} being tuned
+  distant applause
+
+fut.smell
+  {fuel}
+  burnt {food}
+  {drink}
+  wet stone
+  the gardens after rain
+  hot metal
+
+# a resident's wish, and the answer
+fut.ask
+  (3) {fut.asker} asked {fut.wish}. {fut.answer}
+  (1) Request from {fut.asker.lc}: {fut.wish.n}. {fut.answer}
+  (1) {fut.asker} asked {fut.wish} again. {fut.answer}
+  (1) {fut.asker} came to the panel and asked {fut.wish}. {fut.answer}
+
+fut.asker (people=10)
+  A child of {n}
+  The oldest resident of {$home}
+  A gardener from the {fut.green}
+  A visitor from {city2}
+  The master of the {craft} workshop
+  Two sisters from the {fut.block}
+  A man who keeps the {herd} in the heritage pens
+  (has:$home.quarter) A woman from {$home.quarter}
+  A boy who wants to be a {fut.dream}
+  The watch at the {fut.gate}
+  A new mother in the {fut.block}
+  The {~elder} of the east stair
+  A resident who never asks for anything
+  One of the players of {instrument}
+fut.asker.lc
+  a child of {n}
+  the oldest resident of {$home}
+  a gardener from the {fut.green}
+  the master of the {craft} workshop
+  the watch at the {fut.gate}
+  a resident who never asks for anything
+
+fut.wish (people=18)
+  for more light in {season.now}
+  for the old music in the halls
+  for the {festival} lamps to be lit early
+  for {food} at the evening meal
+  for the {herd} to be let out of the pens for a day
+  for the weather to be changed for {festival}
+  for a quiet day, without announcements
+  for {instrument} to be played at dawn
+  to be woken {time.of}
+  for the {tree} by the {fut.gate} to be left alone
+  for the old word for {fut.oldword}
+  whether {skynight} would be clear tonight
+  for the recording of their grandmother's voice
+  for a set for {fut.game} in the common room
+  for the doors to be painted {colour.any}, as they were
+  for the smell of {fruit} in the {fut.green}, like before
+  for the doors to stop greeting them by name
+  for a story, any story, at bedtime
+  to be told how old the {fut.wall} are
+  for {drink} to be served at the watch
+  for the {fut.green} to be left dark one night, for the stars
+  to learn {craft} from a person, not from me
+fut.wish.n
+  more light in {season.now}
+  the old music in the halls
+  {food} at the evening meal
+  a quiet day
+  the {festival} lamps early
+  a story at bedtime
+  {drink} at the watch
+
+fut.answer (share=0.75)
+  Granted.
+  Granted, within limits.
+  Refused; the reason has been explained twice, once over {drink}.
+  Referred to {ruler.the}.
+  Granted. Nobody came, except the {herd}.
+  Granted, though it is the {nth} time, and the {fut.block} have opinions.
+  Considered. I will answer after the {fut.green} are watered.
+  Granted, and I enjoyed it.
+  Granted for one day; the day was a success, and ended with {food}.
+  Granted, after the {craft} workshop was asked.
+  Granted, and the {herd} were moved to make room.
+  Granted, on condition of {food} for everyone.
+  Referred to the keepers of {holyplace}, who said yes.
+  Granted at {festival}, when the {colour.holy} lamps are lit, and not before.
+  Refused. Resubmitted with {fruit}. Granted.
+  Not possible. {food} offered instead, and accepted.
+  Granted. {#n|resident} from the {fut.block} asked for the same.
+  Answered with a riddle from {fut.game}. The resident laughed.
+
+# what the residents were seen doing
+fut.obs
+  (3) {fut.res.pl} {fut.doing} in the {fut.common}.
+  (2) {fut.res.pl} {fut.doing} in the {fut.common}. {fut.obscoda}
+  (1) {#n|resident} {fut.doing} {fut.when.past}. {fut.obscoda}
+  (1) In the {fut.common}, {fut.res.lc} {fut.doing}.
+
+fut.res.pl (pl people=6)
+  Residents
+  The children
+  The old ones
+  The young
+  The {craft} workers
+  The night watch
+  The families of the {fut.block}
+  The players of {instrument}
+  The gardeners
+  The newcomers from {city2}
+fut.res.lc (pl)
+  residents
+  the children
+  the old ones
+  the gardeners
+  the young
+
+fut.doing (people=14)
+  kept {feast.custom}
+  spent the evening at {pastime}
+  planted {fruit} in the long beds
+  argued about the gardens
+  sang the {festival} songs
+  wore {colour.mourn} for a death in the {fut.block}
+  cooked {food} in the common kitchens
+  brought {drink} to the watch
+  repainted {motif.over} over the doors
+  practised {craft} the slow way
+  danced the {~dance}
+  told the old stories about {mountain}
+  counted {bird} from the observation deck
+  walked the {herd} round the terraces
+  swapped {fruit} and {veg} across the courtyard
+  carried {colour.holy} lamps to {holyplace}
+  sat in silence for the dead of {city}
+  built a model of {focusword} out of {material}
+fut.obscoda (share=0.8)
+  I kept the lights on for them.
+  Nobody asked me to join. I watched.
+  Logged without comment.
+  It went on past midnight, and so did {instrument}.
+  The noise was within limits, just, until the {herd} joined in.
+  Two of them asked me to record it for the {~book}.
+  It rained on the {fut.green}; they did not seem to notice.
+  It was the first time in {#n|cycle} that anyone had danced the {~dance}.
+  They left {food} out for me afterwards. I logged it as kindness.
+  The {craft} workshop lent them the old tools for it.
+
+# the counts of the day
+fut.count
+  {#n|birth} this cycle, {#n|death}; the births marked with {colour.holy} cord at the {fut.gate}.
+  Population of {$home} stable. The {herd} in the pens up by {#n}.
+  {#nbig} meals served at {festival}; {#n} complaints, all about the {food}.
+  Water use up by a {fut.part} in {season.now}, most of it in the {fut.green}.
+  {#n|resident} moved from the {fut.block} to {city2}; {#n} came the other way, with their {beast}.
+  Stores of {crop} at {fut.level}; of {crop2} at {fut.level}.
+  {#nbig} visitors at the {fut.green} this cycle, most of them for the {fruit}.
+  {#n} weddings this cycle, all in the {fut.common}, all with {feast.custom}.
+fut.part
+  tenth
+  quarter
+  third
+  fifth
+fut.level
+  capacity
+  three quarters
+  half
+  the usual
+  a level nobody living has seen
+
+# outside the shield
+fut.outside
+  {weather.now} outside the shield. Inside: within limits, and the {herd} restless.
+  {skynight} visible from the observation deck; {#n|resident} went up to see it, with {drink}.
+  Outside: {weather.now}. The {tree} on the slopes have turned.
+  The {bird} came back to {land} this week, {#n} days late.
+  (aurora=1) The lights in the north, all night. The children were allowed up to watch from the {fut.green}.
+  (comet=1) The hairy star is in the evening sky again; the {craft} workshop has painted it on a door.
+  (rings=1) The ring was edge-on today, a line across the sky. The {herd} did not look up.
+  (moons>0) {moon} rose full over {mountain}. The {fut.green} doors were opened for it, as the old ones did.
+
+# the old ways kept: the herds, the crafts, the feasts
+fut.pens
+  The {herd} in the heritage pens are well; one is lame and has been named for it.
+  {#n} young {herd} born in the pens. Named by the children, badly.
+  The {craft} workshop open late; {#n} pieces finished for {festival}, mostly {colour.any}.
+  {fruit} picked in the {fut.green}: more than last cycle, and sweeter.
+  The {~hall} swept for {feast.custom}.
+fut.rite
+  (faith!=machine faith!=philosophy) Lamps lit at {holyplace} for {god}, with {fruit} on the step. Attendance: {fut.attend}.
+  {feast.custom} kept at {$home}. Attendance: {fut.attend}.
+  (rite=memory) The names of the dead read at {holyplace}, the {colour.mourn} cloths hung. It went on long after dark.
+  The {#number} bells rung for {festival} by hand, the ropes wound with {colour.holy} cloth, as the old ones did.
+fut.attend (share=0.6)
+  most of them
+  everyone who could walk
+  fewer than last cycle
+  {#nbig}
+  the old ones, a few children and the {herd}
+  the whole {fut.block}, and their {beast}
+
+fut.decline
+  Population of {$home} down again this period.
+  {#n} districts dark. Power rerouted to the others.
+  Nobody has come to the {fut.green} in {#n|cycle}.
+  The transit line runs empty most of the day.
+  The {fut.block} closed. Its residents moved nearer the centre.
+  The {herd} released from the pens; there was nobody to keep them.
+  {festival} kept by {#n|resident}. The rest were too tired.
+  The {craft} workshop shut. The tools are labelled and stored.
+  I have stopped heating the {fut.common}. Nobody sits there now.
+)VG"

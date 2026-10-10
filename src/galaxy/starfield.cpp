@@ -102,19 +102,23 @@ double bandToneOf(double column) {
     return x / std::sqrt(std::sqrt(1 + x * x * x * x));
 }
 
+void buildGalaxyBandCells(const Vec3& obs, std::vector<float>& map, int W, int H, int c0, int c1) {
+    // the cells in parallel: 8,192 directions of 70 samples each, 10 ms for a whole map; the landing's site build and the space
+    // view both run on the main thread with the pool free (the drainage prefetch has threads of its own)
+    parallelFor(c1 - c0, 32, [&](int b, int e) {
+        for (int c = c0 + b; c < c0 + e; c++) {
+            const int i = c % W, j = c / W;
+            double lon = (i + 0.5) / W * TAU, lat = bandRowLat((j + 0.5) / H);
+            Vec3 d(std::cos(lat) * std::cos(lon), std::sin(lat), std::cos(lat) * std::sin(lon));
+            double tau, col = galaxyColumn(obs, d, tau);
+            map[(size_t)c] = (float)bandToneOf(col);
+        }
+    });
+}
+
 void buildGalaxyBand(const Vec3& obs, std::vector<float>& map, int W, int H) {
     map.assign((size_t)W * H, 0.f);
-    // the rows in parallel: 8,192 directions of 70 samples each, 10 ms; the landing's site build and the space view both
-    // run on the main thread with the pool free (the drainage prefetch has threads of its own)
-    parallelFor(H, 2, [&](int jb, int je) {
-        for (int j = jb; j < je; j++)
-            for (int i = 0; i < W; i++) {
-                double lon = (i + 0.5) / W * TAU, lat = bandRowLat((j + 0.5) / H);
-                Vec3 d(std::cos(lat) * std::cos(lon), std::sin(lat), std::cos(lat) * std::sin(lon));
-                double tau, col = galaxyColumn(obs, d, tau);
-                map[(size_t)j * W + i] = (float)bandToneOf(col);
-            }
-    });
+    buildGalaxyBandCells(obs, map, W, H, 0, W * H);
 }
 
 double sampleGalaxyBand(const std::vector<float>& map, int W, int H, const Vec3& d) {
@@ -263,6 +267,28 @@ double galaxyDensity(double sx, double sy, double sz) {
     double d = fieldDensity(galaxyTerms(sx, sy, sz));
     double cd; if (clusterAt(sx, sy, sz, cd)) d = std::max(d, cd);   // G-02: a cluster's knot over the field
     return d > GALAXY_CAP ? GALAXY_CAP : d;
+}
+
+double galaxyFieldDensity(double sx, double sy, double sz) { return fieldDensity(galaxyTerms(sx, sy, sz)); }
+
+FaceOnColumn galaxyFaceOnColumn(double sx, double sz) {
+    const GalaxyTerms g = galaxyTerms(sx, 0, sz);   // in the plane: the disc's and the bulge's midplane densities
+    const double A = g.disk * (0.55 + 0.6 * g.arm), B = g.bulge, h = g.h, Rb = GALAXY_BULGE_R, SQRT_PI = 1.7724538509055159;
+    const double diskCol = 2 * g.disk * 0.55 * h, armCol = 2 * g.disk * 0.6 * g.arm * h, bulgeCol = B * Rb * SQRT_PI / 2;
+    FaceOnColumn c;
+    c.column = diskCol + armCol + bulgeCol;
+    if (A + B > GALAXY_CAP) {   // the core: solid stars to the height y* where the two fall under the cap, then their tails
+        double lo = 0, hi = 8 * std::max(h, Rb);
+        for (int k = 0; k < 24; k++) {
+            const double m = 0.5 * (lo + hi);
+            if (A * std::exp(-m / h) + B * std::exp(-4 * m * m / (Rb * Rb)) > GALAXY_CAP) lo = m; else hi = m;
+        }
+        const double ys = 0.5 * (lo + hi);
+        c.column = 2 * (GALAXY_CAP * ys + A * h * std::exp(-ys / h) + B * Rb * SQRT_PI / 4 * std::erfc(2 * ys / Rb));
+    }
+    const double sum = diskCol + armCol + bulgeCol;
+    if (sum > 0) { c.disk = diskCol / sum; c.arm = armCol / sum; c.bulge = bulgeCol / sum; }
+    return c;
 }
 
 int galaxyRegion(int64_t sx, int64_t sy, int64_t sz) {

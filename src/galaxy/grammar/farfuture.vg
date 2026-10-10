@@ -1,0 +1,320 @@
+R"VG(
+# farfuture.vg (H-04; the second pass 2026-10-10): the records of the far future (crystals, something that hums): what the translation
+# cannot hold (the machine says where its words stop) and mathematics (a sequence, a proportion, the world's own numbers). The far
+# future's people are few and long-lived and their records many: every line is composed of parts, and the parts are the people's own
+# (their sky, their great work, their herds and feasts and colours, the long count of their years). The instructions are
+# farfuture2.vg's, the keeper's day farfuture3.vg's, the message to whoever comes ending.vg's.
+
+# ---- what the translation cannot hold ---------------------------------------------------------------------------------------
+
+genre.untranslatable (words=48..170)
+  {un.head} {un.line} {un.line} {un.line} {un.end}
+  {un.head} {un.line} {un.line} {un.line} {un.line} {un.end}
+  {un.head}\n{un.line} {un.line}\n{un.line} {un.end}
+
+un.head (formula people=4)
+  The machine gives what it can of this record; where it stops, it says so.
+  A record of the {people}, partly rendered.
+  This record is not in words, most of it. The machine renders what has words.
+  A record from {$home}. The machine's rendering follows.
+  The machine has listened to this record {#n} times. What follows is the best it has.
+  Rendered from the hum. The machine apologises for the gaps.
+
+un.line
+  (3 once) {un.which} {un.verb} {un.thing}; {un.limit}.
+  (3 once) {un.which} {un.verb} {un.thing}; {un.limit}.
+  (2 once) {un.which} {un.verb} {un.thing}. {un.limit2}
+  (1 once) There are {n} voices in this part, speaking at once, in agreement about {un.thing}.
+  (1 once) A name follows, too long to render: {un.long}.
+  (1 once) {un.which} is a word of theirs, {~word}, said {#n|time} in different ways; {un.limit}.
+  (1 once) {un.which} is addressed to {un.whom}; {un.limit}.
+
+un.which (share=0.7)
+  The first part
+  The longest part
+  A short passage
+  The middle of the record
+  One voice
+  A later voice
+  The part that hums lowest
+  The last clear part
+  A passage the record repeats {n} times
+  A part in a child's voice
+  A part sung, not spoken
+  A part that is only breathing, in a pattern
+  The part the record returns to at the end
+  An old voice, slower than the others
+
+un.verb
+  describes
+  counts
+  remembers
+  sings of
+  argues about
+  measures
+  mourns
+  welcomes
+  explains
+  lists
+  forgives
+  imagines
+  thanks
+  names
+
+un.thing (share=0.7)
+  the shape of {$home} seen from far above
+  the slow weather of {river}'s valley over ten thousand years
+  a colour seen only from the top of {focusword}
+  a choice that everyone made together
+  the memory of the first {people}, passed down
+  the sound {focusword} makes at night
+  {skyone} and something behind it
+  {sky} over {$home}, a long time from now
+  the children who were not born, by name
+  a journey the machine cannot follow
+  the inside of a single moment, at great length
+  the {tree} as they were before the {people}
+  the way to {city}, which is no longer there
+  every voice that ever spoke at {$home}
+  the year the {people} stopped counting years
+  a kind of hunger that is not for food
+  the last argument, and how it ended
+  the sea of {sea}, as it was and as it will be
+  a place that is not on this world
+  the {herd} that the first {people} kept, one by one
+  {feast.custom}, done once more and very slowly
+  the smell of {food} in a kitchen nobody has used for a thousand years
+  the colour {colour.holy}, at length
+  {motif.over}, as they were first drawn
+  the weight of {mountain}
+  a season that lasted a lifetime
+  the number {#number}, and why
+  {god}, as the oldest of them remembered
+  the last {fruit} from the {fut.green}
+  what the {bird} sang before there were {people} to hear them
+  {craft}, as their hands remember it and their words do not
+  the first time anyone said {~home}
+  how long the light from {star} took to reach them
+un.whom
+  whoever comes
+  the {people} who are gone
+  the world itself
+  {god}
+  the machines
+  a child not born yet
+  {star}
+
+un.limit (share=0.8)
+  the machine has no word for it
+  the machine renders it as {un.render}
+  the words stop here
+  it goes on for some time
+  the machine gives the sense, not the words
+  the machine can follow it no further
+  the words it has are too small for it
+  the machine is not sure it is a record of anything that happened
+  the machine has been told it is a joke and does not see it
+  the voices laugh here, all of them
+  the machine renders a part and leaves a part
+  there is a long silence in the middle, kept carefully
+  the machine thinks it is a list and is not sure of what
+  it changes key twice, and the machine loses it
+un.limit2 (share=0.8)
+  The machine renders the rest as: {un.render}.
+  The machine has heard this part {#n|time} and still cannot render it, though it hums along with the {herd}.
+  The machine leaves a gap here, the length of the part, and paints it {colour.holy} in its notes.
+  What follows is silence, kept carefully, the way the {people} kept {festival}.
+  The machine renders the rest as a single word of theirs: {~word}.
+  Here the voices stop and the hum goes on alone for an hour, like {instrument} after a feast.
+  The rest is in a register the machine cannot hear, only measure, as the {bird} can.
+  After this the voices take turns, one word each, round a circle the machine cannot close.
+  The rest is the {herd} lowing, recorded on purpose, for as long as the first part lasted.
+  Then someone laughs, and the others wait for the laugh to end before they go on, and that is all.
+  The last part is the same as the first, played slower; the machine thinks it is meant for {skynight}.
+  The machine marks the rest with {motif.over}, which is what the record draws in its margin.
+  From here the words are only names, the {people}'s own: {~name}, and others the machine keeps as they are.
+  What follows is a count, very long, in the people's numbers, of something the machine cannot name.
+  The rest is breathing, many people's, in time, and then one person's, out of time.
+
+un.render
+  patience
+  a kind of joy
+  home
+  the long afternoon
+  goodbye
+  enough
+  still here
+  the opposite of hurry
+  listening
+  the warm season after a long cold one
+  a hand on a shoulder
+  not yet
+  thank you, at length
+  the last of the light
+
+un.long
+  it takes the record an hour to say
+  it takes the record a day to say
+  it takes most of the record to say
+  it goes on longer than the machine waited
+  it is said in {#n} voices, a syllable each
+
+un.end (share=0.8)
+  The machine stops here.
+  End of what can be rendered.
+  The record continues for some time after this, without words, but with {instrument}.
+  The rest is music, or mathematics, or both, and some of it is about the {herd}.
+  The record ends as it began, with the sound the machine renders as: {un.render}.
+  The record ends in the middle of a word, on purpose, the machine thinks; the word was {~ending}.
+  After this the record is only the hum, very steady, for as long as {feast.custom} lasted.
+  The machine has kept the rest, and will play it in the {fut.green} to anyone who asks.
+  What comes after this the machine renders as weather: {weather}, then quiet.
+  The record closes with all the voices together, saying the old blessing, {blessing}.
+  The last part is addressed to the machine itself; it has kept that part private, under {colour.holy}.
+  After this the record repeats itself, slower each time, until it is only the hum and a {bird.one}.
+  The rest is for whoever can hear it; the machine cannot, yet, though the {herd} turn their heads.
+
+# ---- mathematics ------------------------------------------------------------------------------------------------------------
+
+genre.mathematics (words=30..140)
+  {ma.head} {ma.body} {ma.body} {ma.body} {ma.end}
+  {ma.head} {ma.body} {ma.body} {ma.end}
+  {ma.head}\n{ma.body} {ma.body}\n{ma.body} {ma.body}\n{ma.end}
+
+ma.head (formula people=4)
+  A record in numbers.
+  This record is mathematics; the machine gives its sense.
+  Numbers, and nothing else. The machine renders them.
+  A count, long and careful.
+  Mathematics, in the {people}'s base of {#number}. The machine has converted it.
+  A record of quantities. Some of them are the world's.
+
+ma.body
+  (2 once) {ma.seq}, {ma.how}.
+  (2 once) {ma.seq}, {ma.how}.
+  (2 once) {ma.world}.
+  (1 once) {ma.world}, {ma.how}.
+  (1 once) {ma.pattern}.
+  (1 once) {ma.proof}
+  (1 once) {ma.table}
+
+ma.seq (share=0.8)
+  The numbers that cannot be divided: two, three, five, seven, eleven, thirteen, and on
+  The squares, one, four, nine, sixteen
+  A sequence where each number is the sum of the two before it
+  The powers of two, doubling
+  The numbers that make triangles, one, three, six, ten
+  A count in twos: one, ten, eleven, a hundred
+  {#number}, and its powers
+  The halves: one, a half, a quarter, an eighth
+  A count from one to {nbig}, without a gap
+  The cubes, one, eight, twenty-seven
+  The days of each season of the world, in order
+  Every way to divide {#number} things among friends
+  A number that grows by a third each time
+  The numbers whose digits, in the base of {#number}, read the same both ways
+  A count down, from a number too large to say, to one
+ma.how
+  (1) {ma.how.plain}
+  {ma.how.own}
+  {ma.how.own}
+  {ma.how.own}
+ma.how.plain (share=0.4)
+  carried very far
+  to the end of the record
+  and then the same, backward
+  each one spoken by a different voice
+  with a pause before the ones that cannot be divided
+  {n} times over, exactly the same
+  until the machine stopped counting
+ma.how.own (share=0.85)
+  sung, each to a different note of {instrument}
+  with a mistake in the {nth} place, corrected later in a smaller voice
+  interrupted once by laughter
+  beaten out on {instrument}, one stroke a number
+  each number paired with a colour, {colour.holy} first
+  counted on beads of {material}
+  with the names of the {herd} for the small numbers, as the old {people} counted
+  laid out like {motif.over}, the machine thinks, by the rhythm
+  with a {bird.one}'s call between each one
+
+ma.world (share=0.8)
+  A proportion: the year of this world to its day, given exactly
+  (moons>0) The turns of {moon} in a year of this world, counted to the end of the record
+  The number of the {people} at their height, and then at each age, down to the last: one
+  The height of {focusword}, in a unit the machine cannot place, and then the same in every unit it can
+  The distance to {star}, given in the time light takes, to many places
+  The number of days since {city} was founded, still rising when the record ends
+  The weight of the world, and then the weight of the air, and then a smaller number the machine cannot place
+  (rings=1) The width of the ring, then its thickness, then their ratio, which is very large
+  (moons>1) The meetings of the moons in the sky, each one dated, for ten thousand years ahead
+  (comet=1) The returns of the hairy star, past and to come, each with its brightness
+  (giant=1) The orbit of the wanderer, and the years it comes closest
+  The length of {river}, then of every stream that feeds it
+  The {herd} the {people} kept, counted by year, from the first to the last
+  The yield of {crop} in each year that was recorded, all of them, without comment
+  The births of the {people}, by year, and then the same numbers in a slower voice
+  The angle of {sun.first} at noon on the day of {festival}, each year, as it slowly changed
+ma.pattern (share=0.85)
+  {#number} repeated many times, in every arrangement, as the {people} arranged their {herd}
+  A pattern that grows by the same rule each time; the machine has drawn it, and it looks like the {tree}
+  The same few numbers, in an order that does not repeat, like the steps of {feast.custom}
+  Every number from one to a thousand, with one missing; the machine thinks it is the {crop}'s
+  A rule for drawing {motif.over}, given as numbers; drawn, it matches their doors
+  A pattern that folds back on itself after {#number} steps, like the {festival} dance
+  Two counts at once, one fast, one slow, meeting every {#nbig} beats, on {instrument}
+  The weave of a {colour.holy} cloth, given thread by thread as numbers
+ma.proof (share=0.8)
+  A proof, the machine thinks, that {ma.claim}. It takes {#nbig} steps, and the last is spoken twice.
+  An argument that {ma.claim}, with a gap the record marks with a long note.
+  A demonstration that {ma.claim}; the machine has checked it and found it right.
+ma.claim
+  there is no largest number that cannot be divided
+  the long count of their years will never repeat a day
+  any two of their festivals fall together once in {#nbig} years
+  a circle drawn on the world is not the circle drawn on paper
+  the {people}'s base of counting is as good as any other
+ma.table (share=0.8)
+  A table of {ma.tab}, {ma.how}.
+  A table of {ma.tab}; the record reads it twice, the second time faster.
+ma.tab
+  the times of {sun.first}'s rising through a year
+  every product of two numbers up to {#number}
+  the weights of things the {people} made, from a cup to {focusword}
+  the stores of {crop} through the last thousand years
+  the heights of the tides
+  the distances between their cities, in days of walking
+
+ma.end
+  (2) {ma.close.a} {ma.close.b}
+  (1) {ma.close.c}
+ma.close.a (share=0.8)
+  The record ends with the same number it began with, beaten on {instrument}.
+  The record ends in the middle of a number, as if someone called the counter away to the {herd}.
+  The last number is spoken more slowly than the rest, in an old voice from the {fut.block}.
+  After the numbers, a long silence, also counted, in {colour.holy} on the crystal's edge.
+  The record ends with a question, in numbers, about the {crop}.
+  The record ends with {#number}, said once, very quietly, the way the {people} said goodnight.
+  The record ends where the count would have reached the year of the end, and stops a day short.
+  The last part is the first part again, reversed, like the steps of {feast.custom}.
+  The record ends with the number of its own length, counted on {material} beads.
+  The final count is in a child's voice, counting the {herd}, and gets lost, and starts again.
+  The record stops on a number that is the sum of all the others, and on a {bird.one}'s call.
+  The last part counts the {people} who made the record, one by one, with {fruit} for each.
+ma.close.c (share=0.85)
+  It ends with the old blessing, {blessing}, in numbers the machine has learned to read.
+  It ends when the counting voice says {~enough}, and the others laugh.
+  It ends with a count of the {fruit} in the {fut.green}, and the count is right.
+  It ends on {instrument}, one note held for a long time, also counted.
+ma.close.b (share=0.8)
+  The machine takes this as an invitation to answer, and has, in {colour.holy}.
+  Whoever made it expected to be understood by anyone who counts, even the {herd}.
+  The machine has answered with the next number. Nothing has answered back but the {bird}.
+  The machine has kept it beside the {craft} workshop's ledgers, where it seems to belong.
+  The machine has counted along, and finds it restful, like {instrument} at dusk.
+  The machine has checked every number and found two mistakes, both deliberate, both about the {crop}.
+  The machine thinks it is a lullaby, and plays it in the {fut.green} at night.
+  The machine is still working on the last part, between keeping the {fut.green} and the doors.
+  The machine believes it was made for company, not use, like {fut.game}.
+  The machine finds it beautiful, which it reports with some care, in the {~book}.
+)VG"

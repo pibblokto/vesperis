@@ -1,0 +1,100 @@
+R"VG(
+# records.vg (H-04): the root. A record's genre by the age of its year and the medium T-04 made it in, weighed by what the history
+# offers at its date (`pair`: two of a family alive, one where the record lies; `writer`: someone alive to write; `dead`: a death in
+# the three years before; `will`: someone old who will die within six; `notable`: a death the chronicle told; `event`, `battle`,
+# `built`, `invented`, `sign`: such an event in the years before; `holyplace`, `railway`, `household`, `figure`). `steady`: the
+# weights hold across a people's records (no catalogue dryness on the genre: what a people wrote most stays so). The register is
+# the ideas note's: most records are the ordinary life, and the collapse's genres (ending.vg) come with its years (`stage`).
+
+@root record
+
+record (steady)
+  (last=1 99) {genre.last}
+  # ---- the prehistoric age: bone, stone, a painted wall
+  (last=0 age=prehistoric 1.7 medium=bone|medium=stone) {genre.tally}
+  (last=0 age=prehistoric 1 medium=bone) {genre.moon}
+  (last=0 age=prehistoric 2.2 medium=painted|medium=stone|medium=bone) {genre.hunt}
+  (last=0 age=prehistoric 0.8 medium=painted|medium=bone economy=herding|economy2=herding) {genre.herd}
+  (last=0 age=prehistoric 1.2 has:dead medium=stone|medium=painted) {genre.dead}
+  (last=0 age=prehistoric 1.4 medium=painted|medium=stone|medium=bone) {genre.song}
+  (last=0 age=prehistoric 1.2 has:event medium=painted|medium=stone) {genre.picture}
+  (last=0 age=prehistoric 0.6 medium=stone) {genre.boundary}
+  # ---- the medieval age: tablets, scrolls, codices, stone
+  (last=0 age=medieval 1.4 medium=tablet|medium=scroll) {genre.annal}
+  (last=0 age=medieval 1.4 medium=codex|medium=scroll) {genre.chronicle}
+  (last=0 age=medieval 2.4 has:pair medium=scroll|medium=tablet|medium=codex) {genre.letter}
+  (last=0 age=medieval 0.8 medium=stone|medium=scroll|medium=tablet) {genre.decree}
+  (last=0 age=medieval 0.8 medium=scroll|medium=tablet|medium=stone) {genre.prayer}
+  (last=0 age=medieval 1.2 medium=tablet|medium=codex) {genre.account}
+  (last=0 age=medieval 0.7 has:will medium=scroll|medium=codex) {genre.will}
+  (last=0 age=medieval 1.4 has:dead medium=stone) {genre.epitaph}
+  (last=0 age=medieval 0.9 has:event medium=scroll|medium=codex) {genre.ballad}
+  (last=0 age=medieval 0.7 medium=scroll|medium=codex) {genre.sermon}
+  (last=0 age=medieval 0.4 has:holyplace medium=codex|medium=scroll) {genre.pilgrim}
+  (last=0 age=medieval 0.4 medium=codex) {genre.herbal}
+  (last=0 age=medieval 0.8 has:built medium=stone) {genre.inscription}
+  # ---- the industrial age: printed pages, a codex in a hand, a wax cylinder
+  (last=0 age=industrial 2.6 medium=printed) {genre.newspaper}
+  (last=0 age=industrial 0.5 medium=printed) {genre.report}
+  (last=0 age=industrial 0.5 has:invented medium=printed) {genre.patent}
+  (last=0 age=industrial 0.5 has:pair inv.telegraph=1 medium=printed) {genre.telegram}
+  (last=0 age=industrial 0.5 medium=printed) {genre.rules}
+  (last=0 age=industrial 0.6 has:household medium=printed) {genre.census}
+  (last=0 age=industrial 0.6 has:railway medium=printed) {genre.timetable}
+  (last=0 age=industrial 0.9 has:notable medium=printed) {genre.obituary}
+  (last=0 age=industrial 0.5 medium=printed|medium=cylinder) {genre.sermon}
+  (last=0 age=industrial 2.6 has:pair medium=codex) {genre.letter}
+  (last=0 age=industrial 1.4 has:writer medium=codex) {genre.diary}
+  (last=0 age=industrial 1.0 medium=codex) {genre.ledger}
+  (last=0 age=industrial 0.5 medium=codex) {genre.chronicle}
+  (last=0 age=industrial 2.0 has:writer medium=cylinder) {genre.voice}
+  (last=0 age=industrial 1.0 has:event medium=cylinder) {genre.ballad}
+  (last=0 age=industrial 0.6 has:dead medium=printed) {genre.epitaph}
+  # ---- the modern age: printed pages, discs, reels, drives
+  (last=0 age=modern 2.0 medium=printed) {genre.newspaper}
+  (last=0 age=modern 0.8 medium=printed|medium=drive) {genre.mreport}
+  (last=0 age=modern 0.6 medium=printed) {genre.manual}
+  (last=0 age=modern 0.8 medium=printed|medium=drive) {genre.minutes}
+  (last=0 age=modern 0.5 medium=printed) {genre.propaganda}
+  (last=0 age=modern 0.6 medium=printed|medium=drive) {genre.paper}
+  (last=0 age=modern 0.6 has:notable medium=printed) {genre.obituary}
+  (last=0 age=modern 2.0 medium=disc) {genre.lyrics}
+  (last=0 age=modern 1.2 medium=disc|medium=reel) {genre.broadcast}
+  (last=0 age=modern 0.7 medium=disc|medium=reel) {genre.weather}
+  (last=0 age=modern 0.8 has:writer medium=reel|medium=drive) {genre.diary}
+  (last=0 age=modern 1.0 medium=reel|medium=drive) {genre.log}
+  (last=0 age=modern 2.0 has:pair medium=drive) {genre.messages}
+  (last=0 age=modern 0.5 has:writer medium=disc) {genre.voice}
+  # ---- the futuristic age: drives and crystals
+  (last=0 age=futuristic 1.5 medium=drive|medium=crystal) {genre.mlog}
+  (last=0 age=futuristic 1.5 has:pair medium=drive) {genre.messages}
+  (last=0 age=futuristic 0.8 medium=drive) {genre.medical}
+  (last=0 age=futuristic 0.6 medium=drive|medium=crystal) {genre.mission}
+  (last=0 age=futuristic 0.6 has:writer medium=drive) {genre.diary}
+  (last=0 age=futuristic 0.8 medium=drive|medium=crystal) {genre.notes}
+  (last=0 age=futuristic 1.6 has:writer medium=crystal) {genre.archive}
+  (last=0 age=futuristic 0.6 medium=crystal) {genre.charter}
+  (last=0 age=futuristic 0.6 medium=crystal) {genre.law}
+  (last=0 age=futuristic 0.8 has:event medium=crystal) {genre.memorial}
+  (last=0 age=futuristic 0.5 medium=crystal) {genre.chronicle}
+  (last=0 age=futuristic 0.9 medium=crystal|medium=drive) {genre.lesson}
+  (last=0 age=futuristic 0.6 medium=crystal|medium=drive) {genre.vote}
+  (last=0 age=farfuture 0.5 medium=crystal) {genre.lesson}
+  # ---- the far future: crystals and something that hums
+  (last=0 age=farfuture 1.2 medium=crystal|medium=hum) {genre.untranslatable}
+  (last=0 age=farfuture 1.0 medium=crystal|medium=hum) {genre.instructions}
+  (last=0 age=farfuture 1.0 medium=crystal|medium=hum) {genre.mathematics}
+  (last=0 age=farfuture 1.4 has:writer medium=crystal) {genre.reflection}
+  (last=0 age=farfuture 0.6 has:writer medium=crystal) {genre.archive}
+  (last=0 age=farfuture 0.9 medium=hum|medium=crystal) {genre.whoever}
+  (last=0 age=farfuture 0.4 has:event medium=crystal) {genre.memorial}
+  (last=0 age=farfuture 0.6 medium=crystal) {genre.chronicle}
+  (last=0 age=farfuture 0.7 medium=hum|medium=crystal) {genre.mlog}
+  # ---- the collapse, from many sides (ending.vg): its witnesses come with its years (`stage`: 0 the warning .. 3 the end)
+  (last=0 age>=medieval 1.6 stage>=0 has:writer medium=scroll|medium=tablet|medium=stone|medium=codex|medium=printed|medium=drive|medium=reel) {genre.warning}
+  (last=0 age>=medieval age<=modern 1.0 stage>=0 stage<=1 medium=stone|medium=scroll|medium=printed|medium=disc|medium=reel) {genre.denial}
+  (last=0 age>=medieval age<=futuristic 1.2 stage>=1 medium=scroll|medium=stone|medium=printed|medium=drive) {genre.orders}
+  (last=0 age>=medieval age<=futuristic 1.2 stage>=2 medium=tablet|medium=codex|medium=printed|medium=drive|medium=crystal) {genre.inventory}
+  (last=0 age>=medieval age<=futuristic 1.0 stage>=2 medium=stone|medium=codex|medium=scroll|medium=cylinder|medium=disc|medium=drive|medium=crystal) {genre.whoever}
+  (last=0 age>=modern age<=futuristic 1.4 stage>=1 medium=reel|medium=disc|medium=drive) {genre.emergency}
+)VG"

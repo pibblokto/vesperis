@@ -72,8 +72,22 @@ void attachPoint(const RoadNode& n, double cx, double cz, double tx, double tz, 
     } else { x = cx + tx * reach; z = cz + tz * reach; }
 }
 
+// T-01: what a walk weighs by the way's kind: the grade's weight, the turn's, the grade under which the straight step is taken alone, the
+// waver across the way (C-09's road the first)
+struct WalkCost { double gradeW = 60, turnW = 0.5, straight = 0.06, waver = ROAD_WAVER_M; };
+WalkCost walkCostOf(int kind) {
+    WalkCost w;
+    switch (kind) {
+        case 0: w.gradeW = 30; w.turnW = 0.3; w.straight = 0.09; w.waver = 14; break;    // a path
+        case 2: w.gradeW = 400; w.turnW = 2.0; w.straight = 0.02; w.waver = 3; break;    // rail
+        case 3: w.gradeW = 2000; w.turnW = 1.0; w.straight = 0.006; w.waver = 2; break;  // a canal
+        case 4: w.gradeW = 150; w.turnW = 1.5; w.straight = 0.04; w.waver = 4; break;    // a highway
+        default: break;
+    }
+    return w;
+}
 // the walk from one edge to the other: the gentlest of five headings each step
-bool walk(const BodyGen& g, const Frame& F, double ax, double az, double gx, double gz, Road& out) {
+bool walk(const BodyGen& g, const Frame& F, double ax, double az, double gx, double gz, Road& out, const WalkCost& W = WalkCost()) {
     DrainageOff off;
     auto sample = [&](double x, double z) { return sampleSurface(g, F.unitAt(x, z), 32.0); };
     auto wet = [](const SurfaceSample& s) { return s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water) || s.oldSea > 0.5; };
@@ -93,9 +107,9 @@ bool walk(const BodyGen& g, const Frame& F, double ax, double az, double gx, dou
             SurfaceSample qs = sample(qx, qz);
             if (wet(qs)) continue;
             double grade = std::fabs(qs.height - ps.height) / ROAD_STEP_M, turn = std::remainder(h - prevH, TAU) / (45 * DEG), off = OFF[k] / (45 * DEG);
-            double cost = grade * grade * 60.0 + off * off + turn * turn * 0.5;
+            double cost = grade * grade * W.gradeW + off * off + turn * turn * W.turnW;
             if (cost < bestCost) { bestCost = cost; bestK = k; bestH = h; bx = qx; bz = qz; bestS = qs; bestGrade = grade; }
-            if (k == 0 && grade < 0.06) break;   // the straight step over easy ground: no other heading is tried
+            if (k == 0 && grade < W.straight) break;   // the straight step over easy ground: no other heading is tried
         }
         if (bestK < 0) return false;   // every heading steps into water
         if (bestK != 0) out.bends++;
@@ -111,7 +125,7 @@ bool walk(const BodyGen& g, const Frame& F, double ax, double az, double gx, dou
     for (size_t i = 1; i + 1 < way.size(); i++) {
         double dx = sm[i + 1].first - sm[i - 1].first, dz = sm[i + 1].second - sm[i - 1].second, L = std::hypot(dx, dz);
         if (L < 1e-6) continue;
-        double w = ROAD_WAVER_M * gnoise2(i * ROAD_STEP_M / 420.0, 0.5, out.id) * std::min(1.0, std::min(i, way.size() - 1 - i) / 3.0);   // nothing at the ends
+        double w = W.waver * gnoise2(i * ROAD_STEP_M / 420.0, 0.5, out.id) * std::min(1.0, std::min(i, way.size() - 1 - i) / 3.0);   // nothing at the ends
         sm[i].first += -dz / L * w; sm[i].second += dx / L * w;
     }
     out.pts.clear(); out.lengthM = 0;
@@ -170,8 +184,10 @@ bool RoadNodeCache::node(int gLat, int gLon, RoadNode& out) {
     return it->second.first;
 }
 void RoadNodeCache::block(int gLat, int gLon, std::vector<RoadNode>& out) {
-    for (int dl = -ROAD_REACH; dl <= ROAD_REACH; dl++)
-        for (int dn = -ROAD_REACH; dn <= ROAD_REACH; dn++) { RoadNode n; if (node(gLat + dl, gLon + dn, n)) out.push_back(n); }
+    for (int dl = -ROAD_REACH; dl <= ROAD_REACH; dl++) {
+        const int row = ruinCellLonIn(*g, gLat, gLon, gLat + dl);   // T-01: the row's own cells at this longitude (they drift from the index far from the meridian)
+        for (int dn = -ROAD_REACH; dn <= ROAD_REACH; dn++) { RoadNode n; if (node(gLat + dl, row + dn, n)) out.push_back(n); }
+    }
 }
 void RoadNodeCache::joinedTo(const RoadNode& a, std::vector<RoadNode>& out) {
     std::vector<RoadNode> blockA; block(a.gLat, a.gLon, blockA);
@@ -214,7 +230,8 @@ void roadsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<R
     for (int dl = -cellsR; dl <= cellsR; dl++) {
         int nLon = std::max(1, ruinCellsAround(g, gLat0 + dl));
         int cellsLon = std::min(nLon / 2, cellsR);   // the grid's lon cells are the same metres across as its lat cells
-        for (int dn = -cellsLon; dn <= cellsLon; dn++) { RoadNode n; if (nc.node(gLat0 + dl, gLon0 + dn, n)) nodes.push_back(n); }
+        const int row = ruinCellLonIn(g, gLat0, gLon0, gLat0 + dl);   // T-01: the row's own cells at this longitude
+        for (int dn = -cellsLon; dn <= cellsLon; dn++) { RoadNode n; if (nc.node(gLat0 + dl, row + dn, n)) nodes.push_back(n); }
     }
     struct Pair { RoadNode a, b; };
     std::vector<Pair> pairs;
@@ -247,4 +264,23 @@ void roadsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<R
 double roadLeft(uint64_t id, double alongM, double wear) {
     double n = 0.5 + 0.7 * gnoise2(alongM / 70.0, 0.37, id) + 0.45 * gnoise2(alongM / 23.0, 0.61, id ^ 0x55ULL);
     return smoothstep(wear - 0.08, wear + 0.08, n);
+}
+
+bool roadLegWalk(const BodyGen& g, int kind, const Vec3& a, const Vec3& b, uint64_t id, Road& out) {   // T-01
+    out = Road();
+    out.id = id; out.kind = kind;
+    Frame F(a, g.R * 1000.0);
+    double bx, bz; F.localAt(b, bx, bz);
+    if (bx * bx + bz * bz < 1) return false;
+    return walk(g, F, 0, 0, bx, bz, out, walkCostOf(kind));
+}
+
+double netHalfWidth(int kind, const Culture& c, bool trunk) {   // T-01
+    switch (kind) {
+        case 0: return 1.1;                          // a path
+        case 2: return 2.2;                          // rail: its ballast
+        case 3: return 6.5;                          // a canal's channel
+        case 4: return trunk ? 12.0 : 9.0;           // a highway's two carriageways
+        default: return c.roadHalf + (trunk ? 1.5 : 0.5);
+    }
 }

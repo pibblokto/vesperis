@@ -1,6 +1,9 @@
 #include "landmarks.h"
+#include "plan.h"
+#include "peoples.h"
 #include "drainage.h"
 #include "ruins.h"
+#include "works.h"
 #include "core/noise.h"
 #include <cmath>
 #include <algorithm>
@@ -9,8 +12,8 @@
 #include <atomic>
 #include <chrono>
 
-const char* LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS"};
-const char* LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#"};
+const char* LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS", "WORKS"};
+const char* LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#", "%"};
 
 namespace {
 constexpr double CELL_KM = 14.0;   // the sights' grid: one of each kind at most per cell of about 14 km
@@ -127,7 +130,20 @@ unsigned sightKindsOf(const BodyGen& g) {
     if ((g.type == PT_QUARTZ || g.type == PT_CARBON) && g.hasTrait(TR_SPIRES)) m |= 1u << LM_CRYSTALS;
     if (typeHasDrainage(g.type) && (g.type == PT_FELISIAN || g.type == PT_HYDROCARBON || g.type == PT_ACIDIC)) m |= 1u << LM_LAKE;
     if (worldHasRuins(g)) m |= 1u << LM_RUIN;
+    if (worldHadCivilisation(g)) m |= 1u << LM_WORK;   // T-03
     return m;
+}
+
+void worksHeardNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out) {
+    out.clear();
+    if (!worldHadCivilisation(g) || !sightsWorld(g)) return;
+    const std::shared_ptr<const WorldWorks> W = worldWorksOf(g);
+    std::vector<const Work*> near; worksNear(*W, unit, radiusM, near);
+    for (const Work* w : near) {
+        if (!w->heard || std::acos(clampd(dot(w->unit, unit), -1, 1)) * W->Rm > radiusM) continue;
+        Landmark L; L.kind = LM_WORK; L.unit = w->unit; L.id = w->id; L.radiusM = w->radiusM; L.heightM = w->ground; L.prominenceM = w->height; L.sub = w->kind;
+        out.push_back(L);
+    }
 }
 
 namespace {
@@ -478,6 +494,30 @@ void ruinsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<L
             L.radiusM = settlement ? spec.size : std::max(20.0, spec.size); L.prominenceM = settlement ? 2 * spec.size : spec.size;
             L.sub = settlement ? spec.sclass + 1 : 0;
             out.push_back(L);
+        }
+    }
+    // T-01: the world plan's places heard by their size from beyond the cells' reach (a capital from 400 km, a city from 200, a town of the
+    // plan from 80, a band's seat from 40; a futuristic people's great places from 300 and 120; a far-future work from 1,500)
+    if (worldHadCivilisation(g)) {
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
+        std::set<uint64_t> have; for (const Landmark& L : out) have.insert(L.id);
+        for (int k = 0; k < P->peoples; k++) {
+            const PeoplePlan& pp = P->plans[k];
+            for (const PlanPlace& p : pp.places) {
+                double hear;
+                switch (p.sclass) {
+                    case SC_CAPITAL: hear = 400e3; break;
+                    case SC_CITY: hear = 200e3; break;
+                    case SC_MONUMENT: hear = 1500e3; break;
+                    case SC_TOWN: hear = pp.age == AGE_FUTURISTIC ? 300e3 : 80e3; break;
+                    default: hear = pp.age == AGE_FUTURISTIC ? 120e3 : 40e3; break;
+                }
+                if (have.count(p.seed) || std::acos(clampd(dot(p.unit, unit), -1, 1)) * R > hear) continue;
+                Landmark L; L.kind = LM_RUIN; L.unit = p.unit; L.id = p.seed;
+                { DrainageOff off; L.heightM = sampleSurface(g, p.unit, 64.0).height; }
+                L.radiusM = std::max(20.0, p.radiusM); L.prominenceM = 2 * p.radiusM; L.sub = p.sclass + 1;
+                out.push_back(L);
+            }
         }
     }
 }

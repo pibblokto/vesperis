@@ -17,9 +17,9 @@ static_assert(MARK_PLACE == LM_COUNT, "a mark of a place is the kind after the s
 
 namespace {
 // the scanner's modes in the order R cycles them, and their names (by LandmarkKind)
-const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS};
-const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS"};
-const char* RUIN_SIZE_NAMES[5] = {"A STRUCTURE", "A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT"};   // LM_RUIN's `sub`
+const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS};   // T-03: the works after the ruins
+const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
+const char* RUIN_SIZE_NAMES[7] = {"A STRUCTURE", "A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub` (T-01: a city, the capital)
 }
 
 const std::vector<Game::SiteMark>& Game::marksHere() {
@@ -105,7 +105,8 @@ void Game::scanToggleSkip() {
 std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     const Landmark& L = e.lm;
     switch (L.kind) {
-        case LM_RUIN: return RUIN_SIZE_NAMES[clampi(L.sub, 0, 4)];
+        case LM_RUIN: return RUIN_SIZE_NAMES[clampi(L.sub, 0, 6)];
+        case LM_WORK: return WORK_HEARD[clampi(L.sub, 0, WO_COUNT - 1)];   // T-03: what it is, never whose
         case LM_PEAK: return fmt("%.0f M, %.0f OVER", L.heightM, L.prominenceM);
         case LM_MESA: return fmt("%.0f M HIGH", L.prominenceM);
         case LM_CANYON: return fmt("%.0f M DEEP", L.prominenceM);

@@ -1,0 +1,151 @@
+R"VG(
+# letter_events2.vg (H-04; the second pass 2026-10-10): the letter's register (letter_events.vg's conventions; `deathwhen` is shared):
+# the people's news as a person hears it, in the market more than seen: war and its battles, sickness, hunger and the harvest. Each told
+# several ways, the hearsay's lead (`let.heard`) and the writer's own coda in the people's things.
+
+# who says so
+let.heard (share=0.8)
+  They say
+  Word is that
+  The traders say
+  Everyone at the market says
+  (age>=industrial) The paper says
+  (age>=industrial inv.telegraph=1) The wire says
+  (inv.radio=1) The radio says
+  We heard at {holyplace} that
+  The {craft} people had it first:
+  My neighbour swears {oath} that
+  (age<=medieval) The crier says
+
+# a rite in a few words (the plague's custom)
+let.rite.short
+  (rite=firstfruits) the first fruits
+  (rite=fire) the fire at the door
+  (rite=song) the long songs
+  (rite=water) the water poured
+  (rite=silence) the silences
+  (rite=fast) the fasting
+  (rite=pilgrimage) the walking
+  (rite=animals) the {herd} given
+  (rite=memory) the names said
+
+# ---- war ------------------------------------------------------------------------------------------------------------------------
+
+letter.war
+  (tense=past $e.warkind=other) So it is war with the {other}. {waropinion}
+  (tense=past $e.warkind=other) {let.heard} we are at war with the {other}, and nobody can say over what. {waropinion}
+  (tense=past $e.warkind=conquest) The {other} have crossed into our land. {waropinion}
+  (tense=past $e.warkind=rebellion) {$e.place} has risen against {ruler.the}. {waropinion}
+  (tense=past $e.warkind=rebellion) {let.heard} {$e.place} will not pay and will not kneel, and {ruler.the} sent men after it. {waropinion}
+  (tense=past $e.warkind=revolution) It has started at {$e.place}: they are calling it the revolution. {waropinion}
+  (tense=past $e.warkind=civil|$e.warkind=succession) It is war between our own now. {waropinion}
+  (tense=past $e.warkind=succession) Two claimants, one throne, and the rest of us in between. {waropinion}
+  (tense=past $e.warkind=cities|$e.warkind=bands) So it is war, over {$e.place}. {waropinion}
+  (tense=past $e.warkind=cities) {let.heard} the quarrel over {$e.place} has gone past words. {waropinion}
+
+waropinion (share=0.75)
+  If it comes to it, keep the young ones at home with the {herd}; nothing is worth a child.
+  The young ones are excited and sharpening {tool}; the old ones have gone quiet.
+  (age=industrial has:gazette) {gazette} is all flags. {gazette} does not go to war.
+  (age<=medieval) The levy is called for {season.next}, and the smiths are busy.
+  (temper=wry) I am too old for the levy and too young to be let off the taxes on my {herd} for it.
+  (temper=anxious) I have hidden the good knives under the floor with the {smallcoin}, for what that is worth.
+  (temper=pious) {god} has no side in it, the priest says, which is not what was said last time.
+  Everyone is buying {crop} and nobody is selling it.
+  The {herd} have been driven up into the hills, in case.
+  They are taking {herd} for the army, and paying in promises.
+  {proverb}, the old ones say, and look at the young ones.
+
+letter.battle
+  (tense=past $e.won=1) The army came back from {$e.place}. We held the field, they say, and {#$e.value:about} did not come back. {battlecoda}
+  (tense=past $e.won=1) {let.heard} we won at {$e.place}. {#$e.value:about} dead, and the bells rang for the winning. {battlecoda}
+  (tense=past $e.won=0) There was a battle at {$e.place} and it went against us: {#$e.value:about} dead, they say, and more who will not walk again. {battlecoda}
+  (tense=past $e.won=0) We lost at {$e.place}. Nobody says it like that, but that is what it was. {battlecoda}
+  (tense=past $e.won=draw) A battle at {$e.place}; both sides say they won it, and both buried their dead. {battlecoda}
+
+battlecoda (share=0.8)
+  The bells rang all night at {holyplace}, and I did not know whether for the living or the dead.
+  (inv.telegraph=1) The names came down the wire and we stood in {town.open} and read them.
+  Everyone in {streets.of} has a name to ask after.
+  (has:$you far=1) I am glad you are far from it, with your {herd} and your quiet.
+  Keep away from the roads, and keep the {herd} in.
+  The carts came back through {$me.home} for two days, and we gave them {drink} and did not look in them.
+  The women wear {colour.mourn} in half the houses in {$me.home}.
+  {god.call}.
+
+letter.peace
+  (tense=past) Peace, and {$e.war} is over. [The bells rang half the day.|Nobody quite believes it yet.|The price of bread fell by evening.]
+  (tense=past) {let.heard} {$e.war} is over. {peacecoda}
+  (tense=past) So it is peace. {peacecoda}
+peacecoda (share=0.8)
+  We will see what it costs.
+  The young ones came home thinner and quieter, and ate all the {food} in the house.
+  {drink} ran in the street, and nobody paid for any of it.
+  We danced at {town.open}, and the old ones cried.
+  The {herd} came down out of the hills and nobody has counted them since.
+
+letter.siege
+  (tense=past) {let.heard} {$e.place} is shut up and the enemy sits outside it. [Nothing goes in or out.|My cousin is there.|They are eating the {herd} already.]
+  (tense=past) {$e.place} is under siege. Every road to it is soldiers, and every soldier wants {food}.
+
+letter.sack
+  (tense=past) {$e.place} is burned. [There is nothing to say about it that is not worse than saying nothing.|The ones who got out are on the roads.|We took in a family; they have nothing but what they wore.]
+  (tense=past) They sacked {$e.place}. {#$e.value:about} dead, they say, and the rest on the roads with {vessel} on their backs.
+
+# ---- sickness -----------------------------------------------------------------------------------------------------------------
+
+letter.sickness
+  (tense=past $e.here=1) {$e.sickness} came to {$e.place} {deathwhen}. [It took the young and the old mostly.|The hall is full of the sick.] They say {#$e.value:about} are dead across the land. {plaguecoda}
+  (tense=past $e.here=0) We hear {$e.sickness} is at {$e.place}; stay out of the markets, and keep the children in with the {herd}. {plaguecoda}
+  (tense=past $e.here=0) {let.heard} {$e.sickness} has come to {$e.place}. {plaguecoda}
+  (tense=past $e.wave>1) {$e.sickness} is back, [{#$e.value:about} dead in the land already, and it began at {$e.place}|up the river with the boats again|at {$e.place} and coming this way]. {greatcoda}
+  (tense=past $e.wave>1) They have shut the gates of {$e.place} for {$e.sickness} again. {greatcoda}
+
+plaguecoda (share=0.8)
+  We burn [juniper|the bedding|the old straw|{crop2}] and keep the door shut.
+  {god} spare the house.
+  (age>=industrial) The doctors go from door to door in masks like {bird}.
+  (temper=wry) The priest has stopped visiting the sick, which the sick do not mind; we send {food} instead.
+  We hang {colour.holy} cloth on the door, which keeps nothing out but the neighbours.
+  We drink {drink} with {crop2} in it, which is what Grandmother did, and she lived to be old.
+  (contact=1) Nobody shakes hands. Nobody buys from the {other}. Nobody knows anything.
+greatcoda (share=0.8)
+  It is the {#$e.wave:ord} time in my life.
+  Nobody speaks of it in the street now; we only count, and burn {fuel} at the doors.
+  {god} has stopped listening, the old ones say, or never did.
+  The houses on the hill stand empty with the {vessel} still on the shelves.
+  We know how to do this now, which is the worst of it: the {colour.mourn} cloth, {let.rite.short}, the counting.
+
+# ---- hunger and the harvest ---------------------------------------------------------------------------------------------------
+
+letter.famine
+  (tense=past has:$e.place) The bread ran out at {$e.place} before the end of the season. {faminecoda}
+  (tense=past) There is hunger everywhere this year, and it is not over. {faminecoda}
+  (tense=past) {let.heard} there is no {crop} to be had for money anywhere this side of {mountain}. {faminecoda}
+
+faminecoda (share=0.8)
+  We are eating the seed {crop}. Do not tell anyone.
+  (gov=monarchy) The crown opened the granaries, and it was not enough for a {vessel.one.n} a house.
+  (age=industrial has:company) {company} gives credit at its shop, and remembers it.
+  We have eaten the {beast}. The children named it first, which was a mistake.
+  We boil the tops of the {veg} and call it soup, and nobody argues.
+  The {vessel} are empty and we have stopped looking in them.
+  {ruler.the} promised {crop} by {season.next}. We are eating the promise.
+
+letter.harvest
+  (tense=past $e.harvest=rich) The {crop} came in heavy, [the best anyone remembers|more than the granary holds], and the price is down to nothing. {richcoda}
+  (tense=past $e.harvest=rich) A great year for the {crop}: the {vessel} are full and so are we. {richcoda}
+  (tense=past $e.harvest=failed|$e.harvest=poor) The {crop} was thin this year; {weather} took [a third|half|the upper fields]. We will manage, but there is nothing to send.
+  (tense=past $e.harvest=failed|$e.harvest=poor) The {crop} failed in the low fields and half-failed in the high ones. {poorcoda}
+richcoda (share=0.8)
+  We will have the {drink} at {festival} after all.
+  (has:$you far=1) I would send you a sack of it if the road over {mountain} were better.
+  Even the {bird} are fat.
+  The {herd} eat better than we did last year.
+  The old ones say a good year for the {crop} comes before a bad one; they say that every year.
+poorcoda (share=0.8)
+  We will manage on {food} and {veg}, as we do.
+  We have sold the {herd} we could spare and two we could not.
+  The {pest} had what the weather left.
+  Mother would say {proverb}. I am saying it a great deal.
+)VG"

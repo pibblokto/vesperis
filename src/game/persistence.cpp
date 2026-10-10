@@ -1,5 +1,6 @@
 // Save slots, autosave and the save file format (M0-04).
 #include "game.h"
+#include "galaxy/plan.h"
 #include "core/fs.h"
 #include "ui.h"
 #include "core/rng.h"
@@ -179,6 +180,7 @@ bool Game::load(const std::string& path) {
     std::getline(f, line);
     if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
     radarOff(); radar = RadarState();   // C-07: the radar is not saved
+    playerStop(); stopInstrument(); player.items.clear(); icase = InstrumentCase();   // C-11: nor what the player and the case had out
     telescopeOff();                     // W-06: nor the telescope
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10: nor the chart held up
     probe = ProbeState();                                    // X-01: a falling probe comes back from its own line below
@@ -250,6 +252,7 @@ bool Game::load(const std::string& path) {
     if (ship.parkedBody >= 0 && ship.parkedBelt >= 0) { ship.parkedBelt = -1; ship.targetBelt = -1; }   // B-410: a save made with both parks at the body its approach reached
     if (ship.mode == ShipState::PARKED && ship.parkedBody < 0 && ship.parkedBelt < 0) ship.mode = ShipState::STANDBY;
     nb.update(ship.pos);
+    if (ship.parkedBody >= 0) worldPlanPrefetch(spaceR.genFor(sys.bodies[ship.parkedBody]));   // T-01: a people's world's plan, read at once
     surf.valid = false;
     lastSecX = lastSecY = -1; landZoom = 0; sectorImgEpoch = -1;   // O2, B-303
     if (onSurface && siteBody >= 0 && siteBody < (int)sys.bodies.size()) {

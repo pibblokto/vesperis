@@ -40,6 +40,8 @@ struct Road {
     double maxGrade = 0;    // the steepest step (rise over run)
     double halfWidth = 3;   // metres: the culture's, broader between towns
     int bends = 0;          // steps that were not the straight one
+    int kind = 1;           // T-01: the network's kind (galaxy/plan.h's NetKind: C-09's roads NK_ROAD)
+    bool trunk = false;     // T-01: on the trunk between the capital and the cities
 };
 
 struct RoadPair { RoadNode a, b; uint64_t id = 0; };   // two joined settlements, a's cell before b's, not walked yet
@@ -78,3 +80,9 @@ double roadDistanceM(const BodyGen& g, const Vec3& a, const Vec3& b);
 double roadLeft(uint64_t id, double alongM, double wear);
 // the road's id from its two cells (either order)
 uint64_t roadIdOf(const BodyGen& g, int gLatA, int gLonA, int gLatB, int gLonB);
+// T-01: a leg of a plan's way (galaxy/plan.h: the waypoints a few kilometres apart) walked as C-09 walked its roads, by the way's kind: a
+// path wanders and climbs, a road is C-09's, rail and a highway keep their grades low and turn wide, a canal keeps level; `id` the leg's
+bool roadLegWalk(const BodyGen& g, int kind, const Vec3& a, const Vec3& b, uint64_t id, Road& out);
+// T-01: a way's half width by its kind (a path's a metre, a road the culture's, rail's ballast, a canal's channel, a highway's two
+// carriageways), broader on the trunk
+double netHalfWidth(int kind, const Culture& c, bool trunk);

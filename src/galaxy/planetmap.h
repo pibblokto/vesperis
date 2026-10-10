@@ -137,6 +137,11 @@ struct BodyGen {
     double cliffStep = 40;      // O6-04: the height of the cliff bands on steep ground (metres), hashed
     double cliffAmount = 0.5;   // O6-04: the share of the steep ground that is cliffed (0..1)
     uint64_t sA = 1, sB = 2, sC = 3, sD = 4, sE = 5, sF = 6, sG = 7;
+    // T-02: the body's star's sector and its index in the system (`Body::starSx..`): a reader of the world that needs its system (the
+    // history: the star, the comets, the moons) regenerates it from these (`historyOfWorld`, galaxy/history.h); never read by the terrain
+    int64_t starSx = 0, starSy = 0, starSz = 0;
+    int bodyIndex = -1;
+    bool starKnown = false;
     static BodyGen make(const Body& b, double season = 0);
 };
 

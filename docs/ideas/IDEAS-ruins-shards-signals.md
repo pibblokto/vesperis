@@ -139,7 +139,8 @@ catastrophe. A traveller who hears both learns the difference without being told
   drawn from their world with their constellations and names. Decoding it on the ship
   overlays their sky on yours, so you can find the star they named, and sometimes it
   points at another dead world. Cultures that knew each other become a chain to follow.
-* **Artefacts that are instruments.** A shard's music was played on something. Finding
+* **Artefacts that are instruments.** (Done 2026-10-10 as C-11 in 1.3.0: the instruments of each people's ages beside their music in the
+  ruins, played from the cabin's case on their scale; with the ship's player.) A shard's music was played on something. Finding
   the instrument in a ruin (a generated shape, a generated timbre) lets you play a few
   notes of the world's scale from the cabin. Small and tactile; the tradition becomes
   something you can touch.
@@ -235,3 +236,43 @@ connected rather than sampled.
   tones, clicks, rolled r's), through a formant synthesiser in the ship's synth ("formant-like synthesis: breathy, clicky,
   tonal"). The speech carries each word's span, so the decoder's words resolve as they are spoken and the word being
   spoken is underlined: "speech and decoded text come from the same seed, so they agree" word for word.
+
+## 6. Planned 2026-10-08: the radar turned up (C-15, C-16, for 1.3.0)
+
+The user's request R-410: "a way to increase sensitivity of signals radar so you can find further signals but it should give
+some radio noise, creepy mixed sounds when you are trying to get really far signal". C-15 gives the radar a gain of six steps
+(the first hears exactly what C-07 hears) and every transmitter a power of its own, so a step up adds a few far, faint
+signals and the transmitters stay rare (a plain longer reach would not: 3 peoples' signals within 200 ly of home, 234 within
+1,600); C-16 is the sound and the picture of the gain: the bed rising, the galaxy's own noise in the beam, the wide lobe's
+signals mixed under the centred one, far voices worn, more and stranger events in the static, false rises. The register of
+section 2 holds: found, not handed; the system named, never the source; the sound tells. `ITERATION-1.3.0.md`.
+
+Done (2026-10-08, C-15): the gain x1, x5, x11, x18, x25, x32. The steps are even, because the reach's area grows with the
+gain: a doubling dial would add next to nothing for three steps and a crowd at the top. A weak power for C-07's
+transmitters and a sparse population of strong ones heard to about 7,000 ly; x1 is exactly what A-01 left. Beyond 200 ly a
+people is heard only in the light of its first broadcast, so the far signals are nearly all its machines and a living
+voice from afar is rare (C-16's to use, KI-370). The salts are pinned so each step adds one to three peoples from home and
+the test worlds. The price is the floor, a near signal's overload (backing the gain off to lock it), a longer hold and
+narrower cones. `10-decisions.md` (C-15).
+
+Done (2026-10-09, C-16): what the gain lets in. The register held: the sound tells and nothing is printed.
+* The floor rises with the level held. The galaxy's band is a noise in the beam, loudest toward the core, where a far signal
+  is hardest to pull out.
+* A second signal in the wide lobe is heard under the one centred, with a whistle between two carriers that slides as the
+  beam turns and a metallic ring at the top steps.
+* A far signal comes worn: a narrower band, drift, deep fades, dropouts, echoes of itself.
+* The static's events come oftener, and at the top steps stranger ones join (speech backwards, counting whispered, a breath
+  at the microphone, a knock answered, a choir cut off). A word of a recording heard before comes back out of the static.
+* False rises fill a hold and empty it (`NOTHING THERE`).
+* Each age is on the air with its own programmes and carrier: the phonograph and Morse by spark, C-07's programmes, a
+  synthetic voice, a beacon of mathematics.
+* The picture's static, the band's glow, a double and tears grow with the gain.
+
+`10-decisions.md` (C-16).
+
+## 7. Planned 2026-10-08: the civilisation expansion (blocks A, T and H, for 1.3.0)
+
+The user's request R-411 rebuilds what this note started: peoples found at the age of their collapse, an architecture genome
+per people, settlements placed by a plan of the world and works of every kind, a researched grammar over a simulated history,
+longer records, and more shards in three categories styled by the age. The design is `IDEAS-civilisation-expansion.md`; the
+register of sections 1 and 2 holds (quiet, mostly ordinary lives, the catastrophe late; found, not handed).

@@ -1,0 +1,183 @@
+R"VG(
+# annal6.vg (H-04's second pass): the annal's register for the everyday, continued (annal4.vg): trials, envoys, disasters of the
+# works, prices, the herds, shows and the ruler's visits.
+
+# ---- a trial ----------------------------------------------------------------------------------------------------------------------
+
+annal.trial
+  (has:$e.a) {ann.lead} {$e.a:full} was tried for {ann.charge}{ann.verdict}
+  (has:$e.a) {ann.lead} {$e.a:full} was brought before the judges for {ann.charge}{ann.verdict}
+  (has:$e.a) {ann.lead} {$e.a:full} was charged with {ann.charge}{ann.verdict}
+  (!has:$e.a) {ann.lead} a {ann.charge.who} was tried at {$e.place} and put to death.
+  (!has:$e.a) {ann.lead} {ann.charge.who.pl} were tried at {$e.place} and hanged.
+ann.charge
+  ($e.what=theft) theft from {holyplace}
+  ($e.what=theft) the theft of {herd}
+  ($e.what=murder) murder
+  ($e.what=treason) treason
+  ($e.what=heresy) speaking against {god}
+  ($e.what=forgery) forging the seal
+  ($e.what=fraud) false weights
+  ($e.what=smuggling) smuggling {trade}
+  ($e.what=bribery) taking bribes
+  ($e.what=arson) setting fire to a neighbour's {crop}
+  ($e.what=libel) words against {ruler.the}
+ann.charge.who
+  ($e.what=theft|$e.what=smuggling) thief
+  ($e.what=murder) murderer
+  ($e.what=treason) traitor
+  ($e.what=heresy|$e.what=libel) speaker against the rule
+  ($e.what=forgery|$e.what=fraud|$e.what=bribery) cheat
+  ($e.what=arson) fire-raiser
+ann.charge.who.pl
+  ($e.what=theft|$e.what=smuggling) thieves
+  ($e.what=murder|$e.what=arson) murderers
+  ($e.what=treason|$e.what=heresy|$e.what=libel) traitors
+  ($e.what=forgery|$e.what=fraud|$e.what=bribery) cheats
+ann.verdict
+  ($e.verdict=acquitted) , and set free.
+  ($e.verdict=acquitted) ; the judges found nothing.
+  ($e.verdict=acquitted) , and walked out of the court.
+  ($e.verdict=condemned) , and condemned.
+  ($e.verdict=condemned) ; the sentence was death.
+  ($e.verdict=condemned) , and did not come home.
+  ($e.verdict=exiled) , and sent out of the land.
+  ($e.verdict=exiled) ; the sentence was exile beyond {mountain}.
+  ($e.verdict=fined) , and fined.
+  ($e.verdict=fined) ; the fine was {#nbig} {coin}.
+
+# ---- envoys -----------------------------------------------------------------------------------------------------------------------
+
+annal.embassy
+  ($e.what=city) {ann.lead} envoys came from {$e.place2} to {$e.place}{ann.emb.t}
+  ($e.what=city) {ann.lead} {$e.place2} sent its envoys to {$e.place}, to talk of {ann.emb.topic}{ann.emb.t}
+  ($e.what=others) {ann.lead} envoys of the {other} came to {$e.place}{ann.emb.t}
+  ($e.what=others) {ann.lead} the {other} sent their envoys, who would not sit down{ann.emb.t}
+  ($e.what=sent) {ann.lead} envoys were sent to the {other}{ann.emb.t}
+  ($e.what=sent) {ann.lead} an embassy went to the {other} with gifts of {crop2}{ann.emb.t}
+ann.emb.topic
+  the roads
+  the water
+  a marriage
+  the border
+  old debts
+ann.emb.t
+  (has:$e.a) ; {$e.a:name} spoke for them.
+  ; gifts were given: {vessel} of {crop} and a {beast}.
+  ; nothing was agreed, and everyone ate well.
+  ; they stayed until {festival}.
+  (5) .
+
+# ---- a disaster of the works --------------------------------------------------------------------------------------------------------
+
+annal.accident
+  {ann.lead} {ann.acc2.m}{ann.acc2.t}
+  {ann.lead} {ann.acc2.m}{ann.acc2.t}
+ann.acc2.m
+  ($e.what=bridge) the bridge at {$e.place} fell into the river
+  ($e.what=bridge) the bridge at {$e.place} gave way under a loaded cart
+  ($e.what=mine) the mine at {$e.place} fell in
+  ($e.what=mine) the deep gallery at {$e.place} flooded with the men in it
+  ($e.what=ship) a ship from {$e.place} was lost with everyone aboard
+  ($e.what=ship) a ship went down within sight of {$e.place}
+  ($e.what=train) a train was wrecked near {$e.place}
+  ($e.what=train) two trains met on one line near {$e.place}
+  ($e.what=explosion) an explosion at the works in {$e.place} broke windows across the town
+  ($e.what=dam) the dam above {$e.place} broke
+  ($e.what=aircraft) an aircraft fell on {$e.place}
+  ($e.what=reactor) the reactor at {$e.place} failed
+  ($e.what=habitat) the habitat at {$e.place} was breached
+  ($e.what=tower) a tower fell at {$e.place}
+  ($e.what=well) a well fell in at {$e.place}, with a woman in it
+ann.acc2.t
+  ($e.value>12) ; {#$e.value:about} died.
+  ($e.value>12) , and {#$e.value:about} were killed.
+  ($e.value>1 $e.value<=12) ; {#$e.value} died.
+  ($e.value=1) ; one died.
+  ; the dead were laid out in {town.open} to be named.
+  ; it was the builders' fault, or the weather's, depending who you asked.
+  ; it was cleared, and the work went on.
+  ($e.value<=3) ; by a wonder, few died.
+
+# ---- a price --------------------------------------------------------------------------------------------------------------------------
+
+annal.price
+  {ann.lead} {ann.price.m}{ann.price.t}
+  {ann.lead} {ann.price.m}{ann.price.t}
+ann.price.m
+  ($e.out=1) the price of {ann.price.what} rose by {ann.price.frac}
+  ($e.out=1) {ann.price.what} was dear
+  ($e.out=1) {ann.price.what} was hard to come by and dearer than ever
+  ($e.out=0) the price of {ann.price.what} fell
+  ($e.out=0) {ann.price.what} was cheap
+  ($e.out=0 $e.what!=rent) there was {ann.price.what} enough and to spare
+ann.price.what
+  ($e.what=bread) bread
+  ($e.what=bread) {crop}
+  ($e.what=salt) salt
+  ($e.what=oil) oil
+  ($e.what=rent) rent
+  ($e.what=cloth) cloth
+  ($e.what=meat) meat
+  ($e.what=fuel) {fuel}
+  ($e.what=water) water
+ann.price.frac
+  ($e.value>=40) half
+  ($e.value>=20 $e.value<40) a quarter
+  ($e.value<20) a tenth
+ann.price.t
+  ($e.out=1) ; the poor went without.
+  ($e.out=1) ; there was talk of a riot, and then there was not.
+  ($e.out=0) ; for once nobody complained.
+  ; it was {weather} that did it, the traders said.
+  (5) .
+  {ann.after}
+
+# ---- the herds and the game -----------------------------------------------------------------------------------------------------------
+
+annal.beasts
+  ($e.what=late) {ann.lead} the {game} came late to the river crossings{ann.beast.t}
+  ($e.what=early) {ann.lead} the {game} came early, before the hunters were ready{ann.beast.t}
+  ($e.what=none) {ann.lead} the {game} did not come at all{ann.beast.t}
+  ($e.what=many) {ann.lead} the {game} came in such numbers the ground shook{ann.beast.t}
+  ($e.what=great) {ann.lead} a great {game.one} was taken at {$e.place}{ann.beast.t}
+  ($e.what=killed) {ann.lead} a {game.one} killed {#$e.value|hunter} at {$e.place}{ann.beast.t}
+ann.beast.t
+  (5) .
+  ; the hunters said it was the weather.
+  ; there was meat for everyone, and hides for the winter.
+  ; the old hunters said they had never seen it.
+
+# ---- a show -----------------------------------------------------------------------------------------------------------------------------
+
+annal.show
+  ($e.what=play) {ann.lead} a new play was given at {$e.place}{ann.show.t}
+  ($e.what=song) {ann.lead} a new song was first sung at {$e.place}{ann.show.t}
+  ($e.what=pictures) {ann.lead} new pictures were shown at {$e.place}{ann.show.t}
+  ($e.what=film) {ann.lead} a new film was shown at {$e.place}{ann.show.t}
+  ($e.what=dance) {ann.lead} a new dance was danced at {$e.place}{ann.show.t}
+  ($e.what=poem) {ann.lead} a new poem was read at {$e.place}{ann.show.t}
+  ($e.what=statue) {ann.lead} a new statue was set up at {$e.place}{ann.show.t}
+ann.show.t
+  ($e.what!=pictures has:$e.a) ; it was the work of {$e.a:name}.
+  ($e.what=pictures has:$e.a) ; they were the work of {$e.a:name}.
+  (has:$e.a) , by {$e.a:name}, who was {#$e.a.age}.
+  ($e.what!=pictures) ; half the town hated it.
+  ($e.what=pictures) ; half the town hated them.
+  ($e.what!=pictures) ; it was talked of for a season.
+  ($e.what=pictures) ; they were talked of for a season.
+  (5) .
+
+# ---- the ruler's visit ---------------------------------------------------------------------------------------------------------------------
+
+annal.visit
+  {ann.lead} {$e.a:full} came to {$e.place}{ann.visit.t}
+  {ann.lead} {$e.a:full} visited {$e.place}{ann.visit.t}
+  {ann.lead} {$e.a:full} rode through {$e.place}{ann.visit.t}
+ann.visit.t
+  ; the streets were swept for the first time in years.
+  ; the people were given {food}.
+  ; {$e.a:name} stayed {#n|day} and ate a great deal.
+  , and was gone by evening.
+  (5) .
+)VG"

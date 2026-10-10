@@ -1,0 +1,131 @@
+R"VG(
+# people.vg (H-04): the people's own words: its god and how its faith speaks of it, its rites and its holy place, the dead's custom,
+# its rulers and where they sat, its sacred number and its focal work (A-04's genome), its oaths and blessings. The facts: `faith`,
+# `rite`, `holy`, `deadway`, `focus`, `centre`, `number` (the people's); `gov` (the record's year's government); `$ruler` the year's.
+
+# =====================================================================================================================
+# the god (the lore's name), as each faith calls on it
+# =====================================================================================================================
+
+god.who
+  (faith=ancestors) {god}, the first of us
+  (faith=ancestors) {god} and the old ones
+  (faith=land) {god} of {land}
+  (faith=land) {god}, who is the land
+  (faith=sky) {god} in the sky
+  (faith=sky) {god}, who turns the sky
+  (faith=manygods) {god} and the others
+  (faith=manygods) {god}, first of the gods
+  (faith=onegod) {god}
+  (faith=onegod) {god}, the one
+  (faith=philosophy) the teaching of {god}
+  (faith=machine) {god}
+
+god.keep (formula)
+  (faith!=philosophy faith!=machine) {god} keep you
+  (faith=ancestors) {god} and the old ones keep you
+  (faith=land) the land keep you
+  (faith=sky) {skyone} light your road
+  (faith=philosophy) keep the teaching
+  (faith=machine) {god} hold you
+
+# a short call on the god, at a sentence's end or start
+god.call
+  (faith!=philosophy) {god} help us
+  (faith!=philosophy) {god} keep us
+  (faith=ancestors) the old ones watch us
+  (faith=sky) {skyone} see us
+  (faith=philosophy) so the teaching says
+  (faith=machine) {god} counts us
+
+# =====================================================================================================================
+# the faith's places and rites
+# =====================================================================================================================
+
+holyplace
+  (holy=temple) the temple
+  (holy=grove) the grove
+  (holy=highplace) the high place
+  (holy=spring) the spring of {god}
+  (holy=cave) the cave of {god}
+  (holy=house) the house of {god}
+  (holy=tombs) the tombs
+  (holy=opensky) the open altar
+  (holy=hall) the hall of the faith
+
+rite.do
+  (rite=firstfruits) gave {god} the first of the {crop}
+  (rite=fire) kept the fire
+  (rite=song) sang the songs
+  (rite=water) poured the water for {god}
+  (rite=silence) kept the silence
+  (rite=fast) kept the fast
+  (rite=pilgrimage) went up to {holyplace}
+  (rite=animals) gave {god} the firstborn of the {herd}
+  (rite=memory) said the names of the dead
+
+# the rite as a thing to do (a guide's, a sermon's)
+rite.imp
+  (rite=firstfruits) give {god} the first of the {crop}
+  (rite=fire) keep the fire
+  (rite=song) sing the songs
+  (rite=water) pour the water for {god}
+  (rite=silence) keep the silence
+  (rite=fast) keep the fast
+  (rite=pilgrimage) go up to {holyplace}
+  (rite=animals) give {god} the firstborn of the {herd}
+  (rite=memory) say the names of the dead
+
+# the dead's place, by the people's custom
+deadplace
+  (deadway=barrows) the barrow
+  (deadway=tombs) the tombs
+  (deadway=cemeteries) the burying ground
+  (deadway=towers) the tower of the dead
+  (deadway=none) the river
+
+buried
+  (deadway=barrows) laid in the barrow
+  (deadway=tombs) laid in the tombs
+  (deadway=cemeteries) buried in the burying ground
+  (deadway=towers) carried up the tower of the dead
+  (deadway=none) given to the river
+
+# the people's focal work (A-04's genome), as the records name it
+focusword
+  (focus=spire) the great spire
+  (focus=dome) the great dome
+  (focus=gate) the great gate
+  (focus=tower) the great tower
+  (focus=colossus) the colossus
+  (focus=mast) the great mast
+  (focus=ring) the great ring
+  (focus=obelisk) the great obelisk
+  (focus=pool) the sacred pool
+  (focus=tree) the planted tree
+
+
+# =====================================================================================================================
+# the rule: who held it in the record's year (`gov`) and where it sat
+# =====================================================================================================================
+
+
+hall
+  (gov=chiefs) the chief's house
+  (gov=monarchy) the palace
+  (gov=council) the council house
+  (gov=theocracy) the temple
+  (gov=republic) the senate house
+  (gov=assembly) the Assembly
+  (gov=corporate) the board
+  (gov=machine) the mind's house
+
+# what the people lived by, as a phrase
+living
+  (economy=hunting) the hunt
+  (economy=herding) the {herd}
+  (economy=farming) the {crop}
+  (economy=trade) the trade
+  (economy=industry) the mills
+  (economy=information) the work
+)VG"

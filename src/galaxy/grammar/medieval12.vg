@@ -1,0 +1,82 @@
+R"VG(
+# medieval12.vg (H-04; the second pass 2026-10-10): the chronicle's asides (the chronicler on a year: its prices, its weather, its
+# small news) and the chronicle in the late ages (a futuristic or far-future people kept it on crystal, year by year, over spans so long
+# that the years told are few and far apart): the keeper's word before the years and after.
+
+@root med.chr.*
+
+med.chr.late (share=0.5)
+  The years are many here and the events few; the keepers wrote down only what changed.
+  This record was begun on {med.chr.on} and moved to crystal when that would not last; the words are the first keepers'.
+  Most years at {$home} nothing happened, and they are left out. What is left in is what the people asked to keep.
+  The keepers of {holyplace} have kept the years since the founding of {city}, and still keep them, out of habit and a little love.
+  (age=farfuture) The years are counted from the founding of {city}, which nobody now living saw, nor their mothers.
+  (age=farfuture) When the years ran into the tens of thousands the keepers stopped counting quiet ones. These are the loud ones.
+  (age=futuristic) The machines keep the days; the keepers keep the years, which the machines do not understand.
+  The {med.chr.trades} of {$home} asked for this record to be kept in the old way, and so it is.
+  Each year below is the year someone thought worth a line, which is a different thing from a year that mattered.
+
+med.chr.late.end (share=0.5 formula)
+  Between these years there are others, and in them the {crop} grew and the children were born and the keepers slept.
+  The rest of those years were ordinary, which is not nothing; ask anyone who lived through the other kind.
+  After that the record is quiet again for a long while.
+  Here the keeper put down the stylus and went out to look at {skyone}.
+  So the years went at {$home}, a few loud ones in a long quiet.
+  (moons>0) Between the loud years {moon} went round many thousands of times, and nobody wrote that down.
+  The keeper notes that the {bird} came back every one of those years, and does not write it every time.
+  That is all for this stretch; the next keeper will find it where it stops.
+
+# the chronicler's word on a year (the year's own facts: its harvest, its war, its sickness, the collapse's stage), in the people's goods
+med.chr.aside
+  {med.chr.aside.a}
+  {med.chr.aside.b}
+med.chr.aside.a (share=0.35)
+  (harvest<=1) The {crop} was dear that year, and the {herd} were sold cheap because there was nothing to feed them.
+  (harvest<=1) That winter the poor of {$home} ate {med.chr.poor}, and some of them nothing.
+  (harvest>=3) That year {crop} was so cheap at {$seat} that it was fed to the {herd}.
+  (harvest>=3) The {fruit} were so many that the trees broke under them.
+  (war=1) The roads to {city2} were closed most of that year, and the market at {$seat} sold {crop2} and rumours.
+  (war=1) Many of the young men of {$home} were away, and the {crop} was cut by the women and the old.
+  (sick=1) The {craft} stopped for half the year at {$home}, because the {med.chr.trades} were sick or afraid.
+  (sick=1) The bells of {holyplace} were rung so often that year that the ringers wore out the ropes.
+  (famine=1) The {bird} were eaten that year, which nobody at {$home} had done before.
+  (stage>=1) People spoke that year as if the bad years were coming, and they were right; the {crop} knew first.
+  (stage>=2) That year more were buried at {deadplace} than born, and the scribe counted both.
+  {fish} were taken in {river} that year by the cartload, and salted.
+  That year the {herd} of {$home} were counted at {nbig}, which was thought a good number.
+  There was a quarrel that year over {med.chr.quarrel}, which went on longer than the year did.
+  The roof of {holyplace} was mended that year with {material}, and leaked anyway.
+  That year {festival} was kept twice at {$home}, once by mistake, with {feast.custom} both times.
+  That year the roof of the granary at {$home} was renewed in {material}, and it was argued about.
+  That year the road from {$home} to {city2} was paved as far as the first stone, and no further.
+  That year the {pest} got into the {crop2}, and the {bird} got the rest.
+  (desert=1) That year the {watersrc.n} at {$home} was dug deeper by {#n|span}, and found water.
+  (cold=1) That year the snow lay until {festival}, and the {herd} were fed {crop2} from the stores.
+  (coast=1) That year the boats of {$home} went out past {sea} and came back with {fish} and stories.
+med.chr.aside.b (share=0.35)
+  (harvest<=1) Bread was weighed out by the {measure.load} that year at {$home}, and the weighers were watched.
+  (gov=monarchy has:$ruler) It was said that year that {$ruler:name} {med.chr.said}, but the scribe did not see it.
+  The price of {crop} that year was {#n} {coin} the {med.unit}.
+  The {pest} were bad that year in the {crop2}, and the cats were fat.
+  (moons>0) That year {moon} was red at {festival}, and nothing came of it but talk at {town.open}.
+  That year a {bird.one} built its nest in the scribe's window, and is mentioned for that reason.
+  (desert=0) That year {river} froze, or nearly, and the boys of {$home} walked on it.
+  (desert=1) That year the dust came twice, and the {watersrc.n} was cleaned out after each.
+  The {craft} of {$home} was much praised that year at {city2}, and sold there.
+  Many went to {holyplace} that year, and came back saying it was smaller than they remembered.
+  That year the {craft}-house at {$home} burned its {fuel} day and night for an order from {city2}.
+  The {herd} of that year were sold at {$seat} for {#n} {coin} a head, which the old ones said was robbery.
+  That year a {bird.one} was seen at {$home} that nobody had seen before, and the children named it.
+  That year the {med.chr.trades} of {$home} would not work on the rest day, and were not made to.
+  That year {watersrc} was cleaned out and {#n} old {vessel} were found in it.
+  (moons>0) That year {moon} was eaten at {festival}, and the people banged {vessel} to bring it back.
+  That year the {med.chr.trades} of {$home} asked for a guild, and were refused, and made one anyway.
+  That year the {tree} by {holyplace} were cut for {med.chr.cutfor}, and the old ones wept.
+
+med.chr.cutfor
+  the new roof
+  the boats
+  the bridge
+  fuel
+
+)VG"

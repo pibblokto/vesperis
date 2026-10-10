@@ -10,11 +10,13 @@
 #include "bestiary.h"
 #include "galaxy/landmarks.h"
 #include "galaxy/ruins.h"
-#include "galaxy/shards.h"
+#include "galaxy/records.h"   // T-04: the records (galaxy/shards.h with them)
 #include "galaxy/fronts.h"
 #include "galaxy/nights.h"
 #include "galaxy/graves.h"
+#include "galaxy/instruments.h"   // C-11
 #include <set>
+#include <deque>
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -269,8 +271,16 @@ public:
     void ruinCellAt(double x, double z, int& gLat, int& gLon) const;
     // C-01: the ruins of the cells round the site, each built once from `ruinOfCell` (a town's layout is not cheap) with its
     // pieces at the three levels of detail; cleared at a landing or a re-anchor (the local metres change)
-    struct RuinCell { bool has = false; Ruin r; RuinSpec spec; std::vector<RuinElem> elems[3]; std::vector<ShardSite> shards; std::vector<Grave> graves; mutable std::vector<float> base; mutable bool baseDone = false; };   // C-03: the settlement's shards; C-12: its graves (their stones among the pieces of lod 0)
+    // A-02: `groups[l][b]` the first of building b's pieces in `elems[l]` (b == the buildings' count: the graves' stones, to the
+    // end), so each building is drawn at its own level of detail; `foot[l][i]` the drawn ground under piece i at the middle and far
+    // levels, read off the coarse ring that draws it there (its own water, and under a big piece's footprint the lowest and the
+    // highest: it stands on the highest, its foot down to the lowest), kept while that ring draws it
+    struct FootCache { int ring = -1; float y = 0, water = -1e9f, lo = 0, hi = 0; };
+    struct RuinCell { bool has = false; bool placed = false; Ruin r; RuinSpec spec; std::vector<Form> elems[3]; std::vector<int> groups[3]; std::vector<ShardSite> shards; std::vector<Grave> graves; mutable std::vector<FootCache> foot[3]; mutable uint32_t drawn = 0; mutable bool marked = false;
+                      std::vector<Form> recordForms; std::vector<int> recordFirst;
+                      std::vector<InstrumentSite> instruments; std::vector<int> instrumentIds; std::vector<Form> instrumentForms; std::vector<int> instrumentFirst; };   // C-11: the instruments beside its music records (each site's id, -1 none; its objects as the records')   // T-04: each record's object (`recordForms`, galaxy/records.h): site k's from recordFirst[k] to recordFirst[k + 1]   // T-02: `marked` its ground in the site's marks   // T-01: `drawn` the frame that gathered it   // C-03: the settlement's shards; C-12: its graves (their stones among the pieces of lod 0)
     mutable std::unordered_map<uint64_t, RuinCell> ruinCells;
+    void settlementColliders(const Ruin& r, const RuinCell& cell, double x, double z, std::vector<Collider>& out);
     Culture cultures[2]; int peoples = 1;           // C-01: the world's, set at init; C-13: one a people (a settlement's is `cultures[spec.people]`)
     Lore lores[2];                                  // C-12: the world's names, span and calendar (`loreQuick`, no chart marks), for the graves; empty on a world without a people; C-13: one a people
     double lastRuinMs = 0; int lastRuinElems = 0;   // tests: the ruins' draw time and the pieces drawn
@@ -280,32 +290,102 @@ public:
     // one of their buildings (its rectangle plus a margin): the rocks, the logs and the rock colliders keep out of the rooms
     int settlementsNear(double x, double z, const RuinCell* near[4]) const;
     static bool inSettlementBuilding(const RuinCell& c, double x, double z, double margin);
-    void drawSettlement(Framebuffer& fb, const Ruin& r, const RuinCell& cell, double dist);
+    // A-02: the settlements' forms (galaxy/forms.h) are gathered from every cell in reach (and the harness's placed ones), each
+    // building at its own level of detail by its distance (whole within 350 m, simpler to 1.3 km, coarse to 4 km, beyond that
+    // its silhouette where it stands tall enough to show), then built and lit in chunks on the workers and drawn in bands
+    // of rows (B-310's contract: the pixels the serial loop's)
+    void gatherSettlement(const Ruin& r, const RuinCell& cell, double dist);
+    void drawFormItems(Framebuffer& fb);
+    static void groupPieces(RuinCell& c);   // `groups` from the pieces' building indices
+    FormPalette palettes[2];                        // A-02: each people's colours and windows (from its culture; the harness may set them)
+    std::deque<RuinCell> placedCells;               // A-02 (tests): settlements the harness placed in the view, drawn and walked into as the cells' are
+    // A-02 (tests): place a settlement of forms with its centre at local (x, z): its layout (the buildings' footprints) and its
+    // pieces at the three levels of detail; drawn at any distance (the skyline), its colliders walked into. `testClearPlaced` empties them
+    void testPlaceSettlement(double x, double z, const RuinSpec& spec, const std::vector<Form> pieces[3]);
+    void testClearPlaced() { placedCells.clear(); }
+    int testForceLod = -1;                          // A-02 (tests): every building at this level of detail (the sheet's meshes up close), -1 by distance
+    int lastFormPolys = 0, lastFormLines = 0, lastSilhouettes = 0;   // tests: what the last frame drew of the forms
     // C-03: the shards (`galaxy/shards.h`): the world's the explorer already has (the game fills it from the guide at a landing
     // and a load; every copy of one is then neither drawn nor offered), the one within reach this frame (E takes it), the draw
+    // T-04: the records (`galaxy/records.h`): each an object of its medium (a carved bone, a codex, a disc, a crystal, a painted wall: `recordForms`)
+    // drawn with the settlement's forms within 40 m and a point of light over it within 250 m; a painted wall stays painted once recorded
     std::set<int> shardsFound;
-    struct NearShard { int index = -1; int place = 0; int sclass = 0; double x = 0, z = 0, dist = 0; };
+    struct NearShard { int index = -1; int place = 0; int sclass = 0; int medium = RM_STONE; int work = -1; bool wall = false, archive = false, last = false; double x = 0, z = 0, dist = 0; };
     NearShard nearShard;
     void findNearShard();
     void drawShards(Framebuffer& fb, double t);
+    static void recordObjects(RuinCell& c);   // T-04: the cell's records' objects from its sites
+    void gatherRecords();                     // T-04: the records' objects in reach into the frame's forms
     // C-12: the grave within 2.2 m of the explorer this frame (the stone's name and years as the HUD reads them; the game records it in the guide the first time)
     struct NearGrave { int k = -1; uint64_t id = 0; int sclass = 0; std::string line, hud; double x = 0, z = 0, dist = 0; };   // `line` "Thaelu, years 140 to 212 of Kethra" (the log), `hud` "Thaelu, 140-212"
     NearGrave nearGrave;
     void findNearGrave();
-    int lastShardsDrawn = 0;
-    // the ruins of the cells within `reach` cells of (x, z): fn(ruin, cell, ring), ring the cell's distance in cells
+    // C-11: the instruments (galaxy/instruments.h): each people's tradition and its instruments by age (set at init from the lore), the ones the
+    // explorer already has from this world (the game fills it from the guide, as the shards), the one within reach this frame (E takes it)
+    Tradition traditions[2]; PeopleInstruments instrumentSets[2];
+    std::set<int> instrumentsFound;
+    struct NearInstrument { int id = -1; std::string name; int people = 0; double x = 0, z = 0, dist = 0; };   // C-17: its name (its make's)
+    NearInstrument nearInstrument;
+    void findNearInstrument();
+    void instrumentObjects(RuinCell& c) const;   // the cell's instruments' ids and objects from its sites
+    int lastShardsDrawn = 0, lastRecordForms = 0;   // T-04: the records' objects' forms the last frame gathered
+    // T-01: the world plan's places within PLAN_NEAR_M of the explorer (galaxy/plan.h): their anchor cells and where their cores stand,
+    // refreshed as the explorer moves a kilometre (`refreshPlanNear`): a city's core spans cells, so the cells round a point reach it from
+    // farther than its own; a far city's towers stand on the skyline (`drawRuins` gathers them to PLAN_NEAR_M)
+    struct PlanNear { int gLat = 0, gLon = 0; double x = 0, z = 0, radius = 0; };
+    std::vector<PlanNear> planNear;
+    double planNearX = 1e18, planNearZ = 1e18;
+    static constexpr double PLAN_NEAR_M = 24000;
+    void refreshPlanNear();
+    // T-03: the world's works (galaxy/works.h) within PLAN_NEAR_M of the explorer, refreshed with the plan's places: each laid out once as a
+    // settlement's cell (`workCell`: its pieces at the three levels, a necropolis's graves), visited by `forNearbyRuins` as the cells' are;
+    // their ground put into the site's (`SurfaceSite::addWorkEdits`) by `ensureTownMarks`, each once. The world's works are taken when ready
+    // (built on the plan's thread after the histories): a render never waits for them
+    struct WorkNear { int index = 0; double x = 0, z = 0, radius = 0; };
+    std::vector<WorkNear> workNear;
+    std::shared_ptr<const WorldWorks> worksHere;
+    mutable std::unordered_map<uint64_t, RuinCell> workCells;
+    std::unordered_set<uint64_t> workEdited;
+    const RuinCell* workCell(int index) const;
+    // T-02: the towns in reach put their streets, squares and fields into the ground (`SurfaceSite::addTownMarks`), checked as the explorer moves
+    // (T-03: and the works their cuts, pits, ditches, craters, flats, reservoirs and lines)
+    void ensureTownMarks();
+    double markCheckX = 1e18, markCheckZ = 1e18;
+    // the ruins of the cells within `reach` cells of (x, z): fn(ruin, cell, ring), ring the cell's distance in cells; T-01: and a plan's
+    // place whose core comes within that reach from a cell farther off
     template <class F> void forNearbyRuins(double x, double z, int reach, F fn) const {
         if (!worldHasRuins(site.gen)) return;
         double lat, lon; site.latLonAt(x, z, lat, lon);
         double dLat = ruinCellLat(site.gen);
         int gLat = (int)std::floor(lat / dLat);
+        uint64_t seen[64]; int nSeen = 0;
         for (int dl = -reach; dl <= reach; dl++) {
             int row = gLat + dl;
             double latc = (row + 0.5) * dLat;
             if (std::fabs(latc) > PI / 2 - dLat) continue;
             double dLon = dLat / std::max(std::cos(latc), 0.05);
             int g2 = (int)std::floor(lon / dLon);
-            for (int dd = -reach; dd <= reach; dd++) { const RuinCell* c = ruinCell(row, g2 + dd); if (c->has) fn(c->r, *c, std::max(std::abs(dl), std::abs(dd))); }
+            const int nLon = std::max(1, ruinCellsAround(site.gen, row));
+            for (int dd = -reach; dd <= reach; dd++) {
+                if (nSeen < 64) seen[nSeen++] = ((uint64_t)(uint32_t)(row + 0x100000) << 32) | (uint32_t)((((g2 + dd) % nLon) + nLon) % nLon);
+                const RuinCell* c = ruinCell(row, g2 + dd); if (c->has) fn(c->r, *c, std::max(std::abs(dl), std::abs(dd)));
+            }
+        }
+        const double cellM = dLat * site.R;
+        for (const PlanNear& pn : planNear) {
+            const double d = std::hypot(pn.x - x, pn.z - z) - pn.radius;
+            if (d > reach * cellM) continue;
+            const uint64_t key = ((uint64_t)(uint32_t)(pn.gLat + 0x100000) << 32) | (uint32_t)pn.gLon;
+            bool done = false; for (int i = 0; i < nSeen && !done; i++) done = seen[i] == key;
+            if (done) continue;
+            const RuinCell* c = ruinCell(pn.gLat, pn.gLon);
+            if (c->has) fn(c->r, *c, std::max(1, (int)std::ceil(std::max(0.0, d) / cellM)));
+        }
+        for (const WorkNear& wn : workNear) {   // T-03: the works
+            const double d = std::hypot(wn.x - x, wn.z - z) - wn.radius;
+            if (d > reach * cellM) continue;
+            const RuinCell* c = workCell(wn.index);
+            if (c && c->has) fn(c->r, *c, std::max(1, (int)std::ceil(std::max(0.0, d) / cellM)));
         }
     }
     // N2 vegetation: every tree and log of a 16 m cell, deterministic; the canopy density field (veg x clearings)
@@ -513,6 +593,8 @@ private:
     static double jetStrength(uint64_t h, double t, bool constant, double cycle, double duty);   // 0 off .. 1 full (1.35 in the first seconds of a burst)
     void drawFountains(Framebuffer& fb, double t);   // R-307: the lava fountains and the meteorite strikes (the eruption list), the dust devils
     double heightNear(double x, double z, double dist, double& water);   // the cached height (and water level) at a distance from the camera, coarser far away
+    double drawnGround(double x, double z, double dist, double& water, int& ring);   // A-02: the drawn ground: the near rings' within lod0's reach, a coarse ring's surface beyond (`ring` 0..3)
+    int drawnRing(double dist) const { return dist < ringR[0] * 16.0 * 0.9 ? 0 : (dist < ringR[1] * 64.0 * 0.9 ? 1 : (dist < ringR[2] * 512.0 * 0.9 || !ringR[3] ? 2 : 3)); }
 
     void computeEnvironment(double t);
     void setupPalette(Framebuffer& fb);
@@ -555,6 +637,17 @@ private:
     struct TreeRef { TreeInst T; float dist; int y0, y1; };
     std::vector<FloraCell> floraCells;
     std::vector<TreeRef> treeList;
+    // A-02: the forms' frame: the items gathered (a form, its foot, its level of detail, the people whose banks it takes; a
+    // silhouette at level 3), the chunks the workers build them into (the polygons and lines in view space, lit and fogged,
+    // with the rows they touch), the raster parameters of the peoples' banks and windows
+    struct FormItem { const Form* f; Vec3 foot; double skirt, d, fog; int lod, people; };
+    struct FormPolyOut { int first, n, rp, y0, y1; };
+    struct FormLineOut { RVert a, b; int bank, thick, y0, y1; };
+    struct FormChunk { std::vector<RVert> v; std::vector<FormPolyOut> polys; std::vector<FormLineOut> lines; int silhouettes = 0; };
+    std::vector<FormItem> formItems;
+    std::vector<FormChunk> formChunks;
+    std::vector<RasterParams> formRps;
+    FacePattern formPatterns[2][4];
     void drawCapsule(Framebuffer& fb, double t);
     void drawWeather(Framebuffer& fb, double t);
     void drawLife(Framebuffer& fb, double t);

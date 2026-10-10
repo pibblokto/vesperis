@@ -5,9 +5,11 @@
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
 #include "galaxy/roads.h"
+#include "galaxy/works.h"
 #include <vector>
 #include <algorithm>
 #include <unordered_set>
+#include <unordered_map>
 
 struct TerrainVertex {
     float h = 0;         // metres, relative to reference level
@@ -29,8 +31,33 @@ struct SiteRoad {
     uint64_t id = 0;
     float half = 3;
     bool paved = true; float wear = 0.2f;   // C-13: the builders' (a road between two peoples' settlements is the bigger settlement's people's)
+    int kind = 1;                            // T-01: the network's kind (galaxy/plan.h's NetKind: a path, a road, rail, a canal, a highway)
     std::vector<float> x, z, along;
     float x0 = 0, z0 = 0, x1 = 0, z1 = 0;
+};
+
+// T-02: a town's ground drawn into the terrain (`SurfaceSite::addTownMarks`, from the settlements the view laid out): a street (a segment and its
+// half width, paved or beaten), a square (a disc), a field (a rectangle across and along its heading: its strips' or its plot's tone, its
+// edge a hedge, a wall or a bank) or an irrigation circle, in local metres, with what the years left of it
+struct GroundMark {
+    int kind = 0;            // 0 a street, 1 a square, 2 a field, 3 an irrigation circle
+    int sub = 0;             // a street or a square: 2 asphalt (the modern age), 1 paved, 0 beaten; a field: its `FieldKind` (galaxy/towns.h)
+    double ax = 0, az = 0, bx = 0, bz = 0;   // a street's ends; a square's, a field's or a circle's centre in (ax, az)
+    double half = 0, r = 0, hw = 0, hd = 0, heading = 0;
+    float left = 1;          // what the years left of it (1 .. 0)
+    uint32_t id = 0;
+};
+
+// T-03: a work's ground (galaxy/works.h's `GroundEdit`) in the site's local metres, with what the years left of it (a ditch silted, a
+// crater filled, lines grown over; a rock cut, a flattened plain and a reservoir keep) and its bounds
+struct SiteEdit {
+    int kind = 0, tone = 0;
+    double x = 0, z = 0, heading = 0, hw = 0, hd = 0, r = 0, level = 0, depth = 0, step = 0, width = 0, width2 = -1, bank = 0;
+    float left = 1, fresh = 0;   // what the years left of it; how fresh a cut still looks (1 new .. 0 weathered)
+    double x0 = 0, z0 = 0, x1 = 0, z1 = 0;
+    std::vector<float> pts;
+    double gx0 = 0, gz0 = 0, cell = 0; int nx = 0, nz = 0;
+    std::vector<uint8_t> mask;
 };
 
 // B-322: the water's edge on the mesh. A cell whose corners lie on both sides of the edge is drawn as pieces cut along the
@@ -59,6 +86,7 @@ struct TerrainCache {
     // vertex at lattice coords (cx, cz) in cells; computed on demand
     const TerrainVertex& at(int cx, int cz);
     inline int index(int cx, int cz) const { int n = 1 << logN; return ((cz & (n - 1)) << logN) | (cx & (n - 1)); }
+    void invalidate(double x0, double z0, double x1, double z1);   // T-02: the vertices in a box sampled again when next asked for
 };
 
 struct SunInfo {
@@ -122,6 +150,26 @@ struct SurfaceSite {
     // 0..1: the road's bed at a point (within its half width, what the wear left; fading over a metre beyond), for the
     // flora, the rocks and the explorer's feet
     double roadCover(double x, double z) const;
+    // T-02: the towns' ground (`GroundMark`), found by 32 m cells; `addTownMarks` adds a settlement's (its streets, squares and fields at its
+    // centre's local metres, the years since it was left and the world's wet fading them) and makes the fine rings' vertices under it be
+    // sampled again; the view adds them with its worker joined (the vertices read the list), and clears them with the roads
+    std::vector<GroundMark> marks;
+    std::unordered_map<int64_t, std::vector<int>> markCells;
+    void clearMarks() { marks.clear(); markCells.clear(); }
+    void addTownMarks(const RuinSpec& spec, double ox, double oz, double years, double wet, double wear);
+    double markCover(double x, double z) const;   // 0..1: a street's or a square's bed at a point (the flora and the rocks keep off it)
+    void applyMarks(double x, double z, double detailM, TerrainVertex& t) const;
+    // T-03: the works' ground (`SiteEdit`): a quarry's cut and a pit, ditches, craters, a plain made flat, a reservoir's water, lines, a
+    // mountain's terraces; the small ones found by 64 m cells, the great ones (over 600 m) by their bounds. `addWorkEdits` adds a work's (its
+    // middle at local (ox, oz), the years since it was left and the world's wet fading them) and makes every ring's vertices under it be
+    // sampled again; the view adds them with its worker joined, and clears them with the roads
+    std::vector<SiteEdit> edits;
+    std::unordered_map<int64_t, std::vector<int>> editCells;
+    std::vector<int> bigEdits;
+    void clearEdits() { edits.clear(); editCells.clear(); bigEdits.clear(); }
+    void addWorkEdits(const Work& w, double ox, double oz, double years, double wet);
+    void applyEdits(double x, double z, double detailM, TerrainVertex& t) const;
+    double editCover(double x, double z) const;   // 0..1: a fresh cut's floor, a line's bed, a plain made flat (the flora and the rocks keep off it)
 
     void init(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);   // t: the season (M9-09)
     double season = 0;

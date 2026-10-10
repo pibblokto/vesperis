@@ -618,6 +618,7 @@ BodyGen BodyGen::make(const Body& b, double season) {
     g.seed = b.seed;
     g.R = b.radiusKm;
     g.season = season;
+    g.starSx = b.starSx; g.starSy = b.starSy; g.starSz = b.starSz; g.starKnown = b.starKnown; g.bodyIndex = b.index;   // T-02
     // B-321: a living world's air keeps it 33 degrees over its equilibrium temperature (Earth's greenhouse), so an Earth-like
     // orbit gives an Earth-like climate; without it two thirds of the felisian land was ice sheet (`vesperis_test encounters`)
     g.tempBias = (b.tempK + (b.type == PT_FELISIAN ? 33.0 : 0.0) - 288.0) * 0.3;

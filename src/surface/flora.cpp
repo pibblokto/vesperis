@@ -75,7 +75,8 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);   // R-304
     double f = seasonPhaseLocal();
     double deadChance = site.gen.hasTrait(TR_DEAD_FOREST) ? 0.6 : 0.03;   // R-304: a dying world
-    // C-01: no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone)
+    // C-01: no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone);
+    // A-03: a twentieth of them two centuries after the end, a third after ten thousand years
     const RuinCell* near[4]; int nNear = 0;
     if (worldHadCivilisation(site.gen))
         forNearbyRuins(cx * cs + 8, cz * cs + 8, 1, [&](const Ruin& r, const RuinCell& c, int) {
@@ -89,19 +90,25 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         T.seed = ht;
         T.x = cx * cs + h01(ht) * cs; T.z = cz * cs + h01(mix64(ht + 1)) * cs;
         if (!site.roads.empty() && site.roadCover(T.x, T.z) > 0.3) continue;   // C-09: nothing grows on the road's bed
+        if (!site.marks.empty() && site.markCover(T.x, T.z) > 0.3) continue;   // T-02: nor on a town's streets and squares
+        if (!site.edits.empty() && site.editCover(T.x, T.z) > 0.3) continue;   // T-03: nor on a fresh cut, a line's bed, a plain made flat
         if (nNear) {
             bool skip = false;
             for (int q = 0; q < nNear && !skip; q++) {
                 const Ruin& r = near[q]->r;
                 double dx = T.x - r.x, dz = T.z - r.z;
                 if (dx * dx + dz * dz > (r.size + 40) * (r.size + 40)) continue;
-                if (std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond
+                if (near[q]->spec.work < 0 && std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond (T-03: a work has none)
                 for (const Building& bd : near[q]->spec.buildings) {
                     double ex = dx - bd.x, ez = dz - bd.z;
                     double lx = ex * std::cos(bd.heading) - ez * std::sin(bd.heading), lz = ex * std::sin(bd.heading) + ez * std::cos(bd.heading);
                     if (std::fabs(lx) < bd.hw + 1.5 && std::fabs(lz) < bd.hd + 1.5) { skip = true; break; }
                 }
-                if (!skip && dx * dx + dz * dz < r.size * r.size && h01(mix64(ht + 21)) < 0.67) skip = true;
+                if (!skip && near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // A-03: its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
+                    const Culture& cu = cultures[near[q]->spec.people == 1 && peoples > 1 ? 1 : 0];
+                    double keep = clampd(0.05 + 0.15 * std::log10(std::max(1.0, cu.ageYears / 200.0)), 0.05, 0.33);
+                    if (h01(mix64(ht + 21)) >= keep) skip = true;
+                }
             }
             if (skip) continue;
         }
@@ -154,6 +161,8 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     L.radius = 0.25 + 0.35 * h01(mix64(L.seed + 4)) * h01(mix64(L.seed + 6));   // most are slim, a few are giants
     { const RuinCell* near[4]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
     if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // C-09: nor across the road
+    if (!site.marks.empty() && site.markCover(L.x, L.z) > 0.3) return;   // T-02: nor on a street
+    if (!site.edits.empty() && site.editCover(L.x, L.z) > 0.3) return;   // T-03: nor on a work's ground
     fn(L);
 }
 

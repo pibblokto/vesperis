@@ -1,0 +1,52 @@
+R"VG(
+# medieval13.vg (H-04; the second pass 2026-10-10): the words a sermon says the everyday with (a law's subject, a contest, a new
+# work of art) and the sermon's news when there is none.
+
+# the everyday's words as a sermon says them
+med.law.of
+  ($e.what=measures) the weights and measures
+  ($e.what=tax) the tax
+  ($e.what=water) the water
+  ($e.what=tolls) the tolls
+  ($e.what=curfew) the curfew
+  ($e.what=coin) the coinage
+  ($e.what=inheritance) inheritance
+  ($e.what=drink) drink
+  ($e.what=weapons) the carrying of blades
+  ($e.what=school) the schools
+  ($e.what=census) the count of the people
+  ($e.what=calendar) the calendar
+  ($e.what=dogs) the dogs
+  ($e.what=hours) the hours of work
+  ($e.what=noise) noise in the streets
+  ($e.what=forests) the forests
+  ($e.what=rations) the rations
+med.games.of
+  ($e.what=race) the race
+  ($e.what=wrestling) the wrestling
+  ($e.what=archery) the archery
+  ($e.what=boats) the boat race
+  ($e.what=ball) the ball game
+  ($e.what=song) the singing
+  ($e.what=horses) the horse race
+  ($e.what=chess) the board game
+  ($e.what=swimming) the swimming
+med.show.of
+  ($e.what=play) play
+  ($e.what=song) song
+  ($e.what=pictures) painting
+  ($e.what=film) film
+  ($e.what=dance) dance
+  ($e.what=poem) poem
+  ($e.what=statue) statue
+
+sermon.none
+  (has:.told)
+  (!has:.told) Nothing has happened this year worth a sermon, which is the best thing a year can do.
+  (!has:.told) It has been a quiet year. Be grateful; they are rarer than the loud ones.
+  (!has:.told) The {crop} is in, the {herd} are fat, and nobody died who was not old. Remember this year when the bad ones come.
+  (!has:.told) I was going to speak about the weather, but the weather has been kind, and I will not complain about kindness.
+  (!has:.told) You have all heard the news from {city}. It is not news here, and it will not be.
+  (!has:.told) It has been an ordinary {season.now}. I want to talk about ordinary things: the {craft}, the {herd}, the {food} on the table.
+  (!has:.told) Nothing has happened, and that is not nothing. Look at the {fruit} on the trees and the children in the street.
+)VG"

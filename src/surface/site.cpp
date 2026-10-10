@@ -1,8 +1,19 @@
 #include "site.h"
+#include "galaxy/plan.h"
+#include "galaxy/towns.h"
+#include "galaxy/peoples.h"
 #include "core/parallel.h"
 #include <chrono>
 #include "space/space_view.h"
 #include <cmath>
+
+void TerrainCache::invalidate(double x0, double z0, double x1, double z1) {   // T-02
+    if (v.empty()) return;
+    const int n = 1 << logN;
+    const int i0 = (int)std::floor(x0 / cellSize), i1 = (int)std::ceil(x1 / cellSize), j0 = (int)std::floor(z0 / cellSize), j1 = (int)std::ceil(z1 / cellSize);
+    if (i1 - i0 >= 4 * n || j1 - j0 >= 4 * n) { for (TerrainVertex& t : v) t.cx = 0x7fffffff; return; }
+    for (int j = j0; j <= j1; j++) for (int i = i0; i <= i1; i++) { TerrainVertex& t = v[index(i, j)]; if (t.cx == i && t.cz == j) t.cx = 0x7fffffff; }
+}
 
 void TerrainCache::init(const SurfaceSite* s, int cell, int logn) {
     site = s; cellSize = cell; logN = logn;
@@ -31,6 +42,7 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
     t.water = (float)s.water;
     t.shore = (float)s.shore;
     t.scree = (uint8_t)clampi((int)(s.scree * 255 + 0.5), 0, 255);
+    if (!edits.empty()) applyEdits(x, z, detailM, t);   // T-03: the works' cuts, pits, ditches, craters, flats, reservoirs and lines
     if (!roads.empty() && detailM <= 100) {   // C-09: an old road through this vertex (the coarse rings see nothing: a seven-metre road is a hundredth of their cells)
         double d, along, hd; const SiteRoad* rd;
         if (roadAt(x, z, 0.5 * detailM + 8.0, d, along, hd, rd)) {
@@ -43,19 +55,368 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
                 double maxCover = std::min(1.0, 2 * half / detailM);
                 if (dry && detailM <= 24 && cover >= 0.5 * maxCover) {   // on the bed (the fine rings): the paving, or the beaten earth, bare and darker
                     int fam = matFamily(t.material);
-                    if (rd->paved) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.75f : 0.9f; }   // the paving: the rock family (on rock ground, darker stone)
-                    else if (fam == FAM_GRASS || fam == FAM_FOREST) { t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.85f; }   // the beaten track: bare earth through the green
-                    else { if (t.material == MAT_SAND) t.material = MAT_DUST; t.albedo *= 0.5f; }   // beaten sand is packed and dark (the dust tile: no ripples), beaten rock darker; a fifth less read as the sand's own patches
-                    t.veg *= 0.1f;
+                    switch (rd->kind) {   // T-01: the networks' beds by their kind
+                        case NK_RAIL: if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= 0.55f; break;   // the ballast, dark with the years' soot
+                        case NK_CANAL: if (fam != FAM_SAND) t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.6f; break;   // the channel's silted bed
+                        case NK_HIGHWAY: if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.85f : 1.0f; break;   // the slabs, pale
+                        case NK_PATH: if (fam == FAM_GRASS || fam == FAM_FOREST) t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.9f; break;   // a worn line
+                        default:
+                            if (rd->paved) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.75f : 0.9f; }   // the paving: the rock family (on rock ground, darker stone)
+                            else if (fam == FAM_GRASS || fam == FAM_FOREST) { t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.85f; }   // the beaten track: bare earth through the green
+                            else { if (t.material == MAT_SAND) t.material = MAT_DUST; t.albedo *= 0.5f; }   // beaten sand is packed and dark (the dust tile: no ripples), beaten rock darker; a fifth less read as the sand's own patches
+                            break;
+                    }
+                    t.veg *= rd->kind == NK_PATH ? 0.4f : 0.1f;
                 } else if (dry) {   // the line from the air (the 64 m ring): the tone, darker the more of the footprint it holds
                     double k = std::min(1.0, cover * std::max(1.0, detailM / 16.0));
-                    t.albedo *= (float)(1 - 0.28 * k);
+                    t.albedo *= (float)(1 - (rd->kind == NK_HIGHWAY ? 0.15 : 0.28) * k);
                     t.veg *= (float)(1 - 0.8 * k);
                 }
             }
         }
     }
+    if (!marks.empty() && detailM <= 100) applyMarks(x, z, detailM, t);   // T-02: the towns' streets, squares and fields
     return t;
+}
+
+// ---- T-02: the towns' ground ----------------------------------------------------------------------------------------------------
+namespace {
+constexpr double MARK_CELL = 32;
+inline int64_t markKey(int64_t i, int64_t j) { return (i << 32) ^ (j & 0xffffffffLL); }
+double segDist(double x, double z, double ax, double az, double bx, double bz, double* along = nullptr) {
+    const double dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz;
+    const double t = L2 > 1e-12 ? clampd(((x - ax) * dx + (z - az) * dz) / L2, 0, 1) : 0;
+    if (along) *along = t * std::sqrt(L2);
+    return std::hypot(x - (ax + dx * t), z - (az + dz * t));
+}
+}
+void SurfaceSite::addTownMarks(const RuinSpec& sp, double ox, double oz, double years, double wet, double wear) {
+    double x0 = 1e18, z0 = 1e18, x1 = -1e18, z1 = -1e18;
+    auto index = [&](int k, double ax, double az, double bx, double bz) {
+        x0 = std::min(x0, ax); z0 = std::min(z0, az); x1 = std::max(x1, bx); z1 = std::max(z1, bz);
+        for (int64_t j = (int64_t)std::floor(az / MARK_CELL); j <= (int64_t)std::floor(bz / MARK_CELL); j++)
+            for (int64_t i = (int64_t)std::floor(ax / MARK_CELL); i <= (int64_t)std::floor(bx / MARK_CELL); i++) markCells[markKey(i, j)].push_back(k);
+    };
+    // what the years left: a paved street stands its wear, a beaten one less, a field's tone and its edges fade in centuries (a dry world's
+    // last longer)
+    const double y = std::max(1.0, years);
+    const float paved = (float)clampd(1 - 0.75 * wear, 0.15, 1), beaten = (float)clampd(1 - 1.2 * wear, 0.1, 1);
+    const float field = (float)clampd(1 - (std::log10(std::max(100.0, y)) - 2) / (wet > 0.4 ? 1.4 : 2.2), 0.08, 1);
+    for (const Street& s : sp.streets) {
+        GroundMark m; m.kind = 0; m.sub = s.paved ? (s.age >= AGE_MODERN ? 2 : 1) : 0;
+        m.ax = ox + s.ax; m.az = oz + s.az; m.bx = ox + s.bx; m.bz = oz + s.bz; m.half = s.half; m.left = s.paved ? paved : beaten;
+        m.id = (uint32_t)mix64(sp.seed ^ (uint64_t)marks.size());
+        const double e = s.half + 1;
+        marks.push_back(m);
+        index((int)marks.size() - 1, std::min(m.ax, m.bx) - e, std::min(m.az, m.bz) - e, std::max(m.ax, m.bx) + e, std::max(m.az, m.bz) + e);
+    }
+    for (const Plaza& p : sp.plazas) {
+        GroundMark m; m.kind = 1; m.sub = p.age >= AGE_MODERN ? 2 : (p.age >= AGE_MEDIEVAL ? 1 : 0); m.ax = ox + p.x; m.az = oz + p.z; m.r = p.r; m.left = m.sub ? paved : beaten;
+        marks.push_back(m);
+        index((int)marks.size() - 1, m.ax - m.r - 1, m.az - m.r - 1, m.ax + m.r + 1, m.az + m.r + 1);
+    }
+    for (const FieldPatch& f : sp.fields) {
+        GroundMark m; m.kind = f.kind == FI_CIRCLE ? 3 : 2; m.sub = f.kind; m.ax = ox + f.x; m.az = oz + f.z; m.r = f.hw; m.hw = f.hw; m.hd = f.hd; m.heading = f.heading;
+        m.left = f.kind == FI_TERRACE ? std::max(field, 0.35f) : field;   // a terrace's walls outlast a field's tone
+        m.id = (uint32_t)mix64(sp.seed ^ 0xF1E1DULL ^ (uint64_t)marks.size());
+        const double e = std::hypot(f.hw, f.hd) + 2;
+        marks.push_back(m);
+        index((int)marks.size() - 1, m.ax - e, m.az - e, m.ax + e, m.az + e);
+    }
+    if (x0 > x1) return;
+    // the fine rings' vertices under it sampled again (the coarse ones never draw it)
+    for (TerrainCache* c : {&lodN, &lod0, &lod1}) c->invalidate(x0 - c->cellSize, z0 - c->cellSize, x1 + c->cellSize, z1 + c->cellSize);
+}
+
+double SurfaceSite::markCover(double x, double z) const {
+    if (markCells.empty()) return 0;
+    auto it = markCells.find(markKey((int64_t)std::floor(x / MARK_CELL), (int64_t)std::floor(z / MARK_CELL)));
+    if (it == markCells.end()) return 0;
+    double best = 0;
+    for (int k : it->second) {
+        const GroundMark& m = marks[k];
+        if (m.kind == 0) best = std::max(best, m.left * clampd(m.half + 1.0 - segDist(x, z, m.ax, m.az, m.bx, m.bz), 0, 1));
+        else if (m.kind == 1) best = std::max(best, m.left * clampd(m.r + 1.0 - std::hypot(x - m.ax, z - m.az), 0, 1));
+    }
+    return best;
+}
+
+void SurfaceSite::applyMarks(double x, double z, double detailM, TerrainVertex& t) const {
+    auto it = markCells.find(markKey((int64_t)std::floor(x / MARK_CELL), (int64_t)std::floor(z / MARK_CELL)));
+    if (it == markCells.end()) return;
+    const bool dry = t.material != MAT_WATER && t.material != MAT_ICE && t.material != MAT_SNOW && t.material != MAT_LAVA && t.material != MAT_GLASS && !(t.water > -1e8f && t.h < t.water + 0.3f);
+    if (!dry) return;
+    // the street or the square under the vertex (its share of the footprint), and the field it lies in
+    double cover = 0, maxCover = 1; int paved = 1;
+    const GroundMark* fld = nullptr; double lx = 0, lz = 0;
+    for (int k : it->second) {
+        const GroundMark& m = marks[k];
+        if (m.kind == 0) {
+            const double d = segDist(x, z, m.ax, m.az, m.bx, m.bz);
+            const double c = clampd(m.half + 0.5 * detailM - d, 0, std::min(2 * m.half, detailM)) / detailM * m.left;
+            if (c > cover) { cover = c; paved = m.sub; maxCover = std::min(1.0, 2 * m.half / detailM) * m.left; }
+        } else if (m.kind == 1) {
+            const double c = clampd((m.r + 0.5 * detailM - std::hypot(x - m.ax, z - m.az)) / detailM, 0, 1) * m.left;
+            if (c > cover) { cover = c; paved = m.sub; maxCover = m.left; }
+        } else if (!fld) {
+            const double ex = x - m.ax, ez = z - m.az;
+            if (m.kind == 3) { if (std::hypot(ex, ez) <= m.r) { fld = &m; lx = std::hypot(ex, ez); } }
+            else {
+                const double ch = std::cos(m.heading), sh = std::sin(m.heading), a = ex * ch - ez * sh, b = ex * sh + ez * ch;
+                if (std::fabs(a) <= m.hw && std::fabs(b) <= m.hd) { fld = &m; lx = a; lz = b; }
+            }
+        }
+    }
+    if (cover > 0.002) {   // the street's bed: the paving (the rock family, darker on rock ground) or the beaten earth, as C-09's roads
+        t.road = (uint8_t)clampi((int)(cover * 255 + 0.5), std::max<int>(t.road, 1), 255);
+        if (detailM <= 24 && cover >= 0.5 * maxCover) {
+            const int fam = matFamily(t.material);
+            // the cut is deep: a fifth of the albedo vanishes in the ground's tone tile (C-09's lesson)
+            if (paved == 2) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= 0.45f; }   // a modern street's asphalt and concrete
+            else if (paved) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= 0.6f; }   // setts, flags
+            else if (fam == FAM_GRASS || fam == FAM_FOREST) { t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.85f; }
+            else { if (t.material == MAT_SAND) t.material = MAT_DUST; t.albedo *= 0.6f; }
+            t.veg *= 0.1f;
+        } else {   // the streets from the air (the 64 m ring): the tone
+            const double k = std::min(1.0, cover * std::max(1.0, detailM / 16.0));
+            t.albedo *= (float)(1 - 0.36 * k);
+            t.veg *= (float)(1 - 0.75 * k);
+        }
+        return;
+    }
+    if (!fld) return;
+    const float L = fld->left;
+    const bool green = gen.type != PT_DESERT;
+    if (fld->kind == 3) {   // an irrigation circle: its old soil darker on a desert, greener on a living world; its rim (the cuts are deep: a fifth
+                            // of the albedo is lost in the ground's tone tile)
+        const double rim = clampd(1 - std::fabs(lx - fld->r + 2) / (1.5 + 0.25 * detailM), 0, 1);
+        if (green) { t.veg = std::min(1.0f, t.veg * (1 + 0.6f * L) + 0.08f * L); t.albedo *= 1 - 0.12f * L; } else t.albedo *= 1 - 0.38f * L;
+        t.albedo *= (float)(1 - 0.2 * rim * L);
+        return;
+    }
+    // a field: its strips (alternate tones across it), a plot's or an enclosure's own tone, its edge a hedge on a living world, a wall or a
+    // bank on a dry one
+    const double edge = std::min(fld->hw - std::fabs(lx), fld->hd - std::fabs(lz));
+    const double line = clampd(1 - edge / (1.2 + 0.25 * detailM), 0, 1);
+    double tone = 0;
+    if (fld->sub == FI_STRIP || fld->sub == FI_TERRACE) { const int strip = (int)std::floor((lx + fld->hw) / (fld->sub == FI_TERRACE ? 6.0 : 14.0)); tone = (strip & 1) ? 0.12 : -0.1; }
+    else tone = (unitFromHash(fld->id) - 0.5) * 0.3;
+    t.albedo *= (float)(1 + tone * L);
+    if (green) t.veg = std::min(1.0f, std::max(0.0f, t.veg * (float)(1 + 2 * tone * L)));
+    if (line > 0) {
+        if (green && fld->sub != FI_TERRACE) { t.veg = std::min(1.0f, t.veg * (float)(1 + 0.8 * line * L)); t.albedo *= (float)(1 - 0.25 * line * L); }   // a hedge
+        else t.albedo *= (float)(1 - 0.38 * line * L);   // a wall, a bank, a terrace's riser
+    }
+}
+
+// ---- T-03: the works' ground --------------------------------------------------------------------------------------------------
+namespace {
+constexpr double EDIT_CELL = 64, EDIT_BIG = 600;
+// a point's distance to a polyline (x, z pairs) and the share along the whole of it, and its side (+1 right of the way it runs)
+double polyDist(const std::vector<float>& p, double x, double z, double* along = nullptr, int* side = nullptr) {
+    double best = 1e18, bestT = 0, total = 0, run = 0; int bs = 1;
+    for (size_t i = 2; i + 1 < p.size(); i += 2) total += std::hypot(p[i] - p[i - 2], p[i + 1] - p[i - 1]);
+    for (size_t i = 2; i + 1 < p.size(); i += 2) {
+        const double ax = p[i - 2], az = p[i - 1], bx = p[i], bz = p[i + 1], dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz, L = std::sqrt(L2);
+        const double t = L2 > 1e-12 ? clampd(((x - ax) * dx + (z - az) * dz) / L2, 0, 1) : 0;
+        const double d = std::hypot(x - (ax + dx * t), z - (az + dz * t));
+        if (d < best) { best = d; bestT = total > 0 ? (run + t * L) / total : 0; bs = (dx * (z - az) - dz * (x - ax)) < 0 ? 1 : -1; }
+        run += L;
+    }
+    if (along) *along = bestT;
+    if (side) *side = bs;
+    return best;
+}
+}
+
+void SurfaceSite::addWorkEdits(const Work& w, double ox, double oz, double years, double wet) {
+    const double y = std::max(1.0, years);
+    const float left = (float)editLeft(y, wet), lineLeft = (float)editLeft(y, wet, true), fresh = (float)clampd(1 - (std::log10(y) - 1.5) / 2.5, 0, 1);
+    for (const GroundEdit& g : w.edits) {
+        SiteEdit e;
+        e.kind = g.kind; e.tone = g.tone; e.x = ox + g.x; e.z = oz + g.z; e.heading = g.heading; e.hw = g.hw; e.hd = g.hd; e.r = g.r;
+        e.level = g.level; e.depth = g.depth; e.step = g.step; e.width = g.width; e.width2 = g.width2; e.bank = g.bank;
+        e.left = g.fades ? (g.kind == GE_LINE ? lineLeft : left) : 1.0f; e.fresh = fresh;
+        double ext = 0;
+        switch (g.kind) {
+            case GE_CUT: ext = std::hypot(g.hw, g.hd) + 2; e.x0 = e.x - ext; e.x1 = e.x + ext; e.z0 = e.z - ext; e.z1 = e.z + ext; break;
+            case GE_PIT: case GE_BOWL: case GE_FLAT: case GE_TERRACES: ext = g.r * (g.kind == GE_BOWL ? 1.4 : 1.0) + 2; e.x0 = e.x - ext; e.x1 = e.x + ext; e.z0 = e.z - ext; e.z1 = e.z + ext; e.pts = g.pts; break;
+            case GE_WATER:
+                e.gx0 = e.x + g.gx0; e.gz0 = e.z + g.gz0; e.cell = g.cell; e.nx = g.nx; e.nz = g.nz; e.mask = g.mask;
+                e.x0 = e.gx0; e.z0 = e.gz0; e.x1 = e.gx0 + g.nx * g.cell; e.z1 = e.gz0 + g.nz * g.cell;
+                break;
+            default: {   // a ditch's or a line's points
+                const double half = 0.5 * std::max(g.width, g.width2) + std::fabs(g.bank) * 2.5 + 2;
+                e.x0 = e.z0 = 1e18; e.x1 = e.z1 = -1e18;
+                for (size_t i = 0; i + 1 < g.pts.size(); i += 2) {
+                    const double px = ox + g.pts[i], pz = oz + g.pts[i + 1];
+                    e.pts.push_back((float)px); e.pts.push_back((float)pz);
+                    e.x0 = std::min(e.x0, px - half); e.x1 = std::max(e.x1, px + half); e.z0 = std::min(e.z0, pz - half); e.z1 = std::max(e.z1, pz + half);
+                }
+                if (e.pts.size() < 4) continue;
+                break;
+            }
+        }
+        edits.push_back(e);
+        const int k = (int)edits.size() - 1;
+        if (std::max(e.x1 - e.x0, e.z1 - e.z0) > EDIT_BIG) bigEdits.push_back(k);
+        else
+            for (int64_t j = (int64_t)std::floor(e.z0 / EDIT_CELL); j <= (int64_t)std::floor(e.z1 / EDIT_CELL); j++)
+                for (int64_t i = (int64_t)std::floor(e.x0 / EDIT_CELL); i <= (int64_t)std::floor(e.x1 / EDIT_CELL); i++) editCells[markKey(i, j)].push_back(k);
+        for (TerrainCache* c : {&lodN, &lod0, &lod1, &lod2, &lod3}) c->invalidate(e.x0 - c->cellSize, e.z0 - c->cellSize, e.x1 + c->cellSize, e.z1 + c->cellSize);
+    }
+}
+
+void SurfaceSite::applyEdits(double x, double z, double detailM, TerrainVertex& t) const {
+    auto one = [&](const SiteEdit& e) {
+        if (x < e.x0 || x > e.x1 || z < e.z0 || z > e.z1) return;
+        const int rock = familyRep(gen.type, FAM_ROCK);
+        const bool wetHere = t.material == MAT_WATER || (t.water > -1e8f && t.h < t.water + 0.3f);
+        switch (e.kind) {
+            case GE_CUT: {   // a face into the hill: the floor and its benches, the rock fresh and pale for a few centuries
+                if (detailM > std::max(e.hw, e.hd) * 1.5) return;
+                const double dx = x - e.x, dz = z - e.z, ch = std::cos(e.heading), sh = std::sin(e.heading);
+                const double u = dx * ch - dz * sh, v = dx * sh + dz * ch;
+                if (std::fabs(u) > e.hw || std::fabs(v) > e.hd) return;
+                const double s = e.level + (e.step > 0 && e.depth > 0 ? e.depth * std::floor((v + e.hd) / e.step) : 0);
+                if (s >= t.h) return;
+                t.h = (float)s; t.material = (uint8_t)rock; t.albedo *= 1 + 0.25f * e.fresh; t.veg *= 1 - 0.9f * e.fresh; t.scree = 0;
+                return;
+            }
+            case GE_PIT: {   // an open pit's benches down to its floor (a flint pit: one small shaft)
+                if (detailM > e.r * 1.2) return;
+                const double r = std::hypot(x - e.x, z - e.z);
+                if (r > e.r) return;
+                const double r0 = e.hw > 0 ? e.hw : e.r;
+                const double s = r <= r0 || e.step <= 0 ? e.level : e.level + e.depth * std::ceil((r - r0) / e.step);
+                if (s >= t.h) return;
+                t.h = (float)(e.left < 1 ? t.h + (s - t.h) * e.left : s);
+                if (e.r > 30) { t.material = (uint8_t)rock; t.albedo *= 1 + 0.2f * e.fresh; t.veg *= 1 - 0.9f * e.fresh; t.scree = 0; }
+                else t.albedo *= 1 - 0.25f * e.left;
+                return;
+            }
+            case GE_TERRACES: {   // a mountain cut into terraces: each ring band flat at its level, a riser at its inner edge
+                if (detailM > e.step * 1.2 || e.pts.empty()) return;
+                const double r = std::hypot(x - e.x, z - e.z);
+                if (r > e.r) return;
+                const double s = e.pts[(size_t)clampi((int)((e.r - r) / e.step), 0, (int)e.pts.size() - 1)];
+                if (s >= t.h) return;
+                t.h = (float)s; t.material = (uint8_t)(e.tone == ET_GLASS ? MAT_GLASS : rock); t.veg = 0; t.scree = 0; t.albedo = e.tone == ET_GLASS ? 0.18f : t.albedo * 1.1f;
+                return;
+            }
+            case GE_FLAT: {   // the ground made flat at its level: cut where it was higher, banked where lower
+                if (detailM > e.r * 0.8) return;
+                const double r = std::hypot(x - e.x, z - e.z);
+                if (r > e.r) return;
+                const double k = smoothstep(e.r, e.r - std::max(1.0, e.width), r);
+                t.h = (float)(t.h + (e.level - t.h) * k);
+                if (k > 0.5) {
+                    if (e.tone == ET_GLASS) { t.material = MAT_GLASS; t.albedo = 0.2f; t.veg = 0; }
+                    else if (e.tone == ET_PAVED) { t.material = (uint8_t)rock; t.albedo = std::min(0.75f, t.albedo * 1.35f + 0.08f); t.veg = 0; }
+                    else { t.veg *= 0.35f; }
+                    t.scree = 0;
+                }
+                return;
+            }
+            case GE_WATER: {   // the reservoir: its water over the cells it filled, the plane under its banks a cell further; on a world whose water is
+                               // gone (a dead desert), its old bed: silt laid flat and pale under the old waterline
+                const int i = (int)std::floor((x - e.gx0) / e.cell), j = (int)std::floor((z - e.gz0) / e.cell);
+                if (i < 0 || j < 0 || i >= e.nx || j >= e.nz || !e.mask[(size_t)j * e.nx + i]) return;
+                if (gen.type == PT_DESERT || e.tone == ET_DARK) {   // a dead desert's, or drained by a breach: silt laid flat under the old waterline
+                    if (t.h < e.level) {
+                        t.h = (float)(e.level - (e.level - t.h) * 0.55 - 1.5);
+                        if (gen.type == PT_DESERT) { t.material = MAT_SALT; t.albedo = std::min(0.8f, t.albedo * 1.2f + 0.1f); t.veg = 0; }
+                        else { t.albedo *= 0.85f; t.veg *= 0.6f; }
+                        t.scree = 0;
+                    }
+                    return;
+                }
+                t.water = (float)e.level; t.shore = 1e9f;
+                if (t.h < e.level) { t.material = t.material == MAT_SNOW || t.material == MAT_ICE ? MAT_ICE : MAT_WATER; t.albedo = 0.3f; t.veg = 0; t.scree = 0; }
+                return;
+            }
+            case GE_DITCH: {   // a ditch (a trench, a henge's, a line's) silting up, its bank beside it
+                const double half = 0.5 * e.width;
+                if (detailM > std::max(e.width * 2.0, 4.0)) return;
+                int side = 1; const double d = polyDist(e.pts, x, z, nullptr, &side);
+                if (d < half) { const double q = d / half; t.h -= (float)(e.depth * e.left * (1 - q * q)); t.albedo *= 1 - 0.18f * e.left; if (wetHere) return; t.veg *= 1 - 0.3f * e.left; }
+                else if (e.bank != 0 && (e.bank > 0 ? side > 0 : side < 0) && d < half + 3 * std::fabs(e.bank)) {
+                    const double q = (d - half) / (3 * std::fabs(e.bank));
+                    t.h += (float)(std::fabs(e.bank) * e.left * std::sin(PI * q));
+                }
+                return;
+            }
+            case GE_BOWL: {   // a crater: its hollow and its rim, scorched or glassed; filling with the years
+                if (detailM > e.r * 1.5) return;
+                const double r = std::hypot(x - e.x, z - e.z);
+                if (r > e.r * 1.4) return;
+                if (r < e.r) {
+                    const double q = r / e.r;
+                    t.h -= (float)(e.depth * e.left * (1 - q * q));
+                    if (e.tone == ET_GLASS && q < 0.85) { t.material = MAT_GLASS; t.albedo = 0.16f + 0.1f * (1 - e.left); t.veg = 0; }
+                    else { t.albedo *= 1 - 0.3f * e.left; t.veg *= 1 - 0.7f * e.left; }
+                } else t.h += (float)(0.22 * e.depth * e.left * std::sin(PI * (r - e.r) / (0.4 * e.r)));
+                t.scree = 0;
+                return;
+            }
+            default: {   // lines: their share of the vertex's footprint, cleared (paler), dark, paved; the bed's material on the fine rings
+                if (detailM > 100 || wetHere) return;
+                double along = 0; const double d = polyDist(e.pts, x, z, &along);
+                const double half = 0.5 * (e.width2 >= 0 ? e.width + (e.width2 - e.width) * along : e.width);
+                const double overlap = clampd(half + 0.5 * detailM - d, 0, std::min(2 * half, detailM));
+                const double cover = overlap / detailM * e.left;
+                if (cover < 0.002) return;
+                const double maxCover = std::min(1.0, 2 * half / detailM);
+                const bool bed = detailM <= 24 && cover >= 0.5 * maxCover * e.left;
+                const double k = std::min(1.0, cover * std::max(1.0, detailM / 16.0));
+                const int fam = matFamily(t.material);
+                switch (e.tone) {
+                    case ET_CLEARED:   // the dark stones swept aside: the paler ground under them (a fifth of the albedo is lost in the tone tile: twice it)
+                        if (bed && (fam == FAM_GRASS || fam == FAM_FOREST)) t.material = (uint8_t)familyRep(gen.type, FAM_SAND);
+                        t.albedo = std::min(0.92f, (float)(t.albedo * (1 + 1.2 * k)));
+                        t.veg *= (float)(1 - 0.95 * k);
+                        break;
+                    case ET_PAVED:
+                        if (bed) t.material = (uint8_t)rock;
+                        t.albedo = std::min(0.8f, (float)(t.albedo * (1 + 0.3 * k)));
+                        t.veg *= (float)(1 - 0.9 * k);
+                        break;
+                    default:   // a beaten track, a channel, a conduit's line
+                        if (bed && (fam == FAM_GRASS || fam == FAM_FOREST)) t.material = (uint8_t)familyRep(gen.type, FAM_SAND);
+                        t.albedo *= (float)(1 - 0.35 * k);
+                        t.veg *= (float)(1 - 0.6 * k);
+                        break;
+                }
+                return;
+            }
+        }
+    };
+    for (int k : bigEdits) one(edits[k]);
+    if (editCells.empty()) return;
+    auto it = editCells.find(markKey((int64_t)std::floor(x / EDIT_CELL), (int64_t)std::floor(z / EDIT_CELL)));
+    if (it != editCells.end()) for (int k : it->second) one(edits[k]);
+}
+
+double SurfaceSite::editCover(double x, double z) const {
+    double best = 0;
+    auto one = [&](const SiteEdit& e) {
+        if (x < e.x0 || x > e.x1 || z < e.z0 || z > e.z1) return;
+        switch (e.kind) {
+            case GE_CUT: {
+                const double dx = x - e.x, dz = z - e.z, ch = std::cos(e.heading), sh = std::sin(e.heading);
+                if (std::fabs(dx * ch - dz * sh) < e.hw + 1 && std::fabs(dx * sh + dz * ch) < e.hd + 1) best = std::max(best, (double)e.fresh);
+                break;
+            }
+            case GE_PIT: if (e.r > 30 && std::hypot(x - e.x, z - e.z) < e.r) best = std::max(best, (double)e.fresh); break;
+            case GE_FLAT: case GE_TERRACES: if (std::hypot(x - e.x, z - e.z) < e.r) best = 1; break;   // a grove's clearing, a plain made level: no tree
+            case GE_LINE: { double along = 0; const double d = polyDist(e.pts, x, z, &along); const double half = 0.5 * (e.width2 >= 0 ? e.width + (e.width2 - e.width) * along : e.width); best = std::max(best, e.left * clampd(half + 1.0 - d, 0, 1)); break; }
+            default: break;
+        }
+    };
+    for (int k : bigEdits) one(edits[k]);
+    auto it = editCells.find(markKey((int64_t)std::floor(x / EDIT_CELL), (int64_t)std::floor(z / EDIT_CELL)));
+    if (it != editCells.end()) for (int k : it->second) one(edits[k]);
+    return best;
 }
 
 // C-09: the roads of the site. Walked once per pair from the cells looked at so far (`RoadNodeCache`), kept in local metres
@@ -70,11 +431,13 @@ void SurfaceSite::ensureRoads(double x, double z) {
     double lat, lon; latLonAt(x, z, lat, lon);
     int gLat0, gLon0; ruinCellOf(gen, lat, lon, gLat0, gLon0);
     std::vector<RoadPair> pairs;
-    for (int dl = -ROAD_BLOCK; dl <= ROAD_BLOCK; dl++)
+    for (int dl = -ROAD_BLOCK; dl <= ROAD_BLOCK; dl++) {
+        const int row = ruinCellLonIn(gen, gLat0, gLon0, gLat0 + dl);   // T-01: the row's own cells at this longitude
         for (int dn = -ROAD_BLOCK; dn <= ROAD_BLOCK; dn++) {
-            if (!roadCells.insert(roadCellKey(gen, gLat0 + dl, gLon0 + dn)).second) continue;
-            roadNodes.pairsOf(gLat0 + dl, gLon0 + dn, pairs);
+            if (!roadCells.insert(roadCellKey(gen, gLat0 + dl, row + dn)).second) continue;
+            roadNodes.pairsOf(gLat0 + dl, row + dn, pairs);
         }
+    }
     std::vector<RoadPair> todo;
     for (const RoadPair& p : pairs) if (roadIds.insert(p.id).second) todo.push_back(p);
     std::vector<Road> rs(todo.size()); std::vector<char> ok(todo.size(), 0);
@@ -94,6 +457,46 @@ void SurfaceSite::ensureRoads(double x, double z) {
             px = rx; pz = rz;
         }
         roads.push_back(std::move(sr));
+    }
+    // T-01: the plan's ways through the block (galaxy/plan.h): each leg within reach walked once by its kind (a maglev's runs on its pylons:
+    // no bed), its id the way's and the leg's
+    if (std::shared_ptr<const WorldPlan> P = worldPlanOf(gen)) {
+        const double blockM = (ROAD_BLOCK + 1) * ruinCellLat(gen) * R;
+        std::vector<PlanEdgeRef> es; planEdgesNear(*P, unitAt(x, z), blockM + 3000, es);
+        struct Leg { Vec3 a, b; uint64_t id; int kind, people; bool trunk; };
+        std::vector<Leg> legs;
+        for (const PlanEdgeRef& r : es) {
+            if (r.e->kind == NK_MAGLEV || r.e->kind == NK_SEA) continue;
+            const std::vector<Vec3>& way = planEdgeWay(gen, *P, r);
+            for (size_t k = 0; k + 1 < way.size(); k++) {
+                double ax, az, bx, bz; localAt(way[k], ax, az); localAt(way[k + 1], bx, bz);
+                const double dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz;
+                const double tt = L2 > 1e-9 ? clampd(((x - ax) * dx + (z - az) * dz) / L2, 0, 1) : 0;
+                if (std::hypot(x - (ax + dx * tt), z - (az + dz * tt)) > blockM) continue;
+                const uint64_t id = mix64(r.e->id ^ ((uint64_t)(k + 1) * 0x9E3779B97F4A7C15ULL));
+                if (!roadIds.insert(id).second) continue;
+                legs.push_back({way[k], way[k + 1], id, r.e->kind, r.people, r.e->trunk});
+            }
+        }
+        std::vector<Road> lr(legs.size()); std::vector<char> lok(legs.size(), 0);
+        auto legRange = [&](int i0, int i1) { for (int i = i0; i < i1; i++) lok[i] = roadLegWalk(gen, legs[i].kind, legs[i].a, legs[i].b, legs[i].id, lr[i]) ? 1 : 0; };
+        if (legs.size() > 4) parallelFor((int)legs.size(), 2, legRange); else legRange(0, (int)legs.size());
+        for (size_t i = 0; i < legs.size(); i++) {
+            if (!lok[i]) continue;
+            const Culture& cu = roadCultures[legs[i].people > 0 && peoplesOf(gen) > 1 ? 1 : 0];
+            SiteRoad sr; sr.id = legs[i].id; sr.kind = legs[i].kind; sr.half = (float)netHalfWidth(legs[i].kind, cu, legs[i].trunk);
+            sr.paved = legs[i].kind != NK_PATH && (legs[i].kind != NK_ROAD || cu.paved || legs[i].trunk); sr.wear = (float)cu.roadWear;
+            double along = 0, px = 0, pz = 0;
+            for (size_t k = 0; k < lr[i].pts.size(); k++) {
+                double rx, rz; localAt(lr[i].pts[k], rx, rz);
+                if (k) along += std::hypot(rx - px, rz - pz);
+                sr.x.push_back((float)rx); sr.z.push_back((float)rz); sr.along.push_back((float)along);
+                if (!k) { sr.x0 = sr.x1 = (float)rx; sr.z0 = sr.z1 = (float)rz; }
+                sr.x0 = std::min(sr.x0, (float)rx); sr.x1 = std::max(sr.x1, (float)rx); sr.z0 = std::min(sr.z0, (float)rz); sr.z1 = std::max(sr.z1, (float)rz);
+                px = rx; pz = rz;
+            }
+            roads.push_back(std::move(sr));
+        }
     }
     roadsMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }

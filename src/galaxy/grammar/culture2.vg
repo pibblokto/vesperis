@@ -1,0 +1,312 @@
+R"VG(
+# culture2.vg (H-04, the second pass): how a people lived: what it built with and how its houses looked (the ruins' own: the genome's
+# facts `plan`, `roof`, `walls`, `huts`, `ornament`, `motif`, `tops`, `accent`, `land`, `streets`, `public`, `edge`, `links`, `light`,
+# `towers`, read through the record's age, so a text says "under the domed roofs" where the explorer finds domes), its crafts, its
+# tools, its clothes, its music and its games, its feasts' customs, the hours of its day and its measures. Each people keeps its own
+# few of every pool (`people=K`).
+
+# =====================================================================================================================
+# the houses, as the ruins show them
+# =====================================================================================================================
+
+# a house (with its article) and houses, by the plan and the land and the age
+house.one
+  (plan=round age<=medieval) a round house
+  (plan=square age<=medieval) a long house
+  (plan=court) a house round its court
+  (plan=oval age<=medieval) an oval house
+  (plan=polygon age<=medieval) a many-sided house
+  (plan=free age<=prehistoric) a pit house
+  (land=stilts) a house on stilts
+  (land=terraced) a house on the terraces
+  (land=cliffs) a house in the cliff
+  (land=pits) a sunken house
+  (age<=prehistoric huts=wattle) a wattle hut
+  (age<=prehistoric huts=stone) a stone hut
+  (age>=industrial age<=modern) a terrace house
+  (age>=modern) a flat
+  (age>=futuristic) a cell in the stack
+  (age<=industrial) a house of {walls.of}
+houses (pl)
+  (plan=round age<=medieval) round houses
+  (plan=square age<=medieval) long houses
+  (plan=court) courtyard houses
+  (plan=oval age<=medieval) oval houses
+  (plan=free age<=prehistoric) pit houses
+  (land=stilts) houses on stilts
+  (land=terraced) terrace houses
+  (land=cliffs) cliff houses
+  (age<=prehistoric huts=wattle) wattle huts
+  (age<=prehistoric huts=stone) stone huts
+  (age>=industrial age<=modern) terraced streets
+  (age>=modern) tower blocks
+  (age>=futuristic) stacked cells
+  (age<=industrial) {walls.of} houses
+
+# the roofs and the walls (the people's materials, as the ruins keep them)
+roofs (pl)
+  (roof=flat) flat roofs
+  (roof=pitched) steep roofs
+  (roof=hipped) hipped roofs
+  (roof=domed) domed roofs
+  (roof=conical) cone roofs
+  (roof=vaulted) vaulted roofs
+  (roof=saddle) saddle roofs
+  (roof=stepped) stepped roofs
+  (roof=open) open roofs
+walls.of (mass)
+  (walls=stone age<=industrial) stone
+  (walls=mudbrick age<=industrial) mud brick
+  (age=industrial) brick
+  (age>=modern) concrete
+  (age>=futuristic) grown stone
+
+# the ornament over the doors, the people's motif, their sacred colour (the genome's accent)
+motif.over (pl)
+  (motif=lines) the lines
+  (motif=circles) the circles
+  (motif=steps) the step patterns
+  (motif=spirals) the spirals
+  (motif=glyphs) the old signs
+  (motif=figures) the figures
+  (motif=stars) the stars
+colour.holy
+  (accent=red) red
+  (accent=ochre) ochre
+  (accent=blue) blue
+  (accent=green) green
+  (accent=teal) sea-green
+  (accent=white) white
+  (accent=black) black
+colour.mourn (people=1)
+  white
+  black
+  grey
+  blue
+  undyed
+  ash-grey
+  red
+colour.any (people=4)
+  red
+  blue
+  yellow
+  green
+  white
+  black
+  ochre
+  saffron
+  indigo
+  rust
+  {colour.holy}
+
+# the town as its plan shows it
+streets.of
+  (streets=grid) the straight streets
+  (streets=radial) the streets that run to the centre
+  (streets=concentric) the ring streets
+  (streets=organic) the crooked lanes
+  (streets=line) the long street
+  (streets=contour) the streets along the hill
+  (streets=branching) the lanes that branch and branch
+town.edge
+  (edge=walls) the town wall
+  (edge=ditches) the ditch
+  (edge=nothing) the last houses
+town.open
+  (public=plazas) the square
+  (public=courts) the inner courts
+  (public=gardens) the gardens
+  (public=none) the street
+
+# =====================================================================================================================
+# the work of their hands
+# =====================================================================================================================
+
+material (mass people=3)
+  stone
+  timber
+  clay
+  reed
+  hide
+  bone
+  turf
+  wattle
+  (walls=mudbrick) mud brick
+  (age>=medieval) brick
+  (age>=medieval) iron
+  (age>=medieval) glass
+  (age>=industrial) steel
+  (age>=modern) concrete
+  (age>=futuristic) foam
+
+# a craft (a mass noun: "the weaving")
+craft (mass people=4)
+  weaving
+  pottery
+  tanning
+  carving
+  basketry
+  brewing
+  rope-making
+  beadwork
+  leatherwork
+  felt-making
+  dyeing
+  (coast=1|river=1) boat-building
+  (age>=medieval) smithing
+  (age>=medieval) glassblowing
+  (age>=medieval) paper-making
+  (age>=medieval) bookbinding
+  (age>=medieval) clock-making
+  (age>=industrial) printing
+  (age>=industrial) engineering
+  (age>=modern) wiring
+
+# a tool (with its article)
+tool (people=4)
+  the adze
+  the sickle
+  the hoe
+  the spindle
+  the net
+  the sling
+  the axe
+  the quern
+  the awl
+  the scraper
+  the bone needle
+  the digging stick
+  (age>=medieval) the plough
+  (age>=medieval) the loom
+  (age>=medieval) the scythe
+  (age>=medieval) the anvil
+  (age>=industrial) the lathe
+  (age>=industrial) the sewing machine
+  (age>=modern) the drill
+
+# what they wore (singular, with its article)
+garment (people=3)
+  a cloak
+  a shawl
+  a tunic
+  a smock
+  a robe
+  a sash
+  a hood
+  an apron
+  a wrap
+  a headcloth
+  (cold=1) a fur coat
+  (cold=1) felt boots
+  (desert=1) a veil
+  (desert=1) a long shirt
+  (age>=medieval) a coat
+  (age>=industrial) a jacket
+  (age>=modern) a suit
+
+# their music (singular, with its article)
+instrument (people=2)
+  the drum
+  the flute
+  the pipes
+  the horn
+  the lyre
+  the harp
+  the rattle
+  the bells
+  the bone whistle
+  the {~instrument}
+  (age>=medieval) the fiddle
+  (age>=medieval) the lute
+  (age>=medieval) the gongs
+  (age>=industrial) the piano
+  (age>=modern) the guitar
+
+# their pastimes (with their articles where they take one)
+pastime (people=3)
+  knucklebones
+  dice
+  wrestling
+  foot races
+  stone games
+  board games
+  kites
+  ball games
+  riddles
+  stick fighting
+  {~game}
+  (coast=1|river=1) boat races
+  (age>=medieval) cards
+  (age>=medieval) horse races
+  (age>=medieval) two-kings
+  (age>=industrial) football
+  (age>=modern) picture shows
+
+# =====================================================================================================================
+# their feasts' customs (a phrase: "the {festival} fires")
+# =====================================================================================================================
+
+feast.custom (sing people=3)
+  the lighting of the {festival} fires
+  the night of masks
+  the long table
+  the race of the {herd}
+  the floating of the lamps on the water
+  the burning of the old year
+  the procession to {holyplace}
+  the silence at noon
+  the throwing of the seed
+  the giving of bread
+  the new fire
+  the counting of the children
+  the dance of the {~dance}
+  the singing of the {festival} songs
+  the washing of the doors
+  the tying of the {colour.holy} ribbons
+
+# =====================================================================================================================
+# the hours of their day, their measures, their money
+# =====================================================================================================================
+
+time.of (people=4)
+  at first light
+  before first light
+  at the noon meal
+  at lamp-lighting
+  at dusk
+  in the cool of the evening
+  after the second meal
+  at the turn of the night
+  when the {bird} wake
+  when the herds come in
+  (moons>0) at {moon}rise
+  (age>=medieval) at the bell
+  (age>=industrial) at the works' whistle
+  (age>=modern) at six
+
+# a length (plural units), a load (plural units)
+measure.far (pl people=2)
+  paces
+  spans
+  ropes
+  strides
+  bowshots
+  (age>=medieval) cubits
+  (age>=industrial) miles
+  (age>=modern) kilometres
+measure.load (pl people=2)
+  measures
+  loads
+  baskets
+  handfuls
+  (age>=medieval) bushels
+  (age>=industrial) tons
+
+# money: their coins in their own words (the medieval age on)
+coin
+  {~coin}
+  {~coin}
+  (age>=industrial) {~note}
+smallcoin
+  {~smallcoin}
+)VG"

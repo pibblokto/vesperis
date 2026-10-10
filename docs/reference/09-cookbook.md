@@ -18,7 +18,7 @@
 
 ## Add a building kind or a settlement plan (C-01)
 
-`galaxy/ruins.h` `BuildingKind` / `SettlementPlan` and the name tables in `ruins.cpp`; the layout in `layoutSettlement` (place with `Layout::add`, which keeps buildings apart and draws the decay and the seed) and the pieces in `elemsBuilding` (boxes and domes from the building's own seed at the three levels of detail; a piece standing on the ground with `y0` under 0.01 is sunk a metre by the view and collides when it stands 0.9 m or more). The surface view (`drawSettlement`, `collectColliders`, `forTrees`) and the landmark finder need no change; `vesperis_test unit` checks every house's room and doorway, `scene civilisation_town` shows a town from its gate.
+`galaxy/ruins.h` `BuildingKind` / `SettlementPlan` and the name tables in `ruins.cpp`; the layout in `layoutSettlement` (place with `Layout::add`, which keeps buildings apart and draws the decay and the seed) and the pieces in `elemsBuilding` (`Form`s, A-02's `galaxy/forms.h`: C-01's boxes and domes or any of the twelve kinds, from the building's own seed at the three levels of detail, building by building in order (the view groups them so each building is drawn at its own level); a piece standing on the ground with `y0` under 0.01 is sunk a metre by the view, a big one stands on the highest ground under it with its foot down to the lowest; each kind's colliders are `formColliders`'). The surface view (`gatherSettlement`, `drawFormItems`, `collectColliders`, `forTrees`) and the landmark finder need no change; `vesperis_test forms sheet` shows a new kind whole and broken at every level, `forms check` walks into it; `vesperis_test unit` checks every house's room and doorway, `scene civilisation_town` shows a town from its gate.
 
 ## Add a material
 
@@ -48,32 +48,79 @@ Palettes are rebuilt every frame (`setupPalette`), so time-varying effects are c
 
 `SurfaceSite::init` sets cache cell sizes and torus sizes (the torus must be larger than twice the draw radius in cells); `SurfaceView::render` sets radii `r0, r1, r2` and the inner skips (`(r0*16)/64 - 1` etc.). Keep LOD1's inner skip just inside LOD0's radius to avoid gaps.
 
-## Add a shard kind or a slot (C-02)
+## Add a record's genre, a register, a rule or a word (C-02, H-03, H-04)
 
-1. A kind is a row of `kinds()` in `galaxy/shards.cpp`: a name, a tone (`ST_ORDINARY`, `ST_ELEGY`, `ST_WARNING`, `ST_END`),
-   the world it belongs to (0 both, 1 felisian, 2 desert), a weight, the last age it is told at on a desert (0.5 for what
-   speaks of living water, 1 otherwise) and its templates. Write two to four templates of two to four sentences each;
-   draw on the lore (`{god}`, `{river}`, `{founder}`...) so the names recur; use `{skyone}` where a singular verb follows,
-   `{beast}` for one animal and `{herd}` where the same animal returns in the text; `{he}`, `{him}`, `{his}` follow the
-   shard's `{kin}`.
-2. A slot is a `G.set(...)` in `buildGrammar`: read it from the body, the system or the `BodyGen` (a trait, a class, a
-   number), never from a site (the shards are a property of the world). An entry may hold marks of its own.
-3. `vesperis_test shards 151 25 1 50 full` and `shards 153 70 2 50 full` to read the result; `unit` checks the marks, the
-   lengths, the distinctness, the names and the tones. The texts are translations: plain English, no digits over the year.
+The texts are written by the grammar engine from `src/galaxy/grammar/*.vg` (the format: `12-civilisations.md`, "The grammar engine";
+the records: "The records (H-04)").
+
+1. Edit the `.vg` file and read the result without a rebuild: `vesperis_test grammar` reads the tree's files, prints the link's errors
+   (an unknown rule, fact, entity or field, a guard's unknown key, a rule no root reaches, "a" before a plural list: each with its file and
+   line), runs every people's records of the test worlds, the age worlds and the forty nearest home through the checks (every name the
+   history's at the record's year), and writes them all to `shots/tests/grammar_texts.txt`; `grammar ages` prints fifty of one people of
+   each age to `shots/tests/records_<age>.txt`. Read fifty before judging: the checks catch the grammar, not the sense (a door drunk from,
+   twelve elk "turned at bay, its head down", a diary that says "you"). Then `make` (the files are compiled in) and `unit` (it checks the
+   tree's files are the text compiled in, each under 16 KB: split a file that grows past it).
+2. A genre is an alternative of `record` in `records.vg`: its age and its media (`age=industrial medium=printed|medium=codex`), what the
+   history must offer (`has:pair`, `has:writer`, `has:dead`, `has:event`, an invention `inv.telegraph=1`), the collapse's `stage` for its
+   witnesses, and a weight (the rule is `steady`: a people's shares hold). Its rule `genre.<name>` (`words=lo..hi`: what it writes, the
+   length check) in the age's file; its heading and closing `(formula)` rules, left out of the measures. Bind its persons with `@cast`
+   and tell the history with `@news`, `@entries`, `@years`, `@death`, `@life` or `@event`; a register's rules are `<register>.<kind>`.
+3. A register is a way to tell an event: a rule per event kind (`annal.war`, `letter.sickness`), the event bound as `$e` (its fields:
+   `{$e.place}`, `{#$e.value:about}`, `$e.won`, `$e.wave`, `$e.out`), `.none` when there is nothing to tell and `.quiet` for an empty year;
+   `registerOf` in `galaxy/genres.cpp` names it (the salience gives a great event told in another register its other side).
+4. Compose within a sentence: a part a people draws a hundred times needs many frames (`[a|b|c]` inside a line, two or three slots a
+   sentence), and a tail that only fits one part goes with that part (`{=.many}` and `(.many=1)`, or the part and its reactions on one
+   line). Persons are entities: `{$me}`, `{$you}`, `{$x}`, `{$kin}`, `{$child}`, `{$spouse}`, `{$ruler}`, `{$founder}` (the realiser writes
+   "my mother", then "she" or "my mother" again where a pronoun would not be clear), their cases `{$kin:obj}`, `{$kin:poss}`, a vocative
+   `{$you:voc}` (the given name), the name `{$child:name}`; a line that speaks to the reader is guarded `has:$you` (a diary has none). Never
+   write "he", "his" or a verb's ending for a person; a verb whose subject changes is `{walk:$x}`, `{be:.w}` after `{rule>.w}`.
+5. A word list is a rule in `world.vg` or `people.vg` with guards on the facts (`desert=1`, `cold=1`, `moons>0`, a trait `erg=1`) and
+   its number (`(pl)`, `(mass)`, `(sing)`: no "a" before a plural); `(keep)` makes it the same all through a record. A new fact is the
+   model's: add it to `RecordFact` and its name in `galaxy/genres.cpp` (the same order) and set it in `recordWorldFacts` (the world and the
+   people) or `yearFacts` (the record's year), never from a site. A word of a later age goes behind a guard (`(age>=medieval) iron`) and
+   into `lexicon.vg`, by age or by the invention that brings it (`@lexicon inv.railway train trains`).
+6. A number with its noun is `{#n|day}` ("one day", "five days"); a rule of counts is written as it is read ("twenty", "a hundred").
+7. H-04's second pass: make it a people's own. A thing a people names its own way is a culture pool (`culture*.vg`) with `people=K`
+   (each people keeps K of those whose guards hold): one number for every word in it (no "the" in one entry and not in the next: a
+   writer will put "the" before it, or not), and a word of a later age behind its guard. A thing with no word of ours is `{~key}` (their
+   coin, their dish: lowercase, kept by the decoder). A quip, an image, a joke a reader would notice twice is in a rule with `share=0.3`
+   to `0.5`, so each people has its own part of them. A sentence a people draws often is built of parts with two or three of the people's
+   own words in it (its crop, its vessel, its craft, its house, its colour): that is what makes it no other people's; names do not help
+   (the measures mask them). Read `grammar`'s genre table: "between peoples" (the share of the genre's sentences on a frame another
+   people wrote) and "within one" (the people's own repeats); `VESPERIS_TOPFRAMES=8` prints each people's worst. A heading or a closing
+   that is the genre's habit is `(formula)`.
+8. Several writers side by side: each copies the tree (`cp src/galaxy/grammar/*.vg D/`) and the binary, works in its own files with its
+   own rule prefix, runs `vesperis_test grammar dir D out D/texts.txt` (from the repository's root), and copies its own files back; a new
+   file is read from disk at once, and compiled in by its line in `galaxy/shards.cpp` (`SRC_...` and `GRAMMAR_FILES`; the unit fails a
+   file the build does not list).
+
+## Add a tongue's sound, a name's shape, or an everyday event (H-04's second pass)
+
+1. A people's tongue is `galaxy/tongue.cpp`: a consonant set is a row of `CSETS` (codes from `CONS`, each sound with its spellings), a vowel
+   set a row of `VSETS`, a syllable shape a string of `SHAPES` (C, V, L, S, F, `?` after a part it may leave out). A name's shape by its
+   kind is `tongueName`'s switch (a place by its rank: a root, a root and a generic word before or after it, an adjective and a root); the
+   generic words are the `TM_` meanings. A name that reads as a word of ours is caught by `unfortunate` (add the word). `vesperis_test
+   tongues 60` shows sixty peoples' names side by side and how often a name tells its people; the unit asks 65% over 24.
+2. An everyday event is a row of `EVERYDAY` in `galaxy/history.cpp` (its kind in `HistoryEventKind`, before `HE_BIRTH` for a public one,
+   after `HE_DEATH` for a family's; its name in `HISTORY_EVENT_NAMES`, `KIND_KEYS` and the event's noun in `galaxy/genres.cpp`; its words
+   with the ages and what each needs; its rate by age and its salience): drawn from the year's own stream (`Builder::everyday`) or a
+   person's (`Builder::family`), it never harms anyone or makes a person, so the rest of the history stays. Then the registers that tell it
+   (`annal.<kind>`, `letter.<kind>`, `news.<kind>`, `log.<kind>`, `song.<kind>`, `sermon.<kind>`) with `$e.what` for its word.
 
 ## Move the shards, or add a place they lie (C-03)
 
-1. The counts per settlement class and the buildings' weights are the first lines of `shardSitesOf` (`galaxy/shards.cpp`);
-   the candidate spots per building kind are its `switch`, in the building's own frame (x' across the heading, z' along
-   it; a house's in the door's frame, v toward the door). A new place is a `ShardPlace` and a `SHARD_PLACE_NAMES` entry
-   (the log reads "TAKEN FROM <place>").
-2. Every spot is tested against the building's pieces (`ruinElements` at level 0, the ground ones) and its doorway
-   (`buildingDoor`); keep that, or the explorer cannot stand at the shard. Nothing in the view or the game knows where a
+1. The counts per settlement class and the buildings' weights are in `recordSitesOf` (`galaxy/records.cpp`; T-04 replaced C-03's
+   `shardSitesOf`, see "Add a record's medium, or change where records lie");
+   since A-03 the candidate spots are the building's room's (`buildingRoom`, `galaxy/buildings.cpp`: a `case` per kind, in the
+   building's own frame, x' across the heading, z' along it; a rectangular room's by its door, `rectSpots`), and the place is
+   the building's kind, named by `buildingPlaceName` (the log reads "TAKEN FROM <place>"). A new kind with a room gets a `case`
+   there that matches its generator's walls and doorway.
+2. Every spot is tested against the colliders of the building's pieces (`ruinElements` at level 0, `formColliders`) and its
+   doorway (`BuildingRoom::door`); keep that, or the explorer cannot stand at the shard. Nothing in the view or the game knows where a
    shard lies beyond `RuinCell::shards`.
 3. `vesperis_test ruins 151 25 1 12 4.22` lists the sites, `scene civilisation_shard` shows one from its room, `unit` checks
    the counts, the clearance and the view's reach; a changed placement moves no regress hash (no regress scene has a
-   settlement in view) but changes what a saved guide's `shard` lines point at only if the indices move, which the
-   settlement's own draw order decides.
+   settlement in view) and never what a saved guide's `shard` lines point at (they name a people's record by its index).
 
 ## Tune the decoder: the learning curve or the people's tongue (C-06)
 
@@ -155,3 +202,105 @@ Palettes are rebuilt every frame (`setupPalette`), so time-varying effects are c
 3. Judge it with `vesperis_test flow` (`flow_drone_seat/flight/chase.png` and the `drone:` line), the unit's drone check (the
    top speed at 25 s, the height, the landing time) and `bench check`'s `drone 2x` row; the sound is `AudioState::rotor`
    and `rotorPitch` in `audio.cpp` (a whine at 70-160 Hz with two harmonics over low-passed noise).
+
+## Read the world's plan from a feature, or add a network kind (T-01)
+
+1. A feature that stands where a people lived reads the plan (`worldPlanOf(g)` once a world, cached; in a frame `worldPlanIfReady`,
+   which never waits): `planPlacesNear` for the places in reach (their rank, class, core and population), `planCountryside` for the
+   density of the countryside at a point, `planCoreAt` for a core under a point, `planEdgesNear` and `planEdgeWay` for the ways and
+   their waypoints. Keep the feature a function of the plan and the world (no site), as the cells' reading is.
+2. A new network kind: its entry in `NetKind` with its names (`NET_KIND_NAMES`, `NET_KIND_HUD`), where the plan lays it (`planPeople`'s
+   kinds by the age, after the spanner), its walk's weights (`walkCostOf` in `roads.cpp`), its half width (`netHalfWidth`), its bed
+   (`SurfaceSite::sampleAt`'s switch), its line on the zoom (`KL` in `renderLandingMap`) and on the plate (`KD` in `plateFill`); a kind
+   on pylons or other works puts them in the cells it crosses (`planSpansIn`, `ruinOfCell`'s works).
+3. `vesperis_test plan <sx> <sz> <body>` (the plan of every age), `plan view` (the telescope), `zoom` over a place, the unit's T-01
+   checks (connected, dry, the ways on the ground) and `bench check` (`descent people`, `capital 2x`).
+
+## Change a town's plan: a street pattern, a district, a work of the water (T-02)
+
+1. The streets are `townStreets` (`galaxy/towns.cpp`): a pattern is a function of `Net` over a ring (`grid`, `spokes`, `rings`, `organic`,
+   `lineTown`, `branching`, `suburbs`), called by `Net::pattern` for each layer's age; a street is laid by `line` (a medieval one crooked by
+   its wobble) or `arc`, clipped to its ring by `seg`. The end of `townStreets` clips them to the shore and keeps the one web: a pattern
+   needs only lay streets that meet. Widths are `streetHalf` (by rank and age, times the class's `widthK`), the blocks `streetSpacing`.
+2. The buildings are `layoutTown` (`galaxy/ruins.cpp`): `districtAt` says a lot's district, `lotSpec` its building (a dwelling through the
+   layer's `Layout::dwellingSpec`, a work, a tower, a compound, a garden), `setback` and `gapAfter` its place on the street, `density` how
+   often a lot is built. A new building placed off a street: `Layout::add` with its fit tested (a rectangle against the others, off the
+   streets), then `intrusion` (its own pieces off the streets) and `undoTo` if they reach one; mark its `district`.
+3. A work of the water or the land of an age: `addFeatures` (the harbour by `c.age`, the reservoir, the terraces): its buildings
+   `L.add` with their fit tested or `segmentClear`/`offStreets` first; a new kind gets its generator in `galaxy/buildings.cpp` (see A-03's
+   recipe) and its feature flag in `RuinSpec` and `featureList`.
+4. `vesperis_test towns <sx> <sz> <body>` (the plans drawn from above), `towns view` (through the renderer), `towns check` (no building
+   across a street, the streets walkable, the old cores, the districts, the harbours, the ground's marks), `ruins check`, `genome reach`
+   (a variable that acted in the old plans must still reach the drawing).
+
+## Add a record's medium, or change where records lie (T-04)
+
+1. A medium is a `RecordMedium` (`galaxy/records.h`, before `RM_COUNT`) with its harness name (`RECORD_MEDIUM_NAMES`) and what the HUD and
+   the log say of it (`RECORD_MEDIUM_HUD`: a description, never a name); the ages and categories that made it are `mediaOf`'s table in
+   `galaxy/records.cpp` (a weight by the record's age and category, `f` how far into its era the year falls), which `recordMediumFits`
+   (the unit) reads too. Its object is `recordForms`'s case: a few forms in the object's frame (`Obj::add`, `lying`), small, on the floor,
+   in the records' parts (`FORM_PART_PALE` .. `FORM_PART_METAL`: banks 29, 30, 31, 17 and 7) or its people's slots (a stone's 0, a
+   sleeve's accent 1, a light's 3); no collider (it is picked up).
+2. Where records lie is `recordSitesOf`: a building kind's weight for one (`recordWeight`), where an age kept its archive (`archiveKinds`)
+   and its last words (`lastKinds`), how many by the class (the `want` and the archive's `k`), the works that kept records (the `SC_WORKS`
+   switch: a work's pieces need a `buildingRoom`, at least its foot). A record's home (`recordHomesOf`) is the place that always holds it:
+   change its weights there, and keep every record on some place of the plan (the unit counts the copies).
+3. The count is `recordCountOf` (`BASE` by the age, `REF` the age's middling numbers); it must stay within 80 to 200 and rise with the age.
+   C-02's first fifty keep their categories (`shardIsMusic`, `chartIndexOf`); past them `recordIsMusic` and `recordChartIndex`.
+4. `vesperis_test records <sx> <sz> <body>` (the catalogue and its sites), `records ages`, `records scenes [age]` (each object drawn and taken
+   in the game), `records check` (the unit's five).
+
+## Add a work, or change where one goes (T-03)
+
+1. A kind is a `WorkKind` (`galaxy/works.h`, after the last: the guide keeps none, only `LM_WORK` marks) with its name in `WORK_KIND_NAMES`
+   and what the scanner hears in `WORK_HEARD` (a description, never a name), and a glyph in the harness's `WORK_GLYPHS`.
+2. Its rule is a member of `WB` (`galaxy/works.cpp`) called in `buildWorldWorks`'s order (the history's works first): probe the ground with
+   `at` (64 m, the rivers off) and `grade`, find a place (`summitNear`, `shoreNear`, rings round a place, the plan grid's cells), keep it
+   `clearOf` the settlements, the cores and the works before it, then `add` it with its age, its place and its event (`placeAge`, `eraAge`
+   for the history's years; `cleared` for a place its people cleared). What it does to the ground is a `GroundEdit` in its own metres (a cut,
+   a pit, a ditch, a bowl, a flat, water, lines, terraces); a new kind of edit is drawn in `SurfaceSite::applyEdits` on the rings that can
+   show it and listed in `editCover` if nothing should grow on it.
+3. Its pieces are `workSpec`'s case: `Lay::add` buildings in the work's metres (a new kind's generator in `galaxy/buildings.cpp`, A-03's
+   recipe; heights over the reference level with `Building::base` and `Form::absolute`), `Lay::plot` for a plot of graves.
+4. `vesperis_test works <sx> <sz> <body>` (its line), `works view ... <word>` (through the renderer), `works gallery`, `works map` (with its
+   place), `works check` (and a check of its rule beside the dam's, the quarry's and the battlefield's).
+
+## Read a people's history, or add an event to it (H-02)
+
+1. A feature that reads what happened (a town's old core, a battlefield, a record) takes the history once (`historyOf(sys, b, g,
+   people)`, cached; it builds the world's plan first if it must, so ask it off the frame, as the plan is) and reads it by year
+   (`eventsIn`, `reignAt`, `harvestAt`, `populationAt`, `inventionYear`, `historySeat`), by person or place (`eventsOf`, `eventsAt`,
+   `historyKinship`) or by its lists (`places`: the plan's by rank, then a later people's cleared cities; `wars`, `sicknesses`,
+   `institutions`, `families`). A place's `age` is the age of its old core, its `ended` and `fate` how it was left.
+2. A new kind of event: its entry in `HistoryEventKind` with its name (`HISTORY_EVENT_NAMES`) and the slots it fills (the comment by
+   it); where the year loop makes it (`randomEvents` for a rate, `setupPlanned` for a year fixed in advance, `collapseYear` for the
+   collapse's) with its cause and its places standing; its sentence in `historyEventLine`. A person it names must be alive that year
+   and a place it names standing (the unit checks both); a harm that kills goes through `harm` so the families' deaths name it.
+3. `vesperis_test history <sx> <sz> <body>` (the legends), `history ages`, `history check` (the unit's five checks in a few seconds).
+
+## Add a variable to the architecture genome (A-04)
+
+1. Its entry in `GenomeVar` (`galaxy/genome.h`; the `static_assert` counts thirty-five: a thirty-sixth moves it), its values' enum,
+   and its row in `GENOME_VARS` (`genome.cpp`): its printed name, its group, its categories (0 a measure with its two ends), the ages
+   it acts in (a bit an age: the unit's reach check holds it to them) and its weight among the strongest (0 not one of them; a weight
+   moves `genomeMaxDistance` and the alike threshold's meaning). Its draw is its own hash (`genomeOf`): nothing else moves.
+2. Where it acts: a way of the culture (`cultureWays`, `galaxy/buildings.cpp`), a generator reading it (`Gen::gv`, `gf`), the palette
+   (`culturePalette`), a plan (`Layout` in `ruins.cpp`: `formOf`, `foundOf`, `dwelling`, `dwellingSpot`, `centre`, `focus`, `stela`,
+   the plan's `case`). What a room depends on goes into the `Building` (as `form`, `sides`, `found`, `centred`), so `buildingRoom`
+   stays a function of the building alone.
+3. `vesperis_test genome reach` (every age it claims), `genome sheet` and `genome ages` to see it act at a scale the picture shows,
+   `ruins check` (nothing on air, every doorway open), `genome distinct` if it weighs among the strongest.
+
+## Add a kind of building to an age (A-03)
+
+1. A `BuildingKind` (`galaxy/ruins.h`, with its `BUILDING_KIND_NAMES` entry: a `static_assert` counts them), its age in
+   `buildingAge` and its place's name in `buildingPlaceName` (`galaxy/buildings.cpp`).
+2. Its generator in `buildings.cpp`: a `Gen` gives the building's frame (`add`, `box`, `lathe` in its metres, the heading turned
+   by `dh`), its draws (`U`), its materials' decay (`D`, `Dk` for a piece), and the helpers: `walls4` (a room with its doorway and
+   windows), `roof` (never on walls under 92% of their height), `post` (a post to its stump and its hole), `heap`, `fallen` (a tall
+   thing's top across the ground). Tag every piece with its material and its palette slot; copy what a piece's reference holds
+   before adding the next (`out` grows and moves). Route the kind in `buildingForms`, and its room in `buildingRoom`.
+3. Where it stands: a place of the plans asks the age (`Layout::dwelling`, `centre`, `tower`, `hall`, `stela` in `ruins.cpp`,
+   the monuments in `pickMonument` with their reach in `monumentReach`).
+4. `vesperis_test ruins kinds` (add it to the sheet's table) and `ruins ages` to see it; `ruins check` checks that nothing of it
+   rests on air, its room's doorway is open, its spots are clear, and that its age builds nothing later than itself.

@@ -85,6 +85,7 @@
 | Habitat cells for herds (2026-09-28, B-316; supersedes the landing-only spawn of N3) | Herds lived within 180 m of the capsule and the re-anchor cleared them; hashed 512 m cells of latitude and longitude put them wherever the biome has them, spawned within 900 m and forgotten beyond 1300 m | A forgotten herd respawns at its spot when you return (KI-317); the grassland site holds nine herds |
 | Generation version 11: the galaxy of 200 billion stars (2026-10-01, G-01); `tests/regress_baseline.txt` re-blessed | The first milestone of `docs/ideas/MILESTONES.md`: a disc with the Milky Way's proportions, home kept at its sectors by putting the galactic centre 13,050 ly away; every star's existence, class and name can change, so the whole G/S series is this one bump | A save whose star is gone does not load and says so; one whose star survived says `THE GALAXY WAS REBUILT`; the four pinned harness bodies exist at the new density; the flow stops comparing the hop's star name (Skeatoltdos) and approaches unless its comet case parked the ship |
 | Generation version 12: each giant's character on its globe (2026-10-07, X-03); the regress unchanged | A descent must fall into what the globe shows (the consistency principle): each giant's share of storms, an ice giant's faint bands and a great storm on one giant in four are the planet function's, so the telescope and the probe see the same | Only the globes of gas giants and brown dwarfs change (no system, star or solid surface moves); a 1.1.0 save loads with `WORLDS WERE REGENERATED SINCE THIS SAVE` |
+| Generation version 13: the ages (2026-10-08, A-01); the regress unchanged | The civilisation expansion of 1.3.0 is one generation change from its first milestone: every people's age, eras, end and collapse (`galaxy/peoples.*`) are what every later milestone reads, and only the peoples that had radio transmit | The peoples' worlds' ruins weather by their age's years (Aieliaalas II 0.92 to 0.91, Leileashphail III as before); the transmitters moved (the cells' rate and salt); a chart's heard marks follow; systems, stars and surfaces do not move; a 1.2.0 save loads with `WORLDS WERE REGENERATED SINCE THIS SAVE` (the found shards by their index, T-04) |
 
 ## O10 (2026-09-28): the third review
 
@@ -279,7 +280,7 @@
 * **The tradition is a function of the world, the piece of the shard.** `traditionOf` reads the body's seed and the lore's style (hard names lean the timbres to bells, plucked strings and the drum; flowing ones to pipes and bows), so the language and the music of a people agree in character; `pieceOf` reads the shard's seed. Scales are five to nine notes to a period from an equal division of 5-24 steps or from just ratios, never with neighbours under 75 cents or a hole over 450; the period is the octave at 82%, a stretched or narrow one at 13%, the twelfth at 5%: enough that a tradition sounds like somewhere else, not so much that every world is a noise experiment. The resting degree (nearest a fifth, else a fourth) is where the open phrases end, so the phrases breathe the way ours do even in a 13-step scale.
 * **Form over improvisation.** A piece is statement / variation / answer / return (with the answer and the return once more for the quick forms) and a close of the tonic held a cycle: 28-70 s. Rests are a beat at most; a leap is answered by a step back; every timbre of a tradition plays (the answer on the second when it has no part of its own, the variation on the third when there is no drone). The forms' table (tempo, density, register, drum) is what makes a lullaby a lullaby.
 * **Heard whole from the first.** The language's learning curve does not apply to music: a piece plays whole on its first opening, and hearing it is recorded as read at the world's full count (`decoded <key> 50`), so it never waits and never shows `*` again. The wait of a text is the listening of a piece.
-* **The music stays on the decoder screen.** `Game::frame` stops the piece whenever the state is not SHARDS or its naming entry: the synth reads the pointers the decoder gave it, and the decoder is the one place that owns them. A way to hear the pieces found elsewhere on the ship (a cabin screen, in flight) belongs with C-11, the instruments.
+* **The music stays on the decoder screen.** `Game::frame` stops the piece whenever the state is not SHARDS or its naming entry: the synth reads the pointers the decoder gave it, and the decoder is the one place that owns them. A way to hear the pieces found elsewhere on the ship (a cabin screen, in flight) belongs with C-11, the instruments. (C-11, 2026-10-10: the decoder's own still stop off its screen; the ship's player owns a copy of its own and plays on, below.)
 * **Naming.** `N` on a piece names it through the text entry (kind 7, keyed like the shard in the guide's `names`, a note in the log); the entry draws over the decoder and the music goes on. It is the "name a piece" of the milestone and the guide-loop's "see, name, remember" for a sound.
 * **What moved.** No generation change (`GEN_VERSION` 11); the regress unchanged (no hash sees a shard). The text shards keep their texts (the music decision draws from its own hash before the text is expanded), but with twelve to eighteen fewer texts a world's language is smaller (Aieliaalas II 345 to 255 words) and the share read with one shard moves a little. A guide holding a shard that is now music lists it as a piece. The unit's shard checks count the text shards; two music checks and the flow's four `shards_music*` frames are new.
 
@@ -552,3 +553,902 @@ The user's review of the reworked telescope: "when you are in telescope planet s
 * **The sector map is where marks are made.** It gains a cursor (the arrows moved the zoom: `+`/`-` and the wheel now); Enter marks or renames, Delete twice removes (a named place is not lost to one key), M puts the waypoint at the cursor (the help always said so; it was put at the feet). The landing map shows the marks too, so a landing can be made beside one.
 * **The old names became marks.** The explorer's names of O6-06 landmarks (`<world>/L<id>`) are moved to marks where the landmarks stand when the ship is in their system: one pass over the world's grid finds the cells by their ids, and the old order picks the landmark the name was given to, on a thread of its own (the player's dozen names of one system asked a dozen cells and their drainage tiles: 7.5 s cold, which froze the arrival on the main thread; the marks come in when it is done, with a status line). A name whose landmark is not found again stays where it was (and is not asked again that session). The `landmark` lines (the seen set) are not read any more.
 * **What moved.** No generation change (`GEN_VERSION` 12): the terrain, the ruins and the sights are as they were. `galaxy/landmarks.*` (`CellSights`, `sightsOfCell`, `legacyLandmarkOf`, `cellsOfLegacyIds`, `sightsNear`, `ruinsNear`, `sightKindsOf`; `landmarksNear`, `landmarkOfCell` and the generated names gone), `surface/surface_view.*` (`ScanEcho`, `startScan`, `collectScan`, `joinScan`; the landmark thread gone), `game/guide.*` (`SurfaceMark`, `mark` lines, the lending), `game/marks.cpp` (new), `game/hud.cpp` (the sector map, the rangefinder's line), `game/landing_map.cpp`, `game/guide_screens.cpp` (the menu, text kind 6, the inbox's status), `game/game_states.cpp` (`R`, `L`, the help).
+
+## G-05 (2026-10-08): the galaxy chart
+
+R-409 (the user: "display whole galaxy map and show a point where you are + density of the stars and the ability to select on that map where to jump next"); the chart is G-05, choosing the jump on it G-06.
+
+* **A page of the star map, not a screen of its own.** `Tab` turns the map between the neighbourhood and the galaxy (Tab had no use there) and the map opens on the page it was left on, so `M`, the right wall's screen and the guide menu all reach it. In a Vimana flight `M` opens the map now, always on the galaxy (the line flown, the ship moving along it), and `Tab` is refused there: the neighbourhood is read at a star, and its `Enter` would retarget a flight in progress. The neighbourhood's title names the page (`THE NEIGHBOURHOOD  1419 STARS IN 10 LY  ZOOM 1.0X`) and its keys say `TAB GALAXY` (`MOUSE/WHEEL TURN/ZOOM` and `0 ALL` gave way: the mouse turns it without being told, `C/X/0 CLASS` keeps the key). The help's page 0 merges the line (`G GUIDE  M MAP, TAB GALAXY  J LOG  C CAPSULE/PROBE`: page 0 holds 21 lines).
+* **The column in closed form, not integrated.** The plan measured the harness's map at 61 samples a pixel and planned a worker, coarse images first. The disc's height profile is an exponential and the bulge's a gaussian, so the face-on column has a closed form (`galaxyFaceOnColumn`, `04-galaxy-and-systems.md`; the cap's slab bisected in the core) that agrees with a 2 ly integration to 0.01% at 65-80 ns a column. The face (320 x 128 at the logical resolution, 2 x 2 samples to level 3) and the edge-on strip (40 samples along the view's depth a pixel) build in 2-7 ms on the pool, synchronously when the view changes; no worker, no coarse pass, no stale image. The pixel grid is anchored in the galaxy (the view's centre snapped to a pixel of its level), so a pan moves the picture by whole pixels without a shimmer and a cached image is reused while the view stays on its pixel.
+* **Starlight, toned to the core.** Brightness is the log of the column (the harness's tone) normalised at the core's 4,000 stars a square light year, raised to 0.7, at 0.85 of white: the light climbs all the way in (the first tone, normalised at 700, saturated everything inside 8,000 ly and the core stopped standing out). The arms' excess is weighted four times at the crest (`1 + 3 x arm share`): an arm holds about twice its gap's stars and its young stars outshine it, and with counts alone home's own arm did not read at all beside the inner arms (home is on a crest, arm factor 0.99). The hue is the three parts' shares of the column: the bulge's old stars warm, the disc between the arms a pale gold, the arms blue-white. The scale bar and, in G-06, the readout carry the numbers; the picture shows where the stars are dense.
+* **The knots from their cells.** The column steps over anything a few tens of light years thick, so the globulars (all 145, found once a session) are faint warm points at every level and in the strip, and from level 6 (13 ly a pixel) the open clusters (100 ly cells through six scale heights) are blue-white knots and the star-forming complexes faint red glows of their 12 ly reach. The first try drew them as bright as stars and the chart read as a star field: they are dimmed under the markers' brightness. Nothing on the chart has a name.
+* **Levels.** Nine by powers of two, `+`/`-` and the wheel: level 0 is the whole disc (110,000 ly tall, 860 ly a pixel, the face 2.5 times as wide), always centred on the galactic centre and not panned; from level 1 the view follows the ship until the arrows or the mouse pan it (a nudge of under two pixels of the mouse does not let it go), `C` or `Space` follow again; level 8 is 430 ly tall (3.4 ly a pixel), the neighbourhood page below that. The chart opens on the whole disc: the first question is where the ship is in the galaxy.
+* **The strip.** The edge-on view of the same window: the field's mean density along the face's depth, its height 600 to 3,000 ly over and under the plane by the level and larger when the ship is higher (R-407's jump north leaves it 2,300 ly over): the ship is always in it.
+* **What the explorer has.** The ship (a white crosshair open in the middle with a dark rim, `YOU`, an arrow at the edge when panned away), home (the star map's amber diamond, rimmed), the stars visited (dots) and the way between them in the order of the arrivals (`Guide::route`, `route` lines, one per arrival, ten thousand kept: an older guide's visited stars are dots without lines until it travels again), the remote target with a dotted line from the ship, the line flown in a flight, the signals the radar locked as rings in the radar's red (KI-349's "on no map or screen of the ship"), the explorer's named stars at levels 6-8. The galaxy's marks and the cursor are G-06's.
+* **No scene under it.** The chart is opaque, so the render dispatch draws no space frame under the galaxy page (the neighbourhood keeps the scene under its veil); a frame of the chart without a rebuild costs 0.75 ms at 4x.
+* **What moved.** No generation change (`GEN_VERSION` 12); the regress unchanged. `galaxy/starfield.*` (`galaxyFieldDensity`, `FaceOnColumn`, `galaxyFaceOnColumn`), `game/galaxy_chart.cpp` (new: `Game::chartView`, `chartProject`, `updateGalaxyChart`, `renderGalaxyChart`), `game/game.h` (`mapPage`, `GalaxyChart gchart`, `CHART_*`, `chartScale`, the hooks `testMapPage`, `testChartLevel`, `testChartFollow`, `testChartBuildMs`, `testChartYouX/Y`, `testChartLegs`, `testArriveAt`, `testPlaceShip`), `game/guide.*` (`route`, `pushRoute`), `game/guide_screens.cpp` (the pages, `noteVisit`'s route), `game/autopilot.cpp` (`M` in a flight), `game/game.cpp` (no scene under the chart), `game/game_states.cpp` (the help's line), the harness's `chart` mode, three unit checks, the flow's `starmap_galaxy`, `starmap_galaxy_x16`, `starmap_flight`.
+
+## G-06 (2026-10-08): the next jump chosen on the chart
+
+R-409's second half ("the ability to select on that map where to jump next"): a cursor on the galaxy chart, what lies under it, the jump plotted and flown, a look at the stars round its end first, the explorer's things as stops, the explorer's own marks of the galaxy.
+
+* **A free cursor that carries the view.** The R-408 sector map's cursor was the model: white corners round a point, moved by the arrows (80 px a second, Shift three times) and the mouse; the chart's pan (G-05) became the cursor pushing the view within 16 px of the face's sides and 12 of its top and bottom, so one control does both and level 0 (the whole disc, not panned) moves the cursor alone. The zoom keeps the cursor's pixel (the wheel zooms where the explorer looks). The cursor sits on the ship and moves with it until it is moved (a mouse nudge under 2 counts leaves it, as it left the view); `C` or `Space` bring it and the view back, and an arrival puts both on the ship's new place. Its reach is 54,000 ly from the galactic centre (the level-0 face).
+* **In the plane unless told.** Let go of the ship, the cursor's point lies at `y` 0, where the stars are (after a jump north the ship is 2,300 ly over the plane and a jump back to the disc is the likely next); `PgUp`/`PgDn` move its height on the strip (two seconds from the plane to the strip's edge, to 30,000 ly), and the strip grows to hold it as it holds the ship.
+* **The readout in the rows the chart had.** The top row's region and the second row describe the cursor's place while it is off the ship (white): the stars there as one star in so many sectors (`galaxyDensity` at the point, two figures; `NO STARS` past one in a million) and its height; on the ship the rows stay G-05's (green). The row under the strip gives the jump's line (`5,000 LY COREWARD - 61 S BY VIMANA`), the legend's place: the legend shows while the cursor is on the ship. The zoom went into the scale bar's box (`10,000 LY  X4`) to free the second row. What the explorer has under the cursor is a label beside it, not a row. The last row shows the status while one is up (the map pages drew none: G-05's in-flight refusal of `Tab` was silent) and otherwise the keys of the moment (four sets: on the ship, away, on a mark, plotted).
+* **Plot, then fly: R-407's line in two steps.** `Enter` plots: `Game::plotJump` (R-407's `startJump` split) runs `jumpTarget` along the line from the ship to the cursor's point, so the chart's jump is the aim's jump (the void sends it back along the line to the first stars, the readout saying `16,795 LY SHORT, THE VOID`), and makes the star the remote target; `Enter` again flies it (`flyJump`), `Esc` keeps the target for `V`. The `JUMP` log line moved to the flight's start (`toggleVimana`) and is written for any plotted target flown (`Game::jumpPlot`, forgotten by any other kind of target), with `- PLOTTED ON THE CHART` when the chart plotted it; the aim's and the console's jumps log as before. A move of the cursor lets the plot go (its status too) and the target stays until another is set. The plot is not saved: after a load `V` flies the target as a plain flight.
+* **The look before the leap is the neighbourhood page moved.** On a plotted jump `Tab` shows the neighbourhood page round the plotted star (`AT THE PLOTTED END`, a `StarNeighborhood` of its own: the page reads `Game::mapStars`/`mapCentre`), not a new screen. The page's pick is the star nearest the screen's middle, which in the look would always be the plotted star itself, so the plotted star is left out of the pick as the ship's own star is on the ship's page; `Enter` takes the picked star as the plotted end (the line kept for the log) and goes back to the chart still plotted, so `Enter` flies.
+* **Stops by kind.** `N` (Shift+`N` back) steps through the locked signals first (a signal locked 3,000 ly off is `N`, `Enter`, `Enter` from a jump), then home, the named stars, the marks of the galaxy, the systems visited, nearest the ship first within a kind, a star once (its first kind), the star the ship is at left out. A star's stop is the star's own place, so the plot finds that star.
+* **Marks of the galaxy as R-408's marks.** `L` at the cursor names a place (`NAME THE PLACE` over the chart with its region and distance from the core; an empty name places an unnamed mark; on a mark `RENAME THE PLACE`), `Delete` twice removes it, the log has a `MARK` line. Kept as `gmark` lines in the guide (`Guide::galaxyMarks`) and lent by an export like the marks of the worlds (a friend's in cyan, theirs lent to them not passed on, one within a light year of a mark already there the same place; the inbox counts them with the world marks). Drawn at every level as a pennant with the name (the named stars only from level 6): they mark galaxy-scale places.
+* **Labels by priority.** The ship's `YOU` is placed first, then what the cursor rests on, then home's label, then the marks' and the named stars' names, each trying the right of its place at three heights and then the left; a name with no room is left out (the first frames drew a mark's name twice over `YOU` when the cursor stood on it).
+* **What moved.** No generation change (`GEN_VERSION` 12). `game/galaxy_chart.cpp` (the cursor, `chartCentre`, `chartCursor`, `chartPlotted`, `chartLetGo`, `chartUnplot`, `chartEnter`, `chartStops`, `chartNextStop`, `galaxyMarkNear`, `chartThere`, `galaxyPlace`, `beginGalaxyMark`, `finishGalaxyMark`, `drawMapStatus`; the readout, the strip's target and cursor), `game/autopilot.cpp` (`plotJump`, `flyJump`; the arrival resets the cursor), `game/cabin.cpp` (the `JUMP` line at the flight's start), `game/guide.*` (`GalaxyMark`, `galaxyMarks`, the `gmark` lines, their lending), `game/guide_screens.cpp` (the look, the status on the map pages, the mark's entry, `setRemoteStar` forgets a plot), `game/game.cpp` (the entry over the chart), `game/game.h` (`JumpPlot`, the cursor's state, `CHART_REACH_LY`, `CHART_HEIGHT_LY`, the hooks `testChartCursor`, `testChartCursorAt`, `testChartOnShip`, `testChartPlotted`, `testChartLook`, `testLookStars`, `testChartCurX/Y`, `testJumpShort`, `testMapPick`), the harness's `chart` mode, five unit checks, the flow's `starmap_cursor`, `starmap_plotted`, `starmap_look`, `starmap_jumped`, `starmap_arrived` (not `chart_`: C-10's star charts have those).
+
+## G-07 (2026-10-08): the crossing
+
+R-409's third part and KI-364's "the band is not drawn in a flight": a jump across the galaxy showed the neighbourhood's streaks on black, so nothing of the disc turned round the ship.
+
+* **Keyframes built ahead, blended between.** The plan said a band rebuilt every half second on a worker and crossfaded. The flight's line is closed-form (`vimanaProgress`, now the one curve `updateShipMotion` moves the ship by), so the band is built ahead: keyframes at flight times (`SpaceRenderer::FlightBand::tau`), each a whole map at the ship's place then, and a frame draws the two round its clock blended, a piecewise-linear band in time rather than a chase of where the ship was. Not a worker thread: `WorkerPool` is not reentrant and the frame's passes use it, and a thread finishing whenever it finishes would make a flight's frames depend on the machine. The keyframes are built a share a frame on the pool inside the frame (`buildGalaxyBandCells`), sized so the next one is whole within half its interval at the clock's pace, so a flight's frame is a function of its clock and the frames before it (the harness's frames repeat).
+* **Closer where the core turns fast.** Half a second apart, as planned, wherever the galactic centre turns less than two degrees past the ship between two keyframes (its speed over its distance from the centre, 1,000 ly at least); closer than that where it would turn more, to a twentieth of a second (a flight through the core: 520 ly a second at the centre on a 26,000 ly jump). A crossfade of two keyframes 15 degrees apart would show the bulge fading out in one place and in at another.
+* **Neither end builds at once.** The first keyframe is the parked map when it was built within ten sectors of the start (what the explorer was looking at), and the last is handed to the parked band as soon as it is whole, so the arrival does not rebuild the band (it did, synchronously, 9 ms). A keyframe the clock needs before its share is done is built whole in that frame: a flight begun with no parked band, a skip of the clock (the harness's), and nothing else (a 10,000 ly flight at 60 frames a second builds none at once). The galaxy page, which draws no scene, keeps the keyframes building (`Game::keepFlightBand`), or closing it in a flight would build one.
+* **The star-forming regions' patches fade with the speed.** They lie within 42 ly (N5-01, G-03), so at a crossing's 100-200 ly a second the ship passes a complex in a fifth of a second: a 30-degree disc of red or blue for one frame and gone (`stability flight` counted four to seven such frames on the 10,000 ly flight, the worst moving the whole frame's mean by 15 levels). Building them into the keyframes would spread a disc of the wrong place over half a second; they are faded by the flight's speed instead (`1 / (1 + (v / 15 ly/s)^2)`), seen as the ship sets off and arrives and on a short hop, gone on the way. The band's own near part (the clusters within 55 ly) is in the keyframes and blends.
+* **The tone stays G-03's.** The band's exposure is fixed so a place always looks the same; toward the core the bulge widens until it fills the view at the tone's knee (the luminance 48 over the whole view at 3,000 ly from the centre). An exposure that adapted in flight would show the bulge's structure near the core but make the arrival's sky differ from the same place parked; not done.
+* **A flight straight out of the disc turns its side to the core.** The ship's attitude is a yaw and a pitch, no roll; a flight within 0.6 degrees of the pole took its yaw from the target's few light years aside, which on the harness's jump north put the galactic centre under the cabin's floor, the one side without a window. Such a flight turns its right side to the centre (the nose stays within 0.6 degrees of the line), so the side windows watch the disc fall away (as a stripe across them: the ship stands on its tail). A steep flight that is not that steep keeps its heading.
+* **What moved.** No generation change (`GEN_VERSION` 12). `galaxy/starfield.*` (`buildGalaxyBandCells`, `buildGalaxyBand` on it, `vimanaProgress`), `space/space_view.*` (`SpaceContext::flightFrom/flightTo/flightT/flightDur/nebulae`, `SpaceRenderer::FlightBand`, `fband`, `flightBand`, `flightBandPos`, `flightKeyStep`, `parkedBandBuilds`, `parkedBand`, `parkedBandPos`; the band drawn in a flight, the patches faded), `game/hud.cpp` (the flight's line in the context, `keepFlightBand`), `game/game.cpp` (the galaxy page keeps the band), `game/autopilot.cpp` (`vimanaProgress`), `game/cabin.cpp` (the roll of a flight straight out of the disc), `game/game.h` (the hooks `testFlightT`, `testFlying`, `testFlightSkip`, `testStartJump`, `testCabinTurn`, `testCabinLook`, `testFlightBand`, `testParkedBandBuilds`), the harness's `crossing` and `stability flight` modes, the bench's `vimana 2x` (budget 12 ms), one unit check.
+
+## H-01 (2026-10-08): the records' grammar (research)
+
+R-411's request that the text overhaul be researched first. `docs/ideas/RESEARCH-records.md` is the survey, the choice and the data model; `docs/ideas/RESEARCH-records-samples.md` holds the prototype's fifty records beside C-02's texts of the same two worlds. The prototype was built in the scratchpad against `build/galaxy/*.o` and `build/core/*.o` and is out of the tree.
+
+* **History first, told by a grammar.** A people's records are told from a simulated history (H-02): places, rulers, families year by year, public and private events with their causes, the collapse in stages. A record's plan (a genre's schema, its events picked by salience) decides what it tells. The depth is the history: C-02's hundred templates have none, and keep no person, crop or event from one text to the next.
+* **A small attribute grammar over a realiser.** Weighted alternatives with guards (on the record's and the world's facts, on fields of the bound entities and events, on attributes) and `once`. Attributes pass down (the tense, the bindings, the facts) and up (a part's choice, `{=.key}`, so a tail fits its main clause). Dryness works inside a record (an alternative is not reused while others are left) and, weakly, across a world's catalogue. The record's plan is a set of directives (`@news`, `@years`, `@entries`, `@death`, `@deed`). The realiser owns the English: references (the first mention in full, kinship from the writer or the reader's close kin, titles; pronouns only where clear), verbs by tense and subject, numbers with their nouns, plurals, articles, capitals, punctuation and the spaces at joins. A plain weighted grammar (C-02's) was measured, not only argued against.
+* **Composition for the frequent parts.** Over 100 chronicles, entries built of a time, a main clause and a consequence cut the share of repeated sentence frames from 77% to 30% with 1.7 times the authored lines, while weighting the draw (catalogue dryness from 0 to 6) moved the repeats by three points at most. Variety is pools of alternatives and their composition, not the draw; whole hand-written sentences stay for the strong moments.
+* **The authoring format.** Plain `.vg` files: a rule name at the start of a line, its alternatives indented, options in parentheses first; the marks `{rule}`, `[a|b]`, `{$entity:form}`, `{lemma:$subject}`, `{#number|noun}`, `{=.attribute}`, `{@directive}` and `\n`; the joins are spaces, local attributes start with a dot. Each file is wrapped once as a C++ raw string and `#include`d, so neither build system changes and both track the dependency (files under 16 KB for an MSVC build); the harness reads the same files from disk, so an edit reprints without a rebuild. C++ tables (C-02's) and JSON (Tracery's) were set aside.
+* **One catalogue a people.** A record's text depends on what the world's other records told (an event once in a record, at half weight in the next, from other sides elsewhere), so a people's records are built together: deterministic, about 10 ms with the history, on a thread at the approach, cached; a shard's text becomes a lookup.
+* **Measured** (the prototype: 167 rules, 579 alternatives). A record's text 28 µs, a world's history 1.5 to 2.9 ms, the grammar parsed in under 2 ms. Repeated frames of six words or more (the genres' formulas left out) at 50, 100 and 200 records a world: 12%, 21–22% and 33–35% (C-02: 11–20%, 34–38%, 50–51%). The harness's checks found nothing in 3,000 records a world but lengths at the genres' edges. The targets for H-03 and H-04: under 15%, 25% and 35%, every check at zero, a record under 50 µs, a history under 10 ms.
+* **The data model the peoples' milestones build to** (the note's section 6). A-01's profile: the age, the eras with their years, the collapse's cause, onset and stages, government, faith, economy, values, the genome's meanings. H-02's history: entities with kinship, homes, trades and causes of death; events with roles, season, cause, value, outcome and their own text; the per-year index; causes kept for every event that has one, a death in its cause's season. T-04's records: genre, date, writer, reader, subject, place, medium, the events told, tags, the tokens with their lemmas. The inputs list by group.
+* **The language layer.** The tongue maps lemmas, not word forms, with endings of its own, and the language share counts lemmas (H-04 re-tunes it). The voice reads a record's opening. C-16's programmes take whole sentences from the radio ages' records.
+* **What moved.** Nothing in the game or the harness; no generation change (`GEN_VERSION` 12). The two notes in `docs/ideas/`, the H-01 rows of `ITERATION-1.3.0.md` and `MILESTONES.md`, `PROGRESS.md`, R-411's status, KI-368 (C-02's measured repetition, for H-03 and H-04).
+
+## A-01 (2026-10-08): the ages
+
+The first milestone of the peoples (R-411, `docs/ideas/IDEAS-civilisation-expansion.md` section 1): a people is found at the age it had reached when it collapsed, with a profile every later milestone reads, built to H-01's data model (`docs/ideas/RESEARCH-records.md` section 6). `docs/reference/12-civilisations.md` ("The ages") has the numbers.
+
+* **The age is the people's, not the world's.** The six ages are drawn from the people's generator by the decided shares (28, 32, 18, 13, 7 and 2 per cent: the early ages commoner, the far future rare, about one people in fifty: 32 of the 1,501 within 25 ly of home, the nearest 8.6 ly away and 21 ly on the harness's plane), whatever the world. A world's type, sun and system weigh on the cause instead, where they can say something (a desert dried with its people, a red dwarf flares).
+* **Years in the people's own count.** Year 1 is the first towns' founding (the medieval age's start), or a prehistoric people's first village; the ages before it are counted back, negative. So the eras, the radio's year, the collapse's onset and stages are all in one reckoning the history (H-02) and the records (H-04) can date by. C-02's lore keeps its own span (150-600 years from the founding) and the shards their years until H-04 rebuilds them on the history: the profile is in no text yet.
+* **The end's years by the age, the weathering by the age's durability.** C-08's draw is kept (its hash, log-uniform), over 200-40,000 years for the first two ages (C-08's span: their years did not move) and longer spans for the late ages, whose works outlast them (to 60,000, 100,000, 250,000 and 2,000,000 years). The ruins' decay reads the years over a durability by the age (1, 1, 1.5, 2.5, 6, 40), so a late people found long after its end is not foundations by that alone; A-03 gives each material its own decay and replaces this.
+* **The cause by the age and the world.** Thirty-seven causes (the ideas note's lists, with the world's own disasters weighed in at every age by what the world and its system are), how long the collapse took by the cause and the stages by its speed. Two peoples that ended together (C-13) share the first's years and one cause that can end a world, drawn from the world's seed over both ages; where the other people went on after this one, conquest and war come from them. Prehistoric peoples ended by a nuclear exchange exist: a neighbour's war that ended both.
+* **The extent from the land of their time.** The land share is sampled (64 points at 2 km, a dead desert's old seas counted as water: they were seas), so a world of islands holds fewer than a world of continents; the held share and the density are by the age (Earth-like orders: a medieval people some hundreds of millions, a modern one some billions on a world of 5,000-7,600 km).
+* **Names, not only numbers.** Every enum has a name table as the grammar will read it (lowercase noun phrases; the ruler's title as a man and as a woman), as the research asked. The genome's meanings (the sacred number, the focal monument, the dead's custom) are A-04's and are not in the profile yet.
+* **Two functions.** `peopleAgeOf` (the generator alone: the age, the eras, the end, radio) is what the per-cell readers need (the culture, the radar, the charts); `peopleProfileOf` (with the system and the body: the cause, the extent, the rest) is the whole, 0.25 ms.
+* **Only the radio ages on the air, the density kept.** A transmitter sector's people's world transmits only where one of its peoples had radio (an industrial people that got far enough into its age, every later one: 29% of all), so C-07's candidate rate went up 3.4 times and the mean heard within 200 ly on the arm stayed 1.85 (C-07's 1.8). The salt was re-pinned from sixty: home hears three peoples of three ages (modern at 90 ly, futuristic at 184, industrial at 197), each test world four with a far-future people among them; C-15 pins it again with the powers. A world of two broadcasts its peoples that had radio only (`slotPeople`), and a chart's "heard" mark (C-10) needs radio on both ends.
+* **What is heard is not yet the age's.** A signal heard at d ly left d years ago; a people that ended E > d years ago was gone when it left, so what reaches the radar is its machines (C-07's "dead machines"); the programmes are C-07's whatever the age. C-16 makes each age's sound on the air and can make the time tell (only machines where d < E, the living voices from farther: a reason to turn the gain up). KI-370.
+* **A test world of each age, pinned.** The nearest people of each age on the harness's plane (sector y 0, so every mode's `<sx> <sz> <body>` reaches it; `second` for the modern one), in `AGE_WORLDS`; `peoples ages` says when they move and the unit checks they hold.
+* **What moved.** `GEN_VERSION` 13; the regress unchanged (no hashed frame has a people). `galaxy/peoples.*` (new); `Culture::age/weatherYears`, `cultureOf` reads the profile's end; `Lore::otherFate` by the profile's ends; `starSignal`, `localSignals`, `slotPeople` (the radar's coin moved there), `transmitterCell`'s rate and salt; `chartMarksOf`'s heard marks; the harness's `peoples ages`, the profile in `peoples <sx> <sz> <body>`, `AGE_WORLDS`; three unit checks (217). KI-369 (the ages are in the data, not yet in the world), KI-370 (the radio's time).
+
+## C-15 (2026-10-08): deep listening, the radar's gain
+
+The first of the faint (R-410): a gain in the radar camera, x1 to x32 in six steps. At x1 the radar is C-07's under A-01's rule; turned up it hears transmitters beyond 200 ly as far as each one's power carries it, at the price of the static. `docs/reference/12-civilisations.md` (the radar's gain) has the numbers.
+
+* **A power per transmitter, in two populations.** The plan's "most weak, a long tail of strong ones". The sectors of C-07's cells (A-01's salt and rate, kept) are the weak, powers 0.005-0.05 log-uniform, carried at most 319 ly at x32. A sparse second population of strong transmitters is hashed in cells of 256 sectors (`deepCell`: a Poisson count of mean 1.4 a cell, one candidate in 12 million sectors against C-07's one in 85,000) with powers 1-40 log-uniform, carried to 7,045 ly at x32. Their own coarse cells keep the scan cheap: within 7,000 ly there are 45 million of C-07's cells (a quarter of a second to hash before a candidate is read) but 170,000 strong cells, each candidate read by its power before any star is looked for (about 10 ms from home at x32, spread over five frames).
+* **x1 is C-07's, by rule.** Within 200 ly every transmitter is heard at every gain, at C-07's strength by the distance, whatever its power; beyond, a transmitter of power p is heard at gain G within 200 sqrt(1 + (G - 1) p) ly, its margin over the floor (reach over distance) squared and read as C-07 reads the distance (a strength of 0.18 at the edge of its reach). A purely physical law (a received power p/d^2 against a floor 1/G) cannot give both: an x1 that hears every transmitter within 200 ly and none beyond needs every power the same, and then the gain cannot single out the strong ones. The rule is the compromise; the player meets a receiver whose near list never changes and whose far list grows with the dial. x1 hears exactly A-01's lists at home and the nine test worlds (compared with the A-01 build).
+* **Beyond 200 ly, only what was on the air in the light that reaches the ship.** A signal d ly off left d years ago. A-01's ends run from 200 years, so within the reach the light always left after a people's end (C-07's dead machines still running). Beyond it the light can be older than the radio: with powers alone, the first pin had two of home's eight far peoples heard from a time before they had any (Greyrveideand III at 6,379 ly ended 998 years ago and had radio for 377). So a far people is heard only where d is within the years since its world's first broadcast (`Signal::airYears`: the end's years plus the radio's). That silences about a third of the strong population's peoples within reach (its density went from 0.85 to 1.4 a cell to keep the steps), and what is left is almost all machines (d below the end's years): the window in which a people is heard alive is its radio's years, decades to centuries for most ages, so a living voice from afar is rare (none from home). KI-370 has what C-16 can make of it.
+* **The steps even in the gain, not doubling.** Measured on the real galaxy (`scratchpad/c15/sim.cpp`, 300 layouts of the salts): the peoples on the air within D of home grow as D^2 beyond about 800 ly (the disc), and under the reach law the area within a transmitter's reach grows with (G - 1) p, so equal steps of G add equal areas. A doubling dial (x2, x4, x8, x16, x32) adds 0.6, 1.2, 1.8, 2.4 and 4.4 peoples from home on average and no layout gives one to three at every step from the four places; x5, x11, x18, x25, x32 add 2.3, 2.2, 2.2, 2.0 and 1.7 (the last lower: farther, more of the light is older than the radio). The dial says `GAIN X11`; the reach is the transmitter's and is never printed.
+* **The salts pinned together.** Of 2,000 pairs (the weak powers' salt and the strong cells'), 33 gave home and the three C-series worlds one to three peoples more at every step and home's farthest at x32 within 4,500-7,000 ly; two kept every step within one to three at the six age worlds as well (50 steps of the ten places), and the one kept (0xC15A0165, 0xC1500165) puts a far-future people among home's far signals. From home: A-01's three at x1, then +3 (202, 216 and 349 ly), +1 (3,085), +1 (3,469), +2 (211 and 4,548) and +2 (4,500 and 5,524: Phiostraisia I's far-future people and Esamiala I's modern one); five pulsars more, the farthest at 3,841 ly. The strongest are heard to about 5,500 ly from home and up to 7,000 elsewhere (the plan's "about 6,000").
+* **The pulsars.** A pulsar in a transmitter sector carries a third of its sector's power (no light rule: a pulsar does not end), so about one is added a step against two peoples. The loud near pulsars keep their 25 ly at every gain: scanning them sector by sector farther costs the cube (25 ly is 130,000 sectors, 100 ly eight million).
+* **The price: the floor, the overload, the hold, the cone.** The static's floor rises with the gain (0.07 at x1, 0.37 at x32), wanders wider and fills the scope with grass, so a far signal is a small rise over it; above x1 the meter's top is soft (a knee at 0.6), so a full meter is an overload's alone. A near or a local signal reads a little louder on the meter (its strength times G^0.1) but drives the receiver hard (times G^0.4): with the beam on one whose drive is 1 or over (at x32 the peoples within about 165 ly and most of a system's own) the meter pins red, the hold is refused (`OVERLOADED - TURN THE GAIN DOWN`) and the sound is overdriven (`AudioState::radarDrive`, the signal pushed into a hard knee: the renders keep their peaks under 0.5 and their rms within C-07's, a voice's crest factor 7.5 falling to 4.3). The first build read the meter by the drive too: the near signals' side lobes and the floor pinned it at 0.99 on the far signal at x32 from home, so the meter and the overload are two readings now. The hold grows by 1 + 0.25 log2 G (x2.25 at x32: eleven seconds for a faint far signal), the lock cone narrows from 3 to 2 degrees and the keep cone from 8 to 4; turning the gain down under a locked signal loses it (`LOCK LOST - TOO FAINT AT THIS GAIN`).
+* **The hold is on what the crosshair has.** C-07 held the strongest signal when it was within the lock cone; at a high gain the near signals are loud in their side lobes and the strongest is seldom the one centred, so the hold is on the loudest within the lock cone (at x1 the same whenever C-07's could hold), and what is heard follows it.
+* **The far scan in slices, not on a worker.** The plan put it on a worker; G-07 found that a worker's timing makes the harness's frames machine-dependent, and the whole scan is about 10 ms. It runs 40,000 cells a frame (five frames from home, `LISTENING DEEPER...`), once a sector when the gain first goes over x1, and keeps the whole dial's list (each signal with the least gain that hears it), so a step up or down is a filter. The x1 scan stays C-07's, on the main thread.
+* **What moved.** No generation change: `GEN_VERSION` 13 is A-01's and 1.3.0 is unreleased, so the strong transmitters join A-01's change; C-07's cells, their salt and every transmitter within 200 ly of the test places are as A-01 left them. The regress unchanged (no hashed frame has the radar). `transmitterPower`, `deepCell`, `signalReachAtGain`, `signalNeedGain`, `signalStrengthAtGain`, `signalLevel`, `signalDrive`, `SignalScan` and `signalsNear`'s gain; `sectorTransmits` reads both populations; `Signal::power`, `needGain`, `airYears`; `RadarState`'s dial and far list, `radarGainStep`, `radarDeepStep`; `thousands` moved to `ui.cpp`; the harness's `signals` by the step and `x32`, the overdriven renders of `signals wav`; two unit checks (219); four flow frames. KI-370 rewritten, KI-371 for what stays.
+
+## C-16 (2026-10-09): what the gain lets in, and each age on the air
+
+The second of the faint (R-410): "radio noise, creepy mixed sounds when you are trying to get really far signal". C-07's receiver is the instrument and the gain is how much of the void comes through it. The register stays C-07's: the sound tells, the readout never does. `docs/reference/12-civilisations.md` (what the gain lets in) has what is heard where.
+
+* **One receiver, two channels.** C-07's synth heard one signal at a time, its oscillators the synth's own. A signal under another needed every signal's sound in a channel of its own (`AudioSynth::RadarChannel`, `channelSample`): the one centred, and the loudest other within forty degrees (`RadarState::under`). The under one bleeds in with the gain: none at x1, which keeps C-07's receiver exactly, and up to 0.6 of the way at the top. A people under another is heard as its age's machine or as the shape of a voice (a phantom babbling, `underVoiceOf`). Its own programme would need its world built for what is only a bleed. Two peoples' carriers beat into a whistle that slides as the beam turns (350-2,050 Hz, by the two seeds and the angle between them). From about x18 the two ring against each other: the centred signal ring-modulated and multiplied by the other, a metallic intermodulation.
+* **The floor rises, the loudness does not.** The bed's hiss grows 2.6 times at x32, a crackle of clicks comes in (up to 55 a second) and the rumble breathes deeper and quicker. A receiver's gain lifts the noise, not the loudness, so the rumble falls by 30% and the whole by 15% at x32. The bed's rms stays C-07's: 0.096 at x1, 0.090 at x11, 0.095 at x32 toward the plane. C-07's lesson held: the levels were set from rendered WAVs first.
+* **The galaxy's noise is the band's map.** `radarSkyAt` reads the band's brightness (the map the sky already has, G-03) at the beam's centre and on a ring of six points ten degrees out.
+  * The bed gains a scintillating rush by it: 0.15 of it at x1, all of it at x32.
+  * The meter's floor rises by up to 0.12 toward the core at x32.
+  * A far signal comes through up to 35% less there, so a far signal toward the core is the hardest to pull out. From home the core is at AZ 115 EL 0, and a far-future people at 4,500 ly sits three degrees from it.
+  * A real radio sky would not show the dust's rifts, but the visible band is the sky the game has (KI-372).
+* **Far voices worn by their distance.** The wear is log(d/200)/log(30): none within 200 ly, 0.47 at 1,000 ly and 0.97 at 5,500. With it the content comes through:
+  * in a narrower band (the high-pass up, the low-pass down);
+  * with its pitch drifting (the wow's delay wandering by up to 34 ms over tens of seconds);
+  * with deep slow fades (to a tenth at the bottom of a cycle of tens of seconds);
+  * with dropouts that come oftener and last longer;
+  * with three echoes of itself, 0.13, 0.29 and 0.47 s behind (the paths it came by).
+  The signals within 200 ly are C-07's.
+* **The static's events, oftener and stranger.** C-07's seven come every 12-40 s at x1 and 3.2 times as often at x32 (4-13 s). From x25 five stranger ones join, up to 55% of the draw at x32:
+  * speech running backwards (syllables swelling out of their own echo and cut off, the phrase's melody rising);
+  * counting whispered in no one's language (a two-syllable word a number, the last drawn out);
+  * a breath close to the microphone (the pop, the lips, in, a held moment, out);
+  * a knock answering a knock (the answer nearer and deeper);
+  * a choir swelling and stopping (four voices in a semitone cluster, cut off at once).
+  The near ones are heard dry, outside the echo. The void's echo makes everything sound far, so near means without it. Over two minutes the renders hold 4 events at x1 and 11 at x32.
+* **A word heard before comes back.** At x25 and x32, with nothing on the air, every 35-90 s a word of a recording from `Guide::heard` is spoken in its own world's voice. Sometimes two or three words come together. It comes through the receiver as from very far: the wear's band and echoes, at a level of its own. It is never a recording not heard, and it is never logged. When the radar's own world is the one, it is used; otherwise that world is built once (C-07's `buildShardWorld`) and kept.
+* **False rises.** At x25 and x32 the noise makes a rise 8-30 degrees off the beam every 12-45 s.
+  * A rise lives 10-16 s and lifts the meter by 0.16-0.30 (a far signal's rise), and the source's smudge shows as a real one's would.
+  * Where the beam has it, the static gathers into almost a tone.
+  * Held, the hold fills a third to two thirds of a faint signal's and empties, `NOTHING THERE` shows, and the rise fades.
+  * It never locks. The meter is what the receiver hears, and noise makes ghosts: the radar stays honest as an instrument.
+* **Each age on the air** (the expansion note's section 10). It is built here rather than at H-05, so the receiver is designed once. A slot's programme is by its people's age (`programmeOf`'s `age`; `Signal::age` is the first people's, for the carrier before a programme is known).
+  * **The industrial age:**
+    * A phonograph in six text slots in ten and in one music slot in three: the recording through a horn's hump, the needle's edge and the turntable's wow, over the record's hiss, its crackle and a tick every turn.
+    * Otherwise Morse by spark. The text is keyed in a code of the people's own: each letter is one to four dots and dashes by the world's hash, after the station's call twice, as much as forty seconds holds. A music slot keys the call and a group.
+    * The spark gap fires at 260-740 Hz, each spark a damped ring and a crack: a quenched gap's sparks are even (a note), a plain one's ragged.
+  * **The modern age:** C-07's eleven, so home's nearest, a modern people, keeps the variety C-07's check pins.
+  * **The futuristic age:**
+    * a synthetic voice: one pitch, no breath, a ring at 38-72 Hz under it, its samples held on a coarse clock of 4.5-7.5 kHz;
+    * data and beacons (C-07's machines);
+    * the piece in one music slot in five.
+  * **The far future:** a beacon of mathematics, and a synthetic voice in one text slot in four. The beacon sends pure pips, a group a term, by the world's seed: the primes, the squares, Fibonacci's numbers, the powers of two, the triangular numbers, the harmonic series as pitches, a count in binary sent high and low, or the digits of pi.
+  * **The carrier by the age:**
+    * modern: C-07's 1,200 Hz;
+    * industrial: none, only the spark's rasp;
+    * futuristic: a thin whine that flutters;
+    * far future: a pure tone at 1,420 Hz (the hydrogen line's number) that never moves.
+  * A Morse keying, a phonograph and a synthetic voice carry the recording, so it counts as heard (`speaks`); the mathematics does not.
+* **The picture.** With the gain, in the radar camera:
+  * the static (+50 intensity units) and the snow thicken;
+  * the band glows through the phosphor, from two shades at its brightest at x1 to twelve at x32, sampled on a grid of every eighth pixel (the radio sky the receiver hears, KI-349's "not a radio sky");
+  * the star field ghosts a faint double (three pixels right and one down, 0.45 of it at x32);
+  * the rolling band runs faster (6 s at x1, 2.4 s at x32);
+  * the picture tears now and then (a band of rows thrown sideways for an eighth of a second, about one tear in three seconds at x32).
+  The scope reads `SWEEP` while a false rise's hold empties.
+* **What moved.** No generation change (`GEN_VERSION` 13). The regress is unchanged (no hashed frame has the radar).
+  * `galaxy/signals.*`: the four programmes, `programmeOf` and `programmeFor` by the age, `Programme::piece`, `code`, `unit` and `age`, `MORSE_OFF`, `morseSeconds`, `Signal::age`.
+  * `game/audio.*`: the channels, the floor, the sky, the wear, the events, the ages' sounds, `mathsName`.
+  * `game/radar.cpp`: `radarSkyAt`, `radarRiseStep`, `radarWordStep` and `radarWordStop`, the under signal, the picture.
+  * `RadarState`: `progAge`, `sky`, `under`, `rollPh`, `rise`, the word.
+  * The harness: `RxOpts`, the C-16 renders of `signals wav`, the AZ, EL and age of each signal in `signals`, three unit checks (222).
+  * KI-349 and KI-370 narrowed, KI-371 closed, KI-372 new.
+
+## A-02 (2026-10-09): the forms the renderer needs
+
+The first of what they built (R-411, the expansion note's section 4): the shapes the ages' buildings will be made of, their broken states, their colliders, their levels of detail down to a skyline, and a people's colours in banks. Who builds what is A-03's and A-04's; until then the game's settlements are C-01's. `docs/reference/12-civilisations.md` (the forms) has the kinds and where to see them.
+
+* **One form, many kinds.** C-01's `RuinElem` (a box or a dome) became `Form` (`galaxy/forms.*`) with twelve kinds and their variants: the box, the dome (four profiles), turned forms (six profiles, round or a prism), pyramids and stepped masses, vaults, arches and arcades, shells, trusses, cables, rings, sweeps along an arc or a line, grown forms. A form is geometry alone (`formMesh` at a level, `formColliders`, `formProfile` for its silhouette), read by the view, the harness and the unit alike. Most kinds are a few generators underneath (a profile turned, a section swept, a grid bent), so A-03 can ask for shapes not on the list by their numbers.
+* **C-01 to the bit.** C-01's box and hemisphere keep their own arithmetic and their faces' order, and the renderer keeps C-01's light and fog, so the nine civilisation scenes are pixel-identical to C-16's (compared PNG by PNG at 2x). The rename (`shape` to `kind`) touched the ruins, the graves, the shards' placement and the harness.
+* **Broken is the form's, falling is the building's.** Every kind has its broken state from a share and a seed (a tower snapped and holed, a dome caved, a frame bent, a vault's stretch fallen, a keystone gone...). What it drops (rubble, a fallen top lying on its side by `tilt`) is the building's to place (A-03), and a form resting on another is broken with it by the building (the sheet keeps the supports whole).
+* **A level a building.** C-01 drew a settlement at one level by the distance to its edge. A city two kilometres across needs each building's own: whole within 350 m, simpler to 1.3 km, coarse to 4 km, then a silhouette where it stands a pixel high (`gatherSettlement`, the pieces grouped by building in each cell, `RuinCell::groups`).
+* **The skyline is the silhouettes.** Beyond 4 km a building's forms are flat outlines across the line of sight with their own profile up their height (`formProfile`, `formHalfWidth`, `formTop`). A tower under a pixel wide is drawn one framebuffer pixel wide at its own shade, and the mush averages it into its neighbours: the first build widened it to a logical pixel and paled it toward the fog colour, which against a dark sky stood bright ghost lines on the horizon. `stability skyline` shows no shimmer (a pixel's light over the city changes 0.3 a frame against 0.26 over the empty horizon beside it; no pixel jumps).
+* **The fog is the terrain's.** A tower and the hill beside it fade alike, so the air decides how far a city is seen: on the peoples' worlds (9-12 km) a city is a pale cluster at 15 km and a ghost at 30, while an airless world's 45 km shows it clearly. Lifting the haze with height would let a far-future spike stand clear at 50 km, but the terrain would need it too (V-03, parked). KI-373.
+* **The ground under a form.** A big form (over 6 m) stands on the highest ground under its footprint and reaches down to the lowest (an aqueduct's deck stays level, a block stands on its plinth). Near, that is the ground drawn this frame; farther, the coarse ring's surface that draws the ground there (`drawnGround`, `drawnRing`), read once per form while that ring does. C-01's far towns stood on 64 m samples with the rivers off: a mast in a wadi floated 22 m over the drawn floor. Reading every form's ground every frame cost 3 ms at the test city; the ring follows from the distance, so only a change of ring reads.
+* **Colliders by the form.** Discs with their span of heights (B-405), C-01's rows along a wall kept; slices up a turned form by its profile, outlines for prisms and pyramids, an arch's piers with the opening free, a vault's flanks and closed ends with the hall free, a mast's legs. A broken form's missing parts have none. The unit's check tracks every frame of a walk: the explorer touches the form and never enters a disc (walking at a thin mast or along a curved wall the explorer slides round it, which is right).
+* **Colours in banks.** `FormPalette` (in `Culture`, A-04 draws it): the structure, the accent, metal and glass, light; the first people's banks 18, 19, 20 and 24, the second's 25-28 (`FORM_BANKS`; banks 21-23 are the aurora's tops, the band and the storm). A slot can be the ground's own material, whose ramp is then that bank's (C-01's walls: the same RGB in bank 18 as in bank 0 or 9). The striated rock's grain stays on walls cut from the rock: on the test palette's concrete it buried the windows.
+* **Windows are a pattern.** `FacePattern` in `RasterParams` (core): the face's own u and v in metres, a cell a bay wide and a storey high, the window's shape; where a cell spans under two pixels it fades to its mean, from four whole. A lit window switches to the light's bank. Thirty storeys cost what a blank face does.
+* **Threads.** The gather is serial (it reads the ground caches); the forms are built, lit and fogged in 64 chunks on the workers, and drawn in bands of rows that every thread walks in chunk order, so the pixels are the serial loop's (B-310's contract). `parallelThreadsOverride()` lets the unit draw the city frame both ways in one run: the same hash, 2.5 ms against 4.8. Lattice members are prisms only where they span a pixel and a half, lines thinner (legs, chords and cables however thin, the rest from a fifth of a pixel).
+* **What moved.** No generation change (`GEN_VERSION` 13). The regress is unchanged. C-01's scenes are pixel-identical.
+  * `galaxy/forms.*` (new): `Form`, `FormKind`, `FormMesh`, `formMesh`, `formColliders`, `formProfile`, `formHalfWidth`, `formTop`, `formReach`, `WindowSpec`, `FormPalette`, `FORM_BANKS`.
+  * `galaxy/ruins.*`, `graves.*`, `shards.cpp`: `RuinElem` is `Form`; `Culture::palette`.
+  * `surface/forms_draw.cpp` (new): `gatherSettlement`, `drawFormItems`, `groupPieces`, `testPlaceSettlement`; `surface_view.*`: `drawSettlement` gone, `settlementColliders`, `drawnGround`, `drawnRing`, the peoples' ramps in `setupPalette`, `placedCells`, `testForceLod`, `RuinCell::groups/foot/placed`.
+  * `core/raster.*`: `FacePattern`, `RasterParams::pattern`. `core/parallel.h`: `parallelThreadsOverride`.
+  * The harness: `forms sheet|city|skyline|check`, `stability skyline`, the bench's `city 2x` (16 ms), four unit checks (226).
+  * KI-373 new.
+
+## A-03 (2026-10-09): what each age builds
+
+The second of what they built (R-411, the expansion note's section 2): each age's buildings from A-02's forms, standing in C-01's
+plans until T-02 builds towns by age, and their decay by material. `docs/reference/12-civilisations.md` (what each age builds) has the
+kinds, the plans, the shares and the materials' table.
+
+* **A kind is an age's way of building.** About forty-five generators in `galaxy/buildings.*` (`buildingForms`), each a kind of one
+  age (`buildingAge`): C-01's ten kinds are the medieval age's, roofed; the works every age built its own way (a gate, a wall, a stela,
+  a heap, C-08's features) are built in the building's age's material. A building keeps the age whose way built it (`Building::age`),
+  and `cultureAs` / `settlementOf` lay out a people's settlement as if it had reached any age, so T-02's old cores and megaliths are
+  generators already, not new code.
+* **The plans stay C-01's, the places ask the age.** A dwelling, a centre, a hall, a tower, a stela, a monument: each age answers
+  with its own kind and size, and the plan's spacing and radius scale with the age (0.85 to 2.4). The futuristic age has a plan of its
+  own (`SP_GREAT`: a few great structures, the land between wild), the far future one structure. How many cells hold a settlement
+  follows the age (the prehistoric camps days apart, the industrial and modern towns oftener, the futuristic few, the far future one
+  cell in about seven hundred); a lone monument draws its kind and size with the class's size, so the finders' radius (read without
+  the layout) is its reach.
+* **The decay is the material's.** `materialDecay` is a log-logistic in the years for each of ten materials (the years to half gone at a
+  middling rain, the decades from a tenth to nine tenths, how much sooner the rain takes it). Masonry is C-08's `decayOf` to the digit
+  (half at 10^(0.92/0.3) years), so a medieval town of stone weathers as the C series' did. The buildings read the real years since
+  the end: A-01's stopgap (the years over the age's durability) stays only for the roads' wear and the sand's burial, which are not
+  the buildings'. A building's luck (C-01's decay draws: a quarter for the building, a sixth for the settlement) moves a material only
+  where it is half gone (`2.5 d (1 - d)`), so glass is gone and the far future's material whole in every building, and a concrete tower
+  after three thousand years is a stump in every one (the first spread, four times as wide, left a lucky tower whole).
+* **Nothing rests on air.** A roof, a dome, a spire, a lintel, a tank, a tower's shaft never outlasts what holds it up: a roof needs
+  every wall at 92% of its height, a tower's lobby stands whole while its shaft does (and falls with the rest after), a gasometer's
+  girders go before its columns, a maglev's span lies on the ground where a pylon fell. The unit checks it piece by piece (every piece
+  over the ground has one of its building under it that reaches it). A tall thing that fell lies across the ground away from the
+  town's middle and breaks up with its material; the heap at its foot lies on the side it fell, so the tower's lobby stays a room.
+* **Rooms are the buildings' own.** `buildingRoom` replaces C-03's per-kind spots and C-01's `buildingDoor`: the floor, the doorway and
+  the spots, from the generator's own draws. A shard's place is its building's kind (`ShardSite::place`, `outside`; the log names
+  it with `buildingPlaceName`); a spot is cleared against the building's colliders, not its boxes. A great structure's room is the gate
+  hall before it (an open vault); a standing stone's, a ring's and a far-future structure's records lie at their foot.
+* **A clearing that grows over.** A settlement's yards keep a twentieth of their trees two centuries after the end, a third after ten
+  thousand years (C-01's rule): the prehistoric scene stood in a forest that hid the village.
+* **Two A-02 errors found.** A form lying on its side had its row of colliders centred on its foot (half of it behind, `cos` for
+  `sin`), which shut a fallen tower's lobby; a `Form&` from a generator dies with the next piece added (a spire's collar floated):
+  every generator copies what it needs before adding more.
+* **What moved.** No generation change (13 holds: 1.3.0 is one generation). Every civilised world's settlements, its shards' places
+  (the indices stay), its trees in the yards; the regress unchanged; C-01's scenes stand on whatever age their worlds' peoples are.
+  * `galaxy/buildings.*` (new): `BuiltMaterial`, `materialDecay`, `buildingDecay`, `buildingAge`, `buildingPlaceName`, `buildingForms`,
+    `BuildingRoom`, `buildingRoom`, `agePalette`.
+  * `galaxy/ruins.*`: the kinds of the ages (`BuildingKind`), `Building::luck/age/style` (`decay` gone), `Culture::roof/temple/hut/
+    towerForm/great` and the age's palette, `SP_GREAT`, the plans by age, the shares by age, the monument's pick, `settlementOf`,
+    `cultureAs`; `elemsBuilding` moved into the generators.
+  * `galaxy/shards.*`: `ShardSite::place` the building's kind, `outside`; `SHARD_PLACE_NAMES` gone. `galaxy/forms.*`: `Form::material`,
+    part 8 (earth), the lying collider; colliders skip what is lower than a step. `surface/forms_draw.cpp`: the soil's bank for earth.
+    `surface/flora.cpp`: the clearing.
+  * The harness: `ruins ages`, `ruins kinds`, `ruins check`, `peoples fresh`, the scenes `civilisation_<age>` (`AGE_SCENE_WORLDS`), four unit
+    checks (230); C-01's, C-03's and C-08's checks read every building's room; the dead desert's and the town's scans of the globe run
+    without the rivers' tiles (the unit takes two minutes and a quarter, from six and a half).
+  * KI-374 new; KI-373 and KI-350 narrowed.
+
+## A-04 (2026-10-09): the architecture genome
+
+The third of what they built (R-411, the expansion note's section 3): every people's architecture from thirty-five deep variables it
+keeps through its ages, read through the age it reached. `docs/reference/12-civilisations.md` (the architecture genome) has the table
+of the variables, what each does and in which ages.
+
+* **A variable a hash.** `genomeOf(peopleSeed)` draws each variable from its own hash of the people's seed (as C-09's and A-03's
+  draws did), so C-01's stream and every draw before it stay, and a variable added later moves none of the others. A variable is a
+  number in [0, 1): a category is its share of the range, a measure the number itself, so the harness and the unit set any of them
+  (`Genome::set`) and draw again (`cultureWays`).
+* **The genome is the culture's ways.** C-01's `tall`, `plan`, `towers`, `style` and `stoneRoofs` and A-03's `roof`, `temple`, `hut`,
+  `towerForm`, `great` are the genome read through the age now (`cultureWays`: the proportion, the streets, the appetite for height,
+  the structure, the roof, the focus and the centre, the plan and the massing, the technique); the generators read those and the
+  genome; the unit's tests that set a way (a wattle village, the spike) still set it after.
+* **The accent has its place.** One variable carries the accent's colour and where it goes (bands, roofs, doors, tops): a slot is what
+  a piece is (`Gen::roofSlot`, `topSlot`, `doorSlot`, `timberSlot`). The four slots are the structure, the accent, the roofing or the
+  glass, and timber and iron where the age has no light: a light's ramp only in the futuristic and the far future's (`glow`), and only
+  the far future's structures glow (a dead city is dark). The ground's own stone is tinted a quarter toward the people's colour, so
+  the base colour shows on a people of unpainted stone too.
+* **Every variable acts at a scale the picture shows.** The plan's forms, the nine roofs in every age's material, the profiles, the
+  towers' sections, the windows' shape, rhythm and share, bands and cornices, an expressed frame, tops and motifs on the great
+  buildings, the focal accent (a building of its own before the centre), the centre's kind, the monuments, the graves' architecture,
+  the plans (spokes, rings, scattered, a street, across the fall, branching), plazas, courts, gardens, compounds, rows, an edge, joined
+  towers, arcades, colonnades, tunnels, a high place, an aqueduct, stilts, mounds, pits, cuts, terraces. The unit checks that every
+  variable reaches the drawing in every age it says it acts in (each of its values set in three peoples' genomes in turn changes a
+  town's pieces or the colours they use); light acts in the far future alone and a people built to last in the ages that weather.
+* **The relation to the land is the buildings' until T-01.** Ridges, valleys, cliffs are where a people settled: the cells are hashed
+  until T-01 plans a world, so the land acts on each settlement (a high place, an aqueduct, a cut, terraces, stilts, mounds, pits). No
+  floor is raised where a record lies: a house on stilts keeps its records on the ground under its floor; a sunk house keeps its
+  doorway 2.1 m over the ground outside.
+* **The uniqueness is measured, not hoped for.** `genomeDistance` weighs the strongest variables (the base colour, the roof, the
+  plan, the massing, the accent, the proportion, the focus, the profile, the height, the openings, the structure, the centre, the
+  tops, the streets, the ornament: 13.4 at most); two peoples are alike under a quarter of it (3.4). The hundred peoples nearest home
+  are distinct (the nearest pair 4.93 apart; random pairs under 4.0 five in a million); the nearest pair drawn side by side reads as
+  two peoples (grey and pitched both, an oval village round a great tree and a walled town round a domed temple).
+* **Found on the way.** C-01's rotundas and A-03's dry-stone huts, cisterns and observatories stood their ring segments across the
+  ring as fins, and the stone circles their stones and lintels radially: a ring's segment lies along its chord now (`ringWalls`). Tops
+  on a roof stood after their roof fell (a stone finial over a gone timber roof): they are the roof's own and stand while it does.
+* **What moved.** No generation change (13 holds). Every civilised world's settlements (their plans, headings, sizes, kinds, colours),
+  its roads' ends, its shards' places; the regress unchanged; the flow as A-03's but the zoom's roads (3,723 to 3,725).
+  * `galaxy/genome.*` (new): the variables, their names and ages, `genomeOf`, `genomeValue`, the colours, `genomeDistance`,
+    `techniqueOf`.
+  * `galaxy/buildings.*`: `cultureWays`, `culturePalette` (for `agePalette`), the genome's slots, `walls4`'s profiles and dress,
+    `ringWalls`, the nine roofs, `towerShaft`/`towerTop`, tops, figures, foundations, the motif; the new kinds' generators and rooms.
+  * `galaxy/ruins.*`: `Culture::genome/technique/life`, `Building::form/sides/found/centred`, `BK_FOCUS`, `BK_WINDMILL`, `BK_AQUEDUCT`,
+    `BK_TWIN`, `BK_PORTAL`, `Foundation`; the plans by the genome; `orientedHeading`. `galaxy/graves.*`: the dead's architecture.
+  * `galaxy/forms.h`: `WindowSpec::group/scatter`, `FormPalette::tint/glow`, parts 9-11. `core/raster.*`: the triangle and the keyhole,
+    mullions, scattered cells. `surface/forms_draw.cpp`, `surface/surface_view.cpp`: the tints, the light only where it glows, the
+    water's, the bark's and the leaves' banks.
+  * The harness: `genome sheet|ages|distinct|pair|print|reach`, `ruins kinds`' page of the genome's works; three unit checks (233);
+    A-02's banks check reads an untinted people; C-08's terraces allow a terracing people's gentle slopes; A-03's heights to 800 m (a
+    lofty people's towers to 650 m and their masts).
+  * KI-375 new; KI-374 narrowed.
+
+## T-01 (2026-10-09): a people's map of its world
+
+The first of the towns and the works (R-411, the expansion note's section 5): a plan of each people's world, read once a world, which
+the 2 km cells, the view, the maps, the telescope and the scanner read. `docs/reference/12-civilisations.md` (a people's map of its
+world) has the plan's parts and where to see them.
+
+* **A plan of the world, not a hash a cell.** The cells were hashed alone (a third of them settled, the whole world over). Now a coarse
+  reading of the world (the planet function on 165,018 cells of half a degree, without the rivers' tiles: the land of the people's
+  time, the height, the roughness, the climate, the fertility, the coast, coal and ore, and the rivers of a flow over the grid) is
+  scored for the age and the people's relation to the land, a territory is grown from the capital to the profile's held share, and the
+  places and ways are laid in it. Where it is built: once a world, on a thread of its own at the approach (the parking, the landing map
+  and a load ask too); 0.24-0.67 s on one thread for the six age worlds (the reading 0.2 s); four worlds kept; whatever asks first
+  waits for it or builds it (the harness and the unit build at once).
+* **Places by rank, the countryside by density.** The plan lays the places a history can name (the capital, the cities, the towns; a
+  prehistoric people's gathering place and its bands' seats; a futuristic people's great places; the far future's one to three works),
+  hundreds a world, each with its rank in the founding, its population and its core; the countryside (C-01's hamlets, villages and
+  market towns, a lone monument) stays the cells' own by a density the plan gives (millions a world: a list of them would be a hundred
+  megabytes and seconds to build). Nothing stands in the land no people held, nothing in a core but its city.
+* **A city is its core, as the renderer affords it.** The cores hold C-01's density at the age's spacing, so a capital is 1,100-1,400
+  buildings (a medieval one 470 m across its radius, a modern one 1.15 km; A-02's test city of 1,348 drew in 8 ms at 2x) and spans 2 km
+  cells: the view reaches it from every cell it covers and draws the plan's places to 24 km for the skyline. A modern capital's suburbs
+  and districts, its street plan and the density falling from its centre are T-02's; T-01 builds a city's middle up (tenements, blocks,
+  towers by the people's appetite for height) so it reads as one.
+* **The networks join real places.** A greedy spanner over the places' nearest neighbours (each link kept where the laid ways go round
+  by more than the age's detour), the water dear, the trunk the routes between the capital and the cities: a web as dense as the age
+  travelled and connected everywhere. The ways are laid on the ground in legs between waypoints every 3 km (made when first asked: a
+  ground walk of a 500 km way is never needed whole) and walked by C-09's walk with each kind's weights; C-09's lanes join the
+  countryside's settlements as before.
+* **What is seen from orbit is what is walked on, at every scale that shows it.** The zoom and the telescope's plate draw the cores and
+  the ways as the ground has them; the whole-world map draws nothing at its scale (a core is a thousandth of a 74 km texel), and nothing
+  is exaggerated to be seen. The scanner hears the plan's places by their size, so an explorer outside the land a people held is led to
+  it.
+* **Two peoples meet only where their lands do.** Each people grows its territory on its side of the divide from its own capital; on
+  Eleinewai I a prehistoric and a medieval people hold lands far apart, so C-13's frontier roads are checked where territories meet
+  (and the rule on two made-up settlements). Contact, trade and war between them are H-02's.
+* **Found on the way.** C-09's road blocks stepped by one longitude index in every row; rows have their own steps, so far from the
+  meridian the next row's cell of that index lies cells away (a hamlet's neighbour 1.8 km off was outside its block): `ruinCellLonIn`.
+* **What moved.** No generation change (13 holds). Every civilised world's settlements, its roads, its shards' and graves' places; the
+  civilisation scenes (from a town of the plan, the ages' from the capital); the regress unchanged; the flow as A-04's but the zoom's
+  roads (its step now round a town of Aieliaalas II's plan).
+  * `galaxy/plan.*` (new): `PlanGrid`/`readPlanGrid`, `planPeople`, `WorldPlan`/`buildWorldPlan`, the cache (`worldPlanOf`,
+    `worldPlanIfReady`, `worldPlanPrefetch`), the cells' reading (`planPlaceIn`, `planCountryside`, `planCoreAt`, `planPlacesNear`,
+    `planEdgesNear`, `planEdgeWay`, `planSpansIn`), `NetKind`.
+  * `galaxy/ruins.*`: `SC_CITY`, `SC_CAPITAL`, `SC_WORKS`, `RuinSpec::rank/wanted`, `settlementRadiusOf`, `townOrGreater`,
+    `ruinCellLonIn`; `ruinOfCell` reads the plan (the places, the countryside, the maglev's spans); the cores' layouts.
+    `galaxy/peoples.*`: `peopleExtentOf`. `galaxy/roads.*`: `roadLegWalk`, `netHalfWidth`, `Road::kind/trunk`, the blocks' rows.
+    `galaxy/landmarks.*`: the plan's places heard by size. `galaxy/shards.*`, `graves.*`: a city's and a capital's counts, none for works.
+  * `surface/*`: `SurfaceView::planNear`, `refreshPlanNear`, `forNearbyRuins` and `drawRuins` read it; `SiteRoad::kind`, the ways' legs
+    in `ensureRoads`, their beds in `sampleAt`. `space/space_view.*`: the plate's cores and ways. `game/*`: the prefetch, the zoom's
+    cores and ways by kind, the HUD's and the log's way kinds, the scanner's `A CITY` and `A GREAT CITY`.
+  * The harness: `plan <sx> <sz> <body>`, `plan ages`, `plan view`; the bench's `descent people` (57.4 ms of 80) and `capital 2x` (8.9
+    ms of 16); five unit checks (238); C-01's, C-08's, C-09's, C-12's and C-13's checks read the countryside round a town of the plan.
+  * KI-376 new; KI-352, KI-373, KI-374, KI-375 narrowed.
+
+## H-02 (2026-10-09): the history
+
+The first of the histories and the records (R-411, the expansion note's section 8): each people's history, simulated over the plan's
+places before the towns, the works and the records that will read it. `docs/reference/12-civilisations.md` (the history) has its parts
+and where to see them.
+
+* **A history simulated, then told.** H-01's answer: the depth is in what a text tells, so a people gets the history the records will
+  draw on (Dwarf Fortress's order). A year at a time from year 1 (the capital's founding: the reckoning's start) to the end, with a few
+  round-year legends of the old time before it; deterministic from the profile (A-01), the plan (T-01) and the world; built when asked
+  (0.9-6.5 ms on the six age worlds, the world's plan first) and kept (`historyOf`, eight). Not prefetched at the approach: nothing in the
+  game reads it yet (T-02's cells will, and then it is built with the plan on its thread).
+* **The places are the plan's.** A history names no place the ground does not have, so every place it founds is one of the plan's, by
+  its rank, in the era whose ground suited it (the plan's scores for the older ages over the territory); a futuristic or far-future
+  people's older cities, which its plan does not draw, are places it cleared before its collapse (nothing of them stands). A place left
+  early stays on the plan (T-02 draws it in its older way); every place ends by the end, the last one at it.
+* **Ten families for six centuries.** The records need writers and readers with kin: ten households are followed through the last 600
+  years (the whole history of a short one), births, marriages, moves and deaths with their causes. Past eight living, only the main line
+  marries in: a branch let go keeps its life (its death drawn alone) but its children are not followed, so a family stays a household
+  and a history some thousands of persons (1,100-4,800 on the six worlds; the prototype's 873 in 343 years). A family that dies out is
+  replaced. Before the families' years the history follows its rulers, their houses and its figures alone, so a record of an older age
+  names public persons (KI-377). The families' events are in the one list, marked private (the chronicle is the public ones: 330-3,435).
+* **The rule by its form.** Life tenures (chiefs, a monarchy's houses with heirs by the people's rule of succession, elders, high
+  priests), terms (consuls and speakers, three to seven years, longer in the later ages: a far-future speaker's twelve times), the
+  machine's rule as a reign with no person. The government changes once in an era, to the one A-01 drew for its close.
+* **Rates for reading.** The rates of wars, sicknesses, works, deeds and the rest were set on the six age worlds so a long history reads:
+  a medieval people at war one year in sixty times what it valued war, a sickness one year in eighty-five, a battle's dead capped by its
+  age, the comet told where it returns once in thirty years or rarer, the capital's centuries its festivals, a failed harvest told in a
+  collapse only with its famine, a routine term's end and a former consul's death left to the families' record.
+* **Two peoples, one shared history.** Where two peoples' years overlap and they could meet (lands touching, or one of them sailing),
+  their meeting, treaties and wars are drawn from the world's seed in years before the present, so both histories hold the same; a
+  people whose end A-01 drew as a conquest while the other went on is conquered by the other (who meets it first if it had not).
+* **What moved.** No generation change (13 holds); nothing drawn or heard changed (the regress, the flow and the bench as T-01's).
+  * `galaxy/history.*` (new): `History` (`HistoryEra`, `HistoryPlace`, `HistoryPerson`, `HistoryFamily`, `HistoryReign`, `HistoryWar`,
+    `HistorySickness`, `HistoryInstitution`, `HistoryInvention`, `HistoryEvent`: 46 kinds), `buildHistory`, `historyOf`, the queries
+    (`eventsIn`, `reignAt`, `eraAt`, `harvestAt`, `populationAt`, `inventionYear`, `eventsOf`, `eventsAt`), the lines (`historyEventLine`,
+    `historyPersonName`, `historyPlaceName`, `historyWarName`, `historySicknessName`, `historyYear`, `historySeason`, `historyKinship`,
+    `historySeat`).
+  * `galaxy/plan.*`: `planScores` (a people's ground scored for an age, its own age's the plan's as before: the plans are the same to the
+    bit). `galaxy/peoples.*`: `PeopleAge::fullYears` (each whole age's length as drawn), `WorldRead`/`readWorld` public.
+  * The harness: `history <sx> <sz> <body> [second]`, `history ages`, `history check`; five unit checks (243).
+  * KI-377 new; KI-376 narrowed (the two peoples' contact, trade and war are H-02's now).
+
+## T-02 (2026-10-09): towns by age
+
+The first of the towns and the works (R-411, the expansion note's section 6): towns laid out as each age laid them, with streets, districts,
+an edge, the old cores the history founded them in, and C-08's reading of the site by age. `docs/reference/12-civilisations.md` (towns by
+age) has the parts and where to see them.
+
+* **Streets first, buildings on them.** C-01's plans placed buildings, and the streets were the gaps between them. A town now lays its
+  streets first (`galaxy/towns.*`: the people's pattern in each age's way) and puts its buildings on the streets' lots, fronting them,
+  tested as rectangles against each other (a row's houses side by side) and against every street's corridor. So "no building across a
+  street" holds by construction, and the unit checks it over 41 towns. A building's own pieces that reach past its footprint (a mill's
+  chimney, a mound's bank, a jetty, a gate's piers) are tested too: such a building is set back by as much once, else not built.
+* **The plan's budget sets the blocks.** A city's buildings stay at its class's count (a capital about a thousand: the frame's budget,
+  `capital 2x`), so a city whose buildings could not line its streets lays wider blocks (the street network laid again, the blocks
+  the root of the ratio wider, up to three times). The density falls from the centre and with the street's rank (the main streets built
+  up the most), and a lot left empty is a yard or a gap.
+* **The history through the planet function.** A plan place's layout reads its history (its founding age, its fate). The history needs
+  the star system, and a cell's layout has only the world's generator, so `Body` and `BodyGen` carry the star's sector and the body's
+  index, and `historyOfWorld` regenerates the system (microseconds) when the history is not cached. The approach's plan thread builds the
+  peoples' histories after the plan. A plan place's size (what the finders, the roads and the landing read without the layout) stays the
+  history-free one: a place left early lays out its older town inside it.
+* **Layers by the age's radius.** A city founded in an older age is built in rings, the founding age's inside, each later age's out to
+  its own class's typical radius in that age (a capital 470 m medieval, 820 industrial, 1,150 modern), each ring in its age's way (the
+  people's genome read through that age: `cultureAtAge`). The edge of an older ring is a boulevard; a medieval ring's wall stands in
+  stretches inside a later city, its gates kept where they stood. A modern city builds its towers round its old core.
+* **The countryside's past from the ages alone.** The countryside's settlements are not in the history, so a later people's village or
+  town takes a founding age from the history's shares by a hash of its cell (its old core that age's), one in twelve of the older ones was
+  left early (in its founding age, weathered from then), and three of five of its lone monuments are megaliths of its old time. The finders
+  read the same without the layout.
+* **One palette, older windows.** A people has four banks for its colours (the second people four more), so an old core is drawn in its
+  people's colours; its windows are the age before's (the palette's fourth window slot), so a modern city's old streets show sash
+  windows, not bands.
+* **The ground marked where the eye is.** A town's streets, squares and fields are drawn into the terrain's vertices on the 4, 16 and 64 m
+  rings (`SurfaceSite::addTownMarks`), added as a town comes within two cells of the explorer, the vertices under it sampled again. The
+  paving's cut is deep (setts 0.6 of the albedo, asphalt 0.45: C-09's lesson that a fifth vanishes in the tone tile), the fields' tones
+  fade with the years. A medieval lane of four metres is two pixels from 100 m up: it reads on the ground, not from the air.
+* **Found on the way.** Compounds of wide houses overlapped (A-04's houses round a court at a fixed radius): the houses are sized first and
+  the court set as wide as they need. A fallen dolmen slab fell into its chamber half the time: the slabs fall outward and the capstone
+  slides off beside it. A leaning wall's doorway side stands upright. C-08's quay ran across the shore as a pier: it runs along the shore
+  now. The genome's EDGE acts in the prehistoric and medieval ages (an industrial town is not walled; its medieval core keeps its wall).
+* **What moved.** No generation change (13 holds). Every civilised world's villages, towns and cities change (their streets, districts,
+  harbours, fields, walls; the countryside's older ages and megaliths), and with them the shards' and graves' places; the regress is
+  unchanged.
+  * `galaxy/towns.*` (new): `Street`, `Plaza`, `FieldPatch`, `TownLayer` (in ruins.h), `TownSpec`, `townStreets`, `townFields`,
+    `StreetGrid`, `streetRectGap`, `buildingStreet`, `streetsJoined`, the names.
+  * `galaxy/ruins.*`: `layoutTown` (the layers, the centre, the streets, the districts, the lots, the stations and market halls, the
+    stadium and power station, the wall and gates, the works of the land, the features, the old stones, the fields), `placeHist`,
+    `countrysideHist`, `cultureAtAge`, `Culture::seed`, `Building::district/before`, `RuinSpec::streets/plazas/fields/layers/buildAge/
+    before/founded/harbourKind/reservoir`; the harbour by age, the reservoir; `BuildingGrid`, `Layout::fitsRect/offStreets/intrusion/
+    undoTo/dwellingSpec`.
+  * `galaxy/buildings.*`: `BK_CRANE` (a jib crane, a gantry), `BK_CONTAINERS`, `BK_RESERVOIR`; the dolmen's fall, the leaning doorway side,
+    the older window in the palette's fourth slot. `galaxy/history.*`: `historyOfWorld`. `galaxy/system.*`, `galaxy/planetmap.*`: the
+    star's sector on the body and its generator. `galaxy/plan.cpp`: the histories on the approach's thread. `galaxy/genome.cpp`: EDGE's ages.
+  * `surface/site.*`: `GroundMark`, `addTownMarks`, `applyMarks`, `markCover`, `TerrainCache::invalidate`. `surface/surface_view.*`:
+    `ensureTownMarks` (at a landing, a re-anchor and every 250 m), the flora and the rocks off the streets.
+  * The harness: `towns <sx> <sz> <body> [second]`, `towns ages`, `towns view`, `towns check`; five unit checks.
+  * KI-378 new; KI-377 narrowed (the towns read the history now).
+
+## T-03 (2026-10-09): the works
+
+The second of the towns and the works (R-411, the expansion note's section 6): everything a people made outside its towns, each placed by
+its rule of the terrain or where the history made it. `docs/reference/12-civilisations.md` (the works) has the twenty-one kinds, their rules
+and their ages' ways.
+
+* **A layer over the ruin cells, not in them.** A work is not a ruin cell's settlement: `ruinOfCell` (what the finders, the roads, the
+  shards, the graves and the landing read) is untouched, so no settlement moved and generation 13 holds. A world's works are one list
+  (`worldWorksOf`, cached four worlds, built on the approach's plan thread after the histories: they read both), each laid out on demand as
+  a settlement's pieces (`workSpec`), and the view visits them with the cells (`forNearbyRuins`). A work keeps clear of the settlements'
+  radii, the cities' cores and the works laid before it.
+* **The history first, then the land.** A battlefield is each war's greatest battle (two of a great war), between the battle's place and
+  the place the other side came from (the war's head, else the seat, else the nearest place standing), on the line between them; a dam, a
+  mine, an aqueduct, an observatory, a lighthouse, a launch site are where the history finished one (`HE_BUILT`, `HistoryWork` moved to
+  history.h), in the era's age, weathered from when its place was left; the last shelter is by the history's last place; a people's older
+  works of a city it cleared (a futuristic or far-future people's) went with the city. Then the land's own: the quarries by the stone-built
+  towns, the mines on the plan's coal and ore, the shrine at the holy place, the necropolises, the plains' lines, the henges, the fortified
+  line, the antenna field, the wrecks, a colossus, the terraformed basins, the far future's, the wind farms.
+* **A dam fits its valley.** The first dams never found a valley: a fixed height asked of walls within a few hundred metres, and the river
+  towns the history builds them for stand in broad plains. Now a dam is sought by its town and then up its river (the plan's coarse rivers,
+  into the hills), over a grid of 300 m with the flow gathered down its steepest neighbours; every valley cell's cross-section is read on
+  the grid (free) out to the age's reach, the best few again every 25 m; the crest is the lower shoulder (the age's height at most); the
+  reservoir is filled from behind the wall over a grid of 50 m to the highest level that neither runs round the wall nor reaches the grid's
+  edge, the crest a few metres over it. These worlds' valleys are broad: the dams come out long and low (8 to 26 m over 0.9 to 1.4 km).
+* **The drainage's basins kept out.** The view draws the ground with the rivers and the lakes (the drainage fills closed basins with a lake
+  or a playa's flat, and melts a valley toward its channel); the dam's search reads the planet function without them (a drainage tile is
+  200 to 500 ms). The first desert dam stood 25 m under the drawn ground at its middle: a playa had filled its valley. Checking each dam
+  against the drawn ground built a tile per try (2.3 s a world); a priority flood on the search's own grid finds the closed basins the
+  drainage fills instead, and a dam's floor in one is passed over (44 to 350 ms a world).
+* **Heights over the reference level.** A dam's wall spans its valley: a form standing on its foot's ground (the drawing raises a big form
+  to the highest ground under it) would bury it or lift it. `Building::base` and `Form::absolute` stand a dam's wall, an aqueduct's arches
+  and the far future's lattice at their own heights; the drawing and the colliders read them so.
+* **A reservoir in the ground.** The water is an edit of the site's vertices at all the rings (`GE_WATER`: its level over the cells the
+  fill reached, the plane under its banks a cell further, the shore cut at the level as B-322's): no new water renderer. A dam whose wall is
+  half gone (its material's decay as its generator reads it, `damBreached`) holds none: its bed is silt; a dead desert's reservoirs are old
+  pale beds.
+* **The ground's edits** (`GroundEdit`, `SurfaceSite::addWorkEdits`/`applyEdits`/`editCover`): cuts and pits lower the ground (a fresh
+  pale rock), ditches and craters silt up with the years (`editLeft`), plains are made flat, lines are tones; each on the rings that can show
+  it (a crater under its radius, a trench on the 4 m ring), the great ones (over 600 m) found by their bounds, the rest by 64 m cells.
+  Lines on a plain are cleared bands of ten metres and twice the albedo: three or four metres vanished in the 16 m cells from the air (C-09's
+  and T-02's lesson again).
+* **Heard as what they are.** The scanner's WORKS mode names the kind (`A DAM`, `LINES ON THE GROUND`, `SOMETHING MADE` for the far
+  future's): a description, as `A TOWN` is, never a name. `LM_WORK` took 8 and the place mark moved to 9 in memory; the guide's file keeps
+  R-408's numbers (8 a place, 9 a work), so older guides read as they were.
+* **What moved.** No generation change, no ruin cell moved; the regress is unchanged (its scenes are not on peoples' worlds). Every
+  civilised world gains its works (and the scenes near them change); the scanner on a civilised world steps RUINS, WORKS, then the land's.
+  * `galaxy/works.*` (new): `WorkKind` (21), `GroundEdit`, `Work`, `WorldWorks`, `worldWorksOf`/`IfReady`/`buildWorldWorks`/`ClearCache`,
+    `worksNear`, `workSpec`, `workLine`, `editLeft`, `damBreached`; the rules (`WB`: `quarries`, `mines`, `dams`/`damNear`, `aqueducts`,
+    `observatories`, `shrine`, `necropolises`, `geoglyphs`, `henges`, `fortLine`, `battlefields`, `launchSites`, `antennas`, `wrecks`,
+    `colossi`, `terraforms`, `shelter`, `strange`, `windfarms`, `lighthouses`).
+  * `galaxy/buildings.*`: twenty-two generators of the works' kinds; the aqueduct at heights over the reference level; their ages and places.
+    `galaxy/ruins.*`: the kinds, `Building::base`, `RuinSpec::work`, the landing's clearance of a work. `galaxy/forms.h`: `Form::absolute`.
+    `galaxy/graves.*`: a work's plots' graves, `graveElements(..., stonesOnly)`. `galaxy/history.h`: `HistoryWork`. `galaxy/landmarks.*`:
+    `LM_WORK`, `worksHeardNear`. `galaxy/plan.cpp`: the works on the approach's thread.
+  * `surface/site.*`: `SiteEdit`, `addWorkEdits`, `applyEdits`, `editCover`, `clearEdits`. `surface/surface_view.*`: `workNear`,
+    `workCell`, `worksHere`, the works in `forNearbyRuins` and their edits in `ensureTownMarks`, the absolute forms' colliders.
+    `surface/forms_draw.cpp`: the absolute forms. `surface/flora.cpp`: no tree on a work's ground or across its line.
+  * `game/marks.cpp`, `game/hud.cpp`: the WORKS mode. `game/guide.*`: the marks' kinds in the file. `game/game.cpp`: `testWalkToWork`.
+  * The harness: `works`, `works ages`, `works gallery`, `works map`, `works view`, `works check`; six unit checks.
+  * KI-379 new; KI-377 narrowed (the works read the history's battles, works and last place).
+
+## T-04 (2026-10-09): where the records lie
+
+The last of the towns and the works (R-411, the expansion note's section 7): how many records a people left, when each was made and in
+what, and where each lies, fixed before H-04 writes them. `docs/reference/12-civilisations.md` (where the records lie) has the numbers.
+
+* **A people's own count, C-02's fifty its first.** 80 to 200 records a people (`recordCountOf`: a count by the age, moved by its numbers at
+  its height against its age's middling numbers, and a draw of its own): the age worlds hold 86, 101, 135, 143, 175 and 178. The fifty C-02
+  made are the first fifty and keep their texts, their music, their charts and their last recording, so a shard found before is the same
+  shard; past them music and charts come at the people's own shares of the fifty (`recordIsMusic`, `recordChartIndex`: a shuffle of their
+  own), and the charts past the fifty are marked too (`chartMarksOf`'s count, C-10's marks first). H-05 sorts the three categories by age.
+* **Dated in the history, the order C-02's.** A record's date is its share of the people's years from the founding to the end, weighed by
+  what each age wrote a year and what the years left (`recordYear`); the share is C-02's first draw of the shard, so the records keep
+  C-02's order and the last recording stays the latest (the others end a year before it). The shards' years, the `{year}` of the texts, the
+  decoder's dates and timeline and the graves' years read the history's count (`Lore::spanYears` is the end's year less one, `Lore::
+  endYear`): A-01 had left C-02's span of 150 to 600 years for H-04, but a record's medium follows its date, and a disc dated in the lore's
+  year 200 of a people whose year 200 was medieval would be wrong. The texts are C-02's until H-04.
+* **The medium by the year's age** (`RecordMedium`, fifteen; `mediaOf` a weight by the age, the category and how far into its era): what
+  the expansion note listed, carved bone to something that hums; an age's early and late years differ (tablets before codices, reels
+  before drives).
+* **Every record somewhere: a home.** Laid as C-03 laid them (each settlement drawing a few from the whole catalogue), the futuristic test
+  world's records were a quarter nowhere and the far future's nine in ten nowhere: few places, no countryside. Each record has a home now
+  (`recordHomesOf`): a place of the plan standing in its year, drawn by its size, which always holds it (its archive, else its rooms); the
+  copies come on top, as many as before. Every record of the six age worlds lies somewhere; the far future's two structures hold half each
+  in rings. H-04 can say a record was written where it lies.
+* **Archives in the middle of the room.** An archive is a row of records across the middle of the room its age kept writings in (a
+  temple, a palace's hall, a town hall, a tower's ground floor, a spire's gate hall), the place's own first: rows along the back wall ran
+  into the corners of polygonal temples and their ambulatories' columns. The capital's holds 8 to 14, a city's 5 to 8, a third of the towns'
+  3 to 5; the far future's structures ring theirs round their feet.
+* **The last recording where the history ended.** At the last place (`History::lastPlace`), in the building its age would keep last words in
+  (the capital's mast, the temple, the town hall), and in the last shelter T-03 laid by it: two copies, both meaning it, so a world whose
+  shelter is a long walk off still gives it at its last place; nowhere else (the general draws leave it out).
+* **A place keeps nothing written after it was left.** A town the history ended early holds records up to its end; the old time's stones
+  (left before year 1) hold none.
+* **A painted wall on a wall.** A painting is on the face of the first wall box a line from its spot away from the doorway meets (the
+  wall's own geometry: a march through the colliders' discs hit a polygonal hut's corners, half the painting inside the next wall), centred
+  on the face within its length and leaning with it (a hut's walls lean); recorded, it stays painted. Where no wall stands, a painted slab.
+* **The objects are forms.** Each object is a few small forms in the records' banks (29 pale, 30 dark, 31 ochre; clay the cut wood's 17,
+  metal the chrome's 7; the free banks the surface left) or its people's slots (a carved stone in its stone, a sleeve in its accent, a
+  crystal and a sphere in its light), drawn with the settlements' forms within 40 m, no collider; C-03's glint stays the find. The HUD
+  names the object a row over the sun's line (`A CODEX - E`; C-03's line ran into the elevation).
+* **The found shards across the change: kept by their index.** A people's records are at people x 1000 + index in the world's indices (the
+  guide's keys): two hundred no longer fit C-13's 50 + index. A guide without the file's `records 2` line is moved when loaded (`Guide::load`:
+  its second people's shards, decoded, heard, lent and pieces' names), so the counts and the language are kept and the contents are the
+  records' (the first fifty's texts, music and charts C-02's as before); the game says it once (`RECORDS REGENERATED - N SHARDS KEPT,
+  CONTENTS NEW`), logs it and saves the guide. The marker, not the generation: guides saved between A-01 and now carry generation 13 with
+  C-13's keys.
+* **What moved.** No generation change; the regress unchanged. Every people's shards lie elsewhere (more of them, archives, the last at its
+  place), their years are the history's, the second people's keys moved.
+  * `galaxy/records.*` (new): `RecordMedium`, `RecordCategory`, `recordCountOf`, `shardsOfWorld`, `recordsOf`/`RecordCatalogue`/
+    `RecordEntry`, `recordYear`, `recordIsMusic`, `recordChartIndex`, `recordChartCount`, `recordMediumFits`, `recordHomesOf`, `ShardSite`
+    (moved from shards.h, with the medium, the archive, the last, the wall), `recordSitesOf` (C-03's `shardSitesOf` replaced), `recordForms`;
+    `SHARD_STRIDE`, `shardPeopleOf`/`shardLocalOf`/`shardWorldIndex` moved here at the new stride.
+  * `galaxy/shards.*`: `Lore::records`/`endYear`, the span the history's, `shardOf` dated by the catalogue, music and charts past the fifty.
+    `galaxy/charts.*`: `chartMarksOf`'s count, `chartOf` past the fifty. `galaxy/buildings.*`: the works' pieces' feet as rooms
+    (`buildingRoom`), their places' names. `galaxy/forms.h`: the records' parts.
+  * `surface/surface_view.*`: `RuinCell::recordForms`/`recordFirst`, `recordObjects`, `gatherRecords`, `drawShards` the glint alone, the
+    works' cells' records, `NearShard`'s medium and more, banks 29 to 31. `surface/forms_draw.cpp`: the records' parts' banks.
+  * `game/guide.*`: `records 2`, the move, `migratedShards`. `game/game.cpp`: the status on the first load, `testWalkToRecord`.
+    `game/guide_screens.cpp`: the taking's words. `game/hud.cpp`: the prompt. `game/shards_screen.cpp`: the people's counts.
+    `game/radar.cpp`: the people of an index.
+  * The harness: `records`, `records ages`, `records scenes`, `records check`; five unit checks; the C-03, C-10, C-13 and C-14 checks read
+    the people's counts.
+  * KI-380 new; KI-377 narrowed (the records' homes and dates read the history).
+
+## H-03 (2026-10-09): the grammar engine
+
+The engine H-01 chose (`docs/ideas/RESEARCH-records.md`, sections 4 and 5), built, and C-02's kinds rebuilt on it from the same inputs
+before H-04 writes new content. `docs/reference/12-civilisations.md` (the grammar engine) documents the format and has the numbers.
+
+* **The format is plain text, compiled in as raw strings.** `src/galaxy/grammar/*.vg`, each file wrapped once in `R"VG(` and `)VG"` and
+  `#include`d where a string goes: no build step, no generated header, Make's and CMake's dependency scans see the include. The loader skips
+  the wrapper, so a file from disk parses as its compiled-in copy with the same line numbers; the harness reads the tree's files (an edited
+  rule reprinted without a rebuild) and the unit checks the tree's files are the text compiled in. Files stay under 16 KB (MSVC's literal).
+* **Texts parsed once into nodes, linked against the model's schema.** A reference to a rule, a fact, an entity, a field or a directive
+  that does not exist, a guard's unknown key, a rule no `@root` reaches and "a" before a plural list are errors at load with their file and
+  line (`vgLink`). The model names what it gives (`VgSchema`); the shard model's facts are indexed, not looked up by string.
+* **The realiser owns the English.** Entities, not pronoun slots: a person's first mention in full, a pronoun only where clear, its later
+  form else ("the child", "my mother", "the woman"); the case by the mark (`:obj`, `:poss`, `:refl`). Clear is stricter than H-01's rule (the
+  last of its gender within a sentence): no person may have been mentioned since whose gender the reader cannot know, because the peoples'
+  names do not say it ("Cekrast says they follow him", right by gender when Cekrast is a girl, reads as Cekrast); a kin word, a stated
+  gender or a pronoun used shows one. Verbs by tense, person and number (140 irregular verbs), numbers with their nouns, "a" or "an" by
+  sound, the seams. C-02's `tidy` and its `{he}`/`{him}`/`{his}` slots are gone.
+* **Attributes in reading order.** `{=.x}` sets a record-wide attribute a later part's guard reads (the prototype passed it up to every
+  caller, which is the same thing in reading order); `{rule>.x}` keeps a word with its number for a later verb or pronoun ("the nets are
+  mine"); a `keep` rule says one thing all through a record (one crop, one herd animal); a person a text brings in (`{+$x:?|the stranger}`)
+  is the text's own.
+* **A people's texts are one catalogue.** Built in index order with the engine's memory (an alternative's weight over 1 + 1.5 times its
+  uses by the people's earlier records); `shardTextsOf` caches the last eight peoples and `shardOf` reads it, so a shard alone is the same
+  text as in its catalogue. A `steady` rule keeps its weights across the catalogue: the kinds keep C-02's shares (spread evenly, a desert
+  drew "the dust" four times in its first fifty and a one-template elegy as often as the elegy); only the templates within a kind are
+  spread. A text the same as an earlier one of the people is drawn again (up to eight times; the memory untouched by the draws thrown
+  away), so a world never repeats a text whole.
+* **C-02's draws kept in their order.** The herd, the kin and the child's name are drawn from the shard's stream as before the tone, so every
+  shard's tone is C-02's and C-04's pieces are the same pieces; the text is drawn from its own seed. The child has its own pronoun (C-02's
+  shared the kin's); the kin, the child and the founder are the model's persons, the beloved, the stranger, the woman from the other town
+  and the old one who kept the count the texts' own.
+* **The lexicon by age, as written.** `@lexicon <age> words` lists an age's words in the forms the texts would use (not stems), so "bore"
+  does not match the industrial "bores"; the check reads a record's year's age (T-04's). C-02's texts needed one guard: iron waits for the
+  medieval age.
+* **The kinds' names** are their rules' (`kind.the-other-people.gone` "the other people"), the order of the root's alternatives their index.
+* **What moved.** No generation change; the regress unchanged. Every text shard's text is new (the same kinds and templates, other draws:
+  the engine's stream is the text's own), the tones, music, charts and years are as they were; the captions of the charts are written by
+  the engine (`shardChartRecord`).
+  * `galaxy/grammar.*` (new): `VgGrammar`, `vgParse`, `vgLink`, `VgSchema`, `VgModel`, `VgEntity`, `VgRecord`, `vgRecord`, `VgMemory`,
+    `VgRun`, `vgCheck`, `vgMeasure`, `vgFrame`, `vgSentences`, `vgTopFrames`, `vgInflect`, `vgPlural`, `vgNumberWords`, `vgOrdinal`.
+  * `galaxy/grammar/` (new): `shards.vg`, `shards_end.vg`, `shards_world.vg`, `lexicon.vg`.
+  * `galaxy/shards.*`: C-02's `Grammar`, `tidy`, `kinds()` and `buildGrammar` replaced by the shard model (`schemaOf`, `worldFacts`,
+    `recordFacts`, `shardDraw`), `shardGrammar`, `shardSchema`, `shardGrammarFromDisk`, `shardGrammarSource`, `shardTextsOf`/`ShardTexts`,
+    `shardChartRecord`; `shardKindCount`/`shardKindName` from the grammar.
+  * The harness: `grammar` (the tree's files, every people's texts of the test worlds, the age worlds and the forty nearest home through
+    every check, the measures, the rule use, the cost; `shots/tests/grammar_texts.txt`), `grammar check`; four unit checks.
+  * KI-381 new (what C-02's content still does and what H-04 takes); KI-368 narrowed.
+
+## H-04 (2026-10-10): the records
+
+The records written from the history on H-03's engine: the genres of each age, the collapse told from many sides, the language by
+roots, the decoder's pages. `docs/reference/12-civilisations.md` ("The records (H-04)") has the genres, the model and the numbers.
+
+* **The genre is the grammar's choice.** The root (`record (steady)` in `records.vg`) picks a genre by the age of the record's year and
+  T-04's medium, guarded by what the history offers at its date (a pair of a family alive, someone to write, a death, an old one who
+  dies soon, an event, a battle, a building, an invention, a railway); its weights hold across a people's records, so what a people
+  wrote most stays so. 63 genres in 81 alternatives; a genre's name is its rule's (`genre.letter.far` "letter").
+* **The model reads the history; the directives plan the record.** Facts (the world, the people, the record's year: its government,
+  era, ruler and reign, harvest, war, sickness, the collapse's stage, the inventions and institutions at the year, the genome's traits),
+  entities (the writer, the reader, the subject, the event, the ruler, the home, the seat, kin, bound lazily), paths and fields.
+  `@cast` binds a record's persons (a letter's two of a family, weighed by kinship and by living apart, the reader at home five times
+  as likely), `@news` tells the most salient event not told, `@entries` a year's events in their seasons' order, `@years` a chronicle's
+  years with the gaps between, `@death`, `@deed`, `@life` and `@event` the rest. Salience: the event's weight, its nearness, its place,
+  the writer's stake; an event told elsewhere counts half, a great one told in another register 1.3 (the annal, the letter and the song
+  of one event); nothing twice in a record.
+* **The register kept by the collapse's stage.** Most records are the ordinary life; the warning, the denial, the orders, the inventory,
+  the emergency and the whoever-comes come only in the collapse's years (`stage`), the last recording where the history ended.
+* **Every name the history's at the record's year.** Places founded by then, persons born by then (by the whole name or the given
+  name), the lore's; the unit checks every name written (`recordNameKnown`). A ruler's title is capitalised word by word ("High
+  Priestess"); a letter greets by the given name (the second word is a surname unless it is a regnal numeral); places and events are
+  never "it". Names are marked through the realiser (`vgName`) so the checks and the decoder know them.
+* **Anachronism by invention, not only by age.** `@lexicon inv.railway train trains` (a word whose fact is unset at the year fails);
+  "broadcast" waits for the radio, "steam" for the steam engine, trains for the railway; a prehistoric text says "the ship", not "the
+  computer"; the history's coal-out signs say "the engines stopped" and "the last works shut" (its text, not its events).
+* **Repetition: composition within the sentence.** A slot a people draws a hundred times needs many frames, so the parts compose inside
+  their sentences (two or three slots a line) and a tail goes with the part it fits (the hunt's beasts one or many, the instructions'
+  things with their reasons, the machine's notes with their reactions, the mission's days in order); the catalogue dryness rose from
+  1.5 to 4; a genre's heading and closing are `formula` rules, left out of the measures. Over the 48 peoples: 10.6% of the longer
+  sentences on a repeated frame at a people's first 50 texts, 34.6% at 100, 15.8% over all, distinct 2/3-grams 0.74/0.89; C-02's texts of
+  the same peoples 20.4%, 36.4%, 27.6%, 0.68/0.83 (the targets were 15%, 25% at 100: met at 50, not at 100, KI-381).
+* **An object as its medium.** A bone's hunt is cut, not painted; a stone's weathers, a wall's paint flakes; a diary has no "you"; the
+  night sky has no sun (`skynight`).
+* **Texts built on a thread.** A people's records with its history take a third of a second; `shardTextsIfReady` returns them when built
+  and starts a thread when not (`shardTextsPrefetch`, joined at exit); the radar asks every quarter second, the decoder builds the world
+  under its cursor. `shardTextsOf` still blocks for the harness.
+* **The language by roots** (C-06 re-tuned): the computer learns a root and reads its forms (`rootOf`, the tongue's endings `endS`,
+  `endPast`, `endIng`); the share is 30% with one shard and all at the people's full count (`languageFull`: 12% of its records, 10 to 24;
+  C-06's was all at ten, with three times fewer words); the names read from the start are every name the records wrote.
+* **Long texts in pages; the voice reads the opening.** The decoder lays a text out from its final reading, a page starting at a paragraph
+  or a sentence; the voice speaks the page shown (the opening first), `UP`/`DOWN` turn pages, `ENTER` speaks the page; the radar's voice
+  reads a record's opening (sixty words at most). A word followed by a paragraph gets a sentence's pause.
+* **What moved.** No generation change (13); the regress unchanged. Every text shard's text is new (the genres replace C-02's kinds);
+  C-02's stream draws are kept before the text, so the tones, the music and the star charts are as they were; the charts' captions read
+  the record model.
+  * `galaxy/genres.*` (new): `RecordModel`, `recordSchema`, `recordWorldFacts`, `writeRecordTexts`, `recordGenreNames`, `recordNameKnown`.
+  * `galaxy/grammar/` (28 files): `records.vg`, `world.vg`, `people.vg`, the registers (`annal.vg`, `annal2.vg`, `letter_events.vg`,
+    `letter_events2.vg`, `news.vg`, `song.vg`, `log.vg`), `letters.vg`, the ages' genres (`prehistoric.vg` to `farfuture.vg`, two or three
+    files an age), `ending.vg`, `ending2.vg`, `charts.vg`, `lexicon.vg`; C-02's `shards.vg`, `shards_end.vg`, `shards_world.vg` gone.
+  * `galaxy/grammar.*`: `formula`, `@lexicon` by fact, name marks (`vgName`), `VgModel::lazy`, `VgEntity::named`, `VgRun::has`, the
+    measures without formulas and with the distinct sentences, `VG_DRYNESS` 4, the anachronism diagnostic.
+  * `galaxy/shards.*`: the texts from `writeRecordTexts`, the async build, `ShardText` (genre, age, year, told, writer, reader, subject),
+    `Shard::names`, the language by roots (`rootOf`, `languageShare(held, records)`, `languageFull`), `shardOpening`.
+  * `galaxy/history.*`: `historyWorkName`, `historySignPattern` and `historyLeftWhy` exported; the coal-out signs reworded.
+  * `game/shards_screen.cpp` (the pages, `speakShardPage`, the prefetch), `game/radar.cpp` (the opening, the build on the thread),
+    `galaxy/voice.cpp` (a paragraph's pause).
+  * The harness: `grammar ages`, `grammar compare <file>`, the genres' table, one event from several sides, the names checked; the unit's
+    records checks rewritten (the count stays 263); the flow's `shards_long` and `shards_long_page2`.
+  * KI-381 narrowed (H-04 took the content and the directives); KI-368 closed by H-04; KI-382 new (what the records leave).
+
+## H-04, the second pass (2026-10-10): each people its own
+
+The user read H-04's records and asked for more: the repetition at a people's hundredth text down to 5% (H-04 left 34.6%, H-01's
+target was 25%), the words that came back on every world ("jars, wells, chiefs and so on") gone, names that differ from people to
+people ("everything sounds like it was one civilization"), and texts that feel unique to each civilisation, the genres kept. Done the
+same day; `docs/reference/12-civilisations.md` ("Each people its own") has the parts and the numbers.
+
+* **Measured first.** Two measures beside H-04's: the share of a people's longer sentences (its first hundred texts) on a frame another
+  people also wrote (65.9% over the 48 peoples: most of what any civilisation wrote, another wrote word for word), and how well a
+  held-out name tells its people from its letters (C-02's one generator in three styles: 53% over 48 peoples). Within one genre over all
+  the peoples the frames were 50-95% shared (the letter 56%, the newspaper 71%, the picture 94%). `grammar late N` adds the nearest late
+  peoples, so the measure at a hundred texts reads seventeen peoples, not six.
+* **A sentence said once (the engine).** A people's records keep the frame of every sentence they wrote (names, persons and numbers
+  masked); a rule that writes whole sentences and holds no directive is drawn again, up to six times, while a sentence it finished
+  repeats one (its draws, their dryness and their marks undone; a record's budget 160; a repeat an inner rule let stand does not make
+  the rules round it draw again). Each attempt opens a token of its own, so the check sees where its sentence began (writer F found
+  that a sentence merged into the previous token was never checked; writer A that the first sentence after a formula was skipped).
+  On H-04's grammar alone it took the three figures from 10.6/34.6/15.8% to 4.8/21.6/8.1%; its real use is that a rule with N frames
+  says N things before it repeats one, instead of repeating at the birthday bound.
+* **A word worn out.** A distinctive word (in 24 alternatives or fewer) weighs down every alternative it is in by the people's uses of
+  it, so "jars" does not come back from five rules; the culture's pools put each people's own vessels, waters and titles where the
+  fixed words were.
+* **A people's own few, not a people's own weights.** `people=K` keeps K of a rule's alternatives for a people (its seed ranks those
+  whose guards hold), `share=F` a share. A dialect (every alternative weighed by the people's seed, sigma 0.9) was tried and set aside:
+  with the dryness a people uses every alternative in the end, so weights changed the order and not the set; the sharing between
+  peoples stayed (65.4% against 66.0%) and the repetition within one rose (4.8% to 7.3% at fifty). It is kept on the genres' root only
+  (sigma 0.45): one people writes more prayers, another more letters. N2 found the same of `people=K` on a sentence: what lowered the
+  sharing was more people-specific words in each sentence and longer lists.
+* **Their own words.** `{~key}` writes the people's own word for a thing of theirs with none of ours (their coin, their dish, their
+  dance), from their tongue, kept by the decoder (`VgRecord::theirs`).
+* **A tongue for every people** (`galaxy/tongue.*`). C-02's names came from one generator in three styles keyed by the galaxy's region;
+  a people's tongue is now drawn from its seed after Martin O'Leary's naming languages: twenty-four consonant sets, fourteen vowel sets,
+  one to three syllable shapes, the clusters a tongue allows, its spelling, a doubling in some, the morphemes of thirty-three meanings
+  before or after the root, joined or hyphened, thirty to fifty name roots that come back, a given name's ending by sex where the
+  tongue marks it, a family affix. The lore's names, the history's persons, families and places (by rank), the graves', the decoder's
+  words, their own words and the voice are the tongue's; a name that reads as a rude or famous word of ours, or stutters a syllable
+  thrice, is drawn again. A held-out name tells its people 74% of the time over 60 peoples (C-02's 51%), 83% over 24 (the unit's).
+  C-02's draw of the style stays in the lore (`Lore::style`): the shards' stream reads it, so every shard's tone and every piece of
+  music is as it was; the voice leans with the tongue's own hardness now.
+* **The ruins in the texts.** The genome read through the record's age (the house's plan, the roofs, the walls, the huts, the ornament,
+  the motif, the tops, the accent's colour, the land, the streets, the squares, the edge, the links, the lights, the towers) are the
+  model's facts, so a text says "under the domed roofs" where the explorer finds domes. A place has a trade, a landmark and quarters,
+  a ruler an epithet, a person a trait; a government's ruler the people's own title (a headman, an archon, an oracle; a word of their
+  tongue for nearly half the monarchs, kept as a name); wars, sicknesses and eras are named from larger tables by the people's seed.
+* **The everyday in the history.** Fourteen public kinds (fair, fire, storm, pest, wonder, games, law, trial, embassy, accident, price,
+  the herds, a show, the ruler's visit) from a stream of their own a year, and seven private kinds of the families followed (an illness
+  got over, a hurt, an apprenticeship, the house, a quarrel, a journey, a betrothal) from each person's own stream after the years are
+  drawn: neither harms anyone or makes a person, so H-02's history stands as it was (every war, death and ruler where it was). Low in
+  salience, they are what quiet years are told with (75,827 of 184,647 events on the test worlds' peoples). A reader is never told
+  their own news; `@digest` tells several items in the order they happened (KI-382's defeat above its war).
+* **Seven writers.** The grammar was rewritten in parallel by seven writers (prehistoric; medieval; letters and diaries; industrial and
+  the news register; modern and the log register; futuristic and far future; annals, songs and the collapse), each owning its files, a
+  rule prefix and the registers of the new kinds, on a copy of the tree with a copy of the binary (`grammar dir D out F`), merged by file;
+  the harness reads every `.vg` in the directory and the unit holds the tree's list to the build's. 94 files, 2,864 rules, 16,808
+  alternatives (H-04: 28, 914, 3,640), every file under 16 KB.
+* **The numbers.** Over the 48 peoples H-04 measured: 0.2% of the longer sentences on a repeated frame at a people's first 50 texts
+  (99.9% written once), 0.9% at 100, 0.6% over all (H-04: 10.6%, 34.6%, 15.8%); distinct 2/3-grams 0.79/0.94 (0.74/0.89); 17.1% of a
+  people's sentences on a frame another people wrote (65.9%); 287,211 words, 83 a text (216,497, 62). With the twenty nearest late peoples
+  (68 peoples, 17 at a hundred texts): 0.3%, 1.6%, 0.9%, sharing 22.2%. Every check at zero, every one of 14,868 names the history's.
+  A text 67 us (501 at most), a people's texts with its history 0.35 s.
+* **What moved.** The generation stays 13 (1.3.0 unreleased: the tongues, the everyday and the names join A-01's change; no save of
+  13 has a people's name in it, the guide keeps the explorer's); the regress unchanged (22 hashes). `galaxy/tongue.*` (new: `Tongue`
+  moved there from `shards.h`, `tongueOfSeed`, `tongueName`, `tongueTerm`, `tongueReadable`); `galaxy/grammar.*` (the frame memory,
+  the fatigue, `people=K`, `share=F`, `{~key}`, the root's lean, the kept rule's tokens, the article-pair check, the agreement check's
+  prepositions); `galaxy/genres.*` (the culture facts, `what`, `verdict`, `epithet`, `trait`, `ptrade`, `landmark`, `quarter`, `@digest`,
+  `@years` reaching further in a sparse age, the native titles, the private kinds' salience); `galaxy/history.*` (the everyday and the
+  families' kinds, `historyEverydayKey`, `historyRulerTitle`, `historyTitleNative`, `historyFamilyName`, the names of wars, sicknesses and
+  eras); `galaxy/shards.*` (the lore's names, `personName(Lore, ...)`, the loader reading the directory, the 66 new files compiled in);
+  `galaxy/graves.cpp`, `galaxy/voice.cpp`; the harness's `tongues`, `grammar late N`, `out F`, the sharing measures, `VESPERIS_TOPFRAMES`;
+  three unit checks more (266). KI-381 and KI-382 narrowed, KI-383 new.
+
+## H-05 (2026-10-10): more shards in three categories, by age
+
+* **The categories by the record's age.** C-02's fifty keep C-04's and C-10's categories (a found shard keeps what it was). Past them a
+  record is music or a star chart by the age of its year, not at the fifty's shares (KI-380): an age's share (music 36% prehistoric, 22%
+  medieval, 25% industrial, 32% modern, 24% futuristic, 26% far future; charts 9, 8, 7, 6, 12, 15%) leaned by the people's own fifty (its
+  pieces against fifteen, its charts against four), the records of each age taken by a hash of their own so the count is exact. The
+  record's year and age are the people's generator's (`peopleAgeOf(pg, 0)`: the eras do not depend on the end's years), so the
+  generator-only callers (`recordIsMusic`, `recordChartIndex`, the lore's chart count) agree with the catalogue. `Shard::recordAge` and
+  `Shard::medium` carry the record's age and medium to the music, the charts and the decoder.
+* **The music: the age as an axis of C-04's tradition.** `traditionOf` draws C-04's core first and to the bit (each people keeps its
+  scale, tuning, cycle, beat, timbres, drum, drone, second voice and ornament: "after two pieces the listener knows the tradition" holds
+  across its ages), then from streams of its own what holds through the ages (a swing, a refrain, choruses in octaves, the singers'
+  vowels from its tongue) and an ensemble per age (thirty timbre families by role, leaned by the people's own C-04 timbres). A piece is
+  played on its record's age's ensemble in a form of forty by the tone and the age, in the age's texture, its length by the clock (15 to
+  120 s, not by cycles). Chords are stacked from the people's own scale (the degree nearest a third, the nearest a fifth), so a people
+  without a third plays what it has: alien by design. The player moved to `game/audio_music.cpp`: 28 voices of up to 32 partials on a
+  sine table at a control rate of 32 samples, the kits' pieces of sines, resonators and noise, a limiter on the music's bus (stacked
+  chords under 0.82). Every age's pieces peak under 0.78 with an rms of 0.061-0.152 (the speech's 0.13-0.15); at most 22 voices sound at
+  once; the dearest piece (a modern song) costs 315 ms of a core a minute.
+* **The charts: a way per age and medium.** `chartStyleOf(age, medium)` picks one of twelve ways (a cave's ceiling, a carved bone, a
+  painted vault, an astrolabe's plate, a codex page, an engraved atlas, a photograph on glass, a survey on glass, printed or on a drive,
+  a navigation chart, a chart of far places); each reads the world (the moon's count is the calendar's, the ecliptic the world's orbit,
+  the tropics its tilt, the wanderers the other planets' apparent paths, the atlas's grid the spin axis, the survey's rings the voices
+  heard). The figures stay one set over the people's sky (C-10's rule); their names are animals for a people whose records began in the
+  oldest age, creatures, heroes and things for the others. A navigation chart is a map of the neighbourhood from above whose routes are
+  the overlay's lines between real stars; the far future marks a real star thousands of light years off (`ChartMark::how` 3: toward the
+  heart, a cluster, out of the disc or along it), so Enter can target it and the galaxy chart's jumps reach it. A chart drawn before its
+  people's radio marks no voice (C-10's marks were the people's whatever the chart's year): near home 15 of 341 charts mark a people
+  heard (33 before). The chart's page moved to `game/chart_draw.cpp`; 3.1-4.1 ms a frame at 2x.
+* **The media.** A medium with a sound of its own (`recordMediumSounds`: a wax cylinder, a reel, a disc, a drive, a crystal, something
+  that hums) is the recording, heard on the decoder through it (`AudioState::medium`, `game/audio_medium.cpp`: the band, the horn, the
+  saturation, the wow and flutter through a delay line, the surface's hiss, rumble and crackle, a reel's dropouts, a drive's stutters,
+  coarse moments and gaps, a crystal's second reading, the hum's drone); the content's level is kept within a tenth (measured in the
+  speech's pauses: the cylinder's surface 0.012-0.016, the drive's 0.0005). The air keeps C-16's colours (the receiver has its own; a
+  medium on the radio would double them). A record with no sound of its own is the ship's rendering: a text read in the people's voice
+  made flatter (`voiceRead`: the melody a third, the pace even and slower, no tremor or second tone, little breath; the vowels' pitch
+  spread 30% of the voice's), notation played dry. The decoder names the medium and who is heard under the date and draws the object at
+  its right (`game/medium_draw.cpp`); a chart's page draws its object as the chart.
+* **Two writers.** The music and the charts were built side by side by two writers, each on a copy of the tree owning its files (the
+  music's: `music.*`, `audio_music.cpp`, the roll; the charts': `charts.*`, `charts.vg`, `chart_draw.cpp`, the caption's facts), merged
+  three ways against the shared base (`git merge-file`), the lead keeping the media, the decoder's header, the harness's `decoder` mode
+  and the docs. A merge must give the files it writes a fresh time: the first merged build kept the writers' older times, so the files
+  including the changed headers were not rebuilt and the unit crashed in `StarChart`'s move (a layout of two definitions); a clean
+  rebuild passed.
+* **What moved.** The generation stays 13 (1.3.0 unreleased: the categories past the fifty, the pieces and the charts join A-01's
+  change; the found shards keep their indices, as T-04 decided); the regress unchanged (22 hashes). `galaxy/records.*`
+  (`recordAgeAt`, the categories by age, `recordChartRecords`, `recordMusicShare`/`recordChartShare`, `recordMediumSounds`),
+  `galaxy/shards.*` (`Shard::recordAge`/`medium`, the chart caption's facts), `galaxy/music.*`, `galaxy/charts.*`, `galaxy/voice.*`
+  (`voiceRead`), `galaxy/genres.cpp` (the chart facts in the schema), `src/galaxy/grammar/charts.vg`, `game/audio_music.cpp`,
+  `game/audio_medium.cpp`, `game/chart_draw.cpp`, `game/medium_draw.cpp` (new), `game/audio.*`, `game/shards_screen.cpp`; the harness's
+  `decoder [ages|counts|wav|check]`, `music ages [wav|frames]`, `music ... age=N tone=N`, `charts ages|check`; four unit checks more
+  (270). KI-347, KI-380 and KI-382 narrowed; KI-384, KI-385 and KI-386 new.
+
+## H-06 (2026-10-10): the decoder reads a history
+
+* **Three pages, Tab.** A world's records on the decoder are three pages (the star map's G-05 key): the records (C-06's list with each
+  row's kind as a glyph and Left/Right showing one kind; the year column without its word, the line one character short of the screen
+  with three-figure counts otherwise), the timeline of the eras (C-12's grown: the records stacked by their years in their kinds'
+  colours, the events learnt under the axis, the record under the cursor below) and the history. A record opened from the timeline or the
+  history comes back to it; a record's own Left/Right keep to the kind the records page shows.
+* **Only what the read records told.** The history page is assembled from the records read (`Guide::decoded`), never from the history
+  itself: the events their texts told (`ShardText::told`: the directives' picks, and since H-06 the death an epitaph or an obituary is
+  about and the end the last recording tells, kept apart from the salience so no text moved), a person by name only once a read record
+  wrote it (else what they were at the event: a woman, a man, a child, a ruler; `historyEventLine` takes a namer and is the legends'
+  line unchanged without one), the people's ways their drawn alternatives were guarded by (faith, rite, holy place, living, values, the
+  dead, the cause of the end: `ShardText::ways`). Enter on an event opens the record that told it, so the legends are an index into the
+  records. The unit checks the page against the read records' own lists (nothing an unread record told, nothing missing).
+* **The eras placed by a record of them.** The grammar names an era in three rules of 94 files, so an era named by its name in a text would
+  almost never be: an era is placed and named once a record written in it is read (the computer dates its records); its name is read
+  through the language like the rest. On the timeline each era's width is its share of the people's records (an era of few or none a
+  sliver: the medieval Ta-Zhozo's six thousand years of the old time would otherwise fill the axis), linear within; its name over the
+  band, else under it, else (two rows taken) left out, never cut.
+* **The age named by three records of it.** A-01's rule (the age shown, never named until the records tell it) is kept by the count:
+  three records written in the people's last age read, or its last recording, name it (THE AGE THEY REACHED: INDUSTRIAL). One record would
+  name it at the first reading of a late record; the end recording names it because it tells the end.
+* **Read through the language.** The history page's lines, the eras' and the people's names are decoded as the records are
+  (`decodeLine`): a word the records wrote by its root as the shards held read it, a name kept, a word the records never wrote read only
+  once the whole tongue is (the ship learns their words from their records). The page is built when the world's pages are opened and
+  again after every reading (`Game::ensureTold`), not each frame.
+* **What moved.** No generation change (GEN 13 holds, 1.3.0 unreleased); the regress unchanged (22 hashes); the grammar's 3,564 texts H-05's
+  byte for byte (the measure "one event from several sides" 75 events where it was 71: the epitaphs' deaths). New: `galaxy/legends.*`,
+  `game/history_screen.cpp`; changed: `galaxy/history.*` (the namer), `galaxy/genres.cpp` (`toldLegend`, the ways), `galaxy/shards.*`
+  (`ShardText::ways`, `decodeLine`), `game/shards_screen.cpp` (the pages, the kinds), `game/game.h`; the harness's `decoder pages`, the
+  flow's `shards_eras` and `shards_history`, seven unit checks (277). KI-377 and KI-382 narrowed; KI-387 new.
+
+## C-11 (2026-10-10): the ship's player and the instruments of the ages
+
+* **One owner a sound, the player its own copy.** The synth reads one piece and one speech through pointers, and a pointer moved under it
+  stops it. The decoder's playback stays the decoder's (C-04, C-05: off its screen it stops; its first readings resolve the words as they
+  are spoken); the ship's player holds its own `ShardWorld` (`ShipPlayer::world`) and points the synth into it, so nothing the decoder opens
+  moves it, and the decoder's stops touch only its own pointers. One sound at a time: while another owner plays (the decoder's record, the
+  radar's receiver, the gramophone) the player lets go and is held; it takes up where it was through `AudioState::pieceFrom` (beats) and
+  `speechFrom` (seconds), the notes begun before not struck again. A second music engine for two pieces at once was not built: two
+  peoples' pieces together are noise, and the player's piece and an instrument can sound together (the instrument has voices of its own).
+* **What the player lists.** The pieces held, the recordings held (a text made on something that sounds: H-05's media; a tablet or a page
+  is read on the decoder, by the ship), and the recordings the radar caught (`Guide::heard`, their opening as it was on the air, through
+  `MEDIUM_AIR`, the receiver's band): the plan's three. A piece's form and length come from its draws and the catalogue's age
+  (`shardDrawOf`), so the page opens without the people's texts written; a world's records are written on a thread when an item of it
+  plays (`buildShardWorld` without waiting: `waiting` until they are).
+* **Where it plays, where it stops.** Everywhere on the ship, in every state but a landing's (the descent, the surface, the ascent) and the
+  title: a landing stops it, as the plan asked; the menu and the maps let it play. It plays the list on from the item chosen and stops at the
+  list's end; Enter, Space, Backspace on its page, no key in flight (the HUD line says what plays; the decoder is where it is changed). The
+  hum and the drive lower under it (0.3 and 0.55, from 0.6 and 0.9).
+* **Instruments are the ensembles' voices.** A found instrument is one of its people's ensemble voices of an age (H-05), so it sounds as
+  their pieces do on their scale, and every people's are its own: the kinds by the ensemble (a lute, a lyre or a harp by the people's coin
+  among the plucked strings), the timbre the voice's own, the look from its numbers and the scale. What a hand cannot carry stays (the
+  singers, the drones, the church organs, the pianos, a band's drum kit); the kits add the drums a prehistoric, medieval and industrial
+  people carried and a modern drum machine (pads); the industrial age adds the gramophone, which plays a disc (the plan's example) rather
+  than notes: a piece of the age through a cylinder's horn. Names by what it is, never by the age (A-01).
+* **Placed beside the music, on a stream of their own.** An instrument lies beside a third of the music records, by the record, so every copy
+  of that record has it and taking it once takes every copy (C-03's rule, the guide's key the instrument's: `<body>/I<id>`); it is placed in
+  `recordSitesOf` after the records, on its own random stream, so the records lie where they did (the unit compares). Which of the age's
+  instruments is resolved where the people's tradition is (the view, `instrumentIdOf`), and a settlement shows one of each. `E` takes the
+  nearer of a record and an instrument.
+* **Played from a case, by degrees.** The case is a cabin station like the decoder's (`facing` 10, the devices page, lime in bank 28);
+  ten keys play ten degrees from the register's first note, past the scale into the next period, so a five-note scale spans two periods
+  and a nine-note one a period and a step: the scale is what the keys give, the explorer cannot play a note the people did not have. The
+  register is the instrument's own (a bass a period down, a flute, bells, a music box one up), Left and Right a period either way.
+* **What moved.** No generation change (GEN 13 holds); the music's 25 WAVs byte-identical to H-06's (the voice set-up split into
+  `voiceShape` for the instrument's notes); the records' listings identical. New: `galaxy/instruments.*`, `game/player.cpp`,
+  `game/instruments_screen.cpp`, `game/instrument_draw.cpp`; changed: the synth (`audio.*`: the instrument's voices, the resume points,
+  `MEDIUM_AIR`), `galaxy/records.*` (`InstrumentSite`, the placement), the view (the sites, objects, glints, the nearest), the cabin (the
+  case, the devices row), the decoder (the player page, its stops), the HUD, the guide (`instrument` lines), the statistics. KI-347 closed;
+  KI-388 new.
+
+## C-17 (2026-10-10): the instruments' maker
+
+* **Made by their peoples, not chosen by their age.** The user, after C-11: "civilizations are different, numerous, alien - yes, there are
+  industrial or prehistoric societies but it doesn't mean everyone was carving bones or building gramophones". C-11's 49 kinds (by the age,
+  with a coin among a family's few) are replaced by a constructor: what sounds is the voice's (the class, from the timbre's family), the plan
+  is drawn among the class's by the people's leanings, the materials are what its world gave in its age by its loves, the style is its
+  architecture genome's. Supersedes C-11's "Instruments are the ensembles' voices" for the kinds and the look; what holds is that an
+  instrument is a voice of its people's ensembles and sounds as their pieces do.
+* **The sound stays the voice's.** The make does not change the timbre: the music the decoder plays and the instrument the case plays are
+  one sound, and the pieces are the same to the byte (the 25 music WAVs identical to C-11's). A make that shaped its own sound (a clay
+  vessel's purer tone, a shell's breath) would split the instrument from its people's music; left for later if wanted (KI-389).
+* **The genome, not a second set of variables.** The style reads A-04's thirty-five deep variables (plan, profile, roof for the bodies'
+  outline; openings for holes; tops for heads; ornament, motif, accent, paint, symmetry, number, rhythm, proportion, light), so a people's
+  instruments and buildings are one people's (a keyhole window, a keyhole sound hole), and the genome's measured distinctness carries over.
+  The materials read the world (its flora's families, a hashed fauna, its seas, its cold, its volcanoes, its crystal) and three loves a
+  people; the plans a log-normal leaning a people pushed by the genome. All on streams of their own: `traditionOf`'s draws stay.
+* **One list of parts, two pictures.** The constructor writes parts (tubes, outlined bodies, discs, balls, boxes, rings, strings, marks);
+  the ruins draw them as A-02's forms and the case draws them seen from above, so the picture is the object. An outlined body needed a new
+  form kind (`FK_PLATE`: a superellipse with a taper, a waist, a lean, a dome, or a polygon), its outline one function both draw with; the
+  forms' sheet and check carry it. An instrument's strings are cables a millimetre thick (`cableMesh`'s floor lowered from 1 cm: every
+  building's cable is 3 cm or more) drawn in their part's bank (a line's bank was the people's slot's alone). The 3D object's colours are
+  the nine banks it can take (the records' five, the people's four); the picture's are the materials' own, the people's where the object takes
+  theirs.
+* **Measured apart.** As A-04's genome: every age's and class's makes of 48 peoples near home in pairs, their pictures drawn small and
+  compared, alike under 6 of 255 on the mean: under 1.5% (0.86% over 100 peoples), the same plan and body under 15%; prehistoric pipes of
+  bone under half (13 of 100); the cylinders' machine for a quarter to nine tenths of the peoples (62 of 100). The closest pairs are drawn
+  side by side for a look, and the simple plans the measure found too alike (single rings, orbs, cymbals, stars, rain tubes, pad rings,
+  reed pipes, blades) were given more of their people's style until the closest pairs differed to the eye.
+* **Names from the make, the decoder's too.** "A SHELL PIPE", "A NECKED GOURD", "BRONZE BOWLS", "A TALKING MACHINE": what it is made of and
+  how, never the age; a timbre takes its make's name (a kit piece the plural), so a piece's instruments on the decoder are the ones the ruins
+  hold. Seventeen letters at the most (the case's list): the material's word is left out where it would not fit, never a word cut.
+* **What moved.** No generation change (GEN 13 holds); the music's WAVs and the records' listings identical; what an instrument is at an
+  id moved (1.3.0 is unreleased). New: `galaxy/instrument_plans.cpp`, `FK_PLATE`; rewritten: `galaxy/instruments.*`,
+  `game/instrument_draw.cpp`; changed: `galaxy/music.*` (`InstrumentMake`, `Timbre::make`, `Tradition::makes` and `machine`), the forms
+  (the plate, the cable's floor), the forms' drawing (a line's bank), the view (an instrument's name, its small parts far off), the HUD, the
+  guide's log, the case. KI-389 new.

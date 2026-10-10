@@ -13,8 +13,11 @@
 // shard that is a star chart (`galaxy/charts.h`) draws itself here beside its caption: the hemisphere of the people's sky
 // round the star they marked, their figures and their names (words of the language, resolving as it is learnt); a first
 // reading draws it over a few seconds; Enter targets the marked star and O holds the chart up to the sky (`drawChartOverlay`).
+// H-06: a world's records on three pages (Tab): the records by their years with their kinds (Left/Right shows one kind), the timeline of
+// the people's eras with the records held on it, and the history as the records read so far tell it (game/history_screen.cpp).
 #include "game.h"
 #include "ui.h"
+#include "galaxy/records.h"   // H-05: the media
 #include "core/rng.h"
 #include <cstdlib>
 #include <algorithm>
@@ -23,7 +26,7 @@
 
 namespace {
 const int WORLD_ROWS = 8;    // worlds per page (two lines each)
-const int SHARD_ROWS = 16;   // a world's shards per page
+const int SHARD_ROWS = 15;   // a world's shards per page (H-06: under the pages' strip)
 int bodyOfKey(const std::string& key) { size_t sl = key.find('/'); return sl == std::string::npos ? -1 : atoi(key.c_str() + sl + 1); }
 }
 
@@ -77,7 +80,7 @@ bool Game::shardsPending() const {
 
 // the world's system from its key, its lore, its fifty and its language; kept while the same world is read
 // C-07: a world's shards, language, voice and tradition built for the decoder or the radar (the key is the caller's)
-bool Game::buildShardWorld(ShardWorld& w, const Star& s, int bi, int which) {
+bool Game::buildShardWorld(ShardWorld& w, const Star& s, int bi, int which, bool wait) {
     std::string key = w.key;
     w = ShardWorld(); w.key = key; w.which = which;
     if (!s.valid) return false;
@@ -85,13 +88,19 @@ bool Game::buildShardWorld(ShardWorld& w, const Star& s, int bi, int which) {
     if (bi < 0 || bi >= (int)w.sys.bodies.size()) return false;
     const Body& b = w.sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
+    if (!wait) {   // H-04: a world's records need its history, and its history its plan: written on a thread the first time
+        Lore q = loreQuick(w.sys, b, g, which);
+        if (!shardTextsIfReady(w.sys, b, g, q)) { w.pending = true; return false; }
+    }
     w.body = bi;
     w.lore = loreOf(w.sys, b, g, which);
     w.which = w.lore.which; w.peoples = w.lore.peoples; w.base = shardWorldIndex(w.which, 0);   // C-13: the people's fifty, its guide indices from `base`
     w.tongue = tongueOf(g, w.lore);
-    shardsOf(w.sys, b, g, w.lore, SHARDS_PER_WORLD, w.shards);
+    shardsOf(w.sys, b, g, w.lore, w.lore.records, w.shards);   // T-04: the people's records (C-02's fifty the first)
+    w.texts = shardTextsOf(w.sys, b, g, w.lore);                // H-06: what each told (the cache's: `shardsOf` read it)
     languageOf(w.lore, w.shards, w.tongue, w.lang);
     w.voice = voiceOf(g, w.lore, w.tongue);   // C-05: its voice
+    w.readVoice = voiceRead(w.voice);          // H-05: and the ship's reading of what has no voice of its own
     w.tradition = traditionOf(g, w.lore);   // C-04: its music and the form and length of each piece, for the list
     w.pieceForm.assign(w.shards.size(), -1); w.pieceSeconds.assign(w.shards.size(), 0.0);
     for (size_t i = 0; i < w.shards.size(); i++) if (w.shards[i].music) { Piece pc; pieceOf(w.tradition, w.shards[i], pc); w.pieceForm[i] = pc.form; w.pieceSeconds[i] = pc.seconds; }
@@ -99,10 +108,23 @@ bool Game::buildShardWorld(ShardWorld& w, const Star& s, int bi, int which) {
     return true;
 }
 
+void Game::prefetchShardWorld(int sel) {
+    if (sel < 0 || sel >= (int)shardWorldKeys.size()) return;
+    const std::string& key = shardWorldKeys[sel];
+    int64_t sx, sy, sz; if (!Guide::parseStarKey(key, sx, sy, sz)) return;
+    Star st; if (!starInSector(sx, sy, sz, st, true)) return;
+    StarSystem wsys; wsys.generate(st);
+    const int bi = bodyOfKey(key);
+    if (bi < 0 || bi >= (int)wsys.bodies.size()) return;
+    const BodyGen g = BodyGen::make(wsys.bodies[bi]);
+    shardTextsPrefetch(wsys, wsys.bodies[bi], g, loreQuick(wsys, wsys.bodies[bi], g, shardWorldWhich[sel]));
+}
+
 bool Game::openShardWorld(const std::string& key, int which) {
     if (shardWorld.valid && shardWorld.key == key && shardWorld.which == which) return true;
     stopPiece(); stopSpeech();
     shardWorld = ShardWorld(); shardWorld.key = key;
+    toldValid = false; told = ToldHistory(); legendRows.clear(); legendSel = 0; legendTop = 0; shardsFilter = 0;   // H-06: the pages read the new world
     int64_t sx, sy, sz; if (!Guide::parseStarKey(key, sx, sy, sz)) return false;
     int bi = bodyOfKey(key);
     Star s; if (!starInSector(sx, sy, sz, s, true)) return false;
@@ -112,33 +134,42 @@ bool Game::openShardWorld(const std::string& key, int which) {
 // C-04: the piece of the open world onto the synth, from the top; off it (the pointers cleared before anything they point at can move)
 void Game::startPiece() {
     audio.piece = &shardWorld.piece; audio.tradition = &shardWorld.tradition; audio.pieceSpeed = 1;
+    audio.medium = shardWorld.valid && !shardHeld.empty() ? shardWorld.shards[shardHeld[shardSel]].medium : -1;   // H-05: heard through what it was made on
     audio.pieceStart = true; audio.piecePause = false; audio.pieceDone = false; audio.pieceBeat = -1;
     pieceT = 0; pieceSyncBeat = -1; piecePaused = false;
     if (humBeforePiece < 0) humBeforePiece = audio.hum;   // the ship's hum ducked under the music
     audio.hum = std::min(audio.hum, 0.2);
 }
 void Game::stopPiece() {
-    audio.piece = nullptr; audio.tradition = nullptr;
-    audio.pieceStart = false; audio.piecePause = false; audio.pieceBeat = -1;
+    if (audio.piece == &shardWorld.piece) {   // C-11: the decoder's own (the ship's player and the gramophone keep theirs)
+        audio.piece = nullptr; audio.tradition = nullptr;
+        if (!audio.speech) audio.medium = -1;   // H-05
+        audio.pieceStart = false; audio.piecePause = false; audio.pieceBeat = -1;
+    }
     pieceT = -1; pieceSyncBeat = -1; piecePaused = false;
-    if (humBeforePiece >= 0 && !audio.speech) { audio.hum = humBeforePiece; humBeforePiece = -1; }
+    if (humBeforePiece >= 0 && audio.speech != &shardWorld.speech) { audio.hum = humBeforePiece; humBeforePiece = -1; }
 }
 double Game::pieceBeatNow() const { return pieceT >= 0 ? pieceT * shardWorld.piece.bpm / 60.0 : 0; }
 bool Game::pieceEnded() const { return pieceT >= 0 && (audio.pieceDone || pieceBeatNow() >= shardWorld.piece.beats); }
 
 // C-05: the shard on the screen spoken from the top; off (the pointers cleared before anything they point at can move)
 void Game::startSpeech() {
-    audio.speech = &shardWorld.speech; audio.voice = &shardWorld.voice;
+    const int medium = shardWorld.valid && !shardHeld.empty() ? shardWorld.shards[shardHeld[shardSel]].medium : -1;
+    audio.speech = &shardWorld.speech; audio.voice = medium < 0 || recordMediumSounds(medium) ? &shardWorld.voice : &shardWorld.readVoice;   // H-05: a recording's own voice, else the ship's reading
+    audio.medium = medium;
     audio.speechStart = true; audio.speechPause = false; audio.speechDone = false; audio.speechT = -1;
     speechT = 0; speechSyncT = -1; speechPaused = false;
     if (humBeforePiece < 0) humBeforePiece = audio.hum;   // the ship's hum ducked under the voice
     audio.hum = std::min(audio.hum, 0.2);
 }
 void Game::stopSpeech() {
-    audio.speech = nullptr; audio.voice = nullptr;
-    audio.speechStart = false; audio.speechPause = false; audio.speechT = -1;
+    if (audio.speech == &shardWorld.speech) {   // C-11: the decoder's own
+        audio.speech = nullptr; audio.voice = nullptr;
+        if (!audio.piece) audio.medium = -1;   // H-05
+        audio.speechStart = false; audio.speechPause = false; audio.speechT = -1;
+    }
     speechT = -1; speechSyncT = -1; speechPaused = false;
-    if (humBeforePiece >= 0 && !audio.piece) { audio.hum = humBeforePiece; humBeforePiece = -1; }
+    if (humBeforePiece >= 0 && audio.piece != &shardWorld.piece) { audio.hum = humBeforePiece; humBeforePiece = -1; }
 }
 bool Game::speechEnded() const { return speechT >= 0 && (audio.speechDone || speechT >= shardWorld.speech.seconds); }
 // a first reading done: the shard is read at the world's current count
@@ -147,6 +178,7 @@ void Game::markShardRead() {
     shardFresh = false;
     int idx = shardHeld[shardSel];
     guide.decoded[heldShardKey(idx)] = (int)shardHeld.size();
+    toldValid = false;   // H-06: what the records told grows
     if (shardWorld.shards[idx].last && guide.ended.insert(endedKey()).second) {   // C-12: the world's last recording read: the log notes it and the timeline closes (`logEvent` saves the guide)
         logEvent("SHARD", fmt("THE LAST RECORDING OF THE %s READ: THE RECORD OF %s ENDS IN YEAR %d OF %s", upper(shardWorld.lore.people).c_str(), upper(worldNameOfKey(shardWorld.key)).c_str(), shardWorld.shards[idx].year, upper(shardWorld.lore.city).c_str()));
     } else if (shardWorld.shards[idx].chart && shardWorld.chart.valid) {   // C-10: a chart read goes to the log with the star it marks (the system only: what is there is theirs to tell)
@@ -162,29 +194,35 @@ void Game::openShards() {
     std::map<std::string, std::set<int>> held;
     for (const std::string& k : guide.shards) { size_t p = k.rfind("/S"); if (p != std::string::npos) held[k.substr(0, p)].insert(shardPeopleOf(atoi(k.c_str() + p + 2))); }
     for (const std::string& k : guide.lent) { size_t p = k.rfind("/S"); if (p != std::string::npos) held[k.substr(0, p)].insert(shardPeopleOf(atoi(k.c_str() + p + 2))); }   // C-14: a friend's shards list their world too
-    shardWorldKeys.clear(); shardWorldWhich.clear(); shardWorldLabels.clear();
+    shardWorldKeys.clear(); shardWorldWhich.clear(); shardWorldLabels.clear(); shardWorldTotals.clear();
     for (const auto& kv : held) {
-        int peoples = 1; std::string names[2];
+        int peoples = 1; std::string names[2]; int totals[2] = {SHARDS_PER_WORLD, SHARDS_PER_WORLD};
         int64_t sx, sy, sz; Star s;
         if (Guide::parseStarKey(kv.first, sx, sy, sz) && starInSector(sx, sy, sz, s, true)) {
             StarSystem wsys; wsys.generate(s); int bi = bodyOfKey(kv.first);
-            if (bi >= 0 && bi < (int)wsys.bodies.size()) { BodyGen g = BodyGen::make(wsys.bodies[bi]); if (peoplesOf(g) > 1) { peoples = 2; for (int k = 0; k < 2; k++) names[k] = peopleNameOf(peopleGen(g, k)); } }
+            if (bi >= 0 && bi < (int)wsys.bodies.size()) {
+                BodyGen g = BodyGen::make(wsys.bodies[bi]);
+                if (peoplesOf(g) > 1) { peoples = 2; for (int k = 0; k < 2; k++) names[k] = peopleNameOf(peopleGen(g, k)); }
+                for (int k = 0; k < peoples; k++) totals[k] = recordCountOf(g, k);   // T-04: each people's records
+            }
         }
         size_t before = shardWorldKeys.size();
         for (int k = 0; k < peoples; k++) {
             if (!kv.second.count(k)) continue;
-            shardWorldKeys.push_back(kv.first); shardWorldWhich.push_back(k); shardWorldLabels.push_back(peoples > 1 ? "THE " + upper(names[k]) : std::string());
+            shardWorldKeys.push_back(kv.first); shardWorldWhich.push_back(k); shardWorldLabels.push_back(peoples > 1 ? "THE " + upper(names[k]) : std::string()); shardWorldTotals.push_back(totals[k]);
         }
-        if (shardWorldKeys.size() == before) { shardWorldKeys.push_back(kv.first); shardWorldWhich.push_back(0); shardWorldLabels.push_back(std::string()); }   // a key the world cannot place: under the first people
+        if (shardWorldKeys.size() == before) { shardWorldKeys.push_back(kv.first); shardWorldWhich.push_back(0); shardWorldLabels.push_back(std::string()); shardWorldTotals.push_back(totals[0]); }   // a key the world cannot place: under the first people
     }
     radarOff();   // C-07: the decoder takes the synth
     shardsLevel = 0; shardFresh = false; stopPiece(); stopSpeech();
     if (shardWorldSel >= (int)shardWorldKeys.size()) shardWorldSel = 0;
+    prefetchShardWorld(shardWorldSel);   // H-04: its records written while the list is read
     // the world under the ship first, when its shards are here
     if (sys.valid && ship.parkedBody >= 0) {
         std::string here = Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, ship.parkedBody);
         for (size_t i = 0; i < shardWorldKeys.size(); i++) if (shardWorldKeys[i] == here) { shardWorldSel = (int)i; break; }
     }
+    if (shardsTop == 1) playerBuildList();   // C-11: the player's page, as it was left
     guideReturn = GameState::SPACE; returnState = GameState::SPACE;
     state = GameState::SHARDS;
     audio.beep = 4;
@@ -203,7 +241,7 @@ void Game::openShard(int sel) {
         shardWords.clear();
         pieceOf(shardWorld.tradition, shardWorld.shards[idx], shardWorld.piece);
         startPiece();
-        if (!guide.decoded.count(skey)) { guide.decoded[skey] = SHARDS_PER_WORLD; guide.save(guidePath); }
+        if (!guide.decoded.count(skey)) { guide.decoded[skey] = shardWorld.lore.records; guide.save(guidePath); toldValid = false; }   // T-04: read at the people's whole count
         shardsLevel = 2; audio.beep = 4;
         return;
     }
@@ -218,19 +256,79 @@ void Game::openShard(int sel) {
         shardsLevel = 2;
         return;
     }
-    speechOf(shardWorld.voice, shardWords, shardWorld.shards[idx].seed, shardWorld.speech);   // C-05: the recording speaks
-    startSpeech();
+    layoutShardText(12, 33, UW - 12, UH - 36);   // H-04: a long text in pages; the voice speaks the opening (C-05: the recording speaks)
+    speakShardPage(0);
     if (shardFresh) audio.beep = 4;
     shardsLevel = 2;
 }
 
+// H-04: the shard on the screen in pages: the words laid out at the text's width as they read at this share (a word read as ours, one
+// not learnt in their tongue), a paragraph on a new line a little lower, a page where the text area is full; a page begins at a
+// paragraph or a sentence where one is near (`shardPageStart`); the screen flows a page's words as they are shown in the frame
+void Game::layoutShardText(int x0, int y0, int maxX, int maxY) {
+    shardLayout.assign(shardWords.size(), WordAt()); shardPageStart.assign(1, 0); shardPage = 0;
+    int x = x0, y = y0, page = 0, lastStart = 0;   // lastStart: the latest word a page could begin at (a paragraph's or a sentence's first)
+    for (size_t i = 0; i < shardWords.size(); i++) {
+        const DecodedWord& w = shardWords[i];
+        const int tw = textWidth(upper(w.pre + (w.known ? w.ours : w.theirs) + w.post).c_str());
+        if (i > 0 && (w.par || shardWords[i - 1].post.find_first_of(".?!") != std::string::npos)) lastStart = (int)i;
+        if (w.par && i > 0) { x = x0; y += 12; }
+        else if (x > x0 && x + tw > maxX) { x = x0; y += 9; }
+        if (y > maxY && i > 0) {   // a new page, from the paragraph or the sentence this line is part of when it began on this page
+            int from = lastStart > shardPageStart.back() && (int)i - lastStart < 40 ? lastStart : (int)i;
+            page++; shardPageStart.push_back(from);
+            x = x0; y = y0;
+            for (int k = from; k < (int)i; k++) {   // the words moved over, laid out again
+                const DecodedWord& v = shardWords[k];
+                const int vw = textWidth(upper(v.pre + (v.known ? v.ours : v.theirs) + v.post).c_str());
+                if (k > from && v.par) { x = x0; y += 12; } else if (x > x0 && x + vw > maxX) { x = x0; y += 9; }
+                shardLayout[k] = {page, x, y, vw}; x += vw + FONT_ADV;
+            }
+            if (w.par && from < (int)i) { x = x0; y += 12; } else if (x > x0 && x + tw > maxX) { x = x0; y += 9; }
+        }
+        shardLayout[i] = {page, x, y, tw};
+        x += tw + FONT_ADV;
+    }
+}
+// the voice speaks a page of the text (the opening on a first reading; any page again on Enter)
+void Game::speakShardPage(int page) {
+    const int pages = (int)shardPageStart.size();
+    page = std::max(0, std::min(pages - 1, page));
+    speechFrom = shardPageStart.empty() ? 0 : shardPageStart[page];
+    speechTo = page + 1 < pages ? shardPageStart[page + 1] : (int)shardWords.size();
+    std::vector<DecodedWord> said(shardWords.begin() + speechFrom, shardWords.begin() + speechTo);
+    if (!said.empty()) said[0].par = false;
+    const Shard& sh = shardWorld.shards[shardHeld[shardSel]];   // H-05: a recording speaks in its own voice; a tablet or a page is read by the ship
+    speechOf(sh.medium < 0 || recordMediumSounds(sh.medium) ? shardWorld.voice : shardWorld.readVoice, said, sh.seed + (uint64_t)page * 0x9E37ULL, shardWorld.speech);
+    shardPage = page;
+    startSpeech();
+}
+
 void Game::updateShards(const Input& in, double realDt) {
     int nw = (int)shardWorldKeys.size();
+    if (shardsLevel == 0 && in.wasPressed(KEY_TAB)) { shardsTop = 1 - shardsTop; if (shardsTop == 1) playerBuildList(); audio.beep = 4; return; }   // C-11: the worlds, the player
+    if (shardsLevel == 0 && shardsTop == 1) {   // C-11: the ship's player
+        const int n = (int)player.items.size();
+        if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; return; }   // it plays on
+        if (n == 0) return;
+        if (in.wasPressed(KEY_UP)) player.sel = (player.sel + n - 1) % n;
+        if (in.wasPressed(KEY_DOWN)) player.sel = (player.sel + 1) % n;
+        if (in.wasPressed(KEY_PAGE_UP)) player.sel = std::max(0, player.sel - 15);
+        if (in.wasPressed(KEY_PAGE_DOWN)) player.sel = std::min(n - 1, player.sel + 15);
+        if (enterKey(in)) { playerPlay(player.sel); audio.beep = 4; }
+        if (in.wasPressed(KEY_SPACE) && player.playing >= 0) {
+            player.paused = !player.paused;
+            if (audio.piece == &player.world.piece) audio.piecePause = player.paused;
+            if (audio.speech == &player.world.speech) audio.speechPause = player.paused;
+        }
+        if (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) { playerStop(); audio.beep = 4; }
+        return;
+    }
     if (shardsLevel == 0) {
         if (in.wasPressed(KEY_ESCAPE) || (nw == 0 && enterKey(in))) { stopPiece(); state = GameState::SPACE; return; }
         if (nw == 0) return;
-        if (in.wasPressed(KEY_UP)) shardWorldSel = (shardWorldSel + nw - 1) % nw;
-        if (in.wasPressed(KEY_DOWN)) shardWorldSel = (shardWorldSel + 1) % nw;
+        if (in.wasPressed(KEY_UP)) { shardWorldSel = (shardWorldSel + nw - 1) % nw; prefetchShardWorld(shardWorldSel); }
+        if (in.wasPressed(KEY_DOWN)) { shardWorldSel = (shardWorldSel + 1) % nw; prefetchShardWorld(shardWorldSel); }
         if (!enterKey(in)) return;
         if (!openShardWorld(shardWorldKeys[shardWorldSel], shardWorldWhich[shardWorldSel])) { status("THE DECODER CANNOT FIND THAT WORLD", 3); audio.beep = 3; return; }
         shardHeld.clear();
@@ -241,21 +339,46 @@ void Game::updateShards(const Input& in, double realDt) {
         shardHeld.assign(locals.begin(), locals.end());
         std::sort(shardHeld.begin(), shardHeld.end(), [&](int a, int b) { int ya = shardWorld.shards[a].year, yb = shardWorld.shards[b].year; return ya != yb ? ya < yb : a < b; });
         shardSel = 0; shardsLevel = 1; audio.beep = 4;
-    } else if (shardsLevel == 1) {
+        toldValid = false;   // H-06: the held may have changed since
+        if (!shardHeld.empty() && !shardInFilter(shardHeld[0])) stepShard(1);
+    } else if (shardsLevel == 1) {   // H-06: the world's three pages
         int n = (int)shardHeld.size();
         if (in.wasPressed(KEY_ESCAPE)) { shardsLevel = 0; return; }
+        if (in.wasPressed(KEY_TAB)) { shardsPage = (shardsPage + (in.shift() ? 2 : 1)) % 3; audio.beep = 4; return; }
         if (n == 0) return;
-        if (in.wasPressed(KEY_UP)) shardSel = (shardSel + n - 1) % n;
-        if (in.wasPressed(KEY_DOWN)) shardSel = (shardSel + 1) % n;
-        if (in.wasPressed(KEY_PAGE_UP)) shardSel = std::max(0, shardSel - SHARD_ROWS);
-        if (in.wasPressed(KEY_PAGE_DOWN)) shardSel = std::min(n - 1, shardSel + SHARD_ROWS);
-        if (enterKey(in)) openShard(shardSel);
+        if (shardsPage == 0) {   // the records: Up/Down through the kind shown, Left/Right the kind
+            if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_RIGHT)) {
+                shardsFilter = (shardsFilter + (in.wasPressed(KEY_RIGHT) ? 1 : 3)) % 4; audio.beep = 4;
+                if (!shardInFilter(shardHeld[shardSel])) stepShard(1);
+                return;
+            }
+            if (in.wasPressed(KEY_UP)) stepShard(-1);
+            if (in.wasPressed(KEY_DOWN)) stepShard(1);
+            if (in.wasPressed(KEY_PAGE_UP)) stepShard(-SHARD_ROWS);
+            if (in.wasPressed(KEY_PAGE_DOWN)) stepShard(SHARD_ROWS);
+            if (enterKey(in) && shardInFilter(shardHeld[shardSel])) openShard(shardSel);
+        } else if (shardsPage == 1) {   // the timeline: along the years
+            if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) shardSel = (shardSel + n - 1) % n;
+            if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) shardSel = (shardSel + 1) % n;
+            if (in.wasPressed(KEY_PAGE_UP)) shardSel = std::max(0, shardSel - 10);
+            if (in.wasPressed(KEY_PAGE_DOWN)) shardSel = std::min(n - 1, shardSel + 10);
+            if (enterKey(in)) openShard(shardSel);
+        } else {   // the history: Up/Down through the events told, Enter opens the record that told the one under the cursor
+            ensureTold();
+            const int ne = (int)told.events.size();
+            if (ne == 0) return;
+            if (in.wasPressed(KEY_UP)) legendSel = std::max(0, legendSel - 1);
+            if (in.wasPressed(KEY_DOWN)) legendSel = std::min(ne - 1, legendSel + 1);
+            if (in.wasPressed(KEY_PAGE_UP)) legendSel = std::max(0, legendSel - 8);
+            if (in.wasPressed(KEY_PAGE_DOWN)) legendSel = std::min(ne - 1, legendSel + 8);
+            if (enterKey(in)) { const int r = toldRecordOf(legendSel); if (r >= 0) openShard(r); }
+        }
     } else if (shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].music) {   // C-04: a piece playing
         if (audio.pieceBeat >= 0 && audio.pieceBeat != pieceSyncBeat) { pieceSyncBeat = audio.pieceBeat; pieceT = audio.pieceBeat * 60.0 / shardWorld.piece.bpm; }   // the synth's clock when it runs
         else if (pieceT >= 0 && !piecePaused && !pieceEnded()) pieceT += realDt;
         if (in.wasPressed(KEY_ESCAPE)) { stopPiece(); shardsLevel = 1; return; }
-        if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) { openShard(shardSel - 1); return; }
-        if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) { openShard(shardSel + 1); return; }
+        if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) { stepShard(-1); openShard(shardSel); return; }   // H-06: the kind the records' page shows
+        if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) { stepShard(1); openShard(shardSel); return; }
         if (in.wasPressed(KEY_SPACE) && !pieceEnded()) { piecePaused = !piecePaused; audio.piecePause = piecePaused; }
         if (enterKey(in) && pieceEnded()) startPiece();
         if (in.wasPressed(KEY_N) && !in.ctrl()) {
@@ -275,24 +398,33 @@ void Game::updateShards(const Input& in, double realDt) {
             return;
         }
         if (in.wasPressed(KEY_O) && !reading && shardWorld.chart.valid) { holdChart(!(chartUp && chartHeldKey == shardWorld.key && chartHeldIndex == shardWorld.base + idx)); return; }
-        if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) openShard(shardSel - 1);
-        else if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) openShard(shardSel + 1);
+        if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) { stepShard(-1); openShard(shardSel); }
+        else if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) { stepShard(1); openShard(shardSel); }
     } else {   // C-05: a text speaking; on a first reading at this share the words resolve as they are spoken and the end reads the shard
+        // H-04: the opening is spoken (the first page); the rest on request: UP/DOWN turn a long text's pages, Enter speaks the page shown
         if (audio.speechT >= 0 && audio.speechT != speechSyncT) { speechSyncT = audio.speechT; speechT = audio.speechT; }   // the synth's clock when it runs
         else if (speechT >= 0 && !speechPaused && !speechEnded()) speechT += realDt;
         if (shardFresh && speechEnded()) markShardRead();
         bool speaking = speechT >= 0 && !speechEnded();
+        const int pages = (int)shardPageStart.size();
         if (in.wasPressed(KEY_ESCAPE)) { stopSpeech(); shardsLevel = 1; return; }   // a first reading left early is not read: it waits again next time
-        if (enterKey(in)) { if (speaking) { stopSpeech(); markShardRead(); } else startSpeech(); return; }   // Enter skips to the end, or speaks it again
+        if (enterKey(in)) { if (speaking && shardFresh) { stopSpeech(); markShardRead(); } else if (speaking) stopSpeech(); else speakShardPage(shardPage); return; }   // Enter skips the wait, stops, or speaks the page
         if (in.wasPressed(KEY_SPACE) && speaking) { speechPaused = !speechPaused; audio.speechPause = speechPaused; }
-        if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) openShard(shardSel - 1);
-        else if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) openShard(shardSel + 1);
+        const bool up = in.wasPressed(KEY_UP) || in.wasPressed(KEY_PAGE_UP), down = in.wasPressed(KEY_DOWN) || in.wasPressed(KEY_PAGE_DOWN);
+        if (pages > 1 && (up || down)) {   // a page turned: the voice stops (a first reading is read at once)
+            int to = std::max(0, std::min(pages - 1, shardPage + (down ? 1 : -1)));
+            if (to != shardPage) { if (shardFresh) markShardRead(); stopSpeech(); shardPage = to; audio.beep = 4; }
+            return;
+        }
+        if (in.wasPressed(KEY_LEFT) || up) { stepShard(-1); openShard(shardSel); }
+        else if (in.wasPressed(KEY_RIGHT) || down) { stepShard(1); openShard(shardSel); }
     }
 }
 
 void Game::renderShards() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
     int nw = (int)shardWorldKeys.size();
+    if (shardsLevel == 0 && shardsTop == 1) { renderPlayerPage(); return; }   // C-11
     if (shardsLevel == 0) {
         drawText(canvas, 6, 4, "THE SHARD DECODER", HUD_AMBER);
         if (nw == 0) {
@@ -313,68 +445,23 @@ void Game::renderShards() {
                 int64_t sx = 0, sy = 0, sz = 0; Guide::parseStarKey(key, sx, sy, sz);
                 drawText(canvas, 16, y, fmt("%s  (%+lld %+lld %+lld / %d)%s", upper(worldNameOfKey(key)).c_str(), (long long)sx, (long long)sy, (long long)sz, bodyOfKey(key), shardWorldLabels[i].empty() ? "" : ("  " + shardWorldLabels[i]).c_str()).c_str(), sel ? HUD_WHITE : (nameIsForeign(key) ? HUD_CYAN : HUD_GREEN));   // C-14: a friend's name in cyan
                 if (sel) drawText(canvas, 6, y, ">", HUD_AMBER);
-                drawText(canvas, 16, y + 9, (lent > 0 ? fmt("%d OF %d SHARDS (%d LENT)   LANGUAGE %d%%   %d READ", held, SHARDS_PER_WORLD, lent, (int)std::lround(100 * languageShare(held)), read)
-                                                      : fmt("%d OF %d SHARDS   THE LANGUAGE %d%% LEARNT   %d READ", held, SHARDS_PER_WORLD, (int)std::lround(100 * languageShare(held)), read)).c_str(), HUD_DIM);
+                const int total = i < (int)shardWorldTotals.size() ? shardWorldTotals[i] : SHARDS_PER_WORLD;   // T-04: the people's records
+                drawText(canvas, 16, y + 9, (lent > 0 ? fmt("%d OF %d SHARDS (%d LENT)   LANGUAGE %d%%   %d READ", held, total, lent, (int)std::lround(100 * languageShare(held, total)), read)
+                                                      : fmt("%d OF %d SHARDS   THE LANGUAGE %d%% LEARNT   %d READ", held, total, (int)std::lround(100 * languageShare(held, total)), read)).c_str(), HUD_DIM);   // H-04: by the people's records
             }
         }
-        drawTextCentered(canvas, UW / 2, UH - 10, nw ? "UP/DOWN  ENTER THE WORLD'S SHARDS  ESC CLOSE" : "ESC CLOSE", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, nw ? "UP/DOWN  ENTER A WORLD  TAB THE PLAYER  ESC CLOSE" : "TAB THE PLAYER  ESC CLOSE", HUD_DIM);   // C-11
         return;
     }
     const std::string& key = shardWorld.key;
-    int n = (int)shardHeld.size(), pct = (int)std::lround(100 * languageShare(n));
+    int n = (int)shardHeld.size(), pct = (int)std::lround(100 * languageShare(n, shardWorld.lore.records));
     std::string name = upper(worldNameOfKey(key));
     if (shardsLevel == 1) {
-        drawText(canvas, 6, 4, (shardWorld.peoples > 1 ? fmt("%s - THE %s - %d OF %d - %d%% LEARNT", trunc(name, 12).c_str(), trunc(upper(shardWorld.lore.people), 9).c_str(), n, SHARDS_PER_WORLD, pct)   // C-13: the people named
-                                                     : fmt("%s - %d OF %d SHARDS - THE LANGUAGE %d%% LEARNT", trunc(name, 18).c_str(), n, SHARDS_PER_WORLD, pct)).c_str(), HUD_AMBER);
-        int page = shardSel / SHARD_ROWS, pages = (n + SHARD_ROWS - 1) / SHARD_ROWS;
-        bool anyPending = false;
-        for (int i = page * SHARD_ROWS; i < n && i < (page + 1) * SHARD_ROWS; i++) {
-            int y = 16 + (i - page * SHARD_ROWS) * 9;
-            int idx = shardHeld[i]; const Shard& s = shardWorld.shards[idx];
-            auto d = guide.decoded.find(heldShardKey(idx));
-            int readAt = d == guide.decoded.end() ? 0 : d->second;   // the words as the computer last read them: an unread shard is all in the people's tongue
-            std::string what;
-            if (s.music) {   // C-04: a piece, by its name once given (C-14: or a friend's), else its form and length
-                bool foreign = false; const std::string* nm = shardNameOf(heldShardKey(idx), foreign);
-                what = nm ? fmt("'%s' - %s", upper(*nm).c_str(), PIECE_FORM_NAMES[shardWorld.pieceForm[idx]]) : fmt("%s, %d S", PIECE_FORM_NAMES[shardWorld.pieceForm[idx]], (int)std::lround(shardWorld.pieceSeconds[idx]));
-            } else { std::vector<DecodedWord> w; decodeShard(s, shardWorld.lang, shardWorld.tongue, readAt, w); what = (s.chart ? "A CHART: " : "") + decodedText(w); }   // C-10: a chart by its caption
-            bool sel = i == shardSel, pending = s.music ? readAt == 0 : readAt < n;
-            anyPending = anyPending || pending;
-            drawText(canvas, 16, y, fmt("YEAR %3d  %s", s.year, trunc(upper(what), 37).c_str()).c_str(), sel ? HUD_WHITE : (shardLent(idx) ? HUD_CYAN : (readAt == 0 ? HUD_DIM : HUD_GREEN)));   // C-14: a friend's in cyan
-            if (s.last && guide.ended.count(endedKey())) drawText(canvas, 16, y, fmt("YEAR %3d", s.year).c_str(), HUD_AMBER);   // C-12: the last recording, once read
-            if (pending) drawText(canvas, UW - 12, y, "*", HUD_AMBER);
-            if (sel) drawText(canvas, 6, y, ">", HUD_AMBER);
-        }
-        {   // C-12: the people's calendar and the timeline of what is held: the years from the founding along a rule, a tick a shard (read green, unread
-            // dim, the one under the cursor white), the rule dotted past the latest held until the last recording is read, when it closes in amber
-            const Lore& L = shardWorld.lore;
-            drawText(canvas, 12, 161, upper(calendarLine(L)).c_str(), HUD_DIM);
-            bool ended = guide.ended.count(endedKey()) > 0;
-            const int tx0 = 12, tx1 = UW - 12, ty = 179;
-            int lastYear = L.spanYears + 1, latest = 1;
-            for (int i : shardHeld) latest = std::max(latest, shardWorld.shards[i].year);
-            auto xOf = [&](int yr) { return tx0 + (int)std::lround((tx1 - tx0) * clampd((yr - 1) / (double)std::max(1, lastYear - 1), 0, 1)); };
-            drawText(canvas, tx0, 168, "YEAR 1", HUD_DIM);
-            if (ended) {
-                fillRectRGB(canvas, tx0, ty, tx1, ty, HUD_DIM);
-                fillRectRGB(canvas, tx1 - 1, ty - 3, tx1, ty + 3, HUD_AMBER);
-                std::string endLabel = fmt("THE RECORD ENDS, YEAR %d", lastYear);
-                drawText(canvas, tx1 - textWidth(endLabel.c_str()), 168, endLabel.c_str(), HUD_AMBER);
-            } else {
-                int xl = xOf(latest);
-                fillRectRGB(canvas, tx0, ty, xl, ty, HUD_DIM);
-                for (int x = xl + 3; x <= tx1; x += 3) fillRectRGB(canvas, x, ty, x, ty, HUD_DIM);
-            }
-            for (int i = 0; i < n; i++) {
-                const Shard& s = shardWorld.shards[shardHeld[i]];
-                bool read = guide.decoded.count(heldShardKey(shardHeld[i])) > 0;
-                uint32_t col = i == shardSel ? HUD_WHITE : (s.last && ended && read ? HUD_AMBER : (shardLent(shardHeld[i]) ? HUD_CYAN : (read ? HUD_GREEN : HUD_DIM)));   // C-14: a friend's tick in cyan
-                int x = xOf(s.year);
-                fillRectRGB(canvas, x, ty - 3, x, ty + 3, col);
-            }
-        }
-        if (pages > 1) { std::string pg = fmt("PAGE %d/%d", page + 1, pages); drawText(canvas, UW - 6 - textWidth(pg.c_str()), 4, pg.c_str(), HUD_DIM); }
-        drawTextCentered(canvas, UW / 2, UH - 10, anyPending ? "UP/DOWN  ENTER READ  ESC BACK   * UNREAD" : "UP/DOWN  ENTER READ  ESC BACK", HUD_DIM);
+        drawText(canvas, 6, 4, (shardWorld.peoples > 1 ? fmt("%s - THE %s - %d OF %d - %d%% LEARNT", trunc(name, 12).c_str(), trunc(upper(shardWorld.lore.people), 9).c_str(), n, shardWorld.lore.records, pct)   // C-13: the people named
+                                                     : fmt("%s - %d OF %d SHARDS - LANGUAGE %d%%", trunc(name, 18).c_str(), n, shardWorld.lore.records, pct)).c_str(), HUD_AMBER);   // H-06: 52 characters with three-figure counts
+        if (shardsPage == 1) renderShardTimeline();        // H-06: game/history_screen.cpp
+        else if (shardsPage == 2) renderShardHistory();
+        else renderShardRecords();
         return;
     }
     if (shardWorld.shards[shardHeld[shardSel]].music) { renderPiece(); return; }   // C-04
@@ -384,30 +471,42 @@ void Game::renderShards() {
     // one being spoken flickering; on a reading done the word being spoken is underlined
     int idx = shardHeld[shardSel]; const Shard& s = shardWorld.shards[idx];
     bool theLast = s.last && guide.ended.count(endedKey()) > 0;   // C-12: named as the last once read, not before
-    std::string head = theLast ? fmt("%s - THE LAST RECORDING", shardWorldTitle(30).c_str()) : fmt("%s - SHARD %d OF %d", shardWorldTitle(30).c_str(), shardSel + 1, n);
+    std::string head = theLast ? fmt("%s - THE LAST RECORDING", shardWorldTitle(22).c_str()) : fmt("%s - SHARD %d OF %d", shardWorldTitle(22).c_str(), shardSel + 1, n);   // H-05: short of the medium's picture
     drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);
     if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // C-14: a friend's, credited
-    drawText(canvas, 6, 13, upper(shardDate(shardWorld.lore, s)).c_str(), HUD_DIM);   // C-12: in the people's reckoning
-    drawText(canvas, 6, 22, voiceLine(shardWorld.voice).c_str(), HUD_DIM);   // C-05
+    const std::string date = upper(shardDate(shardWorld.lore, s));
+    drawText(canvas, 6, 13, date.c_str(), HUD_DIM);   // C-12: in the people's reckoning
+    drawText(canvas, 6, 22, mediumLine(s).c_str(), HUD_DIM);   // C-05: the voice; H-05: what it was made on, and who reads it
+    drawMediumPanel(UW - 46, 3, s, speechT >= 0 && !speechEnded() && !speechPaused, realTime);
     int total = (int)shardWords.size();
     bool speaking = speechT >= 0 && !speechEnded();
     int spoken = speaking ? speechWordAt(shardWorld.speech, speechT) : -1;
-    int cursor = shardFresh && speaking ? std::max(0, spoken) : total;
+    if (spoken >= 0) spoken += speechFrom;   // H-04: the speech is a page's
+    int cursor = shardFresh && speaking ? std::max(speechFrom, spoken) : (shardFresh ? speechFrom : total);
     Rng flick((uint64_t)(realTime * 20));
-    int x = 12, y = 33; const int maxX = UW - 12;
-    for (int i = 0; i < total; i++) {
-        const DecodedWord& w = shardWords[i];
-        std::string shown; uint32_t col;
-        if (i < cursor) { shown = w.pre + (w.known ? w.ours : w.theirs) + w.post; col = w.name ? HUD_AMBER : (w.known ? HUD_WHITE : HUD_DIM); }
-        else if (i == cursor && cursor < total) { shown = w.theirs; for (char& c : shown) c = (char)('A' + flick.irange(26)); col = HUD_GREEN; }
-        else { shown = w.pre + w.theirs + w.post; col = HUD_DIM; }
-        shown = upper(shown);
-        int tw = textWidth(shown.c_str());
-        if (x > 12 && x + tw > maxX) { x = 12; y += 9; }
-        if (y > UH - 36) break;
-        drawText(canvas, x, y, shown.c_str(), col);
-        if (i == spoken && !shardFresh) fillRectRGB(canvas, x, y + 7, x + tw - 1, y + 7, HUD_GREEN);   // the word being spoken, underlined
-        x += tw + FONT_ADV;
+    const int pages = (int)shardPageStart.size();
+    {   // H-04: the page on the screen, its words flowed as they are shown now (a first reading's words resolve in place)
+        const int from = shardPage < pages ? shardPageStart[shardPage] : 0, to = shardPage + 1 < pages ? shardPageStart[shardPage + 1] : total;
+        int x = 12, y = 33; const int maxX = UW - 12;
+        for (int i = from; i < to && i < total; i++) {
+            const DecodedWord& w = shardWords[i];
+            std::string shown; uint32_t col;
+            if (i < cursor) { shown = w.pre + (w.known ? w.ours : w.theirs) + w.post; col = w.name ? HUD_AMBER : (w.known ? HUD_WHITE : HUD_DIM); }
+            else if (i == cursor && cursor < total) { shown = w.theirs; for (char& c : shown) c = (char)('A' + flick.irange(26)); col = HUD_GREEN; }
+            else { shown = w.pre + w.theirs + w.post; col = HUD_DIM; }
+            shown = upper(shown);
+            int tw = textWidth(shown.c_str());
+            if (w.par && i > from) { x = 12; y += 12; } else if (x > 12 && x + tw > maxX) { x = 12; y += 9; }
+            if (y > UH - 36) break;
+            drawText(canvas, x, y, shown.c_str(), col);
+            if (i == spoken && !shardFresh) fillRectRGB(canvas, x, y + 7, x + tw - 1, y + 7, HUD_GREEN);   // the word being spoken, underlined
+            x += tw + FONT_ADV;
+        }
+    }
+    if (pages > 1) {   // H-05: before the medium's picture, on the medium's line or else the date's, two characters clear of it (the keys say UP/DOWN PAGE)
+        std::string pg = fmt("PAGE %d/%d", shardPage + 1, pages); const int px = UW - 50 - textWidth(pg.c_str());
+        if (px >= 6 + textWidth(mediumLine(s).c_str()) + 2 * FONT_ADV) drawText(canvas, px, 22, pg.c_str(), HUD_DIM);
+        else if (px >= 6 + textWidth(date.c_str()) + 2 * FONT_ADV) drawText(canvas, px, 13, pg.c_str(), HUD_DIM);
     }
     int read = 0; for (const DecodedWord& w : shardWords) if (w.known) read++;
     if (speaking) {
@@ -420,12 +519,130 @@ void Game::renderShards() {
             drawTextCentered(canvas, UW / 2, UH - 10, "ENTER SKIPS THE WAIT  SPACE PAUSE  ESC STOPS", HUD_DIM);
         } else {
             drawText(canvas, 12, UH - 22, fmt("%s %3d%%   %d OF %d WORDS READ", speechPaused ? "PAUSED " : "PLAYING", (int)(100 * u), read, total).c_str(), HUD_GREEN);
-            drawTextCentered(canvas, UW / 2, UH - 10, "ENTER SKIPS  SPACE PAUSE  LEFT/RIGHT  ESC BACK", HUD_DIM);
+            drawTextCentered(canvas, UW / 2, UH - 10, pages > 1 ? "ENTER STOPS  UP/DOWN PAGE  LEFT/RIGHT  ESC BACK" : "ENTER STOPS  SPACE PAUSE  LEFT/RIGHT  ESC BACK", HUD_DIM);
         }
     } else {
         drawText(canvas, 12, UH - 22, fmt("%d OF %d WORDS READ   THE LANGUAGE %d%% (%d SHARD%s)", read, total, pct, n, n == 1 ? "" : "S").c_str(), HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, UH - 10, "ENTER PLAYS IT AGAIN  LEFT/RIGHT ANOTHER  ESC BACK", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, pages > 1 ? "ENTER READS THE PAGE  UP/DOWN PAGE  LEFT/RIGHT" : "ENTER PLAYS IT AGAIN  LEFT/RIGHT ANOTHER  ESC BACK", HUD_DIM);
     }
+}
+
+bool Game::shardInFilter(int local) const {
+    if (shardsFilter == 0 || local < 0 || local >= (int)shardWorld.shards.size()) return true;
+    return recordKindOf(shardWorld.shards[local]) == shardsFilter - 1;
+}
+// dir +-1: the next record held of the kind the records' page shows, round from the end; more: that many on, stopping at the end
+void Game::stepShard(int dir) {
+    const int n = (int)shardHeld.size();
+    if (n == 0) return;
+    const bool wrap = dir == 1 || dir == -1;
+    const int sgn = dir > 0 ? 1 : -1;
+    for (int left = std::abs(dir); left > 0; left--) {
+        int j = shardSel, found = -1;
+        for (int k = 0; k < n && found < 0; k++) {
+            j += sgn;
+            if (j < 0 || j >= n) { if (!wrap) break; j = (j + n) % n; }
+            if (shardsPage != 0 || shardInFilter(shardHeld[j])) found = j;
+        }
+        if (found < 0) break;
+        shardSel = found;
+    }
+}
+// a record as the lists name it: a piece by its name once given (C-14: or a friend's), else its form and length; a text, or a chart's caption,
+// in the words the computer last read it with (an unread one all in the people's tongue)
+std::string Game::recordSummary(int idx, int maxChars) const {
+    const Shard& s = shardWorld.shards[idx];
+    auto d = guide.decoded.find(heldShardKey(idx));
+    const int readAt = d == guide.decoded.end() ? 0 : d->second;
+    std::string what;
+    if (s.music) {
+        bool foreign = false; const std::string* nm = shardNameOf(heldShardKey(idx), foreign);
+        what = nm ? fmt("'%s' - %s", upper(*nm).c_str(), PIECE_FORM_NAMES[shardWorld.pieceForm[idx]]) : fmt("%s, %d S", PIECE_FORM_NAMES[shardWorld.pieceForm[idx]], (int)std::lround(shardWorld.pieceSeconds[idx]));
+    } else { std::vector<DecodedWord> w; decodeShard(s, shardWorld.lang, shardWorld.tongue, readAt, w); what = (s.chart ? "A CHART: " : "") + decodedText(w); }   // C-10: a chart by its caption
+    return trunc(upper(what), maxChars);
+}
+// the pages' strip under the title: the three pages, the one shown white; the page's own note at the right
+void Game::drawShardPagesStrip(const std::string& right) {
+    static const char* const PAGES[3] = {"RECORDS", "TIMELINE", "HISTORY"};
+    int x = 6;
+    for (int p = 0; p < 3; p++) {
+        const int w = textWidth(PAGES[p]);
+        drawText(canvas, x, 14, PAGES[p], p == shardsPage ? HUD_WHITE : HUD_DIM);
+        if (p == shardsPage) fillRectRGB(canvas, x, 21, x + w - 1, 21, HUD_GREEN);
+        x += w + 2 * FONT_ADV;
+    }
+    if (!right.empty()) drawText(canvas, UW - 6 - textWidth(right.c_str()), 14, right.c_str(), HUD_DIM);
+}
+
+// the records page (C-06's list; H-06: under the pages' strip, each row's kind before it, one kind shown on Left/Right)
+void Game::renderShardRecords() {
+    const int n = (int)shardHeld.size();
+    int count[RC_COUNT] = {0, 0, 0};
+    for (int i : shardHeld) count[recordKindOf(shardWorld.shards[i])]++;
+    std::vector<int> rows;   // the rows shown: the held of the kind shown, in their years' order
+    for (int i = 0; i < n; i++) if (shardInFilter(shardHeld[i])) rows.push_back(i);
+    int at = 0; for (size_t r = 0; r < rows.size(); r++) if (rows[r] == shardSel) at = (int)r;
+    const int page = at / SHARD_ROWS, pages = ((int)rows.size() + SHARD_ROWS - 1) / SHARD_ROWS;
+    drawShardPagesStrip(pages > 1 ? fmt("%d/%d", page + 1, pages) : std::string());
+    {   // the kinds held, each by its glyph and its count, from the right (the page's own count before them): the kind shown white, all green when all are
+        int x = UW - 6 - (pages > 1 ? textWidth(fmt("%d/%d", page + 1, pages).c_str()) + 3 * FONT_ADV : 0);
+        for (int k = RC_COUNT - 1; k >= 0; k--) {
+            const std::string c = std::to_string(count[k]);
+            x -= textWidth(c.c_str());
+            const uint32_t col = shardsFilter == 0 ? HUD_GREEN : (shardsFilter - 1 == k ? HUD_WHITE : HUD_DIM);
+            drawText(canvas, x, 14, c.c_str(), col);
+            x -= 7; drawRecordKindGlyph(canvas, x, 14, k, col);
+            x -= 2 * FONT_ADV;
+        }
+    }
+    bool anyPending = false;
+    for (int r = page * SHARD_ROWS; r < (int)rows.size() && r < (page + 1) * SHARD_ROWS; r++) {
+        const int i = rows[r];
+        int y = 25 + (r - page * SHARD_ROWS) * 9;
+        int idx = shardHeld[i]; const Shard& s = shardWorld.shards[idx];
+        auto d = guide.decoded.find(heldShardKey(idx));
+        int readAt = d == guide.decoded.end() ? 0 : d->second;
+        bool sel = i == shardSel, pending = s.music ? readAt == 0 : readAt < n;
+        anyPending = anyPending || pending;
+        const uint32_t col = sel ? HUD_WHITE : (shardLent(idx) ? HUD_CYAN : (readAt == 0 ? HUD_DIM : HUD_GREEN));   // C-14: a friend's in cyan
+        drawRecordKindGlyph(canvas, 16, y, recordKindOf(s), col);
+        const std::string yr = fmt("%6s", thousands(s.year).c_str());   // H-06: the year in their count (the strip says what the column is)
+        drawText(canvas, 24, y, (yr + "  " + recordSummary(idx, 38)).c_str(), col);
+        if (s.last && guide.ended.count(endedKey())) drawText(canvas, 24, y, yr.c_str(), HUD_AMBER);   // C-12: the last recording, once read
+        if (pending) drawText(canvas, UW - 12, y, "*", HUD_AMBER);
+        if (sel) drawText(canvas, 6, y, ">", HUD_AMBER);
+    }
+    if (rows.empty()) drawTextCentered(canvas, UW / 2, 80, "NO RECORD OF THIS KIND HELD", HUD_DIM);
+    {   // C-12: the people's calendar and the timeline of what is held: the years from the founding along a rule, a tick a shard (read green, unread
+        // dim, the one under the cursor white), the rule dotted past the latest held until the last recording is read, when it closes in amber
+        const Lore& L = shardWorld.lore;
+        drawText(canvas, 12, 160, upper(calendarLine(L)).c_str(), HUD_DIM);
+        bool ended = guide.ended.count(endedKey()) > 0;
+        const int tx0 = 12, tx1 = UW - 12, ty = 180;
+        int lastYear = L.spanYears + 1, latest = 1;
+        for (int i : shardHeld) latest = std::max(latest, shardWorld.shards[i].year);
+        auto xOf = [&](int yr) { return tx0 + (int)std::lround((tx1 - tx0) * clampd((yr - 1) / (double)std::max(1, lastYear - 1), 0, 1)); };
+        drawText(canvas, tx0, 169, "YEAR 1", HUD_DIM);
+        if (ended) {
+            fillRectRGB(canvas, tx0, ty, tx1, ty, HUD_DIM);
+            fillRectRGB(canvas, tx1 - 1, ty - 3, tx1, ty + 3, HUD_AMBER);
+            std::string endLabel = fmt("THE RECORD ENDS, YEAR %s", thousands(lastYear).c_str());   // H-06: as the timeline page writes it
+            drawText(canvas, tx1 - textWidth(endLabel.c_str()), 169, endLabel.c_str(), HUD_AMBER);
+        } else {
+            int xl = xOf(latest);
+            fillRectRGB(canvas, tx0, ty, xl, ty, HUD_DIM);
+            for (int x = xl + 3; x <= tx1; x += 3) fillRectRGB(canvas, x, ty, x, ty, HUD_DIM);
+        }
+        for (int i = 0; i < n; i++) {
+            if (!shardInFilter(shardHeld[i])) continue;
+            const Shard& s = shardWorld.shards[shardHeld[i]];
+            bool read = guide.decoded.count(heldShardKey(shardHeld[i])) > 0;
+            uint32_t col = i == shardSel ? HUD_WHITE : (s.last && ended && read ? HUD_AMBER : (shardLent(shardHeld[i]) ? HUD_CYAN : (read ? HUD_GREEN : HUD_DIM)));   // C-14: a friend's tick in cyan
+            int x = xOf(s.year);
+            fillRectRGB(canvas, x, ty - 3, x, ty + 3, col);
+        }
+    }
+    drawTextCentered(canvas, UW / 2, UH - 10, anyPending ? "ENTER READ  LEFT/RIGHT KIND  TAB PAGE   * UNREAD" : "ENTER READ  LEFT/RIGHT KIND  TAB PAGE  ESC BACK", HUD_DIM);
 }
 
 // C-04: a piece on the screen: its name or form, the tradition in words, the notes as a roll across the piece's length (the lead
@@ -436,18 +653,20 @@ void Game::renderPiece() {
     int n = (int)shardHeld.size(), idx = shardHeld[shardSel]; const Shard& s = shardWorld.shards[idx];
     const Piece& P = shardWorld.piece; const Tradition& T = shardWorld.tradition;
     std::string name = upper(worldNameOfKey(key));
-    std::string head = fmt("%s - SHARD %d OF %d", shardWorldTitle(30).c_str(), shardSel + 1, n);
+    std::string head = fmt("%s - SHARD %d OF %d", shardWorldTitle(22).c_str(), shardSel + 1, n);   // H-05: short of the medium's picture
     drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);
     if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // C-14: a friend's, credited
     drawText(canvas, 6, 13, upper(shardDate(shardWorld.lore, s)).c_str(), HUD_DIM);   // C-12
+    drawText(canvas, 6, 22, mediumLine(s).c_str(), HUD_DIM);   // H-05: what it was made on: a recording, or notation the ship plays
+    drawMediumPanel(UW - 46, 3, s, pieceT >= 0 && !piecePaused && !pieceEnded(), realTime);
     bool foreign = false; const std::string* nm = shardNameOf(heldShardKey(idx), foreign);   // C-14: a friend's name for it, in cyan
     std::string title = nm ? fmt("'%s' - %s, %d S", upper(*nm).c_str(), PIECE_FORM_NAMES[P.form], (int)std::lround(P.seconds))
                            : fmt("%s OF THE %s, %d S", PIECE_FORM_NAMES[P.form], upper(shardWorld.lore.people).c_str(), (int)std::lround(P.seconds));
-    drawText(canvas, 12, 24, trunc(title, 52).c_str(), foreign ? HUD_CYAN : HUD_WHITE);
-    drawText(canvas, 12, 34, traditionLine(T).c_str(), HUD_DIM);
-    drawText(canvas, 12, 43, cycleLine(T, P.bpm).c_str(), HUD_DIM);
-    drawText(canvas, 12, 52, timbresLine(T, pieceHasDrum(P)).c_str(), HUD_DIM);
-    const int rx0 = 12, rx1 = UW - 12, ry0 = 66, ry1 = UH - 34;
+    drawText(canvas, 12, 31, trunc(title, 52).c_str(), foreign ? HUD_CYAN : HUD_WHITE);
+    drawText(canvas, 12, 40, traditionLine(T).c_str(), HUD_DIM);
+    drawText(canvas, 12, 49, cycleLine(T, P).c_str(), HUD_DIM);     // H-05: the field's line in the far future
+    drawText(canvas, 12, 58, timbresLine(T, P).c_str(), HUD_DIM);   // H-05: the instruments of the piece's age
+    const int rx0 = 12, rx1 = UW - 12, ry0 = 69, ry1 = UH - 34;   // H-05: under the medium line and the age's instruments (the tune's top row two over its note)
     double beat = pieceBeatNow();
     int minD = 1000, maxD = -1000;
     for (const Note& nt : P.notes) if (nt.voice >= 0) { minD = std::min(minD, nt.degree); maxD = std::max(maxD, nt.degree); }
@@ -456,15 +675,21 @@ void Game::renderPiece() {
     auto xOf = [&](double t) { return rx0 + (int)std::lround((rx1 - rx0) * clampd(t / std::max(P.beats, 1e-9), 0, 1)); };
     auto yOf = [&](int d) { return ry1 - 8 - (int)std::lround((ry1 - 8 - ry0) * (d - minD) / span); };
     const uint32_t grid = rgb(28, 40, 32), dimNote = HUD_DIM;
-    for (int c = 0; c <= P.cycles; c++) { int x = xOf(c * T.beats); fillRectRGB(canvas, x, ry0, x, ry1, grid); }
+    // H-05: the parts by what they play in the piece's ensemble: the tune white (three rows), the second voices and the chorus green, the chords
+    // and the swarms a darker cyan (one row), the bass and the drones a dim amber, the kit's pieces amber ticks in rows of their own below
+    const Ensemble& E = pieceEnsemble(T, P);
+    if (P.age != AGE_FAR_FUTURE) for (int c = 0; c <= P.cycles; c++) { int x = xOf(c * T.beats); fillRectRGB(canvas, x, ry0, x, ry1, grid); }
     for (const Note& nt : P.notes) {
         int x0 = xOf(nt.t), x1 = std::max(x0, xOf(nt.t + nt.dur) - 1);
         bool played = nt.t <= beat;
-        if (nt.voice < 0) { int y = ry1 - (nt.degree == 0 ? 1 : 4); fillRectRGB(canvas, x0, y, x0, y + 1, played ? HUD_AMBER : dimNote); continue; }
+        if (nt.voice < 0) { int y = ry1 - 1 - 2 * std::min(nt.degree, 3); fillRectRGB(canvas, x0, y, x0, y + 1, played ? HUD_AMBER : dimNote); continue; }
         int y = yOf(nt.degree);
-        uint32_t col = !played ? dimNote : (nt.voice == 0 ? HUD_WHITE : (nt.voice == 1 ? HUD_GREEN : HUD_CYAN));
-        fillRectRGB(canvas, x0, y - 1, x1, y, col);                                  // two rows a note
-        if (nt.voice == 0 && played) fillRectRGB(canvas, x0, y - 2, x1, y - 2, col);   // the lead three
+        const int role = nt.voice < (int)E.role.size() ? E.role[nt.voice] : MR_ALT;
+        const bool tune = role == MR_LEAD || role == MR_SINGER || role == MR_BOX, low = role == MR_BASS || role == MR_DRONE, back = role == MR_CHORDS || role == MR_KEYS || role == MR_ORGAN || role == MR_SWARM;
+        uint32_t col = !played ? dimNote : (tune ? HUD_WHITE : (low ? rgb(170, 130, 60) : (back ? rgb(60, 150, 150) : (role == MR_BELL ? HUD_CYAN : HUD_GREEN))));
+        if (back) fillRectRGB(canvas, x0, y, x1, y, col);                          // one row a chord's note
+        else fillRectRGB(canvas, x0, y - 1, x1, y, col);                           // two rows a note
+        if (tune && played) fillRectRGB(canvas, x0, y - 2, x1, y - 2, col);         // the tune three
     }
     int px = xOf(beat); fillRectRGB(canvas, px, ry0, px, ry1, HUD_AMBER);
     bool ended = pieceEnded();
@@ -492,8 +717,9 @@ std::string Game::testShardsInfo() const {
         speech = fmt("; speech: %.1f of %.1f s, word %d, %s", speechT >= 0 ? speechT : 0.0, shardWorld.speech.seconds, speechT >= 0 ? speechWordAt(shardWorld.speech, speechT) : -1,
                      speechT < 0 ? "stopped" : (speechEnded() ? "ended" : (speechPaused ? "paused" : "speaking")));
     int lentN = 0; for (int i : shardHeld) if (shardLent(i)) lentN++;   // C-14
-    return fmt("decoder: level %d, %zu worlds, %zu held of %s (people %d of %d, %d lent), shard %d: %d of %zu words read, %s%s%s", shardsLevel, shardWorldKeys.size(), shardHeld.size(), shardWorld.valid ? shardWorld.key.c_str() : "-", shardWorld.which + 1, shardWorld.peoples, lentN,
-               shardSel, read, shardWords.size(), shardFresh ? fmt("decoding %.0f%%", 100 * clampd(speechT / std::max(shardWorld.speech.seconds, 1e-9), 0, 1)).c_str() : "idle", speech.c_str(), piece.c_str());
+    std::string page = shardsLevel == 2 && shardPageStart.size() > 1 ? fmt(", page %d of %zu", shardPage + 1, shardPageStart.size()) : std::string();   // H-04
+    return fmt("decoder: level %d, %zu worlds, %zu held of %s (people %d of %d, %d lent), shard %d: %d of %zu words read%s, %s%s%s", shardsLevel, shardWorldKeys.size(), shardHeld.size(), shardWorld.valid ? shardWorld.key.c_str() : "-", shardWorld.which + 1, shardWorld.peoples, lentN,
+               shardSel, read, shardWords.size(), page.c_str(), shardFresh ? fmt("decoding %.0f%%", 100 * clampd(speechT / std::max(shardWorld.speech.seconds, 1e-9), 0, 1)).c_str() : "idle", speech.c_str(), piece.c_str());
 }
 
 bool Game::testShardsOpenIndex(int idx) {
@@ -502,233 +728,4 @@ bool Game::testShardsOpenIndex(int idx) {
     return false;
 }
 
-// ---------------------------------------------------------------------------
-// C-10: the star charts
-// ---------------------------------------------------------------------------
-
-// a figure's name ("the hunter") as the computer reads it with that many shards of the open world held: the known words ours,
-// the rest the people's
-std::string Game::figureLabel(const std::string& name, int held) const {
-    Shard tmp; tmp.text = name;
-    std::vector<DecodedWord> w; decodeShard(tmp, shardWorld.lang, shardWorld.tongue, held, w);
-    return upper(decodedText(w));
-}
-
-void Game::holdChart(bool up) {
-    if (!up) { chartUp = false; status("THE CHART IS PUT DOWN", 3); audio.beep = 4; return; }
-    if (!shardWorld.valid || !shardWorld.chart.valid || shardHeld.empty()) return;
-    chartHeld = shardWorld.chart; chartHeldKey = shardWorld.key; chartHeldIndex = shardWorld.base + shardHeld[shardSel]; chartHeldPeople = shardWorld.lore.people;   // C-13: the world index
-    chartHeldLabels.clear();
-    for (const ChartFigure& f : chartHeld.figures) chartHeldLabels.push_back(figureLabel(f.name, (int)shardHeld.size()));
-    chartUp = true;
-    status("THE CHART IS HELD UP - ITS FIGURES SHOW ON THE VIEW", 5);   // 50 characters
-    audio.beep = 4;
-}
-
-// the chart on the decoder: the hemisphere of the people's sky round the marked star as a disc (the stars as dots by their
-// brightness, the figures' lines, their names at their brightest star, the mark's amber diamond), the caption beside it word by
-// word as a text's, and the star marked named as the explorer knows it (or UNKNOWN) with its sector and its distance from
-// here; on a first reading at this share the stars appear first, then the lines, then the names, over CHART_READ_S seconds
-void Game::renderChart() {
-    const std::string& key = shardWorld.key;
-    int n = (int)shardHeld.size(), idx = shardHeld[shardSel], pct = (int)std::lround(100 * languageShare(n));
-    const Shard& s = shardWorld.shards[idx]; const StarChart& C = shardWorld.chart;
-    std::string name = upper(worldNameOfKey(key));
-    std::string head = fmt("%s - SHARD %d OF %d", shardWorldTitle(30).c_str(), shardSel + 1, n);
-    drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);
-    if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // C-14: a friend's, credited
-    drawText(canvas, 6, 13, fmt("YEAR %d OF %s", s.year, upper(shardWorld.lore.city).c_str()).c_str(), HUD_DIM);
-    drawText(canvas, 6, 22, fmt("A STAR CHART OF THE %s", upper(shardWorld.lore.people).c_str()).c_str(), HUD_DIM);
-    bool reading = chartT >= 0;
-    double u = reading ? clampd(chartT / CHART_READ_S, 0, 1) : 1;   // the stars by 0.4, the lines by 0.75, the names after
-    const int cx = 82, cy = 108, R = 66;
-    const uint32_t rim = rgb(30, 60, 45), lineCol = rgb(60, 130, 90), faint = rgb(70, 120, 90);
-    {   // the rim
-        int px = cx + R, py = cy;
-        for (int k = 1; k <= 72; k++) { double a = k * TAU / 72; int x = cx + (int)std::lround(R * std::cos(a)), y = cy + (int)std::lround(R * std::sin(a)); drawLineRGB(canvas, px, py, x, y, rim); px = x; py = y; }
-        drawLineRGB(canvas, cx - 3, cy, cx + 3, cy, rim); drawLineRGB(canvas, cx, cy - 3, cx, cy + 3, rim);
-    }
-    Rng flick((uint64_t)(realTime * 20));
-    bool held = chartUp && chartHeldKey == key && chartHeldIndex == shardWorld.base + idx;
-    if (!C.valid) drawTextCentered(canvas, cx, cy, "NO CHART", HUD_DIM);
-    else {
-        auto at = [&](int k, int& px, int& py) { px = cx + (int)std::lround(C.stars[k].x * R); py = cy - (int)std::lround(C.stars[k].y * R); };
-        int total = (int)C.stars.size(), shown = u >= 0.4 ? total : (int)(total * u / 0.4);
-        int lines = 0; for (const ChartFigure& f : C.figures) lines += (int)f.lines.size();
-        int shownL = u >= 0.75 ? lines : (u > 0.4 ? (int)(lines * (u - 0.4) / 0.35) : 0), drawnL = 0;
-        for (const ChartFigure& f : C.figures) for (const auto& ln : f.lines) {
-            if (drawnL++ >= shownL) break;
-            int x0, y0, x1, y1; at(ln.first, x0, y0); at(ln.second, x1, y1);
-            drawLineRGB(canvas, x0, y0, x1, y1, lineCol);
-        }
-        for (int k = 0; k < shown; k++) {   // the stars (in their order of brightness, so a reading brightens the sky from its brightest down)
-            int px, py; at(k, px, py);
-            double b = C.stars[k].bright;
-            if (b > 2) { fillRectRGB(canvas, px - 1, py - 1, px, py, HUD_WHITE); fillRectRGB(canvas, px - 2, py, px - 2, py, faint); fillRectRGB(canvas, px + 1, py, px + 1, py, faint); fillRectRGB(canvas, px, py - 2, px, py - 2, faint); fillRectRGB(canvas, px, py + 1, px, py + 1, faint); }
-            else if (b > 0.6) fillRectRGB(canvas, px - 1, py - 1, px, py, HUD_WHITE);
-            else fillRectRGB(canvas, px, py, px, py, HUD_GREEN);
-        }
-        if (u >= 0.4 && C.markStar >= 0) {   // the mark
-            int px, py; at(C.markStar, px, py);
-            drawLineRGB(canvas, px - 5, py, px, py - 5, HUD_AMBER); drawLineRGB(canvas, px, py - 5, px + 5, py, HUD_AMBER);
-            drawLineRGB(canvas, px + 5, py, px, py + 5, HUD_AMBER); drawLineRGB(canvas, px, py + 5, px - 5, py, HUD_AMBER);
-        }
-        std::vector<std::array<int, 4>> placed;   // the labels' boxes, so a name moves down or up rather than over another
-        auto labelY = [&](int lx, int ly, int tw) {
-            static const int tries[5] = {0, 9, -9, 18, -18};
-            for (int dy : tries) {
-                int y0 = ly + dy; bool clear = y0 >= 30 && y0 <= 2 * cy - 30;
-                for (const auto& b : placed) if (clear && lx < b[2] + 2 && lx + tw > b[0] - 2 && y0 < b[3] + 1 && y0 + 7 > b[1] - 1) clear = false;
-                if (clear) { placed.push_back({lx, y0, lx + tw, y0 + 7}); return y0; }
-            }
-            placed.push_back({lx, ly, lx + tw, ly + 7}); return ly;
-        };
-        if (u >= 0.75) for (size_t i = 0; i < C.figures.size(); i++) {   // the names at the brightest star of each figure, flickering until the reading is done
-            const ChartFigure& f = C.figures[i];
-            std::string label = figureLabel(f.name, n);
-            bool known = true; { Shard tmp; tmp.text = f.name; std::vector<DecodedWord> w; decodeShard(tmp, shardWorld.lang, shardWorld.tongue, n, w); for (const DecodedWord& d : w) if (!d.known) known = false; }
-            if (reading && u < 1) for (char& c : label) if (c != ' ' && flick.chance(0.5)) c = (char)('A' + flick.irange(26));
-            int px, py; at(f.label, px, py);
-            int tw = textWidth(label.c_str()), lx = std::min(std::max(2, px + 4), 2 * cx - 2 - tw), ly = labelY(lx, std::min(std::max(30, py - 3), 2 * cy - 30), tw);
-            drawText(canvas, lx, ly, label.c_str(), reading && u < 1 ? HUD_GREEN : (known ? HUD_WHITE : HUD_DIM));
-        }
-    }
-    // the caption, laid out at the right as a text is (a first reading reveals it with the stars)
-    int total = (int)shardWords.size(), cursor = reading ? std::min(total, (int)(total * u / 0.75)) : total;
-    int x = 170, y = 33; const int x0 = 170, maxX = UW - 8;
-    for (int i = 0; i < total; i++) {
-        const DecodedWord& w = shardWords[i];
-        std::string shown; uint32_t col;
-        if (i < cursor) { shown = w.pre + (w.known ? w.ours : w.theirs) + w.post; col = w.name ? HUD_AMBER : (w.known ? HUD_WHITE : HUD_DIM); }
-        else if (i == cursor) { shown = w.theirs; for (char& c : shown) c = (char)('A' + flick.irange(26)); col = HUD_GREEN; }
-        else { shown = w.pre + w.theirs + w.post; col = HUD_DIM; }
-        shown = upper(shown);
-        int tw = textWidth(shown.c_str());
-        if (x > x0 && x + tw > maxX) { x = x0; y += 9; }
-        if (y > 118) break;
-        drawText(canvas, x, y, shown.c_str(), col);
-        x += tw + FONT_ADV;
-    }
-    if (C.valid && u >= 0.4) {   // the star they marked, as the explorer knows it
-        const ChartMark& m = C.mark;
-        Star full = m.star;
-        double lyHere = length(m.star.pos - ship.pos) / SECTOR_KM;
-        int yy = std::min(std::max(y + 16, 124), 136);   // the column is 23 characters wide: four short lines
-        bool isRemote = ship.hasRemote && ship.remote.seed == m.star.seed;
-        drawText(canvas, 170, yy, "THEY MARKED", HUD_AMBER);
-        drawText(canvas, 170, yy + 9, fmt("%s (%s)", trunc(upper(starNameOf(full)), 16).c_str(), STAR_CLASSES[m.star.cls].code).c_str(), HUD_WHITE);
-        drawText(canvas, 170, yy + 18, fmt("%.1f LY FROM HERE", lyHere).c_str(), HUD_WHITE);
-        drawText(canvas, 170, yy + 27, fmt("SECTOR %lld %lld %lld", (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz).c_str(), HUD_DIM);
-        if (isRemote || held) drawText(canvas, 170, yy + 36, isRemote ? (held ? "THE REMOTE TARGET, HELD UP" : "THE REMOTE TARGET") : "HELD UP TO THE SKY", isRemote ? HUD_CYAN : HUD_GREEN);
-    }
-    int read = 0; for (const DecodedWord& w : shardWords) if (w.known) read++;
-    if (reading) {
-        drawText(canvas, 12, UH - 22, fmt("DECODING %3d%%", (int)(100 * u)).c_str(), HUD_AMBER);
-        const int bx0 = 100, bx1 = UW - 12;
-        drawRectRGB(canvas, bx0, UH - 22, bx1, UH - 16, HUD_DIM);
-        if (u > 0) fillRectRGB(canvas, bx0 + 1, UH - 21, bx0 + 1 + (int)((bx1 - bx0 - 2) * u), UH - 17, HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, UH - 10, "ENTER SKIPS THE WAIT  ESC STOPS", HUD_DIM);
-    } else {
-        drawText(canvas, 12, UH - 22, fmt("%d OF %d WORDS READ   THE LANGUAGE %d%% (%d SHARD%s)", read, total, pct, n, n == 1 ? "" : "S").c_str(), HUD_GREEN);
-        drawTextCentered(canvas, UW / 2, UH - 10, held ? "O PUT DOWN  ENTER TARGET THE STAR  LEFT/RIGHT  ESC" : "O HOLD UP  ENTER TARGET THE STAR  LEFT/RIGHT  ESC", HUD_DIM);   // 50 and 49 characters
-    }
-}
-
-// the chart held up: its figures' lines between the real stars as the camera sees them (`cam` world to view, `obs` the eye in
-// km), the figures' names at their brightest star, the marked star's diamond (an edge mark when it is behind), a line naming
-// the chart; on the surface (`localFrame` given) only above the horizon
-void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, const Mat3* localFrame) {
-    chartLinesDrawn = 0;
-    if (!chartUp || !chartHeld.valid) return;
-    const StarChart& C = chartHeld;
-    const double f = pj.f / FB_SCALE; const int cx = UW / 2, cy = UH / 2;
-    size_t N = C.stars.size();
-    std::vector<double> sx(N), sy(N); std::vector<char> ok(N, 0); std::vector<Vec3> vv(N);
-    for (size_t k = 0; k < N; k++) {
-        Vec3 d = C.stars[k].star.pos - obs;
-        if (localFrame) { Vec3 l = (*localFrame) * d; if (l.y < 0.01 * length(l)) continue; }
-        Vec3 v = cam * d; vv[k] = v;
-        if (v.z <= 1e-9) continue;
-        sx[k] = cx + f * v.x / v.z; sy[k] = cy - f * v.y / v.z;
-        ok[k] = std::fabs(sx[k]) < 4000 && std::fabs(sy[k]) < 4000;
-    }
-    auto clip = [&](double& x0, double& y0, double& x1, double& y1) {   // Liang-Barsky against the screen with a margin
-        const double L = -2, Rr = UW + 1, T = -2, B = UH + 1;
-        double t0 = 0, t1 = 1, dx = x1 - x0, dy = y1 - y0;
-        auto edge = [&](double p, double q) { if (p == 0) return q >= 0; double r = q / p; if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; } return true; };
-        if (!edge(-dx, x0 - L) || !edge(dx, Rr - x0) || !edge(-dy, y0 - T) || !edge(dy, B - y0)) return false;
-        double nx0 = x0 + t0 * dx, ny0 = y0 + t0 * dy, nx1 = x0 + t1 * dx, ny1 = y0 + t1 * dy;
-        x0 = nx0; y0 = ny0; x1 = nx1; y1 = ny1;
-        return true;
-    };
-    const uint32_t lineCol = rgb(50, 120, 80);
-    const int S = FB_SCALE;
-    std::vector<std::array<int, 4>> placed;   // the labels' boxes: a name moves down or up rather than over another (from afar a people's whole sky is a knot of a few degrees)
-    auto labelY = [&](int lx, int ly, int tw) {
-        static const int tries[5] = {0, 9, -9, 18, -18};
-        for (int dy : tries) {
-            int y0 = ly + dy; bool clear = y0 >= 30 && y0 <= UH - 30;
-            for (const auto& b : placed) if (clear && lx < b[2] + 2 && lx + tw > b[0] - 2 && y0 < b[3] + 1 && y0 + 7 > b[1] - 1) clear = false;
-            if (clear) { placed.push_back({lx, y0, lx + tw, y0 + 7}); return y0; }
-        }
-        placed.push_back({lx, ly, lx + tw, ly + 7}); return ly;
-    };
-    auto skyLine = [&](int x0, int y0, int x1, int y1) {   // a line on the sky alone: no pixel where something solid is drawn (the cabin's walls, a globe, the ground)
-        int dx = std::abs(x1 - x0), dy = std::abs(y1 - y0), steps = std::max(dx, dy);
-        for (int i = 0; i <= steps; i++) {
-            int x = steps ? x0 + (x1 - x0) * i / steps : x0, y = steps ? y0 + (y1 - y0) * i / steps : y0;
-            if (x < 0 || y < 0 || x >= UW || y >= UH) continue;
-            if (fb.invz[(size_t)(y * S) * FBW + (size_t)(x * S)] > 0) continue;
-            fillRectRGB(canvas, x, y, x, y, lineCol);
-        }
-    };
-    for (size_t i = 0; i < C.figures.size(); i++) {
-        const ChartFigure& fg = C.figures[i];
-        for (const auto& ln : fg.lines) {
-            if (!ok[ln.first] || !ok[ln.second]) continue;
-            double x0 = sx[ln.first], y0 = sy[ln.first], x1 = sx[ln.second], y1 = sy[ln.second];
-            if (!clip(x0, y0, x1, y1)) continue;
-            skyLine((int)std::lround(x0), (int)std::lround(y0), (int)std::lround(x1), (int)std::lround(y1));
-            chartLinesDrawn++;
-        }
-        int lb = fg.label;
-        if (ok[lb] && sx[lb] > 2 && sy[lb] > 30 && sx[lb] < UW - 40 && sy[lb] < UH - 30 && i < chartHeldLabels.size()) { int tw = textWidth(chartHeldLabels[i].c_str()), lx = (int)sx[lb] + 4; drawText(canvas, lx, labelY(lx, (int)sy[lb] - 3, tw), chartHeldLabels[i].c_str(), HUD_DIM); }
-    }
-    if (C.markStar >= 0) {
-        int k = C.markStar;
-        if (ok[k] && sx[k] > 6 && sy[k] > 6 && sx[k] < UW - 6 && sy[k] < UH - 6) {
-            int px = (int)std::lround(sx[k]), py = (int)std::lround(sy[k]);
-            drawLineRGB(canvas, px - 5, py, px, py - 5, HUD_AMBER); drawLineRGB(canvas, px, py - 5, px + 5, py, HUD_AMBER);
-            drawLineRGB(canvas, px + 5, py, px, py + 5, HUD_AMBER); drawLineRGB(canvas, px, py + 5, px - 5, py, HUD_AMBER);
-            if (py < UH - 30) drawTextCentered(canvas, px, py + 8, "THEY MARKED THIS STAR", HUD_AMBER);
-        } else if (!localFrame || (*localFrame * (C.stars[k].star.pos - obs)).y > 0) {
-            const Vec3& v = vv[k];
-            double ang = std::atan2(-v.y, v.x);
-            drawText(canvas, UW / 2 + (int)(std::cos(ang) * 140) - 2, UH / 2 + (int)(std::sin(ang) * 85) - 3, "+", HUD_AMBER);
-        }
-    }
-    std::string line = fmt("A CHART OF THE %s HELD UP", upper(chartHeldPeople).c_str());
-    drawTextShadow(canvas, UW - 8 - textWidth(line.c_str()), 32, line.c_str(), HUD_DIM, HUD_SHADOW);
-}
-
-std::string Game::testChartInfo() const {
-    std::string s = fmt("chart: level %d", shardsLevel);
-    if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].chart) {
-        const StarChart& C = shardWorld.chart;
-        s += fmt(", on the screen S%d (chart %d of the %s): %zu stars, %zu figures, the mark %s at %lld %lld %lld (how %d, %.0f ly, %s), %s", shardHeld[shardSel], C.which, shardWorld.lore.people.c_str(), C.stars.size(), C.figures.size(),
-                 STAR_CLASSES[C.mark.star.cls].code, (long long)C.mark.star.sx, (long long)C.mark.star.sy, (long long)C.mark.star.sz, C.mark.how, C.mark.ly, C.mark.people.empty() ? "no people" : ("the " + C.mark.people).c_str(),
-                 chartT >= 0 ? fmt("reading %.0f%%", 100 * clampd(chartT / CHART_READ_S, 0, 1)).c_str() : (shardFresh ? "unread" : "read"));
-    }
-    s += chartUp ? fmt("; held up: S%d of %s (%zu stars, %zu figures), %d lines drawn", chartHeldIndex, chartHeldKey.c_str(), chartHeld.stars.size(), chartHeld.figures.size(), chartLinesDrawn) : "; none held up";
-    return s;
-}
-
-bool Game::testAimAtChartMark(int figure) {
-    if (!chartUp || !chartHeld.valid) return false;
-    if (figure >= (int)chartHeld.figures.size()) return false;
-    const Star& at = figure < 0 ? chartHeld.mark.star : chartHeld.stars[chartHeld.figures[figure].label].star;
-    Vec3 fwd = normalize(at.pos - ship.pos);
-    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
-    cabin.yaw = 0; cabin.pitch = 0;
-    return true;
-}
+// C-10: the star charts on the decoder and held up to the sky are game/chart_draw.cpp's (H-05)

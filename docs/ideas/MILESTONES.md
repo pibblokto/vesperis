@@ -16,7 +16,13 @@ column: `1.1.0` or `1.2.0` shipped in that release, `1.3.0` is for the next one.
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
 
-**Left for 1.3.0 and later:** the V series (the surface picture, parked), C-11 (skipped under KI-347), S-07, W-02, W-05, the P, L and K series.
+**Planned for 1.3.0 (2026-10-08), one release with everything in it:** the iteration `ITERATION-1.3.0.md`, the far, the
+faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar turned up to hear
+farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
+G-05, G-06, G-07, H-01, A-01, C-15, C-16, A-02, A-03, A-04, T-01, H-02, T-02, T-03, T-04, H-03, H-04, H-05, H-06, C-11;
+generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first.
+
+**Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -28,6 +34,12 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | G-02 | Regions, globular clusters, start sector and home star in the new disc | S | 1.1.0 |
 | G-03 | Galaxy background integration at the new scale (two-scale ray integration) | M | 1.1.0 |
 | G-04 | Scene finders and pinned sites re-found, `regress bless`, flow green | S | 1.1.0 |
+| G-05 | The galaxy chart: the star map's second page, the whole disc by its stars, the ship, home, the route, the locked signals | M | 1.3.0, done 2026-10-08 |
+| G-06 | The next jump chosen on the chart: a cursor and what lies there, the jump plotted and flown, a look before the leap | M | 1.3.0, done 2026-10-08 |
+| G-07 | The crossing: the galaxy turning round the ship in a long flight (KI-364) | S | 1.3.0, done 2026-10-08 |
+
+G-05 to G-07 were added on 2026-10-08 for 1.3.0 (R-409): the galaxy as the explorer sees and crosses it, after the bump; no
+generation change.
 
 ## S: star classes (`PLAN-star-classes.md`) — same bump as G
 
@@ -55,13 +67,51 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | C-08 | Ruins that read the world: harbours, terraces, cisterns and walls from the terrain; weathering by age | L | 1.1.0 |
 | C-09 | Roads that still go somewhere: faint lines in the terrain, on the landing zoom, between ruins | M | 1.1.0 |
 | C-10 | Star charts as shards: the culture's sky overlaid on yours, pointing at other dead worlds | M | 1.1.0 |
-| C-11 | Instruments as artefacts, playable from the cabin | S | 1.3.0 (KI-347) |
+| C-11 | Instruments as artefacts, playable from the cabin | S | 1.3.0, done 2026-10-10 (KI-347; the ship's player and the instruments of the ages, last of the iteration) |
 | C-12 | Graves and names; a culture's calendar and the timeline; the last recording per world | M | 1.1.0 |
 | C-13 | Cultures per world: none, one or (rarely) two | S | 1.1.0 |
 | C-14 | Lending: decoded shards travel with the guide export, credited in cyan | S | 1.1.0 |
+| C-15 | Deep listening: the radar's gain, a power per transmitter, the far scan, far signals faint and slow to lock | M | 1.3.0, done 2026-10-08 |
+| C-16 | What the gain lets in: the floor, the galaxy's own noise, signals mixed, far voices worn, voices in the static | L | 1.3.0, done 2026-10-09 |
+| C-17 | The instruments' maker: each people's instruments built from parts by its own way of making (the user's request after C-11) | L | 1.3.0, done 2026-10-10 |
 
 Order: C-01, C-02 (judge the text before any audio), C-03, C-06, C-04, C-05, C-07, then
-C-08 and C-10 as the pair that connects the galaxy, the rest as wanted.
+C-08 and C-10 as the pair that connects the galaxy, the rest as wanted. C-15 and C-16 were added on 2026-10-08 for 1.3.0
+(R-410): the radar turned up to hear farther, through the noise; no generation change.
+
+## A: the ages and what they built (`IDEAS-civilisation-expansion.md`) — generation 13 with T and H
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| A-01 | The ages: each people's age at its collapse (prehistoric to far future), its profile, who transmits | M | 1.3.0, done 2026-10-08 |
+| A-02 | The forms the renderer needs: new shapes and their broken states, colliders, LOD to a skyline, a people's colours in banks | XL | 1.3.0, done 2026-10-09 |
+| A-03 | What each age builds: buildings, materials, heights and density of six ages; decay by material; older layers | L | 1.3.0, done 2026-10-09 |
+| A-04 | The architecture genome: thirty-five deep variables and the age's own; the architecture sheet; distinctness measured | L | 1.3.0, done 2026-10-09 |
+
+## T: the towns and the works (`IDEAS-civilisation-expansion.md`)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| T-01 | A people's map of its world: a plan of capital, cities, towns and villages by the age, networks, seen from orbit | XL | 1.3.0, done 2026-10-09 |
+| T-02 | Towns by age: plans, districts, density and height, edges, the site's reading by age | L | 1.3.0, done 2026-10-09 |
+| T-03 | The works: everything else people make, each placed by a rule of the terrain and the history | L | 1.3.0, done 2026-10-09 |
+| T-04 | Where the records lie: the shards' places and objects by age, the count by age and size | M | 1.3.0, done 2026-10-09 |
+
+## H: the histories and the records (`IDEAS-civilisation-expansion.md`)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| H-01 | Research: grammars and histories for generated records; a written choice and a prototype to read | M | 1.3.0, done 2026-10-08 |
+| H-02 | The history: a simulated history per people, eras, figures, institutions, events, the collapse by its cause | L | 1.3.0, done 2026-10-09 |
+| H-03 | The grammar engine: the chosen formalism, the realiser, the authoring format, the checks; C-02's texts rebuilt on it | L | 1.3.0, done 2026-10-09 |
+| H-04 | The records: genres by age, longer texts, dozens of inputs, the collapse from many sides; reworked: each people its own (tongues, culture, the everyday) | XL | 1.3.0, done 2026-10-10 |
+| H-05 | More shards in three categories styled by the age: texts, music, star charts; the radar's programmes by age | L | 1.3.0, done 2026-10-10 |
+| H-06 | The decoder reads a history: categories, long texts, the eras' timeline, the people's history as read | M | 1.3.0, done 2026-10-10 |
+
+The three blocks were added on 2026-10-08 for 1.3.0 (R-411), interleaved with the far and the faint in the iteration's
+order (H-01, A-01, then the radar, A-02 to A-04, T-01, H-02, T-02 to T-04, H-03 to H-06); one generation change for the
+three, from A-01. They rebuild what the C series made (C-01's settlements, C-02's
+grammar, C-03's shards, C-08's reading of the site, C-09's roads, C-12's graves) and keep its register.
 
 ## V: the surface picture (`IDEAS-surface-picture.md`) — the rendering polish asked for after C-09
 
@@ -156,3 +206,10 @@ L-01 and L-02 first: they change every frame on every world.
 2. W-01 (the almanac), then W-02 and W-04: cheap and visible on every world.
 3. C-11 (the instruments) once KI-347 is settled; the texts of C-02 once judged on paper.
 4. Then by appetite: the probe (X), caves (K), the planet kinds (P) and the looks (L).
+
+## 1.3.0
+
+The iteration is `ITERATION-1.3.0.md` (2026-10-08), one release in twenty milestones and eight phases: the far (G-05,
+G-06, G-07), groundwork (H-01, A-01), the faint (C-15, C-16), what they built (A-02, A-03, A-04), where and when (T-01,
+H-02), towns and works (T-02, T-03, T-04), the records (H-03, H-04, H-05, H-06), the player (C-11). The V series stays parked until
+the rendering direction is discussed; W-02, W-05, S-07 and the P, L and K series wait for a later iteration.

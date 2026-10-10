@@ -11,7 +11,9 @@
 #include <condition_variable>
 #include <cstdlib>
 
+inline int& parallelThreadsOverride() { static int n = 0; return n; }   // A-02 (tests): over 0 it is the count (1 the serial loop, in one run)
 inline int parallelThreads() {
+    if (parallelThreadsOverride() > 0) return std::min(8, parallelThreadsOverride());
     static int n = 0;
     if (!n) {
         n = (int)std::thread::hardware_concurrency();

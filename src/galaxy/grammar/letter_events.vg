@@ -1,0 +1,165 @@
+R"VG(
+# letter_events.vg (H-04; the second pass 2026-10-10): the letter's register: an event of the history as a person tells it to a relative
+# (`@news ... letter`; the letters, the diaries, the messages, the voices). The family's own here (a birth, a wedding, a move, a
+# death: `$e.a`, `$e.b`, `$e.c` as the history has them, named in the writer's eyes by the realiser: "my sister Utsior"), each told
+# with the people's own customs (their colour of mourning, how they lay their dead, their blessings, their feasts); the people's
+# news in letter_events2.vg to letter_events4.vg. In a diary there is no `$you`: what speaks to the reader is guarded by `has:$you`.
+
+@root letter.*
+
+# ---- a birth ------------------------------------------------------------------------------------------------------------------
+
+letter.birth
+  (tense=past $e.b.person=1|$e.c.person=1) We have a {childword}. {$e.a:name} came {birthtime}, {birthhow}. {birthcoda}
+  (tense=past $e.b.person=1|$e.c.person=1) {$e.a:name}, our {childword}, came {birthtime}, {birthhow}. {birthcoda}
+  (tense=past $e.b.person!=1 $e.c.person!=1) {$e.b} had a {childword} {birthtime}, {birthhow}, and [they have called|they are calling] the child {$e.a:name}. {birthcoda}
+  (tense=past $e.b.person!=1 $e.c.person!=1 has:$you has:$e.a.yourkin) You have a {$e.a.yourkin} now: {$e.a:name}, born {birthtime}, {birthhow}. {birthcoda}
+  (tense=past $e.b.person!=1 $e.c.person!=1) A {childword} for {$e.b}, {birthtime}: {$e.a:name}, {birthhow}. {birthcoda}
+
+childword
+  ($e.a.gender=he) son
+  ($e.a.gender=she) daughter
+
+birthtime (share=0.8)
+  in the night
+  at first light
+  {time.of}
+  (moons>0) under {moon} full
+  (has:$e.season) in the last days of {$e.season}
+  in the middle of the {crop} harvest, of course
+  with {weather} at the shutters
+  on the night of {feast.custom}
+  while the {herd} were being brought in
+  in the hour the {bird} come back to the roof
+  the day the {fuel} ran out, naturally
+
+birthhow (share=0.8)
+  and both are well
+  quick and easy, the midwife says, which is easy for her to say over her {drink}
+  after a long day of it, with the {fuel} burning all night
+  small but loud
+  (stage>=1) and we were afraid for a while, and lit lamps at {holyplace}, but both are well
+  feet first, which the old women at {holyplace} say is lucky
+  with a head of hair like a {beast}
+  with the midwife late and everyone else early, the {beast} included
+  red, furious and perfect
+  wrapped in {colour.holy} before the cord was cut, as is the way
+
+birthcoda (share=0.75)
+  {god} keep the child.
+  [The house is loud again.|There is no sleep in the house.|The old ones say it is a good sign.]
+  (age<=medieval) We cut the mark in the lintel, under {motif.over}.
+  (age>=industrial) The registrar wrote the name wrong, and we had to go back twice through {streets.of}.
+  (stage>=2) [So there is one more of us.|Someone is still being born here.|The midwife says it is the first this year.]
+  (temper=wry) The child has a nose like one of our {veg}, poor thing.
+  We hung {colour.holy} thread over the door, as is the way.
+  There was {luck.good} that morning, so the old ones are smug.
+  Grandmother has already decided the child will be a {$me.trade}.
+  We buried the cord under the {tree.n} by the house, as our mothers did.
+  The {herd} were let out early, for luck.
+  The neighbours brought {food}, and then stayed to eat it.
+  {blessing}, the whole street said, and some of them meant it.
+
+# ---- a wedding ----------------------------------------------------------------------------------------------------------------
+
+letter.marriage
+  (tense=past $e.a.person!=1 $e.b.person!=1) {$e.a} was married at {festival} to {$e.b:name}, a {$e.b.trade} from {$e.place}. {weddingcoda}
+  (tense=past $e.a.person!=1 $e.b.person!=1) {$e.a} has married {$e.b:name}, a {$e.b.trade}, [and nobody is surprised|at last|in a hurry, which made people count on their fingers|after three years of everyone else deciding it]. {weddingcoda}
+  (tense=past $e.a.person!=1 $e.b.person!=1) So {$e.a} is married: {$e.b:name}, a {$e.b.trade} of {$e.place}, {weddinghow}. {weddingcoda}
+  (tense=past $e.a.person=1) I am married. {$e.b:name} is a {$e.b.trade}, {spouseis}. {weddingcoda}
+  (tense=past $e.b.person=1) I am married. {$e.a:name} is a {$e.a.trade}, {spouseis}. {weddingcoda}
+
+weddinghow (share=0.8)
+  which everyone saw coming but the two of them and the {herd}
+  with the whole street to watch and {drink} for everyone
+  in {colour.holy}, the old way
+  quietly, with {food} and no speeches, for once in this family
+  in {weather.now}, which is lucky, they say, for somebody
+  under {holyplace}'s roof
+
+spouseis (share=0.8)
+  quiet, and good with the {herd}
+  tall, and laughs at the right things, mostly at the {beast}
+  older than me, and knows it
+  younger than me, and does not mind
+  clever with {tool}, and can read
+  a better cook of {food} than I am, which is not hard
+  from a family that keeps {herd} and opinions
+  stubborn as {mountain}, and kind under it
+
+weddingcoda (share=0.75)
+  The {drink} ran out before the dancing did.
+  {god} was given the first cup, as is right.
+  (age=industrial inv.photography=1) We had the photograph made in front of {holyplace}, all of us in a row and nobody breathing.
+  [The old ones|The neighbours] say it will last longer than the {drink}.
+  (stage>=2) There were more of us at the table than I expected, and more {food} than there were of us.
+  (moons>0) They were married under {moon}, which is supposed to be lucky and [is certainly cold|was certainly bright|made the priest late].
+  They walked three times round {holyplace}, as our people do.
+  We had {food} for everyone and {drink} for most.
+  The {let.instrument} played until the strings gave out.
+  {blessing}, we told them, and meant it.
+  We broke {vessel.one} on the step for luck, and swept it up for thrift.
+  The bride's mother wept and the groom's mother counted the {vessel} of {drink}.
+
+# ---- a move ----------------------------------------------------------------------------------------------------------------------
+
+letter.move
+  (tense=past $e.a.person=1) I have moved to {$e.place2}. {movecoda}
+  (tense=past $e.a.person!=1) {$e.a} has gone to live at {$e.place2}. {movecoda}
+  (tense=past $e.a.person!=1) {$e.a} left {$e.place} for {$e.place2} {deathwhen}. {movecoda}
+  (tense=past $e.a.person!=1) {$e.a} packed up {$e.a:poss} {vessel} and went off to {$e.place2}. {movecoda}
+
+movecoda (share=0.8)
+  [The house is small and the water is near.|The house leaks, but the people are kind.|Nobody knows us there yet, which has its uses.]
+  (age=industrial) There is work at the [mill|station|waterworks], and a room over the bakery that smells of {food}.
+  (age>=modern) The rent is half what it was, and so is the room, but there is a view of {mountain}.
+  (stage>=1) Everyone is going somewhere these days, with their {vessel} on their backs.
+  The {herd} went too, complaining all the way.
+  They say the {crop} grows taller at {$e.place2}. We will see.
+  It is {n} days' walk, and the road is bad, and the {beast} would not go.
+
+# ---- a death -------------------------------------------------------------------------------------------------------------------
+
+letter.death
+  (tense=past has:$e.sickness) {$e.a} died {deathwhen}, of {$e.sickness}. {grief}
+  (tense=past $e.how=battle) {$e.a} died {deathwhen}, in the fighting. They brought nothing home. {grief}
+  (tense=past $e.how=famine|$e.how=hard) {$e.a} died {deathwhen}, in the hunger, though we gave what we had. {grief}
+  (tense=past $e.how=childbirth) {$e.a} died {deathwhen}, in childbirth. The child lived. {grief}
+  (tense=past $e.how=flood) {$e.a} was taken by the water {deathwhen}. {grief}
+  (tense=past $e.how=accident) {$e.a} died {deathwhen}, a stupid accident, [a fall from the roof|under a cart|in the mill race|with {tool} in {$e.a:poss} hand]. {grief}
+  (tense=past $e.how=cold) {$e.a} died {deathwhen}, of the cold. {grief}
+  (tense=past $e.how=sea) {$e.a} was lost at sea {deathwhen}. {grief}
+  (tense=past $e.how=old $e.a.age>=60) {$e.a} died {deathwhen}, [in the night|in {$e.a:poss} sleep|at the table, in the middle of a sentence|with the {herd} all counted], [{#$e.a.age} years old|old and tired of it]. {grief}
+  (tense=past $e.how=old $e.a.age<60 $e.a.age>=12) {$e.a} died {deathwhen}, of a fever that came and went in [three|four|five] days. {grief}
+  (tense=past $e.how=young|$e.a.age<12) {$e.a} died {deathwhen}. The child was [{#$e.a.age}|so small]. {grief}
+  (tense=past $e.a.age>=40 deadway!=none) We laid {$e.a:obj} in {deadplace} {deathwhen}. {grief}
+  (tense=past $e.a.age>=40 deadway=none) We gave {$e.a:obj} to the river {deathwhen}. {grief}
+  (tense=past $e.a.age>=30) We lost {$e.a} {deathwhen}; {$e.a} has {death.went}, as we say. {grief}
+
+deathwhen
+  (has:$e.season) in {$e.season}
+  (has:$e.season) in the first days of {$e.season}
+  ($e.ago=0 seasons=4 has:$e.season) this {$e.season}
+  ($e.ago=0 !has:$e.season) this year
+  ($e.ago=1) last year
+  ($e.ago>=2) {#$e.ago|year} ago
+
+grief (share=0.75)
+  I cannot write more.
+  {god.call}.
+  The house is very quiet.
+  {god} keep {$e.a:obj}.
+  (deadway!=none) {$e.a:name} is in {deadplace} now, with the others.
+  (age=industrial) Half the street came to the burying, in {colour.mourn}.
+  I keep setting a bowl of {food} for {$e.a:obj}.
+  [{$e.a:name} would have laughed at the fuss.|{$e.a:name} would have hated the fuss.]
+  (temper=pious) {$e.a:name} is with {god}, and I am here with the dishes.
+  (temper=anxious) I keep thinking of what I should have done, out with the {herd} where nobody can see.
+  (temper=wry) {$e.a:name} owed the baker money. The baker came to the burying, to be sure.
+  We are in {colour.mourn} for the season, all of us, the children too.
+  The dead are {dead.are}, the old ones say. I hope they are right.
+  We {rite.do}, as is right, and it helped a little.
+  {$e.a:name} left {$e.a:poss} {let.tool.n} on the bench, and nobody will move it.
+  The {herd} kept looking for {$e.a:obj} for days.
+  {time.pass}, and then this.
+)VG"

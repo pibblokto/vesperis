@@ -1,5 +1,6 @@
 // Descent, ascent and surface updates, and the overlay screens (title, help, menu, settings, list, data).
 #include "game.h"
+#include "galaxy/plan.h"
 #include "ui.h"
 #include "core/rng.h"
 #include <cmath>
@@ -95,8 +96,9 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         double d, along, hd; const SiteRoad* rd;
         if (surf.site.roadAt(surf.player.x, surf.player.z, 12, d, along, hd, rd) && d < rd->half + 1.0 && roadLeft(rd->id, along, rd->wear) > 0.3 && roadsMet.insert(rd->id).second) {
             std::string way = fmt("%s TO %s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));
-            status(fmt("AN OLD ROAD RUNS HERE, %s", way.c_str()), 4);
-            logEvent("ROAD", fmt("AN OLD ROAD ON %s, %s, UNDER THE %s", upper(bodyNameOf(surf.site.body)).c_str(), way.c_str(), surf.inBuggy ? "WHEELS" : "FEET"));
+            const char* kind = NET_KIND_HUD[clampi(rd->kind, 0, NK_COUNT - 1)];   // T-01: the network's kind
+            status(fmt("AN OLD %s RUNS HERE, %s", kind, way.c_str()), 4);
+            logEvent("ROAD", fmt("AN OLD %s ON %s, %s, UNDER THE %s", kind, upper(bodyNameOf(surf.site.body)).c_str(), way.c_str(), surf.inBuggy ? "WHEELS" : "FEET"));
         }
     }
     if (surf.nearGrave.k >= 0 && guide.graves.insert(graveKey(surf.nearGrave.id)).second) {   // C-12: a grave within reach is read once into the guide, like a landmark: a status and a log line
@@ -123,6 +125,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         else if (surf.inBuggy) { guide.longestDriveM = std::max(guide.longestDriveM, surf.buggy.odometer); surf.toggleBuggy(); status(fmt("OUT OF THE BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4); audio.beep = 4; }
         else if (surf.buggy.deployed && surf.buggyDist() <= 3.5) { if (surf.toggleBuggy()) { status("NOSE CAMERA: W/S A/D DRIVE  SPACE BRAKE  V VIEW  E OUT", 5); audio.beep = 4; } }
         else if (surf.drone.deployed && surf.droneDist() <= 3.5) { if (surf.toggleDrone()) { status("NOSE CAMERA: SPACE LIFTS OFF  W/S THRUST  A/D TURN  SHIFT DOWN", 5); audio.beep = 4; } else { status("THE DRONE IS STILL UNFOLDING", 3); audio.beep = 3; } }   // R-403
+        else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) takeInstrument();   // C-11: the nearer of the two
         else if (surf.nearShard.index >= 0) takeShard();   // C-03
         else if (surf.env.nearCapsule) { state = GameState::ASCENT; transT = 0; audio.beep = 2; autosave(); }
         else { status(fmt("CAPSULE IS %.0f M AWAY (%s) - FOLLOW THE BEACON, OR PRESS K TO CALL IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); audio.beep = 3; }
@@ -260,8 +263,8 @@ void Game::renderHelp() {
     static const char* page0[] = {
         "STARDRIFTER - FLIGHT CONTROL", "",
         "MOUSE LOOKS, W A S D WALK IN THE CABIN, ARROWS TURN",
-        "THE SHIP; E USES A CONSOLE, A SCREEN, THE SHARD",
-        "DECODER (BACK WALL) OR THE CAPSULE",
+        "THE SHIP; E USES A CONSOLE, A SCREEN, THE DECODER",
+        "(TAB: ITS PLAYER), THE INSTRUMENTS OR THE CAPSULE",
         "U LIGHT  Y GLASS HULL  PGUP/PGDN ROOF DECK",
         "R             AIM AT A STAR: N NEXT, ENTER LOCKS IT",
         "R, DIGITS, ENTER  JUMP THAT MANY LY ALONG THE AIM",
@@ -272,7 +275,7 @@ void Game::renderHelp() {
         "X  CENTER ON TARGET   Z  TELESCOPE   F  FIELD AMP.",
         "B             THE RADAR: HOLD A RISE, ENTER FLIES",
         "O  ORBIT / CHASE   SHIFT+ARROWS  ROUND THE WORLD",
-        "G / M / J  GUIDE/STAR MAP/LOG  C CAPSULE / PROBE",
+        "G GUIDE  M MAP, TAB GALAXY  J LOG  C CAPSULE/PROBE",
         "I  DATA SHEET  T  TIME WARP  CTRL+T  THE ALMANAC",
         "CTRL+S / L    SAVE / LOAD         P  SCREENSHOT",
         "CTRL+K / F    SCANLINES / FULLSCREEN   ESC MENU",
@@ -286,7 +289,7 @@ void Game::renderHelp() {
         "1-9 / 0       AUTOWALK SPEED / STOP    C CROUCH",
         "Z (HOLD)      STAND TALL    CTRL (SWIMMING) DIVE",
         "B / F         A (NEW) BUGGY / DRONE AT THE CAPSULE",
-        "E             IN/OUT, A SHARD, THE CAPSULE (Q TOO)",
+        "E             IN/OUT, TAKE, THE CAPSULE (Q TOO)",
         "  BUGGY: W/S DRIVE  A/D STEER  SPACE BRAKE  V VIEW",
         "  DRONE: SPACE LIFTS OFF  W/S THRUST  A/D TURN",
         "         SPACE / SHIFT CLIMB, DESCEND, LAND  V VIEW",

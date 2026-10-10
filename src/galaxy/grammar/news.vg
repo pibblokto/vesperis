@@ -1,0 +1,180 @@
+R"VG(
+# news.vg (H-04; the second pass 2026-10-10): the news's register: an event as a newspaper or a broadcast told it (`@news public news`):
+# a headline (its own line; the decoder writes everything in capitals), then the item: the place first, the numbers given, the officials
+# quoted. The industrial age's papers and the modern age's broadcasts share it (`age` guards the words: the wire, the telephone, the
+# ministry; `medium` the spoken lead of a broadcast). Each item is built from parts (a lead, a detail, a close) drawn from pools that
+# carry the people's own words (their crops and crafts, their towns' quarters and landmarks, their coin), so two peoples' papers do
+# not print the same sentence. news2.vg: the land, the works, the rule; news3.vg: the collapse, the sky, the quiet weeks; news4.vg and
+# news5.vg: the everyday (fairs, fires, storms, trials, prices...).
+
+@root news.*
+
+# ---- who said it -------------------------------------------------------------------------------------------------------------
+
+news.said
+  {news.who} {news.saidv}
+news.who
+  (gov=monarchy) a spokesman for the palace
+  (gov=monarchy) an officer of the court
+  (gov=chiefs) one of the elders
+  (gov=council) a member of the council
+  (gov=council) the clerk to the council
+  (gov=theocracy) a priest of {holyplace}
+  (gov=theocracy) the temple's secretary
+  (gov=republic) a spokesman for the consuls
+  (gov=republic) an under-secretary
+  (gov=assembly) a delegate for {$home}
+  (gov=corporate) a spokesman for the companies
+  (gov=corporate) a director who asked not to be named
+  (age>=modern) a ministry spokesman
+  (age>=modern) a government source
+  an official at {$seat}
+  the town clerk of {$home}
+  the keeper of the seals
+  a secretary to the council
+news.saidv
+  said
+  told this paper
+  insisted
+  admitted
+  announced
+  assured our correspondent
+  let it be known
+  conceded
+
+# where the news came from
+news.wire
+  (inv.telegraph=1) by wire
+  (inv.telephone=1) by telephone
+  (inv.radio=1) by radio
+  by the morning post
+  (inv.railway=1) by the night train
+  by a rider from the coast road
+  from travellers
+
+# ---- war ------------------------------------------------------------------------------------------------------------------
+
+news.war
+  {news.h.war}\n{news.war.m} {news.war.x}
+  (medium=printed) {news.h.war}\n{news.war.m} {news.war.x} {news.war.t}
+news.h.war
+  War
+  War declared
+  The war
+  ($e.warkind=other) War with the {other}
+  ($e.warkind=conquest) Invasion
+  ($e.warkind=rebellion) {$e.place} in revolt
+  ($e.warkind=revolution) Revolution
+  ($e.warkind=civil|$e.warkind=succession) Civil war
+  (medium!=printed) This is the news
+news.war.m
+  ($e.warkind=other) War has been declared on the {other} [by order of {ruler.the}|after the failure of the talks|after the border shootings of {season.this}|after the burning of the frontier posts].
+  ($e.warkind=other) The {other} have been told that a state of war exists between their people and ours, and [their envoys have been sent home|their traders have been given three days to leave|the frontier roads are closed].
+  ($e.warkind=conquest) The {other} have crossed the frontier in force; {news.said} that [our forces are falling back in good order|the border towns are being emptied|the army has been called up in full].
+  ($e.warkind=rebellion) {$e.place} has declared itself free of {ruler.the} and [closed its gates|seized the treasury|hanged the tax collectors in effigy|raised its own flag].
+  ($e.warkind=rebellion has:$e.place.landmark) The rebels at {$e.place} have raised their flag over {$e.place.landmark} and say they will not take it down.
+  ($e.warkind=rebellion) The town of {$e.place} is in open revolt; [the garrison has gone over to the rebels|the governor has fled|the bridges have been pulled down].
+  ($e.warkind=rebellion has:$e.place.quarter) Barricades stand in {$e.place.quarter} of {$e.place}, and the town has declared for itself.
+  ($e.warkind=revolution) Crowds at {$e.place} have seized the public buildings and declared the old order at an end.
+  ($e.warkind=revolution has:$e.ruler) The rule of {$e.ruler:name} is said to be over at {$e.place}, where [committees|the workers' councils|the students and the dockers] now sit in the [council house|town hall|post office].
+  ($e.warkind=civil|$e.warkind=succession|$e.warkind=cities|$e.warkind=bands) Fighting has broken out over {$e.place}, [and there is no sign of a truce|and both sides claim the right|and the roads out of the town are full].
+  ($e.warkind=succession) Two claimants now call themselves the rightful heir, and the provinces are choosing between them.
+  ($e.warkind=cities) The quarrel between {$e.place} and its neighbours, long a matter for the courts, has become a matter for the army.
+news.war.x
+  The army is said to be ready, and [the {herd} of the border farms have been driven inland|the bakers of {$home} have been told to bake for the regiments|the {craft} works at {$home} are to make for the army until further notice].
+  (has:$home.landmark) Recruiting tables have been set up in {town.open} of every town, and the queue at {$home} reached {$home.landmark} by noon.
+  Recruiting tables have been set up in {town.open} of every town, and the queues were longer than the bread queues.
+  The price of {crop} rose by a third on the news, and [{drink}|salt|lamp oil] is to be rationed from {season.next}.
+  (age>=modern) Reservists have been ordered to report by the end of the week, and the railway timetables are suspended.
+  Volunteers were drilling in {town.open} at {$home} by evening, [some with rifles and some with brooms|in their work clothes|to the sound of {instrument}].
+  The schools at {$home} will close early so that the older children can help with the harvest.
+  The families of soldiers will receive half pay in {coin}, the council promises, from the first of the month.
+  (inv.telegraph=1) The telegraph offices were open all night, and [still could not keep up|the clerks slept at their desks|the lines to the border were reserved for the army].
+news.war.t
+  The markets fell at the news, {crop} first and {craft} goods after.
+  {news.said} that the war would be short, as they always do.
+  {news.said} that there was no cause for alarm, which caused alarm.
+  (has:gazette) {gazette} urges calm, and patience, and the buying of war bonds at {n} {coin}.
+  Prayers for victory will be said at {holyplace} on the rest day, and {news.rite.n}.
+  The {festival} fair is cancelled, and the {ind.sport} with it.
+  In {town.open} at {$home} people stood about {time.of} waiting for more news, and none came.
+  The {colour.holy} flags are out in {streets.of}, and nobody remembers putting them there.
+
+news.battle
+  {news.h.battle}\n{news.battle.m} {news.battle.x}
+  (medium=printed) {news.h.battle}\n{news.battle.m} {news.battle.x} {news.battle.t}
+news.h.battle
+  ($e.won=1) Victory at {$e.place}
+  ($e.won=1) {$e.place}: the enemy routed
+  ($e.won=0) Defeat at {$e.place}
+  ($e.won=0) Grave news from {$e.place}
+  ($e.won=draw) Battle at {$e.place}
+  ($e.won=draw) No decision at {$e.place}
+news.battle.m
+  ($e.won=1) Our forces held the field at {$e.place} after [a day|two days|a night and a day] of fighting, with losses put at {#$e.value:about}.
+  ($e.won=1) The enemy broke at {$e.place} [in the afternoon|at first light|when the reserves came up], leaving {#$e.value:about} dead on both sides and [the baggage|their guns|their standards] in our hands.
+  ($e.won=1 has:$e.a) {$e.a:full} has won a great victory at {$e.place}; the dead are put at {#$e.value:about}.
+  ($e.won=0) Reports from {$e.place} speak of a heavy defeat; the losses are put at {#$e.value:about}, and [the army is falling back|the town has been given up|the survivors are coming home by every road].
+  ($e.won=0) Our army has been beaten at {$e.place}, {news.beaten.how}. {news.said} that [the men fought well|the enemy had the advantage of numbers|the orders came too late], and that {#$e.value:about} have died.
+  ($e.won=draw) Both sides claim the field at {$e.place}. The dead are put at {#$e.value:about}.
+  ($e.won=draw) The armies met at {$e.place} and parted again at nightfall, neither giving way; {#$e.value:about} are dead.
+news.battle.x
+  The lists of the fallen will be posted at the town halls [from tomorrow|as they arrive|on the doors of {holyplace}].
+  (inv.telegraph=1) Further news is expected {news.wire} tonight, and crowds are waiting outside the offices of this paper.
+  The wounded are being brought [by cart|by river|by the night post] to {$home}, where {houses} have been opened to them.
+  ($e.won=1) The bells of {$home} were rung until the ringers were tired, and {drink} flowed free at the inns.
+  ($e.won=0) The mood at {$home} is [quiet|grim|angry], and nobody went to the {festival} rehearsal.
+  The women of {$home} are cutting up old {garment.n:pl} for bandages in {town.open}.
+  The field at {$e.place} is said to be [all mud|burned black|trampled to dust] for a mile around.
+news.battle.t
+  The fighting is said to be heavy, and the {herd} of the farms round it lost.
+  {news.said} that the war is going as planned, though not whose plan.
+  (has:$e.b) The enemy was led by {$e.b:full}, of whom more is said than is known.
+  It is too early to say what this means for the war; the {crop} will have to be got in either way.
+  The families of {$home} are reading the lists in {town.open} {time.of}.
+
+news.siege
+  ($e.out=1) {$e.place} has fallen\nAfter [weeks|months|a long winter] under siege, {$e.place} has opened its gates. {news.siege.t}
+  ($e.out!=1) {$e.place} besieged\n{$e.place} is surrounded; [the last road out was cut on {season.now}'s first day|no carts have gone in for a month|the garrison has refused to talk]. {news.siege.t}
+news.siege.t
+  Inside the walls, it is said, they are down to [a ration a day|half a ration|what the {herd} were eating].
+  {news.said} that the town would hold [until relieved|as long as it has water|for a year if it must].
+  Refugees from the villages round {$e.place} are sleeping in the fields along the road, under {garment.n:pl}.
+  The {watersrc.n} inside the walls is said to be still sweet, which is something.
+  The besiegers have dug in on the {crop} fields, and burned what they could not eat.
+
+news.sack
+  {$e.place} sacked\nThe town of {$e.place} has been put to the sword; {#$e.value:about} are said to be dead and {news.sack.t}
+news.sack.t
+  the fires near the market are burning still.
+  the survivors are on the roads with what they could carry, {herd} and {vessel} and children.
+  not one {vessel.one.n} was left in the market, our correspondent writes.
+  the bells of {$e.place} have been carried off, and {holyplace} burned.
+
+news.peace
+  {news.h.peace}\n{news.peace.m} {news.peace.t}
+news.h.peace
+  Peace
+  The war is over
+  Peace signed
+  ($e.won=1) Peace with honour
+  ($e.won=0) Peace at a price
+news.peace.m
+  (has:$e.war) {$e.war} is over. The terms will be published in full tomorrow.
+  (has:$e.war) The treaty that ends {$e.war} was signed at {$e.place} [at noon yesterday|after three days of talks|in the small hours].
+  ($e.won=1) The enemy has accepted our terms, and the army will be home before {season.next}.
+  ($e.won=0) The terms are hard, {news.said}, but the war is over and the men are coming home.
+  ($e.won=draw) Neither side has won and both have stopped, which may be the best that could be had.
+news.peace.t
+  Crowds gathered in the squares of {city} through the night, [singing|weeping|lighting lamps in the windows].
+  The bells of every town were rung at once, and the {bird} rose off the roofs of {$home}.
+  There will be a holiday on the rest day, and the council has promised to pay for the {drink}.
+  The prisoners are to be sent home by [the coast road|the river|the first boats], with a {vessel.one.n} of {food} each.
+  Nobody at {$home} quite believes it yet, and the {colour.mourn} has not come down from the doors.
+  The {craft} works will go back to making what they made before.
+news.beaten.how
+  and the {herd} of the baggage train lost with it
+  with the {colour.holy} standards taken
+  in {weather.now}
+  after holding the field until noon
+)VG"

@@ -12,6 +12,7 @@
 #include "galaxy/almanac.h"
 #include "galaxy/fronts.h"
 #include "galaxy/probe.h"
+#include "galaxy/legends.h"
 #include "space/space_view.h"
 #include "surface/surface_view.h"
 #include "audio.h"
@@ -23,7 +24,8 @@
 #include <cmath>
 
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
-                       GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS, ALMANAC, PROBE, RECORDING };
+                       GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS, ALMANAC, PROBE, RECORDING,
+                       INSTRUMENTS };   // C-11: the instruments' case
 
 // M2: the explorer inside the Stardrifter
 struct Cabin {
@@ -55,6 +57,14 @@ struct ShipState {
     int64_t rockIr = 0, rockIa = 0, rockIy = 0; int rockM = 0;
     double rockDist = 0;      // km from the rock's centre
 };
+
+// C-17: an instrument's parts drawn as it lies, seen from above, in a box of the canvas's logical units (the case's picture, the harness's
+// sheets: game/instrument_draw.cpp): lit from the upper left, its courses glowing as `glow` says, a ruler of its size when `ruler`
+void drawInstrumentParts(RGBCanvas& c, int x0, int y0, int w, int h, const std::vector<InstrumentPart>& parts, const FormPalette& pal, const std::vector<double>& glow, double t, bool ruler);
+
+// H-06: a record's kind (RC_*, galaxy/records.h) and its glyph on the decoder's pages (a page, a note, a star; game/history_screen.cpp)
+int recordKindOf(const Shard& s);
+void drawRecordKindGlyph(RGBCanvas& fb, int x, int y, int kind, uint32_t col);
 
 class Game {
 public:
@@ -138,12 +148,19 @@ public:
     // the sector map's cursor (local metres), a removal armed (the mark, until when), the mark Tab went to
     double mapCurX = 0, mapCurZ = 0, mapDelUntil = -1; int mapDelMark = -1, mapTabMark = -1;
     std::string shardKey(int index) const;                     // C-03: "<body key>/S<index>" on the surface's body
-    void syncShards();                                         // C-03: the view hides this world's shards the guide already holds
+    void syncShards();                                         // C-03: the view hides this world's shards the guide already holds (C-11: and its instruments)
+    std::string instrumentKey(int id) const;                   // C-11: "<body key>/I<id>" on the surface's body
+    void takeInstrument();                                     // C-11: the instrument within reach into the guide and the cabin's case
     std::set<uint64_t> roadsMet;                               // C-09: the old roads met on this landing (a status and a log line the first time on each)
     void takeShard();                                          // C-03: E at a shard: the guide, the log, the status
     std::string graveKey(uint64_t id) const;                   // C-12: "<body key>/G<id>" on the surface's body
     bool shardsPending() const;                                // C-06: a shard the decoder has not read at its world's current share (the decoder's screen glows)
     std::string testShardsInfo() const;
+    std::string testHistoryInfo();                                             // H-06: the decoder's pages for the harness (the page, the told events, the age, the eras)
+    const ToldHistory& testTold() { ensureTold(); return told; }               // H-06: what the open world's read records told
+    std::vector<std::string> testLegendLines();                                // H-06: the history page's rows as the screen shows them (the words as read)
+    int testShardsPage() const { return shardsPage; }
+    int testShardSel() const { return shardHeld.empty() ? -1 : shardHeld[std::max(0, std::min((int)shardHeld.size() - 1, shardSel))]; }   // H-06: the record under the cursor (its local index)
     std::string testRadarInfo() const;         // C-07: the radar's state for the harness
     bool testAimAtSignal(int which);           // C-07: turn the ship (the cabin view forward) onto signal `which` of the radar's list (far first, then local)
     int testRadarSignals() const { return (int)radar.all.size(); }
@@ -153,8 +170,48 @@ public:
     bool testRadarLocal(int which) const { return which >= 0 && which < (int)radar.all.size() && radar.all[which].local; }
     bool testRadarOn() const { return radar.on; }
     bool testRadarSector(int which, int64_t& sx, int64_t& sy, int64_t& sz) const { if (which < 0 || which >= (int)radar.all.size()) return false; sx = radar.all[which].star.sx; sy = radar.all[which].star.sy; sz = radar.all[which].star.sz; return true; }
+    double testRadarDist(int which) const { return which >= 0 && which < (int)radar.all.size() ? radar.all[which].distLy : -1; }   // C-15
+    double testRadarNeedGain(int which) const { return which >= 0 && which < (int)radar.all.size() ? radar.all[which].needGain : -1; }
+    int testRadarGainStep() const { return radar.gainStep; }
+    bool testRadarDeepReady() const { return radar.deepReady; }
+    bool testRadarOverload() const { return radar.overload; }
+    double testRadarLockSecs() const { return radar.lockSecs; }
+    double testRadarReading() const { return radar.reading; }
+    int testRadarUnder() const { return radar.under; }                     // C-16
+    bool testRadarRise(Vec3& dir) const { dir = radar.rise.dir; return radar.rise.on; }
+    int testRadarRises() const { return radar.rises; }
+    int testRadarNothings() const { return radar.nothings; }
+    double testRadarHold() const { return radar.holdT; }
+    int testRadarWords() const { return radar.words; }
+    bool testRadarWordOn() const { return radar.wordT >= 0; }
+    std::string testRadarWordSaid() const { return radar.wordSaid; }
+    double testRadarFloor() const { return radar.floorNow; }
+    std::string testRadarWordKey() const { return radar.wordKey; }
+    double testRadarSky() const { return radar.sky; }
+    Vec3 testRadarDir(int which) const { return which >= 0 && which < (int)radar.all.size() ? normalize(radar.all[which].pos - ship.pos) : Vec3(0, 0, 1); }
+    bool testAimAtDir(const Vec3& d) { Vec3 f = normalize(d); ship.yaw = std::atan2(f.x, f.z); ship.pitch = std::asin(std::max(-1.0, std::min(1.0, f.y))); cabin.yaw = 0; cabin.pitch = 0; return true; }
     bool testCivilisedHere() const;    // C-07: a people's world in the system the ship is at
     bool testShardsOpenIndex(int idx);   // C-04: at the world's list, opens the shard of that index (a piece plays)
+    // C-11 (tests): the ship's player and the instruments' case
+    int testPlayerItems();                     // the player's list, built afresh: its items
+    std::string testPlayerItemLine(int i) const;
+    bool testPlayerPlay(int item);             // plays an item of the list from its start
+    std::string testPlayerInfo() const;        // what plays, its clock, held / paused / waiting, the synth's pointers
+    int testPlayerPlaying() const { return player.playing; }
+    bool testPlayerHeld() const { return player.held; }
+    double testPlayerT() const { return player.t; }
+    int testPlayerFinished() const { return player.finished; }
+    void testPlayerSkipTo(double t) { player.t = t; player.syncT = -1; }   // the player's clock moved on (a long piece's end without its minutes)
+    bool testPlayerOwnsPiece() const { return audio.piece && audio.piece == &player.world.piece; }
+    bool testPlayerOwnsSpeech() const { return audio.speech && audio.speech == &player.world.speech; }
+    int testShardsTop() const { return shardsTop; }
+    std::string testPlayerHud() const { return playerHudLine(); }
+    int testShipMode() const { return (int)ship.mode; }
+    int testWalkToInstrument(int age = -1);    // the explorer before the nearest instrument not taken (of that age, -1 any), facing it: its id, -1 none
+    int testNearInstrumentId() const { return surf.nearInstrument.id; }
+    std::string testInstrumentInfo() const;    // the case: the one on the screen, its timbre, its register, the notes played
+    int testInstrumentCount() const { return (int)guide.instruments.size(); }
+    void testShardsTop(int top) { shardsTop = top; }
     int testShardsLevel() const { return shardsLevel; }                        // C-06: the decoder's state for the harness
     std::string testChartInfo() const;         // C-10: the chart on the screen and the one held up
     bool testAimAtChartMark(int figure = -1);  // C-10: turn the ship onto the held chart's marked star (or onto figure `figure`'s brightest star)
@@ -201,6 +258,9 @@ public:
     void testAimAtNearestStar();
     void testAimAtBody(int body);
     int testZoomRoads() const { return (int)zoomRoads.size(); }   // C-09: the roads drawn on the zoom
+    int testZoomCores() const { return zoomCores; }                // T-01: the cores drawn on the zoom
+    void testSurfaceFace(double yaw, double pitch) { surf.player.yaw = yaw; surf.player.pitch = pitch; }   // T-01 (the bench): the explorer's look
+    int testZoomWays(int kind) const { int n = 0; for (int k : zoomRoadKinds) if (k == kind) n++; return n; }   // T-01: the zoom's lines of a kind
     std::string testRoadInfo() const;                             // C-09: the site's roads, the road under the explorer, the roads met, the zoom's lines
     void testBuildZoom() { buildLandingZoom(); }
     bool testWalkToRoad(double withinM = 400);                    // C-09: the explorer set on the nearest road's centre line
@@ -209,7 +269,13 @@ public:
     void importInboxFile();                                       // C-14: the guide menu's "import an inbox file" (the harness calls it too): a friend's export beside the guide
     int testPeoples() const { return surf.peoples; }              // C-13: the peoples of the world under the feet
     int testNearShardIndex() const { return surf.nearShard.index; }   // C-13: the shard within reach (its world index), -1 none
+    // T-04: the explorer set before the nearest record of a medium (-1 any) the guide does not hold, looking at it (an archive's from its row's
+    // middle when `archive`); its world index, -1 none. What the frame drew of the records' objects
+    int testWalkToRecord(int medium = -1, bool archive = false);
+    int testNearShardMedium() const { return surf.nearShard.index >= 0 ? surf.nearShard.medium : -1; }
+    int testRecordFormsDrawn() const { return surf.lastRecordForms; }
     bool testWalkToGrave();                                       // C-12: the explorer set a metre in front of the nearest settlement's first grave, facing it
+    bool testWalkToWork(double withinM = 1e9);                    // T-03: the explorer set 150 m from the nearest work the scanner hears (the frame re-anchored and the scan asked again from there)
     void testLandCursor(double latDeg, double lonDeg) { landLat = latDeg * DEG; landLon = lonDeg * DEG; }   // C-09: the landing map's cursor
     void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
     int testLandableBody() const;
@@ -234,6 +300,7 @@ public:
     static double siteSlope(const SurfaceSite& probe);           // N1-06: steepest rise over run around a site
     static double parkDistanceFor(const Body& b);  // 3.5 radii; outside the rings; 12 radii for a comet (N0-01)
     std::string testStatus() const { return statusMsg; }
+    std::string testStatusNext() const { return statusNext; }   // T-04: what is said when the status now shown expires
     std::string testDebugInfo() const;
     std::string testHealth() const;   // "" when every number is finite
     double testPlayerStamina() const { return surf.player.stamina; }
@@ -264,12 +331,45 @@ public:
     void testCabinGoto(double x, double z, double yaw, double pitch = 0) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = pitch; }
     void testShipScreenRow(int page, int sel) { shipScreenPage = page; shipScreenSel = sel; }   // B-410: the flight computer's row Enter acts on
     double testFlightDur() const { return ship.flightDur; }   // R-407: the Vimana flight's length (real seconds)
+    double testFlightT() const { return ship.flightT; }
+    bool testFlying() const { return ship.mode == ShipState::VIMANA; }
+    void testFlightSkip(double tt) { if (ship.mode == ShipState::VIMANA) ship.flightT = tt; }   // G-07: the flight's clock set (the band's keyframes catch up)
+    void testStartJump(double ly, const Vec3& dir) { startJump(ly, dir); }   // G-07: R-407's jump along a direction, plotted and flown
+    void testCabinTurn(double yaw, double pitch) { cabin.yaw = yaw; cabin.pitch = pitch; }   // G-07: the head turned in the cabin
+    void testCabinLook(const Vec3& dir) { const Vec3 d = cameraBasis(ship.yaw, ship.pitch) * dir; cabin.yaw = std::atan2(d.x, d.z); cabin.pitch = 0; }   // G-07: the head turned toward a direction of the galaxy, level (at the windows)
+    const SpaceRenderer::FlightBand& testFlightBand() const { return spaceR.fband; }
+    long testParkedBandBuilds() const { return spaceR.parkedBandBuilds; }
     bool testAiming() const { return ship.targeting; }
     std::string testJumpDigits() const { return jumpDigits; }
     Vec3 testAimDirection() const { return aimDirection(); }
     std::string testAimLabel(const Star& s) const { Star full; starInSector(s.sx, s.sy, s.sz, full, true); return aimStarLabel(full); }
     const StarNeighborhood& testNeighborhood() const { return nb; }
     Vec3 testShipPos() const { return ship.pos; }
+    // G-05: the galaxy chart's frame (logical pixels: the face-on disc over the width, the edge-on strip under it) and its levels
+    static constexpr int CHART_LEVELS = 9, CHART_FACE_Y0 = 22, CHART_FACE_H = 128, CHART_EDGE_Y0 = 152, CHART_EDGE_H = 22;
+    static constexpr double CHART_TALL_LY = 110000;   // the face's height at level 0: the whole disc
+    static double chartScale(int level) { return CHART_TALL_LY / std::ldexp(1.0, level) / CHART_FACE_H; }   // light years a logical pixel
+    // G-05: the galaxy chart for the harness
+    int testMapPage() const { return mapPage; }
+    void testChartLevel(int level) { gchart.level = std::max(0, std::min(CHART_LEVELS - 1, level)); }
+    void testChartFollow() { gchart.follow = true; }
+    double testChartBuildMs() const { return gchart.buildMs; }
+    int testChartYouX() const { return gchart.youX; }
+    int testChartYouY() const { return gchart.youY; }
+    const std::vector<std::pair<std::string, std::string>>& testChartLegs() const { return gchart.legs; }
+    void testArriveAt(const Star& s) { arriveAtStar(s, Vec3(0, 0, -1)); }   // the arrival as a Vimana flight ends it
+    void testPlaceShip(const Vec3& posKm) { ship.pos = posKm; ship.mode = ShipState::STANDBY; nb.update(ship.pos); }   // the ship set down anywhere (the harness's chart)
+    // G-06: the chart's cursor and plot for the harness
+    void testChartCursor(const Vec3& p) { gchart.onShip = false; gchart.plotHere = false; gchart.curX = p.x; gchart.curY = p.y; gchart.curZ = p.z; if (gchart.level > 0) { gchart.follow = false; gchart.cx = p.x; gchart.cz = p.z; } }
+    Vec3 testChartCursorAt() const { return chartCursor(); }
+    bool testChartOnShip() const { return gchart.onShip; }
+    bool testChartPlotted() const { return chartPlotted(); }
+    bool testChartLook() const { return gchart.look; }
+    const StarNeighborhood& testLookStars() const { return gchart.lookNb; }
+    int testChartCurX() const { return gchart.curPX; }
+    int testChartCurY() const { return gchart.curPY; }
+    double testJumpShort() const { return jumpPlot.shortLy; }
+    int testMapPick() const { return mapPick; }
     int testCabinFacing() const { return cabin.facing; }   // 7 is the shard decoder (C-06)
     int testLogEntries() const { return (int)guide.log.size(); }
     // W-01: the almanac for the harness
@@ -329,6 +429,7 @@ public:
     const GiantAtmosphere& testProbeAtm() const { return probe.atm; }
     double testGameTime() const { return t; }
     void testAdvanceTime(double dt) { t += dt; }
+    double testSunHeight() const { return surf.env.sun.dirLocal.y; }   // T-04: the sun's height over the horizon (its direction's up component)
     const StarSystem& testSystem() const { return sys; }
     void testProbeRelease() { probeRelease(); }
     double testProbeSightClock() const { return probe.active ? probe.sightClock : -1; }
@@ -373,6 +474,8 @@ private:
     bool zoomDry = false; double zoomPrefetchT = -1e9;   // O6-03: the zoom was drawn without the drainage (its tiles were not built); rebuilt when they are
     uint64_t zoomSeed = 0;
     std::vector<std::vector<std::pair<float, float>>> zoomRoads;   // C-09: the old roads of the window (texel coordinates), drawn as faint lines over it
+    std::vector<int> zoomRoadKinds;                                  // T-01: each line's kind (galaxy/plan.h's NetKind: C-09's lanes are roads)
+    int zoomCores = 0;                                               // T-01: the plan's places whose cores the window shows
     double zoomRoadsMs = 0;                                          // C-09: what the window's network cost at the last build
     void buildLandingZoom();
     bool landingZoomAllowed() const;
@@ -417,6 +520,58 @@ private:
     GameState guideReturn = GameState::SPACE;
     std::string textPrompt, textBuffer;
     double mapYaw = 0, mapPitch = 0, mapZoom = 1;
+    // G-05: the galaxy chart, the star map's second page (game/galaxy_chart.cpp). `Tab` turns the map between the neighbourhood and
+    // the galaxy; the map opens on the page it was left on, and on the galaxy in a Vimana flight
+    int mapPage = 0;   // 0 the neighbourhood, 1 the galaxy
+    struct GalaxyChart {
+        int level = 0;                      // 0: the whole disc in the face's height; each level halves it
+        bool follow = true;                 // the view centred on the ship (C or Space); a pan lets it go
+        double cx = 0, cz = 0;              // the view's centre while it does not follow (sector units)
+        std::vector<uint32_t> face, edge;   // the view's images as built last: the disc face-on and edge-on, at the logical resolution
+        int builtLevel = -1; long long builtI = 0, builtJ = 0; double builtHalf = 0;
+        double buildMs = 0;                 // the last build's time (the harness prints it)
+        std::vector<std::pair<std::string, std::string>> legs;   // the route's legs drawn last frame, in order (star keys)
+        int youX = -9999, youY = -9999;     // where the ship's crosshair was drawn last frame (logical pixels)
+        // G-06: the cursor (the arrows, Shift faster, the mouse; the view moves when it nears the face's edge; PgUp/PgDn its height over
+        // the plane, on the strip). On the ship it moves with it; let go, it lies in the plane unless its height is what moved
+        bool onShip = true;
+        double curX = 0, curY = 0, curZ = 0;   // the cursor's point while it is not on the ship (sector units)
+        bool plotHere = false;              // a jump plotted at the cursor's point (Enter); a move of the cursor lets it go
+        int stop = -1;                      // N's last stop
+        bool look = false;                  // the neighbourhood page shows the plotted end (the look before the leap), not the ship's
+        StarNeighborhood lookNb;            // the stars round the plotted end
+        Vec3 lookCentre;                    // the plotted star (km)
+        int delMark = -1; double delUntil = 0;   // Delete twice removes the mark under the cursor
+        int curPX = -9999, curPY = -9999;   // where the cursor was drawn last frame (logical pixels; -9999 on the ship)
+    } gchart;
+    void chartCentre(int level, double& cx, double& cz) const;   // the view's centre at a level (sector units), before the pixel grid
+    void chartView(long long& I, long long& J) const;   // the view's centre in pixels of its level (the pixel grid anchored in the galaxy)
+    bool chartProject(double sx, double sz, int& px, int& py) const;   // a place (sector units) on the face, logical pixels; false off the face
+    void updateGalaxyChart(const Input& in);
+    void renderGalaxyChart();
+    // G-06: the next jump chosen on the chart (game/galaxy_chart.cpp). Enter plots the jump to the cursor's point (`plotJump`), Enter again
+    // flies it; on a plotted jump Tab looks at the stars round its end (the neighbourhood page round the plotted star, where another can be
+    // taken); N steps the cursor through what the explorer has on the chart; L marks the place under it (`Guide::galaxyMarks`)
+    static constexpr double CHART_REACH_LY = 54000;    // the cursor's reach from the galactic centre (the whole disc's face)
+    static constexpr double CHART_HEIGHT_LY = 30000;   // and over or under the plane
+    Vec3 chartCursor() const;                 // the cursor's point (sector units): the ship's while it sits on it
+    bool chartPlotted() const;                // a jump plotted at the cursor, still the remote target
+    void chartLetGo(bool height);             // the cursor leaves the ship (to the plane unless its height is what moves); a plot lets go
+    void chartUnplot();                       // the plot let go (the target stays), its status with it
+    void chartEnter();                        // Enter: plot, or fly the plotted jump
+    struct ChartStop { Vec3 p; std::string label; uint32_t col = 0; };
+    std::vector<ChartStop> chartStops() const;   // N's stops: the locked signals, home, the named stars, the marks, the systems visited (nearest first in each)
+    void chartNextStop(int dir);
+    int galaxyMarkNear(double sx, double sz, double px) const;   // the explorer's mark of the galaxy within `px` pixels of a place at the chart's level, -1 none
+    struct ChartThere { std::string label; uint32_t col = 0; int kind = 0, mark = -1; std::string key; };   // kind: 0 nothing, 1 a mark, 2 a signal, 3 home, 4 a named star, 5 a star visited
+    ChartThere chartThere(const Vec3& p) const;   // what the explorer has within four pixels of a place (the first of the kinds)
+    std::string galaxyPlace(const Vec3& p, bool height) const;   // "SPIRAL ARM, 13,040 LY FROM THE CORE" (and the height over the plane)
+    void beginGalaxyMark(int mi);             // the entry for a new mark at the cursor (-1) or a mark's new name
+    void finishGalaxyMark(const std::string& name);
+    int textGalaxyMark = -1; Vec3 textGalaxyAt; std::string textGalaxyLine;
+    bool drawMapStatus();                     // the status over the map's key line (true when one is shown)
+    const StarNeighborhood& mapStars() const { return gchart.look ? gchart.lookNb : nb; }   // the neighbourhood page's stars and centre
+    Vec3 mapCentre() const { return gchart.look ? gchart.lookCentre : ship.pos; }
     struct GalleryItem { std::string file; int rec = -1; long long when = 0; };   // X-04: a photograph, or a probe's recording (`rec`: its record; `file` its final image, "" for a lent one: drawn)
     std::vector<GalleryItem> galleryItems;
     std::vector<uint32_t> galleryPix; int galleryW = 0, galleryH = 0; bool galleryOk = false; std::string galleryCaption;
@@ -439,25 +594,58 @@ private:
     void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in); void renderConsole();
     // C-06 the shard decoder (game/shards_screen.cpp): the worlds the guide holds shards of, the one open with its fifty and its language, the shard on the screen
     struct ShardWorld { std::string key; bool valid = false; StarSystem sys; int body = -1; Lore lore; Tongue tongue; Language lang; std::vector<Shard> shards;
-                        int which = 0, peoples = 1, base = 0;   // C-13: which of the world's peoples this is, how many the world had, the guide index of this people's first shard (its fifty count from zero here)
+                        int which = 0, peoples = 1, base = 0;   // C-13: which of the world's peoples this is, how many the world had, the guide index of this people's first shard (its records count from zero here; T-04: `lore.records` of them)
                         Tradition tradition; std::vector<int> pieceForm; std::vector<double> pieceSeconds; Piece piece;    // C-04: its music, the forms of its pieces, the piece on the screen
                         Voice voice; Speech speech;                                                                      // C-05: its voice and the shard on the screen spoken
-                        StarChart chart; };                                                                              // C-10: the chart on the screen
+                        Voice readVoice;                                                                                 // H-05: the ship reading a record with no voice of its own (`voiceRead`)
+                        StarChart chart;                                                                                 // C-10: the chart on the screen
+                        bool pending = false;                                                                            // H-04: its records are being written on a thread (the radar does not wait)
+                        std::shared_ptr<const History> history; std::shared_ptr<const ShardTexts> texts; };              // H-06: the decoder's: its history and its records' texts (what each told)
     ShardWorld shardWorld;
+    // H-06: the decoder reads a history: a world's records on three pages (Tab): its records by category (Left/Right: every kind, the texts,
+    // the music, the charts), the timeline of its eras with the records held on it, and its history as the records read so far tell it
+    // (galaxy/legends.h: the events told in the history's order under the eras they fell in, the persons only as the records named them,
+    // the age once told, the last recording closing it); Enter on an event opens the record that told it
+    int shardsPage = 0;                          // 0 the records, 1 the timeline, 2 the history
+    int shardsFilter = 0;                        // the records' page: 0 every kind, 1 the texts, 2 the music, 3 the star charts
+    struct LegendRow { int kind = 0; int item = -1; int year = 0; bool first = false; std::string text; std::vector<DecodedWord> words; };   // 0 a heading, 1 an event's line (`item` of `told.events`; `first` its first row), 2 the close, 3 a way of the people (`text` its label)
+    ToldHistory told; bool toldValid = false; double toldMs = 0;   // what the read records told (built when the world's pages are opened, again after a reading; how long it took)
+    std::vector<LegendRow> legendRows; std::vector<int> legendFirstRow;   // the history page's rows; each told event's first row
+    int legendSel = 0, legendTop = 0;            // the event under the cursor (of `told.events`), the first row shown
+    std::vector<double> eraX0, eraX1;            // the timeline's eras across its width (each era's share by the people's records in it)
+    void ensureTold();                           // `told`, the history page's rows and the timeline's eras for the open world (no-op while valid)
+    bool shardInFilter(int local) const;         // a record of the kind the records' page shows
+    void stepShard(int dir);                     // the cursor to the next record held of the kind shown
+    int toldRecordOf(int item) const;            // the record (of `shardHeld`'s order) that told an event first, -1 none held
+    void renderShardRecords(); void renderShardTimeline(); void renderShardHistory(); void drawShardPagesStrip(const std::string& right);
+    std::string recordSummary(int local, int maxChars) const;   // a record as the list names it ("A LETTER: ...", a piece's form, a chart's caption)
+
     std::vector<std::string> shardWorldKeys, shardWorldLabels; std::vector<int> shardWorldWhich;   // C-13: an entry a people whose shards are held, labelled with the people's name where the world had two
+    std::vector<int> shardWorldTotals;           // T-04: how many records each entry's people left (`recordCountOf`)
     std::vector<int> shardHeld;                  // the open world's shards held, in the order of their years
     int shardsLevel = 0, shardWorldSel = 0, shardSel = 0;
     std::vector<DecodedWord> shardWords;         // the shard on the screen as the computer reads it
+    // H-04: a long text in pages (the words' places on the screen and where each page starts); the voice speaks the page on the
+    // screen (the opening first), from `speechFrom` (the first of its words) to `speechTo`
+    struct WordAt { int page = 0, x = 0, y = 0, w = 0; };
+    std::vector<WordAt> shardLayout; std::vector<int> shardPageStart; int shardPage = 0, speechFrom = 0, speechTo = 0;
+    void layoutShardText(int x0, int y0, int maxX, int maxY);
+    void speakShardPage(int page);
     bool shardFresh = false;                     // C-05: a first reading at this share: the words resolve as the recording speaks them, and its end reads the shard
     double speechT = -1, speechSyncT = -1; bool speechPaused = false;   // C-05: the game's own clock into the speech (synced to the synth's when it runs), paused
     void startSpeech(); void stopSpeech(); bool speechEnded() const; void markShardRead();
+    // H-05: what a record was made on, named and drawn on the decoder (game/medium_draw.cpp): the line under the date (a recording names its
+    // voice, a record with no sound of its own says the ship reads or plays it) and the object at the right of it, turning while it plays
+    std::string mediumLine(const Shard& s) const;
+    void drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double t);
     // C-04 a piece on the screen: the game's own clock into it (synced to the synth's beat when the synth runs), paused, the shard being named
     double pieceT = -1, pieceSyncBeat = -1, humBeforePiece = -1; bool piecePaused = false;
     std::string textShardKey;
     std::string textStormKey;   // X-04: the storm a text entry of kind 9 names
     void startPiece(); void stopPiece(); double pieceBeatNow() const; bool pieceEnded() const;
     bool openShardWorld(const std::string& key, int which = 0);
-    bool buildShardWorld(ShardWorld& w, const Star& s, int bi, int which = 0);   // C-07: a world's shards, language, voice and tradition, for the decoder and the radar alike
+    bool buildShardWorld(ShardWorld& w, const Star& s, int bi, int which = 0, bool wait = true);   // C-07: a world's shards, language, voice and tradition, for the decoder and the radar alike (H-04: `wait` false: not until its records are written, on a thread)
+    void prefetchShardWorld(int sel);            // H-04: the decoder's worlds list asks for the selected world's records early
     // C-10 the star charts (galaxy/charts.h): a chart shard draws itself on the decoder (a first reading at this share over
     // CHART_READ_S seconds, the stars, then the figures, then their names), Enter targets the star it marks, O holds it up to the
     // sky: the figures' lines are drawn between the real stars on the space view and the surface's night sky from wherever the
@@ -486,12 +674,37 @@ private:
         int locked = -1; uint64_t lockedSeed = 0; int lockedKind = -1; double lostT = 0;
         double clarity = 0;                     // how much of the signal comes through the static (the synth's radarSignal)
         ShardWorld world; uint64_t worldSeed = 0; int worldWhich = -1;   // the people's world in the beam, built once (C-13: once per people on the air)
+        uint64_t pendingSeed = 0; double pendingAt = -10;               // H-04: a world whose records are being written (the carrier alone until they are)
         int shard = -1; double contentT = -1, contentSecs = 0; bool contentMusic = false; double awayT = 0;
         Programme prog; int loopI = 0; double loopAt = 0;   // the programme on the air (galaxy/signals.h), the repeat a loop or a numbers station is at and when it began
         Rng rng{0x5161};
+        // C-15 the gain: the dial (SIGNAL_GAINS, x1 to x32; kept while the radar is off, not saved), what it hears beyond 200 ly from the
+        // scan's sector (the whole dial's at once, each by its `needGain`), found a slice a frame by `deep` (LISTENING DEEPER meanwhile)
+        int gainStep = 0;
+        std::vector<Signal> deep; SignalScan deepScan; bool deepRunning = false, deepReady = false; double deepMs = 0; int deepFrames = 0;
+        std::vector<double> level;              // per entry of `all`: the level at the beam's centre (C-07's strength at x1; 1 and over overloads)
+        int aim = -1; double aimAngle = 0;      // the loudest within the lock cone: the one the hold is on
+        bool overload = false;                  // the aim overloads the receiver: the meter pinned, the hold refused
+        double sum = 0, floorNow = 0;           // the beam's sum over the signals and the static's floor this frame (the harness)
+        // C-16 what the gain lets in: the age of the slot's people on the air, the band's brightness in the beam (the galaxy's own
+        // noise), the signal under the one heard (an index into `all`: the loudest other in the wide lobe), the rolling band's phase
+        int progAge = -1; double sky = 0; int under = -1; double rollPh = 0;
+        // a false rise: the noise's ghost in a direction near the beam at the top steps, living some seconds; held, the hold fills
+        // part way (`holdMax` of it) and empties (NOTHING THERE for `nothingT`); never a lock
+        struct FalseRise { bool on = false, spent = false, held = false; Vec3 dir; double t = 0, life = 8, peak = 0.2, holdMax = 0.6; };
+        FalseRise rise; double riseNext = 20, riseGain = 0, riseAngle = PI, nothingT = 0; int rises = 0, riseHolds = 0, nothings = 0;
+        // a word of a recording heard before (`Guide::heard`) coming back out of the static at the top steps while nothing is on the
+        // air: its world (when it is not the radar's), the word spoken in the world's voice, when the next may come
+        ShardWorld wordWorld; Speech wordSpeech; Voice wordVoice; double wordNext = 30, wordT = -1; int words = 0; std::string wordKey, wordSaid;
     };
     RadarState radar;
     void radarToggle(); void radarOff(); void radarScan(); bool updateRadar(const Input& in, double realDt);
+    void radarGainStep(int dir);        // C-15: the dial a step up or down
+    void radarDeepStep();               // C-15: a slice of the far scan (begun when the gain is up and the list is not this sector's)
+    double radarSkyAt(const Vec3& dir) const;   // C-16: the band's brightness round a direction (the beam's width), 0..1
+    void radarRiseStep(const Vec3& fwd, double realDt);   // C-16: a false rise born, aged and gone
+    void radarWordStep(double realDt); void radarWordStop();   // C-16: a heard word back out of the static
+    double radarGain() const { return SIGNAL_GAINS[std::max(0, std::min(SIGNAL_GAIN_STEPS - 1, radar.gainStep))]; }
     void renderRadarCamera();           // the camera's frame over the picture: the scope, the cone, the readout
     void radarCameraFeed(Framebuffer& fb);   // the picture as the radar camera gives it (the palette cold, static by the clarity), before the mush
     void radarLock(int idx); void radarAccept(); void radarStartContent(const Signal& s, bool next); void radarRepeatContent(); void radarStopContent();
@@ -504,6 +717,60 @@ private:
     std::string shardWorldTitle(int maxName) const; // C-13: the world's name, and the people's where the world had two
     std::string worldNameOfKey(const std::string& key) const;
     void openShards(); void openShard(int sel); void updateShards(const Input& in, double realDt); void renderShards(); void renderPiece();
+    // C-11 the ship's player (game/player.cpp): the pieces and the recordings held and the recordings the radar caught (`Guide::heard`), listed
+    // on the decoder's player page (Tab at its worlds) and played on wherever the ship goes, a line on the space HUD, until a landing. Held
+    // while the decoder, the radar or the gramophone has the synth (its place kept) and taken up where it was; one after another down the list
+    struct PlayerItem {
+        std::string world; int which = 0, local = 0;   // the guide's world key, the people, its record
+        bool music = false, heard = false;             // a piece; caught by the radar (and not held as a recording)
+        int medium = -1, year = 0, form = -1;          // what it was made on; its year; a piece's form
+        double seconds = 0;                            // a piece's length (a recording's once built)
+        std::string people;                            // "THE KHOSA"
+    };
+    struct ShipPlayer {
+        std::vector<PlayerItem> items; int sel = 0, top = 0;
+        int playing = -1;                              // the item playing (of `items`), -1 none
+        bool paused = false, held = false, waiting = false;   // paused by the explorer; held while another has the synth; its world's records still being written
+        ShardWorld world;                              // the playing item's world: the synth's piece, tradition, speech and voice point into it
+        double t = 0, secs = 0, syncT = -1;            // the game's clock into it (synced to the synth's while it runs), its length
+        std::string title, people;                     // the HUD's ("A LULLABY", "THE KHOSA": the people left out where the line has no room)
+        int finished = 0;                              // items played to their end since the game began (the harness)
+        int guideVersion = -1;                         // the list's (rebuilt when the guide's shards change)
+        std::map<std::string, std::pair<int, double>> pieceInfo;   // a piece's form and length by its key, worked out once
+    };
+    ShipPlayer player;
+    int shardsTop = 0;                                 // the decoder's first level: 0 the worlds, 1 the player
+    void playerBuildList();
+    void playerPlay(int item);                         // from its start
+    void playerStart();                                // the playing item onto the synth from `player.t`
+    void playerStop();
+    bool playerOwns() const;                           // the synth's piece or speech is the player's
+    void updatePlayer(double realDt);                  // every frame: the landing stops it, another's sound holds it, its end moves it on
+    void renderPlayerPage();
+    std::string playerHudLine() const;
+    static std::string playerItemKey(const PlayerItem& it);                            // its guide key ("<body>/S<index>")
+    static std::string playerItemTitle(const PlayerItem& it, const std::string* name);  // "A LULLABY", "'THE RIVER'", "A WAX CYLINDER", "AIR: A RECORDING"
+    // C-11 the instruments' case (game/instruments_screen.cpp), on the cabin's left wall: the instruments taken (`Guide::instruments`), the one
+    // on the screen with its people's tradition (the synth's timbre points into it) and colours; a key a degree of its scale (1 to 9, 0),
+    // Left/Right its register; the gramophone's disc through its horn
+    struct InstrumentCase {
+        std::vector<std::string> keys; int sel = 0;    // the guide's keys, by world then id
+        std::vector<std::string> names;                // each one's name ("A LUTE")
+        std::string key; bool valid = false;           // the one on the screen
+        Tradition tradition; PeopleInstruments set; Instrument inst; FormPalette palette; std::string people, world;
+        int regShift = 0;
+        bool held[10] = {};                            // its keys down (1..9, 0)
+        std::vector<double> glow;                      // per course of the picture: a note just played, fading
+        struct Played { int degree = 0; double t = 0; };
+        std::vector<Played> played;                    // the last notes (the roll under the picture)
+        int notes = 0;                                 // the notes played since the case opened (the harness)
+        Piece disc; bool discOn = false; double discT = -1;   // the gramophone's disc playing (its clock, the game's own)
+        double humBefore = -1;
+    };
+    InstrumentCase icase;
+    void openInstruments(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double realDt); void renderInstruments(); void stopInstrument();
+    void playInstrumentDegree(int degree, int key);    // a note of the one on the screen (`key` holds it; 0 a note of its own length)
+    void drawInstrumentPicture(int x0, int y0, int w, int h, const Instrument& I, const Tradition& T, const FormPalette& pal, const std::vector<double>& glow, double t);   // C-17: its parts (`drawInstrumentParts`)
     void deployCapsule(); void toggleVimana();
     // M4-02 sector map, M4-10 vision modes
     int visionMode = 0;
@@ -533,6 +800,7 @@ private:
     void updateSpace(const Input& in, double dt, double realDt);
     void updateShipMotion(double dt);
     void renderSpace();
+    void keepFlightBand();   // G-07: the band's keyframes built on while the galaxy page covers a flight
     void renderSpaceHUD();
     void updateLandingMap(const Input& in, double dt);
     void renderLandingMap();
@@ -574,6 +842,13 @@ private:
     std::string jumpDigits;
     Vec3 aimDirection() const;                     // the crosshair's direction in the world (the view's forward)
     void startJump(double ly, const Vec3& dir);
+    // G-06: a jump plotted before it is flown (the galaxy chart's Enter plots, its second Enter flies; the aim and the console's JUMP do
+    // both at once): the star nearest the line's end made the remote target, the line remembered for the log (its length and way, how
+    // far short of its end the void sent it, where from, whether the chart plotted it). The flight's start logs the JUMP line
+    // (`toggleVimana`, so V flies a plotted target the same way); any other target forgets it (`setRemoteStar`)
+    struct JumpPlot { uint64_t seed = 0; double ly = 0, shortLy = 0; std::string way, from; bool onChart = false; } jumpPlot;
+    bool plotJump(double ly, const Vec3& dir, bool onChart);   // false when refused (in a flight, no star along the line, the current star)
+    void flyJump();                                            // the plotted jump flown (the Vimana and its status)
     std::string aimStarLabel(const Star& full) const;   // a marker's label in the aim (its name once it has one, else the distance; VISITED)
     std::vector<std::string> worldNamesAt(const std::string& starKey) const;   // the names given to a star's worlds (the star map's card)
     // O3 (R-302): belts as destinations

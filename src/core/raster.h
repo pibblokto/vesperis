@@ -24,6 +24,21 @@ struct RVert {
 
 enum BlendMode { BLEND_REPLACE = 0, BLEND_ADD = 1, BLEND_MAX = 2, BLEND_DARKEN = 3, BLEND_REFLECT = 4 };
 
+// A-02: windows as a pattern on a face, by the face's own u and v in metres (along it, up it): a cell a bay wide and a storey
+// high, the window inside it; where a cell spans few pixels the pattern fades to its mean, so a far tower does not shimmer
+struct FacePattern {
+    double bay = 3.2, storey = 3.5;          // the cell (metres)
+    double x0 = 0.3, x1 = 0.7, y0 = 0.3, y1 = 0.8;   // the window within its cell (shares)
+    int shape = 0;                           // 0 a rectangle, 1 an arched head, 2 a slit, 3 round, 4 a band, 5 a triangle (A-04), 6 a keyhole (A-04)
+    int group = 1;                           // A-04: lights to a window, split by mullions (a pair, a group)
+    double scatter = 0;                      // A-04: the share of the cells left blank (by a hash of the cell)
+    double dark = 14;                        // shades under the wall
+    int litBank = -1;                        // >= 0: the window glows, drawn in this bank at `litShade` whatever the light
+    double litShade = 50;
+    double fromV = 0;                        // no windows under this height
+    double meanShare = 0.2;                  // the window's share of its cell (the far mean)
+};
+
 struct RasterParams {
     int bank = 0;                 // bank index 0..15
     const GrainTexture* grain = nullptr;    // micro grain (M10-05: faded by grainWeight)
@@ -50,6 +65,7 @@ struct RasterParams {
     bool zwrite = true;
     int blend = BLEND_REPLACE;
     double shadeMin = 0, shadeMax = 63;
+    const FacePattern* pattern = nullptr;    // A-02: windows on the face (u and v in metres)
 };
 
 constexpr double NEAR_Z = 0.05;

@@ -1,0 +1,265 @@
+R"VG(
+# industrial2.vg (H-04; the second pass 2026-10-10): the census return (a household of the history: `@cast household`, its head `$x` with
+# the spouse and the child the history gives them, the house as the ruins show it), the railway's timetable (once the railway runs:
+# `railway`), the obituary (a death the chronicle told: `@cast notable`; its epithet, its trade, its cause). The voice on a wax cylinder
+# is industrial6.vg's.
+
+@root obit.deed.* obit.by.*
+
+# ---- the census return -----------------------------------------------------------------------------------------------------
+genre.census (words=34..120)
+  {@cast household}{census.head}\n{census.head2}\n{census.row.x}\n{census.row.sp}\n{census.row.ch}\n{census.end}
+  {@cast household}{census.head}\n{census.head2}\n{census.row.x}\n{census.row.sp}\n{census.row.ch}\n{census.row.more}\n{census.end} {census.end2}
+
+census.head (formula)
+  The count of the people, year {#year:digits}. The return of one house at {$x.home}.
+  Census of {$x.home}, the {#year:ord} year of {city}: a household.
+  The {#year:ord} year of {city}: the count of the people of {$x.home}, sheet {n}.
+
+census.head2 (formula)
+  Name, place in the house, age, trade.
+  Name; place in the house; age; trade or calling.
+
+census.row.x
+  {$x:name}, head of the house, {#$x.age}, {$x.trade}.
+census.row.sp
+  (has:$x.spouse) {$x.spouse:name}, {census.spword}, {#$x.spouse.age}, {$x.spouse.trade}.
+  (!has:$x.spouse) No wife or husband living.
+census.spword
+  ($x.spouse.gender=she) wife
+  ($x.spouse.gender=he) husband
+census.row.ch
+  (has:$x.child) {$x.child:name}, {census.chword}, {#$x.child.age}, {census.chtrade}.
+census.chword
+  ($x.child.gender=she) daughter
+  ($x.child.gender=he) son
+census.chtrade
+  ($x.child.age<5) at home
+  ($x.child.age>=5 $x.child.age<12) at school
+  ($x.child.age>=12) {$x.child.trade}
+census.row.more
+  A lodger, name not given, [nineteen|twenty-two|thirty|forty-one], a hand at the {craft} works.
+  A servant girl, fourteen, from the hills.
+  An apprentice, {census.appr}, sleeps in the shop.
+  The head's mother, very old, takes in sewing.
+  Two lodgers, brothers, carters, rarely in.
+census.appr
+  fifteen
+  sixteen
+  thirteen, if the parents are to be believed
+
+census.end
+  Also living in the house: {n} lodgers, names not given.
+  The house has {n} rooms and {census.water}.
+  The house is {house.one}, under {roofs}.
+  The enumerator notes that the head of the house would not give the ages of the lodgers.
+  The family keep {n} {herd} in the yard and a {beast} in the kitchen.
+  (stage>=1) The enumerator notes that the street is half empty.
+  Signed by the head of the house, with a mark.
+  The household speaks the tongue of the {people} at home, and the city's at work.
+  The enumerator was given {drink} and asked to come back next year.
+census.end2
+  Religion: {census.faith}.
+  Rent: {n} {coin} the quarter, paid.
+  The enumerator notes {census.note}.
+census.water
+  water from {watersrc}
+  no water but what is carried
+  (age>=industrial) a tap in the yard, which works
+  a share of the pump with three other houses
+census.faith
+  (faith=ancestors) the old ones of the family
+  (faith=land) the spirits of the land, and the chapel at {festival}
+  (faith=sky) the sky, as the old people keep it
+  (faith=manygods) {god} and the others
+  (faith=onegod) {god}
+  (faith=philosophy) none, by conviction
+  (faith=machine) as the law requires
+  none given
+census.note
+  a dog that would not let him in
+  that the children were counted twice, having moved during the count
+  that the head is the oldest {$x.trade} in the street
+  a smell of {fuel} and {food}
+
+# ---- the railway's timetable ----------------------------------------------------------------------------------------------
+genre.timetable (words=29..125)
+  {tt.head}\n{tt.row}\n{tt.row}\n{tt.row}\n{tt.note}
+  {tt.head}\n{tt.row}\n{tt.row}\n{tt.row}\n{tt.row}\n{tt.note} {tt.note2}
+
+tt.head (formula)
+  The {city} railway. Trains from {$home}, {season.now}, year {#year:digits}.
+  Timetable of the line through {$home}, in force from the first of {season.now}.
+  Departures from {$home}, {season.now} service, the {#year:ord} year of {city}.
+
+tt.row
+  (once) To {tt.dest}: {tt.when}{tt.more}.
+  (once) To {tt.dest}: {tt.when}{tt.more}.
+  (once) To {tt.dest}: {tt.when}{tt.more}.
+  (once homerank!=capital) To {city}: {tt.when}{tt.more}.
+  (once) The goods train, with {tt.goods}: {tt.goods.when}.
+  (once) The mail: {tt.mail}, not for passengers.
+  (once) Market specials: {tt.market}.
+tt.dest (people=6)
+  the coast
+  the hill towns
+  the junction
+  the mines
+  the border
+  the river towns
+  the south
+  the north
+  the {crop} country
+  the market towns
+  the foot of {mountain}
+  the quarries
+  the lakes
+  the old capital
+tt.when
+  first light and at noon
+  once a day, at the second bell
+  twice a day, stopping everywhere
+  every hour until dark
+  {time.of}, and on rest days not at all
+  at the {nth} bell and again at lamp-lighting
+  three times a day in {season.now}, once in {season.next}
+tt.more
+  ; the journey takes a day and a night
+  ; change at the junction for the hill line
+  ; through carriages on market days
+  , the evening train on rest days only
+  ; {herd} in the rear van only
+  , returning the next morning
+  ; the fare is {n} {coin}, third class
+tt.goods
+  {crop} and {vessel}
+  {herd} and {fuel}
+  the {craft} works' loads
+  {fruit} in season
+tt.goods.when
+  when it comes
+  at night, and noisily
+  on the {nth} day of the week
+  daily but for the rest day
+tt.mail
+  at night
+  at the {nth} bell
+  {time.of}
+tt.market
+  on the eve of every market, with room for {herd}
+  in {festival} week, three a day each way
+  for the {crop} harvest, as required
+
+tt.note
+  Passengers are asked not to ride on the roofs, nor to carry {herd} in the carriages.
+  Fares are to be paid at the window and not to the guard, in {coin} and not in {crop}.
+  The company is not responsible for the weather, nor for {weather.now} in {season.now}.
+  (stage>=1) Some trains on this list no longer run. Ask at the window.
+  Passengers with {herd} will travel with them, in the van.
+  The company regrets the changes, which are the council's fault.
+  Children under {n} travel free, on a lap; {tt.beasts} by arrangement.
+  On {festival} the trains run all night, and so do the passengers.
+tt.note2
+  Lost property is kept at {$home} station for one month, then given to {holyplace}.
+  Smoking is permitted in the end carriages only, and {drink} nowhere.
+  The station clock is right; the passengers are early or late.
+  Refreshments at the station: {food} and {drink}, at station prices.
+
+# ---- the obituary ----------------------------------------------------------------------------------------------------------
+genre.obituary (words=23..100)
+  {@cast notable}{obit.head}\n{obit.life}\n{@deed obit.deed}\n{@death obit.by}\n{obit.end}
+  {@cast notable}{obit.head}\n{obit.life} {obit.more}\n{@deed obit.deed}\n{@death obit.by}\n{obit.end}
+
+obit.head (formula)
+  ($x.role=ruler) {$x:full}, {#$x.born:digits} to {#$x.died:digits}.
+  ($x.role!=ruler) {$x:name}, {$x.trade}, of {$x.home}.
+  Deaths: {$x:name}.
+  ($x.role=ruler has:$x.epithet) {$x:name} {$x.epithet}.
+  In memoriam: {$x:name} of {$x.home}.
+
+obit.life
+  Born in the {#$x.born:ord} year of {city}, {$x:name} lived {#$x.age|year}, most of them at {$x.home}.
+  {$x:name} was {#$x.age} and had lived at {$x.home} all {$x:poss} life.
+  ($x.role=ruler has:$x.reigned) {$x:name} held the rule {#$x.reigned|year}.
+  ($x.role=general) {$x:name} led the army in the wars, and came home from most of them.
+  ($x.role=maker|$x.role=inventor) {$x:name} was known to everyone at {$x.home} for {$x:poss} work.
+  ($x.role=prophet) {$x:name} preached for many years, and many listened.
+  (has:$x.trait) {$x:name} was {obit.trait.how} {$x.trait}, and at {$x.home} nobody needed to be told so.
+  (has:$x.home.ptrade) {$x:name} lived at {$x.home}, which lives by {$x.home.ptrade}, and was part of it for {#$x.age|year}.
+obit.trait.how
+  thought
+  known to be
+  by every account
+obit.more
+  (has:$x.children) {$x:name} raised {#$x.children|child}.
+  {$x:name} was seen every morning at {town.open}, and will be missed there.
+  (has:$x.family) {$x:name} was of the {$x.family} family, long at {$x.home}.
+  {$x:name} kept {herd} to the end, against the doctor's advice.
+
+obit.deed.built
+  {$x:name} was the maker of {$d.work} at {$d.place}.
+  {$d.work} at {$d.place} was {$x:poss} work, and stands.
+obit.deed.battle
+  {$x:name} fought at {$d.place}.
+  {$x:name} was at {$d.place} in the war, and did not talk about it.
+obit.deed.invention
+  It was {$x:name} who made {$d.invention}.
+obit.deed.deed
+  {$x:name} is remembered for {obit.deedword}.
+obit.deed.founding
+  {$x:name} saw the founding of {$d.place}.
+obit.deed.trade
+  {$x:name} was a {$x.trade} and a good one.
+  {$x:name} worked as a {$x.trade} until the last year.
+  {$x:name} was a {$x.trade} for {#$x.age:about|year}, and taught the trade to half the street.
+
+obit.deedword
+  ($d.deed=song) a song that everyone knows
+  ($d.deed=book|$d.deed=chronicle) a book that everyone read
+  ($d.deed=theory) a new account of the world
+  ($d.deed=taught) the years of teaching
+  ($d.deed!=song $d.deed!=book $d.deed!=chronicle $d.deed!=theory $d.deed!=taught) what was done at {$d.place}
+
+obit.by.sickness
+  {$x:name} died of {$c.sickness}, at {$x.home}.
+  {$c.sickness} took {$x:name} in {season.now}.
+obit.by.battle
+  {$x:name} fell at {$c.place}.
+obit.by.famine
+  {$x:name} died in the hungry year.
+obit.by.flood
+  {$x:name} was drowned in the flood at {$c.place}.
+obit.by.quake
+  {$x:name} died when the ground shook at {$c.place}.
+obit.by.old
+  {$x:name} died quietly, at home, after a short illness.
+  {$x:name} died in {$x:poss} sleep, at a great age.
+obit.by.illness
+  {$x:name} died after a long illness, bravely borne.
+obit.by.young
+  {$x:name} died young, and the town has not got over it.
+obit.by.childbirth
+  {$x:name} died in childbirth; the child lives.
+obit.by.accident
+  {$x:name} died in an accident at the works.
+obit.by.sea
+  {$x:name} was lost at sea.
+obit.by.cold
+  {$x:name} died in the great cold.
+obit.by.fire
+  {$x:name} died in a fire.
+obit.by.any
+  {$x:name} died at {$x.home}.
+
+obit.end
+  The burying is at {deadplace} tomorrow; all are welcome.
+  (has:$x.spouse) {$x.spouse:name} and the family ask that no flowers be sent.
+  The family thank all who sent word.
+  (has:$x.child) {$x:name} leaves {$x.child:name} and others.
+  The shops of {$x.home} will close for the funeral, as they have not for anyone in years.
+  Friends will wear {colour.mourn} for {n} days, as was asked.
+tt.beasts
+  dogs
+  birds in cages
+  small beasts
+)VG"

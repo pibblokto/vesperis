@@ -53,12 +53,12 @@ void parsePhones(const std::string& word, std::vector<int>& out) {
     }
 }
 
-// the voice from the body's seed, leaning with the names' style: hard names (1) sit lower and rougher and click and roll more,
-// flowing names (2) run quicker and breathier and tremble more; the inventory is the sounds the tongue's pools spell
+// the voice from the body's seed, leaning with the tongue's sound: a hard tongue (1) sits lower and rougher and clicks and rolls more,
+// a flowing one (2) runs quicker and breathier and trembles more; the inventory is the sounds the tongue's pools spell
 Voice voiceOf(const BodyGen& g, const Lore& L, const Tongue& T) {
     Voice V; V.seed = mix64(loreSeed(g, L) ^ 0x3C05A1ULL);   // C-13: the people's
     Rng rng(V.seed);
-    int st = L.style < 0 || L.style > 2 ? 0 : L.style;
+    int st = T.style < 0 || T.style > 2 ? 0 : T.style;   // H-04's second pass: how the people's own tongue sounds
     double oct = rng.uni() * 1.75;                                   // 85 to 286 Hz
     if (st == 1) oct = std::max(0.0, oct - 0.25);
     V.pitch = 85 * std::pow(2.0, oct);
@@ -79,6 +79,21 @@ Voice voiceOf(const BodyGen& g, const Lore& L, const Tongue& T) {
     for (const std::vector<std::string>* pool : {&T.onsets, &T.nuclei, &T.codas}) for (const std::string& s : *pool) { std::vector<int> ph; parsePhones(s, ph); for (int p : ph) seen[p] = true; }
     for (int p = 0; p < phoneCount(); p++) if (seen[p]) V.inventory.push_back(p);
     return V;
+}
+
+// H-05 (2026-10-10): the ship reading a record that has no voice of its own (a tablet, a scroll, a page): the people's tongue in the
+// people's voice as the computer rebuilds it, flatter: the melody and the tones a third of the voice's, an even pace a little slower, no
+// tremor, no second tone, no whisper and little breath or roughness (the computer reads the sounds; it does not know how they felt)
+Voice voiceRead(const Voice& V) {
+    Voice R = V;
+    R.range = 0.3 * V.range;
+    R.rate = 0.92 * V.rate;
+    R.breath = std::min(V.breath, 0.12);
+    R.rough = 0.2 * V.rough;
+    R.nasal = 0.5 * V.nasal;
+    R.tremor = 0; R.sub = 0;
+    R.read = true;
+    return R;
 }
 
 std::string voiceLine(const Voice& V) {
@@ -127,6 +142,7 @@ void speechOf(const Voice& V, const std::vector<DecodedWord>& words, uint64_t se
         if (post.find('?') != std::string::npos) x.brk = 4; else if (post.find('!') != std::string::npos) x.brk = 5; else if (post.find('.') != std::string::npos) x.brk = 3;
         else if (post.find(';') != std::string::npos || post.find(':') != std::string::npos) x.brk = 2; else if (post.find(',') != std::string::npos) x.brk = 1;
         if (i == nw - 1 && x.brk < 2) x.brk = 3;
+        if (i + 1 < nw && words[i + 1].par && x.brk < 3) x.brk = 3;   // H-04: a paragraph ends a sentence (a headline has no stop)
     }
     double t = 0;
     int i = 0;

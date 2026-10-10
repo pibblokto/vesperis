@@ -22,6 +22,7 @@ inline void sectorIndexOf(double latDeg, double lonDeg, int& sx, int& sy) {
 inline std::string sectorName(double latDeg, double lonDeg) { int sx, sy; sectorIndexOf(latDeg, lonDeg, sx, sy); return fmt("%03d:%03d", sx, sy); }
 // metres as "420 M" or "8.4 KM"
 inline std::string metresString(double m) { return m < 1000 ? fmt("%.0f M", m) : fmt("%.1f KM", m / 1000.0); }
+std::string thousands(double v);   // 13050 -> "13,050" (G-05, C-15)
 
 // HUD colours; `setHudScheme` (M6-01) picks the classic green, amber or a cool white scheme
 extern uint32_t HUD_GREEN, HUD_DIM, HUD_AMBER, HUD_WHITE, HUD_RED, HUD_SHADOW, HUD_CYAN;
