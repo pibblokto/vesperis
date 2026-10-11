@@ -46,8 +46,10 @@ struct Voice {
     bool trill = false;         // the r's are rolled
     std::vector<int> inventory; // the phones the tongue's pools use, for the print
     uint64_t seed = 0;
+    bool read = false;          // H-05: the ship's reading of a record with no voice of its own (`voiceRead`)
 };
 Voice voiceOf(const BodyGen& g, const Lore& L, const Tongue& T);
+Voice voiceRead(const Voice& V);   // H-05: the ship reading a record with no voice of its own: the people's voice as the computer rebuilds it, flatter
 std::string voiceLine(const Voice& V);   // "A DEEP, ROUGH VOICE, SLOW, WITH CLICKS" (52 characters at most)
 
 struct Segment {

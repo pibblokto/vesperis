@@ -11,12 +11,19 @@ Order is a suggestion.
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
 B-403 to B-406 (`docs/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0` or `1.2.0` shipped in that release, `1.3.0` is for the next one.
+column: `1.1.0`, `1.2.0` or `1.3.0` shipped in that release, `1.4.0` is for the next one.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
 
-**Left for 1.3.0 and later:** the V series (the surface picture, parked), C-11 (skipped under KI-347), S-07, W-02, W-05, the P, L and K series.
+**Released as 1.3.0 (2026-10-11), generation 13:** the iteration `ITERATION-1.3.0.md`, planned 2026-10-08 as one release with
+everything in it, the far, the faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar turned up to hear
+farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
+G-05, G-06, G-07, H-01, A-01, C-15, C-16, A-02, A-03, A-04, T-01, H-02, T-02, T-03, T-04, H-03, H-04, H-05, H-06, C-11;
+generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first; C-18
+(the drone bay) on 2026-10-11, the twenty-second; with R-412 to R-417 and B-411 to B-422. The rows not done move to `1.4.0`.
+
+**Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -28,6 +35,12 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | G-02 | Regions, globular clusters, start sector and home star in the new disc | S | 1.1.0 |
 | G-03 | Galaxy background integration at the new scale (two-scale ray integration) | M | 1.1.0 |
 | G-04 | Scene finders and pinned sites re-found, `regress bless`, flow green | S | 1.1.0 |
+| G-05 | The galaxy chart: the star map's second page, the whole disc by its stars, the ship, home, the route (gone with R-414), the locked signals | M | 1.3.0, done 2026-10-08 |
+| G-06 | The next jump chosen on the chart: a cursor and what lies there, the jump plotted and flown, a look before the leap | M | 1.3.0, done 2026-10-08 |
+| G-07 | The crossing: the galaxy turning round the ship in a long flight (KI-364) | S | 1.3.0, done 2026-10-08 |
+
+G-05 to G-07 were added on 2026-10-08 for 1.3.0 (R-409): the galaxy as the explorer sees and crosses it, after the bump; no
+generation change.
 
 ## S: star classes (`PLAN-star-classes.md`) — same bump as G
 
@@ -39,7 +52,7 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | S-04 | Protostar (nebula sky, dust and belts, accretion disc) | M | 1.1.0 |
 | S-05 | Wolf-Rayet star (shell ring in the sky, stripping wind, radiation) | M | 1.1.0 |
 | S-06 | Black hole: lensing, accretion ring, drawn-out companion, survivor rocks | XL | 1.1.0 |
-| S-07 | Later rows when wanted: yellow supergiant, magnetar, T Tauri, white dwarf pair | S each | 1.3.0 or later |
+| S-07 | Later rows when wanted: yellow supergiant, magnetar, T Tauri, white dwarf pair | S each | 1.4.0 or later |
 
 ## C: civilisations (`IDEAS-ruins-shards-signals.md`)
 
@@ -55,25 +68,64 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | C-08 | Ruins that read the world: harbours, terraces, cisterns and walls from the terrain; weathering by age | L | 1.1.0 |
 | C-09 | Roads that still go somewhere: faint lines in the terrain, on the landing zoom, between ruins | M | 1.1.0 |
 | C-10 | Star charts as shards: the culture's sky overlaid on yours, pointing at other dead worlds | M | 1.1.0 |
-| C-11 | Instruments as artefacts, playable from the cabin | S | 1.3.0 (KI-347) |
+| C-11 | Instruments as artefacts, playable from the cabin | S | 1.3.0, done 2026-10-10 (KI-347; the ship's player and the instruments of the ages, last of the iteration) |
 | C-12 | Graves and names; a culture's calendar and the timeline; the last recording per world | M | 1.1.0 |
 | C-13 | Cultures per world: none, one or (rarely) two | S | 1.1.0 |
 | C-14 | Lending: decoded shards travel with the guide export, credited in cyan | S | 1.1.0 |
+| C-15 | Deep listening: the radar's gain, a power per transmitter, the far scan, far signals faint and slow to lock | M | 1.3.0, done 2026-10-08 |
+| C-16 | What the gain lets in: the floor, the galaxy's own noise, signals mixed, far voices worn, voices in the static | L | 1.3.0, done 2026-10-09 |
+| C-17 | The instruments' maker: each people's instruments built from parts by its own way of making (the user's request after C-11) | L | 1.3.0, done 2026-10-10 |
+| C-18 | The drone bay: three drones with hands bring a people's world's records and instruments to the ship; the instruments' case by world, a world of two peoples a folder each people (the user's request after R-412) | L | 1.3.0, done 2026-10-11 |
 
 Order: C-01, C-02 (judge the text before any audio), C-03, C-06, C-04, C-05, C-07, then
-C-08 and C-10 as the pair that connects the galaxy, the rest as wanted.
+C-08 and C-10 as the pair that connects the galaxy, the rest as wanted. C-15 and C-16 were added on 2026-10-08 for 1.3.0
+(R-410): the radar turned up to hear farther, through the noise; no generation change.
+
+## A: the ages and what they built (`IDEAS-civilisation-expansion.md`) — generation 13 with T and H
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| A-01 | The ages: each people's age at its collapse (prehistoric to far future), its profile, who transmits | M | 1.3.0, done 2026-10-08 |
+| A-02 | The forms the renderer needs: new shapes and their broken states, colliders, LOD to a skyline, a people's colours in banks | XL | 1.3.0, done 2026-10-09 |
+| A-03 | What each age builds: buildings, materials, heights and density of six ages; decay by material; older layers | L | 1.3.0, done 2026-10-09 |
+| A-04 | The architecture genome: thirty-five deep variables and the age's own; the architecture sheet; distinctness measured | L | 1.3.0, done 2026-10-09 |
+
+## T: the towns and the works (`IDEAS-civilisation-expansion.md`)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| T-01 | A people's map of its world: a plan of capital, cities, towns and villages by the age, networks, seen from orbit | XL | 1.3.0, done 2026-10-09 |
+| T-02 | Towns by age: plans, districts, density and height, edges, the site's reading by age | L | 1.3.0, done 2026-10-09 |
+| T-03 | The works: everything else people make, each placed by a rule of the terrain and the history | L | 1.3.0, done 2026-10-09 |
+| T-04 | Where the records lie: the shards' places and objects by age, the count by age and size | M | 1.3.0, done 2026-10-09 |
+
+## H: the histories and the records (`IDEAS-civilisation-expansion.md`)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| H-01 | Research: grammars and histories for generated records; a written choice and a prototype to read | M | 1.3.0, done 2026-10-08 |
+| H-02 | The history: a simulated history per people, eras, figures, institutions, events, the collapse by its cause | L | 1.3.0, done 2026-10-09 |
+| H-03 | The grammar engine: the chosen formalism, the realiser, the authoring format, the checks; C-02's texts rebuilt on it | L | 1.3.0, done 2026-10-09 |
+| H-04 | The records: genres by age, longer texts, dozens of inputs, the collapse from many sides; reworked: each people its own (tongues, culture, the everyday) | XL | 1.3.0, done 2026-10-10 |
+| H-05 | More shards in three categories styled by the age: texts, music, star charts; the radar's programmes by age | L | 1.3.0, done 2026-10-10 |
+| H-06 | The decoder reads a history: categories, long texts, the eras' timeline, the people's history as read | M | 1.3.0, done 2026-10-10 |
+
+The three blocks were added on 2026-10-08 for 1.3.0 (R-411), interleaved with the far and the faint in the iteration's
+order (H-01, A-01, then the radar, A-02 to A-04, T-01, H-02, T-02 to T-04, H-03 to H-06); one generation change for the
+three, from A-01. They rebuild what the C series made (C-01's settlements, C-02's
+grammar, C-03's shards, C-08's reading of the site, C-09's roads, C-12's graves) and keep its register.
 
 ## V: the surface picture (`IDEAS-surface-picture.md`) — the rendering polish asked for after C-09
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| V-01 | Continuous LOD: nested rings geomorphed everywhere, one shading and one set of material tiles at every distance, no cell popping, no shore steps | XL | 1.3.0 |
-| V-02 | Normals from the planet function's gradient, ambient by slope and sky, a finer intensity ramp | M | 1.3.0 |
-| V-03 | Aerial perspective: height-aware per-pixel fog shared by every pass, a horizon haze band, scattering toward the sun | M | 1.3.0 |
-| V-04 | Flora and rock LOD: distance-faded instancing, billboards far out, forests that do not shimmer | L | 1.3.0 |
-| V-05 | Ground texture to the horizon: the meso tiles at coarser octaves on every ring, the macro tone at all scales | M | 1.3.0 |
-| V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | 1.3.0 |
-| V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | 1.3.0 |
+| V-01 | Continuous LOD: nested rings geomorphed everywhere, one shading and one set of material tiles at every distance, no cell popping, no shore steps | XL | 1.4.0 |
+| V-02 | Normals from the planet function's gradient, ambient by slope and sky, a finer intensity ramp | M | 1.4.0 |
+| V-03 | Aerial perspective: height-aware per-pixel fog shared by every pass, a horizon haze band, scattering toward the sun | M | 1.4.0 |
+| V-04 | Flora and rock LOD: distance-faded instancing, billboards far out, forests that do not shimmer | L | 1.4.0 |
+| V-05 | Ground texture to the horizon: the meso tiles at coarser octaves on every ring, the macro tone at all scales | M | 1.4.0 |
+| V-06 | Water and sky: shoreline foam, reflections by the wave normal, a cloud layer with parallax | L | 1.4.0 |
+| V-07 | The artifact audit: every site, the stability sheets, the holes and seam checks; KI-310/318/320/323/341 closed or re-scoped | S | 1.4.0 |
 
 V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in every frame. Parked on 2026-10-03: the direction (this series, or GPU rendering through raylib) is to be discussed before any of it starts.
 
@@ -82,10 +134,10 @@ V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
 | W-01 | The time-lapse as an almanac menu: upcoming events with countdowns, run-to-it with a slowdown at the end; orbital events on the ship | M | 1.2.0, done 2026-10-06 |
-| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.3.0 |
+| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.4.0 |
 | W-03 | Weather that arrives: fronts with position, heading and speed; visible from orbit, on the map and on the ground; the data sheet forecast | L | 1.2.0, done 2026-10-06 |
 | W-04 | Nights: aurorae, meteor showers from comet orbits, zodiacal light, ring and moon shadows, earthshine | M | 1.2.0, done 2026-10-07 |
-| W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | 1.3.0 |
+| W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | 1.4.0 |
 | W-06 | The telescope on the ship: zoom, reticle, drift, photo mode | M | 1.2.0, done 2026-10-06, reworked the same day on review (the plate, the set, R-404), then R-405 (the stabiliser, the orbit keys) |
 
 W-01 first: it makes every other timed event (W-02..W-04) something you can witness.
@@ -94,37 +146,37 @@ W-01 first: it makes every other timed event (W-02..W-04) something you can witn
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| P-01 | Tidally locked eyeball world (with S-01's red dwarfs) | L | 1.3.0 or later |
-| P-02 | Ammonia world | M | 1.3.0 or later |
-| P-03 | Salt world | M | 1.3.0 or later |
-| P-04 | Glass world | M | 1.3.0 or later |
-| P-05 | Fungal world | L | 1.3.0 or later |
-| P-06 | Rogue-captured world | M | 1.3.0 or later |
-| P-07 | Chthonian world | M | 1.3.0 or later |
-| P-08 | Shattered world | L | 1.3.0 or later |
-| P-09 | Supercritical world (landable at the poles or not at all) | M | 1.3.0 or later |
-| P-10 | Iron rain world | M | 1.3.0 or later |
-| P-11 | Shepherd moon in a ring (a place, not a type) | M | 1.3.0 or later |
-| P-12 | Pelagic world with a single island | S | 1.3.0 or later |
+| P-01 | Tidally locked eyeball world (with S-01's red dwarfs) | L | 1.4.0 or later |
+| P-02 | Ammonia world | M | 1.4.0 or later |
+| P-03 | Salt world | M | 1.4.0 or later |
+| P-04 | Glass world | M | 1.4.0 or later |
+| P-05 | Fungal world | L | 1.4.0 or later |
+| P-06 | Rogue-captured world | M | 1.4.0 or later |
+| P-07 | Chthonian world | M | 1.4.0 or later |
+| P-08 | Shattered world | L | 1.4.0 or later |
+| P-09 | Supercritical world (landable at the poles or not at all) | M | 1.4.0 or later |
+| P-10 | Iron rain world | M | 1.4.0 or later |
+| P-11 | Shepherd moon in a ring (a place, not a type) | M | 1.4.0 or later |
+| P-12 | Pelagic world with a single island | S | 1.4.0 or later |
 
 ## L: looks and effects (`IDEAS-planet-kinds-and-looks.md`, second list)
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| L-01 | Atmospheric scattering with distance and altitude | L | 1.3.0 or later |
-| L-02 | Cloud shadows moving over the ground | M | 1.3.0 or later |
-| L-03 | Wet ground after rain: darker material, puddles, gullies running | M | 1.3.0 or later |
-| L-04 | Snow and frost by time of day and season | M | 1.3.0 or later |
-| L-05 | Dust and sand in the air: haze, streaming crests, deposits | M | 1.3.0 or later |
-| L-06 | Material detail by distance: pebbles, cracked mud, ripples, moss | L | 1.3.0 or later |
-| L-07 | Volumetric light: rays, shafts, plume glow | L | 1.3.0 or later |
-| L-08 | Wind on vegetation and water | M | 1.3.0 or later |
-| L-09 | Heat shimmer | S | 1.3.0 or later |
-| L-10 | Bioluminescence as a trait | M | 1.3.0 or later |
-| L-11 | Ring light and planetshine on the ground | M | 1.3.0 or later |
-| L-12 | Palette moods per world | S | 1.3.0 or later |
-| L-13 | Weathering on the capsule and the buggy | M | 1.3.0 or later |
-| L-14 | Ground fog and mist | M | 1.3.0 or later |
+| L-01 | Atmospheric scattering with distance and altitude | L | 1.4.0 or later |
+| L-02 | Cloud shadows moving over the ground | M | 1.4.0 or later |
+| L-03 | Wet ground after rain: darker material, puddles, gullies running | M | 1.4.0 or later |
+| L-04 | Snow and frost by time of day and season | M | 1.4.0 or later |
+| L-05 | Dust and sand in the air: haze, streaming crests, deposits | M | 1.4.0 or later |
+| L-06 | Material detail by distance: pebbles, cracked mud, ripples, moss | L | 1.4.0 or later |
+| L-07 | Volumetric light: rays, shafts, plume glow | L | 1.4.0 or later |
+| L-08 | Wind on vegetation and water | M | 1.4.0 or later |
+| L-09 | Heat shimmer | S | 1.4.0 or later |
+| L-10 | Bioluminescence as a trait | M | 1.4.0 or later |
+| L-11 | Ring light and planetshine on the ground | M | 1.4.0 or later |
+| L-12 | Palette moods per world | S | 1.4.0 or later |
+| L-13 | Weathering on the capsule and the buggy | M | 1.4.0 or later |
+| L-14 | Ground fog and mist | M | 1.4.0 or later |
 
 L-01 and L-02 first: they change every frame on every world.
 
@@ -141,11 +193,11 @@ L-01 and L-02 first: they change every frame on every world.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| K-01 | Design answers to the open questions (finding, darkness, life, the buggy, the map) | S | 1.3.0 or later |
-| K-02 | Placement: `LM_CAVE` through the landmark grid; sinkholes and springs from the drainage on karst worlds; lava-tube, sea, ice and collapse variants | M | 1.3.0 or later |
-| K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | 1.3.0 or later |
-| K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | 1.3.0 or later |
-| K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | 1.3.0 or later |
+| K-01 | Design answers to the open questions (finding, darkness, life, the buggy, the map) | S | 1.4.0 or later |
+| K-02 | Placement: `LM_CAVE` through the landmark grid; sinkholes and springs from the drainage on karst worlds; lava-tube, sea, ice and collapse variants | M | 1.4.0 or later |
+| K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | 1.4.0 or later |
+| K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | 1.4.0 or later |
+| K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | 1.4.0 or later |
 
 ## Suggested order for 1.2.0
 
@@ -156,3 +208,10 @@ L-01 and L-02 first: they change every frame on every world.
 2. W-01 (the almanac), then W-02 and W-04: cheap and visible on every world.
 3. C-11 (the instruments) once KI-347 is settled; the texts of C-02 once judged on paper.
 4. Then by appetite: the probe (X), caves (K), the planet kinds (P) and the looks (L).
+
+## 1.3.0
+
+The iteration is `ITERATION-1.3.0.md` (2026-10-08), one release in twenty milestones and eight phases: the far (G-05,
+G-06, G-07), groundwork (H-01, A-01), the faint (C-15, C-16), what they built (A-02, A-03, A-04), where and when (T-01,
+H-02), towns and works (T-02, T-03, T-04), the records (H-03, H-04, H-05, H-06), the player (C-11). The V series stays parked until
+the rendering direction is discussed; W-02, W-05, S-07 and the P, L and K series wait for a later iteration.

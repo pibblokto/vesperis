@@ -1,0 +1,319 @@
+R"VG(
+# modern6.vg (H-04, the second pass): the minutes of a meeting (a council's, a board's, a committee's: the items, who said what, what
+# was decided, which was usually nothing). An item is built from parts (what was raised, about what, where; who spoke and how; what
+# came of it), each people keeping its own few ways of putting each part (`people=K`), so one council "carries" a motion by a show of
+# hands and another "lets it stand"; their disputes are their own: their water, their herds in the streets, their crafts' smells.
+# The manual is modern8.vg's.
+
+genre.minutes (words=26..140)
+  {min.head}\n{min.item}\n{min.item}\n{min.item}\n{min.close}
+  {min.head}\n{min.present}\n{min.item}\n{min.item}\n{min.close}
+  {min.head}\n{min.item}\n{min.item}\n{min.item}\n{min.item}\n{min.close}
+  {min.head}\n{min.present}\n{min.item}\n{min.item}\n{min.item}\n{min.close}
+
+min.head (formula people=3)
+  Minutes of the meeting of the {min.body} of {$home}, held in {season.now}, year {#year:digits}.
+  {min.body} of {$home}: minutes.
+  The {min.body} met at {$home} in {season.now}. These are the minutes.
+  Minutes, {min.body}, {$home}, {season.now}.
+  Record of the {min.body} of {$home}, its meeting of {season.now}.
+
+min.body (people=3)
+  council
+  water board
+  school committee
+  market board
+  street committee
+  residents' association
+  {craft} guild
+  (coast=1) harbour board
+  (has:assembly) assembly
+  (has:company) board of {company}
+
+# ---- who was there -----------------------------------------------------------------------------------------------------------
+
+min.present
+  Present: {min.who}, {min.who2} and {#n|member}. {min.absent}
+  {#n|member} present, with {min.gallery}{min.present2}. {min.absent}
+  Present: {min.who}, {min.who2}, and {min.extra}. {min.absent}
+min.who (people=3)
+  the chair
+  the secretary
+  the treasurer
+  the clerk
+  the eldest member
+  the member for the north side
+min.who2 (people=3)
+  the keeper of the seal
+  the clerk of the works
+  the member for {$home}
+  the doctor
+  the schoolmaster
+  the {craft} guild's member
+  the harbour master
+min.present2
+  (3)
+  , and the windows open
+  , the stove lit for once
+  , under the {craft} guild's banner
+  , and {drink} on the side table
+min.gallery (people=4)
+  the public gallery full
+  the gallery empty but for a dog
+  two reporters in the gallery
+  the gallery full of {craft} workers
+  a crowd outside
+  the children of the members in the gallery
+  a smell of {food} from the gallery
+  the gallery asked to keep its voice down
+  half the {craft} guild in the gallery
+  the gallery cold and the windows open
+min.extra (people=2)
+  one who was asked to leave
+  a visitor from {$seat}, who said nothing
+  the new member, who said a great deal
+  a child who was looking for a parent
+min.absent (people=3)
+  Apologies from the rest.
+  The member for the north side was absent again.
+  One seat is empty since {season.any}.
+  The clerk was late.
+  Two absent through sickness.
+  Absent without word: the usual.
+
+# ---- an item ------------------------------------------------------------------------------------------------------------------
+
+min.item
+  (3) Item: {min.topic}. {min.outcome}
+  (2) On {min.topic}, {min.speaker} {min.said}. {min.outcome}
+  (2) The chair raised {min.topic}. {min.outcome}
+  A letter from {min.from} about {min.tobj} was read. {min.outcome}
+  {min.speaker} asked that {min.tobj} be put on the next agenda. {min.short}
+  On {min.topic}, {min.speaker} {min.said}; {min.speaker2} {min.said2}. {min.outcome}
+  (stage>=1) Item: the closing of the {min.building} on the hill. Agreed. Nobody spoke.
+  (stage>=2) Item: the evacuation plan. The chair asked whether anyone had read it. Nobody had.
+
+min.topic
+  {min.tpre} {min.tobj} {min.tpost}
+min.tpre (people=6)
+  the matter of
+  complaints about
+  the cost of
+  a petition about
+  the state of
+  the question of
+  the future of
+  a report on
+  a dispute over
+  an inquiry into
+  the old quarrel over
+  a proposal about
+  the money for
+  a letter of thanks for
+min.tobj (share=0.7)
+  the drains
+  the {craft} works
+  the {watersrc.n}
+  the old {min.building}
+  the {festival} procession
+  the market stalls
+  the {herd} kept in the town
+  {streets.of}
+  {town.edge}
+  {town.open}
+  the ground for {pastime}
+  the bridge over {river}
+  the {tree} along the river road
+  the tram shelters
+  the public baths
+  the burial ground
+  the {colour.any} doors of the old houses
+  the stores of {food}
+  the {drink} houses
+  the fountain
+  the clock
+  the bells
+  (coast=1) the harbour wall
+  (coast=1) the fish market
+  (has:$home.landmark) {$home.landmark}
+min.tpost (people=5)
+  (4)
+  , again
+  , raised before
+  , for the third time this year
+  (has:$home.quarter) in {$home.quarter}
+  (has:$home.quarter) near {$home.quarter}
+  on the north side
+  by the station
+  , which the members had hoped was settled
+min.building (people=2)
+  school
+  hall
+  baths
+  library
+  clinic
+  market
+  orphanage
+  fire station
+
+min.from (people=4)
+  {$seat}
+  a resident of {$home}
+  the {craft} guild
+  the schoolchildren of {$home}
+  a lawyer acting for the {craft} works
+  the keeper of {holyplace}
+  the widows of the {craft} workers
+  a traveller from {city2}
+  the {herd} keepers' society
+
+min.speaker (people=4)
+  the treasurer
+  the secretary
+  the oldest member
+  a visitor from {$seat}
+  the youngest member
+  the member who keeps {herd}
+  the {craft} guild's member
+  the doctor
+  the clerk of the works
+  (has:$home.quarter) the member for {$home.quarter}
+min.speaker2 (people=3)
+  the chair
+  another member
+  the treasurer
+  the visitor
+  the clerk
+min.said (people=6)
+  said that it had been raised before
+  proposed that it be dropped
+  asked who was paying for it
+  reminded the meeting of the last time
+  spoke for some time
+  said that the old way had worked well enough
+  said that the people of {$home} would not stand for it
+  proposed a committee to look into it
+  wished it minuted that the member had warned them
+  said nothing, at length
+  quoted the old saying: {proverb}
+  said that {ruler.the} would have to be told
+  read out a list of figures nobody could follow
+  asked whether anyone had been to look
+min.said2 (people=3)
+  disagreed
+  agreed, for once
+  asked for the figures
+  left the room
+  said the same, more loudly
+  called for a vote
+
+min.outcome
+  (5) {min.short}
+  (2) {min.long}
+min.short (people=5)
+  Agreed.
+  Deferred.
+  Noted.
+  Agreed, one against.
+  Carried.
+  Lost.
+  Let stand.
+  Not agreed.
+  Withdrawn.
+  Passed by hands.
+  Referred back.
+min.long (share=0.8)
+  Agreed, after {min.delay}.
+  Deferred until {min.until}.
+  Not agreed; the chair will write to {ruler.the} {min.write}.
+  Referred to a sub-committee, which {min.subc}.
+  Agreed in principle; the money will be found {min.money}.
+  The vote was tied; the chair's vote went with {min.tie}.
+  Carried, with {#n} against, {min.after}.
+  The discussion was {min.disc} and is {min.notmin}.
+min.delay (people=4)
+  a short adjournment for the members to calm down
+  a recess for {drink}
+  the second reading
+  some argument about the wording
+  a walk to look at the thing itself
+  the treasurer had counted twice
+  the chair had been fetched from the {drink} house
+  a reading of the old charter
+  a vote on whether to vote
+  a long story about the founder
+min.until (people=3)
+  the next meeting
+  {season.next}
+  the figures come
+  the {festival} holiday is over
+  the weather improves
+  someone remembers it
+min.write (people=2)
+  about it
+  again
+  in the plainest words
+  this week
+min.subc (people=3)
+  has not met since {season.any}
+  will report in {season.next}
+  is the same people in other chairs
+  meets at the {drink} house
+  has lost its minutes
+  has two members, who do not speak
+  will meet when the weather allows
+min.money (people=2)
+  later
+  somewhere
+  from the {festival} fund
+  by selling the old {min.building}
+  by a collection at {holyplace}
+  from the {craft} guild, who do not know it yet
+  once the tolls are in
+min.tie (people=3)
+  the old arrangement
+  the new one
+  nobody, and the motion was withdrawn
+  the side that had brought {drink}
+  the members who had stayed awake
+  whoever had spoken last
+  the chair's own street
+  the way of the founder
+min.after (people=4)
+  to some surprise
+  after a long silence
+  and the gallery cheered
+  with two abstaining
+  and the treasurer walked out
+  to the relief of the chair
+  after the member for the north side had been woken
+  and the bell rang for the end of the shift
+  without anyone saying why
+  to nobody's satisfaction
+  after the visitor had been asked to sit down
+  with the {craft} guild against
+min.notmin
+  not minuted
+  left out of these minutes
+  best forgotten
+  minuted elsewhere
+min.disc (people=3)
+  long
+  heated
+  personal
+  circular
+  short and bitter
+  loud
+  learned
+  about something else
+  tearful
+  conducted in whispers
+
+min.close (formula people=3)
+  There being no other business, the meeting closed.
+  The next meeting will be held when it is held.
+  The meeting closed at ten. The tea urn was not working.
+  The chair thanked the members, and the meeting closed.
+  Meeting closed. The minutes are a fair record, as far as they go.
+  The meeting closed in time for the last {msg.transit}.
+)VG"

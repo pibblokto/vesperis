@@ -1,0 +1,379 @@
+R"VG(
+# culture.vg (H-04, the second pass): what a people grew, kept, hunted, ate and drank and carried it in. Every list is a pool from which
+# each people keeps its own few (`people=K`: the people's seed ranks the alternatives whose guards hold and keeps the first K), so one
+# people's records speak of millet, goats, gourds and the cistern and another's of rye, reindeer, birch baskets and the river: the same
+# sentence in two peoples' records is two sentences. A list's number is its rule's option ((pl), (mass), (sing)) and holds for every
+# word in it (a verb after it agrees: "the {crop} was thin"). `keep`: the same word all through one record.
+
+# =====================================================================================================================
+# the fields
+# =====================================================================================================================
+
+# the staple grain or root: mass nouns only
+crop (mass keep people=3)
+  (desert=1) millet
+  (desert=1) sorghum
+  (desert=1) barley
+  (desert=1) teff
+  (desert=1) durum
+  (desert=1) red millet
+  (desert=0 cold=1) barley
+  (desert=0 cold=1) rye
+  (desert=0 cold=1) spelt
+  (desert=0 cold=1) buckwheat
+  (desert=0 cold=1) black barley
+  (desert=0 cold=1) oatgrass
+  (desert=0 cold=0) wheat
+  (desert=0 cold=0) emmer
+  (desert=0 cold=0) maize
+  (desert=0 cold=0) rice
+  (desert=0 cold=0) millet
+  (desert=0 cold=0) hill rice
+  (desert=0 cold=0) taro
+  (desert=0 cold=0) bluegrain
+  (desert=0 cold=0) cassava
+  (desert=0) seedgrass
+
+# a second crop, also a mass noun (a fibre, a leaf, a root, an oil)
+crop2 (mass keep people=2)
+  (desert=1) sesame
+  (desert=1) cotton
+  (desert=1) henna
+  (desert=1) saffron
+  (desert=0 cold=1) flax
+  (desert=0 cold=1) hemp
+  (desert=0 cold=1) kale
+  (desert=0 cold=1) cabbage
+  (desert=0 cold=1) woad
+  (desert=0 cold=0) flax
+  (desert=0 cold=0) squash
+  (desert=0 cold=0) madder
+  (desert=0 cold=0) indigo
+  (desert=0 cold=0) cotton
+  (desert=0 cold=0) hops
+  (desert=0) garlic
+  (desert=0) fennel
+  (desert=0) sorrel
+
+# the fruit of their trees and vines
+fruit (pl people=3)
+  (desert=1) dates
+  (desert=1) figs
+  (desert=1) pomegranates
+  (desert=1) melons
+  (desert=0 cold=1) apples
+  (desert=0 cold=1) cloudberries
+  (desert=0 cold=1) rowan berries
+  (desert=0 cold=1) plums
+  (desert=0 cold=0) grapes
+  (desert=0 cold=0) olives
+  (desert=0 cold=0) quinces
+  (desert=0 cold=0) cherries
+  (desert=0 cold=0) breadfruit
+  (desert=0 cold=0) mangoes
+  (desert=0) pears
+  (desert=0) sloes
+
+# the garden's, the pot's
+veg (pl people=3)
+  (desert=1) lentils
+  (desert=1) chickpeas
+  (desert=1) onions
+  (desert=1) gourds
+  (desert=0 cold=1) turnips
+  (desert=0 cold=1) peas
+  (desert=0 cold=1) leeks
+  (desert=0 cold=1) radishes
+  (desert=0 cold=0) beans
+  (desert=0 cold=0) yams
+  (desert=0 cold=0) peppers
+  (desert=0 cold=0) gourds
+  (desert=0) onions
+  (desert=0) carrots
+  (desert=0) beets
+
+# =====================================================================================================================
+# the beasts
+# =====================================================================================================================
+
+# what a people herded (plural; the same all through a record)
+herd (pl keep people=2)
+  (desert=1) goats
+  (desert=1) sheep
+  (desert=1) camels
+  (desert=1) asses
+  (desert=1 economy=herding|economy2=herding) dromedaries
+  (desert=0) goats
+  (desert=0) sheep
+  (desert=0) cattle
+  (desert=0) pigs
+  (desert=0 cold=1) reindeer
+  (desert=0 cold=1) yaks
+  (desert=0 cold=1) musk oxen
+  (desert=0 cold=0) buffalo
+  (desert=0 cold=0) llamas
+  (desert=0 highmountains=1) alpacas
+  (desert=0) water buffalo
+  (age>=medieval) horses
+  (age>=medieval) mules
+
+# a beast about the house (singular)
+beast (sing people=4)
+  (desert=1) goat
+  (desert=1) lizard
+  (desert=1) jackal pup
+  (desert=1) sand cat
+  (desert=0) goat
+  (desert=0) dog
+  (desert=0) cat
+  (desert=0) hen
+  (desert=0) goose
+  (desert=0) ferret
+  (desert=0 cold=0) parrot
+  (desert=0 cold=0) monkey
+  (desert=0) tortoise
+  (desert=0) crow
+  (desert=0 coast=1) gull
+  (desert=0) magpie
+  dog
+  bird
+
+# the game (plural) and one of it
+game (pl people=3)
+  (desert=1) gazelles
+  (desert=1) wild asses
+  (desert=1) sand grouse
+  (desert=1) oryx
+  (desert=1) ibex
+  (desert=0) deer
+  (desert=0) boar
+  (desert=0) elk
+  (desert=0) hares
+  (desert=0 cold=1) reindeer
+  (desert=0 cold=1) bison
+  (desert=0 cold=1) snow hares
+  (desert=0 coast=1) seals
+  (desert=0 cold=0) antelope
+  (desert=0 cold=0) wild pigs
+  (desert=0 cold=0) wild cattle
+  (desert=0) wild geese
+game.one (people=3)
+  (desert=1) gazelle
+  (desert=1) wild ass
+  (desert=1) oryx
+  (desert=1) ibex
+  (desert=0) deer
+  (desert=0) boar
+  (desert=0) elk
+  (desert=0 cold=1) reindeer
+  (desert=0 cold=1) bison
+  (desert=0 coast=1) seal
+  (desert=0 cold=0) antelope
+  (desert=0 cold=0) wild bull
+
+# the water's (plural)
+fish (pl people=2)
+  (desert=0) eels
+  (desert=0) carp
+  (desert=0) trout
+  (desert=0) perch
+  (desert=0) pike
+  (desert=0) catfish
+  (desert=0 coast=1) herring
+  (desert=0 coast=1) cod
+  (desert=0 coast=1) mackerel
+  (desert=0 coast=1) crabs
+  (desert=0 coast=1) mussels
+  (desert=0 cold=1) salmon
+  (desert=1) river fish
+  (desert=1) little silver fish
+
+# the birds over the fields (plural)
+bird (pl people=3)
+  crows
+  larks
+  swifts
+  cranes
+  herons
+  hawks
+  owls
+  doves
+  ravens
+  finches
+  starlings
+  (coast=1) gulls
+  (desert=1) vultures
+  (desert=1) sand larks
+  (desert=0) storks
+  (desert=0 cold=0) ibises
+  (desert=0 cold=1) snow buntings
+  (desert=0) geese
+
+# what ate the fields (plural)
+pest (pl people=2)
+  rats
+  mice
+  crows
+  (desert=1) locusts
+  (desert=0) weevils
+  (desert=0) slugs
+  (desert=0) aphids
+  (desert=0) moles
+  (desert=0) starlings
+
+# =====================================================================================================================
+# the table
+# =====================================================================================================================
+
+# what was eaten (a mass noun or a dish's name taken as one)
+food (mass people=4)
+  bread
+  flatbread
+  porridge
+  gruel
+  broth
+  stew
+  cheese
+  curd cheese
+  smoked fish
+  dried meat
+  fish paste
+  bean paste
+  {crop} porridge
+  {crop} bread
+  honey
+  butter
+  pickled cabbage
+  roast meat
+  (economy=herding|economy2=herding) sour milk
+  (coast=1) salt fish
+  (age>=medieval) pastry
+  (age>=medieval) sausage
+  (age>=industrial) tinned meat
+  (age>=industrial) white bread
+  (age>=modern) noodle soup
+  (age>=futuristic) protein
+
+# their drink (mass)
+drink (mass people=3)
+  beer
+  {crop} beer
+  ale
+  mead
+  milk
+  sour milk
+  wine
+  (desert=0 cold=0) palm wine
+  (desert=0) cider
+  (desert=1) date wine
+  buttermilk
+  tea
+  (age>=medieval) brandy
+  (age>=industrial) coffee
+  (age>=modern) soda
+
+# what they carried and kept things in (plural; one of them: `vessel.one`)
+vessel (pl people=3)
+  pots
+  baskets
+  skins
+  gourds
+  sacks
+  bowls
+  (age>=medieval) jars
+  (age>=medieval) casks
+  (age>=medieval) barrels
+  (age>=medieval) chests
+  (age>=medieval) crates
+  (age>=medieval) bottles
+  (age>=industrial) tins
+  (age>=industrial) drums
+  (age>=modern) canisters
+  (age>=modern) boxes
+  (age>=futuristic) cases
+  (age<=medieval) leather bags
+  (age<=medieval) reed baskets
+  (age<=medieval) clay pots
+  (cold=1) birch boxes
+  (desert=1) water skins
+vessel.one (people=3)
+  a pot
+  a basket
+  a skin
+  a gourd
+  a sack
+  a bowl
+  (age>=medieval) a jar
+  (age>=medieval) a cask
+  (age>=medieval) a chest
+  (age>=medieval) a bottle
+  (age>=industrial) a tin
+  (age>=modern) a box
+  (age<=medieval) a leather bag
+  (cold=1) a birch box
+
+# where the water came from (singular, with its article)
+watersrc (people=2)
+  (desert=0) the river
+  (desert=0) the stream
+  (desert=0) the spring
+  (desert=0) the lake
+  (desert=0) the pool below the rocks
+  (desert=0 age<=medieval) the rain barrel
+  (desert=1) the well
+  (desert=1) the cistern
+  (desert=1) the channel under the hill
+  (desert=1) the oasis
+  (desert=1) the deep well
+  (cold=1) the snowmelt
+  (age>=medieval) the conduit
+  (age>=industrial) the pump
+  (age>=industrial) the reservoir
+  (age>=modern) the mains
+  (age>=futuristic) the recycler
+
+# what they burnt (mass)
+fuel (mass people=2)
+  wood
+  dung
+  peat
+  charcoal
+  driftwood
+  (desert=1) thornwood
+  (desert=0) brushwood
+  (age>=medieval) seal oil
+  (age>=industrial) coal
+  (age>=industrial) gas
+  (age>=modern) oil
+  (age>=futuristic) power
+
+# the trees by the world's flora (its two families; lamp trees and great trees where the traits say); a people names each its own way
+tree (pl people=4)
+  (desert=0 flora=0|flora2=0) round trees
+  (desert=0 flora=0|flora2=0) ball trees
+  (desert=0 flora=1|flora2=1) needle trees
+  (desert=0 flora=1|flora2=1) pin trees
+  (desert=0 flora=2|flora2=2) flat-crowned trees
+  (desert=0 flora=2|flora2=2) table trees
+  (desert=0 flora=3|flora2=3) great tiered trees
+  (desert=0 flora=3|flora2=3) stair trees
+  (desert=0 flora=4|flora2=4) stalk trees
+  (desert=0 flora=4|flora2=4) reed trees
+  (desert=0 flora=5|flora2=5) fern trees
+  (desert=0 flora=5|flora2=5) feather trees
+  (desert=0 flora=6|flora2=6) cap trees
+  (desert=0 flora=6|flora2=6) hat trees
+  (desert=0 flora=7|flora2=7) weeping trees
+  (desert=0 flora=7|flora2=7) hair trees
+  (desert=0 flora=8|flora2=8) candle trees
+  (desert=0 flora=8|flora2=8) torch trees
+  (desert=0 flora=9|flora2=9) spire trees
+  (desert=0 flora=9|flora2=9) lance trees
+  (desert=0 glowflora=1) lamp trees
+  (desert=0 glowflora=1) glow trees
+  (desert=0 greatflora=1) great trees
+  (desert=0 greatflora=1) giant trees
+  (desert=1) thorn trees
+  (desert=1) date palms
+  (desert=1) salt bushes
+)VG"

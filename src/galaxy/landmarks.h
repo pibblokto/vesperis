@@ -14,7 +14,7 @@
 #include <map>
 #include <utility>
 
-enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_COUNT };
+enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK, LM_COUNT };   // T-03: LM_WORK a people's work (galaxy/works.h)
 extern const char* LANDMARK_KIND_NAMES[LM_COUNT];   // "PEAK", "MESA", ...
 extern const char* LANDMARK_KIND_SYMBOLS[LM_COUNT]; // one glyph for the maps
 
@@ -25,7 +25,8 @@ struct Landmark {
     double heightM = 0;     // the ground at the centre (the peak's height; a crater's floor)
     double prominenceM = 0; // a peak's rise over the cell, a mesa's cap over the plain, a crater's depth, a ruin's span
     uint64_t id = 0;        // the hash of its cell and body (a ruin of `ruinsNear`: its 2 km cell's seed): stable
-    int sub = 0;            // LM_RUIN: 0 a monolith of the old ones, 1 a hamlet, 2 a village, 3 a town, 4 a monument (`SettlementClass` + 1)
+    int sub = 0;            // LM_RUIN: its `SettlementClass` (0 a hamlet, 1 a village, 2 a town, 3 a monument, 4 a city, 5 a capital; B-417: no monolith);
+                            // LM_WORK: its `WorkKind`
 };
 
 // the sights of one cell, each kind on its own; `hiH` and `mean` are the cell's scan (its highest sample, its mean height); `lake0` is
@@ -45,8 +46,12 @@ bool legacyLandmarkOf(const CellSights& s, Landmark& out);
 void cellsOfLegacyIds(const BodyGen& g, const std::set<uint32_t>& ids, std::map<uint32_t, std::pair<int, int>>& out);
 // the sights of the kinds in `kindMask` (bits of LandmarkKind) of the cells within `radiusM` of a point, each within the radius
 void sightsNear(const BodyGen& g, const Vec3& unit, double radiusM, unsigned kindMask, std::vector<Landmark>& out, bool buildTiles = true);
-// every ruin of the 2 km grid within `radiusM` (the settlements as the surface view keeps them, the monoliths out of the water)
+// every settlement of the 2 km grid within `radiusM` (as the surface view keeps them); T-01: and
+// the world plan's places heard by their size from farther (a capital from 400 km, a city from 200: galaxy/plan.h)
 void ruinsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out);
+// T-03: the works the scanner hears within `radiusM` (galaxy/works.h; a line's lesser stretches and a pilgrims' way are not heard): built here
+// if the world's works are not yet (the scanner's thread may wait); B-418: the land's works with them
+void worksHeardNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out);
 // the kinds a world can hold (bits of LandmarkKind): the scanner's modes there
 unsigned sightKindsOf(const BodyGen& g);
 int landmarkCellsSearched();                // tests: how many cells were searched (not served from the cache) so far

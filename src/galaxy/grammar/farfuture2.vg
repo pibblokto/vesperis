@@ -1,0 +1,388 @@
+R"VG(
+# farfuture2.vg (H-04's second pass): the far future's instructions (to keep the works, to wake the keeper, to live in what they left):
+# every step composed of a doing and a place that fit each other, with its reason, so a people that left twenty sets of instructions
+# never says the same thing twice; the places are the people's own (their great work, their holy place, their colours and signs, their
+# bridges or tunnels or terraces, their gardens, their herds).
+
+genre.instructions (words=34..150)
+  {in.head}\n{in.step}\n{in.step}\n{in.step}\n{in.step}\n{in.end}
+  {in.head}\n{in.step}\n{in.step}\n{in.step}\n{in.end}
+  {in.head}\n{in.step}\n{in.step}\n{in.step}\n{in.step}\n{in.step}\n{in.end}
+
+in.head (formula people=6)
+  To keep {focusword} at {$home} running. For whoever comes.
+  How to wake the keeper of {$home}.
+  Instructions, left in the hope that someone will need them.
+  For the one who finds {$home} empty: what to do, and what not to.
+  How to use the water, the light and the doors of {$home}.
+  How to live at {$home}, for a day or for a thousand years.
+  For the next ones. Read this first; the rest can wait.
+  What we would tell you if we were here. We are not, so we wrote it down.
+  The care of {$home}, set out plainly.
+
+in.step
+  (3 once) {in.go}
+  (2 once) {in.leave}
+  (2 once) {in.if}
+  (1 once) {in.keep}
+  (1 once) {in.find}
+
+# ---- a doing and a place --------------------------------------------------------------------------------------------------------
+
+in.go
+  (3) {in.posture} {in.where}. {in.why}
+  (2) {in.speak} {in.whom}. {in.why}
+  (1) Follow {in.sense}. {in.why}
+  (1) {in.along} {in.path}. {in.why}
+  (1) {in.posture} {in.where}, {time.of}. {in.why}
+  (1) First, {in.posture.lc} {in.where}. {in.why}
+
+in.posture
+  Stand
+  Sit
+  Wait
+  Rest
+  Stay a while
+  Lie down
+  Kneel, if you like,
+  Sing, quietly,
+in.posture.lc
+  stand
+  sit
+  wait
+  rest
+  stay a while
+
+in.where (share=0.6)
+  in the light at the centre
+  beside the pool in the lowest room
+  under the dome
+  beside the column that hums
+  at the door that opens by itself
+  on the {colour.holy} stair
+  under {motif.over} in the great hall
+  in the {fut.green}
+  at the foot of {focusword}
+  in the room with no corners
+  by the window that faces {in.faces}
+  where the floor is warm
+  in the circle of {colour.holy} stones
+  by the spring in the lowest room
+  at {holyplace}
+  among the {tree} on the upper level
+  (links=bridges) on the long bridge, in the middle
+  (links=tunnels) in the tunnel where it widens
+  (links=arcades) under the arcades
+  (links=colonnades) between the columns
+  (land=terraced) on the highest terrace
+  (land=cliffs) in the gallery cut into the cliff
+  (land=stilts) on the platform above the water
+  (land=pits) at the bottom of the sunken garden
+  (public=courts) in the inner court
+  (public=plazas) in the middle of the square
+  (light=lines) where the lines on the floor meet
+  (light=lamps) under the oldest lamp
+in.faces
+  {mountain}
+  {sun.first}
+  (moons>0) {moon}
+  {river}
+  the sea of {sea}
+  the old city
+
+in.speak
+  Speak to
+  Sing to
+  Call out to
+  Whisper to
+  Say your name to
+  Ask about us of
+in.whom (share=0.7)
+  the wall that is warm
+  the column that hums
+  the light
+  the pool
+  the doors
+  the room with no corners
+  the {~keeper}
+  {focusword}
+  the {colour.holy} stone by the gate
+  the oldest of the machines
+
+in.along
+  Follow
+  Walk along
+  Keep to
+  Count your steps along
+in.path (share=0.7)
+  the line on the floor
+  the {colour.holy} stones
+  {motif.over} on the walls
+  the oldest corridor, which slopes down
+  the wall with the names on it
+  (light=lines) the light in the floor
+  (light=lamps) the lamps
+  (links=bridges) the bridges, east to west
+  (links=tunnels) the tunnels, downward
+  (land=terraced) the terraces, upward
+in.sense (share=0.7)
+  the sound of water
+  the warm air
+  the bells, if they are ringing
+  the smell of the {fut.green}
+  the {bird}, if any are left
+  the light, wherever it goes
+
+# ---- what not to do ---------------------------------------------------------------------------------------------------------------
+
+in.leave
+  (2) Do not touch {in.touch}. {in.why2}
+  (2) Do not wake {in.wake}. {in.why2}
+  (2) Do not open {in.open}. {in.why2}
+  (1) Do not move {in.move}. {in.why2}
+  (1) Do not try to stop {in.stop}. {in.why2}
+in.touch (share=0.7)
+  the dark panels
+  the {colour.mourn} stones
+  the column at night
+  the glass that is cold
+  the {vessel} on the high shelf
+  {motif.over} in the lowest room
+  the water in the black basin
+  {instrument} in the great hall, which is tuned for someone else
+  the {craft} workshop's last piece, which is not finished
+in.wake (share=0.7)
+  the sleepers
+  the small machines
+  the keeper, whatever happens
+  the {herd} in the lower pens, if any are left
+  anything in the room with the blue light
+  the {bird} nesting in the {fut.gate}; they were here first
+  the old ones in the {fut.block}, if you find any; they have earned it
+in.open (share=0.7)
+  the sealed rooms
+  the lowest door
+  the {colour.holy} boxes
+  the floor where it rings hollow
+  the cases in the archive that are marked with {motif.over}
+  the {vessel} in the cold store; they are older than they look
+in.move (share=0.7)
+  the stones in the circle
+  the bones in the niches
+  the chairs in the {fut.common}
+  the {vessel} by the doors
+  the {colour.holy} cloths on the long table
+  the {tree} in the {fut.green}; they have their reasons for where they are
+in.stop (share=0.8)
+  the hum
+  the water
+  the music in the lowest room
+  the lights in the evening
+  {instrument} in the great hall; it plays itself at {festival}
+  the bells of {holyplace}
+  the fountains in the {fut.common}
+  the slow wheel in the {craft} workshop
+
+# ---- if ---------------------------------------------------------------------------------------------------------------------------
+
+in.if
+  (2) If {in.c.sign}, {in.r.sign}.
+  (2) If you are hungry, {in.r.hungry}.
+  (1) If you are thirsty, {in.r.thirsty}.
+  (1) If you are cold, {in.r.cold}.
+  (1) If you are tired, {in.r.tired}.
+  (2) If you are {in.c.lonely}, {in.r.lonely}.
+  (1) If you hear {in.c.hear}, {in.r.hear}.
+  (1) If you want to leave, {in.r.leave}.
+in.c.sign
+  the hum stops
+  the hum changes
+  the floor grows warm
+  the lights dim
+  the light turns red
+  the doors do not open
+  the bells ring by themselves
+  the water rises in the pool
+in.r.sign
+  wait; it will start again
+  sit down where you are and wait, as the {herd} do
+  count to {#number} hundred, slowly
+  go to the lowest room and sit
+  say your name, once
+  open your hands and stand still
+  do nothing; it is only remembering
+in.r.hungry
+  ask the wall; it knows where the food is
+  go to the {fut.green}; something is always ripe
+  eat the {fruit} by the door; they are still good
+  look behind the third door; we left {food}
+  the store under the {colour.holy} stair is full
+in.r.thirsty
+  drink from the spring in the lowest room, where the {colour.holy} tiles are
+  the water in the {colour.holy} bowls is clean
+  ask for water, and {drink} if you like; both will come
+  drink from {watersrc}; it was kept clean for you
+in.r.cold
+  stand by the column that hums, under {motif.over}
+  the room with no corners is warm, and smells of {fuel}
+  wrap yourself in the {colour.holy} cloth in the chests; it was ours
+  light the lamps; they still burn {fuel}
+in.r.tired
+  sleep in the room with no corners
+  lie down anywhere; nothing here will hurt you
+  the beds in the {fut.block} are made; we made them
+in.c.lonely
+  alone
+  afraid
+  sad
+  lost
+in.r.lonely
+  you are not; we are in the records, and the records will talk to you
+  speak, and the walls will answer in our voices
+  go to {holyplace} and sit with the names
+  sing; we always did
+  ask the archive for a story; ask for the long one
+in.c.hear
+  voices
+  singing
+  something speak your name
+  {instrument}
+in.r.hear
+  they are ours, recorded; they will not mind you listening
+  answer; it is only manners
+  follow the sound; it goes somewhere good
+  sit down and listen; we played it for whoever came
+in.r.leave
+  the way out is the way you came in, past the {fut.green}
+  go, and leave the doors open behind you
+  take something with you, so that something of us goes
+  go when you like; we did
+
+# ---- keeping and finding ---------------------------------------------------------------------------------------------------------
+
+in.keep
+  (3) {in.when} {in.keepdo}. {in.why}
+  (1) {in.keepdo.cap}, {in.when.lc}. {in.why}
+in.when (share=0.8)
+  Once a year, at {festival},
+  Every morning,
+  When the {bird} come back,
+  At {festival},
+  Every hundred years or so,
+  When the hum is low,
+  Before you sleep,
+  On the longest night,
+  When you have time, and you will,
+  Once in a while,
+in.when.lc
+  once a year
+  every morning
+  at {festival}
+  when the hum is low
+  when you remember
+in.keepdo (share=0.8)
+  light the {colour.holy} lamps
+  sweep {holyplace}
+  feed the {herd} in the lower pens, if any are left
+  wind the clock in the great hall
+  say the names of the dead at {holyplace}, as many as you can
+  water the {tree} on the upper level
+  close the shutters on the {fut.block}
+  play {fut.game} in the {fut.common}; the pieces are still there
+  open the {fut.gate} for an hour, to let the old air out
+  sing one of the {festival} songs, any of them
+  polish {motif.over} on the great doors
+  turn the soil in the {fut.green}
+  ring the {#number} bells, by hand
+  check the seals on the vault, and say aloud that they are good
+  cook {food} in the big kitchen, even if only for yourself
+  walk to {focusword} and touch it
+in.keepdo.cap
+  Light the {colour.holy} lamps
+  Sweep {holyplace}
+  Wind the clock in the great hall
+  Ring the {#number} bells
+  Turn the soil in the {fut.green}
+in.find
+  (3) {in.thing>.t} {be:.t} {in.found}. {in.why}
+  (1) If you want {in.want}, look {in.found}. {in.why}
+in.thing
+  (pl) Our records
+  (pl) The tools
+  (sing) The map
+  (sing) The music
+  (pl) The seeds of the {crop}
+  (pl) Our names
+  (pl) The children's drawings
+  (pl) The recipes for {food}
+  (sing) The {~book}
+  (pl) The keys we kept
+  (sing) The cloth we wove
+  (pl) The pieces for {fut.game}
+in.found (share=0.8)
+  behind the {colour.holy} door
+  in the cases in the lowest room
+  under the floor of the {fut.common}
+  in the {craft} workshop, oiled and labelled
+  cut into the wall at {holyplace}
+  in the vault under {focusword}
+  with the machines, who will hand them over if you ask nicely
+  in the chests in the {fut.block}
+  where the light lines end
+  under the {colour.holy} stair
+  in the room with no corners, on the left
+  on the high shelf in the {fut.green}
+in.want
+  to know who we were
+  something to eat that we made
+  to hear us
+  to make something
+  to know the way out
+
+in.end
+  (2) {in.end.a} {in.end.b}
+  (1) {in.end.a}
+  (1) {in.end.b}
+  (1) {in.end.c}
+in.end.c (share=0.8)
+  Light a lamp at {holyplace} for us, if you think of it.
+  If the {herd} are still here, they are yours; be kind to them.
+  We kept {festival} here for a very long time; keep it once, for us.
+  Tell the machines your name. They have been waiting to learn a new one.
+  The {colour.holy} cloth on the table is for you. It was ours.
+  When you leave, tell someone about us, if there is anyone to tell.
+  Sing something in the {fut.common}. It has been quiet a long time.
+  Eat the {fruit} in the {fut.green}. Nobody else will.
+in.end.a (share=0.55)
+  That is all you need.
+  That is everything.
+  There is more, but you will find it, as we found the {fruit}.
+  If you forget, ask the walls.
+  The rest is in the records.
+  Do these, and the place will do the rest.
+  Nothing else is important.
+  The rest you can learn by living here.
+  You will make mistakes; the place forgives them.
+  We have written more, but this is what matters.
+  The machines know the rest; they are only waiting to be asked.
+  Everything else is a matter of taste.
+  If something is not written here, it does not need doing.
+  We did all this for a thousand years. It was not a burden.
+  Read this again in a year; it will say something different.
+  That is the end of the instructions and the beginning of the rest.
+in.end.b (share=0.55 formula)
+  The rest will be shown to you.
+  You are welcome here.
+  Close the doors behind you, for the next one.
+  Whoever you are: we left it ready for you.
+  Stay as long as you like.
+  We hope you like it here. We did.
+  {blessing}.
+  Be kinder to it than time was.
+  The place is yours now; be good to it, and to the {herd}.
+  We would have liked to meet you.
+  Go well, and come back if you like.
+  You will not be the last; leave it as you found it, with {motif.over} on the door.
+  Think of us at {festival}, if you keep it.
+  We are glad it was you.
+)VG"

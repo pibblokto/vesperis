@@ -1,0 +1,123 @@
+R"VG(
+# farfuture3.vg (H-04's second pass): a keeper's record of a day in the far future: what they did with a day when every day is free
+# (walked to the mountain, listened to the oldest records, planted the old crop the old way), what they thought, who they saw, and
+# late, the choosing. The people are few and live long; their days are their own, and their world's.
+
+genre.reflection (words=41..150)
+  {@cast writer}{rf.open} {rf.line} {rf.line} {rf.line} {rf.close}
+  {@cast writer}{rf.open} {rf.line} {rf.line} {rf.line} {rf.line} {rf.close}
+  {@cast writer}{rf.open}\n{rf.line} {rf.line}\n{rf.line}\n{rf.close}
+
+rf.open (formula people=3)
+  This is {$me:name}, at {$me.home}, in the {#year:ord} year of {city}.
+  {$me:name}, keeper at {$me.home}, records this.
+  A day at {$me.home}, as {$me:name} saw it.
+  {$me:name}, of {$me.home}. A day, for the record.
+  The keeper of {$me.home}, {$me:name}: today.
+
+rf.line
+  (2 once) {rf.day}
+  (2 once) {rf.day}
+  (2 once) {rf.thought}
+  (1 once) {rf.thought}
+  (1 once) {rf.others}
+  (1 once stage>=1) {rf.choosing}
+
+# a day and how it was
+rf.day
+  (3) Today I {rf.did}. {rf.coda}
+  (1) Last night I {rf.night}. {rf.coda}
+  (1) I spent the day {rf.spent}. {rf.coda}
+rf.did (share=0.7)
+  walked to {mountain} and back; it took {#n|day}, and nothing was in a hurry
+  sat by {water} until {skyone} rose
+  listened to the oldest records, the ones in the old speech
+  visited {focusword}, the way you visit the old
+  saw the {crop} I planted from seed, the old way, come up
+  taught a song to the machines, who already knew it and listened anyway
+  walked through the {fut.block}, which nobody has lived in for a long time
+  mended a wall that did not need mending
+  fed the {herd} in the lower pens, the last of them
+  practised {craft} until my hands remembered what my head had forgotten
+  played {fut.game} against the oldest machine and won, which worried us both
+  cooked {food} for nobody, the way my grandmother made it
+  climbed the {colour.holy} stair to the top and sat in the wind
+  read the names at {holyplace}, as far as the {#nbig:ord}, and stopped there
+  counted the {bird} on the upper level; there are more than last century
+  painted {motif.over} over a door that had lost them
+  went down to {river} and found it in a new bed
+rf.night
+  sat out watching {skynight}
+  listened to {instrument}, played by a machine that has learned to play it badly on purpose
+  did not sleep, and was glad of it, and fed the {herd} at midnight
+  dreamed of {city}, which is no longer there, and of its {fut.green}
+  counted the {bird} coming in to roost, by the light of the {colour.holy} lamps
+rf.spent
+  in the {fut.green}, among the {fruit}
+  doing nothing whatever, which takes practice, under the {tree}
+  with the oldest records, in the lowest room, by {colour.holy} light
+  walking the old roads to {city2}, past the {herd}
+  learning {craft} again from the beginning, badly and happily
+rf.coda (share=0.8)
+  I came back hungry, which was a surprise, and ate {food} standing up.
+  The light was very good, at the end, on the {tree}.
+  I did not speak to anyone, not even the {herd}, and that was right.
+  I thought about my mother, who is long gone, and it did not hurt.
+  I understood more of it than last time, and less of the {craft}.
+  It reminded me of being young, a long time ago, in the {fut.block}.
+  The machines asked me how it was. I said: long.
+  I will do it again in a hundred years, if the {bird} are still here.
+  I wrote it down so that someone would know, in {colour.holy}, the old way.
+  Nothing happened, which was the point.
+  My knees disagree with the rest of me about it, as they did about {pastime}.
+  {time.pass}, and today did not mind.
+  It was {un.render}, if the machine will let me borrow its word.
+  I sang the {festival} song on the way home, the long version, to nobody.
+
+rf.thought (share=0.8)
+  I have lived longer than {focusword} has stood, and it was old when I was young.
+  The {people} were many once; we are few now, by choice, and we have time for the {herd}.
+  Sometimes I wonder who will find these records, and whether they will grow {crop}.
+  I have been learning the oldest songs on {instrument}. Nobody else wants to.
+  The works run without us; we are not needed, and so we are free to keep {craft}.
+  I counted the {tree} on the hill today; there are fewer than when I was young, and they are taller.
+  The old speech had a word for missing a place you are standing in. We still use it: {~longing}.
+  It is strange to remember the {people} when we were many and hurried, and ate {food} standing up.
+  Life is {life.is}. I have had long enough to check.
+  My mother used to say: {proverb}, and I have had a thousand years to find out she was right.
+  The dead are {dead.are}, and I visit them there, with {fruit}.
+  We gave up {vice} a long time ago; we kept {virtue}, and it has kept us.
+  I keep {festival} alone now, some years, with one {colour.holy} lamp. It is still {festival}.
+  I have outlived three of the machines that kept me, and said goodbye to each over {drink}.
+  Every so often I am the oldest person in the world. Then someone older wakes and complains about the {fut.green}.
+  The {herd} we keep are the great-grandchildren, many times over, of the ones the first {people} kept.
+rf.others
+  {rf.someone} came to see me; we sat under the {tree} and said nothing for a whole afternoon.
+  There are {#n} of us left at {$me.home}. We meet at {festival}, with {food}, and it is enough.
+  I have not seen another person in {#n|year}, only the {herd}. That is not unusual now.
+  {rf.someone} sent a message: {blessing}. I sent it back the long way, with {fruit}.
+  {rf.someone} and I argued about {rf.about} until the light went. Neither of us won.
+rf.someone
+  A friend from {city2}
+  My oldest friend
+  One of the young ones, who is only three hundred
+  My sister, who lives on the far side now
+  The keeper of {city2}
+rf.about
+  the old songs
+  the colour of the doors
+  whether the {herd} remember us
+  {founder}
+  nothing; it was a pleasure
+rf.choosing
+  We are deciding, all of us together, what to do next. It may take a long time.
+  Some of us have already gone. The rest of us are still talking about it.
+  The choosing has begun. I have not chosen. I have time; that is the trouble.
+  {rf.someone} has chosen. We had {food} together first, the old way.
+
+rf.close (formula)
+  That is today's record.
+  {$me:name}.
+  End of the day.
+  That is the day. {blessing}.
+)VG"

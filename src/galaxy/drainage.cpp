@@ -62,12 +62,15 @@ struct Tile {
 };
 
 struct Key { uint64_t gen; int tLat, tLon; bool operator<(const Key& o) const { return gen != o.gen ? gen < o.gen : (tLat != o.tLat ? tLat < o.tLat : tLon < o.tLon); } };
-struct Entry { std::shared_ptr<Tile> tile; bool computing = false; uint64_t use = 0; };
+// B-422: who wants a tile being computed: the threads waiting for it, and the last prefetch that asked for it
+struct Interest { std::atomic<int> waiters{0}; std::atomic<uint64_t> wanted{0}; };
+struct Entry { std::shared_ptr<Tile> tile; bool computing = false; uint64_t use = 0; std::shared_ptr<Interest> interest; };
 std::mutex g_mutex;
 std::condition_variable g_cv;
 std::map<Key, Entry> g_tiles;
 uint64_t g_use = 0;
 std::vector<std::thread> g_workers;   // async prefetches, joined when finished (and at exit, by the reaper below)
+std::atomic<int> g_built{0};          // the tiles computed (tests)
 std::vector<std::shared_ptr<std::atomic<bool>>> g_workerDone;
 
 inline uint64_t hashD(uint64_t h, double v) { uint64_t b; std::memcpy(&b, &v, 8); return mix64(h ^ (b + 0x9E3779B97F4A7C15ULL)); }
@@ -93,13 +96,26 @@ inline bool isSeaSample(const BodyGen& g, const SurfaceSample& s) {
     return g.liquidLevel > -1e8 && s.material == MAT_WATER && s.water > -1e8 && std::fabs(s.water - g.liquidLevel) < 0.01;
 }
 
-void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
+// B-422: a tile a superseded prefetch was computing is abandoned when neither a thread waits for it nor the newest prefetch asked
+// for it (the landing map's cursor moved on: tapped once a third of a second, the places it passed kept six cores busy); the
+// tile is computed whole or not at all
+struct Abandon {
+    const std::atomic<uint64_t>* gen = nullptr; uint64_t mine = 0;   // the prefetches' generation and this one's (none: never abandoned)
+    std::shared_ptr<Interest> interest;
+    bool operator()() const {
+        if (!gen || !interest) return false;
+        const uint64_t now = gen->load();
+        return now != mine && interest->wanted.load() != now && interest->waiters.load() == 0;
+    }
+};
+
+bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& abandon, int samplers) {
     auto t0 = std::chrono::steady_clock::now();
     const int N0 = drainageLatticeN0(g.R);
     T.N0 = N0; T.M = std::max(2, (int)std::lround(MARGIN_DEG * N0)); T.Nd = N0 + 2 * T.M;
     T.i0 = tLat * N0 - T.M; T.j0 = tLon * N0 - T.M;
     double latC = -90.0 + tLat + 0.5;
-    if (std::fabs(latC) > MAX_LAT_DEG) { T.empty = true; return; }
+    if (std::fabs(latC) > MAX_LAT_DEG) { T.empty = true; return true; }
     T.empty = false;
     const int Nd = T.Nd, n = Nd * Nd;
     const double dDeg = 1.0 / N0, dRad = dDeg * DEG;
@@ -107,12 +123,15 @@ void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
     const double detail = std::max(30.0, 0.6 * cellLatM);
     std::vector<float> h(n, 0.f);
     std::vector<uint8_t> flag(n, 0);
-    {   // sample the ground of the domain (in threads of this function's own: it may run inside a worker of the pool)
-        int threads = std::min(8, std::max(1, (int)std::thread::hardware_concurrency()));
+    {   // sample the ground of the domain (in threads of this function's own: it may run inside a worker of the pool; B-422: as many
+        // as the asking allows, a prefetch on its own thread sharing its cores between its lanes)
+        int threads = samplers > 0 ? samplers : std::min(8, std::max(1, (int)std::thread::hardware_concurrency()));
         std::vector<std::thread> ts;
+        std::atomic<bool> stop{false};
         auto job = [&](int r0, int r1) {
             t_noDrain++;
             for (int i = r0; i < r1; i++) {
+                if (stop.load(std::memory_order_relaxed) || ((i & 3) == 0 && abandon())) { stop.store(true); break; }
                 int I = T.i0 + i;
                 if (I < 0 || I >= 180 * N0) continue;
                 double lat = (-90.0 + (I + 0.5) * dDeg) * DEG;
@@ -131,6 +150,7 @@ void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
         for (int k = 1; k < threads; k++) { int r0 = k * band, r1 = std::min(Nd, r0 + band); if (r0 < r1) ts.emplace_back(job, r0, r1); }
         job(0, std::min(Nd, band));
         for (auto& t : ts) t.join();
+        if (stop.load()) return false;
     }
     // the routing surface: the ground plus a metre of slow noise and a few centimetres of hash, so the flood's paths over
     // the flats (the sediment floors, the breached basins) follow a lie of the land instead of the scan order, which made
@@ -159,7 +179,9 @@ void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
             bool edge = i == 0 || j == 0 || i == Nd - 1 || j == Nd - 1;
             if (edge || !(flag[c] & FL_VALID) || (flag[c] & FL_SEA)) { seen[c] = 1; T.lvl[c] = hr[c]; pq.push({hr[c], c}); }
         }
+    if (abandon()) return false;
     while (!pq.empty()) {
+        if ((order.size() & 16383) == 0 && abandon()) return false;
         QE e = pq.top(); pq.pop();
         int c = e.second; float f = e.first;
         order.push_back(c);
@@ -181,6 +203,7 @@ void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
         std::vector<int> comp(n, -1);
         std::vector<int> stack, members;
         for (int c0 = 0; c0 < n; c0++) {
+            if ((c0 & 16383) == 0 && abandon()) return false;
             if (comp[c0] >= 0 || !(flag[c0] & FL_VALID) || (flag[c0] & FL_SEA) || T.lvl[c0] <= hr[c0] + 0.3f) continue;
             float spill = T.lvl[c0], minH = hr[c0]; int pit = c0; bool cut = false;
             stack.clear(); members.clear(); stack.push_back(c0); comp[c0] = c0;
@@ -271,6 +294,7 @@ void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
             }
         };
         for (int c = 0; c < n; c++) {
+            if ((c & 4095) == 0 && abandon()) return false;
             if (T.dir[c] == 8 || (T.flag[c] & FL_LAKE) || !(flag[c] & FL_VALID)) continue;
             bool lower = false;
             for (int k = 0; k < 8 && !lower; k++) { int nc = neighbourOf(c, k); if (nc >= 0 && hc[nc] < hc[c]) lower = true; }
@@ -321,6 +345,7 @@ void buildTile(const BodyGen& g, int tLat, int tLon, Tile& T) {
         T.up[c] = (uint8_t)bk;
     }
     T.buildMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    return true;
 }
 
 void reapWorkers() {   // g_mutex held
@@ -332,22 +357,30 @@ void reapWorkers() {   // g_mutex held
 
 static double traceMs() { static const auto t0 = std::chrono::steady_clock::now(); return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
 
-std::shared_ptr<Tile> getTile(const BodyGen& g, uint64_t gkey, int tLat, int tLon) {
+// the tile, from the cache or computed now (another thread computing it: waited for); a superseded prefetch's (`gen` moved on from
+// `mine`) is abandoned when no thread waits for it: null
+std::shared_ptr<Tile> getTile(const BodyGen& g, uint64_t gkey, int tLat, int tLon, const std::atomic<uint64_t>* gen = nullptr, uint64_t mine = 0, int samplers = 0) {
     Key key{gkey, tLat, tLon};
     std::unique_lock<std::mutex> lock(g_mutex);
+    Abandon abandon; abandon.gen = gen; abandon.mine = mine;
     for (;;) {
         auto it = g_tiles.find(key);
-        if (it == g_tiles.end()) { Entry e; e.computing = true; g_tiles[key] = e; break; }
+        if (it == g_tiles.end()) { Entry e; e.computing = true; e.interest = std::make_shared<Interest>(); e.interest->wanted = mine; abandon.interest = e.interest; g_tiles[key] = e; break; }
         if (it->second.tile) { it->second.use = ++g_use; return it->second.tile; }
-        g_cv.wait(lock);   // another thread is computing it
+        const std::shared_ptr<Interest> w = it->second.interest;   // another thread is computing it: waited for (B-422: counted, so it is not abandoned)
+        w->waiters++;
+        g_cv.wait(lock, [&] { auto j = g_tiles.find(key); return j == g_tiles.end() || j->second.tile || j->second.interest != w; });
+        w->waiters--;
     }
     lock.unlock();
     auto t = std::make_shared<Tile>();
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
     auto tb0 = std::chrono::steady_clock::now();
-    buildTile(g, tLat, tLon, *t);
-    if (trace) fprintf(stderr, "    [%.0f] drainage tile %d %d built in %.1f ms (thread %zu)\n", traceMs(), tLat, tLon, std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count(), std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000);
+    const bool built = buildTile(g, tLat, tLon, *t, abandon, samplers);
+    if (trace) fprintf(stderr, "    [%.0f] drainage tile %d %d %s in %.1f ms (thread %zu)\n", traceMs(), tLat, tLon, built ? "built" : "abandoned", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count(), std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000);
     lock.lock();
+    if (!built) { g_tiles.erase(key); reapWorkers(); g_cv.notify_all(); return nullptr; }
+    g_built++;
     Entry& e = g_tiles[key];
     e.tile = t; e.computing = false; e.use = ++g_use;
     if ((int)g_tiles.size() > CACHE_CAP) {   // the least recently used finished tile goes (holders keep their shared pointers)
@@ -594,6 +627,7 @@ void setDrainageEnabled(bool on) { g_enabled.store(on); }
 bool drainageEnabled() { return g_enabled.load(); }
 int drainageLatticeN0(double radiusKm) { return clampi((int)std::lround(radiusKm * 1000.0 * DEG / CELL_M), 16, 1024); }
 int drainageTilesHeld() { std::lock_guard<std::mutex> lock(g_mutex); return (int)g_tiles.size(); }
+int drainageTilesBuilt() { return g_built.load(); }
 
 DrainInfo drainageAt(const BodyGen& g, const Vec3& unit, double detailM, double moist) {
     DrainInfo D;
@@ -717,6 +751,32 @@ static void tileRange(const BodyGen& g, const Vec3& unit, double radiusM, double
     lo0 = (int)std::floor(lon / DEG + 180.0 - lonR); lo1 = (int)std::floor(lon / DEG + 180.0 + lonR);
 }
 
+// a later prefetch supersedes an earlier one's remaining tiles: the landing map's cursor moved on, and the old site's
+// worker went on computing nine tiles into the landing's first frames, which it slowed by half
+static std::atomic<uint64_t> g_prefetchGen{0};
+
+// B-422: the tiles of one prefetch built side by side, a lane each (the routing of a tile is serial: the six round a landing took
+// six tiles' time on the main thread with the other cores idle); a superseded worker's lanes stop before their next tile. A worker
+// on its own thread keeps to every core but two, its lanes and their samplers together (the frames go on drawing; the landing map's
+// cursor asked for tile after tile and every core was busy); a caller that waits takes every core but one
+static void buildTiles(const BodyGen& g, uint64_t gkey, const std::vector<std::pair<int, int>>& want, uint64_t myGen, bool async) {
+    const int cores = std::max(1, (int)std::thread::hardware_concurrency());
+    const int budget = std::max(1, async ? cores - 2 : cores - 1);
+    const int lanes = std::min((int)want.size(), async ? std::max(1, budget / 4) : budget);   // a worker's: few, each tile soon done (a landing may wait for it)
+    const int samplers = async ? std::max(1, budget / lanes) : 0;   // 0: the tile's own (eight)
+    std::atomic<size_t> next{0};
+    auto lane = [&]() {
+        for (size_t k; (k = next++) < want.size();) {
+            if (async && g_prefetchGen.load() != myGen) break;
+            getTile(g, gkey, want[k].first, want[k].second, async ? &g_prefetchGen : nullptr, myGen, samplers);
+        }
+    };
+    std::vector<std::thread> ts;
+    for (int i = 1; i < lanes; i++) ts.emplace_back(lane);
+    lane();
+    for (std::thread& t : ts) t.join();
+}
+
 void drainagePrefetch(const BodyGen& g, const Vec3& unit, double radiusM, bool async) {
     if (!typeHasDrainage(g.type) || !g_enabled.load()) return;
     double lat, lon; int la0, la1, lo0, lo1;
@@ -727,21 +787,28 @@ void drainagePrefetch(const BodyGen& g, const Vec3& unit, double radiusM, bool a
         for (int b = lo0; b <= lo1 && b < lo0 + 360; b++) want.push_back({a, ((b % 360) + 360) % 360});
     }
     if (want.empty()) return;
+    {   // B-422: the tiles nearest the point first (a short rest of the cursor builds the site's own)
+        const double la = lat / DEG + 90.0, lo = lon / DEG + 180.0, k = std::cos(lat);
+        auto d2 = [&](const std::pair<int, int>& w) { const double dl = w.first + 0.5 - la, dn = std::remainder(w.second + 0.5 - lo, 360.0) * k; return dl * dl + dn * dn; };
+        std::stable_sort(want.begin(), want.end(), [&](const std::pair<int, int>& a, const std::pair<int, int>& b) { return d2(a) < d2(b); });
+    }
     uint64_t gkey = genKey(g);
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
     if (trace) fprintf(stderr, "    [%.0f] drainage prefetch %s: type %d lat %.2f lon %.2f radius %.0f m: tiles %d..%d x %d..%d (%zu)\n", traceMs(), async ? "async" : "sync", g.type, lat / DEG, lon / DEG, radiusM, la0, la1, lo0, lo1, want.size());
     BodyGen gc = g;
-    // a later prefetch supersedes an earlier one's remaining tiles: the landing map's cursor moved on, and the old site's
-    // worker went on computing nine tiles into the landing's first frames, which it slowed by half
-    static std::atomic<uint64_t> gen{0};
-    uint64_t myGen = ++gen;
-    auto work = [gc, gkey, want, myGen]() { for (auto& w : want) { if (gen.load() != myGen) break; getTile(gc, gkey, w.first, w.second); } };
-    if (!async) { for (auto& w : want) getTile(gc, gkey, w.first, w.second); return; }
+    uint64_t myGen;
+    {   // B-422: the tiles of this asking being computed already are marked wanted before the generation moves on (not abandoned)
+        std::lock_guard<std::mutex> lock(g_mutex);
+        myGen = g_prefetchGen.load() + 1;
+        for (const auto& w : want) { auto it = g_tiles.find(Key{gkey, w.first, w.second}); if (it != g_tiles.end() && it->second.interest) it->second.interest->wanted = myGen; }
+        g_prefetchGen.store(myGen);
+    }
+    if (!async) { buildTiles(gc, gkey, want, myGen, false); return; }
     std::lock_guard<std::mutex> lock(g_mutex);
     reapWorkers();
     auto done = std::make_shared<std::atomic<bool>>(false);
     g_workerDone.push_back(done);
-    g_workers.emplace_back([work, done]() { work(); done->store(true); });
+    g_workers.emplace_back([gc, gkey, want, myGen, done]() { buildTiles(gc, gkey, want, myGen, true); done->store(true); });
 }
 
 bool drainageReady(const BodyGen& g, const Vec3& unit, double radiusM) {

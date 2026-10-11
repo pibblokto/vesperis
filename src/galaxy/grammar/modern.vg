@@ -1,0 +1,371 @@
+R"VG(
+# modern.vg (H-04; the second pass): the news on the air (a reel or a disc): the bulletin read at the hour, the history's news in the
+# news's register (`@news public news`), then the town's own: its council and its prices, its quarters and landmarks, its sport, its
+# shows, the odd story, the weather (modern3.vg's parts). Each people's announcers open and close their own way and follow their own
+# sports; the items speak of that people's food, crafts, beasts and streets, so no two peoples' bulletins read alike.
+
+genre.broadcast (words=33..175)
+  {bc.open}\n{@news public news}\n{@news public news}\n{bc.item}\n{bc.weather}\n{bc.close}
+  {bc.open}\n{@news public news}\n{bc.item}\n{bc.item}\n{bc.close}
+  {bc.open}\n{@news public news}\n{@news public news}\n{@news public news}\n{bc.weather}\n{bc.close}
+  {bc.open}\n{@news public news}\n{bc.item}\n{bc.sport}\n{bc.close}
+  {bc.open}\n{@news public news}\n{bc.item}\n{bc.sport}\n{bc.weather}\n{bc.close}
+  {bc.open}\n{bc.item}\n{@news public news}\n{bc.item}\n{bc.close}
+
+bc.open (formula people=3)
+  (has:broadcaster) This is {broadcaster}. The news, at the hour.
+  (has:broadcaster) You are listening to {broadcaster}. Here is the news.
+  (has:broadcaster) {broadcaster}, and the news, read by the duty announcer.
+  This is the {city} service. Here is the news.
+  Good evening. Here is the news from {$seat}.
+  Good morning, {$seat}. Here is the news.
+  The news, from {$seat}.
+  {$seat} calling. The news at the hour.
+  The bulletin for {season.now}, from {$seat}.
+  This is the evening service. First, the news.
+
+bc.close (formula people=3)
+  That is the news. The next bulletin is at the hour.
+  This is {city}. Good night.
+  That was the news from {$seat}. Stay tuned.
+  And that is the end of the bulletin.
+  More news at the hour. Good night.
+  That is all from {$seat}. Sleep well.
+  The news was read by the duty announcer. Good night.
+  We return you now to the music.
+
+# ---- the town's own items ----------------------------------------------------------------------------------------------------
+
+bc.item
+  (3) {bc.civic}
+  (3) {bc.price}
+  (3) {bc.local}
+  (2) {bc.culture}
+  (2) {bc.odd}
+  (2) {bc.traffic}
+  (2 contact=1) {bc.others}
+  (3 stage>=0) {bc.crisis}
+
+bc.civic
+  (gov!=machine) In {$seat}, {ruler.the} {bc.met} to {bc.over} {bc.issue}; {bc.outcome}.
+  (gov!=machine) {ruler.the} {bc.met} in {$seat} to {bc.over} {bc.issue}. {bc.outcome2}.
+  (gov!=machine) The question of {bc.issue} came before {ruler.the} {bc.when}; {bc.outcome}.
+  (gov!=machine) {bc.when2}, {ruler.the} {bc.met} to {bc.over} {bc.issue}, and {bc.outcome}.
+bc.met (people=3)
+  met today
+  met this morning
+  sat late into the night
+  met in a closed session
+  met for the third day running
+  sat again
+bc.over (people=3)
+  discuss
+  vote on
+  settle
+  argue over
+  hear the petitions about
+  look again at
+bc.when (people=2)
+  again this week
+  again today
+  for the fourth time {season.this}
+  after a long recess
+bc.when2 (people=2)
+  Late last night
+  Early this morning
+  After a long recess
+  For the third time this month
+bc.issue (people=9)
+  the budget
+  the price of {food}
+  the new tax on {craft}
+  the rationing of the {watersrc.n}
+  (has:$home.landmark) the closing of {$home.landmark}
+  (has:$home.quarter) the trams to {$home.quarter}
+  the {festival} holiday
+  (has:$home.quarter) the schools in {$home.quarter}
+  the noise from the {craft} works
+  the wages of the {craft} workers
+  the {herd} kept in the city
+  the state of {streets.of}
+  (has:$home.quarter) the old houses of {$home.quarter}
+  (coast=1) the harbour dues
+  (coast=1) the fishing limits off {sea}
+  the price of {fuel}
+  the {drink} licences
+  the street lighting
+  the hospital in {$home}
+  the cemetery extension
+  the sports ground
+  the new road to {$home}
+bc.outcome (people=6)
+  no agreement was reached
+  the vote was put off again
+  a committee will report in {season.next}
+  the motion passed by {#n} votes
+  the motion failed by one vote
+  members walked out
+  the matter was sent to the courts
+  {ruler.the} promised a statement
+  the gallery was cleared twice
+  the session ended in shouting
+  nothing was decided, which some called a decision
+  the old arrangement stands for another year
+bc.outcome2 (people=4)
+  No agreement was reached
+  The vote has been put off until {season.next}
+  A statement is promised for tomorrow
+  The session ended without a vote
+  The petitioners were sent home
+  It passed, narrowly
+  A committee will look at it again
+
+bc.price (share=0.7)
+  The price of {food} rises again from tomorrow, the {nth} rise {season.this}.
+  {food} will cost a {nth} more from the start of the month, the market board says.
+  The price of {fuel} falls this week for the first time in {#n|year}.
+  (has:$home.quarter) Shops in {$home.quarter} report a run on {food} after rumours of a shortage.
+  The {crop} harvest is said to be {bc.harv}; prices at the market are {bc.mkt}.
+  {drink} is dearer from tonight; the new duty takes effect at midnight.
+  The {craft} works will raise its prices in {season.next}, the owners say.
+  (has:$home.quarter) Rents in {$home.quarter} have doubled in {#n|year}, a survey finds.
+bc.harv (people=3)
+  average in the south and better in the north
+  the best in a decade
+  poor everywhere but the river valleys
+  late but heavy
+  thin, and the stores are low
+bc.mkt (people=3)
+  steady
+  climbing
+  falling for once
+  where they were last year
+  anyone's guess
+
+bc.local
+  In {$home}, {bc.loc}.
+  From {$home}: {bc.loc}.
+  News from {$home}, where {bc.loc}.
+bc.loc (share=0.6)
+  (has:$home.landmark) {$home.landmark} is to close for repairs until {season.next}
+  (has:$home.quarter) the trams to {$home.quarter} are running again after {#n|week}
+  (has:$home.quarter) a water main burst in {$home.quarter} and flooded the market
+  the {craft} works has laid off {#n|hand}
+  (has:$home.quarter) the new school in {$home.quarter} opened its doors
+  (has:$home.quarter) residents of {$home.quarter} have complained about the smell of the {craft} works
+  the bridge over {river} has been closed to heavy traffic
+  the market will stay open late for {festival}
+  (has:$home.quarter) a fire in {$home.quarter} was put out before it spread
+  the {herd} that got loose on the main road have been rounded up
+  (has:$home.landmark) the clock on {$home.landmark} has stopped again
+  (has:$home.quarter) the last {craft} shop in {$home.quarter} has closed
+  a new hall for the players of {pastime} opened today
+  (has:$home.quarter) the street lamps in {$home.quarter} were lit for the first time
+  the {watersrc.n} has been declared safe to drink again
+  the oldest woman in the town has turned {#nbig}
+  (has:$home.quarter) the {colour.any} doors of {$home.quarter} are to be painted over
+  (has:$home.landmark) a sinkhole has opened outside {$home.landmark}
+
+bc.culture
+  At the {bc.venue} in {$seat}, {bc.show}.
+  {bc.show2}, at the {bc.venue} in {$seat}.
+  In {$home}, {bc.show}.
+bc.venue (people=3)
+  theatre
+  concert hall
+  old market
+  hall of the {craft} guild
+  open-air stage
+  picture house
+  people's hall
+bc.show (share=0.6)
+  a new play about {bc.playtopic} opened last night to a full house
+  the players of {instrument} gave the last concert of the season
+  an exhibition of {colour.any} {material} work opens tomorrow
+  the {festival} songs were sung by a choir of {#nbig}
+  a film about {bc.playtopic} has been banned, and the queues are longer than ever
+  (has:$home.quarter) the dancers of {$home.quarter} won the prize again
+  the poets met for the reading, and nobody left early
+  a new opera was booed and cheered in about equal parts
+bc.show2 (share=0.6)
+  A new play about {bc.playtopic} opened last night
+  The recital of {instrument} music was sold out
+  The {festival} pageant drew the largest crowd in years
+  The prize for the best {material} carving went to a schoolgirl
+  A revival of the old {festival} songs filled the hall
+bc.playtopic (people=4)
+  the founding of {city}
+  the old kings
+  the {crop} famine
+  the floods
+  the {craft} workers' strike
+  a family of {herd} keepers
+  the war with the {other}
+  the first railway
+  {founder}
+
+bc.odd (share=0.4)
+  And finally: a {beast} walked into the council chamber in {$seat} during the debate and was allowed to stay.
+  And finally: the oldest {craft} shop in {$home} has sold its last {vessel.one.n}; the owner is {#nbig}.
+  (has:$home.quarter) And finally: a boy in {$home.quarter} has grown {crop} on the roof of his school.
+  (has:$home.landmark) And finally: the bells of {$home.landmark} rang for an hour at midnight; nobody knows who rang them.
+  And finally: a fish the size of a child was taken from {river}, and eaten by the whole street.
+  And finally: {exclaim}, says the farmer whose {herd} were found on the station platform.
+  And finally: a letter posted in {$home} {#nbig} years ago was delivered this morning.
+  (has:$home.quarter) And finally: the champion at {pastime} in {$home.quarter} is ninety-one, and not retiring.
+
+bc.traffic (share=0.6)
+  Traffic on the {bc.road} is heavy; drivers are advised to leave early.
+  The {bc.road} is closed by {weather.now}; use the old road through {$home}.
+  (has:$home.landmark) Delays on the {bc.road} after an accident near {$home.landmark}.
+  (has:$home.quarter) The trams in {$home.quarter} are running late because of {weather.now}.
+  (inv.railway=1) Trains from {$seat} are running {#n|hour} late tonight.
+bc.road (people=3)
+  coast road
+  north road
+  river road
+  mountain road
+  ring road
+  bridge road
+  old road
+
+bc.others
+  Talks with the {other} {bc.talks}.
+  (otherwar=1) Fighting with the {other} continued along the border overnight.
+  A delegation of the {other} arrived in {$seat} {bc.when}.
+  Trade with the {other} {bc.trade}.
+bc.talks (people=2)
+  will resume next week, the ministry says
+  broke down again over the border
+  went on late into the night
+  ended with a promise of more talks
+bc.trade (people=2)
+  is up a {nth} on last year
+  has stopped at the border
+  goes on, whatever the speeches say
+
+bc.crisis (share=0.7)
+  The government says the shortages are temporary.
+  The {watersrc.n} is lower than at any time on record; the {bc.bodies} ask for patience.
+  (has:$home.quarter) Queues for {food} formed again in {$home.quarter} before first light.
+  {ruler.the} said there was no need for alarm, which some listeners found alarming.
+  (stage>=1) The outer districts of {$home} are to be closed by {season.next}.
+  (stage>=1) The last trains from the north have been cancelled.
+  (stage>=2) The rationing of {fuel} begins tomorrow at every hall.
+bc.bodies (people=2)
+  authorities
+  water board
+  ministry
+  engineers
+
+# ---- the sport ------------------------------------------------------------------------------------------------------------
+
+bc.sport
+  {bc.sp.kind}{bc.sp.lead} {bc.sp.how}
+  {bc.sp.kind}{bc.sp.lead} {bc.sp.how} {bc.sp.coda}
+bc.sp.kind (people=1)
+  {=.spk:team}
+  {=.spk:team}{=.spt:1}
+  {=.spk:hold}
+  {=.spk:race}
+bc.sp.lead
+  (.spk=team) The {bc.sp}: {city} beat {city2} {bc.sp.score}, {bc.sp.where}.
+  (.spk=team) In the {bc.sp}, {city2} held {city} to a draw, {n} {bc.sp.unit} each, {bc.sp.where}.
+  (.spk=team) The {bc.sp}: {city2} lost at home to {city}, {bc.sp.score}.
+  (.spk=hold) The {bc.sp}: the {city} champion threw the {city2} champion twice in {#n|minute}.
+  (.spk=hold) In the {bc.sp} at {$seat}, the title stays with {city} for the {nth} year running.
+  (.spk=race) The {bc.sp}: {city} first, {city2} a close second, the rest nowhere.
+  (.spk=race) In the {bc.sp} at {$seat}, {city} won by {bc.sp.margin}.
+bc.sp.score (people=4)
+  by two {bc.sp.unit} to one
+  by three {bc.sp.unit} to nil
+  by four {bc.sp.unit} to two
+  by five {bc.sp.unit} to four
+  by nine {bc.sp.unit} to three
+  by the narrowest of margins
+  by more {bc.sp.unit} than anyone could count
+bc.sp.margin (people=3)
+  a length
+  half a length
+  a head
+  the width of a hand
+  a long way
+bc.sp (people=2)
+  (.spk=team) football
+  (.spk=team) ball game
+  (.spk=team) stick game
+  (.spk=team) {~game}
+  (.spk=team) hand ball
+  (.spk=hold) wrestling
+  (.spk=hold) stick fighting
+  (.spk=hold) {~game}
+  (.spk=race) long race
+  (.spk=race) relay
+  (.spk=race) cycling
+  (.spk=race) swimming
+  (.spk=race coast=1|river=1) boat race
+  (.spk=race coast=1|river=1) rowing
+  (.spk=race cold=1) ice race
+bc.sp.unit (people=1)
+  goals
+  points
+  runs
+bc.sp.where (people=3)
+  in the rain
+  in front of a full ground
+  after extra time
+  with the last kick
+  on a frozen pitch
+  before a silent crowd
+bc.sp.how (share=0.6)
+  Their supporters were seen in {bc.sp.streets} until {bc.sp.till}.
+  The match was stopped for {#n|hour} by {weather.now}.
+  It was {city}'s first {bc.sp.what} in {#n|season}.
+  The crowd of {#nbig} went home {bc.sp.happy}.
+  The referee needed an escort to {bc.sp.esc}.
+  {bc.sp.who} {bc.sp.did}.
+  Nobody had expected it, least of all {bc.sp.least}.
+bc.sp.streets (people=2)
+  the streets
+  the fountains
+  the {drink} houses
+  the squares
+bc.sp.till (people=2)
+  morning
+  the trams stopped
+  the police came
+bc.sp.what
+  loss
+  win
+  draw
+bc.sp.happy (people=3)
+  happy
+  soaked
+  hoarse
+  early
+  singing the {festival} songs
+bc.sp.esc (people=2)
+  the station
+  the river
+  the gate
+bc.sp.who (people=2)
+  The captain
+  The keeper
+  The new player from {city2}
+  A girl from {$home}
+bc.sp.did (people=3)
+  scored twice
+  was carried off
+  was sent off
+  scored with the last kick
+  wept on the field
+bc.sp.least (people=2)
+  the players
+  the bookmakers
+  the {city2} manager
+bc.sp.coda (people=2)
+  The return match is in {season.next}.
+  The {city2} captain has resigned.
+  (has:$home.landmark) The cup goes on show at {$home.landmark} tomorrow.
+  Tickets for the final are already sold out.
+)VG"

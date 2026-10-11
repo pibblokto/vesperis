@@ -6,6 +6,7 @@
 // (galaxy/landmarks.h); the scanner hears them and the maps show only what the explorer marked
 #include "game.h"
 #include "ui.h"
+#include "galaxy/drainage.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
@@ -17,14 +18,32 @@ static_assert(MARK_PLACE == LM_COUNT, "a mark of a place is the kind after the s
 
 namespace {
 // the scanner's modes in the order R cycles them, and their names (by LandmarkKind)
-const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS};
-const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS"};
-const char* RUIN_SIZE_NAMES[5] = {"A STRUCTURE", "A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT"};   // LM_RUIN's `sub`
+const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS};   // T-03: the works after the ruins
+const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
+const char* RUIN_SIZE_NAMES[6] = {"A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub`, its SettlementClass (T-01: a city, the capital)
+}
+
+// B-422: a mark's ground at the map's 64 m, with the rivers only where their drainage tiles are built already: a mark far off reads
+// it without them, and again with them once the explorer's way has built them (every two seconds a dry mark asks). Reading it with
+// them built a tile of a degree on the main thread for every mark across the world: nineteen on the user's BUBAS, the first look
+// of the readings, the scanner or a shown mark after a landing frozen for eight seconds
+static bool markGround(const SurfaceSite& site, const SurfaceMark& m, Game::SiteMark& sm) {
+    const bool dry = !drainageReady(site.gen, StarSystem::bodyFromLatLon(m.lat, m.lon), 0.0);
+    DrainageOff off(dry);
+    const TerrainVertex v = site.sampleAt(sm.x, sm.z, 64.0);
+    sm.y = std::max((double)v.h, (double)v.water);
+    return dry;
 }
 
 const std::vector<Game::SiteMark>& Game::marksHere() {
     if (!surf.valid) { siteMarks.clear(); siteMarksVersion = -1; return siteMarks; }
-    if (siteMarksEpoch == surf.siteEpoch && siteMarksBody == surf.site.body && siteMarksVersion == marksVersion && siteMarksCount == guide.marks.size()) return siteMarks;
+    if (siteMarksEpoch == surf.siteEpoch && siteMarksBody == surf.site.body && siteMarksVersion == marksVersion && siteMarksCount == guide.marks.size()) {
+        if (realTime >= siteMarksDryT) {
+            siteMarksDryT = realTime + 2.0;
+            for (SiteMark& sm : siteMarks) if (sm.dry) sm.dry = markGround(surf.site, guide.marks[sm.index], sm);
+        }
+        return siteMarks;
+    }
     siteMarks.clear();
     const std::string body = worldKeyOf(surf.site.body);
     for (int i = 0; i < (int)guide.marks.size(); i++) {
@@ -32,11 +51,10 @@ const std::vector<Game::SiteMark>& Game::marksHere() {
         if (m.body != body) continue;
         SiteMark sm; sm.index = i;
         surf.site.localAt(StarSystem::bodyFromLatLon(m.lat, m.lon), sm.x, sm.z);
-        TerrainVertex v = surf.site.sampleAt(sm.x, sm.z, 64.0);
-        sm.y = std::max((double)v.h, (double)v.water);
+        sm.dry = markGround(surf.site, m, sm);
         siteMarks.push_back(sm);
     }
-    siteMarksEpoch = surf.siteEpoch; siteMarksBody = surf.site.body; siteMarksVersion = marksVersion; siteMarksCount = guide.marks.size();
+    siteMarksEpoch = surf.siteEpoch; siteMarksBody = surf.site.body; siteMarksVersion = marksVersion; siteMarksCount = guide.marks.size(); siteMarksDryT = realTime + 2.0;
     return siteMarks;
 }
 
@@ -105,7 +123,8 @@ void Game::scanToggleSkip() {
 std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     const Landmark& L = e.lm;
     switch (L.kind) {
-        case LM_RUIN: return RUIN_SIZE_NAMES[clampi(L.sub, 0, 4)];
+        case LM_RUIN: return RUIN_SIZE_NAMES[clampi(L.sub, 0, 5)];
+        case LM_WORK: return WORK_HEARD[clampi(L.sub, 0, WO_COUNT - 1)];   // T-03: what it is, never whose
         case LM_PEAK: return fmt("%.0f M, %.0f OVER", L.heightM, L.prominenceM);
         case LM_MESA: return fmt("%.0f M HIGH", L.prominenceM);
         case LM_CANYON: return fmt("%.0f M DEEP", L.prominenceM);
@@ -114,12 +133,12 @@ std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     }
 }
 
-// the scanner's two lines at the top left (on foot under the sector's line, in a vehicle under its camera's) and its mark on the
+// the scanner's two lines at the top left (on foot under the world's line, in a vehicle under its camera's REC: R-414) and its mark on the
 // compass: an arrow over the strip at the echo's bearing, or at the strip's end toward it
 void Game::drawScanHUD() {
     if (scanMode < 0 || !surf.valid) return;
     const bool seat = surf.inVehicle() && !surf.chaseCam;
-    const int y0 = seat ? 32 : 24;
+    const int y0 = seat ? 24 : 16;
     const double px = surf.player.x, pz = surf.player.z;
     double hx = 0, hz = 0;
     const SurfaceView::ScanEcho* e = nullptr;
@@ -134,40 +153,57 @@ void Game::drawScanHUD() {
     drawTextShadow(canvas, 8, y0, fmt("SCAN %s%s", SCAN_MODE_NAMES[scanMode], scanSkipMarked ? "" : "*").c_str(), HUD_DIM, HUD_SHADOW);   // * the marked heard too
     drawTextShadow(canvas, 8, y0 + 8, l2.c_str(), HUD_CYAN, HUD_SHADOW);
     if (!e || l2 == "HERE") return;
+    drawCompassMark(std::atan2(hx - px, hz - pz), HUD_CYAN, true);
+}
+
+// a diamond on the compass strip's line at a bearing (filled: the scanner's echo; hollow: B-412's shown mark), or an arrow at the
+// strip's end it lies beyond
+void Game::drawCompassMark(double bearing, uint32_t col, bool filled) {
     const int cx = UW / 2, y = 28;   // the compass strip's line (renderSurfaceHUD: the strip at 22, its line 6 under)
-    const double off = wrapAngle(std::atan2(hx - px, hz - pz) - surf.player.yaw) / DEG;
-    if (std::fabs(off) <= 60) {   // a diamond on the strip's line at the echo's bearing
+    const double off = wrapAngle(bearing - surf.player.yaw) / DEG;
+    if (std::fabs(off) <= 60) {
         const int x = cx + (int)std::lround(off);
-        for (int r = 3; r >= 2; r--) { const uint32_t c = r == 3 ? HUD_SHADOW : HUD_CYAN; drawLineRGB(canvas, x - r, y, x, y - r, c); drawLineRGB(canvas, x, y - r, x + r, y, c); drawLineRGB(canvas, x + r, y, x, y + r, c); drawLineRGB(canvas, x, y + r, x - r, y, c); }
-        fillRectRGB(canvas, x - 1, y - 1, x + 1, y + 1, HUD_CYAN);
-    } else {   // an arrow at the strip's end the echo lies beyond
+        for (int r = 3; r >= 2; r--) { const uint32_t c = r == 3 ? HUD_SHADOW : col; drawLineRGB(canvas, x - r, y, x, y - r, c); drawLineRGB(canvas, x, y - r, x + r, y, c); drawLineRGB(canvas, x + r, y, x, y + r, c); drawLineRGB(canvas, x, y + r, x - r, y, c); }
+        if (filled) fillRectRGB(canvas, x - 1, y - 1, x + 1, y + 1, col);
+    } else {
         char glyph[2] = {off < 0 ? CH_LEFT : CH_RIGHT, 0};
-        drawTextShadow(canvas, off < 0 ? cx - 69 : cx + 63, y - 4, glyph, HUD_CYAN, HUD_SHADOW);
+        drawTextShadow(canvas, off < 0 ? cx - 69 : cx + 63, y - 4, glyph, col, HUD_SHADOW);
     }
 }
 
-// the explorer's marks over the view: the eight nearest within 25 km in front, a diamond over the ground and the name with the distance
-void Game::drawMarksInView() {
-    const std::vector<SiteMark>& ms = marksHere();
-    if (ms.empty()) return;
-    const double px = surf.player.x, pz = surf.player.z;
-    std::vector<std::pair<double, const SiteMark*>> near;
-    for (const SiteMark& m : ms) { double d = std::hypot(m.x - px, m.z - pz); if (d < 25000 && d > 4) near.push_back({d, &m}); }
-    std::sort(near.begin(), near.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-    if (near.size() > 8) near.resize(8);
-    for (const auto& nm : near) {
-        const SiteMark& m = *nm.second;
-        double sx, sy;
-        if (!surf.projectPoint(m.x, m.y + 6, m.z, sx, sy)) continue;
-        const int lx = (int)(sx / FB_SCALE), ly = (int)(sy / FB_SCALE);
-        if (lx < 6 || ly < 44 || lx > UW - 6 || ly > UH - 52) continue;
-        const uint32_t col = guide.marks[m.index].lent ? HUD_CYAN : HUD_WHITE;
-        drawLineRGB(canvas, lx - 3, ly, lx, ly - 3, col); drawLineRGB(canvas, lx, ly - 3, lx + 3, ly, col); drawLineRGB(canvas, lx + 3, ly, lx, ly + 3, col); drawLineRGB(canvas, lx, ly + 3, lx - 3, ly, col);
-        std::string lab = trunc(markLabel(m.index), 18) + " " + metresString(nm.first);
-        int tx = lx + 6;
-        if (tx + textWidth(lab.c_str()) > UW - 4) tx = lx - 6 - textWidth(lab.c_str());
-        drawTextShadow(canvas, tx, ly - 3, lab.c_str(), col, HUD_SHADOW);
-    }
+const Game::SiteMark* Game::shownMarkHere() {
+    if (guide.shownMark < 0) return nullptr;
+    for (const SiteMark& m : marksHere()) if (m.index == guide.shownMark) return &m;
+    return nullptr;
+}
+
+void Game::showMark(int mi) {
+    if (mi < 0 || mi >= (int)guide.marks.size()) return;
+    const bool hide = guide.shownMark == mi;
+    guide.shownMark = hide ? -1 : mi;
+    guide.save(guidePath);
+    status(hide ? std::string("NO MARK SHOWN OVER THE VIEW") : fmt("SHOWN OVER THE VIEW: %s", trunc(markLabel(mi), 26).c_str()), 3);
+    audio.beep = 4;
+}
+
+// B-412: the shown mark over the view, at any distance (the explorer chose it): where it stands in front a diamond over the ground
+// with the name and the distance, and wherever it is a hollow diamond on the compass strip at its bearing
+void Game::drawShownMark() {
+    const SiteMark* m = shownMarkHere();
+    if (!m) return;
+    const double px = surf.player.x, pz = surf.player.z, d = std::hypot(m->x - px, m->z - pz);
+    if (d <= 4) return;
+    const uint32_t col = guide.marks[m->index].lent ? HUD_CYAN : HUD_WHITE;
+    drawCompassMark(std::atan2(m->x - px, m->z - pz), col, false);
+    double sx, sy;
+    if (!surf.projectPoint(m->x, m->y + 6, m->z, sx, sy)) return;
+    const int lx = (int)(sx / FB_SCALE), ly = (int)(sy / FB_SCALE);
+    if (lx < 6 || ly < 44 || lx > UW - 6 || ly > UH - 52) return;
+    drawLineRGB(canvas, lx - 3, ly, lx, ly - 3, col); drawLineRGB(canvas, lx, ly - 3, lx + 3, ly, col); drawLineRGB(canvas, lx + 3, ly, lx, ly + 3, col); drawLineRGB(canvas, lx, ly + 3, lx - 3, ly, col);
+    std::string lab = trunc(markLabel(m->index), 18) + " " + metresString(d);
+    int tx = lx + 6;
+    if (tx + textWidth(lab.c_str()) > UW - 4) tx = lx - 6 - textWidth(lab.c_str());
+    drawTextShadow(canvas, tx, ly - 3, lab.c_str(), col, HUD_SHADOW);
 }
 
 // a new mark: the kind the scanner hears at the place (the mode's first), else a place; the name's entry follows (Tab changes the
@@ -221,6 +257,7 @@ void Game::removeMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     const std::string label = markLabel(mi);
     guide.marks.erase(guide.marks.begin() + mi);
+    if (guide.shownMark == mi) guide.shownMark = -1; else if (guide.shownMark > mi) guide.shownMark--;   // B-412
     marksVersion++; guide.save(guidePath);
     status(fmt("MARK REMOVED: %s", trunc(label, 30).c_str()), 3);
     audio.beep = 4;

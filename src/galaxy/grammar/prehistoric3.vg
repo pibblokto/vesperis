@@ -1,0 +1,232 @@
+R"VG(
+# prehistoric3.vg (H-04's second pass): the tally (a bone or a stone of counts), in the people's own marks (prehistoric.vg); the
+# years' events read as marks (`@event ... pre.mark`: the herds that came late, the storm, the gathering, the fire), so a people's
+# bones count what its history held. The moon's turns are prehistoric7.vg's.
+
+@root pre.mark.*
+
+# ---- the tally ----------------------------------------------------------------------------------------------------------------
+
+genre.tally (words=35..150)
+  {tally.head} {tally.line} {tally.line} {tally.line} {tally.end}
+  {tally.head} {tally.line} {tally.line} {tally.note} {tally.end}
+  {tally.head} {tally.line} {tally.note} {tally.line} {tally.line} {tally.end}
+  (2) {tally.head} {tally.line} {@event beasts,storm,fire,wonder,games,fair,pest,flood,drought,winter,famine,sickness,omen,quake,death pre.mark 3} {tally.line} {tally.end}
+  (2) {tally.head} {@event beasts,storm,fire,wonder,games,fair,pest,flood,drought,winter,famine,sickness,omen,quake,death pre.mark 3} {tally.line} {tally.note} {tally.end}
+
+pre.bone (people=2)
+  rib
+  shoulder blade
+  shin bone
+  antler tine
+  jawbone
+  length of horn
+  thigh bone
+  (cold=1) tusk
+
+tally.head (formula)
+  (medium=bone) A {pre.bone}, cut with marks on both sides.
+  (medium=bone) A {pre.bone}, polished by hands, cut along its length.
+  (medium=bone) A {game.one}'s {pre.bone}, cut with counts.
+  (medium=bone) A {pre.bone} with a hole at one end for a cord, and counts along it.
+  (medium=stone) A flat stone from {river}, scratched on its flat side.
+  (medium=stone) A pebble the size of a fist, its marks pecked in.
+  (medium=stone) A slab by the door of {house.one}, its face covered with counts.
+  (medium=painted) {pre.stroke} painted in a long row on the wall, in {colour.holy}.
+  (medium=painted) On the wall of the shelter above {$home}, rows of {pre.stroke}.
+  The counts of {$home}, in {pre.stroke}.
+  (has:$ruler) The marks of {$home}; the first sign is {$ruler:name}'s.
+  The {people}'s counts, as {$home} kept them.
+
+tally.line
+  (once) {count.game}
+  (once economy=hunting|economy2=hunting) {count.game}
+  (once) {count.fish}
+  (once coast=1) {count.fish}
+  (once) {count.herd}
+  (once economy=herding|economy2=herding) {count.herd}
+  (once harvest<=1) {count.hunger}
+  (once) {count.moon}
+  (once) {count.lost}
+  (once) {count.born}
+  (once) {count.rain}
+  (once) {count.trade}
+  (once) {count.walk}
+  (once) {count.make}
+  (once sick=1) {marks.s}, crossed through, in a row: the sick who died.
+
+tally.note (share=0.7)
+  (once) A stroke, a gap, a stroke: the count was stopped and begun again{pre.note.tail}.
+  (once harvest>=3) The {pre.stroke} go round the end of the {pre.bone.or}; there was not room for them all.
+  (once harvest<=1) {pre.sign.hunger}, cut where the {pre.stroke} stop.
+  (once) Some marks are older, worn almost smooth; the new ones are cut over them.
+  (once) Two hands cut these; the second presses harder{pre.note.tail}.
+  (once) A mark like a {tree.n}, and the {pre.stroke} start again after it.
+  (once) Between the counts, a small sign like {pre.eye.like}; it comes back {#number|time}.
+  (once) The counts are grouped by {#number} where the cutter could; the ship counts them so.
+  (once) One group of {pre.stroke} is cut twice, the second time over the first, as if to be sure.
+  (once moons>0) A small circle after each group: one turn of {moon}.
+  (once) A {game.one} drawn badly, then crossed out, then drawn again.
+  (once) {colour.holy} in some grooves and not in others: two kinds of count, or two people's.
+  (once) Along the top, {motif.over}, very small, the way the {people} marked what was theirs.
+  (once) The {pre.stroke} lean one way at the start and the other way at the end{pre.note.tail}.
+  (once) A hand's width of the {pre.bone.or} is left bare, then the counts go on in another hand.
+  (once) A sign like {house.one} drawn from above, and the counts that follow are smaller.
+  (once) The last group is cut so lightly it may be a scratch; the ship counts it anyway.
+  (once) Each group ends with a dot rubbed with {colour.holy}{pre.note.tail}.
+pre.eye.like
+  an eye
+  a {bird.one}
+  a {tree.n}
+  a hand
+  a {herd.sign}
+pre.note.tail
+  (3)
+  , the ship thinks
+  , as far as the ship can tell
+  , or the ship misreads it
+pre.bone.or
+  (medium=bone) bone
+  (medium=stone) stone
+  (medium=painted) wall
+
+tally.end
+  (3) {obj.state}
+  (stage>=1) The {pre.stroke} get fewer toward the end.
+  (stage>=1) The last count is cut, then smeared with {colour.mourn}, as if to unsay it.
+  The counts stop halfway along, at a {pre.stroke.one} rubbed with {colour.holy}; the rest of the {pre.bone.or} is clean.
+  The counts stop where a {game.one} is drawn, very small; after it the {pre.bone.or} is bare.
+
+# ---- the years' events, as marks (`@event ... pre.mark`) --------------------------------------------------------------------
+
+pre.mark.beasts
+  ($e.what=late) {pre.sign.game}, and a long run of {pre.stroke} before it: the {game} came late, {pre.e.when}.
+  ($e.what=late) {marks.s} of waiting, then {pre.sign.game} at last: the {game} were late that year.
+  ($e.what=early) {pre.sign.game} cut before the {pre.stroke} begin: the {game} came early, {pre.e.when}.
+  ($e.what=early) {pre.sign.game}, and the {pre.stroke} crowd after it: the {game} came before anyone was ready.
+  ($e.what=none) {pre.sign.game}, crossed through, and nothing after it: the {game} did not come.
+  ($e.what=none) {pre.sign.game} drawn and scratched out {#number|time}: that year the {game} stayed away.
+  ($e.what=many) {marksbig} beside {pre.sign.game}, more than the {pre.bone.or} has room for: the {game} came in a flood.
+  ($e.what=many) {pre.sign.game} drawn {#number|time} over, and {marksbig.s}: the year the {game} would not stop coming.
+  ($e.what=great) A {game.one} cut larger than any other, and {n} hands round it: the great one, taken {pre.e.at}.
+  ($e.what=great) {pre.sign.game} ringed in {colour.holy}: one {game.one}, the great one, {pre.e.when}.
+  ($e.what=killed) {pre.sign.game} over {pre.sign.dead}: the {game.one} killed {#$e.value|hunter}.
+  ($e.what=killed) {pre.sign.dead}, and a {game.one} drawn standing over it: the hunt went wrong {pre.e.at}.
+pre.mark.storm
+  ($e.what=wind) Lines blown sideways over {pre.huts}: the wind that took the roofs, {pre.e.when}.
+  ($e.what=wind) {house.one} drawn without its roof: the great wind {pre.e.at}.
+  ($e.what=hail) Dots cut hard, like stones falling: the hail, {pre.e.when}.
+  ($e.what=snow) Flakes over the {pre.stroke}: snow up to the roofs, {pre.e.when}.
+  ($e.what=dust) The {pre.stroke} smeared over, as if on purpose: the dust that came out of {land}.
+  ($e.what=sea) Waves cut over a boat: the sea came up {pre.e.at}.
+  ($e.what=lightning) A crooked line down to a {tree.n}: the fire from the sky {pre.e.at}.
+  ($e.what=rain) {pre.sign.rain}, and {marks.s} after it: rain that would not stop, {pre.e.when}.
+pre.huts
+  the huts
+  the camp
+  {houses}
+pre.mark.fire
+  {pre.mark.fire.a}: {pre.mark.fire.b}.
+pre.mark.fire.a
+  A fire drawn over {houses}
+  Flames cut over the sign of {$e.place}
+  A ring of black round the {pre.stroke}
+  {pre.huts} drawn, then blackened with soot
+pre.mark.fire.b
+  ($e.what=grass) the grass burned to the water's edge, {pre.e.when}
+  ($e.what=camp) the camp burned {pre.e.when}, and {#$e.value|hut} with it
+  ($e.what=half) half of {$e.place} burned, {pre.e.when}
+  ($e.what=forest) the {tree} burned for days
+  ($e.what!=grass $e.what!=forest) {#$e.value|hut} burned at {$e.place}
+pre.mark.wonder
+  ($e.what=calf) A young beast drawn with two heads: born at {$e.place}, {pre.e.when}.
+  ($e.what=fish) A fish drawn as long as the {pre.bone.or}: taken at {$e.place}, they said.
+  ($e.what=stone) A stone with lines falling from it: it came down {pre.e.at}, and they kept it.
+  ($e.what=rain) {pre.sign.rain} in {colour.holy}: a red rain at {$e.place}, {pre.e.when}.
+  ($e.what=spring) A wavy line with steam over it: the water at {$e.place} came up warm.
+  ($e.what=beast) A {game.one} drawn white, the only white thing on the {pre.bone.or}: seen {pre.e.at}.
+  ($e.what=twins) Two small figures side by side, held up: twins at {$e.place}, both living.
+  ($e.what=tree) A {tree.n} drawn in flower over the sign of {season.now}: a {tree.n} that flowered out of its time.
+pre.mark.games
+  {pre.games.a} {pre.games.b}
+pre.games.a
+  ($e.what=race) Figures with their legs drawn long, one ahead:
+  ($e.what=wrestling) Two figures locked together, one bent back:
+  ($e.what=archery) A row of figures with bows and a mark like a target:
+  ($e.what=boats) Boats in a row on a wavy line, one ahead:
+  ($e.what=song) Figures with their mouths open and lines from them:
+  ($e.what!=race $e.what!=wrestling $e.what!=archery $e.what!=boats $e.what!=song) Figures in a ring, and one with its arms up:
+pre.games.b
+  (has:$e.a) the games at {$e.place}, and the sign over the one ahead is {$e.a:name}'s.
+  the games at {$e.place}, {pre.e.when}.
+  (has:$e.a) {$e.a:name} won, at {$e.place}.
+  the contest at the gathering, and {n} strokes for the ones who came.
+pre.mark.fair
+  ($e.what=gathering) {pre.sign.band} {pre.sign.band.again}, and {marksbig.s} round them: the bands gathered at {$e.place}, {pre.e.when}.
+  ($e.what=gathering) Many hands pressed in a ring: the gathering at {$e.place}, the year the bands came together.
+  ($e.what!=gathering) {pre.sign.band}, and {marks.s} beside the sign for {pre.fair.what}: the trading at {$e.place}.
+  ($e.what!=gathering) {marks} beside the sign for {pre.fair.what}: what went out at the gathering at {$e.place}.
+pre.sign.band.again
+  drawn many times
+  repeated round a fire
+  in a ring
+pre.fair.what
+  ($e.what=beasts) the {herd}
+  ($e.what=salt) salt
+  ($e.what=pots) pots
+  ($e.what=fish) {fish}
+  ($e.what=furs) furs
+  ($e.what!=beasts $e.what!=salt $e.what!=pots $e.what!=fish $e.what!=furs) {trade.thing}
+pre.mark.pest
+  ($e.what=locusts) Dots thick as a cloud over the sign of the {crop}: the locusts, {pre.e.when}.
+  ($e.what=murrain) {pre.sign.herd}, and many of them crossed through: the {herd} sickened {pre.e.when}.
+  ($e.what=wolves) A beast with its teeth drawn, and {pre.sign.herd} crossed out: the wolves came for the {herd}.
+  ($e.what=rats) Small beasts in a line over the sign for {vessel}: the {pest} got into the stores.
+  ($e.what!=locusts $e.what!=murrain $e.what!=wolves $e.what!=rats) Small marks over the sign of the {crop}: the {pest}, {pre.e.when}.
+pre.mark.flood
+  Wavy lines over the sign of {$e.place}, and {marks.s} beside them: {.k} days under water.
+  {pre.sign.rain}, then the sign of {$e.place} drawn upside down: the water came over {$e.place}.
+pre.mark.drought
+  {pre.sign.sun}, and the {pre.stroke} run on and on after it: the dry years, {#$e.value|year} of them.
+  {pre.sign.sun} over {pre.sign.hunger}: no rain, {#$e.value|year}.
+pre.mark.winter
+  Flakes over {marks.s}: {.k} nights of the long winter, and more not counted.
+  {pre.sign.moon} drawn pale and small, and snow over the {pre.stroke}: the winter that stayed.
+pre.mark.famine
+  {pre.sign.hunger}, and {marksbig.s} after it: the hunger, and the ones it took.
+  {pre.sign.hunger} cut {#number|time}: the hunger year at {pre.e.place.or}.
+pre.mark.sickness
+  Figures lying in rows, and {marks.s} beside them: the sickness, {pre.e.when}.
+  Red dots over {pre.sign.dead}: the sickness at {pre.e.place.or}.
+pre.mark.omen
+  ($e.omen=comet) A star with a long tail, cut deep: the hairy star, {pre.e.when}.
+  ($e.omen=eclipse) A sun cut black, with a ring round it: the day the sun went out.
+  ($e.omen=aurora) Hanging lines, cut close: the lights in the north.
+  ($e.omen!=comet $e.omen!=eclipse $e.omen!=aurora) Marks in the sky part of the {pre.bone.or}, cut fine: a sign over {pre.e.place.or}.
+pre.mark.quake
+  The sign of {$e.place} drawn split in two: the ground opened {pre.e.when}.
+  A crooked line across all the counts: the ground that moved at {$e.place}.
+pre.mark.death
+  {pre.sign.dead}, and beside it the sign of {$e.a:name}: gone, {pre.e.when}.
+  The sign of {$e.a:name}, and {pre.sign.dead} after it: {$e.a:name}, {death.went}.
+pre.mark.rulerdeath
+  The sign of {$e.a:name} cut larger than the rest, and {pre.sign.dead} cut above it: the one who led them, {death.went}.
+  {pre.sign.dead}, ringed {#number|time}, and {$e.a:name}'s sign inside: the band's first, dead {pre.e.when}.
+pre.mark.none
+  {count.game}
+  {count.rain}
+  {count.born}
+  {count.make}
+
+pre.e.when
+  (2 has:$e.season) in {$e.season}
+  that year
+  in the year of it
+pre.e.at
+  at {$e.place}
+  near {$e.place}
+  (has:$e.season) in {$e.season}
+pre.e.place.or
+  (has:$e.place) {$e.place}
+  (!has:$e.place) {$home}
+)VG"

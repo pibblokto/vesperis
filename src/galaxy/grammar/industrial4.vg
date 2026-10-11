@@ -1,0 +1,191 @@
+R"VG(
+# industrial4.vg (H-04's second pass): more of the newspaper's columns (the works, an oddity, the town's health, the feast, the late
+# years' small items) and its advertisements: things for sale and wanted, remedies, lessons and rooms, the town's shops, each in the
+# people's own goods and coin.
+
+ind.works
+  The {craft} works at {$home} {ind.wk.news}.
+  {ind.wk.lead} the {craft} trade {ind.wk.trade}.
+  (has:$home.ptrade) {$home}, which lives by {$home.ptrade}, {ind.wk.town}.
+ind.wk.news
+  are taking on hands, and the queue at the gate began before light
+  have gone on short time until the orders come back
+  have a new boiler, and the neighbours have the noise of it
+  will close for a week at {festival}, without pay
+  have been sold to a company from {city}, which says nothing will change
+ind.wk.lead
+  This year in {$home}
+  The guild reports that
+  It is said in the yards that
+ind.wk.trade
+  has never been busier, nor its wages lower
+  is losing its young people to the city
+  will take no more apprentices until the price of {crop} comes down
+  has found a buyer over the sea for everything it can make
+ind.wk.town
+  has had a better year than most
+  is asking where the next one is to come from
+  sends its thanks to the buyers of {city2}
+  will hold its fair on the old day, whatever the council says
+  (has:$home.landmark) has asked the council to mend {$home.landmark} before it falls on someone
+
+ind.oddity
+  {ind.odd.lead} {ind.odd.what}
+  (has:$home.landmark) A {beast} has been living on {$home.landmark} since {season.now} began, and nobody can reach it.
+  (has:$home.quarter) The people of {$home.quarter} have been woken every night this week by {ind.odd.noise}.
+ind.odd.lead
+  A curiosity from {$home}:
+  Our readers will want to know that
+  It is reported, and we pass it on, that
+ind.odd.what
+  a {beast} at the mill has learned to open the gate, and does.
+  a {vessel.one.n} of {crop} left on a step at {$home} in {season.any} was found full of nests.
+  a child of {$home} has counted the steps of {holyplace} and made them one more than the builders did.
+  the {tree.n} by the north road flowered twice this year.
+  a man has walked from the coast to {$home} backwards, for a bet, and won it.
+  the bells of {holyplace} rang by themselves at midnight, and the ringers swear they were asleep.
+ind.odd.noise
+  a {beast} that will not stop
+  {instrument} of someone practising
+  the new engine at the works
+  the {bird}, who have found the gutters
+
+ind.health
+  The doctors of {$home} {ind.hl.what}.
+  A notice from the health board: {ind.hl.notice}.
+ind.hl.what
+  ask that water from the {watersrc.n} be boiled until further notice
+  report fewer fevers than last {season.now}, and thank the new drains
+  warn against the {food} sold from the carts at the station
+  have vaccinated {nbig} children, and been bitten by {n}
+ind.hl.notice
+  the {pest} in the granaries are to be poisoned on the rest day; keep the {herd} in
+  the public baths at {town.open} are open to women in the mornings
+  nobody is to throw anything into the {watersrc.n} that they would not drink
+
+ind.festival
+  {festival} is near: {ind.fest.what}.
+  The {festival} committee {ind.fest.cm}.
+ind.fest.what
+  the procession will take the [usual|old|long] route, and the band has been asked to [practise|keep together|start on time]
+  {feast.custom} will be at {town.open} as always
+  the stalls are let, and the {drink} brewed
+  the children are rehearsing the songs, and the neighbours hearing them
+ind.fest.cm
+  reports that the fireworks have arrived and are being kept somewhere safe, away from the {fuel}
+  asks for volunteers to carry the lamps in the procession
+  has fixed the stall fees at {n} {smallcoin}, which the stallholders will discuss with it
+  regrets that the {ind.sport} cannot be held this year
+
+ind.late
+  Another family has given up its house in the old town; the council is asked what it intends.
+  The water rate goes up again next month, and the water has not improved.
+  {n} houses in {streets.of} have stood empty since {season.now}, and the council will let them for nothing to anyone who will stay.
+  The school will close one of its rooms; there are not the children to fill it.
+  The {festival} fair will be held this year on one day only.
+  (inv.railway=1) The night train has been cancelled for want of passengers.
+
+# ---- the advertisements ------------------------------------------------------------------------------------------------------
+ind.ads
+  {ind.ad}
+  {ind.ad} {ind.ad}
+
+ind.ad
+  (once) For sale: {ind.sale}. {=.ad:sale}{ind.apply}
+  (once) Wanted: {ind.wanted}. {=.ad:want}{ind.apply}
+  (once) {ind.remedy.name}: {ind.remedy}.
+  (once) Lessons on {instrument}, by a teacher lately of {ind.away}; {n} {smallcoin} the {ind.lesson.per}, {ind.lesson.extra}.
+  (once) To let: {ind.let}. {=.ad:let}{ind.apply}
+  (once) {ind.shop}
+  (once) {craft} done cheaply and well. {=.ad:trade}{ind.apply}
+  (once age>=modern) {ind.modern.ad}
+
+ind.sale (share=0.6)
+  {n} {herd} in good condition, the owner going over the sea
+  a good cart, its wheels new, its owner old, with {n} {herd} to pull it
+  a {colour.any} {garment.n}, worn once, at a funeral
+  the tools of the {craft} trade, nearly new, the owner having taken up another
+  {vessel} of every size, at the {craft} yard
+  a stall at {town.open}, with the custom and the awning, in the {craft} row
+  the right of the {watersrc.n} on the east side, with a bucket
+  a {beast}, quiet, good with children, eats anything
+  {n} {measure.load} of {crop}, dry, from last year
+  a {ind.instr}, played by one careful owner
+ind.wanted (share=0.6)
+  a teacher for the school at {$home}, who must be able to read, and to teach {craft} besides
+  hands for the {craft} works, no questions asked about the last place
+  a girl for the dairy, early hours, {n} {smallcoin} a week and her {food}
+  a clerk who can add, and will, at {n} {coin} a quarter
+  a night watchman, sober, who is not afraid of {ind.wild}
+  a strong boy for the {herd}, who can count them
+  a cook for a house of {n}, plain food, {food} on the rest day
+  a {ind.ct.trade}'s apprentice, the son of a {ind.ct.trade} preferred
+# a paper's own way of saying where to apply (its house style: each paper keeps its few)
+ind.apply (formula people=5)
+  (.ad=want) Apply at the gate {time.of}.
+  Enquire at the office of this paper.
+  Apply to the clerk at {town.open}.
+  (.ad=want) Write, giving your age and your references.
+  (.ad=want) Apply in person, sober, to the foreman.
+  Enquire at the inn by the market, and ask for the owner.
+  Apply at the {ind.paper.name} office, by letter only.
+  Ask at {holyplace}, after the service.
+  Write to the box number below.
+  (.ad=want) Apply before {festival}; no one taken after.
+  (.ad=sale) Seen by appointment; no offers refused.
+  (.ad=let) Rent by the season, paid in advance.
+  (.ad=trade) Orders taken at the yard, {time.of}.
+ind.let (share=0.6)
+  rooms over the bakery, warm in winter, smelling of {food}
+  a house by the {watersrc.n}, with a garden of {veg}
+  a room for a single person of quiet habits and no {beast}
+  a shop in the market row, the {craft} trade preferred
+  a loft over the {craft} works, noisy by day, quiet by night
+  {house.one} at the edge of the town, with a yard for {herd}
+ind.remedy.name
+  The {city} cordial
+  Mother's balsam
+  The old {$home} remedy
+  The doctor's own drops
+ind.remedy
+  for coughs, colds, the [chest|back|liver] and the low spirits, {n} {smallcoin} the bottle
+  cures the fever, the ague and the bad dreams; {n} {smallcoin}, from every chemist
+  made of {crop2} and honey and something the makers will not say, which works
+  taken by three generations of the {people}, and they are still here
+ind.shop (share=0.6)
+  The {$home} brewery: {drink}, [as your father drank it|brewed at the river|by the cup and by the cask].
+  (coast=1) {fish}, fresh at the quay every morning, and cheaper after noon.
+  The {$home} bakery has {food} on the rest day, for those who order before the bell.
+  Boots made and mended at the sign of the {colour.any} {beast}.
+  The {craft} shop by the bridge sells to the trade and to everyone else.
+  {fruit} and {veg} from the hill farms, at the stall by {holyplace}, every market day.
+  Lessons in {craft} for young women, by the widow of a master, at {n} {smallcoin} the {ind.lesson.per}.
+ind.modern.ad
+  Refrigerators on easy terms: keep your {food} as fresh as the day you bought it.
+  The new motorcars are at the showroom by the station; drive one home to {ind.drive}.
+  Learn to type in {n} weeks; the offices of {city} are waiting, and so are their {coin}.
+  A wireless set in every house: {n} {coin} down and the rest when you can.
+  (inv.telephone=1) Have a telephone put in, and never walk to {holyplace} to ask the time again.
+ind.wild
+  wolves
+  the dark
+  {game}
+ind.instr
+  drum
+  fiddle
+  set of pipes
+  horn
+ind.drive
+  your door
+  the country
+  the coast
+ind.lesson.per
+  hour
+  week
+  season
+ind.lesson.extra
+  pupils of any age
+  the neighbours permitting
+  no talent required
+  beginners in the mornings
+)VG"

@@ -1,0 +1,251 @@
+R"VG(
+# song3.vg (H-04's second pass): the picture's register (`@event ... picture`): a painted wall or a carved stone of the old ages read as
+# the ship reads its figures, a figure at a time, the count of the marks and what they mean. Each people painted in its own colour
+# (`colour.holy`, the genome's accent the ruins show), framed its figures with its own motif (`motif.over`) and drew its own beasts,
+# houses and dead; the ship's reading closes it in a few words. The everyday's pictures are writer P's.
+
+# the ship's short reading (under six words: a caption, not a sentence)
+ann.pic.cap
+  Read:
+  The reading:
+  The ship reads:
+  Its sign:
+
+# a detail some pictures add: how this people framed and laid on its colour
+ann.pic.frame
+  (2)
+  Round the whole of it, {motif.over}, cut deep.
+  The {colour.holy} is laid on thick here, and nowhere else.
+  The border is {motif.over} in {colour.holy}, the people's own.
+  Somebody has rubbed the {colour.holy} smooth here with their hand, over and over.
+  The figures stand close inside {motif.over}, as if there was not room.
+  Under the {colour.holy} the old lines of {motif.over} show through.
+
+# ---- war --------------------------------------------------------------------------------------------------------------------
+
+picture.battle
+  {ann.pic.bat.a} {ann.pic.bat.b} {ann.pic.cap} the battle at {$e.place}.
+  {ann.pic.bat.a} {ann.pic.frame} {ann.pic.bat.b} {ann.pic.cap} the fight at {$e.place}.
+ann.pic.bat.a
+  Many figures with spears, facing each other across a line of {colour.holy}.
+  Two lines of figures running at each other, their spears and {ann.tooln:pl} up.
+  Figures in {colour.holy} on one side, in black on the other, their spears crossed.
+  A great many small figures, packed tight inside {motif.over}, all of them armed.
+  Figures driving the {herd} behind them as they go to the fight.
+ann.pic.bat.b
+  ($e.value>0) Between them, figures lying down, and {#$e.value:about} strokes beside them.
+  Over them all, a black hand with {motif.over} on its palm.
+  The ones lying down have no faces drawn, only {colour.holy} where the faces should be.
+  The {bird} are drawn over the field, larger than the men.
+  ($e.won=1) The {colour.holy} figures stand; the black ones lie down among the {ann.crop.or.grass}.
+  ($e.won=0) The black figures stand; ours lie down among the {ann.crop.or.grass}.
+ann.crop.or.grass
+  grass
+  {crop}
+
+picture.war
+  ($e.warkind!=other $e.warkind!=conquest) {ann.pic.war.a} {ann.pic.cap} the quarrel over {$e.place}.
+  ($e.warkind=other|$e.warkind=conquest) Two groups of figures, one in {colour.holy} and one drawn thin and tall, with spears raised. {ann.pic.cap} ours and the {other}.
+ann.pic.war.a
+  Two groups of figures, one in {colour.holy} and one in black, with spears raised. The {colour.holy} ones are ours.
+  Two bands drawn face to face across a line cut through {motif.over}.
+  Figures painting their faces {colour.holy}, and spears stacked like {tree.n} trunks.
+  A long line of figures walking out of a circle of {ann.pic.houses}, all armed, the {herd} left behind.
+
+# ---- the sick and the hungry --------------------------------------------------------------------------------------------------
+
+picture.sickness
+  {ann.pic.sick.a} {ann.pic.sick.b} {ann.pic.cap} the sickness at {$e.place}.
+ann.pic.sick.a
+  Figures lying down, many, in rows, between {ann.pic.houses}.
+  A circle of figures with their hands over their mouths, inside {motif.over}.
+  A figure bent double, and another holding it up by a {colour.holy} band.
+  Figures carried on the backs of others toward {ann.pic.deadmark}.
+ann.pic.sick.b
+  Over them, spots of {colour.holy}.
+  ($e.value>0) The strokes beside the figures are the dead: {#$e.value:about}.
+  A hand held over the mouth, drawn again and again among the {herd}.
+  The {herd} are drawn turned away, as if they would not look.
+  One figure stands apart, painted all in {colour.holy}: the healer, perhaps.
+
+picture.famine
+  {ann.pic.fam.a} {ann.pic.fam.b} {ann.pic.cap} the hunger.
+ann.pic.fam.a
+  Empty bowls, turned over, in a row under {motif.over}.
+  A figure with its ribs drawn, every one, in {colour.holy}.
+  A field of {crop} drawn with nothing standing in it.
+  Figures digging in bare ground with {ann.tooln:pl}.
+ann.pic.fam.b
+  A {beast}, crossed out.
+  The {herd}, drawn as bones.
+  Children with big heads and thin arms, holding out {vessel}.
+  A figure giving its bowl to another, under {skyone}.
+
+# ---- the land and the sky ----------------------------------------------------------------------------------------------------
+
+picture.flood
+  {ann.pic.fl.a} {ann.pic.fl.b} {ann.pic.cap} the flood at {$e.place}.
+ann.pic.fl.a
+  Wavy lines over {ann.pic.houses}, up to their tops.
+  Water drawn as long lines of {colour.holy}, over everything.
+  {ann.pic.houses} drawn up to their roofs in wavy lines, and the {crop} under them.
+ann.pic.fl.b
+  Figures on the roofs; one figure in the water, its arms up.
+  The {herd} drawn floating, upside down.
+  A boat with too many figures in it, and {vessel} floating after it.
+  A {tree.n} with figures in its branches, like {bird}.
+
+picture.drought
+  {ann.pic.dr.a} {ann.pic.dr.b} {ann.pic.cap} the year without rain.
+ann.pic.dr.a
+  A sun with long rays, many, painted {colour.holy}.
+  The sun drawn twice as large as anything else on the wall, over the {crop}.
+  A cracked ground, drawn as a net of lines like {motif.over}.
+ann.pic.dr.b
+  A {watersrc.n}, crossed out; the {herd} lying down.
+  Figures carrying {vessel} a long way, the line of them going off the wall.
+  Figures with their hands up to the sky over the dry {crop}, and nothing coming.
+
+picture.quake
+  {ann.pic.qk.a} {ann.pic.qk.b} {ann.pic.cap} the ground moved.
+ann.pic.qk.a
+  {ann.pic.houses} drawn falling, upside down.
+  A crack across the whole wall, painted through {motif.over}, not broken.
+  The ground drawn as a wave, with {ann.pic.houses} on its crest.
+ann.pic.qk.b
+  Figures running out of the doors, and the {herd} after them.
+  Figures digging in a heap of stones with {ann.tooln:pl}.
+  ($e.value>0) Figures lying under the stones, and {colour.holy} strokes beside them.
+
+picture.eruption
+  {ann.pic.er.a} {ann.pic.er.b} {ann.pic.cap} {mountain}, awake.
+ann.pic.er.a
+  A mountain with {colour.holy} at its top, and black lines falling from it like rain.
+  A mountain drawn with a mouth, and fire coming out of it over the {crop}.
+  A mountain twice the height of the wall's other mountains, its top broken.
+ann.pic.er.b
+  The figures running, and the {herd} running ahead of them.
+  Everything below it is painted grey, the {tree} too.
+  The {game} are drawn going away over the edge of the stone.
+
+picture.impact
+  A star falling, very large, with a tail of {colour.holy} fire. Under it, nothing: the wall is blackened there.
+  A great fire in the sky, and the figures under it lying flat among the {herd}. A burned place in the middle of the picture.
+  A stone drawn with lines coming off it like hair, coming down on {ann.pic.houses}. {ann.pic.cap} the falling stone.
+
+picture.winter
+  {ann.pic.win.a} {ann.pic.win.b}
+ann.pic.win.a
+  A sun drawn small and pale in a sky of white dots.
+  Snow marks over everything, white dots on the dark stone, even on the {herd}.
+  {ann.pic.houses} drawn buried to their tops in white.
+ann.pic.win.b
+  Figures huddled round a fire of {fuel}.
+  The {herd} standing in the white, with no grass under them.
+  Figures wrapped up so only their eyes are drawn, holding {vessel}.
+
+picture.omen
+  ($e.omen=comet) A star with a long tail, and figures pointing at it from among the {herd}. {ann.pic.cap} the hairy star.
+  ($e.omen=comet) A star drawn with a tail as long as the wall in {colour.holy}, and a figure kneeling under it.
+  ($e.omen=eclipse) A black sun with a ring of {colour.holy} round it. Figures lying flat on the ground.
+  ($e.omen=eclipse) A sun painted black and filled in, and the {herd} lying down in the middle of the day.
+  ($e.omen!=comet $e.omen!=eclipse) Many small marks in the sky part of the wall, and figures looking up from the {crop}. {ann.pic.cap} a sign.
+  ($e.omen!=comet $e.omen!=eclipse) The sky part of the wall is all {colour.holy}, and figures stand under it with their arms out.
+
+# ---- the places, the dead, the coming and the leaving --------------------------------------------------------------------------
+
+picture.founding
+  {ann.pic.fd.a} A circle drawn round them in {colour.holy}: the new place, {$e.place}.
+  {ann.pic.fd.a} {ann.pic.houses} drawn beside a {watersrc.n}. {ann.pic.cap} {$e.place}, new.
+ann.pic.fd.a
+  Figures carrying bundles and a fire in {vessel.one}.
+  Figures walking with the {herd} before them, toward a {watersrc.n}.
+  A line of figures with poles on their shoulders, and {motif.over} over the first of them.
+
+picture.rulerdeath
+  {ann.pic.rd.a} {ann.pic.rd.b} {ann.pic.rd.c}
+  {ann.pic.rd.a} {ann.pic.frame} {ann.pic.rd.c}
+ann.pic.rd.a
+  A large figure with a crown of lines, lying down, painted in {colour.holy}.
+  A figure larger than the rest, laid out flat, its spear and its {vessel.one.n} beside it.
+  A tall figure on its back, with the sign of the band over it and {motif.over} round the sign.
+  A figure carried on the shoulders of {n} others toward {ann.pic.deadmark}.
+  A figure painted all in {colour.holy}, lying across the middle of the wall.
+  A great figure lying among the {herd}, which are drawn kneeling.
+  A figure lying down under {skyone}, drawn larger than the sun.
+ann.pic.rd.b
+  Many small figures round it with their hands on their heads, {ann.pic.mourn}.
+  The band stands round it in a circle, and the circle is drawn {ann.pic.times}.
+  A fire beside it, painted very large, fed with {fuel}.
+  Its {herd} are drawn walking away, with nobody behind them.
+  {motif.over} are cut all round it, more than anywhere else on the stone.
+  Beside it, {#number} marks in {colour.holy}, the number the {people} held sacred, and {#number} {herd}.
+  The {game} are drawn standing still round it, which they never do.
+ann.pic.rd.c
+  {$e.a:name}, dead.
+  The sign beside it is {$e.a:name}'s, cut twice in {colour.holy} among {motif.over}.
+  {ann.pic.cap} {$e.a:name}.
+  The sign is {$e.a:name}'s; under it, a hand in {colour.holy} and a {vessel.one.n}.
+ann.pic.mourn
+  painted in {colour.mourn}
+  with {colour.mourn} on their faces
+ann.pic.times
+  twice
+  three times
+  over and over
+
+picture.death
+  {ann.pic.dth.a} {ann.pic.dth.b} {ann.pic.cap} {$e.a:name}, dead.
+  {ann.pic.dth.a} {ann.pic.dth.b} The sign beside it is {$e.a:name}'s.
+ann.pic.dth.a
+  A large figure lying down, with things set round it, in {colour.holy}.
+  A figure laid out flat on {ann.pic.deadmark}, the {herd} drawn below.
+  A figure lying on its side, its knees drawn up, as the {people} buried theirs.
+  A figure under {motif.over}, lying still among {ann.pic.houses}.
+ann.pic.dth.b
+  A spear, a bowl, a {beast}.
+  A {vessel.one.n} at its head and its {ann.tooln} at its feet.
+  Hands pressed round it in {colour.holy}, many hands.
+  A {garment.n} drawn over it, every fold.
+  The {bird} are drawn above it, waiting.
+
+picture.coming
+  A long line of figures walking, with the {herd} among them, {song.whence}. {ann.pic.cm.b} {ann.pic.cap} the coming.
+ann.pic.cm.b
+  At the front, a figure larger than the rest, painted {colour.holy}.
+  The last figures carry the old ones and the {vessel} on their backs.
+  Ahead of them, an empty land drawn with only {game}.
+
+picture.stones
+  {#number} upright marks in a circle, and figures dancing round them in {colour.holy}. {ann.pic.cap} the stones.
+  {#number} stones drawn standing, and {skyone} drawn over them, and {motif.over} on every stone.
+
+picture.contact
+  Figures drawn differently from ours, tall and thin, holding out their hands. Ours hold out {vessel} of {crop}. {ann.pic.cap} the {other}.
+  Two kinds of figures sitting down together, the strange ones drawn in a colour that is not {colour.holy}. {ann.pic.cap} the {other}.
+
+picture.exodus
+  Figures walking away to the edge of the wall with the {herd}, their backs turned. Behind them, an empty circle: {$e.place}.
+  The {herd} and the figures going off the edge of the stone, and {ann.pic.houses} left behind with no one in them.
+
+picture.none
+  A great {ann.pic.herdbeasts} and the hunters round it, many, with spears. Under it, hands pressed to the wall in {colour.holy}, more than can be counted.
+  {game} drawn running, layer over layer, and among them one figure with a spear. Hands in {colour.holy} along the bottom.
+  A {game.one} as large as the wall, painted with care in {colour.holy}, and small figures round its feet.
+  The {herd} drawn grazing inside {motif.over}, and the figures sitting among them doing nothing at all.
+
+ann.pic.herdbeasts
+  herd of beasts
+  herd of {game}
+ann.pic.houses
+  (plan=round) round huts
+  (plan=square) long huts
+  (huts=wattle) wattle huts
+  (huts=stone) stone huts
+ann.pic.deadmark
+  (deadway=barrows) a mound
+  (deadway=tombs) a door in the rock
+  (deadway=cemeteries) a field of marks
+  (deadway=towers) a tall frame
+  (deadway=none) the water
+)VG"

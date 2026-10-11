@@ -1,0 +1,283 @@
+R"VG(
+# medieval.vg (H-04; the second pass 2026-10-10): the annal (a year on a tablet or a scroll), the chronicle (several years in a codex; an
+# industrial codex and a late age's crystal keep it too), the decree (the rule's law). The events are the annal register's (annal*.vg);
+# what the scribe adds is here: the quiet years in the people's own goods, the chronicler's preface and asides (the year's own facts:
+# its harvest, its war, its sickness), the decree's reasons (a law the history made: `@event law med.dec`) and its clauses.
+
+@root med.chr.*
+
+# ---- the annal: one year's entries, terse -----------------------------------------------------------------------------------
+
+genre.annal (words=6..76)
+  (tense=past 2) {annal.head} {@entries annal 3}
+  (tense=past) {annal.head} {@entries annal 2} {med.ann.note}
+
+annal.head (formula)
+  (reign>0 has:$ruler) Year {#year:digits} of {city}, the {#reign:ord} year of {$ruler:poss} rule.
+  Year {#year:digits} of {city}.
+  The {#year:ord} year from the founding of {city}.
+  (reign>0 has:$ruler) In the {#reign:ord} year of {$ruler:full}.
+  (reign>0 has:$ruler.epithet) In the {#reign:ord} year of {$ruler:full} {$ruler.epithet}.
+  Year {#year:digits}, in {era}.
+  At {$home}, the year {#year:digits}.
+  (gov=council|gov=republic|gov=assembly) Year {#year:digits}, {ruler.the} sitting at {$seat}.
+  (gov=theocracy) Year {#year:digits} of {city}, in the keeping of {holyplace}.
+  (moons>0) Year {#year:digits}, counted by {moon}.
+
+# a quiet year (the register's: `@entries` finds nothing)
+annal.quiet (share=0.5)
+  Nothing of note.
+  A quiet year.
+  A quiet year. The {crop} came in {med.ann.how}.
+  Nothing of note, except that {annal.small}.
+  Nothing was written this year but the count of the {vessel} in the stores.
+  The year passed with nothing in it but the {crop} and the {herd}.
+  Nothing happened worth the ink, except that {annal.small}.
+  A year of {weather} and small quarrels, and nothing else to set down.
+  The scribe has nothing to write but that the {fruit} were sweet.
+  No war, no sickness, no stranger at the gate of {$home}; the {crop} came in {med.ann.how}.
+  Quiet. The {herd} were counted twice and came out the same both times.
+  Nothing, unless you count that {annal.small}.
+  A year like the one before at {$home}, {crop} and {herd} and {weather}.
+  (moons>0) A year of quiet. {moon} kept its time and so did we.
+  (contact=1) Nothing of note, except that traders of the {other} came to {city2} with {trade}.
+  The {craft} of {$home} sold well, and nothing else happened.
+  No news at {$home} but the {bird} and {weather}.
+  The {med.chr.trades} complained, the {herd} grew fat, and the year ended.
+
+# the small things of a quiet year (a clause)
+annal.small (share=0.6)
+  the bell of {hall} cracked in the cold and was recast
+  a {beast} with two heads was born at {city2} and shown at {festival}
+  the roof of the granary was mended with {material}
+  (moons>0) {moon} was red for a night
+  the old {tree.n} by the gate came down in {weather}
+  a fish was taken from {river} as long as a boat
+  the {bird} came early and stayed late
+  the {craft} of {city2} was sent for from the far towns
+  a boy of {$home} walked to {mountain} and back for a wager
+  the {herd} of {$seat} got into the {crop2} and ate it to the ground
+  someone painted {motif.over} on the gate of {hall} and nobody would say who
+  the price of {crop} fell so low that the farmers would not sell it
+  the custom of {feast.custom} was kept with more noise than usual
+  a whole cask of {drink} was spilt in the square at {festival}
+  the oldest woman in {$home} died at a great age, and everyone went
+  {fish} came up {river} so thick that they were taken by hand
+  a well-digger at {city2} found old pots, and the priests took them away
+  (comet=1) the hairy star was looked for and did not come
+  (aurora=1) the lights in the north were seen as far south as {city2}
+  (coast=1) a whale came ashore below {$seat}, and the town ate well
+  (desert=1) it rained for a whole day, and the children were afraid of it
+
+med.ann.how
+  heavy
+  late
+  early
+  thin but sound
+  better than anyone had said
+  wet
+  as usual
+
+# a note at a year's end (the annal's own, rare)
+med.ann.note (share=0.4)
+  The {crop} was {med.ann.how} that year.
+  {time.of} the bells were rung for the {crop}.
+  The roads were bad and the {herd} thin.
+  Prices were high in the market at {$seat}, for {crop2} above all.
+  The {fruit} failed, but nobody died of that.
+  (harvest>=3) The granaries of {$home} were full of {crop} for once.
+  The {med.chr.trades} of {$home} were busy all that year.
+  The {pest} were in the {crop2}, and the cats were fat.
+  A {bird.one} nested in the bell tower, and the bell was not rung until it flew.
+  The {watersrc.n} ran low in {season.now}, and was cleaned.
+
+# ---- the chronicle: several years, each a paragraph (`@years` tells each by `chronicle.year`, the empty runs by its `.gap`) ----
+
+@root chronicle.year chronicle.year.gap
+
+genre.chronicle (words=15..440)
+  (tense=past age<=industrial) {chronicle.open} {@years 4 chronicle.year} {chronicle.close}
+  (tense=past age<=industrial) {@years 5 chronicle.year}
+  (tense=past 0.6 age<=industrial) {chronicle.open} {@years 7 chronicle.year} {chronicle.close}
+  (tense=past 1.2 age<=industrial) {chronicle.open} {med.chr.preface}\n{@years 4 chronicle.year} {chronicle.close}
+  (tense=past age>=futuristic) {chronicle.open} {med.chr.late}\n{@years 6 chronicle.year}\n{med.chr.late.end} {chronicle.close}
+  (tense=past age>=futuristic) {chronicle.open} {@years 7 chronicle.year}\n{med.chr.late.end}
+
+chronicle.open (formula)
+  Here are written the years of {city}, as they were told to me.
+  The chronicle of {city}, continued.
+  (has:$seat) What follows is the record kept at {$seat}.
+  In the name of {god}, the years.
+  The years of {city}, set down at {holyplace}.
+  (has:$ruler) The years of {city} to the rule of {$ruler:full}.
+  Of the years of {city}, the next part.
+  (age>=futuristic) The chronicle of {city}, kept as it was kept, year by year.
+
+chronicle.close (formula)
+  (2)
+  Here ends this part of the chronicle.
+  So far the years. The rest is for the next hand.
+  Here the scribe rested.
+  The rest is on the next roll.
+  (age>=futuristic) The record continues.
+
+# the chronicler on their sources, their task, their hand (a sentence or two before the years)
+med.chr.preface (share=0.4)
+  I had the earlier years from the old roll at {holyplace}, which the {pest} have been at.
+  What I did not see I had from the old ones of {$home}, and I have written it as they said it, though they did not agree.
+  The ink is made from {med.ink} and will last longer than I will.
+  I write in the cold room over the {craft}-house at {$home}, and my hand is not what it was.
+  Where the old roll and the old ones disagree about the {crop} years, I have followed the old ones, who ate them.
+  The years before these are in another hand, a better one, and on {med.chr.on}.
+  I have left out the quarrels of {$home} about the {med.chr.quarrel.s}; there were too many to write.
+  I was told to write the years plainly by {ruler.the}, and I have tried.
+  Some of these years I remember; the rest I have from {med.chr.source}.
+  (age>=industrial) These years are copied from the old rolls of {holyplace}, word for word, and the spelling mended.
+  (age>=futuristic) These years were kept on rolls first, then on {material}, then here. Nothing was changed but the hand.
+  (value=learning) The years are written so that the young of {$home} may count them, and learn that the bad ones end.
+  (value=piety) The years are written so that {god} may read them, though {god} saw them first.
+  I am the {nth} to keep this chronicle at {$home}, and the first to complain about writing on {med.chr.on}.
+  My teacher kept these years before me, with a {bird.one} feather and a temper.
+
+med.chr.on
+  vellum
+  bark
+  reed sheets
+  {colour.any} cloth
+  the back of old accounts
+
+med.ink
+  oak gall and rust
+  soot and gum
+  the black of {tree} bark
+  burnt {crop} and water
+  {crop2} ash and vinegar
+
+med.chr.source
+  the roll at {holyplace}
+  the old women of {$home}
+  the stones by {town.edge}
+  my teacher, who had them from hers
+  the songs, which are wrong about the numbers and right about everything else
+
+chronicle.year
+  (3) {chronicle.head} {@entries annal 3}
+  (2) {chronicle.head} {@entries annal 4}
+  (2) {chronicle.head} {@entries annal 3} {med.chr.aside}
+  {chronicle.head} {med.chr.weather} {@entries annal 3}
+chronicle.year.gap (formula)
+  (gap>=2) Nothing of note in the years {#y0:digits} to {#y1:digits}.
+  (gap>=2) The years {#y0:digits} to {#y1:digits} passed without anything worth the writing.
+  (gap>=3 gap<=12) {#gap|quiet year}, and nothing in them but the harvests.
+  (gap>12) Then {#gap} years of quiet, with nothing in them but the harvests.
+  (gap=1) In {#y0:digits}, nothing of note.
+  (gap=1) The year {#y0:digits} was quiet.
+  (gap>=2) From {#y0:digits} to {#y1:digits} the years were quiet ones.
+  (gap>=2) Of the years {#y0:digits} to {#y1:digits} nothing is written.
+
+chronicle.head (formula)
+  (3 gov=monarchy has:$ruler) Year {#y:digits} of {city}, the {#reign:ord} of {$ruler:poss} reign.
+  (gov=monarchy has:$ruler) In the {#y:ord} year of {city}, {$ruler:full} holding the throne.
+  (gov=monarchy has:$ruler.epithet) In the {#y:ord} year of {city}, {$ruler:full} {$ruler.epithet} on the throne.
+  (gov=chiefs has:$ruler) Year {#y:digits}, {$ruler:full} at {$seat}.
+  (gov=council|gov=republic|gov=assembly) Year {#y:digits} of {city}, under {ruler.the}.
+  (gov=theocracy) Year {#y:digits} of {city}, in the keeping of the priests.
+  (2) Year {#y:digits}.
+  The {#y:ord} year from the founding.
+  In the year {#y:digits}.
+
+# the chronicler's own word on a year: its weather, its prices, its mood (the year's facts: harvest, war, sickness, famine, the stage)
+med.chr.weather (share=0.35)
+  (seasons=4) It was a year of {weather} early and {weather} late.
+  The year began in {weather}, and the {herd} were kept in.
+  The year began badly for the {crop} and mended for the {fruit}.
+  (harvest<=1) A hungry year from the first; the {crop} was eaten green.
+  (harvest>=3) A fat year from the first; the {vessel} could not hold it.
+  The year came in with {weather} and went out with {weather}.
+  It was the year the {bird} came early to {$home}.
+  It was a year for the {craft} and a bad one for the {crop}.
+  The year was {med.chr.adj}, and the {herd} were {med.chr.herdwere}.
+  In that year the {fruit} were {med.chr.fruitwere}.
+  That year the {crop} was {med.chr.cropwas} and the {crop2} was {med.chr.cropwas}.
+  That year {season.any} came {med.chr.came} to {$home}, and is remembered for it.
+  It was a {med.chr.adj} year at {$home}, and a {med.chr.adj} one at {city2}.
+
+med.chr.came
+  late
+  early
+  hard
+  gently
+  twice
+
+med.chr.herdwere
+  thin
+  fat
+  few
+  sick
+  restless
+
+med.chr.fruitwere
+  small and sweet
+  many and sour
+  late
+  eaten by the {bird}
+
+med.chr.cropwas
+  late
+  early
+  thin
+  heavy
+  good
+  middling
+
+med.chr.adj
+  long
+  short
+  cold
+  wet
+  dry
+  loud
+  quiet
+  hard
+  kind
+
+med.chr.poor
+  {crop2} and bark
+  {veg} and little else
+  the {herd} they should have kept
+  acorns, the way the old ones did
+  bread made with sawdust
+
+med.chr.trades
+  weavers
+  potters
+  smiths
+  carters
+  boatmen
+  dyers
+
+med.chr.quarrel
+  the boundary of the {crop} fields above {$home}
+  who should ring the bell at {holyplace}
+  the weights of the market at {$seat}
+  the {watersrc.n} and who might draw from it
+  a {beast} that nobody would own
+  the order of the houses in the procession at {festival}
+
+med.chr.said
+  had gone grey in a night
+  would not eat {food}
+  had taken a fancy to the {craft}
+  wept at {festival}
+  could not read, and did not need to
+
+med.unit
+  {med.unit.w}
+med.unit.w (people=2)
+  measure
+  basket
+  sack
+  load
+  handful
+
+)VG"

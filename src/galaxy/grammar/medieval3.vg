@@ -1,0 +1,261 @@
+R"VG(
+# medieval3.vg (H-04; the second pass 2026-10-10): the sermon: its sayings (the people's own proverbs; its faith's teaching and a story
+# told for a lesson are medieval11.vg), the year's news as the preacher takes it up (`sermon.<kind>`, medieval5.vg and medieval6.vg),
+# what to do about it. The industrial age printed its sermons and recorded them on cylinders: the same genre, its own openings.
+
+# ---- the sermon -----------------------------------------------------------------------------------------------------------
+
+genre.sermon (words=52..177)
+  (2) {sermon.open}\n{sermon.text} {sermon.text}\n{@news public sermon}\n{sermon.turn}\n{sermon.close}
+  (2) {sermon.open}\n{sermon.text}\n{@news public sermon} {@news public sermon}\n{sermon.turn} {sermon.turn}\n{sermon.close}
+  (1.5) {sermon.open}\n{med.ser.story}\n{@news public sermon}\n{sermon.turn}\n{sermon.close}
+  (1.5) {sermon.open}\n{med.ser.faith} {sermon.text}\n{@news public sermon}\n{med.ser.vice} {sermon.turn}\n{sermon.close}
+
+sermon.open (formula)
+  Friends, sit down, and listen; it will not take long, whatever you have heard.
+  In the name of {god.who}, I speak to you at {holyplace}.
+  You have come in out of {weather.now}, so listen at least until it stops.
+  We are gathered at {$home} for {festival}, and I have something to say before the feast.
+  Sit, all of you, even the ones at the back who think I cannot see them.
+  It is {season.now} at {$home}, and the {crop} is {med.ser.cropnow}; let us think about that a while.
+  (age>=industrial) A sermon preached at {holyplace}, {$home}, in {season.now}, and printed at the asking of the people.
+  (age>=industrial) Friends, the bell has gone at the works, and you are tired; I will be quick.
+  (faith=ancestors) Before the old ones and before you, I will say a few words.
+  (faith=sky) Under {skyone}, which hears everything, I will say a little.
+  (faith=land) On this ground, which is {god}'s, I will say a little.
+
+med.ser.cropnow
+  (season=0) in the ground
+  (season=1) standing
+  (season=2) coming in
+  (season=3) in the stores
+  in our hands
+
+# the sayings: the people's proverbs and their faith's teaching
+sermon.said
+  It is said that
+  The old ones said that
+  My teacher used to say that
+  They say at {holyplace} that
+  There is a song that says
+  Our mothers had a saying:
+  You all know the saying:
+  The {med.chr.trades} have a saying, and it is a good one:
+  At {$home} they say
+  (age>=industrial) Even in the mills they say
+
+sermon.text
+  (3) {sermon.said} {proverb}.
+  {sermon.said} {proverb}. {med.ser.gloss}
+  {sermon.said} {sermon.saying}
+  Life, as the {med.chr.trades} of {$home} say, is {life.is}. {med.ser.gloss}
+  {time.pass}, and {med.ser.still}. {med.ser.gloss}
+  (faith=ancestors|faith=land) The dead are {dead.are}. {med.ser.deadnear}
+
+med.ser.gloss (share=0.3)
+  Think about that.
+  (0.3) The old ones were not fools.
+  My mother said it to me with {tool} in her hand.
+  It was carved over the door of {holyplace} once, before the {med.ser.gone} took it.
+  It is the only saying the {med.chr.trades} and the priests agree on.
+  I have thought about it over the {craft} for {#n|year}, and I am not finished.
+  It is truer in {season.now} than in {season.next}, but it is true in both.
+  You can say it in the {crop} market at {$seat} and nobody will argue.
+  Say it over the {craft}, and the {craft} goes better.
+  The {med.chr.trades} of {city2} say it differently, and wrongly.
+  It is older than {holyplace} and younger than {mountain}.
+  Every child of {$home} has heard it over the {food} at supper.
+  The old ones said it over the {herd} in the evenings, and the {herd} agreed.
+  Write it on the {vessel.one.n} you drink from, if you can write.
+  It was my teacher's, and her teacher's, back to the founding of {city}.
+  When the {bird} come back in {season.next}, say it again.
+  I have it from a {med.chr.trades.one} at {city2}, who swore it was {god}'s own.
+  Some of you need it more than others; the ones by the {med.ser.door}, mostly.
+  The children laugh at it, the way they laugh at the {beast}. So did I.
+  Put it in your head, next to the price of {crop}.
+  I say it every {festival}, and every {festival} the {drink} drowns it.
+  It is cut on the lintel at {holyplace}, under {motif.over}, if you can find it.
+  The {med.chr.trades} sing it at the {craft} when the master is out.
+  Grandmothers in {$home} still say it to the girls who carry {watersrc.n} water.
+  It is the kind of thing the old ones said over {food} and nobody wrote down.
+  I learned it on {mountain}, with the {herd}, which is where most sayings come from.
+  It is said in {city2} too, but there they say it about {herd}, and get the end wrong.
+  When I was young I thought it was about {crop}. It is not about {crop}.
+
+med.ser.deadnear (share=0.5)
+  They are not far, and they are listening.
+  They hear the {herd} come in, and they count them.
+  They know the price of {crop} and they do not approve.
+  At {festival} we set a bowl of {food} for them; it is still there in the morning, and that is how we know they are polite.
+  They wear {colour.mourn}, I suppose, the way we wore it for them.
+
+med.ser.door
+  door
+  window
+  back wall
+  stove
+
+med.ser.gone
+  rain
+  wind
+  frost
+  {pest}
+
+med.ser.still (share=0.5)
+  we are still here, and {god} is still here
+  the {crop} still comes up
+  {holyplace} still stands, more or less
+  the {herd} still need feeding
+  we still quarrel about the {med.chr.quarrel.s}
+  {river} still runs past the door
+  the {bird} still come back in {season.next}
+  we still keep {festival}, and still argue about it
+
+sermon.saying (share=0.6)
+  a house is not its walls but its fire.
+  we live by {living}, and {living} lives by us.
+  {skyone} keeps its time without being asked, and so should we.
+  the {herd} know the way home better than the herder.
+  a debt forgiven is a debt paid twice.
+  the one who plants a {tree.n} does not sit in its shade.
+  bread shared is heavier than bread kept.
+  every year has its flood, and every flood its year.
+  the stranger at the door is always somebody's child.
+  a {vessel.one.n} with a crack holds water for a day and grief for a year.
+  the {craft} is learned with the hands and kept with the heart.
+
+# the vice the preacher has noticed (the people's own vices)
+med.ser.vice (share=0.7)
+  Put away {vice}; it is a heavier load than {crop}.
+  I have seen {vice} in this town, and I have seen it in the mirror.
+  We are known for {virtue}, they say at {city2}. They have not been here at {festival}, when the {drink} runs.
+  {vice} has come into {$home} like {weather} under a door.
+  Keep to {virtue}; it comes up slowly, like the {crop}, and lasts longer.
+  {vice} is the {pest} of the soul: small, many, and hungry.
+  Our mothers had {virtue} and not much else. We have much else.
+  There is more {vice} in {$home} this {season.now} than {crop} in the stores.
+  A little {virtue}, every day, like water on the {fruit} trees: that is all.
+
+sermon.turn
+  (2 stage<=0) So {sermon.do}, and {sermon.do}.
+  (stage<=0) So {sermon.do}, and {sermon.do}, and {sermon.do}.
+  (2 stage<=0) {med.ser.go}, {sermon.do}.
+  (stage<=0) This {season.now}, {sermon.do}. {med.ser.small}
+  (stage<=0) Before {festival}, {sermon.do}, and {sermon.do}.
+  (stage<=0) {sermon.do}, and if you cannot, {sermon.do}.
+  (stage>=1) {med.ser.hard}
+  (stage>=2) {med.ser.end}
+  (sick=1) Visit the sick{med.ser.sick}.
+  (famine=1) Share what you have. {med.ser.share}
+  (war=1) Pray for our own in the army, and for the others, {med.pr.mothers}.
+  (temper=wry) Do better than last year. It should not be difficult.
+  (temper=wry) {sermon.do}. {med.ser.wry}
+  (temper=anxious) I do not know what is coming. Neither did our mothers. {sermon.do}.
+  (temper=proud) We are {people}, and {med.ser.proud}. {sermon.do}, and be proud of it.
+  (temper=pious) Kneel when you go in and stand when you go out; in between, {sermon.do}.
+
+med.ser.wry (share=0.5)
+  I say it every year; one year someone will.
+  I have said it since my hair was {colour.any}; it is grey now, and so is the advice.
+  The {herd} listen better than you do, and they are {herd}.
+  I will say it again at {festival}, louder.
+
+med.ser.go
+  Go home, then
+  So, this week,
+  Before you sleep tonight,
+  Tomorrow, before the work,
+  When you get home,
+  All of you, the young ones first,
+
+med.ser.small (share=0.35)
+  That is all {god} asks; it is more than it sounds.
+  It is a small thing. Small things are what we have, like the {crop2} by the door.
+  Nobody will thank you. {god} will notice.
+  Start with that, and we will see about the rest.
+  Do it before the {crop} is in, while there is time.
+  The {herd} will not do it for you, and neither will I.
+  You will find it harder than the {craft}, and better paid.
+  It costs less than a cup of {drink} and lasts longer.
+  If you forget, the {bird} on the roof will remind you; they are louder than I am.
+  Your mother did it, at {$home}, in a worse year than this one, with {herd} to feed besides.
+
+med.ser.sick
+  . If you are afraid, visit them anyway
+  , and take {food}, and do not stay too long
+  ; the sick are lonelier than they are ill
+  , and bring {drink}, and sit by the door if you must
+
+med.ser.share
+  The one who hoards bread will eat it alone.
+  A full {vessel.one.n} in a hungry street is a shame, not a store.
+  Your grandmother shared hers, or you would not be here.
+
+med.ser.hard (share=0.6)
+  Some of you say {god} has turned away. I say: we have turned away, and {god} is where {god} always was.
+  Do not listen to the ones who say this is the end. They have said so in every year since the founding.
+  Hard years make hard people. Do not let them make you hard. {sermon.do}.
+  We have been here before, in the songs. The songs end well, mostly.
+  The {crop} is thin and the talk is thick. Less talk, then, and more {craft}.
+  Everyone is leaving for {city2}, they say. {city2} is no better; it is only further.
+  Keep the lamps lit. Someone has to, and it may as well be us.
+
+med.ser.end (share=0.6)
+  Whatever comes, we will meet it here, together, at {holyplace}.
+  If we must leave, we will carry {god} with us, and the names, and {med.ser.carry}.
+  We are fewer every {season.any}. Sit closer.
+  When the last of us goes, let the last of us shut the door gently.
+
+med.ser.proud
+  we have kept the faith longer than anyone
+  our {craft} is known as far as {city2}
+  we built {holyplace} with our own hands
+  our mothers crossed {land} to get here
+
+med.ser.carry
+  the fire
+  the {colour.holy} cloth
+  the old songs
+  the seed of the {crop}
+
+sermon.do (share=0.7)
+  (contact=1) be fair with the {other} in the market
+  keep {festival} as it should be kept
+  keep the weights of the market honest
+  open your doors to the stranger
+  give {god} the first cup of {drink}
+  be content with the {crop} you have
+  visit the old ones on the hill
+  mend your neighbour's wall before your own
+  teach the children the songs
+  forgive the debt you were going to forgive anyway
+  feed the {herd} before you feed yourselves
+  sweep {holyplace} on the rest day
+  say the names of the dead at {festival}
+  go easy on the young; you were young
+  keep {feast.custom}, and keep it properly
+  {rite.imp}
+  bring {food} to the house where there is sickness
+  leave the last of the {crop} in the field for whoever needs it
+  share {watersrc} with the late ones
+  lend {tool}, and do not count the days
+  put a lamp in the window for the ones on the road
+  give the {craft}-house its tithe without grumbling
+  stop quarrelling about the {med.chr.quarrel.s}
+  wear {colour.mourn} for the dead and not a day longer
+
+med.chr.quarrel.s
+  boundary stones
+  bell
+  weights
+  order of the procession
+  {beast}
+
+sermon.close (formula)
+  Go home, and keep the lamps lit.
+  That is all. {god.keep}.
+  Now eat; the bread is getting cold.
+  Go in peace, and go carefully; the road is bad.
+  That is enough. You have work, and so have I.
+  {god.keep}, and keep each other.
+)VG"

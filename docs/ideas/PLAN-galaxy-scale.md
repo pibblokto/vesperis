@@ -11,7 +11,10 @@ the dust on a fixed exposure (a 128 x 64 map, the rift at the core, the night sk
 bank) and the star-forming regions are complexes 42 ly apart on average, none in home's sky. **G-04 done 2026-10-01**:
 the mountain site re-pinned, the scene finders get the light they ask for (seasons, binaries, locked worlds), the flow
 flies again (the lock in the cabin, a land site, a living world), `regress` re-blessed. The star classes
-(`PLAN-star-classes.md`) share the bump.
+(`PLAN-star-classes.md`) share the bump. **G-05..G-07 planned 2026-10-08 for 1.3.0** (R-409,
+`ITERATION-1.3.0.md`): the galaxy as the explorer sees and crosses it (a chart of the whole disc as the star
+map's second page, the next jump chosen on it, the band drawn round the ship in a long flight); no
+generation change.
 
 ## Target
 

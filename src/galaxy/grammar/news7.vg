@@ -1,0 +1,148 @@
+R"VG(
+# news7.vg (H-04's second pass): the news's register, continued: the rule (a ruler's death, an accession, a resignation, a new
+# constitution), a death of note, the unrest and the move to the cities.
+
+# ---- the rule --------------------------------------------------------------------------------------------------------------
+
+news.rulerdeath
+  {news.h.rd}\n{news.rd.m} {news.rd.x}
+news.h.rd
+  {$e.a:full} is dead
+  (has:$e.a.title) The {$e.a.title} is dead
+  Mourning
+news.rd.m
+  {$e.a:full} died yesterday at {$e.place}, aged {#$e.a.age}. The nation is in mourning.
+  (has:$e.a.epithet has:$e.a.reigned) {$e.a:name} {$e.a.epithet} died at {$e.place} in the {#$e.a.reigned:ord} year of the reign, aged {#$e.a.age}.
+  (has:$e.a.reigned) {$e.a:full} is dead at {#$e.a.age}, after a reign of {#$e.a.reigned|year}.
+  (has:$e.a.epithet) {$e.a:name} {$e.a.epithet} is dead at {$e.place}, aged {#$e.a.age}, and the bells have not stopped since.
+news.rd.x
+  The shops will close for {n} days and the bells will be rung at noon.
+  The body will lie in state at {$seat}, where the queues already reach the river.
+  Black cloth hangs from the windows of {$home}, and {colour.mourn} ribbons on the doors.
+  The theatres are closed and the papers, this one included, are printed with black borders.
+  The {herd} of the royal farms have been led through {streets.of} with {colour.mourn} on their horns.
+
+news.accession
+  (has:$e.a) {news.h.acc}\n{news.acc.m} {news.said} that {news.acc.t}.
+  (!has:$e.a) Change at the top\nThe rule has passed into new hands at {$seat}. {news.said} that {news.acc.t}.
+news.h.acc
+  A new head of state
+  {$e.a:name} takes office
+  Change at the top
+news.acc.m
+  {$e.a:full} has taken office at {$seat}, {news.acc.how}.
+  ($e.accession=elected) {$e.a:full} has been elected {news.margin}, {news.acc.how}.
+  ($e.accession=elected) The votes are counted, and {$e.a:full} has won {news.margin}; the losers have gone home to {news.losers}.
+  ($e.accession=seized|$e.accession=revolution) {$e.a:full} has taken the rule, and the old ministers have left {$seat} in a hurry.
+  ($e.accession=inherited) {$e.a:full} has come to the throne, and the oaths will be taken at {$seat} on the rest day.
+news.acc.t
+  there would be no changes
+  the old ministers would stay
+  the taxes would not rise this year
+  order would be kept
+  the roads would be mended at last
+  the new reign would be one of peace and of bread
+
+news.ruleend
+  {news.h.re}\n{$e.a:full} [has given up the rule|has stepped down|is no longer at the head of affairs]. {news.said} that the reasons were [private|of health|plain to everyone].
+news.h.re
+  Resignation
+  The end of a reign
+  {$e.a:name} goes
+
+news.government
+  {news.h.gov}\n{news.gov.m} {news.said} that order would be kept.
+news.h.gov
+  A new constitution
+  The old order ends
+news.gov.m
+  The form of the rule has changed.
+  ($e.gov=republic) The crown is abolished and the consuls will govern.
+  ($e.gov=assembly) The Assembly will govern from today, and every town will send its delegate.
+  ($e.gov=corporate) The companies have taken over the running of the state, which some say they always had.
+  ($e.gov=council) A council will rule, and nobody will rule alone.
+
+news.death
+  {news.h.death}\n{news.death.m} {news.death.x}
+news.h.death
+  Death of {$e.a:name}
+  {$e.a:name}
+news.death.m
+  {$e.a:full} died at {$e.place}, aged {#$e.a.age}.
+  (has:$e.a.trade) {$e.a:full}, {$e.a.trade}, died at {$e.place} at the age of {#$e.a.age}.
+  (has:$e.a.trade) The death is announced of {$e.a:full}, for many years a {$e.a.trade} at {$e.place}, {news.deathhow}.
+news.death.x
+  The funeral will be at {deadplace}, {time.of}.
+  Many at {$e.place} will remember {$e.a:obj}.
+  (has:$e.a.trait) {$e.a:name} was [known as|thought|remembered as] a {$e.a.trait} [soul|neighbour|presence] by those who knew {$e.a:obj}.
+  The {craft} works of {$e.place} will stop for an hour on the day of the funeral.
+
+# ---- unrest and moving ------------------------------------------------------------------------------------------------------
+
+news.unrest
+  ($e.unrest=strike) Strike at {$e.place}\n{news.strike.m} {news.strike.t}
+  ($e.unrest=bread|$e.unrest=riot) Riot at {$e.place}\n{news.riot.m} {#$e.value:about} dead.
+  ($e.unrest=rising) Rising at {$e.place}\nArmed men have taken the town hall at {$e.place}.
+news.strike.m
+  The {news.strikers} at {$e.place} have stopped work {news.strike.why}.
+  Work has stopped at the {craft} works of {$e.place}, where the hands want {n} {smallcoin} more a day and the owners want them back at work.
+news.strike.t
+  The owners, {news.owners}, have [refused to meet them|offered half of what was asked|sent for the police].
+  The strikers are holding meetings in {town.open} and singing the old songs to new words.
+  The {crop} for the town is rotting in the yards.
+  The wives of the strikers are keeping them in {food}, and the shops are keeping them in credit.
+news.riot.m
+  Troops were called to {$e.place} last night after crowds broke the windows of the bakeries.
+  The price of {food} brought the women of {$e.place} into the streets, and the soldiers did not know what to do with them.
+
+news.migration
+  (has:$e.place has:$e.place2) To the cities\n{#$e.value:about} more have left {$e.place} for {$e.place2} this year, the council reports.
+  (!has:$e.place has:$e.place2) To the cities\n{#$e.value:about} more have left the countryside for {$e.place2} this year, the council reports. The villages are full of the old.
+  (!has:$e.place2) The young leave\n{#$e.value:about} have left the countryside for the cities this year, the council reports.
+news.acc.how
+  with the oaths taken in {holyplace}
+  quietly, on a rest day
+  to the sound of {instrument}
+  before a crowd that filled {town.open}
+news.strikers
+  workers
+  men at the yards
+  weavers
+  {craft} hands
+  carters
+  women of the {craft} sheds
+  (coast=1) dockers
+news.strike.why
+  over the wages
+  over the hours
+  after an accident at the {news.machine}
+  because the ration of {food} was cut
+  until the foreman goes
+news.machine
+  looms
+  presses
+  furnace
+  vats
+news.owners
+  who live in {city}
+  three brothers and a widow
+  a company from over the sea
+  the family that gave {holyplace} its bells
+  who have not been seen at the works in years
+news.margin
+  by a clear margin
+  by {n} votes in every hundred
+  on the second count
+  unopposed, which nobody remembers happening before
+  by the narrowest of margins, after a recount
+news.losers
+  count again
+  write letters to this paper
+  their {herd}
+  think about next time
+news.deathhow
+  at a great age
+  after a short illness
+  peacefully, at home
+  in {season.any}, as {$e.a:name} would have wished
+)VG"

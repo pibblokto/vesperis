@@ -39,6 +39,7 @@ DrainInfo drainageAt(const BodyGen& g, const Vec3& unit, double detailM, double 
 void drainagePrefetch(const BodyGen& g, const Vec3& unit, double radiusM, bool async);
 bool drainageReady(const BodyGen& g, const Vec3& unit, double radiusM);   // every tile within the radius is in the cache
 int drainageTilesHeld();
+int drainageTilesBuilt();                 // tests: the tiles computed since the start (B-422: none for the places a moving cursor passes)
 // the flood's own cell under a point: true when it is a kept lake, with its level (the own tile alone, no neighbourhood: cheap)
 bool drainageLakeCell(const BodyGen& g, const Vec3& unit, double& level, bool buildTiles, bool& known);   // known: false when the tile is not built and buildTiles is false
 // a scope in which this thread's samples read the planet function without the drainage (the landmark search's coarse

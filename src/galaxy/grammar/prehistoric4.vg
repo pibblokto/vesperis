@@ -1,0 +1,386 @@
+R"VG(
+# prehistoric4.vg (H-04's second pass): the hunt, painted or cut: the wall, the hunters (each people's own weapons, its own way of
+# drawing a hunter, its own rites over the kill), the beast, what else is on the wall, and the year the hunt was painted for (`@event
+# beasts pre.huntev`: the great one taken, the one that killed, the year the herds did not come).
+
+genre.hunt (words=28..141)
+  {hunt.wall} {hunt.figures} {hunt.beast} {hunt.more} {hunt.end}
+  {hunt.wall} {hunt.beast} {hunt.figures} {hunt.end}
+  {hunt.wall} {hunt.figures} {hunt.beast} {hunt.detail} {hunt.end}
+  (2) {hunt.wall} {@event beasts pre.huntev 6} {hunt.figures} {hunt.more} {hunt.end}
+  {hunt.wall} {hunt.detail} {hunt.figures} {hunt.beast} {hunt.end}
+
+hunt.wall (formula)
+  (medium=painted) {pre.wall.where}, in {pre.paint}, a hunt.
+  (medium=painted) {pre.wall.where}: a hunt, in {pre.paint}.
+  (medium=stone) Cut into {pre.stone.where}, the lines filled with {colour.holy}: hunters.
+  (medium=stone) Pecked into {pre.stone.where}, a hunt.
+  (medium=bone) A hunt, cut small along a {pre.bone}.
+  (medium=bone) Along a {pre.bone}, cut very fine, a hunt.
+
+pre.wall.where (people=4)
+  On the wall of the shelter above {$home}
+  Painted low on the rock, where the light reaches at evening
+  High on the wall, where it must have been painted from a ledge
+  Deep in the cave behind {$home}, where no daylight reaches
+  On the overhang by {watersrc}
+  (has:$home.landmark) On the rock at {$home.landmark}
+  On the ceiling of the shelter
+  Along the passage into the cave, at the height of a child's eyes
+  On a smooth face of rock above the camp
+  Round a bulge in the rock that the painter made the beast's belly
+pre.stone.where (people=3)
+  a boulder by the path
+  the flat rock above {$home}
+  a stone by {watersrc}
+  the face of a standing stone
+  a slab set by the door of {house.one}
+  a rock in the middle of {river}, reached at low water
+pre.paint (people=2)
+  red and black
+  (accent!=black) {colour.holy} and black
+  ochre and soot
+  {colour.holy} alone
+  white clay and charcoal
+  three colours, the {colour.holy} brightest
+
+# ---- the hunters ------------------------------------------------------------------------------------------------------------
+
+hunt.figures
+  {hunt.who} {hunt.doing}{hunt.where}. {hunt.sign}
+  {hunt.who} {hunt.doing}{hunt.where}. {hunt.sign}
+  {hunt.who} {hunt.doing}{hunt.where}.
+  {hunt.who} {hunt.doing}. {hunt.look2}
+hunt.who
+  {n} hunters with {pre.weapon},
+  {n} hunters {pre.look},
+  A line of hunters {pre.look}, {nbig} or more,
+  Two hunters only, with {pre.weapon} and a dog between them,
+  {n} hunters with {pre.weapon}, {pre.look},
+  {n} hunters {pre.look}, one larger than the rest,
+  A single hunter with {pre.weapon}, very small, under the belly of the beast,
+  {n} hunters with {pre.weapon} and as many dogs,
+  {n} hunters {pre.look}, the last of them a child,
+hunt.doing
+  running
+  kneeling, their weapons ready
+  closing in from both sides
+  driving the beasts toward a cliff edge
+  waiting in the reeds
+  crossing {river} on a fallen tree
+  following the tracks, bent low
+  creeping up behind a screen of branches
+  calling, their hands to their mouths
+  lying flat in the grass
+  throwing all at once
+  waving firebrands
+  (cold=1) running on the ice
+  (cold=1) on snowshoes, in a line
+  (coast=1) wading along the shore
+  (desert=1) crouched among the dunes
+  (desert=0) under the {tree}
+hunt.where
+  (3)
+  {pre.where.hunt}
+pre.where.hunt (people=4)
+  \ under {mountain}
+  \ through {land}
+  \ in {weather.now}
+  \ among the {tree}
+  \ by {river}
+  \ at the edge of the camp
+  \ in {season.now}
+  \ along the ridge
+
+pre.weapon (pl people=3)
+  spears
+  bows
+  slings
+  nets strung between them
+  throwing sticks
+  clubs
+  darts
+  long poles
+  firebrands
+  snares
+  stone-tipped spears
+  (coast=1) harpoons
+  (cold=1) lances
+
+pre.look (people=2)
+  with masks of the {game.one}
+  with feathers in their hair
+  with tails, as if they were beasts too
+  painted half {colour.holy}
+  drawn as sticks
+  with their legs very long
+  with the sign of {$home} on their chests
+  wrapped in {garment.n:pl}
+  with their hair tied high
+  with {motif.over} on their bodies
+  with horns on their heads
+  with their eyes drawn very large
+
+hunt.look2
+  Every hunter has {motif.over} drawn on the arm in {colour.holy}.
+  The hunters are drawn without faces; the {game} have faces.
+  The hunters' feet are not drawn at all; they seem to float over {land}.
+  The first hunter wears the {game.one}'s skin, head and all.
+  (accent!=black) The hunters are drawn in {colour.holy}, the {game} in black.
+  Each hunter has a line from the mouth: calling, or singing to the {game}.
+  The hunters are all the same size except one, who is twice as tall and carries {pre.weapon}.
+  The hunters' {pre.weapon} are drawn longer than the hunters.
+
+hunt.sign
+  (has:$ruler) Over the {pre.ahead}, in {colour.holy}, the sign that stands for {$ruler:name}.
+  Over them, {$home}'s sign in {colour.holy}, {pre.signrep}.
+  The sign over them, in {colour.holy}, is the same as on the {pre.signed} from {$home}{pre.signed.tail}.
+  Each has a sign of its own over the head, in {colour.holy}; the ship keeps them as names{pre.unread}.
+  (has:$f) Over the first of them, in {colour.holy}, the sign of {$f:name}, {pre.f.seen}.
+  The sign of {$home} is drawn on every {pre.weapon.one}, {pre.signrep}.
+pre.ahead
+  large one
+  first hunter
+  one in front
+  one with the longest {pre.weapon.one}
+pre.signrep
+  once
+  twice
+  repeated down the line
+  fainter than the rest
+  inside a ring of {pre.stroke}
+pre.unread
+  (2)
+  , unread
+  \ it cannot read
+  , for now
+pre.f.seen
+  who is on other {pre.signed} too
+  who is on the {pre.signed} too
+  drawn inside {motif.over}
+  (has:$home.landmark) the same as on the rock at {$home.landmark}
+pre.signed
+  bones
+  pots
+  stones
+  {vessel}
+  spear shafts
+pre.signed.tail
+  (2)
+  , but larger
+  , turned on its side
+  , cut twice
+
+# ---- the beast --------------------------------------------------------------------------------------------------------------
+
+hunt.beast
+  {hunt.beast.a} {hunt.beast.b}
+  {hunt.beast.a} {hunt.beast.b}
+  (cold=1) The {game} in snow, {pre.snow.drawn}.
+  (desert=1) The {game} at the dry pool, {pre.dry.drawn}.
+pre.snow.drawn
+  drawn as dots round their legs
+  floundering, and the hunters gaining on them
+  with the {bird} following over them
+  drawn white on {colour.holy}, the snow left bare
+  sunk to the belly, the hunters with {pre.weapon} on snowshoes behind them
+  their breath drawn as lines in front of them
+  the snow drawn as a white band the {colour.holy} hunters cross
+pre.dry.drawn
+  drawn with their heads down, drinking
+  the water drawn as a single ring in {colour.holy}
+  the hunters lying flat behind the dunes
+  drawn at night, with {skynight} over them
+hunt.beast.a
+  Before them, a great {game.one}
+  Before them, {n} {game} {=.many}
+  Ahead, a {game.one}
+  (medium=painted) At the edge of the wall, a {game.one}
+  (medium!=painted) At the end, a {game.one}
+  Over them all, a {game.one} drawn twice their size,
+  In the middle, a {game.one}
+  Coming down the slope, {n} {game} {=.many}
+  Across the whole {pre.bone.or}, the {game} {=.many}
+  Alone at the top, a {game.one}
+# the beast's state, one or many (`.many`)
+hunt.beast.b
+  (!has:.many) with arrows in its side.
+  (.many=1) with arrows in their sides.
+  (medium=painted) painted on top of older ones.
+  (medium!=painted) cut over older ones.
+  (!has:.many) fallen, its legs up; the hunters' hands are raised.
+  (.many=1) , one of them fallen, its legs up; the hunters' hands are raised.
+  drinking at the water, not yet seen.
+  (!has:.many) turned at bay, its head down; one hunter is already on the ground.
+  (.many=1) turned at bay, their heads down; one hunter is already on the ground.
+  (!has:.many) running, its legs drawn many times to show it.
+  (.many=1) running, their legs drawn many times to show it.
+  (!has:.many) with its young behind it, which the hunters do not touch.
+  (.many=1) with their young among them, which the hunters do not touch.
+  (!has:.many) looking back over its shoulder at the hunters.
+  (.many=1) looking back over their shoulders at the hunters.
+  (!has:.many) drawn with its heart showing, a red mark inside the outline.
+  (!has:.many) with a {pre.weapon.one} hanging from it.
+  (.many=1) going over the edge, one after another.
+
+# ---- what else is on the wall -------------------------------------------------------------------------------------------------
+
+hunt.more
+  (once medium=painted) [Under it|Around it|Beside the beast], hands pressed to the rock in {colour.holy}: {n}.
+  (once) Behind them, a [woman|man|girl] {pre.fig.dress} holds up a child to see the {game.one}.
+  (once) A fire of {fuel} burns at the side, and figures round it with their arms [up|linked|out].
+  (once moons>0) Above it all, {moon}, drawn as {pre.moon.drawn}.
+  (once) A figure walks away from the hunt, carrying {pre.carry.thing}, {pre.carry.how}.
+  (once) A figure with {instrument} stands behind them, and lines run from it to the beast: the calling, perhaps.
+  (4 once contact=1) At the edge, figures drawn thinner and taller than the hunters: the {other}, watching.
+  (once) {pre.hunt.rite}
+  (once) {pre.hunt.rite}
+pre.moon.drawn
+  a half circle over {land}
+  a circle with {motif.over} in it
+  a ring with a {colour.holy} dot
+  a crescent lying on its back
+  a circle of {pre.stroke}
+pre.carry.thing
+  {vessel.one}
+  {tool}
+  a child
+  the {game.one}'s head
+  a bundle of {material}
+pre.carry.how
+  very carefully
+  at a run
+  looking back
+  and the ship cannot tell why
+pre.hunt.rite (people=4)
+  One hunter kneels by the fallen beast and touches its head: the thanks, perhaps.
+  The beast's heart is drawn outside it, held up toward {skyone}.
+  A figure stands apart with {instrument}: the one who calls the beasts.
+  A dog is drawn as large as a hunter, with a sign of its own over it.
+  The {game.one}'s meat is drawn divided into {#number} parts, one of them very small, for {god}.
+  Every hunter carries a small bag at the hip; the {~charm}, perhaps.
+  A figure with the {game.one}'s horns on its head dances in front of the hunters.
+  The first beast's blood is drawn running into {vessel.one}, and a figure holds it up to {god}.
+  Behind the hunters, a line of figures carries the {game.one} home on poles, toward {houses}.
+  The {game.one}'s skull is drawn hung on a post by the camp.
+  A child is given the first piece; the child is drawn holding it up.
+  The hunters are drawn again at the bottom, washing in {river}.
+  The hunters' faces are smeared with the {game.one}'s blood, drawn in {colour.holy}.
+  A figure counts the hunters back in, with a {pre.stroke.one} for each one.
+  The bones of the {game.one} are drawn laid out in a row, every one, for {god}.
+  One hunter is drawn giving the skin to an old woman with {tool}.
+  The hunters sit in a ring and a {vessel.one.n} goes round: {drink}, perhaps.
+  A small fire is drawn where the {game.one} fell, and smoke going up to {skyone}.
+  The best hunter is drawn with the {game.one}'s tail tied at the waist.
+  The {game.one}'s eyes are covered with a hand: so it will not see who took it, perhaps.
+pre.stroke.one
+  notch
+  stroke
+  dot
+  mark
+
+hunt.detail
+  Behind them, {land}, drawn as {pre.land.drawn}.
+  {pre.wx.marks} across the top of the {pre.bone.or}: the hunt was in {season.now}.
+  The {bird} are drawn over the hunt, {pre.bird.do}.
+  At the bottom, the camp: {houses}, drawn as {pre.hut.drawn}.
+  A line of {pre.track} in {colour.holy} runs the length of the {pre.bone.or}, older than the {game} over it.
+  The hunters' dogs, {pre.dog.look}, are drawn alone at one end, {pre.dogs.do}.
+  A river runs along the bottom of the {pre.bone.or}, the beasts on one side and the hunters on the other, {pre.river.cross}.
+  (medium=painted) The wall slopes, and the painter made the slope the {pre.slope} the beasts are running down.
+  In a corner, a small hunter in {colour.holy} sits apart with a broken {pre.weapon.one}.
+  (accent!=black) The {game} are thick and careful, {colour.holy} over black; the hunters were done {pre.fast}.
+  The {game} are cut deep and the hunters only scratched, as if the {game} mattered more.
+  The {tree} are drawn behind the hunters as {pre.tree.drawn}.
+  A {beast} is drawn among the hunters, following them like one of them.
+pre.land.drawn
+  a row of humps
+  long lines
+  a jagged edge
+  dots
+  a line of teeth
+pre.wx.marks
+  (cold=1) Snow marks
+  (cold=1) Flakes
+  Dots like rain
+  Long lines like wind
+  A sun with rays
+  (desert=1) Brown smears like dust
+pre.bird.do
+  following it
+  waiting
+  circling over the fallen beast
+  flying the other way
+pre.hut.drawn
+  small marks with smoke over them
+  circles with a dot in each
+  little humps
+  triangles in a row
+pre.track
+  tracks
+  hoofprints
+  footprints
+  dots and dashes
+pre.fast
+  fast
+  in a hurry, by another hand
+  quickly, the legs only lines
+pre.dog.look (people=2)
+  spotted
+  with curled tails
+  drawn as big as calves
+  with collars of {colour.holy}
+  lean and long-legged
+  with their ears up
+pre.dogs.do
+  lying down, done
+  still running
+  fighting over a bone
+  with their tongues out
+pre.river.cross
+  and only one hunter has crossed
+  and a fallen tree between them
+  and nobody has crossed yet
+pre.slope
+  hill
+  bank
+  ridge
+  cliff
+pre.tree.drawn
+  straight lines with branches like hands
+  tufts
+  spikes
+  circles on sticks
+
+hunt.end
+  (medium=painted) {wall.state}
+  (medium=painted) {wall.state}
+  (medium=stone) {stone.state}
+  (medium=bone) {obj.state}
+  {hunt.later}
+hunt.later
+  (medium=painted) {pre.later.who} {pre.later.did} a {game.one} {pre.later.where} later, {pre.later.how}.
+  (medium!=painted) {pre.later.who} cut a {game.one} {pre.later.where} later, {pre.later.how}.
+pre.later.who
+  Someone
+  Another hand
+  A child, by the size of the hand,
+pre.later.did
+  scratched
+  added
+  painted
+pre.later.where
+  beside them
+  between the hunters
+  at the end
+  into the paint
+  under the first beast
+pre.later.how
+  smaller and less sure
+  in a different hand
+  with too many legs
+  unfinished
+  facing the wrong way
+  (accent!=black) in {colour.holy}, when the rest is black
+
+)VG"

@@ -24,6 +24,26 @@ struct RVert {
 
 enum BlendMode { BLEND_REPLACE = 0, BLEND_ADD = 1, BLEND_MAX = 2, BLEND_DARKEN = 3, BLEND_REFLECT = 4 };
 
+// A-02: windows as a pattern on a face, by the face's own u and v in metres (along it, up it): a cell a bay wide and a storey
+// high, the window inside it; where a cell spans few pixels the pattern fades to its mean, so a far tower does not shimmer
+struct FacePattern {
+    double bay = 3.2, storey = 3.5;          // the cell (metres)
+    double x0 = 0.3, x1 = 0.7, y0 = 0.3, y1 = 0.8;   // the window within its cell (shares)
+    int shape = 0;                           // 0 a rectangle, 1 an arched head, 2 a slit, 3 round, 4 a band, 5 a triangle (A-04), 6 a keyhole (A-04)
+    int group = 1;                           // A-04: lights to a window, split by mullions (a pair, a group)
+    double scatter = 0;                      // A-04: the share of the cells left blank (by a hash of the cell)
+    double dark = 14;                        // shades under the wall
+    int litBank = -1;                        // >= 0: the window glows, drawn in this bank at `litShade` whatever the light
+    double litShade = 50;
+    double fromV = 0;                        // no windows under this height
+    double meanShare = 0.2;                  // the window's share of its cell (the far mean)
+    // R-412: the people's dress on its walls, by the face's own metres as the windows are: a surround round each window `frame` wide (a share of
+    // the cell's width; as many metres up as across) `frameShade` lighter (+) or darker (-) than the wall; shutters each side of it `shutter`
+    // wide (a share) at `shutterShade`; courses `stripe` metres high, every other one `stripeShade` off; a dado `dado` metres high `dadoShade` off
+    double frame = 0, frameShade = 0, shutter = 0, shutterShade = 0, stripe = 0, stripeShade = 0, dado = 0, dadoShade = 0;
+    double meanDress = 0;                    // the dress's mean shade over a cell (the far mean)
+};
+
 struct RasterParams {
     int bank = 0;                 // bank index 0..15
     const GrainTexture* grain = nullptr;    // micro grain (M10-05: faded by grainWeight)
@@ -43,13 +63,16 @@ struct RasterParams {
     bool cutout = false;          // B-315: pixels whose wobbled weight falls under a half are not drawn at all (ragged leaf clusters); the edge noise and the vertex weights as for two materials
     double quantize = 0;          // >0: snap the interpolated shade to this step (quantised gradient mode)
     double zbias = 1.0;           // B-313: the depth tested and written is iz x zbias; under 1 pushes a surface back a little (a coarser terrain ring loses to the finer one where they coincide)
-    double darken = 1.0;          // BLEND_DARKEN: multiply the existing intensity (blob shadows)
+    double darken = 1.0;          // BLEND_DARKEN: multiply the existing intensity (blob shadows, a glass's tint)
+    bool sheen = false;           // B-411: BLEND_DARKEN as tinted glass that catches a light: the face's own shade in its bank where
+                                  // that is brighter than the pixel behind darkened (the outside shows through where it outshines it)
     int maskBank = -1;            // BLEND_REFLECT: only pixels of this bank are touched; intensity = mix of old and new
     double reflectMix = 0.5;
     bool ztest = true;
     bool zwrite = true;
     int blend = BLEND_REPLACE;
     double shadeMin = 0, shadeMax = 63;
+    const FacePattern* pattern = nullptr;    // A-02: windows on the face (u and v in metres)
 };
 
 constexpr double NEAR_Z = 0.05;

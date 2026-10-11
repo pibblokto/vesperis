@@ -1,0 +1,378 @@
+R"VG(
+# annal2.vg (H-04; the second pass): the annal's register (annal.vg's leads and codas): war, the sick, the land and the sky. `$e.won`
+# 1 when the record's side won; `$e.value` the dead; a war's name is the history's (`$e.war`).
+
+# =====================================================================================================================
+# war
+# =====================================================================================================================
+
+annal.war
+  {ann.lead} {ann.war.m}{ann.war.t}
+  {ann.lead} {ann.war.m}{ann.war.t}
+ann.war.m
+  ($e.warkind=other) war began with the {other}
+  ($e.warkind=other) the {other} crossed the border in arms
+  ($e.warkind=other) there was war with the {other}, the first in a long time
+  ($e.warkind=conquest) the {other} came to conquer
+  ($e.warkind=conquest) the {other} came down on the land with all their strength
+  ($e.warkind=rebellion) {$e.place} rose against the rule
+  ($e.warkind=rebellion) {$e.place} shut its gates against {$seat}
+  ($e.warkind=rebellion) the people of {$e.place} took up arms against {ruler.the}
+  ($e.warkind=revolution) the revolution began at {$e.place}
+  ($e.warkind=revolution) {$e.place} rose, and the rising spread
+  ($e.warkind=civil) civil war broke out
+  ($e.warkind=civil) the land split in two, and each half called the other traitor
+  ($e.warkind=succession) two claimants fought for the rule
+  ($e.warkind=succession) the rule was claimed twice over, and it came to blows
+  ($e.warkind=bands) the bands of {$e.place} took up their spears
+  ($e.warkind=bands) the young men of {$e.place} went out painted for war
+  ($e.warkind=cities) {$e.war} began
+  ($e.warkind=cities) the quarrel over {$e.place} came to war
+  ($e.warkind=cities) {$e.war} was declared, over {$e.place}
+ann.war.t
+  (5) .
+  {ann.after}
+  ; the levy was called from every town.
+  ; the smiths worked through the nights.
+  (age>=industrial) ; the regiments marched by night.
+  , and the roads were closed.
+  ; the {herd} were driven into the hills to keep them from the armies.
+  ; the price of {crop} doubled before the first battle.
+  ; the {craft} of {$seat} went to making shields.
+  ; nobody went out at night without a reason.
+  ; every house was asked for a son.
+  ; the walls of {$seat} were looked at again, and found wanting.
+  (age>=industrial) ; the newspapers were full of it.
+  (age>=modern) ; the broadcasts talked of nothing else.
+
+annal.battle
+  {ann.lead} {ann.bat.m}{ann.bat.t}
+  {ann.lead} {ann.bat.m}{ann.bat.t}
+ann.bat.m
+  ($e.won=1) our army broke the enemy at {$e.place}
+  ($e.won=1) the enemy was beaten at {$e.place}
+  ($e.won=1) the enemy ran at {$e.place} and did not stop running
+  ($e.won=1) {$e.place} was won
+  ($e.won=1 has:$e.a) {$e.a:name} won the field at {$e.place}
+  ($e.won=0) the army was beaten at {$e.place}
+  ($e.won=0) the enemy held {$e.place} against the army
+  ($e.won=0) the army broke at {$e.place}
+  ($e.won=0) the field at {$e.place} was lost
+  ($e.won=0 has:$e.b) {$e.b:name} lost the field at {$e.place}
+  ($e.won=draw) the armies met at {$e.place} and neither would give way
+  ($e.won=draw) both armies left {$e.place} claiming it
+  the battle of {$e.place} was fought
+  the armies met near {$e.place}
+  there was fighting at {$e.place} from first light
+ann.bat.t
+  ($e.value>0) , with {#$e.value:about} dead.
+  ($e.value>0) ; {#$e.value:about} did not come home.
+  , in {$e.war}.
+  . The field was left to the {bird}.
+  ; the dead were {buried} where they fell.
+  ($e.value>0) ; {#$e.value:about} were counted on the field.
+  . It rained all that night on the field.
+  ; the {colour.holy} banners came home torn.
+  ; the wounded were carried home on carts.
+  ; the {herd} of the place were taken by whoever was nearest.
+  , in {$e.season}, in the mud.
+  (has:$e.a) ; {$e.a:name} led.
+  {ann.after}
+
+annal.siege
+  ($e.out=1) {ann.lead} {$e.place} was besieged and fell{ann.siege.t}
+  ($e.out=1) {ann.lead} {$e.place} held out {#n|month} and then opened its gates{ann.siege.t}
+  ($e.out=1) {ann.lead} the walls of {$e.place} were broken{ann.siege.t}
+  ($e.out=0) {ann.lead} {$e.place} was besieged and held{ann.siege.t}
+  ($e.out=0) {ann.lead} {$e.place} was shut up a whole season, and did not open{ann.siege.t}
+  ($e.out=0) {ann.lead} the enemy sat before {$e.place} until the {crop} rotted in the fields, and went away{ann.siege.t}
+ann.siege.t
+  (5) .
+  ; inside, they ate the {herd}, then the leather.
+  ; the {watersrc.n} inside the walls did not fail.
+  ; {fuel} ran short, and they burned the doors.
+  ; the children of {$e.place} remember it still.
+  {ann.after}
+
+annal.sack
+  {ann.lead} {$e.place} was sacked{ann.sack.t}
+  {ann.lead} the enemy took {$e.place} and burned it{ann.sack.t}
+  {ann.lead} {$e.place} was put to the sword{ann.sack.t}
+ann.sack.t
+  ($e.value>0) , and {#$e.value:about} died.
+  ; the gates were never hung again.
+  ; the {craft} sheds were burned with everything in them.
+  ; what was not carried off was broken.
+  ; {holyplace} was stripped to the walls.
+  (4) .
+
+annal.peace
+  {ann.lead} {ann.peace.m}{ann.peace.t}
+  {ann.lead} {ann.peace.m}{ann.peace.t}
+ann.peace.m
+  ($e.won=1) {$e.war} ended in victory
+  ($e.won=1) {$e.war} was won
+  ($e.won=1) the enemy asked for peace, and it was given
+  ($e.won=0) {$e.war} ended, and it was lost
+  ($e.won=0) peace was bought, at a price
+  ($e.won=0) {$e.war} was over, and the land was smaller
+  ($e.won=draw) {$e.war} ended, and neither side had won it
+  ($e.won=draw) both sides were tired, and {$e.war} ended
+  peace was sworn, and {$e.war} was over
+  the fighting stopped
+  ($e.warkind=other|$e.warkind=conquest) peace was made with the {other}
+ann.peace.t
+  (5) .
+  . The bells were rung half the day.
+  ; the prisoners were sent home.
+  ; the levy went back to the {crop}.
+  ; they played {instrument} in the streets of {$seat} for the first time in years.
+  ; both sides swore {oath}.
+  ; there was {drink} for everyone at {$seat}.
+  ; the dead were counted, and the count was not read out.
+  {ann.after}
+
+# =====================================================================================================================
+# the sick
+# =====================================================================================================================
+
+annal.sickness
+  {ann.lead} {ann.sick.m}{ann.sick.t}
+  {ann.lead} {ann.sick.m}{ann.sick.t}
+ann.sick.m
+  ($e.wave=1) {$e.sickness} came to {$e.place}
+  ($e.wave=1) {$e.sickness} was first seen at {$e.place}
+  ($e.wave=1) a sickness nobody knew came to {$e.place}; they named it {$e.sickness}
+  ($e.wave=1 coast=1) {$e.sickness} came in with the boats to {$e.place}
+  ($e.wave>1) {$e.sickness} came back to {$e.place}
+  ($e.wave>1) {$e.sickness} returned to {$e.place} for the {#$e.wave:ord} time
+  ($e.wave>1) {$e.sickness} was at {$e.place} again
+  {$e.place} was shut for {$e.sickness}
+  there was {$e.sickness} at {$e.place}
+  {$e.sickness} went through {$e.place}
+ann.sick.t
+  ($e.value>0) , and it spread; {#$e.value:about} died of it in the land.
+  ($e.value>0) ; {#$e.value:about} dead in the land before {season.next}.
+  . The dead were buried outside the walls.
+  ; the market was closed until the sickness passed.
+  (age>=industrial) ; the hospitals were full.
+  ; the sick were carried to {holyplace} and laid in rows.
+  ; nobody would buy {fish} from {$e.place} for a year.
+  ; the doors of the sick were marked in {colour.any}.
+  ; {fuel} was burned in the streets against it.
+  ; the {herd} were kept from {$e.place}.
+  ; the healers of {$e.place} died first, as they always do.
+  {ann.after}
+
+# =====================================================================================================================
+# the harvest and the land
+# =====================================================================================================================
+
+annal.harvest
+  ($e.harvest=rich) {ann.lead} {ann.harv.rich}{ann.harv.t}
+  ($e.harvest=rich) {ann.lead} {ann.harv.rich}{ann.harv.t}
+  ($e.harvest=failed) {ann.lead} {ann.harv.failed}{ann.harv.t}
+  ($e.harvest=failed) {ann.lead} {ann.harv.failed}{ann.harv.t}
+  ($e.harvest=poor) {ann.lead} {ann.harv.poor}{ann.harv.t}
+  ($e.harvest=poor) {ann.lead} {ann.harv.poor}{ann.harv.t}
+ann.harv.rich
+  a great harvest
+  the {crop} came in heavy, the best in living memory
+  the {crop} stood so thick the cutters could hardly walk through it
+  there were more {fruit} than baskets to hold them
+  the stores were full and the price of {crop} fell by half
+  the {crop} was cut in a week and stacked to the eaves
+  every {vessel.one.n} in {$seat} was full
+ann.harv.failed
+  the harvest failed
+  the {crop} failed; {weather} took it in the fields
+  the {crop} rotted standing
+  {pest} ate what the rain had left
+  there was no {crop} to cut
+  the fields gave back less than was sown
+ann.harv.poor
+  a poor harvest
+  a thin year for the {crop}
+  the {crop} came in light
+  the {fruit} were small and few
+  the {crop} was short and the ears were empty
+ann.harv.t
+  (6) .
+  ; the {herd} were sold for what they would fetch.
+  ; the {craft} went on, there being nothing else to do.
+  (harvest>=3) ; there was {drink} at every door for {festival}.
+  ; the {bird} grew fat on the stubble.
+  ; it was {weather} that did it, or so the farmers said.
+  ; the tithe was paid in {vessel} of {crop}.
+  {ann.after}
+
+annal.famine
+  {ann.lead} {ann.fam.m}{ann.fam.t}
+  {ann.lead} {ann.fam.m}{ann.fam.t}
+ann.fam.m
+  (has:$e.place) famine at {$e.place}
+  (has:$e.place) hunger at {$e.place} and round it
+  (has:$e.place) the stores of {$e.place} ran out
+  (!has:$e.place) famine in the land
+  (!has:$e.place) the stores ran out across the land
+  (!has:$e.place) there was nothing to eat from {river} to {mountain}
+  the people went hungry
+  there was hunger, the worst anyone remembered
+ann.fam.t
+  ($e.value>0) ; {#$e.value:about} died before the new {crop}.
+  ($e.value>0) , and {#$e.value:about} died.
+  . The seed was eaten, and the {herd}.
+  (gov=monarchy) . The crown opened the granaries, and it was not enough.
+  ; they ate {tree.n} bark and scraped the {vessel} for the last of the {food}.
+  ; children were sent to kin in other places to be fed.
+  ; the {herd} were killed one by one and then there were none.
+  ; the old went out and did not come back, so the young could eat.
+  {ann.after}
+
+annal.flood
+  ($e.flood=river) {ann.lead} {ann.flood.river}{ann.flood.t}
+  ($e.flood=river) {ann.lead} {ann.flood.river}{ann.flood.t}
+  ($e.flood=sea) {ann.lead} {ann.flood.sea}{ann.flood.t}
+  {ann.lead} the water stood in the streets of {$e.place} for {#n|day}{ann.flood.t}
+ann.flood.river
+  the river rose over {$e.place}
+  the river came out of its bed at {$e.place}
+  the river took the lower town of {$e.place}
+  {river} rose and kept rising, and {$e.place} was under it
+ann.flood.sea
+  the sea came over {$e.place}
+  the sea broke through at {$e.place}
+  a great wave came in on {$e.place}
+ann.flood.t
+  ($e.value>0) , and {#$e.value:about} drowned.
+  ; the lower town was lost.
+  ; the {herd} were drowned in their pens.
+  ; the {craft} sheds by the water were carried off.
+  ; when it went down, the fields were stone and sand.
+  ; boats were rowed through the streets.
+  ; the {tree} stood in water up to the branches.
+  (4) .
+  {ann.after}
+
+annal.drought
+  {ann.lead} {ann.dro.m}{ann.dro.t}
+  {ann.lead} {ann.dro.m}{ann.dro.t}
+ann.dro.m
+  no rain for {#$e.value|year}
+  drought, {#$e.value|year} of it
+  {watersrc} sank
+  the rain did not come
+  the ground cracked and stayed cracked
+  ($e.value>1) the dry years began
+ann.dro.t
+  (5) .
+  ; water was sold by the cup.
+  ; the {herd} were driven to the high country.
+  ; the {crop} came up and died.
+  ; the {watersrc.n} gave mud, and then nothing.
+  ; the priests went up to {holyplace} every day, and nothing came of it.
+  ; dust lay on everything, even the bread.
+  {ann.after}
+
+annal.quake
+  {ann.lead} the ground shook at {$e.place}{ann.quake.t}
+  {ann.lead} the earth moved under {$e.place}{ann.quake.t}
+  {ann.lead} {$e.place} was shaken{ann.quake.t}
+  {ann.lead} the ground at {$e.place} rose and fell like water{ann.quake.t}
+ann.quake.t
+  ($e.value>0) ; {#$e.value:about} died.
+  , and the walls cracked.
+  , twice in one day.
+  ; {holyplace} fell in.
+  ; the {roofs} came down on whoever was under them.
+  ; the springs changed their courses.
+  ; for a month the people slept in the fields.
+  (4) .
+
+annal.eruption
+  {ann.lead} {mountain} broke open, and the ash fell on {$e.place}{ann.erupt.t}
+  {ann.lead} fire came out of {mountain}{ann.erupt.t}
+  {ann.lead} {mountain} smoked for a month and then burst{ann.erupt.t}
+ann.erupt.t
+  ($e.value>0) ; {#$e.value:about} died.
+  ; the fields were grey to the knee.
+  ; the {herd} would not eat the grass.
+  ; it was dark at noon for {#n|day}.
+  (4) .
+
+annal.impact
+  ($e.impact=world) {ann.lead} a great stone fell from the sky and the sky went dark{ann.imp.t}
+  ($e.impact=world) {ann.lead} a star fell, and after it the summer did not come{ann.imp.t}
+  ($e.impact=town) {ann.lead} a stone fell from the sky on {$e.place}, and nothing was left of it{ann.imp.t}
+  ($e.impact=town) {ann.lead} fire fell on {$e.place} out of a clear sky{ann.imp.t}
+  ($e.impact=near) {ann.lead} a stone fell from the sky near {$e.place}; the windows broke as far as {city}{ann.imp.t}
+  ($e.impact=near) {ann.lead} a burning stone came down in the hills by {$e.place}{ann.imp.t}
+ann.imp.t
+  ($e.value>0) ; {#$e.value:about} died.
+  ; the sound was heard at {$seat}.
+  ; the people still go and look at the hole.
+  (4) .
+
+annal.flare
+  {ann.lead} the sun flared, and the day side burned{ann.flare.t}
+  {ann.lead} {sun} flared white{ann.flare.t}
+  {ann.lead} the light of {sun} grew so hard that the leaves curled{ann.flare.t}
+ann.flare.t
+  ($e.value>0) ; {#$e.value:about} died.
+  ; those who were out in the fields did not come home.
+  ; the {herd} went blind.
+  (4) .
+
+annal.winter
+  {ann.lead} the long winter began{ann.win.t}
+  {ann.lead} the summer did not come{ann.win.t}
+  {ann.lead} snow lay into {season.next} and on into the next{ann.win.t}
+  {ann.lead} the cold came, and stayed {#$e.value|year}{ann.win.t}
+ann.win.t
+  (4) .
+  ; it lasted {#$e.value|year}.
+  ; the {herd} died in the snow.
+  ; the {crop} lay under the snow until it rotted.
+  ; {fuel} was worth more than bread.
+  {ann.after}
+
+annal.omen
+  ($e.omen=comet) {ann.lead} {ann.omen.comet}{ann.omen.t}
+  ($e.omen=eclipse) {ann.lead} {ann.omen.eclipse}{ann.omen.t}
+  ($e.omen=aurora) {ann.lead} {ann.omen.aurora}{ann.omen.t}
+  ($e.omen=falling) {ann.lead} stars fell all night over {$e.place}{ann.omen.t}
+  ($e.omen=falling) {ann.lead} the sky over {$e.place} was full of falling stars{ann.omen.t}
+  ($e.omen=newstar) {ann.lead} a new star shone for a season{ann.omen.t}
+  ($e.omen=newstar) {ann.lead} a star nobody knew stood over {mountain} until {season.next}{ann.omen.t}
+  ($e.omen=redmoon) {ann.lead} the moon turned red over {$e.place}{ann.omen.t}
+  ($e.omen=redmoon moons>0) {ann.lead} {moon} rose the colour of blood{ann.omen.t}
+ann.omen.comet
+  the hairy star returned
+  the hairy star came back, as the old ones said it would
+  the star with the tail stood over {mountain}
+ann.omen.eclipse
+  the sun went dark at noon
+  the sun was eaten and given back
+  it was night in the middle of the day
+ann.omen.aurora
+  lights filled the night sky
+  the lights danced in the north all night
+  the sky burned in curtains, and nothing was burned
+ann.omen.t
+  (5) .
+  ; the priests said it meant one thing, and the farmers another.
+  ; the {herd} were restless all night.
+  ; nobody slept.
+  ; the children were brought out to see it.
+  ; it was taken for {ann.badsign}.
+  ; it was taken for {ann.goodsign}.
+  {ann.after}
+ann.badsign
+  a bad sign
+  a warning
+  the end of something
+ann.goodsign
+  a good sign
+  a blessing
+  a promise
+)VG"

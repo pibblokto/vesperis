@@ -1,0 +1,196 @@
+R"VG(
+# diary.vg (H-04; the second pass 2026-10-10): the diary: a person's days in their own hand (`@cast diary`: someone alive where the
+# record lies; the industrial age on, a notebook, then a reel, then a drive). No reader: the lines that speak to one are left out.
+# The ordinary life is the letters' own lines (letters2.vg to letters4.vg) and the diary's: the day's doings, the self, the dreams,
+# the reading, the walk, the accounts; the news is the letter's register (`@news`), heard in the street.
+
+genre.diary (words=30..202)
+  {@cast diary}{diary.entry}\n{diary.entry}\n{diary.last}
+  {@cast diary}{diary.entry}\n{diary.entry}\n{diary.entry}\n{diary.last}
+  {@cast diary}{diary.entry}\n{diary.entry}\n{diary.entry}\n{diary.entry}
+  {@cast diary}{diary.entry}\n{diary.entry}\n{diary.entry}
+
+# the heading of an entry: each people its own few
+diary.head (formula people=4)
+  (has:day) Day {#day}.
+  {season.now}, the {nth} day.
+  (age>=industrial) {#year:digits}, {season.now}.
+  Later.
+  Morning.
+  Evening.
+  (has:day) The {#day:ord}.
+  (age>=modern) Entry.
+  (has:month has:day) {#day:digits}/{#month:digits}.
+  Night.
+
+diary.entry
+  (3) {diary.head} {diary.line} {diary.line}
+  (2) {diary.head} {@news any letter}
+  (2) {diary.head} {diary.line} {@news private letter}
+  (2) {diary.head} {@news public letter} {diary.line}
+  (1) {diary.head} {diary.line} {diary.line} {diary.line}
+  (1) {diary.head} {diary.line}
+
+diary.last
+  {diary.head} {diary.line} {diary.night}
+  {diary.head} {diary.night}
+
+diary.line
+  (once has:$child) {let.kid}
+  (once has:$spouse) {let.sp}
+  (once) {let.work}
+  (once) {let.wx}
+  (once) {let.sky}
+  (once) {let.house}
+  (once) {let.market}
+  (once contact=1) {let.other}
+  (once) {let.table}
+  (once) {let.body}
+  (once) {let.faith}
+  (once) {let.saying}
+  (once) {let.gossip}
+  (once) {let.town}
+  (once) {let.feast}
+  (once) {let.d.day}
+  (once) {let.d.self}
+  (once) {let.d.dream}
+  (once age>=industrial) {let.d.read}
+  (once) {let.d.walk}
+  (once) {let.d.money}
+  (once stage>=1) {let.d.dark}
+
+# ---- what I did today ------------------------------------------------------------------------------------------------------
+
+let.d.day
+  (3) {let.d.did}{let.d.did.tail}
+  Today: {let.d.did}{let.d.did.tail}
+let.d.did (share=0.75)
+  mended {garment} by the window until the light went {=.light}
+  carried {fuel} up from the yard, three loads, and the {beast} supervised {=.carry}
+  sorted the {vessel} in the store and threw nothing away {=.store}
+  walked to {$me.home.landmark} and back for no reason at all {=.walk}
+  sat with the {craft} people for an hour and learnt nothing I can use {=.sit}
+  made {food}; ate {food}; washed the {vessel} {=.plain}
+  wrote a letter and did not send it {=.letter}
+  cleaned {tool} and put it away and took it out again {=.tool}
+  bought {veg} from a woman who talked about her knees {=.buy}
+  (age>=industrial) queued at the office for a stamp and a temper {=.queue}
+  (age>=modern) waited in for a delivery that did not come {=.wait}
+  argued with the landlord about the {roofs}, and lost {=.argue}
+let.d.did.tail
+  (2) .
+  (.light=1) ; my eyes are paying for it.
+  (.carry=1) ; it watched every trip and did not lift a paw.
+  (.store=1) ; one day I will.
+  (.walk=1) ; I needed to.
+  (.letter=1) ; it was the honest kind.
+  (.buy=1) ; I know more about her knees than mine.
+  (.queue=1) ; I got the stamp.
+  (.argue=1) ; the rain will argue for me.
+
+# ---- the self ---------------------------------------------------------------------------------------------------------------
+
+let.d.self (share=0.7)
+  I am {#$me.age|year} old today, or near enough, and I feel every one of them in my knees.
+  I have decided to be kinder, even to the {beast}. I will start tomorrow.
+  I am too old for {vice} and too young for {virtue}, which leaves the middle, where I live.
+  Nobody asked me anything today over the {food}, and I answered all of it in my head.
+  I think I am happier than I was, like the {bird} in the eaves, and I will not look too closely.
+  I keep this book because Mother kept one, full of {crop} prices and other people's weddings, and hers was more interesting.
+  I was cross with everyone today. The {beast} forgave me first.
+  I sang at the {craft}, and stopped when I saw anyone, as usual.
+  (temper=pious) I prayed at {holyplace} for {virtue}, and was given patience instead, which is the long road to it.
+  (temper=wry) I have been right about everything this week, the {crop} included, and it has done me no good at all.
+  (temper=anxious) I lay awake making lists of what could go wrong, from the {roofs} to the {herd}; the list was long and I was thorough.
+  (temper=proud) I did a good day's work at the {craft}, and I will write it down so that one day someone knows it.
+  Life is {life.is}. I wrote that down because it seemed true at the time.
+
+# ---- the dreams ------------------------------------------------------------------------------------------------------------
+
+let.d.dream
+  (3) {let.d.dream.main}{let.d.dream.tail}
+let.d.dream.main (share=0.75)
+  Dreamt of {river}, which I have not seen in years {=.far}
+  Dreamt of my mother's house; the {vessel} were all where she kept them {=.mother}
+  Dreamt the {herd} could talk, and had nothing to say {=.odd}
+  Dreamt I was a child at {festival}, eating {food} with both hands {=.child}
+  Dreamt of {skynight} falling into the {crop}, slowly, like a leaf {=.odd}
+  Dreamt of the old school {=.far}
+  Dreamt I was lost in {streets.of}, and everyone I asked was a {$me.trade} {=.lost}
+  (contact=1) Dreamt I spoke the tongue of the {other}, and understood every word, and forgot all of it at waking {=.odd}
+let.d.dream.tail
+  (2) .
+  (.far=1) ; I woke with the smell of it.
+  (.mother=1) ; I did not want to wake.
+  (.odd=1) ; I will not tell anyone.
+  (.child=1) ; I woke hungry.
+  (.lost=1) ; I woke laughing.
+
+# ---- the reading (the industrial age on) ---------------------------------------------------------------------------------
+
+let.d.read (share=0.7)
+  Read the paper. Nothing in it but the price of {crop} and the dead.
+  Read until the lamp went out, a book about {mountain} by someone who has never been there.
+  Read the old letters again; Mother's hand gets smaller towards the end, and the {herd} get fewer.
+  (has:gazette) {gazette} says the {crop} will be dear. {gazette} says everything will be dear.
+  Read a book on {craft} and understood every word and none of the sentences.
+  Borrowed a book about {craft} from the schoolmaster and fell asleep on it.
+
+# ---- the walk ----------------------------------------------------------------------------------------------------------------
+
+let.d.walk
+  (3) {let.d.walk.main}{let.d.walk.tail}
+let.d.walk.main (share=0.75)
+  (has:$me.home.landmark) walked out to {$me.home.landmark} {time.of} {=.out}
+  walked the long way round by {town.edge} {=.edge}
+  (desert=0) walked along {river} as far as the {tree} {=.river}
+  (has:$me.home.quarter) walked through {$me.home.quarter}, where everyone was out on the steps {=.quarter}
+  walked up the hill to see {skyone} go down {=.hill}
+  (coast=1) walked on the shore; the {bird} had the whole of it to themselves {=.shore}
+let.d.walk.tail
+  (2) .
+  (.out=1) ; it is smaller than it was when I was small.
+  (.edge=1) ; the {herd} watched me the whole way.
+  (.river=1) ; the water was high and brown and in no hurry.
+  (.quarter=1) ; I was offered {drink} three times and accepted twice.
+  (.hill=1) ; it was worth the knees.
+  (.shore=1) .
+
+# ---- the accounts ----------------------------------------------------------------------------------------------------------
+
+let.d.money (share=0.7)
+  Counted the money. There is less of it than there was, and more {vessel} to fill.
+  (age>=medieval) Owe the baker {n} {coin}, and the baker owes me an apology for the {food}, so we are even.
+  Paid the rent, and the {vessel} are nearly empty. {proverb}, Mother would say. She would be right.
+  (age>=industrial) The fund of the {$me.trades} paid out this week, a little; I bought {food} and a candle.
+  Sold the {let.tool.n} I never used. Missed it at once.
+
+# ---- the dark years (the collapse) --------------------------------------------------------------------------------------
+
+let.d.dark (share=0.8)
+  Another family gone from our street. Their {vessel} are still on the step.
+  I count the {vessel} in the store every night now, as if counting made more of them.
+  Nobody says the word at the {craft} stalls, but everyone says the thing around it.
+  (stage>=2) The {bird} are the only ones who have not changed their ways.
+  (stage>=2) I have started writing smaller, to make the book last, and burning less {fuel}.
+  (stage>=1) The market had three stalls today, and one of them was mine, with {veg} nobody bought.
+
+# ---- the night's last line -------------------------------------------------------------------------------------------------
+
+diary.night
+  (once) It is late, and the lamp is low on {fuel}.
+  (once) {skynight} is up. To bed.
+  (once) Tomorrow, {diary.tomorrow}.
+  (once stage>=2) I do not know who will read this, or what they eat. Someone, I hope.
+  (once) The {beast} is asleep on my feet, which settles it.
+  (once) The house is quiet; only the {fuel} talks.
+  (once) Enough for one day.
+  (once) {god.keep}, the old ones would say; I say it to the page and to the {beast}.
+diary.tomorrow
+  the market
+  the same again
+  {festival}, if the weather holds
+  {feast.custom}, and I have nothing to wear
+  the {herd}, and then the {herd}
+  more of the {craft}
+)VG"

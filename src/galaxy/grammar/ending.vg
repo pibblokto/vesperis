@@ -1,0 +1,198 @@
+R"VG(
+# ending.vg (H-04; the second pass 2026-10-10): the collapse told from many sides (the ideas note's section 9): the warning and the
+# denial here; the orders and the inventory (ending3.vg), the message to whoever comes (ending2.vg), the last recording (ending4.vg).
+# The cause is the profile's (`cause`; how fast it came: `speed`, 0 sudden .. 2 over generations); the stage the record's year's
+# (`stage`: 0 the warning, 1 the onset, 2 the crisis, 3 the end); the signs are the history's (`@event sign... annal`). What a people
+# saw coming is told in its own world's words: its water, its herds, its crops, its dead.
+
+# what is happening, by the cause, as a clause and as a noun (the modern emergency reads them too)
+cause.what
+  (cause=famine|cause=cropfailure|cause=foodsystems) there is not enough {food}, and there will be less
+  (cause=famine|cause=cropfailure|cause=foodsystems) the {crop} fails a little more each year, and the stores do not fill
+  (cause=foodsystems) the {crop} comes from further away every year, and one year it will not come
+  (cause=iceage|cause=cold) the cold is coming down, a little further into the {crop} every winter
+  (cause=iceage|cause=cold) the ice is coming down from {mountain}, and it does not go back up in {season.next}
+  (cause=volcanic) the sky stays grey and the {crop} does not ripen
+  (cause=volcanic) {mountain} has not stopped smoking, and the sun is the colour of a coin
+  (cause=flood|cause=climate) the water is rising over the {crop}, and it does not go back down
+  (cause=climate) the seasons have come loose; the rains come in the dry months and the heat in the cold
+  (cause=sickness|cause=greatsickness|cause=epidemics|cause=engineered) the sickness is in every town and in the {herd}, and it comes back
+  (cause=sickness|cause=greatsickness|cause=epidemics) the sickness comes back every {season.now}, and every time it takes more
+  (cause=engineered) the sickness was made, and whoever made it cannot unmake it
+  (cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar) the fighting is coming closer every year, and it eats the {crop}
+  (cause=conquest) the {other} take a town every summer, and do not give it back
+  (cause=waterwar) we are fighting over the water, and the water is going while we fight
+  (cause=civilwar) we are killing each other over who is to rule what will be left
+  (cause=leaving|cause=exodus|cause=elsewhere) everyone is leaving the {ann.houses}, and nobody comes back
+  (cause=drying) the water is going out of {watersrc}, and nobody will say it
+  (cause=drying) {watersrc} sinks every year, and the {crop} stands shorter
+  (cause=impact) the stone is coming, and there is nowhere it will not reach
+  (cause=poisoned) the air and the rivers are poisoned, the {fish} float, and the children cough
+  (cause=coalout) the coal is running out, and nothing runs without it
+  (cause=revolution) the factions are tearing at each other, and the rest of us are in between
+  (cause=nuclear|cause=weapons) the weapons are ready, and the ones who hold them are afraid
+  (cause=cascade) the systems are failing one after another, and each failure brings the next
+  (cause=fewerchildren|cause=chosen) there are fewer of us every year, and more {herd} than children
+  (cause=machine) the machines have stopped listening to us
+  (cause=nanotech) the grey is spreading, and nothing stops it
+  (cause=geoengineering) the sky has changed, and the rain has stopped
+  (cause=flare) the sun is wrong, and the watchers are afraid of it
+  (cause=retreat) everyone is going into the machines, and the streets are empty
+  (cause=physics|cause=undescribed) something is happening that our words for {ann.skyword} do not fit
+
+cause.noun
+  (cause=famine|cause=cropfailure|cause=foodsystems) the hunger
+  (cause=iceage|cause=cold) the cold
+  (cause=volcanic) the grey years
+  (cause=flood|cause=climate) the water
+  (cause=sickness|cause=greatsickness|cause=epidemics|cause=engineered) the sickness
+  (cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar) the war
+  (cause=leaving|cause=exodus|cause=elsewhere) the leaving
+  (cause=drying) the drying
+  (cause=impact) the stone
+  (cause=poisoned) the poison
+  (cause=coalout) the cold houses
+  (cause=revolution) the troubles
+  (cause=nuclear|cause=weapons) the fire
+  (cause=cascade) the failures
+  (cause=fewerchildren|cause=chosen) the emptying
+  (cause=machine) the machines
+  (cause=nanotech) the grey
+  (cause=geoengineering) the white sky
+  (cause=flare) the sun
+  (cause=retreat) the sleep
+  (cause=physics|cause=undescribed) what happened
+
+# ---- the warning ------------------------------------------------------------------------------------------------------------
+
+genre.warning (words=23..103)
+  {@cast writer}{warning.open} {warning.what} {@event sign,famine,flood,drought,sickness,exodus,abandoned,winter,unrest,quake,storm,pest,fire,price annal 8} {warning.ask}\n{warning.close}
+  {@cast writer}{warning.open} {warning.what}\n{warning.measure} {warning.ask}\n{warning.close}
+  {@cast writer}{warning.open} {warning.measure} {warning.what}\n{warning.ask} {warning.ask2}\n{warning.close}
+  {@cast writer}{warning.open} {warning.who} {warning.what}\n{warning.measure}\n{warning.close}
+
+warning.open (formula)
+  To whoever hears this:
+  I say this for the record, since {ruler.the} will not:
+  (age>=industrial) For the attention of anyone still reading the reports:
+  Write this down, and keep it somewhere dry:
+  (age<=medieval) Cut this where it will be seen:
+  Hear me, people of {$me.home}:
+  (age>=industrial) Not for publication, since nobody will publish it:
+  Let it be known at {$me.home} and at {$seat}:
+
+warning.who
+  I am {$me:name}, a {$me.trade} of {$me.home}, and I have no reason to lie.
+  I am not a priest and I am not a fool. I am {$me:name}, and I keep {ann.w.kept}.
+  My name is {$me:name}; ask anyone at {$me.home} whether I make things up about the {herd}.
+  I have lived at {$me.home} {#$me.age|year}, by {$me.home.ptrade}, and I have never said a thing like this.
+ann.w.kept
+  the {herd} on the hill
+  the stores at {$me.home}
+  the count of the dead
+  the water rights
+  the marks on the post by {watersrc}
+
+warning.what
+  {cause.what}.
+  {cause.what}, and they laugh when I say it.
+  I have said it at {hall} and I will say it here: {cause.what}.
+  Everyone knows it and nobody says it: {cause.what}.
+  {cause.what}; it is not the weather, and it will not pass.
+  The old ones say it has been worse. They are wrong: {cause.what}.
+  (speed=0) It will come all at once: {cause.what}.
+  (speed=2) It has been coming for longer than anyone has lived: {cause.what}.
+
+warning.measure
+  (cause=drying) We measured {watersrc}: {n} {measure.far} lower in {n} years.
+  (cause=drying) The {crop} came up to my waist when I was a child. Now it comes to my knee.
+  (cause=drying) The marks on the stones by {watersrc} are dry now, all but the lowest.
+  (cause=drying|cause=flood|cause=climate) The marks on the {material} by {watersrc} tell it, if anyone looks at them.
+  (cause=flood|cause=climate) The water came into the {crop} fields {n} times this year; it used to be once in a lifetime.
+  (cause=sickness|cause=greatsickness|cause=epidemics|cause=engineered) I have counted the burials at {deadplace}: more each {season.now}.
+  (cause=sickness|cause=greatsickness|cause=epidemics|cause=engineered) There are {colour.any} marks on half the doors of {$me.home}.
+  (cause=famine|cause=cropfailure|cause=foodsystems) The {vessel} in the stores were full {n} years ago. Go and look at them now.
+  (cause=famine|cause=cropfailure|cause=foodsystems) We are eating the {crop} seed; a people that eats its seed eats its children's {food}.
+  (cause=iceage|cause=cold) The snow lay on the {crop} into {season.next} this year. It never used to.
+  (cause=iceage|cause=cold) The {herd} came down from the high grazing a month early, and some did not come down.
+  (cause=volcanic) The ash is in the {food}, in the water, in the children's hair.
+  (cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar) Every year the fighting is a day's walk closer to the {herd} at {$me.home}.
+  (cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar) There is not a house at {$me.home} that has not lost someone.
+  (cause=leaving|cause=exodus|cause=elsewhere) Half the {ann.houses} at {$me.home} are empty, and nobody is buying.
+  (cause=poisoned) The {fish} in {river} come up dead, belly to the sky.
+  (cause=impact) The watchers at {hall} have seen it over {mountain}, and they have stopped eating their {food}.
+  (cause=fewerchildren|cause=chosen) There were {n} children born at {$me.home} this year. There were {nbig} when I was young.
+  (age>=industrial) The figures for the {crop} are in the report nobody read.
+  Every year the {crop} is a little worse, and every year we say it is the weather.
+  I have seen {n} years like this one for the {herd}, and each was worse than the last.
+
+warning.ask
+  Do not stay for {festival}. Go to {dest}. Go now.
+  Tell your children over the {food}, so they tell theirs.
+  If you can leave, leave.
+  I am not asking anyone to believe me; I am asking them to look at {watersrc}.
+  Take the {herd} and go to {dest} while the roads are open.
+  Fill the {vessel} with seed and go.
+  Do not wait for {ruler.the} to tell you; {ruler.the} will be the last to know.
+  Store {crop} where you can; share it where you must.
+warning.ask2
+  It is not too late to fill the {vessel}.
+  I hope I am wrong, {oath}; I am not wrong.
+  {god.call}.
+  Someone has to say it.
+  Laugh over your {drink} if you like; I would rather be laughed at than right.
+
+warning.close (formula)
+  {$me:name}, at {$me.home}, the {#year:ord} year of {city}.
+  Cut it on the stone when I am dead. {$me:name}.
+  (age>=industrial) Filed by {$me:name}, {$me.trade}, {$me.home}.
+  {$me:name}, who has said it now.
+  Written at {$me.home} by {$me:name}, {time.of}.
+
+# ---- the denial: the rule's own word -----------------------------------------------------------------------------------------
+
+genre.denial (words=19..64)
+  {denial.head} {denial.body} {denial.body} {denial.close}
+  {denial.head} {denial.body} {denial.body} {denial.body} {denial.close}
+
+denial.head (formula)
+  (age<=medieval) {ruler.the} of {$seat} to all the {people}:
+  (age=industrial) A notice from {ruler.the}, to be read in every town:
+  (age>=modern) An announcement from {ruler.the}.
+  By order of {ruler.the}:
+  To be read at the gates and in {town.open}:
+
+denial.body
+  (once) There is no cause for alarm among the {ann.craftfolk}.
+  (once) The {vessel} in the stores are sufficient for the year, and the year after.
+  (once) Those who spread rumours of {cause.noun} will answer for it.
+  (once) The trouble at the edges of the land is being dealt with, and will not reach {$seat}.
+  (once) Work is to go on as before; the {crop} markets are to stay open.
+  (once) {festival} will be kept this year as every year, with {feast.custom}.
+  (once age>=industrial) The figures for the {crop} published elsewhere are mistaken.
+  (once age>=modern) The situation is under control. Stay at home and wait for further announcements.
+  (once) Nobody is to leave the land without leave, nor take {herd} out of it.
+  (once) The {crop} will come in as it always has.
+  (once) The {herd} are to be driven out to the grazing as usual.
+  (once) What some call {cause.noun} is a hard year, and hard years end.
+  (once) The {vessel} of the common store will not be opened; there is no need.
+  (once) Prices are fixed. Anyone asking more for {crop} will be fined.
+  (once) The workshops of {$seat} are to stay open, and full.
+  (once) Those who have gone to {dest} will come back, and will be welcome.
+  (once) {holyplace} will be open every day, and {god} has not left us.
+  (once age>=industrial inv.press=1) The newspapers that print otherwise will be closed.
+  (once) The old signs are only the old signs; the {bird} have flown that way before.
+  (once) Anyone found packing a cart with {vessel} will have it unpacked for them.
+
+denial.close (formula)
+  So it is ordered.
+  Keep calm, and keep working.
+  (age>=industrial) Issued at {$seat}, {season.now} of the year {#year:digits}.
+  The {people} have come through worse.
+  {god.keep}, and do as you are told.
+ann.skyword
+  the sky
+  the world
+  the weather
+  the ground
+)VG"

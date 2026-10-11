@@ -1,0 +1,273 @@
+R"VG(
+# annal.vg (H-04; the second pass 2026-10-10): the annal's register: an event of the history told as the people's own record of its
+# years told it, in the past and without a writer (`annal.<kind>`, `@entries annal` and `@years`: the chronicles, the annals, the
+# warnings). `$e` is the event; its fields and paths are the model's (galaxy/genres.cpp). Every kind is composed (a lead, a main, a
+# tail), so a people's chronicles tell a hundred deaths a hundred ways; the leads and the codas are each people's own habits
+# (`share`: a people keeps its own part of them), and they date things by the people's own year: its feasts, its herds, its harvest.
+# The rest of the register: annal2.vg (war, the land, the sky, the sick), annal3.vg (what they made and found, the other people, the
+# collapse, the deaths), annal4.vg (the everyday: fairs, fires, storms, trials, prices).
+
+@root annal.*
+
+# =====================================================================================================================
+# the leads: when, as the chronicler of this people dated a thing (most entries have one; a people keeps its own habits)
+# =====================================================================================================================
+
+ann.lead
+  (9)
+  (11) {ann.lead.d}
+ann.lead.d (share=0.6)
+  (3 has:$e.season) In {$e.season},
+  (2 has:$e.season seasons=4) That {$e.season},
+  (2 has:$e.season) Early in {$e.season},
+  (2 has:$e.season) Late in {$e.season},
+  (has:$e.season) At the end of {$e.season},
+  (has:$e.season) In the first days of {$e.season},
+  (has:$e.season seasons=4) Before {$e.season} was out,
+  (has:$e.season) When {$e.season} came,
+  (has:$e.season) In the middle of {$e.season},
+  (2) That year,
+  The same year,
+  In that year also,
+  Also in that year,
+  In this year,
+  Item:
+  It is written that
+  Let it be set down that
+  Note that
+  (gov=monarchy has:$ruler $e.kind!=rulerdeath $e.kind!=accession $e.kind!=ruleend $e.kind!=regency $e.kind!=government) In the days of {$ruler:name},
+  (has:$ruler.epithet $e.kind!=rulerdeath $e.kind!=accession $e.kind!=ruleend $e.kind!=regency $e.kind!=government) Under {$ruler:name} {$ruler.epithet},
+  (gov=council|gov=republic|gov=assembly) Under {ruler.the},
+  ($e.season=spring) When the {herd} went up to the high grazing,
+  ($e.season=spring) At the sowing of the {crop},
+  ($e.season=spring) In the month they call {~sowing},
+  ($e.season=summer) In the long days,
+  ($e.season=summer) While the {crop} stood green,
+  ($e.season=summer) In the month they call {~midsummer},
+  ($e.season=autumn) At the cutting of the {crop},
+  ($e.season=autumn) When the {fruit} were in,
+  ($e.season=autumn) In the month they call {~reaping},
+  ($e.season=winter) In the cold months,
+  ($e.season=winter) When the {herd} were brought in,
+  ($e.season=winter) In the month they call {~midwinter},
+  (moons>0) At the turning of {moon},
+  (has:$e.season) Around {festival},
+  (has:$e.season) {time.of} on a day of {$e.season},
+
+# a short word after an entry: a chronicler's habit (most entries have none; a people keeps its own few)
+ann.after (share=0.5 formula)
+  . {god.call}.
+  . Let it be remembered.
+  . So it was.
+  . The truth of it.
+  . Mark it.
+  . Set down, not to be forgotten.
+  . {exclaim}.
+  . Write it in {colour.holy}.
+  . The rest is not known.
+  (faith=ancestors) . The old ones saw it.
+  (faith=sky) . {skyone} saw it.
+
+# =====================================================================================================================
+# the places and the rule
+# =====================================================================================================================
+
+annal.founding
+  {ann.lead} {ann.found.m}{ann.found.t}
+  {ann.lead} {ann.found.m}{ann.found.t}
+  ($e.founding=capital has:$e.a) {ann.lead} {$e.a:name} founded {$e.place}, and from it the years are counted.
+  ($e.founding=capital !has:$e.a) {ann.lead} {$e.place} was founded, and from it the years are counted.
+ann.found.m
+  ($e.founding!=capital !has:$e.a) {$e.place} was founded {ann.found.why}
+  ($e.founding=capital !has:$e.a) the first house was raised at {$e.place}
+  ($e.founding!=capital has:$e.a) {$e.a:name} founded {$e.place}
+  ($e.founding!=capital has:$e.place2) settlers from {$e.place2} founded {$e.place}
+  ($e.founding!=capital) the first {ann.houses} were raised at {$e.place}
+  ($e.founding!=capital) {$e.place} was founded {ann.found.why}
+  ($e.founding!=capital) the ground was marked out for {$e.place} with {colour.holy} cords
+  ($e.founding!=capital) a new place was made at {$e.place}
+  ($e.founding!=capital) people went out with their {herd} and settled at {$e.place}
+  ($e.founding!=capital has:$e.place2) {$e.place2} sent out its young to found {$e.place}
+  ($e.founding!=capital) the first {fuel} fire was lit at {$e.place}
+  ($e.founding!=capital has:$e.a) {$e.a:name} led {#n|family} to {$e.place} and stayed
+  ($e.founding=capital has:$e.a) {$e.a:name} raised the first house at {$e.place}
+ann.found.why
+  (2)
+  ($e.founding=harbour) by the shore
+  ($e.founding=crossing) at the crossing of the river
+  ($e.founding=fort) as a fort against the borders
+  ($e.founding=mine) by the new mine
+  ($e.founding=market) round a market
+  ($e.founding=shrine) round a shrine of {god}
+  ($e.founding=plain) on good ground for the {crop}
+  ($e.founding=station) by the new line
+  ($e.founding=work) for the work
+ann.found.t
+  (6) .
+  {ann.after}
+  , {ann.found.who}.
+  (has:$e.place2) ; the first families came from {$e.place2}.
+  ; they carried the fire there in {vessel.one}.
+  ; the first year they lived in {ann.house1} and were cold.
+  ; there was {material} to hand and {watersrc.n} water, and that was reason enough.
+  ; the {herd} were the first to settle, and the people followed.
+  . It was a small place of {ann.houses}, and nobody thought it would last.
+  . {$e.place} lived by {$e.place.ptrade} from the first.
+ann.found.who
+  ($e.place.river=1) on the river
+  ($e.place.coast=1) on the shore
+  with {n} families
+  (has:$e.a) under {$e.a:name}
+  in a good year
+
+# the founding's words: "houses", "a house", by the people's way (the age's plain word where the plan says nothing)
+ann.houses
+  (age<=medieval plan=round) round houses
+  (age<=medieval plan=square) long houses
+  (plan=court) courtyard houses
+  (land=stilts) houses on stilts
+  (huts=wattle age<=medieval) wattle houses
+  (age<=industrial) {walls.of} houses
+  (age>=modern) houses
+ann.house1
+  (age<=medieval plan=round) a round house
+  (age<=medieval plan=square) a long house
+  (land=stilts) a house on stilts
+  (age<=medieval huts=wattle) a wattle hut
+  (age<=medieval huts=stone) a stone hut
+  (age<=industrial) a house of {walls.of}
+  (age>=modern) a single house
+
+annal.accession
+  {ann.lead} {ann.acc.m}{ann.acc.t}
+  {ann.lead} {ann.acc.m}{ann.acc.t}
+ann.acc.m
+  ($e.accession=inherited has:$e.a) {$e.a:name} came to the rule after {$e.b:name}
+  ($e.accession=inherited has:$e.a) {$e.a:name} took the rule, as was {$e.a:poss} right
+  ($e.accession=inherited has:$e.a) the rule passed to {$e.a:name}
+  ($e.accession=inherited has:$e.a) {$e.a:name} sat down in the high seat
+  ($e.accession=inherited has:$e.b has:$e.a) {$e.a:name}, child of the house, followed {$e.b:name}
+  ($e.accession=chosen has:$e.a) {$e.a:name} was chosen to rule
+  ($e.accession=chosen has:$e.a) the elders chose {$e.a:name}
+  ($e.accession=chosen has:$e.a) {$e.a:name} was raised up by the people
+  ($e.accession=elected|$e.accession=again has:$e.a) {$e.a:name} was elected
+  ($e.accession=elected|$e.accession=again has:$e.a) the vote went to {$e.a:name}
+  ($e.accession=again has:$e.a) {$e.a:name} was elected again
+  ($e.accession=seized has:$e.a) {$e.a:name} seized the rule
+  ($e.accession=seized has:$e.a) {$e.a:name} took the rule by force
+  ($e.accession=seized has:$e.a) {$e.a:name} came in with armed men and sat down in the high seat
+  ($e.accession=appointed has:$e.a) {$e.a:name} was appointed to the rule
+  ($e.accession=won has:$e.a) {$e.a:name} won the rule in the war
+  ($e.accession=ofage has:$e.a) {$e.a:name} came of age and ruled alone
+  ($e.accession=ofage has:$e.a) {$e.a:name} was of age at last, and the regents stood down
+  ($e.accession=revolution has:$e.a) the revolution raised {$e.a:name} to the rule
+  ($e.accession=founded has:$e.a) {$e.a:name} ruled first of all
+  ($e.accession=mind) the rule was given to the mind
+  (!has:$e.a $e.accession!=mind) a new hand took the rule
+  (!has:$e.a $e.accession!=mind) the rule passed on, and the people hardly noticed
+ann.acc.t
+  (6) .
+  {ann.after}
+  ; there was feasting at {$seat} for {#n|day}.
+  ; they played {instrument} in every street of {$seat}.
+  . Not everyone was glad of it, least of all the {ann.craftfolk}.
+  ; the people came out to look, and went home.
+  (has:$e.a.trait) . {$e.a:name} was known to be {$e.a.trait}.
+  (has:$e.a.epithet) . In later years the {ann.craftfolk} called {$e.a:obj} {$e.a.epithet}.
+  (has:$e.a) ; {$e.a:name} gave {food} and {drink} to all who came.
+  (has:$e.a) . {$e.a:name} was {#$e.a.age} years old.
+  (has:$e.a) ; {$e.a:name} swore {oath} to keep the law.
+
+annal.rulerdeath
+  {ann.lead} {ann.rd.m}{ann.rd.t}
+  {ann.lead} {ann.rd.m}{ann.rd.t}
+ann.rd.m
+  {$e.a:full} died
+  {$e.a:full} died at {$e.place}
+  ($e.a.age>=70) {$e.a:full} died, old and full of years
+  ($e.a.age>=60) {$e.a:full} died in {$e.a:poss} sleep at {$e.place}
+  ($e.a.age<45) {$e.a:full} died young
+  {$e.a:full} was taken
+  (has:$e.a.epithet) {$e.a:name} {$e.a.epithet} died
+  {$e.a:full} breathed {$e.a:poss} last at {$e.place}
+  ($e.how=sickness has:$e.sickness) {$e.sickness} took {$e.a:full}
+  ($e.how=battle) {$e.a:full} fell in battle
+  ($e.how=murdered) {$e.a:full} was murdered
+  ($e.how=sea) {$e.a:full} was lost at sea
+ann.rd.t
+  {ann.after}
+  , aged {#$e.a.age}.
+  (has:$e.a.reigned) , in the {#$e.a.reigned:ord} year of {$e.a:poss} rule.
+  . The mourning lasted until {festival}.
+  (age>=medieval) . The bells were rung [in every town|for nine days|until the ropes wore through].
+  . {$e.a:name} was {buried}.
+  ; they hung {colour.mourn} cloth over the doors of {$seat}.
+  ; the fires were put out in every house for a night.
+  ; the {herd} were not driven out that day.
+  (has:$e.a.reigned) . {$e.a:name} had ruled {#$e.a.reigned|year}.
+  ; nobody worked for {#n|day}.
+  ; {$e.a:poss} {garment.n} was burned with {$e.a:obj}.
+  . The people said {$e.a:name} had {death.went}.
+  (has:$e.a.trait) . {$e.a:name} had been {$e.a.trait}, and was mourned as such.
+
+annal.ruleend
+  (!has:$e.a) {ann.lead} the old rule came to an end{ann.end.t}
+  (!has:$e.a) {ann.lead} the rule changed hands{ann.end.t}
+  ($e.ruleend=deposed has:$e.a) {ann.lead} {$e.a:full} was deposed{ann.end.t}
+  ($e.ruleend=deposed has:$e.a) {ann.lead} {$e.a:full} was put out of the rule{ann.end.t}
+  ($e.ruleend=overthrown has:$e.a) {ann.lead} {$e.a:full} was overthrown{ann.end.t}
+  ($e.ruleend=overthrown has:$e.a) {ann.lead} {$e.a:full} was pulled down from the high seat{ann.end.t}
+  ($e.ruleend=fled has:$e.a) {ann.lead} {$e.a:full} fled {$seat} by night{ann.end.t}
+  ($e.ruleend=fled has:$e.a) {ann.lead} {$e.a:full} ran from the city with {$e.a:poss} household{ann.end.t}
+  ($e.ruleend=steppeddown|$e.ruleend=gaveover has:$e.a) {ann.lead} {$e.a:full} gave up the rule{ann.end.t}
+  ($e.ruleend=steppeddown|$e.ruleend=gaveover has:$e.a) {ann.lead} {$e.a:full} laid the rule down and went home{ann.end.t}
+  ($e.ruleend=term has:$e.a) {ann.lead} {$e.a:poss} term ended, and {$e.a:name} went home to {$e.a.home}.
+  ($e.ruleend=term has:$e.a) {ann.lead} {$e.a:name} served out the term and left office{ann.end.t}
+  ($e.ruleend=ended has:$e.a) {ann.lead} the rule ended with {$e.a:full}, the last to hold it.
+ann.end.t
+  (6) .
+  ; few were sorry.
+  ; nobody knew what would come next.
+  ; nobody played {instrument} in {$seat} that year.
+  , and the people waited.
+
+annal.regency
+  {ann.lead} {$e.a:name} ruled for the child {$e.b:name}{ann.reg.t}
+ann.reg.t
+  (4) .
+  , until the child was grown.
+  ; the child was {#$e.b.age}.
+  ; it was {$e.a:name} who held the seal, whatever the coins said.
+
+annal.government
+  {ann.lead} {ann.gov.m}{ann.gov.t}
+ann.gov.m
+  ($e.govhow=reform) the rule was changed by a reform: {ann.gov.to}
+  ($e.govhow=reform) the old rule was mended: {ann.gov.to}
+  ($e.govhow=revolution) the revolution changed the rule: {ann.gov.to}
+  ($e.govhow=revolution) the people tore down the old rule: {ann.gov.to}
+  ($e.govhow=kingdom) a kingdom was proclaimed
+  ($e.govhow=kingdom) the chiefs bowed to one of their own, and there was a crown
+  ($e.govhow=priests) the priests took the rule
+  ($e.govhow=priests) the temple took the rule into its own hands
+  ($e.govhow=companies) the companies bought the rule
+  ($e.govhow=machine) the rule was given to the mind
+  ($e.govhow=coup) the soldiers took the rule
+  ($e.govhow=coup) the army came out of its barracks and took the rule
+  ($e.govhow=elders) the elders took the rule
+  ($e.govhow=assembly) the Assembly was called, and the rule passed to it
+ann.gov.to
+  ($e.gov=monarchy) a king or a queen would rule from now on
+  ($e.gov=council) the council would rule from now on
+  ($e.gov=republic) the consuls would rule from now on
+  ($e.gov=assembly) the Assembly would rule from now on
+  ($e.gov=theocracy) the priests would rule from now on
+  ($e.gov=corporate) the companies would rule from now on
+  ($e.gov=machine) the mind would rule from now on
+  ($e.gov=chiefs) the old way of the elders came back
+ann.gov.t
+  (6) .
+  ; the old seals were broken.
+  ; it was argued about in every house.
+  . Nobody asked the {herd}.
+)VG"

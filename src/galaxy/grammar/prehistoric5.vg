@@ -1,0 +1,355 @@
+R"VG(
+# prehistoric5.vg (H-04's second pass): the prehistoric song, the words the marks were made for: each people its own refrains, its own
+# way of calling to what it sang for, its own songs of the ordinary days (the hunt, the herd, the grinding, the net, the child, the
+# dead); the years' events sung are prehistoric8.vg's (`pre.song.<kind>`).
+
+# ---- the song ------------------------------------------------------------------------------------------------------------------
+
+genre.song (words=20..102)
+  {pre.sh.head}\n{@event flood,famine,sickness,battle,war,sack,coming,stones,founding,winter,drought,quake,eruption,impact,rulerdeath,omen,contact,exodus,beasts,storm,fire,wonder,games,fair,pest pre.song 80}
+  {pre.sh.head}\n{pre.sh.land}
+  {pre.sh.head}\n{pre.sh.kind}
+  {pre.sh.head}\n{pre.sh.kind}
+
+pre.sh.head (formula)
+  The marks beside the figures are a song; these are its words, as near as they can be given.
+  A chant, read from the order of the signs:
+  The words, as near as the marks allow:
+  (medium=painted) Painted beside the dancers, the signs of a song:
+  (medium=bone) A flute's bone, with signs cut between the holes: the words of its song.
+  (medium=stone) Signs cut round the edge of the stone, a song's:
+  A song for {instrument}, its words read from the signs:
+  The signs go round in a ring, so the song has no end; the ship begins it here:
+  (medium=painted) Over the figures with their mouths open, the signs of what they sang:
+  (medium=bone) A {pre.bone} with a song's signs along it, worn by a thumb:
+
+# each people's refrains (a formula: a refrain comes back by design)
+pre.refrain (formula people=4)
+  and the {herd} come home, and the {herd} come home.
+  hey, the {crop2}, hey, the {crop2}, who will carry it in.
+  {god} hears it, {god} hears it, round the fire.
+  and {river} runs on, and {river} runs on.
+  so the old ones sang it, and we sing it now.
+  beat it slow, beat it slow, the night is long.
+  oh {mountain}, {mountain}, you saw it all.
+  and the {bird} cry over the water.
+  turn the bowl, turn the bowl, and drink to the ones not here.
+  round the fire {#number|time}, and then sleep.
+  hold the light up, hold it high, the dark is wide.
+  and the smoke goes up, and the smoke goes up.
+  sing it, {$home}, sing it loud.
+  ai, ai, the long road, ai, ai, the road home.
+  (moons>0) and {moon} looks down, and says nothing.
+  and the {game} run on in the old ground.
+  one foot, the other foot, and the drum.
+  keep the fire, keep the fire, till {skyone} comes.
+
+# ---- singing to the world: "Sing for the river, it gives the fish" -------------------------------------------------------------
+
+pre.sh.land
+  {pre.sh.landl} {pre.sh.landl} {pre.sh.landl}\n{pre.refrain}
+  {pre.sh.landl} {pre.sh.landl} {pre.sh.landl} {pre.sh.landl}\n{pre.refrain}
+  {pre.sh.landl}\n{pre.sh.landl}\n{pre.sh.landl}\n{pre.refrain}
+pre.sh.landl
+  (once) {pre.call} {river}, it {pre.river.gives}.
+  (once) {pre.call} the {herd}, they {pre.herd.give}.
+  (once) {pre.call} {skyone}, it {pre.sky.gives}.
+  (once) {pre.call} {mountain}, it {pre.mtn.gives}.
+  (once) {pre.call} {god}, who made the {game}.
+  (once) {pre.call} the fire, it keeps the night out.
+  (once) {pre.call} {sun}, it comes back every morning.
+  (once moons>0) {pre.call} {moon}, who comes back.
+  (once) {pre.call} the dead {pre.dead.where}, they hear us.
+  (once) {pre.call} the children, they will sing after us.
+  (once) {pre.call} the {tree}, they hold the ground.
+  (once) {pre.call} the {crop2}, it fills the bowl.
+  (once) {pre.call} the dog, it knows the way home from {count.where}.
+  (once) {pre.call} {watersrc}, it does not fail us.
+  (once aurora=1) {pre.call} the lights in the north, they dance for us.
+  (once) {pre.call} the {game}, they feed us and forgive us.
+  (once desert=0) {pre.call} the {fish}, they come up {river} to us.
+  (once) {pre.call} the {bird}, they bring back {season.next}.
+  (once) {pre.call} {tool}, it does the work and asks for nothing.
+  (once) {pre.call} {houses}, they keep the wind off.
+  (once) {pre.call} the {fruit}, they hang low for the children.
+  (once) {pre.call} the old women, they know the name of every {tree.n}.
+  (once) {pre.call} the hunters, they come back tired.
+  (once) {pre.call} the ground under us, it holds our feet.
+  (once rings=1) {pre.call} the ring, it holds up the sky.
+  (once comet=1) {pre.call} the hairy star, it comes back when it likes.
+  (3 once contact=1) {pre.call} the {other} across the hills, they sing too.
+pre.call (people=2)
+  Sing for
+  Call to
+  Dance for
+  Shout for
+  Clap for
+  Beat the drum for
+  Sing to
+pre.river.gives (people=2)
+  (desert=0) gives the {fish}
+  gives the water
+  runs to the sea
+  carries the old leaves away
+  talks all night
+pre.herd.give (people=2)
+  give the milk
+  give the wool
+  know the way down
+  carry the loads
+  keep us warm
+pre.sky.gives (people=2)
+  keeps the time
+  shows the way
+  watches the camp
+  wakes the {bird}
+pre.mtn.gives (people=2)
+  keeps the snow
+  keeps the dead
+  breaks the wind
+  shows the way home
+pre.dead.where
+  in {deadplace}
+  under the hill
+  by the fire
+  in the smoke
+
+# ---- the songs of the ordinary days ----------------------------------------------------------------------------------------------
+
+pre.sh.kind
+  {pre.sh.hunt}
+  {pre.sh.lull}
+  {pre.sh.work}
+  {pre.sh.love}
+  {pre.sh.mourn}
+  {pre.sh.count}
+  {pre.sh.road}
+  {pre.sh.weather}
+  (economy=herding|economy2=herding) {pre.sh.herding}
+  (coast=1) {pre.sh.fishing}
+  {pre.sh.fire}
+  {pre.sh.riddle}
+
+pre.sh.hunt
+  Run, {game.one}, run, the {pre.weapon} are coming,\nrun to {mountain} and we will follow,\nyour meat for the children and your hide for {season.next},\n{pre.refrain}
+  We went out in {season.now} with the dogs before us,\nwe came back with {n} {game} and nobody hurt,\n{pre.refrain}
+  {pre.hunt.l1}\n{pre.hunt.l2}\n{pre.hunt.l3}\n{pre.refrain}
+  {pre.hunt.l1}\n{pre.hunt.l2}\n{pre.refrain}
+pre.hunt.l1
+  Quiet in the {tree}, quiet in the grass,
+  The {game} are on the ridge and the wind is right,
+  Mother of the {game}, send us one,
+  Paint the hands with {colour.holy}, the hunt goes out,
+  (cold=1) Tracks in the snow, {game.one} tracks in the snow,
+  (desert=1) The {game} come to the dry pool at dusk,
+  Sharpen the {pre.weapon}, the {bird} are flying low,
+  Over {land} we go with the dogs,
+pre.hunt.l2
+  the old ones say the first {game.one} is for {god},
+  we will take only what {vessel} can carry,
+  we have {pre.weapon} and we have the dogs,
+  we will thank the {game.one} when it falls,
+  the children are hungry and the {vessel} are empty,
+  {instrument} is quiet and so are we,
+pre.hunt.l3
+  and carry it home on poles before the dark,
+  and the camp will smell of meat and {fuel} all night,
+  and sing this when we come back over {land},
+  and give the head to the one who threw first,
+  and the {beast} will get the bones,
+
+pre.sh.lull
+  {pre.lull.l1}\n{pre.lull.l2}\n{pre.lull.l3}\nsleep.
+  {pre.lull.l1}\n{pre.lull.l2}\nsleep, {endear}, sleep.
+pre.lull.l1
+  Sleep, small one, the {fuel} fire is lit,
+  Hush, the wind is only the wind over {land},
+  Hush, the dark is only {mountain},
+  Sleep, {endear}, the {herd} are in,
+  Close your eyes, the {bird} are asleep,
+  Hush now, {roofs.one} holds the rain off,
+  Sleep, the dogs are by the door of {house.one.lc},
+pre.lull.l2
+  {god} is watching and so am I,
+  your mother is here and your father is near,
+  the {tree} are talking to each other,
+  tomorrow there is {food} and the sun,
+  (moons>0) {moon} is watching from over the hill,
+  the hunters are home and the {game.one} is hung,
+pre.lull.l3
+  nothing comes in that we do not let in,
+  the night is long but {house.one.lc} is ours,
+  the old ones are keeping the count of the {herd},
+  your feet are warm and the {beast} is near,
+roofs.one
+  (roof=domed|roof=conical) the round roof
+  (roof!=domed roof!=conical) the roof
+  the hide over us
+house.one.lc
+  the hut
+  (plan=round age<=medieval) the round house
+  (land=stilts) the house on its stilts
+  (huts=stone age<=prehistoric) the stone hut
+
+pre.sh.work
+  {pre.work.l1}\n{pre.work.l2}\n{pre.work.l3}\n{pre.refrain}
+  {pre.work.l1}\n{pre.work.l2}\n{pre.refrain}
+pre.work.l1
+  Pound the {crop2}, pound it fine,
+  Pull the net, pull the net, {river} is heavy,
+  Scrape the hide, scrape it thin,
+  Turn the stone, turn the stone, the {crop} is coming,
+  Twist the cord, twist it long,
+  Knap the stone, knap it sharp,
+  Carry the {fuel}, carry it in,
+  Dig, dig, the ground is soft for the {crop},
+  Work the {material}, work it well,
+  Weave the {material}, weave it tight,
+pre.work.l2
+  the {vessel} are empty and the children wait,
+  one {vessel.one.n} for the children, one for the old,
+  {tool} in the hand and the song in the mouth,
+  {skyone} is high and the shade is far,
+  the one who stops first fetches the water from {watersrc},
+  my arms are tired but my mouth is not, said the {craft} woman,
+  the {bird} watch us and laugh,
+pre.work.l3
+  pound it, pound it, until {sun.first} goes down,
+  one for {god} and the rest for the {vessel},
+  and tomorrow the same, and tomorrow the {crop},
+  and the song does half of the {craft},
+  till the shadows reach the {tree},
+
+pre.sh.love
+  I saw you at {watersrc} in {season.now},\nyou had the sign of {$home} on your arm,\nI will bring you a {game.one} and a string of beads,\nand the {herd} will be ours.
+  Where you walk the {crop2} comes up,\nwhere you sleep the {fuel} fire stays lit,\n{pre.refrain}
+  {pre.love.l1}\n{pre.love.l2}\n{pre.love.l3}
+pre.love.l1
+  Your hair is like the {tree} in the wind,
+  You laughed at the gathering and I could not eat my {food},
+  I made you {vessel.one} and you did not take it,
+  When you dance the dust stands still over {land},
+  I have counted the nights since {festival},
+  Your eyes are {colour.any} like the {pre.love.like},
+pre.love.like
+  {bird.one}'s wing
+  river stones
+  first light
+  {fruit}
+pre.love.l2
+  your hands smell of {fuel} smoke and {food},
+  your mother watches me like a {bird.one},
+  I would carry your water to {mountain} and back,
+  the other girls are like the {bird}, and you are the sky,
+  the other boys are like the {herd}, and you are the hill,
+pre.love.l3
+  come and sit by my fire.
+  take the beads, take the beads.
+  say yes before the {game} come back.
+  I will wait at {watersrc}.
+
+pre.sh.mourn
+  You went to {deadplace} and you did not look back,\nwe painted your hand on the wall in {colour.holy} so it stays,\n{pre.refrain}
+  The {fuel} fire is cold where you used to sit,\nthe dogs look for you at the door of {house.one.lc},\n{pre.refrain}
+  {pre.mourn.l1}\n{pre.mourn.l2}\n{pre.mourn.l3}
+pre.mourn.l1
+  You have {death.went},
+  We put {colour.mourn} on our faces for you,
+  We broke {vessel.one} at your feet,
+  {tool} is still by your door,
+  The {herd} called for you all night,
+  Your {pre.weapon.one} hangs on the post of {house.one.lc},
+pre.mourn.l2
+  and we cannot follow yet,
+  and the camp is too quiet for the {beast},
+  and nobody laughs the way you did over the {food},
+  and the children ask where,
+pre.mourn.l3
+  the dead are {dead.are}.
+  go slow, go slow, we are coming after.
+  keep a place by the fire for us.
+  {pre.refrain}
+
+pre.sh.count
+  One {game.one}, two {game}, three for the pot,\nfour for the dogs and five for the old,\nand the rest, and the rest, for the ones who come home from {land}.
+  {pre.count.l} {pre.count.l} {pre.count.l}\nand that is all the {pre.count.end}, and that is enough.
+pre.count.end
+  {herd}
+  {game}
+  children
+  {vessel}
+  stars
+pre.count.l
+  One for the fire,
+  two for the water,
+  three for the {herd},
+  (number>3) {#number} for {god}, as it was always,
+  four for the children,
+  five for the hand that counts,
+  six for the {tree},
+  seven for the stars,
+
+pre.sh.road
+  {pre.road.l1}\n{pre.road.l2}\n{pre.road.l3}\n{pre.refrain}
+pre.road.l1
+  We are walking to {count.where} with the fire in {vessel.one},
+  Up over the ridge and down to {river},
+  Three days to the flint place, three days back over {land},
+  The camp moves on when the {game} move on,
+pre.road.l2
+  the old ones on the {herd}, the children on our backs,
+  the dogs ahead of us and the {bird} behind,
+  carry the {vessel}, carry {tool},
+pre.road.l3
+  we will sleep by {watersrc},
+  and the old camp grows {tree} behind us,
+  and nobody knows the way like {$home} knows it,
+
+pre.sh.weather
+  {pre.wx.l1}\n{pre.wx.l2}\n{pre.refrain}
+pre.wx.l1
+  (desert=0) Rain, rain, come down on the {crop2},
+  Wind, go round us, go round {$home},
+  (cold=1) Snow, lie soft on the huts tonight,
+  (desert=1) Dust, go back to the dunes where you live,
+  Sun, come up over {mountain},
+  {weather.now}, {weather.now}, go away,
+pre.wx.l2
+  we have done nothing to you,
+  we will give you the first of the {crop},
+  the children want to go out to {watersrc},
+  the {herd} are tired of the shelter,
+
+pre.sh.herding
+  Up to the high grass, up, up,\nthe {herd} know the way better than we do,\n{pre.refrain}
+  Come down, come down, the {herd}, come down,\nthe snow is on the tops of {mountain} and the pens are open,\n{pre.refrain}
+  (desert=1) Out to the far water with the {herd},\nthree days there and three days back,\n{pre.refrain}
+pre.sh.fishing
+  (desert=0) The sea is grey and the {pre.boat} is small,\nthe {fish} are under us, deep and cold,\n{pre.refrain}
+  The sea is grey and the {pre.boat} is small,\nwhat we eat is under us, deep and cold,\n{pre.refrain}
+pre.boat (people=1)
+  boat
+  skin boat
+  reed boat
+  log boat
+  canoe
+  (desert=0) Throw the net wide, throw it wide,\nthe {fish} are running and the {bird} know it,\n{pre.refrain}
+pre.sh.fire
+  {pre.fire.l1}\n{pre.fire.l2}\n{pre.refrain}
+pre.fire.l1
+  Little fire, eat the {fuel},
+  The fire was given to the first ones by {god}, in {vessel.one},
+  Who keeps the fire keeps the band,
+  Feed it, feed it, do not let it sleep,
+pre.fire.l2
+  and give us warm hands for the {crop},
+  and keep the dark at the door of {house.one.lc},
+  and we will sing to you with {instrument} every night,
+pre.sh.riddle
+  {pre.riddle}
+pre.riddle (share=0.6)
+  What runs and never tires? {river}.\nWhat sleeps and never wakes? {mountain}.\nWhat is fed and is never full? The {fuel} fire.\n{pre.refrain}
+  What has a mouth and no teeth? {vessel.one}.\nWhat has teeth and no mouth? {tool}.\nWhat has a song and no voice? The bone you are holding.
+  Who is older than the old ones? {mountain}.\nWho is younger than the newborn? The morning.\nWho is everyone's and no one's? {skyone}.
+  What walks in front of you and is never caught? The day.\nWhat follows you home and is not a {beast}? The smoke.\n{pre.refrain}
+)VG"

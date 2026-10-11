@@ -1,0 +1,121 @@
+R"VG(
+# ending3.vg (H-04's second pass): the collapse's lists (ending.vg's causes): the last orders of the rule, and the inventory of what is
+# left. Each counts the people's own things: its vessels, its crop, its herds, its fuel, its water, its tools, its measures.
+
+# ---- the last orders ---------------------------------------------------------------------------------------------------------
+
+genre.orders (words=35..91)
+  {orders.head} {orders.item} {orders.item} {orders.item} {orders.close}
+  {orders.head} {orders.item} {orders.item} {orders.item} {orders.item} {orders.close}
+
+orders.head (formula)
+  (age<=medieval) By order of {ruler.the}, in the hard year:
+  (age=industrial) Emergency orders, to be posted in every street:
+  (age>=modern) Emergency instructions. Read this to the end.
+  To all who are left at {$seat}:
+  (age<=medieval) Hear the orders of {ruler.the}, and keep them:
+  To every house at {$seat}, from {ruler.the}:
+
+orders.item
+  (once) Every house is to give its {vessel} of {crop} to the common store; a measure a day, a measure a person.
+  (once) The {herd} are to be killed and salted before {season.next}.
+  (once) The roads to {dest} are open until the end of {season.now}; after that nobody goes, not even the {herd}.
+  (once) The sick are to be kept apart, in {hall}, and fed {food} there.
+  (once) The dead are to be {buried} the same day, by whoever is near.
+  (once) The young are to go first with the {herd}; the old are to follow if they can.
+  (once) {watersrc} is to be guarded day and night. Water by the cup, at the call.
+  (once) Carry nothing that is not {food}, water or a child.
+  (once inv.railway=1) The trains will run until the coal is gone; be at the station {time.of} with no more than {vessel.one}.
+  (once age>=modern) Do not use the roads or the lines; stay in with the {herd} and wait to be told.
+  (once) Lock nothing; someone may need the {vessel} you leave.
+  (once) The {fuel} is to be shared: every house its share, no house more.
+  (once) No {crop} is to be sold. Anyone selling it will lose it.
+  (once) The {crop} seed is not to be eaten; whoever eats the seed eats next year.
+  (once) The {craft} is stopped. Every hand is wanted in the fields.
+  (once) {fuel} fires are to be kept low and lamps put out by dark.
+  (once) {holyplace} is to be open day and night for whoever needs it.
+  (once) Every {ann.farone} of the wall is to be watched.
+  (once) Children without parents are to be taken into the nearest {ann.house1.n}.
+  (once cause=sickness|cause=greatsickness|cause=epidemics|cause=engineered) Nobody is to enter a house with the {colour.any} mark on its door.
+  (once cause=drying|cause=waterwar) Nobody is to water the {herd} until the people have drunk.
+  (once cause=iceage|cause=cold) Every house is to take in the family next door and burn one fire of {fuel}, not two.
+  (once cause=flood|cause=climate) Everyone below the old mark on the quay is to move up the hill with the {herd} by {season.next}.
+  (once cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar) Every grown person is to bring a weapon to {town.open} at the call.
+  (once cause=famine|cause=cropfailure|cause=foodsystems) The {fruit} and the {veg} are to be gathered by everyone and kept by no one.
+  (once cause=leaving|cause=exodus|cause=elsewhere) Those who go are to leave the keys at {hall} and the {herd} in the common pen.
+  (once age>=industrial inv.radio=1) The radio will give the news at noon; listen for your town's name over the {herd}.
+
+ann.farone
+  pace
+  span
+  stride
+
+orders.close (formula)
+  This is the last order. There will not be another.
+  {ruler.the} will be the last to leave {$seat}.
+  {god.keep}, all of you.
+  Do as you are told and we may yet come through.
+  These orders hold until there is nobody to keep them.
+
+# ---- the inventory of what is left -------------------------------------------------------------------------------------------
+
+genre.inventory (words=30..76)
+  {inventory.head} {inventory.item}; {inventory.item}; {inventory.item}; {inventory.item}. {inventory.end}
+  {inventory.head} {inventory.item}; {inventory.item}; {inventory.item}; {inventory.item}; {inventory.item}. {inventory.end}
+  {inventory.head} {inventory.item}; {inventory.item}; {inventory.item}. {inventory.note} {inventory.end}
+
+inventory.head (formula)
+  What is left at {$home}, counted in {season.now}:
+  The count of what remains, {#year:digits}:
+  For whoever comes after: what we have, and where.
+  Counted at {$home} by those who could still count:
+  The stores of {$home}, as they stand:
+
+inventory.item
+  (once) {n} {vessel} of {crop}, two of them spoiled
+  (once) {n} of the {herd}, and an old one past use
+  (once) water in {watersrc}, enough for {n} days if nobody washes
+  (once) {n} of us; the youngest is {n} and minds the {herd}
+  (once) the {crop} seed for {season.next}, if {season.next} comes at all
+  (once) the lamps, and {fuel} for {n} nights
+  (once) the records of {$home}, in {vessel} in the room by the gate
+  (once) the tools of the {craft}, oiled and wrapped
+  (once) the keys of the empty {ann.houses}, on a {colour.any} string
+  (once age>=industrial) the medicines, very few, in {vessel.one}
+  (once age>=modern) the generator, and {fuel} for {n} days
+  (once) {n} {measure.load} of {crop2}
+  (once) {fuel} for {n} nights, less if it is cold
+  (once) {n} {vessel} of {food}, sealed
+  (once) {n} {vessel} of {drink}, for the dead and the living
+  (once) {tool}, and nobody strong enough to use it
+  (once) {instrument}, and nobody to play it
+  (once) the {colour.holy} cloth from {holyplace}, folded
+  (once) {n} bolts of {colour.any} cloth
+  (once) the {fruit} on the trees, if the {bird} leave any
+  (once) a {beast}, which follows us about
+  (once) the {herd} that went wild, somewhere on the hill
+  (once) {material} enough to mend one roof
+  (once) {garment} for every one of us, and more than that
+  (once age>=medieval) {nbig} {coin}, which will buy nothing
+  (once) the {veg} in the gardens, gone to seed
+  (once) the boats, pulled up and turned over on the {material}
+  (once) the dead, {n} of them this {season.now}, {buried}
+
+inventory.note
+  The {crop} will not last.
+  Someone has eaten the seed.
+  We have counted it twice.
+  It is more {crop} than we thought.
+
+inventory.end
+  That is all. With the {crop} it is enough for a while.
+  It will not last until {season.next}, even with the {herd}.
+  Whoever finds this: take what you need from the {vessel}. We did.
+  We have left the doors open for the {herd}.
+  We will count the {vessel} again in {season.next}, if we are here.
+  It is written so we stop counting the {herd} in our heads.
+ann.house1.n
+  house
+  (plan=round age<=medieval) round house
+  (age<=medieval huts=wattle) hut
+)VG"

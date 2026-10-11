@@ -1,0 +1,215 @@
+R"VG(
+# news3.vg (H-04's second pass): the news's register, continued: the collapse as the papers saw it (the signs, the towns left, the
+# people leaving), the sky, the feasts, the other people, the institutions, the discoveries, the faith, a deed, a regency, and the quiet
+# week (`news.none`: what a paper prints when nothing happened, which is most weeks).
+
+news.sign
+  {news.h.sign}\n{news.sign.m} {news.sign.t}
+news.h.sign
+  Concern grows
+  Questions asked
+  A strange season
+  (stage>=2) The trouble spreads
+  (stage>=2) What is happening?
+news.sign.m
+  It is reported that {$e.sign}.
+  Readers have written to say that {$e.sign}.
+  Our correspondent writes that {$e.sign}, and that nobody in the town will talk about it.
+  It is now confirmed that {$e.sign}; the rumours of last {season.any} were, if anything, too mild.
+  (stage>=2) Again: {$e.sign}.
+news.sign.t
+  {news.said} that there is no cause for alarm.
+  This paper has asked the council for an explanation and received none.
+  {news.said} that a commission will look into it, and report by {season.next}.
+  The old people say they have seen it before; the young ones say the old people say that about everything.
+  (stage>=1) Families are asking the paper whether they should leave. The paper does not know.
+  (stage>=1) The price of a cart has doubled in a month, and of a {vessel.one.n} of {crop} more.
+  The priests of {holyplace} have called for {news.rite.imp.x}.
+  The {herd} have been restless, the farmers say, and the {bird} are gone from the roofs.
+news.rite.imp.x
+  a fast
+  a day of silence
+  prayers at every hearth
+  the old rites to be kept again
+
+news.abandoned
+  {news.h.left}\n{news.left.m} {news.left.t}
+news.h.left
+  {$e.place} abandoned
+  The last of {$e.place}
+  {$e.place} empty
+news.left.m
+  The last residents of {$e.place} have left. The town has been empty for some months.
+  ($e.left=river) {$e.place} is given up: the river has moved away from it, and the wharves stand over dry mud.
+  ($e.left=wells) {$e.place} is given up, its water gone; the last carts left with the last barrels.
+  ($e.left=mine) The mine at {$e.place} is worked out, and the town with it.
+  ($e.left=soil) The fields round {$e.place} will grow nothing more, and its people have gone to where something grows.
+  ($e.left=cities) Nobody young is left in {$e.place}, and now nobody old either.
+  ($e.left=taken) {$e.place} has been given up to the enemy without a fight.
+  ($e.left=collapse|$e.left=cause) {$e.place} has emptied, family by family, until there was nobody left to post the notice.
+news.left.t
+  Its {houses} stand open to the weather.
+  The council has taken the bells away for safe keeping.
+  (has:$e.place.landmark) Of the town, only {$e.place.landmark} still looks as it did.
+  A watchman will stay until {season.next}, the council says, and then he will not.
+  Its people are said to be at {$home} and in the coast towns, and its {herd} on the roads.
+  The {crop} fields about the town are going back to grass and {tree}.
+
+news.exodus
+  {news.h.exo}\n{news.exo.m} {news.exo.t}
+news.h.exo
+  Mass departures
+  They are leaving
+  The roads are full
+news.exo.m
+  {#$e.value:about} people are reported to have left {$e.place} in the last month.
+  ($e.whither=sea) {#$e.value:about} have taken ship from {$e.place}, and the boats come back empty for more.
+  ($e.whither=mountains) {#$e.value:about} have left {$e.place} for the mountains with what they could carry.
+  ($e.whither=south|$e.whither=north) {#$e.value:about} have left {$e.place} for the {$e.whither}, where they have heard it is better.
+  ($e.whither=sky) The ships have taken {#$e.value:about} from {$e.place}; the launch was watched by everyone who stayed.
+news.exo.t
+  The carters are charging what they like.
+  The {herd} of the leavers are being sold at {town.open} for almost nothing.
+  The houses they left have their doors open and their lamps on the tables.
+  {news.said} that they will come back when things are better.
+  They take {vessel} of {crop} and the {colour.holy} cloth from {holyplace}, and little else.
+
+# ---- the sky -----------------------------------------------------------------------------------------------------------------
+news.omen
+  ($e.omen=comet) The comet returns\nThe comet has returned, as the astronomers predicted; it was last seen in our grandparents' time. {news.omen.t}
+  ($e.omen=eclipse) Eclipse\nThe sun was eclipsed at noon yesterday, and {news.eclipse.m}. {news.omen.t}
+  ($e.omen=aurora) Lights in the north\nThe lights were in the north sky over {$e.place} for three nights running. {news.omen.t}
+  ($e.omen=falling) A falling star\nA fireball crossed the sky over {$e.place} at night, and some say they heard it. {news.omen.t}
+  ($e.omen=newstar) A new star\nA star nobody has seen before is shining {news.newstar.m}. {news.omen.t}
+  ($e.omen=redmoon) The red moon\n{moon} rose red over {$e.place}, as red as anyone can remember. {news.omen.t}
+news.eclipse.m
+  the {bird} went to roost at midday
+  the {herd} lay down in the fields
+  crowds watched it through smoked glass in {town.open}
+  the bells rang by order of the council, to the confusion of the {herd}
+news.newstar.m
+  low in the evening sky
+  near {star}, brighter every night
+  where the old charts show nothing
+news.omen.t
+  It will be visible after dark for some weeks.
+  The astronomers of {city} say it means nothing; the fortune-tellers of {$home} say otherwise.
+  Children have been allowed to stay up to see it.
+  {news.omen.bad}
+news.omen.bad
+  Some are saying it is a bad sign, as they always do.
+  The old people of {$home} are counting it among the signs, as they count everything.
+
+news.festival
+  {$e.place} celebrates\n{$e.place} marked the {#$e.value:ord} year of its founding with {news.fest.how}. {news.fest.t}
+news.fest.how
+  a procession and fireworks
+  {feast.custom} and speeches
+  a dinner for the oldest families and a fair for everyone else
+  a holiday, a parade and a great deal of {drink}
+news.fest.t
+  The {colour.holy} flags were out in every street.
+  The oldest resident, who admits to ninety, cut the bread.
+  Nobody went to work the next day either.
+  The band played {news.tune} until the band could not.
+  {feast.custom} lasted until morning, as it should.
+
+# ---- the other people --------------------------------------------------------------------------------------------------------
+news.contact
+  Strangers at {$e.place}\nPeople who are not of the {people} have been met near {$e.place}. They call themselves the {other}. {news.contact.t}
+news.contact.t
+  They are said to be peaceful, and to have brought {news.contact.gift}.
+  Nobody yet speaks their language, but they understand prices.
+  {news.said} that envoys will be sent.
+news.contact.gift
+  salt
+  cloth of a weave nobody here can make
+  beasts we have no name for
+  a great deal of curiosity
+news.treaty
+  Treaty with the {other}\nA treaty has been signed with the {other} at {$e.place}, {news.treaty.m}.
+news.treaty.m
+  and the frontier roads will be open from {season.next}
+  and the traders of both peoples are pleased
+  and nobody is quite sure what it says
+news.otherend
+  The {other}\nThere has been no word from the {other} for a year. Their towns are reported empty, and {news.otherend.t}.
+news.otherend.t
+  the traders who went to look came back quickly and would not say what they saw
+  their fields are going back to grass
+  nobody can say where they have gone
+
+# ---- the institutions, the discoveries, the faith, a deed, a regency -----------------------------------------------------------
+news.institution
+  {$e.instname}\n{$e.instname} was founded yesterday {news.inst.t}.
+news.inst.t
+  , with speeches
+  , to the surprise of nobody who had been asked for money
+  (has:$e.a) by {$e.a:full}
+  , and has already met twice
+news.discovery
+  A discovery\n{news.disc.m} {news.disc.t}
+news.disc.m
+  (has:$e.a) {$e.a:name} has returned from an expedition with remarkable news.
+  ($e.discovery=farshore has:$e.a) {$e.a:name} has come back from over the sea with word of a coast nobody had seen.
+  ($e.discovery=source has:$e.a) {$e.a:name} has followed {river} to its source, and found it smaller than the river deserves.
+  ($e.discovery=pass has:$e.a) {$e.a:name} has found a way over {mountain} that a cart can take.
+  ($e.discovery=round) The learned now agree that the world is round, which the sailors say they knew.
+  The expedition sent from {$e.place} has come home with [maps|specimens|stories|less than it took].
+news.disc.t
+  A lecture on it will be given at the hall, with lantern pictures.
+  The council has voted the explorers a dinner of {food} and {drink}.
+  Not everyone believes it, least of all the {craft} guild, which was not consulted.
+news.faith
+  ($e.faith=schism) A split in the faith\nThe faithful of {$e.place} are divided, and two services are held where there was one.
+  ($e.faith=reformed has:$e.a) The rites reformed\n{$e.a:full} has changed the old rites at {$e.place}, and everyone has an opinion.
+  ($e.faith=reformed !has:$e.a) The rites reformed\nThe old rites have been changed at {$e.place}, and everyone has an opinion.
+  ($e.faith=preached has:$e.a) A new preacher\n{$e.a:full} is preaching at {$e.place}, and the hall cannot hold the crowds.
+  ($e.faith=preached !has:$e.a) A new faith\nA new faith is being preached at {$e.place}, and the hall cannot hold the crowds.
+  ($e.faith=closed) The temples closed\nThe temples have been closed by order, and their keepers sent home.
+  ($e.faith=persecution) Arrests at {$e.place}\nThe faithful of {$e.place} are being arrested, it is said, for holding the old rites.
+news.deed
+  (has:$e.a) {$e.a:name}\n{news.deed.m}
+news.deed.m
+  ($e.deed=song) A song by {$e.a:name} is being sung in every street of {$e.place}, and some streets would like it to stop.
+  ($e.deed=book|$e.deed=chronicle) A book by {$e.a:name} of {$e.place} is said to be in every house that has a shelf.
+  ($e.deed=book|$e.deed=chronicle) {$e.a:name} of {$e.place} has written a book about {news.booksubject}, and the printers cannot print it fast enough.
+  ($e.deed=map) The new map of the land made by {$e.a:name} shows {$e.place} smaller than {$e.place} thought.
+  ($e.deed=healed) The doctor {$e.a:name} has stopped the fever at {$e.place}, and the town has given a dinner.
+  ($e.deed=theory) {$e.a:name} has published a new account of the world, which the old accounts dispute.
+  ($e.deed=taught) {$e.a:name} has taught at {$e.place} for many years, and the old pupils gave a dinner this week.
+  ($e.deed=frieze|$e.deed=pictures|$e.deed=gardens) The new work of {$e.a:name} at {$e.place} can be seen on the rest day.
+  ($e.deed=laws|$e.deed=hunt|$e.deed=sailed) {$e.a:full} is the talk of {$e.place} this week.
+news.regency
+  A regent\n{$e.a:full} will rule for {$e.b:name}, who is a child, until {$e.b:name} comes of age.
+
+# ---- the quiet week ---------------------------------------------------------------------------------------------------------
+news.none
+  {news.quiet.h}\n{news.quiet.b} {news.quiet.t}
+news.quiet.h
+  Nothing to report
+  A quiet week
+  From the provinces
+  Around the towns
+  The week
+news.quiet.b
+  It has been a quiet week across the land; the council sat twice and decided nothing.
+  The {crop} is said to be average in the south and a little better in the north.
+  The roads are open and the markets full, and prices are steady.
+  The rest day passed without incident, the police report, apart from the usual.
+  {festival} was kept in the towns, with {feast.custom} as always.
+  From the hill towns, nothing but weather; from the coast, nothing but fish.
+  The provinces report {weather.now}, a good price for {herd}, and a wedding in every second village.
+news.quiet.t
+  This paper is glad of it.
+  We will report something when something happens.
+  Readers with news are asked to bring it to the office, with a {vessel.one.n} of {fruit} if possible.
+  The {bird} are back on the roofs, and that is the news.
+  The {herd} are fat and the {crop} is green, and the paper has nothing to add.
+news.booksubject
+  the founding of {city}
+  the {craft} trade and its secrets
+  the year of the great {weather}
+  a family of {$e.place}, very like the writer's
+  the rivers, and the {fish} in them
+)VG"

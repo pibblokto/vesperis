@@ -1,6 +1,9 @@
 #include "landmarks.h"
+#include "plan.h"
+#include "peoples.h"
 #include "drainage.h"
 #include "ruins.h"
+#include "works.h"
 #include "core/noise.h"
 #include <cmath>
 #include <algorithm>
@@ -9,8 +12,8 @@
 #include <atomic>
 #include <chrono>
 
-const char* LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS"};
-const char* LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#"};
+const char* LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS", "WORKS"};
+const char* LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#", "%"};
 
 namespace {
 constexpr double CELL_KM = 14.0;   // the sights' grid: one of each kind at most per cell of about 14 km
@@ -63,7 +66,8 @@ bool sightsWorld(const BodyGen& g) { return PLANET_TYPES[g.type].landable && g.t
 int landmarkCellsSearched() { return g_lmSearched.load(); }
 double landmarkScanMs(int part) { return g_lmMs[part]; }
 
-bool sightsOfCell(const BodyGen& g, int ci, int cj, CellSights& out, bool buildTiles) {
+bool sightsOfCell(const BodyGen& gSeason, int ci, int cj, CellSights& out, bool buildTiles) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     out = CellSights();
     if (!sightsWorld(g)) return false;
     CellKey key{g.seed, ci, cj};
@@ -126,8 +130,19 @@ unsigned sightKindsOf(const BodyGen& g) {
     if (g.hasTrait(TR_GEYSERS)) m |= 1u << LM_GEYSERS;
     if ((g.type == PT_QUARTZ || g.type == PT_CARBON) && g.hasTrait(TR_SPIRES)) m |= 1u << LM_CRYSTALS;
     if (typeHasDrainage(g.type) && (g.type == PT_FELISIAN || g.type == PT_HYDROCARBON || g.type == PT_ACIDIC)) m |= 1u << LM_LAKE;
-    if (worldHasRuins(g)) m |= 1u << LM_RUIN;
+    if (worldHadCivilisation(g)) m |= (1u << LM_RUIN) | (1u << LM_WORK);   // C-01, T-03 (B-417: no ruins on a world without a people)
     return m;
+}
+
+void worksHeardNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out) {
+    out.clear();
+    if (!worldHadCivilisation(g) || !sightsWorld(g)) return;
+    std::vector<std::shared_ptr<const Work>> near; worksAround(g, unit, radiusM, near);   // B-418: the world's and the land's
+    for (const std::shared_ptr<const Work>& w : near) {
+        if (!w->heard || std::acos(clampd(dot(w->unit, unit), -1, 1)) * g.R * 1000.0 > radiusM) continue;
+        Landmark L; L.kind = LM_WORK; L.unit = w->unit; L.id = w->id; L.radiusM = w->radiusM; L.heightM = w->ground; L.prominenceM = w->height; L.sub = w->kind;
+        out.push_back(L);
+    }
 }
 
 namespace {
@@ -368,10 +383,9 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         }
         g_lmMs[1] += nowMs() - tl0;
     }
-    // 7. the ruins of the old ones (M4-07's grid of 2 km cells, one in twenty, on felisian, quartz and ocean worlds) and,
-    // on a world that had a civilisation (C-01, `galaxy/ruins.*`), its settlements: the biggest of the cell (a town before a
-    // village before a hamlet before a monolith); the scanner lists every one of them apart (`ruinsNear`)
-    if (g.type == PT_FELISIAN || g.type == PT_QUARTZ || worldHadCivilisation(g)) {
+    // 7. on a world that had a civilisation (C-01, `galaxy/ruins.*`), its settlements in M4-07's grid of 2 km cells: the biggest of the
+    // cell (a town before a village before a hamlet before a monument); the scanner lists every one of them apart (`ruinsNear`)
+    if (worldHadCivilisation(g)) {
         double dLat = ruinCellLat(g);   // the ruins' grid (M4-07): 2 km cells of latitude and longitude
         int gLat0 = (int)std::floor((lat0 - half / (g.R * 1000.0)) / dLat), gLat1 = (int)std::floor((lat0 + half / (g.R * 1000.0)) / dLat);
         double bestSize = 0; Vec3 bestU; RuinSpec bestSpec;
@@ -388,16 +402,15 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
                 Vec3 u = StarSystem::bodyFromLatLon(spec.lat, spec.lon);
                 int ci2, cj2; landmarkCellOf(g, u, ci2, cj2);
                 if (ci2 != ci || cj2 != cj) continue;
-                double size = spec.kind == RK_SETTLEMENT ? 1000.0 * settlementRank(spec.sclass) + 500.0 + spec.size : spec.size;
+                double size = 1000.0 * settlementRank(spec.sclass) + 500.0 + spec.size;
                 if (size <= bestSize || !ruinSiteOk(g, spec)) continue;
                 bestSize = size; bestU = u; bestSpec = spec;
             }
         }
         if (bestSize > 0) {
-            bool settlement = bestSpec.kind == RK_SETTLEMENT;
             Landmark& L = sight(LM_RUIN);
-            L.unit = bestU; L.radiusM = settlement ? bestSpec.size : 60; L.prominenceM = settlement ? 2 * bestSpec.size : bestSpec.size;
-            L.sub = settlement ? bestSpec.sclass + 1 : 0; L.heightM = sampleSurface(g, bestU, 16.0).height;
+            L.unit = bestU; L.radiusM = bestSpec.size; L.prominenceM = 2 * bestSpec.size;
+            L.sub = bestSpec.sclass; L.heightM = sampleSurface(g, bestU, 16.0).height;
         }
     }
     // 8. a peak: the highest point of the cell, standing 90 m over the cell's mean (50 m on the flat types: an inselberg
@@ -451,9 +464,10 @@ void sightsNear(const BodyGen& g, const Vec3& unit, double radiusM, unsigned kin
     }
 }
 
-void ruinsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out) {
+void ruinsNear(const BodyGen& gSeason, const Vec3& unit, double radiusM, std::vector<Landmark>& out) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     out.clear();
-    if (!worldHasRuins(g) || !sightsWorld(g)) return;
+    if (!worldHadCivilisation(g) || !sightsWorld(g)) return;
     double lat, lon;
     StarSystem::latLonFromBody(unit, lat, lon);
     const double R = g.R * 1000.0, rRad = radiusM / R, dLat = ruinCellLat(g);
@@ -470,14 +484,35 @@ void ruinsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<L
             if (!ruinOfCell(g, gLat, gLon, spec, false)) continue;
             Vec3 u = StarSystem::bodyFromLatLon(spec.lat, spec.lon);
             if (std::acos(clampd(dot(u, unit), -1, 1)) * R > radiusM) continue;
-            const bool settlement = spec.kind == RK_SETTLEMENT;
             double h = 0;
-            if (settlement) { DrainageOff off; if (!ruinSiteOk(g, spec)) continue; h = sampleSurface(g, u, 64.0).height; }   // as the surface view keeps them
-            else { SurfaceSample sm = sampleSurface(g, u, 16.0); if (sm.water > -1e8 && sm.height < sm.water) continue; h = sm.height; }   // as it draws the monoliths
+            { DrainageOff off; if (!ruinSiteOk(g, spec)) continue; h = sampleSurface(g, u, 64.0).height; }   // as the surface view keeps them
             Landmark L; L.kind = LM_RUIN; L.unit = u; L.id = spec.seed; L.heightM = h;
-            L.radiusM = settlement ? spec.size : std::max(20.0, spec.size); L.prominenceM = settlement ? 2 * spec.size : spec.size;
-            L.sub = settlement ? spec.sclass + 1 : 0;
+            L.radiusM = spec.size; L.prominenceM = 2 * spec.size; L.sub = spec.sclass;
             out.push_back(L);
+        }
+    }
+    // T-01: the world plan's places heard by their size from beyond the cells' reach (a capital from 400 km, a city from 200, a town of the
+    // plan from 80, a band's seat from 40; a futuristic people's great places from 300 and 120; a far-future work from 1,500)
+    {
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
+        std::set<uint64_t> have; for (const Landmark& L : out) have.insert(L.id);
+        for (int k = 0; k < P->peoples; k++) {
+            const PeoplePlan& pp = P->plans[k];
+            for (const PlanPlace& p : pp.places) {
+                double hear;
+                switch (p.sclass) {
+                    case SC_CAPITAL: hear = 400e3; break;
+                    case SC_CITY: hear = 200e3; break;
+                    case SC_MONUMENT: hear = 1500e3; break;
+                    case SC_TOWN: hear = pp.age == AGE_FUTURISTIC ? 300e3 : 80e3; break;
+                    default: hear = pp.age == AGE_FUTURISTIC ? 120e3 : 40e3; break;
+                }
+                if (have.count(p.seed) || std::acos(clampd(dot(p.unit, unit), -1, 1)) * R > hear) continue;
+                Landmark L; L.kind = LM_RUIN; L.unit = p.unit; L.id = p.seed;
+                { DrainageOff off; L.heightM = sampleSurface(g, p.unit, 64.0).height; }
+                L.radiusM = std::max(20.0, p.radiusM); L.prominenceM = 2 * p.radiusM; L.sub = p.sclass;
+                out.push_back(L);
+            }
         }
     }
 }

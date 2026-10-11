@@ -1,6 +1,8 @@
 // Game orchestration core: construction, settings, the frame loop, global keys, test hooks.
 // autopilot.cpp, hud.cpp, landing_map.cpp, game_states.cpp and persistence.cpp hold the rest.
 #include "game.h"
+#include "galaxy/works.h"
+#include "galaxy/plan.h"
 #include "galaxy/roads.h"
 #include "galaxy/drainage.h"
 #include <chrono>
@@ -17,7 +19,7 @@
 #include "core/png.h"
 #include "core/fs.h"
 
-Game::~Game() { if (migrateThread.joinable()) migrateThread.join(); }
+Game::~Game() { if (migrateThread.joinable()) migrateThread.join(); if (droneJob.joinable()) droneJob.join(); }
 
 Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
     canvas.px = rgbBuf.data(); canvas.w = FBW; canvas.h = FBH;
@@ -35,6 +37,12 @@ void Game::loadFromDisk() {
     guide.genVersion = GEN_VERSION;
     hasSave = loadNewest();
     if (!hasSave) newGame();
+    if (guide.migratedShards > 0) {   // T-04: the shards found before the records were the peoples' own, kept by their index: said once (the guide saved)
+        logEvent("SHARD", fmt("THE OLD PEOPLES' RECORDS WERE REGENERATED: THE %d SHARDS FOUND ARE KEPT BY THEIR PLACE IN THEIR WORLDS' RECORDS, THE LANGUAGE AS LEARNT, THEIR CONTENTS NEW", guide.migratedShards));
+        statusNext = fmt("RECORDS REGENERATED - %d SHARDS KEPT, CONTENTS NEW", guide.migratedShards); statusNextSecs = 8;
+        guide.migratedShards = 0;
+        guide.save(guidePath);
+    }
     state = GameState::TITLE;
 }
 
@@ -138,8 +146,10 @@ void Game::newGame() {
     almanacRunning = false;   // W-01
     telescopeOff(); tele = TelescopeState();   // W-06
     radarOff(); radar = RadarState();   // C-07
+    playerStop(); stopInstrument(); player.items.clear(); icase = InstrumentCase();   // C-11
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10
     probe = ProbeState();   // X-01: a new expedition sends nothing
+    bay = DroneBay();       // C-18: nor drones
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -257,14 +267,16 @@ void Game::frame(const Input& in, double realDt) {
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
-    if (audio.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the music plays on the decoder screen only (C-07: or through the radar)
-    if (audio.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                     // C-05: the voice too
-    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE)) radarOff();   // C-07: a ship's instrument, off the ship
-    if (tele.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE)) telescopeOff();   // W-06: stowed off the window
+    if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the decoder's music on its screen only (C-07: or through the radar; C-11: the ship's player plays on)
+    if (audio.speech && audio.speech == &shardWorld.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                 // C-05: the voice too
+    if ((audio.instrument || icase.discOn) && state != GameState::INSTRUMENTS) stopInstrument();                                                       // C-11: an instrument is played at its case
+    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS || state == GameState::DRONES)) radarOff();   // C-07: a ship's instrument, off the ship
+    if (tele.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS || state == GameState::DRONES)) telescopeOff();   // W-06: stowed off the window
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
     collectMigration();   // R-408: the named sights found on the thread become marks
     bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
-                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS || state == GameState::PROBE;
+                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS || state == GameState::PROBE ||
+                      state == GameState::INSTRUMENTS || state == GameState::DRONES;
     if (in.wasPressed(KEY_T) && simulating) {
         if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }   // W-01: the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
         else if (almanacRunning) almanacStop(false);
@@ -282,6 +294,7 @@ void Game::frame(const Input& in, double realDt) {
     if (simulating) { autosaveTimer += realDt; if (autosaveTimer >= 300) { autosave(); autosaveTimer = 0; } }
     probe.fast = state == GameState::PROBE && in.shift() && probe.endClock < 0;   // R-406: Shift held on the probe's screen, this frame's clock x8
     if (simulating) updateProbe(realDt);   // X-01: the probe falls on the relay's clock (real time) wherever the explorer is aboard
+    if (simulating) updateDrones(realDt);  // C-18: the drones' trip and the bay's cooldown on real time, wherever the explorer is
     // state logic
     switch (state) {
         case GameState::TITLE:
@@ -363,6 +376,8 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::SHIPSCREEN: updateShipScreen(in); updateShipMotion(dt); break;
         case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
         case GameState::SHARDS: updateShards(in, realDt); updateShipMotion(dt); break;   // C-06
+        case GameState::INSTRUMENTS: updateInstruments(in, realDt); updateShipMotion(dt); break;   // C-11
+        case GameState::DRONES: updateDroneBay(in, realDt); updateShipMotion(dt); break;   // C-18
         case GameState::SECTOR_MAP: updateSectorMap(in); break;
         case GameState::ALMANAC: updateAlmanac(in); break;   // W-01
         case GameState::PROBE: updateProbeScreen(in, dt, realDt); break;   // X-01
@@ -389,6 +404,7 @@ void Game::frame(const Input& in, double realDt) {
         }
     }
     probeAudio();   // X-01: the relay's sound for this frame
+    updatePlayer(realDt);   // C-11: the ship's player, wherever the ship is (a landing stops it)
     // rendering
     switch (state) {
         case GameState::TITLE: renderSpace(); renderTitle(); break;
@@ -419,6 +435,10 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::DATA:
         case GameState::KEYS:
         case GameState::SHARDS:
+        case GameState::INSTRUMENTS:
+        case GameState::DRONES:
+            if (state == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); break; }   // G-05: the galaxy chart covers the frame: no scene under it
+            if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }   // G-06: a mark's name, over the chart
             if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // X-04: naming the storm over the probe's screen
                 if (guideReturn == GameState::PROBE) renderProbe(); else renderRecording();
                 renderTextEntry();
@@ -441,6 +461,8 @@ void Game::frame(const Input& in, double realDt) {
             else if (state == GameState::SHIPSCREEN) renderShipScreen();
             else if (state == GameState::CONSOLE) renderConsole();
             else if (state == GameState::SHARDS) renderShards();   // C-06
+            else if (state == GameState::INSTRUMENTS) renderInstruments();   // C-11
+            else if (state == GameState::DRONES) renderDroneBay();   // C-18
             else if (state == GameState::SECTOR_MAP) renderSectorMap();
             else if (state == GameState::SYSTEM_LIST) renderSystemList();
             else renderDataSheet();
@@ -474,6 +496,21 @@ std::string Game::testRoadInfo() const {   // C-09
     else s += "; no road within 30 m";
     s += fmt("; roads met %zu", roadsMet.size());
     return s;
+}
+
+bool Game::testWalkToWork(double withinM) {   // T-03
+    if (!surf.valid || surf.inVehicle() || !worldHadCivilisation(surf.site.gen)) return false;
+    const Vec3 here = surf.site.unitAt(surf.player.x, surf.player.z);
+    std::vector<std::shared_ptr<const Work>> near; worksAround(surf.site.gen, here, std::min(withinM, 60000.0), near);   // B-418: the land's within 60 km
+    const std::shared_ptr<const WorldWorks> W = worldWorksOf(surf.site.gen);
+    for (const Work& w : W->works) near.push_back(std::shared_ptr<const Work>(W, &w));   // and the world's wherever they are
+    const Work* best = nullptr; double bd = withinM;
+    for (const std::shared_ptr<const Work>& w : near) { if (!w->heard) continue; const double d = std::acos(clampd(dot(w->unit, here), -1, 1)) * W->Rm; if (d < bd) { bd = d; best = w.get(); } }
+    if (!best) return false;
+    double x, z; surf.site.localAt(best->unit, x, z);
+    const double r = best->radiusM + 150, dx = surf.player.x - x, dz = surf.player.z - z, d = std::max(1.0, std::hypot(dx, dz));
+    surf.player.x = x + dx / d * r; surf.player.z = z + dz / d * r; surf.player.y = surf.site.surfaceHeight(surf.player.x, surf.player.z); surf.player.vx = surf.player.vz = 0;
+    return true;
 }
 
 bool Game::testWalkToRoad(double withinM) {   // C-09
@@ -541,6 +578,7 @@ void Game::testParkAt(const Star& s, int body) {
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
     nb.update(ship.pos);
     state = GameState::SPACE;
+    worldPlanPrefetch(spaceR.genFor(b));   // T-01
     if (PLANET_TYPES[b.type].landable) beginLanding();
 }
 
@@ -624,7 +662,7 @@ bool Game::testWalkToGrave() {   // C-12: a metre in front of the nearest settle
     if (!surf.valid || surf.inVehicle()) return false;
     bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT || cell.graves.empty()) return;
+        if (cell.graves.empty()) return;
         const Grave& g = cell.graves[0];
         double x = r.x + g.x, z = r.z + g.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
         if (d < bestD) { bestD = d; sx = x + std::sin(g.heading); sz = z + std::cos(g.heading); yaw = g.heading + PI; found = true; }
@@ -634,11 +672,105 @@ bool Game::testWalkToGrave() {   // C-12: a metre in front of the nearest settle
     return true;
 }
 
+int Game::testWalkToRecord(int medium, bool archive) {   // T-04
+    if (!surf.valid || surf.inVehicle()) return -1;
+    double bestD = 1e18; int found = -1; ShardSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
+    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        for (const ShardSite& st : cell.shards) {
+            if (surf.shardsFound.count(st.index) || (medium >= 0 && st.medium != medium) || archive != (st.archive > 0)) continue;
+            const double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
+            if (d >= bestD) continue;
+            bestD = d; found = st.index; site = st; rx = r.x; rz = r.z;
+            const Building& b = cell.spec.buildings[st.building]; bx = r.x + b.x; bz = r.z + b.z;
+        }
+    });
+    if (found < 0) return -1;
+    const double x = rx + site.x, z = rz + site.z;
+    double dx, dz;
+    if (site.wallD > 0) { dx = std::sin(site.heading); dz = std::cos(site.heading); }   // before the wall, facing it
+    else if (site.archive) {   // square to the row: toward the room's middle, or away from the structure a ring of them stands round
+        const double px = std::cos(site.heading), pz = -std::sin(site.heading);
+        double side = px * (bx - x) + pz * (bz - z) < 0 ? -1.0 : 1.0;
+        if (site.outside) side = -side;
+        dx = px * side; dz = pz * side;
+    } else {   // toward its building's middle from a record in a room, away from it at a foot
+        dx = bx - x; dz = bz - z; double L = std::hypot(dx, dz);
+        if (L < 0.3) { dx = std::sin(site.heading); dz = std::cos(site.heading); L = 1; }
+        dx /= L; dz /= L;
+        if (site.outside) { dx = -dx; dz = -dz; }
+    }
+    // the first stand clear of the pieces (a column, a pier, a wall) at a distance that frames it (an archive's row from either side)
+    static const double BACK[2][5] = {{1.25, 1.0, 1.5, 0.8, 1.8}, {1.5, 1.2, 1.9, 1.0, 0.8}};
+    std::vector<SurfaceView::Collider> cols;
+    double sx = x + dx * 1.25, sz = z + dz * 1.25, back = 1.25;
+    bool placed = false;
+    for (int side = 0; side < (site.archive ? 2 : 1) && !placed; side++) {
+        if (side == 1) { dx = -dx; dz = -dz; }
+        for (int k = 0; k < 5 && !placed; k++) {
+            const double bk = site.wallD > 0 ? 0.9 + 0.2 * k : BACK[site.archive ? 1 : 0][k];
+            const double cx = x + dx * bk, cz = z + dz * bk, gy = surf.site.surfaceHeight(cx, cz);
+            surf.collectColliders(cx, cz, cols);
+            bool blocked = false;
+            for (const SurfaceView::Collider& c : cols) if (std::hypot(c.x - cx, c.z - cz) < c.r + 0.3 && c.y1 > gy + 0.4 && c.y0 < gy + 1.8) { blocked = true; break; }
+            if (!blocked) { sx = cx; sz = cz; back = bk; placed = true; }
+        }
+    }
+    if (!placed) { if (site.archive) { dx = -dx; dz = -dz; } sx = x + dx * 1.25; sz = z + dz * 1.25; back = 1.25; }
+    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz);
+    surf.player.yaw = std::atan2(-dx, -dz);
+    surf.player.pitch = site.wallD > 0 ? -0.3 : -std::atan2(1.45, back + 0.4);   // the eye 1.6 m up, the object a little ahead of the frame's middle
+    return found;
+}
+
+int Game::testWalkToInstrument(int age) {   // C-11: before the nearest instrument not taken (of that age), as `testWalkToRecord` stands before a record
+    if (!surf.valid || surf.inVehicle()) return -1;
+    double bestD = 1e18; int found = -1; InstrumentSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
+    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        if (cell.instrumentIds.size() != cell.instruments.size()) return;
+        for (size_t i = 0; i < cell.instruments.size(); i++) {
+            const InstrumentSite& st = cell.instruments[i];
+            const int id = cell.instrumentIds[i];
+            if (id < 0 || surf.instrumentsFound.count(id) || (age >= 0 && st.age != age)) continue;
+            const double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
+            if (d >= bestD) continue;
+            bestD = d; found = id; site = st; rx = r.x; rz = r.z;
+            const Building& b = cell.spec.buildings[st.building]; bx = r.x + b.x; bz = r.z + b.z;
+        }
+    });
+    if (found < 0) return -1;
+    const double x = rx + site.x, z = rz + site.z;
+    double dx = bx - x, dz = bz - z, L = std::hypot(dx, dz);
+    if (L < 0.3) { dx = std::sin(site.heading); dz = std::cos(site.heading); L = 1; }
+    dx /= L; dz /= L;
+    std::vector<SurfaceView::Collider> cols;
+    std::vector<std::pair<double, double>> records;   // the records not taken round it: a stand has the instrument nearer than any (E takes the nearer)
+    surf.forNearbyRuins(x, z, 1, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
+        for (const ShardSite& st : cell.shards) if (!surf.shardsFound.count(st.index) && std::hypot(r.x + st.x - x, r.z + st.z - z) < 4) records.push_back({r.x + st.x, r.z + st.z});
+    });
+    double sx = x + dx * 1.3, sz = z + dz * 1.3, back = 1.3;
+    bool placed = false;
+    for (int pass = 0; pass < 2 && !placed; pass++)
+        for (int turn = 0; turn < 16 && !placed; turn++) {   // round it until a stand clear of the pieces frames it (first one where nothing else lies nearer)
+            const double a = turn * PI / 8, ux = dx * std::cos(a) - dz * std::sin(a), uz = dx * std::sin(a) + dz * std::cos(a);
+            for (double bk : {1.2, 0.9, 1.6}) {
+                const double cx = x + ux * bk, cz = z + uz * bk, gy = surf.site.surfaceHeight(cx, cz);
+                if (pass == 0) { bool nearer = false; for (const auto& rc : records) if (std::hypot(rc.first - cx, rc.second - cz) < bk + 0.05) nearer = true; if (nearer) continue; }
+                surf.collectColliders(cx, cz, cols);
+                bool blocked = false;
+                for (const SurfaceView::Collider& c : cols) if (std::hypot(c.x - cx, c.z - cz) < c.r + 0.3 && c.y1 > gy + 0.4 && c.y0 < gy + 1.8) { blocked = true; break; }
+                if (!blocked) { sx = cx; sz = cz; back = bk; dx = ux; dz = uz; placed = true; break; }
+            }
+        }
+    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz);
+    surf.player.yaw = std::atan2(-dx, -dz);
+    surf.player.pitch = -std::atan2(1.4, back + 0.3);
+    return found;
+}
+
 bool Game::testWalkToShard() {   // C-13: a metre from the nearest settlement's first shard not yet taken, facing it
     if (!surf.valid || surf.inVehicle()) return false;
     bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (const ShardSite& st : cell.shards) {
             if (surf.shardsFound.count(st.index)) continue;
             double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);

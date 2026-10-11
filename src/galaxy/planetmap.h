@@ -76,6 +76,9 @@ struct SurfaceSample {
 struct BodyGen {
     int type = PT_CRATERED;
     uint64_t seed = 0;
+    // R-413: the world's own seed (`make`): a people's generator (C-13's `peopleGen`, or a copy with the people's seed) changes `seed`
+    // alone and keeps it, so it can be read as its world's people (a second people's age is its first's: `peopleAgeOf`)
+    uint64_t worldSeed = 0;
     double R = 3000;        // km
     double seaLevel = 0;    // felisian: -1..1 continent threshold
     double mountainAmp = 3000, hillAmp = 200, detailAmp = 20;
@@ -137,8 +140,18 @@ struct BodyGen {
     double cliffStep = 40;      // O6-04: the height of the cliff bands on steep ground (metres), hashed
     double cliffAmount = 0.5;   // O6-04: the share of the steep ground that is cliffed (0..1)
     uint64_t sA = 1, sB = 2, sC = 3, sD = 4, sE = 5, sF = 6, sG = 7;
+    // T-02: the body's star's sector and its index in the system (`Body::starSx..`): a reader of the world that needs its system (the
+    // history: the star, the comets, the moons) regenerates it from these (`historyOfWorld`, galaxy/history.h); never read by the terrain
+    int64_t starSx = 0, starSy = 0, starSz = 0;
+    int bodyIndex = -1;
+    bool starKnown = false;
     static BodyGen make(const Body& b, double season = 0);
 };
+// B-419: what is made on a world is the world's, not its season's. The terrain the explorer sees keeps the season (the winter
+// hemisphere's ice cap and snow line); a reader of the world's made things (a people's plan, its extent, its histories, settlements,
+// roads and works, the scanner's sights) reads it without (the cap and the line at their means): the generator itself where its season
+// is 0, else a copy without it in `tmp`
+inline const BodyGen& unseasoned(const BodyGen& g, BodyGen& tmp) { if (g.season == 0) return g; tmp = g; tmp.season = 0; return tmp; }
 
 // B-321: the climate's mean surface temperature (degrees C) at a latitude, height and season on a living world: the
 // biome table and the HUD read the same number. `sub` is dot(unit, lockedDir) on a locked world (0 otherwise).

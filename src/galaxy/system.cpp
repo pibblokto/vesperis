@@ -477,6 +477,7 @@ void StarSystem::generate(const Star& s) {
         b.locked = true;
         b.lockedDir = bodyFrame(i, 0) * normalize(star.pos - bodyPos(i, 0));
     }
+    for (Body& b : bodies) { b.starSx = star.sx; b.starSy = star.sy; b.starSz = star.sz; b.starKnown = true; }   // T-02
 }
 
 // O3: belt rocks. The belt is cut into rings of BELT_CELL_KM in radius; each ring turns as one at the Kepler rate of its

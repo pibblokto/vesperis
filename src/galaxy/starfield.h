@@ -85,6 +85,15 @@ bool globularInCell(int64_t cx, int64_t cy, int64_t cz, Vec3& centre, double& ra
 bool openClusterInCell(int64_t cx, int64_t cy, int64_t cz, Vec3& centre, double& radius);
 int clusterAt(double sx, double sy, double sz, double& dens);   // 0 none, 1 open, 2 globular; dens: the cluster's density at the point
 double galaxyDensity(double sx, double sy, double sz);   // 0..1, in sector units
+// G-05 (2026-10-08): the field without the cluster knots (the disc and its arms, the bulge, the cap), and its face-on column through the
+// whole height of the disc at (sx, sz) in stars per square light year, in closed form: the disc falls as e^(-|y|/h) and the bulge as a
+// gaussian half as thick as it is wide, so the column is 2 A h + B R sqrt(pi) / 2 where the two stay under the cap; in the core, where
+// they meet it, the height at which they fall under it is bisected and the slab of solid stars added to the two tails. `disk`, `arm`
+// and `bulge` are the three parts' shares of the uncapped column (the old disc between the arms, the arms' excess, the bulge), by which
+// the galaxy chart colours its light
+double galaxyFieldDensity(double sx, double sy, double sz);
+struct FaceOnColumn { double column = 0, disk = 0, arm = 0, bulge = 0; };
+FaceOnColumn galaxyFaceOnColumn(double sx, double sz);
 // M9-13 regions of the galaxy: where a sector sits decides star classes, names and the backdrop.
 enum GalaxyRegion { REGION_CORE = 0, REGION_BULGE, REGION_ARM, REGION_DISK, REGION_HALO, REGION_CLUSTER, REGION_NEBULA, REGION_OPEN, REGION_COUNT };   // G-02: REGION_OPEN, an open cluster of the disc
 extern const char* REGION_NAMES[REGION_COUNT];
@@ -102,6 +111,9 @@ constexpr double BAND_EXPOSURE = 2600, BAND_GAMMA = 0.7;   // the column that re
 double galaxyColumn(const Vec3& obsSectors, const Vec3& dir, double& tau);
 double bandToneOf(double column);   // the brightness 0..1 of a column
 void buildGalaxyBand(const Vec3& obsSectors, std::vector<float>& map, int W, int H);
+// G-07: the cells c0..c1 (row-major, j W + i) of a map already W x H, on the pool: a Vimana flight builds its keyframes a share
+// a frame (`SpaceRenderer::flightBand`); the cells are independent, so a map built in shares is the whole build's to the bit
+void buildGalaxyBandCells(const Vec3& obsSectors, std::vector<float>& map, int W, int H, int c0, int c1);
 // N5-01: nebula patches of the star-forming regions around an observer (sector coordinates): a direction, an
 // angular radius (radians), a tone (0 blue, 1 red, 2 white) and a strength; nebulaGlow is their glow 0..1 in a direction.
 // G-03: the patches belong to star-forming complexes, one in a NEBULA_CELL ly column of the arms with probability
@@ -159,6 +171,9 @@ std::string galacticHeading(const Vec3& fromSectors, const Vec3& dir);
 // the length of a Vimana flight in real seconds: 7 + 2 sqrt(ly) to 100 ly (27 s), then 6 s for every doubling (R-407: a crossing
 // of the galaxy in 87 s, not ten minutes)
 double vimanaSeconds(double ly);
+// G-07: the share of a Vimana flight's line flown at the share u of its time, a smoothstep (the ship's motion and the band's
+// keyframes ahead of it read the one curve)
+inline double vimanaProgress(double u) { u = u < 0 ? 0 : (u > 1 ? 1 : u); return u * u * (3 - 2 * u); }
 std::string generateName(uint64_t seed, int style = 0);   // style 0 plain, 1 hard (core/halo), 2 flowing (arms/nebulae)
 std::string romanNumeral(int n);
 inline uint64_t sectorSeed(int64_t sx, int64_t sy, int64_t sz) { return hash3i(sx, sy, sz, 0x5EED5EEDULL); }

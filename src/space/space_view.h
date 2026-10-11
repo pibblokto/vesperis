@@ -49,6 +49,11 @@ struct SpaceContext {
     // build may take (0: the whole plate now, for a photo or a harness frame)
     int detailBody = -1;
     int detailBudget = 8000;
+    // G-07: a Vimana flight's line (km) and its clock (real seconds), so the galaxy's band is built ahead of the ship along the
+    // line (`vimanaProgress`); flightDur 0 in a flight: no line given, no band
+    Vec3 flightFrom, flightTo;
+    double flightT = 0, flightDur = 0;
+    bool nebulae = true;      // G-07: the star-forming regions' patches over the band (the harness measures the band alone without them)
 };
 
 // W-06 (the user's review, 2026-10-06): the telescope's plate. The world map (512 x 256 texels, 11-44 km each) is the
@@ -75,6 +80,11 @@ struct DetailPlate {
     bool drainageWanted = false;
     double radiusM = 0;        // the ground radius the plate covers (what the drainage prefetch is asked for)
     long samples = 0;
+    // T-01: the world plan's places and ways over the plate (galaxy/plan.h), read once the plan is built: the cores' built ground and the
+    // ways' beds over the cells as the ground has them (what is seen from orbit is what is walked on)
+    struct PlanCore { Vec3 u; double r = 0, alb = 0.45, standing = 1; };
+    struct PlanWay { Vec3 a, b; double half = 3, k = 0.3; };
+    std::vector<PlanCore> cores; std::vector<PlanWay> ways; bool planRead = false;
     static constexpr int BLOCKS[4] = {8, 4, 2, 1};
     bool valid() const { return W > 0; }
     bool done() const { return pass >= 4; }
@@ -153,6 +163,29 @@ private:
     std::vector<float> bandMap;   // M1-09 galactic backdrop for the current neighbourhood
     Vec3 bandPos; bool bandValid = false;
 public:
+    // G-07 (KI-364): the band in a Vimana flight. The flight's line is closed-form, so the band is built ahead of the ship:
+    // keyframes at flight times `tau` (half a second apart, closer where the galactic centre would turn more than two degrees
+    // past the ship between two), each a whole band map at the ship's place then, built a share a frame on the pool so that it
+    // is whole within half its interval; a frame draws the two keyframes round the clock blended (`shown`). The first keyframe
+    // is the band the ship was seeing (the parked map, built within ten sectors of the start), the last is handed to the parked
+    // band, so neither end of the flight builds anything at once
+    struct FlightBand {
+        Vec3 from, to; double dur = -1;   // the flight (sector units) the keyframes belong to
+        std::vector<double> tau;          // the keyframes' flight times, 0 .. dur
+        struct Key { int k = -1; int done = 0; std::vector<float> map; } keys[3];   // keyframes k, k+1 and the next being built (done: cells)
+        std::vector<float> shown;         // the map the last frame drew
+        double lastT = -1;
+        int k = 0;                        // the interval drawn last (tau[k] .. tau[k+1])
+        bool handed = false;              // the last keyframe given to the parked band
+        long built = 0, forced = 0;       // keyframes finished, and those the clock needed before their share was done (built at once)
+        int cellsFrame = 0;               // the cells the last frame built
+    };
+    FlightBand fband;
+    const std::vector<float>& flightBand(const SpaceContext& c);   // the band a flight frame draws (builds the frame's share)
+    Vec3 flightBandPos(double tFlight) const;                       // the ship's place (sectors) at a time of the current flight
+    long parkedBandBuilds = 0;                                      // the parked band's builds (the harness: an arrival builds none)
+    const std::vector<float>& parkedBand() const { return bandMap; }
+    Vec3 parkedBandPos() const { return bandPos; }
     const std::vector<float>& ringProfile(const StarSystem& sys, int bi);   // M5-04: the surface draws ring arcs with it
 private:
     void startMap(const Body& b, int bucket);

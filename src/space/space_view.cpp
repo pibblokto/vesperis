@@ -1,4 +1,6 @@
 #include "space_view.h"
+#include "galaxy/plan.h"
+#include "galaxy/roads.h"
 #include "galaxy/probe.h"
 #include "galaxy/fronts.h"
 #include "galaxy/nights.h"   // W-04: the earthshine
@@ -651,6 +653,35 @@ void SpaceRenderer::plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket
 // the build: the block passes in order, the blocks of a pass in rows, `budget` samples at most (0: all of it)
 void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
     long left = budget > 0 ? budget : (1L << 40);
+    const double Rm = g.R * 1000.0;
+    if (!p.planRead && worldHadCivilisation(g)) {   // T-01: the plan's cores and ways in reach of the plate (it is built at the approach; until then not)
+        if (std::shared_ptr<const WorldPlan> P = worldPlanIfReady(g)) {
+            p.planRead = true;
+            const double reach = p.radiusM + 3000;
+            std::vector<const PlanPlace*> ps; planPlacesNear(*P, p.u0, reach, ps);
+            for (const PlanPlace* q : ps) {
+                const Culture cu = cultureOf(g, q->people);
+                const RGB pc = cu.palette.colour[0];
+                DetailPlate::PlanCore k; k.u = q->unit; k.r = q->radiusM; k.alb = clampd(0.25 + 0.5 * (0.3 * pc.r + 0.55 * pc.g + 0.15 * pc.b), 0.2, 0.7); k.standing = 0.75 - 0.45 * cu.decay;
+                p.cores.push_back(k);
+            }
+            if (p.texelM < 300) {   // a way shows where a texel is no more than ten times its width
+                std::vector<PlanEdgeRef> es; planEdgesNear(*P, p.u0, reach, es);
+                for (const PlanEdgeRef& r : es) {
+                    if (r.e->kind == NK_SEA) continue;
+                    const std::vector<Vec3>& way = planEdgeWay(g, *P, r);
+                    const Culture cu = cultureOf(g, r.people);
+                    static const double KD[NK_COUNT] = {0.2, 0.3, 0.5, 0.45, -0.15, -0.2, 0};   // darker (a railway's ballast), paler (a highway's slabs)
+                    for (size_t k = 0; k + 1 < way.size(); k++) {
+                        if (std::acos(clampd(dot(way[k], p.u0), -1, 1)) * Rm > reach + PLAN_LEG_KM * 1000) continue;
+                        DetailPlate::PlanWay w; w.a = way[k]; w.b = way[k + 1]; w.half = netHalfWidth(r.e->kind, cu, r.e->trunk) * (r.e->kind == NK_MAGLEV ? 0.5 : 1.0); w.k = KD[clampi(r.e->kind, 0, NK_COUNT - 1)];
+                        p.ways.push_back(w);
+                    }
+                }
+            }
+        }
+    }
+    const int rockMat = familyRep(g.type, FAM_ROCK);
     while (!p.done() && left > 0) {
         int L = DetailPlate::BLOCKS[p.pass];
         int bw = (p.W + L - 1) / L, bh = (p.H + L - 1) / L, nBlocks = bw * bh;
@@ -672,7 +703,23 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
                         double alb = s.albedo;
                         if (g.type == PT_GASGIANT && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));   // M9-10: the polar vortex, as the map has it
-                        p.height[o] = (float)s.height; p.material[o] = (uint8_t)s.material;
+                        int mat = s.material;
+                        for (const DetailPlate::PlanCore& k : p.cores) {   // T-01: a core's built ground, its share of the cell, less what the years took
+                            const double d = std::acos(clampd(dot(u, k.u), -1, 1)) * Rm;
+                            if (d > k.r + p.texelM) continue;
+                            const double f = clampd((k.r - d) / p.texelM + 0.5, 0, 1) * std::min(1.0, k.r / std::max(1.0, p.texelM)) * k.standing;
+                            alb += (k.alb - alb) * f;
+                            if (f > 0.4 && mat != MAT_WATER) mat = rockMat;
+                        }
+                        for (const DetailPlate::PlanWay& w : p.ways) {   // the ways' beds: their share of the cell, darker or paler by their kind
+                            const Vec3 ab = w.b - w.a; const double L2 = dot(ab, ab);
+                            const double tt = L2 > 1e-24 ? clampd(dot(u - w.a, ab) / L2, 0, 1) : 0;
+                            const double d = length(u - (w.a + ab * tt)) * Rm;
+                            if (d > w.half + p.texelM) continue;
+                            const double cover = clampd((w.half + 0.5 * p.texelM - d) / p.texelM, 0, std::min(1.0, 2 * w.half / p.texelM));
+                            alb *= 1 - w.k * cover;
+                        }
+                        p.height[o] = (float)s.height; p.material[o] = (uint8_t)mat;
                         p.albedo[o] = (uint8_t)clampi((int)(alb * 255 + 0.5), 0, 255);
                         p.veg[o] = (uint8_t)clampi((int)(s.veg * 255 + 0.5), 0, 255);
                         p.cloud[o] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon + p.cloudDrift0, lat) * 255 + 0.5), 0, 255);
@@ -1125,6 +1172,77 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     });
 }
 
+// G-07: the keyframes' spacing at a flight time: half a second, or the time the galactic centre takes to turn two degrees past
+// the ship (the flight's speed over its distance from the centre, 1,000 ly at least), a twentieth of a second at the least
+static double flightKeyStep(const Vec3& from, const Vec3& to, double dur, double t) {
+    const double u = clampd(t / dur, 0, 1);
+    const double speed = length(to - from) * 6 * u * (1 - u) / dur;   // ly a second: the smoothstep's slope
+    const Vec3 p = lerp(from, to, vimanaProgress(u));
+    const double w = speed / std::max(1000.0, length(p - Vec3(GALAXY_CENTRE_SX, 0, GALAXY_CENTRE_SZ)));
+    return clampd(w > 1e-9 ? 2 * DEG / w : 0.5, 0.05, 0.5);
+}
+
+Vec3 SpaceRenderer::flightBandPos(double tt) const { return lerp(fband.from, fband.to, vimanaProgress(fband.dur > 0 ? tt / fband.dur : 1)); }
+
+const std::vector<float>& SpaceRenderer::flightBand(const SpaceContext& c) {
+    FlightBand& F = fband;
+    const int W = BAND_MAP_W, H = BAND_MAP_H, N = W * H;
+    const Vec3 from = c.flightFrom / SECTOR_KM, to = c.flightTo / SECTOR_KM;
+    if (F.dur != c.flightDur || length(F.from - from) > 1e-6 || length(F.to - to) > 1e-6) {   // a new flight: its keyframes' times
+        F = FlightBand();
+        F.from = from; F.to = to; F.dur = std::max(1e-3, c.flightDur);
+        F.tau.push_back(0);
+        while (F.tau.back() < F.dur) {
+            double next = F.tau.back() + flightKeyStep(from, to, F.dur, F.tau.back());
+            if (next > F.dur - 0.025) next = F.dur;   // no sliver of an interval at the end
+            F.tau.push_back(next);
+        }
+        if (bandValid && length(bandPos - from) <= 10.0) { F.keys[0].k = 0; F.keys[0].map = bandMap; F.keys[0].done = N; }   // the band the ship was seeing
+    }
+    const double t = clampd(c.flightT, 0, F.dur);
+    const int last = (int)F.tau.size() - 1;
+    const int k = clampi((int)(std::upper_bound(F.tau.begin(), F.tau.end(), t) - F.tau.begin()) - 1, 0, last - 1);
+    auto find = [&](int kk) -> FlightBand::Key* { for (FlightBand::Key& key : F.keys) if (key.k == kk) return &key; return nullptr; };
+    auto slot = [&](int kk) -> FlightBand::Key& {   // keyframe kk's key: its own, else one holding none of k .. k+2
+        if (FlightBand::Key* key = find(kk)) return *key;
+        for (FlightBand::Key& key : F.keys)
+            if (key.k < k || key.k > k + 2) { key.k = kk; key.done = 0; key.map.assign((size_t)N, 0.f); return key; }
+        return F.keys[0];
+    };
+    auto build = [&](FlightBand::Key& key, int cells) {   // the next `cells` of a keyframe (all that is left: -1)
+        const int c1 = cells < 0 ? N : std::min(N, key.done + cells);
+        if (c1 <= key.done) return 0;
+        buildGalaxyBandCells(flightBandPos(F.tau[key.k]), key.map, W, H, key.done, c1);
+        const int n = c1 - key.done;
+        key.done = c1;
+        if (key.done == N) F.built++;
+        return n;
+    };
+    F.cellsFrame = 0;
+    FlightBand::Key* A = find(k);
+    if (!A || A->done < N) { FlightBand::Key& a = slot(k); F.cellsFrame += build(a, -1); F.forced++; A = &a; }   // the start without a parked band, a skip of the clock
+    // the frame's share: a keyframe whole within half its interval at the clock's pace, a sixteenth of one at the least (a still
+    // clock finishes too); the next keyframe first, then the one after it
+    const double dtF = F.lastT >= 0 ? std::max(0.0, t - F.lastT) : 0.0;
+    int budget = std::max(N / 16, (int)std::ceil(N * dtF / std::max(0.025, 0.5 * (F.tau[k + 1] - F.tau[k]))));
+    for (int kk = k + 1; kk <= std::min(k + 2, last) && budget > 0; kk++) {
+        FlightBand::Key& key = slot(kk);
+        if (key.done == N) continue;
+        const int n = build(key, budget);
+        budget -= n; F.cellsFrame += n;
+        if (key.done < N) break;
+    }
+    A = find(k);
+    const FlightBand::Key* B = find(k + 1);
+    const bool both = B && B->done == N;
+    const double w = both ? clampd((t - F.tau[k]) / std::max(1e-9, F.tau[k + 1] - F.tau[k]), 0, 1) : 0;
+    F.shown.resize((size_t)N);
+    for (int i = 0; i < N; i++) F.shown[i] = both ? (float)(A->map[i] + ((double)B->map[i] - A->map[i]) * w) : A->map[i];
+    if (both && k + 1 == last && !F.handed) { bandMap = B->map; bandPos = to; bandValid = true; F.handed = true; }   // the arrival's band, ready before it
+    F.lastT = t; F.k = k;
+    return F.shown;
+}
+
 void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
     bodyInfo.clear();
     if (c.sys && c.sys->valid) setSeason(*c.sys, c.t);
@@ -1135,22 +1253,32 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         fb.clear(0);
     }
     fb.clearDepth();
-    // M1-09: the galactic backdrop, a faint band of unresolved stars (rebuilt when the ship moved)
-    if (!c.vimana) {
+    // M1-09: the galactic backdrop, a faint band of unresolved stars (rebuilt when the ship moved); G-07: in a Vimana flight
+    // too, from the flight's keyframes (KI-364: the band was not drawn in a flight), under the streaks that fade into it
+    if (!c.vimana || c.flightDur > 0) {
         Vec3 obs = c.shipPos / SECTOR_KM;
-        if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; }   // G-03: rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
+        const std::vector<float>* bandSrc = &bandMap;
+        if (c.vimana) bandSrc = &flightBand(c);
+        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; parkedBandBuilds++; }   // G-03: rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
         Mat3 camT = c.cam.transposed();
         double invf = 1.0 / proj.f;
         const int step = 2;
         NebulaPatch nebP[18];
-        int nebN = nebulaPatches(obs, nebP, 16);   // N5-01: the star-forming region's patches, blue, red or white
+        int nebN = c.nebulae ? nebulaPatches(obs, nebP, 16) : 0;   // N5-01: the star-forming region's patches, blue, red or white
+        if (c.vimana && c.flightDur > 0 && nebN) {
+            // G-07: the patches lie within 42 ly, so past a few tens of light years a second they would come and go within a frame or two
+            // (a 30-degree disc for one frame): a flight fades them by its speed, half at 15 ly a second, seen as it sets off and arrives
+            const double u = clampd(c.flightT / c.flightDur, 0, 1), v = length(c.flightTo - c.flightFrom) / SECTOR_KM * 6 * u * (1 - u) / c.flightDur;
+            const double fade = 1.0 / (1.0 + (v / 15) * (v / 15));
+            for (int i = 0; i < nebN; i++) nebP[i].inten *= fade;
+        }
         if (c.sys && c.sys->valid) nebN += starNebulaPatches(c.sys->star, normalize(c.sys->star.pos - c.shipPos), nebP + nebN);   // S-04: a protostar's own cloud
         parallelFor(FBH / step, 40, [&](int rb, int re) {
             for (int y = rb * step; y < re * step && y < FBH; y += step)
                 for (int x = 0; x < FBW; x += step) {
                     Vec3 d = normalize(Vec3((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0));
                     Vec3 dw = camT * d;
-                    double band = sampleGalaxyBand(bandMap, BAND_MAP_W, BAND_MAP_H, dw);
+                    double band = sampleGalaxyBand(*bandSrc, BAND_MAP_W, BAND_MAP_H, dw);
                     Pix pv = pix(0, band * BAND_SHADES);   // G-03: the map is the brightness itself
                     if (nebN) {
                         int tone;

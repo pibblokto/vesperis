@@ -10,6 +10,14 @@ std::string fmt(const char* f, ...) {
     return buf;
 }
 std::string upper(std::string s) { for (char& c : s) c = (char)toupper((unsigned char)c); return s; }
+std::string thousands(double v) {   // 13050 -> "13,050" (G-05; C-15's radar)
+    const long long n = std::llround(std::fabs(v));
+    const std::string d = std::to_string(n);
+    std::string out;
+    for (size_t i = 0; i < d.size(); i++) { if (i && (d.size() - i) % 3 == 0) out += ','; out += d[i]; }
+    return (v < -0.5 ? "-" : "") + out;
+}
+
 std::string trunc(const std::string& s, size_t n) { return s.size() <= n ? s : s.substr(0, n - 1) + "."; }
 std::vector<std::string> wrapText(const std::string& s, size_t width) {
     std::vector<std::string> out;

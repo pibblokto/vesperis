@@ -1,0 +1,210 @@
+R"VG(
+# letter_events5.vg (H-04, the second pass): the letter's register for the everyday (letter_events4.vg's conventions): games, laws,
+# trials, envoys, the works' disasters, prices, the herds, plays and songs, the ruler passing through.
+
+# ---- games ---------------------------------------------------------------------------------------------------------------------
+
+letter.games
+  ($e.a.person!=1 tense=past has:$e.a) There were {let.games.of} at {$e.place}, and {$e.a:full} won. {let.games.coda}
+  (tense=past) There were {let.games.of} at {$e.place}, and the whole district went. {let.games.coda}
+  ($e.a.person!=1 tense=past has:$e.a) {$e.a:full} won {let.games.of} at {$e.place}, and has not been quiet about it since. {let.games.coda}
+  (tense=past has:$e.a $e.a.person=1) I won {let.games.of} at {$e.place}, and I will not be quiet about it, so you need not ask.
+let.games.of
+  ($e.what=race) the races
+  ($e.what=wrestling) the wrestling
+  ($e.what=archery) the shooting at the mark
+  ($e.what=boats) the boat races
+  ($e.what=ball) the ball games
+  ($e.what=song) the singing
+  ($e.what=horses) the horse races
+  ($e.what=chess) the great game of the board
+  ($e.what=swimming) the swimming races
+let.games.coda (share=0.8)
+  Our street lost, and has not stopped explaining why over the {drink}.
+  The prize was {vessel.one} of {drink}, which did not last the evening.
+  I bet {n} {coin} and lost {n}, which is not how betting is meant to go.
+  We had {food} after, and a fight, as we always do.
+  The old ones say it was better done when they were young, with real {herd}.
+
+# ---- a law ---------------------------------------------------------------------------------------------------------------------
+
+letter.law
+  (tense=past) {ruler.the} made a new law about {let.law.of} {deathwhen}. {let.law.coda}
+  ($e.a.person!=1 tense=past has:$e.a) {$e.a:full} has laid down the law on {let.law.of}. {let.law.coda}
+  (tense=past) There is a new rule on {let.law.of}, read out at {town.open}. {let.law.coda}
+let.law.of
+  ($e.what=measures) the weights and measures
+  ($e.what=tax) the tax
+  ($e.what=water) who may draw water, and when
+  ($e.what=tolls) the tolls on the roads
+  ($e.what=curfew) who may be in the streets after dark
+  ($e.what=coin) the money
+  ($e.what=inheritance) who gets what when someone dies
+  ($e.what=drink) drink
+  ($e.what=weapons) who may carry a blade
+  ($e.what=school) the schools
+  ($e.what=census) counting us
+  ($e.what=calendar) the calendar
+  ($e.what=dogs) dogs
+  ($e.what=hours) the hours of work
+  ($e.what=noise) noise
+  ($e.what=forests) the forests
+  ($e.what=rations) the rations
+let.law.coda (share=0.8)
+  Nobody understands it, so everyone obeys it differently, the {craft} people least of all.
+  The {craft} people are furious, which means it is working.
+  It will change nothing here.
+  The crier read it twice in {town.open}, and the second time nobody listened.
+  (temper=wry) It is the third law on it this year, and we have obeyed none of them with great care, like the {herd}.
+  I will believe in it when the {herd} do.
+
+# ---- a trial ---------------------------------------------------------------------------------------------------------------------
+
+letter.trial
+  ($e.a.person!=1 tense=past has:$e.a) {$e.a:full} was tried at {$e.place} for {let.trial.of}, and {let.trial.verdict}. {let.trial.coda}
+  ($e.a.person!=1 tense=past has:$e.a) They tried {$e.a:full} for {let.trial.of}. {let.trial.v.cap} {let.trial.coda}
+  ($e.a.person!=1 tense=past !has:$e.a) There was a great trial at {$e.place}, for {let.trial.of}. {let.trial.coda}
+  (tense=past has:$e.a $e.a.person=1) I was tried at {$e.place} for {let.trial.of}, and {let.trial.verdict}; I will say no more about it here.
+let.trial.of
+  ($e.what=theft) theft
+  ($e.what=murder) murder
+  ($e.what=treason) treason
+  ($e.what=heresy) heresy
+  ($e.what=forgery) forgery
+  ($e.what=fraud) fraud
+  ($e.what=smuggling) smuggling
+  ($e.what=bribery) bribery
+  ($e.what=arson) setting a fire
+  ($e.what=libel) saying things in print
+let.trial.verdict
+  ($e.verdict=acquitted) was let go
+  ($e.verdict=condemned) was condemned
+  ($e.verdict=exiled) was sent away for good
+  ($e.verdict=fined) was fined, heavily
+let.trial.v.cap
+  ($e.verdict=acquitted) Let go, in the end.
+  ($e.verdict=condemned) Condemned.
+  ($e.verdict=exiled) Sent away for good.
+  ($e.verdict=fined) Fined, heavily.
+let.trial.coda (share=0.8)
+  Half the town went to watch, with {food} in their pockets.
+  Everyone at the {craft} stalls has a different story of it, and all of them are certain.
+  The judges took {n} days and a great deal of {drink} over it.
+  I knew the family a little; they have stopped coming to market for their {veg}.
+  (temper=wry) Justice is done, the crier says; something is, and the {herd} are none the wiser.
+
+# ---- envoys ---------------------------------------------------------------------------------------------------------------------
+
+letter.embassy
+  (tense=past $e.what=city) Envoys came from {$e.place2} to {$e.place}, in {colour.any} cloaks, and talked for a week. {let.emb.coda}
+  (tense=past $e.what=others) Envoys of the {other} came to {$e.place}. {let.emb.coda}
+  (tense=past $e.what=sent) {ruler.the} sent envoys to the {other} {deathwhen}. {let.emb.coda}
+  ($e.a.person!=1 tense=past has:$e.a) {$e.a:full} has gone as envoy, which {$e.a} will never let anyone forget. {let.emb.coda}
+  (tense=past has:$e.a $e.a.person=1) I went as envoy, and talked for a week, and ate {food} I could not name.
+let.emb.coda (share=0.8)
+  Nobody knows what was said over all that {drink}, and everyone knows what it means.
+  They brought gifts: {vessel} of {food} and a {beast} on a cord.
+  The children followed them through {streets.of}.
+  We will see what comes of it, which will be nothing, or a war, or {food} for a week.
+
+# ---- a works' disaster ---------------------------------------------------------------------------------------------------
+
+letter.accident
+  (tense=past $e.what=bridge) The bridge at {$e.place} fell with a cart on it. {let.acc.coda}
+  (tense=past $e.what=mine) The mine at {$e.place} came in; {#$e.value} were under it. {let.acc.coda}
+  (tense=past $e.what=ship) A ship out of {$e.place} went down; {#$e.value} drowned. {let.acc.coda}
+  (tense=past $e.what=train inv.railway=1) A train came off the rails at {$e.place}. {let.acc.coda}
+  (tense=past $e.what=explosion) An explosion at the works at {$e.place}; we heard it here. {let.acc.coda}
+  (tense=past $e.what=dam) The dam above {$e.place} broke. {let.acc.coda}
+  (tense=past $e.what=aircraft) A flying machine came down at {$e.place}. {let.acc.coda}
+  (tense=past $e.what=reactor) Something went wrong at the reactor at {$e.place}, and they will not say what. {let.acc.coda}
+  (tense=past $e.what=habitat) A habitat at {$e.place} lost its air; {#$e.value} gone. {let.acc.coda}
+  (tense=past $e.what=tower) A tower fell at {$e.place}, all at once, like a tired man. {let.acc.coda}
+  (tense=past $e.what=well) The well at {$e.place} caved in with a man in it. {let.acc.coda}
+let.acc.coda (share=0.8)
+  ($e.value>1) {#$e.value} dead, and everyone knows one of them.
+  They say it was nobody's fault, which is what they say, and the {craft} people say otherwise.
+  There will be an inquiry at {hall}, and then there will be another.
+  We lit a lamp at {holyplace} for them all.
+  I lit a lamp at {holyplace} and do not want to write any more about it.
+
+# ---- a price ------------------------------------------------------------------------------------------------------------------
+
+letter.price
+  (tense=past $e.out=1) {let.price.of.cap} has gone up again, by {#$e.value} in the hundred. {let.price.coda}
+  (tense=past $e.out=0) {let.price.of.cap} has come down, by {#$e.value} in the hundred, for once. {let.price.coda}
+  (tense=past $e.out=1) Have you seen what they want for {let.price.of} now? {let.price.coda}
+let.price.of
+  ($e.what=bread) bread
+  ($e.what=salt) salt
+  ($e.what=oil) oil
+  ($e.what=rent) the rent
+  ($e.what=cloth) cloth
+  ($e.what=meat) meat
+  ($e.what=fuel) {fuel}
+  ($e.what=water) water
+let.price.of.cap
+  ($e.what=bread) Bread
+  ($e.what=salt) Salt
+  ($e.what=oil) Oil
+  ($e.what=rent) The rent
+  ($e.what=cloth) Cloth
+  ($e.what=meat) Meat
+  ($e.what=fuel) The price of {fuel}
+  ($e.what=water) Water
+let.price.coda (share=0.8)
+  We manage.
+  Nobody knows why, and everyone at the {craft} stalls says they do.
+  ($e.out=1) We will eat less {food} and talk more about it.
+  ($e.out=0) Somebody somewhere is ruined by it, I suppose, and eating {food} about it.
+  (contact=1) They blame the {other}; they would blame the {other} for the rain.
+
+# ---- the herds and the game -----------------------------------------------------------------------------------------------
+
+letter.beasts
+  (tense=past $e.what=great) A great {game.one} was taken at {$e.place}, the biggest anyone remembers. Everyone ate.
+  (tense=past $e.what=killed) A {game.one} killed {#$e.value} at {$e.place} before the hunters got it.
+  (tense=past $e.what=late|$e.what=early|$e.what=none|$e.what=many) The {game} were strange this year at {$e.place}: {let.beasts.how}.
+let.beasts.how
+  ($e.what=late) late, and thin when they came
+  ($e.what=early) early, before anyone was ready
+  ($e.what=none) they did not come at all
+  ($e.what=many) more of them than anyone could count
+
+# ---- a play, a song, pictures -----------------------------------------------------------------------------------------------
+
+letter.show
+  (tense=past) There is a new {let.show.of} at {$e.place}{let.show.by}. {let.show.coda}
+  ($e.a.person!=1 tense=past has:$e.a) Everyone is talking about {$e.a:full} and the new {let.show.of}. {let.show.coda}
+  (tense=past has:$e.a $e.a.person=1) My new {let.show.of} is on at {$e.place}, and everyone is talking about it, mostly kindly.
+let.show.of
+  ($e.what=play) play
+  ($e.what=song) song, that everyone is singing
+  ($e.what=pictures) show of pictures
+  ($e.what=film) film
+  ($e.what=dance) dance
+  ($e.what=poem) poem going round
+  ($e.what=statue) statue in {town.open}
+let.show.by
+  (has:$e.a) , by {$e.a:full}
+  (2) .
+let.show.coda (share=0.8)
+  I have seen it twice and understood it once, which is more than the {beast} did.
+  The young ones love it and the old ones love hating it over their {drink}.
+  It is about {mountain}, they say, or about a woman; it is hard to tell.
+  We went, and laughed, and came home quiet through {streets.of}.
+  (temper=wry) It is very modern, which is to say nobody liked it the first time, like {food}.
+
+# ---- the ruler passing through ---------------------------------------------------------------------------------------------
+
+letter.visit
+  ($e.a.person!=1 tense=past) {$e.a:full} came to {$e.place} {deathwhen}. {let.visit.coda}
+  ($e.a.person!=1 tense=past $e.here=1) {$e.a:full} rode through here {deathwhen}, and we all stood in the road. {let.visit.coda}
+  (tense=past $e.a.person=1) I went to {$e.place} {deathwhen}, and they swept the streets for me, which I pretended not to see.
+let.visit.coda (share=0.8)
+  We swept the street for nothing; {$e.a} looked at none of it.
+  {$e.a} is smaller than the coins make out.
+  The children cheered; the {herd} did not.
+  The town paid for the {drink}, so everyone is a loyal subject today.
+  We saw the back of a {garment.n} and a great many horses.
+)VG"

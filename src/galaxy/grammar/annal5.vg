@@ -1,0 +1,115 @@
+R"VG(
+# annal5.vg (H-04's second pass): the annal's register (annal.vg's leads and codas): the collapse's signs, stages, leavings and end,
+# and the deaths of the people a chronicle names (a ruler's are annal.vg's).
+
+# =====================================================================================================================
+# the collapse
+# =====================================================================================================================
+
+annal.sign
+  {ann.lead} {$e.sign}{ann.sign.t}
+  {ann.lead} {$e.sign}{ann.sign.t}
+  {ann.lead} it was noted that {$e.sign}{ann.sign.t}
+ann.sign.t
+  (5) .
+  ; there was nobody to say why.
+  ; it was talked of, and then not talked of.
+  ; the old ones said it had happened before, and nobody believed them.
+  {ann.after}
+
+annal.stage
+  {ann.lead} {ann.stage.m}{ann.stage.t}
+ann.stage.m
+  ($e.stage=0) the first signs were written down, and nobody read them
+  ($e.stage=0) the first of {cause.noun} was seen, and called something else
+  ($e.stage=1) the years of the trouble began
+  ($e.stage=1) {cause.noun} came, and was not called anything else
+  ($e.stage=2) the trouble was everywhere
+  ($e.stage=2) {cause.noun} was in every house
+  ($e.stage=3) the end began
+  ($e.stage=3) the last years began
+ann.stage.t
+  (4) .
+  {ann.after}
+
+annal.exodus
+  {ann.lead} {ann.exo.m}{ann.exo.t}
+  {ann.lead} {ann.exo.m}{ann.exo.t}
+ann.exo.m
+  {#$e.value:about} left {$e.place}
+  ($e.whither=place) {#$e.value:about} left {$e.place} for the last places
+  ($e.whither=mountains) {#$e.value:about} left {$e.place} for the mountains
+  ($e.whither=sea) {#$e.value:about} left {$e.place} over the sea
+  ($e.whither=south|$e.whither=north) {#$e.value:about} left {$e.place} for the {$e.whither}
+  {$e.place} emptied onto the roads
+  the people of {$e.place} went away together
+ann.exo.t
+  , with what they could carry.
+  ; the road was white with their dust for three days.
+  . The rest stayed for the graves.
+  ; they drove the {herd} before them.
+  ; they carried the {vessel} on their backs and the children on top of them.
+  ; they took the {colour.holy} cloth from {holyplace} and nothing else.
+
+annal.end
+  (!has:$e.a) {ann.lead} the last of the {people} died at {$e.place}, and nobody wrote down a name.
+  (!has:$e.a) {ann.lead} the last fire of the {people} went out at {$e.place}.
+  (has:$e.a) {ann.lead} {$e.a:name} was the last of the {people}, at {$e.place}.
+  (has:$e.a) {ann.lead} at {$e.place}, {$e.a:name} was left alone, the last of the {people}.
+  (has:$e.a) {ann.lead} {$e.a:name} kept the last fire of the {people}, at {$e.place}.
+
+# =====================================================================================================================
+# the deaths (a ruler's are annal.vg's)
+# =====================================================================================================================
+
+annal.death
+  {ann.lead} {ann.death.m}{ann.death.t}
+  {ann.lead} {ann.death.m}{ann.death.t}
+ann.death.m
+  {$e.a:full} died at {$e.place}
+  {$e.a:full} died
+  {$e.a:full} was taken
+  death came for {$e.a:full} at {$e.place}
+  ($e.how=old) {$e.a:full} died in {$e.a:poss} bed, old
+  ($e.how=old) {$e.a:full} died full of years at {$e.place}
+  ($e.how=old) {$e.a:full} went to sleep and did not wake
+  ($e.how=young) {$e.a:full} died young
+  ($e.how=sickness has:$e.sickness) {$e.sickness} took {$e.a:full}
+  ($e.how=sickness has:$e.sickness) {$e.a:full} died of {$e.sickness} at {$e.place}
+  ($e.how=childbirth) {$e.a:full} died in childbirth
+  ($e.how=battle) {$e.a:full} fell in battle
+  ($e.how=battle) {$e.a:full} was killed in the fighting
+  ($e.how=famine) {$e.a:full} died in the hunger
+  ($e.how=flood) {$e.a:full} drowned at {$e.place}
+  ($e.how=quake) {$e.a:full} was killed when the walls came down at {$e.place}
+  ($e.how=accident) {$e.a:full} was killed by a fall at {$e.place}
+  ($e.how=accident) {$e.a:full} died by mischance at {$e.place}
+  ($e.how=murdered) {$e.a:full} was murdered at {$e.place}
+  ($e.how=murdered) {$e.a:full} was killed, and nobody was named for it
+  ($e.how=executed) {$e.a:full} was put to death at {$e.place}
+  ($e.how=fire) {$e.a:full} died in a fire at {$e.place}
+  ($e.how=cold) {$e.a:full} died of the cold
+  ($e.how=sea) {$e.a:full} was lost at sea
+  ($e.a.role=founder) {$e.a:full}, who founded towns, died
+  ($e.a.role=general) the general {$e.a:name} died at {$e.place}
+  ($e.a.role=prophet) the prophet {$e.a:name} died at {$e.place}
+  ($e.a.role=maker|$e.a.role=artist) {$e.a:name} the maker died
+  ($e.a.role=explorer) {$e.a:name}, who had gone further than anyone, died at home
+  ($e.a.role=inventor) {$e.a:name}, who made things nobody had made, died
+  ($e.a.role=rebel) {$e.a:name}, who had risen against the rule, died at {$e.place}
+  ($e.a.role=envoy) the envoy {$e.a:name} died
+ann.death.t
+  , aged {#$e.a.age}.
+  (6) .
+  ($e.how=sickness has:$e.sickness) , of {$e.sickness}.
+  ($e.how=battle) , in battle.
+  . {$e.a:name} was {buried}.
+  ; the {colour.mourn} cloth was hung over {$e.a:poss} door.
+  ; they played {instrument} at the burial.
+  ($e.a.children>=1) ; {$e.a:name} left {#$e.a.children|child}.
+  . The people said {$e.a:name} had {death.went}.
+  (has:$e.a.trait) . {$e.a:name} was {$e.a.trait}, and was missed.
+  (has:$e.a.trade) ; the {$e.a.trades} of {$e.place} followed the body.
+  ; {fuel} was burned on the grave three nights.
+  {ann.after}
+)VG"

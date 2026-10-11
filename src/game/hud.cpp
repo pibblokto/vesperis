@@ -1,5 +1,6 @@
 // Scene rendering entry points and the HUD overlays for space and surface.
 #include "game.h"
+#include "galaxy/plan.h"
 #include <array>
 #include "ui.h"
 #include "core/rng.h"
@@ -7,6 +8,7 @@
 #include <cmath>
 #include <functional>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -48,6 +50,7 @@ void Game::renderSpace() {
         double u = clampd(ship.flightT / ship.flightDur, 0, 1);
         c.vimanaSpeed = std::sin(u * PI);
         c.vimanaDirView = c.cam * normalize(ship.flightTo - ship.flightFrom);
+        c.flightFrom = ship.flightFrom; c.flightTo = ship.flightTo; c.flightT = ship.flightT; c.flightDur = ship.flightDur;   // G-07: the band built ahead along the line
     }
     c.bankBodyA = a; c.bankBodyB = b;
     c.starIntensity = (ship.targeting || fieldAmp || radar.on || tele.on) ? 1.5 : 1.0;   // field amplification while aiming or by choice; C-07: the radar camera sees the stars amplified; W-06: the telescope gathers light
@@ -55,10 +58,19 @@ void Game::renderSpace() {
     c.detailBudget = (wantsScreenshot || telePlateFinish) ? 0 : TELE_PLATE_BUDGET;   // a photo reads the plate out whole
     telePlateFinish = false;
     spaceR.render(fb, c);
-    if (settings.cabin && !titleCam && state != GameState::LANDING_MAP && !radar.on && !tele.on) { cabinPalette(); drawCabin(); }   // M2; C-07: the radar camera is outside the cabin; W-06: the eye is at the eyepiece
+    if (settings.cabin && !titleCam && state != GameState::LANDING_MAP && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }   // M2; C-07: the radar camera is outside the cabin; W-06: the eye is at the eyepiece; C-18: the drones outside the windows
     if (radar.on && !titleCam) radarCameraFeed(fb);   // C-07
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // M1-10 arrival flash
+}
+
+// G-07: the galaxy page in a flight draws no scene, so the band's keyframes are kept building here (a share a frame), or closing the
+// page would build one whole at once
+void Game::keepFlightBand() {
+    if (ship.mode != ShipState::VIMANA) return;
+    SpaceContext c;
+    c.vimana = true; c.flightFrom = ship.flightFrom; c.flightTo = ship.flightTo; c.flightT = ship.flightT; c.flightDur = ship.flightDur;
+    spaceR.flightBand(c);
 }
 
 void Game::drawVisor(uint32_t col) {
@@ -94,6 +106,11 @@ void Game::renderSpaceHUD() {
     std::string line2 = sys.valid ? sys.classString() + "   " + coords : coords;
     line2 += std::string("  ") + REGION_NAMES[galaxyRegion(sectorOf(ship.pos.x), sectorOf(ship.pos.y), sectorOf(ship.pos.z))];
     drawTextShadow(canvas, 8, 16, line2.c_str(), HUD_DIM, HUD_SHADOW);
+    if (player.playing >= 0 && player.playing < (int)player.items.size()) {   // C-11: the ship's player, under the system's lines
+        const uint32_t col = player.held || player.paused || player.waiting ? HUD_DIM : HUD_GREEN;
+        drawRecordKindGlyph(canvas, 8, 24, player.items[player.playing].music ? RC_MUSIC : RC_TEXT, col);
+        drawTextShadow(canvas, 17, 24, playerHudLine().c_str(), col, HUD_SHADOW);
+    }
     // mode
     const char* modeName = "STANDBY";
     if (ship.mode == ShipState::VIMANA) modeName = "VIMANA FLIGHT";
@@ -104,6 +121,14 @@ void Game::renderSpaceHUD() {
         std::string pl = probe.endClock >= 0 ? "PROBE: SIGNAL LOST - C SHOWS ITS LAST FRAME"
                                              : fmt("PROBE: %s  %.2f ATM - C WATCHES", probeStageLabel(probe.clock).c_str(), probeBarAt(probe.flight, probe.clock) * 0.98692);
         drawTextShadow(canvas, 8, UH - 32, pl.c_str(), probe.endClock >= 0 ? HUD_RED : HUD_CYAN, HUD_SHADOW);
+    }
+    if (bay.out && droneBayHere() && !(probe.active && probeHere())) {   // C-18: the drones down on the world
+        int found = 0; for (const DroneRun& R : bay.run) for (const DroneFindRec& f : R.finds) if (f.aboard || f.t <= bay.clock) found++;
+        int docked = 0; for (const DroneRun& R : bay.run) if (R.docked) docked++;
+        const double in = droneBackIn(); const int s = (int)std::ceil(std::max(0.0, in));
+        const std::string when = in >= 0 ? fmt("DRONES BACK IN %d:%02d", s / 60, s % 60) : std::string("DRONES AWAY");   // the user's two minutes of searching: when they are back
+        const std::string dl = docked ? fmt("%s - %d FOUND, %d ABOARD", when.c_str(), found, docked) : fmt("%s - %d FOUND", when.c_str(), found);
+        drawTextShadow(canvas, 8, UH - 32, dl.c_str(), HUD_CYAN, HUD_SHADOW);
     }
     if (ship.mode == ShipState::VIMANA) {
         double u = clampd(ship.flightT / ship.flightDur, 0, 1);
@@ -327,7 +352,8 @@ void Game::applyVision() {
     }
 }
 
-// M4-02: the sector map: heights, water, the capsule, the buggy, the waypoint, the trail and you.
+// M4-02: the sector map: heights, water, the capsule, the buggy, the waypoint and you (R-414: M4-02's trail of where you walked is gone;
+// the user: "remove these lines that show what routes you traveled - they seem to be a good idea but they confuse you a lot").
 static const double SECTOR_HALF_W[6] = {1000, 4000, 16000, 64000, 256000, 1024000};   // metres (Game::SECTOR_LEVELS)
 static const double SECTOR_DETAIL[6] = {16, 64, 512, 2048, 4096, 16384};
 
@@ -342,7 +368,7 @@ int Game::sectorMaxLevel() const {
 // see as a landmark and name it"): the arrows (Shift faster) and the mouse move it within the frame, C or Space bring it back to the
 // explorer; Enter marks the place under it (the name's entry; on a mark: renames it), Delete twice removes the mark under it, M puts
 // the waypoint there (on the waypoint: clears it), Tab goes to the next mark; +/- and the wheel zoom (the arrows did), R and Shift+R
-// work the scanner as on the ground
+// work the scanner as on the ground. B-412: Shift+Enter or Shift+click on a mark shows it over the view (the one shown), again hides it
 void Game::updateSectorMap(const Input& in) {
     if (in.wasPressed(KEY_EQUAL) || in.wheel > 0) sectorZoom = std::max(0, sectorZoom - 1);
     if (in.wasPressed(KEY_MINUS) || in.wheel < 0) sectorZoom = std::min(sectorMaxLevel(), sectorZoom + 1);
@@ -370,7 +396,10 @@ void Game::updateSectorMap(const Input& in) {
     }
     mapCurX = clampd(mapCurX, px - hw, px + hw); mapCurZ = clampd(mapCurZ, pz - hh, pz + hh);
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
-    if (enterKey(in) || in.mousePressed[0]) { if (onMark >= 0) beginRenameMark(onMark); else beginMark(mapCurX, mapCurZ); return; }
+    if ((enterKey(in) || in.mousePressed[0]) && in.shift()) {   // B-412
+        if (onMark >= 0) showMark(onMark);
+        else { status("NO MARK UNDER THE CURSOR", 2); audio.beep = 3; }
+    } else if (enterKey(in) || in.mousePressed[0]) { if (onMark >= 0) beginRenameMark(onMark); else beginMark(mapCurX, mapCurZ); return; }
     if (in.wasPressed(KEY_DELETE) || in.wasPressed(KEY_BACKSPACE)) {
         if (onMark >= 0 && onMark == mapDelMark && realTime < mapDelUntil) { removeMark(onMark); mapDelMark = -1; }
         else if (onMark >= 0) { mapDelMark = onMark; mapDelUntil = realTime + 3; status(fmt("REMOVE %s? DELETE AGAIN", trunc(markLabel(onMark), 24).c_str()), 3); audio.beep = 3; }
@@ -490,7 +519,6 @@ void Game::renderSectorMap() {
             }
         }
     }
-    for (size_t i = 1; i < surf.trail.size(); i++) if (mark(surf.trail[i].first, surf.trail[i].second, sx, sy)) fillRectRGB(canvas, sx, sy, sx, sy, rgb(230, 200, 120));
     if (mark(surf.capsuleX, surf.capsuleZ, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_AMBER); drawText(canvas, sx + 4, sy - 3, "CAPSULE", HUD_AMBER); }
     if (surf.buggy.deployed && mark(surf.buggy.x, surf.buggy.z, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_CYAN); drawText(canvas, sx + 4, sy - 3, "BUGGY", HUD_CYAN); }
     if (surf.drone.deployed && mark(surf.drone.x, surf.drone.z, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_CYAN); drawText(canvas, sx + 4, sy - 3, "DRONE", HUD_CYAN); }   // R-403
@@ -503,14 +531,14 @@ void Game::renderSectorMap() {
             double hx, hz; echoHeardAt(*heard[i].second, hx, hz);
             if (!mark(hx, hz, sx, sy)) continue;
             if (i == 0) { drawRectRGB(canvas, sx - 3, sy - 3, sx + 3, sy + 3, HUD_CYAN); fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, HUD_CYAN); }
-            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == 2 || L.sub == 3) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town)
+            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == SC_VILLAGE || L.sub == SC_TOWN || L.sub >= SC_CITY) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town, T-01's cities)
         }
     }
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
     {   // R-408: the explorer's marks (a friend's in cyan): the glyph of what they mark (a place: a small diamond), the names of the
-        // nearest twelve where they do not run into one another
+        // nearest twelve where they do not run into one another; B-412: the one shown over the view boxed, its name first
         std::vector<std::pair<double, const SiteMark*>> shown;
-        for (const SiteMark& m : marksHere()) if (mark(m.x, m.z, sx, sy)) shown.push_back({(m.x - px) * (m.x - px) + (m.z - pz) * (m.z - pz), &m});
+        for (const SiteMark& m : marksHere()) if (mark(m.x, m.z, sx, sy)) shown.push_back({m.index == guide.shownMark ? -1.0 : (m.x - px) * (m.x - px) + (m.z - pz) * (m.z - pz), &m});
         std::sort(shown.begin(), shown.end(), [](const auto& a, const auto& b2) { return a.first < b2.first; });
         std::vector<std::array<int, 4>> boxes;
         for (size_t i = 0; i < shown.size(); i++) {
@@ -520,7 +548,7 @@ void Game::renderSectorMap() {
             const uint32_t col = armed ? (((int)(realTime * 4) & 1) ? HUD_RED : HUD_WHITE) : (gm.lent ? HUD_CYAN : HUD_WHITE);
             if (gm.kind < LM_COUNT) drawText(canvas, sx - 2, sy - 3, LANDMARK_KIND_SYMBOLS[gm.kind], col);
             else { drawLineRGB(canvas, sx - 2, sy, sx, sy - 2, col); drawLineRGB(canvas, sx, sy - 2, sx + 2, sy, col); drawLineRGB(canvas, sx + 2, sy, sx, sy + 2, col); drawLineRGB(canvas, sx, sy + 2, sx - 2, sy, col); }
-            if (m.index == onMark) drawRectRGB(canvas, sx - 4, sy - 5, sx + 4, sy + 4, HUD_AMBER);
+            if (m.index == onMark || m.index == guide.shownMark) drawRectRGB(canvas, sx - 4, sy - 5, sx + 4, sy + 4, m.index == onMark ? HUD_AMBER : col);
             if (i >= 12 || gm.name.empty()) continue;
             std::string nm = trunc(upper(gm.name), 14);
             int tw = textWidth(nm.c_str()), lx = sx + 5, ly = sy - 3;
@@ -555,26 +583,29 @@ void Game::renderSectorMap() {
         drawText(canvas, tx, oy + 40, cd < 2 * mpp ? "HERE" : fmt("%s %s", metresString(cd).c_str(), compassName(wrap2pi(std::atan2(mapCurX - px, mapCurZ - pz)))).c_str(), HUD_WHITE);
         drawText(canvas, tx, oy + 49, fmt("%.2f%s %.2f%s", std::fabs(la), la >= 0 ? "N" : "S", std::fabs(lo), lo >= 0 ? "E" : "W").c_str(), HUD_DIM);
         drawText(canvas, tx, oy + 58, fmt("S %s", sectorName(la, lo).c_str()).c_str(), HUD_CYAN);   // O2
-        if (onMark >= 0) drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
+        if (onMark >= 0) {
+            drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
+            drawText(canvas, tx, oy + 76, onMark == guide.shownMark ? "SHIFT+ENTER HIDES" : "SHIFT+ENTER SHOWS", HUD_DIM);   // B-412: over the view
+        }
         else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "THE WAYPOINT", HUD_WHITE);
     }
     {   // R-408: the scanner
-        if (scanMode < 0) drawText(canvas, tx, oy + 80, "R SCANNER OFF", HUD_DIM);
+        if (scanMode < 0) drawText(canvas, tx, oy + 89, "R SCANNER OFF", HUD_DIM);
         else {
-            static const char* MODES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS"};
-            drawText(canvas, tx, oy + 80, fmt("SCAN %s", MODES[scanMode]).c_str(), HUD_CYAN);
+            static const char* MODES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
+            drawText(canvas, tx, oy + 89, fmt("SCAN %s", MODES[scanMode]).c_str(), HUD_CYAN);
             double hx, hz; const SurfaceView::ScanEcho* e = scanModeHere(scanMode) && surf.scanned ? scanNearest(hx, hz) : nullptr;
-            if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 89, "NONE ON THIS WORLD", HUD_DIM);
-            else if (!surf.scanned) drawText(canvas, tx, oy + 89, "SCANNING", HUD_DIM);
-            else if (!e) drawText(canvas, tx, oy + 89, "NONE IN 40 KM", HUD_DIM);
+            if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 98, "NONE ON THIS WORLD", HUD_DIM);
+            else if (!surf.scanned) drawText(canvas, tx, oy + 98, "SCANNING", HUD_DIM);
+            else if (!e) drawText(canvas, tx, oy + 98, "NONE IN 40 KM", HUD_DIM);
             else {
-                drawText(canvas, tx, oy + 89, fmt("%s %s", metresString(std::hypot(hx - px, hz - pz)).c_str(), compassName(wrap2pi(std::atan2(hx - px, hz - pz)))).c_str(), HUD_CYAN);
-                drawText(canvas, tx, oy + 98, trunc(echoDetail(*e), 17).c_str(), HUD_DIM);
+                drawText(canvas, tx, oy + 98, fmt("%s %s", metresString(std::hypot(hx - px, hz - pz)).c_str(), compassName(wrap2pi(std::atan2(hx - px, hz - pz)))).c_str(), HUD_CYAN);
+                drawText(canvas, tx, oy + 107, trunc(echoDetail(*e), 17).c_str(), HUD_DIM);
             }
-            drawText(canvas, tx, oy + 107, scanSkipMarked ? "MARKED LEFT OUT" : "MARKED HEARD (*)", HUD_DIM);
+            drawText(canvas, tx, oy + 116, scanSkipMarked ? "MARKED LEFT OUT" : "MARKED HEARD (*)", HUD_DIM);
         }
     }
-    drawText(canvas, tx, oy + 124, fmt("ELEV %+.0f", surf.player.y).c_str(), HUD_DIM);
+    drawText(canvas, tx, oy + 127, fmt("ELEV %+.0f", surf.player.y).c_str(), HUD_DIM);
     for (const FrontForecast& f : forecast) {   // W-03: the next front, or the one overhead
         if (f.tClear <= t) continue;
         const uint32_t c = f.dust ? HUD_AMBER : HUD_CYAN;
@@ -592,12 +623,17 @@ void Game::renderSurfaceHUD() {
     }
     drawVisor(HUD_DIM);
     const SurfaceEnvironment& e = surf.env;
+    const Player& pl = surf.player;
+    const bool seat = surf.inVehicle() && !surf.chaseCam;
     // (B-309: the visor glint arcs of N5-02 are gone; their angle spun whenever the sun sat near the screen centre
     // and they wobbled with every head bob. The surface draws a soft veiling glare round the sun instead.)
+    // R-414 (2026-10-11): the HUD pared down (the user: "all the indicators of elevation, longitude, local time, elevation, temp, grav,
+    // wind, rain and what not should be hidden in a separate menu you can open by some key"): on foot the world's name and the place,
+    // the epoch, the compass, the scanner, the stamina and what E or Q would do here; the rest in the readings (Tab, `drawReadings`)
     std::string l1 = fmt("%s  %.1f%c%s %.1f%c%s", trunc(upper(bodyNameOf(surf.site.body)), 14).c_str(), std::fabs(e.latDeg), CH_DEGREE,
                          e.latDeg >= 0 ? "N" : "S", std::fabs(e.lonDeg), CH_DEGREE, e.lonDeg >= 0 ? "E" : "W");
     drawTextShadow(canvas, 8, 8, l1.c_str(), HUD_GREEN, HUD_SHADOW);
-    drawTextShadow(canvas, UW - 8 - textWidth(epocString().c_str()), 8, epocString().c_str(), HUD_GREEN, HUD_SHADOW);
+    if (!seat) drawTextShadow(canvas, UW - 8 - textWidth(epocString().c_str()), 8, epocString().c_str(), HUD_GREEN, HUD_SHADOW);   // R-414: not from a vehicle's camera
     if (recording) drawTextShadow(canvas, UW - 8 - textWidth("REC"), 16, "REC", ((int)(realTime * 2) & 1) ? HUD_RED : HUD_DIM, HUD_SHADOW);   // M6-05
     // compass strip
     {
@@ -620,61 +656,21 @@ void Game::renderSurfaceHUD() {
         std::string hd = fmt("%03.0f", yawDeg);
         drawText(canvas, cx + 66, y - 1, hd.c_str(), HUD_AMBER);
     }
-    const Player& pl = surf.player;
-    bool seat = surf.inVehicle() && !surf.chaseCam;
-    if (surf.lastRange > 0) {   // O1 (B-302): the rangefinder: what the crosshair rests on, how far, and how long it takes to get there
-        double spd = surf.inDrone ? 80.0 : (surf.inBuggy ? 32.0 : (surf.site.escapeVelocity < 30 ? 0.3 * surf.site.escapeVelocity : 4.2));   // a fast cruise over open ground, not the 50 m/s top; R-403: a cruise by air
-        double secs = surf.lastRange / spd;
-        std::string tt = secs < 90 ? fmt("%.0f S", secs) : (secs < 5400 ? fmt("%.0f MIN", secs / 60) : fmt("%.1f H", secs / 3600));
-        std::string rg = fmt("%s%s  %s %s", metresString(surf.lastRange).c_str(), surf.lastRangeWater ? " WATER" : "", tt.c_str(), surf.inDrone ? "FLIGHT" : (surf.inBuggy ? "DRIVE" : "WALK"));
-        drawTextCentered(canvas, UW / 2, seat ? 44 : 34, rg.c_str(), HUD_CYAN);
-        const int mk = markNear(surf.lastRangeX, surf.lastRangeZ, std::max(150.0, 0.03 * surf.lastRange));   // R-408: the mark the crosshair rests on
-        if (mk >= 0) drawTextCentered(canvas, UW / 2, seat ? 52 : 42, markLabel(mk).c_str(), guide.marks[mk].lent ? HUD_CYAN : HUD_AMBER);
-    }
-    std::string cap = e.nearCapsule ? "CAPSULE HERE - Q" : fmt("CAPSULE %s %s", metresString(e.capsuleDist).c_str(), compassName(e.capsuleBearing));
-    if (!seat) {
-        // sun and environment readouts (the buggy's cowl replaces them from the seat)
-        std::string sun = fmt("SUN ALT %+.1f%c AZ %03.0f%c  LOCAL %02d:%02d  ELEV %+.0fM", e.sun.altitude / DEG, CH_DEGREE, e.sun.azimuth / DEG, CH_DEGREE,
-                              (int)(e.localTime * 24), (int)(std::fmod(e.localTime * 24, 1.0) * 60), e.altitude);
-        drawTextShadow(canvas, 8, UH - 40, sun.c_str(), HUD_WHITE, HUD_SHADOW);
-        std::string envl = fmt("TEMP %+.0f C  PRESS %.2f ATM", e.temperatureC, e.pressureAtm);
-        drawTextShadow(canvas, 8, UH - 32, envl.c_str(), HUD_GREEN, HUD_SHADOW);
-        double gg = surf.site.gravity / 9.8;
-        std::string envl2 = gg < 0.01 ? fmt("GRAV %.4f G  ESCAPE %.1f M/S", gg, surf.site.escapeVelocity)   // O4: a comet
-                                      : fmt("GRAV %.2f G  WIND %.0f KT %s", gg, e.windKnots, e.windKnots > 0.5 ? compassName(e.windDir) : "");
-        if (e.ringShadow > 0.15) envl2 += "  RING SHADOW";   // O0-01
-        if (e.cometActivity > 0.05) envl2 += fmt("  VENTING %.0f%%", e.cometActivity * 100);   // O4
-        if (e.rain > 0.05) envl2 += fmt("  RAIN %.0f%%", e.rain * 100);
-        if (e.snow > 0.05) envl2 += fmt("  SNOW %.0f%%", e.snow * 100);
-        if (e.hail > 0.05) envl2 += "  HAIL";
-        if (e.dust > 0.05) envl2 += fmt("  DUST %.0f%%", e.dust * 100);   // B-206: "DUST STORM" ran into the stamina bar
-        if (e.fogBank > 0.3) envl2 += "  FOG";
-        if (e.aurora > 0.15 && e.skyBrightness < 0.4) envl2 += e.auroraStorm > 0.7 ? "  AURORA STORM" : "  AURORA";   // R-402
-        drawTextShadow(canvas, 8, UH - 24, envl2.c_str(), HUD_GREEN, HUD_SHADOW);
-        drawTextShadow(canvas, UW - 8 - textWidth(cap.c_str()), UH - 32, cap.c_str(), e.nearCapsule ? HUD_AMBER : HUD_CYAN, HUD_SHADOW);
-        if (surf.nearShard.index >= 0) drawTextShadow(canvas, UW - 8 - textWidth("A SHARD HERE - E"), UH - 40, "A SHARD HERE - E", HUD_AMBER, HUD_SHADOW);   // C-03
-        if (surf.nearGrave.k >= 0) { std::string gl = fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()); drawTextShadow(canvas, UW - 8 - textWidth(gl.c_str()), UH - 56, gl.c_str(), HUD_AMBER, HUD_SHADOW); }   // C-12: the stone's name and years
-        drawTextShadow(canvas, 8, 16, fmt("SECTOR %s", sectorName(e.latDeg, e.lonDeg).c_str()).c_str(), HUD_DIM, HUD_SHADOW);   // O2 (R-301)
-        {   // B-321: the suit's life sensor: the nearest herd or flock within 1.5 km, its bearing and distance (`X` still brackets what is in view)
-            double best = 1e9, bx = 0, bz = 0; bool flock = false;
-            for (const SurfaceView::Herd& hd : surf.herds) { double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = false; } }
-            for (const Flock& f : surf.flocks) { double a = f.phase + t * f.speed; double dx = f.cx + std::cos(a) * f.radius - pl.x, dz = f.cz + std::sin(a) * f.radius - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = true; } }
-            if (best < 1500) {
-                std::string life = best < 25 ? "LIFE HERE" : fmt("LIFE %s %s%s", metresString(best).c_str(), compassName(wrap2pi(std::atan2(bx, bz))), flock ? " (FLYERS)" : "");
-                drawTextShadow(canvas, UW - 8 - textWidth(life.c_str()), UH - 40, life.c_str(), HUD_CYAN, HUD_SHADOW);
-            }
-        }
-        if (!surf.site.roads.empty()) {   // C-09: the old road under the feet and the way it runs
-            double d, along, hd; const SiteRoad* rd;
-            if (surf.site.roadAt(pl.x, pl.z, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3) {
-                std::string rl = fmt("OLD ROAD %s-%s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI)));
-                drawTextShadow(canvas, UW - 8 - textWidth(rl.c_str()), UH - 48, rl.c_str(), HUD_CYAN, HUD_SHADOW);
-            }
-        }
-    }
-    if (pl.swimming) drawTextShadow(canvas, UW - 8 - textWidth(pl.underwater ? "DIVING" : "SWIMMING"), UH - 24, pl.underwater ? "DIVING" : "SWIMMING", HUD_CYAN, HUD_SHADOW);
-    // M8-02 stamina bar and pulse (hidden while driving or flying)
     if (!surf.inVehicle()) {
+        // what E or Q does here, over the stamina from the bottom up (R-414: the capsule's, the buggy's and the drone's distances are gone:
+        // K calls the capsule, B and F unfold a new buggy or drone at it; the user: "there is no need for that if you can always call
+        // capsule in 1 button and buggy/drone in 2")
+        std::vector<std::pair<std::string, uint32_t>> act;
+        if (e.nearCapsule) act.push_back({"CAPSULE HERE - Q", HUD_AMBER});
+        std::string use;   // E's in `updateSurface`'s order
+        if (surf.buggy.deployed && surf.buggyDist() <= 3.5) use = "BUGGY HERE - E";
+        else if (surf.drone.deployed && surf.droneDist() <= 3.5) use = "DRONE HERE - E";
+        else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) use = surf.nearInstrument.name + " - E";   // C-11: an instrument, the nearer
+        else if (surf.nearShard.index >= 0) use = std::string(RECORD_MEDIUM_HUD[clampi(surf.nearShard.medium, 0, RM_COUNT - 1)]) + " - E";   // C-03; T-04: the object ("A CODEX - E")
+        if (!use.empty()) act.push_back({use, HUD_AMBER});
+        if (surf.nearGrave.k >= 0) act.push_back({fmt("A GRAVE: %s", upper(surf.nearGrave.hud).c_str()), HUD_AMBER});   // C-12: the stone's name and years
+        for (size_t i = 0; i < act.size(); i++) drawTextShadow(canvas, UW - 8 - textWidth(act[i].first.c_str()), UH - 32 - 8 * (int)i, act[i].first.c_str(), act[i].second, HUD_SHADOW);
+        // M8-02 stamina bar and pulse (hidden while driving or flying)
         int bx = UW - 68, by = UH - 24;
         if (!pl.swimming) {
             drawRectRGB(canvas, bx, by, bx + 40, by + 5, HUD_DIM);
@@ -683,20 +679,19 @@ void Game::renderSurfaceHUD() {
             int pulse = (int)(60 + 80 * (1 - pl.stamina / 100.0) + 30 * pl.sprintRamp);
             drawText(canvas, bx + 44, by - 1, fmt("%d", pulse).c_str(), pl.winded ? HUD_RED : HUD_DIM);
         }
-        if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) {
-            std::string jet = fmt("JET  ALT %.0f M  VS %+.1f  HEAT %.0f%%%s", pl.altAboveGround, pl.vy, pl.jetHeat, surf.site.escapeVelocity < 30 ? "  CTRL DESCENDS" : "");
+        if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) {   // the jetpack's heat (R-414: its height and climb in the readings)
+            std::string jet = fmt("JET HEAT %.0f%%%s", pl.jetHeat, surf.site.escapeVelocity < 30 ? "  CTRL DESCENDS" : "");
             drawTextCentered(canvas, UW / 2, UH - 52, jet.c_str(), pl.jetHeat > 90 ? HUD_RED : HUD_AMBER);
         }
-        if (pl.autoWalk > 0) drawText(canvas, 8, UH - 48, fmt("AUTOWALK %d", pl.autoWalk).c_str(), HUD_DIM);
-        if (visionMode) { static const char* vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"}; drawText(canvas, UW / 2 - textWidth(vn[visionMode]) / 2, UH - 48, vn[visionMode], HUD_CYAN); }
-        if (surf.buggy.deployed) drawText(canvas, UW - 8 - textWidth(fmt("BUGGY %.0f M", surf.buggyDist()).c_str()), UH - 40, fmt("BUGGY %.0f M", surf.buggyDist()).c_str(), HUD_DIM);
-        if (surf.drone.deployed) drawText(canvas, UW - 8 - textWidth(fmt("DRONE %.0f M", surf.droneDist()).c_str()), UH - 48, fmt("DRONE %.0f M", surf.droneDist()).c_str(), HUD_DIM);   // R-403
-    } else if (surf.inDrone && !surf.chaseCam) {
-        // R-403: the drone's nose camera interface: the buggy's frame (brackets, the channel with its REC, pan and tilt, the pan
-        // gauge, the crosshair) with the flight's numbers: the speed in double-size digits, the height over the ground and the
-        // vertical speed, the trip on the left; a bar under the picture for the turn; the heading, the state (LANDED, LIFTING,
-        // CLIMB, DESCENT, CEILING, HOVER, LIGHTS ON or the temperature), the capsule and the local time on the right
-        const Drone& d = surf.drone;
+    } else if (seat) {
+        // R-204, R-403: the nose camera, the buggy's and the drone's alike: the brackets inside the visor's, the blinking REC, the pan gauge
+        // under the compass (where the camera looks, its 70 deg limits), the crosshair, the speed in double-size digits and the turn under
+        // the picture (right is right). R-414 (the user: "local time, hdg, alt, vs, trip and other things (pan, tilt, cam 02 drone) - gone,
+        // descent and climb also. Only keep speed"): the channel's name, the pan and tilt, the height, the climb, the trip, the gear, the
+        // heading, the state, the capsule, the local time and the epoch went, the most of them to the readings (Tab)
+        const bool drone = surf.inDrone;
+        const double heading = drone ? surf.drone.heading : surf.buggy.heading, speed = drone ? surf.drone.speed : surf.buggy.speed;
+        const double turn = drone ? surf.drone.steer / (70 * DEG) : surf.buggy.steer / (30 * DEG);
         const uint32_t fc = HUD_WHITE, fd = HUD_DIM;
         {   // brackets inside the visor's
             int m = 14, l = 26;
@@ -705,11 +700,9 @@ void Game::renderSurfaceHUD() {
             drawLineRGB(canvas, m, UH - 1 - m, m + l, UH - 1 - m, fc); drawLineRGB(canvas, m, UH - 1 - m, m, UH - 1 - m - l, fc);
             drawLineRGB(canvas, UW - 1 - m, UH - 1 - m, UW - 1 - m - l, UH - 1 - m, fc); drawLineRGB(canvas, UW - 1 - m, UH - 1 - m, UW - 1 - m, UH - 1 - m - l, fc);
         }
-        double look = wrapAngle(pl.yaw - d.heading);
-        drawTextShadow(canvas, 8, 16, "CAM 02 DRONE", fc, HUD_SHADOW);
-        if ((int)(realTime * 2) & 1) drawTextShadow(canvas, 8 + textWidth("CAM 02 DRONE") + 6, 16, "\x07REC", HUD_RED, HUD_SHADOW);
-        drawTextShadow(canvas, 8, 24, fmt("PAN %+03.0f  TILT %+03.0f", look / DEG, pl.pitch / DEG).c_str(), fd, HUD_SHADOW);
+        if ((int)(realTime * 2) & 1) drawTextShadow(canvas, 8, 16, "\x07REC", HUD_RED, HUD_SHADOW);
         {   // the pan gauge
+            const double look = wrapAngle(pl.yaw - heading);
             int cx = UW / 2, y = 36;
             drawLineRGB(canvas, cx - 35, y, cx + 35, y, fd);
             drawLineRGB(canvas, cx - 35, y - 2, cx - 35, y + 2, fd); drawLineRGB(canvas, cx + 35, y - 2, cx + 35, y + 2, fd); drawLineRGB(canvas, cx, y - 1, cx, y + 1, fd);
@@ -721,79 +714,15 @@ void Game::renderSurfaceHUD() {
             drawLineRGB(canvas, cx - 10, cy, cx - 4, cy, fd); drawLineRGB(canvas, cx + 4, cy, cx + 10, cy, fd);
             drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, fd); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, fd);
         }
-        double kmh = std::fabs(d.speed) * 3.6;
-        drawTextShadow(canvas, 8, UH - 48, fmt("%3.0f", kmh).c_str(), fc, HUD_SHADOW, 2);
-        drawTextShadow(canvas, 8 + textWidth("000", 2) + 4, UH - 42, d.speed < -0.2 ? "KM/H BACK" : "KM/H", fd, HUD_SHADOW);
-        drawTextShadow(canvas, 8, UH - 32, fmt("ALT %.0f M  VS %+.1f", d.altAboveGround, d.vy).c_str(), d.ceiling ? HUD_AMBER : HUD_GREEN, HUD_SHADOW);
-        drawTextShadow(canvas, 8, UH - 24, fmt("TRIP %.2f KM", d.odometer / 1000.0).c_str(), HUD_GREEN, HUD_SHADOW);
+        drawTextShadow(canvas, 8, UH - 48, fmt("%3.0f", std::fabs(speed) * 3.6).c_str(), fc, HUD_SHADOW, 2);
+        drawTextShadow(canvas, 8 + textWidth("000", 2) + 4, UH - 42, speed < -0.2 ? "KM/H BACK" : "KM/H", fd, HUD_SHADOW);
         {   // the turn bar
             int cx = UW / 2, y = UH - 28;
             drawLineRGB(canvas, cx - 30, y, cx + 30, y, fd); drawLineRGB(canvas, cx, y - 2, cx, y + 2, fd);
-            int sx = cx + (int)std::lround(clampd(d.steer / (70 * DEG), -1, 1) * 30);
+            int sx = cx + (int)std::lround(clampd(turn, -1, 1) * 30);
             fillRectRGB(canvas, sx - 1, y - 3, sx + 1, y + 3, HUD_AMBER);
-            drawTextCentered(canvas, cx, y + 5, "TURN", fd);
+            drawTextCentered(canvas, cx, y + 5, drone ? "TURN" : "STEER", fd);
         }
-        std::string hd = fmt("HDG %03.0f %s", wrap2pi(d.heading) / DEG, compassName(wrap2pi(d.heading)));
-        drawTextShadow(canvas, UW - 8 - textWidth(hd.c_str()), UH - 48, hd.c_str(), HUD_GREEN, HUD_SHADOW);
-        std::string st = d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "CEILING" : (d.vy > 1 ? "CLIMB" : (d.vy < -1 ? "DESCENT" : (std::fabs(d.speed) < 1 ? "HOVER" : (d.lights ? "LIGHTS ON" : fmt("%+.0f C", e.temperatureC))))));
-        drawTextShadow(canvas, UW - 8 - textWidth(st.c_str()), UH - 40, st.c_str(), d.landed || d.ceiling || std::fabs(d.vy) > 1 ? HUD_AMBER : HUD_GREEN, HUD_SHADOW);
-        drawTextShadow(canvas, UW - 8 - textWidth(cap.c_str()), UH - 32, cap.c_str(), e.nearCapsule ? HUD_AMBER : HUD_CYAN, HUD_SHADOW);
-        std::string lt = fmt("%02d:%02d LOCAL", (int)(e.localTime * 24), (int)(std::fmod(e.localTime * 24, 1.0) * 60));
-        drawTextShadow(canvas, UW - 8 - textWidth(lt.c_str()), UH - 24, lt.c_str(), fd, HUD_SHADOW);
-    } else if (!surf.chaseCam) {
-        // R-204: the nose camera's interface. The driver sees the picture from the pod on the nose, framed by the
-        // camera's own overlay: bigger brackets, the channel with a blinking REC, the pod's pan and tilt with a pan
-        // gauge under the compass, a crosshair, the speed, gear and trip on the left, the heading, the state, the
-        // capsule and the local time on the right, and the steering bar under the picture (right is right)
-        const Buggy& b = surf.buggy;
-        const uint32_t fc = HUD_WHITE, fd = HUD_DIM;
-        {   // brackets inside the visor's
-            int m = 14, l = 26;
-            drawLineRGB(canvas, m, m, m + l, m, fc); drawLineRGB(canvas, m, m, m, m + l, fc);
-            drawLineRGB(canvas, UW - 1 - m, m, UW - 1 - m - l, m, fc); drawLineRGB(canvas, UW - 1 - m, m, UW - 1 - m, m + l, fc);
-            drawLineRGB(canvas, m, UH - 1 - m, m + l, UH - 1 - m, fc); drawLineRGB(canvas, m, UH - 1 - m, m, UH - 1 - m - l, fc);
-            drawLineRGB(canvas, UW - 1 - m, UH - 1 - m, UW - 1 - m - l, UH - 1 - m, fc); drawLineRGB(canvas, UW - 1 - m, UH - 1 - m, UW - 1 - m, UH - 1 - m - l, fc);
-        }
-        double look = wrapAngle(pl.yaw - b.heading);
-        drawTextShadow(canvas, 8, 16, "CAM 01 NOSE", fc, HUD_SHADOW);
-        if ((int)(realTime * 2) & 1) drawTextShadow(canvas, 8 + textWidth("CAM 01 NOSE") + 6, 16, "\x07REC", HUD_RED, HUD_SHADOW);
-        drawTextShadow(canvas, 8, 24, fmt("PAN %+03.0f  TILT %+03.0f", look / DEG, pl.pitch / DEG).c_str(), fd, HUD_SHADOW);
-        {   // the pan gauge: the pod's 70 deg limits and where it points
-            int cx = UW / 2, y = 36;
-            drawLineRGB(canvas, cx - 35, y, cx + 35, y, fd);
-            drawLineRGB(canvas, cx - 35, y - 2, cx - 35, y + 2, fd); drawLineRGB(canvas, cx + 35, y - 2, cx + 35, y + 2, fd); drawLineRGB(canvas, cx, y - 1, cx, y + 1, fd);
-            int px = cx + (int)std::lround(look / SurfaceView::CAM_PAN * 35);
-            fillRectRGB(canvas, px - 1, y - 2, px + 1, y + 2, HUD_AMBER);
-        }
-        {   // crosshair
-            int cx = UW / 2, cy = UH / 2;
-            drawLineRGB(canvas, cx - 10, cy, cx - 4, cy, fd); drawLineRGB(canvas, cx + 4, cy, cx + 10, cy, fd);
-            drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, fd); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, fd);
-        }
-        double kmh = std::fabs(b.speed) * 3.6;
-        drawTextShadow(canvas, 8, UH - 48, fmt("%3.0f", kmh).c_str(), fc, HUD_SHADOW, 2);
-        drawTextShadow(canvas, 8 + textWidth("000", 2) + 4, UH - 42, "KM/H", fd, HUD_SHADOW);
-        drawTextShadow(canvas, 8, UH - 32, fmt("GEAR %d%s", b.gear + 1, b.speed < -0.2 ? "  REVERSE" : "").c_str(), HUD_GREEN, HUD_SHADOW);
-        if (!surf.site.roads.empty()) {   // C-09: the old road under the wheels and the way it runs
-            double d, along, hd; const SiteRoad* rd;
-            if (surf.site.roadAt(b.x, b.z, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3)
-                drawTextShadow(canvas, 8, UH - 58, fmt("OLD ROAD %s-%s", compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI))).c_str(), HUD_CYAN, HUD_SHADOW);
-        }
-        drawTextShadow(canvas, 8, UH - 24, fmt("TRIP %.2f KM", b.odometer / 1000.0).c_str(), HUD_GREEN, HUD_SHADOW);
-        {   // the steering bar
-            int cx = UW / 2, y = UH - 28;
-            drawLineRGB(canvas, cx - 30, y, cx + 30, y, fd); drawLineRGB(canvas, cx, y - 2, cx, y + 2, fd);
-            int sx = cx + (int)std::lround(clampd(b.steer / (30 * DEG), -1, 1) * 30);
-            fillRectRGB(canvas, sx - 1, y - 3, sx + 1, y + 3, HUD_AMBER);
-            drawTextCentered(canvas, cx, y + 5, "STEER", fd);
-        }
-        std::string hd = fmt("HDG %03.0f %s", wrap2pi(b.heading) / DEG, compassName(wrap2pi(b.heading)));
-        drawTextShadow(canvas, UW - 8 - textWidth(hd.c_str()), UH - 48, hd.c_str(), HUD_GREEN, HUD_SHADOW);
-        std::string st = b.airborne ? "AIRBORNE" : (b.skid > 0.3 ? "SKID" : (b.brake ? "BRAKE" : (b.lights ? "LIGHTS ON" : fmt("%+.0f C", e.temperatureC))));
-        drawTextShadow(canvas, UW - 8 - textWidth(st.c_str()), UH - 40, st.c_str(), b.airborne || b.skid > 0.3 || b.brake ? HUD_AMBER : HUD_GREEN, HUD_SHADOW);
-        drawTextShadow(canvas, UW - 8 - textWidth(cap.c_str()), UH - 32, cap.c_str(), e.nearCapsule ? HUD_AMBER : HUD_CYAN, HUD_SHADOW);
-        std::string lt = fmt("%02d:%02d LOCAL", (int)(e.localTime * 24), (int)(std::fmod(e.localTime * 24, 1.0) * 60));
-        drawTextShadow(canvas, UW - 8 - textWidth(lt.c_str()), UH - 24, lt.c_str(), fd, HUD_SHADOW);
     }
     // M4-05 creature highlight
     if (surf.highlightUntil > realTime) {
@@ -824,7 +753,98 @@ void Game::renderSurfaceHUD() {
         std::string wp = fmt("WAYPOINT %s %s", metresString(std::sqrt(dx * dx + dz * dz)).c_str(), compassName(wrap2pi(std::atan2(dx, dz))));
         drawTextShadow(canvas, UW - 8 - textWidth(wp.c_str()), 16, wp.c_str(), HUD_CYAN, HUD_SHADOW);
     }
-    drawMarksInView();   // R-408: the explorer's marks over the view
+    if (readings) drawReadings();   // R-414
+    drawShownMark();     // B-412: the one mark the explorer shows over the view (R-408 drew the eight nearest)
     drawScanHUD();       // R-408: the scanner
     drawCommonHUD();
+}
+
+// R-414 (2026-10-11): the readings, Tab on the ground and in the vehicles (the user: "should be hidden in a separate menu you can open by
+// some key"): what the HUD showed of the place, the sky, the air, the ground and the vehicle, in a panel at the right under the epoch's
+// lines (the right of the view is free on foot over the stamina and in a vehicle, whose speed is at the left), rows of 23 characters at
+// most so it stops short of the crosshair (x 150-170); Tab again puts it away
+void Game::drawReadings() {
+    const SurfaceEnvironment& e = surf.env;
+    const Player& pl = surf.player;
+    const size_t W = 23;
+    std::vector<std::pair<std::string, uint32_t>> rows;
+    auto row = [&](const std::string& s, uint32_t c) { rows.push_back({trunc(s, (int)W), c}); };
+    auto pack = [&](const std::vector<std::string>& items, uint32_t c) {   // two spaces apart, a row while they fit
+        std::string line;
+        for (const std::string& it : items) {
+            if (it.empty()) continue;
+            if (!line.empty() && line.size() + 2 + it.size() > W) { row(line, c); line.clear(); }
+            line += (line.empty() ? "" : "  ") + it;
+        }
+        if (!line.empty()) row(line, c);
+    };
+    row(fmt("SECTOR %s", sectorName(e.latDeg, e.lonDeg).c_str()), HUD_CYAN);   // O2 (R-301)
+    row(fmt("LOCAL %02d:%02d", (int)(e.localTime * 24), (int)(std::fmod(e.localTime * 24, 1.0) * 60)), HUD_WHITE);
+    row(fmt("SUN %+.0f%c AZ %03.0f%c", e.sun.altitude / DEG, CH_DEGREE, e.sun.azimuth / DEG, CH_DEGREE), HUD_WHITE);
+    if (surf.inDrone) {   // R-403: the drone's numbers and its state
+        const Drone& d = surf.drone;
+        pack({fmt("HDG %03.0f %s", wrap2pi(d.heading) / DEG, compassName(wrap2pi(d.heading))), fmt("TRIP %.2f KM", d.odometer / 1000.0)}, HUD_GREEN);
+        pack({fmt("ALT %.0f M", d.altAboveGround), fmt("VS %+.1f", d.vy)}, d.ceiling ? HUD_AMBER : HUD_GREEN);
+        const std::string st = d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT ITS CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
+        pack({st, d.lights ? "LIGHTS ON" : ""}, d.landed || d.ceiling ? HUD_AMBER : HUD_GREEN);
+    } else if (surf.inBuggy) {   // R-204: the buggy's
+        const Buggy& b = surf.buggy;
+        pack({fmt("HDG %03.0f %s", wrap2pi(b.heading) / DEG, compassName(wrap2pi(b.heading))), fmt("TRIP %.2f KM", b.odometer / 1000.0)}, HUD_GREEN);
+        const std::string st = b.airborne ? "AIRBORNE" : (b.skid > 0.3 ? "SKIDDING" : (b.brake ? "BRAKING" : ""));
+        pack({fmt("GEAR %d%s", b.gear + 1, b.speed < -0.2 ? " REVERSE" : ""), st, b.lights ? "LIGHTS ON" : ""}, st.empty() ? HUD_GREEN : HUD_AMBER);
+    }
+    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC)}, HUD_GREEN);
+    const double gg = surf.site.gravity / 9.8;
+    if (gg < 0.01) pack({fmt("GRAV %.4f G", gg), fmt("ESCAPE %.1f M/S", surf.site.escapeVelocity)}, HUD_GREEN);   // O4: a comet
+    else pack({fmt("GRAV %.2f G", gg), fmt("%.2f ATM", e.pressureAtm)}, HUD_GREEN);
+    {   // the wind and the weather
+        std::vector<std::string> wx;
+        if (surf.site.atmosphere) wx.push_back(e.windKnots > 0.5 ? fmt("WIND %.0f KT %s", e.windKnots, compassName(e.windDir)) : std::string("NO WIND"));
+        if (e.ringShadow > 0.15) wx.push_back("RING SHADOW");   // O0-01
+        if (e.cometActivity > 0.05) wx.push_back(fmt("VENTING %.0f%%", e.cometActivity * 100));   // O4
+        if (e.rain > 0.05) wx.push_back(fmt("RAIN %.0f%%", e.rain * 100));
+        if (e.snow > 0.05) wx.push_back(fmt("SNOW %.0f%%", e.snow * 100));
+        if (e.hail > 0.05) wx.push_back("HAIL");
+        if (e.dust > 0.05) wx.push_back(fmt("DUST %.0f%%", e.dust * 100));
+        if (e.fogBank > 0.3) wx.push_back("FOG");
+        if (e.aurora > 0.15 && e.skyBrightness < 0.4) wx.push_back(e.auroraStorm > 0.7 ? "AURORA STORM" : "AURORA");   // R-402
+        pack(wx, HUD_GREEN);
+    }
+    if (!surf.inDrone) {   // B-321: the suit's life sensor: the nearest herd or flock within 1.5 km (`X` still brackets what is in view)
+        double best = 1e9, bx = 0, bz = 0; bool flock = false;
+        for (const SurfaceView::Herd& hd : surf.herds) { double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = false; } }
+        for (const Flock& f : surf.flocks) { double a = f.phase + t * f.speed; double dx = f.cx + std::cos(a) * f.radius - pl.x, dz = f.cz + std::sin(a) * f.radius - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = true; } }
+        if (best < 1500) row(best < 25 ? std::string("LIFE HERE") : fmt("LIFE %s %s%s", metresString(best).c_str(), compassName(wrap2pi(std::atan2(bx, bz))), flock ? " (FLYERS)" : ""), HUD_CYAN);
+    }
+    if (!surf.inDrone && !surf.site.roads.empty()) {   // C-09: the old road under the feet or the wheels and the way it runs (T-01: its kind)
+        const double rx = surf.inBuggy ? surf.buggy.x : pl.x, rz = surf.inBuggy ? surf.buggy.z : pl.z;
+        double d, along, hd; const SiteRoad* rd;
+        if (surf.site.roadAt(rx, rz, 12, d, along, hd, rd) && d < rd->half + 1.5 && roadLeft(rd->id, along, rd->wear) > 0.3)
+            row(fmt("OLD %s %s-%s", NET_KIND_HUD[clampi(rd->kind, 0, NK_COUNT - 1)], compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI))), HUD_CYAN);
+    }
+    if (surf.lastRange > 0) {   // O1 (B-302): the rangefinder: how far the crosshair rests and how long it takes to get there (walking, driving, flying)
+        const double spd = surf.inDrone ? 80.0 : (surf.inBuggy ? 32.0 : (surf.site.escapeVelocity < 30 ? 0.3 * surf.site.escapeVelocity : 4.2));   // a fast cruise over open ground, not the 50 m/s top; R-403: a cruise by air
+        const double secs = surf.lastRange / spd;
+        const std::string tt = secs < 90 ? fmt("%.0f S", secs) : (secs < 5400 ? fmt("%.0f MIN", secs / 60) : fmt("%.1f H", secs / 3600));
+        row(fmt("AHEAD %s %s%s", metresString(surf.lastRange).c_str(), tt.c_str(), surf.lastRangeWater ? " WATER" : ""), HUD_CYAN);
+        const int mk = markNear(surf.lastRangeX, surf.lastRangeZ, std::max(150.0, 0.03 * surf.lastRange));   // R-408: the mark the crosshair rests on
+        if (mk >= 0) row(markLabel(mk), guide.marks[mk].lent ? HUD_CYAN : HUD_AMBER);
+    }
+    if (!surf.inVehicle()) {   // the walker's own
+        if (pl.swimming) row(pl.underwater ? "DIVING" : "SWIMMING", HUD_CYAN);
+        if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) pack({fmt("JET ALT %.0f M", pl.altAboveGround), fmt("VS %+.1f", pl.vy)}, HUD_AMBER);
+        if (pl.autoWalk > 0) row(fmt("AUTOWALK %d", pl.autoWalk), HUD_GREEN);
+        static const char* vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
+        if (visionMode > 0 && visionMode < 5) row(vn[visionMode], HUD_CYAN);
+    }
+    const bool seat = surf.inVehicle() && !surf.chaseCam;
+    const int y0 = seat ? 44 : 36, maxRows = (UH - 56 - y0) / 8 - 1;   // under the pan gauge in a vehicle; over the prompts and the stamina on foot
+    if ((int)rows.size() > maxRows) rows.resize(std::max(0, maxRows));
+    int w = textWidth("READINGS");
+    for (const auto& r : rows) w = std::max(w, textWidth(r.first.c_str()));
+    const int x0 = UW - 8 - w, n = (int)rows.size() + 1;
+    blendRectRGB(canvas, x0 - 3, y0 - 3, x0 + w + 2, y0 + n * 8 + 1, rgb(0, 0, 0), 150);
+    drawRectRGB(canvas, x0 - 3, y0 - 3, x0 + w + 2, y0 + n * 8 + 1, rgb(40, 52, 40));
+    drawText(canvas, x0, y0, "READINGS", HUD_AMBER);
+    for (int i = 0; i < (int)rows.size(); i++) drawText(canvas, x0, y0 + 8 * (i + 1), rows[i].first.c_str(), rows[i].second);
 }

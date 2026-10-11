@@ -1,5 +1,6 @@
 // The Stardrifter: remote and local targeting, Vimana flight, fine approach, parking.
 #include "game.h"
+#include "galaxy/plan.h"
 #include "ui.h"
 #include "core/rng.h"
 #include <cstdlib>
@@ -26,6 +27,7 @@ void Game::arriveAtStar(const Star& s, const Vec3& fromDir) {
     Vec3 fwd = normalize(full.pos - ship.pos);
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
     nb.update(ship.pos);
+    gchart.onShip = true; gchart.follow = true; gchart.plotHere = false; gchart.look = false;   // G-06: the chart opens on the ship's new place
     visitNoted = false;
     arrivalNote = fmt("ARRIVED AT %s - %d PLANETS, %d MOONS", upper(starNameOf(full)).c_str(), sys.planetCount(),
                       (int)sys.bodies.size() - sys.planetCount());
@@ -64,25 +66,34 @@ Vec3 Game::aimDirection() const { return normalize(viewBasis().transposed() * Ve
 
 // R-407 (the user's request of 2026-10-07: "fly stardrifter in any direction you want for any number of light years ... break the
 // loop with just saying 'now I jump 400 light years in that direction' and boom"): the star nearest the end of the line becomes the
-// remote target and the Vimana flies at once; where the end lies in the void the jump comes back along the line to the first stars
+// remote target and the Vimana flies at once; where the end lies in the void the jump comes back along the line to the first stars.
+// G-06: the plot and the flight are two steps, so the galaxy chart can plot a jump and fly it on a second Enter
 void Game::startJump(double ly, const Vec3& dir) {
-    if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return; }
+    if (plotJump(ly, dir, false)) flyJump();
+}
+
+bool Game::plotJump(double ly, const Vec3& dir, bool onChart) {
+    if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return false; }
     ly = clampd(ly, 1, JUMP_MAX_LY);
     Star dest; double shortLy = 0;
-    if (!jumpTarget(ship.pos, dir, ly, dest, shortLy, sys.valid ? sys.star.seed : 0)) { status("NO STAR TO COME OUT AT ALONG THAT LINE", 4); audio.beep = 3; return; }
+    if (!jumpTarget(ship.pos, dir, ly, dest, shortLy, sys.valid ? sys.star.seed : 0)) { status("NO STAR TO COME OUT AT ALONG THAT LINE", 4); audio.beep = 3; return false; }
     Star full; starInSector(dest.sx, dest.sy, dest.sz, full, true);
-    const std::string from = sys.valid ? upper(starNameOf(sys.star)) : std::string("DEEP SPACE");
-    const std::string way = galacticHeading(ship.pos / SECTOR_KM, dir);
+    JumpPlot p; p.seed = full.seed; p.ly = ly; p.shortLy = shortLy; p.onChart = onChart;
+    p.from = sys.valid ? upper(starNameOf(sys.star)) : std::string("DEEP SPACE");
+    p.way = galacticHeading(ship.pos / SECTOR_KM, dir);
     ship.targeting = false; jumpDigits.clear();
     setRemoteStar(full);
-    if (!ship.hasRemote || ship.remote.seed != full.seed) return;   // refused (the current star: `jumpTarget` leaves it out already)
-    const double flyLy = length(full.pos - ship.pos) / SECTOR_KM;
-    logEvent("JUMP", fmt("%.0f LY %s FROM %s TO PARSIS %+lld %+lld %+lld, %s%s", ly, way.c_str(), from.c_str(), (long long)full.sx, (long long)full.sy, (long long)full.sz,
-                         REGION_NAMES[galaxyRegion(full.sx, full.sy, full.sz)], shortLy > 0 ? fmt(" (%.0f LY SHORT: THE VOID)", shortLy).c_str() : ""));
-    toggleVimana();
+    if (!ship.hasRemote || ship.remote.seed != full.seed) return false;   // refused (the current star: `jumpTarget` leaves it out already)
+    jumpPlot = p;
+    return true;
+}
+
+void Game::flyJump() {
+    const double ly = jumpPlot.ly, shortLy = jumpPlot.shortLy;
+    toggleVimana();   // the JUMP line
     if (ship.mode != ShipState::VIMANA) return;
     if (shortLy > 0) status(fmt("NO STARS OUT THERE - THE JUMP ENDS %.0f LY SHORT", shortLy), 6);
-    else status(fmt("VIMANA JUMP OF %.0f LY: A STAR %.0f LY AWAY", ly, flyLy), 6);
+    else status(fmt("VIMANA JUMP OF %.0f LY: A STAR %.0f LY AWAY", ly, length(ship.remote.pos - ship.pos) / SECTOR_KM), 6);
 }
 
 void Game::nearestStars(int n, std::vector<const Star*>& out) const {
@@ -144,6 +155,7 @@ void Game::startApproach(int body) {
     if (dot(side, fromShip) < 0) side = -side;
     ship.parkDir = normalize(toStar * 0.55 + side * 0.75 + fromShip * 0.3 + Vec3(0, 0.18, 0));
     ship.parkedBody = -1;
+    worldPlanPrefetch(spaceR.genFor(b));   // T-01: a people's world: its plan read on a thread of its own while the ship comes in
     status(fmt("FINE APPROACH: %s", upper(bodyNameOf(body)).c_str()), 4);
     audio.beep = 1;
 }
@@ -209,8 +221,7 @@ void Game::updateShipMotion(double dt) {
         case ShipState::VIMANA: {
             ship.flightT += lastRealDt;
             double u = clampd(ship.flightT / ship.flightDur, 0, 1);
-            double s = u * u * (3 - 2 * u);
-            ship.pos = lerp(ship.flightFrom, ship.flightTo, s);
+            ship.pos = lerp(ship.flightFrom, ship.flightTo, vimanaProgress(u));   // G-07: the curve the band's keyframes read ahead
             nb.update(ship.pos);
             if (u >= 1) {
                 Vec3 fromDir = normalize(ship.flightFrom - ship.remote.pos);
@@ -385,7 +396,7 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
         if (picked >= 0) { ship.localTarget = picked; ship.targetBelt = -1; status(fmt("LOCAL TARGET: %s", upper(bodyLabelOf(picked)).c_str()), 4); audio.beep = 4; }
     }
     if (in.wasPressed(KEY_G) && !in.ctrl()) { openGuide(); return; }
-    if (in.wasPressed(KEY_M) && !in.ctrl() && ship.mode != ShipState::VIMANA) { guideReturn = GameState::SPACE; returnState = GameState::SPACE; openStarMap(); return; }
+    if (in.wasPressed(KEY_M) && !in.ctrl()) { guideReturn = GameState::SPACE; returnState = GameState::SPACE; openStarMap(); return; }   // G-05: in a flight too, on the galaxy
     if (in.wasPressed(KEY_J) && !in.ctrl()) { guideReturn = GameState::SPACE; returnState = GameState::SPACE; logPage = 0; state = GameState::LOG; return; }
     if (in.wasPressed(KEY_F) && !in.ctrl()) { fieldAmp = !fieldAmp; status(fieldAmp ? "FIELD AMPLIFICATOR ON" : "FIELD AMPLIFICATOR OFF", 3); audio.beep = 4; }
     if (in.wasPressed(KEY_X) && inSystem && (ship.localTarget >= 0 || ship.targetBelt >= 0)) {
@@ -401,7 +412,13 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_C)) deployCapsule();
     if (dataKey(in) && inSystem) { returnState = GameState::SPACE; state = GameState::DATA; }
     updateShipMotion(dt);
-    audio.hum = radar.on ? 0.25 : 0.6;   // C-07: the hum under the receiver's static
-    audio.engine = ship.mode == ShipState::VIMANA ? 0.9 : (ship.mode == ShipState::APPROACH ? 0.35 : 0.0);
-    audio.wind = 0; audio.rain = 0; audio.lava = 0;
+    const bool playing = player.playing >= 0 && !player.held && !player.paused;   // C-11: the ship's player: the hum and the drive lower under it
+    audio.hum = radar.on ? 0.25 : (playing ? 0.3 : 0.6);   // C-07: the hum under the receiver's static
+    audio.engine = ship.mode == ShipState::VIMANA ? (playing ? 0.55 : 0.9) : (ship.mode == ShipState::APPROACH ? (playing ? 0.22 : 0.35) : 0.0);
+    audio.surfaceOff();   // B-413: nothing of the ground aboard
+    {   // C-18: the drones' fans as they leave the rack or come back to it (the surface drone's whine, aboard)
+        double spin = 0;
+        for (int k = 0; k < DRONE_COUNT; k++) { double x, lift, blur; if (droneRackPlace(k, x, lift, blur)) spin = std::max(spin, blur); }
+        audio.rotor = 0.4 * spin; audio.rotorPitch = 0.25 * spin;
+    }
 }
