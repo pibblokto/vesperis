@@ -135,6 +135,10 @@
 
 * **1.2.0 is the iteration and the requests it drew, nothing held back.** The user called the release after R-408: the eight milestones of `ITERATION-1.2.0.md` with R-404..R-408 and B-407..B-410, generation 12 (the giants' decks and storms; saves load, a giant may look different). The index marks the rows not done `1.3.0`. The recipe is 1.1.0's, run on the merged tree.
 
+## Release 1.3.0 (2026-10-11)
+
+* **1.3.0 is the iteration and everything the user asked after it, nothing held back.** The user called the release after R-417: the twenty-two milestones of `ITERATION-1.3.0.md` (G-05..G-07, H-01..H-06, A-01..A-04, C-15, C-16, T-01..T-04, C-11, C-17, C-18) with R-412..R-417 and B-411..B-422, generation 13 (the ages: saves load, the shards found kept by their place in their worlds' records, their contents new). The index marks the rows not done `1.4.0`. The README's paragraph and keys (the chart, the gain, the decoder's pages, the case and the bay, the landing map's peoples, the readings, the works). The recipe is 1.2.0's, run on the merged tree.
+
 ## B-403 (2026-10-01): the aurora
 
 * **The aurora is curtains in the sky's geometry, drawn after the stars.** The M4-06 effect was five lobes of azimuth, opaque, hard-edged, meeting at the zenith: a player under a pulsar reported "four moving morphing green blobs". Sheets of light along an auroral oval at a hashed latitude, with a height profile integrated analytically between a ray's entry and exit of each slab, give the lower border, the fade upward, the brightening along the sheet and the latitude dependence (a low arc at 55 degrees, overhead at the oval) from a few lines; the per-pixel noise of the old code was no cheaper. Drawn as a pass over the sky-bank pixels after the bodies and the stars, with no threshold, so the stars show through it; a moon's night side shows it in front, since the curtains hang 100-250 km up, far under any body in the sky, and its lit disc is brighter and stays (the pass compares shades, it cannot add light across banks: the twilight glow near the sun washes the curtains out smoothly instead of cutting holes in them). The alternative, keeping the per-pixel loop and making the star field treat bank 11 as transparent, kept the hard edge. Rain and dust take it away as the rain takes the stars; the night clouds hide neither (KI-336). The regression frames stand at 12 degrees of latitude and did not change.
@@ -1876,7 +1880,38 @@ but a Mac's keyboard has them only under `FN`.
   two), so a short hold lands near and a long one crosses a people's records. A run stops at the first and the last; the arrow alone
   still goes round on the timeline. A slow frame (the history read again) counts as a tenth of a second at most, so it never leaps.
 * **The timeline and the history**, as asked. The records page keeps its steps: its hint line (47 characters of 53, 48 with `* UNREAD`)
-  has no room for `SHIFT FAST` beside `LEFT/RIGHT KIND`, and its `PGUP`/`PGDN` turn its pages of fifteen rows.
+  has no room for `SHIFT FAST` beside `LEFT/RIGHT KIND`, and its `PGUP`/`PGDN` turn its pages of fifteen rows (superseded by R-417 on
+  the user's asking: the records page runs too).
 * **The hints say so**: `ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK` (the timeline: Up and Down move it too, as before),
   `UP/DOWN  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK` (the history: Enter reads the record that told the event, as `ENTER THE RECORD`
   said; that line had no room for both).
+
+## B-422 (2026-10-11): nothing far off is computed on the main thread for a glance
+
+The user: freezes of five to seven seconds when landing ("looking slightly underground"), at `Tab` or `R` just after, and at an Enter,
+with the CPU spiking while the landing map's cursor moved. `docs/iteration-3/bugs/resolved/B-422-freezes-at-the-landing-tab-r-and-enter.md`.
+
+* **A mark far off is read without its rivers**: the marks' ground at the map's 64 m reads the drainage only where its tiles are built,
+  as the scanner's sights' heights already did; a mark read without them asks again every two seconds. Reading them built a tile of a
+  degree a mark on the main thread: nineteen marks, eight seconds, at the readings', the scanner's or a shown mark's first look. The
+  height is the shown mark's diamond's alone, so a far one a few metres off its ground until the explorer's way builds its tiles is the
+  price (KI-403).
+* **The descent ends at the eye** (1.65 m), not on the ground: its last third of a second stood the camera under the near ground's
+  triangles, the frame a freeze held.
+* **The landing map asks for a place's tiles once the cursor rests 0.4 s**, not at every step: a step's asking cost a thread of eight per
+  tile and Shift held kept every core busy. A landing right after a move builds the site's tiles then (KI-403); a rest of two seconds
+  has them.
+* **A prefetch's tiles side by side, a superseded one's abandoned**: lanes, the nearest the point first; a worker keeps to every core
+  but two, a caller that waits takes every core but one; a tile being computed for a superseded worker is abandoned unless a thread
+  waits for it or the newest asked for it too. A tile is computed whole or not at all and the same as before: no generation change.
+  Half the cores for a worker was measured and refused: the slow walk over the map cost as much and its landing waited longer.
+
+## R-417 (2026-10-11): the records page runs too
+
+The user: "in shards decoder also add this fast shift scrolling for records tab". `docs/iteration-3/plans/requests/R-417-the-records-quick-scroll.md`.
+
+* **`SHIFT` with `UP` or `DOWN` held runs the records page** as R-416's run does, through the kind shown and stopping at the ends;
+  `LEFT`/`RIGHT` stay the kind's keys, with `SHIFT` or without.
+* **The hint makes room with the font's arrows**: `ENTER READ  ↔ KIND  SHIFT FAST  TAB PAGE  ESC BACK` (51 characters of 53; 52 with
+  `* UNREAD`). Words (`LEFT/RIGHT KIND`) beside `SHIFT FAST` were 59; dropping `ENTER READ` or `TAB PAGE` would have hidden what the
+  page is for on the page the decoder opens on; `L/R` reads as the `L` and `R` keys.

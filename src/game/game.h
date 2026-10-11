@@ -153,8 +153,8 @@ public:
     int scanMode = -1;                 // -1 off, else the LandmarkKind the scanner listens for
     bool scanSkipMarked = true;        // a sight with one of the explorer's marks on it is left out
     std::string worldKeyOf(int bi) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi); }
-    struct SiteMark { int index = -1; double x = 0, z = 0, y = 0; };   // a mark of the surface's world in local metres, its ground's height
-    std::vector<SiteMark> siteMarks; int siteMarksEpoch = -1, siteMarksBody = -1, marksVersion = 0, siteMarksVersion = -1; size_t siteMarksCount = 0;
+    struct SiteMark { int index = -1; double x = 0, z = 0, y = 0; bool dry = false; };   // a mark of the surface's world in local metres, its ground's height (B-422: dry, read without the rivers until their tiles are built)
+    std::vector<SiteMark> siteMarks; int siteMarksEpoch = -1, siteMarksBody = -1, marksVersion = 0, siteMarksVersion = -1; size_t siteMarksCount = 0; double siteMarksDryT = 0;
     const std::vector<SiteMark>& marksHere();                  // the surface's world's marks (rebuilt when the marks, the landing or the frame change)
     int markNear(double x, double z, double radiusM);          // the mark of this world nearest a point within a radius (its index in Guide::marks), -1 none
     std::string markLabel(int mi) const;                       // its name, else "A MARK" / "A MARK: RUINS"
@@ -198,6 +198,7 @@ public:
     int testShardsPage() const { return shardsPage; }
     int testShardSel() const { return shardHeld.empty() ? -1 : shardHeld[std::max(0, std::min((int)shardHeld.size() - 1, shardSel))]; }   // H-06: the record under the cursor (its local index)
     int testShardCursor() const { return shardSel; }                           // R-416: the cursor's place among the records held (the timeline's)
+    int testShardsFilter() const { return shardsFilter; }                      // R-417: the kind the records' page shows (0 every kind)
     int testShardsHeld() const { return (int)shardHeld.size(); }
     int testLegendSel() const { return legendSel; }                            // R-416: the history's event under the cursor
     std::string testRadarInfo() const;         // C-07: the radar's state for the harness
@@ -300,6 +301,12 @@ public:
         return false;
     }
     void testMarkLocal(int mi, double& x, double& z) const { const SurfaceMark& m = guide.marks[mi]; surf.site.localAt(StarSystem::bodyFromLatLon(m.lat, m.lon), x, z); }
+    int testMarksHere(int& dry) { dry = 0; for (const SiteMark& m : marksHere()) dry += m.dry ? 1 : 0; return (int)marksHere().size(); }   // B-422: the world's marks, and those read without their rivers
+    bool testMarkGround(int mi, double& y, double& wet) {   // B-422: a mark's ground as the marks hold it, and the ground there with the rivers (ask once its tiles are built)
+        for (const SiteMark& m : marksHere()) if (m.index == mi) { y = m.y; const TerrainVertex v = surf.site.sampleAt(m.x, m.z, 64.0); wet = std::max((double)v.h, (double)v.water); return true; }
+        return false;
+    }
+    const BodyGen& testSiteGen() const { return surf.site.gen; }   // B-422
     void testWalkTo(double x, double z) { surf.player.x = x; surf.player.z = z; surf.player.y = surf.site.surfaceHeight(x, z); }
     double testPlayerX() const { return surf.player.x; }
     double testRange() const { return surf.lastRange; }
@@ -541,6 +548,7 @@ private:
     bool hasSave = false;
     double landLat = 0, landLon = 0;   // radians
     double drainLat = 1e9, drainLon = 1e9;   // O6-03: the site whose drainage tiles were last asked for ahead of the landing
+    double landSeenLat = 1e9, landSeenLon = 1e9, landMovedT = -1e9;   // B-422: where the cursor was last frame and when it last moved (its tiles asked for once it rests)
     int landBody = -1;
     // O2 (R-301): the landing map's zoom into the cursor's sector (Z): a window two sectors wide and one tall, sampled
     // from the planet function at the far ring's detail, with the sector grid drawn over it
@@ -713,7 +721,7 @@ private:
     std::vector<double> eraX0, eraX1;            // the timeline's eras across its width (each era's share by the people's records in it)
     void ensureTold();                           // `told`, the history page's rows and the timeline's eras for the open world (no-op while valid)
     bool shardInFilter(int local) const;         // a record of the kind the records' page shows
-    void stepShard(int dir);                     // the cursor to the next record held of the kind shown
+    void stepShard(int dir, bool stop = false);  // the cursor to the next record held of the kind shown (stop: a single step stops at the ends too)
     int toldRecordOf(int item) const;            // the record (of `shardHeld`'s order) that told an event first, -1 none held
     void renderShardRecords(); void renderShardTimeline(); void renderShardHistory(); void drawShardPagesStrip(const std::string& right);
     std::string recordSummary(int local, int maxChars) const;   // a record as the list names it ("A LETTER: ...", a piece's form, a chart's caption)

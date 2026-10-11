@@ -29,6 +29,7 @@ void Game::beginLanding() {
     worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // T-01 (already on its way since the approach)
     if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // R-415: its records and their homes, for V
     drainLat = 1e9; drainLon = 1e9;   // O6-03: the map's first update prefetches the drainage of the default site
+    landSeenLat = landLat; landSeenLon = landLon; landMovedT = -1e9;   // B-422: at once (the cursor has not moved)
     landZoom = 0;   // O2: start from the whole world
     state = GameState::LANDING_MAP;
 }
@@ -50,8 +51,11 @@ void Game::updateLandingMap(const Input& in, double dt) {
     landLat = clampd(landLat, -88 * DEG, 88 * DEG);
     landLon = wrapAngle(landLon);
     // O6-03: the drainage tiles of the sector under the cursor are computed on their own thread while the site is chosen,
-    // so the landing's first frame finds them in the cache (a tile takes 100-300 ms on a big world)
-    if (std::fabs(landLat - drainLat) > 1e-9 || std::fabs(landLon - drainLon) > 1e-9) {
+    // so the landing's first frame finds them in the cache (a tile takes 100-300 ms on a big world). B-422: once the cursor
+    // rests 0.4 s: every step asked for its own tiles, and a cursor held with Shift kept every core busy (46 threads, 8 cores
+    // of 10) and the Enter after it waited three seconds on the places it had passed
+    if (landLat != landSeenLat || landLon != landSeenLon) { landSeenLat = landLat; landSeenLon = landLon; landMovedT = realTime; }
+    if ((std::fabs(landLat - drainLat) > 1e-9 || std::fabs(landLon - drainLon) > 1e-9) && realTime - landMovedT >= 0.4) {
         drainLat = landLat; drainLon = landLon;
         drainagePrefetch(spaceR.genFor(sys.bodies[landBody]), StarSystem::bodyFromLatLon(landLat, landLon), 65000.0, true);
     }

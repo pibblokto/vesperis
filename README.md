@@ -41,6 +41,21 @@ any number of light years along the aim, and on the ground a scanner points to
 ruins, lakes, peaks and the other sights while the explorer marks and names
 what they find on the sector map. The giants were regenerated (generation 12).
 
+1.3.0 is the far, the faint and the peoples. Each dead people is found at the
+age it had reached when it fell, from the stone age to a far future, and its
+world shows it: towns, roads and great works of that age across the people's
+own lands, buildings in an architecture of its own, and on a world of two
+peoples the frontier between them and the battlefields of their wars. Their
+records come in the genres and the tongue of the people and the age (letters,
+chronicles, songs, sermons, broadcasts, a star chart on a cave's ceiling or a
+navigation chart of routes), and the decoder reads them as a history along the
+people's eras. Instruments taken from the ruins are played from a case on the
+ship, a drone bay sends three drones down to bring back records and
+instruments, and the ship's player plays what the ship has heard and held. A
+chart of the whole galaxy plots the next jump, and the radar's gain hears
+signals thousands of light years away. The peoples were regenerated (generation
+13): saves load, and the shards already found are kept with new contents.
+
 ## Playing
 
 Download the build for your machine from the
@@ -100,10 +115,11 @@ In space:
 | `Z` | The telescope (zoom, the reticle, photographs) |
 | `O` | Toggle orbit / fixed point chase; `Shift`+arrows carry the parked ship round its world |
 | `F` | Field amplificator (brighter star field) |
-| `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import) / star map / expedition log |
+| `G` / `M` / `J` | The GUIDE (name stars and worlds, notes, targets by name or coordinates, home, history, export/import) / star map (`Tab` turns to the galaxy chart: `Enter` plots a jump to the cursor, `Enter` again flies it) / expedition log |
 | `C` | Deploy the surface capsule (from orbit around a landable world), or drop a probe into a gas giant |
-| `B` | The signal radar (the sweep, lock a signal, its distance and age) |
-| `E` at the cabin's back wall | The shard decoder: read, hear and play what the ruins held, name a piece with `N` |
+| `B` | The signal radar (the sweep, lock a signal, its distance and age; `+`/`-` turn the gain up to hear farther) |
+| `E` at the cabin's back wall | The shard decoder: a world's records, timeline and history (`Tab`; `Shift` with the arrows runs the cursor), read, hear and play what the ruins held, name a piece with `N`; `Tab` at the worlds turns to the ship's player |
+| `E` at the cabin's left wall | The instruments' case (play what the ruins held) and, by the front window, the drone bay (`Enter` sends three drones down for records and instruments) |
 | `I` (`F2`) | Data sheet of the local target |
 | `T` / `Ctrl+T` | Time warp x1 / x10 / x100 / x1000 / x10000 / the almanac |
 | `Ctrl+S` / `Ctrl+L` (`F5` / `F9`) | Save / load |
@@ -120,8 +136,9 @@ the roof deck. The classic cockpit camera is one setting away (SHIP VIEW).
 
 Landing map: arrows move the cursor (`Shift` = fast), `Z` zooms into the
 cursor's sector, `R` picks a random lit land site, `C` toggles the cloud
-overlay, `J` jumps under the biggest body in that world's sky, `Enter` lands,
-`Esc` returns.
+overlay, `J` jumps under the biggest body in that world's sky, `V` shows the
+peoples (where their records were kept; a people's whole map once all its
+records are held), `Enter` lands, `Esc` returns.
 
 On the surface:
 
@@ -136,9 +153,10 @@ On the surface:
 | `B` | Unfold a buggy next to the capsule; `E` gets in and out; `W/S` drive, `A/D` steer, `Space` brake; `V` outside view |
 | `F` | Launch the drone from the capsule (`Space` lifts off, `W/S` thrust, `A/D` turn) |
 | `M` | Set a waypoint on the spot under the crosshair, or clear it |
-| `Q` / `E` | Board the capsule when standing next to it (return to orbit); `E` also takes a shard from a ruin |
+| `Q` / `E` | Board the capsule when standing next to it (return to orbit); `E` also takes a record or an instrument from a ruin |
 | `K` | Call the capsule to your position |
-| `R` / `Shift+R` | The scanner: ruins, lakes, peaks, craters, canyons, mesas, geysers, crystals, off / leave out or take in what you have marked |
+| `R` / `Shift+R` | The scanner: ruins, works, lakes, peaks, craters, canyons, mesas, geysers, crystals, off / leave out or take in what you have marked |
+| `Tab` | The readings: the place, the sky, the air, the ground, the vehicle |
 | `L` | Mark the spot under the crosshair and name it |
 | `N` | Sector map (2 km to 2048 km wide): a cursor (arrows or mouse), `Enter` marks or renames, `Delete` twice removes, `M` places the waypoint, `Tab` the next mark, `+`/`-` zoom |
 | `G` | The GUIDE: name the world, write a note |

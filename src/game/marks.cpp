@@ -6,6 +6,7 @@
 // (galaxy/landmarks.h); the scanner hears them and the maps show only what the explorer marked
 #include "game.h"
 #include "ui.h"
+#include "galaxy/drainage.h"
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
@@ -22,9 +23,27 @@ const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS",
 const char* RUIN_SIZE_NAMES[6] = {"A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub`, its SettlementClass (T-01: a city, the capital)
 }
 
+// B-422: a mark's ground at the map's 64 m, with the rivers only where their drainage tiles are built already: a mark far off reads
+// it without them, and again with them once the explorer's way has built them (every two seconds a dry mark asks). Reading it with
+// them built a tile of a degree on the main thread for every mark across the world: nineteen on the user's BUBAS, the first look
+// of the readings, the scanner or a shown mark after a landing frozen for eight seconds
+static bool markGround(const SurfaceSite& site, const SurfaceMark& m, Game::SiteMark& sm) {
+    const bool dry = !drainageReady(site.gen, StarSystem::bodyFromLatLon(m.lat, m.lon), 0.0);
+    DrainageOff off(dry);
+    const TerrainVertex v = site.sampleAt(sm.x, sm.z, 64.0);
+    sm.y = std::max((double)v.h, (double)v.water);
+    return dry;
+}
+
 const std::vector<Game::SiteMark>& Game::marksHere() {
     if (!surf.valid) { siteMarks.clear(); siteMarksVersion = -1; return siteMarks; }
-    if (siteMarksEpoch == surf.siteEpoch && siteMarksBody == surf.site.body && siteMarksVersion == marksVersion && siteMarksCount == guide.marks.size()) return siteMarks;
+    if (siteMarksEpoch == surf.siteEpoch && siteMarksBody == surf.site.body && siteMarksVersion == marksVersion && siteMarksCount == guide.marks.size()) {
+        if (realTime >= siteMarksDryT) {
+            siteMarksDryT = realTime + 2.0;
+            for (SiteMark& sm : siteMarks) if (sm.dry) sm.dry = markGround(surf.site, guide.marks[sm.index], sm);
+        }
+        return siteMarks;
+    }
     siteMarks.clear();
     const std::string body = worldKeyOf(surf.site.body);
     for (int i = 0; i < (int)guide.marks.size(); i++) {
@@ -32,11 +51,10 @@ const std::vector<Game::SiteMark>& Game::marksHere() {
         if (m.body != body) continue;
         SiteMark sm; sm.index = i;
         surf.site.localAt(StarSystem::bodyFromLatLon(m.lat, m.lon), sm.x, sm.z);
-        TerrainVertex v = surf.site.sampleAt(sm.x, sm.z, 64.0);
-        sm.y = std::max((double)v.h, (double)v.water);
+        sm.dry = markGround(surf.site, m, sm);
         siteMarks.push_back(sm);
     }
-    siteMarksEpoch = surf.siteEpoch; siteMarksBody = surf.site.body; siteMarksVersion = marksVersion; siteMarksCount = guide.marks.size();
+    siteMarksEpoch = surf.siteEpoch; siteMarksBody = surf.site.body; siteMarksVersion = marksVersion; siteMarksCount = guide.marks.size(); siteMarksDryT = realTime + 2.0;
     return siteMarks;
 }
 

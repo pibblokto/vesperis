@@ -60,6 +60,9 @@ Left out on purpose: the V series (parked until the rendering direction is settl
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row
 of `MILESTONES.md` gets `1.3.0, done <date>`. The ids keep their series' names; this table is the order.
 
+After the twenty-two, the user's bugs and requests one by one (2026-10-10 and 2026-10-11): B-411 to B-422 and R-412 to R-417
+(`docs/iteration-3/bugs/resolved/`, `docs/iteration-3/plans/requests/`). Released as 1.3.0 on 2026-10-11.
+
 ## Why this order
 
 1. **The far first.** Three small, self-contained milestones with no generation change, playable at

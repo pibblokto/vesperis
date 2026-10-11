@@ -374,14 +374,17 @@ void Game::updateShards(const Input& in, double realDt) {
         if (in.wasPressed(KEY_ESCAPE)) { shardsLevel = 0; return; }
         if (in.wasPressed(KEY_TAB)) { shardsPage = (shardsPage + (in.shift() ? 2 : 1)) % 3; audio.beep = 4; return; }
         if (n == 0) return;
-        if (shardsPage == 0) {   // the records: Up/Down through the kind shown, Left/Right the kind
+        if (shardsPage == 0) {   // the records: Up/Down through the kind shown, Left/Right the kind (R-417: with Shift held Up/Down run, stopping at the ends)
             if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_RIGHT)) {
                 shardsFilter = (shardsFilter + (in.wasPressed(KEY_RIGHT) ? 1 : 3)) % 4; audio.beep = 4;
                 if (!shardInFilter(shardHeld[shardSel])) stepShard(1);
                 return;
             }
-            if (in.wasPressed(KEY_UP)) stepShard(-1);
-            if (in.wasPressed(KEY_DOWN)) stepShard(1);
+            if (in.shift()) { const int s = shardRunSteps(in, realDt, false); if (s) stepShard(s, true); }
+            else {
+                if (in.wasPressed(KEY_UP)) stepShard(-1);
+                if (in.wasPressed(KEY_DOWN)) stepShard(1);
+            }
             if (in.wasPressed(KEY_PAGE_UP)) stepShard(-SHARD_ROWS);
             if (in.wasPressed(KEY_PAGE_DOWN)) stepShard(SHARD_ROWS);
             if (enterKey(in) && shardInFilter(shardHeld[shardSel])) openShard(shardSel);
@@ -569,11 +572,12 @@ bool Game::shardInFilter(int local) const {
     if (shardsFilter == 0 || local < 0 || local >= (int)shardWorld.shards.size()) return true;
     return recordKindOf(shardWorld.shards[local]) == shardsFilter - 1;
 }
-// dir +-1: the next record held of the kind the records' page shows, round from the end; more: that many on, stopping at the end
-void Game::stepShard(int dir) {
+// dir +-1: the next record held of the kind the records' page shows, round from the end; more (or `stop`, R-417's run): that many on,
+// stopping at the end
+void Game::stepShard(int dir, bool stop) {
     const int n = (int)shardHeld.size();
     if (n == 0) return;
-    const bool wrap = dir == 1 || dir == -1;
+    const bool wrap = !stop && (dir == 1 || dir == -1);
     const int sgn = dir > 0 ? 1 : -1;
     for (int left = std::abs(dir); left > 0; left--) {
         int j = shardSel, found = -1;
@@ -587,8 +591,9 @@ void Game::stepShard(int dir) {
     }
 }
 // R-416: Shift with an arrow held runs the timeline's and the history's cursor (the user's: "a quick scroll ... so you don't have to click
-// right/left or up/down one event at a time"): a step as the arrow (or Shift) goes down, then from a fifth of a second on ever faster, 12 a
-// second doubling every half second to 100 (a hundred records in about two seconds); the steps this frame, back negative
+// right/left or up/down one event at a time"; R-417: the records' too, Up and Down): a step as the arrow (or Shift) goes down, then from a
+// fifth of a second on ever faster, 12 a second doubling every half second to 100 (a hundred records in about two seconds); the steps
+// this frame, back negative
 int Game::shardRunSteps(const Input& in, double realDt, bool leftRight) {
     const bool fwd = in.isDown(KEY_DOWN) || (leftRight && in.isDown(KEY_RIGHT)), back = in.isDown(KEY_UP) || (leftRight && in.isDown(KEY_LEFT));
     const int dir = in.shift() ? (fwd ? 1 : 0) - (back ? 1 : 0) : 0;
@@ -698,7 +703,10 @@ void Game::renderShardRecords() {
             fillRectRGB(canvas, x, ty - 3, x, ty + 3, col);
         }
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, anyPending ? "ENTER READ  LEFT/RIGHT KIND  TAB PAGE   * UNREAD" : "ENTER READ  LEFT/RIGHT KIND  TAB PAGE  ESC BACK", HUD_DIM);
+    {   // R-417: SHIFT FAST beside the rest: the kind's keys drawn as the font's arrows (LEFT/RIGHT left no room: 59 characters of 53)
+        const std::string kind = std::string(1, CH_LEFT) + std::string(1, CH_RIGHT) + " KIND";
+        drawTextCentered(canvas, UW / 2, UH - 10, ("ENTER READ  " + kind + "  SHIFT FAST  TAB PAGE" + (anyPending ? "   * UNREAD" : "  ESC BACK")).c_str(), HUD_DIM);
+    }
 }
 
 // C-04: a piece on the screen: its name or form, the tradition in words, the notes as a roll across the piece's length (the lead

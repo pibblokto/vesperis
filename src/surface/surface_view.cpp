@@ -3537,7 +3537,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     double pitch = player.pitch, yaw = player.yaw, roll = 0;
     double camX = player.x, camZ = player.z;
     if (cameraOverrideAlt >= 0) {
-        eyeY = site.surfaceHeight(player.x, player.z) + cameraOverrideAlt;
+        eyeY = site.surfaceHeight(player.x, player.z) + std::max(cameraOverrideAlt, player.eyeHeight);   // B-422: the descent ends at the eye, not in the ground
         pitch = cameraOverridePitch;
     } else if (inBuggy) {
         double hx = std::sin(buggy.heading), hz = std::cos(buggy.heading);

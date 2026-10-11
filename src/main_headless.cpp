@@ -76,6 +76,7 @@ static int takePeopleArg(int& argc, char** argv);
 #include <cmath>
 #include <map>
 #include <functional>
+#include <thread>
 
 static int g_testScale = 1;
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
@@ -5391,6 +5392,37 @@ static void planChecks(const std::function<void(const char*, bool, const std::st
               fmt("off at first %s; on: the mark %d, places %d with none held; %d held: %d places drawn of %zu homes, %d ways; all %d held: %d places of %zu, %d ways, %d land pixels, the capital named %d; the zoom: %d rings, the capital %d, %d pixels the layer's",
                   offFirst ? "yes" : "NO", marksOn, placesNone, (n0 + 8) / 9, placesSome, ranks.size(), waysSome, n0, placesAll, P->plans[0].places.size(), waysAll, landAll, capitalAll, rings, capitalZoom, differ));
     }
+    {   // B-422: the landing map's cursor asked for the drainage tiles of every place it stepped to (Shift held: 46 threads, every core busy, the
+        // Enter after it three seconds): held, it asks for none of the places it passes; at rest, 0.4 s on, for the place it stopped at
+        StarSystem fs; int fb = -1;
+        const bool have = firstBodyOfType(PT_FELISIAN, fs, fb);
+        Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+        auto quiet = [&]() { int n = drainageTilesBuilt(); for (double t0 = nowSec(); nowSec() - t0 < 20;) { std::this_thread::sleep_for(std::chrono::milliseconds(600)); const int m = drainageTilesBuilt(); if (m == n) break; n = m; } return n; };
+        bool readyFirst = false, readyRest = false; int during = -1, rested = -1, built0 = 0;
+        if (have) {
+            game.testParkAt(fs.star, fb); run(0.1);
+            game.testLandCursor(20.5, 30.5); run(0.5);
+            for (double t0 = nowSec(); nowSec() - t0 < 30 && !game.testDrainageReady();) run(1.0 / 30);
+            readyFirst = game.testDrainageReady();
+            built0 = quiet();
+            in.down[KEY_LEFT_SHIFT] = true;
+            for (int i = 0; i < 10; i++) { in.down[KEY_RIGHT] = true; game.frame(in, 1.0 / 30); in.newFrame(); }   // six degrees a frame
+            in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false;
+            run(0.2);   // at rest, short of the 0.4 s
+            std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+            during = drainageTilesBuilt() - built0;
+            run(0.4);
+            for (double t0 = nowSec(); nowSec() - t0 < 30 && !game.testDrainageReady();) run(1.0 / 30);
+            readyRest = game.testDrainageReady();
+            rested = drainageTilesBuilt() - built0;
+        }
+        check("the landing map's cursor: no drainage tiles for the places it passes, the place it rests at's 0.4 s on (B-422)", have && readyFirst && during == 0 && readyRest && rested > 0,
+              fmt("%s: the first place's tiles %s; ten steps of six degrees and 0.2 s at rest: %d tiles built in 1.5 s; 0.4 s more at rest: the place's tiles %s (%d built)",
+                  have ? fs.bodies[fb].name.c_str() : "no felisian world", readyFirst ? "in" : "NOT IN", during, readyRest ? "in" : "NOT IN", rested));
+    }
 }
 
 static std::string lowerOf(std::string s) { for (char& c : s) c = (char)tolower((unsigned char)c); return s; }
@@ -7871,6 +7903,35 @@ static int testUnit() {
                   fmt("Shift+Enter on the shown one %s (white %d px), on no mark %s; a mark before it removed: %s, read back from the guide %s; itself removed: %s",
                       hideFar ? "hides it" : "DOES NOT", hidden, onNothing ? "nothing" : "SOMETHING", keptShown ? "still shown" : "LOST", keptFile ? "shown" : "NOT", goneWith ? "none shown" : "STILL SET"));
         }
+        {   // B-422: the user's landings froze for 5-7 s: the readings (Tab), the scanner (R) or a shown mark asked for the world's marks,
+            // whose ground was read with the rivers, and every mark far off built a drainage tile of a degree on the main thread (their
+            // nineteen on BUBAS: 8 s). Eight marks far across this world, none of their tiles built: read at once, without the rivers,
+            // no tile built for them; one's tiles built, the look two seconds on reads it with them
+            const BodyGen& sg = game.testSiteGen();
+            std::string wk; for (const SurfaceMark& m : game.guide.marks) if (m.name == "LOOKOUT") wk = m.body;
+            const size_t kept = game.guide.marks.size();
+            double la0 = 0, lo0 = 0; game.testLatLonAt(game.testPlayerX(), game.testPlayerZ(), la0, lo0);
+            std::vector<Vec3> far; int unbuilt0 = 0;
+            for (int k = 0; k < 8 && !wk.empty(); k++) {
+                SurfaceMark m; m.body = wk; m.name = fmt("FAR %d", k); m.lat = clampd(la0 + (k % 2 ? -1 : 1) * (12 + 5 * k) * DEG, -60 * DEG, 60 * DEG); m.lon = wrapAngle(lo0 + (40 + 35 * k) * DEG);
+                game.guide.marks.push_back(m); far.push_back(StarSystem::bodyFromLatLon(m.lat, m.lon));
+                if (!drainageReady(sg, far.back(), 0.0)) unbuilt0++;
+            }
+            const double t0 = nowSec(); int dry = 0; const int count = game.testMarksHere(dry); const double ms = (nowSec() - t0) * 1000;
+            int unbuilt = 0; for (const Vec3& u : far) if (!drainageReady(sg, u, 0.0)) unbuilt++;
+            bool wetLater = false; double y = 0, wet = 0; int dry2 = -1;
+            if (!far.empty()) {
+                drainagePrefetch(sg, far[0], 0.0, false);   // the first one's tiles, as the explorer's way would build them
+                run(2.2);
+                game.testMarksHere(dry2);
+                wetLater = game.testMarkGround((int)kept, y, wet) && std::fabs(y - wet) < 1e-6 && dry2 >= 0 && dry2 < dry;
+            }
+            game.guide.marks.resize(kept); game.marksVersion++;
+            check("marks: the far ones read without building a drainage tile, with their rivers once built (B-422)",
+                  typeHasDrainage(sg.type) && !wk.empty() && unbuilt0 == 8 && unbuilt == 8 && dry >= 8 && count >= 8 && ms < 250 && wetLater,
+                  fmt("%s world; eight marks far across it, their tiles unbuilt %d; the marks read in %.1f ms (%d, %d without their rivers), the tiles still unbuilt %d; the first's tiles built, two seconds on: %s (ground %.2f, with the rivers %.2f, %d dry)",
+                      PLANET_TYPES[sg.type].name, unbuilt0, ms, count, dry, unbuilt, wetLater ? "read with them" : "NOT", y, wet, dry2));
+        }
         // the guide: the marks saved and read back; lent to a friend, not lent on
         game.guide.save("shots/tests/test_r408_export.txt");
         Guide back2; back2.load("shots/tests/test_r408_export.txt");
@@ -8132,6 +8193,33 @@ static int testUnit() {
             check("dead desert world: dry seas, the bed under the land, wadis to the shore", sea * 100 >= n * 15 && sea * 100 <= n * 70 && hSea < hLand && salt > 0 && shoreFound && st.sea > 0 && st.channels > 0,
                   fmt("%s (the sea stood at %.0f m): the old sea on %d%% of %d points (salt on %d), its bed %.0f m against the land's %.0f; at the shore %d sea cells, %d channels of %d", b.name.c_str(), g.oldSeaM, sea * 100 / n, n, salt, hSea, hLand, st.sea, st.channels, st.cells));
         } else check("dead desert world: dry seas", false, "no dead desert world in the scan");
+        if (haveFel) {   // B-422: the landing map's cursor asked for its drainage tiles at every step, and the places it had passed kept every
+            // core busy: a superseded prefetch's tiles are abandoned (A's, at a tile's middle: unbuilt once B's is in); a tile a thread
+            // waits for is finished all the same (C read while its prefetch is superseded by D's)
+            StarSystem sys; sys.generate(firstFel);
+            const BodyGen g = BodyGen::make(sys.bodies[bodyFel]);
+            const bool wasOn = drainageEnabled(); setDrainageEnabled(true);
+            const Vec3 A = StarSystem::bodyFromLatLon(30.5 * DEG, 100.5 * DEG), B = StarSystem::bodyFromLatLon(-35.5 * DEG, -79.5 * DEG);
+            const Vec3 C = StarSystem::bodyFromLatLon(20.5 * DEG, -150.5 * DEG), D = StarSystem::bodyFromLatLon(-10.5 * DEG, 160.5 * DEG);
+            const bool fresh = !drainageReady(g, A, 0) && !drainageReady(g, B, 0) && !drainageReady(g, C, 0) && !drainageReady(g, D, 0);
+            auto waitReady = [&](const Vec3& u) { const double t0 = nowSec(); while (nowSec() - t0 < 30 && !drainageReady(g, u, 0)) std::this_thread::sleep_for(std::chrono::milliseconds(10)); return drainageReady(g, u, 0); };
+            drainagePrefetch(g, A, 30000.0, true);
+            drainagePrefetch(g, B, 0.0, true);
+            const bool bIn = waitReady(B);
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            const bool abandoned = !drainageReady(g, A, 0);
+            drainagePrefetch(g, C, 0.0, true);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            DrainInfo dc; std::thread reader([&] { dc = drainageAt(g, C, 64.0); });
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            drainagePrefetch(g, D, 0.0, true);
+            reader.join();
+            const bool readerHas = drainageReady(g, C, 0), dIn = waitReady(D);
+            setDrainageEnabled(wasOn);
+            check("drainage: a superseded prefetch's tiles abandoned, a tile waited for finished (B-422)", fresh && bIn && abandoned && readerHas && dIn,
+                  fmt("%s: the four places' tiles unbuilt at first %s; A's prefetch superseded by B's: B's in %s, A's middle %s; C's read while its prefetch was superseded: %s, D's in %s",
+                      sys.bodies[bodyFel].name.c_str(), fresh ? "yes" : "NO", bIn ? "yes" : "NO", abandoned ? "unbuilt (abandoned)" : "BUILT", readerHas ? "its tile there" : "NO TILE", dIn ? "yes" : "NO"));
+        }
         if (haveFel || haveDes) {   // the settlements of the first world: the classes' shares, every house a room with a doorway (the pieces), and the view's colliders
             StarSystem sys; sys.generate(haveFel ? firstFel : firstDes);
             int bi = haveFel ? bodyFel : bodyDes;
@@ -13819,6 +13907,27 @@ static void historyPageChecks(const std::function<void(const char*, bool, const 
         check("history: Shift held with an arrow runs the history's events, a tap one, stopping at the ends (R-416)",
               game.testShardsPage() == 2 && ne >= 15 && h0 == 0 && h1 == 1 && h2 - h1 >= std::min(12, ne - 1 - h1) && h2 - h1 <= 30 && h3 == ne - 1 && h4 == ne - 1,
               fmt("page %d, %d events: run up to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Down alone %d", game.testShardsPage(), ne, h0, h1, h2, h2 - h1, h3, h4));
+        // R-417 (the user: "in shards decoder also add this fast shift scrolling for records tab"): Shift and Up/Down run the records
+        // page's cursor through the kind shown, stopping at the ends where Down alone goes round; the music alone shown, the run keeps to it
+        while (game.testShardsPage() != 0) press(KEY_TAB);
+        while (game.testShardsFilter() != 0) press(KEY_LEFT);
+        run(0.1);
+        writePNG("shots/tests/decoder_pages_records_hint.png", game.output(), FBW, FBH);
+        hold(KEY_UP, 30 * (3 + n / 100)); const int r0 = game.testShardCursor();
+        hold(KEY_DOWN, 1); const int r1 = game.testShardCursor();
+        hold(KEY_DOWN, 30); const int r2 = game.testShardCursor();
+        hold(KEY_DOWN, 30 * (3 + n / 100)); const int r3 = game.testShardCursor();
+        press(KEY_DOWN); const int r4 = game.testShardCursor();
+        press(KEY_RIGHT); press(KEY_RIGHT); run(0.1);   // the music alone
+        const bool anyMusic = std::any_of(held.begin(), held.end(), [&](int i) { return C->entries[i].category == RC_MUSIC; });
+        hold(KEY_DOWN, 30 * (3 + n / 100)); const int mLast = game.testShardSel();
+        press(KEY_DOWN); const int mFirst = game.testShardSel();   // Down alone round to the first
+        hold(KEY_DOWN, 30 * (3 + n / 100)); hold(KEY_UP, 30 * (3 + n / 100)); const int mUp = game.testShardSel();   // run to the last and back: the first
+        const bool musicOk = !anyMusic || (game.testShardsFilter() == 2 && mLast >= 0 && mFirst >= 0 && C->entries[mLast].category == RC_MUSIC && C->entries[mFirst].category == RC_MUSIC && mUp == mFirst);
+        check("history: Shift held with Up/Down runs the records page through the kind shown, stopping at the ends; Down alone goes round (R-417)",
+              game.testShardsPage() == 0 && r0 == 0 && r1 == 1 && r2 - r1 >= std::min(12, n - 1 - r1) && r2 - r1 <= 30 && r3 == n - 1 && r4 == 0 && musicOk,
+              fmt("page %d, every kind, %d records: run up to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Down alone %d; the music alone: run to S%d, Down alone round to S%d, run down and up to S%d%s",
+                  game.testShardsPage(), n, r0, r1, r2, r2 - r1, r3, r4, mLast, mFirst, mUp, anyMusic ? "" : " (no music held)"));
     }
 }
 

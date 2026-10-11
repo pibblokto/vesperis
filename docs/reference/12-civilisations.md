@@ -2012,7 +2012,8 @@ between them (`SHIFT+TAB` back): the records, the timeline of the eras, the hist
 *The records* (`game/shards_screen.cpp`): C-06's list under the pages' strip, each row's kind as a glyph before it (a page, a note, a star),
 the year in the people's count and the record's first words as the computer last read them; `LEFT`/`RIGHT` show one kind (the texts, the
 music, the star charts) or all, the strip counting each kind held (the one shown white); `UP`/`DOWN` and a record's own `LEFT`/`RIGHT` keep
-to the kind shown. C-12's calendar and timeline stay under the rows.
+to the kind shown (R-417: held with `SHIFT` they run as the timeline's do, stopping at the ends). C-12's calendar and timeline stay
+under the rows.
 
 *The timeline* (`game/history_screen.cpp`, C-12's grown): the people's eras across the width, each its share by the people's records
 written in it (an era of few or none a sliver, linear in its years within; B-414: a late people's earlier eras slivers); an era is placed, a band, once a record written in it (B-414: or a history telling it) is read
