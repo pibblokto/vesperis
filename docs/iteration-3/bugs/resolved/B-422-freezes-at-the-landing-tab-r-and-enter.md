@@ -58,7 +58,7 @@ The star map and the galaxy chart were measured too: 0.03-0.72 cores, no frame o
 ## Verified
 
 Each before and after measured the same way on the same machine (another Vesperis process ran beside both: the numbers are its, not an
-idle machine's), the before from the commit `c880985` built in a worktree:
+idle machine's), the before from the commit `10a81fe` built in a worktree:
 
 * BUBAS with the user's save and guide, landing 2 km off the capital after 3 s on the map: Tab on the first frame on the ground 7,767
   ms before (8,492 on an idler run), no frame over 60 ms after (the run's worst 99 ms, the Enter's); R 8,289 ms before, none over 60

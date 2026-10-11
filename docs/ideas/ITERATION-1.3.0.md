@@ -867,7 +867,7 @@ unchanged; bench within every budget. The music's WAVs and the records' places a
 
 ### C-18: the drone bay
 
-Added on 2026-10-11 after the bugs B-411..B-421 and R-412 (committed as `6139a2f` the same day), on the user's request: "add three drones
+Added on 2026-10-11 after the bugs B-411..B-421 and R-412 (committed as `90437ac` the same day), on the user's request: "add three drones
 with robotic hands (don't model them exactly like you modeled surface drone but still in similar design) that you can send from stardrifter
 to felisian/desert planets with civilizations. When you send them each can bring 2-8 items on stardrifter each (so minimum 6 and max 32),
 cooldown is 5 minutes. They can bring both shards (all three kinds) and instruments. As for instruments there is another change I would like
