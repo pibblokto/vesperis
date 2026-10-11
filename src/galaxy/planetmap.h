@@ -76,6 +76,9 @@ struct SurfaceSample {
 struct BodyGen {
     int type = PT_CRATERED;
     uint64_t seed = 0;
+    // R-413: the world's own seed (`make`): a people's generator (C-13's `peopleGen`, or a copy with the people's seed) changes `seed`
+    // alone and keeps it, so it can be read as its world's people (a second people's age is its first's: `peopleAgeOf`)
+    uint64_t worldSeed = 0;
     double R = 3000;        // km
     double seaLevel = 0;    // felisian: -1..1 continent threshold
     double mountainAmp = 3000, hillAmp = 200, detailAmp = 20;

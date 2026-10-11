@@ -55,6 +55,7 @@ Left out on purpose: the V series (parked until the rendering direction is settl
 | 19 | The records | H-06 | The decoder reads a history: categories, long texts, the eras' timeline, the people's history as read | M | done 2026-10-10 |
 | 20 | The player | C-11 | The ship's player and the instruments of the ages (KI-347) | M | done 2026-10-10 |
 | 21 | The makers | C-17 | The instruments' maker: each people's instruments built from parts by its own way of making (added 2026-10-10) | L | done 2026-10-10 |
+| 22 | The makers | C-18 | The drone bay: three drones with hands sent from the ship to a people's world for its records and instruments; the instruments' case by world (added 2026-10-11) | L | done 2026-10-11 |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row
 of `MILESTONES.md` gets `1.3.0, done <date>`. The ids keep their series' names; this table is the order.
@@ -137,7 +138,7 @@ as it is.
 * **What the explorer has on it.** The ship (a crosshair, `YOU`), home (the star map's amber
   diamond), the systems visited (dots, and the route between them in the order they were reached:
   a `route` line per arrival in the guide, so an older guide draws its visited stars without the
-  lines), the remote target with the ship's line to it (in a flight the ship moving along it), the
+  lines; R-414, 2026-10-11: the route is gone, the user finding it confusing; the dots stay), the remote target with the ship's line to it (in a flight the ship moving along it), the
   explorer's named stars at the closer zooms, and the signals the radar locked (`Guide::signals`,
   rings in the radar's red: KI-349's "on no map or screen of the ship"). One panel line:
   `13,050 LY FROM THE CORE - SPIRAL ARM - IN THE PLANE`, the scale bar and the zoom.
@@ -860,6 +861,63 @@ names the piece's instruments the same.
 `instruments distinct 100`: 5.0% of the pairs share the plan and the body, 0.87% have pictures alike; prehistoric pipes of bone 13 of 100,
 a cylinders' machine 62 of 100 (C-11: every one each); 326 names. Unit 288 (three C-17 checks) in 3:31; flow 34.1 s; regress 22
 unchanged; bench within every budget. The music's WAVs and the records' places as C-11's. KI-389 new. The twenty-first of 1.3.0.
+
+### C-18: the drone bay
+
+Added on 2026-10-11 after the bugs B-411..B-421 and R-412 (committed as `6139a2f` the same day), on the user's request: "add three drones
+with robotic hands (don't model them exactly like you modeled surface drone but still in similar design) that you can send from stardrifter
+to felisian/desert planets with civilizations. When you send them each can bring 2-8 items on stardrifter each (so minimum 6 and max 32),
+cooldown is 5 minutes. They can bring both shards (all three kinds) and instruments. As for instruments there is another change I would like
+you to add - make it so that instruments are also separated by planet/world as shards are so you open specific planet as a folder (as we
+have in shards) and can view all the instruments from the planet".
+
+Three drones at two to eight finds each make six to twenty-four a trip; the request's "max 32" would need eleven a drone, so the per-drone
+rule was kept and the difference reported to the user.
+
+* Done when: the cabin holds the three drones (the surface drone's family, not its copy: ducted fans, the dark band of an eye, a beacon;
+  two arms with three-fingered hands), seen leaving and coming back; parked at a people's world (felisian or desert, `TR_CIVILISATION`) the
+  bay sends them and each brings two to eight of the world's records (texts, music, star charts) and instruments the explorer does not
+  hold, into the guide (the decoder, the case), gone from the ruins as one taken by hand is; five minutes from one launch to the next; the
+  case opens on its worlds, a world's instruments inside it; checked in the unit and seen in frames.
+
+**Done (2026-10-11):** `galaxy/drones.*` (what a world holds for them and a trip's haul), `game/drones.cpp` (the bay: the trip, the
+cooldown, the screen), `game/drone_draw.cpp` (the model, the rack, the drones outside the windows, the screen's lines, the map), the case's
+worlds in `game/instruments_screen.cpp` (`docs/reference/12-civilisations.md`, "The drone bay (C-18)"; `10-decisions.md`, C-18):
+
+* the bay: a rack of three shelves against the cabin's left wall by the front window (`facing` 11, pale yellow, the flight computer's
+  devices page `THE DRONE BAY`), a port behind each shelf the drone backs through into the hull; the drones fly past the windows and
+  dwindle to strobes over the world; the screen (`GameState::DRONES`): each drone in lines (turning on its shelf, its face three-quarters
+  on while out, its arms reaching and its hands closing on each find), the world's map with the ground under the ship, the places searched
+  and the drones on it, what the world still holds for them, the finds as they are made;
+* a trip: each drone two to eight, to a place by how much of its own it holds, three to five there (its own, then copies of its people's
+  records kept there), on to a second or a third; the rarer kinds leaned toward; aboard at the dock; real time (the warp does not hurry it),
+  a minute or two, five minutes from launch to launch; called back with what was found when the ship leaves; saved and resumed;
+* the case: its worlds as folders (the count, whose they are, the world under the ship first), Enter opens one, Esc closes it.
+
+Two hundred hauls from the modern age world (250 items): 7 to 24 finds, 17% instruments (3.6% of the items), 9.5% star charts. Unit 310
+(nine C-18 checks) 0 failures; flow 36.6 s with the bay at its end; regress 22 unchanged; bench within every budget. KI-399 new. The
+twenty-second of 1.3.0.
+
+**Reworked on the user's review (2026-10-11, the same day):** "Why on my save Bubas doesn't show shards adding up from drones rack? Nothing
+changes and rack shows there are about 200+ shards and shards decoder there are 130+ or something. What I am expecting - when drones arrive
+everything immediately appears on shard decoder [...] make them look for stuff longer, maybe for 2 minutes + 5 minutes recharge". Every
+find was in their guide (Bubas: 58 shards, 35 of them brought by the drones); the rack counted what was left (204) and the decoder each
+people's whole (129 and 133), the held split over its two rows; and a decoder left open on a world did not list what docked. Now the rack
+says `ABOARD: 58 OF ITS 262 SHARDS` and `AND 7 OF ITS 9 INSTRUMENTS`; the decoder lists again as the guide grows (its worlds, the open
+world's records, the player's page) and its rows that ran off the screen with three-figure counts fit; each drone searches for two minutes (`DRONE_SEARCH_S`) and the bay charges five minutes from their
+return (`BACK IN 1:52` while they are out). Unit 311 (ten C-18 checks: the charge from the return, two minutes a drone,
+a decoder open as they dock) 0 failures; flow 38.2 s; regress 22 unchanged; bench within every budget.
+
+**The case a folder each people (2026-10-11, the same day):** asked whether the case kept two peoples' instruments apart, the user: "in
+instruments case split instruments by civilization as a decoder does". A world of two peoples is a folder each people in the case, the
+people named on its line as the decoder's rows name them (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`), the open folder that people's
+alone. With it R-413 (the two peoples of a world of one age), the same message's other answer.
+
+**The rack's list and the case's line pared (R-414, 2026-10-11):** the user, of the rack: "all the findings should be cleared after you
+took a look at them [...] So drones are back, you open, see what they found, close rack and that's it"; of the case: "On the right you
+again see that it's 'From <planet>' and coordinates. No need for that". The rack's screen closed after the drones are back aboard clears
+the trip's finds and the places searched (`droneFindsSeen`; a trip still on keeps them); an instrument's line is its name alone, the open
+folder's title naming the world and its people on a world of one too. A check: the rack lists none once seen.
 
 ## Working rules for this iteration
 

@@ -4,7 +4,8 @@
 // warm, the disc between the arms a pale gold, the arms' young stars blue-white and weighted brighter, as starlight is); the
 // globulars as fuzzy points, and from level 6 the open clusters and the star-forming complexes read from their cells (the column
 // steps over anything 30 ly thick). Nothing on it has a name: the explorer's things are drawn over it (the ship, home, the stars
-// visited and the way between them, the remote target and its line, the signals the radar locked, the stars named at the close levels).
+// visited (R-414: not the way between them), the remote target and its line, the signals the radar locked, the stars named at the close
+// levels).
 // G-06 (2026-10-08): the next jump chosen on it ("the ability to select on that map where to jump next"): a cursor with what lies under
 // it (the region, the stars there, its height, the way and the flight from the ship, what the explorer has there), Enter plots the jump
 // to its point by R-407's line (`plotJump`) and flies it on a second Enter, Tab looks at the stars round the plotted end first, N steps
@@ -473,14 +474,8 @@ void Game::renderGalaxyChart() {
         }
     };
 
-    // the way the ship came: a line per leg in the order of the arrivals, then the stars visited
-    gchart.legs.clear();
-    const uint32_t ROUTE = rgb(70, 130, 95);
-    for (size_t k = 1; k < guide.route.size(); k++) {
-        if (guide.route[k] == guide.route[k - 1]) continue;
-        const Vec3 a = sectorCentre(guide.route[k - 1]), b = sectorCentre(guide.route[k]);
-        if (segment(a.x, a.z, b.x, b.z, ROUTE, false)) gchart.legs.push_back({guide.route[k - 1], guide.route[k]});
-    }
+    // the stars visited (R-414: G-05's lines of the way the ship came between them are gone; the user: "they seem to be a good idea but they
+    // confuse you a lot")
     for (const std::string& key : guide.visited) {
         const Vec3 v = sectorCentre(key); int x, y;
         if (chartProject(v.x, v.z, x, y)) dot(x, y, HUD_GREEN);

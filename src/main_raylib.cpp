@@ -2,6 +2,7 @@
 // scales it to the window with nearest-neighbour filtering.
 #include "platform.h"
 #include "game/game.h"
+#include "galaxy/plan.h"
 #include "core/png.h"
 #include "core/fs.h"
 #include <cstdio>
@@ -17,6 +18,7 @@ int main(int argc, char** argv) {
     int autoFrames = -1;
     for (int i = 1; i < argc; i++)
         if (!strcmp(argv[i], "--frames") && i + 1 < argc) autoFrames = atoi(argv[++i]);
+    std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still running at the quit is waited for before the caches it writes are destroyed
     makeDir("shots");
     Game game;
 #ifdef __APPLE__

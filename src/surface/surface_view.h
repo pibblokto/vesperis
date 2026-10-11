@@ -552,8 +552,6 @@ public:
     struct DustDevil { double x, z, height, radius, age, life, phase; };
     std::vector<DustDevil> devils;
     double nextDevil = 20;
-    // M4-02 trail of where you walked (one point per 25 m); cleared by a new landing (B-303), carried across a re-anchor
-    std::vector<std::pair<float, float>> trail;
     int siteEpoch = 0;   // B-303: counts landings and re-anchors, so cached maps of the site (the sector map image) know to rebuild
     double drainCheckT = -1e9;   // O6-03: when the drainage tiles ahead were last checked
     // R-408: the surface scanner's echoes: every sight the world can hold within SCAN_RANGE of the scan's centre (the cells' kinds

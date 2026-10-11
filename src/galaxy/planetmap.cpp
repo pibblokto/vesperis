@@ -615,7 +615,7 @@ static void giantGlobe(const Body& b, BodyGen& g) {
 BodyGen BodyGen::make(const Body& b, double season) {
     BodyGen g;
     g.type = b.type;
-    g.seed = b.seed;
+    g.seed = b.seed; g.worldSeed = b.seed;   // R-413
     g.R = b.radiusKm;
     g.season = season;
     g.starSx = b.starSx; g.starSy = b.starSy; g.starSz = b.starSz; g.starKnown = b.starKnown; g.bodyIndex = b.index;   // T-02

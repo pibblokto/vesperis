@@ -237,7 +237,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     nearGrave = NearGrave();
     shardsFound.clear(); nearShard = NearShard();   // C-03 (the game refills the set from the guide after this)
     instrumentsFound.clear(); nearInstrument = NearInstrument();   // C-11 (likewise)
-    trail.clear(); hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
+    hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
     tick("capsule+misc");
     joinScan(); echoes.clear(); scanned = false;   // R-408: the last site's echoes are gone; the scanner asks again
     tick("scan");
@@ -668,9 +668,7 @@ void SurfaceView::reanchor() {
     Vec3 capU = site.unitAt(capsuleX, capsuleZ);
     Vec3 bugU = site.unitAt(buggy.x, buggy.z);
     Vec3 drnU = site.unitAt(drone.x, drone.z);   // R-403
-    Vec3 wpU = site.unitAt(wpX, wpZ);   // B-303: the waypoint and the trail move with the frame too
-    std::vector<Vec3> trailU; trailU.reserve(trail.size());
-    for (const auto& tp : trail) trailU.push_back(site.unitAt(tp.first, tp.second));
+    Vec3 wpU = site.unitAt(wpX, wpZ);   // B-303: the waypoint moves with the frame too
     Vec3 oldNorth = site.north0;
     const StarSystem* sys = site.sys;
     int body = site.body;
@@ -689,7 +687,6 @@ void SurfaceView::reanchor() {
     capsuleX = cx; capsuleZ = cz;
     capsuleY = site.surfaceHeight(cx, cz);
     site.localAt(wpU, wpX, wpZ);
-    for (size_t i = 0; i < trail.size(); i++) { double tx, tz; site.localAt(trailU[i], tx, tz); trail[i] = {(float)tx, (float)tz}; }
     siteEpoch++;
     ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();   // C-01: the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
     refreshPlanNear();   // T-01: the plan's places in the new frame's metres
@@ -1281,11 +1278,6 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         d.z += std::cos(env.windDir) * sp * dt + std::cos(t * 0.5 + d.phase) * 0.6 * dt;
     }
     devils.erase(std::remove_if(devils.begin(), devils.end(), [&](const DustDevil& d) { double dx = d.x - player.x, dz = d.z - player.z; return d.age > d.life || dx * dx + dz * dz > 1500.0 * 1500.0; }), devils.end());
-    // M4-02: the trail
-    {
-        double dxs = player.x - (trail.empty() ? player.x : trail.back().first), dzs = player.z - (trail.empty() ? player.z : trail.back().second);
-        if (trail.empty() || dxs * dxs + dzs * dzs > 25.0 * 25.0) { trail.push_back({(float)player.x, (float)player.z}); if (trail.size() > 600) trail.erase(trail.begin()); }
-    }
     updateLife(dt, t);
     computeEnvironment(t);
 }

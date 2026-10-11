@@ -183,7 +183,6 @@ void Game::noteVisit() {
     migrateLandmarkNames();   // R-408: the sights named here before are marks now
     std::string key = starKeyOf(sys.star);
     guide.visited.insert(key);
-    guide.pushRoute(key);   // G-05: the way the ship came, for the galaxy chart
     guide.classesSeen.insert(sys.star.cls);
     if (guide.home.empty()) guide.home = key;
     if (!guide.home.empty()) {
@@ -622,7 +621,8 @@ void Game::renderStats() {
     line(fmt("NAMES GIVEN           %d   FROM OTHERS %d", (int)guide.names.size(), (int)guide.inbox.size()), HUD_GREEN);
     line(fmt("LOG ENTRIES           %d   PHOTOGRAPHS %d", (int)guide.log.size(), guide.screenshots), HUD_GREEN);
     line(fmt("CREATURES SIGHTED     %d SPECIES   SIGNALS HEARD %d", guide.creaturesSeen, (int)guide.signals.size()), HUD_GREEN);   // N3-01; C-07: the radar's locks
-    sub(guide.probesSent ? fmt("  PROBES SENT %d   DEEPEST DESCENT %.0f KM", guide.probesSent, guide.deepestProbeKm()) : std::string("  PROBES SENT 0"));   // X-04
+    sub(guide.probesSent ? fmt("  PROBES SENT %d, DEEPEST %.0f KM   DRONE TRIPS %d", guide.probesSent, guide.deepestProbeKm(), guide.droneTrips)   // X-04; C-18: the drones (51 characters at most)
+                         : fmt("  PROBES SENT 0   DRONE TRIPS %d, %d FINDS", guide.droneTrips, guide.droneFinds));
     line(fmt("LONGEST DRIVE         %.2f KM   TOP SPEED %.0f KM/H", guide.longestDriveM / 1000.0, guide.topSpeedKmh), HUD_GREEN);   // N4-05
     int64_t hx, hy, hz;
     if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) { Star h; if (starInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN); }

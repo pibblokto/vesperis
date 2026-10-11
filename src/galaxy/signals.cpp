@@ -22,8 +22,11 @@ constexpr uint64_t SALT_CELL = 0xA01C0717ULL, SALT_PULSAR = 0x9F5A1ULL, SALT_AIR
 // C-15: the powers' salts, pinned together after a scan of 2,000 pairs (`scratchpad/c15/sim.cpp`): of the 33 that gave home and
 // the three C-series test worlds one to three peoples' signals more at every step and home its farthest within 4,500-7,000 ly,
 // two kept every step within one to three from the six age worlds as well (50 steps of the ten places); this one puts a far
-// future people among home's far signals (4,500 ly at x32)
-constexpr uint64_t SALT_POWER = 0xC15A0165ULL, SALT_DEEP = 0xC1500165ULL;
+// future people among home's far signals (4,500 ly at x32). R-413 pinned the weak powers' again, the strong ones' kept (a world's
+// second people of its first's age: fewer worlds of two on the air, and home's x18 step added none): of 8,000 tried on the game's
+// own scan (`scratchpad/radar/saltscan.cpp`), 33 gave home and the C-series worlds one to three at every step, none every step from
+// the six age worlds; this one misses one there (the far-future world's first step adds four)
+constexpr uint64_t SALT_POWER = 0xC15A0404ULL, SALT_DEEP = 0xC1500165ULL;
 constexpr double POWER_WEAK_LO = 0.005, POWER_WEAK_HI = 0.05, POWER_STRONG_LO = 1, POWER_STRONG_HI = 40, DEEP_MEAN = 1.4;
 inline int64_t floorDiv(int64_t a, int64_t b) { int64_t q = a / b; if ((a % b != 0) && ((a < 0) != (b < 0))) q--; return q; }
 inline double logUniform(double u, double lo, double hi) { return lo * std::pow(hi / lo, u); }

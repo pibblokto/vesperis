@@ -72,7 +72,7 @@ struct PeopleAge {
     // they got; the far future's is its own span)
     double fullYears[AGE_COUNT] = {0, 0, 0, 0, 0, 0};
 };
-PeopleAge peopleAgeOf(const BodyGen& g, int people = 0);   // the world's generator and which of its peoples (C-13)
+PeopleAge peopleAgeOf(const BodyGen& g, int people = 0);   // the world's generator and which of its peoples (C-13; R-413: the second's age the first's)
 // B-414 (2026-10-10): a world shows only the age its people reached. What it built, wrote and buried in its earlier ages is gone (built
 // over, cleared, worn away): its towns and works stand in its last age's way, its records were made and its dead buried in that age's
 // years, and the places it left before that age began are not on the ground. The first of those years in the people's count (1 at least)

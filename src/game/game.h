@@ -13,6 +13,7 @@
 #include "galaxy/fronts.h"
 #include "galaxy/probe.h"
 #include "galaxy/legends.h"
+#include "galaxy/drones.h"
 #include "space/space_view.h"
 #include "surface/surface_view.h"
 #include "audio.h"
@@ -22,10 +23,39 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <atomic>
+#include <thread>
 
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
                        GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS, ALMANAC, PROBE, RECORDING,
-                       INSTRUMENTS };   // C-11: the instruments' case
+                       INSTRUMENTS,    // C-11: the instruments' case
+                       DRONES };       // C-18: the drone bay's screen
+
+// C-18: a drone of the bay as a model in its own metres (x its right, y up, z its nose; its feet at y 0), drawn filled on its rack in the
+// cabin and as lines on the bay's screen (game/drone_draw.cpp): a short hull with the dark band of its eye, four ducted fans on arms, two
+// arms under its nose with three-fingered hands, a hold, its number in lamps on its back and a beacon
+struct DronePose {
+    double arms = 0;     // 0 folded under the belly .. 1 reaching down and forward
+    double grip = 0;     // 0 the fingers open .. 1 closed on a find
+    double spin = 0;     // the fans' angle (radians)
+    double blur = 0;     // 0 still blades .. 1 a disc
+    int number = 1;      // its lamps (one, two, three)
+    bool lit = true;     // its eye and its beacon lit
+    double blink = 0;    // the beacon's clock (seconds)
+};
+enum DroneMat { DM_PAINT = 0, DM_DARK, DM_METAL, DM_ACCENT, DM_EYE, DM_BEACON, DM_NUMBER };
+struct DronePrim {
+    int kind = 0;        // 0 a face (`n` points), 1 a tube from p[0] to p[1] of radius `r`, 2 a lamp at p[0] (`r` its size in pixels at a metre)
+    int n = 0; Vec3 p[6];
+    Vec3 nrm;            // a face's outward normal
+    double tint = 1;     // a face's paint
+    int mat = DM_PAINT;
+    double r = 0.01;
+};
+void droneModel(const DronePose& pose, std::vector<DronePrim>& out);
+constexpr double DRONE_SEARCH_S = 120;     // C-18 (the user's, 2026-10-11): two minutes down there, from the first place a drone searches to its last
+constexpr double DRONE_COOLDOWN_S = 300;   // C-18: five minutes charging from the drones' return to the next launch (real time; the user's, 2026-10-11:
+                                           // "2 minutes + 5 minutes recharge", at first five minutes from launch to launch)
 
 // M2: the explorer inside the Stardrifter
 struct Cabin {
@@ -167,6 +197,9 @@ public:
     std::vector<std::string> testLegendLines();                                // H-06: the history page's rows as the screen shows them (the words as read)
     int testShardsPage() const { return shardsPage; }
     int testShardSel() const { return shardHeld.empty() ? -1 : shardHeld[std::max(0, std::min((int)shardHeld.size() - 1, shardSel))]; }   // H-06: the record under the cursor (its local index)
+    int testShardCursor() const { return shardSel; }                           // R-416: the cursor's place among the records held (the timeline's)
+    int testShardsHeld() const { return (int)shardHeld.size(); }
+    int testLegendSel() const { return legendSel; }                            // R-416: the history's event under the cursor
     std::string testRadarInfo() const;         // C-07: the radar's state for the harness
     bool testAimAtSignal(int which);           // C-07: turn the ship (the cabin view forward) onto signal `which` of the radar's list (far first, then local)
     int testRadarSignals() const { return (int)radar.all.size(); }
@@ -217,6 +250,36 @@ public:
     int testNearInstrumentId() const { return surf.nearInstrument.id; }
     std::string testInstrumentInfo() const;    // the case: the one on the screen, its timbre, its register, the notes played
     int testInstrumentCount() const { return (int)guide.instruments.size(); }
+    // C-18 (tests): the case's worlds, and the drone bay
+    int testCaseLevel() const { return icase.level; }
+    int testCaseWorldSel() const { return icase.worldSel; }
+    int testCaseWorlds() const { return (int)icase.worlds.size(); }
+    int testCaseWorldItems(int w) const { return w >= 0 && w < (int)icase.worldCounts.size() ? icase.worldCounts[w] : -1; }
+    std::string testCaseWorldKey(int w) const { return w >= 0 && w < (int)icase.worlds.size() ? icase.worlds[w] : std::string(); }
+    int testCaseWorldWhich(int w) const { return w >= 0 && w < (int)icase.worldWhich.size() ? icase.worldWhich[w] : -1; }
+    int testCaseKeys() const { return (int)icase.keys.size(); }
+    std::string testCaseKey(int i) const { return i >= 0 && i < (int)icase.keys.size() ? icase.keys[i] : std::string(); }
+    bool testDronesLaunch();                    // the bay's send (its screen's Enter): true when they went
+    void testDronesSettle();                    // the world's items read now (the thread waited for) and the haul drawn
+    void testDronesSkip(double clock);          // the bay's clock set forward in steps (the docks, the deliveries on the way, as the frames would)
+    std::string testDronesInfo() const;         // the trip: each drone's state, stops and finds; the cooldown; the world's items
+    int testDronesFinds(int kind = -1) const;   // the last trip's finds (of a DroneFindKind), aboard or not
+    int testDronesAboard() const;               // of them, aboard
+    int testDronesWanted(int k) const { return k >= 0 && k < DRONE_COUNT ? bay.run[k].wanted : 0; }
+    int testDronesOfDrone(int k) const { return k >= 0 && k < DRONE_COUNT ? (int)bay.run[k].finds.size() : 0; }
+    std::string testDronesFindKey(int k, int i) const;   // a find's guide key ("<body>/S<index>", "<body>/I<id>")
+    double testDronesClock() const { return bay.clock; }
+    bool testDronesOut() const { return bay.out; }
+    bool testDronesPlanned() const { return bay.planned; }
+    bool testDronesReady() const { return droneBayReady(); }
+    double testDronesCooldown() const { return droneCooldownLeft(); }
+    double testDronesBack() const { return bay.back; }
+    int testShardsListed() const { return (int)shardHeld.size(); }            // C-18: the open world's records the decoder lists
+    int testDronesWorldItems(int kind = -1, bool unheld = false);   // the parked world's items (of a kind; not held), read now
+    double testDroneRackX(int k) const;          // where a drone stands in the cabin (its rack's slot, the launch moving it), its height
+    double testDroneRackY(int k) const;
+    std::string testDroneState(int k) const { return k >= 0 && k < DRONE_COUNT ? droneStateLine(k) : std::string(); }
+    void testOpenDroneBay() { openDroneBay(); }
     void testShardsTop(int top) { shardsTop = top; }
     int testShardsLevel() const { return shardsLevel; }                        // C-06: the decoder's state for the harness
     std::string testChartInfo() const;         // C-10: the chart on the screen and the one held up
@@ -270,6 +333,7 @@ public:
     void testAimAtBody(int body);
     int testZoomRoads() const { return (int)zoomRoads.size(); }   // C-09: the roads drawn on the zoom
     int testZoomCores() const { return zoomCores; }                // T-01: the cores drawn on the zoom
+    std::string testLandPeoplesInfo();                               // R-415: the landing map's peoples: what is known, what the layer drew
     void testSurfaceFace(double yaw, double pitch) { surf.player.yaw = yaw; surf.player.pitch = pitch; }   // T-01 (the bench): the explorer's look
     const SurfaceView& testSurface() const { return surf; }   // R-412 (the bench): the forms drawn
     int testZoomWays(int kind) const { int n = 0; for (int k : zoomRoadKinds) if (k == kind) n++; return n; }   // T-01: the zoom's lines of a kind
@@ -334,7 +398,7 @@ public:
     std::string testRangeInfo() const { return "range=" + std::to_string((int)surf.lastRange) + " water=" + std::to_string((int)surf.lastRangeWater); }   // O1
     int testParkedBelt() const { return ship.parkedBelt; }                                                                  // O3
     std::string testBeltDraw() const;   // O3: rocks drawn last frame and the bank-20 pixels in the framebuffer
-    std::string testMarksInfo() const { return "trail=" + std::to_string(surf.trail.size()) + " waypoint=" + std::to_string((int)surf.hasWaypoint) + " zoom=" + std::to_string(sectorZoom) + "/" + std::to_string(sectorMaxLevel()); }   // B-303, O1-04
+    std::string testMarksInfo() const { return "waypoint=" + std::to_string((int)surf.hasWaypoint) + " zoom=" + std::to_string(sectorZoom) + "/" + std::to_string(sectorMaxLevel()); }   // B-303, O1-04
     double testEscapeVelocity() const { return surf.site.escapeVelocity; }                                                  // O4
     void testTypeText(const std::string& s);   // feeds text entry as key presses
     std::string testStarName() const { return sys.valid ? starNameOf(sys.star) : ""; }
@@ -370,7 +434,6 @@ public:
     double testChartBuildMs() const { return gchart.buildMs; }
     int testChartYouX() const { return gchart.youX; }
     int testChartYouY() const { return gchart.youY; }
-    const std::vector<std::pair<std::string, std::string>>& testChartLegs() const { return gchart.legs; }
     void testArriveAt(const Star& s) { arriveAtStar(s, Vec3(0, 0, -1)); }   // the arrival as a Vimana flight ends it
     void testPlaceShip(const Vec3& posKm) { ship.pos = posKm; ship.mode = ShipState::STANDBY; nb.update(ship.pos); }   // the ship set down anywhere (the harness's chart)
     // G-06: the chart's cursor and plot for the harness
@@ -491,6 +554,25 @@ private:
     std::vector<std::vector<std::pair<float, float>>> zoomRoads;   // C-09: the old roads of the window (texel coordinates), drawn as faint lines over it
     std::vector<int> zoomRoadKinds;                                  // T-01: each line's kind (galaxy/plan.h's NetKind: C-09's lanes are roads)
     int zoomCores = 0;                                               // T-01: the plan's places whose cores the window shows
+    // R-415: the landing map's peoples (V, off by default): the old roads and the cores over the zoom, the explorer's marks of ruins and works,
+    // the places the records held were kept at, and a people's whole land, its places and its ways once all its records are held
+    bool landPeoples = false;
+    std::vector<uint32_t> zoomCivImg;                                // the zoom with the places' cores (`zoomImg` the land alone)
+    struct ZoomPlace { int people = 0, rank = 0, sclass = 0; Vec3 unit; double radiusT = 0; };
+    std::vector<ZoomPlace> zoomPlaces;                               // the plan's places in the window (their core's radius in texels)
+    struct LandKnown {
+        bool ready = false;                    // the world's items read (`droneWorldAsk`: the drone bay's reading of a world's records and their homes)
+        int peoples = 0;
+        std::string name[2];                   // "THE JENGNE" once a record of theirs is held, else ""
+        int held[2] = {0, 0}, total[2] = {0, 0};
+        std::set<int> ranks[2];                // the plan's places the held records were kept at
+        bool all(int k) const { return k >= 0 && k < peoples && total[k] > 0 && held[k] >= total[k]; }
+    };
+    LandKnown landKnownOf(int body);
+    uint64_t landTerrSeed = 0;                             // the world view's lands of the peoples, per logical pixel (built for a people whose records are all held)
+    std::vector<uint8_t> landTerr;                         // bit 0 the first people's land, 1 its frontier; bits 2 and 3 the second's
+    void drawLandPeoples(int ox, int oy, int cx, int cy);   // the layer over the map (the world's or the zoom's), the cursor at (cx, cy)
+    struct { int places = 0, ways = 0, land = 0, marks = 0, rings = 0, capital = 0; } landDrawn;   // what the layer drew last (the harness)
     double zoomRoadsMs = 0;                                          // C-09: what the window's network cost at the last build
     void buildLandingZoom();
     bool landingZoomAllowed() const;
@@ -545,7 +627,6 @@ private:
         std::vector<uint32_t> face, edge;   // the view's images as built last: the disc face-on and edge-on, at the logical resolution
         int builtLevel = -1; long long builtI = 0, builtJ = 0; double builtHalf = 0;
         double buildMs = 0;                 // the last build's time (the harness prints it)
-        std::vector<std::pair<std::string, std::string>> legs;   // the route's legs drawn last frame, in order (star keys)
         int youX = -9999, youY = -9999;     // where the ship's crosshair was drawn last frame (logical pixels)
         // G-06: the cursor (the arrows, Shift faster, the mouse; the view moves when it nears the face's edge; PgUp/PgDn its height over
         // the plane, on the strip). On the ship it moves with it; let go, it lies in the plane unless its height is what moved
@@ -627,6 +708,8 @@ private:
     ToldHistory told; bool toldValid = false; double toldMs = 0;   // what the read records told (built when the world's pages are opened, again after a reading; how long it took)
     std::vector<LegendRow> legendRows; std::vector<int> legendFirstRow;   // the history page's rows; each told event's first row
     int legendSel = 0, legendTop = 0;            // the event under the cursor (of `told.events`), the first row shown
+    struct { int dir = 0; double t = 0, acc = 0; } shardRun;   // R-416: Shift with an arrow held runs the timeline's and the history's cursor
+    int shardRunSteps(const Input& in, double realDt, bool leftRight);   // the steps it takes this frame (back negative); 0 without Shift
     std::vector<double> eraX0, eraX1;            // the timeline's eras across its width (each era's share by the people's records in it)
     void ensureTold();                           // `told`, the history page's rows and the timeline's eras for the open world (no-op while valid)
     bool shardInFilter(int local) const;         // a record of the kind the records' page shows
@@ -638,6 +721,9 @@ private:
     std::vector<std::string> shardWorldKeys, shardWorldLabels; std::vector<int> shardWorldWhich;   // C-13: an entry a people whose shards are held, labelled with the people's name where the world had two
     std::vector<int> shardWorldTotals;           // T-04: how many records each entry's people left (`recordCountOf`)
     std::vector<int> shardHeld;                  // the open world's shards held, in the order of their years
+    size_t shardsListed = 0;                     // C-18: the guide's shards and lent ones when the lists were made (the drones bring more while they are open)
+    void listShardWorlds();                      // C-18: `shardWorldKeys` and the rest from the guide, the cursor kept on its world
+    void listShardsHeld();                       // C-18: `shardHeld` of the open world, the cursor kept on its record
     int shardsLevel = 0, shardWorldSel = 0, shardSel = 0;
     std::vector<DecodedWord> shardWords;         // the shard on the screen as the computer reads it
     // H-04: a long text in pages (the words' places on the screen and where each page starts); the voice speaks the page on the
@@ -769,10 +855,19 @@ private:
     // on the screen with its people's tradition (the synth's timbre points into it) and colours; a key a degree of its scale (1 to 9, 0),
     // Left/Right its register; the gramophone's disc through its horn
     struct InstrumentCase {
-        std::vector<std::string> keys; int sel = 0;    // the guide's keys, by world then id
+        // C-18: the case opens on its worlds, a folder each as the decoder's (the user's: "you open specific planet as a folder"), and a
+        // world's instruments inside it: Enter opens the world, Esc closes it. A world of two peoples a folder each people, as the decoder
+        // lists them (the user's: "split instruments by civilization as a decoder does")
+        int level = 0;                                 // 0 the worlds, 1 the open world's instruments
+        std::vector<std::string> worlds;               // each folder's world ("<body key>"), the one under the ship selected
+        std::vector<int> worldWhich;                   // and its people (0, or 1 the second of a world of two)
+        std::vector<int> worldCounts;                  // how many of each the case holds
+        std::vector<std::string> worldPeoples;         // whose they are on a world of two ("THE GREIP"), else ""
+        int worldSel = 0;
+        std::vector<std::string> keys; int sel = 0;    // the open world's instruments: the guide's keys, by id
         std::vector<std::string> names;                // each one's name ("A LUTE")
         std::string key; bool valid = false;           // the one on the screen
-        Tradition tradition; PeopleInstruments set; Instrument inst; FormPalette palette; std::string people, world;
+        Tradition tradition; PeopleInstruments set; Instrument inst; FormPalette palette; std::string people;
         int regShift = 0;
         bool held[10] = {};                            // its keys down (1..9, 0)
         std::vector<double> glow;                      // per course of the picture: a note just played, fading
@@ -784,11 +879,75 @@ private:
     };
     InstrumentCase icase;
     void openInstruments(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double realDt); void renderInstruments(); void stopInstrument();
+    void openCaseWorld(int w);                         // C-18: a world's instruments onto the case's list (the first on the screen); a people's of a world of two
+    void renderCaseWorlds();                           // C-18: the case's worlds
+    // C-18 the drone bay (game/drones.cpp, game/drone_draw.cpp): three drones with hands on a rack against the left wall by the front window
+    // (the cabin's `facing` 11, its screen `GameState::DRONES`, the devices page's row 10). Parked at a people's world the bay sends them
+    // down; each brings two to eight of the world's records (texts, music, star charts) and instruments the explorer does not hold, from
+    // the places that keep them (galaxy/drones.h), into the guide as it docks. The trip and the bay's charge run on real time (the warp does
+    // not hurry them): two minutes searching, five minutes charging from their return. Leaving the parking calls them back with what they
+    // found so far. A trip is saved and resumed (the `bay` lines)
+    struct DroneFindRec { int kind = 0, index = 0, people = 0, medium = -1, place = -1; double t = 0; std::string name; bool aboard = false; };
+    struct DroneStopRec { int place = -1, sclass = -1; double lat = 0, lon = 0; double arrive = 0, leave = 0; };
+    struct DroneRun {
+        double out = 0;                                // the clock it leaves the rack at
+        double down = 0, up = 0, dock = 0;             // it reaches its first stop, leaves its last, is back on its rack
+        bool docked = true;
+        int wanted = 0;                                // what it set out to bring (2 to 8)
+        std::vector<DroneStopRec> stops;
+        std::vector<DroneFindRec> finds;               // in the order found
+    };
+    struct DroneBay {
+        double clock = -1;                             // real seconds since the last launch (-1: none since the bay was new)
+        bool out = false;                              // a trip on: from the launch until the last drone docks
+        bool planned = false;                          // its haul drawn (the world's items read)
+        bool recalled = false;                         // the last trip was called back
+        uint64_t starSeed = 0; int body = -1; std::string worldKey, worldName;
+        uint64_t seed = 0;
+        double back = 0;                               // the clock when the last trip ended (its last dock, or the recall): the charge runs from it
+        double subLat = 0, subLon = 0;                 // the ground under the ship at the launch (radians)
+        DroneRun run[DRONE_COUNT];
+        // the parked world's items (`droneWorldOf`, read on the thread below)
+        DroneWorld world; bool worldValid = false; uint64_t worldStar = 0; int worldBody = -1;
+        // the screen: the world's map (its key), the finds list's scroll
+        std::vector<uint32_t> map; uint64_t mapSeed = 0; int mapW = 0, mapH = 0;
+        int listTop = 0;
+    };
+    DroneBay bay;
+    std::thread droneJob; std::atomic<bool> droneJobBusy{false}; DroneWorld droneJobOut; uint64_t droneJobStar = 0; int droneJobBody = -1;
+    void openDroneBay(); void updateDroneBay(const Input& in, double realDt); void renderDroneBay();
+    void droneBayLaunch();                             // the drones sent down (or the refusal's status)
+    void updateDrones(double realDt);                  // every simulating frame: the thread's result, the clock, the docks, the recall
+    void droneWorldAsk(int body);                      // the world's items asked for on the thread (no-op when held or on its way)
+    void droneCollect();                               // the thread's result taken (once it is done)
+    bool droneWorldHere(uint64_t starSeed, int body) const { return bay.worldValid && bay.worldStar == starSeed && bay.worldBody == body; }
+    void dronePlanTrip();                              // the haul drawn and each drone's clock laid out (the world's items read)
+    void droneDock(int k);                             // a drone back on its rack: its finds into the guide
+    void droneRecall();                                // the ship left the parking: the drones aboard with what they had found
+    void droneTripEnd();                               // the last docked: the log, the status
+    void droneFindsSeen();                             // R-414: the rack's screen closed: a trip back aboard leaves no list behind
+    bool droneBayHere() const;                         // the ship is parked at the trip's world
+    bool droneBayReady() const;                        // not out and charged (five minutes from the last trip's end)
+    double droneCooldownLeft() const;
+    double droneBackIn() const;                        // seconds until the last of them docks (-1: not out, or its trip not laid out yet)
+    std::string droneFindKey(const DroneFindRec& f) const;
+    std::string droneFindLabel(const DroneFindRec& f) const;   // "A CLAY TABLET", "A WAX CYLINDER", "A SHELL PIPE"
+    std::string droneStateLine(int k) const;           // "DESCENDING 4,200 KM", "SEARCHING A CITY", "ABOARD"
+    bool dronePosition(int k, double& lat, double& lon) const;   // where on the world the drone is (false: aboard or in the bay's hatch)
+    DronePose dronePoseAt(int k) const;                // its arms, its hands, its fans now
+    bool droneRackPlace(int k, double& x, double& lift, double& blur) const;   // where it stands in the cabin (its shelf, on its way through the rack's port), its lift and its fans' blur; false while away
+    void drawDroneRack(const Mat3& look, const Vec3& eye);   // the rack and the drones on it, in the cabin (`drawCabin`)
+    void drawDroneLights();                            // the drones leaving the ship and coming back, as lights in the space view
+    void drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun);   // a drone's model in the cabin's frame
+    void drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, double yaw, uint32_t col);   // a drone in lines on the screen
+    void buildDroneMap(int body);                      // the screen's map of a world of this system
     void playInstrumentDegree(int degree, int key);    // a note of the one on the screen (`key` holds it; 0 a note of its own length)
     void drawInstrumentPicture(int x0, int y0, int w, int h, const Instrument& I, const Tradition& T, const FormPalette& pal, const std::vector<double>& glow, double t);   // C-17: its parts (`drawInstrumentParts`)
     void deployCapsule(); void toggleVimana();
     // M4-02 sector map, M4-10 vision modes
     int visionMode = 0;
+    bool readings = false;   // R-414: the readings over the surface's view (Tab): the place, the sky, the air, the ground, the vehicle
+    void drawReadings();
     int sectorZoom = 1;
     std::vector<uint32_t> sectorImg; int sectorImgW = 100, sectorImgH = 80; double sectorImgX = 1e9, sectorImgZ = 1e9; int sectorImgZoom = -1, sectorImgEpoch = -1;
     static constexpr int SECTOR_LEVELS = 6;   // O1-04: 2, 8, 32, 128, 512 and 2048 km wide (the widest levels only on big worlds)

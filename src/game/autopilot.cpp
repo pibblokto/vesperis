@@ -416,4 +416,9 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     audio.hum = radar.on ? 0.25 : (playing ? 0.3 : 0.6);   // C-07: the hum under the receiver's static
     audio.engine = ship.mode == ShipState::VIMANA ? (playing ? 0.55 : 0.9) : (ship.mode == ShipState::APPROACH ? (playing ? 0.22 : 0.35) : 0.0);
     audio.surfaceOff();   // B-413: nothing of the ground aboard
+    {   // C-18: the drones' fans as they leave the rack or come back to it (the surface drone's whine, aboard)
+        double spin = 0;
+        for (int k = 0; k < DRONE_COUNT; k++) { double x, lift, blur; if (droneRackPlace(k, x, lift, blur)) spin = std::max(spin, blur); }
+        audio.rotor = 0.4 * spin; audio.rotorPitch = 0.25 * spin;
+    }
 }

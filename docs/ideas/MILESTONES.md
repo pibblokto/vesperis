@@ -20,7 +20,8 @@ W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
 faint and the peoples, on the user's three requests (R-409 a chart of the whole galaxy, R-410 a radar turned up to hear
 farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`), in the order the user left to the plan:
 G-05, G-06, G-07, H-01, A-01, C-15, C-16, A-02, A-03, A-04, T-01, H-02, T-02, T-03, T-04, H-03, H-04, H-05, H-06, C-11;
-generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first.
+generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first; C-18
+(the drone bay) on 2026-10-11, the twenty-second.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -34,7 +35,7 @@ lot more variety and interiors; not every desert is post-apocalyptic).
 | G-02 | Regions, globular clusters, start sector and home star in the new disc | S | 1.1.0 |
 | G-03 | Galaxy background integration at the new scale (two-scale ray integration) | M | 1.1.0 |
 | G-04 | Scene finders and pinned sites re-found, `regress bless`, flow green | S | 1.1.0 |
-| G-05 | The galaxy chart: the star map's second page, the whole disc by its stars, the ship, home, the route, the locked signals | M | 1.3.0, done 2026-10-08 |
+| G-05 | The galaxy chart: the star map's second page, the whole disc by its stars, the ship, home, the route (gone with R-414), the locked signals | M | 1.3.0, done 2026-10-08 |
 | G-06 | The next jump chosen on the chart: a cursor and what lies there, the jump plotted and flown, a look before the leap | M | 1.3.0, done 2026-10-08 |
 | G-07 | The crossing: the galaxy turning round the ship in a long flight (KI-364) | S | 1.3.0, done 2026-10-08 |
 
@@ -74,6 +75,7 @@ generation change.
 | C-15 | Deep listening: the radar's gain, a power per transmitter, the far scan, far signals faint and slow to lock | M | 1.3.0, done 2026-10-08 |
 | C-16 | What the gain lets in: the floor, the galaxy's own noise, signals mixed, far voices worn, voices in the static | L | 1.3.0, done 2026-10-09 |
 | C-17 | The instruments' maker: each people's instruments built from parts by its own way of making (the user's request after C-11) | L | 1.3.0, done 2026-10-10 |
+| C-18 | The drone bay: three drones with hands bring a people's world's records and instruments to the ship; the instruments' case by world, a world of two peoples a folder each people (the user's request after R-412) | L | 1.3.0, done 2026-10-11 |
 
 Order: C-01, C-02 (judge the text before any audio), C-03, C-06, C-04, C-05, C-07, then
 C-08 and C-10 as the pair that connects the galaxy, the rest as wanted. C-15 and C-16 were added on 2026-10-08 for 1.3.0

@@ -115,12 +115,12 @@ std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     }
 }
 
-// the scanner's two lines at the top left (on foot under the sector's line, in a vehicle under its camera's) and its mark on the
+// the scanner's two lines at the top left (on foot under the world's line, in a vehicle under its camera's REC: R-414) and its mark on the
 // compass: an arrow over the strip at the echo's bearing, or at the strip's end toward it
 void Game::drawScanHUD() {
     if (scanMode < 0 || !surf.valid) return;
     const bool seat = surf.inVehicle() && !surf.chaseCam;
-    const int y0 = seat ? 32 : 24;
+    const int y0 = seat ? 24 : 16;
     const double px = surf.player.x, pz = surf.player.z;
     double hx = 0, hz = 0;
     const SurfaceView::ScanEcho* e = nullptr;

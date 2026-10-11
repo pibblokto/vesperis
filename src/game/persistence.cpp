@@ -153,6 +153,17 @@ bool Game::save(const std::string& path) {
         f << " " << probe.timeTrack.size(); for (double v : probe.timeTrack) f << " " << v;
         f << "\n";
     }
+    if (bay.clock >= 0) {   // C-18: the drone bay: its clock (the cooldown), a trip on and what the last one found
+        f << "bay " << bay.clock << " " << (bay.out ? 1 : 0) << " " << (bay.planned ? 1 : 0) << " " << (bay.recalled ? 1 : 0) << " " << bay.starSeed << " " << bay.body << " " << bay.seed << " "
+          << bay.subLat << " " << bay.subLon << " " << (bay.worldKey.empty() ? "-" : bay.worldKey) << " " << bay.worldName << "\n";
+        f << "bayback " << bay.back << "\n";   // the user's five minutes of charging run from the trip's end
+        for (int k = 0; k < DRONE_COUNT; k++) {
+            const DroneRun& R = bay.run[k];
+            f << "bayrun " << k << " " << R.out << " " << R.down << " " << R.up << " " << R.dock << " " << (R.docked ? 1 : 0) << " " << R.wanted << "\n";
+            for (const DroneStopRec& st : R.stops) f << "baystop " << k << " " << st.place << " " << st.sclass << " " << st.lat << " " << st.lon << " " << st.arrive << " " << st.leave << "\n";
+            for (const DroneFindRec& fd : R.finds) f << "bayfind " << k << " " << fd.kind << " " << fd.index << " " << fd.people << " " << fd.medium << " " << fd.place << " " << fd.t << " " << (fd.aboard ? 1 : 0) << " " << fd.name << "\n";
+        }
+    }
     // where the explorer is: on the surface in the surface states, and in every overlay state (menus, guide screens,
     // the title after a load, ...) when the overlay returns to the surface. The title was missing here, so closing
     // the window on the title (or `--frames`) autosaved the expedition as "in space" and lost the landing (2026-09-27)
@@ -184,6 +195,7 @@ bool Game::load(const std::string& path) {
     telescopeOff();                     // W-06: nor the telescope
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10: nor the chart held up
     probe = ProbeState();                                    // X-01: a falling probe comes back from its own line below
+    bay = DroneBay();                                        // C-18: the bay from its own lines below (the thread's world, if any, is taken when it is done)
     audio.surfaceOff();                                      // B-413: nor the ground's sounds (a ground loaded sets its own)
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
@@ -195,6 +207,7 @@ bool Game::load(const std::string& path) {
     Cabin cab; int cl = 1, cd = 0, cr = 0;
     ProbeState np; int npTorn = 0, npWatch = 0; bool npHas = false;   // X-01
     ShipState ns;
+    DroneBay nbay; bool nbayBack = false;   // C-18
     double nt = t, warp = 1;
     while (std::getline(f, line)) {
         std::istringstream is(line);
@@ -224,6 +237,29 @@ bool Game::load(const std::string& path) {
             npHas = !is.fail();
             std::string sk;   // X-04 (a save before it has none)
             if (npHas && is >> np.id >> np.notes >> np.stormKind >> sk) np.stormKey = sk == "-" ? std::string() : sk;
+        } else if (key == "bay") {   // C-18
+            int out = 0, planned = 0, recalled = 0; std::string wk;
+            is >> nbay.clock >> out >> planned >> recalled >> nbay.starSeed >> nbay.body >> nbay.seed >> nbay.subLat >> nbay.subLon >> wk;
+            if (is.fail()) { nbay = DroneBay(); continue; }
+            nbay.out = out != 0; nbay.planned = planned != 0; nbay.recalled = recalled != 0; nbay.worldKey = wk == "-" ? std::string() : wk;
+            std::getline(is, nbay.worldName); if (!nbay.worldName.empty() && nbay.worldName[0] == ' ') nbay.worldName.erase(0, 1);
+        } else if (key == "bayback") {   // C-18 (a save of the first trips has none: their end read from the docks)
+            double v = 0; is >> v; if (!is.fail()) { nbay.back = v; nbayBack = true; }
+        } else if (key == "bayrun") {
+            int k = -1, docked = 1; DroneRun R;
+            is >> k >> R.out >> R.down >> R.up >> R.dock >> docked >> R.wanted;
+            if (!is.fail() && k >= 0 && k < DRONE_COUNT) { R.docked = docked != 0; nbay.run[k] = R; }
+        } else if (key == "baystop") {
+            int k = -1; DroneStopRec st;
+            is >> k >> st.place >> st.sclass >> st.lat >> st.lon >> st.arrive >> st.leave;
+            if (!is.fail() && k >= 0 && k < DRONE_COUNT) nbay.run[k].stops.push_back(st);
+        } else if (key == "bayfind") {
+            int k = -1, aboard = 0; DroneFindRec fd;
+            is >> k >> fd.kind >> fd.index >> fd.people >> fd.medium >> fd.place >> fd.t >> aboard;
+            if (!is.fail() && k >= 0 && k < DRONE_COUNT) {
+                std::getline(is, fd.name); if (!fd.name.empty() && fd.name[0] == ' ') fd.name.erase(0, 1);
+                fd.aboard = aboard != 0; nbay.run[k].finds.push_back(fd);
+            }
         } else if (key == "probetrack") {   // X-04
             size_t n = 0;
             is >> n; for (size_t i = 0; i < n && i < 400000 && is; i++) { double v; is >> v; np.camTrack.push_back(v); }
@@ -286,6 +322,12 @@ bool Game::load(const std::string& path) {
         probe.prevYaw = probe.camYaw; probe.prevPitch = probe.camPitch;
         if (probe.id <= 0) probe.id = std::max(1, guide.probesSent);
         if (npWatch) state = GameState::PROBE;
+    }
+    if (nbay.clock >= 0) {   // C-18: the bay as it was (a trip on goes on if the ship is still over its world; else it is called back at once)
+        if (!nbayBack && !nbay.out) for (const DroneRun& R : nbay.run) nbay.back = std::max(nbay.back, std::min(R.dock, nbay.clock));   // a save before the charge ran from the return
+        bay = nbay;
+        if (bay.out && !bay.planned) for (DroneRun& R : bay.run) R.docked = false;
+        if (bay.out && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() && worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body]))) droneWorldAsk(bay.body);
     }
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
     hasSave = true;

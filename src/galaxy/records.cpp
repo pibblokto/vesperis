@@ -109,7 +109,7 @@ std::shared_ptr<const Categories> categoriesOf(const BodyGen& pg, int count) {
     }
     K->charts = first;
     if (count > SHARDS_PER_WORLD) {
-        const PeopleAge pa = peopleAgeOf(pg, 0);   // the people's generator: its eras (`peopleAgeOf(g, which)`'s, the end's years aside)
+        const PeopleAge pa = peopleAgeOf(pg, 0);   // the people's generator read as its people (R-413: `peopleAgeOf(g, which)`'s)
         const int lastYear = std::max(1, pa.lastYear);
         const double leanM = musicShardsOf(pg) / 15.0, leanC = chartShardsOf(pg) / 4.0;
         const uint64_t base = mix64(pg.seed ^ 0x5A4D5ULL);   // a record's seed, its first draw its share of the years (`recordsOf`)

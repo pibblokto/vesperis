@@ -19,7 +19,7 @@
 #include "core/png.h"
 #include "core/fs.h"
 
-Game::~Game() { if (migrateThread.joinable()) migrateThread.join(); }
+Game::~Game() { if (migrateThread.joinable()) migrateThread.join(); if (droneJob.joinable()) droneJob.join(); }
 
 Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
     canvas.px = rgbBuf.data(); canvas.w = FBW; canvas.h = FBH;
@@ -149,6 +149,7 @@ void Game::newGame() {
     playerStop(); stopInstrument(); player.items.clear(); icase = InstrumentCase();   // C-11
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10
     probe = ProbeState();   // X-01: a new expedition sends nothing
+    bay = DroneBay();       // C-18: nor drones
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -269,13 +270,13 @@ void Game::frame(const Input& in, double realDt) {
     if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the decoder's music on its screen only (C-07: or through the radar; C-11: the ship's player plays on)
     if (audio.speech && audio.speech == &shardWorld.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                 // C-05: the voice too
     if ((audio.instrument || icase.discOn) && state != GameState::INSTRUMENTS) stopInstrument();                                                       // C-11: an instrument is played at its case
-    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS)) radarOff();   // C-07: a ship's instrument, off the ship
-    if (tele.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS)) telescopeOff();   // W-06: stowed off the window
+    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS || state == GameState::DRONES)) radarOff();   // C-07: a ship's instrument, off the ship
+    if (tele.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS || state == GameState::DRONES)) telescopeOff();   // W-06: stowed off the window
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
     collectMigration();   // R-408: the named sights found on the thread become marks
     bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
                       state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS || state == GameState::PROBE ||
-                      state == GameState::INSTRUMENTS;
+                      state == GameState::INSTRUMENTS || state == GameState::DRONES;
     if (in.wasPressed(KEY_T) && simulating) {
         if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }   // W-01: the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
         else if (almanacRunning) almanacStop(false);
@@ -293,6 +294,7 @@ void Game::frame(const Input& in, double realDt) {
     if (simulating) { autosaveTimer += realDt; if (autosaveTimer >= 300) { autosave(); autosaveTimer = 0; } }
     probe.fast = state == GameState::PROBE && in.shift() && probe.endClock < 0;   // R-406: Shift held on the probe's screen, this frame's clock x8
     if (simulating) updateProbe(realDt);   // X-01: the probe falls on the relay's clock (real time) wherever the explorer is aboard
+    if (simulating) updateDrones(realDt);  // C-18: the drones' trip and the bay's cooldown on real time, wherever the explorer is
     // state logic
     switch (state) {
         case GameState::TITLE:
@@ -375,6 +377,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
         case GameState::SHARDS: updateShards(in, realDt); updateShipMotion(dt); break;   // C-06
         case GameState::INSTRUMENTS: updateInstruments(in, realDt); updateShipMotion(dt); break;   // C-11
+        case GameState::DRONES: updateDroneBay(in, realDt); updateShipMotion(dt); break;   // C-18
         case GameState::SECTOR_MAP: updateSectorMap(in); break;
         case GameState::ALMANAC: updateAlmanac(in); break;   // W-01
         case GameState::PROBE: updateProbeScreen(in, dt, realDt); break;   // X-01
@@ -433,6 +436,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::KEYS:
         case GameState::SHARDS:
         case GameState::INSTRUMENTS:
+        case GameState::DRONES:
             if (state == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); break; }   // G-05: the galaxy chart covers the frame: no scene under it
             if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }   // G-06: a mark's name, over the chart
             if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // X-04: naming the storm over the probe's screen
@@ -458,6 +462,7 @@ void Game::frame(const Input& in, double realDt) {
             else if (state == GameState::CONSOLE) renderConsole();
             else if (state == GameState::SHARDS) renderShards();   // C-06
             else if (state == GameState::INSTRUMENTS) renderInstruments();   // C-11
+            else if (state == GameState::DRONES) renderDroneBay();   // C-18
             else if (state == GameState::SECTOR_MAP) renderSectorMap();
             else if (state == GameState::SYSTEM_LIST) renderSystemList();
             else renderDataSheet();

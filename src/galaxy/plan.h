@@ -59,6 +59,7 @@ PlanGrid readPlanGrid(const BodyGen& g, bool parallel = false);
 enum NetKind { NK_PATH = 0, NK_ROAD, NK_RAIL, NK_CANAL, NK_HIGHWAY, NK_MAGLEV, NK_SEA, NK_COUNT };
 extern const char* const NET_KIND_NAMES[NK_COUNT];   // "path", "road", "rail", "canal", "highway", "maglev", "sea crossing"
 extern const char* const NET_KIND_HUD[NK_COUNT];     // the HUD's: "PATH", "ROAD", "RAILWAY", "CANAL", "HIGHWAY", "MAGLEV", "CROSSING"
+extern const uint32_t NET_KIND_COLOURS[NK_COUNT];    // the maps' (0xAABBGGRR): a path brown, a road pale, rail red, a canal blue, a highway orange, maglev magenta, a crossing grey-blue
 
 struct PlanPlace {
     int rank = 0;               // its index in the people's list: the order of the founding (0 the capital)
@@ -116,6 +117,7 @@ std::shared_ptr<const WorldPlan> worldPlanOf(const BodyGen& g);
 std::shared_ptr<const WorldPlan> worldPlanIfReady(const BodyGen& g);   // null while it is being built or was never asked for
 void worldPlanPrefetch(const BodyGen& g);                               // the approach: built on a thread of its own
 bool worldPlanBuilt(uint64_t seed);                                     // tests: in the cache and ready
+void worldPlanThreadsJoin();   // C-18: the prefetches' threads waited for (at exit, before the caches they write are destroyed)
 void worldPlanClearCache();                                             // tests: the next ask builds again
 // a whole plan built now, not cached (the harness: `parallel` reads the grid on the workers; the unit compares it with the cached)
 std::shared_ptr<WorldPlan> buildWorldPlan(const BodyGen& g, bool parallel = false);

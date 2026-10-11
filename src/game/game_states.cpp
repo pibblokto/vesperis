@@ -18,7 +18,7 @@ static const KeyAction KEY_ACTIONS[] = {
     {KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"}, {KEY_LEFT_SHIFT, "SPRINT"},
     {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
     {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"}, {KEY_R, "AIM / SCANNER"},
-    {KEY_L, "TARGET / MARK"}, {KEY_TAB, "ANALYZER"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
+    {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 
 }
@@ -155,6 +155,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         static const char* names[] = {"NORMAL VISION", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
         visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = 4;
     }
+    if (in.wasPressed(KEY_TAB) && !in.ctrl()) { readings = !readings; audio.beep = 4; }   // R-414: the readings in and out of the view
     if (in.wasPressed(KEY_N) && !in.ctrl()) { returnState = GameState::SURFACE; state = GameState::SECTOR_MAP; mapCurX = surf.player.x; mapCurZ = surf.player.z; mapDelMark = -1; audio.beep = 4; return; }   // M4-02; R-408: the cursor on the explorer
     if (in.wasPressed(KEY_X) && !in.ctrl()) { surf.highlightUntil = realTime + 4.0; status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3); }   // M4-05/N3-06
     // N3: first sightings go to the log and the statistics
@@ -265,7 +266,7 @@ void Game::renderHelp() {
         "STARDRIFTER - FLIGHT CONTROL", "",
         "MOUSE LOOKS, W A S D WALK IN THE CABIN, ARROWS TURN",
         "THE SHIP; E USES A CONSOLE, A SCREEN, THE DECODER",
-        "(TAB: ITS PLAYER), THE INSTRUMENTS OR THE CAPSULE",
+        "(TAB: PLAYER), THE CASE, THE DRONES OR THE CAPSULE",   // C-18: the drone bay
         "U LIGHT  Y GLASS HULL  PGUP/PGDN ROOF DECK",
         "R             AIM AT A STAR: N NEXT, ENTER LOCKS IT",
         "R, DIGITS, ENTER  JUMP THAT MANY LY ALONG THE AIM",
@@ -299,6 +300,7 @@ void Game::renderHelp() {
         "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
         "L             MARK WHERE THE CROSSHAIR RESTS",
         "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
+        "TAB           THE READINGS: TIME, SUN, AIR, GROUND",   // R-414
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
         "CTRL+S  SAVE  P PHOTO  G GUIDE  H HELP  ESC MENU",
         "PAGE 2/2 - SPACE: PREVIOUS PAGE, OTHER KEYS: CLOSE"};

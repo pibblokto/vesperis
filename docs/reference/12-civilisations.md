@@ -464,11 +464,22 @@ detail reads it (`sampleAt`): the road's share of the vertex's footprint is `Ter
 rings a vertex on the bed takes the paving as its material, loses its vegetation and darkens a tenth (a beaten track a
 fifth), so the two-material contour of B-311 draws the road's edge through the cells; on the 64 m ring the tone alone
 darkens, a faint line from the air; the 512 m ring sees nothing. No tree, log or rock stands on the bed
-(`roadCover`), and the buggy rolls on rock where the road is paved. Under the feet the HUD reads `OLD ROAD NE-SW`,
-the first step onto each road of a landing is a status line and a `ROAD` entry in the log, and on the landing map the
-zoom draws the window's roads as faint lines in the ground's own colour (`Game::zoomRoads`: the villages' and the towns'
-roads, since the whole web of lanes between hamlets was a honeycomb over the land), the one map of a world that shows
-something not yet found: the roads are terrain, as the rivers are.
+(`roadCover`), and the buggy rolls on rock where the road is paved. Under the feet the readings say `OLD ROAD NE-SW` (R-414: `Tab`;
+the HUD's own line before), the first step onto each road of a landing is a status line and a `ROAD` entry in the log, and on the
+landing map the zoom draws the window's roads as faint lines in the ground's own colour (`Game::zoomRoads`: the villages' and the
+towns' roads, since the whole web of lanes between hamlets was a honeycomb over the land), the one map of a world that shows something
+not yet found: the roads are terrain, as the rivers are. R-415: with the peoples (`V`), off as the map opens.
+
+*The peoples on the landing map* (R-415, 2026-10-11, `game/landing_map.cpp`; the user: "make them turned of by-default and make it a
+separate button ... something like whole map autocompleted when you find all the shards for a civilization"). `V` shows the layer: the
+explorer's marks of ruins and works (small points; the names of the three nearest the cursor beside it), the zoom's old roads and the
+plan's cores (below), the places the records held were kept at (each record's home, `recordHomesOf`: of the places standing in its
+year, by their size; read with the world's items, `droneWorldAsk`, the drone bay's reading, from the map's opening) and, of a people
+whose records are all held, its whole plan: its land tinted to its frontier, every place (a town a point in the people's colour, the
+first amber and the second cyan, a city paler and rimmed, the capital white and named) and every way, coloured by kind as the plan's
+maps (`NET_KIND_COLOURS`). The homes spread over the land (the capital weighs ten, a city four, a town one and a half): on the drone
+bay's world of two, 21 of the first people's 147 records showed 21 places and its capital among them, all of them its 454 places and
+847 ways. The legend counts each people's records held of its count, its name once a record of theirs is held.
 
 *The harness.* `vesperis_test roads <sx> <sz> <body> [latDeg lonDeg]` prints the culture's road style, the region's
 network (the nodes, the pairs, each road's length against the straight line, its bends and steepest step, the share
@@ -582,7 +593,8 @@ traders over the mountain, a buried stranger whose stone faces the other way, th
 headland no fire answered, their river failing or their families asking for land, and an end-tone kind whose first
 sentence is the fate (`{otherfate}`: their fires went out years before ours; they are quiet on their side of the water; they
 still light their fires and will come for what we leave). A few of each people's fifty name the other (three and four on
-the test world), and the name is kept as it is in the decoding (`languageOf` adds it to the names). Whether they ended
+the test world; since H-04 where their histories met, and R-413 made Eleinewai I's two peoples prehistoric, their lands apart and
+neither sailing: they never met and name none), and the name is kept as it is in the decoding (`languageOf` adds it to the names). Whether they ended
 together is a coin of the world's (`peoplesEndedTogether`): the second people's `ageYears` is then the first's (its decay,
 its drifts and its road wear follow from its own wet), else its own log-uniform draw; the calendar is the world's for both
 (the day, the moon and the year are physical), the spans and the counts of years are each people's own.
@@ -643,7 +655,8 @@ future), and has a profile every later milestone reads, built to the fields of H
 (`docs/ideas/RESEARCH-records.md`, section 6). `galaxy/peoples.*`; generation 13.
 
 * **The age** is drawn from the people's generator (`peopleGen`) by the decided shares, 28, 32, 18, 13, 7 and 2 per cent,
-  whatever the world (within 25 ly of home 28.2, 33.0, 17.0, 12.5, 7.1 and 2.1 of 1,501 peoples).
+  whatever the world (within 25 ly of home 28.2, 33.0, 17.0, 12.5, 7.1 and 2.1 of 1,501 peoples). R-413: a world's second
+  people reached its first's age ("Two peoples of one age (R-413)", below).
 * **The eras** are the ages passed, one each, with their years in the people's own count: year 1 is the first towns'
   founding (the medieval age's start) or a prehistoric people's first village, and the ages before it are counted back (a
   later people's prehistoric age 3,000-20,000 years before year 1). A whole age runs 1,000-4,500 years (medieval), 120-400
@@ -666,7 +679,7 @@ future), and has a profile every later milestone reads, built to the fields of H
   * a flood: by the world's water.
 
   Where the other people of a world went on after this one, conquest and war come from them. Two peoples that ended together
-  share one cause that can end a world, drawn over both their ages. The collapse takes years by its cause (an impact 1-25,
+  share one cause that can end a world, drawn by their age (R-413: one age; drawn over both ages before). The collapse takes years by its cause (an impact 1-25,
   the drying 60-600), within the last era. Its four stages (the warning, the onset, the crisis, the end) are shares of it,
   set by the cause's speed.
 * **The extent:**
@@ -713,7 +726,7 @@ future), and has a profile every later milestone reads, built to the fields of H
   | Prehistoric | 198 55 body 10 | Navio V-a, felisian | 9.5 ly |
   | Medieval | 200 41 body 1 | Faiyiari II, desert | 7.1 ly |
   | Industrial | 189 45 body 2 | Meihimeeri III, felisian | 6.1 ly |
-  | Modern | 195 57 body 17, the second people | Rieneseirela VI-a, felisian | 11 ly |
+  | Modern | 208 51 body 5 | Yeesheleemiola II-b, desert | 13.9 ly |
   | Futuristic | 210 33 body 0 | Iamaielyari I, desert | 19.8 ly |
   | Far future | 202 26 body 2 | Seanesaila III, desert | 21.2 ly |
 
@@ -721,7 +734,11 @@ future), and has a profile every later milestone reads, built to the fields of H
   * Aieliaalas II's Rauzhia are industrial, without radio, and ended 31,594 years ago; weathered as 21,063 years, their
     decay is 0.91 as before.
   * Leileashphail III's Feloya are medieval and ended 209 years ago by the drying, over 401 years.
-  * Eleinewai I's two peoples, one prehistoric and one medieval, ended together by a stellar flare 1,005 years ago.
+  * Eleinewai I's two peoples, both prehistoric (R-413; the second was medieval before), ended together by a stellar flare
+    1,005 years ago.
+
+  R-413 moved the modern one: Rieneseirela VI-a's second people (11 ly) took its first's age, medieval, and the nearest modern
+  people on the plane is Yeesheleemiola II-b's first (13.9 ly, the modern scene's world, two modern peoples).
 * **The harness:** `vesperis_test peoples ages [count]`, and the profile in `peoples <sx> <sz> <body>`
   (`08-testing-and-tools.md`).
 
@@ -1207,7 +1224,7 @@ waits for it or builds it; four worlds kept). Generation 13 (A-01's) holds.
 * **What moved.** Every civilised world's settlements (where they stand, how many, the cities), its roads (the plan's ways, and C-09's
   lanes in the countryside only), its shards' and graves' places, the civilisation scenes (from a town of the plan; the ages' from the
   capital). C-01's checks read the countryside round a town of the plan; C-13's frontier is asked for only where the two territories
-  meet (Eleinewai I's do not: a prehistoric people's and a medieval people's lands far apart).
+  meet (Eleinewai I's do not: a prehistoric people's and a medieval people's lands far apart; R-413: two prehistoric peoples' now).
 
 Where to see it:
 
@@ -1284,7 +1301,8 @@ plan thread building it). Generation 13 holds.
 * **The other people** (C-13): where their years overlap (in years before the present: each people's end and count) and their lands
   touch or one of them sailed, they meet; treaties and wars follow by what both valued, with battles at the frontier's places, and word
   of the other's end reaches the one that went on. One list for both, so both histories hold the same years: on Eleinewai I nine
-  shared events, on Meareafionris III thirteen. Where a people's end is a conquest and the other went on, the other conquers it (its
+  shared events, on Meareafionris III thirteen (R-413: of one age, neither pair meets now; the check reads Leanmya V-a's 42 and
+  Hiameshseine I-a's 47, its conquest among them). Where a people's end is a conquest and the other went on, the other conquers it (its
   battles inward to the capital), meeting it before if they had not met.
 * **The collapse**: the profile's cause in its four stages, each marked; the signs of each stage at the places most exposed (the
   wells of Tsearis sank; the fields of Tsearis turned to dust; the caravans no longer reached Tsearis; the last well at Kauza was
@@ -1848,9 +1866,11 @@ computer rebuilds it, flatter (`voiceRead`: the melody and the tones a third of 
 no second tone, little breath; the vowels' pitch spread 30% of the voice's own), and a piece's notation (a bone flute's holes, a scroll's
 or a codex's marks, printed music) is played dry, as written.
 
-*On the decoder* (`game/medium_draw.cpp`). Under a shard's date its medium is named with who is heard: `A CLAY TABLET, READ BY THE
-SHIP`, `A WAX CYLINDER: A ROUGH VOICE`, `NOTATION ON A SCROLL, PLAYED BY THE SHIP`, `A RECORDING IN WAX, THROUGH ITS HORN`,
-`SOMETHING THAT HUMS IT`; at the right of the date the object is drawn (40 x 26 of the HUD's 320 x 200): a bone with its cuts (a
+*On the decoder* (`game/medium_draw.cpp`). Under a shard's date its medium is named, the object alone (R-414, the user: "just say what
+kind of medium this is"): `A CLAY TABLET`, `A WAX CYLINDER`, `A REEL`, `SOMETHING THAT HUMS`; a piece on a medium without a sound of its
+own as what it is, `A BONE FLUTE`, `NOTATION ON A SCROLL`, `NOTATION IN A CODEX`, `PRINTED MUSIC` (H-05 named who was heard, `A CLAY
+TABLET, READ BY THE SHIP`, `A WAX CYLINDER: A ROUGH VOICE`, `A RECORDING IN WAX, THROUGH ITS HORN`: the sound says it); at the right of
+the date the object is drawn (40 x 26 of the HUD's 320 x 200): a bone with its cuts (a
 flute's holes, a sky's dots), a slab with its signs, a patch of painted rock, a clay tablet's wedges, a scroll on its rods, an open codex
 with its red initial, a brass plate, a wax cylinder on its mandrel with its grooves turning by while it plays, a glass plate, printed
 pages, two spools turning, a disc spinning with its label, a drive blinking, a crystal glowing, and an ovoid whose rings pulse out.
@@ -2002,7 +2022,10 @@ on the axis by their years, stacked, in their kinds' colours (a text green, a pi
 friend's cyan; the last recording amber once read; the one under the cursor white with a mark over it); the axis is solid to the latest
 held and dotted on until the last recording is read, when it closes in amber (THE RECORD ENDS, YEAR 3,314). Under it the events learnt are
 ticks at their years (those the record under the cursor told white), and under them that record: its date, its medium, its first words.
-`LEFT`/`RIGHT` (`UP`/`DOWN`, `PGUP`/`PGDN` by ten) move along the records held, `ENTER` reads one.
+`LEFT`/`RIGHT` (`UP`/`DOWN`, `PGUP`/`PGDN` by ten) move along the records held, `ENTER` reads one. R-416: held with `SHIFT`
+the arrows run (a step as they go down, then from a fifth of a second 12 a second, doubling every half second to 100: a hundred records in
+about two seconds), stopping at the first and the last where an arrow alone goes round (`ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC
+BACK`).
 
 *The history* (`galaxy/legends.*`, `game/history_screen.cpp`): THE AGE THEY REACHED once the records have told it (`AGE_TOLD_RECORDS`,
 three records written in that age read, or the last recording: PREHISTORIC .. FAR FUTURE; before, NOT TOLD YET: A-01's rule that the age
@@ -2011,7 +2034,7 @@ records told them (the people's name as a heading, then FAITH with their god onc
 `legendWays`), then the events the read records told in the history's order, under the eras they fell in (an era's name and years; one no
 read record is from AN ERA NO RECORD READ IS FROM), each a legend's line with its year in their count; the last recording closes it (THE
 LAST RECORDING: THE RECORD ENDS IN YEAR 4,414, after THE END OF THE NULO: A MAN WAS THE LAST OF THEM, AT TECHAENOE). `UP`/`DOWN`
-(`PGUP`/`PGDN` by eight) move along the events, `ENTER` opens the record that told the one under the cursor (the earliest of them; TOLD BY
+(`PGUP`/`PGDN` by eight; R-416: held with `SHIFT` they run as the timeline's do) move along the events, `ENTER` opens the record that told the one under the cursor (the earliest of them; TOLD BY
 N at the right when several did) and `ESC` comes back to the page.
 
 *What a record tells* (`ShardText::told`, `ShardText::ways`). The events its genre's directives picked and wrote (H-04: a chronicle's
@@ -2385,6 +2408,88 @@ an arch's piers, a truss's legs, a sweep's faces band by band); a big piece stan
 collided with (`forRocks`). **B-421, the records lie where they can be reached**: off the drawn pieces at the floor and the heaps'
 slopes (`Placer::clear`), out of the water (the view lays a place's records again with its drawn water within 600 m: `waterRecords`),
 off the earthworks' banks, and not behind a doorway something fell across (`Placer::doorOpen`).
+
+## The drone bay (C-18)
+
+The user's request (2026-10-11): "add three drones with robotic hands [...] that you can send from stardrifter to felisian/desert planets
+with civilizations. When you send them each can bring 2-8 items [...] cooldown is 5 minutes. They can bring both shards (all three kinds)
+and instruments", and the instruments' case "separated by planet/world as shards are".
+
+**What a world holds for them** (`galaxy/drones.*`, `droneWorldOf`): every record of its peoples (both, on a world of two: T-04's 80 to 200
+each, H-05's texts, music and star charts) and every instrument lying beside their music records (C-11's third by the record: an id once a
+world), each at its home: the place of its people's plan that always holds it (`recordHomesOf`; an instrument at the home of the first
+music record it lies beside), with the place's latitude, longitude and class. It reads the plan and the histories (blocking on the
+approach's prefetch), so the game asks for it on a thread of its own (`Game::droneWorldAsk`) when the bay's screen opens or the drones go;
+the modern age world's 250 items in 0.75 s from nothing built, a few milliseconds once the plan is.
+
+**A trip's haul** (`droneHaulOf`): each of the three wants two to eight (`DRONE_MIN_FINDS`, `DRONE_MAX_FINDS`; six to twenty-four a trip:
+the request's "max 32" would need eleven a drone). A drone goes to a place drawn by how much of its own the explorer lacks there (the count
+to the power 0.75; a place another drone searches at 0.15 of its weight), takes three to five there, the place's own first, then copies
+kept there of its people's other records (T-04: a record's copies lie in many places; an instrument beside each copy of its record), and
+flies on to a second and a third place for the rest; every find drawn with the rarer kinds leaned toward (a text 1, music 1.4, a star chart
+2.2, an instrument 4: a world holds a few instruments to its hundreds of records), and at one stop in three an instrument of the place's people
+looked for first. Over two hundred hauls from the modern age world (250 items: 143 texts, 80 music, 18 star charts, 9 instruments) the
+finds were 17% instruments (3.6% of the items: two or three a trip) and 9.5% star charts (7.2%), 47% a place's own. A drone brings fewer only when the world has no more; a world whose every item the ship holds sends none.
+
+**The trip** (`game/drones.cpp`, `DroneBay`, `DroneRun`): the drones leave the rack 0.7 s apart (2.2 s each through its port), fall 14 s
+to their first place, search for two minutes (`DRONE_SEARCH_S`, the user's after the first trips: from a drone's first place to its last,
+the flights of 4 to 10 s between its places within them, the rest shared by its places, a share each and one a find, its finds spread
+through each), climb 14 s and dock (2.2 s back through the port): about 2:35 from the launch to the last dock. Each drone's finds go into
+the guide as it docks (`shard` and `instrument` lines: the decoder's and the case's, a copy taken is gone from the whole world,
+`syncShards` when the explorer is down there; the decoder, open, lists them at once); the log has a line at the launch and one at the end
+(`DRONES`), the status the count and its kinds. The bay's clock is real time, in the simulating states (the warp does not hurry it, as the
+probe's relay; a menu stops it); the bay charges for five minutes from the drones' return (`DRONE_COOLDOWN_S` from `DroneBay::back`, the
+last dock or the recall).
+Leaving the parking (an approach, a Vimana flight, a jump) calls them back: what each had found comes aboard, the rest stays down there.
+A trip is saved and resumed (`bay`, `bayback`, `bayrun`, `baystop`, `bayfind` lines in the save); `stat drones` and `stat dronefinds` in the guide.
+
+**The drones** (`game/drone_draw.cpp`, `droneModel`): the surface drone's family, not its copy: a short octagonal hull in a light paint
+(bank 30) with the dark band of its eye on the nose's bevel and three cyan lenses in it, the bay's stripe down its deck, its number in
+lamps by its tail, a beacon on a mast; four ducted fans on struts; two skids; a hold under its back; and on the nose's flanks two arms in
+the bay's yellow, a shoulder, an elbow and a wrist of metal, each ending in a hand of three fingers of two joints (folded, the hands held
+beside the nose like a crab's claws; at a place, reaching down under it, a hand closing on each find and opening after). On the rack (three
+shelves against the left wall by the front window, the bay's screen across its head in three cells, a lamp at each shelf: green aboard
+and ready, amber charging, red blinking while its drone is out) they stand facing the room; launched, each lifts, its fans blur, and it backs
+through its port into the hull; outside it flies past the windows lit by the sun, then dwindles toward the world as a strobe; coming back,
+the same in reverse.
+
+**The screen** (`GameState::DRONES`, the rack's E or the devices page): the bay's state (`READY`, `BACK IN 1:52` while out, `CHARGING
+4:10`); each drone in lines (its visible faces' edges; turning on its shelf, its face three-quarters on while out), its number, its finds of
+what it wanted or its height while it falls or climbs, where it is (`IN A CITY`, `FLYING TO A TOWN`, `CLIMBING`, `ABOARD, CHARGING`); the
+world's map (its ground under the screen's lines, the ground under the ship, the places searched and the ways flown, the drones blinking);
+what the ship holds of what the world left, in the decoder's words (`ABOARD: 58 OF ITS 262 SHARDS` / `AND 7 OF ITS 9 INSTRUMENTS`: the
+world's peoples together, where the decoder lists each people's on a row of its own, `32 OF 129` and `26 OF 133`); the finds, the newest
+first, dim until aboard. The peoples are named only once the ship holds a record of theirs (`TWO PEOPLES LIVED THERE`). The cabin's line
+while they are out: `DRONES BACK IN 1:52 - 4 FOUND`.
+
+**The case by its worlds**: the instruments' case opens on its worlds, a folder each as the decoder's (the world's name and where it is,
+how many it holds; the world under the ship first); Enter opens one (its instruments, the C-11 screen within it), Esc goes back to the
+worlds and Esc again to the cabin. A world of two peoples is a folder each people, as the decoder lists a row each (the user, the same day:
+"in instruments case split instruments by civilization as a decoder does"): the people named on the folder's line after the world
+(`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`), the open folder headed `UNKNOWN - THE VASANTHUL` and holding that people's alone (an
+instrument's id carries its people: people x 1000 + age x 100 + slot).
+
+## Two peoples of one age (R-413)
+
+The user: "it won't make sense to have futuristic society next to prehistoric [...] it would be cool if both societes were of the same
+age". A world's second people reached its first's age (`peopleAgeOf`): its own draw from its generator is taken and set aside
+(`ageOfPeople(pg, age)`), so the lengths of its eras, its end's years over the age's span and its radio's year stay its own draws within
+the shared age. Before, each people's age was its own (of 600 worlds of two, 22% of one age, 36% a stage apart, 42% two or more); now
+every world of two is of one age, and 466 of those 600 (78%) have a new second people, the rest and every first people as they were.
+
+* **A people's own generator.** The charts and the records' categories read a people's age from its own generator
+  (`peopleAgeOf(pg, 0)`); the generator keeps its world's seed (`BodyGen::worldSeed`, set by `make` and kept by `peopleGen` and the copies
+  with a people's seed), so a second people's generator reads as that people.
+* **One age, not one time.** Ended apart (half the worlds of two), each people's end is its own draw over the age's span: two peoples
+  of one age may have ended far apart (Rieneseirela VI-a's 34,293 and 427 years ago), the one's ruins worn and the other's fresh, and
+  never met (H-02 meets them where their years overlap and their lands touch or one sailed: 13 of the 35 worlds of two nearest home
+  met). Ended together, they share the first's years and one cause, drawn by their age.
+* **On the air.** A world of two transmits where one of its peoples had radio: 33.5% of them (47.8% before), all civilised worlds 31.3%
+  (34.2%). The weak transmitters' powers were pinned again so every step of the gain adds one to three peoples from home and the three
+  C-series worlds (`SALT_POWER` 0xC15A0404; home 3, +2, +3, +2, +1, +1); the cells and the strong transmitters are as they were.
+* **The test worlds.** The modern age world is Yeesheleemiola II-b's first people (208 51 body 5; Rieneseirela VI-a's second, medieval
+  now); H-02's worlds of two are Leanmya V-a (179 57 body 18, they met: 42 shared events) and Hiameshseine I-a (202 9 body 5, a
+  conquest: 47); the works' checks read Shioleesein I-a too (196 66 body 7, two dams holding their water).
 
 ## What the later milestones take from here
 

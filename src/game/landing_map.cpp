@@ -27,6 +27,7 @@ void Game::beginLanding() {
     landLat = clampd(landLat, -85 * DEG, 85 * DEG);
     spaceR.mapFor(sys.bodies[landBody]);
     worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // T-01 (already on its way since the approach)
+    if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // R-415: its records and their homes, for V
     drainLat = 1e9; drainLon = 1e9;   // O6-03: the map's first update prefetches the drainage of the default site
     landZoom = 0;   // O2: start from the whole world
     state = GameState::LANDING_MAP;
@@ -72,6 +73,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         }
     }
     if (in.wasPressed(KEY_C)) mapClouds = !mapClouds;   // the original's cloud filter
+    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = 4; }   // R-415: the peoples over the map, off by default
     if (in.wasPressed(KEY_J)) {   // M5-09: jump to the point where the biggest body in this world's sky stands highest
         int best = -1; double bestAng = 0;
         Vec3 bp = sys.bodyPos(landBody, t);
@@ -237,6 +239,7 @@ void Game::buildLandingZoom() {
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
     zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
+    zoomCivImg = zoomImg; zoomPlaces.clear();   // R-415: the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
     if (worldHadCivilisation(g)) {
         auto tr0 = std::chrono::steady_clock::now();
         auto texel = [&](const Vec3& u, float& x, float& y) { double la, lo; StarSystem::latLonFromBody(u, la, lo); x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW); y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH); };
@@ -262,6 +265,7 @@ void Game::buildLandingZoom() {
         MatRamp ramps2[MAT_COUNT]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
         const uint32_t rock = mapColor(ramps2, familyRep(g.type, FAM_ROCK), 0.45, lf2, atmo2, 1.0);
         for (const PlanPlace* p : ps) {
+            zoomPlaces.push_back({p->people, p->rank, p->sclass, p->unit, p->radiusM / texelM});   // R-415: for the places the explorer knows
             const Culture cu = cultureOf(g, p->people);
             const RGB pc = cu.palette.colour[0];
             const double rr = (rock & 255) * 0.5 + pc.r * 140, gg = ((rock >> 8) & 255) * 0.5 + pc.g * 140, bb = ((rock >> 16) & 255) * 0.5 + pc.b * 140;
@@ -275,7 +279,7 @@ void Game::buildLandingZoom() {
                     const double d = std::hypot(x + 0.5 - cx, y + 0.5 - cy);
                     const double f = clampd(rT + 0.5 - d, 0, 1) * std::min(1.0, PI * rT * rT) * standing;   // the disc's share of the texel (a core under a texel its area's)
                     if (f <= 0.01) continue;
-                    uint32_t& c = zoomImg[y * ZW + x];
+                    uint32_t& c = zoomCivImg[y * ZW + x];
                     const double r0 = c & 255, g0 = (c >> 8) & 255, b0 = (c >> 16) & 255;
                     c = rgb(clampi((int)(r0 + (rr - r0) * f), 0, 255), clampi((int)(g0 + (gg - g0) * f), 0, 255), clampi((int)(b0 + (bb - b0) * f), 0, 255));
                     any = true;
@@ -431,12 +435,12 @@ void Game::renderLandingMap() {
                 double lit = dot(zoomUnit[i], sunB);
                 double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
                 if (zoomEmissive[i]) l = std::max(l, 0.95);
-                uint32_t c = zoomImg[i];
+                uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // R-415: the cores with the peoples
                 if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
                 row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
             }
         }
-        for (size_t ri = 0; ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light
+        for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
             const auto& poly = zoomRoads[ri];
             int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
             double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
@@ -506,7 +510,7 @@ void Game::renderLandingMap() {
         struct LabelBox { int x0, y0, x1, y1; }; std::vector<LabelBox> labels;   // no name over another's, nor over the map's own text
         const std::string bkey = worldKeyOf(landBody);
         for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world (a glyph each, a friend's in cyan), eight names at most
-            if (m.body != bkey) continue;
+            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // R-415: the ruins and the works with the peoples (V)
             int lx = ox + (int)((wrapAngle(m.lon - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW), ly = oy + (int)((0.5 - (m.lat - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
             if (lx < ox + 1 || ly < oy + 1 || lx >= ox + MAP_LW - 1 || ly >= oy + MAP_LH - 1) continue;
             const uint32_t lc = m.lent ? HUD_CYAN : HUD_WHITE;
@@ -526,12 +530,13 @@ void Game::renderLandingMap() {
         cx = ox + (int)((wrap2pi(landLon + PI) / TAU) * MAP_LW); cy = oy + (int)((0.5 - landLat / PI) * MAP_LH);
         const std::string bkey = worldKeyOf(landBody);
         for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world, a dot each (Z zooms in on them)
-            if (m.body != bkey) continue;
+            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // R-415: the ruins and the works with the peoples (V)
             int mx = ox + (int)((wrap2pi(m.lon + PI) / TAU) * MAP_LW), my = oy + (int)((0.5 - m.lat / PI) * MAP_LH);
             fillRectRGB(canvas, mx - 1, my - 1, mx + 1, my + 1, rgb(0, 0, 0)); fillRectRGB(canvas, mx, my, mx, my, m.lent ? HUD_CYAN : HUD_WHITE);
         }
     }
     cx = clampi(cx, ox, ox + MAP_LW - 1); cy = clampi(cy, oy, oy + MAP_LH - 1);
+    if (landPeoples) drawLandPeoples(ox, oy, cx, cy); else landDrawn = {};   // R-415
     drawLineRGB(canvas, ox, cy, ox + MAP_LW - 1, cy, rgb(255, 255, 255));
     drawLineRGB(canvas, cx, oy, cx, oy + MAP_LH - 1, rgb(255, 255, 255));
     drawRectRGB(canvas, cx - 3, cy - 3, cx + 3, cy + 3, HUD_AMBER);
@@ -616,7 +621,199 @@ void Game::renderLandingMap() {
         } else l5 = (ringNote.empty() ? std::string("SKY: ") : "SKY: " + ringNote + "; ") + (points ? fmt("%d WORLDS AS POINTS OF LIGHT", points) : std::string("NOTHING BUT STARS"));
         drawText(canvas, 8, ry + 32, l5.c_str(), (best >= 0 || !ringNote.empty()) ? HUD_CYAN : HUD_DIM);
     }
-    if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM (SHIFT 5)  Z WORLD MAP  R RANDOM  ENTER LAND  ESC", HUD_AMBER);
-    else drawTextCentered(canvas, UW / 2, UH - 12, PLANET_TYPES[b.type].atmosphere ? "ARROWS  Z SECTOR ZOOM  R RANDOM  C CLOUDS  J SKY  ENTER LAND  ESC" : "ARROWS  Z SECTOR ZOOM  R RANDOM  J SKY  ENTER LAND  ESC", HUD_AMBER);
+    // R-415: V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
+    if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER", HUD_AMBER);
+    else drawTextCentered(canvas, UW / 2, UH - 12, PLANET_TYPES[b.type].atmosphere ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);
     drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str() : "SURFACE CAPSULE - SELECT LANDING SECTOR", HUD_CYAN);
+}
+
+// ---- R-415 (2026-10-11): the peoples on the landing map --------------------------------------------------------------------------------
+// The user: "on the capsule deployment map there are these dots for places were civilization ruins were found - they are too huge and
+// non-subtle. Please, make them turned of by-default and make it a separate button ... There should be some map like the one you used when
+// you were adding cities layout, it just should be a button toggle. Also It would be cool to have something like whole map autocompleted when
+// you find all the shards for a civilization, as if you have enough information to know where is what, where to find cities, capital, etc".
+// V shows them, off on every map: the explorer's marks of ruins and works as small points (the names of those by the cursor beside it), in the
+// zoom the old roads and the places' cores the ground holds (C-09's, T-01's); the places the held records were kept at (each record's home,
+// galaxy/records.h's `recordHomesOf`, read with the world's items as the drone bay reads them: `droneWorldAsk`), the capital named; and a
+// people whose records the ship holds all, its whole plan: its land tinted to its frontier, every place and every way, coloured by kind as
+// the plan's maps (`NET_KIND_COLOURS`)
+namespace {
+const uint32_t PEOPLE_TINT[2] = {0xFF64D2FFu, 0xFFFFE16Eu};   // the first people amber (255, 210, 100), the second cyan (110, 225, 255)
+uint32_t mixRGB(uint32_t a, uint32_t b, double t) {
+    auto ch = [&](int s) { return (uint32_t)clampi((int)std::lround(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t), 0, 255) << s; };
+    return 0xFF000000u | ch(0) | ch(8) | ch(16);
+}
+}
+
+Game::LandKnown Game::landKnownOf(int body) {
+    LandKnown K;
+    if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return K;
+    if (!worldHadCivilisation(spaceR.genFor(sys.bodies[body]))) { K.ready = true; return K; }
+    if (!droneWorldHere(sys.star.seed, body)) { droneWorldAsk(body); return K; }
+    const DroneWorld& W = bay.world;
+    K.ready = true; K.peoples = std::min(2, std::max(1, W.peoples));
+    const std::string prefix = worldKeyOf(body) + "/S";
+    for (const DroneItem& it : W.items) {
+        if (it.kind == DF_INSTRUMENT || it.people < 0 || it.people >= K.peoples) continue;
+        K.total[it.people]++;
+        if (!guide.shards.count(prefix + std::to_string(it.index))) continue;
+        K.held[it.people]++;
+        if (it.place >= 0 && it.place < (int)W.places.size()) K.ranks[it.people].insert(W.places[it.place].rank);
+    }
+    for (int k = 0; k < K.peoples; k++) if (K.held[k] > 0 && k < (int)W.peopleNames.size()) K.name[k] = "THE " + upper(W.peopleNames[k]);   // named once a record of theirs is held (the decoder's rule)
+    return K;
+}
+
+void Game::drawLandPeoples(int ox, int oy, int cx, int cy) {
+    landDrawn = {};
+    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return;
+    const Body& b = sys.bodies[landBody];
+    const BodyGen& g = spaceR.genFor(b);
+    const int S = std::max(1, canvas.scale);
+    const bool zoom = landZoom && !zoomImg.empty();
+    auto toMap = [&](double lat, double lon, double& x, double& y) {   // logical pixels; within the frame?
+        if (zoom) { x = ox + (wrapAngle(lon - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW; y = oy + (0.5 - (lat - zoomLat) / (2 * zoomHalfLat)) * MAP_LH; }
+        else { x = ox + wrap2pi(lon + PI) / TAU * MAP_LW; y = oy + (0.5 - lat / PI) * MAP_LH; }
+        return x >= ox && y >= oy && x < ox + MAP_LW && y < oy + MAP_LH;
+    };
+    const int X0 = ox * S, Y0 = oy * S, X1 = (ox + MAP_LW) * S, Y1 = (oy + MAP_LH) * S;
+    auto plot = [&](int X, int Y, uint32_t c) { if (X >= X0 && Y >= Y0 && X < X1 && Y < Y1) canvas.px[(size_t)Y * canvas.w + X] = c; };
+    auto block = [&](double x, double y, int half, uint32_t c, bool rim) {   // a square of (2 half + 1) frame pixels round a place, a dark rim round it
+        const int X = (int)std::floor(x * S), Y = (int)std::floor(y * S);
+        if (rim) for (int dy = -half - 1; dy <= half + 1; dy++) for (int dx = -half - 1; dx <= half + 1; dx++) plot(X + dx, Y + dy, HUD_SHADOW);
+        for (int dy = -half; dy <= half; dy++) for (int dx = -half; dx <= half; dx++) plot(X + dx, Y + dy, c);
+    };
+    const LandKnown K = landKnownOf(landBody);
+    std::shared_ptr<const WorldPlan> P = K.ready && K.peoples > 0 ? worldPlanIfReady(g) : nullptr;
+    // ---- a people's whole land (the world's map): its territory tinted, its frontier drawn
+    if (!zoom && P && (K.all(0) || K.all(1))) {
+        if (landTerrSeed != b.seed || landTerr.size() != (size_t)MAP_LW * MAP_LH) {
+            landTerrSeed = b.seed; landTerr.assign((size_t)MAP_LW * MAP_LH, 0);
+            std::vector<uint8_t> in[2];
+            for (int k = 0; k < std::min(2, P->peoples); k++) {
+                const std::vector<uint8_t>& T = P->plans[k].territory;
+                if (T.empty()) continue;
+                in[k].assign((size_t)MAP_LW * MAP_LH, 0);
+                for (int y = 0; y < MAP_LH; y++)
+                    for (int x = 0; x < MAP_LW; x++) {
+                        const double lat = (0.5 - (y + 0.5) / MAP_LH) * PI, lon = (x + 0.5) / MAP_LW * TAU - PI;
+                        const int cell = P->grid.cellOf(lat, lon);
+                        in[k][(size_t)y * MAP_LW + x] = cell >= 0 && cell < (int)T.size() && T[cell];
+                    }
+                for (int y = 0; y < MAP_LH; y++)
+                    for (int x = 0; x < MAP_LW; x++) {
+                        if (!in[k][(size_t)y * MAP_LW + x]) continue;
+                        const bool edge = !in[k][(size_t)y * MAP_LW + (x + 1) % MAP_LW] || !in[k][(size_t)y * MAP_LW + (x + MAP_LW - 1) % MAP_LW] ||
+                                          (y > 0 && !in[k][(size_t)(y - 1) * MAP_LW + x]) || (y + 1 < MAP_LH && !in[k][(size_t)(y + 1) * MAP_LW + x]);
+                        landTerr[(size_t)y * MAP_LW + x] |= (uint8_t)((edge ? 2 : 1) << (2 * k));
+                    }
+            }
+        }
+        for (int y = 0; y < MAP_LH; y++)
+            for (int x = 0; x < MAP_LW; x++) {
+                const uint8_t m = landTerr[(size_t)y * MAP_LW + x];
+                for (int k = 0; k < 2; k++) {
+                    const int v = (m >> (2 * k)) & 3;
+                    if (!v || !K.all(k)) continue;
+                    landDrawn.land++;
+                    for (int sy = 0; sy < S; sy++)
+                        for (int sx = 0; sx < S; sx++) {
+                            uint32_t& c = canvas.px[(size_t)((oy + y) * S + sy) * canvas.w + (ox + x) * S + sx];
+                            c = mixRGB(c, PEOPLE_TINT[k], v == 2 ? 0.45 : 0.15);
+                        }
+                }
+            }
+    }
+    // ---- its ways (the world's map: from place to place; the zoom draws the ground's own, C-09's and the plan's, under the layer)
+    if (!zoom && P)
+        for (int k = 0; k < std::min(K.peoples, P->peoples); k++) {
+            if (!K.all(k)) continue;
+            const PeoplePlan& pp = P->plans[k];
+            for (const PlanEdge& e : pp.edges) {
+                if (e.kind == NK_SEA || e.a < 0 || e.b < 0 || e.a >= (int)pp.places.size() || e.b >= (int)pp.places.size()) continue;
+                double xa, ya, xb, yb;
+                toMap(pp.places[e.a].lat, pp.places[e.a].lon, xa, ya); toMap(pp.places[e.b].lat, pp.places[e.b].lon, xb, yb);
+                if (std::fabs(xb - xa) > MAP_LW / 2) continue;   // across the map's seam
+                const int ax = (int)std::floor(xa * S), ay = (int)std::floor(ya * S), bx = (int)std::floor(xb * S), by = (int)std::floor(yb * S);
+                const int n = std::max(std::abs(bx - ax), std::abs(by - ay));
+                const uint32_t col = NET_KIND_COLOURS[clampi(e.kind, 0, NK_COUNT - 1)];
+                for (int q = 0; q <= n; q++) plot(ax + (n ? (bx - ax) * q / n : 0), ay + (n ? (by - ay) * q / n : 0), col);
+                landDrawn.ways++;
+            }
+        }
+    // ---- the places: those the held records were kept at, every one of a people whose records are all held
+    struct Spot { int people, sclass; double lat, lon; double radiusT; };
+    std::vector<Spot> spots;
+    if (zoom) {
+        for (const ZoomPlace& z : zoomPlaces) {
+            if (z.people < 0 || z.people >= K.peoples || (!K.all(z.people) && !K.ranks[z.people].count(z.rank))) continue;
+            double la, lo; StarSystem::latLonFromBody(z.unit, la, lo);
+            spots.push_back({z.people, z.sclass, la, lo, z.radiusT});
+        }
+    } else
+        for (int k = 0; k < K.peoples; k++) {
+            if (P && k < P->peoples && K.all(k)) { for (const PlanPlace& p : P->plans[k].places) spots.push_back({k, p.sclass, p.lat, p.lon, 0}); continue; }
+            for (int r : K.ranks[k]) {
+                if (P && k < P->peoples && r >= 0 && r < (int)P->plans[k].places.size()) { const PlanPlace& p = P->plans[k].places[r]; spots.push_back({k, p.sclass, p.lat, p.lon, 0}); continue; }
+                for (const DronePlace& dp : bay.world.places) if (dp.people == k && dp.rank == r) { spots.push_back({k, dp.sclass, dp.lat, dp.lon, 0}); break; }
+            }
+        }
+    std::stable_sort(spots.begin(), spots.end(), [](const Spot& a, const Spot& c) { return (a.sclass == SC_CAPITAL) < (c.sclass == SC_CAPITAL); });   // the capital over the rest
+    for (const Spot& sp : spots) {
+        double x, y;
+        if (!toMap(sp.lat, sp.lon, x, y)) continue;
+        const uint32_t tint = PEOPLE_TINT[clampi(sp.people, 0, 1)];
+        const bool capital = sp.sclass == SC_CAPITAL, great = sp.sclass == SC_CITY || sp.sclass == SC_MONUMENT;
+        if (zoom) {   // a ring round the core the ground draws
+            const double r = (std::max(1.5, sp.radiusT) + 2) * S;
+            const int n = std::max(16, (int)(r * 6.3 / 2));
+            for (int q = 0; q < n; q += 1 + (capital ? 0 : 1)) plot((int)std::floor(x * S + r * std::cos(q * TAU / n)), (int)std::floor(y * S + r * std::sin(q * TAU / n)), tint);
+            landDrawn.rings++;
+        } else block(x, y, capital ? S : S / 2, capital ? HUD_WHITE : (great ? mixRGB(tint, HUD_WHITE, 0.45) : tint), capital || great);   // a town a point, a city rimmed and paler, the capital white
+        landDrawn.places++;
+        if (capital) {   // named: where the people's capital stood
+            const int lx = (int)x + (zoom ? (int)(sp.radiusT + 4) : 4), ly = (int)y - 3;
+            if (lx + textWidth("CAPITAL") < ox + MAP_LW && ly > oy && ly + 7 < oy + MAP_LH) { drawTextShadow(canvas, lx, ly, "CAPITAL", tint, HUD_SHADOW); landDrawn.capital++; }
+        }
+    }
+    // ---- the explorer's marks of ruins and works: small points, the names of the three nearest the cursor beside it
+    const std::string bkey = worldKeyOf(landBody);
+    std::vector<std::pair<double, const SurfaceMark*>> near;
+    for (const SurfaceMark& m : guide.marks) {
+        if (m.body != bkey || (m.kind != LM_RUIN && m.kind != LM_WORK)) continue;
+        double x, y;
+        if (!toMap(m.lat, m.lon, x, y)) continue;
+        block(x, y, S / 2, m.lent ? HUD_CYAN : HUD_WHITE, true);
+        landDrawn.marks++;
+        const double d = std::hypot(x - cx, y - cy);
+        if (d < 10 && !m.name.empty()) near.push_back({d, &m});
+    }
+    std::sort(near.begin(), near.end(), [](const auto& a, const auto& c) { return a.first < c.first; });
+    for (size_t i = 0; i < near.size() && i < 3; i++) {
+        const std::string nm = trunc(upper(near[i].second->name), 14);
+        const int lx = std::min(cx + 6, ox + MAP_LW - 2 - textWidth(nm.c_str())), ly = std::min(cy + 5 + 8 * (int)i, oy + MAP_LH - 8);
+        blendRectRGB(canvas, lx - 1, ly - 1, lx + textWidth(nm.c_str()), ly + 7, rgb(0, 0, 0), 150);
+        drawText(canvas, lx, ly, nm.c_str(), near[i].second->lent ? HUD_CYAN : HUD_WHITE);
+    }
+    // ---- the legend: each people, its records held, its whole land once they are all
+    std::vector<std::pair<std::string, uint32_t>> rows;
+    if (!K.ready) rows.push_back({"READING THE WORLD...", HUD_DIM});
+    else if (K.peoples == 0) rows.push_back({"NO PEOPLE LIVED ON THIS WORLD", HUD_DIM});
+    for (int k = 0; k < K.peoples; k++) {
+        const std::string who = K.name[k].empty() ? (k == 0 ? "A PEOPLE" : "ANOTHER PEOPLE") : trunc(K.name[k], 16);
+        rows.push_back({K.all(k) ? fmt("%s: ALL %d SHARDS, THE WHOLE MAP", who.c_str(), K.total[k]) : fmt("%s: %d OF %d SHARDS", who.c_str(), K.held[k], K.total[k]), PEOPLE_TINT[k]});
+    }
+    for (size_t i = 0; i < rows.size(); i++) {
+        const int lx = ox + 2, ly = oy + 2 + 9 * (int)i;
+        blendRectRGB(canvas, lx - 1, ly - 1, lx + textWidth(rows[i].first.c_str()), ly + 7, rgb(0, 0, 0), 160);
+        drawText(canvas, lx, ly, rows[i].first.c_str(), rows[i].second);
+    }
+}
+
+std::string Game::testLandPeoplesInfo() {
+    const LandKnown K = landKnownOf(landBody);
+    std::string s = fmt("the peoples %s; %s", landPeoples ? "shown" : "hidden", K.ready ? "read" : "being read");
+    for (int k = 0; k < K.peoples; k++) s += fmt("; people %d '%s' %d of %d held, %zu places known%s", k + 1, K.name[k].c_str(), K.held[k], K.total[k], K.ranks[k].size(), K.all(k) ? ", ALL" : "");
+    s += fmt("; drawn: %d places, %d ways, %d land pixels, %d marks, %d rings, %d capitals named", landDrawn.places, landDrawn.ways, landDrawn.land, landDrawn.marks, landDrawn.rings, landDrawn.capital);
+    return s;
 }

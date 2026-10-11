@@ -1,7 +1,7 @@
 // H-05 (2026-10-10): the decoder names what a record was made on and draws it: a carved bone, a clay tablet, a scroll on its rods, a wax
 // cylinder turning, a disc spinning, a reel's spools, a drive's light, a crystal's glow, something that hums. A record with no sound of its
-// own (a tablet, a page, a bone flute) is read or played by the ship (`recordMediumSounds`, galaxy/records.h): the line says so; a
-// recording names its voice. The picture sits at the right of the shard's date and medium lines (40 x 26 of the 320 x 200 HUD).
+// own (a tablet, a page, a bone flute) is read or played by the ship (`recordMediumSounds`, galaxy/records.h); R-414: the line names the
+// object alone. The picture sits at the right of the shard's date and medium lines (40 x 26 of the 320 x 200 HUD).
 #include "game.h"
 #include "galaxy/records.h"
 #include <cmath>
@@ -21,32 +21,22 @@ uint32_t mixc(uint32_t a, uint32_t b, double t) {
 inline uint32_t mh(uint64_t s, int k) { uint64_t x = s + (uint64_t)k * 0x9E3779B97F4A7C15ULL; x ^= x >> 31; x *= 0xBF58476D1CE4E5B9ULL; x ^= x >> 29; return (uint32_t)x; }
 }
 
+// R-414 (2026-10-11): what the record is and no more (the user: "there is this overexplanation, like 'The Reel: Rough voice that clicks' - no
+// need please, just say what kind of medium this is ... For all the shards just explanation of what it is"): the medium, and for a piece on
+// a medium without a sound of its own what it is (a bone flute, notation, printed music); who reads or plays it, and the voice, went
 std::string Game::mediumLine(const Shard& s) const {
     const int m = s.medium;
-    if (m < 0 || m >= RM_COUNT) return s.music ? std::string() : voiceLine(shardWorld.voice);
-    const std::string what = RECORD_MEDIUM_HUD[m];
-    if (s.music) {
-        if (recordMediumSounds(m)) {
-            switch (m) {
-                case RM_CYLINDER: return "A RECORDING IN WAX, THROUGH ITS HORN";
-                case RM_HUM: return "SOMETHING THAT HUMS IT";
-                case RM_CRYSTAL: return "A RECORDING IN A CRYSTAL";
-                default: return "A RECORDING ON " + what;
-            }
-        }
+    if (m < 0 || m >= RM_COUNT) return std::string();
+    if (s.music && !recordMediumSounds(m)) {
         switch (m) {
-            case RM_BONE: return "A BONE FLUTE, PLAYED BY THE SHIP";
-            case RM_SCROLL: return "NOTATION ON A SCROLL, PLAYED BY THE SHIP";
-            case RM_CODEX: return "NOTATION IN A CODEX, PLAYED BY THE SHIP";
-            case RM_PRINTED: return "PRINTED MUSIC, PLAYED BY THE SHIP";
-            default: return what + ", PLAYED BY THE SHIP";
+            case RM_BONE: return "A BONE FLUTE";
+            case RM_SCROLL: return "NOTATION ON A SCROLL";
+            case RM_CODEX: return "NOTATION IN A CODEX";
+            case RM_PRINTED: return "PRINTED MUSIC";
+            default: break;
         }
     }
-    if (!recordMediumSounds(m)) return what + ", READ BY THE SHIP";
-    std::string v = voiceLine(shardWorld.voice), line = what + ": " + v;
-    if (line.size() > 43) { size_t comma = v.find(','); line = what + ": " + (comma == std::string::npos ? v : v.substr(0, comma)); }
-    if (line.size() > 43) line = what + ": A VOICE";
-    return line;
+    return RECORD_MEDIUM_HUD[m];
 }
 
 // the object, in the 40 x 26 box from (x0, y0): its shape and marks from the record's seed; turning, spinning, blinking or glowing while

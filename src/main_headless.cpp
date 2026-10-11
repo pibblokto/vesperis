@@ -39,6 +39,7 @@ static void instrumentChecks(const std::function<void(const char*, bool, const s
 static void playerChecks(const std::function<void(const char*, bool, const std::string&)>& check);        // C-11
 static void wallsChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // B-420, B-421
 static void makerChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // C-17
+static void droneChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // C-18
 static void grammarChecks(const std::function<void(const char*, bool, const std::string&)>& check);       // H-03
 static double nameClassify(const std::vector<std::vector<std::string>>& names);                           // H-04's second pass
 // A-01: the age test worlds, the nearest people of each age to home on the harness's plane (sector y 0, where every mode's
@@ -46,12 +47,12 @@ static double nameClassify(const std::vector<std::vector<std::string>>& names); 
 // has its age, and the mode says when one moved
 struct AgeWorld { int64_t sx, sz; int body, which; };
 static const AgeWorld AGE_WORLDS[AGE_COUNT] = {
-    {198, 55, 10, 0},   // prehistoric, 9.5 ly: Navio V-a (felisian), the Taarkhaur
-    {200, 41, 1, 0},    // medieval, 7.1 ly: Faiyiari II (desert), the Othleas
-    {189, 45, 2, 0},    // industrial, 6.1 ly: Meihimeeri III (felisian), the Xoocu
-    {195, 57, 17, 1},   // modern, 11.0 ly: Rieneseirela VI-a (felisian), the Veathiash, the world's second people
-    {210, 33, 0, 0},    // futuristic, 19.8 ly: Iamaielyari I (desert), the Balaxiorn
-    {202, 26, 2, 0}};   // far future, 21.2 ly: Seanesaila III (desert), the Xoguskax
+    {198, 55, 10, 0},   // prehistoric, 9.5 ly: Navio V-a (felisian), the Witniikh
+    {200, 41, 1, 0},    // medieval, 7.1 ly: Faiyiari II (desert), the Ta-Zhozo
+    {189, 45, 2, 0},    // industrial, 6.1 ly: Meihimeeri III (felisian), the Aachidblukh
+    {208, 51, 5, 0},    // modern, 13.9 ly: Yeesheleemiola II-b (desert), the Jengne (R-413: Rieneseirela VI-a's second people, 11.0 ly, became medieval with its first)
+    {210, 33, 0, 0},    // futuristic, 19.8 ly: Iamaielyari I (desert), the Irrur
+    {202, 26, 2, 0}};   // far future, 21.2 ly: Seanesaila III (desert), the Glaak
 // A-03: the ages' scenes stand on peoples that ended lately (what is left of their works stands: `peoples fresh`), the nearest of each age
 // on the harness's plane; the test worlds above where their own people did
 static const AgeWorld AGE_SCENE_WORLDS[AGE_COUNT] = {
@@ -1885,6 +1886,7 @@ static void runGameFlow() {
         in.down[KEY_W] = true; run(3.0); in.down[KEY_W] = false;
         in.mouseDx = 400; game.frame(in, 1.0 / 30); in.newFrame();
         run(0.5); shot("surface2");
+        press(KEY_TAB); run(0.2); shot("surface_readings"); press(KEY_TAB); run(0.1);   // R-414: the readings (Tab) over the view and away again
         // M8: sprint, jump + jetpack, the buggy
         in.down[KEY_W] = true; in.down[KEY_LEFT_SHIFT] = true; run(2.5); shot("sprint"); in.down[KEY_LEFT_SHIFT] = false; in.down[KEY_W] = false;
         printf("  sprint: stamina %.0f, speed %.1f m/s\n", game.testPlayerStamina(), game.testPlayerSpeed());
@@ -1907,6 +1909,8 @@ static void runGameFlow() {
                 if (i == 30 * 8) { in.down[KEY_D] = true; }
                 if (i == 30 * 9) { in.down[KEY_D] = false; }
                 if (i == 30 * 20) shot("buggy_drive");
+                if (i == 30 * 21 || i == 30 * 22) in.pressed[KEY_TAB] = true;   // R-414: the buggy's readings
+                if (i == 30 * 21 + 6) shot("buggy_readings");
                 top = std::max(top, game.testBuggySpeed());
                 if (!airShot && game.testBuggyAirborne()) { shot("buggy_air"); airShot = true; }
             }
@@ -1937,6 +1941,8 @@ static void runGameFlow() {
                 if (i == 30 * 9) in.down[KEY_D] = true;
                 if (i == 30 * 11) in.down[KEY_D] = false;
                 if (i == 30 * 12) shot("drone_flight");
+                if (i == 30 * 13 || i == 30 * 14) in.pressed[KEY_TAB] = true;   // R-414: the drone's readings
+                if (i == 30 * 13 + 6) shot("drone_readings");
                 top = std::max(top, game.testDroneSpeed()); altMax = std::max(altMax, game.testDroneAlt());
             }
             press(KEY_V); run(0.2); shot("drone_chase"); press(KEY_V); run(0.1);
@@ -2037,8 +2043,8 @@ static void runGameFlow() {
             press(KEY_C); run(0.3); press(KEY_ENTER); run(8.0); shot("second_landing");
             bool none = game.testBuggyInfo().find("deployed=0") != std::string::npos;
             printf("  second landing: %s -> %s\n", game.testBuggyInfo().c_str(), none ? "no buggy (ok)" : "FAIL: the buggy carried over");
-            std::string marks = game.testMarksInfo();   // B-303: the trail and the waypoint of the first landing must be gone
-            bool fresh = marks.find("trail=1 ") != std::string::npos && marks.find("waypoint=0") != std::string::npos;
+            std::string marks = game.testMarksInfo();   // B-303: the waypoint of the first landing must be gone (R-414: no trail any more)
+            bool fresh = marks.find("waypoint=0") != std::string::npos;
             press(KEY_N); run(0.2); shot("second_sectormap"); press(KEY_ESCAPE);
             printf("  marks after the second landing: %s -> %s\n", marks.c_str(), fresh ? "fresh (ok)" : "FAIL: the old landing's marks carried over");
             press(KEY_K); run(0.3); press(KEY_Q); run(9.0);   // back to space for the rest of the flow
@@ -2160,14 +2166,25 @@ static void runGameFlow() {
         } else printf("probe: no gas giant in the scan\n");
     }
     {   // C-09: the old roads on the landing zoom of Aieliaalas II (T-01: round a town of its people's plan, the cores and the plan's ways with them):
-        // the network's faint lines over the window
+        // the network's faint lines over the window (R-415: with the peoples, V)
         Star as; if (starInSector(151, 0, 25, as, true)) {
             game.testParkAt(as, 1); run(0.3);
             StarSystem asys; asys.generate(as);
             double la = 12.0 * DEG, lo = 4.22 * DEG; planPlacePoint(BodyGen::make(asys.bodies[1]), 0, la, lo);
             game.testLandCursor(la / DEG, lo / DEG); run(0.2);
-            press(KEY_Z); run(0.5); shot("roads_zoom"); printf("  %s; the plan's cores %d, its roads %d\n", game.testRoadInfo().c_str(), game.testZoomCores(), game.testZoomWays(NK_ROAD));
-            press(KEY_Z); run(0.1); press(KEY_ESCAPE); run(0.1);
+            press(KEY_Z); press(KEY_V); run(0.5); shot("roads_zoom"); printf("  %s; the plan's cores %d, its roads %d; %s\n", game.testRoadInfo().c_str(), game.testZoomCores(), game.testZoomWays(NK_ROAD), game.testLandPeoplesInfo().c_str());
+            press(KEY_V); press(KEY_Z); run(0.1); press(KEY_ESCAPE); run(0.1);
+            // C-18: the drone bay over the same world: the rack, its screen, the drones sent (out of their ports), down there searching, back
+            game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);
+            shot("drones_rack"); printf("  facing %d (11 is the drone bay)\n", game.testCabinFacing());
+            press(KEY_E); run(0.1); game.testDronesSettle(); run(0.1); shot("drones_bay");
+            press(KEY_ENTER); game.testDronesSettle(); run(1.0); shot("drones_launch");
+            const std::string di = game.testDronesInfo();
+            const size_t dp = di.find(" down "); const double down = dp != std::string::npos ? atof(di.c_str() + dp + 6) : 20;
+            game.testDronesSkip(down + 4); game.testOpenDroneBay(); run(0.05); shot("drones_search");
+            game.testDronesSkip(DRONE_SEARCH_S + 60); run(0.05); shot("drones_back");
+            printf("  the drones: %d finds aboard (%d texts, %d music, %d charts, %d instruments); '%s'\n", game.testDronesAboard(), game.testDronesFinds(DF_TEXT), game.testDronesFinds(DF_MUSIC), game.testDronesFinds(DF_CHART), game.testDronesFinds(DF_INSTRUMENT), game.testStatus().c_str());
+            press(KEY_ESCAPE); run(0.1);
         }
     }
     Game g2; g2.savePrefix = "shots/tests/test_save"; g2.settingsPath = "shots/tests/test_settings.txt"; g2.guidePath = "shots/tests/test_guide.txt";
@@ -5328,6 +5345,52 @@ static void planChecks(const std::function<void(const char*, bool, const std::st
         check("the plan on the ship and the ground: the zoom shows a modern capital's core and its highways, the scanner hears it from 150 km, a way's legs on the ground (T-01)", cores >= 1 && highways >= 1 && heard && siteWays >= 1,
               fmt("the zoom over the capital: %d cores, %d highways; the capital %s from 150 km; the capital's first %s: %d legs at the site", cores, highways, heard ? "heard" : "NOT heard", kinds.c_str(), siteWays));
     }
+    {   // R-415: the landing map's peoples (V), off as the map opens: the marks of ruins hidden, the zoom the land alone; on: the marks, the places a
+        // few held records were kept at (one each), and with all of a people's records held its whole map (its land, every place, its ways); the
+        // zoom's rings and the capital named
+        const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
+        Star st; starInSector(W.sx, 0, W.sz, st, true);
+        Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        game.newGame(); game.setState(GameState::SPACE);
+        Input in;
+        auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+        auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+        auto drawn = [&](int what) {   // the info's "drawn: P places, W ways, L land pixels, M marks, R rings, C capitals named"
+            const std::string i = game.testLandPeoplesInfo(); const size_t p = i.find("drawn: ");
+            int v[6] = {}; if (p != std::string::npos) sscanf(i.c_str() + p, "drawn: %d places, %d ways, %d land pixels, %d marks, %d rings, %d capitals", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]);
+            return v[what];
+        };
+        game.testParkAt(st, W.body); run(0.1);
+        StarSystem sys; sys.generate(st);
+        const BodyGen g = BodyGen::make(sys.bodies[W.body]);
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
+        game.testDronesSettle(); run(0.1);
+        const PlanPlace cap = P->plans[0].places[0];
+        const std::string bkey = Guide::bodyKey(W.sx, 0, W.sz, W.body);
+        SurfaceMark m; m.body = bkey; m.lat = cap.lat - 0.02; m.lon = cap.lon + 0.03; m.kind = LM_RUIN; m.name = "A RUIN"; game.guide.marks.push_back(m);
+        game.testLandCursor(cap.lat / DEG, cap.lon / DEG); run(0.1);
+        const bool offFirst = game.testLandPeoplesInfo().find("hidden") != std::string::npos && drawn(3) == 0;
+        press(KEY_V); run(0.1);
+        const int marksOn = drawn(3), placesNone = drawn(0);
+        const int n0 = recordCountOf(g, 0);
+        std::set<int> ranks; std::shared_ptr<const RecordHomes> H = recordHomesOf(g, 0);
+        for (int i = 0; i < n0; i += 9) { game.guide.shards.insert(bkey + "/S" + std::to_string(shardWorldIndex(0, i))); if (H->rank[i] >= 0) ranks.insert(H->rank[i]); }
+        run(0.1);
+        const int placesSome = drawn(0), waysSome = drawn(1);
+        for (int i = 0; i < n0; i++) game.guide.shards.insert(bkey + "/S" + std::to_string(shardWorldIndex(0, i)));
+        run(0.1);
+        const int placesAll = drawn(0), waysAll = drawn(1), landAll = drawn(2), capitalAll = drawn(5);
+        const bool allSaid = game.testLandPeoplesInfo().find(", ALL") != std::string::npos;
+        press(KEY_Z); run(0.3);
+        const int rings = drawn(4), capitalZoom = drawn(5);
+        std::vector<uint32_t> on(game.output(), game.output() + (size_t)FBW * FBH);
+        press(KEY_V); run(0.1);
+        int differ = 0; for (size_t i = 0; i < on.size(); i++) if (on[i] != game.output()[i]) differ++;
+        check("the landing map's peoples: off as it opens, the places of the records held, all of them the whole map (R-415)",
+              offFirst && marksOn == 1 && placesNone == 0 && placesSome == (int)ranks.size() && waysSome == 0 && allSaid && placesAll == (int)P->plans[0].places.size() && waysAll > 0 && landAll > 0 && capitalAll == 1 && rings >= 1 && capitalZoom == 1 && differ > 0,
+              fmt("off at first %s; on: the mark %d, places %d with none held; %d held: %d places drawn of %zu homes, %d ways; all %d held: %d places of %zu, %d ways, %d land pixels, the capital named %d; the zoom: %d rings, the capital %d, %d pixels the layer's",
+                  offFirst ? "yes" : "NO", marksOn, placesNone, (n0 + 8) / 9, placesSome, ranks.size(), waysSome, n0, placesAll, P->plans[0].places.size(), waysAll, landAll, capitalAll, rings, capitalZoom, differ));
+    }
 }
 
 static std::string lowerOf(std::string s) { for (char& c : s) c = (char)tolower((unsigned char)c); return s; }
@@ -5353,9 +5416,9 @@ static void historyChecks(const std::function<void(const char*, bool, const std:
         w.body = AGE_WORLDS[a].body; w.g = BodyGen::make(w.sys.bodies[w.body]); w.which = AGE_WORLDS[a].which; w.ok = worldHadCivilisation(w.g); w.name = w.sys.bodies[w.body].name;
         W.push_back(w);
     }
-    // the worlds of two: Eleinewai I (C-13's: they met and made treaties) and Meareafionris III (three wars, then the Kreabock's end a conquest
-    // by the Alifeis)
-    const struct { int64_t sx, sz; int body; } TWO[2] = {{152, 92, 0}, {233, 60, 2}};
+    // the worlds of two: Leanmya V-a (19.4 ly, the nearest whose peoples met: two treaties, nine wars) and Hiameshseine I-a (37.7 ly, the
+    // nearest with a conquest). R-413: C-13's Eleinewai I and Meareafionris III, their peoples of one age since, never met
+    const struct { int64_t sx, sz; int body; } TWO[2] = {{179, 57, 18}, {202, 9, 5}};
     for (const auto& tw : TWO)
         for (int k = 0; k < 2; k++) {
             World w;
@@ -5574,9 +5637,12 @@ static void worksChecks(const std::function<void(const char*, bool, const std::s
     int nWorlds = 0, same = 0, inTown = 0, nanForms = 0, pieces = 0, total = 0; bool kinds[WO_COUNT] = {}; std::string sWhy;
     double buildMs = 0, worstMs = 0; std::string worstName;
     std::set<std::string> seen;
-    for (int set = 0; set < 2; set++)
-        for (int a = 0; a < AGE_COUNT; a++) {
-            const AgeWorld& aw = set ? AGE_SCENE_WORLDS[a] : AGE_WORLDS[a];
+    // the age and scene worlds, and the nearest living world whose dams hold their water (R-413: the modern test world a desert since;
+    // Shioleesein I-a, 20 ly, a modern people's two)
+    std::vector<AgeWorld> worlds(AGE_WORLDS, AGE_WORLDS + AGE_COUNT);
+    worlds.insert(worlds.end(), AGE_SCENE_WORLDS, AGE_SCENE_WORLDS + AGE_COUNT);
+    worlds.push_back(AgeWorld{196, 66, 7, 0});
+    for (const AgeWorld& aw : worlds) {
             if (!seen.insert(fmt("%lld %lld %d", (long long)aw.sx, (long long)aw.sz, aw.body)).second) continue;
             Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) continue;
             StarSystem sys; sys.generate(st);
@@ -6514,23 +6580,20 @@ static int testUnit() {
         sv.init(&sys, bi, 0.5, 1.2, 0.0);
         check("no buggy on a new landing", !sv.buggy.deployed && !sv.inBuggy);
     }
-    // B-303: a new landing clears the trail and the waypoint; a re-anchor carries both to the new frame at the same place
+    // B-303: a new landing clears the waypoint; a re-anchor carries it to the new frame at the same place (R-414: M4-02's trail is gone)
     if (bi >= 0) {
         SurfaceView sv;
         sv.init(&sys, bi, 0.4, 1.1, 0.0);
         Input in;
-        for (int i = 0; i < 40; i++) { sv.player.x += 30; sv.update(1.0 / 30, in, i / 30.0, false); }   // the trail collects points every 25 m
+        for (int i = 0; i < 40; i++) { sv.player.x += 30; sv.update(1.0 / 30, in, i / 30.0, false); }
         sv.hasWaypoint = true; sv.wpX = 900; sv.wpZ = -400;
-        Vec3 wpU = sv.site.unitAt(sv.wpX, sv.wpZ), trU = sv.site.unitAt(sv.trail[3].first, sv.trail[3].second);
-        size_t nTrail = sv.trail.size();
-        check("the trail collects points", nTrail >= 30, std::to_string(nTrail));
+        Vec3 wpU = sv.site.unitAt(sv.wpX, sv.wpZ);
         sv.player.x = 51e3; sv.update(1.0 / 30, in, 2.0, false);   // beyond 50 km: reanchor
-        double wx, wz, tx, tz; sv.site.localAt(wpU, wx, wz); sv.site.localAt(trU, tx, tz);
+        double wx, wz; sv.site.localAt(wpU, wx, wz);
         check("reanchor keeps the waypoint in place", sv.hasWaypoint && std::fabs(wx - sv.wpX) < 0.05 && std::fabs(wz - sv.wpZ) < 0.05 && std::fabs(sv.wpX) > 1000, "wp " + std::to_string(sv.wpX) + "," + std::to_string(sv.wpZ));
-        check("reanchor keeps the trail in place", sv.trail.size() >= nTrail && std::fabs(tx - sv.trail[3].first) < 0.5 && std::fabs(tz - sv.trail[3].second) < 0.5, std::to_string(sv.trail.size()) + " points");   // one more: the point at the new origin
         int epoch = sv.siteEpoch;
         sv.init(&sys, bi, 0.5, 1.2, 0.0);
-        check("a new landing clears the trail and the waypoint", sv.trail.empty() && !sv.hasWaypoint && sv.siteEpoch > epoch);
+        check("a new landing clears the waypoint", !sv.hasWaypoint && sv.siteEpoch > epoch);
     }
     // B-206: on a thin-atmosphere world in a dust storm the wind stays a wind (it compounded every frame to 1e13 knots)
     {
@@ -7284,6 +7347,7 @@ static int testUnit() {
     instrumentChecks(check);    // C-11
     makerChecks(check);         // C-17
     playerChecks(check);        // C-11
+    droneChecks(check);         // C-18
     // O3 (R-302): belt rocks keep their identity as the belt shears
     {
         Star bs; StarSystem bsys; bool have = false;
@@ -7401,8 +7465,8 @@ static int testUnit() {
     }
     {   // G-05: the galaxy chart. From home the star map's Tab turns to the galaxy; at every level the ship's crosshair is drawn within a
         // pixel of where the level's scale puts it from the view's centre (the galactic centre on the whole disc, the ship from level 1),
-        // found in the frame by its four white arms; three arrivals are the route's last three stops in order, the chart draws their legs
-        // in that order, and the route goes through the guide's file; in a Vimana flight M opens the galaxy page and Tab keeps it there
+        // found in the frame by its four white arms; three arrivals are the stars visited, with no line between them (R-414: G-05's route
+        // is gone, from the chart and from the guide's file); in a Vimana flight M opens the galaxy page and Tab keeps it there
         Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -7437,15 +7501,21 @@ static int testUnit() {
         std::string keys[3];
         for (size_t k = 0; k < stops.size() && k < 3; k++) { game.testArriveAt(stops[k]); run(0.1); keys[k] = Guide::starKey(stops[k].sx, stops[k].sy, stops[k].sz); }
         game.testChartLevel(Game::CHART_LEVELS - 1); game.testChartFollow(); run(0.05);
-        const std::vector<std::string>& R = game.guide.route;
-        const bool inOrder = stops.size() == 3 && R.size() >= 3 && R[R.size() - 3] == keys[0] && R[R.size() - 2] == keys[1] && R.back() == keys[2];
-        const auto& legs = game.testChartLegs();
-        const bool legsOk = legs.size() >= 2 && legs[legs.size() - 2] == std::make_pair(keys[0], keys[1]) && legs.back() == std::make_pair(keys[1], keys[2]);
+        // R-414: the stars visited, a dot each; no line of the way the ship came between them (G-05's route, in its green, is gone)
+        bool visited = stops.size() == 3;
+        for (const std::string& k : keys) visited = visited && game.guide.visited.count(k);
+        int routeGreen = 0;
+        {
+            const uint32_t* px = game.output(); const int S = FBW / UW;
+            for (int y = Game::CHART_FACE_Y0; y < Game::CHART_FACE_Y0 + Game::CHART_FACE_H; y++)
+                for (int x = 0; x < UW; x++) if (px[(size_t)(y * S) * FBW + x * S] == rgb(70, 130, 95)) routeGreen++;
+        }
         game.guide.save("shots/tests/test_guide_route.txt");
-        Guide back; const bool loaded = back.load("shots/tests/test_guide_route.txt");
+        std::ifstream gf("shots/tests/test_guide_route.txt"); std::string gl; int routeLines = 0;
+        while (std::getline(gf, gl)) if (gl.rfind("route ", 0) == 0) routeLines++;
         remove("shots/tests/test_guide_route.txt");
-        check("the route of three arrivals, in order (G-05)", inOrder && legsOk && loaded && back.route == game.guide.route,
-              fmt("route of %zu stops ending %s > %s > %s; %zu legs drawn, the last two in order %d; through the file %d", R.size(), keys[0].c_str(), keys[1].c_str(), keys[2].c_str(), legs.size(), legsOk, loaded && back.route == game.guide.route));
+        check("three arrivals visited, no route drawn between them (R-414)", visited && routeGreen == 0 && routeLines == 0,
+              fmt("the three %s visited; the route's green on the chart %d pixels; %d route lines in the guide", visited ? "all" : "NOT", routeGreen, routeLines));
         // a jump flies at once; M in the flight shows the galaxy (the map left on the neighbourhood), Tab is refused there
         press(KEY_TAB); run(0.05); press(KEY_ESCAPE); run(0.05);
         const int leftOn = game.testMapPage();
@@ -8744,6 +8814,29 @@ static int testUnit() {
                 }
             }
         }
+        // R-413: a people names the other in its records where their histories met (H-02's contact): Eleinewai I's two prehistoric peoples
+        // never did (their lands apart, neither sailed), Leanmya V-a's medieval ones did (two treaties, nine wars)
+        bool metHere = false, metThere = false, namedThere[2] = {false, false}; std::string thereLine = "Leanmya V-a NOT two peoples";
+        if (have && isTwo) { std::shared_ptr<const History> H = historyOfWorld(BodyGen::make(sys.bodies[0]), 0); if (H) for (const HistoryEvent& e : H->events) if (e.kind == HE_CONTACT) metHere = true; }
+        {
+            Star ms; StarSystem msys;
+            if (starInSector(179, 0, 57, ms, true)) {
+                msys.generate(ms);
+                const BodyGen mg = 18 < (int)msys.bodies.size() ? BodyGen::make(msys.bodies[18]) : BodyGen();
+                if (18 < (int)msys.bodies.size() && peoplesOf(mg) == 2) {
+                    const Body& mb = msys.bodies[18];
+                    std::shared_ptr<const History> H = historyOfWorld(mg, 0); if (H) for (const HistoryEvent& e : H->events) if (e.kind == HE_CONTACT) metThere = true;
+                    thereLine = fmt("Leanmya V-a's %s:", metThere ? "met" : "NEVER MET");
+                    for (int k = 0; k < 2; k++) {
+                        const Lore ML = loreOf(msys, mb, mg, k);
+                        std::vector<Shard> sh; shardsOf(msys, mb, mg, ML, SHARDS_PER_WORLD, sh);
+                        int m = 0; for (const Shard& x : sh) if (!x.music && x.text.find(ML.other) != std::string::npos) m++;
+                        namedThere[k] = m >= 1;
+                        thereLine += fmt("%s the %s name the %s in %d shards", k ? "," : "", ML.people.c_str(), ML.other.c_str(), m);
+                    }
+                }
+            }
+        }
         {   // the one-people test worlds: one people, no other, the world's own seed, the "other" kinds never drawn
             struct W { int64_t sx, sz; int bi; } ws[2] = {{151, 25, 1}, {153, 70, 2}};
             for (const W& w : ws) {
@@ -8755,10 +8848,10 @@ static int testUnit() {
                 for (const Shard& x : sh) if (x.text.find("the other people") != std::string::npos || (x.kind >= 0 && std::string(shardKindName(x.kind)) == "the other people")) oneOk = false;
             }
         }
-        check("a world of two peoples: two lores, tongues, voices, traditions and fifties, each naming the other, one last each, the ends by the coin; one-people worlds as they were (C-13)",
-              have && isTwo && seedsDiffer && namesDiffer && tonguesDiffer && own && determ && clean && dups <= 4 && otherNamed[0] && otherNamed[1] && lastOne[0] && lastOne[1] && endsAgree && oneOk,
-              fmt("Eleinewai I: %s; seeds %s, names %s, tongues %s, voices and traditions %s; the fifties %s, %s, %d texts repeated in the hundred; %s; one last each %s; the ends %s; the one-people worlds %s", isTwo ? names.c_str() : "NOT two peoples", seedsDiffer ? "differ" : "NOT as drawn", namesDiffer ? "cross-named" : "NOT cross-named",
-                  tonguesDiffer ? "differ" : "the SAME", own ? "their own" : "NOT their own", determ ? "the same twice" : "NOT the same twice", clean ? "clean" : "NOT clean", dups, otherLine.c_str(), lastOne[0] && lastOne[1] ? "yes" : "NO", endsAgree ? "as the coin says" : "NOT as the coin says", oneOk ? "as they were" : "CHANGED"));
+        check("a world of two peoples: two lores, tongues, voices, traditions and fifties, each naming the other where they met, one last each, the ends by the coin; one-people worlds as they were (C-13)",
+              have && isTwo && seedsDiffer && namesDiffer && tonguesDiffer && own && determ && clean && dups <= 4 && otherNamed[0] == metHere && otherNamed[1] == metHere && metThere && namedThere[0] && namedThere[1] && lastOne[0] && lastOne[1] && endsAgree && oneOk,
+              fmt("Eleinewai I: %s; seeds %s, names %s, tongues %s, voices and traditions %s; the fifties %s, %s, %d texts repeated in the hundred; they %s: %s; %s; one last each %s; the ends %s; the one-people worlds %s", isTwo ? names.c_str() : "NOT two peoples", seedsDiffer ? "differ" : "NOT as drawn", namesDiffer ? "cross-named" : "NOT cross-named",
+                  tonguesDiffer ? "differ" : "the SAME", own ? "their own" : "NOT their own", determ ? "the same twice" : "NOT the same twice", clean ? "clean" : "NOT clean", dups, metHere ? "met" : "never met", otherLine.c_str(), thereLine.c_str(), lastOne[0] && lastOne[1] ? "yes" : "NO", endsAgree ? "as the coin says" : "NOT as the coin says", oneOk ? "as they were" : "CHANGED"));
         // T-01: the two peoples' lands meet only where their plans' territories touch; where they do not (their capitals far apart, each holding
         // a share of the world's land) there is no frontier and its roads are not asked for: the rule is checked on two settlements made up
         bool meet = false, ruleOk = false;
@@ -9556,7 +9649,7 @@ static int testUnit() {
             press(KEY_Z); run(0.05);
             check("cabin: the telescope's set on the back wall, E looks through it", facing == 9 && on && !game.testTelescopeOn(), fmt("facing %d, E: %s, Z: %s", facing, on ? "the eye at the eyepiece" : "nothing", game.testTelescopeOn() ? "still on" : "stowed"));
             double minDist = 0; int n = game.testScreenColours(minDist);
-            check("cabin: every computer in a colour of its own", n == 9 && minDist > 0.3, fmt("%d computers and the instruments' case (C-11), the nearest two %.2f apart in RGB", n, minDist));
+            check("cabin: every computer in a colour of its own", n == 10 && minDist > 0.3, fmt("%d computers, the instruments' case (C-11) and the drone bay (C-18), the nearest two %.2f apart in RGB", n, minDist));
         }
         {   // B-411: the light through a glass hull. Y makes the hull glass (the outside tinted through the walls, the floor and the
             // ceiling); what stands in the room stays solid, U lights it and catches a sheen on the glass, and says the hull is glass.
@@ -11924,7 +12017,7 @@ static void genomeDressTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood
 // ---- T-01: a people's map of its world --------------------------------------------------------------------------------------------
 // `plan <sx> <sz> <body> [second]`: the world's plan over its map for each age (the people as if it had reached it, over one reading of the
 // world), and the plan the game builds (the people's own age), with the build times; `plan ages`: the six age worlds' own plans
-static const uint32_t PLAN_WAY_COLOURS[NK_COUNT] = {rgb(175, 140, 100), rgb(245, 225, 160), rgb(215, 55, 45), rgb(70, 160, 255), rgb(255, 150, 30), rgb(240, 70, 235), rgb(120, 170, 220)};
+static const uint32_t* const PLAN_WAY_COLOURS = NET_KIND_COLOURS;   // galaxy/plan.h's (R-415: the landing map's too)
 static void planLine(std::vector<uint32_t>& img, int W, int H, int x0, int y0, int x1, int y1, uint32_t c, int width, bool dotted = false) {
     const int steps = std::max(std::abs(x1 - x0), std::abs(y1 - y0));
     for (int q = 0; q <= steps; q++) {
@@ -13696,6 +13789,37 @@ static void historyPageChecks(const std::function<void(const char*, bool, const 
         const bool any = std::any_of(held.begin(), held.end(), [&](int i) { return C->entries[i].category == RC_MUSIC; });
         check("history: the records page shows one kind (H-06)", !any || music == steps, fmt("%d of %d steps on music", music, steps));
     }
+    {   // R-416: Shift with an arrow held runs the timeline's and the history's cursor (a tap of it one step, a second's hold a score), the run
+        // stopping at the ends where the arrow alone goes round (the timeline) or stays (the history)
+        auto hold = [&](int key, int frames) {   // Shift and the arrow down together for `frames` frames at 30 a second, then both let go
+            gi.down[KEY_LEFT_SHIFT] = true; gi.down[key] = true; gi.pressed[key] = true;
+            for (int f = 0; f < frames; f++) { game.frame(gi, 1.0 / 30); gi.newFrame(); }
+            gi.down[KEY_LEFT_SHIFT] = false; gi.down[key] = false; game.frame(gi, 1.0 / 30); gi.newFrame();
+        };
+        while (game.testShardsPage() != 1) press(KEY_TAB);
+        const int n = game.testShardsHeld();
+        hold(KEY_LEFT, 30 * (3 + n / 100)); const int t0 = game.testShardCursor();
+        hold(KEY_RIGHT, 1); const int t1 = game.testShardCursor();
+        hold(KEY_RIGHT, 30); const int t2 = game.testShardCursor();
+        hold(KEY_RIGHT, 30 * (3 + n / 100)); const int t3 = game.testShardCursor();
+        press(KEY_RIGHT); const int t4 = game.testShardCursor();
+        check("history: Shift held with an arrow runs the timeline, a tap one record, stopping at the ends; the arrow alone goes round (R-416)",
+              n >= 15 && t0 == 0 && t1 == 1 && t2 - t1 >= std::min(12, n - 1 - t1) && t2 - t1 <= 30 && t3 == n - 1 && t4 == 0,
+              fmt("%d records held: run back to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Right alone to %d", n, t0, t1, t2, t2 - t1, t3, t4));
+        for (int i : held) game.guide.decoded[key + std::to_string(shardWorldIndex(W.which, i))] = (int)held.size();   // every record held read: more events told
+        press(KEY_ESCAPE); run(0.1); press(KEY_ENTER); run(0.2);   // the world opened again, its pages read again
+        while (game.testShardsPage() != 2) press(KEY_TAB);
+        run(0.1);
+        const int ne = (int)game.testTold().events.size();
+        hold(KEY_UP, 30 * (3 + ne / 100)); const int h0 = game.testLegendSel();
+        hold(KEY_DOWN, 1); const int h1 = game.testLegendSel();
+        hold(KEY_DOWN, 30); const int h2 = game.testLegendSel();
+        hold(KEY_DOWN, 30 * (3 + ne / 100)); const int h3 = game.testLegendSel();
+        press(KEY_DOWN); const int h4 = game.testLegendSel();
+        check("history: Shift held with an arrow runs the history's events, a tap one, stopping at the ends (R-416)",
+              game.testShardsPage() == 2 && ne >= 15 && h0 == 0 && h1 == 1 && h2 - h1 >= std::min(12, ne - 1 - h1) && h2 - h1 <= 30 && h3 == ne - 1 && h4 == ne - 1,
+              fmt("page %d, %d events: run up to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Down alone %d", game.testShardsPage(), ne, h0, h1, h2, h2 - h1, h3, h4));
+    }
 }
 
 // C-11: the instruments of an age world's people: each age's (its timbre, family, register, courses) and where they lie over the world's places
@@ -13877,7 +14001,8 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
         game.testCabinGoto(-1.9, -1.38, -PI / 2, -0.25); run(0.2);
         const int facing = game.testCabinFacing();
         press(KEY_E); run(0.2);
-        const bool open = game.state == GameState::INSTRUMENTS;
+        press(KEY_ENTER); run(0.2);   // C-18: the case opens on its worlds (this one first, the ship over it): Enter opens it
+        const bool open = game.state == GameState::INSTRUMENTS && game.testCaseLevel() == 1;
         const std::string info0 = game.testInstrumentInfo();
         const bool disc = info0.find("its disc") != std::string::npos;
         if (disc) { press(KEY_ENTER); run(1.0); }
@@ -14319,6 +14444,318 @@ static int runInstruments(int argc, char** argv) {
     if (argc > 4) return printInstruments(AgeWorld{atoll(argv[2]), atoll(argv[3]), atoi(argv[4]), which});
     printf("instruments [ages] | instruments <sx> <sz> <body> [second] | instruments wav | instruments scenes [age] | instruments check | instruments sheet [age] [peoples] [scale] | instruments plans [peoples] [scale] | instruments distinct [peoples]\n");
     return 1;
+}
+
+// ---- C-18: the drone bay -------------------------------------------------------------------------------------------------------------
+
+static const char* dronePlaceWord(int sclass) {
+    return sclass == SC_CAPITAL ? "capital" : (sclass == SC_CITY ? "city" : (sclass == SC_TOWN ? "town" : (sclass == SC_VILLAGE ? "village" : "place")));
+}
+
+// a world's items for the drones and three hauls drawn from none held (`drones world <sx> <sz> <body>`)
+static int printDroneWorld(int64_t sx, int64_t sz, int body) {
+    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
+    StarSystem sys; sys.generate(s);
+    if (body < 0 || body >= (int)sys.bodies.size()) { printf("no body %d\n", body); return 1; }
+    DroneWorld W; droneWorldOf(sys, body, W);
+    int kinds[DF_COUNT] = {}, homed = 0;
+    for (const DroneItem& it : W.items) { kinds[std::max(0, std::min(DF_COUNT - 1, it.kind))]++; if (it.place >= 0) homed++; }
+    printf("%s: %d people%s, %d items (%d texts, %d music, %d star charts, %d instruments), %d places their homes, %d items at a home, read in %.0f ms\n", sys.bodies[body].name.c_str(), W.peoples, W.peoples == 1 ? "" : "s",
+           (int)W.items.size(), kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], (int)W.places.size(), homed, W.buildMs);
+    for (int i = 0; i < 3; i++) {
+        DroneHaul H; droneHaulOf(W, std::vector<bool>(W.items.size(), false), 0xD00ULL + i, H);
+        printf("  haul %d: %d finds\n", i + 1, H.total);
+        for (int k = 0; k < DRONE_COUNT; k++) {
+            printf("    drone %d wants %d:", k + 1, H.wanted[k]);
+            for (const DroneLeg& leg : H.legs[k]) {
+                const DronePlace* pl = leg.place >= 0 && leg.place < (int)W.places.size() ? &W.places[leg.place] : nullptr;
+                printf(" [%s %d of people %d:", pl ? dronePlaceWord(pl->sclass) : "nowhere", pl ? pl->rank : -1, pl ? pl->people : -1);
+                for (int idx : leg.items) { const DroneItem& it = W.items[idx]; printf(" %s", it.kind == DF_INSTRUMENT ? ("'" + it.name + "'").c_str() : DRONE_FIND_NAMES[it.kind]); }
+                printf("]");
+            }
+            printf("\n");
+        }
+    }
+    return 0;
+}
+
+// the bay in a game on the modern age world (two peoples): the rack, the screen, a trip from the launch to the docks, the cooldown, a recall,
+// a save and a load in a trip, and the case's worlds (a folder each people of the world); frames `drones_*.png` when `frames`. `ck` reports
+// each check
+static void dronesGame(bool frames, const std::function<void(const char*, bool, const std::string&)>& ck) {
+    mkdir("shots/tests", 0755);
+    const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
+    Star st; if (!starInSector(W.sx, 0, W.sz, st, true)) { ck("the drone bay: a trip (C-18)", false, "no modern age world"); return; }
+    StarSystem sys; sys.generate(st);
+    const std::string gp = "shots/tests/test_drones_guide.txt";
+    remove(gp.c_str());
+    Game game; game.savePrefix = "shots/tests/test_drones_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = gp;
+    game.newGame(); game.setState(GameState::SPACE); applyTestScale(game);
+    Input gi;
+    auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+    auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+    auto shot = [&](const std::string& what) { if (!frames) return; const std::string fn = fmt("shots/tests/drones_%s.png", what.c_str()); writePNG(fn.c_str(), game.output(), FBW, FBH); printf("    %s\n", fn.c_str()); };
+    auto held = [&]() { std::set<std::string> h(game.guide.shards.begin(), game.guide.shards.end()); h.insert(game.guide.instruments.begin(), game.guide.instruments.end()); return h; };
+    auto atRack = [&]() { game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.1); };
+    run(0.2); game.testParkAt(st, W.body); run(0.2); game.setState(GameState::SPACE); run(0.2);
+    // ---- the rack with the drones aboard, E, the screen
+    atRack(); run(0.2);
+    const int facing = game.testCabinFacing();
+    shot("rack");
+    press(KEY_E); run(0.1);
+    const bool open = game.state == GameState::DRONES;
+    game.testDronesSettle(); run(0.2);
+    const int items = game.testDronesWorldItems(-1, false), texts = game.testDronesWorldItems(DF_TEXT), music = game.testDronesWorldItems(DF_MUSIC), charts = game.testDronesWorldItems(DF_CHART), instr = game.testDronesWorldItems(DF_INSTRUMENT);
+    shot("screen_ready");
+    ck("the drone bay: the rack and its screen (C-18)", facing == 11 && open && items > 0 && instr > 0 && charts > 0,
+       fmt("facing %d (11 the bay), the screen %s; %s holds %d for them: %d texts, %d music, %d star charts, %d instruments", facing, open ? "open" : "NOT OPEN", sys.bodies[W.body].name.c_str(), items, texts, music, charts, instr));
+    // ---- the launch: Enter, the screen gone to the rack, the drones out of their ports one after another
+    const std::set<std::string> before = held();
+    press(KEY_ENTER);
+    const bool sent = game.testDronesOut() && game.state == GameState::SPACE;
+    game.testDronesSettle();
+    atRack(); run(1.1);
+    const double x1 = game.testDroneRackX(0), x3 = game.testDroneRackX(2), y1 = game.testDroneRackY(0);
+    shot("launch");
+    game.testDronesSkip(3.6);
+    const double gone = game.testDroneRackX(0);
+    // the lights: the ship's nose on the world, the explorer at the front window
+    game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05);
+    game.testDronesSkip(4.0); run(0.02);
+    shot("lights");
+    game.testDronesSkip(6.5); run(0.02);
+    shot("lights_far");
+    game.testDronesSkip(9.0); game.testOpenDroneBay(); run(0.05);
+    const std::string descent = game.testDroneState(0);
+    shot("screen_descent");
+    ck("the drone bay: the launch (C-18)", sent && x1 < -2.3 && y1 > 1.0 && std::fabs(x3 - (-2.19)) < 0.01 && gone < -90 && game.testDronesPlanned() && descent == "DESCENDING",
+       fmt("sent %s; at 1.2 s drone 1 at x %.2f (backing into the hull from -2.19) %.2f m up, drone 3 at x %.2f (waiting its turn); at 3.6 s drone 1 %s; the haul %s; at 9 s drone 1 %s",
+           sent ? "yes" : "NO", x1, y1, x3, gone < -90 ? "gone through its port" : "STILL IN THE CABIN", game.testDronesPlanned() ? "drawn" : "NOT DRAWN", descent.c_str()));
+    // ---- the search: a hand closing on a find, the ways on the map; each drone two minutes from its first place to its last (the user's)
+    std::string info = game.testDronesInfo();
+    double arrive = 0;
+    { const size_t p = info.find(" down "); if (p != std::string::npos) arrive = atof(info.c_str() + p + 6); }
+    int searchOk = 0; std::string searches;
+    for (size_t p = info.find(" down "); p != std::string::npos; p = info.find(" down ", p + 6)) {
+        const double d = atof(info.c_str() + p + 6); const size_t u = info.find(" up ", p);
+        const double up = u != std::string::npos ? atof(info.c_str() + u + 4) : 0;
+        if (std::fabs(up - d - DRONE_SEARCH_S) < 0.05) searchOk++;
+        searches += fmt("%s%.1f s", searches.empty() ? "" : ", ", up - d);
+    }
+    game.testDronesSkip(arrive + 3.0); run(0.05);
+    const std::string searching = game.testDroneState(0);
+    shot("screen_search");
+    atRack(); shot("rack_away");
+    // ---- the docks: everything found aboard, in the guide; nothing found twice, nothing held before
+    double dock = 0;
+    for (size_t p = info.find(" dock "); p != std::string::npos; p = info.find(" dock ", p + 6)) dock = std::max(dock, atof(info.c_str() + p + 6));
+    game.testDronesSkip(dock + 0.5); run(0.05);
+    const int total = game.testDronesFinds(), aboard = game.testDronesAboard();
+    int perOk = 0, wantedSum = 0; std::set<std::string> keys; int dup = 0, old = 0, kinds[DF_COUNT] = {};
+    for (int k = 0; k < DRONE_COUNT; k++) {
+        const int n = game.testDronesOfDrone(k), w = game.testDronesWanted(k);
+        wantedSum += w;
+        if (n == w && n >= DRONE_MIN_FINDS && n <= DRONE_MAX_FINDS) perOk++;
+        for (int i = 0; i < n; i++) { const std::string key = game.testDronesFindKey(k, i); if (!keys.insert(key).second) dup++; if (before.count(key)) old++; }
+    }
+    for (int kd = 0; kd < DF_COUNT; kd++) kinds[kd] = game.testDronesFinds(kd);
+    const std::set<std::string> after = held();
+    const int grew = (int)after.size() - (int)before.size();
+    game.testOpenDroneBay(); run(0.05); shot("screen_back");
+    // R-414: the list goes once the rack has shown it: closed, the finds and the places searched are gone from it, the guide keeps them
+    const int listed = game.testDronesFinds();
+    press(KEY_ESCAPE); run(0.05);
+    const int afterSeen = game.testDronesFinds(); const bool keptInGuide = held() == after;
+    game.testOpenDroneBay(); run(0.05); shot("screen_seen"); press(KEY_ESCAPE); run(0.05);
+    ck("the drone bay: the finds go from the rack once seen (R-414)", listed == total && afterSeen == 0 && keptInGuide && game.state == GameState::SPACE,
+       fmt("%d listed on the screen; after it closed %d on the rack, the guide's %s", listed, afterSeen, keptInGuide ? "as they were" : "CHANGED"));
+    ck("the drone bay: a trip's finds aboard (C-18)", searching.rfind("IN ", 0) == 0 && !game.testDronesOut() && perOk == DRONE_COUNT && total >= 6 && total <= 24 && aboard == total && grew == total && dup == 0 && old == 0 && searchOk == DRONE_COUNT,
+       fmt("drone 1 at a stop %s; searching %s (two minutes each %d of 3); %d finds (%d texts, %d music, %d charts, %d instruments) of %d wanted, each drone 2 to 8 and what it wanted %d of 3, %d aboard, the guide %d more; %d found twice, %d held before; %s",
+           searching.c_str(), searches.c_str(), searchOk, total, kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], wantedSum, perOk, aboard, grew, dup, old, trunc(game.testStatus(), 40).c_str()));
+    // ---- the charge: refused until five minutes from the return (not from the launch), then a second trip that brings none of the first's,
+    // watched on the decoder: the world's records listed open there grow as the drones dock (the user's: "when drones arrive everything
+    // immediately appears on shard decoder")
+    const bool refused = !game.testDronesLaunch();
+    const std::string why = game.testStatus();
+    const double back1 = game.testDronesBack();
+    game.testDronesSkip(DRONE_COOLDOWN_S + 0.1); const bool refusedAtOld = !game.testDronesLaunch();   // five minutes from the launch: still charging
+    game.testDronesSkip(back1 + DRONE_COOLDOWN_S - 2); const bool stillRefused = !game.testDronesLaunch();
+    game.testDronesSkip(back1 + DRONE_COOLDOWN_S + 0.1);
+    const std::set<std::string> before2 = held();
+    const bool second = game.testDronesLaunch();
+    game.testDronesSettle();
+    game.setState(GameState::SPACE); game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.1);
+    press(KEY_E); run(0.1);
+    const bool decoderOpen = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
+    press(KEY_ENTER); run(0.1);
+    const int listedBefore = game.testShardsListed(), levelBefore = game.testShardsLevel();
+    info = game.testDronesInfo(); dock = 0;
+    for (size_t p = info.find(" dock "); p != std::string::npos; p = info.find(" dock ", p + 6)) dock = std::max(dock, atof(info.c_str() + p + 6));
+    game.testDronesSkip(dock + 0.5); run(0.1);
+    int heldNow = 0, which = -1;
+    {   // the open world's people's shards in the guide now
+        const std::string si = game.testShardsInfo(); const size_t pp = si.find("(people ");
+        which = pp != std::string::npos ? atoi(si.c_str() + pp + 8) - 1 : -1;
+        const std::string prefix = Guide::bodyKey(W.sx, 0, W.sz, W.body) + "/S";
+        for (const std::string& k : game.guide.shards) if (k.compare(0, prefix.size(), prefix) == 0 && shardPeopleOf(atoi(k.c_str() + prefix.size())) == which) heldNow++;
+    }
+    const int listedAfter = game.testShardsListed(), levelAfter = game.testShardsLevel();
+    shot("decoder_after");
+    press(KEY_ESCAPE); run(0.05); press(KEY_ESCAPE); run(0.05);
+    int again = 0, n2 = 0;
+    for (int k = 0; k < DRONE_COUNT; k++) for (int i = 0; i < game.testDronesOfDrone(k); i++) { n2++; if (before2.count(game.testDronesFindKey(k, i))) again++; }
+    ck("the drone bay: five minutes charging from the return (C-18)", refused && refusedAtOld && stillRefused && second && !game.testDronesOut() && n2 >= 6 && again == 0,
+       fmt("refused after the trip (%s), at %.0f s from the launch still, and at %.0f s (back at %.1f), sent at %.1f; the second brought %d, %d of them held before", trunc(why, 40).c_str(), DRONE_COOLDOWN_S + 0.1, back1 + DRONE_COOLDOWN_S - 2, back1, back1 + DRONE_COOLDOWN_S + 0.1, n2, again));
+    ck("the decoder open as the drones dock (C-18)", decoderOpen && levelBefore == 1 && levelAfter == 1 && which >= 0 && listedAfter == heldNow && listedAfter >= listedBefore,
+       fmt("the decoder %s; people %d's records listed %d before the docks, %d after (the guide %d), at the world's records %s", decoderOpen ? "open" : "NOT OPEN", which + 1, listedBefore, listedAfter, heldNow, levelBefore == 1 && levelAfter == 1 ? "throughout" : "NOT THROUGHOUT"));
+    // ---- a recall: the ship leaves its parking mid-trip; what was found comes aboard, the rest stays down there
+    game.testDronesSkip(game.testDronesBack() + DRONE_COOLDOWN_S + 0.1);
+    const std::set<std::string> before3 = held();
+    const bool third = game.testDronesLaunch();
+    game.testDronesSettle();
+    info = game.testDronesInfo();
+    { const size_t p = info.find(" down "); arrive = p != std::string::npos ? atof(info.c_str() + p + 6) : 20; }
+    game.testDronesSkip(arrive + 40);
+    const int wantedAll = game.testDronesFinds();
+    game.testPlaceShip(game.testShipPos()); run(0.05);   // the parking left
+    const int brought = (int)held().size() - (int)before3.size();
+    ck("the drone bay: called back as the ship leaves (C-18)", third && !game.testDronesOut() && brought == game.testDronesAboard() && brought > 0 && brought < wantedAll && game.testStatus().find("AS THE SHIP LEFT") != std::string::npos,
+       fmt("sent %s; %d of the %d planned aboard when the ship left at %.0f s; %s", third ? "yes" : "NO", brought, wantedAll, arrive + 40, trunc(game.testStatus(), 44).c_str()));
+    // ---- saved in a trip and loaded: it goes on and docks
+    game.setState(GameState::SPACE); game.testParkAt(st, W.body); run(0.1); game.setState(GameState::SPACE);
+    game.testDronesSkip(game.testDronesClock() + DRONE_COOLDOWN_S + 1);
+    const bool fourth = game.testDronesLaunch();
+    game.testDronesSettle();
+    game.testDronesSkip(25);
+    const std::string mid = game.testDronesInfo();
+    game.saveSlot(1);
+    const std::set<std::string> before4 = held();
+    const bool loaded = game.loadSlot(1);
+    const std::string mid2 = game.testDronesInfo();
+    info = mid2; dock = 0;
+    for (size_t p = info.find(" dock "); p != std::string::npos; p = info.find(" dock ", p + 6)) dock = std::max(dock, atof(info.c_str() + p + 6));
+    game.testDronesSkip(dock + 0.5);
+    const int brought4 = (int)held().size() - (int)before4.size();
+    const std::string runs = mid.substr(std::min(mid.size(), mid.find("drone 1:"))), runs2 = mid2.substr(std::min(mid2.size(), mid2.find("drone 1:")));
+    ck("the drone bay: a trip saved and loaded (C-18)", fourth && loaded && !runs.empty() && runs == runs2 && !game.testDronesOut() && brought4 == game.testDronesAboard() && brought4 >= 6,
+       fmt("sent %s, loaded %s; the drones %s; %d aboard at the end", fourth ? "yes" : "NO", loaded ? "yes" : "NO", runs == runs2 ? "as they were" : ("NOT AS THEY WERE: " + trunc(runs, 60) + " | " + trunc(runs2, 60)).c_str(), brought4));
+    remove("shots/tests/test_drones_save_1.txt");
+    // ---- the case: its worlds as folders (the drones' world and another's instrument), a world opened, closed; the drones' world, one of
+    // two peoples, a folder each people (an instrument of each put in the case), each opening its own people's alone
+    auto caseAdd = [&](int64_t sx, int64_t sz, int body, int which) {   // the first instrument of a world's people, into the case
+        Star is; StarSystem isys;
+        if (!starInSector(sx, 0, sz, is, true)) return;
+        isys.generate(is);
+        if (body >= (int)isys.bodies.size()) return;
+        const BodyGen ig = BodyGen::make(isys.bodies[body]);
+        if (which >= std::max(1, peoplesOf(ig))) return;
+        const Lore L = loreQuick(isys, isys.bodies[body], ig, which); const Tradition T = traditionOf(ig, L);
+        PeopleInstruments P; instrumentsOf(T, L.which, P);
+        for (int a = 0; a < AGE_COUNT; a++) if (!P.byAge[a].empty()) { game.guide.instruments.insert(Guide::bodyKey(sx, 0, sz, body) + "/I" + std::to_string(P.byAge[a][0].id)); break; }
+    };
+    caseAdd(AGE_WORLDS[AGE_INDUSTRIAL].sx, AGE_WORLDS[AGE_INDUSTRIAL].sz, AGE_WORLDS[AGE_INDUSTRIAL].body, AGE_WORLDS[AGE_INDUSTRIAL].which);
+    const std::string twoKey = Guide::bodyKey(W.sx, 0, W.sz, W.body);
+    const bool two = peoplesOf(BodyGen::make(sys.bodies[W.body])) > 1;
+    for (int p = 0; p < 2 && two; p++) caseAdd(W.sx, W.sz, W.body, p);
+    auto keyFits = [&](const std::string& k, const std::string& world, int which) { return k.rfind(world + "/I", 0) == 0 && atoi(k.c_str() + world.size() + 2) / 1000 == which; };
+    game.setState(GameState::SPACE); game.testCabinGoto(-1.9, -1.38, -PI / 2, -0.25); run(0.1);
+    press(KEY_E); run(0.1);
+    const bool caseOpen = game.state == GameState::INSTRUMENTS && game.testCaseLevel() == 0;
+    int counted = 0; for (int w = 0; w < game.testCaseWorlds(); w++) counted += game.testCaseWorldItems(w);
+    shot("case_worlds");
+    press(KEY_ENTER); run(0.1);
+    const int lvl = game.testCaseLevel(), nk = game.testCaseKeys();
+    const int wsel = game.testCaseWorldSel();
+    int ofWorld = 0; for (int i = 0; i < nk; i++) if (keyFits(game.testCaseKey(i), game.testCaseWorldKey(wsel), game.testCaseWorldWhich(wsel))) ofWorld++;
+    shot("case_world");
+    press(KEY_ESCAPE); run(0.05);
+    const int lvlBack = game.testCaseLevel(); const bool stillOpen = game.state == GameState::INSTRUMENTS;
+    int twoFolders = 0, twoRight = 0, whichSeen = 0; std::string twoLines;
+    for (int w = 0; w < game.testCaseWorlds(); w++) {   // the world of two's folders, opened in turn
+        if (game.testCaseWorldKey(w) != twoKey) continue;
+        const int which = game.testCaseWorldWhich(w);
+        twoFolders++; whichSeen |= 1 << std::max(0, std::min(1, which));
+        for (int k = 0; k < game.testCaseWorlds() && game.testCaseWorldSel() != w; k++) press(KEY_DOWN);
+        press(KEY_ENTER); run(0.1);
+        const int n = game.testCaseKeys();
+        bool right = game.testCaseLevel() == 1 && n > 0 && n == game.testCaseWorldItems(w);
+        for (int i = 0; i < n; i++) if (!keyFits(game.testCaseKey(i), twoKey, which)) right = false;
+        if (right) twoRight++;
+        twoLines += fmt("%speople %d: %d of its people's%s", twoLines.empty() ? "" : "; ", which + 1, n, right ? "" : " (NOT ITS OWN ALONE)");
+        if (which == 1) shot("case_world_second");
+        press(KEY_ESCAPE); run(0.05);
+    }
+    press(KEY_ESCAPE); run(0.05);
+    ck("the instruments' case by its worlds (C-18)", caseOpen && game.testCaseWorlds() >= 2 && counted == (int)game.guide.instruments.size() && lvl == 1 && nk == game.testCaseWorldItems(wsel) && ofWorld == nk && lvlBack == 0 && stillOpen && game.state == GameState::SPACE,
+       fmt("%d folders holding %d of the %d in the case; the first opened: %d instruments, %d of its world and people; Esc back to the worlds %s, again to the cabin %s", game.testCaseWorlds(), counted, (int)game.guide.instruments.size(), nk, ofWorld,
+           lvlBack == 0 && stillOpen ? "yes" : "NO", game.state == GameState::SPACE ? "yes" : "NO"));
+    ck("the instruments' case: a world of two peoples a folder each people (C-18)", two && twoFolders == 2 && whichSeen == 3 && twoRight == 2,
+       fmt("%s: %s; %d folders%s%s", sys.bodies[W.body].name.c_str(), two ? "two peoples" : "NOT TWO PEOPLES", twoFolders, twoLines.empty() ? "" : ", ", twoLines.c_str()));
+    remove(gp.c_str());
+}
+
+// the unit's: a world's items and the hauls drawn from them (galaxy/drones.h), then the bay in the game
+static void droneChecks(const std::function<void(const char*, bool, const std::string&)>& check) {
+    const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
+    Star s; StarSystem sys; bool ok = starInSector(W.sx, 0, W.sz, s, true);
+    if (ok) { sys.generate(s); ok = W.body < (int)sys.bodies.size(); }
+    if (!ok) { check("the drones: a world's items (C-18)", false, "no modern age world"); return; }
+    const BodyGen g = BodyGen::make(sys.bodies[W.body]);
+    DroneWorld D; droneWorldOf(sys, W.body, D);
+    int kinds[DF_COUNT] = {}, homed = 0, records = 0;
+    for (int p = 0; p < std::max(1, peoplesOf(g)); p++) records += recordCountOf(g, p);
+    for (const DroneItem& it : D.items) { kinds[std::max(0, std::min(DF_COUNT - 1, it.kind))]++; if (it.place >= 0) homed++; }
+    check("the drones: a world's items (C-18)", D.peoples == peoplesOf(g) && kinds[DF_TEXT] + kinds[DF_MUSIC] + kinds[DF_CHART] == records && kinds[DF_INSTRUMENT] > 0 && kinds[DF_CHART] > 0 && D.homes && homed == (int)D.items.size(),
+          fmt("%s: %d peoples, %d records of %d, %d texts %d music %d charts, %d instruments, %d of %d at a home among %d places, %.0f ms", sys.bodies[W.body].name.c_str(), D.peoples, kinds[0] + kinds[1] + kinds[2], records,
+              kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], homed, (int)D.items.size(), (int)D.places.size(), D.buildMs));
+    // two hundred hauls from nothing held: each drone two to eight and what it wanted, nothing twice, three stops at most, each find at its stop
+    int bad = 0, totalMin = 99, totalMax = 0, seen[DF_COUNT] = {}, finds = 0, ownFinds = 0, ofPeople[2] = {0, 0}, bothPeoples = 0;
+    for (int i = 0; i < 200; i++) {
+        DroneHaul H; droneHaulOf(D, std::vector<bool>(D.items.size(), false), 0x5EED0ULL + i, H);
+        std::set<int> got; int sum = 0, peoples = 0;
+        for (int k = 0; k < DRONE_COUNT; k++) {
+            int n = 0;
+            if (H.wanted[k] < DRONE_MIN_FINDS || H.wanted[k] > DRONE_MAX_FINDS || (int)H.legs[k].size() > DRONE_MAX_STOPS) bad++;
+            for (const DroneLeg& leg : H.legs[k]) for (int idx : leg.items) {   // each the place's own or a copy of its people's
+                n++; seen[D.items[idx].kind]++; finds++;
+                const int p = std::max(0, std::min(1, D.items[idx].people)); ofPeople[p]++; peoples |= 1 << p;
+                const bool own = D.items[idx].place == leg.place, copy = leg.place >= 0 && D.items[idx].people == D.places[leg.place].people;
+                if (!got.insert(idx).second || !(own || copy)) bad++; else if (own) ownFinds++;
+            }
+            if (n != H.wanted[k]) bad++;
+            sum += n;
+        }
+        if (sum != H.total) bad++;
+        if (peoples == 3) bothPeoples++;
+        totalMin = std::min(totalMin, sum); totalMax = std::max(totalMax, sum);
+    }
+    // all but five held: those five; all held: nothing
+    std::vector<bool> heldAll(D.items.size(), true);
+    for (int i = 0; i < 5 && i < (int)heldAll.size(); i++) heldAll[i * 7 % heldAll.size()] = false;
+    DroneHaul H5; droneHaulOf(D, heldAll, 0x5EEDULL, H5);
+    std::vector<bool> none(D.items.size(), true);
+    DroneHaul H0; droneHaulOf(D, none, 0x5EEDULL, H0);
+    const double shareI = finds ? (double)seen[DF_INSTRUMENT] / finds : 0, shareC = finds ? (double)seen[DF_CHART] / finds : 0;
+    const double itemI = (double)kinds[DF_INSTRUMENT] / std::max<size_t>(1, D.items.size()), itemC = (double)kinds[DF_CHART] / std::max<size_t>(1, D.items.size());
+    check("the drones: the hauls (C-18)", bad == 0 && totalMin >= 6 && totalMax <= 24 && seen[DF_TEXT] && seen[DF_MUSIC] && seen[DF_CHART] && seen[DF_INSTRUMENT] && H5.total == 5 && H0.total == 0 && shareI > itemI && shareC > itemC,
+          fmt("200 hauls: %d wrong, %d to %d finds, %d%% a place's own; found %d texts %d music %d charts %d instruments (instruments %.1f%% of the finds, %.1f%% of the items; charts %.1f%%, %.1f%%); all but five held: %d; all held: %d",
+              bad, totalMin, totalMax, finds ? 100 * ownFinds / finds : 0, seen[0], seen[1], seen[2], seen[3], 100 * shareI, 100 * itemI, 100 * shareC, 100 * itemC, H5.total, H0.total));
+    // a world of two peoples (the user asked whether one trip brings both): both peoples' found, and a trip that brought of both
+    check("the drones: a world of two peoples, both in a trip (C-18)", D.peoples == 2 && ofPeople[0] > 0 && ofPeople[1] > 0 && bothPeoples > 0,
+          fmt("%s: %d peoples; of the 200 hauls' %d finds %d the first people's and %d the second's; %d hauls brought of both", sys.bodies[W.body].name.c_str(), D.peoples, finds, ofPeople[0], ofPeople[1], bothPeoples));
+    dronesGame(false, check);
+}
+
+static int runDrones(int argc, char** argv) {
+    const std::string what = argc > 2 ? argv[2] : "frames";
+    if (what == "world" && argc > 5) return printDroneWorld(atoll(argv[3]), atoll(argv[4]), atoi(argv[5]));
+    int failures = 0;
+    auto ck = [&](const char* name, bool ok, const std::string& detail) { printf("  %s %s %s\n", name, ok ? "ok" : "FAIL", detail.c_str()); fflush(stdout); if (!ok) failures++; };
+    if (what == "check") droneChecks(ck);
+    else if (what == "frames") dronesGame(true, ck);
+    else { printf("drones [frames] | drones check | drones world <sx> <sz> <body>\n"); return 1; }
+    printf("drones %s: %d failure%s\n", what.c_str(), failures, failures == 1 ? "" : "s");
+    return failures ? 1 : 0;
 }
 
 static int runDecoder(int argc, char** argv) {
@@ -16680,7 +17117,53 @@ static int runPeoplesFresh(int argc, char** argv) {
     return 0;
 }
 
+// R-415: the landing map's peoples (V): `peoples map [sx sz body]` (default the drone bay's world of two, Yeesheleemiola II-b): the world's map with
+// the layer off (as it opens), on with nothing held, with a few records of the first people held (the places they were kept at) and with all
+// of them (its whole map: its land, its places, its ways), then the zoom over its capital with the layer on and off; two marks of ruins by
+// the capital, hidden with the layer off
+static int runPeoplesMap(int argc, char** argv) {
+    const int64_t sx = argc > 5 ? atoll(argv[3]) : 208, sz = argc > 5 ? atoll(argv[4]) : 51; const int bi = argc > 5 ? atoi(argv[5]) : 5;
+    Star st; if (!starInSector(sx, 0, sz, st, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
+    Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+    game.newGame(); game.setState(GameState::SPACE);
+    game.settings.renderScale = 2; game.applySettings();
+    Input in;
+    auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+    auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
+    auto shot = [&](const char* name) { const std::string fn = fmt("shots/tests/landpeoples_%s.png", name); writePNG(fn.c_str(), game.output(), FBW, FBH); printf("  %-6s %s\n         -> %s\n", name, game.testLandPeoplesInfo().c_str(), fn.c_str()); };
+    game.testParkAt(st, bi); run(0.2);
+    StarSystem sys; sys.generate(st);
+    if (bi >= (int)sys.bodies.size()) { printf("no body %d\n", bi); return 1; }
+    const BodyGen g = BodyGen::make(sys.bodies[bi]);
+    if (!worldHadCivilisation(g)) { printf("%s: no people lived there\n", sys.bodies[bi].name.c_str()); return 1; }
+    std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
+    game.testDronesSettle(); run(0.1);
+    const PlanPlace cap = P->plans[0].places.empty() ? PlanPlace() : P->plans[0].places[0];
+    printf("%s (%d people%s), the first people's capital at %.2f %.2f, %d records\n", sys.bodies[bi].name.c_str(), peoplesOf(g), peoplesOf(g) > 1 ? "s" : "", cap.lat / DEG, cap.lon / DEG, recordCountOf(g, 0));
+    const std::string bkey = Guide::bodyKey(sx, 0, sz, bi);
+    for (int k = 0; k < 2; k++) { SurfaceMark m; m.body = bkey; m.lat = cap.lat + 0.004 * (k + 1); m.lon = cap.lon + 0.003 * k; m.kind = LM_RUIN; m.name = k ? "SECOND RUIN" : "FIRST RUIN"; game.guide.marks.push_back(m); }
+    game.testLandCursor(cap.lat / DEG, cap.lon / DEG); run(0.1);
+    shot("off");
+    const std::string off = game.testLandPeoplesInfo();
+    press(KEY_V); run(0.1); shot("none");
+    const int n0 = recordCountOf(g, 0);
+    for (int i = 0; i < n0; i += 7) game.guide.shards.insert(bkey + "/S" + std::to_string(shardWorldIndex(0, i)));
+    run(0.1); shot("some");
+    const std::string some = game.testLandPeoplesInfo();
+    for (int i = 0; i < n0; i++) game.guide.shards.insert(bkey + "/S" + std::to_string(shardWorldIndex(0, i)));
+    run(0.1); shot("all");
+    const std::string all = game.testLandPeoplesInfo();
+    press(KEY_Z); run(0.3); shot("zoom");
+    const std::string zoomOn = game.testLandPeoplesInfo();
+    press(KEY_V); run(0.1); shot("zoom_off");
+    printf("the layer: off at first %s; the marks hidden with it %s; a few held: places %s; all held: the whole map %s; the zoom: rings %s\n",
+           off.find("hidden") != std::string::npos ? "yes" : "NO", off.find("0 marks") != std::string::npos ? "yes" : "NO", some.find("places known") != std::string::npos ? "yes" : "NO",
+           all.find("ALL") != std::string::npos ? "yes" : "NO", zoomOn.find(" 0 rings") == std::string::npos ? "yes" : "NO");
+    return 0;
+}
+
 static int runPeoples(int argc, char** argv) {
+    if (argc >= 3 && std::string(argv[2]) == "map") return runPeoplesMap(argc, argv);     // R-415
     if (argc >= 3 && std::string(argv[2]) == "ages") return runPeoplesAges(argc, argv);   // A-01
     if (argc >= 3 && std::string(argv[2]) == "fresh") return runPeoplesFresh(argc, argv);   // A-03
     if (argc >= 5) {   // one world in full
@@ -17148,6 +17631,7 @@ static void testSeasons() {
 }
 
 int main(int argc, char** argv) {
+    std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still writing its histories and works is waited for before their caches go
     makeDir("shots");
     makeDir("shots/tests");   // O7-01: every harness output lands here; shots/ itself holds the player's screenshots
     // `scale=N` anywhere on the command line renders at that resolution scale
@@ -17676,6 +18160,7 @@ int main(int argc, char** argv) {
     if (mode == "records") return runRecords(argc, argv);   // T-04
     if (mode == "decoder") return runDecoder(argc, argv);   // H-05
     if (mode == "instruments") return runInstruments(argc, argv);   // C-11
+    if (mode == "drones") return runDrones(argc, argv);             // C-18
     if (mode == "grammar") return runGrammar(argc, argv);   // H-03
     if (mode == "tongues") return runTongues(argc, argv);   // H-04's second pass
     if (mode == "forms") return runForms(argc, argv);   // A-02

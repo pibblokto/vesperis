@@ -88,13 +88,13 @@ struct Guide {
     int lentCount() const;                        // C-14: how many are lent and not taken since
     std::set<int> classesSeen, typesSeen;
     std::vector<std::string> history;             // previous stars, oldest first (max 20)
-    std::vector<std::string> route;               // G-05: the stars arrived at, in order (`route` lines; the galaxy chart draws the way between them; an older guide has none)
     std::string home;                             // star key
     double furthestFromHomeLY = 0, longestWalkM = 0, highestPointM = 0, totalWalkedM = 0, totalDrivenM = 0;
     double totalFlownM = 0;   // R-403: by drone
     int screenshots = 0;
     std::vector<ProbeRecord> probes;              // X-04: the probes' records, the friends' lent ones among them
     int probesSent = 0;                           // X-04: launched (`stat probes`)
+    int droneTrips = 0, droneFinds = 0;           // C-18: the drone bay's trips and what they brought aboard (`stat drones`, `stat dronefinds`)
     double deepestProbeKm() const;                // X-04: the deepest of the explorer's own
     int probeIndexBySeed(uint64_t seed) const;    // -1 none
     int creaturesSeen = 0;   // N3-01: first sightings of species (per landing)
@@ -119,5 +119,4 @@ struct Guide {
     int importInbox(const std::string& path, int* lentOut = nullptr, int* probesOut = nullptr, int* marksOut = nullptr, int* galaxyOut = nullptr);
     void addLog(double t, const std::string& kind, const std::string& text);
     void pushHistory(const std::string& key);
-    void pushRoute(const std::string& key);       // G-05: an arrival (a star the route already ends at is not added again)
 };

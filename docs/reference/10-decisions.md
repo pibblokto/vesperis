@@ -612,7 +612,7 @@ R-411's request that the text overhaul be researched first. `docs/ideas/RESEARCH
 
 The first milestone of the peoples (R-411, `docs/ideas/IDEAS-civilisation-expansion.md` section 1): a people is found at the age it had reached when it collapsed, with a profile every later milestone reads, built to H-01's data model (`docs/ideas/RESEARCH-records.md` section 6). `docs/reference/12-civilisations.md` ("The ages") has the numbers.
 
-* **The age is the people's, not the world's.** The six ages are drawn from the people's generator by the decided shares (28, 32, 18, 13, 7 and 2 per cent: the early ages commoner, the far future rare, about one people in fifty: 32 of the 1,501 within 25 ly of home, the nearest 8.6 ly away and 21 ly on the harness's plane), whatever the world. A world's type, sun and system weigh on the cause instead, where they can say something (a desert dried with its people, a red dwarf flares).
+* **The age is the people's, not the world's.** The six ages are drawn from the people's generator by the decided shares (28, 32, 18, 13, 7 and 2 per cent: the early ages commoner, the far future rare, about one people in fifty: 32 of the 1,501 within 25 ly of home, the nearest 8.6 ly away and 21 ly on the harness's plane), whatever the world. A world's type, sun and system weigh on the cause instead, where they can say something (a desert dried with its people, a red dwarf flares). (R-413, 2026-10-11: a world's second people takes its first's age.)
 * **Years in the people's own count.** Year 1 is the first towns' founding (the medieval age's start), or a prehistoric people's first village; the ages before it are counted back, negative. So the eras, the radio's year, the collapse's onset and stages are all in one reckoning the history (H-02) and the records (H-04) can date by. C-02's lore keeps its own span (150-600 years from the founding) and the shards their years until H-04 rebuilds them on the history: the profile is in no text yet.
 * **The end's years by the age, the weathering by the age's durability.** C-08's draw is kept (its hash, log-uniform), over 200-40,000 years for the first two ages (C-08's span: their years did not move) and longer spans for the late ages, whose works outlast them (to 60,000, 100,000, 250,000 and 2,000,000 years). The ruins' decay reads the years over a durability by the age (1, 1, 1.5, 2.5, 6, 40), so a late people found long after its end is not foundations by that alone; A-03 gives each material its own decay and replaces this.
 * **The cause by the age and the world.** Thirty-seven causes (the ideas note's lists, with the world's own disasters weighed in at every age by what the world and its system are), how long the collapse took by the cause and the stages by its speed. Two peoples that ended together (C-13) share the first's years and one cause that can end a world, drawn from the world's seed over both ages; where the other people went on after this one, conquest and war come from them. Prehistoric peoples ended by a nuclear exchange exist: a neighbour's war that ended both.
@@ -1688,3 +1688,195 @@ same day; `docs/reference/12-civilisations.md` ("Each people its own") has the p
 * **What moved.** No generation bump (13 holds: 1.3.0 is unreleased, as for B-414..B-419): every people's dwellings and its works'
   roofs; a town's lots with the setback, the frontage and the storeys (its houses, and the records in their rooms, stand elsewhere in
   it), its plan's places not; the regress unchanged (its scenes hold no settlement).
+
+## C-18 (2026-10-11): the drone bay
+
+* **The per-drone rule over the total.** The request said two to eight a drone "(so minimum 6 and max 32)": three drones at eight are
+  twenty-four. The per-drone rule is the one the bay keeps (six to twenty-four a trip); the difference was told to the user, who can move
+  `DRONE_MAX_FINDS` or add a drone.
+* **The drones bring from where the records are kept.** A record's home (T-04's `recordHomesOf`) is where a drone goes, and copies of its
+  people's other records there fill its hands (T-04 lays copies everywhere): a place is the story the screen tells (`IN A CITY`), and the
+  per-place counts (one or two of a people's records are homed in most towns) would never fill eight in three stops without the copies.
+  The rarer kinds are leaned toward (a star chart 2.2 times a text, an instrument four times, and at one stop in three an instrument of
+  the place's people looked for first: a world holds a few instruments to its hundreds of records, nine to 241 on the modern age world),
+  so a trip brings two or three instruments and a star chart or two; leaned by weights alone (the place's own records come first, and few
+  places keep an instrument) a trip brought one. What is brought is the guide's (the same keys as by hand): the ruins hold it no more.
+* **Real time, like the probe.** The trip and the five minutes run on the explorer's time in the simulating states, not on the game's
+  clock: the warp (x10,000, the almanac's runs) would otherwise empty the cooldown in a second. A closed game or a menu stops the clock.
+  (Reworked the same day, below: two minutes searching, the five minutes from the return.)
+* **Called back, not held.** Leaving the parking does not wait for the drones (no refusal of V or an approach): they come aboard with
+  what they had found, the rest left down there.
+* **Seen in the cabin and outside it.** The rack stands in the cabin's one free stretch of wall (the left wall's front, the GOES console's
+  neighbour); the drones back through ports in its back (hidden by the rack's own back panel, so nothing passes through the window band's
+  glass), fly past the windows as models lit by the sun and dwindle to strobes over the world. On the screen they are lines (the visible
+  faces' edges at the canvas's own resolution), like the ship's other schematics, not a second camera: a surface seen through a drone would
+  be a second `SurfaceView`.
+* **The case opens on its worlds.** The C-11 screen is one world's now; a case of many worlds' instruments in one column read as a list
+  without a place (the user's request); the world under the ship is selected first, as on the decoder.
+* **Found on the way: a plan's prefetch at the exit.** A short harness run quit while T-01's prefetch thread was still writing a world's
+  histories and works, and the process aborted on a mutex already destroyed (`mutex lock failed`): the static destructors of another file
+  ran before plan.cpp's joining one. Both mains now wait for the prefetch threads at the exit (`worldPlanThreadsJoin`, `atexit`), the game
+  too (a quit right after an approach could have crashed on the way out).
+* **What moved.** No generation change; the regress unchanged (no settlement, no cabin in its scenes); the C-11 unit check opens the case's
+  world before playing.
+* **Reworked on the user's review (2026-10-11, the same day).** After three trips to their world: "Why on my save Bubas doesn't show shards
+  adding up from drones rack? Nothing changes and rack shows there are about 200+ shards and shards decoder there are 130+ or something.
+  What I am expecting - when drones arrive everything immediately appears on shard decoder [...] make them look for stuff longer, maybe for
+  2 minutes + 5 minutes recharge". Their guide held every find: Bubas 58 shards, 35 of them the drones' (40 finds in three trips, 5 of
+  them instruments). The screens counted other things: the rack's `LEFT: 204 RECORDS` what the world still held (its two peoples' 262
+  less the 58), the decoder's `OF 129` and `OF 133` each people's whole count, the 32 and 26 held on two rows (C-13: a people a row). And a
+  decoder left open did not grow: a world's records were listed on Enter (`shardHeld`) and the worlds on opening, so finds docked while it
+  was open showed only after leaving and entering again.
+  * The rack says what the ship holds, in the decoder's words: `ABOARD: 58 OF ITS 262 SHARDS` / `AND 7 OF ITS 9 INSTRUMENTS` (the world's
+    peoples together); what is left is the difference, not a third number. The finds' list is four rows under the two lines.
+  * The decoder lists again when the guide holds more (`listShardWorlds`, `listShardsHeld`, `shardsListed`): the worlds, the open world's
+    records (the cursor kept on its record), the player's page (on its row); a record on the screen keeps the count it is read with until
+    it is left, then the list is made again. Its worlds' rows ran off the screen with three-figure counts on a world of two peoples (`16
+    RE`: H-04's counts in C-13's rows); such a row says `LANGUAGE 100%` for `THE LANGUAGE 100% LEARNT`, the rest as they were.
+  * Two minutes down there (`DRONE_SEARCH_S`): a drone's time from its first place to its last, the flights between its places within it,
+    the rest shared by the places (a share each and one a find) and its finds spread through each. The trip is about 2:35 from the launch
+    to the last dock; the header and the cabin's line count down to the return (`BACK IN 1:52`). The five minutes charge from the return
+    (`DroneBay::back`: the last dock or the recall; a `bayback` save line, a save of the first trips reading its end from its docks):
+    launch to launch about seven and a half minutes, from five.
+* **The case a folder each people (2026-10-11, the same day).** Asked whether a world of two peoples kept two records of instruments, the
+  user: "in instruments case split instruments by civilization as a decoder does". The case's folder was a world, both peoples' instruments
+  in it by their ids (people x 1000 + age x 100 + slot) with the peoples named together under it (`3 INSTRUMENTS   THE GREIP AND THE
+  WIPA`); a world of two is a folder each people now (`openInstruments`: by the key's world and the id's people), the people named on the
+  folder's line after the world as the decoder's rows name it (`UNKNOWN (+208 +0 +51 / 5)  THE VASANTHUL`), the open folder headed with
+  both (`UNKNOWN - THE VASANTHUL`) and holding that people's alone; the head counts the worlds, not the folders (`12 IN THE CASE FROM 2
+  WORLDS`). A world of one people is the folder it was. Two checks: the case's folder its world's and its people's, and a world of two a
+  folder each people (an instrument of each of the bay's world's peoples put in the case).
+
+## R-413 (2026-10-11): the two peoples of a world of one age
+
+The user, asking whether a world's two peoples could be of different ages: "It would be nice if they were to differ not more than by 1
+stage (because it won't make sense to have futuristic society next to prehistoric). To be honest even having medieval next to industrial
+doesn't make sense, it would be cool if both societes were of the same age." Each people's age was A-01's own draw: of 600 worlds of two,
+22% of one age, 36% a stage apart, 42% two or more (a prehistoric people beside a far-future one twelve times). Offered the second people
+taking the first's age: "yes, I would like planets with two civilizations for both civilizations to be of same age".
+`docs/iteration-3/plans/requests/R-413-two-peoples-of-one-age.md`.
+
+* **The second takes the first's age.** Not a draw within a stage of it (the user's first thought, then "the same age") and not a world's
+  age both draw from: the first people's own draw is that already, so every world of one people and every first people stand as they
+  were. The second people's draw is still taken (`ageOfPeople(pg, age)`: A-01's draws at fixed positions of the stream) and its result set
+  aside, so its eras' lengths, its end's years over the age's span and its radio's year are its own draws within the shared age. Of the 600
+  worlds of two 466 (78%) have a new second people: its towns, works, records, instruments, history, voice and music; the rest (the user's
+  BUBAS, two industrial peoples, and XOHORT, two medieval ones) are as they were. Supersedes A-01's "the age is the people's, not the
+  world's" for a world's second people.
+* **A people's generator keeps its world's seed.** The charts (the stars a people marked, its figures' names) and the records'
+  categories past the fifty read a people's age from its own generator (`peopleAgeOf(pg, 0)`: A-01's "the generator alone"), which a
+  second people's no longer says: a second people made prehistoric drew its chart's figures as the medieval people it had been, and the
+  records' check caught "sword" (medieval) in a prehistoric record of Eleinewai I. `BodyGen::worldSeed` (set by `make`; C-13's
+  `peopleGen` and the copies with a people's seed change `seed` alone) lets `peopleAgeOf` read a second people's generator as that
+  people; chosen over passing the age to fourteen callers of the records' and the charts' functions, which take the people's generator.
+* **One age, not one time.** Ended apart (half the worlds of two) each people's end is its own draw over the age's span, so two peoples
+  of one age can have ended tens of thousands of years apart and never met (H-02 meets them where their years overlap and their lands
+  touch or one of them sailed): 13 of the 35 worlds of two nearest home met. Bringing their ends together was not asked; KI-400.
+* **The causes and the conquests by the one age.** Two peoples that ended together draw their shared cause by their age (the weights of
+  both ages summed before; where the ages agreed the pick is the same: every weight doubled); a people conquered by the other needs no
+  later age of it. A prehistoric pair is no longer ended by a neighbour's nuclear exchange (A-01's "prehistoric peoples ended by a
+  nuclear exchange exist" was a later people's war).
+* **The radar's weak powers pinned again, the rest kept.** A world of two transmits where one of its peoples had radio: 47.8% of the
+  worlds of two did, 33.5% do (all civilised worlds 34.2%, now 31.3%), and home's x18 step added none (C-15's rule: one to three peoples
+  every step from home and the three C-series worlds). The cells' rate and salt (the near transmitters, the three peoples home hears)
+  and the strong transmitters' salt (C-15's far signals: the user's far finds) are kept; the weak powers' salt alone is pinned again
+  (`SALT_POWER` 0xC15A0165 to 0xC15A0404): of 8,000 tried on the game's own scan, 33 gave every step one to three from the four places,
+  all of them peoples of the four radio ages from home and home's farthest at 5,524 ly; none kept every step at the six age worlds as C-15's
+  had, and this one misses one (the far-future world's first step adds four; the other three missed by a step adding none).
+* **The test worlds moved with it.** The modern age world was Rieneseirela VI-a's second people (11 ly), medieval now with its first:
+  `peoples ages` pins Yeesheleemiola II-b's first (13.9 ly, the modern scene's world, two modern peoples; the drone bay's world, so its
+  checks keep a world of two). H-02's worlds of two were Eleinewai I's and Meareafionris III's, whose peoples of one age never meet now:
+  the nearest that met (Leanmya V-a, 19.4 ly: 42 shared events) and the nearest with a conquest (Hiameshseine I-a, 37.7 ly: 47). C-13's
+  check reads its naming where the peoples met (Eleinewai I's prehistoric peoples never did and name none; Leanmya V-a's name each
+  other). T-03's dam holding its water was the Veathiash's on Rieneseirela VI-a: the works' checks read Shioleesein I-a too (196 66
+  body 7, 20 ly, the nearest living world whose dams hold their water). One new check: the drones bring of both peoples (185 of 200 hauls
+  on the bay's world).
+* **What moved.** No generation change (13 holds: 1.3.0 is one generation, unreleased): the second people of 78% of the worlds of two
+  and everything its age gives (its towns, works, records, instruments, history, voice, music), the weak transmitters' powers, the
+  harness's pinned worlds above. The user's guide touches eleven civilised worlds, two of them of two peoples already of one age: all as
+  they were. The regress unchanged (22 hashes); unit 0 failures (313); flow 37.5 s; `bench check` within every budget. KI-400.
+
+## R-414 (2026-10-11): the HUD pared down
+
+The user: "Now let's refactor all the HUD/UI we have since it's overblown at times", item by item: on foot the capsule's, the buggy's
+and the drone's distances gone ("there is no need for that if you can always call capsule in 1 button and buggy/drone in 2"), the
+readouts "hidden in a separate menu you can open by some key", the epoch, the name with the coordinates, the scanner, the compass and
+the stamina kept; in the drone and the buggy the turn bar, the camera's pan, REC, the compass and the scanner kept, "Only keep speed";
+the routes travelled removed ("they seem to be a good idea but they confuse you a lot"); the decoder's medium line "just say what kind of
+medium this is"; the case's "From <planet>" line gone; the rack's finds "cleared after you took a look at them".
+`docs/iteration-3/plans/requests/R-414-the-hud-pared-down.md`.
+
+* **The readings on Tab** (`drawReadings`). Nothing like it existed: the data sheet (`I`) is the world's (its size, its orbit, its
+  season, its forecast, its sky, its life) and was already full on a world of many species; the walking readouts are the place's and the
+  moment's. A panel over the view rather than a screen of its own: it can stay open while the explorer climbs or drives (the elevation,
+  the wind, the range ahead change as they go), and Tab, free on the surface, is the analyzer's key in space (the system's readings).
+  At the right (free on foot over the stamina, and in a vehicle, whose speed is at the left), its rows packed to 23 characters so it
+  stops short of the crosshair (a first draft at the left, 29 wide, hid the vehicles' crosshair).
+  It holds what left the view: the sector (O2's line), the local time and the sun, the elevation, the temperature, the gravity and the
+  pressure, the wind and the weather (one row, a second for more), the life sensor (B-321), the old road (C-09), the rangefinder and
+  the mark it rests on (O1, R-408), swimming, the jetpack's height and climb, the autowalk and the vision; in a vehicle its heading,
+  trip, gear or height and climb, and its state. Supersedes O1's rangefinder, O2's sector line, B-321's sensor and C-09's road on the
+  view.
+* **What E or Q would do stays** (`CAPSULE HERE - Q`, a record's or an instrument's `- E`, a grave's name), stacked over the stamina
+  from the bottom; `BUGGY HERE - E` and `DRONE HERE - E` are new where the vehicles' distances went (E takes the vehicle before a find,
+  as `updateSurface` does). The jetpack keeps its heat on the view, the one gauge besides the stamina (its height and climb are in the
+  readings).
+* **The nose camera, one branch for the buggy and the drone**: the brackets, the blinking REC, the pan gauge, the crosshair, the speed
+  and the turn bar; the epoch is not drawn from a vehicle's camera; the scanner's lines sit under the REC as they sit under the name on
+  foot. Supersedes R-204's and R-403's channel name, pan and tilt, trip, gear, heading, state, capsule and local time on the view (the
+  heading, the trip, the gear, the height, the climb and the state are in the readings; the channel's name, the pan and tilt numbers and
+  the capsule nowhere).
+* **No ways travelled**: G-05's route (the guide's `route` lines and the chart's green legs) and M4-02's trail (a point every 25 m on the
+  N map) are gone, not hidden: kept unread they would be a second code path. The stars visited keep their dots and their VISITED.
+* **The medium line names the object**: supersedes C-05's voice on the decoder's line and H-05's "read by the ship" and "played by the
+  ship"; the ship still reads a record without a voice of its own in its flat voice (C-05's speech unchanged).
+* **The case's instrument line is the instrument**: the people's name moves to the open folder's title on a world of one too (C-18 put
+  it there on a world of two), C-17's `FROM <world> (<sector> / <body>)` is gone.
+* **The rack's list goes once seen** (`droneFindsSeen`): C-18 kept a trip's finds and places on the rack's screen until the next trip;
+  the screen closed after the drones are back clears them (a trip still on keeps them: they are not all back). The log and the status at
+  the dock still count them; the guide holds them.
+* **The landing map's hints** fit (R-415's V took the room the zoom's line never had).
+
+## R-415 (2026-10-11): the peoples on the landing map
+
+The user: "on the capsule deployment map there are these dots for places were civilization ruins were found - they are too huge and
+non-subtle. Please, make them turned of by-default and make it a separate button. Why? It would polute map if you find too many cells
+with ruins/works. There should be some map like the one you used when you were adding cities layout, it just should be a button toggle.
+Also It would be cool to have something like whole map autocompleted when you find all the shards for a civilization, as if you have
+enough information to know where is what, where to find cities, capital, etc". The dots were their own marks of ruins (R-408: BUBAS
+holds twelve, seven in one town's few kilometres), a glyph and a name each in the zoom.
+`docs/iteration-3/plans/requests/R-415-the-peoples-on-the-landing-map.md`.
+
+* **V, off on every opening.** The marks of ruins and works, the zoom's old roads (C-09) and the plan's cores (T-01) are the layer's;
+  the marks of the natural sights stay on the map. Not saved: the map opens on the land each time, as asked.
+* **What the explorer knows, from the records held.** A record names the place it was kept at (T-04's home: of the places standing in
+  its year, by their size), so each held record shows its home: a point, a city paler and rimmed, the capital white and named. Chosen
+  over the places the explorer walked (the guide keeps no trail, R-414) and over the drones' searches (they search where the records are,
+  so they would show the same places a trip later). The homes spread over the land (BUBAS-sized peoples keep a record or two in most of
+  their places): a few records show scattered towns; the capital shows once a record kept there is held.
+* **The whole map once every record is held**, the user's "autocompleted": the people's land tinted to its frontier, every place and
+  every way, by kind, as the plan harness draws them (`NET_KIND_COLOURS` is `galaxy/plan.h`'s now, the harness's too). All of a
+  people's records, as asked, not a share: a people's 80 to 200 records are an hour or two of the drones' trips (6 to 24 finds a trip,
+  a trip every seven minutes or so) or longer on foot.
+* **The reading** is the drone bay's (`droneWorldAsk`: the world's records with their homes, the plan's places), asked at the map's
+  opening on a civilised world; the plan is the approach's prefetch (`worldPlanIfReady`: the whole map waits for it, the known places
+  do not).
+* **The names of the marks by the cursor**: the three nearest within ten pixels are listed beside it, not at each mark, so a town of
+  marks is a cluster of points and a short list where the explorer looks.
+
+## R-416 (2026-10-11): the decoder's quick scroll
+
+The user: "Can you add a quick scroll in timeline/history with shift pressed so you don't have to click right/left or up/down one event
+at a time?" The arrows took one step a press (the platform's keys do not repeat: `IsKeyPressed`); `PGUP`/`PGDN` jumped ten and eight,
+but a Mac's keyboard has them only under `FN`.
+`docs/iteration-3/plans/requests/R-416-the-decoders-quick-scroll.md`.
+
+* **Shift and an arrow held run the cursor** (`shardRunSteps`, `game/shards_screen.cpp`): a step as the arrow (or Shift) goes down, then
+  from a fifth of a second on ever faster, 12 a second doubling every half second to 100 (17 steps in a second's hold, a hundred in about
+  two), so a short hold lands near and a long one crosses a people's records. A run stops at the first and the last; the arrow alone
+  still goes round on the timeline. A slow frame (the history read again) counts as a tenth of a second at most, so it never leaps.
+* **The timeline and the history**, as asked. The records page keeps its steps: its hint line (47 characters of 53, 48 with `* UNREAD`)
+  has no room for `SHIFT FAST` beside `LEFT/RIGHT KIND`, and its `PGUP`/`PGDN` turn its pages of fifteen rows.
+* **The hints say so**: `ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK` (the timeline: Up and Down move it too, as before),
+  `UP/DOWN  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK` (the history: Enter reads the record that told the event, as `ENTER THE RECORD`
+  said; that line had no room for both).

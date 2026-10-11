@@ -116,11 +116,13 @@ const double HOLY_W[FAITH_COUNT][HOLY_COUNT] = {
 double logUni(Rng& r, double lo, double hi) { return std::exp(std::log(lo) + r.uni() * std::log(hi / lo)); }
 
 // the age and its years from the people's own generator: every draw from fixed positions of the stream whatever the age, so
-// a table's change moves no other number; the end's years from C-08's own hash (the same years where the bounds are C-08's)
-PeopleAge ageOfPeople(const BodyGen& pg) {
+// a table's change moves no other number; the end's years from C-08's own hash (the same years where the bounds are C-08's).
+// R-413: `age` the age reached where it is given (a world's second people reached its first's), the draw taken all the same
+PeopleAge ageOfPeople(const BodyGen& pg, int age = -1) {
     PeopleAge a;
     Rng r(pg.seed ^ 0xA01A6EULL);
     a.age = r.pick(AGE_SHARES, AGE_COUNT);
+    if (age >= 0) a.age = age;
     double lp = logUni(r, 3000, 20000), lm = logUni(r, 1000, 4500), li = r.range(120, 400), lmo = r.range(70, 300), lf = logUni(r, 250, 3000);
     double radioAt = r.range(0.55, 0.85);   // radio came this far into a whole industrial age
     double cut = r.range(0.25, 1.0);        // an industrial people got this far into it
@@ -231,9 +233,19 @@ PeopleExtent peopleExtentOf(const BodyGen& g, int people, int age) {
     return e;
 }
 
+// R-413 (2026-10-11): the two peoples of a world reached one age, the first's (the user's: "it won't make sense to have futuristic
+// society next to prehistoric [...] it would be cool if both societes were of the same age"); the second's years in it are its own.
+// A second people's own generator read as people 0 (the charts' and the records' categories' `peopleAgeOf(pg, 0)`) is that people:
+// its age is not its generator's draw alone, so the world's seed it keeps (`BodyGen::worldSeed`) says whose it is
 PeopleAge peopleAgeOf(const BodyGen& g, int people) {
-    PeopleAge a = ageOfPeople(peopleGen(g, people));
-    if (people > 0 && peoplesEndedTogether(g)) a.endedYearsAgo = ageOfPeople(peopleGen(g, 0)).endedYearsAgo;   // C-13: one catastrophe for both
+    if (people <= 0 && g.worldSeed && g.seed != g.worldSeed) {
+        BodyGen w = g; w.seed = g.worldSeed;
+        if (peopleGen(w, 1).seed == g.seed) return peopleAgeOf(w, 1);
+    }
+    const PeopleAge first = ageOfPeople(peopleGen(g, 0));
+    if (people <= 0) return first;
+    PeopleAge a = ageOfPeople(peopleGen(g, people), first.age);
+    if (peoplesEndedTogether(g)) a.endedYearsAgo = first.endedYearsAgo;   // C-13: one catastrophe for both
     return a;
 }
 
@@ -273,28 +285,27 @@ PeopleProfile peopleProfileOf(const StarSystem& sys, const Body& b, const BodyGe
     P.seed = pg.seed;
     static_cast<PeopleAge&>(P) = peopleAgeOf(g, P.which);
     const WorldRead w = readWorld(sys, b, g);
-    // the cause: two peoples that ended together share one that can end a world, drawn from the world's seed over both ages; else
-    // the people's own, by its age and the world, and where the other people went on after it, by them (conquest, a war)
+    // the cause: two peoples that ended together share one that can end a world, drawn from the world's seed by their age (R-413:
+    // one age); else the people's own, by its age and the world, and where the other people went on after it, by them (conquest, a war)
     double cw[CAUSE_COUNT];
     bool together = n > 1 && peoplesEndedTogether(g);
     PeopleAge other; if (n > 1) other = peopleAgeOf(g, 1 - P.which);
     int lastLen = P.lastYear - P.eras.back().start + 1;
     if (together) {
         int otherLen = other.lastYear - other.eras.back().start + 1;
-        int a0 = P.which == 0 ? P.age : other.age, a1 = P.which == 0 ? other.age : P.age;
-        for (int c = 0; c < CAUSE_COUNT; c++) cw[c] = CAUSES[c].worldwide ? (CAUSES[c].w[a0] + CAUSES[c].w[a1]) * causeWorldFactor(c, w) : 0;
+        for (int c = 0; c < CAUSE_COUNT; c++) cw[c] = CAUSES[c].worldwide ? CAUSES[c].w[P.age] * causeWorldFactor(c, w) : 0;
         Rng rs(g.seed ^ 0xA01C5ULL);
         P.cause = rs.pick(cw, CAUSE_COUNT);
         double years = logUni(rs, CAUSES[P.cause].lo, CAUSES[P.cause].hi);
         P.collapseYears = std::max(1, (int)std::lround(std::min(years, 0.85 * std::min(lastLen, otherLen))));
         drawStages(rs, CAUSES[P.cause].speed, P.stage);
     } else {
-        bool otherWentOn = n > 1 && other.endedYearsAgo < P.endedYearsAgo && other.age >= P.age;
+        bool otherWentOn = n > 1 && other.endedYearsAgo < P.endedYearsAgo;
         for (int c = 0; c < CAUSE_COUNT; c++) {
             cw[c] = CAUSES[c].w[P.age] * causeWorldFactor(c, w);
-            if (!otherWentOn) continue;   // by the other people: a band's war with them, a conquest by a people of a later age or their own, an industrial war
+            if (!otherWentOn) continue;   // by the other people: a band's war with them, a conquest by them, an industrial war
             if (c == CAUSE_BAND_WAR && P.age == AGE_PREHISTORIC) cw[c] *= 2;
-            if (c == CAUSE_CONQUEST && (P.age > AGE_PREHISTORIC || other.age > AGE_PREHISTORIC)) cw[c] = std::max(cw[c], 0.5) * 3;
+            if (c == CAUSE_CONQUEST && P.age > AGE_PREHISTORIC) cw[c] = std::max(cw[c], 0.5) * 3;
             if (c == CAUSE_INDUSTRIAL_WAR) cw[c] *= 1.5;
         }
         Rng rc(pg.seed ^ 0xA01CAULL);

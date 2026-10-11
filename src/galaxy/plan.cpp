@@ -20,6 +20,7 @@
 
 const char* const NET_KIND_NAMES[NK_COUNT] = {"path", "road", "rail", "canal", "highway", "maglev", "sea crossing"};
 const char* const NET_KIND_HUD[NK_COUNT] = {"PATH", "ROAD", "RAILWAY", "CANAL", "HIGHWAY", "MAGLEV", "CROSSING"};
+const uint32_t NET_KIND_COLOURS[NK_COUNT] = {0xFF648CAFu, 0xFFA0E1F5u, 0xFF2D37D7u, 0xFFFFA046u, 0xFF1E96FFu, 0xFFEB46F0u, 0xFFDCAA78u};   // the plan's maps (the harness's) and R-415's landing map
 
 namespace {
 constexpr int PLAN_ROWS = 360;   // half a degree a row: about 165,000 cells, 30-50 km across on the peoples' worlds
@@ -778,6 +779,12 @@ void worldPlanPrefetch(const BodyGen& gSeason) {
         done->store(true);
     });
     g_planThreads.push_back(std::move(th));
+}
+
+void worldPlanThreadsJoin() {
+    std::list<PlanThread> mine;
+    { std::lock_guard<std::mutex> lock(g_planMutex); mine.splice(mine.end(), g_planThreads); }
+    for (PlanThread& p : mine) if (p.t.joinable()) p.t.join();
 }
 
 bool worldPlanBuilt(uint64_t seed) {

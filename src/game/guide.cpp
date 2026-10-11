@@ -97,7 +97,6 @@ bool Guide::load(const std::string& path) {
         else if (key == "class") { int c; is >> c; classesSeen.insert(c); }
         else if (key == "type") { int c; is >> c; typesSeen.insert(c); }
         else if (key == "history") { std::string k; is >> k; history.push_back(k); }
-        else if (key == "route") { std::string k; is >> k; route.push_back(k); }   // G-05
         else if (key == "home") is >> home;
         else if (key == "gen") is >> genVersion;
         else if (key == "records") is >> recordsScheme;   // T-04
@@ -112,6 +111,8 @@ bool Guide::load(const std::string& path) {
             else if (n == "walked") totalWalkedM = v; else if (n == "driven") totalDrivenM = v; else if (n == "flown") totalFlownM = v; else if (n == "screenshots") screenshots = (int)v;
             else if (n == "creatures") creaturesSeen = (int)v; else if (n == "topspeed") topSpeedKmh = v; else if (n == "longestdrive") longestDriveM = v;
             else if (n == "probes") probesSent = (int)v;   // X-04
+            else if (n == "drones") droneTrips = (int)v;   // C-18
+            else if (n == "dronefinds") droneFinds = (int)v;
         }
     }
     if (shownMark < -1 || shownMark >= (int)marks.size()) shownMark = -1;
@@ -159,9 +160,8 @@ bool Guide::save(const std::string& path) const {
     for (int c : classesSeen) f << "class " << c << "\n";
     for (int c : typesSeen) f << "type " << c << "\n";
     for (auto& k : history) f << "history " << k << "\n";
-    for (auto& k : route) f << "route " << k << "\n";   // G-05
     f << "stat furthest " << furthestFromHomeLY << "\nstat walk " << longestWalkM << "\nstat highest " << highestPointM
-      << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM << "\nstat flown " << totalFlownM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM << "\nstat probes " << probesSent << "\n";
+      << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM << "\nstat flown " << totalFlownM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM << "\nstat probes " << probesSent << "\nstat drones " << droneTrips << "\nstat dronefinds " << droneFinds << "\n";
     for (auto& e : log) f << "log " << e.t << " " << e.kind << " " << e.text << "\n";
     return true;
 }
@@ -246,8 +246,3 @@ void Guide::pushHistory(const std::string& key) {
     if (history.size() > 20) history.erase(history.begin());
 }
 
-void Guide::pushRoute(const std::string& key) {   // G-05: the oldest arrivals go past ten thousand
-    if (key.empty() || (!route.empty() && route.back() == key)) return;
-    route.push_back(key);
-    if (route.size() > 10000) route.erase(route.begin(), route.begin() + 1000);
-}
