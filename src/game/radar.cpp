@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 
 namespace {
 const double LOCK_CONE = 3 * DEG, KEEP_CONE = 8 * DEG;

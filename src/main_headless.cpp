@@ -65,6 +65,7 @@ static const AgeWorld AGE_SCENE_WORLDS[AGE_COUNT] = {
 static int takePeopleArg(int& argc, char** argv);
 #include <set>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>

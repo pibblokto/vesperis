@@ -28,6 +28,7 @@
 #include "core/png.h"
 #include "core/fs.h"
 #include <cmath>
+#include <cstdlib>
 #include <ctime>
 #include <cstring>
 #include <algorithm>
