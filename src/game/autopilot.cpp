@@ -415,5 +415,5 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     const bool playing = player.playing >= 0 && !player.held && !player.paused;   // C-11: the ship's player: the hum and the drive lower under it
     audio.hum = radar.on ? 0.25 : (playing ? 0.3 : 0.6);   // C-07: the hum under the receiver's static
     audio.engine = ship.mode == ShipState::VIMANA ? (playing ? 0.55 : 0.9) : (ship.mode == ShipState::APPROACH ? (playing ? 0.22 : 0.35) : 0.0);
-    audio.wind = 0; audio.rain = 0; audio.lava = 0;
+    audio.surfaceOff();   // B-413: nothing of the ground aboard
 }

@@ -10,6 +10,10 @@
 
 void SurfaceView::groupPieces(RuinCell& c) {
     const int nb = (int)c.spec.buildings.size();
+    // B-420: how far its pieces reach (a capital's harbour stood 650 m out on a radius of 473: its hall without colliders, a boulder in it)
+    c.r.reach = c.spec.size;
+    for (const Form& e : c.elems[0]) c.r.reach = std::max(c.r.reach, std::hypot(e.x, e.z) + formReach(e));
+    for (const Building& b : c.spec.buildings) c.r.reach = std::max(c.r.reach, std::hypot(b.x, b.z) + std::hypot(b.hw, b.hd));
     for (int l = 0; l < 3; l++) {
         std::vector<int>& g = c.groups[l];
         g.assign(nb + 2, (int)c.elems[l].size());
@@ -29,8 +33,43 @@ void SurfaceView::testPlaceSettlement(double x, double z, const RuinSpec& spec, 
     RuinCell& c = placedCells.back();
     c.has = true; c.placed = true; c.spec = spec;
     for (int l = 0; l < 3; l++) c.elems[l] = pieces[l];
-    c.r.x = x; c.r.z = z; c.r.heading = spec.heading; c.r.kind = RK_SETTLEMENT; c.r.style = 0; c.r.size = spec.size; c.r.spec = &c.spec;
+    c.r.x = x; c.r.z = z; c.r.heading = spec.heading; c.r.size = spec.size; c.r.spec = &c.spec;
     groupPieces(c);
+}
+
+namespace {
+// A-02: the points of the ground under a big form's footprint: its corners and along its long sides every 15 m or so
+template <class F> void footPoints(const Form& e, double ex, double ez, F fn) {
+    const double ca = std::cos(e.heading), sa = std::sin(e.heading), L = std::max(e.hx, e.hz);
+    const int along = clampi((int)std::ceil(L / 15), 1, 8);
+    for (int side = -1; side <= 1; side += 2)
+        for (int j = 0; j <= along; j++) {
+            double t = (double)j / along * 2 - 1;
+            double a = (e.hx >= e.hz ? t * e.hx : side * e.hx) * 0.92, bb = (e.hx >= e.hz ? side * e.hz : t * e.hz) * 0.92;
+            fn(ex + ca * a + sa * bb, ez - sa * a + ca * bb);
+        }
+}
+inline bool c01Form(const Form& e) { return e.kind <= FK_DOME && e.sub == 0 && e.tilt == 0; }
+// B-420: a ring standing on its rim touches the ground at one point, its middle: it stands there (on the highest ground of its square it floated
+// over a slope, the explorer walking under it)
+inline bool bigForm(const Form& e) { return !c01Form(e) && std::max(e.hx, e.hz) > 6 && e.kind != FK_CABLE && !(e.kind == FK_TORUS && e.tilt > 0.3); }
+}   // namespace
+
+// B-420: a piece's foot as the near level draws it (the colliders and the explorer's footing read the same)
+bool SurfaceView::pieceFootNear(const Form& e, double ex, double ez, double& gy, double& skirt) {
+    const bool big = bigForm(e);
+    gy = site.groundHeight(ex, ez);
+    const double w = site.waterAt(ex, ez);
+    double lo = gy, hi = gy;
+    if (big && e.y0 < 0.01) footPoints(e, ex, ez, [&](double x, double z) { double h = site.groundHeight(x, z); lo = std::min(lo, h); hi = std::max(hi, h); });
+    if (w > -1e8 && gy < w) { if (e.part != 6) return false; gy = w; }   // C-08: the harbour works stand in the water, their foot at its level
+    skirt = 0;
+    if (e.y0 < 0.01) {
+        skirt = 1.0;   // C-01: a piece on the ground is sunk a metre
+        if (big) { lo = std::min(lo, gy); hi = std::max(hi, gy); gy = hi; skirt = hi - lo + 1.0; }   // A-02: a big form stands on the highest ground under it, its foot reaching down to the lowest
+        if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // R-412 (B-420): earth on the lowest, sunk into the slope above (lifted, a hill fort's bank stood a cliff downhill)
+    }
+    return true;
 }
 
 // a settlement's forms into the frame's list: each building at the level its distance asks, beyond 4 km its silhouette where it
@@ -44,17 +83,6 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
     double tallest = 0; for (const Form& e : cell.elems[2]) tallest = std::max(tallest, formTop(e) - (e.absolute ? e.y0 : 0.0));
     if (dist - R > 4000 && tallest * proj.f / std::max(1.0, dist - R) < 1.2) return;   // nothing of it stands a pixel high
     const double fwx = camLocal.m[2][0], fwz = camLocal.m[2][2];   // the camera's forward on the ground
-    // A-02: the points of the ground under a big form's footprint: its corners and along its long sides every 15 m or so
-    auto footPoints = [&](const Form& e, double ex, double ez, const std::function<void(double, double)>& fn) {
-        const double ca = std::cos(e.heading), sa = std::sin(e.heading), L = std::max(e.hx, e.hz);
-        const int along = clampi((int)std::ceil(L / 15), 1, 8);
-        for (int side = -1; side <= 1; side += 2)
-            for (int j = 0; j <= along; j++) {
-                double t = (double)j / along * 2 - 1;
-                double a = (e.hx >= e.hz ? t * e.hx : side * e.hx) * 0.92, bb = (e.hx >= e.hz ? side * e.hz : t * e.hz) * 0.92;
-                fn(ex + ca * a + sa * bb, ez - sa * a + ca * bb);
-            }
-    };
     for (int b = 0; b <= nb; b++) {   // b == nb: the graves' stones, with the settlement
         double bx = r.x, bz = r.z, brad = R;
         if (b < nb) { const Building& B = sp.buildings[b]; bx = r.x + B.x; bz = r.z + B.z; brad = std::max(B.hw, B.hd); }
@@ -82,11 +110,14 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 formItems.push_back({&e, Vec3(ex, 0, ez), 0.0, d, fog, lod, people});
                 continue;
             }
-            const bool big = !c01 && std::max(e.hx, e.hz) > 6 && e.kind != FK_CABLE;
+            const bool big = bigForm(e);
             double gy, w, lo, hi;
-            if (lod == 0) {   // the near ground, as drawn this frame
-                gy = site.groundHeight(ex, ez); w = site.waterAt(ex, ez); lo = hi = gy;
-                if (big && e.y0 < 0.01) footPoints(e, ex, ez, [&](double x, double z) { double h = site.groundHeight(x, z); lo = std::min(lo, h); hi = std::max(hi, h); });
+            if (lod == 0) {   // the near ground, as drawn this frame (B-420: the colliders' foot too)
+                double skirt;
+                if (!pieceFootNear(e, ex, ez, gy, skirt)) continue;
+                const double fog = 1 - std::exp(-d / env.fogDistance);
+                formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people});
+                continue;
             } else {   // the ring that draws the ground there, read once while that ring does
                 std::vector<FootCache>& fc = cell.foot[L];
                 if (fc.size() != el.size()) fc.assign(el.size(), FootCache());
@@ -106,6 +137,7 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
             if (e.y0 < 0.01) {
                 skirt = 1.0;   // C-01: a piece on the ground is sunk a metre
                 if (big) { lo = std::min(lo, gy); hi = std::max(hi, gy); gy = hi; skirt = hi - lo + 1.0; }   // A-02: a big form stands on the highest ground under it, its foot reaching down to the lowest
+                if (big && formWalkable(e)) { gy = lo; skirt = 1.0; }   // R-412: earth on the lowest (`pieceFootNear`)
                 if (lod > 0 && !c01) skirt += 0.004 * d;   // the far rings' ground is coarser than the 64 m samples
             }
             formItems.push_back({&e, Vec3(ex, gy, ez), skirt, d, fog, lod, people});
@@ -145,6 +177,14 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
             P.group = std::max(1, W.group); P.scatter = clampd(W.scatter, 0, 0.9);
             P.meanShare = (P.x1 - P.x0) * (P.y1 - P.y0) * (W.shape == 3 ? 0.785 : (W.shape == 1 ? 0.93 : (W.shape == 5 ? 0.5 : (W.shape == 6 ? 0.62 : 1.0))))
                         * (P.group > 1 ? 0.8 : 1.0) * (1 - P.scatter);
+            // R-412: the dress round the windows and up the wall
+            P.frame = W.frame; P.frameShade = W.frameShade; P.shutter = W.shutter; P.shutterShade = W.shutterShade;
+            P.stripe = W.stripe; P.stripeShade = W.stripeShade; P.dado = W.dado; P.dadoShade = W.dadoShade;
+            {
+                const double wx = P.x1 - P.x0, wy = P.y1 - P.y0, fvh = P.frame * P.bay / std::max(0.1, P.storey);
+                const double frameArea = std::max(0.0, (wx + 2 * P.frame) * (wy + 2 * fvh) - wx * wy) - (P.shutter > 0 ? 2 * std::min(P.frame, P.shutter) * wy : 0.0);
+                P.meanDress = ((P.frame > 0 ? frameArea * P.frameShade : 0.0) + (P.shutter > 0 ? 2 * P.shutter * wy * P.shutterShade : 0.0)) * (1 - P.scatter);
+            }
         }
         for (int s = 0; s < 4; s++) {
             for (int w = 0; w < 5; w++) {
@@ -194,7 +234,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     Vec3 right(std::cos(hdg), 0, -std::sin(hdg));
                     if (e.kind == FK_TRUSS) hw *= 0.5;   // a lattice shows the sky through it: a narrower shape
                     if (hw * proj.f / I.d < 0.5) hw = 0.5 * I.d / proj.f;   // at least a pixel of the framebuffer wide; the mush averages it into its neighbours
-                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(lightOf(normalize(dd * -1.0)), I.fog);
+                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(lightOf(normalize(dd * -1.0)), I.fog) + e.tone * (1 - I.fog);
                     const bool profiled = !(e.kind == FK_BOX || e.kind == FK_ARCH || e.kind == FK_SWEEP || e.kind == FK_VAULT || e.kind == FK_SHELL || (e.kind == FK_LATHE && e.sub == 0));
                     const int Kp = profiled ? 4 : 1;
                     const double top = formTop(e), yb = e.y0 - (5 + 0.003 * I.d);
@@ -214,6 +254,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                 }
                 formMesh(e, I.lod, I.foot, I.skirt, mesh, proj.f / FB_SCALE / std::max(1.0, I.d));
                 const int partRp = e.part == 7 ? 0 : (e.part == 8 ? 49 : (e.part == 9 ? 50 : (e.part == 10 ? 51 : (e.part == 11 ? 52 : (e.part >= FORM_PART_PALE && e.part <= FORM_PART_METAL ? 53 + e.part - FORM_PART_PALE : -1)))));   // the ground's and the world's own banks; T-04 the records
+                const double tone = lit ? 0.0 : e.tone * (1 - I.fog);   // R-412: a house painted lighter or darker than its neighbours
                 const int rpBase = partRp >= 0 ? partRp : formRpIndex(I.people, slot, 0), rpPat = partRp >= 0 ? partRp : formRpIndex(I.people, slot, e.pattern);
                 for (const FormMesh::Poly& P : mesh.polys) {
                     const FormMesh::V* vs = &mesh.v[P.first];
@@ -223,12 +264,12 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     const double sgn = back ? -1.0 : 1.0;
                     RVert q[8];
                     double flatShade = 0;
-                    if (!(P.flags & FormMesh::SMOOTH)) flatShade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(n * sgn) : lightOf(n), I.fog);
+                    if (!(P.flags & FormMesh::SMOOTH)) flatShade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(n * sgn) : lightOf(n), I.fog) + tone;
                     for (int k = 0; k < P.n; k++) {
                         const Vec3& p = vs[k].p;
                         Vec3 v = toView(p.x, p.y, p.z);
                         q[k].x = v.x; q[k].y = v.y; q[k].z = v.z;
-                        if (P.flags & FormMesh::SMOOTH) q[k].shade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(vs[k].n * sgn) : lightOf(vs[k].n), I.fog);
+                        if (P.flags & FormMesh::SMOOTH) q[k].shade = lit ? 50 + (63 - 50) * I.fog : shadeOf(back ? insideOf(vs[k].n * sgn) : lightOf(vs[k].n), I.fog) + tone;
                         else q[k].shade = flatShade;
                         if (P.flags & FormMesh::FACE_UV) { q[k].u = vs[k].u; q[k].v = vs[k].v; }
                         else { q[k].u = p.x + p.y * 0.5; q[k].v = p.z + p.y * 0.5; }
@@ -239,7 +280,7 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                 }
                 if (!mesh.lines.empty()) {   // members and cables: lines a pixel or more thick; under a fifth of a pixel only the legs, chords and cables
                     Vec3 side = normalize(Vec3(sd.x, 0, sd.z));
-                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(0.5 * (lightOf(side) + ambient), I.fog);
+                    double sh = lit ? 50 + (63 - 50) * I.fog : shadeOf(0.5 * (lightOf(side) + ambient), I.fog) + tone;
                     for (const FormMesh::Line& l : mesh.lines) {
                         Vec3 va = toView(l.a.x, l.a.y, l.a.z), vb = toView(l.b.x, l.b.y, l.b.z);
                         if (va.z < NEAR_Z && vb.z < NEAR_Z) continue;

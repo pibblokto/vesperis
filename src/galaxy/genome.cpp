@@ -42,6 +42,20 @@ const char* const V_FOCUS[] = {"SPIRE", "DOME", "GATE", "TOWER", "COLOSSUS", "MA
 const char* const V_CENTRE[] = {"TEMPLE", "PALACE", "ASSEMBLY", "MARKET", "TOMB", "MACHINE"};
 const char* const V_MONUMENTS[] = {"STELAE", "OBELISKS", "COLOSSI", "ARCHES", "PILLARS"};
 const char* const V_DEAD[] = {"BARROWS", "TOMBS", "CEMETERIES", "TOWERS OF SILENCE", "NOTHING"};
+// R-412
+const char* const V_EAVES[] = {"FLUSH", "OVERHANGING", "DEEP", "FLARED"};
+const char* const V_ROOFLINE[] = {"PLAIN", "DORMERS", "GABLETS", "CRESTED", "LANTERNS"};
+const char* const V_GABLES[] = {"PLAIN", "STEPPED", "CURVED", "PEDIMENTED", "HALF-HIPPED"};
+const char* const V_ROOFING[GENOME_ROOFINGS] = {"STRAW", "TERRACOTTA", "OCHRE", "BROWN", "SLATE", "CHARCOAL", "MOSS", "VERDIGRIS"};
+const char* const V_POLYCHROMY[] = {"UNIFORM", "TWO-TONE", "VARIED", "STRIPED"};
+const char* const V_TRIM[] = {"NONE", "LIGHT", "DARK", "SHUTTERS"};
+const char* const V_PROJECTIONS[] = {"NONE", "BALCONIES", "GALLERIES", "BAYS", "ORIELS"};
+const char* const V_ENTRANCE[] = {"PLAIN", "PORCHES", "STEPS", "PORTICOS", "CANOPIES"};
+const char* const V_CORNERS[] = {"PLAIN", "QUOINS", "PILASTERS", "TURRETS"};
+const char* const V_FRONTAGE[] = {"EAVES TO THE STREET", "GABLES TO THE STREET"};
+const char* const V_BOUNDARY[] = {"OPEN", "WALLS", "FENCES", "HEDGES", "RAILINGS"};
+const char* const V_FURNITURE[] = {"NONE", "WELLS", "LAMPS", "FOUNTAINS", "STATUES"};
+const char* const V_POLES[] = {"NONE", "TOTEMS", "BANNERS", "SKULLS", "CAIRNS"};
 
 constexpr unsigned P = 1, M = 2, I = 4, MO = 8, F = 16, FF = 32, ALL = 63;
 
@@ -77,8 +91,8 @@ const GenomeVarInfo GENOME_VARS[GV_COUNT] = {
     {"TOPS", "SURFACE", 5, V_TOPS, nullptr, nullptr, M | I | MO | F, 0.5},
     {"BASE", "COLOUR", GENOME_BASES, V_BASE, nullptr, nullptr, ALL, 2.0},
     {"ACCENT", "COLOUR", GENOME_ACCENTS * 4, V_ACCENT, nullptr, nullptr, ALL, 1.0},
-    {"FINISH", "COLOUR", 2, V_PAINTED, nullptr, nullptr, P | M | I | MO, 0},
-    {"TINT", "COLOUR", GENOME_TINTS, V_TINT, nullptr, nullptr, MO | F, 0},
+    {"FINISH", "COLOUR", 2, V_PAINTED, nullptr, nullptr, P | M | MO, 0},   // B-415: an industrial people built in brick, painted or not
+    {"TINT", "COLOUR", GENOME_TINTS, V_TINT, nullptr, nullptr, F, 0},   // B-415: a modern ruin's glass gone within years, its metal roofs with B-415's flat ones
     {"LIGHT", "COLOUR", 3, V_LIGHT, nullptr, nullptr, FF, 0},
     {"LAND", "PLACE", 7, V_LAND, nullptr, nullptr, P | M | I | MO, 0},
     {"FACING", "PLACE", 6, V_ORIENT, nullptr, nullptr, ALL, 0},
@@ -93,6 +107,23 @@ const GenomeVarInfo GENOME_VARS[GV_COUNT] = {
     {"THE DEAD", "MEANING", 5, V_DEAD, nullptr, nullptr, P | M | I | MO | F, 0},
     {"HOUSES", "MEANING", 0, nullptr, "ALIKE", "VARIED", P | M | I | MO | F, 0},
     {"BUILT", "MEANING", 0, nullptr, "LIGHT", "TO LAST", P | M | I | MO, 0},
+    // R-412: the people's own within its age's ways
+    {"PITCH", "ROOFS", 0, nullptr, "SHALLOW", "STEEP", P | M | I, 0.6},
+    {"EAVES", "ROOFS", 4, V_EAVES, nullptr, nullptr, P | M | I | MO, 0.5},
+    {"ROOFLINE", "ROOFS", 5, V_ROOFLINE, nullptr, nullptr, M | I | MO, 0.4},
+    {"GABLES", "ROOFS", 5, V_GABLES, nullptr, nullptr, M | I, 0.3},
+    {"ROOFING", "ROOFS", GENOME_ROOFINGS, V_ROOFING, nullptr, nullptr, P | M | I, 1.0},
+    {"POLYCHROMY", "WALLS", 4, V_POLYCHROMY, nullptr, nullptr, M | I | MO | F, 0.6},
+    {"TRIM", "WALLS", 4, V_TRIM, nullptr, nullptr, M | I | MO, 0.3},
+    {"PROJECTIONS", "WALLS", 5, V_PROJECTIONS, nullptr, nullptr, M | I | MO | F, 0.6},
+    {"ENTRANCES", "WALLS", 5, V_ENTRANCE, nullptr, nullptr, P | M | I | MO | F, 0.3},
+    {"CORNERS", "WALLS", 4, V_CORNERS, nullptr, nullptr, M | I | MO, 0.4},
+    {"STOREYS", "TOWN", 0, nullptr, "LOW", "TALL", M | I | MO | F, 0.6},
+    {"FRONTAGE", "TOWN", 2, V_FRONTAGE, nullptr, nullptr, M | I, 0.4},
+    {"SETBACK", "TOWN", 0, nullptr, "AT THE STREET", "IN GARDENS", M | I | MO, 0},
+    {"BOUNDARIES", "TOWN", 5, V_BOUNDARY, nullptr, nullptr, P | M | I | MO, 0.4},
+    {"FURNITURE", "TOWN", 5, V_FURNITURE, nullptr, nullptr, M | I | MO | F, 0},
+    {"POLES", "TOWN", 5, V_POLES, nullptr, nullptr, P, 0},
 };
 
 int Genome::of(int var) const {
@@ -122,6 +153,19 @@ std::string genomeValue(const Genome& G, int var) {
 RGB genomeBase(const Genome& G) { return BASES[G.of(GV_BASE)]; }
 RGB genomeAccent(const Genome& G) { return ACCENTS[std::min(GENOME_ACCENTS - 1, G.accentColour())]; }
 RGB genomeTint(const Genome& G) { return TINTS[G.of(GV_TINT)]; }
+// R-412: a roofing's colour as the age made it: a prehistoric people's thatch and turf (straw, a reddish reed, a dark sedge, a grey, the
+// smoke's black, a mossed one); a medieval people's tiles, slates, shingles and thatch; an industrial people's slates and tiles and their
+// coppered and tarred sheets
+RGB genomeRoofing(const Genome& G, int age) {
+    static const RGB PRE[GENOME_ROOFINGS] = {RGB(0.62f, 0.53f, 0.33f), RGB(0.55f, 0.40f, 0.27f), RGB(0.60f, 0.50f, 0.30f), RGB(0.45f, 0.37f, 0.26f),
+                                             RGB(0.48f, 0.47f, 0.42f), RGB(0.25f, 0.23f, 0.20f), RGB(0.40f, 0.44f, 0.28f), RGB(0.52f, 0.50f, 0.38f)};
+    static const RGB MED[GENOME_ROOFINGS] = {RGB(0.66f, 0.56f, 0.34f), RGB(0.66f, 0.33f, 0.22f), RGB(0.70f, 0.50f, 0.26f), RGB(0.44f, 0.33f, 0.24f),
+                                             RGB(0.34f, 0.36f, 0.41f), RGB(0.21f, 0.21f, 0.23f), RGB(0.38f, 0.43f, 0.30f), RGB(0.34f, 0.55f, 0.48f)};
+    static const RGB IND[GENOME_ROOFINGS] = {RGB(0.56f, 0.46f, 0.36f), RGB(0.62f, 0.30f, 0.21f), RGB(0.64f, 0.46f, 0.28f), RGB(0.38f, 0.30f, 0.25f),
+                                             RGB(0.30f, 0.33f, 0.39f), RGB(0.18f, 0.18f, 0.20f), RGB(0.33f, 0.38f, 0.30f), RGB(0.30f, 0.52f, 0.46f)};
+    const int k = G.of(GV_ROOFING);
+    return age <= AGE_PREHISTORIC ? PRE[k] : (age == AGE_MEDIEVAL ? MED[k] : IND[k]);
+}
 RGB genomeLight(const Genome& G) {
     if (G.of(GV_LIGHT) == LT_LAMPS) return RGB(1.0f, 0.78f, 0.45f);
     RGB a = genomeAccent(G);   // lines: the accent's hue at a glow's brightness (white and black ones a cold white)

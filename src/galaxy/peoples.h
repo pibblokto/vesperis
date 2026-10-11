@@ -9,10 +9,12 @@
 // generator (`peopleGen`, C-13) and the world. Two functions: `peopleAgeOf` reads the generator alone (the age, the eras, the
 // end: what a ruin cell and the radar need), `peopleProfileOf` adds the rest (the cause reads the system: its star, its comets
 // and belts, the orbit; the extent samples the land). Only the peoples that had radio (the late industrial age and after) are on
-// the air (C-07's transmitters, `galaxy/signals.h`). No screen names an age: the ruins show it, the records tell it (H-06).
+// the air (C-07's transmitters, `galaxy/signals.h`). No screen names an age: the ruins show it, the records tell it (H-06). B-414: the
+// ground shows the age reached alone (`ageFromOf`); the eras before it live on in the history and in the histories its records keep.
 // The names below are the facts as the grammar will read them (lowercase noun phrases); the lore's names stay C-02's (`Lore`).
 #include "system.h"
 #include "planetmap.h"
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -71,6 +73,10 @@ struct PeopleAge {
     double fullYears[AGE_COUNT] = {0, 0, 0, 0, 0, 0};
 };
 PeopleAge peopleAgeOf(const BodyGen& g, int people = 0);   // the world's generator and which of its peoples (C-13)
+// B-414 (2026-10-10): a world shows only the age its people reached. What it built, wrote and buried in its earlier ages is gone (built
+// over, cleared, worn away): its towns and works stand in its last age's way, its records were made and its dead buried in that age's
+// years, and the places it left before that age began are not on the ground. The first of those years in the people's count (1 at least)
+inline int ageFromOf(const PeopleAge& pa) { return pa.eras.empty() ? 1 : std::max(1, std::min(pa.eras.back().start, pa.lastYear)); }
 int peoplesOnAir(const BodyGen& g);                        // the peoples of a world that had radio: bit 0 the first, bit 1 the second (0 none)
 
 // the whole profile (`docs/ideas/RESEARCH-records.md`, section 6, item 1)

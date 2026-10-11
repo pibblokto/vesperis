@@ -222,7 +222,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     prefetchStage = 0; prefetchRing = 0;
     for (int m = 0; m < MAT_COUNT; m++) mesoBuilt[m] = false;
     footprints.clear(); footHead = 0; stepAccum = 0; lastStepX = 6; lastStepZ = -4;
-    ruinCells.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;   // C-01; C-13: the world's peoples, each with a culture and a lore
+    ruinCells.clear(); supportMeshes.clear(); supports.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;   // C-01; C-13: the world's peoples, each with a culture and a lore (B-420: the footings' meshes with them)
     for (int k = 0; k < 2; k++) {
         cultures[k] = k < peoples ? cultureOf(site.gen, k) : Culture();
         lores[k] = worldHadCivilisation(site.gen) && k < peoples ? loreQuick(*site.sys, site.sys->bodies[site.body], site.gen, k) : Lore();   // C-12: for the graves' names and years
@@ -462,9 +462,8 @@ bool SurfaceView::projectPoint(double x, double y, double z, double& sx, double&
     return true;
 }
 
-// M4-07: ruins on a jittered 2 km latitude/longitude grid of habitable and quartz worlds, so a ruin
-// stays where it is whatever the landing site or the anchor of the local frame; the giant cube is rare.
-// C-01: the grid, the draw and the settlements live in `galaxy/ruins.*`; the view keeps a cache per cell in local metres.
+// M4-07's jittered 2 km latitude/longitude grid, so a settlement stays where it is whatever the landing site or the anchor of the local
+// frame. C-01: the grid, the draw and the settlements live in `galaxy/ruins.*`; the view keeps a cache per cell in local metres.
 void SurfaceView::ruinCellAt(double x, double z, int& gLat, int& gLon) const {
     double lat, lon;
     site.latLonAt(x, z, lat, lon);
@@ -479,12 +478,12 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
     if (it != ruinCells.end()) return &it->second;
     RuinCell& c = ruinCells[key];
     c.has = ruinOfCell(site.gen, gLat, gl, c.spec, true);
-    if (c.has && c.spec.kind == RK_SETTLEMENT) { DrainageOff off; c.has = ruinSiteOk(site.gen, c.spec); }   // the slope and the sea, without building tiles (the water's own check is at the draw)
+    if (c.has) { DrainageOff off; c.has = ruinSiteOk(site.gen, c.spec); }   // the slope and the sea, without building tiles (the water's own check is at the draw)
     if (c.has) {
         Ruin& r = c.r;
         site.localAt(StarSystem::bodyFromLatLon(c.spec.lat, c.spec.lon), r.x, r.z);
-        r.heading = c.spec.heading; r.kind = c.spec.kind; r.style = c.spec.style; r.size = c.spec.size; r.spec = &c.spec;
-        if (c.spec.kind == RK_SETTLEMENT) {   // C-03: and its shards; C-12: and its graves, their stones drawn with the pieces; C-13: in its people's culture and lore
+        r.heading = c.spec.heading; r.size = c.spec.size; r.spec = &c.spec;
+        {   // C-03: and its shards; C-12: and its graves, their stones drawn with the pieces; C-13: in its people's culture and lore
             const Culture& cu = cultures[c.spec.people == 1 && peoples > 1 ? 1 : 0]; const Lore& lo = lores[c.spec.people == 1 && peoples > 1 ? 1 : 0];
             for (int l = 0; l < 3; l++) ruinElements(c.spec, cu, l, c.elems[l]); recordSitesOf(site.gen, c.spec, cu, c.shards, &c.instruments); gravesOf(lo, c.spec, cu, c.graves); graveElements(c.graves, cu, 0, c.elems[0]);
             recordObjects(c);   // T-04
@@ -497,9 +496,7 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
 
 // T-03: a work's cell: its pieces laid out once (`workSpec`, galaxy/works.h) as a settlement's are, in its people's culture, and a necropolis's
 // or a battlefield's graves among them
-const SurfaceView::RuinCell* SurfaceView::workCell(int index) const {
-    if (!worksHere || index < 0 || index >= (int)worksHere->works.size()) return nullptr;
-    const Work& w = worksHere->works[index];
+const SurfaceView::RuinCell* SurfaceView::workCell(const Work& w) const {
     auto it = workCells.find(w.id);
     if (it != workCells.end()) return &it->second;
     RuinCell& c = workCells[w.id];
@@ -507,7 +504,7 @@ const SurfaceView::RuinCell* SurfaceView::workCell(int index) const {
     c.has = true;
     Ruin& r = c.r;
     site.localAt(w.unit, r.x, r.z);
-    r.heading = c.spec.heading; r.kind = RK_SETTLEMENT; r.style = c.spec.style; r.size = c.spec.size; r.spec = &c.spec;
+    r.heading = c.spec.heading; r.size = c.spec.size; r.spec = &c.spec;
     const int k = w.people == 1 && peoples > 1 ? 1 : 0;
     for (int l = 0; l < 3; l++) ruinElements(c.spec, cultures[k], l, c.elems[l]);
     gravesOf(lores[k], c.spec, cultures[k], c.graves); graveElements(c.graves, cultures[k], 0, c.elems[0], true);
@@ -524,15 +521,14 @@ void SurfaceView::ensureTownMarks() {
     if (!worldHadCivilisation(site.gen)) return;
     std::vector<const RuinCell*> todo;
     forNearbyRuins(player.x, player.z, 2, [&](const Ruin& r, const RuinCell& c, int) {
-        if (r.kind == RK_SETTLEMENT && c.spec.work < 0 && !c.marked && (!c.spec.streets.empty() || !c.spec.plazas.empty() || !c.spec.fields.empty())) todo.push_back(&c);
+        if (c.spec.work < 0 && !c.marked && (!c.spec.streets.empty() || !c.spec.plazas.empty() || !c.spec.fields.empty())) todo.push_back(&c);
     });
     std::vector<const WorkNear*> works;
-    if (worksHere)
-        for (const WorkNear& wn : workNear) {
-            const Work& w = worksHere->works[wn.index];
-            if (w.edits.empty() || workEdited.count(w.id) || std::hypot(wn.x - player.x, wn.z - player.z) - wn.radius > 6000) continue;
-            works.push_back(&wn);
-        }
+    for (const WorkNear& wn : workNear) {
+        const Work& w = *wn.work;
+        if (w.edits.empty() || workEdited.count(w.id) || std::hypot(wn.x - player.x, wn.z - player.z) - wn.radius > 6000) continue;
+        works.push_back(&wn);
+    }
     if (todo.empty() && works.empty()) return;
     joinAhead();
     for (const RuinCell* c : todo) {
@@ -541,7 +537,7 @@ void SurfaceView::ensureTownMarks() {
         site.addTownMarks(c->spec, c->r.x, c->r.z, cu.ageYears + c->spec.before, cu.wet, cu.roadWear);
     }
     for (const WorkNear* wn : works) {
-        const Work& w = worksHere->works[wn->index];
+        const Work& w = *wn->work;
         workEdited.insert(w.id);
         const Culture& cu = cultures[w.people == 1 && peoples > 1 ? 1 : 0];
         site.addWorkEdits(w, wn->x, wn->z, cu.ageYears + w.before, cu.wet);
@@ -555,9 +551,9 @@ void SurfaceView::refreshPlanNear() {   // T-01
     const Vec3 here = site.unitAt(player.x, player.z);
     std::vector<const PlanPlace*> near; planPlacesNear(*P, here, PLAN_NEAR_M, near);
     for (const PlanPlace* p : near) { PlanNear pn; pn.gLat = p->gLat; pn.gLon = p->gLon; site.localAt(p->unit, pn.x, pn.z); pn.radius = p->radiusM; planNear.push_back(pn); }
-    if (worksHere) {   // T-03: the works
-        std::vector<const Work*> wn; worksNear(*worksHere, here, PLAN_NEAR_M, wn);
-        for (const Work* w : wn) { WorkNear n; n.index = (int)(w - worksHere->works.data()); site.localAt(w->unit, n.x, n.z); n.radius = w->radiusM; workNear.push_back(n); }
+    if (worksHere) {   // T-03: the works; B-418: the world's and the land's
+        std::vector<std::shared_ptr<const Work>> wn; worksAroundIfReady(site.gen, here, PLAN_NEAR_M, wn, LAND_NEAR_M);
+        for (std::shared_ptr<const Work>& w : wn) { WorkNear n; site.localAt(w->unit, n.x, n.z); n.radius = w->radiusM; n.work = std::move(w); workNear.push_back(std::move(n)); }
     }
 }
 
@@ -568,12 +564,12 @@ bool SurfaceView::ruinAt(int gLat, int gLon, Ruin& r) const {
     return true;
 }
 
-int SurfaceView::settlementsNear(double x, double z, const RuinCell* near[4]) const {
+int SurfaceView::settlementsNear(double x, double z, const RuinCell* near[SETTLEMENTS_NEAR]) const {
     int n = 0;
     auto take = [&](const Ruin& r, const RuinCell& c) {
-        if (r.kind != RK_SETTLEMENT || n >= 4) return;
+        if (n >= SETTLEMENTS_NEAR) return;
         double dx = r.x - x, dz = r.z - z;
-        if (dx * dx + dz * dz < (r.size + 50) * (r.size + 50)) near[n++] = &c;
+        if (dx * dx + dz * dz < (r.reach + 50) * (r.reach + 50)) near[n++] = &c;
     };
     for (const RuinCell& c : placedCells) take(c.r, c);   // A-02 (tests)
     if (!worldHadCivilisation(site.gen)) return n;
@@ -582,7 +578,7 @@ int SurfaceView::settlementsNear(double x, double z, const RuinCell* near[4]) co
 }
 bool SurfaceView::inSettlementBuilding(const RuinCell& c, double x, double z, double margin) {
     double dx = x - c.r.x, dz = z - c.r.z;
-    if (dx * dx + dz * dz > (c.r.size + 40) * (c.r.size + 40)) return false;
+    if (dx * dx + dz * dz > (c.r.reach + 40) * (c.r.reach + 40)) return false;
     for (const Building& bd : c.spec.buildings) {
         double ex = dx - bd.x, ez = dz - bd.z;
         double lx = ex * std::cos(bd.heading) - ez * std::sin(bd.heading), lz = ex * std::sin(bd.heading) + ez * std::cos(bd.heading);
@@ -594,86 +590,16 @@ bool SurfaceView::inSettlementBuilding(const RuinCell& c, double x, double z, do
 // C-01: a settlement's pieces stand on the ground at their own foot, the near ones on the drawn ground (`groundHeight`, so the walls
 // meet what the feet walk on and nothing floats as the near ring blends), the far ones on the planet function at 64 m, read once
 // per building. A-02: every settlement in reach is gathered building by building and drawn as one batch (`drawFormItems`)
-void SurfaceView::drawRuins(Framebuffer& fb, double t) {
+void SurfaceView::drawRuins(Framebuffer& fb) {
     lastRuinMs = 0; lastRuinElems = 0;
-    if (!worldHasRuins(site.gen) && placedCells.empty()) return;
+    if (!worldHadCivilisation(site.gen) && placedCells.empty()) return;
     auto tr0 = std::chrono::steady_clock::now();
-    const Vec3& sd = env.sun.dirLocal;
-    double sunUp = smoothstep(-0.03, 0.06, sd.y);
-    double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
     formItems.clear();
     for (const RuinCell& c : placedCells) gatherSettlement(c.r, c, std::hypot(c.r.x - camPos.x, c.r.z - camPos.z));   // A-02 (tests)
     static uint32_t drawStamp = 0; drawStamp++;
-    forNearbyRuins(camPos.x, camPos.z, worldHadCivilisation(site.gen) ? 2 : 1, [&](const Ruin& r, const RuinCell& cell, int ring) {
-        double dist = std::sqrt((r.x - camPos.x) * (r.x - camPos.x) + (r.z - camPos.z) * (r.z - camPos.z));
-        if (r.kind == RK_SETTLEMENT) { cell.drawn = drawStamp; gatherSettlement(r, cell, dist); return; }
-        if (ring > 1) return;   // the monoliths as M4-07 drew them: the 3 x 3 cells, within 1.8 km
-        {
-            if (dist > 1800 || r.size / dist * proj.f < 1.5) return;
-            TerrainVertex tvr = site.sampleAt(r.x, r.z, 16);   // analytic: far ruins must not thrash the terrain cache
-            double gy = tvr.h;
-            if (tvr.water > -1e8f && gy < tvr.water) return;
-            RasterParams rp; rp.bank = 0;
-            if (r.style == 1) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }
-            double fog = 1 - std::exp(-dist / env.fogDistance);
-            auto face = [&](Vec3 a, Vec3 b, Vec3 c, Vec3 d) {
-                Vec3 n = normalize(cross(b - a, d - a));
-                double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
-                double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp;
-                double shade = 46 * std::pow(light, 0.6);
-                shade += (63 - shade) * fog;
-                RVert q[4]; Vec3 pts[4] = {a, b, c, d};
-                for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].y * 0.5; q[k].v = pts[k].z + pts[k].y * 0.5; }
-                rasterPolygon(fb, q, 4, rp, proj);
-                if (r.style == 2) {   // glowing edges
-                    for (int k = 0; k < 4; k++) {
-                        RVert l0 = q[k], l1 = q[(k + 1) % 4];
-                        l0.shade = l1.shade = 50 + 10 * std::sin(t * 1.5 + k);
-                        rasterLine3(fb, l0, l1, 2, proj, true, 1);
-                    }
-                }
-            };
-            auto box = [&](Vec3 c, double hx, double hy, double hz, double heading) {
-                Vec3 f(std::sin(heading), 0, std::cos(heading)), s(std::cos(heading), 0, -std::sin(heading));
-                Vec3 p[8];
-                for (int i = 0; i < 8; i++) p[i] = c + f * ((i & 1) ? hz : -hz) + s * ((i & 2) ? hx : -hx) + Vec3(0, (i & 4) ? hy * 2 : 0, 0);
-                face(p[4], p[5], p[7], p[6]); face(p[0], p[1], p[5], p[4]); face(p[2], p[6], p[7], p[3]); face(p[1], p[3], p[7], p[5]); face(p[0], p[4], p[6], p[2]);
-            };
-            Vec3 base(r.x, gy, r.z);
-            switch (r.kind) {
-                case 0: for (int k = 0; k < 8; k++) { double a = r.heading + k * TAU / 8; box(base + Vec3(std::cos(a) * r.size * 0.5, 0, std::sin(a) * r.size * 0.5), 0.4, r.size * 0.35, 0.4, a); } break;
-                case 1: case 4: box(base, r.size * 0.5, r.size * 0.5, r.size * 0.5, r.heading); break;
-                case 2: {
-                    RasterParams rd = rp;
-                    for (int e = 0; e < 4; e++) for (int a = 0; a < 10; a++) {
-                        double e0 = e * PI / 8, e1 = (e + 1) * PI / 8, a0 = a * TAU / 10, a1 = (a + 1) * TAU / 10, rr = r.size * 0.5;
-                        Vec3 pts[4] = {Vec3(std::cos(a0) * std::cos(e0), std::sin(e0), std::sin(a0) * std::cos(e0)), Vec3(std::cos(a1) * std::cos(e0), std::sin(e0), std::sin(a1) * std::cos(e0)),
-                                       Vec3(std::cos(a1) * std::cos(e1), std::sin(e1), std::sin(a1) * std::cos(e1)), Vec3(std::cos(a0) * std::cos(e1), std::sin(e1), std::sin(a0) * std::cos(e1))};
-                        face(base + pts[0] * rr, base + pts[1] * rr, base + pts[2] * rr, base + pts[3] * rr);
-                    }
-                    (void)rd;
-                    break;
-                }
-                case 3: for (int k = 0; k < 4; k++) { if (k == 1) continue; double a = r.heading + k * TAU / 4; box(base + Vec3(std::cos(a) * r.size * 0.5, 0, std::sin(a) * r.size * 0.5), r.size * 0.5, 0.75, 0.25, a + PI / 2); } break;
-            }
-            // glyphs from the star's name on the front of cubes and walls
-            if ((r.kind == 1 || r.kind == 4) && dist < 200) {
-                const std::string& nm = site.sys->star.name;
-                Vec3 f(std::sin(r.heading), 0, std::cos(r.heading)), s(std::cos(r.heading), 0, -std::sin(r.heading));
-                Vec3 origin = base + f * (-r.size * 0.5 - 0.02) + Vec3(0, r.size * 0.55, 0) - s * (r.size * 0.4);
-                double step = r.size * 0.8 / std::max<size_t>(1, nm.size());
-                for (size_t i = 0; i < nm.size() && i < 14; i++) {
-                    int code = (unsigned char)nm[i];
-                    for (int seg = 0; seg < 3; seg++) {
-                        if (!((code >> seg) & 1)) continue;
-                        Vec3 p0 = origin + s * (i * step + seg * step * 0.3) + Vec3(0, seg * r.size * 0.05, 0), p1 = p0 + Vec3(0, r.size * 0.12, 0) + s * (step * 0.15);
-                        RVert a, b; Vec3 va = toView(p0.x, p0.y, p0.z), vb = toView(p1.x, p1.y, p1.z);
-                        a.x = va.x; a.y = va.y; a.z = va.z; a.shade = 55; b.x = vb.x; b.y = vb.y; b.z = vb.z; b.shade = 55;
-                        rasterLine3(fb, a, b, 2, proj, true, 1);
-                    }
-                }
-            }
-        }
+    forNearbyRuins(camPos.x, camPos.z, 2, [&](const Ruin& r, const RuinCell& cell, int) {
+        cell.drawn = drawStamp;
+        gatherSettlement(r, cell, std::hypot(r.x - camPos.x, r.z - camPos.z));
     });
     // T-01: the plan's places beyond the cells' reach, to PLAN_NEAR_M: a far city's skyline (each building at its level of detail, the far
     // ones a silhouette where they stand a pixel high)
@@ -681,7 +607,7 @@ void SurfaceView::drawRuins(Framebuffer& fb, double t) {
         const double d = std::hypot(pn.x - camPos.x, pn.z - camPos.z);
         if (d > PLAN_NEAR_M) continue;
         const RuinCell* c = ruinCell(pn.gLat, pn.gLon);
-        if (c->has && c->r.kind == RK_SETTLEMENT && c->drawn != drawStamp) { c->drawn = drawStamp; gatherSettlement(c->r, *c, d); }
+        if (c->has && c->drawn != drawStamp) { c->drawn = drawStamp; gatherSettlement(c->r, *c, d); }
     }
     gatherRecords();   // T-04
     lastRuinElems = (int)formItems.size();
@@ -765,7 +691,7 @@ void SurfaceView::reanchor() {
     site.localAt(wpU, wpX, wpZ);
     for (size_t i = 0; i < trail.size(); i++) { double tx, tz; site.localAt(trailU[i], tx, tz); trail[i] = {(float)tx, (float)tz}; }
     siteEpoch++;
-    ruinCells.clear(); placedCells.clear();   // C-01: the cells' local metres moved with the frame (A-02: the harness's placed ones too)
+    ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();   // C-01: the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
     refreshPlanNear();   // T-01: the plan's places in the new frame's metres
     ensureTownMarks();   // T-02
     if (buggy.deployed) {   // the buggy moves with the frame too (B-205); a driven buggy is where the player is
@@ -1045,7 +971,6 @@ void SurfaceView::findNearShard() {
     if (inVehicle() || !worldHadCivilisation(site.gen)) return;
     double best = 2.2;
     forNearbyRuins(player.x, player.z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (const ShardSite& s : cell.shards) {
             if (shardsFound.count(s.index)) continue;
             double x = r.x + s.x, z = r.z + s.z, d = std::sqrt((x - player.x) * (x - player.x) + (z - player.z) * (z - player.z));
@@ -1063,7 +988,7 @@ void SurfaceView::findNearInstrument() {
     if (inVehicle() || !worldHadCivilisation(site.gen)) return;
     double best = 2.2;
     forNearbyRuins(player.x, player.z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT || cell.instrumentIds.size() != cell.instruments.size()) return;
+        if (cell.instrumentIds.size() != cell.instruments.size()) return;
         const int k = cell.spec.people == 1 && peoples > 1 ? 1 : 0;
         for (size_t i = 0; i < cell.instruments.size(); i++) {
             const int id = cell.instrumentIds[i];
@@ -1093,13 +1018,39 @@ void SurfaceView::instrumentObjects(RuinCell& c) const {
     }
 }
 
+void SurfaceView::waterRecords() {
+    if (!worldHadCivilisation(site.gen)) return;
+    forNearbyRuins(player.x, player.z, 1, [&](const Ruin& r, const RuinCell& cc, int) {
+        if (cc.watered || std::hypot(r.x - player.x, r.z - player.z) > r.reach + 600) return;
+        RuinCell& c = const_cast<RuinCell&>(cc);   // the view's own cache: its records laid again
+        c.watered = true;
+        if (c.shards.empty()) return;
+        auto wetAt = [&](double sx, double sz) {   // a spot of the settlement's metres, and four round it a quarter of a cell off, 0.3 m over the water
+            for (int k = 0; k < 5; k++) {
+                const double x = r.x + sx + (k == 1 ? 4 : (k == 2 ? -4 : 0)), z = r.z + sz + (k == 3 ? 4 : (k == 4 ? -4 : 0)), w = site.waterAt(x, z);
+                if (w > -1e8 && site.groundHeight(x, z) < w + 0.3) return true;
+            }
+            return false;
+        };
+        bool any = false;
+        for (const ShardSite& s : c.shards) any = any || wetAt(s.x, s.z);
+        for (const InstrumentSite& s : c.instruments) any = any || wetAt(s.x, s.z);
+        if (!any) return;   // none in the water: as the generation laid them
+        const std::function<bool(double, double)> fn = wetAt;
+        const int k = c.spec.people == 1 && peoples > 1 ? 1 : 0;
+        if (c.spec.work >= 0) recordSitesOf(site.gen, c.spec, cultures[k], c.shards, nullptr, &fn);
+        else recordSitesOf(site.gen, c.spec, cultures[k], c.shards, &c.instruments, &fn);
+        recordObjects(c);
+        if (c.spec.work < 0) instrumentObjects(c);
+    });
+}
+
 // C-12: the nearest grave within 2.2 m of the explorer on foot, for the HUD and the guide
 void SurfaceView::findNearGrave() {
     nearGrave = NearGrave();
     if (inVehicle() || !worldHadCivilisation(site.gen)) return;
     double best = 2.2;
     forNearbyRuins(player.x, player.z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (size_t k = 0; k < cell.graves.size(); k++) {
             const Grave& g = cell.graves[k];
             double x = r.x + g.x, z = r.z + g.z, d = std::sqrt((x - player.x) * (x - player.x) + (z - player.z) * (z - player.z));
@@ -1127,7 +1078,7 @@ void SurfaceView::gatherRecords() {
     if (!worldHadCivilisation(site.gen)) return;
     const double fwx = camLocal.m[2][0], fwz = camLocal.m[2][2];
     forNearbyRuins(camPos.x, camPos.z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT || cell.recordFirst.size() != cell.shards.size() + 1) return;
+        if (cell.recordFirst.size() != cell.shards.size() + 1) return;
         const int people = cell.spec.people == 1 && peoples > 1 ? 1 : 0;
         for (size_t k = 0; k < cell.shards.size(); k++) {
             const ShardSite& s = cell.shards[k];
@@ -1169,7 +1120,6 @@ void SurfaceView::drawShards(Framebuffer& fb, double t) {
     lastShardsDrawn = 0;
     if (!worldHadCivilisation(site.gen)) return;
     forNearbyRuins(camPos.x, camPos.z, 2, [&](const Ruin& r, const RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (const ShardSite& s : cell.shards) {
             if (shardsFound.count(s.index)) continue;
             double x = r.x + s.x, z = r.z + s.z;
@@ -1236,6 +1186,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     if (!valid) return;
     if (dt > 0.1) dt = 0.1;
     updateNearRing(dt);   // O6-02: before the movement, so the ground underfoot is the ground drawn
+    waterRecords();       // B-421
     if (inBuggy) updateBuggy(dt, in, t);
     else if (inDrone) updateDrone(dt, in, t);   // R-403
     else updateWalking(dt, in, t, controlsEnabled);
@@ -1343,7 +1294,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
 // arch's piers), within 40 m of the point, each over the ground at its foot where it is drawn
 void SurfaceView::settlementColliders(const Ruin& r, const RuinCell& cell, double x, double z, std::vector<Collider>& out) {
     double dcx = r.x - x, dcz = r.z - z;
-    if (dcx * dcx + dcz * dcz > (r.size + 45) * (r.size + 45)) return;
+    if (dcx * dcx + dcz * dcz > (r.reach + 45) * (r.reach + 45)) return;
     static thread_local std::vector<FormDisc> discs;
     for (const Form& e : cell.elems[0]) {
         double ex = r.x + e.x, ez = r.z + e.z, reach = 40 + std::max(e.hx + e.hz, formReach(e));
@@ -1357,74 +1308,131 @@ void SurfaceView::settlementColliders(const Ruin& r, const RuinCell& cell, doubl
         }
         formColliders(e, discs);
         if (discs.empty()) continue;
-        double gy = site.groundHeight(ex, ez);   // the piece's feet where it is drawn
-        for (const FormDisc& q : discs) out.push_back({r.x + q.x, r.z + q.z, q.r, 3, gy + q.y0, gy + q.y1});
+        double gy, skirt;   // B-420: the piece's foot where it is drawn (a big one on the highest ground under it, its sides down to the lowest); none
+        if (!pieceFootNear(e, ex, ez, gy, skirt)) continue;   // where it is not drawn (under water)
+        for (const FormDisc& q : discs) out.push_back({r.x + q.x, r.z + q.z, q.r, 3, gy + q.y0 - (e.y0 < 0.01 && q.y0 <= e.y0 + 0.01 ? skirt : 0.0), gy + q.y1});
     }
 }
 
-// Rocks larger than 0.6 m and tree trunks in the 3x3 cells around (x, z), as cylinders (M8-05).
-// The placement formulas mirror drawObjects.
+// B-420: the heaps, banks, barrows and tiers within `reach` of a point (each its form's own reach farther), each with its foot as drawn and its
+// mesh built once at that foot's skirt
+void SurfaceView::collectSupports(double x, double z, double reach) {
+    supports.clear();
+    if (!worldHadCivilisation(site.gen) && placedCells.empty()) return;
+    auto take = [&](const Ruin& r, const RuinCell& cell) {
+        const double dcx = r.x - x, dcz = r.z - z;
+        if (dcx * dcx + dcz * dcz > (r.reach + 60 + reach) * (r.reach + 60 + reach)) return;
+        for (const Form& e : cell.elems[0]) {
+            if (!formWalkable(e)) continue;
+            const double ex = r.x + e.x, ez = r.z + e.z, rr = formReach(e) + reach;
+            if ((ex - x) * (ex - x) + (ez - z) * (ez - z) > rr * rr) continue;
+            Support S; S.f = &e; S.x = ex; S.z = ez; S.reach = formReach(e);
+            if (!pieceFootNear(e, ex, ez, S.gy, S.skirt)) continue;
+            SupportMesh& M = supportMeshes[&e];
+            if (std::fabs(M.skirt - S.skirt) > 0.05) { formMesh(e, 0, Vec3(0, 0, 0), S.skirt, M.m, 1e9); M.skirt = S.skirt; }
+            supports.push_back(S);
+        }
+    };
+    forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) { take(r, cell); });
+    for (const RuinCell& c : placedCells) take(c.r, c);   // A-02 (tests)
+}
+
+// B-420: the floor at a point for feet at `feet`: the ground, or the highest drawn surface of a heap, a bank, a barrow or a tier there that is
+// not over a step above them (`blocked`: one is; the explorer would walk into it)
+double SurfaceView::floorAt(double x, double z, double feet, bool* blocked) {
+    double g = site.groundHeight(x, z);
+    if (blocked) *blocked = false;
+    for (const Support& S : supports) {
+        const double dx = x - S.x, dz = z - S.z;
+        if (dx * dx + dz * dz > S.reach * S.reach) continue;
+        auto it = supportMeshes.find(S.f);
+        if (it == supportMeshes.end()) continue;
+        const double top = formSupportAt(it->second.m, dx, dz);
+        if (top < -1e17) continue;
+        const double y = S.gy + top;
+        if (y > feet + STEP_M) { if (blocked) *blocked = true; continue; }
+        g = std::max(g, y);
+    }
+    return g;
+}
+
+// B-420: one enumerator of a 16 m cell's boulders, which the drawing and the colliders both read (as the trees' `forTrees`): none in a room,
+// on a road's or a street's bed, on a work's ground or under the water; `keep` a cheap test first (the drawing's size over its distance: the
+// costlier ones after it). The colliders mirrored the drawing's formulas and missed its last three tests: a boulder left off a street or a
+// quarry's floor still stood there, unseen. Returns the cell's candidates (the bench's count)
+namespace {
+void rockParams(int type, double& density, double& scale) {
+    density = 0.0; scale = 1.0;
+    switch (type) {
+        case PT_CRATERED: density = 1.1; scale = 1.1; break;
+        case PT_ROCKY: density = 1.6; scale = 1.6; break;
+        case PT_THINATMO: density = 1.2; scale = 0.9; break;
+        case PT_MOLTEN: density = 0.7; scale = 1.1; break;
+        case PT_ICY: density = 0.3; scale = 1.3; break;
+        case PT_FELISIAN: density = 0.35; scale = 0.9; break;
+        case PT_VENUSIAN: density = 0.6; scale = 1.4; break;
+        case PT_QUARTZ: density = 0.5; scale = 0.8; break;
+        case PT_METAL: density = 1.3; scale = 1.2; break;
+        case PT_VOLCANIC: density = 0.8; scale = 1.0; break;
+        case PT_CARBON: density = 0.9; scale = 1.1; break;
+        case PT_COMET: density = 1.4; scale = 1.2; break;   // O4: boulders of dirty ice
+        case PT_OCEAN: density = 0.0; break;
+        case PT_EUROPAN: density = 0.25; scale = 1.0; break;   // R-307: ice blocks by the chaos
+        case PT_TECTONIC: density = 1.0; scale = 1.2; break;
+        case PT_DESERT: density = 0.9; scale = 1.0; break;
+        case PT_HYDROCARBON: density = 0.3; scale = 0.9; break;
+        case PT_BOMBARDED: density = 1.8; scale = 1.3; break;   // ejecta boulders
+        case PT_ACIDIC: density = 0.6; scale = 1.0; break;
+    }
+}
+}   // namespace
+int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, double, double)>& keep, const std::function<void(const RockInst&)>& fn) {
+    const double cs = 16;
+    const int type = site.sys->bodies[site.body].type;
+    double rockDensity, rockScale; rockParams(type, rockDensity, rockScale);
+    const uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
+    const TerrainVertex& tv = site.lod0.at(cx, cz);
+    double rd = rockDensity;
+    if (type == PT_FELISIAN && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
+    rd *= 1 + 5.0 * tv.scree / 255.0;   // O6-04: boulder fields on the scree under the cliffs
+    int nrocks = (int)(rd * 2.0 * hash01(h));
+    if (type == PT_FELISIAN && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
+    if (tv.material == MAT_SAND || tv.material == MAT_WATER || tv.material == MAT_LAVA) nrocks = 0;
+    if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
+    if (nrocks <= 0) return 0;
+    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;   // C-08: no rock in a room (the settlements near, found once a cell when a rock asks)
+    for (int i = 0; i < nrocks; i++) {
+        const uint64_t hr = mix64(h + 17 * (i + 1));
+        RockInst R;
+        R.x = cx * cs + hash01(hr) * cs; R.z = cz * cs + hash01(mix64(hr + 1)) * cs; R.h = hr;
+        R.size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // O6-04: bigger on the scree
+        if (keep && !keep(R.x, R.z, R.size)) continue;
+        if (nNear < 0) nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);
+        { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], R.x, R.z, 1.0); if (in) continue; }
+        if (!site.roads.empty() && site.roadCover(R.x, R.z) > 0.3) continue;   // C-09: no rock on the road's bed
+        if (!site.marks.empty() && site.markCover(R.x, R.z) > 0.3) continue;   // T-02: nor on a street
+        if (!site.edits.empty() && site.editCover(R.x, R.z) > 0.3) continue;   // T-03: nor on a work's ground
+        R.gy = site.groundHeight(R.x, R.z);
+        if (R.gy < site.waterAt(R.x, R.z)) continue;
+        fn(R);
+    }
+    return nrocks;
+}
+
+// Rocks larger than 0.6 m and tree trunks in the 3x3 cells around (x, z), as cylinders (M8-05). B-420: from the enumerators that draw them
 void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& out) {
     out.clear();
-    int type = site.sys->bodies[site.body].type;
-    double rockDensity = 0.0, rockScale = 1.0;
-    switch (type) {
-        case PT_CRATERED: rockDensity = 1.1; rockScale = 1.1; break;
-        case PT_ROCKY: rockDensity = 1.6; rockScale = 1.6; break;
-        case PT_THINATMO: rockDensity = 1.2; rockScale = 0.9; break;
-        case PT_MOLTEN: rockDensity = 0.7; rockScale = 1.1; break;
-        case PT_ICY: rockDensity = 0.3; rockScale = 1.3; break;
-        case PT_FELISIAN: rockDensity = 0.35; rockScale = 0.9; break;
-        case PT_VENUSIAN: rockDensity = 0.6; rockScale = 1.4; break;
-        case PT_QUARTZ: rockDensity = 0.5; rockScale = 0.8; break;
-        case PT_METAL: rockDensity = 1.3; rockScale = 1.2; break;
-        case PT_VOLCANIC: rockDensity = 0.8; rockScale = 1.0; break;
-        case PT_CARBON: rockDensity = 0.9; rockScale = 1.1; break;
-        case PT_COMET: rockDensity = 1.4; rockScale = 1.2; break;   // O4
-        case PT_OCEAN: rockDensity = 0.0; break;
-        case PT_EUROPAN: rockDensity = 0.25; rockScale = 1.0; break;   // R-307: ice blocks by the chaos
-        case PT_TECTONIC: rockDensity = 1.0; rockScale = 1.2; break;
-        case PT_DESERT: rockDensity = 0.9; rockScale = 1.0; break;
-        case PT_HYDROCARBON: rockDensity = 0.3; rockScale = 0.9; break;
-        case PT_BOMBARDED: rockDensity = 1.8; rockScale = 1.3; break;   // ejecta boulders
-        case PT_ACIDIC: rockDensity = 0.6; rockScale = 1.0; break;
-    }
     double cs = 16;
-    double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0));
     int pcx = (int)std::floor(x / cs), pcz = (int)std::floor(z / cs);
-    // ruins (M4-07) as one cylinder each; C-01: a settlement's standing pieces as rows of discs along their walls (within 40 m)
+    // C-01: a settlement's standing pieces as rows of discs along their walls (within 40 m)
     forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) {
-            double gy = site.groundHeight(r.x, r.z), top = r.kind == 0 ? r.size * 0.7 : (r.kind == 2 ? r.size * 0.5 : (r.kind == 3 ? 1.5 : r.size));
-            out.push_back({r.x, r.z, r.kind == 3 ? r.size * 0.15 : r.size * 0.55, 3, gy, gy + top});
-            return;
-        }
         settlementColliders(r, cell, x, z, out);
     });
     for (const RuinCell& c : placedCells) settlementColliders(c.r, c, x, z, out);   // A-02 (tests)
     for (int cz = pcz - 1; cz <= pcz + 1; cz++)
         for (int cx = pcx - 1; cx <= pcx + 1; cx++) {
-            uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
-            const TerrainVertex& tv = site.lod0.at(cx, cz);
-            bool lava = tv.material == MAT_LAVA;
-            const RuinCell* near[4]; int nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);   // C-08: as the drawing keeps them out
-            double rd = rockDensity;
-            if (type == PT_FELISIAN && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
-            rd *= 1 + 5.0 * tv.scree / 255.0;   // O6-04: boulder fields on the scree under the cliffs
-            int nrocks = (int)(rd * 2.0 * hash01(h));
-            if (type == PT_FELISIAN && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
-            if (tv.material == MAT_SAND || tv.material == MAT_WATER || lava) nrocks = 0;
-            if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
-            for (int i = 0; i < nrocks; i++) {
-                uint64_t hr = mix64(h + 17 * (i + 1));
-                double rx = cx * cs + hash01(hr) * cs, rz = cz * cs + hash01(mix64(hr + 1)) * cs;
-                double size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // O6-04: bigger on the scree
-                if (size < 0.6) continue;   // stepped over
-                { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], rx, rz, 1.0); if (in) continue; }
-                double gy = site.groundHeight(rx, rz);
-                if (gy < site.waterAt(rx, rz)) continue;
-                out.push_back({rx, rz, size * 0.8, 0, gy - size * 0.15, gy + size * 1.15});   // the peak stands up to 1.3 sizes over a base sunk 0.15
-            }
+            forRocks(cx, cz, [](double, double, double size) { return size >= 0.6; },   // a smaller one is stepped over
+                     [&](const RockInst& R) { out.push_back({R.x, R.z, R.size * 0.8, 0, R.gy - R.size * 0.15, R.gy + R.size * 1.15}); });   // the peak stands up to 1.3 sizes over a base sunk 0.15
             // N2: trunks and fallen logs from the same enumerators that draw them
             forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + T.h * 0.02, 1, T.gy - 0.3, T.gy + T.h}); });
             forLogs(cx, cz, [&](const LogInst& L) {
@@ -1432,7 +1440,6 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
                 for (int k = -1; k <= 1; k++) out.push_back({L.x + dx * L.len * 0.33 * k, L.z + dz * L.len * 0.33 * k, L.radius + 0.35, 2, lg - 1.0, lg + 2 * L.radius + 0.6});
             });
         }
-    (void)treeScale;
 }
 
 // B within 10 m of the capsule: a new buggy unfolds beside it; a buggy already out, wherever it was left, is scrapped
@@ -1529,8 +1536,13 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     double tx = (sy * fwd + cy * str), tz = (cy * fwd - sy * str);
     double tl = std::sqrt(tx * tx + tz * tz);
     if (tl > 1 && p.autoWalk == 0) { tx /= tl; tz /= tl; }
+    // B-420: what the explorer may stand on beside the ground: the heaps, banks, barrows and tiers near it (inside one, as after a landing on it,
+    // it stands on its top)
+    collectSupports(p.x, p.z);
+    auto footing = [&](double x, double z, bool* blocked = nullptr) { bool in = false; double f = floorAt(x, z, p.y, &in); if (in && blocked) *blocked = true; return f; };
+    bool insideHere = false; floorAt(p.x, p.z, p.y, &insideHere);
     // wading (M8-08): slower with depth until swimming takes over
-    double groundHere = site.groundHeight(p.x, p.z);
+    double groundHere = insideHere ? floorAt(p.x, p.z, 1e9) : footing(p.x, p.z);
     double waterHere = site.waterAt(p.x, p.z);
     double depthHere = waterHere > -1e8 ? clampd(waterHere - groundHere, 0, 1.2) : 0;
     if (!p.swimming && p.onGround && depthHere > 0) speed *= 1.0 - 0.55 * depthHere / 1.2;   // B-406: wading, not flying over
@@ -1564,12 +1576,12 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     double terminal = site.atmosphere ? 55.0 : 80.0;
     if (p.vy < -terminal) p.vy = -terminal;
     double nx = p.x + p.vx * dt, nz = p.z + p.vz * dt;
-    // slopes (M8-01): the ground gradient decides climbing and sliding
-    double gx = (site.groundHeight(p.x + 0.5, p.z) - site.groundHeight(p.x - 0.5, p.z)),
-           gz = (site.groundHeight(p.x, p.z + 0.5) - site.groundHeight(p.x, p.z - 0.5));
+    // slopes (M8-01): the ground gradient decides climbing and sliding (B-420: the ground, or the heap, bank or tier under the feet)
+    double gx = (footing(p.x + 0.5, p.z) - footing(p.x - 0.5, p.z)),
+           gz = (footing(p.x, p.z + 0.5) - footing(p.x, p.z - 0.5));
     double slope = std::sqrt(gx * gx + gz * gz);   // rise per run
     bool steep = slope > 1.35 && p.onGround && !p.swimming;
-    double hNew = site.groundHeight(nx, nz);
+    double hNew = footing(nx, nz);
     double moveLen = std::sqrt((nx - p.x) * (nx - p.x) + (nz - p.z) * (nz - p.z));
     if (p.onGround && moveLen > 1e-6 && (hNew - groundHere) / std::max(moveLen, 0.05) > 1.35) {
         // too steep to climb: keep only the along-slope part of the motion
@@ -1585,6 +1597,26 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         p.vx -= gx / sl * g * std::sin(ang) * 0.8 * dt;
         p.vz -= gz / sl * g * std::sin(ang) * 0.8 * dt;
         nx = p.x + p.vx * dt; nz = p.z + p.vz * dt;
+    }
+    // B-420: a heap's, a bank's or a tier's side more than a step high, or steeper than the ground's climb, is walked into, not up: the move
+    // along it where one axis is free
+    if (!insideHere && !p.swimming && p.onGround) {
+        auto barred = [&](double x, double z) {
+            bool bl = false; const double f = footing(x, z, &bl);
+            if (bl) return true;
+            const double run = std::hypot(x - p.x, z - p.z);
+            return f > site.groundHeight(x, z) + 0.01 && run > 1e-6 && (f - groundHere) / std::max(run, 0.05) > 1.35;   // a heap's steep side
+        };
+        if (barred(nx, nz)) {
+            const bool bx = barred(nx, p.z), bz = barred(p.x, nz);
+            if (!bx) { nz = p.z; p.vz = 0; } else if (!bz) { nx = p.x; p.vx = 0; } else { nx = p.x; nz = p.z; p.vx = p.vz = 0; }
+        }
+    } else if (!insideHere && !p.swimming) {   // in the air: into a side more than a step over the feet
+        bool bl = false; footing(nx, nz, &bl);
+        if (bl) {
+            bool bx = false, bz = false; footing(nx, p.z, &bx); footing(p.x, nz, &bz);
+            if (!bx) { nz = p.z; p.vz = 0; } else if (!bz) { nx = p.x; p.vx = 0; } else { nx = p.x; nz = p.z; p.vx = p.vz = 0; }
+        }
     }
     // collision with rocks and trunks (M8-05)
     {
@@ -1620,7 +1652,8 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
             }
         }
     }
-    double ground = site.groundHeight(p.x, p.z);
+    bool insideNow = false; floorAt(p.x, p.z, p.y, &insideNow);
+    double ground = insideNow ? floorAt(p.x, p.z, 1e9) : floorAt(p.x, p.z, p.y);   // B-420: the footing (a heap, a bank, a tier), the ground else
     double water = site.waterAt(p.x, p.z);
     // B-406 (2026-10-02): deep water is swum once the body is down at its surface; above it the air is the air, so the jetpack
     // flies over a lake (the old rule made the explorer swim the moment the ground under them was 0.4 m under water, whatever
@@ -3066,28 +3099,6 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
     double sunUp = smoothstep(-0.03, 0.06, sd.y);
     double lf = env.sun.lightFactor;
     double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
-    double rockDensity = 0.0, rockScale = 1.0;
-    switch (type) {
-        case PT_CRATERED: rockDensity = 1.1; rockScale = 1.1; break;
-        case PT_ROCKY: rockDensity = 1.6; rockScale = 1.6; break;
-        case PT_THINATMO: rockDensity = 1.2; rockScale = 0.9; break;
-        case PT_MOLTEN: rockDensity = 0.7; rockScale = 1.1; break;
-        case PT_ICY: rockDensity = 0.3; rockScale = 1.3; break;
-        case PT_FELISIAN: rockDensity = 0.35; rockScale = 0.9; break;
-        case PT_VENUSIAN: rockDensity = 0.6; rockScale = 1.4; break;
-        case PT_QUARTZ: rockDensity = 0.5; rockScale = 0.8; break;
-        case PT_METAL: rockDensity = 1.3; rockScale = 1.2; break;
-        case PT_VOLCANIC: rockDensity = 0.8; rockScale = 1.0; break;
-        case PT_CARBON: rockDensity = 0.9; rockScale = 1.1; break;
-        case PT_COMET: rockDensity = 1.4; rockScale = 1.2; break;   // O4: boulders of dirty ice
-        case PT_OCEAN: rockDensity = 0.0; break;
-        case PT_EUROPAN: rockDensity = 0.25; rockScale = 1.0; break;   // R-307
-        case PT_TECTONIC: rockDensity = 1.0; rockScale = 1.2; break;
-        case PT_DESERT: rockDensity = 0.9; rockScale = 1.0; break;
-        case PT_HYDROCARBON: rockDensity = 0.3; rockScale = 0.9; break;
-        case PT_BOMBARDED: rockDensity = 1.8; rockScale = 1.3; break;
-        case PT_ACIDIC: rockDensity = 0.6; rockScale = 1.0; break;
-    }
     int radius = 22;
     lastRocksDrawn = 0; lastRocksCandidates = 0;
     RasterParams rp; rp.bank = type == PT_FELISIAN ? 0 : 3;   // N1-03: boulders in the rock colour (bank 3 is the forest on living worlds)
@@ -3104,30 +3115,12 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
             if (cellDist > radius * cs) continue;
             if (cellDist > cs * 2 && (ddx * camLocal.m[2][0] + ddz * camLocal.m[2][2]) / cellDist < -0.2) continue;
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
-            const TerrainVertex& tv = site.lod0.at(cx, cz);
-            bool lava = tv.material == MAT_LAVA;
-            const RuinCell* near[4]; int nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);   // C-08: no rock in a room
-            // rocks
-            double rd = rockDensity;
-            if (type == PT_FELISIAN && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
-            rd *= 1 + 5.0 * tv.scree / 255.0;   // O6-04: boulder fields on the scree under the cliffs
-            int nrocks = (int)(rd * 2.0 * hash01(h));
-            if (type == PT_FELISIAN && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
-            if (tv.material == MAT_SAND || tv.material == MAT_WATER || lava) nrocks = 0;
-            if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
-            lastRocksCandidates += nrocks;
-            for (int i = 0; i < nrocks; i++) {
-                uint64_t hr = mix64(h + 17 * (i + 1));
-                double rx = cx * cs + hash01(hr) * cs, rz = cz * cs + hash01(mix64(hr + 1)) * cs;
-                double size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // O6-04: bigger on the scree
+            // rocks (B-420: the colliders' enumerator)
+            lastRocksCandidates += forRocks(cx, cz, [&](double rx, double rz, double size) { const double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z)); return size / dist * proj.f >= 0.8; },
+                                            [&](const RockInst& R) {
+                const double rx = R.x, rz = R.z, size = R.size, gy = R.gy;
+                const uint64_t hr = R.h;
                 double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
-                if (size / dist * proj.f < 0.8) continue;
-                { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], rx, rz, 1.0); if (in) continue; }
-                if (!site.roads.empty() && site.roadCover(rx, rz) > 0.3) continue;   // C-09: no rock on the road's bed
-                if (!site.marks.empty() && site.markCover(rx, rz) > 0.3) continue;   // T-02: nor on a street
-                if (!site.edits.empty() && site.editCover(rx, rz) > 0.3) continue;   // T-03: nor on a work's ground
-                double gy = site.groundHeight(rx, rz);
-                if (gy < site.waterAt(rx, rz)) continue;
                 double a0 = hash01(mix64(hr + 3)) * TAU;
                 Vec3 base(rx, gy - size * 0.15, rz);
                 Vec3 pts[3];
@@ -3154,7 +3147,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     }
                     rasterTriangle(fb, tri, rp, proj);
                 }
-            }
+            });
             // quartz crystals
             if (type == PT_QUARTZ && hash01(mix64(h + 99)) < 0.5) {
                 int nc = 1 + (int)(hash01(mix64(h + 98)) * 2);
@@ -3689,7 +3682,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     section(3);
     drawFlora(fb, t);
     section(4);
-    drawRuins(fb, t);
+    drawRuins(fb);
     drawShards(fb, t);   // C-03: after the walls, so the depth test hides what lies behind them
     if (buggy.deployed) drawBuggy(fb, t);
     if (drone.deployed) drawDrone(fb, t);   // R-403

@@ -31,7 +31,7 @@ struct ToldEvent {
 struct ToldHistory {
     std::vector<ToldEvent> events;      // in the history's order
     std::set<std::string> names;        // the proper names the read records wrote (`VgRecord::names`)
-    std::vector<int> eraRead;           // per era of the history: the records read that were written in it
+    std::vector<int> eraRead;           // per era of the history: the records read that were written in it (B-414: or tell it, a late people's history)
     int ageRead[AGE_COUNT] = {};        // the records read by the age of their year
     int read = 0;                       // the records read (every category)
     int texts = 0;                      // of them texts (the ones that tell)

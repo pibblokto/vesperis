@@ -6,9 +6,17 @@
 #include <cmath>
 #include <algorithm>
 
+namespace {
+// B-414: a death in the years of the age the people reached (`Lore::ageFrom`) while the place stood (one left early: before it was left)
+int diedIn(const Lore& L, const RuinSpec& r, Rng& rng) {
+    const int end = L.endYear > 0 ? L.endYear : L.spanYears + 1, from = std::max(1, std::min(L.ageFrom, L.spanYears));
+    const int to = std::max(from, std::min(L.spanYears, end - (int)std::lround(std::max(0.0, r.before))));
+    return from + rng.irange(to - from + 1);
+}
+}
+
 void gravesOf(const Lore& L, const RuinSpec& r, const Culture& c, std::vector<Grave>& out) {
     out.clear();
-    if (r.kind != RK_SETTLEMENT) return;
     if (r.sclass == SC_WORKS) {   // T-01: a line's pylons hold no grave; T-03: a work's plots (a necropolis's, a battlefield's war graves), rows of stones
         if (r.work < 0) return;
         Rng rng(r.seed ^ 0x6A4E7ULL);
@@ -25,7 +33,7 @@ void gravesOf(const Lore& L, const RuinSpec& r, const Culture& c, std::vector<Gr
                     g.x = f.x + sx * a + fx * b; g.z = f.z + sz * a + fz * b; g.heading = std::fmod(f.heading + rng.sym(0.05) + 2 * TAU, TAU);
                     g.height = 0.7 + 0.4 * rng.uni();
                     g.fallen = rng.chance(c.decay * 0.6);
-                    g.died = r.founded > 0 ? r.founded : 1 + rng.irange(std::max(1, L.spanYears));   // a battle's dead all in its year
+                    g.died = r.founded > 0 ? r.founded : diedIn(L, r, rng);   // a battle's dead all in its year
                     g.born = g.died - (r.founded > 0 ? 17 + rng.irange(30) : 20 + rng.irange(70));
                     if (g.born < 1) g.born = 0;
                     g.name = personName(L, rng.next());
@@ -63,7 +71,7 @@ void gravesOf(const Lore& L, const RuinSpec& r, const Culture& c, std::vector<Gr
         g.x = x; g.z = z; g.heading = std::fmod(dir + PI + rng.sym(0.08) + 2 * TAU, TAU);   // the face toward the settlement
         g.height = 0.7 + 0.5 * rng.uni();
         g.fallen = rng.chance(c.decay * 0.6);
-        g.died = 1 + rng.irange(std::max(1, L.spanYears));
+        g.died = diedIn(L, r, rng);
         g.born = g.died - (30 + rng.irange(61));
         if (g.born < 1) g.born = 0;
         uint64_t nameSeed = rng.next();

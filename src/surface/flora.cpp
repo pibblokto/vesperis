@@ -77,12 +77,12 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     double deadChance = site.gen.hasTrait(TR_DEAD_FOREST) ? 0.6 : 0.03;   // R-304: a dying world
     // C-01: no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone);
     // A-03: a twentieth of them two centuries after the end, a third after ten thousand years
-    const RuinCell* near[4]; int nNear = 0;
+    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = 0;
     if (worldHadCivilisation(site.gen))
         forNearbyRuins(cx * cs + 8, cz * cs + 8, 1, [&](const Ruin& r, const RuinCell& c, int) {
-            if (r.kind != RK_SETTLEMENT || nNear >= 4) return;
+            if (nNear >= SETTLEMENTS_NEAR) return;
             double dx = r.x - (cx * cs + 8), dz = r.z - (cz * cs + 8);
-            if (dx * dx + dz * dz < (r.size + 50) * (r.size + 50)) near[nNear++] = &c;
+            if (dx * dx + dz * dz < (r.reach + 50) * (r.reach + 50)) near[nNear++] = &c;
         });
     for (int i = 0; i < n; i++) {
         uint64_t ht = mix64(h + 41 * (uint64_t)(i + 1));
@@ -97,7 +97,7 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
             for (int q = 0; q < nNear && !skip; q++) {
                 const Ruin& r = near[q]->r;
                 double dx = T.x - r.x, dz = T.z - r.z;
-                if (dx * dx + dz * dz > (r.size + 40) * (r.size + 40)) continue;
+                if (dx * dx + dz * dz > (r.reach + 40) * (r.reach + 40)) continue;
                 if (near[q]->spec.work < 0 && std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond (T-03: a work has none)
                 for (const Building& bd : near[q]->spec.buildings) {
                     double ex = dx - bd.x, ez = dz - bd.z;
@@ -159,7 +159,7 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     L.heading = h01(mix64(L.seed + 2)) * TAU;
     L.len = 3.5 + 6 * h01(mix64(L.seed + 3));
     L.radius = 0.25 + 0.35 * h01(mix64(L.seed + 4)) * h01(mix64(L.seed + 6));   // most are slim, a few are giants
-    { const RuinCell* near[4]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
+    { const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
     if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // C-09: nor across the road
     if (!site.marks.empty() && site.markCover(L.x, L.z) > 0.3) return;   // T-02: nor on a street
     if (!site.edits.empty() && site.editCover(L.x, L.z) > 0.3) return;   // T-03: nor on a work's ground

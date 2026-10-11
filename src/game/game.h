@@ -118,7 +118,8 @@ public:
     // R-408 (game/marks.cpp): the explorer's marks (Guide::marks) and the surface scanner. `R` on the ground cycles the scanner
     // through the kinds the world can hold (off, ruins, lakes, peaks, craters, canyons, mesas, geysers, crystals), Shift+R leaves
     // the marked sights out or takes them in; `L` marks what the crosshair rests on; the sector map's cursor places, names and
-    // removes marks. O6-06's landmarks are no longer markers: a sight is an echo of the scanner until the explorer marks it
+    // removes marks (B-412: and shows one over the view). O6-06's landmarks are no longer markers: a sight is an echo of the scanner
+    // until the explorer marks it
     int scanMode = -1;                 // -1 off, else the LandmarkKind the scanner listens for
     bool scanSkipMarked = true;        // a sight with one of the explorer's marks on it is left out
     std::string worldKeyOf(int bi) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi); }
@@ -134,7 +135,12 @@ public:
     void scanCycle(); void scanToggleSkip();
     std::string echoDetail(const SurfaceView::ScanEcho& e) const;   // "A TOWN", "1240 M HIGH", "2.3 KM ACROSS"
     void drawScanHUD();                                        // the scanner's lines at the top left and its mark on the compass
-    void drawMarksInView();                                    // the marks of the world over the view, with their distance
+    void drawCompassMark(double bearing, uint32_t col, bool filled);   // a diamond on the compass strip at a bearing, an arrow at its end beyond sixty degrees
+    // B-412: one mark at a time over the view, none until the explorer picks it (the sector map's Shift+Enter or Shift+click on a
+    // mark, again to hide it): the user found every mark within 25 km drawn over the view, their names run into one another
+    const SiteMark* shownMarkHere();                           // the shown mark (Guide::shownMark) when it stands on the surface's world
+    void showMark(int mi);                                     // that mark shown over the view in place of any other; the shown one hidden
+    void drawShownMark();                                      // its diamond over the ground with the name and the distance, its diamond on the compass
     void beginMark(double x, double z);                        // a new mark at a place of the site: the entry for its name
     void beginRenameMark(int mi);
     int textMark = -1; double textMarkLat = 0, textMarkLon = 0; int textMarkKind = MARK_PLACE;   // what the entry names: a mark (-1: a new one at the place)
@@ -225,6 +231,11 @@ public:
     std::string testScanInfo();                                // the mode, the echoes, the nearest (true and heard), the marks here
     bool testEchoTrue(double& x, double& z, double& radius);   // the nearest echo of the mode's true place
     void testMapCursor(double x, double z) { mapCurX = x; mapCurZ = z; }
+    int testShownMark() const { return guide.shownMark; }   // B-412
+    bool testMarkOnScreen(int mi, int& lx, int& ly) {       // B-412: where a mark's diamond over the view stands (logical pixels); false behind the eye
+        for (const SiteMark& m : marksHere()) if (m.index == mi) { double sx, sy; if (!surf.projectPoint(m.x, m.y + 6, m.z, sx, sy)) return false; lx = (int)(sx / FB_SCALE); ly = (int)(sy / FB_SCALE); return true; }
+        return false;
+    }
     void testMarkLocal(int mi, double& x, double& z) const { const SurfaceMark& m = guide.marks[mi]; surf.site.localAt(StarSystem::bodyFromLatLon(m.lat, m.lon), x, z); }
     void testWalkTo(double x, double z) { surf.player.x = x; surf.player.z = z; surf.player.y = surf.site.surfaceHeight(x, z); }
     double testPlayerX() const { return surf.player.x; }
@@ -260,6 +271,7 @@ public:
     int testZoomRoads() const { return (int)zoomRoads.size(); }   // C-09: the roads drawn on the zoom
     int testZoomCores() const { return zoomCores; }                // T-01: the cores drawn on the zoom
     void testSurfaceFace(double yaw, double pitch) { surf.player.yaw = yaw; surf.player.pitch = pitch; }   // T-01 (the bench): the explorer's look
+    const SurfaceView& testSurface() const { return surf; }   // R-412 (the bench): the forms drawn
     int testZoomWays(int kind) const { int n = 0; for (int k : zoomRoadKinds) if (k == kind) n++; return n; }   // T-01: the zoom's lines of a kind
     std::string testRoadInfo() const;                             // C-09: the site's roads, the road under the explorer, the roads met, the zoom's lines
     void testBuildZoom() { buildLandingZoom(); }
@@ -317,6 +329,8 @@ public:
     bool testFlySetup(double altM);   // deploy the drone beside the capsule, get in, lift it to altM over the ground (for the bench)
     void testSetPitch(double p) { surf.player.pitch = p; }
     void testSetYaw(double y) { surf.player.yaw = y; }
+    double testPitch() const { return surf.player.pitch; }   // B-412: the flow's look put back
+    double testYaw() const { return surf.player.yaw; }
     std::string testRangeInfo() const { return "range=" + std::to_string((int)surf.lastRange) + " water=" + std::to_string((int)surf.lastRangeWater); }   // O1
     int testParkedBelt() const { return ship.parkedBelt; }                                                                  // O3
     std::string testBeltDraw() const;   // O3: rocks drawn last frame and the bank-20 pixels in the framebuffer
@@ -371,6 +385,7 @@ public:
     double testJumpShort() const { return jumpPlot.shortLy; }
     int testMapPick() const { return mapPick; }
     int testCabinFacing() const { return cabin.facing; }   // 7 is the shard decoder (C-06)
+    int testCabinLights() const { return (cabin.light ? 1 : 0) | (cabin.depolarised ? 2 : 0); }   // B-411: 1 the light on, 2 the hull glass
     int testLogEntries() const { return (int)guide.log.size(); }
     // W-01: the almanac for the harness
     bool testAlmanacRunning() const { return almanacRunning; }

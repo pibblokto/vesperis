@@ -73,6 +73,7 @@ struct Guide {
     std::set<std::string> visited;                // star keys
     std::set<std::string> landed;                 // body keys
     std::vector<SurfaceMark> marks;               // R-408: the explorer's marks on the worlds (and the friends' lent ones)
+    int shownMark = -1;                           // B-412: the one of them shown over the view (an index in marks; -1 none, the default; `shownmark`)
     std::vector<GalaxyMark> galaxyMarks;          // G-06: the explorer's marks of the galaxy (and the friends' lent ones)
     std::set<std::string> shards;                 // C-03: "<body key>/S<index>" of every shard taken from a ruin (`shard` lines)
     int shardWorlds() const;                      // C-03: how many worlds they come from
@@ -101,7 +102,8 @@ struct Guide {
     int genVersion = 0;      // generation version the guide was last saved with (M9-17)
     // T-04: the shards' keys are a people's records at people x 1000 + index (galaxy/records.h's `shardWorldIndex`); a guide saved before
     // (no `records 2` line) had C-13's second people at 50 + index, moved here when it is loaded: the shards found are kept by their index (the
-    // counts and the language kept, the contents the records' now), `migratedShards` how many of the explorer's own were (the game says so once)
+    // counts and the language kept, the contents the records' now), `migratedShards` how many of the explorer's own were (the game says so once).
+    // B-414: a guide saved before `records 3` keeps its keys, its found shards' contents new (a people's records all of the age it reached)
     int migratedShards = 0;
 
     static std::string starKey(int64_t sx, int64_t sy, int64_t sz);

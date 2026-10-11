@@ -3,8 +3,9 @@
 // and H-05 sorts them into its three categories by the age. C-02's fifty are the first fifty of them, kept as they were (a shard found before
 // keeps its text, its music, its chart); the rest are drawn the same way, music and star charts at the people's own shares of the fifty.
 //
-// * Each record is dated in the people's own count (`RecordEntry::year`, from the founding, year 1, to the end): the later years the likelier,
-//   since each age wrote more than the one before and the years took the oldest first (`recordYear`). The last recording (C-12) is the end's.
+// * Each record is dated in the people's own count (`RecordEntry::year`): B-414, in the years of the age the people reached (its earlier ages'
+//   records went with their towns; a late people's histories tell those years), the later the likelier, the years taking the oldest first
+//   (`recordYear`). The last recording (C-12) is the end's.
 // * Each is made in the way of its year's age (`RecordMedium`): carved bone, carved stone, a painted wall (prehistoric); clay tablets,
 //   scrolls, codices, an engraved plate (medieval); printed pages, wax cylinders, glass plates (industrial); reels, discs, drives (modern);
 //   drives and crystals (futuristic); crystals and something that hums (the far future).
@@ -23,6 +24,7 @@
 #include "peoples.h"
 #include <memory>
 #include <vector>
+#include <functional>
 
 enum RecordMedium {
     RM_BONE = 0,   // carved bone: a tally, a flute, a sky's marks
@@ -73,8 +75,8 @@ struct RecordCatalogue {
 };
 // a people's records (the world's generator): cached by the world and the people (the last eight)
 std::shared_ptr<const RecordCatalogue> recordsOf(const BodyGen& g, int people = 0);
-// the year a record was made at the share `u` (0 .. 1) of the people's records ordered by their years: the people's eras weighed by how much
-// each age wrote and by what the years left of it
+// the year a record was made at the share `u` (0 .. 1) of the people's records ordered by their years: B-414, the years of the age the people
+// reached (`ageFromOf` to the end), weighed by what the years left of them
 int recordYear(const PeopleAge& pa, double u);
 // the age of a year of the people's count (the era it falls in; `f` how far into it, 0 its start .. 1 its end)
 int recordAgeAt(const PeopleAge& pa, int year, double* f = nullptr);
@@ -128,8 +130,11 @@ struct InstrumentSite {
     double heading = 0;
 };
 // the records a settlement, or a work, holds (`r.work` >= 0: the works' rules): deterministic from its seed, its people's records and history;
-// C-11: and the instruments lying beside its music records (a settlement's only; a stream of their own: the records are where they were)
-void recordSitesOf(const BodyGen& g, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments = nullptr);
+// C-11: and the instruments lying beside its music records (a settlement's only; a stream of their own: the records are where they were).
+// B-421: never in water: the sea read here (the planet function without its rivers, which a frame cannot wait for); `wet` (if given) the
+// water as the view draws it at a spot of the settlement's metres (its rivers and lakes too: the view asks again once it draws them near)
+void recordSitesOf(const BodyGen& g, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments = nullptr,
+                   const std::function<bool(double, double)>* wet = nullptr);
 // a record's object as forms, in the settlement's metres over the floor at its site (no colliders: it is picked up): the medium's shapes in
 // the records' banks (`FORM_PART_*` parts: bone and paper pale, wax and leather dark, ochre, clay, metal) or its people's (a stone's, a light's)
 void recordForms(const ShardSite& s, uint64_t seed, std::vector<Form>& out);

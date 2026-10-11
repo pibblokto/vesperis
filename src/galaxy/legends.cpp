@@ -1,5 +1,6 @@
 // H-06: what a people's read records told of its history (see legends.h)
 #include "legends.h"
+#include <set>
 #include <algorithm>
 #include <map>
 
@@ -46,6 +47,11 @@ void toldHistoryOf(const History& H, const ShardTexts& texts, const std::vector<
         if (t.text.empty()) continue;   // a piece, a chart: it dates its era and its age, it tells no event
         out.texts++;
         for (int ev : t.told) if (ev >= 0 && ev < (int)H.events.size()) { std::vector<int>& v = by[ev]; if (std::find(v.begin(), v.end(), i) == v.end()) v.push_back(i); }
+        {   // B-414: a late people's history tells an earlier era (its records are all of its last age's years): the era it tells is placed too
+            std::set<int> told;
+            for (int ev : t.told) if (ev >= 0 && ev < (int)H.events.size()) { const int k = H.eraAt(H.events[ev].year); if (k >= 0 && k < era) told.insert(k); }
+            for (int k : told) if (k < (int)out.eraRead.size()) out.eraRead[k]++;
+        }
         for (const std::string& n : t.rec.names) out.names.insert(n);
         for (const auto& w : t.ways) if (!out.ways.count(w.first)) out.ways[w.first] = {w.second, i};
     }

@@ -37,6 +37,11 @@ struct FacePattern {
     double litShade = 50;
     double fromV = 0;                        // no windows under this height
     double meanShare = 0.2;                  // the window's share of its cell (the far mean)
+    // R-412: the people's dress on its walls, by the face's own metres as the windows are: a surround round each window `frame` wide (a share of
+    // the cell's width; as many metres up as across) `frameShade` lighter (+) or darker (-) than the wall; shutters each side of it `shutter`
+    // wide (a share) at `shutterShade`; courses `stripe` metres high, every other one `stripeShade` off; a dado `dado` metres high `dadoShade` off
+    double frame = 0, frameShade = 0, shutter = 0, shutterShade = 0, stripe = 0, stripeShade = 0, dado = 0, dadoShade = 0;
+    double meanDress = 0;                    // the dress's mean shade over a cell (the far mean)
 };
 
 struct RasterParams {
@@ -58,7 +63,9 @@ struct RasterParams {
     bool cutout = false;          // B-315: pixels whose wobbled weight falls under a half are not drawn at all (ragged leaf clusters); the edge noise and the vertex weights as for two materials
     double quantize = 0;          // >0: snap the interpolated shade to this step (quantised gradient mode)
     double zbias = 1.0;           // B-313: the depth tested and written is iz x zbias; under 1 pushes a surface back a little (a coarser terrain ring loses to the finer one where they coincide)
-    double darken = 1.0;          // BLEND_DARKEN: multiply the existing intensity (blob shadows)
+    double darken = 1.0;          // BLEND_DARKEN: multiply the existing intensity (blob shadows, a glass's tint)
+    bool sheen = false;           // B-411: BLEND_DARKEN as tinted glass that catches a light: the face's own shade in its bank where
+                                  // that is brighter than the pixel behind darkened (the outside shows through where it outshines it)
     int maskBank = -1;            // BLEND_REFLECT: only pixels of this bank are touched; intensity = mix of old and new
     double reflectMix = 0.5;
     bool ztest = true;

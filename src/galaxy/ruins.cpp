@@ -1,6 +1,5 @@
-// C-01: the ruins of a world (see ruins.h). The monoliths of the old ones keep M4-07's draw to the bit (the same cells, kinds,
-// styles and sizes as before, so nothing moved on the worlds that had no civilisation); a civilisation's settlements take
-// the cells of its world that the monoliths left. A settlement is laid out once from the cell's hash: its class gives the
+// C-01: the ruins of a world (see ruins.h): a civilisation's settlements in the cells of its world's 2 km grid (B-417: M4-07's
+// monoliths of the old ones no longer take one in twenty of them). A settlement is laid out once from the cell's hash: its class gives the
 // number of buildings and the radius, its plan places them (a cluster, a street, rings round a centre, a grid of streets
 // with a plaza), and every building draws its own pieces from its seed: walls that stand to a share of their height by
 // its decay, a doorway with a lintel, a window, an inner wall, the columns of a hall, a roof where the culture built stone
@@ -26,10 +25,9 @@ const char* const BUILDING_KIND_NAMES[BK_COUNT] = {"HOUSE", "HALL", "TOWER", "RO
     "BLOCK", "SUBURB", "HIGHRISE", "STADIUM", "MAST", "POWER", "TANKS", "ARCOLOGY", "HABITAT", "SPIRE", "RING", "MAGLEV", "WRECK", "POD",
     "SPIKE", "HALO", "PILLARS", "SHAFT", "MONOLITH", "FOCUS", "WINDMILL", "AQUEDUCT", "TWIN TOWERS", "TUNNEL", "CRANE", "CONTAINERS", "RESERVOIR",
     "MOUND", "DAM", "DISH", "TOMB", "FORT", "BUNKER", "TEETH", "VEHICLE", "AIRCRAFT", "SHIP", "LAUNCH PAD", "HANGAR", "COLOSSUS", "TURBINE",
-    "LIGHTHOUSE", "LATTICE", "DERRICK", "BLOCKS", "SPHERE", "TETHER", "TRILITHON", "CONVEYOR"};
-static_assert(BK_CONVEYOR + 1 == BK_COUNT, "a name for every building kind");
+    "LIGHTHOUSE", "LATTICE", "DERRICK", "BLOCKS", "SPHERE", "TETHER", "TRILITHON", "CONVEYOR", "FURNITURE"};
+static_assert(BK_FURNITURE + 1 == BK_COUNT, "a name for every building kind");
 
-bool worldHasRuins(const BodyGen& g) { return g.type == PT_FELISIAN || g.type == PT_QUARTZ || g.type == PT_OCEAN || g.hasTrait(TR_CIVILISATION); }
 double ruinCellLat(const BodyGen& g) { return 2000.0 / (g.R * 1000.0); }
 
 void ruinCellOf(const BodyGen& g, double lat, double lon, int& gLat, int& gLon) {
@@ -64,7 +62,8 @@ std::unordered_map<uint64_t, Vec3> g_divides;   // a world's divide, by its seed
 }
 // the great circle: twelve poles drawn from the seed, forty-eight points along each sampled at 2 km (the sea, the inland water
 // and a dead desert's old sea count as water), the one crossing the least land kept
-Vec3 peopleDivide(const BodyGen& g) {
+Vec3 peopleDivide(const BodyGen& gSeason) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     { std::lock_guard<std::mutex> lock(g_divideMutex); auto it = g_divides.find(g.seed); if (it != g_divides.end()) return it->second; }
     DrainageOff off;
     Rng rng(mix64(g.seed ^ 0xD1F1DEULL));
@@ -284,7 +283,7 @@ void settlementSize(RuinSpec& r, Rng& rng, int& n, double& R, const Culture& c, 
 }   // namespace
 
 double settlementRadiusOf(const Culture& c, int sclass, uint64_t seed) {   // T-01
-    RuinSpec r; r.kind = RK_SETTLEMENT; r.sclass = sclass; r.seed = seed;
+    RuinSpec r; r.sclass = sclass; r.seed = seed;
     Rng rng(seed ^ 0x5E77ULL); int n; double R;
     settlementSize(r, rng, n, R, c);
     return sclass == SC_MONUMENT ? std::max(R, 12.0) : R;
@@ -328,6 +327,13 @@ struct Layout {
             default: footK = 1.06; heightK = 1.15; break;   // stepped
         }
         towerK = 0.7 + 0.8 * G.at(GV_HEIGHT);
+        if (age >= AGE_MEDIEVAL && age <= AGE_FUTURISTIC) heightK *= 0.82 + 0.56 * G.at(GV_STOREYS);   // R-412: its dwellings' storeys within its age's
+    }
+    // R-412: a house's or a villa's frontage as its people turned it to the street (a medieval or an industrial people's): its gable (a narrow,
+    // deep house, its ridge running back from the street) or its eaves (a wide, shallow one, its ridge along the street)
+    void frontage(BSpec& s) const {
+        if (!(age == AGE_MEDIEVAL || age == AGE_INDUSTRIAL) || !(s.kind == BK_HOUSE || s.kind == BK_VILLA)) return;
+        if (G.of(GV_FRONTAGE) == FR_GABLES ? s.hw > s.hd : s.hd > s.hw) std::swap(s.hw, s.hd);
     }
     double var(double lo, double span) { return lo + span * clampd(0.5 + (rng.uni() - 0.5) * spread, 0, 1); }   // a draw spread by the people's sameness
     bool fits(double x, double z, double rad) const {
@@ -432,6 +438,9 @@ struct Layout {
         const double var = G.at(GV_SAMENESS);
         if (var > 0.6 && unitFromHash(h) < (var - 0.6) * 1.5) { static const int ALT[3] = {PF_RECT, PF_CIRCLE, PF_POLYGON}; f = ALT[std::min(2, (int)(unitFromHash(mix64(h + 1)) * 3))]; }
         if (G.of(GV_PUBLIC) == PU_COURTS && age >= AGE_MEDIEVAL && (kind == BK_HOUSE || kind == BK_VILLA || kind == BK_BLOCK) && unitFromHash(mix64(h + 2)) < 0.6) f = PF_COURT;
+        // B-414: an industrial or a modern people's villas, houses and blocks on the age's plans (a rectangle, an L, a court); the round and the
+        // many-sided plans are the hand-made ages' and the futuristic's, kept on the people's own temples, rotundas and towers
+        if (age >= AGE_INDUSTRIAL && age <= AGE_MODERN && (kind == BK_VILLA || kind == BK_SUBURB || kind == BK_BLOCK) && (f == PF_CIRCLE || f == PF_POLYGON || f == PF_ELLIPSE)) f = PF_RECT;
         switch (kind) {
             case BK_TOWER: if (f == PF_FREE || f == PF_COURT) f = PF_RECT; break;
             case BK_HUT: if (f == PF_COURT) f = PF_RECT; break;
@@ -442,16 +451,19 @@ struct Layout {
         }
         return f;
     }
-    // A-04: what a dwelling stands on, by its people's relation to the land
+    // A-04: what a dwelling stands on, by its people's relation to the land. B-415: a pit, a cut in the rock and a terrace's kerb are the
+    // hand-made ages' (an industrial row or a modern block stands on the street); a podium (a people of mounds) and a modern block's pilotis
+    // (a people of stilts) are any age's
     int foundOf(int kind) const {
         const bool dwellingK = kind == BK_HOUSE || kind == BK_VILLA || kind == BK_SUBURB || kind == BK_BLOCK || kind == BK_ROW || kind == BK_TENEMENT || kind == BK_HUT;
         if (!dwellingK) return FD_GROUND;
+        const bool handMade = age <= AGE_MEDIEVAL;
         switch (G.of(GV_LAND)) {
             case LD_STILTS: return (kind == BK_HOUSE && age == AGE_MEDIEVAL) || (kind == BK_BLOCK && age == AGE_MODERN) ? FD_STILTS : FD_GROUND;
             case LD_MOUNDS: return FD_MOUND;
-            case LD_PITS: return FD_PIT;
-            case LD_CLIFFS: return kind == BK_HUT ? FD_PIT : FD_CUT;
-            case LD_TERRACED: return FD_TERRACE;
+            case LD_PITS: return handMade ? FD_PIT : FD_GROUND;
+            case LD_CLIFFS: return !handMade ? FD_GROUND : (kind == BK_HUT ? FD_PIT : FD_CUT);
+            case LD_TERRACED: return handMade ? FD_TERRACE : FD_GROUND;
             default: return FD_GROUND;
         }
     }
@@ -490,7 +502,7 @@ struct Layout {
     bool dwellingSpec(double d, BSpec& s) {
         const double u = rng.uni();
         const double F = footK, Hk = heightK;
-        auto set = [&](int k, double hw, double hd, double h, double t) { s.kind = k; s.hw = hw; s.hd = hd; s.h = h; s.thick = t; s.style = -1; return true; };
+        auto set = [&](int k, double hw, double hd, double h, double t) { s.kind = k; s.hw = hw; s.hd = hd; s.h = h; s.thick = t; s.style = -1; frontage(s); return true; };
         switch (age) {
             case AGE_PREHISTORIC: {
                 if (r.sclass == SC_HAMLET && u < 0.55) { double rr = var(2.0, 0.9); return set(BK_TENT_RING, rr, rr, 2.8, 0.2); }
@@ -537,7 +549,9 @@ struct Layout {
         if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && (age == AGE_INDUSTRIAL || age == AGE_MODERN) && std::sqrt(x * x + z * z) < 0.6 * std::max(1.0, r.size)) return dwelling(x, z, heading) ? 1 : 0;
         const double fxh = std::sin(heading), fzh = std::cos(heading), sxh = std::cos(heading), szh = -std::sin(heading);
         if (gr == GR_ROWS) {   // three joined side by side (the medieval houses, the prehistoric longhouses, a modern street of terraced houses)
-            const double hw = age == AGE_MODERN ? 3.4 : (age == AGE_PREHISTORIC ? 2.2 : 2.7), hd = age == AGE_MODERN ? 5.0 : (age == AGE_PREHISTORIC ? 5.5 : 3.6), step = 2 * hw + 0.05;
+            double hw = age == AGE_MODERN ? 3.4 : (age == AGE_PREHISTORIC ? 2.2 : 2.7), hd = age == AGE_MODERN ? 5.0 : (age == AGE_PREHISTORIC ? 5.5 : 3.6);
+            if (age == AGE_MEDIEVAL && G.of(GV_FRONTAGE) == FR_EAVES) std::swap(hw, hd);   // R-412: their eaves to the street
+            const double step = 2 * hw + 0.05;
             if (!fits(x, z, std::sqrt(9 * hw * hw + hd * hd) + 1.0)) return 0;
             const int kind = age == AGE_MODERN ? BK_SUBURB : (age == AGE_PREHISTORIC ? BK_LONGHOUSE : BK_HOUSE);
             const double h = age == AGE_MODERN ? 5.8 : (age == AGE_PREHISTORIC ? 1.8 : var(2.8, 0.6) * heightK);
@@ -548,6 +562,7 @@ struct Layout {
                 if (kind == BK_LONGHOUSE) { if (add(kind, ox * 1.0 + sxh * k * 1.6, oz + szh * k * 1.6, heading, hw, hd, h, 0.8, false)) placed++; }   // a longhouse's walls of turf apart
                 else if (add(kind, ox, oz, heading, hw, hd, h, 0.45, false)) placed++;
                 if (kind == BK_HOUSE && placed) r.buildings.back().door = 0;   // their doorways to the street
+                if (placed) r.buildings.back().joined = true;   // R-412
             }
             rectNext = false;
             return placed;
@@ -578,6 +593,7 @@ struct Layout {
             else { if (add(BK_HOUSE, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.45, false)) { placed++; if (r.buildings.back().form == PF_RECT || r.buildings.back().form == PF_FREE) r.buildings.back().door = 0; } }
         }
         if (placed == 0) return 0;
+        for (size_t i = r.buildings.size() - placed; i < r.buildings.size(); i++) r.buildings[i].joined = true;   // R-412: round their court
         for (int s = -1; s <= 1; s += 2)   // the court's walls on its two open sides (its gap to the street)
             add(BK_WALL, x + sxh * s * (R + 0.6) + fxh * 0.5, z + szh * s * (R + 0.6) + fzh * 0.5, heading + PI / 2, R * 0.55, 0.3, age == AGE_PREHISTORIC ? 1.0 : 1.4, 0.6, false);
         return placed;
@@ -832,10 +848,11 @@ void addFeatures(Layout& L, RuinSpec& r, const Culture& c) {
 
 // ---- T-02: the towns ------------------------------------------------------------------------------------------------------------
 
-// what is known of a place's past: the ages it was built in, inside out (the old core first, the last its own), the years before its people's
-// end it was left (0: used to the end), its founding year (the history's; 0 the countryside's), the old stones raised in its fields and how
-// long before the end
-struct TownHist { std::vector<int> ages; double before = 0, stonesYears = 0; int founded = 0; bool stones = false; };
+// what is known of a place's past: the ages it was built in, inside out (B-414: one, its people's last: a world shows the age its people
+// reached alone, T-02's old cores and a place left in an older age's way are gone with that age), the years before its people's end it was
+// left (0: used to the end), its founding year (the history's; 0 the countryside's), and whether it was left before its people's last age
+// began (`gone`: nothing of it on the ground)
+struct TownHist { std::vector<int> ages; double before = 0; int founded = 0; bool gone = false; };
 
 std::shared_ptr<const WorldPlan> planFor(const BodyGen& g);   // below
 
@@ -864,17 +881,59 @@ std::vector<double> planExits(const BodyGen& g, const RuinSpec& r) {
 }
 // a village's, a town's or a city's plan as its ages built it (see towns.h): its layers, its centre and its square, its streets, its buildings
 // along them by district (each layer in its age's way, the people's genome through it), its wall and gates, its works of the water and the
-// land, its fields, the old stones beyond them. `n` the buildings its class asks for (a city's the plan's), `R` its reach
+// land, its fields. `n` the buildings its class asks for (a city's the plan's), `R` its reach. B-414: one layer, its people's last age
+// R-412: the people's street furniture (`GV_FURNITURE`; `BK_FURNITURE`, its style the `Furniture`): a town's well, fountain or figure in each
+// square and beside the middle of each long main street, its lamps along its main streets and round its squares; a futuristic people's
+// round its great structures. Laid last, by a stream of its own (nothing of the plan moves for it)
+void placeFurniture(Layout& L, RuinSpec& r, double R) {
+    const int fu = L.G.of(GV_FURNITURE), age = L.age;
+    if (fu == FU_NONE || age < AGE_MEDIEVAL || age > AGE_FUTURISTIC) return;
+    Rng rng(r.seed ^ 0xF0412ULL);
+    const double S = fu == FU_FOUNTAINS ? (age == AGE_MODERN ? 3.2 : 2.7) : (fu == FU_WELLS ? 1.0 : (fu == FU_STATUES ? 1.0 : 0.25));
+    auto put = [&](double x, double z, double heading) {
+        const size_t n0 = r.buildings.size();
+        if (!L.add(BK_FURNITURE, x, z, heading, S, S, fu == FU_LAMPS ? 4.0 : 2.0, 0.3, true, fu)) return false;
+        r.buildings[n0].district = 0;
+        return true;
+    };
+    int lamps = 0, pieces = 0;
+    if (r.streets.empty()) {   // a futuristic people's: round its middle, past its great structure
+        const int n = fu == FU_LAMPS ? 10 : 3;
+        for (int k = 0; k < n; k++) {
+            const double a = r.heading + (k + 0.5) * TAU / n;
+            for (int q = 0; q < 8; q++) { const double d = R * (0.2 + 0.1 * q) + 6 * rng.uni(); if (put(std::sin(a) * d, std::cos(a) * d, a + PI)) break; }
+        }
+        return;
+    }
+    for (const Plaza& p : r.plazas) {
+        if (fu == FU_LAMPS) { for (int k = 0; k < 4 && lamps < 60; k++) { const double a = PI / 4 + k * PI / 2; if (put(p.x + std::sin(a) * p.r * 0.85, p.z + std::cos(a) * p.r * 0.85, a)) lamps++; } continue; }
+        static const double OFF[5][2] = {{0, 0}, {0.5, 0}, {-0.5, 0}, {0, 0.5}, {0, -0.5}};
+        for (int t = 0; t < 5 && pieces < 12; t++) if (put(p.x + OFF[t][0] * p.r, p.z + OFF[t][1] * p.r, std::atan2(-p.x, -p.z + 1e-9))) { pieces++; break; }
+    }
+    for (const Street& s : r.streets) {
+        if (s.rank < SR_MAIN) continue;
+        const double len = std::hypot(s.bx - s.ax, s.bz - s.az);
+        if (len < 20) continue;
+        const double ux = (s.bx - s.ax) / len, uz = (s.bz - s.az) / len, nx = -uz, nz = ux;
+        if (fu == FU_LAMPS) {
+            int side = 1;
+            for (double t = 8; t < len - 6 && lamps < 60; t += 22, side = -side)
+                if (put(s.ax + ux * t + nx * side * (s.half + 0.8), s.az + uz * t + nz * side * (s.half + 0.8), std::atan2(-nx * side, -nz * side))) lamps++;   // at the kerb, before the yards' bounds
+        } else if (len > 50 && pieces < 12) {
+            const double t = len * (0.35 + 0.3 * rng.uni()), off = s.half + S + 0.8;
+            const int side = rng.chance(0.5) ? 1 : -1;
+            if (put(s.ax + ux * t + nx * side * off, s.az + uz * t + nz * side * off, std::atan2(-nx * side, -nz * side))) pieces++;
+        }
+    }
+}
+
 void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R, const TownHist& th, double luckS) {
     const Genome& G = c.genome;
     const int nl = (int)th.ages.size(), townAge = th.ages.back();
     const bool big = r.sclass == SC_CITY || r.sclass == SC_CAPITAL, village = r.sclass == SC_VILLAGE;
-    // a place left early: its older age's size (a futuristic people's great place left in an older age a city of that age)
-    const int rc = c.age >= AGE_FUTURISTIC && r.sclass == SC_TOWN && townAge < c.age ? SC_CITY : r.sclass;
-    const double Rt = c.age >= AGE_FUTURISTIC && townAge < c.age ? std::min(R, classRadiusIn(rc, townAge) * (0.9 + 0.2 * unitFromHash(mix64(r.seed ^ 0x7052ULL))))
-                                                                 : std::max(30.0, R * classRadiusIn(r.sclass, townAge) / classRadiusIn(r.sclass, c.age));
+    const double Rt = std::max(30.0, R * classRadiusIn(r.sclass, townAge) / classRadiusIn(r.sclass, c.age));
     const double h0 = r.heading;
-    r.buildAge = townAge != c.age ? townAge : -1;
+    r.buildAge = -1;   // B-414: its people's own age
     // the layers, each its ring and its builder: the people's genome through the layer's age, weathered from when the place was left
     std::vector<Culture> lc(nl);
     std::vector<std::unique_ptr<Layout>> LL;
@@ -1039,6 +1098,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         if (grouping == GR_COMPOUNDS && age <= AGE_MODERN && age != AGE_INDUSTRIAL && di == DI_HOUSES && !(big && dd < 0.6)) { kind = 1; sp.hw = sp.hd = (age == AGE_MODERN ? 9.0 : 6.5) + 2.5; return true; }
         if ((grouping == GR_ROWS || mainFront) && age == AGE_MEDIEVAL && Lk.rng.uni() < 0.85) {   // a row's houses joined along the street, gabled cell by cell where the people built in cells
             set(BK_HOUSE, 2.7 * (0.95 + 0.1 * Lk.rng.uni()), 3.6 * (0.92 + 0.16 * Lk.rng.uni()), Lk.var(2.8, 0.6) * Hk, 0.45);
+            Lk.frontage(sp);   // R-412
             sp.rect = true;
             if (big) sp.h *= 0.85 + 0.55 * (1 - dd);
             return true;
@@ -1047,12 +1107,15 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         if (sp.kind == BK_HOUSE || sp.kind == BK_ROW || sp.kind == BK_TENEMENT || sp.kind == BK_BLOCK || sp.kind == BK_VILLA) sp.h *= big ? 0.85 + 0.55 * (1 - dd) : 0.92 + 0.2 * (1 - dd);
         return true;
     };
-    auto setback = [&](int di, int age, int kind) {
-        if (kind == BK_VILLA || kind == BK_SUBURB) return 5.0 + 3.0 * rng.uni();
+    // R-412: how far a medieval, an industrial or a modern people set its houses back from the street (`GV_SETBACK`): at its edge, or in
+    // front yards and gardens
+    auto setback = [&](int di, int age, int kind, const Genome& G) {
+        const double S = age >= AGE_MEDIEVAL && age <= AGE_MODERN ? G.at(GV_SETBACK) : 0.3;
+        if (kind == BK_VILLA || kind == BK_SUBURB) return (4.0 + 3.0 * rng.uni()) * (0.6 + 0.8 * S);
         switch (di) {
             case DI_TOWERS: return 6.0 + 6.0 * rng.uni();
             case DI_WORKS: case DI_HARBOUR: return 3.0 + 3.0 * rng.uni();
-            default: return age <= AGE_MEDIEVAL ? 0.6 : (age == AGE_INDUSTRIAL ? 1.2 : 3.0);
+            default: return age <= AGE_MEDIEVAL ? 0.4 + 4.5 * S * S : (age == AGE_INDUSTRIAL ? 0.8 + 5.0 * S * S : 2.0 + 7.0 * S * S);
         }
     };
     auto gapAfter = [&](int di, int age, int kind) {
@@ -1105,9 +1168,18 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         return da != db ? da < db : a < b;
     });
     int placed = 0, gardens = 0;
+    const Street* lotStreet = nullptr;
+    // a lot's building fronting its street: a house's door to it (R-412: before its pieces, a porch among them, are tested against the streets),
+    // its front yard's depth to it
+    auto fronting = [&](size_t i, double off) {
+        Building& b = r.buildings[i];
+        if (b.kind == BK_HOUSE && b.form != PF_FREE && b.form != PF_COURT) b.door = 0;
+        b.yard = std::max(0.0, off - lotStreet->half - b.hd);
+    };
     for (int si : order) {
         if (placed >= cap) break;
         const Street s = r.streets[si];
+        lotStreet = &s;
         if (s.rank == SR_RING) continue;
         const double L = std::hypot(s.bx - s.ax, s.bz - s.az);
         if (L < 6) continue;
@@ -1130,7 +1202,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                 if (Lk.rng.uni() > p0 * density(di, age, qr / Rt) * rankK) { t += 2 * sp.hw + gapAfter(di, age, sp.kind); continue; }   // an empty lot: a yard, a gap
                 const double along = t + sp.hw;
                 if (along + sp.hw > L - 1) break;
-                const double sb = setback(di, age, sp.kind), heading = std::atan2(-nx * side, -nz * side);
+                const double sb = setback(di, age, sp.kind, Lk.G), heading = std::atan2(-nx * side, -nz * side);
                 double off = s.half + sb + sp.hd;
                 double cx = s.ax + ux * along + nx * side * off, cz = s.az + uz * along + nz * side * off;
                 const double reach = std::sqrt(sp.hw * sp.hw + sp.hd * sp.hd);
@@ -1156,6 +1228,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                         ok = Lk.add(sp.kind, cx, cz, heading, sp.hw, sp.hd, sp.h, sp.thick, true, sp.style);
                     }
                     Lk.arcadeNext = false;
+                    if (ok) fronting(before, off);   // R-412: its door to the street before its pieces are tested against the streets
                 }
                 if (ok) {   // its own pieces off the street (a chimney, a bank, a jetty past its footprint): set back by as much once, else not built
                     const double in1 = Lk.intrusion(before, r.site);
@@ -1167,6 +1240,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                             cx = s.ax + ux * along + nx * side * off; cz = s.az + uz * along + nz * side * off;
                             Lk.rectNext = sp.rect;
                             if ((lr != walledK || std::hypot(cx, cz) + reach <= wallR - 1.5) && Lk.add(sp.kind, cx, cz, heading, sp.hw, sp.hd, sp.h, sp.thick, true, sp.style)) {
+                                fronting(before, off);
                                 if (Lk.intrusion(before, r.site) > 0) Lk.undoTo(before); else ok = true;
                             }
                             Lk.rectNext = false;
@@ -1179,7 +1253,8 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                 for (size_t i = before; i < r.buildings.size(); i++) {
                     Building& b = r.buildings[i];
                     b.district = di;
-                    if (kind == 0 && i == before && b.kind == BK_HOUSE && b.form != PF_FREE && b.form != PF_COURT) b.door = 0;   // its door to the street
+                    if (kind == 1 || (di != DI_TOWERS && di != DI_WORKS && di != DI_HARBOUR && ((age == AGE_INDUSTRIAL && b.kind == BK_ROW) || (age <= AGE_MEDIEVAL && (grouping == GR_ROWS || (mainFront && b.kind == BK_HOUSE))))))
+                        b.joined = true;   // in a row or a compound
                     if (i == before && kind == 0) hwNow = std::max(hwNow, b.hw);
                 }
                 placed += kind == 3 ? 0 : (int)std::max<size_t>(1, r.buildings.size() - before);
@@ -1267,21 +1342,9 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
     const double rSaved = r.size; r.size = Rt;
     addFeatures(Lo, r, Lo.c);
     r.size = rSaved;
-    // the old stones in its fields (a later people's prehistoric work: a stone circle, a row, a dolmen), weathered since they were raised
-    if (th.stones) {
-        const Culture pc = cultureAtAge(c, AGE_PREHISTORIC, th.stonesYears);
-        Layout Lp(r, pc, 0x5701ULL); Lp.grid = &bg; Lp.sgrid = &sg; Lp.streets = &r.streets;
-        MonPick m; pickMonument(pc, Lp.rng, m);
-        const double reach = monumentReach(m, pc.tall);
-        for (int tries = 0; tries < 12; tries++) {
-            const double a = Lp.rng.uni() * TAU;
-            if (shoreNear && std::fabs(std::remainder(a - st.shoreDir, TAU)) < 1.0) continue;
-            const double d = Rt + reach + 25 + 60 * Lp.rng.uni();
-            if (Lp.add(m.kind, std::sin(a) * d, std::cos(a) * d, a, m.hw, m.hd, m.hWall, 0.5, true, m.kind == BK_FOCUS || m.kind == BK_STELA ? m.style : -1)) { r.buildings.back().before = th.stonesYears; break; }
-        }
-    }
     // the fields round it
     townFields(T, townAge, st, g.type == PT_DESERT, r.fields);
+    placeFurniture(Lo, r, Rt);   // R-412
 }
 
 void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const TownHist* th = nullptr) {
@@ -1302,15 +1365,6 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
         const int townAge = t.ages.back();
         if ((r.sclass == SC_VILLAGE || townOrGreater(r.sclass)) && townAge >= AGE_MEDIEVAL && townAge <= AGE_MODERN) {
             layoutTown(r, c, g, n, R, t, L.luckS);
-            return;
-        }
-        if (townAge != c.age) {   // a camp or a hamlet of an older age (left early): in that age's way, all of it, within the reach the finders read
-            const Culture oc = cultureAtAge(c, townAge, t.before);
-            TownHist one; one.ages.push_back(townAge); one.before = t.before; one.founded = t.founded;
-            r.buildings.clear();
-            layoutSettlement(r, oc, g, &one);
-            r.buildAge = townAge;
-            r.size = std::max(r.size, R);
             return;
         }
     }
@@ -1606,6 +1660,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
             for (int k = 0, made = 0; k < 12 && made < 3; k++) { const double a = rng.uni() * TAU, d = R * (0.3 + 0.6 * rng.uni()); if (L.add(BK_PORTAL, std::sin(a) * d, std::cos(a) * d, a, 2.4, 3.5, 4.8, 0.8, true)) made++; }
     }
     addFeatures(L, r, c);   // C-08: after the plan and the wall, so the earlier draws stay where C-01 left them
+    if (c.age == AGE_FUTURISTIC && r.plan == SP_GREAT && r.sclass != SC_HAMLET) placeFurniture(L, r, R);   // R-412
 }
 }   // namespace
 
@@ -1615,7 +1670,8 @@ bool settlementClear(const RuinSpec& r, double x, double z, double margin) { ret
 // sixteen directions at the radius (the slope and its fall, the highest ground), then out to 240 m past the edge for the
 // nearest water or old sea out to 500 m past the edge (the shore bisected between the last dry sample and the first wet); the wind by the dune fields'
 // rule (the world's angle, flipped per hemisphere, turned per 30-degree band) as a heading
-SiteRead readSite(const BodyGen& g, const RuinSpec& r) {
+SiteRead readSite(const BodyGen& gSeason, const RuinSpec& r) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     DrainageOff off;
     SiteRead st;
     st.desert = g.type == PT_DESERT;
@@ -1698,65 +1754,38 @@ std::shared_ptr<const WorldPlan> planFor(const BodyGen& g) {
     if (!plan || seed != g.seed) { plan = worldPlanOf(g); seed = g.seed; }
     return plan;
 }
-// T-01: the countryside's shares a cell (hamlets, villages, market towns, a lone monument in the old ones' band) where the plan's density
-// is full (the medieval age's C-01's, a little thinner: its towns are the plan's), by the age
+// T-01: the countryside's shares a cell (hamlets, villages, market towns, a lone monument in the draw's first twentieth) where the plan's
+// density is full (the medieval age's C-01's, a little thinner: its towns are the plan's), by the age
 const double COUNTRYSIDE[AGE_COUNT][4] = {{0.05, 0.03, 0.0, 0.6}, {0.16, 0.10, 0.02, 0.4}, {0.12, 0.10, 0.04, 0.3}, {0.08, 0.08, 0.04, 0.3}, {0.03, 0, 0, 0}, {0, 0, 0, 0}};
 }
 
 namespace {
-// T-02: a place of the plan's past from its people's history (its system found again from the world's star, `historyOfWorld`): the ages
-// it was built in from its founding to its end (a place left early: to the age it was left in), the years before the end it was left, the
-// old stones in the fields of the capital (and a third of the cities) of a people that passed its old time
-TownHist placeHist(const BodyGen& g, const Culture& c, int people, int rank, uint64_t seed) {
+// T-02: a place of the plan's past from its people's history (its system found again from the world's star, `historyOfWorld`): its founding
+// and the years before the end it was left. B-414: it stands in its people's last age's way whatever age founded it, and a place left
+// before that age began is gone (its cell holds nothing: its records, its works and its dead went with it)
+TownHist placeHist(const BodyGen& g, const Culture& c, int people, int rank) {
     TownHist t;
+    t.ages.push_back(c.age);
     const std::shared_ptr<const History> H = historyOfWorld(g, people);
-    if (!H || rank < 0 || rank >= (int)H->places.size() || H->places[rank].plan != rank) { t.ages.push_back(c.age); return t; }
+    if (!H || rank < 0 || rank >= (int)H->places.size() || H->places[rank].plan != rank) return t;
     const HistoryPlace& hp = H->places[rank];
     t.founded = hp.founded;
-    int endAge = c.age;
-    if (hp.fate == HP_EARLY) { t.before = std::max(0, H->last - hp.ended); const int e = H->eraAt(hp.ended); endAge = e >= 0 ? H->eras[e].age : hp.age; }
-    for (const HistoryEra& E : H->eras) if (E.age >= hp.age && E.age <= endAge && (t.ages.empty() || t.ages.back() != E.age)) t.ages.push_back(E.age);
-    if (t.ages.empty()) t.ages.push_back(endAge);
-    const bool oldTime = !H->eras.empty() && H->eras.front().age == AGE_PREHISTORIC && c.age > AGE_PREHISTORIC;
-    t.stones = oldTime && c.age < AGE_FUTURISTIC && (rank == 0 || unitFromHash(mix64(seed ^ 0x7050ULL)) < 0.3);
-    t.stonesYears = std::max(0, H->last - H->first);
+    if (hp.fate == HP_EARLY) {
+        if (hp.ended < ageFromOf(H->profile)) t.gone = true;
+        else t.before = std::max(0, H->last - hp.ended);
+    }
     return t;
 }
-// the people's ages, kept a thread (the countryside's cells are asked for in runs)
-const PeopleAge& peopleAgeFor(const BodyGen& g, int people) {
-    thread_local uint64_t seed = 0; thread_local int which = -1; thread_local PeopleAge pa;
-    if (seed != g.seed || which != people) { pa = peopleAgeOf(g, people); seed = g.seed; which = people; }
-    return pa;
-}
-// T-02: a countryside settlement's past from its people's ages alone (the finders read its size without the history): a later people's
-// village or town founded in an older age at the history's shares (its old core that age's way), one in twelve of the older ones left early
-// in the age it was founded in; a hamlet its people's own age unless left early; a later people's lone monument a megalith of its old time
-// three times in five
-TownHist countrysideHist(const BodyGen& g, const Culture& c, int people, int sclass, uint64_t seed) {
+// T-02: a countryside settlement's past: B-414, its people's own age, used to the end (T-02 drew a later people's villages round an older
+// core and its lone monuments as megaliths of its old time: those ages are not on the ground now)
+TownHist countrysideHist(const Culture& c) {
     TownHist t;
-    const int a = c.age;
-    if (sclass == SC_MONUMENT) {
-        const bool stone = a > AGE_PREHISTORIC && a < AGE_FUTURISTIC && unitFromHash(mix64(seed ^ 0x7042ULL)) < 0.6;
-        t.ages.push_back(stone ? AGE_PREHISTORIC : a);
-        if (stone) { const PeopleAge& pa = peopleAgeFor(g, people); t.before = std::max(0, pa.lastYear - (pa.eras.empty() ? 1 : pa.eras.front().end)); }
-        return t;
-    }
-    if (a <= AGE_MEDIEVAL || a >= AGE_FUTURISTIC) { t.ages.push_back(a); return t; }
-    const double u1 = unitFromHash(mix64(seed ^ 0x7040ULL)), u2 = unitFromHash(mix64(seed ^ 0x7041ULL));
-    const int found = a == AGE_INDUSTRIAL ? (u1 < 0.72 ? AGE_MEDIEVAL : AGE_INDUSTRIAL) : (u1 < 0.55 ? AGE_MEDIEVAL : (u1 < 0.8 ? AGE_INDUSTRIAL : AGE_MODERN));
-    if (found < a && u2 < 0.08) {   // left early, in the age it was founded in
-        const PeopleAge& pa = peopleAgeFor(g, people);
-        for (const Era& E : pa.eras) if (E.age == found) { const int left = E.start + (int)((E.end - E.start) * (0.3 + 0.6 * unitFromHash(mix64(seed ^ 0x7043ULL)))); t.before = std::max(0, pa.lastYear - left); }
-        t.ages.push_back(found);
-        return t;
-    }
-    if (sclass == SC_HAMLET) { t.ages.push_back(a); return t; }
-    for (int k = found; k <= a; k++) t.ages.push_back(k);
+    t.ages.push_back(c.age);
     return t;
 }
 
 bool cellSettlement(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool withBuildings) {
-    if (!worldHasRuins(g)) return false;
+    if (!worldHadCivilisation(g)) return false;
     double dLat = ruinCellLat(g);
     double latc = (gLat + 0.5) * dLat;
     if (std::fabs(latc) > PI / 2 - dLat) return false;
@@ -1765,12 +1794,10 @@ bool cellSettlement(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool wi
     int gl = ((gLon % nLon) + nLon) % nLon;
     uint64_t h = hash2i(gLat, gl, g.seed ^ 0x2711);
     double u = unitFromHash(h);
-    bool civ = g.hasTrait(TR_CIVILISATION);
-    bool oldOnes = g.type == PT_FELISIAN || g.type == PT_QUARTZ || g.type == PT_OCEAN;
     // T-01: a place of the world's plan stands in this cell: the capital, a city, a town, a band's seat, a great place, a work
-    const std::shared_ptr<const WorldPlan> plan = civ ? planFor(g) : nullptr;
-    const PlanPlace* pl = plan ? planPlaceIn(*plan, gLat, gl) : nullptr;
-    if (!pl && u > 0.05 && (!civ || u > 0.35)) return false;
+    const std::shared_ptr<const WorldPlan> plan = planFor(g);
+    const PlanPlace* pl = planPlaceIn(*plan, gLat, gl);
+    if (!pl && u > 0.35) return false;
     out.buildings.clear();
     out.lat = (gLat + 0.2 + 0.6 * unitFromHash(mix64(h + 1))) * dLat;
     out.lon = (gl + 0.2 + 0.6 * unitFromHash(mix64(h + 2))) * dLon;
@@ -1778,31 +1805,22 @@ bool cellSettlement(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool wi
     out.seed = h;
     out.sclass = 0; out.plan = 0; out.walled = false; out.rank = -1; out.wanted = 0;
     if (pl) {
-        out.kind = RK_SETTLEMENT;
         out.lat = pl->lat; out.lon = pl->lon; out.people = pl->people;
         out.sclass = pl->sclass; out.rank = pl->rank; out.wanted = pl->buildings;
         if (pl->sclass == SC_CITY || pl->sclass == SC_CAPITAL) out.size = pl->radiusM;
         const Culture c = cultureOf(g, out.people);
-        out.style = c.style;
         out.heading = orientedHeading(g, c, out.lat, out.lon, out.heading);   // A-04
-        if (withBuildings) { const TownHist th = placeHist(g, c, out.people, pl->rank, out.seed); layoutSettlement(out, c, g, &th); }   // T-02: its past from the history
+        const TownHist th = placeHist(g, c, out.people, pl->rank);   // T-02: its past from the history
+        if (th.gone) return false;   // B-414: left before its people's last age: nothing of it stands
+        if (withBuildings) layoutSettlement(out, c, g, &th);
         else { Rng rng(out.seed ^ 0x5E77ULL); int n; settlementSize(out, rng, n, out.size, c); if (out.sclass == SC_MONUMENT) out.size = std::max(out.size, 12.0); }
         return true;
     }
     const Vec3 at = StarSystem::bodyFromLatLon(out.lat, out.lon);
-    if (u <= 0.05 && oldOnes) {   // the monoliths of the old ones (M4-07's draw): a felisian world that had a people of its own keeps them (T-01: not in a city's core)
-        if (plan && planCoreAt(*plan, at, 60.0)) return false;
-        out.kind = unitFromHash(mix64(h + 4)) < 0.033 ? RK_GIANT_CUBE : (int)(unitFromHash(mix64(h + 5)) * 4);
-        out.style = (int)(unitFromHash(mix64(h + 6)) * 3);
-        out.size = out.kind == RK_GIANT_CUBE ? 40.0 : 6.0 + 8.0 * unitFromHash(mix64(h + 7));
-        return true;
-    }
-    if (!civ) return false;
-    out.kind = RK_SETTLEMENT;
     out.people = peopleAt(g, out.lat, out.lon);   // C-13: whose side of the divide the settlement stands on
     // T-01: the countryside: a cell's settlement by the plan's density here (the people's territory, its ground, the nearness of its
     // places; nothing outside the land the people held, nothing in a city's core), the age's shares (C-01's hamlets, villages and towns
-    // a medieval people's, its lone monuments in the band the old ones' monoliths take on a felisian world)
+    // a medieval people's; its lone monuments in the draw's first twentieth, B-417: on every people's world, the old ones' gone)
     const double d = planCountryside(*plan, out.lat, out.lon, out.people);
     if (d <= 0) return false;
     const int age = plan->plans[out.people > 0 && plan->peoples > 1 ? 1 : 0].age;
@@ -1814,16 +1832,10 @@ bool cellSettlement(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool wi
     else if (u <= t2) out.sclass = SC_TOWN;
     else return false;
     if (planCoreAt(*plan, at, 250.0)) return false;   // within a city's core and its edge: the city's own ground
-    const Culture c0 = cultureOf(g, out.people);
-    // T-02: its past from its people's ages (an old village's core, a town left early, a megalith of the old time); a monument is its age's
-    const TownHist th = countrysideHist(g, c0, out.people, out.sclass, out.seed);
-    const Culture c = out.sclass == SC_MONUMENT && th.ages[0] != c0.age ? cultureAtAge(c0, th.ages[0], th.before) : c0;
-    out.style = c.style;
+    const Culture c = cultureOf(g, out.people);
+    const TownHist th = countrysideHist(c);   // T-02; B-414: its people's own age (a monument too)
     if (out.sclass != SC_MONUMENT || c.age == AGE_FAR_FUTURE) out.heading = orientedHeading(g, c, out.lat, out.lon, out.heading);   // A-04
-    if (withBuildings) {
-        if (out.sclass == SC_MONUMENT) { TownHist mt; mt.ages.push_back(c.age); mt.before = th.before; layoutSettlement(out, c, g, &mt); }
-        else layoutSettlement(out, c, g, &th);
-    }
+    if (withBuildings) layoutSettlement(out, c, g, &th);
     else { Rng rng(out.seed ^ 0x5E77ULL); int n; settlementSize(out, rng, n, out.size, c); if (out.sclass == SC_MONUMENT) out.size = std::max(out.size, 12.0); }
     return true;
 }
@@ -1831,18 +1843,19 @@ bool cellSettlement(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool wi
 
 // T-01: a cell's settlement, and the plan's works that cross it (a maglev's spans on their pylons): added to its settlement's buildings, or
 // a cell of works alone (`SC_WORKS`)
-bool ruinOfCell(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool withBuildings) {
+bool ruinOfCell(const BodyGen& gSeason, int gLat, int gLon, RuinSpec& out, bool withBuildings) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     const bool has = cellSettlement(g, gLat, gLon, out, withBuildings);
     if (!withBuildings || !worldHadCivilisation(g)) return has;
     const std::shared_ptr<const WorldPlan> plan = planFor(g);
     if (!plan->works) return has;
     const int nLon = std::max(1, ruinCellsAround(g, gLat)), gl = ((gLon % nLon) + nLon) % nLon;
     std::vector<PlanSpan> spans; planSpansIn(g, *plan, gLat, gl, spans);
-    if (spans.empty() || (has && out.kind != RK_SETTLEMENT)) return has;   // none, or an old ones' monolith keeps its cell
+    if (spans.empty()) return has;
     if (!has) {   // a cell of works alone, centred on the cell
         const double dLat = ruinCellLat(g), latc = (gLat + 0.5) * dLat, dLon = dLat / std::max(std::cos(latc), 0.05);
         out = RuinSpec();
-        out.kind = RK_SETTLEMENT; out.sclass = SC_WORKS; out.plan = SP_LONE;
+        out.sclass = SC_WORKS; out.plan = SP_LONE;
         out.lat = latc; out.lon = (gl + 0.5) * dLon; out.seed = hash2i(gLat, gl, g.seed ^ 0x2711); out.people = spans[0].people; out.size = 12;
     }
     const double Rm = g.R * 1000.0, cosLat = std::max(std::cos(out.lat), 0.05);
@@ -1858,7 +1871,8 @@ bool ruinOfCell(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool withBu
     return true;
 }
 
-void settlementOf(const BodyGen& g, int gLat, int gLon, const Culture& c, int sclass, RuinSpec& out) {
+void settlementOf(const BodyGen& gSeason, int gLat, int gLon, const Culture& c, int sclass, RuinSpec& out) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     const double dLat = ruinCellLat(g), latc = (gLat + 0.5) * dLat, dLon = dLat / std::max(std::cos(latc), 0.05);
     const int nLon = (int)std::ceil(TAU / dLon), gl = ((gLon % nLon) + nLon) % nLon;
     const uint64_t h = hash2i(gLat, gl, g.seed ^ 0x2711);
@@ -1866,7 +1880,7 @@ void settlementOf(const BodyGen& g, int gLat, int gLon, const Culture& c, int sc
     out.lat = (gLat + 0.2 + 0.6 * unitFromHash(mix64(h + 1))) * dLat;
     out.lon = (gl + 0.2 + 0.6 * unitFromHash(mix64(h + 2))) * dLon;
     out.heading = unitFromHash(mix64(h + 3)) * TAU;
-    out.seed = h; out.kind = RK_SETTLEMENT; out.sclass = sclass; out.people = c.people; out.style = c.style;
+    out.seed = h; out.sclass = sclass; out.people = c.people;
     if (sclass != SC_MONUMENT || c.age == AGE_FAR_FUTURE) out.heading = orientedHeading(g, c, out.lat, out.lon, out.heading);   // A-04
     layoutSettlement(out, c, g);
 }
@@ -1878,11 +1892,11 @@ Culture cultureAs(const BodyGen& g, int people, int age, double years) {
     return c;
 }
 
-bool ruinSiteOk(const BodyGen& g, const RuinSpec& r) {
-    if (r.kind == RK_SETTLEMENT && r.sclass == SC_WORKS) return true;   // T-01: a line's pylons stand over whatever the line crosses
+bool ruinSiteOk(const BodyGen& gSeason, const RuinSpec& r) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    if (r.sclass == SC_WORKS) return true;   // T-01: a line's pylons stand over whatever the line crosses
     SurfaceSample s = sampleSurface(g, StarSystem::bodyFromLatLon(r.lat, r.lon), 64.0);
     if (s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water)) return false;
-    if (r.kind != RK_SETTLEMENT) return true;
     if (s.oldSea > 0.5) return false;   // nobody lived on the sea's floor while it was a sea
     double dAng = r.size / (g.R * 1000.0), hmin = s.height, hmax = s.height;
     for (int k = 0; k < 4; k++) {
@@ -1897,8 +1911,8 @@ bool ruinSiteOk(const BodyGen& g, const RuinSpec& r) {
 
 void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form>& out) {
     out.clear();
-    // T-02: a building of an older age (an old core's, a place left early, the old stones) in that age's way and weathered from when it was
-    // left; its windows the people's older ones (the palette's slot 3)
+    // T-02: a building left before the end (a place left early) weathered from when it was left; one of another age (a work's piece built
+    // its age's way: a modern quarry's trucks) in that age's way (B-414: a world's settlements and works are all its people's last age's)
     struct Way { int age; double before; Culture c; };
     std::vector<Way> ways;
     for (size_t i = 0; i < r.buildings.size(); i++) {
@@ -1908,10 +1922,7 @@ void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form
         const Way* w = nullptr;
         for (const Way& x : ways) if (x.age == wa && x.before == b.before) w = &x;
         if (!w) { ways.push_back({wa, b.before, cultureAtAge(c, wa, b.before)}); w = &ways.back(); }
-        const size_t first = out.size();
         buildingForms(b, w->c, r.site, lod, out, (int)i);
-        if (wa < c.age && c.palette.nWindows >= 4)
-            for (size_t k = first; k < out.size(); k++) if (out[k].pattern > 0 && out[k].pattern <= 3) out[k].pattern = 4;
     }
 }
 
@@ -1922,14 +1933,15 @@ bool buildingDoor(const Building& b, double& dx, double& dz) {   // C-03; A-03: 
     return true;
 }
 
-bool settlementClearance(const BodyGen& g, double& lat, double& lon, double marginM) {
+bool settlementClearance(const BodyGen& gSeason, double& lat, double& lon, double marginM) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     if (!worldHadCivilisation(g)) return false;
     int gLat, gLon; ruinCellOf(g, lat, lon, gLat, gLon);
     bool moved = false;
     for (int dl = -1; dl <= 1; dl++)
         for (int dn = -1; dn <= 1; dn++) {
             RuinSpec sp;
-            if (!ruinOfCell(g, gLat + dl, ruinCellLonIn(g, gLat, gLon, gLat + dl) + dn, sp, false) || sp.kind != RK_SETTLEMENT) continue;
+            if (!ruinOfCell(g, gLat + dl, ruinCellLonIn(g, gLat, gLon, gLat + dl) + dn, sp, false)) continue;
             double mPerRad = g.R * 1000.0, cosLat = std::max(std::cos(sp.lat), 0.05);
             double north = (lat - sp.lat) * mPerRad, east = std::remainder(lon - sp.lon, TAU) * mPerRad * cosLat, d = std::sqrt(north * north + east * east);
             double want = sp.size + marginM;
@@ -1939,10 +1951,10 @@ bool settlementClearance(const BodyGen& g, double& lat, double& lon, double marg
             moved = true;
         }
     // T-03: a work's ground (a quarry's pit, a reservoir, a shelter's door, a necropolis), the compact ones: out to its reach (the works when built;
-    // a line, a field of turbines or masts, a battlefield's craters and a launch site's spread are landed among)
-    if (std::shared_ptr<const WorldWorks> W = worldWorksIfReady(g)) {
-        std::vector<const Work*> near; worksNear(*W, StarSystem::bodyFromLatLon(lat, lon), marginM, near);
-        for (const Work* w : near) {
+    // a line, a field of turbines or masts, a battlefield's craters and a launch site's spread are landed among); B-418: the land's too
+    std::vector<std::shared_ptr<const Work>> near;
+    if (worksAroundIfReady(g, StarSystem::bodyFromLatLon(lat, lon), marginM, near)) {
+        for (const std::shared_ptr<const Work>& w : near) {
             if (w->radiusM > 1500 || w->kind == WO_WAY || w->kind == WO_FORT_LINE || w->kind == WO_GEOGLYPH || w->kind == WO_BATTLEFIELD || w->kind == WO_WINDFARM ||
                 w->kind == WO_ANTENNA || w->kind == WO_LAUNCH || (w->kind == WO_STRANGE && w->style == 1)) continue;
             double mPerRad = g.R * 1000.0, cosLat = std::max(std::cos(w->lat), 0.05);

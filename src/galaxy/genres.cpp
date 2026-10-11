@@ -44,6 +44,7 @@ enum RecordFact {
     F_PLAN, F_ROOF, F_ORNAMENT, F_MOTIF, F_TOPS, F_ACCENT, F_LAND, F_STREETS, F_PUBLIC, F_EDGE, F_LINKS, F_LIGHT, F_WALLS, F_HUTS, F_TOWERS,
     // H-05 (CHARTS): a chart's caption reads the way it was made and what that way shows (`shardChartRecord`, galaxy/shards.cpp)
     F_CHARTSTYLE, F_TALLY, F_TALLYKIND, F_WANDERERS, F_NUMBERED, F_PLATE, F_MAGLIMIT, F_HEARD, F_ROUTES, F_REACHED, F_PLANNED, F_FARLY, F_FARKIND, F_SIGNS,
+    F_PAST,   // B-414: the people had an age before the record's (a history's: `@past`)
     F_FIXED_COUNT
 };
 const char* const FACT_NAMES[F_FIXED_COUNT] = {
@@ -58,7 +59,8 @@ const char* const FACT_NAMES[F_FIXED_COUNT] = {
     "figs", "infig", "markhow", "named",
     "y", "y0", "y1", "gap",
     "plan", "roof", "ornament", "motif", "tops", "accent", "land", "streets", "public", "edge", "links", "light", "walls", "huts", "towers",
-    "chartstyle", "tally", "tallykind", "wanderers", "numbered", "plate", "maglimit", "heard", "routes", "reached", "planned", "farly", "farkind", "signs"};   // H-05 (CHARTS)
+    "chartstyle", "tally", "tallykind", "wanderers", "numbered", "plate", "maglimit", "heard", "routes", "reached", "planned", "farly", "farkind", "signs",   // H-05 (CHARTS)
+    "past"};   // B-414
 constexpr int NAME_FACTS = F_FOUNDERNAME + 1;
 
 // the inventions by the history's names (`historyInventionName`), each a fact while it exists: `inv.railway`
@@ -106,8 +108,8 @@ const char* const FIELD_NAMES[FD_COUNT] = {
     "age", "born", "died", "trade", "trades", "title", "role", "alive", "kin", "yourkin", "family", "dead", "reigned", "children",
     "rank", "coast", "river", "founded", "years", "stands", "gone", "far",
     "what", "verdict", "epithet", "trait", "ptrade", "landmark", "quarter"};
-enum RecordDirective { D_CAST = 0, D_NEWS, D_ENTRIES, D_YEARS, D_DEATH, D_DEED, D_LIFE, D_EVENT, D_DIGEST, D_COUNT };
-const char* const DIRECTIVE_NAMES[D_COUNT] = {"cast", "news", "entries", "years", "death", "deed", "life", "event", "digest"};
+enum RecordDirective { D_CAST = 0, D_NEWS, D_ENTRIES, D_YEARS, D_DEATH, D_DEED, D_LIFE, D_EVENT, D_DIGEST, D_PAST, D_COUNT };
+const char* const DIRECTIVE_NAMES[D_COUNT] = {"cast", "news", "entries", "years", "death", "deed", "life", "event", "digest", "past"};
 
 const VgSchema& schemaOf() {
     static const VgSchema S = [] {
@@ -790,6 +792,7 @@ struct RecordModel : VgModel {
         facts[F_TEMPER] = TEMPER_KEYS[rng.irange(5)];
         facts[F_FAR] = "0";
         facts[F_Y] = num(y); facts[F_Y0].clear(); facts[F_Y1].clear(); facts[F_GAP].clear();
+        { const int own = H.eraAt(y); bool past = false; for (int k = 0; k < own && k < (int)H.eras.size(); k++) if (H.eras[k].end >= std::max(1, H.first)) past = true; setFlag(F_PAST, past); }   // B-414
         offers();
     }
 
@@ -866,6 +869,7 @@ struct RecordModel : VgModel {
             case D_LIFE: return life(run, arg(0, "life"), std::atoi(arg(1, "3").c_str()));
             case D_EVENT: return event(run, arg(0, "any"), arg(1, "song"), std::atoi(arg(2, "15").c_str()));
             case D_DIGEST: return digest(run, arg(0, "public"), arg(1, "news"), std::atoi(arg(2, "3").c_str()));
+            case D_PAST: return past(run, std::atoi(arg(0, "4").c_str()), arg(1, "history.year"));
             default: return false;
         }
     }
@@ -1098,6 +1102,53 @@ struct RecordModel : VgModel {
         const std::vector<std::string> lastYear = facts;
         facts = saved;
         for (int k = 0; k < INV_COUNT; k++) facts[F_INV0 + k] = lastYear[F_INV0 + k];
+        fixedYear = 0; bound[E_RULER] = -1;
+        return true;
+    }
+    // B-414: `@past <n> <rule>`: a late people's history of an age before the record's (a world shows only the age its people reached, so its
+    // earlier ages are told by its own histories): one of its earlier eras since the reckoning began (year 1: the old time before it is the
+    // chroniclers' round years, no heading counts them), the record's draw, the nearer the likelier; a run of up to n of
+    // its years with something in them counting back from a year drawn in it, told in their order by `<rule>` with each year's facts and ruler
+    // bound (the era's name, its government, its age, its inventions), the empty years between by `<rule>.gap`; `<rule>.open` before them and
+    // `<rule>.close` after, with the first year's and the last year's facts. The record's own facts come back after
+    bool past(VgRun& run, int n, const std::string& rule) {
+        const int own = H.eraAt(year);
+        std::vector<int> eras; double total = 0;
+        for (int k = 0; k < own && k < (int)H.eras.size(); k++) if (H.eras[k].end >= std::max(1, H.first)) { eras.push_back(k); total += k + 1; }
+        if (eras.empty()) return false;
+        double u = run.uni() * total; int pick = eras.back();
+        for (int k : eras) { u -= k + 1; if (u < 0) { pick = k; break; } }
+        const HistoryEra& E = H.eras[pick];
+        const int lo = std::max({1, H.first, E.start}), hi = std::min(E.end, year - 1);
+        if (hi < lo) return false;
+        const int anchor = lo + std::min(hi - lo, (int)(run.uni() * (hi - lo + 1)));
+        std::vector<int> ys;
+        for (int y = anchor; y >= std::max(lo, anchor - 60) && (int)ys.size() < n; y--) if (notable(run, y, "annal")) ys.push_back(y);
+        if ((int)ys.size() < std::min(n, 2)) {   // a quiet stretch: the era's notable years further back, then forward
+            ys.clear();
+            for (int y = anchor; y >= lo && (int)ys.size() < n; y--) if (notable(run, y, "annal")) ys.push_back(y);
+            for (int y = anchor + 1; y <= hi && (int)ys.size() < n; y++) if (notable(run, y, "annal")) ys.insert(ys.begin(), y);
+        }
+        if (ys.empty()) return false;
+        std::sort(ys.begin(), ys.end());
+        const std::vector<std::string> saved = facts;
+        auto bindYear = [&](int y) { fixedYear = y; yearFacts(y); facts[F_Y] = num(y); bound[E_RULER] = -1; };
+        bindYear(ys.front());
+        if (run.has(rule + ".open")) { run.expand(rule + ".open"); run.paragraph(); }
+        for (size_t i = 0; i < ys.size(); i++) {
+            const int y = ys[i];
+            if (i > 0 && y - ys[i - 1] > 1) {
+                bindYear(y);
+                facts[F_Y0] = num(ys[i - 1] + 1); facts[F_Y1] = num(y - 1); facts[F_GAP] = num(y - ys[i - 1] - 1);
+                run.paragraph();
+                if (run.has(rule + ".gap")) run.expand(rule + ".gap");
+            }
+            if (i > 0) run.paragraph();
+            bindYear(y);
+            run.expand(rule);
+        }
+        if (run.has(rule + ".close")) { bindYear(ys.back()); run.paragraph(); run.expand(rule + ".close"); }
+        facts = saved;
         fixedYear = 0; bound[E_RULER] = -1;
         return true;
     }

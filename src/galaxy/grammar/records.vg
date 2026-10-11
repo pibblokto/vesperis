@@ -50,6 +50,7 @@ record (steady)
   (last=0 age=industrial 2.0 has:writer medium=cylinder) {genre.voice}
   (last=0 age=industrial 1.0 has:event medium=cylinder) {genre.ballad}
   (last=0 age=industrial 0.6 has:dead medium=printed) {genre.epitaph}
+  (last=0 age=industrial 0.7 has:past medium=printed|medium=codex) {genre.history}
   # ---- the modern age: printed pages, discs, reels, drives
   (last=0 age=modern 2.0 medium=printed) {genre.newspaper}
   (last=0 age=modern 0.8 medium=printed|medium=drive) {genre.mreport}
@@ -65,6 +66,7 @@ record (steady)
   (last=0 age=modern 1.0 medium=reel|medium=drive) {genre.log}
   (last=0 age=modern 2.0 has:pair medium=drive) {genre.messages}
   (last=0 age=modern 0.5 has:writer medium=disc) {genre.voice}
+  (last=0 age=modern 0.9 has:past medium=printed|medium=drive) {genre.history}
   # ---- the futuristic age: drives and crystals
   (last=0 age=futuristic 1.5 medium=drive|medium=crystal) {genre.mlog}
   (last=0 age=futuristic 1.5 has:pair medium=drive) {genre.messages}
@@ -79,6 +81,7 @@ record (steady)
   (last=0 age=futuristic 0.5 medium=crystal) {genre.chronicle}
   (last=0 age=futuristic 0.9 medium=crystal|medium=drive) {genre.lesson}
   (last=0 age=futuristic 0.6 medium=crystal|medium=drive) {genre.vote}
+  (last=0 age=futuristic 0.8 has:past medium=crystal|medium=drive) {genre.history}
   (last=0 age=farfuture 0.5 medium=crystal) {genre.lesson}
   # ---- the far future: crystals and something that hums
   (last=0 age=farfuture 1.2 medium=crystal|medium=hum) {genre.untranslatable}
@@ -90,6 +93,7 @@ record (steady)
   (last=0 age=farfuture 0.4 has:event medium=crystal) {genre.memorial}
   (last=0 age=farfuture 0.6 medium=crystal) {genre.chronicle}
   (last=0 age=farfuture 0.7 medium=hum|medium=crystal) {genre.mlog}
+  (last=0 age=farfuture 0.6 has:past medium=crystal) {genre.history}
   # ---- the collapse, from many sides (ending.vg): its witnesses come with its years (`stage`: 0 the warning .. 3 the end)
   (last=0 age>=medieval 1.6 stage>=0 has:writer medium=scroll|medium=tablet|medium=stone|medium=codex|medium=printed|medium=drive|medium=reel) {genre.warning}
   (last=0 age>=medieval age<=modern 1.0 stage>=0 stage<=1 medium=stone|medium=scroll|medium=printed|medium=disc|medium=reel) {genre.denial}

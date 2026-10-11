@@ -1,5 +1,5 @@
 // A-04 (2026-10-09): the architecture genome (`docs/ideas/IDEAS-civilisation-expansion.md`, section 3). Every people draws
-// thirty-five deep variables from its seed and keeps them through its ages, so a people that loved domes builds them in dry
+// thirty-five deep variables (R-412: fifty-one) from its seed and keeps them through its ages, so a people that loved domes builds them in dry
 // stone, in masonry, in iron and glass, in concrete and in diamond glass, and its keep and its towers are one people's; the
 // age's own variables (`techniqueOf`, the materials and heights of `galaxy/buildings.*`) are what its age could do. Each
 // variable is a number in [0, 1): a category is its share of the range (`Genome::of`), a measure the number itself. The
@@ -24,9 +24,17 @@ enum GenomeVar {
     GV_LAND, GV_ORIENT, GV_STREETS, GV_PUBLIC, GV_GROUPING, GV_EDGE, GV_LINKS,
     // meaning
     GV_FOCUS, GV_CENTRE, GV_MONUMENTS, GV_DEAD, GV_SAMENESS, GV_LASTING,
+    // R-412: the people's own within its age's ways, every one read through the age (the age speaks first: B-415). Its roofs: their pitch,
+    // their eaves, what rises from them, their gables' ends, their colour
+    GV_PITCH, GV_EAVES, GV_ROOFLINE, GV_GABLES, GV_ROOFING,
+    // its walls: their colours from house to house, the windows' surrounds, what stands out from the fronts, the doorways, the corners
+    GV_POLYCHROMY, GV_TRIM, GV_PROJECTIONS, GV_ENTRANCE, GV_CORNERS,
+    // its towns: the dwellings' storeys, which end of a house the street sees, how far back they stand, what bounds a yard, what stands in its
+    // streets and squares, a prehistoric people's poles
+    GV_STOREYS, GV_FRONTAGE, GV_SETBACK, GV_BOUNDARY, GV_FURNITURE, GV_POLES,
     GV_COUNT
 };
-static_assert(GV_COUNT == 35, "thirty-five deep variables");
+static_assert(GV_COUNT == 51, "fifty-one deep variables (A-04's thirty-five, R-412's sixteen)");
 
 enum Massing { MS_COMPACT = 0, MS_SPRAWLING, MS_VERTICAL, MS_BURIED, MS_STEPPED };
 enum PlanForm { PF_RECT = 0, PF_CIRCLE, PF_POLYGON, PF_ELLIPSE, PF_FREE, PF_COURT };   // PF_COURT: a house round an inward court (`GV_PUBLIC`)
@@ -52,6 +60,20 @@ enum Focus { FO_SPIRE = 0, FO_DOME, FO_GATE, FO_TOWER, FO_COLOSSUS, FO_MAST, FO_
 enum Centre { CE_TEMPLE = 0, CE_PALACE, CE_ASSEMBLY, CE_MARKET, CE_TOMB, CE_MACHINE };
 enum Monuments { MN_STELAE = 0, MN_OBELISKS, MN_COLOSSI, MN_ARCHES, MN_PILLARS };
 enum Dead { DE_BARROWS = 0, DE_TOMBS, DE_CEMETERIES, DE_TOWERS, DE_NOTHING };
+// R-412
+enum Eaves { EV_FLUSH = 0, EV_OVERHANGING, EV_DEEP, EV_FLARED };                          // a flat roof's slab: flush, a lip, a deep slab, a cornice
+enum Roofline { RL_PLAIN = 0, RL_DORMERS, RL_GABLETS, RL_CRESTED, RL_LANTERN };          // a flat roof's: bare, a pergola, tanks, rails, a lantern
+enum Gables { GB_PLAIN = 0, GB_STEPPED, GB_CURVED, GB_PEDIMENT, GB_HALF_HIPPED };
+constexpr int GENOME_ROOFINGS = 8;                                                        // a roofing's colour (the age's materials: thatch, tiles, slate, sheet)
+enum Polychromy { PC_UNIFORM = 0, PC_TWO_TONE, PC_VARIED, PC_STRIPED };
+enum Trim { TM_NONE = 0, TM_LIGHT, TM_DARK, TM_SHUTTERS };
+enum Projections { PJ_NONE = 0, PJ_BALCONIES, PJ_GALLERIES, PJ_BAYS, PJ_ORIELS };
+enum Entrance { EN_PLAIN = 0, EN_PORCH, EN_STEPS, EN_PORTICO, EN_CANOPY };
+enum Corners { CO_PLAIN = 0, CO_QUOINS, CO_PILASTERS, CO_TURRETS };
+enum Frontage { FR_EAVES = 0, FR_GABLES };
+enum Boundary { BD_OPEN = 0, BD_WALLS, BD_FENCES, BD_HEDGES, BD_RAILINGS };
+enum Furniture { FU_NONE = 0, FU_WELLS, FU_LAMPS, FU_FOUNTAINS, FU_STATUES };
+enum Poles { PO_NONE = 0, PO_TOTEMS, PO_BANNERS, PO_SKULLS, PO_CAIRNS };
 // the age's techniques: post and lintel, arch and vault, frame, cantilever, tension, shell, printed or grown (`techniqueOf`)
 enum Technique { TQ_POST_LINTEL = 0, TQ_ARCH_VAULT, TQ_FRAME, TQ_CANTILEVER, TQ_TENSION, TQ_SHELL, TQ_PRINTED, TQ_GROWN, TQ_COUNT };
 extern const char* const TECHNIQUE_NAMES[TQ_COUNT];
@@ -82,12 +104,13 @@ RGB genomeBase(const Genome& G);
 RGB genomeAccent(const Genome& G);
 RGB genomeTint(const Genome& G);
 RGB genomeLight(const Genome& G);   // warm lamps, or lines in the accent's light
+RGB genomeRoofing(const Genome& G, int age);   // R-412: its roofing's colour in the age's material (thatch, tiles, slate, sheet)
 
 // how far two peoples' architecture is apart on the strongest variables (0 alike .. the weights' sum), and the variables they
 // share as a line; two are alike under `GENOME_ALIKE`
 double genomeDistance(const Genome& a, const Genome& b, std::string* shared = nullptr);
 double genomeMaxDistance();
-constexpr double GENOME_ALIKE = 3.4;   // a quarter of the strongest variables' weight: two peoples sharing all of them but the weaker few
+constexpr double GENOME_ALIKE = 4.9;   // a quarter of the strongest variables' weight (R-412: 19.8 with its own): two peoples sharing all of them but the weaker few
 
 // the technique a people used in an age, drawn among the age's by the deep variables' leanings (a people of domes and vaults the
 // arch and the shell, of frames the frame, of free plans the grown)

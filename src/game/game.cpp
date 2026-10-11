@@ -495,10 +495,12 @@ std::string Game::testRoadInfo() const {   // C-09
 
 bool Game::testWalkToWork(double withinM) {   // T-03
     if (!surf.valid || surf.inVehicle() || !worldHadCivilisation(surf.site.gen)) return false;
-    const std::shared_ptr<const WorldWorks> W = worldWorksOf(surf.site.gen);
     const Vec3 here = surf.site.unitAt(surf.player.x, surf.player.z);
+    std::vector<std::shared_ptr<const Work>> near; worksAround(surf.site.gen, here, std::min(withinM, 60000.0), near);   // B-418: the land's within 60 km
+    const std::shared_ptr<const WorldWorks> W = worldWorksOf(surf.site.gen);
+    for (const Work& w : W->works) near.push_back(std::shared_ptr<const Work>(W, &w));   // and the world's wherever they are
     const Work* best = nullptr; double bd = withinM;
-    for (const Work& w : W->works) { if (!w.heard) continue; const double d = std::acos(clampd(dot(w.unit, here), -1, 1)) * W->Rm; if (d < bd) { bd = d; best = &w; } }
+    for (const std::shared_ptr<const Work>& w : near) { if (!w->heard) continue; const double d = std::acos(clampd(dot(w->unit, here), -1, 1)) * W->Rm; if (d < bd) { bd = d; best = w.get(); } }
     if (!best) return false;
     double x, z; surf.site.localAt(best->unit, x, z);
     const double r = best->radiusM + 150, dx = surf.player.x - x, dz = surf.player.z - z, d = std::max(1.0, std::hypot(dx, dz));
@@ -655,7 +657,7 @@ bool Game::testWalkToGrave() {   // C-12: a metre in front of the nearest settle
     if (!surf.valid || surf.inVehicle()) return false;
     bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT || cell.graves.empty()) return;
+        if (cell.graves.empty()) return;
         const Grave& g = cell.graves[0];
         double x = r.x + g.x, z = r.z + g.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
         if (d < bestD) { bestD = d; sx = x + std::sin(g.heading); sz = z + std::cos(g.heading); yaw = g.heading + PI; found = true; }
@@ -669,7 +671,6 @@ int Game::testWalkToRecord(int medium, bool archive) {   // T-04
     if (!surf.valid || surf.inVehicle()) return -1;
     double bestD = 1e18; int found = -1; ShardSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (const ShardSite& st : cell.shards) {
             if (surf.shardsFound.count(st.index) || (medium >= 0 && st.medium != medium) || archive != (st.archive > 0)) continue;
             const double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
@@ -720,7 +721,7 @@ int Game::testWalkToInstrument(int age) {   // C-11: before the nearest instrume
     if (!surf.valid || surf.inVehicle()) return -1;
     double bestD = 1e18; int found = -1; InstrumentSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT || cell.instrumentIds.size() != cell.instruments.size()) return;
+        if (cell.instrumentIds.size() != cell.instruments.size()) return;
         for (size_t i = 0; i < cell.instruments.size(); i++) {
             const InstrumentSite& st = cell.instruments[i];
             const int id = cell.instrumentIds[i];
@@ -739,7 +740,6 @@ int Game::testWalkToInstrument(int age) {   // C-11: before the nearest instrume
     std::vector<SurfaceView::Collider> cols;
     std::vector<std::pair<double, double>> records;   // the records not taken round it: a stand has the instrument nearer than any (E takes the nearer)
     surf.forNearbyRuins(x, z, 1, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (const ShardSite& st : cell.shards) if (!surf.shardsFound.count(st.index) && std::hypot(r.x + st.x - x, r.z + st.z - z) < 4) records.push_back({r.x + st.x, r.z + st.z});
     });
     double sx = x + dx * 1.3, sz = z + dz * 1.3, back = 1.3;
@@ -766,7 +766,6 @@ bool Game::testWalkToShard() {   // C-13: a metre from the nearest settlement's 
     if (!surf.valid || surf.inVehicle()) return false;
     bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (r.kind != RK_SETTLEMENT) return;
         for (const ShardSite& st : cell.shards) {
             if (surf.shardsFound.count(st.index)) continue;
             double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);

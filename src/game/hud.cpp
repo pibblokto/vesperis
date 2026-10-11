@@ -358,7 +358,7 @@ int Game::sectorMaxLevel() const {
 // see as a landmark and name it"): the arrows (Shift faster) and the mouse move it within the frame, C or Space bring it back to the
 // explorer; Enter marks the place under it (the name's entry; on a mark: renames it), Delete twice removes the mark under it, M puts
 // the waypoint there (on the waypoint: clears it), Tab goes to the next mark; +/- and the wheel zoom (the arrows did), R and Shift+R
-// work the scanner as on the ground
+// work the scanner as on the ground. B-412: Shift+Enter or Shift+click on a mark shows it over the view (the one shown), again hides it
 void Game::updateSectorMap(const Input& in) {
     if (in.wasPressed(KEY_EQUAL) || in.wheel > 0) sectorZoom = std::max(0, sectorZoom - 1);
     if (in.wasPressed(KEY_MINUS) || in.wheel < 0) sectorZoom = std::min(sectorMaxLevel(), sectorZoom + 1);
@@ -386,7 +386,10 @@ void Game::updateSectorMap(const Input& in) {
     }
     mapCurX = clampd(mapCurX, px - hw, px + hw); mapCurZ = clampd(mapCurZ, pz - hh, pz + hh);
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
-    if (enterKey(in) || in.mousePressed[0]) { if (onMark >= 0) beginRenameMark(onMark); else beginMark(mapCurX, mapCurZ); return; }
+    if ((enterKey(in) || in.mousePressed[0]) && in.shift()) {   // B-412
+        if (onMark >= 0) showMark(onMark);
+        else { status("NO MARK UNDER THE CURSOR", 2); audio.beep = 3; }
+    } else if (enterKey(in) || in.mousePressed[0]) { if (onMark >= 0) beginRenameMark(onMark); else beginMark(mapCurX, mapCurZ); return; }
     if (in.wasPressed(KEY_DELETE) || in.wasPressed(KEY_BACKSPACE)) {
         if (onMark >= 0 && onMark == mapDelMark && realTime < mapDelUntil) { removeMark(onMark); mapDelMark = -1; }
         else if (onMark >= 0) { mapDelMark = onMark; mapDelUntil = realTime + 3; status(fmt("REMOVE %s? DELETE AGAIN", trunc(markLabel(onMark), 24).c_str()), 3); audio.beep = 3; }
@@ -519,14 +522,14 @@ void Game::renderSectorMap() {
             double hx, hz; echoHeardAt(*heard[i].second, hx, hz);
             if (!mark(hx, hz, sx, sy)) continue;
             if (i == 0) { drawRectRGB(canvas, sx - 3, sy - 3, sx + 3, sy + 3, HUD_CYAN); fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, HUD_CYAN); }
-            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == 2 || L.sub == 3 || L.sub >= 5) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town, T-01's cities)
+            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == SC_VILLAGE || L.sub == SC_TOWN || L.sub >= SC_CITY) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town, T-01's cities)
         }
     }
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
     {   // R-408: the explorer's marks (a friend's in cyan): the glyph of what they mark (a place: a small diamond), the names of the
-        // nearest twelve where they do not run into one another
+        // nearest twelve where they do not run into one another; B-412: the one shown over the view boxed, its name first
         std::vector<std::pair<double, const SiteMark*>> shown;
-        for (const SiteMark& m : marksHere()) if (mark(m.x, m.z, sx, sy)) shown.push_back({(m.x - px) * (m.x - px) + (m.z - pz) * (m.z - pz), &m});
+        for (const SiteMark& m : marksHere()) if (mark(m.x, m.z, sx, sy)) shown.push_back({m.index == guide.shownMark ? -1.0 : (m.x - px) * (m.x - px) + (m.z - pz) * (m.z - pz), &m});
         std::sort(shown.begin(), shown.end(), [](const auto& a, const auto& b2) { return a.first < b2.first; });
         std::vector<std::array<int, 4>> boxes;
         for (size_t i = 0; i < shown.size(); i++) {
@@ -536,7 +539,7 @@ void Game::renderSectorMap() {
             const uint32_t col = armed ? (((int)(realTime * 4) & 1) ? HUD_RED : HUD_WHITE) : (gm.lent ? HUD_CYAN : HUD_WHITE);
             if (gm.kind < LM_COUNT) drawText(canvas, sx - 2, sy - 3, LANDMARK_KIND_SYMBOLS[gm.kind], col);
             else { drawLineRGB(canvas, sx - 2, sy, sx, sy - 2, col); drawLineRGB(canvas, sx, sy - 2, sx + 2, sy, col); drawLineRGB(canvas, sx + 2, sy, sx, sy + 2, col); drawLineRGB(canvas, sx, sy + 2, sx - 2, sy, col); }
-            if (m.index == onMark) drawRectRGB(canvas, sx - 4, sy - 5, sx + 4, sy + 4, HUD_AMBER);
+            if (m.index == onMark || m.index == guide.shownMark) drawRectRGB(canvas, sx - 4, sy - 5, sx + 4, sy + 4, m.index == onMark ? HUD_AMBER : col);
             if (i >= 12 || gm.name.empty()) continue;
             std::string nm = trunc(upper(gm.name), 14);
             int tw = textWidth(nm.c_str()), lx = sx + 5, ly = sy - 3;
@@ -571,26 +574,29 @@ void Game::renderSectorMap() {
         drawText(canvas, tx, oy + 40, cd < 2 * mpp ? "HERE" : fmt("%s %s", metresString(cd).c_str(), compassName(wrap2pi(std::atan2(mapCurX - px, mapCurZ - pz)))).c_str(), HUD_WHITE);
         drawText(canvas, tx, oy + 49, fmt("%.2f%s %.2f%s", std::fabs(la), la >= 0 ? "N" : "S", std::fabs(lo), lo >= 0 ? "E" : "W").c_str(), HUD_DIM);
         drawText(canvas, tx, oy + 58, fmt("S %s", sectorName(la, lo).c_str()).c_str(), HUD_CYAN);   // O2
-        if (onMark >= 0) drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
+        if (onMark >= 0) {
+            drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
+            drawText(canvas, tx, oy + 76, onMark == guide.shownMark ? "SHIFT+ENTER HIDES" : "SHIFT+ENTER SHOWS", HUD_DIM);   // B-412: over the view
+        }
         else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "THE WAYPOINT", HUD_WHITE);
     }
     {   // R-408: the scanner
-        if (scanMode < 0) drawText(canvas, tx, oy + 80, "R SCANNER OFF", HUD_DIM);
+        if (scanMode < 0) drawText(canvas, tx, oy + 89, "R SCANNER OFF", HUD_DIM);
         else {
             static const char* MODES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
-            drawText(canvas, tx, oy + 80, fmt("SCAN %s", MODES[scanMode]).c_str(), HUD_CYAN);
+            drawText(canvas, tx, oy + 89, fmt("SCAN %s", MODES[scanMode]).c_str(), HUD_CYAN);
             double hx, hz; const SurfaceView::ScanEcho* e = scanModeHere(scanMode) && surf.scanned ? scanNearest(hx, hz) : nullptr;
-            if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 89, "NONE ON THIS WORLD", HUD_DIM);
-            else if (!surf.scanned) drawText(canvas, tx, oy + 89, "SCANNING", HUD_DIM);
-            else if (!e) drawText(canvas, tx, oy + 89, "NONE IN 40 KM", HUD_DIM);
+            if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 98, "NONE ON THIS WORLD", HUD_DIM);
+            else if (!surf.scanned) drawText(canvas, tx, oy + 98, "SCANNING", HUD_DIM);
+            else if (!e) drawText(canvas, tx, oy + 98, "NONE IN 40 KM", HUD_DIM);
             else {
-                drawText(canvas, tx, oy + 89, fmt("%s %s", metresString(std::hypot(hx - px, hz - pz)).c_str(), compassName(wrap2pi(std::atan2(hx - px, hz - pz)))).c_str(), HUD_CYAN);
-                drawText(canvas, tx, oy + 98, trunc(echoDetail(*e), 17).c_str(), HUD_DIM);
+                drawText(canvas, tx, oy + 98, fmt("%s %s", metresString(std::hypot(hx - px, hz - pz)).c_str(), compassName(wrap2pi(std::atan2(hx - px, hz - pz)))).c_str(), HUD_CYAN);
+                drawText(canvas, tx, oy + 107, trunc(echoDetail(*e), 17).c_str(), HUD_DIM);
             }
-            drawText(canvas, tx, oy + 107, scanSkipMarked ? "MARKED LEFT OUT" : "MARKED HEARD (*)", HUD_DIM);
+            drawText(canvas, tx, oy + 116, scanSkipMarked ? "MARKED LEFT OUT" : "MARKED HEARD (*)", HUD_DIM);
         }
     }
-    drawText(canvas, tx, oy + 124, fmt("ELEV %+.0f", surf.player.y).c_str(), HUD_DIM);
+    drawText(canvas, tx, oy + 127, fmt("ELEV %+.0f", surf.player.y).c_str(), HUD_DIM);
     for (const FrontForecast& f : forecast) {   // W-03: the next front, or the one overhead
         if (f.tClear <= t) continue;
         const uint32_t c = f.dust ? HUD_AMBER : HUD_CYAN;
@@ -846,7 +852,7 @@ void Game::renderSurfaceHUD() {
         std::string wp = fmt("WAYPOINT %s %s", metresString(std::sqrt(dx * dx + dz * dz)).c_str(), compassName(wrap2pi(std::atan2(dx, dz))));
         drawTextShadow(canvas, UW - 8 - textWidth(wp.c_str()), 16, wp.c_str(), HUD_CYAN, HUD_SHADOW);
     }
-    drawMarksInView();   // R-408: the explorer's marks over the view
+    drawShownMark();     // B-412: the one mark the explorer shows over the view (R-408 drew the eight nearest)
     drawScanHUD();       // R-408: the scanner
     drawCommonHUD();
 }

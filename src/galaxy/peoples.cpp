@@ -200,7 +200,8 @@ void drawStages(Rng& r, int speed, double* st) {
     st[STAGE_END] = st[STAGE_CRISIS] + (1 - st[STAGE_CRISIS]) * r.range(F3[speed][0], F3[speed][1]);
 }
 // the share of a world that was land in its people's time (a dead desert's old seas were water): 64 points of a spiral at 2 km
-double landShareOf(const BodyGen& g) {
+double landShareOf(const BodyGen& gSeason) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     DrainageOff off;
     const int N = 64; int land = 0;
     for (int i = 0; i < N; i++) {

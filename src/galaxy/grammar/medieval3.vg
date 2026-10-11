@@ -137,12 +137,12 @@ med.ser.vice (share=0.7)
   A little {virtue}, every day, like water on the {fruit} trees: that is all.
 
 sermon.turn
-  (2 stage<0) So {sermon.do}, and {sermon.do}.
-  (stage<0) So {sermon.do}, and {sermon.do}, and {sermon.do}.
-  (2 stage<0) {med.ser.go}, {sermon.do}.
-  (stage<0) This {season.now}, {sermon.do}. {med.ser.small}
-  (stage<0) Before {festival}, {sermon.do}, and {sermon.do}.
-  (stage<0) {sermon.do}, and if you cannot, {sermon.do}.
+  (2 stage<=0) So {sermon.do}, and {sermon.do}.
+  (stage<=0) So {sermon.do}, and {sermon.do}, and {sermon.do}.
+  (2 stage<=0) {med.ser.go}, {sermon.do}.
+  (stage<=0) This {season.now}, {sermon.do}. {med.ser.small}
+  (stage<=0) Before {festival}, {sermon.do}, and {sermon.do}.
+  (stage<=0) {sermon.do}, and if you cannot, {sermon.do}.
   (stage>=1) {med.ser.hard}
   (stage>=2) {med.ser.end}
   (sick=1) Visit the sick{med.ser.sick}.

@@ -237,7 +237,7 @@
 ## C-01 (2026-10-02): the civilisations' worlds
 
 * **A trait by a hash of its own, one world in eight.** `TR_CIVILISATION` is never drawn by the trait draw: `BodyGen::make` gives it to a felisian or desert world when `mix64(seed ^ 0xC1D1)` falls under 0.125, first among the traits (after the glass), so no other world's traits move and the other seven deserts in eight are deserts and nothing more (the user's rule of 2026-10-02: "not all deserts are post-apocalyptic"). The share is a balance: rarer and the scan's finders and a player's first hundred worlds find none; commoner and the signal radar (C-07) has nothing rare to find. Near home 10.5% of the felisian and 12.9% of the desert worlds have it. GEN_VERSION stays 11 (the generation changes for those worlds only, within the one unreleased bump).
-* **The ruins are a module of the galaxy, not of the view.** `galaxy/ruins.*` holds the grid, the draw and the settlements' layouts and pieces (`ruinOfCell`, `cultureOf`, `ruinElements`, `ruinSiteOk`), read by the surface view, the landmark finder and the harness alike: the old M4-07 monoliths kept their draw to the bit (the regress's 22 hashes held), the settlements took the cells the monoliths leave on a civilisation's world (hamlets 16%, villages 9%, towns 5%; a desert's lone monuments in the monoliths' 5%).
+* **The ruins are a module of the galaxy, not of the view.** `galaxy/ruins.*` holds the grid, the draw and the settlements' layouts and pieces (`ruinOfCell`, `cultureOf`, `ruinElements`, `ruinSiteOk`), read by the surface view, the landmark finder and the harness alike: the old M4-07 monoliths kept their draw to the bit (the regress's 22 hashes held), the settlements took the cells the monoliths leave on a civilisation's world (hamlets 16%, villages 9%, towns 5%; a desert's lone monuments in the monoliths' 5%). B-417 removed the monoliths (a world's ruins are its people's): the lone monuments take their twentieth on every people's world.
 * **Variety and interiors (the user's addition).** Ten building kinds and five plans, every building its own seed: walls standing to a share of their height, doorways with lintels, windows, inner walls, roofs on sound houses where the culture built stone ones, rubble at fallen walls, columns in the halls, domes on the rotundas, gates and a wall round most towns. The pieces are boxes and one dome shape, drawn at three levels of detail with the far faces culled: a walled town of 44 buildings is 275 pieces and half a millisecond at 1x. The colliders follow the pieces (rows of discs along the standing walls), so the rooms are walked into through their doorways; the unit check proves it for every house of a world and for a town's houses through the view.
 * **No ground is flattened.** Each piece stands at its own foot on the drawn ground (sunk a metre), so a settlement follows the terrain and the terrain cache is never touched; settlements keep off water, the dry seabed and slopes steeper than a quarter. Flattening the planet function under a town (a plinth) would be a generation change for every trait world and a second code path in the rings; a later milestone (C-08, the ruins that read the world) can add it if the slopes look wrong.
 * **The dead desert world's seas and rivers.** A trait desert's seas stood at `oldSeaM` (-120..100 m), on the coarse ground with its canyons (a canyon under the level was a sound of the sea); the bed is a sediment floor keeping a tenth of the relief, the shore a band of 3 m of the coarse ground (a scarp on a sloping coast, a ramp on a flat one), the land within 40 m over the level pulled to a bench (the coastal flats). The drainage reads the bed as the sea, so the wadis end at the old shore and the flood has its outlets there; the net is denser (`riverDensity` 0.8, moist 0.75). The bed is the rock material at a low albedo (dark basins from orbit), salt only in the deeps (over 420-570 m): a first version of the salt put it on two thirds of the bed and read as snow.
@@ -1452,3 +1452,239 @@ same day; `docs/reference/12-civilisations.md` ("Each people its own") has the p
   `game/instrument_draw.cpp`; changed: `galaxy/music.*` (`InstrumentMake`, `Timbre::make`, `Tradition::makes` and `machine`), the forms
   (the plate, the cable's floor), the forms' drawing (a line's bank), the view (an instrument's name, its small parts far off), the HUD, the
   guide's log, the case. KI-389 new.
+
+## B-411 (2026-10-10): the glass is the hull's alone
+
+* **The hull is glass, the room is not.** M2 drew a depolarised hull by darkening every face of the cabin, and the consoles, the
+  back wall's sets, the case and the desk are faces like the walls: the room went to glass with the hull, and the light, which works
+  through the hull's ramp and the faces' shades, had nothing left to light. The glass is the hull's now (the floor, the ceiling, the
+  walls, the pillars and the mullions; the deck's rim seen from the roof); what stands in the room is drawn solid, lit as with a
+  polarised hull. The screens, the cage and the capsule were solid already.
+* **The glass catches the light.** `BLEND_DARKEN` with `RasterParams::sheen` (`core/raster.*`): the pixel behind darkened to 45%, or the
+  glass's own shade in the hull's bank where that is the brighter, the light's level times 16 (`GLASS_SHEEN`). Lit, the glass shows the room's shape as a faint
+  sheen with whatever outshines it showing through; unlit, it is clear: the light becomes the glass hull's own control (off to see out),
+  as a lit room's windows at night. The brighter of the two keeps the outside's bank where it wins (`BLEND_MAX` would repaint a star
+  in the hull's grey). A flag on the darkening, not a blend of its own: a fifth case in the blends' chain put a compare before every
+  opaque pixel (the compiler tested it first), and in four alternating pairs of `bench check` against the commit the people's descent
+  ran 3-10 ms slower each time (the forests and the capital a little); with the flag, two pairs came out even.
+* **The state is said where it is missed.** `Y` lies beside `U`, its status lasts three seconds, and the glass is saved with the cabin,
+  so a load comes back to it with nothing said: `U` with the hull glass says `Y POLARISES THE GLASS HULL`. The key stays (M2's, the
+  original's depolarisation) and so does the saved state (KI-390).
+* **What moved.** Nothing generated; the regress unchanged (the cabin is in no hashed frame); a polarised cabin draws as before (the
+  flow's `cabin` and `roof` frames byte-identical to the commit's). New: `RasterParams::sheen`, `Game::testCabinLights`; the flow's `cabin_glass_lit`.
+
+## B-412 (2026-10-10): one mark over the view, the explorer's choice
+
+* **None over the view until one is chosen.** R-408 drew the eight nearest marks within 25 km over the view, each a diamond, its
+  name and its distance, and nothing kept the names apart (the sector map's do keep apart): two marks in one line of sight wrote
+  their names over each other (the user's TOWERS and FALLEN CITY over a ruin), and a world with seven marks within a few kilometres
+  filled the view with them. A mark placed was over the view at once. The user: "by default there should be none and you can toggle
+  it on or off - it should be optional and no need to show more than one". This supersedes R-408's "over the view, the eight nearest
+  within 25 km". The maps keep every mark (they show what the explorer marked), and the rangefinder still names the mark the
+  crosshair rests on.
+* **Shown from the sector map, one at a time.** `Shift+Enter`, or a click with `Shift`, on a mark shows it in place of any other
+  (the user: "select it by clicking in N map, maybe with shift"); on the shown one it hides it; on no mark it says `NO MARK UNDER THE
+  CURSOR`. A plain Enter or click still marks and renames. The map boxes the shown mark in its colour and draws its name first, so
+  neither the twelve names nor a collision drops it, and the panel says `SHIFT+ENTER SHOWS` or `HIDES` under the mark at the cursor
+  (the scanner's lines a row lower). There is no key for it on the ground: the map is where marks are made, named and removed.
+* **At any distance, and on the compass.** The shown mark is drawn wherever it stands on the world (the 25 km went with the eight:
+  the explorer chose it), and a hollow diamond on the compass strip gives its bearing, an arrow at the strip's end beyond sixty
+  degrees (the scanner's echo, filled and cyan, is drawn the same way by `drawCompassMark`). One mark over the view must be found
+  when it is behind the explorer, or the choice looks lost.
+* **Kept in the guide.** `Guide::shownMark`, an index in the marks written as a `shownmark` line after them (a guide without the line
+  shows none; an older version reads past it). A removal before it moves it down and its own removal clears it. The guide holds the
+  marks, so the choice goes with them across the save slots. A friend's export carries the line, and the import does not read it.
+* **What moved.** Nothing generated; the regress unchanged (no mark is in a hashed frame). `game/marks.cpp` (`shownMarkHere`,
+  `showMark`, `drawShownMark`, `drawCompassMark`; `drawMarksInView` gone), `game/hud.cpp` (the map's Shift+Enter, the box, the panel's
+  line), `game/guide.*` (`shownMark`, `shownmark`), the help's `N` line (`MAP: ENTER MARKS, SHIFT+ENTER SHOWS`); the harness's
+  `testShownMark`, `testMarkOnScreen`, `testPitch` and `testYaw`, two unit checks, the flow's `mark_shown`.
+
+## B-413 (2026-10-10): the ground's sounds stay on the ground
+
+* **Nothing of a world off it.** The surface sets its sounds in `Game::audio` every frame and the synth holds each level where it
+  was last set; the space view silenced the wind, the rain and the lava only, so the breath after a sprint, the waves, the birds,
+  the leaves, the hooves, the insects and the drone's pods went on in the capsule and aboard at their last level, through a load
+  too, until another landing (the user: "that sound persists on stardrifter unless you quit the game and start it again").
+  `AudioState::surfaceOff()` sets every level the surface sets to 0, and it stands beside those levels in the struct, so a sound
+  added to the ground is added to it. The jetpack has no sound of its own (the wind rises with the height over the ground).
+* **The capsule hears none either.** It runs every frame of the descent and of the climb, so the ground's sounds fade as the capsule
+  lifts off (they went on, frozen at the last frame's levels, for the climb's seven seconds), as none was heard on the way down;
+  the capsule has its drive and the ship's hum. It runs every frame of the space view (in place of the three) and at a load, which
+  can come back to the probe's screen or a descent or a climb resumed (a ground loaded sets its own on its first frame).
+* **On the ground they go on.** The menu, the maps and the guide opened on the ground keep the ground's sounds under them: the
+  explorer is still there.
+* **What moved.** `game/audio.h` (`surfaceOff`), `game/game_states.cpp` (`updateDescentAscent`), `game/autopilot.cpp`
+  (`updateSpace`), `game/persistence.cpp` (`load`); one unit check. Nothing generated or drawn: the regress unchanged.
+
+## B-414 (2026-10-10): one age a world
+
+* **A world shows only the age its people reached.** The user found a disc in what read as a medieval village and a lattice mast over
+  its ruins, and expected "prehistoric [to] have one set of shards, medieval another set, modern its set [...] and also building
+  design"; asked whether a late people's world should keep its history in layers made legible or show its last age alone, they chose
+  the last age. This supersedes A-01's "a people passed through the ages before its own: a modern people's world keeps its medieval towns
+  as the old cores of its cities and its megaliths in the fields" (the expansion note's section 1), T-02's layers (a later people's old
+  cores, a place left early in its older way, the old time's stones, the countryside's older villages and megaliths) and T-04's dating of
+  the records over the eras. The history (H-02) keeps every era; what is on the ground is the last age's (`ageFromOf`: its first year).
+* **What was made before it is gone.** A place the history left before that age began has nothing on the ground (its cell holds nothing:
+  the view, the finders and the landing alike), and its works with it; a battle of an earlier age left no field; a work the history
+  finished in an earlier era at a place that stood on stands in the last age's way (a modern people's industrial dam a modern dam). A place
+  left early within the age keeps its weathering from when it was left.
+* **Its records were made in that age's years**, the later the likelier (`recordYear`), so the media, the categories' shares, the
+  genres, the music, the charts' ways and the instruments are that age's; a late people's earlier ages are told by its own **histories**
+  (`genre.history`, `@past`: an earlier era since year 1, a run of its years with their facts and rulers, its events in the annal's
+  register, between an opening and a closing in the last age's voice). The graves' dead died in the age's years while their place stood.
+  A guide saved before keeps its found shards by their index, their contents new (`records 3`, said once).
+* **The age speaks first on the everyday buildings, the people on its own.** A-04 kept a people's plan, roof and openings through every
+  age, and a people of polygon plans, conical roofs and triangular windows built modern suburbs that read as a medieval village. An
+  industrial or a modern people's villas, suburban houses and blocks stand on the age's plans (a rectangle, an L, a court), under the
+  age's roofs (`ageRoof`: the people's where the age built so, else hipped slate in the industrial age and a flat roof in the modern) with
+  the age's windows (sash, round-headed where the people's openings were arched, round, pointed or keyholed; wide panes and bands); the
+  people's own plan, roof and openings stay on its temples, palaces and focal accent, and its colours, accents, tops and proportions on
+  everything. The window slots are the dwellings' (0), the public and tall buildings' (1) and the people's own (2); the age before's slot
+  (3) went with the old cores.
+* **What moved.** No generation change (13 holds), as A-03, A-04, T-02 and T-04 changed the ground without one: no star, body or terrain
+  moved, and a save's place is where it was. Every civilised world's towns, works, records and graves; the regress unchanged.
+  * `galaxy/peoples.h` (`ageFromOf`), `galaxy/records.*` (`recordYear`), `galaxy/shards.*` (`Lore::ageFrom`), `galaxy/graves.*`.
+  * `galaxy/ruins.*` (`placeHist`, `countrysideHist`, `TownHist::gone`, the old stones and the older age's settlement gone, `formOf`, the
+    window slot's remap gone), `galaxy/towns.h`, `galaxy/works.*` (`placeAge`, `gone`, `ageFrom`; `eraAge` gone).
+  * `galaxy/buildings.cpp` (`culturePalette`'s windows, `ageRoof`, the mill's doorway and chimney, the slots), `galaxy/genres.cpp`
+    (`F_PAST`, `@past`), `galaxy/grammar/history.vg` (new), `records.vg` (the history in the late ages' roots), `medieval3.vg`
+    (`sermon.turn` in the warning stage), `galaxy/shards.cpp` (the file), `game/guide.*` (`records 3`).
+  * The harness: T-02's old-core check replaced by the one-age check (`towns check`), and a guide of `records 2` in the T-04 check.
+
+## B-415 (2026-10-11): each age its own vocabulary
+
+* **The age speaks first, the people second.** The user found an industrial town (BUBAS) that read as modern (white stucco, flat roofs,
+  ribbon windows) and as medieval (colonnades of stone, white chimneys standing like columns), and asked that every age be clear, "but
+  whole genome thing stays". A-04 let a people's genome speak as loudly in every age as in its own; B-414 gave the machine ages' houses
+  only their plans, roofs in place of domes and cones, and their windows' shapes. Now every age has its vocabulary (its walls, its
+  everyday roofs, its windows, its tops, its arches and domes, its colonnades, its great buildings' forms) and the genome chooses within
+  it: `ageExpressed` reads a variable as the age let the people build it, the great buildings (`greatKind`) keeping the people's forms
+  where the everyday ones take the age's. This supersedes A-04's "a people that loved domes builds them in dry stone, in masonry, in iron
+  and glass, in concrete and in diamond glass" for the everyday buildings (its great buildings still do, in each age's profile) and
+  B-414's `ageRoof` (an industrial people's flat roofs and a modern people's pitched, hipped and saddle ones kept).
+* **An industrial people builds in brick, slate, sash windows and chimneys**: its walls brick painted or not (`BRICK`, by the base); its
+  everyday roofs slate, pitched or hipped (a people of flat roofs behind a parapet), with gables of brick that outlast them and stacks with
+  pots; its windows tall sash one to a bay; its frame brick piers, its colonnades cast iron under glass, its platform a bandstand, its
+  round temple a brick rotunda under an iron saucer; no crenels, nothing pointed, no onion domes.
+* **A modern people builds flat, glazed and in concrete**: its everyday roofs flat; wide panes or bands; its frame a concrete grid; its
+  temple of its age (setbacks, shells, needles; no ziggurat, no peristyle, no onion); its focal tower a tower of the air.
+* **A medieval people's windows are small** (a third of a bay at the most), whatever its glazing; a futuristic people's arched or
+  keyholed windows portholes. Pitched roofs on walls of stone, brick or adobe have gables of the walls' own that stand after them.
+* **The genome's reach moves**: the finish no longer acts in the industrial age, the tint no longer in the modern (a modern ruin's glass
+  is gone within years), the modules act in the modern through the lift houses. Two industrial peoples' towns are nearer alike than A-04
+  drew them (KI-393).
+* **What moved.** No generation change (13 holds), as A-04 and B-414 changed the ground without one: no star, body or terrain moved. Every
+  civilised world's buildings, and its towns' layouts where a building's pieces met a street; the regress unchanged.
+  * `galaxy/buildings.*` (`ageExpressed`, `greatKind`, `archSub`, `ageDome`, `gables`, `stack`, `parapetRoof`, `Walls::parapet`,
+    `ageRoof`, `culturePalette`'s walls and windows by age, `BRICK`, the frame, `towerTop`, the industrial and modern generators, the
+    temple, the colonnade, the platform, the focal tower, the highrise's tops on its shaft), `galaxy/genome.cpp` (FINISH's and TINT's
+    ages), `galaxy/records.cpp` (`Placer::collide`: every piece over a building's ground).
+  * The harness: `genome street` (new); `genome sheet ... felisian` a grassland site's.
+
+## B-416 (2026-10-11): nothing round a building
+
+* **A building stands on the ground it covers.** A-04 drew a people of mounds' earth banked against its dwellings and a people of pits'
+  rims as round banks of the ground's soil as wide as each building's longest side (a row 40 m long in a ring 43 m across); the user saw
+  "round green things around each building [...] they overlap with each other and other buildings a lot". The banks and the rims are gone
+  (`foundation`, `genHut`); the pits, the cuts in the rock and the kerbs are the hand-made ages' (`Layout::foundOf`). A plinth of the
+  walls' stone in their place read from the drone as a modern slab once a ruin's walls fell, and was left out (KI-394).
+
+## B-417 (2026-10-11): a world's ruins are its people's
+
+* **The old ones' monoliths are gone.** M4-07 put a ring of columns, a cube, a dome, three walls or a 40 m cube in one 2 km cell in
+  twenty of every felisian, quartz and ocean world, and C-01 kept them to the bit beside its peoples ("so nothing moved on the worlds
+  that had no civilisation"); the user found them on most felisian worlds and asked them gone: "they don't follow the genome, never have
+  records on anything". This supersedes M4-07's ruins and C-01's keeping them: `worldHadCivilisation` is the one question (`worldHasRuins`
+  is gone), a world without a people has no ruins and no RUINS mode (KI-395), and on a people's world the draw's first twentieth of a cell
+  holds the countryside's lone monuments, as on a dead desert world.
+* **One code path.** `RuinKind`, `RuinSpec::kind` and `style`, `Ruin::kind` and `style`, the monoliths' drawing (`drawRuins`' own boxes,
+  domes and glyphs) and colliders, and the `felisian_ruin` scene are gone; a ruin's echo is its settlement's class (`Landmark::sub`).
+* **What moved.** No generation change (13 holds): the people's worlds' first twentieth of their cells (a lone monument where a monolith
+  stood), the worlds without a people's ruins (none); no terrain moved. The harness's R-408 check lands 5 km off a town of the people's
+  plan (its old landing point lay outside the people's land).
+
+## B-418 (2026-10-11): a people's everyday works are its land's
+
+* **The works wherever a people lived.** T-03 made every world's works once, each rule a handful a people (24 quarries, four
+  necropolises, four wrecks, three henges, wind farms one to three) while T-01's plan gave a people hundreds of places over a third of its
+  world or more: over 41 people's worlds a tenth of the places and one point of the land in two hundred had one within the scanner's 40
+  km, and the user heard "nothing in 40 km" wherever they went. The world's list keeps the history's works and the world's great ones;
+  the everyday kinds are the land's (`landWorkOf`): a grid of 8 km cells, a cell holding one by the countryside's density and its age's
+  appetite (`LAND_RATE`), the kind drawn among what its ground offers that age, sited by the kind's rule inside the cell (its reach and
+  60 m inside: none touch), clear of the settlements, the cores and the world's works. This supersedes T-03's "made once a world" for
+  those kinds (the quarries in the rock nearest each town, the necropolises by the capital and the cities, the henges by the old seats,
+  the wrecks by the harbour towns, the mines on the territory's richest ground, the wind farms).
+* **Made when asked, kept.** A cell's work is made the first time it is asked for (a few milliseconds) and kept for the last two worlds;
+  `worksAround` gives the world's and the land's within a reach, `worksAroundIfReady` the view's (never waiting for the world's).
+  A lazy grid like the countryside's cells: a world's land holds tens of thousands of works, too many to make at the approach.
+* **A fort** (`WO_FORT`) is the land's new kind, so a people whose ground offers little (flat forest, no rock, no coal, no burials, a holy
+  place of the heights) still left something: a hill fort, a castle (behind a moat on the flat), a redoubt, pillboxes. A medieval or later
+  people's pits on any dry ground and a prehistoric people's flint pits under the forest (it grew since, as over the villages) fill the
+  rest; a necropolis serves a village or more, a shrine stands where the cell's ground is its holy place's kind.
+* **What moved.** No generation change (13 holds): every people's world's works (the world's list lost the everyday kinds; the land's
+  are new), no settlement, record of a place, grave or road; the regress unchanged.
+  * `galaxy/works.*` (the land's grid, `LandCell`, `LandSettle`, `landWork` and each kind's rule, `landWorkOf`, `buildLandWork`,
+    `worksAround`, `worksAroundIfReady`, `Work::land`, `WO_FORT` and its layout; `WB` writes to a list and keeps clear of the world's;
+    `worksNear` gone), `galaxy/landmarks.cpp` (`worksHeardNear`), `galaxy/ruins.cpp` (`settlementClearance`), `galaxy/records.cpp` (a
+    fort's record), `surface/surface_view.*` (`WorkNear` a shared `Work`, `workCell` by the work), `game/game.cpp` (`testWalkToWork`).
+  * The harness: the land's works in `works <sx> <sz> <body>`, `works view` (a whole name matched whole), the gallery and the map, the
+    records' walk round each capital; the works checks' quarry check on the land's, two new (the land's sound, the scanner's coverage).
+
+## B-419 (2026-10-11): what is made on a world is not its season's
+
+* **The season is the terrain's alone.** M9-09 gave the generator a season (the winter cap 11 degrees further, the snow line 900 m
+  lower, the sea ice) and the game makes its generators in the season of the moment (the approach's `genFor`, the site's); T-01's plan,
+  the people's extent, H-02's histories, the settlements' sites, C-09's roads, T-03's works and B-418's land's read the planet through
+  whichever asked first in a session, and a winter's sea ice was land: nearly every place of a plan moved between a winter's and a summer's
+  visit. Every reader of the world's made things takes `unseasoned(g)` at its entry (the generator at the year's mean); the terrain, the
+  snow and the planet's maps from orbit keep the season. This supersedes nothing written: the plan was meant to be the world's ("built once
+  a world"), and the harness had always read it at the mean (`BodyGen::make(b)`); the game's plans now agree with it.
+* **What moved.** No generation change (13 holds): the plans the harness reads are the ones it always read; a game session's plan, made
+  in its approach's season, is the mean's now (KI-397: a mark put at a town of a solstice's plan). The unit's works checks hold one more:
+  the plan, the extent, the settlements and the works the same from a winter's and a summer's generator.
+
+## B-420 (2026-10-11): the walls the explorer meets are the walls drawn
+
+* **One rule for every kind**: a piece's colliders (discs with the heights they span) follow its drawn mesh, measured, not reasoned
+  (`walls forms`: a disc is a wall over nothing where its rim at the feet lies outside the drawn solid and off its surface by 0.25 m;
+  the unit allows one in 20,000, KI-398's rare forms). A turned form's slices take their narrowest outline there, so the explorer is
+  never stopped short of what is drawn (it may stand a hand inside a cone's flank at the head): a wall short of the drawn surface is a
+  smaller fault than a wall in the air.
+* **Heaps, banks, barrows and tiers are ground**: `formWalkable` pieces carry no discs; the explorer stands on their drawn surface
+  (`formSupportAt`) through the view's floor (`floorAt`): a step of 0.5 m, a slope over 1.35 barred, as the ground's. A ring of discs at a
+  barrow's foot was a wall where its slope began.
+* **One foot, one enumeration**: a big piece is collided where it is drawn (`pieceFootNear`), and the rocks drawn are the rocks
+  collided with (`forRocks`), none in a settlement, on a road, by a mark, on an edit or in water. Earth (a walkable piece) stands on the
+  lowest ground under it, sunk into the slope above (R-412's run: lifted to the highest like a wall, a hill fort's rampart stood a cliff
+  downhill and its inside was out of reach).
+* **What moved.** No generation change (13 holds): the colliders, the meshes' undersides and skirts, the rocks on the beds; the regress
+  unchanged. The harness: `walls` (forms, view, one, at, place, reach, walk, check) and the unit's four checks.
+
+## B-421 (2026-10-11): a record lies where the explorer can reach it
+
+* **The placer reads what is drawn**: a record's spot is clear of each piece's drawn slice at the floor (0.06 m), of the heaps' slopes and
+  of the water, not only of the colliders; a room with a shut doorway (the A-03 check's rule: no metre of its line clear at the knee) holds
+  none. The water of the generation is the sea's and the planet function's at 16 m without the rivers (a place is laid out before its
+  rivers' tiles exist); the view lays a place's records again with its drawn water within 600 m (`waterRecords`), so a record moves
+  only from where it could not be reached.
+* **What moved.** No generation change: a few records of a place (those that lay in water, in a piece, under a slope or behind a shut
+  doorway) lie elsewhere in it; the works' buildings have their doorways; a holy spring's temple stands 17 m off.
+
+## R-412 (2026-10-11): the genome grows within each age
+
+* **Sixteen more variables, read through the age** (fifty-one; each its own hash, so A-04's did not move): the roofs' pitch, eaves,
+  roofline, gables and roofing; the walls' polychromy, trim, projections, entrances and corners; the towns' storeys, frontage, setback,
+  boundaries, furniture and a prehistoric people's poles. Each acts where B-415 lets the age speak first: an age's expression, a people's
+  choice (a medieval people's cresting pales of its roofing, an industrial people's iron; a modern people's corners glazed, finned or
+  rounded, never quoined). `genome reach` holds every value in every age a variable claims.
+* **New shapes over new kinds**: one new form (`FK_FENCE`: pales, bars, wattle, a balustrade) serves the yards, the balconies, the
+  ridges and the roofs; one new building kind (`BK_FURNITURE`) the streets' furniture, laid last in a town by a stream of its own so the
+  plan does not move for it. The rest are the forms there were.
+* **Low things are stepped over**: a yard's wall, fence, hedge or railings, a stoop, a hut's ring stand under C-01's 0.9 m and carry no
+  collider (KI-398), so no yard traps the explorer.
+* **A house faces its street before it is tested**: a town's house turned its door to its street after its pieces were tested against
+  the streets; its porch stood in a lane. The door and the yard are set first (`fronting`).
+* **What moved.** No generation bump (13 holds: 1.3.0 is unreleased, as for B-414..B-419): every people's dwellings and its works'
+  roofs; a town's lots with the setback, the frontage and the storeys (its houses, and the records in their rooms, stand elsewhere in
+  it), its plan's places not; the regress unchanged (its scenes hold no settlement).

@@ -51,7 +51,9 @@ A people is found at the age it had reached when it collapsed. Six ages, the use
 | Futuristic | fusion, orbit, arcologies, machines that think | composites, ceramics, grown stone, diamond glass | data crystals | data, synthetic voices, beacons |
 | Far future | matter shaped to purpose; what we cannot name | one material over kilometres; nothing that weathers | things that keep themselves | a beacon that is mathematics |
 
-* **A people passed through the ages before its own.** A modern people's world keeps its medieval towns
+* **A people passed through the ages before its own.** (B-414, 2026-10-10, the user's call: superseded. A world shows only the age its
+  people reached; its earlier ages live in its history and in the histories its records keep: `docs/reference/10-decisions.md`, B-414.)
+  A modern people's world keeps its medieval towns
   as the old cores of its cities and its megaliths in the fields, each in the decay of its own time; a
   far-future people's world may show almost nothing of its earlier ages (they cleared it) or keep it as
   a museum would.

@@ -127,7 +127,7 @@ int Game::toldRecordOf(int item) const {
     return -1;
 }
 
-// the timeline: the people's eras across the width, each placed and named once a record written in it is read (an era none is from a
+// the timeline: the people's eras across the width, each placed and named once a record written in it (B-414: or a history telling it) is read (an era none is from a
 // stretch of dots); the records held stacked by their years over the axis in their kinds' colours (read bright, held dim, the one under the
 // cursor white, a friend's cyan, the last recording amber once read); the events learnt as ticks under it; the record under the cursor below
 void Game::renderShardTimeline() {

@@ -54,6 +54,7 @@ struct Lore {
     // T-04: how many records the people left (`recordCountOf`, galaxy/records.h: 80 to 200, C-02's fifty the first) and the year of its end
     // in its own count (`PeopleAge::lastYear`): the shards are dated in the people's history now, `spanYears` the end's year less one
     int records = SHARDS_PER_WORLD, endYear = 0;
+    int ageFrom = 1;   // B-414: the first year of the age they reached (`ageFromOf`): their graves and records are of its years
 };
 Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g, int which = 0);
 std::string peopleNameOf(const BodyGen& g);   // C-10: what `loreOf` would call the world's people, without the rest (the other peoples a chart names); C-13: a people's by `peopleGen`

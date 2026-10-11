@@ -59,6 +59,9 @@ bool buildingRoom(const Building& b, BuildingRoom& out);
 // futuristic and the far future's) its light; its windows (its openings' shape, rhythm and share of the wall, by the age's bays and
 // storeys; none before the medieval age; the far future's lit lines or lamps)
 FormPalette culturePalette(const Culture& c, uint64_t seed);
+// B-415: a genome variable as the people's age let it build: the age speaks first on its everyday buildings, the people on its great ones
+// (`great`: its temples, churches, town halls, palaces, keeps, focal accent and monuments); the generators read the genome through it
+int ageExpressed(const Culture& c, int var, bool great);
 // A-04: a culture's ways from its genome and its age (`Culture::technique`, `roof`, `temple`, `hut`, `towerForm`, `great`, `life`, C-01's
 // `tall`, `plan`, `towers`, `style`, `stoneRoofs`) and its palette; `cultureOf` and `cultureAs` call it, and the harness after setting a
 // variable

@@ -1,0 +1,47 @@
+R"VG(
+# history.vg (B-414): a late people's history of its own past. A world shows only the age its people reached: its earlier ages' towns,
+# works and records are gone, so an industrial, a modern, a futuristic or a far-future people's earlier ages are told by its own histories
+# (a book, a paper, a drive, a crystal of its last age). `@past` reads one of the earlier eras from the history: a run of its years with
+# something in them, each with that year's facts and ruler (the era's name, its government, its age, its inventions), its events in the
+# annal's register; the opening and the closing in the voice of the people's last age (`lastage`).
+
+@root history.year history.year.gap history.year.open history.year.close
+
+genre.history (words=40..560)
+  (tense=past 2) {@past 4 history.year}
+  (tense=past) {@past 6 history.year}
+  (tense=past) {@past 3 history.year}
+
+history.year.open (formula people=4)
+  From a history of the {people}: {era}.
+  {era}, as the old records tell it.
+  A history of {city}. Its chapter on {era}.
+  What is known of {era}, set down from what was left of it.
+  {era}, from the chronicles, year by year.
+  Of the {people} in {era}, and what became of them.
+  (lastage=industrial) A history of the {people}, for the use of schools. Of {era}.
+  (lastage=industrial) {era}: the years as the old rolls give them, copied fair.
+  (lastage=modern) {era}: a summary of the years, from the surviving records.
+  (lastage=modern) The {people} before our time. A chapter: {era}.
+  (lastage=futuristic) Record of the early years. {era}, reconstructed from the archives.
+  (lastage=futuristic) {era}, as the archive holds it.
+  (lastage=farfuture) {era}. The archive remembers.
+  (lastage=farfuture) Of the first of us, in {era}.
+
+history.year
+  (3) {chronicle.head} {@entries annal 3}
+  (2) {chronicle.head} {@entries annal 4}
+
+history.year.gap (formula)
+  {chronicle.year.gap}
+
+history.year.close (formula people=4)
+  Of the years after, the next chapter tells.
+  The rest of {era} is in the next part.
+  So the old records end here.
+  The chronicles say no more of these years.
+  (lastage=industrial) Here the copy ends; the rest of the roll could not be read.
+  (lastage=modern) The records of the next years are lost.
+  (lastage=futuristic) The archive's record of these years ends here.
+  (lastage=farfuture) That is what is kept of it.
+)VG"

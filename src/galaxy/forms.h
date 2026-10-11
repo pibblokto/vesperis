@@ -31,6 +31,9 @@ enum FormKind {
     FK_BLOB,      // a grown form: a lumpy body and its lobes. Broken: cracked open at the top
     FK_PLATE,     // C-17: a flat body of a drawn outline (an instrument's: a gourd's face, a box, a slab), its sides upright from y0 to y1, its
                   // top flat or domed. Broken: a bite out of its rim
+    FK_FENCE,     // R-412: a fence along the heading, 2 hz long and 2 hx deep, from y0 to y1 (sub 0 pales on two rails, 1 bars between a bottom and
+                  // a top rail, 2 wattle hurdles between their stakes, 3 a balustrade's balusters between its plinth and its handrail): a yard's
+                  // boundary, a balcony's or a gallery's rail, an iron cresting along a ridge. Broken: pales gone, stretches of them fallen
     FK_COUNT
 };
 extern const char* const FORM_KIND_NAMES[FK_COUNT];
@@ -54,6 +57,8 @@ extern const char* const FORM_KIND_NAMES[FK_COUNT];
 //   FK_PLATE    a superellipse hx across by hz along: p2 its corners' power (2 an ellipse, 8 near a rectangle, 1 a lozenge; `sides` 3..9 a
 //               polygon instead), p0 its far end's width (+along) over its near end's, p1 a waist pinched just past its middle (negative: a
 //               bulge), `sub` its middle leaning sideways by tenths of hx (a free-handed body), p3 its top's rise over its middle (m)
+//   FK_FENCE    p0 the pales' spacing (m; wattle's hurdles about 1.6 m), p1 a pale's width over its spacing, p3 > 0 the points' or the spear
+//               tips' height (pales and bars)
 struct Form {
     int kind = FK_BOX;      // FormKind (C-01's `shape`: 0 a box, 1 a dome)
     int sub = 0;            // the kind's variant
@@ -77,6 +82,7 @@ struct Form {
     int material = -1;      // A-03: what it is built of (`BuiltMaterial`, galaxy/buildings.h), whose decay it shows; -1 none (the drifts' sand)
     bool absolute = false;  // T-03: y0 and y1 are heights over the reference level, not over the ground at its foot (a dam's wall across its
                             // valley, an aqueduct's arches to their channel): drawn and walked into where they are whatever the ground does
+    float tone = 0;         // R-412: shades over its slot's (a house painted a little lighter or darker than its neighbours: `GV_POLYCHROMY`)
 };
 
 // T-04: a record's object (galaxy/records.h) in the records' own banks: bone, parchment and paper pale; wax, leather, vinyl, a glass plate and a
@@ -95,6 +101,9 @@ struct WindowSpec {
     double fromY = 0;                 // none under this height over the foot (a plinth, the doors' storey)
     int group = 1;                    // A-04: lights to a window (a pair, a group), split by their mullions
     double scatter = 0;               // A-04: the share of the cells left blank (a people that set its windows at random)
+    // R-412: the people's dress on the wall round its windows (`FacePattern`'s, shades off the wall): a surround a share of the bay wide,
+    // shutters each side, courses so many metres high (every other one off), a dado so many metres high
+    double frame = 0, frameShade = 0, shutter = 0, shutterShade = 0, stripe = 0, stripeShade = 0, dado = 0, dadoShade = 0;
 };
 // A-02: a people's colours: the structure, the accent, metal and glass, and light, each a ramp in the banks the surface leaves
 // free (`FORM_BANKS`). `own` takes the ground's material for the slot (C-01's walls: the rock, or the sand of adobe)
@@ -133,6 +142,12 @@ void formMesh(const Form& f, int lod, const Vec3& foot, double skirt, FormMesh& 
 // over the ground at the form's foot: rows along a wall, slices up a tower, an arch's piers and not its opening
 struct FormDisc { double x, z, r, y0, y1; };
 void formColliders(const Form& f, std::vector<FormDisc>& out);
+// B-420: a form the explorer stands on, not walks into: earth and rubble heaped on the ground (a barrow, a bank, a spoil heap, a heap of what
+// fell) and an amphitheatre's or a stadium's tiers (no discs: their sides are slopes and steps); the view holds the explorer up on their drawn
+// surface (`formSupportAt` over its mesh: the highest face looking upward over a point, at or under `ceiling`; -1e18 none) and stops it where
+// that rises more than a step
+bool formWalkable(const Form& f);
+double formSupportAt(const FormMesh& m, double x, double z, double ceiling = 1e18);
 
 // C-17: a plate's outline, `n` corners (at most 64) round its middle, a across and b along in the form's frame (the instruments' pictures
 // draw the same outline: galaxy/instruments.h)

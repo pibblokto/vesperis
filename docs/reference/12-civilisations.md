@@ -14,11 +14,11 @@ below).
 `mix64(seed ^ 0xC1D1)` falls under 0.125, first among its traits (after the glass), so no other world's traits move.
 A trait desert keeps the level its seas stood at (`BodyGen::oldSeaM`, -120..100 m) and a river density of 0.8 at
 least: dry seabeds with salt in the deeps, old channels, a shore band. Every other desert is a desert and nothing more.
-`worldHadCivilisation(g)` (`galaxy/ruins.h`) is the one question the ruins, the landmarks, the harness and the shards ask. Since R-408 (2026-10-07) the surface scanner's RUINS mode hears every settlement and monolith within 40 km (`ruinsNear`) and points to the nearest one the explorer has not marked; the explorer marks and names what they find (`07-game-flow-and-controls.md`).
+`worldHadCivilisation(g)` (`galaxy/ruins.h`) is the one question the ruins, the landmarks, the harness and the shards ask. Since R-408 (2026-10-07) the surface scanner's RUINS mode hears every settlement within 40 km (`ruinsNear`; B-417: M4-07's monoliths of the old ones, on every felisian, quartz and ocean world a people there or not, are gone, and a world without a people offers no RUINS mode) and points to the nearest one the explorer has not marked; the explorer marks and names what they find (`07-game-flow-and-controls.md`).
 
 ## The settlements (C-01)
 
-`galaxy/ruins.*`: hamlets, villages, towns and a desert's lone monuments on the 2 km ruin grid, in a `Culture` the whole
+`galaxy/ruins.*`: hamlets, villages, towns and lone monuments (a desert's; B-417: every people's world's) on the 2 km ruin grid, in a `Culture` the whole
 world shares (`cultureOf`; C-13: the whole people, a settlement's being its people's, `RuinSpec::people`), each building drawn from its own seed with a doorway, a window, an inner wall, a roof where
 the culture built stone ones, rubble at the fallen walls. `06-surface.md` has the layouts, the pieces, the levels of
 detail and the colliders (B-405: each spans its own height); `08-testing-and-tools.md` the scenes, the `ruins` mode and
@@ -985,7 +985,8 @@ peoples' least: C-01's buildings are theirs, roofed); generation 13 (A-01's) hol
   village; pods in a hamlet); a lone monument is the age's (a stone circle, a dolmen, a row of stones; C-01's; an observatory, a
   gasometer, a water tower, a headframe; a mast, a power station, tanks, a tower; a ring, a wreck, a spire; the far future's one
   structure), drawn with the class's size so its reach is the radius the finders read without the layout.
-* **How many** (`ruinOfCell`): the share of the 2 km cells holding a settlement follows the age (the monoliths' 5% as before):
+* **How many** (`ruinOfCell`): the share of the 2 km cells holding a settlement follows the age (the lone monuments in the draw's first
+  twentieth; B-417: on every people's world, the old ones' monoliths gone):
 
   | Age | Hamlets | Villages | Towns |
   | --- | --- | --- | --- |
@@ -1039,7 +1040,8 @@ peoples' least: C-01's buildings are theirs, roofed); generation 13 (A-01's) hol
   centuries after the end, a third after ten thousand years (C-01's one in three), so a young ruin is a clearing.
 * **Every age's buildings are generators**: `cultureAs(g, people, age, years)` builds a people's culture as if it had reached an age and
   ended so long ago, `settlementOf` lays out a settlement of a class in it, and a building keeps the age whose way built it
-  (`Building::age`): T-02's old cores and megaliths in the fields are a later people's older works in their own age's way.
+  (`Building::age`). B-414: a world's buildings are all its people's last age's (T-02's old cores and the old time's megaliths went with
+  their ages: "One age a world", below); a work's pieces keep their work's.
 
 Where to see it:
 
@@ -1053,7 +1055,7 @@ Where to see it:
 ## The architecture genome (A-04)
 
 A people's buildings are its own (`docs/ideas/IDEAS-civilisation-expansion.md`, section 3): every people draws thirty-five deep
-variables from its seed (`galaxy/genome.*`: `genomeOf`, one hash a variable, so a variable added later moves none of the others) and
+variables (R-412: fifty-one, below) from its seed (`galaxy/genome.*`: `genomeOf`, one hash a variable, so a variable added later moves none of the others) and
 keeps them through its ages, and its culture reads them through the age it reached (`cultureWays`, galaxy/buildings.h): a people that
 loved domes builds them in dry stone, in masonry, in iron and glass, in concrete and in diamond glass, and a people of blue spires
 raises one over its huts, its church and its tower block. Every civilised world's settlements change with it; generation 13 (A-01's)
@@ -1070,20 +1072,20 @@ holds. A variable is a number in [0, 1): a category its share of the range (`Gen
 | | PROFILE | upright, battered, bulging, leaning out, stepped back | walls and rings battered on a thicker foot, bulging with rounded buttresses at the corners, an upper storey jettied out or set back (a plinth for a low wall), towers as frustums, barrels, corbelled tops or tiers, the futuristic spires' flanks | all but the far future |
 | | SYMMETRY | bilateral, radial, rotational, none | doorways in the middle (bilateral, radial), the temple's and the church's towers (a pair at the front, one over the crossing, two at opposite corners, one at a corner), the minarets round a dome, the futuristic spires' placement | medieval to futuristic |
 | | NUMBER | three .. nine | a polygon's sides, the stepped temple's and the setbacks' tiers, the platform's steps, the colonnade's columns, the stone circles' stones, the gasometer's columns, the cooling towers, the tanks, the grown arcology's towers, the spokes of a radial town, the far future's pillars and facets | all |
-| | MODULES | one-offs, cells | a house and a row roofed cell by cell (a row of gables), crow steps on the gables | medieval to modern |
-| Surface | OPENINGS | square, arched, round, slit, triangular, keyhole | the windows' shape (`FacePattern` 0, 1, 3, 2 and A-04's 5 and 6), the gates', arcades' and aqueducts' arches (round, pointed, flat), the domes' profile | medieval to futuristic |
-| | RHYTHM | regular, paired, grouped, scattered | the windows' lights a bay (a pair, three or four split by mullions) or cells left blank by their hash | medieval to futuristic |
-| | GLAZING | few .. wide | the windows' share of the wall (slits to wide lights; bands in a modern people's frame) | medieval to futuristic |
+| | MODULES | one-offs, cells | a house and a row roofed cell by cell (a row of gables), crow steps on the gables, a mill's gables across it; a modern block's lift house a module (B-415) | medieval to modern |
+| Surface | OPENINGS | square, arched, round, slit, triangular, keyhole | the windows' shape (`FacePattern` 0, 1, 3, 2 and A-04's 5 and 6; B-415: the industrial age's sash square or round-headed, the modern age's bands, portholes and slits on its temples, the futuristic age's portholes for arches and keyholes), the gates', arcades' and aqueducts' arches (round, pointed, flat; B-415: pointed in the hand-made ages alone), the domes' profile (B-415: an industrial people's hemispheres, a modern people's saucers) | medieval to futuristic |
+| | RHYTHM | regular, paired, grouped, scattered | the windows' lights a bay (a pair, three or four split by mullions) or cells left blank by their hash (B-415: the industrial age's a pair at the most, never scattered) | medieval to futuristic |
+| | GLAZING | few .. wide | the windows' share of the wall within its age's (B-415: a medieval window a third of a bay at the most, an industrial sash a third to a half, a modern pane half to the whole; bands in a modern people's frame) | medieval to futuristic |
 | | ORNAMENT | bare, banded, carved, encrusted | bands of the accent at the walls' tops and storeys, a cornice, glyphs round every side, the door's surround, capitals | medieval to futuristic |
 | | MOTIF | lines, circles, steps, spirals, glyph bands, figures, stars | on the great buildings: ribs up the walls, spheres on the corners, steps along the top, a ramp climbing round, glyph bands, statues at the front, the points of a star round the foot; the domes' onion profile (spirals, figures), the spires' collars | medieval to futuristic |
-| | STRUCTURE | heavy masonry, expressed frame, smooth monolith | thick walls on the rock's striated grain (C-01's `style`), small windows; posts and beams on the walls (half timbering of daub between timber, iron, a concrete frame, an exoskeleton); smooth walls, fewer windows | medieval to futuristic |
-| | TOPS | finials, crenels, masts, statues, nothing | what tops the roofs, walls and towers (finials, spheres on a people of circles; merlons; poles; figures) | medieval to futuristic |
-| Colour | BASE | sixteen colours | the structure's colour: the ground's rock tinted toward it, or painted in it; the brick it fires (red, buff, blue-grey, white glazed, brown); its concrete, its composite, the far future's material at the colour's extreme | all |
+| | STRUCTURE | heavy masonry, expressed frame, smooth monolith | thick walls on the rock's striated grain (C-01's `style`), small windows; posts and beams on the walls (half timbering of daub between timber; B-415: an industrial people's brick piers between the windows, a modern people's concrete grid of columns and floor slabs; a futuristic exoskeleton); smooth walls, fewer windows | medieval to futuristic |
+| | TOPS | finials, crenels, masts, statues, nothing | what tops the roofs, walls and towers (finials, spheres on a people of circles; merlons; poles; figures). B-415: crenels the hand-made ages' alone; an industrial people's everyday buildings topped by their chimneys, a modern people's by a mast or nothing; no statues after the modern age | medieval to futuristic |
+| Colour | BASE | sixteen colours | the structure's colour: the ground's rock tinted toward it, or painted in it; the brick it fires (B-415: `BRICK`, one a colour, from a gault and a cream stock to reds, a blue, a dark engineering brick and a plum); its concrete, its composite, the far future's material at the colour's extreme | all |
 | | ACCENT | seven colours on bands, roofs, doors or tops | slot 1's colour and the pieces that take it (bands always) | all |
-| | FINISH | its own, painted | the structure the material's own (the rock tinted a quarter toward the base, brick, concrete toward the base) or painted the base | prehistoric to modern |
-| | TINT | clear, bronze, green, blue, gold, smoke | metal and glass (slot 2) of the modern and futuristic ages: the frames, the domes of diamond glass | modern, futuristic |
+| | FINISH | its own, painted | the structure the material's own (the rock tinted a quarter toward the base, concrete toward the base) or painted the base (B-415: an industrial people's brick, painted or not) | prehistoric, medieval, modern |
+| | TINT | clear, bronze, green, blue, gold, smoke | metal and glass (slot 2) of the futuristic age: the frames, the domes of diamond glass (B-415: a modern ruin's glass is gone within years, its metal roofs went with its flat ones) | futuristic |
 | | LIGHT | none, lamps, lines | a far-future structure's lights: glowing lines up it, lamps scattered on it (a dead city is dark) | far future |
-| Place | LAND | ridges, valleys, terraced, cliffs, stilts, mounds, pits | a high place toward the ridge (a stepped platform and its shrine), an aqueduct down from the high ground (a leat before the medieval age), terraces on any slope and a kerb round each dwelling, a cut in the rock round each, houses on stilts (the records under their floor; a modern people's blocks on pilotis), earth banked against the walls, dwellings sunk in pits with an earth rim. The siting itself (on ridges, in valleys) waits for T-01 | prehistoric to modern |
+| Place | LAND | ridges, valleys, terraced, cliffs, stilts, mounds, pits | a high place toward the ridge (a stepped platform and its shrine; B-415: an industrial people's bandstand, a modern people's plinth and mast), an aqueduct down from the high ground (a leat before the medieval age), terraces on any slope and a kerb round each dwelling, a cut in the rock round each, houses on stilts (the records under their floor; a modern people's blocks on pilotis), dwellings sunk in pits (B-416: the kerbs, the cuts and the pits the hand-made ages' alone, the mounds' earth banks and the pits' rims gone); T-01's plan sites the towns by it | prehistoric to modern |
 | | FACING | sunrise, a star, the moon, the river, the wind, none | the settlement's axis (`orientedHeading`: east; a bearing of the people's own; the moon's rising; the ground's fall; the wind's; the cell's draw); the roads read it | all |
 | | STREETS | grid, radial, concentric, organic, a line, contour, branching | the plan: C-01's grid; spokes from the centre (the people's number); rings; houses scattered round the centre; a street; a street across the fall; a street with side streets; T-02's street plans in each age's way (towns by age, below) | medieval to modern |
 | | PUBLIC | plazas, courts, gardens, none | a plaza kept open round the centre; houses, villas and blocks round inward courts; walled gardens with their pools; none (denser) | medieval to modern |
@@ -1131,6 +1133,7 @@ Where to see it:
 | `genome pair <sx> <sy> <sz> <body> <people>` (twice) | two peoples in every age, side by side (`genome_pair_<scale>x.png`, `scale=N`) |
 | `genome print <sx> <sz> <body> [people]` | a people's genome and its techniques by age |
 | `genome reach` | every variable's values set in turn in three peoples' genomes, in every age it acts in: which reach the drawing |
+| `genome street [scale] [peoples] [years] [desert\|felisian] [drone]` | B-415: the same peoples (rows, six unless given) in every age but the far future's, each town seen from inside it (a street half way in, at a walker's height; `drone` 35 m up at its edge): does every age read as itself? (`genome_street[_drone]_<scale>x.png`) |
 | `ruins kinds [scale]` | its last page (`ruins_kinds_genome_<scale>x.png`): the focal accents, the monuments, the windmill, the market halls, the palace, the round temple, the amphitheatre, the aqueduct, the joined towers, the tunnel, the town halls' dome and spire, the mall, a modern temple |
 
 ## A people's map of its world (T-01)
@@ -1167,8 +1170,8 @@ waits for it or builds it; four worlds kept). Generation 13 (A-01's) holds.
   a capital 110, 470, 820 and 1,150 m across its radius in the four ages to the modern (480 m a futuristic one), a city 270, 500 and
   700 m, holding C-01's town's density at the age's spacing (1,100 to 1,400 buildings in a capital, 350 to 550 in a city); a town,
   a seat, a great place and a work their layout's own draw.
-* **The countryside** stays the cells' own (`planCountryside`): C-01's hamlets, villages and market towns, a lone monument in the old
-  ones' band on a desert, by a density the plan gives each grid cell (the territory's ground, thinning toward the frontier, half a
+* **The countryside** stays the cells' own (`planCountryside`): C-01's hamlets, villages and market towns, a lone monument in the draw's
+  first twentieth (a desert's; B-417: every people's world's), by a density the plan gives each grid cell (the territory's ground, thinning toward the frontier, half a
   cell out beyond it) and the nearness of the people's places; at full density a medieval people's cells hold 16% hamlets, 10%
   villages and 2% towns (C-01's third, a little thinner: its towns are the plan's), the prehistoric 5% and 3%, the industrial 12, 10
   and 4, the modern 8, 8 and 4; a futuristic people's pods round its great places alone; the far future none. No settlement in the
@@ -1331,15 +1334,13 @@ the far future has no towns.
   go out by its gates. The streets end before the water (and the harbour's room); what a clip cut off from the rest is dropped (the web is
   one). The blocks widen where a town's buildings could not line its streets (a city keeps its class's count: the frame's budget).
 * **The layers** (`TownLayer`): a place of the plan reads its history (`historyOfWorld`: the world's system found again from its star's
-  sector): the ages from its founding to its end, each a ring out to its class's radius in that age (a capital's medieval core to 470 m,
-  its industrial ring to 820, its modern to 1,150), built in that age's way (`cultureAtAge`: the people's genome read through the age,
-  weathered from when it was left). The edge of an older ring is a boulevard (an old wall's line), the old wall standing in stretches with
-  its gates. A place the history says was left early is built in the age it was left in, inside its plan's size, weathered from then. A
-  later people's capital (and a third of its cities) keeps the old stones of its old time in its fields. The countryside's villages and
-  towns take a founding age by the history's shares from their cell (their old core that age's), one in twelve of the older ones left early;
-  a later people's lone monuments are megaliths three times in five.
-* **The centre and the districts** (`District`, on each building): the centre's square with its centre in the oldest layer's way (a modern
-  city's medieval temple at its heart), its monuments and its focal accent; the old core; the houses, built up densest near the centre and
+  sector). B-414: one layer, its people's last age, whatever age founded it (T-02 drew the ages from its founding to its end, a ring each:
+  a modern capital's medieval core to 470 m, its industrial ring to 820, its modern to 1,150); a place the history left before that age
+  began is not on the ground (`TownHist::gone`), one left early within it is built weathered from when it was left. The countryside's
+  villages, towns and lone monuments are their people's age (T-02 gave a later people's an older core by the history's shares, and its
+  lone monuments and its capital's fields the megaliths of its old time: gone with that age).
+* **The centre and the districts** (`District`, on each building): the centre's square with its centre in the oldest layer's way (B-414: the
+  town's one), its monuments and its focal accent; the old core (none since B-414); the houses, built up densest near the centre and
   along the main streets (a medieval town's main streets a row of joined houses whatever the people's grouping); the works downwind (an
   industrial ring's mills, warehouses, water towers, gasworks and workers' rows; a modern one's tanks, works halls and masts); the harbour
   toward the water; a modern city's towers round its old core and its suburbs beyond its ring road, thinning into the fields; the station on
@@ -1377,31 +1378,33 @@ Where to see it:
 Everything else a people made outside its towns (`galaxy/works.*`, the expansion note's section 6: "it can be virtually anything"), each
 placed by a rule of the terrain or where the history (H-02) says it was made, and built in the way of the age that made it (`Work::age`,
 weathered from when it was left, `before`). A world's works are made once (`worldWorksOf`, the last four kept) on the approach's plan thread
-after the peoples' histories, in 44 to 350 ms; the surface takes them when they are built (a render never waits). Twenty-one kinds; generation
-13 holds (the works are a layer over the ruin cells: no settlement, shard, grave or road moved).
+after the peoples' histories, in 44 to 350 ms; the surface takes them when they are built (a render never waits). Twenty-two kinds (B-418:
+the fort); generation 13 holds (the works are a layer over the ruin cells: no settlement, shard, grave or road moved). B-418 made a people's
+everyday works its land's (the land's works, below): the rules marked "the land's" place one in a cell of 8 km where its ground offers it.
 
 | Work | Where its rule puts it | Its age's way |
 | --- | --- | --- |
-| quarry | the exposed rock nearest each stone-built town or city (within 8 km of its edge): a face where the hill stands steep, a pit in flat rock | flint pits and their spoil rings (prehistoric); a face or a stone pit of three-metre steps, cut blocks, a timber derrick, a hut (medieval); benches, an iron derrick, a shed and a spoil tip (industrial); great benches or an open pit, its crusher's hall, tailings and trucks (modern) |
-| mine | where the plan read coal and ore, and by the places the history sank one | adits along a hillside, their spoil tipped below (medieval); headframes with their engine houses and stacks, a great tip, the miners' houses (industrial); an open pit in benches, its headframe, mill, tailings and trucks (modern) |
+| quarry | the land's: where a cell's rock shows, a face where the hill stands steep, a pit in flat rock (a stone-built people's); a medieval or later people's pit on any dry ground, the forest grown over it since (clay, marl, gravel, sand: an adobe people's only these); a prehistoric people's flint pits on any ground but snow | flint pits and their spoil rings (prehistoric); a face or a stone pit of three-metre steps, cut blocks, a timber derrick, a hut (medieval); benches, an iron derrick, a shed and a spoil tip (industrial); great benches or an open pit, its crusher's hall, tailings and trucks (modern) |
+| mine | the land's where the plan read coal and ore; the history's by the places it sank one | adits along a hillside, their spoil tipped below (medieval); headframes with their engine houses and stacks, a great tip, the miners' houses (industrial); an open pit in benches, its headframe, mill, tailings and trucks (modern) |
 | dam | where the history built one (a river town's): the narrowest cross-section of a valley near the town or up its river, its crest at the lower shoulder (the age's height at most), never in a basin the drainage fills; the reservoir behind it as high as it holds | a masonry gravity dam and its buttresses (industrial); a concrete gravity dam with its spillway, intake tower and power house, or an arch bowed into the reservoir (modern); a wall of composite, its light along the crest (futuristic). Breached when its material is half gone, the reservoir drained to its silt; a dead desert's an old pale bed |
 | aqueduct | where the history built one: from a spring on higher ground 3 to 13 km off to its town's edge, the channel falling all the way, on arches where the ground falls under it | arcades of one to three tiers standing to the channel's line, the spring's house, the castellum; its conduit's line across the ground |
 | observatory | the highest summit within 25 km of the town that built one | a platform, a tower and its ring of horizon stones (medieval); domes (industrial); dishes and a dome (modern); a ring of dishes round a dome (futuristic) |
-| shrine, the pilgrims' way | the people's holy place (`PeopleProfile::holy`): a summit, a spring's hollow, a cliff (a cave's mouth), a grove (in its clearing), the open sky; a beaten track from its town with a cairn or a stela every 600 m | stones and a cairn, a temple, a chapel, a monument |
-| necropolis | the slope that looks at the capital or a city across the low ground (its river's where it has one); the genome's way with its dead | barrows and a long barrow (a people of barrows, the old time), tombs cut into the slope over houses of the dead and rows of graves (a people of tombs), a walled garden of graves with its tombs, obelisks and chapel (industrial), a grid of graves and a columbarium (modern), a field of memorial pillars (futuristic), towers of silence |
+| shrine, the pilgrims' way | the people's holy place (`PeopleProfile::holy`): a summit, a spring's hollow, a cliff (a cave's mouth), a grove (in its clearing), the open sky; a beaten track from its town with a cairn or a stela every 600 m. The land's: the lesser shrines where a cell's ground is its holy place's kind (no way to them) | stones and a cairn, a temple, a chapel, a monument |
+| necropolis | the land's: the slope that looks at the greatest settlement in or round its cell (a village or more; a prehistoric people's any) across the low ground (its river's where it has one); the genome's way with its dead | barrows and a long barrow (a people of barrows, the old time), tombs cut into the slope over houses of the dead and rows of graves (a people of tombs), a walled garden of graves with its tombs, obelisks and chapel (industrial), a grid of graves and a columbarium (modern), a field of memorial pillars (futuristic), towers of silence |
 | lines on a plain | the flattest dry plains of a prehistoric or medieval people's land | a creature drawn in cleared bands ten metres wide, rays from a cairn, cleared trapezoids: read from the air (the drone) |
-| henge, standing stones | open ground on a slight rise near a prehistoric people's seats, or a later people's old time | a circle in its ditch and bank with its avenue, rows of standing stones, a great circle with its trilithons, a field of dolmens and barrows |
+| henge, standing stones | the land's: open ground on a slight rise wherever a prehistoric people lived | a circle in its ditch and bank with its avenue, rows of standing stones, a great circle with its trilithons, a field of dolmens and barrows |
 | fortified line | along the frontier with the other people, or the border nearest the capital facing land not held; in stretches of 2.5 km | a wall with its towers and forts (medieval); a ditch, a rampart and redoubts (industrial); an anti-tank ditch, dragon's teeth, pillboxes and a blockhouse (modern) |
 | battlefield | each war's greatest battle (two of a great war): between the battle's place and the place the other side came from, on the line between them, on open ground | cairns (prehistoric); barrows and a memorial stone (medieval); trenches facing each other, shell craters, an obelisk and war graves (industrial); craters, wrecked tanks, an aircraft, pillboxes, war graves (modern); glassed craters and fallen machines (futuristic); its dead's graves all of the battle's year |
 | launch site | where the history built one: the flattest dry ground of the land nearest the equator, the sea to the east | pads with their towers and aprons, the crawlerways, the assembly hall, tanks, a blockhouse (modern); a mass driver rising east (futuristic); an elevator's anchor and its ribbon to the sky |
 | antenna field | a radio people's high plain away from its towns | a row of tall masts (industrial); a field of dishes or of masts (modern); a ring of dishes (futuristic) |
-| wreck | a ship on the shore near a harbour town; an aircraft on open ground; wreckage fallen from orbit in its crater | a hull's ribs and keel, an iron steamer listing, a freighter broken in two; an aircraft; a hull in its furrow |
+| wreck | the land's: a ship on a cell's shore; a modern people's aircraft on open flat ground; a futuristic people's wreckage fallen from orbit in its crater | a hull's ribs and keel, an iron steamer listing, a freighter broken in two; an aircraft; a hull in its furrow |
 | colossus | a people of colossi (the genome's focus or monuments): its capital's harbour mouth, else the height over it | its figure on its plinth, an arm raised; fallen along the ground, its head off |
 | terraformed basin | a low basin of a futuristic people's land | the ground levelled in its rim, channels across it, pumping stations |
 | the last shelter | the steep rock nearest the place the collapse ended in (H-02's last place) | a rock shelter's mouth (prehistoric), a citadel on the height (medieval), a casemate (industrial), a bunker's door with its vents, masts and guardhouse (modern), a vault under its dome (futuristic) |
 | something of the far future | anywhere on its land, two to four | a plain made flat and glassy, pillars to the horizon, a mountain cut into terraces, a lattice over a valley, a sphere on its point |
-| wind farm | a modern people's ridges | rows of turbines into the wind |
-| lighthouse | where the history lit one: the headland nearest its harbour | its tower and lantern, the keeper's house |
+| wind farm | the land's: a modern people's cell's highest ridge | rows of turbines into the wind |
+| lighthouse | where the history lit one: the headland nearest its harbour; the land's on a cell's headland (the water round a third of it at 400 m) by a settlement | its tower and lantern, the keeper's house |
+| fort | the land's (B-418): the cell's height, a crest it can stand on (a prehistoric people's on a hill; a later people's anywhere, likelier on a hill), its gate toward the settlement it guarded | a hill fort's one to three rings of bank in their ditches round the huts of its last people (prehistoric); a castle of five to eight sides, a tower at each corner, the gatehouse, the keep, behind a moat on the flat (medieval); a redoubt, its ring bank round a casemate in its ditch (industrial); pillboxes round a blockhouse, dragon's teeth across the way up (modern); its towers and walls in the people's genome |
 
 * **The pieces** are buildings of the works' kinds (`BK_MOUND`, `BK_DAM`, `BK_DISH`, `BK_TOMB`, `BK_FORT`, `BK_BUNKER`, `BK_TEETH`,
   `BK_VEHICLE`, `BK_AIRCRAFT`, `BK_SHIP`, `BK_LAUNCHPAD`, `BK_HANGAR`, `BK_COLOSSUS`, `BK_TURBINE`, `BK_LIGHTHOUSE`, `BK_LATTICE`, `BK_DERRICK`,
@@ -1423,12 +1426,12 @@ Where to see it:
 
 | Mode | What |
 | --- | --- |
-| `works <sx> <sz> <body>` | a world's works: each kind's count by people, what its history finished, and every work's line (its age, its place, its rule's numbers: a dam's height, length and reservoir; a quarry's face or pit; a battlefield's war and year) |
+| `works <sx> <sz> <body>` | a world's works: each kind's count by people, what its history finished, and every work's line (its age, its place, its rule's numbers: a dam's height, length and reservoir; a quarry's face or pit; a battlefield's war and year); B-418: the land's round each people's first ten places and at forty points of its land, and what the scanner hears from those points |
 | `works ages` | the six age worlds' and the six scene worlds' |
 | `works gallery [scale=N]` | each kind of work of each age's scene world through the renderer, where its rule put it (`shots/tests/works_<age>_<kind>.png`, a sheet `works_<age>_sheet.png`) |
 | `works map` | the same works on insets of the ground with the place each serves (`works_map_<age>.png`: the terrain, the cores, the ways, its reach, a battlefield's line between its sides, the rule in a line) |
-| `works view <sx> <sz> <body> <kind's word> [index]` | one work through the renderer (`WORK_D`, `WORK_H`, `WORK_A` set the camera) and its pieces printed |
-| `works check` | the unit's T-03 checks alone |
+| `works view <sx> <sz> <body> <kind's word> [index]` | one work through the renderer (`WORK_D`, `WORK_H`, `WORK_A` set the camera) and its pieces printed; the world's then the land's, a kind's whole name matched whole (`"a fort"`) |
+| `works check` | the unit's T-03 checks alone (B-418: and the land's, and the scanner's from the peoples' land) |
 
 ## Where the records lie (T-04)
 
@@ -1439,14 +1442,14 @@ before H-04 writes the texts: C-02's fifty are the first fifty and keep their te
 same way, music and star charts at the people's own shares of the fifty (H-05 sorts the three categories by the age). `Lore::records`
 carries it: the decoder's lists, the taking and the radar's world read it (`shardsOfWorld` both peoples').
 
-* **Dated in the history** (`recordsOf`, a catalogue a people, the last eight kept). Each record is dated in the people's own count, from
-  the founding (year 1) to the end (`recordYear`): the eras weighed by what each age wrote a year (a medieval people's 1, a prehistoric
-  one's 0.35, an industrial 5, a modern 12, a futuristic 16, the far future 10) and by what the years left (e every 1,500 years before the
-  end). A modern people's records are a fifth medieval books and scrolls, a fifth industrial print and wax, the rest its own; C-02's draw of
-  a shard's share of the years is the record's share, so the order is C-02's and the last recording is the end's year. The shards' years
+* **Dated in the history** (`recordsOf`, a catalogue a people, the last eight kept). Each record is dated in the people's own count
+  (`recordYear`). B-414: in the years of the age the people reached (`ageFromOf` to the end), weighed by what the years left (e every 1,500
+  years before the end); T-04 spread them over the eras by what each age wrote a year, so a modern people's records were a fifth medieval
+  books and scrolls, a fifth industrial print and wax. Its earlier ages are told by its own histories (`genre.history`, "One age a world",
+  below). C-02's draw of a shard's share of the years is the record's share, so the order is C-02's and the last recording is the end's year. The shards' years
   (`Shard::year`, the `{year}` in a text, the decoder's dates and timeline, the graves' years: the lore's span is the end's year less one)
   are the history's now: A-01 had kept C-02's span of 150 to 600 years until H-04, but the medium follows the date.
-* **Made in its year's way** (`RecordMedium`, `mediaOf`): carved bone (a tally, a flute), carved stone and a painted wall (prehistoric); clay
+* **Made in its year's way** (`RecordMedium`, `mediaOf`; B-414: the age reached's): carved bone (a tally, a flute), carved stone and a painted wall (prehistoric); clay
   tablets early, scrolls, codices late, carved stones, an engraved plate for a chart (medieval); printed pages, codices, wax cylinders (a
   voice, a piece), a glass plate of the sky (industrial); printed pages and reels early, discs, drives late, a glass plate (modern); drives
   and crystals (futuristic); crystals and something that hums (the far future).
@@ -1992,7 +1995,7 @@ music, the star charts) or all, the strip counting each kind held (the one shown
 to the kind shown. C-12's calendar and timeline stay under the rows.
 
 *The timeline* (`game/history_screen.cpp`, C-12's grown): the people's eras across the width, each its share by the people's records
-written in it (an era of few or none a sliver, linear in its years within); an era is placed, a band, once a record written in it is read
+written in it (an era of few or none a sliver, linear in its years within; B-414: a late people's earlier eras slivers); an era is placed, a band, once a record written in it (B-414: or a history telling it) is read
 (the computer dates its records), and its name is shown over the band or, where that row is taken, under it, read through the language as
 the records are (THE YEARS OF THE SOHONG until "bells" is learnt); an era no read record is from is a row of dots. The records held stand
 on the axis by their years, stacked, in their kinds' colours (a text green, a piece blue, a chart violet; held but not read dim; a
@@ -2215,6 +2218,173 @@ every one); 326 names; no class's plans fewer than three where three were open t
 (`shots/tests/instruments_sheet_<age>.png`); `instruments plans [peoples] [scale]` every plan made by a few peoples at its class's age
 (`instruments_plans_<n>.png`); `instruments distinct [peoples]` the measure above, the forms an instrument takes, the commonest names
 (`VESPERIS_MAKERS=1` every name, and the unit check's every finding); the lists (`instruments ages`) print each one's plan and materials.
+
+## One age a world (B-414)
+
+The user found a disc in what read as a medieval village and a lattice mast over its ruins (a modern people's world: its villages a
+medieval core in rings of industrial rows and modern suburbs, its records over its eras, its modern houses in its medieval forms) and
+chose that a world show only the age its people reached. The history (H-02) keeps every era; the ground is the last age's.
+
+* **The age's first year** (`ageFromOf`, galaxy/peoples.h; `Lore::ageFrom`): the start of the last era in the people's count (1 at
+  least). A modern people's last age runs 30-300 years, an industrial people's 30-400, so its records and its dead fall in those.
+* **Towns** stand in the last age's way, one layer (`placeHist`, `countrysideHist`); a place of the plan the history left before that
+  age is gone (`TownHist::gone`: `cellSettlement` returns nothing for its cell, its works go with it: `WB::gone`), one left within it
+  weathers from when it was left. Over the six age worlds 40 places are gone and 39 test towns are all their people's age.
+* **Works** (`galaxy/works.cpp`): `placeAge` and the history's works give the people's age (`eraAge` is gone): a modern people's dam,
+  mine, observatory or lighthouse its history finished in an earlier era stands as a modern one. Gone: a battle of an earlier age
+  (`e.year < ageFrom`), a later people's henges (a prehistoric people's own stay), a modern or later people's aqueduct (a medieval and
+  an industrial people's in their age's way). A necropolis of barrows raises its age's stelae (menhirs a prehistoric people's).
+* **Records**: every record made in the last age's years; the medium, the category's share, the genre, the music, the chart's way and the
+  instrument beside a piece follow. **Histories** (`galaxy/grammar/history.vg`): an industrial people's on printed pages or a codex, a
+  modern people's on printed pages or a drive, a futuristic people's on a drive or a crystal, the far future's on a crystal (`has:past`:
+  an era before the record's since year 1). `@past <n> <rule>` draws one of the earlier eras (the nearer the likelier) and a year in it,
+  takes a run of up to n years with something in them back from it (forward too in a quiet stretch), binds each year's facts and ruler
+  (its era's name, government, age and inventions) and tells it by `<rule>` (`history.year`: C-02's chronicle heading and the annal's
+  register), the gaps by `<rule>.gap`, `<rule>.open` and `<rule>.close` with the first and the last year's facts; the record's own come
+  back after. About one record in twenty: SLEEPING's modern people 7 of 150, the futuristic age world 7 of 175.
+* **Graves**: a death in the age's years while the place stood (`diedIn`).
+* **The machine ages' buildings their age's** (`ageRoof`, `Layout::formOf`, `culturePalette`): an industrial or a modern people's villas,
+  suburban houses and blocks on a rectangle, an L or a court; their roofs the people's where the age built so (flat, pitched, hipped, a
+  row's crow steps in the industrial age; flat, pitched, hipped, a saddle in the modern), else hipped slate (industrial) or flat (modern;
+  B-415: the age's alone, below);
+  their windows the age's (slot 0 the dwellings', 1 the public and the tall buildings'): an industrial people's sash windows, round-headed
+  where its openings were arched, round, pointed or keyholed, a modern people's wide panes and bands. Slot 2 keeps the people's openings
+  for its temples, palaces and focal accent (the suburbs, the mills, the malls and the lighthouses left it); slot 3 (the age before's, for
+  the old cores) is gone. The temple keeps the people's plan and roof in every age.
+* **A mill's doorway is in its front** and its chimney in its back end: all-industrial towns stood mills side by side, and a side doorway
+  met a neighbour's wall or chimney.
+* **A guide saved before** (`records 2`) keeps its found shards by their index, their contents new, said once (`records 3`).
+
+Where to see it: `towns check` (the one-age check), `genome pair <sx sy sz body people> x 2` (a people's town in every age, the machine
+ages' houses now their age's), `records <sx> <sz> <body>` (a people's records by their years' age and medium: one age), `works ages`.
+
+## Each age its own vocabulary (B-415)
+
+The user found an industrial town that read as modern (white stucco, flat roofs, ribbon windows) and as medieval (colonnades of stone,
+white chimneys standing like columns) and asked that every age be clear, the genome kept. **The age speaks first, the people second**: each
+age has its vocabulary and the genome chooses within it; the genome's variables stay the people's own through its ages.
+
+* **A building's role** (`greatKind`): the people's great buildings (temples, churches, town halls, palaces, keeps and towers, the focal
+  accent, monuments, gates, platforms, rotundas, joined towers, aqueducts, tunnels), where its genome speaks fully, and its everyday ones
+  (houses, rows, tenements, villas, blocks, halls, mills, works), where the age speaks first.
+* **The genome read through the age** (`ageExpressed`, galaxy/buildings.h; the generators read it through `Gen::gv`; `archSub`, `ageDome`):
+
+| | Prehistoric | Medieval | Industrial | Modern | Futuristic, far future |
+| --- | --- | --- | --- | --- | --- |
+| Walls | dry stone, wattle, turf (the rock tinted, or daubed) | the rock tinted toward the base, or painted (adobe a desert people's) | brick, painted or not (`BRICK` by the base) | concrete toward the base, or rendered in it | composite in a light of the base; the far future's one material |
+| Everyday roofs | thatch cones, turf, beehives | the people's (any) | slate, pitched or hipped (`ageRoof`); a people of flat roofs behind a parapet (`parapetRoof`); stone, brick or adobe gables standing after the roof (`gables`) | flat | domes and shells |
+| Windows | none | small: a third of a bay at the most, lancets in pairs or groups, scattered where the people scattered them | tall sash one to a bay (a pair at most, never scattered), square or round-headed | wide panes or bands; on a temple its own shape, wide (bands for arches and keyholes, slits for triangles) | bands of glow; portholes for arches and keyholes |
+| Tops | (none) | the people's: finials, crenels, masts, statues | chimney stacks with their pots on the everyday buildings; the great ones' finials, masts, statues; a tower's slate pyramid, spire or dome; no crenels | a mast or nothing on the everyday buildings; needles, saucers or masts on its towers; no crenels | masts, finials; no crenels or statues |
+| Walls' profile | battered huts | the people's (battered, bulging, jettied, set back) | upright (a great building's set back) | upright (a great building's battered, jettied or set back) | the spires' flanks |
+| An expressed frame | | half timbering | brick piers between the windows | a concrete grid: columns between the windows, a slab every storey | an exoskeleton |
+| Arches, domes | | pointed, round, flat; every dome | round or flat; hemispheres | round or flat; saucers | the people's |
+| Colonnades | | columns, arcades | a covered walk of cast-iron columns under iron and glass | pilotis under a slab | |
+| The platform | | steps and a shrine | a bandstand | a plinth and its mast | a plinth |
+| The great buildings | henges, longhouses, dolmens | the people's own forms | a church's own tall windows and gables; a town hall hipped; a round temple a brick rotunda under an iron saucer (no peristyle) | the temple of its age: a low mausoleum of three broad setbacks, a drum under a saucer or a cone, a saucer with needles for minarets, a basilica under a concrete shell (a steep gable, a vault, a saddle, a saucer, a tent) with needle-topped towers; the focal tower's pod | the people's |
+
+* **The everyday buildings' own ages**: an industrial warehouse's iron columns and tall windows, a mill's chimney sooted at its lip and
+  its roof the age's (a row of gables across it for a people of cells), a tenement's four stacks, a villa's chimney at each end; a
+  modern block's lift house a module for a people of cells.
+* **What a building stands on** (B-416): the mounds' earth banks and the pits' rims are gone (each building stood in a ring of the
+  ground's soil as wide as its longest side, over its neighbours); the pits, the cuts in the rock and the kerbs are the hand-made ages'.
+* **The reach**: the finish acts in the prehistoric, medieval and modern ages (an industrial people's brick), the tint in the futuristic
+  alone, the modules in the modern through the lift houses (`genome reach`).
+
+Where to see it: `genome street [scale] [peoples] [years] [desert|felisian] [drone]` (the same peoples in every age, from the street or
+the drone), `genome ages`, `ruins kinds` (every kind of each age at its years), `spot` at a people's place.
+
+## No one's ruins, the land's works, and not the season's (B-417, B-418, B-419)
+
+**A world's ruins are its people's (B-417).** M4-07's monoliths of the old ones (a ring of eight columns, a cube, a dome, three walls, a
+rare 40 m cube, in one 2 km cell in twenty of every felisian, quartz and ocean world, a people there or not) were nobody's: no age, no
+genome, no record, drawn by code of their own. They are gone. `worldHadCivilisation` is the one question (`worldHasRuins` is gone); a world
+without a people (seven felisian worlds in eight, every quartz and ocean world) has no ruins and its scanner no RUINS mode. On a people's
+world the draw's first twentieth of a cell goes to the countryside's lone monuments, its people's in its age and genome, as on a dead
+desert world before. A ruin's echo carries its settlement's class (`Landmark::sub`).
+
+**What is made on a world is not its season's (B-419).** The plan, the people's extent, its histories, its settlements, roads and works
+and the scanner's sights read the planet at the year's mean (`unseasoned`, galaxy/planetmap.h); the game's generators carry the season of
+the moment (a winter's sea ice had counted as land, and nearly every place of a plan moved with the season of a session's first approach).
+
+**A people's everyday works are its land's (B-418).** T-03's rules made a handful of each kind a people (24 quarries by its towns, four
+necropolises by its capital and cities, four wrecks, three henges...), and T-01's plan gives a people hundreds of places over a third of its
+world or more: over 41 people's worlds near home a tenth of the plan's places and one point of the peoples' land in two hundred had a work
+within the scanner's 40 km. The world's list keeps the history's works and the world's great ones (the battlefields, the dams, the
+aqueducts, the observatories, the lighthouses the history lit, the launch sites, the holy place and its way, the colossus, the fortified
+line, the antenna field, the terraformed basins, the far future's, the lines on the plains, the last shelter, the mines the history sank);
+the everyday ones are the land's:
+
+* **The grid** (`landCellOf`, `landCellsAround`): rows of `LAND_CELL_M` (8 km) of latitude, each row's cells at least as wide; a cell's
+  people the side of the divide its middle lies on.
+* **Whether a cell holds one**: its hash under the countryside's density at its middle (`planCountryside`: the people's land, thicker near
+  its places, none beyond its frontier) times its age's appetite (`LAND_RATE`: 0.34 prehistoric and medieval, 0.36 industrial and modern,
+  0.5 futuristic round its great places, none in the far future, whose works are the world's).
+* **What its ground offers** (`landWork`: a 5 x 5 reading of the cell and the plan's coarse grid at its middle): rock, open ground, forest,
+  snow, a shore (water that is not an old sea), coal and ore (the plan's `res`), a hill (`relief`), the greatest settlement in or round it
+  (the plan's places reaching in, the countryside's in its 2 km cells, not a lone monument). A prehistoric people's flint pits (on any
+  ground but snow), standing stones (open ground), a hill fort (a hill); a medieval to modern people's quarry (rock for a stone-built
+  people, else a pit on any dry ground), a mine (coal and ore), a wreck (a shore; a modern people's aircraft on open flat ground), a
+  lighthouse (a shore by a settlement), a wind farm (a modern people's ridges), a fort (anywhere, likelier on a hill); a futuristic people's
+  wreckage fallen from orbit; for every people but the far future's a necropolis by a village or more (a prehistoric people's by any
+  settlement) where its genome buries its dead, and a shrine where the cell's ground is its holy place's kind. One is drawn by their
+  weights; one that finds no site gives way to the next.
+* **Where in it** (the kind's rule over a jittered grid of the cell, `landPoints`): its reach and 60 m inside the cell (no two of the land's
+  touch: `landInside`), clear of the 2 km cells' settlements (their radius and 60 m), the cities' cores (150 m) and the world's works (40 m),
+  as T-03's rules kept clear of each other (`WB::clearOf`, the world's works its `world`).
+* **Made when asked** (`landWorkOf`): a cell's work (or none) made the first time it is asked for, in a few milliseconds, and kept (the last
+  two worlds' cells, a world's cleared at 40,000); the world's works waited for first (the land's keep clear of them). `worksAround` gives
+  the world's and the land's within a reach (the scanner's `worksHeardNear`, the landing's `settlementClearance`, the harness);
+  `worksAroundIfReady` the view's, which never waits (its `WorkNear` holds each as a shared `Work`). `Work::land` marks the land's.
+* **What the explorer meets**: from every point of a prehistoric to a modern people's land sampled by the unit (216) and every place (108)
+  the scanner hears a work within 40 km, eleven on the whole; a scan's first hearing of a region takes 5 to 10 ms on the scanner's thread.
+  A futuristic people's land is wild between its great places (T-01's countryside), and so are its works (KI-396).
+* **The fort** (`WO_FORT`, `A FORT`, B-418's new kind): a prehistoric people's hill fort (one to three rings of bank, `BK_MOUND` style 4,
+  inside their ditches, the huts of its last people within), a medieval people's castle (a curtain wall of five to eight sides, a wall tower
+  at each corner, the gatehouse in the side toward the settlement it guarded, a keep back from it, a moat on the flat), an industrial
+  people's redoubt (`BK_FORT`: its ring bank round a casemate, its ditch), a modern people's strongpoint (pillboxes round a blockhouse,
+  dragon's teeth across the way up); one record in its keep or casemate (`recordSitesOf`).
+
+## The genome within each age, the walls and the records (R-412, B-420, B-421)
+
+R-412 (2026-10-11): B-415 let the age speak first; within an age a people's everyday buildings drew from fewer variables, and towns of one
+age looked more alike. Sixteen more deep variables (`galaxy/genome.*`, fifty-one in all; each its own hash, so A-04's thirty-five did not
+move) act on what the eye picks out along a street, each read through the age as B-415 reads the rest (its expression the age's, its
+choice the people's). `docs/iteration-3/plans/requests/R-412-the-genome-grows-within-each-age.md` has the table; in short:
+
+* **Roofs**: PITCH (every pitched, hipped and conical roof and gable, a hut's cone: `Gen::pitchK`), EAVES (the overhang, a bellcast
+  skirt, a modern slab's lip, deep slab or cornice: `Gen::eave`, `slabEave`), ROOFLINE (`rooflineOf`: dormers, a cross gable, cresting,
+  a bell-cote or a ventilator; a dome's or a cone's lantern, a vault's crest, a cell roof's crest and lantern; on a hand-made people's
+  flat roof a pavilion, a stair house, a balustrade, a cupola; on a modern people's a pergola, a water tank, rails, a penthouse), GABLES
+  (`gables`: crow steps, a curved neck and its cap, a pediment's cornice and raking frame, a half hip), ROOFING (palette slot 2 in the
+  age's material: `genomeRoofing`, eight colours by age).
+* **Walls**: POLYCHROMY (a dado and courses through the windows' pattern, `WindowSpec::dado`, `stripe`; each house its own shade and a
+  third in the accent, `Gen::tone`, `painted`, `Form::tone`; a lighthouse's bands), TRIM (`WindowSpec::frame`, `shutter`), PROJECTIONS
+  (`projectionsOf`: balconies, galleries and a one-storey house's verandah, bays, oriels, each on the front as `walls4x` leans or jetties
+  it; `ringDress` for a round house; `podDress` for a pod), ENTRANCES (`entranceAt`: porch, stoop, portico, hood or canopy; `hutEntrance`;
+  a pod's arch, step, pylons, shell), CORNERS (`cornersOf`: quoins, pilasters, corbelled turrets or a low house's corner tower; a modern
+  people's glazed corners, fins, rounded corners).
+* **Town**: STOREYS (`Layout::heightK`), FRONTAGE (`Layout::frontage`; an industrial row a gable a house), SETBACK (the lots' setback,
+  `Building::yard`), BOUNDARIES (`yardOf`, `yardRun`, `hutRing`: each under C-01's 0.9 m, stepped over), FURNITURE (`BK_FURNITURE`,
+  `genFurniture`, `placeFurniture`: laid last in a town by a stream of its own, round a futuristic people's great structure), POLES
+  (`hutPole`).
+* **A new form**: `FK_FENCE` (pales, bars, wattle, a balustrade; its pales one by one near, its stretches as bands far; its colliders discs
+  where its pales stand). A building in a row or round a compound's court is `Building::joined` (no turrets at its sides, no garden behind).
+* **The works**: every pitched roof of a work takes the roofs' variables; a lighthouse its section, taper, bands, lantern and rail, a
+  headframe its structure (a lattice, a brick tower, an A-frame), a turbine a lattice tower, a rounded nacelle and its blades by number,
+  an observatory, a pillbox and a casemate the people's section, a tomb its gables and doorway, a hangar its roof; a church, a town
+  hall, a station and a mill their doorways, corners and roofline.
+* **The uniqueness** (`genomeDistance`): R-412's own among the strongest variables (the roofing 1, the pitch, the polychromy, the
+  projections and the storeys 0.6, the eaves 0.5, the roofline, the corners, the frontage and the boundaries 0.4, the gables and the
+  trim 0.3, the entrances 0.3): 19.8 at most, alike under a quarter of it (`GENOME_ALIKE` 4.9). The hundred peoples nearest home are
+  10.0 apart at the nearest.
+
+**B-420, the walls the explorer meets are the walls drawn** (`docs/iteration-3/bugs/resolved/B-420-*.md`): every kind's colliders follow
+its drawn mesh (`formColliders`: a lathe's slices by their narrowest outline, a lying piece's section where it lies, a vault's flanks,
+an arch's piers, a truss's legs, a sweep's faces band by band); a big piece stands on the highest ground under it with its colliders
+(`pieceFootNear`); a heap, a bank, a barrow or a tier is stood on (`formWalkable`, `formSupportAt`); the rocks drawn are the rocks
+collided with (`forRocks`). **B-421, the records lie where they can be reached**: off the drawn pieces at the floor and the heaps'
+slopes (`Placer::clear`), out of the water (the view lays a place's records again with its drawn water within 600 m: `waterRecords`),
+off the earthworks' banks, and not behind a doorway something fell across (`Placer::doorOpen`).
 
 ## What the later milestones take from here
 

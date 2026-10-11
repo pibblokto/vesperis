@@ -4,6 +4,7 @@
 #include "history.h"
 #include "works.h"
 #include "buildings.h"
+#include "drainage.h"
 #include "core/rng.h"
 #include <algorithm>
 #include <chrono>
@@ -58,32 +59,18 @@ int shardsOfWorld(const BodyGen& g) {
     return total;
 }
 
-// ---- when: the people's eras weighed by what each age wrote and what the years left ---------------------------------------------------
+// ---- when: the years of the age the people reached, weighed by what the years left -----------------------------------------------------
 
 int recordYear(const PeopleAge& pa, double u) {
-    static const double LIT[AGE_COUNT] = {0.35, 1.0, 5.0, 12.0, 16.0, 10.0};   // what an age wrote a year, against a medieval people's
-    const double TAU = 1500;                                                  // the years take a record's chance by e in 1,500 years
-    const int L = std::max(1, pa.lastYear);
-    struct Seg { double s, e, w, lit; };
-    Seg segs[AGE_COUNT + 2]; int n = 0; double total = 0;
-    for (const Era& e : pa.eras) {
-        const double s = std::max(1, e.start), en = std::min(L, e.end) + 1.0;   // the era's years, the year 1 the first counted
-        if (en <= s || n >= AGE_COUNT + 2) continue;
-        const double lit = LIT[clampi(e.age, 0, AGE_COUNT - 1)];
-        const double w = lit * TAU * (std::exp(-(L + 1.0 - en) / TAU) - std::exp(-(L + 1.0 - s) / TAU));
-        if (w <= 0) continue;
-        segs[n++] = {s, en, w, lit}; total += w;
-    }
-    if (n == 0) return clampi(1 + (int)(clampd(u, 0, 1) * (L - 1)), 1, L);
-    double t = clampd(u, 0, 1) * total;
-    for (int i = 0; i < n; i++) {
-        const Seg& sg = segs[i];
-        if (t > sg.w && i + 1 < n) { t -= sg.w; continue; }
-        // lit tau (exp(-(L+1-y)/tau) - exp(-(L+1-s)/tau)) = t
-        const double y = L + 1.0 + TAU * std::log(std::exp(-(L + 1.0 - sg.s) / TAU) + std::min(t, sg.w) / (sg.lit * TAU));
-        return clampi((int)std::floor(y), (int)sg.s, (int)sg.e - 1);
-    }
-    return L;
+    // B-414: every record was made in the age the people reached (its earlier ages' are gone with their towns; a late people's histories
+    // tell those years: `genre.history`, galaxy/grammar/history.vg). The years take a record's chance by e in 1,500 years: the later the likelier
+    const double TAU = 1500;
+    const int L = std::max(1, pa.lastYear), s = ageFromOf(pa);
+    if (L <= s) return L;
+    // tau (exp(-(L+1-y)/tau) - exp(-(L+1-s)/tau)) = t, of the whole tau (1 - exp(-(L+1-s)/tau))
+    const double e0 = std::exp(-(L + 1.0 - s) / TAU), t = clampd(u, 0, 1) * (1 - e0);
+    const double y = L + 1.0 + TAU * std::log(e0 + t);
+    return clampi((int)std::floor(y), s, L);
 }
 
 // ---- what: music and charts past the fifty by the age, the medium by the age ----------------------------------------------------
@@ -352,28 +339,108 @@ const std::vector<int>& lastKinds(int age) {
     return K[clampi(age, 0, AGE_COUNT - 1)];
 }
 
+// B-421: the drawn surface of a piece where an object lies on the floor (0.06 m over the ground at its foot): the segments its faces cross that
+// height in, and whether a point lies inside them or within `near` of one (a drift of sand, a low heap of rubble, a bank, a hearth's stone: the
+// pieces with no collider hid what lay under them)
+struct FloorSlice { double x0, z0, x1, z1; };
+bool sliceHolds(const std::vector<FloorSlice>& S, double x, double z, double near) {
+    int c[4] = {0, 0, 0, 0};
+    for (const FloorSlice& s : S) {
+        const double dx = s.x1 - s.x0, dz = s.z1 - s.z0, L2 = dx * dx + dz * dz;
+        const double t = L2 > 1e-12 ? clampd(((x - s.x0) * dx + (z - s.z0) * dz) / L2, 0, 1) : 0;
+        if (std::hypot(s.x0 + dx * t - x, s.z0 + dz * t - z) < near) return true;
+        if ((s.z0 > z) != (s.z1 > z)) { const double xx = s.x0 + (z - s.z0) * dx / dz; c[xx > x ? 0 : 1]++; }
+        if ((s.x0 > x) != (s.x1 > x)) { const double zz = s.z0 + (x - s.x0) * dz / dx; c[zz > z ? 2 : 3]++; }
+    }
+    return (c[0] & 1) && (c[1] & 1) && (c[2] & 1) && (c[3] & 1);
+}
+void floorSliceOf(const Form& e, std::vector<FloorSlice>& out) {
+    out.clear();
+    const double h = 0.06;   // a wall's stub of a hand's height hid half a record
+    if (e.absolute || e.y0 > h + 0.01 || formTop(e) < h || e.kind == FK_CABLE || formWalkable(e)) return;
+    FormMesh m; formMesh(e, 0, Vec3(e.x, 0, e.z), e.y0 < 0.01 ? 1.0 : 0.0, m, 1e9);
+    for (const FormMesh::Poly& P : m.polys) {
+        const FormMesh::V* v = &m.v[P.first];
+        double ix[16], iz[16]; int ni = 0;
+        for (int k = 0; k < P.n && ni < 16; k++) {
+            const Vec3& a = v[k].p; const Vec3& b = v[(k + 1) % P.n].p;
+            const double da = a.y - h, db = b.y - h;
+            if ((da < 0) == (db < 0)) continue;
+            const double t = da / (da - db);
+            ix[ni] = a.x + (b.x - a.x) * t; iz[ni] = a.z + (b.z - a.z) * t; ni++;
+        }
+        if (ni >= 2) out.push_back({ix[0], iz[0], ix[ni - 1], iz[ni - 1]});
+    }
+}
+
 struct Placer {
+    const BodyGen& g;
     const RuinSpec& r;
     const RecordCatalogue& C;
     std::vector<ShardSite>& out;
     Rng& rng;
     std::vector<Form> el;
     std::vector<FormDisc> discs;
+    std::vector<std::vector<FloorSlice>> slices;   // B-421: the drawn pieces at the floor, of the building being furnished and its neighbours
+    std::vector<FormMesh> heaps;                   // B-421: and the banks, heaps and barrows among them (their surface over a spot)
     int discsOf = -2;
     std::set<int> used;   // the records here (distinct within the place)
-    Placer(const RuinSpec& r_, const Culture& c, const RecordCatalogue& C_, std::vector<ShardSite>& o, Rng& rg) : r(r_), C(C_), out(o), rng(rg) { ruinElements(r, c, 0, el); }
+    const std::function<bool(double, double)>* wetFn = nullptr;   // B-421: the view's water, where it gives it
+    Placer(const BodyGen& g_, const RuinSpec& r_, const Culture& c, const RecordCatalogue& C_, std::vector<ShardSite>& o, Rng& rg) : g(g_), r(r_), C(C_), out(o), rng(rg) { ruinElements(r, c, 0, el); }
 
-    void collide(int bi) {
+    void collide(int bi) {   // B-415: every piece over its ground, a neighbour's too (a tower's top fallen across its room)
         if (discsOf == bi) return;
-        discs.clear();
-        for (const Form& e : el) if (e.building == bi) formColliders(e, discs);
+        discs.clear(); slices.clear(); heaps.clear();
+        const Building& b = r.buildings[bi];
+        const double reach = std::hypot(b.hw, b.hd) + 2;
+        for (const Form& e : el) {
+            if (!(e.building == bi || std::hypot(e.x - b.x, e.z - b.z) < reach + formReach(e))) continue;
+            formColliders(e, discs);
+            if (formWalkable(e)) { heaps.emplace_back(); formMesh(e, 0, Vec3(e.x, 0, e.z), 1.0, heaps.back(), 1e9); continue; }
+            slices.emplace_back(); floorSliceOf(e, slices.back());
+            if (slices.back().empty()) slices.pop_back();
+        }
         discsOf = bi;
     }
-    // a spot the explorer can stand at: `margin` clear of every piece standing on the ground, 0.45 m from the records already here
-    bool clear(double x, double z, double margin) const {
+    // B-421: a spot in water or at its edge: the view's water where it gives it (its rivers and lakes as drawn); else the sea's, the planet
+    // function at the view's 16 m without the rivers (a frame cannot wait for their tiles), at the spot and half a cell round it, 0.3 m over the
+    // water at least (a lighthouse's foot on its headland stood a record at the sea's edge; a city across a river stood buildings in it)
+    bool wet(double x, double z) const {
+        if (wetFn) return (*wetFn)(x, z);
+        DrainageOff off;
+        const double mPerRad = g.R * 1000.0, cosLat = std::max(std::cos(r.lat), 0.05);
+        const bool seaWorld = g.type == PT_FELISIAN || g.type == PT_OCEAN || g.liquidLevel > -1e8;
+        const double sea = g.liquidLevel > -1e8 ? g.liquidLevel : 0.0;
+        for (int k = 0; k < 5; k++) {
+            const double ex = x + (k == 1 ? 8 : (k == 2 ? -8 : 0)), nz = z + (k == 3 ? 8 : (k == 4 ? -8 : 0));
+            const SurfaceSample q = sampleSurface(g, StarSystem::bodyFromLatLon(r.lat + nz / mPerRad, r.lon + ex / (mPerRad * cosLat)), 16.0);
+            if (q.material == MAT_WATER || (q.water > -1e8 && q.height < q.water + 0.3) || (seaWorld && q.height < sea + 0.3)) return true;
+        }
+        return false;
+    }
+    // a spot the explorer can stand at: `margin` clear of every piece standing on the ground, 0.45 m from the records already here (`apart`);
+    // B-421: not inside a drawn piece at the floor (nor within 0.15 m of one), not under water
+    bool clear(double x, double z, double margin, double apart = 0.45) const {
         for (const FormDisc& q : discs) { if (q.y0 > 1.0) continue; if (std::hypot(x - q.x, z - q.z) < q.r + margin) return false; }
-        for (const ShardSite& o : out) if (std::hypot(o.x - x, o.z - z) < 0.45) return false;
-        return true;
+        for (const ShardSite& o : out) if (std::hypot(o.x - x, o.z - z) < apart) return false;
+        for (const auto& S : slices) if (sliceHolds(S, x, z, 0.3)) return false;
+        for (const FormMesh& m : heaps)   // on a bank's, a heap's or a barrow's ground, or within a stride of its toe (the view stands a big one on the
+            for (int k = 0; k < 5; k++)   // highest ground under it: its toe over a spot beside it on a slope)
+                if (formSupportAt(m, x + (k == 1 ? 0.5 : (k == 2 ? -0.5 : 0)), z + (k == 3 ? 0.5 : (k == 4 ? -0.5 : 0))) > -0.5) return false;
+        return !wet(x, z);
+    }
+    // B-421: a room's doorway open: a run of a metre along its line clear of every piece's collider at the knee (a tower's top fallen across its
+    // lobby's doorway shut the records laid in it; the A-03 check's rule)
+    bool doorOpen(const BuildingRoom& room) const {
+        if (!room.door) return true;
+        int run = 0, best = 0;
+        for (double t = -room.doorL; t <= room.doorL + 1e-9; t += 0.1) {
+            const double x = room.doorX + room.doorAx * t, z = room.doorZ + room.doorAz * t;
+            bool blocked = false;
+            for (const FormDisc& q : discs) if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - x, q.z - z) < q.r + 0.35) { blocked = true; break; }
+            run = blocked ? 0 : run + 1; best = std::max(best, run);
+        }
+        return best * 0.1 >= 1.0;
     }
     // a record drawn from `pool` that is not here yet (-1 none), music or a chart first where `want` asks it
     int draw(const std::vector<int>& pool, int want = -1) {
@@ -431,6 +498,7 @@ struct Placer {
         BuildingRoom room;
         if (local < 0 || !buildingRoom(b, room)) return false;
         collide(bi);
+        if (!doorOpen(room)) return false;   // its doorway under something fallen: none laid where none can go
         for (const auto& sp : room.spots) {
             double x, z; toSettlement(b, sp.first, sp.second, x, z);
             if (room.door && std::hypot(x - room.doorX, z - room.doorZ) < 1.5) continue;
@@ -449,6 +517,7 @@ struct Placer {
         BuildingRoom room;
         if (!buildingRoom(b, room)) return 0;
         collide(bi);
+        if (!doorOpen(room)) return 0;
         double cx, cz; toSettlement(b, room.cx, room.cz, cx, cz);
         if (room.outside && !room.spots.empty()) toSettlement(b, room.spots[0].first, room.spots[0].second, cx, cz);
         double dx = std::sin(b.heading + PI), dz = std::cos(b.heading + PI);   // the back, without a doorway
@@ -515,7 +584,7 @@ struct Placer {
                 const double lx = qx * std::cos(b.heading) - qz * std::sin(b.heading), lz = qx * std::sin(b.heading) + qz * std::cos(b.heading);
                 if (room.round ? std::hypot(lx - room.cx, lz - room.cz) > room.r - 0.55 : (std::fabs(lx - room.cx) > room.hw - 0.55 || std::fabs(lz - room.cz) > room.hd - 0.55)) return false;
             }
-            if (!clear(x, z, 0.45)) return false;
+            if (!clear(x, z, 0.45, 0.7)) return false;   // B-421: its body beside a record, not over it (an archive's rows were 0.45 m off)
             for (const InstrumentSite& q : placed) if (std::hypot(q.x - x, q.z - z) < 0.9) return false;
             return true;
         };
@@ -550,11 +619,13 @@ struct Placer {
 // archive (the capital's, a city's, some towns'; a prehistoric people's in its chief's longhouse, the far future's round its structure),
 // then C-03's few by the class, in buildings drawn by their weight (not the archive's), each from the records made before the place was
 // left. A work: the works that kept records (the last shelter, an observatory, a necropolis, a shrine, standing stones, a station, a launch
-// site's blockhouse, a lighthouse), a few each in its buildings' rooms or at their feet
-void recordSitesOf(const BodyGen& g, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments) {
+// site's blockhouse, a lighthouse, B-418: a fort), a few each in its buildings' rooms or at their feet
+void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments,
+                   const std::function<bool(double, double)>* wet) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's (B-421: its water read at a spot)
     out.clear();
     if (instruments) instruments->clear();
-    if (r.kind != RK_SETTLEMENT || r.buildings.empty()) return;
+    if (r.buildings.empty()) return;
     std::shared_ptr<const RecordCatalogue> Cp = recordsOf(g, r.people);
     if (!Cp || Cp->count <= 0) return;
     const RecordCatalogue& C = *Cp;
@@ -565,7 +636,8 @@ void recordSitesOf(const BodyGen& g, const RuinSpec& r, const Culture& c, std::v
     const int endYear = C.lastYear - (int)std::lround(std::max(0.0, r.before));   // a place left early holds nothing written after
     std::vector<int> pool;
     for (int i = 0; i < C.count; i++) if (i != C.last && C.entries[i].year <= endYear) pool.push_back(i);   // none for the old time's stones (left before year 1)
-    Placer P(r, c, C, out, rng);
+    Placer P(g, r, c, C, out, rng);
+    P.wetFn = wet;
     const int age = clampi(r.buildAge >= 0 ? r.buildAge : c.age, 0, AGE_COUNT - 1);
     std::set<int> taken;   // the buildings already holding one
 
@@ -586,7 +658,7 @@ void recordSitesOf(const BodyGen& g, const RuinSpec& r, const Culture& c, std::v
             case WO_OBSERVATORY: want = 1 + rng.irange(3); cat = RC_CHART; break;
             case WO_NECROPOLIS: want = 1 + rng.irange(3); break;
             case WO_SHRINE: want = 1 + rng.irange(2); break;
-            case WO_HENGE: case WO_ANTENNA: case WO_LAUNCH: case WO_LIGHTHOUSE: want = 1; break;
+            case WO_HENGE: case WO_ANTENNA: case WO_LAUNCH: case WO_LIGHTHOUSE: case WO_FORT: want = 1; break;   // B-418: a fort's keep, its casemate
             default: return;
         }
         std::vector<int> cand; std::vector<double> wt;

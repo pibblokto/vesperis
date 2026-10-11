@@ -14,6 +14,7 @@
 namespace {
 const double CAB_HALF = 2.5, CAB_H = 2.4, EYE = 1.6, CAGE_R = 1.0;
 const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10;
+const double GLASS_SHEEN = 16;   // B-411: the shade of the cabin light on a glass hull
 // R-404 (2026-10-06): every computer in a colour of its own, so the one wanted is found at a glance: by `facing` (6 is
 // the cage, 0 nothing), the bank its screen is drawn in (9 the flight computer's green, 21-27 the others) and its colour;
 // the prompt under the crosshair takes the colour too
@@ -82,7 +83,11 @@ void Game::updateCabin(const Input& in, double realDt) {
     // the roof lifter
     if (in.wasPressed(KEY_PAGE_UP) && !c.onRoof) { c.onRoof = true; c.x = clampd(c.x, -1.4, 1.4); c.z = clampd(c.z, -1.4, 1.4); status("ON THE OBSERVATION DECK - PAGE DOWN TO COME BACK IN", 4); audio.beep = 4; }
     else if (in.wasPressed(KEY_PAGE_DOWN) && c.onRoof) { c.onRoof = false; status("BACK IN THE CABIN", 3); audio.beep = 4; }
-    if (in.wasPressed(KEY_U) && !in.ctrl()) { c.light = !c.light; status(c.light ? "CABIN LIGHT ON" : "CABIN LIGHT OFF", 3); audio.beep = 4; }
+    if (in.wasPressed(KEY_U) && !in.ctrl()) {   // B-411: with the hull glass, the light says so (Y lies beside U)
+        c.light = !c.light; audio.beep = 4;
+        if (c.depolarised) status(c.light ? "CABIN LIGHT ON - Y POLARISES THE GLASS HULL" : "CABIN LIGHT OFF - Y POLARISES THE GLASS HULL", 4);
+        else status(c.light ? "CABIN LIGHT ON" : "CABIN LIGHT OFF", 3);
+    }
     if (in.wasPressed(KEY_Y) && !in.ctrl()) { c.depolarised = !c.depolarised; status(c.depolarised ? "HULL DEPOLARISED - THE WALLS ARE GLASS" : "HULL POLARISED", 3); audio.beep = 4; }
     c.lightLevel += ((c.light ? 1.0 : 0.0) - c.lightLevel) * (1 - std::exp(-realDt * 3));
     // what the explorer is facing: 0 nothing, 1 GOES console, 2 front screen, 3 right-left, 4 right-middle, 5 right-right, 6 capsule cage, 7 the shard decoder (C-06), 8 the signal radar (C-07), 9 the telescope (W-06), 10 the instruments' case (C-11)
@@ -123,13 +128,20 @@ void Game::drawCabin() {
     auto toView = [&](double x, double y, double z) { return look * Vec3(x - eye.x, y - eye.y, z - eye.z); };
     double lit = c.lightLevel;
     double hullShade = 12 + 30 * lit;
-    RasterParams rp; rp.bank = BANK_HULL; rp.grain = &cabinGrain; rp.grainScale = 12.0 * FB_SCALE; rp.grainWeight = 0.6;
-    if (c.depolarised) { rp.blend = BLEND_DARKEN; rp.darken = 0.45; rp.grain = nullptr; }
-    auto quad = [&](Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade) {
+    // B-411: a depolarised hull is glass (the walls, the floor, the ceiling): the outside tinted through it, and the cabin light
+    // caught on it as a sheen that clears with the light off; what stands in the room (the consoles, the sets, the case, the
+    // desk) stays solid and lit, where it went to glass with the walls and the light had nothing left to light
+    RasterParams solid; solid.bank = BANK_HULL; solid.grain = &cabinGrain; solid.grainScale = 12.0 * FB_SCALE; solid.grainWeight = 0.6;
+    RasterParams rp = solid;
+    if (c.depolarised) { rp.blend = BLEND_DARKEN; rp.darken = 0.45; rp.sheen = true; rp.grain = nullptr; }
+    const double sheen = c.depolarised ? GLASS_SHEEN * lit / hullShade : 1;   // the glass's shade for a shade of the solid hull
+    auto face = [&](const RasterParams& prm, Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade) {
         RVert q[4]; Vec3 pts[4] = {a, b, cc, d};
         for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].z * 0.31; q[k].v = pts[k].y + pts[k].z * 0.17; }
-        rasterPolygon(fb, q, 4, rp, spaceR.proj);
+        rasterPolygon(fb, q, 4, prm, spaceR.proj);
     };
+    auto quad = [&](Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade) { face(rp, a, b, cc, d, shade * sheen); };   // the hull
+    auto box = [&](Vec3 a, Vec3 b, Vec3 cc, Vec3 d, double shade) { face(solid, a, b, cc, d, shade); };       // what stands in it
     double H = CAB_HALF, T = CAB_H;
     // walls: below the window, above it, and the pillars at the corners; the window band is open
     const double wy0 = 0.95, wy1 = 2.05, px = 0.45;   // window band, pillar half width
@@ -165,7 +177,7 @@ void Game::drawCabin() {
         }
     }
     if (c.onRoof) {
-        RasterParams rf = rp; rf.blend = BLEND_REPLACE;
+        RasterParams rf = solid;
         RVert q[4]; Vec3 pts[4] = {Vec3(-1.6, T + 0.9, -1.6), Vec3(1.6, T + 0.9, -1.6), Vec3(1.6, T + 0.9, 1.6), Vec3(-1.6, T + 0.9, 1.6)};
         for (int k = 0; k < 4; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = hullShade * 0.7; q[k].u = pts[k].x; q[k].v = pts[k].z; }
         rasterPolygon(fb, q, 4, rf, spaceR.proj);
@@ -206,40 +218,40 @@ void Game::drawCabin() {
     double flick = 0.9 + 0.1 * std::sin(realTime * 7.0);
     {   // GOES console box against the left wall
         Vec3 a(-H, 0, -0.8), b(-1.9, 0, -0.8), cc(-1.9, 0, 0.8), d(-H, 0, 0.8);
-        quad(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
-        quad(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
+        box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
+        box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         screen(Vec3(-1.89, 0.35, -0.6), Vec3(-1.89, 0.35, 0.6), Vec3(-1.89, 0.9, 0.6), Vec3(-1.89, 0.9, -0.6), (c.facing == 1 ? 50 : 30) * flick, 1);
     }
     {   // C-06: the shard decoder against the back wall, a desk like the console's with its screen toward the room; the screen
         // glows and breathes while a shard waits to be read at the language's current share
         Vec3 a(-0.8, 0, -H), b(-0.8, 0, -1.9), cc(0.8, 0, -1.9), d(0.8, 0, -H);
-        quad(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
-        quad(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
+        box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
+        box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         bool waiting = shardsPending();
         double breathe = waiting ? 0.85 + 0.15 * std::sin(realTime * 2.2) : flick;
         screen(Vec3(-0.6, 0.35, -1.89), Vec3(0.6, 0.35, -1.89), Vec3(0.6, 0.9, -1.89), Vec3(-0.6, 0.9, -1.89), (c.facing == 7 ? 50 : (waiting ? 44 : 30)) * breathe, 7);
     }
     {   // C-07: the signal radar beside the decoder, a narrower set against the back wall; its screen brightens while the receiver is on
         Vec3 a(-2.1, 0, -H), b(-2.1, 0, -1.9), cc(-1.0, 0, -1.9), d(-1.0, 0, -H);
-        quad(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
-        quad(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
+        box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
+        box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         double sweep = radar.on ? 0.8 + 0.2 * std::sin(realTime * 3.1) : flick;
         screen(Vec3(-1.95, 0.35, -1.89), Vec3(-1.15, 0.35, -1.89), Vec3(-1.15, 0.9, -1.89), Vec3(-1.95, 0.9, -1.89), (c.facing == 8 ? 50 : (radar.on ? 46 : 30)) * sweep, 8);
     }
     {   // W-06 (the user's review): the telescope's set at the back wall's other end, the radar's twin; its screen glows while the eye is at the eyepiece
         Vec3 a(1.0, 0, -H), b(1.0, 0, -1.9), cc(2.1, 0, -1.9), d(2.1, 0, -H);
-        quad(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
-        quad(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
+        box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
+        box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
         double glow = tele.on ? 0.85 + 0.15 * std::sin(realTime * 2.6) : flick;
         screen(Vec3(1.15, 0.35, -1.89), Vec3(1.95, 0.35, -1.89), Vec3(1.95, 0.9, -1.89), Vec3(1.15, 0.9, -1.89), (c.facing == 9 ? 50 : (tele.on ? 46 : 30)) * glow, 9);
     }
     {   // C-11: the instruments' case on the left wall behind the console: a cabinet, its glass front lit in the case's colour, brighter with
         // what it holds and while an instrument is played
         Vec3 a(-H, 0, -1.85), b(-1.98, 0, -1.85), cc(-1.98, 0, -0.9), d(-H, 0, -0.9);
-        quad(a + Vec3(0, 1.45, 0), b + Vec3(0, 1.45, 0), cc + Vec3(0, 1.45, 0), d + Vec3(0, 1.45, 0), hullShade * 0.9);   // top
-        quad(b, b + Vec3(0, 1.45, 0), cc + Vec3(0, 1.45, 0), cc, hullShade * 0.75);                                         // front frame
-        quad(a, b, b + Vec3(0, 1.45, 0), a + Vec3(0, 1.45, 0), hullShade * 0.6);                                            // its sides
-        quad(d, cc, cc + Vec3(0, 1.45, 0), d + Vec3(0, 1.45, 0), hullShade * 0.6);
+        box(a + Vec3(0, 1.45, 0), b + Vec3(0, 1.45, 0), cc + Vec3(0, 1.45, 0), d + Vec3(0, 1.45, 0), hullShade * 0.9);   // top
+        box(b, b + Vec3(0, 1.45, 0), cc + Vec3(0, 1.45, 0), cc, hullShade * 0.75);                                         // front frame
+        box(a, b, b + Vec3(0, 1.45, 0), a + Vec3(0, 1.45, 0), hullShade * 0.6);                                            // its sides
+        box(d, cc, cc + Vec3(0, 1.45, 0), d + Vec3(0, 1.45, 0), hullShade * 0.6);
         const double held = std::min(1.0, guide.instruments.size() / 6.0), shine = (c.facing == 10 ? 50 : 26 + 14 * held) * flick;
         for (int shelf = 0; shelf < 3; shelf++) {   // three shelves behind the glass, each a band of light
             const double y0 = 0.18 + shelf * 0.42, y1 = y0 + 0.34;
@@ -247,9 +259,9 @@ void Game::drawCabin() {
         }
     }
     {   // the front desk under the front window
-        quad(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0, H), Vec3(-1.5, 0, H), hullShade * 0.8);
-        quad(Vec3(-1.5, 0.85, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(1.5, 0.85, H), Vec3(-1.5, 0.85, H), hullShade * 0.9);
-        quad(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(-1.5, 0.85, 1.95), hullShade * 0.75);
+        box(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0, H), Vec3(-1.5, 0, H), hullShade * 0.8);
+        box(Vec3(-1.5, 0.85, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(1.5, 0.85, H), Vec3(-1.5, 0.85, H), hullShade * 0.9);
+        box(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(-1.5, 0.85, 1.95), hullShade * 0.75);
         screen(Vec3(-1.2, 0.86, 2.0), Vec3(1.2, 0.86, 2.0), Vec3(1.2, 0.95, H - 0.05), Vec3(-1.2, 0.95, H - 0.05), (c.facing == 2 ? 48 : 28) * flick, 2);
     }
     {   // three screens on the right wall's lower band

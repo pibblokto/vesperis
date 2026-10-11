@@ -64,6 +64,7 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         }
         audio.engine = 0.6 * u; audio.hum = 0.3;
     }
+    audio.surfaceOff();   // B-413: the capsule hears nothing of the ground, going down or up (its last level went on through the climb)
     surf.update(realDt, in, t, false);
     updateShipMotion(dt);
 }
@@ -297,7 +298,7 @@ void Game::renderHelp() {
         "M  WAYPOINT AT THE CROSSHAIR   K  CALL THE CAPSULE",
         "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
         "L             MARK WHERE THE CROSSHAIR RESTS",
-        "N             MAP: CURSOR, ENTER MARKS, +/- ZOOM",
+        "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
         "CTRL+S  SAVE  P PHOTO  G GUIDE  H HELP  ESC MENU",
         "PAGE 2/2 - SPACE: PREVIOUS PAGE, OTHER KEYS: CLOSE"};

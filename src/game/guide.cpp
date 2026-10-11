@@ -58,6 +58,7 @@ bool Guide::load(const std::string& path) {
             if (m.kind < 0 || m.kind > MARK_PLACE) m.kind = MARK_PLACE;
             marks.push_back(m);
         }
+        else if (key == "shownmark") is >> shownMark;   // B-412: after the marks it counts in
         else if (key == "gmark") {   // G-06: <x> <y> <z> <lent> <when> <name...>
             GalaxyMark m; int lentFlag = 0; std::string rest;
             is >> m.x >> m.y >> m.z >> lentFlag >> m.when;
@@ -113,11 +114,12 @@ bool Guide::load(const std::string& path) {
             else if (n == "probes") probesSent = (int)v;   // X-04
         }
     }
-    if (recordsScheme < 2) {   // T-04: the second people's shards at the records' stride, everywhere a shard's key is kept
+    if (shownMark < -1 || shownMark >= (int)marks.size()) shownMark = -1;
+    if (recordsScheme < 3) {   // T-04 (2): the records' contents new; B-414 (3): a people's records all of the age it reached
         migratedShards = 0;
         for (const std::string& k : shards) if (k.find("/S") != std::string::npos) migratedShards++;
-        rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox);
     }
+    if (recordsScheme < 2) { rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox); }   // T-04: the second people's shards at the records' stride, everywhere a shard's key is kept
     return true;
 }
 
@@ -127,13 +129,14 @@ bool Guide::save(const std::string& path) const {
     f.precision(12);
     f << "vesperis-guide 1\n";
     f << "gen " << genVersion << "\n";
-    f << "records 2\n";   // T-04: the shards' keys at the records' stride (people x 1000 + index)
+    f << "records 3\n";   // T-04: the shards' keys at the records' stride (people x 1000 + index); B-414: the records of the age reached
     if (!home.empty()) f << "home " << home << "\n";
     for (auto& kv : names) f << "name " << kv.first << " " << kv.second << "\n";
     for (auto& kv : inbox) f << "inbox " << kv.first << " " << kv.second << "\n";
     for (auto& k : visited) f << "visited " << k << "\n";
     for (auto& k : landed) f << "landed " << k << "\n";
     for (const SurfaceMark& m : marks) f << "mark " << m.body << " " << m.lat << " " << m.lon << " " << markKindToFile(m.kind) << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";   // R-408 (T-03: R-408's numbers kept)
+    if (shownMark >= 0 && shownMark < (int)marks.size()) f << "shownmark " << shownMark << "\n";   // B-412
     for (const GalaxyMark& m : galaxyMarks) f << "gmark " << m.x << " " << m.y << " " << m.z << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";   // G-06
     for (auto& k : shards) f << "shard " << k << "\n";   // C-03
     for (auto& kv : decoded) f << "decoded " << kv.first << " " << kv.second << "\n";   // C-06

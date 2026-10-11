@@ -36,6 +36,9 @@ struct AudioState {
     // R-403 the drone
     double rotor = 0;      // the thrust pods' spin 0..1 (the whine's level)
     double rotorPitch = 0; // 0..1 with the speed and the climb (the whine's pitch)
+    // B-413: the ground's sounds off, every level the surface sets (`updateSurface`): the capsule, the ship and a load hear none of
+    // them (the ship silenced the wind, the rain and the lava only; the breath, the waves, the leaves, ... went on aboard)
+    void surfaceOff() { wind = rain = lava = breath = surf = birds = leaves = hoofs = insects = engineRpm = skid = rotor = 0; }
     // C-04 a piece of the old peoples' music (the decoder screen): the piece and its tradition, which must outlive the play;
     // `pieceStart` plays it from the top, a null `piece` stops it at once; the synth reports the beat it is at (-1 idle) and the end
     const Piece* piece = nullptr;

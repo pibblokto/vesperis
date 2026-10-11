@@ -1,12 +1,12 @@
-// C-01: the ruins of a world. The monoliths of the old ones (M4-07: 5% of the cells of a 2 km latitude/longitude grid on
-// felisian, quartz and ocean worlds hold one structure) and, on a world that had a civilisation (TR_CIVILISATION: one
-// felisian or desert world in eight), the settlements of that people: hamlets, villages and towns of buildings with walls,
-// doorways, windows, roofs and inner rooms, in a style the whole world shares (`Culture`), decayed by their age. One
-// deterministic function of the grid cell (the body's seed and the cell's indices), read by the surface view (the drawing,
-// the colliders), the landmark finder, the landing map and the harness: a settlement is where it is whatever the landing
-// site or the local frame. The layout is in metres east and north of the settlement's centre; the pieces (`Form`) are
-// forms (A-02: C-01's boxes and domes among them) over the ground at their own foot, so a settlement follows the terrain and no
-// ground is flattened.
+// C-01: the ruins of a world. On a world that had a civilisation (TR_CIVILISATION: one felisian or desert world in eight), the
+// settlements of that people: hamlets, villages and towns of buildings with walls, doorways, windows, roofs and inner rooms, in a
+// style the whole world shares (`Culture`), decayed by their age. One deterministic function of a 2 km latitude/longitude grid's
+// cell (the body's seed and the cell's indices), read by the surface view (the drawing, the colliders), the landmark finder, the
+// landing map and the harness: a settlement is where it is whatever the landing site or the local frame. The layout is in metres
+// east and north of the settlement's centre; the pieces (`Form`) are forms (A-02: C-01's boxes and domes among them) over the
+// ground at their own foot, so a settlement follows the terrain and no ground is flattened. B-417: M4-07's monoliths of the old
+// ones (columns, cubes, domes and walls in one cell in twenty of every felisian, quartz and ocean world, a people there or not)
+// are gone: a world's ruins are its people's.
 #pragma once
 #include "planetmap.h"
 #include "forms.h"
@@ -15,8 +15,7 @@
 #include <string>
 #include <cstdint>
 
-enum RuinKind { RK_COLUMNS = 0, RK_CUBE, RK_DOME, RK_WALLS, RK_GIANT_CUBE, RK_SETTLEMENT };
-enum SettlementClass { SC_HAMLET = 0, SC_VILLAGE, SC_TOWN, SC_MONUMENT,   // a monument: one building alone (a dead desert world's, in the cells the old ones' monoliths take elsewhere)
+enum SettlementClass { SC_HAMLET = 0, SC_VILLAGE, SC_TOWN, SC_MONUMENT,   // a monument: one building alone in the countryside
                        SC_CITY, SC_CAPITAL,                                  // T-01: the plan's cities and its capital (galaxy/plan.h), their cores spanning cells
                        SC_WORKS };                                           // T-01: a cell that holds only a network's works (a maglev's pylons): no shards, no graves
 enum SettlementPlan { SP_CLUSTER = 0, SP_STREET, SP_RADIAL, SP_GRID, SP_LONE, SP_GREAT };   // A-03: SP_GREAT the futuristic age's few great structures
@@ -43,6 +42,8 @@ enum BuildingKind { BK_HOUSE = 0, BK_HALL, BK_TOWER, BK_ROTUNDA, BK_GATE, BK_PLA
                     // a conveyor
                     BK_MOUND, BK_DAM, BK_DISH, BK_TOMB, BK_FORT, BK_BUNKER, BK_TEETH, BK_VEHICLE, BK_AIRCRAFT, BK_SHIP, BK_LAUNCHPAD, BK_HANGAR,
                     BK_COLOSSUS, BK_TURBINE, BK_LIGHTHOUSE, BK_LATTICE, BK_DERRICK, BK_BLOCKS, BK_SPHERE, BK_TETHER, BK_TRILITHON, BK_CONVEYOR,
+                    // R-412: the people's street furniture (`style` its `Furniture`: a well, a lamp, a fountain, a figure on its plinth)
+                    BK_FURNITURE,
                     BK_COUNT };
 extern const char* const SETTLEMENT_CLASS_NAMES[7];   // "HAMLET", "VILLAGE", "TOWN", "MONUMENT", "CITY", "CAPITAL", "WORKS"
 extern const char* const BUILDING_KIND_NAMES[BK_COUNT];
@@ -98,13 +99,12 @@ Vec3 peopleDivide(const BodyGen& g);                      // the pole of the gre
 int peopleAt(const BodyGen& g, double lat, double lon);   // which people lived at a point (0 on a world of one)
 bool peoplesEndedTogether(const BodyGen& g);              // one catastrophe for both
 Culture cultureOf(const BodyGen& g, int people = 0);      // a people's culture (C-13: the second's by its own draws, its age the first's when they ended together)
-// A-03: a people's culture as if it had reached `age` and ended `years` ago (its palette the age's): the harness's sheets of the ages, and
-// a people's older works in their own age's way (T-02)
+// A-03: a people's culture as if it had reached `age` and ended `years` ago (its palette the age's): the harness's sheets of the ages
 Culture cultureAs(const BodyGen& g, int people, int age, double years);
 double decayOf(double ageYears, double wet);   // 0.05..0.95: a village of two centuries stands, one of thirty millennia is foundations (C-08; A-03: masonry's)
-// T-02: a people's culture building in an older age's way (its genome read through that age: the roofs, the temple, the huts, the materials'
-// leanings) and weathered `extraYears` longer (a place left before the end); the palette stays the people's (its banks), its window slot 3
-// the older ways' (`ruinElements` draws an older building's windows there)
+// T-02: a people's culture building in an age's way (its genome read through that age: the roofs, the temple, the huts, the materials'
+// leanings) and weathered `extraYears` longer (a place left before the end; B-414: of its people's last age, the age a world shows); the
+// palette stays the people's (its banks)
 Culture cultureAtAge(const Culture& c, int age, double extraYears = 0);
 
 struct Building {
@@ -117,7 +117,7 @@ struct Building {
     double luck = 0;        // A-03: its fortune against the weather (the settlement's and its own, -0.4..0.4): a material half gone is more
                             // or less gone in it (`buildingDecay`, galaxy/buildings.h); C-01's one decay is its materials' now
     int door = 0;           // the side with the doorway: 0 front (+z'), 1 right (+x'), 2 back (-z'), 3 left (-x'); -1 none
-    int age = 1;            // A-03: the age whose way built it (its kind's; T-02's old cores keep their own inside a later people's city)
+    int age = 1;            // A-03: the age whose way built it (its kind's; B-414: its people's last, a work's pieces their work's)
     int style = 0;          // A-03: the kind's form its culture chose (a temple: `Culture::temple`; a tower: `towerForm`), so a room is known without the culture
     // A-04: what its people's genome made of it that its room reads (so a room is still known without the culture): its plan's form
     // (`PlanForm`: a rectangle, a circle, a polygon of `sides`, an ellipse, an L, a court), what it stands on (`Foundation`), and its
@@ -132,9 +132,14 @@ struct Building {
     // T-03: a work whose forms stand at heights over the reference level, not over the ground at their foot (a dam's wall from its valley's
     // floor to its crest, an aqueduct's arches to its channel): the height they rise from (-1e9: the ground's, as every building's)
     double base = -1e9;
+    // R-412: how deep its front yard is to the street it fronts (a town's lots; 0 none known): what bounds it, where its people bounded yards;
+    // whether it stands in a row or a compound (its neighbours at its sides: no turrets on its corners, no garden behind it)
+    double yard = 0;
+    bool joined = false;
 };
-// A-04: what a building stands on, by its people's relation to the land: the ground; stilts (its room the ground under its floor); an
-// earth mound banked against its walls; a pit it is sunk in; a cut in the rock round it; a terrace's kerb
+// A-04: what a building stands on, by its people's relation to the land: the ground; stilts (its room the ground under its floor); a
+// mound (B-416: nothing drawn round it: its earth bank, as wide as the building's longest side, ran over its neighbours); a pit it is
+// sunk in; a cut in the rock round it; a terrace's kerb (B-416: the pits, the cuts and the kerbs the hand-made ages')
 enum Foundation { FD_GROUND = 0, FD_STILTS, FD_MOUND, FD_PIT, FD_CUT, FD_TERRACE };
 // the drawn pieces are `Form`s (A-02, galaxy/forms.h): C-01's boxes (walls, columns, slabs, blocks) and domes among the forms of the ages
 // C-08: what the terrain round a settlement says (`readSite`: samples of the planet function at 64 m, no tile built), read once
@@ -158,9 +163,7 @@ struct Plaza { double x = 0, z = 0, r = 10; int age = 1; };
 struct FieldPatch { double x = 0, z = 0, hw = 20, hd = 20, heading = 0; int kind = 0, age = 1; };
 struct TownLayer { int age = 1; double r0 = 0, r1 = 0; };
 struct RuinSpec {
-    int kind = RK_CUBE;     // RuinKind
-    int style = 0;          // 0 smooth, 1 striated, 2 glowing lines (the monoliths' styles; a settlement's is its culture's)
-    double size = 10;       // a monolith's size; a settlement's radius (metres)
+    double size = 10;       // the settlement's radius (metres)
     double lat = 0, lon = 0;   // the centre (radians)
     double heading = 0;
     uint64_t seed = 0;
@@ -176,9 +179,8 @@ struct RuinSpec {
     // T-01: a place of the world's plan (galaxy/plan.h): its rank in the people's founding (-1 the countryside's, hashed in its cell) and
     // the buildings its core holds (a capital's and a city's: the layout's count; 0 the class's own draw)
     int rank = -1, wanted = 0;
-    // T-02: the town's plan (galaxy/towns.h): its streets, its squares, its fields, its layers by age (the old core first: a later people's
-    // older town inside its city, by the history's founding of the place); the age it was built in (a town the history says was left early
-    // stands in its founding age's way; a countryside village of a later people may be an old one), and the years before the end it was left
+    // T-02: the town's plan (galaxy/towns.h): its streets, its squares, its fields, its layers by age (B-414: one, its people's last); the age
+    // it was built in (-1 its people's: B-414, every settlement's; a work's pieces their work's), and the years before the end it was left
     std::vector<Street> streets;
     std::vector<Plaza> plazas;
     std::vector<FieldPatch> fields;
@@ -188,8 +190,7 @@ struct RuinSpec {
     int founded = 0;          // the year of its founding in the people's count (the history's; 0 unknown: the countryside's)
     int work = -1;            // T-03: a work's pieces (`WorkKind`, galaxy/works.h; `sclass` SC_WORKS), -1 a settlement's
 };
-bool worldHasRuins(const BodyGen& g);   // felisian, quartz and ocean worlds (the old ones) and the civilisations' worlds
-inline bool worldHadCivilisation(const BodyGen& g) { return g.hasTrait(TR_CIVILISATION); }
+inline bool worldHadCivilisation(const BodyGen& g) { return g.hasTrait(TR_CIVILISATION); }   // the worlds with ruins (B-417: no others)
 // the 2 km grid (M4-07): the cell of a point (gLon unwrapped, from the longitude given), and a row's number of cells
 void ruinCellOf(const BodyGen& g, double lat, double lon, int& gLat, int& gLon);
 int ruinCellsAround(const BodyGen& g, int gLat);
@@ -197,8 +198,8 @@ int ruinCellsAround(const BodyGen& g, int gLat);
 // far from the meridian the same index in the next row lies cells away (at 50 degrees and an index of 5,000, two cells and a half)
 int ruinCellLonIn(const BodyGen& g, int gLatFrom, int gLonFrom, int gLatTo);
 double ruinCellLat(const BodyGen& g);   // the grid's cell size in radians of latitude
-// the ruin of a cell: false when the cell holds none (95% of the cells on a world of the old ones, 65% on a civilisation's).
-// A civilisation's settlements rank town, village, hamlet, monument for the finders
+// the settlement of a cell: false when the cell holds none (most cells: outside the people's land all of them). The settlements rank
+// town, village, hamlet, monument for the finders
 // `withBuildings` false leaves the settlement's layout out (the landmark finder needs the class and the radius alone)
 bool ruinOfCell(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool withBuildings = true);
 // A-03: a settlement of the given class laid out at a cell's spot in the given culture (the harness's sheets of the ages)

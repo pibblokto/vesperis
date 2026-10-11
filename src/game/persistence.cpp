@@ -184,6 +184,7 @@ bool Game::load(const std::string& path) {
     telescopeOff();                     // W-06: nor the telescope
     chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10: nor the chart held up
     probe = ProbeState();                                    // X-01: a falling probe comes back from its own line below
+    audio.surfaceOff();                                      // B-413: nor the ground's sounds (a ground loaded sets its own)
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;
     int onSurface = 0, siteBody = -1; double slat = 0, slon = 0, px = 0, pz = 0, pyaw = 0, ppitch = 0, capx = 0, capz = 0;

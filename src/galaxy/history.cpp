@@ -2676,7 +2676,8 @@ std::vector<int> History::eventsAt(int place) const {
     return o;
 }
 
-std::shared_ptr<History> buildHistory(const StarSystem& sys, const Body& b, const BodyGen& g, int people) {
+std::shared_ptr<History> buildHistory(const StarSystem& sys, const Body& b, const BodyGen& gSeason, int people) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     const double t0 = nowMs();
     auto H = std::make_shared<History>();
     const int n = std::max(1, peoplesOf(g));
@@ -2709,7 +2710,8 @@ std::mutex g_histMutex;
 std::map<std::pair<uint64_t, int>, HistorySlot> g_hist;
 uint64_t g_histTick = 0;
 }
-std::shared_ptr<const History> historyOf(const StarSystem& sys, const Body& b, const BodyGen& g, int people) {
+std::shared_ptr<const History> historyOf(const StarSystem& sys, const Body& b, const BodyGen& gSeason, int people) {
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     const std::pair<uint64_t, int> key(g.seed, people > 0 ? 1 : 0);
     {
         std::lock_guard<std::mutex> lk(g_histMutex);
@@ -2727,7 +2729,8 @@ std::shared_ptr<const History> historyOf(const StarSystem& sys, const Body& b, c
     return h;
 }
 
-std::shared_ptr<const History> historyOfWorld(const BodyGen& g, int people) {   // T-02
+std::shared_ptr<const History> historyOfWorld(const BodyGen& gSeason, int people) {   // T-02
+    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
     const std::pair<uint64_t, int> key(g.seed, people > 0 ? 1 : 0);
     {
         std::lock_guard<std::mutex> lk(g_histMutex);

@@ -144,6 +144,11 @@ struct BodyGen {
     bool starKnown = false;
     static BodyGen make(const Body& b, double season = 0);
 };
+// B-419: what is made on a world is the world's, not its season's. The terrain the explorer sees keeps the season (the winter
+// hemisphere's ice cap and snow line); a reader of the world's made things (a people's plan, its extent, its histories, settlements,
+// roads and works, the scanner's sights) reads it without (the cap and the line at their means): the generator itself where its season
+// is 0, else a copy without it in `tmp`
+inline const BodyGen& unseasoned(const BodyGen& g, BodyGen& tmp) { if (g.season == 0) return g; tmp = g; tmp.season = 0; return tmp; }
 
 // B-321: the climate's mean surface temperature (degrees C) at a latitude, height and season on a living world: the
 // biome table and the HUD read the same number. `sub` is dot(unit, lockedDir) on a locked world (0 otherwise).
