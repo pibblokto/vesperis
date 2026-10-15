@@ -129,7 +129,7 @@ double nebulaGlow(const NebulaPatch* p, int n, const Vec3& dir, int& tone);
 // the whole sky), in the tone of `starNebulaTone` (0 blue, 1 red, 2 white, by the star's seed); 0 patches for every other class
 int starNebulaPatches(const Star& s, const Vec3& dirToStar, NebulaPatch* out);
 int starNebulaTone(const Star& s);
-double sampleGalaxyBand(const std::vector<float>& map, int W, int H, const Vec3& dir);
+double sampleGalaxyBand(const std::vector<float>& map, const Vec3& dir);   // a BAND_MAP_W x BAND_MAP_H map by direction, bilinear
 bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName = true);
 // S-01 (2026-10-01): the varieties. The pick draws one of the six families with the rarity weights (the same draw as at
 // G-01, so every star kept its family); a hash of its own then turns a share of a family's stars into one of its
@@ -154,7 +154,8 @@ struct StarNeighborhood {
     int64_t cx = 1 << 30, cy = 0, cz = 0;
     int radius = 10;
     std::vector<Star> stars;
-    void update(const Vec3& posKm);
+    int builtRadius = -1;   // F-02: the radius of the cube `stars` holds (-1 none yet)
+    void update(const Vec3& posKm);   // the cube round the position's sector (F-02: the sectors it shares with the last one kept)
     // nearest star to a position (or nullptr)
     const Star* nearest(const Vec3& posKm, double* distOut = nullptr) const;
 };

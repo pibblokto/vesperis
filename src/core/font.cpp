@@ -1,4 +1,5 @@
 #include "font.h"
+#include "parallel.h"
 #include <cstring>
 #include <algorithm>
 #include <cstdlib>
@@ -133,17 +134,24 @@ void fillRectRGB(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t color) {
     int S = c.scale;
     fillPhys(c, x0 * S, y0 * S, x1 * S + S - 1, y1 * S + S - 1, color);
 }
+// F-05: the rows on the pool when there are many (a screen's dimmed frame, 800 rows at 4x); the status bar and the thousands of small
+// blends stay direct calls under the threshold. A blend that may dispatch must not run inside a pool job (the pool is not reentrant):
+// every RGB pass runs on the main thread, after the mush
 void blendRectRGB(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t color, int a) {
     int S = c.scale;
     x0 *= S; y0 *= S; x1 = x1 * S + S - 1; y1 = y1 * S + S - 1;
     int cr = color & 255, cg = (color >> 8) & 255, cb = (color >> 16) & 255;
-    for (int y = std::max(0, y0); y <= std::min(c.h - 1, y1); y++)
-        for (int x = std::max(0, x0); x <= std::min(c.w - 1, x1); x++) {
-            uint32_t& p = c.px[y * c.w + x];
-            int r = p & 255, g = (p >> 8) & 255, b = (p >> 16) & 255;
-            r += (cr - r) * a / 255; g += (cg - g) * a / 255; b += (cb - b) * a / 255;
-            p = rgb(r, g, b);
-        }
+    const int ya = std::max(0, y0), yb = std::min(c.h - 1, y1);
+    if (ya > yb) return;
+    parallelFor(yb - ya + 1, 100, [&](int rb, int re) {
+        for (int y = ya + rb; y < ya + re; y++)
+            for (int x = std::max(0, x0); x <= std::min(c.w - 1, x1); x++) {
+                uint32_t& p = c.px[y * c.w + x];
+                int r = p & 255, g = (p >> 8) & 255, b = (p >> 16) & 255;
+                r += (cr - r) * a / 255; g += (cg - g) * a / 255; b += (cb - b) * a / 255;
+                p = rgb(r, g, b);
+            }
+    });
 }
 void drawRectRGB(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t color) {
     for (int x = x0; x <= x1; x++) { putBlock(c, x, y0, color); putBlock(c, x, y1, color); }

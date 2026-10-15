@@ -14,10 +14,6 @@
 namespace {
 constexpr double TAU_M = 6.283185307179586, PI_M = 3.141592653589793;
 inline double onePole(double f, double dt) { return 1.0 - std::exp(-TAU_M * f * dt); }
-inline double resonM(double x, double f, double bw, double dt, double& y1, double& y2) {   // Klatt's resonator, unity at the centre
-    double r = std::exp(-PI_M * bw * dt), B = 2 * r * std::cos(TAU_M * f * dt), C = -r * r;
-    double o = (1 - r) * x + B * y1 + C * y2; y2 = y1; y1 = o; return o;
-}
 // a medium's numbers: the band (high-pass and low-pass corners), the horn, the gain back, the saturation, the speed's wander (the wow's
 // rate and its pitch share, the flutter's), the surface (the hiss's level and its band, the rumble, the crackle's rate and size)
 struct MediumSound {
@@ -48,6 +44,15 @@ const MediumSound* soundOf(int medium) {
 }
 }
 
+void AudioSynth::mediumCoefs(double dt, int medium) {
+    co.mdUp = 1 - std::exp(-dt * 4.0); co.mdDown = 1 - std::exp(-dt * 2.0); co.mdDropK = 1 - std::exp(-dt * 40); co.mdSr = 1.0 / dt;
+    const MediumSound* M = medium >= 0 ? soundOf(medium) : nullptr;
+    if (!M) return;
+    co.mdAh = onePole(M->hp, dt); co.mdAl = M->lpPoles > 0 ? onePole(M->lp, dt) : 0;
+    co.mdHornR = std::exp(-PI_M * M->hornBw * dt); co.mdHornB = 2 * co.mdHornR * std::cos(TAU_M * M->hornF * dt);
+    co.mdHissHi = onePole(M->hissHi, dt); co.mdHissLo = onePole(M->hissLo, dt); co.mdRum = onePole(45, dt);
+}
+
 double AudioSynth::mediumSample(double x, double dt, AudioState& st) {
     const int medium = st.medium;
     if (medium != mdKind) {   // another record: the filters, the delay line and the wear begin again
@@ -59,15 +64,19 @@ double AudioSynth::mediumSample(double x, double dt, AudioState& st) {
     // the surface sounds while something plays: it comes up as the record starts and dies with it (a pause stops the turning)
     const bool playing = (mOn || spOn) && !(st.piecePause && mOn) && !(st.speechPause && spOn);
     const double target = M && playing ? 1.0 : 0.0;
-    mdLvl += (target - mdLvl) * (1 - std::exp(-dt * (target > mdLvl ? 4.0 : 2.0)));
+    mdLvl += (target - mdLvl) * (target > mdLvl ? co.mdUp : co.mdDown);
     if (!M) return x;
     mdT += dt;
     // the band: two high-passes, the low-passes, the horn's hump
-    const double ah = onePole(M->hp, dt);
+    const double ah = co.mdAh;
     mdHp1 += (x - mdHp1) * ah; double y = x - mdHp1;
     mdHp2 += (y - mdHp2) * ah; y -= mdHp2;
-    if (M->lpPoles > 0) { const double al = onePole(M->lp, dt); mdLp1 += (y - mdLp1) * al; y = mdLp1; if (M->lpPoles > 1) { mdLp2 += (y - mdLp2) * al; y = mdLp2; } if (M->lpPoles > 2) { mdLp3 += (y - mdLp3) * al; y = mdLp3; } }
-    if (M->horn > 0) y += M->horn * resonM(y, M->hornF, M->hornBw, dt, mdHy1, mdHy2);
+    if (M->lpPoles > 0) { const double al = co.mdAl; mdLp1 += (y - mdLp1) * al; y = mdLp1; if (M->lpPoles > 1) { mdLp2 += (y - mdLp2) * al; y = mdLp2; } if (M->lpPoles > 2) { mdLp3 += (y - mdLp3) * al; y = mdLp3; } }
+    if (M->horn > 0) {   // Klatt's resonator, unity at the centre (its radius and pole the block's)
+        const double r = co.mdHornR, B = co.mdHornB, C = -r * r;
+        const double o = (1 - r) * y + B * mdHy1 + C * mdHy2; mdHy2 = mdHy1; mdHy1 = o;
+        y += M->horn * o;
+    }
     y *= M->gain;
     if (M->drive > 0) y = std::tanh(M->drive * y) / M->drive;
     // the speed: the delay line read at a wandering delay (a cylinder's turn, a turntable's, a reel's wow and its capstan's flutter)
@@ -75,14 +84,14 @@ double AudioSynth::mediumSample(double x, double dt, AudioState& st) {
     double d = 0.006;
     if (M->wow > 0) d += M->wow / (TAU_M * M->wowHz) * (1 + std::sin(TAU_M * M->wowHz * mdT));
     if (M->flut > 0) d += M->flut / (TAU_M * M->flutHz) * (1 + std::sin(TAU_M * M->flutHz * mdT + 1.3));
-    const double sr = 1.0 / dt;
+    const double sr = co.mdSr;
     auto tap = [&](double back) { double pos = (double)mdI - back * sr; while (pos < 0) pos += mdBuf.size(); size_t i0 = (size_t)pos % mdBuf.size(), i1 = (i0 + 1) % mdBuf.size(); double fr = pos - std::floor(pos); return mdBuf[i0] * (1 - fr) + mdBuf[i1] * fr; };
     double out = tap(d);
     // the wear and the media of the late ages
     if (medium == RM_REEL) {   // a dropout where the oxide wore: a dip of a tenth of a second or two now and then
         mdDropT -= dt;
         if (mdDropT <= 0) { const bool gap = 0.5 + 0.5 * noise() < 0.3; mdDrop = gap ? 0.25 : 1.0; mdDropT = gap ? 0.06 + 0.14 * (0.5 + 0.5 * noise()) : 7 + 18 * (0.5 + 0.5 * noise()); }
-        mdDropLvl += (mdDrop - mdDropLvl) * (1 - std::exp(-dt * 40));
+        mdDropLvl += (mdDrop - mdDropLvl) * co.mdDropK;
         out *= mdDropLvl;
     } else if (medium == RM_DRIVE) {   // the rot: a stutter (the last scrap read again), a moment gone coarse, a gap
         mdGlNext -= dt;
@@ -116,12 +125,12 @@ double AudioSynth::mediumSample(double x, double dt, AudioState& st) {
     double surface = 0;
     if (M->hiss > 0) {
         const double n = noise();
-        mdNzLp += (n - mdNzLp) * onePole(M->hissHi, dt); mdNzHp += (mdNzLp - mdNzHp) * onePole(M->hissLo, dt);
+        mdNzLp += (n - mdNzLp) * co.mdHissHi; mdNzHp += (mdNzLp - mdNzHp) * co.mdHissLo;
         double h = (mdNzLp - mdNzHp) * M->hiss * 2.2;
         if (medium == RM_CYLINDER) { const double sw = std::sin(PI_M * M->wowHz * mdT); h *= 0.55 + 0.45 * sw * sw; }
         surface += h;
     }
-    if (M->rumble > 0) { mdRum += (noise() - mdRum) * onePole(45, dt); surface += M->rumble * mdRum * 6; }
+    if (M->rumble > 0) { mdRum += (noise() - mdRum) * co.mdRum; surface += M->rumble * mdRum * 6; }
     if (M->crackRate > 0) {
         mdCrkNext -= dt;
         if (mdCrkNext <= 0) {   // a tick, now and then a pop

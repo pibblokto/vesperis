@@ -99,16 +99,12 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
                 double dx = T.x - r.x, dz = T.z - r.z;
                 if (dx * dx + dz * dz > (r.reach + 40) * (r.reach + 40)) continue;
                 if (near[q]->spec.work < 0 && std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond (T-03: a work has none)
-                for (const Building& bd : near[q]->spec.buildings) {
-                    double ex = dx - bd.x, ez = dz - bd.z;
-                    double lx = ex * std::cos(bd.heading) - ez * std::sin(bd.heading), lz = ex * std::sin(bd.heading) + ez * std::cos(bd.heading);
-                    if (std::fabs(lx) < bd.hw + 1.5 && std::fabs(lz) < bd.hd + 1.5) { skip = true; break; }
-                }
-                if (!skip && near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // A-03: its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
+                if (near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // A-03: its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
                     const Culture& cu = cultures[near[q]->spec.people == 1 && peoples > 1 ? 1 : 0];
                     double keep = clampd(0.05 + 0.15 * std::log10(std::max(1.0, cu.ageYears / 200.0)), 0.05, 0.33);
-                    if (h01(mix64(ht + 21)) >= keep) skip = true;
+                    if (h01(mix64(ht + 21)) >= keep) { skip = true; break; }   // F-02: before the buildings (one hash; it clears 67-95% of the yards' trees)
                 }
+                skip = inSettlementBuilding(*near[q], T.x, T.z, 1.5);
             }
             if (skip) continue;
         }
@@ -186,14 +182,21 @@ double SurfaceView::testCanopyCoverage(double radiusM) {
     return total ? (double)covered / total : 0.0;
 }
 
+// B-423: the flora's bands are pinned, six at 1x and eight at 2x-4x whatever the threads (`parallelBands`): a band's coverage grid
+// hides the trees its own canopies cover, so where the bands begin decides which far trees show, and a picture that followed the
+// thread count differed between machines (13,921 pixels at 4x between one thread and eight)
+static int floraBands() { return std::min(8, FBH / 32); }
+
 // B-310: the flora in parallel bands of rows: every thread walks the same cells and trees, draws what falls into its
 // band (the rasteriser clips lines, points and polygons to the band; a canopy blob wholly outside it is skipped before
 // its points are placed) and keeps its own coverage grid and counts; the counts are merged, a tree counting in the
 // band that holds its canopy's centre
 void SurfaceView::drawFlora(Framebuffer& fb, double t) {
+    lastFloraBandN = 0;
     if (site.gen.type != PT_FELISIAN) return;
     lastTreesDrawn = 0; lastFloraPoints = 0; lastFloraPolys = 0; lastNearTrees = lastMidTrees = lastFarTrees = 0; lastTreesHidden = 0; lastTreesVisited = 0;
     for (double& m : lastFloraMs) m = 0;
+    const auto tl0 = std::chrono::steady_clock::now();   // F-01
     {   // the cells near to far (N2-04), within the 70 degree view with a margin, and their trees with the rows each can touch
         const double cs = 16;
         const int radius = 24;
@@ -228,17 +231,22 @@ void SurfaceView::drawFlora(Framebuffer& fb, double t) {
             });
         lastTreesListed = (int)treeList.size();
     }
+    lastFloraListMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tl0).count();
     std::mutex mu;
-    parallelFor(FBH, 32, [&](int yb, int ye) {
+    parallelBands(FBH, floraBands(), [&](int yb, int ye) {
+        const auto tb0 = std::chrono::steady_clock::now();
         setRasterBand(yb, ye);
         FloraStats st;
         drawFloraBand(fb, t, yb, ye, st);
         setRasterBand(0, 1 << 30);
+        const double bandMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count();
         std::lock_guard<std::mutex> lock(mu);
         lastTreesDrawn += st.treesDrawn; lastFloraPoints += st.floraPoints; lastFloraPolys += st.floraPolys; lastTreesVisited += st.treesVisited;
         lastNearTrees += st.nearTrees; lastMidTrees += st.midTrees; lastFarTrees += st.farTrees; lastTreesHidden += st.treesHidden;
-        for (int k = 0; k < 4; k++) lastFloraMs[k] = std::max(lastFloraMs[k], st.ms[k]);
+        for (int k = 0; k < 2; k++) lastFloraMs[k] = std::max(lastFloraMs[k], st.ms[k]);
+        if (lastFloraBandN < TRACE_BANDS) { BandTrace& b = lastFloraBands[lastFloraBandN++]; b = BandTrace(); b.y0 = yb; b.y1 = ye; b.ms = bandMs; b.walked = st.treesVisited; b.drawn = st.treesDrawn; }   // F-01
     });
+    std::sort(lastFloraBands, lastFloraBands + lastFloraBandN, [](const BandTrace& a, const BandTrace& b) { return a.y0 < b.y0; });
 }
 
 void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY1, FloraStats& st) {
@@ -265,6 +273,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     auto nowMs = []() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); };
     double tSec = nowMs();
     auto section = [&](int k) { double n = nowMs(); st.ms[k] += n - tSec; tSec = n; };
+    bool markCov = true;   // F-07: the coverage grid is read by the trees alone: the cells after them mark nothing
     // a tree (or its hiding) counts once: in the band that holds the row of its canopy centre
     auto inBand = [&](double x, double y, double z) { Vec3 v = toView(x, y, z); if (v.z < NEAR_Z) return bandY0 == 0; int sy = clampi((int)(proj.cy - proj.f * v.y / v.z), 0, FBH - 1); return sy >= bandY0 && sy < bandY1; };
     auto vert = [&](double x, double y, double z, double shade) { RVert q; Vec3 v = toView(x, y, z); q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade; return q; };
@@ -276,7 +285,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     auto point = [&](double x, double y, double z, double shade, int bank, int size) {
         RVert p = vert(x, y, z, shade);
         if (p.z < NEAR_Z) return;
-        if (rasterPoint3(fb, p, bank, proj, true, size)) {
+        if (rasterPoint3(fb, p, bank, proj, true, size) && markCov) {
             double sx, sy;
             if (::projectPoint(p, proj, sx, sy)) { int tx = (int)(sx / TILE), ty = (int)(sy / TILE); if (tx >= 0 && ty >= 0 && tx < TX && ty < TY) cov[ty * TX + tx] += (uint16_t)(size * size); }
         }
@@ -297,7 +306,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         double fogF = 1 - std::exp(-(dist / fogD + wallHere));
         if (pxR < 0.6 * S) {   // a speck
             RVert p; p.x = cV.x; p.y = cV.y; p.z = cV.z; p.shade = leafBase * tone0 * 0.8; p.shade += (63 - p.shade) * fogF;
-            if (rasterPoint3(fb, p, bank, proj, true, 1)) { double sx, sy; if (::projectPoint(p, proj, sx, sy)) { int tx = (int)(sx / TILE), ty = (int)(sy / TILE); if (tx >= 0 && ty >= 0 && tx < TX && ty < TY) cov[ty * TX + tx] += 1; } }
+            if (rasterPoint3(fb, p, bank, proj, true, 1) && markCov) { double sx, sy; if (::projectPoint(p, proj, sx, sy)) { int tx = (int)(sx / TILE), ty = (int)(sy / TILE); if (tx >= 0 && ty >= 0 && tx < TX && ty < TY) cov[ty * TX + tx] += 1; } }
             st.floraPoints++;
             return;
         }
@@ -334,6 +343,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         rasterPolygon(fb, q, nOut + 2, rp, proj);
         st.floraPolys++;
         // the coverage grid: the tiles under the inner part of the disc fill up
+        if (!markCov) return;
         double sxC = proj.cx + proj.f * cV.x / cV.z;
         int tx0 = clampi((int)((sxC - pxR * 0.7) / TILE), 0, TX - 1), tx1 = clampi((int)((sxC + pxR * 0.7) / TILE), 0, TX - 1);
         int ty0 = clampi((int)((syC - ryPx * 0.7) / TILE), 0, TY - 1), ty1 = clampi((int)((syC + ryPx * 0.7) / TILE), 0, TY - 1);
@@ -611,6 +621,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         drawTree(tr.T, tr.dist);
     }
     section(0);
+    markCov = false;
     for (const FloraCell& cr : cells) {
         wallHere = rainWall((cr.cx + 0.5) * cs, (cr.cz + 0.5) * cs, cr.d);
         {
@@ -740,7 +751,6 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     }
                 }
             }
-            section(1);
             // ---- bushes on grass and at the forest edge, some with berries. R-306: shrubland: 0.5-4 bushes a cell on grass
             // (savanna the most, tundra cushions, desert scrub), to 320 m, the big ones two clusters; the plains read empty
             // with 0-2 bushes a cell within 200 m
@@ -872,7 +882,6 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     rasterPoint3(fb, p, 11, proj, true, 1);
                 }
             }
-            section(2);
             // ---- deserts: cacti and succulents; tundra and alpine rock: cushions and lichen
             if (cellDist < 300 && ((tv.material == MAT_SAND && tv.biome == BIO_DESERT) || tv.biome == BIO_TUNDRA || (tv.biome == BIO_ALPINE && cellDist < 60))) {
                 bool cactus = tv.biome == BIO_DESERT;
@@ -914,7 +923,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     }
                 }
             }
-            section(3);
         }
     }
+    section(1);   // F-07: the cells' whole time (a clock read per cell and part was ~2,700 a frame)
 }

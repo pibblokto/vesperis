@@ -10,11 +10,56 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <algorithm>
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
 
+namespace {
+// F-01: VESPERIS_TRACE=1 times the parts of the real game's frame, which the headless bench never runs (the window's upload and
+// swap, the synth's blocks, the files): once a second the mean and the worst of each on stderr, and at the quit the percentiles
+// of the frames' intervals and of their work without the hold and the swap (F-08: the pacing's wait and the vsync's)
+struct FrameTrace {
+    enum { POLL, GAME, AUDIO, SYNTH, SHOT, REC, UPLOAD, DRAW, HOLD, SWAP, WORK, INTERVAL, N };
+    const char* names[N] = {"poll", "game", "audio", "synth", "shot", "rec", "upload", "draw", "hold", "swap", "work", "interval"};
+    double sum[N] = {}, worst[N] = {}, v[N] = {};
+    int frames = 0, blocks = 0;
+    double lastReport = -1;
+    std::vector<float> intervals, works;
+    void add(double now) {
+        if (lastReport < 0) lastReport = now;
+        for (int k = 0; k < N; k++) { sum[k] += v[k]; worst[k] = std::max(worst[k], v[k]); }
+        intervals.push_back((float)v[INTERVAL]); works.push_back((float)v[WORK]);
+        frames++;
+        if (now - lastReport < 1.0) return;
+        fprintf(stderr, "frames %d in %.2f s, ms mean/worst:", frames, now - lastReport);
+        for (int k = 0; k < N; k++) fprintf(stderr, " %s %.2f/%.2f%s", names[k], sum[k] / frames, worst[k], k == SYNTH ? (" (" + std::to_string(blocks) + " blocks)").c_str() : "");
+        fprintf(stderr, "\n");
+        for (int k = 0; k < N; k++) sum[k] = worst[k] = 0;
+        frames = 0; blocks = 0; lastReport = now;
+    }
+    void summary() const {
+        auto pct = [](std::vector<float> s, const char* what) {
+            if (s.empty()) return;
+            std::sort(s.begin(), s.end());
+            auto at = [&](double p) { return s[std::min(s.size() - 1, (size_t)(p * s.size()))]; };
+            int over17 = 0, over20 = 0, over33 = 0;   // F-08: 17.5, as paced frames sit at 16.67 give or take the swap's wake
+            for (float x : s) { over17 += x > 17.5f; over20 += x > 20.0f; over33 += x > 33.4f; }
+            fprintf(stderr, "%s over %zu frames: p50 %.2f, p90 %.2f, p99 %.2f, max %.2f ms; over 17.5 ms %d, over 20 ms %d, over 33.4 ms %d\n", what, s.size(), at(0.5), at(0.9), at(0.99), s.back(), over17, over20, over33);
+        };
+        pct(intervals, "frame intervals");
+        pct(works, "frame work without the swap");
+    }
+};
+double msBetween(std::chrono::steady_clock::time_point a, std::chrono::steady_clock::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); }
+}
+
 int main(int argc, char** argv) {
+    static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;   // F-01: read once
+    FrameTrace ft;
+    auto stepStart = std::chrono::steady_clock::now();
+    bool stepped = false;
     int autoFrames = -1;
     for (int i = 1; i < argc; i++)
         if (!strcmp(argv[i], "--frames") && i + 1 < argc) autoFrames = atoi(argv[++i]);
@@ -41,6 +86,9 @@ int main(int argc, char** argv) {
     double lastTime = platformTime();
     // one frame of the desktop loop; also the callback of the browser's animation loop (M6-04)
     auto step = [&]() {
+        using Clock = std::chrono::steady_clock;
+        const Clock::time_point c0 = trace ? Clock::now() : Clock::time_point();
+        if (trace) { ft.v[FrameTrace::INTERVAL] = msBetween(stepStart, c0); stepStart = c0; }
         double now = platformTime();
         double dt = now - lastTime;
         lastTime = now;
@@ -60,17 +108,21 @@ int main(int argc, char** argv) {
             for (int b = 0; b < PAD_BUTTONS; b++) ps.buttons[b] = pin.pad.buttons[b];
             applyPad(ps, padPrev, in, game.settings.mouseSensitivity);
         }
+        const Clock::time_point c1 = trace ? Clock::now() : Clock::time_point();
         game.frame(in, dt);
+        const Clock::time_point c2 = trace ? Clock::now() : Clock::time_point();
 
         bool wantCap = game.mouseCaptureWanted() && platformFocused();
         if (wantCap != captured) { platformSetCapture(wantCap); captured = wantCap; }
         if (game.wantsFullscreenToggle) { game.wantsFullscreenToggle = false; platformToggleFullscreen(); }
         if (game.wantsWindowScale > 0) { platformSetWindowSize(320 * game.wantsWindowScale, 200 * game.wantsWindowScale); game.wantsWindowScale = 0; }
+        const Clock::time_point c3 = trace ? Clock::now() : Clock::time_point();
         platformAudioPump(synth, game.audio);
+        const Clock::time_point c4 = trace ? Clock::now() : Clock::time_point();
         if (game.wantsScreenshot || (autoFrames > 0 && frames == autoFrames - 1)) {
             game.wantsScreenshot = false;
             std::string fn = "shots/screenshot_" + std::to_string(shotCounter++) + ".png";
-            writePNG(fn.c_str(), game.output(), FBW, FBH);
+            writePNGAsync(fn.c_str(), game.output(), FBW, FBH);   // F-02: encoded and written by the PNG writer's thread
             { FILE* sc = fopen((fn.substr(0, fn.size() - 4) + ".txt").c_str(), "w"); if (sc) { fprintf(sc, "%s\n", game.screenshotCaption().c_str()); fclose(sc); } }
             game.noteScreenshot();
             printf("saved %s\n", fn.c_str());
@@ -82,9 +134,23 @@ int main(int argc, char** argv) {
             writePNG(fn.c_str(), pano.data(), pw, ph);
             printf("saved %s\n", fn.c_str());
         }
+        const Clock::time_point c5 = trace ? Clock::now() : Clock::time_point();
         if (game.recording) game.recordFrame();
+        const Clock::time_point c6 = trace ? Clock::now() : Clock::time_point();
         platformPresent(game.output(), FBW, FBH, game.settings.scanlines, game.settings.crt ? 1.0 : 0.0, game.settings.bloom ? 1.0 : 0.0, game.settings.aspect);
         frames++;
+        if (trace) {   // F-01
+            const Clock::time_point c7 = Clock::now();
+            const PlatformAudioTimes at = platformAudioTimes();
+            const PlatformPresentTimes pt = platformPresentTimes();
+            ft.v[FrameTrace::POLL] = msBetween(c0, c1); ft.v[FrameTrace::GAME] = msBetween(c1, c2); ft.v[FrameTrace::AUDIO] = msBetween(c3, c4);
+            ft.v[FrameTrace::SYNTH] = at.synth; ft.blocks += at.blocks;
+            ft.v[FrameTrace::SHOT] = msBetween(c4, c5); ft.v[FrameTrace::REC] = msBetween(c5, c6);
+            ft.v[FrameTrace::UPLOAD] = pt.upload; ft.v[FrameTrace::DRAW] = pt.draw; ft.v[FrameTrace::HOLD] = pt.hold; ft.v[FrameTrace::SWAP] = pt.swap;
+            ft.v[FrameTrace::WORK] = msBetween(c0, c7) - pt.hold - pt.swap;
+            if (stepped) ft.add(std::chrono::duration<double>(c7.time_since_epoch()).count());   // the first frame has no interval
+            stepped = true;
+        }
     };
 #ifdef __EMSCRIPTEN__
     struct Ctx { decltype(step)* s; Game* g; } ctx{&step, &game};
@@ -92,8 +158,10 @@ int main(int argc, char** argv) {
 #else
     while (!platformShouldClose() && !game.wantsQuit) { step(); if (autoFrames > 0 && frames >= autoFrames) break; }
 #endif
+    if (trace) ft.summary();
     game.autosave();
     game.settings.save(game.settingsPath);
+    pngFlush();   // F-02: the photographs and the recording's last frames on disk before the window goes
     platformShutdown();
     return 0;
 }

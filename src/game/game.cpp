@@ -6,6 +6,7 @@
 #include "galaxy/roads.h"
 #include "galaxy/drainage.h"
 #include <chrono>
+#include <thread>
 #include <cstdlib>
 #include <cstdio>
 #include "ui.h"
@@ -222,6 +223,7 @@ void Game::togglePhotoMode() {
 void Game::toggleRecording() {
     recording = !recording;
     if (recording) {
+        pngFlush();   // F-02: a take before it written out (the harness's fixed take is the same directory)
         makeDir(moviesDir);
         if (recFixedTake) recTake = 1; else do { recTake++; } while (fileExists(fmt("%s/take_%03d", moviesDir.c_str(), recTake)));
         makeDir(fmt("%s/take_%03d", moviesDir.c_str(), recTake));
@@ -233,7 +235,8 @@ void Game::toggleRecording() {
 bool Game::recordFrame() {
     if (!recording) return false;
     std::string fn = fmt("%s/take_%03d/frame_%05d.png", moviesDir.c_str(), recTake, recFrame++);
-    return writePNG(fn.c_str(), rgbBuf.data(), FBW, FBH);
+    writePNGAsync(fn.c_str(), rgbBuf.data(), FBW, FBH);   // F-02: encoded and written by the PNG writer's thread (27.8 ms a frame at 4x on the main thread before)
+    return true;
 }
 
 // M6-05: three views at yaw -fov, 0, +fov stitched side by side, the HUD off
@@ -547,7 +550,7 @@ void Game::testLandSite() {
                     if (m.materialAt(lo + i * 2 * DEG, la + j * 2 * DEG) == MAT_WATER) land = false;
             if (!land) continue;
             if (anyLat > 1e8) { anyLat = la; anyLon = lo; }
-            SurfaceSite probe; probe.init(&sys, landBody, la, lo, t); probed++;   // S-01: level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
+            SurfaceSite probe; probe.initFrame(&sys, landBody, la, lo, t); probed++;   // S-01: level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
             if (siteSlope(probe) < 0.1) { setDrainageEnabled(true); landLat = la; landLon = lo; return; }
         }
     }
@@ -563,7 +566,7 @@ int Game::testLandableBody() const {
     return -1;
 }
 
-void Game::testParkAt(const Star& s, int body) {
+void Game::testParkAt(const Star& s, int body, bool waitMap) {
     arriveAtStar(s, Vec3(0, 0, -1));
     if (body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
@@ -579,7 +582,14 @@ void Game::testParkAt(const Star& s, int body) {
     nb.update(ship.pos);
     state = GameState::SPACE;
     worldPlanPrefetch(spaceR.genFor(b));   // T-01
-    if (PLANET_TYPES[b.type].landable) beginLanding();
+    spaceR.setSeason(sys, t);   // F-02: the season the next frame draws (the renderer held the last system's: the map was made for it, then again)
+    if (PLANET_TYPES[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // F-02: the tests' landing map drawn from their next frame, as before
+}
+
+void Game::testWaitMap() { testWaitMapOf(landBody); }
+void Game::testWaitMapOf(int bi) {   // a wait on the map's thread, not one of the game's blocking calls (`mapStats.blocked` counts the game's)
+    if (bi < 0 || bi >= (int)sys.bodies.size()) return;
+    while (!spaceR.mapIfReady(sys.bodies[bi])) std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 std::string Game::testBeltDraw() const {

@@ -7,6 +7,7 @@
 #include "surface_view.h"
 #include "core/noise.h"
 #include "core/rng.h"
+#include "core/parallel.h"
 #include <cmath>
 #include <algorithm>
 
@@ -255,18 +256,22 @@ void SurfaceView::cameraFeed(Framebuffer& fb, double t) {
     if ((int)vx.size() != FBW) { vx.resize(FBW); for (int x = 0; x < FBW; x++) { double u = (x + 0.5) / FBW * 2 - 1; vx[x] = (float)(u * u); } }
     if ((int)vy.size() != FBH) { vy.resize(FBH); for (int y = 0; y < FBH; y++) { double u = (y + 0.5) / FBH * 2 - 1; vy[y] = (float)(u * u); } }
     int bandY = (int)(std::fmod(t * 0.22, 1.0) * (FBH + 40 * S)) - 20 * S;   // rolls down the picture every 4.5 s
-    uint32_t rs = (uint32_t)(t * 60) * 2654435761u + 0x9E37u;
-    for (int y = 0; y < FBH; y++) {
-        double line = ((y / S) & 1) ? 0.82 : 1.0;
-        double band = std::abs(y - bandY) < 10 * S ? 1.05 : 1.0;
-        Pix* row = &fb.idx[(size_t)y * FBW];
-        for (int x = 0; x < FBW; x++) {
-            rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5;
-            double vig = 1 - 0.45 * std::max(0.0, (double)(vx[x] + vy[y]) - 0.45);
-            int inten = (int)(intenOf(row[x]) * line * band * vig) + (int)(rs % 97) - 48;   // +-1.5 shades of noise (32 units per shade)
-            row[x] = pixI(bankOf(row[x]), inten);
+    static std::vector<uint32_t> rowStart;   // F-05: the rows on the pool, each band from its first row's noise state (xorshiftRowStarts)
+    xorshiftRowStarts((uint32_t)(t * 60) * 2654435761u + 0x9E37u, FBW, FBH, rowStart);
+    parallelFor(FBH, 32, [&](int yb, int ye) {
+        uint32_t rs = rowStart[yb];
+        for (int y = yb; y < ye; y++) {
+            double line = ((y / S) & 1) ? 0.82 : 1.0;
+            double band = std::abs(y - bandY) < 10 * S ? 1.05 : 1.0;
+            Pix* row = &fb.idx[(size_t)y * FBW];
+            for (int x = 0; x < FBW; x++) {
+                rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5;
+                double vig = 1 - 0.45 * std::max(0.0, (double)(vx[x] + vy[y]) - 0.45);
+                int inten = (int)(intenOf(row[x]) * line * band * vig) + (int)(rs % 97) - 48;   // +-1.5 shades of noise (32 units per shade)
+                row[x] = pixI(bankOf(row[x]), inten);
+            }
         }
-    }
+    });
 }
 
 // N4-04: the dust, snow or mud thrown up by the wheels (and, R-403, by the drone's downwash): points rising as they age

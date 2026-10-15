@@ -8,7 +8,6 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
-#include <atomic>
 
 void ShadeRamp::set(const std::vector<std::pair<double, RGB>>& stops, float gain) {
     for (int i = 0; i < 64; i++) {
@@ -88,10 +87,9 @@ inline double knee(double s) { return s < 46 ? s : 46 + 17 * (1 - std::exp(-(s -
 double msSince(std::chrono::steady_clock::time_point t0) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
 
 // work taken a piece at a time by whichever thread is free (the panoramas' columns differ in cost, and the efficiency cores
-// would hold up an even split)
+// would hold up an even split; F-06: the pool's own dealing, one index a chunk)
 template <class F> void dealt(int n, const F& fn) {
-    std::atomic<int> next(0);
-    parallelFor(parallelThreads(), 1, [&](int, int) { for (int i; (i = next.fetch_add(1)) < n;) fn(i); });
+    parallelFor(n, 1, [&](int b, int e) { for (int i = b; i < e; i++) fn(i); }, 1);
 }
 
 // the frame's rays by azimuth (round the camera's heading) and elevation; every azimuth when the zenith or the nadir is in it
@@ -248,10 +246,21 @@ double holedTop(const ProbeView& v, int k, double xr, double zr, double lod, dou
     return h;
 }
 
-// one azimuth of a panorama, outward from r0: each sample of the surface fills the rows it rises over (a top seen from above)
-// or hangs under (an underside from below), the rows between two samples seen one after the other interpolated. X-03: a hole in
-// a top shows the top of the deck under it (the next whole one), its wall the slope between; a hole in an underside is open
-void marchColumn(Pano& P, const ProbeView& v, int i, double r0, double rMax) {
+// the steps on a fixed grid of distances (even to minStep / STEP, then each STEP longer): as the probe falls the samples stay on
+// the same ground and the clouds do not crawl. F-07: a panorama's distances from r0, the same for every column: made once before
+// the columns are dealt, up to the first at rMax or past it (or the march's 3,000th step)
+void marchSteps(const ProbeView& v, double r0, double rMax, std::vector<double>& out) {
+    const double minStep = 0.02 * v.decks->sh, rLin = minStep / STEP;
+    auto rAt = [&](int k) { return k * minStep <= rLin ? k * minStep : rLin * std::pow(1 + STEP, k - rLin / minStep); };
+    const int k0 = r0 <= rLin ? (int)std::ceil(r0 / minStep) : (int)std::ceil(rLin / minStep + std::log(r0 / rLin) / std::log(1 + STEP));
+    out.clear();
+    for (int n = 0; n <= 3000; n++) { out.push_back(rAt(k0 + n)); if (!(out.back() < rMax)) break; }
+}
+
+// one azimuth of a panorama, outward along the steps: each sample of the surface fills the rows it rises over (a top seen from
+// above) or hangs under (an underside from below), the rows between two samples seen one after the other interpolated. X-03: a
+// hole in a top shows the top of the deck under it (the next whole one), its wall the slope between; a hole in an underside is open
+void marchColumn(Pano& P, const ProbeView& v, int i, const std::vector<double>& steps, double rMax) {
     const GiantDecks& D = *v.decks;
     const int k = P.deck;
     const double a = P.a0 + i * P.da, sa = std::sin(a), ca = std::cos(a);
@@ -259,16 +268,11 @@ void marchColumn(Pano& P, const ProbeView& v, int i, double r0, double rMax) {
     float* Dd = &P.ds[(size_t)i * P.ne];
     float* G = &P.gl[(size_t)i * P.ne];
     uint8_t* K = &P.dk[(size_t)i * P.ne];
-    const double R2 = 2 * v.radiusKm, zp = v.zKm, minStep = 0.02 * D.sh;
+    const double R2 = 2 * v.radiusKm, zp = v.zKm;
     const bool holed = D.holeable(k) && (D.holes > 0 || D.path[k].on);
     int edge = P.under ? P.ne : -1;
     bool prevVis = false, havePrev = false;
-    // the steps on a fixed grid of distances (even to minStep / STEP, then each STEP longer): as the probe falls the samples
-    // stay on the same ground and the clouds do not crawl
-    const double rLin = minStep / STEP;
-    auto rAt = [&](int k) { return k * minStep <= rLin ? k * minStep : rLin * std::pow(1 + STEP, k - rLin / minStep); };
-    int k0 = r0 <= rLin ? (int)std::ceil(r0 / minStep) : (int)std::ceil(rLin / minStep + std::log(r0 / rLin) / std::log(1 + STEP));
-    double prevE = 0, prevS = 0, prevD = 0, prevG = 0, hPrev = 0, rPrev = 0, r = rAt(k0);
+    double prevE = 0, prevS = 0, prevD = 0, prevG = 0, hPrev = 0, rPrev = 0, r = steps[0];
     int prevK = k;
     for (int n = 0; n < 3000 && r < rMax; n++) {
         const double lod = r * std::max(STEP, P.da), xr = r * sa, zr = r * ca, x = xr + v.px[k], z = zr + v.pz[k];
@@ -277,7 +281,7 @@ void marchColumn(Pano& P, const ProbeView& v, int i, double r0, double rMax) {
         const double m = holed ? D.holeAt(k, x, z) : 0.0;
         double ssHole = 0; bool haveSs = false;
         if (P.under) {
-            if (m >= 0.5) { prevVis = false; havePrev = false; r = rAt(k0 + n + 1); continue; }   // open through the hole
+            if (m >= 0.5) { prevVis = false; havePrev = false; r = steps[n + 1]; continue; }   // open through the hole
             h = D.base(k, x, z, lod, &low);
         } else if (m > 0) {   // a hole: its floor the next whole deck's top (in its own frame), its wall this deck's own cloud
             h = holedTop(v, k, xr, zr, lod, &low, &kd);
@@ -308,7 +312,7 @@ void marchColumn(Pano& P, const ProbeView& v, int i, double r0, double rMax) {
         } else prevVis = false;
         hPrev = h; rPrev = r; havePrev = true;
         if (P.under ? edge <= 0 : edge >= P.ne - 1) break;
-        r = rAt(k0 + n + 1);
+        r = steps[n + 1];
     }
 }
 
@@ -436,6 +440,7 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
     auto t0 = std::chrono::steady_clock::now();
     // the panoramas, out to where the haze leaves nothing of them (the extinction along the probe's level, or the horizon)
     static Pano floorP, ceilP;
+    static std::vector<double> steps;
     floorP.deck = ceilP.deck = -1;
     double kHere = pathTau(HZ, v.zKm, v.zKm, 1.0);
     const double reach = std::min(9000.0, std::max(200.0, 5.0 / std::max(kHere, 1e-6)));
@@ -446,7 +451,8 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
         double r0 = L.floorFar ? fogReach : std::max(0.02 * D.sh, drop * 0.05);
         if (F.eLo > -PI / 2 + 0.05 && !L.floorFar) r0 = std::max(r0, 0.6 * drop / std::tan(std::min(PI / 2 - 0.01, -std::min(-0.01, F.eLo))));
         if (L.inHole) r0 = 0.02 * D.sh;   // the shaft's walls round the probe
-        dealt(floorP.na, [&](int i) { marchColumn(floorP, v, i, r0, rMax); });
+        marchSteps(v, r0, rMax, steps);
+        dealt(floorP.na, [&](int i) { marchColumn(floorP, v, i, steps, rMax); });
     }
     if (L.ceil >= 0) {
         panoInit(ceilP, F, L.ceil, true);
@@ -454,7 +460,8 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
         double r0 = std::max(0.02 * D.sh, rise * 0.05);
         if (F.eHi < PI / 2 - 0.05) r0 = std::max(r0, 0.6 * rise / std::tan(std::min(PI / 2 - 0.01, std::max(0.01, F.eHi))));
         double rMax = std::min(9000.0, std::max(reach, 5.0 / std::max(pathTau(HZ, v.zKm, D.lvBase[L.ceil], 1.0), 1e-6)));
-        dealt(ceilP.na, [&](int i) { marchColumn(ceilP, v, i, r0, rMax); });
+        marchSteps(v, r0, rMax, steps);
+        dealt(ceilP.na, [&](int i) { marchColumn(ceilP, v, i, steps, rMax); });
     }
     st.msPano = msSince(t0); t0 = std::chrono::steady_clock::now();
     // the fog: the deck the probe is in, the deep's haze, the lamp's beam

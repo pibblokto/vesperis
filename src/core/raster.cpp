@@ -6,16 +6,15 @@ namespace {
 thread_local int g_bandY0 = 0, g_bandY1 = 1 << 30;   // B-310: the rows this thread may write
 struct SV { double sx, sy, iz, shade, u, v, w; };
 
-inline void emitPixel(Framebuffer& fb, int x, int y, double iz, double shade, const RasterParams& rp, double grainOff, int bank) {
-    int o = y * FBW + x;
-    iz *= rp.zbias;
-    if (rp.ztest && iz <= fb.invz[o]) return;
+// F-07: a pixel whose depth test has passed (izb: its 1/z with the bias). The opaque replace, nearly every pixel of the ground, the
+// forms and the leaves, inline; the other blends and the quantized shade out of line
+[[gnu::noinline]] void emitPixelRare(Framebuffer& fb, int o, double izb, double shade, const RasterParams& rp, double grainOff, int bank) {
     if (rp.blend == BLEND_DARKEN) {
         Pix& q = fb.idx[o];
         const int behind = (int)(intenOf(q) * rp.darken);
         const int si = rp.sheen ? toInten(std::min(std::max(shade + grainOff, rp.shadeMin), rp.shadeMax)) : -1;   // B-411: the glass's sheen
         q = si > behind ? pixI(bank, si) : pixI(bankOf(q), behind);
-        if (rp.zwrite) fb.invz[o] = (float)iz;
+        if (rp.zwrite) fb.invz[o] = (float)izb;
         return;
     }
     if (rp.blend == BLEND_REFLECT) {
@@ -35,22 +34,38 @@ inline void emitPixel(Framebuffer& fb, int x, int y, double iz, double shade, co
     if (rp.blend == BLEND_REPLACE) p = pixI(bank, si);
     else if (rp.blend == BLEND_ADD) p = pixI(bankOf(p), intenOf(p) + si);
     else p = pixI(bank, std::max(intenOf(p), si));
-    if (rp.zwrite) fb.invz[o] = (float)iz;
+    if (rp.zwrite) fb.invz[o] = (float)izb;
+}
+inline void emitPassed(Framebuffer& fb, int o, double izb, double shade, const RasterParams& rp, double grainOff, int bank) {
+    if (rp.blend != BLEND_REPLACE || rp.quantize > 0) { emitPixelRare(fb, o, izb, shade, rp, grainOff, bank); return; }
+    double s = shade + grainOff;
+    if (s < rp.shadeMin) s = rp.shadeMin;
+    if (s > rp.shadeMax) s = rp.shadeMax;
+    fb.idx[o] = pixI(bank, toInten(s));
+    if (rp.zwrite) fb.invz[o] = (float)izb;
+}
+inline void emitPixel(Framebuffer& fb, int x, int y, double iz, double shade, const RasterParams& rp, double grainOff, int bank) {
+    int o = y * FBW + x;
+    iz *= rp.zbias;
+    if (rp.ztest && iz <= fb.invz[o]) return;
+    emitPassed(fb, o, iz, shade, rp, grainOff, bank);
 }
 
 // B-311: a texel of a world-mapped tile that spans more than about two and a half pixels on screen is read bilinearly, so the
 // ground close to the camera is soft mottling instead of a mosaic of texel squares (the mush no longer melts 30-pixel
 // squares at 2x and above); farther away, where texels are sub-pixel, the nearest texel is enough
-void rasterProjected(Framebuffer& fb, SV a, SV b, SV c, const RasterParams& rp, const Proj& pj) {
-    const double lerpZ1 = rp.grain ? pj.f / (2.5 * rp.grainScale) : 0, lerpZ2 = rp.grain2 || rp.grain2b ? pj.f / (2.5 * rp.grain2Scale) : 0;
-    if (a.sy > b.sy) std::swap(a, b);
-    if (b.sy > c.sy) std::swap(b, c);
-    if (a.sy > b.sy) std::swap(a, b);
+void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, const RasterParams& rp, const Proj& pj) {
+    const SV* pa = &a0; const SV* pb = &b0; const SV* pc = &c0;   // F-07: sorted by reference
+    if (pa->sy > pb->sy) std::swap(pa, pb);
+    if (pb->sy > pc->sy) std::swap(pb, pc);
+    if (pa->sy > pb->sy) std::swap(pa, pb);
+    const SV& a = *pa; const SV& b = *pb; const SV& c = *pc;
     int yStart = std::max(std::max(0, g_bandY0), (int)std::ceil(a.sy - 0.5));
     int yEnd = std::min(std::min(FBH - 1, g_bandY1 - 1), (int)std::floor(c.sy - 0.5));
     if (yStart > yEnd) return;
     double dyac = c.sy - a.sy;
     if (dyac < 1e-9) return;
+    const double lerpZ1 = rp.grain ? pj.f / (2.5 * rp.grainScale) : 0, lerpZ2 = rp.grain2 || rp.grain2b ? pj.f / (2.5 * rp.grain2Scale) : 0;
     for (int y = yStart; y <= yEnd; y++) {
         double py = y + 0.5;
         // long edge a-c
@@ -83,10 +98,12 @@ void rasterProjected(Framebuffer& fb, SV a, SV b, SV c, const RasterParams& rp, 
             const double eAmp = rp.edgeAmp / 64.0;
             const bool ztest = rp.ztest;
             const float* zrow = &fb.invz[(size_t)y * FBW];
+            const bool flatZ = diz == 0.0;           // F-07: a span at one depth (a leaf cluster, a pad, a blob shadow): its 1/z once
+            const double zFlat = flatZ ? 1.0 / iz : 0.0;
             for (int x = xStart; x <= xEnd; x++) {
                 // B-315: a pixel hidden by the depth buffer costs nothing more (the texture reads come after the test)
                 if (ztest && (float)(iz * rp.zbias) <= zrow[x]) { iz += diz; sh += dsh; u += du; v += dv; w += dw; continue; }
-                double z = 1.0 / iz;
+                double z = flatZ ? zFlat : 1.0 / iz;
                 double uu = u * z, vv = v * z;
                 int bank = rp.bank;
                 const GrainTexture* g2 = rp.grain2;
@@ -156,7 +173,8 @@ void rasterProjected(Framebuffer& fb, SV a, SV b, SV c, const RasterParams& rp, 
                         else go += -P.dark * (fade * (in ? 1.0 : 0.0) + (1 - fade) * P.meanShare) + fade * dress + (1 - fade) * P.meanDress;
                     }
                 }
-                emitPixel(fb, x, y, iz, s2, rp, go, bank);
+                // F-07: the depth test above passed (a float under the stored one: the double is too), so the pixel is written as it is
+                emitPassed(fb, y * FBW + x, iz * rp.zbias, s2, rp, go, bank);
                 iz += diz; sh += dsh; u += du; v += dv; w += dw;
             }
         } else {
@@ -184,30 +202,40 @@ inline RVert clipLerp(const RVert& a, const RVert& b, double t) {
 
 void setRasterBand(int y0, int y1) { g_bandY0 = y0; g_bandY1 = y1; }
 
+// F-07: no row of the shape in this thread's band: a fan triangle's rows lie within the shape's, and rasterProjected draws none outside
+// [ceil(min - 0.5), floor(max - 0.5)] (an integer edge n: ceil(y) > n exactly when y > n, floor(y) < n when y < n)
+inline bool outsideBand(double miny, double maxy) { return maxy - 0.5 < g_bandY0 || miny - 0.5 > g_bandY1 - 1; }
+
 void rasterPolygon(Framebuffer& fb, const RVert* v, int n, const RasterParams& rp, const Proj& pj) {
     // Sutherland-Hodgman against z = NEAR_Z (B-315: up to 16 vertices; a leaf cluster is a fan of 12)
     RVert out[16];
+    const RVert* src = out;
     int m = 0;
-    for (int i = 0; i < n; i++) {
-        const RVert& a = v[i];
-        const RVert& b = v[(i + 1) % n];
-        bool ain = a.z >= NEAR_Z, bin = b.z >= NEAR_Z;
-        if (ain) out[m++] = a;
-        if (ain != bin) {
-            double t = (NEAR_Z - a.z) / (b.z - a.z);
-            out[m++] = clipLerp(a, b, t);
+    bool allIn = true;
+    for (int i = 0; i < n && allIn; i++) allIn = v[i].z >= NEAR_Z;
+    if (allIn) { src = v; m = std::min(n, 15); }   // F-07: every vertex in front: read in place, the first 15 as the clip keeps them
+    else
+        for (int i = 0; i < n; i++) {
+            const RVert& a = v[i];
+            const RVert& b = v[(i + 1) % n];
+            bool ain = a.z >= NEAR_Z, bin = b.z >= NEAR_Z;
+            if (ain) out[m++] = a;
+            if (ain != bin) {
+                double t = (NEAR_Z - a.z) / (b.z - a.z);
+                out[m++] = clipLerp(a, b, t);
+            }
+            if (m >= 15) break;
         }
-        if (m >= 15) break;
-    }
     if (m < 3) return;
     SV p[16];
     double minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
     for (int i = 0; i < m; i++) {
-        p[i] = project(out[i], pj);
+        p[i] = project(src[i], pj);
         minx = std::min(minx, p[i].sx); maxx = std::max(maxx, p[i].sx);
         miny = std::min(miny, p[i].sy); maxy = std::max(maxy, p[i].sy);
     }
     if (maxx < 0 || minx > FBW || maxy < 0 || miny > FBH) return;
+    if (outsideBand(miny, maxy)) return;
     for (int i = 1; i + 1 < m; i++) rasterProjected(fb, p[0], p[i], p[i + 1], rp, pj);
 }
 
@@ -217,6 +245,7 @@ void rasterTriangle(Framebuffer& fb, const RVert* v, const RasterParams& rp, con
         double minx = std::min({p0.sx, p1.sx, p2.sx}), maxx = std::max({p0.sx, p1.sx, p2.sx});
         double miny = std::min({p0.sy, p1.sy, p2.sy}), maxy = std::max({p0.sy, p1.sy, p2.sy});
         if (maxx < 0 || minx > FBW || maxy < 0 || miny > FBH) return;
+        if (outsideBand(miny, maxy)) return;
         rasterProjected(fb, p0, p1, p2, rp, pj);
     } else {
         rasterPolygon(fb, v, 3, rp, pj);

@@ -25,60 +25,70 @@ void Framebuffer::clearDepth() { std::fill(invz.begin(), invz.end(), 0.f); }
 void Framebuffer::mush(int passes) {
     const int W = FBW, H = FBH;
     if ((int)idx.size() != W * H) return;
-    int k = g_mushKernel < 1 ? 1 : g_mushKernel;
-    static std::vector<Pix> tmp;
-    static std::vector<uint32_t> hs;   // horizontal window sums of the intensity
-    tmp.resize(idx.size());
-    hs.resize(idx.size());
+    const int k = g_mushKernel < 1 ? 1 : g_mushKernel;
+    back.resize(idx.size());
+    static std::vector<Pix> none;   // the row the general box's column sums take in past the bottom: no intensity
+    none.assign(W, 0);
+    // F-07: a pass reads idx and writes back, then the two swap (the copy of the frame it read from is gone); the rows on the pool
     for (int p = 0; p < passes; p++) {
-        memcpy(tmp.data(), idx.data(), idx.size() * sizeof(Pix));
-        const Pix* s = tmp.data();
-        Pix* d = idx.data();
+        const Pix* s = idx.data();
+        Pix* d = back.data();
         if (k == 2) {
-            // the original kernel: 2x2 block starting one row below, bank from one row below
-            for (int y = 0; y < H - 2; y++) {
-                const Pix* r0 = s + (y + 1) * W;
-                const Pix* r1 = s + (y + 2) * W;
-                Pix* o = d + y * W;
-                for (int x = 0; x < W - 1; x++) {
-                    unsigned a = (r0[x] & INTEN_MASK) + (r0[x + 1] & INTEN_MASK) + (r1[x] & INTEN_MASK) + (r1[x + 1] & INTEN_MASK);
-                    o[x] = (Pix)((r0[x] & BANK_MASK) | (a >> 2));
+            // the original kernel: 2x2 block starting one row below, bank from one row below (the last two rows as they were)
+            parallelFor(H - 2, 64, [&](int yb, int ye) {
+                for (int y = yb; y < ye; y++) {
+                    const Pix* r0 = s + (y + 1) * W;
+                    const Pix* r1 = s + (y + 2) * W;
+                    Pix* o = d + y * W;
+                    for (int x = 0; x < W - 1; x++) {
+                        unsigned a = (r0[x] & INTEN_MASK) + (r0[x + 1] & INTEN_MASK) + (r1[x] & INTEN_MASK) + (r1[x + 1] & INTEN_MASK);
+                        o[x] = (Pix)((r0[x] & BANK_MASK) | (a >> 2));
+                    }
+                    o[W - 1] = r0[W - 1];
                 }
-                o[W - 1] = r0[W - 1];
-            }
-            continue;
+            });
+            memcpy(d + (size_t)(H - 2) * W, s + (size_t)(H - 2) * W, 2 * (size_t)W * sizeof(Pix));
+        } else {
+            // general k x k box starting one row below (windows clamped at the right edge and the bottom), bank from one row below.
+            // F-07: a band of rows slides the column sums of its k rows down a row at a time and a k-wide window along them (the
+            // box's sum whatever the order of its terms), the row under the pixel giving the bank and leaving the sums in one read;
+            // the quotient by a multiply and a shift, exact while sum x divisor < 2^32 (sum <= 2047 k^2, divisor <= k^2: every k to 38)
+            const bool recip = k <= 38;
+            parallelFor(H, 64, [&](int yb, int ye) {
+                static thread_local std::vector<uint32_t> colv;
+                colv.assign(W, 0);
+                uint32_t* col = colv.data();
+                for (int yy = yb + 1; yy <= std::min(H - 1, yb + k); yy++) {
+                    const Pix* r = s + yy * W;
+                    for (int x = 0; x < W; x++) col[x] += r[x] & INTEN_MASK;
+                }
+                for (int y = yb; y < ye; y++) {
+                    Pix* o = d + y * W;
+                    const int y0 = y + 1;   // rows y+1 .. y+k
+                    if (y0 >= H) { memcpy(o, s + (H - 1) * W, W * sizeof(Pix)); continue; }
+                    const int rows = std::min(H - 1, y + k) - y0 + 1;
+                    const Pix* r0 = s + y0 * W;
+                    const Pix* rIn = y0 + k <= H - 1 ? s + (y0 + k) * W : none.data();
+                    const uint32_t div = (uint32_t)(rows * k);
+                    const uint64_t m = ((uint64_t)1 << 32) / div + 1;
+                    uint32_t win = 0;
+                    for (int x = 0; x < k && x < W; x++) win += col[x];
+                    int x = 0;
+                    for (; x + k <= W; x++) {   // the whole windows
+                        o[x] = (Pix)((r0[x] & BANK_MASK) | (recip ? (uint32_t)((win * m) >> 32) : win / div));
+                        if (x + k < W) win += col[x + k];
+                        win -= col[x];
+                        col[x] = col[x] - (r0[x] & INTEN_MASK) + (rIn[x] & INTEN_MASK);
+                    }
+                    for (; x < W; x++) {        // the last k - 1, cut by the edge
+                        o[x] = (Pix)((r0[x] & BANK_MASK) | (win / (uint32_t)(rows * (W - x))));
+                        win -= col[x];
+                        col[x] = col[x] - (r0[x] & INTEN_MASK) + (rIn[x] & INTEN_MASK);
+                    }
+                }
+            });
         }
-        // general k x k box (windows clamped at the right edge), separable running sums; rows in parallel
-        uint32_t* hsp = hs.data();
-        parallelFor(H, 64, [&](int yb, int ye) {
-            for (int y = yb; y < ye; y++) {
-                const Pix* r = s + y * W;
-                uint32_t* h = hsp + y * W;
-                uint32_t sum = 0;
-                for (int x = 0; x < k && x < W; x++) sum += r[x] & INTEN_MASK;
-                for (int x = 0; x < W; x++) {
-                    h[x] = sum;
-                    int leave = x, enter = x + k;
-                    sum -= r[leave] & INTEN_MASK;
-                    if (enter < W) sum += r[enter] & INTEN_MASK;
-                }
-            }
-        });
-        parallelFor(H, 64, [&](int yb, int ye) {
-            for (int y = yb; y < ye; y++) {
-                Pix* o = d + y * W;
-                int y0 = y + 1, y1 = std::min(H - 1, y + k);   // rows y+1 .. y+k
-                if (y0 >= H) { memcpy(o, s + (H - 1) * W, W * sizeof(Pix)); continue; }
-                int rows = y1 - y0 + 1;
-                const Pix* bankRow = s + y0 * W;
-                for (int x = 0; x < W; x++) {
-                    int cols = std::min(k, W - x);
-                    uint32_t a = 0;
-                    for (int yy = y0; yy <= y1; yy++) a += hsp[yy * W + x];
-                    o[x] = (Pix)((bankRow[x] & BANK_MASK) | (a / (uint32_t)(rows * cols)));
-                }
-            }
-        });
+        idx.swap(back);
     }
 }
 
@@ -88,25 +98,30 @@ void Framebuffer::glowDisc(double cx, double cy, double radius, double coreRadiu
     int y0 = (int)std::floor(cy - radius), y1 = (int)std::ceil(cy + radius);
     if (x1 < 0 || y1 < 0 || x0 >= FBW || y0 >= FBH) return;
     x0 = std::max(x0, 0); y0 = std::max(y0, 0); x1 = std::min(x1, FBW - 1); y1 = std::min(y1, FBH - 1);
+    if (maxAdd <= 0) return;   // F-05: every pixel's add would be 0 (a dim veil walked a disc of 0.9 M pixels at 4x for nothing)
     double r2 = radius * radius;
-    for (int y = y0; y <= y1; y++) {
-        double dy = y + 0.5 - cy;
-        for (int x = x0; x <= x1; x++) {
-            double dx = x + 0.5 - cx;
-            double d2 = dx * dx + dy * dy;
-            if (d2 >= r2) continue;
-            double d = std::sqrt(d2);
-            double t = d <= coreRadius ? 1.0 : 1.0 - (d - coreRadius) / (radius - coreRadius + 1e-9);
-            int add = (int)(maxAdd * INTEN_PER_SHADE * t * t + 0.5);
-            if (add <= 0) continue;
-            if (skipOccluded && invz[y * FBW + x] > 1e-12f) continue;
-            Pix& p = idx[y * FBW + x];
-            int bank = bankOf(p);
-            int v = intenOf(p);
-            if (v == 0 && bankIfEmpty >= 0) bank = bankIfEmpty;
-            p = pixI(bank, v + add);
+    // F-05: the rows on the pool (a pixel is written once, by its row; a small disc stays on the caller under the threshold). Every
+    // caller is on the main thread outside a pool job (the pool is not reentrant)
+    parallelFor(y1 - y0 + 1, 32, [&](int rb, int re) {
+        for (int y = y0 + rb; y < y0 + re; y++) {
+            double dy = y + 0.5 - cy;
+            for (int x = x0; x <= x1; x++) {
+                double dx = x + 0.5 - cx;
+                double d2 = dx * dx + dy * dy;
+                if (d2 >= r2) continue;
+                double d = std::sqrt(d2);
+                double t = d <= coreRadius ? 1.0 : 1.0 - (d - coreRadius) / (radius - coreRadius + 1e-9);
+                int add = (int)(maxAdd * INTEN_PER_SHADE * t * t + 0.5);
+                if (add <= 0) continue;
+                if (skipOccluded && invz[y * FBW + x] > 1e-12f) continue;
+                Pix& p = idx[y * FBW + x];
+                int bank = bankOf(p);
+                int v = intenOf(p);
+                if (v == 0 && bankIfEmpty >= 0) bank = bankIfEmpty;
+                p = pixI(bank, v + add);
+            }
         }
-    }
+    });
 }
 
 void Framebuffer::toRGB(uint32_t* out, double gain, bool dither) const {

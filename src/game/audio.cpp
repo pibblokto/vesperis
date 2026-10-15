@@ -55,7 +55,7 @@ double AudioSynth::speechSample(double dt, AudioState& st) {
         }
         trill = sg->trill;
     }
-    double kF = 1 - std::exp(-dt / 0.02), kUp = 1 - std::exp(-dt / 0.006), kDown = 1 - std::exp(-dt / 0.012), kN = 1 - std::exp(-dt / 0.003);
+    const double kF = co.kF, kUp = co.kUp, kDown = co.kDown, kN = co.kN;
     for (int i = 0; i < 3; i++) spF[i] += (tf[i] - spF[i]) * kF;
     spVoiceAmp += (tVoice - spVoiceAmp) * (tVoice > spVoiceAmp ? kUp : kDown);
     spBreathAmp += (tBreath - spBreathAmp) * kUp;
@@ -74,15 +74,14 @@ double AudioSynth::speechSample(double dt, AudioState& st) {
     spLpB += (nz - spLpB) * 0.25;
     double x = src + spLpB * spBreathAmp * 0.5;
     // the cascade: three formants moving and a fourth fixed, then the nasal resonance and the noise band beside
-    static const double BW[4] = {80, 100, 150, 250};
     double y = x;
     for (int i = 0; i < 4; i++) {
         double f = i < 3 ? spF[i] : 3300 * V.tract;
-        double r = std::exp(-PI_ * BW[i] * dt), B = 2 * r * std::cos(TAU_ * f * dt), C = -r * r, A = 1 - B - C;
+        double r = co.rS[i], B = 2 * r * std::cos(TAU_ * f * dt), C = -r * r, A = 1 - B - C;
         double o = A * y + B * spY1[i] + C * spY2[i];
         spY2[i] = spY1[i]; spY1[i] = o; y = o;
     }
-    if (spNasal > 0.001 || std::fabs(spY1[4]) > 1e-7) { double r = std::exp(-PI_ * 120 * dt), B = 2 * r * std::cos(TAU_ * 280 * V.tract * dt), C = -r * r, A = 1 - B - C; double o = A * src + B * spY1[4] + C * spY2[4]; spY2[4] = spY1[4]; spY1[4] = o; y += 0.8 * spNasal * o; }
+    if (spNasal > 0.001 || std::fabs(spY1[4]) > 1e-7) { double r = co.rNasal, B = 2 * r * std::cos(TAU_ * 280 * V.tract * dt), C = -r * r, A = 1 - B - C; double o = A * src + B * spY1[4] + C * spY2[4]; spY2[4] = spY1[4]; spY1[4] = o; y += 0.8 * spNasal * o; }
     if (spNzAmp > 0.0005 || std::fabs(spY1[5]) > 1e-7) { double r = std::exp(-PI_ * spNzBw * dt), B = 2 * r * std::cos(TAU_ * spNzF * dt), C = -r * r; double o = (1 - r) * nz + B * spY1[5] + C * spY2[5]; spY2[5] = spY1[5]; spY1[5] = o; y += spNzAmp * o * 1.5; }
     spTrillPh += dt * 26; if (spTrillPh >= 1) spTrillPh -= 1;
     spT += dt;
@@ -161,15 +160,14 @@ double AudioSynth::phantomSample(Phantom& p, double dt, double sylRate, double b
             p.f0T = p.f0Base * (0.85 + 0.3 * (0.5 + 0.5 * noise()));
         }
     }
-    double kF = 1 - std::exp(-dt / 0.05), kA = 1 - std::exp(-dt / 0.03), kP = 1 - std::exp(-dt / 0.1);
+    const double kF = co.pkF, kA = co.pkA, kP = co.pkP;
     for (int i = 0; i < 3; i++) p.F[i] += (p.FT[i] - p.F[i]) * kF;
     p.amp += (p.ampT - p.amp) * kA; p.f0 += (p.f0T - p.f0) * kP;
     p.ph += dt * p.f0 * (1 + p.jit); if (p.ph >= 1) { p.ph -= 1; p.jit = rough * 0.08 * noise(); }
     float nz = noise(); p.lpN += (nz - p.lpN) * 0.25;
     double src = glottal(p.ph) * p.amp * (1 - 0.7 * breathy) + p.lpN * breathy * p.amp * 0.6;
-    static const double BW[3] = {90, 110, 160};
     double y = src;
-    for (int i = 0; i < 3; i++) { double r = std::exp(-PI_ * BW[i] * dt), B = 2 * r * std::cos(TAU_ * p.F[i] * dt), C = -r * r, A = 1 - B - C; double o = A * y + B * p.y1[i] + C * p.y2[i]; p.y2[i] = p.y1[i]; p.y1[i] = o; y = o; }
+    for (int i = 0; i < 3; i++) { double r = co.rP[i], B = 2 * r * std::cos(TAU_ * p.F[i] * dt), C = -r * r, A = 1 - B - C; double o = A * y + B * p.y1[i] + C * p.y2[i]; p.y2[i] = p.y1[i]; p.y1[i] = o; y = o; }
     return std::tanh(y * 0.5) * 0.65;
 }
 
@@ -213,7 +211,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
                     c.beacT += dt; if (c.beacT >= cyc) c.beacT -= cyc;
                     int k = (int)(c.beacT / (v.beacDur + v.beacGap)); double tk = c.beacT - k * (v.beacDur + v.beacGap);
                     bool on = k < v.beacN && tk < v.beacDur;
-                    c.beacEnv += ((on ? 1.0 : 0.0) - c.beacEnv) * (1 - std::exp(-dt / 0.008));
+                    c.beacEnv += ((on ? 1.0 : 0.0) - c.beacEnv) * co.kBeac;
                     double f = v.beacF[std::min(k, 6)] * (v.beacSag ? 0.985 + 0.015 * std::cos(TAU_ * 0.03 * c.clock) : 1.0);
                     c.beacPh += dt * f; double ph = c.beacPh - std::floor(c.beacPh);
                     sig += 0.24 * c.beacEnv * ((1 - v.beacSq) * std::sin(TAU_ * ph) + v.beacSq * (ph < 0.5 ? 1 : -1));
@@ -225,7 +223,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
                     if (c.dataOn) {
                         c.dataBitT += dt * v.dataRate;
                         if (c.dataBitT >= 1) { c.dataBitT -= 1; uint32_t b = ((c.dataLfsr >> 0) ^ (c.dataLfsr >> 2) ^ (c.dataLfsr >> 3) ^ (c.dataLfsr >> 5)) & 1u; c.dataLfsr = (c.dataLfsr >> 1) | (b << 15); }
-                        double want = (c.dataLfsr & 1u) ? v.dataF2 : v.dataF1; c.dataF += (want - c.dataF) * (1 - std::exp(-dt / 0.002));
+                        double want = (c.dataLfsr & 1u) ? v.dataF2 : v.dataF1; c.dataF += (want - c.dataF) * co.kData;
                         c.dataPh += dt * c.dataF; double ph = c.dataPh - std::floor(c.dataPh);
                         sig += 0.17 * (0.55 * std::sin(TAU_ * ph) + 0.45 * (ph < 0.5 ? 1 : -1));
                         c.dataHumPh += dt * v.dataHum; double hp = c.dataHumPh - std::floor(c.dataHumPh);
@@ -271,7 +269,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
                 case RP_CHANT: {   // a chant: a hum of three voices an octave, a unison and a fifth round the chanter's pitch, swelling with it
                     if (!main) break;
                     double p = st.voice ? st.voice->pitch : 110;
-                    rdChantAmp += (spVoiceAmp - rdChantAmp) * (1 - std::exp(-dt / 0.6));
+                    rdChantAmp += (spVoiceAmp - rdChantAmp) * co.kChant;
                     double vib = 1 + 0.008 * std::sin(TAU_ * 4.3 * c.clock);
                     rdChantPh[0] += dt * p * 0.5 * vib; rdChantPh[1] += dt * p * 1.003 * vib; rdChantPh[2] += dt * p * 1.5 * vib;
                     sig += 0.2 * rdChantAmp * (std::sin(TAU_ * rdChantPh[0]) + 0.6 * std::sin(TAU_ * rdChantPh[1]) + 0.4 * std::sin(TAU_ * rdChantPh[2]));
@@ -317,7 +315,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
                         }
                         on = c.codeOn;
                     }
-                    c.codeEnv += ((on ? 1.0 : 0.0) - c.codeEnv) * (1 - std::exp(-dt / 0.004));
+                    c.codeEnv += ((on ? 1.0 : 0.0) - c.codeEnv) * co.kCode;
                     c.sparkT += dt;
                     double period = 1.0 / v.sparkHz;
                     if (c.sparkT >= period) { c.sparkT -= period * (v.quench ? 1.0 : 0.92 + 0.16 * uni()); c.sparkPh = 0; }   // a quenched gap's sparks even (a note), a plain one's ragged
@@ -633,7 +631,7 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
         rdWornI = (rdWornI + 1) % rdWorn.size();
     }
     // C-16: two peoples' carriers beat into a whistle that slides as the beam moves; at the top steps the two ring against each other
-    rdHetF += (st.radarHetHz - rdHetF) * (1 - std::exp(-dt / 0.08));
+    rdHetF += (st.radarHetHz - rdHetF) * co.kHet;
     rdHetPh += dt * rdHetF;
     if (rdHetLvl > 0.002) mix += rdHetLvl * 0.075 * (std::sin(TAU_ * rdHetPh) + 0.15 * std::sin(2 * TAU_ * rdHetPh)) * (0.75 + 0.25 * std::sin(TAU_ * 5.5 * rdClock));
     if (rdImLvl > 0.002) { rdImPh += dt * (rdHetF * 1.37 + 230); mix += rdImLvl * (0.9 * main * std::sin(TAU_ * rdImPh) + 0.5 * std::tanh(5 * main) * std::tanh(5 * under)); }
@@ -711,8 +709,22 @@ double AudioSynth::probeSample(double dt, AudioState& st) {
     return prLvl * s;
 }
 
+void AudioSynth::coefs(double dt) {
+    co.kF = 1 - std::exp(-dt / 0.02); co.kUp = 1 - std::exp(-dt / 0.006); co.kDown = 1 - std::exp(-dt / 0.012); co.kN = 1 - std::exp(-dt / 0.003);
+    static const double BW[4] = {80, 100, 150, 250};
+    for (int i = 0; i < 4; i++) co.rS[i] = std::exp(-PI_ * BW[i] * dt);
+    co.rNasal = std::exp(-PI_ * 120 * dt);
+    co.pkF = 1 - std::exp(-dt / 0.05); co.pkA = 1 - std::exp(-dt / 0.03); co.pkP = 1 - std::exp(-dt / 0.1);
+    static const double BWP[3] = {90, 110, 160};
+    for (int i = 0; i < 3; i++) co.rP[i] = std::exp(-PI_ * BWP[i] * dt);
+    co.kBeac = 1 - std::exp(-dt / 0.008); co.kData = 1 - std::exp(-dt / 0.002); co.kChant = 1 - std::exp(-dt / 0.6); co.kCode = 1 - std::exp(-dt / 0.004);
+    co.kHet = 1 - std::exp(-dt / 0.08);
+}
+
 void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
     double dt = 1.0 / sr;
+    coefs(dt);
+    mediumCoefs(dt, st.medium);
     if (st.beep > 0) { beepT = 0; beepKind = st.beep; st.beep = 0; }
     if (st.thunder > 0) { thunderT = 0; thunderAmp = st.thunder; st.thunder = 0; }
     if (st.step > 0) { stepT = 0; stepKind = st.step; stepGainCur = st.stepGain; st.step = 0; }

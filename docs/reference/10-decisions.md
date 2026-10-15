@@ -29,7 +29,7 @@
 | Gamepad mapping fixed in code (2026-09-26, M6-02) | One sensible layout, documented; the key map file can still move letters | Not rebindable |
 | Warnings as errors only in `core/` and `galaxy/` (2026-09-26, M7-06) | Those layers are the deterministic ones and small enough to keep clean; the renderers and the game carry long one-line style that trips `-Wextra` noise | `space/`, `surface/`, `game/` build with warnings visible, not fatal |
 | Web build written but not run (2026-09-26, M6-04) | No emsdk on the development machine; the code path is small (`step` callback, IDBFS mount) and mirrors raylib's own web template | KI-021: first run may need fixes |
-| Frame hashes must match exactly (2026-09-26, M7-04) | The renderer is deterministic across runs on one machine (integer hashes, fixed thread bands, maps warmed before hashing); a tolerance would hide real regressions | Another compiler or CPU may hash differently (KI-014); bless per platform if CI ever runs the frame hashes elsewhere |
+| Frame hashes must match exactly (2026-09-26, M7-04) | The renderer is deterministic across runs on one machine (integer hashes, every pass row-pure or band-pinned so the picture does not depend on which thread draws a row or how many there are (F-06: the rows are dealt, no longer fixed to threads), maps warmed before hashing); a tolerance would hide real regressions | Another compiler or CPU may hash differently (KI-014); bless per platform if CI ever runs the frame hashes elsewhere |
 | Generous performance budgets (2026-09-26, M7-04) | CI runners are 3-5x slower than the development Mac; the budgets catch a pathological regression, not a 20% slowdown | Small slowdowns are read from the printed timings, not enforced |
 | One material palette per body and one exposure rule in every view (2026-09-26, N1, B-202): `BodyGen::matColor`, `materialRamp`, `exposureStop`; the ground's curve (`50 clamp(0.45 + 0.75 a) light^0.65`) became the common rule; frame hashes re-blessed | The globe, the map and the ground were tuned separately and disagreed on every world; the ground's curve was the one people look at longest | Globes are a little darker for dim stars than before; icy worlds show dark rock crack zones on the ground where the globe shows them; the venusian globe stays its cloud deck, so the consistency test compares its map (`C`) with the ground only |
 | Forest frame budget 14 ms at 2x instead of the 6 ms aimed at (2026-09-26, N2-04) | A tropical forest with giants is ten trees deep; after tiers, point budgets, solid mid-distance blobs and skipping trees behind filled canopy tiles the densest case measures 12 ms (trees 5.8 ms) and the look was not worth cutting further | The worst-case forest frame is 12 ms on an M4 (KI-206); plains stay at 3.4 ms; 1x remains the escape on slow machines |
@@ -45,7 +45,7 @@
 | The buggy is closed and driven through its nose camera, never a drawn cabin (2026-09-27, N4-06, R-204) | The user asked for a closed futuristic vehicle whose only inside view is the front camera's picture; the drawn cabin had shaken (B-203) and its wheel was wrong (B-204); a pan limit of +-70 deg keeps the driver from looking back, which confused | No cockpit geometry from inside (the hull is skipped when the camera is live); reversing uses the outside view (KI-215); the CCTV pass costs about 0.3 ms at 2x |
 | The capsule always answers `K` and `B` always gives a fresh buggy (2026-09-27, B-205) | The 200 m rule and the one-buggy rule stranded the player whenever the buggy state went stale; the user wants the capsule and a new buggy to be always available, the old buggy simply gone | An abandoned buggy stays where it was until replaced (it is on the sector map); the launch log counts the metres driven over every buggy of the landing |
 | Cloud drift as an integral of the wind, not `wind x t` (2026-09-27, B-206) | With t at 3.6e6 s a change of 0.1 knots moved the clouds 180 km; the integral is continuous and seeded to the old value on the first frame so the regression frames did not change | The drift is per `SurfaceView` instance and not saved: after a load the clouds start from the formula's value again |
-| Prefetch on a worker thread through a staging buffer, the caches written only by the main thread (2026-09-26, M7-01) | No locks in the render path; the sampled function is pure so the worker's results are identical | The job is at most one frame stale; cells the main thread already computed are skipped |
+| Prefetch on a worker thread through a staging buffer, the caches written only by the main thread (2026-09-26, M7-01) | No locks in the render path; the sampled function is pure so the worker's results are identical | The job is at most one frame stale; cells the main thread already computed are skipped. Since F-03 (2026-10-13) the pool's workers write them too, inside the warm pass's joined fill, each cell on its own slot |
 | The ring arc mapped to the bright part of the sky bank, like the moons (2026-09-27, O0-01, B-301) | The sky bank's ramps are black to shade 30 and dark to 44; the old formula peaked at 39, so the rings were there and invisible | Rings read as a pale band by day and bright at night; the unlit face is half as bright; the shadowed part is not drawn |
 | Generation version 5: rings on 12% of solid planets (2026-09-27, O0-01) | The user could not find a ringed world to land on; the same random draw with a higher threshold changes nothing else in a system, so the generation hashes did not move | One solid world in eight wears rings; old saves warn once |
 | The curvature lives in `toView`, the far ring reaches 53 km and the haze opened (2026-09-27, O1, B-302); frame hashes re-blessed | Only the terrain mesh curved; objects sat on a flat plane 0.1-25 m too high with distance (a rock at 300 m on a comet 12 m up); the 13 km ring with a 5 km haze hid what you were told to walk to | Every distant frame changed; airless worlds show 45 km of ground; surface 2x costs 3.9 ms (3.4 before) |
@@ -1915,3 +1915,784 @@ The user: "in shards decoder also add this fast shift scrolling for records tab"
 * **The hint makes room with the font's arrows**: `ENTER READ  ↔ KIND  SHIFT FAST  TAB PAGE  ESC BACK` (51 characters of 53; 52 with
   `* UNREAD`). Words (`LEFT/RIGHT KIND`) beside `SHIFT FAST` were 59; dropping `ENTER READ` or `TAB PAGE` would have hidden what the
   page is for on the page the decoder opens on; `L/R` reads as the `L` and `R` keys.
+
+## F-01 (2026-10-12): what the bench could not see, and the proof tools
+
+The first milestone of the performance plan (`docs/ideas/PLAN-performance.md`): nothing drawn changes; the tools every later F item is
+proved with, and the numbers that decide which of the plan's estimates stand.
+
+* **The proof is the harness's.** `pngdiff` (two PNGs or two directories: the pixels that differ, the largest step of a channel, the
+  first, the rows, the eighths, a diff image in red) and `bothways <scene> [scale]` (a scene by the workers twice, by one thread, by the
+  workers again) replace the audit's thirty-line Python reader. `unit`'s new check draws fourteen frames at 4x the regress never hashes
+  both ways in one run (the shore; the landing map and its zoom; the cabin lit and dark, polarised and glass; the roof; the radar camera;
+  the drones out at the rack and outside the window; the ground; the nose camera; the sector map), each frame drawn at one instant
+  (`Game::frame(in, 0)`) and twice by the workers first, so a frame that changes by itself fails rather than proving nothing. All
+  fourteen are the serial loop's today. The forest is not among them: it is B-423, measured again here (13,921 pixels at 4x, 3,419 at
+  2x, 506 at 1x, steps to 130; the shore identical), and joins the check with its fix.
+* **The flow is not a reference.** Two runs of the same binary from the same files differ in 44 of the flow's frames (the threads
+  deliver drainage tiles, works and scans at different frames; the slots, the log, the gallery and the drone bay's charge read the wall
+  clock), and the unit's six scanner and marks frames follow what a previous run left in `shots/tests`. A change is proved by `regress`
+  both ways, the `scene` frames at 2x and 4x against the previous binary (deterministic), the unit's check and `bothways`; the flow
+  only from the same restored state beside a baseline-against-baseline run (F-01: the baseline and F-01 identical in all 1,113 pictures,
+  the baseline against itself 44 apart). Whole copies of `shots/tests` (about 2 GB) filled the disk once: copy what a run writes.
+* **The bands' trace stays in the tree.** Two clock reads a band give every frame's terrain and flora bands (rows and ms), which the
+  bench prints; `VESPERIS_TRACE` adds the terrain's split (four clock reads a drawn cell). It shows F-04's premise in numbers: at
+  surface 4x every band costs 2.5-5.2 ms whatever its rows, and in the forest each of the eight walks all 9,079 cells and sets up the
+  water of all 2,982 wet ones.
+* **The real game's frame is traced, not benchmarked**: `VESPERIS_TRACE=1 ./vesperis` prints the poll, the game, the audio pump and its
+  synth blocks, the shot and recorder writes, the upload, the drawing and the swap once a second, and the percentiles at the quit (the
+  platform layer reports its parts through `platformPresentTimes`/`platformAudioTimes`). The window's states were measured with a
+  scratch copy of the window loop driven by script (removed): two minutes each at 4x in a 1280x800 window on the dev Mac's built-in
+  ProMotion display, muted (the synth renders every sample and scales them by zero). The synth's block costs 0.07 ms quiet and 0.76 ms
+  at most (the ship's player, the radar, the decoder's piece; one block in 5.4 frames; the ground walked had no wind): F-08's helper
+  thread is under its bar and is dropped. The upload is 0.38-0.52 ms (0.96 at worst): under the bar of a pixel-unpack ring, not planned, as the plan said. The pacing
+  is the finding: with `SetTargetFPS(60)` on top of the vsync the frames' intervals sit at 16.8-17.2 ms and 4-28% of them exceed
+  17.5 ms while the work is 7-13 ms (driving: 9.0 ms of work, 55 frames a second); parked in the cabin, where the work nears 14 ms,
+  3.3% of the frames wait for a second refresh (33 ms). F-08 becomes the platform's pacing experiment (`SetTargetFPS(0)` with the vsync,
+  judged by the same histograms; no pixel changes). The decoder at 4x with a piece playing runs at 30 frames a second (18.5 ms of work):
+  a frame the bench's row (13.3 ms, no piece) understated, for F-05's screens.
+* **Rows without budgets and modes for the stalls**: the bench's new rows (the maps, the radar, a recorded frame and a photo's PNG,
+  the telescope, the decoder, the sun in the view, a sprint, the city, the probe and the capital at 4x, an arrival, the guide's save and
+  load) and `load landing|map|arrival|drive|capital|probe` (B-422's cores-and-threads measure, paced at 60 frames a second), `soak`
+  (memory over a long expedition), `reanchor comet`, `bench noise`, `zoom`'s parts. F-11 sets budgets where they are stable.
+* **What the numbers say about the plan's estimates.** The guide's save is 7.9 ms (the player's 731,810 bytes; the bench's guide of
+  the same composition 7.6-7.9), not 20-35: F-02's item still turns a dropped frame at space 4x (14 + 8 ms) into none, for a third of
+  the gain estimated. A 4x PNG is 16-19 ms and a recorded frame 27.8 ms, as estimated. The landing zoom builds in 24-32 ms (the home
+  worlds' samples, the modern capital's roads 14.7 ms of it), a frame or two, not the "seconds" feared: its progressive fill is not
+  needed. A world not yet mapped blocks the landing map's opening 150-200 ms a map (two maps, 287-414 ms in every `load` landing),
+  which F-02's `mapIfReady` item answers. The landing map at 4x is 7.3 ms (13.5 with the cursor tapped) and the radar camera 6.7 ms
+  (it has no cabin): neither over the budget the plan feared, so F-05's blits and feeds are gains, not rescues. The telescope at 4x is
+  25 ms (101 serially), and the probe's fall toward its giant holds 26 ms a frame from ten seconds after the launch (the giant filling
+  the frame, as at the eyepiece; the entry's handover, KI-361, comes later): the worst steady frames at the default scale, rows the plan
+  did not have (KI-406). The trees listed against a
+  settlement's buildings cost 1.0 ms in the prehistoric village's forest (2,855 trees) and nothing at the other test capitals, none of
+  which stands in a forest: F-02's 20-120 ms stays an estimate. The pool's dispatch is 34-50 µs after a rest and 22-32 µs back to back:
+  over F-06's 25 µs bar, so its spin stays. `gnoise3` costs 88 ns a call against `gnoise3d`'s 23.5 with its gradient: F-07's gradient
+  table is worth more than estimated. A comet's re-anchor costs its next frame 30-33 ms, F-03's parallel fill's case. The people's
+  descent sits on its 80 ms budget with either binary (four of sixteen runs over: F-03's). The sweep: ten threads take space 4x from
+  14.05 to 13.41 ms while the surface rows are fastest at four; half the rows-per-thread rule takes space 2x from 4.01 to 3.65 (F-06).
+  The site's roads' rebuild on the main thread (every two ruin cells) was not measured: the buggy stops at
+  the capital's edge long before 4 km (`load drive`: 0.39 km in 30 s), and `load roads` (the explorer moved 4 km at a time) waits
+  for an awake machine. A long expedition's memory (`soak`, 20 minutes at 4x before the Mac's lid closed) settles at 115-185 MB
+  from its second stop on (24 maps and 28-36 drainage tiles held, both at their caps; the peak 185 MB): no growth.
+* **Left open.** One bench and one serial-against-workers hash on Linux: Docker Desktop's daemon did not answer (before and after the
+  machine slept), so the container run (a copy of the tree built in `vesperis-build:arm64`, `regress bless` into the copy, then
+  `VESPERIS_THREADS=1 regress` against it, `bothways`, `bench check`) waits for it; no Windows machine. The runs that met the Mac's idle
+  sleep (the session's batch from 18:22 on) were taken again awake under `caffeinate -i`.
+* **What moved.** No generation change (GEN_VERSION 13); the regress unchanged, and with `VESPERIS_THREADS=1`; the scene frames at 2x
+  and 4x, the unit's and the flow's pictures (from the same state) identical to the previous binary's; `bench check`'s rows within 1.3%
+  of the previous binary in four alternating pairs (the people's descent in eight: 77.8 ms against 77.2); `unit` 320 checks. New:
+  `pngdiff`, `bothways`, `bench noise`, `load`, `soak`, `reanchor comet`, `zoom ... site|capital`, the bench's F-01 rows, the unit's
+  both-ways check and pool print, `SurfaceView::BandTrace`/`bandTraceLine`/`lastFloraListMs`/`lastRoadsMs`/`roadsBuilds`,
+  `SpaceRenderer::MapStats::blocked`, `Game::testZoomBuildMs`, `benchFeatureField` (planetmap), the window build's trace.
+
+## B-423 (2026-10-12): the forest the same on every machine
+
+`docs/iteration-3/bugs/resolved/B-423-the-forests-picture-depends-on-the-core-count.md`; the performance plan's section 4.
+
+* **The flora's bands are pinned, not its grid made global.** The canopy-coverage grid is per band (B-310), so a far tree whose canopy
+  crosses a band edge shows in one band layout and hides in another, and the layout followed the thread count: the forest differed
+  between one thread and eight (13,921 pixels at 4x) and between machines. `parallelBands(n, bands, fn)` runs exactly `bands` bands
+  whatever the threads (shared out among them, one after another on a single thread); the flora runs `floraBands()` = min(8, FBH / 32):
+  six at 1x, eight at 2x-4x, the dev Mac's layout, so nothing moved there. The plan's other way (one grid a frame by the serial rule)
+  would have moved the forest on the dev Mac for a serial pass of ~0.2 ms; the plan recommended the pin and the user's "proceed" took it.
+* **The price** is the one-thread forest's: it walks the eight bands' trees one after another (the band trace: 4,804 visits at 4x
+  against 2,073 in a single band): `VESPERIS_THREADS=1 bench forest` 39.7-40.3 ms against F-01's 37.8-38.7 (the flora 14.6-15.6 against
+  12.6-13.3), and in one serial `bench check` each the forest 2x 22.3 against 19.2, 4x 39.5 against 37.2, at the game's 3x3 40.5
+  against 36.5; every other serial row the same. With the workers nothing: four alternating `bench check` pairs against F-01's binary
+  put every row within the runs' own spread (measured 2026-10-13, with F-02).
+* **What moved.** No generation change (GEN_VERSION 13); the regress unchanged (and with one thread); the default-thread scene frames
+  at 1x, 2x and 4x identical to F-01's; with one thread the forest, the tropical biome and the buggy's seat moved to the workers'
+  picture (B-423 reached every felisian scene with trees). `unit`'s both-ways check holds the forest at 1x, 2x and 4x with one, three and
+  eight threads (20 frames). New: `parallelBands` (`core/parallel.h`), `floraBands` (`surface/flora.cpp`).
+
+## F-02 (2026-10-13): the stalls in play
+
+The second milestone of the performance plan (`docs/ideas/PLAN-performance.md`): the hitches a player feels at an event, which the
+bench never saw (its guide was fresh, its PNGs written outside its timed loops). Nothing drawn changes; a world not mapped yet no
+longer holds the landing map or the drone bay (the user's choice).
+
+* **The guide writes its probes' lines as they were made.** `Guide::save` formatted the probe records' 39,615 doubles again at every
+  logged event (566 KB of the player's 731,810-byte guide; a sector crossed, a sighting, a mark, a photo, the five-minute autosave). A
+  `ProbeRecord` keeps its four lines (`probecam`, `probetime`, `probeprofile`, `probelayers`) in `lines`, made by `probeLines` (an
+  `ostringstream` at the file's precision 12) once the whole file is loaded, or at a new record's first save (`probeKeep`'s); the
+  inbox's import copies them with the record. The tracks never change once a record is made (said at the vectors). The same bytes: the
+  player's guide loaded and saved by the old code and the new is the file itself, byte for byte, through a load-save-load-save chain
+  and an import (but the lending's clock). A save of it 7.0 → 0.9 ms (20 saves, a scratch program); the load pays the lines once, 6.8 →
+  13.2 ms at the start. The plan's dirty flag (one save at the frame's end) was not built: two events in one frame now cost 2 ms.
+* **The PNG encoder writes the same bytes about three times sooner.** The rows packed through a pointer (three `push_back`s a pixel
+  before); the Adler-32 sums reduced once a run of 5,552 bytes (zlib's NMAX: the most bytes after which the sum still fits 32 bits, so
+  the result is the per-byte modulo's exactly); the chunks' CRC run over the type, then the data in place (the data was copied behind
+  its type); the CRC table a function-local static (made once, safely, from the writer's thread too); the bytewise CRC kept. A 4x
+  photo's PNG 15.4 → 7.2 ms (the medians of four alternating `bench check` pairs, as every bench number here). Proof: 17 scenes at 1x,
+  2x and 4x byte for byte the previous binary's files (51 pictures), the unit's check, and a Python check of every chunk's CRC and the
+  IDAT's zlib stream with its Adler-32 (the scenes' 51, the TSan run's 47).
+* **One thread writes the photographs, the recording and the probe's image.** `writePNGAsync` copies the pixels (0.4 ms at 4x) and
+  queues them for one thread (`PngWriter`, made at the first picture) that writes them in their order with `writePNG`'s encoder; the
+  caller waits only while three are queued, so no picture is dropped and the names stay in order; the pixel buffers are kept for the
+  next pictures (a fresh 4 MB a frame cost a millisecond of page faults). `pngFlush` returns once the queue is on disk: `readPNG`
+  flushes, the gallery flushes before it lists its directory, a recording flushes the last take before it starts, the window flushes
+  before the platform closes, and the queue's destructor writes what is left at any exit. The panorama, the harness's own pictures and
+  the browser build stay synchronous. A decision: a thread for a result no frame waits for, like the maps and the tiles
+  (`01-architecture.md`). Recording at 4x (the bench's row in space): 24.5 → 9.6 ms a frame, the recorder's part of it 15.8 → 0.1 ms,
+  the writer one picture behind at the row's end (its queue empty 7.2 ms after); serially 37.1 → 21.9. Its behaviour changes: at 4x it
+  no longer halves the frame rate, so a take holds twice the frames a game second it did (KI-022). ThreadSanitizer is clean on a
+  scratch program (a burst of 40 through the queue with flushes and reads back, three left for the exit's drain).
+* **A settlement's buildings tested only where they can hold the point.** The trees' listing (`forTrees`), the logs and the rocks
+  (`inSettlementBuilding`) turned the point into every building's frame with a sine and a cosine before the rectangle test. A point
+  beyond the circle round the rectangle (with the margin) is outside it at any heading: a turn keeps the length, and a slack of 1e-9 (a
+  hundred times the turn's rounding) keeps every point the rectangle would hold. The yards' one hash is drawn before the buildings (it
+  clears 67-95% of a yard's trees), and `forTrees` calls `inSettlementBuilding` (one rectangle test in the tree, not two). The listing
+  at the prehistoric capital in its forest (`load capital 6 4 0`, 2,855 trees): 0.99 → 0.70 ms a frame (the frame's p50 11.9 → 11.6);
+  the bench's capital 4x 9.20 → 8.93 and the descent beside the modern capital 78.4 → 75.1 ms (its 80 ms budget, which it touched).
+* **The sky's direction table made on the pool.** `buildDirLUT` (1,024,000 entries at 4x, a pure function of the pixel) runs in
+  `parallelFor` bands: the sprint's FOV kick makes it again on six frames at its start and its stop (the 1.2% rule kept: a hysteresis
+  would change which frames rebuild and so the sky during the ramp). The sprint's second at 4x: its frames over the median + 1.5 ms 2-4
+  → 0 (one run of four kept one unrelated 23 ms frame), the worst 12.0 → 10.9-11.2 ms; with one thread the same as before (the pool has
+  nothing to share).
+* **The star neighbourhood kept across moves.** `StarNeighborhood::update` made its 21^3 cube again whenever the ship's sector changed,
+  every frame of a Vimana flight. A star is a function of its sector alone and both cubes are listed x, y, z ascending, so the sectors
+  the new cube shares with the last take their stars from the last list by one forward cursor, in the order a fresh walk finds them;
+  only the sectors new to the cube are generated (`builtRadius` says what the list holds). Vimana 2x 2.57 → 2.24 ms (serially 4.40 →
+  4.07): a third of the estimate, the cube costing 0.5 ms a rebuild along the bench's flight, not 1.4 as at home; the unit's 53 moves
+  6.8 ms kept against 25.0 fresh.
+* **The landing map's probe of its cursor is a frame, not a site.** `SurfaceSite::initFrame` is `init` without the five terrain caches
+  (106,496 vertices, 3.8 MB, filled at every step of the cursor and never read by the probe); the probe, `testReliefClass` and
+  `testLandSite` call it. The caches' fill cost less than estimated: the landing map at 4x with Shift held 7.27 → 7.26 ms a frame,
+  `load map` (the cursor tapped) p50 13.5 both, p99 15.2-15.3 → 14.6-14.7; the 3.8 MB are no longer held.
+* **A world not mapped yet: the screens open at once (the user's choice).** The landing map and the drone bay asked for the world's map
+  with `mapFor` and waited 150-200 ms a map. Asked whether they should open at once and show the map when it is made, the user chose to
+  open at once (2026-10-13). Both read the map through `mapIfReady`: the landing map draws its empty frame with `READING THE WORLD...`
+  until the map's thread has made it (the keys work meanwhile as they did after the wait: `Enter` lands at the cursor, `R` waits for
+  the map), the bay its `THE MAP IS BEING DRAWN` and builds its picture when the map is there (`droneBayWorld`). The finished map is
+  the same picture. The harness's `testParkAt` waits for the map before it returns, after giving the renderer the system's season as a
+  frame would (the map was made for the last system's season, then again: the "two maps" of F-01's `load` landings); `testParkAt(s, b,
+  false)` does not; `testWaitMap` for the tests that open the map with `C`. The harness's parking at a world never seen (`load
+  capital`) blocked twice for 358-420 ms before and not at all now.
+* **Measured and not built.** the plan's bound on the arrival's map threads (two at a time, nearest first): `load arrival` runs its
+  first second at 8.6 ms a frame against 8.4-8.8 after, nothing to win on ten cores (a four-core machine is the open question, as
+  before); the roads' block in slices: `load roads` (the explorer moved 4 km ten times by the modern capital) grows them in 0.0-0.3 ms;
+  the hop's frame of 26-29 ms is the rings' refill after the move (F-03's case); the comet's re-anchor is F-03's (F-01).
+* **What moved.** No generation change (GEN_VERSION 13); the regress unchanged, and with `VESPERIS_THREADS=1`; 17 scenes at 1x, 2x and
+  4x byte for byte the previous binary's files, with the workers and with one thread; `unit` 324 checks (four new), 0 failures; the
+  flow (32.1-32.2 s; the previous binary's 32.8-33.7) from one restored state in eight runs: F-02 drew all 163 pictures of the previous
+  binary's in one run and all but one in two (`flow_shipscreen.png`: a world's map arriving a frame later under the dimmed screen,
+  which F-01's binary drew so too), the previous binary differed from itself in 45 pictures in one of its four; `bench check` within
+  every budget in four alternating pairs, every row not named above within the pairs' own spread. New: `ProbeRecord::lines`,
+  `probeLines`, `writePNGAsync`, `pngFlush`, `SurfaceSite::initFrame`, `StarNeighborhood::builtRadius`, `Game::droneBayWorld`,
+  `Game::testWaitMap`, `Game::testMapReadyNow`, `Game::testDroneBayMapped`, `testParkAt`'s `waitMap`.
+
+## F-03 (2026-10-13): the first frame of a descent, and the tiles
+
+The third milestone of the performance plan (`docs/ideas/PLAN-performance.md`): the frame under the fade at a landing's Enter, where
+the site is made and every cell of its rings is sampled at once, and the drainage tiles a landing waits for. Nothing generated changes
+but one cache's order dependence, which the parallel fill exposed (fixed: the user's choice); every tile is the same bytes.
+
+* **The rings' misses sampled on the pool.** `warmTerrainLOD` sampled every missing cell of a ring's disc on the main thread while the
+  pool waited: at a landing's first frame 12,084 cells in four rings (13.9 ms of the frame at the home world's default site), at a
+  re-anchor all five rings, after a hop the near ones. It now lists the disc's misses first (`fillMisses`, kept) and, over 64 of them
+  (`FILL_SERIAL_MAX`), samples them on the pool in equal shares of the list (`parallelFor`), each listed cell by one worker into its
+  own slot: a ring's disc is 2r + 3 cells a side, within its torus's `1 << logN` for every ring (83, 75, 55, 55 and 63 against 128,
+  128, 64, 64 and 256 on a planet; the unit checks it on a planet and a comet), so distinct cells have distinct slots, and a sample is
+  a function of the cell and the site (the drainage read through each thread's own caches; the site's roads, streets and works read,
+  never written). The pool's join is the barrier before the vertex pass. Fewer misses (a walk's edge) are sampled by the disc's walk
+  as before. A decision, amending M7-01's rule (the caches written by the main thread alone; the row says so): the caches are written by
+  the main thread, or by the pool inside a joined region on distinct slots; the ahead worker keeps its staging buffer. The fill at the
+  home world's site 13.9 → 3.3 ms; the descent's prefetch (`prefetch(3.0)`, budgeted, done in the descent's first twenty frames) stays
+  serial, as the plan's checklist said.
+* **A sample was not a function of its point: fixed (the user's choice).** The 67 comparison scenes drawn by the workers and by one
+  thread found `civilisation_road` 3 pixels apart (one step). The drainage keeps a thread's last neighbourhood of reaches (`t_neigh`,
+  keyed by the world, the 400 m lattice cell, the coarse flag and the brooks), but `buildNeigh` bent the reaches with the east-west
+  metres of the first point asked in the cell (its latitude's `cellLonM`) and chose the coarse list's channels by the first point's
+  scale: the rivers near a point moved by millimetres to centimetres with the order the cells were asked for. Serially that order is
+  fixed, so a run repeated itself; the ahead worker (a fresh thread a job) and the landing map's zoom on the pool were order-dependent
+  already, and the fill on the pool would have drawn a picture of its own on every core count (B-310's contract). Asked whether to fix
+  the cache (the rivers made from their own cell; five scenes moving once) or to keep the fill serial (every picture byte-identical,
+  the descent ~32 ms and the re-anchor ~30), the user chose the fix (2026-10-13). The neighbourhood is made from its cell alone (the
+  cell's centre latitude; the coarse list keyed by its scale). What moved, against the previous binary: of the 67 scenes at 2x
+  `biome_taiga` 18 pixels, `civilisation_futuristic` 3 (40 at 4x), `civilisation_road` 3, `felisian_river` 8, and
+  `civilisation_second_people` 1 at 1x and 45 at 4x, every one a step or two; the regress's 22 hashes, every drainage tile and 815,409
+  vertices of three grids round the home world's sites (4, 16 and 64 m, asked row by row) unchanged; no GEN bump (no generation hash,
+  map or save moves). The fixed picture is the same with 1, 3, 5 and 8 threads.
+* **The material tiles a ring wants, made together.** The disc's walk after the fill names the materials whose meso tiles are not
+  made yet and `buildMesoTiles` makes them a material to a worker (each a function of its material and the seed, into its own slot);
+  a band thread reads a tile, never makes one, as before. On the modern test world the far ring's first fill held five or six of them,
+  about a millisecond each: its fill 8.3 → 2.6 ms.
+* **The landing's ground textures on the pool.** `buildMacroTile`, `buildLeafTiles` and `buildBarkTile`, made at every landing (7 ms
+  together), run their rows on the pool (a texel is a function of its place and the seed; `SurfaceView::init` already dispatched the
+  galaxy band and the direction table, so it never runs inside a pool job). The meso tile's own rows stay serial: a band thread may
+  ask for one, and the pool takes no dispatch from inside a dispatch.
+* **The drainage tile, the same bytes in about half the time.** The plan named the topological sort (5-13 ms a tile); timing the
+  tile's parts found the breach's descent: after a pit is breached, the walk down from the spill's far cell turned back on itself in
+  every walk that reached its guard (the tile's cell count), from its third or fourth step: two cells, each the other's lowest
+  neighbour, sinking in turn 5 mm a step (520 million steps, 3.1 s, in one tile of lake country). Once the walk has turned back twice
+  running it alternates to the guard (the two only sink, two steps lower at each turn, and nothing round them is written), so the two
+  cells' last values are the last two of the same float subtractions, computed a binade of floats at a time (`drainageSink`: inside one
+  binade every step rounds to the same multiple of the spacing, so k steps are one exact subtraction in double; a step under 1 m, and
+  one that might leave its binade, is the subtraction itself). The sort runs on one integer key a cell (the height's bits made
+  monotone over the pop index: a strict total order, the comparator's permutation); the breach's queue is emptied at once; each cell's
+  routing noise is made beside its sample on the sampling threads. `drain`: the median tile 163 → 96 ms, the worst 3,202 → 177; `drain
+  desert` 75 → 50 (440 → 129); `home` 162 → 137 (its candidates' default sites 0.5-1.0 → 0.3-0.8 s); the shore scene's four 196 → 169
+  (their sampling). Proof: a hash of every finished tile's arrays in the trace line (`tileHash`): the 159 tiles of `drain`, `drain
+  desert`, `drain thin_atmosphere`, `home` and `scene felisian_shore` the same by both binaries; `drainageSink` against the loop in
+  43,462 cases (5.1 billion steps) in a scratch sweep and 3,720 in `unit`.
+* **A quirk found and left** (a generation question): the walk sinks the two cells about 1.2 km down the routing surface before its
+  guard stops it, so every neighbour drains into them and they come last in the topological order: the water gathered there is not
+  carried down past the cell they drain to (KI-408; 50-120 such pits in a felisian tile, 2,121 in the lake country's). A GEN bump's
+  question, not this plan's.
+* **The numbers.** The descent's first frame at the home world's default site (the bench's row, 1x, the medians of four alternating
+  pairs) 40.0 → 22.3 ms (in `load landing`'s trace 37-41 → 22.5: the fill 13.9 → 3.5, the textures 7.0 → 1.8; the galaxy band's 7.6 and
+  the terrain's 4.4 remain); beside the modern capital 78.9 → 45.5 ms (the plan's estimate was ~60; its town marks, 11 ms, the capital's
+  cells built, remain); a comet's re-anchor's next frame at 4x 30.0-32.8 → 14.9-15.8 ms (under a 60 Hz frame, KI-302); the `load
+  roads` hop's frame (4 km at once) 26.7-28.8 → 11.6-15.3 ms. The budgets fall with the rows (the method's step 5): the descent's first
+  frame 80 → 35 ms, beside a capital 80 → 70. The plan's estimates were 37 → 20-22 and 77 → 55-62: both met.
+* **Measured and not built.** The galaxy band at a landing (7.6 ms, on the pool already: its equal bands wait for the efficiency
+  cores, F-06's dealing); the town marks beside a capital (11 ms: the capital's cells built, a cache of their own); the prefetch
+  during the descent (above). A cold landing builds its tiles in `SurfaceView::init`'s synchronous prefetch (radius + 3 km + 0.2
+  degrees + ten lattice cells, about 77 km on a 6,000 km world, against the fill's 58 km disc): the fill never builds one (two traced
+  landings entered a second after the landing map opened: no tile built inside the first frame; the resident memory 72-97 MB at 1x).
+* **What moved.** No GEN bump (GEN_VERSION 13); the regress unchanged, and with `VESPERIS_THREADS=1`; the 67 scenes at 2x and the 17 at
+  1x, 2x and 4x the previous binary's but the five scenes above, every one the same with the workers and with one thread (the five
+  also with three and five); `unit` 326 checks (two new), 0 failures; TSan clean on a landing, two comet re-anchors and a landing beside
+  the modern capital; `capsule` 0.00% at every height; the flow (32.4-33.3 s; the previous binary's 32.2-32.3) from one restored state:
+  the previous binary twice identical, F-03's two runs 1 picture apart from it (`flow_shipscreen.png`, the known one) and 46 in the
+  other (the flow's timing set: the almanac, the slots, the log, the gallery, the probe; KI-404), and 45 apart from each other. `bench
+  check` in four alternating pairs: every row but the two descents within the pairs' spread, but for the space rows and the telescope,
+  which the four F-03 runs and the one-thread pair drew 20-33% slower; the Mac was on battery at 22% and no F-03 code runs there (the
+  view's init and fill run at a landing), and the space rows alone alternated eight times came out within 1.5% (4x 14.13 against 14.25
+  ms): a clean batch on mains power was left open, and run on 2026-10-14 (four pairs against F-02's binary): the space rows and the
+  telescope within 1% (space 4x 14.09 against 13.97 ms), the descents 39.8 → 23.2 and 77.7 → 47.4 ms. New: `SurfaceView::fillMisses`, `FILL_SERIAL_MAX`, `buildMesoTiles`, `lastWarmMisses`, `testRings`,
+  `drainageSink`, `tileHash`, the tile's `sampleMs` and `sortMs`, `Neigh::detail`.
+
+## F-04 (2026-10-14): the terrain rings
+
+The fourth milestone of the performance plan (`docs/ideas/PLAN-performance.md`): every band thread walked every cell of every ring
+and set up every wet cell's water, so the terrain section cost the same with eight threads as with one. Nothing drawn changes: every
+picture is the previous binary's, with the workers and with one thread.
+
+* **The water corners once per vertex.** A wet cell's sheet made each of its four corners (the place in view, the depth, the glint's
+  `pow 28`, the waves' two sines, the Fresnel `pow 4`, the fog's `exp`, the rain's wall) in each of the four cells that share it, and
+  in every band, since the band cull spared wet cells: on the bench's sea view 1.4-2.5 ms of every band's 2.7-5.8. The corner's code
+  moved verbatim into `waterCorner(x, z, wl, hy)`; `vertexOf` keeps the corner with its vertex (`VtxCache::wv`) when the vertex has its
+  own level (on a world with water), from the stored floats the cells read; a corner without one takes the cell's mean level and is
+  made by the cell, as before. The frame's wind direction (its sine and cosine in one statement, as the cell had them) and the sun's
+  rise are taken once in `render`.
+* **The warm's vertices by rows of vertices.** The vertex pass warmed the cells' bottom corners on the pool by rows of cells, then
+  walked every cell of every ring again on the main thread for their top corners. One `parallelFor` over the 2r + 1 rows of vertices
+  now: the thread of row vz warms the corners on it of cells (cx, vz) and (cx, vz - 1) when either passes the culls, the same vertices
+  as before, each written by one thread. `vertexOf` looks its cell up after its hit test (a current vertex's cell was sampled when it
+  was made).
+* **The fill reaches what the vertices read (a race found by TSan).** A corner reads its neighbours for its normal and for its side of
+  the water's edge (`vertexShore`, the eight round it when it has no level of its own), so a drawn cell's corners read cells up to 2.83
+  cells from its centre, and on a lava world the near rings' glow two cells round a corner (4.24); the warm's disc reached two (O6-06),
+  so a rare cell at the disc's edge was sampled inside the parallel vertex pass, where two threads could sample it into one slot. With
+  the top corners on the pool it was no longer rare: TSan reported it in each of six scenes. The disc now reaches three cells past the radius
+  (four and a half on a lava world's near rings) and every ring's square of 2r + 5 cells still fits its torus (the unit's check
+  tightened from 2r + 3); TSan clean on eight scenes after (a lava world and the forest among them).
+* **The cells binned once.** After the warm, `binTerrainLOD` runs on the pool by rows of cells, every ring's rows in one dispatch: the
+  culls each band thread ran (the distance, the cover, the frustum, the four corners behind the camera), the corners (vertexOf's hit;
+  a corner the warm missed is counted, `lastStaleCorners`, and the unit wants none), and the rows each piece of the cell reaches: the
+  ground's two triangles or the pieces of its shore cut, the outermost ring's walls, the water's sheet, each projected as the
+  rasteriser projects it and clipped at the near plane as `rasterPolygon` clips it, a row of slack each side; a piece wholly beside,
+  above or below the frame adds nothing (the rasteriser rejects it), a cell none of whose pieces reaches the frame is not listed, and
+  the foam's sparkles put a cell in every band. A ring's list keeps the walk's order (`TerrainBin`, a row of cells to a slice, 12 bytes
+  a cell); a band thread draws, in that order, the cells whose rows meet its own, reading the corners from the vertex cache (no band
+  thread writes a cache). Each pixel is written by the same cells in the same order as by the serial loop, whatever the band edges
+  (B-310's contract), so no band layout has to be shared between the bin and the draw (the plan's "one source of truth" is not
+  needed): the bin knows rows, not bands. The pieces' points that are not corners come from helpers the bin and the draw share
+  (`cellWaterLevels`, `cellShoreSplit`, `shoreCutView`, `skirtFoot`). Bounding a cell by all its points at once was too loose: over a
+  deep sea the bed lies thousands of rows under the sheet (the bench's view: 3,135 of 3,567 cells in the bottom band); by piece the
+  same view lists 3,194 cells in 0.11 ms, none in every band.
+* **The numbers** (the medians of four alternating `bench check` pairs against F-03's binary, on mains power). The terrain section at
+  4x 5.2 → 1.2-1.6 ms (the plan's estimate 2.3-3.7, then ~2 with the chunks), at 2x 4.2 → 0.7-0.8 (~2); surface 4x 8.93 → 4.85 ms, 3x
+  6.77 → 3.10, 2x 6.56 → 3.09, 1x 5.28 → 1.83 (section 2's targets for surface 2x, 4 ms, and the buggy, 8, met; surface 4x's 4.5 nearly);
+  the landing's first frame 5.30 → 1.75, the descent's 22.95 → 19.85; buggy 2x 8.79 → 5.12, 4x 11.88 → 7.76; drone 2x 7.35 → 3.38;
+  forest 2x 10.00 → 8.04, 4x 15.35 → 13.21; city 2x 6.25 → 5.62, 4x 9.89 → 9.30; capital 2x 6.13 → 5.66, 4x 8.98 → 8.21; sunward 4x 12.62
+  → 10.64, sunaway 10.38 → 8.00, the sprint 10.19 → 7.64; every row away from the ground within the pairs' spread. The 4-to-8-thread
+  slowdown is gone (surface 1x with 1, 2, 4, 6 and 8 threads 5.32 / 4.56 / 3.80 / 5.30 / 5.28 → 3.98 / 2.90 / 1.97 / 1.89 / 1.77 ms), and
+  one thread gains too (surface 4x 17.12 → 15.82, 1x 5.28 → 4.00, buggy 4x 23.05 → 19.31). The warm stays at 0.8 ms at 4x: the water
+  corners moved into it, the serial walk left it. The flow 34.2-34.8 → 28.1-28.3 s. A scene's peak footprint 70.9 → 76.0 MB (the water
+  corner in every vertex of the five caches).
+* **Not built.** The adaptive row chunks (the plan's fourth item): they need F-06's dealing primitive, and the bands now show the
+  skew they are for: at 4x on the bench's sea the horizon's band (rows 400-500) draws 3,193 of the 3,194 cells in 1.28 ms, the three
+  sky bands nothing, the bands under the horizon 215-514 cells in 0.76-0.84 ms (the near water's pixels).
+* **Found on the way: the sun's loop and the stack** (KI-409). The one-thread pairs drew the sunward, sunaway, sprint, city 4x and
+  forest 2x rows up to 2.4 times slower with F-04's binary (sunward 26.6 → 62.6 ms, all of it in the sky's section), but only when the
+  run was a zsh background job whose one added variable was `VESPERIS_THREADS=1`: six such runs of F-04's binary slow, none of F-03's
+  four, and the same binary through `env`, with one more variable, under `/usr/bin/time`, under a pty or in the foreground 25.7-26.2 ms.
+  A profile of a slow run puts five times the samples in `drawSun`'s per-pixel lambda (the sky's own loop the same): its captures are
+  read through the closure from `drawSun`'s frame while it stores pixels, so the main thread's stack alignment decides it. Nothing in
+  F-04 runs there; F-05's sun item or F-07 takes it.
+* **What moved.** Nothing drawn: the regress's 22 hashes, with the workers and with one thread; the 67 scenes at 2x and 4x the
+  previous binary's, and at 4x the same drawn by one thread in fresh runs; `VESPERIS_SKIP=wq` and `cut` the previous binary's frames
+  (the bin lists a superset, the draw skips); `unit` 327 checks (one new: four scenes at 1x, 2x and 4x drawn with one, three and five
+  threads the same as with eight, no corner unwarmed), 0 failures; the ring seams 0.0000 m; `capsule` 0.00% at every height; TSan
+  clean; the flow from one restored state: F-04's two runs identical, F-03's two 45 pictures apart (KI-404), F-04 against F-03 the
+  same 45 and `flow_shipscreen.png` (the known race); the 13 bench pictures that hold still between runs (the surface's four, the
+  forest, the buggy, the drone, the city's two, the sunward view, the probe, the belt, Vimana) the same by both binaries and by F-04's
+  one thread. New: `waterCorner`, `VtxCache::wv`, `binTerrainLOD`, `TerrainBin`, `TerrainCellRef`, `lastTerrainCells`,
+  `lastTerrainBinMs`, `lastTerrainAllRows`, `lastStaleCorners`, `shoreCutView`, `skirtFoot`, `cellWaterLevels`, `cellShoreSplit`.
+
+## F-05 (2026-10-14): the passes one thread drew alone
+
+The fifth milestone of the performance plan (`docs/ideas/PLAN-performance.md`): beside the parallel passes, the main thread drew the
+cabin, the screens' dimming and blits, the sun's veil, the camera feeds, the sky's cloud and zodiacal grids, the far floor and the
+reflections alone, and walked the whole frame for a sun out of view. Nothing drawn changes: every picture is the previous binary's,
+with the workers and with one thread.
+
+* **The cabin in bands.** `drawCabin` takes what the frame shares once (`CabinFrame`: the eye, the light, the screens' flickers, the
+  decoder's wait, which builds a map and a set a call, and the rack's three drones, their places, poses and models: `droneRackFrame`,
+  `drawDronePrims`), then the room's ~150 pieces go to the pool in bands of rows (`drawCabinBand` under `setRasterBand`, B-310's rule:
+  every band walks every piece in the serial order, its fills clipped to its rows). The roof's early return leaves `drawCabinBand`,
+  not the band; the bulb's and the orb's points and glows come after the bands, last as before (`glowDisc` is not clipped to a band);
+  the screens' `rs.bank` is each band's own. The space rows: 4x 14.09 → 10.62 ms, 3x 7.85 → 5.98, 2x 4.14 → 3.20, 1x 1.60 → 1.46 (the
+  plan's estimate 13.6 → ~10.8); the belt 2x 2.02 → 1.17, Vimana 2.21 → 1.47, an arrival's frames 10.97 → 5.92.
+* **The screens' dimming and blits.** `blendRectRGB` puts its rows on the pool from 100 rows (a dimmed screen: 800 at 4x; the status
+  bar and the thousands of small blends stay direct calls); its three statements are verbatim (`(c - p) * a / 255` is a signed
+  truncating division). The landing map's whole-world blit and its zoom go to the pool by rows, a texel's colour made once for the
+  pixels that share it: along a row when the texel changes, and a row whose texels the band's row above had is copied from it (each
+  band starts afresh, so no band reads another's row; at 1x the skipped texels are never made, at 3x the shared ones alternate as
+  before). The sector map takes each pixel column's image column and each pixel row's image row from the per-pixel expressions into
+  two tables, then its rows go to the pool. A blend that may dispatch must not run inside a pool job (the pool is not reentrant):
+  every RGB pass runs on the main thread after the mush, and no pool job or game thread calls one (read). The decoder 4x 13.25 → 7.50
+  ms (the cabin and the dimming), the landing map 4x 7.20 → 4.47 (one thread 20.19 → 17.38), its zoom 7.81 → 4.97, the sector map 9.87
+  → 8.34.
+* **`glowDisc`.** Nothing at all when `maxAdd` is 0 or less (every pixel's add would be 0: a dim veil walked a disc of 0.9 M pixels at
+  4x), and the rows on the pool (a disc under 64 rows stays on the caller); its ten callers are all on the main thread outside a pool
+  job (read).
+* **The camera feeds by rows.** The nose camera's and the radar camera's noise is a xorshift32 (13, 17, 5) walk along the rows, which
+  pinned both to one thread. The step is linear over GF(2): a row's FBW steps are a 32x32 bit matrix, kept by its 32 columns (the
+  images of the 32 bits; `XorshiftJump`, made once per width by stepping each bit FBW times), and `xorshiftRowStarts` gives every
+  row's starting state, so the rows go to the pool and each band starts from the state the serial walk reaches at its first row: every
+  pixel draws the number it drew (the unit checks the starts against the walk at the four widths). Re-seeding each row from a hash
+  would have been five lines and another speckle. The radar's interpolated glow row is each band's own. The buggy 4x 7.80 → 5.92 ms
+  (the feed, the sky's grids and the sun's pass), 2x 5.12 → 4.65; the radar camera 4x 6.69 → 5.03.
+* **The sky's grids.** The cloud grid (three `fbm2` and the front's reads a cell, 2,000-2,400 cells above the horizon at every scale)
+  and the zodiacal grid go to the pool by rows, as the aurora's did: each cell reads pure functions and writes its own floats.
+* **The floor and the reflections in the terrain's bands.** `drawFloor` is drawn first in each band (it was drawn before the rings);
+  `drawReflections` is split into `gatherReflections`, serial after the bin (the walk, the sort and the shore cut: during the descent
+  the lod0 cells it reads are not warmed and the caches fill on a miss), which keeps each polygon with the rows it can fill
+  (`polygonRows`: F-04's piece bounds, now one function for the bin and the gather), and `drawReflectionBand`, which each band runs
+  after its rings, in order. The section `terrain` now holds the bin, the gather and the bands; `warm` the warm alone. The forest 4x
+  13.32 → 11.80 ms (at the game's 3x3 mush 12.47 → 10.96), 2x 8.13 → 7.51 (the plan's estimate 0.55 ms; the cloud grid's share was the
+  larger).
+* **The sun's glow when its cone misses the frame.** With the sun beside or behind the camera (no box: the cone reaches the camera
+  plane), the glow's pass walked the whole frame and wrote nothing. `coneMissesFrame`: every pixel centre lies more than theta -
+  cornerA from the sun (theta its angle off the view's axis, cornerA the farthest pixel centre's; the angle between two directions is
+  at least the difference of their angles to a third), so the pass is skipped when that exceeds the cone's half-angle by 1e-5 rad;
+  likewise the protostar's strip (its cone of 0.6 rad) and the black hole's frame copy, bend grid and lens pass (its region's cone;
+  the jet's glows stay). The box path is untouched. `suncone` sweeps the sun toward the frame's corner across the edge (61 steps of
+  1e-4 and of 1e-6 rad round it, and 101 from half the cone inside to half outside, where the glow still shows) for seven classes,
+  three sizes, with an atmosphere and without, at 1x and 4x: both binaries' 84 cases the same (one hash of all 18,732 frames). The sun
+  facing away 4x 7.98 → 6.17 ms, the sprint 7.67 → 5.71, city 4x 9.27 → 8.94; facing it 10.68 → 9.04 (the veil's disc on the pool).
+* **KI-409 closed.** The glow loop reads its values from its band's own locals (the same arithmetic): replayed in the launch that
+  showed it (a zsh background job from the same directory, `VESPERIS_THREADS=1` its only addition, the binaries at paths of one
+  length), F-04's binary drew sunward 4x in 61.7 and 62.1 ms (the sky 50.7 and 52.5), F-05's in 25.5 and 25.8 (the sky 16.2 and 16.1);
+  sixteen alignments of the stack (a padding variable of 0-240 bytes, a one-thread `bench forest`) slowed neither binary.
+* **The numbers** (the medians of four alternating `bench check` pairs against F-04's binary, on mains power): as above; every other
+  row within the pairs' spread (the surface rows, the telescope, the descents, the probe 2x, capital 4x, city 2x, the guide). With one
+  thread (`env VESPERIS_THREADS=1`, one run each): nothing slower; space 4x 41.12 → 39.92 (the serial path pays nothing for the
+  dispatch), the landing map 20.19 → 17.38 and its zoom 22.53 → 20.04 (the texel's colour once), sunaway 19.74 → 18.32, the sprint
+  19.85 → 18.33, city 4x 22.23 → 20.84, probe 4x 35.37 → 33.37 (the cone test). The flow 27.8 → 24.2 s. The recorder's frame at 4x
+  9.46 → 7.13 ms, its writer now setting the pace (the main thread waits 0.6-2.1 ms a frame for the queue, 0.1 before). Left: the
+  cabin's hull fills the frame's top and bottom bands, which the static bands cannot balance (F-06's dealing).
+* **What moved.** Nothing drawn: the regress's 22 hashes, with the workers and with one thread; the 67 scenes at 2x and 4x the
+  previous binary's, and at 4x the same drawn by one thread in fresh runs; `screens` (96 pictures: the cabin's ten views at the four
+  scales, its menus, the radar camera, the landing map and zoom, the drone bay, the descent, the ground, the menu, the sector map near
+  and wide, the nose camera) the previous binary's set and the same with one thread (two runs of the baseline identical); `suncone`
+  the same; `unit` 328 checks (one new: the feeds' row starts), 0 failures; TSan clean (`screens` at 2x, eight scenes at 4x: the
+  shore, the forest, the zodiacal light, a front, a sunset, a protostar's night, a black hole's sky, the buggy's seat); the flow from
+  one restored state the same 163 pictures as F-04's (F-04's twice), its wait for the scanner's thread held at one instant (frames at
+  dt 0: frames of 1/30 s had put F-05's faster clock, and the 47 pictures after it, ahead); the 13 bench pictures that hold still
+  between runs the same in all four pairs. New: `CabinFrame`, `drawCabinBand`, `droneRackFrame`, `drawDronePrims`, `xorshift32`,
+  `XorshiftJump`, `xorshiftRowStarts`, `coneMissesFrame`, `gatherReflections`, `drawReflectionBand`, `polygonRows`, the harness's
+  `screens` and `suncone`.
+
+## F-06 (2026-10-14): the pool deals its rows
+
+The sixth milestone of the performance plan (`docs/ideas/PLAN-performance.md`): `parallelFor` cut [0, n) into one equal band a thread
+and gave band t to thread t for good, so an efficiency core at about 0.55x held up every pass it had a band of, and a pass whose rows
+differ in cost (a globe's middle rows, the ground's horizon, a town on the skyline, the cabin's hull at the frame's top and bottom)
+waited for its heaviest band. Nothing drawn changes: every picture is the previous binary's, with the workers and with one thread.
+
+* **The dealing.** A dispatch cuts its range into chunks, a quarter of a thread's share and at least half its `minPerThread`
+  (`parallelFor`'s new `chunk` sets it), which the caller and the workers take from an atomic counter until none is left
+  (`core/parallel.cpp`). The caller starts at once and a worker joins as it wakes (a kernel wake is 10-30 us). A dispatch completes by
+  its work: the caller waits only for the workers that entered, and a worker that wakes after the body closed never touches it (the
+  close and the entry are one store-and-load pair, sequentially consistent: the caller sees the worker counted or the worker sees the
+  body closed), so a descheduled worker cannot hold up the frame. The workers wake on one condition variable: a `notify_all` costs the
+  caller 14 us after a rest, seven `notify_one`s 28-31 (F-05's pool 43-45; back to back 1.3 us against 34). `parallelBands` deals its
+  exact bands the same way (the flora's layout stays B-423's); the probe's own counter (`dealt`) is the pool's dealing one column a
+  chunk; the plate's blocks are dealt 64 at a time (a block costs a sample, a copy or nothing; the same blocks land in the same
+  frames).
+* **The band-raster passes.** The terrain and the cabin take the default chunks (thirty-odd at 4x): eight dealt bands were slower
+  (space 4x 9.60 against 9.99 ms, forest 4x 10.61 against 11.41, city 4x 7.70 against 8.47, the decoder 6.29 against 6.84), and so
+  were sixty-four at 1x-2x (surface 1x 1.55 against 1.74). The forms take chunks of eight rows or a sixty-fourth of the frame (a chunk
+  costs them a test per polygon and a town fills a few rows: city 4x 7.16 → 6.83 against the default chunks, 2x within the spread).
+* **The terrain's chunks by cost**, as the plan proposed (each cell 1 + 4 wet a row over its rows, 4 x threads chunks of equal cost),
+  lost: surface 4x 4.31 → 5.09 ms, forest 4x 10.74 → 12.21. The per-row model put the near ground (few cells, many pixels) into one
+  chunk of 1.97 ms and cut the horizon's thousands of small cells into chunks a row or two high that set them up again each. With the
+  equal chunks the horizon's is the longest (1.43 ms of the forest's 1.8 ms section). Not built.
+* **No spin.** Workers kept awake 50 us after a job (on the pause hint, then in the M4's low-power wait: `ldaxr` and `wfe`, woken 0.2
+  us after the write, every 1.2 us without one) won 0.15-0.18 ms on the surface at 1x-3x and lost 0.1-0.4 on every space frame and at
+  4x, the default; 15 us kept the loss and lost the gain (four pairs each). Each thread's own stretch of rows first, then the others'
+  (the old bands' cache affinity), was no better either (space 1x 1.42 → 1.50, surface 2x 2.36 → 2.59, city 4x 6.77 → 6.56). The
+  workers sleep between jobs.
+* **The guard.** A dispatch from inside a dispatch runs alone in one call (`pool::inside`, a thread-local flag on the caller during
+  its dispatch and on every worker), and a second thread's while the pool is held runs alone too (`try_lock`, counted by
+  `pool::contended`, which the unit wants at 0: only the main thread dispatches). Before, either hung the pool.
+* **The cap stays at eight.** Ten threads on the M4's ten cores won 0.53 ms on space 4x and 0.94 on the telescope 4x, and a recorded
+  frame at 4x went 7.7 → 14.5 ms: the PNG writer's thread starved by a pool on every core, as B-422's prefetch had been. Two cores
+  stay for the game's own threads (the writer, the drainage lanes, the ahead worker, the synth).
+* **The numbers** (the medians of four alternating `bench check` pairs against F-05's binary, on battery): space 4x 10.65 → 9.31 ms,
+  3x 5.95 → 4.89, 2x 3.19 → 2.91, 1x 1.46 → 1.32; the telescope 4x 24.44 → 23.05 (2x within the spread); surface 4x 4.81 → 4.18, 3x
+  3.06 → 2.56, 2x 3.12 → 2.46, 1x 1.78 → 1.67; forest 4x 11.89 → 10.60 (11.03 → 9.46 at the game's 3x3), 2x 7.50 → 6.73; city 4x 8.93
+  → 6.69, 2x 5.55 → 4.50; capital 4x 7.94 → 6.51, 2x 5.38 → 4.31; buggy 4x 5.96 → 5.07, drone 2x 3.09 → 2.84; sunward 9.04 → 7.18,
+  sunaway 6.24 → 4.96, the sprint 5.71 → 4.68; the decoder 7.32 → 6.12, the sector map 8.12 → 6.57, the landing map 4.47 → 4.19 and
+  its zoom 4.99 → 4.59, the radar camera 4.84 → 4.35; probe 4x 10.13 → 9.47; an arrival's frames 5.87 → 5.06 and its first 15.15 →
+  13.10; the descent's first frame 19.70 → 18.70. With one thread (`env VESPERIS_THREADS=1`, one run each, two batches) every row
+  within the runs' spread. Two rows the other way: the buggy 2x row 4.49 → 5.31 (its first ten frames run beside the drainage work of
+  the drive's relocation, 10-17 ms with the dealing against 7-10, everything in them slow at once; its median frame 3.9 against
+  4.3-4.9, and paced at 60 a second while driving, three alternations, p50 5.2-5.3 against 5.8, p99 5.9-6.7 against 6.6-7.0) and the
+  recorded frame 9.37 → 11.74 (both binaries' runs 7-16 ms: unpaced, the frames come faster than the writer encodes them, and the
+  dealt pool leaves it fewer idle moments).
+* **What moved.** Nothing drawn: the regress's 22 hashes, with the workers and with one thread; the 67 scenes at 2x and 4x the
+  previous binary's, at 4x the same drawn by one thread and in fresh runs at two, three and five threads (66 scenes, `aurora_moon`'s
+  five-minute search aside); `screens` (96) the previous binary's set and the same with one thread; `suncone` the same (one hash of
+  its 18,732 frames); `unit` 329 checks (one new: `threads: the picture whatever the count`, six scenes at 4x with one, two, four, six
+  and eight threads, and no dispatch from a thread beside the main one), 0 failures; the `pool` mode's stress, 0 failures; TSan clean
+  (`pool`; `screens` at 2x; nine scenes at 4x, the shore, the forest, the zodiacal light, a front, a sunset, a protostar's night, a
+  black hole's sky, the buggy's seat and the modern town, with the pool's threads and with two: 20 runs, no warning); the flow from
+  one restored state the same 163 pictures as F-05's; the 13 bench pictures that hold still between runs the same in all four pairs;
+  `capsule` 0.00% at its eight heights. New: `core/parallel.cpp` (the pool: `pool::dispatch`, `pool::run`, `pool::inside`,
+  `pool::contended`), `parallelFor`'s `chunk`, `POOL_MAX_THREADS`, the harness's `pool` mode; gone: `WorkerPool` and its
+  `std::function` jobs.
+
+## F-07 (2026-10-14): exact trims
+
+The seventh milestone of the performance plan (`docs/ideas/PLAN-performance.md`): small changes in the hottest loops, each giving the
+bits it gave before, so the pictures, the sounds and the generation are the previous binary's, with the workers and with one thread.
+
+* **The globe's lookups.** `wrap2pi` returns a longitude within a turn of its range without `fmod` (the same bits: `fmod` returns
+  `[0, TAU)` as it is, `a - TAU` over `[TAU, 2 TAU)` is exact by Sterbenz, `(-TAU, 0)` has `TAU` added either way; `-0.0`, NaN and
+  the infinities fall through); the unit sweeps 2.2 million values and the turns' edges against the formula it had, bit for bit.
+  `PlanetMap`'s lookups (`texelIndex`, `albedoAt`, `cloudAt`, `heightAt`, `materialAt`, the bilinear read) are inline in
+  `planetmap.h` (the globe reads seven a pixel, each a call into another file), `TerrainCache::at` inline in `site.h` with its miss
+  out of line (`fill`), `giantJetTurn` inline in `probe.h`.
+* **The globe's pixels.** A moon or the parent whose shadow cannot fall on a lit point that frame is left out of the pixels' loop: its
+  shadow's cylinder passes wide of the globe (a point's distance from the cylinder's axis is at least the centre's less R) or it is
+  behind the globe from the star and clear of it (every lit point's `along` is under the centre's), with a slack (a hundredth of its
+  radius and a millionth of the distances) far over the rounding of either side; a scratch test of 400,000 systems from 10^4 to 10^10
+  km, grazing and edge-on, found no lit point a dropped body would have shaded. The plate's cloud turn is a sine and a cosine a plate
+  a frame where the pixel has no jet (the angle as the pixel wrote it, `0.0 + drift - drift0`); the limb's `pow` runs on the lit side
+  only (its term is +0 under `lit + 0.2 <= 0`); an opaque deck's and a giant's ground exposure, overwritten by their clouds', is not
+  made. The plate's cores test the cosine of their reach before the `acos` (`cosReach - 1e-9`, the angle's margin far over the
+  rounding).
+* **The mush.** A pass reads the frame and writes `Framebuffer::back`, the two swapped after it (no copy of the frame), its rows on
+  the pool, k = 2's too (rows independent; the last two copied as they were). A larger box slides the column sums of its k rows down a
+  band of rows a row at a time and a k-wide window along them (the row under the pixel giving the bank and leaving the sums in one
+  read), and divides by a multiply and a shift (`m = 2^32 / divisor + 1`, exact while sum x divisor < 2^32: every kernel to 38). A
+  scratch oracle, F-06's mush verbatim, gave the same frames on 576 random frames (every scale, kernels 1-8, one to three passes, one
+  thread and eight).
+* **The rasteriser.** The grain's two divisions come after the band's early-outs; a span at one depth (`diz == 0`: a leaf cluster, a
+  lily pad, a blob shadow) divides once; a polygon or triangle with no row in the thread's band returns before its fan (its triangles'
+  rows lie within its own, and `ceil(y) > n` exactly when `y > n`); the vertices are sorted by reference; a polygon wholly in front
+  projects its first 15 vertices in place instead of copying them through the clip (the clip keeps 15). Then, judged by its own four
+  pairs: the opaque replace inline and the other blends and the quantized shade out of line (`emitPixelRare`), and the textured loop
+  writes a pixel without testing its depth again (its float test passed, so the double one would: rounding to a float is monotone);
+  forest 4x 9.25 → 8.84 ms, city 4x 5.76 → 5.41, the sprint 3.88 → 3.62, surface 4x 3.51 → 3.42, every row within the spread or
+  faster.
+* **The sky.** The horizon's `pow(.., 2.2)` is 1 under the horizon; the suns' glow `pow`s run where the sun is up and the pixel faces
+  it, the airless world's `pow 300` and the comet's tail where their bases are over 0 (elsewhere each term is +0); the ring arc's
+  `pow` is a table of the profile's 256 densities a frame; the 22-degree halo's `acos` and the pillar's `atan2` and `asin` wait for
+  pre-tests on the cosine, the height and the azimuth's tangent a thousandth of a degree outside the tests after them.
+* **The noise.** `grad3` picks its gradient by Perlin's selects instead of a jump on a random hash (the same sums: `a - b` is
+  `a + (-b)`), and the 27-cell walks of `worley3` and `visitFeatures` mix each x and each (x, y) once (`hashX`, `hashXY`, `hashXYZ`,
+  `hash3i` their composition). `bench noise`, the same results' hashes: `gnoise3` 88.9 → 11.2 ns a call, `worley3` 230 → 187, the
+  features' walk 510 → 378.
+* **The probe's steps.** A panorama's march distances (`pow(1 + STEP, ..)` a step of every column) are a table made once before the
+  columns are dealt (`marchSteps`), up to the first at its reach.
+* **The synth.** The speech's, a phantom's and the medium's constants (the smoothings' `1 - exp(-dt / tau)`, the fixed bandwidths'
+  radii, the medium's poles) are made once a block in `render` (`AudioSynth::Coefs`) by the expressions that made them every sample;
+  the 87 WAVs of `audio`, `decoder wav` and `signals wav` the previous binary's byte for byte.
+* **The flora.** The cells' loop is timed whole (a clock read per cell and part was ~2,700 a frame; `lastFloraMs` keeps the trees and
+  the cells), and the cells after the trees mark nothing in the coverage grid only the trees read.
+* **`ifloor`.** `ifloorTrunc` (the truncation less one where it rounded a negative non-integer up: `std::floor`'s integer for every
+  input in range) stands in for `std::floor` where the target has no rounding instruction (baseline x86-64, the Linux and Windows
+  zips, where `std::floor` is a library call); arm64 and SSE4.1 keep `std::floor` (the truncation's form measured 11.3 → 12.5-13.2 ns
+  a `gnoise3` on the M4). The unit checks both against `std::floor` (2 million values and the integers' neighbours to 2^40).
+* **The backdrop kept while the camera is still.** Outside a flight and with no nebula patch the band's layer is a function of
+  `BackdropKey` (the camera, the focal length and centre, the frame's size, `bandGen`, which both writers of the band map move on): a
+  frame whose key matches the last one's keeps its layer (2 MB at 4x) and later frames with that key copy it instead of clearing and
+  drawing. The sampler takes the map's size as a constant and wraps the longitude by a mask. The key's completeness is the contract
+  (`02-rendering.md`).
+* **The numbers** (the medians of four alternating `bench check` pairs against F-06's binary, on mains, the Mac swapping 11 of its 13
+  GB and the system's media analysis, Spotlight and Docker's VM busy beside the runs): space 4x 9.43 → 6.86 ms (the plan's target 7),
+  3x 4.97 → 3.71, 2x 2.95 → 2.18, 1x 1.37 → 1.02; the telescope 4x 23.06 → 18.37, 2x 10.30 → 9.01; surface 4x 4.18 → 3.54, 3x 2.58
+  → 2.33, 2x 2.47 → 2.29, 1x 1.67 → 1.55; forest 4x 10.37 → 8.95 (9.49 → 8.39 at the game's 3x3; the target 10), 2x 6.88 → 6.28;
+  city 4x 6.79 → 5.53, 2x 4.46 → 3.87; capital 4x 6.47 → 5.42, 2x 4.38 → 3.88; buggy 4x 5.06 → 4.12, 2x 5.15 → 3.66, drone 2x 2.80 →
+  2.25; the belt 1.14 → 0.61, Vimana 1.42 → 1.31; probe 2x 6.72 → 5.97, 4x 9.45 → 8.46; the decoder 6.03 → 3.75, the landing map 4.14
+  → 2.28 and its zoom 4.53 → 2.62, the radar camera 4.35 → 2.46, the sector map 6.55 → 5.54; sunward 7.18 → 6.17, sunaway 4.93 →
+  3.87, the sprint 4.69 → 3.71; an arrival's frames 4.97 → 4.38, its first 13.40 → 12.45; the descent's first frame 18.95 → 17.65.
+  With one thread: space 4x 40.37 → 28.80, the telescope 4x 101.65 → 80.63, surface 4x 15.71 → 13.17, forest 4x 38.05 → 33.65, city
+  4x 20.67 → 16.84, the landing map 17.31 → 9.05, the decoder 23.26 → 14.23, the radar camera 18.28 → 9.87. By step (four pairs each
+  against the step before): the globe's lookups and pixels space 4x 9.43 → 8.73, the telescope 4x 25.38 → 23.05, surface 4x 4.43 →
+  4.14 (`TerrainCache::at`); the mush and the rasteriser's first trims surface 4x 4.10 → 3.57, forest 4x 10.59 → 9.86, space 4x 8.73
+  → 8.16, the sector map 7.00 → 6.08; the sky, the noise, the probe's steps, the synth and the flora the telescope 4x 20.52 → 18.01
+  (the plate's samples), probe 2x 6.69 → 5.90, forest 4x 9.86 → 9.18, the buggy's 2x 5.13 → 3.81, the drone 2.74 → 2.26; the backdrop
+  kept space 4x 8.21 → 6.96, the landing map 3.33 → 2.33, the radar camera 3.68 → 2.45, the decoder 5.63 → 4.06 (each over a still
+  cabin view), capital 4x 6.11 → 5.48 (the sky's band read by the sampler's constants); the rasteriser's second step as above. The
+  recorded frame 9.52 → 8.88 and a photo's PNG the same (both set by the PNG writer's pace, 7-16 ms run to run).
+* **What moved.** Nothing drawn or heard: the regress's 22 hashes, with the workers and with one thread; the 67 scenes at 2x and 4x
+  the previous binary's, and at 4x drawn by one thread; `screens` (96) the previous binary's set and the same with one thread; the
+  `compare` sheets (the mush's kernels 3, 4 and 5 at 2x-4x) and the probe's frames and sheets (`probe`, `probe stability`, `probe
+  giants`) the previous binary's; `suncone` the same; `bench noise`'s hashes; the 87 WAVs; `unit` 332 checks (three new: the turn, the
+  floors, the quotient), 0 failures; TSan clean (`screens` at 2x; seven scenes at 4x with the pool's threads and with two, two at 1x;
+  the probe's panoramas); `capsule` 0.00% at its eight heights; the 13 bench pictures that hold still between runs the same in every
+  pair; driving paced at 2x (`load drive 12 2`, three alternations) p99 9.1-10.1 ms against 10.5-11.2. The flow from one restored
+  state: 162 of 163 pictures the same; `flow_probe_aim.png` had the gas giant's map at the shot with F-07's faster noise and not with
+  F-06's (the flow waits for a landable world's map only; the plate's arrays were the same in both, and the shot the same once both
+  waited), and `flow_space.png` varied run to run with one body's map (its readiness printed at the shot: the picture followed it).
+  The flow now waits for the starting system's maps and the giant's (`Game::testWaitMapOf`), and with those waits F-06's binary and
+  F-07's draw the same 163 pictures in every run (24.4 → 20.7 s). The unit's C-11 player check read its piece before the piece's
+  records were written on their thread on a loaded machine (KI-410): it waits for them now at one instant (`testPlayerWaiting`). New:
+  `ifloor`, `ifloor64`, `ifloorTrunc`, `hashX`, `hashXY`, `hashXYZ`, `Framebuffer::back`, `TerrainCache::fill`, `emitPixelRare`,
+  `marchSteps`, `AudioSynth::Coefs`, `SpaceRenderer::BackdropKey` and `bandGen`, `PlanCore::cosReach`, `Game::testWaitMapOf`,
+  `testPlayerWaiting`; `sampleGalaxyBand` without its size; `lastFloraMs` two sections.
+
+## F-08 (2026-10-14): the frames' pacing
+
+The eighth milestone of the performance plan (`docs/ideas/PLAN-performance.md`): the platform layer. F-01's window had dropped the
+plan's audio thread (the synth's block 0.76 ms at most) and its unpack ring (the upload 0.4-0.5 ms) and left the pacing (KI-407); the
+window was measured again here, its work half of F-01's since F-05 to F-07. Nothing drawn or heard changes.
+
+* **What raylib's pacing did.** `SetTargetFPS(60)` waits after the swap for 1/60 s less the frame's time, asleep for 95% of it and
+  spinning the rest; macOS wakes the sleep late (by about half a millisecond), so with 6-7.5 ms of work the frames came every 17.2 ms,
+  58 a second, in every state, against a display that refreshes every 8.33 ms (the dev Mac's 120 Hz ProMotion panel: two refreshes a
+  frame). With the swaps' returns written down (on the vsync a swap returns at the refresh its frame met) 93-97% of the frames reached
+  the screen 16.7 ms after the one before in the calmest run (the decoder 69%) and 57-94% in the busier ones, and 2.0-3.4% stayed on
+  it for 33 ms in every state. F-01's 33 ms frames in the cabin came from its 13.4 ms of work; with the work at 7 ms the late wake is
+  what is left.
+* **The modes tried** (a scratch copy of the window loop driven through seven states by script, F-01's with a turning cabin added, the
+  pacing chosen by an environment variable, each frame's parts and its swap's return written; muted, 4x in a 1280 x 800 window): the
+  vsync alone (the plan's experiment, `SetTargetFPS(0)`) lets the panel run between 60 and 120 Hz with the game: 71 frames a second in
+  the quiet cabin, 31% of them 8.3 ms apart and the rest 16.7 (dropped: a judder, and a frame rate that is the display's). raylib's
+  wait without the vsync paces as with it (17.2 ms). A 60 Hz schedule kept by the platform, each swap held until its frame's refresh
+  less a margin and the schedule following the refreshes the swaps met: with 2 ms of margin every frame met its refresh while the Mac
+  was calm (100% in two-second windows), but under load the compositor wants a frame earlier and whole stretches missed (33 ms apart:
+  the decoder 41.7 frames a second, the walk 47.6); with 4 ms (60.0, 59.8 and 59.7 a second in three states) and 6.25 ms it held.
+* **The platform paces the frames** (`platform_raylib.cpp`; raylib's `SetTargetFPS(0)` on the desktop, the browser's pacing as it
+  was). A frame is meant for the refresh a whole number of the monitor's refreshes after the last one's (`floor(hz / 60 + 0.2)`: two
+  at 120 Hz, two at 144 (72 a second), one at 60, 75, 90 or 100; the monitor's rate read every 60 frames, 60 when it reports none),
+  and its swap waits until three quarters of a refresh before that one: past the refresh between, where the frame must not show, and
+  early enough for the compositor. The wait sleeps until a millisecond before and spins the rest. A swap that waited for the display
+  returned at its refresh, later only by the thread's wake: the schedule follows a return earlier than it expected, or half a refresh
+  or more late (a refresh missed), all the way, and one a little late a tenth of the way (the display's clock against the CPU's,
+  without the wakes' noise); a swap that did not wait (no vsync, a hidden window) leaves the schedule to the clock, and a frame a
+  whole period late starts it again.
+* **The numbers** (round three: raylib's pacing and the platform's alternated twice, 30 s a state, the Mac swapping 12.7 of its 13.3
+  GB with a browser's GPU process busy beside the runs; on the beat = within 1.6 ms of 16.7 after the previous frame's refresh). On
+  the beat, raylib's two runs against the platform's: the quiet cabin 86.3 and 94.3% against 91.1 and 99.5%, the cabin turning 82.9
+  and 77.8 against 92.9 and 99.7, the ship's player 73.4 and 93.5 against 96.3 and 99.7, the radar camera 57.0 and 92.0 against 95.9
+  and 98.4, the decoder with a piece playing 85.1 and 72.1 against 98.2 and 99.6, walking 80.0 and 85.8 against 99.9, driving 75.1 and
+  81.0 against 95.9 (the platform's second walk and drive came straight after the Mac woke from a lid closed for 17 minutes, 59.2 and
+  73.5%, and are set aside); 56.4-58.3 frames a second against 59.3-60.0; frames that stayed 33 ms 2.0-3.4% of every state against
+  0-0.5%. The tree's own build afterwards (the same driver on `platform_raylib.o`): 59.7-60.0 a second, 94.2-98.5% on the beat, 0-0.1%
+  at 33 ms; `VESPERIS_TRACE=1 ./vesperis --frames 600` at the title: the intervals' p50 16.67 ms and p99 20.6, the hold 2.4-3.4 ms and
+  the swap 6.3-7.2 a frame.
+* **The plan's other two items stay dropped.** The synth's block is 0.08 ms quiet and 0.98 on average, 2.08 at worst, with the radar
+  and the ship's player on the loaded Mac (F-01: 0.36 and 0.76), one block in 5.4 frames whose work is 6-7.5 ms of 16.7: no frame
+  waits for it, so no helper thread (the synth stays on the main thread). The upload is 0.42-0.77 ms on average (1.17 in the radar
+  camera on the loaded Mac): no frame waits for it either, so no unpack ring.
+* **Machines that are not this one.** On a 60 Hz display a frame is one refresh, its swap's wait three quarters of a refresh before it
+  (the work mostly past that point already) and the vsync paces as before, without raylib's late wake after it; at 144 Hz the game
+  runs at 72 frames a second; without a vsync (a driver that forces it off) the schedule alone paces, exact to the spin. Windows
+  sleeps to the millisecond (raylib sets 1 ms timers), so a sleep a millisecond or two late still lands inside the margin. None of
+  these was measured (no machine): the release builds are the check (F-09).
+* **What moved.** Nothing drawn or heard; the harness does not link the platform layer (`vesperis_test` is F-07's binary byte for
+  byte, so its checks stand as F-07 left them). The window build: the pacing (`platform_raylib.cpp`), `PlatformPresentTimes::hold`
+  (`platform.h`), and the trace's `hold` column beside the swap, its work without either, and its summary counting the intervals over
+  17.5 ms (paced frames sit at 16.67, give or take a wake). KI-407 closed; the decoder's part of KI-406 too (6.6-7.0 ms of work in the
+  window, 60 frames a second).
+
+## F-09 (2026-10-15): the release flags
+
+The ninth milestone of the performance plan (`docs/ideas/PLAN-performance.md`): the six release builds' flags, and their scripts in
+the tree. Stopped midway by the user on 2026-10-14 and finished the next day. The Makefile stays at `-O2` (the edit loop: the bench
+measures the code, not the flags).
+
+* **The release builds are scripts** (`packaging/`). They had lived in a session's `/tmp` scratchpad, which macOS wipes, and each
+  release rebuilt them from an old transcript. `toolchains.sh` fetches raylib 5.5 and llvm-mingw 20260922 against their SHA-256 into
+  `build/toolchains` (or `VESPERIS_TC`) and builds raylib static for macOS arm64 and x86_64 (the Apple clang, macOS 11) and Windows
+  x86_64 and aarch64 (llvm-mingw, the UCRT): 22 s. `build-mac.sh` and `build-win.sh` build one target each (15-25 s; the Windows
+  binary imports only system DLLs). `build-linux.sh` builds one Linux target in an Ubuntu 20.04 container (`linux.Dockerfile`, the
+  image `vesperis-build:<arch>` made on first use: glibc 2.31 and GCC 9.4, so the zips start on older systems) through
+  `build-linux-inner.sh`, which builds raylib (X11 only) on first use and links the C++ runtime in; amd64 runs emulated on the Mac.
+  `build-release.sh <version> <out dir>` runs the six (the Mac and Windows ones side by side, then the Linux ones one at a time:
+  beside other work 1.3.0's Docker VM went away mid-build), makes no zip unless all six built, and zips each as 1.3.0 did (the binary,
+  `README.md`, `LICENSE`, `vesperis_keys.example.txt`; `Vesperis.app` beside the macOS binary).
+* **Thin LTO on the clang lines** (macOS and Windows, `-O2 -flto=thin`). clang decides `-ffp-contract=on`'s fusions per source
+  expression before the link, so the link's inlining cannot fuse another multiply-add. On the Mac the LTO build drew the 67 scenes at
+  4x, 2x and 4x on one thread, the 96 screens, the 48 scale sheets and the probe's 49 frames as F-07's final sets, with the regress
+  both ways, `suncone` and `capsule` the same; the x86_64 build under Rosetta its regress both ways and 18 scenes at 2x as its own
+  `-O2` build's. Time (four alternating `bench check` pairs on battery): space 4x 6.86 → 6.80 ms, the telescope 2x 8.86 → 8.61, probe
+  2x 5.92 → 5.81 and 3.48 → 3.39, buggy 4x 4.17 → 4.05, every other row within 1%; with one thread the same (space 4x 28.8-29.0 in
+  both). The plan's -0.8-1.7 ms at space 4x was measured before F-07, whose inlined lookups took it. Kept: never slower, the pictures
+  identical, one flag. A first batch, run while the machine was still settling, read space 4x 11% faster; that was its `-O2` side's
+  spread (6.90-8.15 ms against 6.80-7.02), and the batch above was run after it, the order swapped.
+* **Windows takes the Mac's line and nothing more.** No Windows machine runs the harness here, so its zips are untimed and the plan's
+  `-fno-math-errno` for them is not taken (KI-411). Its builds' one warning was B-424, and a scan for the narrowings only Windows has
+  (`-Wshorten-64-to-32` on both targets) found the rest of it; the Windows line now compiles with that warning.
+* **Linux: `-O3`** (`build-linux-inner.sh`). GCC 9's `-O2` does not vectorise and inlines only small functions (clang's `-O2` does
+  both; `-O3` was noise on the Mac). In the arm64 container (GCC 9.4, Docker's 10 CPUs and 8 GB) four variants were built beside `-O2`
+  and gated against `-O2`'s own `regress bless`: `-O2 -flto=8`, `-O3`, `-O2 -fno-math-errno` and the three together each kept the
+  regress with the workers and with one thread, and drew the 67 scenes and the 24 screens at 4x as `-O2` did. Timed in a rotation
+  (each variant's `bench check` in turn, three rounds, nothing else running), against `-O2` over the 39 steady rows (the geometric
+  mean of the medians): `-O3` -4.9%, 22 rows faster in every round (surface 4x 3.92 → 3.66 ms, 2x 2.72 → 2.48, forest 4x at the game's
+  3x3 9.08 → 8.66, city 4x 6.38 → 5.96, buggy 4x 4.94 → 4.71, the telescope 4x 21.17 → 20.59, the radar camera 2.81 → 2.55, the
+  landing map 2.52 → 2.28, the belt 0.86 → 0.72, Vimana 2.11 → 1.89, space 2x 2.77 → 2.63; space 4x 7.05 → 6.97 within the spread) and
+  two slower (probe 4x 10.96 → 11.28, an arrival's frames 5.58 → 5.92); `-flto` +1.2% (no row faster in every round, four slower);
+  `-fno-math-errno` +1.1%, within the noise; the three together -6.6%. `-O3` alone is taken, the one flag that measured on its own:
+  the combination's further 1.7% would bring in two flags that gained nothing alone. The amd64 container (emulated: not timed) passed
+  the same gate for `-O3`: the regress with the workers and with one thread against `-O2`'s bless, and 18 of the scenes
+  (`aurora_moon`'s five-minute search among those left out: the emulation is slow) and the 24 screens at 4x as `-O2` drew them.
+* **The hashes by platform** (KI-014). In the arm64 container GCC blesses the tree's 22 hashes exactly, the Mac's; the amd64 one
+  differs in six: the three system hashes the x86_64 Mac differs in too, and three frames (`scene_cratered_noon`,
+  `scene_molten_night`, `space_S00`). Each line is gated against its own `-O2`.
+* **Not taken**, as the plan said: `-O3` on the Mac (noise), PGO (six targets, a training run a build), the micro-flags (`-fno-plt`,
+  `-no-pie`, `-fno-stack-protector`), a newer Ubuntu (glibc), `-march`.
+* **The release, dry run.** `build-release.sh f09 <a scratch dir>` from this tree, nothing uploaded (2026-10-15): the six built in
+  316 s (the Mac and Windows four side by side in 57 s, then Linux arm64 in 27 s and amd64, emulated, in 3 min 49 s, each building its
+  raylib first), every log `exit 0`; the Mac and Windows lines print no warning, the Linux ones GCC's 31 (one-line `if`s' misleading
+  indentation and two set-but-unused variables in `shards.cpp`, all older than F-09). The zips hold the files 1.3.0's did (macOS
+  arm64, Linux x86_64 and Windows arm64 compared with 1.3.0's download); the Mac binaries link only the system's frameworks and
+  libraries (macOS 11), the Windows ones import the system DLLs 1.3.0's did, the Linux ones need only glibc 2.29's core libraries, as
+  1.3.0's (no `libstdc++`). Sizes against 1.3.0: macOS arm64 7.86 → 7.24 MB, Windows arm64 9.01 → 9.12, Linux x86_64 11.27 → 11.74. No
+  game window was opened.
+* **What moved.** No game code but B-424's two lines; the Makefile's `vesperis` and `vesperis_test` are F-08's byte for byte. New in
+  `packaging/`: `toolchains.sh`, `build-mac.sh`, `build-win.sh`, `build-linux.sh`, `build-linux-inner.sh`, `linux.Dockerfile`,
+  `build-release.sh`; `CLAUDE.md`'s Release section names them. KI-411 (the Windows and Linux zips untimed on their systems); KI-404
+  gained a note (the probe's fall and entry frames varied once under load).
+
+## B-424 (2026-10-15): a telescope photo reads its plate whole on Windows too
+
+`docs/iteration-3/bugs/resolved/B-424-the-windows-telescope-photo-left-its-plate-unread.md`; found by F-09's Windows builds.
+
+* `SpaceRenderer::plateFill` took a budget of 0 ("all of it": a photo through the telescope, the harness's `telePlateFinish`) as
+  `1L << 40` samples. Windows' `long` is 32 bits, the shift undefined, and clang folded the select to its other arm, so a photo on
+  Windows read nothing more of the plate than the eyepiece's frames had (since 1.2.0). `long long` now, and the loop's
+  `std::min<long>(…, left)` a `std::min<long long>`: the first fix (2026-10-14) had kept it, which on Windows makes 2^40 a 0 and the
+  loop endless (a hang at the photo; it never left the working tree). The Mac's binaries are byte for byte as before (both types 64
+  bits there). The photo itself is unchecked on Windows.
+* **The rule**: a count that can pass 2^31 is `long long` (or `int64_t`), never `long`, and never narrowed through a `long`. The
+  Windows builds compile with `-Wshorten-64-to-32` (`build-win.sh`): a narrowing only that target reports is Windows' 32-bit `long`.
+  The tree has none (every game source compiled for Windows x86_64 and for the Mac with it, 2026-10-15; the first fix's loop was the
+  one), and `build-release.sh` prints each build's warning count.
+
+## F-10 (2026-10-15): the hash-moving batch, nothing to bless
+
+The tenth milestone of the performance plan (`docs/ideas/PLAN-performance.md`): floating-point rewrites that cannot promise the last
+bits of what they replace, batched so that one bless would cover them all. Three are kept, and none moved a hash or a pixel: the 22
+hashes stand, every picture compared is the one F-08's binary drew, and nothing was blessed. The fourth, the plan's `atan2`/`asin`
+pair, was built, measured slower in the frame than libm, and taken out.
+
+* **The sky's powers of a cosine as products** (`surface_view.cpp`: `sunGlow`, `pow300`, `pow18`). The day's two glows round a sun
+  (`9 c^6 + 14 c^50`), the sun's disc in an airless sky (`c^300`) and a comet's tail (`c^18`) are products of squares, within a few
+  dozen ulp of libm's `pow` (c^50's chain rounds seven times, c^300's ten); `pow(1 - el, 2.2)` stays. The sky's loop went from eight
+  `pow` calls to one and from 90 stack reloads to 56. Four `bench check` pairs against F-08's binary, the order swapped every pair:
+  surface 4x 3.44 → 2.97 ms (the sky's section 1.3 → 0.8), 2x 2.27 → 1.82, sunward 4x 6.21 → 5.66 (its sky 3.5 → 2.9-3.0), forest 4x
+  8.92 → 8.37 (8.46 → 7.97 at the game's 3x3), each faster in every pair; with one thread surface 4x 13.17 → 10.70 (the sky 6.1 →
+  3.8), 2x 8.04 → 5.43. The plan's -0.65 ms at surface 4x was estimated on F-01's 8.8 ms frame. The bench's sunaway row (30 frames
+  facing away from a sun 30 degrees up: no glow in view) read 3.90 → 4.10 in every pair: its frames follow the sunward row's, now
+  faster, and meet more of the turn's background work; 300 frames of each view in a scratch harness drew sunaway alike in both
+  binaries (3.57-3.59 ms, the sky 1.15-1.17) and sunward 5.60 → 5.07. On baseline x86-64 the airless products meet subnormal values
+  within about five degrees of a right angle from the sun (c^300 is under 2e-308 there), as libm's `pow` did; untimed there (KI-411).
+* **The clouds' drift wrapped once a frame** (`cloudDriftOf` in `space_view.cpp`, for the globe and the plate). Unwrapped it grew with
+  the clock, tens of turns and more in play, so the globe's every cloud read (`cloudAt(lon + drift)`) went through `fmod`; within a
+  turn it takes `wrap2pi`'s one-turn path (F-07). The plate's drift is wrapped the same way, so the two stay within a turn of each
+  other and the plate's cloud turn keeps a small angle.
+* **The limb's cube as products** (`edge * edge * edge` for `pow(1 - viewCos, 3)`). With the drift: space 4x 6.86 → 6.33 ms, 3x 3.71 →
+  3.46, 2x 2.13 → 2.02 (one thread 28.99 → 26.65), the plan's -0.5; the telescope 2x 8.95 → 8.64, 4x 18.73 → 18.33, faster in every
+  pair.
+* **Not taken: the `atan2`/`asin` pair** (the plan's second implementation in `core/` for the globe's latitude and longitude and the
+  galaxy band's). Built as planned: the smaller magnitude over the larger, folded past tan(pi/8), one division, an 11-term minimax
+  polynomial fitted for it (error under 3e-17), the octant by selects, asin as the angle of (sqrt((1 - z)(1 + z)), z); within 2 ulp of
+  macOS's libm over a million directions (4.4e-16 rad), and every picture the same. In the frame it lost: space 4x 6.77 ms against
+  6.35 without it, the telescope 4x 19.80 against 18.57, Vimana 1.46 against 1.32 (a rotation of the three binaries, three rounds,
+  every round alike). The plan's 13 ns for libm was a loop over random directions, whose signs defeat libm's branches (asin and atan2
+  26 ns a pixel there, the pair 5.5); a globe's pixels in scanline order let them predict (libm 7.7 ns, the pair 5.7 on a performance
+  core, no better on an efficiency core, where its two divisions and square root are slow), and inlined in the globe's loop the pair's
+  234 instructions and 22 more stack reloads cost more than that. Taken out; the angles stay libm's.
+* **Not taken: the raster's reciprocals** (the plan's optional item, without an estimate: one reciprocal a triangle for the two
+  divisions each row makes). It would move every triangle's edges and lerps by an ulp, and an edge, unlike a shade, can sit exactly on
+  a pixel's rounding (polygons drawn from the same corners every frame, the cabin's among them), so the odds that kept the other
+  items' pixels say nothing for it.
+* **The proof.** The regress 22 of 22 with the workers and with one thread, never blessed. Every picture compared is F-08's binary's:
+  the 67 scenes at 4x and 2x (the day skies, the airless noons, both comet scenes, the night skies, moons in the sky), the `space`
+  mode's 62 frames at 1x, 2x and 4x (the suns, a globe of every type, the black hole), the 24 screens at 4x (each drawn alike by one
+  thread), the 163 flow pictures from one restored state (the game's clock, where the drift had run many turns), the probe's 49
+  frames, the 48 scale sheets and the bench's 13 stable pictures; the unit 332 checks, 0 failures. The build with the pair drew the
+  scenes, the `space` frames, the screens and the flow as F-08's did too. So the plan's method, the differing pixels' count, largest
+  step and bank changes, had nothing to print, and no frame needs a look.
+* **What moved.** No generation change (GEN_VERSION 13 holds); the regress unchanged, nothing blessed. Over the bench's 39 steady rows
+  -4.0% (the geometric mean of the medians; 15 rows faster in every pair). Against the plan's estimates (surface 4x -0.65 ms, forest
+  -0.7-0.9, space 4x -1-1.4, the telescope -0.5): -0.47, -0.55, -0.53, -0.31 at 2x; the space and telescope rows' shortfall is the
+  pair's share.
+
+## F-11 (2026-10-15): the close: the budgets lowered, the regress widened
+
+The last milestone of the performance plan (`docs/ideas/PLAN-performance.md`): the gains of F-01 to F-10 guarded by the bench's
+budgets and by two more frames in the regress, and the series' numbers and known issues written down. Only the harness changed; no
+game code.
+
+* **The budgets: about 1.5x this Mac's medians.** Every `bench check` budget is now about 1.5 times its row's median over F-10's four
+  runs on the dev Mac (an M4 of four performance and six efficiency cores), and at least the median + 0.5 ms (the herd's draw, 0.07
+  ms, and the belt, 0.60): a change that gives a gain back fails, where the old budgets (12-24 ms on rows of 2-9) let it through. The
+  seventeen kept: space 2x 12 → 3.1 ms, surface 2x 16 → 2.8, forest 2x 14 → 8.2 and 4x 24 → 13, city 2x 16 → 5.7, the herd's draw 1 →
+  0.6, buggy 2x 14 → 6.1 and 4x 24 → 6.1, drone 2x 16 → 3.3, the belt 12 → 1.1, Vimana 12 → 2.0, the telescope 2x 16 → 13, probe 2x 16
+  → 8.9, capital 2x 16 → 5.4, the descent's first frame 35 → 26, beside the capital 70 → 62, and the sprint's worst frame 40 → 10 (one
+  frame, a stall detector: one run of eight read 6.6 ms by the machine alone). Twenty new: space 4x 9.5 and surface 4x 4.5 (the
+  default picture), the forest at the game's 3x3 mush 12, and the F-01 rows that held within a few percent over eight runs: capital 4x
+  8.3, the sector map 8.2, the landing map 3.5, its zoom 3.9 and the zoom's build frame 22, the radar camera 3.8, a photo's PNG 11,
+  the telescope 4x 28, the decoder 6.4, sunward 8.5 and sunaway 6.2, the sprint 5.7, city 4x 8.3, probe 4x 13, an arrival's frames
+  6.6, the guide's save 1.5 and load 23 (`rowF`'s limit). Not budgeted: a recorded frame (the writer's pace on the efficiency cores:
+  7-16 ms in F-06's runs on battery), an arrival's first frame (11.8-20.3 by its maps' threads), the rows at 1x and 3x (the 2x and 4x
+  rows run the same code). `bench check <factor>` multiplies every limit: the budgets are this Mac's with the workers, so another
+  machine or one thread passes its own factor.
+* **The first frames after a scale's change, out of the timed rows.** The first three runs with the new budgets failed two rows in one
+  run: space 4x 11.0 ms (6.4 and 6.6 in the others) and surface 2x 2.9 (1.8), both timed from the frame a scale changes, which
+  allocates the new scale's buffers and direction table (the Mac swapped 8.8 of 10 GB; space 4x had read 7.5 in one run of four in
+  F-08's and in F-10's batches too). The space and surface rows now draw five frames at one instant (dt 0) after the change before
+  their timed frames, as every other row draws a warm-up of its own; at dt 0 the game's clock stands, so the rows after them run at
+  the game times they did. Three more runs: all 37 within. The noisiest of them, on battery with the Mac swapping, came within 5% of
+  one (capital 2x 5.11 ms of 5.4; the landing map 3.15 of 3.5, the sector map 7.36 of 8.2, a stretch of rows 20-45% over their
+  medians): a failure on a busy machine is worth a second run before it is believed.
+* **The regress widened: 24 hashes.** Two frames join the four at 1x: the forest at 4x (`scene_felisian_forest_4x`, the bench's forest
+  and B-423's frame, its flora in bands pinned per scale) and the cabin at 1x through the game (`cabin_1x`: the start's parking, the
+  light on and the hull polarised, every map of the system made, the game's picture with its HUD drawn at one instant once it holds
+  still: the cabin's bands, the globe in the window, the backdrop, the HUD's text). Each is drawn again by one thread in the same run
+  and the regress fails when it differs: the forest's serial-versus-workers check, which B-423 put in the unit (1x, 2x and 4x, one and
+  three threads) and F-06 widened (six scenes, one to eight threads), is in the regress too, and `VESPERIS_THREADS=1 regress` still
+  checks the frames between runs. `regress bless` refuses then: a frame one thread draws differently is no reference. Blessed for the
+  two new lines alone, the other 22 byte for byte; the regress takes 9 s.
+* **The series against its targets** (the plan's section 2: its "now" of 2026-10-12, F-10's medians, the target). Met: space 4x 13.6 →
+  6.33 ms (7), with one thread 40.6 → 26.65 (30); surface 4x 8.8 → 2.97 (4.5), one thread 17.0 → 10.70 (12); surface 2x 6.6 → 1.82
+  (4), one thread 9.95 → 5.43 (7); forest 4x 14.8 → 8.37 (10); buggy 4x 11.9 → 4.04 (8); the landing map at 4x (estimated 17-18) →
+  2.29 (under 14); the descent's first frame 37 → 16.95 (20), beside a capital 77 → 41.1 (55); a logged event's guide save 20-35 →
+  0.95 ms (+3); a photo's PNG off the frame (encoded on the writer's thread in 7.2 ms; the frame copies it); recording at 4x 33 → 6.47
+  ms frames (16.7); a sprint's start and stop with no frame 1.5 ms over its median (+0.5); a capital's tree listing 1.0 → 0.7 ms (the
+  plan's 20-120 was an estimate F-01 measured at 1.0). Missed: the telescope 2x 11.0 → 8.64 (8), one thread 28.4 → 24.95 (24); the
+  forest with one thread 36.0 → 30.86 (28); the descent with one thread 65 → 63.8 (40: F-03 gave its fill and textures to the pool,
+  which one thread does not have). The telescope at its deepest at 4x, 25.0 → 18.33 ms, is still over a 60 Hz frame (KI-406).
+* **The known issues.** KI-312 closed: the terrain's cells binned once (F-04), the cabin in bands (F-05) and the rows dealt (F-06)
+  were its parts; the frames at 4x are 3.6-4.3 times faster with the workers than with one thread (space 4.2, surface 3.6, the forest
+  3.7, the telescope 4.3), about what four performance and six efficiency cores give; the flora's per-tree set-up in each pinned band
+  its rows reach stays (2,080 trees listed, 4,804 visits at 4x), the forest the densest steady frame at 8.4 ms. KI-206 (iteration 2)
+  closed: the densest forest at 2x 5.46 ms, under N2-04's hoped-for 6 (12 then); its budget 14 → 8.2. KI-331 unchanged (the planet
+  function's cost is generation, outside the plan). KI-338 and KI-403 carry F-03's tiles since F-03, KI-022 F-02's writer since F-02.
+  KI-406 (the telescope at 4x) and KI-411 (Windows and Linux untimed; now also the budgets, this Mac's, and the regress's two new
+  frames, unchecked in the Linux containers) stay open.
+* **What moved.** Nothing drawn: no game code changed, GEN_VERSION 13 holds, the regress's 22 hashes stand and two are added. The
+  harness: `appendFrameHashes`' two frames and their both-ways check, `bench check`'s 37 budgets and its factor, the warm-up after a
+  scale's change. Unit 332 checks, 0 failures; the regress 24 of 24 with the workers, one thread and three. The cookbook's recipe for
+  timing a change (`09-cookbook.md`).

@@ -458,12 +458,19 @@ void Game::renderSectorMap() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     int S = FB_SCALE;
     double shiftX = (px - sectorImgX) / mpp, shiftZ = (pz - sectorImgZ) / mpp;   // the image is a little stale between rebuilds
-    for (int y = 0; y < MH * S; y++)
-        for (int x = 0; x < MW * S; x++) {
-            int ix = (int)((x / (double)S + shiftX) / 2), iy = (int)((y / (double)S - shiftZ) / 2);
-            uint32_t col = (ix >= 0 && iy >= 0 && ix < sectorImgW && iy < sectorImgH) ? sectorImg[iy * sectorImgW + ix] : rgb(10, 10, 10);
-            canvas.px[(size_t)(oy * S + y) * FBW + ox * S + x] = col;
-        }
+    // F-05: the image's column of every pixel column and its row of every pixel row, by the per-pixel expressions, then the rows on the pool
+    static std::vector<int> ixs, iys;
+    ixs.resize(MW * S); iys.resize(MH * S);
+    for (int x = 0; x < MW * S; x++) ixs[x] = (int)((x / (double)S + shiftX) / 2);
+    for (int y = 0; y < MH * S; y++) iys[y] = (int)((y / (double)S - shiftZ) / 2);
+    parallelFor(MH * S, 64, [&](int yb, int ye) {
+        for (int y = yb; y < ye; y++)
+            for (int x = 0; x < MW * S; x++) {
+                int ix = ixs[x], iy = iys[y];
+                uint32_t col = (ix >= 0 && iy >= 0 && ix < sectorImgW && iy < sectorImgH) ? sectorImg[iy * sectorImgW + ix] : rgb(10, 10, 10);
+                canvas.px[(size_t)(oy * S + y) * FBW + ox * S + x] = col;
+            }
+    });
     if (surf.localFront.on) {   // W-03: the nearest front's rain line across the map and its band behind it, hatched
         const LocalFront& F = surf.localFront;
         const double s0 = FRONT_RAIN_END * F.width;

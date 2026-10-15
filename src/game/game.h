@@ -53,6 +53,16 @@ struct DronePrim {
     double r = 0.01;
 };
 void droneModel(const DronePose& pose, std::vector<DronePrim>& out);
+// F-05: what the cabin's bands share, taken once a frame (`drawCabin`): the eye, the light, the screens' flickers, the decoder's wait, and
+// the drones on the rack (where each stands, its pose and its model)
+struct CabinFrame {
+    Mat3 look; Vec3 eye;
+    double lit = 0, hullShade = 0, flick = 1, breathe = 1, sweep = 1, glow = 1, shine = 0;
+    bool waiting = false, ready = false;
+    bool here[DRONE_COUNT] = {}; double x[DRONE_COUNT] = {}, lift[DRONE_COUNT] = {}, blur[DRONE_COUNT] = {};
+    DronePose pose[DRONE_COUNT];
+    std::vector<DronePrim> prims[DRONE_COUNT];
+};
 constexpr double DRONE_SEARCH_S = 120;     // C-18 (the user's, 2026-10-11): two minutes down there, from the first place a drone searches to its last
 constexpr double DRONE_COOLDOWN_S = 300;   // C-18: five minutes charging from the drones' return to the next launch (real time; the user's, 2026-10-11:
                                            // "2 minutes + 5 minutes recharge", at first five minutes from launch to launch)
@@ -239,6 +249,7 @@ public:
     std::string testPlayerInfo() const;        // what plays, its clock, held / paused / waiting, the synth's pointers
     int testPlayerPlaying() const { return player.playing; }
     bool testPlayerHeld() const { return player.held; }
+    bool testPlayerWaiting() const { return player.waiting; }   // KI-410: its world's records still being written on their thread
     double testPlayerT() const { return player.t; }
     int testPlayerFinished() const { return player.finished; }
     void testPlayerSkipTo(double t) { player.t = t; player.syncT = -1; }   // the player's clock moved on (a long piece's end without its minutes)
@@ -281,6 +292,7 @@ public:
     double testDroneRackY(int k) const;
     std::string testDroneState(int k) const { return k >= 0 && k < DRONE_COUNT ? droneStateLine(k) : std::string(); }
     void testOpenDroneBay() { openDroneBay(); }
+    bool testDroneBayMapped() const { return bay.mapW > 0; }   // F-02: the screen's map of its world drawn
     void testShardsTop(int top) { shardsTop = top; }
     int testShardsLevel() const { return shardsLevel; }                        // C-06: the decoder's state for the harness
     std::string testChartInfo() const;         // C-10: the chart on the screen and the one held up
@@ -339,6 +351,7 @@ public:
     void testAimAtNearestStar();
     void testAimAtBody(int body);
     int testZoomRoads() const { return (int)zoomRoads.size(); }   // C-09: the roads drawn on the zoom
+    const double* testZoomBuildMs() const { return zoomBuildMs; } int testZoomBuilds() const { return zoomBuilds; }   // F-01: the zoom's last build in parts, the builds so far
     int testZoomCores() const { return zoomCores; }                // T-01: the cores drawn on the zoom
     std::string testLandPeoplesInfo();                               // R-415: the landing map's peoples: what is known, what the layer drew
     void testSurfaceFace(double yaw, double pitch) { surf.player.yaw = yaw; surf.player.pitch = pitch; }   // T-01 (the bench): the explorer's look
@@ -361,8 +374,11 @@ public:
     bool testWalkToWork(double withinM = 1e9);                    // T-03: the explorer set 150 m from the nearest work the scanner hears (the frame re-anchored and the scan asked again from there)
     void testLandCursor(double latDeg, double lonDeg) { landLat = latDeg * DEG; landLon = lonDeg * DEG; }   // C-09: the landing map's cursor
     void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
+    void testWaitMap();    // F-02: the landing map's world mapped before the test's next frame (the game's screen reads it on its thread; `testParkAt` waits)
+    void testWaitMapOf(int bi);   // F-07: any body's map made before the test's next frame (`testParkAt` waits for a landable world's only)
+    bool testMapReadyNow() { return landBody >= 0 && landBody < (int)sys.bodies.size() && spaceR.mapIfReady(sys.bodies[landBody]) != nullptr; }   // F-02
     int testLandableBody() const;
-    void testParkAt(const Star& s, int body);   // arrive at a star, park at a body, open the landing map
+    void testParkAt(const Star& s, int body, bool waitMap = true);   // arrive at a star, park at a body, open the landing map (F-02: its world mapped first unless `waitMap` is false)
     void testParkAtBelt(const Star& s, int k);  // O3: arrive at a star and park beside a rock of belt k at once
     std::string cometMotionString(int bi) const;   // N0-01: "740 KM/S, PERIAPSIS IN 3.2 H"
     static const char* shortPlan(int plan);        // N3: "QUADRUPED", "BROWSER", ...
@@ -582,6 +598,7 @@ private:
     void drawLandPeoples(int ox, int oy, int cx, int cy);   // the layer over the map (the world's or the zoom's), the cursor at (cx, cy)
     struct { int places = 0, ways = 0, land = 0, marks = 0, rings = 0, capital = 0; } landDrawn;   // what the layer drew last (the harness)
     double zoomRoadsMs = 0;                                          // C-09: what the window's network cost at the last build
+    double zoomBuildMs[5] = {0, 0, 0, 0, 0}; int zoomBuilds = 0;   // F-01: the last build's samples, colours, roads, plan ways and places' cores (ms); builds so far
     void buildLandingZoom();
     bool landingZoomAllowed() const;
     // O0-04 (B-306): the shadows of moons, the parent and the rings on the landing map and its zoom, as the globe shows them
@@ -693,6 +710,7 @@ private:
     void cabinPalette();
     void updateCabin(const Input& in, double realDt);
     void drawCabin();
+    void drawCabinBand(const CabinFrame& f);   // F-05: the room's pieces in order, in the calling thread's band of rows
     void renderCabinHUD();
     void updateShipScreen(const Input& in); void renderShipScreen();
     void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in); void renderConsole();
@@ -944,11 +962,14 @@ private:
     bool dronePosition(int k, double& lat, double& lon) const;   // where on the world the drone is (false: aboard or in the bay's hatch)
     DronePose dronePoseAt(int k) const;                // its arms, its hands, its fans now
     bool droneRackPlace(int k, double& x, double& lift, double& blur) const;   // where it stands in the cabin (its shelf, on its way through the rack's port), its lift and its fans' blur; false while away
-    void drawDroneRack(const Mat3& look, const Vec3& eye);   // the rack and the drones on it, in the cabin (`drawCabin`)
+    void droneRackFrame(CabinFrame& f) const;          // F-05: the rack's drones for the cabin's bands (their places, poses and models)
+    void drawDroneRack(const CabinFrame& f);           // the rack and the drones on it, in the cabin (`drawCabinBand`)
     void drawDroneLights();                            // the drones leaving the ship and coming back, as lights in the space view
     void drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun);   // a drone's model in the cabin's frame
+    void drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims);   // F-05: a model already made
     void drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, double yaw, uint32_t col);   // a drone in lines on the screen
-    void buildDroneMap(int body);                      // the screen's map of a world of this system
+    void buildDroneMap(int body);                      // the screen's map of a world of this system (F-02: none until the world's map is made)
+    int droneBayWorld() const;                         // the body the screen shows: the trip's, else the one the ship is parked at (-1 none)
     void playInstrumentDegree(int degree, int key);    // a note of the one on the screen (`key` holds it; 0 a note of its own length)
     void drawInstrumentPicture(int x0, int y0, int w, int h, const Instrument& I, const Tradition& T, const FormPalette& pal, const std::vector<double>& glow, double t);   // C-17: its parts (`drawInstrumentParts`)
     void deployCapsule(); void toggleVimana();

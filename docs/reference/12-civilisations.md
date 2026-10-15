@@ -1054,7 +1054,9 @@ peoples' least: C-01's buildings are theirs, roofed); generation 13 (A-01's) hol
   bank, a spoil heap, a wreck's furrow: `Form::part` 8) draws in the ground's own soil: the grass on a living world, the sand on a
   desert.
 * **The forest takes them back** (`forTrees`): no tree stands in a building; a settlement's yards keep a twentieth of their trees two
-  centuries after the end, a third after ten thousand years (C-01's one in three), so a young ruin is a clearing.
+  centuries after the end, a third after ten thousand years (C-01's one in three), so a young ruin is a clearing. F-02 (2026-10-13): the
+  building test (`inSettlementBuilding`, the logs' and the rocks' too) passes over a building whose circle (with the margin) the point
+  lies beyond before it turns the point into the building's frame, and the yards' hash is drawn before the buildings: the same trees.
 * **Every age's buildings are generators**: `cultureAs(g, people, age, years)` builds a people's culture as if it had reached an age and
   ended so long ago, `settlementOf` lays out a settlement of a class in it, and a building keeps the age whose way built it
   (`Building::age`). B-414: a world's buildings are all its people's last age's (T-02's old cores and the old time's megaliths went with

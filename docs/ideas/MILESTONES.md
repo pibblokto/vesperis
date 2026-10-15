@@ -11,7 +11,7 @@ Order is a suggestion.
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
 B-403 to B-406 (`docs/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
-column: `1.1.0`, `1.2.0` or `1.3.0` shipped in that release, `1.4.0` is for the next one.
+column: `1.1.0`, `1.2.0`, `1.3.0` or `1.3.1` shipped in that release, `1.4.0` is for the next one.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
 W-04, X-01 to X-04, with R-404 to R-408 and B-407 to B-410.
@@ -22,6 +22,9 @@ farther, R-411 the civilisation expansion of `IDEAS-civilisation-expansion.md`),
 G-05, G-06, G-07, H-01, A-01, C-15, C-16, A-02, A-03, A-04, T-01, H-02, T-02, T-03, T-04, H-03, H-04, H-05, H-06, C-11;
 generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 after C-11, on the user's request, the twenty-first; C-18
 (the drone bay) on 2026-10-11, the twenty-second; with R-412 to R-417 and B-411 to B-422. The rows not done move to `1.4.0`.
+
+**Released as 1.3.1 (2026-10-15), generation 13 unchanged:** the performance plan `PLAN-performance.md`, F-01 to F-11 with
+B-423 and B-424: the frame about twice as fast with the same pictures, the stalls a player felt cut down.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -198,6 +201,28 @@ L-01 and L-02 first: they change every frame on every world.
 | K-03 | Geometry: the cut into the terrain rings at the mouths, the tunnel mesh and its collision | XL | 1.4.0 or later |
 | K-04 | Rendering: daylight falloff, the helmet lamp, floor water, skylights, sound | L | 1.4.0 or later |
 | K-05 | Maps: the sinkhole and spring on the landing zoom, the walked passage on the sector map | S | 1.4.0 or later |
+
+## F: the frame (`PLAN-performance.md`) — faster without changing a pixel, no generation change
+
+Planned 2026-10-12 from a day of measurements and an audit of every subsystem; the plan holds the verified findings, the
+targets and the method. Every item but F-10 is bit-identical (the 22 regress hashes stay); F-10 is one blessed batch.
+The audit's own measurement found B-423 (the forest's picture depends on the core count: the flora's coverage grid is
+per band), which is fixed before any band-boundary work (F-05, F-06); the plan's section 4 has the two ways. Progress (2026-10-15):
+F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 2026-10-13); F-02 done; F-03 done; F-04 done; F-05 done; F-06 done; F-07 done; F-08 done; F-09 done; F-10 done; F-11 done: the series is closed, released as 1.3.1 on 2026-10-15.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| F-01 | Measure what the bench cannot see: the real game's frame sections, `pngdiff`, serial-versus-workers checks for the cabin, the forest and the feeds, the per-band terrain trace, the pool and noise micro-benches, rows for the landing map, a sun-facing frame, the radar camera and the guide save | M | 1.3.1, done 2026-10-12 (Linux and Windows runs open) |
+| F-02 | The stalls in play: the guide's probe lines cached, the PNG encoder and a writer thread, the trees against a settlement's buildings, the direction table in parallel, the star neighbourhood walked incrementally, the landing probe's `initFrame`; the landing map and the drone bay open at once on a world not mapped yet (the user's choice) | M | 1.3.1, done 2026-10-13 |
+| F-03 | The first frame of a descent and the tiles: the rings' misses filled by the pool, the tile's integer-key sort; the breach's two-cell pits sunk a binade at a time; the landing's textures and meso tiles on the pool; the drainage's neighbourhood made from its cell (the user's choice) | M | 1.3.1, done 2026-10-13 (its timing batch on mains power 2026-10-14: the space rows within 1%) |
+| F-04 | The terrain rings: cells binned by band once, water corners per vertex, the warm pass's vertex rows (the adaptive row chunks after F-06) | L | 1.3.1, done 2026-10-14 |
+| F-05 | The passes one thread draws alone, in bands: the cabin, the maps' and menus' blits, `glowDisc`, the camera feeds, the sky grids, the floor and reflections, the sun's cone test (and KI-409, the sun's loop and the stack) | M | 1.3.1, done 2026-10-14 |
+| F-06 | The pool deals its rows: atomic chunks, a bounded spin, the reentrancy guard, the terrain's adaptive chunks; the cap raise measured | M | 1.3.1, done 2026-10-14 (the spin, the chunks by cost and the cap of ten measured and not taken) |
+| F-07 | Exact trims: `wrap2pi`, the map accessors inline, the globe's trims, the mush, the raster, the sky's skips, the halo and pillar, the plate, the probe, the noise table, the synth, `ifloor`; the backdrop replay | M | 1.3.1, done 2026-10-14 (in five A/B steps; `ifloor`'s truncation on baseline x86-64 only, the toRGB cache and the ring-shadow skip not made) |
+| F-08 | The platform layer: the audio block on a helper thread, the upload measured; the frames' pacing (done: the platform paces, the thread and the ring dropped) | S | 1.3.1, done |
+| F-09 | The release flags: thin LTO on the clang lines, the build scripts into `packaging/`, the Linux and Windows flags gated on the container's regress | M | 1.3.1, done 2026-10-15 (thin LTO on macOS and Windows; Linux `-O3`, its `-flto` slower and `-fno-math-errno` nothing in the container; Windows untimed; B-424 found by the Windows builds) |
+| F-10 | The hash-moving batch, one bless: the sky's pows as products, the cloud drift wrapped once, the limb, the `atan2`/`asin` pair | M | 1.3.1, done 2026-10-15 (the sky's powers as products, the cloud drift wrapped once, the limb as products: surface 4x -14%, space 4x -8%; no hash moved, nothing blessed; the `atan2`/`asin` pair built and dropped, slower in the frame) |
+| F-11 | The close: budgets lowered, the regress widened, the docs and KNOWN-ISSUES | S | 1.3.1, done 2026-10-15 (37 budgets at about 1.5 times the dev Mac's medians, `bench check <factor>` elsewhere; the regress 24: the forest at 4x and the cabin at 1x, each drawn by one thread too; KI-312 and KI-206 closed) |
 
 ## Suggested order for 1.2.0
 

@@ -35,3 +35,10 @@ void platformToggleFullscreen();
 void platformSetWindowSize(int w, int h);
 void platformAudioPump(AudioSynth& synth, AudioState& st);
 void platformShutdown();
+// F-01 (VESPERIS_TRACE): the last present's parts in ms (the texture's upload; the drawing up to the swap, which records the
+// commands; F-08's hold, the swap held to its refresh; EndDrawing: the commands' flush, the buffer swap with its vsync wait and the
+// input poll) and the last audio pump's (the synth's blocks, their ms, the stream's updates)
+struct PlatformPresentTimes { double upload = 0, draw = 0, hold = 0, swap = 0; };
+struct PlatformAudioTimes { int blocks = 0; double synth = 0, update = 0; };
+PlatformPresentTimes platformPresentTimes();
+PlatformAudioTimes platformAudioTimes();

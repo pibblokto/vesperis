@@ -632,6 +632,7 @@ void Game::renderStats() {
 // X-04: the photographs and the probes' recordings (each by its final image: shots/probe_<n>.png, a lent one drawn), in the order
 // they were taken: a photograph by its file's time, a recording by the time it came back (a lent one: its lending)
 void Game::openGallery() {
+    pngFlush();   // F-02: a photograph or a probe's image still with the writer is in the directory first
     galleryItems.clear();
     std::vector<GalleryItem> photos, recs;
     std::string dir = shotsDir;

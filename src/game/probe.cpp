@@ -972,7 +972,7 @@ void Game::probeKeep(int cause) {
     probe.lastFrame = rgbBuf;
     makeDir(shotsDir);
     const std::string fn = fmt("%s/probe_%d.png", shotsDir.c_str(), r.id);
-    writePNG(fn.c_str(), rgbBuf.data(), FBW, FBH);
+    writePNGAsync(fn.c_str(), rgbBuf.data(), FBW, FBH);   // F-02: on the writer's thread (the gallery flushes before it lists)
     if (FILE* f = fopen((fn.substr(0, fn.size() - 4) + ".txt").c_str(), "w")) { fprintf(f, "%s - %s\n", recordTitle(r).c_str(), recordLine(r).c_str()); fclose(f); }
     const int at = guide.probeIndexBySeed(r.seed);
     if (at >= 0) guide.probes[at] = r; else guide.probes.push_back(r);

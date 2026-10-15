@@ -1,41 +1,54 @@
-#include <string>
 #include "png.h"
 #include <cstdio>
 #include <vector>
+#include <string>
 #include <cstring>
+#include <algorithm>
+#include <array>
+#ifndef __EMSCRIPTEN__
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <deque>
+#endif
 
 namespace {
-uint32_t crcTable[256];
-bool crcInit = false;
-void initCrc() {
-    for (uint32_t n = 0; n < 256; n++) {
-        uint32_t c = n;
-        for (int k = 0; k < 8; k++) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-        crcTable[n] = c;
-    }
-    crcInit = true;
+// F-02: built once at its first use (a function-local static is initialised once, safely, from the writer thread too)
+const std::array<uint32_t, 256>& crcTable() {
+    static const std::array<uint32_t, 256> t = [] {
+        std::array<uint32_t, 256> a{};
+        for (uint32_t n = 0; n < 256; n++) {
+            uint32_t c = n;
+            for (int k = 0; k < 8; k++) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+            a[n] = c;
+        }
+        return a;
+    }();
+    return t;
 }
 uint32_t crc(const uint8_t* buf, size_t len, uint32_t c = 0xFFFFFFFFu) {
-    if (!crcInit) initCrc();
-    for (size_t i = 0; i < len; i++) c = crcTable[(c ^ buf[i]) & 0xFF] ^ (c >> 8);
+    const std::array<uint32_t, 256>& T = crcTable();
+    for (size_t i = 0; i < len; i++) c = T[(c ^ buf[i]) & 0xFF] ^ (c >> 8);
     return c;
 }
-void put32(std::vector<uint8_t>& v, uint32_t x) {
-    v.push_back((x >> 24) & 255); v.push_back((x >> 16) & 255); v.push_back((x >> 8) & 255); v.push_back(x & 255);
-}
-void chunk(FILE* f, const char* type, const std::vector<uint8_t>& data) {
-    std::vector<uint8_t> buf;
-    put32(buf, (uint32_t)data.size());
-    size_t start = buf.size();
-    buf.insert(buf.end(), type, type + 4);
-    buf.insert(buf.end(), data.begin(), data.end());
-    uint32_t c = crc(buf.data() + start, buf.size() - start) ^ 0xFFFFFFFFu;
-    put32(buf, c);
-    fwrite(buf.data(), 1, buf.size(), f);
+void put32(uint8_t* o, uint32_t x) { o[0] = (x >> 24) & 255; o[1] = (x >> 16) & 255; o[2] = (x >> 8) & 255; o[3] = x & 255; }
+void put32(std::vector<uint8_t>& v, uint32_t x) { uint8_t b[4]; put32(b, x); v.insert(v.end(), b, b + 4); }
+// a chunk: its length, its type, its data and the CRC of the type and the data (F-02: the CRC runs over the type, then the data, in
+// place: the data is not copied behind the type first)
+void chunk(FILE* f, const char* type, const uint8_t* data, size_t n) {
+    uint8_t head[8];
+    put32(head, (uint32_t)n);
+    memcpy(head + 4, type, 4);
+    fwrite(head, 1, 8, f);
+    if (n) fwrite(data, 1, n, f);
+    uint8_t tail[4];
+    put32(tail, crc(data, n, crc(head + 4, 4)) ^ 0xFFFFFFFFu);
+    fwrite(tail, 1, 4, f);
 }
 }
 
 bool readPNG(const char* path, std::vector<uint32_t>& px, int& w, int& h) {
+    pngFlush();   // F-02: a picture still queued for the writer is on disk first
     FILE* f = fopen(path, "rb");
     if (!f) return false;
     std::vector<uint8_t> d;
@@ -86,31 +99,42 @@ bool readPNG(const char* path, std::vector<uint32_t>& px, int& w, int& h) {
     return true;
 }
 
+// F-02: the same bytes as before, about three times sooner (16-19 ms at 4x before): the rows packed through a pointer, not three
+// push_backs a pixel; the Adler-32 sums reduced once a run of 5,552 bytes (zlib's NMAX: the most bytes after which `b` still fits 32
+// bits, so the sums are the per-byte modulo's exactly); the chunks' data written in place, not copied behind their type
 bool writePNG(const char* path, const uint32_t* px, int w, int h) {
     FILE* f = fopen(path, "wb");
     if (!f) return false;
     const uint8_t sig[8] = {137, 80, 78, 71, 13, 10, 26, 10};
     fwrite(sig, 1, 8, f);
-    std::vector<uint8_t> ihdr;
-    put32(ihdr, w); put32(ihdr, h);
-    ihdr.push_back(8); ihdr.push_back(2); ihdr.push_back(0); ihdr.push_back(0); ihdr.push_back(0);
-    chunk(f, "IHDR", ihdr);
+    uint8_t ihdr[13];
+    put32(ihdr, w); put32(ihdr + 4, h);
+    ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+    chunk(f, "IHDR", ihdr, sizeof(ihdr));
     // raw scanlines with filter byte 0
-    std::vector<uint8_t> raw;
-    raw.reserve((size_t)h * (w * 3 + 1));
+    const size_t stride = (size_t)w * 3 + 1;
+    std::vector<uint8_t> raw((size_t)h * stride);
     for (int y = 0; y < h; y++) {
-        raw.push_back(0);
-        for (int x = 0; x < w; x++) {
-            uint32_t p = px[y * w + x];
-            raw.push_back(p & 255); raw.push_back((p >> 8) & 255); raw.push_back((p >> 16) & 255);
+        uint8_t* o = raw.data() + (size_t)y * stride;
+        *o++ = 0;
+        const uint32_t* row = px + (size_t)y * w;
+        for (int x = 0; x < w; x++, o += 3) {
+            const uint32_t p = row[x];
+            o[0] = p & 255; o[1] = (p >> 8) & 255; o[2] = (p >> 16) & 255;
         }
     }
     // zlib stream with stored blocks
+    const size_t blocks = (raw.size() + 65534) / 65535;
     std::vector<uint8_t> z;
+    z.reserve(2 + raw.size() + 5 * std::max<size_t>(blocks, 1) + 4);
     z.push_back(0x78); z.push_back(0x01);
     size_t pos = 0;
     uint32_t a = 1, b = 0;
-    for (uint8_t c : raw) { a = (a + c) % 65521; b = (b + a) % 65521; }
+    for (size_t i = 0; i < raw.size();) {
+        const size_t end = std::min(raw.size(), i + 5552);
+        for (; i < end; i++) { a += raw[i]; b += a; }
+        a %= 65521; b %= 65521;
+    }
     while (pos < raw.size()) {
         size_t n = std::min<size_t>(65535, raw.size() - pos);
         bool last = pos + n >= raw.size();
@@ -121,8 +145,76 @@ bool writePNG(const char* path, const uint32_t* px, int w, int h) {
         pos += n;
     }
     put32(z, (b << 16) | a);
-    chunk(f, "IDAT", z);
-    chunk(f, "IEND", {});
+    chunk(f, "IDAT", z.data(), z.size());
+    chunk(f, "IEND", nullptr, 0);
     fclose(f);
     return true;
 }
+
+#ifdef __EMSCRIPTEN__
+void writePNGAsync(const char* path, const uint32_t* px, int w, int h) { writePNG(path, px, w, h); }   // the browser's threads are the pool's
+void pngFlush() {}
+#else
+namespace {
+// F-02: one thread that writes the pictures queued for it in their order, the caller blocked only while three wait (no picture is
+// dropped, and the names stay in order); the pixel buffers kept for the next pictures (a fresh 4 MB a frame cost a millisecond of
+// page faults). Destroyed at the exit after writing what is queued
+class PngWriter {
+public:
+    static PngWriter& instance() { static PngWriter w; return w; }
+    void push(const char* path, const uint32_t* px, int w, int h) {
+        std::unique_lock<std::mutex> lock(m);
+        room.wait(lock, [&] { return q.size() < 3; });
+        Job j;
+        if (!spare.empty()) { j.px = std::move(spare.back()); spare.pop_back(); }
+        lock.unlock();
+        j.path = path; j.w = w; j.h = h;
+        j.px.assign(px, px + (size_t)w * h);
+        lock.lock();
+        q.push_back(std::move(j));
+        if (!th.joinable()) th = std::thread([this] { loop(); });
+        work.notify_one();
+    }
+    void flush() {
+        std::unique_lock<std::mutex> lock(m);
+        idle.wait(lock, [&] { return q.empty() && !busy; });
+    }
+    ~PngWriter() {
+        { std::lock_guard<std::mutex> lock(m); quit = true; }
+        work.notify_one();
+        if (th.joinable()) th.join();
+    }
+private:
+    struct Job { std::string path; std::vector<uint32_t> px; int w = 0, h = 0; };
+    void loop() {
+        for (;;) {
+            Job j;
+            {
+                std::unique_lock<std::mutex> lock(m);
+                work.wait(lock, [&] { return quit || !q.empty(); });
+                if (q.empty()) return;   // quit, and everything queued written
+                j = std::move(q.front()); q.pop_front();
+                busy = true;
+            }
+            room.notify_one();
+            writePNG(j.path.c_str(), j.px.data(), j.w, j.h);
+            {
+                std::lock_guard<std::mutex> lock(m);
+                if (spare.size() < 4) spare.push_back(std::move(j.px));
+                busy = false;
+            }
+            idle.notify_all();
+        }
+    }
+    std::mutex m;
+    std::condition_variable work, room, idle;
+    std::deque<Job> q;
+    std::vector<std::vector<uint32_t>> spare;
+    bool busy = false, quit = false;
+    std::thread th;
+};
+}
+
+void writePNGAsync(const char* path, const uint32_t* px, int w, int h) { PngWriter::instance().push(path, px, w, h); }
+void pngFlush() { PngWriter::instance().flush(); }
+#endif

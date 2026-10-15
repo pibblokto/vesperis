@@ -5,6 +5,7 @@
 #include "game.h"
 #include "ui.h"
 #include "core/rng.h"
+#include "core/parallel.h"
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
@@ -126,14 +127,62 @@ void Game::updateCabin(const Input& in, double realDt) {
     }
 }
 
-// The cabin drawn over the space view, in ship-local metres (+z forward, +y up, +x right).
+// The cabin drawn over the space view, in ship-local metres (+z forward, +y up, +x right). F-05: in bands of rows on the pool, as the
+// ground's rings are (B-310): what the frame shares is taken once (the decoder's wait builds a map and a set a call; the drones on the
+// rack), then every band walks every piece in the serial order with its fills clipped to its rows. The bulb's and the orb's glows are not
+// clipped to a band: they come after the bands, last as before
 void Game::drawCabin() {
     const Cabin& c = cabin;
-    Mat3 look = cameraBasis(c.yaw, c.pitch);
-    Vec3 eye(c.x, c.onRoof ? CAB_H + 0.9 + EYE - 0.3 : EYE, c.z);
+    CabinFrame f;
+    f.look = cameraBasis(c.yaw, c.pitch);
+    f.eye = Vec3(c.x, c.onRoof ? CAB_H + 0.9 + EYE - 0.3 : EYE, c.z);
+    f.lit = c.lightLevel;
+    f.hullShade = 12 + 30 * f.lit;
+    f.flick = 0.9 + 0.1 * std::sin(realTime * 7.0);
+    if (!c.onRoof) {
+        f.waiting = shardsPending();
+        f.breathe = f.waiting ? 0.85 + 0.15 * std::sin(realTime * 2.2) : f.flick;
+        f.sweep = radar.on ? 0.8 + 0.2 * std::sin(realTime * 3.1) : f.flick;
+        f.glow = tele.on ? 0.85 + 0.15 * std::sin(realTime * 2.6) : f.flick;
+        const double held = std::min(1.0, guide.instruments.size() / 6.0);
+        f.shine = (c.facing == 10 ? 50 : 26 + 14 * held) * f.flick;
+        droneRackFrame(f);
+    }
+    parallelFor(FBH, 32, [&](int yb, int ye) {
+        setRasterBand(yb, ye);
+        drawCabinBand(f);
+        setRasterBand(0, 1 << 30);
+    });
+    if (c.onRoof) return;
+    // the light bulb and the fuel orb
+    const Mat3& look = f.look; const Vec3& eye = f.eye;
     auto toView = [&](double x, double y, double z) { return look * Vec3(x - eye.x, y - eye.y, z - eye.z); };
-    double lit = c.lightLevel;
-    double hullShade = 12 + 30 * lit;
+    const double lit = f.lit;
+    {
+        Vec3 bulb = toView(0, CAB_H - 0.15, 0);
+        if (bulb.z > NEAR_Z) {
+            RVert p; p.x = bulb.x; p.y = bulb.y; p.z = bulb.z; p.shade = 20 + 43 * lit;
+            rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 2);
+            double sx, sy; if (projectPoint(p, spaceR.proj, sx, sy)) fb.glowDisc(sx, sy, (8 + 14 * lit) * FB_SCALE, 2 * FB_SCALE, (int)(14 * lit), BANK_LIGHT, true);
+        }
+        double pulse = 0.7 + 0.3 * std::sin(realTime * 1.3);
+        Vec3 orb = toView(-2.1, 0.5, 2.1);   // W-06: moved to the front-left corner from the back-right, where the telescope's set stands now
+        if (orb.z > NEAR_Z) {
+            RVert p; p.x = orb.x; p.y = orb.y; p.z = orb.z; p.shade = 40 + 20 * pulse;
+            rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 3);
+            double sx, sy; if (projectPoint(p, spaceR.proj, sx, sy)) fb.glowDisc(sx, sy, 10 * FB_SCALE / std::max(0.5, orb.z), 2 * FB_SCALE, (int)(12 * pulse), BANK_LIGHT, true);
+        }
+    }
+}
+
+// F-05: the room's pieces in the serial order, by each band thread with its fills clipped to its rows (`drawCabin`); nothing here writes
+// what another band reads
+void Game::drawCabinBand(const CabinFrame& f) {
+    const Cabin& c = cabin;
+    const Mat3& look = f.look; const Vec3& eye = f.eye;
+    auto toView = [&](double x, double y, double z) { return look * Vec3(x - eye.x, y - eye.y, z - eye.z); };
+    const double lit = f.lit;
+    const double hullShade = f.hullShade;
     // B-411: a depolarised hull is glass (the walls, the floor, the ceiling): the outside tinted through it, and the cabin light
     // caught on it as a sheen that clears with the light off; what stands in the room (the consoles, the sets, the case, the
     // desk) stays solid and lit, where it went to glass with the walls and the light had nothing left to light
@@ -221,7 +270,7 @@ void Game::drawCabin() {
         rs.bank = SCREENS[facingId].bank;
         rasterPolygon(fb, q, 4, rs, spaceR.proj);
     };
-    double flick = 0.9 + 0.1 * std::sin(realTime * 7.0);
+    const double flick = f.flick;
     {   // GOES console box against the left wall
         Vec3 a(-H, 0, -0.8), b(-1.9, 0, -0.8), cc(-1.9, 0, 0.8), d(-H, 0, 0.8);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
@@ -233,22 +282,22 @@ void Game::drawCabin() {
         Vec3 a(-0.8, 0, -H), b(-0.8, 0, -1.9), cc(0.8, 0, -1.9), d(0.8, 0, -H);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
-        bool waiting = shardsPending();
-        double breathe = waiting ? 0.85 + 0.15 * std::sin(realTime * 2.2) : flick;
+        const bool waiting = f.waiting;
+        const double breathe = f.breathe;
         screen(Vec3(-0.6, 0.35, -1.89), Vec3(0.6, 0.35, -1.89), Vec3(0.6, 0.9, -1.89), Vec3(-0.6, 0.9, -1.89), (c.facing == 7 ? 50 : (waiting ? 44 : 30)) * breathe, 7);
     }
     {   // C-07: the signal radar beside the decoder, a narrower set against the back wall; its screen brightens while the receiver is on
         Vec3 a(-2.1, 0, -H), b(-2.1, 0, -1.9), cc(-1.0, 0, -1.9), d(-1.0, 0, -H);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
-        double sweep = radar.on ? 0.8 + 0.2 * std::sin(realTime * 3.1) : flick;
+        const double sweep = f.sweep;
         screen(Vec3(-1.95, 0.35, -1.89), Vec3(-1.15, 0.35, -1.89), Vec3(-1.15, 0.9, -1.89), Vec3(-1.95, 0.9, -1.89), (c.facing == 8 ? 50 : (radar.on ? 46 : 30)) * sweep, 8);
     }
     {   // W-06 (the user's review): the telescope's set at the back wall's other end, the radar's twin; its screen glows while the eye is at the eyepiece
         Vec3 a(1.0, 0, -H), b(1.0, 0, -1.9), cc(2.1, 0, -1.9), d(2.1, 0, -H);
         box(a + Vec3(0, 0.95, 0), b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), d + Vec3(0, 0.95, 0), hullShade * 0.9);   // top
         box(b, b + Vec3(0, 0.95, 0), cc + Vec3(0, 0.95, 0), cc, hullShade * 0.8);                                            // front face
-        double glow = tele.on ? 0.85 + 0.15 * std::sin(realTime * 2.6) : flick;
+        const double glow = f.glow;
         screen(Vec3(1.15, 0.35, -1.89), Vec3(1.95, 0.35, -1.89), Vec3(1.95, 0.9, -1.89), Vec3(1.15, 0.9, -1.89), (c.facing == 9 ? 50 : (tele.on ? 46 : 30)) * glow, 9);
     }
     {   // C-11: the instruments' case on the left wall behind the console: a cabinet, its glass front lit in the case's colour, brighter with
@@ -258,13 +307,13 @@ void Game::drawCabin() {
         box(b, b + Vec3(0, 1.45, 0), cc + Vec3(0, 1.45, 0), cc, hullShade * 0.75);                                         // front frame
         box(a, b, b + Vec3(0, 1.45, 0), a + Vec3(0, 1.45, 0), hullShade * 0.6);                                            // its sides
         box(d, cc, cc + Vec3(0, 1.45, 0), d + Vec3(0, 1.45, 0), hullShade * 0.6);
-        const double held = std::min(1.0, guide.instruments.size() / 6.0), shine = (c.facing == 10 ? 50 : 26 + 14 * held) * flick;
+        const double shine = f.shine;
         for (int shelf = 0; shelf < 3; shelf++) {   // three shelves behind the glass, each a band of light
             const double y0 = 0.18 + shelf * 0.42, y1 = y0 + 0.34;
             screen(Vec3(-1.97, y0, -1.78), Vec3(-1.97, y0, -0.97), Vec3(-1.97, y1, -0.97), Vec3(-1.97, y1, -1.78), shine * (0.8 + 0.1 * shelf), 10);
         }
     }
-    drawDroneRack(look, eye);   // C-18: the drone bay by the front window (game/drone_draw.cpp)
+    drawDroneRack(f);   // C-18: the drone bay by the front window (game/drone_draw.cpp)
     {   // the front desk under the front window
         box(Vec3(-1.5, 0, 1.95), Vec3(1.5, 0, 1.95), Vec3(1.5, 0, H), Vec3(-1.5, 0, H), hullShade * 0.8);
         box(Vec3(-1.5, 0.85, 1.95), Vec3(1.5, 0.85, 1.95), Vec3(1.5, 0.85, H), Vec3(-1.5, 0.85, H), hullShade * 0.9);
@@ -277,22 +326,6 @@ void Game::drawCabin() {
             bool relay = k == 1 && probe.active;   // X-01: the landing screen relays the probe; it breathes while one falls, glows on its last frame
             double sh = c.facing == 3 + k ? 48 : (relay ? 44 * (probe.endClock >= 0 ? 0.75 + 0.25 * std::sin(realTime * 1.1) : 0.85 + 0.15 * std::sin(realTime * 2.4)) : 26 * flick);
             screen(Vec3(H - 0.02, 0.3, zc - 0.55), Vec3(H - 0.02, 0.3, zc + 0.55), Vec3(H - 0.02, 0.85, zc + 0.55), Vec3(H - 0.02, 0.85, zc - 0.55), sh, 3 + k);
-        }
-    }
-    // the light bulb and the fuel orb
-    {
-        Vec3 bulb = toView(0, T - 0.15, 0);
-        if (bulb.z > NEAR_Z) {
-            RVert p; p.x = bulb.x; p.y = bulb.y; p.z = bulb.z; p.shade = 20 + 43 * lit;
-            rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 2);
-            double sx, sy; if (projectPoint(p, spaceR.proj, sx, sy)) fb.glowDisc(sx, sy, (8 + 14 * lit) * FB_SCALE, 2 * FB_SCALE, (int)(14 * lit), BANK_LIGHT, true);
-        }
-        double pulse = 0.7 + 0.3 * std::sin(realTime * 1.3);
-        Vec3 orb = toView(-2.1, 0.5, 2.1);   // W-06: moved to the front-left corner from the back-right, where the telescope's set stands now
-        if (orb.z > NEAR_Z) {
-            RVert p; p.x = orb.x; p.y = orb.y; p.z = orb.z; p.shade = 40 + 20 * pulse;
-            rasterPoint3(fb, p, BANK_LIGHT, spaceR.proj, true, 3);
-            double sx, sy; if (projectPoint(p, spaceR.proj, sx, sy)) fb.glowDisc(sx, sy, 10 * FB_SCALE / std::max(0.5, orb.z), 2 * FB_SCALE, (int)(12 * pulse), BANK_LIGHT, true);
         }
     }
 }

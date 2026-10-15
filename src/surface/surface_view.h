@@ -421,8 +421,23 @@ public:
     double testCanopyCoverage(double radiusM);      // share of forest-biome ground within the radius under a canopy
     int lastTreesDrawn = 0, lastFloraPoints = 0, lastFloraPolys = 0, lastNearTrees = 0, lastMidTrees = 0, lastFarTrees = 0, lastTreesHidden = 0;
     int lastTreesVisited = 0, lastTreesListed = 0;   // B-310 (bench): trees listed this frame, and visits summed over the band threads (the duplication of the per-tree work)
-    double lastFloraMs[4] = {0, 0, 0, 0};   // trees, logs and undergrowth, meadows/shores/fireflies, deserts and tundra (bench)
-    double lastRenderMs[6] = {0, 0, 0, 0, 0, 0};   // B-310 (bench): palette and sky; floor and the vertex warm pass; the terrain bands; reflections to objects; flora; the rest
+    double lastFloraMs[2] = {0, 0};   // the trees, the cells (logs, undergrowth, meadows, shores, deserts) (bench; the worst band's)
+    double lastRenderMs[6] = {0, 0, 0, 0, 0, 0};   // B-310 (bench): palette and sky; the vertex warm pass; the terrain (the bin, the reflections' gather, the bands: floor, rings, reflections; F-05); footprints to objects; flora; the rest
+    int lastWarmMisses = 0;   // F-03 (tests): the cells the last frame's warm pass sampled, its rings together
+    static constexpr int FILL_SERIAL_MAX = 64;   // F-03: a ring's misses over this are sampled on the pool (warmTerrainLOD)
+    // F-01: the bands of the last frame's terrain and flora passes (their rows and ms, the bench's skew); under VESPERIS_TRACE the
+    // terrain's also split: the water corners' set-up, the fills (the ground's cells with their set-up, the walls, the water's
+    // quads and foam), the cells walked (F-04: the binned cells the band read) and drawn (those reaching its rows) and wet; the
+    // rest of a band's ms is its walk. The flora's: the trees visited and drawn
+    struct BandTrace { int y0 = 0, y1 = 0; double ms = 0, waterMs = 0, fillMs = 0; int walked = 0, drawn = 0, wet = 0; };
+    static constexpr int TRACE_BANDS = 64;   // F-06: the terrain's chunks (thirty-odd at 4x), the flora's bands
+    BandTrace lastTerrainBands[TRACE_BANDS], lastFloraBands[TRACE_BANDS];
+    int lastTerrainBandN = 0, lastFloraBandN = 0;
+    int lastTerrainCells = 0, lastTerrainAllRows = 0, lastStaleCorners = 0;   // F-04 (bench, tests): the cells binned, those every band draws (a corner behind the near plane, foam), the corners the bin found unwarmed (0)
+    double lastTerrainBinMs = 0;
+    std::string bandTraceLine(bool flora) const;   // the bands as one line (the harness, the trace)
+    double lastRoadsMs = 0; int roadsBuilds = 0;    // F-01: the site's roads grown as the explorer goes (`ensureRoads` on the main thread): the last one's ms, how many
+    double lastFloraListMs = 0;                     // F-01: the flora's cells and trees listed this frame (on the main thread, before the bands; a settlement's buildings tested against every tree)
     double highlightUntil = -1;                    // M4-05: X highlights creatures
     // N3 creatures: the world's bestiary, the site's herds (planLife is the deterministic spawn, shared with the survey).
     // B-316: a herd is either one of the landing's (planLife: within 180 m of the capsule, `origin`) or the herd of a
@@ -514,6 +529,7 @@ private:
     void computeRings();
     void updateNearRing(double dt);
     int frameStamp = 0;
+    int anchorFrame = -100;   // F-01: the frame of the last re-anchor (the trace follows the refill)
     int prefetchStage = 0, prefetchRing = 0;
     // M7-01: a worker samples the terrain ahead of the walking direction into a staging buffer; the main
     // thread copies it into the caches (sampleAt is pure, so the result is the same whoever computes it)
@@ -537,6 +553,7 @@ private:
     GrainTexture mesoTiles[MAT_COUNT];
     bool mesoBuilt[MAT_COUNT] = {false};
     const GrainTexture* mesoFor(int material);
+    void buildMesoTiles(uint32_t want);   // F-03: the tiles of a set of materials not made yet, a material to a worker
     int curRadius = 40;              // ring radius of the LOD being drawn (limits the shadow march)
     // footprints: ring buffer of recent steps (x, z, heading)
 public:
@@ -590,7 +607,14 @@ private:
     void drawBlobShadow(Framebuffer& fb, double x, double z, double radius, double height);
     void drawBlobShadowFrom(Framebuffer& fb, double x, double z, double radius, double height, const Vec3& sunDir, double share);
     void drawFootprints(Framebuffer& fb);
-    void drawReflections(Framebuffer& fb);   // M1-04: mirrored terrain into water pixels
+    // M1-04: mirrored terrain into water pixels. F-05: gathered once a frame (serial: during the descent the cells it reads are not warmed
+    // and the caches fill on a miss), each polygon's vertices kept with the rows it can fill, and drawn by the terrain's band threads after
+    // the rings (every pixel blended by the same polygons in the same order, far to near)
+    struct ReflPoly { int first, n, y0, y1; };   // its vertices at reflVerts[first, first + n); the rows y0..y1 (inclusive)
+    std::vector<RVert> reflVerts;
+    std::vector<ReflPoly> reflPolys;
+    void gatherReflections();
+    void drawReflectionBand(Framebuffer& fb, int bandY0, int bandY1) const;
     void updateBuggy(double dt, const Input& in, double t);
     void drawBuggy(Framebuffer& fb, double t);
     void buggyFrame(Vec3& fwdT, Vec3& sideT, Vec3& upT) const;   // the hull's axes with its pitch and roll
@@ -604,7 +628,7 @@ private:
     void drawWaypointLine(Framebuffer& fb);
     void drawRuins(Framebuffer& fb);
     void updateWalking(double dt, const Input& in, double t, bool controlsEnabled);
-    struct VtxCache { int stamp = -1; RVert v; uint8_t bank = 0; bool front = false; float sy = 0; float wy = -1e9f; float hy = 0; float sh = 1e9f; };   // B-322: hy = the height as drawn (morphed), sh = the side of the water's edge as drawn (`vertexShore`, morphed), for the shore cut and the water's depth
+    struct VtxCache { int stamp = -1; RVert v; uint8_t bank = 0; bool front = false; float sy = 0; float wy = -1e9f; float hy = 0; float sh = 1e9f; RVert wv; };   // B-322: hy = the height as drawn (morphed), sh = the side of the water's edge as drawn (`vertexShore`, morphed), for the shore cut and the water's depth; F-04: wv = the water sheet's corner here when the vertex has its own level (`waterCorner`)
     double coarseShoreAt(TerrainCache& c, double x, double z);   // B-322: the coarser ring's shore value at (x, z), bilinear; 1e9 where a corner has none   // B-310: front/sy = the projected row, for the band cull; B-320: wy = the water level as drawn (morphed with the ground), -1e9 none
     double coarseWaterAt(TerrainCache& c, double x, double z);   // B-320: the coarser ring's water level at (x, z), bilinear over its wet corners; -1e9 none
     std::vector<VtxCache> vc0, vc1, vc2, vc3, vcN;
@@ -626,10 +650,14 @@ private:
     void drawFloor(Framebuffer& fb);
     double floorHeight();   // the floor's height beyond the last ring: the sea, or 300 m under the lowest far cell (0 on a small body)
     double floorH = 0;      // B-408: this frame's, for the floor and the galactic band's horizon
-    // B-310: the terrain is drawn in parallel bands of rows: warmTerrainLOD fills the vertex cache and the material tiles
-    // serially, then every band thread draws all rings clipped to its rows (drawTerrainLOD with bandY0/bandY1 skips
-    // cells wholly outside the band), reading only. The frame is identical to the serial loop's.
+    // B-310: the terrain is drawn in parallel bands of rows: warmTerrainLOD fills the vertex cache and the material tiles first,
+    // then every band thread draws all rings clipped to its rows (F-04: the cells binned by the rows they reach, binTerrainLOD),
+    // reading only. The frame is identical to the serial loop's.
+    // F-03: the cells the warm samples (`cache.at`) are its disc's misses; over FILL_SERIAL_MAX of them (a landing's first frame, a
+    // re-anchor, a hop: thousands) they are sampled on the pool, each by one worker into its own slot, the pool's join the barrier.
+    // F-04: the vertices are made on the pool by rows of vertices, each by the thread of its row
     void warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vcache, int radius, double coverM, TerrainCache* coarse, std::vector<VtxCache>* coarseVc, int band);
+    std::vector<std::pair<int, int>> fillMisses;   // the warm's list of its disc's misses (kept: no allocation a frame)
     bool cellCovered(double cs, int cx, int cz, double coverM) const;   // B-318: the cell lies wholly under the finer ring (every corner within coverM of the camera)
     // B-313 geomorphing: while a ring is warmed, the next coarser ring (already warmed) and the width of the morph band
     // in cells; a vertex within the band takes the coarser ring's interpolated height and shade in proportion to its
@@ -647,12 +675,23 @@ public:
     // between the finer ring's edge vertices as drawn and the coarser ring's surface there (`seam`; the rings meet when
     // it is 0) and the gap the unmorphed vertices would have had (`raw`: what popped before). -1 where the edge is not drawn
     void testRingSeams(double seam[4], double raw[4]);
+    void testRings(int r[5]) const { for (int k = 0; k < 4; k++) r[k] = ringR[k]; r[4] = ringN; }   // F-03 (tests): the cells drawn per ring, lod0..lod3, then the near ring
 private:
-    void drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vector<VtxCache>& vcache, int radius, double coverM,
-                        bool water, double t, int bandY0 = 0, int bandY1 = 1 << 30, bool skirt = true);
+    // F-04: the terrain's cells binned once a frame. After the warm, one pass on the pool (by rows of cells) runs the culls every band
+    // thread used to run on every cell (the distance, the cover, the frustum, the corners behind the camera) and keeps each cell
+    // that draws, in the draw's order, with the rows its pieces can touch (the ground's triangles or its shore cut, the water's
+    // sheet, the outermost ring's walls; projected as the rasteriser projects, a row of slack each side). A band thread then draws,
+    // in that order, the cells that reach its rows: every pixel is written by the same cells in the same order as before (B-310)
+    struct TerrainCellRef { int cx, cz; int16_t y0, y1; };   // y0..y1: the rows, inclusive (INT16_MIN..INT16_MAX: every band)
+    struct TerrainBin { std::vector<TerrainCellRef> cells; std::vector<int> count; int cols = 0; };   // row j's cells at [j * cols, j * cols + count[j])
+    TerrainBin terrainBins[5];
+    void binTerrainLOD(TerrainBin& bin, TerrainCache& cache, std::vector<VtxCache>& vcache, int radius, double coverM, bool water, bool skirt,
+                       int rowB, int rowE, int& stale, int& allRows);
+    void drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, TerrainCache& cache, std::vector<VtxCache>& vcache, int radius, double coverM,
+                        bool water, double t, int bandY0, int bandY1, bool skirt, BandTrace* bt);
     void drawObjects(Framebuffer& fb, double t);
     void drawFlora(Framebuffer& fb, double t);     // N2: trees, undergrowth, meadows, reeds, lily pads, cacti, lichen, fireflies (B-310: in parallel bands)
-    struct FloraStats { int treesDrawn = 0, floraPoints = 0, floraPolys = 0, nearTrees = 0, midTrees = 0, farTrees = 0, treesHidden = 0, treesVisited = 0; double ms[4] = {0, 0, 0, 0}; };
+    struct FloraStats { int treesDrawn = 0, floraPoints = 0, floraPolys = 0, nearTrees = 0, midTrees = 0, farTrees = 0, treesHidden = 0, treesVisited = 0; double ms[2] = {0, 0}; };
     void drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY1, FloraStats& st);
     // B-310: the flora cells in view (near to far) and their trees, listed once per frame by drawFlora with the rows a
     // tree can touch (its trunk, canopy, sway and shadow), so a band thread places only the trees that reach its rows
@@ -676,7 +715,20 @@ private:
     void drawLife(Framebuffer& fb, double t);
     void updateLife(double dt, double t);
     const RVert& vertexOf(TerrainCache& cache, std::vector<VtxCache>& vcache, int cx, int cz, uint8_t& bank);
+    // F-04: a corner of a cell's water sheet at (x, z): its place in view and its shade from the level `wl` and the drawn ground `hy`
+    // under it. A vertex with its own level keeps its corner (`VtxCache::wv`, made by vertexOf in the warm, once, where four cells
+    // and every band used to make it again); a corner without one takes its cell's mean level and is made by the cell
+    RVert waterCorner(double x, double z, double wl, double hy) const;
+    double waterWdx = 0, waterWdz = 0, waterSunUp = 0;   // F-04: the frame's wind direction (sin, cos) and the sun's rise, for waterCorner
     void materialLook(const TerrainVertex& v, uint8_t& bank, double& albedo) const;
+    // F-04: the points of a terrain cell's pieces that are not its corners, the same for the draw and the bin: a shore cut's point (O6-03:
+    // the dry piece's edge SHORE_LIP over the water), the foot of the outermost ring's wall under a corner (KI-006: a cell and a half down)
+    Vec3 shoreCutView(const ShorePt& p, bool dry) const { return toView(p.x, p.h + (dry ? SHORE_LIP : 0.0), p.z); }
+    Vec3 skirtFoot(TerrainCache& cache, double x, double z) const {
+        const double cs = cache.cellSize, skirt = cs * 1.5;
+        const TerrainVertex& tv = cache.at((int)std::lround(x / cs), (int)std::lround(z / cs));
+        return toView(x, tv.h - skirt, z);
+    }
     // Local metres -> view. The ground curves away from the camera in every direction (M1-07); since O1 the curvature is
     // applied here, so rocks, trees, the capsule and the buggy sit on the curved ground too, not only the terrain mesh.
     // Planets: the paraboloid drop d^2 / 2R. Small bodies (O4, comets): the exact sphere seen from the camera's own

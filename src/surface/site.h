@@ -83,8 +83,13 @@ struct TerrainCache {
     std::vector<TerrainVertex> v;
     const SurfaceSite* site = nullptr;
     void init(const SurfaceSite* s, int cell, int logn);
-    // vertex at lattice coords (cx, cz) in cells; computed on demand
-    const TerrainVertex& at(int cx, int cz);
+    // vertex at lattice coords (cx, cz) in cells; computed on demand (F-07: the hit inline, the miss's sampling out of line)
+    const TerrainVertex& at(int cx, int cz) {
+        TerrainVertex& t = v[index(cx, cz)];
+        if (t.cx != cx || t.cz != cz) fill(t, cx, cz);
+        return t;
+    }
+    void fill(TerrainVertex& t, int cx, int cz);
     inline int index(int cx, int cz) const { int n = 1 << logN; return ((cz & (n - 1)) << logN) | (cx & (n - 1)); }
     void invalidate(double x0, double z0, double x1, double z1);   // T-02: the vertices in a box sampled again when next asked for
 };
@@ -172,6 +177,9 @@ struct SurfaceSite {
     double editCover(double x, double z) const;   // 0..1: a fresh cut's floor, a line's bed, a plain made flat (the flora and the rocks keep off it)
 
     void init(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);   // t: the season (M9-09)
+    // F-02: `init` without the five terrain caches (106,496 vertices): a site that is sampled (`sampleAt`), never drawn, such as the
+    // landing map's probe of its cursor; drawing it would index empty caches
+    void initFrame(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);
     double season = 0;
     // local metres -> body-frame unit vector (azimuthal equidistant mapping)
     Vec3 unitAt(double x, double z) const;

@@ -51,6 +51,17 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 3. Platform uploads `rgbBuf` (320x200 RGBA) to a texture and draws it scaled with point filtering; optional scanlines.
 4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels.
 
+F-01 (2026-10-12): with `VESPERIS_TRACE=1` the window build times each frame's parts (the poll, `Game::frame`, the audio pump with
+its synth blocks, the screenshot and recorder writes, the texture's upload, the drawing, the swap with its vsync wait: the platform
+layer reports the last present's and pump's parts through `platformPresentTimes`/`platformAudioTimes`) and prints their mean and worst
+once a second on stderr and, at the quit, the percentiles of the frames' intervals and of their work without the swap.
+
+F-08 (2026-10-14): the platform paces the frames itself (raylib's `SetTargetFPS(0)` on the desktop; the browser paces its own): a
+frame is meant for the refresh a whole number of the monitor's refreshes after the last one's (two at 120 Hz: 60 frames a second; one
+at 60 Hz), its swap waits until three quarters of a refresh before that one, and the schedule follows the refreshes the swaps met
+(`platform_raylib.cpp`). The trace's `hold` is that wait, its work the frame without the hold and the swap. The synth stays on the
+main thread (its block is about 2 ms at most on a loaded Mac, one frame in 5.4).
+
 ## Time
 
 Two clocks: `realTime` (seconds of wall clock) drives transitions, UI, flight and approach durations; `t` (game seconds) drives orbits, rotations, clouds and the sky. Time warp multiplies `t` only. A new game starts at `t = 3.6e6` s.
@@ -69,8 +80,16 @@ Text saves in three slots plus an autosave (`vesperis_save_1..3.txt`, `vesperis_
 
 * `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and `applyPad` (gamepad snapshot to keys and analogue movement); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
 * `platform.h` stays free of the core key enum (raylib defines its own `KEY_*`): the pad is passed as `PlatformPad` and converted in `main_raylib.cpp`, which also loads the key map and drives the photo tools and the recorder. The desktop loop body is a `step` lambda so the Emscripten build can hand it to the browser's animation loop.
-* `packaging/` (app bundle and zip scripts), `web/` (shell page, build script), `.clang-format`, CI `package` job.
+* `packaging/` (app bundle and zip scripts; since F-09 the release's six builds: `toolchains.sh`, `build-mac.sh`, `build-win.sh`, `build-linux.sh` in Docker, `build-release.sh`), `web/` (shell page, build script), `.clang-format`, CI `package` job.
 
 ## Threads (M7, 2026-09-26)
 
 Three kinds of worker: `parallelFor` row bands inside a frame (renderers, `toRGB`), one thread per planet map generation (`SpaceRenderer::startMap`, joined when the map is read or evicted), and the terrain prefetch worker (`SurfaceView::prefetchAhead`, one job at a time, joined before its buffer is read). All of them call pure functions; the caches and the framebuffer are written only by the main thread.
+
+F-02 (2026-10-13) adds a fourth, the PNG writer (`core/png.cpp`'s `PngWriter`, one thread made at the first `writePNGAsync`): the
+photographs, the recording's frames and the probe's final image are copied and queued (three at most: the caller waits beyond them, so
+none is dropped) and written in their order by `writePNG`'s encoder. `pngFlush` returns once the queue is on disk: before a picture is
+read back (`readPNG`), listed (the gallery) or must exist (a new take, the window's exit); the queue's destructor writes what is left at
+any exit. A thread for a result no frame waits for, like the maps and the drainage tiles; the panorama, the harness's own pictures and
+the browser build write synchronously. The screens that show a world's map (the landing map, the drone bay) read it through
+`mapIfReady` and say they are reading the world until its thread has made it: `mapFor`, which waits, is the harness's.

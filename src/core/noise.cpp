@@ -5,14 +5,13 @@ namespace {
 inline double fade(double t) { return t * t * t * (t * (t * 6 - 15) + 10); }
 inline double lerpn(double a, double b, double t) { return a + t * (b - a); }
 
-// 12 edge-of-cube gradients (Perlin's improved set), plus 4 repeats to make 16.
+// 12 edge-of-cube gradients (Perlin's improved set), plus 4 repeats to make 16: x + y, -x + y, x - y, -x - y, the same with x, z and
+// y, z, then y + x, -y + z, y - x, -y - z. F-07: chosen by selects, as Perlin wrote it, not a jump on a random hash (the same sums:
+// a - b is a + (-b), bit for bit)
 inline double grad3(uint64_t h, double x, double y, double z) {
-    switch (h & 15) {
-        case 0: return  x + y; case 1: return -x + y; case 2: return  x - y; case 3: return -x - y;
-        case 4: return  x + z; case 5: return -x + z; case 6: return  x - z; case 7: return -x - z;
-        case 8: return  y + z; case 9: return -y + z; case 10: return y - z; case 11: return -y - z;
-        case 12: return y + x; case 13: return -y + z; case 14: return y - x; default: return -y - z;
-    }
+    const int c = (int)(h & 15);
+    const double u = c < 8 ? x : y, v = c < 4 ? y : (c == 12 || c == 14 ? x : z);
+    return ((c & 1) ? -u : u) + ((c & 2) ? -v : v);
 }
 inline double grad2(uint64_t h, double x, double y) {
     switch (h & 7) {
@@ -20,7 +19,6 @@ inline double grad2(uint64_t h, double x, double y) {
         case 4: return x * 1.414; case 5: return -x * 1.414; case 6: return y * 1.414; default: return -y * 1.414;
     }
 }
-inline int64_t ifloor(double v) { return (int64_t)std::floor(v); }
 // the gradient vectors behind grad3, for the analytic derivative
 inline Vec3 grad3v(uint64_t h) {
     switch (h & 15) {
@@ -34,7 +32,7 @@ inline double dfade(double t) { return 30.0 * t * t * (t * (t - 2) + 1); }
 }
 
 double gnoise3(double x, double y, double z, uint64_t seed) {
-    int64_t X = ifloor(x), Y = ifloor(y), Z = ifloor(z);
+    int64_t X = ifloor64(x), Y = ifloor64(y), Z = ifloor64(z);
     double fx = x - X, fy = y - Y, fz = z - Z;
     double u = fade(fx), v = fade(fy), w = fade(fz);
     double n000 = grad3(hash3i(X, Y, Z, seed), fx, fy, fz);
@@ -55,7 +53,7 @@ double gnoise3(double x, double y, double z, uint64_t seed) {
 // derivative has two parts: the fade weights' derivative times the differences of the corner dots, and the trilinear
 // blend of the corner gradient vectors themselves (Quilez's "noised").
 double gnoise3d(double x, double y, double z, uint64_t seed, Vec3& grad) {
-    int64_t X = ifloor(x), Y = ifloor(y), Z = ifloor(z);
+    int64_t X = ifloor64(x), Y = ifloor64(y), Z = ifloor64(z);
     double fx = x - X, fy = y - Y, fz = z - Z;
     double u = fade(fx), v = fade(fy), w = fade(fz);
     double du = dfade(fx), dv = dfade(fy), dw = dfade(fz);
@@ -77,7 +75,7 @@ double gnoise3d(double x, double y, double z, uint64_t seed, Vec3& grad) {
 }
 
 double gnoise2(double x, double y, uint64_t seed) {
-    int64_t X = ifloor(x), Y = ifloor(y);
+    int64_t X = ifloor64(x), Y = ifloor64(y);
     double fx = x - X, fy = y - Y;
     double u = fade(fx), v = fade(fy);
     double n00 = grad2(hash2i(X, Y, seed), fx, fy);
@@ -127,14 +125,16 @@ double ridged3(const Vec3& p, uint64_t seed, int octaves, double lacunarity, dou
 }
 
 Worley3 worley3(const Vec3& p, uint64_t seed) {
-    int64_t X = ifloor(p.x), Y = ifloor(p.y), Z = ifloor(p.z);
+    int64_t X = ifloor64(p.x), Y = ifloor64(p.y), Z = ifloor64(p.z);
     Worley3 r;
     r.f1 = 1e30; r.f2 = 1e30; r.id1 = 0; r.id2 = 0;
+    uint64_t hxy[3][3];   // F-07: hash3i's (x, y) steps once for the 27 cells
+    for (int dx = -1; dx <= 1; dx++) { const uint64_t hx = hashX(X + dx, seed); for (int dy = -1; dy <= 1; dy++) hxy[dy + 1][dx + 1] = hashXY(hx, Y + dy); }
     for (int dz = -1; dz <= 1; dz++)
         for (int dy = -1; dy <= 1; dy++)
             for (int dx = -1; dx <= 1; dx++) {
                 int64_t cx = X + dx, cy = Y + dy, cz = Z + dz;
-                uint64_t h = hash3i(cx, cy, cz, seed);
+                uint64_t h = hashXYZ(hxy[dy + 1][dx + 1], cz);
                 Vec3 c((double)cx + unitFromHash(h), (double)cy + unitFromHash(mix64(h + 1)),
                        (double)cz + unitFromHash(mix64(h + 2)));
                 double d = length2(c - p);

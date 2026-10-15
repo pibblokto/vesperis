@@ -36,11 +36,17 @@ struct ProbeRecord {
     double chuteOpen = -1, chuteClose = -1, crushBar = 25;
     double endClock = 0, endBar = 0, endKm = 0, endK = 0; int endCause = 0;   // 1 the hull gave way, 2 the heat, 3 the relay was cut
     std::string storm;               // the key of the storm it fell into ("" none)
+    // the tracks and the profile never change once the record is made (`probeKeep`, the inbox's copy, the load): F-02 writes their
+    // lines from `lines`, so a path that changed them in place would save the old ones
     std::vector<double> cam;         // the explorer's turns of the camera where they changed: clock, yaw, pitch
     std::vector<double> time;        // the game's time along the fall where its pace changed: clock, t
     std::vector<ProbeSample> profile;
     std::vector<double> layers;      // the layers it found from the top down: layer, from (bar), to (bar)
+    // F-02: the four lines that follow the `probe` line in the guide (`probecam`, `probetime`, `probeprofile`, `probelayers`), made once
+    // (`probeLines`) where the record is made: they were 566 KB of the player's 732 KB guide, formatted again at every logged event
+    mutable std::string lines;
 };
+std::string probeLines(const ProbeRecord& r);   // F-02: the record's four lines as `Guide::save` writes them (precision 12)
 
 // R-408: a mark the explorer placed on a world (the sector map's cursor, or `L` at what the crosshair rests on), named or not; the
 // maps, the HUD and the scanner (which leaves the marked sights out) read them. `mark` lines; a friend's travel lent (C-14)

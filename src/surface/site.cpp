@@ -20,13 +20,9 @@ void TerrainCache::init(const SurfaceSite* s, int cell, int logn) {
     v.assign((size_t)1 << (2 * logN), TerrainVertex());
 }
 
-const TerrainVertex& TerrainCache::at(int cx, int cz) {
-    TerrainVertex& t = v[index(cx, cz)];
-    if (t.cx != cx || t.cz != cz) {
-        t = site->sampleAt((double)cx * cellSize, (double)cz * cellSize, cellSize);
-        t.cx = cx; t.cz = cz;
-    }
-    return t;
+void TerrainCache::fill(TerrainVertex& t, int cx, int cz) {
+    t = site->sampleAt((double)cx * cellSize, (double)cz * cellSize, cellSize);
+    t.cx = cx; t.cz = cz;
 }
 
 TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
@@ -555,6 +551,15 @@ void shoreSplitTriangle(const double x[3], const double z[3], const double h[3],
 }
 
 void SurfaceSite::init(const StarSystem* s, int bodyIndex, double lat, double lon, double t) {
+    initFrame(s, bodyIndex, lat, lon, t);
+    lod0.init(this, 16, 7);
+    lod1.init(this, 64, 7);
+    lod2.init(this, 512, 6);
+    lod3.init(this, 2048, 6);
+    lodN.init(this, 4, 8);   // O6-02
+}
+
+void SurfaceSite::initFrame(const StarSystem* s, int bodyIndex, double lat, double lon, double t) {
     sys = s; body = bodyIndex; lat0 = lat; lon0 = lon;
     const Body& b = s->bodies[bodyIndex];
     season = s->seasonOf(bodyIndex, t);
@@ -570,11 +575,6 @@ void SurfaceSite::init(const StarSystem* s, int bodyIndex, double lat, double lo
     hasWater = b.type == PT_FELISIAN || b.type == PT_OCEAN || gen.liquidLevel > -1e8;   // R-304: exotic seas are a sea too
     seaLevel = gen.liquidLevel > -1e8 ? gen.liquidLevel : 0;
     lavaLevel = b.type == PT_MOLTEN ? gen.lavaLevel : -1e9;
-    lod0.init(this, 16, 7);
-    lod1.init(this, 64, 7);
-    lod2.init(this, 512, 6);
-    lod3.init(this, 2048, 6);
-    lodN.init(this, 4, 8);   // O6-02
     nearBlend = 0; nearR = 0;
     smallBody = R < 300e3;
     escapeVelocity = std::sqrt(2 * gravity * R);

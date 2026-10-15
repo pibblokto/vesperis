@@ -46,6 +46,9 @@ bool drainageLakeCell(const BodyGen& g, const Vec3& unit, double& level, bool bu
 // scan; the landing map's site probe while the site's tiles are not built yet: a probe must not build them)
 struct DrainageOff { explicit DrainageOff(bool off = true); ~DrainageOff(); bool off; };
 int drainageLatticeN0(double radiusKm);    // cells per degree of the lattice of a world of that radius
+// F-03: v after `steps` of `v = v - 0.005f`, bit for bit what that loop computes, a binade at a time (the routing's descent sinking a
+// pit of two cells; the unit checks it against the loop)
+float drainageSink(float v, long steps);
 // tests: the flood's own numbers over a window of the lattice round a point: channel cells, lake cells, the largest
 // accumulation (km^2), the share of channel cells whose downstream neighbour lies lower or level
 struct DrainStats { int cells = 0, channels = 0, lakes = 0, sea = 0; double maxAcc = 0; int monotone = 0, tested = 0; double msBuild = 0; int lakesKept = 0, lakesBreached = 0; };
