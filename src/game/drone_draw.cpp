@@ -157,8 +157,21 @@ bool Game::droneRackPlace(int k, double& x, double& lift, double& blur) const {
 double Game::testDroneRackX(int k) const { double x, lift, blur; return droneRackPlace(k, x, lift, blur) ? x : -99; }
 double Game::testDroneRackY(int k) const { double x, lift, blur; return droneRackPlace(k, x, lift, blur) && k >= 0 && k < DRONE_COUNT ? SHELF_Y[k] + lift : -99; }
 
-void Game::drawDroneRack(const Mat3& look, const Vec3& eye) {
-    const double lit = cabin.lightLevel, hullShade = 12 + 30 * lit;
+// F-05: the rack's drones for the cabin's bands, once a frame: where each stands, its pose and its model (`drawDroneRack`)
+void Game::droneRackFrame(CabinFrame& f) const {
+    f.ready = droneBayReady();
+    for (int k = 0; k < DRONE_COUNT; k++) {
+        f.here[k] = droneRackPlace(k, f.x[k], f.lift[k], f.blur[k]);
+        if (!f.here[k]) continue;
+        f.pose[k] = dronePoseAt(k);
+        f.pose[k].blur = std::max(f.pose[k].blur, f.blur[k]);
+        droneModel(f.pose[k], f.prims[k]);
+    }
+}
+
+void Game::drawDroneRack(const CabinFrame& f) {
+    const Mat3& look = f.look; const Vec3& eye = f.eye;
+    const double hullShade = f.hullShade;
     auto toView = [&](const Vec3& p) { return look * (p - eye); };
     RasterParams solid; solid.bank = BANK_HULL; solid.grain = &cabinGrain; solid.grainScale = 12.0 * FB_SCALE; solid.grainWeight = 0.6;
     auto quad = [&](const RasterParams& prm, Vec3 a, Vec3 b, Vec3 c, Vec3 d, double shade) {
@@ -172,20 +185,20 @@ void Game::drawDroneRack(const Mat3& look, const Vec3& eye) {
         RVert q; q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade;
         rasterPoint3(fb, q, bank, spaceR.proj, true, size);
     };
-    const double flick = 0.9 + 0.1 * std::sin(realTime * 7.0);
+    const double flick = f.flick;
     // ---- the rack: its back against the hull (a port behind each shelf, open while its drone is away), its sides, its shelves, its head
     // with the bay's screen across it (three cells, a drone's each: bright aboard and ready, breathing while the bay charges, dim while away)
     quad(solid, Vec3(RACK_X0 + 0.02, 0, RACK_Z0), Vec3(RACK_X0 + 0.02, 0, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z1), Vec3(RACK_X0 + 0.02, RACK_TOP, RACK_Z0), hullShade * 0.55);
     for (const double z : {RACK_Z0, RACK_Z1}) quad(solid, Vec3(RACK_X0, 0, z), Vec3(RACK_X1, 0, z), Vec3(RACK_X1, RACK_TOP, z), Vec3(RACK_X0, RACK_TOP, z), hullShade * 0.7);
     quad(solid, Vec3(RACK_X0, RACK_TOP, RACK_Z0), Vec3(RACK_X1, RACK_TOP, RACK_Z0), Vec3(RACK_X1, RACK_TOP, RACK_Z1), Vec3(RACK_X0, RACK_TOP, RACK_Z1), hullShade * 0.9);
     quad(solid, Vec3(RACK_X1, SCREEN_Y0 - 0.06, RACK_Z0), Vec3(RACK_X1, SCREEN_Y0 - 0.06, RACK_Z1), Vec3(RACK_X1, RACK_TOP, RACK_Z1), Vec3(RACK_X1, RACK_TOP, RACK_Z0), hullShade * 0.8);
-    const bool ready = droneBayReady();
+    const bool ready = f.ready;
     for (int k = 0; k < DRONE_COUNT; k++) {
         const double y = SHELF_Y[k];
         quad(solid, Vec3(RACK_X0, y, RACK_Z0), Vec3(RACK_X1, y, RACK_Z0), Vec3(RACK_X1, y, RACK_Z1), Vec3(RACK_X0, y, RACK_Z1), hullShade * 0.85);
         quad(solid, Vec3(RACK_X1, y - 0.03, RACK_Z0), Vec3(RACK_X1, y - 0.03, RACK_Z1), Vec3(RACK_X1, y, RACK_Z1), Vec3(RACK_X1, y, RACK_Z0), hullShade * 0.7);
-        double x, lift, blur;
-        const bool here = droneRackPlace(k, x, lift, blur);
+        const double x = f.x[k];
+        const bool here = f.here[k];
         const bool docked = bay.clock < 0 || bay.run[k].docked;
         if (!docked || x < RACK_DX - 0.01) {   // the port in the back open: its drone out or on its way
             RasterParams dark; dark.bank = 0;
@@ -204,25 +217,25 @@ void Game::drawDroneRack(const Mat3& look, const Vec3& eye) {
         rasterPolygon(fb, q, 4, rs, spaceR.proj);
     }
     // ---- the drones: each where it stands, facing the room (its nose +x, its right -z), lit by the cabin's lamp over the cage
-    for (int k = 0; k < DRONE_COUNT; k++) {
-        double x, lift, blur;
-        if (!droneRackPlace(k, x, lift, blur)) continue;
-        DronePose pose = dronePoseAt(k);
-        pose.blur = std::max(pose.blur, blur);
-        drawDroneMesh(look, eye, Vec3(x, SHELF_Y[k] + lift, RACK_DZ), Vec3(1, 0, 0), Vec3(0, 1, 0), pose, nullptr);
-    }
+    for (int k = 0; k < DRONE_COUNT; k++)
+        if (f.here[k]) drawDronePrims(look, eye, Vec3(f.x[k], SHELF_Y[k] + f.lift[k], RACK_DZ), Vec3(1, 0, 0), Vec3(0, 1, 0), f.pose[k], nullptr, f.prims[k]);
 }
 
 // a drone's model drawn in the cabin's frame (the ship's metres): its feet at `origin`, its nose along `fwd`; lit by the cabin's lamp, or
 // outside the hull by the sun (`sun`: the ship's metres, toward it)
 void Game::drawDroneMesh(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun) {
+    std::vector<DronePrim> prims;
+    droneModel(pose, prims);
+    drawDronePrims(look, eye, origin, fwd, up, pose, sun, prims);
+}
+
+// F-05: a drone's model already made (`droneModel`), so the cabin's bands draw the rack's three without making them in every band
+void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin, const Vec3& fwd, const Vec3& up, const DronePose& pose, const Vec3* sun, const std::vector<DronePrim>& prims) {
     const double lit = cabin.lightLevel;
     const Vec3 right = normalize(cross(up, fwd));
     auto toCab = [&](const Vec3& p) { return origin + right * p.x + up * p.y + fwd * p.z; };
     auto toView = [&](const Vec3& p) { return look * (p - eye); };
     const Vec3 bulb(0, 2.25, 0);
-    std::vector<DronePrim> prims;
-    droneModel(pose, prims);
     for (const DronePrim& pr : prims) {
         if (pr.kind == 0) {
             const Vec3 n = right * pr.nrm.x + up * pr.nrm.y + fwd * pr.nrm.z;
@@ -366,7 +379,9 @@ void Game::buildDroneMap(int body) {
     bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0;
     if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
-    const PlanetMap& m = spaceR.mapFor(b);
+    const PlanetMap* mp = spaceR.mapIfReady(b);   // F-02: never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
+    if (!mp) return;
+    const PlanetMap& m = *mp;
     MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
     const int W = 376, H = 188;   // twice the screen's box: crisp at 2x and over

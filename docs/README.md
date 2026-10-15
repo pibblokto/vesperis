@@ -20,4 +20,15 @@ Three areas, three audiences:
 
 * Build: `make` (needs raylib). Game: `./vesperis`. Headless checks: `./vesperis_test flow|surface|space|maps|moonsky|bench|stars`.
 * Frames rendered by the tests land in `shots/tests/` as PNG (since 2026-09-27; `shots/` itself holds your screenshots); the reference docs explain what each test shows.
+* Proving a frame unchanged (F-01, 2026-10-12): `./vesperis_test pngdiff <a> <b>` compares two PNGs or two directories of them,
+  `./vesperis_test bothways <scene> [scale]` draws a scene by the workers and by one thread; `VESPERIS_TRACE=1 ./vesperis` prints the
+  real game's frame parts (the game, the audio pump, the upload, the hold before the swap by which the platform paces the frames since
+  F-08, the swap) once a second (`reference/08-testing-and-tools.md`). F-03 (2026-10-13): a fresh `scene` with `VESPERIS_THREADS=1`
+  against the default finds what `bothways` cannot (its frames reuse warm caches), and under `VESPERIS_TRACE` a drainage tile's line
+  carries a hash of its arrays. F-05 (2026-10-14): `./vesperis_test screens [scales]` writes the game's own frames the regress skips
+  (the cabin, its menus, the maps, the camera feeds) at every scale, the same between runs, for `pngdiff` between two binaries;
+  `suncone` hashes the sun's glow swept across the edge of its cone. F-06 (2026-10-14): the pool deals its rows to whichever thread is
+  free; `./vesperis_test pool` times a dispatch and checks the dealing. F-11 (2026-10-15): `regress` also draws the forest at 4x and
+  the cabin at 1x, each by one thread too; `bench check`'s budgets are the dev Mac's (about 1.5 times its medians):
+  `bench check <factor>` on another machine or with one thread.
 * The save file is `vesperis_save.txt` in the working directory (text, documented in `reference/07-game-flow-and-controls.md`).

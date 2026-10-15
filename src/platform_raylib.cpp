@@ -2,6 +2,9 @@
 #include "platform.h"
 #include <vector>
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <thread>
 
 namespace {
 Texture2D gTex;
@@ -64,13 +67,50 @@ void ensurePostShader() {
 AudioStream gStream;
 std::vector<float> gAbuf;
 bool gAudioOk = false;
+PlatformPresentTimes gPresentTimes;   // F-01
+PlatformAudioTimes gAudioTimes;
+double msSince(std::chrono::steady_clock::time_point t0) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
+// F-08: the frames' pacing (KI-407). raylib's SetTargetFPS(60) waited after the swap for 1/60 s less the frame's time, asleep for
+// most of it; macOS wakes such a sleep up to a millisecond late, so on the dev Mac's 120 Hz display the frames came every 17.2 ms (58
+// a second) and some stayed on the screen a refresh longer. The platform paces them instead: a frame is meant for the refresh a whole
+// number of the monitor's refreshes after the last one's (two at 120 Hz, one at 60: floor(hz / 60 + 0.2): about 50 to 110 frames a
+// second), and its swap waits until three quarters of a refresh before that one (asleep until PACE_SPIN before, then spinning): past
+// the refresh between, so the frame cannot show there, and early enough for the compositor, which under load wants a frame well
+// before its refresh (2 ms before missed whole stretches of refreshes). The vsync then meets the refresh. A swap that waited for the
+// display returned at its refresh, later only by the thread's wake: the schedule follows a return earlier than it expected, or half a
+// refresh or more late (the frame missed its refresh), all the way, and one a little late a tenth of the way (the display's clock
+// against this one's, without the wakes' noise). A swap that did not wait (no vsync, a hidden window) leaves the schedule to the
+// clock. The browser paces its own frames.
+#ifndef __EMSCRIPTEN__
+constexpr double PACE_SPIN = 0.001;
+double gPacePeriod = 1.0 / 60.0, gPaceRefresh = 1.0 / 60.0, gPaceMargin = 0.0125;   // s
+double gPaceNext = 0;              // GetTime() of the refresh the next frame is meant for
+int gPaceHz = -1, gPaceFrames = 0;
+void pacePeriod() {   // read at the start and every 60 frames: the window may have moved to another monitor
+    const int hz = GetMonitorRefreshRate(GetCurrentMonitor());
+    if (hz == gPaceHz) return;
+    gPaceHz = hz;
+    const double rate = hz >= 24 && hz <= 480 ? hz : 60;
+    gPaceRefresh = 1.0 / rate;
+    gPacePeriod = std::max(1, (int)std::floor(rate / 60.0 + 0.2)) * gPaceRefresh;
+    gPaceMargin = 0.75 * gPaceRefresh;
 }
+#endif
+}
+
+PlatformPresentTimes platformPresentTimes() { return gPresentTimes; }
+PlatformAudioTimes platformAudioTimes() { return gAudioTimes; }
 
 bool platformInit(int w, int h, const char* title) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(w, h, title);
     if (!IsWindowReady()) return false;
+#ifdef __EMSCRIPTEN__
     SetTargetFPS(60);
+#else
+    SetTargetFPS(0);   // F-08: platformPresent paces the frames
+    pacePeriod();
+#endif
     SetExitKey(0);
     InitAudioDevice();
     gAudioOk = IsAudioDeviceReady();
@@ -120,10 +160,14 @@ void platformToggleFullscreen() { ToggleFullscreen(); }
 void platformSetWindowSize(int w, int h) { if (!IsWindowFullscreen()) SetWindowSize(w, h); }
 
 void platformAudioPump(AudioSynth& synth, AudioState& st) {
+    gAudioTimes = PlatformAudioTimes();
     if (!gAudioOk) return;
     while (IsAudioStreamProcessed(gStream)) {
+        auto t0 = std::chrono::steady_clock::now();
         synth.render(gAbuf.data(), (int)gAbuf.size(), 22050, st);
+        auto t1 = std::chrono::steady_clock::now();
         UpdateAudioStream(gStream, gAbuf.data(), (int)gAbuf.size());
+        gAudioTimes.blocks++; gAudioTimes.synth += std::chrono::duration<double, std::milli>(t1 - t0).count(); gAudioTimes.update += msSince(t1);
     }
 }
 
@@ -137,7 +181,10 @@ void platformPresent(const uint32_t* rgb, int w, int h, bool scanlines, double c
         SetTextureFilter(gTex, TEXTURE_FILTER_POINT);
         gTexW = w; gTexH = h;
     }
+    auto t0 = std::chrono::steady_clock::now();
     UpdateTexture(gTex, rgb);
+    gPresentTimes.upload = msSince(t0);
+    t0 = std::chrono::steady_clock::now();
     BeginDrawing();
     ClearBackground(BLACK);
     int sw = GetScreenWidth(), sh = GetScreenHeight();
@@ -189,7 +236,29 @@ void platformPresent(const uint32_t* rgb, int w, int h, bool scanlines, double c
             DrawRectangle((int)dst.x, (int)yy, (int)dw, 1, Color{0, 0, 0, 70});
         }
     }
+    gPresentTimes.draw = msSince(t0);
+    t0 = std::chrono::steady_clock::now();
+#ifdef __EMSCRIPTEN__
     EndDrawing();
+    gPresentTimes.swap = msSince(t0);
+#else
+    if (++gPaceFrames >= 60) { gPaceFrames = 0; pacePeriod(); }
+    const double now = GetTime();
+    if (gPaceNext == 0 || now > gPaceNext + gPacePeriod) gPaceNext = now + gPaceMargin;   // the first frame, or one a whole period late: the schedule starts again
+    const double holdUntil = gPaceNext - gPaceMargin;
+    if (now + PACE_SPIN < holdUntil) std::this_thread::sleep_for(std::chrono::duration<double>(holdUntil - PACE_SPIN - now));
+    while (GetTime() < holdUntil) {}
+    gPresentTimes.hold = msSince(t0);
+    t0 = std::chrono::steady_clock::now();
+    const double swap0 = GetTime();
+    EndDrawing();
+    const double back = GetTime();
+    gPresentTimes.swap = msSince(t0);
+    const double late = back - gPaceNext;
+    if (late < 0 ? back - swap0 > 0.0005 : late >= 0.5 * gPaceRefresh) gPaceNext = back;
+    else if (late > 0) gPaceNext += 0.1 * late;
+    gPaceNext += gPacePeriod;
+#endif
 }
 
 void platformShutdown() {

@@ -232,6 +232,17 @@ private:
     double mdHumPh[3] = {0, 0, 0}, mdShimPh = 0, mdShimLp = 0;
     std::vector<float> mdBuf; size_t mdI = 0;
     double mediumSample(double x, double dt, AudioState& st);
+    // F-07: the samples' constants (a smoothing's coefficient, a fixed bandwidth's radius, the medium's poles) made once a block from
+    // dt and the medium by the expressions that made them every sample (`coefs` in render, the medium's in audio_medium.cpp)
+    struct Coefs {
+        double kF, kUp, kDown, kN, rS[4], rNasal;          // the speech: its smoothings, its formants' and its nasal's radii
+        double pkF, pkA, pkP, rP[3];                       // a phantom's
+        double kBeac, kData, kChant, kCode, kHet;          // the radar's: a beacon's keying, a data carrier's shift, a chant, a code's keying, the heterodyne
+        double mdUp, mdDown, mdDropK, mdSr;                // the medium's level, a reel's dropout, the rate
+        double mdAh, mdAl, mdHornR, mdHornB, mdHissHi, mdHissLo, mdRum;   // by the medium: its band, its horn, its hiss and rumble
+    } co{};
+    void coefs(double dt);
+    void mediumCoefs(double dt, int medium);
     double thunderT = -1; double thunderAmp = 0;
     double lp1 = 0, lp2 = 0, lp3 = 0, hp = 0;
     uint32_t rs = 12345;

@@ -13,6 +13,27 @@
 #include <thread>
 #include <climits>
 
+// F-03: v after `steps` of `v = v - 0.005f`, the value that loop computes. Inside one binade of floats (|v| at least 1: one spacing u
+// for every value and for every step's exact result) a step rounds to the same multiple of u every time, so the steps that stay inside
+// it with two to spare are one subtraction of k steps in double (exact, and its result a multiple of u inside the binade: a float
+// exactly); a step that might leave the binade, and every step under 1 m (in the binade of 2^-6 the step is halfway between two
+// multiples of u and rounds by their parity), is the float subtraction itself
+float drainageSink(float v, long steps) {
+    while (steps > 0) {
+        const float next = v - 0.005f;
+        long k = 0; double D = 0;
+        if (std::fabs(v) >= 1.0f) {
+            int e; std::frexp(v, &e);   // |v| in [2^(e-1), 2^e)
+            D = (double)v - (double)next;
+            const double room = v > 0 ? (double)v - std::ldexp(1.0, e - 1) : std::ldexp(1.0, e) + (double)v;
+            k = std::min(steps, (long)(room / D) - 2);
+        }
+        if (k > 1) { v = (float)((double)v - (double)k * D); steps -= k; }
+        else { v = next; steps--; }
+    }
+    return v;
+}
+
 namespace {
 constexpr double MAX_LAT_DEG = 78.0;    // no drainage under the polar caps (the lattice's cells thin out there)
 constexpr double CELL_M = 400.0;        // the lattice spacing aimed at
@@ -41,7 +62,7 @@ struct Tile {
     bool empty = true;
     std::vector<float> lvl, acc;                 // the filled height (m) and the accumulation (km^2) per domain cell
     std::vector<uint8_t> dir, up, flag;          // downstream neighbour 0-7 (8 none), main upstream neighbour (8 none), flags
-    double buildMs = 0;
+    double buildMs = 0, sampleMs = 0, sortMs = 0;   // F-03: the whole build, its sampling and its topological sort (the trace line)
     int lakesKept = 0, lakesBreached = 0;
     // -1 when (I, J) lies outside the domain
     int index(int I, int J) const {
@@ -123,6 +144,11 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
     const double detail = std::max(30.0, 0.6 * cellLatM);
     std::vector<float> h(n, 0.f);
     std::vector<uint8_t> flag(n, 0);
+    // the routing surface: the ground plus a metre of slow noise and a few centimetres of hash, so the flood's paths over
+    // the flats (the sediment floors, the breached basins) follow a lie of the land instead of the scan order, which made
+    // combs of parallel streams and dead-straight reaches. F-03: made beside each sample, by the sampling threads (a cell's noise
+    // is its own; 11-17 ms of a tile after the sampling, on the calling thread alone, before)
+    std::vector<float> hr(n);
     {   // sample the ground of the domain (in threads of this function's own: it may run inside a worker of the pool; B-422: as many
         // as the asking allows, a prefetch on its own thread sharing its cores between its lanes)
         int threads = samplers > 0 ? samplers : std::min(8, std::max(1, (int)std::thread::hardware_concurrency()));
@@ -133,15 +159,20 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
             for (int i = r0; i < r1; i++) {
                 if (stop.load(std::memory_order_relaxed) || ((i & 3) == 0 && abandon())) { stop.store(true); break; }
                 int I = T.i0 + i;
-                if (I < 0 || I >= 180 * N0) continue;
+                const bool lattice = I >= 0 && I < 180 * N0;   // the rows past a pole are routed (their ground 0), not sampled
                 double lat = (-90.0 + (I + 0.5) * dDeg) * DEG;
                 for (int j = 0; j < Nd; j++) {
                     int J = T.j0 + j;
                     double lon = ((J + 0.5) * dDeg - 180.0) * DEG;
-                    SurfaceSample s = sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), detail);
+                    const Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
                     int c = i * Nd + j;
-                    h[c] = (float)s.height;
-                    flag[c] = FL_VALID | (isSeaSample(g, s) ? FL_SEA : 0);
+                    if (lattice) {
+                        SurfaceSample s = sampleSurface(g, u, detail);
+                        h[c] = (float)s.height;
+                        flag[c] = FL_VALID | (isSeaSample(g, s) ? FL_SEA : 0);
+                    }
+                    Vec3 pk = u * g.R;
+                    hr[c] = h[c] + (float)(1.0 * gnoise3(pk / (2.5 * cellLatM * 0.001), g.sF ^ 0x0F10ULL) + 0.15 * (unitFromHash(hash2i(I, J, g.sF ^ 0x0F11ULL)) - 0.5));
                 }
             }
             t_noDrain--;
@@ -152,20 +183,7 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
         for (auto& t : ts) t.join();
         if (stop.load()) return false;
     }
-    // the routing surface: the ground plus a metre of slow noise and a few centimetres of hash, so the flood's paths over
-    // the flats (the sediment floors, the breached basins) follow a lie of the land instead of the scan order, which made
-    // combs of parallel streams and dead-straight reaches
-    std::vector<float> hr(n);
-    for (int i = 0; i < Nd; i++) {
-        double lat = (-90.0 + (T.i0 + i + 0.5) * dDeg) * DEG;
-        for (int j = 0; j < Nd; j++) {
-            int c = i * Nd + j;
-            int I = T.i0 + i, J = T.j0 + j;
-            double lon = ((J + 0.5) * dDeg - 180.0) * DEG;
-            Vec3 pk = StarSystem::bodyFromLatLon(lat, lon) * g.R;
-            hr[c] = h[c] + (float)(1.0 * gnoise3(pk / (2.5 * cellLatM * 0.001), g.sF ^ 0x0F10ULL) + 0.15 * (unitFromHash(hash2i(I, J, g.sF ^ 0x0F11ULL)) - 0.5));
-        }
-    }
+    T.sampleMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     // priority flood: outlets are the domain's edge and every sea cell; the cells are popped lowest first and each newly
     // reached cell takes the popped cell as its downstream neighbour, so every path to an outlet never rises
     T.lvl.assign(n, 0.f); T.dir.assign(n, 8); T.up.assign(n, 8); T.acc.assign(n, 0.f); T.flag = flag;
@@ -252,12 +270,13 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
         std::vector<float> cost(n, 0.f);
         int cur = 0;
         using CE = std::pair<float, int>;
-        std::priority_queue<CE, std::vector<CE>, std::greater<CE>> q;
+        struct Heap : std::priority_queue<CE, std::vector<CE>, std::greater<CE>> { void clear() { c.clear(); } };
+        Heap q;
         std::vector<int> path;
         auto breach = [&](int m) {
             float base = hc[m];
             cur++;
-            while (!q.empty()) q.pop();
+            q.clear();   // F-03: the last search's frontier dropped at once (it was popped one at a time)
             stamp[m] = cur; par[m] = -1; cost[m] = 0; q.push({0.f, m});
             int found = -1;
             while (!q.empty()) {
@@ -283,14 +302,29 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
                 hc[c] = v;
             }
             // the ramp may have run under `found`: carry on down its steepest descent until the ground is lower than the ramp
-            int c = found;
+            int c = found, prev = -1, prev2 = -1;
             for (int guard = 0; guard < n; guard++) {
                 int best = -1; float bh = 1e30f;
                 for (int k = 0; k < 8; k++) { int nc = neighbourOf(c, k); if (nc >= 0 && (flag[nc] & FL_VALID) && hc[nc] < bh) { bh = hc[nc]; best = nc; } }
                 if (best < 0 || bh < hc[c]) break;
                 v = hc[c] - 0.005f;
                 if (T.flag[best] & FL_LAKE) break;
-                hc[best] = v; c = best;
+                if (best == prev && c == prev2) {
+                    // F-03: the walk turned back twice running: a pit of two cells, each the other's lowest neighbour from here on (the two only
+                    // sink, two steps lower at each turn, and the cells round them are not written), so it sinks them in turn by 5 mm a step until
+                    // the guard. Every walk that reached the guard did this, from its third or fourth step: 520 million steps in a tile of lake
+                    // country (3.1 s), each a scan of eight neighbours. The writes left, this step's to `best` and the rest's in turn: the two
+                    // cells' last values are the last two of the same subtractions (`drainageSink`)
+                    const long w = (long)n - guard;
+                    if (w == 1) hc[best] = v;
+                    else {
+                        const float before = drainageSink(v, w - 2), last = before - 0.005f;
+                        const int lastCell = ((w - 1) & 1) ? c : best;   // write j lands on `best` when j is even
+                        hc[lastCell] = last; hc[lastCell == best ? c : best] = before;
+                    }
+                    break;
+                }
+                hc[best] = v; prev2 = prev; prev = c; c = best;
             }
         };
         for (int c = 0; c < n; c++) {
@@ -301,18 +335,30 @@ bool buildTile(const BodyGen& g, int tLat, int tLon, Tile& T, const Abandon& aba
             if (!lower) breach(c);
         }
     }
-    std::vector<int> popIndex(n, 0);
-    for (int q = 0; q < (int)order.size(); q++) popIndex[order[q]] = q;
     for (int c = 0; c < n; c++) {
         if (T.dir[c] == 8 || (T.flag[c] & FL_LAKE) || !(flag[c] & FL_VALID)) continue;
         int best = -1; float bh = hc[c];
         for (int k = 0; k < 8; k++) { int nc = neighbourOf(c, k); if (nc >= 0 && hc[nc] < bh) { bh = hc[nc]; best = k; } }
         if (best >= 0) T.dir[c] = (uint8_t)best;
     }
-    // a topological order of the new directions: the higher cells first; a flat lake by the flood's order (parents first)
+    // a topological order of the new directions: the higher cells first; a flat lake by the flood's order (parents first): `hc`
+    // descending, then the flood's pop index descending. F-03: one integer key a cell, sorted ascending and read backwards: the
+    // height's bits made monotone (-0 as +0, which the comparison of floats holds equal) over the pop index. No two cells share a pop
+    // index, so the order is a strict total one and the permutation the one the comparator of the two indirect loads made
+    const auto ts0 = std::chrono::steady_clock::now();
     std::vector<int> topo(n);
-    for (int c = 0; c < n; c++) topo[c] = c;
-    std::sort(topo.begin(), topo.end(), [&](int a, int b) { if (hc[a] != hc[b]) return hc[a] > hc[b]; return popIndex[a] > popIndex[b]; });
+    {
+        std::vector<uint64_t> keys(order.size());   // the flood pops every cell of the domain once
+        for (size_t q = 0; q < order.size(); q++) {
+            uint32_t b; std::memcpy(&b, &hc[order[q]], 4);
+            if ((b & 0x7FFFFFFFu) == 0) b = 0;
+            b = (b & 0x80000000u) ? ~b : (b | 0x80000000u);
+            keys[q] = ((uint64_t)b << 32) | (uint64_t)q;
+        }
+        std::sort(keys.begin(), keys.end());
+        for (size_t k = 0; k < keys.size(); k++) topo[k] = order[(uint32_t)keys[keys.size() - 1 - k]];
+    }
+    T.sortMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - ts0).count();
     // accumulation (km^2) down the new directions
     for (int i = 0; i < Nd; i++) {
         double lat = (-90.0 + (T.i0 + i + 0.5) * dDeg) * DEG;
@@ -357,6 +403,16 @@ void reapWorkers() {   // g_mutex held
 
 static double traceMs() { static const auto t0 = std::chrono::steady_clock::now(); return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
 
+// F-03: a finished tile's arrays folded into one hash (FNV-1a over the bytes of the levels, the accumulations, the directions, the
+// upstream neighbours and the flags), printed in the trace line: a change to the routing's arithmetic keeps every tile's hash or is a bug
+static uint64_t tileHash(const Tile& T) {
+    uint64_t h = 0xcbf29ce484222325ULL;
+    auto add = [&](const void* p, size_t n) { const uint8_t* b = (const uint8_t*)p; for (size_t i = 0; i < n; i++) { h ^= b[i]; h *= 0x100000001b3ULL; } };
+    add(T.lvl.data(), T.lvl.size() * sizeof(float)); add(T.acc.data(), T.acc.size() * sizeof(float));
+    add(T.dir.data(), T.dir.size()); add(T.up.data(), T.up.size()); add(T.flag.data(), T.flag.size());
+    return h;
+}
+
 // the tile, from the cache or computed now (another thread computing it: waited for); a superseded prefetch's (`gen` moved on from
 // `mine`) is abandoned when no thread waits for it: null
 std::shared_ptr<Tile> getTile(const BodyGen& g, uint64_t gkey, int tLat, int tLon, const std::atomic<uint64_t>* gen = nullptr, uint64_t mine = 0, int samplers = 0) {
@@ -377,7 +433,11 @@ std::shared_ptr<Tile> getTile(const BodyGen& g, uint64_t gkey, int tLat, int tLo
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
     auto tb0 = std::chrono::steady_clock::now();
     const bool built = buildTile(g, tLat, tLon, *t, abandon, samplers);
-    if (trace) fprintf(stderr, "    [%.0f] drainage tile %d %d %s in %.1f ms (thread %zu)\n", traceMs(), tLat, tLon, built ? "built" : "abandoned", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count(), std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000);
+    if (trace) {
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count();
+        if (built && !t->empty) fprintf(stderr, "    [%.0f] drainage tile %d %d built in %.1f ms (thread %zu; sampled %.1f, sorted %.1f; hash %016llx)\n", traceMs(), tLat, tLon, ms, std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000, t->sampleMs, t->sortMs, (unsigned long long)tileHash(*t));
+        else fprintf(stderr, "    [%.0f] drainage tile %d %d %s in %.1f ms (thread %zu)\n", traceMs(), tLat, tLon, built ? "built (empty)" : "abandoned", ms, std::hash<std::thread::id>()(std::this_thread::get_id()) % 1000);
+    }
     lock.lock();
     if (!built) { g_tiles.erase(key); reapWorkers(); g_cv.notify_all(); return nullptr; }
     g_built++;
@@ -470,7 +530,7 @@ inline double channelA0(const BodyGen& g) {
 // and accumulations (interpolated along it), the flatness of its two ends (the meander swing)
 struct Seg { double u[5], v[5]; double lvl0, lvl1, acc0, acc1; double lake0; };
 struct Neigh {
-    uint64_t gkey = 0; int N0 = -1, I = INT_MIN, J = INT_MIN; bool coarse = false, brooks = false;
+    uint64_t gkey = 0; int N0 = -1, I = INT_MIN, J = INT_MIN; bool coarse = false, brooks = false; double detail = -1;   // detail: the coarse list's (its channels by the scale)
     std::vector<Seg> segs;
     double lake[5][5], lvl[5][5], lakeLvl[5][5]; bool have[5][5];
 };
@@ -481,9 +541,15 @@ inline Vec3 unitOfUV(const Ctx& c, double u, double v) {
     return StarSystem::bodyFromLatLon((-90.0 + u * dDeg) * DEG, (v * dDeg - 180.0) * DEG);
 }
 
-void buildNeigh(const Ctx& c, int I, int J, double cellLatM, double cellLonM, bool coarse, double detailM) {
+// F-03: the neighbourhood is a function of its key alone (the world, the cell, the coarse list's scale, the brooks), so a sample is a
+// function of its point whatever this thread asked before: the reaches' east-west metres are the cell's own (its centre's latitude), and
+// the coarse list is keyed by its scale. They were the first sample's in the cell (its latitude, and the scale it asked at), so the
+// rivers near a point moved by up to a few centimetres with the order the cells were asked for (the ahead worker's, the landing map's
+// zoom on the pool), and the warm's fill on the pool would have drawn a picture of its own on every core count
+void buildNeigh(const Ctx& c, int I, int J, double cellLatM, bool coarse, double detailM) {
+    const double cellLonM = cellLatM * std::max(0.05, std::cos((-90.0 + (I + 0.5) / c.N0) * DEG));
     Neigh& N = t_neigh;
-    N.gkey = c.gkey; N.N0 = c.N0; N.I = I; N.J = J; N.coarse = coarse;
+    N.gkey = c.gkey; N.N0 = c.N0; N.I = I; N.J = J; N.coarse = coarse; N.detail = coarse ? detailM : -1;
     N.brooks = detailM < 300.0;   // the brooks' valleys (Wv 200 m) show at 64 m and finer only; the 512 m ring skips them (a third of its fill)
     N.segs.clear();
     const double a0 = channelA0(*c.g);
@@ -647,7 +713,7 @@ DrainInfo drainageAt(const BodyGen& g, const Vec3& unit, double detailM, double 
     int I = (int)std::floor(u), J = (int)std::floor(v);
     Neigh& N = t_neigh;
     const bool coarse = detailM >= COARSE_DETAIL;
-    if (N.gkey != c.gkey || N.N0 != c.N0 || N.I != I || N.J != J || N.coarse != coarse || N.brooks != (detailM < 300.0)) buildNeigh(c, I, J, cellLatM, cellLonM, coarse, detailM);
+    if (N.gkey != c.gkey || N.N0 != c.N0 || N.I != I || N.J != J || N.coarse != coarse || N.brooks != (detailM < 300.0) || (coarse && N.detail != detailM)) buildNeigh(c, I, J, cellLatM, coarse, detailM);
     // every reach of the neighbourhood: its distance, the level and accumulation at its nearest point, its floodplain's
     // strength here and its valley's; the channel that shapes the point is the one whose floodplain reaches it most (a
     // brook beside a big river does not hide the river's plain), the water surface is the reaches' levels blended by

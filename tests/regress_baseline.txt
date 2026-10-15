@@ -21,3 +21,5 @@ scene_felisian_shore 311e5d51c487ed49  # frame of scene felisian_shore at 1x (Fe
 scene_cratered_noon ad3fe0e0797463ac  # frame of scene cratered_noon at 1x (Wyariothmai IV)
 scene_molten_night aef54d9b0eceaf40  # frame of scene molten_night at 1x (Shiesaimiori I)
 space_S00 94d6e6d85e491996  # space frame from the first orbit of Salyiesesh
+scene_felisian_forest_4x a58dbd9849b29bee  # frame of scene felisian_forest at 4x (Feeyeithis IV)
+cabin_1x d7d2577faf64807c  # the cabin at 1x, the light on, parked at Heilya II

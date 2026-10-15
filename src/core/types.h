@@ -115,12 +115,27 @@ inline double smoothstep(double e0, double e1, double x) {
     double t = clampd((x - e0) / (e1 - e0), 0.0, 1.0);
     return t * t * (3 - 2 * t);
 }
+// F-07: floor to an integer. `ifloorTrunc`: the truncation, less one where it rounded a negative non-integer up: the same integer as
+// std::floor for every input in range, without the library call baseline x86-64 (the Linux and Windows zips) makes of std::floor;
+// where the target rounds in one instruction (arm64, x86-64 from SSE4.1: the Mac's) std::floor stays (the truncation's is dearer there)
+inline int64_t ifloorTrunc(double v) { const int64_t i = (int64_t)v; return i - (v < (double)i); }
+#if defined(__aarch64__) || defined(_M_ARM64) || defined(__SSE4_1__)
+inline int64_t ifloor64(double v) { return (int64_t)std::floor(v); }
+#else
+inline int64_t ifloor64(double v) { return ifloorTrunc(v); }
+#endif
+inline int ifloor(double v) { return (int)ifloor64(v); }
 inline double wrapAngle(double a) {  // to [-PI, PI)
     a = std::fmod(a + PI, TAU);
     if (a < 0) a += TAU;
     return a - PI;
 }
 inline double wrap2pi(double a) {  // to [0, 2PI)
+    // F-07: within a turn of the range, the value fmod gives without the call (fmod returns [0, TAU) as it is, a - TAU over [TAU,
+    // 2 TAU) is exact by Sterbenz, (-TAU, 0) has TAU added either way); -0.0 returns itself as before; NaN and the infinities fall through
+    if (a >= 0 && a < TAU) return a;
+    if (a >= TAU && a < 2 * TAU) return a - TAU;
+    if (a < 0 && a > -TAU) return a + TAU;
     a = std::fmod(a, TAU);
     if (a < 0) a += TAU;
     return a;

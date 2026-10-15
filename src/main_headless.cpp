@@ -74,10 +74,18 @@ static int takePeopleArg(int& argc, char** argv);
 #include <sys/stat.h>
 #include <sstream>
 #include <dirent.h>
+#if defined(__APPLE__) || defined(__linux__)
+#include <sys/resource.h>   // F-01: the process's CPU time (`load`, `soak`)
+#include <unistd.h>
+#endif
+#ifdef __APPLE__
+#include <mach/mach.h>       // F-01: its threads and resident memory
+#endif
 #include <cmath>
 #include <map>
 #include <functional>
 #include <thread>
+#include <limits>
 
 static int g_testScale = 1;
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
@@ -332,10 +340,10 @@ static void runGalaxy() {
         buildGalaxyBand(obs, band, BAND_MAP_W, BAND_MAP_H);
         printf("  the %d x %d map builds in %.1f ms (%d threads)\n", BAND_MAP_W, BAND_MAP_H, (nowSec() - tb0) * 1000, parallelThreads());
         // the profile along the plane every 30 degrees from the core, and by latitude at the core and the anticentre
-        printf("  along the plane from the core:"); for (int k = 0; k < 12; k++) { double lon = coreLon + k * 30 * DEG; printf(" %d:%.2f", k * 30, sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, Vec3(std::cos(lon), 0, std::sin(lon)))); } printf("\n");
+        printf("  along the plane from the core:"); for (int k = 0; k < 12; k++) { double lon = coreLon + k * 30 * DEG; printf(" %d:%.2f", k * 30, sampleGalaxyBand(band, Vec3(std::cos(lon), 0, std::sin(lon)))); } printf("\n");
         for (int a = 0; a < 2; a++) {
             double lon = coreLon + a * PI; printf("  by latitude at the %s:", a ? "anticentre" : "core");
-            for (double lat : {0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 60.0, 90.0}) printf(" %.0f:%.2f", lat, sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, Vec3(std::cos(lat * DEG) * std::cos(lon), std::sin(lat * DEG), std::cos(lat * DEG) * std::sin(lon))));
+            for (double lat : {0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 60.0, 90.0}) printf(" %.0f:%.2f", lat, sampleGalaxyBand(band, Vec3(std::cos(lat * DEG) * std::cos(lon), std::sin(lat * DEG), std::cos(lat * DEG) * std::sin(lon))));
             printf("\n");
         }
         {   // the whole sky as the game samples it, 720 x 360, the core at the centre
@@ -343,7 +351,7 @@ static void runGalaxy() {
             for (int j = 0; j < BH; j++)
                 for (int i = 0; i < BW; i++) {
                     double lon = coreLon + ((i + 0.5) / BW - 0.5) * TAU, lat = (0.5 - (j + 0.5) / BH) * PI;
-                    int g = clampi((int)(255 * sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, Vec3(std::cos(lat) * std::cos(lon), std::sin(lat), std::cos(lat) * std::sin(lon)))), 0, 255);
+                    int g = clampi((int)(255 * sampleGalaxyBand(band, Vec3(std::cos(lat) * std::cos(lon), std::sin(lat), std::cos(lat) * std::sin(lon)))), 0, 255);
                     bimg[(size_t)j * BW + i] = 0xFF000000u | (uint32_t)g << 16 | (uint32_t)g << 8 | (uint32_t)g;
                 }
             writePNG("shots/tests/galaxy_band.png", bimg.data(), BW, BH);
@@ -1258,6 +1266,108 @@ static void renderSurface(int onlyType) {
 #include "game/game.h"
 #include "game/ui.h"
 
+// ---- F-01: the proof tools ---------------------------------------------------------------------------------------------------------
+// Two RGB frames compared pixel for pixel (`pngdiff`, `bothways`, the unit's both-ways checks): how many pixels differ, the largest step of
+// one channel, the first differing pixel, the rows they span and how many fall in each eighth of the frame's height
+struct FrameDiff { long differ = 0; int step = 0, firstX = -1, firstY = -1, rowMin = -1, rowMax = -1; long eighths[8] = {0, 0, 0, 0, 0, 0, 0, 0}; };
+static FrameDiff diffFrames(const uint32_t* a, const uint32_t* b, int w, int h) {
+    FrameDiff d;
+    for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            const uint32_t p = a[(size_t)y * w + x], q = b[(size_t)y * w + x];
+            if (p == q) continue;
+            for (int c = 0; c < 24; c += 8) d.step = std::max(d.step, std::abs((int)((p >> c) & 255) - (int)((q >> c) & 255)));
+            if (d.differ++ == 0) { d.firstX = x; d.firstY = y; d.rowMin = y; }
+            d.rowMax = y;
+            d.eighths[std::min(7, y * 8 / h)]++;
+        }
+    return d;
+}
+static std::string diffLine(const FrameDiff& d, int w, int h) {
+    if (!d.differ) return "identical";
+    std::string s = fmt("%ld px differ (%.3f%%), largest step %d, first at %d,%d, rows %d-%d, by eighths of the height", d.differ, 100.0 * d.differ / ((double)w * h), d.step, d.firstX, d.firstY, d.rowMin, d.rowMax);
+    for (int k = 0; k < 8; k++) s += fmt("%s%ld", k ? " " : ": ", d.eighths[k]);
+    return s;
+}
+// the differing pixels in red over the first frame at a third of its brightness
+static void writeDiffImage(const char* path, const uint32_t* a, const uint32_t* b, int w, int h) {
+    std::vector<uint32_t> out((size_t)w * h);
+    for (size_t i = 0; i < out.size(); i++) {
+        const uint32_t p = a[i];
+        out[i] = p != b[i] ? 0xFF0000FFu : 0xFF000000u | ((((p >> 16) & 255) / 3) << 16) | ((((p >> 8) & 255) / 3) << 8) | ((p & 255) / 3);
+    }
+    writePNG(path, out.data(), w, h);
+}
+
+// F-01: the process as B-422 measured it: its CPU seconds (all threads), its threads alive and running now, its resident memory (MB);
+// macOS and Linux (elsewhere zeros)
+struct ProcSample { double cpuS = 0; int threads = 0, running = 0; double rssMB = 0; };
+static ProcSample procSample() {
+    ProcSample p;
+#if defined(__APPLE__) || defined(__linux__)
+    struct rusage ru; if (getrusage(RUSAGE_SELF, &ru) == 0) p.cpuS = ru.ru_utime.tv_sec + ru.ru_utime.tv_usec * 1e-6 + ru.ru_stime.tv_sec + ru.ru_stime.tv_usec * 1e-6;
+#endif
+#ifdef __APPLE__
+    thread_act_array_t list; mach_msg_type_number_t n = 0;
+    if (task_threads(mach_task_self(), &list, &n) == KERN_SUCCESS) {
+        p.threads = (int)n;
+        for (mach_msg_type_number_t i = 0; i < n; i++) {
+            thread_basic_info_data_t info; mach_msg_type_number_t cnt = THREAD_BASIC_INFO_COUNT;
+            if (thread_info(list[i], THREAD_BASIC_INFO, (thread_info_t)&info, &cnt) == KERN_SUCCESS && info.run_state == TH_STATE_RUNNING) p.running++;
+            mach_port_deallocate(mach_task_self(), list[i]);
+        }
+        vm_deallocate(mach_task_self(), (vm_address_t)list, n * sizeof(thread_act_t));
+    }
+    mach_task_basic_info_data_t ti; mach_msg_type_number_t tc = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&ti, &tc) == KERN_SUCCESS) p.rssMB = ti.resident_size / 1048576.0;
+#elif defined(__linux__)
+    if (DIR* d = opendir("/proc/self/task")) {
+        while (dirent* e = readdir(d)) {
+            if (e->d_name[0] == '.') continue;
+            p.threads++;
+            std::ifstream st(std::string("/proc/self/task/") + e->d_name + "/stat"); std::string all; std::getline(st, all);
+            const size_t close = all.rfind(')'); if (close != std::string::npos && close + 2 < all.size() && all[close + 2] == 'R') p.running++;
+        }
+        closedir(d);
+    }
+    { std::ifstream sm("/proc/self/statm"); long pages = 0, res = 0; sm >> pages >> res; p.rssMB = res * (double)sysconf(_SC_PAGESIZE) / 1048576.0; }
+#endif
+    return p;
+}
+
+// F-01: a guide of the player's composition (the dev Mac's guide.txt of 2026-10-11, 731,810 bytes: five probes' camera tracks of 5,889 to
+// 8,856 values, a log of 1,087 lines, the shards, names, marks and the rest in their counts), made from a seed: the bench times the save a
+// long expedition pays at every logged event without reading anyone's file
+static void fillBenchGuide(Guide& G) {
+    Rng r(0x6D1DEULL);
+    auto key = [](int i) { return Guide::bodyKey(150 + i % 97, 0, 20 + i % 89, i % 7); };
+    G.genVersion = GEN_VERSION;
+    for (int i = 0; i < 46; i++) G.names[key(i)] = fmt("THE EXPLORER'S NAME %d", i);
+    for (int i = 0; i < 93; i++) G.visited.insert(Guide::starKey(150 + i, 0, 30 + i % 40));
+    for (int i = 0; i < 65; i++) G.landed.insert(key(i));
+    for (int i = 0; i < 35; i++) { SurfaceMark m; m.body = key(i); m.lat = r.range(-1.2, 1.2); m.lon = r.range(-PI, PI); m.when = r.range(1e6, 2e7); if (i % 2) m.name = "A MARK"; G.marks.push_back(m); }
+    for (int i = 0; i < 285; i++) G.shards.insert(key(i % 40) + "/S" + std::to_string(i));
+    for (int i = 0; i < 268; i++) G.decoded[key(i % 40) + "/S" + std::to_string(i)] = i % 30;
+    for (int i = 0; i < 24; i++) G.signals[key(i)] = i % 4;
+    for (int i = 0; i < 53; i++) G.heard.insert(key(i % 30) + "/S" + std::to_string(i));
+    for (int i = 0; i < 28; i++) G.graves.insert(key(i % 20) + "/G" + std::to_string(i));
+    for (int i = 0; i < 9; i++) G.instruments.insert(key(i) + "/I" + std::to_string(i));
+    for (int i = 0; i < 14; i++) G.classesSeen.insert(i);
+    for (int i = 0; i < 13; i++) G.typesSeen.insert(i);
+    const int cams[5] = {8856, 8784, 8451, 7620, 5889}, times[5] = {102, 82, 82, 82, 82}, layers[5] = {18, 18, 24, 18, 24};
+    for (int k = 0; k < 5; k++) {
+        ProbeRecord p; p.id = k + 1; p.body = key(k); p.gen = GEN_VERSION; p.saved = 1760000000LL + k; p.launchT = r.range(1e6, 2e7); p.aimLat = r.range(-1, 1); p.aimLon = r.range(-3, 3);
+        p.seed = r.next(); p.startX = r.range(-1e5, 1e5); p.startY = r.range(-1e5, 1e5); p.startZ = r.range(-1e5, 1e5); p.headYaw = r.range(-3, 3); p.descYaw = r.range(-3, 3);
+        p.endClock = r.range(300, 700); p.endBar = r.range(5, 30); p.endKm = r.range(50, 200); p.endK = r.range(200, 600); p.endCause = 1;
+        for (int i = 0; i < cams[k]; i++) p.cam.push_back(i % 3 == 0 ? i * 0.0371 : r.range(-PI, PI));   // clock, yaw, pitch where they changed
+        for (int i = 0; i < times[k]; i++) p.time.push_back(i % 2 == 0 ? i * 3.7 : r.range(1e6, 2e7));
+        for (int i = 0; i < 42; i++) { ProbeSample q; q.clock = i * 15.7; q.bar = 0.1 * (i + 1) + r.range(0, 0.05); q.tempK = r.range(100, 400); q.windE = r.range(-150, 150); q.light = r.range(0, 1); q.layer = i % 4; q.flashes = i % 3; p.profile.push_back(q); }
+        for (int i = 0; i < layers[k]; i++) p.layers.push_back(r.range(0, 30));
+        G.probes.push_back(p);
+    }
+    for (int i = 0; i < 1087; i++) G.log.push_back({r.range(1e6, 2e7), i % 3 ? "SECTOR" : "SIGHT", fmt("ENTERED SECTOR %d:%d ON THE WORLD THE STARDRIFTER CIRCLES, THE %d ENTRY OF A LONG ROAD", i % 360, i % 180, i)});
+}
+
 // ---- the galaxy chart (G-05) ----------------------------------------------------------------------------------------------------
 // `chart`: the star map's galaxy page at every level from three places (home; 2,000 ly over home's plane; a star of the core), a frame
 // a level (`shots/tests/chart_<place>_<level>.png`) with the level's build time and where the ship's crosshair was drawn; first the
@@ -1638,7 +1748,9 @@ static void runGameFlow() {
     run(0.5); shot("title");
     game.testAttract(30); run(0.3); shot("attract");   // M6-06
     press(KEY_C); run(0.1); shot("credits"); press(KEY_ESCAPE); run(0.1);
-    press(KEY_ENTER); run(1.0); shot("space"); printf("  %s\n", game.testDebugInfo().c_str());
+    press(KEY_ENTER);
+    for (int i = 0; i < (int)game.testSystem().bodies.size(); i++) game.testWaitMapOf(i);   // F-07: the system's maps first (made on their thread at a binary's own pace)
+    run(1.0); shot("space"); printf("  %s\n", game.testDebugInfo().c_str());
     // M2: walk to the GOES console, use it, then the front computer, the roof and the glass hull
     game.testCabinGoto(-1.2, 0.0, -PI / 2); run(0.2); shot("cabin"); printf("  facing %d\n", game.testCabinFacing());
     press(KEY_E); run(0.1); game.testTypeText("SL 4"); run(0.1); shot("console"); press(KEY_ESCAPE);
@@ -1865,7 +1977,7 @@ static void runGameFlow() {
             for (int i = 0; i < lb; i++) press(KEY_DOWN);
             press(KEY_ENTER); run(2.0); shot("approach");
             run(9.0); shot("orbit"); printf("  %s\n", game.testDebugInfo().c_str());
-            press(KEY_C); run(0.2);
+            press(KEY_C); game.testWaitMap(); run(0.2);   // F-02: the map's frames below (the screen reads the world on the map's thread)
         }
         if (game.testBodyType(lb) != PT_FELISIAN) {
             // G-04: the landing below (the walk, the herd, the water) wants a living world: the arrival's world gave the approach
@@ -1973,7 +2085,9 @@ static void runGameFlow() {
             // B-412: the mark is not over the view until the map's Shift+Enter shows it (boxed on the map), then over the view with its
             // diamond on the compass
             press(KEY_R);
-            for (int i = 0; i < 30 * 30 && !game.testScanned(); i++) { game.frame(in, 1.0 / 30); in.newFrame(); }
+            // F-05: the scan's thread waited for at one instant (frames at dt 0): frames of 1/30 s while it worked put a faster binary's
+            // clock ahead (more frames in the scan's 50 ms), and every picture after this one with it
+            for (int i = 0; i < 3000 && !game.testScanned(); i++) { game.frame(in, 0); in.newFrame(); std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
             run(0.2); shot("scan_hud"); printf("  scanner: %s\n", game.testScanInfo().c_str());
             const double pitch0 = game.testPitch();
             game.testSetPitch(-0.06); run(0.1);   // B-412: the crosshair on the ground ahead (level, it rests on the sky and L marks the feet)
@@ -2136,7 +2250,7 @@ static void runGameFlow() {
             for (int i = 0; i < (int)gsys.bodies.size(); i++) if (gsys.bodies[i].type == PT_GASGIANT) { gs = s; gi = i; break; }
         }
         if (gi >= 0) {
-            game.testParkAt(gs, gi); run(0.3);
+            game.testParkAt(gs, gi); game.testWaitMapOf(gi); run(0.3);   // F-07: the giant's map first (made at a binary's own pace, the shot had it or not)
             game.testAimAtBody(gi); press(KEY_Z); in.down[KEY_UP] = true; run(0.25); in.down[KEY_UP] = false; run(0.2); shot("probe_aim"); printf("  %s\n", game.testTelescopeInfo().c_str());
             press(KEY_C); run(2.0); shot("probe_fall"); printf("  C: '%s'; %s\n", game.testStatus().c_str(), game.testProbeInfo().c_str());
             game.testProbeSkip(PROBE_FALL_S + 5); run(0.1); shot("probe_entry");
@@ -2581,13 +2695,14 @@ static void testSettings() {
 // ---- determinism regression (M0-03) ----------------------------------------------
 // Hashes generated content that must not change by accident: the first systems met in the
 // start region, ten planet maps, and height profiles at three sites. `regress bless`
-// rewrites tests/regress_baseline.txt; `regress` compares against it (exit code 1 on change).
+// rewrites tests/regress_baseline.txt; `regress` compares against it (exit code 1 on change,
+// or when one thread draws the forest or the cabin differently: F-11).
 static uint64_t fnv(uint64_t h, const void* p, size_t n) {
     const uint8_t* b = (const uint8_t*)p;
     for (size_t i = 0; i < n; i++) { h ^= b[i]; h *= 1099511628211ULL; }
     return h;
 }
-static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lines, std::vector<std::string>& notes);
+static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lines, std::vector<std::string>& notes, std::vector<std::string>& differs);
 static int runRegress(bool bless) {
     const uint64_t FNV0 = 1469598103934665603ULL;
     std::vector<std::pair<std::string, uint64_t>> lines;
@@ -2637,9 +2752,12 @@ static int runRegress(bool bless) {
                 }
             }
         }
-    appendFrameHashes(lines, notes);
+    std::vector<std::string> differs;
+    appendFrameHashes(lines, notes, differs);
+    for (const std::string& d : differs) printf("  %-10s DRAWN DIFFERENTLY by one thread\n", d.c_str());
     const char* path = "tests/regress_baseline.txt";
     if (bless) {
+        if (!differs.empty()) { printf("not blessed: a frame one thread draws differently is not a reference\n"); return 1; }
         std::ofstream f(path);
         f << "# vesperis determinism baseline; regenerate with ./vesperis_test regress bless\n";
         for (size_t i = 0; i < lines.size(); i++) f << lines[i].first << " " << std::hex << lines[i].second << std::dec << "  # " << notes[i] << "\n";
@@ -2664,8 +2782,9 @@ static int runRegress(bool bless) {
         if (!bv) { printf("  %-10s new (no baseline)  %s\n", lines[i].first.c_str(), notes[i].c_str()); missing++; }
         else if (*bv != lines[i].second) { printf("  %-10s CHANGED %016llx -> %016llx  %s\n", lines[i].first.c_str(), (unsigned long long)*bv, (unsigned long long)lines[i].second, notes[i].c_str()); changed++; }
     }
-    printf("regress: %zu hashes, %d changed, %d without baseline -> %s\n", lines.size(), changed, missing, (changed || missing) ? "FAIL" : "PASS");
-    return (changed || missing) ? 1 : 0;
+    const bool fail = changed || missing || !differs.empty();
+    printf("regress: %zu hashes, %d changed, %d without baseline, %zu drawn differently by one thread -> %s\n", lines.size(), changed, missing, differs.size(), fail ? "FAIL" : "PASS");
+    return fail ? 1 : 0;
 }
 
 // ---- look comparison across resolution scales (M10-02) ---------------------------------
@@ -3391,9 +3510,10 @@ static int runStability(const char* want, double walk) {
     return shown ? 0 : 1;
 }
 // M7-04 frame hashes (defined after the scene helpers it uses)
-static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lines, std::vector<std::string>& notes) {
+static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lines, std::vector<std::string>& notes, std::vector<std::string>& differs) {
     const uint64_t FNV0 = 1469598103934665603ULL;
-    // M7-04 frame hashes: three fixed surface scenes and one space frame at 1x (the framebuffer indices, before the RGB conversion)
+    // M7-04 frame hashes: three fixed surface scenes and one space frame at 1x (the framebuffer indices, before the RGB conversion); F-11:
+    // the forest at 4x and the cabin at 1x, each also drawn by one thread (`differs` names a frame one thread draws differently)
     {
         int savedScale = g_testScale;
         setFramebufferScale(1);
@@ -3433,6 +3553,54 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
                 done = true;
             }
             if (done) break;
+        }
+        mkdir("shots", 0755); mkdir("shots/tests", 0755);
+        {   // F-11: the forest at 4x (the bench's `felisian_forest`, B-423's frame: the flora's bands pinned per scale), then drawn again by
+            // the workers and by one thread (B-310's rule within the run; `VESPERIS_THREADS=1 regress` checks it between runs)
+            setFramebufferScale(4);
+            for (const CmpScene& sc : CMP_SCENES) {
+                if (std::string("felisian_forest") != sc.name) continue;
+                SpaceRenderer srF; StarNeighborhood nbF; StarSystem sys; SurfaceView sv; double t = 0;
+                if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nbF, t, sc.wantMat)) break;
+                for (const Body& b : sys.bodies) if (b.type != PT_COMPANION) srF.mapFor(b);
+                Framebuffer fb;
+                auto draw = [&]() { sv.render(fb, t, nbF.stars, srF, 1.0); fb.mush(2); return fnv(FNV0, fb.idx.data(), fb.idx.size() * sizeof(Pix)); };
+                const uint64_t h = draw();
+                saveFB(fb, "shots/tests/regress_forest_4x.png");
+                const uint64_t w = draw();
+                parallelThreadsOverride() = 1; const uint64_t s = draw(); parallelThreadsOverride() = 0;
+                lines.push_back({"scene_felisian_forest_4x", h});
+                notes.push_back("frame of scene felisian_forest at 4x (" + sys.bodies[sv.site.body].name + ")");
+                if (s != w) differs.push_back("scene_felisian_forest_4x");
+                break;
+            }
+        }
+        {   // F-11: the cabin at 1x through the game: the start's parking, the light on and the hull polarised (`screens`' cabin), every
+            // map of the system made; the game's picture (the RGB with the HUD) at one instant once it holds still, then by one thread
+            Game game; game.savePrefix = "shots/tests/regress_save"; game.settingsPath = "shots/tests/regress_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/regress_guide.txt";
+            remove(game.guidePath.c_str()); remove(game.settingsPath.c_str());
+            game.newGame(); game.setState(GameState::SPACE);
+            game.settings.renderScale = 1; game.applySettings();
+            Input gi;
+            auto run = [&](int frames) { for (int i = 0; i < frames; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+            auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; run(1); gi.down[key] = false; };
+            run(9);
+            const int lights = game.testCabinLights();
+            if (!(lights & 1)) press(KEY_U);
+            if (lights & 2) press(KEY_Y);
+            run(45);
+            const StarSystem& gs = game.testSystem();
+            for (const Body& b : gs.bodies) if (b.type != PT_COMPANION) game.testWaitMapOf(b.index);
+            auto out = [&]() { return fnv(FNV0, game.output(), (size_t)FBW * FBH * sizeof(uint32_t)); };
+            uint64_t h = 0; int still = 0;
+            for (int n = 0; n < 200 && still < 10; n++) { game.frame(gi, 0); const uint64_t k = out(); still = n > 0 && k == h ? still + 1 : 0; h = k; std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+            writePNG("shots/tests/regress_cabin_1x.png", game.output(), FBW, FBH);
+            parallelThreadsOverride() = 1; game.frame(gi, 0); const uint64_t s = out(); parallelThreadsOverride() = 0;
+            const int pb = game.testParkedBody();
+            lines.push_back({"cabin_1x", h});
+            notes.push_back("the cabin at 1x, the light on, parked at " + (pb >= 0 ? gs.bodies[pb].name : std::string("nothing")));
+            if (s != h) differs.push_back("cabin_1x");
+            if (still < 10) differs.push_back("cabin_1x (never held still)");
         }
         setFramebufferScale(savedScale);
     }
@@ -3842,12 +4010,13 @@ static int runBenchForest() {
     for (int i = 0; i < 150; i++) { sv.update(1.0 / 30, in, t + i * 0.033, false); sv.render(fb, t + i * 0.033, nb.stars, sr, 1.0); fb.mush(2); }
     printf("forest 4x x150: %.2f ms/frame (sections sky %.1f warm %.1f terrain %.1f objects %.1f flora %.1f rest %.1f; trees %.1f ms)\n", (nowSec() - t0) * 1000 / 150,
            sv.lastRenderMs[0], sv.lastRenderMs[1], sv.lastRenderMs[2], sv.lastRenderMs[3], sv.lastRenderMs[4], sv.lastRenderMs[5], sv.lastFloraMs[0]);
+    printf("  %s\n  %s\n", sv.bandTraceLine(false).c_str(), sv.bandTraceLine(true).c_str());   // F-01: the last frame's bands
     return 0;
 }
 
-static int runBench(bool check) {
+static int runBench(bool check, double slack) {
     Game game;
-    double surface2x = 0, space2x = 0, descentFirst = 0, runWorst = 0;
+    double surface2x = 0, surface4x = 0, space2x = 0, space4x = 0, descentFirst = 0, runWorst = 0;
     game.savePrefix = "shots/tests/bench_save";
     game.settingsPath = "shots/tests/test_settings.txt";
     game.guidePath = "shots/tests/bench_guide.txt";
@@ -3860,8 +4029,11 @@ static int runBench(bool check) {
         printf("%-12s %.2f ms/frame\n", name, dt);
         return dt;
     };
+    // F-11: five frames at one instant after a scale's change, before a row's timed frames: the first frames at a new scale allocate its
+    // buffers and tables (on the swapping Mac one run's space 4x read 11.0 ms against 6.4-6.6), and the timeline stays the rows' before
+    auto settle = [&]() { for (int i = 0; i < 5; i++) { game.frame(in, 0); in.newFrame(); } };
     press(KEY_ENTER);
-    for (int s = 1; s <= 4; s++) { game.settings.renderScale = s; game.applySettings(); double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60); if (s == 2) space2x = ms; }
+    for (int s = 1; s <= 4; s++) { game.settings.renderScale = s; game.applySettings(); settle(); double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60); if (s == 2) space2x = ms; if (s == 4) space4x = ms; }
     double telescope2x = 0;
     {   // W-06: the telescope at its deepest magnification on the parked world (the globe fills the frame), 2x
         game.settings.renderScale = 2; game.applySettings();
@@ -3873,6 +4045,7 @@ static int runBench(bool check) {
     }
     game.settings.renderScale = 1; game.applySettings();
     press(KEY_C);   // G-02: no R: it picked a random lit site seeded by the clock, whose tiles took 0.4-3.2 s by luck (KI-338); the default site is the measure
+    game.testWaitMap();   // F-02: no map thread beside the descent's frames
     {   // O6-03: a player looks at the map for a moment; the drainage tiles of the site are computed meanwhile (up to 3 s here)
         int waited = 0; double tw0 = nowSec();
         for (; nowSec() - tw0 < 3.0 && !game.testDrainageReady(); waited++) { game.frame(in, 1.0 / 60); in.newFrame(); }
@@ -3891,7 +4064,7 @@ static int runBench(bool check) {
             worst = std::max(worst, ms);
         }
         printf("descent      first frame %.1f ms, worst of 60: %.1f ms\n", first, worst);
-        { const double* ms = game.testRenderMs(); printf("  last frame's render sections: palette+sky %.1f, floor+warm %.1f, terrain %.1f, reflections..objects %.1f, flora %.1f, rest %.1f ms\n", ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]); }
+        { const double* ms = game.testRenderMs(); printf("  last frame's render sections: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]); }
         descentFirst = first;
     }
     for (int i = 0; i < 60 * 7; i++) { game.frame(in, 1.0 / 60); in.newFrame(); }
@@ -3901,13 +4074,15 @@ static int runBench(bool check) {
         printf("landing      first frame %.1f ms, worst of 30: %.1f ms\n", first, worst);
     }
     for (int s = 4; s >= 2; s--) {
-        game.settings.renderScale = s; game.applySettings();
+        game.settings.renderScale = s; game.applySettings(); settle();
         double ms = bench(("surface " + std::to_string(s) + "x").c_str(), 40);
         if (s == 2) surface2x = ms;
+        if (s == 4) surface4x = ms;
         const double* r = game.testRenderMs();
         printf("             sections: sky %.1f, warm %.1f, terrain %.1f, objects %.1f, flora %.1f, rest %.1f ms\n", r[0], r[1], r[2], r[3], r[4], r[5]);
+        for (int f = 0; f < 2; f++) { const std::string bl = game.testSurface().bandTraceLine(f == 1); if (!bl.empty()) printf("             %s\n", bl.c_str()); }   // F-01: the last frame's bands
     }
-    game.settings.renderScale = 1; game.applySettings();
+    game.settings.renderScale = 1; game.applySettings(); settle();
     bench("surface", 120);
     writePNG("shots/tests/bench_surface.png", game.output(), FBW, FBH);
     printf("  state=%d %s\n", (int)game.state, game.testStatus().c_str());
@@ -3932,9 +4107,11 @@ static int runBench(bool check) {
     const SpaceRenderer::MapStats& ms = game.testMapStats();
     printf("maps         %d generated (%.0f ms each on the worker), %d hits, %d evicted, %zu held (cap 24)\n", ms.generated, ms.generated ? game.testGenMicros() / 1000.0 / ms.generated : 0.0, ms.hits, ms.evicted, game.testMapsHeld());
     if (!check) return 0;
-    // M7-04 performance budgets, generous enough for a CI runner
+    // M7-04 performance budgets. F-11: about 1.5x the dev Mac's medians after F-10 (an M4 of four performance and six efficiency cores;
+    // at least the median + 0.5 ms), so a change that gives a gain back fails; `bench check <factor>` multiplies them for another machine
+    // or one thread
     int fails = 0;
-    auto budget = [&](const char* name, double ms, double limit) { bool ok = ms <= limit; printf("budget %-14s %.1f ms (limit %.0f) %s\n", name, ms, limit, ok ? "ok" : "EXCEEDED"); if (!ok) fails++; };
+    auto budget = [&](const char* name, double ms, double limit) { limit *= slack; bool ok = ms <= limit; printf("budget %-14s %.1f ms (limit %g) %s\n", name, ms, limit, ok ? "ok" : "EXCEEDED"); if (!ok) fails++; };
     {   // N2-04: a forest view at 2x through the surface renderer alone
         int saved = g_testScale;
         setFramebufferScale(2);
@@ -3945,10 +4122,10 @@ static int runBench(bool check) {
             double t0 = nowSec();
             for (int i = 0; i < 30; i++) { sv2.update(1.0 / 30, in2, t2 + i * 0.033, false); sv2.render(fb2, t2 + i * 0.033, nb2.stars, sr2, 1.0); fb2.mush(2); }
             double ms = (nowSec() - t0) * 1000 / 30;
-            printf("forest 2x    %.2f ms/frame (%d trees: near %d mid %d far %d, %d hidden behind canopy, %d flora points; flora sections trees %.1f, logs+undergrowth %.1f, meadows/shores %.1f, deserts %.1f ms)\n", ms, sv2.lastTreesDrawn,
-                   sv2.lastNearTrees, sv2.lastMidTrees, sv2.lastFarTrees, sv2.lastTreesHidden, sv2.lastFloraPoints, sv2.lastFloraMs[0], sv2.lastFloraMs[1], sv2.lastFloraMs[2], sv2.lastFloraMs[3]);
+            printf("forest 2x    %.2f ms/frame (%d trees: near %d mid %d far %d, %d hidden behind canopy, %d flora points; flora sections trees %.1f, cells %.1f ms)\n", ms, sv2.lastTreesDrawn,
+                   sv2.lastNearTrees, sv2.lastMidTrees, sv2.lastFarTrees, sv2.lastTreesHidden, sv2.lastFloraPoints, sv2.lastFloraMs[0], sv2.lastFloraMs[1]);
             saveFB(fb2, "shots/tests/bench_forest.png");
-            budget("forest 2x", ms, 14);   // N2-04: a tropical giant forest, the densest case (about 12 ms on an M4; CI headroom)
+            budget("forest 2x", ms, 8.2);   // N2-04: a tropical giant forest, the densest case (12 ms on an M4 then, 5.46 after F-10; the budget 14 -> 8.2)
         }
         setFramebufferScale(4);   // the same forest at 4x (the default picture since B-310)
         { SpaceRenderer sr4; StarNeighborhood nb4; StarSystem sys4; SurfaceView sv4; double t4 = 0;
@@ -3958,8 +4135,18 @@ static int runBench(bool check) {
             double t0 = nowSec();
             for (int i = 0; i < 30; i++) { sv4.update(1.0 / 30, in4, t4 + i * 0.033, false); sv4.render(fb4, t4 + i * 0.033, nb4.stars, sr4, 1.0); fb4.mush(2); }
             double ms = (nowSec() - t0) * 1000 / 30;
-            printf("forest 4x    %.2f ms/frame (flora sections trees %.1f, logs+undergrowth %.1f, meadows/shores %.1f, deserts %.1f ms; %d trees listed, %d visits over the bands)\n", ms, sv4.lastFloraMs[0], sv4.lastFloraMs[1], sv4.lastFloraMs[2], sv4.lastFloraMs[3], sv4.lastTreesListed, sv4.lastTreesVisited);
-            budget("forest 4x", ms, 24);
+            printf("forest 4x    %.2f ms/frame (flora sections trees %.1f, cells %.1f ms; %d trees listed, %d visits over the bands)\n", ms, sv4.lastFloraMs[0], sv4.lastFloraMs[1], sv4.lastTreesListed, sv4.lastTreesVisited);
+            budget("forest 4x", ms, 13);   // 8.37 after F-10 (F-11: 24 -> 13)
+            printf("             %s\n             %s\n", sv4.bandTraceLine(false).c_str(), sv4.bandTraceLine(true).c_str());   // F-01
+            {   // F-01: the same forest at the game's kernel (the game's fine mush at 4x is 3x3; the row above runs setFramebufferScale's 5x5)
+                const int k0 = g_mushKernel; g_mushKernel = 3;
+                const double t3 = nowSec();
+                for (int i = 0; i < 30; i++) { sv4.update(1.0 / 30, in4, t4 + i * 0.033, false); sv4.render(fb4, t4 + i * 0.033, nb4.stars, sr4, 1.0); fb4.mush(2); }
+                const double ms3 = (nowSec() - t3) * 1000 / 30;
+                printf("forest 4x    %.2f ms/frame at the game's 3x3 mush (F-01)\n", ms3);
+                budget("forest 4x 3x3", ms3, 12);   // F-11: 7.97 after F-10
+                g_mushKernel = k0;
+            }
         } }
         setFramebufferScale(saved);
     }
@@ -3985,7 +4172,7 @@ static int runBench(bool check) {
                 saveFB(fbC, view == 0 ? "shots/tests/bench_city.png" : "shots/tests/bench_city_plaza.png");
                 worst = std::max(worst, ms);
             }
-            budget("city 2x", worst, 16);
+            budget("city 2x", worst, 5.7);   // 3.78 after F-10 (F-11: 16 -> 5.7)
         }
         setFramebufferScale(saved);
     }
@@ -3996,7 +4183,7 @@ static int runBench(bool check) {
             double upd = 0, drw = 0; int n = 0; for (const Critter& c : sv3.critters) if (c.herd == 0) n++;
             for (int i = 0; i < 20; i++) { sv3.update(1.0 / 30, in3, t3 + i * 0.033, false); sv3.render(fb3, t3 + i * 0.033, nb3.stars, sr3, 1.0); if (i >= 5) { upd += sv3.lastLifeMs[0]; drw += sv3.lastLifeMs[1]; } }
             printf("herd 1x      update %.2f ms, draw %.2f ms per frame (%d in the herd, %zu creatures at the site)\n", upd / 15, drw / 15, n, sv3.critters.size());
-            budget("herd draw 1x", drw / 15, 1.0);
+            budget("herd draw 1x", drw / 15, 0.6);   // 0.07 after F-10 (F-11: 1 -> 0.6, the median + 0.5)
         }
     }
     {   // N4-02: the driving frame at 2x (the game, seat view, 60 frames at full throttle)
@@ -4007,7 +4194,7 @@ static int runBench(bool check) {
             for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in4, 1.0 / 30); in4.newFrame(); in4.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
             printf("buggy 2x     %.2f ms/frame, worst %.1f ms (%s)\n", sum / 60, worst, game.testBuggyInfo().c_str());
             writePNG("shots/tests/bench_buggy.png", game.output(), FBW, FBH);
-            budget("buggy 2x", sum / 60, 14);
+            budget("buggy 2x", sum / 60, 6.1);   // 4.02 after F-10 (F-11: 14 -> 6.1)
         }
         if (game.testFlySetup(200)) {   // R-403: the drone 200 m up at full thrust, the camera tilted down 30 deg: the ground from the air
             Input in5; in5.down[KEY_W] = true; game.testSetPitch(-30 * DEG);
@@ -4015,7 +4202,7 @@ static int runBench(bool check) {
             for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in5, 1.0 / 30); in5.newFrame(); in5.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
             printf("drone 2x     %.2f ms/frame, worst %.1f ms (%s)\n", sum / 60, worst, game.testDroneInfo().c_str());
             writePNG("shots/tests/bench_drone.png", game.output(), FBW, FBH);
-            budget("drone 2x", sum / 60, 16);
+            budget("drone 2x", sum / 60, 3.3);   // 2.20 after F-10 (F-11: 16 -> 3.3)
         }
         game.settings.renderScale = 4; game.applySettings();   // and at 4x, the default picture (B-310)
         if (game.testDriveSetup()) {
@@ -4023,7 +4210,7 @@ static int runBench(bool check) {
             double sum = 0, worst = 0;
             for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in4, 1.0 / 30); in4.newFrame(); in4.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
             printf("buggy 4x     %.2f ms/frame, worst %.1f ms\n", sum / 60, worst);
-            budget("buggy 4x", sum / 60, 24);
+            budget("buggy 4x", sum / 60, 6.1);   // 4.04 after F-10 (F-11: 24 -> 6.1)
         }
         game.settings.renderScale = 1; game.applySettings();
     }
@@ -4043,7 +4230,7 @@ static int runBench(bool check) {
                 for (int i = 0; i < 60; i++) { double t0 = nowSec(); game.frame(in5, 1.0 / 60); in5.newFrame(); sum += (nowSec() - t0) * 1000; }
                 printf("belt 2x      %.2f ms/frame (%s)\n", sum / 60, game.testDebugInfo().c_str());
                 writePNG("shots/tests/bench_belt.png", game.output(), FBW, FBH);
-                budget("belt 2x", sum / 60, 12);
+                budget("belt 2x", sum / 60, 1.1);   // 0.60 after F-10 (F-11: 12 -> 1.1, the median + 0.5)
                 game.settings.renderScale = 1; game.applySettings();
                 found = true;
             }
@@ -4144,18 +4331,195 @@ static int runBench(bool check) {
             capital2x = sum / 60;
             printf("capital 2x   %.2f ms/frame, worst %.1f ms (%s; the forms %.2f ms: %d items, %d polygons, %d lines)\n", capital2x, worst, game.testStatus().c_str(), game.testSurface().lastRuinMs, game.testSurface().lastRuinElems, game.testSurface().lastFormPolys, game.testSurface().lastFormLines);
             writePNG("shots/tests/bench_capital.png", game.output(), FBW, FBH);
+            {   // F-01: the capital at 4x (no budget)
+                game.settings.renderScale = 4; game.applySettings();
+                for (int i = 0; i < 10; i++) { game.frame(in8, 1.0 / 60); in8.newFrame(); }
+                sum = 0; worst = 0;
+                for (int i = 0; i < 60; i++) { const double t0 = nowSec(); game.frame(in8, 1.0 / 60); in8.newFrame(); const double msF = (nowSec() - t0) * 1000; sum += msF; worst = std::max(worst, msF); }
+                printf("capital 4x   %.2f ms/frame, worst %.1f ms (the forms %.2f ms; F-01)\n", sum / 60, worst, game.testSurface().lastRuinMs);
+                budget("capital 4x", sum / 60, 8.3);   // F-11: 5.48 after F-10
+            }
             game.settings.renderScale = 1; game.applySettings();
         }
     }
-    budget("space 2x", space2x, 12);
-    budget("vimana 2x", vimana2x, 12);        // G-07: a flight's frame, the band from its keyframes
-    budget("telescope 2x", telescope2x, 16);   // W-06: the deepest magnification, the globe over the whole frame
-    budget("probe 2x", probe2x, 16);           // X-02: the descent's camera over the deck and between the decks
-    budget("surface 2x", surface2x, 16);
-    budget("descent first", descentFirst, 80);   // O6-03: the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in
-    budget("descent people", descentPeople, 80);   // T-01: onto a people's world beside its capital, its plan built at the parking
-    budget("capital 2x", capital2x, 16);           // T-01: the modern test world's capital from its edge
-    budget("sprint worst", runWorst, 40);
+    {   // F-01: rows without budgets for what the bench did not see, printed so that a later change that gives a gain back is seen (the
+        // targets of PLAN-performance's section 2): the sector map, the landing map and its zoom with the cursor moving, the radar camera, a
+        // recorded frame and a photo's PNG, the telescope and the decoder, the sun in the view, the city and the probe at 4x, an arrival while
+        // its maps generate, the guide's save and load at the player's size
+        Input inF;
+        auto stepF = [&]() { game.frame(inF, 1.0 / 60); inF.newFrame(); };
+        auto pressF = [&](int key) { inF.pressed[key] = true; inF.down[key] = true; stepF(); inF.down[key] = false; };
+        auto rowF = [&](const char* name, int frames, const std::function<void()>& each, double limit) {   // F-11: a limit of 0, no budget
+            double sum = 0, worst = 0;
+            for (int i = 0; i < frames; i++) { const double t0 = nowSec(); each(); const double ms = (nowSec() - t0) * 1000; sum += ms; worst = std::max(worst, ms); }
+            printf("%-12s %.2f ms/frame, worst %.1f ms (F-01%s)\n", name, sum / frames, worst, limit > 0 ? "" : ", no budget");
+            if (limit > 0) budget(name, sum / frames, limit);
+            return sum / frames;
+        };
+        game.settings.renderScale = 4; game.applySettings();
+        if (game.state == GameState::SURFACE) {   // the people's world of the capital's rows: its sector map (N)
+            pressF(KEY_N); for (int i = 0; i < 10; i++) stepF();
+            rowF("sectormap 4x", 60, stepF, 8.2);   // F-11: 5.42 after F-10
+            writePNG("shots/tests/bench_sectormap.png", game.output(), FBW, FBH);
+            pressF(KEY_ESCAPE);
+        }
+        Star hs; StarSystem hsys;
+        if (starInSector(HOME_SX, HOME_SY, HOME_SZ, hs, true)) {
+            hsys.generate(hs);
+            int hb = -1; for (const Body& b : hsys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0 && b.type != PT_COMET) { hb = b.index; break; }
+            const int blocked0 = game.testMapStats().blocked; const double blockedMs0 = game.testMapStats().blockedMs;
+            game.testParkAt(hs, hb);   // the landing map opens on the home world
+            for (int i = 0; i < 20; i++) stepF();
+            printf("landmap      opened on %s: %d blocking map calls (%.0f ms)\n", hsys.bodies[hb].name.c_str(), game.testMapStats().blocked - blocked0, game.testMapStats().blockedMs - blockedMs0);
+            auto shiftRight = [&]() { inF.down[KEY_LEFT_SHIFT] = true; inF.down[KEY_RIGHT] = true; stepF(); };
+            rowF("landmap 4x", 60, shiftRight, 3.5);   // Shift+Right held: six degrees a frame; F-11: 2.29 after F-10
+            inF.down[KEY_LEFT_SHIFT] = false; inF.down[KEY_RIGHT] = false;
+            writePNG("shots/tests/bench_landmap.png", game.output(), FBW, FBH);
+            const int zb0 = game.testZoomBuilds();
+            const double tz0 = nowSec(); pressF(KEY_Z); const double zMs = (nowSec() - tz0) * 1000;
+            const double* zp = game.testZoomBuildMs();
+            printf("landzoom     Z: a frame of %.1f ms (the build: samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms)\n", zMs, zp[0], zp[1], zp[2], zp[3], zp[4]);
+            budget("landzoom Z", zMs, 22);   // F-11: 14.45 after F-10
+            rowF("landzoom 4x", 120, shiftRight, 3.9);   // Shift+Right held: 0.05 degrees a frame, the window built again as the cursor leaves three quarters of it; F-11: 2.56 after F-10
+            inF.down[KEY_LEFT_SHIFT] = false; inF.down[KEY_RIGHT] = false;
+            printf("             %d builds in the 120 frames, the last: samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms\n", game.testZoomBuilds() - zb0 - 1, zp[0], zp[1], zp[2], zp[3], zp[4]);
+            writePNG("shots/tests/bench_landzoom.png", game.output(), FBW, FBH);
+            pressF(KEY_Z); pressF(KEY_ESCAPE); for (int i = 0; i < 10; i++) stepF();   // to space, parked
+            if (game.state == GameState::SPACE) {
+                pressF(KEY_B); for (int i = 0; i < 10; i++) stepF();   // the radar camera
+                rowF("radar 4x", 60, stepF, 3.8);   // F-11: 2.52 after F-10
+                writePNG("shots/tests/bench_radar.png", game.output(), FBW, FBH);
+                pressF(KEY_B); for (int i = 0; i < 5; i++) stepF();
+                // a recorded frame (one PNG a frame) and a photo's PNG alone
+                game.moviesDir = "shots/tests/test_movies"; game.recFixedTake = true;
+                game.toggleRecording();
+                double recMs = 0;
+                rowF("recording 4x", 30, [&]() { stepF(); const double t0 = nowSec(); game.recordFrame(); recMs += (nowSec() - t0) * 1000; }, 0);   // the writer's pace: no budget
+                game.toggleRecording();
+                const double tq = nowSec(); pngFlush(); const double queueMs = (nowSec() - tq) * 1000;   // F-02: the writer's queue out before the rows below
+                double pngMs = 1e9; for (int i = 0; i < 5; i++) { const double t0 = nowSec(); writePNG("shots/tests/bench_photo.png", game.output(), FBW, FBH); pngMs = std::min(pngMs, (nowSec() - t0) * 1000); }
+                printf("             the recorder's PNG %.1f ms a frame on the main thread (F-02: the copy for the writer's thread; its queue out %.1f ms after); a photo's PNG at %dx%d %.1f ms (the best of five)\n", recMs / 30, queueMs, FBW, FBH, pngMs);
+                budget("photo PNG", pngMs, 11);   // F-11: 7.2 after F-10
+                // the telescope at its deepest on the home world (the 2x row's view at 4x)
+                game.testAimAtBody(game.testParkedBody()); pressF(KEY_Z); for (int i = 0; i < 9; i++) pressF(KEY_EQUAL);
+                rowF("telescope 4x", 60, stepF, 28);   // F-11: 18.33 after F-10
+                pressF(KEY_Z); for (int i = 0; i < 5; i++) stepF();
+                // the decoder with a world's records listed (the flow's world)
+                for (int i = 0; i < 12; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
+                game.testCabinGoto(0.0, -0.8, PI, -0.65); for (int i = 0; i < 5; i++) stepF();
+                pressF(KEY_E); for (int i = 0; i < 10; i++) stepF();
+                if (game.state == GameState::SHARDS) { rowF("decoder 4x", 60, stepF, 6.4); writePNG("shots/tests/bench_decoder.png", game.output(), FBW, FBH); }   // F-11: 4.22 after F-10
+                else printf("decoder 4x   not opened (state %d)\n", (int)game.state);
+                pressF(KEY_ESCAPE); pressF(KEY_ESCAPE); for (int i = 0; i < 5; i++) stepF();
+            } else printf("radar 4x     not in space (state %d)\n", (int)game.state);
+        }
+        {   // the sun in the view at 4x (the veil's disc): the shore scene, facing the sun ten degrees under it, and facing away
+            const int saved = g_testScale; setFramebufferScale(4);
+            SpaceRenderer srS; StarNeighborhood nbS; StarSystem sysS; SurfaceView svS; double tS = 0;
+            if (setupSceneForType(PT_FELISIAN, 12, 30 * DEG, 0.0, 0.0, svS, sysS, nbS, tS, MAT_SAND)) {
+                const SunInfo si = svS.site.sun(tS);
+                Framebuffer fbS; Input inS;
+                for (int k = 0; k < 2; k++) {
+                    svS.player.yaw = k == 0 ? si.azimuth : wrap2pi(si.azimuth + PI); svS.player.pitch = k == 0 ? std::max(0.0, si.altitude - 10 * DEG) : 0.0;
+                    for (int i = 0; i < 3; i++) { svS.update(1.0 / 30, inS, tS, false); svS.render(fbS, tS, nbS.stars, srS, 1.0); fbS.mush(2); }
+                    const double t0 = nowSec();
+                    for (int i = 0; i < 30; i++) { svS.update(1.0 / 30, inS, tS + i * 0.033, false); svS.render(fbS, tS + i * 0.033, nbS.stars, srS, 1.0); fbS.mush(2); }
+                    const double msS = (nowSec() - t0) * 1000 / 30;
+                    printf("%-12s %.2f ms/frame (the sun %.0f deg up; sky %.1f, terrain %.1f, the rest with the veil %.1f ms; F-01)\n", k == 0 ? "sunward 4x" : "sunaway 4x", msS,
+                           si.altitude / DEG, svS.lastRenderMs[0], svS.lastRenderMs[2], svS.lastRenderMs[5]);
+                    budget(k == 0 ? "sunward 4x" : "sunaway 4x", msS, k == 0 ? 8.5 : 6.2);   // F-11: 5.66 and 4.10 after F-10
+                    if (k == 0) saveFB(fbS, "shots/tests/bench_sunward.png");
+                }
+                {   // a sprint at 4x facing away from the sun: Shift and W held for a second, then let go (the FOV kick rebuilds the direction table)
+                    double sum = 0, worst = 0, base = 0; int over = 0;
+                    std::vector<double> fr;
+                    for (int i = 0; i < 120; i++) {
+                        Input inR; inR.down[KEY_W] = i < 60; inR.down[KEY_LEFT_SHIFT] = i < 60;
+                        const double t0 = nowSec(); svS.update(1.0 / 60, inR, tS + 1 + i / 60.0, true); svS.render(fbS, tS + 1 + i / 60.0, nbS.stars, srS, 1.0); fbS.mush(2);
+                        fr.push_back((nowSec() - t0) * 1000);
+                    }
+                    std::vector<double> sorted = fr; std::sort(sorted.begin(), sorted.end()); base = sorted[sorted.size() / 2];
+                    for (double v : fr) { sum += v; worst = std::max(worst, v); if (v > base + 1.5) over++; }
+                    printf("sprint 4x    %.2f ms/frame over 120 (a second's sprint and its stop), median %.2f, worst %.1f ms, %d frames over the median + 1.5 ms (F-01)\n", sum / 120, base, worst, over);
+                    budget("sprint 4x", sum / 120, 5.7);   // F-11: 3.77 after F-10
+                }
+            }
+            setFramebufferScale(saved);
+        }
+        {   // the test city at 4x from its edge (the 2x row's first view)
+            const int saved = g_testScale; setFramebufferScale(4);
+            SpaceRenderer srC; StarNeighborhood nbC; StarSystem sysC; SurfaceView svC; double tC = 0;
+            if (setupSceneForType(PT_DESERT, 15, 40 * DEG, 1.3, 0.0, svC, sysC, nbC, tC, -47)) {
+                svC.palettes[0] = testPalette(); svC.flocks.clear(); svC.critters.clear();
+                const double yaw = svC.player.yaw, cx = svC.player.x + std::sin(yaw) * 1250, cz = svC.player.z + std::cos(yaw) * 1250;
+                placeCity(svC, cx, cz, 0xC17E5EEDULL);
+                formsCamera(svC, 12.0, cx, svC.site.surfaceHeight(cx, cz) + 30, cz, tC);
+                Framebuffer fbC; Input inC;
+                for (int i = 0; i < 5; i++) { svC.update(1.0 / 30, inC, tC, false); svC.render(fbC, tC, nbC.stars, srC, 1.0); fbC.mush(2); }
+                const double t0 = nowSec();
+                for (int i = 0; i < 30; i++) { svC.update(1.0 / 30, inC, tC + i * 0.033, false); svC.render(fbC, tC + i * 0.033, nbC.stars, srC, 1.0); fbC.mush(2); }
+                const double msC = (nowSec() - t0) * 1000 / 30;
+                printf("city 4x      %.2f ms/frame from its edge (the forms %.2f ms; F-01)\n", msC, svC.lastRuinMs);
+                budget("city 4x", msC, 8.3);   // F-11: 5.52 after F-10
+            }
+            setFramebufferScale(saved);
+        }
+        {   // the probe at 4x over the deck (the 2x row's first view)
+            Star ps;
+            if (starInSector(150, 0, 106, ps, true)) {
+                game.settings.renderScale = 4; game.applySettings();
+                game.testParkAt(ps, 5);
+                for (int i = 0; i < 10; i++) stepF();
+                pressF(KEY_C);
+                if (game.testProbeActive()) {
+                    const double endC = game.testProbeEndClock(); double fromHaze = -1, toHaze = -1;
+                    for (double c = 0; c <= endC; c += 0.25) if (game.testProbeStageAt(c) == PS_HAZE) { if (fromHaze < 0) fromHaze = c; toHaze = c; }
+                    game.testProbeSkip(fromHaze + (toHaze - fromHaze) * 0.8);
+                    for (int i = 0; i < 5; i++) stepF();
+                    rowF("probe 4x", 60, stepF, 13);   // F-11: 8.66 after F-10
+                } else printf("probe 4x     no probe launched ('%s')\n", game.testStatus().c_str());
+            }
+        }
+        {   // an arrival at a star never seen, at 4x: its maps generate on their threads while the frames go on
+            Star as; bool found = false;
+            for (int64_t x = HOME_SX + 40; x < HOME_SX + 80 && !found; x++) found = starInSector(x, HOME_SY, HOME_SZ + 7, as);
+            if (found) {
+                game.settings.renderScale = 4; game.applySettings();
+                const SpaceRenderer::MapStats m0 = game.testMapStats();
+                game.testArriveAt(as); game.setState(GameState::SPACE);
+                double first = 0, sum = 0, worst = 0;
+                for (int i = 0; i < 120; i++) { const double t0 = nowSec(); stepF(); const double ms = (nowSec() - t0) * 1000; if (i == 0) first = ms; sum += ms; worst = std::max(worst, ms); }
+                const SpaceRenderer::MapStats& m1 = game.testMapStats();
+                printf("arrival 4x   first frame %.1f ms, %.2f ms/frame over 120, worst %.1f ms; %d maps generated, %d blocking map calls (%.0f ms) (F-01)\n", first, sum / 120, worst,
+                       m1.generated - m0.generated, m1.blocked - m0.blocked, m1.blockedMs - m0.blockedMs);
+                budget("arrival 4x", sum / 120, 6.6);   // F-11: 4.38 after F-10 (the first frame without one: 11.8-20.3 by its maps' threads)
+            }
+        }
+        {   // the guide's save and load at the player's size (every logged event saves it: a sector crossed, a sighting, a mark, a photo, the autosave)
+            Guide G; fillBenchGuide(G);
+            const std::string gp = "shots/tests/bench_guide_big.txt";
+            double save = 1e9, load = 1e9;
+            for (int i = 0; i < 5; i++) { const double t0 = nowSec(); G.save(gp); save = std::min(save, (nowSec() - t0) * 1000); }
+            for (int i = 0; i < 3; i++) { Guide L; const double t0 = nowSec(); L.load(gp); load = std::min(load, (nowSec() - t0) * 1000); }
+            struct stat st; stat(gp.c_str(), &st);
+            printf("guide        a save %.1f ms, a load %.1f ms (the best of five and of three; %lld bytes of the player's composition; F-01)\n", save, load, (long long)st.st_size);
+            budget("guide save", save, 1.5);   // F-11: 0.95 after F-10 (every logged event saves it)
+            budget("guide load", load, 23);    // F-11: 14.85
+            remove(gp.c_str());
+        }
+        game.settings.renderScale = 1; game.applySettings();
+    }
+    budget("space 2x", space2x, 3.1);           // 2.02 after F-10 (F-11: 12 -> 3.1)
+    budget("space 4x", space4x, 9.5);           // F-11: 6.33 after F-10 (a still camera: the backdrop kept)
+    budget("vimana 2x", vimana2x, 2.0);         // G-07: a flight's frame, the band from its keyframes; 1.32 after F-10 (F-11: 12 -> 2)
+    budget("telescope 2x", telescope2x, 13);    // W-06: the deepest magnification, the globe over the whole frame; 8.64 after F-10 (F-11: 16 -> 13)
+    budget("probe 2x", probe2x, 8.9);           // X-02: the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)
+    budget("surface 2x", surface2x, 2.8);       // 1.82 after F-10 (F-11: 16 -> 2.8)
+    budget("surface 4x", surface4x, 4.5);       // F-11: 2.97 after F-10
+    budget("descent first", descentFirst, 26);   // O6-03: the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in. F-03: 40 -> 22 ms (the fill, the textures and the meso tiles on the pool), the budget 80 -> 35; F-11: 16.95 after F-10, 35 -> 26
+    budget("descent people", descentPeople, 62);   // T-01: onto a people's world beside its capital, its plan built at the parking. F-03: 79 -> 45 ms, the budget 80 -> 70; F-11: 41.1 after F-10 (51.7 in one run of four), 70 -> 62
+    budget("capital 2x", capital2x, 5.4);       // T-01: the modern test world's capital from its edge; 3.58 after F-10 (F-11: 16 -> 5.4)
+    budget("sprint worst", runWorst, 10);       // M7-01: the sprint's worst frame shows a cache's stall; 1.7 after F-10, 6.6 in one run of eight by the machine alone (F-11: 40 -> 10)
     return fails;
 }
 
@@ -6449,7 +6813,8 @@ static bool checkChartsByAge(std::string& detail) {
 
 static int testUnit() {
     int fails = 0;
-    auto check = [&](const char* name, bool ok, const std::string& detail = "") { printf("  %-34s %s %s\n", name, ok ? "ok" : "FAIL", detail.c_str()); fflush(stdout); if (!ok) fails++; };   // A-03: flushed, so a slow check shows where it is
+    int checks = 0;   // F-01: the count the reports give
+    auto check = [&](const char* name, bool ok, const std::string& detail = "") { printf("  %-34s %s %s\n", name, ok ? "ok" : "FAIL", detail.c_str()); fflush(stdout); checks++; if (!ok) fails++; };   // A-03: flushed, so a slow check shows where it is
     {   // O6-02: the analytic gradient of gnoise3d matches central differences and its value is gnoise3's
         double worst = 0, worstV = 0; Rng r(0x616);
         for (int i = 0; i < 200; i++) {
@@ -10394,7 +10759,466 @@ static int testUnit() {
         check("probe: what it crosses goes to the log with its depth (X-04)", gs && au && ho && ha && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 1 && counts[4] == 1 && depths && nameKept,
               fmt("storm %d, wall %d, aurora %d, hole %d, hail %d (each once), depths %d; the storm '%s' named: '%s'", counts[0], counts[1], counts[2], counts[3], counts[4], depths, stormKey.c_str(), named.c_str()));
     }
-    printf("unit: %d failures\n", fails);
+    {   // F-01: the frames the regress never hashes, drawn by the workers and by one thread in one run (B-310's contract, A-02's template),
+        // at 4x: the shore through the surface renderer, and through the game the cabin (the light on and off, the hull glass, the roof, the
+        // drones out at the rack and outside the window), the radar camera, the landing map whole and zoomed, the ground, the nose camera and
+        // the sector map. A game's frame is drawn at one instant (`frame(in, 0)`): the workers' twice (a frame that changes by itself says so),
+        // then one thread's. B-423: the forest at 1x, 2x and 4x by the workers, by one thread and by three (fewer threads than its bands)
+        const int saved = g_testScale; setFramebufferScale(4);
+        int frames = 0, same = 0; std::string bad;
+        auto note = [&](const char* what, uint64_t a, uint64_t a2, uint64_t s) {
+            frames++;
+            if (a == a2 && a == s) same++;
+            else bad += fmt("%s%s %s", bad.empty() ? "" : "; ", what, a != a2 ? "not the same twice" : "DIFFERS with one thread");
+        };
+        for (int sc : {1, 2, 4}) {   // B-423: the forest (the `felisian_forest` scene)
+            setFramebufferScale(sc);
+            SpaceRenderer srF; StarNeighborhood nbF; StarSystem sysF; SurfaceView svF; double tF = 0;
+            if (setupSceneForType(PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, svF, sysF, nbF, tF, -4)) {
+                Framebuffer fbF;
+                auto draw = [&]() { svF.render(fbF, tF, nbF.stars, srF, 1.0); fbF.mush(2); return fnv(1469598103934665603ULL, fbF.idx.data(), fbF.idx.size() * sizeof(Pix)); };
+                draw(); const uint64_t a = draw(), a2 = draw();
+                parallelThreadsOverride() = 1; const uint64_t s1 = draw();
+                parallelThreadsOverride() = 3; const uint64_t s3 = draw(); parallelThreadsOverride() = 0;
+                note(fmt("the forest at %dx", sc).c_str(), a, a2, s1);
+                if (s3 != a) { frames++; bad += fmt("%sthe forest at %dx DIFFERS with three threads", bad.empty() ? "" : "; ", sc); } else { frames++; same++; }
+            } else bad += fmt("%sno forest at %dx", bad.empty() ? "" : "; ", sc);
+        }
+        setFramebufferScale(4);
+        {
+            SpaceRenderer srS; StarNeighborhood nbS; StarSystem sysS; SurfaceView svS; double tS = 0;
+            if (setupSceneForType(PT_FELISIAN, 12, 30 * DEG, 0.0, 0.0, svS, sysS, nbS, tS, MAT_SAND)) {   // the felisian_shore scene
+                Framebuffer fbS;
+                auto draw = [&]() { svS.render(fbS, tS, nbS.stars, srS, 1.0); fbS.mush(2); return fnv(1469598103934665603ULL, fbS.idx.data(), fbS.idx.size() * sizeof(Pix)); };
+                draw(); const uint64_t a = draw(), a2 = draw();
+                parallelThreadsOverride() = 1; const uint64_t s = draw(); parallelThreadsOverride() = 0;
+                note("the shore", a, a2, s);
+            }
+        }
+        {
+            Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_bothways.txt";
+            remove(game.guidePath.c_str());
+            game.newGame(); game.setState(GameState::SPACE);
+            game.settings.renderScale = 4; game.applySettings();
+            Input gi;
+            auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+            auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+            auto out = [&]() { return fnv(1469598103934665603ULL, game.output(), (size_t)FBW * FBH * sizeof(uint32_t)); };
+            auto both = [&](const char* what) {
+                game.frame(gi, 0); const uint64_t a = out();
+                game.frame(gi, 0); const uint64_t a2 = out();
+                parallelThreadsOverride() = 1; game.frame(gi, 0); const uint64_t s = out(); parallelThreadsOverride() = 0;
+                note(what, a, a2, s);
+            };
+            const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
+            Star st; StarSystem wsys;
+            if (starInSector(W.sx, 0, W.sz, st, true)) {
+                wsys.generate(st);
+                run(0.2); game.testParkAt(st, W.body); run(0.5);
+                both("the landing map");
+                if (game.testLandableBody() >= 0) { press(KEY_Z); for (int i = 0; i < 90 && !game.testDrainageReady(); i++) run(0.1); run(0.3); both("the landing map's zoom"); press(KEY_Z); }
+                game.setState(GameState::SPACE); run(0.3);
+                const int lights = game.testCabinLights();
+                if (!(lights & 1)) press(KEY_U);   // the light on, the hull polarised
+                if (lights & 2) press(KEY_Y);
+                run(1.5); both("the cabin, the light on");
+                press(KEY_U); run(1.5); both("the cabin, the light off");
+                press(KEY_Y); run(1.5); both("the cabin, the hull glass, the light off");
+                press(KEY_U); run(1.5); both("the cabin, the hull glass, the light on");
+                press(KEY_Y); run(0.5);
+                press(KEY_PAGE_UP); run(0.5); both("the roof"); press(KEY_PAGE_DOWN); run(0.3);
+                press(KEY_B); run(0.5); both("the radar camera"); press(KEY_B); run(0.2);
+                game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);   // the drones' rack (C-18's harness)
+                press(KEY_E); run(0.1);
+                if (game.state == GameState::DRONES) {
+                    game.testDronesSettle(); run(0.2);
+                    press(KEY_ENTER); game.testDronesSettle();
+                    game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(1.1);
+                    both("the rack, the drones out");
+                    game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05); game.testDronesSkip(4.0); run(0.05);
+                    both("the drones outside the window");
+                } else bad += fmt("%sthe drone bay not opened (state %d)", bad.empty() ? "" : "; ", (int)game.state);
+            }
+            {   // the ground of the home world: the landing (C, Enter), the explorer, the nose camera, the sector map
+                Star hs;
+                if (starInSector(HOME_SX, HOME_SY, HOME_SZ, hs, true)) {
+                    StarSystem hsys; hsys.generate(hs);
+                    int hb = -1; for (const Body& b : hsys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0 && b.type != PT_COMET) { hb = b.index; break; }
+                    game.testParkAt(hs, hb); run(0.3);
+                    for (int i = 0; i < 90 && !game.testDrainageReady(); i++) run(0.1);
+                    press(KEY_ENTER); run(9.0);
+                    if (game.state == GameState::SURFACE) {
+                        both("the ground");
+                        if (game.testDriveSetup()) { run(0.5); both("the nose camera"); }
+                        press(KEY_N); run(0.3); both("the sector map"); press(KEY_ESCAPE); run(0.1);
+                    } else bad += fmt("%snot on the ground (state %d)", bad.empty() ? "" : "; ", (int)game.state);
+                }
+            }
+        }
+        setFramebufferScale(saved);
+        check("threads: the frames the regress skips (F-01, B-423)", frames >= 20 && same == frames, fmt("%d frames (the forest at 1x, 2x and 4x also with three threads; the rest at 4x) the same with %d threads and with one: %d%s%s", frames, parallelThreads(), same, bad.empty() ? "" : "; ", bad.c_str()));
+    }
+    {   // F-06: the picture is the thread count's no more: six scenes at 4x (the forest's flora and terrain, the shore's water and reflections,
+        // a town's forms, the aurora's grid, the protostar's strip, the black hole's lens) drawn with one thread and with two, four, six and
+        // eight, the rows dealt to whichever thread is free
+        const int saved = g_testScale; setFramebufferScale(4);
+        int scenes = 0, same = 0; std::string bad;
+        for (const char* name : {"felisian_forest", "felisian_shore", "civilisation_modern", "thinatmo_aurora", "protostar_night", "black_hole_sky"}) {
+            for (const CmpScene& sc : CMP_SCENES) {
+                if (std::string(name) != sc.name) continue;
+                SpaceRenderer srT; StarNeighborhood nbT; StarSystem sysT; SurfaceView svT; double tT = 0;
+                if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, svT, sysT, nbT, tT, sc.wantMat)) { bad += fmt("%s%s: no body", bad.empty() ? "" : "; ", name); break; }
+                Framebuffer fbT;
+                auto draw = [&](int threads) { parallelThreadsOverride() = threads; svT.render(fbT, tT, nbT.stars, srT, 1.0); fbT.mush(2); parallelThreadsOverride() = 0; return fnv(1469598103934665603ULL, fbT.idx.data(), fbT.idx.size() * sizeof(Pix)); };
+                draw(8);
+                const uint64_t one = draw(1);
+                std::string off;
+                for (int threads : {2, 4, 6, 8}) if (draw(threads) != one) off += fmt("%s%d", off.empty() ? "" : ", ", threads);
+                scenes++;
+                if (off.empty()) same++; else bad += fmt("%s%s DIFFERS with %s threads", bad.empty() ? "" : "; ", name, off.c_str());
+                break;
+            }
+        }
+        setFramebufferScale(saved);
+        const long contended = pool::contended();   // a dispatch from a thread beside the main one's (it runs alone: none wanted)
+        check("threads: the picture whatever the count (F-06)", scenes == 6 && same == scenes && contended == 0, fmt("%d scenes at 4x the same with one thread and with two, four, six and eight: %d%s%s; %ld dispatches from another thread in this run", scenes, same, bad.empty() ? "" : "; ", bad.c_str(), contended));
+    }
+    {   // F-02: the probes' lines in the guide made once: a guide saved, loaded and saved again is the same file byte for byte (the second
+        // save writes the load's lines), so is a third, and a friend's import carries the lines of the file it read
+        Guide G; fillBenchGuide(G);
+        const std::string a = "shots/tests/f02_guide_a.txt", b = "shots/tests/f02_guide_b.txt", c = "shots/tests/f02_guide_c.txt";
+        G.save(a);
+        Guide L; const bool loaded = L.load(a); L.save(b);
+        Guide L2; L2.load(b); L2.save(c);
+        auto bytes = [](const std::string& path) { std::ifstream f(path, std::ios::binary); return std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>()); };
+        const std::string A = bytes(a), B = bytes(b), C = bytes(c);
+        bool cached = !L.probes.empty();
+        for (const ProbeRecord& r : L.probes) cached = cached && !r.lines.empty() && r.lines == probeLines(r);
+        Guide F; int lentN = 0, probesN = 0; F.importInbox(a, &lentN, &probesN);
+        bool imported = probesN == (int)G.probes.size();
+        for (const ProbeRecord& r : F.probes) imported = imported && r.lent && r.lines == probeLines(r);
+        double saveMs = 1e9; for (int i = 0; i < 5; i++) { const double t0 = nowSec(); L.save(b); saveMs = std::min(saveMs, (nowSec() - t0) * 1000); }
+        check("guide: the probes' lines made once (F-02)", loaded && A.size() > 600000 && A == B && B == C && cached && imported,
+              fmt("%zu bytes: saved, loaded and saved again %s, once more %s; the loaded lines the records' %s; an import's %s; a save %.1f ms", A.size(), A == B ? "the same" : "DIFFERENT",
+                  B == C ? "the same" : "DIFFERENT", cached ? "yes" : "NO", imported ? "carried" : "NOT CARRIED", saveMs));
+        remove(a.c_str()); remove(b.c_str()); remove(c.c_str());
+    }
+    {   // F-02: the PNG writer's thread writes the call's bytes; a picture of noise (every byte in every place, 47 stored blocks at 4x's size)
+        // read back as drawn; the IEND chunk's CRC the one every PNG has (0xAE426082); a run of six behind a full queue keeps its order
+        bool ok = true; std::string det;
+        const int sizes[3][2] = {{1280, 800}, {320, 200}, {7, 3}};
+        for (const auto& wh : sizes) {
+            const int w = wh[0], h = wh[1];
+            std::vector<uint32_t> px((size_t)w * h);
+            for (size_t i = 0; i < px.size(); i++) px[i] = 0xFF000000u | (uint32_t)(mix64(i * 7919 + w) & 0xFFFFFF);
+            const std::string sp = fmt("shots/tests/f02_png_%dx%d_call.png", w, h), ap = fmt("shots/tests/f02_png_%dx%d_thread.png", w, h);
+            writePNG(sp.c_str(), px.data(), w, h);
+            writePNGAsync(ap.c_str(), px.data(), w, h);
+            pngFlush();
+            std::ifstream fs(sp, std::ios::binary), fa(ap, std::ios::binary);
+            const std::string S((std::istreambuf_iterator<char>(fs)), std::istreambuf_iterator<char>()), Aa((std::istreambuf_iterator<char>(fa)), std::istreambuf_iterator<char>());
+            std::vector<uint32_t> back; int bw = 0, bh = 0; const bool read = readPNG(ap.c_str(), back, bw, bh);
+            const bool iend = S.size() > 12 && S.compare(S.size() - 8, 4, "IEND") == 0 && (uint8_t)S[S.size() - 4] == 0xAE && (uint8_t)S[S.size() - 3] == 0x42 && (uint8_t)S[S.size() - 2] == 0x60 && (uint8_t)S[S.size() - 1] == 0x82;
+            const bool same = S == Aa && read && bw == w && bh == h && back == px && iend;
+            ok = ok && same;
+            det += fmt("%s%dx%d %zu bytes %s", det.empty() ? "" : ", ", w, h, S.size(), same ? "the same" : (S != Aa ? "THE THREAD'S DIFFER" : (!iend ? "IEND'S CRC WRONG" : "NOT READ BACK")));
+            remove(sp.c_str()); remove(ap.c_str());
+        }
+        {   // six pictures queued behind each other: each file the picture asked for under its name
+            std::vector<uint32_t> px(320 * 200);
+            for (int k = 0; k < 6; k++) { for (size_t i = 0; i < px.size(); i++) px[i] = 0xFF000000u | (uint32_t)((k * 40) << 8 | (i & 255)); writePNGAsync(fmt("shots/tests/f02_png_run_%d.png", k).c_str(), px.data(), 320, 200); }
+            bool order = true;
+            for (int k = 0; k < 6; k++) {
+                std::vector<uint32_t> back; int bw = 0, bh = 0;
+                order = order && readPNG(fmt("shots/tests/f02_png_run_%d.png", k).c_str(), back, bw, bh) && bw == 320 && ((back[5] >> 8) & 255) == (uint32_t)(k * 40);
+                remove(fmt("shots/tests/f02_png_run_%d.png", k).c_str());
+            }
+            ok = ok && order; det += order ? ", a run of six in order" : ", A RUN OF SIX OUT OF ORDER";
+        }
+        check("png: the writer's thread writes the call's bytes (F-02)", ok, det);
+    }
+    {   // F-02: the star neighbourhood kept across moves: the stars of the sectors the new cube shares with the last taken from it, in the order a
+        // fresh walk finds them; fifty steps of a flight coreward (a fraction of a sector to a few, up and down), a jump far off and back
+        StarNeighborhood inc; int steps = 0, same = 0; size_t most = 0; double incMs = 0, freshMs = 0;
+        const Vec3 home((HOME_SX + 0.5) * SECTOR_KM, 0.5 * SECTOR_KM, (HOME_SZ + 0.5) * SECTOR_KM);
+        const Vec3 core = normalize(Vec3(GALAXY_CENTRE_SX - HOME_SX, 0.07 * (GALAXY_CENTRE_SX - HOME_SX), GALAXY_CENTRE_SZ - HOME_SZ));
+        auto sameStar = [](const Star& x, const Star& y) {
+            return x.sx == y.sx && x.sy == y.sy && x.sz == y.sz && x.seed == y.seed && x.cls == y.cls && x.pos.x == y.pos.x && x.pos.y == y.pos.y && x.pos.z == y.pos.z &&
+                   x.radiusKm == y.radiusKm && x.luminosity == y.luminosity && x.massFactor == y.massFactor && x.color.r == y.color.r && x.color.g == y.color.g && x.color.b == y.color.b &&
+                   x.name == y.name && x.pulseHz == y.pulseHz && x.valid == y.valid;
+        };
+        auto at = [&](const Vec3& q) {
+            double t0 = nowSec(); inc.update(q); incMs += (nowSec() - t0) * 1000;
+            StarNeighborhood fresh; t0 = nowSec(); fresh.update(q); freshMs += (nowSec() - t0) * 1000;
+            bool eq = inc.stars.size() == fresh.stars.size() && inc.cx == fresh.cx && inc.cy == fresh.cy && inc.cz == fresh.cz;
+            for (size_t i = 0; eq && i < fresh.stars.size(); i++) eq = sameStar(inc.stars[i], fresh.stars[i]);
+            steps++; same += eq; most = std::max(most, fresh.stars.size());
+        };
+        double along = 0;
+        for (int k = 0; k < 50; k++) { along += (0.3 + (k % 7) * 0.55) * SECTOR_KM; at(home + core * along + Vec3(0, (k % 5 - 2) * 0.8 * SECTOR_KM, 0)); }
+        at(home + Vec3(4000 * SECTOR_KM, 0, -3000 * SECTOR_KM));
+        at(home + Vec3(4000 * SECTOR_KM + 2.6 * SECTOR_KM, -1.3 * SECTOR_KM, -3000 * SECTOR_KM + 0.4 * SECTOR_KM));
+        at(home);
+        check("stars: the neighbourhood kept across moves (F-02)", steps == 53 && same == steps && most > 50,
+              fmt("%d of %d positions the fresh walk's stars in its order (up to %zu stars); %.2f ms kept against %.2f fresh", same, steps, most, incMs, freshMs));
+    }
+    {   // F-02: the landing map and the drone bay open at once on a world not yet mapped (the landing map READING THE WORLD, the bay THE MAP
+        // IS BEING DRAWN; a world not mapped held them 150-200 ms a map before), the map drawn once its thread has made it; Enter still lands
+        Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_f02.txt";
+        remove(game.guidePath.c_str());
+        game.newGame(); game.setState(GameState::SPACE);
+        Input gi;
+        auto frame = [&]() { game.frame(gi, 1.0 / 30); gi.newFrame(); };
+        Star st; bool found = false; int bi = -1;
+        for (int64_t x = HOME_SX + 40; x < HOME_SX + 80 && !found; x++) {
+            if (!starInSector(x, HOME_SY, HOME_SZ + 7, st)) continue;
+            StarSystem ss; ss.generate(st);
+            for (const Body& b : ss.bodies) if (PLANET_TYPES[b.type].landable && b.type != PT_COMET && b.parent < 0) { bi = b.index; found = true; break; }
+        }
+        bool opened = false, reading = false, drawn = false, landed = false, bay = false, bayLater = false; int blocked = -1; double openMs = 0;
+        if (found) {
+            const int b0 = game.testMapStats().blocked;
+            const double t0 = nowSec();
+            game.testParkAt(st, bi, false); frame();
+            openMs = (nowSec() - t0) * 1000;
+            opened = game.state == GameState::LANDING_MAP;
+            const uint64_t h0 = fnv(1469598103934665603ULL, game.output(), (size_t)FBW * FBH * sizeof(uint32_t));
+            reading = opened && !game.testMapReadyNow();
+            game.testWaitMap(); frame();
+            drawn = game.testMapReadyNow() && fnv(1469598103934665603ULL, game.output(), (size_t)FBW * FBH * sizeof(uint32_t)) != h0;
+            blocked = game.testMapStats().blocked - b0;
+            Star st2; bool found2 = false; int bi2 = -1;   // the bay: another world never seen, the ship parked there, the bay opened
+            for (int64_t x = HOME_SX + 81; x < HOME_SX + 140 && !found2; x++) {
+                if (!starInSector(x, HOME_SY, HOME_SZ + 7, st2)) continue;
+                StarSystem ss; ss.generate(st2);
+                for (const Body& b : ss.bodies) if (PLANET_TYPES[b.type].landable && b.type != PT_COMET && b.parent < 0) { bi2 = b.index; found2 = true; break; }
+            }
+            if (found2) {
+                game.testParkAt(st2, bi2, false); game.setState(GameState::SPACE);
+                game.testOpenDroneBay(); frame();
+                bay = game.state == GameState::DRONES && !game.testDroneBayMapped();
+                for (int i = 0; i < 300 && !game.testDroneBayMapped(); i++) { std::this_thread::sleep_for(std::chrono::milliseconds(5)); frame(); }
+                bayLater = game.testDroneBayMapped() && game.testMapStats().blocked - b0 == 0;
+                gi.pressed[KEY_ESCAPE] = true; frame();
+            }
+            game.testParkAt(st, bi, false); frame();   // Enter while the world is read (the map is held: Enter at once on a fresh opening)
+            gi.pressed[KEY_ENTER] = true; gi.down[KEY_ENTER] = true; frame(); gi.down[KEY_ENTER] = false;
+            landed = game.state == GameState::DESCENT;
+        }
+        check("landing map and bay: no wait for the world's map (F-02)", found && opened && reading && drawn && blocked == 0 && bay && bayLater && landed,
+              fmt("the opening %.0f ms, %s, then the map %s; %d blocking map calls; the bay %s, its map %s; Enter %s", openMs, reading ? "READING THE WORLD" : "NOT READING", drawn ? "drawn" : "NOT DRAWN",
+                  blocked, bay ? "open with its map being drawn" : "NOT OPEN AS EXPECTED", bayLater ? "drawn later" : "NOT DRAWN", landed ? "lands" : "DOES NOT LAND"));
+        remove(game.guidePath.c_str());
+    }
+    {   // F-03: a fresh site's first frame (every cell of its rings a miss: the warm's fill on the pool) drawn by the workers and by one
+        // thread: the same picture and the same five caches, every field of every vertex. The home world's default site from the descent's
+        // height and standing, the modern test world beside its capital standing (its roads, streets and works in the samples) and a comet
+        // standing; each one's rings fit their tori (2r + 3 cells a side within 1 << logN, F-04: 2r + 5, so the fill's cells have distinct slots)
+        const int saved = g_testScale; setFramebufferScale(2);
+        auto cachesHash = [](const SurfaceSite& st) {
+            uint64_t h = 1469598103934665603ULL;
+            for (const TerrainCache* c : {&st.lodN, &st.lod0, &st.lod1, &st.lod2, &st.lod3})
+                for (const TerrainVertex& tv : c->v) {
+                    const float f[5] = {tv.h, tv.albedo, tv.veg, tv.water, tv.shore};
+                    const int32_t i[2] = {tv.cx, tv.cz};
+                    const uint8_t b[5] = {tv.material, tv.glow, tv.biome, tv.scree, tv.road};
+                    h = fnv(h, f, sizeof f); h = fnv(h, i, sizeof i); h = fnv(h, b, sizeof b);
+                }
+            return h;
+        };
+        int sites = 0, same = 0, fit = 0, misses = 0; std::string bad, seen;
+        auto both = [&](const char* what, const StarSystem& sys, int body, double lat, double lon, double t, double alt) {
+            uint64_t fh[2] = {0, 0}, ch[2] = {0, 0}; int m = 0;
+            for (int pass = 0; pass < 2; pass++) {
+                parallelThreadsOverride() = pass;   // 0: the pool's threads; 1: one
+                SurfaceView sv; sv.init(&sys, body, lat, lon, t);
+                if (alt > 0) { sv.cameraOverrideAlt = alt; sv.cameraOverridePitch = -60 * DEG; }   // the descent's first frame: Enter, init, render
+                StarNeighborhood nb; nb.update(sv.site.worldPos(t, 0, 0, 0)); SpaceRenderer sr; Framebuffer fb;
+                sv.render(fb, t, nb.stars, sr, 1.0); fb.mush(2);
+                fh[pass] = fnv(1469598103934665603ULL, fb.idx.data(), fb.idx.size() * sizeof(Pix)); ch[pass] = cachesHash(sv.site);
+                if (pass == 0) {
+                    m = sv.lastWarmMisses;
+                    int r[5]; sv.testRings(r);
+                    const TerrainCache* cs[5] = {&sv.site.lod0, &sv.site.lod1, &sv.site.lod2, &sv.site.lod3, &sv.site.lodN};
+                    bool ok = true;
+                    for (int k = 0; k < 5; k++) if (r[k] > 0 && 2 * r[k] + 5 > (1 << cs[k]->logN)) ok = false;   // F-04: 2r + 5 (the disc's reach on a lava world)
+                    if (ok) fit++; else bad += fmt("%s%s: a ring's disc wider than its torus", bad.empty() ? "" : "; ", what);
+                }
+            }
+            parallelThreadsOverride() = 0;
+            sites++; misses += m;
+            seen += fmt("%s%s %d", seen.empty() ? "" : ", ", what, m);
+            if (fh[0] == fh[1] && ch[0] == ch[1]) same++;
+            else bad += fmt("%s%s: %s", bad.empty() ? "" : "; ", what, fh[0] != fh[1] ? "the frame DIFFERS with one thread" : "the caches DIFFER with one thread");
+        };
+        Star hs;
+        if (starInSector(HOME_SX, HOME_SY, HOME_SZ, hs, true)) {
+            StarSystem hsys; hsys.generate(hs);
+            int hb = -1; for (const Body& b : hsys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0 && b.type != PT_COMET) { hb = b.index; break; }
+            if (hb >= 0) { both("home, descending", hsys, hb, 15.13 * DEG, -8.01 * DEG, 1000.0, 1800); both("home, standing", hsys, hb, 15.13 * DEG, -8.01 * DEG, 1000.0, -1); }
+        }
+        {
+            const AgeWorld& mw = AGE_WORLDS[AGE_MODERN]; Star ms;
+            if (starInSector(mw.sx, 0, mw.sz, ms, true)) {
+                StarSystem msys; msys.generate(ms);
+                const BodyGen mg = BodyGen::make(msys.bodies[mw.body]);
+                std::shared_ptr<const WorldPlan> P = worldPlanOf(mg);
+                const PlanPlace& cap = P->plans[std::min(mw.which, P->peoples - 1)].places[0];
+                both("the modern capital", msys, mw.body, cap.lat + (cap.radiusM + 400) / (mg.R * 1000.0), cap.lon, 1000.0, -1);
+            }
+        }
+        {
+            bool done = false;
+            for (int64_t x = 150; x < 340 && !done; x++)
+                for (int64_t z = 20; z < 160 && !done; z++) {
+                    Star cs; if (!starInSector(x, 0, z, cs)) continue;
+                    StarSystem csys; csys.generate(cs);
+                    for (const Body& b : csys.bodies) if (b.type == PT_COMET) { both("a comet", csys, b.index, 20 * DEG, 30 * DEG, 1000.0, -1); done = true; break; }
+                }
+        }
+        setFramebufferScale(saved);
+        check("warm: a fresh site's rings filled on the pool (F-03)", sites == 4 && same == sites && fit == sites && misses > 4 * 4 * SurfaceView::FILL_SERIAL_MAX,
+              fmt("%d first frames the same with %d threads and with one, frame and caches: %d; the rings within their tori: %d; cells sampled (%s)%s%s", sites, parallelThreads(), same, fit, seen.c_str(), bad.empty() ? "" : "; ", bad.c_str()));
+    }
+    {   // F-03: the routing's descent sinking a pit of two cells a binade at a time (`drainageSink`) is the float loop it stands for, bit for
+        // bit: powers of two and their neighbours either side, zero, the binade where the step rounds by parity, and random starts and counts
+        Rng rng(0xF03ULL);
+        int cases = 0, differ = 0; long steps = 0; std::string first;
+        auto one = [&](float v, long m) {
+            float a = v; for (long i = 0; i < m; i++) a = a - 0.005f;
+            const float b = drainageSink(v, m);
+            cases++; steps += m;
+            if (std::memcmp(&a, &b, 4) != 0) { if (first.empty()) first = fmt("; %.9g after %ld: the loop %.9g, the sink %.9g", v, m, a, b); differ++; }
+        };
+        for (int e = -8; e <= 15; e++)
+            for (int sg = -1; sg <= 1; sg += 2)
+                for (int d = -2; d <= 2; d++) {
+                    float v = sg * std::ldexp(1.0f, e);
+                    for (int k = 0; k < std::abs(d); k++) v = std::nextafter(v, d < 0 ? -1e9f : 1e9f);
+                    for (long m : {0L, 1L, 2L, 3L, 40L, 3000L, 60000L}) one(v, m);
+                }
+        for (float v : {0.0f, -0.0f, 0.005f, 0.02f, -0.02f, 0.999f, 1.0f, -1.0f}) for (long m : {1L, 2L, 5L, 450L, 9000L}) one(v, m);
+        for (int i = 0; i < 2000; i++) {
+            const float v = i % 4 == 3 ? (float)((i & 4 ? -1 : 1) * std::pow(10.0, rng.range(-6, 4))) : (float)rng.range(-3000, 30000);
+            one(v, rng.irange(60000));
+        }
+        check("drainage: the two-cell pit sunk a binade at a time (F-03)", differ == 0 && cases > 2000,
+              fmt("%d cases, %ld steps of the loop, %d differ%s", cases, steps, differ, first.c_str()));
+    }
+    {   // F-04: the terrain's cells binned once a frame by the rows their pieces reach: the frame the same with the pool's threads and with
+        // one, three and five (other band edges: a cell missing from a band its pieces reach would leave a hole there), and no corner the
+        // bin found unwarmed; scenes with a sea and its shore cuts, a lake, a comet's curved disc and the nose camera, at 1x, 2x and 4x
+        const int saved = g_testScale;
+        int frames = 0, same = 0, stale = 0, cells = 0, every = 0; std::string bad;
+        for (const char* name : {"felisian_shore", "felisian_lake", "comet_day", "buggy_seat"})
+            for (const CmpScene& sc : CMP_SCENES) {
+                if (std::string(sc.name) != name) continue;
+                for (int scale : {1, 2, 4}) {
+                    setFramebufferScale(scale);
+                    SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
+                    if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { bad += fmt("%sno %s", bad.empty() ? "" : "; ", name); continue; }
+                    Framebuffer fb;
+                    auto draw = [&]() { sv.render(fb, t, nb.stars, sr, 1.0); stale += sv.lastStaleCorners; return fnv(1469598103934665603ULL, fb.idx.data(), fb.idx.size() * sizeof(Pix)); };
+                    const uint64_t a = draw();
+                    cells += sv.lastTerrainCells; every += sv.lastTerrainAllRows;
+                    for (int threads : {1, 3, 5}) {
+                        parallelThreadsOverride() = threads; const uint64_t b = draw(); parallelThreadsOverride() = 0;
+                        frames++;
+                        if (b == a) same++; else bad += fmt("%s%s at %dx DIFFERS with %d threads", bad.empty() ? "" : "; ", name, scale, threads);
+                    }
+                }
+            }
+        setFramebufferScale(saved);
+        check("terrain: the cells binned by their rows (F-04)", frames == 36 && same == frames && stale == 0 && cells > 0,
+              fmt("%d frames the same with %d threads and with one, three and five: %d; %d cells binned (%d in every band), %d corners unwarmed%s%s", frames, parallelThreads(), same, cells, every, stale, bad.empty() ? "" : "; ", bad.c_str()));
+    }
+    {   // F-05: the camera feeds' noise by rows: the state at every row's start from the row's jump (a 32x32 bit matrix) is the state the
+        // serial walk reaches there, a row of FBW steps at a time, at every scale's width, for seeds of both feeds and the extremes
+        int rows = 0, same = 0; std::string bad;
+        for (int sc = 1; sc <= 4; sc++) {
+            const int w = UW * sc, h = UH * sc;
+            for (uint32_t seed : {0x9E37u, 0x51A7u, 123u * 2654435761u + 0x9E37u, 0xFFFFFFFFu, 1u}) {
+                std::vector<uint32_t> starts;
+                xorshiftRowStarts(seed, w, h, starts);
+                uint32_t rs = seed;
+                for (int y = 0; y < h; y++) {
+                    rows++;
+                    if (starts[y] == rs) same++;
+                    else if (bad.empty()) bad = fmt("width %d, seed %08x: row %d starts at %08x, the walk at %08x", w, seed, y, starts[y], rs);
+                    for (int x = 0; x < w; x++) rs = xorshift32(rs);
+                }
+            }
+        }
+        check("feeds: the noise's rows from the jump (F-05)", rows > 0 && same == rows, fmt("%d rows at four widths and five seeds, %d start as the serial walk%s%s", rows, same, bad.empty() ? "" : ": ", bad.c_str()));
+    }
+    {   // F-07: wrap2pi's turns without fmod give fmod's bits: a sweep over three turns either way, the values next to every turn's edge
+        // and the specials, against the formula it had
+        auto old = [](double a) { a = std::fmod(a, TAU); if (a < 0) a += TAU; return a; };
+        std::vector<double> xs = {0.0, -0.0, TAU, -TAU, 2 * TAU, -2 * TAU, 3 * TAU, PI, -PI, 1e-300, -1e-300, 4.9e-324, -4.9e-324, 1e300, -1e300,
+                                  std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()};
+        for (int k = -4; k <= 4; k++) {
+            double e = k * TAU;
+            for (int s = 0; s < 64; s++) { xs.push_back(e); xs.push_back(-e); e = std::nextafter(e, 1e300); }
+            e = k * TAU;
+            for (int s = 0; s < 64; s++) { e = std::nextafter(e, -1e300); xs.push_back(e); }
+        }
+        Rng rng(0xF07);
+        for (int i = 0; i < 2000000; i++) xs.push_back(rng.range(-3 * TAU, 3 * TAU));
+        for (int i = 0; i < 200000; i++) xs.push_back(rng.range(-1e4, 1e4));
+        size_t same = 0; std::string bad;
+        for (double a : xs) {
+            const double n = wrap2pi(a), o = old(a);
+            if (memcmp(&n, &o, sizeof n) == 0) same++;
+            else if (bad.empty()) bad = fmt(": %.17g gives %.17g, fmod %.17g", a, n, o);
+        }
+        check("wrap2pi: a turn either side without fmod, the bits it had (F-07)", same == xs.size(), fmt("%zu values, %zu the same%s", xs.size(), same, bad.c_str()));
+    }
+    {   // F-07: the floors to an integer against std::floor: the truncation's form (baseline x86-64's) and the one this build uses, over the
+        // integers and their neighbours to 2^40 either way, the halves, -0.0, and two million values at the scales the noise and maps see
+        std::vector<double> xs = {0.0, -0.0, 0.5, -0.5, 1e-300, -1e-300, 4.9e-324, -4.9e-324, 2147483647.0, -2147483648.0, 9.0e15, -9.0e15};
+        for (double e = 1; e < 1.1e12; e *= 2)
+            for (double b : {e, -e, e + 0.5, -e - 0.5}) { xs.push_back(b); xs.push_back(std::nextafter(b, 1e300)); xs.push_back(std::nextafter(b, -1e300)); }
+        Rng rng(0xF10);
+        for (int i = 0; i < 1000000; i++) xs.push_back(rng.range(-600, 600));
+        for (int i = 0; i < 1000000; i++) xs.push_back(rng.range(-1e9, 1e9));
+        size_t same = 0; std::string bad;
+        for (double v : xs) {
+            const int64_t f = (int64_t)std::floor(v);
+            const bool ok = ifloorTrunc(v) == f && ifloor64(v) == f && (std::fabs(v) >= 2e9 || ifloor(v) == (int)f);
+            if (ok) same++; else if (bad.empty()) bad = fmt(": %.17g gives %lld / %lld, floor %lld", v, (long long)ifloorTrunc(v), (long long)ifloor64(v), (long long)f);
+        }
+        check("ifloor: the truncation's floor and this build's, std::floor's integer (F-07)", same == xs.size(), fmt("%zu values, %zu the same%s", xs.size(), same, bad.c_str()));
+    }
+    {   // F-07: the mush's quotient as a multiply and a shift (`(sum x m) >> 32`, m = 2^32 / d + 1, d = rows x k): every sum of a box of
+        // intensities (to 2047 d) for the kernels to 8, and for every kernel to 38 the sums either side of each multiple of d (where a
+        // short reciprocal would first be wrong)
+        long tested = 0, wrong = 0; std::string bad;
+        auto test = [&](uint32_t sum, uint32_t d) {
+            const uint64_t m = ((uint64_t)1 << 32) / d + 1;
+            tested++;
+            if ((uint32_t)((sum * m) >> 32) != sum / d) { wrong++; if (bad.empty()) bad = fmt(": %u / %u", sum, d); }
+        };
+        for (uint32_t k = 1; k <= 38; k++)
+            for (uint32_t rows = 1; rows <= k; rows++) {
+                const uint32_t d = rows * k;
+                if (k <= 8) for (uint32_t s = 0; s <= 2047 * d; s++) test(s, d);
+                else for (uint32_t q = 0; q <= 2047; q++) { test(q * d, d); if (q) test(q * d - 1, d); }
+            }
+        check("mush: the box's quotient by a multiply and a shift (F-07)", wrong == 0, fmt("%ld quotients, %ld wrong%s", tested, wrong, bad.c_str()));
+    }
+    {   // F-01: the pool's dispatch, printed and not checked (it decides F-06's spin): an empty parallelFor over eight bands after a rest of
+        // 2 ms (the workers parked, as at a frame's first pass) and fifteen back to back (a surface frame dispatches about fifteen)
+        auto empty = [](int, int) {};
+        for (int i = 0; i < 200; i++) parallelFor(8, 1, empty);
+        double rested = 0, burst = 0; const int R = 200;
+        for (int r = 0; r < R; r++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            double t0 = nowSec(); parallelFor(8, 1, empty); rested += nowSec() - t0;
+            t0 = nowSec(); for (int k = 0; k < 15; k++) parallelFor(8, 1, empty); burst += nowSec() - t0;
+        }
+        printf("  pool (F-01, printed): %d threads; an empty dispatch over eight bands after a rest %.1f us, fifteen back to back %.1f us each (%.0f us the fifteen)\n", parallelThreads(), rested / R * 1e6, burst / R / 15 * 1e6, burst / R * 1e6);
+    }
+    printf("unit: %d checks, %d failures\n", checks, fails);
     return fails;
 }
 
@@ -14459,7 +15283,11 @@ static void playerChecks(const std::function<void(const char*, bool, const std::
     check("the player: lists the pieces, the recordings and what the radar caught (C-11)", n == 3 && pi >= 0 && ri >= 0 && hi >= 0 && game.testShardsTop() == 1,
           fmt("%d items on the page%s; %s", n, game.testShardsTop() == 1 ? "" : " (NOT the player's page)", n > 0 ? game.testPlayerItemLine(0).c_str() : "-"));
     for (int k = 0; k < pi; k++) press(KEY_DOWN);
-    press(KEY_ENTER); run(0.3);
+    press(KEY_ENTER);
+    // KI-410 (F-07): the world's records are written on a thread the first time: the wait held at one instant (frames at dt 0), so a
+    // loaded machine's late thread is not read as a piece that did not play
+    for (const double tw = nowSec(); game.testPlayerWaiting() && nowSec() - tw < 20;) { std::this_thread::sleep_for(std::chrono::milliseconds(2)); game.frame(gi, 0); gi.newFrame(); }
+    run(0.3);
     const bool playing0 = game.testPlayerPlaying() == pi && game.testPlayerOwnsPiece();
     press(KEY_TAB); press(KEY_ESCAPE); run(0.2);
     const bool afterClose = game.state == GameState::SPACE && game.testPlayerOwnsPiece();
@@ -17424,8 +18252,9 @@ static int runRoads(int argc, char** argv) {
 // 4), with the steps timed (the park, the cursor, Z, half a second of frames, Z and Esc): `shots/tests/zoom_<name>.png`; the roads drawn
 // and their cost printed. `zoom 151 25 1 12 4.22` is Aieliaalas II's land region, `zoom 153 70 2 11.46 40.11` Leileashphail III's
 static int runZoom(int argc, char** argv) {
-    if (argc < 7) { printf("zoom <sx> <sz> <body index> <latDeg> <lonDeg> [scale]\n"); return 1; }
+    if (argc < 7) { printf("zoom <sx> <sz> <body index> <latDeg|site|capital> <lonDeg> [scale]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
+    const std::string at = argv[5];   // F-01: `site` keeps the landing map's own cursor, `capital` the first people's capital's core
     double latDeg = atof(argv[5]), lonDeg = atof(argv[6]); int scale = argc > 7 ? atoi(argv[7]) : 4;
     Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
@@ -17437,8 +18266,17 @@ static int runZoom(int argc, char** argv) {
     auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
     auto tick = [&](const char* what) { printf("  %-28s %7.2f s\n", what, nowSec() - t0); };
     game.testParkAt(s, bi); run(0.3); tick("parked, the landing map");
-    game.testLandCursor(latDeg, lonDeg); run(0.2); tick("the cursor set");
+    if (at == "capital") {
+        StarSystem zs; zs.generate(s);
+        const BodyGen zg = BodyGen::make(zs.bodies[bi]);
+        for (double tw0 = nowSec(); nowSec() - tw0 < 5.0 && !worldPlanBuilt(zg.seed);) run(0.1);
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(zg);
+        if (P->peoples > 0 && !P->plans[0].places.empty()) { latDeg = P->plans[0].places[0].lat / DEG; lonDeg = P->plans[0].places[0].lon / DEG; }
+    }
+    if (at != "site") game.testLandCursor(latDeg, lonDeg);
+    run(0.2); tick("the cursor set");
     press(KEY_Z); tick("Z: the zoom built");
+    { const double* z = game.testZoomBuildMs(); printf("  the build (F-01): samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms\n", z[0], z[1], z[2], z[3], z[4]); }
     run(0.5); tick("half a second of frames");
     std::string nm = game.testStarName(); for (char& ch : nm) if (ch == ' ') ch = '_';
     std::string fn = fmt("shots/tests/zoom_%lld_%lld_%d.png", (long long)sx, (long long)sz, bi);
@@ -17708,6 +18546,563 @@ static int testInput() {
         if (!good) fails++;
     }
     return fails;
+}
+
+// ---- F-01: the proof tools' modes and the measurements the bench cannot see ----------------------------------------------------------
+// `pngdiff <a.png> <b.png> [diff.png]`, or `pngdiff <dirA> <dirB>` (every PNG of A against B's of the same name, the differing ones listed):
+// the exit code is the number of pictures that differ or are missing, 0 when every pair is the same picture
+static int runPngDiff(int argc, char** argv) {
+    if (argc < 4) { printf("pngdiff <a.png> <b.png> [diff.png]  |  pngdiff <dirA> <dirB>\n"); return 1; }
+    auto isDir = [](const char* p) { struct stat st; return stat(p, &st) == 0 && S_ISDIR(st.st_mode); };
+    auto one = [](const std::string& pa, const std::string& pb, const char* diffOut, const std::string& label, bool quiet) -> int {
+        std::vector<uint32_t> a, b; int wa = 0, ha = 0, wb = 0, hb = 0;
+        if (!readPNG(pa.c_str(), a, wa, ha)) { printf("%s: cannot read %s\n", label.c_str(), pa.c_str()); return 1; }
+        if (!readPNG(pb.c_str(), b, wb, hb)) { printf("%s: cannot read %s\n", label.c_str(), pb.c_str()); return 1; }
+        if (wa != wb || ha != hb) { printf("%s: sizes differ (%dx%d against %dx%d)\n", label.c_str(), wa, ha, wb, hb); return 1; }
+        const FrameDiff d = diffFrames(a.data(), b.data(), wa, ha);
+        if (d.differ || !quiet) printf("%s: %s\n", label.c_str(), diffLine(d, wa, ha).c_str());
+        if (d.differ && diffOut) { writeDiffImage(diffOut, a.data(), b.data(), wa, ha); printf("  the differing pixels in red -> %s\n", diffOut); }
+        return d.differ ? 1 : 0;
+    };
+    if (!isDir(argv[2])) return one(argv[2], argv[3], argc > 4 ? argv[4] : nullptr, argv[2], false);
+    std::vector<std::string> names;
+    if (DIR* dd = opendir(argv[2])) { while (dirent* e = readdir(dd)) { const std::string n = e->d_name; if (n.size() > 4 && n.compare(n.size() - 4, 4, ".png") == 0) names.push_back(n); } closedir(dd); }
+    std::sort(names.begin(), names.end());
+    int same = 0, differ = 0, missing = 0;
+    for (const std::string& n : names) {
+        const std::string pa = std::string(argv[2]) + "/" + n, pb = std::string(argv[3]) + "/" + n;
+        if (!fileExists(pb)) { missing++; printf("%s: missing in %s\n", n.c_str(), argv[3]); continue; }
+        if (one(pa, pb, nullptr, n, true)) differ++; else same++;
+    }
+    printf("pngdiff: %zu pictures in %s: %d the same, %d differ, %d missing in %s\n", names.size(), argv[2], same, differ, missing, argv[3]);
+    return differ + missing;
+}
+
+// `bothways <scene> [scale]`: a scene of `scene` drawn by the workers and by one thread in one run (`parallelThreadsOverride`), B-310's
+// contract (the same picture whatever the threads): the workers' frame twice (one that changes by itself says so), then one thread's,
+// then the workers' again; the frames go to shots/tests/bothways_<scene>_<scale>x_{workers,serial}.png and the differing pixels to _diff.png
+static int runBothWays(int argc, char** argv) {
+    const std::string want = argc > 2 ? argv[2] : "felisian_shore";
+    if (argc > 3) setFramebufferScale(atoi(argv[3]));
+    for (const CmpScene& sc : CMP_SCENES) {
+        if (want != sc.name) continue;
+        SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
+        if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { printf("no body\n"); return 1; }
+        const size_t n = (size_t)FBW * FBH;
+        std::vector<uint32_t> w1(n), w2(n), s1(n), w3(n);
+        double ms[4] = {0, 0, 0, 0};
+        auto draw = [&](std::vector<uint32_t>& out, double& msOut) {
+            const double t0 = nowSec();
+            Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0); fb.mush(2);
+            if (sv.inBuggy && !sv.chaseCam) sv.cameraFeed(fb, t);
+            fb.toRGB(out.data(), 1.0);
+            msOut = (nowSec() - t0) * 1000;
+        };
+        draw(w1, ms[0]); draw(w2, ms[1]);
+        const std::string floraW = sv.bandTraceLine(true);
+        parallelThreadsOverride() = 1; draw(s1, ms[2]); parallelThreadsOverride() = 0;
+        draw(w3, ms[3]);
+        const FrameDiff again = diffFrames(w1.data(), w2.data(), FBW, FBH), both = diffFrames(w2.data(), s1.data(), FBW, FBH), back = diffFrames(w2.data(), w3.data(), FBW, FBH);
+        const std::string base = fmt("shots/tests/bothways_%s_%dx", sc.name, FB_SCALE);
+        writePNG((base + "_workers.png").c_str(), w2.data(), FBW, FBH);
+        writePNG((base + "_serial.png").c_str(), s1.data(), FBW, FBH);
+        if (both.differ) writeDiffImage((base + "_diff.png").c_str(), w2.data(), s1.data(), FBW, FBH);
+        else remove((base + "_diff.png").c_str());
+        printf("bothways %s at %dx (%d threads, %.1f / %.1f ms; one thread %.1f ms)\n", sc.name, FB_SCALE, parallelThreads(), ms[1], ms[3], ms[2]);
+        printf("  the workers' frame twice: %s; again after one thread's: %s\n", diffLine(again, FBW, FBH).c_str(), diffLine(back, FBW, FBH).c_str());
+        printf("  the workers against one thread: %s%s\n", diffLine(both, FBW, FBH).c_str(), both.differ ? fmt(" -> %s_diff.png", base.c_str()).c_str() : "");
+        printf("  %s\n", floraW.c_str());
+        return again.differ || back.differ || both.differ ? 1 : 0;
+    }
+    printf("bothways: no scene %s\n", want.c_str());
+    return 1;
+}
+
+// F-05: `suncone`: the sun drawn alone (`SpaceRenderer::drawSun` on a cleared frame), its direction swept toward the frame's corner
+// across the angle where its glow's cone leaves the frame (the farthest pixel centre's angle plus the cone's half-angle, as drawSun
+// finds them): 61 steps of 1e-4 and 61 of 1e-6 radians round it, and from half the cone inside the edge to half outside in 101 steps
+// (where the glow still shows: near the edge it adds nothing to a pixel), for seven classes, three sizes (the larger put the edge beside or
+// behind the camera, where the cone test works) with an atmosphere and without, at 1x and 4x: one hash of every frame and the frames
+// that drew a pixel, for two binaries to agree on (the cone test skips a pass that would draw nothing)
+static int runSunCone() {
+    const int saved = FB_SCALE;
+    struct Kind { int cls; double glowMul; };
+    const Kind kinds[] = {{STAR_YELLOW, 1.0}, {STAR_WHITE_DWARF, 1.1}, {STAR_BLUE_GIANT, 1.8}, {STAR_CARBON, 1.4}, {STAR_WOLF_RAYET, 1.6}, {STAR_PROTOSTAR, 2.0}, {STAR_BLACK_HOLE, 1.0}};
+    uint64_t all = 1469598103934665603ULL;
+    for (int sc : {1, 4}) {
+        setFramebufferScale(sc);
+        const Proj pj = Proj::fromHFov(90);
+        const double S = FB_SCALE, invf = 1.0 / pj.f;
+        const double mx = std::max(std::fabs(0.5 - pj.cx), std::fabs(FBW - 0.5 - pj.cx)), my = std::max(std::fabs(0.5 - pj.cy), std::fabs(FBH - 0.5 - pj.cy));
+        const double cornerA = std::atan(std::sqrt(mx * mx + my * my) / pj.f), phi = std::atan2(-(FBH - 0.5 - pj.cy), FBW - 0.5 - pj.cx);
+        for (const Kind& k : kinds)
+            for (double angR : {0.004, 0.06, 0.2})
+            for (int atmo = 0; atmo < 2; atmo++) {
+                Star st; st.cls = k.cls; st.seed = 0x5C0E00ULL + k.cls; st.radiusKm = 7e5; st.valid = true;
+                const double haze = atmo ? 0.3 : 0.0;
+                double edge;   // the half-angle drawSun's passes reach
+                if (k.cls == STAR_BLACK_HOLE) edge = std::min(2.6 * std::sqrt(std::max(angR, 0.8 * S * invf)), 80 * DEG);
+                else {
+                    const double rA = std::max(angR, 0.6 * S * invf), coronaA = std::max(rA * (atmo ? 3.2 : 2.4), 5.0 * S * invf) * k.glowMul;
+                    edge = std::min(coronaA * (atmo ? 3.0 : 1.6) * (1.0 + haze), PI - 0.01);
+                    if (k.cls == STAR_WOLF_RAYET) { const double ringA = std::max(rA * 5.0, 4.0 * S * invf); edge = std::min(std::max(edge, ringA + 3 * ringA / 7.0), PI - 0.01); }
+                    if (k.cls == STAR_PROTOSTAR) edge = std::max(edge, 0.6);   // its dust strip's cone
+                }
+                uint64_t h = 1469598103934665603ULL; int drew = 0, frames = 0;
+                const Vec3 up(0, 1, 0);
+                for (int i = -61; i <= 161; i++) {
+                    const double th = cornerA + edge + (i < 0 ? (i + 31) * 1e-4 : (i <= 60 ? (i - 30) * 1e-6 : (i - 111) * 0.01 * edge));
+                    const Vec3 dir(std::sin(th) * std::cos(phi), std::sin(th) * std::sin(phi), std::cos(th));
+                    Framebuffer fb; fb.clear(0); fb.clearDepth();
+                    SpaceRenderer::drawSun(fb, st, dir, angR, 100.0, 1.0, 1, atmo != 0, haze, true, pj, &up);
+                    frames++;
+                    bool any = false; for (Pix p : fb.idx) if (p) { any = true; break; }
+                    drew += any ? 1 : 0;
+                    h = fnv(h, fb.idx.data(), fb.idx.size() * sizeof(Pix));
+                }
+                all = fnv(all, &h, sizeof(h));
+                printf("suncone %dx class %2d, %.3f rad, %s: %d frames over the edge at %.5f rad (the corner %.5f, the cone %.5f), %d drew a pixel, hash %016llx\n", sc, k.cls, angR,
+                       atmo ? "with an atmosphere" : "airless           ", frames, cornerA + edge, cornerA, edge, drew, (unsigned long long)h);
+            }
+    }
+    setFramebufferScale(saved);
+    printf("suncone: every frame %016llx\n", (unsigned long long)all);
+    return 0;
+}
+
+// F-06: `pool`: the pool's dispatch timed at its thread count (an empty one after a rest and back to back; 800 rows of uneven work
+// against one thread), then its dealing checked at 2 to 8 threads: thousands of dispatches of random sizes and rests visit every index
+// once (`parallelFor` with its own chunk and a set one, `parallelBands` in exactly its bands), a dispatch inside a dispatch runs alone in
+// one call, and a second thread dispatching beside the main thread loses nothing. Run it in a `-fsanitize=thread` build too
+static int runPool() {
+    int fails = 0;
+    auto check = [&](bool ok, const std::string& what, const std::string& detail) { printf("%s %s: %s\n", ok ? "ok  " : "FAIL", what.c_str(), detail.c_str()); if (!ok) fails++; };
+    {
+        auto empty = [](int, int) {};
+        for (int i = 0; i < 200; i++) parallelFor(8, 1, empty);
+        double rested = 0, burst = 0; const int R = 200;
+        for (int r = 0; r < R; r++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            double t0 = nowSec(); parallelFor(8, 1, empty); rested += nowSec() - t0;
+            t0 = nowSec(); for (int k = 0; k < 15; k++) parallelFor(8, 1, empty); burst += nowSec() - t0;
+        }
+        printf("pool: %d threads; an empty dispatch after a rest of 2 ms %.1f us, fifteen back to back %.1f us each\n", parallelThreads(), rested / R * 1e6, burst / R / 15 * 1e6);
+        // rows of uneven work (a quarter of them four times the rest, in one block, as a globe's middle rows): the pool against one thread
+        auto rows = [](int b, int e) { for (int y = b; y < e; y++) { const double until = nowSec() + (y >= 300 && y < 500 ? 16e-6 : 4e-6); while (nowSec() < until) {} } };
+        double ws = 1e9, one = 1e9;
+        for (int r = 0; r < 20; r++) {
+            double t0 = nowSec(); parallelFor(800, 32, rows); ws = std::min(ws, nowSec() - t0);
+            t0 = nowSec(); rows(0, 800); one = std::min(one, nowSec() - t0);
+        }
+        printf("pool: 800 rows of 4 and 16 us: %.2f ms (one thread %.2f ms, %.2f of %d threads' ideal)\n", ws * 1e3, one * 1e3, one / parallelThreads() / ws, parallelThreads());
+    }
+    const int saved = parallelThreadsOverride();
+    uint64_t rs = 0x9E3779B97F4A7C15ULL;
+    auto rnd = [&](int n) { rs ^= rs << 13; rs ^= rs >> 7; rs ^= rs << 17; return n > 0 ? (int)(rs % (uint64_t)n) : 0; };
+    const int NMAX = 3000;
+    std::vector<std::atomic<int>> hits(NMAX);
+    for (int t : {2, 3, 4, 6, 8}) {
+        parallelThreadsOverride() = t;
+        long dispatches = 0, bad = 0;
+        std::atomic<long> badLayout{0};
+        std::string first;
+        for (int it = 0; it < 20000; it++) {
+            const int n = rnd(NMAX), mpt = 1 + rnd(64), kind = rnd(3), chunk = kind == 1 ? 1 + rnd(100) : 0, bands = 1 + rnd(40);
+            for (int i = 0; i < n; i++) hits[i].store(0, std::memory_order_relaxed);
+            if (kind < 2) parallelFor(n, mpt, [&](int b, int e) { for (int i = b; i < e; i++) hits[i].fetch_add(1, std::memory_order_relaxed); }, chunk);
+            else {
+                const int k = std::max(1, std::min(bands, n)), band = (n + k - 1) / k;
+                parallelBands(n, bands, [&](int b, int e) {
+                    if (band <= 0 || b % band != 0 || e != std::min(n, b + band)) badLayout++;
+                    for (int i = b; i < e; i++) hits[i].fetch_add(1, std::memory_order_relaxed);
+                });
+            }
+            for (int i = 0; i < n; i++)
+                if (hits[i].load(std::memory_order_relaxed) != 1) {
+                    if (first.empty()) first = fmt("%s over %d (min %d, chunk %d, bands %d): index %d visited %d times", kind < 2 ? "parallelFor" : "parallelBands", n, mpt, chunk, bands, i, hits[i].load());
+                    bad++; break;
+                }
+            dispatches++;
+            if (rnd(40) == 0) std::this_thread::sleep_for(std::chrono::microseconds(rnd(400)));   // now and then a rest: the workers fall asleep
+        }
+        check(bad == 0 && badLayout == 0, fmt("dealing at %d threads", t), fmt("%ld dispatches, %ld with an index not visited once, %ld bands off the layout%s%s", dispatches, bad, badLayout.load(), first.empty() ? "" : "; ", first.c_str()));
+    }
+    parallelThreadsOverride() = 8;
+    {   // a dispatch inside a dispatch: alone, in one call over the whole range
+        const int O = 64, I = 512;
+        std::vector<std::atomic<int>> h(O * I);
+        std::atomic<int> innerCalls{0}, innerWhole{0};
+        parallelFor(O, 1, [&](int b, int e) {
+            for (int i = b; i < e; i++)
+                parallelFor(I, 1, [&](int ib, int ie) { innerCalls++; if (ib == 0 && ie == I) innerWhole++; for (int j = ib; j < ie; j++) h[(size_t)i * I + j]++; });
+        });
+        int once = 0;
+        for (auto& x : h) once += x.load() == 1;
+        check(once == O * I && innerCalls == O && innerWhole == O, "a dispatch inside a dispatch", fmt("%d of %d indices once, %d inner calls (%d whole) for %d inner dispatches", once, O * I, innerCalls.load(), innerWhole.load(), O));
+    }
+    {   // two threads dispatching at once: one holds the pool, the other runs alone
+        const long c0 = pool::contended();
+        std::atomic<long> badB{0};
+        auto loop = [&](int N) {
+            std::vector<std::atomic<int>> hb(N);
+            for (int it = 0; it < 3000; it++) {
+                for (auto& x : hb) x.store(0, std::memory_order_relaxed);
+                parallelFor(N, 16, [&](int b, int e) { for (int i = b; i < e; i++) hb[i].fetch_add(1, std::memory_order_relaxed); });
+                for (auto& x : hb) if (x.load(std::memory_order_relaxed) != 1) { badB++; break; }
+            }
+        };
+        std::thread other([&] { loop(1500); });
+        loop(2000);
+        other.join();
+        check(badB == 0, "two threads dispatching", fmt("6000 dispatches, %ld with an index not visited once; %ld ran alone beside the other's", badB.load(), pool::contended() - c0));
+    }
+    parallelThreadsOverride() = saved;
+    printf("pool: %d failures\n", fails);
+    return fails;
+}
+
+// F-05: `screens [scale ...]`: the game's frames the regress never hashes, as pictures at each scale (1 2 3 4 by default): the cabin (the
+// light on and off, the hull glass, the roof, the decoder's desk, the case, the drones' rack), the console, the ship's screen, the help, the
+// guide, the radar camera, the landing map whole and zoomed, and on the home world the descent, the ground, the menu, the sector map near
+// and wide and the nose camera. Each is drawn at one instant (`frame(in, 0)`) once it has held still for half a second (a world's map or a
+// tile arriving changes it), by the workers and by one thread: the workers' frames go to shots/tests/screens/<name>_<scale>x.png, for
+// `pngdiff` between two binaries' directories, and a frame one thread draws differently is named. The waits for a thread's work run at one
+// instant too, so the clocks reach every picture by the same frames. The times are single frames: a hint, not a bench
+static int runScreens(int argc, char** argv) {
+    std::vector<int> scales;
+    for (int i = 2; i < argc; i++) scales.push_back(clampi(atoi(argv[i]), 1, 4));
+    if (scales.empty()) scales = {1, 2, 3, 4};
+    mkdir("shots/tests", 0755); mkdir("shots/tests/screens", 0755);
+    Game game; game.savePrefix = "shots/tests/screens_save"; game.settingsPath = "shots/tests/screens_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/screens_guide.txt";
+    remove(game.guidePath.c_str()); remove(game.settingsPath.c_str());
+    game.newGame(); game.setState(GameState::SPACE);
+    const int stepScale = 2;   // the scale the steps between the pictures run at
+    game.settings.renderScale = stepScale; game.applySettings();
+    Input gi;
+    auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+    auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
+    auto out = [&]() { return fnv(1469598103934665603ULL, game.output(), (size_t)FBW * FBH * sizeof(uint32_t)); };
+    auto waitDrainage = [&]() { for (int i = 0; i < 900 && !game.testDrainageReady(); i++) { game.frame(gi, 0); std::this_thread::sleep_for(std::chrono::milliseconds(10)); } };
+    int shots = 0, differ = 0, unsettled = 0;
+    auto capture = [&](const char* name) {
+        for (int s : scales) {
+            game.settings.renderScale = s; game.applySettings();
+            uint64_t last = 0; int still = 0;
+            for (int n = 0; n < 200 && still < 10; n++) { game.frame(gi, 0); const uint64_t h = out(); still = n > 0 && h == last ? still + 1 : 0; last = h; std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+            if (still < 10) unsettled++;
+            const size_t np = (size_t)FBW * FBH;
+            double t0 = nowSec(); game.frame(gi, 0); const double msW = (nowSec() - t0) * 1000;
+            const std::vector<uint32_t> w(game.output(), game.output() + np);
+            parallelThreadsOverride() = 1; t0 = nowSec(); game.frame(gi, 0); const double msS = (nowSec() - t0) * 1000; parallelThreadsOverride() = 0;
+            const FrameDiff d = diffFrames(w.data(), game.output(), FBW, FBH);
+            writePNG(fmt("shots/tests/screens/%s_%dx.png", name, s).c_str(), w.data(), FBW, FBH);
+            shots++; differ += d.differ ? 1 : 0;
+            printf("  %-18s %dx %7.2f ms, one thread %7.2f ms: %s%s%s\n", name, s, msW, msS, d.differ ? "ONE THREAD DIFFERS, " : "the same", d.differ ? diffLine(d, FBW, FBH).c_str() : "", still < 10 ? " (never held still)" : "");
+        }
+        game.settings.renderScale = stepScale; game.applySettings();
+    };
+    printf("screens at %s, %d threads in the pool:\n", [&]() { std::string s; for (int k : scales) s += fmt("%s%dx", s.empty() ? "" : " ", k); return s; }().c_str(), parallelThreads());
+    run(0.3);
+    const int lights = game.testCabinLights();   // the light on, the hull polarised
+    if (!(lights & 1)) press(KEY_U);
+    if (lights & 2) press(KEY_Y);
+    run(1.5); capture("cabin");
+    press(KEY_U); run(1.5); capture("cabin_dark");
+    press(KEY_Y); run(1.5); capture("cabin_glass_dark");
+    press(KEY_U); run(1.5); capture("cabin_glass");
+    press(KEY_Y); run(0.5);
+    press(KEY_PAGE_UP); run(0.5); capture("roof"); press(KEY_PAGE_DOWN); run(0.3);
+    game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); capture("cabin_decoder");   // the flow's: looking down at the decoder's desk
+    game.testCabinGoto(-1.1, -1.38, -PI / 2, -0.55); run(0.2); capture("cabin_case");
+    game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2); capture("cabin_rack");
+    game.testCabinGoto(-1.2, 0.0, -PI / 2); run(0.2);   // at the GOES console
+    press(KEY_E); run(0.1); game.testTypeText("SL 4"); run(0.1); capture("console"); press(KEY_ESCAPE); run(0.1);
+    game.testCabinGoto(0.0, 1.3, 0.0); run(0.2); press(KEY_E); run(0.1); capture("shipscreen"); press(KEY_ESCAPE); run(0.1);
+    game.testCabinGoto(0.0, 0.0, 0.0); run(0.2);
+    press(KEY_H); run(0.1); capture("help"); press(KEY_ESCAPE); run(0.1);
+    press(KEY_G); run(0.1); capture("guide"); press(KEY_ESCAPE); run(0.1);
+    press(KEY_B); run(0.5); capture("radar"); press(KEY_B); run(0.2);
+    const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
+    Star st;
+    if (starInSector(W.sx, 0, W.sz, st, true)) {   // the modern test world's landing map, whole and zoomed (the zoom's drainage waited for)
+        game.testParkAt(st, W.body); run(0.5); capture("landmap");
+        if (game.testLandableBody() >= 0) { press(KEY_Z); waitDrainage(); run(0.3); capture("landzoom"); press(KEY_Z); }
+        game.setState(GameState::SPACE); run(0.3);
+        game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);   // the drone bay (C-18's harness): its screen, the drones leaving the rack, outside the window
+        press(KEY_E); run(0.1);
+        if (game.state == GameState::DRONES) {
+            game.testDronesSettle(); run(0.2); capture("bay");
+            press(KEY_ENTER); game.testDronesSettle();
+            game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(1.1); capture("rack_out");
+            game.testAimAtBody(W.body); game.testCabinGoto(-0.6, 0.6, -0.25, -0.05); run(0.05); game.testDronesSkip(4.0); run(0.05); capture("drones_window");
+        } else printf("screens: the drone bay not opened (state %d)\n", (int)game.state);
+    }
+    Star hs;
+    if (starInSector(HOME_SX, HOME_SY, HOME_SZ, hs, true)) {   // the home world: the descent, the ground, the menu, the sector map, the nose camera
+        StarSystem hsys; hsys.generate(hs);
+        int hb = -1; for (const Body& b : hsys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0 && b.type != PT_COMET) { hb = b.index; break; }
+        game.testParkAt(hs, hb); run(0.3);
+        waitDrainage();
+        press(KEY_ENTER); run(2.5); capture("descent"); run(6.5);
+        if (game.state == GameState::SURFACE) {
+            capture("ground");
+            press(KEY_ESCAPE); run(0.1); capture("menu"); press(KEY_ESCAPE); run(0.1);
+            press(KEY_N); run(0.3); capture("sectormap");
+            for (int i = 0; i < 3; i++) { press(KEY_MINUS); run(0.3); }
+            capture("sectormap_wide");
+            for (int i = 0; i < 3; i++) press(KEY_EQUAL);
+            press(KEY_ESCAPE); run(0.1);
+            if (game.testDriveSetup()) { run(0.5); capture("nose"); }
+        } else printf("screens: not on the ground (state %d)\n", (int)game.state);
+    }
+    printf("screens: %d pictures in shots/tests/screens, %d drawn differently by one thread, %d never held still\n", shots, differ, unsettled);
+    return differ ? 1 : 0;
+}
+
+// F-01: `bench noise`: the noise's cost a call (the best of three passes over a million points at a planet's coordinates) and the bits of
+// its results hashed, so F-07's gradient table and prefix hashing are judged by their time and by the same hashes (any other hash is a bug)
+static int runBenchNoise() {
+    const int N = 1000000;
+    std::vector<Vec3> pts(N), shell(N);
+    Rng r(0xB0B5EEDULL);
+    for (int i = 0; i < N; i++) {
+        pts[i] = Vec3(r.range(-3000, 3000), r.range(-3000, 3000), r.range(-3000, 3000));
+        Vec3 u(r.range(-1, 1), r.range(-1, 1), r.range(-1, 1));
+        if (length(u) < 1e-6) u = Vec3(1, 0, 0);
+        shell[i] = normalize(u) * 6000.0;   // km on a world of 6,000 km
+    }
+    const uint64_t seed = 0x5EED5EEDULL;
+    std::vector<double> out;
+    auto hashOf = [&]() { return fnv(1469598103934665603ULL, out.data(), out.size() * sizeof(double)); };
+    auto row = [&](const char* name, int per, const std::function<void()>& pass) {
+        double best = 1e9;
+        for (int k = 0; k < 3; k++) { out.assign((size_t)N * per, 0.0); const double t0 = nowSec(); pass(); best = std::min(best, nowSec() - t0); }
+        printf("%-14s %6.1f ns a call (best of three passes over %d points), results' bits %016llx\n", name, best / N * 1e9, N, (unsigned long long)hashOf());
+    };
+    row("gnoise3", 1, [&]() { for (int i = 0; i < N; i++) out[i] = gnoise3(pts[i].x, pts[i].y, pts[i].z, seed); });
+    row("gnoise3d", 4, [&]() { for (int i = 0; i < N; i++) { Vec3 g; out[4 * (size_t)i] = gnoise3d(pts[i].x, pts[i].y, pts[i].z, seed, g); out[4 * (size_t)i + 1] = g.x; out[4 * (size_t)i + 2] = g.y; out[4 * (size_t)i + 3] = g.z; } });
+    row("worley3", 7, [&]() {
+        for (int i = 0; i < N; i++) {
+            const Worley3 w = worley3(pts[i] * 0.1, seed);
+            double* o = &out[7 * (size_t)i];
+            o[0] = w.f1; o[1] = w.f2; std::memcpy(&o[2], &w.id1, 8); std::memcpy(&o[3], &w.id2, 8); o[4] = w.c1.x; o[5] = w.c1.y; o[6] = w.c1.z;
+        }
+    });
+    row("features", 1, [&]() { for (int i = 0; i < N; i++) out[i] = benchFeatureField(shell[i], 6000.0, seed); });   // a dome field: `visitFeatures`' 27 cells
+    return 0;
+}
+
+// F-01: `load landing|map|arrival|drive|capital|probe|roads [seconds] [scale] [age]`: B-422's measure in the harness: the frames paced at 60 a second as the
+// window paces them, and every second the cores the process kept busy (its CPU seconds over the wall's), its threads alive and running
+// (the mean of six samples), the frames' mean and worst. `landing`: the descent from the landing map (its drainage waited for up to 3 s)
+// and the first minute on the ground; `map`: the landing map with the cursor tapped every 0.15 s; `arrival`: a star never seen, its maps
+// generating; `drive`: full throttle from 400 m outside the modern test world's capital (the roads' rebuilds and their worst ms);
+// `capital`: standing 400 m outside an age test world's capital (the industrial's by default, felisian), facing it, the flora's listing
+// timed (a settlement's buildings tested against every tree); `probe`: the launch from the ringed test giant (the handover, KI-361);
+// `roads`: on foot near the modern capital, moved two ruin cells at a time: each rebuild of the site's roads on the main thread timed
+static int runLoad(int argc, char** argv) {
+    const std::string what = argc > 2 ? argv[2] : "landing";
+    const double secs = argc > 3 ? atof(argv[3]) : 60.0;
+    const int scale = argc > 4 ? atoi(argv[4]) : 4;
+    Game game;
+    game.savePrefix = "shots/tests/load_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/load_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+    remove(game.guidePath.c_str());
+    Input in;
+    const double tick = 1.0 / 60;
+    double next = nowSec();
+    auto paced = [&]() { next += tick; const double wait = next - nowSec(); if (wait > 0) std::this_thread::sleep_for(std::chrono::duration<double>(wait)); else next = nowSec(); };
+    auto frame = [&]() { const double t0 = nowSec(); game.frame(in, tick); in.newFrame(); const double ms = (nowSec() - t0) * 1000; paced(); return ms; };
+    auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; const double ms = frame(); in.down[key] = false; return ms; };
+    press(KEY_ENTER);
+    game.settings.renderScale = scale; game.applySettings();
+    for (int i = 0; i < 30; i++) frame();
+    const int mapsBefore = game.testMapStats().generated, blockedBefore = game.testMapStats().blocked;
+    const double blockedMsBefore = game.testMapStats().blockedMs;
+    bool drive = false;
+    if (what == "landing") {
+        press(KEY_C);
+        const double tw0 = nowSec();
+        while (nowSec() - tw0 < 3.0 && !game.testDrainageReady()) frame();
+        printf("load landing: the drainage ready %.2f s after the landing map opened (%s)\n", nowSec() - tw0, game.testBodyTypes().c_str());
+        in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true;
+    } else if (what == "map") {
+        press(KEY_C);
+    } else if (what == "arrival") {
+        Star s; bool found = false;
+        for (int64_t x = HOME_SX + 40; x < HOME_SX + 80 && !found; x++) found = starInSector(x, HOME_SY, HOME_SZ + 7, s);
+        if (!found) { printf("load arrival: no star found\n"); return 1; }
+        game.testArriveAt(s);
+    } else if (what == "roads") {   // the modern test world's roads grown on the main thread: the explorer moved two ruin cells (4 km) at a time, ten times
+        Star ms; const AgeWorld& mw = AGE_WORLDS[AGE_MODERN];
+        if (!starInSector(mw.sx, 0, mw.sz, ms, true)) { printf("load roads: no world\n"); return 1; }
+        StarSystem msys; msys.generate(ms);
+        const BodyGen mg = BodyGen::make(msys.bodies[mw.body]);
+        game.testParkAt(ms, mw.body);
+        for (double tw0 = nowSec(); nowSec() - tw0 < 5.0 && !worldPlanBuilt(mg.seed);) frame();
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(mg);
+        const PlanPlace& cap = P->plans[std::min(mw.which, P->peoples - 1)].places[0];
+        game.testLandCursor((cap.lat + (cap.radiusM + 400) / (mg.R * 1000.0)) / DEG, cap.lon / DEG);
+        for (double tw0 = nowSec(); nowSec() - tw0 < 3.0 && !game.testDrainageReady();) frame();
+        press(KEY_ENTER);
+        for (int i = 0; i < 60 * 9 && game.state != GameState::SURFACE; i++) frame();
+        for (int i = 0; i < 120; i++) frame();
+        printf("load roads: on %s's ground (state %d), %zu road cells\n", msys.bodies[mw.body].name.c_str(), (int)game.state, game.testSurface().site.roadCells.size());
+        const double step = 2.05 * 2000.0;   // two ruin cells and a little (`ruinCellLat` is 2 km)
+        for (int k = 1; k <= 10; k++) {
+            const int rb = game.testSurface().roadsBuilds;
+            game.testWalkTo(game.testPlayerX() + step * 0.6, game.testPlayerZ() + step * 0.8);
+            const double ms = frame(); double after = 0;
+            for (int i = 0; i < 30; i++) after = std::max(after, frame());
+            printf("  hop %2d: the roads grown %d time(s), %.1f ms (%zu roads held); that frame %.1f ms, the worst of the next 30 %.1f ms\n", k, game.testSurface().roadsBuilds - rb,
+                   game.testSurface().lastRoadsMs, game.testSurface().site.roads.size(), ms, after);
+            for (int i = 0; i < 90; i++) frame();
+        }
+        return 0;
+    } else if (what == "drive" || what == "capital") {   // a people's world, 400 m outside its capital's core: `drive` the bench's (modern, desert) at full
+        // throttle (the roads grow every two ruin cells); `capital` the industrial test world's (felisian: the trees listed against the buildings), facing the capital
+        const int age = argc > 5 ? std::max(0, std::min(AGE_COUNT - 1, atoi(argv[5]))) : (what == "drive" ? AGE_MODERN : AGE_INDUSTRIAL);   // `load capital <s> <scale> <age>`
+        Star ms; const AgeWorld& mw = AGE_WORLDS[age];
+        if (!starInSector(mw.sx, 0, mw.sz, ms, true)) { printf("load drive: no world\n"); return 1; }
+        StarSystem msys; msys.generate(ms);
+        const BodyGen mg = BodyGen::make(msys.bodies[mw.body]);
+        game.testParkAt(ms, mw.body);
+        for (double tw0 = nowSec(); nowSec() - tw0 < 5.0 && !worldPlanBuilt(mg.seed);) frame();
+        std::shared_ptr<const WorldPlan> P = worldPlanOf(mg);
+        const PlanPlace& cap = P->plans[std::min(mw.which, P->peoples - 1)].places[0];
+        game.testLandCursor((cap.lat + (cap.radiusM + 400) / (mg.R * 1000.0)) / DEG, cap.lon / DEG);
+        for (double tw0 = nowSec(); nowSec() - tw0 < 3.0 && !game.testDrainageReady();) frame();
+        press(KEY_ENTER);
+        for (int i = 0; i < 60 * 9 && game.state != GameState::SURFACE; i++) frame();
+        for (int i = 0; i < 60; i++) frame();
+        if (what == "capital") game.testSurfaceFace(PI, 0.02);   // the capital to the south (the bench's view)
+        else if (!game.testDriveSetup()) { printf("load drive: no buggy (state %d)\n", (int)game.state); return 1; }
+        else drive = true;
+        printf("load %s: on %s's ground (state %d), %s\n", what.c_str(), msys.bodies[mw.body].name.c_str(), (int)game.state, game.testStatus().c_str());
+    } else if (what == "probe") {   // the probe's launch from the ringed test giant: the handover (KI-361) and the first stages
+        Star ps; if (!starInSector(150, 0, 106, ps, true)) { printf("load probe: no giant\n"); return 1; }
+        game.testParkAt(ps, 5);
+        for (int i = 0; i < 30; i++) frame();
+        in.pressed[KEY_C] = true; in.down[KEY_C] = true;
+    } else { printf("load landing|map|arrival|drive|capital|probe|roads [seconds] [scale]\n"); return 1; }
+    printf("load %s at %dx, frames paced at 60 a second, %d threads in the pool:\n", what.c_str(), scale, parallelThreads());
+    ProcSample p0 = procSample();
+    double w0 = nowSec(), first = -1, tapT = 0;
+    std::vector<double> all;
+    for (int sec = 1; nowSec() - w0 < secs + 1e-9 || sec == 1; sec++) {
+        double sum = 0, worst = 0; int frames = 0, threads = 0, running = 0, samples = 0;
+        const double end = w0 + sec;
+        const int roads0 = game.testSurface().roadsBuilds; double roadsWorst = 0, listWorst = 0;
+        while (nowSec() < end) {
+            if (what == "map" && nowSec() - tapT >= 0.15) { in.pressed[KEY_RIGHT] = true; in.down[KEY_RIGHT] = true; tapT = nowSec(); }
+            if (drive) in.down[KEY_W] = true;
+            const int rb = game.testSurface().roadsBuilds;
+            const double ms = frame();
+            if (what == "capital" && frames == 0 && sec == 1) printf("  the first frame on the ground: %d trees listed (%.2f ms), %d drawn; the forms %.2f ms\n", game.testSurface().lastTreesListed, game.testSurface().lastFloraListMs, game.testSurface().lastTreesDrawn, game.testSurface().lastRuinMs);
+            listWorst = std::max(listWorst, game.testSurface().lastFloraListMs);
+            if (game.testSurface().roadsBuilds != rb) roadsWorst = std::max(roadsWorst, game.testSurface().lastRoadsMs);
+            in.down[KEY_ENTER] = false; in.down[KEY_RIGHT] = false; in.down[KEY_C] = false;
+            if (first < 0) first = ms;
+            sum += ms; worst = std::max(worst, ms); frames++; all.push_back(ms);
+            if (frames % 10 == 1) { const ProcSample q = procSample(); threads += q.threads; running += q.running; samples++; }
+        }
+        const ProcSample p1 = procSample(); const double w1 = nowSec();
+        printf("  %3d s: %.2f cores, %.1f threads (%.1f running), %d frames: mean %.1f ms, worst %.1f ms, state %d, %.0f MB%s\n", sec, (p1.cpuS - p0.cpuS) / (w1 - (w0 + sec - 1)), samples ? (double)threads / samples : 0.0,
+               samples ? (double)running / samples : 0.0, frames, frames ? sum / frames : 0.0, worst, (int)game.state, p1.rssMB,
+               game.testSurface().roadsBuilds != roads0 ? fmt("; the roads grown %d times, the worst %.1f ms (%.0f km/h)", game.testSurface().roadsBuilds - roads0, roadsWorst, game.testBuggySpeed() * 3.6).c_str() :
+               (what == "capital" ? fmt("; the flora's listing %.2f ms at worst, %d trees listed", listWorst, game.testSurface().lastTreesListed).c_str() :
+               (drive ? fmt("; %.0f km/h, %.2f km from the start, %zu road cells", game.testBuggySpeed() * 3.6, std::hypot(game.testPlayerX(), game.testPlayerZ()) / 1000, game.testSurface().site.roadCells.size()).c_str() : "")));
+        p0 = p1;
+        if (nowSec() - w0 >= secs) break;
+    }
+    std::sort(all.begin(), all.end());
+    auto at = [&](double q) { return all.empty() ? 0.0 : all[std::min(all.size() - 1, (size_t)(q * all.size()))]; };
+    printf("load %s: the first frame %.1f ms; %zu frames: p50 %.1f, p99 %.1f, max %.1f ms; maps generated %d, blocking map calls %d (%.0f ms)\n", what.c_str(), first, all.size(), at(0.5), at(0.99), all.empty() ? 0.0 : all.back(),
+           game.testMapStats().generated - mapsBefore, game.testMapStats().blocked - blockedBefore, game.testMapStats().blockedMs - blockedMsBefore);
+    return 0;
+}
+
+// F-01: `soak [minutes] [scale]`: a long expedition at 4x, the frames paced at 60 a second, round the stars of the harness's plane: at each
+// a parking (the landing map, then the cabin turning for 10 s), a landing at the map's default site and 40 s on the ground walking and
+// turning; the resident memory, its peak, the maps and drainage tiles held after each stop. The guide's load at the start is timed too
+static int runSoak(int argc, char** argv) {
+    const double minutes = argc > 2 ? atof(argv[2]) : 30.0;
+    const int scale = argc > 3 ? atoi(argv[3]) : 4;
+    {
+        Guide G; fillBenchGuide(G); G.save("shots/tests/soak_guide_big.txt");
+        Guide L; const double t0 = nowSec(); L.load("shots/tests/soak_guide_big.txt"); const double ms = (nowSec() - t0) * 1000;
+        struct stat st; stat("shots/tests/soak_guide_big.txt", &st);
+        printf("soak: a guide of %lld bytes (the player's composition) loads in %.1f ms\n", (long long)st.st_size, ms);
+        remove("shots/tests/soak_guide_big.txt");
+    }
+    Game game;
+    game.savePrefix = "shots/tests/soak_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/soak_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+    remove(game.guidePath.c_str());
+    Input in;
+    const double tick = 1.0 / 60;
+    double next = nowSec();
+    long frames = 0;
+    auto frame = [&]() { game.frame(in, tick); in.newFrame(); frames++; next += tick; const double wait = next - nowSec(); if (wait > 0) std::this_thread::sleep_for(std::chrono::duration<double>(wait)); else next = nowSec(); };
+    auto run = [&](double s) { for (int i = 0; i < (int)(s * 60); i++) frame(); };
+    auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; frame(); in.down[key] = false; };
+    press(KEY_ENTER);
+    game.settings.renderScale = scale; game.applySettings();
+    const double w0 = nowSec();
+    printf("soak: %.0f minutes at %dx\n", minutes, scale);
+    int stop = 0;
+    for (int64_t x = HOME_SX + 1; nowSec() - w0 < minutes * 60; x++) {
+        Star s; if (!starInSector(x, HOME_SY, HOME_SZ + 3, s)) continue;
+        StarSystem sys; sys.generate(s);
+        int body = -1; for (const Body& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.type != PT_COMET && b.radiusKm > 1000) { body = b.index; break; }
+        if (body < 0) continue;
+        game.testParkAt(s, body); run(2.0);
+        press(KEY_ESCAPE); for (int i = 0; i < 600; i++) { in.mouseDx = 3; frame(); }   // the cabin turning
+        press(KEY_C); run(1.0); press(KEY_ENTER); run(9.0);   // the landing map, the descent
+        for (int i = 0; i < 2400; i++) { in.down[KEY_W] = true; in.mouseDx = (i / 240) % 2 ? 2 : -2; frame(); }   // walking and turning
+        in.down[KEY_W] = false;
+        press(KEY_Q); run(9.0);   // the ascent
+        stop++;
+        const ProcSample p = procSample();
+        double peakMB = 0;
+#if defined(__APPLE__) || defined(__linux__)
+        struct rusage ru; getrusage(RUSAGE_SELF, &ru);
+#ifdef __APPLE__
+        peakMB = ru.ru_maxrss / 1048576.0;   // bytes on macOS
+#else
+        peakMB = ru.ru_maxrss / 1024.0;      // kilobytes on Linux
+#endif
+#endif
+        printf("  %5.1f min, stop %d (%s): %.0f MB resident, peak %.0f MB, %d threads; %zu maps held, %d drainage tiles; %ld frames\n", (nowSec() - w0) / 60, stop, game.testStarName().c_str(), p.rssMB, peakMB, p.threads,
+               game.testMapsHeld(), drainageTilesHeld(), frames);
+        fflush(stdout);
+    }
+    return 0;
+}
+
+// F-01: `reanchor comet [scale]`: the comet's re-anchor (every 0.35 radii, KI-302) on the `comet_day` scene: the update that re-anchors and
+// the next frames' refill timed (with VESPERIS_TRACE the parts: the site's init, the roads, the tiles asked, each ring's misses and fill)
+static int runReanchorComet(int argc, char** argv) {
+    setFramebufferScale(argc > 3 ? atoi(argv[3]) : 4);
+    for (const CmpScene& sc : CMP_SCENES) {
+        if (std::string(sc.name) != "comet_day") continue;
+        SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
+        if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { printf("no comet\n"); return 1; }
+        Framebuffer fb; Input in;
+        for (int i = 0; i < 3; i++) sv.render(fb, t, nb.stars, sr, 1.0);
+        const double reach = std::min(50e3, 0.35 * sv.site.R);
+        printf("reanchor comet: %s, R %.1f km, the frame re-anchored beyond %.1f km at %dx\n", sys.bodies[sv.site.body].name.c_str(), sv.site.R / 1000, reach / 1000, FB_SCALE);
+        for (int k = 0; k < 2; k++) {
+            sv.player.x = reach * 1.02; sv.player.z = 0; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
+            const double t0 = nowSec(); sv.update(1.0 / 60, in, t, false); const double upd = (nowSec() - t0) * 1000;
+            double ms[3], firstMs[3] = {0, 0, 0};
+            for (int i = 0; i < 3; i++) {
+                const double t1 = nowSec(); sv.render(fb, t, nb.stars, sr, 1.0); ms[i] = (nowSec() - t1) * 1000;
+                if (i == 0) for (int j = 0; j < 3; j++) firstMs[j] = sv.lastRenderMs[j];
+            }
+            printf("  re-anchor %d: the update %.1f ms, then frames %.1f, %.1f, %.1f ms (the first: palette+sky %.1f, warm %.1f, terrain %.1f)\n", k + 1, upd, ms[0], ms[1], ms[2], firstMs[0], firstMs[1], firstMs[2]);
+        }
+        return 0;
+    }
+    return 1;
 }
 
 // M5-06: day length at 82 degrees latitude on a tilted felisian world, half an orbit apart
@@ -18226,7 +19621,15 @@ int main(int argc, char** argv) {
     if (mode == "compare") { renderCompare(); return 0; }
     if (mode == "sheet") { composeSheets(); return 0; }
     if (mode == "moonsky") { renderMoonSky(); { SpaceRenderer sr2; StarNeighborhood nb2; renderBinarySurface(sr2, nb2); } return 0; }
-    if (mode == "bench") return argc > 2 && std::string(argv[2]) == "forest" ? runBenchForest() : runBench(argc > 2 && std::string(argv[2]) == "check");
+    if (mode == "bench" && argc > 2 && std::string(argv[2]) == "noise") return runBenchNoise();   // F-01
+    if (mode == "bench") return argc > 2 && std::string(argv[2]) == "forest" ? runBenchForest() : runBench(argc > 2 && std::string(argv[2]) == "check", argc > 3 ? std::max(0.1, atof(argv[3])) : 1.0);   // F-11: `bench check <factor>`
+    if (mode == "pngdiff") return runPngDiff(argc, argv);     // F-01
+    if (mode == "bothways") return runBothWays(argc, argv);   // F-01
+    if (mode == "screens") return runScreens(argc, argv);     // F-05
+    if (mode == "suncone") return runSunCone();               // F-05
+    if (mode == "pool") return runPool();                     // F-06
+    if (mode == "load") return runLoad(argc, argv);           // F-01
+    if (mode == "soak") return runSoak(argc, argv);           // F-01
     if (mode == "flow") { runGameFlow(); return 0; }
     if (mode == "landmaps") { renderLandingMaps(); return 0; }
     if (mode == "consistency") { runConsistency(); return 0; }
@@ -18240,6 +19643,7 @@ int main(int argc, char** argv) {
     if (mode == "settings") { testSettings(); return 0; }
     if (mode == "regress") return runRegress(argc > 2 && std::string(argv[2]) == "bless");
     if (mode == "fuzz") return runFuzz(argc > 2 ? atoi(argv[2]) : 10000);
+    if (mode == "reanchor" && argc > 2 && std::string(argv[2]) == "comet") return runReanchorComet(argc, argv);   // F-01
     if (mode == "reanchor") { testReanchor(); return 0; }
     if (mode == "survey") { runSurvey(argc > 2 ? atoi(argv[2]) : 2000); return 0; }
     if (mode == "galaxy") { runGalaxy(); return 0; }   // G-01

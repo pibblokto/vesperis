@@ -298,9 +298,11 @@ std::string Game::droneStateLine(int k) const {
 
 // ---- the screen ------------------------------------------------------------------------------------------------------------------
 
+int Game::droneBayWorld() const { return bay.out ? bay.body : (sys.valid && ship.mode == ShipState::PARKED && ship.parkedBelt < 0 ? ship.parkedBody : -1); }
+
 void Game::openDroneBay() {
     radarOff(); if (tele.on) telescopeOff();
-    const int b = bay.out ? bay.body : (sys.valid && ship.mode == ShipState::PARKED && ship.parkedBelt < 0 ? ship.parkedBody : -1);
+    const int b = droneBayWorld();
     if (sys.valid && b >= 0 && b < (int)sys.bodies.size()) {
         if (bay.mapSeed != sys.bodies[b].seed) buildDroneMap(b);
         if (worldHadCivilisation(spaceR.genFor(sys.bodies[b]))) droneWorldAsk(b);
@@ -320,6 +322,10 @@ void Game::droneFindsSeen() {
 }
 
 void Game::updateDroneBay(const Input& in, double realDt) {
+    {   // F-02: the world's map once its thread has made it (the screen opens at once: THE MAP IS BEING DRAWN until then)
+        const int b = droneBayWorld();
+        if (sys.valid && b >= 0 && b < (int)sys.bodies.size() && bay.mapSeed != sys.bodies[b].seed) buildDroneMap(b);
+    }
     if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl())) { droneFindsSeen(); state = GameState::SPACE; audio.beep = 4; return; }
     if (in.wasPressed(KEY_UP)) { bay.listTop = std::max(0, bay.listTop - 1); audio.beep = 4; }
     if (in.wasPressed(KEY_DOWN)) { bay.listTop++; audio.beep = 4; }
@@ -341,7 +347,7 @@ void Game::renderDroneBay() {
         drawText(canvas, UW - 6 - textWidth(st.c_str()), 4, st.c_str(), col);
     }
     // the world: the trip's, else the one under the ship
-    const int b = bay.out ? bay.body : (sys.valid && ship.mode == ShipState::PARKED && ship.parkedBelt < 0 ? ship.parkedBody : -1);
+    const int b = droneBayWorld();
     const bool world = sys.valid && b >= 0 && b < (int)sys.bodies.size();
     bool people = false;
     {

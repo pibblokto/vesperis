@@ -318,7 +318,9 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
         }
     });
     for (int c = 0; c < K; c++) { lastFormPolys += (int)formChunks[c].polys.size(); lastFormLines += (int)formChunks[c].lines.size(); lastSilhouettes += formChunks[c].silhouettes; }
-    // the bands: every thread walks every chunk in order and draws what reaches its rows
+    // the bands: every thread walks every chunk in order and draws what reaches its rows. F-06: in chunks of eight rows or a sixty-fourth of
+    // the frame, dealt: a chunk costs little more than a test per polygon, and a town fills a few rows of the frame (city 4x 7.16 -> 6.83 ms
+    // against the pool's own quarter of a thread's share)
     parallelFor(FBH, 32, [&](int yb, int ye) {
         setRasterBand(yb, ye);
         for (int c = 0; c < K; c++) {
@@ -328,5 +330,5 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
         for (int c = 0; c < K; c++)
             for (const FormLineOut& L : formChunks[c].lines) { if (L.y1 < yb || L.y0 >= ye) continue; rasterLine3(fb, L.a, L.b, L.bank, proj, true, L.thick); }
         setRasterBand(0, 1 << 30);
-    });
+    }, std::max(8, FBH / 64));
 }

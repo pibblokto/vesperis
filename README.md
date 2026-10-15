@@ -56,6 +56,16 @@ chart of the whole galaxy plots the next jump, and the radar's gain hears
 signals thousands of light years away. The peoples were regenerated (generation
 13): saves load, and the shards already found are kept with new contents.
 
+1.3.1 is faster, with the same worlds and pictures. A frame takes about half
+the time it did (less of a gain on fewer cores): on the Apple M4 it was
+measured on, the game holds 60 frames a second at the largest scale in the
+cabin, at the decoder, walking and driving, where 1.3.0 ran at 30 to 58.
+Saving to the guide, taking a photograph or a recording and opening the
+landing map or the drone bay over a world not yet mapped no longer stall the
+game, and a landing's first frame takes about half as long. The forest looks
+the same on every machine, and on Windows a telescope photograph shows its
+whole plate. Saves load as they were.
+
 ## Playing
 
 Download the build for your machine from the
@@ -87,7 +97,9 @@ installed (Linux, Windows), `-DVESPERIS_BUILD_GAME=OFF` to build only the
 headless harness, and `ctest --test-dir build-cmake` runs the headless checks.
 `packaging/make_app.sh` wraps the macOS binary into `dist/Vesperis.app`,
 `packaging/make_zip.sh` makes a portable zip, `web/build_web.sh` targets the
-browser with emsdk (experimental).
+browser with emsdk (experimental). The release's six zips come from
+`packaging/build-release.sh` (after `packaging/toolchains.sh`; the Linux builds
+run in Docker).
 
 The headless harness needs no window: `./vesperis_test flow` plays through a
 whole expedition and dumps frames to `shots/tests/`, `./vesperis_test unit`

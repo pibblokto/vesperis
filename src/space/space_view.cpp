@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cstdio>
 #include <algorithm>
+#include <cstring>
 
 static constexpr double BAND_SHADES = 24.0;   // G-03: the galactic band at full brightness, in shades of bank 0 (the ramp's dim blue-grey stop is at 20): the bulge 21, the plane 8-10
 
@@ -184,9 +185,11 @@ const PlanetMap* SpaceRenderer::mapIfReady(const Body& b) {
 const PlanetMap& SpaceRenderer::mapFor(const Body& b) {
     const PlanetMap* m = mapIfReady(b);
     if (m) return *m;
+    auto tb = std::chrono::steady_clock::now();   // F-01: the caller waits from here (a generation under way joined, or the map made here)
     joinMap(b.seed);
     PlanetMap* mm = maps[b.seed].get();
     if (!mm->valid) { auto t0 = std::chrono::steady_clock::now(); mm->generate(genFor(b)); mm->generating = false; genMicros.fetch_add((long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count()); }
+    mapStats.blocked++; mapStats.blockedMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb).count();
     return *mm;
 }
 
@@ -282,6 +285,15 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     if (fade < 1) scalePalette(fb.pal, fade);
 }
 
+// F-05: true when no pixel centre of the frame lies within `halfAngle` of a direction `theta` off the view's axis. The farthest pixel
+// centre lies `cornerA` off the axis, and the angle between two directions is at least the difference of their angles to a third, so
+// every pixel lies more than theta - cornerA from the direction (a margin of 1e-5 radians over the passes' own rounding)
+static bool coneMissesFrame(const Proj& pj, double theta, double halfAngle) {
+    const double mx = std::max(std::fabs(0.5 - pj.cx), std::fabs(FBW - 0.5 - pj.cx)), my = std::max(std::fabs(0.5 - pj.cy), std::fabs(FBH - 0.5 - pj.cy));
+    const double cornerA = std::atan(std::sqrt(mx * mx + my * my) / pj.f);
+    return theta - cornerA > halfAngle + 1e-5;
+}
+
 // B-308: the sun's disc and glow by angle. Each pixel's ray is compared with the star's direction, so the disc is right
 // whatever its size and wherever its centre is. The old screen-space circle used the radius f tan(a) d/z, which grows
 // without bound as the centre nears the camera plane: with the ship parked 3.5 radii from a companion star, a swing of
@@ -339,12 +351,13 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     double sx = 0, sy = 0;
     if (centreFront) { sx = pj.cx + pj.f * dirView.x / dirView.z; sy = pj.cy - pj.f * dirView.y / dirView.z; }
     int x0 = 0, x1 = FBW - 1, y0 = 0, y1 = FBH - 1;
+    bool glowPass = true;
     if (centreFront && theta + outerA < 85 * DEG) {
         double rb = pj.f * std::sin(outerA) / (std::cos(theta) * std::cos(theta + outerA)) + 2;
         x0 = std::max(0, (int)(sx - rb)); x1 = std::min(FBW - 1, (int)(sx + rb));
         y0 = std::max(0, (int)(sy - rb)); y1 = std::min(FBH - 1, (int)(sy + rb));
         if (x0 > x1 || y0 > y1) return;
-    }
+    } else glowPass = !coneMissesFrame(pj, theta, outerA);   // F-05: the sun beside or behind the camera: the whole frame was walked for nothing
     bool disc = rA * pj.f >= 0.8;   // under 0.8 px the sun is a point
     // a tangent basis for the granulation pattern (6 units across the disc, as the old dx * ns)
     Vec3 e1 = cross(dirView, Vec3(0, 1, 0));
@@ -352,77 +365,87 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     e1 = normalize(e1);
     Vec3 e2 = cross(dirView, e1);
     double cosOuter = std::cos(outerA);
-    parallelFor(y1 - y0 + 1, 32, [&](int rb, int re) {
+    if (glowPass) parallelFor(y1 - y0 + 1, 32, [&](int rb, int re) {
+        // F-05 (KI-409): what the loop reads, copied into the band's own locals. Read through the closure from drawSun's frame between the
+        // pixels' stores, the loop ran five times slower under one alignment of the main thread's stack; the arithmetic is the same
+        const double pcx = pj.cx, pcy = pj.cy, inv = invf, cosOut = cosOuter, rAng = rA, outer = outerA, corona = coronaA, tc = t;
+        const double fl = flare, pu = pulse, inten = intensity, rgA = ringA, rgW = ringW, bowA = bowAng;
+        const Vec3 dir = dirView, g1 = e1, g2 = e2, s1 = r1, s2 = r2;
+        const int kind = cls, bk0 = bank, aOuter = addOuter, aCorona = addCorona, xa = x0, xb = x1, W = FBW;
+        const bool depth = depthTest, isDisc = disc;
+        const uint64_t seed = star.seed;
+        const float* const zbuf = fb.invz.data();
+        Pix* const pixels = fb.idx.data();
         for (int y = y0 + rb; y < y0 + re; y++) {
-            for (int x = x0; x <= x1; x++) {
-                Vec3 d((x + 0.5 - pj.cx) * invf, -(y + 0.5 - pj.cy) * invf, 1.0);
+            for (int x = xa; x <= xb; x++) {
+                Vec3 d((x + 0.5 - pcx) * inv, -(y + 0.5 - pcy) * inv, 1.0);
                 double dl = std::sqrt(dot(d, d));
-                double cosA = dot(d, dirView) / dl;
-                if (cosA <= cosOuter) continue;
-                int o = y * FBW + x;
-                if (depthTest && fb.invz[o] > 1e-12f) continue;
+                double cosA = dot(d, dir) / dl;
+                if (cosA <= cosOut) continue;
+                int o = y * W + x;
+                if (depth && zbuf[o] > 1e-12f) continue;
                 double a = std::acos(clampd(cosA, -1, 1));
-                Pix& p = fb.idx[o];
-                if (disc && a < rA) {
-                    double q = a / rA;
+                Pix& p = pixels[o];
+                if (isDisc && a < rAng) {
+                    double q = a / rAng;
                     double mu = std::sqrt(std::max(0.0, 1.0 - q * q));
                     double limb = 0.55 + 0.45 * mu;
-                    double px = dot(d, e1) / dl, py = dot(d, e2) / dl;
+                    double px = dot(d, g1) / dl, py = dot(d, g2) / dl;
                     double pl = std::sqrt(px * px + py * py);
                     double k = pl > 1e-9 ? 6.0 * q / pl : 0.0;
                     double nx = px * k, ny = py * k;
                     double v;
-                    if (cls == STAR_RED_GIANT || cls == STAR_ORANGE_GIANT || cls == STAR_CARBON) {   // S-01: the giants' mottled convection; the carbon star's disc dark under its soot
-                        double n = gnoise2(nx * 1.5 + t * 0.03, ny * 1.5, star.seed) * 0.5 +
-                                   gnoise2(nx * 4 - t * 0.05, ny * 4, star.seed + 3) * 0.3;
-                        v = (cls == STAR_CARBON ? 42 : 50) + 14 * n;
+                    if (kind == STAR_RED_GIANT || kind == STAR_ORANGE_GIANT || kind == STAR_CARBON) {   // S-01: the giants' mottled convection; the carbon star's disc dark under its soot
+                        double n = gnoise2(nx * 1.5 + tc * 0.03, ny * 1.5, seed) * 0.5 +
+                                   gnoise2(nx * 4 - tc * 0.05, ny * 4, seed + 3) * 0.3;
+                        v = (kind == STAR_CARBON ? 42 : 50) + 14 * n;
                         v *= limb * 0.95 + 0.05;
-                    } else if (cls == STAR_ORANGE || cls == STAR_YELLOW || cls == STAR_RED_DWARF) {
-                        double n = gnoise2(nx * 3 + t * 0.01, ny * 3, star.seed);
-                        double spotFrom = cls == STAR_RED_DWARF ? 0.36 : 0.42;   // S-01: a red dwarf is spotted all over, and its flare whitens the disc
-                        double spots = (cls != STAR_YELLOW && n > spotFrom) ? 18 * (n - spotFrom) / 0.3 : 0;
-                        v = (58 + 4 * gnoise2(nx * 8, ny * 8 + t * 0.02, star.seed + 1)) * limb - spots * 2.0 + 12 * flare;
-                    } else if (cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) {   // S-05: the Wolf-Rayet star's disc is the blue giant's
+                    } else if (kind == STAR_ORANGE || kind == STAR_YELLOW || kind == STAR_RED_DWARF) {
+                        double n = gnoise2(nx * 3 + tc * 0.01, ny * 3, seed);
+                        double spotFrom = kind == STAR_RED_DWARF ? 0.36 : 0.42;   // S-01: a red dwarf is spotted all over, and its flare whitens the disc
+                        double spots = (kind != STAR_YELLOW && n > spotFrom) ? 18 * (n - spotFrom) / 0.3 : 0;
+                        v = (58 + 4 * gnoise2(nx * 8, ny * 8 + tc * 0.02, seed + 1)) * limb - spots * 2.0 + 12 * fl;
+                    } else if (kind == STAR_BLUE_GIANT || kind == STAR_BLUE_WHITE || kind == STAR_WOLF_RAYET) {   // S-05: the Wolf-Rayet star's disc is the blue giant's
                         v = 63 * (0.8 + 0.2 * mu);
-                    } else if (cls == STAR_PULSAR) {
-                        v = 40 + 23 * pulse;
-                    } else if (cls == STAR_PROTOSTAR) {   // S-04: a soft disc, strongly limb-darkened, its light through the dust
-                        double n = gnoise2(nx * 2 + t * 0.02, ny * 2, star.seed) * 0.5 + gnoise2(nx * 5, ny * 5 - t * 0.03, star.seed + 3) * 0.3;
+                    } else if (kind == STAR_PULSAR) {
+                        v = 40 + 23 * pu;
+                    } else if (kind == STAR_PROTOSTAR) {   // S-04: a soft disc, strongly limb-darkened, its light through the dust
+                        double n = gnoise2(nx * 2 + tc * 0.02, ny * 2, seed) * 0.5 + gnoise2(nx * 5, ny * 5 - tc * 0.03, seed + 3) * 0.3;
                         v = (47 + 8 * n) * (0.35 + 0.65 * mu);
                     } else {
                         v = 63 * (0.75 + 0.25 * mu);
                     }
-                    v *= intensity;
+                    v *= inten;
                     // the disc is never dimmer than the glow-lit sky round it (a dim low sun inside a saturated corona read
                     // as a ring: the glow saturated the sky at 63 while the disc itself sat at 45)
-                    double rim = shadeOf(p) + (addOuter + addCorona) * (1.0 - 0.2 * 0.2);
+                    double rim = shadeOf(p) + (aOuter + aCorona) * (1.0 - 0.2 * 0.2);
                     if (v < rim) v = rim;
-                    p = pix(bank, clampd(v, 0, 63));
+                    p = pix(bk0, clampd(v, 0, 63));
                     continue;
                 }
                 // the glow: an outer disc and the corona, both squared falloffs from the edge of the disc
                 int add = 0;
                 {
-                    double t1 = a <= rA ? 1.0 : 1.0 - (a - rA) / (outerA - rA + 1e-9);
-                    if (t1 > 0) add += (int)(addOuter * INTEN_PER_SHADE * t1 * t1 + 0.5);
-                    double c0 = rA * 0.8;
-                    double t2 = a <= c0 ? 1.0 : 1.0 - (a - c0) / (coronaA - c0 + 1e-9);
-                    if (t2 > 0) add += (int)(addCorona * INTEN_PER_SHADE * t2 * t2 + 0.5);
+                    double t1 = a <= rAng ? 1.0 : 1.0 - (a - rAng) / (outer - rAng + 1e-9);
+                    if (t1 > 0) add += (int)(aOuter * INTEN_PER_SHADE * t1 * t1 + 0.5);
+                    double c0 = rAng * 0.8;
+                    double t2 = a <= c0 ? 1.0 : 1.0 - (a - c0) / (corona - c0 + 1e-9);
+                    if (t2 > 0) add += (int)(aCorona * INTEN_PER_SHADE * t2 * t2 + 0.5);
                 }
-                if (cls == STAR_WOLF_RAYET && a > rA) {   // S-05: the shell's ring
-                    double ex = (a - ringA) / ringW;
+                if (kind == STAR_WOLF_RAYET && a > rAng) {   // S-05: the shell's ring
+                    double ex = (a - rgA) / rgW;
                     double ring = ex > 0 ? std::exp(-4.0 * ex * ex) : std::exp(-0.5 * ex * ex);
                     if (ring > 0.01) {
-                        double px = dot(d, r1) / dl, py = dot(d, r2) / dl;
+                        double px = dot(d, s1) / dl, py = dot(d, s2) / dl;
                         double ang = std::atan2(py, px);
-                        double fil = 0.6 + 0.4 * gnoise2(std::cos(ang) * 4.5 + 3.1, std::sin(ang) * 4.5 + ex * 0.7, star.seed + 17);
-                        double bow = 0.7 + 0.3 * std::cos(ang - bowAng);
-                        add += (int)(intensity * 34 * ring * fil * bow * INTEN_PER_SHADE + 0.5);
+                        double fil = 0.6 + 0.4 * gnoise2(std::cos(ang) * 4.5 + 3.1, std::sin(ang) * 4.5 + ex * 0.7, seed + 17);
+                        double bow = 0.7 + 0.3 * std::cos(ang - bowA);
+                        add += (int)(inten * 34 * ring * fil * bow * INTEN_PER_SHADE + 0.5);
                     }
                 }
                 if (add <= 0) continue;
-                if (cls == STAR_PROTOSTAR && a > rA) add = (int)(add * (0.6 + 0.4 * (0.5 + 0.5 * gnoise3(d / dl * 6.0, star.seed + 9))));   // S-04: the cloud's wisps
-                int bk = intenOf(p) == 0 ? bank : bankOf(p);
+                if (kind == STAR_PROTOSTAR && a > rAng) add = (int)(add * (0.6 + 0.4 * (0.5 + 0.5 * gnoise3(d / dl * 6.0, seed + 9))));   // S-04: the cloud's wisps
+                int bk = intenOf(p) == 0 ? bk0 : bankOf(p);
                 p = pixI(bk, intenOf(p) + add);
             }
         }
@@ -430,7 +453,7 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     // S-04: the protostar's dust disc, seen edge-on from the plane of its worlds: a band of glow along the orbital plane through
     // the star, narrow at the star and flaring to 0.05 + 0.3 a (radians) at the angle a from it, gone 0.6 rad out, with the dark
     // lane of the disc's own shadow along its middle. Its own pass over the frame, skipping cheaply every pixel outside the strip
-    if (cls == STAR_PROTOSTAR && discUp) {
+    if (cls == STAR_PROTOSTAR && discUp && !coneMissesFrame(pj, theta, 0.6)) {   // F-05: not when the strip's cone misses the frame
         const Vec3 n = *discUp;
         const double cosBand = std::cos(0.6);
         parallelFor(FBH, 32, [&](int rb, int re) {
@@ -585,7 +608,8 @@ Vec3 SpaceRenderer::plateCellUnit(const DetailPlate& p, int i, int j) {
 
 namespace {
 // a body-frame point turned about the spin axis (the jets' and the clouds' drift are turns of the lookup, the plate being fixed)
-inline Vec3 rotZ(const Vec3& v, double ang) { double cs = std::cos(ang), sn = std::sin(ang); return Vec3(v.x * cs - v.y * sn, v.x * sn + v.y * cs, v.z); }
+inline Vec3 rotZcs(const Vec3& v, double cs, double sn) { return Vec3(v.x * cs - v.y * sn, v.x * sn + v.y * cs, v.z); }
+inline Vec3 rotZ(const Vec3& v, double ang) { return rotZcs(v, std::cos(ang), std::sin(ang)); }
 // the plate's cell under a body-frame point: the cell coordinates (a cell's centre at integer fx, fy), the nearest cell,
 // filled and on the sphere, else no hit
 struct PlateHit { const DetailPlate* p = nullptr; double fx = 0, fy = 0; int in = 0, jn = 0; bool ok = false; };
@@ -635,6 +659,10 @@ inline void plateSlopes(const PlateHit& h, double& ga, double& gb) {
 }
 }
 
+// The clouds' drift in longitude at t, within a turn (F-10: wrapped once a frame, so that the globe's every cloud read, `lon + drift`,
+// takes wrap2pi's one-turn path; unwrapped it grew with the clock, tens of turns and more in play, and each read was an fmod)
+static double cloudDriftOf(const Body& b, double t) { return wrap2pi(t * TAU / (b.rotPeriod * 3.7) + 1.0); }
+
 void SpaceRenderer::plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket, const Vec3& u0, const Vec3& e1, const Vec3& e2, double texel, double R, double cloudDrift, double halfA, double halfB) {
     plateBegun++;
     p = DetailPlate();
@@ -652,7 +680,7 @@ void SpaceRenderer::plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket
 
 // the build: the block passes in order, the blocks of a pass in rows, `budget` samples at most (0: all of it)
 void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
-    long left = budget > 0 ? budget : (1L << 40);
+    long long left = budget > 0 ? budget : (1LL << 40);   // B-424: long long (Windows' long is 32 bits: 1L << 40 left the photo's plate unread)
     const double Rm = g.R * 1000.0;
     if (!p.planRead && worldHadCivilisation(g)) {   // T-01: the plan's cores and ways in reach of the plate (it is built at the approach; until then not)
         if (std::shared_ptr<const WorldPlan> P = worldPlanIfReady(g)) {
@@ -663,6 +691,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                 const Culture cu = cultureOf(g, q->people);
                 const RGB pc = cu.palette.colour[0];
                 DetailPlate::PlanCore k; k.u = q->unit; k.r = q->radiusM; k.alb = clampd(0.25 + 0.5 * (0.3 * pc.r + 0.55 * pc.g + 0.15 * pc.b), 0.2, 0.7); k.standing = 0.75 - 0.45 * cu.decay;
+                k.cosReach = std::cos(std::min(PI, (k.r + p.texelM) / Rm));
                 p.cores.push_back(k);
             }
             if (p.texelM < 300) {   // a way shows where a texel is no more than ten times its width
@@ -686,9 +715,11 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
         int L = DetailPlate::BLOCKS[p.pass];
         int bw = (p.W + L - 1) / L, bh = (p.H + L - 1) / L, nBlocks = bw * bh;
         if (p.next >= nBlocks) { p.pass++; p.next = 0; continue; }
-        int count = (int)std::min<long>(nBlocks - p.next, left), first = p.next;
+        int count = (int)std::min<long long>(nBlocks - p.next, left), first = p.next;   // B-424: not min<long> (2^40 is 0 in Windows' long)
         std::atomic<long> taken{0};
         bool noDrain = p.noDrainage;
+        // F-06: the blocks dealt 64 at a time (a block costs a sample, a copy or nothing: the threads' shares even out); the same
+        // blocks land in the same frames whoever takes them
         parallelFor(count, 32, [&](int k0, int k1) {
             DrainageOff off(noDrain);
             long mine = 0;
@@ -705,6 +736,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         if (g.type == PT_GASGIANT && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));   // M9-10: the polar vortex, as the map has it
                         int mat = s.material;
                         for (const DetailPlate::PlanCore& k : p.cores) {   // T-01: a core's built ground, its share of the cell, less what the years took
+                            if (dot(u, k.u) < k.cosReach - 1e-9) continue;   // F-07: surely out of reach (the angle's margin is far over acos's rounding)
                             const double d = std::acos(clampd(dot(u, k.u), -1, 1)) * Rm;
                             if (d > k.r + p.texelM) continue;
                             const double f = clampd((k.r - d) / p.texelM + 0.5, 0, 1) * std::min(1.0, k.r / std::max(1.0, p.texelM)) * k.standing;
@@ -737,7 +769,7 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                     }
             }
             taken += mine;
-        });
+        }, 64);
         p.samples += taken; plateSamplesFrame += taken; p.next += count; left -= count;
     }
 }
@@ -799,7 +831,7 @@ void SpaceRenderer::updatePlate(const SpaceContext& c) {
     };
     int bucket = bi < 64 ? seasonBucket[bi] : 0;
     const BodyGen& g = genFor(b);
-    double cloudDrift = c.t * TAU / (b.rotPeriod * 3.7) + 1.0;
+    double cloudDrift = cloudDriftOf(b, c.t);
     auto fits = [&](const DetailPlate& p) {
         if (!p.valid() || p.body != bi || p.seed != b.seed || p.seasonBucket != bucket || std::fabs(p.texel / texel - 1) >= 0.25) return false;
         if (dot(u0, p.u0) <= 0.77) return false;   // the aim within forty degrees of the plate's centre
@@ -940,6 +972,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
             pl[npl] = &q; plE1W[npl] = frameT * q.e1; plE2W[npl] = frameT * q.e2; plK[npl] = 2.5 + 3.5 * smoothstep(200.0, 1500.0, q.texelM); npl++;
         }
     bool atmosphere = pt.atmosphere;
+    const bool ownCloudV = atmosphere && (hasOpaqueDeck(b.type) || b.type == PT_GASGIANT);
     double bubble = atmosphere ? 1.045 : 1.0;
     const FrontMap* fmap = (atmosphere && !hasOpaqueDeck(b.type) && worldHasFronts(b)) ? frontsFor(b, c.t) : nullptr;   // W-03: the fronts' bands
     const int frontCW = PlanetMap::W / FRONT_BLOCK, frontCH = PlanetMap::H / FRONT_BLOCK;
@@ -958,7 +991,9 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         shineP = bodyShineAt(sys, b.parent, posW, c.t, lf);
         shineDirW = normalize(sys.bodyPos(b.parent, c.t) - posW);
     }
-    double cloudDrift = c.t * TAU / (b.rotPeriod * 3.7) + 1.0;
+    double cloudDrift = cloudDriftOf(b, c.t);
+    double plCs[2] = {1, 1}, plSn[2] = {0, 0};   // F-07: a plate's cloud turn where there is no jet (the angle as the pixel wrote it)
+    for (int k = 0; k < npl; k++) { const double ang = 0.0 + cloudDrift - pl[k]->cloudDrift0; plCs[k] = std::cos(ang); plSn[k] = std::sin(ang); }
     double R2 = R * R;
     double c2 = dot(cv, cv);
     double rings = b.rings ? 1 : 0;
@@ -971,13 +1006,22 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         x0 = std::min(x0, rx0); x1 = std::max(x1, rx1); y0 = std::min(y0, ry0); y1 = std::max(y1, ry1);
     }
     if (x0 > x1 || y0 > y1) return;
-    // M1-08: moons and the parent cast shadows on this globe; rings shade it too
+    // M1-08: moons and the parent cast shadows on this globe; rings shade it too. F-07: a body that can shade no lit point this
+    // frame is left out (the loop would leave its shadow at 0): its shadow's cylinder passes wide of the globe (a point's distance
+    // from the axis is at least the centre's less R), or it is behind the globe from the star and clear of it (a lit point's
+    // `along` is under the centre's); the slack is far over the rounding of either side
     struct Occ { Vec3 pos; double r; };
     std::vector<Occ> occ;
     if (!c.skyMode)
         for (int j = 0; j < (int)sys.bodies.size(); j++) {
             if (j == bi) continue;
-            if (sys.bodies[j].parent == bi || j == b.parent) occ.push_back({sys.bodyPos(j, c.t), sys.bodies[j].radiusKm});
+            if (sys.bodies[j].parent != bi && j != b.parent) continue;
+            const Occ o{sys.bodyPos(j, c.t), sys.bodies[j].radiusKm};
+            const Vec3 rc = o.pos - posW;
+            const double alongC = dot(rc, starDirW), dc = length(rc), dpC = std::sqrt(std::max(0.0, length2(rc) - alongC * alongC));
+            const double slack = 0.01 * o.r + 1e-6 * (dc + R);
+            if (dpC - R > o.r + slack || (alongC <= 0 && dc - R > o.r + slack)) continue;
+            occ.push_back(o);
         }
     double invf = 1.0 / proj.f;
     parallelFor(y1 - y0 + 1, 48, [&](int rb, int re) {
@@ -1065,13 +1109,16 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 double earth = shineP > 0.002 && lit < 0 ? (1 - ambient) * 0.6 * shineP * std::max(0.0, dot(nW, shineDirW)) * smoothstep(0.0, -0.1, lit) : 0.0;
                 if (earth > 0 && !c.skyMode) shade += earth;
                 if (b.type == PT_SUBSTELLAR) shade = std::max(shade, bgen.selfGlow * (0.3 + 0.7 * alb));   // M5-02: it glows on its own, bands and all
-                double v = exposureStop(alb, shade, atmosphere);   // N1-05: the ground's exposure rule
-                if (mat == MAT_LAVA) v = std::max(v, 50.0 + 10.0 * alb);
+                double v = 0;
+                if (!ownCloudV) {   // F-07: an opaque deck's and a giant's value is their clouds' (below), the ground's never read
+                    v = exposureStop(alb, shade, atmosphere);   // N1-05: the ground's exposure rule
+                    if (mat == MAT_LAVA) v = std::max(v, 50.0 + 10.0 * alb);
+                }
                 bool cloudy = false;
                 if (atmosphere) {
                     double cl = 0.0; bool gotCl = false;
                     for (int k = 0; k < npl && !gotCl; k++) {   // W-06: the plate's cloud, the point turned by the drift since the build
-                        PlateHit pc = plateFind(*pl[k], rotZ(bf, jet + cloudDrift - pl[k]->cloudDrift0));
+                        PlateHit pc = plateFind(*pl[k], jet == 0.0 ? rotZcs(bf, plCs[k], plSn[k]) : rotZ(bf, jet + cloudDrift - pl[k]->cloudDrift0));
                         if (pc.ok) { cl = plateCloud(pc); gotCl = true; }
                     }
                     if (!gotCl) cl = haveMap ? map.cloudAt(lon + cloudDrift, lat) : 0.0;
@@ -1087,8 +1134,10 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (hasOpaqueDeck(b.type)) { v = 63.0 * (0.6 + 0.4 * cl) * shade; }
                     else if (b.type == PT_GASGIANT) { v = 63.0 * std::pow(alb, 0.7) * shade * 1.05; }
                     else { v = v + (63.0 * 0.92 * shade - v) * cl; cloudy = cl > 0.6; }
-                    double limb = std::pow(1.0 - clampd(viewCos, 0, 1), 3.0);
-                    v += 14.0 * limb * clampd(lit + 0.2, 0, 1) * lf;
+                    if (lit + 0.2 > 0) {   // F-07: else the term is +0 (the night side)
+                        const double edge = 1.0 - clampd(viewCos, 0, 1), limb = edge * edge * edge;   // F-10: the cube as products
+                        v += 14.0 * limb * clampd(lit + 0.2, 0, 1) * lf;
+                    }
                 }
                 if (b.type == PT_GASGIANT && lit < -0.05 && !c.skyMode) {   // M9-10 lightning on the night side
                     if (unitFromHash(hash3i(x >> 2, y >> 2, (int64_t)(c.t * 4), b.seed)) < 0.0025) v = 58;
@@ -1238,7 +1287,7 @@ const std::vector<float>& SpaceRenderer::flightBand(const SpaceContext& c) {
     const double w = both ? clampd((t - F.tau[k]) / std::max(1e-9, F.tau[k + 1] - F.tau[k]), 0, 1) : 0;
     F.shown.resize((size_t)N);
     for (int i = 0; i < N; i++) F.shown[i] = both ? (float)(A->map[i] + ((double)B->map[i] - A->map[i]) * w) : A->map[i];
-    if (both && k + 1 == last && !F.handed) { bandMap = B->map; bandPos = to; bandValid = true; F.handed = true; }   // the arrival's band, ready before it
+    if (both && k + 1 == last && !F.handed) { bandMap = B->map; bandPos = to; bandValid = true; bandGen++; F.handed = true; }   // the arrival's band, ready before it
     F.lastT = t; F.k = k;
     return F.shown;
 }
@@ -1249,9 +1298,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
     if (c.vimana) {
         // fade previous frame for streaks
         for (auto& p : fb.idx) { int v = intenOf(p) - 9 * INTEN_PER_SHADE; p = v > 0 ? pixI(bankOf(p), v) : 0; }
-    } else {
-        fb.clear(0);
-    }
+    }   // (outside a flight the frame is cleared by the backdrop's pass below, or replaced by its kept layer)
     fb.clearDepth();
     // M1-09: the galactic backdrop, a faint band of unresolved stars (rebuilt when the ship moved); G-07: in a Vimana flight
     // too, from the flight's keyframes (KI-364: the band was not drawn in a flight), under the streaks that fade into it
@@ -1259,7 +1306,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         Vec3 obs = c.shipPos / SECTOR_KM;
         const std::vector<float>* bandSrc = &bandMap;
         if (c.vimana) bandSrc = &flightBand(c);
-        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; parkedBandBuilds++; }   // G-03: rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
+        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; bandGen++; parkedBandBuilds++; }   // G-03: rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
         Mat3 camT = c.cam.transposed();
         double invf = 1.0 / proj.f;
         const int step = 2;
@@ -1273,22 +1320,38 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
             for (int i = 0; i < nebN; i++) nebP[i].inten *= fade;
         }
         if (c.sys && c.sys->valid) nebN += starNebulaPatches(c.sys->star, normalize(c.sys->star.pos - c.shipPos), nebP + nebN);   // S-04: a protostar's own cloud
-        parallelFor(FBH / step, 40, [&](int rb, int re) {
-            for (int y = rb * step; y < re * step && y < FBH; y += step)
-                for (int x = 0; x < FBW; x += step) {
-                    Vec3 d = normalize(Vec3((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0));
-                    Vec3 dw = camT * d;
-                    double band = sampleGalaxyBand(*bandSrc, BAND_MAP_W, BAND_MAP_H, dw);
-                    Pix pv = pix(0, band * BAND_SHADES);   // G-03: the map is the brightness itself
-                    if (nebN) {
-                        int tone;
-                        double g = nebulaGlow(nebP, nebN, dw, tone);
-                        if (g > 0.02) { Pix pn = pix(tone == 0 ? 4 : (tone == 1 ? 5 : 0), g * 17.0); if (intenOf(pn) > intenOf(pv)) pv = pn; }
+        // F-07: outside a flight and without patches the layer is a function of the key: kept while the camera is still
+        const bool keyed = !c.vimana && nebN == 0;
+        BackdropKey key{};
+        if (keyed) {
+            for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) key.cam[i * 3 + j] = c.cam.m[i][j];
+            key.f = proj.f; key.cx = proj.cx; key.cy = proj.cy; key.w = FBW; key.h = FBH; key.band = bandGen;
+        }
+        auto same = [](const BackdropKey& a, const BackdropKey& b) { return std::memcmp(&a, &b, sizeof a) == 0; };
+        const bool replay = keyed && backHave && same(key, backKey) && fb.idx.size() == backLayer.size();
+        if (replay) std::memcpy(fb.idx.data(), backLayer.data(), backLayer.size() * sizeof(Pix));
+        else {
+            if (!c.vimana) fb.clear(0);
+            parallelFor(FBH / step, 40, [&](int rb, int re) {
+                for (int y = rb * step; y < re * step && y < FBH; y += step)
+                    for (int x = 0; x < FBW; x += step) {
+                        Vec3 d = normalize(Vec3((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0));
+                        Vec3 dw = camT * d;
+                        double band = sampleGalaxyBand(*bandSrc, dw);
+                        Pix pv = pix(0, band * BAND_SHADES);   // G-03: the map is the brightness itself
+                        if (nebN) {
+                            int tone;
+                            double g = nebulaGlow(nebP, nebN, dw, tone);
+                            if (g > 0.02) { Pix pn = pix(tone == 0 ? 4 : (tone == 1 ? 5 : 0), g * 17.0); if (intenOf(pn) > intenOf(pv)) pv = pn; }
+                        }
+                        for (int yy = y; yy < y + step && yy < FBH; yy++)
+                            for (int xx = x; xx < x + step && xx < FBW; xx++) if (intenOf(fb.idx[yy * FBW + xx]) < intenOf(pv)) fb.idx[yy * FBW + xx] = pv;
                     }
-                    for (int yy = y; yy < y + step && yy < FBH; yy++)
-                        for (int xx = x; xx < x + step && xx < FBW; xx++) if (intenOf(fb.idx[yy * FBW + xx]) < intenOf(pv)) fb.idx[yy * FBW + xx] = pv;
-                }
-        });
+            });
+            if (keyed && backPrevHave && same(key, backPrev)) { backLayer = fb.idx; backKey = key; backHave = true; }   // still for two frames: kept
+        }
+        backPrevHave = keyed;
+        if (keyed) backPrev = key;
     }
     if (c.stars)
         drawStarField(fb, *c.stars, c.shipPos, c.cam, proj, c.starIntensity, 0, true, nullptr, 0, c.vimana ? c.vimanaSpeed : 0, c.vimanaDirView);
@@ -1527,6 +1590,7 @@ void SpaceRenderer::drawBlackHole(Framebuffer& fb, const Star& star, const Vec3&
             }
         }
     }
+    if (coneMissesFrame(pj, theta, regionA)) return;   // F-05: no pixel within the lens's region: the copy, the grid and the pass write nothing
     // the frame before the lens
     std::vector<Pix> before(fb.idx);
     // the bent directions on the grid (not unit: only their projection and their line are used)

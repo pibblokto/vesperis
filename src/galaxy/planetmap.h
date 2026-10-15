@@ -180,6 +180,9 @@ double giantStormCell(const BodyGen& g, const Vec3& unit, uint64_t* id = nullptr
 // O6-02: the relief spectrum alone at a point (metres, and the slope of the sum as rise over run), for tests
 struct Relief { double h = 0, slope = 0; };
 Relief reliefAt(const BodyGen& g, const Vec3& unit, double a0, double ridge, double detailMeters);
+// F-01 (`bench noise`): one of the planet function's terms that walk the features' 27 cells (the round hills of a jittered grid on a
+// shell round the sphere: 2 km cells, metres at p, km), for timing that walk and hashing its results
+double benchFeatureField(const Vec3& p, double R, uint64_t seed);
 // Static cloud pattern (0..1) at lon/lat; animate by offsetting lon.
 double sampleCloudPattern(const BodyGen& g, double lon, double lat);
 
@@ -198,10 +201,33 @@ struct PlanetMap {
     PlanetMap(const PlanetMap&) = delete;
     PlanetMap& operator=(const PlanetMap&) = delete;
     void generate(const BodyGen& g);
-    int texelIndex(double lon, double lat) const;    // nearest texel
+    // F-07: the lookups inline (the globe reads seven a pixel; a call each from another file reloaded the data and wrapped the
+    // longitude again)
+    int texelIndex(double lon, double lat) const {   // nearest texel
+        double fx = (wrap2pi(lon + PI) / TAU) * W;
+        double fy = (0.5 - lat / PI) * H;
+        int x = clampi((int)fx, 0, W - 1), y = clampi((int)fy, 0, H - 1);
+        return y * W + x;
+    }
     // bilinear albedo/cloud/height at lon/lat (radians)
-    double albedoAt(double lon, double lat) const;
-    double cloudAt(double lon, double lat) const;
-    double heightAt(double lon, double lat) const;
-    int materialAt(double lon, double lat) const;
+    double albedoAt(double lon, double lat) const { return bilinear(albedo, lon, lat) / 255.0; }
+    double cloudAt(double lon, double lat) const { return bilinear(cloud, lon, lat) / 255.0; }
+    double heightAt(double lon, double lat) const { return bilinear(height, lon, lat); }
+    int materialAt(double lon, double lat) const { return material[texelIndex(lon, lat)]; }
+
+private:
+    template <class T>
+    static double bilinear(const std::vector<T>& v, double lon, double lat) {
+        double fx = (wrap2pi(lon + PI) / TAU) * W - 0.5;
+        double fy = (0.5 - lat / PI) * H - 0.5;
+        int x0 = ifloor(fx), y0 = ifloor(fy);
+        double tx = fx - x0, ty = fy - y0;
+        int x1 = (x0 + 1) & (W - 1);
+        x0 &= (W - 1);
+        int y1 = clampi(y0 + 1, 0, H - 1);
+        y0 = clampi(y0, 0, H - 1);
+        double a = v[y0 * W + x0], b = v[y0 * W + x1];
+        double c = v[y1 * W + x0], d = v[y1 * W + x1];
+        return (a + (b - a) * tx) + ((c + (d - c) * tx) - (a + (b - a) * tx)) * ty;
+    }
 };

@@ -121,7 +121,9 @@ double giantGlowAt(const GiantAtmosphere& a, double bar, unsigned cut = 0);
 
 // X-02 (2026-10-07): the globe's jets, the turn of a giant's pattern at a latitude by a time (M9-10; space_view's globe and
 // the descent read the same): a band drifts by 6% of the giant's turn times sin(lat x bands)
-double giantJetTurn(const Body& b, double bandCount, double lat, double t);
+inline double giantJetTurn(const Body& b, double bandCount, double lat, double t) {   // F-07: inline (the globe asks it every pixel)
+    return b.type == PT_GASGIANT ? TAU * t / b.rotPeriod * 0.06 * std::sin(lat * bandCount) : 0.0;
+}
 // X-03: the turn at a place (body-frame latitude and longitude): the great storm turns whole with its own latitude's jet, its
 // surroundings easing into it, so it keeps its shape while the bands round it shear
 double giantJetAt(const Body& b, const BodyGen& g, double lat, double lon, double t);

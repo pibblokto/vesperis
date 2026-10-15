@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <chrono>
+#include <atomic>
 
 namespace {
 struct SurfaceLook {
@@ -105,11 +106,13 @@ inline double p_rot_z(double x, double z, double a) { return -x * std::sin(a) + 
 void SurfaceView::buildDirLUT() {
     dirLUT.resize(FBW * FBH);
     double invf = 1.0 / proj.f;
-    for (int y = 0; y < FBH; y++)
-        for (int x = 0; x < FBW; x++) {
-            Vec3 d((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0);
-            dirLUT[y * FBW + x] = normalize(d);
-        }
+    parallelFor(FBH, 16, [&](int y0, int y1) {   // F-02: on the pool (the sprint's kick rebuilds it on six frames at its start and its stop, 2.3 ms each at 4x alone)
+        for (int y = y0; y < y1; y++)
+            for (int x = 0; x < FBW; x++) {
+                Vec3 d((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0);
+                dirLUT[y * FBW + x] = normalize(d);
+            }
+    });
 }
 
 void SurfaceView::setFov(double deg) {
@@ -282,11 +285,21 @@ void SurfaceView::buildBandMap() {
     buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H);
     nebN = nebulaPatches(obs, nebP, 16);   // N5-01
 }
-double SurfaceView::bandAt(const Vec3& d) const { return sampleGalaxyBand(bandMap, BAND_MAP_W, BAND_MAP_H, d); }
+double SurfaceView::bandAt(const Vec3& d) const { return sampleGalaxyBand(bandMap, d); }
 
 void SurfaceView::relocateCapsule(double x, double z) {
     capsuleX = x; capsuleZ = z;
     capsuleY = site.surfaceHeight(x, z);
+}
+
+// F-03: the material tiles of `want` (a bit a material) not made yet, made together, a material to a worker (a tile is a function of
+// its material and the seed, each into its own slot; ~1 ms each, five or six at a landing's first ring on a peopled world)
+void SurfaceView::buildMesoTiles(uint32_t want) {
+    static_assert(MAT_COUNT <= 32, "a bit a material");
+    int mats[MAT_COUNT], k = 0;
+    for (int m = 0; m < MAT_COUNT; m++) if ((want >> m & 1u) && !mesoBuilt[m] && materialHasMesoTile(m)) mats[k++] = m;
+    parallelFor(k, 1, [&](int b, int e) { for (int i = b; i < e; i++) buildMesoTile(mesoTiles[mats[i]], mats[i], site.gen.seed); });
+    for (int i = 0; i < k; i++) mesoBuilt[mats[i]] = true;
 }
 
 const GrainTexture* SurfaceView::mesoFor(int material) {
@@ -352,8 +365,35 @@ void SurfaceView::drawBlobShadowFrom(Framebuffer& fb, double x, double z, double
     rasterPolygon(fb, q, 8, rp, proj);
 }
 
-// M1-04: the land mirrored about the sea level, blended into water pixels only (bank 2), far to near.
-void SurfaceView::drawReflections(Framebuffer& fb) {
+// F-04, F-05: the rows a convex polygon can fill: clipped at the near plane as rasterPolygon clips it, projected as it projects, a row of
+// slack each side; false when it fills none (wholly beside, above or below the frame: the rasteriser rejects it). `every` is set when a
+// point projects to no finite place
+static bool polygonRows(const Proj& pj, const Vec3* p, int np, int& y0, int& y1, bool& every) {
+    double minx = 1e300, maxx = -1e300, miny = 1e300, maxy = -1e300;
+    int m = 0;
+    auto at = [&](double x, double y, double z) {
+        const double iz = 1.0 / z, sx = pj.cx + pj.f * x * iz, sy = pj.cy - pj.f * y * iz;
+        if (!std::isfinite(sx) || !std::isfinite(sy)) every = true;
+        minx = std::min(minx, sx); maxx = std::max(maxx, sx); miny = std::min(miny, sy); maxy = std::max(maxy, sy);
+        m++;
+    };
+    for (int i = 0; i < np; i++) {   // rasterPolygon's clip against z = NEAR_Z
+        const Vec3& a = p[i]; const Vec3& b = p[(i + 1) % np];
+        const bool ain = a.z >= NEAR_Z, bin = b.z >= NEAR_Z;
+        if (ain) at(a.x, a.y, a.z);
+        if (ain != bin) { const double t = (NEAR_Z - a.z) / (b.z - a.z); at(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t); }
+    }
+    if (m < 3 || maxx < -1 || minx > FBW + 1) return false;
+    const double ylo = std::ceil(miny - 0.5) - 1, yhi = std::floor(maxy - 0.5) + 1;
+    if (yhi < 0 || ylo > FBH - 1) return false;
+    y0 = (int)std::max(-1.0, ylo); y1 = (int)std::min((double)FBH, yhi);
+    return true;
+}
+
+// M1-04: the land mirrored about the sea level, blended into water pixels only (bank 2), far to near. F-05: the polygons gathered here
+// (serially) with their rows, then drawn by the terrain's band threads (drawReflectionBand)
+void SurfaceView::gatherReflections() {
+    reflVerts.clear(); reflPolys.clear();
     struct Cell { double d2; int cx, cz; int lod; double level; };
     std::vector<Cell> cells;
     double sea = site.seaLevel;
@@ -381,8 +421,6 @@ void SurfaceView::drawReflections(Framebuffer& fb) {
             }
     }
     std::sort(cells.begin(), cells.end(), [](const Cell& a, const Cell& b) { return a.d2 > b.d2; });
-    RasterParams rp;
-    rp.blend = BLEND_REFLECT; rp.maskBank = 2; rp.reflectMix = 0.45; rp.ztest = false; rp.zwrite = false;
     for (const Cell& c : cells) {
         TerrainCache& cache = c.lod == 0 ? site.lod0 : site.lod1;
         std::vector<VtxCache>& vcache = c.lod == 0 ? vc0 : vc1;
@@ -430,8 +468,26 @@ void SurfaceView::drawReflections(Framebuffer& fb) {
                 if (ain) emit(px[a], ph[a], pz[a]);
                 if (ain != bin) { double t = (c.level - ph[a]) / (ph[b] - ph[a]); emit(px[a] + (px[b] - px[a]) * t, c.level, pz[a] + (pz[b] - pz[a]) * t); }
             }
-            if (m >= 3) rasterPolygon(fb, q, m, rp, proj);
+            if (m < 3) continue;
+            ReflPoly rpo; rpo.first = (int)reflVerts.size(); rpo.n = m;
+            Vec3 pv[6]; for (int e = 0; e < m; e++) pv[e] = Vec3(q[e].x, q[e].y, q[e].z);
+            bool every = false;
+            const bool fills = polygonRows(proj, pv, m, rpo.y0, rpo.y1, every);
+            if (every) { rpo.y0 = -(1 << 30); rpo.y1 = 1 << 30; }
+            else if (!fills) continue;   // it fills no row of the frame (the rasteriser rejects it)
+            reflVerts.insert(reflVerts.end(), q, q + m);
+            reflPolys.push_back(rpo);
         }
+    }
+}
+
+// F-05: the gathered reflections that reach this band's rows, in order, clipped to it (the caller's raster band)
+void SurfaceView::drawReflectionBand(Framebuffer& fb, int bandY0, int bandY1) const {
+    RasterParams rp;
+    rp.blend = BLEND_REFLECT; rp.maskBank = 2; rp.reflectMix = 0.45; rp.ztest = false; rp.zwrite = false;
+    for (const ReflPoly& p : reflPolys) {
+        if (p.y1 < bandY0 || p.y0 >= bandY1) continue;
+        rasterPolygon(fb, &reflVerts[p.first], p.n, rp, proj);
     }
 }
 
@@ -581,8 +637,12 @@ bool SurfaceView::inSettlementBuilding(const RuinCell& c, double x, double z, do
     if (dx * dx + dz * dz > (c.r.reach + 40) * (c.r.reach + 40)) return false;
     for (const Building& bd : c.spec.buildings) {
         double ex = dx - bd.x, ez = dz - bd.z;
+        // F-02: a point beyond the circle round the rectangle is outside it at any heading (a turn keeps the length; the slack of 1e-9 is
+        // a hundred times the rounding of the turn's products), so the far buildings of a town cost no sine and cosine
+        const double ax = bd.hw + margin, az = bd.hd + margin;
+        if (ex * ex + ez * ez > (ax * ax + az * az) * (1 + 1e-9)) continue;
         double lx = ex * std::cos(bd.heading) - ez * std::sin(bd.heading), lz = ex * std::sin(bd.heading) + ez * std::cos(bd.heading);
-        if (std::fabs(lx) < bd.hw + margin && std::fabs(lz) < bd.hd + margin) return true;
+        if (std::fabs(lx) < ax && std::fabs(lz) < az) return true;
     }
     return false;
 }
@@ -662,6 +722,7 @@ void SurfaceView::prefetch(double budgetMs) {
 }
 
 void SurfaceView::reanchor() {
+    const auto ta0 = std::chrono::steady_clock::now();   // F-01: the parts' ms under VESPERIS_TRACE (KI-302: a comet's every 0.35 radii)
     joinAhead();   // M7-01: cell coordinates change with the anchor
     double lat, lon;
     site.latLonAt(player.x, player.z, lat, lon);
@@ -672,8 +733,11 @@ void SurfaceView::reanchor() {
     Vec3 oldNorth = site.north0;
     const StarSystem* sys = site.sys;
     int body = site.body;
+    const auto ta1 = std::chrono::steady_clock::now();
     site.init(sys, body, lat, lon, lastT);
+    const auto ta2 = std::chrono::steady_clock::now();
     site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // C-09: the roads in the new frame's metres
+    const auto ta3 = std::chrono::steady_clock::now();
     site.clearMarks(); markCheckX = markCheckZ = 1e18;   // T-02: added again from the cells in the new frame
     site.clearEdits(); workCells.clear(); workEdited.clear();   // T-03: the works too
     double cx, cz;
@@ -713,10 +777,18 @@ void SurfaceView::reanchor() {
     vc3.assign((size_t)1 << 12, VtxCache());
     vcN.assign((size_t)1 << 16, VtxCache());
     computeRings();
+    const auto ta4 = std::chrono::steady_clock::now();
     drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);   // O6-03
+    const auto ta5 = std::chrono::steady_clock::now();
     for (ScanEcho& e : echoes) site.localAt(e.lm.unit, e.x, e.z);   // R-408: the same echoes, in the new frame (a scan under way is taken in it)
     flocks.clear(); critters.clear(); herds.clear(); habitatT = -1e9;   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs)
     prefetchStage = 0; prefetchRing = 0;
+    anchorFrame = frameStamp;   // F-01: the next frames' warm lines are traced (the rings' refill)
+    static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
+    if (trace) {
+        auto ms = [](std::chrono::steady_clock::time_point a, std::chrono::steady_clock::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+        fprintf(stderr, "  reanchor: %.1f ms (the worker's join %.1f, the site's init %.1f, roads %.1f, marks, plan and the vehicles %.1f, the tiles asked %.1f)\n", ms(ta0, ta5), ms(ta0, ta1), ms(ta1, ta2), ms(ta2, ta3), ms(ta3, ta4), ms(ta4, ta5));
+    }
 }
 
 // R-408: the scanner's search on a thread of its own (a scan of 40 km reads a few dozen cells of 14 km, a few milliseconds each and
@@ -1219,7 +1291,13 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     if (worldHadCivilisation(site.gen) && std::hypot(player.x - markCheckX, player.z - markCheckZ) > 250) ensureTownMarks();   // T-02: the towns coming into reach
     if (!site.roadCells.empty()) {   // C-09: the roads grow with the explorer: two cells from the last build, the next block (the worker joined first: the vertices read the list)
         double dx = player.x - roadBuildX, dz = player.z - roadBuildZ, two = 2 * ruinCellLat(site.gen) * site.R;
-        if (dx * dx + dz * dz > two * two) { joinAhead(); site.ensureRoads(player.x, player.z); roadBuildX = player.x; roadBuildZ = player.z; }
+        if (dx * dx + dz * dz > two * two) {
+            const auto tr0 = std::chrono::steady_clock::now();   // F-01: a rebuild's ms on the main thread (the worker's join with it)
+            joinAhead(); site.ensureRoads(player.x, player.z); roadBuildX = player.x; roadBuildZ = player.z;
+            lastRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count(); roadsBuilds++;
+            static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
+            if (trace) fprintf(stderr, "  roads grown %d: %.1f ms (%zu roads held)\n", roadsBuilds, lastRoadsMs, site.roads.size());
+        }
     }
     if (t - drainCheckT > 3.0) {   // O6-03: the drainage tiles the far ring will reach next, computed ahead on their own thread
         drainCheckT = t;
@@ -1895,11 +1973,11 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     int n = 1 << cache.logN;
     int idx = ((cz & (n - 1)) << cache.logN) | (cx & (n - 1));
     VtxCache& vc = vcache[idx];
-    const TerrainVertex& tv = cache.at(cx, cz);
     if (vc.stamp == frameStamp && vc.v.u == (double)(cx * cache.cellSize) && vc.v.v == (double)(cz * cache.cellSize)) {
         bank = vc.bank;
         return vc.v;
     }
+    const TerrainVertex& tv = cache.at(cx, cz);   // F-04: after the hit test (a current vertex's cell was sampled when it was made)
     double cs = cache.cellSize;
     double x = cx * cs, z = cz * cs;
     double h = tv.h;
@@ -2057,9 +2135,34 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     vc.sh = (float)shore;
     vc.front = vv.z >= NEAR_Z;
     vc.sy = vc.front ? (float)(proj.cy - proj.f * vv.y / vv.z) : 0.f;
+    if (site.hasWater && (double)vc.wy > -1e8) vc.wv = waterCorner(x, z, (double)vc.wy, (double)vc.hy);   // F-04: the stored floats, as the cells read them
     vc.stamp = frameStamp;
     bank = bk;
     return vc.v;
+}
+
+RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
+    double ddx = x - camPos.x, ddz = z - camPos.z;
+    Vec3 vv = toView(x, wl, z);
+    double depth = clampd(wl - hy, 0, 8);   // B-322: the depth under the drawn ground (morphed at the ring edges), or the shade jumped at every seam
+    Vec3 toV = Vec3(ddx, wl - camPos.y, ddz);
+    double dist = length(toV);
+    Vec3 rd = normalize(Vec3(toV.x, -toV.y, toV.z));
+    double glint = std::pow(std::max(0.0, dot(rd, env.sun.dirLocal)), 28.0) * 24 * waterSunUp * env.sun.lightFactor;
+    // M1-04: wave rings coming in with the wind
+    double wave = 2.5 * std::sin((x * waterWdx + z * waterWdz) / 2.6 - lastT * 1.4 + 0.8 * std::sin((x * waterWdz - z * waterWdx) / 7.0));
+    // B-320: the water's own colour seen from above (deep dark, shallow lighter), the sky's colour at grazing
+    // angles (a Fresnel term: nearly all of the far water mirrors the sky), the ramp darkened by the night
+    double cosT = clampd(std::fabs(toV.y) / std::max(dist, 0.1), 0.04, 1);   // B-322: the waves' slopes keep the mirror short of grazing: from an eye at the surface the water stays water, not a sheet of sky
+    double fres = 0.04 + 0.96 * std::pow(1 - cosT, 4.0);
+    double body = 24 + (1 - depth / 8) * 8, skyR = 55;
+    double base = body + (skyR - body) * fres + glint + wave * (0.5 + 0.5 * clampd(env.windKnots / 15.0, 0, 1));
+    double fog = 1 - std::exp(-(dist / env.fogDistance + rainWall(x, z, dist)));   // W-03
+    RVert w;
+    w.x = vv.x; w.y = vv.y; w.z = vv.z;
+    w.shade = base + (63 - base) * fog;
+    w.u = x + lastT * 0.7; w.v = z + lastT * 0.4;
+    return w;
 }
 
 // B-313: the coarser ring's drawn surface at (x, z): the cell's two triangles are split along the (cx + 1, cz) - (cx, cz + 1)
@@ -2210,78 +2313,100 @@ void SurfaceView::warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vca
     double r2 = (double)radius * radius, warmCover = std::max(0.0, coverM - 3 * cs);
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
     auto t0 = std::chrono::steady_clock::now();
-    int misses = 0;
-    // the terrain cells of the whole square first, serially (a miss samples the planet function and writes the cache;
-    // the shadow march of vertexOf reads cells anywhere within the radius), and the tiles of their materials
+    // the terrain cells first (a miss samples the planet function and writes the cache; the shadow march of vertexOf reads cells
+    // anywhere within the radius), then the tiles of their materials
     // O6-06: within the disc (plus two cells for the normals): the square's corners lay 75 km out on the far ring, beyond
     // the drainage tiles a landing prefetches, and the first frame computed those tiles (270 ms)
-    double rFill2 = (double)(radius + 2) * (radius + 2);
-    for (int cz = pcz - radius - 1; cz <= pcz + radius + 1; cz++)
-        for (int cx = pcx - radius - 1; cx <= pcx + radius + 1; cx++) {
-            double ddx = cx + 0.5 - camPos.x / cs, ddz = cz + 0.5 - camPos.z / cs;
-            if (ddx * ddx + ddz * ddz > rFill2) continue;
-            if (trace) { const TerrainVertex& tv = cache.v[cache.index(cx, cz)]; if (tv.cx != cx || tv.cz != cz) misses++; }
-            mesoFor(cache.at(cx, cz).material);
-        }
+    // F-03: the disc's misses listed first; over FILL_SERIAL_MAX of them they are sampled on the pool (a landing's first frame:
+    // 12,000 cells, 14 ms here before), each listed cell by one worker into its own slot: the disc spans 2r + 3 cells a side, under
+    // the torus's 1 << logN for every ring (the unit checks it), so distinct cells have distinct slots, and a sample is a pure
+    // function of the cell and the site, whatever its thread asked before (the drainage's tiles and neighbourhood read through each
+    // thread's own caches, the neighbourhood a function of its lattice cell: `buildNeigh`). The pool's join is the barrier.
+    // A few misses (a walk's edge) are sampled by the walk below as before. The material tiles the disc's cells want are made here,
+    // after, as before (a band thread reads a tile, it never makes one), the ones not made yet together (`buildMesoTiles`)
+    // F-04: the disc reaches every cell the vertex pass reads (on the pool since B-310, every corner since F-04, so a cell it missed
+    // would be sampled by two threads into one slot): a drawn cell's centre lies within the radius, its corners read their neighbours
+    // for the normals and the shore's side (`vertexShore`: up to two cells on from the cell, 2.83 from its centre), on a lava world the
+    // near rings' glow two cells round a corner (4.24); the shadow's march stays within the radius. Distinct slots still: 2r + 5 cells
+    const bool glowReach = isLavaWorld(site.gen.type) && cache.cellSize <= 16;
+    const int edge = radius + (glowReach ? 2 : 1);
+    const double rFill = radius + (glowReach ? 4.5 : 3.0), rFill2 = rFill * rFill;
+    auto forDisc = [&](auto&& fn) {
+        for (int cz = pcz - edge; cz <= pcz + edge; cz++)
+            for (int cx = pcx - edge; cx <= pcx + edge; cx++) {
+                double ddx = cx + 0.5 - camPos.x / cs, ddz = cz + 0.5 - camPos.z / cs;
+                if (ddx * ddx + ddz * ddz > rFill2) continue;
+                fn(cx, cz);
+            }
+    };
+    fillMisses.clear();
+    forDisc([&](int cx, int cz) { const TerrainVertex& tv = cache.v[cache.index(cx, cz)]; if (tv.cx != cx || tv.cz != cz) fillMisses.push_back({cx, cz}); });
+    const int misses = (int)fillMisses.size();
+    lastWarmMisses += misses;
+    if (misses > FILL_SERIAL_MAX)
+        parallelFor(misses, 16, [&](int b, int e) { for (int k = b; k < e; k++) cache.at(fillMisses[k].first, fillMisses[k].second); });
+    uint32_t want = 0;
+    forDisc([&](int cx, int cz) { const int m = cache.at(cx, cz).material; if (m < MAT_COUNT && !mesoBuilt[m]) want |= 1u << m; });
+    if (want) buildMesoTiles(want);
     auto t1 = std::chrono::steady_clock::now();
-    // then the vertices, rows of cells in parallel: a vertex belongs to one row, so the writes are disjoint
-    int rows = 2 * radius;
-    parallelFor(rows, 4, [&](int rb, int re) {
-        for (int cz = pcz - radius + rb; cz < pcz - radius + re; cz++) {
+    // then the vertices, the four corners of every cell the draw can reach, in parallel by rows of vertices (F-04: the thread of
+    // vertex row vz warms the corners on it of the cells either side, cell rows vz - 1 and vz, so every vertex is written by one
+    // thread; the cells' top corners had a serial walk of their own)
+    auto warmed = [&](int cx, int cz) {
+        if (cz < pcz - radius || cz >= pcz + radius) return false;
+        double dx = cx + 0.5 - (camPos.x / cs), dz = cz + 0.5 - (camPos.z / cs);
+        double d2 = dx * dx + dz * dz;
+        if (d2 > r2) return false;
+        if (cellCovered(cs, cx, cz, warmCover)) return false;
+        double wx = (cx + 0.5) * cs - camPos.x, wz = (cz + 0.5) * cs - camPos.z;
+        double fwdx = camLocal.m[2][0], fwdz = camLocal.m[2][2];
+        double dd = std::sqrt(wx * wx + wz * wz);
+        return !(dd > cs * 3 && (wx * fwdx + wz * fwdz) / dd < -0.25);
+    };
+    parallelFor(2 * radius + 1, 4, [&](int rb, int re) {
+        for (int vz = pcz - radius + rb; vz < pcz - radius + re; vz++)
             for (int cx = pcx - radius; cx < pcx + radius; cx++) {
-                double dx = cx + 0.5 - (camPos.x / cs), dz = cz + 0.5 - (camPos.z / cs);
-                double d2 = dx * dx + dz * dz;
-                if (d2 > r2) continue;
-                if (cellCovered(cs, cx, cz, warmCover)) continue;
-                {
-                    double wx = (cx + 0.5) * cs - camPos.x, wz = (cz + 0.5) * cs - camPos.z;
-                    double fwdx = camLocal.m[2][0], fwdz = camLocal.m[2][2];
-                    double dd = std::sqrt(wx * wx + wz * wz);
-                    if (dd > cs * 3 && (wx * fwdx + wz * fwdz) / dd < -0.25) continue;
-                }
+                if (!warmed(cx, vz) && !warmed(cx, vz - 1)) continue;
                 uint8_t bk;
-                vertexOf(cache, vcache, cx, cz, bk);
-                vertexOf(cache, vcache, cx + 1, cz, bk);
+                vertexOf(cache, vcache, cx, vz, bk);
+                vertexOf(cache, vcache, cx + 1, vz, bk);
             }
-        }
     });
-    // the row above the last one (its vertices belong to cells drawn from the row below)
-    for (int cz = pcz - radius; cz < pcz + radius; cz++) {
-        for (int cx = pcx - radius; cx < pcx + radius; cx++) {
-            double dx = cx + 0.5 - (camPos.x / cs), dz = cz + 0.5 - (camPos.z / cs);
-            double d2 = dx * dx + dz * dz;
-            if (d2 > r2) continue;
-            if (cellCovered(cs, cx, cz, warmCover)) continue;
-            {
-                double wx = (cx + 0.5) * cs - camPos.x, wz = (cz + 0.5) * cs - camPos.z;
-                double fwdx = camLocal.m[2][0], fwdz = camLocal.m[2][2];
-                double dd = std::sqrt(wx * wx + wz * wz);
-                if (dd > cs * 3 && (wx * fwdx + wz * fwdz) / dd < -0.25) continue;
-            }
-            uint8_t bk;
-            vertexOf(cache, vcache, cx, cz + 1, bk);
-            vertexOf(cache, vcache, cx + 1, cz + 1, bk);
-        }
-    }
-    if (trace && frameStamp <= 3) { auto t2 = std::chrono::steady_clock::now(); fprintf(stderr, "    warm %4d m: %d misses, fill %.1f ms, vertices %.1f ms\n", (int)cs, misses, std::chrono::duration<double, std::milli>(t1 - t0).count(), std::chrono::duration<double, std::milli>(t2 - t1).count()); }
+    if (trace && (frameStamp <= 3 || frameStamp - anchorFrame <= 2)) { auto t2 = std::chrono::steady_clock::now(); fprintf(stderr, "    warm %4d m: %d misses, fill %.1f ms, vertices %.1f ms\n", (int)cs, misses, std::chrono::duration<double, std::milli>(t1 - t0).count(), std::chrono::duration<double, std::milli>(t2 - t1).count()); }
 }
 
-void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vector<VtxCache>& vcache, int radius,
-                                 double coverM, bool water, double t, int bandY0, int bandY1, bool skirt) {
-    double cs = cache.cellSize;
-    int pcx = (int)std::floor(camPos.x / cs), pcz = (int)std::floor(camPos.z / cs);
-    RasterParams rp;
-    rp.grain = &grain;
-    rp.grainScale = (cache.cellSize <= 16 ? 3.0 : 0.25) * FB_SCALE;   // same on-screen grain size at every scale
-    rp.edge = &grainEdge;                                              // B-311: the boundary wobble
-    if (coverM > 0) rp.zbias = 0.999;   // B-313: where a coarser ring overlaps the finer one's morphed edge (coincident surfaces) the finer wins
-    if (shadingMode == 1) rp.quantize = 63.0 / 12.0;
-    RasterParams rpw;
-    rpw.grain = &grainFine; rpw.grainScale = 0.5 * FB_SCALE;
-    rpw.zbias = rp.zbias;   // B-322: the water of a ring is pushed back with its ground, or from a kilometre away the metre-high shore lost to the plane in every wet cell and the coast snapped to the grid (KI-321)
-    double r2 = (double)radius * radius;
-    double sunUp = smoothstep(-0.03, 0.06, env.sun.dirLocal.y);
-    for (int cz = pcz - radius; cz < pcz + radius; cz++) {
+// F-04: a terrain cell's pieces, the same for the bin (the rows they reach) and the draw. B-320: the cell's water surface per corner
+// (00, 10, 11, 01; the level as drawn, morphed with the ground); a corner without water takes the mean of the others, so the sheet is
+// one continuous plane cut by the ground. Returns how many corners have their own level
+static int cellWaterLevels(double w00, double w10, double w11, double w01, double wCorner[4]) {
+    wCorner[0] = w00; wCorner[1] = w10; wCorner[2] = w11; wCorner[3] = w01;
+    double wMean = 0; int wN = 0;
+    for (int i = 0; i < 4; i++) if (wCorner[i] > -1e8) { wMean += wCorner[i]; wN++; }
+    if (wN) { wMean /= wN; for (int i = 0; i < 4; i++) if (wCorner[i] < -1e8) wCorner[i] = wMean; }
+    return wN;
+}
+// the corners of a cell's two triangles (0: 00 10 01, 1: 10 11 01) in the order 00, 10, 01, 11
+static const int CELL_TRIS[2][3] = {{0, 1, 2}, {1, 3, 2}};
+// B-322: triangle k of a cell that straddles its water's edge, split along the edge (`shoreSplitTriangle`); hy, wl and sh per corner
+// in the order 00, 10, 01, 11 (the drawn height, the water level, the side of the edge)
+static void cellShoreSplit(int k, int cx, int cz, double cs, const double hy[4], const double wl[4], const double sh[4], ShoreSplit& sp) {
+    static const int oxv[4] = {0, 1, 0, 1}, ozv[4] = {0, 0, 1, 1};
+    double xs[3], zs[3], hs[3], wls[3], shs[3];
+    for (int e = 0; e < 3; e++) { int c = CELL_TRIS[k][e]; xs[e] = (cx + oxv[c]) * cs; zs[e] = (cz + ozv[c]) * cs; hs[e] = hy[c]; wls[e] = wl[c]; shs[e] = sh[c]; }
+    shoreSplitTriangle(xs, zs, hs, wls, shs, sp);
+}
+
+void SurfaceView::binTerrainLOD(TerrainBin& bin, TerrainCache& cache, std::vector<VtxCache>& vcache, int radius, double coverM, bool water,
+                                bool skirt, int rowB, int rowE, int& stale, int& allRows) {
+    const double cs = cache.cellSize;
+    const int pcx = (int)std::floor(camPos.x / cs), pcz = (int)std::floor(camPos.z / cs), mk = (1 << cache.logN) - 1;
+    const double r2 = (double)radius * radius;
+    auto outside = [&](int ncx, int ncz) { double ex = ncx + 0.5 - (camPos.x / cs), ez = ncz + 0.5 - (camPos.z / cs); return ex * ex + ez * ez > r2; };
+    auto current = [&](const VtxCache& vc, int vx, int vz) { return vc.stamp == frameStamp && vc.v.u == (double)(vx * cache.cellSize) && vc.v.v == (double)(vz * cache.cellSize); };
+    for (int j = rowB; j < rowE; j++) {
+        const int cz = pcz - radius + j;
+        TerrainCellRef* out = &bin.cells[(size_t)j * bin.cols];
+        int n = 0;
         for (int cx = pcx - radius; cx < pcx + radius; cx++) {
             double dx = cx + 0.5 - (camPos.x / cs), dz = cz + 0.5 - (camPos.z / cs);
             double d2 = dx * dx + dz * dz;
@@ -2294,29 +2419,124 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
                 double dd = std::sqrt(wx * wx + wz * wz);
                 if (dd > cs * 3 && (wx * fwdx + wz * fwdz) / dd < -0.25) continue;
             }
-            uint8_t b00, b10, b01, b11;
-            const RVert& v00 = vertexOf(cache, vcache, cx, cz, b00);
-            const RVert& v10 = vertexOf(cache, vcache, cx + 1, cz, b10);
-            const RVert& v01 = vertexOf(cache, vcache, cx, cz + 1, b01);
-            const RVert& v11 = vertexOf(cache, vcache, cx + 1, cz + 1, b11);
+            const VtxCache& c00 = vcache[((cz & mk) << cache.logN) | (cx & mk)];
+            const VtxCache& c10 = vcache[((cz & mk) << cache.logN) | ((cx + 1) & mk)];
+            const VtxCache& c01 = vcache[(((cz + 1) & mk) << cache.logN) | (cx & mk)];
+            const VtxCache& c11 = vcache[(((cz + 1) & mk) << cache.logN) | ((cx + 1) & mk)];
+            // the warm made every corner of every cell drawn (the same culls, its cover three cells shorter); a corner it missed is made
+            // here as the draw made it before (counted: the tests want none)
+            stale += !current(c00, cx, cz) + !current(c10, cx + 1, cz) + !current(c01, cx, cz + 1) + !current(c11, cx + 1, cz + 1);
+            uint8_t bk;
+            const RVert& v00 = vertexOf(cache, vcache, cx, cz, bk);
+            const RVert& v10 = vertexOf(cache, vcache, cx + 1, cz, bk);
+            const RVert& v01 = vertexOf(cache, vcache, cx, cz + 1, bk);
+            const RVert& v11 = vertexOf(cache, vcache, cx + 1, cz + 1, bk);
             if (v00.z < NEAR_Z && v10.z < NEAR_Z && v01.z < NEAR_Z && v11.z < NEAR_Z) continue;
+            double wCorner[4];
+            const int wN = cellWaterLevels(c00.wy, c10.wy, c11.wy, c01.wy, wCorner);
+            bool anyWet = false, anyDry = false;
+            const double shc[4] = {c00.sh, c10.sh, c01.sh, c11.sh};
+            if (water && wN > 0) for (int k = 0; k < 4; k++) { if (shc[k] < 0) anyWet = true; else anyDry = true; }
+            const bool wet = water && wN > 0 && anyWet, cut = wet && anyDry;
+            // the rows: each piece (a triangle of the ground or of its shore cut, a wall, the water's sheet) projected as the rasteriser
+            // projects it, clipped at the near plane where it clips it; a piece wholly beside, above or below the frame adds nothing (the
+            // rasteriser rejects it: a deep sea's bed under its sheet), and the foam's sparkles put the cell in every band
+            int y0 = 1 << 30, y1 = -(1 << 30);
+            bool every = false;
+            auto piece = [&](const Vec3* p, int np) {
+                int a, b;
+                if (polygonRows(proj, p, np, a, b, every)) { y0 = std::min(y0, a); y1 = std::max(y1, b); }
+            };
+            auto V = [](const RVert& r) { return Vec3(r.x, r.y, r.z); };
+            const RVert* vs[4] = {&v00, &v10, &v01, &v11};
+            if (!cut) {
+                const Vec3 tA[3] = {V(v00), V(v10), V(v01)}, tB[3] = {V(v10), V(v11), V(v01)};
+                piece(tA, 3); piece(tB, 3);
+            } else {
+                const double hyv[4] = {c00.hy, c10.hy, c01.hy, c11.hy}, wlv[4] = {wCorner[0], wCorner[1], wCorner[3], wCorner[2]};
+                for (int k = 0; k < 2; k++) {
+                    ShoreSplit sp;
+                    cellShoreSplit(k, cx, cz, cs, hyv, wlv, shc, sp);
+                    auto cutPiece = [&](const ShorePt* pts, int np, bool dry) {
+                        if (np < 3) return;
+                        Vec3 q[4];
+                        for (int i = 0; i < np; i++) q[i] = pts[i].a == pts[i].b ? V(*vs[CELL_TRIS[k][pts[i].a]]) : shoreCutView(pts[i], dry);
+                        piece(q, np);
+                    };
+                    cutPiece(sp.dry, sp.nDry, true);
+                    cutPiece(sp.wet, sp.nWet, false);
+                }
+            }
+            if (skirt) {
+                auto wall = [&](const RVert& a, const RVert& b, double ax, double az, double bx, double bz) {
+                    const Vec3 q[4] = {V(a), V(b), skirtFoot(cache, bx, bz), skirtFoot(cache, ax, az)};   // the draw's a, b and their feet
+                    piece(q, 4);
+                };
+                if (outside(cx + 1, cz)) wall(v10, v11, (cx + 1) * cs, cz * cs, (cx + 1) * cs, (cz + 1) * cs);
+                if (outside(cx - 1, cz)) wall(v00, v01, cx * cs, cz * cs, cx * cs, (cz + 1) * cs);
+                if (outside(cx, cz + 1)) wall(v01, v11, cx * cs, (cz + 1) * cs, (cx + 1) * cs, (cz + 1) * cs);
+                if (outside(cx, cz - 1)) wall(v00, v10, cx * cs, cz * cs, (cx + 1) * cs, cz * cs);
+            }
+            if (wet) {
+                const VtxCache* vcw[4] = {&c00, &c10, &c11, &c01};
+                static const int ox[4] = {0, 1, 1, 0}, oz[4] = {0, 0, 1, 1};
+                Vec3 q[4];
+                for (int i = 0; i < 4; i++) q[i] = (double)vcw[i]->wy > -1e8 ? V(vcw[i]->wv) : toView((cx + ox[i]) * cs, wCorner[i], (cz + oz[i]) * cs);   // waterCorner's place
+                piece(q, 4);
+                double cdist = std::sqrt(d2) * cs;
+                if (cdist < 90 && cache.cellSize <= 16 && (cs >= 16 || ((cx & 3) == 0 && (cz & 3) == 0)))
+                    for (int i = 0; i < 4; i++) if (!(std::fabs(cache.at(cx + ox[i], cz + oz[i]).h - wCorner[i]) > 0.6)) every = true;   // the foam
+            }
+            if (!every && y0 > y1) continue;   // nothing of it reaches the frame
+            TerrainCellRef& r = out[n];
+            r.cx = cx; r.cz = cz;
+            if (every) { r.y0 = INT16_MIN; r.y1 = INT16_MAX; allRows++; }
+            else { r.y0 = (int16_t)y0; r.y1 = (int16_t)y1; }
+            n++;
+        }
+        bin.count[j] = n;
+    }
+}
+
+void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, TerrainCache& cache, std::vector<VtxCache>& vcache, int radius,
+                                 double coverM, bool water, double t, int bandY0, int bandY1, bool skirt, BandTrace* bt) {
+    using TraceClock = std::chrono::steady_clock;   // F-01: with `bt` (VESPERIS_TRACE), the band's cells counted and its time split
+    auto traceMs = [](TraceClock::time_point a, TraceClock::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+    double cs = cache.cellSize;
+    RasterParams rp;
+    rp.grain = &grain;
+    rp.grainScale = (cache.cellSize <= 16 ? 3.0 : 0.25) * FB_SCALE;   // same on-screen grain size at every scale
+    rp.edge = &grainEdge;                                              // B-311: the boundary wobble
+    if (coverM > 0) rp.zbias = 0.999;   // B-313: where a coarser ring overlaps the finer one's morphed edge (coincident surfaces) the finer wins
+    if (shadingMode == 1) rp.quantize = 63.0 / 12.0;
+    RasterParams rpw;
+    rpw.grain = &grainFine; rpw.grainScale = 0.5 * FB_SCALE;
+    rpw.zbias = rp.zbias;   // B-322: the water of a ring is pushed back with its ground, or from a kilometre away the metre-high shore lost to the plane in every wet cell and the coast snapped to the grid (KI-321)
+    double r2 = (double)radius * radius;
+    const int mk = (1 << cache.logN) - 1;
+    for (int j = 0; j < (int)bin.count.size(); j++) {   // F-04: the ring's cells as binned, in the walk's order
+        const TerrainCellRef* row = &bin.cells[(size_t)j * bin.cols];
+        for (int s = 0; s < bin.count[j]; s++) {
+            const TerrainCellRef& ref = row[s];
+            if (bt) bt->walked++;
+            if (ref.y1 < bandY0 || ref.y0 >= bandY1) continue;   // its pieces miss this band's rows
+            const int cx = ref.cx, cz = ref.cz;
+            double dx = cx + 0.5 - (camPos.x / cs), dz = cz + 0.5 - (camPos.z / cs);
+            double d2 = dx * dx + dz * dz;
+            // the corners as the warm made them (the bin found each current: vertexOf's hit)
+            const VtxCache& c00 = vcache[((cz & mk) << cache.logN) | (cx & mk)];
+            const VtxCache& c10 = vcache[((cz & mk) << cache.logN) | ((cx + 1) & mk)];
+            const VtxCache& c01 = vcache[(((cz + 1) & mk) << cache.logN) | (cx & mk)];
+            const VtxCache& c11 = vcache[(((cz + 1) & mk) << cache.logN) | ((cx + 1) & mk)];
+            const RVert& v00 = c00.v; const RVert& v10 = c10.v; const RVert& v01 = c01.v; const RVert& v11 = c11.v;
+            const uint8_t b00 = c00.bank, b10 = c10.bank, b01 = c01.bank, b11 = c11.bank;
             auto outside = [&](int ncx, int ncz) { double ex = ncx + 0.5 - (camPos.x / cs), ez = ncz + 0.5 - (camPos.z / cs); return ex * ex + ez * ez > r2; };
             const TerrainVertex& t00 = cache.at(cx, cz);
             const TerrainVertex& t10 = cache.at(cx + 1, cz);
             const TerrainVertex& t01 = cache.at(cx, cz + 1);
             const TerrainVertex& t11 = cache.at(cx + 1, cz + 1);
-            double hmin = std::min(std::min(t00.h, t10.h), std::min(t01.h, t11.h));
-            int n = 1 << cache.logN, mk = n - 1;
-            const VtxCache& c00 = vcache[((cz & mk) << cache.logN) | (cx & mk)];
-            const VtxCache& c10 = vcache[((cz & mk) << cache.logN) | ((cx + 1) & mk)];
-            const VtxCache& c01 = vcache[(((cz + 1) & mk) << cache.logN) | (cx & mk)];
-            const VtxCache& c11 = vcache[(((cz + 1) & mk) << cache.logN) | ((cx + 1) & mk)];
-            // B-320: this cell's water surface per corner (the level as drawn, morphed with the ground); a corner without
-            // water takes the mean of the others, so the sheet is one continuous plane cut by the ground
-            double wCorner[4] = {c00.wy, c10.wy, c11.wy, c01.wy};
-            double wMean = 0, wMax = -1e9; int wN = 0;
-            for (int i = 0; i < 4; i++) if (wCorner[i] > -1e8) { wMean += wCorner[i]; wN++; wMax = std::max(wMax, wCorner[i]); }
-            if (wN) { wMean /= wN; for (int i = 0; i < 4; i++) if (wCorner[i] < -1e8) wCorner[i] = wMean; }
+            double wCorner[4];   // B-320: the water surface per corner (00, 10, 11, 01), one continuous plane cut by the ground
+            const int wN = cellWaterLevels(c00.wy, c10.wy, c11.wy, c01.wy, wCorner);
             // B-322: the sheet is drawn where a corner lies on the water's side of its edge (`shoreValue`); it used to be drawn
             // wherever a corner lay within half a metre of the level, which reached over the low ground beyond a river's plain
             // as a moat of cells
@@ -2324,14 +2544,8 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
             double shc[4] = {c00.sh, c10.sh, c01.sh, c11.sh};   // in the vs order: 00, 10, 01, 11 (as drawn: morphed at the ring's edge)
             if (water && wN > 0) for (int k = 0; k < 4; k++) { if (shc[k] < 0) anyWet = true; else anyDry = true; }
             bool wet = water && wN > 0 && anyWet;
-            (void)hmin; (void)wMax;
-            {   // B-310: the band cull: a cell whose four corners project wholly above or below this thread's rows is skipped,
-                // unless a skirt or its water could reach into them
-                if (c00.front && c10.front && c01.front && c11.front) {
-                    float ymin = std::min(std::min(c00.sy, c10.sy), std::min(c01.sy, c11.sy)), ymax = std::max(std::max(c00.sy, c10.sy), std::max(c01.sy, c11.sy));
-                    if ((ymax < bandY0 - 1 || ymin > bandY1 + 1) && !wet && !(outside(cx + 1, cz) || outside(cx - 1, cz) || outside(cx, cz + 1) || outside(cx, cz - 1))) continue;
-                }
-            }
+            TraceClock::time_point tA;
+            if (bt) { bt->drawn++; tA = TraceClock::now(); }
             RVert tri[3];
             // the bank by majority; B-311: a cell whose corners differ in family also gets the second bank and per-corner
             // weights, and the rasteriser draws the boundary as a noisy contour through the cell (it used to be the
@@ -2385,20 +2599,16 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
                 if (shadingMode == 0) tri[0].shade = tri[1].shade = tri[2].shade = flat;
                 rasterTriangle(fb, tri, rp, proj);
             } else {
-                const VtxCache* vcs[4] = {&c00, &c10, &c01, &c11};
-                const int oxv[4] = {0, 1, 0, 1}, ozv[4] = {0, 0, 1, 1};
+                const double hyv[4] = {c00.hy, c10.hy, c01.hy, c11.hy};
                 const double wlv[4] = {wCorner[0], wCorner[1], wCorner[3], wCorner[2]};   // wCorner runs 00, 10, 11, 01
-                static const int trisV[2][3] = {{0, 1, 2}, {1, 3, 2}};
                 for (int k = 0; k < 2; k++) {
-                    double xs[3], zs[3], hs[3], wl[3], sh[3];
-                    for (int e = 0; e < 3; e++) { int c = trisV[k][e]; xs[e] = (cx + oxv[c]) * cs; zs[e] = (cz + ozv[c]) * cs; hs[e] = vcs[c]->hy; wl[e] = wlv[c]; sh[e] = shc[c]; }
                     ShoreSplit sp;
-                    shoreSplitTriangle(xs, zs, hs, wl, sh, sp);
+                    cellShoreSplit(k, cx, cz, cs, hyv, wlv, shc, sp);
                     auto emitPiece = [&](const ShorePt* pts, int n, bool dry) {
                         if (n < 3) return;
                         RVert q[4];
                         for (int i = 0; i < n; i++) {
-                            int a = trisV[k][pts[i].a], b = trisV[k][pts[i].b];
+                            int a = CELL_TRIS[k][pts[i].a], b = CELL_TRIS[k][pts[i].b];
                             const RVert& va = *vs[a]; const RVert& vb = *vs[b];
                             double t = pts[i].t;
                             if (pts[i].a == pts[i].b) { q[i] = va; q[i].w = w[a]; }
@@ -2406,7 +2616,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
                                 // O6-03: the dry piece's edge stands SHORE_LIP over the water, the wet piece's lies 3 cm under it: with one shared
                                 // point under the plane, the sheet covered the dry piece out to wherever it rose through the plane, which on a
                                 // flat shore was near the next corner, and the water's edge ran along the cells' edges in stairs
-                                Vec3 vv = toView(pts[i].x, pts[i].h + (dry ? SHORE_LIP : 0.0), pts[i].z);
+                                Vec3 vv = shoreCutView(pts[i], dry);
                                 q[i].x = vv.x; q[i].y = vv.y; q[i].z = vv.z;
                                 q[i].shade = va.shade + (vb.shade - va.shade) * t;
                                 q[i].u = va.u + (vb.u - va.u) * t; q[i].v = va.v + (vb.v - va.v) * t;
@@ -2424,11 +2634,8 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
             // rings hang none: since B-313 their edges lie on the coarser ring's surface, and a wall there peeked through
             // the coincident ground as a thin bright line along the ring's edge (its depth bias differs from the coarser ring's)
             if (skirt) {
-                double skirt = cs * 1.5;
                 auto wall = [&](const RVert& a, const RVert& b, double ax, double az, double bx, double bz) {
-                    const TerrainVertex& ta = cache.at((int)std::lround(ax / cs), (int)std::lround(az / cs));
-                    const TerrainVertex& tb = cache.at((int)std::lround(bx / cs), (int)std::lround(bz / cs));
-                    Vec3 la = toView(ax, ta.h - skirt, az), lb = toView(bx, tb.h - skirt, bz);
+                    Vec3 la = skirtFoot(cache, ax, az), lb = skirtFoot(cache, bx, bz);
                     RVert q[4] = {a, b, b, a};
                     q[2].x = lb.x; q[2].y = lb.y; q[2].z = lb.z; q[3].x = la.x; q[3].y = la.y; q[3].z = la.z;
                     for (int k = 0; k < 4; k++) q[k].shade = flat * 0.8;
@@ -2439,36 +2646,16 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
                 if (outside(cx, cz + 1)) wall(v01, v11, cx * cs, (cz + 1) * cs, (cx + 1) * cs, (cz + 1) * cs);
                 if (outside(cx, cz - 1)) wall(v00, v10, cx * cs, cz * cs, (cx + 1) * cs, cz * cs);
             }
+            if (bt) { const TraceClock::time_point tB = TraceClock::now(); bt->fillMs += traceMs(tA, tB); tA = tB; }
             if (water && !(skipEnv && std::strstr(skipEnv, "wq"))) {
                 if (wet) {
                     RVert w[4];
                     const TerrainVertex* tv[4] = {&t00, &t10, &t11, &t01};
                     const VtxCache* vcw[4] = {&c00, &c10, &c11, &c01};
                     int ox[4] = {0, 1, 1, 0}, oz[4] = {0, 0, 1, 1};
-                    double wdx = std::sin(env.windDir), wdz = std::cos(env.windDir);
-                    for (int i = 0; i < 4; i++) {
-                        double x = (cx + ox[i]) * cs, z = (cz + oz[i]) * cs;
-                        double ddx = x - camPos.x, ddz = z - camPos.z;
-                        double wl = wCorner[i];
-                        Vec3 vv = toView(x, wl, z);
-                        double depth = clampd(wl - vcw[i]->hy, 0, 8);   // B-322: the depth under the drawn ground (morphed at the ring edges), or the shade jumped at every seam
-                        Vec3 toV = Vec3(ddx, wl - camPos.y, ddz);
-                        double dist = length(toV);
-                        Vec3 rd = normalize(Vec3(toV.x, -toV.y, toV.z));
-                        double glint = std::pow(std::max(0.0, dot(rd, env.sun.dirLocal)), 28.0) * 24 * sunUp * env.sun.lightFactor;
-                        // M1-04: wave rings coming in with the wind
-                        double wave = 2.5 * std::sin((x * wdx + z * wdz) / 2.6 - t * 1.4 + 0.8 * std::sin((x * wdz - z * wdx) / 7.0));
-                        // B-320: the water's own colour seen from above (deep dark, shallow lighter), the sky's colour at grazing
-                        // angles (a Fresnel term: nearly all of the far water mirrors the sky), the ramp darkened by the night
-                        double cosT = clampd(std::fabs(toV.y) / std::max(dist, 0.1), 0.04, 1);   // B-322: the waves' slopes keep the mirror short of grazing: from an eye at the surface the water stays water, not a sheet of sky
-                        double fres = 0.04 + 0.96 * std::pow(1 - cosT, 4.0);
-                        double body = 24 + (1 - depth / 8) * 8, skyR = 55;
-                        double base = body + (skyR - body) * fres + glint + wave * (0.5 + 0.5 * clampd(env.windKnots / 15.0, 0, 1));
-                        double fog = 1 - std::exp(-(dist / env.fogDistance + rainWall(x, z, dist)));   // W-03
-                        w[i].x = vv.x; w[i].y = vv.y; w[i].z = vv.z;
-                        w[i].shade = base + (63 - base) * fog;
-                        w[i].u = x + t * 0.7; w[i].v = z + t * 0.4;
-                    }
+                    for (int i = 0; i < 4; i++)   // F-04: a corner with its own level was made with its vertex; one without takes the cell's mean
+                        w[i] = (double)vcw[i]->wy > -1e8 ? vcw[i]->wv : waterCorner((cx + ox[i]) * cs, (cz + oz[i]) * cs, wCorner[i], vcw[i]->hy);
+                    if (bt) { const TraceClock::time_point tC = TraceClock::now(); bt->waterMs += traceMs(tA, tC); bt->wet++; tA = tC; }
                     rpw.bank = 2;
                     rasterPolygon(fb, w, 4, rpw, proj);
                     // foam sparkle where the shore is shallow and close
@@ -2489,11 +2676,18 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, TerrainCache& cache, std::vect
                             }
                         }
                     }
+                    if (bt) bt->fillMs += traceMs(tA, TraceClock::now());
                 }
             }
         }
     }
 }
+
+// F-10: the sky's powers of a cosine as products of squares (libm's pow was the sky's largest cost; these are within a few dozen ulp of
+// it): the day's two glows round a sun, 9 c^6 + 14 c^50; the sun's disc in an airless sky, c^300; a comet's tail, c^18
+static inline double sunGlow(double c) { const double c2 = c * c, c6 = c2 * c2 * c2, c12 = c6 * c6, c24 = c12 * c12; return c6 * 9 + c24 * c24 * c2 * 14; }
+static inline double pow300(double c) { const double c2 = c * c, c6 = c2 * c2 * c2, c12 = c6 * c6, c24 = c12 * c12, c50 = c24 * c24 * c2, c150 = c50 * c50 * c50; return c150 * c150; }
+static inline double pow18(double c) { const double c2 = c * c, c6 = c2 * c2 * c2; return c6 * c6 * c6; }
 
 void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& stars, SpaceRenderer& sr) {
     const Body& b = site.sys->bodies[site.body];
@@ -2521,8 +2715,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         cloudGrid.assign(GX * GY * 3, 0.f);   // per cell: the density, the index, and (W-03) the share that is a front's deck
         double thrP = 1.0 - env.cloudPattern * 0.75;   // W-03: the pattern's threshold; a front's deck is read per cell from its line
         double wx = windDriftX, wz = windDriftZ;
-        // two layers (M10-14): low cumulus at 2600 m with lit tops and shaded bases, high thin veils at 6000 m
-        for (int gy = 0; gy < GY; gy++)
+        // two layers (M10-14): low cumulus at 2600 m with lit tops and shaded bases, high thin veils at 6000 m. F-05: the grid's rows on the
+        // pool, as the aurora's (a cell reads pure functions and writes its own three floats)
+        parallelFor(GY, 4, [&](int gy0, int gy1) {
+        for (int gy = gy0; gy < gy1; gy++)
             for (int gx = 0; gx < GX; gx++) {
                 int px = std::min(gx * CELL, FBW - 1), py = std::min(gy * CELL, FBH - 1);
                 Vec3 d = camT * dirLUT[py * FBW + px];
@@ -2565,6 +2761,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 cloudGrid[(gy * GX + gx) * 3 + 1] = idx;
                 cloudGrid[(gy * GX + gx) * 3 + 2] = storm;
             }
+        });
     }
     // B-403: the aurora as curtains. Three sheets of light hang 90-250 km up along the auroral oval, which lies a few degrees
     // of latitude poleward of the site (over it and beyond, inside the oval): slabs 10-16 km thick, their light a gamma profile
@@ -2670,6 +2867,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // O0-01: which face of the ring we see: the lit face when the sun is on our side of the ring plane, else the
     // unlit face, dim with the light that comes through
     const double ringFace = ringArc ? ((dot(ringOrig, ringN) * dot(ringSunW, ringN) >= 0) ? 1.0 : 0.5) : 1.0;
+    double ringPow[256];   // F-07: the arc's pow of each of the profile's 256 densities, once a frame
+    if (ringArc) for (int i = 0; i < 256; i++) ringPow[i] = std::pow(clampd((double)(*ringProf)[i] * 1.3, 0, 1), 0.35);
+    const double cosHaloLo = std::cos((22.0 + 1.401) * DEG), cosHaloHi = std::cos((22.0 - 1.401) * DEG);
+    const double pillarElLo = std::sin(sunAltA - 2.001 * DEG), pillarElHi = std::sin(sunAltA + 11.001 * DEG), pillarTanAz = std::tan(2.501 * DEG);
     // O4: on a comet the coma hazes the whole sky, brightest toward the sun, and the ion tail streams from the anti-solar
     // point; both grow with the activity
     const bool comet = b.type == PT_COMET && env.cometActivity > 0.02;
@@ -2689,13 +2890,14 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             double v;
             double tailV = 0, stormW = 0;   // W-03: how much of the pixel is a front's deck or its rain (bank 23 past a half)
             if (!site.atmosphere) {
+                // F-07: each pow only where its base is over 0 (elsewhere its term is +0, as the formula gives)
                 double cosSun = dot(d, sd);
-                v = std::pow(std::max(0.0, cosSun), 300.0) * 22;
-                if (twoSuns) v += std::pow(std::max(0.0, dot(d, sd2)), 300.0) * 22 * sun2Up;
+                v = cosSun > 0 ? pow300(cosSun) * 22 : 0.0;
+                if (twoSuns) { const double c2 = dot(d, sd2); if (c2 > 0) v += pow300(c2) * 22 * sun2Up; }
                 if (comet) {
                     double cs = std::max(0.0, cosSun);
                     v += act * (6 + 14 * cs * cs * cs);
-                    double tail = std::pow(std::max(0.0, -cosSun), 18.0) * act;   // a cone some 15 degrees wide round the anti-solar point
+                    double tail = cosSun < 0 ? pow18(-cosSun) * act : 0.0;   // a cone some 15 degrees wide round the anti-solar point
                     if (tail > 0.02 && el > -0.05) {
                         // the knots of the ion tail stream outward: brightness along the anti-solar distance
                         double f = std::acos(clampd(-cosSun, -1, 1)) / (0.5 * PI);   // 0 at the anti-solar point .. 1 at 90 degrees
@@ -2705,7 +2907,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     }
                 }
             } else {
-                double hz = std::pow(1 - clampd(el, 0, 1), 2.2);
+                double hz = el <= 0 ? 1.0 : std::pow(1 - clampd(el, 0, 1), 2.2);   // F-07: pow(1, 2.2) is 1 under the horizon
                 double base;
                 if (venus) base = 26 + 14 * hz;
                 else base = day * (15 + 25 * hz) + (1 - day) * (2 + 5 * hz);
@@ -2713,12 +2915,14 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 base *= density;
                 double cosSun = dot(d, sd);
                 double cs = std::max(0.0, cosSun);
-                double g = (std::pow(cs, 6.0) * 9 + std::pow(cs, 50.0) * 14) * sunUp * (venus ? 1.6 : 1.0);
-                if (twoSuns) { double cs2 = std::max(0.0, dot(d, sd2)); g += (std::pow(cs2, 6.0) * 9 + std::pow(cs2, 50.0) * 14) * sun2Up; }
+                // F-07: the glows' pows only where the sun is up and the pixel faces it (elsewhere the term is +0)
+                double g = sunUp > 0 && cs > 0 ? sunGlow(cs) * sunUp * (venus ? 1.6 : 1.0) : 0.0;
+                if (twoSuns) { double cs2 = std::max(0.0, dot(d, sd2)); if (sun2Up > 0 && cs2 > 0) g += sunGlow(cs2) * sun2Up; }
                 v = base + g;
-                // M10-14: 22-degree halo in cold, clear air; twilight wedge opposite a low sun
-                if (halo > 0) { double ang = std::acos(clampd(cosSun, -1, 1)) / DEG; double dh = std::fabs(ang - 22.0); if (dh < 1.4) v += 5.0 * halo * (1 - dh / 1.4); }
-                if (pillar > 0 && cosSun > 0.85) {
+                // M10-14: 22-degree halo in cold, clear air; twilight wedge opposite a low sun. F-07: the ring's and the pillar's tests
+                // first on the cosine, the height and the azimuth's tangent (their bounds a thousandth of a degree outside the ones after)
+                if (halo > 0 && cosSun > cosHaloLo && cosSun < cosHaloHi) { double ang = std::acos(clampd(cosSun, -1, 1)) / DEG; double dh = std::fabs(ang - 22.0); if (dh < 1.4) v += 5.0 * halo * (1 - dh / 1.4); }
+                if (pillar > 0 && cosSun > 0.85 && el > pillarElLo && el < pillarElHi && std::fabs(d.x * sdh.z - d.z * sdh.x) < pillarTanAz * (d.x * sdh.x + d.z * sdh.z)) {
                     double dAz = std::atan2(d.x * sdh.z - d.z * sdh.x, d.x * sdh.x + d.z * sdh.z);
                     double dAlt = std::asin(clampd(el, -1, 1)) - sunAltA;
                     if (std::fabs(dAz) < 2.5 * DEG && dAlt > -2 * DEG && dAlt < 11 * DEG)
@@ -2769,7 +2973,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                                 // shade 39, which is near black on that bank). Opening angle, the face we see and the light factor
                                 double litRing = std::fabs(dot(ringN, ringSunW)) * 0.7 + 0.3;
                                 double lit = (0.55 + 0.45 * litRing) * ringFace * std::max(ringLf, 0.5);
-                                double rv = 36 + 24 * std::pow(clampd(dens * 1.3, 0, 1), 0.35) * lit;   // the sky bank is black below 30
+                                double rv = 36 + 24 * ringPow[clampi((int)(u * 255), 0, 255)] * lit;   // the sky bank is black below 30
                                 if (site.atmosphere) rv = rv * (1 - 0.3 * day) + v * 0.45 * day;   // washed by daylight like the day moon
                                 if (rv > v) v = rv;
                             }
@@ -2830,12 +3034,14 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         zodiGrid.assign(GX * GY, 0.f);
         const Vec3 sunW = toWorld * env.sunDisc.dirLocal;
         const double gain = bandGain * zodiDust;
-        for (int gy = 0; gy < GY; gy++)
-            for (int gx = 0; gx < GX; gx++) {
-                int px = std::min(gx * CELL, FBW - 1), py = std::min(gy * CELL, FBH - 1);
-                Vec3 dW = toWorld * (camT * dirLUT[py * FBW + px]);
-                zodiGrid[gy * GX + gx] = (float)(gain * zodiacalLight(dW, sunW));
-            }
+        parallelFor(GY, 4, [&](int gy0, int gy1) {   // F-05: the rows on the pool (zodiacalLight is pure)
+            for (int gy = gy0; gy < gy1; gy++)
+                for (int gx = 0; gx < GX; gx++) {
+                    int px = std::min(gx * CELL, FBW - 1), py = std::min(gy * CELL, FBH - 1);
+                    Vec3 dW = toWorld * (camT * dirLUT[py * FBW + px]);
+                    zodiGrid[gy * GX + gx] = (float)(gain * zodiacalLight(dW, sunW));
+                }
+        });
     }
     const bool airless = !site.atmosphere;
     if (bandGain > 0.05) {
@@ -3606,6 +3812,8 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
         if (std::fabs(wantF - proj.f) > proj.f * 0.012) { proj = Proj::fromHFov(baseFov + player.fovKick); buildDirLUT(); }
     }
     lastT = t;
+    waterWdx = std::sin(env.windDir), waterWdz = std::cos(env.windDir);   // F-04: the water corners' (waterCorner)
+    waterSunUp = smoothstep(-0.03, 0.06, env.sun.dirLocal.y);
     {
         SurfaceLook L = lookFor(site.gen, site.sys->star);
         cloudShadows = site.atmosphere && L.cloudsLayer && (env.cloudCover > 0.03 || localFront.on) && !hasOpaqueDeck(site.gen.type);   // W-03: a front's deck in reach counts
@@ -3621,7 +3829,6 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     floorH = floorHeight();   // B-408: the sky's galactic band reaches down to its horizon
     drawSky(fb, t, stars, sr);
     section(0);
-    { auto tf0 = std::chrono::steady_clock::now(); drawFloor(fb); static const bool traceF = std::getenv("VESPERIS_TRACE") != nullptr; if (traceF && frameStamp <= 3) fprintf(stderr, "    floor %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tf0).count()); }
     int r0 = ringR[0], r1 = ringR[1], r2 = ringR[2], r3 = ringR[3];
     int rN = nearBlend > 0 ? ringN : 0;   // O6-02: the near ring (B-313: at every speed, on foot and in the buggy; off when the capsule is high)
     if (cameraOverrideAlt > 800) r0 = 0;          // high above the site the 16 m cells are invisible
@@ -3639,7 +3846,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
         // the morph band of a ring reaches from the finer ring's edge (plus two cells) to its own edge: the gap between
         // two rings is two octaves of the relief (hundreds of metres at the 13 km edge, KI-310), and a narrow band would
         // twist the cells; the near ring keeps a full-detail core of ten cells (40 m) round the camera
-        site.lod0R = 0; site.lod0Band = 0;
+        site.lod0R = 0; site.lod0Band = 0; lastWarmMisses = 0;
         for (int k = 4; k >= 0; k--) {   // coarse to fine: a ring morphs onto the next coarser one that is drawn
             Ring& g = rings[k];
             if (g.r <= 0) continue;
@@ -3653,20 +3860,66 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
         }
         morphCoarse = nullptr; morphBand = 0;
         section(1);
+        // F-04: the cells binned once, on the pool by rows of cells (every ring's rows in one dispatch), then each band thread draws
+        // the cells that reach its rows
+        bool outermost[5]; int firstRow[6], rowsAll = 0;
+        for (int k = 0; k < 5; k++) {
+            outermost[k] = true;
+            for (int j = k + 1; j < 5; j++) if (rings[j].r > 0) outermost[k] = false;
+            firstRow[k] = rowsAll;
+            if (rings[k].r <= 0) continue;
+            TerrainBin& bin = terrainBins[k];
+            const int side = 2 * rings[k].r;
+            bin.cols = side;
+            if (bin.cells.size() < (size_t)side * side) bin.cells.resize((size_t)side * side);
+            bin.count.assign(side, 0);
+            rowsAll += side;
+        }
+        firstRow[5] = rowsAll;
+        {
+            const auto tb0 = std::chrono::steady_clock::now();
+            std::atomic<int> staleN{0}, everyN{0};
+            parallelFor(rowsAll, 4, [&](int b, int e) {
+                int stale = 0, every = 0;
+                for (int k = 0; k < 5; k++) {
+                    const int lo = std::max(b, firstRow[k]), hi = std::min(e, firstRow[k + 1]);
+                    if (lo < hi) binTerrainLOD(terrainBins[k], *rings[k].c, *rings[k].vc, rings[k].r, rings[k].cover, site.hasWater, outermost[k], lo - firstRow[k], hi - firstRow[k], stale, every);
+                }
+                staleN += stale; everyN += every;
+            });
+            lastStaleCorners = staleN; lastTerrainAllRows = everyN; lastTerrainCells = 0;
+            for (int k = 0; k < 5; k++) if (rings[k].r > 0) for (int n : terrainBins[k].count) lastTerrainCells += n;
+            lastTerrainBinMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count();
+        }
+        // F-05: the reflections gathered (serially: they fill the caches on a miss) for the bands to draw after the rings; the floor is
+        // drawn first in every band, as it was drawn before the rings
+        static const char* skipEnv2 = std::getenv("VESPERIS_SKIP");
+        const bool reflections = site.hasWater && !(skipEnv2 && std::strstr(skipEnv2, "refl"));
+        if (reflections) gatherReflections();
+        static const bool traceBands = std::getenv("VESPERIS_TRACE") != nullptr;   // F-01: each band's time split (its ms and rows always)
+        std::atomic<int> bandSlot{0};
+        // F-06: the frame's rows dealt in chunks (a quarter of a thread's share): the chunk that holds the horizon's thousands of small cells
+        // is one of thirty-odd, and the threads take the others meanwhile (cuts by a cost per cell and row lost: 4.31 -> 5.09 ms at 4x)
         parallelFor(FBH, 32, [&](int yb, int ye) {
+            const auto tb0 = std::chrono::steady_clock::now();
+            const int slot = bandSlot.fetch_add(1);
+            BandTrace* bt = slot < TRACE_BANDS ? &lastTerrainBands[slot] : nullptr;
+            if (bt) *bt = BandTrace();
             setRasterBand(yb, ye);
+            drawFloor(fb);
             for (int k = 0; k < 5; k++) {
                 Ring& g = rings[k];
                 if (g.r <= 0) continue;
-                bool outermost = true;
-                for (int j = k + 1; j < 5; j++) if (rings[j].r > 0) outermost = false;
-                drawTerrainLOD(fb, *g.c, *g.vc, g.r, g.cover, site.hasWater, t, yb, ye, outermost);
+                drawTerrainLOD(fb, terrainBins[k], *g.c, *g.vc, g.r, g.cover, site.hasWater, t, yb, ye, outermost[k], traceBands ? bt : nullptr);
             }
+            if (reflections) drawReflectionBand(fb, yb, ye);
             setRasterBand(0, 1 << 30);
+            if (bt) { bt->y0 = yb; bt->y1 = ye; bt->ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count(); }
         });
+        lastTerrainBandN = std::min(bandSlot.load(), TRACE_BANDS);
+        std::sort(lastTerrainBands, lastTerrainBands + lastTerrainBandN, [](const BandTrace& a, const BandTrace& b) { return a.y0 < b.y0; });
         section(2);
     }
-    { static const char* skipEnv2 = std::getenv("VESPERIS_SKIP"); if (site.hasWater && !(skipEnv2 && std::strstr(skipEnv2, "refl"))) drawReflections(fb); }
     drawFootprints(fb);
     if (cameraOverrideAlt < 0 && !inVehicle()) drawBlobShadow(fb, player.x, player.z, 0.32, 1.7);
     drawWaypointLine(fb);
@@ -3685,7 +3938,28 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     section(5);
     // O1: what the crosshair rests on, for the HUD's range readout and M (skipped while the capsule flies)
     lastRange = cameraOverrideAlt >= 0 ? -1 : rangeToGround(drawRadiusM(), lastRangeX, lastRangeZ, lastRangeWater);
-    { static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr; if (trace && frameStamp <= 3) fprintf(stderr, "  render %d: palette+sky %.1f, floor+warm %.1f, terrain %.1f, refl..objects %.1f, flora %.1f, rest %.1f ms\n", frameStamp, lastRenderMs[0], lastRenderMs[1], lastRenderMs[2], lastRenderMs[3], lastRenderMs[4], lastRenderMs[5]); }
+    { static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr; if (trace && frameStamp <= 3) {
+        fprintf(stderr, "  render %d: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", frameStamp, lastRenderMs[0], lastRenderMs[1], lastRenderMs[2], lastRenderMs[3], lastRenderMs[4], lastRenderMs[5]);
+        for (int f = 0; f < 2; f++) { const std::string bl = bandTraceLine(f == 1); if (!bl.empty()) fprintf(stderr, "    %s\n", bl.c_str()); }   // F-01
+    } }
+}
+
+// F-01: the bands of the last frame as one line: rows and ms; the terrain's split and counts when they were traced
+std::string SurfaceView::bandTraceLine(bool flora) const {
+    const BandTrace* bs = flora ? lastFloraBands : lastTerrainBands;
+    const int n = flora ? lastFloraBandN : lastTerrainBandN;
+    if (n == 0) return std::string();
+    char buf[160];
+    std::string s = "flora bands:";
+    if (!flora) { snprintf(buf, sizeof buf, "terrain bands (%d cells binned in %.2f ms, %d in every band):", lastTerrainCells, lastTerrainBinMs, lastTerrainAllRows); s = buf; }   // F-04
+    for (int i = 0; i < n; i++) {
+        const BandTrace& b = bs[i];
+        if (flora) snprintf(buf, sizeof buf, " %d-%d %.2f ms (%d visited, %d drawn)%s", b.y0, b.y1, b.ms, b.walked, b.drawn, i + 1 < n ? "," : "");
+        else if (b.walked > 0) snprintf(buf, sizeof buf, " %d-%d %.2f ms (walk %.2f, water set-up %.2f, fill %.2f; %d walked, %d drawn, %d wet)%s", b.y0, b.y1, b.ms, b.ms - b.waterMs - b.fillMs, b.waterMs, b.fillMs, b.walked, b.drawn, b.wet, i + 1 < n ? "," : "");
+        else snprintf(buf, sizeof buf, " %d-%d %.2f%s", b.y0, b.y1, b.ms, i + 1 < n ? "," : "");
+        s += buf;
+    }
+    return s;
 }
 
 // the cached height under a point at `dist` from the camera: bilinear lod0 close by, the coarser rings further out

@@ -45,6 +45,7 @@ struct Framebuffer {
     std::vector<Pix> idx;       // bank | intensity
     std::vector<float> invz;    // 1/z per pixel, 0 = infinitely far
     uint8_t pal[BANKS * 64 * 3]; // 64 colour stops per bank, 0..255 per channel
+    std::vector<Pix> back;      // F-07: the mush's output, swapped with idx after each pass (its contents are nobody's)
 
     Framebuffer();
     void clear(Pix v = 0);

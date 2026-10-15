@@ -23,6 +23,7 @@
 #include "galaxy/planetmap.h"
 #include "galaxy/ruins.h"
 #include "core/rng.h"
+#include "core/parallel.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -191,8 +192,8 @@ double Game::radarSkyAt(const Vec3& dir) const {
     if (band.empty()) return 0;
     Vec3 f = normalize(dir), up = std::fabs(f.y) < 0.9 ? Vec3(0, 1, 0) : Vec3(1, 0, 0);
     Vec3 a = normalize(cross(f, up)), b = cross(f, a);
-    double s = 0.5 * sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, f), k = std::tan(10 * DEG);
-    for (int i = 0; i < 6; i++) { double ang = i * TAU / 6; s += 0.5 / 6 * sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, normalize(f + (a * std::cos(ang) + b * std::sin(ang)) * k)); }
+    double s = 0.5 * sampleGalaxyBand(band, f), k = std::tan(10 * DEG);
+    for (int i = 0; i < 6; i++) { double ang = i * TAU / 6; s += 0.5 / 6 * sampleGalaxyBand(band, normalize(f + (a * std::cos(ang) + b * std::sin(ang)) * k)); }
     return clampd(s, 0, 1);
 }
 
@@ -465,17 +466,17 @@ void Game::radarCameraFeed(Framebuffer& fb) {
     // the radio sky: the band's brightness at every eighth pixel of the screen's grid, in intensity units (two shades at x1 where the
     // band is brightest, twelve at x32)
     const int cell = 8 * S, GW = FBW / cell + 2, GH = FBH / cell + 2;
-    static std::vector<float> glow, rowGlow, colT; static std::vector<int> colI;
+    static std::vector<float> glow, colT; static std::vector<int> colI;
     if ((int)colI.size() != FBW || (int)colT.size() != FBW) { colI.resize(FBW); colT.resize(FBW); }
     for (int x = 0; x < FBW; x++) { double fx = (double)x / cell; colI[x] = std::min(GW - 2, (int)fx); colT[x] = (float)(fx - colI[x]); }   // the grid's column and the share across it, per pixel
     const std::vector<float>& band = spaceR.parkedBand();
     const double glowAmp = band.empty() ? 0 : INTEN_PER_SHADE * (2 + 10 * gT);
     if (glowAmp > 0) {
-        glow.assign((size_t)GW * GH, 0.f); rowGlow.assign((size_t)GW, 0.f);
+        glow.assign((size_t)GW * GH, 0.f);
         Mat3 camT = viewBasis().transposed(); double invf = 1.0 / spaceR.proj.f;
         for (int j = 0; j < GH; j++) for (int i = 0; i < GW; i++) {
             Vec3 d = normalize(Vec3((i * cell - spaceR.proj.cx) * invf, -(j * cell - spaceR.proj.cy) * invf, 1.0));
-            glow[(size_t)j * GW + i] = (float)(glowAmp * sampleGalaxyBand(band, BAND_MAP_W, BAND_MAP_H, camT * d));
+            glow[(size_t)j * GW + i] = (float)(glowAmp * sampleGalaxyBand(band, camT * d));
         }
     }
     // the ghost double and the tears read the picture as it was
@@ -491,30 +492,35 @@ void Game::radarCameraFeed(Framebuffer& fb) {
     }
     if (dblK > 0 || tearY0 >= 0) orig = fb.idx;
     int bandY = (int)(std::fmod(radar.rollPh, 1.0) * (FBH + 40 * S)) - 20 * S;   // rolls down the picture every 6 s at x1 (C-16: 2.4 s at x32)
-    uint32_t rs = (uint32_t)(realTime * 60) * 2654435761u + 0x51A7u;
     int noiseAmp = (int)(40 + 150 * statik + 50 * gT), snowOdds = (int)(2 + 40 * statik + 25 * gT);   // intensity units (32 a shade); flecks per 4096 pixels
-    for (int y = 0; y < FBH; y++) {
-        double line = ((y / S) & 1) ? 0.8 : 1.0;
-        double bnd = std::abs(y - bandY) < 10 * S ? 1.08 : 1.0;
-        Pix* row = &fb.idx[(size_t)y * FBW];
-        const bool tear = y >= tearY0 && y < tearY1;
-        if (glowAmp > 0) {
-            double fy = (double)y / cell; int j0 = std::min(GH - 2, (int)fy); double ty = fy - j0;
-            for (int i = 0; i < GW; i++) rowGlow[i] = (float)(glow[(size_t)j0 * GW + i] * (1 - ty) + glow[(size_t)(j0 + 1) * GW + i] * ty);
+    static std::vector<uint32_t> rowStart;   // F-05: the rows on the pool, each band from its first row's noise state (xorshiftRowStarts)
+    xorshiftRowStarts((uint32_t)(realTime * 60) * 2654435761u + 0x51A7u, FBW, FBH, rowStart);
+    parallelFor(FBH, 32, [&](int yb, int ye) {
+        uint32_t rs = rowStart[yb];
+        std::vector<float> rowGlow(glowAmp > 0 ? (size_t)GW : 0, 0.f);   // the radio sky along this row (the band's own)
+        for (int y = yb; y < ye; y++) {
+            double line = ((y / S) & 1) ? 0.8 : 1.0;
+            double bnd = std::abs(y - bandY) < 10 * S ? 1.08 : 1.0;
+            Pix* row = &fb.idx[(size_t)y * FBW];
+            const bool tear = y >= tearY0 && y < tearY1;
+            if (glowAmp > 0) {
+                double fy = (double)y / cell; int j0 = std::min(GH - 2, (int)fy); double ty = fy - j0;
+                for (int i = 0; i < GW; i++) rowGlow[i] = (float)(glow[(size_t)j0 * GW + i] * (1 - ty) + glow[(size_t)(j0 + 1) * GW + i] * ty);
+            }
+            for (int x = 0; x < FBW; x++) {
+                rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5;
+                int xs = tear ? std::max(0, std::min(FBW - 1, x - tearShift)) : x;
+                Pix p = tear ? orig[(size_t)y * FBW + xs] : row[x];
+                double base = intenOf(p);
+                if (dblK > 0 && y >= dblY && xs >= dblX) base = std::max(base, dblK * intenOf(orig[(size_t)(y - dblY) * FBW + (xs - dblX)]));
+                if (glowAmp > 0) { int i0 = colI[x]; float tx = colT[x]; base += rowGlow[i0] + (rowGlow[i0 + 1] - rowGlow[i0]) * tx; }
+                double vig = 1 - 0.5 * std::max(0.0, (double)(vx[x] + vy[y]) - 0.4);
+                int inten = (int)(base * line * bnd * vig) + (int)(rs % (2 * noiseAmp + 1)) - noiseAmp;
+                if ((int)((rs >> 8) & 4095) < snowOdds) inten = std::max(inten, 32 * (28 + (int)((rs >> 20) % 24)));
+                row[x] = pixI(bankOf(p), inten);
+            }
         }
-        for (int x = 0; x < FBW; x++) {
-            rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5;
-            int xs = tear ? std::max(0, std::min(FBW - 1, x - tearShift)) : x;
-            Pix p = tear ? orig[(size_t)y * FBW + xs] : row[x];
-            double base = intenOf(p);
-            if (dblK > 0 && y >= dblY && xs >= dblX) base = std::max(base, dblK * intenOf(orig[(size_t)(y - dblY) * FBW + (xs - dblX)]));
-            if (glowAmp > 0) { int i0 = colI[x]; float tx = colT[x]; base += rowGlow[i0] + (rowGlow[i0 + 1] - rowGlow[i0]) * tx; }
-            double vig = 1 - 0.5 * std::max(0.0, (double)(vx[x] + vy[y]) - 0.4);
-            int inten = (int)(base * line * bnd * vig) + (int)(rs % (2 * noiseAmp + 1)) - noiseAmp;
-            if ((int)((rs >> 8) & 4095) < snowOdds) inten = std::max(inten, 32 * (28 + (int)((rs >> 20) % 24)));
-            row[x] = pixI(bankOf(p), inten);
-        }
-    }
+    });
 }
 
 // the camera's frame over the picture: the vehicles' brackets and channel, the ship's attitude as the camera's azimuth and

@@ -1,4 +1,5 @@
 #include "textures.h"
+#include "core/parallel.h"
 #include <cmath>
 #include <algorithm>
 
@@ -355,19 +356,24 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
 
 // B-311: the broad tone tile: three octaves of periodic gradient noise, +-10, that the rasteriser adds at two metres a texel
 // (patches of 23, 43 and 85 m) so the ground of one material is not one flat tone from cell to cell.
+// F-03: this tile, the leaves' and the bark's are made at a landing's first frame (7 ms together, alone): their rows on the pool (a
+// texel is a function of its place and the seed)
 void buildMacroTile(GrainTexture& g, uint64_t seed) {
     g.resize(N);
     uint64_t sA = mix64(seed ^ 0x3A11ULL), sB = mix64(seed ^ 0x3A12ULL), sC = mix64(seed ^ 0x3A13ULL);
-    for (int y = 0; y < N; y++)
+    parallelFor(N, 8, [&](int y0, int y1) {
+    for (int y = y0; y < y1; y++)
         for (int x = 0; x < N; x++) {
             double v = 6.5 * pgrad(x, y, 3, sA) + 4 * pgrad(x, y, 6, sB) + 2.5 * pgrad(x, y, 11, sC);
             g.v[(y << g.shift) | x] = (int8_t)clampi((int)std::lround(v), -60, 60);
         }
+    });
 }
 
 void buildLeafTiles(GrainTexture& leaf, GrainTexture& edge, uint64_t seed) {
     leaf.resize(N); edge.resize(N);
-    for (int y = 0; y < N; y++)
+    parallelFor(N, 8, [&](int y0, int y1) {
+    for (int y = y0; y < y1; y++)
         for (int x = 0; x < N; x++) {
             // leaves: small bright and dark lumps (3-4 texels) over a softer mottle, with a few sharp glints
             double n = 9.0 * pgrad(x, y, 32, seed ^ 0x1EAF1ULL) + 5.0 * pgrad(x, y, 16, seed ^ 0x1EAF2ULL) + 4.0 * pgrad(x, y, 8, seed ^ 0x1EAF3ULL);
@@ -378,11 +384,13 @@ void buildLeafTiles(GrainTexture& leaf, GrainTexture& edge, uint64_t seed) {
             double e = 0.65 * pgrad(x, y, 24, seed ^ 0x1EAF5ULL) + 0.35 * pgrad(x, y, 48, seed ^ 0x1EAF6ULL);
             edge.v[(size_t)y * N + x] = (int8_t)clampi((int)std::lround(e * 30.0), -127, 127);   // +-0.45 weight units at ragged 1 (the rasteriser divides by 64)
         }
+    });
 }
 
 void buildBarkTile(GrainTexture& g, uint64_t seed) {
     g.resize(N);
-    for (int y = 0; y < N; y++)
+    parallelFor(N, 8, [&](int y0, int y1) {
+    for (int y = y0; y < y1; y++)
         for (int x = 0; x < N; x++) {
             // ridges and furrows across (x), long along (y): the trunk maps x at 8 texels a metre and y at 2, so a furrow
             // 3 texels wide is 4 cm across and runs a metre and a half
@@ -392,4 +400,5 @@ void buildBarkTile(GrainTexture& g, uint64_t seed) {
             n -= 10.0 * (1 - smoothstep(0.05, 0.22, f2 - f1));   // the crack lines between the plates
             g.v[(size_t)y * N + x] = (int8_t)clampi((int)std::lround(n), -127, 127);
         }
+    });
 }

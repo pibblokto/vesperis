@@ -1,5 +1,6 @@
 // The landing map: site selection on the body's planet map (B-004 relief shading).
 #include "game.h"
+#include "core/parallel.h"
 #include "galaxy/roads.h"
 #include "galaxy/plan.h"
 #include "galaxy/buildings.h"
@@ -25,7 +26,8 @@ void Game::beginLanding() {
     Vec3 bf = frame * ship.parkDir;
     StarSystem::latLonFromBody(bf, landLat, landLon);
     landLat = clampd(landLat, -85 * DEG, 85 * DEG);
-    spaceR.mapFor(sys.bodies[landBody]);
+    spaceR.mapIfReady(sys.bodies[landBody]);   // F-02: asked, never waited for: the screen reads the world until its thread has made the map (the keys
+                                               // work meanwhile as they did after the wait: Enter lands at the cursor, R waits for the map)
     worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // T-01 (already on its way since the approach)
     if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // R-415: its records and their homes, for V
     drainLat = 1e9; drainLon = 1e9;   // O6-03: the map's first update prefetches the drainage of the default site
@@ -63,10 +65,11 @@ void Game::updateLandingMap(const Input& in, double dt) {
         if (!landingZoomAllowed()) status("THE WHOLE WORLD ALREADY FITS THE MAP", 3);
         else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = 4; }
     }
-    if (in.wasPressed(KEY_R)) {
+    const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // F-02: R once the world's map is made
+    if (rMap) {
         // random lit land site
         Rng r((uint64_t)(realTime * 1000));
-        const PlanetMap& m = spaceR.mapFor(sys.bodies[landBody]);
+        const PlanetMap& m = *rMap;
         Mat3 frame = sys.bodyFrame(landBody, t);
         Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
         for (int k = 0; k < 200; k++) {
@@ -215,6 +218,10 @@ void Game::buildLandingZoom() {
     const bool dry = zoomDry;
     zoomImg.assign(ZW * ZH, 0); zoomEmissive.assign(ZW * ZH, 0); zoomUnit.assign(ZW * ZH, Vec3());
     std::vector<float> hs(ZW * ZH), albs(ZW * ZH); std::vector<uint8_t> mats(ZW * ZH);
+    auto zt = std::chrono::steady_clock::now();   // F-01: the build's parts
+    auto zoomPart = [&](int k) { auto n = std::chrono::steady_clock::now(); zoomBuildMs[k] = std::chrono::duration<double, std::milli>(n - zt).count(); zt = n; };
+    for (double& ms : zoomBuildMs) ms = 0;
+    zoomBuilds++;
     parallelFor(ZH, 8, [&](int y0, int y1) {
         DrainageOff noDrain(dry);   // per worker thread
         for (int y = y0; y < y1; y++)
@@ -227,6 +234,7 @@ void Game::buildLandingZoom() {
                 zoomUnit[i] = u; hs[i] = (float)s.height; mats[i] = (uint8_t)s.material; albs[i] = (float)s.albedo;
             }
     });
+    zoomPart(0);
     MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
     mapRampsFor(b, ramps, lf, atmo);
     auto hAt = [&](int x, int y) { x = clampi(x, 0, ZW - 1); y = clampi(y, 0, ZH - 1); return (double)hs[y * ZW + x]; };
@@ -242,6 +250,7 @@ void Game::buildLandingZoom() {
             zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade);
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
+    zoomPart(1);
     zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
     zoomCivImg = zoomImg; zoomPlaces.clear();   // R-415: the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
     if (worldHadCivilisation(g)) {
@@ -260,11 +269,13 @@ void Game::buildLandingZoom() {
             if (std::max(settlementRank(r.a.sclass), settlementRank(r.b.sclass)) < 2) continue;   // the roads of the villages and the towns: a lane between two hamlets is not seen from orbit, and the whole web was a honeycomb over the land
             addLine(r.pts, NK_ROAD);
         }
+        zoomPart(2);
         // T-01: the world plan's ways through the window (their waypoints: a leg's walk wanders less than a texel) and its places' cores,
         // each a disc of its built ground over the map (the core's share of a texel, darkened by the years: what the ground holds)
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
         std::vector<PlanEdgeRef> es; planEdgesNear(*P, zoomCentre, zoomRadiusM, es);
         for (const PlanEdgeRef& r : es) if (r.e->kind != NK_SEA) addLine(planEdgeWay(g, *P, r), r.e->kind);
+        zoomPart(3);
         std::vector<const PlanPlace*> ps; planPlacesNear(*P, zoomCentre, zoomRadiusM, ps);
         MatRamp ramps2[MAT_COUNT]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
         const uint32_t rock = mapColor(ramps2, familyRep(g.type, FAM_ROCK), 0.45, lf2, atmo2, 1.0);
@@ -291,6 +302,7 @@ void Game::buildLandingZoom() {
             if (any) zoomCores++;
         }
         zoomRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
+        zoomPart(4);
     }
 }
 
@@ -392,7 +404,7 @@ double Game::testFrontBandAt(double latDeg, double lonDeg) {   // W-03
 
 // N1-06: the relief class the landing map would print at a site
 const char* Game::testReliefClass(double lat, double lon) {
-    probeSite.init(&sys, landBody, lat, lon, t);
+    probeSite.initFrame(&sys, landBody, lat, lon, t);
     probeBody = landBody; probeLat = lat; probeLon = lon;
     return reliefClass(siteSlope(probeSite));
 }
@@ -402,10 +414,17 @@ void Game::renderLandingMap() {
     renderSpace();
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 150);
     const Body& b = sys.bodies[landBody];
-    const PlanetMap& m = spaceR.mapFor(b);
+    int ox = 32, oy = 12;
+    const PlanetMap* mp = spaceR.mapIfReady(b);
+    if (!mp) {   // F-02: the world's map is being made on its thread (a world not mapped yet held this screen 150-200 ms a map)
+        drawRectRGB(canvas, ox - 1, oy - 1, ox + MAP_LW, oy + MAP_LH, HUD_DIM);
+        drawTextCentered(canvas, ox + MAP_LW / 2, oy + MAP_LH / 2 - 3, "READING THE WORLD...", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, 2, "SURFACE CAPSULE - SELECT LANDING SECTOR", HUD_CYAN);
+        return;
+    }
+    const PlanetMap& m = *mp;
     Mat3 frame = sys.bodyFrame(landBody, t);
     Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
-    int ox = 32, oy = 12;
     const int S = FB_SCALE;
     if (mapBaseSeed != b.seed || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();
     static std::vector<Vec3> unitLUT;   // body-frame unit vector per texel
@@ -430,20 +449,31 @@ void Game::renderLandingMap() {
         return rgb((int)r, (int)gg, (int)bl);
     };
     if (landZoom && !zoomImg.empty()) {
-        // O2: the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map
-        for (int py = 0; py < PH; py++) {
-            int ty = py / S;
-            uint32_t* row = canvas.px + (size_t)(oy * S + py) * FBW + ox * S;
-            for (int px = 0; px < PW; px++) {
-                int i = ty * ZW + px / S;
-                double lit = dot(zoomUnit[i], sunB);
-                double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
-                if (zoomEmissive[i]) l = std::max(l, 0.95);
-                uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // R-415: the cores with the peoples
-                if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
-                row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+        // O2: the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map. F-05: the rows on the pool, a
+        // texel's colour made once for the pixels that share it (along a row, and a row whose texels the band's row above had is copied)
+        parallelFor(PH, 32, [&](int pyb, int pye) {
+            int lastTy = -1;
+            for (int py = pyb; py < pye; py++) {
+                int ty = py / S;
+                uint32_t* row = canvas.px + (size_t)(oy * S + py) * FBW + ox * S;
+                if (ty == lastTy) { std::copy(row - FBW, row - FBW + PW, row); continue; }
+                lastTy = ty;
+                int lastI = -1; uint32_t col = 0;
+                for (int px = 0; px < PW; px++) {
+                    int i = ty * ZW + px / S;
+                    if (i != lastI) {
+                        lastI = i;
+                        double lit = dot(zoomUnit[i], sunB);
+                        double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
+                        if (zoomEmissive[i]) l = std::max(l, 0.95);
+                        uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // R-415: the cores with the peoples
+                        if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
+                        col = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+                    }
+                    row[px] = col;
+                }
             }
-        }
+        });
         for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
             const auto& poly = zoomRoads[ri];
             int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
@@ -466,21 +496,32 @@ void Game::renderLandingMap() {
             }
         }
     } else {
-        // the 512x256 map fills a 256x128 logical frame: one texel per pixel at 2x, every second texel at 1x
-        for (int py = 0; py < PH; py++) {
-            int ty = py * PlanetMap::H / PH;
-            uint32_t* row = canvas.px + (size_t)(oy * S + py) * FBW + ox * S;
-            for (int px = 0; px < PW; px++) {
-                int tx = px * PlanetMap::W / PW;
-                int i = ty * PlanetMap::W + tx;
-                double lit = dot(unitLUT[i], sunB);
-                double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
-                if (mapEmissive[i]) l = std::max(l, 0.95);
-                uint32_t c = mapBase[i];
-                if (fm && (*fm)[i]) c = withFront(c, (*fm)[i] / 255.0);
-                row[px] = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+        // the 512x256 map fills a 256x128 logical frame: one texel per pixel at 2x, every second texel at 1x. F-05: the rows on the pool, a
+        // texel's colour made once for the pixels that share it (at 3x and 4x; at 1x the skipped texels are never made)
+        parallelFor(PH, 32, [&](int pyb, int pye) {
+            int lastTy = -1;
+            for (int py = pyb; py < pye; py++) {
+                int ty = py * PlanetMap::H / PH;
+                uint32_t* row = canvas.px + (size_t)(oy * S + py) * FBW + ox * S;
+                if (ty == lastTy) { std::copy(row - FBW, row - FBW + PW, row); continue; }
+                lastTy = ty;
+                int lastTx = -1; uint32_t col = 0;
+                for (int px = 0; px < PW; px++) {
+                    int tx = px * PlanetMap::W / PW;
+                    if (tx != lastTx) {
+                        lastTx = tx;
+                        int i = ty * PlanetMap::W + tx;
+                        double lit = dot(unitLUT[i], sunB);
+                        double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
+                        if (mapEmissive[i]) l = std::max(l, 0.95);
+                        uint32_t c = mapBase[i];
+                        if (fm && (*fm)[i]) c = withFront(c, (*fm)[i] / 255.0);
+                        col = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
+                    }
+                    row[px] = col;
+                }
             }
-        }
+        });
     }
     (void)m;
     drawRectRGB(canvas, ox - 1, oy - 1, ox + MAP_LW, oy + MAP_LH, HUD_DIM);
@@ -546,7 +587,7 @@ void Game::renderLandingMap() {
     drawRectRGB(canvas, cx - 3, cy - 3, cx + 3, cy + 3, HUD_AMBER);
     // info
     if (probeBody != landBody || probeLat != landLat || probeLon != landLon) {
-        probeSite.init(&sys, landBody, landLat, landLon, t);
+        probeSite.initFrame(&sys, landBody, landLat, landLon, t);   // F-02: sampled, never drawn (the five caches cost 0.3-0.5 ms a step)
         probeBody = landBody; probeLat = landLat; probeLon = landLon;
     }
     const SurfaceSite& probe = probeSite;

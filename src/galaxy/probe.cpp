@@ -343,10 +343,6 @@ double giantGlowAt(const GiantAtmosphere& a, double bar, unsigned cut) {
     return g;
 }
 
-double giantJetTurn(const Body& b, double bandCount, double lat, double t) {
-    return b.type == PT_GASGIANT ? TAU * t / b.rotPeriod * 0.06 * std::sin(lat * bandCount) : 0.0;
-}
-
 double giantJetAt(const Body& b, const BodyGen& g, double lat, double lon, double t) {
     double jet = giantJetTurn(b, g.bandCount, lat, t);
     if (!g.gsOn || jet == 0.0) return jet;

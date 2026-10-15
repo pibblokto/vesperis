@@ -82,7 +82,7 @@ struct DetailPlate {
     long samples = 0;
     // T-01: the world plan's places and ways over the plate (galaxy/plan.h), read once the plan is built: the cores' built ground and the
     // ways' beds over the cells as the ground has them (what is seen from orbit is what is walked on)
-    struct PlanCore { Vec3 u; double r = 0, alb = 0.45, standing = 1; };
+    struct PlanCore { Vec3 u; double r = 0, alb = 0.45, standing = 1, cosReach = -2; };   // F-07: the cosine of the reach, the acos's pre-test
     struct PlanWay { Vec3 a, b; double half = 3, k = 0.3; };
     std::vector<PlanCore> cores; std::vector<PlanWay> ways; bool planRead = false;
     static constexpr int BLOCKS[4] = {8, 4, 2, 1};
@@ -154,7 +154,7 @@ private:
 public:
     // M7-02: cache policy and profiling counters (printed by `vesperis_test bench`)
     int mapCacheCap = 24;
-    struct MapStats { int generated = 0, hits = 0, evicted = 0; double genMs = 0; } mapStats;
+    struct MapStats { int generated = 0, hits = 0, evicted = 0; double genMs = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // F-01: `mapFor` waiting on a map or making it
     std::atomic<long> genMicros{0};
     size_t mapsHeld() const { return maps.size(); }
 private:
@@ -162,6 +162,14 @@ private:
     std::map<uint64_t, std::vector<float>> ringProfiles;
     std::vector<float> bandMap;   // M1-09 galactic backdrop for the current neighbourhood
     Vec3 bandPos; bool bandValid = false;
+    uint64_t bandGen = 0;         // F-07: moved on by every write of bandMap (the replay's key holds it)
+    // F-07: the backdrop drawn while the camera is still, kept and copied instead of drawn again (`render`). The key is every input of
+    // the pass outside a flight and without nebula patches: the camera, the projection, the frame's size and the band map. A frame
+    // whose key matches the last one's keeps its layer; one whose key matches the kept layer's copies it
+    struct BackdropKey { double cam[9], f, cx, cy; int w, h; uint64_t band; };
+    BackdropKey backKey{}, backPrev{};
+    bool backHave = false, backPrevHave = false;
+    std::vector<Pix> backLayer;
 public:
     // G-07 (KI-364): the band in a Vimana flight. The flight's line is closed-form, so the band is built ahead of the ship:
     // keyframes at flight times `tau` (half a second apart, closer where the galactic centre would turn more than two degrees

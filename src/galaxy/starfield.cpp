@@ -121,15 +121,19 @@ void buildGalaxyBand(const Vec3& obs, std::vector<float>& map, int W, int H) {
     buildGalaxyBandCells(obs, map, W, H, 0, W * H);
 }
 
-double sampleGalaxyBand(const std::vector<float>& map, int W, int H, const Vec3& d) {
+double sampleGalaxyBand(const std::vector<float>& map, const Vec3& d) {
+    // F-07: the size a constant, the longitude's wrap a mask once a coordinate (((x % W) + W) % W for a power of two)
+    constexpr int W = BAND_MAP_W, H = BAND_MAP_H;
+    static_assert((W & (W - 1)) == 0, "the band map's width wraps by a mask");
     if (map.empty()) return 0;
     double lon = std::atan2(d.z, d.x); if (lon < 0) lon += TAU;
     double lat = std::asin(clampd(d.y, -1, 1));
     double fx = lon / TAU * W - 0.5, fy = bandRowOf(lat) * H - 0.5;
-    int x0 = (int)std::floor(fx), y0 = (int)std::floor(fy);
+    int x0 = ifloor(fx), y0 = ifloor(fy);
     double tx = fx - x0, ty = fy - y0;
-    auto at = [&](int x, int y) { x = ((x % W) + W) % W; y = clampi(y, 0, H - 1); return (double)map[(size_t)y * W + x]; };
-    return (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
+    const int xa = x0 & (W - 1), xb = (x0 + 1) & (W - 1), ya = clampi(y0, 0, H - 1), yb = clampi(y0 + 1, 0, H - 1);
+    auto at = [&](int x, int y) { return (double)map[(size_t)y * W + x]; };
+    return (at(xa, ya) * (1 - tx) + at(xb, ya) * tx) * (1 - ty) + (at(xa, yb) * (1 - tx) + at(xb, yb) * tx) * ty;
 }
 
 const char* REGION_NAMES[REGION_COUNT] = {"GALACTIC CORE", "THE BULGE", "SPIRAL ARM", "THE DISK", "THE HALO", "GLOBULAR CLUSTER", "STAR-FORMING REGION", "OPEN CLUSTER"};
@@ -445,14 +449,28 @@ std::string romanNumeral(int n) {
     return r;
 }
 
+// F-02: a star is a function of its sector alone, and both cubes are listed x, then y, then z ascending, so the stars of the sectors the
+// new cube shares with the last are taken from the last list by one forward cursor, in the order a fresh walk would find them; only the
+// sectors new to the cube are generated (a Vimana flight crosses several sectors a frame and rebuilt all 9,261 every frame: 1.4 ms at home)
 void StarNeighborhood::update(const Vec3& posKm) {
     int64_t sx = sectorOf(posKm.x), sy = sectorOf(posKm.y), sz = sectorOf(posKm.z);
     if (sx == cx && sy == cy && sz == cz) return;
-    cx = sx; cy = sy; cz = sz;
-    stars.clear();
+    const int64_t ox = cx, oy = cy, oz = cz, orad = builtRadius;
+    std::vector<Star> old;
+    old.swap(stars);
+    stars.reserve(old.size());
+    cx = sx; cy = sy; cz = sz; builtRadius = radius;
+    auto inOld = [&](int64_t x, int64_t y, int64_t z) { return orad >= 0 && x >= ox - orad && x <= ox + orad && y >= oy - orad && y <= oy + orad && z >= oz - orad && z <= oz + orad; };
+    auto before = [](const Star& s, int64_t x, int64_t y, int64_t z) { return s.sx != x ? s.sx < x : (s.sy != y ? s.sy < y : s.sz < z); };
+    size_t k = 0;
     for (int64_t x = sx - radius; x <= sx + radius; x++)
         for (int64_t y = sy - radius; y <= sy + radius; y++)
             for (int64_t z = sz - radius; z <= sz + radius; z++) {
+                if (inOld(x, y, z)) {
+                    while (k < old.size() && before(old[k], x, y, z)) k++;
+                    if (k < old.size() && old[k].sx == x && old[k].sy == y && old[k].sz == z) stars.push_back(old[k++]);
+                    continue;
+                }
                 Star s;
                 if (starInSector(x, y, z, s, false)) stars.push_back(s);
             }

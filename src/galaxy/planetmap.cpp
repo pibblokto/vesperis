@@ -121,10 +121,12 @@ template <class F>
 void visitFeatures(const Vec3& p, double R, double cellKm, double density, uint64_t seed, double reachCells, F fn) {
     double inv = 1.0 / cellKm;
     int64_t cx = (int64_t)std::floor(p.x * inv), cy = (int64_t)std::floor(p.y * inv), cz = (int64_t)std::floor(p.z * inv);
+    uint64_t hxy[3][3];   // F-07: hash3i's (x, y) steps once for the 27 cells
+    for (int dx = -1; dx <= 1; dx++) { const uint64_t hx = hashX(cx + dx, seed); for (int dy = -1; dy <= 1; dy++) hxy[dy + 1][dx + 1] = hashXY(hx, cy + dy); }
     for (int dz = -1; dz <= 1; dz++)
         for (int dy = -1; dy <= 1; dy++)
             for (int dx = -1; dx <= 1; dx++) {
-                uint64_t h = hash3i(cx + dx, cy + dy, cz + dz, seed);
+                uint64_t h = hashXYZ(hxy[dy + 1][dx + 1], cz + dz);
                 if (unitFromHash(h) > density) continue;
                 double u0 = unitFromHash(mix64(h + 1)), u1 = unitFromHash(mix64(h + 2)), u2 = unitFromHash(mix64(h + 3));
                 Vec3 c((cx + dx + u0) * cellKm, (cy + dy + u1) * cellKm, (cz + dz + u2) * cellKm);
@@ -2438,31 +2440,4 @@ void PlanetMap::generate(const BodyGen& g) {
     valid = true;
 }
 
-int PlanetMap::texelIndex(double lon, double lat) const {
-    double fx = (wrap2pi(lon + PI) / TAU) * W;
-    double fy = (0.5 - lat / PI) * H;
-    int x = clampi((int)fx, 0, W - 1), y = clampi((int)fy, 0, H - 1);
-    return y * W + x;
-}
-
-namespace {
-template <class T>
-double bilinear(const std::vector<T>& v, double lon, double lat) {
-    double fx = (wrap2pi(lon + PI) / TAU) * PlanetMap::W - 0.5;
-    double fy = (0.5 - lat / PI) * PlanetMap::H - 0.5;
-    int x0 = (int)std::floor(fx), y0 = (int)std::floor(fy);
-    double tx = fx - x0, ty = fy - y0;
-    int x1 = (x0 + 1) & (PlanetMap::W - 1);
-    x0 &= (PlanetMap::W - 1);
-    int y1 = clampi(y0 + 1, 0, PlanetMap::H - 1);
-    y0 = clampi(y0, 0, PlanetMap::H - 1);
-    double a = v[y0 * PlanetMap::W + x0], b = v[y0 * PlanetMap::W + x1];
-    double c = v[y1 * PlanetMap::W + x0], d = v[y1 * PlanetMap::W + x1];
-    return (a + (b - a) * tx) + ((c + (d - c) * tx) - (a + (b - a) * tx)) * ty;
-}
-}
-
-double PlanetMap::albedoAt(double lon, double lat) const { return bilinear(albedo, lon, lat) / 255.0; }
-double PlanetMap::cloudAt(double lon, double lat) const { return bilinear(cloud, lon, lat) / 255.0; }
-double PlanetMap::heightAt(double lon, double lat) const { return bilinear(height, lon, lat); }
-int PlanetMap::materialAt(double lon, double lat) const { return material[texelIndex(lon, lat)]; }
+double benchFeatureField(const Vec3& p, double R, uint64_t seed) { return domeField(p, R, 2.0, 0.6, seed, 0.4, 100.0, 0.0); }   // F-01

@@ -304,3 +304,22 @@ the records: "The records (H-04)").
    the monuments in `pickMonument` with their reach in `monumentReach`).
 4. `vesperis_test ruins kinds` (add it to the sheet's table) and `ruins ages` to see it; `ruins check` checks that nothing of it
    rests on air, its room's doorway is open, its spots are clear, and that its age builds nothing later than itself.
+
+## Time a change, or prove that it draws nothing new (F-01 to F-11)
+
+1. Keep the previous binary (`cp vesperis_test build/perf-baselines/vesperis_test_<id>`; never `make clean`, it deletes `build/`).
+   Before timing, the Mac's state: `pmset -g batt` (mains or battery: compare only runs of one batch), `sysctl vm.swapusage` and
+   `top -l 2 -s 2` (a build, Spotlight or Docker beside the runs shows in them); wrap a batch in `caffeinate -i`.
+2. The pixels: `regress` and `VESPERIS_THREADS=1 regress`; `scene <name> 2` and `4` by both binaries, then `pngdiff` (zero differing
+   for an identical change); `screens` for the cabin, the menus, the maps and the feeds; `bothways <scene>`. The `flow` only from one
+   restored state, beside a baseline-against-baseline run (KI-404).
+3. The time: `bench check` by the two binaries in turn, the order swapped every pair, four pairs; a row is faster when it is faster in
+   every pair. Several variants: a rotation, each in turn, three rounds. One thread: `env VESPERIS_THREADS=1` (a zsh background job
+   with that variable alone once ran the sun's loop five times slower: KI-409). A row of 30 frames after a row that got faster can
+   read slower: time that view alone over hundreds of frames before calling it a loss.
+4. Where the time goes: `VESPERIS_TRACE=1` (the sections and the bands), `sample vesperis_test 5` on `bench forest` or on a mode run
+   under a pseudo-terminal (`python3 -c 'import pty,sys; pty.spawn(sys.argv[1:])' ./vesperis_test bench`), and the scaling curve over
+   `VESPERIS_THREADS=1, 2, 4, 6, 8` (`08-testing-and-tools.md`). A pure function is judged in the frame, on the renderer's own inputs:
+   F-10's `atan2`/`asin` pair won a loop of random directions and lost the globe's scanlines.
+5. After: a row that fell gets its budget lowered to about 1.5 times the new median (`runBench`), the numbers go into
+   `08-testing-and-tools.md`'s reference paragraphs, the decision and what was dropped into `10-decisions.md`.

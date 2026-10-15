@@ -116,12 +116,25 @@ bool Guide::load(const std::string& path) {
         }
     }
     if (shownMark < -1 || shownMark >= (int)marks.size()) shownMark = -1;
+    for (ProbeRecord& r : probes) r.lines = probeLines(r);   // F-02: once the whole file is read (a record's lines follow its `probe` line)
     if (recordsScheme < 3) {   // T-04 (2): the records' contents new; B-414 (3): a people's records all of the age it reached
         migratedShards = 0;
         for (const std::string& k : shards) if (k.find("/S") != std::string::npos) migratedShards++;
     }
     if (recordsScheme < 2) { rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox); }   // T-04: the second people's shards at the records' stride, everywhere a shard's key is kept
     return true;
+}
+
+std::string probeLines(const ProbeRecord& r) {
+    std::ostringstream f;
+    f.precision(12);   // the guide's file
+    auto list = [&](const char* k, const std::vector<double>& v) { f << k << " " << r.seed << " " << v.size(); for (double x : v) f << " " << x; f << "\n"; };
+    list("probecam", r.cam); list("probetime", r.time);
+    f << "probeprofile " << r.seed << " " << r.profile.size();
+    for (const ProbeSample& q : r.profile) f << " " << q.clock << " " << q.bar << " " << q.tempK << " " << q.windE << " " << q.light << " " << q.layer << " " << q.flashes;
+    f << "\n";
+    list("probelayers", r.layers);
+    return f.str();
 }
 
 bool Guide::save(const std::string& path) const {
@@ -150,12 +163,8 @@ bool Guide::save(const std::string& path) const {
     for (const ProbeRecord& r : probes) {   // X-04
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " " << r.startX << " " << r.startY << " " << r.startZ
           << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " " << r.endBar << " " << r.endKm << " " << r.endK << " " << r.endCause << " " << (r.storm.empty() ? "-" : r.storm) << "\n";
-        auto list = [&](const char* k, const std::vector<double>& v) { f << k << " " << r.seed << " " << v.size(); for (double x : v) f << " " << x; f << "\n"; };
-        list("probecam", r.cam); list("probetime", r.time);
-        f << "probeprofile " << r.seed << " " << r.profile.size();
-        for (const ProbeSample& q : r.profile) f << " " << q.clock << " " << q.bar << " " << q.tempK << " " << q.windE << " " << q.light << " " << q.layer << " " << q.flashes;
-        f << "\n";
-        list("probelayers", r.layers);
+        if (r.lines.empty()) r.lines = probeLines(r);   // F-02: a record made by a path that did not make them
+        f << r.lines;
     }
     for (int c : classesSeen) f << "class " << c << "\n";
     for (int c : typesSeen) f << "type " << c << "\n";
