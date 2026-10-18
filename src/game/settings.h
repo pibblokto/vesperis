@@ -21,6 +21,10 @@ struct Settings {
     int aspect = 0;                  // M6-01: 0 square pixels, 1 the original's 4:3 (pixels 1.2 taller)
     bool dither = false;             // M6-01: ordered 2x2 dither instead of smooth palette interpolation
     int hudColor = 0;                // M6-01: 0 green, 1 amber, 2 white
+    double padLookSpeed = 1.0;       // R-418: the controller's look stick (0.2 .. 3.0), apart from the mouse's sensitivity
+    bool padInvertY = false;         // R-418: the look stick's up and down, apart from the mouse's
+    double padDeadZone = 0.18;       // R-418: the sticks' dead zone (0.05 .. 0.40)
+    int autoProfile = 0;             // R-419: the auto-explore profile chosen last (`AutoProfile`)
 
     void clampAll();
     bool load(const std::string& path);

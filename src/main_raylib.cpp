@@ -77,7 +77,6 @@ int main(int argc, char** argv) {
     KeyMap keymap;                 // M6-02: optional physical-to-logical remap
     if (keymap.load("vesperis_keys.txt")) printf("key map loaded from vesperis_keys.txt\n");
     game.keymap = &keymap;         // N5-05: the key bindings screen edits and saves it
-    PadState padPrev;
     bool captured = false;
     int shotCounter = 0, frames = 0;
     while (fileExists("shots/screenshot_" + std::to_string(shotCounter) + ".png")) shotCounter++;
@@ -102,11 +101,17 @@ int main(int argc, char** argv) {
         game.rawKey = -1;
         for (int k = 32; k < 400; k++) if (pin.pressed[k]) { game.rawKey = k; break; }
         keymap.apply(in);
-        {
-            PadState ps;
-            ps.present = pin.pad.present; ps.lx = pin.pad.lx; ps.ly = pin.pad.ly; ps.rx = pin.pad.rx; ps.ry = pin.pad.ry; ps.lt = pin.pad.lt; ps.rt = pin.pad.rt;
-            for (int b = 0; b < PAD_BUTTONS; b++) ps.buttons[b] = pin.pad.buttons[b];
-            applyPad(ps, padPrev, in, game.settings.mouseSensitivity);
+        {   // R-418: the controller as read; the game translates it (game/pad.cpp)
+            const PlatformPad& pp = pin.pad;
+            PadState& ps = in.pad;
+            ps.present = pp.present; ps.mapped = pp.mapped;
+            for (int b = 0; b < PAD_BUTTONS; b++) ps.buttons[b] = pp.buttons[b];
+            for (int a = 0; a < PAD_AXES; a++) ps.axes[a] = pp.axes[a];
+            ps.rawButtonCount = pp.rawButtonCount; ps.rawAxisCount = pp.rawAxisCount; ps.rawHatCount = pp.rawHatCount;
+            for (int b = 0; b < PAD_RAW_BUTTONS; b++) ps.rawButtons[b] = pp.rawButtons[b];
+            for (int a = 0; a < PAD_RAW_AXES; a++) ps.rawAxes[a] = pp.rawAxes[a];
+            for (int h = 0; h < PAD_RAW_HATS; h++) ps.rawHats[h] = pp.rawHats[h];
+            memcpy(ps.name, pp.name, sizeof ps.name); memcpy(ps.guid, pp.guid, sizeof ps.guid);
         }
         const Clock::time_point c1 = trace ? Clock::now() : Clock::time_point();
         game.frame(in, dt);

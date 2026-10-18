@@ -575,6 +575,73 @@
   (`CMakeLists.txt`; `packaging/make_app.sh`, its short version `1.3.1`), the README's paragraph, the milestone index. The branch
   `release/v1.3.1` merged into `main` by pull request, tag `v1.3.1`, the six zips built by `packaging/build-release.sh` from the tree
   that was merged and attached to the GitHub release.
+* **Branch `release/v1.3.2` (2026-10-17)** from `main` after 1.3.1's merge (`e2d948f`), for the user's patch: the items one at a time.
+* **R-418 (2026-10-17): the controller.** The user: the pad "somehow works but many bindings for all the features are missing", an
+  AYN Thor's tester found them wrong, and the ask: a controller's own menu of actions, "so we can be sure game is playable if bindings
+  are wrong", the bindings still configurable for any controller. Built: the controller read raw through GLFW beside its standard
+  layout (the dev Makefile links raylib statically, as the release does; `gamecontrollerdb.txt` read when beside the game); sixteen
+  button roles and two sticks bound to any control by device (`PadMap`, `vesperis_pad.txt`), a raw device's guess reading its axes
+  at rest; a layout a context run as the game's own keys (`game/pad.cpp`: the screens, the title, the ship, on foot, the buggy, the
+  drone, the probe, a recording, an instrument); the command menu on Y (the context's actions in words, the general ones, a keyboard
+  of every key); the on-screen keyboard at a text entry and the console; the CONTROLS screen (the settings' `KEY BINDINGS` renamed)
+  with the controller's page (press to bind, swaps, the sticks from two pushes, look speed, inversion, dead zone, reset); the help's
+  third page; the cabin walks with the stick; the look per second; the maps their own buttons and words, the right stick a cursor's
+  pace on them, and the landing map's cursor moved by it. `input` 24 new PASS lines (the bindings, and the game driven by a
+  controller alone from the title to the buggy, every map with it: the landing map, the sector map, the star map, the galaxy chart),
+  the overlays in `shots/tests/pad_*.png`; `unit` 332 checks, 0 failures; `regress`
+  24 of 24 unchanged. Not tried on a real controller here. Nothing committed.
+* **B-425 (2026-10-18): a red giant filling the sky of a red dwarf's worlds.** The user, with screenshots of Yaiphuyiabrus (PARSIS
+  -31900 +3 -35668, `S06+S03 MULTIPLE`): a sun "ridiculously huge" over a felisian world. The giant's orbit came inside its own radius
+  (M5-01 drew a far companion's orbit from the primary's widest orbit alone, before S-01's red dwarfs and giants): a far companion now
+  keeps clear of the primary's worlds (3 degrees of their sky and 100 K of warmth at most, its own worlds within a third of the gap), a
+  close one is dim (a tenth of the primary's light), and a far sun lights as much as it does (the night side under the giant was lit as
+  a day; a companion's world had a day under a far blue giant). `GEN_VERSION` 14: every primary's worlds as they were, the companion
+  moved in 56% of the multiples. `unit` 336 checks, 0 failures (four new); `regress` 24 of 24 unchanged; `flow` passes. Nothing
+  committed. (B-426's screenshots, of the same visit, showed the reported ground was Yaiphuyiabrus IV's at three in its night, not III's:
+  the docs and the check read IV now.)
+* **B-426 (2026-10-18): a capital's records heaped on its archive's floor.** The user, with screenshots from the capital of
+  Yaiphuyiabrus IV: the shards "all located in the center, tons of them". The archive took every record its place kept, not T-04's
+  count (`std::max(k, own)`): a people of few places laid a third to a half of its records in rows across one room (31 of 80 on a
+  prehistoric chief's longhouse's floor; a futuristic capital's 32 and more). Now an archive holds its count (a prehistoric capital's 4
+  to 6, the others' 8 to 14), the place's own lie one a building over the rest of it, and every place holds all its own (a lone menhir's
+  village had left out what its foot could not hold). No generation change. `unit` 337 checks, 0 failures (one new); `regress` 24 of 24
+  unchanged; `flow` and the six ages' `records scenes` pass. KI-415 for what stays. Nothing committed.
+* **R-419 (2026-10-18): auto-explore.** The user: "game plays itself", several profiles (space, planets, the surface, civilisations,
+  gas giants, random: "you choose and give ideas"), no HUD while it plays, the movements "soft, non-robotic ... in chilling manner". The
+  menu's second row AUTO-EXPLORE (the controller's commands too) opens a chooser of six profiles (WANDERER, STARGAZER, PLANETFALL,
+  SURVEYOR, ARCHAEOLOGIST, GIANTS; `auto_profile` remembered); the explorer then plays on its own (`game/autoexplore.cpp`): a mind of
+  short plans by the scene, and hands that make the frame's input as a hand gives it (a gaze spring at 43 degrees a second at most,
+  a sway at rest, the stick ramped, the ship's nose and its laps eased, the clock's pace in decades), read by the game as the player's.
+  Its ground walk plans its way round what stands (A* in legs over the colliders, the slopes and the water); the buggy and the drone
+  driven and flown; a probe watched to its end; the radar swept after a people's transmission; a settlement's records taken. No HUD;
+  any key, click, mouse motion or button gives the controls back, unacted on. The fine approach is now taken from its world (the distance
+  by ratios, the direction swung early): its straight line swooped the view at every parking, a player's approach too. `auto` (a new
+  harness mode): every profile twelve minutes, the eye's fastest turn 43 to 56 degrees a second outside the cuts, no frame over 60;
+  `unit` 338 checks, 0 failures (one new); `regress` 24 of 24 unchanged; `flow` and `input` pass. Ideas offered, not built (the
+  request's file). Nothing committed.
+* **B-427 (2026-10-18): a white blob behind a Wolf-Rayet star's giants.** The user, with screenshots from the gas giant of PARSIS
+  +18071 +1 -19950 (`S12+S04`): "strange white lights behind it [...] with several gas giants as well". It was S-05's tail of the
+  envelope the wind strips from every giant of a Wolf-Rayet star. Its forty glow discs, crowded at the root, summed to the ramp's white
+  (20,000 to 42,000 pixels at the top shade at 4x), took the band's blue elsewhere, and hid behind the globe when the tail streamed
+  toward the camera; in a moon's sky they showed only where they heaped past the sky bank's black. Now about ten splats each carry the
+  light of their stretch of the tube (24 shades side-on at the root, a soft 36 down its length), drawn after the globe and behind
+  whatever is nearer (over the night face), in the giant's bank dithered with the pixel's where neither outshines, in filaments along
+  the flow, by luminance in a sky, sampled once per 2 x 2 block at 3x and 4x. No generation change. `tail` (a new harness mode): the
+  giant round its parking, far, from a moon, in the cabin and at 1x, the same with one thread; `unit` 339 checks, 0 failures (one new,
+  failing on the old drawing); `regress` 24 of 24 unchanged; `flow` passes. Nothing committed.
+* **B-428 (2026-10-18): moons crowding their worlds from the ship.** The user: "quite often planets/moons are super close to each
+  other when you are on startdrifter [...] I love when I am on the surface and you seen a big beatiful moon or planet [...] there is no
+  sense of it being an actual system with distance". Every world's first moon orbited at 4.5-6 of its radii (R-001, M5-09, B-314) and a
+  twin 5-9 off, so from the parking at 3.5 radii, inside that orbit, another world wider than 10 degrees hung in the ship's sky at 44% of
+  the parkings near home (96% at a solid world's moon, 80% at a twin). The same distance makes the ground's big discs, so the spread was
+  the user's choice of three directions with their numbers: a solid world's first moon at 5-40 radii, even in the logarithm on the same
+  draw, and a twin at 12-20; the giants' moons kept (the giant over its inner moons). Now 21% (39%, 5%; giants' moons 34% as before);
+  the ground keeps a disc wider than 2 degrees at 31% of sites (33), wider than 6 at 17% (27), wider than 20 at 3% (10). A locked
+  moon's day follows its month (a solid world's first moon 7.7 hours at the median, 1.9 before). Generation 15. The almanac's check
+  reads a transit's time as its middle (a test world's moon now crosses its sun). `survey` gains the parkings line, `parkings` (a new
+  harness mode) the twelve views before and after; `unit` 340 checks, 0 failures (one new, failing on the old generation); `regress`
+  re-blessed (the five systems, two scenes and the cabin: the moons' places); `flow` passes. Nothing committed.
+
 ## Next
 
 The 1.2.0 iteration is `docs/ideas/ITERATION-1.2.0.md` (2026-10-06, eight milestones in a fixed order on the branch `release/v1.2.0`): W-01, W-06 (reworked on the user's review the same day: the plate, the set, R-404, B-407; then R-405 the same day on the second review: the stabiliser, Shift+arrows round the world), W-03 (weather that arrives: the fronts) W-04 (nights: meteor showers, the zodiacal light, the earthshine; after B-408, the user's comet sky) X-01 (the probe: launch to end; unlimited probes, the user's answer), X-02 (the descent's stages, with R-406: Shift runs the probe x8) X-03 (each giant its own: decks by condensation, kinds, storms, glow, aurorae, rare sights; generation 12; then B-409, the picture black in a one-deck giant's clouds) and X-04 (what comes back: the recording, the final image, the profile, the log, the statistics, the lending; with B-410 between, the belt's parking) done: the iteration's eight milestones are done, and after them the user's two requests on playing X-04, R-407 (a jump of any length along the aim; the aim's markers) and R-408 (the explorer's marks on the sector map, the scanner in place of the landmarks). Released as 1.2.0 on 2026-10-07.

@@ -108,10 +108,20 @@ hashes; run it without arguments for the full list of modes.
 
 ## Controls
 
-A gamepad works out of the box (left stick walks, right stick looks, A enter, B
-back, X jump, Y data, bumpers sprint and chase view). Keyboard layouts: copy
-`vesperis_keys.example.txt` to `vesperis_keys.txt` and list `PHYSICAL LOGICAL`
-pairs, or use the key bindings screen in the settings.
+A controller works out of the box: the left stick walks, the right stick looks,
+A confirms (jumps on foot), B goes back, X uses, START opens the menu, and **Y
+opens the commands**: every action of the screen you are on as a list to pick
+from, a page of general ones and an on-screen keyboard with every key, so the
+whole game is playable from a controller whatever its buttons. Text entry and
+the console bring the keyboard up by themselves. Settings > Controls has a
+controller page: press the button you want for each of A, B, X, Y, the bumpers,
+triggers, sticks and d-pad (any controller, known or not: the game reads its
+buttons, axes and hats raw), with look speed, inversion and dead zone; it is
+saved per controller in `vesperis_pad.txt`. A controller the system does not
+know the layout of can also be taught with SDL's `gamecontrollerdb.txt` placed
+next to the game. Keyboard layouts: copy `vesperis_keys.example.txt` to
+`vesperis_keys.txt` and list `PHYSICAL LOGICAL` pairs, or use the keyboard page
+of Settings > Controls.
 
 In space:
 

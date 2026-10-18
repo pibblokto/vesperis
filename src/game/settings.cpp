@@ -15,6 +15,9 @@ void Settings::clampAll() {
     clockMode = std::max(0, std::min(1, clockMode));
     aspect = std::max(0, std::min(1, aspect));
     hudColor = std::max(0, std::min(2, hudColor));
+    padLookSpeed = std::max(0.2, std::min(3.0, padLookSpeed));
+    padDeadZone = std::max(0.05, std::min(0.40, padDeadZone));
+    autoProfile = std::max(0, std::min(5, autoProfile));
 }
 
 bool Settings::load(const std::string& path) {
@@ -47,6 +50,10 @@ bool Settings::load(const std::string& path) {
         else if (key == "aspect") is >> aspect;
         else if (key == "dither") { is >> b; dither = b != 0; }
         else if (key == "hud_color") is >> hudColor;
+        else if (key == "pad_look_speed") is >> padLookSpeed;
+        else if (key == "pad_invert_y") { is >> b; padInvertY = b != 0; }
+        else if (key == "pad_dead_zone") is >> padDeadZone;
+        else if (key == "auto_profile") is >> autoProfile;
     }
     // B-310: a file from before the sharper picture keeps its other settings but takes the new look once
     // (4x with the fine mush, smooth terrain shading); it is saved as version 2 afterwards
@@ -77,5 +84,9 @@ bool Settings::save(const std::string& path) const {
     f << "aspect " << aspect << "\n";
     f << "dither " << (dither ? 1 : 0) << "\n";
     f << "hud_color " << hudColor << "\n";
+    f << "pad_look_speed " << padLookSpeed << "\n";
+    f << "pad_invert_y " << (padInvertY ? 1 : 0) << "\n";
+    f << "pad_dead_zone " << padDeadZone << "\n";
+    f << "auto_profile " << autoProfile << "\n";
     return true;
 }

@@ -52,7 +52,8 @@ void SurfaceView::updateDrone(double dt, const Input& in, double t) {
     p.pitch = clampd(p.pitch, -DRONE_TILT_DOWN, DRONE_TILT_UP);
     double throttle = (in.isDown(KEY_W) || in.isDown(KEY_UP) ? 1 : 0) - (in.isDown(KEY_S) || in.isDown(KEY_DOWN) ? 1 : 0);
     double steerIn = (in.isDown(KEY_D) || in.isDown(KEY_RIGHT) ? 1 : 0) - (in.isDown(KEY_A) || in.isDown(KEY_LEFT) ? 1 : 0);
-    if (in.moveY != 0 || in.moveX != 0) { throttle = in.moveY; steerIn = in.moveX; }   // M6-02: a stick
+    if (in.moveY != 0) throttle = in.moveY;   // M6-02: a stick; R-418: each axis on its own
+    if (in.moveX != 0) steerIn = in.moveX;
     bool up = in.isDown(KEY_SPACE), down = in.shift();
     if (in.ctrl()) { throttle = 0; steerIn = 0; up = down = false; }   // Ctrl+S saves: not a flight
     auto thump = [&](double v) { d.thud = std::max(d.thud, v); d.jolt = std::max(d.jolt, v); };

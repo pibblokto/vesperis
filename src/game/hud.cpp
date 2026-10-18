@@ -58,7 +58,7 @@ void Game::renderSpace() {
     c.detailBudget = (wantsScreenshot || telePlateFinish) ? 0 : TELE_PLATE_BUDGET;   // a photo reads the plate out whole
     telePlateFinish = false;
     spaceR.render(fb, c);
-    if (settings.cabin && !titleCam && state != GameState::LANDING_MAP && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }   // M2; C-07: the radar camera is outside the cabin; W-06: the eye is at the eyepiece; C-18: the drones outside the windows
+    if (settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }   // R-419: auto-explore's landing map is the cabin still   // M2; C-07: the radar camera is outside the cabin; W-06: the eye is at the eyepiece; C-18: the drones outside the windows
     if (radar.on && !titleCam) radarCameraFeed(fb);   // C-07
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // M1-10 arrival flash

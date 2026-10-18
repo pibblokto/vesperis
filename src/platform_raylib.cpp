@@ -4,7 +4,31 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <thread>
+
+#ifndef __EMSCRIPTEN__
+// R-418: GLFW's joystick calls, inside raylib's static library (raylib's own gamepad calls read only the devices GLFW has a mapping
+// for, and only through that mapping; a controller nobody mapped reads as nothing). The C declarations of GLFW 3.3+, raylib 5.5's own.
+// Weak on ELF: a Linux build against a shared raylib that keeps GLFW hidden still links, and reads the controller through raylib
+#if defined(__ELF__)
+#define VESPERIS_GLFW_WEAK __attribute__((weak))
+#else
+#define VESPERIS_GLFW_WEAK
+#endif
+extern "C" {
+typedef struct GLFWgamepadstate { unsigned char buttons[15]; float axes[6]; } GLFWgamepadstate;
+VESPERIS_GLFW_WEAK int glfwJoystickPresent(int jid);
+VESPERIS_GLFW_WEAK int glfwJoystickIsGamepad(int jid);
+VESPERIS_GLFW_WEAK const float* glfwGetJoystickAxes(int jid, int* count);
+VESPERIS_GLFW_WEAK const unsigned char* glfwGetJoystickButtons(int jid, int* count);
+VESPERIS_GLFW_WEAK const unsigned char* glfwGetJoystickHats(int jid, int* count);
+VESPERIS_GLFW_WEAK const char* glfwGetJoystickName(int jid);
+VESPERIS_GLFW_WEAK const char* glfwGetJoystickGUID(int jid);
+VESPERIS_GLFW_WEAK int glfwGetGamepadState(int jid, GLFWgamepadstate* state);
+}
+#endif
 
 namespace {
 Texture2D gTex;
@@ -112,6 +136,12 @@ bool platformInit(int w, int h, const char* title) {
     pacePeriod();
 #endif
     SetExitKey(0);
+    // R-418: SDL's controller database beside the game (`gamecontrollerdb.txt`: the community's file, or a line of one's own) teaches GLFW
+    // the layout of the controllers its own list lacks
+    if (FileExists("gamecontrollerdb.txt")) {
+        char* db = LoadFileText("gamecontrollerdb.txt");
+        if (db) { const int ok = SetGamepadMappings(db); UnloadFileText(db); printf("controller mappings %s from gamecontrollerdb.txt\n", ok ? "read" : "not understood"); }
+    }
     InitAudioDevice();
     gAudioOk = IsAudioDeviceReady();
     if (gAudioOk) {
@@ -127,6 +157,19 @@ bool platformShouldClose() { return WindowShouldClose(); }
 double platformTime() { return GetTime(); }
 bool platformFocused() { return IsWindowFocused(); }
 
+// R-418: the first gamepad through raylib's own calls, the standard layout alone (the browser; a build whose raylib keeps GLFW hidden)
+[[maybe_unused]] static void padFromRaylib(PlatformPad& p) {
+    if (!IsGamepadAvailable(0)) return;
+    p.present = p.mapped = true;
+    snprintf(p.name, sizeof p.name, "%s", GetGamepadName(0));
+    static const int RL_BUTTONS[15] = {GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP,
+                                       GAMEPAD_BUTTON_LEFT_TRIGGER_1, GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_MIDDLE_LEFT, GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_MIDDLE,
+                                       GAMEPAD_BUTTON_LEFT_THUMB, GAMEPAD_BUTTON_RIGHT_THUMB, GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_RIGHT, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT};
+    for (int k = 0; k < 15; k++) p.buttons[k] = IsGamepadButtonDown(0, RL_BUTTONS[k]);
+    static const int RL_AXES[6] = {GAMEPAD_AXIS_LEFT_X, GAMEPAD_AXIS_LEFT_Y, GAMEPAD_AXIS_RIGHT_X, GAMEPAD_AXIS_RIGHT_Y, GAMEPAD_AXIS_LEFT_TRIGGER, GAMEPAD_AXIS_RIGHT_TRIGGER};
+    for (int k = 0; k < 6; k++) p.axes[k] = GetGamepadAxisMovement(0, RL_AXES[k]);
+}
+
 void platformPoll(PlatformFrameInput& in, bool captured) {
     for (int k = 0; k < 400; k++) {
         in.down[k] = k >= 32 && IsKeyDown(k);
@@ -137,22 +180,39 @@ void platformPoll(PlatformFrameInput& in, bool captured) {
     in.mouseDy = captured ? md.y : 0;
     in.wheel = (int)GetMouseWheelMove();
     for (int b = 0; b < 3; b++) { in.mouseDown[b] = IsMouseButtonDown(b); in.mousePressed[b] = IsMouseButtonPressed(b); }
-    // M6-02: the first gamepad
+    // R-418: the first controller: the first GLFW knows the layout of, else the first with four buttons or more (a pad's motion sensor
+    // shows up as a joystick of axes alone), read raw always and through its standard layout when known
     in.pad = PlatformPad();
-    if (IsGamepadAvailable(0)) {
-        in.pad.present = true;
-        in.pad.lx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
-        in.pad.ly = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
-        in.pad.rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
-        in.pad.ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
-        in.pad.lt = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_TRIGGER);
-        in.pad.rt = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_TRIGGER);
-        static const int RL_BUTTONS[16] = {GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP,
-                                                    GAMEPAD_BUTTON_LEFT_TRIGGER_1, GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_MIDDLE_LEFT,
-                                                    GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT, GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
-                                                    GAMEPAD_BUTTON_LEFT_THUMB, GAMEPAD_BUTTON_RIGHT_THUMB, GAMEPAD_BUTTON_MIDDLE, GAMEPAD_BUTTON_UNKNOWN};
-        for (int b = 0; b < 16; b++) in.pad.buttons[b] = RL_BUTTONS[b] != GAMEPAD_BUTTON_UNKNOWN && IsGamepadButtonDown(0, RL_BUTTONS[b]);
+#if defined(__ELF__)
+    if (!glfwJoystickPresent || !glfwGetGamepadState || !glfwGetJoystickHats || !glfwGetJoystickGUID) { padFromRaylib(in.pad); return; }   // GLFW hidden: raylib's reading
+#endif
+#ifndef __EMSCRIPTEN__
+    int jid = -1;
+    for (int j = 0; j < 16; j++) {
+        if (!glfwJoystickPresent(j)) continue;
+        if (glfwJoystickIsGamepad(j)) { jid = j; break; }
+        int nb = 0;
+        if (jid < 0 && glfwGetJoystickButtons(j, &nb) && nb >= 4) jid = j;
     }
+    if (jid >= 0) {
+        PlatformPad& p = in.pad;
+        p.present = true;
+        if (const char* nm = glfwGetJoystickName(jid)) snprintf(p.name, sizeof p.name, "%s", nm);
+        if (const char* gu = glfwGetJoystickGUID(jid)) snprintf(p.guid, sizeof p.guid, "%s", gu);
+        int n = 0;
+        if (const unsigned char* b = glfwGetJoystickButtons(jid, &n)) { p.rawButtonCount = std::min(n, 32); for (int k = 0; k < p.rawButtonCount; k++) p.rawButtons[k] = b[k] != 0; }
+        if (const float* a = glfwGetJoystickAxes(jid, &n)) { p.rawAxisCount = std::min(n, 16); for (int k = 0; k < p.rawAxisCount; k++) p.rawAxes[k] = a[k]; }
+        if (const unsigned char* h = glfwGetJoystickHats(jid, &n)) { p.rawHatCount = std::min(n, 4); for (int k = 0; k < p.rawHatCount; k++) p.rawHats[k] = h[k]; }
+        GLFWgamepadstate gs;
+        if (glfwJoystickIsGamepad(jid) && glfwGetGamepadState(jid, &gs)) {
+            p.mapped = true;
+            for (int k = 0; k < 15; k++) p.buttons[k] = gs.buttons[k] != 0;
+            for (int k = 0; k < 6; k++) p.axes[k] = gs.axes[k];
+        }
+    }
+#else
+    padFromRaylib(in.pad);   // the browser's standard mapping (no raw device there)
+#endif
 }
 
 void platformSetCapture(bool on) { if (on) DisableCursor(); else EnableCursor(); }

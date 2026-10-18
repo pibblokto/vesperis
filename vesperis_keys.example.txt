@@ -1,4 +1,4 @@
-# noctis_keys.txt: physical key -> logical key, one pair per line (M6-02). Copy this file to noctis_keys.txt
+# vesperis_keys.txt: physical key -> logical key, one pair per line (M6-02). Copy this file to vesperis_keys.txt
 # next to the game and edit it. Names: letters, digits, SPACE ENTER ESC TAB BACKSPACE UP DOWN LEFT RIGHT
 # PGUP PGDN HOME END INSERT DELETE LSHIFT RSHIFT LCTRL RCTRL LALT RALT F1..F12 COMMA PERIOD SLASH MINUS EQUAL
 # SEMICOLON APOSTROPHE GRAVE LBRACKET RBRACKET BACKSLASH.

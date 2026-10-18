@@ -36,6 +36,7 @@ void Game::loadFromDisk() {
     applySettings();
     guide.load(guidePath);
     guide.genVersion = GEN_VERSION;
+    padMap.load(padPath);   // R-418
     hasSave = loadNewest();
     if (!hasSave) newGame();
     if (guide.migratedShards > 0) {   // T-04: the shards found before the records were the peoples' own, kept by their index: said once (the guide saved)
@@ -263,10 +264,13 @@ void Game::renderPanorama(std::vector<uint32_t>& out, int& w, int& h) {
     wantsPanorama = false;
 }
 
-void Game::frame(const Input& in, double realDt) {
+void Game::frame(const Input& inRaw, double realDt) {
     if (realDt > 0.1) realDt = 0.1;
     realTime += realDt;
     lastRealDt = realDt;
+    Input in = inRaw;        // R-418: the controller's buttons become this frame's keys (game/pad.cpp)
+    padFrame(in, realDt);
+    if (ax.on && !autoTakeover(in, realDt)) autoInput(in, realDt);   // R-419: the explorer plays on its own (any key, click or button gives the controls back)
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
@@ -341,26 +345,28 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::HELP: {
             bool any = false;
             for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-            if (in.wasPressed(KEY_SPACE) && helpPage < 2) helpPage = 1 - helpPage;
+            if (in.wasPressed(KEY_SPACE) && helpPage != 2) helpPage = helpPage == 0 ? 1 : (helpPage == 1 ? 3 : 0);   // R-418: the ship, the surface, the controller
             else if (any) state = returnState;
             break;
         }
         case GameState::MENU:
-            if (in.wasPressed(KEY_UP)) menuSel = (menuSel + 6) % 7;
-            if (in.wasPressed(KEY_DOWN)) menuSel = (menuSel + 1) % 7;
+            if (in.wasPressed(KEY_UP)) menuSel = (menuSel + 7) % 8;
+            if (in.wasPressed(KEY_DOWN)) menuSel = (menuSel + 1) % 8;
             if (in.wasPressed(KEY_ESCAPE)) state = returnState;
             if (enterKey(in)) {
                 switch (menuSel) {
                     case 0: state = returnState; break;
-                    case 1: openSlots(false); break;
-                    case 2: openSlots(true); break;
-                    case 3: settingsSel = 0; state = GameState::SETTINGS; break;
-                    case 4: helpPage = returnState == GameState::SURFACE ? 1 : 0; state = GameState::HELP; break;
-                    case 5: newGame(); break;
-                    case 6: autosave(); wantsQuit = true; break;
+                    case 1: openAutoScreen(GameState::MENU); break;   // R-419
+                    case 2: openSlots(false); break;
+                    case 3: openSlots(true); break;
+                    case 4: settingsSel = 0; state = GameState::SETTINGS; break;
+                    case 5: helpPage = returnState == GameState::SURFACE ? 1 : 0; state = GameState::HELP; break;
+                    case 6: newGame(); break;
+                    case 7: autosave(); wantsQuit = true; break;
                 }
             }
             break;
+        case GameState::AUTO: updateAutoScreen(in); break;   // R-419
         case GameState::SETTINGS:
             updateSettingsScreen(in);
             break;
@@ -411,11 +417,11 @@ void Game::frame(const Input& in, double realDt) {
     // rendering
     switch (state) {
         case GameState::TITLE: renderSpace(); renderTitle(); break;
-        case GameState::SPACE: renderSpace(); if (!photoMode) renderSpaceHUD(); break;
-        case GameState::LANDING_MAP: renderLandingMap(); break;
+        case GameState::SPACE: renderSpace(); if (!photoMode && !ax.on) renderSpaceHUD(); break;   // R-419: no HUD while auto-explore plays
+        case GameState::LANDING_MAP: if (ax.on) renderSpace(); else renderLandingMap(); break;    // R-419: its site chosen in its head, the map not shown
         case GameState::DESCENT:
-        case GameState::ASCENT: renderSurfaceScene(); drawVisor(HUD_DIM); drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER); break;
-        case GameState::SURFACE: renderSurfaceScene(); if (!photoMode) renderSurfaceHUD(); break;
+        case GameState::ASCENT: renderSurfaceScene(); if (!ax.on) { drawVisor(HUD_DIM); drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER); } break;
+        case GameState::SURFACE: renderSurfaceScene(); if (!photoMode && !ax.on) renderSurfaceHUD(); break;
         case GameState::PROBE: renderProbe(); break;   // X-01: the probe's camera
         case GameState::RECORDING: renderRecording(); break;   // X-04: a probe's recording
         case GameState::ALMANAC:   // W-01: over the scene it was opened from (the landing map keeps its picture)
@@ -440,6 +446,7 @@ void Game::frame(const Input& in, double realDt) {
         case GameState::SHARDS:
         case GameState::INSTRUMENTS:
         case GameState::DRONES:
+        case GameState::AUTO:
             if (state == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); break; }   // G-05: the galaxy chart covers the frame: no scene under it
             if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }   // G-06: a mark's name, over the chart
             if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // X-04: naming the storm over the probe's screen
@@ -466,11 +473,14 @@ void Game::frame(const Input& in, double realDt) {
             else if (state == GameState::SHARDS) renderShards();   // C-06
             else if (state == GameState::INSTRUMENTS) renderInstruments();   // C-11
             else if (state == GameState::DRONES) renderDroneBay();   // C-18
+            else if (state == GameState::AUTO) renderAutoScreen();   // R-419
             else if (state == GameState::SECTOR_MAP) renderSectorMap();
             else if (state == GameState::SYSTEM_LIST) renderSystemList();
             else renderDataSheet();
             break;
     }
+    if (ax.on) autoRender();   // R-419: its caption in the first seconds, nothing else
+    else renderPad();          // R-418: the command menu or the keyboard over everything
 }
 
 void Game::testAimAtNearestStar() {

@@ -334,7 +334,7 @@ double SurfaceView::castShadowLit(TerrainCache& cache, int cx, int cz, double h,
 
 // Blob shadow (M10-11): a dark ellipse on the ground under an object, stretched away from the sun.
 void SurfaceView::drawBlobShadow(Framebuffer& fb, double x, double z, double radius, double height) {
-    if (!env.hasSun2 || env.sun2Share < 0.05 || env.sun2Share > 0.95) { drawBlobShadowFrom(fb, x, z, radius, height, env.sun.dirLocal, 1.0); return; }
+    if (!env.hasSun2 || env.sun2Share < 0.05 || env.sun2Share > 0.95) { drawBlobShadowFrom(fb, x, z, radius, height, env.sun.dirLocal, env.glow); return; }   // B-425: as strong as the light (a far sun alone casts a faint one)
     // M5-01 double shadows: one per sun, each as strong as its share of the light
     drawBlobShadowFrom(fb, x, z, radius, height, env.sunDisc.dirLocal, 1 - env.sun2Share);
     drawBlobShadowFrom(fb, x, z, radius, height, env.sun2.dirLocal, env.sun2Share);
@@ -833,11 +833,17 @@ void SurfaceView::computeEnvironment(double t) {
     env.lightColor = env.sun.color;   // the star's colour (S-01: whiter in a red dwarf's flare)
     env.hasSun2 = site.sun2(t, env.sun2);
     env.sun2Share = 0;
+    env.glow = 1; env.primaryRel = 1;
     double sinAlt = env.sun.dirLocal.y;
     env.skyBrightness = site.atmosphere ? smoothstep(-0.12, 0.2, sinAlt) * (1 - 0.9 * env.sun.eclipse * env.sun.eclipse) : 0.0;   // M1-08
     if (env.hasSun2) {
         // M5-01: the light for shading blends both suns by their strength above the horizon; the sky and the
-        // day brightness take the brighter of the two, so a companion still up after the primary set keeps the day alive
+        // day brightness take the brighter of the two, so a companion still up after the primary set keeps the day alive.
+        // B-425: each sun by its own light beside the world's own sun's (the far one's is faint: `SurfaceSite::sun2`); a sun under the
+        // horizon adds none (the primary's whole light was added to a companion's still up, so a night under a far one was lit as a day)
+        const bool ofK = site.sys->ofCompanion(site.body);
+        const double ownLf = std::max(ofK ? env.sun2.lightFactor : env.sunDisc.lightFactor, 0.05);
+        if (ofK) { env.primaryRel = clampd(env.sunDisc.lightFactor / ownLf, 0, 1); env.skyBrightness *= env.primaryRel; }
         double up1 = smoothstep(-0.12, 0.05, env.sunDisc.dirLocal.y), up2 = smoothstep(-0.12, 0.05, env.sun2.dirLocal.y);
         double w1 = env.sunDisc.lightFactor * up1, w2 = env.sun2.lightFactor * up2;
         if (w1 + w2 > 1e-6) {
@@ -847,18 +853,19 @@ void SurfaceView::computeEnvironment(double t) {
                 env.sun.dirLocal = dir;
                 env.sun.altitude = std::asin(clampd(dir.y, -1, 1));
                 env.sun.azimuth = wrap2pi(std::atan2(dir.x, dir.z));
-                env.sun.lightFactor = env.sunDisc.lightFactor * (1 - env.sun2Share) + (env.sunDisc.lightFactor + env.sun2.lightFactor) * env.sun2Share;
+                env.sun.lightFactor = env.sunDisc.lightFactor * (1 - env.sun2Share) + (env.sunDisc.lightFactor * up1 + env.sun2.lightFactor) * env.sun2Share;
                 env.sun.eclipse = env.sunDisc.eclipse * (1 - env.sun2Share);
                 env.lightColor = lerp(env.sunDisc.color, env.sun2.color, (float)env.sun2Share);
             }
         }
-        double day2 = site.atmosphere ? smoothstep(-0.12, 0.2, env.sun2.dirLocal.y) * clampd(env.sun2.lightFactor / std::max(env.sunDisc.lightFactor, 0.05), 0, 1) : 0.0;
+        env.glow = clampd(env.sun.lightFactor / ownLf, 0, 1);
+        double day2 = site.atmosphere ? smoothstep(-0.12, 0.2, env.sun2.dirLocal.y) * clampd(env.sun2.lightFactor / ownLf, 0, 1) : 0.0;
         env.skyBrightness = std::max(env.skyBrightness, day2);
         sinAlt = env.sun.dirLocal.y;
     }
     env.ringShadow = env.sunDisc.ringShadow;   // O0-01
     env.skyBrightness *= 1 - 0.45 * env.ringShadow;
-    env.localTime = env.sun.dayFraction;
+    env.localTime = env.hasSun2 && site.sys->ofCompanion(site.body) ? env.sun2.dayFraction : env.sun.dayFraction;   // B-425: the time of the world's own sun
     site.latLonAt(player.x, player.z, env.latDeg, env.lonDeg);
     env.latDeg /= DEG; env.lonDeg /= DEG;
     env.altitude = player.y;
@@ -1238,7 +1245,8 @@ void SurfaceView::updateFreeCam(double dt, const Input& in) {
     freePitch = clampd(freePitch, -88 * DEG, 88 * DEG);
     double fwd = (in.isDown(KEY_W) || in.isDown(KEY_UP) ? 1 : 0) - (in.isDown(KEY_S) || in.isDown(KEY_DOWN) ? 1 : 0);
     double str = (in.isDown(KEY_D) ? 1 : 0) - (in.isDown(KEY_A) ? 1 : 0);
-    if (in.moveY != 0 || in.moveX != 0) { fwd = in.moveY; str = in.moveX; }
+    if (in.moveY != 0) fwd = in.moveY;   // R-418: each axis of a stick on its own (the keys keep the other)
+    if (in.moveX != 0) str = in.moveX;
     double up = (in.isDown(KEY_SPACE) ? 1 : 0) - (in.isDown(KEY_C) ? 1 : 0);
     if (in.ctrl()) { fwd = 0; str = 0; up = 0; }
     double speed = in.shift() ? 40.0 : 8.0;
@@ -1574,7 +1582,8 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         for (int k = 0; k <= 9; k++) if (in.wasPressed(KEY_0 + k) && !in.ctrl()) p.autoWalk = k;
         fwd = (in.isDown(KEY_W) || in.isDown(KEY_UP) ? 1 : 0) - (in.isDown(KEY_S) || in.isDown(KEY_DOWN) ? 1 : 0);
         str = (in.isDown(KEY_D) ? 1 : 0) - (in.isDown(KEY_A) ? 1 : 0);
-        if (in.moveY != 0 || in.moveX != 0) { fwd = in.moveY; str = in.moveX; }   // M6-02: an analogue stick
+        if (in.moveY != 0) fwd = in.moveY;   // M6-02: an analogue stick; R-418: each axis on its own
+        if (in.moveX != 0) str = in.moveX;
         if (in.ctrl()) { fwd = 0; str = 0; }   // Ctrl+S saves, Ctrl+L loads: not a walk
         if (fwd < 0) p.autoWalk = 0;
         if (p.autoWalk > 0 && fwd == 0) fwd = std::min(2.25, p.autoWalk / 4.0);
@@ -2696,7 +2705,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     const Vec3 sd = env.sun.dirLocal;
     double sinAlt = sd.y;
     double day = env.skyBrightness;
-    double sunUp = smoothstep(-0.28, 0.0, sinAlt);
+    double sunUp = smoothstep(-0.28, 0.0, sinAlt) * env.glow;   // B-425: a far sun alone up glows as faintly as it lights
     bool venus = hasOpaqueDeck(b.type);   // R-307: the hydrocarbon haze is a deck like the venusian clouds
     double density = L.skyDensity * (1 - 0.3 * env.rain);
     double halo = (site.atmosphere && !venus && env.temperatureC < -5 && env.cloudCover < 0.35 && sinAlt > 0.05) ? 0.8 : 0.0;
@@ -2892,7 +2901,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             if (!site.atmosphere) {
                 // F-07: each pow only where its base is over 0 (elsewhere its term is +0, as the formula gives)
                 double cosSun = dot(d, sd);
-                v = cosSun > 0 ? pow300(cosSun) * 22 : 0.0;
+                v = cosSun > 0 ? pow300(cosSun) * 22 * env.glow : 0.0;
                 if (twoSuns) { const double c2 = dot(d, sd2); if (c2 > 0) v += pow300(c2) * 22 * sun2Up; }
                 if (comet) {
                     double cs = std::max(0.0, cosSun);
@@ -3198,7 +3207,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             double inten = venus ? 0.55 : 1.0;
             double haze = site.atmosphere ? (0.6 + 0.4 * env.cloudCover) : 0.0;
             if (sinAltD > -0.05 || !site.atmosphere) {
-                double sunI = inten * (site.atmosphere ? clampd(0.55 + 0.45 * smoothstep(-0.05, 0.1, sinAltD), 0, 1) : 1.0);
+                double sunI = inten * (site.atmosphere ? clampd(0.55 + 0.45 * smoothstep(-0.05, 0.1, sinAltD), 0, 1) : 1.0) * clampd(0.5 + 0.5 * env.primaryRel, 0.5, 1.0);   // B-425: a far primary as the companion's disc is drawn
                 Vec3 discUp = camLocal * (site.localFrame(t) * Vec3(0, 1, 0));   // S-04: the orbital plane's normal, for a protostar's disc
                 // B-408: on an airless sky in the band's bank, which the sky lies in (a hole's disc and a protostar's keep the sky bank's colours)
                 const int sunBank = !site.atmosphere && site.sys->star.cls != STAR_BLACK_HOLE && site.sys->star.cls != STAR_PROTOSTAR ? 22 : 1;
@@ -3208,7 +3217,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 double rpx = proj.f * std::tan(env.sunDisc.angularRadius) / v.z;
                 // B-309: the veiling glare over the finished picture (drawVeil), from the sun's place and brightness
                 sunSx = sx; sunSy = sy; sunRpx = rpx;
-                sunVeil = site.sys->star.cls == STAR_BLACK_HOLE ? 0.0 : sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7);   // S-06: no glare from a hole
+                sunVeil = site.sys->star.cls == STAR_BLACK_HOLE ? 0.0 : sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7) * env.primaryRel;   // S-06: no glare from a hole; B-425: nor much from a far primary
                 if (env.sunDisc.eclipse > 0.3 && !venus) {
                     double r = std::max(rpx, 1.5 * FB_SCALE), e = env.sunDisc.eclipse;
                     fb.glowDisc(sx, sy, r * 4.0, r * 1.05, (int)(34 * e * e), sunBank, true);
@@ -3217,7 +3226,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 int ix = (int)sx, iy = (int)sy;
                 bool centreFree = ix >= 0 && iy >= 0 && ix < FBW && iy < FBH && fb.invz[iy * FBW + ix] <= 1e-12f;
                 // M1-03 lens flare, dimmed by haze and rain, only with the sun well up and unobstructed
-                double flareI = sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.5 * env.cloudCover) * (1 - env.rain) * smoothstep(0.0, 0.15, sinAltD) : 0.8);
+                double flareI = sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.5 * env.cloudCover) * (1 - env.rain) * smoothstep(0.0, 0.15, sinAltD) : 0.8) * env.primaryRel;
                 if (!venus && centreFree && flareI > 0.05 && site.sys->star.cls != STAR_BLACK_HOLE) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, sunBank, proj);   // S-06: nor a flare
             }
         }

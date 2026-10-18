@@ -2149,8 +2149,9 @@ static void runGameFlow() {
         run(4.0); shot("surface3");
         press(KEY_I); run(0.1); shot("surface_data"); printf("  fronts: %s\n", game.testFrontInfo().c_str()); press(KEY_SPACE);   // W-03: the data sheet's FORECAST line
         press(KEY_ESCAPE); run(0.1); shot("menu");
+        press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("auto"); press(KEY_ESCAPE); run(0.1);   // R-419: auto-explore's chooser, Esc back to the menu (on its row)
         press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("settings"); press(KEY_ESCAPE); press(KEY_ESCAPE);
-        press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("slots"); press(KEY_ENTER); run(0.1);   // menu > save > slot 1
+        press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("slots"); press(KEY_ENTER); run(0.1);   // menu > save > slot 1 (R-419: AUTO-EXPLORE the second row)
         press(KEY_K); run(0.5);
         press(KEY_Q); run(3.0); shot("ascent");
         run(6.0); shot("back_in_space");
@@ -3754,6 +3755,24 @@ static void composeSheets() {
 
 // ---- survey and gallery (M9-01) ------------------------------------------------------------
 // survey [N]: distributions over N bodies of the start region; gallery <type>: 16 random sites in one sheet.
+// B-428: what a parked ship sees of the other worlds. From the game's parking (`testParkAt`'s side of the world, `parkDistanceFor`
+// out) at time t: the angular radius in degrees of the biggest other world anywhere in the sky, and of the biggest in the default
+// 70-degree view of the world
+static void parkedNeighbours(const StarSystem& sys, int bi, double t, double& skyDeg, double& viewDeg) {
+    const Vec3 bp = sys.bodyPos(bi, t), toStar = normalize(sys.star.pos - bp), side = normalize(cross(toStar, Vec3(0, 1, 0)));
+    const Vec3 P = bp + normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0)) * Game::parkDistanceFor(sys.bodies[bi]);
+    const Vec3 f = normalize(bp - P), r = normalize(cross(Vec3(0, 1, 0), f)), u = cross(f, r);
+    const double tx = std::tan(35 * DEG), ty = tx * 200 / 320;
+    skyDeg = viewDeg = 0;
+    for (int j = 0; j < (int)sys.bodies.size(); j++) {
+        if (j == bi || sys.bodies[j].type == PT_COMPANION) continue;
+        const Vec3 rel = sys.bodyPos(j, t) - P;
+        const double a = std::asin(clampd(sys.bodies[j].radiusKm / length(rel), 0, 1)) / DEG, z = dot(rel, f), m = std::tan(std::min(a, 80.0) * DEG);
+        skyDeg = std::max(skyDeg, a);
+        if (z > 0 && std::fabs(dot(rel, r) / z) <= tx + m && std::fabs(dot(rel, u) / z) <= ty + m) viewDeg = std::max(viewDeg, a);
+    }
+}
+
 static void runSurvey(int wanted) {
     int types[PT_COUNT] = {0}, planets = 0, moons = 0, systems = 0, felSystems = 0;
     int tempHist[6] = {0}, gravHist[5] = {0}, moonHist[8] = {0};
@@ -3763,6 +3782,7 @@ static void runSurvey(int wanted) {
     // M5-09 (R-001): what hangs in the sky at random landing sites and times
     int skySites = 0, sky05 = 0, sky1 = 0, sky3 = 0, sky10 = 0, skyPoint = 0, skyParent = 0, skyMoon = 0, skySister = 0, skyOther = 0, skyTwoSuns = 0;
     int multiples = 0, substellar = 0, comets = 0, doubles = 0, lockedN = 0;
+    int parkN[5] = {0}, parkSky[5] = {0}, parkView[5] = {0};   // B-428: at a solid planet, its moon, a giant, a giant's moon, a twin
     for (int64_t x = 150; x < 320 && bodies < wanted; x++)
         for (int64_t z = 20; z < 140 && bodies < wanted; z++) {
             Star s;
@@ -3777,6 +3797,17 @@ static void runSurvey(int wanted) {
                 if (b.type == PT_COMET) comets++;
                 if (b.doublePlanet && b.parent >= 0) doubles++;
                 if (b.locked) lockedN++;
+                if (b.type != PT_COMPANION && b.type != PT_COMET) {   // B-428: what the parked ship sees of the other worlds, twice a body
+                    const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;
+                    const Body& w = moon ? sys.bodies[b.parent] : b;
+                    const bool gi = w.type == PT_GASGIANT || w.type == PT_SUBSTELLAR;
+                    const int cat = b.doublePlanet ? 4 : (moon ? (gi ? 3 : 1) : (gi ? 2 : 0));
+                    Rng pr(b.seed ^ 0xC40DULL);
+                    for (int k = 0; k < 2; k++) {
+                        double sky, view; parkedNeighbours(sys, bi, pr.range(0, 4e6), sky, view);
+                        parkN[cat]++; if (sky > 5) parkSky[cat]++; if (view > 3) parkView[cat]++;
+                    }
+                }
                 if (!PLANET_TYPES[b.type].landable) continue;
                 Rng sr(b.seed ^ 0x5C1EULL);
                 for (int k = 0; k < 2; k++) {
@@ -3836,6 +3867,13 @@ static void runSurvey(int wanted) {
         printf("sky at %d random sites (R-001 targets in brackets): disc >0.5 deg %.0f%%, >1 deg %.0f%% [45-50], >3 deg %.0f%% [35], >10 deg %.0f%% [12-15]; a planet as a point %.0f%%; two suns up %.0f%%\n",
                skySites, 100.0 * sky05 / skySites, 100.0 * sky1 / skySites, 100.0 * sky3 / skySites, 100.0 * sky10 / skySites, 100.0 * skyPoint / skySites, 100.0 * skyTwoSuns / skySites);
         printf("  the disc is: the parent %.0f%%, an own moon %.0f%%, a sister moon %.0f%%, another world %.0f%%\n", 100.0 * skyParent / std::max(1, sky05), 100.0 * skyMoon / std::max(1, sky05), 100.0 * skySister / std::max(1, sky05), 100.0 * skyOther / std::max(1, sky05));
+    }
+    {   // B-428: from the parking, another world wider than 10 deg anywhere in the sky / wider than 6 deg in the view of the world
+        const char* kinds[5] = {"solid planets", "their moons", "giants", "giants' moons", "twins"};
+        int n = 0, sk = 0, vw = 0;
+        printf("from the ship parked at a world (B-428), another world wider than 10 deg in the sky / wider than 6 deg in the view:");
+        for (int k = 0; k < 5; k++) { printf(" %s %.0f%% / %.0f%% of %d;", kinds[k], 100.0 * parkSky[k] / std::max(1, parkN[k]), 100.0 * parkView[k] / std::max(1, parkN[k]), parkN[k]); n += parkN[k]; sk += parkSky[k]; vw += parkView[k]; }
+        printf(" all %.0f%% / %.0f%% of %d\n", 100.0 * sk / std::max(1, n), 100.0 * vw / std::max(1, n), n);
     }
     for (int t = 0; t < PT_COUNT; t++) {
         if (!matN[t]) continue;
@@ -7101,6 +7139,139 @@ static int testUnit() {
             check("the companion behind (150 deg) does not flood", frac[3] == 0 && mean[3] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[3] * 100, mean[3], mean[1]));
         }
     }
+    // B-425: a companion star keeps clear of the other sun's worlds. Over the home cube and a cube of the core: a far companion at its closest
+    // approach spans 3 degrees at most of the sky of the primary's farthest world and its light alone warms it to 100 K at most, its own worlds
+    // keep within a third of that gap and see the primary 3 degrees wide at most; a close one shines a tenth of the primary at most (a black
+    // hole's excepted: S-06 keeps it close whatever it is). Then the report: Yaiphuyiabrus, a red dwarf whose red giant's orbit came inside the
+    // giant's own radius (60 degrees of its felisian worlds' sky and more) keeps its worlds and has a small sun for a companion; the reported
+    // place, on Yaiphuyiabrus IV (its people's world, a day of 2.4 hours) at its night, is a night under it (the companion's light floor and the
+    // set primary's light lit it as a day), and a world of a companion keeps its own night under the far primary
+    {
+        int multiples = 0, far = 0, closeN = 0, holes = 0, wrong = 0;
+        double worstDisc = 0, worstHeat = 0, worstOwn = 0, worstPrimary = 0, worstLight = 0;
+        auto scan = [&](int64_t x0, int64_t x1, int64_t y0, int64_t y1, int64_t z0, int64_t z1) {
+            for (int64_t x = x0; x < x1; x++) for (int64_t y = y0; y < y1; y++) for (int64_t z = z0; z < z1; z++) {
+                Star s; if (!starInSector(x, y, z, s, false)) continue;
+                StarSystem sys; sys.generate(s);
+                if (sys.companion < 0) continue;
+                multiples++;
+                const Body& k = sys.bodies[sys.companion];
+                double reach = 0, own = 0, first = 1e30;
+                for (const Body& b : sys.bodies) {
+                    if (b.type == PT_COMET || b.type == PT_COMPANION) continue;
+                    if (sys.ofCompanion(b.index)) { own = std::max(own, b.orbitRadiusKm * (1 + b.ecc)); continue; }
+                    const Body& p = b.parent < 0 ? b : sys.bodies[b.parent];
+                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : b.orbitRadiusKm * (1 + b.ecc)));
+                    if (b.parent < 0) first = std::min(first, b.orbitRadiusKm);
+                }
+                if (first > 1e29) continue;   // a primary without worlds: nothing to keep clear of (its companion is close or far by the draw alone)
+                if (k.orbitRadiusKm < first) {   // close: the worlds circle both suns
+                    if (s.cls == STAR_BLACK_HOLE) { holes++; continue; }
+                    closeN++;
+                    double light = k.luminosity / s.luminosity;
+                    worstLight = std::max(worstLight, light);
+                    if (light > 0.1 + 1e-9) wrong++;
+                    continue;
+                }
+                far++;
+                double gap = k.orbitRadiusKm * (1 - k.ecc) - reach;
+                double disc = gap > k.radiusKm ? 2 * std::asin(k.radiusKm / gap) / DEG : 180;
+                double heat = gap > 0 ? 278.0 * std::pow(k.luminosity, 0.25) * std::sqrt(AU_GAME_KM / gap) : 1e4;
+                double ownShare = gap > 0 ? own / gap : 1;
+                double prim = own > 0 ? 2 * std::asin(std::min(1.0, s.radiusKm / (k.orbitRadiusKm * (1 - k.ecc) - own))) / DEG : 0;
+                worstDisc = std::max(worstDisc, disc); worstHeat = std::max(worstHeat, heat); worstOwn = std::max(worstOwn, ownShare); worstPrimary = std::max(worstPrimary, prim);
+                if (disc > 3.0 + 1e-6 || heat > 100.0 + 1e-6 || ownShare > 1.0 / 3 + 1e-9 || prim > 3.0 + 1e-6) wrong++;
+            }
+        };
+        scan(150, 320, 0, 1, 20, 140);
+        scan(12293, 12308, -7, 8, -5507, -5492);   // the core cube of `galaxy`: the giants, the holes
+        check("companions keep clear of the other sun's worlds (B-425)", multiples > 500 && far > 300 && closeN > 50 && wrong == 0,
+              fmt("%d multiples: %d far (widest disc %.2f deg, warmest %.0f K, own worlds out to %.2f of the gap, the primary %.2f deg from them), %d close (the brightest %.3f of its primary), %d holes' close ones; %d wrong",
+                  multiples, far, worstDisc, worstHeat, worstOwn, worstPrimary, closeN, worstLight, holes, wrong));
+        Star ys; StarSystem ysys; bool yFound = starInSector(-31900, 3, -35668, ys);
+        if (yFound) ysys.generate(ys);
+        bool yShape = yFound && ysys.companion == 8 && ysys.bodies[8].starClass == STAR_RED_GIANT && ysys.bodies[0].type == PT_VENUSIAN && ysys.bodies[1].type == PT_FELISIAN &&
+                      ysys.bodies[2].type == PT_FELISIAN && ysys.bodies[3].type == PT_FELISIAN && ysys.bodies[2].locked;
+        double yWidest = 0;
+        if (yShape) for (int i = 0; i < 2000; i++) {
+            double t = i * ysys.bodies[8].orbitPeriod / 2000.0;
+            for (int w = 1; w <= 3; w++) yWidest = std::max(yWidest, 2 * std::asin(std::min(1.0, ysys.bodies[8].radiusKm / length(ysys.bodyPos(8, t) - ysys.bodyPos(w, t)))) / DEG);
+        }
+        check("the reported giant: a small sun over the same worlds (B-425)", yShape && yWidest < 3.0, fmt("%s: %s, worlds I-IV %s %s %s %s; the giant (R %.3g km) %.3g km out, at its widest %.2f deg of their sky (60 and more before)", yFound ? ys.name.c_str() : "no star",
+              yFound ? ysys.classString().c_str() : "-", yShape ? "VENUSIAN" : "?", yShape ? "FELISIAN" : "?", yShape ? "FELISIAN" : "?", yShape ? "FELISIAN (locked)" : "?", yShape ? ysys.bodies[8].radiusKm : 0.0, yShape ? ysys.bodies[8].orbitRadiusKm : 0.0, yWidest));
+        if (yShape) {   // the report's place and time: Yaiphuyiabrus IV at three in its night with the giant high (EPOC 6011:003.601; B-426: IV, not III)
+            SurfaceView sv; sv.init(&ysys, 3, 3.9 * DEG, -99.4 * DEG, 3601000);
+            const SurfaceEnvironment& e = sv.env;
+            check("a night under a far companion is a night (B-425)", e.hasSun2 && e.sunDisc.altitude < -0.5 && e.sun2.altitude > 0.5 && e.skyBrightness < 0.2 && e.sun.lightFactor < 0.3 && e.glow < 0.3,
+                  fmt("the dwarf at %.0f deg, the giant at %.0f deg (%.2f deg across, light %.3f); the sky %.2f, the light %.2f, its glow %.2f (the giant 95 deg across, the sky 1.0 and the light 1.9 before)", e.sunDisc.altitude / DEG, e.sun2.altitude / DEG,
+                      2 * e.sun2.angularRadius / DEG, e.sun2.lightFactor, e.skyBrightness, e.sun.lightFactor, e.glow));
+        }
+        Star ps; StarSystem psys; bool pFound = starInSector(150, 0, 134, ps);
+        if (pFound) psys.generate(ps);
+        if (pFound && (int)psys.bodies.size() > 25 && psys.ofCompanion(25) && PLANET_TYPES[psys.bodies[25].type].atmosphere) {   // `cworld`'s find: an ocean world of a red dwarf companion with the blue giant primary 65 degrees up
+            SurfaceView sv; sv.init(&psys, 25, 10 * DEG, 30 * DEG, 100000);
+            const SurfaceEnvironment& e = sv.env;
+            bool midnight = e.localTime < 0.1 || e.localTime > 0.9;
+            check("a companion's world keeps its own night (B-425)", e.sunDisc.altitude > 0.5 && e.sun2.altitude < -0.5 && e.skyBrightness < 0.2 && e.sun.lightFactor < 0.3 && e.primaryRel < 0.3 && midnight,
+                  fmt("%s: the far primary at %.0f deg (light %.3f, %.2f of its own sun's), its own sun at %.0f deg; the sky %.2f, the light %.2f, local time %.2f (a blue day and 0.62 before)", psys.bodies[25].name.c_str(),
+                      e.sunDisc.altitude / DEG, e.sunDisc.lightFactor, e.primaryRel, e.sun2.altitude / DEG, e.skyBrightness, e.sun.lightFactor, e.localTime));
+        } else check("a companion's world keeps its own night (B-425)", false, "the world of sector 150 0 134 moved");
+    }
+    {   // B-428: a system with distance from the ship. Over the stars near home (the survey's sectors): a solid world's first moon at
+        // 5-40 of its radii (beyond 10 in most systems), a twin 12-20 off, a giant's first moon at 4.5-6 still; from the game's
+        // parking another world wider than 10 degrees in the sky at a fifth of the parkings (43% before: 85% at a solid world's
+        // moon, 80% at a twin), and the ground keeps its discs (wider than 2 degrees at a third of the sites, a wall wider than 20
+        // degrees still, from a giant's inner moons)
+        int firstN = 0, firstFar = 0, firstOut = 0, giantN = 0, giantOut = 0, twinN = 0, twinOut = 0;
+        int parks = 0, parkBig = 0, solidN = 0, solidBig = 0, twinP = 0, twinBig = 0, sites = 0, disc2 = 0, disc20 = 0, bodies = 0;
+        for (int64_t x = 150; x < 320 && bodies < 2500; x++)
+            for (int64_t z = 20; z < 140 && bodies < 2500; z++) {
+                Star s;
+                if (!starInSector(x, 0, z, s)) continue;
+                StarSystem sys; sys.generate(s);
+                for (const Body& p : sys.bodies) {   // the first moon's orbit (a twin's world: its next moon is keyed off the twin)
+                    if (p.parent >= 0 || p.type == PT_COMPANION || p.type == PT_COMET) continue;
+                    const Body* first = nullptr; bool twin = false;
+                    for (const Body& m : sys.bodies) if (m.parent == p.index) { twin |= m.doublePlanet; if (!first && m.orbitPeriod > 0) first = &m; }
+                    for (const Body& m : sys.bodies) if (m.parent == p.index && m.doublePlanet) { twinN++; const double x0 = m.orbitRadiusKm / p.radiusKm; if (x0 < 12 || x0 > 20) twinOut++; }
+                    if (!first || twin) continue;
+                    const bool giant = p.type == PT_GASGIANT || p.type == PT_SUBSTELLAR;
+                    const double x0 = first->orbitRadiusKm / p.radiusKm, ring = p.rings ? p.ringOuter * 1.35 : 0;
+                    const double lo = 0.95 * std::max(giant ? 4.5 : 5.0, ring), hi = 1.05 * std::max(giant ? 6.0 : 40.0, ring);
+                    if (giant) { giantN++; if (x0 < lo || x0 > hi) giantOut++; }
+                    else { firstN++; if (x0 < lo || x0 > hi) firstOut++; if (x0 > 10) firstFar++; }
+                }
+                for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                    const Body& b = sys.bodies[bi];
+                    if (b.type == PT_COMPANION || b.type == PT_COMET) continue;
+                    bodies++;
+                    Rng pr(b.seed ^ 0xC40DULL);
+                    double sky, view; parkedNeighbours(sys, bi, pr.range(0, 4e6), sky, view);
+                    const bool planet = b.parent < 0 || sys.bodies[b.parent].type == PT_COMPANION;
+                    parks++; if (sky > 5) parkBig++;
+                    if (b.doublePlanet) { twinP++; if (sky > 5) twinBig++; }
+                    else if (planet && b.type != PT_GASGIANT && b.type != PT_SUBSTELLAR) { solidN++; if (sky > 5) solidBig++; }
+                    if (!PLANET_TYPES[b.type].landable) continue;
+                    Rng gr(b.seed ^ 0x5C1EULL);   // the survey's first site: the biggest disc over the horizon
+                    const double lat = std::asin(gr.sym(1.0)), lon = gr.range(0, TAU), t = gr.range(0, 4e6);
+                    const Vec3 site = sys.surfacePointWorld(bi, t, lat, lon, 0.002), up = normalize(site - sys.bodyPos(bi, t));
+                    double best = 0;
+                    for (int j = 0; j < (int)sys.bodies.size(); j++) {
+                        if (j == bi || sys.bodies[j].type == PT_COMPANION) continue;
+                        const Vec3 rel = sys.bodyPos(j, t) - site; const double d = length(rel);
+                        if (dot(rel / d, up) >= 0.02) best = std::max(best, std::asin(clampd(sys.bodies[j].radiusKm / d, 0, 1)) / DEG);
+                    }
+                    sites++; if (best > 1) disc2++; if (best > 10) disc20++;
+                }
+            }
+        check("moons spread: a system with distance from the ship, discs still in the sky (B-428)",
+              firstN > 100 && firstOut == 0 && firstFar * 2 > firstN && giantN > 30 && giantOut == 0 && twinN > 5 && twinOut == 0 &&
+              parkBig * 100 < parks * 30 && solidBig * 10 < solidN && twinBig * 100 < twinP * 15 && disc2 * 100 > sites * 28 && disc20 * 200 > sites,
+              fmt("solid worlds' first moons beyond 10 radii %d of %d (%d outside 5-40), giants' %d outside 4.5-6 of %d, twins %d outside 12-20 of %d; from %d parkings "
+                  "a world wider than 10 deg in the sky %.0f%% (solid worlds %.0f%%, twins %.0f%%); from %d sites a disc wider than 2 deg %.0f%%, wider than 20 deg %.1f%%",
+                  firstFar, firstN, firstOut, giantOut, giantN, twinOut, twinN, parks, 100.0 * parkBig / std::max(1, parks), 100.0 * solidBig / std::max(1, solidN),
+                  100.0 * twinBig / std::max(1, twinP), sites, 100.0 * disc2 / std::max(1, sites), 100.0 * disc20 / std::max(1, sites)));
+    }
     // B-312: a big ringed globe whose centre lies outside the frame to the left or the right still shows its limb (its
     // projection is a conic that stretches away from the centre; the old box round the projected centre cut it off);
     // B-317: in a sky the bodies' depths are written in metres, beyond the farthest terrain (they were kilometres, so a
@@ -8481,6 +8652,41 @@ static int testUnit() {
         auto radial = [&](double mult) { double r = pj.f * std::tan(angR * mult), sum = 0; int n = 0; for (int k = 0; k < 360; k += 15) { int x = (int)(pj.cx + r * std::cos(k * DEG)), y = (int)(pj.cy + r * std::sin(k * DEG)); if (x < 0 || y < 0 || x >= FBW || y >= FBH) continue; sum += shadeOf(fb.at(x, y)); n++; } return n ? sum / n : 0.0; };
         double atRing = radial(5.0), inside = radial(3.2), outside = radial(7.0);
         check("Wolf-Rayet star: the shell's ring round the sun", found && atRing > inside + 3 && atRing > outside + 3, fmt("shade %.1f at 5 radii, %.1f at 3.2, %.1f at 7 (%s)", atRing, inside, outside, found ? w.name.c_str() : "no star"));
+    }
+    {   // B-427: the envelope the wind strips from a Wolf-Rayet star's giant (S-05), the user's (18071 1 -19950, body 1) from 2.5 radii: in
+        // its own bank and dim (the discs heaped to the ramp's white in a blob behind it), hidden by the globe from the sun's side and
+        // over the globe from the night side (a second tail drawn over the frame lights the globe's pixels only where it is in front)
+        Star s; bool ok = starInSector(18071, 1, -19950, s, true);
+        StarSystem sys; if (ok) sys.generate(s);
+        ok = ok && sys.star.cls == STAR_WOLF_RAYET && sys.bodies.size() > 1 && sys.bodies[1].type == PT_GASGIANT;
+        int white = 0, own[3] = {0, 0, 0}, gain[3] = {0, 0, 0}, globe[3] = {0, 0, 0};
+        if (ok) {
+            SpaceRenderer sr;
+            const double t = 1000.0, R = sys.bodies[1].radiusKm;
+            const Vec3 bp = sys.bodyPos(1, t), away = normalize(bp - sys.star.pos), side = normalize(cross(away, Vec3(0, 1, 0)));
+            const Vec3 from[3] = {normalize(side - away), side, normalize(away * 0.8 + side * 0.6)};   // the sun's side, side-on, the night side
+            sr.mapFor(sys.bodies[1]);
+            for (int k = 0; k < 3; k++) {
+                const Vec3 ship = bp + from[k] * (2.5 * R), f = normalize(bp - ship);
+                SpaceContext c; c.sys = &sys; c.t = t; c.shipPos = ship; c.cam = cameraBasis(std::atan2(f.x, f.z), std::asin(f.y)); c.bankBodyA = 1; c.nebulae = false;
+                Framebuffer fb;
+                sr.setupPalette(fb, &sys, 1, -1, 1.0);
+                sr.render(fb, c);
+                for (int i = 0; i < FBW * FBH; i++) {   // no stars drawn: off the bodies only the band (bank 0), the tail and the sun's glow (bank 1)
+                    if (fb.invz[i] > 1e-12f) { globe[k]++; continue; }
+                    const int bk = bankOf(fb.idx[i]);
+                    if ((bk == 0 || bk == 2) && shadeOf(fb.idx[i]) >= 48) white++;
+                    else if (bk == 2 && shadeOf(fb.idx[i]) >= 6) own[k]++;
+                }
+                const std::vector<Pix> before = fb.idx;
+                sr.drawStrippedTail(fb, c, 1, 2);
+                for (int i = 0; i < FBW * FBH; i++) if (fb.invz[i] > 1e-12f && intenOf(fb.idx[i]) > intenOf(before[i]) + INTEN_PER_SHADE) gain[k]++;
+            }
+        }
+        check("a Wolf-Rayet giant's stripped tail: its own dim cloud, behind the globe by day, over it by night",
+              ok && white < 50 && own[1] > FBW * FBH / 50 && own[2] > FBW * FBH / 50 && gain[2] > globe[2] / 10 && gain[0] * 20 < gain[2],
+              fmt("off the globe: %d at shade 48 and up in its bank or the band's, %d / %d / %d in its bank at 6-48 from the sun's side, side-on, the night side; a second tail lit %d / %d / %d of the globe's %d / %d / %d pixels",
+                  white, own[0], own[1], own[2], gain[0], gain[1], gain[2], globe[0], globe[1], globe[2]));
     }
     {   // S-06: the black hole. A share of the pulsars that stayed, most in the core; systems of rubble and rocks with a close companion
         // in half; and the lens: a star right behind the hole becomes an Einstein ring, the shadow is black, the far sky untouched
@@ -9890,7 +10096,16 @@ static int testUnit() {
                     case AL_DUSK: case AL_DAWN: { SunInfo s = site.sun(T), sb = site.sun(T - 20), sa = site.sun(T + 20); err = std::fabs(std::sin(s.altitude) + 0.12); ok = err < 2e-5 && ((sa.altitude > sb.altitude) == (e.kind == AL_DAWN)); break; }
                     case AL_RISE: case AL_SET: { double ar, arb, ara, a = altOf(e.body, T, ar), ab = altOf(e.body, T - 20, arb), aa = altOf(e.body, T + 20, ara); err = std::fabs(a + ar); ok = err < 2e-5 && ((aa > ab) == (e.kind == AL_RISE)); break; }
                     case AL_FULL: case AL_NEW: { double d = 0.01 * std::fabs(sys.bodies[e.body].orbitPeriod), k = litOf(e.body, T), kb = litOf(e.body, T - d), ka = litOf(e.body, T + d); err = std::fabs(k - e.value); ok = err < 1e-6 && (e.kind == AL_FULL ? (k >= kb && k >= ka) : (k <= kb && k <= ka)); break; }
-                    case AL_ECLIPSE: { SunInfo s = site.sun(T); err = std::fabs(s.eclipse - e.value); ok = err < 1e-6 && s.eclipse > 0 && s.eclipse >= site.sun(T - 30).eclipse && s.eclipse >= site.sun(T + 30).eclipse; break; }
+                    case AL_ECLIPSE: {   // B-428: a disc wholly inside the sun's (a transit) or over it covers the discs' ratio, flat but for the body's
+                        // distance: the time listed is the middle, the centres nearest (a solid world's moon far out is smaller than its sun)
+                        SunInfo s = site.sun(T); err = std::fabs(s.eclipse - e.value);
+                        auto sepOf = [&](double U, double& rb) { Mat3 L = site.localFrame(U); Vec3 rel = sys.bodyPos(e.body, U) - site.worldPos(U, 0, 0, 0); double d = length(rel);
+                                                                 rb = std::asin(clampd(sys.bodies[e.body].radiusKm / d, 0, 1)); return std::acos(clampd(dot(site.sun(U).dirLocal, L * (rel / d)), -1, 1)); };
+                        double rb, rbo, th = sepOf(T, rb);
+                        const bool whole = th <= std::fabs(rb - s.angularRadius);
+                        ok = err < 1e-6 && s.eclipse > 0 && (whole ? th <= sepOf(T - 30, rbo) && th <= sepOf(T + 30, rbo) : s.eclipse >= site.sun(T - 30).eclipse && s.eclipse >= site.sun(T + 30).eclipse);
+                        break;
+                    }
                     case AL_RING_SHADOW: ok = site.sun(T - 30).ringShadow < 1e-4 && site.sun(T + 30).ringShadow >= 1e-4; break;
                     case AL_RING_CLEAR: ok = site.sun(T - 30).ringShadow >= 1e-4 && site.sun(T + 30).ringShadow < 1e-4; break;
                     case AL_PERIAPSIS: { double M = sys.meanAnomaly(e.body, T); err = std::min(M, TAU - M); ok = err < 1e-6; break; }
@@ -11217,6 +11432,36 @@ static int testUnit() {
             t0 = nowSec(); for (int k = 0; k < 15; k++) parallelFor(8, 1, empty); burst += nowSec() - t0;
         }
         printf("  pool (F-01, printed): %d threads; an empty dispatch over eight bands after a rest %.1f us, fifteen back to back %.1f us each (%.0f us the fifteen)\n", parallelThreads(), rested / R * 1e6, burst / R / 15 * 1e6, burst / R * 1e6);
+    }
+    {   // R-419: auto-explore from the home parking: the menu's second row opens the chooser on the profile chosen last, Enter begins it; it walks
+        // to the front window and looks at the world, the eye never turning faster than a hand's limits (the head's spring 43 degrees a second,
+        // the ship's nose 26: under 60 together); a key gives the controls back and is not acted on (G opens no guide)
+        Game game;
+        game.savePrefix = "shots/tests/unit_auto_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_auto_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.settings.autoProfile = AP_PLANETFALL; game.settings.renderScale = 1; game.applySettings();
+        game.setState(GameState::SPACE);
+        Input in;
+        auto frame = [&]() { game.frame(in, 1.0 / 30); in.newFrame(); };
+        auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; frame(); in.down[key] = false; };
+        press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_ENTER);
+        const bool chooser = game.state == GameState::AUTO && game.testAutoSel() == AP_PLANETFALL;
+        press(KEY_ENTER);
+        const bool began = game.autoOn() && game.state == GameState::SPACE;
+        double maxTurn = 0; Vec3 prev = game.testViewDir(); std::set<std::string> steps; int frames = 0;
+        for (int i = 0; i < 20 * 30 && game.autoOn(); i++) {
+            frame(); frames++;
+            const Vec3 v = game.testViewDir();
+            maxTurn = std::max(maxTurn, std::acos(clampd(dot(v, prev), -1, 1)) / DEG * 30);
+            prev = v;
+            steps.insert(game.testAutoDoing());
+        }
+        const bool window = steps.count("to the window") && steps.count("the world");
+        const bool on = game.autoOn();
+        press(KEY_G);
+        const bool back = !game.autoOn() && game.state == GameState::SPACE;
+        check("auto-explore: begun from the menu, eased, given back (R-419)", chooser && began && on && window && maxTurn < 60 && back,
+              fmt("chooser %d on %d, %d frames, steps %zu (window %d), the fastest turn %.0f deg/s; G: auto %d, state %d", (int)chooser, (int)began, frames, steps.size(), (int)window, maxTurn, (int)game.autoOn(), (int)game.state));
     }
     printf("unit: %d checks, %d failures\n", checks, fails);
     return fails;
@@ -14182,6 +14427,62 @@ static void recordsChecks(const std::function<void(const char*, bool, const std:
               placesN > 0 && sitesN > 0 && dup == 0 && foreign == 0 && late == 0 && capN > 0 && capArch == capN && cityN > 0 && cityArch * 10 >= cityN * 9 && walls > 0 && wallsBad == 0 && notSame == 0 && worksWith > 0,
               fmt("%d places (the plans', %d works, the countryside round the capitals) holding %d records: %d copies twice in a place, %d not the place's people's or medium, %d written after their place was left; archives in %d of %d capitals and %d of %d cities; %d painted walls (%d not standing); %d works hold records; %s",
                   placesN, works, sitesN, dup, foreign, late, capArch, capN, cityArch, cityN, walls, wallsBad, worksWith, notSame ? "NOT the same twice" : "the same twice"));
+    }
+    {   // B-426: an archive holds its class's count (the capital's 8 to 14, a prehistoric capital's 4 to 6, a city's 5 to 8, a town's 3 to 5), the
+        // place's own beyond it lie in its other buildings, and every place of the plan holds all its own (a lone stone's foot held two); the far
+        // future's structures keep theirs in rings round their feet (the archive that keeps itself). Then the report: Yaiphuyiabrus IV's
+        // prehistoric capital, whose archive took its own thirty-one onto its longhouse's floor
+        auto archMax = [](int sclass, int age) { return sclass == SC_CAPITAL ? (age == AGE_PREHISTORIC ? 6 : 14) : (sclass == SC_CITY ? 8 : (sclass == SC_TOWN ? 5 : 0)); };
+        int archives = 0, over = 0, worst = 0, ownN = 0, ownLaid = 0, rings = 0; std::string worstAt;
+        auto tally = [&](const BodyGen& g, int which, const std::vector<RecordPlace>& ps, int age) {
+            std::shared_ptr<const RecordCatalogue> C = recordsOf(g, which);
+            std::shared_ptr<const RecordHomes> Hm = recordHomesOf(g, which);
+            for (const RecordPlace& rp : ps) {
+                if (rp.work >= 0 || rp.countryside || rp.spec.rank < 0) continue;
+                int arch = 0; for (const ShardSite& x : rp.sites) arch += x.archive > 0;
+                if (rp.spec.sclass == SC_MONUMENT && age == AGE_FAR_FUTURE) rings += arch;
+                else if (arch) {
+                    archives++;
+                    if (arch > archMax(rp.spec.sclass, age)) over++;
+                    if (arch > worst) { worst = arch; worstAt = fmt("a %s %s", AGE_NAMES[age], SETTLEMENT_CLASS_NAMES[rp.spec.sclass]); }
+                }
+                for (int i = 0; i < C->count && i < (int)Hm->rank.size(); i++) {
+                    if (Hm->rank[i] != rp.spec.rank) continue;
+                    ownN++;
+                    for (const ShardSite& x : rp.sites) if (shardLocalOf(x.index) == i) { ownLaid++; break; }
+                }
+            }
+        };
+        for (int a = 0; a < AGE_COUNT; a++) if (W[a].ok) tally(W[a].g, W[a].which, places[a], a);
+        Star ys; StarSystem ysys; bool yOk = starInSector(-31900, 3, -35668, ys, true);
+        if (yOk) { ysys.generate(ys); yOk = (int)ysys.bodies.size() > 3; }
+        int capArch = 0, capOwn = 0, capLaid = 0, capHeap = 0, capAge = -1; std::set<int> capBuildings;
+        if (yOk) {
+            const BodyGen yg = BodyGen::make(ysys.bodies[3]);
+            yOk = worldHadCivilisation(yg);
+            if (yOk) {
+                std::vector<RecordPlace> yp; recordPlacesOf(yg, 0, yp, 0);
+                capAge = peopleAgeOf(yg, 0).age;
+                tally(yg, 0, yp, capAge);
+                std::shared_ptr<const RecordHomes> Hm = recordHomesOf(yg, 0);
+                for (const RecordPlace& rp : yp) {
+                    if (rp.work >= 0 || rp.spec.rank != 0) continue;
+                    for (const ShardSite& x : rp.sites) {
+                        capArch += x.archive > 0; capBuildings.insert(x.building);
+                        int near = 0; for (const ShardSite& y : rp.sites) if (std::hypot(x.x - y.x, x.z - y.z) < 6) near++;
+                        capHeap = std::max(capHeap, near);
+                    }
+                    for (int i = 0; i < (int)Hm->rank.size(); i++) if (Hm->rank[i] == 0) {
+                        capOwn++;
+                        for (const ShardSite& x : rp.sites) if (shardLocalOf(x.index) == i) { capLaid++; break; }
+                    }
+                }
+            }
+        }
+        check("records: an archive its class's count, the place's own beyond it in its other buildings, every place holding its own (B-426)",
+              archives > 0 && over == 0 && ownN > 0 && ownLaid == ownN && rings > 0 && yOk && capAge == AGE_PREHISTORIC && capArch >= 4 && capArch <= 6 && capLaid == capOwn && (int)capBuildings.size() >= 20 && capHeap <= 8,
+              fmt("%d archives, %d over their count (the most %d, %s); %d of the places' %d own records laid at them; the far future's rings %d; Yaiphuyiabrus IV's %s capital: an archive of %d (31 before), its %d own laid %d in %zu buildings, at most %d within 6 m",
+                  archives, over, worst, worstAt.empty() ? "-" : worstAt.c_str(), ownLaid, ownN, rings, capAge >= 0 ? AGE_NAMES[capAge] : "?", capArch, capOwn, capLaid, capBuildings.size(), capHeap));
     }
     {   // the last recording where the history ended: at its last place, in the building its age keeps last words in, and in the last shelter by it;
         // nowhere else
@@ -18488,6 +18789,295 @@ static void renderLandformSites(bool search) {   // G-04: `landforms sites searc
 }
 
 // M6-02: the key map file and the gamepad mapping, checked without a window
+// R-418: the controller: the bindings (a known device's standard layout, a raw device's guess, the capture, the file a device), then the
+// game driven by a controller alone: the title, the cabin (walking, using, the command menu and its pages, the keys page, the aim's digits),
+// the guide's text entry by the keyboard, the controller page (a button set from the next press, the reset), a landing, on foot (a jump,
+// a sprint, the menu's buggy) and the buggy (in, the throttle). PNGs of each overlay in shots/tests/pad_*.png
+static int testPad() {
+    int fails = 0;
+    auto report = [&](const char* name, bool ok, const std::string& detail) { printf("%s: %s %s\n", name, ok ? "PASS" : "FAIL", detail.c_str()); fflush(stdout); if (!ok) fails++; };
+    auto stdPad = [](const char* guid) { PadState p; p.present = true; p.mapped = true; snprintf(p.guid, sizeof p.guid, "%s", guid); snprintf(p.name, sizeof p.name, "TEST PAD"); return p; };
+    auto rawPad = [](const char* guid) { PadState p; p.present = true; p.mapped = false; snprintf(p.guid, sizeof p.guid, "%s", guid); snprintf(p.name, sizeof p.name, "ODD PAD");
+                                         p.rawButtonCount = 12; p.rawAxisCount = 6; p.rawHatCount = 1; p.rawAxes[2] = -1; p.rawAxes[5] = -1; return p; };
+    {   // a known device: its standard layout, the round dead zone, a trigger read from its rest
+        PadState p = stdPad("0300test"); PadMap m; m.use(p);
+        p.buttons[PB_A] = true; p.axes[0] = 0.9f; p.axes[1] = -1.0f; p.axes[5] = 0.8f; p.axes[2] = 0.1f;
+        const PadRead r = m.read(p, 0.18);
+        const bool ok = r.down[PR_A] && !r.down[PR_B] && r.down[PR_RT] && !r.down[PR_LT] && r.walkX > 0.5 && r.walkY < -0.7 && r.lookX == 0;
+        report("pad: the standard layout", ok, fmt("A %d RT %d LT %d walk %+.2f %+.2f look %+.2f", (int)r.down[PR_A], (int)r.down[PR_RT], (int)r.down[PR_LT], r.walkX, r.walkY, r.lookX));
+    }
+    {   // a raw device: buttons 0-3 the face, the hat the d-pad, axes 3 and 4 the right stick and 2 and 5 the triggers with six axes
+        PadState p = rawPad("raw-one"); PadMap m; m.use(p);
+        p.rawButtons[0] = true; p.rawHats[0] = 1; p.rawAxes[3] = 1.0f; p.rawAxes[5] = 1.0f;
+        const PadRead r = m.read(p, 0.18);
+        const bool ok = r.down[PR_A] && r.down[PR_UP] && !r.down[PR_DOWN] && r.lookX > 0.9 && r.down[PR_RT] && !r.down[PR_LT] && padControlName(m.bind[PR_LT]) == "T2";
+        report("pad: a raw device's guess", ok, fmt("A %d UP %d look %+.2f RT %d LT %s", (int)r.down[PR_A], (int)r.down[PR_UP], r.lookX, (int)r.down[PR_RT], padControlName(m.bind[PR_LT]).c_str()));
+    }
+    {   // the guess reads the axes at rest: one resting off-centre is no stick (it would walk by itself); triggers resting in the middle are no
+        // triggers, and four axes or more without them put the right stick on the third and fourth (DirectInput's order)
+        PadState p = rawPad("raw-odd"); p.rawAxes[1] = 1.0f;
+        PadMap m; m.use(p);
+        PadState d = rawPad("raw-dinput"); d.rawAxes[2] = 0; d.rawAxes[5] = 0;
+        PadMap m2; m2.use(d);
+        const bool ok = m.bind[PR_WALK_X] == PADC_NONE && m.bind[PR_WALK_Y] == PADC_NONE && m.read(p, 0.18).walkY == 0 &&
+                        padControlName(m2.bind[PR_LOOK_X]) == "A2+" && padControlName(m2.bind[PR_LOOK_Y]) == "A3+" && m2.bind[PR_LT] == PADC_NONE && !m2.read(d, 0.18).down[PR_LT];
+        report("pad: the guess reads the axes at rest", ok, "walk " + padControlName(m.bind[PR_WALK_X]) + " " + padControlName(m.bind[PR_WALK_Y]) + ", dinput look " + padControlName(m2.bind[PR_LOOK_X]) + " " + padControlName(m2.bind[PR_LOOK_Y]) + " LT " + padControlName(m2.bind[PR_LT]));
+    }
+    {   // the capture: a button, a stick's half, a hat, a trigger resting at one end; a stick's capture takes no button; the standard names first
+        PadState rest = rawPad("raw-cap"), now = rest;
+        now.rawButtons[5] = true; const int c1 = padCapture(rest, rest, now, false), c5 = padCapture(rest, rest, now, true), c8 = padCapture(now, rest, now, false);   // a button held since last frame: none
+        now = rest; now.rawAxes[1] = -0.9f; const int c2 = padCapture(rest, rest, now, true);
+        now = rest; now.rawHats[0] = 4; const int c3 = padCapture(rest, rest, now, false);
+        now = rest; now.rawAxes[2] = 0.9f; const int c4 = padCapture(rest, rest, now, false);
+        PadState srest = stdPad("std-cap"), snow = srest; srest.rawButtonCount = 10;
+        snow.buttons[PB_X] = true; snow.rawButtonCount = 10; snow.rawButtons[2] = true; const int c6 = padCapture(srest, srest, snow, false);
+        snow = srest; snow.axes[4] = 1.0f; const int c7 = padCapture(srest, srest, snow, false);
+        const bool ok = padControlName(c1) == "B5" && padControlName(c2) == "A1-" && padControlName(c3) == "H0D" && padControlName(c4) == "T2" && c5 == -1 && c8 == -1 && padControlName(c6) == "X" && padControlName(c7) == "LT+";
+        report("pad: the capture", ok, padControlName(c1) + " " + padControlName(c2) + " " + padControlName(c3) + " " + padControlName(c4) + " " + std::to_string(c5) + " " + std::to_string(c8) + " " + padControlName(c6) + " " + padControlName(c7));
+    }
+    {   // every control's name reads back as itself
+        int bad = 0, named = 0;
+        for (int c = 0; c < PADC_COUNT; c++) { const std::string n = padControlName(c); if (n == "-") continue; named++; if (padControlFromName(n) != c) bad++; }
+        report("pad: the controls' names", bad == 0 && named > 120, fmt("%d named, %d wrong", named, bad));
+    }
+    {   // the file: a set a device; another device keeps its defaults; the reset
+        PadState a = rawPad("raw-file-a"), b = rawPad("raw-file-b");
+        PadMap m; m.use(a); m.set(a, PR_A, PADC_RAW_BUTTON + 3); m.set(a, PR_WALK_Y, PADC_RAW_AXIS + 2 * 4 + 1); m.set(a, PR_B, PADC_RAW_BUTTON + 1);   // B to its default: not kept
+        const bool saved = m.save("shots/tests/test_pad.txt");
+        PadMap m2; const bool loaded = m2.load("shots/tests/test_pad.txt");
+        m2.use(a); const bool aOk = m2.bind[PR_A] == PADC_RAW_BUTTON + 3 && m2.bind[PR_WALK_Y] == PADC_RAW_AXIS + 9 && m2.bind[PR_B] == PADC_RAW_BUTTON + 1 && m2.custom(a);
+        m2.use(b); const bool bOk = m2.bind[PR_A] == PADC_RAW_BUTTON + 0 && !m2.custom(b);
+        m2.use(a); m2.reset(a); const bool reset = m2.bind[PR_A] == PADC_RAW_BUTTON + 0 && !m2.custom(a);
+        std::ifstream f("shots/tests/test_pad.txt"); std::string all((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        report("pad: a set for each controller", saved && loaded && aOk && bOk && reset && all.find("\nB ") == std::string::npos, fmt("saved %d loaded %d a %d b %d reset %d", (int)saved, (int)loaded, (int)aOk, (int)bOk, (int)reset));
+    }
+    // the game by a controller alone
+    for (const char* f : {"shots/tests/pad_save_1.txt", "shots/tests/pad_save_auto.txt", "shots/tests/pad_settings.txt", "shots/tests/pad_keys.txt", "shots/tests/pad_guide.txt", "shots/tests/pad_pad.txt"}) remove(f);
+    Game game; game.savePrefix = "shots/tests/pad_save"; game.settingsPath = "shots/tests/pad_settings.txt"; game.keysPath = "shots/tests/pad_keys.txt"; game.guidePath = "shots/tests/pad_guide.txt"; game.padPath = "shots/tests/pad_pad.txt";
+    game.settings.renderScale = 2; game.applySettings();
+    KeyMap km; game.keymap = &km;
+    Input gi; gi.pad = stdPad("0300test");
+    auto frames = [&](int n) { for (int i = 0; i < n; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); } };
+    auto tap = [&](int b) { gi.pad.buttons[b] = true; frames(1); gi.pad.buttons[b] = false; frames(1); };
+    auto taps = [&](int b, int n) { for (int i = 0; i < n; i++) tap(b); };
+    auto shot = [&](const char* name) { writePNG(fmt("shots/tests/pad_%s.png", name).c_str(), game.output(), FBW, FBH); };
+    auto itemIndex = [&](int page, const std::string& label) { std::istringstream is(game.testPadItems(page)); std::string line; int i = 0; while (std::getline(is, line)) { if (line.substr(0, line.find('|')) == label) return i; i++; } return -1; };
+    auto runItem = [&](int page, const std::string& label) {   // Y, the page, down to the line, A
+        const int k = itemIndex(page, label);
+        if (k < 0) return false;
+        tap(PB_Y);
+        for (int i = 0; i < 3 && game.testPadPage() != page; i++) tap(PB_RB);
+        taps(PB_DOWN, k);
+        tap(PB_A);
+        return true;
+    };
+    frames(2);
+    tap(PB_A);
+    report("pad: A begins at the title", game.state == GameState::SPACE, fmt("state %d", (int)game.state));
+    frames(3);
+    report("pad: the controller announced", game.testStatus().find("CONTROLLER") != std::string::npos || game.testStatusNext().find("CONTROLLER") != std::string::npos, game.testStatus() + " / " + game.testStatusNext());
+    {   // the left stick walks in the cabin (it walked nothing there before)
+        double x0, z0, y0, x1, z1, y1; game.testCabinGoto(1.6, -1.0, 0.0); frames(1); game.testCabinAt(x0, z0, y0);   // clear of the capsule's cage
+        gi.pad.axes[1] = -1.0f; frames(20); gi.pad.axes[1] = 0; frames(1); game.testCabinAt(x1, z1, y1);
+        gi.pad.axes[2] = 0.8f; frames(10); gi.pad.axes[2] = 0; frames(1); double x2, z2, y2; game.testCabinAt(x2, z2, y2);
+        report("pad: the cabin walks and looks", z1 - z0 > 0.5 && std::fabs(y2 - y1) > 0.2, fmt("z %.2f -> %.2f, yaw %.2f -> %.2f", z0, z1, y1, y2));
+    }
+    game.testCabinGoto(0.0, 1.3, 0.0); frames(2);
+    tap(PB_X);
+    report("pad: X uses what the explorer faces", game.state == GameState::SHIPSCREEN, fmt("state %d", (int)game.state));
+    tap(PB_B);
+    report("pad: B leaves a screen", game.state == GameState::SPACE, fmt("state %d", (int)game.state));
+    {   // the command menu: Y, the pages, a line run as its key
+        tap(PB_Y);
+        const bool open = game.testPadMenu() && game.testPadPage() == 0;
+        shot("menu_cabin");
+        tap(PB_RB); const int p1 = game.testPadPage(); shot("menu_general");
+        tap(PB_RB); const int p2 = game.testPadPage(); shot("menu_keys");
+        tap(PB_RB); const int p0 = game.testPadPage();
+        tap(PB_B); const bool closed = !game.testPadMenu();
+        const bool ran = runItem(0, "FIELD AMPLIFICATOR ON");
+        frames(1);
+        report("pad: the command menu", open && p1 == 1 && p2 == 2 && p0 == 0 && closed && ran && game.testStatus() == "FIELD AMPLIFICATOR ON" && !game.testPadMenu(),
+               fmt("open %d pages %d %d %d closed %d ran %d status '%s'", (int)open, p1, p2, p0, (int)closed, (int)ran, game.testStatus().c_str()));
+    }
+    {   // the keys page: F from the keyboard (the cursor from A, five to the right) toggles the amplificator back
+        tap(PB_Y); taps(PB_RB, 2); taps(PB_RIGHT, 5); tap(PB_A); tap(PB_B);
+        report("pad: the keys page presses a key", game.testStatus() == "FIELD AMPLIFICATOR OFF", "status '" + game.testStatus() + "'");
+    }
+    {   // the aim: L3, then the menu's keyboard types the light years
+        tap(PB_L3);
+        const bool aiming = game.testAiming();
+        const bool ran = runItem(0, "JUMP: TYPE THE LIGHT YEARS");
+        const bool kb = game.testPadKeyboard();
+        tap(PB_A); taps(PB_RIGHT, 9); tap(PB_A); tap(PB_A);   // 1, 0, 0
+        shot("keyboard_aim");
+        const std::string digits = game.testJumpDigits();
+        tap(PB_B);   // the keyboard closes, the aim stays
+        const bool stillAiming = game.testAiming() && !game.testPadKeyboard();
+        tap(PB_B);   // B leaves the aim
+        report("pad: the aim's digits by the keyboard", aiming && ran && kb && digits == "100" && stillAiming && !game.testAiming(), fmt("aim %d ran %d kb %d digits '%s' still %d", (int)aiming, (int)ran, (int)kb, digits.c_str(), (int)stillAiming));
+    }
+    {   // the guide's entry by the keyboard: NAME THIS STAR, A then B, START
+        const bool ran = runItem(1, "THE GUIDE");
+        const bool guide = game.state == GameState::GUIDE;
+        tap(PB_DOWN); tap(PB_A);
+        const bool entry = game.state == GameState::TEXT_ENTRY && game.testPadKeyboard();
+        tap(PB_A); tap(PB_RIGHT); tap(PB_A);
+        shot("keyboard_text");
+        tap(PB_START);
+        report("pad: a name typed with the keyboard", ran && guide && entry && game.testStarName() == "AB" && game.state == GameState::SPACE, fmt("ran %d guide %d entry %d name '%s' state %d", (int)ran, (int)guide, (int)entry, game.testStarName().c_str(), (int)game.state));
+    }
+    {   // the console by the keyboard: SELECT opens the commands over it, WHERE typed and run
+        game.testCabinGoto(-1.3, 0.0, -PI / 2); frames(2);
+        tap(PB_X);
+        const bool console = game.state == GameState::CONSOLE && game.testPadKeyboard();
+        frames(1); shot("keyboard_console");
+        tap(PB_BACK);   // SELECT
+        const bool menu = game.testPadMenu();
+        const int k = itemIndex(0, "WHERE: THE SHIP'S SECTOR");
+        taps(PB_DOWN, k); tap(PB_A); frames(8);
+        const bool back = game.state == GameState::CONSOLE && !game.testPadMenu();
+        tap(PB_B);
+        report("pad: the console's commands over the keyboard", console && menu && k >= 0 && back && game.state == GameState::SPACE, fmt("console %d menu %d item %d back %d state %d", (int)console, (int)menu, k, (int)back, (int)game.state));
+    }
+    {   // the controller page: A set from the next press (Y), Y then acting as A, the reset; Esc saves
+        const bool ran = runItem(1, "CONTROLLER SETUP");
+        const bool page = game.state == GameState::KEYS && game.testKeysPage() == 1;
+        frames(1); shot("controller");
+        tap(PB_A);                                     // Enter on A's row: the capture, armed once A is let go
+        const bool capturing = game.testPadCapture() == PR_A;
+        gi.pad.buttons[PB_Y] = true; frames(2); gi.pad.buttons[PB_Y] = false; frames(2);
+        const bool bound = game.padMap.bind[PR_A] == PB_Y && game.testPadCapture() < 0;
+        taps(PB_DOWN, 8);                              // the walk stick's row (down the first column past RT)
+        tap(PB_Y);                                     // Y is A now (the two changed places): Enter
+        gi.pad.axes[3] = -1.0f; frames(2); gi.pad.axes[3] = 0; frames(2);     // up: the right stick's (Y negative up)
+        gi.pad.axes[2] = 1.0f; frames(2); gi.pad.axes[2] = 0; frames(2);      // right
+        const bool walkSet = padControlName(game.padMap.bind[PR_WALK_Y]) == "RY+" && padControlName(game.padMap.bind[PR_WALK_X]) == "RX+" && game.testPadCapture() < 0;
+        taps(PB_UP, 9);                                // back to the first row, then up: the reset's
+        const int resetRow = game.testPadScreenSel();
+        tap(PB_Y);                                     // Y is A now: Enter resets
+        const bool reset = game.padMap.bind[PR_A] == PB_A && padControlName(game.padMap.bind[PR_WALK_Y]) == "LY+";
+        tap(PB_B);
+        report("pad: the controller page", ran && page && capturing && bound && walkSet && resetRow == 21 && reset && game.state == GameState::SPACE,
+               fmt("ran %d page %d capturing %d bound %d walk stick %d reset row %d reset %d state %d", (int)ran, (int)page, (int)capturing, (int)bound, (int)walkSet, resetRow, (int)reset, (int)game.state));
+    }
+    {   // the help's controller page (Space twice from the first)
+        const bool ran = runItem(1, "HELP");
+        tap(PB_X); tap(PB_X);   // X is Space in the screens
+        shot("help");
+        tap(PB_B);
+        report("pad: the help's controller page", ran && game.state == GameState::SPACE, fmt("ran %d state %d", (int)ran, (int)game.state));
+    }
+    {   // the star map and the galaxy chart by a controller: the right stick turns the view, the triggers zoom, the menu's class filter; SELECT
+        // to the chart, the left stick moves its cursor, X back to the ship, a place marked through the keyboard and removed from the menu
+        const bool ran = runItem(1, "THE STAR MAP");
+        double yaw0, zoom0, yaw1, zoom1; int mask0, mask1, lvl0, lvl1, gm0, gm1;
+        game.testStarMapAt(yaw0, zoom0, mask0, lvl0, gm0);
+        gi.pad.axes[2] = 0.7f; frames(15); gi.pad.axes[2] = 0; frames(1);
+        gi.pad.axes[5] = 1.0f; frames(2); gi.pad.axes[5] = -1.0f; frames(2);
+        game.testStarMapAt(yaw1, zoom1, mask1, lvl1, gm1);
+        const bool turned = std::fabs(yaw1 - yaw0) > 0.05 && std::fabs(yaw1 - yaw0) < 1.5 && zoom1 > zoom0 * 1.2;
+        const bool cls = runItem(0, "THE NEXT CLASS");
+        int maskC; game.testStarMapAt(yaw1, zoom1, maskC, lvl1, gm1);
+        runItem(0, "EVERY CLASS");
+        int maskA; game.testStarMapAt(yaw1, zoom1, maskA, lvl1, gm1);
+        tap(PB_Y); shot("menu_starmap"); tap(PB_B);
+        tap(PB_BACK);   // SELECT: the galaxy
+        const bool chart = game.state == GameState::STAR_MAP && game.testMapPage() == 1;
+        gi.pad.axes[0] = 1.0f; frames(20); gi.pad.axes[0] = 0; frames(1);
+        const bool moved = !game.testChartOnShip();
+        gi.pad.axes[5] = 1.0f; frames(2); gi.pad.axes[5] = -1.0f; frames(2);
+        int lvl2; game.testStarMapAt(yaw1, zoom1, maskA, lvl2, gm1);
+        const bool marked = runItem(0, "MARK THE PLACE") && game.state == GameState::TEXT_ENTRY;
+        tap(PB_START);
+        int gm2; game.testStarMapAt(yaw1, zoom1, maskA, lvl2, gm2);
+        tap(PB_Y); shot("menu_galaxy"); tap(PB_B);
+        runItem(0, "REMOVE THE MARK"); frames(2);
+        int gm3; game.testStarMapAt(yaw1, zoom1, maskA, lvl2, gm3);
+        tap(PB_X);   // Space: the cursor back to the ship
+        const bool home = game.testChartOnShip();
+        tap(PB_B);
+        report("pad: the star map and the galaxy chart", ran && turned && cls && maskC != mask0 && maskA == mask0 && chart && moved && lvl2 == lvl0 + 1 && marked && gm2 == gm0 + 1 && gm3 == gm0 && home && game.state == GameState::SPACE,
+               fmt("ran %d turned %.2f zoom %.2f->%.2f classes %d/%d/%d chart %d moved %d level %d->%d marks %d->%d->%d home %d state %d", (int)ran, yaw1 - yaw0, zoom0, zoom1, mask0, maskC, maskA, (int)chart, (int)moved, lvl0, lvl2, gm0, gm2, gm3, (int)home, (int)game.state));
+    }
+    {   // a landing, on foot, the buggy
+        const Star home = game.testSystem().star;
+        const int body = game.testLandableBody();
+        game.testParkAt(home, body);
+        frames(2);
+        {   // the right stick moves the landing map's cursor smoothly (the d-pad steps it a degree)
+            double la0, lo0, la1, lo1, la2, lo2; int z0, z1;
+            game.testLandCursorAt(la0, lo0, z0);
+            gi.pad.axes[2] = 1.0f; frames(30); gi.pad.axes[2] = 0; frames(1);
+            game.testLandCursorAt(la1, lo1, z1);
+            tap(PB_DOWN); game.testLandCursorAt(la2, lo2, z1);
+            double dl = lo1 - lo0; if (dl < -180) dl += 360; if (dl > 180) dl -= 360;
+            report("pad: the landing map's cursor by the stick and the d-pad", dl > 20 && dl < 90 && std::fabs(la1 - la0) < 0.5 && std::fabs(la1 - la2 - 1.0) < 0.01,
+                   fmt("a second of the stick: %+.1f deg east, %+.2f north; the d-pad down: %.2f deg", dl, la1 - la0, la1 - la2));
+            tap(PB_Y); shot("menu_landmap"); tap(PB_B);
+        }
+        gi.pad.axes[5] = 1.0f; frames(2); gi.pad.axes[5] = -1.0f; frames(2);   // RT: the sector's zoom (Z)
+        const bool zoomed = game.testPadLegend().find("LT THE WORLD") != std::string::npos;
+        gi.pad.axes[4] = 1.0f; frames(2); gi.pad.axes[4] = -1.0f; frames(2);   // LT: the whole world again
+        const bool whole = game.testPadLegend().find("RT ZOOM IN") != std::string::npos;
+        report("pad: the landing map's triggers zoom", zoomed && whole, fmt("zoomed %d whole %d", (int)zoomed, (int)whole));
+        tap(PB_A);   // land here
+        for (int i = 0; i < 300 && game.state != GameState::SURFACE; i++) frames(1);
+        const bool landed = game.state == GameState::SURFACE;
+        frames(30);
+        tap(PB_Y); shot("menu_foot"); tap(PB_B);
+        gi.pad.buttons[PB_A] = true; frames(1); gi.pad.buttons[PB_A] = false;
+        double alt = 0; for (int i = 0; i < 15; i++) { frames(1); alt = std::max(alt, game.testPlayerAlt()); }
+        frames(40);
+        const bool buggy = runItem(0, "UNFOLD A BUGGY");
+        frames(90);
+        const double st0 = game.testPlayerStamina();
+        gi.pad.axes[1] = -1.0f; gi.pad.axes[5] = 1.0f; frames(45); gi.pad.axes[1] = 0; gi.pad.axes[5] = -1.0f; frames(1);
+        const double st1 = game.testPlayerStamina();
+        const int scan0 = game.testScanMode();
+        gi.pad.axes[5] = 1.0f; frames(2); tap(PB_RB); gi.pad.axes[5] = -1.0f; frames(1);   // RB while RT sprints: the scanner's next kind, not Shift+R
+        const bool scanned = game.testScanMode() != scan0;
+        report("pad: on foot (a jump, the sprint, the scanner, the menu's buggy)", landed && alt > 0.3 && st1 < st0 - 2 && scanned && buggy && game.testBuggyInfo().find("deployed=1") != std::string::npos,
+               fmt("landed %d jump %.2f m, stamina %.0f -> %.0f, scanner %d -> %d, buggy %d (%s)", (int)landed, alt, st0, st1, scan0, game.testScanMode(), (int)buggy, game.testBuggyInfo().c_str()));
+        {   // the sector map: LB opens it, the right stick moves the cursor (half a throw: a cursor's pace), the triggers zoom, A marks the place
+            // (the keyboard's START places it unnamed), the menu removes it, X brings the cursor home, B closes
+            tap(PB_LB);
+            const bool open = game.state == GameState::SECTOR_MAP;
+            double x0, z0, x1, z1; int zm0, zm1, dry;
+            game.testSectorMapAt(x0, z0, zm0);
+            gi.pad.axes[2] = 0.5f; frames(20); gi.pad.axes[2] = 0; frames(1);
+            game.testSectorMapAt(x1, z1, zm1);
+            const double hw = zm0 == 1 ? 4000 : 1;   // the default level is 8 km wide
+            const bool cursor = x1 - x0 > 0.02 * hw && x1 - x0 < 0.5 * hw;
+            gi.pad.axes[5] = 1.0f; frames(2); gi.pad.axes[5] = -1.0f; frames(2);
+            int zm2; game.testSectorMapAt(x1, z1, zm2);
+            gi.pad.axes[4] = 1.0f; frames(2); gi.pad.axes[4] = -1.0f; frames(2);
+            int zm3; game.testSectorMapAt(x1, z1, zm3);
+            const int marks0 = game.testMarksHere(dry);
+            tap(PB_A); const bool entry = game.state == GameState::TEXT_ENTRY; tap(PB_START); frames(2);
+            const int marks1 = game.testMarksHere(dry);
+            tap(PB_Y); shot("menu_sectormap"); tap(PB_B);
+            runItem(0, "REMOVE THE MARK"); frames(2);
+            const int marks2 = game.testMarksHere(dry);
+            tap(PB_X);
+            double x3, z3; int zm4; game.testSectorMapAt(x3, z3, zm4);
+            const bool homeAgain = std::fabs(x3 - game.testPlayerX()) < 0.5 && std::fabs(z3 - game.testPlayerZ()) < 0.5;
+            tap(PB_B);
+            report("pad: the sector map", open && cursor && zm2 == zm0 - 1 && zm3 == zm0 && entry && marks1 == marks0 + 1 && marks2 == marks0 && homeAgain && game.state == GameState::SURFACE,
+                   fmt("open %d cursor %+.0f m (level %d) zoom %d->%d->%d mark %d: %d->%d->%d home %d state %d", (int)open, x1 - x0, zm0, zm0, zm2, zm3, (int)entry, marks0, marks1, marks2, (int)homeAgain, (int)game.state));
+        }
+        game.testWalkToBuggy(); frames(2);
+        tap(PB_X);
+        const bool in = game.testBuggyInfo().find("in=1") != std::string::npos;
+        gi.pad.axes[5] = 1.0f; frames(60); const double sp = game.testBuggySpeed();
+        tap(PB_Y); shot("menu_buggy"); tap(PB_B);
+        gi.pad.axes[5] = -1.0f; frames(2);
+        report("pad: the buggy (X gets in, RT drives)", in && sp > 2, fmt("in %d speed %.1f m/s", (int)in, sp));
+    }
+    printf("pad: the legend in the buggy: '%s'\n", game.testPadLegend().c_str());
+    return fails;
+}
+
 static int testInput() {
     int fails = 0;
     {
@@ -18505,11 +19095,12 @@ static int testInput() {
         // N5-05: the key bindings screen: open it from the settings, rebind FORWARD to Z, reset it, save
         {
             Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys2.txt"; game.guidePath = "shots/tests/test_guide.txt";
+            game.padPath = "shots/tests/test_pad2.txt";   // R-418: the CONTROLS screen saves the controller's file too
             KeyMap km2; game.keymap = &km2;
             Input gi;
             auto press = [&](int key) { gi.pressed[key] = true; gi.down[key] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[key] = false; };
             press(KEY_ENTER); for (int i = 0; i < 3; i++) game.frame(gi, 1.0 / 30);
-            press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER);   // menu > settings
+            press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER);   // menu > settings (R-419: a row further)
             for (int i = 0; i < 18; i++) press(KEY_DOWN);   // KEY BINDINGS
             press(KEY_ENTER);
             bool opened = game.state == GameState::KEYS;
@@ -18529,22 +19120,7 @@ static int testInput() {
         if (!good) fails++;
         printf("key names: %s %s %s %s\n", keyName(keyFromName("lshift")).c_str(), keyName(keyFromName("F12")).c_str(), keyName(keyFromName("space")).c_str(), keyName(KEY_PAGE_UP).c_str());
     }
-    {
-        PadState cur, prev;
-        cur.present = true; cur.lx = 0.9; cur.ly = -1.0; cur.rx = 0.5; cur.buttons[0] = true; cur.rt = 0.9;
-        Input in;
-        applyPad(cur, prev, in, 1.0);
-        bool good = in.moveY > 0.9 && in.moveX > 0.8 && in.mouseDx > 1 && in.isDown(KEY_ENTER) && in.wasPressed(KEY_ENTER) && in.isDown(KEY_LEFT_SHIFT);
-        Input in2;
-        applyPad(cur, prev, in2, 1.0);   // held: down but not pressed again
-        good = good && in2.isDown(KEY_ENTER) && !in2.wasPressed(KEY_ENTER);
-        PadState none;
-        Input in3;
-        applyPad(none, prev, in3, 1.0);
-        good = good && in3.moveX == 0 && !in3.isDown(KEY_ENTER);
-        printf("gamepad: %s (stick -> move, A -> enter once, trigger -> sprint, absent pad -> nothing)\n", good ? "PASS" : "FAIL");
-        if (!good) fails++;
-    }
+    fails += testPad();   // R-418
     return fails;
 }
 
@@ -18900,6 +19476,144 @@ static int runBenchNoise() {
 // `capital`: standing 400 m outside an age test world's capital (the industrial's by default, felisian), facing it, the flora's listing
 // timed (a settlement's buildings tested against every tree); `probe`: the launch from the ringed test giant (the handover, KI-361);
 // `roads`: on foot near the modern capital, moved two ruin cells at a time: each rebuild of the site's roads on the main thread timed
+// B-427: a Wolf-Rayet star's gas giant and the envelope its wind strips (S-05): parked at the giant, carried round it by Shift and the
+// arrows as a player is, a frame every 45 degrees; then from 12 and 40 radii, from a moon, through the cabin's window and at 1x.
+// `tail [sx sy sz body]` (the user's giant by default)
+// B-428: the parked ship's views near home of the scenes that were crowded (a solid world with a big moon, a twin, a giant with
+// four moons or more, a giant's moon): parked as a player is, then from the same place the eyes on the biggest other disc
+static int runParkings() {
+    struct Pick { int64_t x, z; int body; const char* what; };
+    std::vector<Pick> picks;
+    int nBig = 0, nGiant = 0, nTwin = 0, nGm = 0;
+    for (int64_t x = 185; x < 215 && picks.size() < 12; x++)
+        for (int64_t z = 36; z < 66 && picks.size() < 12; z++) {
+            Star s;
+            if (!starInSector(x, 0, z, s)) continue;
+            StarSystem sys; sys.generate(s);
+            for (const Body& b : sys.bodies) {
+                if (b.type == PT_COMPANION || b.type == PT_COMET || b.parent >= 0) continue;
+                const bool giant = b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR;
+                int moons = 0; double bigM = 0; bool twin = false;
+                for (const Body& m : sys.bodies) if (m.parent == b.index) { moons++; bigM = std::max(bigM, m.radiusKm / b.radiusKm); twin |= m.doublePlanet; }
+                if (twin && nTwin < 2) { picks.push_back({x, z, b.index, "twin"}); nTwin++; break; }
+                if (!giant && bigM > 0.3 && nBig < 4) { picks.push_back({x, z, b.index, "big moon"}); nBig++; break; }
+                if (giant && moons >= 4 && nGiant < 3) { picks.push_back({x, z, b.index, "giant"}); nGiant++; break; }
+                if (giant && moons >= 2 && nGm < 3) { for (const Body& m : sys.bodies) if (m.parent == b.index) { picks.push_back({x, z, m.index, "giant's moon"}); nGm++; break; } break; }
+            }
+        }
+    Game game; game.savePrefix = "shots/tests/parkings_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/parkings_guide.txt";
+    remove(game.guidePath.c_str());
+    game.newGame(); game.settings.cabin = false; game.applySettings();
+    Input in;
+    auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+    int k = 0;
+    for (const Pick& pk : picks) {
+        Star s; starInSector(pk.x, 0, pk.z, s);
+        game.testParkAt(s, pk.body, false);
+        run(0.2);
+        if (PLANET_TYPES[game.testSystem().bodies[pk.body].type].landable) { in.pressed[KEY_ESCAPE] = true; in.down[KEY_ESCAPE] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[KEY_ESCAPE] = false; }   // the landing map closed
+        run(0.5);
+        const StarSystem& sys = game.testSystem(); const Body& b = sys.bodies[pk.body];
+        std::string ms;
+        for (const Body& m : sys.bodies) if (m.parent == (b.parent >= 0 ? b.parent : b.index) && m.type != PT_COMPANION) ms += fmt(" %.1fR/%.2f", m.orbitRadiusKm / sys.bodies[m.parent].radiusKm, m.radiusKm / sys.bodies[m.parent].radiusKm);
+        writePNG(fmt("shots/tests/parkings_%02d_a.png", k).c_str(), game.output(), FBW, FBH);
+        // from the same place, the eyes on the biggest other disc in the sky (the look round a parked player gives)
+        const double t = game.testGameTime(); const Vec3 P = game.testShipPos();
+        int nb = -1; double nbA = 0;
+        for (int j = 0; j < (int)sys.bodies.size(); j++) {
+            if (j == pk.body || sys.bodies[j].type == PT_COMPANION) continue;
+            const double a = std::asin(clampd(sys.bodies[j].radiusKm / length(sys.bodyPos(j, t) - P), 0, 1)) / DEG;
+            if (a > nbA) { nbA = a; nb = j; }
+        }
+        const double sep = nb >= 0 ? std::acos(clampd(dot(normalize(sys.bodyPos(nb, t) - P), normalize(sys.bodyPos(pk.body, t) - P)), -1, 1)) / DEG : 0;
+        game.testPlaceShip(P); game.testAimAtBody(nb); run(0.3);
+        writePNG(fmt("shots/tests/parkings_%02d_b.png", k).c_str(), game.output(), FBW, FBH);
+        printf("parkings %02d: %s, %lld 0 %lld body %d (%s, R %.0f km); its family's moons (orbit / size in the planet's radii):%s\n", k, pk.what, (long long)pk.x, (long long)pk.z, pk.body, PLANET_TYPES[b.type].name, b.radiusKm, ms.c_str());
+        if (nb >= 0) printf("  the biggest other disc: body %d (%s), %.0f km off, %.2f degrees wide, %.0f degrees from the world's centre -> shots/tests/parkings_%02d_a.png, _b.png\n", nb, PLANET_TYPES[sys.bodies[nb].type].name, length(sys.bodyPos(nb, t) - P), 2 * nbA, sep, k);
+        k++;
+    }
+    return 0;
+}
+
+static int runTail(int argc, char** argv) {
+    const long long sx = argc > 2 ? atoll(argv[2]) : 18071, sy = argc > 3 ? atoll(argv[3]) : 1, sz = argc > 4 ? atoll(argv[4]) : -19950;
+    const int body = argc > 5 ? atoi(argv[5]) : 1;
+    Star s;
+    if (!starInSector(sx, sy, sz, s, true)) { printf("tail: no star at %lld %lld %lld\n", sx, sy, sz); return 1; }
+    Game game; game.savePrefix = "shots/tests/tail_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/tail_guide.txt";
+    remove(game.guidePath.c_str());
+    game.newGame(); game.settings.cabin = false; game.applySettings();
+    game.testParkAt(s, body, false);
+    Input in;
+    auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
+    run(1.0);
+    const StarSystem& sys = game.testSystem();
+    printf("tail: class S%02d, body %d of %d: %s R %.0f km; %s\n", sys.star.cls, body, (int)sys.bodies.size(), PLANET_TYPES[sys.bodies[body].type].name, sys.bodies[body].radiusKm, game.testBodyTypes().c_str());
+    for (int k = 0; k < 8; k++) {
+        if (k > 0) { in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(45.0 / 20.0); in.down[KEY_LEFT_SHIFT] = false; in.down[KEY_RIGHT] = false; run(0.5); }
+        int top = 0, bright = 0, tail = 0; double tmax = 0, tsum = 0;
+        for (int i = 0; i < FBW * FBH; i++) {
+            const double v = shadeOf(game.fb.idx[i]);
+            if (v >= 62) top++;
+            if (v >= 50) bright++;
+            if (bankOf(game.fb.idx[i]) == 2 && game.fb.invz[i] < 1e-12f) { tail++; tmax = std::max(tmax, v); tsum += v; }   // the giant's bank off any body: its tail
+        }
+        const std::string path = fmt("shots/tests/tail_%d.png", k * 45);
+        writePNG(path.c_str(), game.output(), FBW, FBH);
+        printf("  %3d degrees east: pixels at the ramp's top %d, over shade 50 %d; the tail's %d pixels, shade %.1f at most, %.1f mean -> %s\n", k * 45, top, bright, tail, tmax, tail ? tsum / tail : 0.0, path.c_str());
+    }
+    const double R = sys.bodies[body].radiusKm;
+    for (double kR : {12.0, 40.0}) {   // farther: the ship set down beside the giant, the tail across the view
+        const Vec3 bp = sys.bodyPos(body, game.testGameTime()), away = normalize(bp - sys.star.pos);
+        const Vec3 sideV = normalize(cross(away, Vec3(0, 1, 0)));
+        game.testPlaceShip(bp + normalize(sideV - away * 0.3) * (R * kR));
+        game.testAimAtBody(body);
+        run(0.5);
+        const std::string path = fmt("shots/tests/tail_far%.0f.png", kR);
+        writePNG(path.c_str(), game.output(), FBW, FBH);
+        printf("  from %.0f radii -> %s\n", kR, path.c_str());
+    }
+    {   // a moon's sky: 40 degrees from the point under the giant, looking at it
+        StarSystem msys; msys.generate(s);
+        int moon = -1;
+        for (const Body& m : msys.bodies) if (m.parent == body && m.type != PT_COMPANION) { moon = m.index; break; }
+        if (moon >= 0) {
+            double t = game.testGameTime();   // the moon at quadrature (the sun 90 degrees from the giant in its sky): the tail side-on
+            for (double t0 = t, best = 2, dt = 0; dt < 3 * 86400; dt += 30) {
+                const double cq = std::fabs(dot(normalize(msys.star.pos - msys.bodyPos(moon, t0 + dt)), normalize(msys.bodyPos(body, t0 + dt) - msys.bodyPos(moon, t0 + dt))));
+                if (cq < best) { best = cq; t = t0 + dt; }
+                if (best < 0.01) break;
+            }
+            const Mat3 F = msys.bodyFrame(moon, t);
+            const Vec3 up = F * normalize(msys.bodyPos(body, t) - msys.bodyPos(moon, t)), sunB = F * normalize(msys.star.pos - msys.bodyPos(moon, t));
+            Vec3 e = sunB - up * dot(sunB, up); if (length(e) < 1e-6) e = Vec3(1, 0, 0);
+            e = -normalize(e);   // away from the sun: the giant 50 degrees up, the sun under the horizon
+            const Vec3 u = normalize(up * std::cos(40 * DEG) + e * std::sin(40 * DEG));
+            double la, lo; StarSystem::latLonFromBody(u, la, lo);
+            SpaceRenderer sr; StarNeighborhood snb; SurfaceView sv;
+            sv.init(&msys, moon, la, lo, t);
+            snb.update(sv.site.worldPos(t, 0, 0, 0));
+            Input in;
+            for (int k = 0; k < 10; k++) sv.update(0.016, in, t, false);
+            const Vec3 l = sv.site.localFrame(t) * normalize(msys.bodyPos(body, t) - sv.site.worldPos(t, sv.player.x, sv.player.z, 0));
+            sv.player.yaw = std::atan2(l.x, l.z); sv.player.pitch = std::asin(clampd(l.y, -1, 1)) + 22 * DEG;   // the giant low in the frame, the tail rising from it
+            Framebuffer fb; sv.render(fb, t, snb.stars, sr, 1.0); fb.mush(2);
+            saveFB(fb, "shots/tests/tail_sky.png");
+            printf("  from moon %d (%s), lat %.1f lon %.1f, the giant %.0f degrees up -> shots/tests/tail_sky.png\n", moon, PLANET_TYPES[msys.bodies[moon].type].name, la / DEG, lo / DEG, std::asin(clampd(l.y, -1, 1)) / DEG);
+        }
+    }
+    {   // the cabin's front window and one thread at 1x, 135 degrees east of the parking
+        game.settings.cabin = true; game.applySettings();
+        game.testParkAt(s, body, false);
+        in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(135.0 / 20.0); in.down[KEY_LEFT_SHIFT] = false; in.down[KEY_RIGHT] = false; run(0.5);
+        writePNG("shots/tests/tail_cabin.png", game.output(), FBW, FBH);
+        game.settings.renderScale = 1; game.applySettings(); run(0.3);
+        writePNG("shots/tests/tail_1x.png", game.output(), FBW, FBH);
+        printf("  the cabin at 135 degrees east -> shots/tests/tail_cabin.png, at 1x -> shots/tests/tail_1x.png\n");
+    }
+    return 0;
+}
+
 static int runLoad(int argc, char** argv) {
     const std::string what = argc > 2 ? argv[2] : "landing";
     const double secs = argc > 3 ? atof(argv[3]) : 60.0;
@@ -19133,6 +19847,76 @@ static void testSeasons() {
             }
         }
     printf("seasons: no tilted felisian world found\n");
+}
+
+// R-419: `auto [profile] [minutes] [seed] [cockpit]` (`scale=N` for the frames): a fresh expedition from home played by auto-explore for that many
+// minutes of frames (30 a second, drawn as fast as they come: the threads' work arrives when it is done, as on a slow machine), its steps
+// as they change, a frame every 20 s into shots/tests/auto_<profile>_NNN.png; at the end what it did and how the eye moved: the cuts (a
+// scene's change, the roof deck, the telescope, a vehicle, an arrival: a turn over 12 degrees in a frame), the fastest turn outside them
+// and the share of the frames turning faster than 60 degrees a second
+static int runAuto(int argc, char** argv) {
+    int profile = AP_WANDERER;
+    if (argc > 2) { std::string a = upper(argv[2]); for (int i = 0; i < AP_COUNT; i++) if (a == AUTO_PROFILE_NAMES[i] || a == std::to_string(i)) profile = i; }
+    const double minutes = argc > 3 ? atof(argv[3]) : 10.0;
+    const uint64_t seed = argc > 4 ? strtoull(argv[4], nullptr, 10) : 1;
+    std::string lc = AUTO_PROFILE_NAMES[profile]; for (char& c : lc) c = (char)tolower((unsigned char)c);
+    Game game;   // each profile its own files (two may run side by side)
+    game.savePrefix = "shots/tests/auto_save_" + lc; game.settingsPath = "shots/tests/auto_settings_" + lc + ".txt"; game.guidePath = "shots/tests/auto_guide_" + lc + ".txt"; game.keysPath = "shots/tests/test_keys.txt";
+    remove(game.guidePath.c_str()); remove((game.savePrefix + "_auto.txt").c_str());
+    applyTestScale(game);   // `scale=N` (the game's own setting would draw at 4x)
+    if (argc > 5 && std::string(argv[5]) == "cockpit") { game.settings.cabin = false; game.applySettings(); lc += "_cockpit"; }   // the classic cockpit's view: the look is the ship's nose
+    game.setState(GameState::SPACE);
+    game.autoStart(profile, seed);
+    static const char* STATES[] = {"TITLE", "SPACE", "LANDING_MAP", "DESCENT", "SURFACE", "ASCENT", "HELP", "MENU", "SYSTEM_LIST", "DATA", "SETTINGS", "SLOTS", "GUIDE", "TEXT_ENTRY", "STAR_MAP",
+                                   "LOG", "STATS", "GALLERY", "SHIPSCREEN", "CONSOLE", "SECTOR_MAP", "KEYS", "SHARDS", "ALMANAC", "PROBE", "RECORDING", "INSTRUMENTS", "DRONES", "AUTO"};
+    printf("auto: %s for %.1f minutes of frames (seed %llu) at %dx\n", AUTO_PROFILE_NAMES[profile], minutes, (unsigned long long)seed, FB_SCALE);
+    Input in;
+    const double tick = 1.0 / 30;
+    const long frames = (long)(minutes * 60 * 30);
+    std::string lastDoing, lastTown; int lastRecords = 0; int lastState = -1, shotN = 0, cuts = 0; long fast = 0, counted = 0; double maxTurn = 0, maxTurnAt = 0; Vec3 prev; bool havePrev = false;
+    struct Turn { double rate, at; int state, mode; std::string doing; };
+    std::vector<Turn> turns;   // the fastest, each a second apart
+    const double t0 = nowSec();
+    for (long f = 0; f < frames && game.autoOn(); f++) {
+        game.frame(in, tick); in.newFrame();
+        const double clock = f * tick;
+        const int st = (int)game.state;
+        const Vec3 v = game.testViewDir();
+        if (havePrev) {
+            const double a = std::acos(clampd(dot(v, prev), -1, 1)) / DEG;
+            if (st != lastState || a > 12) cuts++;   // no hand turns 360 degrees a second: the game's own snaps (a vehicle's seat, the eyepiece)
+            else {
+                counted++; if (a * 30 > 60) fast++; if (a * 30 > maxTurn) { maxTurn = a * 30; maxTurnAt = clock; }
+                if (a * 30 > 45 && std::getenv("VESPERIS_AUTOTRACE")) printf("    trace %.2f s: %.0f deg/s, %s\n", clock, a * 30, game.testAngles().c_str());
+                if (a * 30 > 45) {
+                    bool merged = false;
+                    for (Turn& T : turns) if (std::fabs(T.at - clock) < 1) { if (a * 30 > T.rate) T = {a * 30, clock, st, game.testShipMode(), game.testAutoDoing()}; merged = true; }
+                    if (!merged) turns.push_back({a * 30, clock, st, game.testShipMode(), game.testAutoDoing()});
+                }
+            }
+        }
+        prev = v; havePrev = true;
+        const std::string doing = game.testAutoDoing();
+        if (game.testAutoCount(4) != lastRecords) { printf("  %3d:%02d  a record taken (%d)\n", (int)clock / 60, (int)clock % 60, game.testAutoCount(4)); lastRecords = game.testAutoCount(4); }
+        if (game.testAutoTown() != lastTown) { printf("  %3d:%02d  %s\n", (int)clock / 60, (int)clock % 60, game.testAutoTown().c_str()); lastTown = game.testAutoTown(); }
+        if (doing != lastDoing || st != lastState) {
+            printf("  %3d:%02d  %-11s %s\n", (int)clock / 60, (int)clock % 60, STATES[std::min(st, 28)], doing.c_str());
+            fflush(stdout);
+            lastDoing = doing;
+        }
+        lastState = st;
+        if (f % (30 * 20) == 0) { writePNG(fmt("shots/tests/auto_%s_%03d.png", lc.c_str(), shotN++).c_str(), game.output(), FBW, FBH); }
+        static const char* stepShots = std::getenv("VESPERIS_AUTOSHOT");   // a step's frames twice a second (`the fine approach`), forty at most
+        static int stepShotN = 0;
+        if (stepShots && doing == stepShots && f % 15 == 0 && stepShotN < 40) writePNG(fmt("shots/tests/auto_%s_step_%02d.png", lc.c_str(), stepShotN++).c_str(), game.output(), FBW, FBH);
+    }
+    pngFlush();
+    printf("auto: %s; %.0f s of frames in %.0f s\n", game.testAutoInfo().c_str(), frames * tick, nowSec() - t0);
+    printf("auto: the eye: %d cuts; outside them the fastest turn %.0f deg/s (at %d:%02d), %.2f%% of %ld frames over 60 deg/s; %d frames written\n", cuts, maxTurn, (int)maxTurnAt / 60, (int)maxTurnAt % 60,
+           counted ? 100.0 * fast / counted : 0.0, counted, shotN);
+    std::sort(turns.begin(), turns.end(), [](const Turn& a, const Turn& b) { return a.rate > b.rate; });
+    for (size_t i = 0; i < turns.size() && i < 8; i++) printf("  a turn of %.0f deg/s at %d:%02d (%s, ship mode %d): %s\n", turns[i].rate, (int)turns[i].at / 60, (int)turns[i].at % 60, STATES[std::min(turns[i].state, 28)], turns[i].mode, turns[i].doing.c_str());
+    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -19630,6 +20414,9 @@ int main(int argc, char** argv) {
     if (mode == "pool") return runPool();                     // F-06
     if (mode == "load") return runLoad(argc, argv);           // F-01
     if (mode == "soak") return runSoak(argc, argv);           // F-01
+    if (mode == "auto") return runAuto(argc, argv);           // R-419
+    if (mode == "tail") return runTail(argc, argv);           // B-427
+    if (mode == "parkings") return runParkings();               // B-428
     if (mode == "flow") { runGameFlow(); return 0; }
     if (mode == "landmaps") { renderLandingMaps(); return 0; }
     if (mode == "consistency") { runConsistency(); return 0; }

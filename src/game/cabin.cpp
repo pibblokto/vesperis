@@ -67,6 +67,8 @@ void Game::updateCabin(const Input& in, double realDt) {
     c.yaw = wrap2pi(c.yaw);
     double fwd = (in.isDown(KEY_W) ? 1 : 0) - (in.isDown(KEY_S) ? 1 : 0);
     double str = (in.isDown(KEY_D) ? 1 : 0) - (in.isDown(KEY_A) ? 1 : 0);
+    if (in.moveY != 0) fwd = in.moveY;   // R-418: a controller's stick (it walked nothing in the cabin)
+    if (in.moveX != 0) str = in.moveX;
     if (in.ctrl()) { fwd = 0; str = 0; }
     double sy = std::sin(c.yaw), cy = std::cos(c.yaw);
     double vx = (sy * fwd + cy * str) * 1.6, vz = (cy * fwd - sy * str) * 1.6;
@@ -553,7 +555,8 @@ void Game::renderConsole() {
     blendRectRGB(canvas, 6, 6, UW - 6, UH - 6, rgb(0, 10, 4), 235);
     drawRectRGB(canvas, 6, 6, UW - 6, UH - 6, HUD_DIM);
     drawText(canvas, 12, 10, "GOES CONSOLE", HUD_AMBER);
-    int rows = 17;
+    const bool kb = padKeyboardShown();   // R-418: the controller's keyboard takes the lower half; the last lines and the prompt over it
+    int rows = kb ? 8 : 17;
     int n = (int)consoleLines.size();
     for (int i = 0; i < rows; i++) {
         int idx = n - rows + i;
@@ -561,7 +564,7 @@ void Game::renderConsole() {
         drawText(canvas, 12, 20 + i * 9, trunc(consoleLines[idx], 50).c_str(), consoleLines[idx][0] == '>' ? HUD_WHITE : HUD_GREEN);
     }
     std::string prompt = "> " + consoleInput + (std::fmod(realTime, 0.8) < 0.4 ? "_" : " ");
-    drawText(canvas, 12, UH - 18, prompt.c_str(), HUD_WHITE);
+    drawText(canvas, 12, kb ? 20 + rows * 9 + 2 : UH - 18, prompt.c_str(), HUD_WHITE);
 }
 
 void Game::deployCapsule() {

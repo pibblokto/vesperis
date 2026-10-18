@@ -50,6 +50,11 @@ void Game::updateLandingMap(const Input& in, double dt) {
     if (in.wasPressed(KEY_RIGHT) || (in.isDown(KEY_RIGHT) && in.shift())) landLon += step;
     if (in.wasPressed(KEY_UP) || (in.isDown(KEY_UP) && in.shift())) landLat += step;
     if (in.wasPressed(KEY_DOWN) || (in.isDown(KEY_DOWN) && in.shift())) landLat -= step;
+    if (in.mouseDx != 0 || in.mouseDy != 0) {   // R-418: the mouse's motion moves the cursor smoothly: a controller's right stick (the mouse is not held here, so it is the stick's)
+        const double k = (landZoom ? 0.0013 : 0.15) * settings.mouseSensitivity * DEG;   // degrees a mouse pixel: about 60 a second at the stick's full throw, half a degree zoomed in
+        landLon += in.mouseDx * k / (landZoom ? std::max(0.15, std::cos(landLat)) : 1.0);   // the zoom's window is wider in longitude by the latitude
+        landLat -= in.mouseDy * k;
+    }
     landLat = clampd(landLat, -88 * DEG, 88 * DEG);
     landLon = wrapAngle(landLon);
     // O6-03: the drainage tiles of the sector under the cursor are computed on their own thread while the site is chosen,
@@ -592,6 +597,7 @@ void Game::renderLandingMap() {
     }
     const SurfaceSite& probe = probeSite;
     SunInfo si = probe.sun(t);
+    if (sys.ofCompanion(landBody)) probe.sun2(t, si);   // B-425: a world of the companion has its day by the companion
     // O6-03: the probe reads the drainage only once the site's tiles are built (the cursor's prefetch); a probe that
     // built them froze the map for half a second at every move of the cursor
     DrainageOff probeDry(!drainageReady(probe.gen, probe.up0, 1500.0));
