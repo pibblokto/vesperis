@@ -71,6 +71,7 @@ int main(int argc, char** argv) {
 #endif
     game.loadFromDisk();
     if (!platformInit(320 * game.settings.windowScale, 200 * game.settings.windowScale, "VESPERIS")) { fprintf(stderr, "could not open a window\n"); return 1; }
+    game.tapeGameDirs(platformAppDir());   // R-420: where the game's own tape lies
     AudioSynth synth;
     Input in;
     PlatformFrameInput pin;

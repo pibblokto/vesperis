@@ -232,10 +232,12 @@ or stick gives the controls back (`autoTakeover`): that press is not acted on, t
 autosaves); it names nothing, marks nothing and saves into no slot. `docs/iteration-3/plans/requests/R-419-auto-explore.md`.
 
 R-420 (2026-10-19): auto-explore's tape. `M` while auto-explore plays (a controller's `SELECT`, whose own key would end it) starts and
-stops the explorer's own music from the `music` folder beside the game (the working directory: the checkout's for `./vesperis`,
-`~/Documents/vesperis` for the macOS app; `Game::musicDir`): its `playlist.txt` (a track a line, `file | author | title | gain in dB`,
-`#` for a comment; a file listed but missing is left out) or else its MP3, OGG, WAV and QOA files in the order of their names
-(`Author - Title.mp3` read as such). The tracks play round and round through a cassette deck's sounds (`game/audio_deck.cpp`): before
+stops a tape: the `music` folder in the working directory when it holds a track (the checkout's for `./vesperis`, `~/Documents/vesperis`
+for the macOS app; `Game::musicDir`), else the game's own beside the executable (`Game::musicDirsGame` from `platformAppDir`: `music`
+beside the binary, the app's `Contents/Resources/music`, a `Vesperis.app` beside a bare binary), four tracks: Jarrad Wright's *Forwards*,
+*It's time to wake up* and *BLUE-MEAN-EYES*, Black Sabbath's *Planet Caravan*. A folder's tape is its `playlist.txt`'s tracks (a line
+each, `file | author | title | gain in dB`, `#` for a comment; a file listed but missing is left out), then its other MP3, OGG, WAV and
+QOA files in the order of their names (`Author - Title.mp3` read as such). The tracks play round and round through a cassette deck's sounds (`game/audio_deck.cpp`): before
 the first a cassette put in (the eject key, the door on its spring, the cassette slid in, the door shut on its latch) and the play key
 (its ka-chunk, the motor coming up, the tape's hiss), the music about 2 s after `M`; at a track's end the auto-stop, the cassette out
 and the next in, about 3.4 s between two tracks; the play key alone (0.55 s) when a cassette was left in; the stop key for `M` again, the music
@@ -244,7 +246,7 @@ over 1.5. Under the tape the game's own sounds keep 0.35 of their level (about 9
 and the first seconds' line say `M STARTS AND STOPS THE MUSIC` (`SELECT ...` with a controller) when there is music to play; with none,
 `M` says so where a title would be. When auto-explore ends the music fades over 1.5 s; the choice (`auto_music`) and the place in the
 tape (`auto_track`, `auto_track_at`) are kept in the settings, and the tape is taken up again, with the play key, as auto-explore next
-begins. No music ships with the game. `docs/iteration-3/plans/requests/R-420-auto-explores-tape.md`.
+begins. `docs/iteration-3/plans/requests/R-420-auto-explores-tape.md`.
 
 ## Title, attract mode and credits (M6-06)
 

@@ -11612,6 +11612,30 @@ static int testUnit() {
         const bool mixOk = std::fabs(ducked / plain - 0.35) < 0.005 && diff < 1e-5 && hushed == 0;
         check("auto-explore's tape: the cassette deck (R-420)", ok && mixOk, det + fmt("; the hum ducked to %.3f of itself, the deck through the synth within %.1e, hushed %.4f", ducked / plain, diff, hushed));
     }
+    {   // R-420: where the tape is read: the explorer's `music` folder when it holds a track, else the game's own beside the executable (in a
+        // macOS app's Resources from its executable, the app's from a bare binary beside it); a folder's playlist first, then the sound
+        // files it does not list, by name
+        const std::string own = tapeTestDir(), app = "shots/tests/unit_tape_app", res = app + "/Vesperis.app/Contents/Resources/music";
+        for (const std::string& d : {app, app + "/empty", app + "/Vesperis.app", app + "/Vesperis.app/Contents", app + "/Vesperis.app/Contents/MacOS", app + "/Vesperis.app/Contents/Resources", res}) makeDir(d);
+        for (const char* f : {"a.mp3", "Someone - Extra.mp3", "notes.txt"}) if (FILE* fp = fopen((res + "/" + f).c_str(), "wb")) { fputs("not sound: the harness lists it\n", fp); fclose(fp); }
+        if (FILE* fp = fopen((res + "/playlist.txt").c_str(), "w")) { fputs("a.mp3 | Jarrad Wright | Forwards | -1.1\n", fp); fclose(fp); }
+        Game game;
+        game.settingsPath = "shots/tests/unit_tape_settings.txt"; game.guidePath = "shots/tests/unit_tape_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        game.musicDir = app + "/empty";
+        game.tapeGameDirs(app + "/Vesperis.app/Contents/MacOS/");   // the app's own executable
+        const size_t inApp = game.testTapeTracks(); const std::string appDir = game.testTapeDir(), a0 = game.testTapeTrack(0), a1 = game.testTapeTrack(1);
+        game.tapeGameDirs(app + "/");                              // a bare binary beside the app
+        const size_t beside = game.testTapeTracks(); const std::string besideDir = game.testTapeDir();
+        game.musicDir = own;                                       // the explorer's folder holds tracks: its tape plays
+        const size_t mine = game.testTapeTracks(); const std::string mineDir = game.testTapeDir();
+        game.musicDir = app + "/empty"; game.tapeGameDirs("");
+        const size_t none = game.testTapeTracks();
+        const bool ok = inApp == 2 && appDir == app + "/Vesperis.app/Contents/MacOS/../Resources/music" && a0 == "a.mp3 | Jarrad Wright | Forwards | -1.1 dB" &&
+                        a1 == "Someone - Extra.mp3 | Someone | Extra | +0.0 dB" && beside == 2 && besideDir == res && mine == 2 && mineDir == own && none == 0;
+        check("auto-explore's tape: the explorer's folder, else the game's own (R-420)", ok,
+              fmt("the app's executable: %zu tracks from %s (%s; %s); a bare binary beside it: %zu from %s; the explorer's folder with tracks: %zu from %s; none anywhere: %zu",
+                  inApp, appDir.c_str(), a0.c_str(), a1.c_str(), beside, besideDir.c_str(), mine, mineDir.c_str(), none));
+    }
     printf("unit: %d checks, %d failures\n", checks, fails);
     return fails;
 }

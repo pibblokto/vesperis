@@ -180,7 +180,10 @@ public:
     int testAutoSel() const { return autoSel; }
     // R-420: auto-explore's tape (game/tape.cpp)
     static inline std::string musicDirDefault = "music";   // the harness points it away from a player's folder
-    std::string musicDir = musicDirDefault;                // the explorer's music: its playlist.txt, else its sound files
+    std::string musicDir = musicDirDefault;                // the explorer's music: its playlist.txt's tracks, then its other sound files
+    std::vector<std::string> musicDirsGame;                // the game's own tape, where it may lie: played when the explorer's folder has none
+    void tapeGameDirs(const std::string& appDir);          // beside the executable, in a macOS app's Resources, in a Vesperis.app beside a bare binary
+    std::string testTapeDir() const { return tape.dir; }   // the folder the tape was read from
     bool tapeOn() const { return tape.phase != 0; }
     std::string testTapeInfo() const;                      // the phase, the track, the music's level, the duck, the caption
     double tapeCaption(std::string& author, std::string& title) const;       // the caption's alpha now (0 none) and its words
@@ -1362,7 +1365,7 @@ private:
     // as it begins, fading; the game's own sounds ducked under it. The choice and the place in the tape are kept in the settings
     struct TapeTrack { std::string file, author, title; double gainDb = 0; };
     struct TapeState {
-        std::vector<TapeTrack> tracks;
+        std::vector<TapeTrack> tracks; std::string dir;   // and the folder they were read from
         int phase = 0;                    // TAPE_OFF, TAPE_DECK (the deck's sequence before the tape moves), TAPE_PLAY, TAPE_FADE (going quiet)
         double t = 0, tapeAt = 0;         // seconds in the phase; when the deck's sequence moves (or stops) the tape
         int track = 0; double from = 0;   // the track in the deck, the second it begins at
@@ -1371,7 +1374,8 @@ private:
         int failed = 0; uint32_t deckSeed = 0;   // tracks in a row that would not play; the deck's sequences begun
     };
     TapeState tape;
-    void tapeList();                  // the tracks, read again from `musicDir`
+    void tapeList();                  // the tracks, read again: the explorer's folder, else the game's own
+    static void tapeRead(const std::string& dir, std::vector<TapeTrack>& out);   // a folder's tape: its playlist's tracks, then its other sound files
     void tapeToggle();                // M: on (a cassette put in, or the one in played on) or off (the stop key)
     void tapeStart(bool asked);       // `asked`: by M (an empty folder is said), else auto-explore taking it up again
     void tapeHalt(bool stopKey);      // the stop key (the choice off), or auto-explore's end (the music fading, the choice kept)

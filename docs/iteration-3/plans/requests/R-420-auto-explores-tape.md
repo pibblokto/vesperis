@@ -29,11 +29,12 @@ under an hour, premiered on 21 August 2015; *Sassy the Sasquatch* is its spin-of
 
 ## What was done
 
-* **M while auto-explore plays** (`game/tape.cpp`; a controller's `SELECT`, whose own key would end it) starts and stops a tape of the
-  explorer's own music. The rest of auto-explore's rule holds: any other key, click, motion or button gives the controls back.
-* **The tape** is the `music` folder beside the game (the working directory: the checkout's for `./vesperis`, `~/Documents/vesperis`
-  for the macOS app). Its `playlist.txt` gives the order and the credits: a track a line, `file | author | title | gain in dB`, `#` for a
-  comment, a missing file left out. Without one, the folder's MP3, OGG, WAV and QOA files play in the order of their names, an
+* **M while auto-explore plays** (`game/tape.cpp`; a controller's `SELECT`, whose own key would end it) starts and stops a tape. The
+  rest of auto-explore's rule holds: any other key, click, motion or button gives the controls back.
+* **The tape** is the game's own, the four tracks in its `music` folder beside the executable (inside the app on macOS), unless a
+  `music` folder in the working directory holds a track (the checkout's for `./vesperis`, `~/Documents/vesperis` for the macOS app).
+  A folder's `playlist.txt` gives the order and the credits: a track a line, `file | author | title | gain in dB`, `#` for a comment, a
+  missing file left out. The folder's other MP3, OGG, WAV and QOA files play after the playlist's, in the order of their names, an
   `Author - Title.mp3` name read as such. The tracks play round and round.
 * **The deck** (`game/audio_deck.cpp`), synthesized, an 80s-90s front-loader:
   * before the first track a cassette is put in (the eject key, the door let go on its spring, the cassette slid in with its reels
@@ -56,14 +57,14 @@ under an hour, premiered on 21 August 2015; *Sassy the Sasquatch* is its spin-of
   mono stream at 22,050 Hz. A thread of its own feeds it every 5 ms and ends each track 30 ms short of its end. raylib, told not to loop,
   stops a track as it reads its last block, with that block and the one playing still unheard; and the game's frames can stall past
   the stream's buffers. The game asks and hears back through `AudioState`.
-* **The user's four**, copied into `music/` (gitignored) under tidy names with a `playlist.txt` in the order downloaded, evened to
+* **The four ship with the game**: `music/` in the repository under tidy names, its `playlist.txt` in the order downloaded, evened to
   -16 LUFS (EBU R128 by ffmpeg: *Forwards* -14.9 LUFS, gain -1.1 dB; *It's time to wake up* -26.5, +10.5; *BLUE-MEAN-EYES* -21.4, +5.4;
-  *Planet Caravan* -15.7, -0.3). They are copyrighted, so they are neither committed nor shipped: the game plays a player's own folder
-  and carries none.
+  *Planet Caravan* -15.7, -0.3). `packaging/tape.sh` packs the folder's tracked files beside the binary in each zip and into the macOS
+  app's `Contents/Resources/music` (`make_app.sh`); the game finds it from its executable's folder (`platformAppDir`, `tapeGameDirs`).
 
 ## Verification (2026-10-19)
 
-* `vesperis_test unit`, two new checks:
+* `vesperis_test unit`, three new checks:
   * the tape played through with the platform's side stood in (`TapePump`). `M` puts a cassette in, and the track starts 2.10 s later
     (the deck's 2.12), at its playlist gain. The caption is 0.08 a frame in, whole at a second, gone at 7.5 s. The rest ducks to 0.35.
     At the end the next cassette goes in, 3.30 s to the next track (3.30), with its own credit and gain, and then round to the first.
@@ -74,6 +75,9 @@ under an hour, premiered on 21 August 2015; *Sassy the Sasquatch* is its spin-of
     Stop: 0.03 s of 0.73. Peaks 0.47 to 0.63. The play key's knock comes before the tape moves and the hiss after it. Each is alike for
     a seed and not for two. Through the synth the deck comes out as rendered (within 1.2e-8), the hum under it at 0.350 of itself
     block for block, and -1 hushes it.
+  * where the tape is read: from a macOS app's executable, the app's `Contents/Resources/music` (its playlist's track, then a file it
+    does not list, `Someone - Extra.mp3` read as Someone / Extra); from a bare binary beside the app, the same folder; the explorer's
+    folder instead when it holds tracks; none when neither does.
 * `vesperis_test tape` (new, `08-testing-and-tools.md`) reads the user's `music/` (the four, credits and gains as above), writes the
   deck's sequences to `shots/tests/tape_deck_*.wav`, and draws the caption: `tape_01`-`04` fading in, whole, fading out, gone; `tape_05`
   the next track's; `tape_00` the chooser's line; `tape_06` the empty folder's words.

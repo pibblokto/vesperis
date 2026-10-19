@@ -86,6 +86,7 @@ if(VESPERIS_BUILD_GAME)
     endif()
     install(TARGETS vesperis RUNTIME DESTINATION .)
     install(FILES README.md DESTINATION .)
+    install(DIRECTORY music DESTINATION .)   # R-420: the game's own tape beside it
     install(DIRECTORY docs DESTINATION .)
   else()
     message(WARNING "raylib not found: building only vesperis_test (install raylib, pass -DVESPERIS_FETCH_RAYLIB=ON, or -DVESPERIS_BUILD_GAME=OFF)")

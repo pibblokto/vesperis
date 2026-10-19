@@ -10,5 +10,6 @@ cp vesperis "$OUT/"
 cp README.md "$OUT/"
 cp -R docs "$OUT/docs"
 [ -f vesperis_keys.example.txt ] && cp vesperis_keys.example.txt "$OUT/"
+sh packaging/tape.sh "$OUT/music"   # R-420: the game's own tape
 (cd dist && rm -f "vesperis-$OS.zip" && zip -qr "vesperis-$OS.zip" "vesperis-$OS")
 echo "built dist/vesperis-$OS.zip"

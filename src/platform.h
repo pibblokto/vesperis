@@ -41,6 +41,7 @@ void platformPresent(const uint32_t* rgb, int w, int h, bool scanlines, double c
 void platformToggleFullscreen();
 void platformSetWindowSize(int w, int h);
 void platformAudioPump(AudioSynth& synth, AudioState& st);
+const char* platformAppDir();   // R-420: the executable's own folder, its separator last (the game's own tape lies by it)
 void platformShutdown();
 // F-01 (VESPERIS_TRACE): the last present's parts in ms (the texture's upload; the drawing up to the swap, which records the
 // commands; F-08's hold, the swap held to its refresh; EndDrawing: the commands' flush, the buffer swap with its vsync wait and the

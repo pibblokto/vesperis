@@ -228,6 +228,7 @@ bool platformInit(int w, int h, const char* title) {
 }
 
 bool platformShouldClose() { return WindowShouldClose(); }
+const char* platformAppDir() { return GetApplicationDirectory(); }
 double platformTime() { return GetTime(); }
 bool platformFocused() { return IsWindowFocused(); }
 
