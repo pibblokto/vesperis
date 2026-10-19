@@ -69,7 +69,8 @@ longer than a stream's buffers last (a landing's first ground, a star's system),
 its last block, that block and the one playing still unheard (up to 0.37 s with the 8,192-frame halves used); so the stream loops in
 raylib and the thread stops it 30 ms short of its end. The pump passes the requests and the reports under a mutex; the browser has no
 thread there, and its pump does the thread's work. The cassette deck's sounds are the synth's (`deckRender`, a sequence rendered whole
-as it begins), mixed over the rest after the duck (`AudioState::duck`).
+as it begins), mixed over the rest after the duck (`AudioState::duck`). The game's own tape lies beside its executable, whose folder the
+platform gives (`platformAppDir`, raylib's `GetApplicationDirectory`; `Game::tapeGameDirs` makes the places from it).
 
 ## Time
 

@@ -3,13 +3,14 @@
 // sound between tracks. Investigate authorship properly so that when track starts author and name of the track are displayed for a few
 // seconds on top left and then fade away. Also when music plays all other sounds are quiter".
 //
-// M while auto-explore plays (the controller's SELECT, whose own key would end it) starts and stops a tape of the explorer's own music from
-// `musicDir`: its playlist.txt (a track a line: the file | the author | the title | a gain in dB evening the tracks' loudness), else its
-// sound files in the order of their names, an "Author - Title" name read as such. The tracks play round and round through a cassette
-// deck (game/audio_deck.cpp): a cassette put in and played, at a tape's end the next cassette, the play key taking up the one left in
-// where it was; each track's author and title at the top left as it begins, fading after a few seconds; the game's own sounds ducked
-// under it. The platform streams the files (platform_raylib.cpp). When auto-explore ends the music fades with it, the choice and the place
-// in the tape kept: the tape is taken up again as auto-explore next begins. The music is the explorer's own; none ships with the game.
+// M while auto-explore plays (the controller's SELECT, whose own key would end it) starts and stops a tape: the explorer's `music` folder
+// when it holds a track (`musicDir`), else the game's own beside the executable (`musicDirsGame`: four tracks, inside the app on macOS).
+// A folder's tape is its playlist.txt's tracks (a line each: the file | the author | the title | a gain in dB evening their loudness),
+// then its other sound files in the order of their names, an "Author - Title" name read as such. The tracks play round and round through
+// a cassette deck (game/audio_deck.cpp): a cassette put in and played, at a tape's end the next cassette, the play key taking up the one
+// left in where it was; each track's author and title at the top left as it begins, fading after a few seconds; the game's own sounds
+// ducked under it. The platform streams the files (platform_raylib.cpp). When auto-explore ends the music fades with it, the choice and
+// the place in the tape kept: the tape is taken up again as auto-explore next begins.
 #include "game.h"
 #include "ui.h"
 #include <algorithm>
@@ -39,10 +40,10 @@ bool fileThere(const std::string& path) { FILE* f = fopen(path.c_str(), "rb"); i
 std::string stemOf(const std::string& name) { const size_t d = name.rfind('.'); return d == std::string::npos ? name : name.substr(0, d); }
 }
 
-void Game::tapeList() {
-    tape.tracks.clear();
-    if (musicDir.empty()) return;
-    if (FILE* f = fopen((musicDir + "/playlist.txt").c_str(), "r")) {   // the explorer's order and credits
+// a folder's tape: its playlist's tracks that are there, then the sound files it does not list, by name
+void Game::tapeRead(const std::string& dir, std::vector<TapeTrack>& out) {
+    std::vector<std::string> listed;
+    if (FILE* f = fopen((dir + "/playlist.txt").c_str(), "r")) {
         char line[1024];
         while (fgets(line, sizeof line, f)) {
             const std::string s = tapeTrim(line);
@@ -57,18 +58,21 @@ void Game::tapeList() {
             TapeTrack k;
             k.file = part[0];
             if (k.file.empty()) continue;
+            listed.push_back(k.file);
             k.author = part.size() > 1 ? part[1] : "";
             k.title = part.size() > 2 && !part[2].empty() ? part[2] : stemOf(k.file);
             k.gainDb = part.size() > 3 ? clampd(atof(part[3].c_str()), -30, 20) : 0;
-            if (!fileThere(musicDir + "/" + k.file)) { fprintf(stderr, "tape: %s/%s is not there\n", musicDir.c_str(), k.file.c_str()); continue; }
-            tape.tracks.push_back(k);
+            if (!fileThere(dir + "/" + k.file)) { fprintf(stderr, "tape: %s/%s is not there\n", dir.c_str(), k.file.c_str()); continue; }
+            out.push_back(k);
         }
         fclose(f);
-        return;
     }
-    std::vector<std::string> names;   // no playlist: the folder's sound files by name
-    if (DIR* d = opendir(musicDir.c_str())) {
-        while (dirent* e = readdir(d)) { const std::string n = e->d_name; if (!n.empty() && n[0] != '.' && soundFile(n)) names.push_back(n); }
+    std::vector<std::string> names;
+    if (DIR* d = opendir(dir.c_str())) {
+        while (dirent* e = readdir(d)) {
+            const std::string n = e->d_name;
+            if (!n.empty() && n[0] != '.' && soundFile(n) && std::find(listed.begin(), listed.end(), n) == listed.end()) names.push_back(n);
+        }
         closedir(d);
     }
     std::sort(names.begin(), names.end());
@@ -78,8 +82,26 @@ void Game::tapeList() {
         const size_t dash = stem.find(" - ");
         if (dash != std::string::npos) { k.author = tapeTrim(stem.substr(0, dash)); k.title = tapeTrim(stem.substr(dash + 3)); }
         else k.title = stem;
-        tape.tracks.push_back(k);
+        out.push_back(k);
     }
+}
+
+void Game::tapeList() {
+    tape.tracks.clear(); tape.dir.clear();
+    std::vector<std::string> dirs{musicDir};
+    dirs.insert(dirs.end(), musicDirsGame.begin(), musicDirsGame.end());
+    for (const std::string& d : dirs) {
+        if (d.empty()) continue;
+        tapeRead(d, tape.tracks);
+        if (!tape.tracks.empty()) { tape.dir = d; return; }
+    }
+}
+
+void Game::tapeGameDirs(const std::string& appDir) {
+    musicDirsGame.clear();
+    if (appDir.empty()) return;
+    const std::string a = appDir.back() == '/' || appDir.back() == '\\' ? appDir : appDir + "/";
+    musicDirsGame = {a + "music", a + "../Resources/music", a + "Vesperis.app/Contents/Resources/music"};
 }
 
 void Game::tapeDeck(int kind) {
@@ -154,7 +176,7 @@ void Game::tapeUpdate(double realDt) {
         case TAPE_DECK:
             if (T.t >= T.tapeAt) {   // the tape moves: the track begins, its credit shown
                 const TapeTrack& k = T.tracks[T.track];
-                audio.music = musicDir + "/" + k.file; audio.musicFrom = T.from; audio.musicGo = true;
+                audio.music = T.dir + "/" + k.file; audio.musicFrom = T.from; audio.musicGo = true;
                 audio.musicEnded = audio.musicFailed = false; audio.musicT = -1;
                 T.phase = TAPE_PLAY; T.t = 0; T.gain = 1;
                 T.capAuthor = k.author; T.capTitle = k.title; T.captionT = 0;
@@ -164,7 +186,7 @@ void Game::tapeUpdate(double realDt) {
             T.gain = std::min(1.0, T.gain + realDt);   // back up after a fade (auto-explore begun again)
             if (audio.musicFailed) {
                 audio.musicFailed = false;
-                fprintf(stderr, "tape: %s/%s would not play\n", musicDir.c_str(), T.tracks[T.track].file.c_str());
+                fprintf(stderr, "tape: %s/%s would not play\n", T.dir.c_str(), T.tracks[T.track].file.c_str());
                 if (++T.failed >= n) {
                     T.phase = TAPE_OFF; audio.duck = 1; settings.autoMusic = false; settings.save(settingsPath);
                     T.capAuthor = "THE TAPE WOULD NOT PLAY"; T.capTitle = "NONE OF ITS FILES COULD BE READ"; T.captionT = 0; audio.beep = 3;

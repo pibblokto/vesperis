@@ -70,8 +70,8 @@ whole plate. Saves load as they were.
 row) hands the game to an explorer of one of six tastes, from the stars and the
 long jumps to the ruins and records of the dead peoples, which flies, lands,
 walks, drives and reads at a hand's unhurried pace with nothing written on the
-screen; while it plays, `M` starts and stops a tape of your own music, a cassette
-deck clunking between the tracks. A controller now reaches every action, and any
+screen; while it plays, `M` starts and stops a tape, four tracks that come with
+the game or your own music, a cassette deck clunking between the tracks. A controller now reaches every action, and any
 controller can be set up button by button. A rocky world's moons stand farther
 out, so a system has distance seen from the ship; a red dwarf's companion giant
 no longer fills its worlds' skies, a Wolf-Rayet star's giants trail streaks of
@@ -204,11 +204,13 @@ On the surface:
 Auto-explore: the menu's `AUTO-EXPLORE` hands the game to an explorer that plays
 by itself in one of six profiles (WANDERER, STARGAZER, PLANETFALL, SURVEYOR,
 ARCHAEOLOGIST, GIANTS), with no HUD; any key or button gives the controls back.
-While it plays, `M` (a controller's `SELECT`) starts and stops a tape of your own
-music: put MP3, OGG or WAV files in a `music` folder next to the game (the macOS
-app: `~/Documents/vesperis/music`). A `playlist.txt` there sets their order and
-the credit shown as each begins, a track a line: `file | author | title | gain in
-dB`. No music comes with the game.
+While it plays, `M` (a controller's `SELECT`) starts and stops a tape: the game
+comes with four tracks, Jarrad Wright's *Forwards*, *It's time to wake up* and
+*BLUE-MEAN-EYES* and Black Sabbath's *Planet Caravan*, in its `music` folder.
+Your own MP3, OGG or WAV files go in that folder too (for the macOS app, in
+`~/Documents/vesperis/music`, which then plays instead of the game's tape). Its
+`playlist.txt` sets the order and the credit shown as each track begins, a track
+a line: `file | author | title | gain in dB`; files it does not list play after.
 
 The expedition is saved to `vesperis_save.txt` in the working directory when
 you quit, and can be continued from the title screen. Names, notes and the log

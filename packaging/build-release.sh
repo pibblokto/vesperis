@@ -26,7 +26,8 @@ pack() {   # pack <os> <arch> <binary>
     D="$OUT/zip/vesperis-$V-$1-$2"; rm -rf "$D"; mkdir -p "$D"
     cp README.md LICENSE vesperis_keys.example.txt "$D/"
     cp "$3" "$D/"; chmod +x "$D/$(basename "$3")"
-    if [ "$1" = macos ]; then sh packaging/make_app.sh "$3" > /dev/null && cp -R dist/Vesperis.app "$D/"; fi
+    # R-420: the game's own tape beside the binary (inside the app on macOS, where make_app.sh puts it and the bare binary finds it)
+    if [ "$1" = macos ]; then sh packaging/make_app.sh "$3" > /dev/null && cp -R dist/Vesperis.app "$D/"; else sh packaging/tape.sh "$D/music"; fi
     (cd "$OUT/zip" && rm -f "vesperis-$V-$1-$2.zip" && zip -q -r -X "vesperis-$V-$1-$2.zip" "vesperis-$V-$1-$2")
 }
 pack macos arm64 "$OUT/mac-arm64/vesperis"

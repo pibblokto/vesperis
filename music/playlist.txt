@@ -1,0 +1,13 @@
+# Auto-explore's tape (R-420): M while auto-explore plays starts and stops it (a controller's SELECT too); the tracks
+# play in this order, round and round. A track a line: file | author | title | gain in dB (evens the tracks' loudness:
+# each measured by EBU R128 with ffmpeg and brought to -16 LUFS). The folder's other MP3, OGG, WAV and QOA files play
+# after these, in the order of their names, "Author - Title.mp3" read as such.
+#
+# Forwards: from SASSY THE SASQUATCH (Original Motion Picture Soundtrack), Jarrad Wright, released 2022-10-05 (DistroKid).
+Jarrad Wright - Forwards.mp3 | Jarrad Wright | Forwards | -1.1
+# It's time to wake up and BLUE-MEAN-EYES: from the soundtrack of Choomah Island 2 (The Big Lez Show's 2015 special),
+# written and performed by Jarrad Wright, posted by The Big Lez Show's channel on 2015-09-29.
+Jarrad Wright - It's time to wake up.mp3 | Jarrad Wright | It's time to wake up | +10.5
+Jarrad Wright - BLUE-MEAN-EYES.mp3 | Jarrad Wright | BLUE-MEAN-EYES | +5.4
+# Planet Caravan: Black Sabbath, Paranoid (1970), the 2009 remaster (Sanctuary Records, a BMG company).
+Black Sabbath - Planet Caravan.mp3 | Black Sabbath | Planet Caravan | -0.3

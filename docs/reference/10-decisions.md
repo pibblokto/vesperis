@@ -2904,10 +2904,11 @@ these 3 files with M button while in autoexplore and it will cycle. Use some 80s
 authorship properly so that when track starts author and name of the track are displayed for a few seconds on top left and then fade
 away. Also when music plays all other sounds are quiter". `docs/iteration-3/plans/requests/R-420-auto-explores-tape.md`.
 
-* **The music is the explorer's, never the game's.** The four tracks are copyrighted (Jarrad Wright's three, Black Sabbath's *Planet
-  Caravan*, ℗ 2009 Sanctuary Records, a BMG company): in the public repository or the release zips they would be distributed. So the
-  game plays a folder of the player's own, `music/` beside it (gitignored), its `playlist.txt` giving the order and the credits, and
-  ships none; the user's four were copied there on their machine. Any player can fill their own; the caption credits whatever plays.
+* **The game's own tape, and the explorer's.** The four ship with the game: `music/` in the repository with its `playlist.txt` (the
+  order, the credits, the gains), packed beside the binary in each zip and inside the macOS app's `Contents/Resources`, since the app
+  runs from `~/Documents/vesperis` (`packaging/tape.sh` copies the folder's tracked files, never a player's own beside them). The game
+  finds it from its executable's folder (`platformAppDir`). A `music` folder in the working directory that holds a track plays instead;
+  a folder's playlist comes first, then the sound files it does not list, so a player can add to the tape by dropping files in.
 * **Authorship from the tracks' own published credits.** The files carried no tags; each track's YouTube upload and its description gave
   the credits: *Forwards* by Jarrad Wright, from *Sassy the
   Sasquatch (Original Motion Picture Soundtrack)* (DistroKid, 2022-10-05); *It's time to wake up* and *BLUE-MEAN-EYES* by Jarrad Wright,

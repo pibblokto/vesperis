@@ -38,4 +38,5 @@ if [ -n "$LIB" ] && [ -f "$LIB" ]; then
   install_name_tool -change "$LIB" "@executable_path/$(basename "$LIB")" "$APP/Contents/MacOS/vesperis"
 fi
 cp README.md "$APP/Contents/Resources/"
+sh packaging/tape.sh "$APP/Contents/Resources/music"   # R-420: the game's own tape (the app runs from Documents/vesperis and finds it here)
 echo "built $APP"

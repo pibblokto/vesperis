@@ -649,14 +649,15 @@
   top left and then fade away. Also when music plays all other sounds are quiter". Authorship from the tracks' published credits (the files
   had no tags; each one's YouTube upload and its description): Jarrad Wright's *Forwards* (*Sassy the Sasquatch* soundtrack, 2022), *It's
   time to wake up* and *BLUE-MEAN-EYES* (*Choomah Island 2*, The Big Lez Show's 2015 special), Black Sabbath's *Planet Caravan*
-  (*Paranoid*, 1970, the 2009 remaster). `M` while auto-explore plays (a controller's `SELECT`) starts and stops a tape of the explorer's
-  own `music` folder (its `playlist.txt`: file, author, title, gain), round and round, through a synthesized cassette deck (a cassette
+  (*Paranoid*, 1970, the 2009 remaster). `M` while auto-explore plays (a controller's `SELECT`) starts and stops a tape, the game's own
+  four or the explorer's `music` folder (a `playlist.txt`: file, author, title, gain), round and round, through a synthesized cassette deck (a cassette
   in and played, the next at a track's end, the play key where it was left, the stop key); each track's author and title fade in at
   the top left and out after five seconds; the game's own sounds ducked to 0.35. raylib's music stream plays the file in stereo beside
   the synth, fed and ended by a platform thread (raylib's own end cut a track's last block, and the frames' stalls would starve it).
-  The music fades with auto-explore and is taken up again where it was. The four are copyrighted, so they sit in the user's
-  gitignored `music/` (evened to -16 LUFS by their playlist's gains) and ship with nothing. `tape` (a new harness mode: the WAVs of the
-  deck, the caption's frames); `unit` 342 checks, 0 failures (two new); a scratch build played the four through raylib silently
+  The music fades with auto-explore and is taken up again where it was. The four ship with the game in its `music` folder (evened to
+  -16 LUFS by their playlist's gains), packed beside the binary and inside the macOS app, found from the executable's folder; a
+  `music` folder of the explorer's own plays instead when it holds tracks. `tape` (a new harness mode: the WAVs of the
+  deck, the caption's frames); `unit` 343 checks, 0 failures (three new); a scratch build played the four through raylib silently
   (lengths, a seek, the end, a stall of 0.8 s); `regress` 24 of 24 unchanged; `flow` passes. KI-418: balanced by measurement, not
   yet by ear.
 * **Release 1.3.2 (2026-10-19).** On the user's request after R-420: commit, push and release. The patch ships as 1.3.2: R-418,
@@ -664,6 +665,8 @@
   regeneration notice once). Version strings 1.3.2 (`CMakeLists.txt`; `packaging/make_app.sh`), the README's paragraph and its
   auto-explore lines (the `music` folder), the milestone index. The branch `release/v1.3.2` merged into `main` by pull request, tag
   `v1.3.2`, the six zips built by `packaging/build-release.sh` from the tree that was merged and attached to the GitHub release.
+  Released again the same day with the game's own tape in it (the four tracks in `music/`, `packaging/tape.sh` packing them into
+  every zip and the macOS app): the first release and its tag replaced by the second's.
 
 ## Next
 
