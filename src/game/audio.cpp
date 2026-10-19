@@ -728,6 +728,8 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
     if (st.beep > 0) { beepT = 0; beepKind = st.beep; st.beep = 0; }
     if (st.thunder > 0) { thunderT = 0; thunderAmp = st.thunder; st.thunder = 0; }
     if (st.step > 0) { stepT = 0; stepKind = st.step; stepGainCur = st.stepGain; st.step = 0; }
+    if (st.deck != 0) { if (st.deck > 0) deckBuf = deckRender(st.deck, st.deckSeed, sr); else deckBuf.clear(); deckI = 0; st.deck = 0; }   // R-420: the cassette deck's sequence (-1 hushes it)
+    const double kDuck = 1 - std::exp(-dt / 0.5);
     // C-04 the music: a start from the top; a null piece stops every voice at once
     if (st.pieceStart) {
         st.pieceStart = false; mPiece = st.piece; mNext = 0; mBeat = 0; mT = 0; for (MVoice& v : mv) v = MVoice(); mOn = mPiece && st.tradition && !mPiece->notes.empty(); st.pieceDone = !mOn;
@@ -926,8 +928,12 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
                 thunderT += dt;
             } else thunderT = -1;
         }
+        duckLvl += (st.duck - duckLvl) * kDuck;   // R-420: everything under the tape's music, the deck over it
+        s *= duckLvl;
+        if (deckI < deckBuf.size()) s += deckBuf[deckI++];
         out[i] = (float)(std::max(-1.0, std::min(1.0, s)) * st.master);
     }
+    if (!deckBuf.empty() && deckI >= deckBuf.size()) { deckBuf.clear(); deckI = 0; }
     st.pieceBeat = mOn ? mBeat : -1;
     st.speechT = spOn ? spT : -1;
 }

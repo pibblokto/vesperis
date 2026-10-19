@@ -511,8 +511,10 @@ struct Placer {
         return false;
     }
     // an archive: `k` records, the place's own first (`home`, as many as fit; a painted one is left for a wall), in rows across the middle of a
-    // building's room (square to its doorway's line, half a metre apart, the rows 0.6 m apart toward its back), or in rings round a structure's foot
-    int archive(int bi, int k, std::vector<int>& home, const std::vector<int>& pool) {
+    // building's room (square to its doorway's line, half a metre apart, the rows 0.6 m apart toward its back), or in rings round a structure's foot.
+    // B-426: `rest`, the place's own its rooms could not hold, laid the same way after what lies there (from `home` alone, a painted one as a slab
+    // where a slab has room), an archive's rows only where the building is the place's archive (`isArchive`)
+    int archive(int bi, int k, std::vector<int>& home, const std::vector<int>& pool, bool rest = false, bool isArchive = true) {
         const Building& b = r.buildings[bi];
         BuildingRoom room;
         if (!buildingRoom(b, room)) return 0;
@@ -545,16 +547,29 @@ struct Placer {
                 if (room.round ? std::hypot(lx - room.cx, lz - room.cz) > room.r - 0.5 : (std::fabs(lx - room.cx) > room.hw - 0.5 || std::fabs(lz - room.cz) > room.hd - 0.5)) return true;
             }
             if (!clear(x, z, 0.3)) return true;
-            const int local = next();
-            if (local < 0) return false;
+            int local = -1;
+            if (rest) {   // the last of the place's own, a painted one where its slab has room (else the last of the others; none blocks the rest)
+                for (int t = (int)home.size() - 1; t >= 0; t--) if (used.count(home[t])) home.erase(home.begin() + t);
+                if (home.empty()) return false;
+                bool slabNear = false;
+                for (const ShardSite& o : out) if (o.medium == RM_PAINTED && o.wallD <= 0 && std::hypot(o.x - x, o.z - z) < 0.95) slabNear = true;
+                const bool slabFits = !slabNear && clear(x, z, 0.6, 0.95);
+                int t = (int)home.size() - 1;
+                while (t >= 0 && C.entries[home[t]].medium == RM_PAINTED && !slabFits) t--;
+                if (t < 0 || (slabNear && C.entries[home[t]].medium != RM_PAINTED)) return true;
+                local = home[t]; home.erase(home.begin() + t);
+            } else {
+                local = next();
+                if (local < 0) return false;
+            }
             ShardSite s = site(bi, room, x, z, local);
-            s.archive = 1; s.heading = heading + rng.sym(0.12);
+            s.archive = isArchive ? 1 : 0; s.heading = heading + rng.sym(0.12);
             used.insert(local); out.push_back(s); placed++;
             return true;
         };
         if (room.outside) {   // rings round the structure, from its foot outward
             const double R0 = std::max(1.5, std::hypot(cx - b.x, cz - b.z)), a0 = std::atan2(cx - b.x, cz - b.z);
-            for (int q = 0; q < 8 && placed < k; q++) {
+            for (int q = 0; q < (rest ? 16 : 8) && placed < k; q++) {
                 const double R = R0 + 0.8 * q; const int n = std::max(6, (int)(TAU * R / 0.55));
                 for (int j = 0; j < n && placed < k; j++) {
                     const double a = a0 + TAU * j / n;
@@ -563,7 +578,7 @@ struct Placer {
             }
             return placed;
         }
-        for (int q = 0; q < 4 && placed < k; q++)
+        for (int q = 0; q < (rest ? 12 : 4) && placed < k; q++)
             for (int j = 0; j < 24 && placed < k; j++) {
                 const double off = ((j + 1) / 2) * 0.5 * ((j & 1) ? 1 : -1);
                 if (!put(bx - dx * 0.6 * q + ax * off, bz - dz * 0.6 * q + az * off, std::atan2(ax, az))) return placed;
@@ -698,10 +713,10 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
     else if (r.sclass == SC_CITY) k = 5 + rng.irange(4);
     else if (r.sclass == SC_TOWN && age != AGE_PREHISTORIC && rng.chance(0.35)) k = 3 + rng.irange(3);
     else if (r.sclass == SC_MONUMENT && r.rank >= 0 && age == AGE_FAR_FUTURE) k = 6 + rng.irange(6);   // the archive that keeps itself
-    if (k > 0) {
-        int own = 0; for (int i : home) if (C.entries[i].medium != RM_PAINTED) own++;
+    int archiveAt = -1;
+    if (k > 0) {   // B-426: its count, the place's own first (it took them all: a prehistoric capital's thirty on its longhouse's floor)
         const int bi = P.firstOf(archiveKinds(age), std::set<int>());   // where the last recording lies too, if that is its age's archive
-        if (bi >= 0 && P.archive(bi, std::max(k, own), home, pool) > 0) taken.insert(bi);
+        if (bi >= 0 && P.archive(bi, k, home, pool) > 0) { taken.insert(bi); archiveAt = bi; }
     }
     // C-03's few by the class
     int want = 0;
@@ -729,6 +744,15 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
     }
     if (held.empty()) for (size_t i = 0; i < r.buildings.size(); i++) held.push_back((int)i);   // a structure alone: its foot
     for (size_t j = 0; !home.empty() && j < held.size() * 3; j++) if (P.one(held[j % held.size()], home.back())) home.pop_back();
+    // B-426: the place's own its rooms' spots could not hold (a lone stone's foot holds two, a futuristic capital's pods two each): one at a time
+    // beside what lies in each building holding one (across its room, round its foot), then after the archive's rows (the far future's structure:
+    // its rings, the archive that keeps itself), so the home holds all of them
+    for (int i = (int)home.size() - 1; i >= 0; i--) if (P.used.count(home[i])) home.erase(home.begin() + i);
+    for (bool more = true; more && !home.empty();) {
+        more = false;
+        for (size_t j = 0; j < held.size() && !home.empty(); j++) if (held[j] != archiveAt && P.archive(held[j], 1, home, std::vector<int>(), true, false) > 0) more = true;
+    }
+    if (archiveAt >= 0 && !home.empty()) P.archive(archiveAt, (int)home.size(), home, std::vector<int>(), true, true);
     // C-11: the instruments beside the music records (`instrumentWithRecord`: by the record, so every copy of it has one), on a stream of their own
     if (instruments) {
         Rng irng(r.seed ^ 0xC11B5ULL);

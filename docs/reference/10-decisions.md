@@ -24,9 +24,9 @@
 | HD prototype removed (2026-09-26): the compile-time `FB_SCALE` build, the variable mush box and the `compare`/`sheet` harness are gone; `shots/compare*.png` stay as the record | The user does not want two parallel code paths (HD and non-HD) in the tree while the richer picture is a separate, not yet started milestone (M10) | One resolution, one code path; M10-01 re-adds resolution as a runtime setting; experiments are removed once their decision is recorded |
 | Generation version 3 (2026-09-26, M5): companion stars, substellar objects, comets, Kepler orbits, double planets, closer and bigger first moons; `tests/regress_baseline.txt` re-blessed | The astronomy milestone changes what a system is; eccentricities and companions are drawn from separate streams so most existing bodies keep their looks, but moons and the cold band shift | Old saves point at systems that now hold more bodies; the guide records `gen` so a friend's names can be matched |
 | Two suns light a surface through one blended `env.sun` rather than a second light in every shading path (2026-09-26, M5-01) | 24 shading sites read `env.sun`; blending direction by strength and summing the factor gives the colour mix and the brightness with no per-quad cost; blob shadows are doubled where it shows most | Terrain cast shadows follow the blended direction, so at two equal suns they point between them (KI-020) |
-| R-001 sky targets left partly short (2026-09-26, M5-09): over 1 deg 39% (target 45-50), over 3 deg 33% (35), over 10 deg 18% (12-15) | The user asked for "more often but not too often"; the >10 deg share already passed the target and going further would make the big-parent view ordinary | Can be revisited by moving the first moon closer still |
+| R-001 sky targets left partly short (2026-09-26, M5-09): over 1 deg 39% (target 45-50), over 3 deg 33% (35), over 10 deg 18% (12-15); superseded 2026-10-18 by B-428 | The user asked for "more often but not too often"; the >10 deg share already passed the target and going further would make the big-parent view ordinary | Can be revisited by moving the first moon closer still; B-428 went the other way (a system with distance from the ship, the user's choice): over 1 deg 31%, over 3 deg 17%, over 10 deg 3% |
 | Key remapping as a text file of physical-to-logical pairs, not an in-game rebinding screen (2026-09-26, M6-02) | The game code names keys directly in 200 places; remapping at the input layer covers layouts (AZERTY, Dvorak) with no refactor and stays testable headlessly | No per-action binding UI; the help text still names the default keys |
-| Gamepad mapping fixed in code (2026-09-26, M6-02) | One sensible layout, documented; the key map file can still move letters | Not rebindable |
+| Gamepad mapping fixed in code (2026-09-26, M6-02; superseded 2026-10-17 by R-418: the controller read raw and bound by role on a screen, a layout a context, the command menu) | One sensible layout, documented; the key map file can still move letters | Not rebindable |
 | Warnings as errors only in `core/` and `galaxy/` (2026-09-26, M7-06) | Those layers are the deterministic ones and small enough to keep clean; the renderers and the game carry long one-line style that trips `-Wextra` noise | `space/`, `surface/`, `game/` build with warnings visible, not fatal |
 | Web build written but not run (2026-09-26, M6-04) | No emsdk on the development machine; the code path is small (`step` callback, IDBFS mount) and mirrors raylib's own web template | KI-021: first run may need fixes |
 | Frame hashes must match exactly (2026-09-26, M7-04) | The renderer is deterministic across runs on one machine (integer hashes, every pass row-pure or band-pinned so the picture does not depend on which thread draws a row or how many there are (F-06: the rows are dealt, no longer fixed to threads), maps warmed before hashing); a tolerance would hide real regressions | Another compiler or CPU may hash differently (KI-014); bless per platform if CI ever runs the frame hashes elsewhere |
@@ -78,7 +78,7 @@
 | The forest bench at 4x is budgeted at 24 ms, the surface 4x rows print their sections (2026-09-27, B-310) | The densest scene is the honest budget of the new default; the sections tell where a regression is | `VESPERIS_THREADS=1` gives the serial baseline for comparison |
 | A globe's box is the exact conic extent of its sphere plus the ring's projected circle (2026-09-28, B-312; completes O0-03/B-304) | A box of radius `f tan(a) d/z` round the projected centre is a circle, the projection of a sphere off axis is not: with the centre ten degrees outside the frame the box was empty and a huge parent vanished with its rings | `sphereBox`/`ringBox`; the whole frame when the sphere or a ring point reaches the camera plane; `unit` holds the case |
 | Sky bodies write their depth in metres (2026-09-28, B-317) | The space renderer's kilometre read as metres against the terrain: a moon 20,000 km away hid the ground beyond 20 km | The sun and the stars test for any depth, so eclipses and the star mask are unchanged; `unit` bounds the nearest sky depth |
-| The first moon at 4.5-6 radii and outside the rings, generation 7 (2026-09-28, B-314; supersedes M5-09's 2.8-4.2) | The user asked for a cap: from 2.8 radii a parent's disc was 42 degrees across and a moon inside the rings saw them fill the sky; the same random draw keeps the rest of every system | Every moon's orbit and period moved (saves get the regeneration notice); 26 degrees across is the biggest parent now |
+| The first moon at 4.5-6 radii and outside the rings, generation 7 (2026-09-28, B-314; supersedes M5-09's 2.8-4.2; a solid world's since B-428, generation 15, at 5-40) | The user asked for a cap: from 2.8 radii a parent's disc was 42 degrees across and a moon inside the rings saw them fill the sky; the same random draw keeps the rest of every system | Every moon's orbit and period moved (saves get the regeneration notice); 26 degrees across is the biggest parent now (a giant from its first moon) |
 | Geomorphing at every terrain ring edge, the band from the finer ring's cover to the edge (2026-09-28, B-313) | Each ring samples the planet function at its own detail, so a coarser ring is a smoother terrain, up to 1015 m off at the 13 km edge: cells popped as the edges swept over the ground; a vertex now slides onto the coarser surface (height and shade) by its continuous distance from the camera; a six-cell band twisted the cells into a sawtooth skyline, so the band spans most of each ring | The far ring's swell rises into its ridges over 10 km as you approach (KI-318); the rings are warmed coarse to fine, overlap by one cell with a depth bias; `unit` requires a zero gap at every edge; the lodFade thresholds themselves are O6-07's question |
 | The near ring at every speed; the buggy rides on a suspension (2026-09-28, B-313; supersedes the speed fade of O6-02) | The fade was the visible morph on getting out of the buggy; its reason (hops over 4 m bumps at 180 km/h) is met by averaging the hull's reference height over 16 m along the way within the wheels' travel | Rough ground at full speed still launches the buggy where the averaged ground asks for more than four g; `descent` and `drive` unchanged |
 | Leaf clusters are camera-facing cutout polygons; bark and cut wood own banks 16 and 17 (2026-09-28, B-315; supersedes the point sprays of N2) | At 4x the sprays were sparse pixel clouds; a ragged disc cut by a leaf-edge noise, shaded by its place in the canopy and textured, reads as leaves at every scale; on the ground bank the trunks came out black | A canopy from straight above is a stack of discs (KI-316); the depth test before the texel reads and the 16-vertex clipper keep the forest at 12.7 ms at 4x |
@@ -86,6 +86,7 @@
 | Generation version 11: the galaxy of 200 billion stars (2026-10-01, G-01); `tests/regress_baseline.txt` re-blessed | The first milestone of `docs/ideas/MILESTONES.md`: a disc with the Milky Way's proportions, home kept at its sectors by putting the galactic centre 13,050 ly away; every star's existence, class and name can change, so the whole G/S series is this one bump | A save whose star is gone does not load and says so; one whose star survived says `THE GALAXY WAS REBUILT`; the four pinned harness bodies exist at the new density; the flow stops comparing the hop's star name (Skeatoltdos) and approaches unless its comet case parked the ship |
 | Generation version 12: each giant's character on its globe (2026-10-07, X-03); the regress unchanged | A descent must fall into what the globe shows (the consistency principle): each giant's share of storms, an ice giant's faint bands and a great storm on one giant in four are the planet function's, so the telescope and the probe see the same | Only the globes of gas giants and brown dwarfs change (no system, star or solid surface moves); a 1.1.0 save loads with `WORLDS WERE REGENERATED SINCE THIS SAVE` |
 | Generation version 13: the ages (2026-10-08, A-01); the regress unchanged | The civilisation expansion of 1.3.0 is one generation change from its first milestone: every people's age, eras, end and collapse (`galaxy/peoples.*`) are what every later milestone reads, and only the peoples that had radio transmit | The peoples' worlds' ruins weather by their age's years (Aieliaalas II 0.92 to 0.91, Leileashphail III as before); the transmitters moved (the cells' rate and salt); a chart's heard marks follow; systems, stars and surfaces do not move; a 1.2.0 save loads with `WORLDS WERE REGENERATED SINCE THIS SAVE` (the found shards by their index, T-04) |
+| Generation version 14: the companion stars keep clear of the other sun's worlds (2026-10-18, B-425); the regress unchanged | A red dwarf's red giant companion came within its own radius of three felisian worlds (Yaiphuyiabrus, the user's report): M5-01 drew a far companion's orbit from the primary's widest orbit alone, before S-01 brought the red dwarfs and the giant varieties, and the worlds' warmth is the primary's alone | The companion's orbit moved in 56% of the multiples (11.5% of the stars, a median 2.4 times out), 3,383 close companions of 160,778 stars are far now, a companion's worlds new or changed in 3,053 systems (2,520 a close one's gone far); every primary's worlds and the stars do not move, nor any body's index (a far companion's new worlds come after every other body); a 1.3.1 save loads with `WORLDS WERE REGENERATED SINCE THIS SAVE` |
 
 ## O10 (2026-09-28): the third review
 
@@ -225,7 +226,7 @@
 
 * **A share of the blue giants that stayed, mostly in the arms.** `starVariety` turns a fifth of the blue giants the blue-white stars left into Wolf-Rayet stars along the arms, in open clusters and in star-forming complexes, a tenth in the core, one in twenty in the bulge and the disc and none in the halo or a globular (no massive star is old), by a hash of their own (`mix64(hash ^ 0x3E5F)`), so the blue-white claims and every other star stay as they were. Near home 40 of 4,559 stars (against 175 blue giants); by region (`galaxy`): the core 1%, an open cluster 1%, a complex 1%, the arm under 1%. The plan said "rare, in the arms": the trickle in the core and the disc keeps a few in every population where massive stars live.
 * **The look.** The blue giant's saturated disc (L 180, R 3.5e6 km) with the cross of four rays and a glow of 1.6, and the shell it has shed as a ring round it: at five radii (four pixels at least), a seventh of that wide, sharp outside (`exp(-4 ex^2)`) and diffuse inside (`exp(-ex^2 / 2)`), filamentary (`0.6 + 0.4 gnoise2` round the ring) and brighter on the side it drives into (`0.7 + 0.3 cos` of a direction fixed by the seed), 34 shades at most. `drawSun` widens the glow's cone to reach past the ring and adds the ring in the glow's pass, so it costs no pass of its own (the protostar's band needed one because it leaves the cone); the pattern is fixed in the world through `discUp`, which both views pass already. A bubble of five radii is a stylisation: a real shell lies light years out and would be the whole sky from a planet, but the ring is what reads as "the shell" (the Crescent and the Bubble nebulae are how everyone knows these stars), and it shows from a world's surface in the black day sky and after sunset as an arc over the horizon (`06-surface.md`).
-* **The wind.** `pickPlanetType` zeroes every type with an atmosphere but the giants (applied after the moon rule, which offers a giant's moons a tectonic sky), halves the ice and the giants (x0.4), and favours bombarded (+25), cratered (x1.5), rocky (x1.3), metal (+8) and molten (+5) worlds; two systems in five are rubble (no world), and the belts come 35% in every gap and 50% beyond the last orbit. The zones within four orbits of a star of L 180 are too hot for a giant to form, so two systems in five get one gas giant far out as the last body (at 2.5-3.5 times the next orbit's key), and a gas giant or a substellar object of a Wolf-Rayet star streams its envelope away from the star (`drawStrippedTail`: forty glow discs of its own bank from the limb to four radii out, widening, thinning and curling back along the orbit, before its globe; in a sky in the sun's bank, like the comet's tail). `unit`: 31 stars, 185 worlds (15 giants), none with an atmosphere, a bombarded world in 21 of 24 systems with planets, 21 with a belt.
+* **The wind.** `pickPlanetType` zeroes every type with an atmosphere but the giants (applied after the moon rule, which offers a giant's moons a tectonic sky), halves the ice and the giants (x0.4), and favours bombarded (+25), cratered (x1.5), rocky (x1.3), metal (+8) and molten (+5) worlds; two systems in five are rubble (no world), and the belts come 35% in every gap and 50% beyond the last orbit. The zones within four orbits of a star of L 180 are too hot for a giant to form, so two systems in five get one gas giant far out as the last body (at 2.5-3.5 times the next orbit's key), and a gas giant or a substellar object of a Wolf-Rayet star streams its envelope away from the star (`drawStrippedTail`: forty glow discs of its own bank from the limb to four radii out, widening, thinning and curling back along the orbit, before its globe; in a sky in the sun's bank, like the comet's tail; B-427 redrew it: the discs heaped to a white blob, see there). `unit`: 31 stars, 185 worlds (15 giants), none with an atmosphere, a bombarded world in 21 of 24 systems with planets, 21 with a belt.
 * **The radiation.** The space HUD's warning at `5e8/d`: a hull exposure inside 5e8 km (every orbit of the four) and high to 1.25e9, so the whole system is inside the hazard, as the plan asked; activity 1.0 (the aurora table); a companion two times in five (most Wolf-Rayet stars are binaries), a blue one possible as for the blue giants. The hazard is the warning the other hostile stars have: no damage model exists, and none was added here.
 * **What moved.** The first molten world of the harness's scan is Shiesaimiori I now (sector 151 0 53: Shiesaimiori was a blue giant whose first world was not molten; under the wind's weights it is), so `scene molten_night` and the `maps` gallery's molten map stand there instead of Henaliolyen III-a and the regress's `scene_molten_night` hash was re-blessed deliberately; the other 21 hashes, the flow, the pinned sites and the aurora scenes are the S-04 run's. Heilya stayed yellow.
 
@@ -2696,3 +2697,240 @@ game code.
   harness: `appendFrameHashes`' two frames and their both-ways check, `bench check`'s 37 budgets and its factor, the warm-up after a
   scale's change. Unit 332 checks, 0 failures; the regress 24 of 24 with the workers, one thread and three. The cookbook's recipe for
   timing a change (`09-cookbook.md`).
+
+## R-418 (2026-10-17): the controller
+
+The user: bindings for most of the game missing from the pad, a tester on an AYN Thor finding them wrong, and the suggestion of a
+controller's own menu of actions to pick from, "so we can be sure game is playable if bindings are wrong", with the bindings still
+configurable though "controller can be literally anything". `docs/iteration-3/plans/requests/R-418-the-controller.md`.
+
+* **The controller is read raw, through GLFW, beside its standard layout.** raylib's gamepad calls see only the devices GLFW has a
+  mapping for, and only through it: a controller nobody mapped reads as nothing, and nothing in-game can bind it. GLFW's joystick
+  calls (`glfwGetJoystickButtons/Axes/Hats`, `glfwGetGamepadState`) give both; they live inside raylib's static library, which the
+  release scripts link already; the dev Makefile now links Homebrew's `libraylib.a` too (its shared library keeps GLFW hidden), so
+  both builds take the same path. The declarations sit in `platform_raylib.cpp`, the one file that sees raylib. SDL's
+  `gamecontrollerdb.txt` beside the game is read for the layouts GLFW's list lacks (the community's file covers thousands).
+* **Binding by role, not by action.** The game reads sixteen buttons by the Xbox names and places and two sticks; the CONTROLS
+  screen's second page binds each to any physical control the device reports (a button, a trigger, a hat, an axis's half), kept by
+  device. Per action across the game's contexts would have been a table of a hundred rows for the explorer to fill and keep; a role
+  bound once makes every context's layout right, and an unknown device is set up by pressing sixteen buttons and pushing two sticks.
+  The preference "jump on another button" is a swap of two roles (a control taken by one role is given back to the other). A raw
+  device starts from a guess at the common driver order that reads its axes at rest (a stick axis off-centre or a trigger resting in
+  the middle is left unbound: the first would walk by itself, the second hold its button).
+* **A layout a context, run as the game's own keys.** The controller presses keys into the frame's copy of the `Input` (`padFrame`,
+  before anything reads it): no action has a second code path, the keyboard and the controller work at once, and the harness drives
+  the game with either. The contexts (the screens, the title, the ship, on foot, the buggy, the drone, the probe, a recording, an
+  instrument) give the face and shoulder buttons what each needs most; the rest go to the command menu.
+* **The command menu is the guarantee.** Y in every context: every action of the screen in words (with its state), the general
+  ones, and a keyboard of every key the game reads with Shift, Ctrl and Alt latched for the next: whatever the bindings, anything a
+  key does is a few presses away, and a wrong layout costs comfort, not reach. The menu runs a line as its keys; the context's page
+  is written for each screen (curated rather than generated from the key handlers, which are code, not data: the cost is keeping the
+  lines in step with the screens). START is Esc everywhere but the title, where it begins (pressing START on a title is what players
+  do; there it would have quit), and B quits nothing there (the menu's QUIT does).
+* **The maps take their own buttons.** On the landing map, the sector map, the star map and the galaxy chart a button presses only
+  what does something there, and the legend names it in the map's words (`A LAND`, `X BACK TO YOU`, `LB HIGHER`); the right stick in
+  the screens runs at 400 mouse pixels a second against a head's 900 (the sector map's cursor crossed its frame in half a second at
+  full throw); the landing map reads the mouse's motion as a smooth cursor (only the stick gives it any there: the mouse is not held
+  on that screen), the d-pad still stepping a degree.
+* **The on-screen keyboard comes up by itself only where letters are wanted** (a text entry, the console) and only while the
+  controller is the device in use, so a keyboard player never sees it; the aim's light years ask for it from the menu.
+* **Not done**: hold actions from the menu (a line taps its key: stand tall, the jetpack, the orbit's Shift are the buttons'); a
+  second controller (the first is read); the browser build's raw devices (it reads the browser's standard mapping through raylib);
+  rumble; the hints of the screens in a controller's words (the menu's foot and the help's third page say the buttons instead).
+* **Fixed on the way**: the left stick walked nothing in the cabin (the cabin read the keys alone); the right stick's look ran with
+  the frame rate and the mouse's sensitivity twice (per second now, its own speed); `E` sat on the guide button the systems keep;
+  the stick took both of the walk's axes from the keys at once (a trigger's throttle died under the stick's steering); the keyboard
+  page's key capture could not be left with a controller.
+
+## B-425 (2026-10-18): the companion stars keep their distance
+
+The user, from Yaiphuyiabrus (a red dwarf with a red giant companion, `S06+S03 MULTIPLE`): a sun "ridiculously huge" over a felisian
+world, "vegetation wouldn't survive it at all". `docs/iteration-3/bugs/resolved/B-425-a-red-giant-filling-the-sky-of-a-red-dwarfs-worlds.md`.
+
+* **A floor under the drawn orbit, not a new draw.** A far companion keeps M5-01's draw (2.5-7.5 times the widest planetary orbit)
+  and its eccentricity; the floor raises only the orbits under it, and every draw keeps its place in its stream (the eccentricity has
+  its own), so a system whose companion already kept clear stays as it was (44% of the multiples) and no other property of any system
+  moves.
+* **Three reasons to keep away, each a number.** The sky: 3 degrees at most at the primary's farthest world, at the companion's
+  periapsis (the primary spans 4-12 degrees from a temperate world: the companion stays the smaller sun; the giant now 0.65-1.2
+  degrees). The warmth: the companion's light alone would keep that world at 100 K at most (the worlds are typed by the primary's
+  light; 100 K adds two or three kelvin to a temperate world, and it is the perceptual factor's old floor, `278 x 0.36`). Its own
+  worlds: within a third of the gap, with the primary 3 degrees wide at most from them (a red giant's worlds orbit 1.6e8 km and more
+  out: they circled both suns of a pair 4.5e7 km apart). The bound on its worlds' reach is the widest its draws allow (the spacing at
+  its top), so the floor cannot read their orbits before they are drawn.
+* **Not the companion's light in the worlds' warmth.** The primary's worlds come first in the stream, and the companion's close or far
+  choice reads them (the first orbit, the widest one): counting the companion in their temperatures would retype the worlds of a fifth
+  of the systems, the worlds explorers land on, name and mark. Keeping the companion away keeps every world as it was and makes the
+  primary's warmth the true one.
+* **A close companion is a dim one.** A tenth of the primary's light at most (2.4% on a temperature) and no wider than the primary in
+  the first world's sky at its nearest; else it is far, with up to three worlds of its own after every other body. Close twin suns
+  are far pairs now. A black hole keeps its close companion (S-06's stream), over worlds typed by the hole's faint disc (KI-413).
+* **A far sun lights as much as it does.** The floor of 0.62 is a world's own sun's (a dim star's day stays a day); the other sun has
+  its true perceptual factor, so a far companion gives a night a twilight at most; a set primary adds nothing to the blend; the
+  blended light's glow and a lone sun's blob shadows follow its share; on a companion's world the far primary's sky, disc, glare and
+  flare follow its light, and the local time and the landing map's day are the companion's. The perceptual blend of the two
+  directions stays M5-01's (KI-414). One-sun worlds are bit for bit as before: the new factors are exactly 1 there.
+* **What moved.** `GEN_VERSION` 14 (the table above); the regress unchanged; four unit checks
+  (336); one unit line, the site of Eliameavevas I-a, whose light blends a companion (40.1 degrees for 40 asked, 39.8 before). The
+  reported place is on Yaiphuyiabrus IV (its people's world, a day of 2.4 hours) at three in its night: the giant, 95 degrees across,
+  lit it as a day, and it is a night now under a sun 0.65 degrees across (B-426's screenshots, from the same visit, showed the world: its
+  ruins; the first frames had been read on III, locked to the dwarf). KI-413 and KI-414 for what stays.
+
+## B-426 (2026-10-18): an archive holds its count
+
+The user, from the capital of Yaiphuyiabrus IV (a prehistoric people's): the shards "all located in the center, tons of them", which
+looked like "some bug with placement that ignores other buildings and just stockpiles everything in one place", though "the center
+having a bit more shards" was welcome. `docs/iteration-3/bugs/resolved/B-426-a-capitals-records-heaped-on-its-archives-floor.md`.
+
+* **T-04's count, not the place's whole share.** An archive holds its class's count (the capital's 8 to 14, a prehistoric capital's 4 to
+  6, a city's 5 to 8, a third of the towns' 3 to 5), the place's own first: the code had asked it for the larger of its count and the
+  place's own, so a people of few places laid a third to a half of its records across one room (31 of 80 on a chief's longhouse's floor;
+  a futuristic capital's 32 and more). The centre keeps a few more than a house: the archive is the find there.
+* **The place's own over its buildings.** What the archive leaves of a place's own lie one a building, drawn by C-03's weights (the place
+  draws as many buildings as it keeps records), then a second and a third in a room's spots, so a capital that kept 38 of its people's 80
+  has them in 34 buildings across its 120 m (four in the archive, the last recording in the same longhouse, 33 huts one each).
+* **Every place holds its own.** T-04's home "always holds it": where its rooms' spots run out (a lone menhir's foot holds two, a futuristic
+  capital's pods two each) the rest go one at a time across the room or round the foot of each building holding one, the archive's rows
+  last; a painted one as a slab only where a slab has room. The far future's structures keep theirs in rings round their feet as T-04 has
+  them (a building alone, the archive that keeps itself). Three harbour places of the survey lay nothing, their spots read as the sea
+  (B-421's rule): KI-415.
+* **What moved.** No generation change (a record's index is its key in the guide wherever it lies); the places' layouts of their records,
+  the archives of the prehistoric and futuristic capitals above all; a capital whose own records fill C-03's few lays no copies of other
+  places' (its few were its own first already). The regress unchanged; one unit check (337).
+
+## R-419 (2026-10-18): auto-explore
+
+The user: "autoexploration. Some user requested it so game plays itself", several profiles ("focus on space, on planets, on surface of
+planets, on civilizations, gas giants, random - you choose and give ideas"), no HUD while it plays, and the movements "soft,
+non-robotic, everything is in chilling manner. So it feels like real person is playing". `docs/iteration-3/plans/requests/R-419-auto-explore.md`.
+
+* **It plays through the input, not beside it.** The explorer's mind makes the frame's input (the keys, the mouse's motion, the stick)
+  and the game reads it as the player's (`Game::autoInput`, after `padFrame`): no second code path for a walk, a drive, a flight, a
+  landing or a take, so every rule holds (the walls, the slopes, the water, the vehicles' handling, a record's reach) and what it does
+  is what a player could do. Two exceptions, where the input's own pace is not a hand's: the ship's nose (the arrows turn it at 69
+  degrees a second on and off, `X` snaps) is eased by setting its angles, and a lap round the parked world (Shift and the arrows: twenty
+  degrees a second on and off) by calling `orbitShip` with an eased rate. The choices a screen would make (a local target, a remote
+  one, a landing site) are made in its head and set as the screens set them (`ship.localTarget` then Enter, `setRemoteStar` then V,
+  `landLat/landLon` then the landing map's Enter on its first frame).
+* **A hand's limits make the softness.** A critically damped spring with a speed and an acceleration limit (43 degrees a second and 80
+  a second squared at a walk's pace, a third of that for a long look) eases every look off its rest and onto its target; a sway of a
+  few tenths of a degree keeps a rest from being dead still; the stick ramps; the clock's pace changes in decades. The game's own turns
+  of the view are taken up as the new rest, not fought; where the game turns the view by itself (the Vimana and the telescope face the
+  front window, a vehicle's seat faces its heading) it looks that way first, so the turn is small; the roof deck's lift, the telescope's
+  powers and a vehicle's seat stay cuts.
+* **The fine approach smoothed for everyone.** Auto-explore's harness found the one fast turn left at every parking: the ship flew a
+  straight line to a parking point beside its world with its nose on the world's centre each frame, so in the last tenth of a second the
+  world's direction swooped 60 to 350 degrees a second. The approach is now taken from the world, as the probe's fall is: the distance
+  closed by equal ratios, the direction swung onto the parking's in the first seven tenths, the last stretch straight in. A player's
+  approach changed with it (the same start, end, duration and aim; the world a speck longer, then growing steadily): one path for both
+  rather than a smoother one for the explorer alone (`updateShipMotion`, `APPROACH`).
+* **No HUD, no screens.** Nothing the HUD draws is drawn (the status line, the probe's and the radar's frames, the capsule's caption,
+  the controller's menu); its first five seconds say how to stop it. It opens no screen (the landing map's frame is the cabin's); a
+  screen opened by chance is closed with Esc.
+* **The expedition's, not a copy.** It plays the expedition: the log, the guide (the visits, the landings, the sightings, the records
+  and instruments taken) and the game's own autosaves take what it does as the player's; it names nothing, marks nothing and saves into
+  no slot. A copy thrown away at the end would keep nothing of an hour watched, and a player who wants none of it saves to a slot
+  first.
+* **Any input gives the controls back, unacted on.** Any key, click, wheel, a mouse's motion past a few pixels (none in a scene's first
+  half second: the window taking the mouse moves it), a button or a stick; that press is swallowed (Esc opens no menu, `E` takes
+  nothing) and the warp goes back to x1.
+* **Six profiles, one mind.** The profiles share every step and differ in their weights (the worlds of a system, a long jump, a landing,
+  a probe, the telescope, the roof deck, the glass hull, a lap; the time at a parking and on the ground; the ground's outings) and in
+  what they look for (the stargazer's star classes; the giants' and the archaeologist's systems, which they pass through when they
+  hold none). The wanderer takes one of the five at each star, the system's own leading.
+* **Its ground walk plans its way** (`autoWay`): A* over 40 cm cells round a leg of up to 24 m, the colliders at a body's height (a
+  settlement's walls are rows of discs: its doorways stay open), the slopes the walk cannot climb and the deep water; legs, not a whole
+  way, because the colliders are gathered round a point (40 m of a settlement's pieces) and a way is planned again from wherever it
+  stalls.
+
+## B-427 (2026-10-18): the stripped tail, the giant's own gas
+
+The user, parked at the gas giant of a Wolf-Rayet star (PARSIS +18071 +1 -19950): "this strange white lights behind it [...] with several
+gas giants as well [...] it's just a blob of white light behind them". It was S-05's tail of the envelope the wind strips, which every
+gas giant and substellar object of a Wolf-Rayet star has. `docs/iteration-3/bugs/resolved/B-427-a-white-blob-behind-a-wolf-rayet-stars-giants.md`.
+
+* **Kept, made to read as gas.** The tail stays: S-05's look of the star's wind on its worlds, the same curve, length and widening.
+  Its forty glow discs (14 shades each, crowded at the root) summed to the ramp's white. Now about ten splats each carry the light of
+  their stretch of the tube, so the side-on column is the profile's (24 shades at the root) and a view down the tail stops at a soft 36,
+  under the lit face's 40-50.
+* **Drawn after the globe with a depth test.** It had been drawn before the globe (which covered its root), but from the night side the
+  tail streams in front of the globe, so the globe hid what should have veiled it. Each splat is now hidden where the frame holds
+  something nearer, softly over the splat's own depth.
+* **The brighter light's bank, dithered between.** A pixel has one bank: the tail takes the giant's where it outshines the pixel's own,
+  and an ordered 4 x 4 dither covers the range where neither does (the shares 0.3 to 0.7). A glow disc's rule (its bank on empty pixels
+  only) had given the tail the band's blue, and the plain switch a hard outline across the band. The backdrop's nebula patches keep
+  their own rule (the brighter's bank, no dither).
+* **Filaments,** two octaves of noise across each splat in the axis's direction on the frame, streaming outward with the clock and faded
+  end-on. They show the light as a stream, not a halo.
+* **A sky by luminance.** The surface's sky bank is black below shade 30 (an airless world's, which every world of a Wolf-Rayet star
+  is), so a shade added there showed nothing until it heaped. In a sky the tail's luminance (at most the bank's shade 40) is added to
+  the pixel's, read from the palette, and written back as the bank's shade of the sum. The band's pass then carries it into its bank
+  as it does the sky's own light.
+* **Its cost held.** Sampled once per 2 x 2 block at 3x and 4x, in bands of rows on the workers (band-pinned, the same with one
+  thread); about ten splats against forty full-resolution discs.
+* **What moved.** No generation change; no regress scene has a Wolf-Rayet giant (24 of 24 unchanged). One unit check; a harness mode,
+  `tail`.
+
+## B-428 (2026-10-18): moons spread, a system with distance
+
+The user: "quite often planets/moons are super close to each other when you are on startdrifter [...] I love when I am on the surface
+and you seen a big beatiful moon or planet [...] there is no sense of it being an actual system with distance and stuff, makes it feel
+more pocket". `docs/iteration-3/bugs/resolved/B-428-moons-crowding-their-worlds-from-the-ship.md`.
+
+* **The ship's view and the ground's are one distance.** R-001 and M5-09 drew the first moons in (2.8-4.2 radii), B-314 put them at
+  4.5-6 so a parent filled no more than 26 degrees, and the ship parks at 3.5 radii, inside that orbit: another world wider than 10
+  degrees hung in its sky at 44% of the parkings near home. A moon wide from the ground is wide from the parked ship, and there the
+  two worlds and the gap between them are seen together. No look of the space renderer separates the two (R-001's own rule: what is
+  in the sky is where the maths puts it), so the spread is a trade, and it was put to the user as one question: the solid worlds' moons
+  and the twins (recommended), the giants' as well, or a gentle spread to 5-20 radii. The user chose the first.
+* **A solid world's first moon at 5-40 radii, even in the logarithm; a twin at 12-20.** On the same draws, so every other part of a system
+  holds. The log keeps the close moon (one in eleven inside 6 radii, a big disc from the ground) as the exception, not every system.
+  The parking (3.5 radii) stays: it frames the whole globe.
+* **The giants' moons kept.** A giant from its first moon (4.5-6 radii, 19-26 degrees across) is the biggest disc in the skies and
+  Jupiter's own over Io; from the ship it still looms behind its inner moons (34% of their parkings), KI-417.
+* **Generation 15.** Kepler gives the periods, so a locked moon's day follows its month (a solid world's first moon 7.7 hours at the
+  median, 1.9 before), not a constant re-fitted to keep the old days. Saves from 14 get the notice once (1.3.2 had already moved to 14
+  with B-425).
+* **Measured where it is decided.** `survey` prints the parkings next to R-001's ground line; the unit check bounds both sides (the ship
+  under 30%, the ground's discs wider than 2 degrees at 28% of sites at least and wider than 20 degrees not gone).
+* **Found on the way, not changed:** the comets' orbits are keyed to the last body generated (a moon in 87% of systems), not to the
+  widest orbit as M5-07 says, so most sit at the floor of four star radii at periapsis (KI-416). Moving them is a generation change
+  of its own, the user's call.
+
+## R-420 (2026-10-19): auto-explore's tape
+
+The user, with four MP3s they had downloaded: "add these for to auto-explore mode as an optional feature - you can enable playlist with
+these 3 files with M button while in autoexplore and it will cycle. Use some 80s-90s cassete insertion sound between tracks. Investigate
+authorship properly so that when track starts author and name of the track are displayed for a few seconds on top left and then fade
+away. Also when music plays all other sounds are quiter". `docs/iteration-3/plans/requests/R-420-auto-explores-tape.md`.
+
+* **The music is the explorer's, never the game's.** The four tracks are copyrighted (Jarrad Wright's three, Black Sabbath's *Planet
+  Caravan*, ℗ 2009 Sanctuary Records, a BMG company): in the public repository or the release zips they would be distributed. So the
+  game plays a folder of the player's own, `music/` beside it (gitignored), its `playlist.txt` giving the order and the credits, and
+  ships none; the user's four were copied there on their machine. Any player can fill their own; the caption credits whatever plays.
+* **Authorship from the tracks' own published credits.** The files carried no tags; each track's YouTube upload and its description gave
+  the credits: *Forwards* by Jarrad Wright, from *Sassy the
+  Sasquatch (Original Motion Picture Soundtrack)* (DistroKid, 2022-10-05); *It's time to wake up* and *BLUE-MEAN-EYES* by Jarrad Wright,
+  posted as the "CI2 soundtrack" by The Big Lez Show's channel on 2015-09-29 (*Choomah Island 2*, the show's special of 21 August 2015;
+  Wright writes and performs the show's music); *Planet Caravan* by Black Sabbath, from *Paranoid* (1970), the 2009 remaster. The caption
+  shows the author and the title as the playlist gives them; the rest is in its comments.
+* **raylib's stream, on a thread of its own.** The tracks are 44.1 kHz stereo; the synth is mono at 22,050 Hz, so the music does not
+  go through it: raylib's music stream plays it beside the synth's stream, decoded as it plays (MP3, OGG, WAV, QOA; raylib's build has no
+  FLAC). raylib, told not to loop, stops a track as it reads its last block, that block and the one playing still unheard, and the
+  game's frames can stall past a stream's buffers: so a platform thread updates the stream every 5 ms, the stream loops in raylib and the
+  thread stops it 30 ms short of its end. The game asks and hears back through `AudioState` (`music`, `musicGo`, `musicGain`; `musicT`,
+  `musicEnded`, `musicFailed`), as for the rest of its sound; the harness stands in for the platform there (`TapePump`).
+* **The deck is synthesized, not sampled.** No recording to license or ship: struck modes (a plastic part's three or four resonances, a
+  body's thump, a spring's ring) on a millisecond of noise, a slide of band-passed noise sticking and slipping with the reels knocking,
+  the motor an oscillator, the tape's hiss filtered noise, two early reflections for a room. One deck: its parts keep their pitches,
+  each event a few per cent off them by a seed, the hands' pauses 15%, so no two changes are alike. The tape moves at the play key's
+  latch plus the motor's half second (`deckTapeAt`), and the game starts the track then.
+* **Ducked by a level, not a compressor.** While the tape is on (the deck's sequences included) the synth's sounds keep 0.35 of their
+  level, eased over half a second; the deck rides over them. A fade (auto-explore's end) brings them back as the music goes.
+* **Tracks evened in the playlist.** The four differ by 11.6 dB (EBU R128: -14.9, -26.5, -21.4 and -15.7 LUFS), so each line carries a
+  gain bringing it to -16 LUFS (raylib does not clamp a stream's volume above 1; the quietest, raised 10.5 dB, peaks at -1 dBFS before
+  the tape's level and the master). The game measures nothing itself: a player's own playlist evens its own.
+* **The tape belongs to auto-explore.** `M` starts and stops it only while auto-explore plays (otherwise it is the star map's key in space
+  and the waypoint's on the ground); when auto-explore ends the music fades, and it is taken up where it was, with the play key, as
+  auto-explore next begins (`auto_music`, `auto_track`, `auto_track_at`). A cassette left in plays on from its place; one left at its very
+  end is over, and the next goes in.

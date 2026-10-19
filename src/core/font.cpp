@@ -113,6 +113,29 @@ void drawText(RGBCanvas& c, int x, int y, const char* s, uint32_t color, int sca
         px += FONT_ADV * g;
     }
 }
+void drawTextBlend(RGBCanvas& c, int x, int y, const char* s, uint32_t color, int a, int scale) {
+    if (a <= 0) return;
+    if (a >= 255) { drawText(c, x, y, s, color, scale); return; }
+    const int cr = color & 255, cg = (color >> 8) & 255, cb = (color >> 16) & 255;
+    int S = c.scale, g = scale * S;
+    int px = x * S, py = y * S;
+    for (; *s; s++) {
+        const char* const* gl = glyphFor((unsigned char)*s);
+        for (int row = 0; row < FONT_H; row++)
+            for (int col = 0; col < FONT_W; col++)
+                if (gl[row][col] == '#')
+                    for (int sy = 0; sy < g; sy++)
+                        for (int sx = 0; sx < g; sx++) {
+                            const int X = px + col * g + sx, Y = py + row * g + sy;
+                            if (X < 0 || Y < 0 || X >= c.w || Y >= c.h) continue;
+                            uint32_t& p = c.px[Y * c.w + X];
+                            int r = p & 255, gg = (p >> 8) & 255, b = (p >> 16) & 255;
+                            r += (cr - r) * a / 255; gg += (cg - gg) * a / 255; b += (cb - b) * a / 255;
+                            p = rgb(r, gg, b);
+                        }
+        px += FONT_ADV * g;
+    }
+}
 void drawTextShadow(RGBCanvas& c, int x, int y, const char* s, uint32_t color, uint32_t shadow, int scale) {
     drawText(c, x + 1, y + 1, s, shadow, scale);
     drawText(c, x, y, s, color, scale);

@@ -1,6 +1,6 @@
 # Architecture
 
-About 5,700 lines of C++17. No engine: everything is software-rendered into a 320x200 8-bit buffer; raylib only opens the window, reads input, plays an audio stream and blits the buffer.
+About 5,700 lines of C++17. No engine: everything is software-rendered into a 320x200 8-bit buffer; raylib only opens the window, reads input, plays an audio stream (and auto-explore's music files beside it, R-420) and blits the buffer.
 
 ## Modules and dependency rules
 
@@ -11,7 +11,8 @@ src/space     <- galaxy    (space_view: stars, suns, globes, rings, sky bodies)
 src/surface   <- space     (site, surface_view)
 src/game      <- surface   (game.cpp core loop; autopilot.cpp ship; hud.cpp; landing_map.cpp; game_states.cpp
                             descent/surface/overlays; persistence.cpp saves; guide.* + guide_screens.cpp the GUIDE (M3);
-                            ui.* text helpers; settings.*; audio.*)
+                            ui.* text helpers; settings.*; audio.* (audio_deck.cpp the tape's cassette deck, R-420);
+                            autoexplore.cpp auto-explore, R-419; tape.cpp its tape, R-420)
 src/platform.h + platform_raylib.cpp  <- game/audio only (never included by game code)
 src/main_raylib.cpp        entry point for the window build
 src/main_headless.cpp      tests and screenshot generation (no raylib)
@@ -43,13 +44,13 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 
 ## Per-frame data flow
 
-1. Platform polls input into `Input` and calls `Game::frame(in, realDt)`.
+1. Platform polls input into `Input` and calls `Game::frame(in, realDt)`, which makes its own copy: the controller's buttons become its keys (`padFrame`, R-418), and while auto-explore plays the explorer's input replaces it (`autoInput`, R-419; any key, click, mouse motion or button ends that first).
 2. `Game::frame` advances game time `t` by `realDt * timeWarp` while in a simulating state (space, surface, descent/ascent, landing map), runs the state's update, then renders:
    * space: `SpaceRenderer::setupPalette` + `render` into `fb`, `fb.mush(2)`, `fb.toRGB(rgbBuf)`, then the HUD is drawn in RGB.
    * surface: `SurfaceView::render` (palette, sky, terrain, objects, life, capsule, weather), `mush(2)`, `toRGB`, HUD.
    * overlays (help, menu, list, data) render the underlying scene first, then blend a dark rectangle and text.
 3. Platform uploads `rgbBuf` (320x200 RGBA) to a texture and draws it scaled with point filtering; optional scanlines.
-4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels.
+4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels. R-420: the same pump hands auto-explore's tape (`AudioState::music`, `musicGo`, `musicGain`) to a thread of the platform's, which streams the file with raylib's music stream, and takes its place, length and end back into `Game::audio`.
 
 F-01 (2026-10-12): with `VESPERIS_TRACE=1` the window build times each frame's parts (the poll, `Game::frame`, the audio pump with
 its synth blocks, the screenshot and recorder writes, the texture's upload, the drawing, the swap with its vsync wait: the platform
@@ -61,6 +62,14 @@ frame is meant for the refresh a whole number of the monitor's refreshes after t
 at 60 Hz), its swap waits until three quarters of a refresh before that one, and the schedule follows the refreshes the swaps met
 (`platform_raylib.cpp`). The trace's `hold` is that wait, its work the frame without the hold and the swap. The synth stays on the
 main thread (its block is about 2 ms at most on a loaded Mac, one frame in 5.4).
+
+R-420 (2026-10-19): auto-explore's tape is a second stream beside the synth's, raylib's music stream (the file decoded as it plays, at its
+own rate and in stereo; the synth is mono at 22,050 Hz). A thread of the platform's feeds it every 5 ms: the game's frames can stall
+longer than a stream's buffers last (a landing's first ground, a star's system), and raylib, told not to loop, stops a track as it reads
+its last block, that block and the one playing still unheard (up to 0.37 s with the 8,192-frame halves used); so the stream loops in
+raylib and the thread stops it 30 ms short of its end. The pump passes the requests and the reports under a mutex; the browser has no
+thread there, and its pump does the thread's work. The cassette deck's sounds are the synth's (`deckRender`, a sequence rendered whole
+as it begins), mixed over the rest after the duck (`AudioState::duck`).
 
 ## Time
 
@@ -78,8 +87,8 @@ Text saves in three slots plus an autosave (`vesperis_save_1..3.txt`, `vesperis_
 
 ## M6 additions (2026-09-26)
 
-* `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and `applyPad` (gamepad snapshot to keys and analogue movement); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
-* `platform.h` stays free of the core key enum (raylib defines its own `KEY_*`): the pad is passed as `PlatformPad` and converted in `main_raylib.cpp`, which also loads the key map and drives the photo tools and the recorder. The desktop loop body is a `step` lambda so the Emscripten build can hand it to the browser's animation loop.
+* `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and, since R-418, the controller's controls and bindings (`PadState`, `PadMap`, `padCapture`; `vesperis_pad.txt`), which `game/pad.cpp` turns into the frame's keys (`Game::padFrame`: the layouts by context, the command menu, the on-screen keyboard, the CONTROLS screen's controller page); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
+* `platform.h` stays free of the core key enum (raylib defines its own `KEY_*`): the pad is passed as `PlatformPad` and copied into `Input::pad` in `main_raylib.cpp`, which also loads the key map and drives the photo tools and the recorder. R-418: the platform reads the controller through GLFW's joystick calls (declared in `platform_raylib.cpp`; raylib links statically, the dev Makefile too), raw and in its standard layout. The desktop loop body is a `step` lambda so the Emscripten build can hand it to the browser's animation loop.
 * `packaging/` (app bundle and zip scripts; since F-09 the release's six builds: `toolchains.sh`, `build-mac.sh`, `build-win.sh`, `build-linux.sh` in Docker, `build-release.sh`), `web/` (shell page, build script), `.clang-format`, CI `package` job.
 
 ## Threads (M7, 2026-09-26)

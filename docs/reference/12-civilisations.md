@@ -1484,6 +1484,10 @@ carries it: the decoder's lists, the taking and the radar's world read it (`shar
   each city one of 5 to 8, some towns (one in three) one of 3 to 5 (a prehistoric capital 4 to 6 in its chief's longhouse): a row of
   records across the middle of the room its age kept them in (a temple's, a palace's hall, a town hall, a tower's ground floor, a spire's
   gate hall), the place's own first; the far future's structures keep theirs in rings round their feet (the archive that keeps itself).
+  B-426: the archive holds its count and no more; the place's own beyond it lie one a building over the rest of the place (C-03's weights),
+  then a second and a third in a room, then one at a time across the rooms or round the feet of the buildings holding one (a lone menhir's
+  foot holds two), so every place holds all its own (a prehistoric capital that kept 38 of its people's 80: four in its longhouse's
+  archive, the last recording in the same longhouse, the other 33 one each in 33 huts).
   The works that kept records hold a few (an observatory its charts, a necropolis its dead's, a shrine, standing stones, an antenna
   field's mast, a launch site's blockhouse, a lighthouse). A place left early holds nothing written after it was left; the old time's
   stones, left before year 1, nothing.

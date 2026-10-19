@@ -21,6 +21,8 @@ struct RGBCanvas {
 int textWidth(const char* s, int scale = 1);
 void drawText(RGBCanvas& c, int x, int y, const char* s, uint32_t color, int scale = 1);
 void drawTextShadow(RGBCanvas& c, int x, int y, const char* s, uint32_t color, uint32_t shadow, int scale = 1);
+// R-420: the text laid over what is there, `alpha255` of the way (a caption fading in and out over the scene)
+void drawTextBlend(RGBCanvas& c, int x, int y, const char* s, uint32_t color, int alpha255, int scale = 1);
 void drawTextCentered(RGBCanvas& c, int cx, int y, const char* s, uint32_t color, int scale = 1);
 void fillRectRGB(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t color);
 void blendRectRGB(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t color, int alpha255);

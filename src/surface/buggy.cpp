@@ -55,7 +55,8 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     p.pitch = clampd(p.pitch, -CAM_TILT_DOWN, CAM_TILT_UP);
     double throttle = (in.isDown(KEY_W) || in.isDown(KEY_UP) ? 1 : 0) - (in.isDown(KEY_S) || in.isDown(KEY_DOWN) ? 1 : 0);
     double steerIn = (in.isDown(KEY_D) || in.isDown(KEY_RIGHT) ? 1 : 0) - (in.isDown(KEY_A) || in.isDown(KEY_LEFT) ? 1 : 0);
-    if (in.moveY != 0 || in.moveX != 0) { throttle = in.moveY; steerIn = in.moveX; }   // M6-02
+    if (in.moveY != 0) throttle = in.moveY;   // M6-02; R-418: each axis on its own (a trigger's throttle with the stick's steering)
+    if (in.moveX != 0) steerIn = in.moveX;
     if (in.ctrl()) { throttle = 0; steerIn = 0; }
     // a thump for the synth and a dip of the camera (the dip decays smoothly: no random shake, B-203)
     auto thump = [&](double v) { b.thud = std::max(b.thud, v); b.jolt = std::max(b.jolt, v); };

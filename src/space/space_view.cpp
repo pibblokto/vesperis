@@ -285,6 +285,12 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     if (fade < 1) scalePalette(fb.pal, fade);
 }
 
+// S-05: a gas giant or a substellar object of a Wolf-Rayet star streams its envelope away in the wind
+static bool strippedByWind(const StarSystem& sys, int bi) {
+    const Body& b = sys.bodies[bi];
+    return (b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR) && b.parent < 0 && sys.star.cls == STAR_WOLF_RAYET;
+}
+
 // F-05: true when no pixel centre of the frame lies within `halfAngle` of a direction `theta` off the view's axis. The farthest pixel
 // centre lies `cornerA` off the axis, and the angle between two directions is at least the difference of their angles to a third, so
 // every pixel lies more than theta - cornerA from the direction (a margin of 1e-5 radians over the passes' own rounding)
@@ -927,7 +933,6 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     Vec3 starDirW = light.dir;
     double lf = clampd(light.factor, 0, 1.15);
     if (b.type == PT_COMET) drawCometTail(fb, c, bi, c.skyMode ? 1 : bank, rpx);
-    if ((b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR) && b.parent < 0 && sys.star.cls == STAR_WOLF_RAYET) drawStrippedTail(fb, c, bi, c.skyMode ? 1 : bank);   // S-05: its envelope streams away in the wind
     const PlanetTypeInfo& pt = PLANET_TYPES[b.type];
     // B-317: in a sky the depth is written in metres, the terrain's unit (it was the kilometre: a moon 20,000 km away read
     // as 20 km, so hills beyond that failed the depth test against it and the moon stood in the ground); in space the
@@ -1407,6 +1412,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         if (i == c.excludeBody) continue;   // X-02: the probe's sky draws the space beyond a giant's air without the giant
         int bank = (i == c.bankBodyA) ? 2 : (i == c.bankBodyB ? 3 : 0);
         drawGlobe(fb, c, i, bank, bodyInfo[i]);
+        if (strippedByWind(sys, i)) drawStrippedTail(fb, c, i, bank);   // S-05, B-427: after its globe, behind what is nearer
     }
     lastBeltRocks = lastBeltMeshes = 0;
     if (!c.skyMode) for (size_t k = 0; k < sys.belts.size(); k++) drawBeltRocks(fb, c, (int)k);   // O3: the rocks around a ship inside a belt
@@ -1496,7 +1502,11 @@ void SpaceRenderer::drawSkyBodies(Framebuffer& fb, const SpaceContext& c) {
     }
     std::sort(order.begin(), order.end(), [](auto& a, auto& b) { return a.first > b.first; });
     bodyInfo.assign(sys.bodies.size(), BodyScreenInfo());
-    for (auto& pr : order) { if (sys.bodies[pr.second].type == PT_COMPANION) continue; drawGlobe(fb, c, pr.second, 1, bodyInfo[pr.second]); }
+    for (auto& pr : order) {
+        if (sys.bodies[pr.second].type == PT_COMPANION) continue;
+        drawGlobe(fb, c, pr.second, 1, bodyInfo[pr.second]);
+        if (strippedByWind(sys, pr.second)) drawStrippedTail(fb, c, pr.second, 1);   // S-05: in a sky in the sky's bank, as the globe's lit side
+    }
 }
 
 // S-06: a black hole's companion is being drawn out: a stream of its gas from the limb facing the hole to the edge of the
@@ -1678,37 +1688,152 @@ void SpaceRenderer::drawBlackHole(Framebuffer& fb, const Star& star, const Vec3&
     });
 }
 
-// S-05: a gas giant of a Wolf-Rayet star has its envelope stripped by the wind: a plume of its own cloud bank from the limb
-// away from the star, four radii long, widening and thinning, curling back along the orbit and wavering slowly, drawn before
-// the globe (which covers its root). The giant itself is untouched; the plume is light, like the comet's tail
+// S-05: the envelope a Wolf-Rayet star's wind strips from a giant: a tail of its own cloud from the limb away from the star, four
+// radii long, widening and thinning, curling back along the orbit and wavering slowly, in filaments along the flow. B-427: it was
+// forty glow discs of up to 14 shades drawn before the globe; heaped near the root they reached the ramp's top (white) in a blob
+// behind the giant, the sky's haze kept its own bank under them, and seen from the night side the tail streaming toward the
+// camera was hidden by the globe. Now splats about half their half-width apart along the axis each carry the light of their
+// stretch of the tube, so the side view is the profile's (24 shades at the root, a dim share of the lit face) and a view down
+// the tail sums to a soft ceiling of 36; drawn after the globe, each splat behind whatever is nearer (the globe hides the root
+// from the day side; from the night side the tail veils the globe), in the giant's bank where it outshines the pixel and the
+// two banks dithered where neither does (one bank a pixel: the switch drew a hard outline where it crossed the band). In a
+// sky its light is added by luminance (below). The filaments run across a splat by the axis's direction in the frame, faded as
+// the tail turns end-on. The light is sampled once a block of 2 x 2 pixels at 3x and 4x, bands of rows in parallel, each block
+// summed over the splats in their order (band-pinned)
 void SpaceRenderer::drawStrippedTail(Framebuffer& fb, const SpaceContext& c, int bi, int bank) {
     const StarSystem& sys = *c.sys;
     const Body& b = sys.bodies[bi];
-    Vec3 posW = sys.bodyPos(bi, c.t);
-    double dark = c.skyMode ? c.skyDark : 1.0;
+    const double dark = c.skyMode ? c.skyDark : 1.0;
     if (dark < 0.05) return;
-    Vec3 away = normalize(posW - sys.star.pos);
+    const Vec3 posW = sys.bodyPos(bi, c.t);
+    const Vec3 away = normalize(posW - sys.star.pos);
     Vec3 back = -sys.bodyVel(bi, c.t);
     back = back - away * dot(back, away);
-    double bl = length(back);
+    const double bl = length(back);
     back = bl > 1e-9 ? back / bl : Vec3(0, 1, 0);
-    Vec3 side = cross(away, back);
+    const Vec3 side = cross(away, back);
     const double R = b.radiusKm, ph = (double)(b.seed % 7);
-    const int N = 40;
-    for (int k = 0; k <= N; k++) {
-        double f = (double)k / N;
-        double wob = 0.25 * std::sin(f * 7.0 + c.t * 0.01 + ph) + 0.15 * std::sin(f * 13.0 - c.t * 0.016);
-        Vec3 p = posW + away * (R * (1.0 + 4.0 * f * f)) + back * (R * 0.6 * f * f) + side * (R * wob * f);
-        Vec3 v = c.cam * (p - c.shipPos);
-        if (v.z <= 1) continue;
-        double sx = proj.cx + proj.f * v.x / v.z, sy = proj.cy - proj.f * v.y / v.z;
-        if (sx < -80 * FB_SCALE || sy < -80 * FB_SCALE || sx > FBW + 80 * FB_SCALE || sy > FBH + 80 * FB_SCALE) continue;
-        double rpx = std::max(proj.f * (R * (0.55 + 0.9 * f)) / length(v), 1.0 * FB_SCALE);
-        if (rpx > 80 * FB_SCALE) rpx = 80 * FB_SCALE;
-        int a = (int)(14 * (1 - f) * (1 - f) * dark + 0.5);
-        if (a < 1) continue;
-        fb.glowDisc(sx, sy, rpx, rpx * 0.4, a, bank);
+    auto axis = [&](double f) {
+        const double wob = 0.25 * std::sin(f * 7.0 + c.t * 0.01 + ph) + 0.15 * std::sin(f * 13.0 - c.t * 0.016);
+        return posW + away * (R * (1.0 + 4.0 * f * f)) + back * (R * 0.6 * f * f) + side * (R * wob * f);
+    };
+    const double B0 = 24.0 * dark, cap = 36.0 * dark, depthUnit = c.skyMode ? 1000.0 : 1.0;
+    const int g = FB_SCALE >= 3 ? 2 : 1;   // the light sampled once a g x g block (at 3x and 4x the finest filament spans tens of pixels)
+    constexpr int FN = 16;
+    static const double BAYER4[16] = {0.5 / 16, 8.5 / 16, 2.5 / 16, 10.5 / 16, 12.5 / 16, 4.5 / 16, 14.5 / 16, 6.5 / 16,
+                                      3.5 / 16, 11.5 / 16, 1.5 / 16, 9.5 / 16, 15.5 / 16, 7.5 / 16, 13.5 / 16, 5.5 / 16};
+    struct Splat { double sx, sy, r, invR, invR2, z, inv2r, a, ux, uy; float fil[FN + 1]; int x0, x1, y0, y1; };
+    std::vector<Splat> sp;
+    for (double f = 0; f < 1.0;) {
+        const double hw = R * (0.55 + 0.9 * f);
+        const double speed = length(axis(std::min(f + 0.01, 1.0)) - axis(f)) / 0.01;
+        const double df = std::min({0.1, 0.55 * hw / std::max(speed, 1e-9), 1.0 - f});
+        if (df < 1e-6) break;
+        const double fm = f + 0.5 * df, rKm = R * (0.55 + 0.9 * fm);
+        const double ds = length(axis(f + df) - axis(f));
+        f += df;
+        const Vec3 P = axis(fm), v = c.cam * (P - c.shipPos);
+        const double near = smoothstep(0.5, 2.0, v.z / rKm);   // a stretch round the camera is too near to see as a shape
+        if (near <= 0) continue;
+        Splat s;
+        s.sx = proj.cx + proj.f * v.x / v.z; s.sy = proj.cy - proj.f * v.y / v.z;
+        s.r = proj.f * rKm / v.z;
+        if (s.r < 0.6 * g || s.sx + s.r < 0 || s.sy + s.r < 0 || s.sx - s.r > FBW || s.sy - s.r > FBH) continue;
+        s.x0 = std::max(0, (int)std::floor(s.sx - s.r)); s.x1 = std::min(FBW - 1, (int)std::ceil(s.sx + s.r));
+        s.y0 = std::max(0, (int)std::floor(s.sy - s.r)); s.y1 = std::min(FBH - 1, (int)std::ceil(s.sy + s.r));
+        if (s.x0 > s.x1 || s.y0 > s.y1) continue;
+        s.invR = 1.0 / s.r; s.invR2 = s.invR * s.invR; s.z = v.z; s.inv2r = 0.5 / rKm;
+        s.a = B0 * std::pow(1.0 - fm, 1.3) * near * ds * 15.0 / (16.0 * rKm);   // a tube of radius rKm seen side-on: its column B
+        const Vec3 v2 = c.cam * (axis(std::min(fm + 0.01, 1.0)) - c.shipPos);
+        double tx = 1, ty = 0, along = 0;
+        if (v2.z > 1e-6) {
+            tx = (proj.cx + proj.f * v2.x / v2.z) - s.sx; ty = (proj.cy - proj.f * v2.y / v2.z) - s.sy;
+            const double tl = std::sqrt(tx * tx + ty * ty), side3 = proj.f * length(v2 - v) / v.z;
+            if (tl > 1e-9) { tx /= tl; ty /= tl; along = side3 > 1e-9 ? tl / side3 : 0; }
+        }
+        s.ux = -ty; s.uy = tx;
+        const double amp = smoothstep(0.15, 0.5, along);   // end-on, a splat's across has no direction
+        for (int j = 0; j <= FN; j++) {
+            const double u = -1.0 + 2.0 * j / FN, q = fm * 1.6 - c.t * 0.004;
+            const double n = 0.9 * gnoise2(u * (2.0 + 1.5 * fm) + ph * 3.7, q, b.seed ^ 0x7A11ULL) + 0.45 * gnoise2(u * (5.0 + 3.0 * fm), q * 2.0, b.seed ^ 0x7A12ULL);
+            s.fil[j] = (float)std::exp(amp * 2.4 * n);
+        }
+        sp.push_back(s);
     }
+    if (sp.empty()) return;
+    int Y0 = FBH, Y1 = -1;
+    for (const Splat& s : sp) { Y0 = std::min(Y0, s.y0); Y1 = std::max(Y1, s.y1); }
+    // in a sky (the surface's palette) the sky's bank is black under shade 30 and steep above it, so the tail's light is added there
+    // by luminance: the pixel's read from the palette, the tail's at most that of the bank's shade 40 (the lit side is drawn from 43
+    // up), the sum written as the bank's shade of that luminance (the band's pass carries the sky's pixels into its bank by luminance)
+    std::vector<float> intenLum;
+    std::vector<int> lumInten;
+    double lumTop = 0;
+    if (c.skyMode) {
+        double lm[64], run = 0;
+        for (int k = 0; k < 64; k++) { const uint8_t* q = &fb.pal[(bank * 64 + k) * 3]; run = std::max(run, 0.2126 * q[0] + 0.7152 * q[1] + 0.0722 * q[2]); lm[k] = run; }
+        intenLum.resize(INTEN_MASK + 1);
+        for (int i = 0; i <= INTEN_MASK; i++) { const double sh = std::min(63.0, i / (double)INTEN_PER_SHADE); const int k = std::min(62, (int)sh); intenLum[i] = (float)(lm[k] + (lm[k + 1] - lm[k]) * (sh - k)); }
+        lumInten.resize(1025);
+        for (int j = 0, k = 0; j <= 1024; j++) {
+            const double L = j * (255.0 / 1024);
+            while (k < 62 && lm[k + 1] < L) k++;
+            const double f = lm[k + 1] > lm[k] ? clampd((L - lm[k]) / (lm[k + 1] - lm[k]), 0, 1) : 0.0;
+            lumInten[j] = (int)((k + f) * INTEN_PER_SHADE + 0.5);
+        }
+        lumTop = lm[40];
+    }
+    parallelFor((Y1 - Y0) / g + 1, 4, [&](int bb, int be) {   // bands of g rows, each its own (band-pinned)
+        std::vector<float> acc(FBW / g + 2), zb(FBW / g + 2);
+        for (int band = bb; band < be; band++) {
+            const int yb = Y0 + band * g, ye = std::min(yb + g, FBH) - 1;
+            int xa = FBW, xb = -1;
+            for (const Splat& s : sp) if (ye >= s.y0 && yb <= s.y1) { xa = std::min(xa, s.x0); xb = std::max(xb, s.x1); }
+            if (xb < xa) continue;
+            const int nk = (xb - xa) / g + 1;
+            for (int k = 0; k < nk; k++) {   // a block's depth: its farthest pixel's (the tail's light reaches the limb, no dark seam)
+                float iz = 3e38f;
+                for (int y = yb; y <= ye; y++) for (int x = xa + k * g; x < std::min(xa + k * g + g, FBW); x++) iz = std::min(iz, fb.invz[y * FBW + x]);
+                acc[k] = 0; zb[k] = iz > 1e-12f ? (float)(1.0 / (iz * depthUnit)) : 3e38f;
+            }
+            const double cy = yb + 0.5 * g;   // the blocks' centres
+            for (const Splat& s : sp) {
+                const double ry = cy - s.sy, ry2 = ry * ry * s.invR2;
+                if (ry2 >= 1) continue;
+                const double span = s.r * std::sqrt(1 - ry2);
+                const int k0 = std::max(0, (int)std::ceil((s.sx - span - xa) / g - 0.5)), k1 = std::min(nk - 1, (int)std::floor((s.sx + span - xa) / g - 0.5));
+                for (int k = k0; k <= k1; k++) {
+                    const double rx = xa + (k + 0.5) * g - s.sx, d2 = rx * rx * s.invR2 + ry2;
+                    if (d2 >= 1) continue;
+                    const double vis = clampd(0.5 + ((double)zb[k] - s.z) * s.inv2r, 0, 1);
+                    if (vis <= 0) continue;
+                    const double fu = ((rx * s.ux + ry * s.uy) * s.invR + 1.0) * 0.5 * FN;
+                    const int j = clampi((int)fu, 0, FN - 1);
+                    const double fil = s.fil[j] + (s.fil[j + 1] - s.fil[j]) * clampd(fu - j, 0, 1);
+                    acc[k] += (float)(s.a * (1 - d2) * (1 - d2) * fil * vis);
+                }
+            }
+            for (int k = 0; k < nk; k++) {
+                if (acc[k] <= 0) continue;
+                const double T = cap * (1.0 - std::exp(-acc[k] / cap));
+                const int add = (int)(T * INTEN_PER_SHADE + 0.5);
+                if (add <= 0) continue;
+                for (int y = yb; y <= ye; y++)
+                    for (int x = xa + k * g; x < std::min(xa + k * g + g, FBW); x++) {
+                        Pix& p = fb.idx[y * FBW + x];
+                        const int v = intenOf(p);
+                        if (c.skyMode) {
+                            const double L = (bankOf(p) == bank ? intenLum[v] : 0.0) + lumTop * T / 36.0;
+                            const int ni = lumInten[clampi((int)(L * (1024 / 255.0) + 0.5), 0, 1024)];
+                            if (ni > v) p = pixI(bank, ni);
+                            continue;
+                        }
+                        const double q = (double)add / (add + v), th = 0.3 + 0.4 * BAYER4[(y & 3) * 4 + (x & 3)];   // the banks dithered where neither outshines
+                        p = pixI(q > th ? bank : bankOf(p), v + add);
+                    }
+            }
+        }
+    });
 }
 
 // M5-07/N0-01 (B-201): a comet's coma, its straight ion tail with knots streaming outward, a dust tail

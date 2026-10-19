@@ -4,7 +4,33 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <mutex>
+#include <string>
 #include <thread>
+
+#ifndef __EMSCRIPTEN__
+// R-418: GLFW's joystick calls, inside raylib's static library (raylib's own gamepad calls read only the devices GLFW has a mapping
+// for, and only through that mapping; a controller nobody mapped reads as nothing). The C declarations of GLFW 3.3+, raylib 5.5's own.
+// Weak on ELF: a Linux build against a shared raylib that keeps GLFW hidden still links, and reads the controller through raylib
+#if defined(__ELF__)
+#define VESPERIS_GLFW_WEAK __attribute__((weak))
+#else
+#define VESPERIS_GLFW_WEAK
+#endif
+extern "C" {
+typedef struct GLFWgamepadstate { unsigned char buttons[15]; float axes[6]; } GLFWgamepadstate;
+VESPERIS_GLFW_WEAK int glfwJoystickPresent(int jid);
+VESPERIS_GLFW_WEAK int glfwJoystickIsGamepad(int jid);
+VESPERIS_GLFW_WEAK const float* glfwGetJoystickAxes(int jid, int* count);
+VESPERIS_GLFW_WEAK const unsigned char* glfwGetJoystickButtons(int jid, int* count);
+VESPERIS_GLFW_WEAK const unsigned char* glfwGetJoystickHats(int jid, int* count);
+VESPERIS_GLFW_WEAK const char* glfwGetJoystickName(int jid);
+VESPERIS_GLFW_WEAK const char* glfwGetJoystickGUID(int jid);
+VESPERIS_GLFW_WEAK int glfwGetGamepadState(int jid, GLFWgamepadstate* state);
+}
+#endif
 
 namespace {
 Texture2D gTex;
@@ -70,6 +96,78 @@ bool gAudioOk = false;
 PlatformPresentTimes gPresentTimes;   // F-01
 PlatformAudioTimes gAudioTimes;
 double msSince(std::chrono::steady_clock::time_point t0) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
+// R-420: auto-explore's tape beside the synth, raylib's music stream (the file decoded as it plays, at its own rate, in stereo). A thread
+// of its own feeds it and ends it. The game's frames can stall longer than a stream's buffers last (a landing's first ground, a star's
+// system), and raylib, told not to loop, stops a track as it reads its last block, that block and the one playing still unheard: so the
+// stream loops in raylib and the thread stops it 30 ms short of its end, looking every 5 ms. The pump hands the thread the game's
+// requests and takes its reports back (the browser has no thread there: the pump does its work)
+struct MusicDeck {
+    std::mutex m;
+    std::string want; double from = 0, gain = 1; bool go = false;   // asked: a file (empty: none) from a second, at a level
+    Music music{}; bool loaded = false;                               // the stream
+    double t = -1, len = 0; bool ended = false, failed = false;       // told
+    std::thread th; bool running = false, quit = false;
+};
+MusicDeck gMusic;
+void musicStep(MusicDeck& D) {   // D.m held
+    if (D.go) {
+        D.go = false;
+        if (D.loaded) { StopMusicStream(D.music); UnloadMusicStream(D.music); D.loaded = false; }
+        D.t = -1; D.len = 0;
+        if (!D.want.empty()) {
+            SetAudioStreamBufferSizeDefault(8192);   // a half of the stream's buffer 0.19 s at 44.1 kHz
+            D.music = LoadMusicStream(D.want.c_str());
+            SetAudioStreamBufferSizeDefault(2048);
+            if (IsMusicValid(D.music)) {
+                D.music.looping = true;
+                D.len = GetMusicTimeLength(D.music);
+                if (D.from > 0 && D.from >= D.len - 2) { UnloadMusicStream(D.music); D.ended = true; return; }   // left at its very end: over
+                if (D.from > 0.5) SeekMusicStream(D.music, (float)D.from);
+                UpdateMusicStream(D.music);   // both halves filled before it sounds
+                SetMusicVolume(D.music, (float)D.gain);
+                PlayMusicStream(D.music);
+                D.loaded = true;
+            } else D.failed = true;
+        }
+    }
+    if (!D.loaded) return;
+    SetMusicVolume(D.music, (float)D.gain);
+    UpdateMusicStream(D.music);
+    const double t = GetMusicTimePlayed(D.music);
+    if (t >= D.len - 0.03 || (D.t > 1 && t < D.t - 1)) {   // its end (or just past it, the stream gone round)
+        StopMusicStream(D.music); UnloadMusicStream(D.music); D.loaded = false; D.ended = true; D.t = -1;
+        return;
+    }
+    D.t = t;
+}
+void musicThread() {
+    for (;;) {
+        { std::lock_guard<std::mutex> lk(gMusic.m); if (gMusic.quit) return; musicStep(gMusic); }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+}
+// the pump's side: the game's request handed over (the thread begun with the first), the thread's reports taken back
+void musicPump(AudioState& st) {
+    MusicDeck& D = gMusic;
+    if (!st.musicGo && !D.running) return;
+    std::lock_guard<std::mutex> lk(D.m);
+    if (st.musicGo) {
+        st.musicGo = false;
+        D.want = st.music; D.from = st.musicFrom; D.go = true; D.ended = D.failed = false; D.t = -1;
+#ifndef __EMSCRIPTEN__
+        if (!D.running) { D.running = true; D.th = std::thread(musicThread); }
+#else
+        D.running = true;
+#endif
+    }
+    D.gain = std::max(0.0, st.musicGain * st.master);
+#ifdef __EMSCRIPTEN__
+    musicStep(D);
+#endif
+    st.musicT = D.t; st.musicLen = D.len;
+    if (D.ended) { st.musicEnded = true; D.ended = false; }
+    if (D.failed) { st.musicFailed = true; D.failed = false; }
+}
 // F-08: the frames' pacing (KI-407). raylib's SetTargetFPS(60) waited after the swap for 1/60 s less the frame's time, asleep for
 // most of it; macOS wakes such a sleep up to a millisecond late, so on the dev Mac's 120 Hz display the frames came every 17.2 ms (58
 // a second) and some stayed on the screen a refresh longer. The platform paces them instead: a frame is meant for the refresh a whole
@@ -112,6 +210,12 @@ bool platformInit(int w, int h, const char* title) {
     pacePeriod();
 #endif
     SetExitKey(0);
+    // R-418: SDL's controller database beside the game (`gamecontrollerdb.txt`: the community's file, or a line of one's own) teaches GLFW
+    // the layout of the controllers its own list lacks
+    if (FileExists("gamecontrollerdb.txt")) {
+        char* db = LoadFileText("gamecontrollerdb.txt");
+        if (db) { const int ok = SetGamepadMappings(db); UnloadFileText(db); printf("controller mappings %s from gamecontrollerdb.txt\n", ok ? "read" : "not understood"); }
+    }
     InitAudioDevice();
     gAudioOk = IsAudioDeviceReady();
     if (gAudioOk) {
@@ -127,6 +231,19 @@ bool platformShouldClose() { return WindowShouldClose(); }
 double platformTime() { return GetTime(); }
 bool platformFocused() { return IsWindowFocused(); }
 
+// R-418: the first gamepad through raylib's own calls, the standard layout alone (the browser; a build whose raylib keeps GLFW hidden)
+[[maybe_unused]] static void padFromRaylib(PlatformPad& p) {
+    if (!IsGamepadAvailable(0)) return;
+    p.present = p.mapped = true;
+    snprintf(p.name, sizeof p.name, "%s", GetGamepadName(0));
+    static const int RL_BUTTONS[15] = {GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP,
+                                       GAMEPAD_BUTTON_LEFT_TRIGGER_1, GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_MIDDLE_LEFT, GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_MIDDLE,
+                                       GAMEPAD_BUTTON_LEFT_THUMB, GAMEPAD_BUTTON_RIGHT_THUMB, GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_RIGHT, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT};
+    for (int k = 0; k < 15; k++) p.buttons[k] = IsGamepadButtonDown(0, RL_BUTTONS[k]);
+    static const int RL_AXES[6] = {GAMEPAD_AXIS_LEFT_X, GAMEPAD_AXIS_LEFT_Y, GAMEPAD_AXIS_RIGHT_X, GAMEPAD_AXIS_RIGHT_Y, GAMEPAD_AXIS_LEFT_TRIGGER, GAMEPAD_AXIS_RIGHT_TRIGGER};
+    for (int k = 0; k < 6; k++) p.axes[k] = GetGamepadAxisMovement(0, RL_AXES[k]);
+}
+
 void platformPoll(PlatformFrameInput& in, bool captured) {
     for (int k = 0; k < 400; k++) {
         in.down[k] = k >= 32 && IsKeyDown(k);
@@ -137,22 +254,39 @@ void platformPoll(PlatformFrameInput& in, bool captured) {
     in.mouseDy = captured ? md.y : 0;
     in.wheel = (int)GetMouseWheelMove();
     for (int b = 0; b < 3; b++) { in.mouseDown[b] = IsMouseButtonDown(b); in.mousePressed[b] = IsMouseButtonPressed(b); }
-    // M6-02: the first gamepad
+    // R-418: the first controller: the first GLFW knows the layout of, else the first with four buttons or more (a pad's motion sensor
+    // shows up as a joystick of axes alone), read raw always and through its standard layout when known
     in.pad = PlatformPad();
-    if (IsGamepadAvailable(0)) {
-        in.pad.present = true;
-        in.pad.lx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_X);
-        in.pad.ly = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_Y);
-        in.pad.rx = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_X);
-        in.pad.ry = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_Y);
-        in.pad.lt = GetGamepadAxisMovement(0, GAMEPAD_AXIS_LEFT_TRIGGER);
-        in.pad.rt = GetGamepadAxisMovement(0, GAMEPAD_AXIS_RIGHT_TRIGGER);
-        static const int RL_BUTTONS[16] = {GAMEPAD_BUTTON_RIGHT_FACE_DOWN, GAMEPAD_BUTTON_RIGHT_FACE_RIGHT, GAMEPAD_BUTTON_RIGHT_FACE_LEFT, GAMEPAD_BUTTON_RIGHT_FACE_UP,
-                                                    GAMEPAD_BUTTON_LEFT_TRIGGER_1, GAMEPAD_BUTTON_RIGHT_TRIGGER_1, GAMEPAD_BUTTON_MIDDLE_RIGHT, GAMEPAD_BUTTON_MIDDLE_LEFT,
-                                                    GAMEPAD_BUTTON_LEFT_FACE_UP, GAMEPAD_BUTTON_LEFT_FACE_DOWN, GAMEPAD_BUTTON_LEFT_FACE_LEFT, GAMEPAD_BUTTON_LEFT_FACE_RIGHT,
-                                                    GAMEPAD_BUTTON_LEFT_THUMB, GAMEPAD_BUTTON_RIGHT_THUMB, GAMEPAD_BUTTON_MIDDLE, GAMEPAD_BUTTON_UNKNOWN};
-        for (int b = 0; b < 16; b++) in.pad.buttons[b] = RL_BUTTONS[b] != GAMEPAD_BUTTON_UNKNOWN && IsGamepadButtonDown(0, RL_BUTTONS[b]);
+#if defined(__ELF__)
+    if (!glfwJoystickPresent || !glfwGetGamepadState || !glfwGetJoystickHats || !glfwGetJoystickGUID) { padFromRaylib(in.pad); return; }   // GLFW hidden: raylib's reading
+#endif
+#ifndef __EMSCRIPTEN__
+    int jid = -1;
+    for (int j = 0; j < 16; j++) {
+        if (!glfwJoystickPresent(j)) continue;
+        if (glfwJoystickIsGamepad(j)) { jid = j; break; }
+        int nb = 0;
+        if (jid < 0 && glfwGetJoystickButtons(j, &nb) && nb >= 4) jid = j;
     }
+    if (jid >= 0) {
+        PlatformPad& p = in.pad;
+        p.present = true;
+        if (const char* nm = glfwGetJoystickName(jid)) snprintf(p.name, sizeof p.name, "%s", nm);
+        if (const char* gu = glfwGetJoystickGUID(jid)) snprintf(p.guid, sizeof p.guid, "%s", gu);
+        int n = 0;
+        if (const unsigned char* b = glfwGetJoystickButtons(jid, &n)) { p.rawButtonCount = std::min(n, 32); for (int k = 0; k < p.rawButtonCount; k++) p.rawButtons[k] = b[k] != 0; }
+        if (const float* a = glfwGetJoystickAxes(jid, &n)) { p.rawAxisCount = std::min(n, 16); for (int k = 0; k < p.rawAxisCount; k++) p.rawAxes[k] = a[k]; }
+        if (const unsigned char* h = glfwGetJoystickHats(jid, &n)) { p.rawHatCount = std::min(n, 4); for (int k = 0; k < p.rawHatCount; k++) p.rawHats[k] = h[k]; }
+        GLFWgamepadstate gs;
+        if (glfwJoystickIsGamepad(jid) && glfwGetGamepadState(jid, &gs)) {
+            p.mapped = true;
+            for (int k = 0; k < 15; k++) p.buttons[k] = gs.buttons[k] != 0;
+            for (int k = 0; k < 6; k++) p.axes[k] = gs.axes[k];
+        }
+    }
+#else
+    padFromRaylib(in.pad);   // the browser's standard mapping (no raw device there)
+#endif
 }
 
 void platformSetCapture(bool on) { if (on) DisableCursor(); else EnableCursor(); }
@@ -161,7 +295,8 @@ void platformSetWindowSize(int w, int h) { if (!IsWindowFullscreen()) SetWindowS
 
 void platformAudioPump(AudioSynth& synth, AudioState& st) {
     gAudioTimes = PlatformAudioTimes();
-    if (!gAudioOk) return;
+    if (!gAudioOk) { if (st.musicGo) { st.musicGo = false; if (!st.music.empty()) st.musicFailed = true; } return; }   // R-420: no device, no tape
+    musicPump(st);
     while (IsAudioStreamProcessed(gStream)) {
         auto t0 = std::chrono::steady_clock::now();
         synth.render(gAbuf.data(), (int)gAbuf.size(), 22050, st);
@@ -265,6 +400,11 @@ void platformShutdown() {
     if (gTexW) UnloadTexture(gTex);
     if (gRTW) UnloadRenderTexture(gRT);
     if (gPostOk) UnloadShader(gPost);
+    if (gMusic.running) {   // R-420: the tape's thread let go, its stream with it
+        { std::lock_guard<std::mutex> lk(gMusic.m); gMusic.quit = true; }
+        if (gMusic.th.joinable()) gMusic.th.join();
+        if (gMusic.loaded) { StopMusicStream(gMusic.music); UnloadMusicStream(gMusic.music); gMusic.loaded = false; }
+    }
     if (gAudioOk) { UnloadAudioStream(gStream); CloseAudioDevice(); }
     CloseWindow();
 }

@@ -31,6 +31,10 @@ const PlanetTypeInfo PLANET_TYPES[PT_COUNT] = {
 namespace {
 constexpr double ORBIT_K = 8.0e-6;         // planet period = K * r^1.5 / sqrt(mass)
 constexpr double MOON_K = 1.26e-3;
+// B-425 (GEN 14): a companion star keeps clear of the other sun's worlds (`StarSystem::generate`)
+constexpr double COMPANION_DISC = 3.0 * DEG;   // the most a far companion spans in the sky of the primary's worlds, and the primary in its own worlds'
+constexpr double COMPANION_HEAT_K = 100.0;     // the most a far companion's light alone warms the primary's worlds (an equilibrium temperature)
+constexpr double CLOSE_LIGHT = 0.1;            // the most a close companion shines beside the primary (its worlds circle both)
 
 double equilibriumTemp(double luminosity, double orbitKm) {
     return 278.0 * std::pow(luminosity, 0.25) * std::sqrt(AU_GAME_KM / orbitKm);
@@ -242,7 +246,7 @@ void StarSystem::generate(const Star& s) {
         if (giant) nm = 2 + rng.irange(maxm - 1);
         if (n == 0 && !giant) nm = std::min(nm, 1);
         if ((int)bodies.size() + nm > 60) nm = 60 - (int)bodies.size();
-        // M5-09: about 7% of the solid mid-sized planets are double planets: a twin of 0.55-0.95 radii at 5-9 radii, both locked to each other
+        // M5-09: about 7% of the solid mid-sized planets are double planets: a twin of 0.55-0.95 radii at 12-20 radii (B-428; 5-9 before), both locked to each other
         bool twin = (p.type == PT_ROCKY || p.type == PT_FELISIAN || p.type == PT_VENUSIAN || p.type == PT_QUARTZ || p.type == PT_OCEAN || p.type == PT_THINATMO || p.type == PT_DESERT || p.type == PT_ACIDIC || p.type == PT_TECTONIC) && rng.chance(0.07) && (int)bodies.size() < 59;
         if (twin) nm = std::max(nm, 1);
         p.moonCount = nm;
@@ -250,8 +254,12 @@ void StarSystem::generate(const Star& s) {
         // B-314 (GEN 7): the first moon orbits at 4.5-6 radii, and outside the rings by a third of their outer radius. From
         // 2.8 radii the parent's disc was 42 degrees across (60% of the view), and a moon inside the rings (they reach
         // 4 radii) saw them fill the sky; from 4.5 radii the disc is 26 degrees, a wall of a planet still, and the rings
-        // a band (M5-09 had 2.8-4.2 radii; 3.5-6.5 before that). The same random draw, so the rest of the system holds
-        double mkey = p.radiusKm * std::max(4.5 + 1.5 * rng.uni(), p.rings ? p.ringOuter * 1.35 : 0.0);
+        // a band (M5-09 had 2.8-4.2 radii; 3.5-6.5 before that). The same random draw, so the rest of the system holds.
+        // B-428 (GEN 15): a solid world's first moon at 5-40 radii, even in the logarithm (most near 14). At 4.5-6 radii a world
+        // and its moon hung side by side from the parked ship (3.5 radii, inside the moon's orbit), a twin 5-9 radii off beside
+        // it: a system in a pocket. A giant's stays at 4.5-6 (the giant over its inner moons, as Jupiter over Io)
+        const double u = rng.uni();
+        double mkey = p.radiusKm * std::max(giant ? 4.5 + 1.5 * u : 5.0 * std::pow(8.0, u), p.rings ? p.ringOuter * 1.35 : 0.0);
         double prevMoonR = 0;
         for (int c = 0; c < nm; c++) {
             if (c == 0 && twin) {
@@ -259,7 +267,7 @@ void StarSystem::generate(const Star& s) {
                 m.index = (int)bodies.size();
                 m.parent = n;
                 m.seed = hashCombine(p.seed, 500);
-                m.orbitRadiusKm = p.radiusKm * (5.0 + 4.0 * rng.uni());
+                m.orbitRadiusKm = p.radiusKm * (12.0 + 8.0 * rng.uni());   // B-428: as Charon from Pluto (5-9 radii before)
                 m.tempK = p.tempK * (0.95 + 0.1 * rng.uni());
                 m.type = pickPlanetType(rng, m.tempK, s.cls, false, -1, 0.5);
                 if (m.type == PT_GASGIANT || m.type == PT_SUBSTELLAR) m.type = PT_ROCKY;
@@ -405,11 +413,16 @@ void StarSystem::generate(const Star& s) {
             k.gravity = 274.0 * cc.massFactor / std::pow(k.radiusKm / 7.0e5, 2);
             k.color = cc.color;
             k.tempK = 5000;
-            double firstOrbit = bodies.empty() || bodies[0].type == PT_COMET ? ci.minFirstOrbitKm : bodies[0].orbitRadiusKm;
+            bool worlds = !bodies.empty() && bodies[0].type != PT_COMET;
+            double firstOrbit = worlds ? bodies[0].orbitRadiusKm : ci.minFirstOrbitKm;
             double closeR = (s.radiusKm + k.radiusKm) * (3.0 + 3.0 * kr.uni());
-            bool close = (kr.chance(0.35) && closeR < 0.4 * firstOrbit) || s.cls == STAR_BLACK_HOLE;   // S-06: a black hole's companion is close, being drawn out
+            // B-425: the worlds circle a close companion with the primary, and their warmth is the primary's alone (`pickPlanetType` read
+            // that), so a close one is dim beside it and no wider than it in the first world's sky at its nearest; else it is far (a white
+            // dwarf's yellow companion was 20-28 degrees across over worlds it would have scorched)
+            double firstPeri = worlds ? firstOrbit * (1 - bodies[0].ecc) : firstOrbit, nearK = firstPeri - closeR * 1.1;
+            bool modest = !worlds || (k.luminosity <= CLOSE_LIGHT * s.luminosity && nearK > 0 && k.radiusKm / nearK <= s.radiusKm / firstPeri);
+            bool close = (kr.chance(0.35) && closeR < 0.4 * firstOrbit && modest) || s.cls == STAR_BLACK_HOLE;   // S-06: a black hole's companion is close, being drawn out
             k.orbitRadiusKm = close ? closeR : outerOrbitKm() * (2.5 + 5.0 * kr.uni());
-            k.orbitPeriod = ORBIT_K * std::pow(k.orbitRadiusKm, 1.5) / std::sqrt(s.massFactor + cc.massFactor);
             k.orbitPhase0 = kr.range(0, TAU);
             k.orbitIncl = kr.sym(close ? 3 * DEG : 25 * DEG);
             k.orbitNode = kr.range(0, TAU);
@@ -423,8 +436,29 @@ void StarSystem::generate(const Star& s) {
             int np2 = close ? 0 : kr.irange(4);
             if ((int)bodies.size() + np2 > 60) np2 = 0;
             k.moonCount = np2;
-            bodies.push_back(k);
             double key2 = std::max(k.radiusKm * cc.firstOrbitMult, cc.minFirstOrbitKm) * (0.8 + 0.5 * kr.uni());
+            if (!close) {
+                // B-425: a far companion keeps its distance. Its orbit was drawn from the primary's widest one alone, so a red giant came within
+                // its own radius of a red dwarf's worlds (60 degrees of their sky and more, and on the inner side of its orbit inside it). At its
+                // closest approach it now stays far enough from the primary's farthest world (a planet's apoapsis and its widest moon) that it spans
+                // COMPANION_DISC of that sky at most and its light alone would warm the world to COMPANION_HEAT_K at most; its own worlds keep
+                // within a third of that gap (the widest its up to three can reach: the first at 1.08 of its key, each next 1.9 times out, e 0.1)
+                // and see the primary no wider than COMPANION_DISC. The draws are as before: only an orbit under the floor moves out
+                double reach = 0;
+                for (const Body& b : bodies) {
+                    if (b.type == PT_COMET) continue;
+                    const Body& p = b.parent < 0 ? b : bodies[b.parent];
+                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : b.orbitRadiusKm * (1 + b.ecc)));
+                }
+                double own = np2 > 0 ? key2 * 1.08 * std::pow(1.9 * 1.08, np2 - 1) * 1.1 : 0;
+                double view = k.radiusKm / std::sin(0.5 * COMPANION_DISC);
+                double heat = AU_GAME_KM * (278.0 / COMPANION_HEAT_K) * (278.0 / COMPANION_HEAT_K) * std::sqrt(k.luminosity);
+                double q = reach + std::max(std::max(view, heat), 3.0 * own);
+                if (np2 > 0) q = std::max(q, own + s.radiusKm / std::sin(0.5 * COMPANION_DISC));
+                k.orbitRadiusKm = std::max(k.orbitRadiusKm, q / (1 - k.ecc));
+            }
+            k.orbitPeriod = ORBIT_K * std::pow(k.orbitRadiusKm, 1.5) / std::sqrt(s.massFactor + cc.massFactor);
+            bodies.push_back(k);
             for (int n = 0; n < np2; n++) {
                 Body b;
                 b.index = (int)bodies.size();
@@ -592,9 +626,15 @@ Star StarSystem::companionStar() const {
     return k;
 }
 
-double StarSystem::starLightFactor(double luminosity, double distKm) {
+double StarSystem::starLightFactor(double luminosity, double distKm, double floor) {
     double f = std::pow(luminosity * (AU_GAME_KM / distKm) * (AU_GAME_KM / distKm), 0.25);
-    return clampd(f, 0.35, 1.15);
+    return clampd(f, floor, 1.15);
+}
+
+bool StarSystem::ofCompanion(int i) const {
+    if (companion < 0) return false;
+    for (int n = 0; i >= 0 && i < (int)bodies.size() && n < 4; n++) { if (bodies[i].parent == companion) return true; i = bodies[i].parent; }
+    return false;
 }
 
 StarSystem::Light StarSystem::lightAt(const Vec3& posKm, double t) const {

@@ -102,6 +102,8 @@ struct SurfaceEnvironment {
     SunInfo sun2;               // M5-01: the companion star, when hasSun2
     bool hasSun2 = false;
     double sun2Share = 0;       // 0..1 share of the light coming from the companion
+    double glow = 1;            // B-425: the blended light's glow in the sky, 0..1 of its own sun's (a far sun alone up makes a faint one)
+    double primaryRel = 1;      // B-425: the primary's light beside the world's own sun, 0..1 (1 but on a world of the companion: the primary is its far sun)
     RGB lightColor;             // colour of the blended light
     double skyBrightness = 0;   // 0..1
     double temperatureC = 0;

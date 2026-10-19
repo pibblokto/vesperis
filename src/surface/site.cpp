@@ -626,7 +626,8 @@ SunInfo SurfaceSite::sun(double t) const {
     si.azimuth = wrap2pi(std::atan2(si.dirLocal.x, si.dirLocal.z));
     double dist = length(sys->star.pos - bp);
     double flare = starFlare(sys->star, t);   // S-01: a red dwarf's flare doubles its light for a minute and whitens it: a quarter more light past the exposure clamp (its near worlds sit at the clamp already)
-    si.lightFactor = std::max(0.62, SpaceRenderer::lightFactor(sys->star.luminosity, dist)) * (1 + 0.25 * flare);
+    // B-425: the floor is the world's own sun's; on a world of the companion the primary is the far sun and lights as much as it does
+    si.lightFactor = (sys->ofCompanion(body) ? StarSystem::starLightFactor(sys->star.luminosity, dist, 0.0) : std::max(0.62, SpaceRenderer::lightFactor(sys->star.luminosity, dist))) * (1 + 0.25 * flare);
     si.angularRadius = std::asin(clampd(sys->star.radiusKm / dist, 0, 1));
     // M1-08: other bodies between the site and the star cover part of its disc
     si.eclipse = 0;
@@ -684,10 +685,13 @@ bool SurfaceSite::sun2(double t, SunInfo& si) const {
     si.dirLocal = L * dW;
     si.altitude = std::asin(clampd(si.dirLocal.y, -1, 1));
     si.azimuth = wrap2pi(std::atan2(si.dirLocal.x, si.dirLocal.z));
-    si.lightFactor = SpaceRenderer::lightFactor(k.luminosity, dist);
+    // B-425: the companion lights the primary's worlds as much as it does (its floor of 0.35 lit a night under a far one like a day); its own
+    // worlds have the floor the primary's have
+    si.lightFactor = sys->ofCompanion(body) ? std::max(0.62, SpaceRenderer::lightFactor(k.luminosity, dist)) : StarSystem::starLightFactor(k.luminosity, dist, 0.0);
     si.angularRadius = std::asin(clampd(k.radiusKm / dist, 0, 1));
     si.eclipse = 0;
-    si.dayFraction = 0;
+    Vec3 sunBody = sys->bodyFrame(body, t) * dW;   // B-425: its own hour angle (a world of the companion keeps its time by it)
+    si.dayFraction = wrap2pi(wrapAngle(lon0 - std::atan2(sunBody.y, sunBody.x)) + PI) / TAU;
     si.color = k.color;
     return true;
 }

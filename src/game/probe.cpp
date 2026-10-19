@@ -651,7 +651,7 @@ void Game::renderProbe() {
         rgbBuf = probe.lastFrame;
         probeHiss();
     } else renderProbeFeed(probe.clock, t);
-    if (!photoMode) renderProbeHUD();
+    if (!photoMode && !ax.on) renderProbeHUD();   // R-419: the picture alone while auto-explore watches
 }
 
 void Game::probeHiss() {

@@ -4,12 +4,19 @@
 #include <cstdint>
 #include "game/audio.h"
 
-// M6-02: the first gamepad, raylib's button order (see PadState in core/input.h; kept separate so this
-// header stays free of the core key enum, which clashes with raylib's own key names)
+// R-418: the first controller, read whole: GLFW's standard layout when the system knows the device (`mapped`), and its raw buttons,
+// axes and hats always (the fields of PadState in core/input.h, copied by the front end; kept apart so this header stays free of the
+// core key enum, which clashes with raylib's own key names)
 struct PlatformPad {
-    bool present = false;
-    float lx = 0, ly = 0, rx = 0, ry = 0, lt = -1, rt = -1;
-    bool buttons[16] = {false};
+    bool present = false, mapped = false;
+    bool buttons[15] = {};                        // A B X Y LB RB BACK START GUIDE L3 R3 UP RIGHT DOWN LEFT
+    float axes[6] = {0, 0, 0, 0, -1, -1};         // LX LY RX RY LT RT
+    int rawButtonCount = 0, rawAxisCount = 0, rawHatCount = 0;
+    bool rawButtons[32] = {};
+    float rawAxes[16] = {};
+    unsigned char rawHats[4] = {};
+    char name[64] = {};
+    char guid[40] = {};
 };
 
 struct PlatformFrameInput {

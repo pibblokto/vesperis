@@ -146,6 +146,7 @@ void Game::startApproach(int body) {
     ship.aimYaw0 = ship.yaw; ship.aimPitch0 = ship.pitch;
     Vec3 bp = sys.bodyPos(body, t);
     double dist = length(bp - ship.pos);
+    ship.approachD0 = dist; ship.approachDir0 = dist > 1e-6 ? (ship.pos - bp) / dist : Vec3(0, 0, 1);   // R-419
     ship.flightDur = 4.0 + 2.0 * std::log10(1 + dist / 1e5);
     ship.parkDist = parkDistanceFor(b);
     Vec3 toStar = normalize(sys.star.pos - bp);
@@ -211,6 +212,7 @@ void Game::startApproachBelt(int k) {
     ship.flightT = 0;
     ship.aimYaw0 = ship.yaw; ship.aimPitch0 = ship.pitch;
     double dist = length(beltParkPos(t) - ship.pos);
+    { const double d0 = length(ship.pos - rk.pos); ship.approachD0 = d0; ship.approachDir0 = d0 > 1e-6 ? (ship.pos - rk.pos) / d0 : Vec3(0, 0, 1); }   // R-419
     ship.flightDur = 4.0 + 2.0 * std::log10(1 + dist / 1e5);
     status(fmt("FINE APPROACH: %s - A ROCK %.1f KM ACROSS", upper(beltNameOf(k)).c_str(), 2 * rk.radiusKm), 4);
     audio.beep = 1;
@@ -238,7 +240,24 @@ void Game::updateShipMotion(double dt) {
             if (beltRun && !beltRockNow(rk)) { ship.mode = ShipState::STANDBY; ship.targetBelt = -1; break; }
             Vec3 bp = beltRun ? rk.pos : sys.bodyPos(ship.localTarget, t);
             Vec3 dest = beltRun ? beltParkPos(t) : bp + ship.parkDir * ship.parkDist;
-            ship.pos = lerp(ship.flightFrom, dest, s);
+            // R-419: from the world, the distance closed by equal ratios and the direction swung onto the parking's in the approach's first
+            // seven tenths, so its last stretch runs straight in and the world holds still in the window as the ship arrives (a straight line
+            // to the parking beside the world swooped the view through 60 to 350 degrees a second in its last tenth of a second, KI-416);
+            // the start and the end are the line's, the world's own motion carried (a comet's)
+            const Vec3 rel1 = dest - bp; const double d1 = length(rel1);
+            if (ship.approachD0 > 1e-6 && d1 > 1e-6) {
+                const Vec3 e1 = rel1 / d1, e0 = ship.approachDir0;
+                const double f = smoothstep(0.0, 0.7, s), ang = std::acos(clampd(dot(e0, e1), -1, 1));
+                Vec3 dir;
+                if (ang < 1e-4) dir = e1;
+                else if (ang > PI - 1e-3) {   // straight across the world: round it by the side its spin axis gives
+                    Vec3 side = cross(beltRun ? Vec3(0, 1, 0) : sys.bodies[ship.localTarget].spinAxis, e0);
+                    if (length(side) < 1e-6) side = cross(Vec3(1, 0, 0), e0);
+                    side = normalize(side);
+                    dir = e0 * std::cos(f * ang) + side * std::sin(f * ang);
+                } else dir = normalize(e0 * (std::sin((1 - f) * ang) / std::sin(ang)) + e1 * (std::sin(f * ang) / std::sin(ang)));
+                ship.pos = bp + dir * (ship.approachD0 * std::pow(d1 / ship.approachD0, s));
+            } else ship.pos = lerp(ship.flightFrom, dest, s);
             // turn toward the body: blend from the initial orientation onto an exact aim
             Vec3 fwd = normalize(bp - ship.pos);
             double ty = std::atan2(fwd.x, fwd.z), tp = std::asin(clampd(fwd.y, -1, 1));

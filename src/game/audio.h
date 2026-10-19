@@ -2,6 +2,7 @@
 #pragma once
 #include <cstdint>
 #include <cstddef>
+#include <string>
 #include <vector>
 struct Piece; struct Tradition; struct Note; struct Timbre; struct Ensemble;   // galaxy/music.h
 struct Speech; struct Voice; struct Segment;                   // galaxy/voice.h
@@ -102,7 +103,23 @@ struct AudioState {
     // creaks), the link (1 clear .. 0 failing: the static), a thunderclap's strength (one-shot) and the loss of signal (the hiss)
     double probe = 0, probeWind = 0, probeHeat = 0, probeChute = 0, probeDepth = 0, probeSignal = 1, probeThunder = 0;
     int probeStage = 0; bool probeLost = false;
+    // R-420 auto-explore's tape (game/tape.cpp): a music file the platform streams beside the synth, at the file's own rate and in stereo
+    // (raylib decodes MP3, OGG, WAV and QOA). `music` is the file (empty: none), begun `musicFrom` seconds in when `musicGo` is set (the
+    // platform clears it); `musicGain` its level, the master's applied too (above 1 a quiet track raised). The platform reports the
+    // second it is at (-1 none), the track's length, its end and a file it could not play
+    std::string music; double musicFrom = 0, musicGain = 1; bool musicGo = false;
+    double musicT = -1, musicLen = 0; bool musicEnded = false, musicFailed = false;
+    // what the synth's own sounds keep of their level under the tape (1 .. TAPE_DUCK), and the cassette deck's mechanics: a sequence
+    // (DECK_*) begun when `deck` is set (then 0; -1 hushes the one playing), `deckSeed` its variation; the deck itself is not ducked
+    double duck = 1; int deck = 0; uint32_t deckSeed = 0;
 };
+
+// R-420 the cassette deck the tape is heard through (game/audio_deck.cpp): a cassette put in and played; a tape's end, the cassette changed
+// and the next played; the play key alone (the cassette still in); the stop key
+enum DeckKind { DECK_NONE = 0, DECK_INSERT, DECK_CHANGE, DECK_PLAY, DECK_STOP, DECK_KINDS };
+double deckTapeAt(int kind, uint32_t seed);                             // the second of the sequence the tape moves (the music begins; DECK_STOP: it stops)
+double deckLength(int kind, uint32_t seed);                             // its whole length (the hiss's tail under the music)
+std::vector<float> deckRender(int kind, uint32_t seed, int sampleRate);   // its sound, mono
 
 class AudioSynth {
 public:
@@ -244,6 +261,7 @@ private:
     void coefs(double dt);
     void mediumCoefs(double dt, int medium);
     double thunderT = -1; double thunderAmp = 0;
+    std::vector<float> deckBuf; size_t deckI = 0; double duckLvl = 1;   // R-420: the deck's sequence (rendered whole as it begins), the duck's level
     double lp1 = 0, lp2 = 0, lp3 = 0, hp = 0;
     uint32_t rs = 12345;
     inline float noise() { rs = rs * 1664525u + 1013904223u; return ((rs >> 8) & 0xFFFF) / 32768.0f - 1.0f; }

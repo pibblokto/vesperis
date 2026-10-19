@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <deque>
+#include <functional>
 #include <cmath>
 #include <atomic>
 #include <thread>
@@ -29,7 +31,13 @@
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
                        GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS, ALMANAC, PROBE, RECORDING,
                        INSTRUMENTS,    // C-11: the instruments' case
-                       DRONES };       // C-18: the drone bay's screen
+                       DRONES,         // C-18: the drone bay's screen
+                       AUTO };         // R-419: auto-explore's profiles
+
+// R-419: auto-explore's profiles (game/autoexplore.cpp): the wanderer takes another's taste at each star
+enum AutoProfile { AP_WANDERER = 0, AP_STARGAZER, AP_PLANETFALL, AP_SURVEYOR, AP_ARCHAEOLOGIST, AP_GIANTS, AP_COUNT };
+extern const char* const AUTO_PROFILE_NAMES[AP_COUNT];   // "WANDERER", "STARGAZER", ...
+extern const char* const AUTO_PROFILE_LINES[AP_COUNT];   // what each looks for, a line of the chooser
 
 // C-18: a drone of the bay as a model in its own metres (x its right, y up, z its nose; its feet at y 0), drawn filled on its rack in the
 // cabin and as lines on the bay's screen (game/drone_draw.cpp): a short hull with the dark band of its eye, four ducted fans on arms, two
@@ -89,6 +97,7 @@ struct ShipState {
     bool orbiting = true;
     Vec3 flightFrom, flightTo;
     double flightT = 0, flightDur = 1;
+    Vec3 approachDir0; double approachD0 = 0;   // R-419: the fine approach's start from its world (unit, km): the distance closed by ratios, the direction swung early
     bool targeting = false;   // remote crosshair mode
     double aimYaw0 = 0, aimPitch0 = 0;   // orientation at approach start
     // O3 (R-302): a belt as the local target or the parking place. The ship parks beside one rock of the belt, named
@@ -142,6 +151,41 @@ public:
     KeyMap ownKeymap;
     int rawKey = -1;
     std::string keysPath = "vesperis_keys.txt";
+    // R-418: the controller's buttons by device (`vesperis_pad.txt`, written by the CONTROLS screen's controller page; game/pad.cpp)
+    PadMap padMap;
+    std::string padPath = "vesperis_pad.txt";
+    bool padInUse() const { return padUI.present && padUI.active; }   // a controller is the device used last
+    // R-418 (tests): the command menu, the keyboard, the controller page
+    bool testPadMenu() const { return padUI.menu; }
+    int testPadPage() const { return padUI.page; }
+    int testPadSel() const { return padUI.sel; }
+    bool testPadKeyboard() const { return padKeyboardShown(); }
+    int testPadContext() const { return padContext(); }
+    std::string testPadItems(int page) const;   // the menu's page as its lines ("label|key")
+    std::string testPadLegend() const;          // the buttons' legend of the context
+    int testKeysPage() const { return keysPage; }
+    int testPadCapture() const { return padUI.capture; }
+    int testPadScreenSel() const { return padUI.screenSel; }
+    // R-419: auto-explore (game/autoexplore.cpp)
+    bool autoOn() const { return ax.on; }
+    void autoStart(int profile, uint64_t seed = 0);   // the explorer plays on its own from this frame (`seed` 0: the clock's)
+    void autoStop();                                  // the controls given back
+    std::string testAutoInfo() const;                 // the profile, the focus, the step, the scene and what it has done so far
+    std::string testAutoDoing() const { return ax.on ? ax.doing : std::string(); }
+    std::string testAutoTown() const { return ax.townLine; }
+    int testAutoCount(int what) const;                // 0 stars, 1 parkings, 2 landings, 3 probes, 4 records, 5 outings, 6 steps given up, 7 unsticks
+    Vec3 testViewDir() const;                         // the eye's direction this frame (the galaxy's in space, the ground's on it)
+    std::string testAngles() const;                   // the ship's and the head's angles, the ship's mode
+    void testOpenAuto() { returnState = state; openAutoScreen(state); }
+    int testAutoSel() const { return autoSel; }
+    // R-420: auto-explore's tape (game/tape.cpp)
+    static inline std::string musicDirDefault = "music";   // the harness points it away from a player's folder
+    std::string musicDir = musicDirDefault;                // the explorer's music: its playlist.txt, else its sound files
+    bool tapeOn() const { return tape.phase != 0; }
+    std::string testTapeInfo() const;                      // the phase, the track, the music's level, the duck, the caption
+    double tapeCaption(std::string& author, std::string& title) const;       // the caption's alpha now (0 none) and its words
+    size_t testTapeTracks() { tapeList(); return tape.tracks.size(); }
+    std::string testTapeTrack(size_t i) const;             // a track as listed: file | author | title | gain
     std::string settingsPath = "vesperis_settings.txt";
     Guide guide;                  // M3: names, log, statistics (guide.txt)
     std::string guidePath = "guide.txt";
@@ -373,6 +417,9 @@ public:
     bool testWalkToGrave();                                       // C-12: the explorer set a metre in front of the nearest settlement's first grave, facing it
     bool testWalkToWork(double withinM = 1e9);                    // T-03: the explorer set 150 m from the nearest work the scanner hears (the frame re-anchored and the scan asked again from there)
     void testLandCursor(double latDeg, double lonDeg) { landLat = latDeg * DEG; landLon = lonDeg * DEG; }   // C-09: the landing map's cursor
+    void testLandCursorAt(double& latDeg, double& lonDeg, int& zoom) const { latDeg = landLat / DEG; lonDeg = landLon / DEG; zoom = landZoom; }   // R-418
+    void testSectorMapAt(double& x, double& z, int& zoom) const { x = mapCurX; z = mapCurZ; zoom = sectorZoom; }   // R-418: the sector map's cursor (local metres) and level
+    void testStarMapAt(double& yaw, double& zoom, int& mask, int& level, int& galaxyMarks) const { yaw = mapYaw; zoom = mapZoom; mask = mapClassMask; level = gchart.level; galaxyMarks = (int)guide.galaxyMarks.size(); }   // R-418
     void testLandSite();   // G-04: the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
     void testWaitMap();    // F-02: the landing map's world mapped before the test's next frame (the game's screen reads it on its thread; `testParkAt` waits)
     void testWaitMapOf(int bi);   // F-07: any body's map made before the test's next frame (`testParkAt` waits for a landable world's only)
@@ -430,6 +477,7 @@ public:
     int testBodyType(int bi) const { return bi >= 0 && bi < (int)sys.bodies.size() ? sys.bodies[bi].type : -1; }
     std::string testBodyTypes() const { std::string r; for (auto& b : sys.bodies) r += std::to_string(b.index) + ":" + PLANET_TYPES[b.type].name + (b.parent >= 0 ? "(moon) " : " "); return r; }
     void testCabinGoto(double x, double z, double yaw, double pitch = 0) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = pitch; }
+    void testCabinAt(double& x, double& z, double& yaw) const { x = cabin.x; z = cabin.z; yaw = cabin.yaw; }   // R-418
     void testShipScreenRow(int page, int sel) { shipScreenPage = page; shipScreenSel = sel; }   // B-410: the flight computer's row Enter acts on
     double testFlightDur() const { return ship.flightDur; }   // R-407: the Vimana flight's length (real seconds)
     double testFlightT() const { return ship.flightT; }
@@ -630,8 +678,47 @@ private:
     int settingsSel = 0;
     int keysSel = 0;               // N5-05 key bindings screen
     bool keysCapture = false;
+    int keysPage = 0;              // R-418: the CONTROLS screen's pages, 0 the keyboard, 1 the controller (Tab)
+    GameState keysReturn = GameState::SETTINGS;   // where it goes back to (the command menu opens it from anywhere)
     void updateKeysScreen(const Input& in);
     void renderKeysScreen();
+    // R-418: the controller (game/pad.cpp). Each frame begins with `padFrame`: the controller's buttons press the keys of the context's
+    // layout (the screens, the ship, on foot, the buggy, the drone, the probe's camera, a recording, an instrument), the left stick walks or
+    // moves the arrows, the right stick looks as the mouse does; Y opens the command menu (every action of the screen in words, run as its
+    // keys; a page of the general ones; a page of every key), and an on-screen keyboard types where the game wants letters
+    struct PadBind { int role = -1, key = -1, mods = 0; std::string label; };
+    struct PadItem { std::string label; int key = -1, mods = 0, special = 0; std::string text; };
+    struct PadUI {
+        bool present = false;                 // a controller was there last frame
+        std::string device; bool announce = false;   // the device in use (a new one is announced once in the cabin or on the ground)
+        bool active = false;                  // the controller is the device used last (a key or the mouse takes it back)
+        bool prev[PR_BUTTONS] = {};          // the buttons last frame
+        bool held[4] = {}; double repeat[4] = {};   // the arrows held (up, down, left, right) and for how long: they repeat in the screens
+        bool pulse[4] = {};                   // this frame's arrow presses (the first frame held, then the repeats)
+        bool resync = false;                  // the next frame takes what is held as already held (after a binding changed)
+        bool menu = false; int page = 0, sel = 0;   // the command menu: its page, its line
+        bool keyboard = false; int kRow = 0, kCol = 0, latch = 0, kbFor = 0;   // the keyboard: its key under the cursor, the latched Shift/Ctrl/Alt; kbFor 1 the aim's digits
+        bool kbShown = false;                 // the keyboard was up last frame
+        std::vector<std::pair<int, int>> queue;   // keys pressed one a frame (a command typed for the console): key, modifiers
+        int screenSel = 0, capture = -1, capStep = 0; double capT = 0; bool capArmed = false; PadState capRest, capPrev;   // the controller page: the row, the role being set (and the stick's step), its clock, the axes at rest, last frame
+        std::string note; double noteUntil = 0;   // the controller page's last word
+    } padUI;
+    PadState lastPad;                         // the controller as last read (the controller page draws it live)
+    void padFrame(Input& in, double realDt);
+    int padContext() const;
+    void padBindings(int ctx, std::vector<PadBind>& out) const;
+    std::string padContextName(int ctx) const;
+    std::vector<PadItem> padItems(int page) const;
+    void padRunItem(const PadItem& it);
+    void padMenuUpdate(const bool* pressed, double realDt);
+    bool padKeyboardShown() const;                     // the keyboard over the frame: asked for, or by itself at a text entry and the console
+    void padKeyboardUpdate(const bool* pressed, bool menuPage);
+    void padPress(int key, int mods);                  // a key into the queue
+    void renderPad();                                  // the command menu or the keyboard over the frame
+    void renderPadKeyboard(int x0, int y0, bool menuPage);
+    std::string padLegend(int ctx, int width) const;   // the context's buttons in words, wrapped to `width` characters (lines by '\n')
+    void openPadScreen();                              // the CONTROLS screen on its controller page, from anywhere
+    void updatePadScreen(const Input& in); void renderPadScreen();
     int slotSel = 0;
     bool slotLoadMode = false;
     std::vector<std::string> slotSummaries;
@@ -1195,4 +1282,100 @@ private:
     std::string distanceString(double km) const;
     void handleGlobalKeys(const Input& in);
     Vec3 shipWorldPos() const { return ship.pos; }
+    // R-419 (2026-10-18, game/autoexplore.cpp): auto-explore. The menu's AUTO-EXPLORE (the controller's commands too) picks a profile; the
+    // explorer then plays on its own. A mind keeps a short plan of steps for the scene it is in (the cabin and the ship, the ground, the
+    // probe's camera; the landing map and the capsule's fall between them), as the profile likes; hands turn the step of the moment into the
+    // frame's input (`autoInput`: the keys, the mouse's motion, the stick) as a hand gives it: the gaze eases onto what it looks at and sways
+    // a little at rest, the walk leans into its stride, the ship's nose and its laps round a world ease in and out. The game reads that
+    // input as it reads the player's, so every rule holds. No HUD meanwhile; any key, click, mouse motion or button gives the controls back
+    // (`autoTakeover`, the press not acted on). What it finds is the expedition's: the log, the guide, the records it takes
+    struct AutoStep { const char* what = ""; double maxT = 30; std::function<bool(double)> run; bool timed = false; };   // `run` each frame (dt): true when done; given up after
+                                                                                                                      // `maxT` (`timed`: a look that lasts that long, not given up)
+    struct AutoState {
+        bool on = false;
+        int profile = AP_WANDERER, focus = AP_WANDERER;   // the chosen profile; the taste it plays with at this star (the wanderer's whim)
+        Rng rng{1};
+        double clock = 0, stepT = 0, sceneT = 0, captionT = 0, mouseAcc = 0;
+        int scene = -1; bool stepFirst = true, abort = false;
+        std::deque<AutoStep> plan;                     // the steps ahead, the first running
+        std::string doing; int steps = 0, timeouts = 0;
+        int stars = 0, bodies = 0, landings = 0, probes = 0, records = 0, outings = 0, unsticks = 0;
+        // the system: its star, the bodies visited, how many it means to visit
+        uint64_t sysSeed = 0; std::set<int> bodyDone, bodyTried; int visits = 0, quota = 0; bool radarTried = false;
+        // the landing: the site chosen, the ground's time and outings, the places and records already sought
+        bool siteSet = false; double siteLat = 0, siteLon = 0;
+        bool groundBegun = false; double groundUntil = 0; int outingsLeft = 0, lastOuting = -1;
+        std::set<uint64_t> placesSeen; std::set<int> recordsTried;
+        int recIdx = -1, recPhase = 0, recTaken = 0; double recT = 0;
+        int towns = 0; std::string townLine;          // the settlements toured, the last one's line (the harness)
+        double probeEndT = -1, chuteAt = 20;
+        // the hands: the look's frame and target, the gaze's angles and speeds in it, what the hands set last frame (a change of the game's
+        // own is taken up), its pace and its sway at rest; the wandering of the eyes; the stick; the keys
+        int lookFrame = -1; bool lookSet = false;
+        double wantYaw = 0, wantPitch = 0, gYaw = 0, gPitch = 0, vYaw = 0, vPitch = 0, setYaw = 1e9, setPitch = 1e9, pace = 1, sway = 1, swayPh[6] = {};
+        double driftNext = 0, driftYaw = 0, driftPitch = 0;
+        double fwd = 0, side = 0, wantFwd = 0, wantSide = 0;
+        bool hold[KEY_MAX] = {}; std::vector<int> taps; double sprintTapT = 0, everyT = 0;
+        bool shipAim = false; Vec3 shipDir; double sYaw = 1e9, sPitch = 0, svYaw = 0, svPitch = 0;   // the ship's nose eased onto an aim
+        double orbitE = 0, orbitN = 0, wantOrbitE = 0, wantOrbitN = 0;                               // a lap round the parked world, eased
+        double warpWant = 1;                                                                         // the clock's pace, eased in decades
+        // the walk's way (its legs round what stands in it), the drive's and the flight's state, the unsticking
+        std::vector<std::pair<double, double>> way; size_t wayI = 0; double goX = 1e18, goZ = 1e18, bestD = 1e18, stillT = 0, jetT = 0; int unstick = 0;
+        double driveOff = 0, driveEvalT = 0, reverseT = 0; int circleDir = 1; bool chase = false;
+    };
+    AutoState ax;
+    int autoSel = 0; GameState autoBack = GameState::MENU;   // the chooser's row; where Esc goes back to
+    bool autoTakeover(Input& in, double realDt);       // a key, a click, the mouse or a button: the end (true), the press swallowed
+    void autoInput(Input& in, double realDt);          // the frame's input made by the explorer
+    int autoScene() const; int autoLookFrame() const;
+    void autoRun(double dt);
+    void autoPush(const char* what, double maxT, std::function<bool(double)> fn, bool timed = false);
+    void autoPlan();
+    void autoPlanSpace(); void autoPlanArrival(); void autoPlanVisit(int b); void autoPlanParked(int b); void autoPlanRoof(int b); void autoPlanTelescope(int b);
+    void autoPlanLanding(int b); void autoPlanProbeLaunch(); void autoPlanFlight(); void autoPlanMove(); void autoPlanRadar(); void autoPlanJump(double ly, const Vec3& dir);
+    bool autoPickStar(Star& out); int autoPickBody(); int autoWhim(); bool autoChooseSite(int b, bool byPlace, bool underGiant, bool low); void autoLandingMap();
+    std::vector<int> autoBodiesInView(int n);
+    void autoPlanGround(); bool autoPlanOuting(int kind); void autoPlanLeave(); void autoPlanVehicleOut(int which);   // 1 the buggy, 2 the drone
+    bool autoOutingVista(); bool autoOutingWater(); bool autoOutingLife(); bool autoOutingSight(); bool autoOutingDrive(); bool autoOutingFly(); bool autoOutingRuins(); bool autoOutingSky();
+    void autoPlanTravel(double x, double z, double r, int how, double circle = 0);   // to a place of the ground: 0 on foot, 1 by buggy, 2 by drone (`circle`: a ring flown round it first)
+    void autoPlanTown(double cx, double cz, double size);
+    bool autoFindRise(double& x, double& z); bool autoBigSky(Vec3& dirLocal); bool autoDryAt(double x, double z);
+    bool autoRecordAt(int index, double& x, double& z); int autoNearestRecord(double cx, double cz, double radius, double& x, double& z);
+    const Critter* autoCritter(uint64_t seed) const;
+    void autoPlanProbe();
+    void autoTap(int key); void autoHold(int key); bool autoEvery(double secs); void autoSprint(bool want);
+    void autoLook(double yaw, double pitch, double pace = 1); void autoLookSpace(const Vec3& dir, double pace = 1); void autoLookLocal(const Vec3& dir, double pace = 1);
+    void autoLookAt(double x, double y, double z, double pace = 1);
+    void autoAimShip(const Vec3& dir); double autoShipOff(const Vec3& dir) const;
+    void autoWindowLook(double pace); void autoEyesFront(double pace); void autoGazeOverBody(int b); void autoGazeRound(double pace);
+    bool autoAtWindow() const; bool autoCabinWalk(double x, double z, double yaw); bool autoCabinToCapsule();
+    int autoWalkTo(double x, double z, double r, double speed, double dt, double replanMove = 0.5);   // 0 on the way, 1 there, -1 given up
+    void autoWay(double x0, double z0, double x1, double z1, std::vector<std::pair<double, double>>& out);
+    int autoDrive(double x, double z, double r, double cruise, double dt); bool autoDriveClear(double x, double z, double heading);
+    int autoFly(double x, double z, double r, double alt, double cruise, double dt); void autoCircle(double cx, double cz, double radius, double alt);
+    void autoHands(Input& in, double dt);
+    void autoRender();
+    void openAutoScreen(GameState back); void updateAutoScreen(const Input& in); void renderAutoScreen();
+    // R-420 (2026-10-19, game/tape.cpp): auto-explore's tape. M while auto-explore plays (the controller's SELECT) starts and stops the
+    // explorer's own music from `musicDir` (its playlist.txt: the file, the author, the title, a gain in dB; else its sound files by name),
+    // round and round, a cassette deck's sounds before a track and between two (DECK_*); each track's author and title at the top left
+    // as it begins, fading; the game's own sounds ducked under it. The choice and the place in the tape are kept in the settings
+    struct TapeTrack { std::string file, author, title; double gainDb = 0; };
+    struct TapeState {
+        std::vector<TapeTrack> tracks;
+        int phase = 0;                    // TAPE_OFF, TAPE_DECK (the deck's sequence before the tape moves), TAPE_PLAY, TAPE_FADE (going quiet)
+        double t = 0, tapeAt = 0;         // seconds in the phase; when the deck's sequence moves (or stops) the tape
+        int track = 0; double from = 0;   // the track in the deck, the second it begins at
+        double gain = 0, fadeLen = 1;     // the music's level (0..1 of the track's), a fade's length
+        double captionT = -1; std::string capAuthor, capTitle;   // the caption's clock (-1 none) and its words
+        int failed = 0; uint32_t deckSeed = 0;   // tracks in a row that would not play; the deck's sequences begun
+    };
+    TapeState tape;
+    void tapeList();                  // the tracks, read again from `musicDir`
+    void tapeToggle();                // M: on (a cassette put in, or the one in played on) or off (the stop key)
+    void tapeStart(bool asked);       // `asked`: by M (an empty folder is said), else auto-explore taking it up again
+    void tapeHalt(bool stopKey);      // the stop key (the choice off), or auto-explore's end (the music fading, the choice kept)
+    void tapeDeck(int kind);          // a deck sequence begun
+    void tapeUpdate(double realDt);   // every frame: the deck's sequence, a track's end, the fades, the duck
+    void tapeRender();                // the caption at the top left
 };

@@ -332,7 +332,7 @@ void Game::updateTextEntry(const Input& in) {
 }
 
 void Game::renderTextEntry() {
-    const int top = 70, bottom = 130;
+    const int top = padKeyboardShown() ? 18 : 70, bottom = top + 60;   // R-418: over the controller's keyboard
     blendRectRGB(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // R-408: as wide as its last line (it ran past the box)
     drawRectRGB(canvas, 6, top, UW - 6, bottom, HUD_DIM);
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
