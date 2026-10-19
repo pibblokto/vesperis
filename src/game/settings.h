@@ -25,6 +25,9 @@ struct Settings {
     bool padInvertY = false;         // R-418: the look stick's up and down, apart from the mouse's
     double padDeadZone = 0.18;       // R-418: the sticks' dead zone (0.05 .. 0.40)
     int autoProfile = 0;             // R-419: the auto-explore profile chosen last (`AutoProfile`)
+    bool autoMusic = false;          // R-420: auto-explore's tape on (M), taken up again as auto-explore begins
+    int autoTrack = 0;               // R-420: the tape's track in the deck
+    double autoTrackAt = -1;         // R-420: the second it was left at (-1: no cassette in the deck yet)
 
     void clampAll();
     bool load(const std::string& path);

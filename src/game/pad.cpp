@@ -573,6 +573,7 @@ void Game::padFrame(Input& in, double realDt) {
     P.kbShown = shown;
     if (P.menu) { padMenuUpdate(pressed, realDt); deliver(); return; }
     if (shown) { if (!justUp) padKeyboardUpdate(pressed, false); deliver(); return; }   // the press that brought it up types nothing
+    if (ax.on && pressed[PR_SELECT]) { in.pressed[KEY_M] = in.down[KEY_M] = true; pressed[PR_SELECT] = false; }   // R-420: auto-explore's tape (SELECT's own key would end it)
     if (pressed[PR_Y]) {
         P.menu = true; P.page = padItems(0).empty() ? 1 : 0; P.sel = 0; audio.beep = 4;
         deliver(); return;

@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <mutex>
+#include <string>
 #include <thread>
 
 #ifndef __EMSCRIPTEN__
@@ -94,6 +96,78 @@ bool gAudioOk = false;
 PlatformPresentTimes gPresentTimes;   // F-01
 PlatformAudioTimes gAudioTimes;
 double msSince(std::chrono::steady_clock::time_point t0) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
+// R-420: auto-explore's tape beside the synth, raylib's music stream (the file decoded as it plays, at its own rate, in stereo). A thread
+// of its own feeds it and ends it. The game's frames can stall longer than a stream's buffers last (a landing's first ground, a star's
+// system), and raylib, told not to loop, stops a track as it reads its last block, that block and the one playing still unheard: so the
+// stream loops in raylib and the thread stops it 30 ms short of its end, looking every 5 ms. The pump hands the thread the game's
+// requests and takes its reports back (the browser has no thread there: the pump does its work)
+struct MusicDeck {
+    std::mutex m;
+    std::string want; double from = 0, gain = 1; bool go = false;   // asked: a file (empty: none) from a second, at a level
+    Music music{}; bool loaded = false;                               // the stream
+    double t = -1, len = 0; bool ended = false, failed = false;       // told
+    std::thread th; bool running = false, quit = false;
+};
+MusicDeck gMusic;
+void musicStep(MusicDeck& D) {   // D.m held
+    if (D.go) {
+        D.go = false;
+        if (D.loaded) { StopMusicStream(D.music); UnloadMusicStream(D.music); D.loaded = false; }
+        D.t = -1; D.len = 0;
+        if (!D.want.empty()) {
+            SetAudioStreamBufferSizeDefault(8192);   // a half of the stream's buffer 0.19 s at 44.1 kHz
+            D.music = LoadMusicStream(D.want.c_str());
+            SetAudioStreamBufferSizeDefault(2048);
+            if (IsMusicValid(D.music)) {
+                D.music.looping = true;
+                D.len = GetMusicTimeLength(D.music);
+                if (D.from > 0 && D.from >= D.len - 2) { UnloadMusicStream(D.music); D.ended = true; return; }   // left at its very end: over
+                if (D.from > 0.5) SeekMusicStream(D.music, (float)D.from);
+                UpdateMusicStream(D.music);   // both halves filled before it sounds
+                SetMusicVolume(D.music, (float)D.gain);
+                PlayMusicStream(D.music);
+                D.loaded = true;
+            } else D.failed = true;
+        }
+    }
+    if (!D.loaded) return;
+    SetMusicVolume(D.music, (float)D.gain);
+    UpdateMusicStream(D.music);
+    const double t = GetMusicTimePlayed(D.music);
+    if (t >= D.len - 0.03 || (D.t > 1 && t < D.t - 1)) {   // its end (or just past it, the stream gone round)
+        StopMusicStream(D.music); UnloadMusicStream(D.music); D.loaded = false; D.ended = true; D.t = -1;
+        return;
+    }
+    D.t = t;
+}
+void musicThread() {
+    for (;;) {
+        { std::lock_guard<std::mutex> lk(gMusic.m); if (gMusic.quit) return; musicStep(gMusic); }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+}
+// the pump's side: the game's request handed over (the thread begun with the first), the thread's reports taken back
+void musicPump(AudioState& st) {
+    MusicDeck& D = gMusic;
+    if (!st.musicGo && !D.running) return;
+    std::lock_guard<std::mutex> lk(D.m);
+    if (st.musicGo) {
+        st.musicGo = false;
+        D.want = st.music; D.from = st.musicFrom; D.go = true; D.ended = D.failed = false; D.t = -1;
+#ifndef __EMSCRIPTEN__
+        if (!D.running) { D.running = true; D.th = std::thread(musicThread); }
+#else
+        D.running = true;
+#endif
+    }
+    D.gain = std::max(0.0, st.musicGain * st.master);
+#ifdef __EMSCRIPTEN__
+    musicStep(D);
+#endif
+    st.musicT = D.t; st.musicLen = D.len;
+    if (D.ended) { st.musicEnded = true; D.ended = false; }
+    if (D.failed) { st.musicFailed = true; D.failed = false; }
+}
 // F-08: the frames' pacing (KI-407). raylib's SetTargetFPS(60) waited after the swap for 1/60 s less the frame's time, asleep for
 // most of it; macOS wakes such a sleep up to a millisecond late, so on the dev Mac's 120 Hz display the frames came every 17.2 ms (58
 // a second) and some stayed on the screen a refresh longer. The platform paces them instead: a frame is meant for the refresh a whole
@@ -221,7 +295,8 @@ void platformSetWindowSize(int w, int h) { if (!IsWindowFullscreen()) SetWindowS
 
 void platformAudioPump(AudioSynth& synth, AudioState& st) {
     gAudioTimes = PlatformAudioTimes();
-    if (!gAudioOk) return;
+    if (!gAudioOk) { if (st.musicGo) { st.musicGo = false; if (!st.music.empty()) st.musicFailed = true; } return; }   // R-420: no device, no tape
+    musicPump(st);
     while (IsAudioStreamProcessed(gStream)) {
         auto t0 = std::chrono::steady_clock::now();
         synth.render(gAbuf.data(), (int)gAbuf.size(), 22050, st);
@@ -325,6 +400,11 @@ void platformShutdown() {
     if (gTexW) UnloadTexture(gTex);
     if (gRTW) UnloadRenderTexture(gRT);
     if (gPostOk) UnloadShader(gPost);
+    if (gMusic.running) {   // R-420: the tape's thread let go, its stream with it
+        { std::lock_guard<std::mutex> lk(gMusic.m); gMusic.quit = true; }
+        if (gMusic.th.joinable()) gMusic.th.join();
+        if (gMusic.loaded) { StopMusicStream(gMusic.music); UnloadMusicStream(gMusic.music); gMusic.loaded = false; }
+    }
     if (gAudioOk) { UnloadAudioStream(gStream); CloseAudioDevice(); }
     CloseWindow();
 }

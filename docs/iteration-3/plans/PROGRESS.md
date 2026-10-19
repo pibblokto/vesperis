@@ -641,6 +641,29 @@
   reads a transit's time as its middle (a test world's moon now crosses its sun). `survey` gains the parkings line, `parkings` (a new
   harness mode) the twelve views before and after; `unit` 340 checks, 0 failures (one new, failing on the old generation); `regress`
   re-blessed (the five systems, two scenes and the cabin: the moons' places); `flow` passes. Nothing committed.
+* **Commit (2026-10-18).** On the user's request, R-418 to B-428 committed as one (`bcdad95`, a random author and committer, no session
+  link) and `release/v1.3.2` pushed; no pull request yet, the patch goes on.
+* **R-420 (2026-10-19): auto-explore's tape.** The user, with four MP3s they had downloaded: "add these for to auto-explore mode as an
+  optional feature - you can enable playlist with [...] M button while in autoexplore and it will cycle. Use some 80s-90s cassete
+  insertion sound between tracks. Investigate authorship properly [...] author and name of the track are displayed for a few seconds on
+  top left and then fade away. Also when music plays all other sounds are quiter". Authorship from the tracks' published credits (the files
+  had no tags; each one's YouTube upload and its description): Jarrad Wright's *Forwards* (*Sassy the Sasquatch* soundtrack, 2022), *It's
+  time to wake up* and *BLUE-MEAN-EYES* (*Choomah Island 2*, The Big Lez Show's 2015 special), Black Sabbath's *Planet Caravan*
+  (*Paranoid*, 1970, the 2009 remaster). `M` while auto-explore plays (a controller's `SELECT`) starts and stops a tape of the explorer's
+  own `music` folder (its `playlist.txt`: file, author, title, gain), round and round, through a synthesized cassette deck (a cassette
+  in and played, the next at a track's end, the play key where it was left, the stop key); each track's author and title fade in at
+  the top left and out after five seconds; the game's own sounds ducked to 0.35. raylib's music stream plays the file in stereo beside
+  the synth, fed and ended by a platform thread (raylib's own end cut a track's last block, and the frames' stalls would starve it).
+  The music fades with auto-explore and is taken up again where it was. The four are copyrighted, so they sit in the user's
+  gitignored `music/` (evened to -16 LUFS by their playlist's gains) and ship with nothing. `tape` (a new harness mode: the WAVs of the
+  deck, the caption's frames); `unit` 342 checks, 0 failures (two new); a scratch build played the four through raylib silently
+  (lengths, a seek, the end, a stall of 0.8 s); `regress` 24 of 24 unchanged; `flow` passes. KI-418: balanced by measurement, not
+  yet by ear.
+* **Release 1.3.2 (2026-10-19).** On the user's request after R-420: commit, push and release. The patch ships as 1.3.2: R-418,
+  B-425, B-426, R-419, B-427, B-428 and R-420, generation 15 (14 from B-425, 15 from B-428: saves from 1.3.1 load, with the
+  regeneration notice once). Version strings 1.3.2 (`CMakeLists.txt`; `packaging/make_app.sh`), the README's paragraph and its
+  auto-explore lines (the `music` folder), the milestone index. The branch `release/v1.3.2` merged into `main` by pull request, tag
+  `v1.3.2`, the six zips built by `packaging/build-release.sh` from the tree that was merged and attached to the GitHub release.
 
 ## Next
 
@@ -657,3 +680,7 @@ backdrop kept while the camera is still) and F-08 (the platform paces the window
 the Mac and Windows, `-O3` on Linux, the scripts in `packaging/`) and F-10 (the sky's powers as products, the clouds' drift wrapped
 once: no hash moved) done, and F-11 (the budgets at about 1.5 times the dev Mac's medians, the regress's forest at 4x and cabin at 1x)
 closes the series. Released as 1.3.1 on 2026-10-15.
+
+The 1.3.2 patch (2026-10-17 to 19, on the branch `release/v1.3.2`): the user's items one at a time, R-418 (the controller), B-425 (the
+companion stars), B-426 (a capital's records), R-419 (auto-explore), B-427 (a Wolf-Rayet star's giants' tail), B-428 (the moons spread)
+and R-420 (auto-explore's tape), generation 15. Released as 1.3.2 on 2026-10-19.

@@ -18,6 +18,8 @@ void Settings::clampAll() {
     padLookSpeed = std::max(0.2, std::min(3.0, padLookSpeed));
     padDeadZone = std::max(0.05, std::min(0.40, padDeadZone));
     autoProfile = std::max(0, std::min(5, autoProfile));
+    autoTrack = std::max(0, autoTrack);
+    autoTrackAt = std::max(-1.0, autoTrackAt);
 }
 
 bool Settings::load(const std::string& path) {
@@ -54,6 +56,9 @@ bool Settings::load(const std::string& path) {
         else if (key == "pad_invert_y") { is >> b; padInvertY = b != 0; }
         else if (key == "pad_dead_zone") is >> padDeadZone;
         else if (key == "auto_profile") is >> autoProfile;
+        else if (key == "auto_music") { is >> b; autoMusic = b != 0; }
+        else if (key == "auto_track") is >> autoTrack;
+        else if (key == "auto_track_at") is >> autoTrackAt;
     }
     // B-310: a file from before the sharper picture keeps its other settings but takes the new look once
     // (4x with the fine mush, smooth terrain shading); it is saved as version 2 afterwards
@@ -88,5 +93,8 @@ bool Settings::save(const std::string& path) const {
     f << "pad_invert_y " << (padInvertY ? 1 : 0) << "\n";
     f << "pad_dead_zone " << padDeadZone << "\n";
     f << "auto_profile " << autoProfile << "\n";
+    f << "auto_music " << (autoMusic ? 1 : 0) << "\n";
+    f << "auto_track " << autoTrack << "\n";
+    f << "auto_track_at " << autoTrackAt << "\n";
     return true;
 }

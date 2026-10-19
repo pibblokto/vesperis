@@ -2896,3 +2896,41 @@ more pocket". `docs/iteration-3/bugs/resolved/B-428-moons-crowding-their-worlds-
 * **Found on the way, not changed:** the comets' orbits are keyed to the last body generated (a moon in 87% of systems), not to the
   widest orbit as M5-07 says, so most sit at the floor of four star radii at periapsis (KI-416). Moving them is a generation change
   of its own, the user's call.
+
+## R-420 (2026-10-19): auto-explore's tape
+
+The user, with four MP3s they had downloaded: "add these for to auto-explore mode as an optional feature - you can enable playlist with
+these 3 files with M button while in autoexplore and it will cycle. Use some 80s-90s cassete insertion sound between tracks. Investigate
+authorship properly so that when track starts author and name of the track are displayed for a few seconds on top left and then fade
+away. Also when music plays all other sounds are quiter". `docs/iteration-3/plans/requests/R-420-auto-explores-tape.md`.
+
+* **The music is the explorer's, never the game's.** The four tracks are copyrighted (Jarrad Wright's three, Black Sabbath's *Planet
+  Caravan*, ℗ 2009 Sanctuary Records, a BMG company): in the public repository or the release zips they would be distributed. So the
+  game plays a folder of the player's own, `music/` beside it (gitignored), its `playlist.txt` giving the order and the credits, and
+  ships none; the user's four were copied there on their machine. Any player can fill their own; the caption credits whatever plays.
+* **Authorship from the tracks' own published credits.** The files carried no tags; each track's YouTube upload and its description gave
+  the credits: *Forwards* by Jarrad Wright, from *Sassy the
+  Sasquatch (Original Motion Picture Soundtrack)* (DistroKid, 2022-10-05); *It's time to wake up* and *BLUE-MEAN-EYES* by Jarrad Wright,
+  posted as the "CI2 soundtrack" by The Big Lez Show's channel on 2015-09-29 (*Choomah Island 2*, the show's special of 21 August 2015;
+  Wright writes and performs the show's music); *Planet Caravan* by Black Sabbath, from *Paranoid* (1970), the 2009 remaster. The caption
+  shows the author and the title as the playlist gives them; the rest is in its comments.
+* **raylib's stream, on a thread of its own.** The tracks are 44.1 kHz stereo; the synth is mono at 22,050 Hz, so the music does not
+  go through it: raylib's music stream plays it beside the synth's stream, decoded as it plays (MP3, OGG, WAV, QOA; raylib's build has no
+  FLAC). raylib, told not to loop, stops a track as it reads its last block, that block and the one playing still unheard, and the
+  game's frames can stall past a stream's buffers: so a platform thread updates the stream every 5 ms, the stream loops in raylib and the
+  thread stops it 30 ms short of its end. The game asks and hears back through `AudioState` (`music`, `musicGo`, `musicGain`; `musicT`,
+  `musicEnded`, `musicFailed`), as for the rest of its sound; the harness stands in for the platform there (`TapePump`).
+* **The deck is synthesized, not sampled.** No recording to license or ship: struck modes (a plastic part's three or four resonances, a
+  body's thump, a spring's ring) on a millisecond of noise, a slide of band-passed noise sticking and slipping with the reels knocking,
+  the motor an oscillator, the tape's hiss filtered noise, two early reflections for a room. One deck: its parts keep their pitches,
+  each event a few per cent off them by a seed, the hands' pauses 15%, so no two changes are alike. The tape moves at the play key's
+  latch plus the motor's half second (`deckTapeAt`), and the game starts the track then.
+* **Ducked by a level, not a compressor.** While the tape is on (the deck's sequences included) the synth's sounds keep 0.35 of their
+  level, eased over half a second; the deck rides over them. A fade (auto-explore's end) brings them back as the music goes.
+* **Tracks evened in the playlist.** The four differ by 11.6 dB (EBU R128: -14.9, -26.5, -21.4 and -15.7 LUFS), so each line carries a
+  gain bringing it to -16 LUFS (raylib does not clamp a stream's volume above 1; the quietest, raised 10.5 dB, peaks at -1 dBFS before
+  the tape's level and the master). The game measures nothing itself: a player's own playlist evens its own.
+* **The tape belongs to auto-explore.** `M` starts and stops it only while auto-explore plays (otherwise it is the star map's key in space
+  and the waypoint's on the ground); when auto-explore ends the music fades, and it is taken up where it was, with the play key, as
+  auto-explore next begins (`auto_music`, `auto_track`, `auto_track_at`). A cassette left in plays on from its place; one left at its very
+  end is over, and the next goes in.

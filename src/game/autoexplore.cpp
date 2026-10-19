@@ -84,6 +84,8 @@ void Game::autoStart(int profile, uint64_t seed) {
     padUI.menu = false; padUI.keyboard = false;
     statusMsg.clear(); statusNext.clear();
     audio.beep = 1;
+    tapeList();                                  // R-420: the tape's tracks (its hint shown if there are any)
+    if (settings.autoMusic) tapeStart(false);    // taken up again where it was left
 }
 
 void Game::autoStop() {
@@ -94,12 +96,14 @@ void Game::autoStop() {
     statusNext.clear();   // what its steps queued (a probe's chute hint) is not the player's
     status("AUTO-EXPLORE OFF - THE CONTROLS ARE YOURS", 4);
     audio.beep = 4;
+    tapeHalt(false);   // R-420: the music fades with it, its place kept
 }
 
 // any key, click or turn of the wheel, a hand on the mouse (a few pixels at once, or a dozen within a moment: a nudge of the desk is not
 // one; none in a scene's first half second, when the window takes the mouse) or the controller's buttons and sticks (their keys and moves,
-// `padFrame` having run) end it; the press that does is not acted on
+// `padFrame` having run) end it; the press that does is not acted on. R-420: but M (the controller's SELECT) starts and stops the tape
 bool Game::autoTakeover(Input& in, double realDt) {
+    if (in.pressed[KEY_M] && !in.ctrl()) { in.pressed[KEY_M] = false; tapeToggle(); }
     bool any = in.wheel != 0 || in.mousePressed[0] || in.mousePressed[1] || in.mousePressed[2] || in.moveX != 0 || in.moveY != 0;
     for (int k = 32; k < KEY_MAX && !any; k++) any = in.pressed[k];
     const double m = ax.clock < 0.6 || ax.sceneT < 0.5 ? 0.0 : std::fabs(in.mouseDx) + std::fabs(in.mouseDy);
@@ -1554,21 +1558,25 @@ void Game::autoHands(Input& in, double dt) {
     in = out;
 }
 
-// the first seconds: what plays and how to take the controls back, fading out (the only words on the screen while it plays)
+// the first seconds: what plays and how to take the controls back, fading out (the only words on the screen while it plays, with the
+// tape's track as it begins)
 void Game::autoRender() {
+    tapeRender();   // R-420
     const double a = ax.captionT < 5 ? 1.0 : clampd(1 - (ax.captionT - 5) / 1.5, 0, 1);
     if (a <= 0) return;
     const std::string s = fmt("AUTO-EXPLORE: %s - ANY %s ENDS IT", AUTO_PROFILE_NAMES[ax.profile], padInUse() ? "BUTTON" : "KEY");
-    blendRectRGB(canvas, 0, UH - 12, UW - 1, UH - 1, rgb(0, 0, 0), (int)(120 * a));
+    const bool music = !tape.tracks.empty();   // R-420: the tape's key, when there is music to play
+    blendRectRGB(canvas, 0, UH - (music ? 21 : 12), UW - 1, UH - 1, rgb(0, 0, 0), (int)(120 * a));
     const uint32_t c = HUD_AMBER;
     const uint32_t faded = rgb((int)((c & 255) * a), (int)(((c >> 8) & 255) * a), (int)(((c >> 16) & 255) * a));
+    if (music) drawTextCentered(canvas, UW / 2, UH - 19, padInUse() ? "SELECT STARTS AND STOPS THE MUSIC" : "M STARTS AND STOPS THE MUSIC", faded);
     drawTextCentered(canvas, UW / 2, UH - 10, s.c_str(), faded);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------
 // the chooser (the menu's AUTO-EXPLORE, the controller's commands)
 
-void Game::openAutoScreen(GameState back) { autoSel = clampi(settings.autoProfile, 0, AP_COUNT - 1); autoBack = back; state = GameState::AUTO; audio.beep = 4; }
+void Game::openAutoScreen(GameState back) { autoSel = clampi(settings.autoProfile, 0, AP_COUNT - 1); autoBack = back; state = GameState::AUTO; audio.beep = 4; tapeList(); }
 
 void Game::updateAutoScreen(const Input& in) {
     const int n = AP_COUNT + 1;   // the profiles and BACK
@@ -1590,6 +1598,12 @@ void Game::renderAutoScreen() {
         drawText(canvas, 18, y, AUTO_PROFILE_NAMES[i], sel ? HUD_WHITE : HUD_GREEN);
         drawText(canvas, 18 + 14 * FONT_ADV, y, AUTO_PROFILE_LINES[i], sel ? HUD_WHITE : HUD_DIM);
         if (sel) drawText(canvas, 11, y, ">", HUD_AMBER);
+    }
+    if (!tape.tracks.empty()) {   // R-420: the tape
+        drawTextCentered(canvas, UW / 2, bottom - 30, padInUse() ? "A BEGINS  B BACK" : "ENTER BEGINS  ESC BACK", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, bottom - 20, padInUse() ? "THEN SELECT STARTS AND STOPS THE MUSIC" : "THEN M STARTS AND STOPS THE MUSIC", HUD_DIM);
+        drawTextCentered(canvas, UW / 2, bottom - 10, padInUse() ? "AND ANY OTHER BUTTON TAKES THE CONTROLS BACK" : "AND ANY OTHER KEY TAKES THE CONTROLS BACK", HUD_DIM);
+        return;
     }
     drawTextCentered(canvas, UW / 2, bottom - 20, padInUse() ? "A BEGINS  B BACK" : "ENTER BEGINS  ESC BACK", HUD_DIM);
     drawTextCentered(canvas, UW / 2, bottom - 10, padInUse() ? "THEN ANY BUTTON TAKES THE CONTROLS BACK" : "THEN ANY KEY TAKES THE CONTROLS BACK", HUD_DIM);

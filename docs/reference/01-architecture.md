@@ -1,6 +1,6 @@
 # Architecture
 
-About 5,700 lines of C++17. No engine: everything is software-rendered into a 320x200 8-bit buffer; raylib only opens the window, reads input, plays an audio stream and blits the buffer.
+About 5,700 lines of C++17. No engine: everything is software-rendered into a 320x200 8-bit buffer; raylib only opens the window, reads input, plays an audio stream (and auto-explore's music files beside it, R-420) and blits the buffer.
 
 ## Modules and dependency rules
 
@@ -11,7 +11,8 @@ src/space     <- galaxy    (space_view: stars, suns, globes, rings, sky bodies)
 src/surface   <- space     (site, surface_view)
 src/game      <- surface   (game.cpp core loop; autopilot.cpp ship; hud.cpp; landing_map.cpp; game_states.cpp
                             descent/surface/overlays; persistence.cpp saves; guide.* + guide_screens.cpp the GUIDE (M3);
-                            ui.* text helpers; settings.*; audio.*; autoexplore.cpp auto-explore, R-419)
+                            ui.* text helpers; settings.*; audio.* (audio_deck.cpp the tape's cassette deck, R-420);
+                            autoexplore.cpp auto-explore, R-419; tape.cpp its tape, R-420)
 src/platform.h + platform_raylib.cpp  <- game/audio only (never included by game code)
 src/main_raylib.cpp        entry point for the window build
 src/main_headless.cpp      tests and screenshot generation (no raylib)
@@ -49,7 +50,7 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
    * surface: `SurfaceView::render` (palette, sky, terrain, objects, life, capsule, weather), `mush(2)`, `toRGB`, HUD.
    * overlays (help, menu, list, data) render the underlying scene first, then blend a dark rectangle and text.
 3. Platform uploads `rgbBuf` (320x200 RGBA) to a texture and draws it scaled with point filtering; optional scanlines.
-4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels.
+4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels. R-420: the same pump hands auto-explore's tape (`AudioState::music`, `musicGo`, `musicGain`) to a thread of the platform's, which streams the file with raylib's music stream, and takes its place, length and end back into `Game::audio`.
 
 F-01 (2026-10-12): with `VESPERIS_TRACE=1` the window build times each frame's parts (the poll, `Game::frame`, the audio pump with
 its synth blocks, the screenshot and recorder writes, the texture's upload, the drawing, the swap with its vsync wait: the platform
@@ -61,6 +62,14 @@ frame is meant for the refresh a whole number of the monitor's refreshes after t
 at 60 Hz), its swap waits until three quarters of a refresh before that one, and the schedule follows the refreshes the swaps met
 (`platform_raylib.cpp`). The trace's `hold` is that wait, its work the frame without the hold and the swap. The synth stays on the
 main thread (its block is about 2 ms at most on a loaded Mac, one frame in 5.4).
+
+R-420 (2026-10-19): auto-explore's tape is a second stream beside the synth's, raylib's music stream (the file decoded as it plays, at its
+own rate and in stereo; the synth is mono at 22,050 Hz). A thread of the platform's feeds it every 5 ms: the game's frames can stall
+longer than a stream's buffers last (a landing's first ground, a star's system), and raylib, told not to loop, stops a track as it reads
+its last block, that block and the one playing still unheard (up to 0.37 s with the 8,192-frame halves used); so the stream loops in
+raylib and the thread stops it 30 ms short of its end. The pump passes the requests and the reports under a mutex; the browser has no
+thread there, and its pump does the thread's work. The cassette deck's sounds are the synth's (`deckRender`, a sequence rendered whole
+as it begins), mixed over the rest after the duck (`AudioState::duck`).
 
 ## Time
 

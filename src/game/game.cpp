@@ -271,6 +271,7 @@ void Game::frame(const Input& inRaw, double realDt) {
     Input in = inRaw;        // R-418: the controller's buttons become this frame's keys (game/pad.cpp)
     padFrame(in, realDt);
     if (ax.on && !autoTakeover(in, realDt)) autoInput(in, realDt);   // R-419: the explorer plays on its own (any key, click or button gives the controls back)
+    tapeUpdate(realDt);   // R-420: auto-explore's tape (its deck, its tracks, its fade after auto-explore)
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);

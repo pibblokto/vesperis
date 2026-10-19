@@ -26,6 +26,10 @@ generation 13 from A-01. C-17 (the instruments' maker) was added on 2026-10-10 a
 **Released as 1.3.1 (2026-10-15), generation 13 unchanged:** the performance plan `PLAN-performance.md`, F-01 to F-11 with
 B-423 and B-424: the frame about twice as fast with the same pictures, the stalls a player felt cut down.
 
+**Released as 1.3.2 (2026-10-19), generation 15:** the user's patch, their items one at a time on the branch `release/v1.3.2`:
+R-418 (the controller), B-425 (the companion stars; generation 14), B-426 (a capital's records), R-419 (auto-explore), B-427 (a
+Wolf-Rayet star's giants' tail), B-428 (the moons spread; generation 15) and R-420 (auto-explore's tape).
+
 **Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).

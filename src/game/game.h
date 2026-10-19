@@ -178,6 +178,14 @@ public:
     std::string testAngles() const;                   // the ship's and the head's angles, the ship's mode
     void testOpenAuto() { returnState = state; openAutoScreen(state); }
     int testAutoSel() const { return autoSel; }
+    // R-420: auto-explore's tape (game/tape.cpp)
+    static inline std::string musicDirDefault = "music";   // the harness points it away from a player's folder
+    std::string musicDir = musicDirDefault;                // the explorer's music: its playlist.txt, else its sound files
+    bool tapeOn() const { return tape.phase != 0; }
+    std::string testTapeInfo() const;                      // the phase, the track, the music's level, the duck, the caption
+    double tapeCaption(std::string& author, std::string& title) const;       // the caption's alpha now (0 none) and its words
+    size_t testTapeTracks() { tapeList(); return tape.tracks.size(); }
+    std::string testTapeTrack(size_t i) const;             // a track as listed: file | author | title | gain
     std::string settingsPath = "vesperis_settings.txt";
     Guide guide;                  // M3: names, log, statistics (guide.txt)
     std::string guidePath = "guide.txt";
@@ -1348,4 +1356,26 @@ private:
     void autoHands(Input& in, double dt);
     void autoRender();
     void openAutoScreen(GameState back); void updateAutoScreen(const Input& in); void renderAutoScreen();
+    // R-420 (2026-10-19, game/tape.cpp): auto-explore's tape. M while auto-explore plays (the controller's SELECT) starts and stops the
+    // explorer's own music from `musicDir` (its playlist.txt: the file, the author, the title, a gain in dB; else its sound files by name),
+    // round and round, a cassette deck's sounds before a track and between two (DECK_*); each track's author and title at the top left
+    // as it begins, fading; the game's own sounds ducked under it. The choice and the place in the tape are kept in the settings
+    struct TapeTrack { std::string file, author, title; double gainDb = 0; };
+    struct TapeState {
+        std::vector<TapeTrack> tracks;
+        int phase = 0;                    // TAPE_OFF, TAPE_DECK (the deck's sequence before the tape moves), TAPE_PLAY, TAPE_FADE (going quiet)
+        double t = 0, tapeAt = 0;         // seconds in the phase; when the deck's sequence moves (or stops) the tape
+        int track = 0; double from = 0;   // the track in the deck, the second it begins at
+        double gain = 0, fadeLen = 1;     // the music's level (0..1 of the track's), a fade's length
+        double captionT = -1; std::string capAuthor, capTitle;   // the caption's clock (-1 none) and its words
+        int failed = 0; uint32_t deckSeed = 0;   // tracks in a row that would not play; the deck's sequences begun
+    };
+    TapeState tape;
+    void tapeList();                  // the tracks, read again from `musicDir`
+    void tapeToggle();                // M: on (a cassette put in, or the one in played on) or off (the stop key)
+    void tapeStart(bool asked);       // `asked`: by M (an empty folder is said), else auto-explore taking it up again
+    void tapeHalt(bool stopKey);      // the stop key (the choice off), or auto-explore's end (the music fading, the choice kept)
+    void tapeDeck(int kind);          // a deck sequence begun
+    void tapeUpdate(double realDt);   // every frame: the deck's sequence, a track's end, the fades, the duck
+    void tapeRender();                // the caption at the top left
 };

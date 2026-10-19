@@ -66,6 +66,19 @@ game, and a landing's first frame takes about half as long. The forest looks
 the same on every machine, and on Windows a telescope photograph shows its
 whole plate. Saves load as they were.
 
+1.3.2 plays itself, and plays with a controller. Auto-explore (the menu's second
+row) hands the game to an explorer of one of six tastes, from the stars and the
+long jumps to the ruins and records of the dead peoples, which flies, lands,
+walks, drives and reads at a hand's unhurried pace with nothing written on the
+screen; while it plays, `M` starts and stops a tape of your own music, a cassette
+deck clunking between the tracks. A controller now reaches every action, and any
+controller can be set up button by button. A rocky world's moons stand farther
+out, so a system has distance seen from the ship; a red dwarf's companion giant
+no longer fills its worlds' skies, a Wolf-Rayet star's giants trail streaks of
+gas instead of a white blob, and a capital's records lie in its buildings rather
+than heaped on its archive's floor. The systems were regenerated (generation
+15): saves load, and the moons and companion stars they show may have moved.
+
 ## Playing
 
 Download the build for your machine from the
@@ -187,6 +200,15 @@ On the surface:
 | `I` (`F2`) | Environment data sheet |
 | `T` / `Ctrl+T` | Time warp / the almanac |
 | `Ctrl+S` / `Ctrl+L` | Save / load |
+
+Auto-explore: the menu's `AUTO-EXPLORE` hands the game to an explorer that plays
+by itself in one of six profiles (WANDERER, STARGAZER, PLANETFALL, SURVEYOR,
+ARCHAEOLOGIST, GIANTS), with no HUD; any key or button gives the controls back.
+While it plays, `M` (a controller's `SELECT`) starts and stops a tape of your own
+music: put MP3, OGG or WAV files in a `music` folder next to the game (the macOS
+app: `~/Documents/vesperis/music`). A `playlist.txt` there sets their order and
+the credit shown as each begins, a track a line: `file | author | title | gain in
+dB`. No music comes with the game.
 
 The expedition is saved to `vesperis_save.txt` in the working directory when
 you quit, and can be continued from the title screen. Names, notes and the log

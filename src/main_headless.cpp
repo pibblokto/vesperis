@@ -6849,6 +6849,39 @@ static bool checkChartsByAge(std::string& detail) {
     }
 }
 
+// R-420: the platform's side of auto-explore's tape as the harness plays it: a file begun "plays" (if it is there) at the frames' pace, `len`
+// seconds long, its end reported (begun at its very end, it is over at once, as the platform's); the deck's sequence taken as the synth
+// takes it, and counted
+struct TapePump {
+    bool playing = false; double len = 10, from = 0; std::string file; int decks[DECK_KINDS] = {}; uint32_t lastSeed = 0;
+    void step(AudioState& st, double dt) {
+        if (st.deck > 0) { decks[st.deck]++; lastSeed = st.deckSeed; }
+        st.deck = 0;
+        if (st.musicGo) {
+            st.musicGo = false; playing = false; st.musicT = -1;
+            if (st.music.empty()) return;
+            FILE* f = fopen(st.music.c_str(), "rb");
+            if (!f) { st.musicFailed = true; return; }
+            fclose(f);
+            file = st.music; from = st.musicFrom; st.musicLen = len;
+            if (from > 0 && from >= len - 2) { st.musicEnded = true; return; }
+            playing = true; st.musicT = from;
+        } else if (playing && (st.musicT += dt) >= len) { playing = false; st.musicT = -1; st.musicEnded = true; }
+    }
+};
+// a tape of two files (and one listed but gone) with their credits and gains, in shots/tests/unit_tape
+static std::string tapeTestDir() {
+    const std::string dir = "shots/tests/unit_tape";
+    makeDir(dir); makeDir(dir + "/empty");
+    for (const char* f : {"one.mp3", "two.mp3"}) if (FILE* fp = fopen((dir + "/" + f).c_str(), "wb")) { fputs("not sound: the harness plays it\n", fp); fclose(fp); }
+    remove((dir + "/gone.mp3").c_str());
+    if (FILE* fp = fopen((dir + "/playlist.txt").c_str(), "w")) {
+        fputs("# the harness's tape (R-420)\none.mp3 | Jarrad Wright | Forwards | -1.1\ngone.mp3 | Nobody | Not There\n\ntwo.mp3 | Black Sabbath | Planet Caravan | +10.5\n", fp);
+        fclose(fp);
+    }
+    return dir;
+}
+
 static int testUnit() {
     int fails = 0;
     int checks = 0;   // F-01: the count the reports give
@@ -11462,6 +11495,122 @@ static int testUnit() {
         const bool back = !game.autoOn() && game.state == GameState::SPACE;
         check("auto-explore: begun from the menu, eased, given back (R-419)", chooser && began && on && window && maxTurn < 60 && back,
               fmt("chooser %d on %d, %d frames, steps %zu (window %d), the fastest turn %.0f deg/s; G: auto %d, state %d", (int)chooser, (int)began, frames, steps.size(), (int)window, maxTurn, (int)game.autoOn(), (int)game.state));
+    }
+    {   // R-420: auto-explore's tape. M begins it: the deck puts a cassette in and plays it, the track starting as the sequence moves the tape,
+        // its author and title fading in at the top left and gone after a few seconds, the game's own sounds ducked; at a track's end the next
+        // cassette, round to the first; M again the stop key (the place kept), once more the play key from there; the controller's SELECT the
+        // same; a key the end, the music fading with auto-explore, taken up again as it begins. A file listed but gone is left out, one that
+        // will not play passed over; an empty folder is said
+        const std::string dir = tapeTestDir();
+        Game game;
+        game.savePrefix = "shots/tests/unit_tape_save"; game.settingsPath = "shots/tests/unit_tape_settings.txt"; game.guidePath = "shots/tests/unit_tape_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        remove(game.guidePath.c_str());
+        game.settings.renderScale = 1; game.settings.autoMusic = false; game.settings.autoTrack = 0; game.settings.autoTrackAt = -1; game.applySettings();
+        game.musicDir = dir;
+        game.setState(GameState::SPACE);
+        game.autoStart(AP_PLANETFALL, 7);
+        TapePump pump;
+        Input in; const double dt = 1.0 / 30; double clock = 0;
+        auto frame = [&]() { game.frame(in, dt); in.newFrame(); pump.step(game.audio, dt); clock += dt; };
+        auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; frame(); in.down[key] = false; };
+        auto until = [&](auto done, double secs) { for (double s = 0; s < secs && !done(); s += dt) frame(); return (bool)done(); };
+        auto wait = [&](double secs) { for (double s = 0; s < secs; s += dt) frame(); };
+        const size_t listed = game.testTapeTracks();
+        const bool hint = !game.tapeOn() && listed == 2;
+        std::string au, ti;
+        press(KEY_M);   // a cassette in
+        const bool inserted = pump.decks[DECK_INSERT] == 1 && game.tapeOn() && game.autoOn();
+        const double atInsert = deckTapeAt(DECK_INSERT, pump.lastSeed), m0 = clock;
+        const bool started1 = until([&]() { return pump.playing; }, 5);
+        const double lead1 = clock - m0;
+        const bool first = pump.file == dir + "/one.mp3" && std::fabs(game.audio.musicGain - 0.8 * std::pow(10.0, -1.1 / 20)) < 1e-3;
+        frame(); const double capIn = game.tapeCaption(au, ti);
+        wait(1.0);
+        const double capWhole = game.tapeCaption(au, ti), duck = game.audio.duck;
+        const bool credit1 = au == "Jarrad Wright" && ti == "Forwards";
+        wait(6.5);
+        const double capGone = game.tapeCaption(au, ti);
+        const bool changed = until([&]() { return pump.decks[DECK_CHANGE] == 1; }, 5);   // its end: the next cassette
+        const double atChange = deckTapeAt(DECK_CHANGE, pump.lastSeed), c0 = clock;
+        const bool started2 = until([&]() { return pump.playing; }, 6);
+        const double lead2 = clock - c0;
+        frame(); game.tapeCaption(au, ti);
+        const bool second = pump.file == dir + "/two.mp3" && au == "Black Sabbath" && ti == "Planet Caravan" && std::fabs(game.audio.musicGain - 0.8 * std::pow(10.0, 10.5 / 20)) < 1e-3;
+        const bool round = until([&]() { return pump.decks[DECK_CHANGE] == 2; }, 12) && until([&]() { return pump.playing; }, 6) && pump.file == dir + "/one.mp3";
+        wait(4.0);   // the stop key four seconds in: the music cut, the place kept
+        const double placeAt = game.audio.musicT;
+        press(KEY_M);
+        const bool stopKey = pump.decks[DECK_STOP] == 1 && game.autoOn();
+        const bool cut = until([&]() { return !pump.playing; }, 0.5) && !game.settings.autoMusic && std::fabs(game.settings.autoTrackAt - placeAt) < 0.1;
+        const double keptAt = game.settings.autoTrackAt;
+        wait(2.0);
+        const double duckOff = game.audio.duck;
+        press(KEY_M);   // the play key: from there
+        const bool resumed = pump.decks[DECK_PLAY] == 1 && until([&]() { return pump.playing; }, 2) && std::fabs(pump.from - placeAt) < 0.1 && game.settings.autoMusic;
+        wait(1.0);
+        in.pad.present = in.pad.mapped = true; frame();   // a controller arrives (what it holds presses nothing), its SELECT pressed
+        in.pad.buttons[PB_BACK] = true; frame(); in.pad.buttons[PB_BACK] = false; frame();
+        const bool select = pump.decks[DECK_STOP] == 2 && game.autoOn();
+        in.pad = PadState(); frame();
+        press(KEY_M); until([&]() { return pump.playing; }, 2);
+        wait(1.0);
+        press(KEY_G);   // the controls back: the music fades, the choice kept
+        const bool ended = !game.autoOn() && game.settings.autoMusic;
+        const double g1 = game.audio.musicGain; wait(0.5); const double g2 = game.audio.musicGain;
+        const bool faded = g1 > 0 && g2 < g1 && until([&]() { return !pump.playing; }, 2) && game.audio.duck == 1;
+        const double leftAt = game.settings.autoTrackAt;
+        game.autoStart(AP_PLANETFALL, 8); frame();   // auto-explore again: the play key, from where it was left
+        const bool again = pump.decks[DECK_PLAY] == 3 && until([&]() { return pump.playing; }, 2) && std::fabs(pump.from - leftAt) < 0.1;
+        remove((dir + "/two.mp3").c_str());   // the next file gone: passed over, round to the first
+        const int changes = pump.decks[DECK_CHANGE];
+        const bool passed = until([&]() { return pump.decks[DECK_CHANGE] == changes + 2; }, 20) && until([&]() { return pump.playing; }, 6) && pump.file == dir + "/one.mp3";
+        press(KEY_M); wait(0.5);
+        game.musicDir = dir + "/empty"; press(KEY_M);   // nothing to play: said
+        const double capEmpty = game.tapeCaption(au, ti) + (frame(), game.tapeCaption(au, ti));
+        const bool empty = !game.tapeOn() && game.autoOn() && capEmpty > 0 && au.find("NO MUSIC") == 0;
+        check("auto-explore's tape: M, the deck, credits, ducked, kept (R-420)",
+              hint && inserted && started1 && std::fabs(lead1 - atInsert) < 0.1 && first && capIn > 0 && capIn < 0.5 && capWhole == 1 && credit1 && std::fabs(duck - 0.35) < 1e-9 && capGone == 0 &&
+                  changed && started2 && std::fabs(lead2 - atChange) < 0.1 && second && round && stopKey && cut && duckOff == 1 && resumed && select && ended && faded && again && passed && empty,
+              fmt("%zu listed; M: a cassette in %d, the track after %.2f s (the deck's %.2f) %d, its level %d, caption %.2f / %.2f / %.2f %d, duck %.2f; next %d after %.2f s (%.2f) %d, round %d; "
+                  "stop key %d cut %d (place %.1f s, kept %.1f), duck after %.2f; play key %d; SELECT %d; G: off %d, faded %d (%.3f to %.3f), back %d; a file gone passed %d; empty folder %d",
+                  listed, (int)inserted, lead1, atInsert, (int)started1, (int)first, capIn, capWhole, capGone, (int)credit1, duck, (int)changed, lead2, atChange, (int)second, (int)round,
+                  (int)stopKey, (int)cut, placeAt, keptAt, duckOff, (int)resumed, (int)select, (int)ended, (int)faded, g1, g2, (int)again, (int)passed, (int)empty));
+    }
+    {   // R-420: the deck's sequences: each kind's parts at their times (onsets counted), the tape moving where it should (the play key's ka-chunk
+        // just before it, the hiss after it), never near clipping, alike for a seed and not for two; through the synth over the ducked rest,
+        // the deck itself not ducked; -1 hushes it
+        const int sr = 22050;
+        static const char* KN[DECK_KINDS] = {"", "insert", "change", "play", "stop"};
+        const double atLo[DECK_KINDS] = {0, 1.5, 2.6, 0.4, 0.03}, atHi[DECK_KINDS] = {0, 2.8, 4.2, 0.7, 0.03}, onsetsMin[DECK_KINDS] = {0, 6, 9, 2, 2};
+        bool ok = true; std::string det;
+        for (int kind = DECK_INSERT; kind < DECK_KINDS; kind++) {
+            const std::vector<float> a = deckRender(kind, 11, sr), b = deckRender(kind, 11, sr), c = deckRender(kind, 12, sr);
+            double peak = 0; bool finite = true;
+            for (float v : a) { finite = finite && std::isfinite(v); peak = std::max(peak, (double)std::fabs(v)); }
+            const double at = deckTapeAt(kind, 11), len = deckLength(kind, 11);
+            auto rms = [&](double t0, double t1) { const long i0 = std::max(0L, (long)(t0 * sr)), i1 = std::min((long)a.size(), (long)(t1 * sr)); double s = 0; for (long i = i0; i < i1; i++) s += (double)a[i] * a[i]; return i1 > i0 ? std::sqrt(s / (i1 - i0)) : 0.0; };
+            int onsets = 0; double prevE = 0;   // 5 ms frames whose energy jumps fourfold over a floor
+            for (size_t i = 0; i + 110 <= a.size(); i += 110) { double e = 0; for (size_t j = i; j < i + 110; j++) e += (double)a[j] * a[j]; e /= 110; if (e > 4 * prevE + 1e-5 && e > 2e-4) onsets++; prevE = e; }
+            const bool timeOk = at >= atLo[kind] - 1e-9 && at <= atHi[kind] + 1e-9 && a.size() == (size_t)std::ceil(len * sr) + 1;
+            const double knock = kind == DECK_STOP ? rms(0, 0.08) : rms(at - 0.5, at - 0.3), after = kind == DECK_STOP ? 0 : rms(at + 0.05, at + 0.4);
+            const bool soundOk = kind == DECK_STOP ? knock > 0.02 : knock > 0.02 && after > 0.004 && after < knock;
+            const bool kOk = finite && peak < 0.9 && a == b && a != c && timeOk && soundOk && onsets >= onsetsMin[kind];
+            ok = ok && kOk;
+            det += fmt("%s%s %.2f s of %.2f, peak %.2f, %d onsets, knock %.3f, hiss %.4f%s", det.empty() ? "" : "; ", KN[kind], at, len, peak, onsets, knock, after, kOk ? "" : " (wrong)");
+        }
+        std::vector<float> buf(2048), buf2(2048);   // the same hum through two synths, one ducked, block for block
+        auto bufRms = [](const std::vector<float>& v) { double s = 0; for (float x : v) s += (double)x * x; return std::sqrt(s / v.size()); };
+        AudioSynth plainS, duckS; AudioState plainSt, duckSt; plainSt.hum = duckSt.hum = 0.6; duckSt.duck = 0.35;
+        for (int i = 0; i < 40; i++) { plainS.render(buf.data(), (int)buf.size(), sr, plainSt); duckS.render(buf2.data(), (int)buf2.size(), sr, duckSt); }
+        const double plain = bufRms(buf), ducked = bufRms(buf2);
+        AudioSynth quiet; AudioState q; q.duck = 0.35; q.deck = DECK_STOP; q.deckSeed = 5;
+        quiet.render(buf.data(), (int)buf.size(), sr, q);
+        const std::vector<float> ref = deckRender(DECK_STOP, 5, sr);
+        double diff = 0; for (size_t i = 0; i < buf.size(); i++) diff = std::max(diff, std::fabs(buf[i] - ref[i] * q.master));
+        q.deck = -1; quiet.render(buf.data(), (int)buf.size(), sr, q);
+        const double hushed = bufRms(buf);
+        const bool mixOk = std::fabs(ducked / plain - 0.35) < 0.005 && diff < 1e-5 && hushed == 0;
+        check("auto-explore's tape: the cassette deck (R-420)", ok && mixOk, det + fmt("; the hum ducked to %.3f of itself, the deck through the synth within %.1e, hushed %.4f", ducked / plain, diff, hushed));
     }
     printf("unit: %d checks, %d failures\n", checks, fails);
     return fails;
@@ -19535,6 +19684,64 @@ static int runParkings() {
     return 0;
 }
 
+// R-420: `tape [dir]`: auto-explore's tape. The tracks as read from `music/` (or dir), with their credits and gains; the deck's four sequences
+// for three seeds into shots/tests/tape_deck_<kind>_<seed>.wav (22,050 Hz mono, as the synth plays them); then auto-explore from home with
+// that tape (the platform's side played by the harness, each track 12 s): the caption fading in, whole, fading out and gone, the next
+// track's (shots/tests/tape_NN.png), the chooser with the tape's line and the words for an empty folder
+static int runTape(int argc, char** argv) {
+    const std::string dir = argc > 2 ? argv[2] : "music";
+    Game game;
+    game.savePrefix = "shots/tests/tape_save"; game.settingsPath = "shots/tests/tape_settings.txt"; game.guidePath = "shots/tests/tape_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+    remove(game.guidePath.c_str());
+    applyTestScale(game);
+    game.settings.autoMusic = false; game.settings.autoTrack = 0; game.settings.autoTrackAt = -1;
+    game.musicDir = dir;
+    const size_t n = game.testTapeTracks();
+    printf("tape: %zu tracks in %s/\n", n, dir.c_str());
+    for (size_t i = 0; i < n; i++) printf("  %zu. %s\n", i + 1, game.testTapeTrack(i).c_str());
+    static const char* KN[DECK_KINDS] = {"", "insert", "change", "play", "stop"};
+    for (int kind = DECK_INSERT; kind < DECK_KINDS; kind++)
+        for (uint32_t seed = 1; seed <= 3; seed++) {
+            const std::vector<float> a = deckRender(kind, seed, 22050);
+            std::vector<int16_t> pcm(a.size());
+            for (size_t i = 0; i < a.size(); i++) pcm[i] = (int16_t)std::lround(std::max(-1.0f, std::min(1.0f, a[i] * 0.8f)) * 32000);   // at the default master
+            const std::string fn = fmt("shots/tests/tape_deck_%s_%u.wav", KN[kind], seed);
+            writeWav16(fn, pcm, 22050);
+            if (seed == 1) printf("  deck %-6s the tape at %.2f s of %.2f -> %s (and _2, _3)\n", KN[kind], deckTapeAt(kind, seed), deckLength(kind, seed), fn.c_str());
+        }
+    game.setState(GameState::SPACE);
+    game.testOpenAuto();
+    { Input in; game.frame(in, 1.0 / 30); }
+    writePNG("shots/tests/tape_00.png", game.output(), FBW, FBH);   // the chooser
+    if (n == 0) { pngFlush(); printf("tape: no tracks, so no captions\n"); return 0; }
+    game.autoStart(AP_PLANETFALL, 3);
+    TapePump pump; pump.len = 12;
+    Input in; const double dt = 1.0 / 30;
+    auto frame = [&]() { game.frame(in, dt); in.newFrame(); pump.step(game.audio, dt); };
+    in.pressed[KEY_M] = in.down[KEY_M] = true; frame(); in.down[KEY_M] = false;
+    int shot = 1;
+    auto snap = [&](const char* what) { std::string au, ti; const double a = game.tapeCaption(au, ti); printf("  tape_%02d: %s (caption %.2f: %s / %s)\n", shot, what, a, au.c_str(), ti.c_str()); writePNG(fmt("shots/tests/tape_%02d.png", shot++).c_str(), game.output(), FBW, FBH); };
+    while (!pump.playing) frame();
+    for (int i = 0; i < 6; i++) frame();
+    snap("fading in");
+    for (int i = 0; i < 45; i++) frame();
+    snap("whole");
+    for (int i = 0; i < 150; i++) frame();
+    snap("fading out");
+    for (int i = 0; i < 40; i++) frame();
+    snap("gone");
+    if (n > 1) { while (pump.decks[DECK_CHANGE] == 0) frame(); while (!pump.playing) frame(); for (int i = 0; i < 45; i++) frame(); snap("the next track"); }
+    game.musicDir = "shots/tests/tape_none";
+    in.pressed[KEY_M] = in.down[KEY_M] = true; frame(); in.down[KEY_M] = false;   // the stop key
+    for (int i = 0; i < 15; i++) frame();
+    in.pressed[KEY_M] = in.down[KEY_M] = true; frame(); in.down[KEY_M] = false;   // an empty folder
+    for (int i = 0; i < 30; i++) frame();
+    snap("an empty folder");
+    pngFlush();
+    printf("tape: %s\n", game.testTapeInfo().c_str());
+    return 0;
+}
+
 static int runTail(int argc, char** argv) {
     const long long sx = argc > 2 ? atoll(argv[2]) : 18071, sy = argc > 3 ? atoll(argv[3]) : 1, sz = argc > 4 ? atoll(argv[4]) : -19950;
     const int body = argc > 5 ? atoi(argv[5]) : 1;
@@ -19923,6 +20130,7 @@ int main(int argc, char** argv) {
     std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still writing its histories and works is waited for before their caches go
     makeDir("shots");
     makeDir("shots/tests");   // O7-01: every harness output lands here; shots/ itself holds the player's screenshots
+    Game::musicDirDefault = "shots/tests/tape_none";   // R-420: a player's own music folder plays in no check (`tape` reads it on purpose)
     // `scale=N` anywhere on the command line renders at that resolution scale
     std::vector<char*> args;
     for (int i = 0; i < argc; i++) {
@@ -20417,6 +20625,7 @@ int main(int argc, char** argv) {
     if (mode == "auto") return runAuto(argc, argv);           // R-419
     if (mode == "tail") return runTail(argc, argv);           // B-427
     if (mode == "parkings") return runParkings();               // B-428
+    if (mode == "tape") return runTape(argc, argv);             // R-420
     if (mode == "flow") { runGameFlow(); return 0; }
     if (mode == "landmaps") { renderLandingMaps(); return 0; }
     if (mode == "consistency") { runConsistency(); return 0; }
