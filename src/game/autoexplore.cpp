@@ -54,12 +54,12 @@ const AutoTaste TASTES[AP_COUNT] = {
 };
 // the stargazer's draw by a star's class: the strange and the rare first
 double classDraw(int cls) {
-    static const double W[STAR_CLASS_COUNT] = {1, 1, 3, 3, 2, 4, 0.5, 1.5, 2, 3, 4, 5, 5, 6};
-    return cls >= 0 && cls < STAR_CLASS_COUNT ? W[cls] : 1;
+    static const double W[STAR_DRAWN_COUNT] = {1, 1, 3, 3, 2, 4, 0.5, 1.5, 2, 3, 4, 5, 5, 6};
+    return cls >= 0 && cls < STAR_DRAWN_COUNT ? W[cls] : 1;
 }
 inline Vec3 forwardOf(double yaw, double pitch) { return Vec3(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch)); }
 inline double angleBetween(const Vec3& a, const Vec3& b) { return std::acos(clampd(dot(normalize(a), normalize(b)), -1, 1)); }
-inline bool civWorld(int type) { return type == PT_FELISIAN || type == PT_DESERT; }   // the only worlds a people lived on (C-01)
+inline bool civWorld(int type) { return kindHas(type, KT_PEOPLE); }   // the only worlds a people lived on (C-01)
 const double CAB_WINDOW_X = 0.62, CAB_WINDOW_Z = 1.72;   // where the explorer stands at the front window: between its bars (at 0 and 1.25 m), the desk at 1.95
 }
 
@@ -219,7 +219,7 @@ void Game::autoPlanArrival() {
     A.quota = T.bodies0 + A.rng.irange(T.bodies1 - T.bodies0 + 1);
     if (A.focus == AP_ARCHAEOLOGIST) {   // its people's worlds alone (none: on to the next star at once)
         A.quota = 0;
-        for (const Body& b : sys.bodies) if (PLANET_TYPES[b.type].landable && civWorld(b.type) && worldHadCivilisation(spaceR.genFor(b))) A.quota++;
+        for (const Body& b : sys.bodies) if (KINDS[b.type].landable && civWorld(b.type) && worldHadCivilisation(spaceR.genFor(b))) A.quota++;
     }
     if (A.focus == AP_GIANTS) {          // its giants and a moon of one (none: on)
         int giants = 0;
@@ -256,7 +256,7 @@ int Game::autoWhim() {
     bool giant = false, land = false, civ = false;
     for (const Body& b : sys.bodies) {
         giant = giant || isProbeGiant(b.type);
-        if (!PLANET_TYPES[b.type].landable || b.type == PT_COMET) continue;
+        if (!KINDS[b.type].landable || b.type == PT_COMET) continue;
         land = true;
         if (civWorld(b.type) && worldHadCivilisation(spaceR.genFor(b))) civ = true;
     }
@@ -275,13 +275,13 @@ int Game::autoPickBody() {
         if (A.bodyTried.count(i)) continue;
         const Body& b = sys.bodies[i];
         if (b.type == PT_COMPANION) continue;
-        const bool landable = PLANET_TYPES[b.type].landable, giant = isProbeGiant(b.type), moon = b.parent >= 0;
+        const bool landable = KINDS[b.type].landable, giant = isProbeGiant(b.type), moon = b.parent >= 0;
         const bool giantMoon = moon && b.parent < (int)sys.bodies.size() && isProbeGiant(sys.bodies[b.parent].type);
         double x = 1;
         switch (A.focus) {
             case AP_STARGAZER: x = (b.rings ? 3 : 1) * (giant ? 2 : 1) * (moon ? 0.4 : 1); break;
-            case AP_PLANETFALL: x = (1 + (b.rings ? 1.5 : 0) + 0.3 * std::min(6, b.moonCount)) * (b.type == PT_FELISIAN ? 1.5 : 1) * (moon ? 0.7 : 1) * (b.type == PT_COMET ? 0.6 : 1); break;
-            case AP_SURVEYOR: x = !landable ? 0.03 : (b.type == PT_FELISIAN ? 6 : (b.type == PT_DESERT ? 3 : (b.type == PT_COMET ? 0.5 : 2))); break;
+            case AP_PLANETFALL: x = (1 + (b.rings ? 1.5 : 0) + 0.3 * std::min(6, b.moonCount)) * (kindHas(b.type, KT_FLORA) ? 1.5 : 1) * (moon ? 0.7 : 1) * (b.type == PT_COMET ? 0.6 : 1); break;
+            case AP_SURVEYOR: x = !landable ? 0.03 : (kindHas(b.type, KT_FLORA) ? 6 : (kindHas(b.type, KT_PEOPLE) ? 3 : (b.type == PT_COMET ? 0.5 : 2))); break;
             case AP_ARCHAEOLOGIST: x = landable && civWorld(b.type) && worldHadCivilisation(spaceR.genFor(b)) ? 1 : 0; break;
             case AP_GIANTS: x = giant ? 10 : (giantMoon && landable ? 2 : 0); break;
             default: break;
@@ -316,7 +316,7 @@ void Game::autoPlanParked(int b) {
     const AutoTaste& T = TASTES[A.focus];
     const Body& B = sys.bodies[b];
     A.bodyDone.insert(b); A.bodyTried.insert(b); A.visits++; A.bodies++;
-    const bool landable = PLANET_TYPES[B.type].landable, giant = isProbeGiant(B.type);
+    const bool landable = KINDS[B.type].landable, giant = isProbeGiant(B.type);
     const bool civ = landable && civWorld(B.type) && worldHadCivilisation(spaceR.genFor(B));
     double land = landable ? T.land : 0;
     if (A.focus == AP_ARCHAEOLOGIST) land = civ ? 1.0 : 0.0;
@@ -528,7 +528,7 @@ bool Game::autoPickStar(Star& out) {
                 bodies++; rings += b.rings ? 1 : 0;
                 if (b.type == PT_COMPANION) companion = true;
                 if (isProbeGiant(b.type)) giants++;
-                if (PLANET_TYPES[b.type].landable && b.type != PT_COMET) { land++; if (b.type == PT_FELISIAN) felis++; }
+                if (KINDS[b.type].landable && b.type != PT_COMET) { land++; if (kindHas(b.type, KT_FLORA)) felis++; }
                 if (civWorld(b.type) && worldHadCivilisation(BodyGen::make(b))) civ = true;
             }
             if (A.focus == AP_GIANTS) x *= giants ? 1 + 2.0 * giants : 0.04;
@@ -620,7 +620,7 @@ bool Game::autoChooseSite(int b, bool byPlace, bool underGiant, bool low) {
             if (pass < 2 && (s < lo0 || s > hi0)) continue;
             if (pass == 2 && s < 0.05) continue;
             if (!dry(la, lo, 1.5 * DEG)) continue;
-            if (pass == 0 && A.focus == AP_SURVEYOR && B.type == PT_FELISIAN) { const int mat = m->materialAt(lo, la); if (mat != MAT_GRASS && mat != MAT_FOREST) continue; }
+            if (pass == 0 && A.focus == AP_SURVEYOR && kindHas(B.type, KT_FLORA)) { const int mat = m->materialAt(lo, la); if (mat != MAT_GRASS && mat != MAT_FOREST) continue; }
             return set(la, lo);
         }
     return false;   // no dry ground in the light (a sea world): not down this time
@@ -684,7 +684,7 @@ bool Game::autoPlanOuting(int kind) {
     }
 }
 
-bool Game::autoDryAt(double x, double z) { const double g = surf.site.groundHeight(x, z); return surf.site.waterAt(x, z) < g - 0.05; }
+bool Game::autoDryAt(double x, double z) { const double g = surf.site.groundHeight(x, z); return surf.site.waterNowAt(x, z) < g - 0.05; }   // Q-02: the tide's
 
 // out of a vehicle (whichever it is in when the step comes): the buggy braked to a stop; the drone set down on dry, gentle ground near where
 // it is (on its skids); then E
@@ -787,7 +787,7 @@ bool Game::autoOutingWater() {
     for (double R = 20; R <= 450; R += 20)
         for (int k = 0; k < 24; k++) {
             const double a = (k + 0.5 * ((int)(R / 20) & 1)) * TAU / 24, x = p.x + std::sin(a) * R, z = p.z + std::cos(a) * R;
-            const double w = surf.site.waterAt(x, z);
+            const double w = surf.site.waterNowAt(x, z);
             if (w < surf.site.groundHeight(x, z) + 0.3) continue;
             double sx = x, sz = z;
             for (double s = 2; s < R; s += 2) { sx = x - std::sin(a) * s; sz = z - std::cos(a) * s; if (autoDryAt(sx, sz)) break; }
@@ -854,6 +854,7 @@ bool Game::autoOutingSight() {
         switch (e.lm.kind) {
             case LM_GEYSERS: case LM_CRYSTALS: x = 3; break;
             case LM_CANYON: case LM_CRATER: x = 2; break;
+            case LM_CALDERA: case LM_LABYRINTH: case LM_CHAIN: case LM_MUD: case LM_PINGO: case LM_MAAR: case LM_PENITENTES: case LM_METEORITES: x = 2; break;   // Q-01; Q-02
             case LM_RUIN: case LM_WORK: x = ax.focus == AP_ARCHAEOLOGIST ? 6 : 0.8; break;
             default: x = 1.2; break;
         }
@@ -870,8 +871,10 @@ bool Game::autoOutingSight() {
         autoPlanTown(e.x, e.z, size);
         return true;
     }
-    // where to stand: a crater's or a canyon's rim, a lake's shore, near a peak's summit, among the geysers or the crystals
-    const double frac = (e.lm.kind == LM_CRATER || e.lm.kind == LM_CANYON || e.lm.kind == LM_LAKE || e.lm.kind == LM_MESA) ? 0.95 : (e.lm.kind == LM_PEAK ? 0.45 : 0.3);
+    // where to stand: a crater's or a canyon's rim, a lake's shore, near a peak's summit, among the geysers or the crystals (Q-01: a caldera's, a
+    // chain crater's or a maar's rim, near a mud volcano's or a pingo's top)
+    const bool rim = e.lm.kind == LM_CRATER || e.lm.kind == LM_CANYON || e.lm.kind == LM_LAKE || e.lm.kind == LM_MESA || e.lm.kind == LM_CALDERA || e.lm.kind == LM_CHAIN || e.lm.kind == LM_MAAR;
+    const double frac = rim ? 0.95 : (e.lm.kind == LM_PEAK || e.lm.kind == LM_MUD || e.lm.kind == LM_PINGO ? 0.45 : 0.3);
     const double k = std::min(1.0, e.lm.radiusM * frac / std::max(dc, 1.0));
     const double sx = e.x + (p.x - e.x) * k, sz = e.z + (p.z - e.z) * k;
     const double far = std::hypot(sx - p.x, sz - p.z);
@@ -899,7 +902,7 @@ bool Game::autoOutingDrive() {
         double run = 0, prev = surf.site.groundHeight(p.x, p.z);
         for (double s = 30; s <= 2600; s += 30) {
             const double x = p.x + std::sin(h) * s, z = p.z + std::cos(h) * s, g = surf.site.groundHeight(x, z);
-            if (surf.site.waterAt(x, z) > g + 0.1 || std::fabs(g - prev) > 30 * 0.3) break;
+            if (surf.site.waterNowAt(x, z) > g + 0.1 || std::fabs(g - prev) > 30 * 0.3) break;
             prev = g; run = s;
         }
         if (run > bestRun) { bestRun = run; bx = p.x + std::sin(h) * run; bz = p.z + std::cos(h) * run; }
@@ -1335,7 +1338,7 @@ void Game::autoWay(double x0, double z0, double x1, double z1, std::vector<std::
     for (int j = 0; j < N; j++) for (int i = 0; i < N; i++) h[j * N + i] = (float)surf.site.groundHeight(ox + (i + 0.5) * C, oz + (j + 0.5) * C);
     for (int j = 0; j < N; j += 5) for (int i = 0; i < N; i += 5) {   // the water on a 2 m grid
         const double x = ox + (i + 2.5) * C, z = oz + (j + 2.5) * C;
-        if (surf.site.waterAt(x, z) <= h[std::min(N - 1, j + 2) * N + std::min(N - 1, i + 2)] + 0.8) continue;
+        if (surf.site.waterNowAt(x, z) <= h[std::min(N - 1, j + 2) * N + std::min(N - 1, i + 2)] + 0.8) continue;
         for (int jj = j; jj < std::min(N, j + 5); jj++) for (int ii = i; ii < std::min(N, i + 5); ii++) cost[jj * N + ii] = 6.0f;
     }
     for (int j = 0; j < N; j++) for (int i = 0; i < N; i++) {
@@ -1436,7 +1439,7 @@ bool Game::autoDriveClear(double x, double z, double heading) {
     double prev = surf.site.groundHeight(x, z);
     for (int k = 1; k <= 6; k++) {
         const double px = x + hx * 6 * k, pz = z + hz * 6 * k, g = surf.site.groundHeight(px, pz);
-        if (surf.site.waterAt(px, pz) > g + 0.2 || std::fabs(g - prev) > 6 * 0.45) return false;
+        if (surf.site.waterNowAt(px, pz) > g + 0.2 || std::fabs(g - prev) > 6 * 0.45) return false;
         prev = g;
     }
     return true;

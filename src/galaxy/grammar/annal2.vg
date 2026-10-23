@@ -346,6 +346,7 @@ annal.omen
   ($e.omen=newstar) {ann.lead} a star nobody knew stood over {mountain} until {season.next}{ann.omen.t}
   ($e.omen=redmoon) {ann.lead} the moon turned red over {$e.place}{ann.omen.t}
   ($e.omen=redmoon moons>0) {ann.lead} {moon} rose the colour of blood{ann.omen.t}
+  ($e.omen=wanderer|$e.omen=intruder|$e.omen=bent|$e.omen=dance) {ann.lead} {ann.sunomen}{ann.omen.t}
 ann.omen.comet
   the hairy star returned
   the hairy star came back, as the old ones said it would

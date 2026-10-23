@@ -146,6 +146,8 @@ pre.cal.winter
 pre.cal.omen
   ($e.omen=comet) A star with a tail at one turn: the hairy star.
   ($e.omen!=comet) A black circle at one turn: the sign in the sky, {pre.e.when}.
+  ($e.omen=wanderer 3) A circle bigger than the moon's at one turn: the wanderer, {pre.e.when}.
+  ($e.omen=dance 3) Two suns cut apart at one turn: the second sun going, {pre.e.when}.
 pre.cal.fair
   A ring of hands at one turn: the gathering at {$e.place}.
 pre.cal.games

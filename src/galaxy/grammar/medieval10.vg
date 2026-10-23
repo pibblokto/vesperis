@@ -103,6 +103,9 @@ med.pr.omen
   ($e.omen=eclipse) The sun went out at noon and the {herd} lay down. Do not do that again.
   ($e.omen=comet) The hairy star is in the sky over {$home}. Let it go by without looking at us.
   ($e.omen=redmoon) {moon} went red. If it was a warning, say it plainer.
+  ($e.omen=wanderer 3) The wanderer grows over {$home} every year. Send it back where it came from, and leave us our summer.
+  ($e.omen=intruder 3) There is a new star, and it is too bright. If it is yours, call it home.
+  ($e.omen=dance 3) The second sun is going away from us. Hold it, or hold us.
 
 med.pr.wonder
   ($e.what=calf|$e.what=beast|$e.what=twins) There is a wonder at {$e.place}. Let it be a good one.

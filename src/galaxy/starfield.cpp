@@ -41,6 +41,10 @@ const StarClassInfo STAR_CLASSES[STAR_CLASS_COUNT] = {
     // renderer draws from, the mass is the real thing), its worlds the survivors, a companion drawn out
     {"S13", "BLACK HOLE", "collapsed star of no light at all: a hole in the sky ringed by the bent light of the stars behind it, a glowing disc where it feeds; survivors only: wandering rocks, a companion drawn out.",
      RGB(1.00f, 0.88f, 0.70f), 3.0e5, 0.30, 0.03, 40.0, 3, 0, 40, 2.0e7},
+    // D-01: no star. A drifter's place: no light, no radius, no mass (nothing orbits its anchor but the drifter, which sits on it), a
+    // neutral colour; never drawn (`STAR_DRAWN_COUNT`), only placed (`galaxy/drifters.h`)
+    {"S14", "NO STAR", "no star: a world adrift in the dark between the stars, warmed by nothing but its own heat; found by its radio alone.",
+     RGB(0.55f, 0.56f, 0.60f), 0.0, 0.0, 0.0, 0.0, 0, 0, 0, 0.0},
 };
 
 // G-03: the dust. A thinner disc than the stars' (two fifths of their scale height), denser in the arms, in clouds of
@@ -134,6 +138,31 @@ double sampleGalaxyBand(const std::vector<float>& map, const Vec3& d) {
     const int xa = x0 & (W - 1), xb = (x0 + 1) & (W - 1), ya = clampi(y0, 0, H - 1), yb = clampi(y0 + 1, 0, H - 1);
     auto at = [&](int x, int y) { return (double)map[(size_t)y * W + x]; };
     return (at(xa, ya) * (1 - tx) + at(xb, ya) * tx) * (1 - ty) + (at(xa, yb) * (1 - tx) + at(xb, yb) * tx) * ty;
+}
+
+void galaxyBandLight(const std::vector<float>& map, double sh[9]) {
+    for (int k = 0; k < 9; k++) sh[k] = 0;
+    if ((int)map.size() != BAND_MAP_W * BAND_MAP_H) return;
+    for (int j = 0; j < BAND_MAP_H; j++) {
+        const double l0 = bandRowLat((double)j / BAND_MAP_H), l1 = bandRowLat((double)(j + 1) / BAND_MAP_H), lat = bandRowLat((j + 0.5) / BAND_MAP_H);
+        const double dOmega = (std::sin(l1) - std::sin(l0)) * TAU / BAND_MAP_W;
+        for (int i = 0; i < BAND_MAP_W; i++) {
+            const double lon = (i + 0.5) / BAND_MAP_W * TAU;
+            const double x = std::cos(lat) * std::cos(lon), y = std::sin(lat), z = std::cos(lat) * std::sin(lon);
+            const double L = std::pow((double)map[(size_t)j * BAND_MAP_W + i], 1.0 / BAND_GAMMA) * dOmega;
+            sh[0] += L * 0.282095;
+            sh[1] += L * 0.488603 * y; sh[2] += L * 0.488603 * z; sh[3] += L * 0.488603 * x;
+            sh[4] += L * 1.092548 * x * y; sh[5] += L * 1.092548 * y * z; sh[6] += L * 0.315392 * (3 * z * z - 1);
+            sh[7] += L * 1.092548 * x * z; sh[8] += L * 0.546274 * (x * x - y * y);
+        }
+    }
+}
+
+double galaxyBandIrradiance(const double sh[9], const Vec3& n) {
+    const double c1 = 0.429043, c2 = 0.511664, c3 = 0.743125, c4 = 0.886227, c5 = 0.247708, x = n.x, y = n.y, z = n.z;
+    const double E = c1 * sh[8] * (x * x - y * y) + c3 * sh[6] * z * z + c4 * sh[0] - c5 * sh[6]
+                   + 2 * c1 * (sh[4] * x * y + sh[7] * x * z + sh[5] * y * z) + 2 * c2 * (sh[3] * x + sh[1] * y + sh[2] * z);
+    return std::max(0.0, E) / PI;
 }
 
 const char* REGION_NAMES[REGION_COUNT] = {"GALACTIC CORE", "THE BULGE", "SPIRAL ARM", "THE DISK", "THE HALO", "GLOBULAR CLUSTER", "STAR-FORMING REGION", "OPEN CLUSTER"};
@@ -361,7 +390,7 @@ double starFlare(const Star& s, double t) {
 bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) {
     uint64_t seed = sectorSeed(sx, sy, sz);
     double d = galaxyDensity((double)sx, (double)sy, (double)sz);
-    if (unitFromHash(seed) >= d) { out.valid = false; return false; }
+    if (!sectorHoldsStar(sx, sy, sz, d)) { out.valid = false; return false; }
     Rng rng(seed ^ 0x1234ABCDULL);
     out.sx = sx; out.sy = sy; out.sz = sz;
     out.pos = Vec3((sx + 0.1 + 0.8 * rng.uni()) * SECTOR_KM, (sy + 0.1 + 0.8 * rng.uni()) * SECTOR_KM,
@@ -369,8 +398,8 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
     // class weights by region (M9-13): remnants and giants in the core, bulge and halo, young blue
     // giants where stars form, old red giants in clusters
     int region = galaxyRegion(sx, sy, sz);
-    double w[STAR_CLASS_COUNT];
-    for (int i = 0; i < STAR_CLASS_COUNT; i++) w[i] = STAR_CLASSES[i].rarity;
+    double w[STAR_DRAWN_COUNT];
+    for (int i = 0; i < STAR_DRAWN_COUNT; i++) w[i] = STAR_CLASSES[i].rarity;
     switch (region) {
         case REGION_CORE: w[STAR_PULSAR] *= 3.0; w[STAR_RED_GIANT] *= 2.0; w[STAR_WHITE_DWARF] *= 1.5; w[STAR_BLUE_GIANT] *= 1.5; break;
         case REGION_BULGE: w[STAR_RED_GIANT] *= 2.2; w[STAR_WHITE_DWARF] *= 1.6; w[STAR_BLUE_GIANT] *= 0.5; break;
@@ -381,7 +410,7 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
         case REGION_ARM: w[STAR_BLUE_GIANT] *= 1.6; break;
         default: break;
     }
-    out.cls = starVariety(rng.pick(w, STAR_CLASS_COUNT), region, mix64(seed ^ 0x5A11E7ULL));   // S-01: the family by weight, then its variety by a hash of its own (mixed: the seed's own uniform is the existence test, under the density)
+    out.cls = starVariety(rng.pick(w, STAR_DRAWN_COUNT), region, mix64(seed ^ 0x5A11E7ULL));   // S-01: the family by weight, then its variety by a hash of its own (mixed: the seed's own uniform is the existence test, under the density)
     const StarClassInfo& ci = STAR_CLASSES[out.cls];
     double rv = 1.0 + rng.sym(ci.radiusVar);
     out.radiusKm = ci.radiusKm * rv;

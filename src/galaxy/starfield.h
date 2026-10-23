@@ -22,8 +22,12 @@ enum StarClass {
     STAR_PROTOSTAR,      // S11 protostar (S-04): a young star in its cloud, a soft orange disc in a wide glow with its dust disc seen edge-on; belts rather than worlds; the sky full of the nebula
     STAR_WOLF_RAYET,     // S12 Wolf-Rayet star (S-05): a massive star blowing off its outer layers, blinding inside the ring of the shell it shed; a wind that strips its few worlds bare; radiation over the whole system
     STAR_BLACK_HOLE,     // S13 black hole (S-06): no light of its own: a shadow in the sky ringed by the bent light of the stars behind it, an accretion disc, a jet on some; survivors only, a companion drawn out
+    STAR_ROGUE,          // S14 no star (D-01): a drifter's place (`galaxy/drifters.h`), a world adrift with no sun, at its system's anchor; never drawn for a sector's star
     STAR_CLASS_COUNT
 };
+// D-01: the classes a sector's star and a companion are drawn from (the picks' count stays fourteen: `Rng::pick` falls through to the
+// last entry on a rounding, and STAR_ROGUE has no weight)
+constexpr int STAR_DRAWN_COUNT = STAR_ROGUE;
 
 struct StarClassInfo {
     const char* code;
@@ -130,6 +134,11 @@ double nebulaGlow(const NebulaPatch* p, int n, const Vec3& dir, int& tone);
 int starNebulaPatches(const Star& s, const Vec3& dirToStar, NebulaPatch* out);
 int starNebulaTone(const Star& s);
 double sampleGalaxyBand(const std::vector<float>& map, const Vec3& dir);   // a BAND_MAP_W x BAND_MAP_H map by direction, bilinear
+// D-02 (2026-10-23): the band's light on a world with no sun. `galaxyBandLight` takes the band's radiance (a tone's 1 / BAND_GAMMA power, the
+// column's own scale) to spherical harmonics of the second order, each cell by its solid angle; `galaxyBandIrradiance` is the light a
+// surface facing `n` receives from the whole sky (Ramamoorthi and Hanrahan's nine terms) over pi: 1 under a sky of radiance 1 everywhere
+void galaxyBandLight(const std::vector<float>& map, double sh[9]);
+double galaxyBandIrradiance(const double sh[9], const Vec3& n);
 bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName = true);
 // S-01 (2026-10-01): the varieties. The pick draws one of the six families with the rarity weights (the same draw as at
 // G-01, so every star kept its family); a hash of its own then turns a share of a family's stars into one of its
@@ -179,3 +188,5 @@ std::string generateName(uint64_t seed, int style = 0);   // style 0 plain, 1 ha
 std::string romanNumeral(int n);
 inline uint64_t sectorSeed(int64_t sx, int64_t sy, int64_t sz) { return hash3i(sx, sy, sz, 0x5EED5EEDULL); }
 inline int64_t sectorOf(double km) { return (int64_t)std::floor(km / SECTOR_KM); }
+// D-01: `starInSector`'s test of whether a sector holds a star, given `galaxyDensity` there (the drifters ask it of the sectors they would take)
+inline bool sectorHoldsStar(int64_t sx, int64_t sy, int64_t sz, double density) { return unitFromHash(sectorSeed(sx, sy, sz)) < density; }

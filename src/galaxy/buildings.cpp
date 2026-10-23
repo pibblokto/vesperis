@@ -65,6 +65,7 @@ int buildingAge(int k) {
         // old time's
         case BK_MOUND: case BK_DAM: case BK_TOMB: case BK_FORT: case BK_SHIP: case BK_COLOSSUS: case BK_LIGHTHOUSE: case BK_DERRICK: case BK_BLOCKS:
         case BK_CONVEYOR: case BK_HANGAR: case BK_FURNITURE: return -1;
+        case BK_DOME: case BK_GREENHOUSE: return -1;   // D-05: in the way of the age that lost its sun
         case BK_DISH: case BK_BUNKER: case BK_TEETH: case BK_VEHICLE: case BK_AIRCRAFT: case BK_LAUNCHPAD: case BK_TURBINE: return AGE_MODERN;
         case BK_TETHER: return AGE_FUTURISTIC;
         case BK_LATTICE: case BK_SPHERE: return AGE_FAR_FUTURE;
@@ -126,6 +127,8 @@ const char* buildingPlaceName(int k) {
         case BK_TRILITHON: return "A TRILITHON";
         case BK_GATE: return "A GATE";
         case BK_WALL_TOWER: return "A WALL'S TOWER";
+        case BK_DOME: return "A DOME";                       // D-05
+        case BK_GREENHOUSE: return "A GLASSHOUSE";
         default: return "A RUIN";
     }
 }
@@ -824,9 +827,9 @@ bool stilts(Gen& g, double rx, double rz, double fy) {
 }
 
 // C-08: on a desert the sand drifts against the walls the wind meets (the sides whose outward normal faces within 60 degrees of where
-// the wind comes from), a low wedge the age has built up; part 7, drawn in the sand's bank
+// the wind comes from), a low wedge the age has built up; part 7, drawn in the sand's bank (P-04: a frozen world's snow, in the snow's)
 void drifts(Gen& g, double hw, double hd, double D) {
-    if (!g.st.desert || g.lod != 0 || g.c.buried < 0.15) return;
+    if (!g.st.drift || g.lod != 0 || g.c.buried < 0.15) return;
     const double hDrift = 0.25 + 0.6 * std::min(1.0, g.c.buried / 1.2) * (0.5 + 0.5 * D);
     for (int side = 0; side < 4; side++) {
         double nAng = g.b.heading + side * PI / 2;   // the side's outward normal: 0 front (+z'), 1 right (+x'), 2 back, 3 left
@@ -4005,6 +4008,75 @@ void genConveyor(Gen& g) {
     const int n = std::max(1, (int)(2 * b.hd / 20));
     for (int k = 0; k <= n; k++) { Form& l = g.lathe(0, 0, -b.hd + 2 * b.hd * k / n, 0.3, 0, b.hWall, sl, MT_IRON, 4); (void)l; }
 }
+
+// D-05: a dome over the warm ground, a people that lost its sun's (`hw` its radius, `hWall` its ring's height): an industrial people's iron ribs
+// and their glass on a ring of brick (`style` 0), a modern people's steel and glass on a ring of concrete (1), the far future's whole (2). The glass
+// went at once; the ribs (half rings standing across the ring, crossing at its crown, and hoops round them) rust to stumps over centuries; the
+// ring stays. A futuristic people's dome is a habitat's (`BK_HABITAT`)
+int domeRingSegs(double r) { return clampi((int)std::lround(r * 0.6), 16, 28); }
+void genDome(Gen& g) {
+    const Building& b = g.b; const Culture& c = g.c;
+    const double r = b.hw;
+    if (b.style == 2) {   // the far future's: nothing weathers
+        { Form& t = g.add(FK_TORUS, 0, 0, 0, 0, r, r, 0, 4, 1, MT_ETERNAL); t.p[0] = 2.0; }
+        g.add(FK_DOME, 1, 0, 0, 0, r, r, 2.0, 2.0 + r * 0.55, 2, MT_ETERNAL);
+        return;
+    }
+    const int mat = b.style == 0 ? brickOf(c) : MT_CONCRETE;
+    const double Dm = g.D(mat), Dg = g.D(MT_GLASS);
+    g.sink = -c.buried * Dm;
+    Ring R; R.rx = R.rz = r; R.h = b.hWall; R.thick = 1.0; R.mat = mat; R.dress = false; R.k0 = 10;
+    R.segs = domeRingSegs(r); R.doorSegs = ringDoorSegs(r, R.segs); R.door = ringDoorFirst(b, R.segs, R.doorSegs);
+    ringWalls(g, R);
+    if (g.lod == 2) return;
+    const double yTop = g.sink + b.hWall, tube = clampd(r * 0.018, 0.45, 0.8);
+    const int n = b.style == 0 ? 6 : 8, is = g.ironSlot();
+    for (int k = 0; k < n; k++) {   // the ribs: a ring standing on its rim, its middle at the ring's top (its lower half in the ground)
+        const double d = g.Dk(MT_IRON, 20 + k);
+        if (d > 0.9) continue;
+        Form& t = g.add(FK_TORUS, 0, 0, 0, k * PI / n, r, r, yTop - r - tube, yTop + r + tube, is, MT_IRON);
+        t.p[0] = tube; t.tilt = PI / 2; t.broken = d < 0.3 ? 0 : clampd(d, 0.3, 0.95);
+    }
+    for (int q = 1; q <= (b.style == 0 ? 2 : 3); q++) {   // the hoops round them
+        const double ph = q * (PI / 2) / (b.style == 0 ? 3 : 4), d = g.Dk(MT_IRON, 40 + q);
+        if (d > 0.8) continue;
+        const double rr = r * std::cos(ph), y = yTop + r * std::sin(ph);
+        Form& t = g.add(FK_TORUS, 0, 0, 0, 0, rr, rr, y - tube, y + tube, is, MT_IRON); t.p[0] = tube * 0.8; t.broken = d < 0.3 ? 0 : clampd(d, 0.3, 0.9);
+    }
+    if (Dg < 0.8) { Form& e = g.add(FK_DOME, 0, 0, 0, 0, r, r, yTop, yTop + r, 2, MT_GLASS); e.broken = Dg < 0.3 ? 0 : clampd(Dg, 0.3, 0.95); }
+}
+
+// D-05: a glasshouse, a people that lost its sun's (`hw` across, `hd` along its heading): an industrial people's iron hoops and their glass on low
+// walls of brick (`style` 0, a conservatory's curve), a modern people's tunnel of steel hoops from the ground under its sheet (1), a futuristic or
+// a later people's vault of composite (2). The glass and the sheet went at once; the hoops stand over their walls
+void genGreenhouse(Gen& g) {
+    const Building& b = g.b; const Culture& c = g.c;
+    const double hw = b.hw, hd = b.hd;
+    if (b.style >= 2) {
+        const int mat = c.age >= AGE_FAR_FUTURE ? MT_ETERNAL : MT_COMPOSITE; const double D = g.D(mat);
+        Form& v = g.add(FK_VAULT, 2, 0, 0, 0, hw, hd, 0, b.hWall, 2, mat); v.p[0] = 0.3; v.p[1] = 1; v.broken = D < 0.3 ? 0 : clampd(D, 0.3, 0.95);
+        return;
+    }
+    const int mat = b.style == 0 ? brickOf(c) : MT_CONCRETE;
+    const double Dm = g.D(mat), Dg = g.D(MT_GLASS);
+    g.sink = -c.buried * Dm;
+    const double wall = b.style == 0 ? 0.9 : 0.3, th = b.style == 0 ? 0.22 : 0.15;
+    for (int s = -1; s <= 1; s += 2) g.box(s * hw, 0, 0, th, hd, g.sink, g.sink + std::max(0.2, wall * wallShare(Dm, g.U(10 + s))), 0, mat);
+    if (b.style == 0 && g.lod < 2) {   // its ends: the back whole, the front either side of its door
+        g.box(0, -hd, 0, hw, th, g.sink, g.sink + wall * wallShare(Dm, g.U(12)), 0, mat);
+        for (int s = -1; s <= 1; s += 2) g.box(s * (hw * 0.5 + 0.6), hd, 0, hw * 0.5 - 0.6, th, g.sink, g.sink + wall * wallShare(Dm, g.U(13 + s)), 0, mat);
+    }
+    if (g.lod == 2) return;
+    const double yTop = g.sink + wall, tube = b.style == 0 ? 0.12 : 0.08, step = b.style == 0 ? 2.5 : 2.0;
+    const int n = std::max(2, (int)std::lround(2 * hd / step)), is = g.ironSlot();
+    for (int k = 0; k <= n; k++) {   // a hoop across it every few metres (a ring standing on its rim, facing along the house)
+        const double d = g.Dk(MT_IRON, 30 + k);
+        if (d > 0.9) continue;
+        Form& t = g.add(FK_TORUS, 0, 0, -hd + 2 * hd * k / n, 0, hw, hw, yTop - hw - tube, yTop + hw + tube, is, MT_IRON);
+        t.p[0] = tube; t.tilt = PI / 2; t.broken = d < 0.3 ? 0 : clampd(d, 0.3, 0.95);
+    }
+    if (Dg < 0.8) { Form& v = g.add(FK_VAULT, 0, 0, 0, 0, hw, hd, yTop, yTop + hw, 2, MT_GLASS); v.p[0] = 0.05; v.broken = Dg < 0.3 ? 0 : clampd(Dg, 0.3, 0.95); }
+}
 }   // namespace
 
 // ---- the dispatch ------------------------------------------------------------------------------------------------------------
@@ -4086,6 +4158,8 @@ void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int 
         case BK_TRILITHON: genTrilithon(g); break;
         case BK_CONVEYOR: genConveyor(g); break;
         case BK_FURNITURE: genFurniture(g); break;   // R-412
+        case BK_DOME: genDome(g); break;             // D-05
+        case BK_GREENHOUSE: genGreenhouse(g); break;
         default: break;
     }
 }
@@ -4251,6 +4325,12 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
         case BK_AQUEDUCT: { R.outside = true; const double bay = 2 * b.hd / std::max(3, (int)std::lround(2 * b.hd / 7.0)); R.spots = {{0, -b.hd + bay * 0.5}, {0, -b.hd + bay * 1.5}}; return true; }   // under its arches
         case BK_TWIN: R.outside = true; R.spots = {{0, 0}, {0, b.hd + 2.0}}; return true;   // between its towers
         case BK_PORTAL: R.outside = true; R.spots = {{0, 2.6}, {1.2, 3.4}}; return true;   // in its mouth's cutting
+        case BK_DOME: {   // D-05: the floor inside its ring (the far future's: at its foot)
+            if (b.style == 2) { R.outside = true; R.spots = {{0, b.hw + 2.5}, {b.hw + 2.5, 0}}; return true; }
+            const int segs = domeRingSegs(b.hw), ds = ringDoorSegs(b.hw, segs);
+            roundRoom(b, R, b.hw, b.hw, segs, ringDoorFirst(b, segs, ds), ds); return true;
+        }
+        case BK_GREENHOUSE: rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0); R.spots = {{0, -b.hd * 0.6}, {0, 0}, {0, b.hd * 0.5}}; return true;   // along its middle walk
         // T-04: where the works keep a record: at the foot of a mast (a station's hut), a dish, a tomb, a barrow, a blockhouse, a hangar, a
         // lighthouse, a trilithon, a fort, outside each side
         case BK_MAST: case BK_DISH: case BK_TOMB: case BK_MOUND: case BK_BUNKER: case BK_HANGAR: case BK_LIGHTHOUSE: case BK_TRILITHON: case BK_FORT: {

@@ -269,7 +269,7 @@ bool Game::load(const std::string& path) {
         }
     }
     Star s;
-    if (!starInSector(sx, sy, sz, s, true)) {   // G-01: the galaxy of generation 11 keeps about half of the old stars near home
+    if (!placeInSector(sx, sy, sz, s, true)) {   // G-01: the galaxy of generation 11 keeps about half of the old stars near home; D-01: a star, else a drifter
         status(fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - ITS STAR IS GONE", gen, GEN_VERSION), 8);
         return false;
     }
@@ -283,7 +283,7 @@ bool Game::load(const std::string& path) {
     ship.parkedBody = parked < (int)sys.bodies.size() ? parked : -1;
     ship.localTarget = local < (int)sys.bodies.size() ? local : -1;
     ship.orbiting = orbiting != 0;
-    if (hasRemote && starInSector(rx, ry, rz, ship.remote, true)) ship.hasRemote = true;
+    if (hasRemote && placeInSector(rx, ry, rz, ship.remote, true)) ship.hasRemote = true;
     if (ship.targetBelt >= (int)sys.belts.size()) ship.targetBelt = -1;   // O3
     if (ship.parkedBelt >= (int)sys.belts.size()) ship.parkedBelt = -1;
     if (ship.parkedBody >= 0 && ship.parkedBelt >= 0) { ship.parkedBelt = -1; ship.targetBelt = -1; }   // B-410: a save made with both parks at the body its approach reached

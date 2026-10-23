@@ -21,76 +21,40 @@ struct SurfaceLook {
 };
 
 // N1-03: the ground colours come from the body's material palette (BodyGen::matColor, shared with the globe
-// and the landing map); only the sky, the fog, the night and the cloud layer are still chosen per type here.
+// and the landing map); the sky, the fog, the night and the cloud layer are the kind's row (P-00)
 SurfaceLook lookFor(const BodyGen& g, const Star& star) {
     SurfaceLook L;
+    const KindDef& K = KINDS[g.type];
     RGB lc = lerp(star.color, RGB(1, 1, 1), 0.5f);   // the star's light, softened (the globe and the map use the same tint, N1-05)
     RGB white(1, 1, 1);
-    L.cloudsLayer = false;
-    L.skyDensity = 1.0;
-    L.fogDistance = 6000;
-    L.nightZenith = RGB(0.01f, 0.01f, 0.03f);
-    L.nightHorizon = RGB(0.04f, 0.04f, 0.07f);
-    L.zenith = RGB(0, 0, 0); L.horizon = RGB(0, 0, 0);
     // O1 (B-302): the terrain is drawn to 53 km now, so the haze must let a clear day show it: felisian 12 km (was 5),
     // ocean 9, quartz 5, thin air 14, the airless worlds 45 (their "fog" is only the softening of distance)
-    typeSky(g, L.zenith, L.horizon);   // R-307: one pair per type, shared with the globe and the landing map
-    switch (g.type) {
-        case PT_MOLTEN: L.horizon = RGB(0.12f, 0.06f, 0.04f); L.fogDistance = 30000; break;
-        case PT_CRATERED: L.fogDistance = 45000; break;
-        case PT_VENUSIAN:
-            L.fogDistance = 700; L.skyDensity = 1.3;
-            L.nightZenith = RGB(0.08f, 0.06f, 0.04f); L.nightHorizon = RGB(0.12f, 0.09f, 0.06f); break;
-        case PT_FELISIAN:
-            L.fogDistance = 12000; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.02f, 0.02f, 0.06f); L.nightHorizon = RGB(0.06f, 0.06f, 0.1f); break;
-        case PT_ROCKY: L.fogDistance = 45000; break;
-        case PT_THINATMO:
-            L.fogDistance = 14000; L.skyDensity = 0.5; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.01f, 0.01f, 0.02f); L.nightHorizon = RGB(0.03f, 0.02f, 0.03f); break;
-        case PT_ICY: L.fogDistance = 45000; break;
-        case PT_COMET: L.fogDistance = 16000; break;   // O4: cut down by the activity (dust in the coma) in computeEnvironment
-        case PT_QUARTZ:
-            L.fogDistance = 5000; L.skyDensity = 1.15; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.05f, 0.04f, 0.06f); L.nightHorizon = RGB(0.1f, 0.08f, 0.1f); break;
-        case PT_OCEAN:
-            L.zenith = g.skyTint * 0.8f; L.horizon = lerp(g.skyTint, white, 0.5f); L.fogDistance = 9000; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.02f, 0.02f, 0.06f); L.nightHorizon = RGB(0.06f, 0.06f, 0.1f); break;
-        case PT_METAL: L.fogDistance = 45000; break;
-        case PT_VOLCANIC: L.horizon = RGB(0.08f, 0.05f, 0.02f); L.fogDistance = 30000; break;
-        case PT_CARBON: L.fogDistance = 45000; break;
-        // R-307
-        case PT_EUROPAN: L.fogDistance = 45000; break;
-        case PT_BOMBARDED: L.fogDistance = 45000; break;
-        case PT_TECTONIC:
-            L.fogDistance = 15000; L.skyDensity = 0.6; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.04f, 0.02f, 0.01f); L.nightHorizon = RGB(0.09f, 0.04f, 0.02f); break;   // the glow of the fissures
-        case PT_DESERT:
-            L.fogDistance = 9000; L.skyDensity = 1.1; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.02f, 0.02f, 0.04f); L.nightHorizon = RGB(0.06f, 0.05f, 0.05f); break;
-        case PT_HYDROCARBON:
-            L.fogDistance = 2500; L.skyDensity = 1.6;   // an opaque deck: no cloud layer, no sun disc
-            L.nightZenith = RGB(0.03f, 0.02f, 0.01f); L.nightHorizon = RGB(0.05f, 0.03f, 0.02f); break;
-        case PT_ACIDIC:
-            L.fogDistance = 2500; L.skyDensity = 1.3; L.cloudsLayer = true;
-            L.nightZenith = RGB(0.03f, 0.04f, 0.02f); L.nightHorizon = RGB(0.06f, 0.06f, 0.03f); break;
-        default: break;
-    }
+    L.cloudsLayer = K.clouds;
+    L.skyDensity = K.skyDensity;
+    L.fogDistance = K.fog;
+    L.nightZenith = K.ownNight ? K.nightZenith : RGB(0.01f, 0.01f, 0.03f);
+    L.nightHorizon = K.ownNight ? K.nightHorizon : RGB(0.04f, 0.04f, 0.07f);
+    L.zenith = RGB(0, 0, 0); L.horizon = RGB(0, 0, 0);
+    typeSky(g, L.zenith, L.horizon);   // R-307: one pair per kind, shared with the globe and the landing map
+    if (K.seaSky) { L.zenith = g.skyTint * 0.8f; L.horizon = lerp(g.skyTint, white, 0.5f); }   // the ocean's own sky over its sea
+    if (K.lavaHorizon) L.horizon = K.horizonGlow;   // an airless horizon lit by the lava
     if (g.hasTrait(TR_HAZE)) { L.fogDistance *= 0.3; L.skyDensity *= 1.25; }   // R-304
+    if (g.hasTrait(TR_FROZEN_AIR)) { L.fogDistance = 45000; L.cloudsLayer = false; }   // D-04: its air on its ground, its sky an airless world's
     const RGB* m = g.matColor;
     L.ground = m[familyRep(g.type, FAM_ROCK)];
     L.sand = m[familyRep(g.type, FAM_SAND)];
     L.snow = m[familyRep(g.type, FAM_SNOW)];
-    L.grass = m[MAT_GRASS];
+    L.grass = m[familyRep(g.type, FAM_GRASS)];   // P-00: a kind's first accent where it lends the grass bank
     L.flora2 = g.vegColor2;
     // bank 2 (secondary): water where there is a sea, lava on hot worlds, else the bright crystal/ejecta tint
-    if (g.type == PT_FELISIAN || g.type == PT_OCEAN || g.liquidLevel > -1e8) L.secondary = m[MAT_WATER];
+    if ((K.tags & KT_SEA) || g.liquidLevel > -1e8) L.secondary = m[MAT_WATER];
     else if (isLavaWorld(g.type)) L.secondary = m[MAT_LAVA];
     else if (g.hasTrait(TR_GLASSED)) L.secondary = m[MAT_GLASS];   // S-03: the sheets of glass own bank 2 (the family's rep is the water the palette coloured as glass)
-    else if (g.type == PT_QUARTZ || g.type == PT_CARBON) L.secondary = lerp(m[MAT_QUARTZ], white, 0.4f);
+    else if (K.famRep[FAM_WATER] != MAT_WATER) L.secondary = m[K.famRep[FAM_WATER]];   // P-01: a kind's own in the water family's bank (the glass world's glass)
+    else if (K.tags & KT_CRYSTAL) L.secondary = lerp(m[MAT_QUARTZ], white, 0.4f);
     else L.secondary = lerp(L.ground, white, 0.5f);
-    // bank 3 (tertiary): the forest on living worlds, elsewhere boulders a shade lighter than the ground
-    L.tertiary = g.type == PT_FELISIAN ? m[MAT_FOREST] : lerp(L.ground, white, 0.25f);
+    // bank 3 (tertiary): the forest on living worlds (P-00: a kind's second accent), elsewhere boulders a shade lighter than the ground
+    L.tertiary = ((K.tags & KT_FLORA) || K.accent[1] >= 0) ? m[familyRep(g.type, FAM_FOREST)] : lerp(L.ground, white, 0.25f);
     L.ground = L.ground * lc; L.secondary = L.secondary * lc; L.tertiary = L.tertiary * lc;
     L.sand = L.sand * lc; L.snow = L.snow * lc; L.grass = L.grass * lc; L.flora2 = L.flora2 * lc;
     L.zenith = L.zenith * lc; L.horizon = L.horizon * lc;
@@ -241,6 +205,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     shardsFound.clear(); nearShard = NearShard();   // C-03 (the game refills the set from the guide after this)
     instrumentsFound.clear(); nearInstrument = NearInstrument();   // C-11 (likewise)
     hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
+    quakeCue = 0; duneSong = 0; iceSong = 0; duneHz = duneSongHz(site.gen, site.gravity);   // Q-03
     tick("capsule+misc");
     joinScan(); echoes.clear(); scanned = false;   // R-408: the last site's echoes are gone; the scanner asks again
     tick("scan");
@@ -249,6 +214,8 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     buildBandMap();
     meteorShowersOf(*sys, bodyIndex, showers);   // W-04
     zodiDust = zodiacalDust(*sys, bodyIndex);
+    lavaGlow = isLavaWorld(site.gen.type) || (site.gen.dark && site.gen.hasTrait(TR_EMBERS));   // D-04
+    waterLights = site.gen.hasTrait(TR_LIGHTS_IN_WATER) && site.hasWater;
     computeEnvironment(t);
     tick("band+env");
     valid = true;
@@ -396,7 +363,7 @@ void SurfaceView::gatherReflections() {
     reflVerts.clear(); reflPolys.clear();
     struct Cell { double d2; int cx, cz; int lod; double level; };
     std::vector<Cell> cells;
-    double sea = site.seaLevel;
+    double sea = site.seaLevel + site.tideM;   // Q-02: the tide's
     for (int lod = 1; lod >= 0; lod--) {
         TerrainCache& cache = lod == 0 ? site.lod0 : site.lod1;
         double cs = cache.cellSize;
@@ -414,7 +381,7 @@ void SurfaceView::gatherReflections() {
                 double hmax = std::max(std::max(cache.at(cx, cz).h, cache.at(cx + 1, cz).h), std::max(cache.at(cx, cz + 1).h, cache.at(cx + 1, cz + 1).h));
                 // B-320: a cell on the shore of a lake or a river (its vertices carry that water's level) mirrors round
                 // that level; every cell above the sea mirrors round the sea
-                double wl = std::max(std::max(cache.at(cx, cz).water, cache.at(cx + 1, cz).water), std::max(cache.at(cx, cz + 1).water, cache.at(cx + 1, cz + 1).water));
+                double wl = std::max(std::max(site.waterOf(cache.at(cx, cz)), site.waterOf(cache.at(cx + 1, cz))), std::max(site.waterOf(cache.at(cx, cz + 1)), site.waterOf(cache.at(cx + 1, cz + 1))));
                 if (wl > sea + 0.5 && hmax > wl + 0.3) cells.push_back({d2 * cs * cs, cx, cz, lod, wl});
                 if (hmax < sea + 0.3) continue;
                 cells.push_back({d2 * cs * cs, cx, cz, lod, sea});
@@ -443,14 +410,14 @@ void SurfaceView::gatherReflections() {
         // B-322: the cell's dry side first (the shore cut the ground is drawn with), then the part of it above the level
         const TerrainVertex* tvc[4] = {&cache.at(c.cx, c.cz), &cache.at(c.cx + 1, c.cz), &cache.at(c.cx + 1, c.cz + 1), &cache.at(c.cx, c.cz + 1)};
         double wMean = 0; int wN = 0;
-        for (int i = 0; i < 4; i++) if (tvc[i]->water > -1e8f) { wMean += tvc[i]->water; wN++; }
+        for (int i = 0; i < 4; i++) if (tvc[i]->water > -1e8f) { wMean += site.waterOf(*tvc[i]); wN++; }
         if (wN) wMean /= wN;
         for (int k = 0; k < 2; k++) {
             double px[4], pz[4], ph[4]; int n = 0;
             if (wN) {
                 double xs3[3], zs3[3], hs3[3], wl3[3], sh3[3];
                 bool anyWet = false, anyDry = false;
-                for (int e = 0; e < 3; e++) { int a = tris[k][e]; xs3[e] = xs[a]; zs3[e] = zs[a]; hs3[e] = hs[a]; wl3[e] = tvc[a]->water > -1e8f ? tvc[a]->water : wMean; sh3[e] = vertexShore(cache, c.cx + ox[a], c.cz + oz[a]); if (sh3[e] < 0) anyWet = true; else anyDry = true; }
+                for (int e = 0; e < 3; e++) { int a = tris[k][e]; xs3[e] = xs[a]; zs3[e] = zs[a]; hs3[e] = hs[a]; wl3[e] = tvc[a]->water > -1e8f ? site.waterOf(*tvc[a]) : wMean; sh3[e] = vertexShore(cache, c.cx + ox[a], c.cz + oz[a]); if (sh3[e] < 0) anyWet = true; else anyDry = true; }
                 if (anyWet && anyDry) {
                     ShoreSplit sp; shoreSplitTriangle(xs3, zs3, hs3, wl3, sh3, sp);
                     for (int i = 0; i < sp.nDry; i++) { px[n] = sp.dry[i].x; pz[n] = sp.dry[i].z; ph[n] = sp.dry[i].h; n++; }
@@ -863,6 +830,9 @@ void SurfaceView::computeEnvironment(double t) {
         env.skyBrightness = std::max(env.skyBrightness, day2);
         sinAlt = env.sun.dirLocal.y;
     }
+    // Q-02 (TR_GREAT_TIDES): the sea's level now (the bulges of the world's moons and sun at the explorer's place: the whole site's, the tide a
+    // few kilometres across being one)
+    site.tideM = site.gen.tideRangeM > 0 && site.hasWater ? tideOffsetM(*site.sys, site.body, site.unitAt(player.x, player.z), t, site.gen.tideRangeM) : 0.0;
     env.ringShadow = env.sunDisc.ringShadow;   // O0-01
     env.skyBrightness *= 1 - 0.45 * env.ringShadow;
     env.localTime = env.hasSun2 && site.sys->ofCompanion(site.body) ? env.sun2.dayFraction : env.sun.dayFraction;   // B-425: the time of the world's own sun
@@ -906,44 +876,63 @@ void SurfaceView::computeEnvironment(double t) {
     cloud = std::max(cloud, fw.cloud);
     env.cloudCover = cloud;
     double cloudP = env.cloudPattern;   // the pattern's cloud rains by its own rule; a front's band rains from its line, not from its first cloud
-    env.rain = (b.type == PT_FELISIAN && cloudP > 0.72) ? clampd((cloudP - 0.72) / 0.25, 0, 1) : 0;
-    if (b.type == PT_ACIDIC) env.rain = cloudP > 0.6 ? clampd((cloudP - 0.6) / 0.3, 0, 1) : 0;   // R-307: the acid rains often
-    if (b.type == PT_HYDROCARBON) { double dz = gnoise2(t / 1800.0, 2.3, site.gen.seed + 27); env.rain = clampd((dz - 0.45) / 0.3, 0, 0.5); }   // a methane drizzle now and then
-    if (b.type == PT_FELISIAN || b.type == PT_OCEAN || b.type == PT_ACIDIC) env.rain = std::max(env.rain, fw.precip);   // W-03: the front's rain
+    const KindDef& K = KINDS[b.type];   // P-00: the kind's weather, temperature and pressure are its row's
+    env.rain = 0;
+    if (K.rain == RAIN_CLOUDS) env.rain = cloudP > K.rainThr ? clampd((cloudP - K.rainThr) / K.rainSpan, 0, 1) : 0;   // R-307: the acid rains often
+    if (K.rain == RAIN_DRIZZLE) { double dz = gnoise2(t / 1800.0, 2.3, site.gen.seed + 27); env.rain = clampd((dz - 0.45) / 0.3, 0, 0.5); }   // a methane drizzle now and then
+    if (K.tags & KT_FRONT_RAIN) env.rain = std::max(env.rain, fw.precip);   // W-03: the front's rain
     // M4-06: the same clouds snow when it is cold; thin air raises dust storms; fog banks drift by
     env.snow = 0; env.dust = 0; env.fogBank = 0; env.hail = 0;
-    if (b.type == PT_FELISIAN || b.type == PT_OCEAN) {
+    if (K.tags & KT_WATER_WEATHER) {
         double precip = std::max(cloudP > 0.62 ? clampd((cloudP - 0.62) / 0.3, 0, 1) : 0.0, fw.precip);
         if (precip > 0) {
             if (env.temperatureC < -1) { env.snow = precip; env.rain = 0; }
             else if (env.temperatureC < 8 && precip > 0.8) env.hail = (precip - 0.8) / 0.2;
         }
     }
-    if (b.type == PT_THINATMO || b.type == PT_DESERT) {
+    if (K.dustThreshold > 0 && site.atmosphere) {   // D-04: no dust rises where the air fell as snow
         double storm = gnoise2(t / 2400.0, 5.1, site.gen.seed + 21);
-        env.dust = clampd((storm - (b.type == PT_DESERT ? 0.45 : 0.35)) / 0.3, 0, 1);   // the storm's wind is applied with the wind update below (B-206); R-307: rarer on a desert world
+        env.dust = clampd((storm - K.dustThreshold) / 0.3, 0, 1);   // the storm's wind is applied with the wind update below (B-206); R-307: rarer on a desert world
         env.dust = std::max(env.dust, fw.precip);   // W-03: a dust front
     }
-    if (b.type == PT_FELISIAN || b.type == PT_OCEAN) {
+    if ((K.tags & KT_WATER_WEATHER) && site.atmosphere) {
         double fogN = gnoise2(t / 1500.0 + player.x / 4000.0, player.z / 4000.0, site.gen.seed + 33);
         env.fogBank = clampd((fogN - 0.45) / 0.25, 0, 1) * (1 - env.rain) * clampd(1 - std::fabs(env.temperatureC - 8) / 25.0, 0, 1);
     }
+    // Q-02 (TR_FOG_SEAS): the valley fog of the morning. It gathers in the night's calm, fills the valleys to a level over their floors by
+    // dawn and burns off as the sun climbs (local times 0.10-0.40, its height with it); no fog in rain, dust or a wind; how deep this
+    // morning's is by the world and the day
+    env.fogSea = 0; env.fogSeaTop = -1e9;
+    if (site.atmosphere && site.gen.hasTrait(TR_FOG_SEAS)) {
+        const double lt = env.localTime, day = std::floor(t / std::max(60.0, std::fabs(b.rotPeriod)));
+        double fs = smoothstep(0.10, 0.22, lt) * (1 - smoothstep(0.30, 0.40, lt)) * (1 - env.rain) * (1 - env.dust) * smoothstep(28.0, 10.0, env.windKnots);
+        if (fs > 0.01) {
+            refreshFogFloor();
+            const double depth = (60 + 110 * hash01(mix64(site.gen.seed ^ 0xF06A5EAULL))) * (0.6 + 0.4 * hash01(hash2i((int64_t)day, 7, site.gen.seed ^ 0xF06DULL)));
+            env.fogSea = fs; env.fogSeaTop = fogFloorM + depth * fs;
+        }
+    }
     env.aurora = 0; env.auroraStorm = 0;
     env.flare = starFlare(site.sys->star, t);   // S-01: a red dwarf's flare opens the exposure (setupPalette) and is a storm of its own (auroralStorm)
-    if (site.atmosphere && !hasOpaqueDeck(b.type) && std::fabs(env.latDeg) > 40) {
+    const bool greatAurorae = site.gen.hasTrait(TR_GREAT_AURORAE);   // Q-02: R-402's field set high
+    if (site.atmosphere && !hasOpaqueDeck(b.type) && (std::fabs(env.latDeg) > 40 || greatAurorae)) {
         // R-402: the night's potential (the star's class, the world's magnetic field, the star's storm), the latitude ramp
-        // pushed equatorward by the storm, the darkness, and the night's own slow variation
+        // pushed equatorward by the storm, the darkness, and the night's own slow variation. Q-02: under great aurorae the field's glow
+        // lights most nights whatever the storm, and the ramp reaches the tropics
         env.auroraStorm = auroralStorm(site.sys->star, t);
-        double latLo = 52 - 10 * env.auroraStorm;
-        env.aurora = auroraPotential(*site.sys, b, t) * smoothstep(latLo, latLo + 16, std::fabs(env.latDeg)) * (1 - env.skyBrightness) * (0.6 + 0.4 * gnoise2(t / 600.0, 8.8, site.gen.seed + 44));
+        double latLo = greatAurorae ? 8 - 8 * env.auroraStorm : 52 - 10 * env.auroraStorm;
+        double pot = auroraPotential(*site.sys, b, t);
+        if (greatAurorae) pot = std::max(pot, 0.7 + 0.3 * env.auroraStorm);
+        env.aurora = pot * smoothstep(latLo, latLo + 16, std::fabs(env.latDeg)) * (1 - env.skyBrightness) * (0.6 + 0.4 * gnoise2(t / 600.0, 8.8, site.gen.seed + 44));
     }
     if (lastWindUpdate < 0 || t - lastWindUpdate > 2.0) {
         // B-206: the wind is set from scratch here (base by type, a slow gust term, rain, the dust storm's x3.5);
         // it used to be multiplied by the storm factor every frame between these updates and ran away to 1e13 knots
         lastWindUpdate = t;
-        double base = site.atmosphere ? (b.type == PT_THINATMO ? 25 : (b.type == PT_VENUSIAN ? 4 : (b.type == PT_DESERT ? 18 : (b.type == PT_HYDROCARBON ? 3 : 10)))) : 0;
-        env.windKnots = base * (0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // W-03: the wind rises ahead of a front
-        env.windDir = wrap2pi(1.7 + 2.0 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6));
+        double base = site.atmosphere ? K.wind : 0;
+        const bool steady = (K.tags & KT_FIXED_SUN) && site.gen.locked;   // P-03: a locked world's surface wind blows toward the substellar point, and hardly changes
+        env.windKnots = base * (steady ? 0.85 + 0.3 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5)) : 0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // W-03: the wind rises ahead of a front
+        env.windDir = steady ? wrap2pi(std::atan2(env.sunDisc.dirLocal.x, env.sunDisc.dirLocal.z) + 0.2 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6)) : wrap2pi(1.7 + 2.0 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6));
         if (fw.windWeight > 0.01) {   // W-03: the front's wind takes over by its weight: along its line ahead of it, with its motion behind
             double fx = dot(fw.windTo, site.east0), fz = dot(fw.windTo, site.north0);
             double w = clampd(fw.windWeight, 0, 1);
@@ -958,48 +947,36 @@ void SurfaceView::computeEnvironment(double t) {
     lastEnvT = t;
     // temperature
     double base = b.tempK - 273.15;
-    if (b.type == PT_FELISIAN) {
+    if (livingGround(b.type)) {
         // B-321: the biome model's mean temperature at this spot (the same number that chose the grass underfoot), with
         // a day-night swing round it; the HUD used to read -10 C on a grassland plateau from a model of its own
         double winter = clampd((env.latDeg >= 0 ? -site.season : site.season), 0, 1);
         double sub = site.gen.locked ? dot(site.unitAt(player.x, player.z), site.gen.lockedDir) : 0.0;
-        base = climateTempC(site.gen, std::fabs(env.latDeg), player.y, winter, sub) - 3 + 10 * sinAlt;
+        base = climateTempC(site.gen, std::fabs(env.latDeg), player.y, winter, sub) - 3 + K.daySwing * sinAlt;   // P-02: the kind's swing (a steppe's wide)
+    } else if (site.atmosphere && K.reachClimate && site.gen.locked) {   // P-03: the fixed sun's height decides it, the sea freezing at the edge of its reach (the eyeball's pupil)
+        base = K.tempOffset + K.tempSwing * (sinAlt - std::cos(site.gen.seaReachDeg * DEG));
     } else if (site.atmosphere) {
-        double offset = 6, swing = 12;   // R-307: each air has its greenhouse and its day-night swing
-        switch (b.type) {
-            case PT_VENUSIAN: offset = 420; break;
-            case PT_THINATMO: offset = -25; break;
-            case PT_DESERT: offset = 22; swing = 32; break;       // hot days, cold nights
-            case PT_HYDROCARBON: offset = -75; swing = 3; break;  // the haze evens everything out
-            case PT_ACIDIC: offset = 55; swing = 6; break;
-            case PT_TECTONIC: offset = 65; swing = 14; break;     // the ground itself is warm
-            default: break;
-        }
+        double offset = K.tempOffset, swing = K.tempSwing;   // R-307: each air has its greenhouse and its day-night swing
         base = base * 0.75 + offset;
         base += swing * sinAlt - 0.4 * std::fabs(env.latDeg);
     } else {
         base = base * 1.3 - 60 + (sinAlt > 0 ? 110 * sinAlt : -70);
         base -= 0.5 * std::fabs(env.latDeg);
     }
-    if (b.type != PT_FELISIAN) base -= 6.5 * (player.y / 1000.0);
-    if (b.type == PT_MOLTEN) base += 180;
-    if (b.type == PT_VOLCANIC) base += 60;
+    if (!livingGround(b.type)) base -= 6.5 * (player.y / 1000.0);
+    if (K.tempAdd != 0) base += K.tempAdd;   // the ground's own heat (a molten world's, a volcanic moon's)
+    if (K.nightSideC > -1e8 && site.gen.locked) base = K.nightSideC + (base - K.nightSideC) * smoothstep(-0.12, 0.08, sinAlt);   // P-01: no air carries the day round to the night side
+    // D-04: in the dark the ground is as warm as the world's own heat keeps it (`Body::tempK`: a drifter's by its kind, a moon's own and a
+    // brown dwarf's glow on it), no day to swing it; an air cools with height over it
+    if (site.sys->sunless()) base = b.tempK - 273.15 - (site.atmosphere ? 6.5 * player.y / 1000.0 : 0.0);
     env.temperatureC = std::max(base - fw.cold, -270.0);   // W-03: the cold behind a front
-    switch (b.type) {
-        case PT_FELISIAN: env.pressureAtm = 0.7 + 0.6 * hash01(site.gen.seed); break;
-        case PT_VENUSIAN: env.pressureAtm = 60 + 35 * hash01(site.gen.seed); break;
-        case PT_THINATMO: env.pressureAtm = 0.006 + 0.04 * hash01(site.gen.seed); break;
-        case PT_QUARTZ: env.pressureAtm = 0.4 + 0.4 * hash01(site.gen.seed); break;
-        case PT_OCEAN: env.pressureAtm = 1.2 + 1.5 * hash01(site.gen.seed); break;
-        case PT_DESERT: env.pressureAtm = 0.3 + 0.7 * hash01(site.gen.seed); break;        // R-307
-        case PT_HYDROCARBON: env.pressureAtm = 1.4 + 0.3 * hash01(site.gen.seed); break;
-        case PT_ACIDIC: env.pressureAtm = 2.0 + 3.0 * hash01(site.gen.seed); break;
-        case PT_TECTONIC: env.pressureAtm = 0.08 + 0.3 * hash01(site.gen.seed); break;
-        default: env.pressureAtm = 0; break;
-    }
+    env.pressureAtm = K.pressureSpan > 0 ? K.pressureLo + K.pressureSpan * hash01(site.gen.seed) : 0;
+    if (airFrozen(b)) env.pressureAtm *= 1e-6;   // D-04: the vapour over its snow, a trace
     env.pressureAtm *= std::exp(-player.y / 8000.0);
     SurfaceLook L = lookFor(site.gen, site.sys->star);
     env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);   // W-03: a front's squall closes the view further
+    if (K.lowFogM > -1e8) env.fogDistance *= clampd((player.y - K.lowFogM) / K.lowFogSpan, 0.03, 1.0);   // P-01: walking down into the steam world's lowlands, the fog closes
+    // Q-02: inside a fog sea the fog closes as in the steam world's lowlands (by the eye: `render` once the eye is placed)
     // O4: a comet vents harder the closer it dives to its star (the same activity as the tail seen from space);
     // the dust of the coma hangs over the ground
     env.cometActivity = 0;
@@ -1024,7 +1001,7 @@ void SurfaceView::computeEnvironment(double t) {
             Vec3 dirL = L * (rel / dist);
             if (dirL.y < 0.02) continue;
             double illum = bodyShineAt(*site.sys, bi, sitePos, t, env.sun.lightFactor);   // W-04: the formula a moon's earthshine reads too
-            bool glowing = ob.type == PT_SUBSTELLAR;
+            bool glowing = kindHas(ob.type, KT_GLOWS);
             if (illum > env.moonLight) {
                 env.moonLight = illum; env.moonBody = bi; env.moonDir = dirL;
                 env.moonColor = glowing ? lerp(ob.color, RGB(1, 0.7f, 0.45f), 0.4f) : lerp(ob.color * lerp(site.sys->star.color, RGB(1, 1, 1), 0.5f), RGB(1, 1, 1), 0.35f);
@@ -1038,6 +1015,22 @@ void SurfaceView::computeEnvironment(double t) {
     findNearShard();   // C-03
     findNearGrave();   // C-12
     findNearInstrument();   // C-11
+}
+
+// Q-02 (TR_FOG_SEAS): the floor of the valleys round the explorer: a low quantile of the 512 m ring's ground over 6 km (a lake's or the sea's
+// level where it is water: the fog lies on them as on the land), found again when the explorer has gone 1.5 km
+void SurfaceView::refreshFogFloor() {
+    if (std::fabs(player.x - fogFloorX) < 1500 && std::fabs(player.z - fogFloorZ) < 1500) return;
+    fogFloorX = player.x; fogFloorZ = player.z;
+    std::vector<double> hs;
+    const int cx0 = (int)std::lround(player.x / site.lod2.cellSize), cz0 = (int)std::lround(player.z / site.lod2.cellSize);
+    for (int dz = -6; dz <= 6; dz++)
+        for (int dx = -6; dx <= 6; dx++) {
+            const TerrainVertex& v = site.lod2.at(cx0 + dx, cz0 + dz);
+            hs.push_back(v.water > -1e8f ? std::max((double)v.h, (double)v.water) : (double)v.h);
+        }
+    std::sort(hs.begin(), hs.end());
+    fogFloorM = hs[hs.size() / 5];
 }
 
 // C-03: the nearest shard the explorer does not have within 2.2 m, on this floor (within 2 m of height), for E and the HUD. T-04: its object,
@@ -1315,11 +1308,12 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     // M4-08: eruptions every minute or so on molten and volcanic worlds, within 400 m. R-307: a tectonic world's fountains
     // rise from its fissures (the nearest lava cell of the 16 m ring within 600 m) every 15-40 s and last 25 s; a bombarded
     // world takes a meteorite every 20-60 s within 1.2 km, and shakes for a moment
-    if (isLavaWorld(site.gen.type) || site.gen.type == PT_BOMBARDED) {
+    const uint32_t events = KINDS[site.gen.type].events;   // P-00: the kind's events
+    if (events & (EV_ERUPTIONS | EV_FOUNTAINS | EV_STRIKES)) {
         nextEruption -= dt;
         if (nextEruption <= 0) {
             Rng er((uint64_t)(t * 100));
-            if (site.gen.type == PT_TECTONIC) {
+            if (events & EV_FOUNTAINS) {
                 double bx = 0, bz = 0; bool found = false;
                 for (int tries = 0; tries < 40 && !found; tries++) {
                     double x = player.x + er.sym(600), z = player.z + er.sym(600);
@@ -1327,7 +1321,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
                 }
                 if (found) { eruptions.push_back({bx, bz, t, 1}); eruptionCue = 1.0; }
                 nextEruption = 15 + 25 * er.uni();
-            } else if (site.gen.type == PT_BOMBARDED) {
+            } else if (events & EV_STRIKES) {
                 eruptions.push_back({player.x + er.sym(1200), player.z + er.sym(1200), t, 2});
                 nextEruption = 20 + 40 * er.uni();
                 eruptionCue = 1.0; quake = std::max(quake, 0.5);
@@ -1339,16 +1333,18 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         }
         eruptions.erase(std::remove_if(eruptions.begin(), eruptions.end(), [t](const Eruption& e) { return t - e.start > (e.kind == 1 ? 30 : 9); }), eruptions.end());
     }
-    // R-307: the ground shakes on a tectonic world: a quake every 60-180 s, ten seconds long, the camera trembling by it
-    if (site.gen.type == PT_TECTONIC) {
+    // R-307: the ground shakes on a tectonic world: a quake every 60-180 s, ten seconds long, the camera trembling by it. Q-03: on a world with
+    // QUAKES every one and a half to four minutes; the quake's own sound at its onset (the tectonic world's thunder before)
+    if ((events & EV_QUAKES) || site.gen.hasTrait(TR_QUAKES)) {
         nextQuake -= dt;
-        if (nextQuake <= 0) { Rng qr((uint64_t)(t * 100) ^ 0x9A4E); quake = 0.6 + 0.4 * qr.uni(); nextQuake = 60 + 120 * qr.uni(); eruptionCue = 1.0; }
+        if (nextQuake <= 0) { Rng qr((uint64_t)(t * 100) ^ 0x9A4E); quake = 0.6 + 0.4 * qr.uni(); nextQuake = (events & EV_QUAKES) ? 60 + 120 * qr.uni() : 90 + 150 * qr.uni(); quakeCue = quake; }
     }
     quake *= std::exp(-dt / 4.0);
     if (quake < 0.01) quake = 0;
+    updateGroundSongs(dt, t);   // Q-03
     // R-307: dust devils on a desert world (and in a thin-air dust storm): up to four within 500 m, born every 20-50 s, each
     // walking with the wind for two to five minutes
-    if ((site.gen.type == PT_DESERT || (site.gen.type == PT_THINATMO && env.dust > 0.3)) && env.skyBrightness > 0.3) {
+    if (((events & EV_DEVILS) || ((events & EV_STORM_DEVILS) && env.dust > 0.3)) && env.skyBrightness > 0.3) {
         nextDevil -= dt;
         if (nextDevil <= 0 && devils.size() < 4) {
             Rng dr((uint64_t)(t * 100) ^ 0xD3B1);
@@ -1366,6 +1362,55 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     devils.erase(std::remove_if(devils.begin(), devils.end(), [&](const DustDevil& d) { double dx = d.x - player.x, dz = d.z - player.z; return d.age > d.life || dx * dx + dz * dz > 1500.0 * 1500.0; }), devils.end());
     updateLife(dt, t);
     computeEnvironment(t);
+}
+
+// Q-03: the note a world's singing dunes hum at: Andreotti's f = 0.4 sqrt(g / d) of its grains' size d (150-320 microns by a hash of the
+// world: 70-100 Hz under Earth's gravity, about 50 on a Mars, 30 on a Titan)
+double SurfaceView::duneSongHz(const BodyGen& g, double gravity) {
+    const double d = (150 + 170 * unitFromHash(mix64(g.worldSeed ^ 0xD0E5ULL))) * 1e-6;
+    return 0.4 * std::sqrt(std::max(gravity, 0.1) / d);
+}
+
+// Q-03: the cues of the sounds of the ground the world's traits give. The singing dunes: a dune's slip face of sand or dust (`slipFace`: its lee,
+// however steep the world's dunes stand) crossed on foot or in the buggy slides; the hum louder the faster it is crossed and the more it is gone
+// down, held a few seconds after as the sand runs on. The singing ice: the ice within 64 m (snow over it half), and how fast the day
+// warms or cools it (the sun's height's rate over the world's day: the most at dawn and dusk, the cooling's more), a quarter of it always
+void SurfaceView::updateGroundSongs(double dt, double t) {
+    const BodyGen& g = site.gen;
+    const double x = inBuggy ? buggy.x : player.x, z = inBuggy ? buggy.z : player.z;
+    double dune = 0;
+    if (g.hasTrait(TR_SINGING_DUNES) && site.atmosphere && !inDrone && (inBuggy ? !buggy.airborne : player.onGround && !player.swimming)) {
+        const int mat = site.lod0.at((int)std::floor(x / 16), (int)std::floor(z / 16)).material;
+        if (mat == MAT_SAND || mat == MAT_DUST) {
+            const double gx = (site.groundHeight(x + 2, z) - site.groundHeight(x - 2, z)) / 4, gz = (site.groundHeight(x, z + 2) - site.groundHeight(x, z - 2)) / 4;
+            const double slope = std::sqrt(gx * gx + gz * gz);
+            const double vx = inBuggy ? std::sin(buggy.heading) * buggy.speed : player.vx, vz = inBuggy ? std::cos(buggy.heading) * buggy.speed : player.vz;
+            const double down = slope > 1e-6 ? std::max(0.0, -(vx * gx + vz * gz) / slope) : 0.0;   // m/s down the face
+            const double slide = clampd((0.35 * std::hypot(vx, vz) + 0.65 * down) / (inBuggy ? 6.0 : 2.5), 0, 1);
+            if (slope > 0.03 && slide > 0.01) dune = slide * smoothstep(0.15, 0.5, sampleSurface(g, site.unitAt(x, z), 4).slipFace);   // the near ring's 4 m: every world's dunes whole
+        }
+    }
+    duneSong = std::max(dune, duneSong * std::exp(-dt / 2.5));
+    if (duneSong < 0.002) duneSong = 0;
+    double ice = 0;
+    if (g.hasTrait(TR_SINGING_ICE) && site.atmosphere && !inDrone) {
+        const int cx = (int)std::floor(x / 16), cz = (int)std::floor(z / 16);
+        double sum = 0; int n = 0;
+        for (int dz = -4; dz <= 4; dz++)
+            for (int dx = -4; dx <= 4; dx++) {
+                if (dx * dx + dz * dz > 16) continue;
+                const int m = site.lod0.at(cx + dx, cz + dz).material;
+                sum += m == MAT_ICE ? 1.0 : (m == MAT_SNOW ? 0.5 : 0.0); n++;
+            }
+        const double share = sum / n;
+        if (share > 0.05) {
+            const double day = std::max(600.0, std::fabs(site.sys->bodies[site.body].rotPeriod));
+            const double rate = (site.sun(t + 30).dirLocal.y - site.sun(t - 30).dirLocal.y) / 60.0 * day / TAU;   // -1..1: falling at dusk
+            ice = smoothstep(0.05, 0.6, share) * (0.25 + 0.75 * clampd(std::fabs(rate) * (rate < 0 ? 1.0 : 0.7), 0, 1));
+        }
+    }
+    iceSong += (ice - iceSong) * (1 - std::exp(-dt / 1.5));
+    if (iceSong < 0.002 && ice == 0) iceSong = 0;
 }
 
 // C-01: a settlement's standing pieces as discs (A-02: each form's own, `formColliders`: rows along a wall, slices up a tower, an
@@ -1439,30 +1484,7 @@ double SurfaceView::floorAt(double x, double z, double feet, bool* blocked) {
 // costlier ones after it). The colliders mirrored the drawing's formulas and missed its last three tests: a boulder left off a street or a
 // quarry's floor still stood there, unseen. Returns the cell's candidates (the bench's count)
 namespace {
-void rockParams(int type, double& density, double& scale) {
-    density = 0.0; scale = 1.0;
-    switch (type) {
-        case PT_CRATERED: density = 1.1; scale = 1.1; break;
-        case PT_ROCKY: density = 1.6; scale = 1.6; break;
-        case PT_THINATMO: density = 1.2; scale = 0.9; break;
-        case PT_MOLTEN: density = 0.7; scale = 1.1; break;
-        case PT_ICY: density = 0.3; scale = 1.3; break;
-        case PT_FELISIAN: density = 0.35; scale = 0.9; break;
-        case PT_VENUSIAN: density = 0.6; scale = 1.4; break;
-        case PT_QUARTZ: density = 0.5; scale = 0.8; break;
-        case PT_METAL: density = 1.3; scale = 1.2; break;
-        case PT_VOLCANIC: density = 0.8; scale = 1.0; break;
-        case PT_CARBON: density = 0.9; scale = 1.1; break;
-        case PT_COMET: density = 1.4; scale = 1.2; break;   // O4: boulders of dirty ice
-        case PT_OCEAN: density = 0.0; break;
-        case PT_EUROPAN: density = 0.25; scale = 1.0; break;   // R-307: ice blocks by the chaos
-        case PT_TECTONIC: density = 1.0; scale = 1.2; break;
-        case PT_DESERT: density = 0.9; scale = 1.0; break;
-        case PT_HYDROCARBON: density = 0.3; scale = 0.9; break;
-        case PT_BOMBARDED: density = 1.8; scale = 1.3; break;   // ejecta boulders
-        case PT_ACIDIC: density = 0.6; scale = 1.0; break;
-    }
-}
+void rockParams(int type, double& density, double& scale) { density = KINDS[type].rockDensity; scale = KINDS[type].rockScale; }   // P-00: the kind's boulders
 }   // namespace
 int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, double, double)>& keep, const std::function<void(const RockInst&)>& fn) {
     const double cs = 16;
@@ -1471,11 +1493,12 @@ int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, doubl
     const uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
     const TerrainVertex& tv = site.lod0.at(cx, cz);
     double rd = rockDensity;
-    if (type == PT_FELISIAN && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
+    if (livingGround(type) && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
     rd *= 1 + 5.0 * tv.scree / 255.0;   // O6-04: boulder fields on the scree under the cliffs
     int nrocks = (int)(rd * 2.0 * hash01(h));
-    if (type == PT_FELISIAN && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
-    if (tv.material == MAT_SAND || tv.material == MAT_WATER || tv.material == MAT_LAVA) nrocks = 0;
+    if (livingGround(type) && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
+    if (tv.material == MAT_SAND || tv.material == MAT_WATER || tv.material == MAT_LAVA || tv.material == MAT_MATS || tv.material == MAT_STROMATOLITE) nrocks = 0;   // P-02: nor on the mats' sediment
+    else if ((tv.material == MAT_BRINE || tv.material == MAT_SALT) && (kindHas(type, KT_VENT_LIFE) || site.gen.hasTrait(TR_GYPSUM) || site.gen.hasTrait(TR_HOT_SPRINGS))) nrocks = 0;   // P-03: nor in a spring or on its sinter; Q-02: nor on the gypsum's dunes, a hot spring's terraces
     if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
     if (nrocks <= 0) return 0;
     const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;   // C-08: no rock in a room (the settlements near, found once a cell when a rock asks)
@@ -1497,9 +1520,83 @@ int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, doubl
     return nrocks;
 }
 
+// P-02: the stromatolites of a 16 m cell: on its reef flats (the cell's ground MAT_STROMATOLITE) seven to fifteen domes 0.7-3.2 m across, on its mats one in
+// three cells one; none in a room, on a road or a street, or with its foot more than 40 cm under the water (a dome stands from the shallows)
+void SurfaceView::forDomes(int cx, int cz, const std::function<void(const RockInst&)>& fn) {
+    if (!kindHas(site.gen.type, KT_MICROBIAL)) return;
+    const TerrainVertex& tv = site.lod0.at(cx, cz);
+    if (tv.material != MAT_STROMATOLITE && tv.material != MAT_MATS) return;
+    const double cs = 16;
+    const uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0x57A0ULL);
+    const int n = tv.material == MAT_STROMATOLITE ? 7 + (int)(hash01(h) * 9) : (hash01(h) < 0.33 ? 1 : 0);
+    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;
+    for (int i = 0; i < n; i++) {
+        const uint64_t hr = mix64(h + 31 * (i + 1));
+        RockInst R;
+        R.x = cx * cs + hash01(hr) * cs; R.z = cz * cs + hash01(mix64(hr + 1)) * cs; R.h = hr;
+        R.size = 0.35 + 1.25 * std::pow(hash01(mix64(hr + 2)), 1.6);   // the radius
+        if (nNear < 0) nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);
+        { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], R.x, R.z, 1.0); if (in) continue; }
+        if (!site.roads.empty() && site.roadCover(R.x, R.z) > 0.3) continue;
+        if (!site.marks.empty() && site.markCover(R.x, R.z) > 0.3) continue;
+        R.gy = site.groundHeight(R.x, R.z);
+        if (R.gy < site.waterAt(R.x, R.z) - 0.4) continue;
+        fn(R);
+    }
+}
+
+// P-03: the chemotroph's sinter chimneys: on the sinter round its springs, none to three a 16 m cell, slim cones 1-4.5 m tall (the pipes the
+// water builds of what it leaves), their foot 0.18-0.5 m across; the caller asks on a vent-life world alone
+inline double chimneyHeight(uint64_t h) { return 1.0 + 3.5 * std::pow(unitFromHash(mix64(h + 4)), 1.4); }
+void SurfaceView::forChimneys(int cx, int cz, const std::function<void(const RockInst&)>& fn) {
+    const TerrainVertex& tv = site.lod0.at(cx, cz);
+    if (tv.material != MAT_SALT) return;
+    const double cs = 16;
+    const uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xC417ULL);
+    const int n = (int)(hash01(h) * 4);
+    for (int i = 0; i < n; i++) {
+        const uint64_t hr = mix64(h + 37 * (i + 1));
+        RockInst R;
+        R.x = cx * cs + hash01(hr) * cs; R.z = cz * cs + hash01(mix64(hr + 1)) * cs; R.h = hr;
+        R.size = 0.18 + 0.32 * hash01(mix64(hr + 2));   // the foot's radius
+        R.gy = site.groundHeight(R.x, R.z);
+        if (R.gy < site.waterAt(R.x, R.z) - 0.2) continue;
+        fn(R);
+    }
+}
+
+// Q-02: the iron meteorites of a strewn field's 16 m cell: none to four by the field's density at the cell (the ground's `gtint`), most a hand to a
+// forearm across, one in twenty-five a mass of a metre or two; none in a room, on a road or a street, under the water
+void SurfaceView::forMeteorites(int cx, int cz, const std::function<void(const RockInst&)>& fn) {
+    if (!site.gen.hasTrait(TR_METEORITES)) return;
+    const TerrainVertex& tv = site.lod0.at(cx, cz);
+    if (tv.gtint < 10) return;
+    const double cs = 16;
+    const uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0x3E7EULL);
+    const double nx = tv.gtint / 255.0 * 2.6 * (0.5 + hash01(h));
+    const int n = (int)nx + (hash01(mix64(h + 1)) < nx - (int)nx ? 1 : 0);
+    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;
+    for (int i = 0; i < n; i++) {
+        const uint64_t hr = mix64(h + 43 * (i + 1));
+        RockInst R;
+        R.x = cx * cs + hash01(hr) * cs; R.z = cz * cs + hash01(mix64(hr + 1)) * cs; R.h = hr;
+        const double u = hash01(mix64(hr + 2));
+        R.size = u > 0.96 ? 0.6 + 0.9 * hash01(mix64(hr + 3)) : 0.12 + 0.4 * u * u;   // the radius
+        if (nNear < 0) nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);
+        { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], R.x, R.z, 1.0); if (in) continue; }
+        if (!site.roads.empty() && site.roadCover(R.x, R.z) > 0.3) continue;
+        if (!site.marks.empty() && site.markCover(R.x, R.z) > 0.3) continue;
+        R.gy = site.groundHeight(R.x, R.z);
+        if (R.gy < site.waterAt(R.x, R.z)) continue;
+        fn(R);
+    }
+}
+
 // Rocks larger than 0.6 m and tree trunks in the 3x3 cells around (x, z), as cylinders (M8-05). B-420: from the enumerators that draw them
 void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& out) {
     out.clear();
+    const bool microbial = kindHas(site.gen.type, KT_MICROBIAL), ventLife = kindHas(site.gen.type, KT_VENT_LIFE);   // P-02, P-03
+    const bool meteorites = site.gen.hasTrait(TR_METEORITES);   // Q-02
     double cs = 16;
     int pcx = (int)std::floor(x / cs), pcz = (int)std::floor(z / cs);
     // C-01: a settlement's standing pieces as rows of discs along their walls (within 40 m)
@@ -1512,7 +1609,10 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
             forRocks(cx, cz, [](double, double, double size) { return size >= 0.6; },   // a smaller one is stepped over
                      [&](const RockInst& R) { out.push_back({R.x, R.z, R.size * 0.8, 0, R.gy - R.size * 0.15, R.gy + R.size * 1.15}); });   // the peak stands up to 1.3 sizes over a base sunk 0.15
             // N2: trunks and fallen logs from the same enumerators that draw them
-            forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + T.h * 0.02, 1, T.gy - 0.3, T.gy + T.h}); });
+            forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + (T.stump ? T.r * 0.14 : T.h * 0.02), 1, T.gy - 0.3, T.gy + T.h}); });   // P-04: a stone stump's girth
+            if (microbial) forDomes(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.85, 0, R.gy - 0.2, R.gy + 0.55 * R.size + 0.2}); });   // P-02
+            if (ventLife) forChimneys(cx, cz, [&](const RockInst& R) { out.push_back({R.x, R.z, R.size, 0, R.gy - 0.1, R.gy + chimneyHeight(R.h)}); });   // P-03
+            if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.9, 0, R.gy - 0.1, R.gy + 0.8 * R.size}); });   // Q-02
             forLogs(cx, cz, [&](const LogInst& L) {
                 double dx = std::sin(L.heading), dz = std::cos(L.heading), lg = site.groundHeight(L.x, L.z);
                 for (int k = -1; k <= 1; k++) out.push_back({L.x + dx * L.len * 0.33 * k, L.z + dz * L.len * 0.33 * k, L.radius + 0.35, 2, lg - 1.0, lg + 2 * L.radius + 0.6});
@@ -1622,7 +1722,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     bool insideHere = false; floorAt(p.x, p.z, p.y, &insideHere);
     // wading (M8-08): slower with depth until swimming takes over
     double groundHere = insideHere ? floorAt(p.x, p.z, 1e9) : footing(p.x, p.z);
-    double waterHere = site.waterAt(p.x, p.z);
+    double waterHere = site.waterNowAt(p.x, p.z);   // Q-02: the tide's
     double depthHere = waterHere > -1e8 ? clampd(waterHere - groundHere, 0, 1.2) : 0;
     if (!p.swimming && p.onGround && depthHere > 0) speed *= 1.0 - 0.55 * depthHere / 1.2;   // B-406: wading, not flying over
     double accel = p.onGround ? (gRel > 1.5 ? 6.0 : 10.0) : (g < 3.0 ? 4.0 : 2.0);   // air control (M8-09)
@@ -1733,7 +1833,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     }
     bool insideNow = false; floorAt(p.x, p.z, p.y, &insideNow);
     double ground = insideNow ? floorAt(p.x, p.z, 1e9) : floorAt(p.x, p.z, p.y);   // B-420: the footing (a heap, a bank, a tier), the ground else
-    double water = site.waterAt(p.x, p.z);
+    double water = site.waterNowAt(p.x, p.z);
     // B-406 (2026-10-02): deep water is swum once the body is down at its surface; above it the air is the air, so the jetpack
     // flies over a lake (the old rule made the explorer swim the moment the ground under them was 0.4 m under water, whatever
     // their height: a jet over the shore was pulled down to the float level)
@@ -1784,11 +1884,11 @@ static void auroraColours(const Body& b, RGB& low, RGB& high) {
     double u = unitFromHash(hashCombine(b.seed, 0xA0C));
     const RGB green(0.1f, 0.45f, 0.2f), teal(0.1f, 0.42f, 0.36f), lime(0.3f, 0.5f, 0.12f), blue(0.15f, 0.3f, 0.7f), gold(0.55f, 0.48f, 0.12f);
     const RGB red(0.55f, 0.12f, 0.16f), violet(0.4f, 0.18f, 0.6f), pink(0.6f, 0.22f, 0.4f), magenta(0.6f, 0.12f, 0.5f), orange(0.7f, 0.3f, 0.08f);
-    switch (b.type) {
-        case PT_THINATMO: low = u < 0.5 ? green : teal; high = violet; break;
-        case PT_DESERT: low = u < 0.5 ? lime : green; high = pink; break;
-        case PT_TECTONIC: low = blue; high = magenta; break;
-        case PT_ACIDIC: low = gold; high = orange; break;
+    switch (KINDS[b.type].aurora) {   // P-00: the kind's style
+        case AU_THIN: low = u < 0.5 ? green : teal; high = violet; break;
+        case AU_DESERT: low = u < 0.5 ? lime : green; high = pink; break;
+        case AU_SULPHUR: low = blue; high = magenta; break;
+        case AU_ACID: low = gold; high = orange; break;
         default: low = u < 0.7 ? green : (u < 0.85 ? teal : lime); high = u < 0.6 ? red : (u < 0.85 ? violet : pink); break;
     }
 }
@@ -1805,7 +1905,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     double sunset = (1 - smoothstep(0.02, 0.22, sinAlt)) * smoothstep(-0.16, -0.03, sinAlt);
     if (site.atmosphere) {
         RGB sunsetC = RGB(0.95f, 0.45f, 0.2f) * lerp(env.lightColor, white, 0.5f);
-        if (site.gen.type == PT_THINATMO) sunsetC = lerp(sunsetC, site.gen.skyTint * 1.3f, 0.65f);   // exotic twilight (M1-07)
+        if (kindHas(site.gen.type, KT_EXOTIC_TWILIGHT)) sunsetC = lerp(sunsetC, site.gen.skyTint * 1.3f, 0.65f);   // exotic twilight (M1-07)
         hor = lerp(hor, sunsetC, (float)(sunset * 0.8));
         zen = lerp(zen, sunsetC * 0.4f, (float)(sunset * 0.25));
     }
@@ -1819,7 +1919,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         RGB kd = site.atmosphere ? lerp(lerp(kc, white, 0.5f), white, 0.6f) : lerp(kc, white, 0.35f);
         setRamp(fb.pal, 12, {{0, RGB(0, 0, 0)}, {20, kc * 0.45f}, {44, kc}, {56, kd}, {63, lerp(kd, white, 0.5f)}});
     }
-    if (env.moonBody >= 0 && site.sys->bodies[env.moonBody].type == PT_SUBSTELLAR) {   // M5-02 bank 13: a glowing parent in the sky
+    if (env.moonBody >= 0 && kindHas(site.sys->bodies[env.moonBody].type, KT_GLOWS)) {   // M5-02 bank 13: a glowing parent in the sky
         RGB g = site.sys->bodies[env.moonBody].color;
         setRamp(fb.pal, 13, {{0, RGB(0, 0, 0)}, {14, g * 0.4f}, {34, g}, {50, lerp(g, RGB(1, 0.55f, 0.25f), 0.6f)}, {63, RGB(1, 0.8f, 0.5f)}});
     }
@@ -1832,7 +1932,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     auto matRamp = [&](int bank, RGB c) {
         // N1-05: the shared material ramp (hemisphere light included), then the surface's own terms: moonlight
         // in the dark end, the sunset tint and the overcast flattening in the lit end, the fog colour at the top
-        MatRamp r = materialRamp(c, site.atmosphere ? &skyLight : nullptr, day);
+        MatRamp r = materialRamp(c, site.atmosphere && env.pressureAtm >= 0.001 ? &skyLight : nullptr, day);   // P-05: an air of millionths of a bar lights nothing
         RGB dark = r.stop[1];
         // planetshine lifts the dark end at night only (N1-05: on airless worlds `day` is the sky, which is always dark, so use the sun)
         double night = site.atmosphere ? (1 - day) : (1 - smoothstep(-0.05, 0.1, sinAlt));
@@ -1842,7 +1942,7 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, dark}, {34, mid}, {47, lit}, {56, lerp(lit, white, 0.5f)}, {63, fog}});
     };
     matRamp(0, L.ground);
-    if (isLavaWorld(site.gen.type)) {
+    if (lavaGlow) {
         setRamp(fb.pal, 2, {{0, RGB(0, 0, 0)}, {14, RGB(0.16f, 0.03f, 0.01f)}, {26, RGB(0.42f, 0.06f, 0)}, {40, RGB(0.8f, 0.14f, 0)}, {52, RGB(1, 0.5f, 0.05f)}, {60, RGB(1, 0.9f, 0.5f)}, {63, RGB(1, 1, 0.85f)}});
     } else if (site.hasWater) {   // R-307: the sea's ramp for every liquid (methane, acid, brine), not the living worlds' alone
         float dayF = 0.25f + 0.75f * (float)day;   // B-320: the water goes dark with the sky (the shade no longer carries the night)
@@ -1880,9 +1980,13 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     }
     {   // B-315 bank 16: bark, a brown of the planet's own (toward the second flora colour); bank 17: cut wood, pale. The
         // trunks used to sit on the ground bank, whose dark stops take the sky's colour: black trunks, grey-blue branches
-        RGB bark = lerp(RGB(0.36f, 0.25f, 0.15f), site.gen.vegColor2 * 0.55f, 0.3f);
+        RGB bark = lerp(RGB(0.36f, 0.25f, 0.15f), site.gen.vegColor2 * 0.55f, 0.3f), wood(0.74f, 0.62f, 0.44f);
+        const int cover = KINDS[site.gen.type].cover;   // P-04: a frozen world's dead wood white with frost, a scorched world's turned to stone
+        if (cover == DC_FROZEN) { bark = RGB(0.80f, 0.84f, 0.90f); wood = RGB(0.86f, 0.88f, 0.92f); }
+        if (cover == DC_SCORCHED) { bark = RGB(0.58f, 0.48f, 0.40f); wood = RGB(0.74f, 0.56f, 0.46f); }
+        if (site.gen.hasTrait(TR_FUNGAL)) { bark = lerp(site.gen.matColor[MAT_FOREST], RGB(0.92f, 0.90f, 0.86f), 0.6f); wood = RGB(0.90f, 0.86f, 0.78f); }   // Q-02: the stems pale
         matRamp(16, bark);
-        matRamp(17, RGB(0.74f, 0.62f, 0.44f));
+        matRamp(17, wood);
     }
     // T-04 banks 29-31: the records' (galaxy/records.h): bone, parchment and paper pale; wax, leather, vinyl and dark glass; a painting's ochre
     // (clay is the cut wood's bank 17, metal the chrome's 7)
@@ -1904,8 +2008,51 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         }
     }
     if (site.gen.type == PT_COMET) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {18, RGB(0.10f, 0.14f, 0.30f)}, {40, RGB(0.32f, 0.48f, 0.85f)}, {63, RGB(0.7f, 0.8f, 1.0f)}});   // O4 bank 15: the ion tail overhead
-    // bank 4: stars (their own ramp, no longer borrowed from the ground)
-    setRamp(fb.pal, 4, {{0, RGB(0, 0, 0)}, {40, RGB(0.55f, 0.57f, 0.66f)}, {63, RGB(0.88f, 0.9f, 0.97f)}});
+    else if (KINDS[site.gen.type].events & EV_SPRINGS) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {20, RGB(0.06f, 0.16f, 0.13f)}, {44, RGB(0.36f, 0.88f, 0.74f)}, {63, RGB(0.80f, 1.0f, 0.94f)}});   // P-03 bank 15: the spores' own light
+    {   // Q-02 (after the peoples' banks: it takes the second people's on worlds that have none): the water's trait colours, each a water's ramp in its own colour (a pink lake's, a bloom's, a lagoon's), and the milky sea's glow at
+        // night (its dark end the night sea's, its light the bacteria's pale blue)
+        tintBankW = tintBankL = -1; tintGlow = 0;
+        const float dayF = 0.25f + 0.75f * (float)day;
+        auto waterTint = [&](int bank, RGB c) {
+            RGB w = c * (0.7f + 0.3f * lf) * dayF, wb = lerp(hor, white, 0.2f);
+            setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {16, w * 0.3f}, {34, w * 0.7f}, {46, w}, {56, lerp(w, wb, 0.6f)}, {63, fog}});
+        };
+        // the peoples' banks are the traits' on a world without a people (its traits that take them move its ground: never on a people's), but
+        // where the harness stages a people's forms (A-02's tests) they keep theirs
+        const bool formsStaged = !placedCells.empty();
+        if (site.gen.hasTrait(TR_PINK_LAKES) && !formsStaged) { tintBankW = 25; waterTint(25, site.gen.waterTintColour); }
+        tintBankSprings = -1;
+        if (site.gen.hasTrait(TR_HOT_SPRINGS) && !formsStaged) { tintBankSprings = 25; matRamp(25, site.gen.matColor[MAT_MATS] * lerp(site.sys->star.color, white, 0.5f)); }   // the springs' mats
+        if (site.gen.hasTrait(TR_MILKY_SEAS)) {
+            tintGlow = 1 - smoothstep(0.04, 0.3, day);
+            if (tintGlow > 0.02) {
+                tintBankW = 15;
+                const RGB m = site.gen.waterTintColour, dark = L.secondary * 0.25f * dayF;
+                setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.45f, (float)tintGlow)}, {44, lerp(dark, m * 0.85f, (float)tintGlow)}, {63, lerp(dark, lerp(m, white, 0.35f), (float)tintGlow)}});
+            }
+        }
+        if (waterLights) {   // D-04: a dark ocean's life, its own light: faint in the black water, in patches that drift (the sheet's)
+            tintGlow = 1; tintBankW = 15;
+            const RGB m = site.gen.waterTintColour, dark = L.secondary * 0.25f * dayF;
+            setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.3f, 0.8f)}, {44, m * 0.62f}, {63, lerp(m, white, 0.25f)}});
+        }
+        if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {22, RGB(0.30f, 0.20f, 0.08f)}, {44, RGB(0.86f, 0.62f, 0.30f)}, {58, RGB(1.0f, 0.86f, 0.56f)}, {63, RGB(1, 0.97f, 0.86f)}});   // D-04: the lamps' and the windows' light
+        if ((site.gen.hasTrait(TR_BLOOMS) || site.gen.hasTrait(TR_REEFS)) && !formsStaged) { tintBankL = 26; waterTint(26, site.gen.hasTrait(TR_BLOOMS) ? lerp(site.gen.matColor[MAT_WATER], site.gen.lifeTintColour, 0.75f) : site.gen.lifeTintColour); }   // a bloom the water's own colour turned
+        tintBankStrata = -1;
+        if (site.gen.hasTrait(TR_STRATA) && !formsStaged) {   // the rainbow strata's accent: a red, an orange or a green by the world
+            static const RGB A[3] = {RGB(0.74f, 0.30f, 0.20f), RGB(0.82f, 0.52f, 0.20f), RGB(0.46f, 0.56f, 0.36f)};
+            tintBankStrata = 27; matRamp(27, A[(int)(hash01(mix64(site.gen.seed ^ 0x57A7BULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
+        }
+        if (site.gen.hasTrait(TR_PETRIFIED) && !formsStaged) {   // the stone trunks' jasper: red-brown, ochre or a purple grey by the world
+            static const RGB J[3] = {RGB(0.62f, 0.32f, 0.22f), RGB(0.70f, 0.52f, 0.28f), RGB(0.54f, 0.42f, 0.52f)};
+            matRamp(26, J[(int)(hash01(mix64(site.gen.seed ^ 0x9E7AULL)) * 3) % 3] * lerp(site.sys->star.color, white, 0.5f));
+        }
+    }
+    // bank 4: stars (their own ramp, no longer borrowed from the ground); D-04: reddened through a thick air (the share it lets through)
+    {
+        const float red = site.atmosphere ? (float)(1.0 - KINDS[site.gen.type].starLight) : 0.0f;
+        setRamp(fb.pal, 4, {{0, RGB(0, 0, 0)}, {40, lerp(RGB(0.55f, 0.57f, 0.66f), RGB(0.66f, 0.46f, 0.36f), red)}, {63, lerp(RGB(0.88f, 0.9f, 0.97f), RGB(0.98f, 0.80f, 0.64f), red)}});
+    }
     {   // G-03 bank 22: the galactic band and the nebula patches, the unresolved starlight, laid over the sky at night by
         // `drawBand`: from the night sky's own colour at the dark end (no hue edge where it fades into the sky) to a pale
         // star-grey, a little of the horizon's tint through an atmosphere
@@ -1967,12 +2114,14 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
 void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& albedo) const {
     albedo = v.albedo;
     bank = 0;
-    // N1-03: one bank per material family, the same families as the globe (matFamily)
-    switch (matFamily(v.material)) {
+    // N1-03: one bank per material family, the same families as the globe (P-00: a kind's accents in the grass and forest banks)
+    if (tintBankSprings >= 0 && v.material == MAT_MATS) { bank = (uint8_t)tintBankSprings; return; }   // Q-02: the hot springs' mats in their own bank
+    if (tintBankStrata >= 0 && v.gtint > 127) { bank = (uint8_t)tintBankStrata; return; }             // Q-02: a rainbow stratum's accent layer
+    switch (matFamilyOn(site.gen.type, v.material)) {
         case FAM_WATER: bank = 2; break;
-        case FAM_FOREST: bank = 3; albedo = 0.28 + 0.1 * v.veg; break;
-        case FAM_GRASS: bank = 10; albedo = 0.36 + 0.2 * v.veg; break;
-        case FAM_SNOW: bank = 8; if (v.material == MAT_SNOW) albedo = site.gen.type == PT_FELISIAN ? 0.95 : 0.9; break;
+        case FAM_FOREST: bank = 3; if (v.material == MAT_FOREST) albedo = 0.28 + 0.1 * v.veg; break;
+        case FAM_GRASS: bank = 10; if (v.material == MAT_GRASS) albedo = 0.36 + 0.2 * v.veg; break;
+        case FAM_SNOW: bank = 8; if (v.material == MAT_SNOW) albedo = KINDS[site.gen.type].snowAlbedo; break;
         case FAM_SAND: bank = 9; break;
         default: bank = v.material == MAT_LAVA ? 2 : 0; break;
     }
@@ -1995,7 +2144,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     // height of its drawn triangle at this spot, and its Gouraud shade when the coarser vertices were computed this
     // frame), by the vertex's continuous distance from the camera, so nothing pops as the edge sweeps the ground
     double morph = 0, hC = 0, shC = 0; bool shOk = false;
-    double wy = tv.water;   // B-320: the water level as drawn
+    double wy = site.waterOf(tv);   // B-320: the water level as drawn (Q-02: the tide's)
     double shore = vertexShore(cache, cx, cz);   // B-322: the side of the water's edge, morphed with the ground below
     if (morphCoarse && morphBand > 0) {
         double ddx = x - camPos.x, ddz = z - camPos.z;
@@ -2055,6 +2204,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     double light = ambient + (1 - ambient) * sunTerm;
     // M10-09 secondary lights: planetshine at night, the capsule beacon pool, lava glow
     if (env.moonLight > 0.005) light += (1 - ambient) * env.moonLight * 0.6 * std::max(0.0, dot(nrm, env.moonDir)) * (1 - sunUp);
+    if (nLamps) light += (1 - ambient) * lampAt(Vec3(x, h, z), &nrm);   // D-04: the lamp, the floodlights
     if (buggy.deployed && buggy.lights) {
         // headlights: a 25 m cone ahead of the buggy
         double hx = std::sin(buggy.heading), hz = std::cos(buggy.heading);
@@ -2079,7 +2229,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     { double ddx = x - camPos.x, ddz = z - camPos.z; fog0 = clampd(std::sqrt(ddx * ddx + ddz * ddz) / (site.atmosphere ? env.fogDistance : 20000.0), 0, 1); }
     if (tv.water > -1e8f && tv.material != MAT_WATER && h < tv.water + (tv.material == MAT_ICE ? 0.25 : 1.5)) albedo *= 0.8;   // wet shore (B-322: a hand's breadth on ice, or every floe was dark)
     double emissive = 0;
-    if (isLavaWorld(site.gen.type) && tv.material != MAT_LAVA && cache.cellSize <= 16) {
+    if (lavaGlow && tv.material != MAT_LAVA && cache.cellSize <= 16) {
         // lava glow: the brightest lava cell within two cells lights the rock around it
         for (int oz = -2; oz <= 2; oz++)
             for (int ox = -2; ox <= 2; ox++) {
@@ -2132,7 +2282,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double toSun = dot(Vec3(x - camPos.x, h - camPos.y, z - camPos.z) / dist, sd);
         fogD *= (1 - 0.35 * std::max(0.0, toSun) * sunUp) * (1 + 0.25 * std::max(0.0, -toSun)) * (1 - 0.25 * cloud);
     }
-    double fog = 1 - std::exp(-(dist / fogD + rainWall(x, z, dist)));   // W-03: the wall of rain between the camera and this ground
+    double fog = 1 - std::exp(-(dist / fogD + rainWall(x, z, dist) + fogSeaWall(x, h, z, dist)));   // W-03: the wall of rain between the camera and this ground; Q-02: a fog sea over it
     shade = shade + (63 - shade) * fog;
     if (shOk) shade += (shC - shade) * morph;   // B-313: onto the coarser ring's shade at the edge
     vc.v.x = vv.x; vc.v.y = vv.y; vc.v.z = vv.z;
@@ -2148,6 +2298,44 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     vc.stamp = frameStamp;
     bank = bk;
     return vc.v;
+}
+
+// D-04: the frame's lights. The helmet lamp a cone from the eye along the view: full within 11 degrees of its axis, gone at 22, a faint spill
+// to 45; its light 3 at the eye falling as 1 / (1 + (d / 16 m)^2), to nothing from 42 m to 60 m. The capsule's floodlights on the way
+// down (and up) a wide cone down and ahead from it, from 500 m. Both scaled by the night (a dayside's sun over three degrees up: none)
+void SurfaceView::setupLamps() {
+    nLamps = 0;
+    const double night = 1 - smoothstep(-0.03, 0.06, env.sun.dirLocal.y);
+    if (night < 0.01) return;
+    if (lamp && !inVehicle() && cameraOverrideAlt < 0 && !freeCam) {
+        LampLight& L = lamps[nLamps++];
+        L.pos = camPos; L.dir = Vec3(camLocal.m[2][0], camLocal.m[2][1], camLocal.m[2][2]);
+        L.cosIn = std::cos(11 * DEG); L.cosOut = std::cos(22 * DEG); L.cosSpill = std::cos(45 * DEG);
+        L.nearM = 16; L.reach0 = 42; L.reach = 60; L.power = 3.0 * night;
+    }
+    if (floodlights && cameraOverrideAlt >= 0 && cameraOverrideAlt < 500) {
+        LampLight& L = lamps[nLamps++];
+        L.pos = camPos; L.dir = normalize(Vec3(camLocal.m[2][0], 0, camLocal.m[2][2]) * 0.6 + Vec3(0, -1, 0));   // down and ahead, where it comes down
+        L.cosIn = std::cos(40 * DEG); L.cosOut = std::cos(70 * DEG); L.cosSpill = std::cos(85 * DEG);
+        L.nearM = 140; L.reach0 = 480; L.reach = 650; L.power = 1.4 * night;
+    }
+}
+double SurfaceView::lampAt(const Vec3& p, const Vec3* n) const {
+    double sum = 0;
+    for (int i = 0; i < nLamps; i++) {
+        const LampLight& L = lamps[i];
+        const Vec3 d = p - L.pos;
+        const double d2 = dot(d, d);
+        if (d2 > L.reach * L.reach || d2 < 1e-6) continue;
+        const double dist = std::sqrt(d2);
+        const Vec3 u = d / dist;
+        const double c = dot(u, L.dir);
+        if (c <= L.cosSpill) continue;
+        const double core = smoothstep(L.cosOut, L.cosIn, c), cone = core + 0.22 * smoothstep(L.cosSpill, L.cosOut, c) * (1 - core);
+        const double fall = (1 - smoothstep(L.reach0, L.reach, dist)) / (1 + d2 / (L.nearM * L.nearM));
+        sum += L.power * cone * fall * (n ? 0.35 + 0.65 * std::max(0.0, -dot(*n, u)) : 0.8);   // a rough ground's grains catch a grazing light (no face lit at all only edge-on)
+    }
+    return std::min(sum, 1.0);   // a noon's light at the most: a face turned to the lamp near the eye glares no whiter than a sunlit one
 }
 
 RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
@@ -2166,7 +2354,7 @@ RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
     double fres = 0.04 + 0.96 * std::pow(1 - cosT, 4.0);
     double body = 24 + (1 - depth / 8) * 8, skyR = 55;
     double base = body + (skyR - body) * fres + glint + wave * (0.5 + 0.5 * clampd(env.windKnots / 15.0, 0, 1));
-    double fog = 1 - std::exp(-(dist / env.fogDistance + rainWall(x, z, dist)));   // W-03
+    double fog = 1 - std::exp(-(dist / env.fogDistance + rainWall(x, z, dist) + fogSeaWall(x, wl, z, dist)));   // W-03; Q-02
     RVert w;
     w.x = vv.x; w.y = vv.y; w.z = vv.z;
     w.shade = base + (63 - base) * fog;
@@ -2191,11 +2379,11 @@ double SurfaceView::coarseWaterAt(TerrainCache& c, double x, double z) {
     int X, Z, ox[3], oz[3]; double u, v;
     coarseTri(c, x, z, X, Z, ox, oz, u, v);
     double wMean = 0; int wN = 0;
-    for (int k = 0; k < 4; k++) { const TerrainVertex& t = c.at(X + (k & 1), Z + (k >> 1)); if (t.water > -1e8f) { wMean += t.water; wN++; } }
+    for (int k = 0; k < 4; k++) { const TerrainVertex& t = c.at(X + (k & 1), Z + (k >> 1)); if (t.water > -1e8f) { wMean += site.waterOf(t); wN++; } }
     if (!wN) return -1e9;
     wMean /= wN;
     double w[3];
-    for (int k = 0; k < 3; k++) { const TerrainVertex& t = c.at(X + ox[k], Z + oz[k]); w[k] = t.water > -1e8f ? t.water : wMean; }
+    for (int k = 0; k < 3; k++) { const TerrainVertex& t = c.at(X + ox[k], Z + oz[k]); w[k] = t.water > -1e8f ? site.waterOf(t) : wMean; }
     return w[0] + u * (w[1] - w[0]) + v * (w[2] - w[0]);
 }
 
@@ -2270,7 +2458,7 @@ double SurfaceView::floorHeight() {
             hmin = std::min(hmin, (double)far.at(cx, cz).h);
         }
     double h = hmin - 300.0;
-    if (site.hasWater) h = site.seaLevel;
+    if (site.hasWater) h = site.seaLevel + site.tideM;   // Q-02
     return h;
 }
 
@@ -2280,8 +2468,8 @@ void SurfaceView::drawFloor(Framebuffer& fb) {
     int farR = ringR[3] ? ringR[3] : ringR[2];
     double cs = far.cellSize;
     double h = floorH;
-    int ty = site.gen.type;
-    uint8_t bank = site.hasWater ? 2 : ((ty == PT_ICY || ty == PT_EUROPAN) ? 8 : ((ty == PT_CRATERED || ty == PT_THINATMO || ty == PT_QUARTZ || ty == PT_VOLCANIC || ty == PT_DESERT || ty == PT_BOMBARDED) ? 9 : 0));   // N1-03: the dominant family
+    const int floorFam = KINDS[site.gen.type].floorFamily;   // N1-03: the dominant family (P-00: the kind's row)
+    uint8_t bank = site.hasWater ? 2 : (floorFam == FAM_SNOW ? 8 : (floorFam == FAM_SAND ? 9 : 0));
     double shade = site.atmosphere ? 63 : 8;
     RasterParams rp; rp.bank = bank; rp.ztest = true; rp.zwrite = true;
     double edge = farR * cs * 0.92;
@@ -2337,7 +2525,7 @@ void SurfaceView::warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vca
     // would be sampled by two threads into one slot): a drawn cell's centre lies within the radius, its corners read their neighbours
     // for the normals and the shore's side (`vertexShore`: up to two cells on from the cell, 2.83 from its centre), on a lava world the
     // near rings' glow two cells round a corner (4.24); the shadow's march stays within the radius. Distinct slots still: 2r + 5 cells
-    const bool glowReach = isLavaWorld(site.gen.type) && cache.cellSize <= 16;
+    const bool glowReach = lavaGlow && cache.cellSize <= 16;
     const int edge = radius + (glowReach ? 2 : 1);
     const double rFill = radius + (glowReach ? 4.5 : 3.0), rFill2 = rFill * rFill;
     auto forDisc = [&](auto&& fn) {
@@ -2665,11 +2853,40 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                     for (int i = 0; i < 4; i++)   // F-04: a corner with its own level was made with its vertex; one without takes the cell's mean
                         w[i] = (double)vcw[i]->wy > -1e8 ? vcw[i]->wv : waterCorner((cx + ox[i]) * cs, (cz + oz[i]) * cs, wCorner[i], vcw[i]->hy);
                     if (bt) { const TraceClock::time_point tC = TraceClock::now(); bt->waterMs += traceMs(tA, tC); bt->wet++; tA = tC; }
-                    rpw.bank = 2;
+                    rpw.bank = 2; rpw.bank2 = -1;
+                    if (tintBankW >= 0 || tintBankL >= 0) {   // Q-02: the water's trait colour over the cell's corners (a bloom's or a lagoon's first, else
+                        // a pink lake's or the milky glow), its edge wobbled as two materials' are; the glow lit by its share
+                        double tw[4] = {0, 0, 0, 0}, mx = 0; int tb = -1;
+                        if (tintBankL >= 0) for (int i = 0; i < 4; i++) { tw[i] = tv[i]->ltint / 255.0; mx = std::max(mx, tw[i]); }
+                        if (mx > 0.25) tb = tintBankL;
+                        else if (tintBankW >= 0) {
+                            mx = 0;
+                            for (int i = 0; i < 4; i++) {
+                                tw[i] = tv[i]->wtint / 255.0;
+                                if (tintBankW == 15) tw[i] *= waterLights ? 0.5 + 0.5 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 260.0 + lastT * 0.02, (cz + oz[i]) * cs / 260.0 - lastT * 0.013, site.gen.seed + 0x6108))   // D-04: drifting
+                                                                    : 0.7 + 0.3 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 700.0, (cz + oz[i]) * cs / 700.0, site.gen.seed + 0x6107));
+                                mx = std::max(mx, tw[i]);
+                            }
+                            if (mx > (waterLights ? 0.12 : 0.25)) tb = tintBankW;
+                        }
+                        if (tb >= 0) {
+                            double wmin = 1, wmax = 0;
+                            const double lo = waterLights && tb == 15 ? 0.12 : 0.25, hi = waterLights && tb == 15 ? 0.42 : 0.75;   // D-04: a dark ocean's lights a fainter field, its patches whole sooner
+                            for (int i = 0; i < 4; i++) {
+                                w[i].w = 1 - smoothstep(lo, hi, tw[i]);   // a corner well inside is the colour's whatever the wobble (it flipped pixels back to the sea)
+                                wmin = std::min(wmin, w[i].w); wmax = std::max(wmax, w[i].w);
+                                if (tb == 15) w[i].shade = waterLights ? 15 + 18 * tw[i] : 20 + 19 * tw[i] * tintGlow;
+                            }
+                            // a cell wholly the colour's (the wobble's 0.35 never lifts a pixel to a half) is drawn in its bank alone, as the split draws
+                            // it, without the split's noise a pixel; one wholly the water's stays the water's
+                            if (wmax < 0.149) rpw.bank = tb;
+                            else if (wmin < 0.851) { rpw.bank2 = tb; rpw.edge = &grainEdge; rpw.edgeScale = 4.0 / cs; rpw.edgeAmp = 0.35; rpw.shade2 = 0; }
+                        }
+                    }
                     rasterPolygon(fb, w, 4, rpw, proj);
-                    // foam sparkle where the shore is shallow and close
+                    // foam sparkle where the shore is shallow and close (Q-02: none where the sea glows, its dark night bank would dot it)
                     double cdist = std::sqrt(d2) * cs;
-                    if (cdist < 90 && cache.cellSize <= 16 && (cs >= 16 || ((cx & 3) == 0 && (cz & 3) == 0))) {   // O6-02: one near cell in sixteen keeps the density
+                    if (cdist < 90 && cache.cellSize <= 16 && (cs >= 16 || ((cx & 3) == 0 && (cz & 3) == 0)) && rpw.bank2 != 15 && rpw.bank != 15) {   // O6-02: one near cell in sixteen keeps the density
                         for (int i = 0; i < 4; i++) {
                             if (std::fabs(tv[i]->h - wCorner[i]) > 0.6) continue;
                             uint64_t hf = hash2i(cx + ox[i], cz + oz[i], site.gen.seed ^ 0xF0A);
@@ -2708,7 +2925,32 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     double sunUp = smoothstep(-0.28, 0.0, sinAlt) * env.glow;   // B-425: a far sun alone up glows as faintly as it lights
     bool venus = hasOpaqueDeck(b.type);   // R-307: the hydrocarbon haze is a deck like the venusian clouds
     double density = L.skyDensity * (1 - 0.3 * env.rain);
+    const double limbHaze = KINDS[b.type].limbHaze;
+    // Q-02 (TR_ICE_HALOS): an air whose ice crystals hang aloft whatever the ground's warmth: the 22-degree ring brighter and every day the
+    // sun is up through a sky not overcast, the parhelia (sundogs) beside the sun at its height, the parhelic circle through it round the
+    // sky, the 46-degree ring faint, and at night the ring round the brightest moon
+    const bool iceHalos = site.gen.hasTrait(TR_ICE_HALOS) && site.atmosphere && !venus;
     double halo = (site.atmosphere && !venus && env.temperatureC < -5 && env.cloudCover < 0.35 && sinAlt > 0.05) ? 0.8 : 0.0;
+    if (iceHalos && env.cloudCover < 0.85 && sinAlt > 0.02) halo = 1.5 * (1 - 0.6 * env.rain);
+    Vec3 dogL, dogR; double dogs = 0, moonHalo = 0;
+    if (iceHalos && halo > 0 && sinAlt < 0.86) {   // the plates' parhelia: at the sun's height, a little outside the ring as the sun climbs (none past 60 degrees)
+        const double h = std::asin(clampd(sinAlt, -1, 1)), rp = (22.0 + 0.15 * std::max(0.0, h / DEG)) * DEG;
+        const double ch = std::cos(h), dA = std::acos(clampd((std::cos(rp) - sinAlt * sinAlt) / std::max(1e-6, ch * ch), -1, 1)), az = std::atan2(sd.x, sd.z);
+        dogL = Vec3(ch * std::sin(az - dA), sinAlt, ch * std::cos(az - dA)); dogR = Vec3(ch * std::sin(az + dA), sinAlt, ch * std::cos(az + dA));
+        dogs = halo * smoothstep(0.86, 0.6, sinAlt);
+    }
+    if (iceHalos && env.moonBody >= 0 && env.moonLight > 0.004 && sinAlt < -0.05) moonHalo = clampd(std::sqrt(env.moonLight / 0.05), 0, 1) * (1 - env.rain) * (1 - 0.7 * env.cloudCover);   // a moon of a twentieth of the sun's light at its full
+    const Vec3 moonD = env.moonDir;
+    const double cosMoonRingLo = std::cos(24.01 * DEG), cosMoonRingHi = std::cos(19.99 * DEG);
+    // Q-02 (TR_NOCTILUCENT): silver-blue clouds 83 km up in a high latitude's summer twilight, lit from below the horizon after the sun has
+    // set (6-16 degrees under it) while the air under them is in the planet's shadow: low in the sky toward the sun's side, in bands and billows
+    double nlc = 0, nlcLimitDeg = 0;
+    const double nlcH = 83.0, RkmS = site.R / 1000.0;
+    if (site.gen.hasTrait(TR_NOCTILUCENT) && site.atmosphere && !venus) {
+        const double dep = -std::asin(clampd(sinAlt, -1, 1)) / DEG, summer = clampd(0.5 + (env.latDeg >= 0 ? site.season : -site.season), 0, 1);
+        nlc = smoothstep(3.5, 6.5, dep) * smoothstep(17.0, 12.5, dep) * smoothstep(35.0, 50.0, std::fabs(env.latDeg)) * (0.45 + 0.55 * summer) * (1 - env.rain) * (1 - 0.85 * env.cloudCover);
+        nlcLimitDeg = std::acos(RkmS / (RkmS + nlcH)) / DEG;   // the depression past which the layer lies in the shadow (9 degrees on a world Earth's size)
+    }
     // N5-02: a sun pillar in cold, clear air when the sun is low (ice crystals in the air mirror it into a column)
     double pillar = (site.atmosphere && !venus && env.temperatureC < -5 && env.cloudCover < 0.45 && sinAlt > -0.03 && sinAlt < 0.2) ? (1 - std::max(0.0, sinAlt) / 0.2) : 0.0;
     double sunAltA = std::asin(clampd(sinAlt, -1, 1));
@@ -2788,7 +3030,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         const double storm = env.auroraStorm;
         // km poleward of the site to the oval's centre (nearer the pole on a strong field, pushed equatorward by a storm), kept
         // within sight on every world, drifting over five minutes
-        const double P0 = clampd((auroraOvalLat(b) - 6 * storm - std::fabs(env.latDeg)) * kmDeg, -120.0, 450.0) + 30.0 * std::sin(t / 310.0);
+        const double P0 = clampd((auroraOvalNow(b) - 6 * storm - std::fabs(env.latDeg)) * kmDeg, -120.0, 450.0) + 30.0 * std::sin(t / 310.0);   // Q-02: a great aurorae's oval lower
         lastAuroraP0 = P0;
         // the profile in height, in two parts: the lower curtain f(u) = u / H^2 exp(-u / H), u = height - h0, its peak at h0 + H
         // (H 24 km: nothing under 90 km, a bright border at 114, gone by 200), in bank 11's colour; and the tops, the same shape
@@ -2801,7 +3043,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         const double camKmX = camPos.x / 1000.0, camKmZ = camPos.z / 1000.0;
         const double hPeak = h0 + H;
         // the tops: faint on a quiet night, their colour taking over the heights in a storm, more on some worlds than others
-        const double topGain = (0.25 + 0.75 * storm) * (0.6 + 0.8 * unitFromHash(hashCombine(site.gen.seed, 0xA0D)));
+        const double topGain = (0.25 + 0.75 * storm) * (0.6 + 0.8 * unitFromHash(hashCombine(site.gen.seed, 0xA0D))) * (site.gen.hasTrait(TR_GREAT_AURORAE) ? 1.5 : 1.0);   // Q-02: a strong field's red tops
         parallelFor(GY, 4, [&](int gy0, int gy1) {
         for (int gy = gy0; gy < gy1; gy++)
             for (int gx = 0; gx < GX; gx++) {
@@ -2898,6 +3140,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             double el = d.y;
             double v;
             double tailV = 0, stormW = 0;   // W-03: how much of the pixel is a front's deck or its rain (bank 23 past a half)
+            double paleV = 0;   // Q-02: a noctilucent cloud's or the moon's ring's shade in the galactic band's bank (22: the sky's colour to a pale silver)
             if (!site.atmosphere) {
                 // F-07: each pow only where its base is over 0 (elsewhere its term is +0, as the formula gives)
                 double cosSun = dot(d, sd);
@@ -2922,6 +3165,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 else base = day * (15 + 25 * hz) + (1 - day) * (2 + 5 * hz);
                 base += 6.0 * day * smoothstep(0.09, 0.0, el);   // M1-07: haze band on the horizon
                 base *= density;
+                if (limbHaze > 0) base += limbHaze * day * smoothstep(0.08, 0.0, el);   // P-05: a haze's layers low over a dark sky
                 double cosSun = dot(d, sd);
                 double cs = std::max(0.0, cosSun);
                 // F-07: the glows' pows only where the sun is up and the pixel faces it (elsewhere the term is +0)
@@ -2931,6 +3175,43 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 // M10-14: 22-degree halo in cold, clear air; twilight wedge opposite a low sun. F-07: the ring's and the pillar's tests
                 // first on the cosine, the height and the azimuth's tangent (their bounds a thousandth of a degree outside the ones after)
                 if (halo > 0 && cosSun > cosHaloLo && cosSun < cosHaloHi) { double ang = std::acos(clampd(cosSun, -1, 1)) / DEG; double dh = std::fabs(ang - 22.0); if (dh < 1.4) v += 5.0 * halo * (1 - dh / 1.4); }
+                if (iceHalos && halo > 0) {   // Q-02: the sundogs, the parhelic circle, the 46-degree ring
+                    if (dogs > 0) for (const Vec3& dg : {dogL, dogR}) {
+                        const double cd = dot(d, dg);
+                        if (cd > 0.9945) {   // within 6 degrees: a bright spot drawn out along the sun's height, a white tail outward
+                            const double dAlt = (std::asin(clampd(el, -1, 1)) - std::asin(clampd(dg.y, -1, 1))) / DEG, dAz = std::acos(clampd(cd, -1, 1)) / DEG;
+                            const double outward = dot(d, dg) > 0 && dot(d - dg, dg - sd) > 0 ? 1.0 : 0.0;
+                            v += dogs * (17.0 * std::exp(-(dAz * dAz) / 0.6 - (dAlt * dAlt) / 0.3) + 5.0 * std::exp(-(dAz * dAz) / 4.0 - (dAlt * dAlt) / 1.2) + 3.0 * outward * std::exp(-std::fabs(dAlt) / 0.4) * std::exp(-dAz / 5.0));
+                        }
+                    }
+                    const double dh = std::fabs(std::asin(clampd(el, -1, 1)) - sunAltA) / DEG;
+                    if (dh < 0.7 && cosSun < 0.94) v += 2.2 * halo * (1 - dh / 0.7) * smoothstep(0.94, 0.85, cosSun);   // the parhelic circle, from past the ring
+                    if (cosSun > cosHaloHi) v -= 2.5 * halo * smoothstep(cosHaloHi, 0.95, cosSun) * smoothstep(0.995, 0.97, cosSun);   // the sky inside the ring darker (no light is bent into it)
+                    if (cosSun > 0.66 && cosSun < 0.72) { const double d46 = std::fabs(std::acos(clampd(cosSun, -1, 1)) / DEG - 46.0); if (d46 < 2.0) v += 1.8 * halo * (1 - d46 / 2.0); }
+                }
+                if (moonHalo > 0) {   // Q-02: the moon's ring at night
+                    const double cm = dot(d, moonD);
+                    if (cm > cosMoonRingLo && cm < cosMoonRingHi) {   // pale in the night's ramp (black under its shade 36, as the noctilucent clouds are drawn), soft
+                        const double dh = std::fabs(std::acos(clampd(cm, -1, 1)) / DEG - 22.0);
+                        if (dh < 2.0) { const double f = 1 - dh / 2.0, k = moonHalo * f * f; paleV = std::max(paleV, 30.0 * k); }
+                    }
+                }
+                if (nlc > 0 && el > 0.012 && el < 0.5) {   // Q-02: the noctilucent clouds where the ray meets their layer
+                    const double sl = nlcH / std::max(el, 0.03), hl = std::sqrt(d.x * d.x + d.z * d.z);
+                    const double X = camPos.x / 1000.0 + d.x * sl, Z = camPos.z / 1000.0 + d.z * sl;
+                    const double along = hl > 1e-6 ? (d.x * sdh.x + d.z * sdh.z) / hl * sl : 0.0;   // km toward the sun's azimuth
+                    const double depHere = -sunAltA / DEG - along / RkmS / DEG;                      // the sun's depression under the cloud
+                    const double lit = smoothstep(nlcLimitDeg + 1.5, nlcLimitDeg - 1.0, depHere) * smoothstep(-2.0, 1.5, depHere);
+                    if (lit > 0.01) {
+                        // long bands tens of kilometres apart drawn out along one way, fine billows across them where the ray is steep enough
+                        // to resolve them (a distant layer seen edge-on keeps the bands alone), the patches hundreds of kilometres wide
+                        const double patch = smoothstep(0.38, 0.68, 0.5 + 0.5 * fbm2(X / 420.0, Z / 420.0, site.gen.seed + 91, 2, 2.0, 0.5));
+                        const double bands = 0.5 + 0.5 * std::sin((X * 0.8 + Z * 0.6) / 14.0 + 2.5 * fbm2(X / 90.0, Z / 90.0, site.gen.seed + 92, 2, 2.0, 0.5));
+                        const double billows = 1.0 - 0.3 * smoothstep(0.04, 0.12, el) * (0.5 + 0.5 * std::sin((Z * 0.8 - X * 0.6) / 5.5 + t * 0.003));
+                        const double nv = nlc * lit * patch * (0.45 + 0.55 * bands * billows) * (1.15 - 0.5 * smoothstep(0.05, 0.4, el));   // brightest low
+                        if (nv > 0.02) paleV = std::max(paleV, 46.0 * nv);
+                    }
+                }
                 if (pillar > 0 && cosSun > 0.85 && el > pillarElLo && el < pillarElHi && std::fabs(d.x * sdh.z - d.z * sdh.x) < pillarTanAz * (d.x * sdh.x + d.z * sdh.z)) {
                     double dAz = std::atan2(d.x * sdh.z - d.z * sdh.x, d.x * sdh.x + d.z * sdh.z);
                     double dAlt = std::asin(clampd(el, -1, 1)) - sunAltA;
@@ -2951,6 +3232,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     double dens = (c00[0] * (1 - fx) + c10[0] * fx) * (1 - fy) + (c01[0] * (1 - fx) + c11[0] * fx) * fy;
                     double ci = (c00[1] * (1 - fx) + c10[1] * fx) * (1 - fy) + (c01[1] * (1 - fx) + c11[1] * fx) * fy;
                     v = v + (ci - v) * dens;
+                    paleV *= 1 - dens;   // Q-02: the clouds under them hide them
                     stormW = ((c00[2] * (1 - fx) + c10[2] * fx) * (1 - fy) + (c01[2] * (1 - fx) + c11[2] * fx) * fy) * dens;   // W-03
                 }
                 if (curtain && el < 0.45) {   // over the clouds: the rain hangs in front of the deck's base, up to where the ray meets it
@@ -2991,6 +3273,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 }
             }
             Pix pv = pix(stormW > 0.5 ? 23 : 1, clampd(v, 0, 51.0));   // W-03: a front's deck in the storm bank
+            if (paleV > 0.6 * v && paleV > 1.5 && stormW <= 0.5) pv = pix(22, clampd(std::max(paleV, 0.6 * v), 0, 50.0));   // Q-02: over the night's dark sky
             if (tailV > v) pv = pix(15, clampd(tailV, 0, 50));   // O4: the comet's tail in its own blue bank
             if (step == 1) fb.idx[o] = pv;
             else {
@@ -3012,7 +3295,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         sr.drawSkyBodies(fb, sc);
     }
     // stars, dimmed by sky brightness
-    double starScale = site.atmosphere ? (1.0 - 0.9 * day) * (1 - env.rain) : 1.0;
+    double starScale = (site.atmosphere ? (1.0 - 0.9 * day) * (1 - env.rain) : 1.0) * (site.atmosphere ? KINDS[site.gen.type].starLight : 1.0);   // D-04: a thick air's share
     if (starScale > 0.03 && !venus) {
         Mat3 L2 = site.localFrame(t);
         Mat3 cam = camLocal * L2;
@@ -3029,7 +3312,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // sun had a hard edge (a pale wedge with straight sides across the sun of a comet); now it lands on one bank
     // whatever lies behind it. It reaches down to the horizon of the drawn ground, not to the horizontal (where it ended in a
     // straight edge across the sky of a small body, whose sky shows under the horizontal all round), and lies behind the bodies
-    const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) : 1.0);   // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
+    const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) * KINDS[site.gen.type].starLight : 1.0);   // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
     NebulaPatch nebAll[18]; int nebAllN = nebN;   // S-04: the field's patches and a protostar's own cloud round the star's direction now
     for (int k = 0; k < nebN; k++) nebAll[k] = nebP[k];
     nebAllN += starNebulaPatches(site.sys->star, normalize(site.sys->star.pos - site.sys->bodyPos(site.body, t)), nebAll + nebAllN);
@@ -3123,6 +3406,42 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         }
         });
     }
+    // Q-02 (TR_AIRGLOW): the oxygen's own glow over the night sky, as the aurora is drawn (banks 11 and 21 over the sky's pixels where it beats
+    // them): the green line's layer 97 km up brightest some ten degrees over the horizon, where the eye looks along it, the red line's
+    // fainter higher up, both rippled by the gravity waves that cross the layer in bands tens of kilometres apart; gone with the day, the rain
+    // and the clouds
+    const double airglow = site.gen.hasTrait(TR_AIRGLOW) && site.atmosphere && !venus ? (1 - smoothstep(0.02, 0.18, day)) * (1 - env.rain) * (1 - 0.8 * env.cloudCover) : 0.0;
+    if (airglow > 0.02) {
+        const double wx0 = camPos.x / 1000.0, wz0 = camPos.z / 1000.0, ph = t / 900.0;
+        parallelFor(rowsTotal, 40, [&](int rb, int re) {
+        for (int y = rb * step; y < re * step && y < FBH; y += step) {
+            for (int x = 0; x < FBW; x += step) {
+                const int o = y * FBW + x;
+                const int pb = bankOf(fb.idx[o]);
+                if ((pb != 1 && pb != 22) || fb.invz[o] > 1e-12f) continue;
+                const Vec3 d = camT * dirLUT[o];
+                const double el = d.y;
+                if (el < 0.005) continue;
+                const double sl = 97.0 / std::max(el, 0.06);   // where the ray meets the layer (km): the waves' place
+                const double X = wx0 + d.x * sl, Z = wz0 + d.z * sl;
+                // the waves where the ray is steep enough to resolve their 40 km (low down they average out)
+                const double waves = 1.0 - 0.3 * smoothstep(0.12, 0.3, el) * (0.5 + 0.5 * std::sin((X * 0.6 + Z * 0.8) / 6.5 + ph + 1.5 * gnoise2(X / 120.0, Z / 120.0, site.gen.seed + 95)));
+                const double green = airglow * 11.0 * smoothstep(0.0, 0.06, el) * (0.35 + 0.65 * std::exp(-(el - 0.15) * (el - 0.15) / 0.015)) * waves;
+                const double red = airglow * 4.5 * smoothstep(0.2, 0.35, el) * std::exp(-(el - 0.5) * (el - 0.5) / 0.04) * waves;
+                const bool g = green >= red;
+                const double ae = g ? green : red;
+                if (ae < 1.5) continue;
+                for (int yy = y; yy < y + step && yy < FBH; yy++)
+                    for (int xx = x; xx < x + step && xx < FBW; xx++) {
+                        Pix& p = fb.idx[yy * FBW + xx];
+                        const int b0 = bankOf(p);
+                        if (b0 == 1) { if (shadeOf(p) < ae) p = pix(g ? 11 : 21, ae); }
+                        else if (b0 == 22) p = pix(g ? 11 : 21, ae + 0.6 * shadeOf(p));   // the galactic band's light shows through it (added, not hidden)
+                    }
+            }
+        }
+        });
+    }
     // B-403: the aurora over the sky pixels, after the bodies and the stars: the grid's value interpolated per pixel, written
     // in bank 11 (or 21 where the tops' colour has the greater share) where it beats the pixel's own shade on the sky bank. The
     // stars (bank 4) show through it; a sky body's lit disc is brighter than it and stays, its night side (depth only, the
@@ -3197,6 +3516,7 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     }
     // the sun
     sunVeil = 0;
+    if (site.sys->sunless()) return;   // D-01: a drifter's sky has none (its place at the nadir is only where the readers of the sun find night)
     {
         const Vec3 sdd = env.sunDisc.dirLocal;
         const double sinAltD = sdd.y;
@@ -3308,9 +3628,11 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
     double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
     int radius = 22;
     lastRocksDrawn = 0; lastRocksCandidates = 0;
-    RasterParams rp; rp.bank = type == PT_FELISIAN ? 0 : 3;   // N1-03: boulders in the rock colour (bank 3 is the forest on living worlds)
+    const bool flora = kindHas(type, KT_FLORA), microbial = kindHas(type, KT_MICROBIAL), ventLife = kindHas(type, KT_VENT_LIFE);   // P-02: the stromatolites' pass on a microbial world alone (its std::function a cell otherwise); P-03 the chimneys' on a vent-life world
+    const bool meteorites = site.gen.hasTrait(TR_METEORITES);   // Q-02
+    RasterParams rp; rp.bank = (flora || KINDS[type].accent[1] >= 0) ? 0 : 3;   // N1-03: boulders in the rock colour (bank 3 is the forest on living worlds, P-00: an accent's where a kind lends it)
     rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE;
-    rp.grain2 = mesoFor(type == PT_FELISIAN ? MAT_FOREST : MAT_ROCK); rp.grain2Scale = 4.0;   // facets and lichen speckle
+    rp.grain2 = mesoFor(flora ? MAT_FOREST : MAT_ROCK); rp.grain2Scale = 4.0;   // facets and lichen speckle
     RasterParams rpPlain; rpPlain.bank = rp.bank;
     RasterParams rp2; rp2.bank = 2;
     double fogD = env.fogDistance;
@@ -3343,6 +3665,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     if (n.y < 0) n = -n;
                     double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
                     double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+                    if (nLamps) light += (1 - amb) * lampAt((p0 + p1 + peak) * (1.0 / 3.0), &n);   // D-04
                     double shade = 50 * std::pow(light, 0.6);
                     shade = fogShade(shade, dist);
                     RVert tri[3];
@@ -3355,8 +3678,33 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     rasterTriangle(fb, tri, rp, proj);
                 }
             });
+            // Q-02: a strewn field's iron meteorites: dark lumps pitted with thumbprints, their fusion crust black-brown in the chrome's ramp,
+            // a facet that faces the sun from the eye's side glinting
+            if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) {
+                const double dist = std::sqrt((R.x - camPos.x) * (R.x - camPos.x) + (R.z - camPos.z) * (R.z - camPos.z));
+                if (R.size / dist * proj.f < 0.6) return;
+                const double hgt = R.size * (0.55 + 0.35 * hash01(mix64(R.h + 4))), a0 = hash01(mix64(R.h + 3)) * TAU;
+                const int NA = dist < 30 ? 6 : 4;
+                if (R.size > 0.4) drawBlobShadow(fb, R.x, R.z, R.size * 0.9, hgt);
+                Vec3 ring[6];
+                for (int a = 0; a < NA; a++) { const double ang = a0 + a * TAU / NA, wob = 0.75 + 0.5 * hash01(mix64(R.h + 10 + a)); ring[a] = Vec3(R.x + std::cos(ang) * R.size * wob, R.gy - 0.05 + 0.3 * hgt * hash01(mix64(R.h + 20 + a)), R.z + std::sin(ang) * R.size * wob); }
+                const Vec3 top(R.x + 0.2 * R.size * std::cos(a0), R.gy + hgt, R.z + 0.2 * R.size * std::sin(a0));
+                const Vec3 toCam = normalize(Vec3(camPos.x - R.x, camPos.y - R.gy, camPos.z - R.z));
+                for (int a = 0; a < NA; a++) {
+                    const Vec3& p0 = ring[a]; const Vec3& p1 = ring[(a + 1) % NA];
+                    Vec3 n = normalize(cross(p1 - p0, top - p0)); if (n.y < 0) n = -n;
+                    const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
+                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + top) * (1.0 / 3.0), &n) : 0.0);   // D-04: the lamp
+                    const double glint = std::pow(std::max(0.0, dot(normalize(toCam + sd), n)), 40.0) * sunUp;
+                    const double shade = fogShade(5 + 9 * light + (glint > 0.4 ? 30 : 0), dist);   // black-brown, the chrome's bright stops a glint's alone
+                    RVert tri[3]; const Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(top.x, top.y, top.z)};
+                    bool ok = true;
+                    for (int q = 0; q < 3; q++) { tri[q].x = vs[q].x; tri[q].y = vs[q].y; tri[q].z = vs[q].z; tri[q].shade = shade; if (vs[q].z < NEAR_Z) ok = false; }
+                    if (ok) { RasterParams rm; rm.bank = 7; rm.grain = &grain; rm.grainScale = 4.0 * FB_SCALE; rasterTriangle(fb, tri, rm, proj); }
+                }
+            });
             // quartz crystals
-            if (type == PT_QUARTZ && hash01(mix64(h + 99)) < 0.5) {
+            if (kindHas(type, KT_CLUSTERS) && hash01(mix64(h + 99)) < 0.5) {
                 int nc = 1 + (int)(hash01(mix64(h + 98)) * 2);
                 for (int i = 0; i < nc; i++) {
                     uint64_t hc = mix64(h + 300 + i);
@@ -3369,13 +3717,87 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     double w = 0.25 + 0.3 * hash01(mix64(hc + 4));
                     Vec3 p0(rx + std::cos(a0) * w, gy, rz + std::sin(a0) * w), p1(rx - std::cos(a0) * w, gy, rz - std::sin(a0) * w);
                     Vec3 pk(rx + 0.2 * w, gy + hgt, rz);
-                    double shade = fogShade(46 + 14 * sunUp * hash01(mix64(hc + 5)), dist);
+                    double shade = fogShade(46 + 14 * std::max(sunUp, std::min(1.0, nLamps ? lampAt(Vec3(rx, gy + 0.5 * hgt, rz)) : 0.0)) * hash01(mix64(hc + 5)), dist);   // D-04: the lamp lights its facets
                     RVert tri[3];
                     Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(pk.x, pk.y, pk.z)};
                     for (int q = 0; q < 3; q++) { tri[q].x = vs[q].x; tri[q].y = vs[q].y; tri[q].z = vs[q].z; tri[q].shade = shade; }
                     rasterTriangle(fb, tri, rp2, proj);
                 }
             }
+            // P-02: stromatolites, low lumpy domes dark with the mats that grow over them (the mats' bank, the kind's first accent: bank 10) on the
+            // reef flat's pale carbonate (Shark Bay's), lit like the boulders
+            if (microbial) forDomes(cx, cz, [&](const RockInst& R) {
+                const double dist = std::sqrt((R.x - camPos.x) * (R.x - camPos.x) + (R.z - camPos.z) * (R.z - camPos.z));
+                if (R.size / dist * proj.f < 0.8) return;
+                const double hgt = R.size * (0.4 + 0.35 * hash01(mix64(R.h + 4))), a0 = hash01(mix64(R.h + 3)) * TAU;
+                const int NA = dist < 40 ? 7 : 5;
+                if (R.size > 0.5) drawBlobShadow(fb, R.x, R.z, R.size * 0.9, hgt);
+                RasterParams rd; rd.bank = 10; rd.grain = &grain; rd.grainScale = 3.0 * FB_SCALE; rd.grain2 = mesoFor(MAT_MATS); rd.grain2Scale = 3.0;
+                rd.grainWeight = clampd(1.0 - (dist - 30.0) / 120.0, 0.2, 1.0);
+                Vec3 ring[2][8];
+                for (int a = 0; a < NA; a++) {   // the foot sunk 0.15 m, a shoulder at 0.6 of the height, the crown; each ring's radius wobbles by the dome's own hash
+                    const double ang = a0 + a * TAU / NA, wob = 0.85 + 0.3 * hash01(mix64(R.h + 10 + a));
+                    ring[0][a] = Vec3(R.x + std::cos(ang) * R.size * wob, R.gy - 0.15, R.z + std::sin(ang) * R.size * wob);
+                    ring[1][a] = Vec3(R.x + std::cos(ang + 0.3) * R.size * 0.72 * wob, R.gy + 0.6 * hgt, R.z + std::sin(ang + 0.3) * R.size * 0.72 * wob);
+                }
+                const Vec3 crown(R.x, R.gy + hgt, R.z);
+                auto face = [&](const Vec3& p0, const Vec3& p1, const Vec3& p2) {
+                    Vec3 n = normalize(cross(p1 - p0, p2 - p0)); if (n.y < 0) n = -n;
+                    const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
+                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + p2) * (1.0 / 3.0), &n) : 0.0);   // D-04: the lamp
+                    const double shade = fogShade(42 * std::pow(light, 0.6), dist);   // darker than the flat they stand on
+                    RVert tri[3]; const Vec3 ws[3] = {p0, p1, p2};
+                    for (int q = 0; q < 3; q++) {
+                        const Vec3 v = toView(ws[q].x, ws[q].y, ws[q].z);
+                        tri[q].x = v.x; tri[q].y = v.y; tri[q].z = v.z; tri[q].shade = shade; tri[q].u = ws[q].x + ws[q].y * 0.7; tri[q].v = ws[q].z + ws[q].y * 0.4;
+                    }
+                    rasterTriangle(fb, tri, rd, proj);
+                };
+                for (int a = 0; a < NA; a++) {
+                    const int b2 = (a + 1) % NA;
+                    face(ring[0][a], ring[0][b2], ring[1][b2]); face(ring[0][a], ring[1][b2], ring[1][a]);
+                    face(ring[1][a], ring[1][b2], crown);
+                }
+                lastRocksDrawn++;
+            });
+            // P-03: sinter chimneys, slim pale cones on the sinter round the springs (the sinter's bank, the kind's second accent: bank 3)
+            if (ventLife) forChimneys(cx, cz, [&](const RockInst& R) {
+                const double dist = std::sqrt((R.x - camPos.x) * (R.x - camPos.x) + (R.z - camPos.z) * (R.z - camPos.z));
+                const double hgt = chimneyHeight(R.h);
+                if (hgt / dist * proj.f < 1.0) return;
+                const double a0 = hash01(mix64(R.h + 3)) * TAU;
+                const int NA = dist < 30 ? 6 : 4;
+                drawBlobShadow(fb, R.x, R.z, R.size * 1.4, hgt);
+                RasterParams rc; rc.bank = 3; rc.grain = &grain; rc.grainScale = 3.0 * FB_SCALE; rc.grain2 = mesoFor(MAT_SALT); rc.grain2Scale = 3.0;
+                rc.grainWeight = clampd(1.0 - (dist - 20.0) / 100.0, 0.2, 1.0);
+                Vec3 ring[3][6];
+                static const double RF[3] = {1.0, 0.62, 0.36}, YF[3] = {0.0, 0.45, 0.88};   // the foot, the shoulder, the neck (radius and height fractions)
+                for (int k = 0; k < 3; k++)
+                    for (int a = 0; a < NA; a++) {
+                        const double ang = a0 + (a + 0.5 * k) * TAU / NA, wob = 0.85 + 0.3 * hash01(mix64(R.h + 10 + 7 * k + a));
+                        ring[k][a] = Vec3(R.x + std::cos(ang) * R.size * RF[k] * wob, R.gy + (k == 0 ? -0.1 : YF[k] * hgt), R.z + std::sin(ang) * R.size * RF[k] * wob);
+                    }
+                const Vec3 crown(R.x + 0.05 * std::cos(a0), R.gy + hgt, R.z + 0.05 * std::sin(a0));
+                auto face = [&](const Vec3& p0, const Vec3& p1, const Vec3& p2) {
+                    Vec3 n = normalize(cross(p1 - p0, p2 - p0)); if (n.y < 0) n = -n;
+                    const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
+                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + p2) * (1.0 / 3.0), &n) : 0.0);   // D-04: the lamp
+                    const double shade = fogShade(50 * std::pow(light, 0.6), dist);
+                    RVert tri[3]; const Vec3 ws[3] = {p0, p1, p2};
+                    for (int q = 0; q < 3; q++) {
+                        const Vec3 v = toView(ws[q].x, ws[q].y, ws[q].z);
+                        tri[q].x = v.x; tri[q].y = v.y; tri[q].z = v.z; tri[q].shade = shade; tri[q].u = ws[q].x + ws[q].y * 0.7; tri[q].v = ws[q].z + ws[q].y * 0.4;
+                    }
+                    rasterTriangle(fb, tri, rc, proj);
+                };
+                for (int k = 0; k < 2; k++)
+                    for (int a = 0; a < NA; a++) {
+                        const int b2 = (a + 1) % NA;
+                        face(ring[k][a], ring[k][b2], ring[k + 1][b2]); face(ring[k][a], ring[k + 1][b2], ring[k + 1][a]);
+                    }
+                for (int a = 0; a < NA; a++) face(ring[2][a], ring[2][(a + 1) % NA], crown);
+                lastRocksDrawn++;
+            });
         }
 }
 
@@ -3399,6 +3821,7 @@ void SurfaceView::drawCapsule(Framebuffer& fb, double t) {
                 Vec3(std::cos(a0) * std::cos(e1), std::sin(e1), std::sin(a0) * std::cos(e1))};
             Vec3 n = normalize(pts[0] + pts[1] + pts[2] + pts[3]);
             double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp;
+            if (nLamps) light = std::min(1.0, light + (1 - ambient) * lampAt(Vec3(cx + n.x * rad, cy + 0.2 + n.y * rad * 0.8, cz + n.z * rad), &n));   // D-04
             double shade = 34 + 26 * light;
             RVert q[4];
             for (int i = 0; i < 4; i++) {
@@ -3482,6 +3905,8 @@ double SurfaceView::jetStrength(uint64_t h, double t, bool constant, double cycl
     return build * burst * smoothstep(duty, duty - 0.1, ph);
 }
 
+double SurfaceView::burstJetStrength(uint64_t id, double t) { return jetStrength(id, t, false, 30 + 60 * hash01(mix64(id + 3)), 0.15 + 0.15 * hash01(mix64(id + 4))); }
+
 double SurfaceView::basinJetStrength(uint64_t id, double t) {
     bool constant = hash01(mix64(id + 9)) < 0.3;
     return jetStrength(id, t, constant, 60 + 120 * hash01(mix64(id + 3)), 0.2 + 0.3 * hash01(mix64(id + 4)));
@@ -3493,7 +3918,7 @@ void SurfaceView::drawJet(Framebuffer& fb, double t, const JetSpec& j, double st
     double sunUp = smoothstep(-0.03, 0.06, env.sun.dirLocal.y);
     double H = j.heightM * (0.55 + 0.45 * std::min(strength, 1.35)), W = j.widthM * (0.7 + 0.3 * std::min(strength, 1.0));
     double gy = site.groundHeight(j.x, j.z);
-    double baseShade = j.lava ? 61 : 38 + 22 * sunUp;   // steam and ice are lit by the sun; lava lights itself
+    double baseShade = j.lava ? 61 : (site.sys->sunless() ? 20 : 38 + 22 * sunUp) + j.shadeAdd;   // steam and ice are lit by the sun; lava lights itself (D-04: in a drifter's dark only faintly seen)
     double vJet = std::sqrt(2 * gAcc * H);                // the ejection speed: the streaks climb the column at it
     // the core column: eight segments, each two quads round the axis so the weight peaks at the centre and the tile cuts the sides ragged
     {
@@ -3568,7 +3993,8 @@ void SurfaceView::drawGeysers(Framebuffer& fb, double t) {
         int c = u < 0.45 ? 0 : (u < 0.85 ? 1 : 2);
         hM = hs[c] * (0.8 + 0.4 * v); wM = ws[c] * (0.8 + 0.4 * v);
     };
-    if (site.gen.type == PT_EUROPAN) {   // the cracks: vents hashed on 300 m cells where the 16 m ring is stained
+    const uint32_t events = KINDS[site.gen.type].events;
+    if (events & EV_CRACK_VENTS) {   // the cracks: vents hashed on 300 m cells where the 16 m ring is stained
         static const double hs[3] = {160, 400, 800}, ws[3] = {7, 15, 30};
         const double cs = 300;
         int pcx = (int)std::floor(camPos.x / cs), pcz = (int)std::floor(camPos.z / cs);
@@ -3601,7 +4027,52 @@ void SurfaceView::drawGeysers(Framebuffer& fb, double t) {
             drawJet(fb, t, j, basinJetStrength(gv.id, t));
         }
     }
-    if (site.gen.type == PT_TECTONIC) {   // fumaroles and hot springs on the sulphur crusts, steady fountains on the lava (the great ones come and go through the eruption list)
+    if (events & EV_STEAM_BURSTS) {   // P-01: steam bursting now and then from the vents of the kind's own ground (the steam world's sinter mounds)
+        const int vent = KINDS[site.gen.type].eventMaterial;
+        std::vector<GeyserVent> vents;
+        steamVents(site.gen, site.unitAt(camPos.x, camPos.z), vents);
+        for (const GeyserVent& gv : vents) {
+            double vx, vz;
+            site.localAt(gv.unit, vx, vz);
+            double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+            if (dist > 2500) continue;
+            if (site.lod0.at((int)std::floor(vx / 16), (int)std::floor(vz / 16)).material != vent) continue;   // a mound in a field of vents
+            JetSpec j; j.x = vx; j.z = vz; j.h = gv.id; j.dist = dist; j.bank = 8; j.lava = false;
+            j.heightM = 50 + 150 * hash01(mix64(gv.id + 7)); j.widthM = 5 + 8 * hash01(mix64(gv.id + 8));
+            drawJet(fb, t, j, burstJetStrength(gv.id, t));
+        }
+    }
+    if (site.gen.hasTrait(TR_HOT_SPRINGS)) {   // Q-02: steam rising steadily off each terraced spring's vent pool
+        std::vector<GeyserVent> vents;
+        hotSpringsNear(site.gen, site.unitAt(camPos.x, camPos.z), vents);
+        for (const GeyserVent& gv : vents) {
+            double vx, vz;
+            site.localAt(gv.unit, vx, vz);
+            const double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+            if (dist > 1500) continue;
+            if (site.lod0.at((int)std::floor(vx / 16 + 0.5), (int)std::floor(vz / 16 + 0.5)).material != MAT_BRINE) continue;   // where the landform put its pool
+            JetSpec j; j.x = vx; j.z = vz; j.h = gv.id; j.dist = dist; j.bank = 8; j.lava = false;
+            j.heightM = 6 + 14 * hash01(mix64(gv.id + 7)); j.widthM = gv.radiusKm * 1000.0 * 0.9;
+            drawJet(fb, t, j, jetStrength(gv.id, t, true, 1, 1));
+        }
+    }
+    if (events & EV_SPRINGS) {   // P-03: the chemotroph's hot springs: steam rising steadily off every pool its ground made (`springVents`), one in five a geyser now and then
+        std::vector<GeyserVent> vents;
+        springVents(site.gen, site.unitAt(camPos.x, camPos.z), vents);
+        for (const GeyserVent& gv : vents) {
+            double vx, vz;
+            site.localAt(gv.unit, vx, vz);
+            const double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+            if (dist > 1200) continue;
+            if (site.lod0.at((int)std::floor(vx / 16 + 0.5), (int)std::floor(vz / 16 + 0.5)).material != MAT_BRINE) continue;   // a pool of the spring fields (the vertex nearest its centre)
+            JetSpec j; j.x = vx; j.z = vz; j.h = gv.id; j.dist = dist; j.bank = 8; j.lava = false;
+            const bool geyser = hash01(mix64(gv.id + 6)) < 0.2;
+            j.heightM = geyser ? 20 + 40 * hash01(mix64(gv.id + 7)) : 3 + 7 * hash01(mix64(gv.id + 7));
+            j.widthM = gv.radiusKm * 1000.0 * (geyser ? 0.25 : 0.7);
+            drawJet(fb, t, j, geyser ? jetStrength(gv.id, t, false, 90 + 120 * hash01(mix64(gv.id + 3)), 0.15 + 0.15 * hash01(mix64(gv.id + 4))) : jetStrength(gv.id, t, true, 1, 1));
+        }
+    }
+    if (events & EV_FUMAROLES) {   // fumaroles and hot springs on the sulphur crusts, steady fountains on the lava (the great ones come and go through the eruption list)
         const double cs = 200;
         int pcx = (int)std::floor(camPos.x / cs), pcz = (int)std::floor(camPos.z / cs);
         for (int cz = pcz - 5; cz <= pcz + 5; cz++)
@@ -3627,9 +4098,223 @@ void SurfaceView::drawGeysers(Framebuffer& fb, double t) {
     }
 }
 
+// P-03: the chemotroph's spores at night: a haze of glowing points over each spring near the explorer (its pool and its mats), rising slowly on
+// the warm air, drifting with the wind, pulsing and fading as they climb; in their own light (bank 15), so only the dark shows them
+void SurfaceView::drawSpores(Framebuffer& fb, double t) {
+    const double dark = 1 - smoothstep(0.2, 0.55, env.skyBrightness);
+    if (dark <= 0.01) return;
+    std::vector<GeyserVent> vents;
+    springVents(site.gen, site.unitAt(camPos.x, camPos.z), vents);
+    const double wx = std::sin(env.windDir), wz = std::cos(env.windDir), lean = 0.04 * env.windKnots;   // metres downwind a metre of rise
+    for (const GeyserVent& gv : vents) {
+        double vx, vz;
+        site.localAt(gv.unit, vx, vz);
+        const double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+        if (dist > 500) continue;
+        if (site.lod0.at((int)std::floor(vx / 16 + 0.5), (int)std::floor(vz / 16 + 0.5)).material != MAT_BRINE) continue;
+        const double gy = site.groundHeight(vx, vz), r = gv.radiusKm * 1000.0;
+        const int n = (int)((dist < 150 ? 260 : 90) * dark);
+        Rng sr(gv.id ^ 0x5B0EULL);
+        for (int i = 0; i < n; i++) {
+            const double a = sr.range(0, TAU), rr = r * (0.2 + 2.8 * std::pow(sr.uni(), 0.9)), top = 4 + 12 * sr.uni(), speed = 0.12 + 0.25 * sr.uni(), ph = sr.uni();
+            const double age = std::fmod(t * speed / top + ph, 1.0), up = age * top;   // 0 at the ground .. 1 at its top
+            const double sx = 0.5 * std::sin(t * 0.6 + 9.0 * ph), sz = 0.5 * std::cos(t * 0.5 + 7.0 * ph);
+            const Vec3 v = toView(vx + std::cos(a) * rr + wx * lean * up + sx, gy + 0.2 + up, vz + std::sin(a) * rr + wz * lean * up + sz);
+            if (v.z < NEAR_Z) continue;
+            const double pulse = 0.65 + 0.35 * std::sin(t * (1.2 + 2.0 * ph) + 11.0 * ph);
+            RVert p; p.x = v.x; p.y = v.y; p.z = v.z; p.shade = 30 + 33 * dark * pulse * (1 - 0.6 * age);
+            rasterPoint3(fb, p, 15, proj, true, dist < 70 && ph < 0.4 ? 2 : 1);
+        }
+    }
+}
+
+// P-05: the cryovolcanic world's plumes (Triton's: Soderblom et al. 1990): from each active vent on its cap within 220 km (`plumeVents`; half of
+// them active, by hash) a dark column 6-9 km high and 200-500 m wide, its top carried downwind along the prevailing wind (the ground's streaks'
+// direction) as a flag 40-90 km long, thickening from a few hundred metres to two kilometres and fading; grey by day, a dim shape at night;
+// the curvature hides the far columns' feet (`toView`); a far column is kept a pixel wide
+void SurfaceView::drawPlumes(Framebuffer& fb, double t) {
+    std::vector<GeyserVent> vents;
+    plumeVents(site.gen, site.unitAt(camPos.x, camPos.z), vents);
+    const double sunUp = smoothstep(-0.05, 0.15, env.sun.dirLocal.y);
+    RasterParams rp;
+    rp.bank = 9; rp.grain = &grainFine; rp.grainScale = 0.9; rp.grainWeight = 1.0;
+    rp.cutout = true; rp.edge = &grainEdge; rp.edgeAmp = 0.75;
+    for (const GeyserVent& v : vents) {
+        if (!plumeActive(v.id)) continue;
+        double vx, vz; site.localAt(v.unit, vx, vz);
+        const double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+        if (dist > 220000) continue;
+        double wx, wz; site.localAt(normalize(v.unit + prevailingWind(site.gen, v.unit) * (1000.0 / site.R)), wx, wz);   // a kilometre downwind
+        double dx = wx - vx, dz = wz - vz; const double dl = std::max(1e-6, std::sqrt(dx * dx + dz * dz)); dx /= dl; dz /= dl;
+        double water = 0;
+        const double gy = dist < 40000 ? heightNear(vx, vz, dist, water) : (double)site.sampleAt(vx, vz, 2048).h;
+        const double H = 6000 + 3000 * hash01(mix64(v.id + 2)), W = std::max(600 + 900 * hash01(mix64(v.id + 3)), dist * 0.006);
+        const double Lf = std::min(v.radiusKm * 800.0, 90000.0), sway = 0.08 * std::sin(t * 0.05 + 6.0 * hash01(mix64(v.id + 4)));
+        const double base = 20 + 16 * sunUp, ph = TAU * hash01(mix64(v.id + 5));
+        const int NSEG = 10;
+        rp.edgeScale = 0.35 / std::max(1.0, W * 0.15);
+        for (int k = 0; k < NSEG; k++) {   // the column, a ribbon facing the camera, widening a little toward its top
+            const double f0 = (double)k / NSEG, f1 = (double)(k + 1) / NSEG;
+            const Vec3 c0 = toView(vx, gy + H * f0, vz), c1 = toView(vx, gy + H * f1, vz);
+            if (c0.z < NEAR_Z || c1.z < NEAR_Z) continue;
+            const double r0 = W * 0.5 * (1 + 0.5 * f0), r1 = W * 0.5 * (1 + 0.5 * f1), v0 = (H * f0 - t * 60) * 0.35, v1 = (H * f1 - t * 60) * 0.35;
+            for (int side = -1; side <= 1; side += 2) {
+                RVert q[4];
+                q[0].x = c0.x; q[0].y = c0.y; q[0].z = c0.z; q[0].w = 1.15; q[0].shade = base - 4 * f0; q[0].u = 0; q[0].v = v0;
+                q[1].x = c0.x + side * r0; q[1].y = c0.y; q[1].z = c0.z; q[1].w = 0.2; q[1].shade = base - 6 - 4 * f0; q[1].u = side * W * 0.75; q[1].v = v0;
+                q[2].x = c1.x + side * r1; q[2].y = c1.y; q[2].z = c1.z; q[2].w = 0.2; q[2].shade = base - 6 - 4 * f1; q[2].u = side * W * 0.75; q[2].v = v1;
+                q[3].x = c1.x; q[3].y = c1.y; q[3].z = c1.z; q[3].w = 1.15; q[3].shade = base - 4 * f1; q[3].u = 0; q[3].v = v1;
+                rasterPolygon(fb, q, 4, rp, proj);
+            }
+        }
+        // the flag: a cross of two ribbons along the wind (an upright one, seen from the side, and a flat one, seen from under it), each a
+        // dense middle and ragged edges, billowing a little, thickening from 600 m to three kilometres and fraying out toward its end
+        const int NF = 16;
+        const double px = -dz, pz = dx;   // across the wind
+        auto at = [&](double f, double& x, double& y, double& z, double& th) {
+            const double sq = Lf * f, a = sway * f;
+            x = vx + (dx + px * a) * sq; z = vz + (dz + pz * a) * sq;
+            y = gy + H - 700 * (1 - smoothstep(0.0, 0.12, f)) + 900 * f + 260 * std::sin(sq / 9000.0 + ph + t * 0.02) * f;   // bending over from the column's top
+            th = std::max(W * 0.7 + 1300 * f, (dist + sq) * 0.004);
+        };
+        for (int k = 0; k < NF; k++) {
+            const double f0 = (double)k / NF, f1 = (double)(k + 1) / NF;
+            double x0, y0, z0, th0, x1, y1, z1, th1;
+            at(f0, x0, y0, z0, th0); at(f1, x1, y1, z1, th1);
+            const double sh0 = base - 2 - 12 * f0, sh1 = base - 2 - 12 * f1, w0 = 1.15 - 0.6 * f0, w1 = 1.15 - 0.6 * f1;
+            rp.edgeScale = 0.35 / std::max(1.0, th0 * 0.3);
+            for (int ribbon = 0; ribbon < 2; ribbon++)
+                for (int side = -1; side <= 1; side += 2) {
+                    const Vec3 m0 = toView(x0, y0, z0), m1 = toView(x1, y1, z1);
+                    const Vec3 e0 = ribbon == 0 ? toView(x0, y0 + side * th0, z0) : toView(x0 + px * side * th0, y0, z0 + pz * side * th0);
+                    const Vec3 e1 = ribbon == 0 ? toView(x1, y1 + side * th1, z1) : toView(x1 + px * side * th1, y1, z1 + pz * side * th1);
+                    if (m0.z < NEAR_Z || m1.z < NEAR_Z || e0.z < NEAR_Z || e1.z < NEAR_Z) continue;
+                    RVert q[4];
+                    q[0].x = m0.x; q[0].y = m0.y; q[0].z = m0.z; q[0].w = w0; q[0].shade = sh0; q[0].u = 0; q[0].v = Lf * f0 * 0.35 - t * 3;
+                    q[1].x = e0.x; q[1].y = e0.y; q[1].z = e0.z; q[1].w = 0.15; q[1].shade = sh0 - 5; q[1].u = side * th0; q[1].v = Lf * f0 * 0.35 - t * 3;
+                    q[2].x = e1.x; q[2].y = e1.y; q[2].z = e1.z; q[2].w = 0.15; q[2].shade = sh1 - 5; q[2].u = side * th1; q[2].v = Lf * f1 * 0.35 - t * 3;
+                    q[3].x = m1.x; q[3].y = m1.y; q[3].z = m1.z; q[3].w = w1; q[3].shade = sh1; q[3].u = 0; q[3].v = Lf * f1 * 0.35 - t * 3;
+                    rasterPolygon(fb, q, 4, rp, proj);
+                }
+        }
+    }
+}
+
+// P-05: the dry ice world's spring (Kieffer 2006): while the hemisphere's sun climbs out of its winter (its season between -0.75 and 0.35 and
+// rising) and the sun is up, gas under the seasonal frost bursts out at the spiders' centres (`springJets`) in jets of dark dust 15-60 m high,
+// a minute or two each, a third of their cycle (the fans on the frost are what they lay)
+bool SurfaceView::springJetsNow(double t) const {
+    if (env.sun.dirLocal.y < 0.05 || !site.sys || site.body < 0) return false;
+    const Body& b = site.sys->bodies[site.body];
+    const double dt = std::max(3600.0, 0.002 * std::fabs(b.orbitPeriod));
+    const double north = site.unitAt(camPos.x, camPos.z).z >= 0 ? 1 : -1;
+    const double s0 = north * site.sys->seasonOf(site.body, t), s1 = north * site.sys->seasonOf(site.body, t + dt);
+    return s1 > s0 && s0 > -0.75 && s0 < 0.35;
+}
+double SurfaceView::springJetStrength(uint64_t id, double t) { return jetStrength(id, t, false, 50 + 90 * hash01(mix64(id + 3)), 0.25 + 0.2 * hash01(mix64(id + 4))); }
+void SurfaceView::drawSpringJets(Framebuffer& fb, double t) {
+    if (!springJetsNow(t)) return;
+    std::vector<GeyserVent> vents;
+    springJets(site.gen, site.unitAt(camPos.x, camPos.z), vents);
+    for (const GeyserVent& gv : vents) {
+        double vx, vz; site.localAt(gv.unit, vx, vz);
+        const double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+        if (dist > 1500) continue;
+        JetSpec j; j.x = vx; j.z = vz; j.h = gv.id; j.dist = dist; j.bank = 10; j.lava = false; j.shadeAdd = -24;   // the fans' dark dust (the accent's bank)
+        j.heightM = 15 + 45 * hash01(mix64(gv.id + 7)); j.widthM = 2 + 3 * hash01(mix64(gv.id + 8));
+        drawJet(fb, t, j, springJetStrength(gv.id, t));
+    }
+}
+
+// P-06: the tiger stripes' curtains (Enceladus's: Porco et al. 2006, Spitale et al. 2015). Along each stripe within 300 km a sheet of fine ice
+// rising 25-60 km, densest low and thinning upward, its top wavering along the stripe and with time, bright in the sun (a glow over the dark sky:
+// the brighter of it and what is behind, so it never darkens the ground), drawn in segments of 4 km; and within 5 km of the explorer its jets one
+// by one (`curtainVents`: R-307's columns, 0.8-2.5 km high, their fallout drifting down for minutes in the moon's weak gravity)
+void SurfaceView::drawCurtains(Framebuffer& fb, double t) {
+    const Vec3 here = site.unitAt(camPos.x, camPos.z);
+    if (here.z > -0.3) return;
+    const TigerStripes T = tigerStripesOf(site.gen);
+    const double Rk = site.gen.R, sunUp = smoothstep(-0.05, 0.15, env.sun.dirLocal.y), base = 18 + 18 * sunUp;
+    RasterParams rp;
+    rp.bank = 8; rp.grain = &grainFine; rp.grainScale = 0.9; rp.grainWeight = 1.0;
+    rp.cutout = true; rp.edge = &grainEdge; rp.edgeAmp = 0.75; rp.blend = BLEND_MAX; rp.zwrite = false;
+    for (int k = 0; k < 4; k++) {
+        const double half = 0.5 * T.len[k];
+        double xp = 0, zp = 0, gp = 0, Hp = 0; bool have = false;
+        for (double a = -half; a <= half + 1e-6; a += 4.0) {
+            double x, z; site.localAt(stripePoint(T, Rk, k, a), x, z);
+            const double d = std::sqrt((x - camPos.x) * (x - camPos.x) + (z - camPos.z) * (z - camPos.z));
+            if (d > 300000) { have = false; continue; }
+            double water = 0;
+            const double gy = d < 40000 ? heightNear(x, z, d, water) : (double)site.sampleAt(x, z, 2048).h;
+            const double H = 1000.0 * (25.0 + 35.0 * (0.5 + 0.5 * std::sin(a / 23.0 + 1.7 * k))) * (0.85 + 0.15 * std::sin(t * 0.05 + a / 7.0 + k));
+            if (have && d > 6000 && std::sqrt((xp - camPos.x) * (xp - camPos.x) + (zp - camPos.z) * (zp - camPos.z)) > 6000) {   // the near part is its jets
+                rp.edgeScale = 1.0 / (0.012 * d); rp.grainScale = rp.edgeScale;   // the veil's grain three pixels or so across at any distance (u and v in metres)
+                const int NS = 4;
+                for (int j = 0; j < NS; j++) {
+                    const double f0 = (double)j / NS, f1 = (double)(j + 1) / NS;
+                    const Vec3 a0 = toView(xp, gp + Hp * f0, zp), b0 = toView(x, gy + H * f0, z), b1 = toView(x, gy + H * f1, z), a1 = toView(xp, gp + Hp * f1, zp);
+                    if (a0.z < NEAR_Z || b0.z < NEAR_Z || b1.z < NEAR_Z || a1.z < NEAR_Z) continue;
+                    const double w0 = 0.8 - 0.6 * f0, w1 = 0.8 - 0.6 * f1, s0 = base - 12 * f0, s1 = base - 12 * f1;   // a veil: thin, thinner upward
+                    RVert q[4];
+                    q[0].x = a0.x; q[0].y = a0.y; q[0].z = a0.z; q[0].w = w0; q[0].shade = s0; q[0].u = a * 1000.0; q[0].v = f0 * Hp - t * 300.0;
+                    q[1].x = b0.x; q[1].y = b0.y; q[1].z = b0.z; q[1].w = w0; q[1].shade = s0; q[1].u = (a + 4.0) * 1000.0; q[1].v = f0 * H - t * 300.0;
+                    q[2].x = b1.x; q[2].y = b1.y; q[2].z = b1.z; q[2].w = w1; q[2].shade = s1; q[2].u = (a + 4.0) * 1000.0; q[2].v = f1 * H - t * 300.0;
+                    q[3].x = a1.x; q[3].y = a1.y; q[3].z = a1.z; q[3].w = w1; q[3].shade = s1; q[3].u = a * 1000.0; q[3].v = f1 * Hp - t * 300.0;
+                    rasterPolygon(fb, q, 4, rp, proj);
+                }
+            }
+            xp = x; zp = z; gp = gy; Hp = H; have = true;
+        }
+    }
+    std::vector<GeyserVent> vents;
+    curtainVents(site.gen, here, vents);
+    for (const GeyserVent& gv : vents) {
+        double vx, vz; site.localAt(gv.unit, vx, vz);
+        const double dist = std::sqrt((vx - camPos.x) * (vx - camPos.x) + (vz - camPos.z) * (vz - camPos.z));
+        if (dist > 5000) continue;
+        JetSpec j; j.x = vx; j.z = vz; j.h = gv.id; j.dist = dist; j.bank = 8; j.lava = false;
+        j.heightM = 800 + 1700 * gv.radiusKm; j.widthM = 15 + 25 * gv.radiusKm;
+        drawJet(fb, t, j, jetStrength(gv.id, t, true, 1, 1));
+    }
+}
+
+// D-04 (TR_LIGHTS_LEFT_ON, D-05's late peoples): the lamps a dead people left burning along its streets, one every 30 m on each side in turn
+// within a kilometre and a half (its towns' streets: T-02's marks), each a point of the lamps' light (bank 15) on a 4 m post, more of them dark
+// where the years left less of the street; the lit windows are the forms' (`drawFormItems`)
+void SurfaceView::drawStreetLamps(Framebuffer& fb) {
+    for (const GroundMark& m : site.marks) {
+        if (m.kind != 0) continue;
+        const double dx = m.bx - m.ax, dz = m.bz - m.az, L = std::sqrt(dx * dx + dz * dz);
+        if (L < 1) continue;
+        const double mx = 0.5 * (m.ax + m.bx) - camPos.x, mz = 0.5 * (m.az + m.bz) - camPos.z;
+        if (std::sqrt(mx * mx + mz * mz) > 1500 + 0.5 * L) continue;
+        const double ux = dx / L, uz = dz / L;
+        const int n = (int)(L / 30.0);
+        for (int k = 0; k <= n; k++) {
+            const uint64_t h = mix64((uint64_t)m.id * 977 + (uint64_t)k);
+            if (hash01(h) > 0.25 + 0.7 * m.left) continue;   // a broken lamp
+            const double side = (k & 1) ? 1.0 : -1.0, along = std::min(L, 15.0 + 30.0 * k);
+            const double x = m.ax + ux * along - uz * side * (m.half + 1.0), z = m.az + uz * along + ux * side * (m.half + 1.0);
+            const double d = std::sqrt((x - camPos.x) * (x - camPos.x) + (z - camPos.z) * (z - camPos.z));
+            if (d > 1500) continue;
+            const Vec3 v = toView(x, site.groundHeight(x, z) + 4.0, z);
+            if (v.z < NEAR_Z) continue;
+            RVert p; p.x = v.x; p.y = v.y; p.z = v.z; p.shade = 58 + 4 * hash01(mix64(h + 1));
+            rasterPoint3(fb, p, 15, proj, true, d < 60 ? 3 : (d < 180 ? 2 : 1));
+        }
+    }
+}
+
 void SurfaceView::drawWeather(Framebuffer& fb, double t) {
-    if (site.gen.type == PT_COMET) drawCometJets(fb, t);   // O4
-    if (site.gen.type == PT_EUROPAN || site.gen.type == PT_TECTONIC || site.gen.hasTrait(TR_GEYSERS)) drawGeysers(fb, t);   // R-307
+    const uint32_t events = KINDS[site.gen.type].events;   // P-00: the kind's vents and jets
+    if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) drawStreetLamps(fb);   // D-04
+    if (events & EV_COMET_JETS) drawCometJets(fb, t);   // O4
+    if (events & EV_PLUMES) drawPlumes(fb, t);   // P-05
+    if (events & EV_SPRING_JETS) drawSpringJets(fb, t);   // P-05
+    if (events & EV_CURTAINS) drawCurtains(fb, t);   // P-06
+    if ((events & (EV_CRACK_VENTS | EV_FUMAROLES | EV_STEAM_BURSTS | EV_SPRINGS)) || site.gen.hasTrait(TR_GEYSERS) || site.gen.hasTrait(TR_HOT_SPRINGS)) drawGeysers(fb, t);   // R-307; P-01; P-03; Q-02
+    if (events & EV_SPRINGS) drawSpores(fb, t);   // P-03
     // R-307: dust devils: a column of dust points spiralling up, leaning with the wind, a skirt at the foot
     for (const DustDevil& d : devils) {
         double dist = std::sqrt((d.x - camPos.x) * (d.x - camPos.x) + (d.z - camPos.z) * (d.z - camPos.z));
@@ -3810,9 +4495,13 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     camLocal = cameraBasis(yaw, pitch);
     {   // B-322: the picture follows the eye, not the body: under the drawn water surface (a dive's first frames, the eye
         // within a few centimetres of the surface, the free camera) everything is seen through water
-        double wlEye = site.hasWater || site.gen.liquidLevel > -1e8 ? site.waterAt(camX, camZ) : -1e9;
+        double wlEye = site.hasWater || site.gen.liquidLevel > -1e8 ? site.waterNowAt(camX, camZ) : -1e9;
         viewUnderwater = wlEye > -1e8 && eyeY < wlEye + 0.03;
         if (viewUnderwater) env.fogDistance = std::min(env.fogDistance, 22.0);
+    }
+    if (env.fogSea > 0) {   // Q-02: an eye inside the fog sea sees a few hundred metres
+        const double in = smoothstep(env.fogSeaTop + 6.0, env.fogSeaTop - 14.0, eyeY);
+        if (in > 0) env.fogDistance = std::min(env.fogDistance, env.fogDistance + (240.0 - env.fogDistance) * in);
     }
     if (std::fabs(roll) > 1e-4) camLocal = Mat3::axisAngle(Vec3(0, 0, 1), roll) * camLocal;
     // sprint FOV kick (M8-02): rebuild the sky table only when the change is noticeable
@@ -3823,6 +4512,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     lastT = t;
     waterWdx = std::sin(env.windDir), waterWdz = std::cos(env.windDir);   // F-04: the water corners' (waterCorner)
     waterSunUp = smoothstep(-0.03, 0.06, env.sun.dirLocal.y);
+    setupLamps();   // D-04
     {
         SurfaceLook L = lookFor(site.gen, site.sys->star);
         cloudShadows = site.atmosphere && L.cloudsLayer && (env.cloudCover > 0.03 || localFront.on) && !hasOpaqueDeck(site.gen.type);   // W-03: a front's deck in reach counts
@@ -3974,18 +4664,18 @@ std::string SurfaceView::bandTraceLine(bool flora) const {
 // the cached height under a point at `dist` from the camera: bilinear lod0 close by, the coarser rings further out
 // (so the march never thrashes the fine cache), with the water level of the same cell
 double SurfaceView::heightNear(double x, double z, double dist, double& water) {
-    if (dist < ringR[0] * 16.0 * 0.9) { water = site.waterAt(x, z); return site.groundHeight(x, z); }
+    if (dist < ringR[0] * 16.0 * 0.9) { water = site.waterNowAt(x, z); return site.groundHeight(x, z); }
     TerrainCache& c = dist < ringR[1] * 64.0 * 0.9 ? site.lod1 : (dist < ringR[2] * 512.0 * 0.9 || !ringR[3] ? site.lod2 : site.lod3);
     const TerrainVertex& tv = c.at((int)std::lround(x / c.cellSize), (int)std::lround(z / c.cellSize));
-    water = tv.water;
+    water = site.waterOf(tv);
     return tv.h;
 }
 
 double SurfaceView::drawnGround(double x, double z, double dist, double& water, int& ring) {
     ring = drawnRing(dist);
-    if (ring == 0) { water = site.waterAt(x, z); return site.groundHeight(x, z); }
+    if (ring == 0) { water = site.waterNowAt(x, z); return site.groundHeight(x, z); }
     TerrainCache& c = ring == 1 ? site.lod1 : (ring == 2 ? site.lod2 : site.lod3);
-    water = c.at((int)std::lround(x / c.cellSize), (int)std::lround(z / c.cellSize)).water;
+    water = site.waterOf(c.at((int)std::lround(x / c.cellSize), (int)std::lround(z / c.cellSize)));
     return cacheHeightAt(c, x, z);
 }
 

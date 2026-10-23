@@ -1,0 +1,163 @@
+R"VG(
+# sunlost12.vg (D-05): genre.deephalls, continued (its first part in sunlost7.vg: a file holds at most 16 KB)
+@apart
+
+dh.pn.head (formula people=4)
+  NOTICE. The rules of {hall.below}, to be obeyed by all residents:
+  Regulations for the lower levels at {$home}, by order of {ruler.the}:
+  To all below: the rules, which will be enforced.
+  The rules of the shelter, posted on every level:
+  (age>=modern) Shelter regulations, {hall.below}, revised:
+  (age>=modern darkyears>=1) Standing orders for the deep levels, {$home}, the {#darkyears:ord} year below:
+  (age>=modern dark=2) Standing orders for the deep levels, {$home}, for the move below:
+dh.pn.item (share=0.65)
+  (once) Rations of {dark.food} are given out at the {dh.pn.hour} bell, [on presentation of the ration card|one share to each person|to the head of each household].
+  (once) The warm-rock shifts change at the {dh.pn.hour} bell. A worker late to the rock [loses a ration|works the next shift too|is reported to the warden].
+  (once) No {fuel} is to be burned in the sleeping levels. The air there is [pumped and counted|short as it is|for breathing].
+  (once) Surface doors are opened only for the {dh.party} and only by the [duty keeper|warden of the stair|level warden].
+  (once) The lights go down at the evening bell. The children's levels are dark [an hour earlier|at the second bell|after the story].
+  (once) Deaths are to be reported to the level warden. The dead are carried up [with the next {dh.party}|on the rest day|by their own families].
+  (once) Births are to be reported the same day; a newborn and its mother go to the warm level [for a month|until the child can be carried|at once].
+  (once) Water is drawn from the melt tanks [by the {vessel.one.n}, at the call|by each household in turn|twice a day, not more].
+  (once) Hoarding [{food}|{fuel}|blankets] is theft from the shelter and is punished as theft.
+  (once) The children's hours at the warm rock are from the {dh.pn.hour} bell to the meal; [lessons are held there|nobody else is to use the room then|parents may sit with them].
+  (once) The upper rooms are closed. Nobody is to sleep above the [third|second|fourth] level.
+  (once) The air shafts are not to be blocked, [whatever the cold|by order of the wardens|even in the worst of the frost].
+  (once inv.electric=1) The electric light is for the working levels only[. Lamps elsewhere|; the sleeping levels keep the dark|, and is not to be used for heat].
+  (once inv.radio=1) The radio gives the news at [noon|the second bell|the evening meal] on every level.
+  (once) Visits to the surface to see the stars are permitted on the rest day, in parties of [four|six|no fewer than three].
+  (once) The {dark.food} beds are tended by every household in turn; the turn is posted at {dh.stair}.
+  (once) Each person may have one {garment.n} from the stores [twice a year|on request|after the children have had theirs].
+  (once) The old library in the {dh.room} is open [after the evening meal|on the rest day]; take nothing out.
+  (once) Quarrels over places at the warm rock are brought to the warden and to nobody else.
+  (once) The {herd} left are kept on the [lowest|warm] level and are not to be slaughtered without the warden's word.
+  (once) Anyone feeling the [cough|fever|cold sickness] goes to the infirmary at once and does not sleep with the household.
+  (once) No {pastime} on the sleeping levels; in the {dh.room}, until the second bell.
+  (once) Nobody is to go up {dh.stair} past the frost line without a lamp and a rope.
+  (once) The {craft} rooms are open to every household for one shift in [five|seven|ten].
+  (once) The {drink} ration is for the rest day only, [one {vessel.one.n} each|and not for the children|as before].
+dh.pn.hour (people=2)
+  first
+  second
+  third
+  morning
+  evening
+dh.pn.end (formula people=3)
+  Keep these rules. The shelter keeps you.
+  By order. The wardens will see these rules kept.
+  These rules hold until the sun comes back.
+  Posted on every level. Do not remove.
+
+# =====================================================================================================================
+# the halls' radio, or the announcements read out at the shaft (a cylinder's, a disc's, a reel's)
+# =====================================================================================================================
+
+dh.bc.open (formula people=4)
+  (inv.radio=1) This is the halls' radio at {$home}, with the announcements for the levels.
+  (inv.radio=1) Good morning, below. The announcements for today.
+  (inv.radio=1) {$home} calling every level. The news from the warm rock.
+  The announcements, read at the head of the shaft, for those who could not come.
+  (inv.radio=1) This is {$seat}, calling the halls. Listen for your level.
+  (inv.radio=1 darkyears>=1) The evening announcements, {hall.below}, the {#darkyears:ord} year of the dark.
+  (inv.radio=1 dark=2) The evening announcements, {hall.below}, as the sun goes.
+dh.bc.item (share=0.65)
+  (once) Rations today as yesterday: {dark.food}, water by the {vessel.one.n}, the evening meal at the bell.
+  (once) The warm rock on the [fourth|third|fifth] level is cooler; the shift there [is to move down to the sixth|will be shortened|goes to the lower face].
+  (once) The {dh.party} is back. [All {n} returned|One was hurt on the way down and is in the infirmary|They report the frost thicker at the doors]. The surface stands at the cold it always does.
+  (once) The lights on the [lower|upper|east] levels will go down for an hour this evening while the {dh.bc.fix} is mended.
+  (once) The air on the [north|west|old] side is bad. Move the sleepers from there to the {dh.room}.
+  (once) A child was born last night on the warm level. [Mother and child are well|The child is small but strong|It is the {#n:ord} this month].
+  (once) We record the deaths of {n} of us this [week|month]. They go up with the next {dh.party}.
+  (once) Children's hours at the warm rock are as usual. [Parents, please keep them to the marked rooms|The story tonight is the one about the sun|Bring the slates].
+  (once) The beds of {dark.food} on the [second|lower|warm] level came in [well|thin]. The rations stand.
+  (once) The sky party reports {sunway.thing} no longer seen. {sun} is where it was.
+  (once) The {festival} gathering will be held in the {dh.room}, the songs low.
+  (once) Remember: no {fuel} in the sleeping levels. The air is counted.
+  (once inv.radio=1) We are still calling the other halls on the long band. [No answer yet|Static, and once a voice we could not make out|Nothing].
+  (once) Lost on the [third|fourth] level: a child's [boot|blanket|{garment.n}]. Bring it to the stores.
+  (once) The frost line in {dh.stair} has come down another {n} steps. [Keep the doors shut behind you|The inner door will be moved down|Nobody is to sit on the steps].
+  (once) The melt tanks are low. Water by the {vessel.one.n} until the {dh.party} is back.
+  (once) The old ones' room by the warm rock is full. [Please make room|The wardens will move the beds|Bring your own blankets].
+  (once) The {herd} on the lowest level have [had young|been counted: {n}|been moved nearer the rock].
+  (once) Music in the {dh.room} tonight: {instrument}, and [the old songs|the songs of the summers|anyone who can play].
+  (once) The infirmary asks that anyone with the cough stay with their household and not come to the meal.
+  (once) The {craft} rooms need hands; ask at {dh.stair}.
+  (once) Tomorrow is the day the sun last rose, by the count. There will be [a silence at the noon bell|a lamp lit in the {dh.room} at noon|the old songs after the meal].
+  (once) {pastime} in the {dh.room} after the meal; the wardens ask that it end by the second bell.
+  (once) A {vessel.one.n} of {drink} for every household on the rest day, for {feast.custom}.
+dh.bc.fix (people=2)
+  pump
+  line
+  lamp
+  (age>=modern) generator
+dh.bc.close (formula people=3)
+  That is all for today. Keep warm, and keep the rules.
+  (inv.radio=1) This has been the halls' radio. Until tomorrow, below.
+  The next announcements at the same bell.
+  Keep to your levels. Keep warm.
+
+# =====================================================================================================================
+# the charter of the deep levels, and its amendments (a drive's, a crystal's)
+# =====================================================================================================================
+
+dh.ch.head (formula people=4)
+  The charter of {hall.below} at {$home}, agreed by all who live below.
+  (age>=futuristic) We who live in the warm levels of {$home} set down how we will live, for as long as the dark lasts.
+  (darkyears>=1) The compact of the deep levels at {$home}, in the {#darkyears:ord} year of the dark.
+  (dark=2) The compact of the deep levels at {$home}, agreed as the sun went.
+  How we live below {$home}: agreed, to be read every year at {festival}.
+dh.ch.pre (share=0.8)
+  We came down when the sun went, and we will not go up again until it comes back or we are gone.
+  We are fewer than we were, and we would rather agree in the dark than be ruled in it.
+  The warm rock gives us what heat there is; what follows is how we share it.
+  We lost the sun and kept each other; this is how.
+  What was above is above. What follows is how we live below it.
+  The ones who came down first wrote this; the ones born below have kept it.
+  As the old saying went, {proverb}; we have needed it below.
+dh.ch.art (share=0.7)
+  (2 once) The heat of the deep rock belongs to [everyone below|all of us|every level alike], and to no one more than another.
+  (2 once) Every person has a place by {warm.ground}, and no one may [take it away|sell it|be moved from it against their will].
+  (once) The {dark.food} of the [vats|beds|lower gardens] are grown by all and eaten by all.
+  (once) The air is counted and shared; no one may [close a shaft|keep air for themselves|change the pumps alone].
+  (once) Every child born below is taught what [the sun was|a day was|a summer was], and what we lost.
+  (once) The dead are taken up to the surface, where the cold keeps them, and their names are kept below.
+  (once) The lights burn in the working halls; the sleeping halls keep the dark, as the night was kept above.
+  (once) Anyone may go up to see the stars, but no one goes [alone|without a lamp|without telling {dh.stair}].
+  (once age>=futuristic) The mind of the levels keeps the count of the days and the air; it may not keep anything else from us.
+  (once) {festival} is kept by all, below, without the sun it was for.
+  (once) [No one is to be blamed for the sun|Nobody is to be blamed for what the sky did|The going of the sun is no one's fault, and no one is to be made to carry it].
+  (once) The water of the melt is common; [no household may store more than it drinks|it is carried in the common {vessel} and in no other|whoever wastes it carries ice for the rest].
+  (once) Every level chooses its warden, and may unchoose them at the next reading.
+  (once) Work at the rock is shared by all who can; those who cannot are kept by those who can.
+  (once) Music, stories and the old songs are kept, as the heat is kept, for everyone, with {instrument} at every gathering.
+  (once) The record of the days is kept and read aloud [so that no one forgets how long it has been|at every gathering|on the day the sun last rose].
+  (once) No one may be sent up into the cold as a punishment.
+  (once) The {craft} of the {people} is taught to every child below, as it was taught above.
+  (once) {feast.custom} is kept below, every year, whatever the stores.
+dh.ch.end (formula people=3)
+  This is the charter. It holds until the sun comes back.
+  Agreed below, by all. Read it to the children.
+  We keep this together, or we do not keep anything.
+
+dh.am.head (formula people=3)
+  (darkyears>=1) Amendment to the compact of {hall.below}, agreed at the {#darkyears:ord} reading:
+  (dark=2) Amendment to the compact of {hall.below}, agreed before the last sunrise:
+  To the charter of the deep levels at {$home}, these changes, agreed below:
+  Changes to the compact, voted on every level and carried:
+dh.am.item (share=0.8)
+  (once) The rations of {dark.food} are cut by a [quarter|tenth|fifth] until the new beds come in.
+  (once) The upper levels are given up; their doors are sealed and the frost let in.
+  (once) Children may go up to see the stars from their [tenth|twelfth] year, with a warden.
+  (once) The {herd} are to be [killed and their meat shared|kept no longer; the beds need the warmth].
+  (once) The {#n:ord} level is closed; its households move down to the warm levels.
+  (once) The names of the dead are to be read at {festival}, not only at the burial.
+  (once) A second shaft is to be cut to the warm rock below the lowest level.
+  (once) The wardens are to be chosen by lot from now on, the votes having become quarrels.
+  (once age>=futuristic) The mind of the levels may reduce the lights without a vote when the heat falls.
+  (once) Anyone who has not been up to see the stars by their twentieth year is to be taken up once, at least.
+  (once) The {drink} stores are to be opened only for {festival} and for the sick.
+  (once) Nobody is to wager {food} on {pastime} any more.
+dh.am.end (formula people=2)
+  Carried below. The charter stands as amended.
+  So agreed. Read at the next gathering.
+)VG"

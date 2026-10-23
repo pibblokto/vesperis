@@ -148,6 +148,10 @@ log.omen
   ($e.omen=comet) {mod.lg.tag} Comet visible at dusk. Recorded. {mod.lg.ack}
   ($e.omen=eclipse) {mod.lg.tag} Eclipse observed, {#n|minute} of totality. {mod.lg.ack}
   ($e.omen=aurora) {mod.lg.tag} Aurora in the north all night; radio poor. {mod.lg.ack}
+  ($e.omen=wanderer 3) {mod.lg.tag} The wanderer at a new brightness record; its orbit predictions revised again. {mod.lg.ack}
+  ($e.omen=intruder 3) {mod.lg.tag} The intruding star nearer again this season. {mod.lg.ack}
+  ($e.omen=bent 3) {mod.lg.tag} Star positions near the dark object displaced again. {mod.lg.ack}
+  ($e.omen=dance 3) {mod.lg.tag} The companion's separation increased again. {mod.lg.ack}
 log.contact
   {mod.lg.tag} Contact with the {other} at {$e.place}. Protocols applied.
   {mod.lg.tag} First signal from the {other}, received at {$e.place}. {mod.lg.ack}

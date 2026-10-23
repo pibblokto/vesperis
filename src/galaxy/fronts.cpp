@@ -41,7 +41,7 @@ Front makeFront(const Body& b, int k, int64_t e, double P, double phase) {
     f.tempDrop = 3 + 8 * r.uni();
     f.bow = (r.uni() < 0.5 ? -1 : 1) * (200 + 400 * r.uni()) * 1e3;
     f.seed = b.seed ^ FRONT_SALT;
-    f.dust = b.type == PT_DESERT || b.type == PT_THINATMO;
+    f.dust = kindHas(b.type, KT_DUST);
     return f;
 }
 
@@ -78,8 +78,8 @@ double frontWindProfile(double x) { return x >= 0 ? smoothstep(350e3, 30e3, x) :
 double frontColdProfile(double x) { return smoothstep(20e3, -80e3, x) * smoothstep(-900e3, -500e3, x); }
 
 bool worldHasFronts(const Body& b) {
-    if (!PLANET_TYPES[b.type].atmosphere || hasOpaqueDeck(b.type)) return false;
-    return b.type == PT_FELISIAN || b.type == PT_OCEAN || b.type == PT_DESERT || b.type == PT_THINATMO || b.type == PT_ACIDIC || b.type == PT_QUARTZ;
+    if (!bodyHasAir(b) || hasOpaqueDeck(b.type)) return false;   // D-04: an air fallen as snow in the dark carries none
+    return kindHas(b.type, KT_FRONTS);
 }
 
 int frontSlots(const Body& b) {

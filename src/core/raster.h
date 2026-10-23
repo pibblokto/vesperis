@@ -35,6 +35,8 @@ struct FacePattern {
     double dark = 14;                        // shades under the wall
     int litBank = -1;                        // >= 0: the window glows, drawn in this bank at `litShade` whatever the light
     double litShade = 50;
+    double litShare = 0;                     // D-04: > 0: that share of the window cells lit, by a hash of the cell, and where the pattern fades to its mean its lit windows stay a
+                                             // scatter of points (a city's lights left on, from afar); 0: every window lit where `litBank` (the far future's)
     double fromV = 0;                        // no windows under this height
     double meanShare = 0.2;                  // the window's share of its cell (the far mean)
     // R-412: the people's dress on its walls, by the face's own metres as the windows are: a surround round each window `frame` wide (a share of

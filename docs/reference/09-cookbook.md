@@ -1,16 +1,270 @@
 # Cookbook
 
-## Add a planet type
+## Add a kind of world (P-00)
 
-1. `galaxy/system.h`: add the enum value before `PT_COUNT`; `system.cpp`: add a `PLANET_TYPES` row (name, description, radius range, landable, atmosphere, max moons, albedo), a `typeColor` case, and weights in `pickPlanetType` (every zone that may host it, plus star-class and moon modifiers).
-2. `galaxy/planetmap.cpp`: `BodyGen::make` case (amplitudes, densities, colours) and a `sampleSurface` case built from the `fb/rg/crater/domeField/volcanoField` helpers; assign materials, albedo, relief, veg, glow.
-3. `surface/surface_view.cpp`: `lookFor` case (ground/secondary/tertiary colours, sky colours, fog distance, sky density, clouds), `materialLook` bank choices if the type uses new materials, rock density in `drawObjects`, pressure in `computeEnvironment`, any temperature offset.
-4. `game/game.cpp`: `shortType` name table (10 chars max); landing map `matCol` if a new material was added (also in `main_headless.cpp`'s map renderer and `MATERIAL_NAMES`).
-5. Run `./vesperis_test maps`, `space`, `surface <id>` and look at the PNGs.
+A kind is a row of `KINDS` (`galaxy/kinds.cpp`, `buildKinds`) and, where no ground function fits, a ground function. The code
+paths read a kind's row or its tags; a kind is named in code only where it is the rule itself (the home world is felisian, a
+comet and a companion star are made apart from the pick, a giant's volcanic moon feeds its torus). A pixel loop reads the
+tags it needs before the loop (`drawGlobe`'s `gasGiant`, `glows`, `deck`, `matBank`): read at every pixel, the table's loads
+cost the space view 3-5%.
+
+1. `galaxy/kinds.h`: the id before `PT_COUNT` (never between: the ids are saved keys, the guide's walked kinds and the
+   harness's arguments; `Rng::pick` falls through to the last id on rounding, so a kind's place in the pick matters only
+   at its end). The checks at the end of `kinds.cpp` refuse a row left out, out of order or incomplete.
+2. The row in `buildKinds` (the existing rows are the examples):
+   * identity: `identity(...)` (the name, unique and safe as a file name; the short name, ten characters; the data
+     sheet's line; the radius range; landable; air; the moons; the albedo), the density, the ring chance, the sentence
+     (`sentence(k, SR_..., ...)`: one phrase, a coin, or a phrase chosen by a parameter of the body);
+   * the tags (`KT_...`: what the code paths read, the groups a kind shares: air with fronts, a sea, flora, a people's
+     world, the giants, the lava worlds...) and the shapes (`KS_...`: the processes that act on its ground; a trait is
+     eligible where a process it needs acts, `TRAITS`);
+   * generation: the zone weights (`zones(k, >600 K, 345-600, 205-345, 120-205, <120)`) and its answer to every
+     star-class rule (`rule(k, WR_..., mul, add)`, `moons(k, ...)`; the Wolf-Rayet wind strips its air by itself), its
+     colour from afar (`colour(k, ch(base, var), ...)` or `palette4`);
+   * the body: `make`'s draws in order (`draw(k, GF_..., lo, span)`; a draw the kind does not make keeps the
+     generator's default), the second colour and the sky tint (`tintOf`), the relief's grades (`k.relief`), the palette's
+     mixes (`mix(k, MAT_..., MM_..., tint, t)`), the family representatives (`famRep`), the exotic sea, the accents (a
+     kind without flora may lend its grass and forest banks to two materials of its own: `accent`);
+   * the ground: `ground` (an existing `GR_...` function shares its code; its parameters are the kind's draws), the
+     plains (`plainK`, `gullyK`), the drainage's area factor, the crater stack (`crater(k, ...)`: the grids
+     `sampleSurface` sums, the ones marked `sight` the landmarks' crater grids);
+   * the look and the air on the ground: the sky (`SKY_TINT`, `SKY_THIN` or `fixedSky`), the fog, the sky's density,
+     the cloud layer, the night (`night`), the far floor's family, the boulders (`rocks`), the snow, the aurora's style,
+     the pressure (lo + span x a hash), the temperature (offset and swing with air, the ground's own heat), the wind,
+     the rain (`RAIN_CLOUDS` with its threshold and span, `RAIN_DRIZZLE`), the dust storms' threshold;
+   * the events (`EV_...`: eruptions, fountains, strikes, quakes, devils, vents, jets; `eventMaterial` the ground an
+     event stands on) and the rumble.
+3. A ground of its own: a `static void groundX(GroundCtx& c)` in `galaxy/planetmap.cpp` beside the others: its base,
+   then `c.relief(h, rel, hf, reliefAmp(g, rel, hf))` (the relief spectrum, the cliff bands and the plains, the traits'
+   landforms), its features (`c.fb`, `c.rg`, `c.crackAt`, `c.craterStack`, the feature fields), its material, albedo and
+   relief; a `GR_...` id and name (`GROUND_NAMES`) and its case in `sampleSurface`'s dispatch. A material that matters on
+   the ground at a scale the far rings do not draw follows B-404's rules (`matVisible`, `featFade`).
+4. A new material: `Material` (before `MAT_COUNT`, 32 at most), `MATERIAL_NAMES`, the meso tile and its variants
+   (`surface/textures.cpp`), the harness's `matCol`; its family (`matFamily`), or an accent of the kinds that use it.
+5. Look: `vesperis_test kinds <NAME>` (the globe, the world map in its own colours, the row's facts, standing, from 350 m
+   up and its event staged: `shots/tests/kind_<NAME>.png`), `survey` (its share and its materials), `maps`, `space`,
+   `surface <id>`, `landmaps`, `consistency`, `traits`; `unit` checks the rows. A kind that changes what is generated
+   bumps `GEN_VERSION`.
+
+### A kind made from the old draws (P-01)
+
+1.4.0's kinds take no place in the pick (a weight anywhere would re-deal every system: the totals, `typeColor`'s extra draw,
+the twin's chance, the moons' counts). The row has no zone weight and no rule (the checks refuse one), a `family` (the
+milestone's: `kinds <family>` writes its sheets) and a `salt` of its own, and one to three sources: `source(k, of(PT_...),
+tLo, tHi, KB_..., stars, lock, share)`, the drawn kinds it replaces (`of` takes up to three; two sources for two shares), the
+band of equilibrium temperature (the game's scale: the inner orbits reach 350-500 K), the bodies (`KB_PLANET` of the
+primary, `KB_COMPANION_WORLD`, `KB_TWIN`, `KB_MOON`), the star classes (`of(STAR_...)`, 0 every class; `LIVE_STARS` the stars
+a giant could have lived beside), 1 locked to its star or -1 turning, and the share of the qualifying worlds. `kindOf` tries
+the made kinds in id order, so a kind later in the table takes what the earlier ones left of a drawn kind. A world with a
+people never changes. The draws stay the drawn kind's: the size comes from the made kind's range on the same draw, the
+colour from its row by hashes, the rings by its own chance where it differs, `untilted` takes a locked world's tilt. Then:
+`survey` says how many changed and from what; `build/p01/stream.cpp` (built against the last release's sources and the
+tree's) proves every draw held; the pinned test worlds (`10-decisions.md`, P-01) are checked.
+
+**A kind on the felisian layer (P-02).** A living kind is a row whose `ground` is `GR_FELISIAN`: the climate, the biomes, the seas, the
+drainage, the flora, the animals and the sounds come with it, and the row says how its world differs (`greenhouseK`, `latGradient`,
+`seaDepth`, `grassBand`, `daySwing`, its draws: the sea level, the ice cap, the snow line, the moisture, `GF_ISLANDS`, `GF_CONT_SCALE`;
+`floraFamily`, `favourTrait`, `fauna`). A way of its own that the layer has not got is a tag (`KT_MICROBIAL`, `KT_ICE_SHEETS`) read where
+it acts, never a test of the kind; every new term reads its field only where the field is not the felisian's, so the felisian world's
+bits stand (`build/p02/fp2.cpp` proves every unmade body the same, field by field and sample by sample). A source `byStar` hashes the
+system's star (every world of a young star alike). Pin a salt where a test world or the home world would move (`build/p02/salt.cpp`).
+A trait the kind should never draw takes a process of its own (P-02 split the snowball's `KS_FREEZE` off the open sea: every kind that
+had the sea got both, so no list moved).
+
+**A kind of the locked, or of a moon's planet (P-03).** A source with lock 1 takes a world that keeps a face to its star; give the row
+`untilted` (the tides took the tilt, so the sun stands still over one point) and, for a climate round the substellar point, `KT_FIXED_SUN`
+(the wind steady toward it; on the felisian layer `subContrast`, `ringWet`, `dayDry`, `daySeasDry`, a sheet `sheetByCold`; on the ground
+`reachClimate`). A planet made such a kind that then draws a twin is made again as one whose day is not its year (`generate`): nothing to
+do but know it. A moon's source may name its planet's drawn kinds (`source(..., byStar, of(PT_SUBSTELLAR))`: the brown dwarfs' moons).
+A made world that grows pushes its moons out; the companion's clearance and the comets read the drawn orbits, so no star moves. Check
+the regress's and the bench's worlds after a new source (`build/p03/salt.cpp` finds a salt that leaves them as drawn).
+
+**A dead kind (P-04).** A world that was a living kind and died: `thenGround(k, K[PT_FELISIAN])` gives the row the living kind's draws,
+relief, greenhouse and tints (the same ground in both times) and its `thenKind`; a `cover` says what the present laid over it (a branch at
+the end of `felisianSample`: change materials and the water, never a dry place's height, or a town floats); `peopleShare` and `peopleSalt`
+its own peoples (C-01's hash never fires on a made world); `elsewhere` for a kind made where no system is (no source: the harness stages
+it, `stageElsewhere`). Every reader of a people's world goes through `thenWorld` already (B-419's `unseasoned` for the living), and what
+the present did to its ruins reads `nowKind` (`cultureOf`'s weathering, `readSite`'s drifts and frozen shores); `unit` checks every dry
+place of its test worlds' plans stands at the then-world's height.
+
+**A body of its own step (P-05's wanderer).** A body no draw of the system makes (a rogue world a star caught) is appended after the system's
+own in `StarSystem::generate`, from a stream of its own (`Rng` seeded by a hash of the star's seed with a salt: no draw of the system's, so
+every other body keeps its index and its draws) and by a share of systems on that hash; its kind is `elsewhere` (no source in `kindOf`). Keep
+it clear of what the system's rules promise (B-425's far companion: the new body is the primary's farthest world), flag it (`Body::wanderer`)
+where a reader must know (no people: `BodyGen::make`), and run the stream against the last milestone's sources (`build/p05/stream.cpp`,
+`analyze.py` keyed by system and index): every old body's draws the same, the new bodies extra. A moon class no kind took before (the
+captured moons, `KB_CAPTURED`) goes through `makeKind` with a body bit of its own, so the earlier kinds' sources (which name `KB_MOON`) take
+none of them.
+
+**A kind made from what a moon is (P-06's strange moons).** A source names a moon's facts among its planet's moons (`KindSource::moon`, the
+`MoonFact` bits: inner, outer, facing, turning, resonant, large, small as drawn) with `KB_MOON` and, where it is a giant's, `parents`; the
+moon loop of `generate` reads them from its draws before `makeKind` (`KindFacts::moon`: nothing drawn, so nothing moves). A new fact is a bit
+of the enum read there from what the loop already has (never a new draw), and the sources that do not name it take a moon whatever it is.
+Do not reuse `lock` or `sync` for a moon: the living kinds' `lock -1` sources take every body, and their moons would change. A fact a reader
+needs later on the body itself (the two-faced moon's apex, `Body::apexDir`) is set at the end of `generate` for the kind that reads it only,
+from the orbit's elements rather than its positions (four `bodyPos` a moon by differences doubled the generator's time). A test system's moon
+the stream shows changed is kept by pinning the kind's salt with `build/p06/salt.cpp`, a fact the body cannot give back (the resonance, the
+drawn size) taken to qualify.
+
+**A giant made from a world (P-07's giants).** A made kind with `KT_GIANT` needs a class (`KindDef::giantClass`, `GiantClass` in `kinds.h`):
+the globe's ramp and night side (`space_view.cpp`'s `bodyRamp` and `drawGlobe`), its bands and storms (`giantGlobe`), its kind in the probe
+(`GiantKind` in `galaxy/probe.h`: its deck list, heat, glow, haze, stratosphere, winds) and its light in the descent (`MadeLight` in
+`game/probe.cpp`) read it, and a class whose look is its warmth gives its one-bar temperature across its band of the game's temperatures
+(`oneBarLo..Hi` over `oneBarTLo..THi`). Made from a world, it keeps the drawn world's moons (pushed out three of its radii by `clear`: the
+companion and the comets read their drawn orbits): a twin drawn after it makes it again by the facts it was made by with no giant
+(`drawnFacts`, `KindFacts::paired`), and so does a people's moon it would push (the moons drawn again from the state the planet's turn began
+with: `rngAt`). The X-03 ice giant is a drawn gas giant's: `isIceGiant` reads the class. The salts of the drawn giants' classes were pinned
+with `build/p07/salt.cpp`, which reads the test systems' planets (and B-427's Wolf-Rayet giant) against every source of the kinds.
+
+## Add a trait (Q-01)
+
+A trait is a row of `TRAITS` (`galaxy/kinds.cpp`, `buildTraits`) and what reads it.
+
+1. `galaxy/kinds.h`: the id before `TR_COUNT`, after the given ones (`TR_GLASSED`, `TR_CIVILISATION`): R-304's draw lists the traits of
+   `TK_FIRST` in id order, so a trait among them would re-deal every world's first three slots. `traitsOk` refuses a new slot's trait before
+   the given ones, a trait without a kind, a landform that does not move the ground.
+2. The row: `landform(T, id, NAME, phrase, needs, excludes)` for a landform (`TK_LANDFORM`, `moves`), or a `TraitDef` with its kind of trait
+   (`TK_WATER`, `TK_SKY`, `TK_LIFE`, `TK_GROUND`, `TK_SOUND`): the name (the data sheet's `TRAITS`), the sentence's phrase (`", ..."`), the
+   processes it needs (`KS_...`, any one; a process of its own is a bit the kinds that have it take in `buildKinds`' Q-01 block, so no other
+   trait's list moves), a colour trait (one a world), the trait it never comes with (both rows say it), `moves` when it moves the ground or
+   what a people's plan reads (then never on a world with a people nor on the home world). The new slots find it by its kind: nothing else to
+   wire for the draw.
+3. A landform: its case in `landformsAt` (`planetmap.cpp`): its province (`prov(k, lo, hi)`, a k of its own), its terms (`dhSmooth` moves
+   the smooth ground the rivers and lakes are cut into, `dhFine` the ground alone, `flatten`), the fades (`featFade` by a shaped feature's
+   width, `lodFade` a periodic pattern's, `matVisible` where a material may be decided: B-404, never by a faded value), its material
+   (`setMat`), its `mark` (1 where it is most itself: the galleries' spot and the scanner's samples) at every scale the scanner's 500 m scan
+   reads. Point features stand on a grid of their own (`PointGrid`) with their sizes from the hit's hashes, read by the landform and by
+   `landformFeatures` alike.
+4. Its sight: a `LandmarkKind` before `LM_COUNT` (its name and glyph, `landformSight`, `SCAN_ORDER`, `SCAN_MODE_NAMES` (twelve characters at
+   most: the HUD's panel), `echoDetail`, auto-explore's weight and where it stands), its finder in `sightsOfCellUncached` (points from
+   `landformFeatures`, kept where their ground carries the mark; a field from the cell's scan, `SurfaceSample::landformTrait`). The guide's
+   file maps the kinds after `LM_WORK` one up (`markKindToFile`): nothing to do.
+5. A world trait reads its parameters in `make`'s switch (`for k < TRAIT_SLOTS`), the palette, the look or the surface by `hasTrait`.
+6. Look: `traits <name>` (`traits new`: the new slots' landforms), `unit` (the slots' rules, the first three slots' hash against P-07's,
+   each new landform's mark and sight), `matlod` (B-404), `regress` (a regress world that drew it moves its map: look, then bless).
+
+
+## Add a quality (Q-02)
+
+A trait of the water, the sky, the life or the ground (not a landform) is a row as a landform is (`Add a trait`), `quality(T, id, NAME, phrase,
+needs, kind, moves, colour, excludes)`, and what draws it.
+
+1. Where it needs a fact of the world besides its kind's process (a forcing, a field, a warm sea), its test in `traitFits` (`planetmap.cpp`, read
+   by the new slots' draw): a fact the generator can read from the `Body` (a derived one is set in `StarSystem::generate`'s last step, no draw).
+2. `moves` when it moves the ground or what stands on it, or takes one of the second people's palette banks on the ground (25-27: free on a world
+   without a people); a trait of the sky or a sea's light leaves it off, and then it may come to a people's world and the home world.
+3. What it does: a field in the ground (`landformsAt`, `qualityWater`, a ground function), a colour (`materialPalette`; a water's second colour
+   through `SurfaceSample::waterTint`/`lifeTint` and the vertex's and the map's channels; the ground's through `groundTint`), the sky
+   (`drawSky`, `computeEnvironment`), objects (an enumerator the drawing and the colliders share, as `forMeteorites`), the globe (bank 31: the
+   first disc's water colour). Every field unfaded where it decides a material or a colour (B-404).
+4. Its sheet: a case in `qualitySheet` (`main_headless.cpp`): the frames at the hour and the place it shows, beside the frame without it.
+
+## Add a sound of the ground (Q-03)
+
+A trait heard, not seen: its row is a quality's (`TK_SOUND`, `moves` false: it may come to a people's world and the home world).
+
+1. The cue in `SurfaceView::updateGroundSongs` (`surface_view.cpp`, each frame): a level of the surface's (0..1) from what the explorer or the
+   vehicle stands on and does and from the hour; a field of the planet function's where it needs the ground's shape (as `slipFace`: an output
+   beside the others, no height or material moved), read at the near ring's 4 m where its wavelength is short. One-shots a cue of their own
+   (`quakeCue`), consumed by the game.
+2. The level in `AudioState` (`audio.h`): cleared in `surfaceOff` (B-413: nothing of the ground aboard), set in `groundSoundsTo`
+   (`game_states.cpp`; the harness's scenes hear through it too), as much of it as `air` carries.
+3. The sound in `AudioSynth::groundSample` (`audio.cpp`): its smoothing in `render`'s loop, its filters' constants in `coefs` (F-07), its gate in
+   `render`'s call (silent costs nothing).
+4. Its levels: a row of `groundSounds()` (`main_headless.cpp`): `vesperis_test sounds` writes its WAV with the peak and the rms, and the unit
+   check bounds them (none at the synth's clamp, the master's 0.8; none silent). A scene with its cue (a finder code and a few lines in the scene
+   runner), and the cue check: where its world has it and not without the trait.
+## Reach a place that is not a star, or read the sun where there may be none (D-01)
+
+A drifter is a place as a star is: a `Star` of class `STAR_ROGUE` in a sector without a star (`galaxy/drifters.h`), its key the sector's.
+
+1. A key that names a place turns into it through `placeInSector` (the sector's star, else its drifter), never `starInSector`: the save, a
+   target, the history, a record's world, a chart's mark. `starInSector` stays where the stars alone are meant: the star field, the
+   neighbourhood and what is drawn from it (the aim, the star map, `N`), the jumps, a new game's home, the radar's scans of the stars.
+2. A reader of the sun asks `StarSystem::sunless()` where the stars' rule would light or place something: `lightAt` (factor 0), `seasonOf`
+   (0) and `SurfaceSite::sun` (the nadir, no light) already answer for a drifter, so a reader of those needs nothing; one that reads
+   `star.pos`, `star.radiusKm` or `star.luminosity` itself does (body 0 sits on the anchor: `normalize` of a zero vector is (0, 0, 1), and a
+   division by the distance to the sun is a division by zero there). The almanac's finders skip the sun's events by it.
+3. A ship's arrival, its Vimana's end and anything that stands off a place: a drifter's distance is its body's (`drifterStandOffKm`), not a
+   star's first orbit (0 there).
+4. `vesperis_test rogues` flies to the nearest landable drifter and lands; `unit`'s drifter checks look for undefined numbers from the anchor,
+   a lit place or a season, a save that does not come back.
+
+## Let the radar hear a new kind of source, or draw where no sun shines (D-02)
+
+1. A signal kind is appended to `SignalKind` (never inserted: the guide's `signal` lines keep a lock's kind), with its name in
+   `SIGNAL_KIND_NAMES` (the harness's; the game shows none), its sound in `AudioSynth::channelSample` (a `case` of its own, or a kind's
+   whose sound it borrows for now), a line in `signalSourceLine` and the harness's `signals wav` names.
+2. Where it is heard from: a population of sources far off is a layer of `SignalScan` (its cells, its own reach at the dial's top so the
+   scan's box is right, each candidate tested by its own law before any system is generated, the list kept whole for the dial to filter by
+   `needGain`); x1 is C-07's list by rule, so a new law gives nothing at x1. A source of the system the ship is in is a branch of
+   `localSignals`. C-15's unit check measures the peoples and the pulsars by their law; a new kind is left out of it and gets a check of
+   its own (`drifters: heard by their own law`).
+3. The lock: its readout, status and log in `renderRadarCamera` and `radarLock` say what the explorer may know (the sound tells, the
+   readout never does), and its key in `Guide::signals` is the one the chart and `N` read (a sector's key is the place's).
+4. A globe, a map or a sky drawn in a sunless system asks `sys.sunless()`: in space the band's light (`galaxyBandLight`, kept with the
+   band's build) is its floor and every term of the sun's is off (`lit` -1); a map colours by `mapColor`'s `survey` with the map's height
+   range (`surveyRange`). Their numbers, not their pictures, prove a dark frame (`rogues heard` prints a disc's middle row).
+
+## Give a signal a voice of its own without moving another's (D-03)
+
+1. A kind's parameters are drawn in `AudioSynth::rvDerive` from the seed by `u(k)`; a new voice takes indices no kind reads yet (D-03's
+   from 161, in a function of its own called at the end of `rvDerive`), so every old parameter, and every old sound, stays as it was. The
+   synth's noise is one stream (`AudioSynth::noise`): a new voice may draw from it, but only inside its own `case`.
+2. What the voice needs besides the seed travels on `AudioState` beside `radarKind` (`radarPulseHz`, D-03's `radarRogue`), with its twin for
+   the signal under the centred one (`radarKind2`, `radarRogue2`) kept by the synth while that one fades (`rdRogue2`); the radar sets both from
+   the `Signal`, which carries what its source is (`turnS`, `moonS`).
+3. Shared code moved for the new voice must keep its arithmetic: the programmes' machines moved out of `case 0` into `machineInto` add into
+   the caller's `sig` by reference in the old order, so a people's WAV is the same file.
+4. The proof is `signals wav` against the last binary's: every old WAV byte for byte, only the new kind's moving (`build/d03/verify.sh`).
+   Levels by rendered WAVs (C-07's rms 0.02-0.13, no peak at 1, at most 20 clipped); distinctness by voice prints against two signals of
+   one kind (`rogueDistinctness`); a picture of the sound (a spectrogram drawn by a scratch tool) shows what the numbers cannot, and the
+   synth's cost per second of sound matters (the game pumps it on the main thread): a band's coefficients made when the voice changes, a
+   slow pitch every 32 samples, a steady tone as a turning phasor.
+
+## Light the ground, or give a world in the dark something of its own (D-04)
+
+1. A light on the ground goes through `SurfaceView::lampAt(p, n)`, not a formula of its own: `setupLamps` sets the frame's lights once
+   (`LampLight`: a place, an axis, the cone's cosines, the falloff, the power, already scaled by the night), and every light formula adds
+   `(1 - ambient) x lampAt` (the ground's vertex light, each object's face or point; the flora raises its band's `light` and `leafBase` for a
+   tree or a cell). Scale a light by the night (`1 - sunUp`) as the vehicles' are, and keep it off when nothing is lit (`nLamps` 0): a
+   dayside's frame stays the same lit or not (a unit check), and the regress with it.
+2. A body's air is `bodyHasAir(b)` (D-04: an air fallen as snow in the dark is none), never `KINDS[type].atmosphere`: the site, the almanac,
+   the fronts, the aurorae, the landing map and the globe all read it.
+3. What only a drifter's world has is a `TK_DARK` trait (`dark` in `buildTraits`: given, never drawn; `darkTraitsOf` decides it from the
+   body), placed first in the new slots, and its ground behind `BodyGen::dark` (`darkGround` after the kind's own: no other world samples
+   it, so fp5 proves the rest unmoved). A process a body in the dark lacks goes into `DARK_LACKS` (or the frozen air's or the frozen seas'
+   masks) so the slots never draw a trait it cannot have. `thenWorld` clears `dark`: a people's time had its sun.
+4. A new kind for the drifters alone is made from the drawn one (`drifterBody`: the same uniforms in its own ranges, `drawnType` and
+   `drawnRadiusKm` kept), never a new row of `DARK_KINDS`: a weight added there re-deals every drifter's kind, their moons, their power
+   and their voices.
+5. A light seen from orbit is a point drawn over the globe after its disc (`drawDarkLights`): small ones as squares two pixels wider than
+   the scale (the frame's two passes of the mush keep their middle), in a bank whose ramp holds the light's colour at the shades drawn.
+
+## Give a people an end of its own without moving another's (D-05)
+
+1. A new cause goes after the drawn ones (`CAUSE_SUN_LOST` after the 37: `CAUSE_DRAWN` is the old count every pick runs over, `Rng::pick`
+   falling through to the last on a rounding), given where it applies (`peopleProfileOf`), never drawn; the tables sized by it grow in step
+   (`CAUSE_NAMES`, `CAUSE_KEYS`, `SCRIPTS`, `LEFT_BY_CAUSE`, the harness's cause tables) with a `static_assert` on each unsized one. A new
+   event kind, hazard, order or whither is appended too; where one must sit before others (`HE_SUN` before the families' kinds), every
+   table and every saved number of the kinds after it moves with it: prove the old histories with the event kinds mapped back
+   (`build/d05/recdump.cpp`).
+2. Every draw of the new people's own takes a salt of its own (the drifter's people, its way, its former sun, its works of the end, its
+   beacon), and none comes before a record's first uniform (it is the record's year, age and tone at once). A step that other peoples take
+   too (the inventions' stop, the ways' years, a cast's fallback) branches on the cause, so theirs runs as it did.
+3. Its records' words go in files of their own under `@apart` (or a guard `@apart key=value` for its lines in the shared rules): the
+   distinctive-word statistics never count them, so no other people's word becomes common. A shared rule the new people's facts reach
+   wrongly is swapped for it alone (`@instead cause=sunlost letter.apprentice letter.apprentice.lost`), never edited: an alternative's key is
+   its rule's name and its whole line, and a people's dialect reads the key. A new alternative in an existing rule must keep its rule's
+   flags (no directive, no stop where it has none) and never join a rule of one alternative (that changes `many`).
+4. A grammar file holds at most 16 KB (a unit check); a rule cannot continue in another file, so a full file's rule points at a new rule
+   elsewhere (`{ann.sunomen}`). A genre's `words=` is the check's alone: widening it changes no text.
+5. Prove it: the unit's pin over the age and scene worlds' peoples (their histories, catalogues, homes, texts and charts' marks), and
+   `recdump` over every 25th people's world near home against the last milestone's objects, byte for byte.
 
 ## Add a star class
 
-1. `galaxy/starfield.h/.cpp`: enum value and `STAR_CLASSES` row (code, name, description, colour, radius, variance, luminosity, mass, max planets, rarity, first orbit multiplier, minimum first orbit). Since S-01 a new class is a *variety* with rarity 0: it takes a share of one of the six families in `starVariety` (by region), so the stars it does not claim keep their class and the pinned sites hold; a family row with a weight of its own would re-deal every star.
+1. `galaxy/starfield.h/.cpp`: enum value and `STAR_CLASSES` row (D-01: before `STAR_ROGUE`, which stays the last: the picks over the classes stop at `STAR_DRAWN_COUNT`, and a drawn class appended after the drifters' would move it) (code, name, description, colour, radius, variance, luminosity, mass, max planets, rarity, first orbit multiplier, minimum first orbit). Since S-01 a new class is a *variety* with rarity 0: it takes a share of one of the six families in `starVariety` (by region), so the stars it does not claim keep their class and the pinned sites hold; a family row with a weight of its own would re-deal every star.
 2. `space/space_view.cpp` `drawSun`: glow multiplier and disc appearance branch (and the rays for compact stars; S-04: a pass of its own for a feature along the orbital plane, `discUp`; S-05: a feature round the star within a few radii goes in the glow's pass, widening `outerA` to reach it; S-06: a star that is not a disc of light at all takes a function of its own at the top of `drawSun`, `drawBlackHole` is the model, with the frame copied before it bends anything); `starNebulaPatches` if the star lights its own sky; `drawGlobe` if its worlds look different (S-05: `drawStrippedTail`; S-06: `drawAccretionStream` on the companion).
 3. `galaxy/system.cpp` `pickPlanetType`: class modifiers if the class should shape its worlds; `generate` for the locking, the companion chance (`pMultiple`, one entry per class) and `starActivity` for the star's activity (the aurora, the scene finders and the unit check read it).
 4. `game/hud.cpp`: radiation warning distances if hazardous; `galaxy/describe.cpp`: the data sheet's sentence. The star map's filter, the statistics and the analyzer read the table (S-02); nothing in the UI needs a change. A new class is the next code (the plan's table is renumbered as the classes arrive: S10 is the neutron star).
@@ -22,7 +276,7 @@
 
 ## Add a material
 
-`galaxy/planetmap.h` enum before `MAT_COUNT`; `planetmap.cpp`: `MATERIAL_NAMES`, `matFamily` (the bank it shares: a material of its own colour needs a family whose rep it recolours, as the glass recolours the water), `materialPalette` (its colour per body); `surface/textures.cpp`: `materialHasMesoTile`, a `buildMesoTile` case and the `mesoVariantName` row; `surface/surface_view.cpp`: the specular list if it glints, `drawObjects` and `collectColliders` if rocks avoid it; `main_headless.cpp`: the `matCol` of the map renderer. The landing map, the globe and the surface take the colour from `matColor`.
+`galaxy/kinds.h` enum before `MAT_COUNT` (P-01: the mud, the potash and the brine; P-02: the mats, the stromatolite, the crust and the moss); `planetmap.cpp`: `MATERIAL_NAMES`, `matFamily` (the bank it shares: a material of its own colour needs a family whose rep it recolours, as the glass recolours the water), `materialPalette` (its colour per body); `surface/textures.cpp`: `materialHasMesoTile`, a `buildMesoTile` case and the `mesoVariantName` row; `surface/surface_view.cpp`: the specular list if it glints, `drawObjects` and `collectColliders` if rocks avoid it; `main_headless.cpp`: the `matCol` of the map renderer. The landing map, the globe and the surface take the colour from `matColor`.
 
 ## Add a HUD readout
 

@@ -4,7 +4,7 @@ R"VG(
 
 # ---- the last orders ---------------------------------------------------------------------------------------------------------
 
-genre.orders (words=35..91)
+genre.orders (words=35..96)
   {orders.head} {orders.item} {orders.item} {orders.item} {orders.close}
   {orders.head} {orders.item} {orders.item} {orders.item} {orders.item} {orders.close}
 

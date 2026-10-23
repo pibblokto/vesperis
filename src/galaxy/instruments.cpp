@@ -159,14 +159,15 @@ struct Organology {
 
 double h01(uint64_t seed, uint64_t k) { return unitFromHash(mix64(seed ^ (0xC17A11ULL + k * 0x9E3779B97F4A7C15ULL))); }
 
-Organology organologyOf(const BodyGen& g, const Lore& L) {
+Organology organologyOf(const BodyGen& gNow, const Lore& L) {
+    BodyGen gTmp; const BodyGen& g = thenWorld(gNow, gTmp);   // P-04: the world in their time (a dead world's living one)
     Organology O;
     const uint64_t ps = loreSeed(g, L);
     O.seed = mix64(ps ^ 0xC17ULL);
     const Genome G = genomeOf(ps);
     // the world in their time: its flora's families give wood, stalks, gourds or pith; its animals bone, horn, hide and gut, chitin, the sea's
     // shells and coral; the cold ice, the volcanoes obsidian
-    const bool desert = g.type == PT_DESERT;
+    const bool desert = kindHas(g.type, KT_DRY);
     const int fam[2] = {g.floraFamily, g.floraFamily2};
     double wood = 0, cane = 0, gourd = 0, pith = 0;
     for (int f : fam) {

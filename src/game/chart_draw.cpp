@@ -271,6 +271,77 @@ bool starAt(const StarChart& C, const ChartStar& s, double& px, double& py) {
     return true;
 }
 
+// D-05: the sun's measure on the decoder, on the object its age and medium make (`baseStyle`'s backdrop): the disc year by year from the
+// onset (`sunCurve`): a row of suns painted or scratched smaller and smaller (their rays fewer, the years between them tallied under each), rings
+// inside rings with each measure's number (a page, an astrolabe's plate), a graph of the years against the disc in ink (an atlas's paper, a
+// print, a glass plate) or in light (a screen); `u` the reading's share (the measures appear one by one)
+std::string measureNum(double v) { return v >= 10 ? std::to_string((int)std::lround(v)) : fmt("%.1f", v); }
+void drawSunMeasure(Painter& P, const StarChart& C, double u, uint64_t hs) {
+    StarChart B = C; B.style = C.baseStyle >= 0 ? C.baseStyle : CHS_PAGE;
+    const uint64_t bkey = mix64(C.seed ^ (uint64_t)(B.style + 40) * 0x9E37ULL ^ (uint64_t)C.medium);
+    if (g_back.key != bkey) buildBackdrop(B, bkey);
+    drawBackdrop(P);
+    const int n = (int)C.sunCurve.size();
+    if (!n) return;
+    const int shown = u >= 0.75 ? n : std::max(1, (int)(n * u / 0.75));
+    const double first = std::max(1e-3, (double)C.sunCurve.front()[1]);
+    switch (B.style) {
+        case CHS_CEILING: case CHS_BONE: case CHS_VAULT: {
+            const bool bone = B.style == CHS_BONE, vault = B.style == CHS_VAULT;
+            const uint32_t sunCol = bone ? col3(84, 64, 44) : (vault ? col3(232, 192, 92) : col3(184, 74, 38)), mark = bone ? col3(70, 52, 36) : col3(36, 28, 22);
+            for (int i = 0; i < shown; i++) {
+                const double t = n == 1 ? 0.5 : (double)i / (n - 1);
+                const double x = BX0 + 20 + (BX1 - BX0 - 40) * t;
+                const double y = bone ? CY + 9 - 18 * t : CY - 20 + 26 * t * t;   // along the bone's axis; on the roof falling as they shrink
+                const double s = C.sunCurve[i][1] / first, r = bone ? 1.5 + 6 * s : 1.5 + 12 * s;
+                if (bone) P.ring(x, y, r, r, sunCol); else P.disc(x, y, r, sunCol, vault ? 255 : 220);
+                const int rays = std::max(0, (int)std::lround(9 * s));
+                for (int k = 0; k < rays; k++) {
+                    const double a = TAU * k / std::max(1, rays) + 0.3 * hashU(i, k, hs);
+                    P.line(x + (r + 1) * std::cos(a), y + (r + 1) * std::sin(a), x + (r + 3 + 2 * s) * std::cos(a), y + (r + 3 + 2 * s) * std::sin(a), sunCol, 200);
+                }
+                if (i > 0) {   // the years since the one before, a stroke for each (at most twelve)
+                    const int years = std::min(12, std::max(1, (int)std::lround(C.sunCurve[i][0] - C.sunCurve[i - 1][0])));
+                    for (int k = 0; k < years; k++) P.line(x - 6 + k, y + r + 6, x - 6 + k, y + r + 9, mark, 220);
+                }
+            }
+            break;
+        }
+        case CHS_ASTROLABE: case CHS_PAGE: {
+            const uint32_t ink = B.style == CHS_PAGE ? col3(70, 46, 30) : col3(80, 56, 20), red = col3(170, 52, 40);
+            for (int i = 0; i < shown; i++) {   // the rings, and their measures in a column at the middle, the last in red
+                const double r = 4 + 54 * C.sunCurve[i][1] / first;
+                P.ring(CX, CY, r, r, i == n - 1 ? red : ink, 230);
+                const std::string t = measureNum(C.sunCurve[i][1]);
+                drawText(P.c, CX - textWidth(t.c_str()) / 2, CY - 4 * n + 8 * i, t.c_str(), i == n - 1 ? red : ink);
+            }
+            break;
+        }
+        default: {   // a graph: the years along, the disc up
+            const bool scr = C.medium == RM_DRIVE || C.medium == RM_CRYSTAL || C.medium == RM_HUM || B.style == CHS_ROUTES || B.style == CHS_BEYOND;
+            const uint32_t ink = scr ? col3(110, 210, 230) : col3(30, 30, 30), grid = scr ? col3(28, 60, 70) : col3(176, 170, 160), dot = scr ? col3(230, 250, 255) : col3(150, 40, 34);
+            const int gx0 = BX0 + 24, gx1 = BX1 - 10, gy0 = BY0 + 16, gy1 = BY1 - 24;
+            for (int k = 0; k <= 4; k++) { const int y = gy0 + (gy1 - gy0) * k / 4; P.line(gx0, y, gx1, y, grid, 255, 1, 2); }
+            for (int k = 0; k <= 5; k++) { const int x = gx0 + (gx1 - gx0) * k / 5; P.line(x, gy0, x, gy1, grid, 255, 1, 2); }
+            P.line(gx0, gy0, gx0, gy1, ink); P.line(gx0, gy1, gx1, gy1, ink);
+            const double y0 = C.sunCurve.front()[0], y1 = std::max(y0 + 1, (double)C.sunCurve.back()[0]);
+            auto at = [&](int i, double& x, double& y) { x = gx0 + (gx1 - gx0) * (C.sunCurve[i][0] - y0) / (y1 - y0); y = gy1 - (gy1 - gy0) * C.sunCurve[i][1] / first; };
+            for (int i = 0; i < shown; i++) {
+                double x, y; at(i, x, y);
+                if (i > 0) { double px0, py0; at(i - 1, px0, py0); P.line(px0, py0, x, y, ink); if (scr) P.line(px0, py0 + 1, x, y + 1, scaled(ink, 0.5)); }
+                P.disc(x, y, 1.2, dot);
+            }
+            drawText(P.c, BX0 + 4, gy0 - 3, measureNum(first).c_str(), ink);
+            drawText(P.c, BX0 + 4, gy1 - 6, "0", ink);
+            const std::string ya = std::to_string((int)y0), yb = std::to_string((int)C.sunCurve.back()[0]);
+            drawText(P.c, gx0 - 2, gy1 + 4, ya.c_str(), ink);
+            drawText(P.c, gx1 - textWidth(yb.c_str()), gy1 + 4, yb.c_str(), ink);
+            if (shown == n) drawText(P.c, gx1 - textWidth(measureNum(C.sunCurve.back()[1]).c_str()) - 2, gy0 + 2, measureNum(C.sunCurve.back()[1]).c_str(), dot);
+            break;
+        }
+    }
+}
+
 // a 5 x 5 sign of the far future's own, from a hash (mirrored, so it reads as made)
 void farSign(Painter& P, uint64_t h, int x, int y, uint32_t col) {
     for (int r = 0; r < 5; r++) for (int k = 0; k < 3; k++) if ((h >> (r * 3 + k)) & 1) { P.px(x + k, y + r, col); P.px(x + 4 - k, y + r, col); }
@@ -320,6 +391,7 @@ void Game::renderChart() {
     bool held = chartUp && chartHeldKey == key && chartHeldIndex == shardWorld.base + idx;
     Painter P{canvas};
     if (!C.valid) drawTextCentered(canvas, CX, CY, "NO CHART", HUD_DIM);
+    else if (C.style == CHS_SUNMEASURE) drawSunMeasure(P, C, u, mix64(C.seed ^ 0xD4A3ULL));   // D-05
     else {
         const uint64_t bkey = mix64(C.seed ^ (uint64_t)C.style * 0x9E37ULL ^ (uint64_t)C.medium);
         if (g_back.key != bkey) buildBackdrop(C, bkey);

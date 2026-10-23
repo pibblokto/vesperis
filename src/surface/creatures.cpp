@@ -32,7 +32,7 @@ static double encounterChance(int biome) {
 void SurfaceView::planLife(const SurfaceSite& s, const Bestiary& B, uint64_t seed, std::vector<Critter>& critters, std::vector<Flock>& flocks, std::vector<Herd>& herds) {
     critters.clear(); flocks.clear(); herds.clear();
     const Body& b = s.sys->bodies[s.body];
-    if (b.type != PT_FELISIAN && b.type != PT_OCEAN) return;
+    if (!kindHas(b.type, KT_FAUNA)) return;
     Rng r(seed);
     int biome = s.sampleAt(0, 0, 16).biome;
     // flocks of the world's flyers
@@ -142,7 +142,7 @@ bool SurfaceView::planCellHerd(const SurfaceSite& s, const Bestiary& B, int gLat
 }
 
 void SurfaceView::updateHabitat() {
-    if (site.gen.type != PT_FELISIAN || !bestiary.landCount) return;
+    if (!kindHas(site.gen.type, KT_FLORA) || !bestiary.landCount) return;
     if (lastT - habitatT < 0.5 && habitatT > -1e8) return;
     habitatT = lastT;
     double px = inBuggy ? buggy.x : player.x, pz = inBuggy ? buggy.z : player.z;
@@ -312,7 +312,7 @@ void SurfaceView::updateLife(double dt, double t) {
             double nx = c.x + std::sin(c.heading) * c.speed * dt, nz = c.z + std::cos(c.heading) * c.speed * dt;
             double gy = site.groundHeight(nx, nz);
             double slope = std::fabs(gy - site.groundHeight(c.x, c.z));
-            bool wet = gy < site.waterAt(nx, nz) + 0.3;
+            bool wet = gy < site.waterNowAt(nx, nz) + 0.3;   // Q-02: the tide's
             if (slope > 0.6 * c.speed * dt + 0.3 || wet) { c.heading += 2.2; c.timer = std::min(c.timer, 1.0); }
             else {
                 double moved = std::sqrt((nx - c.x) * (nx - c.x) + (nz - c.z) * (nz - c.z));
@@ -385,7 +385,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         }
     }
     // ---- night eyes (M4-05): pairs of glints in the dark
-    if (env.skyBrightness < 0.3 && site.gen.type == PT_FELISIAN) {
+    if (env.skyBrightness < 0.3 && kindHas(site.gen.type, KT_FLORA)) {
         for (int i = 0; i < 8; i++) {
             uint64_t he = hash2i((int64_t)std::floor(camPos.x / 60), (int64_t)std::floor(camPos.z / 60) + i * 7, site.gen.seed ^ 0xE7E);
             if (h01(he) < 0.5) continue;
@@ -403,7 +403,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         }
     }
     // ---- swimmers: fins, a back arc, the odd breach, in deep water within 250 m
-    if (site.hasWater && (site.gen.type == PT_FELISIAN || site.gen.type == PT_OCEAN)) {
+    if (site.hasWater && kindHas(site.gen.type, KT_FAUNA)) {
         const Species* sw = bestiary.firstSwimmer() >= 0 ? &bestiary.species[bestiary.firstSwimmer()] : nullptr;
         double ssz = sw ? sw->size : 1.5;
         int ccx = (int)std::floor(camPos.x / 100), ccz = (int)std::floor(camPos.z / 100);
@@ -414,7 +414,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
                 double cx = (ccx + dx) * 100.0 + 20 + h01(mix64(hs + 1)) * 60, cz = (ccz + dz) * 100.0 + 20 + h01(mix64(hs + 2)) * 60;
                 double a = t * (0.03 + 0.03 * h01(mix64(hs + 3))) + h01(mix64(hs + 4)) * TAU;
                 double sx = cx + std::cos(a) * 25, sz = cz + std::sin(a) * 25;
-                double wl = site.waterAt(sx, sz);
+                double wl = site.waterNowAt(sx, sz);
                 if (wl < -1e8 || site.groundHeight(sx, sz) > wl - 1.5) continue;
                 double surf = std::sin(t * 0.7 + h01(mix64(hs + 5)) * TAU);   // above the water only part of the time
                 if (surf < 0.2) continue;
@@ -460,6 +460,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         double fog = fogOf(dist);
         auto shadeOf2 = [&](const Vec3& n, double mul) {
             double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+            if (nLamps) light += (1 - ambient) * lampAt(c0, &n);   // D-04: the explorer's lamp
             double s = 44 * std::pow(light, 0.7) * sp.tone * mul;
             return s + (63 - s) * fog;
         };

@@ -31,9 +31,17 @@ enum Cause {
     CAUSE_NUCLEAR, CAUSE_ENGINEERED_PLAGUE, CAUSE_CLIMATE, CAUSE_FOOD_SYSTEMS, CAUSE_CASCADE, CAUSE_WATER_WAR, CAUSE_FEWER_CHILDREN, // modern
     CAUSE_MACHINE, CAUSE_NANOTECH, CAUSE_GEOENGINEERING, CAUSE_FLARE, CAUSE_WORLD_WEAPONS, CAUSE_RETREAT, CAUSE_EXODUS,              // futuristic
     CAUSE_ELSEWHERE, CAUSE_PHYSICS, CAUSE_CHOSEN, CAUSE_UNDESCRIBED,                                                                 // far future
+    CAUSE_SUN_LOST,   // D-05: the loss of the sun, a drifter's people's alone (given, never drawn)
     CAUSE_COUNT
 };
-extern const char* const CAUSE_NAMES[CAUSE_COUNT];   // "famine", "an ice age", ... "something the records cannot describe"
+constexpr int CAUSE_DRAWN = CAUSE_SUN_LOST;          // D-05: the causes a pick draws among (A-01's 37: a rounding's fall-through stays on the last of them)
+extern const char* const CAUSE_NAMES[CAUSE_COUNT];   // "famine", "an ice age", ... "something the records cannot describe", "the loss of the sun"
+// D-05: how a drifter's people lost its sun (`PeopleProfile::sunWay`): a giant of its own system grew nearer each year and threw it out (planet-
+// planet scattering, the commonest; the giant a real world of the system it left), a star brighter each generation until there were two suns
+// and then neither (a flyby), the stars bent round a point where nothing shone and the year pulled apart (a black hole or a neutron star
+// passing), a companion sun stretching each year until one let go (the second sun's dance: only where the star it left has a companion)
+enum SunWay { SW_WANDERER = 0, SW_INTRUDER, SW_DARK, SW_DANCE, SW_COUNT };
+extern const char* const SUN_WAY_NAMES[SW_COUNT];    // "the wanderer", "the intruder", "the dark", "the dance" (the harness)
 bool causeWorldwide(int cause);   // it can end every people of a world at once (two peoples that ended together share one)
 int causeSpeed(int cause);        // 0 sudden (an impact, a flare), 1 over years, 2 over generations (the drying, the climate)
 
@@ -65,7 +73,8 @@ struct PeopleAge {
     int age = AGE_MEDIEVAL;
     std::vector<Era> eras;          // one per age passed, the oldest first; the last is the age reached
     int lastYear = 1;               // the people's count at the end
-    double endedYearsAgo = 2000;    // C-08's age: how long ago the end was (two peoples that ended together share it)
+    double endedYearsAgo = 2000;    // C-08's age: how long ago the end was (two peoples that ended together share it; D-05: a drifter's people's after
+                                    // it left its star, `drifterLeftYears`, so less: 30-90% of those years)
     bool radio = false;             // they had radio before the end (late in the industrial age, and every later age)
     int radioYear = 0;              // the year it began in their count (radio only)
     // H-02: how long each whole age ran for them, as drawn (the age reached was cut by the end: the history reads how far into it
@@ -73,6 +82,7 @@ struct PeopleAge {
     double fullYears[AGE_COUNT] = {0, 0, 0, 0, 0, 0};
 };
 PeopleAge peopleAgeOf(const BodyGen& g, int people = 0);   // the world's generator and which of its peoples (C-13; R-413: the second's age the first's)
+int peopleFirstAgeOf(uint64_t worldSeed);                  // D-05: the age a world's first people reached (A-01's first draw; the planet function's dark traits)
 // B-414 (2026-10-10): a world shows only the age its people reached. What it built, wrote and buried in its earlier ages is gone (built
 // over, cleared, worn away): its towns and works stand in its last age's way, its records were made and its dead buried in that age's
 // years, and the places it left before that age began are not on the ground. The first of those years in the people's count (1 at least)
@@ -94,10 +104,21 @@ struct PeopleProfile : PeopleAge {
     int economy = ECO_FARMING, economy2 = ECO_HERDING;   // what they lived by, first and second
     double values[VAL_COUNT] = {0.2, 0.2, 0.2, 0.2, 0.2};   // what they valued, the weights summing to one
     int faith = FAITH_ANCESTORS, rite = RITE_FIRE, holy = HOLY_HOUSE;   // what they believed (the god is the lore's), how they kept it, where
+    // D-05: a drifter's people (cause CAUSE_SUN_LOST): how the sun was lost (`SunWay`; -1 none), the giant of the system it left that threw it
+    // (the wanderer's way: an index of `formerSystemOf`'s bodies; -1 none), the year of their count the sun was last seen as a sun (the crisis's
+    // end: the last sunrise)
+    int sunWay = -1, sunGiant = -1, lastSunrise = 0;
     int stageAt(int year) const;    // the collapse's stage in a year of their count, the latest begun by its end (-1 before the warning)
     int eraAt(int year) const;      // the index of the era a year falls in (the first before it, the last after)
 };
 PeopleProfile peopleProfileOf(const StarSystem& sys, const Body& b, const BodyGen& g, int people = 0);
+// D-05: a lost sun's light in a year over its old light (1 before the onset, falling as the orbit widened, ten times as far by the last sunrise:
+// the inverse square, to 0 after it: the stars' alone); a year's dark (0 as ever, 1 dimming, 2 going, 3 gone: after the last sunrise); and the
+// dark of a year of a drifter's people's count from the generator alone (the profile's onset and last sunrise; 0 for every other people)
+double sunLightOf(int onsetYear, int lastSunrise, int year);
+int sunDarkOf(double light, int year, int lastSunrise);
+int sunDarkAt(const BodyGen& g, int people, int year);
+bool sunLossYears(const BodyGen& g, int people, int& onset, int& lastSunrise);   // D-05: a drifter's people's onset and last sunrise (false: none)
 // what the world says about the ways it could end a people (the cause's weights; H-02's disasters): a desert, a red dwarf's sun, the
 // volcanoes (0 .. 2.5), the system's comets and belts (0 .. 2.9), a cold world (0 .. 1), an eccentric orbit (0 .. 1), the water (0 .. 1.3)
 struct WorldRead { bool desert = false, redDwarf = false; double volc = 0, impacts = 0, cold = 0, ecc = 0, wet = 0; };

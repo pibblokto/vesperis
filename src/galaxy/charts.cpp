@@ -3,6 +3,7 @@
 #include "records.h"
 #include "signals.h"
 #include "peoples.h"
+#include "drifters.h"
 #include "core/rng.h"
 #include <algorithm>
 #include <cmath>
@@ -12,9 +13,10 @@
 
 // ---- H-05 (2026-10-10): the ways a chart was made ---------------------------------------------------------------------------------
 
-const char* const CHART_STYLE_NAMES[CHS_COUNT] = {"a cave's ceiling", "a carved bone", "a painted vault", "an astrolabe's plate", "a page of a codex", "an engraved atlas",
-                                                 "a photograph on glass", "a survey", "a navigation chart", "a chart of far places"};
-const char* const CHART_STYLE_KEYS[CHS_COUNT] = {"ceiling", "bone", "vault", "astrolabe", "page", "atlas", "plate", "survey", "routes", "beyond"};
+const char* const CHART_STYLE_NAMES[] = {"a cave's ceiling", "a carved bone", "a painted vault", "an astrolabe's plate", "a page of a codex", "an engraved atlas",
+                                         "a photograph on glass", "a survey", "a navigation chart", "a chart of far places", "the sun's measure"};   // D-05: the last
+const char* const CHART_STYLE_KEYS[] = {"ceiling", "bone", "vault", "astrolabe", "page", "atlas", "plate", "survey", "routes", "beyond", "sunmeasure"};
+static_assert(sizeof(CHART_STYLE_NAMES) / sizeof(CHART_STYLE_NAMES[0]) == CHS_COUNT && sizeof(CHART_STYLE_KEYS) / sizeof(CHART_STYLE_KEYS[0]) == CHS_COUNT, "a name and a key a way");
 
 int chartStyleOf(int age, int medium) {
     switch (age) {
@@ -38,6 +40,15 @@ std::string chartStyleLine(int style, int medium) {
         case CHS_PLATE: return "A PHOTOGRAPH ON GLASS";
         case CHS_SURVEY: return medium == RM_GLASS ? "A SURVEY ON GLASS" : (medium == RM_DRIVE ? "A SURVEY ON A DRIVE" : "A PRINTED SURVEY");
         case CHS_ROUTES: return medium == RM_DRIVE ? "A NAVIGATION CHART, A DRIVE" : "A NAVIGATION CHART, A CRYSTAL";
+        case CHS_SUNMEASURE:   // D-05
+            switch (medium) {
+                case RM_PAINTED: case RM_STONE: return "THE SUN'S MEASURE, PAINTED";
+                case RM_BONE: return "THE SUN'S MEASURE ON A BONE";
+                case RM_TABLET: case RM_SCROLL: case RM_CODEX: return "THE SUN'S MEASURE, A PAGE";
+                case RM_PLATE: return "THE SUN'S MEASURE, ENGRAVED";
+                case RM_PRINTED: case RM_GLASS: return "THE SUN'S MEASURE, A PRINTED GRAPH";
+                default: return "THE SUN'S LIGHT CURVE";
+            }
         default: return medium == RM_HUM ? "FAR PLACES, IN THE HUM" : "FAR PLACES, IN A CRYSTAL";
     }
 }
@@ -87,18 +98,21 @@ void chartSkyOf(const Star& home, std::vector<ChartStar>& out) {
 }
 
 namespace {
+// D-05: where a drifter was some years after its people's last sunrise: off the star it left along its way by its speed for those years (the
+// game's light year is 1.5e10 km: a few km/s for a century is a light year and more)
+Vec3 drifterThen(const StarSystem& dark, const Star& home, int yearsAfter) {
+    const Vec3 dir = normalize(dark.star.pos - home.pos);
+    return home.pos + dir * (drifterSpeedKms(dark.star) * std::max(1, yearsAfter) * 3.15576e7);
+}
 // the first people's world of a star's system, with its people's name and whether it had radio (A-01: only such a world is on
 // the air, `starSignal`)
 bool peoplesWorldOf(const Star& s, int& body, std::string& people, bool& onAir) {
     StarSystem sys; sys.generate(s);
-    for (const Body& b : sys.bodies) {
-        if (b.type != PT_FELISIAN && b.type != PT_DESERT) continue;
-        BodyGen g = BodyGen::make(b);
-        if (!worldHadCivilisation(g)) continue;
-        body = b.index; people = peopleNameOf(g); onAir = peoplesOnAir(g) != 0;
-        return true;
-    }
-    return false;
+    const int pw = systemPeoplesWorld(sys);   // P-04: C-01's kinds first, then a dead world's
+    if (pw < 0) return false;
+    const BodyGen g = BodyGen::make(sys.bodies[pw]);
+    body = pw; people = peopleNameOf(g); onAir = peoplesOnAir(g) != 0;
+    return true;
 }
 // H-05: a figure's name: the oldest age's are animals (the people's own way of saying one: plain, with a word of colour or of what it
 // does, its young or its tracks, a pair, a person's), the later ages' creatures, heroes and things (C-10's twenty-four among them),
@@ -228,7 +242,9 @@ int chartFarKind(const BodyGen& g, const Star& home, int k) { ChartMark m; int k
 // (the one the lore names), the rest a people (heard and near in turns) or a bright star by the chart's own coin; no star twice.
 // H-05: a chart of the far future marks a star thousands of light years off instead (`farMarkOf`); the sky's charts keep C-10's order
 // among themselves
-void chartMarksOf(const StarSystem& sys, const Body& b, const BodyGen& g, std::vector<ChartMark>& out, int countIn) {
+void chartMarksOf(const StarSystem& sys0, const Body& b0, const BodyGen& g, std::vector<ChartMark>& out, int countIn) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys;
     out.clear();
     const Star& home = sys.star;
     std::vector<ChartStar> sky; chartSkyOf(home, sky);
@@ -258,13 +274,23 @@ void chartMarksOf(const StarSystem& sys, const Body& b, const BodyGen& g, std::v
     // whether its year was one of their radio's: a chart drawn before it marks no voice (a near people that transmits is a world among
     // their bright stars to it, a far one nothing)
     std::vector<int> styles(count, CHS_PAGE); std::vector<char> canHear(count, listened ? 1 : 0);
+    std::vector<char> lostSun(count, 0);   // D-05: a drifter's people's chart of a year without the sun
+    ChartMark sunMark;
     {
-        const BodyGen wg = BodyGen::make(b);
-        std::shared_ptr<const RecordCatalogue> C = recordsOf(wg, g.seed == wg.seed ? 0 : 1);
+        const BodyGen wg = BodyGen::make(b0);   // D-05: the world's own generator (a drifter's, not its former orbit's)
+        const int which = g.seed == wg.seed ? 0 : 1;
+        std::shared_ptr<const RecordCatalogue> C = recordsOf(wg, which);
         std::vector<int> recs; recordChartRecords(g, C->count, recs);
+        int onset = 0, lastSunrise = 0;
+        const bool lost = sunLossYears(wg, which, onset, lastSunrise);
         for (int j = 0; j < count && j < (int)recs.size(); j++) if (recs[j] >= 0 && recs[j] < C->count) {
             styles[j] = chartStyleOf(C->entries[recs[j]].age, C->entries[recs[j]].medium);
             canHear[j] = listened && C->entries[recs[j]].year >= pa.radioYear ? 1 : 0;
+            if (lost && C->entries[recs[j]].year >= onset) lostSun[j] = 1;
+        }
+        if (lost) {   // the star that was their sun, as far as the drifter was from it at their end
+            sunMark.star = home; sunMark.body = -1; sunMark.how = 4;
+            sunMark.ly = length(drifterThen(sys0, home, peopleAgeOf(wg, which).lastYear - lastSunrise) - home.pos) / SECTOR_KM;
         }
     }
     std::set<uint64_t> used;
@@ -289,6 +315,7 @@ void chartMarksOf(const StarSystem& sys, const Body& b, const BodyGen& g, std::v
     uint64_t coin = mix64(g.seed ^ 0xC4A29ULL);
     int jj = 0, farK = 0;   // the sky's charts in C-10's order; the far future's in their own
     for (int j = 0; j < count; j++) {
+        if (lostSun[j]) { out.push_back(sunMark); continue; }   // D-05
         if (styles[j] == CHS_BEYOND) {
             ChartMark m; int kind = 0;
             if (farMarkOf(g, home, farK++, m, kind)) { out.push_back(m); continue; }
@@ -444,7 +471,9 @@ void chartStyles(const BodyGen& g, const BodyGen& wg, int which, int count, std:
 // within ninety degrees of it; the mark itself added dim when it is not among them: a far transmitter is a star of no
 // account in their sky), with the people's figures that fit whole within the field. H-05: and what its way shows; a navigation
 // chart the map of the people's neighbourhood with its routes; the far future's its far mark with the places where nothing is
-bool chartOf(const StarSystem& sys, const Body& b, const BodyGen& g0, const Lore& L, int index, StarChart& out) {
+bool chartOf(const StarSystem& sys0, const Body& b0, const BodyGen& g0, const Lore& L, int index, StarChart& out) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
     out = StarChart();
     BodyGen g = g0; g.seed = loreSeed(g0, L);   // C-13: the people's draws
     int which = recordChartIndex(g, L.records, index);   // T-04: past the fifty too
@@ -457,12 +486,43 @@ bool chartOf(const StarSystem& sys, const Body& b, const BodyGen& g0, const Lore
         out.medium = in ? C->entries[index].medium : RM_PAINTED;
         out.style = chartStyleOf(out.age, out.medium);
     }
+    bool lostSky = false;   // D-05: a chart of the dark after the last sunrise: the sky from where the drifter was by its year
+    if (out.mark.how == 4) {
+        std::shared_ptr<const RecordCatalogue> C = recordsOf(g0, L.which);
+        const int year = C && index >= 0 && index < C->count ? C->entries[index].year : 1;
+        int onset = 0, lastSunrise = 0;
+        if (sunLossYears(g0, L.which, onset, lastSunrise)) {
+            if (sunDarkOf(sunLightOf(onset, lastSunrise, year), year, lastSunrise) <= 2) {   // the dimming and the going: the sun's measure
+                out.baseStyle = out.style; out.style = CHS_SUNMEASURE;
+                static const int UNITS[5] = {60, 100, 120, 32, 24};   // the observatory's table's (`@suntable`, galaxy/genres.cpp)
+                out.sunUnits = UNITS[mix64(g.seed ^ 0xD055AULL) % 5];
+                const int from = onset - 1, to = std::max(onset, year), n = std::min(12, to - from + 1);   // from the last year of the whole sun
+                for (int i = 0; i < n; i++) {
+                    const int y = n == 1 ? to : from + (int)std::lround((double)(to - from) * i / (n - 1));
+                    out.sunCurve.push_back({(float)y, (float)(out.sunUnits * std::sqrt(sunLightOf(onset, lastSunrise, y)))});
+                }
+                out.centre = Vec3(0, 0, 1); out.up = Vec3(0, 1, 0); out.right = Vec3(1, 0, 0);
+                ChartStar cs; cs.star = out.mark.star; cs.dir = out.centre; cs.mark = true; cs.bright = 1;
+                out.markStar = 0; out.stars.push_back(cs);
+                out.valid = true;
+                return true;
+            }
+            out.from = drifterThen(sys0, sys.star, year - lastSunrise);
+            out.mark.ly = length(out.from - out.mark.star.pos) / SECTOR_KM;
+            if (out.style == CHS_ROUTES || out.style == CHS_BEYOND) out.style = CHS_SURVEY;   // the late ages' sky surveyed from the dark, not a map
+            lostSky = true;
+        }
+    }
     Rng rs(mix64(out.seed ^ 0x45C4A1ULL));   // the chart's own draws (its plate, its people's units)
     out.centre = normalize(out.mark.star.pos - out.from);
     Vec3 pole = std::fabs(out.centre.y) < 0.98 ? Vec3(0, 1, 0) : Vec3(0, 0, 1);
     out.up = normalize(pole - out.centre * dot(pole, out.centre));
     out.right = cross(out.up, out.centre);
     std::vector<ChartStar> sky; chartSkyOf(sys.star, sky);
+    if (lostSky) for (ChartStar& cs : sky) {   // D-05: the same sky, its figures theirs, seen from where the drifter was
+        const Vec3 d = cs.star.pos - out.from; const double d2 = std::max(length2(d) / (SECTOR_KM * SECTOR_KM), 1e-6);
+        cs.dir = normalize(d); cs.bright = cs.star.luminosity / d2;
+    }
     if (out.style == CHS_ROUTES) {
         // the map of their neighbourhood (the galaxy's heart up): their star in the middle, the brightest within CHART_MAP_LY and every one a
         // route reaches; the routes from their star to the star this chart marks and to the worlds of the peoples they knew, the near

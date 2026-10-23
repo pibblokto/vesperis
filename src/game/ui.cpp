@@ -50,11 +50,7 @@ void setHudScheme(int scheme) {
     HUD_SHADOW = rgb(0, 0, 0);
 }
 
-const char* shortType(int type) {
-    static const char* n[PT_COUNT] = {"MOLTEN", "CRATERED", "VENUSIAN", "FELISIAN", "ROCKY", "THIN ATMOS", "GAS GIANT", "ICY", "QUARTZ", "OCEAN", "METAL", "VOLCANIC", "CARBON", "SUBSTELLAR", "COMET", "COMPANION",
-                                      "EUROPAN", "TECTONIC", "DESERT", "HYDROCARB", "BOMBARDED", "ACIDIC"};
-    return n[type];
-}
+const char* shortType(int type) { return type >= 0 && type < PT_COUNT ? KINDS[type].shortName : "?"; }   // P-00: the kind's short name (ten characters)
 const char* compassName(double azRad) {
     static const char* names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
     int i = (int)std::floor(wrap2pi(azRad) / TAU * 8 + 0.5) & 7;

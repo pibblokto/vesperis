@@ -135,7 +135,7 @@ void SurfaceView::updateDrone(double dt, const Input& in, double t) {
         // the downwash: dust, snow or spray thrown up from soft ground or water under a low hover
         if (d.altAboveGround < 8) {
             int mat = site.lod0.at((int)std::floor(d.x / 16), (int)std::floor(d.z / 16)).material;
-            bool wet = site.waterAt(d.x, d.z) > -1e8 && site.groundHeight(d.x, d.z) < site.waterAt(d.x, d.z) - 0.2;
+            bool wet = site.waterNowAt(d.x, d.z) > -1e8 && site.groundHeight(d.x, d.z) < site.waterNowAt(d.x, d.z) - 0.2;   // Q-02: the tide's
             int kind = wet ? 1 : ((mat == MAT_SAND || mat == MAT_DUST) ? 0 : (mat == MAT_SNOW ? 1 : (mat == MAT_GRASS && env.rain > 0.1 ? 2 : -1)));
             d.puffAccum += dt;
             if (kind >= 0 && d.puffAccum > 0.08) {
@@ -216,9 +216,11 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
     RasterParams rpBody; rpBody.bank = 6; rpBody.grain = &grain; rpBody.grainScale = 3.0 * FB_SCALE;
     RasterParams rpDark; rpDark.bank = 0;   // the blacked-out sensor band, the lens, the fans
     double headGlow = d.lights ? 0.25 : 0.0;
+    const Vec3 lampP = base + upT * (0.6 * sc);   // D-04: the explorer's lamp on its hull (one point: it is a few metres long)
     auto shadeN = [&](const Vec3& n, double tint) {
         double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
         double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp;
+        if (nLamps) light += (1 - amb) * lampAt(lampP, &n);
         light = std::max(light, 0.16 + headGlow * std::max(0.0, dot(n, fwdT) + 0.5));
         double s = 48 * std::pow(light, 0.6) * tint;
         return s + (63 - s) * fog;

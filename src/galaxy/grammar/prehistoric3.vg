@@ -203,6 +203,10 @@ pre.mark.omen
   ($e.omen=eclipse) A sun cut black, with a ring round it: the day the sun went out.
   ($e.omen=aurora) Hanging lines, cut close: the lights in the north.
   ($e.omen!=comet $e.omen!=eclipse $e.omen!=aurora) Marks in the sky part of the {pre.bone.or}, cut fine: a sign over {pre.e.place.or}.
+  ($e.omen=wanderer 3) A circle cut beside the moon's signs, bigger at each turn: the wanderer, {pre.e.when}.
+  ($e.omen=intruder 3) Two suns cut side by side at one turn: the new star, {pre.e.when}.
+  ($e.omen=dance 3) Two suns cut far apart, a line between them broken: the second sun going, {pre.e.when}.
+  ($e.omen=bent 3) Marks cut in a ring round an empty place: the stars that moved, {pre.e.when}.
 pre.mark.quake
   The sign of {$e.place} drawn split in two: the ground opened {pre.e.when}.
   A crooked line across all the counts: the ground that moved at {$e.place}.

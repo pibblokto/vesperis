@@ -50,12 +50,12 @@ ProbeViewStats g_stats;
 
 // the clear air's optical depth from the top down to an altitude (the pressure sampled by its logarithm, resampled by the
 // altitude); kept while the atmosphere stays the same
-struct HazeTable { double z0 = 0, dz = 1; int n = 0; double key[7] = {0, 0, 0, 0, 0, 0, 0}; std::vector<float> K; };
+struct HazeTable { double z0 = 0, dz = 1; int n = 0; double key[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; std::vector<float> K; };
 const HazeTable& hazeOf(const GiantAtmosphere& a) {
     static HazeTable H;
-    const double key[7] = {a.t1K, a.gravity, a.hazeBar, a.top[0], a.base[a.decks - 1], (double)a.decks, a.top[1] + a.base[0]};
-    if (H.n && std::equal(key, key + 7, H.key)) return H;
-    std::copy(key, key + 7, H.key);
+    const double key[11] = {a.t1K, a.gravity, a.hazeBar, a.top[0], a.base[a.decks - 1], (double)a.decks, a.top[1] + a.base[0], a.hazeK, a.absorb, a.stratoW, a.rayleigh};   // P-07: the class's air
+    if (H.n && std::equal(key, key + 11, H.key)) return H;
+    std::copy(key, key + 11, H.key);
     const int NS = 4000;
     std::vector<double> zs(NS + 1), ts(NS + 1);
     for (int i = 0; i <= NS; i++) { double P = std::exp(std::log(1e-7) + (std::log(80.0) - std::log(1e-7)) * i / NS); zs[i] = giantAltitudeKm(a, P); ts[i] = giantHazeTau(a, P); }

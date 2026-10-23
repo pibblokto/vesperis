@@ -122,7 +122,7 @@ void Game::telescopeFindTarget() {
     };
     if (sys.valid && ship.mode != ShipState::VIMANA) {
         for (int i = 0; i < (int)sys.bodies.size(); i++) consider(i, sys.bodyPos(i, t), sys.bodies[i].radiusKm);
-        consider(TELE_SUN, sys.star.pos, sys.star.radiusKm);
+        if (!sys.sunless()) consider(TELE_SUN, sys.star.pos, sys.star.radiusKm);   // D-01: a drifter's place has no sun to aim at
     }
     if (tele.target != TELE_NONE) return;
     bestD = 14 * S;
@@ -295,7 +295,7 @@ void Game::testPlateCheck(int n, double& maxAlb, int& matMiss, double& maxH) {
         SurfaceSample ss = sampleSurface(g, u, p.texelM);
         double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
         double alb = ss.albedo;
-        if (g.type == PT_GASGIANT && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));
+        if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));
         maxAlb = std::max(maxAlb, std::fabs(alb - p.albedo[o] / 255.0));
         if (ss.material != p.material[o]) matMiss++;
         maxH = std::max(maxH, std::fabs(ss.height - p.height[o]));

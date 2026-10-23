@@ -143,9 +143,11 @@ enum PieceForm {
     PF_SONG, PF_DANCEREC, PF_JINGLE, PF_THEME, PF_PROTEST, PF_REQUIEM,                                                     // the modern
     PF_PROCESS, PF_SWARM, PF_SYNSONG, PF_DRIFT, PF_SIGNAL, PF_ELEGY,                                                       // the futuristic
     PF_FIELD, PF_TURNFIELD, PF_BELLFIELD, PF_STANDING,                                                                     // the far future
+    PF_DAWN, PF_LASTSUN,   // D-05: the people who lost their sun: a dawn song to call it up (its line climbing), the last sunrise (an arch, then down)
     PF_COUNT
 };
-extern const char* const PIECE_FORM_NAMES[PF_COUNT];   // "A DANCE", "A LULLABY", ... "THE LAST SONG", "A CHANT", ... "A STANDING TONE"
+constexpr int PF_DRAWN_COUNT = PF_DAWN;               // D-05: the forms every other people's pieces draw among (a rounding's fall-through stays on the last)
+extern const char* const PIECE_FORM_NAMES[PF_COUNT];   // "A DANCE", "A LULLABY", ... "THE LAST SONG", "A CHANT", ... "A STANDING TONE", "A DAWN SONG", "THE LAST SUNRISE"
 
 struct Note {
     double t = 0, dur = 0;   // beats from the piece's start, length in beats

@@ -106,7 +106,7 @@ double biomeFertility(int b) {
 }
 
 PlanGrid readPlanGrid(const BodyGen& gSeason, bool parallel) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     PlanGrid G;
     G.rows = PLAN_ROWS; G.dLat = PI / G.rows; G.R = g.R;
     G.rowStart.resize(G.rows + 1); G.rowCols.resize(G.rows);
@@ -184,7 +184,7 @@ PlanGrid readPlanGrid(const BodyGen& gSeason, bool parallel) {
             }
         }
         const double meanArea = G.landKm2 > 0 ? 4 * PI * G.R * G.R / N : 1;
-        const bool desert = g.type == PT_DESERT;
+        const bool desert = kindHas(g.type, KT_DRY);
         for (int c = 0; c < N; c++) if (G.land[c]) G.river[c] = (float)((desert ? 0.6 : 0.25 + 0.75 * clampd(G.veg[c] * 1.3, 0, 1)) * G.areaKm2(c) / meanArea);
         for (int k = (int)order.size() - 1; k >= 0; k--) { const int c = order[k]; if (G.down[c] >= 0) G.river[G.down[c]] += G.river[c]; }
     }
@@ -274,7 +274,7 @@ int PeoplePlan::count(int sclass) const { int n = 0; for (const PlanPlace& p : p
 
 // the score: the climate counts where the side has a habitable band (a world too hot or cold all over was the people's own)
 void planScores(const BodyGen& gSeason, const PlanGrid& G, int people, int age, std::vector<float>& out, const std::vector<uint8_t>* only) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     age = clampi(age, 0, AGE_COUNT - 1);
     const int N = G.cells, peoples = peoplesOf(g);
     const uint64_t ps = peopleGen(g, people).seed;
@@ -296,7 +296,7 @@ void planScores(const BodyGen& gSeason, const PlanGrid& G, int people, int age, 
 }
 
 void planPeople(const BodyGen& gSeason, const PlanGrid& G, int people, int age, PeoplePlan& out) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const double t0 = nowMs();
     out = PeoplePlan();
     out.people = people; out.age = age = clampi(age, 0, AGE_COUNT - 1);
@@ -701,7 +701,7 @@ const PlanPlace& placeOf(const WorldPlan& P, uint32_t ref) { return P.plans[ref 
 }
 
 std::shared_ptr<WorldPlan> buildWorldPlan(const BodyGen& gSeason, bool parallel) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const double t0 = nowMs();
     auto P = std::make_shared<WorldPlan>();
     P->seed = g.seed; P->peoples = peoplesOf(g);
@@ -739,7 +739,7 @@ void evictLocked(uint64_t keep) {   // the least recently used of five, never on
 }
 
 std::shared_ptr<const WorldPlan> worldPlanOf(const BodyGen& gSeason) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     std::shared_future<std::shared_ptr<const WorldPlan>> f;
     std::promise<std::shared_ptr<const WorldPlan>> pr;
     bool mine = false;
@@ -762,7 +762,7 @@ std::shared_ptr<const WorldPlan> worldPlanIfReady(const BodyGen& g) {
 }
 
 void worldPlanPrefetch(const BodyGen& gSeason) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     if (!worldHadCivilisation(g)) return;
     std::lock_guard<std::mutex> lock(g_planMutex);
     if (g_planSlots.count(g.seed)) { g_planSlots[g.seed].used = ++g_planClock; return; }
@@ -845,7 +845,7 @@ void planEdgesNear(const WorldPlan& P, const Vec3& unit, double radiusM, std::ve
 }
 
 const std::vector<Vec3>& planEdgeWay(const BodyGen& gSeason, const WorldPlan& P, const PlanEdgeRef& r) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const PlanEdge& e = *r.e;
     {
         std::lock_guard<std::mutex> lock(P.wayMutex);
@@ -882,7 +882,7 @@ const std::vector<Vec3>& planEdgeWay(const BodyGen& gSeason, const WorldPlan& P,
 }
 
 void planSpansIn(const BodyGen& gSeason, const WorldPlan& P, int gLat, int gLon, std::vector<PlanSpan>& out) {   // T-01
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out.clear();
     if (!P.works) return;
     const double dLat = ruinCellLat(g), latc = (gLat + 0.5) * dLat, dLon = dLat / std::max(std::cos(latc), 0.05);

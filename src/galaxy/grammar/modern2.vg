@@ -77,6 +77,8 @@ mod.cause.noun
   (cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar|cause=nuclear|cause=weapons) the war
   (cause=drying) the drought
   (cause=coalout|cause=cascade) the cold
+  (cause=sunlost 3) the dark
+  (cause=sunlost 3) the cold
   fear
 
 prop.end (formula people=3)
@@ -121,6 +123,7 @@ em.cause
   (cause=fewerchildren|cause=chosen) There are fewer of us every year, and {em.few2}.
   (cause=leaving|cause=exodus|cause=elsewhere|cause=retreat) The last convoys leave {$seat} {em.leave2}.
   (cause=machine|cause=nanotech|cause=geoengineering|cause=flare|cause=physics|cause=undescribed) Something has happened {em.odd2}.
+  (cause=sunlost) The sun has set for the last time over {$seat}; {em.sun2}.
 em.add (people=3)
   (3)
   It is getting worse.

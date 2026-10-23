@@ -82,6 +82,10 @@ news.omen
   ($e.omen=falling) A falling star\nA fireball crossed the sky over {$e.place} at night, and some say they heard it. {news.omen.t}
   ($e.omen=newstar) A new star\nA star nobody has seen before is shining {news.newstar.m}. {news.omen.t}
   ($e.omen=redmoon) The red moon\n{moon} rose red over {$e.place}, as red as anyone can remember. {news.omen.t}
+  ($e.omen=wanderer) The wanderer brighter again\nThe great wanderer is brighter this year than at any time on record, and the observers at {$e.place} say it is still coming nearer. {news.omen.t}
+  ($e.omen=intruder) The new star\nThe new star in the eastern sky has grown brighter since last winter; the observers at {$e.place} will not say how near it will come. {news.omen.t}
+  ($e.omen=bent) Stars out of place\nObservers at {$e.place} report that the stars round a dark patch of the sky have shifted from their charted places. {news.omen.t}
+  ($e.omen=dance) The second sun further off\nThe second sun is further off than a year ago, the observers at {$e.place} report, and the summer will be shorter for it. {news.omen.t}
 news.eclipse.m
   the {bird} went to roost at midday
   the {herd} lay down in the fields

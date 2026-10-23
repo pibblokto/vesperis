@@ -6,7 +6,18 @@
 #include <vector>
 struct Piece; struct Tradition; struct Note; struct Timbre; struct Ensemble;   // galaxy/music.h
 struct Speech; struct Voice; struct Segment;                   // galaxy/voice.h
+struct Signal;                                                 // galaxy/signals.h
 constexpr int MEDIUM_AIR = 100;   // C-11: `AudioState::medium` for a recording the radar caught (the receiver's band, the air's hiss, its slow fading)
+
+// D-03 what the synth needs of a drifter (SIG_ROGUE) besides its seed (`rogueVoiceFor` reads it off its signal): what its voice is by its
+// body (RV_*, galaxy/signals.h; a giant's when not told), the period of its turning and of its innermost moon's orbit (the game's seconds;
+// 0 no moon) and its power (`drifterPower`)
+struct RogueVoice { int cls = 1; double turnS = 0, moonS = 0, power = 0.6; };
+RogueVoice rogueVoiceFor(const Signal& s);
+// D-03 where the receiver is heard: the radar camera, the cabin's radio at a drifter, the suit's radio on its ground (a small set's band),
+// and the radios' levels (`AudioState::radar`; the camera's is 1)
+enum RadioSet { RADIO_CAMERA = 0, RADIO_CABIN, RADIO_SUIT };
+constexpr double RADIO_CABIN_LEVEL = 0.45, RADIO_SUIT_LEVEL = 0.4;
 
 struct AudioState {
     double hum = 0;        // ship interior hum 0..1
@@ -37,9 +48,15 @@ struct AudioState {
     // R-403 the drone
     double rotor = 0;      // the thrust pods' spin 0..1 (the whine's level)
     double rotorPitch = 0; // 0..1 with the speed and the climb (the whine's pitch)
+    // Q-03 the sounds of the ground (the world's traits): the singing dunes' hum (0..1: a slip face's sand sliding under the explorer or the
+    // buggy) at its note (the grains' and the gravity's), the singing ice round the explorer (0..1: the ice near, the day warming or cooling
+    // it), a quake's shaking (0..1, the surface's) and its onset (one-shot: its strength); how much of them the air carries (1 at a third of a
+    // bar and over, 0.15 in the thinnest, 0 airless: a quake through the boots alone)
+    double dunes = 0, duneHz = 80, ice = 0, quake = 0, quakeHit = 0, air = 1;
+    int iceEvents = 0;   // the ice's sounds begun so far (the harness counts them)
     // B-413: the ground's sounds off, every level the surface sets (`updateSurface`): the capsule, the ship and a load hear none of
     // them (the ship silenced the wind, the rain and the lava only; the breath, the waves, the leaves, ... went on aboard)
-    void surfaceOff() { wind = rain = lava = breath = surf = birds = leaves = hoofs = insects = engineRpm = skid = rotor = 0; }
+    void surfaceOff() { wind = rain = lava = breath = surf = birds = leaves = hoofs = insects = engineRpm = skid = rotor = 0; dunes = ice = quake = quakeHit = 0; }
     // C-04 a piece of the old peoples' music (the decoder screen): the piece and its tradition, which must outlive the play;
     // `pieceStart` plays it from the top, a null `piece` stops it at once; the synth reports the beat it is at (-1 idle) and the end
     const Piece* piece = nullptr;
@@ -98,6 +115,10 @@ struct AudioState {
     // through the receiver as from very far at a level of its own (`radio` with it)
     bool radarGhostWord = false;
     int radarEvents = 0, radarEventKinds = 0;   // the static's events begun so far (the harness counts them) and a bit per kind (0-11)
+    // D-03 a drifter's voice (SIG_ROGUE): what it is besides its seed, for the signal centred and the one under it (`radarVoice` with a
+    // drifter is the beacon under its voice: a programme, D-05's; -1 none); where the receiver is heard (RADIO_*)
+    RogueVoice radarRogue, radarRogue2;
+    int radarSet = RADIO_CAMERA;
     // X-01 the probe's relay: how much of it is heard (1 on the probe's screen, a murmur from the landing screen in the cabin), the
     // stage (PS_*), the air's rush (0..1), the entry's heat, the chute's flutter, the depth (0..1: the dark's rumble and the hull's
     // creaks), the link (1 clear .. 0 failing: the static), a thunderclap's strength (one-shot) and the loss of signal (the hiss)
@@ -125,6 +146,12 @@ class AudioSynth {
 public:
     void render(float* out, int frames, int sampleRate, AudioState& st);
     static const char* mathsName(uint64_t seed);   // C-16: the sequence a beacon of mathematics with that seed sends ("the primes", ...), for the harness
+    // D-03 a drifter's voice for the harness: in words and numbers (its breath, its moon's pulse, its motif, its drones, its moan, its body's
+    // parts), and as its parameters, each 0..1 (the distinctness's spread)
+    static std::string rogueLine(uint64_t seed, const RogueVoice& r);
+    static void rogueTraits(uint64_t seed, const RogueVoice& r, std::vector<double>& out);
+    static double rogueBreathS(uint64_t seed, const RogueVoice& r);   // the breath's period (s): the beam sweeping past once a turning
+    static double roguePulseS(const RogueVoice& r);                    // the moon's pulse's period (s; 0 no moon)
 private:
     double phase1 = 0, phase2 = 0, lfo = 0;
     double humLvl = 0, engLvl = 0, windLvl = 0, rainLvl = 0, lavaLvl = 0, breathLvl = 0, breathPh = 0;
@@ -134,6 +161,13 @@ private:
     double hoofLvl = 0, hoofT = 0, insectLvl = 0, lpI = 0, lpI2 = 0;
     double rpmLvl = 0, skidLvl = 0, thudT = -1, thudAmp = 0, lpK = 0;   // N4-04
     double rotorLvl = 0, rotorPitchLvl = 0, rotorPh = 0, lpR = 0;       // R-403
+    // Q-03 the sounds of the ground: the dunes' hum (its note gliding to the world's, its phase and clock, the sand's hiss), the ice's events (a
+    // near crack's chirp, a far one's, the sheet's boom, the snow settling: its kind, clock, length, pitches, loudness, phase, filters), the
+    // quake's (its rumble's poles, its clock, the P-wave's thump, the stones' rattle)
+    double duneLvl = 0, duneHzCur = 80, dunePh = 0, duneT = 0, duneHp = 0;
+    double iceLvl = 0, iceT = -1, iceNext = 1.5, iceDur = 0.2, iceF0 = 3000, iceFLo = 600, iceT0 = 0.05, iceAmp = 0, icePh = 0, iceLp = 0, iceY1 = 0, iceY2 = 0; int iceKind = 0;
+    double quakeLvl = 0, qkClock = 0, qkLp1 = 0, qkLp2 = 0, qkLp3 = 0, qkT = -1, qkAmp = 0, qkPh = 0, qkRatT = -1, qkRatA = 0, qkRatF = 2000, qkRY1 = 0, qkRY2 = 0;
+    double groundSample(double dt, AudioState& st);
     // C-07 the receiver: the content's band and its ghosting (the wow, the ring, the dropouts, the carrier), the bed (the rumble,
     // the drone, the wisp, the hiss), the signals' own sounds (a pulsar's thump and growl and whine; a comet's song, geysers and ice;
     // a magnetosphere's whistlers, chorus, hiss band and choir) and the echo everything heard goes through
@@ -160,8 +194,27 @@ private:
         double ringHz = 50, holdHz = 6000, whineHz = 3800;
         int mathKind = 0; double mathF = 440, mathPip = 0.06, mathGap = 0.09, mathRest = 0.8;
         double carrier2F = 1200;
+        // D-03 a drifter's (audio_rogue.cpp, `rogueDerive`): its beam (the main lobe's half-width in the turning, the other pole's strength
+        // and where it comes, a breath of its own for a drifter of no known spin), its motif (how many whistles, their pitches on a scale of
+        // `rgEdo` steps to the octave, their lengths and glides, the figure's length, the vibrato, the timbre), its vowels (the moan's pitch,
+        // the three it sweeps through, the moan's and the plasma's paces), its drones (a chord of two to four notes on its scale, each beating
+        // against a twin a little off; their six partials by a tilt and a share of the even ones; their level for the chord's size), its storm
+        // (the surf's band, the S-bursts' rate, pitch and fall, the roar's pitch and flutter), its chorus (the chirps' base, rise and length),
+        // its whistlers' top, its hiss band, its howl's range, its moon's arc, its iron's ring; its parts' weights
+        double rgLobe = 0.22, rgPole2 = 0.5, rgPole2At = 0.5, rgBreathU = 0.5;
+        int rgN = 4, rgEdo = 12, rgTimbre = 0; double rgNoteF[6] = {0, 0, 0, 0, 0, 0}, rgNoteLen[6] = {0, 0, 0, 0, 0, 0}, rgGlide[6] = {0, 0, 0, 0, 0, 0};
+        double rgMotifLen = 1, rgVibHz = 5, rgVib = 0.006, rgAnswer = 1, rgHangS = 12;   // the other pole's figure's key (a ratio), how long a whistle hangs on
+        double rgMoanF = 80, rgMoanRate = 0.06, rgPlasmaRate = 0.04; int rgVowel[3] = {0, 2, 4};
+        int rgChordN = 3; double rgChordF[4] = {50, 75, 100, 150}, rgBeat[4] = {0.6, 1.1, 0.8, 1.4}, rgPart[6] = {1, 0, 0, 0, 0, 0}, rgTilt = 1.2, rgEven = 0.5, rgDroneAmp = 0.05;
+        double rgSurfF = 600, rgSRate = 20, rgSF = 1500, rgSFall = 0.3, rgRoarF = 180, rgRoarFl = 24;
+        double rgChorusF = 700, rgChorusRise = 2.4, rgChirp = 0.25, rgWhistF = 3500, rgHissF = 600, rgHowlLo = 550, rgHowlHi = 1300, rgArcF = 800, rgRingF = 220;
+        // how its parts are weighed against each other (no two the same balance, `RW_*` in audio_rogue.cpp): the drones, the moan, the plasma's
+        // breath; a storm's surf, S-bursts and roar or a small world's chorus, whistlers and hiss; the kilometric howl (a giant's in two of five)
+        double rgW[7] = {1, 1, 1, 1, 1, 1, 1}; bool rgGiantHowl = false;
+        double rgResF[2] = {400, 1800}, rgResG[2] = {1, 1};   // its plasma's two resonances the whole voice passes through (their centres and gains)
     };
     static void rvDerive(RadarVar& v, uint64_t seed);
+    static void rogueDerive(RadarVar& v, uint64_t seed);   // D-03: a drifter's part of it, on indices of its own (no other signal's moves)
     struct Phantom { double ph = 0, jit = 0, f0 = 120, f0T = 120, f0Base = 120, amp = 0, ampT = 0, sylT = 0, sylDur = 0.2, lpN = 0; double F[3] = {500, 1500, 2500}, FT[3] = {500, 1500, 2500}, y1[3] = {0, 0, 0}, y2[3] = {0, 0, 0}; };
     // C-16: a signal's own sound in a channel of its own, so that two are heard at once: the one centred (0) and the one under it in
     // the wide lobe (1). Each keeps its parameters (from its seed) and its oscillators: a pulsar's thump, a comet's song, a
@@ -181,12 +234,34 @@ private:
         size_t codeI = 0; double codeT = 0, codeEnv = 0, sparkT = 0, sparkPh = 0, sparkLp = 0; uint64_t codeLcg = 1; int codeLeft = 4, elemLeft = 2, letterLeft = 4; bool codeOn = false;   // C-16
         double phonoPh = 0, phonoClickT = -1, phonoLp = 0, digPh = 0, digT = 0, digHash = 0, h2Ph = 0;
         int mathTerm = 0, mathPip = 0; double mathT = 0, mathPh = 0, mathPh2 = 0; bool mathRest = false;
-        Phantom phan[4];   // the murmur's three and a raised voice (a comet's moan); under another signal, a broadcast's voice
+        Phantom phan[4];   // the murmur's three and a raised voice (a comet's moan); under another signal, a broadcast's voice; D-03 a drifter's moan
+        // D-03 a drifter's (audio_rogue.cpp): what it is as last read (its class, turning, moon and power) and what follows from it (the
+        // breath's period, the moon's pulse's, the power's share), the turning's phase, the motif (its clock, which way, how loud, its
+        // oscillators, a breathy whistle's resonance, its whistles hanging on), the plasma's resonators, the drones, the storm (two swells of surf and their band, an
+        // S-burst train and its burst, the roar), the chorus' three chirps and their flock, the whistler, the hiss, the howl (and a brown
+        // dwarf's pulse of it), the moon's arc, the iron's ring, the dynamo's rumble, the far voice's band, the beacon under it
+        int rgCls = -1; double rgTurn = -1, rgMoon = -1, rgPow = -1, rgBreathS = 40, rgPulseS = 0, rgPw = 0.5;
+        double rgPh = -1, rgMotT = -1, rgMotAmp = 1, rgMotPh = 0, rgMotPh2 = 0, rgMotY1 = 0, rgMotY2 = 0; bool rgMotRev = false;
+        double rgHang[12] = {}, rgHangPh[12] = {}, rgHangPh2[12] = {}, rgHangF[12] = {};   // the motif's whistles hanging on after it, the main figure's and the answer's (a metallic one's overtone; their pitch, drifting)
+        double rgHowlF = 600;   // the kilometric howl's pitch, wandering
+        double rgPlY[4] = {0, 0, 0, 0}, rgDrC[8] = {1, 1, 1, 1, 1, 1, 1, 1}, rgDrS[8] = {}, rgDrRc[8] = {}, rgDrRs[8] = {};   // the drones as turning phasors (each a sample's turn)
+        double rgSurfT[2] = {-1, -1}, rgSurfDur[2] = {2, 2}, rgSurfA[2] = {0, 0}, rgSurfNext = 0.3, rgSurfY1 = 0, rgSurfY2 = 0, rgSurfLp = 0;
+        double rgTrainT = -1, rgTrainDur = 0.5, rgTrainNext = 0.8, rgBurstT = -1, rgBurstDur = 0.01, rgBurstNext = 0, rgBurstF = 1500, rgBurstA = 1, rgBurstPh = 0, rgRoarY1 = 0, rgRoarY2 = 0;
+        double rgChT[3] = {-1, -1, -1}, rgChLen[3] = {0.25, 0.25, 0.25}, rgChF0[3] = {700, 700, 700}, rgChPh[3] = {0, 0, 0}, rgFlockT = -1, rgFlockDur = 1, rgFlockNext = 1.2;
+        double rgWhT = -1, rgWhDur = 1.5, rgWhNext = 2.5, rgWhPh = 0, rgHissY1 = 0, rgHissY2 = 0, rgHowlPh = 0, rgPulseT = -1, rgPulsePh = 0;
+        double rgArcT = -1, rgMoonT = 0, rgArcPh = 0, rgArcY1 = 0, rgArcY2 = 0, rgRingT = -1, rgRingNext = 2, rgRingPh[4] = {0, 0, 0, 0}, rgRumLp1 = 0, rgRumLp2 = 0;
+        double rgWornLp = 0, rgWornHp = 0, rgBeacLp = 0, rgBeacLp2 = 0, rgResY[4] = {0, 0, 0, 0};
+        struct BandCo { double a = 0, B = 0, C = 0; } rgCo[9];   // its bands' coefficients: the fixed ones made when it changes, the moving ones every 32 samples
+        double rgCoDt = 0; int rgCoN = 0;
     };
     RadarChannel rdCh[2];
     int rdKind2 = -1, rdVoice2 = -1, rdAge2 = -1; uint64_t rdSeed2 = 0; double rdPulse2 = 1;   // the under channel's, kept while it fades
+    RogueVoice rdRogue2;                                                                       // D-03: a drifter's under it, likewise
     double phantomSample(Phantom& p, double dt, double sylRate, double breathy, double rough);
     double channelSample(RadarChannel& c, double dt, int kind, int voice, double pulseHz, uint64_t seed, int age, AudioState& st, bool main);
+    void machineInto(double& sig, RadarChannel& c, double dt, int voice, float n2, AudioState& st, bool main);   // a people's programme's machine (C-07, C-16; D-03 a drifter's beacon too)
+    double rogueSample(RadarChannel& c, double dt, const RogueVoice& R, int voice, float n2, AudioState& st, bool main);   // D-03: a drifter's voice (audio_rogue.cpp)
+    double rdSetHp = 0, rdSetLp1 = 0, rdSetLp2 = 0;   // D-03: the suit's radio's band
     double radarSample(double dt, AudioState& st);
     double rdClock = 0;
     double rdEvT = -1, rdEvNext = 7, rdEvDur = 1, rdEvA = 0, rdEvB = 0, rdEvC = 0, rdEvPh = 0, rdEvLp = 0, rdEvY1 = 0, rdEvY2 = 0; int rdEvKind = -1, rdEvN = 0;   // the bed's events
@@ -257,6 +332,7 @@ private:
         double kBeac, kData, kChant, kCode, kHet;          // the radar's: a beacon's keying, a data carrier's shift, a chant, a code's keying, the heterodyne
         double mdUp, mdDown, mdDropK, mdSr;                // the medium's level, a reel's dropout, the rate
         double mdAh, mdAl, mdHornR, mdHornB, mdHissHi, mdHissLo, mdRum;   // by the medium: its band, its horn, its hiss and rumble
+        double kDuneHz, kDuneHiss, kIceFar, kIceThud, kQuake;   // Q-03: the dunes' note's glide and their sand's hiss, a far crack's dulling, the snow's thud, the quake's rumble
     } co{};
     void coefs(double dt);
     void mediumCoefs(double dt, int medium);

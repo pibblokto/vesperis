@@ -508,7 +508,7 @@ void Game::consoleCommand(const std::string& raw) {
     } else if (cmd == "DL") {
         if (!sys.valid) { consolePrint("NO SYSTEM HERE"); return; }
         consolePrint(fmt("%s: %d BODIES, %d BELTS", upper(starNameOf(sys.star)).c_str(), (int)sys.bodies.size(), (int)sys.belts.size()));
-        for (int i = 0; i < (int)sys.bodies.size() && i < 14; i++) consolePrint(fmt("  %s%-16s %s", sys.bodies[i].parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), PLANET_TYPES[sys.bodies[i].type].name));
+        for (int i = 0; i < (int)sys.bodies.size() && i < 14; i++) consolePrint(fmt("  %s%-16s %s", sys.bodies[i].parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), KINDS[sys.bodies[i].type].name));
         for (size_t k = 0; k < sys.belts.size(); k++) consolePrint(fmt("  %-16s BELT %s - %s", upper(beltNameOf((int)k)).c_str(), distanceString(sys.belts[k].innerKm).c_str(), distanceString(sys.belts[k].outerKm).c_str()));   // O3
     } else if (cmd == "PAR" || cmd == "WHERE") {
         if (rest.empty()) { consolePrint(fmt("SHIP AT SECTOR %+lld %+lld %+lld, %s", (long long)sectorOf(ship.pos.x), (long long)sectorOf(ship.pos.y), (long long)sectorOf(ship.pos.z), REGION_NAMES[galaxyRegion(sectorOf(ship.pos.x), sectorOf(ship.pos.y), sectorOf(ship.pos.z))])); return; }
@@ -571,7 +571,7 @@ void Game::deployCapsule() {
     if (ship.mode != ShipState::PARKED) { status("DEPLOY THE CAPSULE FROM ORBIT: APPROACH A PLANET FIRST", 4); audio.beep = 3; }
     else if (ship.parkedBelt >= 0) { status("NO WORLD UNDER THE SHIP - THE BELT'S ROCKS ARE TOO SMALL FOR THE CAPSULE", 4); audio.beep = 3; }   // O3
     else if (isProbeGiant(sys.bodies[ship.parkedBody].type)) { if (probe.active) watchProbe(); else launchProbe(); }   // X-01: a giant takes a probe (a probe already sent: its screen)
-    else if (!PLANET_TYPES[sys.bodies[ship.parkedBody].type].landable) { status("SURFACE NOT CONSISTENT - LANDING IMPOSSIBLE", 4); audio.beep = 3; }
+    else if (!KINDS[sys.bodies[ship.parkedBody].type].landable) { status("SURFACE NOT CONSISTENT - LANDING IMPOSSIBLE", 4); audio.beep = 3; }
     else beginLanding();
 }
 
@@ -595,7 +595,7 @@ void Game::toggleVimana() {
         ship.flightFrom = ship.pos;
         Vec3 dir = normalize(ship.flightFrom - ship.remote.pos);
         double firstOrbit = std::max(ship.remote.radiusKm * STAR_CLASSES[ship.remote.cls].firstOrbitMult, STAR_CLASSES[ship.remote.cls].minFirstOrbitKm);
-        ship.flightTo = ship.remote.pos + dir * std::max(ship.remote.radiusKm * 25.0, firstOrbit * 0.55);
+        ship.flightTo = ship.remote.pos + dir * (ship.remote.cls == STAR_ROGUE ? drifterStandOffKm(ship.remote) : std::max(ship.remote.radiusKm * 25.0, firstOrbit * 0.55));   // D-01: off a drifter
         ship.flightT = 0;
         double ly = length(ship.flightTo - ship.flightFrom) / SECTOR_KM;
         ship.flightDur = vimanaSeconds(ly);   // R-407: 7 + 2 sqrt(ly) to 100 ly, then 6 s a doubling

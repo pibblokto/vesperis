@@ -12,14 +12,16 @@ const char* const TIMBRE_FAMILY_NAMES[TF_COUNT] = {"A PLUCKED STRING", "A PIPE",
                                                    "VOICES", "BRASS", "KEYS", "AN ORGAN", "A MUSIC BOX", "AN ELECTRIC STRING", "ELECTRIC KEYS", "A SYNTHESISER", "A PAD",
                                                    "A SWARM OF TONES", "A SYNTHETIC VOICE", "A FIELD OF TONES", "A BULLROARER",
                                                    "A LOG DRUM", "RATTLES", "CLAPS", "A BASS DRUM", "A SNARE", "A CYMBAL", "A KICK", "HATS", "CLICKS", "A SUB PULSE", "JINGLES"};
-const char* const PIECE_FORM_NAMES[PF_COUNT] = {"A DANCE", "A LULLABY", "A WORK SONG", "A HYMN", "A HARVEST SONG", "A LOVE SONG", "A SONG OF THE FESTIVAL",
+const char* const PIECE_FORM_NAMES[] = {"A DANCE", "A LULLABY", "A WORK SONG", "A HYMN", "A HARVEST SONG", "A LOVE SONG", "A SONG OF THE FESTIVAL",
                                                 "A LAMENT", "A MARCH", "A SONG OF WARNING", "THE LAST SONG",
                                                 "A CHANT", "A RING DANCE", "A HUNTING SONG", "A KEENING", "A HEALING SONG",
                                                 "A PROCESSION", "A BALLAD",
                                                 "A TURNING DANCE", "AN ANTHEM", "A PARLOUR SONG", "A MUSIC BOX TUNE", "AN OVERTURE", "A FUNERAL MARCH",
                                                 "A SONG", "A DANCE RECORD", "A JINGLE", "A THEME", "A PROTEST SONG", "A REQUIEM",
                                                 "A PROCESS", "A SWARM", "A SYNTHETIC SONG", "A DRIFT", "A SIGNAL", "AN ELEGY",
-                                                "A FIELD", "A FIELD THAT TURNS", "A FIELD OF BELLS", "A STANDING TONE"};
+                                                "A FIELD", "A FIELD THAT TURNS", "A FIELD OF BELLS", "A STANDING TONE",
+                                                "A DAWN SONG", "THE LAST SUNRISE"};   // D-05
+static_assert(sizeof(PIECE_FORM_NAMES) / sizeof(PIECE_FORM_NAMES[0]) == PF_COUNT, "a name a form");
 bool timbrePercussive(int family) { return family == TF_DRUM || (family >= TF_LOG && family < TF_COUNT); }
 
 namespace {
@@ -1183,8 +1185,10 @@ void buildFarFuture(Bld& b, int form) {
     b.P.beats = total + 6;   // the last tones' long fade inside the piece
 }
 
-// the form by the shard's tone and the record's age
-int formOf(int tone, int age, Rng& rng) {
+// the form by the shard's tone and the record's age. D-05: a drifter's people's by the cold (`dark`: 1 dimming, 2 going, 3 gone): the dawn songs to
+// call the sun up while it went, the last sunrise, and in the dark the last songs and the lullabies; every other people's draw among the forms
+// it always drew (`PF_DRAWN_COUNT`)
+int formOf(int tone, int age, Rng& rng, int dark = 0) {
     double w[PF_COUNT] = {0};
     switch (age) {
         case AGE_PREHISTORIC:
@@ -1236,7 +1240,22 @@ int formOf(int tone, int age, Rng& rng) {
             }
             break;
     }
+    if (dark <= 0) return rng.pick(w, PF_DRAWN_COUNT);
+    double sum = 0; for (int f = 0; f < PF_COUNT; f++) sum += w[f];
+    switch (dark) {
+        case 1: w[PF_DAWN] = 0.6 * sum; break;
+        case 2: w[PF_DAWN] = 0.5 * sum; w[PF_LASTSUN] = 0.5 * sum; break;
+        default: for (int f = 0; f < PF_COUNT; f++) w[f] *= 0.5; w[PF_LAST] += 0.35 * sum; w[PF_LULLABY] += 0.2 * sum; w[PF_LASTSUN] = 0.15 * sum; break;
+    }
     return rng.pick(w, PF_COUNT);
+}
+// D-05: the form whose way a dawn song and the last sunrise are composed in, by the age (an age's hymn or chant, its lament)
+int composedAs(int form, int age) {
+    static const int DAWN[AGE_COUNT] = {PF_CHANT, PF_HYMN, PF_HYMN, PF_BALLAD, PF_SYNSONG, PF_FIELD};
+    static const int SUNSET[AGE_COUNT] = {PF_KEENING, PF_LAMENT, PF_FUNERAL, PF_REQUIEM, PF_ELEGY, PF_STANDING};
+    if (form == PF_DAWN) return DAWN[clampi(age, 0, AGE_COUNT - 1)];
+    if (form == PF_LASTSUN) return SUNSET[clampi(age, 0, AGE_COUNT - 1)];
+    return form;
 }
 
 double formTempo(int form, int age) {
@@ -1452,17 +1471,28 @@ void pieceOf(const Tradition& T, const Shard& s, Piece& P) {
     Rng rng(P.seed);
     P.age = clampi(s.recordAge >= 0 ? s.recordAge : AGE_MEDIEVAL, 0, AGE_COUNT - 1);   // H-05: the record's age (C-04's pieces were the medieval's)
     const Ensemble& E = T.ages[P.age];
-    P.form = formOf(s.tone, P.age, rng);
+    P.form = formOf(s.tone, P.age, rng, s.dark);
+    const int built = composedAs(P.form, P.age);   // D-05: a dawn song or the last sunrise in its age's hymn's or lament's way
     P.drift = E.drift;
-    P.bpm = std::min(190.0, std::max(P.age >= AGE_INDUSTRIAL ? 52.0 : 44.0, T.bpm * E.tempo * formTempo(P.form, P.age) * rng.range(0.92, 1.08)));
+    P.bpm = std::min(190.0, std::max(P.age >= AGE_INDUSTRIAL ? 52.0 : 44.0, T.bpm * E.tempo * formTempo(built, P.age) * rng.range(0.92, 1.08)));
     Bld b(T, E, P, rng);
     switch (P.age) {
-        case AGE_PREHISTORIC: buildPrehistoric(b, P.form); break;
-        case AGE_MEDIEVAL: buildMedieval(b, P.form); break;
-        case AGE_INDUSTRIAL: buildIndustrial(b, P.form); break;
-        case AGE_MODERN: buildModern(b, P.form); break;
-        case AGE_FUTURISTIC: buildFuturistic(b, P.form); break;
-        default: buildFarFuture(b, P.form); break;
+        case AGE_PREHISTORIC: buildPrehistoric(b, built); break;
+        case AGE_MEDIEVAL: buildMedieval(b, built); break;
+        case AGE_INDUSTRIAL: buildIndustrial(b, built); break;
+        case AGE_MODERN: buildModern(b, built); break;
+        case AGE_FUTURISTIC: buildFuturistic(b, built); break;
+        default: buildFarFuture(b, built); break;
+    }
+    if (built != P.form) {   // D-05: the dawn song's line climbs as it goes (the sun called up), the last sunrise's rises to its middle and sinks below where it began
+        double len = 1; for (const Note& nt : P.notes) len = std::max(len, nt.t + nt.dur);
+        for (Note& nt : P.notes) {
+            if (nt.voice < 0) continue;   // the kit keeps its pieces
+            const double f = clampd(nt.t / len, 0, 1);
+            const int lift = P.form == PF_DAWN ? (int)std::floor(4.0 * f) : (int)std::lround(3.0 * std::sin(PI * f) - 2.0 * f * f);
+            nt.degree += lift;
+            if (nt.slideFrom > -1000) nt.slideFrom += lift;
+        }
     }
     // the people's lilt on the second of two subdivisions (the hand-played ages and the songs; never the machines' processes or the field)
     if (T.swing > 0 && T.sub == 2 && P.age <= AGE_MODERN) {

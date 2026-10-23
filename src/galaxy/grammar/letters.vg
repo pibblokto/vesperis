@@ -9,7 +9,7 @@ R"VG(
 
 # ---- the letter -------------------------------------------------------------------------------------------------------------
 
-genre.letter (words=27..202)
+genre.letter (words=27..210)
   (5) {@cast letter}{letter.open}\n{letter.body}\n{letter.close}
   (1) {@cast letter}{letter.open}\n{letter.body}\n{letter.close}\n{let.ps}
 

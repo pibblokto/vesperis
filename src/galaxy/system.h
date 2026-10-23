@@ -3,59 +3,41 @@
 // the bodies really are.
 #pragma once
 #include "starfield.h"
+#include "kinds.h"
+#include <memory>
 #include <vector>
 
 // Bumped whenever a generator changes what a star, system or surface looks like (M9-17).
 // Star positions are integer hashes and never move; saves and guides record the version.
-constexpr int GEN_VERSION = 15;   // 15: B-428 a solid world's moons spread out (its first moon at 5-40 radii, 4.5-6 before; a twin at 12-20, 5-9 before): their orbits, periods and so a locked moon's day change, and where a world's reach grew its companion's floor and its comets can; giants' moons, every surface and the stars do not; 14: B-425 the companion stars keep clear of the other sun's worlds (a far one moves out until it spans 3 degrees at most of their sky, its light alone warms them to 100 K at most and its own worlds keep within a third of the gap; a close one bright beside the primary or wider than it is far instead): the companions' orbits and, where one moved, its own worlds' warmth change; every primary's worlds and the stars do not; 13: A-01 the ages (the civilisation expansion of 1.3.0 is this one bump): every people has an age, its end's years are its age's (longer for the late ages) and its ruins weather by them, only the peoples that had radio transmit (the transmitter cells' salt and rate re-pinned, so the signals move) and the charts' heard marks follow; systems, stars and every surface do not; 12: X-03 the giants' character on the globe (each giant's share of storms, an ice giant's faint bands, a great storm on one giant in four: the gas giants' and brown dwarfs' globes change; systems, stars and every solid surface do not); 11: G-01 the galaxy of 200 billion stars (`galaxyDensity`: every star's existence, class and name can change; the whole G/S series of 1.1.0 is this one bump); 10: O6-03..O6-06 drainage (rivers routed downhill by a flood of the ground, lakes at the fill levels of real basins, valleys carved to the rivers), the landform library (cliff bands, broken plains, scree, coasts by exposure, cirques and fjords, lava tongues, slip-face dunes, crater terraces) and the landmarks (heights, water and materials change on every solid surface; systems and star positions do not); 9: B-322 the ocean worlds' floes rise from a shelf sea through an ice foot, river and lake banks stand over their plane (heights change on ocean worlds and along felisian water; systems do not); 8: B-321 the felisian greenhouse (+33 K over the equilibrium temperature: biomes, ice caps and water move on every living world), B-320 rivers and lakes rebuilt, R-304/R-305 planet traits and landforms (every solid surface changes; systems and star positions do not); 7: B-314 the first moon at 4.5 radii and outside the rings (moon orbits and periods change; surfaces do not); 6: O6-02 the relief spectrum (every solid surface changes shape; systems and star positions do not); 5: O0-01 rings on 12% of solid planets; 4: N5-03 gas giant storm term; 3: M5 astronomy
+constexpr int GEN_VERSION = 16;   // 16: P-01 the furnace worlds, the first of 1.4.0's made kinds (the kinds of 1.4.0 are this one bump): `pickPlanetType` draws the old kinds as before and every draw of the system is made as the drawn kind's, then `kindOf` makes about one body in fifty a magma ocean, a chthonian, a glass, a steam, a salt or a rust world by hashes of their own (never a world with a people): those bodies' kinds, sizes, masses, colours and surfaces change, a made chthonian's rings, and the few moons that would lie within three of a made world's radii move out; every other body, every orbit and every star do not; P-02 the living worlds (archean, hothouse, superhabitable, steppe, tundra, lichen: about one body in twenty-four made with the furnace worlds, the home world kept felisian); P-03 the locked and the deep (eyeball, terminator, hycean, ammonia, snowball, chemotroph: about one body in fourteen made in all; the companions and the comets read the moons' orbits as drawn, so no star moves); P-04 the dead worlds (the scorched felisian from a giant's felisian worlds and a white dwarf's rocky and desert planets, its peoples by a hash of their own; the frozen felisian made in no system yet); P-05 the far cold (nitrogen, cryovolcanic, dry ice, brine dwarf and frost dwarf from the icy, cratered, europan and thin-air worlds of the cold orbits, a giant's captured moons made now too; and the wanderers: one system in twenty-seven caught a rogue world, an extra last body drawn from a stream of its own, so every other body keeps its index and its draws; about one body in ten made in all); P-06 the strange moons (grooved ice, two-faced, tiger-striped, patchwork and sponge, made from moons by what they are among their planet's moons, read from the draws: no moon moves, a moon has none; about one body in nine made in all); P-07 the giants (the super-puff from a young star's giants, the water-cloud and the azure from the warm drawn giants, and the giants of the warm zones from the worlds there: the water-cloud, the azure, the alkali and the silicate giants of Sudarsky's classes and the gas dwarf, the hot ones only from worlds locked to their star; the moons a made giant reaches move out, never a people's: a giant that would move one is not made; about one body in eight made in all); Q-01 the six trait slots (three new slots by hashes of their own, R-304's three as drawn; eleven landforms in them on about three worlds in five, never a people's or the home world, whose ground stands as it was) and the landforms' own moisture and warmth off the living ground (an acidic world's karst stands: the dune seas, canyons, badlands, salt flats, glaciers and patterned ground of the wet and the cold-aired worlds follow); Q-02 the water, the sky, the life and the ground (sixteen traits in the new slots by kind, the landforms' share falling; those that move the ground or take a bank never on a people's world or the home world, whose sky and sea may glow: the tides' flats, the hot springs, the reefs, the gypsum's dunes, the strata, the meteorites' pits and the waters' colours change the surfaces that carry them; a body's tidal forcing a derived fact, no draw); 15: B-428 a solid world's moons spread out (its first moon at 5-40 radii, 4.5-6 before; a twin at 12-20, 5-9 before): their orbits, periods and so a locked moon's day change, and where a world's reach grew its companion's floor and its comets can; giants' moons, every surface and the stars do not; 14: B-425 the companion stars keep clear of the other sun's worlds (a far one moves out until it spans 3 degrees at most of their sky, its light alone warms them to 100 K at most and its own worlds keep within a third of the gap; a close one bright beside the primary or wider than it is far instead): the companions' orbits and, where one moved, its own worlds' warmth change; every primary's worlds and the stars do not; 13: A-01 the ages (the civilisation expansion of 1.3.0 is this one bump): every people has an age, its end's years are its age's (longer for the late ages) and its ruins weather by them, only the peoples that had radio transmit (the transmitter cells' salt and rate re-pinned, so the signals move) and the charts' heard marks follow; systems, stars and every surface do not; 12: X-03 the giants' character on the globe (each giant's share of storms, an ice giant's faint bands, a great storm on one giant in four: the gas giants' and brown dwarfs' globes change; systems, stars and every solid surface do not); 11: G-01 the galaxy of 200 billion stars (`galaxyDensity`: every star's existence, class and name can change; the whole G/S series of 1.1.0 is this one bump); 10: O6-03..O6-06 drainage (rivers routed downhill by a flood of the ground, lakes at the fill levels of real basins, valleys carved to the rivers), the landform library (cliff bands, broken plains, scree, coasts by exposure, cirques and fjords, lava tongues, slip-face dunes, crater terraces) and the landmarks (heights, water and materials change on every solid surface; systems and star positions do not); 9: B-322 the ocean worlds' floes rise from a shelf sea through an ice foot, river and lake banks stand over their plane (heights change on ocean worlds and along felisian water; systems do not); 8: B-321 the felisian greenhouse (+33 K over the equilibrium temperature: biomes, ice caps and water move on every living world), B-320 rivers and lakes rebuilt, R-304/R-305 planet traits and landforms (every solid surface changes; systems and star positions do not); 7: B-314 the first moon at 4.5 radii and outside the rings (moon orbits and periods change; surfaces do not); 6: O6-02 the relief spectrum (every solid surface changes shape; systems and star positions do not); 5: O0-01 rings on 12% of solid planets; 4: N5-03 gas giant storm term; 3: M5 astronomy
 
-enum PlanetType {
-    PT_MOLTEN = 0,   // internally hot, lava lakes, no atmosphere
-    PT_CRATERED,     // small, dusty, craterised, no atmosphere
-    PT_VENUSIAN,     // thick atmosphere, fully covered by clouds
-    PT_FELISIAN,     // breathable atmosphere, oceans, vegetation
-    PT_ROCKY,        // creased rocky surface, boulders, no atmosphere
-    PT_THINATMO,     // small, thin atmosphere, exotic colours
-    PT_GASGIANT,     // large, not consistent, dense clouds; not landable
-    PT_ICY,          // icy, fractured surface, no atmosphere
-    PT_QUARTZ,       // milky quartz surface, oxygen atmosphere
-    PT_OCEAN,        // M9-11: a global sea with ice floes, no land
-    PT_METAL,        // M9-11: dark iron world, glinting, craterised
-    PT_VOLCANIC,     // M9-11: tidally heated moon, sulphur plains, active cones
-    PT_CARBON,       // M9-11: black graphite plains with diamond crusts
-    PT_SUBSTELLAR,   // M5-02: a brown dwarf, glowing with its own heat, with a moon system; not landable
-    PT_COMET,        // M5-07: a small icy nucleus on a long eccentric orbit, with a tail near the star; landable since O4 (R-303)
-    PT_COMPANION,    // M5-01: a second sun bound to the primary, with worlds of its own
-    PT_EUROPAN,      // R-307: an ice shell over a hidden ocean: lineae, chaos terrain, water geysers; no atmosphere
-    PT_TECTONIC,     // R-307: a seismic world: rift valleys, fissures running with lava, lava fountains, quakes; a thin sulphurous sky
-    PT_DESERT,       // R-307: a dry world under a dusty ochre sky: hamada, mesas, canyons, ergs, salt pans, dust devils
-    PT_HYDROCARBON,  // R-307: a cold world under an opaque orange haze: methane seas, tholin dunes, drizzle
-    PT_BOMBARDED,    // R-307: a young airless surface under a rain of meteorites: fresh craters, rays, strikes seen from the ground
-    PT_ACIDIC,       // R-307: a corrosive world: bleached karst, sulphur crusts, seas of acid, a yellow-green sky that rains
-    PT_COUNT
-};
-
-struct PlanetTypeInfo {
-    const char* name;
-    const char* description;
-    double minRadiusKm, maxRadiusKm;
-    bool landable;
-    bool atmosphere;
-    int maxMoons;
-    double albedo;
-};
-extern const PlanetTypeInfo PLANET_TYPES[PT_COUNT];
-// R-307: the type groups the renderers branch on
-inline bool hasOpaqueDeck(int t) { return t == PT_VENUSIAN || t == PT_HYDROCARBON; }   // the globe and the sky are one cloud or haze deck; no sun disc, no cast shadows
-inline bool isLavaWorld(int t) { return t == PT_MOLTEN || t == PT_VOLCANIC || t == PT_TECTONIC; }   // bank 2 is lava, the ground glows by it, eruptions
-// X-03: an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves
+// P-00: the kinds of body are rows of KINDS (galaxy/kinds.h): the enum, what each kind is and how it is drawn, made and shown
+// X-03: an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves (P-07: a gas
+// giant's, not a made giant's: the azure giant is blue for another reason)
 struct Body;
 bool isIceGiant(const Body& b);
-inline int landableTypeCount() { int n = 0; for (int i = 0; i < PT_COUNT; i++) if (PLANET_TYPES[i].landable) n++; return n; }
+// P-01 (GEN 16): the kinds made from the old draws. `pickPlanetType` draws the first PT_DRAWN_COUNT kinds as generation 15 did and every
+// draw of the system is made as the drawn kind's (the orbits, the moons and their number, the rings, the twins: every body keeps its index);
+// then `kindOf` may make the world another kind: the first made kind (in id order) whose row has a source the world qualifies for and whose
+// hash of the world's seed falls under that source's share. Never a world with a people (C-01's hash is read first: `peopleHash`)
+struct KindFacts { int drawn = 0; double tempK = 0; int starClass = 0; uint32_t body = KB_PLANET; bool locked = false, sync = false; uint64_t seed = 0, starSeed = 0; int parent = -1; uint32_t moon = 0; bool paired = false; };   // locked: one face to its star (M5-08's: its day its year, a round orbit); sync: its day its year; P-02: starSeed the system's star's (a source `byStar` hashes it); P-03: parent the kind a moon's planet drew (-1 none); P-06: moon what a moon is among its planet's (`MoonFact`; 0 not a moon); P-07: paired a double planet's first half (no giant)
+int kindOf(const KindFacts& f);
+bool peopleHash(uint64_t seed);   // C-01: one world in eight of the kinds a people may live on had one (the hash `BodyGen::make` reads)
+// P-04: whether a world of a kind had a people: C-01's hash on the felisian and desert worlds, a dead world's own (its row's share and salt:
+// C-01's never fires on a made world, `kindOf` keeps those felisian)
+bool peoplesHash(int type, uint64_t seed);
+// D-05: a drifter's people. One in four of the frozen felisian and the desert drifters kept one, on the drifter itself (never on its moons), by a
+// hash of its own (a frozen felisian's its row's salt, a desert's DRIFTER_PEOPLE_SALT): whether the drifter of that kind and seed did
+constexpr double DRIFTER_PEOPLE_SHARE = 0.25;
+constexpr uint64_t DRIFTER_PEOPLE_SALT = 0xD05DE5E70B0B0001ULL;
+bool drifterPeoplesHash(int type, uint64_t seed);
+RGB madeKindColour(int type, uint64_t seed);   // P-01: a made kind's colour from afar (a world the harness stages a kind on, P-04)
 
 struct Body {
     int index = 0, parent = -1;   // parent -1 => planet, else index of parent planet
     int type = PT_CRATERED;
+    int drawnType = -1;           // P-01 (GEN 16): the kind `pickPlanetType` drew, whose draws the system made (`kindOf` may have made it `type`); -1 the same
+    double drawnOrbitKm = -1;     // P-03: a moon's orbit as drawn where a made world pushed it out (the companion keeps clear of the drawn orbits); -1 the same
     uint64_t seed = 0;
     std::string name;
     double radiusKm = 3000;
@@ -73,6 +55,7 @@ struct Body {
     bool rings = false;
     double ringInner = 1.5, ringOuter = 2.5;   // in body radii
     double tempK = 280;           // equilibrium temperature (day side, sub-solar average)
+    double thenTempK = -1;        // P-04: a dead world's in its people's time (its then-world's climate: `BodyGen::make`); -1 its own
     int moonCount = 0;
     RGB color;                    // ramp colour seen from space
     Vec3 spinAxis, ref0, ref1;    // spin frame (ref0/ref1 perpendicular to the axis)
@@ -85,11 +68,22 @@ struct Body {
     bool locked = false;          // M5-08: one face toward its star; lockedDir is the sub-stellar direction in the body frame
     Vec3 lockedDir;
     bool glassed = false;         // S-03: a survivor of the supernova that left its neutron star: the surface fused to glass (`BodyGen::make` puts TR_GLASSED first)
+    bool wanderer = false;        // P-05: a rogue world the star caught (the last body, `generate`'s own step): no people ever lived on it
+    bool drifter = false;         // D-01: a body of a drifter's system (the drifter on the anchor and its moons): no people lived on it (D-05's are the drifters' own)
+    bool former = false;          // D-05: a drifter at its former orbit round the star it left, and its moons (`formerSystemOf`): what its people's readers read
+    double heatK = 0;             // D-01: the world's own warmth (K), added to the star's in quadrature (`tempK`): a drifter's by its kind, its moons' and their tides'; 0 everywhere else
+    Vec3 apexDir;                 // P-06: a two-faced moon (which faces its planet): the direction it travels in its body frame (its leading face's middle, the apex); zero otherwise
+    double tideForcingM = 0;      // Q-02: the equilibrium tide its moons and its sun raise (metres, the game's scale: `tideForcingM`), set once the system is made
     // T-02: the sector of the star the body was generated round (`StarSystem::generate` sets it): a world's planet function alone can then find
     // its system again (`BodyGen::starSx..`, `historyOfWorld` in galaxy/history.h: the history needs the star, the comets, the moons)
     int64_t starSx = 0, starSy = 0, starSz = 0;
     bool starKnown = false;
 };
+inline int drawnKind(const Body& b) { return b.drawnType >= 0 ? b.drawnType : b.type; }   // P-01: the kind whose draws the system made
+// D-04: a body in the dark (a drifter's system) colder than its air's freezing point (`KindDef::airFreezeK`) has its air on its ground as snow
+// (TR_FROZEN_AIR): a trace of pressure, a black sky, no wind and no weather. Every reader of whether a body has an air reads `bodyHasAir`
+inline bool airFrozen(const Body& b) { const KindDef& K = KINDS[b.type]; return b.drifter && K.landable && K.atmosphere && K.airFreezeK > 0 && b.tempK < K.airFreezeK; }
+inline bool bodyHasAir(const Body& b) { return KINDS[b.type].atmosphere && !airFrozen(b); }
 
 // M9-12 asteroid belt in an orbit gap. O3 (R-302): the belt is a place the Stardrifter can fly to; its rocks are
 // hashed in co-rotating cells (`beltRockAt`) so the same rock is found again whatever the time.
@@ -122,6 +116,9 @@ struct StarSystem {
     int companion = -1;           // M5-01: index of the companion star body, -1 for a single star
 
     void generate(const Star& s);
+    // D-01: a drifter's system (STAR_ROGUE): no sun. Its light is 0 everywhere (`lightAt`), its worlds have no season, and on the ground the
+    // sun stands at the nadir with no light (`SurfaceSite::sun`), so every reader of the sun sees a night with no moon
+    bool sunless() const { return star.cls == STAR_ROGUE; }
     // Absolute galactic position of body i at time t (seconds).
     Vec3 bodyPos(int i, double t) const;
     // N0-01: orbital velocity in km/s (central difference over a small fraction of the period) and
@@ -197,4 +194,29 @@ double auroralStorm(const Star& s, double t);
 // (the pulsar, the blue giant, the blue-white star, the red dwarf with its flares, the neutron star)
 double starActivity(int cls);
 double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm);
+// Q-02: the tides (TR_GREAT_TIDES). A world's tidal forcing: the equilibrium tide (m / M) R^4 / d^3 in metres that its moons and its sun raise,
+// summed over the bodies whose pull turns over it (none from a body its face keeps toward it: a twin's, a locked world's sun, a facing moon's
+// planet); on the game's scale it is large (its orbits are close: a moon at 14 radii, an AU of 22 million km), so the trait's coastal spring
+// range is a compression of it (5 m at 300 m of forcing, 4 m more each tenfold, 16 at most); `tidePulls` the bodies and their shares of
+// the forcing (-1 the star), `tideOffsetM` the sea's offset from its mean at a point (body frame) and a time: each pull's P2 bulge less its
+// mean over the day at that latitude, so the range is the trait's at the equator under a pull in the equator's plane, none at a pole
+struct TidePull { int body = -1; double share = 0, forcingM = 0; };
+int tidePulls(const StarSystem& sys, int i, TidePull* out, int maxOut);
+double tideForcingM(const StarSystem& sys, int i);
+double tideRangeOf(double forcingM);
+constexpr double TIDE_FORCING_MIN = 300;   // the trait's forcing at the least (37% of the scan region's sea worlds)
+double tideOffsetM(const StarSystem& sys, int i, const Vec3& unitBody, double t, double rangeM);
 double auroraPotential(const StarSystem& sys, const Body& b, double t);
+
+// D-05: the people who lost their sun. A drifter with a people (`drifterHadPeople`: the drifter itself, a frozen felisian or a desert, by
+// `drifterPeoplesHash`) lived in the system it left: `formerSystemOf` is that star's system as `generate` makes it (the star D-01's way back
+// reaches, `drifterPast`), with the drifter at its former orbit in the system's temperate band appended after its own bodies (the orbit where
+// the star's light gave its then-world's warmth, `Body::thenTempK`: its year; its eccentricity and its spin its own) and the moons that came
+// with it after it (`Body::former` on all of them); null when no star was found (none within 3,000 ly of home). Cached by the drifter (the
+// last eight). Every reader of a people's world (the profile, the lore and the calendar, the history, the records and their world's facts,
+// the charts) reads it through `peoplesWorldOf`: a drifter's people's world at its former orbit, every other world as it is; `hold` keeps
+// the former system alive while the reader holds the pointers
+inline bool drifterHadPeople(const Body& b) { return b.drifter && b.parent < 0 && drifterPeoplesHash(b.type, b.seed); }
+std::shared_ptr<const StarSystem> formerSystemOf(const StarSystem& dark);
+struct PeoplesWorld { const StarSystem* sys = nullptr; const Body* b = nullptr; std::shared_ptr<const StarSystem> hold; };
+PeoplesWorld peoplesWorldOf(const StarSystem& sys, const Body& b);

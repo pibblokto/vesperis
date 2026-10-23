@@ -26,7 +26,7 @@ R"VG(
 @lexicon farfuture ringworld megastructure megastructures uploaded dyson
 
 @lexicon inv.railway railway railways train trains locomotive locomotives timetable
-@lexicon inv.steam steam engine engines
+@lexicon inv.steam engine engines
 @lexicon inv.telegraph telegraph telegraphs telegram telegrams
 @lexicon inv.photography photograph photographs camera cameras
 @lexicon inv.electric electric electricity

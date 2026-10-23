@@ -38,6 +38,7 @@ struct Lore {
     double dayHours = 0;    // its day in hours
     int moons = 0;
     bool desert = false;    // the catastrophe's worlds (a felisian world went on without its people)
+    bool dark = false;      // D-05: a drifter's people, who lost their sun (their tones darken toward the end: `pickTone`)
     int spanYears = 300;    // the years between the founding and the last shard
     // C-12: their calendar (`loreQuick`): the day is the world's turn, the month the nearest moon's round in those days, the year
     // the orbit; `calendar` 0 days and years, 1 moons, days and years, 2 moons and years (the day is the year: a locked world),
@@ -92,6 +93,7 @@ struct Shard {
     std::vector<std::string> names;   // H-04: the proper names its text wrote (the history's persons and places, the lore's): the decoder keeps them
     int recordAge = -1;     // H-05: the age of its year (AGE_*, the record's era: a modern people's medieval hymn is medieval), -1 past the records
     int medium = -1;        // H-05: what it was made on (RM_*, galaxy/records.h: a clay tablet, a wax cylinder, a disc), -1 past the records
+    int dark = 0;           // D-05: a drifter's people's sun in its year (`sunDarkAt`: 0 as ever .. 3 gone): its music by the cold
 };
 int musicShardsOf(const BodyGen& g);              // C-04: how many of the world's fifty are music (12..18)
 bool shardIsMusic(const BodyGen& g, int index);   // C-04: whether that one is

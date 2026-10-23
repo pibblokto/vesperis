@@ -1,5 +1,6 @@
 // H-02 (2026-10-09): the history (see history.h).
 #include "history.h"
+#include "drifters.h"
 #include "starfield.h"
 #include "core/rng.h"
 #include <algorithm>
@@ -13,11 +14,12 @@
 #include <numeric>
 #include <set>
 
-const char* const HISTORY_EVENT_NAMES[HE_COUNT] = {"coming", "first", "stones", "founding", "accession", "rule end", "regency", "government", "war", "battle", "siege",
+const char* const HISTORY_EVENT_NAMES[] = {"coming", "first", "stones", "founding", "accession", "rule end", "regency", "government", "war", "battle", "siege",
     "sack", "peace", "sickness", "harvest", "famine", "flood", "drought", "quake", "eruption", "impact", "flare", "winter", "built", "way", "festival", "omen",
     "invention", "discovery", "faith", "institution", "deed", "unrest", "migration", "abandoned", "contact", "treaty", "other end", "sign", "stage", "exodus",
-    "end", "fair", "fire", "storm", "pest", "wonder", "games", "law", "trial", "embassy", "accident", "price", "beasts", "show", "visit", "birth", "marriage", "move", "death",
+    "end", "fair", "fire", "storm", "pest", "wonder", "games", "law", "trial", "embassy", "accident", "price", "beasts", "show", "visit", "sun", "birth", "marriage", "move", "death",
     "illness", "injury", "apprentice", "house", "quarrel", "journey", "betrothal"};
+static_assert(sizeof(HISTORY_EVENT_NAMES) / sizeof(HISTORY_EVENT_NAMES[0]) == HE_COUNT, "a name an event kind");
 const char* const HISTORY_ROLE_NAMES[HR_COUNT] = {"", "ruler", "regent", "founder", "general", "prophet", "maker", "inventor", "explorer", "rebel", "envoy", "artist", "the last"};
 const char* const HISTORY_WAR_KINDS[HW_COUNT] = {"a war between bands", "a war between cities", "a rising", "a war of succession", "a revolution", "a civil war",
                                                  "a war with the other people", "a conquest"};
@@ -106,11 +108,11 @@ const char* const TRADES[AGE_COUNT][10] = {
 
 // a cause's collapse: what it brings (the hazard), the order the places are left in, where the leavers went, and the signs of each
 // stage ({place} a place's name, {river}, {sea}, {mountain}, {god}, {capital}, {other} the lore's and the history's)
-enum Hazard { HZ_NONE = 0, HZ_FAMINE, HZ_COLD, HZ_FLOOD, HZ_SICKNESS, HZ_WAR, HZ_DRYING, HZ_IMPACT, HZ_FLARE, HZ_UNREST, HZ_LEAVING, HZ_FIRE, HZ_CHILDREN };
-enum Order { OR_REMOTE = 0, OR_COAST, OR_COLD, OR_DRY, OR_CROWDED, OR_RANDOM, OR_SMALL };
-enum Whither { WH_PLACE = 0, WH_MOUNTAINS, WH_SEA, WH_SOUTH, WH_NORTH, WH_SKY, WH_ELSEWHERE, WH_MACHINES };
+enum Hazard { HZ_NONE = 0, HZ_FAMINE, HZ_COLD, HZ_FLOOD, HZ_SICKNESS, HZ_WAR, HZ_DRYING, HZ_IMPACT, HZ_FLARE, HZ_UNREST, HZ_LEAVING, HZ_FIRE, HZ_CHILDREN, HZ_SUNLOST };   // D-05: the sun going
+enum Order { OR_REMOTE = 0, OR_COAST, OR_COLD, OR_DRY, OR_CROWDED, OR_RANDOM, OR_SMALL, OR_WARM };   // D-05: OR_WARM the warmest ground last (the embers, the deep)
+enum Whither { WH_PLACE = 0, WH_MOUNTAINS, WH_SEA, WH_SOUTH, WH_NORTH, WH_SKY, WH_ELSEWHERE, WH_MACHINES, WH_UNDER };   // D-05: WH_UNDER below the ground
 struct CauseScript { int hazard; int order; int whither; const char* signs[STAGE_COUNT][2]; };
-const CauseScript SCRIPTS[CAUSE_COUNT] = {
+const CauseScript SCRIPTS[] = {
     {HZ_FAMINE, OR_DRY, WH_PLACE, {{"the stores at {place} ran low", "the rains came late to {place}"}, {"the seed was eaten at {place}", "the herds of {place} were killed for food"},
                                    {"the paths filled with the hungry", "{place} was left to the hungry"}, {"the last of the stores was shared out at {place}", "the last fires of {place} went out"}}},
     {HZ_COLD, OR_COLD, WH_SOUTH, {{"the snow lay into summer at {place}", "the ice came down the valleys of {mountain}"}, {"the passes closed and did not open", "the herds died in the snow at {place}"},
@@ -184,16 +186,24 @@ const CauseScript SCRIPTS[CAUSE_COUNT] = {
     {HZ_CHILDREN, OR_SMALL, WH_PLACE, {{"the people chose at {place}", "the counting of the voices"}, {"the ending began", "the last children were born"},
                                        {"the people let the world go", "the works were set to keep themselves"}, {"the last of the people at {place}", "the ending was kept"}}},
     {HZ_NONE, OR_RANDOM, WH_PLACE, {{"something at {place}", "the records stop making sense"}, {"it came to {place}", "the counting stopped"},
-                                    {"what happened next", "the words fail"}, {"the last record at {place}", "nothing"}}}};
+                                    {"what happened next", "the words fail"}, {"the last record at {place}", "nothing"}}},
+    // D-05: the loss of the sun: the omens of its way first (the history's own), then the year growing longer and the summers short, the sun
+    // small, the sea frozen, the snow at noon, the last fires kept below the ground by the warmest
+    {HZ_SUNLOST, OR_WARM, WH_UNDER, {{"the watchers at {place} said the year had grown longer", "the summer came late to {place} and left early"},
+                                     {"the harvest froze in the fields of {place}", "the snow lay into summer at {place}"},
+                                     {"the springs of {place} froze in their stones", "the snow fell at noon on {place}"},
+                                     {"the last fire was kept below the ground at {place}", "the halls below {place} were shut against the cold"}}}};
+static_assert(sizeof(SCRIPTS) / sizeof(SCRIPTS[0]) == CAUSE_COUNT, "a script a cause");
 
 // why a place was left in the collapse, by the cause ("" where the end took everything at once)
-const char* const LEFT_BY_CAUSE[CAUSE_COUNT] = {
+const char* const LEFT_BY_CAUSE[] = {
     "its fields could not feed it", "the ice came", "the ash and the cold", "the water came", "the sickness emptied it", "the bands' war", "its people went away",
     "the great sickness emptied it", "it fell to the enemy", "its fields failed", "its wells failed", "the cold drove its people south", "the war", "the dark years after the stone",
     "the poison in its air and water", "there was no coal to warm it", "the war", "the disorder", "the sickness emptied it", "the fire and the poison after it",
     "the made sickness emptied it", "the heat and the sea", "no food came to it", "nothing worked in it any more", "the war for the water", "there was no one left to keep it",
     "the machines closed it", "the grey took it", "the sky failed it", "the burning", "the weapons", "its people went into the machines", "its people went into the sky",
-    "its people went elsewhere", "", "its people let it go", ""};
+    "its people went elsewhere", "", "its people let it go", "", "the cold came and the sun did not come back"};
+static_assert(sizeof(LEFT_BY_CAUSE) / sizeof(LEFT_BY_CAUSE[0]) == CAUSE_COUNT, "a reason a cause");
 
 // the eras' names in the people's own way: a list an age (the government's and the values' first where they say something)
 const char* const ERA_NAMES[AGE_COUNT][6] = {
@@ -328,6 +338,7 @@ std::string fillText(const History& H, std::string s, int place, int year = 1 <<
 }   // namespace
 
 std::string historyInventionName(int id) { return id >= 0 && id < INVENTION_COUNT ? INVENTIONS[id].name : "something"; }
+int historyInventionIndex(const char* name) { return inventionIndex(name); }
 
 // ---- the founding schedule (shared with the other people's meeting: both histories read the same years) -------------------------
 namespace {
@@ -619,7 +630,18 @@ struct Builder {
     std::map<int, std::vector<std::pair<int, int>>> naturalEnds;   // a place left early with no event to blame: (place, why)
     std::vector<int> standBig, standSmall;   // the places founded (some since left: dropped when met)
 
+    std::vector<int> sunOmens;           // D-05: the years the omens of the lost sun's way were seen (the warning's)
+    int sunSeen = 0;                     // D-05: the HE_SUN things seen so far (bits)
+
     Builder(const StarSystem& s, const Body& b, const BodyGen& gg, int p, History& h) : sys(s), body(b), g(gg), people(p), H(h) {}
+
+    bool airFrozenThen() const { return g.hasTrait(TR_FROZEN_AIR); }   // D-05: its air fell as snow in the dark (the world's own trait now)
+    // D-05: the light of a drifter's people's sun by year over its old light: whole to the onset, then falling as the orbit widened (ten times
+    // the distance by the last sunrise, its light the inverse square of it), the stars' alone after the last sunrise
+    double sunAt(int y) const {
+        if (H.cause != CAUSE_SUN_LOST) return 1;
+        return sunLightOf(H.stageYear[STAGE_ONSET], H.profile.lastSunrise, y);
+    }
 
     // ---- small helpers
     int ageAt(int y) const { return H.eras[H.eraAt(y)].age; }
@@ -1330,6 +1352,11 @@ void Builder::setupCollapse() {
             case OR_DRY: x = (p.river ? -0.5 : 0) + (p.coast ? -0.2 : 0) + 0.5 * remote; break;
             case OR_CROWDED: x = sz + (p.coast ? 0.15 : 0); break;
             case OR_SMALL: x = 1 - sz - (capital ? 0.5 : 0); break;
+            case OR_WARM: {   // D-05: the high and the cold first, the warmest ground last (a field of embers, the deep valleys)
+                x = h / 2000.0 + 0.3 * std::fabs(p.lat) / latMax;
+                if (g.hasTrait(TR_EMBERS)) x -= 2.0 * emberFieldAt(g, StarSystem::bodyFromLatLon(p.lat, p.lon) * g.R);
+                break;
+            }
             default: x = 0; break;
         }
         x += 0.25 * unitFromHash(mix64(P.seed ^ (0x40C7ULL + i)));
@@ -1337,6 +1364,11 @@ void Builder::setupCollapse() {
         exp.push_back({x, i});
     }
     std::sort(exp.begin(), exp.end(), [](const std::pair<double, int>& a, const std::pair<double, int>& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
+    if (H.cause == CAUSE_SUN_LOST) {   // D-05: the omens of its way through the warning, two to four (a stream of its own)
+        Rng ro(P.seed ^ 0xD05011ULL);
+        const int from = H.stageYear[STAGE_WARNING], to = std::max(from, H.stageYear[STAGE_ONSET] - 1), n = 2 + ro.irange(3);
+        for (int k = 0; k < n; k++) sunOmens.push_back(from + (int)std::lround((to - from) * (k + ro.range(0.1, 0.9)) / n));
+    }
     if (exp.empty()) return;
     H.lastPlace = exp.back().second;
     const int C = H.stageYear[STAGE_CRISIS], L = H.last;
@@ -1361,7 +1393,8 @@ void Builder::setupPlanned() {
         const HistoryEra& he = H.eras[k];
         if (he.age == AGE_PREHISTORIC && H.age != AGE_PREHISTORIC) continue;
         const double full = he.age == AGE_PREHISTORIC ? std::max(400.0, (double)H.last) : std::max(1.0, P.fullYears[he.age]);
-        const int stop = std::min(he.end, P.collapseYear - 1);
+        // D-05: a people that lost its sun went on making things while it dimmed (its radio among them), to the last sunrise
+        const int stop = std::min(he.end, P.cause == CAUSE_SUN_LOST && P.lastSunrise > 0 ? P.lastSunrise : P.collapseYear - 1);
         for (int i = 0; i < INVENTION_COUNT; i++) {
             const InventionInfo& I = INVENTIONS[i];
             if (I.age != he.age) continue;
@@ -1444,6 +1477,14 @@ void Builder::setupPlanned() {
         for (const Planned& q : planned) if (q.kind == HE_INVENTION && q.a == railway) railYear = q.year;
         int indStart = 0, modStart = 0, futStart = 0;
         for (const HistoryEra& he : H.eras) { if (he.age == AGE_INDUSTRIAL) indStart = he.start; if (he.age == AGE_MODERN) modStart = he.start; if (he.age == AGE_FUTURISTIC) futStart = he.start; }
+        // D-05: a people that lost its sun built on while it dimmed (its ways to the last sunrise, as its inventions); its plan's railways came
+        // after the railway (where its age reached it too late to be invented, it was at the first line's year)
+        const bool sunlost = P.cause == CAUSE_SUN_LOST && P.lastSunrise > 0;
+        const int wayStop = sunlost ? P.lastSunrise : P.collapseYear - 1;
+        if (sunlost && railYear == 0 && indStart > 0) {
+            bool rails = false; for (const PlanEdge& pe : PP->edges) if (pe.kind == NK_RAIL) rails = true;
+            if (rails) { railYear = std::max(1, std::min(indStart + 10, wayStop)); planned.push_back({railYear, HE_INVENTION, railway, 0}); }
+        }
         for (size_t e = 0; e < PP->edges.size(); e++) {
             const PlanEdge& pe = PP->edges[e];
             const HistoryPlace& A = H.places[pe.a]; const HistoryPlace& B = H.places[pe.b];
@@ -1457,12 +1498,13 @@ void Builder::setupPlanned() {
                 default: break;
             }
             y += lo + rng.irange(hi);
-            const int stop = std::min(std::min(A.ended, B.ended), P.collapseYear - 1);
+            const int stop = std::min(std::min(A.ended, B.ended), wayStop);
             if (y > stop) y = std::max(std::max(A.founded, B.founded) + 1, stop);
             if (y > std::min(A.ended, B.ended)) y = std::max(A.founded, B.founded);
             H.wayOpened[e] = y;
             const bool great = big(pe.a) && big(pe.b);
-            if ((pe.trunk && great) || pe.kind == NK_CANAL || pe.kind == NK_RAIL || pe.kind == NK_MAGLEV || (pe.kind == NK_HIGHWAY && great)) waysByYear[y].push_back((int)e);
+            const bool untold = sunlost && pe.kind == NK_RAIL && y < railYear;   // D-05: a line between places left before the railway: its opening not told
+            if (!untold && ((pe.trunk && great) || pe.kind == NK_CANAL || pe.kind == NK_RAIL || pe.kind == NK_MAGLEV || (pe.kind == NK_HIGHWAY && great))) waysByYear[y].push_back((int)e);
         }
     }
     // the collapse's signs: one or two in each stage, at a place by the cause's order
@@ -1586,7 +1628,7 @@ void Builder::randomEvents(int y) {
     }
     // the land and the sky
     const double wet = std::max(0.0, W.wet);
-    if (rng.chance(1 / 35.0 * wet)) {
+    if (rng.chance(1 / 35.0 * wet) && sunAt(y) > 0.5) {   // D-05: no flood once the sun was going (the draw taken all the same)
         const int p = pickPlace(y, [&](int q) { return H.places[q].river ? 2.0 : (H.places[q].coast ? 1.0 : 0.0); });
         if (p >= 0) {
             const int64_t dead = (int64_t)(placePop(p, y) * rng.range(0.001, 0.03));
@@ -1596,7 +1638,7 @@ void Builder::randomEvents(int y) {
         }
     }
     int drought = 0;
-    if (a <= AGE_INDUSTRIAL && rng.chance((W.desert ? 1 / 60.0 : 1 / 140.0) * (1.2 - std::min(1.0, wet)))) {
+    if (a <= AGE_INDUSTRIAL && rng.chance((W.desert ? 1 / 60.0 : 1 / 140.0) * (1.2 - std::min(1.0, wet))) && sunAt(y) > 0.5) {   // D-05: nor a drought
         drought = 1 + rng.irange(4);
         const int e = ev(HE_DROUGHT, y, -1, 0.4f); E(e).value = drought;
     }
@@ -1650,6 +1692,7 @@ void Builder::randomEvents(int y) {
             const int hzd = SCRIPTS[H.cause].hazard;
             const bool fields = hzd == HZ_FAMINE || hzd == HZ_COLD || hzd == HZ_DRYING || hzd == HZ_IMPACT || hzd == HZ_FIRE || H.cause == CAUSE_CLIMATE || H.cause == CAUSE_WATER_WAR || H.cause == CAUSE_POISONED;
             if (fields) { q -= 2.5 * clampd((y - H.stageYear[0]) / (double)std::max(1, H.last - H.stageYear[0]), 0, 1) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }
+            if (hzd == HZ_SUNLOST) { q -= 4.5 * (1 - sunAt(y)) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }   // D-05: the fields under a sun going
         }
         const int hv = clampi((int)std::lround(q), 0, 4);
         H.harvest[yi] = (uint8_t)hv;
@@ -1963,6 +2006,9 @@ void Builder::collapseYear(int y) {
     }
     const int stage = P.stageAt(y);
     if (stage < 0) return;
+    for (int oy : sunOmens) if (oy == y) {   // D-05: the omen of the lost sun's way (the wanderer growing, the new star, the bent stars, the dance)
+        const int e = ev(HE_OMEN, y, seat(y), 0.6f); E(e).thing = 6 + clampi(P.sunWay, 0, SW_COUNT - 1); E(e).cause = stageEv[STAGE_WARNING];
+    }
     // the year's signs: the warning's and the onset's before its harm, the crisis's and the end's after it; each names the one before it
     // (or its stage), so a year's keep their order
     auto signs = [&](int fromStage, int toStage) {
@@ -2048,6 +2094,26 @@ void Builder::collapseYear(int y) {
                 const double share = onset ? rng.range(0.15, 0.6) : rng.range(0.01, 0.05);
                 E(e).value = (int64_t)(pop(y) * share); harm(-1, share, e, 12); deficit += share * 0.5; lastHazardEv = e; } break;
             case HZ_CHILDREN: break;
+            case HZ_SUNLOST: {   // D-05: the long cold from the onset; the sun seen going (smaller, the year that did not end, the sea frozen, the air
+                // fallen as snow, the last sunrise, the stars at noon), each once and in its order; the cold's dead every year as the light failed
+                const double light = sunAt(y), before = y > 1 ? sunAt(y - 1) : 1;
+                if (onset) { const int e = ev(HE_WINTER, y, -1, 0.6f); E(e).value = std::max(1, H.last - y + 1); lastHazardEv = e; }
+                auto seen = [&](int thing, float sal) {
+                    if (sunSeen >> thing & 1) return;
+                    sunSeen |= 1 << thing;
+                    const int p = thing == 2 ? exposed() : (s >= 0 ? s : -1);
+                    const int e = ev(HE_SUN, y, p, sal); E(e).thing = thing; E(e).cause = lastHazardEv;
+                    lastHazardEv = e;
+                };
+                if (light < 0.6 && before >= 0.6) seen(0, 0.7f);
+                if (y == H.stageYear[STAGE_CRISIS]) seen(1, 0.75f);
+                if (light < 0.25 && before >= 0.25 && !W.desert) seen(2, 0.75f);
+                if (light < 0.05 && before >= 0.05 && airFrozenThen()) seen(3, 0.8f);
+                if (y == H.profile.lastSunrise) seen(4, 1.0f);
+                if (y == H.profile.lastSunrise + 1) seen(5, 0.95f);
+                if (light < 0.8) harm(-1, 0.012 * (1 - light) * (stage >= STAGE_END ? 0.5 : 1.0), lastHazardEv, 13);
+                break;
+            }
             default: break;
         }
         if (onset && lastSignEv >= 0 && H.events[lastSignEv].year == y)
@@ -2064,7 +2130,7 @@ void Builder::collapseYear(int y) {
         H.places[p].endEvent = e;
         if (big(p) && placePop(p, y) > 200) {
             const int x = ev(HE_EXODUS, y, p, 0.5f); E(x).value = (int64_t)(placePop(p, y) * rng.range(0.1, 0.4)); E(x).thing = CS.whither; E(x).cause = e;
-            if (CS.whither == WH_PLACE) E(x).place2 = H.lastPlace;
+            if (CS.whither == WH_PLACE || CS.whither == WH_UNDER) E(x).place2 = H.lastPlace;   // D-05: below, at the last place's deep halls
         }
         const int to = nearestStanding(p, y + 1, false);
         for (int q : stepped) {
@@ -2082,7 +2148,7 @@ void Builder::collapseYear(int y) {
         int how = 15;
         switch (CS.hazard) {
             case HZ_FAMINE: case HZ_DRYING: how = 4; break;
-            case HZ_COLD: how = 13; break;
+            case HZ_COLD: case HZ_SUNLOST: how = 13; break;   // D-05: the cold
             case HZ_SICKNESS: how = 1; break;
             case HZ_FLOOD: how = 5; break;
             case HZ_IMPACT: case HZ_FLARE: case HZ_FIRE: how = 12; break;
@@ -2267,6 +2333,7 @@ void Builder::yearLoop() {
     H.yearsFrom = std::max(1, H.last - 25000);
     H.harvest.assign(H.last - H.yearsFrom + 1, 2);
     H.population.assign(H.last - H.yearsFrom + 1, 0);
+    if (H.cause == CAUSE_SUN_LOST) { H.sunlight.resize(H.last - H.yearsFrom + 1); for (int y = H.yearsFrom; y <= H.last; y++) H.sunlight[y - H.yearsFrom] = (float)sunAt(y); }   // D-05
     size_t plannedAt = 0;
     int termEnd = 0;
     ruleEnds = H.stageYear[STAGE_CRISIS] + (int)std::lround(rng.range(0.3, 1.0) * (H.last - H.stageYear[STAGE_CRISIS]));
@@ -2657,6 +2724,11 @@ int History::eraAt(int year) const {
     return eras.empty() ? 0 : (int)eras.size() - 1;
 }
 int History::harvestAt(int year) const { const int i = year - yearsFrom; return i >= 0 && i < (int)harvest.size() ? harvest[i] : 2; }
+double History::sunlightAt(int year) const {   // D-05
+    if (sunlight.empty()) return 1;
+    const int i = clampi(year - yearsFrom, 0, (int)sunlight.size() - 1);
+    return year < yearsFrom ? 1.0 : sunlight[i];
+}
 double History::populationAt(int year) const {
     const int i = year - yearsFrom;
     if (i >= 0 && i < (int)population.size() && population[i] > 0) return population[i];
@@ -2676,8 +2748,10 @@ std::vector<int> History::eventsAt(int place) const {
     return o;
 }
 
-std::shared_ptr<History> buildHistory(const StarSystem& sys, const Body& b, const BodyGen& gSeason, int people) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+std::shared_ptr<History> buildHistory(const StarSystem& sys0, const Body& b0, const BodyGen& gSeason, int people) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const double t0 = nowMs();
     auto H = std::make_shared<History>();
     const int n = std::max(1, peoplesOf(g));
@@ -2711,7 +2785,7 @@ std::map<std::pair<uint64_t, int>, HistorySlot> g_hist;
 uint64_t g_histTick = 0;
 }
 std::shared_ptr<const History> historyOf(const StarSystem& sys, const Body& b, const BodyGen& gSeason, int people) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const std::pair<uint64_t, int> key(g.seed, people > 0 ? 1 : 0);
     {
         std::lock_guard<std::mutex> lk(g_histMutex);
@@ -2730,7 +2804,7 @@ std::shared_ptr<const History> historyOf(const StarSystem& sys, const Body& b, c
 }
 
 std::shared_ptr<const History> historyOfWorld(const BodyGen& gSeason, int people) {   // T-02
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const std::pair<uint64_t, int> key(g.seed, people > 0 ? 1 : 0);
     {
         std::lock_guard<std::mutex> lk(g_histMutex);
@@ -2739,7 +2813,7 @@ std::shared_ptr<const History> historyOfWorld(const BodyGen& gSeason, int people
     }
     if (!g.starKnown || g.bodyIndex < 0) return nullptr;
     Star st;
-    if (!starInSector(g.starSx, g.starSy, g.starSz, st, true)) return nullptr;
+    if (!placeInSector(g.starSx, g.starSy, g.starSz, st, true)) return nullptr;
     StarSystem sys; sys.generate(st);
     if (g.bodyIndex >= (int)sys.bodies.size() || sys.bodies[g.bodyIndex].seed != g.seed) return nullptr;
     return historyOf(sys, sys.bodies[g.bodyIndex], g, people);
@@ -3076,8 +3150,10 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
         case HE_WAY: s = std::string("the ") + ofKind(e.out) + " between " + L(e.place) + " and " + L(e.place2) + " was opened"; break;
         case HE_FESTIVAL: s = L(e.place) + " kept the " + ordinal((int)e.value) + " year of its founding"; break;
         case HE_OMEN: {
-            static const char* const OM[6] = {"the comet returned", "the sun went dark at noon", "lights filled the night sky", "stars fell all night", "a new star shone for a season", "the moon turned red"};
-            s = OM[clampi(e.thing, 0, 5)] + (e.thing != 0 && e.thing != 4 ? std::string(" over ") + L(e.place) : std::string());
+            static const char* const OM[10] = {"the comet returned", "the sun went dark at noon", "lights filled the night sky", "stars fell all night", "a new star shone for a season", "the moon turned red",
+                                               "the wanderer grew brighter in the sky, year after year", "a new star grew brighter each year", "the stars bent round a place where nothing shone",
+                                               "the second sun drew further off each year"};   // D-05: the lost sun's four
+            s = OM[clampi(e.thing, 0, 9)] + (e.thing != 0 && e.thing != 4 && e.thing < 6 ? std::string(" over ") + L(e.place) : std::string());
             break;
         }
         case HE_INVENTION: {
@@ -3155,9 +3231,16 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
         }
         case HE_STAGE: s = std::string("the collapse: ") + STAGE_TITLES[clampi(e.out, 0, STAGE_COUNT - 1)] + " (" + CAUSE_NAMES[clampi(H.cause, 0, CAUSE_COUNT - 1)] + ")"; break;
         case HE_EXODUS: {
-            static const char* const WHI[8] = {"for ", "for the mountains", "over the sea", "for the south", "for the north", "into the sky", "elsewhere", "into the machines"};
-            const int w = clampi(e.thing, 0, 7);
-            s = withCommas(e.value) + " left " + L(e.place) + " " + (w == 0 ? std::string("for ") + (e.place2 >= 0 ? L(e.place2) : std::string("the last places")) : std::string(WHI[w]));
+            static const char* const WHI[9] = {"for ", "for the mountains", "over the sea", "for the south", "for the north", "into the sky", "elsewhere", "into the machines", "for the halls below "};
+            const int w = clampi(e.thing, 0, 8);
+            s = withCommas(e.value) + " left " + L(e.place) + " " + (w == 0 ? std::string("for ") + (e.place2 >= 0 ? L(e.place2) : std::string("the last places"))
+                                                                          : (w == 8 ? std::string(WHI[w]) + (e.place2 >= 0 ? L(e.place2) : std::string("the warm ground")) : std::string(WHI[w])));
+            break;
+        }
+        case HE_SUN: {   // D-05: the sun going, as it was seen
+            static const char* const SU[6] = {"the sun had grown smaller", "the year did not end: the summer did not come back", "the sea froze from the shore at {place}",
+                                              "the air itself fell as snow", "the sun rose for the last time", "the stars stood in the sky at noon"};
+            s = fillText(H, SU[clampi(e.thing, 0, 5)], e.place, e.year) + (e.thing == 4 && e.place >= 0 ? std::string(" over ") + L(e.place) : std::string());
             break;
         }
         case HE_END: s = "the end of " + people(H) + ": " + N(e.a) + " was the last of them, at " + L(e.place); break;

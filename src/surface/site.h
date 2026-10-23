@@ -22,6 +22,8 @@ struct TerrainVertex {
     float shore = 1e9f;    // B-322: signed distance to the water's edge (metres, negative in the water), 1e9 unknown
     uint8_t scree = 0;     // O6-04: loose rock 0..255 (boulder fields under the cliffs)
     uint8_t road = 0;      // C-09: an old road's share of this vertex's footprint (0..255), what the wear left of it
+    uint8_t wtint = 0, ltint = 0;   // Q-02: the water's trait colours here (`SurfaceSample::waterTint`, `lifeTint`), 0..255
+    uint8_t gtint = 0;              // Q-02: the ground trait's field (`SurfaceSample::groundTint`): a strewn field's stones, a stratum's accent
     int32_t cx = 0x7fffffff, cz = 0x7fffffff;   // tags
 };
 
@@ -195,6 +197,13 @@ struct SurfaceSite {
     double groundHeight(double x, double z);
     double groundHeightCoarse(double x, double z);   // lod0 alone (what the near ring blends from)
     double waterHeight() const { return hasWater ? seaLevel : -1e9; }   // the sea
+    // Q-02 (TR_GREAT_TIDES): the sea's offset from its mean level now (the view sets it each frame: `tideOffsetM`). The water as it stands now
+    // adds it to the sea's vertices (`waterOf`, `waterNowAt`: the drawing, the shore's cut, the explorer, the vehicles, the rangefinder); what is
+    // placed on the ground reads the mean (`waterAt`: a tree or a stone stays where it is whatever the tide)
+    double tideM = 0;
+    bool seaVertex(const TerrainVertex& t) const { return hasWater && t.water > -1e8f && std::fabs(t.water - (float)seaLevel) < 0.01f && t.shore >= 1e8f; }
+    double waterOf(const TerrainVertex& t) const { return t.water > -1e8f ? (double)t.water + (tideM != 0 && seaVertex(t) ? tideM : 0.0) : -1e9; }
+    double waterNowAt(double x, double z);
     // local water surface (sea, lake or river) at x, z; -1e9 where there is none (bilinear on lod0)
     double waterAt(double x, double z);
     // ground or water, whichever is higher

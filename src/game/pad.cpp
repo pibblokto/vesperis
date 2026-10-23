@@ -325,6 +325,7 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
             item(surf.hasWaypoint ? "CLEAR THE WAYPOINT" : "WAYPOINT AT THE CROSSHAIR", KEY_M);
             item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
             if (!surf.inVehicle()) {
+                item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);   // D-04
                 item("VISION MODE", KEY_V);
                 item("CREATURES NEARBY", KEY_X);
                 const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));

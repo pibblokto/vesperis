@@ -140,7 +140,7 @@ bool Game::probeHere() const {
 
 int Game::testProbeGiant() const {
     if (!sys.valid) return -1;
-    for (int i = 0; i < (int)sys.bodies.size(); i++) if (sys.bodies[i].type == PT_GASGIANT) return i;
+    for (int i = 0; i < (int)sys.bodies.size(); i++) if (kindHas(sys.bodies[i].type, KT_GAS_GIANT)) return i;
     return -1;
 }
 
@@ -458,7 +458,7 @@ void Game::renderProbeFeed(double c, double tt) {
     if (mixIn > 0) {   // the probe's own picture
         const double zp = giantAltitudeKm(a, std::max(bar, 1e-9));
         const Vec3 sunW = normalize(sys.star.pos - pos), sunL = W * sunW;
-        const double lf = SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - pos));
+        const double lf = sys.sunless() ? 0.0 : SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - pos));   // D-01: a drifter's giant has no sun (the floor is a sun's)
         const BodyGen& gg = spaceR.genFor(g);
         const GiantCharacter& ch = a.ch;
         const int nd = a.decks, last = nd - 1;
@@ -478,7 +478,8 @@ void Game::renderProbeFeed(double c, double tt) {
         // (the light come through it), easing into the next deck's own over the band's last stretch; X-03: the deep's glow
         // counts with the sun's (a brown dwarf's clouds are lit from under them as much as from over them)
         const int kAbove = giantDeckAbove(a, bar), kIn = giantDeckAt(a, bar);
-        double Lref = bar < a.top[0] ? giantSunlightAt(a, a.top[0], cut) : Lp;
+        const bool airGlobe = ch.kind == GK_AZURE || ch.kind == GK_ALKALI;   // P-07: its globe is its air's (no deck seen from orbit: it exposes for the air round it)
+        double Lref = bar < a.top[0] && !airGlobe ? giantSunlightAt(a, a.top[0], cut) : Lp;
         if (kIn < 0 && kAbove >= 0 && kAbove < last)
             Lref = std::exp(lerpd(std::log(giantSunlightAt(a, a.base[kAbove], cut)), std::log(Lp), smoothstep(lpOf(a.top[kAbove + 1] * 0.7), lpOf(a.top[kAbove + 1]), lp)));
         const double glowRef = bar < a.top[0] ? giantGlowAt(a, a.top[0]) : 0.6 * giantGlowAt(a, bar, cut);
@@ -486,17 +487,34 @@ void Game::renderProbeFeed(double c, double tt) {
         double albAim = 0.55, stormAim = 0;
         probe.bands.at(px[0], 0, albAim, stormAim);
         const double bandGain = std::pow(0.75 / std::max(albAim, 0.2), 0.42);   // and takes back some of a dark belt's dark (the band's colour stays)
-        const float colGain = (float)(clampd(std::pow(std::max(Lp + giantGlowAt(a, bar, cut), 1e-6), ice ? 0.06 : 0.1), 0.45, 1.0) * clampd(lf, 0.6, 1.1));   // (an ice giant's blue light carries deeper)
+        // P-07: a made giant's light by its class (the tints down the decks, the deep's colours, whether it changes from high in the air and toward
+        // the blue): a water cloud's white, an azure giant's blue from high in its clear air (Rayleigh's), an alkali giant's blue and dim (its
+        // sodium takes the yellow, its potassium the red), a silicate giant's orange from the glow under it, a hazy giant's pale amber
+        struct MadeLight { RGB t1, t2, dz, dh, warmK; bool high; double gainExp; };   // warmK: the haze's shift (a plain giant's toward the amber)
+        static const MadeLight MADE[6] = {
+            {RGB(0.92f, 0.94f, 1.0f), RGB(0.78f, 0.82f, 0.9f), RGB(0.30f, 0.32f, 0.36f), RGB(0.40f, 0.42f, 0.46f), RGB(0.94f, 0.96f, 1.0f), false, 0.08},
+            {RGB(0.62f, 0.8f, 1.0f), RGB(0.34f, 0.5f, 0.95f), RGB(0.10f, 0.18f, 0.42f), RGB(0.16f, 0.26f, 0.55f), RGB(0.45f, 0.85f, 1.08f), true, 0.05},
+            {RGB(0.55f, 0.58f, 0.92f), RGB(0.38f, 0.30f, 0.72f), RGB(0.22f, 0.05f, 0.04f), RGB(0.34f, 0.08f, 0.05f), RGB(0.5f, 0.6f, 1.0f), true, 0.35},
+            {RGB(1.0f, 0.72f, 0.48f), RGB(1.0f, 0.5f, 0.22f), RGB(0.55f, 0.2f, 0.06f), RGB(0.75f, 0.32f, 0.1f), RGB(1.0f, 0.7f, 0.45f), false, 0.1},
+            {RGB(0.95f, 0.92f, 0.84f), RGB(0.8f, 0.74f, 0.62f), RGB(0.36f, 0.34f, 0.31f), RGB(0.46f, 0.44f, 0.40f), RGB(1.0f, 0.9f, 0.76f), true, 0.1},
+            {RGB(1.0f, 0.86f, 0.66f), RGB(0.92f, 0.66f, 0.42f), RGB(0.40f, 0.30f, 0.22f), RGB(0.50f, 0.40f, 0.30f), RGB(1.0f, 0.8f, 0.6f), true, 0.1}};
+        const MadeLight* ml = ch.kind >= GK_WATER ? &MADE[ch.kind - GK_WATER] : nullptr;
+        const bool high = ice || (ml && ml->high);
+        const float colGain = (float)(clampd(std::pow(std::max(Lp + giantGlowAt(a, bar, cut), 1e-6), ice ? 0.06 : (ml ? ml->gainExp : 0.1)), 0.45, 1.0) * clampd(lf, 0.6, 1.1));   // (an ice giant's blue light carries deeper)
         // the light come down to a pressure, reddened through the decks (an ice giant's: the methane takes the red, the light goes
         // blue-green)
-        const RGB tint1 = ice ? RGB(0.66f, 0.9f, 1.0f) : RGB(1.0f, 0.76f, 0.56f), tint2 = ice ? RGB(0.36f, 0.72f, 0.95f) : RGB(0.95f, 0.56f, 0.38f);
+        const RGB tint1 = ml ? ml->t1 : (ice ? RGB(0.66f, 0.9f, 1.0f) : RGB(1.0f, 0.76f, 0.56f)), tint2 = ml ? ml->t2 : (ice ? RGB(0.36f, 0.72f, 0.95f) : RGB(0.95f, 0.56f, 0.38f));
         auto tint = [&](double b) {   // (an ice giant's methane blues the light from high in the air)
-            RGB t = lerp(white, tint1, (float)smoothstep(lpOf(ice ? 0.005 : a.top[0]), lpOf(a.base[0]), lpOf(b)));
+            RGB t = lerp(white, tint1, (float)smoothstep(lpOf(high ? 0.005 : a.top[0]), lpOf(a.base[0]), lpOf(b)));
             return lerp(t, tint2, (float)smoothstep(lpOf(a.base[0]), lpOf(a.base[last]), lpOf(b)));
         };
-        auto warm = [&](RGB c0, double w) { return ice ? lerp(c0, RGB(c0.r * 0.45f, c0.g * 0.85f, std::min(1.0f, c0.b * 1.08f)), (float)w) : lerp(c0, RGB(c0.r, c0.g * 0.72f, c0.b * 0.5f), (float)w); };
-        // a deck's colour: the first is the globe's (what was seen from orbit), the ones under it their clouds' own in its light
-        auto deckCol = [&](int k) { return k == 0 ? band : lerp(band, CLOUD_SPECIES[a.species[k]].color * lightCol, 0.55f); };
+        auto warm = [&](RGB c0, double w) {
+            if (ml) return lerp(c0, RGB(c0.r * ml->warmK.r, c0.g * ml->warmK.g, std::min(1.0f, c0.b * ml->warmK.b)), (float)w);
+            return ice ? lerp(c0, RGB(c0.r * 0.45f, c0.g * 0.85f, std::min(1.0f, c0.b * 1.08f)), (float)w) : lerp(c0, RGB(c0.r, c0.g * 0.72f, c0.b * 0.5f), (float)w);
+        };
+        // a deck's colour: the first is the globe's (what was seen from orbit), the ones under it their clouds' own in its light (P-07: an azure or
+        // an alkali giant's first too: its globe is its air's)
+        auto deckCol = [&](int k) { return k == 0 && !airGlobe ? band : lerp(band, CLOUD_SPECIES[a.species[k]].color * lightCol, k == 0 ? 0.85f : 0.55f); };
         ProbeView v;
         v.cam = camLocal; v.pj = pj; v.zKm = zp; v.radiusKm = g.radiusKm; v.atm = &probe.atm; v.decks = &probe.decks;
         for (int k = 0; k < GIANT_MAX_DECKS; k++) { v.px[k] = px[k]; v.pz[k] = pz[k]; }
@@ -524,8 +542,8 @@ void Game::renderProbeFeed(double c, double tt) {
             {lpOf(0.02), lerp(ink, band, 0.2f), lerp(band, white, 0.45f), 20, 52},
             {lpOf(a.hazeBar), lerp(lerp(ink, band, 0.2f), warm(band, 1) * 0.9f, 0.6f), warm(lerp(band, white, 0.4f), 0.35), 34, 54},
             {lpOf(a.top[0]), warm(band, 0.8) * 0.95f, warm(lerp(band, white, 0.35f), 0.55), 44, 54}};
-        const RGB deepZ = ice ? RGB(0.2f, 0.28f, 0.34f) : (ch.kind == GK_BROWN ? RGB(0.3f, 0.14f, 0.1f) : RGB(0.32f, 0.27f, 0.26f));
-        const RGB deepH = ice ? RGB(0.28f, 0.36f, 0.42f) : (ch.kind == GK_BROWN ? RGB(0.42f, 0.2f, 0.14f) : RGB(0.42f, 0.37f, 0.36f));
+        const RGB deepZ = ml ? ml->dz : (ice ? RGB(0.2f, 0.28f, 0.34f) : (ch.kind == GK_BROWN ? RGB(0.3f, 0.14f, 0.1f) : RGB(0.32f, 0.27f, 0.26f)));
+        const RGB deepH = ml ? ml->dh : (ice ? RGB(0.28f, 0.36f, 0.42f) : (ch.kind == GK_BROWN ? RGB(0.42f, 0.2f, 0.14f) : RGB(0.42f, 0.37f, 0.36f)));
         for (int k = 0; k < nd; k++) {
             const RGB dc = deckCol(k);
             if (k > 0) looks.push_back({lpOf(a.top[k]), dc * tint(a.top[k]) * 0.7f, lerp(dc, white, 0.15f) * tint(a.top[k]) * 0.9f, 28, 34});
@@ -901,7 +919,7 @@ double Game::probeLightAt(double c, double tt) const {
     unsigned cut = 0;
     for (int k = 0; k + 1 < a.decks; k++) if (bar > a.top[k] && probe.bands.valid() && probe.decks.holeAt(k, -probeDeckDrift(k, c), 0) >= 0.5) cut |= 1u << k;
     const Vec3 up = normalize(sys.bodyFrame(probe.body, tt).transposed() * StarSystem::bodyFromLatLon(probe.aimLat, probe.aimLon));
-    const double el = dot(up, normalize(sys.star.pos - sys.bodyPos(probe.body, tt)));
+    const double el = sys.sunless() ? 0.0 : dot(up, normalize(sys.star.pos - sys.bodyPos(probe.body, tt)));   // D-01: no sun over a drifter's clouds (it sits on the anchor)
     return giantSunlightAt(a, bar, cut) * std::max(0.0, el) + giantGlowAt(a, bar, cut);
 }
 
@@ -1001,7 +1019,7 @@ bool Game::recordingContext(int rec) {
     if (slash == std::string::npos || !Guide::parseStarKey(r.body, sx, sy, sz)) return false;
     const int bi = atoi(r.body.c_str() + slash + 1);
     Star s;
-    if (!starInSector(sx, sy, sz, s, true)) { status("THE GALAXY WAS REBUILT SINCE THIS RECORDING - ITS STAR IS GONE", 5); audio.beep = 3; return false; }
+    if (!placeInSector(sx, sy, sz, s, true)) { status("THE GALAXY WAS REBUILT SINCE THIS RECORDING - ITS STAR IS GONE", 5); audio.beep = 3; return false; }
     const bool here = sys.star.sx == sx && sys.star.sy == sy && sys.star.sz == sz && !sys.bodies.empty();
     if (!here && (replay.here || replay.sys.star.seed != s.seed || replay.sys.bodies.empty())) {
         replay.sys = StarSystem(); replay.sys.generate(s); replay.sys.valid = true;

@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <algorithm>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -73,8 +74,8 @@ std::string Game::bodyLabelOf(int i) const {
     const Body& b = sys.bodies[i];
     std::string n = bodyNameOf(i);
     if (b.type == PT_COMPANION) return n + " (COMPANION STAR, " + STAR_CLASSES[b.starClass].name + ")";
-    if (b.doublePlanet && b.parent >= 0) return n + " (" + PLANET_TYPES[b.type].name + ", twin planet)";
-    return n + " (" + PLANET_TYPES[b.type].name + (b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
+    if (b.doublePlanet && b.parent >= 0) return n + " (" + KINDS[b.type].name + ", twin planet)";
+    return n + " (" + KINDS[b.type].name + (b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? ", of the companion)" : ", moon)") : ")");
 }
 
 bool Game::nameIsForeign(const std::string& key) const { return !guide.names.count(key) && guide.inbox.count(key); }
@@ -83,7 +84,7 @@ std::string Game::screenshotCaption() const {
     std::string where;
     if (surf.valid && (state == GameState::SURFACE || returnState == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT))
         where = fmt("%s  %.1f%s %.1f%s  %s", upper(bodyNameOf(surf.site.body)).c_str(), std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S",
-                    std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", PLANET_TYPES[sys.bodies[surf.site.body].type].name);
+                    std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", KINDS[sys.bodies[surf.site.body].type].name);
     else if (sys.valid) where = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 ? fmt("IN ORBIT OF %s", upper(bodyNameOf(ship.parkedBody)).c_str()) : fmt("SYSTEM %s (%s)", upper(starNameOf(sys.star)).c_str(), STAR_CLASSES[sys.star.cls].code);
     else where = "INTERSTELLAR SPACE";
     if (state == GameState::PROBE && probe.active) where = probeCaption() + " - " + where;   // X-01: what the probe's camera shows and where
@@ -183,12 +184,12 @@ void Game::noteVisit() {
     migrateLandmarkNames();   // R-408: the sights named here before are marks now
     std::string key = starKeyOf(sys.star);
     guide.visited.insert(key);
-    guide.classesSeen.insert(sys.star.cls);
+    if (!sys.sunless()) guide.classesSeen.insert(sys.star.cls);   // D-01: a drifter's place is no class of star
     if (guide.home.empty()) guide.home = key;
     if (!guide.home.empty()) {
         int64_t hx, hy, hz;
         if (Guide::parseStarKey(guide.home, hx, hy, hz)) {
-            Star h; if (starInSector(hx, hy, hz, h)) guide.furthestFromHomeLY = std::max(guide.furthestFromHomeLY, length(h.pos - sys.star.pos) / SECTOR_KM);
+            Star h; if (placeInSector(hx, hy, hz, h)) guide.furthestFromHomeLY = std::max(guide.furthestFromHomeLY, length(h.pos - sys.star.pos) / SECTOR_KM);
         }
     }
 }
@@ -217,7 +218,7 @@ void Game::updateGuideMenu(const Input& in) {
     bool onSurface = guideReturn == GameState::SURFACE;
     switch (guideSel) {
         case 0: if (!onSurface) openStarMap(); else status("THE STAR MAP IS READ FROM THE SHIP", 3); break;
-        case 1: if (sys.valid) beginTextEntry("NAME THIS STAR", 1, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string()); else status("NO STAR HERE", 3); break;
+        case 1: if (sys.valid) beginTextEntry(sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", 1, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string()); else status("NO STAR HERE", 3); break;   // D-02: a drifter's place
         case 2: {
             int bi = onSurface && surf.valid ? surf.site.body : ship.localTarget;
             if (sys.valid && bi >= 0 && bi < (int)sys.bodies.size()) { textBody = bi; beginTextEntry("NAME THIS WORLD", 2, bodyNamed(bi) ? upper(bodyNameOf(bi)) : std::string()); }
@@ -251,6 +252,7 @@ void Game::renderGuideMenu() {
         std::string label = GUIDE_ITEMS[i];
         if (i == 2 && sys.valid) { int bi = guideReturn == GameState::SURFACE && surf.valid ? surf.site.body : ship.localTarget; if (bi >= 0 && bi < (int)sys.bodies.size() && bodyNamed(bi)) label = "RENAME " + trunc(upper(bodyNameOf(bi)), 22); }
         if (i == 1 && sys.valid && starNamed(sys.star)) label = "RENAME " + trunc(upper(starNameOf(sys.star)), 22);
+        else if (i == 1 && sys.valid && sys.sunless()) label = "NAME THIS PLACE";   // D-02: a drifter's place is the explorer's to name as a system is
         drawText(canvas, 56, y, label.c_str(), sel ? HUD_WHITE : HUD_GREEN);
         if (sel) drawText(canvas, 46, y, ">", HUD_AMBER);
     }
@@ -278,8 +280,8 @@ void Game::updateTextEntry(const Input& in) {
         case 1:
             if (text.empty() || !sys.valid) return;
             guide.names[starKeyOf(sys.star)] = text; guide.save(guidePath);
-            status(fmt("THE STAR IS NOW CALLED %s", text.c_str()), 4);
-            logEvent("NOTE", "NAMED THE STAR " + text);
+            status(fmt(sys.sunless() ? "THE PLACE IS NOW CALLED %s" : "THE STAR IS NOW CALLED %s", text.c_str()), 4);   // D-02
+            logEvent("NOTE", (sys.sunless() ? "NAMED THE PLACE WITH NO STAR " : "NAMED THE STAR ") + text);
             break;
         case 2: {
             if (text.empty() || !sys.valid || textBody < 0 || textBody >= (int)sys.bodies.size()) return;
@@ -324,7 +326,7 @@ void Game::updateTextEntry(const Input& in) {
             long long x, y, z;
             if (!(is >> x >> y >> z)) { status("USE THREE NUMBERS: X Y Z", 4); audio.beep = 3; return; }
             Star s;
-            if (!starInSector(x, y, z, s, true)) { status(fmt("NO STAR IN SECTOR %lld %lld %lld", x, y, z), 4); audio.beep = 3; return; }
+            if (!placeInSector(x, y, z, s, true)) { status(fmt("NO STAR IN SECTOR %lld %lld %lld", x, y, z), 4); audio.beep = 3; return; }   // D-01: or its drifter
             setRemoteStar(s);
             break;
         }
@@ -363,11 +365,12 @@ void Game::setRemoteStar(const Star& s) {
     if (sys.valid && s.seed == sys.star.seed) { status("THAT IS THE CURRENT STAR", 3); audio.beep = 3; return; }
     jumpPlot.seed = 0;   // G-06: a target of any other kind is no plotted jump (`plotJump` sets it again after)
     ship.remote = s;
-    if (ship.remote.name.empty()) starInSector(s.sx, s.sy, s.sz, ship.remote, true);
+    if (ship.remote.name.empty()) placeInSector(s.sx, s.sy, s.sz, ship.remote, true);
     ship.hasRemote = true;
     ship.targeting = false;
     double ly = length(ship.remote.pos - ship.pos) / SECTOR_KM;
-    status(fmt("REMOTE TARGET: %s (%s) %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), STAR_CLASSES[ship.remote.cls].code, ly), 6);
+    if (ship.remote.cls == STAR_ROGUE) status(fmt("REMOTE TARGET: %s - NO STAR - %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), ly), 6);   // D-01: a drifter has no class to show
+    else status(fmt("REMOTE TARGET: %s (%s) %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), STAR_CLASSES[ship.remote.cls].code, ly), 6);
     audio.beep = 1;
 }
 
@@ -380,7 +383,7 @@ void Game::targetStarByName(const std::string& name) {
         if (upper(kv.second).rfind(want, 0) != 0) continue;
         int64_t sx, sy, sz;
         if (!Guide::parseStarKey(kv.first, sx, sy, sz)) continue;
-        Star s; if (starInSector(sx, sy, sz, s, true)) { setRemoteStar(s); return; }
+        Star s; if (placeInSector(sx, sy, sz, s, true)) { setRemoteStar(s); return; }   // D-01: a drifter named too
     }
     const Star* best = nullptr; double bestD = 1e300;
     for (const Star& s : nb.stars) {
@@ -399,7 +402,7 @@ void Game::targetPreviousStar() {
         int64_t sx, sy, sz;
         if (!Guide::parseStarKey(guide.history[i], sx, sy, sz)) continue;
         if (sys.valid && sx == sys.star.sx && sy == sys.star.sy && sz == sys.star.sz) continue;
-        Star s; if (starInSector(sx, sy, sz, s, true)) { setRemoteStar(s); state = guideReturn; return; }
+        Star s; if (placeInSector(sx, sy, sz, s, true)) { setRemoteStar(s); state = guideReturn; return; }   // D-01: a drifter visited too
     }
     status("NO PREVIOUS STAR IN THE HISTORY", 3); audio.beep = 3;
 }
@@ -408,7 +411,7 @@ void Game::targetHome() {
     int64_t sx, sy, sz;
     if (guide.home.empty() || !Guide::parseStarKey(guide.home, sx, sy, sz)) { status("NO HOME STAR SET", 3); audio.beep = 3; return; }
     Star s;
-    if (!starInSector(sx, sy, sz, s, true)) { status("THE HOME SECTOR HAS NO STAR", 3); return; }
+    if (!placeInSector(sx, sy, sz, s, true)) { status("THE HOME SECTOR HAS NO STAR", 3); return; }
     setRemoteStar(s);
     state = guideReturn;
 }
@@ -418,7 +421,7 @@ void Game::targetHome() {
 // ---------------------------------------------------------------------------
 
 void Game::openStarMap() {
-    mapYaw = 0.6; mapPitch = 0.5; mapZoom = 1.0; mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
+    mapYaw = 0.6; mapPitch = 0.5; mapZoom = 1.0; mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
     if (ship.mode == ShipState::VIMANA) mapPage = 1;   // G-05: a flight shows the galaxy (the neighbourhood is read at a star)
     state = GameState::STAR_MAP;
 }
@@ -446,12 +449,12 @@ void Game::updateStarMap(const Input& in) {
     // 0 shows all. Keys 1-9 toggled S00-S08 until S-01's tenth class had no key
     if (in.wasPressed(KEY_C) || in.wasPressed(KEY_X)) {
         int cur = -1;   // -1 all, else the one class shown
-        for (int c = 0; c < STAR_CLASS_COUNT; c++) if (mapClassMask == (1 << c)) cur = c;
-        int n = STAR_CLASS_COUNT + 1;
+        for (int c = 0; c < STAR_DRAWN_COUNT; c++) if (mapClassMask == (1 << c)) cur = c;
+        int n = STAR_DRAWN_COUNT + 1;
         cur = ((cur + 1 + (in.wasPressed(KEY_C) ? 1 : -1)) % n + n) % n - 1;
-        mapClassMask = cur < 0 ? (1 << STAR_CLASS_COUNT) - 1 : (1 << cur);
+        mapClassMask = cur < 0 ? (1 << STAR_DRAWN_COUNT) - 1 : (1 << cur);
     }
-    if (in.wasPressed(KEY_0)) mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
+    if (in.wasPressed(KEY_0)) mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_M)) {
         if (gchart.look) { gchart.look = false; mapPage = 1; }   // G-06: the look is the chart's: the map opens on the chart again
         state = GameState::SPACE; return;
@@ -537,7 +540,7 @@ void Game::renderStarMap() {
     drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, HUD_DIM); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, HUD_DIM);
     drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT THE PLOTTED END" : "THE NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);   // G-05: the page's name (49 characters with four digits; G-06's look 50)
     int solo = -1;   // S-02: the filter shows all or one class (the legend of every code outgrew the line at ten classes)
-    for (int c = 0; c < STAR_CLASS_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
+    for (int c = 0; c < STAR_DRAWN_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
     std::string filt = solo < 0 ? "CLASSES: ALL" : fmt("CLASS: %s %s", STAR_CLASSES[solo].code, STAR_CLASSES[solo].name);
     drawText(canvas, 6, 13, filt.c_str(), solo < 0 ? HUD_DIM : HUD_AMBER);
     {   // R-407 (the user's "green marker stars as unknown"): what the marks mean
@@ -598,20 +601,46 @@ void Game::renderLog() {
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN PAGE   ESC CLOSE", HUD_DIM);
 }
 
+// P-00: the world types walked on one line of 48 characters (two spaces in): their short names as far as they go, the count of the
+// rest after them; past that the statistics offer a page of their own (K)
+std::string Game::statsKindsLine() const {
+    std::string all;
+    for (int c : guide.typesSeen) all += std::string(shortType(c)) + " ";
+    if (all.size() <= 48) return all;
+    std::string out; int shown = 0;
+    for (int c : guide.typesSeen) {
+        std::string next = out + shortType(c) + " ";
+        if (next.size() + 4 > 48) break;   // room for "+NN"
+        out = next; shown++;
+    }
+    return out + "+" + std::to_string((int)guide.typesSeen.size() - shown);
+}
+bool Game::statsKindsOverflow() const {
+    size_t n = 0;
+    for (int c : guide.typesSeen) n += std::strlen(shortType(c)) + 1;
+    return n > 48;
+}
+
 void Game::renderStats() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 215);
     int y = 8;
+    if (statsKinds) {   // P-00: the world types walked, by name, in three columns (sixty fit)
+        drawText(canvas, 12, y, fmt("WORLD TYPES WALKED    %d/%d", (int)guide.typesSeen.size(), landableTypeCount()).c_str(), HUD_AMBER); y += 14;
+        int i = 0;
+        for (int c : guide.typesSeen) { drawText(canvas, 12 + (i % 3) * 100, y + (i / 3) * 9, KINDS[c].name, HUD_GREEN); i++; }
+        drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
+        return;
+    }
     auto line = [&](const std::string& s, uint32_t c) { drawText(canvas, 12, y, s.c_str(), c); y += 10; };
     auto sub = [&](const std::string& s) { drawText(canvas, 12, y, s.c_str(), HUD_DIM); y += 9; };   // C-12: a dim row under a count, a pixel closer (the page is full)
     line("DISCOVERY STATISTICS", HUD_AMBER);
     line(fmt("SYSTEMS VISITED       %d", (int)guide.visited.size()), HUD_GREEN);
     line(fmt("WORLDS LANDED ON      %d", (int)guide.landed.size()), HUD_GREEN);
-    line(fmt("STAR CLASSES SEEN     %d/%d", (int)guide.classesSeen.size(), STAR_CLASS_COUNT), HUD_GREEN);
+    line(fmt("STAR CLASSES SEEN     %d/%d", (int)guide.classesSeen.size(), STAR_DRAWN_COUNT), HUD_GREEN);
     std::string cls; for (int c : guide.classesSeen) cls += std::string(STAR_CLASSES[c].code) + " ";
     { std::vector<std::string> rows = wrapText(cls, 48); for (size_t k = 0; k < rows.size() && k < 2; k++) sub("  " + rows[k]); }   // S-02: the codes on their own line (two past twelve classes), like the world types; ten of them overran the count's line
-    std::string types; for (int c : guide.typesSeen) types += std::string(shortType(c)) + " ";
     line(fmt("WORLD TYPES WALKED    %d/%d", (int)guide.typesSeen.size(), landableTypeCount()), HUD_GREEN);
-    sub("  " + trunc(types, 48));
+    sub("  " + statsKindsLine());
     line(fmt("FURTHEST FROM HOME    %.2f LY", guide.furthestFromHomeLY), HUD_GREEN);
     line(fmt("LONGEST WALK          %.2f KM FROM THE CAPSULE", guide.longestWalkM / 1000.0), HUD_GREEN);
     line(fmt("HIGHEST POINT REACHED %.0f M", guide.highestPointM), HUD_GREEN);
@@ -625,8 +654,8 @@ void Game::renderStats() {
                          : fmt("  PROBES SENT 0   DRONE TRIPS %d, %d FINDS", guide.droneTrips, guide.droneFinds));
     line(fmt("LONGEST DRIVE         %.2f KM   TOP SPEED %.0f KM/H", guide.longestDriveM / 1000.0, guide.topSpeedKmh), HUD_GREEN);   // N4-05
     int64_t hx, hy, hz;
-    if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) { Star h; if (starInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN); }
-    drawTextCentered(canvas, UW / 2, UH - 10, "ANY KEY TO CLOSE", HUD_DIM);
+    if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) { Star h; if (placeInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN); }
+    drawTextCentered(canvas, UW / 2, UH - 10, statsKindsOverflow() ? "K WORLD TYPES   ANY OTHER KEY CLOSES" : "ANY KEY TO CLOSE", HUD_DIM);
 }
 
 // X-04: the photographs and the probes' recordings (each by its final image: shots/probe_<n>.png, a lent one drawn), in the order

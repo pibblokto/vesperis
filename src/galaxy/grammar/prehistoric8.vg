@@ -191,6 +191,10 @@ pre.song.omen
   ($e.omen=comet) The hairy star came back as the old ones said,\nand we stood in the {crop} and watched it pass,\n{pre.refrain}
   ($e.omen=eclipse) The sun went out in the middle of the day,\nand the {bird} went to sleep and the dogs howled,\nand then it came back, and we sang this,\n{pre.refrain}
   ($e.omen!=comet $e.omen!=eclipse) There was a sign in the sky over {$e.place},\nand the old ones said this and the old ones said that over the {food},\n{pre.refrain}
+  ($e.omen=wanderer 3) The wanderer grew bigger over {$e.place} every night,\nand the old ones said it was coming for the {herd},\n{pre.refrain}
+  ($e.omen=intruder 3) A new sun came up where no sun was,\nand the old ones put out their fires and watched it,\n{pre.refrain}
+  ($e.omen=dance 3) The second sun went further off each summer,\nand the children asked where it was going,\n{pre.refrain}
+  ($e.omen=bent 3) The stars moved out of their places over {$e.place},\nand nobody could find the way by them,\n{pre.refrain}
 pre.song.contact
   Over the hills there were others, and we did not know,\nthey were taller than us and their {pre.weapon} were longer,\nand they held out their hands, and we held out {trade.thing},\n{pre.refrain}
 pre.song.exodus

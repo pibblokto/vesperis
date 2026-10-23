@@ -670,7 +670,7 @@ future), and has a profile every later milestone reads, built to the fields of H
   `Culture::weatherYears`), so a late people's ruins at a given age look like a medieval people's at a fraction of it; A-03
   gives each material its own. Two peoples that ended together share the first's years (C-13).
 * **The collapse.** Its cause is one of 37: the ideas note's section 8 by age, each at 0.7-1.3 in its own age and a little in
-  the next. The world's disasters weigh in at every age:
+  the next (D-05: a 38th, the loss of the sun, outside the pick and given to a drifter's people alone: below). The world's disasters weigh in at every age:
   * the drying: ×6 on a desert (the world dried with its people: C-01's old seas), ×0.15 on a living world;
   * a stellar flare: ×6 round a red dwarf;
   * a volcanic winter: by the world's volcanic traits;
@@ -880,6 +880,165 @@ reasons and the numbers.
   * two signals mixed;
   * each age's programmes.
   All of them are within C-07's levels.
+
+## The drifters on the radar (D-02)
+
+The worlds with no sun (D-01, `04-galaxy-and-systems.md`) are found by the radar alone, and only through the gain: SIMP 0136 was
+found by its radio aurorae. `10-decisions.md` (D-02) has the reasons.
+
+* **A law of their own.** A drifter of power p is heard at gain G within 180 sqrt((G - 1) p) ly (`rogueReachAtGain`; the least
+  gain that hears it, `rogueNeedGain`, is 1 + (d / 180)^2 / p, over 1 for any distance), so none is heard at x1: x1 stays C-07's
+  list by rule. Its strength is its margin over the floor, read as a far people's (0.18 at the edge of its reach).
+* **The power** (`drifterPower`) by what it is: a brown dwarf 1, a giant 0.6, a young tectonic or molten world 0.12 (its dynamo),
+  a metal world 0.1 (its iron core), a rock, a desert, a europan or a frozen living world 0.05, a small icy world 0.02; times its
+  radius over its kind's middle, times a spread of its own, 0.5-2 log-uniform (its spin and its field). So the giants and the brown
+  dwarfs are what the radar finds; a small world is heard only within about 250 ly at x32.
+* **What each step hears.** From home, and within one of it from the three C-series worlds and the six age worlds:
+
+  | Gain | Drifters | Added (kind, distance, the gain it needs) |
+  | --- | --- | --- |
+  | x1, x5 | 0 | |
+  | x11 | 1 | a brown dwarf, 437 ly (x8.7) |
+  | x18 | 2 | a brown dwarf, 921 ly (x15.7) |
+  | x25 | 4 | a giant, 776 ly (x20.6); a brown dwarf, 983 ly (x21.6) |
+  | x32 | 6 | a brown dwarf, 728 ly (x26.8); a giant, 1,197 ly (x27.1) |
+
+* **The scan.** `SignalScan` gains two layers after C-15's: the drifters' cells within the loudest's reach at the dial's top
+  (`drifterPowerMax`), then the globular clusters' own; each candidate by its own law (`considerDrifter`). Nothing of either runs
+  at x1. A drifter's own system holds it as a local `SIG_ROGUE`, whatever its kind (its moons by C-07's rule).
+* **`SIG_ROGUE`** is the fifth kind. D-02 played it as a magnetosphere by its own seed; D-03 gives it a voice of its own (the drifters'
+  voices, below).
+* **The readout after a lock:** `NO STAR AT THE SOURCE`, the distance (`VISITED` once it has been), `ENTER FLIES THERE`. There is
+  no name, no class and no sector: the sound tells, the readout never does. The status says
+  `A SIGNAL LOCKED - NO STAR THERE - ENTER FLIES`. The log says `A SIGNAL WITH NO STAR AT ITS SOURCE, 437 LY (437 YEARS OLD), SECTOR ...`
+  (and its name, once the explorer gave one). The lock's key is the sector's (`Guide::starKey`, as a pulsar's), so the chart's red
+  ring and its `A SIGNAL` stop are at the place. Enter flies there through D-01's resolver.
+* **The chart.** A jump's line ends at the star nearest its end and never sees a drifter, so Enter on the chart plots the jump to
+  the drifter itself when one the explorer knows (a lock, a visit, a name, home) lies within four pixels of the cursor
+  (`chartDrifterAt`, `plotJump`'s `place`).
+
+## The drifters' voices (D-03)
+
+Every drifter has a voice of its own, from its seed and its body (`game/audio_rogue.cpp`; `10-decisions.md`, D-03, has the reasons). The
+radar plays it as `channelSample`'s `SIG_ROGUE`, on parameters of its own (`AudioSynth::rogueDerive`: indices no other signal reads), so
+no other signal's sound moved. It grows from what receivers hear of the planets and from C-16's static. What the synth needs besides the
+seed is `RogueVoice` (the class by the body, `rogueVoiceClass`; the period of its turning and of its innermost moon's orbit, `Signal::turnS`
+and `moonS`, which the scan and `localSignals` read off its system; its power).
+
+* **The breath of its turning.** The beam of its aurorae sweeps past once a turning: a breath every 20-90 s by its spin (the system's
+  0.33-3.7 h), a main lobe and, by its seed, the other pole's weaker one half a turning on; silence between, its drones a breath of
+  themselves under it. A voice first heard comes in on the rising lobe.
+* **The body by what it is.** A giant's decametric storm: the L-bursts' slow swells of surf in a band of its own, the S-bursts' trains of
+  millisecond tones each falling, a fluttering roar (two giants in five also howl). A brown dwarf's storm is thicker, with a cyclotron howl
+  rising and falling as its beam comes round, once a turning (SIMP 0136's pulses). A small world's is the Earth's: chorus (flocks of rising
+  chirps), whistlers falling from 2.5-5 kHz, a breathing band of hiss, the kilometric howl wandering up and down its range. A young world's
+  is a small world's over the rumble of its dynamo, its drones a fourth lower; a metal world's has its iron core ringing now and then (a
+  free bar's partials).
+* **Its moon's flux tube.** The innermost moon's orbit (1-28 hours, most 3.5-8) pulses it: an arc swept up and down again and the body
+  pumped every 0.9-16 s (0.9 s times the orbit's hours to the 0.85), fainter while the beam is away.
+* **Its motif, its signature.** A figure of four to six whistles on a scale of its own (7, 9, 11, 13, 17 or 19 steps to the octave), each
+  its own pitch, spanning three quarters of an octave or more, with glides, a vibrato and a timbre of its own (pure, hollow, breathy or
+  metallic), as the beam's centre passes. The other pole answers it backwards, softer and in a key of its own (a quarter to a little over
+  half an octave off). Each whistle hangs on in the plasma after it, dying over its own 10-18 s.
+* **Plasma vowels.** A moan with no language in it (a voice's source at 45-150 Hz through three formants sweeping through three vowels of
+  its own, sagging as the beam leaves) and the plasma's breath (noise through two resonances wandering between the same vowels).
+* **Detuned drones.** A chord of three or four notes on its scale from a root of 45-180 Hz, each beating against a twin 0.12-2.4 Hz off,
+  six partials by a tilt and an even share of its own.
+* **Its balance and its plasma.** Each part is weighed by the seed (one storm mostly crackle, another mostly surf), and the whole goes
+  through the plasma's two resonances (160-740 Hz and 0.9-3.6 kHz, 5-12 dB at their centres), its loudness kept.
+
+*Where it is heard.* On the radar from afar, worn by the distance (C-16's `radarWear`: besides the worn bus's fades, dropouts and echoes the
+voice loses its top and its bottom), and mixed under what else is in the beam (`radarRogue2`, the one under it). Whole when the ship is
+close: the drifter's own system holds it as a local signal, with no wear. With the camera off, while the ship is at a drifter, the cabin's
+radio carries it under the ship's hum (`Game::darkRadio`, `RADIO_CABIN` at 0.45, lower under the ship's player). On its ground (the
+drifter's or a moon's: walking, in the buggy or the drone, a sheet or the guide opened there) the suit's radio carries it, fainter and through
+a small set's band (`RADIO_SUIT` at 0.4, 300 Hz to 3 kHz). Nothing is heard where the synth is another's: the decoder, the instruments, the
+probe's relay and its recordings, the drone bay, the landing, the title. *The beacon's slot*: `radarVoice` with a drifter is a programme of
+C-16's machines played under the voice, slowed to 0.7 and darkened; D-05's beacon sets it (below).
+
+*No two alike.* The hundred drifters nearest home (10 brown dwarfs, 36 giants, 3 young worlds, 3 metal worlds, 48 small worlds), each over a
+breath through the receiver: their voice prints (the long spectrum in twelfths of an octave from 30 Hz, its level taken out) lie at least
+4.55 dB apart pair by pair (the median 7.2 dB), where two magnetospheres of seeds of their own lie 4.19 dB apart at the median (two comets
+3.65, two pulsars 3.08). `vesperis_test rogues voices` prints each heard drifter's voice in words and numbers, writes twelve WAVs with
+their levels and prints the distinctness. D-04: a dark ocean, made from a rocky drifter, keeps that drifter's voice (its class, turning and
+power the same; its moons the rocky drifter's, a moon pushed out past three of the dark ocean's radii pulsing slower).
+
+## The lights left on (D-04, for D-05's peoples)
+
+A dead people of the late ages may have left its lights burning (`TR_LIGHTS_LEFT_ON`, a trait of the drifters' own: `05-planet-function.md`,
+`06-surface.md`). D-04 builds what it shows and gives it to no world: D-05 gives it to the drifters' peoples of the late ages. From orbit a
+point of light at each of the people's places on the night side (`drawDarkLights` from the world's plan: a capital or a city brighter than a
+town); on the ground a third of the forms' window cells lit (a people whose light glows in its own bank, every other in the lamps' warm one,
+bank 15), far off a scatter of lit points as many as the lit windows' share and a point for every eight metres up a silhouette, and street
+lamps every 30 m along the towns' streets, fewer where the years left less of the street. `rogues dark` stages it on a modern people's
+capital at night (`rogue_lights_left_off.png` against `rogue_lights_left_on.png`).
+
+## The people who lost their sun (D-05)
+
+One frozen felisian or desert drifter in four kept a people (`drifterHadPeople`: a hash of the drifter's own, `DRIFTER_PEOPLE_SHARE`; 103
+of the 406 within 9,000 ly of home), and its story is the lost sun's, no other world's. 17 peoples on 13 drifters within 3,000 ly, 127
+within 9,000 (prehistoric 27, medieval 48, industrial 20, modern 22, futuristic 9, far future 1). `10-decisions.md` (D-05) has the reasons.
+
+* **The then-world, with a system** (`formerSystemOf`, `peoplesWorldOf`, `galaxy/system.h`). The star it came from is D-01's real star,
+  chosen near its way's end among the living suns (yellow stars, orange and red dwarfs) to fit the way it was lost (`drifterSunWayOf`
+  first: a system with a giant for the wanderer, a companion for the dance), with its own system as `generate` makes it; the drifter
+  stands at its former orbit in that system's temperate band (`Body::former`: its year, its eccentricity, the moons that came with it), a
+  desert drifter warm then (270-320 K). The profile, the lore and the calendar, the history, the records' world facts, the charts and the
+  instruments read that system (`peopleProfileOf`, `loreQuick`, `buildHistory`, `writeRecordTexts`, `recordWorldFacts`, `chartMarksOf`,
+  `chartOf` swap it in); the ground (the towns, the works, the records' homes) reads the planet function's then-world as P-04's dead
+  worlds do. A people's history is the same built from the decoder (its system) and from the ground (the planet function alone).
+* **The cause** (`CAUSE_SUN_LOST`, "the loss of the sun"): the 38th, outside the old pick (`CAUSE_DRAWN` 37, every other people's draw as
+  it was), given to a drifter's people. Its way (`SunWay`): the wanderer (a giant of their own system grew nearer each year, then the
+  summers came late and short; nine of the 17), the intruder (a star brighter each generation until there were two suns, then neither),
+  the dark (the stars bent round a point where nothing shone), the dance (a companion stretching each year until one let go). Its timeline
+  is the generator's alone (`sunLossOf`, the profile, the culture and the age read it alike): its length by the age (a prehistoric
+  people's a few generations, a futuristic people's centuries below ground, the far future's over a thousand years), the warning's omens,
+  the onset's short summers, the crisis while the sun went, its last sunrise (`PeopleProfile::lastSunrise`), the long dark below; two
+  peoples on one drifter end together. The sun's light in a year is `1/(1+9p²)²` of the way's progress (`sunLightOf`); the dark's stage
+  (`sunDarkAt`): 0 as ever, 1 dimming (under 0.9), 2 going (under 0.25), 3 gone (after the last sunrise).
+* **The history** (H-02): a SCRIPTS row (the long cold from the onset, the harvests falling, the deaths of the cold, the warmest ground
+  left last: `OR_WARM`, a field of embers and the deep valleys), the sunlight kept in the history (`History::sunlight`) and its own event
+  (`HE_SUN`: the sun smaller, the year that did not end, the sea frozen from the shore, the air fallen as snow, the last sunrise, the
+  stars at noon), the omens of the way (the wanderer growing, the new star, the bent stars, the dance), the whither below (`WH_UNDER`), no
+  flood or drought once the sun was going. They went on inventing while it dimmed (their radio among them) to the last sunrise, and laid
+  their plan's railways after the railway.
+* **The records** (H-04): the year's facts `dark` (0-3), `darkyears` (the years since the last sunrise) and `sunway`; eight genres of their
+  own for every age from the prehistoric (`sunlost*.vg`): the omens and the last harvest (`omens`), the myth of the sun walking away and the
+  fires lit on the hills to call it back (`sunmyth`), the observatory's table of the sun's disc falling year by year (`sunmeasure`, the
+  `@suntable` directive), the letters to the sun (`sunletter`), the count of the days without a dawn (`daycount`), the rules and the
+  broadcasts of the halls below (`deephalls`), the lesson of what the sun was for the children born in the dark (`sunlesson`), and a radio
+  people's last broadcast (`lastbroadcast`, its last recording); the loss told in the ordinary registers (`<register>.sun`); the cause's
+  rules given theirs (`cause.what`, `cause.noun`, `last.cause`, `em.cause`, `mod.cause.noun`); the sun's, the seasons' and the weather's
+  words darkened by `dark` (`@instead`). Their tones darken toward the end (`Lore::dark`). Every line of theirs is `@apart`: their words
+  make no other people's word common, so no other people's records moved (a unit check pins the age and scene worlds' as D-04 left them).
+* **Charts and music** (H-05): the sun's measure (`CHS_SUNMEASURE`: shrinking suns along a cave's wall, rings drawn with the compass, the
+  observatory's printed curve), its caption read from the chart; their star charts mark the star that was their sun (`ChartMark::how` 4:
+  Enter flies there); the dawn song (`PF_DAWN`), the last sunrise's (`PF_LASTSUN`) and the last song (`PF_LAST`) in the dark years.
+* **The works of the end** (T-03, the table above): the last shelter by the warmest ground (a medieval people's halls under the mountain:
+  its mouth in the rock, a gatehouse, walls), a shelter by each of the two places left last after the last sunrise (the last records of
+  their own years in them; the last recording in the last shelter alone), a dome over the warm ground by each of those places with its
+  glasshouses, the graves of the last generations on a slope facing the last place. The last city is the last place; the late ages' lights
+  are left on (`TR_LIGHTS_LEFT_ON`, D-04's, given to the futuristic and far-future peoples). Their works weathered only until the cold took
+  the world (60-250 years: no rain, no wind, no thaw since), so the glass is gone and the iron stands.
+* **The beacon** (`drifterBeaconOf`, `galaxy/signals.h`): a radio people whose history invented the radio before the last sunrise left its
+  last broadcast as its last recording, on the air ever since (the first people with one, where both had). Under the drifter's own voice a
+  machine of C-16's by the people's age (an industrial people's bell or tones, a modern people's tones, siren or data, a futuristic
+  people's data or tones, the far future's mathematics), in the cabin's and the suit's radios too (D-03's slot); on the radar camera the
+  message itself, the recording's opening in the people's voice slowed and worn, three times and a long gap (`beaconProgramme`). Locked, it
+  is heard (`Guide::heard`): the last recording found in the last shelter is the one the radar caught, read as their language is learnt.
+  32 beacons on the 40 radio peoples within 9,000 ly. The decoder's history page closes ENDED BY THE LOSS OF THE SUN once a record read has
+  told the cause.
+
+| Mode | What |
+| --- | --- |
+| `peoples rogues [ly]` | the drifters within ly of home (3,000) that kept a people: the star it left, its former orbit, each people's age, radio, way, years and records, the beacon |
+| `shards drifters [n] [held]` | the two test drifters' records (`TEST_DRIFTERS`: Balyaphebist's medieval people, Vreikheid's two modern ones), fifty each, in full (or as decoded with `held` shards) |
+| `shards rogue <k>\|age=<age> [n] ...` | the k-th drifter's people nearest home, or the nearest of an age within 12,000 ly |
+| `grammar rogues[=ly]` | the grammar's checks and measures with the drifters' peoples within ly (3,000) besides |
+| `charts rogues` | the sun's measure and a star chart in each age's way (`shots/tests/chart_rogue_<age>_measure.png`, `_dark.png`) |
+| `works rogue <k> [ly]` | the k-th drifter's people's works (the works of the end among them) |
+| `rogues voices` | (besides D-03's) the test drifters' beacons through the receiver, as the radar plays them locked (`rogue_voice_13_beacon_vreikheid.wav`) |
+| `ruins kinds` | the genome page holds the domes and the glasshouses of each age |
 
 ## The forms the renderer needs (A-02)
 
@@ -1398,8 +1557,8 @@ Where to see it:
 Everything else a people made outside its towns (`galaxy/works.*`, the expansion note's section 6: "it can be virtually anything"), each
 placed by a rule of the terrain or where the history (H-02) says it was made, and built in the way of the age that made it (`Work::age`,
 weathered from when it was left, `before`). A world's works are made once (`worldWorksOf`, the last four kept) on the approach's plan thread
-after the peoples' histories, in 44 to 350 ms; the surface takes them when they are built (a render never waits). Twenty-two kinds (B-418:
-the fort); generation 13 holds (the works are a layer over the ruin cells: no settlement, shard, grave or road moved). B-418 made a people's
+after the peoples' histories, in 44 to 350 ms; the surface takes them when they are built (a render never waits). Twenty-four kinds (B-418:
+the fort; D-05: a dome over warm ground, glasshouses); generation 13 holds (the works are a layer over the ruin cells: no settlement, shard, grave or road moved). B-418 made a people's
 everyday works its land's (the land's works, below): the rules marked "the land's" place one in a cell of 8 km where its ground offers it.
 
 | Work | Where its rule puts it | Its age's way |
@@ -1420,15 +1579,18 @@ everyday works its land's (the land's works, below): the rules marked "the land'
 | wreck | the land's: a ship on a cell's shore; a modern people's aircraft on open flat ground; a futuristic people's wreckage fallen from orbit in its crater | a hull's ribs and keel, an iron steamer listing, a freighter broken in two; an aircraft; a hull in its furrow |
 | colossus | a people of colossi (the genome's focus or monuments): its capital's harbour mouth, else the height over it | its figure on its plinth, an arm raised; fallen along the ground, its head off |
 | terraformed basin | a low basin of a futuristic people's land | the ground levelled in its rim, channels across it, pumping stations |
-| the last shelter | the steep rock nearest the place the collapse ended in (H-02's last place) | a rock shelter's mouth (prehistoric), a citadel on the height (medieval), a casemate (industrial), a bunker's door with its vents, masts and guardhouse (modern), a vault under its dome (futuristic) |
+| the last shelter | the steep rock nearest the place the collapse ended in (H-02's last place); D-05: a people that lost its sun's by the warmest ground, and a shelter by each of the two places it left last in the dark | a rock shelter's mouth (prehistoric), a citadel on the height (medieval), a casemate (industrial), a bunker's door with its vents, masts and guardhouse (modern), a vault under its dome (futuristic) |
 | something of the far future | anywhere on its land, two to four | a plain made flat and glassy, pillars to the horizon, a mountain cut into terraces, a lattice over a valley, a sphere on its point |
 | wind farm | the land's: a modern people's cell's highest ridge | rows of turbines into the wind |
 | lighthouse | where the history lit one: the headland nearest its harbour; the land's on a cell's headland (the water round a third of it at 400 m) by a settlement | its tower and lantern, the keeper's house |
 | fort | the land's (B-418): the cell's height, a crest it can stand on (a prehistoric people's on a hill; a later people's anywhere, likelier on a hill), its gate toward the settlement it guarded | a hill fort's one to three rings of bank in their ditches round the huts of its last people (prehistoric); a castle of five to eight sides, a tower at each corner, the gatehouse, the keep, behind a moat on the flat (medieval); a redoubt, its ring bank round a casemate in its ditch (industrial); pillboxes round a blockhouse, dragon's teeth across the way up (modern); its towers and walls in the people's genome |
+| dome over warm ground | D-05, a people that lost its sun's: the warmest open ground near its last place and near each of the two left last (a field of embers where the world has them, else the lowest dry ground: the deep) | a vaulted hall over its spring (medieval); iron ribs and their glass on a ring of brick (industrial); steel and glass on a ring of concrete (modern); a habitat (futuristic); the far future's whole. The glass went at once, the ribs stand |
+| glasshouses | D-05: beside each dome, rows of three to six on flat dry ground, their long sides toward it (an industrial people's and later) | iron hoops on low walls of brick (industrial); tunnels of steel hoops (modern); composite vaults (futuristic, far future) |
 
 * **The pieces** are buildings of the works' kinds (`BK_MOUND`, `BK_DAM`, `BK_DISH`, `BK_TOMB`, `BK_FORT`, `BK_BUNKER`, `BK_TEETH`,
   `BK_VEHICLE`, `BK_AIRCRAFT`, `BK_SHIP`, `BK_LAUNCHPAD`, `BK_HANGAR`, `BK_COLOSSUS`, `BK_TURBINE`, `BK_LIGHTHOUSE`, `BK_LATTICE`, `BK_DERRICK`,
-  `BK_BLOCKS`, `BK_SPHERE`, `BK_TETHER`, `BK_TRILITHON`, `BK_CONVEYOR`) and of the ages' (a headframe, a mast, a stone circle, a portal),
+  `BK_BLOCKS`, `BK_SPHERE`, `BK_TETHER`, `BK_TRILITHON`, `BK_CONVEYOR`; D-05's `BK_DOME`, `BK_GREENHOUSE`) and of the ages' (a headframe, a
+  mast, a stone circle, a portal),
   laid out by `workSpec` as a settlement's (`RuinSpec::work`, `sclass` `SC_WORKS`) and drawn, decayed and walked into as one. A dam's wall,
   an aqueduct's arches and the far future's lattice stand at heights over the reference level (`Building::base`, `Form::absolute`): they
   span their valley whatever the ground under each piece does. A necropolis's and a battlefield's graves are C-12's stones in their plots,

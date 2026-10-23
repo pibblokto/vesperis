@@ -132,6 +132,10 @@ sermon.omen (share=0.8)
   ($e.omen=redmoon) {moon} was red, and half of you have been to the fortune-teller. Bring me what you paid her. {=.told}
   ($e.omen=aurora) The lights came down from the north, and the children danced. The children were right. {=.told}
   ($e.omen=falling has:$e.place) A star fell over {$e.place}. Stars fall. People fall. Help each other up. {=.told}
+  ($e.omen=wanderer 3) You have seen the wanderer grow. You ask whether {god} sent it. {god} sent the summer too, and can take it back. Pray for the summer. {=.told}
+  ($e.omen=intruder 3) There is a new star, and the star-watchers are afraid of it. A star is a lamp. Lamps are lit, and carried off. {=.told}
+  ($e.omen=dance 3) The second sun goes further every year, like a daughter leaving home. Let her go, and keep the hearth. {=.told}
+  ($e.omen=bent 3) The stars have moved out of their places, and you come to me as if I had moved them. Put them back with your prayers. {=.told}
 sermon.sign
   I will say what nobody says: {$e.sign}. Saying it does not make it worse. {=.told}
   You all know this: {$e.sign}. We can pretend, or we can prepare. {god} prefers the second. {=.told}

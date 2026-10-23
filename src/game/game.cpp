@@ -381,7 +381,12 @@ void Game::frame(const Input& inRaw, double realDt) {
         case GameState::TEXT_ENTRY: updateTextEntry(in); break;
         case GameState::STAR_MAP: updateStarMap(in); updateShipMotion(dt); break;
         case GameState::LOG: updateLog(in); break;
-        case GameState::STATS: { bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true; if (any) state = guideReturn; break; }
+        case GameState::STATS: {   // any key closes; P-00: K opens the world types walked where they outgrow their line
+            bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
+            if (any && !statsKinds && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
+            else if (any) { statsKinds = false; state = guideReturn; }
+            break;
+        }
         case GameState::GALLERY: updateGallery(in); break;
         case GameState::SHIPSCREEN: updateShipScreen(in); updateShipMotion(dt); break;
         case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
@@ -405,7 +410,7 @@ void Game::frame(const Input& inRaw, double realDt) {
         }
         case GameState::DATA: {
             if (in.wasPressed(KEY_T) && dataPage == 0) { openAlmanac(); break; }   // W-01: the sheet opens the almanac of the place
-            const int pages = 1 + (int)dataProbes().size();   // X-04: a giant's sheet, then its probes' profiles
+            const int pages = dataSheetPages + (int)dataProbes().size();   // X-04: a giant's sheet, then its probes' profiles (Q-01: the sheet's own pages first)
             if (pages > 1 && (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_LEFT))) { dataPage = (dataPage + (in.wasPressed(KEY_RIGHT) ? 1 : pages - 1)) % pages; break; }
             bool any = false;
             for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
@@ -414,6 +419,7 @@ void Game::frame(const Input& inRaw, double realDt) {
         }
     }
     probeAudio();   // X-01: the relay's sound for this frame
+    darkRadio();    // D-03: a drifter's voice on the cabin's radio or the suit's
     updatePlayer(realDt);   // C-11: the ship's player, wherever the ship is (a landing stops it)
     // rendering
     switch (state) {
@@ -570,10 +576,10 @@ void Game::testLandSite() {
 }
 
 int Game::testLandableBody() const {
-    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0 && b.type != PT_COMET) return b.index;   // O6-03: the flow's buggy steps need gravity (a comet came first since GEN 9)
-    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.type != PT_COMET) return b.index;
-    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable && b.parent < 0) return b.index;
-    for (auto& b : sys.bodies) if (PLANET_TYPES[b.type].landable) return b.index;
+    for (auto& b : sys.bodies) if (KINDS[b.type].landable && b.parent < 0 && b.type != PT_COMET) return b.index;   // O6-03: the flow's buggy steps need gravity (a comet came first since GEN 9)
+    for (auto& b : sys.bodies) if (KINDS[b.type].landable && b.type != PT_COMET) return b.index;
+    for (auto& b : sys.bodies) if (KINDS[b.type].landable && b.parent < 0) return b.index;
+    for (auto& b : sys.bodies) if (KINDS[b.type].landable) return b.index;
     return -1;
 }
 
@@ -594,7 +600,7 @@ void Game::testParkAt(const Star& s, int body, bool waitMap) {
     state = GameState::SPACE;
     worldPlanPrefetch(spaceR.genFor(b));   // T-01
     spaceR.setSeason(sys, t);   // F-02: the season the next frame draws (the renderer held the last system's: the map was made for it, then again)
-    if (PLANET_TYPES[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // F-02: the tests' landing map drawn from their next frame, as before
+    if (KINDS[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // F-02: the tests' landing map drawn from their next frame, as before
 }
 
 void Game::testWaitMap() { testWaitMapOf(landBody); }

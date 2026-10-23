@@ -46,9 +46,13 @@ std::string shortName(Rng& rng, int style, size_t maxLen) {
 
 // C-12: the end's tone is the last recording's alone (`lastShardOf`); the late shards that drew it before are warnings on a
 // desert and elegies on a felisian world, so one shard of a world closes its record (one draw either way: the stream stays)
-int pickTone(bool desert, double age, Rng& rng) {
+int pickTone(bool desert, bool dark, double age, Rng& rng) {
     double w[ST_TONE_COUNT];
-    if (desert) {
+    if (dark) {   // D-05: the sun going in their last years, the long dark after it
+        if (age > 0.85) { w[0] = 0.15; w[1] = 0.45; w[2] = 0.4; w[3] = 0; }
+        else if (age >= 0.6) { w[0] = 0.55; w[1] = 0.2; w[2] = 0.25; w[3] = 0; }
+        else { w[0] = 0.83; w[1] = 0.12; w[2] = 0.05; w[3] = 0; }
+    } else if (desert) {
         if (age > 0.85) { w[0] = 0.2; w[1] = 0.1; w[2] = 0.7; w[3] = 0; }
         else if (age >= 0.3) { w[0] = 0.37; w[1] = 0.08; w[2] = 0.55; w[3] = 0; }
         else { w[0] = 0.84; w[1] = 0.08; w[2] = 0.08; w[3] = 0; }
@@ -349,6 +353,43 @@ const char* const SRC_MEDIEVAL9 =
 const char* const SRC_HISTORY =   // B-414: a late people's histories of its earlier ages
 #include "grammar/history.vg"
 ;
+// D-05: the people who lost their sun (its shared words, then its genres)
+const char* const SRC_SUNLOST =
+#include "grammar/sunlost.vg"
+;
+const char* const SRC_SUNLOST2 =
+#include "grammar/sunlost2.vg"
+;
+const char* const SRC_SUNLOST3 =
+#include "grammar/sunlost3.vg"
+;
+const char* const SRC_SUNLOST4 =
+#include "grammar/sunlost4.vg"
+;
+const char* const SRC_SUNLOST5 =
+#include "grammar/sunlost5.vg"
+;
+const char* const SRC_SUNLOST6 =
+#include "grammar/sunlost6.vg"
+;
+const char* const SRC_SUNLOST7 =
+#include "grammar/sunlost7.vg"
+;
+const char* const SRC_SUNLOST8 =
+#include "grammar/sunlost8.vg"
+;
+const char* const SRC_SUNLOST9 =
+#include "grammar/sunlost9.vg"
+;
+const char* const SRC_SUNLOST10 =
+#include "grammar/sunlost10.vg"
+;
+const char* const SRC_SUNLOST11 =   // the genres' second parts (a file holds at most 16 KB)
+#include "grammar/sunlost11.vg"
+;
+const char* const SRC_SUNLOST12 =
+#include "grammar/sunlost12.vg"
+;
 const char* const GRAMMAR_FILES[][2] = {{"records.vg", SRC_RECORDS}, {"world.vg", SRC_WORLD}, {"people.vg", SRC_PEOPLE}, {"annal.vg", SRC_ANNAL}, 
     {"annal2.vg", SRC_ANNAL2}, {"letter_events.vg", SRC_LETTER_EVENTS}, {"letter_events2.vg", SRC_LETTER_EVENTS2}, 
     {"news.vg", SRC_NEWS}, {"song.vg", SRC_SONG}, {"log.vg", SRC_LOG}, {"letters.vg", SRC_LETTERS}, 
@@ -357,7 +398,8 @@ const char* const GRAMMAR_FILES[][2] = {{"records.vg", SRC_RECORDS}, {"world.vg"
     {"industrial2.vg", SRC_INDUSTRIAL2}, {"modern.vg", SRC_MODERN}, {"modern2.vg", SRC_MODERN2}, {"futuristic.vg", SRC_FUTURISTIC}, 
     {"futuristic2.vg", SRC_FUTURISTIC2}, {"futuristic3.vg", SRC_FUTURISTIC3}, {"farfuture.vg", SRC_FARFUTURE}, 
     {"ending.vg", SRC_ENDING}, {"ending2.vg", SRC_ENDING2}, {"charts.vg", SRC_CHARTS}, {"lexicon.vg", SRC_LEXICON},
-    {"culture.vg", SRC_CULTURE}, {"culture2.vg", SRC_CULTURE2}, {"culture3.vg", SRC_CULTURE3}, {"annal3.vg", SRC_ANNAL3}, {"annal4.vg", SRC_ANNAL4}, {"annal5.vg", SRC_ANNAL5}, {"annal6.vg", SRC_ANNAL6}, {"diary.vg", SRC_DIARY}, {"ending3.vg", SRC_ENDING3}, {"ending4.vg", SRC_ENDING4}, {"industrial3.vg", SRC_INDUSTRIAL3}, {"industrial4.vg", SRC_INDUSTRIAL4}, {"industrial5.vg", SRC_INDUSTRIAL5}, {"industrial6.vg", SRC_INDUSTRIAL6}, {"industrial7.vg", SRC_INDUSTRIAL7}, {"letter_events3.vg", SRC_LETTER_EVENTS3}, {"letter_events4.vg", SRC_LETTER_EVENTS4}, {"letter_events5.vg", SRC_LETTER_EVENTS5}, {"letter_events6.vg", SRC_LETTER_EVENTS6}, {"letters2.vg", SRC_LETTERS2}, {"letters3.vg", SRC_LETTERS3}, {"letters4.vg", SRC_LETTERS4}, {"log2.vg", SRC_LOG2}, {"log3.vg", SRC_LOG3}, {"modern3.vg", SRC_MODERN3}, {"modern4.vg", SRC_MODERN4}, {"modern5.vg", SRC_MODERN5}, {"modern6.vg", SRC_MODERN6}, {"modern7.vg", SRC_MODERN7}, {"modern8.vg", SRC_MODERN8}, {"modern9.vg", SRC_MODERN9}, {"news2.vg", SRC_NEWS2}, {"news3.vg", SRC_NEWS3}, {"news4.vg", SRC_NEWS4}, {"news5.vg", SRC_NEWS5}, {"news6.vg", SRC_NEWS6}, {"news7.vg", SRC_NEWS7}, {"prehistoric3.vg", SRC_PREHISTORIC3}, {"prehistoric4.vg", SRC_PREHISTORIC4}, {"prehistoric5.vg", SRC_PREHISTORIC5}, {"prehistoric6.vg", SRC_PREHISTORIC6}, {"prehistoric7.vg", SRC_PREHISTORIC7}, {"prehistoric8.vg", SRC_PREHISTORIC8}, {"prehistoric9.vg", SRC_PREHISTORIC9}, {"song2.vg", SRC_SONG2}, {"song3.vg", SRC_SONG3}, {"farfuture2.vg", SRC_FARFUTURE2}, {"farfuture3.vg", SRC_FARFUTURE3}, {"farfuture4.vg", SRC_FARFUTURE4}, {"futuristic10.vg", SRC_FUTURISTIC10}, {"futuristic4.vg", SRC_FUTURISTIC4}, {"futuristic5.vg", SRC_FUTURISTIC5}, {"futuristic6.vg", SRC_FUTURISTIC6}, {"futuristic7.vg", SRC_FUTURISTIC7}, {"futuristic8.vg", SRC_FUTURISTIC8}, {"futuristic9.vg", SRC_FUTURISTIC9}, {"medieval10.vg", SRC_MEDIEVAL10}, {"medieval11.vg", SRC_MEDIEVAL11}, {"medieval12.vg", SRC_MEDIEVAL12}, {"medieval13.vg", SRC_MEDIEVAL13}, {"medieval4.vg", SRC_MEDIEVAL4}, {"medieval5.vg", SRC_MEDIEVAL5}, {"medieval6.vg", SRC_MEDIEVAL6}, {"medieval7.vg", SRC_MEDIEVAL7}, {"medieval8.vg", SRC_MEDIEVAL8}, {"medieval9.vg", SRC_MEDIEVAL9}, {"history.vg", SRC_HISTORY}};
+    {"culture.vg", SRC_CULTURE}, {"culture2.vg", SRC_CULTURE2}, {"culture3.vg", SRC_CULTURE3}, {"annal3.vg", SRC_ANNAL3}, {"annal4.vg", SRC_ANNAL4}, {"annal5.vg", SRC_ANNAL5}, {"annal6.vg", SRC_ANNAL6}, {"diary.vg", SRC_DIARY}, {"ending3.vg", SRC_ENDING3}, {"ending4.vg", SRC_ENDING4}, {"industrial3.vg", SRC_INDUSTRIAL3}, {"industrial4.vg", SRC_INDUSTRIAL4}, {"industrial5.vg", SRC_INDUSTRIAL5}, {"industrial6.vg", SRC_INDUSTRIAL6}, {"industrial7.vg", SRC_INDUSTRIAL7}, {"letter_events3.vg", SRC_LETTER_EVENTS3}, {"letter_events4.vg", SRC_LETTER_EVENTS4}, {"letter_events5.vg", SRC_LETTER_EVENTS5}, {"letter_events6.vg", SRC_LETTER_EVENTS6}, {"letters2.vg", SRC_LETTERS2}, {"letters3.vg", SRC_LETTERS3}, {"letters4.vg", SRC_LETTERS4}, {"log2.vg", SRC_LOG2}, {"log3.vg", SRC_LOG3}, {"modern3.vg", SRC_MODERN3}, {"modern4.vg", SRC_MODERN4}, {"modern5.vg", SRC_MODERN5}, {"modern6.vg", SRC_MODERN6}, {"modern7.vg", SRC_MODERN7}, {"modern8.vg", SRC_MODERN8}, {"modern9.vg", SRC_MODERN9}, {"news2.vg", SRC_NEWS2}, {"news3.vg", SRC_NEWS3}, {"news4.vg", SRC_NEWS4}, {"news5.vg", SRC_NEWS5}, {"news6.vg", SRC_NEWS6}, {"news7.vg", SRC_NEWS7}, {"prehistoric3.vg", SRC_PREHISTORIC3}, {"prehistoric4.vg", SRC_PREHISTORIC4}, {"prehistoric5.vg", SRC_PREHISTORIC5}, {"prehistoric6.vg", SRC_PREHISTORIC6}, {"prehistoric7.vg", SRC_PREHISTORIC7}, {"prehistoric8.vg", SRC_PREHISTORIC8}, {"prehistoric9.vg", SRC_PREHISTORIC9}, {"song2.vg", SRC_SONG2}, {"song3.vg", SRC_SONG3}, {"farfuture2.vg", SRC_FARFUTURE2}, {"farfuture3.vg", SRC_FARFUTURE3}, {"farfuture4.vg", SRC_FARFUTURE4}, {"futuristic10.vg", SRC_FUTURISTIC10}, {"futuristic4.vg", SRC_FUTURISTIC4}, {"futuristic5.vg", SRC_FUTURISTIC5}, {"futuristic6.vg", SRC_FUTURISTIC6}, {"futuristic7.vg", SRC_FUTURISTIC7}, {"futuristic8.vg", SRC_FUTURISTIC8}, {"futuristic9.vg", SRC_FUTURISTIC9}, {"medieval10.vg", SRC_MEDIEVAL10}, {"medieval11.vg", SRC_MEDIEVAL11}, {"medieval12.vg", SRC_MEDIEVAL12}, {"medieval13.vg", SRC_MEDIEVAL13}, {"medieval4.vg", SRC_MEDIEVAL4}, {"medieval5.vg", SRC_MEDIEVAL5}, {"medieval6.vg", SRC_MEDIEVAL6}, {"medieval7.vg", SRC_MEDIEVAL7}, {"medieval8.vg", SRC_MEDIEVAL8}, {"medieval9.vg", SRC_MEDIEVAL9}, {"history.vg", SRC_HISTORY}, {"sunlost.vg", SRC_SUNLOST}, {"sunlost2.vg", SRC_SUNLOST2}, {"sunlost3.vg", SRC_SUNLOST3}, {"sunlost4.vg", SRC_SUNLOST4}, {"sunlost5.vg", SRC_SUNLOST5}, {"sunlost6.vg", SRC_SUNLOST6}, {"sunlost7.vg", SRC_SUNLOST7}, {"sunlost8.vg", SRC_SUNLOST8}, {"sunlost9.vg", SRC_SUNLOST9}, {"sunlost10.vg", SRC_SUNLOST10}, {"sunlost11.vg", SRC_SUNLOST11}, {"sunlost12.vg", SRC_SUNLOST12}   // D-05
+};
 constexpr int GRAMMAR_FILE_COUNT = (int)(sizeof(GRAMMAR_FILES) / sizeof(GRAMMAR_FILES[0]));
 
 // the active grammar: the compiled-in files, or the harness's from disk; its genres' names (the root's alternatives); a generation
@@ -409,15 +451,16 @@ Shard shardDraw(const BodyGen& g, const Lore& L, int index) {
     (void)rng.chance(0.5);              // C-02's herd
     (void)rng.irange(9);                // C-02's kin
     (void)shortName(rng, L.style, 7);   // C-02's child
-    s.tone = pickTone(L.desert, s.age, rng);
+    s.tone = pickTone(L.desert, L.dark, s.age, rng);
     if (s.last) s.tone = ST_END;   // C-12
     s.music = recordIsMusic(pg, L.records, index);   // C-04: a piece of music (the tone stays, the piece's form follows it); T-04: past the fifty too
+    if (g.drifter) s.dark = sunDarkAt(g, L.which, s.year);   // D-05
     s.chart = !s.music && recordChartIndex(pg, L.records, index) >= 0;   // C-10: a star chart: its caption names its figures and the star it marks
     return s;
 }
 
 // a people's texts, cached by its seed, the world's kind, the grammar's generation (the last eight)
-struct TextKey { uint64_t seed; int which; bool desert; int records; int generation; bool operator==(const TextKey& o) const { return seed == o.seed && which == o.which && desert == o.desert && records == o.records && generation == o.generation; } };
+struct TextKey { uint64_t seed; int which; bool desert; int records; int generation; bool dark; bool operator==(const TextKey& o) const { return seed == o.seed && which == o.which && desert == o.desert && records == o.records && generation == o.generation && dark == o.dark; } };   // D-05: `dark`
 std::mutex textsMu;
 std::list<std::pair<TextKey, std::shared_ptr<const ShardTexts>>> textsCache;
 // H-04: the texts built on a thread of their own (a world's records need its history, and the history its plan: a few hundred
@@ -472,7 +515,9 @@ namespace { void calendarOf(const StarSystem& sys, const Body& b, Lore& L) {
     L.calendar = days ? (L.months > 0 ? 1 : 0) : (L.months > 0 ? 2 : 3);
 } }
 
-Lore loreQuick(const StarSystem& sys, const Body& b, const BodyGen& g, int which) {
+Lore loreQuick(const StarSystem& sys0, const Body& b0, const BodyGen& g, int which) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
     Lore L;
     L.peoples = peoplesOf(g) > 1 ? 2 : 1;   // C-13: a world without the trait is read as one people (the harness's "what it would have said")
     L.which = which > 0 && L.peoples > 1 ? 1 : 0;
@@ -480,7 +525,8 @@ Lore loreQuick(const StarSystem& sys, const Body& b, const BodyGen& g, int which
     L.seed = pg.seed;
     loreNames(pg, L);
     calendarOf(sys, b, L);
-    L.desert = b.type == PT_DESERT;
+    L.desert = kindHas(livingKindOf(b.type), KT_DRY);   // P-04: the world of their time
+    L.dark = g.drifter;   // D-05: the people who lost their sun
     L.last = lastShardOf(pg);
     L.records = recordCountOf(g, L.which);   // T-04: the people's records, and their years the history's (the founding, year 1, to the end)
     const PeopleAge pa = peopleAgeOf(g, L.which);
@@ -636,7 +682,7 @@ int lastShardOf(const BodyGen& g) {
 // the history by their genres (galaxy/genres.h)
 std::shared_ptr<const ShardTexts> shardTextsOf(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L) {
     GrammarState st = activeGrammar();
-    TextKey key{loreSeed(g, L), L.which, L.desert, L.records, st.generation};
+    TextKey key{loreSeed(g, L), L.which, L.desert, L.records, st.generation, L.dark};
     {
         std::lock_guard<std::mutex> lk(textsMu);
         for (auto it = textsCache.begin(); it != textsCache.end(); ++it)
@@ -656,7 +702,7 @@ std::shared_ptr<const ShardTexts> shardTextsOf(const StarSystem& sys, const Body
 
 void shardTextsPrefetch(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L) {
     GrammarState st = activeGrammar();
-    TextKey key{loreSeed(g, L), L.which, L.desert, L.records, st.generation};
+    TextKey key{loreSeed(g, L), L.which, L.desert, L.records, st.generation, L.dark};
     std::lock_guard<std::mutex> lk(textsMu);
     for (auto it = textJobs.begin(); it != textJobs.end();) {   // the finished threads joined
         if (it->done->load()) { if (it->t.joinable()) it->t.join(); it = textJobs.erase(it); } else ++it;
@@ -675,7 +721,7 @@ void shardTextsPrefetch(const StarSystem& sys, const Body& b, const BodyGen& g, 
 
 std::shared_ptr<const ShardTexts> shardTextsIfReady(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L) {
     GrammarState st = activeGrammar();
-    TextKey key{loreSeed(g, L), L.which, L.desert, L.records, st.generation};
+    TextKey key{loreSeed(g, L), L.which, L.desert, L.records, st.generation, L.dark};
     {
         std::lock_guard<std::mutex> lk(textsMu);
         for (const auto& c : textsCache) if (c.first == key) return c.second;
@@ -726,6 +772,11 @@ bool shardChartRecord(const StarSystem& sys, const Body& b, const BodyGen& g, co
         M.set(S, "plate", std::to_string(ch.plate)); M.set(S, "maglimit", std::to_string(ch.magLimit)); M.set(S, "heard", std::to_string(ch.heardN));
         M.set(S, "routes", std::to_string(ch.reached + ch.planned)); M.set(S, "reached", std::to_string(ch.reached)); M.set(S, "planned", std::to_string(ch.planned));
         M.set(S, "farly", std::to_string((int)std::lround(ch.farLy))); M.set(S, "farkind", std::to_string(ch.farKind)); M.set(S, "signs", std::to_string(ch.signs));
+        if (ch.style == CHS_SUNMEASURE && !ch.sunCurve.empty()) {   // D-05: the sun's measure: its measures, the first and the last
+            const double last = ch.sunCurve.back()[1];
+            char buf[32]; if (last >= 10) snprintf(buf, sizeof buf, "%d", (int)std::lround(last)); else snprintf(buf, sizeof buf, "%.1f", last);
+            M.set(S, "tally", std::to_string((int)ch.sunCurve.size())); M.set(S, "sunfrom", std::to_string(ch.sunUnits)); M.set(S, "sunsize", buf);
+        }
     }
     R.seed = mix64(d.seed ^ 0xC4A2CULL); R.tense = VG_PRESENT;
     vgRecord(*st.G, "chart", M, nullptr, R);

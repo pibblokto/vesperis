@@ -28,7 +28,7 @@ struct KeyRead { BodyGen g; Lore lore; Tradition T; PeopleInstruments set; Instr
 bool readInstrumentKey(const std::string& key, KeyRead& out) {
     const std::string wk = worldOfKey(key); const int id = idOfKey(key);
     int64_t sx, sy, sz; Star st;
-    if (id < 0 || !Guide::parseStarKey(wk, sx, sy, sz) || !starInSector(sx, sy, sz, st, true)) return false;
+    if (id < 0 || !Guide::parseStarKey(wk, sx, sy, sz) || !placeInSector(sx, sy, sz, st, true)) return false;
     StarSystem wsys; wsys.generate(st);
     const int bi = bodyOfKeyI(wk);
     if (bi < 0 || bi >= (int)wsys.bodies.size()) return false;
@@ -62,7 +62,7 @@ void Game::openInstruments() {
         if (wk != read) {
             read = wk; peoples = 1;
             int64_t sx, sy, sz; Star st;
-            if (Guide::parseStarKey(wk, sx, sy, sz) && starInSector(sx, sy, sz, st, true)) {
+            if (Guide::parseStarKey(wk, sx, sy, sz) && placeInSector(sx, sy, sz, st, true)) {
                 StarSystem wsys; wsys.generate(st);
                 const int bi = bodyOfKeyI(wk);
                 if (bi >= 0 && bi < (int)wsys.bodies.size()) {

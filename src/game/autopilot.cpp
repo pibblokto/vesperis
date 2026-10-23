@@ -14,7 +14,7 @@
 void Game::arriveAtStar(const Star& s, const Vec3& fromDir) {
     if (sys.valid) guide.pushHistory(starKeyOf(sys.star));
     Star full = s;
-    if (full.name.empty()) starInSector(s.sx, s.sy, s.sz, full, true);
+    if (full.name.empty()) placeInSector(s.sx, s.sy, s.sz, full, true);   // D-01: a star, else a drifter
     sys.generate(full);
     ship.mode = ShipState::STANDBY;
     ship.parkedBody = -1;
@@ -23,15 +23,21 @@ void Game::arriveAtStar(const Star& s, const Vec3& fromDir) {
     ship.hasRemote = false;
     radarOff();   // C-07: the signals are scanned afresh here
     double firstOrbit = sys.bodies.empty() ? full.radiusKm * 30 : sys.bodies[0].orbitRadiusKm;
-    ship.pos = full.pos + fromDir * std::max(full.radiusKm * 25.0, firstOrbit * 0.55);
+    ship.pos = full.pos + fromDir * (sys.sunless() ? drifterStandOffKm(full) : std::max(full.radiusKm * 25.0, firstOrbit * 0.55));   // D-01: off a drifter, not at its centre
     Vec3 fwd = normalize(full.pos - ship.pos);
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
     nb.update(ship.pos);
     gchart.onShip = true; gchart.follow = true; gchart.plotHere = false; gchart.look = false;   // G-06: the chart opens on the ship's new place
     visitNoted = false;
-    arrivalNote = fmt("ARRIVED AT %s - %d PLANETS, %d MOONS", upper(starNameOf(full)).c_str(), sys.planetCount(),
-                      (int)sys.bodies.size() - sys.planetCount());
-    logEvent("ARRIVAL", fmt("%s, %s, %d PLANETS %d MOONS, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), sys.classString().c_str(), sys.planetCount(), (int)sys.bodies.size() - sys.planetCount(), (long long)full.sx, (long long)full.sy, (long long)full.sz));
+    const int moons = (int)sys.bodies.size() - sys.planetCount();
+    if (sys.sunless()) {   // D-01: a world alone in the dark
+        arrivalNote = fmt("ARRIVED AT %s - NO STAR, ONE WORLD, %d MOON%s", upper(starNameOf(full)).c_str(), moons, moons == 1 ? "" : "S");
+        logEvent("ARRIVAL", fmt("%s, NO STAR, ONE WORLD %d MOON%s, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), moons, moons == 1 ? "" : "S", (long long)full.sx, (long long)full.sy, (long long)full.sz));
+    } else {
+        arrivalNote = fmt("ARRIVED AT %s - %d PLANETS, %d MOONS", upper(starNameOf(full)).c_str(), sys.planetCount(), moons);
+        logEvent("ARRIVAL", fmt("%s, %s, %d PLANETS %d MOONS, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), sys.classString().c_str(), sys.planetCount(), moons, (long long)full.sx, (long long)full.sy, (long long)full.sz));
+    }
+    if (sys.sunless()) ship.localTarget = 0;   // D-02: the one world there is the local target (the HUD's brackets on the black disc)
     status(arrivalNote, 8);
     audio.beep = 2;
     arrivalFlash = 1.0;
@@ -72,12 +78,13 @@ void Game::startJump(double ly, const Vec3& dir) {
     if (plotJump(ly, dir, false)) flyJump();
 }
 
-bool Game::plotJump(double ly, const Vec3& dir, bool onChart) {
+bool Game::plotJump(double ly, const Vec3& dir, bool onChart, const Star* place) {
     if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return false; }
     ly = clampd(ly, 1, JUMP_MAX_LY);
     Star dest; double shortLy = 0;
-    if (!jumpTarget(ship.pos, dir, ly, dest, shortLy, sys.valid ? sys.star.seed : 0)) { status("NO STAR TO COME OUT AT ALONG THAT LINE", 4); audio.beep = 3; return false; }
-    Star full; starInSector(dest.sx, dest.sy, dest.sz, full, true);
+    if (place) dest = *place;   // D-02: a drifter the chart snapped to (a jump's line ends at the star nearest it, and never sees a drifter)
+    else if (!jumpTarget(ship.pos, dir, ly, dest, shortLy, sys.valid ? sys.star.seed : 0)) { status("NO STAR TO COME OUT AT ALONG THAT LINE", 4); audio.beep = 3; return false; }
+    Star full; placeInSector(dest.sx, dest.sy, dest.sz, full, true);
     JumpPlot p; p.seed = full.seed; p.ly = ly; p.shortLy = shortLy; p.onChart = onChart;
     p.from = sys.valid ? upper(starNameOf(sys.star)) : std::string("DEEP SPACE");
     p.way = galacticHeading(ship.pos / SECTOR_KM, dir);
@@ -93,6 +100,7 @@ void Game::flyJump() {
     toggleVimana();   // the JUMP line
     if (ship.mode != ShipState::VIMANA) return;
     if (shortLy > 0) status(fmt("NO STARS OUT THERE - THE JUMP ENDS %.0f LY SHORT", shortLy), 6);
+    else if (ship.remote.cls == STAR_ROGUE) status(fmt("VIMANA JUMP OF %.0f LY: NO STAR AT ITS END", length(ship.remote.pos - ship.pos) / SECTOR_KM), 6);   // D-02
     else status(fmt("VIMANA JUMP OF %.0f LY: A STAR %.0f LY AWAY", ly, length(ship.remote.pos - ship.pos) / SECTOR_KM), 6);
 }
 
@@ -278,9 +286,9 @@ void Game::updateShipMotion(double dt) {
                 ship.mode = ShipState::PARKED;
                 ship.parkedBody = ship.localTarget;
                 const Body& b = sys.bodies[ship.parkedBody];
-                status(fmt("IN ORBIT: %s - %s%s", upper(bodyNameOf(ship.parkedBody)).c_str(), PLANET_TYPES[b.type].name,
-                           PLANET_TYPES[b.type].landable ? " - C TO DEPLOY CAPSULE" : (isProbeGiant(b.type) ? " - C LAUNCHES A PROBE" : " - NOT LANDABLE")), 8);   // X-01
-                logEvent("ORBIT", fmt("%s, %s, R %.0f KM, %.2f G%s", upper(bodyNameOf(ship.parkedBody)).c_str(), PLANET_TYPES[b.type].name, b.radiusKm, b.gravity / 9.8, b.rings ? ", RINGS" : ""));
+                status(fmt("IN ORBIT: %s - %s%s", upper(bodyNameOf(ship.parkedBody)).c_str(), KINDS[b.type].name,
+                           KINDS[b.type].landable ? " - C TO DEPLOY CAPSULE" : (isProbeGiant(b.type) ? " - C LAUNCHES A PROBE" : " - NOT LANDABLE")), 8);   // X-01
+                logEvent("ORBIT", fmt("%s, %s, R %.0f KM, %.2f G%s", upper(bodyNameOf(ship.parkedBody)).c_str(), KINDS[b.type].name, b.radiusKm, b.gravity / 9.8, b.rings ? ", RINGS" : ""));
                 audio.beep = 2;
             }
             break;

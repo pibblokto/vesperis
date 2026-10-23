@@ -50,6 +50,10 @@ letter.omen
   ($e.omen=newstar) There is a new star, low in the south over {let.hereplace}; the priests have not decided what it means yet.
   ($e.omen=redmoon) The moon was red as {colour.any} cloth last night. Everyone has an opinion, and mine is that it was red.
   ($e.omen=comet) The hairy star hangs over {$e.place} every night now; the {herd} will not settle.
+  ($e.omen=wanderer) The wanderer is so bright now that the {herd} throw two shadows at night. The priests say it will pass. It has not passed in my lifetime.
+  ($e.omen=intruder) The new star is brighter this year than last, and it is not where the old charts put anything. Nobody says what they think.
+  ($e.omen=bent) The watchers say the stars round the north have moved a finger's width since {season.next}. I looked and could not tell. They were frightened, and now I am.
+  ($e.omen=dance) The second sun is further off every year; at midsummer it is only a bright star now. My grandmother said it was as big as a thumbnail when she was a girl.
 
 # ---- the works and the feasts ------------------------------------------------------------------------------------------------
 

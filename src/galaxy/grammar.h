@@ -127,7 +127,11 @@ struct VgAlt {
     int rule = -1, file = 0, line = 0;
     uint64_t key = 0;         // its rule's name and its text hashed: a people's dialect and choices read it (stable when other rules change)
     std::vector<int> words;   // its distinctive words (`VgGrammar::words`): the fatigue's
+    bool apart = false;       // D-05: its file's or its guard's `@apart`: left out of the counts that make a word distinctive (no other people's draws move)
 };
+// D-05: `@instead <guard> <rule> <rule2>`: where the guard holds, a reference to `rule` expands `rule2` (a population's own words for an ordinary
+// rule's, the rule's lines unchanged: a line's key is its text, which every people's dialect and choices read)
+struct VgInstead { VgCond cond; std::string from, to; int fromRule = -1, toRule = -1, file = 0, line = 0; };
 struct VgRule {
     std::string name;
     int number = VN_NONE;     // a word list's: `(pl)`, `(mass)`, `(sing)`
@@ -157,6 +161,12 @@ struct VgGrammar {
     std::unordered_set<std::string> plurals;                 // the plural words of the `(pl)` lists (the check: no "a" or "one" before them)
     std::vector<std::string> words;                          // the distinctive words (in few alternatives): the fatigue's, by index
     std::unordered_set<std::string> tongueKeys;              // the `{~key}` the texts ask the model for
+    // D-05: a population's own lines kept apart from the others' (`@apart` alone: a file's every alternative; `@apart key=value`: every
+    // alternative with that guard, in any file): a word of theirs never makes a word of the others' common, so no other people's records move;
+    // and the rules a guard swaps (`@instead`)
+    std::vector<char> apartFiles;
+    std::vector<std::pair<std::string, std::string>> apartGuards;
+    std::vector<VgInstead> insteads;
     const VgSchema* schema = nullptr;
     double parseMs = 0;
     int rule(const std::string& name) const { auto it = ruleIndex.find(name); return it == ruleIndex.end() ? -1 : it->second; }

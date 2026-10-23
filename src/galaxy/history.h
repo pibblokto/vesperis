@@ -108,6 +108,8 @@ enum HistoryEventKind {
     HE_BEASTS,         // the herds and the game (thing: late, early, none, many, a great one taken, one that killed; value: the dead)
     HE_SHOW,           // a play, a song, pictures, a film shown first (thing: its kind; a: who made it; place)
     HE_VISIT,          // the ruler at place (a: the ruler)
+    HE_SUN,            // D-05: the loss of the sun seen (thing: 0 the sun smaller, 1 the year that did not end, 2 the sea frozen from the shore, 3 the air
+                       // falling as snow, 4 the last sunrise, 5 the stars at noon; place: where it was seen)
     // a family's (private)
     HE_BIRTH,          // a born to b (mother) and c (father) at place
     HE_MARRIAGE,       // a married b at place
@@ -257,12 +259,15 @@ struct History {
     int yearsFrom = 1;                    // `harvest` and `population` start here
     std::vector<uint8_t> harvest;         // 0 failed .. 4 rich
     std::vector<float> population;
+    std::vector<float> sunlight;          // D-05: a drifter's people's sun by year, its light over their old sun's (1 before the loss, nothing after the
+                                          // last sunrise but the stars'); empty for every other people
 
     int eventsIn(int year, int& from) const;          // the events of a year: their count, the first's index in `from`
     int reignAt(int year) const;                      // the reign of a year (-1 none: before year 1, after the end)
     int eraAt(int year) const;
     int harvestAt(int year) const;                    // 0 .. 4 (2 an ordinary year; 2 where none is kept)
     double populationAt(int year) const;
+    double sunlightAt(int year) const;                // D-05: 1 where none is kept
     bool placeStands(int place, int year) const { return place >= 0 && place < (int)places.size() && year >= places[place].founded && year <= places[place].ended; }
     bool alive(int person, int year) const { return person >= 0 && person < (int)persons.size() && year >= persons[person].born && year <= persons[person].died; }
     int inventionYear(int id) const;                  // 0 never
@@ -287,6 +292,7 @@ int historySeat(const History& H, int year);                    // the place the
 std::string historyWarName(const History& H, int war);
 std::string historySicknessName(const History& H, int sickness);
 std::string historyInventionName(int id);
+int historyInventionIndex(const char* name);   // D-05: an invention's id by its name ("radio"), -1 none
 std::string historyYear(const History& H, int year);           // "year 512", "about 4,000 years before the founding"
 std::string historySeason(const History& H, int season);       // "spring", "the dry months"
 std::string historyTradeName(int trade);

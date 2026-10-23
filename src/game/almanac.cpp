@@ -33,7 +33,7 @@ void Game::buildAlmanac() {
     } else if (almanacScene == 2 && sys.valid && landBody >= 0 && landBody < (int)sys.bodies.size()) {
         const Body& b = sys.bodies[landBody];
         p.ground = true; p.body = landBody; p.window = GROUND_WINDOW; p.lat = landLat; p.lon = landLon;
-        p.atmosphere = PLANET_TYPES[b.type].atmosphere;
+        p.atmosphere = bodyHasAir(b);   // D-04
         if (b.rings) p.ringProf = spaceR.ringProfile(sys, landBody);
     } else {
         p.ground = false; p.window = SHIP_WINDOW; p.pos = ship.pos;

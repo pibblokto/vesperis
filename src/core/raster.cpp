@@ -169,7 +169,14 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                                 }
                             }
                         }
-                        if (in && fade > 0.5 && P.litBank >= 0) { bank = P.litBank; s2 = P.litShade; go = 0; }
+                        bool lit = in && fade > 0.5 && P.litBank >= 0;
+                        if (P.litShare > 0) {   // D-04: a share of the window cells lit, each cell by its own hash; far off a scatter of points, as many as the lit windows' share of the face
+                            uint32_t h = (uint32_t)((int64_t)std::floor(uu / P.bay) * 83492791) ^ (uint32_t)((int64_t)std::floor(vv / P.storey) * 2971215073u);
+                            h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15;
+                            lit = (lit && (h & 1023) < (uint32_t)(P.litShare * 1024))
+                               || (fade <= 0.5 && (h & 1023) < (uint32_t)(P.litShare * std::min(1.0, 1.4 * P.meanShare) * 1024));
+                        }
+                        if (lit) { bank = P.litBank; s2 = P.litShade; go = 0; }
                         else go += -P.dark * (fade * (in ? 1.0 : 0.0) + (1 - fade) * P.meanShare) + fade * dress + (1 - fade) * P.meanDress;
                     }
                 }

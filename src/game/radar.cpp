@@ -76,6 +76,35 @@ void Game::radarOff() {
     audio.radarGainT = 0; audio.radarSky = 0; audio.radarWear = 0; audio.radarGhost = 0; audio.radarAge = -1; audio.radarKind2 = -1; audio.radarSignal2 = 0; audio.radarHet = 0; audio.radarIntermod = 0;
 }
 
+// D-03: a drifter's voice off the radar camera. While the ship is at a drifter (in its system, out of a flight) the cabin's radio carries it
+// under the ship's hum; on its ground (the drifter's or a moon's: the explorer out of the capsule, walking, in the buggy or the drone, a sheet
+// or the guide opened there) the suit's radio, fainter and narrow. Nothing where the synth is another's (the decoder, the instruments, the
+// probe's relay and its recordings, the drone bay, the landing, the title) or while the camera is on (it hears the drifter itself)
+void Game::darkRadio() {
+    const bool taken = state == GameState::TITLE || state == GameState::LANDING_MAP || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::SHARDS ||
+                       state == GameState::INSTRUMENTS || state == GameState::PROBE || state == GameState::RECORDING || state == GameState::DRONES;
+    if (radar.on || taken || !sys.valid || !sys.sunless() || sys.bodies.empty() || ship.mode == ShipState::VIMANA) {
+        if (darkRadioOn && !radar.on) { audio.radar = 0; audio.radarSignal = 0; audio.radarKind = -1; audio.radarSet = RADIO_CAMERA; }
+        darkRadioOn = false;
+        return;
+    }
+    if (darkRadioSeed != sys.star.seed) {   // the drifter's voice, read once a system
+        Signal s; s.kind = SIG_ROGUE; s.bodyType = sys.bodies[0].type; s.power = drifterPower(sys.star); rogueVoiceOf(sys, s);
+        darkRadioVoice = rogueVoiceFor(s); darkRadioSeed = sys.star.seed; darkRadioBeacon = -2;
+    }
+    if (darkRadioBeacon == -2 && realTime - darkRadioBeaconAt >= 0.25) {   // D-05: its beacon's machine under it, once its people's records are written
+        darkRadioBeaconAt = realTime;
+        DrifterBeacon B; if (drifterBeaconIfReady(sys, B)) darkRadioBeacon = B.people >= 0 ? B.machine : -1;
+    }
+    const bool ground = state == GameState::SURFACE || (state != GameState::SPACE && surf.valid && returnState == GameState::SURFACE);
+    const bool playing = player.playing >= 0 && !player.held && !player.paused;   // C-11: lower under the ship's player
+    audio.radar = (ground ? RADIO_SUIT_LEVEL : RADIO_CABIN_LEVEL) * (playing ? 0.35 : 1.0); audio.radarSet = ground ? RADIO_SUIT : RADIO_CABIN;
+    audio.radarSignal = 0.9; audio.radarKind = SIG_ROGUE; audio.radarSeed = sys.star.seed; audio.radarVoice = darkRadioBeacon >= 0 ? darkRadioBeacon : -1; audio.radarRogue = darkRadioVoice; audio.radarPulseHz = 1;
+    audio.radarGainT = 0; audio.radarSky = 0; audio.radarWear = 0; audio.radarGhost = 0; audio.radarAge = -1; audio.radarDrive = 0;
+    audio.radarKind2 = -1; audio.radarSignal2 = 0; audio.radarHet = 0; audio.radarIntermod = 0;
+    darkRadioOn = true;
+}
+
 // the far signals from the ship's sector (the transmitters within reach and the loud pulsars near); the current star's own are local.
 // C-15: what the gain hears beyond is the sector's too, scanned again (a slice a frame) when the gain is up
 void Game::radarScan() {
@@ -115,10 +144,11 @@ void Game::radarDeepStep() {
 // rarely its piece slowed), in a voice derived from the world's
 void Game::radarStartContent(const Signal& s, bool next) {
     RadarState& r = radar;
+    if (s.kind == SIG_ROGUE) { radarStartBeacon(s); return; }   // D-05: a drifter's beacon (the same message again when it ends)
     if (s.kind != SIG_PEOPLE || s.body < 0) return;
     auto build = [&](int which) {   // built once per world and people; a world that fails to build is not tried again every frame
         r.world.key = Guide::bodyKey(s.star.sx, s.star.sy, s.star.sz, s.body);
-        Star full = s.star; if (full.name.empty()) starInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+        Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
         buildShardWorld(r.world, full, s.body, which, false);
         if (r.world.pending) { r.pendingSeed = s.seed; r.pendingAt = realTime; return false; }   // H-04: its records are being written: the carrier alone till then
         r.worldSeed = s.seed; r.worldWhich = which;
@@ -164,6 +194,52 @@ void Game::radarStartContent(const Signal& s, bool next) {
     }
     audio.radio = true; r.contentT = 0; r.awayT = 0;
     if (r.prog.speaks && r.locked >= 0 && r.locked < (int)r.all.size() && r.all[r.locked].seed == s.seed) { guide.heard.insert(r.world.key + "/S" + std::to_string(idx)); guide.save(guidePath); }
+}
+
+// D-05: a drifter's beacon on the air: its radio people's last recording (`drifterBeaconIfReady`, decided once a drifter, the voice alone while
+// its people's records are written), the recording's opening spoken in the people's voice slowed and worn, three times and a long gap, the
+// machine under the drifter's voice all the while; locked, it is heard (`Guide::heard`): the one found in the last shelter is "the recording
+// the radar caught"
+void Game::radarStartBeacon(const Signal& s) {
+    RadarState& r = radar;
+    auto quiet = [&]() { if (r.contentT >= 0) radarStopContent(); r.contentT = -1; };   // nothing of another's left on the air (a word back out of the static stays)
+    auto it = r.beacons.find(s.seed);
+    if (it != r.beacons.end() && it->second.people < 0) { quiet(); return; }
+    Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+    if (it == r.beacons.end()) {
+        if (r.pendingSeed == s.seed && realTime - r.pendingAt < 0.25) { quiet(); return; }   // asked again four times a second
+        StarSystem dsys; dsys.generate(full);
+        DrifterBeacon B;
+        if (!drifterBeaconIfReady(dsys, B)) { r.pendingSeed = s.seed; r.pendingAt = realTime; quiet(); return; }
+        it = r.beacons.emplace(s.seed, B).first;
+    }
+    const DrifterBeacon B = it->second;
+    if (B.people < 0) { quiet(); return; }
+    if (r.worldSeed != s.seed || r.worldWhich != B.people) {
+        if (r.pendingSeed == s.seed && realTime - r.pendingAt < 0.25) { quiet(); return; }
+        r.world.key = Guide::bodyKey(full.sx, full.sy, full.sz, 0);
+        buildShardWorld(r.world, full, 0, B.people, false);
+        if (r.world.pending) { r.pendingSeed = s.seed; r.pendingAt = realTime; quiet(); return; }
+        r.worldSeed = s.seed; r.worldWhich = B.people; r.shard = -1;
+    }
+    const int local = r.world.lore.last;
+    if (!r.world.valid || local < 0 || local >= (int)r.world.shards.size()) { quiet(); return; }
+    radarWordStop();
+    audio.piece = nullptr; audio.tradition = nullptr; audio.speech = nullptr; audio.voice = nullptr; audio.pieceSpeed = 1; audio.radarCode = nullptr;
+    const int idx = shardWorldIndex(B.people, local);
+    r.shard = idx;
+    const Shard& sh = r.world.shards[local];
+    std::vector<DecodedWord> words; decodeShard(sh, r.world.lang, r.world.tongue, r.world.lore.records, words); words.resize(shardOpening(words));
+    r.progAge = -1;   // the drifter's channel: no age's band (its voice the drifter's)
+    beaconProgramme(s.seed, B, r.world.voice, words, r.prog);
+    r.contentMusic = false; r.loopI = 0; r.loopAt = 0;
+    audio.radarVoice = r.prog.kind; audio.radarSeed = s.seed;   // the drifter's voice and its beacon's pattern by its seed
+    speechOf(r.prog.voice, r.prog.words, sh.seed, r.world.speech);
+    audio.speech = &r.world.speech; audio.voice = &r.prog.voice;
+    audio.speechStart = true; audio.speechPause = false; audio.speechDone = false; audio.speechT = -1;
+    r.contentSecs = r.prog.repeats * (r.world.speech.seconds + r.prog.gap) - r.prog.gap;
+    audio.radio = true; r.contentT = 0; r.awayT = 0;
+    if (r.locked >= 0 && r.locked < (int)r.all.size() && r.all[r.locked].seed == s.seed) { guide.heard.insert(r.world.key + "/S" + std::to_string(idx)); guide.save(guidePath); }
 }
 
 // a loop's phrase or a numbers station's next group again after the gap (on the game's own clock: the harness never runs the synth)
@@ -247,7 +323,7 @@ void Game::radarWordStep(double realDt) {
     else if (r.wordWorld.valid && r.wordWorld.key == bodyKey && r.wordWorld.which == which) w = &r.wordWorld;
     else {
         int64_t sx, sy, sz; Star st;
-        if (!Guide::parseStarKey(bodyKey, sx, sy, sz) || !starInSector(sx, sy, sz, st, true)) return;
+        if (!Guide::parseStarKey(bodyKey, sx, sy, sz) || !placeInSector(sx, sy, sz, st, true)) return;
         r.wordWorld = ShardWorld(); r.wordWorld.key = bodyKey;
         if (!buildShardWorld(r.wordWorld, st, bi, which, false)) return;   // H-04: not before its records are written (the next word's turn will find them)
         w = &r.wordWorld;
@@ -278,19 +354,25 @@ void Game::radarLock(int idx) {
     if (idx < 0 || idx >= (int)r.all.size()) return;
     const Signal& s = r.all[idx];
     r.locked = idx; r.lockedSeed = s.seed; r.lockedKind = s.kind; r.lostT = 0; r.holdT = 0;
-    std::string key = s.kind == SIG_PULSAR ? Guide::starKey(s.star.sx, s.star.sy, s.star.sz) : Guide::bodyKey(s.star.sx, s.star.sy, s.star.sz, s.body);
+    // D-02: a drifter's lock is its sector's, as a pulsar's: the chart's red ring and its A SIGNAL stop at the place
+    std::string key = s.kind == SIG_PULSAR || s.kind == SIG_ROGUE ? Guide::starKey(s.star.sx, s.star.sy, s.star.sz) : Guide::bodyKey(s.star.sx, s.star.sy, s.star.sz, s.body);
     bool fresh = !guide.signals.count(key);
     guide.signals[key] = s.kind;
-    bool content = s.kind == SIG_PEOPLE && r.contentT >= 0 && r.worldSeed == s.seed && r.shard >= 0;
+    bool content = (s.kind == SIG_PEOPLE || s.kind == SIG_ROGUE) && r.contentT >= 0 && r.worldSeed == s.seed && r.shard >= 0;   // D-05: a drifter's beacon too
     if (content) guide.heard.insert(r.world.key + "/S" + std::to_string(r.shard));
     // the log and the status name the system only: what sent the signal is heard, not told, and found on arrival
-    Star full = s.star; if (full.name.empty()) starInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+    Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+    // D-02: a drifter's says there is no star at its source, and no more (its name only once the explorer gave one)
+    const bool rogue = s.kind == SIG_ROGUE && !s.local, visited = guide.visited.count(starKeyOf(full)) > 0;
     std::string what = s.local ? fmt("A SIGNAL FROM THIS SYSTEM: %s", upper(bodyNameOf(s.body)).c_str())
-                               : fmt("A SIGNAL FROM %s (%s), %.0f LY (%.0f YEARS OLD)", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, s.distLy, s.distLy);
+                     : (rogue ? fmt("A SIGNAL WITH NO STAR AT ITS SOURCE%s, %.0f LY (%.0f YEARS OLD)", starNamed(full) ? (": " + upper(starNameOf(full))).c_str() : "", s.distLy, s.distLy)
+                              : fmt("A SIGNAL FROM %s (%s), %.0f LY (%.0f YEARS OLD)", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, s.distLy, s.distLy));
     (void)content;
     if (fresh) logEvent("SIGNAL", fmt("%s, SECTOR %lld %lld %lld", what.c_str(), (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz));
     else guide.save(guidePath);
-    status(s.local ? "A SIGNAL LOCKED - ENTER APPROACHES ITS SOURCE" : (guide.visited.count(starKeyOf(full)) ? "A SIGNAL LOCKED - ITS STAR WAS VISITED, ENTER FLIES" : "A SIGNAL LOCKED - ENTER FLIES TO ITS STAR"), 6);   // R-407
+    status(s.local ? "A SIGNAL LOCKED - ENTER APPROACHES ITS SOURCE"
+                   : (rogue ? (visited ? "A SIGNAL LOCKED - NO STAR, VISITED - ENTER FLIES" : "A SIGNAL LOCKED - NO STAR THERE - ENTER FLIES")
+                            : (visited ? "A SIGNAL LOCKED - ITS STAR WAS VISITED, ENTER FLIES" : "A SIGNAL LOCKED - ENTER FLIES TO ITS STAR")), 6);   // R-407
     audio.beep = 1;
 }
 
@@ -303,7 +385,7 @@ void Game::radarAccept() {
         ship.localTarget = s.body; ship.targetBelt = -1;
         startApproach(s.body);
     } else {   // the star: the remote target, and the Vimana flight at once (which leaves the camera)
-        Star full = s.star; starInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+        Star full = s.star; placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
         setRemoteStar(full);
         if (ship.hasRemote && ship.remote.seed == full.seed) toggleVimana();
     }
@@ -391,7 +473,7 @@ bool Game::updateRadar(const Input& in, double realDt) {
     // plays through the static
     int src = r.locked >= 0 ? r.locked : (r.aim >= 0 ? r.aim : r.best);
     const Signal* sig = src >= 0 && (r.locked >= 0 || beamGain(r.angle[src]) > 0.25) ? &r.all[src] : nullptr;
-    if (sig && sig->kind == SIG_PEOPLE) {
+    if (sig && (sig->kind == SIG_PEOPLE || sig->kind == SIG_ROGUE)) {   // D-05: a drifter's beacon, where it has one
         bool same = r.contentT >= 0 && r.worldSeed == sig->seed && audio.radio;
         if (!same) radarStartContent(*sig, false);
         else {
@@ -405,7 +487,7 @@ bool Game::updateRadar(const Input& in, double realDt) {
         r.awayT += realDt; r.contentT += realDt;
         if (r.awayT > 2.0 || (sig && sig->kind != SIG_PEOPLE)) radarStopContent();
     }
-    if (!(sig && sig->kind == SIG_PEOPLE && r.contentT >= 0)) { audio.radarSeed = sig ? sig->seed : 0; audio.radarVoice = -1; }   // the signal's own voice by its seed; a people's carrier alone until its programme is on
+    if (!(sig && (sig->kind == SIG_PEOPLE || sig->kind == SIG_ROGUE) && r.contentT >= 0)) { audio.radarSeed = sig ? sig->seed : 0; audio.radarVoice = -1; }   // the signal's own voice by its seed; a people's carrier alone until its programme is on (D-05: a drifter's voice without its beacon)
     radarWordStep(realDt);   // C-16: a heard word back out of the static, while nothing is on the air
     double want = 0;
     if (sig) {   // C-15: a far signal comes through less (0.3 + half its strength in the beam, 0.6 locked) than C-07's
@@ -415,8 +497,9 @@ bool Game::updateRadar(const Input& in, double realDt) {
         if (far) want *= 1 - 0.35 * r.sky * tG;   // C-16: toward the core a far signal is the hardest to pull out of the galaxy's noise
     }
     r.clarity += (want - r.clarity) * (1 - std::exp(-realDt * 4));
-    audio.radar = 1; audio.radarSignal = r.clarity;
+    audio.radar = 1; audio.radarSignal = r.clarity; audio.radarSet = RADIO_CAMERA;
     audio.radarKind = sig ? sig->kind : -1;
+    audio.radarRogue = sig && sig->kind == SIG_ROGUE ? rogueVoiceFor(*sig) : RogueVoice();   // D-03: a drifter's voice by what it is
     audio.radarPulseHz = sig && sig->kind == SIG_PULSAR ? std::max(0.2, sig->pulseHz) : 1;
     audio.radarDrive = sig && G > 1 ? clampd((signalDrive(*sig, G) * beamGain(r.angle[src]) - 0.8) / 0.7, 0, 1) : 0;   // C-15: a near signal overdrives the receiver
     // C-16: what the gain lets in. The dial, the galaxy's noise in the beam, how worn the signal heard is, the age on the air (the
@@ -433,6 +516,7 @@ bool Game::updateRadar(const Input& in, double realDt) {
         const Signal& u = r.all[r.under];
         double lvl = clampd(ug * (0.3 + 1.2 * tG), 0, 0.6) * (deepOf(u) ? 1 - 0.35 * r.sky * tG : 1.0);
         audio.radarKind2 = u.kind; audio.radarSeed2 = u.seed; audio.radarAge2 = u.kind == SIG_PEOPLE ? u.age : -1; audio.radarSignal2 = lvl;
+        audio.radarRogue2 = u.kind == SIG_ROGUE ? rogueVoiceFor(u) : RogueVoice();
         audio.radarPulseHz2 = u.kind == SIG_PULSAR ? std::max(0.2, u.pulseHz) : 1;
         audio.radarVoice2 = u.kind == SIG_PEOPLE ? underVoiceOf(u) : -1;
         bool carriers = sig && sig->kind == SIG_PEOPLE && u.kind == SIG_PEOPLE;
@@ -640,8 +724,13 @@ void Game::renderRadarCamera() {
             l1 = "A SIGNAL FROM THIS SYSTEM";
             l2 = fmt("%s", trunc(upper(bodyNameOf(s.body)), 30).c_str());
             l3 = "ENTER APPROACHES IT";
+        } else if (s.kind == SIG_ROGUE) {   // D-02: the distance and no star at the source, nothing more (the sound tells, the readout never does)
+            Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+            l1 = "NO STAR AT THE SOURCE";
+            l2 = thousands(s.distLy) + " LY" + (guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");
+            l3 = "ENTER FLIES THERE";
         } else {   // C-15: thousands of light years at the top steps (the line within its 52 characters: the name gives way first)
-            Star full = s.star; if (full.name.empty()) starInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
+            Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
             std::string ly = thousands(s.distLy), tail = fmt(" (%s)  %s LY%s", STAR_CLASSES[full.cls].code, ly.c_str(), guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");   // R-407: a loop back to a system seen says so
             l1 = "A SIGNAL FROM " + trunc(upper(starNameOf(full)), (size_t)clampi(52 - 14 - (int)tail.size(), 6, 16)) + tail;
             std::string sector = fmt("SECTOR %lld %lld %lld", (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz);
@@ -663,7 +752,7 @@ void Game::renderRadarCamera() {
 
 bool Game::testCivilisedHere() const {
     if (!sys.valid) return false;
-    for (const Body& b : sys.bodies) if ((b.type == PT_FELISIAN || b.type == PT_DESERT) && worldHadCivilisation(BodyGen::make(b))) return true;
+    for (const Body& b : sys.bodies) if (kindHas(b.type, KT_PEOPLE) && worldHadCivilisation(BodyGen::make(b))) return true;
     return false;
 }
 

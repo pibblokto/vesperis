@@ -45,6 +45,10 @@ enum RecordFact {
     // H-05 (CHARTS): a chart's caption reads the way it was made and what that way shows (`shardChartRecord`, galaxy/shards.cpp)
     F_CHARTSTYLE, F_TALLY, F_TALLYKIND, F_WANDERERS, F_NUMBERED, F_PLATE, F_MAGLIMIT, F_HEARD, F_ROUTES, F_REACHED, F_PLANNED, F_FARLY, F_FARKIND, F_SIGNS,
     F_PAST,   // B-414: the people had an age before the record's (a history's: `@past`)
+    // D-05: a drifter's people's sun in the record's year (`dark`: 0 as ever, 1 dimming, 2 going, 3 gone: the years after the last sunrise), the
+    // years since the last sunrise (`darkyears`), how they lost it (`sunway`: wanderer, intruder, dark, dance; empty for every other people)
+    F_DARK, F_DARKYEARS, F_SUNWAY,
+    F_SUNSIZE, F_SUNFROM,   // D-05: the sun's disc in a row of the observatory's table (`@suntable`) and at its first measure, in the people's own parts
     F_FIXED_COUNT
 };
 const char* const FACT_NAMES[F_FIXED_COUNT] = {
@@ -60,7 +64,8 @@ const char* const FACT_NAMES[F_FIXED_COUNT] = {
     "y", "y0", "y1", "gap",
     "plan", "roof", "ornament", "motif", "tops", "accent", "land", "streets", "public", "edge", "links", "light", "walls", "huts", "towers",
     "chartstyle", "tally", "tallykind", "wanderers", "numbered", "plate", "maglimit", "heard", "routes", "reached", "planned", "farly", "farkind", "signs",   // H-05 (CHARTS)
-    "past"};   // B-414
+    "past",   // B-414
+    "dark", "darkyears", "sunway", "sunsize", "sunfrom"};   // D-05
 constexpr int NAME_FACTS = F_FOUNDERNAME + 1;
 
 // the inventions by the history's names (`historyInventionName`), each a fact while it exists: `inv.railway`
@@ -100,16 +105,19 @@ enum RecordField {
     FD_INSTNAME, FD_DISCOVERY, FD_DEED, FD_UNREST, FD_WHITHER, FD_SIGN, FD_STAGE, FD_LEFT, FD_FAITH, FD_TREATY, FD_FOUNDING, FD_WHENCE, FD_FIRST, FD_WON,
     FD_AGE, FD_BORN, FD_DIED, FD_TRADE, FD_TRADES, FD_TITLE, FD_ROLE, FD_ALIVE, FD_KIN, FD_YOURKIN, FD_FAMILY, FD_DEAD, FD_REIGNED, FD_CHILDREN,
     FD_RANK, FD_COAST, FD_RIVER, FD_FOUNDED, FD_YEARS, FD_STANDS, FD_GONE, FD_FAR,
-    FD_WHAT, FD_VERDICT, FD_EPITHET, FD_TRAIT, FD_PTRADE, FD_LANDMARK, FD_QUARTER, FD_COUNT };
+    FD_WHAT, FD_VERDICT, FD_EPITHET, FD_TRAIT, FD_PTRADE, FD_LANDMARK, FD_QUARTER,
+    FD_SUN,   // D-05: a HE_SUN event's: smaller, noend, seafrozen, airsnow, lastsunrise, noonstars
+    FD_COUNT };
 const char* const FIELD_NAMES[FD_COUNT] = {
     "kind", "season", "year", "ago", "value", "out", "here", "pub", "war", "warkind", "sickness", "wave", "work", "workkey",
     "invention", "inv", "omen", "harvest", "flood", "impact", "how", "gov", "govold", "govhow", "accession", "ruleend", "institution",
     "instname", "discovery", "deed", "unrest", "whither", "sign", "stage", "left", "faith", "treaty", "founding", "whence", "first", "won",
     "age", "born", "died", "trade", "trades", "title", "role", "alive", "kin", "yourkin", "family", "dead", "reigned", "children",
     "rank", "coast", "river", "founded", "years", "stands", "gone", "far",
-    "what", "verdict", "epithet", "trait", "ptrade", "landmark", "quarter"};
-enum RecordDirective { D_CAST = 0, D_NEWS, D_ENTRIES, D_YEARS, D_DEATH, D_DEED, D_LIFE, D_EVENT, D_DIGEST, D_PAST, D_COUNT };
-const char* const DIRECTIVE_NAMES[D_COUNT] = {"cast", "news", "entries", "years", "death", "deed", "life", "event", "digest", "past"};
+    "what", "verdict", "epithet", "trait", "ptrade", "landmark", "quarter",
+    "sun"};   // D-05
+enum RecordDirective { D_CAST = 0, D_NEWS, D_ENTRIES, D_YEARS, D_DEATH, D_DEED, D_LIFE, D_EVENT, D_DIGEST, D_PAST, D_SUNTABLE, D_COUNT };
+const char* const DIRECTIVE_NAMES[D_COUNT] = {"cast", "news", "entries", "years", "death", "deed", "life", "event", "digest", "past", "suntable"};   // D-05: `suntable`
 
 const VgSchema& schemaOf() {
     static const VgSchema S = [] {
@@ -130,11 +138,12 @@ const VgSchema& schemaOf() {
 
 // ---- the history's words as the grammar's keys -----------------------------------------------------------------------------------
 
-const char* const KIND_KEYS[HE_COUNT] = {"coming", "first", "stones", "founding", "accession", "ruleend", "regency", "government", "war", "battle", "siege",
+const char* const KIND_KEYS[] = {"coming", "first", "stones", "founding", "accession", "ruleend", "regency", "government", "war", "battle", "siege",
     "sack", "peace", "sickness", "harvest", "famine", "flood", "drought", "quake", "eruption", "impact", "flare", "winter", "built", "way", "festival", "omen",
     "invention", "discovery", "faith", "institution", "deed", "unrest", "migration", "abandoned", "contact", "treaty", "otherend", "sign", "stage", "exodus",
-    "end", "fair", "fire", "storm", "pest", "wonder", "games", "law", "trial", "embassy", "accident", "price", "beasts", "show", "visit", "birth", "marriage", "move", "death",
+    "end", "fair", "fire", "storm", "pest", "wonder", "games", "law", "trial", "embassy", "accident", "price", "beasts", "show", "visit", "sun", "birth", "marriage", "move", "death",
     "illness", "injury", "apprentice", "house", "quarrel", "journey", "betrothal"};
+static_assert(sizeof(KIND_KEYS) / sizeof(KIND_KEYS[0]) == HE_COUNT, "a key an event kind");
 const char* const AGE_KEYS[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
 const char* const MEDIUM_KEYS[RM_COUNT] = {"bone", "stone", "painted", "tablet", "scroll", "codex", "plate", "cylinder", "glass", "printed", "reel", "disc", "drive", "crystal", "hum"};
 const char* const GOV_KEYS[GOV_COUNT] = {"chiefs", "monarchy", "council", "theocracy", "republic", "assembly", "corporate", "machine"};
@@ -143,12 +152,13 @@ const char* const RITE_KEYS[RITE_COUNT] = {"firstfruits", "fire", "song", "water
 const char* const HOLY_KEYS[HOLY_COUNT] = {"temple", "grove", "highplace", "spring", "cave", "house", "tombs", "opensky", "hall"};
 const char* const ECONOMY_KEYS[ECO_COUNT] = {"hunting", "herding", "farming", "trade", "industry", "information"};
 const char* const VALUE_KEYS[VAL_COUNT] = {"war", "piety", "trade", "learning", "art"};
-const char* const CAUSE_KEYS[CAUSE_COUNT] = {"famine", "iceage", "volcanic", "flood", "sickness", "bandwar", "leaving",
+const char* const CAUSE_KEYS[] = {"famine", "iceage", "volcanic", "flood", "sickness", "bandwar", "leaving",
     "greatsickness", "conquest", "cropfailure", "drying", "cold", "civilwar", "impact",
     "poisoned", "coalout", "industrialwar", "revolution", "epidemics",
     "nuclear", "engineered", "climate", "foodsystems", "cascade", "waterwar", "fewerchildren",
     "machine", "nanotech", "geoengineering", "flare", "weapons", "retreat", "exodus",
-    "elsewhere", "physics", "chosen", "undescribed"};
+    "elsewhere", "physics", "chosen", "undescribed", "sunlost"};
+static_assert(sizeof(CAUSE_KEYS) / sizeof(CAUSE_KEYS[0]) == CAUSE_COUNT, "a key a cause");
 const char* const FOCUS_KEYS[10] = {"spire", "dome", "gate", "tower", "colossus", "mast", "ring", "obelisk", "pool", "tree"};
 const char* const CENTRE_KEYS[6] = {"temple", "palace", "assembly", "market", "tomb", "machine"};
 const char* const DEAD_KEYS[5] = {"barrows", "tombs", "cemeteries", "towers", "none"};
@@ -160,7 +170,7 @@ const char* const WORK_KEYS[WK_COUNT] = {"holy", "temple", "walls", "fortress", 
 const char* const WAR_KEYS[HW_COUNT] = {"bands", "cities", "rebellion", "succession", "revolution", "civil", "other", "conquest"};
 const char* const DEATH_KEYS[16] = {"old", "sickness", "childbirth", "battle", "famine", "flood", "quake", "accident", "murdered", "executed", "end", "young",
     "fire", "cold", "sea", "hard"};
-const char* const OMEN_KEYS[6] = {"comet", "eclipse", "aurora", "falling", "newstar", "redmoon"};
+const char* const OMEN_KEYS[10] = {"comet", "eclipse", "aurora", "falling", "newstar", "redmoon", "wanderer", "intruder", "bent", "dance"};   // D-05: the lost sun's four
 const char* const ACCESSION_KEYS[11] = {"founded", "inherited", "chosen", "elected", "seized", "appointed", "won", "ofage", "mind", "revolution", "again"};
 const char* const RULEEND_KEYS[7] = {"gaveover", "deposed", "steppeddown", "term", "overthrown", "fled", "ended"};
 const char* const GOVHOW_KEYS[9] = {"reform", "revolution", "kingdom", "priests", "companies", "machine", "coup", "elders", "assembly"};
@@ -171,7 +181,7 @@ const char* const FOUNDING_KEYS[13] = {"plain", "fort", "harbour", "crossing", "
 const char* const LEFT_KEYS[10] = {"cause", "river", "wells", "mine", "soil", "cities", "band", "cleared", "collapse", "taken"};
 const char* const DISCOVERY_KEYS[9] = {"farshore", "source", "pass", "round", "farside", "poles", "orbit", "moon", "worlds"};
 const char* const DEED_KEYS[13] = {"song", "chronicle", "laws", "map", "hunt", "sailed", "healed", "frieze", "taught", "book", "theory", "pictures", "gardens"};
-const char* const WHITHER_KEYS[8] = {"place", "mountains", "sea", "south", "north", "sky", "elsewhere", "machines"};
+const char* const WHITHER_KEYS[9] = {"place", "mountains", "sea", "south", "north", "sky", "elsewhere", "machines", "under"};   // D-05: below
 const char* const WHENCE_KEYS[8] = {"mountain", "sea", "north", "south", "east", "west", "river", "dry"};
 const char* const FIRST_KEYS[6] = {"fields", "herds", "boats", "pots", "copper", "village"};
 const char* const ROLE_KEYS[HR_COUNT] = {"none", "ruler", "regent", "founder", "general", "prophet", "maker", "inventor", "explorer", "rebel", "envoy", "artist", "last"};
@@ -442,13 +452,14 @@ struct RecordModel : VgModel {
         if (ev < 0 || ev >= (int)H.events.size()) return -1;
         auto it = eventEnt.find(ev); if (it != eventEnt.end()) return it->second;
         VgEntity e; e.gender = VG_IT; e.ref = ev;
-        static const char* const NP[HE_COUNT] = {"the coming", "the first days", "the stones", "the founding", "the new rule", "the end of the rule", "the regency",
+        static const char* const NP[] = {"the coming", "the first days", "the stones", "the founding", "the new rule", "the end of the rule", "the regency",
             "the change", "the war", "the battle", "the siege", "the sack", "the peace", "the sickness", "the harvest", "the famine", "the flood", "the drought",
             "the earthquake", "the eruption", "the stone from the sky", "the flare", "the long winter", "the work", "the new way", "the festival", "the sign in the sky",
             "the invention", "the discovery", "the change in the faith", "the founding", "the deed", "the trouble", "the moving", "the leaving", "the meeting",
             "the treaty", "the news", "the sign", "the change", "the leaving", "the end", "the fair", "the fire", "the storm", "the plague", "the wonder", "the games",
-            "the law", "the trial", "the embassy", "the disaster", "the price", "the herds", "the show", "the visit", "the birth", "the wedding", "the moving", "the death",
+            "the law", "the trial", "the embassy", "the disaster", "the price", "the herds", "the show", "the visit", "the sun", "the birth", "the wedding", "the moving", "the death",
             "the illness", "the hurt", "the apprenticeship", "the house", "the quarrel", "the journey", "the promise"};
+        static_assert(sizeof(NP) / sizeof(NP[0]) == HE_COUNT, "a noun phrase an event kind");
         e.first = NP[std::max(0, std::min(HE_COUNT - 1, H.events[ev].kind))]; e.later = e.first; e.shown = true; e.named = true;
         int id = addEntity(e, {R_EVENT, ev});
         eventEnt[ev] = id;
@@ -623,6 +634,10 @@ struct RecordModel : VgModel {
             case FD_INVENTION: { if (e.kind != HE_INVENTION) return false; std::string nm = historyInventionName(e.thing); if (nm == "a landing on the moon") nm = L.moons > 0 ? "a landing on " + vgName(L.moon) : "the first craft to another world"; out = nm; return true; }
             case FD_INV: { if (e.kind != HE_INVENTION) return false; const std::string nm = historyInventionName(e.thing); for (const InvKey& k : INV_KEYS) if (nm == k.name) { out = k.key; return true; } return false; }
             case FD_OMEN: if (e.kind != HE_OMEN) return false; out = keyOf(OMEN_KEYS, e.thing); return true;
+            case FD_SUN: {   // D-05
+                static const char* const SUN_KEYS[6] = {"smaller", "noend", "seafrozen", "airsnow", "lastsunrise", "noonstars"};
+                if (e.kind != HE_SUN) return false; out = keyOf(SUN_KEYS, e.thing); return true;
+            }
             case FD_HARVEST: if (e.kind != HE_HARVEST) return false; out = e.out == 0 ? "failed" : (e.out == 1 ? "poor" : "rich"); return true;
             case FD_FLOOD: if (e.kind != HE_FLOOD) return false; out = e.thing == 1 ? "sea" : "river"; return true;
             case FD_IMPACT: if (e.kind != HE_IMPACT) return false; out = e.out == 2 ? "world" : (e.out == 0 ? "town" : "near"); return true;
@@ -708,6 +723,12 @@ struct RecordModel : VgModel {
         const int st = H.profile.stageAt(y);
         facts[F_STAGE] = num(st);
         setFlag(F_ENDING, st >= STAGE_CRISIS);
+        {   // D-05: the sun of a drifter's people in the year
+            const double light = H.sunlightAt(y);
+            const int dark = H.sunlight.empty() ? 0 : sunDarkOf(light, y, H.profile.lastSunrise);
+            facts[F_DARK] = num(dark);
+            facts[F_DARKYEARS] = num(dark == 3 ? y - H.profile.lastSunrise : 0);
+        }
         bool contact = false, otherWar = false, otherGone = false;
         for (const HistoryEvent& e : H.events) {
             if (e.year > y) break;
@@ -870,6 +891,7 @@ struct RecordModel : VgModel {
             case D_EVENT: return event(run, arg(0, "any"), arg(1, "song"), std::atoi(arg(2, "15").c_str()));
             case D_DIGEST: return digest(run, arg(0, "public"), arg(1, "news"), std::atoi(arg(2, "3").c_str()));
             case D_PAST: return past(run, std::atoi(arg(0, "4").c_str()), arg(1, "history.year"));
+            case D_SUNTABLE: return suntable(run, std::atoi(arg(0, "5").c_str()), arg(1, "suntable.row"));   // D-05
             default: return false;
         }
     }
@@ -919,6 +941,10 @@ struct RecordModel : VgModel {
             privateGenre = what != "writer";
             std::vector<int> c; for (size_t ri = 0; ri < readers.size(); ri++) if (readerHere[ri] && y - H.persons[readers[ri]].born >= (what == "archive" ? 40 : 16)) c.push_back(readers[ri]);
             if (c.empty()) for (int p : writersAny) if (y - H.persons[p].born >= (what == "archive" ? 40 : 16)) c.push_back(p);
+            if (c.empty() && what == "archive" && H.cause == CAUSE_SUN_LOST) {   // D-05: none forty in the dark: the oldest of them
+                int old = -1; for (int p : writersAny) if (old < 0 || H.persons[p].born < H.persons[old].born) old = p;
+                if (old >= 0 && y - H.persons[old].born >= 16) c.push_back(old);
+            }
             writer = pick(c, [&](int) { return 1.0; });
             if (writer < 0) return false;
             bindPerson(E_ME, writer);
@@ -1070,6 +1096,32 @@ struct RecordModel : VgModel {
     }
     // `@years <n> <rule>`: a chronicle: up to n years with something in them, the last the record's own or before it, within its era, in
     // their order; each told by `<rule>` with the year's facts and ruler bound, the empty years between by `<rule>.gap`
+    // D-05: `@suntable <n> <rule>`: a drifter's people's observatory's table of the sun's disc, up to n rows from the last year of the whole sun
+    // (the year before the onset, or the record's year, if earlier) to the record's year, evenly between, each told by `<rule>` with its year (`y`) and the disc then (`sunsize`) in the
+    // people's own parts of its first measure (`sunfrom`: 60, 100, 120, 32 or 24 by the people; the disc as the distance grew, the square root
+    // of its light); nothing for a people that kept its sun
+    bool suntable(VgRun& run, int n, const std::string& rule) {
+        if (H.sunlight.empty() || n < 1) return false;
+        static const int UNITS[5] = {60, 100, 120, 32, 24};
+        const int units = UNITS[mix64(H.seed ^ 0xD055AULL) % 5];
+        const int from = std::min(year, H.stageYear[STAGE_ONSET] - 1), to = std::max(from, year);   // from the last year of the whole sun
+        const std::string saveY = facts[F_Y], saveS = facts[F_SUNSIZE], saveF = facts[F_SUNFROM];
+        facts[F_SUNFROM] = num(units);
+        const int rows = std::min(n, to - from + 1);
+        int last = -1;
+        for (int i = 0; i < rows; i++) {
+            const int y = rows == 1 ? to : from + (int)std::lround((double)(to - from) * i / (rows - 1));
+            if (y == last) continue;
+            last = y;
+            const double size = units * std::sqrt(std::max(0.0, H.sunlightAt(y)));
+            char buf[32]; if (size >= 10) snprintf(buf, sizeof buf, "%d", (int)std::lround(size)); else snprintf(buf, sizeof buf, "%.1f", size);
+            facts[F_Y] = num(y); facts[F_SUNSIZE] = buf;
+            if (i > 0) run.paragraph();
+            run.expand(rule);
+        }
+        facts[F_Y] = saveY; facts[F_SUNSIZE] = saveS; facts[F_SUNFROM] = saveF;
+        return true;
+    }
     bool years(VgRun& run, int n, const std::string& rule) {
         const int ei = H.eraAt(year);
         const int eraStart = ei >= 0 && ei < (int)H.eras.size() ? H.eras[ei].start : 1;
@@ -1260,7 +1312,9 @@ struct RecordModel : VgModel {
 
 const VgSchema& recordSchema() { return schemaOf(); }
 
-void recordWorldFacts(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L, const History* H, VgModel& M) {
+void recordWorldFacts(const StarSystem& sys0, const Body& b0, const BodyGen& g, const Lore& L, const History* H, VgModel& M) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
     const VgSchema& S = schemaOf();
     if (M.facts.size() < S.facts.size()) M.facts.resize(S.facts.size());
     auto set = [&](int f, const std::string& v) { M.facts[f] = v; };
@@ -1270,21 +1324,21 @@ void recordWorldFacts(const StarSystem& sys, const Body& b, const BodyGen& g, co
     set(F_OTHERFATE, L.other.empty() ? std::string() : std::to_string(L.otherFate));
     flag(F_DESERT, L.desert);
     flag(F_TILTED, std::fabs(b.axialTilt) / DEG_ > 8);
-    const double tempC = b.tempK + g.tempBias - 273.15;
+    const double tempC = (b.thenTempK > 0 ? b.thenTempK : b.tempK) + g.tempBias - 273.15;   // P-04: a dead world's in their time
     flag(F_COLD, tempC < 5);
     set(F_MOONS, std::to_string(L.moons));
     flag(F_RINGS, b.rings);
     flag(F_AURORA, auroraPotentialAt(sys, b, 0.3) > 0.25);
     flag(F_LOCKED, b.locked);
     bool companion = false, comet = false, giant = false;
-    for (const Body& o : sys.bodies) { if (o.type == PT_COMPANION) companion = true; if (o.type == PT_COMET) comet = true; if (o.type == PT_GASGIANT && o.parent < 0) giant = true; }
+    for (const Body& o : sys.bodies) { if (o.type == PT_COMPANION) companion = true; if (o.type == PT_COMET) comet = true; if (kindHas(o.type, KT_GAS_GIANT) && o.parent < 0) giant = true; }
     flag(F_COMPANION, companion); flag(F_COMET, comet); flag(F_GIANT, giant);
     flag(F_LONGNIGHT, L.dayHours > 2.5);
     flag(F_MOTHER, b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION);
     flag(F_HIGHMOUNTAINS, g.mountainAmp > 2000);
     int cls = sys.star.cls;   // the sun: the class of the star the world circles (a companion's world has the companion's)
     if (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION) cls = sys.bodies[b.parent].starClass;
-    if (cls < 0 || cls >= STAR_CLASS_COUNT) cls = 0;
+    if (cls < 0 || cls >= STAR_DRAWN_COUNT) cls = 0;   // D-01: a drifter's world has no class of sun (D-05 reads the star it left)
     set(F_SUNCLASS, std::to_string(cls));
     const int f1 = g.floraFamily >= 0 && g.floraFamily < 10 ? g.floraFamily : 0;
     const int f2 = g.floraFamily2 >= 0 && g.floraFamily2 < 10 && g.floraFamily2 != f1 ? g.floraFamily2 : -1;
@@ -1313,6 +1367,8 @@ void recordWorldFacts(const StarSystem& sys, const Body& b, const BodyGen& g, co
         set(F_FOCUS, keyOf(FOCUS_KEYS, Gn.of(GV_FOCUS))); set(F_CENTRE, keyOf(CENTRE_KEYS, Gn.of(GV_CENTRE))); set(F_DEADWAY, keyOf(DEAD_KEYS, Gn.of(GV_DEAD)));
         set(F_MONUMENTS, keyOf(MONUMENT_KEYS, Gn.of(GV_MONUMENTS))); set(F_ORIENT, keyOf(ORIENT_KEYS, Gn.of(GV_ORIENT)));
         set(F_CAUSE, keyOf(CAUSE_KEYS, H->cause)); set(F_SPEED, std::to_string(causeSpeed(H->cause)));
+        static const char* const SUN_WAY_KEYS[SW_COUNT] = {"wanderer", "intruder", "dark", "dance"};   // D-05
+        set(F_SUNWAY, H->profile.sunWay >= 0 ? SUN_WAY_KEYS[std::min(SW_COUNT - 1, H->profile.sunWay)] : "");
         if (!H->places.empty()) set(F_CITY, historyPlaceName(*H, 0));
     }
 }
@@ -1348,7 +1404,9 @@ bool recordNameKnown(const History& H, const Lore& L, int year, const std::strin
     return false;
 }
 
-void writeRecordTexts(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore& L, const VgGrammar& G, ShardTexts& out) {
+void writeRecordTexts(const StarSystem& sys0, const Body& b0, const BodyGen& g, const Lore& L, const VgGrammar& G, ShardTexts& out) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
     out.items.assign(std::max(0, L.records), ShardText());
     const double t0 = nowMs();
     std::shared_ptr<const History> Hp = historyOf(sys, b, g, L.which);

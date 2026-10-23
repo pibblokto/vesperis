@@ -32,7 +32,9 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `RGBCanvas`, `drawText` | core/font.h | HUD drawing on the RGB output |
 | `Input`, `Key` | core/input.h | per-frame input snapshot |
 | `Star`, `StarNeighborhood`, `STAR_CLASSES` | galaxy/starfield.h | sector hashing, class table, names |
-| `Body`, `StarSystem`, `PLANET_TYPES` | galaxy/system.h | system generation, `bodyPos(i,t)`, `bodyFrame(i,t)` |
+| `Body`, `StarSystem` | galaxy/system.h | system generation, `bodyPos(i,t)`, `bodyFrame(i,t)` |
+| `placeInSector`, `driftersNear`, `DARK_KINDS` | galaxy/drifters.h | D-01: the drifters, worlds with no sun in sectors without a star; the one resolver from a key to its place (a star, else a drifter) |
+| `KINDS`, `KindDef`, `TRAITS` | galaxy/kinds.h | P-00: the kinds of body and the traits as rows; the tags the code paths read |
 | `BodyGen`, `sampleSurface`, `PlanetMap` | galaxy/planetmap.h | the planet function and its coarse map |
 | `SpaceRenderer`, `SpaceContext`, `BodyScreenInfo` | space/space_view.h | space scene; also draws bodies into planetary skies |
 | `SurfaceSite`, `TerrainCache`, `SunInfo` | surface/site.h | landing site geometry, terrain caches, astronomy |

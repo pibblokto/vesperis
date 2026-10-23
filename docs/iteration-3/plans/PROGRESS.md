@@ -667,6 +667,213 @@
   `v1.3.2`, the six zips built by `packaging/build-release.sh` from the tree that was merged and attached to the GitHub release.
   Released again the same day with the game's own tape in it (the four tracks in `music/`, `packaging/tape.sh` packing them into
   every zip and the macOS app): the first release and its tag replaced by the second's.
+* **1.4.0 planned (2026-10-21).** The user: "prepare for release v1.4.0 (prepare a branch). This one will be focused on improved
+  planets generation", 30-50 new planet types "not too ridiculous so it's still scientific enough", 20-30 more modifiers and a
+  greater variety of them, and rogue planets found only by radio, "cosmic horror like sounds", whose dead peoples' shards tell
+  how they lost their sun; "investigate, propose. I will tell you when to proceed". The branch `release/v1.4.0` from `main`
+  (9c4ebc2, fast-forwarded to `origin/main`). Read first (four readings of the code: the radar from the galaxy's hash to the
+  speaker; the places, the travel and the light; every place a kind is wired; the peoples' pipeline), then planned:
+  `docs/ideas/ITERATION-1.4.0.md` (sixteen milestones: P-00 the kind table, P-01 to P-07 thirty-eight new kinds in seven families,
+  Q-01 to Q-03 thirty new traits and six slots, D-01 to D-05 the drifters; generation 16 from P-01), the design and its sources in
+  `docs/ideas/IDEAS-worlds-and-wanderers.md`, requests R-421 (the kinds), R-422 (the modifiers) and R-423 (the rogue planets),
+  `MILESTONES.md` (the P series re-cut, the Q and D series new). Found in the reading, not fixed: the karst towers never stand on an
+  acidic world (Q-01 fixes it). Nothing built or committed.
+* **P-00 (2026-10-21): the kind table.** On the user's "proceed". Every kind of body is a row of `KINDS` (`galaxy/kinds.*`, built at
+  compile time with static checks): what it is, its tags (28, the groups the code paths read) and the processes that shape its ground
+  (24, which the traits need: `TRAITS`), its weights and its answers to the star classes' rules, its colour, `make`'s draws, colours and
+  grades, its ground (eighteen ground functions sharing one skeleton, `GroundCtx::relief`, and the rows' crater stacks, which the
+  landmarks read too), its look, air, weather, events and sounds; about forty hand-written groups in thirty files read the tags. The
+  accents (a kind without flora lending its grass and forest banks to two materials) are in for P-01, unused. The statistics' walked
+  kinds end "+N" past their line, K a page of them. `vesperis_test kinds [name|ground]` writes a sheet a kind. Nothing generated or drawn
+  changed: a fingerprint of every field of 233,347 bodies, their generators and 782,922 ground samples the same as 1.3.2's, `regress`
+  24/24 (workers and one thread), `survey 1500`, `screens` 96/96 and the kinds' sweeps 187/187 the same, `unit` passing; `bench check`
+  within its 37 budgets and level with 1.3.2's binary in alternating pairs, once the globe read its kind's tags once a globe (at every
+  pixel the space rows were 3-5% slower). Docs: the cookbook's recipe, `04`, `05`, `08`, `10-decisions.md`. Nothing committed.
+* **P-01 (2026-10-21): the furnace worlds (generation 16).** On the user's "proceed". Six kinds made from the old draws: the magma ocean
+  (a locked molten world: its day side a sea of magma with rafts and fire fountains, black glass and a frost of rock on its night
+  side), the chthonian (a giant's bare core: smooth heavy ground, wrinkle ridges, iron, a thin pale sky, a ring two times in three),
+  the glass world (sheets of black glass, obsidian domes and flows, fields of glass beads), the steam world (inside the runaway
+  greenhouse: a white deck, highlands of rock and mud, scalding rivers and boiling lakes, seas boiling at the poles, the lowlands lost in
+  fog, steam bursting from sinter mounds), the salt world (a dried ocean: gypsum, halite and potash by depth, brine pools, salt domes and
+  their glaciers) and the rust world (a red dwarf's world that lost its water: red ground, dry valleys, a pale sky). `pickPlanetType`
+  draws as before; `kindOf` makes about one body in fifty from the rows' sources (`KindSource`: the drawn kind, the temperature on the
+  game's scale, the body, the star, the lock, a share by a hash of the kind's own), never a world with a people; every draw of 6,866
+  systems is 1.3.2's, 1,086 bodies made, seven moons moved clear of a made world, no people's world changed. Five grounds of their own,
+  three materials, the accents' first users, the tectonic sulphur's own yellow. `kinds furnace`, six scenes, the survey's made kinds,
+  three unit checks. `regress` 24/24 and `screens` 96/96 unchanged (none of their worlds is made), `unit` passing, the flow passing,
+  `bench check` within its 37 budgets and level with P-00's binary in alternating pairs. Docs: `04`, `05`, `08`, the cookbook,
+  `10-decisions.md`. Nothing committed.
+* **P-02 (2026-10-21): the living worlds.** On the user's "proceed". Six kinds made from the old draws: the archean (young life: bare
+  grey and brown land, microbial mats in the world's own hue on its wet ground, stromatolite reefs along its shores, a green sea under
+  an orange haze, no plants or animals), the hothouse (no ice at either pole, forest and swamp to the poles, warm seas, storms, giant
+  flora more often), the superhabitable (larger and heavier, warmer and wetter, archipelagos over shallow turquoise shelf seas, a thick
+  air), the steppe (grass to the horizon, small seas and salt lakes, forest along the rivers, wide days, big herds), the tundra (an ice
+  age: ice sheets to the middle latitudes ending in walls of ice, taiga and tundra below, patterned ground, sea ice, cold grazers) and
+  the lichen world (cold and dry: crusts of lichen on its stones, moss in its wet hollows). Five from the felisian worlds whose day is
+  not their year round the stars still burning their hydrogen, the lichen world from the thin airs, the archean by its star's hash;
+  the home world kept felisian (the steppe's salt pinned), Heilya III a tundra world. Five on the felisian layer by their rows, the
+  lichen world on the thin air's; four materials. `kinds living` with each sheet's land cover, six scenes, two unit checks. Every draw of
+  6,866 systems P-01's, 1,765 made, two moons moved, no people's world changed, 43,217 of 44,479 bodies bit for bit P-01's;
+  `regress` 24/24 and `screens` 96/96 unchanged, the sweeps P-01's but for the scan's order, `unit` passing, the flow passing, `bench
+  check` within its 37 budgets and level with P-01's binary in pairs. Docs: `04`, `05`, `08`, the cookbook, `10-decisions.md`. Nothing
+  committed.
+* **P-03 (2026-10-21): the locked and the deep.** On the user's "proceed". Six kinds made from the old draws: the eyeball (a red dwarf's
+  locked water world frozen over but for a round sea under its fixed sun, floes round it, a sea glacier's cliff at its edge), the terminator
+  world (locked: a desert under the sun with its seas boiled to salt, an ice sheet over the night, a ring of rivers and forest between under
+  a sunset that never ends), the hycean (a deep teal sea under a cream hydrogen haze, no land), the ammonia world (seas of ammonia water that
+  never freeze, slabs of ice drifting, frost on its hills, a yellow-brown haze), the snowball (frozen to a belt of open sea, nunataks out of
+  its sheets, sea glaciers, blizzards) and the chemotroph (a dead star's or a brown dwarf's dim world warmed from within: hot springs, pale
+  mats, sinter chimneys, glowing spores at night). Two tags, an event, three grounds, the felisian layer's new fields, a moon's source by its
+  planet; a locked world that draws a twin made again as one that turns; the companion and the comets by the drawn moons (no star moves);
+  three salts pinned (the regress's and the bench's worlds as drawn); the tundra's blue ice fixed. `kinds deep`, six scenes, the survey's
+  red dwarfs' locked worlds, three unit checks. Every draw of 6,866 systems P-02's, 1,867 made, 41 moons moved, no people's world changed,
+  43,131 of 44,467 bodies bit for bit P-02's; `regress` 24/24 and `screens` 96/96 unchanged, the sweeps P-02's but for the made hydrocarbon
+  world, two trait sheets and the scan's order, `unit` passing, the flow passing, `bench check` within its 37 budgets; in pairs against
+  P-02's binary on the battery every row within the noise but the sector map at 4x (slower in all eight pairs, level timed alone and in an
+  instrumented round: not found, to be timed again on the mains). Docs: `04`, `05`, `06`, `08`, the cookbook, `10-decisions.md`. Nothing
+  committed.
+* **P-04 (2026-10-21): the dead worlds and their peoples.** On the user's "proceed". Two kinds of a living world that died, read in two
+  times: the scorched felisian (a giant's felisian worlds and a white dwarf's rocky and desert planets: its seas' beds dry kilometres under
+  the old shores, salt, silt and reef limestone, cracked clay and dust, stone forests, frost where the present is cold; one in eight with a
+  people of its own, ending as a desert's) and the frozen felisian (seas ice at their level, still water to the placement, frost, white
+  dead forests, a black sky; made in no system until P-05's wanderers and D's drifters: the harness stages it). The felisian layer under
+  the present's cover, the same ground in both times; `thenWorld`, the world in its people's time, read by every reader of a people's
+  world (the plan, the histories, the settlements, the roads, the works, the records, the instruments; the drainage's tiles its own); a
+  system's signal its C-01 people's first. On the ground the dead forests, roads and fields under frost, snow drifts at the ruins.
+  `kinds dead`, four scenes, the scorched test worlds of each age pinned (`peoples ages`), `peoples scorched` (a town and its fifty
+  records), the survey's dead worlds, three unit checks. Every draw of 6,866 systems P-03's, 166 scorched, no moon moved, no people's world
+  changed, 44,368 of 44,467 bodies bit for bit P-03's (the other 99 scorched); `regress` 24/24 and `screens` 96/96 unchanged, the sweeps
+  P-03's but for the scan's order, `unit` 357 checks passing, the flow passing, `bench check` within its 37 budgets; in pairs against P-03's binary every row within the noise, the probe's at 2x and the
+  sector map's at 4x moving with the launch path (level from short paths: P-03's unexplained sector map row was this). Docs: `04`, `05`, `06`, `08`, the cookbook,
+  `10-decisions.md`. Nothing committed.
+* **P-05 (2026-10-22): the far cold.** On the user's "proceed". Six kinds of the cold orbits, each a ground of its own: the nitrogen world
+  (Pluto: a great plain of nitrogen ice in cells with dark troughs, blocks of water ice along its shores, tholin, methane blades, a blue haze
+  on the horizon), the cryovolcanic world (Triton: cantaloupe ground, a pink cap, dark plumes 6-9 km high streaming downwind over the streaks
+  they lay), dry ice (Mars' south cap: Swiss cheese pits, spiders, the seasonal frost and its dark fans, the jets of the local spring), the
+  wanderer (a rogue world's old ground under its air fallen as snow), the brine dwarf (Ceres: faculae on the young craters' floors, one lone
+  mountain of ice) and the frost dwarf (Eris: the brightest frost, pits, tholin streaks). Made from the icy, cratered, europan and thin-air
+  worlds by their temperature, the cryovolcanic from a giant's captured moons first (`KB_CAPTURED`); the wanderers one system in
+  twenty-seven, an extra last body from a stream of its own, one in five a frozen felisian (P-04's kind's first worlds), none with a people.
+  `kinds cold`, seven scenes, the survey's wanderers, four unit checks. Every draw of 6,866 systems P-04's, 1,529 made, 251 wanderers, 7
+  moons of made planets moved; 43,423 of 44,467 bodies bit for bit P-04's; `regress` 24/24 and `screens` 96/96 unchanged, the sweeps P-04's
+  but for the pictures after a new kind's (339 of 339 with none made), `unit` 361 checks passing, the flow passing, `bench check` within its
+  37 budgets. Docs: `04`, `05`, `06`, `08`, the cookbook, `10-decisions.md`. Nothing committed.
+* **P-06 (2026-10-22): the strange moons.** On the user's "proceed". Five kinds of moon, each a ground of its own: grooved ice (Ganymede: dark
+  old polygons between lanes of bright ice filled with grooves along them), two-faced (Iapetus: the face it leads with coal-black, the other
+  bright, a ridge 8-15 km high along its equator), tiger-striped (Enceladus: the whitest ground, four stripes at its south pole venting
+  curtains of ice, their jets in lines), patchwork (Miranda: blocks of unlike ground, banded coronae, chasms, a cliff of 15-20 km) and sponge
+  (Hyperion: deep pits packed edge to edge, dark dust in their floors). Made from moons by what they are among their planet's moons
+  (`MoonFact`: inner, outer, facing, turning, resonant, large, small, read from the draws), a two-faced moon's leading face from its orbit
+  (`Body::apexDir`). `kinds moons`, six scenes, the survey's giants' moons by kind, four unit checks. Every draw of 6,866 systems P-05's,
+  1,232 moons made, no other body changed; 43,785 of 44,632 bodies bit for bit P-05's; `regress` 24/24 and `screens` 96/96 unchanged, the
+  sweeps P-05's but for the pictures after a new kind's (394 of 395 with none made),
+  `unit` 365 checks passing, the flow passing, `bench check` within its 37 budgets (its third run; single spikes on a machine in use), level
+  with P-05's in six pairs. Docs: `04`, `05`, `06`, `08`, the cookbook, `10-decisions.md`. Nothing committed.
+* **P-07 (2026-10-22): the giants.** On the user's "proceed". Six kinds of giant, each its class's globe, bands and air (the probe's decks):
+  the water-cloud giant (Sudarsky's class II: white, water's clouds on top), the azure giant (class III: deep blue, clear to the deep), the
+  alkali giant (class IV, a hot Jupiter: dark, its night side dull red, rock and iron deep under it), the silicate giant (class V: clouds of
+  rock over iron, glowing, iron rain on its night side), the gas dwarf (a sub-Neptune: pale and hazy, no bands) and the super-puff (Kepler-51's:
+  a young giant of almost no weight under a vast soft haze). Made from the warm and young drawn gas giants and, as the giants of the warm
+  zones, from the worlds of those orbits (a hot one only from a world locked to its star, round a yellow star about one in a hundred), on
+  the game's scale of temperature; no double planet's half and no giant that would move a people's moon. Two decks in the probe (silicate,
+  iron), each class's clear air, stratosphere and light. `kinds giants` (a giant's sheet with its night side, limb and air), `probe giants`
+  (a descent into each class), the survey's giants by class against the temperature, four unit checks. Every draw of 6,866 systems P-06's,
+  1,037 giants made, 341 moons of theirs moved (none a people's), no other body changed; 43,685 of 44,632 bodies bit for bit P-06's;
+  `regress` 24/24 and `screens` 96/96 unchanged, the sweeps P-06's but for the pictures after a new kind's (434 of 435 with none made),
+  `unit` 369 checks passing, the flow passing, `bench check` within its 37 budgets, level with P-06's in six pairs. Docs: `02`, `04`, `05`, `08`,
+  the cookbook, `10-decisions.md`. Nothing committed.
+* **Q-01 (2026-10-22): six slots, the facts and eleven landforms.** On the user's "proceed". Six trait slots a world: R-304's three as drawn
+  (every landable body of the stream's systems), three by hashes of their own, each from a kind of trait that fits the world (the landforms
+  alone so far), never on a world with a people nor the home world. Ten facts from the orbit and the spin (sideways spin, retrograde spin,
+  racing day, locked face, eccentric year, strong field, no field, captured, twin, ringed) on the data sheet's FACTS line, its TRAITS on two;
+  the sheet over pages where it runs long (a fifth of the sheets ran past the footer before). Eleven landforms: the great shield (Olympus Mons),
+  tesserae, a labyrinth (Noctis), Mercury's hollows, crater chains, penitentes, columnar basalt, mud volcanoes, inverted rivers, pingos and maars
+  (crater lakes kept by the drainage), each with a sight the scanner hears (eleven modes). The karst stands on the acidic worlds: the landforms
+  off the living ground read the world's moisture (each wet kind its own mean) and warmth. `traits` (every landform's sheet, the acidic karst,
+  the six slots' distribution), `datasheet`, six unit checks. The first three slots of 61,460 landable bodies P-07's; 18,085 of 44,632 bodies
+  bit for bit P-07's, 26,427 with a new landform, 120 by the moisture and warmth; `regress` five maps blessed (worlds that drew a landform), then
+  24/24 both ways; `screens` 93 of 96; the sweeps 386 of 447 the same; `unit` 375 checks passing, the flow passing, `bench check` 36 of 37 (the
+  photo's PNG by 0.1 ms), level with P-07's in six pairs but the zoom on a world with crater chains. Docs: `04`, `05`, `06`, `07`, `08`, the
+  cookbook, `10-decisions.md`. Nothing committed.
+* **Q-02 (2026-10-22): the water, the sky, the life and the ground.** On the user's "proceed". Sixteen traits in the new slots: great tides
+  (the sea following the world's moons and sun by their masses and distances, kilometres of flats, the tide lines on the maps), hot springs
+  (terraced sinter mounds, coloured pools, steam), pink lakes, milky seas (glowing at night, from orbit too); noctilucent clouds, ice halos
+  (sundogs, the moon's ring), airglow, fog seas, great aurorae (down to the tropics); barrier reefs (turquoise lagoons behind a crest), fungal
+  forests, petrified forests, algal blooms (swirls from orbit, filaments from the air); rainbow strata, gypsum sands, meteorite fields (a
+  scanner mode). 14,852 of the stream's 61,460 landable bodies carry one; never a trait that moves the ground on a people's world or the home
+  world (whose sky and sea may glow). `traits q02` (a sheet a trait at its hour and place), `tides [scene]` (ten worlds' pulls against their
+  ranges; the capsule on its flat over an hour), five unit checks. The first three slots P-07's; every body whose six slots are Q-01's the same;
+  `regress` three hashes blessed (blooms, the home world's milky seas), then 24/24 both ways; `screens` 60 of 96 (the cabin's window at home);
+  the sweeps 415 of 459 the same; `unit` 380 checks passing, the flow passing; `bench check` within all 37 budgets (the pairs with Q-01's binary
+  too noisy to read, the machine loaded and on battery). Docs: `02`, `04`, `05`, `06`, `07`, `08`, the cookbook, `10-decisions.md`. Nothing committed.
+* **Q-03 (2026-10-22): the sounds of the ground.** On the user's "proceed". Three traits heard in the new slots: singing dunes (a dune's slip
+  face hums at the world's note, its grains' under its gravity, with its harmonics, when its sand slides under the explorer or the buggy), singing
+  ice (near and far cracks' dispersive chirps, the sheet's whoops, the snow settling, oftener as the day warms or cools the ice), quakes (R-307's
+  quakes every 90-240 s with a voice of their own: the P-wave's thump, the rumble under a heave, the stones' rattle; a tectonic world's too).
+  7,409 of the stream's 61,460 landable bodies carry one; they move nothing, so a people's world and the home world may take them (Heilya II:
+  singing dunes, its milky seas giving way). The ground says where a dune's slip face is (`slipFace`: the game's dunes stand from under 8
+  degrees to over 30). `sounds` (nine WAVs with their levels), the scenes `singing_dunes`, `singing_ice` and `quakes` (each with its cue and its
+  sound), three unit checks and B-413's list. The first three slots P-07's; every body whose six slots are Q-02's the same; `regress` two hashes
+  back to their earlier selves blessed, then 24/24 both ways; `screens` all 96 Q-01's again; the sweeps 456 of 475 the same; `unit` 383 checks
+  passing, the flow passing; `bench check` within all 37 budgets, six pairs with Q-02's binary level at their bests. Docs: `05`, `06`, `07`,
+  `08`, the cookbook, `10-decisions.md`. Nothing committed.
+* **D-01 (2026-10-23): the dark between.** On the user's "proceed". The drifters, worlds with no sun, as a field of their own in the sectors
+  that hold no star (cells of 256 sectors with a salt of their own, as dense as the stars there times 1.4e-7: near home the nearest at 359 ly,
+  29 within 1,000), so no star or system moved. Each a place of a new class, `STAR_ROGUE` (no light, never drawn), its world by the dark's
+  table with its own heat and its moons, the star it came from and when; a system with no sun whose light, seasons, zodiacal light, almanac
+  and drawn sun are gated by `sunless()`, its ground a night with no moon (the sun at the nadir); one resolver from a key to its place
+  (`placeInSector`) for the save, the targets, the history, the radar and the records' screens; the arrival 40-80 of the drifter's radii off;
+  the sheets `NO STAR`. `rogues` (the list, the density, a flight there, the arrival, the parked view, a landing), five unit checks. Every
+  body of the stream's systems as Q-03's; `regress` 24/24 both ways with nothing blessed; `screens` 96/96 Q-03's; the sweeps 474 of 475 (the
+  chemotroph's known flip); `unit` 388 checks passing, the flow passing; `bench check` within all 37 budgets, level with Q-03's last check row by row. Docs: `01`, `04`, `05`, `06`, `07`, `08`, the cookbook,
+  `10-decisions.md` (R-407's and O6-02's entries rewritten for a sunless system). Nothing committed.
+* **D-02 (2026-10-23): heard, not seen.** On the user's "proceed". The radar hears the drifters above x1 by a law of their own (`SIG_ROGUE`:
+  a drifter of power p within 180 sqrt((G - 1) p) ly at gain G, its power by its kind, its size and its own spread): from home none at x1 or
+  x5, the first a brown dwarf at 437 ly at x11, six at x32; two layers of the far scan (the drifters' cells, the globulars'). The lock reads
+  `NO STAR AT THE SOURCE` and its distance alone, its key the sector's (the chart's ring and stop); the chart's Enter plots a known drifter
+  itself; arrived, it is the local target and its place the explorer's to name. The black disc lit by the galactic band's own light (its
+  irradiance from spherical harmonics, in the band's exposure), a brown dwarf's glow, lava, lightning, a giant's aurorae, its moons lit by a
+  glowing drifter; the landing map, its zoom, the sector map and the drone bay's map in a survey look (heights and relief in the radar's
+  phosphor). `rogues heard`, three unit checks. Every body as Q-03's; `regress` 24/24 both ways with nothing blessed; `screens` 96/96, the
+  sweeps 475/475, the data sheets 24/24 and `signals` as D-01's; `unit` 391 checks passing; the flow passing. `bench check` within all 37 budgets and level with D-01's in pairs. Docs: `02`, `04`, `07`,
+  `08`, `12`, the cookbook, `10-decisions.md`. Nothing committed.
+* **D-03 (2026-10-23): the voices of the dark.** On the user's "proceed". Every drifter has a voice of its own in the radar's channel
+  (`game/audio_rogue.cpp`, on parameters no other signal reads): the breath of its turning with silences, the body by what it is (a giant's
+  decametric storm, a brown dwarf's with its cyclotron howl, a small world's chorus, whistlers, hiss and kilometric howl, a young world's
+  dynamo, a metal world's ring), its moon's flux tube, its motif of whistles on a scale of its own hanging on after it and answered by the
+  other pole in a key of its own, a moan and the plasma's breath, a drone chord, its own balance and plasma resonances. On the radar (worn
+  far, whole near, under another signal), the cabin's radio at a drifter and the suit's on its ground; the beacon's slot for D-05. No two
+  alike over the hundred nearest home (every pair 4.55 dB apart or more, two magnetospheres 4.19 at the median). `rogues voices`, two unit
+  checks. Every radar WAV but the drifter's byte for byte D-02's; every body as Q-03's; `regress` 24/24 both ways with nothing blessed;
+  `screens` 96/96, `signals` and `rogues heard` as D-02's; `unit` 393 checks passing; the flow passing. `bench check` within all 37
+  budgets, level with D-02's in pairs but the decoder's row (0.1-0.4 ms, the layout: no D-03 code runs there). Docs: `07`, `08`, `12`, the cookbook,
+  `10-decisions.md`. Nothing committed.
+* **D-04 (2026-10-23): the ground in the dark.** On the user's "proceed". The explorer's lamp (`U`, the pad's commands): a cone of light from the
+  eye into the ground's vertex light and every object's, by night alone (a dayside's frame the same lit or not), 40-60 m; the capsule's
+  floodlights coming down and going up. A world in the dark: the thermometer by its own heat, an air colder than its freezing fallen as snow
+  (`bodyHasAir` read everywhere: no wind, no weather, a black sky), its seas frozen at their level, no trait it cannot have with no sun. The
+  drifters' own traits, given: FROZEN AIR, EMBERS (lava lakes in fields, the globe's spots of light), LIGHTS IN THE WATER, LIGHTS LEFT ON
+  (built and staged for D-05's peoples). The dark ocean made from two in five rocky drifters (moons, power and voice kept): archipelagos of
+  black basalt in a warm sea under hydrogen, steam on the summits, the stars dimmed. `rogues dark`, the scenes `rogue_lamp`, `rogue_embers`,
+  `rogue_frozen_air`, `dark_ocean`, `kinds dark`, four unit checks, the bench's lamp row. Every body as Q-03's; `regress` 24/24 both ways with
+  nothing blessed; `screens` 96/96 D-03's; the sweeps 475/475 D-02's; the data sheets, `signals`, `rogues heard`, every radar WAV and `rogues
+  voices` as D-03's; `unit` 397 checks passing; the flow passing; `bench check` within all 38 budgets, every row level with D-03's binary
+  over four pairs. Docs: `04`, `05`, `06`, `07`, `08`, `12`,
+  the cookbook, `10-decisions.md`. Nothing committed.
+* **D-05 (2026-10-23): the people who lost their sun.** On the user's "proceed"; the last of 1.4.0's sixteen. One frozen felisian or desert
+  drifter in four kept a people, who lived on it at its former orbit round the star it left (a living sun chosen to fit the way it was
+  lost; that star's system read by the profile, the history, the records, the charts and the instruments: `formerSystemOf`,
+  `peoplesWorldOf`). The loss of the sun, a 38th cause outside the old pick, by the wanderer, the intruder, the dark or the dance, its
+  timeline from the generator; `HE_SUN` and the sunlight in the history; eight genres of records of their own for every age (four writers
+  side by side), the ordinary registers darkened (`@apart`, `@instead`); the sun's measure as a chart, their star charts marking the star
+  that was their sun, the dawn song and the last; the works of the end (shelters, domes over the warm ground with their glasshouses, the
+  graves); the beacon, a radio people's last broadcast under the drifter's voice, heard on the radar. `peoples rogues`, `shards drifters`,
+  `shards rogue`, `grammar rogues`, `charts rogues`, `works rogue`, the beacon in `rogues voices`; six unit checks. Every body as D-04's;
+  every sampled people's records as D-04's, byte for byte, the age and scene worlds' pinned; `regress` 24/24 both ways with nothing blessed;
+  `screens`, the sweeps and the data sheets D-04's; `signals`, `rogues heard`, every radar WAV and `rogues voices` (but its beacon) as
+  D-04's; `unit` 403 checks passing; the flow passing; `bench check` within all 38 budgets and level with D-04's binary over four pairs. The sweep of 337 drifters' peoples found latent faults of the ordinary grammar
+  (a moon named New, "the old old woman", "at at", a ruler named as his family), left for a bug of their own. Docs: `04`, `08`, `12`, the
+  cookbook, `10-decisions.md`, R-423 done. Nothing committed.
 
 ## Next
 
@@ -687,3 +894,13 @@ closes the series. Released as 1.3.1 on 2026-10-15.
 The 1.3.2 patch (2026-10-17 to 19, on the branch `release/v1.3.2`): the user's items one at a time, R-418 (the controller), B-425 (the
 companion stars), B-426 (a capital's records), R-419 (auto-explore), B-427 (a Wolf-Rayet star's giants' tail), B-428 (the moons spread)
 and R-420 (auto-explore's tape), generation 15. Released as 1.3.2 on 2026-10-19.
+
+The 1.4.0 iteration is `docs/ideas/ITERATION-1.4.0.md` (planned 2026-10-21 on the branch `release/v1.4.0`, from the user's requests
+R-421, R-422 and R-423), one release of sixteen milestones in this order: P-00, P-01, P-02, P-03, P-04, P-05, P-06, P-07, Q-01,
+Q-02, Q-03, D-01, D-02, D-03, D-04, D-05 (generation 16 from P-01). One milestone at a time on the user's "proceed": P-00 (the
+kind table), P-01 (the furnace worlds, generation 16), P-02 (the living worlds), P-03 (the locked and the deep) and P-04 (the dead
+worlds and their peoples) done 2026-10-21, P-05 (the far cold), P-06 (the strange moons), P-07 (the giants), Q-01 (six slots, the
+facts and eleven landforms), Q-02 (water, sky, life and ground: sixteen traits, the tides among them) and Q-03 (the sounds of the ground)
+done 2026-10-22, D-01 (the dark between: the drifters' field), D-02 (heard, not seen: the radar finds them), D-03 (the voices of the
+dark), D-04 (the ground in the dark) and D-05 (the people who lost their sun: their records, charts, music, works of the end and the
+beacon) done 2026-10-23: the sixteen are done, uncommitted; what follows is the user's call.

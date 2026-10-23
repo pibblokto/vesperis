@@ -5,7 +5,8 @@
 
 namespace {
 const char* sizeWord(double r, int type) {
-    if (type == PT_GASGIANT) return r > 50000 ? "a giant" : "a modest giant";
+    if (KINDS[type].giantClass == GC_DWARF) return "a small world";   // P-07: its sentence goes on from there
+    if (kindHas(type, KT_GAS_GIANT)) return r > 50000 ? "a giant" : "a modest giant";
     if (r < 1500) return "a tiny";
     if (r < 3000) return "a small";
     if (r < 5500) return "a medium-sized";
@@ -15,48 +16,65 @@ const char* sizeWord(double r, int type) {
 
 std::string describeBody(const Body& b, const BodyGen& g) {
     Rng r(b.seed ^ 0xDE5C);
+    if (b.type == PT_COMPANION) return std::string("The second sun of the system, a ") + STAR_CLASSES[b.starClass].name + " bound to the primary" + (b.moonCount > 0 ? ", with worlds of its own." : ".");
     std::string s = std::string(sizeWord(b.radiusKm, b.type)) + " ";
-    switch (b.type) {
-        case PT_MOLTEN: s += r.chance(0.5) ? "world of cooling crust, split by glowing cracks and lava lakes" : "molten world whose surface never sets, red seams between black plates"; break;
-        case PT_CRATERED: s += g.craterDensity > 0.55 ? "airless world saturated with craters, bright rays crossing dark maria" : "dusty, airless world of old craters and quiet plains"; break;
-        case PT_VENUSIAN: s += "world smothered in clouds, a furnace of basalt domes below"; break;
-        case PT_FELISIAN: s += g.seaLevel < -0.1 ? "living world of wide oceans, scattered continents and river valleys" : (g.seaLevel > 0.1 ? "living world of dry continents, inland seas and long mountain chains" : "living world of continents and seas, forests along its rivers"); break;
-        case PT_ROCKY: s += "creased, rocky world of ridges, rifts and boulder fields"; break;
-        case PT_THINATMO: s += g.duneAmp > 12 ? "world of thin air, red-brown dune seas and shield volcanoes" : "world of thin air, canyons and dust plains under an exotic sky"; break;
-        case PT_GASGIANT: s += "of banded clouds and drifting storms, with no surface to land on"; break;
-        case PT_ICY: s += g.fractureWidth > 0.06 ? "icy world, its crust broken into plates by dark fractures" : "icy world with a smooth, cratered crust and bright cryovolcanic domes"; break;
-        case PT_QUARTZ: s += "milky quartz world glinting under a thin oxygen sky"; break;
-        case PT_OCEAN: s += "water world without land, ice floes drifting toward its poles"; break;
-        case PT_METAL: s += "iron world, dark and dense, its craters glinting like hammered steel"; break;
-        case PT_VOLCANIC: s += "tidally heated moon of sulphur plains and active cones"; break;
-        case PT_CARBON: s += "black world of graphite plains and diamond crusts"; break;
-        case PT_SUBSTELLAR: s += "failed star, banded and stormy, glowing dull red with the heat it was born with"; break;
-        case PT_COMET: s += "mountain of ice and dust that grows a tail each time it dives past the star"; break;
-        case PT_EUROPAN: s += r.chance(0.5) ? "shell of ice over a hidden ocean, its cracks stained red and venting water into space" : "ice moon of long double ridges and broken rafts, geysers rising from the cracks"; break;
-        case PT_TECTONIC: s += r.chance(0.5) ? "restless world of rift valleys, fissures running with lava and ground that never stops shaking" : "world torn by its own crust, fountains of lava along the rifts under a sulphur sky"; break;
-        case PT_DESERT: s += g.hasTrait(TR_CIVILISATION) ? "world of dry seabeds and dead river courses under a dusty sky, salt where its seas were" : (r.chance(0.5) ? "dry world of dune seas, mesas and salt pans under a dusty sky" : "desert world of canyons and ergs, dust devils crossing its plains"); break;   // C-01
-        case PT_HYDROCARBON: s += "cold world under an orange haze, seas of methane and dunes of tar"; break;
-        case PT_BOMBARDED: s += "young airless world under a rain of meteorites, its craters fresh and rayed"; break;
-        case PT_ACIDIC: s += r.chance(0.5) ? "corrosive world of acid seas and bleached karst under a yellow-green sky" : "world whose rain eats the rock, sulphur crusts along its acid shores"; break;
-        case PT_COMPANION: return std::string("The second sun of the system, a ") + STAR_CLASSES[b.starClass].name + " bound to the primary" + (b.moonCount > 0 ? ", with worlds of its own." : ".");
-        default: s += "world"; break;
+    // P-00: the kind's phrases (KindDef::sentence) by its rule: one, a coin, or the body's own parameter
+    const KindDef& K = KINDS[b.type];
+    switch (K.sentenceRule) {
+        case SR_COIN: s += r.chance(0.5) ? K.sentence[0] : K.sentence[1]; break;
+        case SR_CRATERS: s += g.craterDensity > 0.55 ? K.sentence[0] : K.sentence[1]; break;
+        case SR_DUNES: s += g.duneAmp > 12 ? K.sentence[0] : K.sentence[1]; break;
+        case SR_FRACTURES: s += g.fractureWidth > 0.06 ? K.sentence[0] : K.sentence[1]; break;
+        case SR_SEAS: s += g.seaLevel < -0.1 ? K.sentence[0] : (g.seaLevel > 0.1 ? K.sentence[1] : K.sentence[2]); break;
+        case SR_DEAD_SEAS: s += g.hasTrait(TR_CIVILISATION) ? K.sentence[0] : (r.chance(0.5) ? K.sentence[1] : K.sentence[2]); break;   // C-01
+        default: s += K.sentence[0]; break;
     }
-    for (int k = 0; k < 3; k++) if (g.traits[k]) s += traitPhrase(g.traits[k]);   // R-304
+    for (int k = 0; k < TRAIT_SLOTS; k++) if (g.traits[k]) s += TRAITS[g.traits[k]].phrase;   // R-304 (Q-01: the six slots)
     if (b.doublePlanet) s += b.parent >= 0 ? ", the smaller half of a double planet" : ", the larger half of a double planet";
     else if (b.parent >= 0) s += ", a moon";
-    if (b.locked && b.type == PT_FELISIAN) s += ", ice on its night side and deserts under its sun";
+    if (b.locked && livingGround(b.type) && !kindHas(b.type, KT_FIXED_SUN)) s += ", ice on its night side and deserts under its sun";   // P-03: a fixed sun's kind says it its own way
     double gg = b.gravity / 9.8;
     if (gg < 0.25) s += ", where a jump takes you high";
     else if (gg > 1.8) s += ", heavy underfoot";
     if (b.tempK > 500) s += ", scorched by its star";
     else if (b.tempK < 120) s += ", deep in the cold";
     if (b.rings) s += ", wearing a ring system";
-    if (magneticClass(magneticField(b)) == 3 && PLANET_TYPES[b.type].atmosphere && !hasOpaqueDeck(b.type)) s += ", its poles crowned with aurorae";   // R-402
+    if (magneticClass(magneticField(b)) == 3 && K.atmosphere && !hasOpaqueDeck(b.type) && !g.hasTrait(TR_GREAT_AURORAE)) s += ", its poles crowned with aurorae";   // R-402 (Q-02: the trait's phrase says more)
     if (b.moonCount >= 3) s += ", with a family of moons";
     if (b.ecc > 0.15) s += ", on a markedly oval orbit";
     if (b.parent < 0 && std::fabs(1.0 - b.rotPeriod / b.orbitPeriod) < 0.02) s += ", one face forever toward the sun";
     else if (b.rotPeriod < 0) s += ", spinning the wrong way";
     s += ".";
+    return s;
+}
+
+const char* const BODY_FACT_NAMES[BF_COUNT] = {"SIDEWAYS SPIN", "RETROGRADE SPIN", "RACING DAY", "LOCKED FACE", "ECCENTRIC YEAR", "STRONG FIELD", "NO FIELD",
+                                                "CAPTURED", "TWIN", "RINGED"};
+
+unsigned bodyFacts(const StarSystem& sys, int bi) {
+    if (bi < 0 || bi >= (int)sys.bodies.size()) return 0;
+    const Body& b = sys.bodies[bi];
+    if (b.type == PT_COMPANION) return 0;
+    unsigned f = 0;
+    const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;   // a world of the companion has a year of its own
+    if (b.axialTilt > 60 * DEG) f |= 1u << BF_SIDEWAYS;
+    if (b.rotPeriod < 0) f |= 1u << BF_RETROGRADE;
+    if (!b.locked && std::fabs(b.rotPeriod) < 1800) f |= 1u << BF_RACING;
+    if (b.locked) f |= 1u << BF_LOCKED;
+    if ((moon ? sys.bodies[b.parent].ecc : b.ecc) > 0.2) f |= 1u << BF_ECCENTRIC;
+    const int mc = magneticClass(magneticField(b));
+    if (mc == 3) f |= 1u << BF_STRONG_FIELD;
+    else if (mc == 0) f |= 1u << BF_NO_FIELD;
+    if (moon && b.orbitPeriod < 0) f |= 1u << BF_CAPTURED;
+    if (b.doublePlanet) f |= 1u << BF_TWIN;
+    if (b.rings) f |= 1u << BF_RINGED;
+    return f;
+}
+
+std::string factList(const StarSystem& sys, int bi) {
+    const unsigned f = bodyFacts(sys, bi);
+    std::string s;
+    for (int k = 0; k < BF_COUNT; k++) if ((f >> k) & 1u) { if (!s.empty()) s += ", "; s += BODY_FACT_NAMES[k]; }
     return s;
 }
 
@@ -78,6 +96,7 @@ std::string describeStar(const Star& s) {
         case STAR_PROTOSTAR: d = r.chance(0.5) ? "A protostar, not yet done being born, wrapped in the cloud it fell out of, its disc of dust seen edge-on" : "A young star still gathering itself, its light soft through the dust of the disc that will be its worlds"; break;   // S-04
         case STAR_WOLF_RAYET: d = r.chance(0.5) ? "A Wolf-Rayet star, a massive star blowing itself away, blinding inside the ring of gas it has shed" : "A Wolf-Rayet star, its wind stripping what is left of its worlds, the shell it threw off a ring round it in the sky"; break;   // S-05
         case STAR_BLACK_HOLE: d = "A black hole of " + std::to_string((int)(s.massFactor + 0.5)) + " suns' mass, " + (r.chance(0.5) ? "a hole in the sky ringed by the bent light of the stars behind it" : "dark but for the disc of gas it drinks, the stars behind it drawn into arcs"); break;   // S-06
+        case STAR_ROGUE: return "No star: the world drifts alone between the stars, warmed by nothing but its own heat.";   // D-01
         default: d = "A star"; break;
     }
     if (s.luminosity > 30) d += ", fiercely bright";

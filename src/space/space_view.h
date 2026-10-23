@@ -114,8 +114,9 @@ public:
     // each world with a disc has its own six family banks since the pixel carries 32 banks); 12 = the companion
     // star (M5-01); 20 = belt rocks (O3); 8-10 belong to the cabin.
     void setupPalette(Framebuffer& fb, const StarSystem* sys, int bodyA, int bodyB, double fade);
-    // N1-02: the bank a globe pixel of this material goes to, given the body's rock bank (2 or 3; 0 = a far grey body)
-    static int globeBank(int bodyBank, int material);
+    // N1-02: the bank a globe pixel of this material goes to on a body of this kind, given the body's rock bank (2 or 3; 0 = a far
+    // grey body); P-00: a kind's accents in its grass and forest banks
+    static int globeBank(int bodyBank, int type, int material);
     // the ramp of a material colour, shared by the globe and the landing map: {0 black, 14 0.25c, 34 0.6c, 47 c, 56 c->white, 63 white}
     static void materialRamp(uint8_t* pal, int bank, RGB c, const RGB* skyLight);
     const PlanetMap& mapFor(const Body& b);          // synchronous: waits for a background generation
@@ -159,10 +160,15 @@ public:
     size_t mapsHeld() const { return maps.size(); }
 private:
     std::map<uint64_t, BodyGen> gens;
+    std::map<uint64_t, std::vector<EmberField>> emberFields;   // D-04: a young interior's fields by the body's seed (`emberFieldsOf`, once a body)
+    // D-04: the lights of a world in the dark after its disc is drawn: its ember fields' glow, a dead people's cities still lit
+    void drawDarkLights(Framebuffer& fb, const SpaceContext& c, int bi, int bank, const Vec3& posW, const Mat3& frameT, double R, double depthUnit, const Vec3& starDirW, bool dark);
     std::map<uint64_t, std::vector<float>> ringProfiles;
     std::vector<float> bandMap;   // M1-09 galactic backdrop for the current neighbourhood
     Vec3 bandPos; bool bandValid = false;
     uint64_t bandGen = 0;         // F-07: moved on by every write of bandMap (the replay's key holds it)
+    double bandSH[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; uint64_t bandSHGen = ~0ULL;   // D-02: the band's light on a sunless system's globes, kept with its build
+    bool auroraBank12 = false;    // D-02: the palette's bank 12 is a drifter's aurorae (a system with no sun has no second sun to hold it)
     // F-07: the backdrop drawn while the camera is still, kept and copied instead of drawn again (`render`). The key is every input of
     // the pass outside a flight and without nebula patches: the camera, the projection, the frame's size and the band map. A frame
     // whose key matches the last one's keeps its layer; one whose key matches the kept layer's copies it

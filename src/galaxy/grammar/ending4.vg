@@ -188,6 +188,9 @@ last.cause
   (cause=machine|cause=retreat) The others went into the machines and left me the {herd}.
   (cause=nanotech|cause=geoengineering|cause=flare) The land is dead outside, even the {tree}.
   (cause=physics|cause=undescribed) What happened cannot be said, not even in {~word}.
+  (cause=sunlost) The sun went, and then the warmth, and then the others, down to {hall.below} and further.
+  (cause=sunlost) There is no sun to see this by. I write it by {kept.light}, at {warm.ground}.
+  (cause=sunlost) The stars are out at noon, as they have been for {#darkyears|year}, and the cold is at the door of {hall.below}.
 last.cause.pic
   (cause=drying) A {watersrc.n} drawn with a cross over it.
   (cause=sickness|cause=greatsickness|cause=epidemics|cause=engineered) Figures drawn lying in rows, with red spots on them.
@@ -197,6 +200,8 @@ last.cause.pic
   (cause=bandwar|cause=civilwar|cause=conquest|cause=industrialwar|cause=waterwar) Spears drawn broken.
   (cause=leaving|cause=exodus|cause=elsewhere) Footprints going away.
   (cause=volcanic|cause=impact) A grey sky over everything.
+  (cause=sunlost 4) A small circle drawn high up, and under it the figures going into a hole in the ground.
+  (cause=sunlost 4) The sun drawn smaller and smaller along the wall, and then a blank stone.
   A great many figures lying down among the {herd}.
 ann.cointrouble
   trouble

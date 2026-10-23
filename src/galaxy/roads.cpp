@@ -41,7 +41,7 @@ int wrapLon(const BodyGen& g, int gLat, int gLon) { int n = std::max(1, ruinCell
 
 // the sited settlement of a cell, if any
 bool roadNodeOfCell(const BodyGen& gSeason, int gLat, int gLon, RoadNode& out) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     RuinSpec sp;
     if (!ruinOfCell(g, gLat, gLon, sp, false)) return false;
     { DrainageOff off; if (!ruinSiteOk(g, sp)) return false; }
@@ -148,7 +148,7 @@ uint64_t roadIdOf(const BodyGen& g, int gLatA, int gLonA, int gLatB, int gLonB) 
 double roadDistanceM(const BodyGen& g, const Vec3& a, const Vec3& b) { return std::acos(clampd(dot(a, b), -1, 1)) * g.R * 1000.0; }
 
 bool roadJoined(const BodyGen& gSeason, const RoadNode& a, const RoadNode& b, const std::vector<RoadNode>& others) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     if (a.gLat == b.gLat && a.gLon == b.gLon) return false;
     if (std::abs(a.gLat - b.gLat) > ROAD_REACH) return false;
     double d = roadDistanceM(g, a.unit, b.unit);
@@ -161,7 +161,7 @@ bool roadJoined(const BodyGen& gSeason, const RoadNode& a, const RoadNode& b, co
 }
 
 bool roadWay(const BodyGen& gSeason, const Culture& c, const RoadNode& a0, const RoadNode& b0, Road& out) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out = Road();
     const RoadNode& a = cellBefore(a0, b0) ? a0 : b0;
     const RoadNode& b = cellBefore(a0, b0) ? b0 : a0;
@@ -210,7 +210,7 @@ void RoadNodeCache::pairsOf(int gLat, int gLon, std::vector<RoadPair>& out) {
 }
 
 void roadsOfCell(const BodyGen& gSeason, int gLat, int gLon, std::vector<Road>& out) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out.clear();
     if (!worldHadCivilisation(g)) return;
     RoadNodeCache nc; nc.reset(&g);
@@ -221,7 +221,7 @@ void roadsOfCell(const BodyGen& gSeason, int gLat, int gLon, std::vector<Road>& 
 }
 
 void roadsNear(const BodyGen& gSeason, const Vec3& unit, double radiusM, std::vector<Road>& out, bool parallel) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out.clear();
     if (!worldHadCivilisation(g)) return;
     double lat, lon; StarSystem::latLonFromBody(unit, lat, lon);
@@ -272,7 +272,7 @@ double roadLeft(uint64_t id, double alongM, double wear) {
 }
 
 bool roadLegWalk(const BodyGen& gSeason, int kind, const Vec3& a, const Vec3& b, uint64_t id, Road& out) {   // T-01
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out = Road();
     out.id = id; out.kind = kind;
     Frame F(a, g.R * 1000.0);

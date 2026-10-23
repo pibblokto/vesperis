@@ -403,6 +403,23 @@ struct Parser {
             while (p < ln.size()) { size_t q = ln.find_first_of(" \t", p); if (q == std::string::npos) q = ln.size(); if (q > p) w.push_back(ln.substr(p, q - p)); p = q + 1; }
             if (w.empty()) { error("an empty @ line"); return; }
             if (w[0] == "root") { for (size_t i = 1; i < w.size(); i++) G.roots.push_back(w[i]); return; }
+            if (w[0] == "apart") {   // D-05
+                if (w.size() == 1) { if ((int)G.apartFiles.size() <= file) G.apartFiles.resize(file + 1, 0); G.apartFiles[file] = 1; return; }
+                for (size_t i = 1; i < w.size(); i++) {
+                    const size_t q = w[i].find('=');
+                    if (q == std::string::npos || q == 0 || q + 1 >= w[i].size()) { error("@apart, or @apart key=value"); continue; }
+                    G.apartGuards.push_back({w[i].substr(0, q), w[i].substr(q + 1)});
+                }
+                return;
+            }
+            if (w[0] == "instead") {   // D-05
+                if (w.size() != 4) { error("@instead <guard> <rule> <rule2>"); return; }
+                VgInstead I;
+                if (!parseCond(w[1], I.cond)) { error("@instead: a guard: " + w[1]); return; }
+                I.from = w[2]; I.to = w[3]; I.file = file; I.line = line;
+                G.insteads.push_back(I);
+                return;
+            }
             if (w[0] == "lexicon") {
                 if (w.size() < 3) { error("@lexicon <age|fact> words: the age one of prehistoric, medieval, industrial, modern, futuristic, farfuture"); return; }
                 if (ageOf(w[1]) < 0) {   // H-04: a fact's words (linked against the schema)
@@ -446,6 +463,7 @@ struct Parser {
         }
         if (cur < 0) { error("an alternative outside a rule"); return; }
         VgAlt a; a.rule = cur; a.file = file; a.line = line;
+        a.apart = (int)G.apartFiles.size() > file && G.apartFiles[file];   // D-05
         {   // H-04: the alternative's key: its rule's name and its line (a people's dialect reads it; stable while other rules change)
             uint64_t h = 1469598103934665603ULL;
             for (unsigned char ch : G.rules[cur].name + "|" + t) { h ^= ch; h *= 1099511628211ULL; }
@@ -628,6 +646,23 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
         for (VgNode& n : a.body) L.node(n);
     }
     for (VgAlt& a : G.alts) { L.file = a.file; L.line = a.line; L.articles(a.body); }
+    // D-05: the alternatives under an `@apart` guard; the swapped rules
+    for (VgAlt& a : G.alts) {
+        if (a.apart) continue;
+        std::function<bool(const VgCond&)> apartCond = [&](const VgCond& c) {
+            if (!c.alt.empty()) { for (const VgCond& x : c.alt) if (apartCond(x)) return true; return false; }
+            for (const auto& kv : G.apartGuards) if (c.op == 0 && c.key == kv.first && c.val == kv.second) return true;
+            return false;
+        };
+        for (const VgCond& c : a.conds) if (apartCond(c)) a.apart = true;
+    }
+    for (VgInstead& I : G.insteads) {
+        L.file = I.file; L.line = I.line;
+        L.cond(I.cond);
+        I.fromRule = G.rule(I.from); I.toRule = G.rule(I.to);
+        if (I.fromRule < 0) L.error("@instead: no rule " + I.from);
+        if (I.toRule < 0) L.error("@instead: no rule " + I.to);
+    }
     G.lexFact.clear();   // H-04: the words a fact allows
     for (const auto& kv : G.lexFactNames) {
         auto it = L.facts.find(kv.second);
@@ -644,6 +679,10 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
         }
         int r = G.rule(root);
         if (r < 0) G.errors.push_back("@root " + root + ": no rule"); else L.reach(r);
+    }
+    for (bool more = true; more;) {   // D-05: a swapped rule's stand-in is reached where the rule is
+        more = false;
+        for (const VgInstead& I : G.insteads) if (I.fromRule >= 0 && I.toRule >= 0 && G.rules[I.fromRule].used && !G.rules[I.toRule].used) { L.reach(I.toRule); more = true; }
     }
     for (const VgRule& r : G.rules) {
         if (!r.used) G.errors.push_back(G.files[r.file] + ":" + std::to_string(r.line) + ": the rule " + r.name + " is reached from no root");
@@ -694,6 +733,7 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
         std::vector<std::vector<std::string>> altWords(G.alts.size());
         for (size_t ai = 0; ai < G.alts.size(); ai++) {
             std::set<std::string> ws;
+            const bool apart = G.alts[ai].apart;   // D-05: its words its own, counted for none (the others' distinctive words stay theirs)
             for (const VgNode& n : G.alts[ai].body) {
                 if (n.type != VgNode::TEXT) continue;
                 std::string w;
@@ -704,7 +744,7 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
                     w.clear();
                 }
             }
-            for (const std::string& w : ws) { df[w]++; altWords[ai].push_back(w); }
+            for (const std::string& w : ws) { if (!apart) df[w]++; altWords[ai].push_back(w); }
         }
         G.words.clear();
         std::unordered_map<std::string, int> idx;
@@ -959,6 +999,7 @@ struct Expander : VgRun {
     }
 
     bool expandRule(int ri, Scope& sc, const std::string& bindLocal) {
+        for (const VgInstead& I : G.insteads) if (I.fromRule == ri && I.toRule >= 0 && holds(I.cond, sc)) { ri = I.toRule; break; }   // D-05
         if (++depth > 48) { note("too deep at " + G.rules[ri].name); depth--; return false; }
         const VgRule& rule = G.rules[ri];
         if (rule.keep) {

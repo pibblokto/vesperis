@@ -24,6 +24,44 @@ crosses several sectors a frame and made all 9,261 sectors again every frame.
 
 **The face-on column** (G-05, 2026-10-08): `galaxyFaceOnColumn(sx, sz)` is the field's stars (`galaxyFieldDensity`: the disc, its arms, the bulge and the cap, without the cluster knots) integrated through the whole height of the disc, in stars per square light year, in closed form: the disc term falls as `e^(-|y|/h)` and the bulge as a gaussian half as thick as it is wide, so the column is `2 A h + B R sqrt(pi) / 2` (A the disc's midplane density times its arm factor, B the bulge's, R `GALAXY_BULGE_R`) wherever the two stay under the cap, and in the core, where `A + B` passes it, the height `y*` at which they fall under it is bisected (24 steps) and the column is `2 (cap y* + A h e^(-y*/h) + B R sqrt(pi)/4 erfc(2 y*/R))`. It returns the shares of the three parts of the uncapped column too (the disc between the arms, the arms' excess, the bulge). Against the field integrated in 2 ly steps (`vesperis_test chart`) it agrees to 0.0002% at home (90 stars a square light year), 0.01% at the centre (2,949: the cap's slab), 0.0003% at 25,000 ly (8.6) and 45,000 ly (0.68); 65-80 ns a column, so the galaxy chart's 40,960 pixels cost 3 ms on one thread. The column steps over anything a few tens of light years thick: the chart reads the open clusters and the star-forming complexes from their cells.
 
+**The drifters** (D-01, 2026-10-23; `galaxy/drifters.*`, `docs/ideas/IDEAS-worlds-and-wanderers.md` section 3): worlds with no sun, a population of
+their own placed only in sectors that hold no star, so no star, system or sky moves and the star field, the neighbourhood, the aim and
+`jumpTarget` never see one. The field is hashed in cells of `DRIFT_CELL` = 256 sectors (`hash3i(cell, DRIFT_SALT)`): up to
+`DRIFT_CELL_MAX` = 4 candidates a cell at hashed sectors, each kept with the probability `DRIFT_RATE d / max(1 - d, 0.03)` (`d` the sector's
+`galaxyDensity`; `DRIFT_RATE` 0.6) and twice that in the old populations (the core, the bulge, the halo, a globular), and only where the
+sector holds no star (`sectorHoldsStar`, `starInSector`'s own test): with the starred sectors left out the drifters are as dense as the
+stars times `DRIFT_CELL_MAX DRIFT_RATE / DRIFT_CELL^3`, 1.4e-7 a star (one for every seven million; the solid core's few empty sectors hold
+fewer). A globular cluster holds its own besides (`drifterGlobular`: a Poisson count of mean 1.2, at most 4, each the first sector without a
+star along a hashed way out from 0.25-0.75 of its radius). Near home: none within 200 ly, the nearest at 359 ly (a europan world with its
+moon), 17 within 800, 29 within 1,000 (about 215 million stars: one for every 7.4 million), 79 within 1,600; `driftersNear` scans 1,600 ly
+in 0.8 ms. A drifter is a place: `drifterInSector` gives it as a `Star` of class `STAR_ROGUE` (S14 NO STAR: no light, no radius, no mass,
+a neutral colour; its seed `mix64(sectorSeed ^ DRIFT_SALT)`, its anchor hashed in its sector), and `placeInSector` (a star, else a drifter)
+is the one resolver from a key to its place (`07-game-flow-and-controls.md`). What it is comes from its seed (`drifterBody`): its kind by
+the dark's table (`DARK_KINDS`: gas giant 26, substellar 14, rocky 8, frozen felisian 8, icy 7, cratered 6, desert 5, nitrogen 3,
+europan 3, tectonic 3, brine dwarf, frost dwarf, carbon, metal and molten 2 each; within 3,000 ly of home 275 drifters, the shares within
+a few points of the table's), its radius in the kind's range and its own heat (`Body::heatK`: 20-60 K for cold rock and ice, a giant's 60-130,
+a brown dwarf's 400-1,200, a young tectonic world's 90-170, a molten one's 180-320). D-04: two in five of the rocky drifters kept the
+hydrogen they were born in and are dark oceans (`DARK_OCEAN_SHARE` by the kind's salt: an Earth's mass of rock and water under hundreds of
+bars of it, Stevenson 1999): made from the draw, the radius and the heat by the same uniforms in the dark ocean's ranges (5,000-9,000 km,
+280-350 K: its sea's warmth), and what was drawn kept (`DrifterBody::drawnType`, `drawnRadiusKm`): its system's moons are the rocky
+drifter's (`Body::drawnType`, the moon loop's drawn size) and its power its (so the radar hears the same drifters); 12 of the 28 rocky
+drifters within 3,000 ly of home. Where it came from (`drifterPast`, asked for, not
+kept): a hashed way near the disc's plane, 1,500-20,000 years since it left at 2-8 km/s (a scattering's kick), so 6-340 ly back, and the
+star nearest that point (`jumpTarget`'s search, the void's rule included): around home its origins lie 10-230 ly off. How loud it calls
+(D-02, `drifterPower`): the power of its radio aurorae by its kind (a brown dwarf the loudest, a small icy world the faintest), its size and
+a spread of its own, read by the radar's law of its own above x1 (`12-civilisations.md`, the drifters on the radar). What it sounds like
+(D-03): its seed and its body (`rogueVoiceClass`), its turning and its innermost moon's orbit (`rogueVoiceOf` into `Signal::turnS` and
+`moonS`; `12-civilisations.md`, the drifters' voices). What it has of its own (D-04, `05-planet-function.md`): an air fallen as snow
+where it is colder than the air's freezing (`airFrozen`, `bodyHasAir`: every reader of a body's air), a young interior's embers, a dark
+ocean's lights in its water, its seas frozen at their level where it is colder than its liquid's freezing; LIGHTS LEFT ON is D-05's.
+D-05: one frozen felisian or desert drifter in four kept a people (`drifterHadPeople`, a hash of its own; 103 of 406 within 9,000 ly), and
+its people lived on it at its former orbit: `drifterPast` then chooses the star it left among the living suns near its way's end (yellow
+stars, orange and red dwarfs), one that fits how the sun was lost (`drifterSunWayOf`, drawn first: a system with a giant for the wanderer, a
+companion for the dance), and `formerSystemOf` gives that star's system as `generate` makes it with the drifter at its former orbit in the
+temperate band (`Body::former`: its year, its eccentricity, the moons that came with it; a desert drifter with a people warm then, 270-320
+K; the last eight kept). `peoplesWorldOf` is what the peoples' readers take: the former system for a drifter's people, the world's own
+otherwise (`12-civilisations.md`, the people who lost their sun).
+
 ### Star classes (`STAR_CLASSES`)
 
 | Code | Name | Colour | Radius km (var) | L | mass | max planets | rarity | first orbit | min first orbit km |
@@ -42,6 +80,7 @@ crosses several sectors a frame and made all 9,261 sectors again every frame.
 | S11 | Protostar (S-04) | (1.00,0.60,0.36) | 2.0e6 (30%) | 1.5 | 0.8 | 2 | 0: a share of S00 where stars form | 12 R | 1.5e7 |
 | S12 | Wolf-Rayet star (S-05) | (0.78,0.84,1.00) | 3.5e6 (35%) | 180 | 16 | 4 | 0: a share of the S02 that stayed, mostly in the arms | 14 R | 7.0e7 |
 | S13 | Black hole (S-06) | (1.00,0.88,0.70): the disc's | 3.0e5 (30%): the stylised Schwarzschild radius | 0.03: the disc's | 40 | 3 | 0: a share of the S05 that stayed, most in the core and the bulge | 40 R | 2.0e7 |
+| S14 | No star (D-01) | (0.55,0.56,0.60) | 0 | 0 | 0 | 0 | 0: never drawn (`STAR_DRAWN_COUNT` 14: every pick over the classes stops before it), a drifter's place | 0 | 0 |
 
 Class effects elsewhere: sun rendering (`SpaceRenderer::drawSun`: granulation and spots for S00/S01, glare for S02, mottled convection for S03, diffraction rays for S04, pulsing + rotating beams for S05), planet type weights (below), light colour on surfaces, radiation warnings in the space HUD (pulsar `4e7/d`, white dwarf `1.2e7/d`, blue giant `1.5e8/d`, warn above 0.4, hazard above 1.0). S-01 adds: the red dwarf's disc is drawn with the orange dwarf's granulation and more spots (from noise 0.36), its glow 0.8 (to 1.5 in a flare), the flare whitening the disc by 12 shades and the corona by half; the blue-white star takes the blue giant's glare with a cross of four rays and glow 1.5; the orange giant the red giant's mottled convection at glow 0.7; the carbon star a dark mottled disc (42 + 14 n) inside a wide dim glow (1.4 wide, the corona at half and the outer glow at 0.7). `starFlare(star, t)` (`galaxy/starfield.cpp`): a red dwarf's cell of 3,000 s flares with probability 0.4 at a hashed moment, rising in 6 s and fading over 40 (amplitude 0.6-1.4, the luminosity x(1 + flare)); `SurfaceSite::sun` raises the light factor a quarter past its exposure clamp (`x(1 + 0.25 flare)`: the near worlds of a red dwarf sit at the clamp already), `setupPalette` opens the exposure by the same quarter (`env.flare`) and the light's colour moves toward white by 0.35 flare, `auroralStorm` reads it as a storm (x0.8), the aurora activity is 0.8 for red dwarfs and 0.7 for blue-white stars (R-402's table). The space HUD warns of the blue-white star's ultraviolet at `3.5e7/d`. `pickPlanetType`: blue-white x0.6 felisian, x1.4 rocky, x1.3 cratered and icy, x1.2 thin atmosphere; orange giant x0.5 felisian, x2 ocean, x1.5 europan, x1.3 molten, x0.7 icy; carbon star x0.2 felisian, carbon x3 + 10 in every zone, x1.3 metal. A red dwarf's first three planets keep one face to it 90% of the time (never retrograde) and their eccentricities are x0.3, so M5-08's lock holds (unit: 80% of 1,781 near worlds locked, against the 50% of a first planet elsewhere). S-03 (2026-10-02) adds the neutron star: a point of white light in a halo of 1.3 with no rays and no beams (`drawSun` falls to the plain disc branch; `sun_S10`), the x-ray warning at `3e7/d`, activity 0.85 (`starActivity`, the one table since S-02), `describeStar`'s two sentences; its worlds take the dead stars' rule and more (below) and its outermost one or two survivors of a solid type are *glassed* (`Body::glassed`, `05-planet-function.md`). S-04 (2026-10-02) adds the protostar: a soft orange disc, strongly limb-darkened and mottled through its dust (`47 + 8 n` at `0.35 + 0.65 mu`), inside a glow of 2.0 with wisps (the outer glow times `0.6 + 0.4 noise`), and its dust disc seen edge-on: `drawSun` takes the orbital plane's normal in view space (`discUp`, world Y: the planets orbit within their inclinations of it) and, for a protostar, runs a pass of its own over the frame for the strip within 0.3 of the plane and 0.6 rad of the star, a band of glow `exp(-(h / (0.05 + 0.3 a))^2) (1 - a / 0.6)` with the dark lane of the disc's shadow `1 - 0.65 exp(-(h / (0.012 + 0.06 a))^2)` along its middle, 24 shades at most, depth-tested (`sun_S11`, and from a world's surface along the ecliptic through the star); activity 0.9; no hazard; `describeStar`'s two sentences. Its cloud is in the sky: `starNebulaPatches` gives two nebula patches round the direction to the star (1.1 rad at 0.8, the whole sky at 0.3) in a tone by its seed (`starNebulaTone`: blue, red or white), appended to the field's patches in the space view's band pass and the surface's (`06-surface.md`). S-05 (2026-10-02) adds the Wolf-Rayet star: the blue giant's saturated disc with the cross of four rays and a glow of 1.6, and its shell of shed gas as a ring round it at five radii (four pixels at least), a seventh of that wide, sharp outside (`exp(-4 ex^2)`) and diffuse inside (`exp(-ex^2 / 2)`), filamentary (`0.55 + 0.45 gnoise2` round the ring) and brighter on the side it drives into (`0.6 + 0.4 cos`, a direction fixed by the seed), 22 shades at most: `drawSun` widens the glow's cone to reach past the ring and adds it in the glow's pass, so it costs no pass of its own; the ring's pattern is fixed in the world when the caller gives `discUp` (both views do). A gas giant or a substellar object of a Wolf-Rayet star streams its envelope away from the star (`drawStrippedTail`, `02-rendering.md`). The hazard is the whole system: the space HUD warns at `5e8/d` (hull exposure inside 5e8 km, high to 1.25e9), activity 1.0 (the wind), a companion two times in five (the blue giant's weight for a blue companion), `describeStar`'s two sentences. Its worlds (below) keep no atmosphere and most systems have a bombarded world. S-06 (2026-10-02) adds the black hole: `drawSun` hands it to `drawBlackHole`, which draws no disc of light at all: a shadow of 2.6 radii (the photon ring, the class's radius standing for the Schwarzschild radius), the stars and the band behind it bent into arcs by a lens in the sky (a pixel at the angle `th` from the hole shows what lies at `th - thE^2 / th` along the same great circle, the other side when that is negative, with the Einstein angle `thE = sqrt(R / D)`, the weak-field deflection of a source at infinity, fading out toward the edge of the region of 2.6 thE so there is no seam; the bent directions are computed on a grid of one logical pixel and interpolated, the frame before the lens copied once), the accretion disc in the plane of its worlds (a slab half a radius thick from 3 to 9 radii, 63 shades and hot inside to a dim orange outside, brighter on the side that comes toward the viewer by the seed's spin; its near half seen along the straight ray and drawn over the shadow, its far half along the bent ray from the lens plane, so it arches over and under the shadow) and, two in five, a jet along the plane's normal drawn before the lens so the shadow covers its root; rows in parallel, 2-9 ms for a 4x frame with the hole a degree across (the disc edge-on to tilted into view). Its companion (half of them, always close, never a giant) is drawn out: `drawAccretionStream` runs its gas from the limb facing the hole to the disc's edge, bent back against its motion, under its own disc. No lens flare and no veiling glare come from a hole. The space HUD warns of the disc's x-rays at `6e7/d`, activity 0.9, `describeStar` gives the mass in suns (`massFactor`, 40 x [0.8, 1.2]) with one of two sentences.
 
@@ -58,6 +97,18 @@ Seeded with `star.seed ^ 0x51A7E11`. Steps:
 
 Important: the planet loop copies the parent (`Body p = bodies[n]`) because `push_back` invalidates references.
 
+**A drifter's system** (D-01, `STAR_ROGUE`): no planet loop (`np` 0, its draws skipped: every other class's stream is as it was); body 0 is the
+drifter on the anchor (`orbitRadiusKm` 0, a period of 1e18 s, so `bodyPos` is the anchor and `bodyVel` zero), its kind, radius and own heat
+from `drifterBody`, its spin, tilt and rings from a stream of its own (`seed ^ 0xD81F7B0D`), a brown dwarf's glow as M5-02's, a frozen
+felisian's then-climate as P-04's (265-300 K), named as its place; then the moon loop as any planet's (a europan drifter keeps a moon: its
+ocean is a moon's tides'), each moon's warmth its own (`heatK` 20-50 K, a twin's 20-55, a captured moon's 20-45) plus M9-12's tides for a
+giant's two inner moons and M5-02's glow round a brown dwarf; a moon the tables draw felisian becomes a chemotroph (no living world in the
+dark: a brown dwarf's warm moons live by their own heat). No belt, comet, companion or wanderer. `Body::drifter` marks every body of the
+system (no people: D-05's are the drifters' own) and `Body::heatK` their own warmth (0 for every other body, so nothing else moves).
+`StarSystem::sunless()` is the class: `lightAt`'s factor 0, `seasonOf` 0, `classString` "NO STAR", and on the ground the sun at the nadir
+(`06-surface.md`). From space (D-02) its globes are lit by the galactic band alone, a black disc where the stars stop (`02-rendering.md`),
+and its maps are the altimeter's survey (`07-game-flow-and-controls.md`).
+
 ### Planet type selection (`pickPlanetType`)
 
 Zones by equilibrium temperature (weights):
@@ -72,7 +123,22 @@ Zones by equilibrium temperature (weights):
 
 Modifiers: white dwarf / pulsar: no felisian, venusian, quartz; thin x0.3; cratered +20; icy +15; pulsar also gas giant x0.3, molten x0.3; a neutron star (S-03) takes the dead stars' rule and no gas giant, no hydrocarbon world, substellar x0.3, molten x0.3, europan x0.5, metal +14, bombarded +8, rocky x1.3 (bare cores and captured rocks); a protostar (S-04): no felisian, venusian, quartz, ocean, acidic, desert, hydrocarbon or europan world (nothing had time to evolve), thin x0.3, gas giant x0.2, substellar x0.5, icy x0.6, rocky x1.2, molten +25, bombarded +20, tectonic +4; a Wolf-Rayet star (S-05): every type with an atmosphere but the giants at 0 (the wind stripped them: no felisian, venusian, quartz, ocean, thin-atmosphere, tectonic, desert, hydrocarbon or acidic world), gas giant x0.4, substellar x0.5, europan x0.3, icy x0.5, carbon x0.5, bombarded +25, cratered x1.5, rocky x1.3, metal +8, molten +5; a black hole (S-06) takes the dead stars' rule and no gas giant, molten, thin-atmosphere, desert or hydrocarbon world, substellar x0.5, europan x0.5, cratered +10, rocky x1.3, metal +10, bombarded +6 (wandering rocks and ice). Red giant: felisian x0.25, molten x1.5. Blue giant: felisian x0.5. Moons: no gas giants; venusian x0.2; unless the parent is a gas giant, felisian x0.15 and quartz x0.3; cratered x1.6, icy x1.4. Small size roll (< 0.3): gas giant x0.2.
 
-### Planet types (`PLANET_TYPES`)
+### Kinds of body (`KINDS`, galaxy/kinds.*)
+
+P-00 (2026-10-21): every kind is a row of `KINDS`, built at compile time in `galaxy/kinds.cpp` (`buildKinds`; the checks at its end refuse a
+row missing, out of order or incomplete). A row holds what the kind is (the name and short name, the data sheet's line and the
+sentence's phrases, the radius range, landable, air, moons, albedo, density, ring chance), its tags (`KT_...`, the groups the code
+paths read: a giant, a gas giant's globe, its own glow, an opaque deck, lava, plates, drainage and whether it carries a liquid, fronts
+and whether of dust, a sea, flora, fauna, a people's world and a dry one, a twin, glassable, only an inner moon, no sights, crystal,
+flat, frozen...) and the processes that shape its ground (`KS_...`: a trait needs one of them, `TRAITS`), how the generator draws it
+(the weights of the five zones below and its answer to every star-class rule: `WeightOp` w x mul + add, applied in the order of
+`pickPlanetType`; the Wolf-Rayet wind strips every air but a giant's by the `atmosphere` flag; the colour from afar: a base and its
+variation per channel of one draw, or one of four by a second draw), how `BodyGen::make` makes it (its draws in its order, its colours,
+the relief's grades, the palette's mixes, the family representatives), its ground (the ground function it shares, the plains, the crater
+stack, `05-planet-function.md`), its look and air on the ground (sky, fog, night, floor, boulders, aurora, pressure, temperature, wind,
+rain, dust storms) and its events and sounds. The ids are saved keys (the guide's walked kinds) and the harness's arguments: a new kind
+is appended (`09-cookbook.md`). Nothing generated or drawn changed with the table (`10-decisions.md`).
+
 
 | Type | Radius km | Landable | Atmosphere | Max moons | Albedo |
 | --- | --- | --- | --- | --- | --- |
@@ -88,8 +154,155 @@ Modifiers: white dwarf / pulsar: no felisian, venusian, quartz; thin x0.3; crate
 | Ocean / Metal / Volcanic / Carbon (M9-11) | 5000-7800 / 1200-3200 / 1200-2600 / 2500-5000 | yes | yes / no / no / no | 2 / 1 / 0 / 1 | 0.30 / 0.12 / 0.50 / 0.06 |
 | Substellar (M5-02) | 60000-95000 | no | yes | 8 | 0.30 |
 | Comet (M5-07; landable since O4, R-303) | 2-12 | yes | no | 0 | 0.06 |
+| Magma ocean / Chthonian / Glass (P-01) | 4000-9000 / 10000-19000 / 1500-5000 | yes | no / thin / no | as drawn | 0.15 / 0.12 / 0.10 |
+| Steam / Salt / Rust (P-01) | 5000-11000 / 3000-6500 / 3500-7500 | yes | thick / thin / yes | as drawn | 0.75 / 0.70 / 0.28 |
+| Super-puff / Water-cloud / Azure (P-07) | 40000-100000 / 24000-72000 / 24000-72000 | no | yes | as drawn | 0.35 / 0.81 / 0.12 |
+| Alkali / Silicate / Gas dwarf (P-07) | 60000-125000 / 65000-130000 / 10000-24000 | no | yes | as drawn | 0.03 / 0.30 / 0.40 |
 
 Colours (`typeColor`) carry per-body variation; thin atmosphere and gas giants pick one of four families (red/green/purple/grey; cream/blue/brown/pale).
+
+### Made kinds (P-01 to P-07, generation 16)
+
+The kinds after `PT_DRAWN_COUNT` (the first 22, generation 15's) are never drawn: `pickPlanetType` picks among the drawn kinds alone
+(its fall-through on rounding stays the acidic world), and every draw of `StarSystem::generate` is made as the drawn kind's. After a
+body's last draw `kindOf` (`system.*`) may make it another kind: the first made kind, in id order, with a source in its row the world
+qualifies for (`KindSource`: the drawn kinds it comes from, a band of equilibrium temperature, the bodies it may be (`KB_PLANET` of the
+primary, `KB_COMPANION_WORLD`, `KB_TWIN`, `KB_MOON`; P-05: `KB_CAPTURED`, a giant's captured moon, which only the kinds naming it take), the
+star classes, locked to its star or its day not its year, P-06: what a moon is among its planet's moons, `KindSource::moon`, every fact it names)
+whose hash of the world's seed
+(the kind's `salt`) falls under the source's share. A world with a people never changes (`peopleHash`, C-01's one in eight, read
+first). `makeKind` gives a made body its kind's radius on the same size draw (a moon's within the cap its parent's drawn size set, a
+twin keeping its share of its partner), the mass and gravity from its density, its colour from the row by hashes (`madeColour`), its
+rings by its own chance by a hash where that differs from the drawn kind's (the chthonian's two in three), and a magma ocean's tilt is
+taken with its lock (`untilted`: the tides that locked it damped it, so its sea stays under its sun). `Body::drawnType` keeps the drawn
+kind, `drawnKind(b)` reads it: the system's rules read it (a giant's spacing, the moons' table and number, the twin's chance, the
+neutron star's glassing, the inner moons). A planet's moons keep the orbits and periods its drawn size gave them (a people's moon keeps
+its days), moved out only where a made world would reach them: three of its radii, outside its rings.
+
+| Made kind | From | Temperature | Bodies | Share |
+| --- | --- | --- | --- | --- |
+| Magma ocean | molten, locked to its star | over 360 K | the primary's planets | 0.9 |
+| Chthonian | molten, metal | over 400 K | planets of either sun, a living star's (no dead star, protostar or Wolf-Rayet) | 0.25 |
+| Glass | cratered, bombarded | over 400 K | planets, moons | 0.4 |
+| Steam | ocean / felisian / venusian, its day not its year | 330-600 / 330-600 / 345-520 K | planets of either sun, twins | 0.6 / 0.4 / 0.12 |
+| Salt | desert | 300-520 K | planets, twins, moons | 0.3 |
+| Rust | desert / felisian / thin air of a red dwarf | 190-345 K | primary's planets, twins, moons | 0.3 / 0.1 / 0.08 |
+| Archean (P-02) | felisian, its day not its year, of a young star (by the star's hash) | any | every body | blue giant, blue-white 0.6; yellow, orange, red dwarf 0.07 |
+| Hothouse (P-02) | felisian, its day not its year, of a star burning its hydrogen | over 285 K | every body | 0.35 |
+| Superhabitable (P-02) | felisian, its day not its year, of an orange dwarf | 230-330 K | planets of either sun | 0.55 |
+| Steppe (P-02) | felisian, its day not its year, of a star burning its hydrogen | over 262 K | every body | 0.25 |
+| Tundra (P-02) | felisian, its day not its year, of a star burning its hydrogen | 212-248 K | every body | 0.4 |
+| Lichen (P-02) | thin air of a star burning its hydrogen | 205-260 K | every body | 0.3 |
+| Eyeball (P-03) | ocean / felisian / icy, locked to a red dwarf | 200-290 / 200-232 / 165-205 K | the primary's planets | 0.6 / 0.4 / 0.4 |
+| Terminator (P-03) | felisian / desert, locked to its star | over 232 / over 220 K | the primary's planets | 0.5 / 0.45 |
+| Hycean (P-03) | ocean | 250-400 K | planets of either sun | 0.35 |
+| Ammonia (P-03) | ocean / hydrocarbon / icy | 195-232 / 150-212 / 165-232 K | every body | 0.35 / 0.25 / 0.08 |
+| Snowball (P-03) | felisian of a star burning its hydrogen / ocean, its day not its year | 195-222 / 195-240 K | every body | 0.5 / 0.35 |
+| Chemotroph (P-03) | tectonic / rocky of a white dwarf, a pulsar or a neutron star; either as a brown dwarf's moon | any | every body; the brown dwarf's moons | 0.6 / 0.12; 0.3 |
+| Scorched felisian (P-04) | felisian of a red giant or a carbon star / of an orange giant; rocky or desert of a white dwarf | any / any / 180-260 K | every body; the white dwarf's planets, its companion's and twins | 0.75 / 0.5 / 0.4 |
+| Frozen felisian (P-04) | none from a drawn kind: one wanderer in five (P-05), D's drifters | | | |
+| Nitrogen (P-05) | icy, of a star whose worlds keep an air (no black hole, no Wolf-Rayet wind) | under 60 K | planets of either sun, twins; a world's moons | 0.5 |
+| Cryovolcanic (P-05) | icy / icy or europan, of a star whose worlds keep an air | under 120 / under 80 K | a giant's captured moons / a giant's moons | 0.8 / 0.2 |
+| Dry ice (P-05) | thin air / thin air / icy, of a star whose worlds keep an air | 140-200 K | planets of either sun, twins / moons / planets of either sun | 0.35 / 0.2 / 0.1 |
+| Wanderer (P-05) | none from a drawn kind: four wanderers in five | | | |
+| Brine dwarf (P-05) | cratered / icy | 120-260 K | planets of either sun | 0.15 / 0.2 |
+| Frost dwarf (P-05) | icy or cratered | under 45 K | planets of either sun, twins; a world's moons | 0.8 |
+| Grooved ice (P-06) | icy, 1,500 km or more as drawn | any | a giant's moons | 0.35 |
+| Two-faced (P-06) | icy, its planet's fourth moon or further, facing it | over 60 K | a giant's moons | 0.14 |
+| Tiger-striped (P-06) | icy or europan, one of its planet's two inner moons | any | a giant's moons | 0.45 |
+| Patchwork (P-06) | icy or rocky, its period in a resonance with the moon inside it | under 200 K | moons | 0.08 |
+| Sponge (P-06) | cratered or icy, under 1,100 km as drawn, its day not its month | under 200 K | moons | 0.3 |
+| Super-puff (P-07) | gas giant of a protostar / of a blue giant or a blue-white star / of a young yellow, orange or red dwarf star (by the star's hash) | any | planets of either sun | 0.6 / 0.08 / 0.03 |
+| Water-cloud giant (P-07) | gas giant / any world of a star burning its hydrogen | 165-290 / 205-290 K | planets of either sun | 0.75 / 0.01 |
+| Azure giant (P-07) | gas giant / any world of a star burning its hydrogen | over 290 / 290-360 K | planets of either sun | 1 / 0.015 |
+| Alkali giant (P-07) | any world locked to a yellow, blue-white or blue giant star / an orange dwarf / a red dwarf | 360-420 K | the primary's planets | 0.22 / 0.08 / 0.015 |
+| Silicate giant (P-07) | any world locked to a star burning its hydrogen | over 420 K | the primary's planets | 0.15 |
+| Gas dwarf (P-07) | any world of a star burning its hydrogen | 205-420 K | planets of either sun | 0.03 |
+
+The temperatures are the game's own scale: its inner orbits reach 350-500 K (278 K at the reference orbit, no albedo), a world over
+600 K is one in ten thousand, so the furnace kinds take the hottest worlds there are. P-02's living worlds leave the felisian worlds
+that keep a face to their star to P-03's locked kinds and a giant star's to P-04's scorched world (`MAIN_SEQUENCE` in `kinds.cpp`: the
+yellow, orange, red dwarf, blue-white and blue giant stars); a source `byStar` hashes the system's star instead of the world
+(`KindFacts::starSeed`), so a young star's felisian worlds are all archean (a companion's world goes by its own sun's class). The
+steppe's salt is pinned so the home world (Heilya II, 268 K) stays felisian; Heilya III (229 K) is a tundra world. Near home (`survey
+1500`) 55 of 1,504 bodies are made (3.7%: 18 furnace worlds, 37 living ones; the felisian worlds, 5.3% of the bodies, are still the
+commonest living kind), none of the regress's worlds.
+
+P-03's locked kinds read the lock (`lock` 1: the eyeball a red dwarf's planets', the terminator world any star's) and take the tilt
+(`untilted`); a planet made one of them that then draws a twin (the moons' loop, after the planet) keeps its face to its partner, not its
+star, and is made again, as drawn, as one whose day is not its year (`lockedKind`). A source may name the kinds a moon's planet drew
+(`KindSource::parents`, `KindFacts::parent`: the chemotroph from a brown dwarf's moons); the chemotroph's dead stars are the white dwarf, the
+pulsar and the neutron star (a black hole's worlds keep no air: S-06). A made world that grows pushes its moons out as before, but the
+companion's clearance (B-425) and the comets' orbits read the moons' orbits as drawn (`Body::drawnOrbitKm` on a pushed moon), so no star and
+no comet moves for a made world. The eyeball's, the terminator's and the snowball's salts are pinned so the regress's worlds (Feeyeithis
+II-IV, Wyariothmai I-III) and the bench's forest stay as drawn. Near home (`survey 1500`) 105 of 1,504 bodies are made (7.0%: 49 of them
+P-03's); of the 95 locked worlds of the red dwarfs there, 16 are felisian (the test worlds and the people's among them), 8 terminator
+worlds and 2 eyeballs.
+
+P-04's dead worlds are living worlds that died, read in two times (`05-planet-function.md`): the scorched felisian takes a giant star's
+felisian worlds (those the earlier kinds left: the steam world's hot ones, the terminator world's locked ones) and a white dwarf's rocky
+and desert planets in its old temperate band (the same world after the giant phase: cold, frost on its salt); its then-world's climate is
+the drawn felisian's (`Body::thenTempK`), a white dwarf's world's a living one by a hash (265-300 K). The frozen felisian is made in no
+system (`elsewhere`: no source; P-05's wanderers and D's drifters will be its worlds). A dead world's people is its own (`peoplesHash`:
+the row's share, one scorched world in eight, by a salt of its own: C-01's hash never fires on a made world, `kindOf` keeps those
+felisian), with the desert's world factors for its end (`readWorld`: the drying x6, the climate x3). A system's people's world, the one its
+signal and its peoples' charts speak of, is its first world with a people of C-01's kinds, else its first dead one (`systemPeoplesWorld`),
+so no 1.3.2 signal moved; the radar's lists from home and the C-series worlds are P-03's (one more people within reach is silent: its
+light left before its radio). Over the stream's 6,866 systems 166 bodies are scorched (113 felisian, 47 rocky, 6 desert drawn), no moon
+moved; near home (`survey 1500`) 4 (a red giant's, an orange giant's, two white dwarfs'), 109 of 1,504 made in all (7.2%).
+
+P-05's far cold takes the cold worlds of the outer orbits: Pluto's nitrogen world from the icy worlds under 60 K (planets, twins and the moons
+of worlds: a giant's moons are Triton's), Eris's frost dwarf under 45 K (the icy and the cratered, after the nitrogen's share), Mars' dry ice
+from the thin airs at 140-200 K (and a tenth of the icy planets there), Ceres's brine dwarf from the cratered and icy planets at 120-260 K, and
+Triton's cryovolcanic world from a giant's captured moons first (M9-12's retrograde ones under 120 K: `makeKind` now runs on them too, as
+`KB_CAPTURED`, a body class no earlier kind names, so the earlier kinds take none of them; the radius from the kind's range on the captured
+moon's own size) and its coldest icy and europan moons. No kind with an air is made round a black hole or in a Wolf-Rayet wind (S-05, S-06:
+`KEEPS_AIR`). The dry ice's salt is pinned so the regress's and home's cold worlds (Seapheeseeri II and I-a, Iaphiath I and II, Feeyeithis V,
+Heilya V and IV-a) stay as drawn. Over the stream's 6,866 systems 1,529 bodies are made far cold (652 dry ice, 519 brine dwarfs, 215
+cryovolcanic, 107 nitrogen, 36 frost dwarfs) and 7 moons of made planets moved; near home (`survey 1500`) 146 of 1,506 bodies are made in all
+(9.7%).
+
+P-06's strange moons are made from moons by what they are among their planet's moons, read from the draws as drawn (`MoonFact`, the moon loop's
+`KindFacts::moon`): one of its planet's two inner moons (`MF_INNER`: M9-12's tides heat them), its fourth or further (`MF_OUTER`), its day its
+month or not (`MF_FACING`, `MF_TURNING`), its period in a resonance with the moon inside it (`MF_RESONANT`: M9-12's 2:1 or 3:2), 1,500 km or
+more or under 1,100 as drawn (`MF_LARGE`, `MF_SMALL`). Ganymede's grooved ice takes a giant's large icy moons, Iapetus's two faces its outer
+icy moons that face it, Enceladus's tiger stripes its inner icy and europan moons, Miranda's patchwork the cold icy and rocky moons of any
+planet in a resonance (heated by it, then remade), Hyperion's sponge the small cold cratered and icy moons that tumble. A moon has no moons,
+so none moves for a made one. The sponge's salt is pinned so the regress's Wyariothmai V-b stays icy (`build/p06/salt.cpp`, the resonance and
+the drawn size taken to qualify); the patchwork's under 200 K keeps home's Heilya II-b rocky. A two-faced moon holds the direction it travels
+in its own frame (`Body::apexDir`, the middle of its dark face, from its orbit's elements at t = 0 as the locked face is: the only kind that
+reads it, so the only moons that hold it): the start region's 135 keep it within 16 degrees of their motion a quarter of a month on (their
+tilt, their orbits' inclination, an oval orbit's libration). Over the stream's 6,866 systems 1,232 moons are made strange (342 grooved, 242 two-faced, 255 sponges,
+217 tiger-striped, 176 patchwork); in the start region 676 of the giants' 9,725 moons (7%); near home (`survey 1500`) 179 of 1,506 bodies are
+made in all (11.9%).
+
+P-07's giants follow a giant's warmth (Sudarsky et al. 2000), on the game's scale: the gas giant as drawn is class I (ammonia clouds; drawn under
+205 K by the zones), a drawn gas giant over 165 K becomes the water-cloud giant (class II: too warm for ammonia, water's clouds on top), one over
+290 K (a Wolf-Rayet's far giant) the azure giant (class III, no cloud at all). The warm and hot zones' giants are made from the worlds of those
+orbits, whatever they drew (the moons the drawn world's: few): a giant of the temperate orbits water-cloud (205-290 K), the warm Jupiters azure
+(290-360 K), the hot Jupiters alkali (class IV, 360-420 K) and silicate (class V, over 420 K) only from worlds locked to their star (any that close
+is), round a yellow star about one in a hundred (Wright et al. 2012), a red dwarf's seldom. The gas dwarf (the sub-Neptunes, Kepler's commonest
+planets) comes from the warm worlds (205-420 K), the super-puff from a young star's giants: a protostar's, a blue star's, or every giant of a young
+yellow, orange or red dwarf star (by the star's hash: Kepler-51's three), first in `kindOf`'s order (youth swells a giant whatever its warmth).
+Every source of a world's names a star burning its hydrogen (`MAIN_SEQUENCE`). A double planet's half is never a giant: a world made one that
+then draws a twin is made again by the facts it was made by, with no giant (`KindFacts::paired`); a made giant never moves a people's moon (its
+month and day, so its calendar, stay): one that would is made again the same way and its moons drawn again, the same draws, in the room its drawn
+size gave them (two in the stream's systems). The X-03 ice giant is a drawn gas giant's (`isIceGiant`). The gas dwarf's salt is pinned so the
+probe's Wailie II stays cratered, the water-cloud's so B-427's Syaniapheela II (the user's Wolf-Rayet giant) and the probe's Thilawiane III stay
+gas giants. Over the stream's 6,866 systems 1,037 bodies are made giants (587 water-cloud, 539 of them drawn gas giants; 278 gas dwarfs; 67
+super-puffs; 66 azure, 57 from worlds; 28 alkali; 11 silicate, 8 of them a blue-white star's) and 341 moons of made giants moved (none a
+people's); in the scan region 6 of 670 yellow stars hold a hot giant (0.9%).
+
+**The wanderers (P-05).** A wanderer is a rogue world a star caught (Parker and Quanz 2012; Perets and Kouwenhoven 2012: a few stars in a
+hundred, most in their birth cluster). One system in twenty-seven or so has one (`WANDERER_SHARE` 4% by a hash of the star's seed, a few
+dropped where a far companion would come too near: B-425's rule with the wanderer as the primary's farthest world): an extra body appended
+after the system's own (the last index, so every other body keeps its index), drawn from a stream of its own (no draw of the system's: nothing
+else moves), its nearest 1.15-1.75 times the last planet's orbit out, eccentric (0.4-0.8), inclined 25-155 degrees (past 90 it goes round
+the wrong way), no moons, `Body::wanderer` set. Four in five are the wanderer kind (an old world's ground under its air fallen as snow); one
+in five was a living world that froze, the frozen felisian (its then-world's climate a living one by a hash, 265-300 K; never round a black
+hole or in a Wolf-Rayet wind). None kept a people (`BodyGen::make` gives a wanderer no C-01 trait whatever its hash: the lost sun is D-05's
+drifters' story). In the start region's 4,021 systems 147 caught one (3.7%), 27 of them frozen felisian, 66 retrograde, their eccentricity
+0.58 on average, their nearest 1.40 times the last planet's orbit out.
 
 ## Observed statistics (test `stars`, 40x40 sectors at y = 0)
 
@@ -104,6 +317,16 @@ Measured with a throwaway program over 2,646 systems near the start region (28,4
 * **Regions** (`galaxyRegion`, `REGION_NAMES`): core (r < 35, |y| < 12), bulge (bulge term dominant, r < 110), halo (|y| > 2.5 scale heights), globular clusters (hashed 6-sector blocks, density x2.5), star-forming regions (hashed 14-sector blocks on the arms), spiral arms (arm factor > 0.7), disk. Class weights per region: the core favours pulsars and giants, the bulge and halo remnants and red giants, clusters old stars, star-forming regions blue giants. Names use a style per region (`generateName(seed, style)`: hard consonants in the core, bulge and halo; flowing syllables in arms and nebulae). The space HUD shows the region after the sector.
 * **Systems**: orbit spacing `1.32-1.77x` (tighter); zone weights raised for felisian (50 in 205-345 K) and ocean worlds; four new types with their own weights (metal near the star, carbon far out and around remnants, ocean in the temperate band, volcanic only as inner moons of gas giants, which get +60 K of tidal heating per rank); moons draw from a modified table (fewer icy, more rocky and thin-air). Asteroid belts (`StarSystem::belts`) fill wide gaps (55% when the ratio exceeds 1.65, else 12%) and sometimes sit beyond the last planet; they are listed in the analyzer and drawn as 260 hashed rocks. **O3 (R-302):** a belt is a destination (`07-game-flow-and-controls.md`) and its rocks are a pure function of the system: the belt is cut into rings `BELT_CELL_KM` (400 km) wide in radius, each ring turning as one at the Kepler rate of its middle radius (`Belt::rateAt(r) = 2 pi / period x (inner / r)^1.5`, the sparkle band's shear: inner rings outrun outer ones, a ring keeps its formation), into arc cells of 400 km round the star (`beltArcCell`: the cell of a world angle at a given ring, taken modulo the ring's cell count) and height cells; a cell hashes 1-3 rocks (`BELT_ROCKS_PER_CELL`; fewer within 12% of the edges; none above 1.5% of the radius in height), each with a position, a radius `0.25 + 12 u^4` km (one in two thousand +25 km), a seed, a tumble axis and a period of 30-150 min (`BeltRock`, `StarSystem::beltRockAt(k, ir, ia, iy, m, t)`); `beltCellOf` gives a position's cells and `forBeltRocksNear` visits every rock within a few cells of a position ring by ring. The first version hashed cells in one co-rotating frame and, at t = 3.6e6 s, the rings had sheared by hundreds of cells: every rock but one was lost from the search around the ship. Every other moon locks its period to the previous one (2:1 or 3:2); 18% of gas giants keep a captured small moon far out on a tilted retrograde orbit (negative orbital period); moons inside a ring carve a gap in the ring profile.
 * **Descriptions** (`describeBody`, `describeStar`, `galaxy/describe.cpp`): one sentence from size, type parameters, gravity, temperature, rings, moons and rotation, shown on the data sheet.
+* **The tidal forcing** (Q-02, 2026-10-22, `Body::tideForcingM`, `tidePulls`, `tideForcingM`, `tideOffsetM`): `generate`'s last step sets each body's
+  equilibrium tide in metres from the pulls that turn over it, (m / M) R^4 / d^3 summed (its moons and its sun; a moon's its planet's and its
+  planet's sun; none from a body its face keeps toward it): a derived fact, no draw. The great tides' trait reads it (`05-planet-function.md`).
+* **Facts** (Q-01, 2026-10-22, `bodyFacts`, `factList`, `galaxy/describe.cpp`): what a body's orbit and spin say, read and never drawn (no
+  generation change): SIDEWAYS SPIN (a tilt over 60 degrees), RETROGRADE SPIN (`rotPeriod` under 0), RACING DAY (not locked, a day under half
+  an hour of the game's clock: its days run 20 minutes to 4 hours, so this is the fastest twelfth), LOCKED FACE (`locked`: one face to its
+  sun), ECCENTRIC YEAR (its year's orbit over 0.2: a moon's is its planet's), STRONG FIELD and NO FIELD (R-402's classes 3 and 0), CAPTURED (a
+  moon on a retrograde orbit, M9-12's), TWIN (a double planet's half), RINGED. Over the scan region's 38,534 bodies: 691 sideways, 1,024
+  retrograde, 3,104 racing, 3,157 locked, 4,525 eccentric, 9,390 strong fields, 7,992 none, 258 captured, 1,128 twins, 2,468 ringed. The data
+  sheet's `FACTS` line.
 * `GEN_VERSION` (2) is written into saves (`gen` line) and guides; loading an older save shows a one-time warning. Star positions are integer hashes and did not move.
 
 Near the start (`vesperis_test survey 1500`): felisian 9% of bodies and in 54% of systems; cratered 22%, icy 20%, rocky 16%, thin atmosphere 14%, gas giant 5%, quartz 4%, carbon 3%, venusian 2%, ocean 2%, volcanic 1%, metal 1%, molten 0.5%.
@@ -126,6 +349,26 @@ Near the start (`vesperis_test survey 1500`): felisian 9% of bodies and in 54% o
 * **A giant's clouds round a probe (X-02, 2026-10-07, `galaxy/probe.*`).** Derived as well. `giantBandsOf(body, gen, lat, lon, t, halfKm, n)` samples the planet function (the globe's `sampleSurface` with its polar vortex) on an n x n grid of the tangent plane round a place, at the jets' drift of the time (`giantJetTurn`, the globe's own lookup), into `GiantBands` (the albedo and the storms' term, read bilinearly in km east and north). `GiantDecks` builds on it the ammonia deck (0) and the water deck (1): `top(k, x, z, lod)` (the bands' lift for the first, a swell, cloud streets, the convection's cells, billows faded under the sampling's spacing, the towers of a 52 sh km grid), `base(k, x, z, lod)` (a swell and pouches), `towerOf`/`towerAt`/`towerShadow`, `density(k, x, y, z, top, base)` (soft edges, flattened cells, caverns); `sh` is the scale height at one bar over 25 km (0.2-2.5). `giantHazeTau(a, bar)` is the clear air's optical depth from the top (the sunlight's `giantSunlightAt` adds the decks' own). `cloudNoise2/3` is the clouds' fast 32-bit gradient noise.
 * **A giant's character (X-03, 2026-10-07, `galaxy/probe.*`).** `giantCharacterOf(system, body)`: the kind (`GK_GAS`, `GK_ICE` for a small blue gas giant by `isIceGiant` in `galaxy/system.*`, `GK_BROWN` for the substellar type), the internal heat (the star's youth, the giant's mass and a hash; a brown dwarf's 1), the abundance of what condenses, the storms (from the globe's `BodyGen::stormShare` and the heat), the lightning rate, the deep's glow and its colour, the aurora (R-402's `magneticField`, `starActivity`, a volcanic moon, a brown dwarf's own) round a magnetic pole of its own, the clear-air holes, diamond hail (a carbon star's giants, a hash) and the rare sight (one giant in forty). `giantAtmosphereOf(system, body)` puts the decks where the adiabat crosses each `CLOUD_SPECIES`' condensation temperature (methane 80 K, hydrogen sulphide 125, ammonia 150, ammonium hydrosulphide 200, water 275, the salts 700; deeper with more of it; one to three within the reach, a clear band between), warms a young giant and a brown dwarf at one bar, gives an ice giant the fastest jets and sets the haze's top over the first deck; `giantStageName`, `giantDeckAt`, `giantLayerAt`, `giantGlowAt` read them. The globe carries the character's visible part (generation 12, `BodyGen::make`'s `giantGlobe`): each giant's storm share, an ice giant's faint bands, and a great storm on one giant in four (an oval of 10,000-24,000 km at 12-40 degrees, swirled, collared, bright or dark), turned whole by `giantJetAt` with its latitude's jet. `vesperis_test probe giants` prints the first twenty giants' characters.
 * **What a probe found (X-04, 2026-10-07, `galaxy/probe.*`, `galaxy/planetmap.*`).** `GiantDecks::layersAt(z, px, pz)` says which decks a probe at a height is among (the floor, the ceiling, the fog, a hole's shaft): the view draws by it and the profile names the layers by it (`giantFoundLayer`: `giantLayerAt`'s numbers by the fields where the probe was, `GIANT_HOLE_LAYER + k` in a hole through deck k; `giantLayerName` the screen's names, or 14 characters for a chart's column). `giantStormCell(gen, unit, &id)` is the gas giant branch's storm term with its worley cell's id (the branch calls it: the same arithmetic, so no generation change), and `giantStormAt(body, gen, lat, lon, t, id)` the storm under an aim at the bands' time (2 the great storm's oval, 1 a storm cell over 0.3, 0 none), by which a storm keeps its name while it lives.
+* **The made giants' air (P-07, 2026-10-22, `galaxy/probe.*`).** A made giant's kind is its class's (`GK_WATER` to `GK_PUFF`, from
+  `KindDef::giantClass`; `GIANT_KIND_NAMES`). The hot classes' temperature at one bar is the real class's across their band of the game's
+  equilibrium temperature (`KindDef::oneBarLo..Hi` over `oneBarTLo..THi`, a tenth warmer with the heat: the azure giant 600-1,000 K over 290-360,
+  the alkali 1,100-1,500 over 360-420, the silicate 1,800-2,600 over 420-560), the others' the plain giant's rule. Two decks of the hot giants join
+  `CLOUD_SPECIES`: silicate dust and droplets (enstatite and forsterite at 1,700 K, convective: towers of rock cloud) and droplets of iron (2,050
+  K). The lists by class: the water-cloud giant's and the gas dwarf's water and the salts, the azure giant's none (clear to the deep: the salts'
+  haze over the reach's end), the alkali and the silicate giants' rock over iron, the super-puff's the gas giant's. A hot giant keeps its decks to
+  32 bar (`GiantAtmosphere::reach`: under the probe's end, seen from over them). The clear air by class (`hazeK`, `absorb`, `rayleigh`): an azure
+  giant's clearer (0.35) and blue with depth (Rayleigh's 0.3 a bar of pressure), an alkali giant's dark (its sodium and potassium take 2.6 of
+  optical depth over the top three tenths of a bar: TrES-2b reflects under one per cent), a silicate giant's a little (1.3, 0.6), a gas dwarf's
+  hazy (4, the haze from high up) and a super-puff's (3); a gas dwarf's condensables 2.5 times a plain giant's (a metal-rich air). The
+  stratosphere's warming by class (`stratoW`, the height's closed form with it): none on an alkali giant (Fortney et al. 2008's pL class: nothing
+  high takes the light, so no air over the probe hotter than where its heat ends it), 0.1 on an azure giant, an inversion of 0.6 on a silicate
+  giant (pM: the metal oxides take the light high), half on a super-puff. The heat that ends a probe is as before (750 K where the air under the
+  tropopause reaches it, the tropopause at the latest: the thin air over it carries too little heat to end a probe), so a probe into an alkali
+  giant ends in its dark air over its rock deck, into a silicate giant at its rock deck's top. The winds: a hot Jupiter's jet 1.2-3 km/s (an
+  alkali giant's), 2-5 (a silicate giant's: WASP-76b's), an azure giant's 0.3-0.8, a gas dwarf's and a super-puff's 60-260 m/s. A super-puff is
+  young and hot inside whatever its star (heat 0.65 at least), its weak pull (1-2 m/s2) spreading its air over thousands of kilometres; a gas
+  dwarf's heat seven tenths of a giant's. The holes, the lightning and the hail by class (a silicate giant's patchy rock clouds part often, an
+  azure giant's has nothing to part; water's towers the most lightning; no diamond hail in a hot giant: its carbon is a gas).
 * **Double planets and moon tuning (M5-09).** 7% of rocky, felisian, venusian, quartz, ocean and thin-atmosphere planets get a twin (0.55-0.95 radii at 12-20 radii since B-428, 5-9 before, both `doublePlanet`, both locked to each other, the planet's day set to the twin's period). The first moon of a solid planet sits at 2.8-4.2 radii (3.5-6.5 before), may reach half the planet's radius (0.42 before) and is big (size roll 0.5-1) half the time; giants' first two moon spacings are 1.35-1.85 (1.6-2.4 before). **B-314 (GEN_VERSION 7, 2026-09-28):** the first moon of any planet orbits at 4.5-6 radii, and at 1.35 times the ring's outer radius at least, on the same random draw: from 2.8 radii the parent's disc was 42 degrees across and a moon inside the rings (they reach 4 radii) saw them fill the sky; from 4.5 radii the disc is 26 degrees. Moon orbits and periods change everywhere; surfaces and maps do not. **B-428 (GEN_VERSION 15, 2026-10-18):** a solid world's first moon orbits at 5-40 radii, `5 x 8^u` on the draw `u` that gave `4.5 + 1.5 u` (most near 14 radii, one in eleven inside 6), outside the rings as before, its later moons spaced from it as before; a twin at 12-20 radii; a giant's moons unchanged. The ship parks at 3.5 radii, inside the old first orbit: another world wider than 10 degrees hung in its sky at 44% of the parkings near home (96% at a solid world's moon, 80% at a twin), 21% now (39%, 5%; a giant's moon 34% as before); the ground's discs (by radius) over 1 degree at 31% of sites (33), over 3 at 17% (27), over 10 at 3% (10). Periods follow (a solid world's first moon's month 7.7 hours at the median, 1.9 before; a twin's 6-12 hours, 2-3.5); `survey` prints the parkings' line.
 * **Locked faces (M5-08).** After the spin frames, a planet whose day equals its year (within 2%, eccentricity below 0.05, not a twin's parent) gets `locked` and `lockedDir`, the body-frame direction of its star at t = 0; the planet function reads it (`05-planet-function.md`).
 

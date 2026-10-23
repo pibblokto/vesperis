@@ -136,6 +136,8 @@ struct SurfaceEnvironment {
     // W-03: the fronts at the place: the pattern's cloud alone, the fronts' cloud, their rain (or dust) and cold here, and the
     // nearest front's line (metres ahead of the place, positive while it has not come; 1e18 none within reach)
     double cloudPattern = 0, frontCloud = 0, frontRain = 0, frontCold = 0, frontAhead = 1e18;
+    // Q-02 (TR_FOG_SEAS): the valley fog of the morning now (0..1) and its top (metres; -1e9 none)
+    double fogSea = 0, fogSeaTop = -1e9;
 };
 
 // W-03: the nearest front's line in the site's own metres. `ahead(x, z)` is the distance ahead of its rain line (positive
@@ -204,6 +206,7 @@ struct TreeInst {
     int fam = 0;                   // silhouette: 0 dome, 1 cone, 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree, 7 weeping, 8 candelabra, 9 spire
     int bank = 3;                  // leaf bank: 3 forest, 5 second family / autumn, 10 straw variant
     bool dead = false, bare = false;   // a dead skeleton; deciduous in winter
+    bool stump = false;            // P-04: a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
     uint64_t seed = 0;
     double dens = 0;               // the canopy density field at its cell (1 = deep forest)
 };
@@ -219,7 +222,7 @@ struct TreeLook {
     double tone = 1;       // leaf brightness factor
     double droop = 0;      // 0..1, the clusters hang (weeping) or the fronds arch
 };
-struct LogInst { double x = 0, z = 0, heading = 0, len = 6, radius = 0.4; uint64_t seed = 0; };
+struct LogInst { double x = 0, z = 0, heading = 0, len = 6, radius = 0.4; uint64_t seed = 0; bool stone = false; };   // Q-02: stone, a petrified forest's (its own bank)
 // C-01: a settlement's cell (`galaxy/ruins.*`) in the view's metres (B-417: M4-07's monoliths of the old ones are gone)
 struct Ruin {
     double x, z, heading, size;
@@ -239,6 +242,16 @@ public:
     SurfaceEnvironment env;
     LocalFront localFront;   // W-03: the nearest front's line here (the sector map draws it; the sky, the ground and the fog read it)
     // W-03: the extra extinction of the ray from the camera to a point: the wall of rain (or dust) of the front between them
+    // Q-02 (TR_FOG_SEAS): the fog sea a ray from an eye over its top crosses down to a point under it, as an extinction like the rain's (its
+    // depth along the ray per 30 m of fog; the top uneven by a few metres); nothing from an eye inside it (the fog's distance does that)
+    double fogSeaWall(double x, double y, double z, double dist) const {
+        if (env.fogSea <= 0 || camPos.y <= env.fogSeaTop) return 0.0;
+        const double top = env.fogSeaTop + 6.0 * gnoise2(x / 260.0, z / 260.0, site.gen.seed + 0xF06);
+        return y >= top ? 0.0 : (top - y) * dist / std::max(1.0, camPos.y - y) / 30.0;
+    }
+    double fogFloorM = 0, fogFloorX = 1e18, fogFloorZ = 1e18;   // Q-02: the valleys' floor round the explorer (`refreshFogFloor`)
+    void refreshFogFloor();
+    double auroraOvalNow(const Body& b) const { return auroraOvalLat(b) - (site.gen.hasTrait(TR_GREAT_AURORAE) ? 22.0 : 0.0); }   // Q-02: a great aurorae's oval reaches the middle latitudes
     double rainWall(double x, double z, double dist) const { return localFront.on ? localFront.wall(localFront.ahead0, localFront.ahead(x, z), dist, env.frontRain) : 0.0; }
     double capsuleX = 0, capsuleZ = 0, capsuleY = 0;
     double cameraOverrideAlt = -1;   // >=0 during descent/ascent: camera altitude above ground
@@ -262,6 +275,17 @@ public:
     Drone drone;                    // R-403
     bool inDrone = false;
     bool inVehicle() const { return inBuggy || inDrone; }
+    // D-04: the explorer's helmet lamp (U; the pad's commands), on foot: a cone of light from the eye along the view, bright to a dozen metres
+    // and falling off to nothing at 60 m, on every night side as in a drifter's dark; and the capsule's floodlights on the way down. The
+    // frame's lights (`setupLamps`) are added into the ground's vertex light and every object's (`lampAt`), by night alone as the vehicles'
+    // lights are, so on a dayside they add nothing
+    bool lamp = false;
+    bool floodlights = false;   // D-04: the capsule's floodlights lit (the game sets it while it comes down and goes up; a harness's raised camera has none)
+    struct LampLight { Vec3 pos, dir; double cosIn = 1, cosOut = 1, cosSpill = 1, nearM = 1, reach0 = 0, reach = 0, power = 0; };
+    LampLight lamps[2];
+    int nLamps = 0;
+    void setupLamps();
+    double lampAt(const Vec3& p, const Vec3* n = nullptr) const;   // the light the frame's lamps add at p (local metres), facing them by n where given
     bool hasWaypoint = false;
     double wpX = 0, wpZ = 0;
     // kind: 0 rock, 1 trunk, 2 log, 3 ruin; y0..y1 the span it blocks (absolute metres): what has risen above a wall's top
@@ -272,6 +296,11 @@ public:
     // work's ground, under water); `keep` a cheap test before the rest; returns the cell's candidates
     struct RockInst { double x = 0, z = 0, size = 0, gy = 0; uint64_t h = 0; };
     int forRocks(int cx, int cz, const std::function<bool(double, double, double)>& keep, const std::function<void(const RockInst&)>& fn);
+    // P-02: a 16 m cell's stromatolites (a microbial world's, KT_MICROBIAL): low domes 0.7-3.2 m across packed on its reef flats, a few on its
+    // mats, standing from the water's edge; the drawing and the colliders both (`RockInst`: size the radius, gy the foot)
+    void forDomes(int cx, int cz, const std::function<void(const RockInst&)>& fn);
+    void forChimneys(int cx, int cz, const std::function<void(const RockInst&)>& fn);   // P-03: the chemotroph's sinter chimneys a 16 m cell (KT_VENT_LIFE)
+    void forMeteorites(int cx, int cz, const std::function<void(const RockInst&)>& fn);   // Q-02: a strewn field's iron masses a 16 m cell (TR_METEORITES)
     // B-420: where a settlement's piece stands drawn near (its level 0): false where it is not drawn (its foot under water: a harbour's work
     // stands at the water's level); its foot's height (a big piece: the highest ground under its footprint) and how far its sides reach down
     // under it (a metre; a big piece's to the lowest ground under it). The drawing and the colliders both
@@ -492,6 +521,8 @@ public:
     double lastRange = -1, lastRangeX = 0, lastRangeZ = 0; bool lastRangeWater = false;
     bool viewUnderwater = false;   // B-322: the eye is under the drawn water surface this frame (the palette and the fog follow it)
     std::vector<MeteorShower> showers;   // W-04: the world's meteor showers (`meteorShowersOf`, once a landing)
+    bool lavaGlow = false;               // D-04: lava lights the ground and fills bank 2 here (a lava world's, or a drifter's ember lakes: TR_EMBERS), once a landing
+    bool waterLights = false;            // D-04: a dark ocean's lights in its water (TR_LIGHTS_IN_WATER: the glow's bank 15, drifting)
     double zodiDust = 0;                 // W-04: the dust of the world's sky for the zodiacal light (`zodiacalDust`, once a landing)
     // W-04: the shower meteors alight at t: their tail and head as local unit directions and the head's brightness (shades)
     struct ShowerMeteor { Vec3 tail, head; double bright = 0; int shower = 0; };
@@ -565,8 +596,15 @@ public:
     std::vector<Eruption> eruptions;
     double nextEruption = 30;
     double eruptionCue = 0;     // >0: an eruption just started (audio)
-    // R-307: the ground's shaking on a tectonic world (0..1, decays), the next quake's countdown; the camera trembles by it
-    double quake = 0, nextQuake = 45;
+    // R-307: the ground's shaking on a tectonic world (0..1, decays), the next quake's countdown; the camera trembles by it. Q-03: and on a world
+    // with QUAKES; `quakeCue` a quake's onset for the sound (its strength, consumed by the game)
+    double quake = 0, nextQuake = 45, quakeCue = 0;
+    // Q-03: the sounds of the ground the world's traits give (`updateGroundSongs`; game/audio.cpp sings them): a slip face's sand sliding under
+    // the explorer or the buggy (0..1, held a while as the sand runs on) and the note it hums at (`duneSongHz`), the ice's song round the
+    // explorer (0..1: the ice near, the day warming or cooling it)
+    double duneSong = 0, duneHz = 80, iceSong = 0;
+    void updateGroundSongs(double dt, double t);
+    static double duneSongHz(const BodyGen& g, double gravity);   // the grains' note: Andreotti's 0.4 sqrt(g / d), d 150-320 microns by the world
     // R-307: dust devils on a desert world: columns of dust that wander with the wind for a few minutes
     struct DustDevil { double x, z, height, radius, age, life, phase; };
     std::vector<DustDevil> devils;
@@ -595,6 +633,12 @@ private:
     double castShadowLit(TerrainCache& cache, int cx, int cz, double h, const Vec3& sd);
     // per-frame cloud layer parameters for ground shadows (M10-14)
     bool cloudShadows = false;
+    // Q-02: the banks the water's trait colours are drawn in this frame (`setupPalette`): 25 a pink lake's, 15 the milky sea's glow at night (a
+    // milky sea's world has no springs' spores in it), 26 a bloom's or a reef's lagoon (the second people's banks: no people on those worlds); -1 none
+    int tintBankW = -1, tintBankL = -1;
+    int tintBankSprings = -1;   // Q-02: the hot springs' mats (25: a world's water trait is the springs or a pink lake, never both)
+    int tintBankStrata = -1;    // Q-02: the rainbow strata's accent layers (27)
+    double tintGlow = 0;   // the milky sea's glow tonight (0 by day)
     // B-309: the sun's screen position and radius this frame (framebuffer pixels) and the strength of the veiling glare
     // drawn over the finished picture (0 = none: below the horizon, eclipsed, behind the camera)
     double sunSx = -1, sunSy = -1, sunRpx = 0, sunVeil = 0;
@@ -636,11 +680,16 @@ private:
     std::vector<VtxCache> vc0, vc1, vc2, vc3, vcN;
     void drawCometJets(Framebuffer& fb, double t);   // O4: dust jets venting from the sunlit ground of an active comet
     void drawGeysers(Framebuffer& fb, double t);     // R-307: the geysers (europan cracks, geyser basins, tectonic fumaroles and steady fountains)
+    void drawSpores(Framebuffer& fb, double t);      // P-03: the chemotroph's glowing spores over its springs at night (EV_SPRINGS)
+    void drawPlumes(Framebuffer& fb, double t);      // P-05: the cryovolcanic world's dark plumes and their flags (EV_PLUMES)
+    void drawSpringJets(Framebuffer& fb, double t);  // P-05: the dry ice world's jets through its spring frost (EV_SPRING_JETS)
+    void drawCurtains(Framebuffer& fb, double t);    // P-06: the tiger stripes' curtains of ice and the jets along them near the explorer (EV_CURTAINS)
     // R-307: one jet: a dense core column, a spray crown and a falling veil, `heightM` and `widthM` at full strength
-    struct JetSpec { double x, z; uint64_t h; double dist; double heightM, widthM; int bank; bool lava; };
+    struct JetSpec { double x, z; uint64_t h; double dist; double heightM, widthM; int bank; bool lava; double shadeAdd = 0; };   // P-05: shadeAdd darkens a jet of dust
     void drawJet(Framebuffer& fb, double t, const JetSpec& j, double strength);
     static double jetStrength(uint64_t h, double t, bool constant, double cycle, double duty);   // 0 off .. 1 full (1.35 in the first seconds of a burst)
     void drawFountains(Framebuffer& fb, double t);   // R-307: the lava fountains and the meteorite strikes (the eruption list), the dust devils
+    void drawStreetLamps(Framebuffer& fb);           // D-04 (TR_LIGHTS_LEFT_ON): a dead people's lamps still lit along its streets
     double heightNear(double x, double z, double dist, double& water);   // the cached height (and water level) at a distance from the camera, coarser far away
     double drawnGround(double x, double z, double dist, double& water, int& ring);   // A-02: the drawn ground: the near rings' within lod0's reach, a coarse ring's surface beyond (`ring` 0..3)
     int drawnRing(double dist) const { return dist < ringR[0] * 16.0 * 0.9 ? 0 : (dist < ringR[1] * 64.0 * 0.9 ? 1 : (dist < ringR[2] * 512.0 * 0.9 || !ringR[3] ? 2 : 3)); }
@@ -673,6 +722,10 @@ private:
     CoarseHit coarseAt(TerrainCache& c, double x, double z);
 public:
     static double basinJetStrength(uint64_t id, double t);   // R-307: the strength of a geyser basin's vent (its constant/cycle/duty by hash), for the drawing and the tests
+    static double burstJetStrength(uint64_t id, double t);   // P-01: a steam vent's bursts (EV_STEAM_BURSTS: its cycle and duty by hash)
+    bool springJetsNow(double t) const;              // P-05: the local spring with the sun up: the hemisphere's insolation rising from its winter
+    static double springJetStrength(uint64_t id, double t);   // P-05: a spider's jet (its cycle and duty by hash)
+    static bool plumeActive(uint64_t id) { return unitFromHash(mix64(id + 1)) < 0.5; }   // P-05: half the plume vents are active
     // B-313 (tests): after a render, per ring edge (near/lod0, lod0/lod1, lod1/lod2, lod2/lod3), the largest gap in metres
     // between the finer ring's edge vertices as drawn and the coarser ring's surface there (`seam`; the rings meet when
     // it is 0) and the gap the unmorphed vertices would have had (`raw`: what popped before). -1 where the edge is not drawn

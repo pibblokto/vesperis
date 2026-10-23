@@ -18,7 +18,7 @@ static const KeyAction KEY_ACTIONS[] = {
     {KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"}, {KEY_LEFT_SHIFT, "SPRINT"},
     {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
     {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"}, {KEY_R, "AIM / SCANNER"},
-    {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT"}};
+    {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 
 }
@@ -36,12 +36,12 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
         if (u >= 1) {
             surf.cameraOverrideAlt = -1;
             state = GameState::SURFACE;
-            status("LANDED - Q AT THE CAPSULE TO RETURN, H HELP", 6);
+            status(sys.sunless() && !surf.lamp ? "LANDED IN THE DARK - U THE LAMP, Q AT THE CAPSULE TO RETURN" : "LANDED - Q AT THE CAPSULE TO RETURN, H HELP", 6);   // D-04
             {
                 const Body& lb = sys.bodies[surf.site.body];
                 guide.landed.insert(Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, surf.site.body));
                 guide.typesSeen.insert(lb.type);
-                logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), PLANET_TYPES[lb.type].name,
+                logEvent("LANDING", fmt("%s (%s) %.1f%s %.1f%s, %+.0f C, %.2f ATM, %.2f G, %s", upper(bodyNameOf(surf.site.body)).c_str(), KINDS[lb.type].name,
                                         std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S", std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W",
                                         surf.env.temperatureC, surf.env.pressureAtm, lb.gravity / 9.8, surf.env.sun.altitude > 0 ? "DAY" : "NIGHT"));
                 walkMax = 0; lastWalkX = surf.player.x; lastWalkZ = surf.player.z; lastOdometer = 0; drivenLanding = 0; flownLanding = 0;
@@ -67,6 +67,14 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
     audio.surfaceOff();   // B-413: the capsule hears nothing of the ground, going down or up (its last level went on through the climb)
     surf.update(realDt, in, t, false);
     updateShipMotion(dt);
+}
+
+// Q-03: the sounds of the ground the surface cues into the synth's levels: the dunes' hum at their note, the ice's song, a quake's shaking and
+// its onset (consumed), all as much as the air carries (the wind's rule: a third of a bar and over whole, the thinnest air 0.15, none airless)
+void groundSoundsTo(SurfaceView& surf, AudioState& audio) {
+    audio.air = surf.site.atmosphere ? clampd(surf.env.pressureAtm * 3, 0.15, 1.0) : 0.0;
+    audio.dunes = surf.duneSong; audio.duneHz = surf.duneHz; audio.ice = surf.iceSong; audio.quake = surf.quake;
+    if (surf.quakeCue > 0) { audio.quakeHit = surf.quakeCue; surf.quakeCue = 0; }
 }
 
 void Game::updateSurface(const Input& in, double dt, double realDt) {
@@ -156,6 +164,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         visionMode = (visionMode + 1) % 5; status(names[visionMode], 3); audio.beep = 4;
     }
     if (in.wasPressed(KEY_TAB) && !in.ctrl()) { readings = !readings; audio.beep = 4; }   // R-414: the readings in and out of the view
+    if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); audio.beep = 4; }   // D-04: the helmet lamp
     if (in.wasPressed(KEY_N) && !in.ctrl()) { returnState = GameState::SURFACE; state = GameState::SECTOR_MAP; mapCurX = surf.player.x; mapCurZ = surf.player.z; mapDelMark = -1; audio.beep = 4; return; }   // M4-02; R-408: the cursor on the explorer
     if (in.wasPressed(KEY_X) && !in.ctrl()) { surf.highlightUntil = realTime + 4.0; status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3); }   // M4-05/N3-06
     // N3: first sightings go to the log and the statistics
@@ -223,7 +232,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     }
     {   // N2-06: leaves in the wind where the canopy is dense, plus the rustle of walking through undergrowth
         audio.leaves = 0;
-        if (surf.site.gen.type == PT_FELISIAN) {
+        if (kindHas(surf.site.gen.type, KT_FLORA)) {
             const TerrainVertex& tvp = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16));
             if (tvp.material == MAT_FOREST || tvp.material == MAT_GRASS) {
                 double dens = surf.canopyDensityAt(surf.player.x, surf.player.z, tvp.veg) * (tvp.material == MAT_FOREST ? 1.0 : 0.35);
@@ -237,13 +246,18 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         audio.hoofs = surf.hoofLevel;
         bool waterNear2 = false;
         for (int k = 0; k < 4 && !waterNear2; k++) { double a = k * PI / 2; waterNear2 = surf.site.waterAt(surf.player.x + std::cos(a) * 30, surf.player.z + std::sin(a) * 30) > -1e8; }
-        audio.insects = (surf.site.gen.type == PT_FELISIAN && waterNear2 && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
+        audio.insects = (kindHas(surf.site.gen.type, KT_FLORA) && waterNear2 && surf.env.skyBrightness > 0.05 && surf.env.skyBrightness < 0.45 && surf.env.temperatureC > 5) ? 0.5 : 0;
     }
     audio.rain = std::max(surf.env.rain, surf.env.hail);
     updateForecast();   // W-03
     if (surf.env.dust > 0.05) audio.wind = std::min(1.0, audio.wind + 0.8 * surf.env.dust);
     if (surf.eruptionCue > 0) { audio.thunder = 0.6; surf.eruptionCue = 0; }
-    audio.lava = surf.site.gen.type == PT_MOLTEN ? 0.4 : (surf.site.gen.type == PT_TECTONIC ? 0.35 + 0.6 * surf.quake : 0);   // R-307: the tectonic world rumbles, more so in a quake
+    {   // P-00: the kind's rumble (the molten ground's, R-307: a tectonic world's, more so in a quake)
+        const KindDef& K = KINDS[surf.site.gen.type];
+        audio.lava = K.rumbleQuake != 0 ? K.rumble + K.rumbleQuake * surf.quake : K.rumble;
+        if (K.nightSideC > -1e8 && surf.site.gen.locked) audio.lava *= smoothstep(-0.25, 0.1, surf.env.sun.dirLocal.y);   // P-01: on a magma ocean's night side nothing moves
+    }
+    groundSoundsTo(surf, audio);   // Q-03
     if (surf.env.rain > 0.5 && flashTimer <= 0) {
         Rng r((uint64_t)(realTime * 100));
         if (r.chance(0.002)) { flashTimer = 2.0; audio.thunder = 0.8; }
@@ -302,7 +316,7 @@ void Game::renderHelp() {
         "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
         "M  WAYPOINT AT THE CROSSHAIR   K  CALL THE CAPSULE",
         "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
-        "L             MARK WHERE THE CROSSHAIR RESTS",
+        "L / U         MARK AT THE CROSSHAIR / THE LAMP",   // D-04
         "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
         "TAB           THE READINGS: TIME, SUN, AIR, GROUND",   // R-414
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
@@ -502,7 +516,7 @@ void Game::renderSystemList() {
         std::string line = fmt("%s%-18.18s %-10s %10s%s%s", b.parent >= 0 ? "  " : "", upper(bodyNameOf(i)).c_str(), shortType(b.type),
                                distanceString(d).c_str(), b.rings ? " R" : "", b.moonCount ? fmt(" %dM", b.moonCount).c_str() : "");
         if (b.type == PT_COMET) line += fmt(" %.0f KM/S", length(sys.bodyVel(i, t)));   // N0-01: comets are the only bodies that visibly hurry
-        uint32_t col = i == listSel ? HUD_WHITE : (i == ship.localTarget ? HUD_AMBER : (PLANET_TYPES[b.type].landable ? HUD_GREEN : HUD_DIM));
+        uint32_t col = i == listSel ? HUD_WHITE : (i == ship.localTarget ? HUD_AMBER : (KINDS[b.type].landable ? HUD_GREEN : HUD_DIM));
         drawText(canvas, 14, listY + r * 9, line.c_str(), col);
         if (i == listSel) drawText(canvas, 6, listY + r * 9, ">", HUD_AMBER);
     }
@@ -535,7 +549,7 @@ std::string Game::forecastLine() const {
     for (const FrontForecast& f : forecast) {
         if (f.tClear <= t) continue;
         if (f.tArrive <= t) return fmt("IN A %sFRONT, CLEARING IN %s", f.dust ? "DUST " : "", countdownString(f.tClear - t).c_str());
-        const char* what = f.dust ? "DUST" : (b.type == PT_QUARTZ ? "A FRONT" : (surf.env.temperatureC < -1 ? "SNOW" : "RAIN"));
+        const char* what = f.dust ? "DUST" : (!kindHas(b.type, KT_FRONT_RAIN) ? "A FRONT" : (surf.env.temperatureC < -1 ? "SNOW" : "RAIN"));
         return fmt("%s FROM THE %s IN %s", what, frontCompass(f.fromBearing), countdownString(f.tArrive - t).c_str());
     }
     return "NO FRONT WITHIN 5 DAYS";
@@ -550,9 +564,9 @@ std::string Game::testFrontInfo() const {
 }
 
 void Game::renderDataSheet() {
-    if (dataPage > 0) {   // X-04: a probe's profile
+    if (dataPage >= dataSheetPages) {   // X-04: a probe's profile (Q-01: after the sheet's pages)
         const std::vector<int> pr = dataProbes();
-        if (dataPage <= (int)pr.size()) { renderProbeProfile(pr[dataPage - 1]); return; }
+        if (dataPage - dataSheetPages < (int)pr.size()) { renderProbeProfile(pr[dataPage - dataSheetPages]); return; }
         dataPage = 0;
     }
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
@@ -586,33 +600,54 @@ void Game::renderDataSheet() {
     }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { drawTextCentered(canvas, UW / 2, 90, "NO LOCAL TARGET", HUD_DIM); return; }
     const Body& b = sys.bodies[bi];
-    line(fmt("%s", upper(bodyNameOf(bi)).c_str()), HUD_AMBER);
-    line(fmt("%s%s", PLANET_TYPES[b.type].name, b.parent >= 0 ? fmt(" - MOON OF %s", trunc(upper(bodyNameOf(b.parent)), 20).c_str()).c_str() : ""), HUD_GREEN);
-    for (const std::string& w : wrapText(upper(PLANET_TYPES[b.type].description), 50)) line(w, HUD_DIM);
-    for (const std::string& w : wrapText(upper(describeBody(b, spaceR.genFor(b))), 50)) line(w, HUD_CYAN);   // M9-14
-    { std::string tl = traitList(spaceR.genFor(b)); if (!tl.empty()) line(fmt("TRAITS      %s", tl.c_str()), HUD_AMBER); }   // R-304
+    // Q-01: the body's sheet in sections (the world, its numbers, the place, the star) laid over pages (RIGHT): a section kept whole on a
+    // page where it fits a page, a sheet that fits one drawn as it always was (the sentence, six traits and the facts ran past the footer
+    // on half the worlds; a fifth already had)
+    struct SheetLine { std::string s; uint32_t c; int sec; bool gap; };
+    std::vector<SheetLine> sheet; int sec = 0; bool gap = false;
+    auto put = [&](const std::string& s, uint32_t c) { sheet.push_back({s, c, sec, gap}); gap = false; };
+    auto section = [&](bool withGap) { sec++; gap = withGap; };
+    put(fmt("%s", upper(bodyNameOf(bi)).c_str()), HUD_AMBER);
+    put(fmt("%s%s", KINDS[b.type].name, b.parent >= 0 ? fmt(" - MOON OF %s", trunc(upper(bodyNameOf(b.parent)), 20).c_str()).c_str() : ""), HUD_GREEN);
+    for (const std::string& w : wrapText(upper(KINDS[b.type].description), 50)) put(w, HUD_DIM);
+    for (const std::string& w : wrapText(upper(describeBody(b, spaceR.genFor(b))), 50)) put(w, HUD_CYAN);   // M9-14
+    {   // R-304: the traits (Q-01: six slots, on two lines), and the facts read from the orbit and the spin on one
+        const std::string tl = traitList(spaceR.genFor(b)), fl = factList(sys, bi);
+        bool first = true;
+        if (!tl.empty()) for (const std::string& w : wrapText(tl, 38)) { put(fmt("%s%s", first ? "TRAITS      " : "            ", w.c_str()), HUD_AMBER); first = false; }
+        first = true;
+        if (!fl.empty()) for (const std::string& w : wrapText(fl, 38)) { put(fmt("%s%s", first ? "FACTS       " : "            ", w.c_str()), HUD_AMBER); first = false; }
+    }
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {
         int bio = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16)).biome;
-        std::string sn = seasonName(surf.site.season, surf.site.lat0, b.axialTilt);
-        if (bio || !sn.empty()) line(fmt("HERE        %s%s%s", bio ? BIOME_NAMES[bio] : "", (bio && !sn.empty()) ? ", " : "", sn.c_str()), HUD_AMBER);
+        std::string sn = sys.sunless() ? std::string() : seasonName(surf.site.season, surf.site.lat0, b.axialTilt);   // D-01: no sun, no season
+        if (bio || !sn.empty()) put(fmt("HERE        %s%s%s", bio ? BIOME_NAMES[bio] : "", (bio && !sn.empty()) ? ", " : "", sn.c_str()), HUD_AMBER);
     }
-    y += 3;
-    line(fmt("RADIUS      %.0f KM   MASS %.3f EARTHS   TILT %.1f%c", b.radiusKm, b.massEarths, b.axialTilt / DEG, CH_DEGREE), HUD_GREEN);
-    line(fmt("GRAVITY     %.2f G (%.1f M/S2)   EQUILIBRIUM %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
-    line(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "ITS SUN" : "ITS PLANET") : "THE STAR", b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
-    line(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : (b.locked ? " (LOCKED)" : "")), HUD_GREEN);
+    section(true);
+    put(fmt("RADIUS      %.0f KM   MASS %.3f EARTHS   TILT %.1f%c", b.radiusKm, b.massEarths, b.axialTilt / DEG, CH_DEGREE), HUD_GREEN);
+    if (sys.sunless()) {   // D-01: a drifter's worlds have no equilibrium (their warmth is their own) and the drifter no orbit
+        put(fmt("GRAVITY     %.2f G (%.1f M/S2)   OWN HEAT %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
+        if (b.parent < 0) put("ORBIT       NONE - ADRIFT BETWEEN THE STARS", HUD_GREEN);
+        else put(fmt("ORBIT       %s FROM ITS PLANET%s", distanceString(b.orbitRadiusKm).c_str(), b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
+        if (b.parent < 0) put(fmt("PERIOD      NONE   ROTATION %.2f H%s", std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
+        else put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
+    } else {
+    put(fmt("GRAVITY     %.2f G (%.1f M/S2)   EQUILIBRIUM %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
+    put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "ITS SUN" : "ITS PLANET") : "THE STAR", b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
+    put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : (b.locked ? " (LOCKED)" : "")), HUD_GREEN);
+    }
     if (b.type == PT_COMET) {   // N0-01: where it is now on its plunge
-        line(fmt("NOW         %s FROM THE STAR", distanceString(length(sys.bodyPos(bi, t) - sys.star.pos)).c_str()), HUD_CYAN);
-        line(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
+        put(fmt("NOW         %s FROM THE STAR", distanceString(length(sys.bodyPos(bi, t) - sys.star.pos)).c_str()), HUD_CYAN);
+        put(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
     }
-    line(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", PLANET_TYPES[b.type].atmosphere ? "YES" : "NONE", b.moonCount, b.rings ? "   RINGS" : "", PLANET_TYPES[b.type].landable ? "YES" : "NO"), PLANET_TYPES[b.type].landable ? HUD_GREEN : HUD_RED);
+    put(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", KINDS[b.type].atmosphere ? (airFrozen(b) ? "FROZEN" : "YES") : "NONE", b.moonCount, b.rings ? "   RINGS" : "", KINDS[b.type].landable ? "YES" : "NO"), KINDS[b.type].landable ? HUD_GREEN : HUD_RED);
     {   // R-402: the magnetic field and what it means for the nights (the star's class counts too)
         int mc = magneticClass(magneticField(b));
         double quiet = auroraPotentialAt(sys, b, 0), peak = auroraPotentialAt(sys, b, 1);
         const char* hint = quiet > 0.15 ? "   AURORAE ON MOST NIGHTS" : (peak > 0.3 ? "   AURORAE IN STORMS" : (peak > 0.12 ? "   A FAINT AURORA IN A GREAT STORM" : ""));
-        line(fmt("MAGNETIC    %s%s", MAGNETIC_CLASS_NAMES[mc], hint), HUD_GREEN);
+        put(fmt("MAGNETIC    %s%s", MAGNETIC_CLASS_NAMES[mc], hint), HUD_GREEN);
     }
-    y += 3;
+    section(true);
     // M5-06 seasons readout, M5-09 what is up in the sky (surface only)
     if (surf.valid && returnState == GameState::SURFACE && bi == surf.site.body) {
         double lat = surf.site.lat0;
@@ -631,10 +666,11 @@ void Game::renderDataSheet() {
             prev = v; prevD = d;
         }
         auto hours = [&](double secs) { return secs < 0 ? std::string("-") : (secs > 48 * 3600 ? fmt("%.0f D", secs / 86400) : fmt("%.0f H", secs / 3600)); };
-        if (b.axialTilt > 0.5 * DEG) line(fmt("SEASON      DECL %+.1f%c  %s  EQUINOX IN %s  SOLSTICE IN %s", dec / DEG, CH_DEGREE, dayLen.c_str(), hours(toEq).c_str(), hours(toSol).c_str()), HUD_AMBER);
+        if (sys.sunless()) put("SEASON      NONE - NO SUN, NO DAY", HUD_AMBER);   // D-01
+        else if (b.axialTilt > 0.5 * DEG) put(fmt("SEASON      DECL %+.1f%c  %s  EQUINOX IN %s  SOLSTICE IN %s", dec / DEG, CH_DEGREE, dayLen.c_str(), hours(toEq).c_str(), hours(toSol).c_str()), HUD_AMBER);
         else line(fmt("SEASON      NONE (NO TILT)  %s", dayLen.c_str()), HUD_AMBER);
         bool forecastShown = false;
-        { std::string fc = forecastLine(); if (!fc.empty()) { line(fmt("FORECAST    %s", fc.c_str()), HUD_AMBER); forecastShown = true; } }   // W-03
+        { std::string fc = forecastLine(); if (!fc.empty()) { put(fmt("FORECAST    %s", fc.c_str()), HUD_AMBER); forecastShown = true; } }   // W-03
         std::string sky;
         int nsky = 0;
         Mat3 L = surf.site.localFrame(t);
@@ -652,8 +688,8 @@ void Game::renderDataSheet() {
         std::sort(up.begin(), up.end(), [](auto& a, auto& b2) { return a.first > b2.first; });
         for (auto& u : up) { if (nsky++ >= 2) break; sky += (sky.empty() ? "" : ", ") + u.second; }
         if (up.size() > 2) sky += fmt(" +%d", (int)up.size() - 2);
-        line(fmt("IN THE SKY  %s", sky.empty() ? "NOTHING ABOVE THE HORIZON" : sky.c_str()), HUD_AMBER);
-        if (surf.env.hasSun2) line(fmt("SECOND SUN  %s AT %+.0f%c", upper(bodyNameOf(sys.companion)).c_str(), surf.env.sun2.altitude / DEG, CH_DEGREE), HUD_AMBER);
+        put(fmt("IN THE SKY  %s", sky.empty() ? "NOTHING ABOVE THE HORIZON" : sky.c_str()), HUD_AMBER);
+        if (surf.env.hasSun2) put(fmt("SECOND SUN  %s AT %+.0f%c", upper(bodyNameOf(sys.companion)).c_str(), surf.env.sun2.altitude / DEG, CH_DEGREE), HUD_AMBER);
         if (!surf.bestiary.species.empty()) {   // N3-01: the world's bestiary, sighted species marked
             std::string life;
             for (int i = 0; i < (int)surf.bestiary.species.size(); i++) {
@@ -661,12 +697,45 @@ void Game::renderDataSheet() {
                 life += (life.empty() ? "" : ", ") + upper(sp.name) + (surf.seenSpecies.count(i) ? "*" : "") + " (" + shortPlan(sp.plan) + ")";
             }
             std::vector<std::string> ws = wrapText("LIFE        " + life, 52);
-            for (size_t w = 0; w < ws.size() && w < (forecastShown ? 2u : 3u); w++) line(ws[w], HUD_AMBER);   // W-03: the forecast takes the third life line's row (the sheet was already past the frame on a world of many species)
+            for (size_t w = 0; w < ws.size() && w < (forecastShown ? 2u : 3u); w++) put(ws[w], HUD_AMBER);   // W-03: the forecast takes the third life line's row (the sheet was already past the frame on a world of many species)
         }
     }
-    if (settings.clockMode == 1) line("CLOCK       REAL TIME (UTC)", HUD_DIM);
-    line(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
-    line(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
-    for (const std::string& w : wrapText(upper(describeStar(sys.star)), 50)) line(w, HUD_DIM);
-    drawTextCentered(canvas, UW / 2, UH - 10, dataProbes().empty() ? "T THE ALMANAC  ANY OTHER KEY CLOSES" : "T THE ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES", HUD_DIM);   // X-04: a giant's probes
+    section(false);
+    if (settings.clockMode == 1) put("CLOCK       REAL TIME (UTC)", HUD_DIM);
+    if (sys.sunless()) put("STAR        NONE", HUD_CYAN);   // D-01: the drifter's place is no star (its name is the world's)
+    else {
+        put(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
+        put(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
+    }
+    for (const std::string& w : wrapText(upper(describeStar(sys.star)), 50)) put(w, HUD_DIM);
+    {   // the pages: a line's top at UH - 18 at most (its glyphs clear of the footer at UH - 10); a page after the first under the world's name
+        // again, its number left of the clock
+        const int top = y, last = UH - 18;
+        std::vector<int> ys(sheet.size()), pg(sheet.size());
+        int page = 0, yy = top;
+        for (size_t i = 0; i < sheet.size(); i++) {
+            const int first = page == 0 ? top : top + 9;   // the page's first line under its title
+            const bool starts = i > 0 && sheet[i].sec != sheet[i - 1].sec;
+            if (starts && yy > first) {
+                size_t j = i; while (j < sheet.size() && sheet[j].sec == sheet[i].sec) j++;
+                const int h = 9 * (int)(j - i) - 9;   // the section's last line's top, from its first's
+                if (yy + (sheet[i].gap ? 3 : 0) + h > last && top + 9 + h <= last) { page++; yy = top + 9; }
+                else if (sheet[i].gap) yy += 3;
+            }
+            if (yy > last) { page++; yy = top + 9; }
+            ys[i] = yy; pg[i] = page; yy += 9;
+        }
+        dataSheetPages = page + 1;
+        const int show = std::min(dataPage, page);
+        dataSheetBottom = top;
+        for (size_t i = 0; i < sheet.size(); i++) {
+            dataSheetBottom = std::max(dataSheetBottom, ys[i] + 9);
+            if (pg[i] == show) drawText(canvas, 10, ys[i], sheet[i].s.c_str(), sheet[i].c);
+        }
+        if (show > 0) drawText(canvas, 10, top, sheet[0].s.c_str(), sheet[0].c);
+        if (dataSheetPages > 1) { const std::string pn = fmt("%d/%d", show + 1, dataSheetPages); drawText(canvas, UW - 10 - textWidth(epocFullString().c_str()) - 12 - textWidth(pn.c_str()), top, pn.c_str(), HUD_DIM); }
+    }
+    const char* foot = dataPage == 0 ? (dataSheetPages > 1 ? "T THE ALMANAC  RIGHT MORE  ANY OTHER KEY CLOSES" : (dataProbes().empty() ? "T THE ALMANAC  ANY OTHER KEY CLOSES" : "T THE ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES"))
+                                     : "RIGHT MORE  LEFT BACK  ANY OTHER KEY CLOSES";   // X-04: a giant's probes; Q-01: the sheet's pages
+    drawTextCentered(canvas, UW / 2, UH - 10, foot, HUD_DIM);
 }

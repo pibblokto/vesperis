@@ -112,7 +112,7 @@ void Game::prefetchShardWorld(int sel) {
     if (sel < 0 || sel >= (int)shardWorldKeys.size()) return;
     const std::string& key = shardWorldKeys[sel];
     int64_t sx, sy, sz; if (!Guide::parseStarKey(key, sx, sy, sz)) return;
-    Star st; if (!starInSector(sx, sy, sz, st, true)) return;
+    Star st; if (!placeInSector(sx, sy, sz, st, true)) return;
     StarSystem wsys; wsys.generate(st);
     const int bi = bodyOfKey(key);
     if (bi < 0 || bi >= (int)wsys.bodies.size()) return;
@@ -127,7 +127,7 @@ bool Game::openShardWorld(const std::string& key, int which) {
     toldValid = false; told = ToldHistory(); legendRows.clear(); legendSel = 0; legendTop = 0; shardsFilter = 0;   // H-06: the pages read the new world
     int64_t sx, sy, sz; if (!Guide::parseStarKey(key, sx, sy, sz)) return false;
     int bi = bodyOfKey(key);
-    Star s; if (!starInSector(sx, sy, sz, s, true)) return false;
+    Star s; if (!placeInSector(sx, sy, sz, s, true)) return false;
     return buildShardWorld(shardWorld, s, bi, which);
 }
 
@@ -202,7 +202,7 @@ void Game::listShardWorlds() {
     for (const auto& kv : held) {
         int peoples = 1; std::string names[2]; int totals[2] = {SHARDS_PER_WORLD, SHARDS_PER_WORLD};
         int64_t sx, sy, sz; Star s;
-        if (Guide::parseStarKey(kv.first, sx, sy, sz) && starInSector(sx, sy, sz, s, true)) {
+        if (Guide::parseStarKey(kv.first, sx, sy, sz) && placeInSector(sx, sy, sz, s, true)) {
             StarSystem wsys; wsys.generate(s); int bi = bodyOfKey(kv.first);
             if (bi >= 0 && bi < (int)wsys.bodies.size()) {
                 BodyGen g = BodyGen::make(wsys.bodies[bi]);
@@ -431,7 +431,7 @@ void Game::updateShards(const Input& in, double realDt) {
         if (in.wasPressed(KEY_ESCAPE)) { chartT = -1; shardsLevel = 1; return; }   // a first reading left early is not read: it waits again next time
         if (enterKey(in)) {
             if (reading) { chartT = -1; markShardRead(); }   // Enter skips the wait
-            else if (shardWorld.chart.valid) { Star full; if (starInSector(shardWorld.chart.mark.star.sx, shardWorld.chart.mark.star.sy, shardWorld.chart.mark.star.sz, full, true)) setRemoteStar(full); }   // or targets the marked star
+            else if (shardWorld.chart.valid) { Star full; if (placeInSector(shardWorld.chart.mark.star.sx, shardWorld.chart.mark.star.sy, shardWorld.chart.mark.star.sz, full, true)) setRemoteStar(full); }   // or targets the marked star
             return;
         }
         if (in.wasPressed(KEY_O) && !reading && shardWorld.chart.valid) { holdChart(!(chartUp && chartHeldKey == shardWorld.key && chartHeldIndex == shardWorld.base + idx)); return; }

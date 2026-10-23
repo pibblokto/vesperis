@@ -81,7 +81,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
             double la = r.range(-70 * DEG, 70 * DEG), lo = r.range(-PI, PI);
             int mat = m.materialAt(lo, la);
             Vec3 u = StarSystem::bodyFromLatLon(la, lo);
-            if (mat != MAT_WATER && dot(u, sunB) > 0.2) { landLat = la; landLon = lo; break; }
+            if (mat != MAT_WATER && (sys.sunless() || dot(u, sunB) > 0.2)) { landLat = la; landLon = lo; break; }   // D-02: no side lit where there is no sun
         }
     }
     if (in.wasPressed(KEY_C)) mapClouds = !mapClouds;   // the original's cloud filter
@@ -140,8 +140,8 @@ void Game::updateLandingMap(const Input& in, double dt) {
 void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
     const BodyGen& g = spaceR.genFor(b);
     RGB lightC = lerp(sys.star.color, RGB(1, 1, 1), 0.5f);
-    lf = clampd(sys.lightAt(sys.bodyPos(b.index, t), t).factor, 0, 1.15);
-    atmo = PLANET_TYPES[b.type].atmosphere;
+    lf = sys.sunless() ? 1.0 : clampd(sys.lightAt(sys.bodyPos(b.index, t), t).factor, 0, 1.15);   // D-02: the survey's colours at the noon stop
+    atmo = bodyHasAir(b);   // D-04
     RGB skyL; bool hasSky = false;
     if (atmo) {
         RGB zen, hor;
@@ -151,11 +151,29 @@ void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
     for (int mm = 0; mm < MAT_COUNT; mm++) ramps[mm] = materialRamp(g.matColor[mm] * lightC, hasSky ? &skyL : nullptr, 1.0);
 }
 
-uint32_t Game::mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade) {
+// D-02: the survey look of a world with no sun, the ship's altimeter and not its camera (the maps went black at a light of 0): the ground's
+// colour at the noon stop, two parts in three the radar camera's cold phosphor, its brightness by the height (the map's lows dark, its highs
+// pale) times the relief's hillshade; lava keeps its glow
+uint32_t Game::mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey) {
+    if (survey >= 0 && mat != MAT_LAVA) {
+        const RGB c = materialRampColor(ramps[mat], clampd(noonStop(albedo), 0, 63));
+        const double k = (0.45 + 0.7 * clampd(survey, 0, 1)) * shade, l = clampd((0.3 * c.r + 0.59 * c.g + 0.11 * c.b) * k, 0, 1) * 255;
+        const RGB ph((float)((10 + 0.55 * l) / 255), (float)((14 + 1.0 * l) / 255), (float)((16 + 0.92 * l) / 255));
+        const RGB o = lerp(ph, c * (float)k, 0.35f);
+        return rgb(clampi((int)(o.r * 255), 0, 255), clampi((int)(o.g * 255), 0, 255), clampi((int)(o.b * 255), 0, 255));
+    }
     RGB c = materialRampColor(ramps[mat], clampd(exposureStop(albedo, lf, atmo) * shade, 0, 63));
     double r = c.r * 255, gg = c.g * 255, bl = c.b * 255;
     if (mat == MAT_LAVA) { r = 255; gg = 110 + 80 * albedo; bl = 20; }
     return rgb(clampi((int)r, 0, 255), clampi((int)gg, 0, 255), clampi((int)bl, 0, 255));
+}
+
+void Game::surveyRange(const float* h, size_t n, double& lo, double& hi) {
+    std::vector<float> s; s.reserve(n / 7 + 1);
+    for (size_t i = 0; i < n; i += 7) s.push_back(h[i]);
+    if (s.empty()) { lo = 0; hi = 1; return; }
+    std::sort(s.begin(), s.end());
+    lo = s[s.size() * 2 / 100]; hi = s[std::min(s.size() - 1, s.size() * 98 / 100)];
 }
 
 void Game::buildLandingMapBase() {
@@ -175,16 +193,18 @@ void Game::buildLandingMapBase() {
     for (int y = 0; y < H; y += 2)
         for (int x = 0; x < W; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
     double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
+    const bool survey = sys.sunless();   // D-02: the altimeter's map (no clouds: it reads the ground)
+    double hLo = 0, hHi = 1; if (survey) surveyRange(m.height.data(), m.height.size(), hLo, hHi);
     for (int y = 0; y < H; y++)
         for (int x = 0; x < W; x++) {
             int i = y * W + x;
             int mat = m.material[i];
             double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
             double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);   // light from the north-west
-            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade);
+            uint32_t base = mapColor(ramps, mat, m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1);
             double r = base & 255, gg = (base >> 8) & 255, bl = (base >> 16) & 255;
             if (mat == MAT_LAVA) mapEmissive[i] = 1;
-            if (mapClouds && atmo) {
+            if (mapClouds && atmo && !survey) {
                 if (hasOpaqueDeck(b.type)) {
                     // an opaque cloud deck: the pattern only modulates its brightness; C shows the ground
                     double cl = 0.55 + 0.45 * (m.cloud[i] / 255.0);
@@ -247,14 +267,26 @@ void Game::buildLandingZoom() {
     for (int y = 0; y < ZH; y += 2)
         for (int x = 0; x < ZW; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
     double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * texelM));   // a 3% grade at most for full shading
+    const bool survey = sys.sunless();   // D-02: the window's heights the survey's (its lows dark, its highs pale)
+    double hLo = 0, hHi = 1; if (survey) surveyRange(hs.data(), hs.size(), hLo, hHi);
     for (int y = 0; y < ZH; y++)
         for (int x = 0; x < ZW; x++) {
             int i = y * ZW + x;
             double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1);
             double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-            zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade);
+            zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade, survey ? surveyHeight(hs[i], hLo, hHi) : -1);
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
+    if (g.tideRangeM > 0) {   // Q-02: the tide lines over the flats (the high water's pale, the low water's dark), as the sector map draws them
+        const double S = g.liquidLevel > -1e8 ? g.liquidLevel : 0.0;
+        for (int y = 0; y + 1 < ZH; y++)
+            for (int x = 0; x + 1 < ZW; x++) {
+                const int i = y * ZW + x;
+                const double Rl = tideRangeAt(g, zoomUnit[i]), hi = S + 0.5 * Rl, lo = S - 0.5 * Rl, h0 = hs[i], hr = hs[i + 1], hd = hs[i + ZW];
+                if ((h0 - hi) * (hr - hi) < 0 || (h0 - hi) * (hd - hi) < 0) zoomImg[i] = rgb(232, 226, 204);
+                else if ((h0 - lo) * (hr - lo) < 0 || (h0 - lo) * (hd - lo) < 0) zoomImg[i] = rgb(40, 62, 120);
+            }
+    }
     zoomPart(1);
     zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // C-09: the old roads of the window (`galaxy/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
     zoomCivImg = zoomImg; zoomPlaces.clear();   // R-415: the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
@@ -430,6 +462,7 @@ void Game::renderLandingMap() {
     const PlanetMap& m = *mp;
     Mat3 frame = sys.bodyFrame(landBody, t);
     Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
+    const double dayFloor = sys.sunless() ? 1.0 : 0.22;   // D-02: the survey has no night side
     const int S = FB_SCALE;
     if (mapBaseSeed != b.seed || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();
     static std::vector<Vec3> unitLUT;   // body-frame unit vector per texel
@@ -442,7 +475,7 @@ void Game::renderLandingMap() {
     refreshMapShadows(unitLUT);   // O0-04: the moons', the parent's and the rings' shadows on the day side
     const int PW = MAP_LW * S, PH = MAP_LH * S;
     // W-03: the fronts' bands (the same overlay the globe draws), under the cloud filter like the pattern's cloud
-    const SpaceRenderer::FrontMap* fmc = mapClouds && PLANET_TYPES[b.type].atmosphere && !hasOpaqueDeck(b.type) ? spaceR.frontsFor(b, t) : nullptr;
+    const SpaceRenderer::FrontMap* fmc = mapClouds && bodyHasAir(b) && !hasOpaqueDeck(b.type) ? spaceR.frontsFor(b, t) : nullptr;
     const std::vector<uint8_t>* fm = fmc ? &fmc->cloud : nullptr;
     if (fm && landZoom && !zoomUnit.empty() && (zoomFront.size() != zoomUnit.size() || std::fabs(t - zoomFrontT) > 240 || zoomFrontLat != zoomLat || zoomFrontLon != zoomLon)) {
         zoomFront.resize(zoomUnit.size()); zoomFrontT = t; zoomFrontLat = zoomLat; zoomFrontLon = zoomLon;
@@ -469,7 +502,7 @@ void Game::renderLandingMap() {
                     if (i != lastI) {
                         lastI = i;
                         double lit = dot(zoomUnit[i], sunB);
-                        double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
+                        double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
                         if (zoomEmissive[i]) l = std::max(l, 0.95);
                         uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // R-415: the cores with the peoples
                         if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
@@ -482,7 +515,7 @@ void Game::renderLandingMap() {
         for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
             const auto& poly = zoomRoads[ri];
             int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
-            double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
+            double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
             uint32_t c = zoomImg[i];
             // T-01: by its kind: a path fainter, a railway darker, a highway and a maglev's pylons pale, a canal's channel blue-dark
             const int kind = ri < zoomRoadKinds.size() ? zoomRoadKinds[ri] : NK_ROAD;
@@ -517,7 +550,7 @@ void Game::renderLandingMap() {
                         lastTx = tx;
                         int i = ty * PlanetMap::W + tx;
                         double lit = dot(unitLUT[i], sunB);
-                        double l = 0.22 + 0.78 * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
+                        double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, lit) * (mapShadow.size() == unitLUT.size() ? 1 - 0.9 * mapShadow[i] / 255.0 : 1.0);
                         if (mapEmissive[i]) l = std::max(l, 0.95);
                         uint32_t c = mapBase[i];
                         if (fm && (*fm)[i]) c = withFront(c, (*fm)[i] / 255.0);
@@ -609,22 +642,24 @@ void Game::renderLandingMap() {
                          landLat >= 0 ? "N" : "S", std::fabs(landLon / DEG), CH_DEGREE, landLon >= 0 ? "E" : "W", sectorName(landLat / DEG, landLon / DEG).c_str());
     drawText(canvas, 8, ry, l1.c_str(), HUD_GREEN);
     const char* phase = si.altitude > 0.05 ? "DAY" : (si.altitude > -0.1 ? "TWILIGHT" : "NIGHT");
+    const bool noSun = sys.sunless();   // D-02: the lines of a world with no sun: its colour as a lamp will show it, no sun, its turn
     // N1-04/06: what you will see: material, elevation, relief class, and the ground colour at noon as a swatch
     std::string l2 = fmt("%s %+.0fM  %s", MATERIAL_NAMES[mat], hgt, reliefClass(siteSlope(probe)));
     drawText(canvas, 8, ry + 8, l2.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     {
         const BodyGen& g = spaceR.genFor(b);
-        RGB gc = materialRampColor(g.matColor[mat] * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, clampd(si.lightFactor, 0, 1.15), PLANET_TYPES[b.type].atmosphere));
+        RGB gc = materialRampColor(g.matColor[mat] * lerp(sys.star.color, RGB(1, 1, 1), 0.5f), exposureStop(tvp.albedo, noSun ? 1.0 : clampd(si.lightFactor, 0, 1.15), bodyHasAir(b)));
         int sx0 = 8 + textWidth(l2.c_str()) + 8;
         drawText(canvas, sx0, ry + 8, "GROUND", HUD_DIM);
         int bx = sx0 + textWidth("GROUND") + 4;
         blendRectRGB(canvas, bx, ry + 7, bx + 23, ry + 14, rgb((int)(gc.r * 255), (int)(gc.g * 255), (int)(gc.b * 255)), 255);
         drawRectRGB(canvas, bx - 1, ry + 6, bx + 24, ry + 15, HUD_DIM);
     }
-    std::string sn = tvp.biome ? seasonName(probe.season, landLat, b.axialTilt) : "";
-    std::string l3 = fmt("%s%s%s%sSUN %+.0f%c AZ %03.0f%c %s", tvp.biome ? BIOME_NAMES[tvp.biome] : "", (tvp.biome && !sn.empty()) ? ", " : "", sn.c_str(), tvp.biome ? "  " : "",
-                         si.altitude / DEG, CH_DEGREE, si.azimuth / DEG, CH_DEGREE, phase);
-    if (b.type == PT_FELISIAN && tvp.biome) {   // N3-04: the species most likely met here
+    std::string sn = tvp.biome && !sys.sunless() ? seasonName(probe.season, landLat, b.axialTilt) : "";   // D-01: no sun, no season
+    std::string l3 = noSun ? fmt("%s%sNO SUN - THE DARK", tvp.biome ? BIOME_NAMES[tvp.biome] : "", tvp.biome ? "  " : "")
+                           : fmt("%s%s%s%sSUN %+.0f%c AZ %03.0f%c %s", tvp.biome ? BIOME_NAMES[tvp.biome] : "", (tvp.biome && !sn.empty()) ? ", " : "", sn.c_str(), tvp.biome ? "  " : "",
+                                 si.altitude / DEG, CH_DEGREE, si.azimuth / DEG, CH_DEGREE, phase);
+    if (kindHas(b.type, KT_FLORA) && tvp.biome) {   // N3-04: the species most likely met here
         Bestiary B = Bestiary::make(b, spaceR.genFor(b));
         int spi = B.pickLand(hash2i((int64_t)(landLat * 100), (int64_t)(landLon * 100), b.seed), tvp.biome);
         if (spi >= 0 && tvp.biome != BIO_ICE && tvp.biome != BIO_OCEAN) l3 += fmt("  LIFE: %s", trunc(upper(B.species[spi].name), 10).c_str());
@@ -633,8 +668,9 @@ void Game::renderLandingMap() {
     double lockRatio = std::fabs(1.0 - b.rotPeriod / b.orbitPeriod);
     std::string dayLen = (b.parent < 0 && lockRatio < 0.02) ? "TIDALLY LOCKED" : fmt("DAY %.1f H", std::fabs(b.rotPeriod) / 3600.0 * (b.parent < 0 ? 1.0 / lockRatio : 1.0));
     std::string grav = b.gravity / 9.8 < 0.01 ? fmt("GRAV %.4f G", b.gravity / 9.8) : fmt("GRAV %.2f G", b.gravity / 9.8);   // O4: a comet's microgravity
-    std::string l4 = fmt("LOCAL %02d:%02d  %s  %s  %s", (int)(si.dayFraction * 24), (int)(std::fmod(si.dayFraction * 24, 1.0) * 60),
-                         dayLen.c_str(), grav.c_str(), PLANET_TYPES[b.type].atmosphere ? "ATMOSPHERE" : "NO ATMOSPHERE");
+    std::string l4 = noSun ? fmt("TURNS IN %.1f H  %s  %s", std::fabs(b.rotPeriod) / 3600.0, grav.c_str(), KINDS[b.type].atmosphere ? (airFrozen(b) ? "AIR FROZEN" : "ATMOSPHERE") : "NO ATMOSPHERE")
+                           : fmt("LOCAL %02d:%02d  %s  %s  %s", (int)(si.dayFraction * 24), (int)(std::fmod(si.dayFraction * 24, 1.0) * 60),
+                                 dayLen.c_str(), grav.c_str(), KINDS[b.type].atmosphere ? (airFrozen(b) ? "AIR FROZEN" : "ATMOSPHERE") : "NO ATMOSPHERE");
     drawText(canvas, 8, ry + 24, l4.c_str(), HUD_DIM);
     {   // M5-09 (R-001): what hangs in the sky over this sector right now
         Mat3 L = probe.localFrame(t);
@@ -666,7 +702,7 @@ void Game::renderLandingMap() {
         }
         bool bestRinged = best >= 0 && sys.bodies[best].rings;
         if (best >= 0) {
-            const char* ph = bestPhase > 0.85 ? "FULL" : (bestPhase > 0.6 ? "GIBBOUS" : (bestPhase > 0.4 ? "HALF LIT" : (bestPhase > 0.15 ? "CRESCENT" : "NEW")));
+            const char* ph = noSun ? "UNLIT" : (bestPhase > 0.85 ? "FULL" : (bestPhase > 0.6 ? "GIBBOUS" : (bestPhase > 0.4 ? "HALF LIT" : (bestPhase > 0.15 ? "CRESCENT" : "NEW"))));
             l5 = fmt("SKY: %s%s %.0f%c UP, %.1f%c WIDE, %s%s", ringNote.empty() ? "" : (ringNote + "; ").c_str(), trunc(upper(bodyNameOf(best)), ringNote.empty() ? 14 : 10).c_str(), bestAlt / DEG, CH_DEGREE, 2 * bestAng / DEG, CH_DEGREE,
                      bestRinged ? "RINGED" : ph, (points && ringNote.empty() && !bestRinged) ? fmt(" +%d PTS", points).c_str() : "");
         } else l5 = (ringNote.empty() ? std::string("SKY: ") : "SKY: " + ringNote + "; ") + (points ? fmt("%d WORLDS AS POINTS OF LIGHT", points) : std::string("NOTHING BUT STARS"));
@@ -674,8 +710,9 @@ void Game::renderLandingMap() {
     }
     // R-415: V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
     if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER", HUD_AMBER);
-    else drawTextCentered(canvas, UW / 2, UH - 12, PLANET_TYPES[b.type].atmosphere ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);
-    drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str() : "SURFACE CAPSULE - SELECT LANDING SECTOR", HUD_CYAN);
+    else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);   // D-02: the survey has no clouds
+    drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str()
+                                                 : (noSun ? "SURFACE CAPSULE - NO LIGHT: THE ALTIMETER'S SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);   // D-02
 }
 
 // ---- R-415 (2026-10-11): the peoples on the landing map --------------------------------------------------------------------------------

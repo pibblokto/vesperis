@@ -14,7 +14,14 @@
 #include <map>
 #include <utility>
 
-enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK, LM_COUNT };   // T-03: LM_WORK a people's work (galaxy/works.h)
+enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK,   // T-03: LM_WORK a people's work (galaxy/works.h)
+                    // Q-01: the new landforms' sights, one each (`landformSight`): a great shield's caldera, a tessera's crest, a labyrinth's floor, a
+                    // cluster of hollows, a chain's crater, a field of penitentes, a colonnade, a mud volcano, an old river's ridge, a pingo, a maar
+                    LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,
+                    LM_METEORITES,   // Q-02: a strewn field of iron meteorites (TR_METEORITES)
+                    LM_COUNT };
+// Q-01: the sight a landform trait gives (LM_COUNT none); Q-02: a strewn field's
+int landformSight(int trait);
 extern const char* LANDMARK_KIND_NAMES[LM_COUNT];   // "PEAK", "MESA", ...
 extern const char* LANDMARK_KIND_SYMBOLS[LM_COUNT]; // one glyph for the maps
 

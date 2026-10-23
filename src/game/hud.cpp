@@ -138,7 +138,7 @@ void Game::renderSpaceHUD() {
     // remote target
     if (ship.hasRemote) {
         double ly = length(ship.remote.pos - ship.pos) / SECTOR_KM;
-        std::string rt = fmt("REMOTE: %s %s %.2f LY%s", trunc(upper(starNameOf(ship.remote)), 16).c_str(), STAR_CLASSES[ship.remote.cls].code, ly, guide.visited.count(starKeyOf(ship.remote)) ? "  VISITED" : "");   // R-407: the stars already seen
+        std::string rt = fmt("REMOTE: %s %s %.2f LY%s", trunc(upper(starNameOf(ship.remote)), 16).c_str(), ship.remote.cls == STAR_ROGUE ? "NO STAR" : STAR_CLASSES[ship.remote.cls].code, ly, guide.visited.count(starKeyOf(ship.remote)) ? "  VISITED" : "");   // R-407: the stars already seen; D-02: a drifter no class
         drawTextShadow(canvas, UW - 8 - textWidth(rt.c_str()), UH - 40, rt.c_str(), HUD_CYAN, HUD_SHADOW);
         // marker on the remote star
         Mat3 cam = viewBasis();
@@ -306,6 +306,7 @@ std::string Game::aimStarLabel(const Star& full) const {
 }
 
 void Game::renderSurfaceScene() {
+    surf.floodlights = state == GameState::DESCENT || state == GameState::ASCENT;   // D-04: the capsule's, on its way down and up
     surf.render(fb, t, nb.stars, spaceR, fade);
     fb.mush(surf.valid && hasOpaqueDeck(surf.site.gen.type) ? 3 : 2);   // M1-07: the thick air blurs everything
     bool feed = surf.inVehicle() && !surf.chaseCam && !photoMode && surf.cameraOverrideAlt < 0;   // R-204: driving is seen through the nose camera; R-403: flying too
@@ -332,13 +333,13 @@ void Game::applyVision() {
                     break;
                 }
                 case 3: {   // infrared: heat shows, the rest is dark; lava and creatures are hot
-                    bool hot = (b == 2 && isLavaWorld(surf.site.gen.type)) || b == 3;
+                    bool hot = (b == 2 && surf.lavaGlow) || b == 3;
                     double v = hot ? std::min(255.0, i * 4.5 + 60) : lum * 0.35;
                     c[0] = (uint8_t)std::min(255.0, v); c[1] = (uint8_t)(hot ? v * 0.6 : v * 0.5); c[2] = (uint8_t)(hot ? v * 0.15 : v * 0.7);
                     break;
                 }
                 case 4: {   // plant vision: vegetation magenta, everything else grey
-                    bool plant = b == 3 && surf.site.gen.type == PT_FELISIAN;
+                    bool plant = b == 3 && kindHas(surf.site.gen.type, KT_FLORA);
                     if (plant) { c[0] = (uint8_t)std::min(255.0, i * 4.0 + 40); c[1] = (uint8_t)(i * 0.8); c[2] = (uint8_t)std::min(255.0, i * 3.5 + 30); }
                     else { c[0] = c[1] = c[2] = (uint8_t)(lum * 0.6); }
                     break;
@@ -445,15 +446,27 @@ void Game::renderSectorMap() {
         double sum2 = 0; int cnt = 0;
         for (int y = 0; y < sectorImgH; y++) for (int x = 0; x < sectorImgW; x++) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y - 1) - hAt(x, y + 1); sum2 += gx * gx + gy * gy; cnt++; }
         double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * cell));   // a 3% grade at most for full shading
+        const bool survey = sys.sunless();   // D-02: the survey look of a world with no sun, by the frame's heights
+        double hLo = 0, hHi = 1; if (survey) surveyRange(hs.data(), hs.size(), hLo, hHi);
         for (int y = 0; y < sectorImgH; y++)
             for (int x = 0; x < sectorImgW; x++) {
                 const TerrainVertex& v = tv[y * sectorImgW + x];
                 double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y - 1) - hAt(x, y + 1);
                 double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
                 int mat = v.material;
-                if (v.water > -1e8f && v.h < v.water) mat = MAT_WATER;
-                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade);
+                if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // Q-02: a tidal flat its wet sand
+                sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1);
             }
+        if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // Q-02: the tide lines, the high water's pale along the flat's landward edge, the low water's dark
+            const double S = surf.site.seaLevel;
+            for (int y = 0; y + 1 < sectorImgH; y++)
+                for (int x = 0; x + 1 < sectorImgW; x++) {
+                    const double Rl = tideRangeAt(surf.site.gen, surf.site.unitAt(px + (x - sectorImgW / 2) * cell, pz - (y - sectorImgH / 2) * cell));
+                    const double hi = S + 0.5 * Rl, lo = S - 0.5 * Rl, h0 = hAt(x, y), hr = hAt(x + 1, y), hd = hAt(x, y + 1);
+                    if ((h0 - hi) * (hr - hi) < 0 || (h0 - hi) * (hd - hi) < 0) sectorImg[y * sectorImgW + x] = rgb(232, 226, 204);
+                    else if ((h0 - lo) * (hr - lo) < 0 || (h0 - lo) * (hd - lo) < 0) sectorImg[y * sectorImgW + x] = rgb(40, 62, 120);
+                }
+        }
     }
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     int S = FB_SCALE;
@@ -599,8 +612,7 @@ void Game::renderSectorMap() {
     {   // R-408: the scanner
         if (scanMode < 0) drawText(canvas, tx, oy + 89, "R SCANNER OFF", HUD_DIM);
         else {
-            static const char* MODES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
-            drawText(canvas, tx, oy + 89, fmt("SCAN %s", MODES[scanMode]).c_str(), HUD_CYAN);
+            drawText(canvas, tx, oy + 89, fmt("SCAN %s", SCAN_MODE_NAMES[scanMode]).c_str(), HUD_CYAN);   // Q-01: the scanner's own names
             double hx, hz; const SurfaceView::ScanEcho* e = scanModeHere(scanMode) && surf.scanned ? scanNearest(hx, hz) : nullptr;
             if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 98, "NONE ON THIS WORLD", HUD_DIM);
             else if (!surf.scanned) drawText(canvas, tx, oy + 98, "SCANNING", HUD_DIM);
@@ -787,7 +799,8 @@ void Game::drawReadings() {
     };
     row(fmt("SECTOR %s", sectorName(e.latDeg, e.lonDeg).c_str()), HUD_CYAN);   // O2 (R-301)
     row(fmt("LOCAL %02d:%02d", (int)(e.localTime * 24), (int)(std::fmod(e.localTime * 24, 1.0) * 60)), HUD_WHITE);
-    row(fmt("SUN %+.0f%c AZ %03.0f%c", e.sun.altitude / DEG, CH_DEGREE, e.sun.azimuth / DEG, CH_DEGREE), HUD_WHITE);
+    if (surf.site.sys->sunless()) row("NO SUN", HUD_WHITE);   // D-04: a drifter's ground (its sun at the nadir with no light: no reading)
+    else row(fmt("SUN %+.0f%c AZ %03.0f%c", e.sun.altitude / DEG, CH_DEGREE, e.sun.azimuth / DEG, CH_DEGREE), HUD_WHITE);
     if (surf.inDrone) {   // R-403: the drone's numbers and its state
         const Drone& d = surf.drone;
         pack({fmt("HDG %03.0f %s", wrap2pi(d.heading) / DEG, compassName(wrap2pi(d.heading))), fmt("TRIP %.2f KM", d.odometer / 1000.0)}, HUD_GREEN);
@@ -800,7 +813,7 @@ void Game::drawReadings() {
         const std::string st = b.airborne ? "AIRBORNE" : (b.skid > 0.3 ? "SKIDDING" : (b.brake ? "BRAKING" : ""));
         pack({fmt("GEAR %d%s", b.gear + 1, b.speed < -0.2 ? " REVERSE" : ""), st, b.lights ? "LIGHTS ON" : ""}, st.empty() ? HUD_GREEN : HUD_AMBER);
     }
-    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC)}, HUD_GREEN);
+    pack({fmt("ELEV %+.0f M", e.altitude), fmt("TEMP %+.0f C", e.temperatureC), surf.lamp && !surf.inVehicle() ? "LAMP ON" : ""}, HUD_GREEN);   // D-04
     const double gg = surf.site.gravity / 9.8;
     if (gg < 0.01) pack({fmt("GRAV %.4f G", gg), fmt("ESCAPE %.1f M/S", surf.site.escapeVelocity)}, HUD_GREEN);   // O4: a comet
     else pack({fmt("GRAV %.2f G", gg), fmt("%.2f ATM", e.pressureAtm)}, HUD_GREEN);

@@ -409,7 +409,7 @@ struct Placer {
         if (wetFn) return (*wetFn)(x, z);
         DrainageOff off;
         const double mPerRad = g.R * 1000.0, cosLat = std::max(std::cos(r.lat), 0.05);
-        const bool seaWorld = g.type == PT_FELISIAN || g.type == PT_OCEAN || g.liquidLevel > -1e8;
+        const bool seaWorld = kindHas(g.type, KT_SEA) || g.liquidLevel > -1e8;
         const double sea = g.liquidLevel > -1e8 ? g.liquidLevel : 0.0;
         for (int k = 0; k < 5; k++) {
             const double ex = x + (k == 1 ? 8 : (k == 2 ? -8 : 0)), nz = z + (k == 3 ? 8 : (k == 4 ? -8 : 0));
@@ -634,10 +634,11 @@ struct Placer {
 // archive (the capital's, a city's, some towns'; a prehistoric people's in its chief's longhouse, the far future's round its structure),
 // then C-03's few by the class, in buildings drawn by their weight (not the archive's), each from the records made before the place was
 // left. A work: the works that kept records (the last shelter, an observatory, a necropolis, a shrine, standing stones, a station, a launch
-// site's blockhouse, a lighthouse, B-418: a fort), a few each in its buildings' rooms or at their feet
+// site's blockhouse, a lighthouse, B-418: a fort; D-05: a dome over the warm ground, a shelter of a place left before the end), a few each in
+// its buildings' rooms or at their feet
 void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments,
                    const std::function<bool(double, double)>* wet) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's (B-421: its water read at a spot)
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time) (B-421: its water read at a spot)
     out.clear();
     if (instruments) instruments->clear();
     if (r.buildings.empty()) return;
@@ -660,16 +661,19 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
         int want = 0, cat = -1;
         switch (r.work) {
             case WO_SHELTER: {   // the last recording and the last ones kept with it, of the collapse's years
+                // D-05: a shelter of a place left before the end (a people that lost its sun's, `before` its years) the last of its own years alone
+                const bool last = r.before <= 0;
                 pool.clear();
                 const int from = H ? H->stageYear[STAGE_WARNING] : C.lastYear - std::max(5, C.lastYear / 30);
-                for (int i = 0; i < C.count; i++) if (i != C.last && C.entries[i].year >= from) pool.push_back(i);
-                if (pool.size() < 3) { std::vector<int> late; for (int i = 0; i < C.count; i++) if (i != C.last) late.push_back(i);
+                for (int i = 0; i < C.count; i++) if (i != C.last && C.entries[i].year >= from && (last || C.entries[i].year <= endYear)) pool.push_back(i);
+                if (pool.size() < 3) { std::vector<int> late; for (int i = 0; i < C.count; i++) if (i != C.last && (last || C.entries[i].year <= endYear)) late.push_back(i);
                                        std::sort(late.begin(), late.end(), [&](int a, int b) { return C.entries[a].year > C.entries[b].year; });
                                        for (int i = 0; i < (int)late.size() && pool.size() < 3; i++) if (std::find(pool.begin(), pool.end(), late[i]) == pool.end()) pool.push_back(late[i]); }
-                for (size_t i = 0; i < r.buildings.size() && C.last >= 0; i++) if (P.one((int)i, C.last)) { taken.insert((int)i); break; }
+                if (last) for (size_t i = 0; i < r.buildings.size() && C.last >= 0; i++) if (P.one((int)i, C.last)) { taken.insert((int)i); break; }
                 want = 1 + rng.irange(3);
                 break;
             }
+            case WO_DOME: want = 1 + rng.irange(2); break;   // D-05: of the years they lived under it
             case WO_OBSERVATORY: want = 1 + rng.irange(3); cat = RC_CHART; break;
             case WO_NECROPOLIS: want = 1 + rng.irange(3); break;
             case WO_SHRINE: want = 1 + rng.irange(2); break;

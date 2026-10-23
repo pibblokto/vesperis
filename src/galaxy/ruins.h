@@ -44,6 +44,10 @@ enum BuildingKind { BK_HOUSE = 0, BK_HALL, BK_TOWER, BK_ROTUNDA, BK_GATE, BK_PLA
                     BK_COLOSSUS, BK_TURBINE, BK_LIGHTHOUSE, BK_LATTICE, BK_DERRICK, BK_BLOCKS, BK_SPHERE, BK_TETHER, BK_TRILITHON, BK_CONVEYOR,
                     // R-412: the people's street furniture (`style` its `Furniture`: a well, a lamp, a fountain, a figure on its plinth)
                     BK_FURNITURE,
+                    // D-05: a people that lost its sun: a dome over the warm ground (`style` 0 an industrial people's iron ribs and glass on a
+                    // ring of brick, 1 a modern people's steel and glass on a ring of concrete, 2 the far future's whole), a glasshouse (0 an
+                    // industrial people's iron and glass on low walls of brick, 1 a modern people's tunnel of hoops, 2 a later people's vault)
+                    BK_DOME, BK_GREENHOUSE,
                     BK_COUNT };
 extern const char* const SETTLEMENT_CLASS_NAMES[7];   // "HAMLET", "VILLAGE", "TOWN", "MONUMENT", "CITY", "CAPITAL", "WORKS"
 extern const char* const BUILDING_KIND_NAMES[BK_COUNT];
@@ -98,6 +102,9 @@ BodyGen peopleGen(const BodyGen& g, int people);          // the generator a peo
 Vec3 peopleDivide(const BodyGen& g);                      // the pole of the great circle between the two (the first people's side is dot >= 0); found once a world and kept
 int peopleAt(const BodyGen& g, double lat, double lon);   // which people lived at a point (0 on a world of one)
 bool peoplesEndedTogether(const BodyGen& g);              // one catastrophe for both
+// P-04: the world of a system its signal and its peoples' charts speak of: the first world with a people of C-01's kinds (felisian, desert:
+// 1.3.2's, so none of theirs moves), else the first dead world with one; -1 none
+int systemPeoplesWorld(const StarSystem& sys);
 Culture cultureOf(const BodyGen& g, int people = 0);      // a people's culture (C-13: the second's by its own draws, its age the first's when they ended together)
 // A-03: a people's culture as if it had reached `age` and ended `years` ago (its palette the age's): the harness's sheets of the ages
 Culture cultureAs(const BodyGen& g, int people, int age, double years);
@@ -154,6 +161,10 @@ struct SiteRead {
     double ridgeDir = 0;    // the heading of the highest ground round the settlement
     double wind = 0;        // the prevailing wind's heading here (where it blows from), from the world's wind angle, the hemisphere and the band
     bool desert = false;
+    // P-04: the present's (a dead world's people built on its then-world): what the wind drifts against the walls (0 nothing, 1 sand on a dry
+    // world, 2 snow on a frozen one) and a shore whose sea is ice now
+    int drift = 0;
+    bool shoreIce = false;
 };
 // T-02 (galaxy/towns.h): a town's plan. A street of it (a segment, metres from the settlement's centre, its half width, its rank: a lane,
 // a street, a main street, an avenue, a ring road; the age that laid it and whether it was paved); an open square; a field outside it (a

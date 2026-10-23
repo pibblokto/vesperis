@@ -151,6 +151,10 @@ picture.omen
   ($e.omen=eclipse) A sun painted black and filled in, and the {herd} lying down in the middle of the day.
   ($e.omen!=comet $e.omen!=eclipse) Many small marks in the sky part of the wall, and figures looking up from the {crop}. {ann.pic.cap} a sign.
   ($e.omen!=comet $e.omen!=eclipse) The sky part of the wall is all {colour.holy}, and figures stand under it with their arms out.
+  ($e.omen=wanderer 3) A great round light in the sky part of the wall, bigger each time it is painted, and the figures turning their backs on it.
+  ($e.omen=intruder 3) Two suns painted side by side over the {herd}, one of them with its rays drawn short.
+  ($e.omen=dance 3) Two suns painted far apart, and a line between them that breaks in the middle.
+  ($e.omen=bent 3) The stars on the wall drawn in a ring round an empty place, and a figure pointing at the empty place.
 
 # ---- the places, the dead, the coming and the leaving --------------------------------------------------------------------------
 

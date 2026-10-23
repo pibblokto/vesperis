@@ -4,6 +4,7 @@
 #include "core/font.h"
 #include "core/input.h"
 #include "galaxy/starfield.h"
+#include "galaxy/drifters.h"
 #include "galaxy/system.h"
 #include "galaxy/music.h"
 #include "galaxy/voice.h"
@@ -38,6 +39,7 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
 enum AutoProfile { AP_WANDERER = 0, AP_STARGAZER, AP_PLANETFALL, AP_SURVEYOR, AP_ARCHAEOLOGIST, AP_GIANTS, AP_COUNT };
 extern const char* const AUTO_PROFILE_NAMES[AP_COUNT];   // "WANDERER", "STARGAZER", ...
 extern const char* const AUTO_PROFILE_LINES[AP_COUNT];   // what each looks for, a line of the chooser
+extern const char* SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
 
 // C-18: a drone of the bay as a model in its own metres (x its right, y up, z its nose; its feet at y 0), drawn filled on its rack in the
 // cabin and as lines on the bay's screen (game/drone_draw.cpp): a short hull with the dark band of its eye, four ducted fans on arms, two
@@ -114,6 +116,10 @@ void drawInstrumentParts(RGBCanvas& c, int x0, int y0, int w, int h, const std::
 // H-06: a record's kind (RC_*, galaxy/records.h) and its glyph on the decoder's pages (a page, a note, a star; game/history_screen.cpp)
 int recordKindOf(const Shard& s);
 void drawRecordKindGlyph(RGBCanvas& fb, int x, int y, int kind, uint32_t col);
+
+// Q-03: the sounds of the ground the surface cues (the dunes' hum, the ice's song, a quake's heave and rumble) into the synth's levels, as much
+// as the air carries (game/game_states.cpp; the harness's scenes hear them through it too)
+void groundSoundsTo(SurfaceView& surf, AudioState& audio);
 
 class Game {
 public:
@@ -208,6 +214,8 @@ public:
     // removes marks (B-412: and shows one over the view). O6-06's landmarks are no longer markers: a sight is an echo of the scanner
     // until the explorer marks it
     int scanMode = -1;                 // -1 off, else the LandmarkKind the scanner listens for
+    int dataSheetBottom = 0;           // Q-01: the data sheet's lowest next line's top over its pages, as last drawn (`testDataSheetBottom`)
+    int dataSheetPages = 1;            // Q-01: the body's sheet's pages, as last drawn (RIGHT and LEFT step through them, then the probes' profiles)
     bool scanSkipMarked = true;        // a sight with one of the explorer's marks on it is left out
     std::string worldKeyOf(int bi) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi); }
     struct SiteMark { int index = -1; double x = 0, z = 0, y = 0; bool dry = false; };   // a mark of the surface's world in local metres, its ground's height (B-422: dry, read without the rivers until their tiles are built)
@@ -339,6 +347,7 @@ public:
     double testDroneRackY(int k) const;
     std::string testDroneState(int k) const { return k >= 0 && k < DRONE_COUNT ? droneStateLine(k) : std::string(); }
     void testOpenDroneBay() { openDroneBay(); }
+    void testOpenShards() { openShards(); }   // D-03: the decoder, which takes the synth
     bool testDroneBayMapped() const { return bay.mapW > 0; }   // F-02: the screen's map of its world drawn
     void testShardsTop(int top) { shardsTop = top; }
     int testShardsLevel() const { return shardsLevel; }                        // C-06: the decoder's state for the harness
@@ -420,6 +429,8 @@ public:
     bool testWalkToGrave();                                       // C-12: the explorer set a metre in front of the nearest settlement's first grave, facing it
     bool testWalkToWork(double withinM = 1e9);                    // T-03: the explorer set 150 m from the nearest work the scanner hears (the frame re-anchored and the scan asked again from there)
     void testLandCursor(double latDeg, double lonDeg) { landLat = latDeg * DEG; landLon = lonDeg * DEG; }   // C-09: the landing map's cursor
+    int testDataSheetBottom() const { return dataSheetBottom; }   // Q-01: the data sheet's lowest next line's top over its pages, as last drawn
+    int testDataSheetPages() const { return dataSheetPages; }
     void testLandCursorAt(double& latDeg, double& lonDeg, int& zoom) const { latDeg = landLat / DEG; lonDeg = landLon / DEG; zoom = landZoom; }   // R-418
     void testSectorMapAt(double& x, double& z, int& zoom) const { x = mapCurX; z = mapCurZ; zoom = sectorZoom; }   // R-418: the sector map's cursor (local metres) and level
     void testStarMapAt(double& yaw, double& zoom, int& mask, int& level, int& galaxyMarks) const { yaw = mapYaw; zoom = mapZoom; mask = mapClassMask; level = gchart.level; galaxyMarks = (int)guide.galaxyMarks.size(); }   // R-418
@@ -478,7 +489,7 @@ public:
     std::string testStarGenName() const { return sys.valid ? sys.star.name : ""; }   // the generator's name (never shown, R-401)
     bool testDrainageReady() const;   // O6-03: the drainage tiles of the landing site are in the cache
     int testBodyType(int bi) const { return bi >= 0 && bi < (int)sys.bodies.size() ? sys.bodies[bi].type : -1; }
-    std::string testBodyTypes() const { std::string r; for (auto& b : sys.bodies) r += std::to_string(b.index) + ":" + PLANET_TYPES[b.type].name + (b.parent >= 0 ? "(moon) " : " "); return r; }
+    std::string testBodyTypes() const { std::string r; for (auto& b : sys.bodies) r += std::to_string(b.index) + ":" + KINDS[b.type].name + (b.parent >= 0 ? "(moon) " : " "); return r; }
     void testCabinGoto(double x, double z, double yaw, double pitch = 0) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = pitch; }
     void testCabinAt(double& x, double& z, double& yaw) const { x = cabin.x; z = cabin.z; yaw = cabin.yaw; }   // R-418
     void testShipScreenRow(int page, int sel) { shipScreenPage = page; shipScreenSel = sel; }   // B-410: the flight computer's row Enter acts on
@@ -509,6 +520,8 @@ public:
     int testChartYouX() const { return gchart.youX; }
     int testChartYouY() const { return gchart.youY; }
     void testArriveAt(const Star& s) { arriveAtStar(s, Vec3(0, 0, -1)); }   // the arrival as a Vimana flight ends it
+    void testSetRemote(const Star& s) { setRemoteStar(s); }                     // D-01: the remote target set as the guide's targeting sets it
+    bool testRemoteStar(Star& out) const { out = ship.remote; return ship.hasRemote; }
     void testPlaceShip(const Vec3& posKm) { ship.pos = posKm; ship.mode = ShipState::STANDBY; nb.update(ship.pos); }   // the ship set down anywhere (the harness's chart)
     // G-06: the chart's cursor and plot for the harness
     void testChartCursor(const Vec3& p) { gchart.onShip = false; gchart.plotHere = false; gchart.curX = p.x; gchart.curY = p.y; gchart.curZ = p.z; if (gchart.level > 0) { gchart.follow = false; gchart.cx = p.x; gchart.cz = p.z; } }
@@ -540,6 +553,7 @@ public:
     std::string testTelescopeLine(bool plain = false) const { return telescopeTargetLine(plain); }
     bool testBodyScreen(int body, double& sx, double& sy, double& rpx) const;   // where the last frame drew a body (framebuffer pixels); false when behind
     int testParkedBody() const { return ship.parkedBody; }
+    int testLocalTarget() const { return ship.localTarget; }   // D-02: the drifter targeted on arrival
     double testBodyRadiusKm(int body) const { return sys.valid && body >= 0 && body < (int)sys.bodies.size() ? sys.bodies[body].radiusKm : 0; }
     int testTelescopePick() const;                                   // the body with the widest disc from the ship, the parked one left out (-1 none)
     void testAimAtSun() { if (sys.valid) { Vec3 f = normalize(sys.star.pos - ship.pos); ship.yaw = std::atan2(f.x, f.z); ship.pitch = std::asin(clampd(f.y, -1, 1)); } }
@@ -661,7 +675,9 @@ private:
     // the one colouring of every map of a world (the landing map, its zoom, the sector map): the body's material ramps
     // under the star's light, the ground's exposure rule and a hillshade
     void mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo);
-    static uint32_t mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade);
+    static uint32_t mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey = -1);   // D-02: `survey` 0..1, a sunless world's survey look at that height
+    static double surveyHeight(double h, double lo, double hi) { return hi > lo ? clampd((h - lo) / (hi - lo), 0, 1) : 0.5; }
+    static void surveyRange(const float* h, size_t n, double& lo, double& hi);   // D-02: the heights' 2nd and 98th percentiles
     double transT = 0;
     double fade = 1;
     std::string statusMsg;
@@ -728,8 +744,9 @@ private:
     double autosaveTimer = 0;
     int listSel = 0, listScroll = 0;
     // M3 guide screens
-    int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = (1 << STAR_CLASS_COUNT) - 1;
+    int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
     GameState guideReturn = GameState::SPACE;
+    bool statsKinds = false;   // P-00: the statistics' second page, the world types walked (offered when they outgrow their line)
     std::string textPrompt, textBuffer;
     double mapYaw = 0, mapPitch = 0, mapZoom = 1;
     // G-05: the galaxy chart, the star map's second page (game/galaxy_chart.cpp). `Tab` turns the map between the neighbourhood and
@@ -776,6 +793,7 @@ private:
     int galaxyMarkNear(double sx, double sz, double px) const;   // the explorer's mark of the galaxy within `px` pixels of a place at the chart's level, -1 none
     struct ChartThere { std::string label; uint32_t col = 0; int kind = 0, mark = -1; std::string key; };   // kind: 0 nothing, 1 a mark, 2 a signal, 3 home, 4 a named star, 5 a star visited
     ChartThere chartThere(const Vec3& p) const;   // what the explorer has within four pixels of a place (the first of the kinds)
+    bool chartDrifterAt(const Vec3& p, Star& out) const;   // D-02: a drifter the explorer knows (a lock, a visit, a name) within four pixels of a place
     std::string galaxyPlace(const Vec3& p, bool height) const;   // "SPIRAL ARM, 13,040 LY FROM THE CORE" (and the height over the plane)
     void beginGalaxyMark(int mi);             // the entry for a new mark at the cursor (-1) or a mark's new name
     void finishGalaxyMark(const std::string& name);
@@ -913,9 +931,14 @@ private:
         // a word of a recording heard before (`Guide::heard`) coming back out of the static at the top steps while nothing is on the
         // air: its world (when it is not the radar's), the word spoken in the world's voice, when the next may come
         ShardWorld wordWorld; Speech wordSpeech; Voice wordVoice; double wordNext = 30, wordT = -1; int words = 0; std::string wordKey, wordSaid;
+        std::map<uint64_t, DrifterBeacon> beacons;   // D-05: a drifter's beacon by its signal's seed, decided once (`drifterBeaconIfReady`)
     };
     RadarState radar;
     void radarToggle(); void radarOff(); void radarScan(); bool updateRadar(const Input& in, double realDt);
+    // D-03: a drifter's voice off the camera: the cabin's radio while the ship is at a drifter, the suit's on its ground (each frame after the
+    // state's update); its voice read once a system
+    void darkRadio(); bool darkRadioOn = false; uint64_t darkRadioSeed = 0; RogueVoice darkRadioVoice;
+    int darkRadioBeacon = -2; double darkRadioBeaconAt = -10;   // D-05: the beacon's machine under it (-1 none, -2 not decided yet), last asked when
     void radarGainStep(int dir);        // C-15: the dial a step up or down
     void radarDeepStep();               // C-15: a slice of the far scan (begun when the gain is up and the list is not this sector's)
     double radarSkyAt(const Vec3& dir) const;   // C-16: the band's brightness round a direction (the beam's width), 0..1
@@ -925,6 +948,7 @@ private:
     void renderRadarCamera();           // the camera's frame over the picture: the scope, the cone, the readout
     void radarCameraFeed(Framebuffer& fb);   // the picture as the radar camera gives it (the palette cold, static by the clarity), before the mush
     void radarLock(int idx); void radarAccept(); void radarStartContent(const Signal& s, bool next); void radarRepeatContent(); void radarStopContent();
+    void radarStartBeacon(const Signal& s);   // D-05: a drifter's beacon on the air (its radio people's last recording under its voice)
     int shardsHeldOf(const std::string& key, int which = 0) const;   // C-13: of that people's fifty (C-14: the explorer's own and the lent)
     int lentOf(const std::string& key, int which = 0) const;         // C-14: how many of that people's fifty are lent and not taken
     bool shardLent(int local) const;                                 // C-14: the open people's shard is a friend's (lent by the inbox, not taken since)
@@ -1077,6 +1101,7 @@ private:
     void beginTextEntry(const std::string& prompt, int kind, const std::string& initial); void updateTextEntry(const Input& in); void renderTextEntry();
     void openStarMap(); void updateStarMap(const Input& in); void renderStarMap();
     void updateLog(const Input& in); void renderLog(); void renderStats();
+    std::string statsKindsLine() const; bool statsKindsOverflow() const;   // P-00: the walked kinds' line on the statistics page, and whether they outgrow it
     void openGallery(); void updateGallery(const Input& in); void renderGallery();
     void setRemoteStar(const Star& s); void targetStarByName(const std::string& name); void targetPreviousStar(); void targetHome();
     void logEvent(const std::string& kind, const std::string& text); void noteVisit();
@@ -1140,7 +1165,7 @@ private:
     // far short of its end the void sent it, where from, whether the chart plotted it). The flight's start logs the JUMP line
     // (`toggleVimana`, so V flies a plotted target the same way); any other target forgets it (`setRemoteStar`)
     struct JumpPlot { uint64_t seed = 0; double ly = 0, shortLy = 0; std::string way, from; bool onChart = false; } jumpPlot;
-    bool plotJump(double ly, const Vec3& dir, bool onChart);   // false when refused (in a flight, no star along the line, the current star)
+    bool plotJump(double ly, const Vec3& dir, bool onChart, const Star* place = nullptr);   // false when refused (in a flight, no star along the line, the current star); D-02: `place` a drifter the chart snapped to
     void flyJump();                                            // the plotted jump flown (the Vimana and its status)
     std::string aimStarLabel(const Star& full) const;   // a marker's label in the aim (its name once it has one, else the distance; VISITED)
     std::vector<std::string> worldNamesAt(const std::string& starKey) const;   // the names given to a star's worlds (the star map's card)

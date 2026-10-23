@@ -1,15 +1,37 @@
 // C-07 (2026-10-02): the signal radar's sources (see signals.h).
 #include "signals.h"
+#include "drifters.h"
 #include "planetmap.h"
 #include "ruins.h"
 #include "peoples.h"
+#include "history.h"
+#include "shards.h"
 #include "core/rng.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
 
-const char* const SIGNAL_KIND_NAMES[SIG_KIND_COUNT] = {"A PEOPLE'S TRANSMISSION", "A PULSAR", "A COMET OUTGASSING", "A MAGNETOSPHERE"};
+const char* const SIGNAL_KIND_NAMES[SIG_KIND_COUNT] = {"A PEOPLE'S TRANSMISSION", "A PULSAR", "A COMET OUTGASSING", "A MAGNETOSPHERE", "A DRIFTER"};
+const char* const ROGUE_VOICE_NAMES[RV_COUNT] = {"a brown dwarf", "a giant", "a young world", "a metal world", "a small world"};
+
+int rogueVoiceClass(int planetType) {
+    switch (planetType) {
+        case PT_SUBSTELLAR: return RV_BROWN_DWARF;
+        case PT_GASGIANT: return RV_GIANT;
+        case PT_TECTONIC: case PT_MOLTEN: return RV_YOUNG;
+        case PT_METAL: return RV_METAL;
+        default: return RV_SMALL;
+    }
+}
+
+void rogueVoiceOf(const StarSystem& sys, Signal& s) {
+    s.turnS = 0; s.moonS = 0;
+    if (sys.bodies.empty()) return;
+    s.turnS = std::fabs(sys.bodies[0].rotPeriod);
+    double nearest = 1e300;
+    for (const Body& m : sys.bodies) if (m.parent == 0 && m.orbitRadiusKm < nearest) { nearest = m.orbitRadiusKm; s.moonS = m.orbitPeriod; }
+}
 
 namespace {
 // the cells' salt is a design choice like the pinned home star (G-02): of forty tried, C-07's 0xC07F gave the home sector three
@@ -89,11 +111,16 @@ double signalNeedGain(double distLy, double power, double reachLy) {
     return power > 0 ? 1 + y / power : 1e9;
 }
 
+double rogueReachAtGain(double power, double gain) { return SIGNAL_ROGUE_REACH_LY * std::sqrt(std::max(0.0, gain - 1) * std::max(0.0, power)); }
+
+double rogueNeedGain(double distLy, double power) { return power > 0 ? 1 + (distLy / SIGNAL_ROGUE_REACH_LY) * (distLy / SIGNAL_ROGUE_REACH_LY) / power : 1e9; }
+
 // the margin over the floor of a far one, (reach / distance)^2, read as C-07 reads the distance (1 - 0.82 sqrt(d / reach) is
-// 1 - 0.82 / margin^(1/4)): 0.18 at the edge of its reach, as C-07's signals are at 200 ly
+// 1 - 0.82 / margin^(1/4)): 0.18 at the edge of its reach, as C-07's signals are at 200 ly. D-02: a drifter's by its own reach
 double signalStrengthAtGain(const Signal& s, double gain) {
-    if (s.local || s.needGain <= 1) return s.strength;
-    double m = (1 + std::max(0.0, gain - 1) * s.power) / ((s.distLy / SIGNAL_REACH_LY) * (s.distLy / SIGNAL_REACH_LY));
+    if (s.local || (s.needGain <= 1 && s.kind != SIG_ROGUE)) return s.strength;
+    double m = s.kind == SIG_ROGUE ? std::max(0.0, gain - 1) * s.power / ((s.distLy / SIGNAL_ROGUE_REACH_LY) * (s.distLy / SIGNAL_ROGUE_REACH_LY))
+                                   : (1 + std::max(0.0, gain - 1) * s.power) / ((s.distLy / SIGNAL_REACH_LY) * (s.distLy / SIGNAL_REACH_LY));
     return m < 1 ? 0 : clampd(1 - 0.82 / std::pow(m, 0.25), 0, 1);
 }
 
@@ -118,10 +145,10 @@ bool starSignal(const Star& s, Signal& out) {
         return true;
     }
     StarSystem sys; sys.generate(s);
-    for (const Body& b : sys.bodies) {
-        if (b.type != PT_FELISIAN && b.type != PT_DESERT) continue;
+    const int pw = systemPeoplesWorld(sys);   // P-04: the system's people's world (C-01's kinds first, then a dead world's)
+    if (pw >= 0) {
+        const Body& b = sys.bodies[pw];
         BodyGen g = BodyGen::make(b);
-        if (!worldHadCivilisation(g)) continue;
         int air = peoplesOnAir(g);
         if (!air) return false;   // A-01: the system's people's world had no radio: nothing of it is on the air
         out = Signal(); out.kind = SIG_PEOPLE; out.star = s; out.body = b.index; out.bodyType = b.type; out.seed = b.seed; out.pos = s.pos;
@@ -205,12 +232,22 @@ void SignalScan::begin(const Vec3& obsKm, double g, double reach) {
     layer = 0; beginLayer();
 }
 
+// D-02: layer 2 the drifters' cells within the reach of the loudest, layer 3 the globular clusters' cells round it (relative to the
+// galactic centre, a cluster's own reaching 60 ly past its cell's)
 void SignalScan::beginLayer() {
-    int cell = layer == 0 ? SIGNAL_CELL : SIGNAL_DEEP_CELL;
-    layerReach = signalReachAtGain(layer == 0 ? POWER_WEAK_HI : POWER_STRONG_HI, gain, reachLy);
+    const int cell = layer == 0 ? SIGNAL_CELL : (layer == 1 ? SIGNAL_DEEP_CELL : DRIFT_CELL);
+    layerReach = layer <= 1 ? signalReachAtGain(layer == 0 ? POWER_WEAK_HI : POWER_STRONG_HI, gain, reachLy) : rogueReachAtGain(drifterPowerMax(), gain);
     int64_t R = (int64_t)std::ceil(layerReach);
     total = 1;
-    for (int a = 0; a < 3; a++) { lo[a] = floorDiv(o[a] - R, cell); span[a] = floorDiv(o[a] + R, cell) - lo[a] + 1; total *= span[a]; }
+    if (layer == 3) {
+        const double base[3] = {GALAXY_CENTRE_SX, 0, GALAXY_CENTRE_SZ};
+        for (int a = 0; a < 3; a++) {
+            lo[a] = (int64_t)std::floor(((double)o[a] - base[a] - R - 60) / GLOBULAR_CELL);
+            span[a] = (int64_t)std::floor(((double)o[a] - base[a] + R + 60) / GLOBULAR_CELL) - lo[a] + 1; total *= span[a];
+        }
+    } else
+        for (int a = 0; a < 3; a++) { lo[a] = floorDiv(o[a] - R, cell); span[a] = floorDiv(o[a] + R, cell) - lo[a] + 1; total *= span[a]; }
+    if (layer >= 2 && gain <= 1) total = 0;   // nothing of the drifters at x1
     next = 0;
 }
 
@@ -231,10 +268,27 @@ void SignalScan::consider(int64_t x, int64_t y, int64_t z, double power) {
     out.push_back(sig);
 }
 
+// D-02: a drifter a cell listed, by its own law: its place, its power, the least gain that hears it
+void SignalScan::considerDrifter(int64_t x, int64_t y, int64_t z) {
+    double dx = (double)(x - o[0]), dy = (double)(y - o[1]), dz = (double)(z - o[2]);
+    const double R = layerReach + 1.8;
+    if (dx * dx + dy * dy + dz * dz > R * R) return;
+    Star s; drifterAt(x, y, z, s, false);
+    const double d = length(s.pos - obs) / SECTOR_KM;
+    if (d < 1e-6) return;
+    const double pw = drifterPower(s), need = rogueNeedGain(d, pw);
+    if (need > gain) return;
+    for (const Signal& e : out) if (e.star.seed == s.seed) return;   // a cluster's and a cell's alike, found once
+    Signal sig; sig.kind = SIG_ROGUE; sig.star = s; sig.body = 0; sig.bodyType = drifterBody(s).type; sig.seed = s.seed; sig.pos = s.pos;
+    sig.distLy = d; sig.power = pw; sig.needGain = need; sig.strength = signalStrengthAtGain(sig, gain);
+    { StarSystem sys; sys.generate(s); rogueVoiceOf(sys, sig); }   // D-03: its voice's turning and moon
+    out.push_back(sig);
+}
+
 bool SignalScan::step(int budget) {
     while (!done && budget > 0) {
         if (next >= total) {
-            if (layer == 0) { layer = 1; beginLayer(); continue; }
+            if (layer < 3) { layer++; beginLayer(); continue; }
             done = true;
             std::sort(out.begin(), out.end(), [](const Signal& a, const Signal& b) { return a.distLy < b.distLy; });
             break;
@@ -242,7 +296,15 @@ bool SignalScan::step(int budget) {
         int64_t i = next++;
         int64_t c[3] = {lo[0] + i % span[0], lo[1] + (i / span[0]) % span[1], lo[2] + i / (span[0] * span[1])};
         budget--; cells++;
-        int cell = layer == 0 ? SIGNAL_CELL : SIGNAL_DEEP_CELL;
+        if (layer == 3) {   // D-02: a globular cluster's own drifters, when the cell holds one within the reach
+            Vec3 gc; double gr;
+            if (!globularInCell(c[0], c[1], c[2], gc, gr) || length(gc - Vec3((double)o[0] + 0.5, (double)o[1] + 0.5, (double)o[2] + 0.5)) > layerReach + gr + 2) continue;
+            int64_t sx[DRIFT_GLOBULAR_MAX], sy[DRIFT_GLOBULAR_MAX], sz[DRIFT_GLOBULAR_MAX];
+            const int n = drifterGlobular(c[0], c[1], c[2], sx, sy, sz);
+            for (int k = 0; k < n; k++) considerDrifter(sx[k], sy[k], sz[k]);
+            continue;
+        }
+        int cell = layer == 0 ? SIGNAL_CELL : (layer == 1 ? SIGNAL_DEEP_CELL : DRIFT_CELL);
         double near2 = 0;   // the cell's nearest point: a cell wholly beyond the layer's reach holds nothing to hear
         for (int a = 0; a < 3; a++) { double lo2 = (double)(c[a] * cell), hi2 = lo2 + cell, q = (double)o[a] + 0.5; double e = q < lo2 ? lo2 - q : (q > hi2 ? q - hi2 : 0); near2 += e * e; }
         if (near2 > (layerReach + 2) * (layerReach + 2)) continue;
@@ -250,6 +312,10 @@ bool SignalScan::step(int budget) {
             int64_t sx[SIGNAL_MAX_CANDIDATES], sy[SIGNAL_MAX_CANDIDATES], sz[SIGNAL_MAX_CANDIDATES];
             int n = transmitterCell(c[0], c[1], c[2], sx, sy, sz);
             for (int k = 0; k < n; k++) consider(sx[k], sy[k], sz[k], weakPower(sx[k], sy[k], sz[k]));
+        } else if (layer == 2) {   // D-02: the drifters' field
+            int64_t sx[DRIFT_CELL_MAX], sy[DRIFT_CELL_MAX], sz[DRIFT_CELL_MAX];
+            const int n = drifterCell(c[0], c[1], c[2], sx, sy, sz);
+            for (int k = 0; k < n; k++) considerDrifter(sx[k], sy[k], sz[k]);
         } else {
             int64_t sx[SIGNAL_DEEP_MAX], sy[SIGNAL_DEEP_MAX], sz[SIGNAL_DEEP_MAX]; double pw[SIGNAL_DEEP_MAX];
             int n = deepCell(c[0], c[1], c[2], sx, sy, sz, pw);
@@ -262,16 +328,21 @@ bool SignalScan::step(int budget) {
 void localSignals(const StarSystem& sys, const Vec3& obsKm, double t, std::vector<Signal>& out) {
     out.clear();
     if (!sys.valid) return;
-    bool transmits = sectorTransmits(sys.star.sx, sys.star.sy, sys.star.sz);
+    const int pw = sectorTransmits(sys.star.sx, sys.star.sy, sys.star.sz) ? systemPeoplesWorld(sys) : -1;   // P-04: the system's people's world, as in `starSignal`
     for (const Body& b : sys.bodies) {
         Vec3 p = sys.bodyPos(b.index, t);
         double d = length(p - obsKm);
         if (d < 1.0) continue;
-        bool onAir = false;
-        if (transmits && (b.type == PT_FELISIAN || b.type == PT_DESERT) && worldHadCivilisation(BodyGen::make(b))) {
-            onAir = peoplesOnAir(BodyGen::make(b)) != 0;   // A-01: only a people that had radio; the first people's world is the system's, as in `starSignal`
-            transmits = false;
+        if (b.drifter && b.index == 0) {   // D-02: the drifter itself, whatever its kind, louder near (as a magnetosphere is, by its power)
+            Signal sig; sig.kind = SIG_ROGUE; sig.star = sys.star; sig.body = 0; sig.bodyType = b.type; sig.pos = p; sig.seed = sys.star.seed; sig.local = true;
+            sig.distLy = d / SECTOR_KM; sig.power = drifterPower(sys.star);
+            sig.strength = clampd(0.45 + 0.25 * std::log10(1 + 10 * sig.power), 0.35, 0.95) * clampd(1.4 - d / (6 * AU_GAME_KM), 0.3, 1.0);
+            rogueVoiceOf(sys, sig);   // D-03
+            out.push_back(sig);
+            continue;
         }
+        bool onAir = false;
+        if (b.index == pw) onAir = peoplesOnAir(BodyGen::make(b)) != 0;   // A-01: only a people that had radio; the first people's world is the system's
         if (onAir) {   // the people of this very system
             Signal sig; sig.kind = SIG_PEOPLE; sig.star = sys.star; sig.body = b.index; sig.bodyType = b.type; sig.pos = p; sig.seed = b.seed; sig.local = true;
             sig.distLy = d / SECTOR_KM; sig.strength = 1.0;
@@ -288,7 +359,7 @@ void localSignals(const StarSystem& sys, const Vec3& obsKm, double t, std::vecto
             out.push_back(sig);
         } else {   // a giant's always; a world's only when its field is of the strongest and the world big enough to hold a magnetosphere worth the name
             double mag = magneticField(b);
-            bool giant = b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR;
+            bool giant = kindHas(b.type, KT_GIANT);
             if (!giant && (mag < 0.8 || b.radiusKm < 2500)) continue;
             Signal sig; sig.kind = SIG_MAGNETOSPHERE; sig.star = sys.star; sig.body = b.index; sig.bodyType = b.type; sig.pos = p; sig.seed = b.seed; sig.local = true;
             sig.distLy = d / SECTOR_KM; sig.detail = giant ? std::max(mag, 0.6) : mag;
@@ -323,10 +394,11 @@ int nextTransmittedShard(uint64_t worldSeed, int prev) { return (((prev + stride
 std::string signalSourceLine(const Signal& s) {
     auto art = [](const std::string& w) { char c = w.empty() ? 'X' : w[0]; return std::string((c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U') ? "AN " : "A ") + w; };
     switch (s.kind) {
-        case SIG_PEOPLE: return art(std::string(PLANET_TYPES[s.bodyType].name) + " WORLD OF " + art(STAR_CLASSES[s.star.cls].name));
+        case SIG_PEOPLE: return art(std::string(KINDS[s.bodyType].name) + " WORLD OF " + art(STAR_CLASSES[s.star.cls].name));
         case SIG_PULSAR: { char buf[64]; snprintf(buf, sizeof buf, "A PULSAR, %.1f PULSES A SECOND", s.pulseHz); return buf; }
         case SIG_COMET: { char buf[64]; snprintf(buf, sizeof buf, "A COMET OUTGASSING %.1f AU FROM THE SUN", s.detail); return buf; }
-        default: return s.bodyType >= 0 ? "THE MAGNETOSPHERE OF " + art(PLANET_TYPES[s.bodyType].name) : "A MAGNETOSPHERE";
+        case SIG_ROGUE: return s.bodyType >= 0 ? art(KINDS[s.bodyType].name) + " WITH NO STAR" : "A WORLD WITH NO STAR";   // D-02
+        default: return s.bodyType >= 0 ? "THE MAGNETOSPHERE OF " + art(KINDS[s.bodyType].name) : "A MAGNETOSPHERE";
     }
 }
 
@@ -469,4 +541,48 @@ void programmeFor(uint64_t worldSeed, int slot, bool music, int year, const Voic
         default: out.machine = true; out.seconds = 20 + 25 * unit(mix64(h ^ 9)); break;
     }
     if (out.kind != RP_NUMBERS && out.kind != RP_LOOP) { out.repeats = 1; out.gap = 0; }
+}
+
+// ---- D-05: a drifter's beacon ------------------------------------------------------------------------------------------------------
+int beaconMachineOf(uint64_t drifterSeed, int people, int age) {
+    const uint64_t h = mix64(drifterSeed ^ 0xD05BEAC0ULL ^ (uint64_t)people);
+    switch (age) {
+        case AGE_INDUSTRIAL: return (h & 1) ? RP_TOLL : RP_BEACON;
+        case AGE_MODERN: { static const int M[3] = {RP_BEACON, RP_SIREN, RP_DATA}; return M[h % 3]; }
+        case AGE_FUTURISTIC: return (h & 1) ? RP_DATA : RP_BEACON;
+        default: return RP_MATHS;
+    }
+}
+
+namespace {
+bool beaconOf(const StarSystem& sys, DrifterBeacon& out, bool wait) {
+    out = DrifterBeacon();
+    if (sys.bodies.empty() || !drifterHadPeople(sys.bodies[0])) return true;
+    const Body& b = sys.bodies[0];
+    const BodyGen g = BodyGen::make(b);
+    if (!worldHadCivilisation(g)) return true;
+    const int radio = historyInventionIndex("radio");
+    for (int k = 0; k < peoplesOf(g); k++) {
+        const PeopleProfile P = peopleProfileOf(sys, b, g, k);
+        if (!P.radio) continue;
+        if (!wait && !shardTextsIfReady(sys, b, g, loreQuick(sys, b, g, k))) return false;   // its records and its history being written
+        std::shared_ptr<const History> H = historyOf(sys, b, g, k);
+        if (!H || H->inventionYear(radio) <= 0) continue;   // its radio came after the last sunrise: no broadcast left
+        out.people = k; out.age = P.age; out.machine = beaconMachineOf(sys.star.seed, k, P.age);
+        return true;
+    }
+    return true;
+}
+}
+bool drifterBeaconIfReady(const StarSystem& sys, DrifterBeacon& out) { return beaconOf(sys, out, false); }
+DrifterBeacon drifterBeaconOf(const StarSystem& sys) { DrifterBeacon B; beaconOf(sys, B, true); return B; }
+
+void beaconProgramme(uint64_t drifterSeed, const DrifterBeacon& B, const Voice& V, const std::vector<DecodedWord>& text, Programme& out) {
+    out = Programme();
+    out.kind = B.machine; out.seed = mix64(drifterSeed ^ 0xD05BEA5ULL); out.age = B.age;
+    out.speaks = true; out.words = text;
+    out.voice = V;   // slowed and worn: a third slower, lower a little, the melody flattened, rough and breathy
+    out.voice.rate = V.rate * 0.68; out.voice.pitch = V.pitch * 0.94; out.voice.range = V.range * 0.7;
+    out.voice.rough = std::max(V.rough, 0.35); out.voice.breath = std::max(V.breath, 0.3);
+    out.repeats = 3; out.gap = 6.0 + 6.0 * unit(mix64(out.seed ^ 0x6A9ULL));
 }

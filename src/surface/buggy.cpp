@@ -115,7 +115,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
             }
         }
         b.bumpT -= dt;
-        if (site.groundHeight(nx + hx * 1.2, nz + hz * 1.2) < site.waterAt(nx + hx * 1.2, nz + hz * 1.2) - 0.4) { b.speed = -b.speed * 0.2; nx = b.x; nz = b.z; }
+        if (site.groundHeight(nx + hx * 1.2, nz + hz * 1.2) < site.waterNowAt(nx + hx * 1.2, nz + hz * 1.2) - 0.4) { b.speed = -b.speed * 0.2; nx = b.x; nz = b.z; }
     }
     b.x = nx; b.z = nz;
     // wheels and chassis: four contact heights, the chassis follows their mean, the wheels keep their travel
@@ -133,7 +133,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     double smooth = 0;
     for (int k = -2; k <= 2; k++) smooth += site.groundHeight(b.x + hx * (k * 4.0), b.z + hz * (k * 4.0));
     smooth *= 0.2;
-    double chassisY = std::max(clampd(smooth, meanW - 0.3, meanW + 0.3), site.waterAt(b.x, b.z));
+    double chassisY = std::max(clampd(smooth, meanW - 0.3, meanW + 0.3), site.waterNowAt(b.x, b.z));   // Q-02: the tide's
     // B-307: the ground contact's vertical speed along the way (the previous frame's contact height is kept, so it is
     // known in the air too, and a landing is judged by the speed relative to the slope, not the absolute fall)
     double vyGround = b.groundY > -1e8 ? (chassisY - b.groundY) / std::max(dt, 1e-4) : 0.0;
@@ -321,9 +321,11 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
     RasterParams rpBody; rpBody.bank = 6; rpBody.grain = &grain; rpBody.grainScale = 3.0 * FB_SCALE;
     RasterParams rpDark; rpDark.bank = 0;   // the blacked-out sensor band, the lens, the rubber
     double headGlow = b.lights ? 0.25 : 0.0;   // the headlight bar spills onto the hood
+    const Vec3 lampP = base + upT * (0.6 * sc);   // D-04: the explorer's lamp on its hull (one point: it is a few metres long)
     auto shadeN = [&](const Vec3& n, double tint) {
         double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
         double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp;
+        if (nLamps) light += (1 - amb) * lampAt(lampP, &n);
         light = std::max(light, 0.16 + headGlow * std::max(0.0, dot(n, fwdT) + 0.5));   // never black: the mast light glows on it
         double s = 48 * std::pow(light, 0.6) * tint;
         return s + (63 - s) * fog;

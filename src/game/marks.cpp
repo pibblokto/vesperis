@@ -18,8 +18,14 @@ static_assert(MARK_PLACE == LM_COUNT, "a mark of a place is the kind after the s
 
 namespace {
 // the scanner's modes in the order R cycles them, and their names (by LandmarkKind)
-const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS};   // T-03: the works after the ruins
-const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS"};
+const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS,   // T-03: the works after the ruins
+                                  LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,   // Q-01
+                                  LM_METEORITES};   // Q-02
+}
+const char* SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS",
+                                         "CALDERAS", "TESSERAE", "LABYRINTHS", "HOLLOWS", "CHAINS", "PENITENTES", "COLONNADES", "MUD VOLCANOS", "RIDGES", "PINGOS", "MAARS",   // Q-01: the HUD's too
+                                         "METEORITES"};   // Q-02
+namespace {
 const char* RUIN_SIZE_NAMES[6] = {"A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub`, its SettlementClass (T-01: a city, the capital)
 }
 
@@ -129,7 +135,12 @@ std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
         case LM_MESA: return fmt("%.0f M HIGH", L.prominenceM);
         case LM_CANYON: return fmt("%.0f M DEEP", L.prominenceM);
         case LM_CRYSTALS: return "SPIRES";
-        default: return fmt("%.1f KM ACROSS", 2 * L.radiusM / 1000.0);   // a lake, a crater, a geyser field
+        case LM_CALDERA: case LM_LABYRINTH: return fmt("%.0f M DEEP", L.prominenceM);   // Q-01
+        case LM_TESSERA: case LM_COLUMNS: case LM_RIDGE: case LM_MUD: case LM_PINGO: return fmt("%.0f M HIGH", L.prominenceM);
+        case LM_PENITENTES: return "BLADES OF ICE";
+        case LM_HOLLOWS: return "BRIGHT PITS";
+        case LM_METEORITES: return fmt("IRON STONES, %.1f KM", 2 * L.radiusM / 1000.0);   // Q-02
+        default: return fmt("%.1f KM ACROSS", 2 * L.radiusM / 1000.0);   // a lake, a crater, a geyser field (Q-01: a chain's crater, a maar)
     }
 }
 

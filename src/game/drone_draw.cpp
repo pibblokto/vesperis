@@ -395,12 +395,14 @@ void Game::buildDroneMap(int body) {
         sum2 += gx * gx + gy * gy; cnt++;
     }
     const double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
+    const bool survey = sys.sunless();   // D-02: a sunless world's map the survey's, as the landing map's
+    double hLo = 0, hHi = 1; if (survey) surveyRange(m.height.data(), m.height.size(), hLo, hHi);
     for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
         const double lon = (x + 0.5) / W * TAU - PI, lat = (0.5 - (y + 0.5) / H) * PI;
         const int i = m.texelIndex(lon, lat);
         const double gx = hAt(lon + dl, lat) - hAt(lon - dl, lat), gy = hAt(lon, lat - dl) - hAt(lon, lat + dl);
         const double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
-        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade);
+        const uint32_t c = mapColor(ramps, m.material[i], m.albedo[i] / 255.0, lf, atmo, shade, survey ? surveyHeight(m.height[i], hLo, hHi) : -1);
         // dimmed and cooled under the screen's lines
         const int r = (int)((c & 255) * 0.5), g = (int)(((c >> 8) & 255) * 0.55), bl = (int)(((c >> 16) & 255) * 0.6);
         bay.map[(size_t)y * W + x] = rgb(r, g, bl);

@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <string>
 
-inline bool isProbeGiant(int type) { return type == PT_GASGIANT || type == PT_SUBSTELLAR; }   // what a probe can fall into
+inline bool isProbeGiant(int type) { return kindHas(type, KT_GIANT); }   // what a probe can fall into
 
 // X-03 (2026-10-07): each giant's own character. Its kind (a gas giant, an ice giant: a small blue one, galaxy/system.h, or a
 // brown dwarf), its internal heat (a young giant's high, a brown dwarf's its own glow), and from them its decks: what condenses
@@ -20,9 +20,14 @@ inline bool isProbeGiant(int type) { return type == PT_GASGIANT || type == PT_SU
 // few and a cold one's deep, with methane on top. The storms (the globe's share, BodyGen::stormShare), the lightning, the deep's
 // glow, the polar aurorae (an ice giant's off the pole), the clear-air holes, the diamond hail of a carbon-rich giant and, on
 // one rare giant, something seen once in the deep: hashed and derived, so no system changes
-enum GiantKind { GK_GAS = 0, GK_ICE, GK_BROWN };
-extern const char* const GIANT_KIND_NAMES[3];
-enum CloudSpecies { CS_METHANE = 0, CS_H2S, CS_AMMONIA, CS_NH4SH, CS_WATER, CS_SALT, CS_COUNT };
+// P-07: the made giants' kinds by their class (kinds.h's `GiantClass`): the water-cloud giant's water on top and the salts under it, the azure
+// giant clear to the deep (nothing condenses over the salts' haze far under the probe's end), the alkali giant's dark air (the sodium and the
+// potassium take the light) over decks of rock and iron deep under it, the silicate giant's clouds of rock high with iron's under them (CS_SILICATE,
+// CS_IRON: enstatite and forsterite at 1,700 K, iron at 2,050), both glowing from under them, a gas dwarf's haze and its decks deep in a metal-rich
+// air, a super-puff's haze over decks spread far apart by its weak pull. The hot ones' decks under the probe's end are kept (it sees them below)
+enum GiantKind { GK_GAS = 0, GK_ICE, GK_BROWN, GK_WATER, GK_AZURE, GK_ALKALI, GK_SILICATE, GK_DWARF, GK_PUFF, GK_COUNT };
+extern const char* const GIANT_KIND_NAMES[GK_COUNT];
+enum CloudSpecies { CS_METHANE = 0, CS_H2S, CS_AMMONIA, CS_NH4SH, CS_WATER, CS_SALT, CS_SILICATE, CS_IRON, CS_COUNT };
 struct CloudSpeciesInfo {
     const char* deckName;   // the screen's stage name
     const char* name;
@@ -65,6 +70,11 @@ struct GiantAtmosphere {
     double bandCount = 8;        // the globe's bands (`BodyGen::bandCount`)
     double driftSign = 1;        // the sense the globe's bands drift with (the turn's: a retrograde giant's bands run the other way)
     double heatK = 750;          // the heat that ends a probe
+    double hazeK = 1, absorb = 0, rayleigh = 0;   // P-07: the clear air's optical depth against the plain giant's (an azure giant's clear, a gas dwarf's hazy),
+                                                  // what it takes high up by its own (an alkali giant's sodium and potassium), the gas's own scattering a bar
+                                                  // (an azure giant's deep air blue: Rayleigh's)
+    double reach = 32;           // P-07: the deepest a deck is kept at (the probe's reach: 32 bar or the heat's end; a hot giant's 32, seen from over it)
+    double stratoW = 0.4, stratoA = 1.4, stratoB = 1.2;   // P-07: the stratosphere's warming toward the top (two fifths; a hot class's own) and its height's terms
     GiantCharacter ch;
 };
 GiantCharacter giantCharacterOf(const StarSystem& sys, int bodyIndex);
@@ -122,7 +132,7 @@ double giantGlowAt(const GiantAtmosphere& a, double bar, unsigned cut = 0);
 // X-02 (2026-10-07): the globe's jets, the turn of a giant's pattern at a latitude by a time (M9-10; space_view's globe and
 // the descent read the same): a band drifts by 6% of the giant's turn times sin(lat x bands)
 inline double giantJetTurn(const Body& b, double bandCount, double lat, double t) {   // F-07: inline (the globe asks it every pixel)
-    return b.type == PT_GASGIANT ? TAU * t / b.rotPeriod * 0.06 * std::sin(lat * bandCount) : 0.0;
+    return kindHas(b.type, KT_GAS_GIANT) ? TAU * t / b.rotPeriod * 0.06 * std::sin(lat * bandCount) : 0.0;
 }
 // X-03: the turn at a place (body-frame latitude and longitude): the great storm turns whole with its own latitude's jet, its
 // surroundings easing into it, so it keeps its shape while the bands round it shear

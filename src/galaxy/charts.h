@@ -45,6 +45,8 @@ enum ChartStyle {
     CHS_SURVEY,        // modern (glass, printed pages, a drive): a survey by magnitudes, the peoples heard by radio marked
     CHS_ROUTES,        // futuristic: a navigation chart: a map of their neighbourhood, the routes to the worlds they reached or meant to
     CHS_BEYOND,        // far future: a mark thousands of light years off and places where nothing is
+    CHS_SUNMEASURE,    // D-05: a drifter's people's measure of their sun going, its disc year by year in its age's way (suns painted smaller and smaller on a
+                       // cave's ceiling, circles drawn on a page or engraved, a printed graph, a light curve on a screen): its mark the star that was their sun
     CHS_COUNT
 };
 extern const char* const CHART_STYLE_NAMES[CHS_COUNT];   // "a cave's ceiling", "a carved bone", ... (the harness)
@@ -113,12 +115,20 @@ struct StarChart {
     int reached = 0, planned = 0;       // CHS_ROUTES: the routes flown and the ones only meant
     double farLy = 0; int farKind = 0;  // CHS_BEYOND: the mark's distance; 1 toward the galaxy's heart, 2 a cluster, 3 out of the disc, 4 along the disc
     int signs = 0;                      // CHS_BEYOND: the places where nothing is
+    // D-05: the sun's measure (CHS_SUNMEASURE): the way of the chart it is drawn as (its age's and medium's ordinary one: the cave's ceiling, the
+    // page, the atlas's paper, the survey's screen), the disc year by year from the onset to the chart's year (its year, the disc in the people's
+    // own parts) and those parts (the disc at the first measure: 60, 100, 120, 32 or 24 by the people, as their observatory's table counts)
+    int baseStyle = -1;
+    std::vector<std::array<float, 2>> sunCurve;
+    int sunUnits = 0;
 };
 
 // the stars the people marked, one per chart of the world (`chartShardsOf` of them), for `loreOf`; `g` is the people's generator.
 // A-01: a people heard a transmission only if it had radio itself and the star's people had it too (`peoplesOnAir`)
 // H-05: a far future's chart marks a star thousands of light years off (`ChartMark::how` 3: toward the galaxy's heart, a cluster, out of
-// the disc or along it), found once a people and kept; the rest as C-10's
+// the disc or along it), found once a people and kept; the rest as C-10's. D-05: a drifter's people's charts of its years without the sun (its
+// dimming and its going: the sun's measure; the dark after the last sunrise: the sky from where the drifter was by then) mark the star that was
+// their sun (`how` 4), which Enter flies to
 void chartMarksOf(const StarSystem& sys, const Body& b, const BodyGen& g, std::vector<ChartMark>& out, int count = -1);   // T-04: `count` the people's charts (`recordChartCount`), -1 C-10's
 int chartFarKind(const BodyGen& g, const Star& home, int k);   // H-05: the k-th far mark's kind (1 the heart, 2 a cluster, 3 out of the disc, 4 along it), 0 none
 // the sky of a star as a chart sees it: every star of the cube round it, the brightest first

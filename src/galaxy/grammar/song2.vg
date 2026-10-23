@@ -95,6 +95,10 @@ song.omen
   ($e.omen=comet) The hairy star came back as the old ones said,\n{ann.sg.om.b}\n{song.refrain}
   ($e.omen=eclipse) The sun went out at noon at {$e.place},\n{ann.sg.om.b}\n{song.refrain}
   ($e.omen!=comet $e.omen!=eclipse) There was a sign in the sky over {$e.place},\n{ann.sg.om.b}\n{song.refrain}
+  ($e.omen=wanderer 3) The wanderer grew over {$e.place} like a second moon,\n{ann.sg.om.b}\n{song.refrain}
+  ($e.omen=intruder 3) A new star burned over {$e.place} and would not go,\n{ann.sg.om.b}\n{song.refrain}
+  ($e.omen=dance 3) The second sun walked further from us every year,\n{ann.sg.om.b}\n{song.refrain}
+  ($e.omen=bent 3) The stars bent away over {$e.place} round nothing at all,\n{ann.sg.om.b}\n{song.refrain}
 ann.sg.om.b
   and we stood in the {crop} and watched it pass,
   and the priests said this and the {ann.craftfolk} said that,

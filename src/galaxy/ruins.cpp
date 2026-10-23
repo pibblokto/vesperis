@@ -25,8 +25,9 @@ const char* const BUILDING_KIND_NAMES[BK_COUNT] = {"HOUSE", "HALL", "TOWER", "RO
     "BLOCK", "SUBURB", "HIGHRISE", "STADIUM", "MAST", "POWER", "TANKS", "ARCOLOGY", "HABITAT", "SPIRE", "RING", "MAGLEV", "WRECK", "POD",
     "SPIKE", "HALO", "PILLARS", "SHAFT", "MONOLITH", "FOCUS", "WINDMILL", "AQUEDUCT", "TWIN TOWERS", "TUNNEL", "CRANE", "CONTAINERS", "RESERVOIR",
     "MOUND", "DAM", "DISH", "TOMB", "FORT", "BUNKER", "TEETH", "VEHICLE", "AIRCRAFT", "SHIP", "LAUNCH PAD", "HANGAR", "COLOSSUS", "TURBINE",
-    "LIGHTHOUSE", "LATTICE", "DERRICK", "BLOCKS", "SPHERE", "TETHER", "TRILITHON", "CONVEYOR", "FURNITURE"};
-static_assert(BK_FURNITURE + 1 == BK_COUNT, "a name for every building kind");
+    "LIGHTHOUSE", "LATTICE", "DERRICK", "BLOCKS", "SPHERE", "TETHER", "TRILITHON", "CONVEYOR", "FURNITURE",
+    "DOME", "GLASSHOUSE"};   // D-05
+static_assert(BK_GREENHOUSE + 1 == BK_COUNT, "a name for every building kind");
 
 double ruinCellLat(const BodyGen& g) { return 2000.0 / (g.R * 1000.0); }
 
@@ -55,7 +56,15 @@ double decayOf(double ageYears, double wet) { return clampd(0.08 + 0.3 * std::lo
 // C-13: the peoples of a world (see ruins.h)
 int peoplesOf(const BodyGen& g) { return g.hasTrait(TR_CIVILISATION) ? (unitFromHash(mix64(g.seed ^ 0xC13ULL)) < 0.2 ? 2 : 1) : 0; }
 BodyGen peopleGen(const BodyGen& g, int people) { BodyGen pg = g; if (people > 0) pg.seed = mix64(g.seed ^ (0xC13A5ULL + (uint64_t)people * 0x9E3779B97F4A7C15ULL)); return pg; }
-bool peoplesEndedTogether(const BodyGen& g) { return unitFromHash(mix64(g.seed ^ 0xC13E0ULL)) < 0.5; }
+bool peoplesEndedTogether(const BodyGen& g) { return g.drifter || unitFromHash(mix64(g.seed ^ 0xC13E0ULL)) < 0.5; }   // D-05: a drifter's lost one sun
+int systemPeoplesWorld(const StarSystem& sys) {
+    for (int pass = 0; pass < 2; pass++)
+        for (const Body& b : sys.bodies) {
+            if (!kindHas(b.type, KT_PEOPLE) || deadKind(b.type) != (pass == 1)) continue;
+            if (worldHadCivilisation(BodyGen::make(b))) return b.index;
+        }
+    return -1;
+}
 namespace {
 std::mutex g_divideMutex;
 std::unordered_map<uint64_t, Vec3> g_divides;   // a world's divide, by its seed (two threads may find the same one: they agree)
@@ -63,7 +72,7 @@ std::unordered_map<uint64_t, Vec3> g_divides;   // a world's divide, by its seed
 // the great circle: twelve poles drawn from the seed, forty-eight points along each sampled at 2 km (the sea, the inland water
 // and a dead desert's old sea count as water), the one crossing the least land kept
 Vec3 peopleDivide(const BodyGen& gSeason) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     { std::lock_guard<std::mutex> lock(g_divideMutex); auto it = g_divides.find(g.seed); if (it != g_divides.end()) return it->second; }
     DrainageOff off;
     Rng rng(mix64(g.seed ^ 0xD1F1DEULL));
@@ -93,10 +102,14 @@ int peopleAt(const BodyGen& g, double lat, double lon) {
 Culture cultureOf(const BodyGen& g, int people) {
     Culture c;
     const BodyGen pg = peopleGen(g, people);   // C-13: the people's draws (the world's own for the first)
+    // P-04: what a people built is its world's in its time (a dead world's living kind), what the years did to it since is the present's: a
+    // scorched world's dry air keeps its ruins as a desert's does and buries them in dust, a frozen world's cold keeps what it holds under frost
+    const int then = livingKindOf(g.type), now = nowKind(g);
+    const bool dryNow = kindHas(now, KT_DRY), frozenNow = KINDS[now].cover == DC_FROZEN;
     c.people = people;
     Rng r(pg.seed ^ 0xC01DULL);
     c.style = r.chance(0.55) ? 0 : 1;
-    c.family = r.chance(g.type == PT_DESERT ? 0.6 : 0.2) ? 1 : 0;
+    c.family = r.chance(kindHas(then, KT_DRY) ? 0.6 : 0.2) ? 1 : 0;
     c.tall = 0.75 + 0.55 * r.uni();
     double uDecay = r.uni();   // C-01's draw kept in the stream; the decay is the age's now
     c.stoneRoofs = r.chance(0.55);
@@ -109,13 +122,15 @@ Culture cultureOf(const BodyGen& g, int people) {
     PeopleAge pa = peopleAgeOf(g, people);
     c.age = pa.age;
     c.ageYears = pa.endedYearsAgo;
+    // D-05: a drifter's people's works weathered only until the cold took the world (no rain, no wind, no thaw since): a century or two
+    if (g.drifter) c.ageYears = std::min(c.ageYears, 60.0 + 190.0 * unitFromHash(mix64(pg.seed ^ 0xD05F1ULL)));
     c.weatherYears = c.ageYears / ageDurability(c.age);
-    c.wet = g.type == PT_DESERT ? 0.05 + 0.15 * uDecay : 0.5 + 0.5 * uDecay;
+    c.wet = dryNow || frozenNow ? 0.05 + 0.15 * uDecay : 0.5 + 0.5 * uDecay;
     c.decay = decayOf(c.weatherYears, c.wet);
     double ageK = clampd(std::log10(c.weatherYears / 100.0) / 2.6, 0.25, 1.0);
-    c.buried = (g.type == PT_DESERT ? 0.6 + 1.2 * uBuried : 0.15 + 0.4 * uBuried) * ageK;
+    c.buried = (dryNow ? 0.6 + 1.2 * uBuried : (frozenNow ? 0.3 + 0.8 * uBuried : 0.15 + 0.4 * uBuried)) * ageK;
     // C-09 the roads, by hashes of their own (the stream above stays): a desert people beat tracks as often as it paves
-    c.paved = unitFromHash(mix64(pg.seed ^ 0xC09AULL)) < (g.type == PT_DESERT ? 0.5 : 0.7);
+    c.paved = unitFromHash(mix64(pg.seed ^ 0xC09AULL)) < (kindHas(then, KT_DRY) ? 0.5 : 0.7);
     c.roadHalf = 2.5 + 1.5 * unitFromHash(mix64(pg.seed ^ 0xC09BULL));
     c.roadWear = clampd(0.1 + 0.55 * ageK * (0.35 + 0.65 * c.wet), 0.1, 0.6);
     // A-04: the architecture genome (galaxy/genome.h), the people's own through its ages, by hashes of its own (the stream above stays),
@@ -1343,7 +1358,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
     addFeatures(Lo, r, Lo.c);
     r.size = rSaved;
     // the fields round it
-    townFields(T, townAge, st, g.type == PT_DESERT, r.fields);
+    townFields(T, townAge, st, kindHas(livingKindOf(g.type), KT_DRY), r.fields);   // P-04: the fields of its time
     placeFurniture(Lo, r, Rt);   // R-412
 }
 
@@ -1671,10 +1686,10 @@ bool settlementClear(const RuinSpec& r, double x, double z, double margin) { ret
 // nearest water or old sea out to 500 m past the edge (the shore bisected between the last dry sample and the first wet); the wind by the dune fields'
 // rule (the world's angle, flipped per hemisphere, turned per 30-degree band) as a heading
 SiteRead readSite(const BodyGen& gSeason, const RuinSpec& r) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     DrainageOff off;
     SiteRead st;
-    st.desert = g.type == PT_DESERT;
+    st.desert = kindHas(g.type, KT_DRY);
     const double mPerRad = g.R * 1000.0, cosLat = std::max(std::cos(r.lat), 0.05);
     auto at = [&](double east, double north) { return sampleSurface(g, StarSystem::bodyFromLatLon(r.lat + north / mPerRad, r.lon + east / (mPerRad * cosLat)), 64.0); };
     auto wet = [](const SurfaceSample& q) { return q.material == MAT_WATER || (q.water > -1e8 && q.height < q.water) || q.oldSea > 0.5; };
@@ -1706,13 +1721,21 @@ SiteRead readSite(const BodyGen& gSeason, const RuinSpec& r) {
     if (bestD < 1e8) { st.shoreDist = bestD; st.shoreDir = bestA; st.shoreDry = dry; }
     int band = (int)std::floor(std::fabs(r.lat) / (30 * DEG));
     st.wind = g.windAngle + (r.lat < 0 ? PI : 0) + band * 0.9;
+    const int now = nowKind(g), cover = KINDS[now].cover;   // P-04: the present over a dead world's: its seas dry or ice, sand or snow at the walls
+    st.drift = kindHas(now, KT_DRY) ? 1 : (cover == DC_FROZEN ? 2 : 0);
+    if (bestD < 1e8 && cover == DC_SCORCHED) st.shoreDry = true;
+    if (bestD < 1e8 && cover == DC_FROZEN) st.shoreIce = true;
     return st;
 }
 
 std::string featureList(const RuinSpec& r) {
     std::string s;
     auto add = [&](const char* w) { if (!s.empty()) s += ", "; s += w; };
-    if (r.harbour) { static const char* const H[3] = {"a harbour", "a dock", "a container port"}; static const char* const HD[3] = {"a harbour on the dry shore", "a dock on the dry shore", "a container port on the dry shore"}; add((r.site.shoreDry ? HD : H)[clampi(r.harbourKind, 0, 2)]); }   // T-02: by the age
+    if (r.harbour) {   // T-02: by the age; P-04: a frozen world's facing the ice
+        static const char* const H[3] = {"a harbour", "a dock", "a container port"}, * const HD[3] = {"a harbour on the dry shore", "a dock on the dry shore", "a container port on the dry shore"};
+        static const char* const HI[3] = {"a harbour on the ice", "a dock on the ice", "a container port on the ice"};
+        add((r.site.shoreIce ? HI : (r.site.shoreDry ? HD : H))[clampi(r.harbourKind, 0, 2)]);
+    }
     if (r.terraced) add("terraces");
     if (r.cistern) add("a cistern");
     if (r.windwall) add("a wind wall");
@@ -1730,8 +1753,9 @@ double orientedHeading(const BodyGen& g, const Culture& c, double lat, double lo
     const double jitter = std::remainder(cellHeading, TAU) * 0.02;
     auto fall = [&]() {
         DrainageOff off;
+        BodyGen gTmp; const BodyGen& gt = thenWorld(g, gTmp);   // P-04: the ground of its time
         const double mPerRad = g.R * 1000.0, cosLat = std::max(std::cos(lat), 0.05), d = 150;
-        auto h = [&](double e, double nn) { return sampleSurface(g, StarSystem::bodyFromLatLon(lat + nn / mPerRad, lon + e / (mPerRad * cosLat)), 64.0).height; };
+        auto h = [&](double e, double nn) { return sampleSurface(gt, StarSystem::bodyFromLatLon(lat + nn / mPerRad, lon + e / (mPerRad * cosLat)), 64.0).height; };
         const double h0 = h(0, 0), gx = h(d, 0) - h0, gz = h(0, d) - h0;
         return std::atan2(-gx, -gz);   // downhill
     };
@@ -1844,7 +1868,7 @@ bool cellSettlement(const BodyGen& g, int gLat, int gLon, RuinSpec& out, bool wi
 // T-01: a cell's settlement, and the plan's works that cross it (a maglev's spans on their pylons): added to its settlement's buildings, or
 // a cell of works alone (`SC_WORKS`)
 bool ruinOfCell(const BodyGen& gSeason, int gLat, int gLon, RuinSpec& out, bool withBuildings) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const bool has = cellSettlement(g, gLat, gLon, out, withBuildings);
     if (!withBuildings || !worldHadCivilisation(g)) return has;
     const std::shared_ptr<const WorldPlan> plan = planFor(g);
@@ -1872,7 +1896,7 @@ bool ruinOfCell(const BodyGen& gSeason, int gLat, int gLon, RuinSpec& out, bool 
 }
 
 void settlementOf(const BodyGen& gSeason, int gLat, int gLon, const Culture& c, int sclass, RuinSpec& out) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const double dLat = ruinCellLat(g), latc = (gLat + 0.5) * dLat, dLon = dLat / std::max(std::cos(latc), 0.05);
     const int nLon = (int)std::ceil(TAU / dLon), gl = ((gLon % nLon) + nLon) % nLon;
     const uint64_t h = hash2i(gLat, gl, g.seed ^ 0x2711);
@@ -1893,7 +1917,7 @@ Culture cultureAs(const BodyGen& g, int people, int age, double years) {
 }
 
 bool ruinSiteOk(const BodyGen& gSeason, const RuinSpec& r) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     if (r.sclass == SC_WORKS) return true;   // T-01: a line's pylons stand over whatever the line crosses
     SurfaceSample s = sampleSurface(g, StarSystem::bodyFromLatLon(r.lat, r.lon), 64.0);
     if (s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water)) return false;
@@ -1934,7 +1958,7 @@ bool buildingDoor(const Building& b, double& dx, double& dz) {   // C-03; A-03: 
 }
 
 bool settlementClearance(const BodyGen& gSeason, double& lat, double& lon, double marginM) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     if (!worldHadCivilisation(g)) return false;
     int gLat, gLon; ruinCellOf(g, lat, lon, gLat, gLon);
     bool moved = false;

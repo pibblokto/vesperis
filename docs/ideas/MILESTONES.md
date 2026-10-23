@@ -30,7 +30,12 @@ B-423 and B-424: the frame about twice as fast with the same pictures, the stall
 R-418 (the controller), B-425 (the companion stars; generation 14), B-426 (a capital's records), R-419 (auto-explore), B-427 (a
 Wolf-Rayet star's giants' tail), B-428 (the moons spread; generation 15) and R-420 (auto-explore's tape).
 
-**Left for later:** the V series (the surface picture, parked), S-07, W-02, W-05, the P, L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them).
+**Planned for 1.4.0 (2026-10-21), generation 16:** the iteration `ITERATION-1.4.0.md` on the branch `release/v1.4.0`, on the
+user's request of 2026-10-21 (R-421 thirty to fifty new kinds of world, R-422 more modifiers, R-423 rogue planets found by
+radio), the design in `IDEAS-worlds-and-wanderers.md`: sixteen milestones, P-00 to P-07 (the P series re-cut: the old list's
+twelve kinds are in its families), Q-01 to Q-03 and D-01 to D-05, in that order; generation 16 from P-01.
+
+**Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
 lot more variety and interiors; not every desert is post-apocalyptic).
 
@@ -141,7 +146,7 @@ V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
 | W-01 | The time-lapse as an almanac menu: upcoming events with countdowns, run-to-it with a slowdown at the end; orbital events on the ship | M | 1.2.0, done 2026-10-06 |
-| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.4.0 |
+| W-02 | Tides: water level follows the moon and sun, tidal range from masses, tide line on the maps | M | 1.4.0, as Q-02's great tides |
 | W-03 | Weather that arrives: fronts with position, heading and speed; visible from orbit, on the map and on the ground; the data sheet forecast | L | 1.2.0, done 2026-10-06 |
 | W-04 | Nights: aurorae, meteor showers from comet orbits, zodiacal light, ring and moon shadows, earthshine | M | 1.2.0, done 2026-10-07 |
 | W-05 | Fossils and strata: layer sequences from the world's history, an exposure landmark kind, the data sheet's reading, fossils on living worlds | L | 1.4.0 |
@@ -149,22 +154,42 @@ V-01 first: everything else sits on it; V-02 and V-03 next, cheap and visible in
 
 W-01 first: it makes every other timed event (W-02..W-04) something you can witness.
 
-## P: planet kinds (`IDEAS-planet-kinds-and-looks.md`, first list) — each is a generation change
+## P: kinds of world (`IDEAS-worlds-and-wanderers.md` section 1) — generation 16 from P-01
+
+Re-cut on 2026-10-21 for 1.4.0 (R-421): the first list of `IDEAS-planet-kinds-and-looks.md` had twelve rows, one a kind, none
+started; its kinds are in the families below (the eyeball and the ammonia world in P-03, the salt, glass and chthonian worlds
+and the supercritical one as the steam world's lowlands in P-01, the fungal world as P-03's chemotroph, the rogue-captured
+world as P-05's wanderer, the shattered world as P-06's patchwork, the iron rain as P-07's silicate giant); the shepherd moon
+(a place) and the pelagic island (a trait) are left for later.
 
 | Id | Item | Size | Status |
 | --- | --- | --- | --- |
-| P-01 | Tidally locked eyeball world (with S-01's red dwarfs) | L | 1.4.0 or later |
-| P-02 | Ammonia world | M | 1.4.0 or later |
-| P-03 | Salt world | M | 1.4.0 or later |
-| P-04 | Glass world | M | 1.4.0 or later |
-| P-05 | Fungal world | L | 1.4.0 or later |
-| P-06 | Rogue-captured world | M | 1.4.0 or later |
-| P-07 | Chthonian world | M | 1.4.0 or later |
-| P-08 | Shattered world | L | 1.4.0 or later |
-| P-09 | Supercritical world (landable at the poles or not at all) | M | 1.4.0 or later |
-| P-10 | Iron rain world | M | 1.4.0 or later |
-| P-11 | Shepherd moon in a ring (a place, not a type) | M | 1.4.0 or later |
-| P-12 | Pelagic world with a single island | S | 1.4.0 or later |
+| P-00 | The kind table: every kind a row, the planet function's shared skeleton, accent hues, traits by tags; nothing drawn changes | XL | 1.4.0, done 2026-10-21 |
+| P-01 | The furnace worlds: magma ocean, chthonian, glass, steam, salt, rust; the new kinds from the old draws; generation 16 | L | 1.4.0, done 2026-10-21 |
+| P-02 | The living worlds: archean, hothouse, superhabitable, steppe, tundra, lichen | L | 1.4.0, done 2026-10-21 |
+| P-03 | The locked and the deep: eyeball, terminator, hycean, ammonia, snowball, chemotroph | L | 1.4.0, done 2026-10-21 |
+| P-04 | The dead worlds and their peoples: frozen felisian, scorched felisian | L | 1.4.0, done 2026-10-21 |
+| P-05 | The far cold: nitrogen, cryovolcanic, dry ice, wanderer, brine dwarf, frost dwarf | L | 1.4.0, done 2026-10-22 |
+| P-06 | The strange moons: grooved ice, two-faced, tiger-striped, patchwork, sponge | M | 1.4.0, done 2026-10-22 |
+| P-07 | The giants: water-cloud, azure, alkali, silicate, gas dwarf, super-puff; the probe's decks | L | 1.4.0, done 2026-10-22 |
+
+## Q: the qualities (`IDEAS-worlds-and-wanderers.md` section 2)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| Q-01 | Six slots a world, the facts, eleven landforms | L | 1.4.0, done 2026-10-22 |
+| Q-02 | Water, sky, life and ground: sixteen traits, the tides among them (W-02) | L | 1.4.0, done 2026-10-22 |
+| Q-03 | The sounds of the ground: singing dunes, singing ice, quakes | M | 1.4.0, done 2026-10-22 |
+
+## D: the drifters (`IDEAS-worlds-and-wanderers.md` section 3)
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| D-01 | The dark between: the drifters' field, a system with no sun, the way there and back, the save | L | 1.4.0, done 2026-10-23 |
+| D-02 | Heard, not seen: the radar finds them, the lock, the jump into the void, the black disc, the map without light | L | 1.4.0, done 2026-10-23 |
+| D-03 | The voices of the dark: a voice for every drifter | L | 1.4.0, done 2026-10-23 |
+| D-04 | The ground in the dark: the explorer's lamp, frozen air, embers, the lights left on, the dark ocean | L | 1.4.0, done 2026-10-23 |
+| D-05 | The people who lost their sun: the history's new end, its records, charts and music, the beacon | XL | 1.4.0, done 2026-10-23 |
 
 ## L: looks and effects (`IDEAS-planet-kinds-and-looks.md`, second list)
 

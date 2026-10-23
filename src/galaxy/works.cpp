@@ -23,10 +23,10 @@
 
 const char* const WORK_KIND_NAMES[WO_COUNT] = {"a quarry", "a mine", "a dam", "an aqueduct", "an observatory", "a shrine", "a pilgrims' way", "a necropolis",
     "lines on a plain", "a henge", "a fortified line", "a battlefield", "a launch site", "an antenna field", "a wreck", "a colossus", "a terraformed basin",
-    "the last shelter", "something of the far future", "a wind farm", "a lighthouse", "a fort"};
+    "the last shelter", "something of the far future", "a wind farm", "a lighthouse", "a fort", "a dome over warm ground", "glasshouses"};
 const char* const WORK_HEARD[WO_COUNT] = {"A QUARRY", "A MINE", "A DAM", "AN AQUEDUCT", "AN OBSERVATORY", "A SHRINE", "A WAY", "A NECROPOLIS", "LINES ON THE GROUND",
     "STANDING STONES", "A FORTIFIED LINE", "A BATTLEFIELD", "A LAUNCH SITE", "AN ANTENNA FIELD", "A WRECK", "A COLOSSUS", "SHAPED LAND", "A SHELTER",
-    "SOMETHING MADE", "A WIND FARM", "A LIGHTHOUSE", "A FORT"};
+    "SOMETHING MADE", "A WIND FARM", "A LIGHTHOUSE", "A FORT", "A DOME", "GLASSHOUSES"};
 
 double editLeft(double years, double wet, bool line) {
     const double y = std::max(1.0, years);
@@ -185,6 +185,11 @@ struct WB {
 
     void mines(); void dams(); void aqueducts(); void observatories(); void shrine(); void geoglyphs(); void fortLine(); void battlefields();
     void launchSites(); void antennas(); void colossi(); void terraforms(); void shelter(); void strange(); void lighthouses();
+    // D-05: a people that lost its sun: a shelter's site (the last's and the others'), the warmest open ground near a place, the works of the end
+    bool shelterSite(const Vec3& u0, double r0, Rng& rng, Vec3& best, double& bestDown);
+    int shelterStyle() const;
+    bool warmGround(const Vec3& u0, double r0, double reach, Rng& rng, Vec3& best);
+    void sunlostWorks();
     void mineAt(Work& w, int style, double h, double down, double pitR, Rng& rng);
     // B-418: a cell of the land (`landWork`: what its ground offers, the kind drawn, sited by its rule inside the cell)
     bool landWork(const LandCell& L);
@@ -1106,11 +1111,11 @@ void WB::terraforms() {
 }
 
 // ---- the last shelter: by the place the collapse ended in, in the nearest steep rock ---------------------------------------------------
-void WB::shelter() {
-    if (!H || H->lastPlace < 0 || age == AGE_FAR_FUTURE) return;
-    Rng rng(pseed ^ 0x70410ULL);
-    Vec3 u0; double r0; placeAt(H->lastPlace, u0, r0);
-    Vec3 best; double bestS = -1e18, bestDown = 0; bool any = false;
+// a shelter's site near a place: steep rock, near (a medieval people's citadel on the height); D-05: a people that lost its sun's a hall into the
+// rock by the warmest ground
+bool WB::shelterSite(const Vec3& u0, double r0, Rng& rng, Vec3& best, double& bestDown) {
+    const bool sunlost = H->cause == CAUSE_SUN_LOST, embers = sunlost && g.hasTrait(TR_EMBERS);
+    double bestS = -1e18; bool any = false;
     const double a0 = rng.uni() * TAU;
     for (double d : {600.0, 1400.0, 2600.0, 4200.0, 6500.0})
         for (int q = 0; q < 20; q++) {
@@ -1120,17 +1125,145 @@ void WB::shelter() {
             if (wetS(s)) continue;
             double down, h; const double sl = grade(u, 40, down, h);
             double sc = std::min(sl, 0.8) - d / 15000 + (matFamily(s.material) == FAM_ROCK ? 0.2 : 0);
-            if (age == AGE_MEDIEVAL) sc = h * 0.004 - d / 15000;   // a citadel on the height
+            if (age == AGE_MEDIEVAL && !sunlost) sc = h * 0.004 - d / 15000;   // a citadel on the height
+            if (embers) sc += 1.5 * emberFieldAt(g, u * g.R);
             if (sc > bestS && clearOf(u, 140)) { bestS = sc; best = u; bestDown = down; any = true; }
         }
-    if (!any) return;
+    return any;
+}
+// its way by the age (D-05: a medieval people that lost its sun's the halls under the mountain, a far-future one's a habitat's)
+int WB::shelterStyle() const {
+    if (age == AGE_MEDIEVAL && H && H->cause == CAUSE_SUN_LOST) return 5;
+    return age == AGE_PREHISTORIC ? 0 : (age == AGE_MEDIEVAL ? 1 : (age == AGE_INDUSTRIAL ? 2 : (age == AGE_MODERN ? 3 : 4)));
+}
+void WB::shelter() {
+    if (!H || H->lastPlace < 0 || (age == AGE_FAR_FUTURE && H->cause != CAUSE_SUN_LOST)) return;
+    Rng rng(pseed ^ 0x70410ULL);
+    Vec3 u0; double r0; placeAt(H->lastPlace, u0, r0);
+    Vec3 best; double bestDown = 0;
+    if (!shelterSite(u0, r0, rng, best, bestDown)) return;
     Work& w = add(WO_SHELTER, best, 140, seedOf(WO_SHELTER, 0));
     w.age = age; w.place = H->lastPlace; w.planRank = H->places[H->lastPlace].plan; w.year = H->last;
     forEvents(HE_END, [&](int i, const HistoryEvent&) { w.event = i; });
     double down2, h2; const double sl = grade(best, 40, down2, h2);
-    w.style = age == AGE_PREHISTORIC ? 0 : (age == AGE_MEDIEVAL ? 1 : (age == AGE_INDUSTRIAL ? 2 : (age == AGE_MODERN ? 3 : 4)));
+    w.style = shelterStyle();
     w.heading = sl > 0.12 ? bestDown : bearingOf(best, u0);   // its door out of the hill, else toward the place
     w.height = sl;
+}
+
+// ---- D-05: the works of the end of a people that lost its sun ---------------------------------------------------------------------------
+// the warmest open ground near a place for a work of `reach`: a field of embers where the world has them, else the lowest dry ground (the
+// deep), flat enough
+bool WB::warmGround(const Vec3& u0, double r0, double reach, Rng& rng, Vec3& best) {
+    const bool embers = g.hasTrait(TR_EMBERS);
+    double bestS = -1e18; bool any = false;
+    const double a0 = rng.uni() * TAU;
+    for (double d : {250.0, 600.0, 1100.0, 1800.0, 2800.0, 4000.0})
+        for (int q = 0; q < 14; q++) {
+            const double ang = a0 + q * TAU / 14, dd = r0 + reach + d;
+            const Vec3 u = offsetUnit(u0, std::sin(ang) * dd, std::cos(ang) * dd, Rm);
+            const SurfaceSample s = at(u);
+            if (wetS(s)) continue;
+            double down, h; const double sl = grade(u, std::max(30.0, reach * 0.6), down, h);
+            if (sl > 0.14) continue;
+            double sc = -h / 400.0 - d / 6000.0 - 3 * sl;
+            if (embers) sc += 3.0 * emberFieldAt(g, u * g.R);
+            if (sc > bestS && clearOf(u, reach)) { bestS = sc; best = u; any = true; }
+        }
+    return any;
+}
+// the places that lived below the longest (the last, then the two left last after the last sunrise): a shelter by each of the others (the last's
+// is `shelter`'s; their last records with them, `before` the years before the end it was left), a dome over the warm ground by each (a medieval
+// people's vaulted hall over its spring, none for a prehistoric people's: the warm cave was its shelter), its glasshouses beside it (an
+// industrial people's and later); the graves of the last generations on a slope facing the last place. Every draw its own stream
+void WB::sunlostWorks() {
+    if (!H || H->cause != CAUSE_SUN_LOST || H->lastPlace < 0) return;
+    std::vector<int> ps;
+    for (int i = 0; i < (int)H->places.size(); i++) {
+        const HistoryPlace& q = H->places[i];
+        if (i == H->lastPlace || q.fate != HP_COLLAPSE || gone(i) || q.ended < H->profile.lastSunrise || q.ended >= H->last) continue;
+        ps.push_back(i);
+    }
+    std::sort(ps.begin(), ps.end(), [&](int a, int b) { return H->places[a].ended != H->places[b].ended ? H->places[a].ended > H->places[b].ended : a < b; });
+    if (ps.size() > 2) ps.resize(2);
+    for (size_t k = 0; k < ps.size(); k++) {   // their shelters
+        const HistoryPlace& q = H->places[ps[k]];
+        Rng rng(pseed ^ (0xD05510ULL + k));
+        Vec3 u0; double r0; placeAt(ps[k], u0, r0);
+        Vec3 best; double bestDown = 0;
+        if (!shelterSite(u0, r0, rng, best, bestDown)) continue;
+        double down2, h2; const double sl = grade(best, 40, down2, h2);
+        Work& w = add(WO_SHELTER, best, 140, seedOf(WO_SHELTER, 1 + (int)k));
+        w.place = ps[k]; w.planRank = q.plan; w.year = q.ended; w.event = q.endEvent; w.before = H->last - q.ended;
+        w.style = shelterStyle(); w.heading = sl > 0.12 ? bestDown : bearingOf(best, u0); w.height = sl;
+    }
+    if (age >= AGE_MEDIEVAL) {   // the domes and their glasshouses
+        std::vector<int> by = {H->lastPlace}; by.insert(by.end(), ps.begin(), ps.end());
+        const int style = age == AGE_MEDIEVAL ? 0 : (age == AGE_INDUSTRIAL ? 1 : (age == AGE_MODERN ? 2 : (age == AGE_FUTURISTIC ? 3 : 4)));
+        for (size_t k = 0; k < by.size(); k++) {
+            const HistoryPlace& q = H->places[by[k]];
+            Rng rng(pseed ^ (0xD05520ULL + k));
+            Vec3 u0; double r0; placeAt(by[k], u0, r0);
+            const double rad = style == 0 ? 11 + 5 * rng.uni() : 24 + 16 * rng.uni(), reach = rad + 25;
+            Vec3 u; if (!warmGround(u0, r0, reach, rng, u)) continue;
+            {
+                Work& w = add(WO_DOME, u, reach, seedOf(WO_DOME, (int)k));
+                w.style = style; w.place = by[k]; w.planRank = q.plan; w.year = q.ended; w.width = rad; w.heading = bearingOf(u, u0);
+                w.before = by[k] == H->lastPlace ? 0 : H->last - q.ended;
+            }
+            if (age < AGE_INDUSTRIAL) continue;
+            // its glasshouses: rows of them on flat dry ground beside it, their long sides toward it
+            const int gs = age >= AGE_FUTURISTIC ? 2 : (age == AGE_MODERN ? 1 : 0);
+            const double hw = gs == 0 ? 4.0 : (gs == 1 ? 4.5 : 6.0), hd = gs == 0 ? 12.0 : (gs == 1 ? 18.0 : 20.0);
+            const int rows = 3 + rng.irange(4), per = 1 + rng.irange(2);
+            const double across = 0.5 * (rows * (2 * hw + 3) - 3), along = 0.5 * (per * 2 * hd + (per - 1) * 4), greach = std::hypot(across, along) + 6;
+            Vec3 best; double bestS = -1e18; bool any = false;
+            const double a0 = rng.uni() * TAU;
+            for (double d : {20.0, 60.0, 120.0, 220.0, 360.0})
+                for (int qq = 0; qq < 12; qq++) {
+                    const double ang = a0 + qq * TAU / 12, dd = reach + greach + d;
+                    const Vec3 v = offsetUnit(u, std::sin(ang) * dd, std::cos(ang) * dd, Rm);
+                    if (wetS(at(v))) continue;
+                    double down, h; const double sl = grade(v, std::max(25.0, greach * 0.6), down, h);
+                    if (sl > 0.08) continue;
+                    const double sc = -sl * 10 - d / 300.0;
+                    if (sc > bestS && clearOf(v, greach)) { bestS = sc; best = v; any = true; }
+                }
+            if (!any) continue;
+            Work& w = add(WO_GREENHOUSE, best, greach, seedOf(WO_GREENHOUSE, (int)k));
+            w.style = gs; w.place = by[k]; w.planRank = q.plan; w.year = q.ended; w.width = across; w.length = along; w.heading = bearingOf(best, u);
+            w.before = by[k] == H->lastPlace ? 0 : H->last - q.ended;
+        }
+    }
+    {   // the graves of the last generations: on a slope facing the last place, in its people's way of the dead
+        Rng rng(pseed ^ 0xD05530ULL);
+        Vec3 u0; double r0; placeAt(H->lastPlace, u0, r0);
+        const int dead = C.genome.of(GV_DEAD), a = age;
+        int style;
+        if (a == AGE_PREHISTORIC || dead == DE_BARROWS) style = 0;
+        else if (dead == DE_TOWERS) style = 5;
+        else if (a >= AGE_FUTURISTIC) style = 4;
+        else if (dead == DE_TOMBS) style = 1;
+        else style = a == AGE_MODERN ? 3 : 2;
+        const double reach = style == 2 || style == 3 ? 170 : 120, ph = at(u0).height;
+        Vec3 best; double bestS = -1e18, bestDown = 0; bool any = false;
+        const double a0 = rng.uni() * TAU;
+        for (double d : {250.0, 500.0, 900.0, 1600.0, 2500.0})
+            for (int q = 0; q < 16; q++) {
+                const double ang = a0 + q * TAU / 16, dd = r0 + reach + d;
+                const Vec3 u = offsetUnit(u0, std::sin(ang) * dd, std::cos(ang) * dd, Rm);
+                const SurfaceSample s = at(u);
+                if (wetS(s) || s.material == MAT_FOREST) continue;
+                double down, h; const double sl = grade(u, 50, down, h);
+                if (sl > 0.25) continue;
+                const double sc = std::cos(down - (ang + PI)) * std::min(sl, 0.15) * 4 - d / 8000 - std::max(0.0, h - ph) / 2000;   // a slope that looks at the place
+                if (sc > bestS && clearOf(u, reach)) { bestS = sc; best = u; bestDown = down; any = true; }
+            }
+        if (any) {
+            Work& w = add(WO_NECROPOLIS, best, reach, seedOf(WO_NECROPOLIS, 0));
+            w.style = style; w.place = H->lastPlace; w.planRank = H->places[H->lastPlace].plan; w.year = H->last; w.heading = bestDown;
+        }
+    }
 }
 
 // ---- the far future's inexplicable: a plain made flat, pillars to the horizon, a mountain cut into terraces, a lattice over a valley, a
@@ -1724,7 +1857,7 @@ bool WB::landWork(const LandCell& L) {
 
 // ---- the world's works ---------------------------------------------------------------------------------------------------------------
 std::shared_ptr<WorldWorks> buildWorldWorks(const BodyGen& gSeason) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     auto W = std::make_shared<WorldWorks>();
     W->seed = g.seed; W->Rm = g.R * 1000.0;
     if (!worldHadCivilisation(g)) return W;
@@ -1740,7 +1873,7 @@ std::shared_ptr<WorldWorks> buildWorldWorks(const BodyGen& gSeason) {
         if (b.pp->places.empty()) continue;
         // the history's first (its battles, the last shelter, the works it finished where it finished them), then the world's great ones by
         // the terrain (B-418: the everyday works are the land's, `landWorkOf`)
-        b.battlefields(); b.shelter(); b.dams(); b.aqueducts(); b.observatories(); b.lighthouses(); b.launchSites(); b.shrine();
+        b.battlefields(); b.shelter(); b.sunlostWorks(); b.dams(); b.aqueducts(); b.observatories(); b.lighthouses(); b.launchSites(); b.shrine();
         b.colossi(); b.mines(); b.fortLine(); b.antennas(); b.terraforms(); b.strange(); b.geoglyphs();
         for (int k = 0; k < WO_COUNT; k++) W->counts[p][k] = b.made[k];
     }
@@ -1808,7 +1941,8 @@ struct LandCtx {
 };
 std::shared_ptr<LandCtx> makeLandCtx(const BodyGen& g, std::shared_ptr<const WorldWorks> W) {
     auto X = std::make_shared<LandCtx>();
-    X->g = g; X->g.season = 0; X->P = worldPlanOf(g); X->W = std::move(W);   // B-419: the world's, not its season's
+    { BodyGen gTmp; X->g = thenWorld(g, gTmp); }   // B-419: the world's, not its season's (P-04: in its people's time)
+    X->P = worldPlanOf(g); X->W = std::move(W);
     for (int p = 0; p < std::min(2, X->P->peoples); p++) {
         X->H[p] = historyOfWorld(g, p); X->C[p] = cultureOf(g, p); X->pseed[p] = peopleGen(g, p).seed ^ 0x7030ULL;
         X->ageFrom[p] = X->H[p] ? ageFromOf(X->H[p]->profile) : 1;
@@ -1955,11 +2089,12 @@ struct Lay {
 }
 
 void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     r = RuinSpec();
     r.sclass = SC_WORKS; r.plan = SP_LONE; r.lat = w.lat; r.lon = w.lon; r.heading = w.heading; r.size = w.radiusM;
     r.seed = w.seed; r.people = w.people; r.work = w.kind; r.buildAge = w.age; r.before = w.before;
-    r.site.desert = g.type == PT_DESERT;
+    r.site.desert = kindHas(g.type, KT_DRY);
+    { const int now = nowKind(g); r.site.drift = kindHas(now, KT_DRY) ? 1 : (KINDS[now].cover == DC_FROZEN ? 2 : 0); }   // P-04: the present's drifts
     r.site.wind = g.windAngle + (w.lat < 0 ? PI : 0) + (int)std::floor(std::fabs(w.lat) / (30 * DEG)) * 0.9;
     const double Rm = g.R * 1000.0;
     const Frame F(w.unit, Rm);
@@ -2367,11 +2502,35 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     for (int s = -1; s <= 1; s += 2) { L.at(H, 0, 0, s * 18, hill ? -40 : -30, x, z); L.add(BK_MAST, x, z, H, 1, 1, 22 + 6 * rng.uni()); }
                     L.at(H, 0, 0, 14, 16, x, z); L.add(BK_BUNKER, x, z, H, 4, 3, 3, 1);
                     break;
+                case 5:   // D-05: a medieval people that lost its sun's halls under the mountain: their mouth in the rock, a gatehouse before it, walls either side
+                    L.add(BK_PORTAL, 0, 0, H, 4.5, 1, 6);
+                    L.at(H, 0, 0, 0, 16, x, z); L.add(BK_GATE, x, z, H, 3.5, 1.4, 6);
+                    for (int s = -1; s <= 1; s += 2) { L.at(H, 0, 0, s * 11.5, 16, x, z); L.add(BK_WALL, x, z, H, 7, 1.0, 5); }
+                    break;
                 default:
                     L.add(BK_HABITAT, 0, 0, H, 22, 22, 8);
                     if (hill) { L.at(H, 0, 0, 0, 30, x, z); L.add(BK_PORTAL, x, z, H, 4, 1, 6); }
                     break;
             }
+            break;
+        }
+        case WO_DOME: {   // D-05: the dome over the warm ground (`width` its radius), its door toward its place
+            const double rad = w.width;
+            if (w.style == 0) L.add(BK_ROTUNDA, 0, 0, H, rad, rad, 6 + rad * 0.25);   // a medieval people's vaulted hall over its spring
+            else if (w.style == 3) L.add(BK_HABITAT, 0, 0, H, rad, rad, 8);
+            else L.add(BK_DOME, 0, 0, H, rad, rad, 2.6, w.style == 1 ? 0 : (w.style == 2 ? 1 : 2));
+            break;
+        }
+        case WO_GREENHOUSE: {   // D-05: the glasshouses in rows (`width` and `length` the block's half extents), their long sides along `heading`
+            const int st = clampi(w.style, 0, 2);
+            const double hw = st == 0 ? 4.0 : (st == 1 ? 4.5 : 6.0), hd = st == 0 ? 12.0 : (st == 1 ? 18.0 : 20.0), h = st == 2 ? hw * 0.9 : hw;
+            const int rows = std::max(1, (int)std::lround((2 * w.width + 3) / (2 * hw + 3))), per = std::max(1, (int)std::lround((2 * w.length + 4) / (2 * hd + 4)));
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < per; j++) {
+                    double x, z; rot(H, (i - (rows - 1) * 0.5) * (2 * hw + 3), (j - (per - 1) * 0.5) * (2 * hd + 4), x, z);
+                    if (wet(x, z)) continue;
+                    L.add(BK_GREENHOUSE, x, z, H, hw, hd, h, st);
+                }
             break;
         }
         case WO_STRANGE: {
@@ -2472,7 +2631,8 @@ std::string workLine(const Work& w) {
         case WO_OBSERVATORY: { char b2[80]; snprintf(b2, sizeof b2, "on a summit of %.0f m", w.height); what = b2; break; }
         default: { char b2[60]; snprintf(b2, sizeof b2, "style %d", w.style); what = b2; break; }
     }
-    snprintf(buf, sizeof buf, "%s (%s%s) at %.3f %.3f, %.0f m across%s%s; %s", WORK_KIND_NAMES[w.kind], AGE_NAMES[clampi(w.age, 0, AGE_COUNT - 1)], w.before > 0 ? ", left early" : "",
+    snprintf(buf, sizeof buf, "%s (%s%s) at %.3f %.3f, %.0f m across%s%s; %s", w.kind == WO_SHELTER && w.before > 0 ? "a shelter" : WORK_KIND_NAMES[w.kind],   // D-05: a shelter not the last
+             AGE_NAMES[clampi(w.age, 0, AGE_COUNT - 1)], w.before > 0 ? ", left early" : "",
              w.lat / DEG, w.lon / DEG, 2 * w.radiusM, w.year ? (std::string(", year ") + std::to_string(w.year)).c_str() : "", w.heard ? "" : ", unheard", what.c_str());
     return buf;
 }

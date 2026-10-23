@@ -2,6 +2,7 @@
 #include "peoples.h"
 #include "ruins.h"
 #include "drainage.h"
+#include "drifters.h"
 #include "core/rng.h"
 #include <algorithm>
 #include <cmath>
@@ -29,7 +30,7 @@ namespace {
 // and whether it can end a whole world (two peoples that ended together share such a cause)
 struct CauseInfo { const char* name; double w[AGE_COUNT]; double lo, hi; int speed; bool worldwide; };
 //   the cause                                        P     M     I     Mo    F     FF       years        speed, worldwide
-constexpr CauseInfo CAUSES[CAUSE_COUNT] = {
+constexpr CauseInfo CAUSES[] = {
     {"famine",                                      {1.2,  0.3,  0,    0,    0,    0},      3, 30,       1, false},
     {"an ice age",                                  {0.8,  0.2,  0,    0,    0,    0},      150, 2000,   2, true},
     {"a volcanic winter",                           {0.6,  0.2,  0.1,  0,    0,    0},      3, 40,       0, true},
@@ -67,7 +68,9 @@ constexpr CauseInfo CAUSES[CAUSE_COUNT] = {
     {"an experiment with physics",                  {0,    0,    0,    0,    0,    1.0},    1, 3,        0, true},
     {"an ending chosen",                            {0,    0,    0,    0,    0,    1.0},    5, 200,      1, false},
     {"something the records cannot describe",       {0,    0,    0,    0,    0,    1.0},    1, 1000,     1, true},
+    {"the loss of the sun",                         {0,    0,    0,    0,    0,    0},      40, 4000,    2, true},    // D-05: given, never drawn
 };
+static_assert(sizeof(CAUSES) / sizeof(CAUSES[0]) == CAUSE_COUNT, "a row a cause");
 // the forms of government by age (the form at an era's close), what they lived by, what they believed, the rite and the
 // holy place by the faith
 const double GOV_W[AGE_COUNT][GOV_COUNT] = {
@@ -161,12 +164,45 @@ PeopleAge ageOfPeople(const BodyGen& pg, int age = -1) {
     return a;
 }
 
+// D-05: a drifter's people's loss of its sun from the generator alone (the age, the culture and the profile read it alike): how long it took
+// in the people's own years by the age (a prehistoric people's a few generations, a futuristic people's centuries below ground, a far-future
+// people's over a thousand years), within the last age of both peoples (they ended together); its stages (the warning's omens, the onset's
+// short summers, the crisis while the sun went, the end the long dark below); the last sunrise (the crisis's last year); and how long ago the
+// end was: after the drifter left its star (`drifterLeftYears`) by the years they lived on in the dark
+const double SUN_LOSS_YEARS[AGE_COUNT][2] = {{40, 150}, {60, 300}, {50, 250}, {60, 300}, {300, 1500}, {1000, 4000}};
+struct SunLoss { int years = 1; double stage[STAGE_COUNT] = {0, 0.2, 0.6, 0.9}; int lastSunrise = 1; double ended = 1000; };
+SunLoss sunLossOf(const BodyGen& g, const PeopleAge& first) {
+    SunLoss L;
+    const uint64_t ws = g.worldSeed ? g.worldSeed : g.seed;
+    Rng r(ws ^ 0xD05C0ULL);
+    const double want = logUni(r, SUN_LOSS_YEARS[first.age][0], SUN_LOSS_YEARS[first.age][1]);
+    int lastLen = first.lastYear - first.eras.back().start + 1;
+    if (peoplesOf(g) > 1) {   // C-13: the other people's last age bounds it too
+        BodyGen w = g; w.seed = ws;
+        const PeopleAge o = ageOfPeople(peopleGen(w, 1), first.age);
+        lastLen = std::min(lastLen, o.lastYear - o.eras.back().start + 1);
+    }
+    L.years = std::max(1, (int)std::lround(std::min(want, 0.85 * lastLen)));
+    L.stage[STAGE_WARNING] = 0;
+    L.stage[STAGE_ONSET] = r.range(0.15, 0.35);
+    L.stage[STAGE_CRISIS] = L.stage[STAGE_ONSET] + (1 - L.stage[STAGE_ONSET]) * r.range(0.15, 0.35);
+    L.stage[STAGE_END] = L.stage[STAGE_CRISIS] + (1 - L.stage[STAGE_CRISIS]) * r.range(0.05, 0.25);
+    const int collapseYear = first.lastYear - L.years + 1;
+    int endFrom = collapseYear;   // the end's first year (`PeopleProfile::stageAt`'s rule)
+    while (endFrom < first.lastYear && (endFrom - collapseYear + 1) / (double)L.years <= L.stage[STAGE_END]) endFrom++;
+    L.lastSunrise = std::max(collapseYear, endFrom - 1);
+    Star d; drifterAt(g.starSx, g.starSy, g.starSz, d, false);
+    const double left = drifterLeftYears(d);
+    L.ended = std::max(0.08 * left, left - (first.lastYear - L.lastSunrise));
+    return L;
+}
+
 }   // namespace
 
 // what the world says about the ways it could end a people (H-02 reads it for the disasters of a history)
 WorldRead readWorld(const StarSystem& sys, const Body& b, const BodyGen& g) {
     WorldRead w;
-    w.desert = g.type == PT_DESERT;
+    w.desert = kindHas(nowKind(g), KT_DRY);   // P-04: a scorched world's people died as a desert's did, of the drying and the climate
     w.redDwarf = sys.star.cls == STAR_RED_DWARF;
     for (int t : {TR_CINDER_FIELD, TR_TRAPS, TR_RIFT, TR_GEYSERS, TR_CORONAE}) if (g.hasTrait(t)) w.volc += 0.5;
     int comets = 0; for (const Body& o : sys.bodies) if (o.type == PT_COMET) comets++;
@@ -203,7 +239,7 @@ void drawStages(Rng& r, int speed, double* st) {
 }
 // the share of a world that was land in its people's time (a dead desert's old seas were water): 64 points of a spiral at 2 km
 double landShareOf(const BodyGen& gSeason) {
-    BodyGen gTmp; const BodyGen& g = unseasoned(gSeason, gTmp);   // B-419: the world's, not its season's
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     DrainageOff off;
     const int N = 64; int land = 0;
     for (int i = 0; i < N; i++) {
@@ -242,12 +278,15 @@ PeopleAge peopleAgeOf(const BodyGen& g, int people) {
         BodyGen w = g; w.seed = g.worldSeed;
         if (peopleGen(w, 1).seed == g.seed) return peopleAgeOf(w, 1);
     }
-    const PeopleAge first = ageOfPeople(peopleGen(g, 0));
+    PeopleAge first = ageOfPeople(peopleGen(g, 0));
+    if (g.drifter) first.endedYearsAgo = sunLossOf(g, first).ended;   // D-05: after the drifter left its star
     if (people <= 0) return first;
     PeopleAge a = ageOfPeople(peopleGen(g, people), first.age);
     if (peoplesEndedTogether(g)) a.endedYearsAgo = first.endedYearsAgo;   // C-13: one catastrophe for both
     return a;
 }
+
+int peopleFirstAgeOf(uint64_t worldSeed) { Rng r(worldSeed ^ 0xA01A6EULL); return r.pick(AGE_SHARES, AGE_COUNT); }
 
 int peoplesOnAir(const BodyGen& g) {
     int n = peoplesOf(g), mask = 0;
@@ -261,7 +300,9 @@ const char* const CAUSE_NAMES[CAUSE_COUNT] = {
     CAUSES[0].name, CAUSES[1].name, CAUSES[2].name, CAUSES[3].name, CAUSES[4].name, CAUSES[5].name, CAUSES[6].name, CAUSES[7].name, CAUSES[8].name, CAUSES[9].name,
     CAUSES[10].name, CAUSES[11].name, CAUSES[12].name, CAUSES[13].name, CAUSES[14].name, CAUSES[15].name, CAUSES[16].name, CAUSES[17].name, CAUSES[18].name, CAUSES[19].name,
     CAUSES[20].name, CAUSES[21].name, CAUSES[22].name, CAUSES[23].name, CAUSES[24].name, CAUSES[25].name, CAUSES[26].name, CAUSES[27].name, CAUSES[28].name, CAUSES[29].name,
-    CAUSES[30].name, CAUSES[31].name, CAUSES[32].name, CAUSES[33].name, CAUSES[34].name, CAUSES[35].name, CAUSES[36].name};
+    CAUSES[30].name, CAUSES[31].name, CAUSES[32].name, CAUSES[33].name, CAUSES[34].name, CAUSES[35].name, CAUSES[36].name, CAUSES[37].name};
+static_assert(CAUSE_COUNT == 38, "CAUSE_NAMES lists every cause");
+const char* const SUN_WAY_NAMES[SW_COUNT] = {"the wanderer", "the intruder", "the dark", "the dance"};
 
 // the latest stage begun by the year's end (the collapse's share gone by then), so its last year is the end's even when the
 // whole collapse took a year or two
@@ -277,7 +318,9 @@ int PeopleProfile::eraAt(int year) const {
     return eras.empty() ? 0 : (int)eras.size() - 1;
 }
 
-PeopleProfile peopleProfileOf(const StarSystem& sys, const Body& b, const BodyGen& g, int people) {
+PeopleProfile peopleProfileOf(const StarSystem& sys0, const Body& b0, const BodyGen& g, int people) {
+    const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
+    const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
     PeopleProfile P;
     int n = std::max(1, peoplesOf(g));
     P.peoples = n; P.which = people > 0 && n > 1 ? 1 : 0;
@@ -291,17 +334,37 @@ PeopleProfile peopleProfileOf(const StarSystem& sys, const Body& b, const BodyGe
     bool together = n > 1 && peoplesEndedTogether(g);
     PeopleAge other; if (n > 1) other = peopleAgeOf(g, 1 - P.which);
     int lastLen = P.lastYear - P.eras.back().start + 1;
-    if (together) {
+    if (g.drifter) {   // D-05: the loss of the sun, given (the 37 never drawn for them): its length and stages the generator's (`sunLossOf`), its way by
+        // what the system it left had (a giant to throw it, a companion to dance with), the world's own draw (two peoples lost one sun)
+        const PeopleAge first = n > 1 && P.which > 0 ? peopleAgeOf(g, 0) : static_cast<const PeopleAge&>(P);
+        const SunLoss L = sunLossOf(g, first);
+        P.cause = CAUSE_SUN_LOST;
+        P.collapseYears = std::max(1, std::min(L.years, lastLen));
+        for (int k = 0; k < STAGE_COUNT; k++) P.stage[k] = L.stage[k];
+        P.collapseYear = P.lastYear - P.collapseYears + 1;
+        int endFrom = P.collapseYear;
+        while (endFrom < P.lastYear && P.stageAt(endFrom) < STAGE_END) endFrom++;
+        P.lastSunrise = std::max(P.collapseYear, endFrom - 1);
+        int giant = -1; double gd = 1e300;
+        for (const Body& o : sys.bodies) {
+            if (o.parent >= 0 || o.former || !(KINDS[o.type].tags & KT_GIANT)) continue;
+            const double d = std::fabs(std::log(std::max(o.orbitRadiusKm, 1.0) / std::max(b.orbitRadiusKm, 1.0)));
+            if (d < gd) { gd = d; giant = o.index; }
+        }
+        P.sunWay = drifterSunWayOf(g.worldSeed ? g.worldSeed : g.seed);   // the system it left was chosen to allow it (`drifterPast`); where none did, the intruder's
+        if ((P.sunWay == SW_WANDERER && giant < 0) || (P.sunWay == SW_DANCE && sys.companion < 0)) P.sunWay = SW_INTRUDER;
+        P.sunGiant = P.sunWay == SW_WANDERER ? giant : -1;
+    } else if (together) {
         int otherLen = other.lastYear - other.eras.back().start + 1;
-        for (int c = 0; c < CAUSE_COUNT; c++) cw[c] = CAUSES[c].worldwide ? CAUSES[c].w[P.age] * causeWorldFactor(c, w) : 0;
+        for (int c = 0; c < CAUSE_DRAWN; c++) cw[c] = CAUSES[c].worldwide ? CAUSES[c].w[P.age] * causeWorldFactor(c, w) : 0;
         Rng rs(g.seed ^ 0xA01C5ULL);
-        P.cause = rs.pick(cw, CAUSE_COUNT);
+        P.cause = rs.pick(cw, CAUSE_DRAWN);
         double years = logUni(rs, CAUSES[P.cause].lo, CAUSES[P.cause].hi);
         P.collapseYears = std::max(1, (int)std::lround(std::min(years, 0.85 * std::min(lastLen, otherLen))));
         drawStages(rs, CAUSES[P.cause].speed, P.stage);
     } else {
         bool otherWentOn = n > 1 && other.endedYearsAgo < P.endedYearsAgo;
-        for (int c = 0; c < CAUSE_COUNT; c++) {
+        for (int c = 0; c < CAUSE_DRAWN; c++) {
             cw[c] = CAUSES[c].w[P.age] * causeWorldFactor(c, w);
             if (!otherWentOn) continue;   // by the other people: a band's war with them, a conquest by them, an industrial war
             if (c == CAUSE_BAND_WAR && P.age == AGE_PREHISTORIC) cw[c] *= 2;
@@ -309,12 +372,12 @@ PeopleProfile peopleProfileOf(const StarSystem& sys, const Body& b, const BodyGe
             if (c == CAUSE_INDUSTRIAL_WAR) cw[c] *= 1.5;
         }
         Rng rc(pg.seed ^ 0xA01CAULL);
-        P.cause = rc.pick(cw, CAUSE_COUNT);
+        P.cause = rc.pick(cw, CAUSE_DRAWN);
         double years = logUni(rc, CAUSES[P.cause].lo, CAUSES[P.cause].hi);
         P.collapseYears = std::max(1, (int)std::lround(std::min(years, 0.85 * lastLen)));
         drawStages(rc, CAUSES[P.cause].speed, P.stage);
     }
-    P.collapseYear = P.lastYear - P.collapseYears + 1;
+    if (!g.drifter) P.collapseYear = P.lastYear - P.collapseYears + 1;
     // the extent: the land of their time, the share they held (a people of a world of two held its side's), how dense they lived
     // (T-01: drawn by `drawExtent`, which `peopleExtentOf` shares, so the plan of the world reads the same numbers without the system)
     Rng r(pg.seed ^ 0xA01E7ULL);
@@ -357,6 +420,35 @@ PeopleProfile peopleProfileOf(const StarSystem& sys, const Body& b, const BodyGe
     for (int v = 0; v < VAL_COUNT; v++) sum += P.values[v];
     for (int v = 0; v < VAL_COUNT; v++) P.values[v] /= sum;
     return P;
+}
+
+double sunLightOf(int onsetYear, int lastSunrise, int year) {   // D-05
+    const int ls = std::max(onsetYear, lastSunrise);
+    if (year < onsetYear) return 1;
+    if (year > ls) return 0;
+    const double p = (year - onsetYear + 1) / (double)(ls - onsetYear + 1), d = 1 + 9 * p * p;
+    return 1 / (d * d);
+}
+int sunDarkOf(double light, int year, int lastSunrise) { return year > lastSunrise ? 3 : (light < 0.25 ? 2 : (light < 0.9 ? 1 : 0)); }
+bool sunLossYears(const BodyGen& g, int people, int& onset, int& lastSunrise) {
+    if (!g.drifter) return false;
+    const int n = std::max(1, peoplesOf(g)), which = people > 0 && n > 1 ? 1 : 0;
+    PeopleProfile P;
+    static_cast<PeopleAge&>(P) = peopleAgeOf(g, which);
+    const SunLoss L = sunLossOf(g, which > 0 ? peopleAgeOf(g, 0) : static_cast<const PeopleAge&>(P));
+    const int lastLen = P.lastYear - P.eras.back().start + 1;
+    P.collapseYears = std::max(1, std::min(L.years, lastLen));
+    for (int k = 0; k < STAGE_COUNT; k++) P.stage[k] = L.stage[k];
+    P.collapseYear = P.lastYear - P.collapseYears + 1;
+    onset = P.collapseYear; while (onset < P.lastYear && P.stageAt(onset) < STAGE_ONSET) onset++;
+    int endFrom = onset; while (endFrom < P.lastYear && P.stageAt(endFrom) < STAGE_END) endFrom++;
+    lastSunrise = std::max(P.collapseYear, endFrom - 1);
+    return true;
+}
+int sunDarkAt(const BodyGen& g, int people, int year) {
+    int onset = 0, lastSunrise = 0;
+    if (!sunLossYears(g, people, onset, lastSunrise)) return 0;
+    return sunDarkOf(sunLightOf(onset, lastSunrise, year), year, lastSunrise);
 }
 
 std::string peopleCount(double n) {

@@ -16,6 +16,11 @@
 // * by the history: a battlefield between the two sides of a war where the history fought its battle (cairns over the dead, barrows and
 //   a memorial, trenches and shell craters, craters and the wrecks of machines, glassed craters), a dam, a mine, an aqueduct, an
 //   observatory, a lighthouse, a launch site where the history finished one, the last shelter by the place the collapse ended in.
+// * D-05, the works of the end of a people that lost its sun: the last shelter a hall into the rock by the warmest ground, a shelter by each
+//   of the last places it left before (their last records with them), domes over the warm ground by those places (a medieval people's
+//   vaulted hall over its spring, the later ages' ribs of iron or steel and their glass, a futuristic people's habitat) with their glasshouses
+//   in rows, and the graves of the last generations by the last shelter; the last city is its last place, the lights left on (D-04) its
+//   late peoples'.
 //
 // The world's works are made once (`worldWorksOf`, cached, on the plan's thread after the histories): each a place, a size, its age and
 // the years before the end it was left, the numbers its rule found (a dam's floor, crest and reservoir), and what it does to the ground
@@ -45,6 +50,10 @@ enum WorkKind {
     WO_QUARRY = 0, WO_MINE, WO_DAM, WO_AQUEDUCT, WO_OBSERVATORY, WO_SHRINE, WO_WAY, WO_NECROPOLIS, WO_GEOGLYPH, WO_HENGE, WO_FORT_LINE,
     WO_BATTLEFIELD, WO_LAUNCH, WO_ANTENNA, WO_WRECK, WO_COLOSSUS, WO_TERRAFORM, WO_SHELTER, WO_STRANGE, WO_WINDFARM, WO_LIGHTHOUSE,
     WO_FORT,   // B-418: a fort on a height in its age's way (`style`: 0 a hill fort's rings of bank, 1 a castle, 2 a redoubt, 3 pillboxes round a blockhouse)
+    // D-05: a people that lost its sun's: a dome over the warm ground by its last places (`style`: 0 a medieval people's hall over its spring, 1 an
+    // industrial people's of iron and glass, 2 a modern people's of steel and glass, 3 a futuristic people's habitat, 4 the far future's), and its
+    // glasshouses in rows beside it
+    WO_DOME, WO_GREENHOUSE,
     WO_COUNT
 };
 extern const char* const WORK_KIND_NAMES[WO_COUNT];   // "a quarry", "a mine", ... "a pilgrims' way" (the harness)

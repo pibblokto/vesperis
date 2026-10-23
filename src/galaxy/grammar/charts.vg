@@ -20,6 +20,7 @@ chart (words=6..80)
   (chartstyle=survey) {survey.open} {figs}. {survey.heard} {survey.mark}
   (chartstyle=routes) {routes.open} {figs}. {routes.flown} {routes.mark}
   (chartstyle=beyond) {beyond.open} {figs}. {beyond.mark}
+  (chartstyle=sunmeasure) {smc.open} {smc.what} {smc.mark}
 
 # ---- the oldest: ochre and soot on a cave's ceiling, scratches on a bone ----------------------------------------------------------
 
@@ -270,6 +271,7 @@ chart.mark
   (markhow=3 farkind=3) a sun above the road of stars, {#farly:about} years of light away
   (markhow=3 farkind=4) a sun far along the road of stars, {#farly:about} years of light away
   (markhow=3 farkind=0) a sun far off
+  (markhow=4) the star that was our sun{chart.infig}
 
 # the figure the marked star is in, if it is in one
 chart.infig

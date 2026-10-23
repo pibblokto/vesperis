@@ -95,7 +95,7 @@ med.ann.note (share=0.4)
 
 @root chronicle.year chronicle.year.gap
 
-genre.chronicle (words=15..440)
+genre.chronicle (words=15..460)
   (tense=past age<=industrial) {chronicle.open} {@years 4 chronicle.year} {chronicle.close}
   (tense=past age<=industrial) {@years 5 chronicle.year}
   (tense=past 0.6 age<=industrial) {chronicle.open} {@years 7 chronicle.year} {chronicle.close}

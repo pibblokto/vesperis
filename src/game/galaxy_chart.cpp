@@ -238,7 +238,9 @@ void Game::chartEnter() {
     const Vec3 to = chartCursor(), from = ship.pos / SECTOR_KM;
     const double ly = length(to - from);
     if (gchart.onShip || ly < 1) { status("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); audio.beep = 3; return; }
-    if (!plotJump(ly, (to - from) / ly, true)) return;
+    Star drifter;   // D-02: a drifter of the explorer's under the cursor is the jump's end itself
+    const bool snap = chartDrifterAt(to, drifter) && !(sys.valid && sys.star.seed == drifter.seed);
+    if (!plotJump(snap ? length(drifter.pos / SECTOR_KM - from) : ly, (to - from) / ly, true, snap ? &drifter : nullptr)) return;
     gchart.plotHere = true;
     status("PLOTTED - ENTER FLIES, ESC KEEPS IT FOR V", 4);
 }
@@ -253,8 +255,8 @@ std::vector<Game::ChartStop> Game::chartStops() const {
         int64_t x, y, z;
         if (taken.count(k) || !Guide::parseStarKey(k, x, y, z)) return;
         taken.insert(k);
-        Star st;
-        g.push_back({starInSector(x, y, z, st, false) ? st.pos / SECTOR_KM : Vec3(x + 0.5, y + 0.5, z + 0.5), label, col});
+        Star st; const bool at = placeInSector(x, y, z, st, false);
+        g.push_back({at ? st.pos / SECTOR_KM : Vec3(x + 0.5, y + 0.5, z + 0.5), at && st.cls == STAR_ROGUE && label == "A STAR VISITED" ? std::string("VISITED - NO STAR") : label, col});   // D-02
     };
     auto kind = [&]() {   // a kind's stops, nearest the ship first
         std::stable_sort(g.begin(), g.end(), [&](const ChartStop& a, const ChartStop& b) { return length2(a.p - ss) < length2(b.p - ss); });
@@ -315,6 +317,25 @@ Game::ChartThere Game::chartThere(const Vec3& p) const {
     for (const auto& kv : guide.inbox) if (kv.first.find('/') == std::string::npos && !guide.names.count(kv.first) && near(kv.first)) { t.kind = 4; t.key = kv.first; t.col = HUD_CYAN; t.label = trunc(upper(kv.second), 16); return t; }
     for (const std::string& k : guide.visited) if (near(k)) { t.kind = 5; t.key = k; t.col = HUD_GREEN; t.label = "VISITED"; return t; }
     return t;
+}
+
+// D-02: the drifters the explorer knows (its locks' sectors, its visits, its names, its home) within four pixels of a place on the face,
+// the nearest: the chart's Enter plots the jump to it
+bool Game::chartDrifterAt(const Vec3& p, Star& out) const {
+    const double r = 4 * chartScale(gchart.level);
+    double best = r * r; bool found = false;
+    auto tryKey = [&](const std::string& key) {
+        int64_t x, y, z; Star d;
+        if (!Guide::parseStarKey(key.substr(0, key.find('/')), x, y, z) || !drifterInSector(x, y, z, d, true)) return;
+        const Vec3 v = d.pos / SECTOR_KM;
+        const double d2 = (v.x - p.x) * (v.x - p.x) + (v.z - p.z) * (v.z - p.z);
+        if (d2 <= best) { best = d2; out = d; found = true; }
+    };
+    for (const auto& kv : guide.signals) tryKey(kv.first);
+    for (const std::string& k : guide.visited) tryKey(k);
+    for (const auto& kv : guide.names) if (kv.first.find('/') == std::string::npos) tryKey(kv.first);
+    if (!guide.home.empty()) tryKey(guide.home);
+    return found;
 }
 
 std::string Game::galaxyPlace(const Vec3& p, bool height) const {

@@ -5,7 +5,7 @@ R"VG(
 # hands and another "lets it stand"; their disputes are their own: their water, their herds in the streets, their crafts' smells.
 # The manual is modern8.vg's.
 
-genre.minutes (words=26..140)
+genre.minutes (words=26..146)
   {min.head}\n{min.item}\n{min.item}\n{min.item}\n{min.close}
   {min.head}\n{min.present}\n{min.item}\n{min.item}\n{min.close}
   {min.head}\n{min.item}\n{min.item}\n{min.item}\n{min.item}\n{min.close}

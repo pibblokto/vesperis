@@ -4,6 +4,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <map>
 #include <set>
 #include <cstdint>
@@ -50,10 +51,12 @@ std::string probeLines(const ProbeRecord& r);   // F-02: the record's four lines
 
 // R-408: a mark the explorer placed on a world (the sector map's cursor, or `L` at what the crosshair rests on), named or not; the
 // maps, the HUD and the scanner (which leaves the marked sights out) read them. `mark` lines; a friend's travel lent (C-14)
-constexpr int MARK_PLACE = 9;   // a mark's kind when it marks a place, not one of the sights' (galaxy/landmarks.h's LM_COUNT; T-03: 8 is a work's, LM_WORK.
-                                // The guide's file keeps R-408's numbers: 8 a place, 9 a work, `markKindToFile`/`markKindFromFile`)
-inline int markKindToFile(int kind) { return kind == MARK_PLACE ? 8 : (kind == MARK_PLACE - 1 ? 9 : kind); }
-inline int markKindFromFile(int k) { return k == 8 ? MARK_PLACE : (k == 9 ? MARK_PLACE - 1 : k); }
+constexpr int MARK_PLACE = 21;  // a mark's kind when it marks a place, not one of the sights' (galaxy/landmarks.h's LM_COUNT; T-03: 8 is a work's, LM_WORK;
+                                // Q-01: 9-19 the new landforms' sights; Q-02: 20 a strewn field). The guide's file keeps R-408's numbers: 8 a place, 9 a work, the
+                                // sights after them 10 on (`markKindToFile`/`markKindFromFile`)
+constexpr int MARK_WORK = 8;    // LM_WORK
+inline int markKindToFile(int kind) { return kind == MARK_PLACE ? 8 : (kind == MARK_WORK ? 9 : (kind > MARK_WORK ? kind + 1 : kind)); }
+inline int markKindFromFile(int k) { return k == 8 ? MARK_PLACE : (k == 9 ? MARK_WORK : (k > 9 ? std::min(k - 1, MARK_PLACE) : k)); }
 struct SurfaceMark {
     std::string body;            // the world's key
     double lat = 0, lon = 0;     // radians, the body's frame

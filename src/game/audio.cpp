@@ -141,6 +141,7 @@ void AudioSynth::rvDerive(RadarVar& v, uint64_t seed) {
     v.ringHz = 38 + 34 * u(121); v.holdHz = 4500 + 3000 * u(122); v.whineHz = 3200 + 1400 * u(131);
     v.mathKind = (int)(u(141) * 7.99); v.mathF = 330 * std::pow(2.0, 1.4 * u(142)); v.mathPip = 0.05 + 0.035 * u(143); v.mathGap = 0.07 + 0.06 * u(144); v.mathRest = 0.55 + 0.5 * u(145);
     v.carrier2F = 1200 + 300 * (u(151) - 0.5);
+    rogueDerive(v, seed);   // D-03
 }
 
 const char* AudioSynth::mathsName(uint64_t seed) {
@@ -171,6 +172,165 @@ double AudioSynth::phantomSample(Phantom& p, double dt, double sylRate, double b
     return std::tanh(y * 0.5) * 0.65;
 }
 
+// a people's programme's machine into `sig` (C-07; C-16 the ages'): the beacon, data, the bell, the siren, the murmur, a chant's hum,
+// whispers, a numbers station's and a loop's, the spark gap's Morse, the phonograph's surface, the beacon of mathematics. D-03: a drifter's
+// beacon under its voice (D-05's) is one of them
+void AudioSynth::machineInto(double& sig, RadarChannel& c, double dt, int voice, float n2, AudioState& st, bool main) {
+    const RadarVar& v = c.v;
+    auto uni = [&]() { return 0.5 + 0.5 * noise(); };
+    switch (voice) {
+        case RP_BEACON: {   // a beacon: its pattern of tones, a rest, again; half of them sag a little, dying
+            double cyc = v.beacN * (v.beacDur + v.beacGap) + v.beacRest;
+            c.beacT += dt; if (c.beacT >= cyc) c.beacT -= cyc;
+            int k = (int)(c.beacT / (v.beacDur + v.beacGap)); double tk = c.beacT - k * (v.beacDur + v.beacGap);
+            bool on = k < v.beacN && tk < v.beacDur;
+            c.beacEnv += ((on ? 1.0 : 0.0) - c.beacEnv) * co.kBeac;
+            double f = v.beacF[std::min(k, 6)] * (v.beacSag ? 0.985 + 0.015 * std::cos(TAU_ * 0.03 * c.clock) : 1.0);
+            c.beacPh += dt * f; double ph = c.beacPh - std::floor(c.beacPh);
+            sig += 0.24 * c.beacEnv * ((1 - v.beacSq) * std::sin(TAU_ * ph) + v.beacSq * (ph < 0.5 ? 1 : -1));
+            break;
+        }
+        case RP_DATA: {   // data: bursts of two tones switched by a shift register, a buzz of the mains under them
+            c.dataT -= dt;
+            if (c.dataT <= 0) { c.dataOn = !c.dataOn; c.dataT = c.dataOn ? v.dataBurst * (0.7 + 0.6 * uni()) : v.dataGap * (0.6 + 0.8 * uni()); }
+            if (c.dataOn) {
+                c.dataBitT += dt * v.dataRate;
+                if (c.dataBitT >= 1) { c.dataBitT -= 1; uint32_t b = ((c.dataLfsr >> 0) ^ (c.dataLfsr >> 2) ^ (c.dataLfsr >> 3) ^ (c.dataLfsr >> 5)) & 1u; c.dataLfsr = (c.dataLfsr >> 1) | (b << 15); }
+                double want = (c.dataLfsr & 1u) ? v.dataF2 : v.dataF1; c.dataF += (want - c.dataF) * co.kData;
+                c.dataPh += dt * c.dataF; double ph = c.dataPh - std::floor(c.dataPh);
+                sig += 0.17 * (0.55 * std::sin(TAU_ * ph) + 0.45 * (ph < 0.5 ? 1 : -1));
+                c.dataHumPh += dt * v.dataHum; double hp = c.dataHumPh - std::floor(c.dataHumPh);
+                sig += 0.09 * (2 * hp - 1) * (0.7 + 0.3 * std::sin(TAU_ * 0.9 * c.clock));
+            }
+            break;
+        }
+        case RP_TOLL: {   // a bell tolling far off: six partials, the period a little irregular, now and then struck twice
+            c.bellNext -= dt;
+            if (c.bellNext <= 0) { c.bellT = 0; c.bellNext = uni() < 0.2 ? 0.6 + 0.4 * uni() : v.bellPeriod * (0.8 + 0.4 * uni()); }
+            if (c.bellT >= 0) {
+                double b = 0;
+                for (int i = 0; i < 6; i++) { c.bellPh[i] += dt * v.bellF * BELL_PARTIALS[i] * (i == 3 ? 1.003 : 1.0); b += std::sin(TAU_ * c.bellPh[i]) * std::exp(-c.bellT * (0.7 + 0.45 * i)) / (1 + 0.3 * i); }
+                b *= std::exp(-c.bellT / v.bellDecay) * (c.bellT < 0.004 ? c.bellT / 0.004 : 1.0);
+                c.bellLp += (b - c.bellLp) * v.bellFar;
+                sig += 0.55 * c.bellLp;
+                c.bellT += dt; if (c.bellT > v.bellDecay * 3) c.bellT = -1;
+            }
+            break;
+        }
+        case RP_SIREN: {   // a siren still running: a slow glide or two tones, a sawtooth through a resonance, carried in and out as if on a wind
+            c.sirT += dt;
+            double f;
+            if (v.sirenTwo) f = ((int)(c.sirT / v.sirenCycle) % 2) ? v.sirenF * v.sirenRatio : v.sirenF;
+            else { double ph = std::fmod(c.sirT, 2 * v.sirenCycle) / v.sirenCycle; double tri = ph < 1 ? ph : 2 - ph; f = v.sirenF * std::pow(v.sirenRatio, tri); }
+            c.sirPh += dt * f; double saw = 2 * (c.sirPh - std::floor(c.sirPh)) - 1;
+            double o = resonate(saw, f * 3, f * 0.6, dt, c.sirY1, c.sirY2);
+            c.sirSubPh += dt * f * 0.5;
+            double wind = std::pow(0.5 + 0.5 * std::sin(TAU_ * c.clock / v.sirenSwell), 2.0);
+            sig += (0.5 * o + 0.1 * std::sin(TAU_ * c.sirSubPh)) * (0.2 + 0.8 * wind);
+            break;
+        }
+        case RP_MURMUR: {   // a murmur of voices behind a wall, one of them raised now and then
+            double m = 0;
+            for (int i = 0; i < 3; i++) { if (c.phan[i].f0Base != v.murF0[i]) { c.phan[i] = Phantom(); c.phan[i].f0Base = v.murF0[i]; c.phan[i].f0 = c.phan[i].f0T = v.murF0[i]; } m += phantomSample(c.phan[i], dt, v.murRate * (i == 0 ? 1 : (i == 1 ? 1.12 : 0.9)), 0.25, 0.3); }
+            c.shoutNext -= dt;
+            if (c.shoutNext <= 0 && c.shoutT < 0) { c.shoutT = 0; c.shoutNext = 6 + 9 * uni(); c.phan[3] = Phantom(); c.phan[3].f0Base = v.murF0[2] * 1.3; c.phan[3].f0 = c.phan[3].f0T = c.phan[3].f0Base; }
+            if (c.shoutT >= 0) { double u = c.shoutT / 0.7; if (u >= 1) c.shoutT = -1; else { m += 1.6 * std::sin(PI_ * u) * phantomSample(c.phan[3], dt, 6, 0.1, 0.8); c.shoutT += dt; } }
+            c.murLp += (m - c.murLp) * 0.18;
+            sig += 0.9 * c.murLp;
+            break;
+        }
+        case RP_CHANT: {   // a chant: a hum of three voices an octave, a unison and a fifth round the chanter's pitch, swelling with it
+            if (!main) break;
+            double p = st.voice ? st.voice->pitch : 110;
+            rdChantAmp += (spVoiceAmp - rdChantAmp) * co.kChant;
+            double vib = 1 + 0.008 * std::sin(TAU_ * 4.3 * c.clock);
+            rdChantPh[0] += dt * p * 0.5 * vib; rdChantPh[1] += dt * p * 1.003 * vib; rdChantPh[2] += dt * p * 1.5 * vib;
+            sig += 0.2 * rdChantAmp * (std::sin(TAU_ * rdChantPh[0]) + 0.6 * std::sin(TAU_ * rdChantPh[1]) + 0.4 * std::sin(TAU_ * rdChantPh[2]));
+            break;
+        }
+        case RP_WHISPERS: {   // whispers: someone breathing close to the microphone
+            c.whBr += (n2 - c.whBr) * 0.06;
+            double env = std::pow(std::max(0.0, std::sin(TAU_ * 0.28 * c.clock)), 2.5);
+            sig += 0.5 * env * c.whBr;
+            break;
+        }
+        case RP_NUMBERS: {   // a numbers station: a carrier with the mains on it
+            c.numPh += dt * 400; sig += 0.05 * std::sin(TAU_ * c.numPh) * (0.75 + 0.25 * std::sin(TAU_ * 50 * c.clock));
+            break;
+        }
+        case RP_LOOP: {   // a loop: the mechanism's whir while the phrase runs, tape hiss under
+            c.loopPh += dt * 95; c.sparkLp += (n2 - c.sparkLp) * 0.6;
+            sig += (main && spOn ? 0.05 : 0.0) * (2 * (c.loopPh - std::floor(c.loopPh)) - 1) + 0.05 * c.sparkLp;
+            break;
+        }
+        case RP_MORSE: {   // C-16: spark-gap Morse. A spark at the gap's rate, each a damped ring and a crack, keyed in the people's code:
+            // the game's keying for the centred signal (from its top when the programme begins), a hand of the synth's own under another
+            bool on = false;
+            if (main && st.radarCode && !st.radarCode->empty()) {
+                const std::vector<uint8_t>& code = *st.radarCode; double unitS = std::max(0.02, st.radarCodeUnit);
+                if (c.codeI < code.size()) {
+                    uint8_t e = code[c.codeI];
+                    on = !(e & MORSE_OFF);
+                    c.codeT += dt;
+                    if (c.codeT >= (e & 0x7F) * unitS) { c.codeT -= (e & 0x7F) * unitS; c.codeI++; }
+                }
+            } else {   // letters of one to four elements, a word every three to six letters
+                c.codeT += dt;
+                if (c.codeT >= c.codeLeft * v.morseUnit) {
+                    c.codeT = 0;
+                    auto next = [&]() { c.codeLcg = c.codeLcg * 6364136223846793005ULL + 1442695040888963407ULL; return (int)(c.codeLcg >> 33); };
+                    if (c.codeOn) {
+                        c.codeOn = false;
+                        if (--c.elemLeft > 0) c.codeLeft = 1;
+                        else if (--c.letterLeft > 0) { c.codeLeft = 3; c.elemLeft = 1 + next() % 4; }
+                        else { c.codeLeft = 7; c.letterLeft = 3 + next() % 4; c.elemLeft = 1 + next() % 4; }
+                    } else { c.codeOn = true; c.codeLeft = (next() & 1) ? 3 : 1; }
+                }
+                on = c.codeOn;
+            }
+            c.codeEnv += ((on ? 1.0 : 0.0) - c.codeEnv) * co.kCode;
+            c.sparkT += dt;
+            double period = 1.0 / v.sparkHz;
+            if (c.sparkT >= period) { c.sparkT -= period * (v.quench ? 1.0 : 0.92 + 0.16 * uni()); c.sparkPh = 0; }   // a quenched gap's sparks even (a note), a plain one's ragged
+            c.sparkPh += dt * v.ringF;
+            if (c.codeEnv > 0.001) {
+                double ring = std::exp(-c.sparkT * (v.quench ? 0.5 : 1.0) * v.sparkDecay) * std::sin(TAU_ * c.sparkPh);
+                double crack = n2 * std::exp(-c.sparkT * v.sparkDecay * 3);
+                sig += 0.6 * c.codeEnv * (ring + (v.quench ? 0.25 : 0.7) * crack);
+            }
+            break;
+        }
+        case RP_PHONOGRAPH: {   // C-16: the record's surface under the recording: a hiss, a crackle, a tick at every turn, the motor
+            c.phonoPh += dt * v.turnHz;
+            if (c.phonoPh >= 1) { c.phonoPh -= 1; c.phonoClickT = 0; }
+            if (c.phonoClickT >= 0) { sig += 0.5 * v.surface * n2 * std::exp(-c.phonoClickT * 700); c.phonoClickT += dt; if (c.phonoClickT > 0.012) c.phonoClickT = -1; }
+            if (c.cr < 0 && uni() < dt * 10 * v.surface) c.cr = 0;
+            if (c.cr >= 0) { sig += 0.4 * n2 * std::exp(-c.cr * 1500); c.cr += dt; if (c.cr > 0.005) c.cr = -1; }
+            c.phonoLp += (n2 - c.phonoLp) * 0.2;
+            sig += 0.12 * v.surface * c.phonoLp + 0.05 * std::sin(TAU_ * 30 * c.clock) * (0.6 + 0.4 * std::sin(TAU_ * v.turnHz * c.clock));
+            break;
+        }
+        case RP_MATHS: {   // C-16: the beacon that is mathematics: a group of pure pips a term, a pause, the next term; a rest, again
+            c.mathT += dt;
+            if (c.mathRest) { if (c.mathT >= 2.5 + 3 * v.mathRest) { c.mathRest = false; c.mathT = 0; c.mathTerm = 0; c.mathPip = 0; } break; }
+            int n; uint32_t bits; double tone;
+            if (!mathsGroup(v.mathKind, c.mathTerm, n, bits, tone)) { c.mathRest = true; c.mathT = 0; break; }
+            double pip = v.mathKind == 5 ? 0.32 : v.mathPip, gap = v.mathKind == 5 ? 0.14 : v.mathGap;
+            if (n > 8) { double s = std::max(0.45, std::min(1.0, 4.0 / (n * (pip + gap)))); pip *= s; gap *= s; }   // a long group quicker: four seconds at most
+            if (c.mathPip < n) {
+                double f = v.mathF * (v.mathKind == 5 ? 0.25 * tone : 1.0);
+                if (v.mathKind == 6 && ((bits >> (n - 1 - c.mathPip)) & 1u)) f *= 1.5;   // a one high, a nought low
+                double env = c.mathT < pip ? std::sin(PI_ * c.mathT / pip) : 0;
+                c.mathPh += dt * f; c.mathPh2 += dt * f * 2;
+                sig += 0.42 * env * (std::sin(TAU_ * c.mathPh) + 0.2 * std::sin(TAU_ * c.mathPh2));
+                if (c.mathT >= pip + gap) { c.mathT = 0; c.mathPip++; }
+            } else if (c.mathT >= v.mathRest) { c.mathT = 0; c.mathPip = 0; c.mathTerm++; }
+            break;
+        }
+        default: break;
+    }
+}
+
 // one sample of a signal's own sound in its channel: by its kind and its seed, and a people's carrier (by the age, C-16) and its
 // programme's machine (the hum under a chant and the cue at a loop's or a numbers station's start are the centred one's: `main`).
 // Under another (C-16), a people's speaking programme is the shape of a voice: one of the channel's phantoms babbling
@@ -179,6 +339,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
         rvDerive(c.v, seed); c.seed = seed;
         c.codeI = 0; c.codeT = 0; c.codeLcg = seed | 1; c.codeLeft = 4; c.elemLeft = 2; c.letterLeft = 4; c.codeOn = false;
         c.mathTerm = 0; c.mathPip = 0; c.mathT = 0; c.mathRest = false;
+        c.rgCls = -1; c.rgPh = -1; c.rgMotT = -1; c.rgPulseT = -1; c.rgArcT = -1; c.rgMoonT = 0;   // D-03: a drifter's turning from where it is first heard
     }
     const RadarVar& v = c.v;
     float n2 = noise();
@@ -205,157 +366,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
                     sig += 0.04 * std::sin(TAU_ * c.carrier) * (0.6 + 0.4 * std::sin(lfo * TAU_ * 2.3));
                 }
             }
-            switch (voice) {
-                case RP_BEACON: {   // a beacon: its pattern of tones, a rest, again; half of them sag a little, dying
-                    double cyc = v.beacN * (v.beacDur + v.beacGap) + v.beacRest;
-                    c.beacT += dt; if (c.beacT >= cyc) c.beacT -= cyc;
-                    int k = (int)(c.beacT / (v.beacDur + v.beacGap)); double tk = c.beacT - k * (v.beacDur + v.beacGap);
-                    bool on = k < v.beacN && tk < v.beacDur;
-                    c.beacEnv += ((on ? 1.0 : 0.0) - c.beacEnv) * co.kBeac;
-                    double f = v.beacF[std::min(k, 6)] * (v.beacSag ? 0.985 + 0.015 * std::cos(TAU_ * 0.03 * c.clock) : 1.0);
-                    c.beacPh += dt * f; double ph = c.beacPh - std::floor(c.beacPh);
-                    sig += 0.24 * c.beacEnv * ((1 - v.beacSq) * std::sin(TAU_ * ph) + v.beacSq * (ph < 0.5 ? 1 : -1));
-                    break;
-                }
-                case RP_DATA: {   // data: bursts of two tones switched by a shift register, a buzz of the mains under them
-                    c.dataT -= dt;
-                    if (c.dataT <= 0) { c.dataOn = !c.dataOn; c.dataT = c.dataOn ? v.dataBurst * (0.7 + 0.6 * uni()) : v.dataGap * (0.6 + 0.8 * uni()); }
-                    if (c.dataOn) {
-                        c.dataBitT += dt * v.dataRate;
-                        if (c.dataBitT >= 1) { c.dataBitT -= 1; uint32_t b = ((c.dataLfsr >> 0) ^ (c.dataLfsr >> 2) ^ (c.dataLfsr >> 3) ^ (c.dataLfsr >> 5)) & 1u; c.dataLfsr = (c.dataLfsr >> 1) | (b << 15); }
-                        double want = (c.dataLfsr & 1u) ? v.dataF2 : v.dataF1; c.dataF += (want - c.dataF) * co.kData;
-                        c.dataPh += dt * c.dataF; double ph = c.dataPh - std::floor(c.dataPh);
-                        sig += 0.17 * (0.55 * std::sin(TAU_ * ph) + 0.45 * (ph < 0.5 ? 1 : -1));
-                        c.dataHumPh += dt * v.dataHum; double hp = c.dataHumPh - std::floor(c.dataHumPh);
-                        sig += 0.09 * (2 * hp - 1) * (0.7 + 0.3 * std::sin(TAU_ * 0.9 * c.clock));
-                    }
-                    break;
-                }
-                case RP_TOLL: {   // a bell tolling far off: six partials, the period a little irregular, now and then struck twice
-                    c.bellNext -= dt;
-                    if (c.bellNext <= 0) { c.bellT = 0; c.bellNext = uni() < 0.2 ? 0.6 + 0.4 * uni() : v.bellPeriod * (0.8 + 0.4 * uni()); }
-                    if (c.bellT >= 0) {
-                        double b = 0;
-                        for (int i = 0; i < 6; i++) { c.bellPh[i] += dt * v.bellF * BELL_PARTIALS[i] * (i == 3 ? 1.003 : 1.0); b += std::sin(TAU_ * c.bellPh[i]) * std::exp(-c.bellT * (0.7 + 0.45 * i)) / (1 + 0.3 * i); }
-                        b *= std::exp(-c.bellT / v.bellDecay) * (c.bellT < 0.004 ? c.bellT / 0.004 : 1.0);
-                        c.bellLp += (b - c.bellLp) * v.bellFar;
-                        sig += 0.55 * c.bellLp;
-                        c.bellT += dt; if (c.bellT > v.bellDecay * 3) c.bellT = -1;
-                    }
-                    break;
-                }
-                case RP_SIREN: {   // a siren still running: a slow glide or two tones, a sawtooth through a resonance, carried in and out as if on a wind
-                    c.sirT += dt;
-                    double f;
-                    if (v.sirenTwo) f = ((int)(c.sirT / v.sirenCycle) % 2) ? v.sirenF * v.sirenRatio : v.sirenF;
-                    else { double ph = std::fmod(c.sirT, 2 * v.sirenCycle) / v.sirenCycle; double tri = ph < 1 ? ph : 2 - ph; f = v.sirenF * std::pow(v.sirenRatio, tri); }
-                    c.sirPh += dt * f; double saw = 2 * (c.sirPh - std::floor(c.sirPh)) - 1;
-                    double o = resonate(saw, f * 3, f * 0.6, dt, c.sirY1, c.sirY2);
-                    c.sirSubPh += dt * f * 0.5;
-                    double wind = std::pow(0.5 + 0.5 * std::sin(TAU_ * c.clock / v.sirenSwell), 2.0);
-                    sig += (0.5 * o + 0.1 * std::sin(TAU_ * c.sirSubPh)) * (0.2 + 0.8 * wind);
-                    break;
-                }
-                case RP_MURMUR: {   // a murmur of voices behind a wall, one of them raised now and then
-                    double m = 0;
-                    for (int i = 0; i < 3; i++) { if (c.phan[i].f0Base != v.murF0[i]) { c.phan[i] = Phantom(); c.phan[i].f0Base = v.murF0[i]; c.phan[i].f0 = c.phan[i].f0T = v.murF0[i]; } m += phantomSample(c.phan[i], dt, v.murRate * (i == 0 ? 1 : (i == 1 ? 1.12 : 0.9)), 0.25, 0.3); }
-                    c.shoutNext -= dt;
-                    if (c.shoutNext <= 0 && c.shoutT < 0) { c.shoutT = 0; c.shoutNext = 6 + 9 * uni(); c.phan[3] = Phantom(); c.phan[3].f0Base = v.murF0[2] * 1.3; c.phan[3].f0 = c.phan[3].f0T = c.phan[3].f0Base; }
-                    if (c.shoutT >= 0) { double u = c.shoutT / 0.7; if (u >= 1) c.shoutT = -1; else { m += 1.6 * std::sin(PI_ * u) * phantomSample(c.phan[3], dt, 6, 0.1, 0.8); c.shoutT += dt; } }
-                    c.murLp += (m - c.murLp) * 0.18;
-                    sig += 0.9 * c.murLp;
-                    break;
-                }
-                case RP_CHANT: {   // a chant: a hum of three voices an octave, a unison and a fifth round the chanter's pitch, swelling with it
-                    if (!main) break;
-                    double p = st.voice ? st.voice->pitch : 110;
-                    rdChantAmp += (spVoiceAmp - rdChantAmp) * co.kChant;
-                    double vib = 1 + 0.008 * std::sin(TAU_ * 4.3 * c.clock);
-                    rdChantPh[0] += dt * p * 0.5 * vib; rdChantPh[1] += dt * p * 1.003 * vib; rdChantPh[2] += dt * p * 1.5 * vib;
-                    sig += 0.2 * rdChantAmp * (std::sin(TAU_ * rdChantPh[0]) + 0.6 * std::sin(TAU_ * rdChantPh[1]) + 0.4 * std::sin(TAU_ * rdChantPh[2]));
-                    break;
-                }
-                case RP_WHISPERS: {   // whispers: someone breathing close to the microphone
-                    c.whBr += (n2 - c.whBr) * 0.06;
-                    double env = std::pow(std::max(0.0, std::sin(TAU_ * 0.28 * c.clock)), 2.5);
-                    sig += 0.5 * env * c.whBr;
-                    break;
-                }
-                case RP_NUMBERS: {   // a numbers station: a carrier with the mains on it
-                    c.numPh += dt * 400; sig += 0.05 * std::sin(TAU_ * c.numPh) * (0.75 + 0.25 * std::sin(TAU_ * 50 * c.clock));
-                    break;
-                }
-                case RP_LOOP: {   // a loop: the mechanism's whir while the phrase runs, tape hiss under
-                    c.loopPh += dt * 95; c.sparkLp += (n2 - c.sparkLp) * 0.6;
-                    sig += (main && spOn ? 0.05 : 0.0) * (2 * (c.loopPh - std::floor(c.loopPh)) - 1) + 0.05 * c.sparkLp;
-                    break;
-                }
-                case RP_MORSE: {   // C-16: spark-gap Morse. A spark at the gap's rate, each a damped ring and a crack, keyed in the people's code:
-                    // the game's keying for the centred signal (from its top when the programme begins), a hand of the synth's own under another
-                    bool on = false;
-                    if (main && st.radarCode && !st.radarCode->empty()) {
-                        const std::vector<uint8_t>& code = *st.radarCode; double unitS = std::max(0.02, st.radarCodeUnit);
-                        if (c.codeI < code.size()) {
-                            uint8_t e = code[c.codeI];
-                            on = !(e & MORSE_OFF);
-                            c.codeT += dt;
-                            if (c.codeT >= (e & 0x7F) * unitS) { c.codeT -= (e & 0x7F) * unitS; c.codeI++; }
-                        }
-                    } else {   // letters of one to four elements, a word every three to six letters
-                        c.codeT += dt;
-                        if (c.codeT >= c.codeLeft * v.morseUnit) {
-                            c.codeT = 0;
-                            auto next = [&]() { c.codeLcg = c.codeLcg * 6364136223846793005ULL + 1442695040888963407ULL; return (int)(c.codeLcg >> 33); };
-                            if (c.codeOn) {
-                                c.codeOn = false;
-                                if (--c.elemLeft > 0) c.codeLeft = 1;
-                                else if (--c.letterLeft > 0) { c.codeLeft = 3; c.elemLeft = 1 + next() % 4; }
-                                else { c.codeLeft = 7; c.letterLeft = 3 + next() % 4; c.elemLeft = 1 + next() % 4; }
-                            } else { c.codeOn = true; c.codeLeft = (next() & 1) ? 3 : 1; }
-                        }
-                        on = c.codeOn;
-                    }
-                    c.codeEnv += ((on ? 1.0 : 0.0) - c.codeEnv) * co.kCode;
-                    c.sparkT += dt;
-                    double period = 1.0 / v.sparkHz;
-                    if (c.sparkT >= period) { c.sparkT -= period * (v.quench ? 1.0 : 0.92 + 0.16 * uni()); c.sparkPh = 0; }   // a quenched gap's sparks even (a note), a plain one's ragged
-                    c.sparkPh += dt * v.ringF;
-                    if (c.codeEnv > 0.001) {
-                        double ring = std::exp(-c.sparkT * (v.quench ? 0.5 : 1.0) * v.sparkDecay) * std::sin(TAU_ * c.sparkPh);
-                        double crack = n2 * std::exp(-c.sparkT * v.sparkDecay * 3);
-                        sig += 0.6 * c.codeEnv * (ring + (v.quench ? 0.25 : 0.7) * crack);
-                    }
-                    break;
-                }
-                case RP_PHONOGRAPH: {   // C-16: the record's surface under the recording: a hiss, a crackle, a tick at every turn, the motor
-                    c.phonoPh += dt * v.turnHz;
-                    if (c.phonoPh >= 1) { c.phonoPh -= 1; c.phonoClickT = 0; }
-                    if (c.phonoClickT >= 0) { sig += 0.5 * v.surface * n2 * std::exp(-c.phonoClickT * 700); c.phonoClickT += dt; if (c.phonoClickT > 0.012) c.phonoClickT = -1; }
-                    if (c.cr < 0 && uni() < dt * 10 * v.surface) c.cr = 0;
-                    if (c.cr >= 0) { sig += 0.4 * n2 * std::exp(-c.cr * 1500); c.cr += dt; if (c.cr > 0.005) c.cr = -1; }
-                    c.phonoLp += (n2 - c.phonoLp) * 0.2;
-                    sig += 0.12 * v.surface * c.phonoLp + 0.05 * std::sin(TAU_ * 30 * c.clock) * (0.6 + 0.4 * std::sin(TAU_ * v.turnHz * c.clock));
-                    break;
-                }
-                case RP_MATHS: {   // C-16: the beacon that is mathematics: a group of pure pips a term, a pause, the next term; a rest, again
-                    c.mathT += dt;
-                    if (c.mathRest) { if (c.mathT >= 2.5 + 3 * v.mathRest) { c.mathRest = false; c.mathT = 0; c.mathTerm = 0; c.mathPip = 0; } break; }
-                    int n; uint32_t bits; double tone;
-                    if (!mathsGroup(v.mathKind, c.mathTerm, n, bits, tone)) { c.mathRest = true; c.mathT = 0; break; }
-                    double pip = v.mathKind == 5 ? 0.32 : v.mathPip, gap = v.mathKind == 5 ? 0.14 : v.mathGap;
-                    if (n > 8) { double s = std::max(0.45, std::min(1.0, 4.0 / (n * (pip + gap)))); pip *= s; gap *= s; }   // a long group quicker: four seconds at most
-                    if (c.mathPip < n) {
-                        double f = v.mathF * (v.mathKind == 5 ? 0.25 * tone : 1.0);
-                        if (v.mathKind == 6 && ((bits >> (n - 1 - c.mathPip)) & 1u)) f *= 1.5;   // a one high, a nought low
-                        double env = c.mathT < pip ? std::sin(PI_ * c.mathT / pip) : 0;
-                        c.mathPh += dt * f; c.mathPh2 += dt * f * 2;
-                        sig += 0.42 * env * (std::sin(TAU_ * c.mathPh) + 0.2 * std::sin(TAU_ * c.mathPh2));
-                        if (c.mathT >= pip + gap) { c.mathT = 0; c.mathPip++; }
-                    } else if (c.mathT >= v.mathRest) { c.mathT = 0; c.mathPip = 0; c.mathTerm++; }
-                    break;
-                }
-                default: break;
-            }
+            machineInto(sig, c, dt, voice, n2, st, main);
             if (!main && speakingProgramme(voice)) {   // C-16: under another, a broadcast's voice is the shape of one, babbling
                 Phantom& p = c.phan[0];
                 if (p.f0Base != v.murF0[1]) { p = Phantom(); p.f0Base = v.murF0[1]; p.f0 = p.f0T = p.f0Base; }
@@ -421,6 +432,9 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
             }
             break;
         }
+        case 4:     // D-03: a drifter's voice (audio_rogue.cpp)
+            sig = rogueSample(c, dt, main ? st.radarRogue : rdRogue2, voice, n2, st, main);
+            break;
         case 3: {   // a magnetosphere: whistlers falling slowly from 2 kHz, bursts of chorus, a band of hiss that breathes, and a choir of three voices (by its seed quarter-tones, fifths, a cluster or octaves) that comes and goes; some crack with lightning (sferics and tweeks), some roar
             c.whNext -= dt;
             if (c.whNext <= 0 && c.whT < 0) { c.whT = 0; c.whNext = (2.0 + 4.0 * uni()) / v.whistlerRate; }
@@ -608,7 +622,7 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
     close *= 1 - 0.5 * radarSigLvl;
     // the signal centred, and (C-16) the one under it bleeding in from the wide lobe (kept while it fades)
     double sig = channelSample(rdCh[0], dt, st.radarKind, st.radarVoice, st.radarPulseHz, st.radarSeed, st.radarAge, st, true);
-    if (st.radarKind2 >= 0) { rdKind2 = st.radarKind2; rdVoice2 = st.radarVoice2; rdAge2 = st.radarAge2; rdSeed2 = st.radarSeed2; rdPulse2 = st.radarPulseHz2; }
+    if (st.radarKind2 >= 0) { rdKind2 = st.radarKind2; rdVoice2 = st.radarVoice2; rdAge2 = st.radarAge2; rdSeed2 = st.radarSeed2; rdPulse2 = st.radarPulseHz2; rdRogue2 = st.radarRogue2; }
     double sig2 = rdSig2Lvl > 0.002 && rdKind2 >= 0 ? channelSample(rdCh[1], dt, rdKind2, rdVoice2, rdPulse2, rdSeed2, rdAge2, st, false) : 0;
     double main = 0.45 * sig * radarSigLvl + 0.8 * rdContent, under = 0.4 * sig2 * rdSig2Lvl, mix = 0;
     // C-16: a far signal worn by the way: deep slow fades, dropouts, and two or three echoes of itself (the paths it came by); a word
@@ -646,7 +660,13 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
     if (rdEcho.size() != 8192) { rdEcho.assign(8192, 0.0f); rdEchoI = 0; }
     double e = rdEcho[rdEchoI]; rdEchoLp += (e - rdEchoLp) * 0.3;
     rdEcho[rdEchoI] = (float)(dry + rdEchoLp * fb); rdEchoI = (rdEchoI + 1) % rdEcho.size();
-    return radarLvl * ((dry + 0.55 * rdEchoLp) * (1 - 0.15 * gT) + close);   // C-16: the whole held near C-07's level as the floor rises
+    const double out = radarLvl * ((dry + 0.55 * rdEchoLp) * (1 - 0.15 * gT) + close);   // C-16: the whole held near C-07's level as the floor rises
+    if (st.radarSet != RADIO_SUIT) return out;
+    // D-03: the suit's radio on a drifter's ground, a small set's band (about 300 Hz to 3 kHz), driven a little into its speaker
+    rdSetHp += (out - rdSetHp) * (1 - std::exp(-TAU_ * 300 * dt)); const double h = out - rdSetHp;
+    const double k = 1 - std::exp(-TAU_ * 3000 * dt);
+    rdSetLp1 += (h - rdSetLp1) * k; rdSetLp2 += (rdSetLp1 - rdSetLp2) * k;
+    return 0.5 * std::tanh(4.0 * rdSetLp2);
 }
 
 // X-01: the probe's relay. The link is a soft hiss with a tick a second while the probe is in space; the air a rush whose
@@ -709,8 +729,98 @@ double AudioSynth::probeSample(double dt, AudioState& st) {
     return prLvl * s;
 }
 
+// Q-03: the sounds of the ground the world's traits give. The singing dunes: a slip face's sand sliding hums at one low note (Andreotti's
+// f = 0.4 sqrt(g / d) of the grains' size, 70-105 Hz on Earth's, lower on a lighter world) with its harmonics, pure and loud, wavering as the
+// avalanche runs and buzzing with the grains' collisions, over the hiss of the sand. The singing ice: a sheet cracking near (the crack, then
+// the flexural wave's dispersive chirp: the highs first, the pitch falling as 1/t^2), a crack far off across the sheet (a longer, duller
+// chirp: lake ice's "pew"), the sheet's boom as it contracts (a low whoop gliding down), the snow over it settling (a dull thud); oftener the
+// more the day warms or cools it. A quake: the P-wave's thump, then the rumble under a slow heave and the stones' rattle (the air's: on an
+// airless world the ground's rumble alone, through the boots)
+double AudioSynth::groundSample(double dt, AudioState& st) {
+    double s = 0;
+    const double air = st.air;
+    auto uni = [&]() { return 0.5 + 0.5 * noise(); };
+    if (duneLvl > 0.002) {
+        duneT += dt;
+        duneHzCur += (st.duneHz - duneHzCur) * co.kDuneHz;
+        const double f = duneHzCur * (1 + 0.025 * std::sin(TAU_ * 0.23 * duneT) * std::sin(TAU_ * 0.071 * duneT + 1.0) + 0.008 * std::sin(TAU_ * 2.9 * duneT));
+        dunePh += dt * f; dunePh -= std::floor(dunePh);
+        static const double PART[5] = {1.0, 0.5, 0.28, 0.14, 0.07};
+        const double lift = clampd((70.0 - duneHzCur) / 35.0, 0.0, 1.0);   // a low note (a light world's) heard by its harmonics
+        double x = 0;
+        for (int i = 0; i < 5; i++) x += PART[i] * (i == 0 ? 1 - 0.4 * lift : 1 + 0.6 * lift) * std::sin(TAU_ * (i + 1) * dunePh);
+        const double buzz = 0.8 + 0.2 * std::sin(TAU_ * 7.3 * duneT) * std::sin(TAU_ * 1.3 * duneT);
+        x = std::tanh(1.4 * x * buzz) / 1.4;
+        const float n = noise(); duneHp += (n - duneHp) * co.kDuneHiss;
+        s += air * duneLvl * (0.26 * x + 0.06 * (n - duneHp) * (0.6 + 0.4 * duneLvl));
+    } else duneT = 0;
+    if (iceLvl > 0.002 || iceT >= 0) {
+        if (iceLvl > 0.002) iceNext -= dt * (0.3 + 1.7 * iceLvl);
+        if (iceNext <= 0 && iceT < 0) {
+            const double r = uni();
+            iceKind = r < 0.45 ? 0 : (r < 0.75 ? 1 : (r < 0.9 ? 2 : 3));
+            iceT = 0; icePh = 0; iceLp = 0; iceY1 = iceY2 = 0;
+            switch (iceKind) {
+                case 0: iceF0 = 4000 + 3000 * uni(); iceFLo = 500 + 400 * uni(); iceDur = 0.08 + 0.12 * uni(); iceAmp = 0.35 + 0.35 * uni(); break;   // near: the crack and a quick chirp
+                case 1: iceF0 = 2000 + 1500 * uni(); iceFLo = 180 + 220 * uni(); iceDur = 0.4 + 0.8 * uni(); iceAmp = 0.15 + 0.2 * uni(); break;    // far: a long dull chirp
+                case 2: iceF0 = 200 + 120 * uni(); iceDur = 0.6 + 0.6 * uni(); iceAmp = 0.2 + 0.15 * uni(); break;                                   // the sheet's boom
+                default: iceDur = 0.3 + 0.2 * uni(); iceAmp = 0.25 + 0.2 * uni(); break;                                                            // the snow settling
+            }
+            iceT0 = iceKind <= 1 ? iceDur / (std::sqrt(iceF0 / iceFLo) - 1) : 0;   // the chirp reaches its low pitch as it ends
+            iceNext = 0.4 + 3.2 * uni();
+            st.iceEvents++;
+        }
+        if (iceT >= 0) {
+            const double u = iceT / iceDur;
+            if (u >= 1) iceT = -1;
+            else {
+                double x = 0;
+                switch (iceKind) {
+                    case 0: case 1: {
+                        const double q = iceT0 / (iceT + iceT0), f = iceF0 * q * q;
+                        icePh += dt * f;
+                        x = std::min(1.0, iceT / 0.0015) * std::exp(-1.5 * u) * std::sqrt(1 - u) * (std::sin(TAU_ * icePh) + 0.3 * std::sin(2 * TAU_ * icePh));
+                        if (iceKind == 0) x += 0.9 * noise() * std::exp(-iceT * 700);
+                        else { iceLp += (x - iceLp) * co.kIceFar; x = 1.6 * iceLp; }
+                        break;
+                    }
+                    case 2: {
+                        const double f = iceF0 * (0.4 + 0.6 * std::exp(-3.0 * u)) * (1 + 0.15 * std::sin(PI_ * std::min(1.0, 4 * u)));   // up for a moment, then gliding down
+                        icePh += dt * f;
+                        const double w = std::tanh(2.2 * std::sin(TAU_ * icePh)) * std::pow(std::sin(PI_ * u), 0.6) * std::exp(-1.5 * u);
+                        x = 0.3 * w + 0.9 * resonate(w, 2.4 * f, 0.8 * f, dt, iceY1, iceY2);
+                        break;
+                    }
+                    default: iceLp += (noise() - iceLp) * co.kIceThud; x = 4.0 * iceLp * std::exp(-4.0 * u) * std::min(1.0, iceT / 0.01); break;
+                }
+                s += air * iceAmp * (0.6 + 0.4 * iceLvl) * 0.5 * x;
+                iceT += dt;
+            }
+        }
+    }
+    if (st.quakeHit > 0) { qkT = 0; qkAmp = st.quakeHit; qkPh = 0; st.quakeHit = 0; }
+    if (quakeLvl > 0.002 || qkT >= 0) {
+        const float n = noise();
+        qkLp1 += (n - qkLp1) * co.kQuake; qkLp2 += (qkLp1 - qkLp2) * co.kQuake; qkLp3 += (qkLp2 - qkLp3) * co.kQuake;
+        qkClock += dt;
+        const double heave = 0.55 + 0.45 * std::sin(TAU_ * 0.9 * qkClock) * std::sin(TAU_ * 0.31 * qkClock + 0.7);
+        double x = quakeLvl * heave * (6.5 * qkLp3 + (0.3 + 0.7 * air) * 1.8 * (qkLp1 - qkLp3));   // the ground's rumble, the air's roar over it
+        if (qkT >= 0) {   // the P-wave: a thump far down and its crack
+            if (qkT < 1.5) { qkPh += dt * (34 + 30 * std::exp(-5.0 * qkT)); x += qkAmp * (0.45 * std::exp(-3.5 * qkT) * std::sin(TAU_ * qkPh) + 3.0 * air * std::exp(-25.0 * qkT) * qkLp1); qkT += dt; }
+            else qkT = -1;
+        }
+        if (air > 0.01) {   // the stones' rattle
+            if (qkRatT < 0 && uni() < dt * 45 * quakeLvl * quakeLvl) { qkRatT = 0; qkRatA = 0.2 + 0.8 * uni(); qkRatF = 1400 + 2600 * uni(); qkRY1 = qkRY2 = 0; }
+            if (qkRatT >= 0) { x += air * qkRatA * 0.5 * resonate(noise(), qkRatF, 700, dt, qkRY1, qkRY2) * std::exp(-180.0 * qkRatT); qkRatT += dt; if (qkRatT > 0.03) qkRatT = -1; }
+        }
+        s += x;
+    } else qkClock = 0;
+    return s;
+}
+
 void AudioSynth::coefs(double dt) {
     co.kF = 1 - std::exp(-dt / 0.02); co.kUp = 1 - std::exp(-dt / 0.006); co.kDown = 1 - std::exp(-dt / 0.012); co.kN = 1 - std::exp(-dt / 0.003);
+    co.kDuneHz = 1 - std::exp(-dt / 0.5); co.kDuneHiss = 1 - std::exp(-TAU_ * 600 * dt); co.kIceFar = 1 - std::exp(-TAU_ * 1500 * dt); co.kIceThud = 1 - std::exp(-TAU_ * 150 * dt); co.kQuake = 1 - std::exp(-TAU_ * 80 * dt);   // Q-03
     static const double BW[4] = {80, 100, 150, 250};
     for (int i = 0; i < 4; i++) co.rS[i] = std::exp(-PI_ * BW[i] * dt);
     co.rNasal = std::exp(-PI_ * 120 * dt);
@@ -782,6 +892,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         breathLvl += (st.breath - breathLvl) * k;
         surfLvl += (st.surf - surfLvl) * k;
         birdLvl += (st.birds - birdLvl) * k;
+        duneLvl += (st.dunes - duneLvl) * k * 2; iceLvl += (st.ice - iceLvl) * k; quakeLvl += (st.quake - quakeLvl) * k * 4;   // Q-03
         lfo += dt * 0.23;
         double s = 0;
         // hum: two low sines with slow beating
@@ -866,6 +977,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         s += lavaLvl * 0.25 * lp2 * (0.5 + 0.5 * std::sin(lfo * 6.28 * 2.3));
         // breathing: slow noise pulses, faster when more winded
         if (breathLvl > 0.01) { breathPh += dt * (0.7 + 1.1 * breathLvl); double env = std::pow(std::max(0.0, std::sin(breathPh * 6.2831853)), 3.0); s += breathLvl * 0.22 * env * lp3; }
+        if (duneLvl > 0.002 || iceLvl > 0.002 || iceT >= 0 || quakeLvl > 0.002 || qkT >= 0 || st.quakeHit > 0) s += groundSample(dt, st);   // Q-03 the sounds of the ground
         {   // C-04 the music, C-05 the voice; C-07: through the radar's receiver when the radar owns them: a band of 250 Hz to 2.6 kHz,
             // a tape's wow (slight under a voice, heavy under a slowed piece), a slow fading, and only as much of it as the beam has
             double m = musicSample(dt, st) + speechSample(dt, st);

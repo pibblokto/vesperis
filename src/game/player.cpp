@@ -41,7 +41,7 @@ void Game::playerBuildList() {
         if (it != worlds.end()) return it->second;
         W& w = worlds[key];
         int64_t sx, sy, sz; Star st;
-        if (!Guide::parseStarKey(key, sx, sy, sz) || !starInSector(sx, sy, sz, st, true)) return w;
+        if (!Guide::parseStarKey(key, sx, sy, sz) || !placeInSector(sx, sy, sz, st, true)) return w;
         w.sys.generate(st); w.bi = bodyOfKeyP(key);
         if (w.bi < 0 || w.bi >= (int)w.sys.bodies.size()) return w;
         w.g = BodyGen::make(w.sys.bodies[w.bi]);
@@ -121,7 +121,7 @@ void Game::playerStart() {
     if (!(w.valid && w.key == it.world && w.which == it.which)) {
         if (playerOwns()) { audio.piece = nullptr; audio.tradition = nullptr; audio.speech = nullptr; audio.voice = nullptr; audio.medium = -1; }   // before the world they point into goes
         int64_t sx, sy, sz; Star st;
-        if (!Guide::parseStarKey(it.world, sx, sy, sz) || !starInSector(sx, sy, sz, st, true)) { playerStop(); return; }
+        if (!Guide::parseStarKey(it.world, sx, sy, sz) || !placeInSector(sx, sy, sz, st, true)) { playerStop(); return; }
         w = ShardWorld(); w.key = it.world;
         if (!buildShardWorld(w, st, bodyOfKeyP(it.world), it.which, false)) {
             if (w.pending) { player.waiting = true; return; }   // its records are being written: the next frames try again
@@ -155,7 +155,7 @@ void Game::playerStart() {
     if (player.playing + 1 < (int)player.items.size()) {   // the next one's world written meanwhile, so the list moves on without a wait
         const PlayerItem& nx = player.items[player.playing + 1];
         int64_t sx, sy, sz; Star st;
-        if ((nx.world != it.world || nx.which != it.which) && Guide::parseStarKey(nx.world, sx, sy, sz) && starInSector(sx, sy, sz, st, true)) {
+        if ((nx.world != it.world || nx.which != it.which) && Guide::parseStarKey(nx.world, sx, sy, sz) && placeInSector(sx, sy, sz, st, true)) {
             StarSystem wsys; wsys.generate(st); const int bi = bodyOfKeyP(nx.world);
             if (bi >= 0 && bi < (int)wsys.bodies.size()) { const BodyGen g = BodyGen::make(wsys.bodies[bi]); shardTextsPrefetch(wsys, wsys.bodies[bi], g, loreQuick(wsys, wsys.bodies[bi], g, nx.which)); }
         }

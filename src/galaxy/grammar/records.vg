@@ -101,4 +101,19 @@ record (steady)
   (last=0 age>=medieval age<=futuristic 1.2 stage>=2 medium=tablet|medium=codex|medium=printed|medium=drive|medium=crystal) {genre.inventory}
   (last=0 age>=medieval age<=futuristic 1.0 stage>=2 medium=stone|medium=codex|medium=scroll|medium=cylinder|medium=disc|medium=drive|medium=crystal) {genre.whoever}
   (last=0 age>=modern age<=futuristic 1.4 stage>=1 medium=reel|medium=disc|medium=drive) {genre.emergency}
+  # ---- D-05: the people who lost their sun (sunlost*.vg), every age's from the prehistoric: the omens and the last harvest while the sun
+  # dimmed, the myth of the sun walking away and the fires on the hills, the observatory's table of its disc, the letters to it, the count of
+  # the days without a dawn, the rules and the broadcasts of the halls below, the lesson for the children born in the dark; a radio people's
+  # last recording its last broadcast (the beacon's)
+  (last=1 cause=sunlost inv.radio=1 9900) {genre.lastbroadcast}
+  (last=0 cause=sunlost dark<=1 stage>=0 age<=prehistoric 3 medium=painted|medium=stone|medium=bone) {genre.omens}
+  (last=0 cause=sunlost dark<=1 stage>=0 age>=medieval 3 medium=scroll|medium=codex|medium=tablet|medium=stone|medium=printed|medium=drive|medium=crystal) {genre.omens}
+  (last=0 cause=sunlost dark>=1 age<=medieval 4 medium=painted|medium=stone|medium=bone|medium=scroll|medium=codex|medium=tablet) {genre.sunmyth}
+  (last=0 cause=sunlost dark>=2 age>=industrial 1.5 medium=printed|medium=cylinder|medium=disc|medium=reel|medium=drive|medium=crystal|medium=hum) {genre.sunmyth}
+  (last=0 cause=sunlost dark>=1 dark<=2 age>=medieval 4 medium=codex|medium=tablet|medium=plate|medium=printed|medium=glass|medium=drive|medium=crystal) {genre.sunmeasure}
+  (last=0 cause=sunlost dark>=1 age>=medieval 3 has:writer medium=scroll|medium=codex|medium=tablet|medium=printed|medium=cylinder|medium=disc|medium=reel|medium=drive|medium=crystal) {genre.sunletter}
+  (last=0 cause=sunlost dark=3 4 medium=bone|medium=stone|medium=painted|medium=tablet|medium=scroll|medium=codex|medium=printed|medium=reel|medium=drive|medium=crystal|medium=hum) {genre.daycount}
+  (last=0 cause=sunlost dark>=2 age<=medieval 2 medium=painted|medium=stone|medium=scroll|medium=codex|medium=tablet) {genre.deephalls}
+  (last=0 cause=sunlost dark>=2 age>=industrial 4 medium=printed|medium=cylinder|medium=disc|medium=reel|medium=drive|medium=crystal) {genre.deephalls}
+  (last=0 cause=sunlost dark=3 darkyears>=8 5 medium=painted|medium=stone|medium=bone|medium=scroll|medium=codex|medium=printed|medium=disc|medium=reel|medium=drive|medium=crystal|medium=hum) {genre.sunlesson}
 )VG"

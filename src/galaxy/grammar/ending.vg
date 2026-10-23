@@ -39,6 +39,9 @@ cause.what
   (cause=flare) the sun is wrong, and the watchers are afraid of it
   (cause=retreat) everyone is going into the machines, and the streets are empty
   (cause=physics|cause=undescribed) something is happening that our words for {ann.skyword} do not fit
+  (cause=sunlost) the sun is smaller every year, and the summers do not come back
+  (cause=sunlost) {sunway.thing} has taken the summer, and the year will not close
+  (cause=sunlost) the cold is in the stones, and the sun is a coin in the sky
 
 cause.noun
   (cause=famine|cause=cropfailure|cause=foodsystems) the hunger
@@ -62,6 +65,9 @@ cause.noun
   (cause=flare) the sun
   (cause=retreat) the sleep
   (cause=physics|cause=undescribed) what happened
+  (cause=sunlost) the going of the sun
+  (cause=sunlost) the long cold
+  (cause=sunlost) the dark
 
 # ---- the warning ------------------------------------------------------------------------------------------------------------
 
