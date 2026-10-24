@@ -1,0 +1,9 @@
+-xc++
+-std=c++17
+-Isrc
+-I/opt/homebrew/include
+-pthread
+-Wall
+-Wextra
+-Wno-unused-parameter
+-Wno-sign-compare

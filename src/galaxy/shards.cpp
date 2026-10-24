@@ -398,7 +398,29 @@ const char* const GRAMMAR_FILES[][2] = {{"records.vg", SRC_RECORDS}, {"world.vg"
     {"industrial2.vg", SRC_INDUSTRIAL2}, {"modern.vg", SRC_MODERN}, {"modern2.vg", SRC_MODERN2}, {"futuristic.vg", SRC_FUTURISTIC}, 
     {"futuristic2.vg", SRC_FUTURISTIC2}, {"futuristic3.vg", SRC_FUTURISTIC3}, {"farfuture.vg", SRC_FARFUTURE}, 
     {"ending.vg", SRC_ENDING}, {"ending2.vg", SRC_ENDING2}, {"charts.vg", SRC_CHARTS}, {"lexicon.vg", SRC_LEXICON},
-    {"culture.vg", SRC_CULTURE}, {"culture2.vg", SRC_CULTURE2}, {"culture3.vg", SRC_CULTURE3}, {"annal3.vg", SRC_ANNAL3}, {"annal4.vg", SRC_ANNAL4}, {"annal5.vg", SRC_ANNAL5}, {"annal6.vg", SRC_ANNAL6}, {"diary.vg", SRC_DIARY}, {"ending3.vg", SRC_ENDING3}, {"ending4.vg", SRC_ENDING4}, {"industrial3.vg", SRC_INDUSTRIAL3}, {"industrial4.vg", SRC_INDUSTRIAL4}, {"industrial5.vg", SRC_INDUSTRIAL5}, {"industrial6.vg", SRC_INDUSTRIAL6}, {"industrial7.vg", SRC_INDUSTRIAL7}, {"letter_events3.vg", SRC_LETTER_EVENTS3}, {"letter_events4.vg", SRC_LETTER_EVENTS4}, {"letter_events5.vg", SRC_LETTER_EVENTS5}, {"letter_events6.vg", SRC_LETTER_EVENTS6}, {"letters2.vg", SRC_LETTERS2}, {"letters3.vg", SRC_LETTERS3}, {"letters4.vg", SRC_LETTERS4}, {"log2.vg", SRC_LOG2}, {"log3.vg", SRC_LOG3}, {"modern3.vg", SRC_MODERN3}, {"modern4.vg", SRC_MODERN4}, {"modern5.vg", SRC_MODERN5}, {"modern6.vg", SRC_MODERN6}, {"modern7.vg", SRC_MODERN7}, {"modern8.vg", SRC_MODERN8}, {"modern9.vg", SRC_MODERN9}, {"news2.vg", SRC_NEWS2}, {"news3.vg", SRC_NEWS3}, {"news4.vg", SRC_NEWS4}, {"news5.vg", SRC_NEWS5}, {"news6.vg", SRC_NEWS6}, {"news7.vg", SRC_NEWS7}, {"prehistoric3.vg", SRC_PREHISTORIC3}, {"prehistoric4.vg", SRC_PREHISTORIC4}, {"prehistoric5.vg", SRC_PREHISTORIC5}, {"prehistoric6.vg", SRC_PREHISTORIC6}, {"prehistoric7.vg", SRC_PREHISTORIC7}, {"prehistoric8.vg", SRC_PREHISTORIC8}, {"prehistoric9.vg", SRC_PREHISTORIC9}, {"song2.vg", SRC_SONG2}, {"song3.vg", SRC_SONG3}, {"farfuture2.vg", SRC_FARFUTURE2}, {"farfuture3.vg", SRC_FARFUTURE3}, {"farfuture4.vg", SRC_FARFUTURE4}, {"futuristic10.vg", SRC_FUTURISTIC10}, {"futuristic4.vg", SRC_FUTURISTIC4}, {"futuristic5.vg", SRC_FUTURISTIC5}, {"futuristic6.vg", SRC_FUTURISTIC6}, {"futuristic7.vg", SRC_FUTURISTIC7}, {"futuristic8.vg", SRC_FUTURISTIC8}, {"futuristic9.vg", SRC_FUTURISTIC9}, {"medieval10.vg", SRC_MEDIEVAL10}, {"medieval11.vg", SRC_MEDIEVAL11}, {"medieval12.vg", SRC_MEDIEVAL12}, {"medieval13.vg", SRC_MEDIEVAL13}, {"medieval4.vg", SRC_MEDIEVAL4}, {"medieval5.vg", SRC_MEDIEVAL5}, {"medieval6.vg", SRC_MEDIEVAL6}, {"medieval7.vg", SRC_MEDIEVAL7}, {"medieval8.vg", SRC_MEDIEVAL8}, {"medieval9.vg", SRC_MEDIEVAL9}, {"history.vg", SRC_HISTORY}, {"sunlost.vg", SRC_SUNLOST}, {"sunlost2.vg", SRC_SUNLOST2}, {"sunlost3.vg", SRC_SUNLOST3}, {"sunlost4.vg", SRC_SUNLOST4}, {"sunlost5.vg", SRC_SUNLOST5}, {"sunlost6.vg", SRC_SUNLOST6}, {"sunlost7.vg", SRC_SUNLOST7}, {"sunlost8.vg", SRC_SUNLOST8}, {"sunlost9.vg", SRC_SUNLOST9}, {"sunlost10.vg", SRC_SUNLOST10}, {"sunlost11.vg", SRC_SUNLOST11}, {"sunlost12.vg", SRC_SUNLOST12}   // D-05
+    {"culture.vg", SRC_CULTURE}, {"culture2.vg", SRC_CULTURE2}, {"culture3.vg", SRC_CULTURE3}, {"annal3.vg", SRC_ANNAL3},
+    {"annal4.vg", SRC_ANNAL4}, {"annal5.vg", SRC_ANNAL5}, {"annal6.vg", SRC_ANNAL6}, {"diary.vg", SRC_DIARY},
+    {"ending3.vg", SRC_ENDING3}, {"ending4.vg", SRC_ENDING4}, {"industrial3.vg", SRC_INDUSTRIAL3},
+    {"industrial4.vg", SRC_INDUSTRIAL4}, {"industrial5.vg", SRC_INDUSTRIAL5}, {"industrial6.vg", SRC_INDUSTRIAL6},
+    {"industrial7.vg", SRC_INDUSTRIAL7}, {"letter_events3.vg", SRC_LETTER_EVENTS3}, {"letter_events4.vg", SRC_LETTER_EVENTS4},
+    {"letter_events5.vg", SRC_LETTER_EVENTS5}, {"letter_events6.vg", SRC_LETTER_EVENTS6}, {"letters2.vg", SRC_LETTERS2},
+    {"letters3.vg", SRC_LETTERS3}, {"letters4.vg", SRC_LETTERS4}, {"log2.vg", SRC_LOG2}, {"log3.vg", SRC_LOG3},
+    {"modern3.vg", SRC_MODERN3}, {"modern4.vg", SRC_MODERN4}, {"modern5.vg", SRC_MODERN5}, {"modern6.vg", SRC_MODERN6},
+    {"modern7.vg", SRC_MODERN7}, {"modern8.vg", SRC_MODERN8}, {"modern9.vg", SRC_MODERN9}, {"news2.vg", SRC_NEWS2},
+    {"news3.vg", SRC_NEWS3}, {"news4.vg", SRC_NEWS4}, {"news5.vg", SRC_NEWS5}, {"news6.vg", SRC_NEWS6}, {"news7.vg", SRC_NEWS7},
+    {"prehistoric3.vg", SRC_PREHISTORIC3}, {"prehistoric4.vg", SRC_PREHISTORIC4}, {"prehistoric5.vg", SRC_PREHISTORIC5},
+    {"prehistoric6.vg", SRC_PREHISTORIC6}, {"prehistoric7.vg", SRC_PREHISTORIC7}, {"prehistoric8.vg", SRC_PREHISTORIC8},
+    {"prehistoric9.vg", SRC_PREHISTORIC9}, {"song2.vg", SRC_SONG2}, {"song3.vg", SRC_SONG3}, {"farfuture2.vg", SRC_FARFUTURE2},
+    {"farfuture3.vg", SRC_FARFUTURE3}, {"farfuture4.vg", SRC_FARFUTURE4}, {"futuristic10.vg", SRC_FUTURISTIC10},
+    {"futuristic4.vg", SRC_FUTURISTIC4}, {"futuristic5.vg", SRC_FUTURISTIC5}, {"futuristic6.vg", SRC_FUTURISTIC6},
+    {"futuristic7.vg", SRC_FUTURISTIC7}, {"futuristic8.vg", SRC_FUTURISTIC8}, {"futuristic9.vg", SRC_FUTURISTIC9},
+    {"medieval10.vg", SRC_MEDIEVAL10}, {"medieval11.vg", SRC_MEDIEVAL11}, {"medieval12.vg", SRC_MEDIEVAL12},
+    {"medieval13.vg", SRC_MEDIEVAL13}, {"medieval4.vg", SRC_MEDIEVAL4}, {"medieval5.vg", SRC_MEDIEVAL5},
+    {"medieval6.vg", SRC_MEDIEVAL6}, {"medieval7.vg", SRC_MEDIEVAL7}, {"medieval8.vg", SRC_MEDIEVAL8},
+    {"medieval9.vg", SRC_MEDIEVAL9}, {"history.vg", SRC_HISTORY}, {"sunlost.vg", SRC_SUNLOST}, {"sunlost2.vg", SRC_SUNLOST2},
+    {"sunlost3.vg", SRC_SUNLOST3}, {"sunlost4.vg", SRC_SUNLOST4}, {"sunlost5.vg", SRC_SUNLOST5}, {"sunlost6.vg", SRC_SUNLOST6},
+    {"sunlost7.vg", SRC_SUNLOST7}, {"sunlost8.vg", SRC_SUNLOST8}, {"sunlost9.vg", SRC_SUNLOST9}, {"sunlost10.vg", SRC_SUNLOST10},
+    {"sunlost11.vg", SRC_SUNLOST11}, {"sunlost12.vg", SRC_SUNLOST12}   // D-05
 };
 constexpr int GRAMMAR_FILE_COUNT = (int)(sizeof(GRAMMAR_FILES) / sizeof(GRAMMAR_FILES[0]));
 

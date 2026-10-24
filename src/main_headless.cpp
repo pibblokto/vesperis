@@ -28,6 +28,7 @@
 #include "galaxy/works.h"     // T-03
 #include "galaxy/records.h"   // T-04
 #include "galaxy/genres.h"    // H-04
+#include "harness/fingerprint.h"   // E-02
 // C-13: the peoples' helpers (defined with the `peoples` mode, below): a land point deep on a people's side of the divide, the `second` argument
 static Vec3 peopleSidePoint(const BodyGen& g, int people, double wantLat);
 static bool frontierPoint(const BodyGen& g, double& lat, double& lon);
@@ -1274,6 +1275,8 @@ static void renderSurface(int onlyType) {
                     nb.update(sv.site.worldPos(t, 0, 0, 0));
                     Input in;
                     sv.update(0.016, in, t, false);
+                    for (const Body& ob : sys.bodies)   // E-02: the sky's bodies' maps first (made on their thread at the binary's own pace, F-07)
+                        if (ob.type != PT_COMPANION) while (!sr.mapIfReady(ob)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     Framebuffer fb;
                     double t0 = nowSec();
                     sv.render(fb, t, nb.stars, sr, 1.0);
@@ -12364,6 +12367,7 @@ static int testUnit() {
         bool wrote = friendG.save("shots/tests/test_guide_inbox.txt");
         Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
+        for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // E-02: every map first (F-07)
         game.guide.shards.insert(wk + "/S2");   // the explorer's own already: not lent
         game.importInboxFile(); std::string st = game.testStatus();
         bool namesIn = game.guide.inbox.count("151,0,25") && game.guide.inbox["151,0,25"] == "Friendstar" && mi >= 0 && game.guide.inbox.count(mk) && game.guide.names.empty();
@@ -15614,7 +15618,7 @@ static int runChartsRogues() {
                p.which ? ", second people" : "", loreQuick(sys, sys.bodies[0], g, p.which).people.c_str(), p.index, AGE_NAMES[p.ch.age], RECORD_MEDIUM_NAMES[p.ch.medium], CHART_STYLE_NAMES[p.ch.style],
                shardDrawOf(g, loreQuick(sys, sys.bodies[0], g, p.which), p.index).year, p.ch.mark.star.name.c_str(), p.ch.mark.how, p.ch.mark.ly);
         if (kind == 0) { printf("   the disc, year by year:"); for (const auto& v : p.ch.sunCurve) printf(" %d:%.1f", (int)v[0], v[1]); printf(" (in %d parts)\n", p.ch.sunUnits); }
-        else printChartWay(sys, p.ch);
+        else { const PeoplesWorld PW = peoplesWorldOf(sys, sys.bodies[0]); printChartWay(*PW.sys, p.ch); }   // E-02: the wanderers are its former system's
         printf("   caption: %s\n", p.caption.c_str());
         Game game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.settings.renderScale = 2; game.applySettings();
@@ -21859,7 +21863,9 @@ static int runDataSheet(int argc, char** argv) {
         Input in;
         auto run = [&](double secs) { int n = (int)(secs * 30); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
         auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
-        game.testParkAt(c.s, c.bi); run(0.2);
+        game.testParkAt(c.s, c.bi);
+        for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // E-02: every map first (F-07)
+        run(0.2);
         press(KEY_ESCAPE); run(0.1); press(KEY_I); run(0.1);
         const int ySpace = game.testDataSheetBottom(), pSpace = game.testDataSheetPages();
         writePNG(fmt("shots/tests/datasheet_%d_space.png", k).c_str(), game.output(), FBW, FBH);
@@ -22670,6 +22676,7 @@ static int runRoguesHeard() {
     Game game; game.savePrefix = "shots/tests/rogues_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/rogues_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings(); applyTestScale(game); game.setState(GameState::SPACE);
+    for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // E-02: every map first (F-07)
     Input in;
     auto run = [&](double secs) { int n = std::max(1, (int)(secs * 30)); for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); } };
     auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[key] = false; };
@@ -24779,6 +24786,7 @@ int main(int argc, char** argv) {
     std::string mode = argc > 1 ? argv[1] : "stars";
     if (mode == "scene") {
         std::string want = argc > 2 ? argv[2] : "felisian_shore";
+        if (want == "list") { for (const CmpScene& sc : CMP_SCENES) printf("%s\n", sc.name); return 0; }   // E-02: every scene, in the table's order
         if (argc > 3) setFramebufferScale(atoi(argv[3]));   // `scene <name> [scale] [warm]` (B-310): the frame at 1x .. 4x; R-307: warm > 0 runs that many seconds of the world first and stages the type's event in view
         double warm = argc > 4 ? atof(argv[4]) : 0;
         SpaceRenderer sr; StarNeighborhood nb;
@@ -25282,12 +25290,12 @@ int main(int argc, char** argv) {
                     if (b.type != PT_FELISIAN) continue;
                     BodyGen g = BodyGen::make(b);
                     setDrainageEnabled(false);   // O6-03: 1500 random points over the globe would build a tile each; the biome shares do not need the rivers
-                    int bio[BIO_COUNT] = {0}; int n = 0, land = 0, inland = 0, lakes = 0;
+                    int bio[BIO_COUNT] = {0}; int n = 0, land = 0, inland = 0;
                     for (int k = 0; k < 1500; k++) {
                         double lat = std::asin(r.range(-1, 1)), lon = r.range(-PI, PI);
                         SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), 400);
                         n++; bio[ss.biome]++; if (ss.height > 0) land++;
-                        if (ss.material == MAT_WATER && ss.water > 0.5) { inland++; if (ss.biome == BIO_WETLAND) lakes++; }
+                        if (ss.material == MAT_WATER && ss.water > 0.5) inland++;   // E-02: a count of the wetlands' lakes was never printed
                         if (ss.biome == BIO_ICE && ss.height > 0) {
                             double T = climateTempC(g, std::fabs(lat) / DEG, ss.height, 0, 0);
                             double lf = std::fabs(lat) / DEG / 85.0, snowLine = g.snowLine * std::max(0.0, 1.0 - lf * lf);
@@ -25322,6 +25330,7 @@ int main(int argc, char** argv) {
     if (mode == "tail") return runTail(argc, argv);           // B-427
     if (mode == "parkings") return runParkings();               // B-428
     if (mode == "tape") return runTape(argc, argv);             // R-420
+    if (mode == "fingerprint") return runFingerprint(argc, argv);   // E-02: src/harness/fingerprint.cpp
     if (mode == "flow") { runGameFlow(); return 0; }
     if (mode == "landmaps") { renderLandingMaps(); return 0; }
     if (mode == "consistency") { runConsistency(); return 0; }

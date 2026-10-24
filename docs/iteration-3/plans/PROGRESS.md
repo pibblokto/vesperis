@@ -875,6 +875,34 @@
   (a moon named New, "the old old woman", "at at", a ruler named as his family), left for a bug of their own. Docs: `04`, `08`, `12`, the
   cookbook, `10-decisions.md`, R-423 done. Nothing committed.
 
+* **The E series planned (2026-10-23): the repo for its readers.** On the user's word, 1.4.0's sixteen milestones were
+  committed as 92e580a (a random author, no session link), then the repo was surveyed for what an agent must read to change it
+  (five readers: the harness, the engine with the grammar, the game layer, the docs with the memory, Claude Code's documentation;
+  the deciding claims measured again). The plan is `docs/ideas/PLAN-reorganisation.md`: thirteen milestones, E-01 to E-13, in 1.4.0
+  before its release, nothing generated, drawn, played or saved moving. Nothing built.
+
+* **E-01 (2026-10-23): what every session loads.** The first of the E series, no code. The memory went from 252 KB in 12 files to
+  9.2 KB in 6 (MEMORY.md six lines, 972 bytes; the old files in `build/memory-2026-10-23/`); its 261 lessons moved to the CLAUDE.md
+  files, `docs/reference/lessons.md` (new), `packaging/RELEASE.md` (new) and the memory's `user-workflow.md`, eight obsolete ones
+  dropped. The root CLAUDE.md was rewritten with the map (6.5 KB; the mode-list claim corrected, in README.md too); notes in
+  src/core, src/galaxy, src/galaxy/grammar, src/space, src/surface, src/game and docs, and the harness's in
+  `.claude/rules/harness.md`. The guards in `.claude/settings.json` (whole Reads over 100 KB, session links in commits, tags, PRs
+  and releases, `make clean`, `rm -rf build`; 38 cases in `.claude/hooks/test_guard.py`) refuse in the running session. The
+  eight tasks' baseline: 1.33M tokens over eight read-only agents (the plan's section 11). Found: `radarLock` marks a slot heard
+  without its programme speaking. Docs: `10-decisions.md`, the plan, `ITERATION-1.4.0.md`, `MILESTONES.md`. Nothing committed.
+
+* **E-02 (2026-10-24): the proof kept.** D-05's kit run once more against D-05's own outputs (the same, but one sweep frame drawn
+  beside other jobs then and a harness printout reading freed memory, fixed). The fingerprint modes (`src/harness/`): fp5, the
+  draw-stream tool and recdump as modes, with the fields and kinds fp5 missed, and `fingerprint modules` for what nothing pinned.
+  `tools/prove` (snapshot, compare, objects, bench; `tools/prove.items`, 27 items in about 15 minutes); snapshots `e02-base`,
+  `e02-base2` (the base relinked with the final harness) and `e02`. The battery's frames that drew bodies before their maps now
+  wait for them. The almanac's finders listed in `registry()`, their registrars gone. A `make clean` that removes only objects and
+  binaries, flags from make's command line only, `make check`, the two lines over 2,000 characters gone
+  (`docs/reference/generations.md`), `compile_flags.txt`, the skills and the `prover` agent. Proven from a clean rebuild:
+  `tools/prove compare e02-base2` everything the same (27 items, 1,271 files; the unit's 403 checks, the flow and the regress both
+  ways among them); the bench pairs level but for rows bound to the disk. Docs: `10-decisions.md`, `08-testing-and-tools.md`,
+  `generations.md`, `lessons.md`, the plan, `ITERATION-1.4.0.md`, `MILESTONES.md`, the CLAUDE.md files. Nothing committed.
+
 ## Next
 
 The 1.2.0 iteration is `docs/ideas/ITERATION-1.2.0.md` (2026-10-06, eight milestones in a fixed order on the branch `release/v1.2.0`): W-01, W-06 (reworked on the user's review the same day: the plate, the set, R-404, B-407; then R-405 the same day on the second review: the stabiliser, Shift+arrows round the world), W-03 (weather that arrives: the fronts) W-04 (nights: meteor showers, the zodiacal light, the earthshine; after B-408, the user's comet sky) X-01 (the probe: launch to end; unlimited probes, the user's answer), X-02 (the descent's stages, with R-406: Shift runs the probe x8) X-03 (each giant its own: decks by condensation, kinds, storms, glow, aurorae, rare sights; generation 12; then B-409, the picture black in a one-deck giant's clouds) and X-04 (what comes back: the recording, the final image, the profile, the log, the statistics, the lending; with B-410 between, the belt's parking) done: the iteration's eight milestones are done, and after them the user's two requests on playing X-04, R-407 (a jump of any length along the aim; the aim's markers) and R-408 (the explorer's marks on the sector map, the scanner in place of the landmarks). Released as 1.2.0 on 2026-10-07.
@@ -903,4 +931,7 @@ worlds and their peoples) done 2026-10-21, P-05 (the far cold), P-06 (the strang
 facts and eleven landforms), Q-02 (water, sky, life and ground: sixteen traits, the tides among them) and Q-03 (the sounds of the ground)
 done 2026-10-22, D-01 (the dark between: the drifters' field), D-02 (heard, not seen: the radar finds them), D-03 (the voices of the
 dark), D-04 (the ground in the dark) and D-05 (the people who lost their sun: their records, charts, music, works of the end and the
-beacon) done 2026-10-23: the sixteen are done, uncommitted; what follows is the user's call.
+beacon) done 2026-10-23: the sixteen are done, committed as 92e580a. Then the E series (`docs/ideas/PLAN-reorganisation.md`,
+E-01 to E-13, planned 2026-10-23): the repo made cheaper to read and change before the release; E-01 (what every session loads)
+done 2026-10-23, E-02 (the proof kept: `tools/prove`, snapshot `e02`) 2026-10-24; E-03 (the harness in pieces) waits for the user's
+"proceed".

@@ -55,7 +55,10 @@ double bearingOf(const Vec3& dir, const Vec3& p) {
     return wrap2pi(std::atan2(dot(dir, east), dot(dir, north)));
 }
 
-// W-03's almanac finder: the arrival and the clearing of every front that reaches the place within the window
+}   // namespace
+
+// W-03's almanac finder: the arrival and the clearing of every front that reaches the place within the window (E-02: listed in
+// almanac.cpp's registry())
 void findFronts(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
     if (!p.ground || !p.sys || p.body < 0 || p.body >= (int)p.sys->bodies.size()) return;
     const Body& b = p.sys->bodies[p.body];
@@ -67,8 +70,6 @@ void findFronts(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
         AlmanacEvent e2; e2.kind = AL_FRONT_CLEAR; e2.t = f.tClear; e2.body = p.body; e2.value = f.fromBearing; out.push_back(e2);
     }
 }
-struct FrontFinderRegistrar { FrontFinderRegistrar() { addAlmanacFinder(findFronts); } } frontFinderRegistrar;
-}   // namespace
 
 double frontCloudProfile(double x) { return smoothstep(280e3, 180e3, x) * smoothstep(-330e3, -200e3, x); }
 double frontCloudCore(double x) { return smoothstep(100e3, 90e3, x) * smoothstep(-260e3, -130e3, x); }

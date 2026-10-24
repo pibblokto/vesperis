@@ -3,6 +3,7 @@
 // period it moves with and refined by bisection or a golden section: the time listed is the time the geometry reaches it.
 #include "almanac.h"
 #include "fronts.h"
+#include "nights.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -324,8 +325,11 @@ void findSunTransits(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {   
     }
 }
 
+// E-02: every finder, in a fixed order (the fronts' and the showers' last, where their start-up registrars had put them): the order
+// of events at one time after almanacOf's stable sort
 std::vector<AlmanacFinder>& registry() {
-    static std::vector<AlmanacFinder> r = {findSun, findSkyBodies, findEclipses, findRingShadow, findComets, findShipMoons, findConjunctions, findSunTransits};
+    static std::vector<AlmanacFinder> r = {findSun, findSkyBodies, findEclipses, findRingShadow, findComets, findShipMoons, findConjunctions, findSunTransits,
+                                           findFronts, findShowers};
     return r;
 }
 
@@ -336,8 +340,6 @@ std::string shortUpper(const std::string& s, size_t n) {
 }
 
 }   // namespace
-
-void addAlmanacFinder(AlmanacFinder fn) { registry().push_back(fn); }
 
 void almanacOf(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
     out.clear();

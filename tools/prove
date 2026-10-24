@@ -1,0 +1,201 @@
+#!/bin/zsh
+# tools/prove: the proof that a step changes nothing Vesperis makes, draws, plays or saves (E-02, for the E series and after).
+#
+#   tools/prove snapshot <name> [item...]   keep ./vesperis_test, the objects and every item's outputs in $PROVE_HOME/<name>; with
+#                                           items and an existing snapshot, (re)record those items with the snapshot's own binary
+#   tools/prove compare <name> [item...]    run the items with ./vesperis_test and compare with the snapshot's: at most 30 lines
+#   tools/prove objects <name>              the engine's and the game's objects against the snapshot's (comment-only steps)
+#   tools/prove bench <A> <B> [pairs]       `bench check` in AB/BA pairs (4 by default), A and B snapshots or binaries, from paths of
+#                                           one length; the rows' best-of and median ratios (tools/benchcmp.py)
+#   tools/prove items                       the battery, with each item's time in the newest snapshot
+#
+# The battery is tools/prove.items. Each item runs alone in a scratch working directory: src/, tests/ and music/ linked in, an empty
+# shots/tests (the flow makes every save it loads), the binary linked as ./vesperis_test, stdout and stderr kept apart. Its outputs
+# are every file it writes under shots/. Comparisons: tools/provecmp.py. Long: run it under caffeinate -i, in the background, and
+# alone (frames drawn beside other jobs move). PROVE_HOME (the main checkout's build/prove by default) lets a worktree use the main
+# checkout's snapshots. PROVE_BIN=<binary> runs a new snapshot or a compare with that binary instead of ./vesperis_test (an old
+# tree's objects linked with the newest harness; a snapshot's own binary, to see an item's noise).
+emulate -L zsh
+setopt extendedglob pipefail no_nomatch
+zmodload zsh/datetime
+
+ROOT=${0:A:h:h}
+COMMON=$(git -C $ROOT rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+PROVE_HOME=${PROVE_HOME:-${${COMMON:-$ROOT/.git}:h}/build/prove}
+ITEMS=$ROOT/tools/prove.items
+BIN=$ROOT/vesperis_test
+CMP=$ROOT/tools/provecmp.py
+
+die() { print -u2 "prove: $*"; exit 2 }
+
+typeset -a NAMES CMDS OPTS
+typeset -A INDEX
+load_items() {
+  local line name
+  local -a f
+  while IFS= read -r line; do
+    [[ $line == [[:space:]]#(\#*|) ]] && continue
+    f=("${(@s:|:)line}")   # a command holds no |
+    name=${${f[1]}//[[:space:]]/}
+    NAMES+=($name); CMDS+=("${${${f[2]}##[[:space:]]#}%%[[:space:]]#}")
+    OPTS+=("${${${(j:|:)f[4,-1]}##[[:space:]]#}%%[[:space:]]#}")   # the options are the rest of the line (a mask may hold a |)
+    INDEX[$name]=${#NAMES}
+  done < $ITEMS
+}
+
+# the items asked for (all by default), checked against the battery
+pick() {
+  local -a want
+  want=("$@")
+  (( $#want )) || want=($NAMES)
+  local w
+  for w in $want; do [[ -n ${INDEX[$w]} ]] || die "no item '$w' in tools/prove.items (prove items lists them)"; done
+  print -l -- $want
+}
+
+fresh() {   # the binary must be what the tree builds, unless PROVE_BIN names another
+  if [[ -n $PROVE_BIN ]]; then
+    [[ -x $PROVE_BIN ]] || die "PROVE_BIN $PROVE_BIN is not a binary"
+    BIN=${PROVE_BIN:A}
+    return
+  fi
+  [[ -x $BIN ]] || die "no ./vesperis_test: make it first"
+  (cd $ROOT && make -q vesperis_test >/dev/null 2>&1) || die "./vesperis_test is older than its sources: make it first"
+}
+
+run_item() {   # run_item <binary> <item> <run dir>
+  local bin=$1 name=$2 run=$3
+  local i=${INDEX[$name]} w=$3.work
+  rm -rf $run $w; mkdir -p $run $w/shots/tests
+  ln -s $ROOT/src $w/src; ln -s $ROOT/tests $w/tests; ln -s $ROOT/music $w/music; ln -s $bin $w/vesperis_test
+  local t0=$EPOCHREALTIME
+  (cd $w && V=./vesperis_test && eval "${CMDS[i]}") > $run/stdout 2> $run/stderr
+  print $? > $run/exit
+  printf '%.1f\n' $(( EPOCHREALTIME - t0 )) > $run/seconds
+  mv $w/shots $run/shots
+  rm -rf $w
+}
+
+snapshot() {
+  local name=$1; shift
+  [[ -n $name ]] || die "snapshot <name> [item...]"
+  local S=$PROVE_HOME/$name bin
+  local -a list
+  list=(${(f)"$(pick "$@")"}) || exit 2
+  if [[ -d $S ]]; then
+    (( $# )) || die "$S exists: name another snapshot, or give the items to record again with its own binary"
+    bin=$S/vesperis_test
+  else
+    fresh
+    mkdir -p $S/items
+    cp -p $BIN $S/vesperis_test
+    if [[ -z $PROVE_BIN ]]; then   # the objects the binary was linked from (PROVE_BIN's are not known)
+      mkdir -p $S/objects
+      (cd $ROOT/build && for o in {core,galaxy,space,surface,game,harness}/*.o(N) *.o(N); do mkdir -p $S/objects/${o:h}; cp -p $o $S/objects/$o; done)
+    fi
+    { print "snapshot $name, $(date '+%Y-%m-%d %H:%M')"
+      print "head $(git -C $ROOT rev-parse --short HEAD), $(git -C $ROOT status --short | wc -l | tr -d ' ') paths changed"
+      print "binary ${PROVE_BIN:-./vesperis_test} $(shasum $BIN | cut -c1-16)"; } > $S/info
+    bin=$S/vesperis_test
+  fi
+  local n t0=$EPOCHREALTIME bad=0
+  for n in $list; do
+    run_item $bin $n $S/items/$n
+    python3 $CMP expect $S/items/$n $n $ITEMS || bad=1
+    if [[ " ${OPTS[${INDEX[$n]}]} " == *" twice "* ]]; then
+      run_item $bin $n $S/items/$n.2
+      python3 $CMP noise $S/items/$n $S/items/$n.2 $n $ITEMS
+      rm -rf $S/items/$n.2
+    fi
+    print "$n: exit $(<$S/items/$n/exit), $(<$S/items/$n/seconds) s, $(find $S/items/$n/shots -type f | wc -l | tr -d ' ') files"
+  done
+  printf 'snapshot %s: %d items in %.0f s -> %s\n' $name $#list $(( EPOCHREALTIME - t0 )) $S
+  return $bad
+}
+
+compare() {
+  local name=$1; shift
+  [[ -n $name ]] || die "compare <name> [item...]"
+  local S=$PROVE_HOME/$name C=$ROOT/build/prove/cmp/$name
+  [[ -d $S/items ]] || die "no snapshot $S"
+  fresh
+  local -a list
+  local n
+  list=(${(f)"$(pick "$@")"}) || exit 2
+  if (( ! $# )); then   # all: the items the snapshot holds, in the battery's order
+    list=()
+    for n in $NAMES; do [[ -d $S/items/$n ]] && list+=($n); done
+  fi
+  mkdir -p $C
+  local t0=$EPOCHREALTIME
+  for n in $list; do run_item $BIN $n $C/$n; done
+  cmp -s $BIN $S/vesperis_test && print "the binary is the snapshot's own" || print "the binary differs from the snapshot's"
+  python3 $CMP report $S/items $C $ITEMS $list
+  local rc=$?
+  printf '(%d items in %.0f s; the outputs in %s)\n' $#list $(( EPOCHREALTIME - t0 )) $C
+  return $rc
+}
+
+objects() {
+  local S=$PROVE_HOME/$1
+  [[ -d $S/objects ]] || die "no snapshot $S"
+  fresh
+  local o same=0 harness=0
+  local -a moved missing
+  for o in $S/objects/**/*.o(N); do
+    o=${o#$S/objects/}
+    if [[ ! -f $ROOT/build/$o ]]; then missing+=($o); continue; fi
+    if [[ $o == main_headless.o ]]; then harness=1; continue; fi   # two compiles of the harness differ: proven by behaviour
+    if cmp -s $S/objects/$o $ROOT/build/$o; then (( ++same )); else moved+=($o); fi
+  done
+  local -a added
+  for o in $ROOT/build/{core,galaxy,space,surface,game,harness}/*.o(N) $ROOT/build/*.o(N); do
+    o=${o#$ROOT/build/}; [[ -f $S/objects/$o ]] || added+=($o)
+  done
+  print "prove objects $1: $same the same, $#moved differ${moved:+: ${(j:, :)moved}}${missing:+; missing: ${(j:, :)missing}}${added:+; new: ${(j:, :)added}}"
+  (( harness )) && print "(main_headless.o not compared: its compiles differ; the harness is proven by behaviour)"
+  (( $#moved + $#missing + $#added )) && return 1 || return 0
+}
+
+bench() {
+  local A=$1 B=$2 pairs=${3:-4}
+  [[ -n $A && -n $B ]] || die "bench <A> <B> [pairs]: snapshots or binaries"
+  local a b x i
+  for x in A B; do
+    local v=${(P)x}
+    if [[ -x $PROVE_HOME/$v/vesperis_test ]]; then v=$PROVE_HOME/$v/vesperis_test
+    elif [[ -x $v ]]; then v=${v:A}
+    else die "$v: neither a snapshot nor a binary"; fi
+    [[ $x == A ]] && a=$v || b=$v
+  done
+  local D=$ROOT/build/prove/bench/${A:t}-${B:t}
+  rm -rf $D; mkdir -p $D
+  cp $a $ROOT/vt_pa; cp $b $ROOT/vt_pb   # paths of one length: the launch path moves rows (P-04)
+  { print "A $a"; print "B $b"; print "pairs $pairs"; } > $D/info
+  cd $ROOT
+  for (( i = 1; i <= pairs; i++ )); do
+    local order=AB; (( i % 2 == 0 )) && order=BA
+    for x in ${(s::)order}; do caffeinate -i ./vt_p${(L)x} bench check > $D/${(L)x}_$i.txt 2>&1; done
+  done
+  rm -f $ROOT/vt_pa $ROOT/vt_pb
+  python3 $ROOT/tools/benchcmp.py $D
+}
+
+list_items() {
+  local newest=$(ls -td $PROVE_HOME/*/items(N) 2>/dev/null | head -1) n
+  for n in $NAMES; do
+    local s=""
+    [[ -n $newest && -f $newest/$n/seconds ]] && s=" ($(<$newest/$n/seconds) s in ${${newest:h}:t})"
+    print -r -- "$n${OPTS[${INDEX[$n]}]:+ [${OPTS[${INDEX[$n]}]}]}: ${CMDS[${INDEX[$n]}]}$s"
+  done
+}
+
+load_items
+case $1 in
+  snapshot) shift; snapshot "$@" ;;
+  compare)  shift; compare "$@" ;;
+  objects)  shift; objects "$@" ;;
+  bench)    shift; bench "$@" ;;
+  items)    list_items ;;
+  *)        sed -n '2,13p' $0 | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

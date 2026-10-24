@@ -27,6 +27,11 @@ world stays felisian. P-00 changes nothing generated or drawn. The traits' new s
 are. The drifters are additive: they live only in sectors with no star, so no star or system moves (D-01). Saves of 1.3.x load
 with the regeneration notice.
 
+**The repo for its readers** (added 2026-10-23, after D-05, on the user's request: "it's crucial to optimize it now before we go
+any further"): thirteen milestones, E-01 to E-13, that make the repo cheaper for an agent to read and change (the harness split, the
+docs indexed, game.h and the largest files by subsystem, a permanent proof kit, CLAUDE.md files and skills). Nothing generated,
+drawn, played or saved changes. The plan, its measurements and each milestone's done-when are `PLAN-reorganisation.md`.
+
 Left out on purpose: the V series (parked), S-07, W-05, the L and K series, the shepherd moon (P-11 of the old list, a place)
 and the pelagic island (P-12, kept for a later trait). W-02 (tides) comes in as the GREAT TIDES trait (Q-02). The old P list's
 twelve kinds are re-cut into the families below (`MILESTONES.md`).
@@ -51,6 +56,19 @@ twelve kinds are re-cut into the families below (`MILESTONES.md`).
 | 14 | The drifters | D-03 | The voices of the dark: a voice for every drifter | L | done 2026-10-23 |
 | 15 | The drifters | D-04 | The ground in the dark: the explorer's lamp, frozen air, embers, the lights left on, the dark ocean | L | done 2026-10-23 |
 | 16 | The drifters | D-05 | The people who lost their sun: the history's new end, its records, charts and music, the beacon | XL | done 2026-10-23 |
+| 17 | The repo | E-01 | What every session loads: the memory, the root CLAUDE.md with the map, the directory notes, the guards; the eight tasks measured | M | done 2026-10-23 |
+| 18 | The repo | E-02 | The proof kept: fingerprints of every module, `tools/prove`, the almanac's order explicit, a safe `make clean`, `make check`, clangd | L | done 2026-10-24 |
+| 19 | The repo | E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | planned |
+| 20 | The repo | E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | planned |
+| 21 | The repo | E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | planned |
+| 22 | The repo | E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | planned |
+| 23 | The repo | E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | planned |
+| 24 | The repo | E-08 | The views: surface_view and space_view split | L | planned |
+| 25 | The repo | E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | planned |
+| 26 | The repo | E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | planned |
+| 27 | The repo | E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | planned |
+| 28 | The repo | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | planned |
+| 29 | The repo | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | planned |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md`
 gets `1.4.0, done <date>`. This table is the order.
@@ -746,3 +764,19 @@ together on a drifter). Their story is the lost sun's, and no other world's is.
   `rogues heard`, every radar WAV and `rogues voices` (but its beacon) as D-04's; `rogues dark`'s frames and the dark's scenes D-04's; `unit`
   403 checks, none failing; the flow passes (20.3 s); `bench check` within all 38 budgets in D-05's four runs and every row level with
   D-04's binary over four pairs (the buggy's 2x as noisy in both: D-04's binary 3.2-6.6 ms, once over its budget, D-05's 3.5-4.8).
+
+## Phase 5: the repo for its readers (added 2026-10-23)
+
+E-01 to E-13, planned after D-05 on the user's request. The scope, the rules, the proof and each milestone's done-when are in
+`PLAN-reorganisation.md`, not repeated here. Generation 16 is unchanged and nothing is blessed: every step is proven identical
+to the binary before it.
+
+* **E-01 done 2026-10-23.** The memory cut to an index (its lessons in the CLAUDE.md files, `docs/reference/lessons.md` and
+  `packaging/RELEASE.md`), the root CLAUDE.md with the map, seven directory notes and the harness's rule, the guards, and the eight
+  tasks' baseline (the plan's section 11). No code changed.
+
+* **E-02 done 2026-10-24.** The proof kept: the fingerprint modes in `src/harness/`, `tools/prove` with its battery of 27 items
+  (about 15 minutes a compare; snapshots in `build/prove/`), the almanac's finders listed in their registry, a `make clean` that
+  keeps `build/`'s kits and toolchains, `make check`, `compile_flags.txt`, the `prove`, `bench` and `look` skills and the `prover`
+  agent. Proven from a clean rebuild: `tools/prove compare e02-base2` everything the same (27 items, 1,271 files; the unit's 403
+  checks, the flow and the regress both ways among them); the bench pairs level but for rows bound to the disk.

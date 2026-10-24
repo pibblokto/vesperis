@@ -117,7 +117,7 @@ run in Docker).
 The headless harness needs no window: `./vesperis_test flow` plays through a
 whole expedition and dumps frames to `shots/tests/`, `./vesperis_test unit`
 runs the unit tests, `./vesperis_test regress` the determinism and frame
-hashes; run it without arguments for the full list of modes.
+hashes; `docs/reference/08-testing-and-tools.md` describes every mode.
 
 ## Controls
 

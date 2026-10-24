@@ -33,7 +33,9 @@ Wolf-Rayet star's giants' tail), B-428 (the moons spread; generation 15) and R-4
 **Planned for 1.4.0 (2026-10-21), generation 16:** the iteration `ITERATION-1.4.0.md` on the branch `release/v1.4.0`, on the
 user's request of 2026-10-21 (R-421 thirty to fifty new kinds of world, R-422 more modifiers, R-423 rogue planets found by
 radio), the design in `IDEAS-worlds-and-wanderers.md`: sixteen milestones, P-00 to P-07 (the P series re-cut: the old list's
-twelve kinds are in its families), Q-01 to Q-03 and D-01 to D-05, in that order; generation 16 from P-01.
+twelve kinds are in its families), Q-01 to Q-03 and D-01 to D-05, in that order; generation 16 from P-01. All sixteen done 2026-10-23, committed as 92e580a. Added
+the same day, before the release: the E series (`PLAN-reorganisation.md`), E-01 to E-13, the repo made cheaper to read and
+change, nothing generated or drawn moving; E-01 done 2026-10-23, E-02 2026-10-24.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -252,6 +254,28 @@ F-01 done; B-423 done (the pinned bands; its timing pairs and flow frame closed 
 | F-09 | The release flags: thin LTO on the clang lines, the build scripts into `packaging/`, the Linux and Windows flags gated on the container's regress | M | 1.3.1, done 2026-10-15 (thin LTO on macOS and Windows; Linux `-O3`, its `-flto` slower and `-fno-math-errno` nothing in the container; Windows untimed; B-424 found by the Windows builds) |
 | F-10 | The hash-moving batch, one bless: the sky's pows as products, the cloud drift wrapped once, the limb, the `atan2`/`asin` pair | M | 1.3.1, done 2026-10-15 (the sky's powers as products, the cloud drift wrapped once, the limb as products: surface 4x -14%, space 4x -8%; no hash moved, nothing blessed; the `atan2`/`asin` pair built and dropped, slower in the frame) |
 | F-11 | The close: budgets lowered, the regress widened, the docs and KNOWN-ISSUES | S | 1.3.1, done 2026-10-15 (37 budgets at about 1.5 times the dev Mac's medians, `bench check <factor>` elsewhere; the regress 24: the forest at 4x and the cabin at 1x, each drawn by one thread too; KI-312 and KI-206 closed) |
+
+## E: the repo for its readers (`PLAN-reorganisation.md`) — nothing generated or drawn changes, no generation change
+
+Planned 2026-10-23 for 1.4.0, after D-05 and before the release, on the user's request: the repo made cheaper for an agent to
+read and change, and more modular. The plan holds the measurements, the hazards a move can break, the rules, the proof and each
+milestone's done-when. Every step is proven identical to the binary before it; nothing is blessed.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| E-01 | What every session loads: the memory, the root CLAUDE.md with the map, the directory notes, the guards; the eight tasks measured | M | 1.4.0, done 2026-10-23 |
+| E-02 | The proof kept: fingerprints of every module, `tools/prove`, the almanac's order explicit, a safe `make clean`, `make check`, clangd | L | 1.4.0, done 2026-10-24 |
+| E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | 1.4.0 |
+| E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | 1.4.0 |
+| E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | 1.4.0 |
+| E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | 1.4.0 |
+| E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | 1.4.0 |
+| E-08 | The views: surface_view and space_view split | L | 1.4.0 |
+| E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | 1.4.0 |
+| E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | 1.4.0 |
+| E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | 1.4.0 |
+| E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | 1.4.0 |
+| E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | 1.4.0 |
 
 ## Suggested order for 1.2.0
 

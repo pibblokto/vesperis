@@ -592,3 +592,46 @@ refresh on a calm Mac but missed whole stretches under load (the decoder 41.7 a 
 average and 2.08 at worst with the radar and the player; the upload 0.42-0.77 ms (1.17 in the radar camera). `VESPERIS_TRACE=1` now
 prints `hold` (the platform's wait before the swap) beside `swap` (the swap and its vsync wait), the work is the frame without either,
 and the summary counts the intervals over 17.5 ms.
+
+## E-02: the fingerprints and `tools/prove` (2026-10-23)
+
+The E series' proof (`docs/ideas/PLAN-reorganisation.md`, section 5), kept in the tree instead of made again in each milestone's
+`build/<id>/`. The fingerprint modes are the harness's first own files (`src/harness/`).
+
+| Mode | What it does | Output |
+| --- | --- | --- |
+| `fingerprint bodies [n] [out]` | Q-03's fp5 as a mode: every body of four scan regions (150..340 x 20..160 at sy 0, and three far squares) as a keyed line, its key the sector and the body: the body, its label, its made generator, its data sheet's sentence, its traits, its sky, its climate and 24 samples of its ground at four scales, a hash each, and `all`, fp5's hash of them all; `gen2` and `ground2`, the generator's and the ground's fields fp5 left out (E-01's baseline found them); the drifters nearest home with their moons (`dark` lines: the dark bodies and the dark ocean, which no scan reaches, so all 60 kinds); three bodies of each drained kind with the drainage on. `n` takes every n-th sector column. 44,780 lines in about 35 s | `shots/tests/fingerprint_bodies.txt` |
+| `fingerprint stream [n] [out] [full]` | P-01's draw-stream tool as a mode: every system of the scan region and of a strip of far sectors of every class (its name, class and bodies), and each body's draws and what a made kind sets, hashed (`full` prints them). 6,866 systems and 65,714 bodies in under a second | `shots/tests/fingerprint_stream.txt` |
+| `fingerprint peoples [n] [out] [full]` | D-05's recdump as a mode: every people of its fourteen fixed worlds and of every n-th (6) people's world of the plane round home: the profile, the lore with its chart marks, the culture, the history, the record catalogue, the homes, every record and every text, a hash each (`full` writes recdump's text, byte for byte). 63 peoples in about 18 s | `shots/tests/fingerprint_peoples.txt` |
+| `fingerprint modules [n] [out] [full]` | for a fixed sample, what nothing else pins: of 16 peoples' worlds (the age and scene worlds, the scorched ones, the two test drifters) each world's plan, each people's ways and roads, its places and the countryside round its capital laid out as the view lays a cell (the layout, the town, the pieces at three levels, their colliders, meshes and profiles, the rooms, the decay, the graves, records and instruments), the works, a town and a village of each age, the music and its pieces, the instruments, the tongue and voice, the genome; on 22 land sites of the drained kinds the trees, logs, boulders, colliders, ground and drainage; the almanac of home and of every 40th system of the scan region (on the ground and parked), with the showers, dust and fronts; and the tables. 4,607 lines in about 33 s; `full` adds each line's text beneath it | `shots/tests/fingerprint_modules.txt` |
+| `scene list` | every comparison scene's name, in the table's order (109) | stdout |
+
+A keyed line is `<what> <key...> <field>=<value> ...`. `tools/keydiff.py <a> <b>` compares two files key by key and field by
+field; a field one side lacks is a column added or dropped and is reported apart, so a step that adds a field still proves the
+others.
+
+**`tools/prove`** keeps a snapshot of the binary, the objects and every item's outputs in `build/prove/<name>/`:
+- `snapshot <name>`, `compare <name> [items]` (at most 30 lines), `objects <name>` (the engine's and the game's objects, for a
+  comment-only step; the harness's own object is not reproducible and is skipped), `bench <A> <B> [pairs]` (AB/BA pairs of
+  `bench check` from paths of one length, `tools/benchcmp.py`), `items`.
+- The battery is `tools/prove.items`, one item a line (`name | command | expect | options`). Each item runs alone in a scratch
+  working directory with `src/`, `tests/` and `music/` linked in and an empty `shots/tests`, the binary linked as
+  `./vesperis_test`. Every file it writes is compared (`tools/provecmp.py`): fingerprints by key, text after the masks (timings,
+  the saves' `saved <unix time>`, and an item's own `mask=<regex>`), PNGs pixel by pixel (`tools/png.py`), the rest byte for
+  byte; with its exit code, printouts and counts (`expect`).
+- An item marked `twice` runs twice at the snapshot, and what moved between its runs is skipped (its `NOISE`); `noise=<glob>`
+  names an item's files known to move, with the reason in the items file. The flow starts from an empty `shots/tests` (it makes
+  every save it loads) and two runs draw the same 179 files. The unit's six scanner and map frames (R-408, B-412, T-03) and its
+  autosave move between runs: it runs frames until a thread has found the cells or the scan, so the trees and grass sway, and
+  the clock ends, where the threads' pace leaves them. Its printout (the 403 checks) and its other files are compared.
+- `datasheet`, `surface` (the sweeps), `rogues heard` and the unit's lent piece wait for every body's map before a frame (E-02), as the flow and
+  the regress have since F-07: the maps are made on their thread at the binary's own pace, and a frame drawn before one moved
+  between runs by a faint disc or a dim background.
+- `PROVE_BIN=<binary>` runs a new snapshot or a compare with another binary: E-02 relinked e02-base's saved engine objects with
+  its final harness (`e02-base2`) to give the new fingerprint columns a base.
+- `PROVE_HOME` (the main checkout's `build/prove` by default, found through git) lets a worktree use those snapshots.
+
+The skills `prove`, `bench` and `look` (`.claude/skills/`) say when and how; the `prover` agent (`.claude/agents/`) runs the
+battery and returns its verdict. `tools/png.py` (stats, crop, montage, diff) and `tools/wav.py` (stats, events, pitch) read the
+outputs without numpy. `make check` (`tools/check.py`) holds the layout: raylib only in the platform file, the layering, no line
+in src over 2,000 characters, every source file named in its directory's CLAUDE.md.

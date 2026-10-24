@@ -76,6 +76,9 @@ struct FrontForecast {
 // the fronts that reach `p` (body frame, unit) between t - 8 h and t + window, by their arrival (the first may be over the
 // place already: tArrive < t <= tClear)
 void frontsAhead(const Body& b, const Vec3& p, double t, double window, std::vector<FrontForecast>& out);
+struct AlmanacPlace;
+struct AlmanacEvent;
+void findFronts(const AlmanacPlace& p, std::vector<AlmanacEvent>& out);   // the almanac's finder (almanac.cpp's registry())
 
 // the overlay of the globe and the landing map: W x H texels on the planet map's grid of the fronts' cloud at t (0..255)
 void buildFrontMap(const Body& b, double t, int W, int H, std::vector<uint8_t>& out);

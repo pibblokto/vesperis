@@ -2,8 +2,8 @@
 // bodies' positions the sky already draws), so the list is exact: on the ground the sun's rise, transit and set and
 // the sky going dark and light, the bodies' rises and sets, their phases, a body over the sun, the world's own ring
 // over the sun; from the ship the moons across, behind, shadowing and shadowed by the parked body, the planets meeting
-// in the sky, a body across the sun, a comet's plunge. A registry of finders: W-03's fronts and W-04's showers add
-// theirs with `addAlmanacFinder`. The game's screen and the run-to-it live in `game/almanac.cpp`.
+// in the sky, a body across the sun, a comet's plunge. A registry of finders in almanac.cpp, W-03's fronts and W-04's showers
+// among them (E-02: listed there, no longer added at start-up). The game's screen and the run-to-it live in `game/almanac.cpp`.
 #pragma once
 #include "system.h"
 #include <vector>
@@ -51,7 +51,6 @@ struct AlmanacPlace {
 };
 
 typedef void (*AlmanacFinder)(const AlmanacPlace& place, std::vector<AlmanacEvent>& out);
-void addAlmanacFinder(AlmanacFinder fn);   // the registry: a finder appends the events it knows of (the first of each kind per body within the window)
 // every finder's events after `place.t` and within the window, sorted by time
 void almanacOf(const AlmanacPlace& place, std::vector<AlmanacEvent>& out);
 

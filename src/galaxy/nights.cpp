@@ -54,7 +54,10 @@ double timeAtTrueAnomaly(const Body& b, double nu) {
     return t;
 }
 
-// W-04's almanac finder: the next peak of every shower of the place's world within the window
+}   // namespace
+
+// W-04's almanac finder: the next peak of every shower of the place's world within the window (E-02: listed in almanac.cpp's
+// registry())
 void findShowers(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
     if (!p.ground || !p.sys || p.body < 0 || p.body >= (int)p.sys->bodies.size()) return;
     std::vector<MeteorShower> sh;
@@ -66,8 +69,6 @@ void findShowers(const AlmanacPlace& p, std::vector<AlmanacEvent>& out) {
         out.push_back(e);
     }
 }
-struct ShowerFinderRegistrar { ShowerFinderRegistrar() { addAlmanacFinder(findShowers); } } showerFinderRegistrar;
-}   // namespace
 
 Vec3 orbitPointAt(const Body& b, double nu) {
     double r = b.orbitRadiusKm * (1 - b.ecc * b.ecc) / (1 + b.ecc * std::cos(nu));

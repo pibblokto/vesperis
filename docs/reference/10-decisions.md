@@ -4169,3 +4169,133 @@ drifter's people's (`12-civilisations.md`, the people who lost their sun; `04-ga
 * **Left for later:** the latent faults the sweep found (above); the peoples of the new living kinds (the plan's decision 4); a dome over
   the last city itself; the second radio people's beacon on a drifter of two (one beacon a drifter: the first's); the ordinary genres'
   frames shared between the drifters' many peoples.
+
+## E-01 (2026-10-23): what every session loads
+
+The first of the E series (`docs/ideas/PLAN-reorganisation.md`): the repo made cheaper for an agent to read before 1.4.0's release.
+No code changed, so nothing generated, drawn, played or saved moved (generation 16 still).
+
+* **The memory:** 252 KB in 12 files became 9.2 KB in 6. MEMORY.md, loaded every session, is an index of six lines (972 bytes) in
+  place of 6.4 KB with a 3.5 KB line. The histories of 1.1.0 to 1.4.0 were in the docs and git already and went. The twelve old
+  files are kept in `build/memory-2026-10-23/` (gitignored, never loaded), beside `lessons-extracted.txt`, the list of their lessons
+  with each one's source line.
+* **Every lesson has a home.** The extraction found 261 lessons (the plan's 78 counted only the lines that named one). The rules a
+  change must keep went to the CLAUDE.md files, the detail behind them to `docs/reference/lessons.md` (new, by area), the release's
+  steps and traps to `packaging/RELEASE.md` (new), the recording rules to `docs/CLAUDE.md`, and what is about the user (their
+  workflow, questions, reviews, taste) to the memory's `user-workflow.md`. By the extraction's tags:
+  - ROOT 30: the root CLAUDE.md; lessons.md, "Working on the dev Mac" and "Proving and timing".
+  - HARNESS 34: `.claude/rules/harness.md`; lessons.md, "The harness".
+  - CORE 20, SPACE 6, SURFACE 8, GAME 23: their directories' notes; lessons.md, each area's section.
+  - GALAXY 47: src/galaxy's note; lessons.md, the two "Generation" sections; the user's taste, `user-workflow.md`.
+  - GRAMMAR 15: src/galaxy/grammar's note; lessons.md, "The records' text".
+  - DOCS 7: `docs/CLAUDE.md`. RELEASE 18: `packaging/RELEASE.md`, and the accounts in the memory's `release-recipe.md`.
+  - WORKFLOW 21: the root's "Working with the user"; the memory's `user-workflow.md`, `no-session-links.md` and
+    `screenshot-world-identification.md`. DETAIL 24: lessons.md, each in its area.
+  - DROP 8, obsolete: Lathyari I (gone from the harness), the telescope's ground lock (removed by R-405), the data sheet's overflow
+    (paged since Q-01), the F plan's reading order (the series closed), flow_shipscreen's flip (fixed by F-07), the scratch
+    programs in /private/tmp (wiped), the pibblokto noreply author (random identities since 1.3.1), the hand-run toolchain commands
+    (scripted since F-09).
+* **The root CLAUDE.md** (6.5 KB, 94 lines, from 5.7 KB): what Vesperis is, build and run, the map of where things are, the rules,
+  proving a change, working with the user, recording work, the shell and the machine, the release. It corrects "`./vesperis_test`
+  lists every mode": no argument runs `stars`, and an unknown mode exits 0 (README.md said the same; corrected too).
+* **The directory notes** load when a file in their directory is read: src/core (2.7 KB), src/galaxy (6.4), src/galaxy/grammar
+  (3.9), src/space (1.8), src/surface (2.9), src/game (5.9), docs (3.1). Each names every file with its entry points, then the
+  rules and traps; src/game's holds the frame's order and the places a new state touches. src/galaxy's and src/game's stay over the
+  3 KB aim until E-06 and E-09 split them. The harness's traps are a path-scoped rule, `.claude/rules/harness.md`, loaded with
+  `src/main_headless.cpp`: a `src/CLAUDE.md` would load with every source file. E-03 makes it `src/harness/CLAUDE.md`.
+* **The guards** (`.claude/settings.json`, `.claude/hooks/guard.py`, PreToolUse on Read and Bash):
+  - a whole Read of a text file over 100 KB, refused with where to look instead;
+  - a commit, tag, note, PR, issue, release or `gh api` write carrying a claude.ai/code link or a Claude-Session trailer, in the
+    command or in a message file it names (`-F`, `--body-file`, `--notes-file`, `--input`, `field=@file`), and a push while an
+    unpushed commit carries one. The command must stand at a command position: prose in a heredoc that named one beside the
+    trailer was refused once, which is how that rule came about;
+  - `make clean` until E-02 makes it spare `build/toolchains`, and an rm of `build/` itself always.
+  They took effect in the running session: a whole Read of the harness, a tag listing that named the trailer and `make -n clean`
+  were refused. `python3 .claude/hooks/test_guard.py` runs its 38 cases.
+* **The eight tasks measured** (the plan's section 11): eight read-only Plan agents before anything changed, 1,328,318 tokens and
+  399 tool uses in all, from 73k (start a milestone) to 318k (the rules before changing where ruins go: 1,000 lines of this log in
+  nine ranges). E-13 runs the same prompts.
+* **Left for later:** a bug a baseline run found, `radarLock` (radar.cpp:361) marking a slot heard without checking that its
+  programme speaks, which `radarStartContent` checks; the decision table's generation rows stop at 14 (E-04); the clangd-lsp
+  plugin (E-02) and session-report are the user's to install.
+
+## E-02 (2026-10-24): the proof kept
+
+The second of the E series (`docs/ideas/PLAN-reorganisation.md`): the proof that a step changes nothing, kept in the tree
+instead of made again in each milestone's `build/<id>/`. Nothing generated, drawn, played or saved moved (generation 16 still):
+every item of the new battery is the same as before E-02's engine changes.
+
+* **D-05's kit, once more.** The tree's binary (byte for byte D-05's last) against D-05's own outputs: every body (44,707 lines)
+  and every sampled people (65,999 lines), the regress both ways, the 96 screens, the 24 data sheets, the 59 radar WAVs, the
+  rogues' frames, scenes and voices, the same. Two exceptions, neither the binary's: `trait_ice_halos` differed in 18 px by one
+  step (D-05's frame was drawn beside other jobs; three runs alone all match today's), and `charts rogues` printed freed memory:
+  it named a drifter's chart's wanderers from the drifter's own system, but their indices are its former system's
+  (`peoplesWorldOf`). The harness's printout is fixed; nothing the game draws read past the bodies.
+* **The fingerprint modes** (`fingerprint bodies|stream|peoples|modules [n] [out] [full]`) are the harness's first own files,
+  `src/harness/`, linked only into vesperis_test (the Makefile's `HARNESS_SRC`, CMake's `HARNESS_SOURCES`). Keyed lines
+  (`<what> <key...> <field>=<value>`): a new field is a new column, so a step that adds one still proves the others.
+  - `bodies` is fp5: its `all` column equals fp5's hash on all 44,707 lines. It adds the fields fp5 left out (`gen2`: 18 of the
+    generator's, `ground2`: 5 of the ground's) and the drifters nearest home with their moons, so all 60 kinds (E-01's baseline
+    found the dark ocean and the dark bodies unreached).
+  - `stream` is the draw-stream tool (72,580 lines equal); `peoples` is recdump (its `full` text byte for byte recdump's, D-05's
+    numbering shim aside).
+  - `modules` pins what nothing did: plans, ways, roads, ruins and works laid out as the view lays them (layouts, pieces,
+    colliders, meshes, rooms, decay, graves, records, instruments), the ages' sheets, music, instruments, tongues, genomes, the
+    flora and drainage of 22 land sites, the almanacs of 102 systems, the tables (4,607 lines in 33 s).
+  - `scene list` prints the 109 scenes (the old kits' list had 67).
+* **`tools/prove`** (zsh; `tools/prove.items` the battery of 27 items; `tools/provecmp.py`, `keydiff.py`, `benchcmp.py`):
+  `snapshot`, `compare` (at most 30 lines), `objects`, `bench`, `items`; `PROVE_HOME` for a worktree, `PROVE_BIN` for another
+  binary. Each item runs alone in a scratch directory (src, tests and music linked, an empty `shots/tests`), its printouts kept
+  apart, every file it writes compared by kind and counted (`expect`). A compare takes about 15 minutes, a snapshot
+  18 (the unit and the flow run twice).
+  - The flow starts from an empty `shots/tests` (it makes every save it loads) and draws the same 179 files twice, the saves'
+    `saved <unix time>` and the timings masked: no saved state is kept (`flowrun.sh`'s path and `rsync --delete` went with it).
+  - An item's own masks (`mask=`) and known noise (`noise=`, with the reason) live in the items file. The unit's six scanner and
+    map frames (R-408, B-412, T-03) and its autosave move with the pace of the threads it waits on: one snapshot's two runs
+    drew them the same, the next one's did not. Its printout, the 403 checks, is compared with its timings masked. The flow and
+    the unit run twice at a snapshot, and what moves between those runs is skipped.
+* **The battery's own noise, fixed at its cause.** Comparing two runs of one binary moved three frames: a data sheet's space
+  frame, the chemotroph's north sweep frame (its parent planet's faint disc in the sky) and the unit's lent piece (the cabin
+  behind it). Each drew bodies whose maps their threads had not finished, F-07's cause: the data sheets, the surface sweep and
+  that check now wait for every map first, as the flow and the regress do (`testWaitMapOf`, `SpaceRenderer::mapIfReady`). Only
+  the unit's six scanner and map frames and its autosave stay declared noise: they follow the unit's own waits on threads.
+* **A race that a twice-run cannot see.** After the almanac step, `rogue_radar_lock` differed from the base in 1,077 px of the
+  parked world's globe, the same on every run: three binaries of the base engine drew it before its map was made, the final
+  engine's after. The almanac was not the cause: fronts.o and nights.o differ from the base's only by their registrars' three
+  instructions each, almanac.o by `addAlmanacFinder` and the registry's two rows, and with a wait for the maps both engines draw
+  the frame the same. Moving code shifts every later function's address, and such a race then resolves the other way; the
+  `rogues` sequence waits for the maps now too.
+* **The base** is two snapshots: `e02-base`, the tree's binary at the start (12.5 minutes), and `e02-base2`, e02-base's saved
+  engine objects relinked with E-02's final harness in make's link order (`PROVE_BIN`), the base of the new columns. Between the
+  two only the harness's changes differ: `fingerprint bodies`' new columns and dark bodies, and the 9 sweep and 3 data sheet
+  frames whose bodies are now drawn with their maps.
+* **The almanac.** `findFronts` and `findShowers` left their anonymous namespaces (declared in `fronts.h` and `nights.h`) and are
+  listed last in `registry()`, where their start-up registrars had put them in link order; the registrars and
+  `addAlmanacFinder` went. Three objects changed (almanac, fronts, nights); the weather's own functions compile to the same
+  instructions. Proven by `prove compare`: the almanac, `fingerprint modules`' almanacs, the regress, the unit and the flow.
+* **The build.** `make clean` removes only the object directories derived from the source directories, the top-level objects
+  and the binaries: tried in a scratch worktree, it kept toolchains, perf-baselines, prove and the kits. `CPPFLAGS` is split
+  from `CXXFLAGS`, flags come from make's command line only (Homebrew's LLVM exports a `CPPFLAGS` that leaked into the first
+  rebuild), and `CXX` is `/usr/bin/clang++` when it is make's default (`?=` never applied: make's own `c++` won). `make check`
+  (`tools/check.py`): raylib only in the platform file, the layering, no line in src over 2,000 characters, every source file
+  named in its directory's CLAUDE.md. `system.h:12`'s GEN_VERSION history (5,860 characters) moved word for word to
+  `docs/reference/generations.md`; `shards.cpp:401`'s GRAMMAR_FILES row is wrapped (23 lines); the `lakes` warning is gone
+  (a count never printed). Proven by `prove objects e02-base` after a clean rebuild: 92 objects the same (the harness's
+  `main_headless.o` aside, proven by behaviour).
+* **clangd:** `compile_flags.txt` (`-xc++`, C++17, `-Isrc`, the warnings, Homebrew's include). `clangd --check` parses a .cpp and
+  a .h with no diagnostics; the LSP tool answers once the user installs the clangd-lsp plugin and starts a new session.
+* **Skills and agent:** `prove`, `bench`, `look` (`.claude/skills/`), the `prover` agent (`.claude/agents/`), `tools/png.py`
+  (stats, crop, montage, diff) and `tools/wav.py` (stats, events, pitch).
+* **The guards:** a `make clean` is refused only where the Makefile still removes `build/` whole (an old checkout); 41 cases.
+* **The close:** from a clean rebuild, `tools/prove compare e02-base2` reported everything the same: 27 items, 1,271 files, the
+  unit's 403 checks, the flow and the regress both ways among them. The bench, four AB/BA pairs of e02-base's binary against the
+  final one: level on 34 of 38 rows; outside the band the noisy `buggy 2x`, `photo PNG` (+3.0%) and `guide load` (+3.6%), both
+  writing or reading files, and `descent first` (-3.4%, the final faster). `guide save` was over its 1.5 ms budget in all eight
+  runs of both binaries (about 2 ms, D-05's runs 0.9-1.3 ms): the disk that night, not the code. `tools/prove snapshot e02` is
+  E-03's base. Its own check, `tools/prove compare e02` from
+  another clean rebuild, was cut off after 7 items by the two-hour limit on a background job: the Mac's media analysis and
+  Spotlight, indexing the snapshots' pictures, stalled the runs about fifteen minutes at a time. Those 7 items and all 92 objects
+  were the same, and the e02 snapshot, itself taken under that load, matches item for item (27 items) the same binary's full
+  run made earlier in quiet.
+* **Found and left:** the probe's photos (the `probe` mode and the unit) go to `shots/` itself, the player's folder, over a
+  photo of that name; the unit's frames above; a scene makes an empty `shots/tests/shots/tests`.
