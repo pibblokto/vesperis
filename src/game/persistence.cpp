@@ -27,6 +27,9 @@ long long savedStamp(const std::string& path) {
     }
     return stamp;
 }
+// U-03: the slots' page, written once: the three slots, and to load the autosave after them
+const int SAVE_SLOTS = 3;
+int slotRows(bool load) { return SAVE_SLOTS + (load ? 1 : 0); }
 }
 
 bool Game::saveSlot(int n) {
@@ -93,17 +96,16 @@ void Game::openSlots(bool loadMode) {
     slotLoadMode = loadMode;
     slotSel = std::max(0, currentSlot - 1);
     slotSummaries.clear();
-    for (int n = 1; n <= 3; n++) slotSummaries.push_back(saveSummary(slotPath(n)));
+    for (int n = 1; n <= SAVE_SLOTS; n++) slotSummaries.push_back(saveSummary(slotPath(n)));
     slotSummaries.push_back(saveSummary(slotPath(0)));
     state = GameState::SLOTS;
 }
 
 void Game::updateSlots(const Input& in, double dt, double realDt) {
-    int n = slotLoadMode ? 4 : 3;
-    menuStep(in, slotSel, n);
+    menuStep(in, slotSel, slotRows(slotLoadMode));
     if (in.wasPressed(KEY_ESCAPE)) { state = GameState::MENU; return; }
     if (enterKey(in)) {
-        int slot = slotSel == 3 ? 0 : slotSel + 1;
+        int slot = slotSel == SAVE_SLOTS ? 0 : slotSel + 1;
         if (slotLoadMode) { if (loadSlot(slot)) return; }
         else { saveSlot(slot); state = returnState; }
     }
@@ -113,11 +115,10 @@ void Game::renderSlots() {
     const int top = 44, bottom = UH - 44, y0 = top + 26;
     drawPanel(canvas, 16, top, UW - 16, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 8, slotLoadMode ? "LOAD EXPEDITION" : "SAVE EXPEDITION", HUD_AMBER);
-    int n = slotLoadMode ? 4 : 3;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < slotRows(slotLoadMode); i++) {
         int y = y0 + i * 12;
         bool sel = i == slotSel;
-        std::string label = i == 3 ? "AUTO  " : fmt("SLOT %d", i + 1);
+        std::string label = i == SAVE_SLOTS ? "AUTO  " : fmt("SLOT %d", i + 1);
         std::string sum = slotSummaries[i].empty() ? "- EMPTY -" : slotSummaries[i];
         drawText(canvas, 30, y, (label + "  " + sum).c_str(), sel ? HUD_WHITE : (slotSummaries[i].empty() ? HUD_DIM : HUD_GREEN));
         if (sel) drawText(canvas, 22, y, ">", HUD_AMBER);

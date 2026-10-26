@@ -834,29 +834,32 @@ std::string TestGame::testFrontInfo() const {
                e.frontCloud, e.cloudPattern, e.frontRain, e.frontCold, e.windKnots, compassName(e.windDir), e.temperatureC, e.fogDistance);
 }
 
-// R-404: the computers with a colour of their own and the smallest distance between two of them (the cage left out)
+// R-404: the computers with a colour of their own and the smallest distance between two of them (nothing faced and the cage,
+// with no screen, left out)
 int TestGame::testScreenColours(double& minDist) const {
     minDist = 9; int n = 0;
-    for (int i = 1; i <= 11; i++) {
-        if (i == 6) continue;
+    const RowList<CabinDevice>& d = cabinDevices();
+    for (int i = 1; i < d.count; i++) {
+        if (d.row[i].bank == BANK_LIGHT) continue;
         n++;
-        for (int j = i + 1; j <= 11; j++) {
-            if (j == 6) continue;
-            const RGB &a = SCREENS[i].col, &b = SCREENS[j].col;
+        for (int j = i + 1; j < d.count; j++) {
+            if (d.row[j].bank == BANK_LIGHT) continue;
+            const RGB &a = d.row[i].col, &b = d.row[j].col;
             minDist = std::min(minDist, (double)std::sqrt((a.r - b.r) * (a.r - b.r) + (a.g - b.g) * (a.g - b.g) + (a.b - b.b) * (a.b - b.b)));
         }
     }
     return n;
 }
 
-// U-01: the open menu's rows by label (the game's own labels, game_types.h's MenuLabels): a row is found by its label, never
-// counted; the settings' BACK is drawn after their rows, not one of them
+// U-01: the open menu's rows by label (the game's own, U-03's rows): a row is found by its label, never counted; the settings'
+// BACK is drawn after their rows, not one of them
 std::vector<std::string> TestGame::testMenuRows() const {
-    const MenuLabels* m = state == GameState::MENU ? &MENU_LABELS : state == GameState::GUIDE ? &GUIDE_LABELS : state == GameState::SETTINGS ? &SETTINGS_LABELS
-                        : state == GameState::SHIPSCREEN ? &SHIP_PAGE_LABELS[std::max(0, std::min(2, shipScreenPage))] : nullptr;
     std::vector<std::string> rows;
-    if (m) for (int i = 0; i < m->count; i++) rows.push_back(m->label[i]);
-    if (state == GameState::SETTINGS) rows.push_back("BACK");
+    auto add = [&](const auto& list) { for (int i = 0; i < list.count; i++) rows.push_back(list.row[i].label); };
+    if (state == GameState::MENU) add(escMenu());
+    if (state == GameState::GUIDE) add(guideMenu());
+    if (state == GameState::SHIPSCREEN) add(shipPages().row[std::max(0, std::min(shipPages().count - 1, shipScreenPage))].rows);
+    if (state == GameState::SETTINGS) { add(settingRows()); rows.push_back("BACK"); }
     return rows;
 }
 int TestGame::testMenuSel() const {

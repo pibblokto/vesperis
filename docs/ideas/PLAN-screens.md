@@ -483,3 +483,6 @@ Besides them, five in the harness and the docs. Found on the way: no palette ban
 - **U-02, the table's definition:** clang reads a static member's out-of-class `constexpr` definition as an inline variable, emitted
   only where it is used; GCC 15 reads it as a plain one. states.cpp reads the table out of line, so it holds the one definition
   either way. GCC 9.4, the Linux builds' compiler, is unchecked on it until Docker is asked (after KI-423).
+- **U-03, on the way:** 07 named eight of the computers' colours and banks 21-27, two devices behind (C-11, C-18). The game's
+  note counted game.cpp and audio.cpp among the files over 50 KB (16 and 33 KB now). Both are true now. The unit still presses
+  two of the flight computer's rows by number (`testShipScreenRow(0, 2)` and `(0, 4)`); U-06 finds them by label.

@@ -17,18 +17,59 @@
 #include <fstream>
 #include <sstream>
 
-namespace {
-// the sights are marked on the sector map (N), not named here
-const char* const GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",
-                             "TARGET A STAR BY NAME", "TARGET BY COORDINATES", "RETURN TO THE PREVIOUS STAR", "TARGET THE HOME STAR",
-                             "SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", "BACK"};
-const int GUIDE_N = (int)(sizeof(GUIDE_ITEMS) / sizeof(GUIDE_ITEMS[0]));
-}
-const MenuLabels GUIDE_LABELS = {GUIDE_ITEMS, GUIDE_N};
-
 // ---------------------------------------------------------------------------
 // guide menu
 // ---------------------------------------------------------------------------
+
+// U-03: the guide menu's rows. The sights are marked on the sector map (N), not named here; the targets are set from the ship
+const RowList<MenuRow>& Game::guideMenu() {
+    static constexpr const char* SHIP_TARGETS = "TARGETING IS DONE FROM THE SHIP";
+    static constexpr MenuRow ROWS[] = {
+        {"STAR MAP", [](Game& g) { g.openStarMap(); }, "THE STAR MAP IS READ FROM THE SHIP"},
+        {"NAME THIS STAR", [](Game& g) {   // D-02: a drifter's place is the explorer's to name as a system is
+             if (!g.sys.valid) { g.status("NO STAR HERE", 3); return; }
+             g.beginTextEntry(g.sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, g.starNamed(g.sys.star) ? upper(g.starNameOf(g.sys.star)) : std::string());
+         }, nullptr, [](const Game& g) -> std::string {
+             if (g.sys.valid && g.starNamed(g.sys.star)) return "RENAME " + trunc(upper(g.starNameOf(g.sys.star)), 22);
+             return g.sys.valid && g.sys.sunless() ? "NAME THIS PLACE" : "";
+         }},
+        {"NAME THIS WORLD", [](Game& g) {
+             int bi = g.guideReturn == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
+             if (!g.sys.valid || bi < 0 || bi >= (int)g.sys.bodies.size()) { g.status("NO LOCAL TARGET TO NAME", 3); return; }
+             g.textBody = bi;
+             g.beginTextEntry("NAME THIS WORLD", TEXT_WORLD, g.bodyNamed(bi) ? upper(g.bodyNameOf(bi)) : std::string());
+         }, nullptr, [](const Game& g) -> std::string {
+             if (!g.sys.valid) return "";
+             int bi = g.guideReturn == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
+             return bi >= 0 && bi < (int)g.sys.bodies.size() && g.bodyNamed(bi) ? "RENAME " + trunc(upper(g.bodyNameOf(bi)), 22) : "";
+         }},
+        {"WRITE A NOTE", [](Game& g) { g.beginTextEntry("NOTE FOR THE LOG", TEXT_NOTE, ""); }},
+        {"EXPEDITION LOG", [](Game& g) { g.logPage = 0; g.state = GameState::LOG; }},
+        {"GALLERY", [](Game& g) { g.openGallery(); }},
+        {"STATISTICS", [](Game& g) { g.state = GameState::STATS; }},
+        {"THE SHARDS", [](Game& g) { g.openShards(); }, "THE SHARDS ARE READ ON THE SHIP"},
+        {"TARGET A STAR BY NAME", [](Game& g) { g.beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); }, SHIP_TARGETS},
+        {"TARGET BY COORDINATES", [](Game& g) { g.beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); }, SHIP_TARGETS},
+        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { g.targetPreviousStar(); }, SHIP_TARGETS},
+        {"TARGET THE HOME STAR", [](Game& g) { g.targetHome(); }, SHIP_TARGETS},
+        {"SET HOME HERE", [](Game& g) {
+             if (g.sys.valid) {
+                 g.guide.home = g.starKeyOf(g.sys.star); g.guide.save(g.guidePath);
+                 g.status(fmt("HOME STAR: %s", upper(g.starNameOf(g.sys.star)).c_str()), 4); g.state = g.guideReturn;
+             }
+         }},
+        {"EXPORT THE GUIDE", [](Game& g) {
+             std::string p = g.guidePath.substr(0, g.guidePath.rfind('.')) + "_export.txt";
+             g.status(g.guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5);
+             g.state = g.guideReturn;
+         }},
+        {"IMPORT AN INBOX FILE", [](Game& g) { g.importInboxFile(); g.state = g.guideReturn; }},   // the names into the inbox, the friend's read shards lent
+        {"BACK", [](Game& g) { g.state = g.guideReturn; }},
+    };
+    static constexpr RowList<MenuRow> LIST = rowsOf(ROWS);
+    static_assert(rowsWhole(LIST), "each row its label and its act");
+    return LIST;
+}
 
 void Game::openGuide() {
     guideSel = 0;
@@ -42,58 +83,27 @@ void Game::beginTextEntry(const std::string& prompt, int kind, const std::string
     state = GameState::TEXT_ENTRY;
 }
 
+// the guide menu: Enter does its row's act, or says why the ground refuses it
 void Game::updateGuideMenu(const Input& in, double dt, double realDt) {
-    menuStep(in, guideSel, GUIDE_N);
+    const RowList<MenuRow>& m = guideMenu();
+    menuStep(in, guideSel, m.count);
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_G)) { state = guideReturn; return; }
-    if (!enterKey(in)) return;
-    bool onSurface = guideReturn == GameState::SURFACE;
-    switch (guideSel) {
-        case 0: if (!onSurface) openStarMap(); else status("THE STAR MAP IS READ FROM THE SHIP", 3); break;
-        case 1:
-            if (sys.valid) beginTextEntry(sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string());
-            else status("NO STAR HERE", 3);
-            break;   // D-02: a drifter's place
-        case 2: {
-            int bi = onSurface && surf.valid ? surf.site.body : ship.localTarget;
-            if (sys.valid && bi >= 0 && bi < (int)sys.bodies.size()) { textBody = bi; beginTextEntry("NAME THIS WORLD", TEXT_WORLD, bodyNamed(bi) ? upper(bodyNameOf(bi)) : std::string()); }
-            else status("NO LOCAL TARGET TO NAME", 3);
-            break;
-        }
-        case 3: beginTextEntry("NOTE FOR THE LOG", TEXT_NOTE, ""); break;
-        case 4: logPage = 0; state = GameState::LOG; break;
-        case 5: openGallery(); break;
-        case 6: state = GameState::STATS; break;
-        case 7: if (!onSurface) openShards(); else status("THE SHARDS ARE READ ON THE SHIP", 3); break;
-        case 8: if (!onSurface) beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 9: if (!onSurface) beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 10: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 11: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 12: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
-        case 13: {
-            std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt";
-            status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5);
-            state = guideReturn;
-            break;
-        }
-        case 14: importInboxFile(); state = guideReturn; break;   // the names into the inbox, the friend's read shards lent
-        default: state = guideReturn; break;
-    }
+    if (!enterKey(in) || guideSel < 0 || guideSel >= m.count) return;
+    const MenuRow& r = m.row[guideSel];
+    if (r.ground && guideReturn == GameState::SURFACE) status(r.ground, 3);
+    else r.act(*this);
 }
 
 void Game::renderGuideMenu() {
-    const int top = 10, bottom = UH - 6, y0 = top + 18;   // C-06: seventeen items at 9 px; the box grew with them (sixteen already ran into the footer)
+    const RowList<MenuRow>& m = guideMenu();
+    const int top = 10, bottom = UH - 6, y0 = top + 18;   // C-06: a row every 9 px, the box grown with them (the rows had run into the footer)
     drawPanel(canvas, 40, top, UW - 40, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 6, "THE GUIDE", HUD_AMBER);
-    for (int i = 0; i < GUIDE_N; i++) {
+    for (int i = 0; i < m.count; i++) {
         int y = y0 + i * 9;
         bool sel = i == guideSel;
-        std::string label = GUIDE_ITEMS[i];
-        if (i == 2 && sys.valid) {
-            int bi = guideReturn == GameState::SURFACE && surf.valid ? surf.site.body : ship.localTarget;
-            if (bi >= 0 && bi < (int)sys.bodies.size() && bodyNamed(bi)) label = "RENAME " + trunc(upper(bodyNameOf(bi)), 22);
-        }
-        if (i == 1 && sys.valid && starNamed(sys.star)) label = "RENAME " + trunc(upper(starNameOf(sys.star)), 22);
-        else if (i == 1 && sys.valid && sys.sunless()) label = "NAME THIS PLACE";   // a drifter's place is the explorer's to name as a system is
+        std::string label = m.row[i].name ? m.row[i].name(*this) : std::string();
+        if (label.empty()) label = m.row[i].label;
         drawText(canvas, 56, y, label.c_str(), sel ? HUD_WHITE : HUD_GREEN);
         if (sel) drawText(canvas, 46, y, ">", HUD_AMBER);
     }

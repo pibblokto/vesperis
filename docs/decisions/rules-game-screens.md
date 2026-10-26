@@ -1,4 +1,4 @@
-# Rules: the game's screens: the states' table
+# Rules: the game's screens: the states' table and the ways in
 
 The rules in force for how a game state is made, a line each with the entries behind them (`log/`, by release). A milestone that
 sets or changes one edits its line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). What the screens show and
@@ -13,5 +13,12 @@ their keys: `rules-game.md`.
 - Every update takes `(const Input&, double dt, double realDt)`; a row's methods live in its screen's file [U-02]
 - The frame's other tests of a state are their subsystems' (a key captured, the title's visit, the almanac, the probe's Shift) [U-02]
 
+## The ways in
+- A menu is a list of rows in its order, its count read from the list (`rowsOf`): no menu holds a count or a numbered case [U-03]
+- A list is constant data, a `static constexpr` table in a Game static method, its acts lambdas; each row whole, asserted [U-03]
+- A cabin device is its row in `cabinDevices` plus its picture in `drawCabinBand`; a facing without its row fails to compile [U-03]
+- A row's act keeps its case's calls and their order; an act that opens a screen calls its opener [U-03]
+
 [E-06]: log/6-1.4.0.md
 [U-02]: log/6-1.4.0.md
+[U-03]: log/6-1.4.0.md

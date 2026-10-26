@@ -26,7 +26,7 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 - The flow lands by `testLandSite` (lit, level, dry, from the body's seed) and drives only briefly: `drive` is the long-drive test [G-04], [S-01], [N4-02]
 - `descent` holds B-307's bar (grade 0.45, nothing airborne; checked every 2 m, 3 m clear of colliders) at the mountain pin (KI-343: it fails) [G-04], [S-01]
 - `tour` opens every state as the game does, each from a fresh game, by its stop in `STOPS` (asserted: a new state needs one) [U-01]
-- The tour enters a menu's row by its label (`selectRow`, the game's `MenuLabels`), never by counting; `settings` and `input` too [U-01]
+- The tour enters a menu's row by its label (`selectRow`, the game's own rows), never by counting; `settings` and `input` too [U-01], [U-03]
 
 ## Frames that repeat
 - A harness frame drawing a body waits for its map first (`testWaitMapOf`, `mapIfReady`): unwaited, code placement can flip it [E-02], [E-03]
@@ -63,3 +63,4 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 [E-03]: log/6-1.4.0.md
 [E-05]: log/6-1.4.0.md
 [U-01]: log/6-1.4.0.md
+[U-03]: log/6-1.4.0.md

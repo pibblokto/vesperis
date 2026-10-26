@@ -3,7 +3,7 @@
 // its definition. The sections, each under a `// ----` banner naming its files, in order:
 //   public (the platform's and the harness's): the frame; photos; the attract mode; settings and keys; the controller; auto-explore;
 //     the tape; the files, the guide, names; marks and the scanner; what the ground holds; the window and sound; saves; the state
-//     and the clock; the states' table; the galaxy chart's frame; the harness's knobs
+//     and the clock; the states' table; the ways in; the galaxy chart's frame; the harness's knobs
 //   protected: the world and the ship; the landing map; the screens; the controller; the slots; the guide's screens; the galaxy
 //     chart; the gallery; the cabin; the shard decoder; star charts; the radar; the decoder's records; the player; the case; the
 //     drone bay; the sector map; the guide's targets; each state's update and render; jumps; belts; the epoch; the almanac; the
@@ -193,6 +193,13 @@ public:
         void (Game::*away)();           // run each frame another state is current, in the table's order: what its screen stops
     };
     static const StateRow STATE_ROWS[STATE_COUNT];
+    // ---- the ways in, U-03: a menu a list of rows, its count read from it (game_types.h's rows; menus.cpp, guide_screens.cpp,
+    // cabin.cpp)
+    static const RowList<MenuRow>& escMenu();
+    static const RowList<SettingRow>& settingRows();
+    static const RowList<MenuRow>& guideMenu();
+    static const RowList<ShipPage>& shipPages();
+    static const RowList<CabinDevice>& cabinDevices();
     // ---- the galaxy chart's frame in logical pixels: the face-on disc, the edge-on strip, the levels (galaxy_chart.cpp)
     static constexpr int CHART_LEVELS = 9, CHART_FACE_Y0 = 22, CHART_FACE_H = 128, CHART_EDGE_Y0 = 152, CHART_EDGE_H = 22;
     static constexpr double CHART_TALL_LY = 110000;   // the face's height at level 0: the whole disc
@@ -576,7 +583,6 @@ protected:
     void renderMenu();
     void updateSettingsScreen(const Input& in, double dt, double realDt);
     void renderSettings();
-    void adjustSetting(int item, int dir);
     void openSlots(bool loadMode);
     void updateSlots(const Input& in, double dt, double realDt);
     void renderSlots();

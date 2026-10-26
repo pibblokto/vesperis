@@ -269,9 +269,7 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
                 item("JUMP: TYPE THE LIGHT YEARS", -1, 0, PSP_KEYBOARD);
                 item("CANCEL THE AIM", KEY_R);
             } else {
-                static const char* const FACING[FACE_COUNT] = {"", "THE GOES CONSOLE", "THE FLIGHT COMPUTER", "THE STAR MAP SCREEN", "THE LANDING SCREEN", "THE TARGET SCREEN", "THE CAPSULE",
-                                                  "THE SHARD DECODER", "THE SIGNAL RADAR", "THE TELESCOPE", "THE INSTRUMENT CASE", "THE DRONE BAY"};
-                if (settings.cabin && cabin.facing > FACE_NOTHING && cabin.facing < FACE_COUNT) item(std::string("USE ") + FACING[cabin.facing], KEY_E);
+                if (settings.cabin && cabin.facing > FACE_NOTHING && cabin.facing < FACE_COUNT) item(std::string("USE ") + cabinDevices().row[cabin.facing].use, KEY_E);
                 if (ship.mode == ShipState::VIMANA) item("ABORT THE FLIGHT", KEY_V);
                 else {
                     item("AIM AT A STAR", KEY_R);

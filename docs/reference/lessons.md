@@ -328,6 +328,10 @@ Contents:
 - A table of `Game`'s methods is a static member declared `const` in the class, defined `constexpr` in its own file (U-02): clang
   reads that definition as an inline variable (weak, emitted only where it is used), GCC as a plain one, so the file reads it out
   of line (`stateHas`) to hold its one definition either way.
+- A list of rows whose acts reach `Game`'s protected members (U-03): a `static constexpr` table local to a static method of
+  `Game`, its acts captureless lambdas (C++17 makes their pointers constant; their bodies have the method's access). A row's
+  optional columns take default member initializers, so clang and GCC 15 let a row leave them out under `-Wextra`. A `const
+  double` is no constant expression; a `constexpr` one is.
 - A voice's identity comes from strong narrow lines and resonances, not broad noise (compare voices by LTAS distances). Measure a
   medium's surface in the bare render's quiet windows.
 - raylib's non-looping music end cuts the last block, and stalls starve its stream. Log each swap's return (the refresh it met);

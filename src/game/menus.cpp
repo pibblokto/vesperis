@@ -12,7 +12,6 @@
 #include <ctime>
 
 namespace {
-const int SETTINGS_ITEMS = 19;   // plus BACK (N5-05 added KEY BINDINGS)
 // N5-05: the actions a player can rebind (logical key, label)
 struct KeyAction { int key; const char* label; };
 static const KeyAction KEY_ACTIONS[] = {{KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"},
@@ -21,14 +20,62 @@ static const KeyAction KEY_ACTIONS[] = {{KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BAC
         {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
         {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
-const char* const MENU_ITEMS[] = {"RESUME", "AUTO-EXPLORE", "SAVE EXPEDITION", "LOAD EXPEDITION", "SETTINGS", "HELP", "NEW EXPEDITION", "QUIT TO DESKTOP"};   // R-419: AUTO-EXPLORE
-const char* const SETTINGS_NAMES[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER",
-        "TERRAIN SHADING", "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
-
+std::string onOff(bool on) { return on ? "ON" : "OFF"; }
 }
 
-const MenuLabels MENU_LABELS = {MENU_ITEMS, (int)(sizeof(MENU_ITEMS) / sizeof(MENU_ITEMS[0]))};
-const MenuLabels SETTINGS_LABELS = {SETTINGS_NAMES, SETTINGS_ITEMS};
+// U-03: the Esc menu's rows (R-419 put AUTO-EXPLORE second)
+const RowList<MenuRow>& Game::escMenu() {
+    static constexpr MenuRow ROWS[] = {
+        {"RESUME", [](Game& g) { g.state = g.returnState; }},
+        {"AUTO-EXPLORE", [](Game& g) { g.openAutoScreen(GameState::MENU); }},
+        {"SAVE EXPEDITION", [](Game& g) { g.openSlots(false); }},
+        {"LOAD EXPEDITION", [](Game& g) { g.openSlots(true); }},
+        {"SETTINGS", [](Game& g) { g.settingsSel = 0; g.state = GameState::SETTINGS; }},
+        {"HELP", [](Game& g) { g.helpPage = g.returnState == GameState::SURFACE ? 1 : 0; g.state = GameState::HELP; }},
+        {"NEW EXPEDITION", [](Game& g) { g.newGame(); }},
+        {"QUIT TO DESKTOP", [](Game& g) { g.autosave(); g.wantsQuit = true; }},
+    };
+    static constexpr RowList<MenuRow> LIST = rowsOf(ROWS);
+    static_assert(rowsWhole(LIST), "each row its label and its act");
+    return LIST;
+}
+
+// U-03: the settings' rows (N5-05 added CONTROLS; R-418: its controller's page first when a controller is in use)
+const RowList<SettingRow>& Game::settingRows() {
+    using S = Settings;
+    static constexpr SettingRow ROWS[] = {
+        {"MOUSE SENSITIVITY", [](const S& s) { return fmt("%.1f", s.mouseSensitivity); }, [](Game&, S& s, int d) { s.mouseSensitivity += 0.1 * d; }},
+        {"INVERT MOUSE Y", [](const S& s) { return onOff(s.invertY); }, [](Game&, S& s, int) { s.invertY = !s.invertY; }},
+        {"FIELD OF VIEW", [](const S& s) { return fmt("%.0f%c", s.fovDeg, CH_DEGREE); }, [](Game&, S& s, int d) { s.fovDeg += 5 * d; }},
+        {"MASTER VOLUME", [](const S& s) { return fmt("%.0f%%", s.masterVolume * 100); }, [](Game&, S& s, int d) { s.masterVolume += 0.05 * d; }},
+        {"SCANLINES", [](const S& s) { return onOff(s.scanlines); }, [](Game&, S& s, int) { s.scanlines = !s.scanlines; }},
+        {"WINDOW SIZE", [](const S& s) { return fmt("%dX  (%dX%d)", s.windowScale, 320 * s.windowScale, 200 * s.windowScale); },
+         [](Game& g, S& s, int d) { s.windowScale += d; s.clampAll(); g.wantsWindowScale = s.windowScale; }},
+        {"RENDER SCALE", [](const S& s) { return fmt("%dX  (%dX%d)", s.renderScale, 320 * s.renderScale, 200 * s.renderScale); },
+         [](Game&, S& s, int d) { s.renderScale += d; }},
+        {"MUSH FILTER", [](const S& s) -> std::string { return s.mushMode == 0 ? "CLASSIC" : (s.mushMode == 1 ? "SOFT" : (s.mushMode == 2 ? "SHARP" : "FINE")); },
+         [](Game&, S& s, int d) { s.mushMode = (s.mushMode + 4 + d) % 4; }},
+        {"TERRAIN SHADING", [](const S& s) -> std::string { return s.shadingMode == 0 ? "FLAT CELLS" : (s.shadingMode == 1 ? "STEPPED" : "SMOOTH"); },
+         [](Game&, S& s, int d) { s.shadingMode = (s.shadingMode + 3 + d) % 3; }},
+        {"CRT SHADER", [](const S& s) { return onOff(s.crt); }, [](Game&, S& s, int) { s.crt = !s.crt; }},
+        {"BLOOM", [](const S& s) { return onOff(s.bloom); }, [](Game&, S& s, int) { s.bloom = !s.bloom; }},
+        {"SPRINT KEY", [](const S& s) -> std::string { return s.sprintToggle ? "TOGGLE" : "HOLD"; }, [](Game&, S& s, int) { s.sprintToggle = !s.sprintToggle; }},
+        {"SPRINT SPEED", [](const S& s) { return fmt("X%.2f", s.sprintSpeed); }, [](Game&, S& s, int d) { s.sprintSpeed += 0.25 * d; }},
+        {"SHIP VIEW", [](const S& s) -> std::string { return s.cabin ? "CABIN" : "COCKPIT"; }, [](Game&, S& s, int) { s.cabin = !s.cabin; }},
+        {"CLOCK", [](const S& s) -> std::string { return s.clockMode ? "REAL TIME (UTC)" : "GAME TIME"; }, [](Game&, S& s, int) { s.clockMode = 1 - s.clockMode; }},
+        {"ASPECT", [](const S& s) -> std::string { return s.aspect ? "4:3 (TALL PIXELS)" : "SQUARE PIXELS"; }, [](Game&, S& s, int) { s.aspect = 1 - s.aspect; }},
+        {"DITHER", [](const S& s) { return onOff(s.dither); }, [](Game&, S& s, int) { s.dither = !s.dither; }},
+        {"HUD COLOUR", [](const S& s) -> std::string { return s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"); },
+         [](Game&, S& s, int d) { s.hudColor = (s.hudColor + 3 + d) % 3; }},
+        {"CONTROLS", [](const S&) -> std::string { return "ENTER TO OPEN"; }, nullptr, [](Game& g) {
+             g.keysSel = 0; g.keysCapture = false; g.keysPage = g.padInUse() ? 1 : 0; g.keysReturn = GameState::SETTINGS; g.padUI.capture = -1;
+             g.state = GameState::KEYS;
+         }},
+    };
+    static constexpr RowList<SettingRow> LIST = rowsOf(ROWS);
+    static_assert(rowsWhole(LIST), "each row its label and its act");
+    return LIST;
+}
 
 // the title: Enter goes on (on the ground where the expedition was, else in space), N begins afresh over a save, C the credits,
 // H help, Esc quits; the ship moves on the real clock meanwhile
@@ -56,22 +103,12 @@ void Game::updateHelp(const Input& in, double dt, double realDt) {
     else if (any) state = returnState;
 }
 
-// the Esc menu: its rows are MENU_ITEMS
+// the Esc menu: Enter does its row's act
 void Game::updateMenu(const Input& in, double dt, double realDt) {
-    menuStep(in, menuSel, 8);
+    const RowList<MenuRow>& m = escMenu();
+    menuStep(in, menuSel, m.count);
     if (in.wasPressed(KEY_ESCAPE)) state = returnState;
-    if (enterKey(in)) {
-        switch (menuSel) {
-            case 0: state = returnState; break;
-            case 1: openAutoScreen(GameState::MENU); break;
-            case 2: openSlots(false); break;
-            case 3: openSlots(true); break;
-            case 4: settingsSel = 0; state = GameState::SETTINGS; break;
-            case 5: helpPage = returnState == GameState::SURFACE ? 1 : 0; state = GameState::HELP; break;
-            case 6: newGame(); break;
-            case 7: autosave(); wantsQuit = true; break;
-        }
-    }
+    if (enterKey(in) && menuSel >= 0 && menuSel < m.count) m.row[menuSel].act(*this);
 }
 
 // the title, over space (the system its camera tours)
@@ -170,47 +207,19 @@ void Game::renderHelp() {
 }
 
 void Game::renderMenu() {
-    const char* const* items = MENU_ITEMS;
-    const int n = (int)(sizeof(MENU_ITEMS) / sizeof(MENU_ITEMS[0]));
-    // box: title, items, one blank line, the hint and the version line (bug B-001: nothing overlaps; R-419: eight rows, the box taller)
-    const int top = 34, bottom = UH - 28, itemY0 = top + 22, rowH = 11;
+    const RowList<MenuRow>& m = escMenu();
+    // box: title, the rows, one blank line, the hint and the version line (bug B-001: nothing overlaps; U-03: the box sized from
+    // the rows, its bottom 28 px under the last)
+    const int top = 34, itemY0 = top + 22, rowH = 11, bottom = itemY0 + m.count * rowH + 28;
     drawPanel(canvas, 60, top, UW - 60, bottom, rgb(0, 0, 0), 210);
     drawTextCentered(canvas, UW / 2, top + 8, "STARDRIFTER SYSTEMS", HUD_AMBER);
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < m.count; i++) {
         int y = itemY0 + i * rowH;
-        drawTextCentered(canvas, UW / 2, y, items[i], i == menuSel ? HUD_WHITE : HUD_GREEN);
+        drawTextCentered(canvas, UW / 2, y, m.row[i].label, i == menuSel ? HUD_WHITE : HUD_GREEN);
         if (i == menuSel) drawText(canvas, UW / 2 - 60, y, ">", HUD_AMBER);
     }
     drawTextCentered(canvas, UW / 2, bottom - 20, "ARROWS + ENTER", HUD_DIM);
     drawTextCentered(canvas, UW / 2, bottom - 10, "VESPERIS", rgb(50, 80, 60));
-}
-
-void Game::adjustSetting(int item, int dir) {
-    Settings& s = settings;
-    // N5-05; R-418: the controller's page first when a controller is in use
-    if (item == 18) { keysSel = 0; keysCapture = false; keysPage = padInUse() ? 1 : 0; keysReturn = GameState::SETTINGS; padUI.capture = -1; state = GameState::KEYS; return; }
-    switch (item) {
-        case 0: s.mouseSensitivity += 0.1 * dir; break;
-        case 1: s.invertY = !s.invertY; break;
-        case 2: s.fovDeg += 5 * dir; break;
-        case 3: s.masterVolume += 0.05 * dir; break;
-        case 4: s.scanlines = !s.scanlines; break;
-        case 5: s.windowScale += dir; s.clampAll(); wantsWindowScale = s.windowScale; break;
-        case 6: s.renderScale += dir; break;
-        case 7: s.mushMode = (s.mushMode + 4 + dir) % 4; break;
-        case 8: s.shadingMode = (s.shadingMode + 3 + dir) % 3; break;
-        case 9: s.crt = !s.crt; break;
-        case 10: s.bloom = !s.bloom; break;
-        case 11: s.sprintToggle = !s.sprintToggle; break;
-        case 12: s.sprintSpeed += 0.25 * dir; break;
-        case 13: s.cabin = !s.cabin; break;
-        case 14: s.clockMode = 1 - s.clockMode; break;
-        case 15: s.aspect = 1 - s.aspect; break;
-        case 16: s.dither = !s.dither; break;
-        case 17: s.hudColor = (s.hudColor + 3 + dir) % 3; break;
-    }
-    applySettings();
-    audio.beep = BEEP_UI;
 }
 
 void Game::updateKeysScreen(const Input& in, double dt, double realDt) {
@@ -268,35 +277,35 @@ void Game::renderKeysScreen() {
     drawTextCentered(canvas, UW / 2, bottom - 10, "SAVED TO VESPERIS_KEYS.TXT NEXT TO THE GAME", HUD_DIM);
 }
 
+// the settings: a row's change by Left and Right (Enter: Right), the settings applied after; a row that opens a screen opens it
+// whichever; BACK after the rows
 void Game::updateSettingsScreen(const Input& in, double dt, double realDt) {
-    const int n = SETTINGS_ITEMS + 1;
-    menuStep(in, settingsSel, n);
+    const RowList<SettingRow>& rows = settingRows();
+    menuStep(in, settingsSel, rows.count + 1);
     int dir = (in.wasPressed(KEY_RIGHT) ? 1 : 0) - (in.wasPressed(KEY_LEFT) ? 1 : 0);
-    if (enterKey(in) && settingsSel < SETTINGS_ITEMS) dir = 1;
-    if (dir != 0 && settingsSel < SETTINGS_ITEMS) adjustSetting(settingsSel, dir);
-    if (in.wasPressed(KEY_ESCAPE) || (enterKey(in) && settingsSel == SETTINGS_ITEMS)) {
+    if (enterKey(in) && settingsSel < rows.count) dir = 1;
+    if (dir != 0 && settingsSel >= 0 && settingsSel < rows.count) {
+        const SettingRow& r = rows.row[settingsSel];
+        if (r.open) r.open(*this);
+        else { r.change(*this, settings, dir); applySettings(); audio.beep = BEEP_UI; }
+    }
+    if (in.wasPressed(KEY_ESCAPE) || (enterKey(in) && settingsSel == rows.count)) {
         settings.save(settingsPath);
         state = GameState::MENU;
     }
 }
 
 void Game::renderSettings() {
-    const Settings& s = settings;
-    const int top = 6, bottom = UH - 6, itemY0 = top + 14, rowH = 8;   // 18 items + BACK fit 200 rows at an 8 px pitch (M6-01)
+    const RowList<SettingRow>& rows = settingRows();
+    const int top = 6, bottom = UH - 6, itemY0 = top + 14, rowH = 8;   // the rows and BACK at an 8 px pitch, to fit 200 pixel rows (M6-01)
     drawPanel(canvas, 30, top, UW - 30, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 8, "SETTINGS", HUD_AMBER);
-    std::string values[SETTINGS_ITEMS] = {fmt("%.1f", s.mouseSensitivity), s.invertY ? "ON" : "OFF", fmt("%.0f%c", s.fovDeg, CH_DEGREE), fmt("%.0f%%", s.masterVolume * 100),
-            s.scanlines ? "ON" : "OFF", fmt("%dX  (%dX%d)", s.windowScale, 320 * s.windowScale, 200 * s.windowScale), fmt("%dX  (%dX%d)", s.renderScale, 320 * s.renderScale, 200 * s.renderScale),
-            s.mushMode == 0 ? "CLASSIC" : (s.mushMode == 1 ? "SOFT" : (s.mushMode == 2 ? "SHARP" : "FINE")), s.shadingMode == 0 ? "FLAT CELLS" : (s.shadingMode == 1 ? "STEPPED" : "SMOOTH"),
-            s.crt ? "ON" : "OFF", s.bloom ? "ON" : "OFF", s.sprintToggle ? "TOGGLE" : "HOLD", fmt("X%.2f", s.sprintSpeed), s.cabin ? "CABIN" : "COCKPIT", s.clockMode ? "REAL TIME (UTC)" : "GAME TIME",
-            s.aspect ? "4:3 (TALL PIXELS)" : "SQUARE PIXELS", s.dither ? "ON" : "OFF", s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"), "ENTER TO OPEN"};
-    const char* const* names = SETTINGS_NAMES;
-    for (int i = 0; i <= SETTINGS_ITEMS; i++) {
+    for (int i = 0; i <= rows.count; i++) {
         int y = itemY0 + i * rowH;
         bool sel = i == settingsSel;
-        if (i == SETTINGS_ITEMS) { drawTextCentered(canvas, UW / 2, y + 2, "BACK", sel ? HUD_WHITE : HUD_GREEN); if (sel) drawText(canvas, UW / 2 - 30, y + 2, ">", HUD_AMBER); continue; }
-        drawText(canvas, 44, y, names[i], sel ? HUD_WHITE : HUD_GREEN);
-        std::string v = values[i];
+        if (i == rows.count) { drawTextCentered(canvas, UW / 2, y + 2, "BACK", sel ? HUD_WHITE : HUD_GREEN); if (sel) drawText(canvas, UW / 2 - 30, y + 2, ">", HUD_AMBER); continue; }
+        drawText(canvas, 44, y, rows.row[i].label, sel ? HUD_WHITE : HUD_GREEN);
+        std::string v = rows.row[i].value(settings);
         int vx = UW - 44 - textWidth(v.c_str());
         drawText(canvas, vx, y, v.c_str(), sel ? HUD_WHITE : HUD_GREEN);
         if (sel) { drawText(canvas, vx - 12, y, "<", HUD_AMBER); drawText(canvas, UW - 40, y, ">", HUD_AMBER); drawText(canvas, 34, y, ">", HUD_AMBER); }

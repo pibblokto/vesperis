@@ -57,6 +57,7 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `Game` | game/game.h | orchestration, HUD, menus, save/load; an index of its sections at the top |
 | `GameState` + its traits, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game` |
 | `Game::STATE_ROWS` | game/states.cpp | a state's row: its traits (E-06), its update, picture, `covers` and `away` (U-02) |
+| `Game::escMenu`, `guideMenu`, `shipPages`, `settingRows`, `cabinDevices` | game/*.cpp, each its screen's | the ways in as rows (U-03) |
 | `RadarState`, `ProbeState`, `DroneBay`, `AutoState` ... | game/*_state.h | each subsystem's state, a `Game` member (E-05) |
 | `TestGame` | harness/test_game.h | the harness's `Game`, with the hooks the tests read and set it through (E-05) |
 | `AudioSynth`, `AudioState` | game/audio.h | procedural audio |

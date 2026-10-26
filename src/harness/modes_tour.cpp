@@ -77,7 +77,7 @@ struct Tour {
     void back();                                    // to the state toured again: Esc a bounded number of times, else opened again
     void keys(const char* spec);                    // keys by name, each followed by `back`; a group "A,B,C" is pressed without it
     bool row(const std::string& label);             // the open menu's row of that label entered (Enter), then `back`
-    void rows(const MenuLabels& m, const char* const* last);   // every row of a menu by label, those named in `last` (null-ended) last
+    void rows(const RowList<MenuRow>& m, const char* const* last);   // every row of a menu by label, those named in `last` (null-ended) last
     void type(const std::string& text);             // letters typed, a line for the whole, then Enter
     bool device(const Device& d, bool printed = true);   // E at a cabin device, found by the controller's line for it
     bool deviceNamed(const char* label);              // an opener's: E pressed, not printed
@@ -219,9 +219,9 @@ bool Tour::row(const std::string& label) {
     return false;
 }
 
-void Tour::rows(const MenuLabels& m, const char* const* last) {
+void Tour::rows(const RowList<MenuRow>& m, const char* const* last) {
     auto isLast = [&](const std::string& l) { for (const char* const* p = last; p && *p; p++) if (l == *p) return true; return false; };
-    for (int i = 0; i < m.count; i++) if (!isLast(m.label[i])) row(m.label[i]);
+    for (int i = 0; i < m.count; i++) if (!isLast(m.row[i].label)) row(m.row[i].label);
     for (const char* const* p = last; p && *p; p++) row(*p);
 }
 
@@ -412,15 +412,16 @@ void keysHelp(Tour& t) { t.keys("SPACE,SPACE,SPACE A"); }
 void keysMenu(Tour& t) {
     t.keys("UP DOWN");
     static const char* const LAST[] = {"NEW EXPEDITION", "QUIT TO DESKTOP", nullptr};
-    t.rows(MENU_LABELS, LAST);
+    t.rows(Game::escMenu(), LAST);
 }
 void keysSystemList(Tour& t) { t.keys("DOWN DOWN UP L TAB ENTER"); }
 void keysData(Tour& t) { t.keys("RIGHT T A"); }
 // each setting changed (Right) by its label, the clock put back at once (the wall clock kept out); then Esc saves them, the
 // screen opened again shows them kept; CONTROLS and BACK last
 void keysSettings(Tour& t) {
-    for (int i = 0; i < SETTINGS_LABELS.count; i++) {
-        const std::string l = SETTINGS_LABELS.label[i];
+    const RowList<SettingRow>& rows = Game::settingRows();
+    for (int i = 0; i < rows.count; i++) {
+        const std::string l = rows.row[i].label;
         if (l == "CONTROLS") continue;
         if (!selectRow(*t.g, t.in, l)) { printf("  row \"%s\": NOT FOUND\n", l.c_str()); t.lost++; continue; }
         t.step("\"" + l + "\" right", KEY_RIGHT);
@@ -444,7 +445,7 @@ void keysSlots(Tour& t) {
 void keysGuide(Tour& t) {
     t.keys("UP DOWN G");
     static const char* const LAST[] = {"SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", nullptr};
-    t.rows(GUIDE_LABELS, LAST);
+    t.rows(Game::guideMenu(), LAST);
 }
 void keysTextEntry(Tour& t) { t.keys("A,B,C,1,2,SPACE,MINUS,PERIOD,BACKSPACE,TAB ENTER"); }
 void keysStarMap(Tour& t) {
@@ -456,9 +457,11 @@ void keysGallery(Tour& t) { t.keys("LEFT RIGHT UP DOWN ENTER"); }
 void keysShipScreen(Tour& t) {
     t.keys("LEFT RIGHT TAB UP DOWN E");
     static const char* const LAST[] = {"FINE APPROACH TO THE LOCAL TARGET", "DEPLOY THE CAPSULE OR A PROBE", "VIMANA FLIGHT TO THE REMOTE TARGET", "SAVE THE EXPEDITION", nullptr};
-    for (int p = 0; p < 3; p++) {
+    const RowList<ShipPage>& pages = Game::shipPages();
+    for (int p = 0; p < pages.count; p++) {
         auto isLast = [&](const std::string& l) { for (const char* const* q = LAST; *q; q++) if (l == *q) return true; return false; };
-        for (int i = 0; i < SHIP_PAGE_LABELS[p].count; i++) if (!isLast(SHIP_PAGE_LABELS[p].label[i])) t.row(SHIP_PAGE_LABELS[p].label[i]);
+        const RowList<ShipRow>& rows = pages.row[p].rows;
+        for (int i = 0; i < rows.count; i++) if (!isLast(rows.row[i].label)) t.row(rows.row[i].label);
     }
     for (const char* const* q = LAST; *q; q++) t.row(*q);
 }

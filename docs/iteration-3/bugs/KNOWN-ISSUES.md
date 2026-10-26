@@ -136,7 +136,7 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-427 | S2 | probe | Naming a storm in a recording (N) left `guideReturn` at RECORDING: Esc then went from the recording to the gallery and back to it, holding the explorer until they quit. | resolved 2026-10-26 (B-429) |
 | KI-428 | S3 | game | Typing a T at the GOES console (CAT, CAST, ST) also multiplies the time warp, and Ctrl+T there opens the almanac: the frame's T asks whether the state simulates, not whether it types. | open (found 2026-10-26 in U-01's survey) |
 | KI-429 | S4 | game | The settings screen's title overlaps its first row: the rows start 6 px under it (`renderSettings`, 19 rows and BACK at an 8 px pitch). Seen once U-01 mended `settings`' picture. | open (found 2026-10-26) |
-| KI-430 | S4 | harness | The unit's `unit_lent_piece.png` (a lent piece open on the decoder) moved between u01's two snapshot runs, once in five runs since b429: a race its frame waits on nothing for. u02 does not hold it as noise: a compare may flag it. | open (found 2026-10-26, U-01's close) |
+| KI-430 | S4 | harness | The unit's `unit_lent_piece.png` (a lent piece open on the decoder) moved between u01's two snapshot runs, once in five runs since b429: a race its frame waits on nothing for. u02 and u03 hold no noise for it: a compare may flag it. | open (found 2026-10-26, U-01's close) |
 
 ## The long rows, continued
 

@@ -342,10 +342,12 @@ and its picture. Code asks `stateHas(state, ST_...)`; a trait new code needs is 
 - its file of `Game` methods, the row's among them (an update takes `(const Input& in, double dt, double realDt)`), declared in
   game.h under a banner naming the file; the function that opens it sets `state`, `returnState` and `guideReturn`;
 - pad.cpp's screen names and `padItems`; `autoScene`;
-- its way in: a cabin spot (a `CabinFacing`: `updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1` or
-  `PAGE2` appended, `counts[]` and `n` both), the Esc menu (game.cpp's `menuStep(in, menuSel, 8)` and menus.cpp's `items[]`) or
-  the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 16 rows at 9 px); a menu's labels are its `MenuLabels`
-  (game_types.h), by which the harness finds a row;
+- its way in, a row of a list (U-03; a list's count is read from it, and each row's label and act are asserted): a cabin
+  device (a `CabinFacing` before `FACE_COUNT` and its row in `Game::cabinDevices`, cabin.cpp: its spot and reach, its line
+  under the crosshair and the controller's "USE" line, its screen's bank and colour, E's act, its body against a wall; its
+  picture in `drawCabinBand`), a flight computer row (`shipPages`: its label, act, status column, and whether it stays on the
+  screen), an Esc menu row (`escMenu`, menus.cpp) or a guide menu row (`guideMenu`: the status that refuses it on the ground,
+  a label that names); an act that opens the screen calls its opener. The harness finds a row by its label;
 - in the harness: its stop in `modes_tour.cpp`'s `STOPS` (how the game opens it, its keys; the count and the order are
   asserted, so the build fails without it), a `screens` capture if a frame needs its scales, and a TestGame hook if a check needs
   one; `tools/prove compare <base> tour` then shows its run.

@@ -36,6 +36,11 @@ GALLERY -> RECORDING (X-04: Enter on a probe's recording plays it on the ship's 
 MENU -> AUTO (R-419: AUTO-EXPLORE, the menu's second row; the controller's commands' general page too) -> SPACE or SURFACE playing on its own (Enter); Esc back; any key, click, mouse motion or button gives the controls back (R-420: but `M`, a controller's `SELECT`, starts and stops its tape)
 ```
 
+The ways in are lists of rows, their counts read from the lists (U-03): the Esc menu (`Game::escMenu`), the guide menu
+(`guideMenu`: a row the ground refuses says why), the flight computer's pages (`shipPages`: a row's act runs at the window unless
+it stays on the screen), the settings (`settingRows`: a value and its change, or CONTROLS' screen) and the cabin's devices
+(`cabinDevices`).
+
 `returnState` remembers where an overlay came from and is set explicitly by every overlay entry (B-006). Only SPACE, SURFACE, DESCENT, ASCENT and LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's camera).
 
 ## The frame (`Game::frame`, game.cpp)
@@ -493,9 +498,12 @@ decoder on the back wall (`facing` 7: a desk like the console's whose screen glo
 and, since C-07, the signal radar beside it on the same wall (`facing` 8, x -2.1..-1.0: a narrower set whose screen brightens and
 pulses while the receiver is on; `E` enters the radar camera) and, since W-06's rework, the telescope's set at the wall's other
 end (`facing` 9, x 1.0..2.1, its screen glowing while the eye is at the eyepiece; `E` looks through it). R-404 (2026-10-06): every
-computer's screen glows in a colour of its own (`SCREENS` in `cabin.cpp`: the console amber, the flight computer green, the star
-map blue, the landing map pink, the target data cyan, the decoder violet, the radar red, the telescope ice-white; banks 9 and
-21-27) and the `E` prompt is written in it, so the one wanted is found from across the room. `U` toggles the cabin light (the hull
+computer's screen glows in a colour of its own (its row in `Game::cabinDevices`, `cabin.cpp`: the console amber, the flight
+computer green, the star map blue, the landing map pink, the target data cyan, the decoder violet, the radar red, the telescope
+ice-white, the case lime, the drone bay pale yellow; banks 9 and 21-29) and the `E` prompt is written in it, so the one wanted is
+found from across the room. U-03: each device is that row (its spot and reach, its prompt and what it says while the device
+works, the controller's "USE" line, its bank and colour, `E`'s act, its body against a wall) and its picture in
+`drawCabinBand`. `U` toggles the cabin light (the hull
 ramp follows `lightLevel`), `Y` depolarises the hull (B-411: the hull alone, its walls, floor and ceiling, as tinted glass that
 catches the cabin light as a faint sheen and clears with the light off; what stands in the room stays solid and lit; `U` with the
 hull glass says `Y POLARISES THE GLASS HULL`), `PgUp`/`PgDn` ride the lifter to the observation deck on the roof. Banks 8 (hull),

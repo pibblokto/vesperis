@@ -15,7 +15,7 @@ changing anything there.
 - `rules-game.md`: the explorer's rules, saves and the guide, the HUD and the screens, controls and the frame, auto-explore.
 - `rules-game-devices.md`: the cabin's instruments, the radar, the decoder and the player, the probe and photos, flight, maps and
   marks.
-- `rules-game-screens.md`: how a state is made: its row in the states' table, what the frame runs for it.
+- `rules-game-screens.md`: how a state is made: its row in the states' table, what the frame runs for it; the ways in as rows.
 - `rules-audio.md`: the synth, levels, voices, music and instruments, the radar's and the drifters' sounds, the tape.
 - `rules-harness.md`: the harness's code, the unit, the flow and the tour, frames that repeat.
 - `rules-harness-scenes.md`: the scenes, the pinned sites and the test worlds.

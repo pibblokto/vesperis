@@ -11,6 +11,7 @@
 #include "galaxy/starfield.h"
 #include "surface/surface_view.h"
 #include <cstdint>
+#include <string>
 #include <vector>
 
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
@@ -20,11 +21,54 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        AUTO };         // auto-explore's profiles
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
-// U-01: a menu's labels in its order, by which the harness finds a row (U-03 makes each menu rows): the Esc menu's and the
-// settings' (game/menus.cpp; the settings' BACK is drawn after theirs), the guide menu's (game/guide_screens.cpp) and the
-// flight computer's three pages (game/cabin.cpp)
-struct MenuLabels { const char* const* label; int count; };
-extern const MenuLabels MENU_LABELS, SETTINGS_LABELS, GUIDE_LABELS, SHIP_PAGE_LABELS[3];
+// U-03: the ways in. A menu is a list of rows in its order, its count read from the list (`rowsOf`), and the harness finds a
+// row by its label (U-01): `Game::escMenu` and `settingRows` (menus.cpp), `guideMenu` (guide_screens.cpp), `shipPages`
+// (cabin.cpp)
+class Game;
+struct Settings;
+template <class Row> struct RowList {
+    const Row* row; int count;
+    constexpr const Row* begin() const { return row; }
+    constexpr const Row* end() const { return row + count; }
+};
+template <class Row, int N> constexpr RowList<Row> rowsOf(const Row (&rows)[N]) { return {rows, N}; }
+// a menu's row: its label and what Enter does on it; the guide menu's: the status that refuses it on the ground (opened from
+// the surface), and a label that names (the star, the world; empty for its label)
+struct MenuRow {
+    const char* label;
+    void (*act)(Game& g);
+    const char* ground = nullptr;
+    std::string (*name)(const Game& g) = nullptr;
+};
+// a setting's row: its label, its value's text and its change by Left and Right (Enter: Right), the settings applied after;
+// a row that opens a screen has `open` instead (CONTROLS). BACK is drawn after the rows, not one of them
+struct SettingRow {
+    const char* label;
+    std::string (*value)(const Settings& s);
+    void (*change)(Game& g, Settings& s, int dir) = nullptr;
+    void (*open)(Game& g) = nullptr;
+};
+// a row of the flight computer's: its label, what Enter does, its status column (the devices' page), and whether its act runs
+// on the screen, which stays open (else at the window: SPACE)
+struct ShipRow {
+    const char* label;
+    void (*act)(Game& g);
+    std::string (*status)(const Game& g) = nullptr;
+    bool stays = false;
+};
+// the flight computer's pages, each its name and its rows
+struct ShipPage { const char* name; RowList<ShipRow> rows; };
+// each row whole, asserted where its list is made: a label and what Enter does (a setting's: its value, and its change or the
+// screen it opens; a page's: its name and its rows whole)
+constexpr bool rowWhole(const MenuRow& r) { return r.label && r.act; }
+constexpr bool rowWhole(const SettingRow& r) { return r.label && r.value && (r.change || r.open); }
+constexpr bool rowWhole(const ShipRow& r) { return r.label && r.act; }
+template <class Row> constexpr bool rowsWhole(const RowList<Row>& l) {
+    for (int i = 0; i < l.count; i++)
+        if (!rowWhole(l.row[i])) return false;
+    return true;
+}
+constexpr bool rowWhole(const ShipPage& p) { return p.name && p.rows.count > 0 && rowsWhole(p.rows); }
 
 // E-06: what each state is: its row in `Game::STATE_ROWS` (states.cpp, U-02), in GameState's order, holds the traits the frame,
 // the radio, the save and the controller read, the controller's context, the name the harness prints and the methods the frame
@@ -62,7 +106,7 @@ struct CabinFrame {
     std::vector<DronePrim> prims[DRONE_COUNT];
 };
 
-// what the explorer faces in the cabin, E using it (`Cabin::facing`; SCREENS' rows): nothing, the GOES console, the flight computer, the
+// what the explorer faces in the cabin, E using it (`Cabin::facing`; its row in `Game::cabinDevices`): nothing, the GOES console, the flight computer, the
 // star map's, the landing map's and the target's screens, the capsule's cage, the shard decoder, the signal radar, the telescope, the
 // instruments' case, the drone bay
 enum CabinFacing { FACE_NOTHING = 0, FACE_GOES, FACE_FLIGHT, FACE_STAR_MAP, FACE_LANDING, FACE_TARGET, FACE_CAGE, FACE_DECODER, FACE_RADAR, FACE_TELESCOPE, FACE_CASE, FACE_BAY, FACE_COUNT };
@@ -80,24 +124,32 @@ struct Cabin {
 
 // the cabin's banks: its hull, the flight computer's screen, its light (cabin.cpp; drone_draw.cpp draws the rack in them)
 const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10;
-// R-404 (2026-10-06): every computer in a colour of its own, so the one wanted is found at a glance: by `facing` (6 is
-// the cage, 0 nothing), the bank its screen is drawn in (9 the flight computer's green, 21-27 the others) and its colour;
-// the prompt under the crosshair takes the colour too
-struct ScreenLook { int bank; RGB col; };
-const ScreenLook SCREENS[FACE_COUNT] = {
-    {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 0: nothing faced
-    {21, RGB(1.0f, 0.72f, 0.25f)},            // 1 the GOES console: amber
-    {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 2 the flight computer: the green phosphor
-    {22, RGB(0.4f, 0.55f, 1.0f)},             // 3 the star map screen: blue
-    {23, RGB(1.0f, 0.45f, 0.8f)},             // 4 the landing map screen: pink (an orange sat too near the radar's red)
-    {24, RGB(0.3f, 0.95f, 0.9f)},             // 5 the target data screen: cyan
-    {BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f)},    // 6 the capsule cage: no screen
-    {25, RGB(0.75f, 0.45f, 1.0f)},            // 7 the shard decoder: violet
-    {26, RGB(1.0f, 0.35f, 0.3f)},             // 8 the signal radar: red
-    {27, RGB(0.8f, 0.9f, 1.0f)},              // 9 the telescope: ice
-    {28, RGB(0.72f, 1.0f, 0.3f)},             // 10 the instruments' case (C-11): lime
-    {29, RGB(1.0f, 1.0f, 0.45f)},             // 11 the drone bay (C-18): a pale yellow
+// U-03: a device's body against a wall, which the explorer is kept off: pushed back to its face, along the wall between `from`
+// and `to` (a screen in the wall has none)
+enum CabinWall { WALL_NONE, WALL_LEFT, WALL_BACK, WALL_FRONT };
+struct CabinBlock { int wall = WALL_NONE; double face = 0, from = 0, to = 0; };
+// U-03: a cabin device, a row a CabinFacing in its order (`Game::cabinDevices`, cabin.cpp; its picture is drawCabinBand's):
+// where E uses it from (the spot most ahead within its reach is the one faced), its line under the crosshair, the controller's
+// command ("USE " and it), its screen's bank and colour, what E does at it, its body, and its line while it works (the radar on,
+// a probe falling; null: `hud`). R-404: every computer in a colour of its own, so the one wanted is found at a glance (9 the
+// flight computer's green, 21-29 the others, the cage's light no screen); the prompt under the crosshair takes the colour too
+struct CabinDevice {
+    int facing;
+    double x, z, reach;
+    const char* hud;
+    const char* use;
+    int bank; RGB col;
+    void (*act)(Game& g);
+    CabinBlock block = {};
+    const char* (*hudNow)(const Game& g) = nullptr;
 };
+// the devices whole: a row a facing, in its order, each with its lines and its act
+constexpr bool devicesWhole(const RowList<CabinDevice>& l) {
+    if (l.count != FACE_COUNT) return false;
+    for (int i = 0; i < l.count; i++)
+        if (l.row[i].facing != i || !l.row[i].hud || !l.row[i].use || !l.row[i].act) return false;
+    return true;
+}
 
 // the view's forward from its yaw and pitch (auto-explore's and the telescope's)
 inline Vec3 forwardOf(double yaw, double pitch) { return Vec3(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch)); }
