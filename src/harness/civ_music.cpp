@@ -67,7 +67,7 @@ static void printPieceNotation(const Tradition& T, const Piece& P, int maxCycles
 static int musicDecoderFrames();
 static int runMusicAges(int argc, char** argv) {
     bool wav = false; for (int i = 3; i < argc; i++) { if (std::string(argv[i]) == "wav") wav = true; if (std::string(argv[i]) == "frames") return musicDecoderFrames(); }
-    static const char* AGE_FILE[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
+    static const char* const AGE_FILE[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
     auto slug = [](const char* name) { std::string s; for (const char* c = name; *c; c++) { if (*c == ' ') { if (!s.empty() && s.back() != '_') s += '_'; } else if (isalpha((unsigned char)*c)) s += (char)tolower((unsigned char)*c); } if (s.compare(0, 2, "a_") == 0) s = s.substr(2); else if (s.compare(0, 3, "an_") == 0) s = s.substr(3); else if (s.compare(0, 4, "the_") == 0) s = s.substr(4); return s; };
     struct World { StarSystem sys; int body = -1, which = 0; BodyGen g; Lore L; Tradition T; bool ok = false; };
     auto load = [](int64_t sx, int64_t sz, int body, int which, World& w) {
@@ -174,7 +174,7 @@ static int runMusicAges(int argc, char** argv) {
 // H-05: `music ages frames`: a piece of each age on the decoder (the age world's records of its age in the guide, the first opened and played two
 // seconds): shots/tests/music_decoder_<age>.png, the roll in the parts' colours
 static int musicDecoderFrames() {
-    static const char* AGE_FILE[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
+    static const char* const AGE_FILE[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
     TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_music.txt";
     remove("shots/tests/test_guide_music.txt");
     applyTestScale(game);
@@ -185,8 +185,7 @@ static int musicDecoderFrames() {
     int shots = 0;
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& aw = AGE_WORLDS[a];
-        Star s; if (!starInSector(aw.sx, 0, aw.sz, s, true)) continue;
-        StarSystem sys; sys.generate(s); const Body& b = sys.bodies[aw.body]; BodyGen g = BodyGen::make(b);
+        Star s; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, s, sys, true)) continue; const Body& b = sys.bodies[aw.body]; BodyGen g = BodyGen::make(b);
         Lore L = loreQuick(sys, b, g, aw.which); Tradition T = traditionOf(g, L);
         int pick = -1;
         game.guide.shards.clear(); game.guide.decoded.clear();
@@ -218,8 +217,7 @@ int runMusic(int argc, char** argv) {
     int64_t sx = atoll(rest[0].c_str()), sz = atoll(rest[1].c_str()); int bi = atoi(rest[2].c_str());
     int want = rest.size() > 3 && rest[3] != "wav" ? atoi(rest[3].c_str()) : -1;
     bool wav = (rest.size() > 3 && rest[3] == "wav") || (rest.size() > 4 && rest[4] == "wav");
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
@@ -232,8 +230,8 @@ int runMusic(int argc, char** argv) {
     printf("; resting on degree %d (%.0f cents)\n", T.rest, traditionCents(T, T.rest));
     std::string vw; for (int v : T.vowels) vw += "aeiou"[v];
     printf("  %s, each beat in %d, drifting %.0f%%, swing %.2f, the singers' vowels %s\n", cycleLine(T, T.bpm).c_str(), T.sub, 100 * T.drift, T.swing, vw.c_str());
-    static const char* SECOND[4] = {"no second voice", "a second voice in parallel below", "a second voice answering a phrase later", "a second voice doubling a period below"};
-    static const char* ORN[5] = {"no ornament", "grace notes before a leap", "trills on long notes", "slides between neighbours", "mordents"};
+    static const char* const SECOND[4] = {"no second voice", "a second voice in parallel below", "a second voice answering a phrase later", "a second voice doubling a period below"};
+    static const char* const ORN[5] = {"no ornament", "grace notes before a leap", "trills on long notes", "slides between neighbours", "mordents"};
     printf("  its own voices (C-04's): %s; %s; %s; %s %.0f%% of the time\n", timbresLine(T, T.hasDrum).c_str(), T.drone ? "a drone" : "no drone", SECOND[T.second], ORN[T.ornament], 100 * T.ornamentChance);
     for (int a = 0; a < AGE_COUNT; a++) printf("  %-11s %s\n", AGE_NAMES[a], ensembleLine(T.ages[a]).c_str());
     // its records' pieces (H-05: every record of the people, each of its year's age), by year

@@ -634,7 +634,7 @@ std::string TestGame::testRadarInfo() const {
 }
 
 std::string TestGame::testTapeInfo() const {
-    static const char* PH[] = {"off", "deck", "play", "fade"};
+    static const char* const PH[] = {"off", "deck", "play", "fade"};
     std::string author, title;
     const double a = tapeCaption(author, title);
     return fmt("%s, track %d of %zu from %.1f s, level %.3f (gain %.2f), duck %.2f, music \"%s\", caption %.2f \"%s / %s\"", PH[clampi(tape.phase, 0, 3)], tape.track,

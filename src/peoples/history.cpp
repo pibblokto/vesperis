@@ -2,10 +2,7 @@
 #include "history.h"
 #include "history_builder.h"
 #include "shards.h"
-
-namespace {
-double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-}   // namespace
+#include "../core/clock.h"
 
 // ---- the history's queries ----------------------------------------------------------------------------------------------------
 int History::eventsIn(int year, int& from) const {
@@ -28,22 +25,11 @@ double History::sunlightAt(int year) const {   // D-05
     const int i = clampi(year - yearsFrom, 0, (int)sunlight.size() - 1);
     return year < yearsFrom ? 1.0 : sunlight[i];
 }
-double History::populationAt(int year) const {
-    const int i = year - yearsFrom;
-    if (i >= 0 && i < (int)population.size() && population[i] > 0) return population[i];
-    return 0;
-}
 int History::inventionYear(int id) const { for (const HistoryInvention& I : inventions) if (I.id == id) return I.year; return 0; }
 std::vector<int> History::eventsOf(int person) const {
     std::vector<int> o;
     if (person < 0 || person + 1 >= (int)personFirst.size()) return o;
     for (int k = personFirst[person]; k < personFirst[person + 1]; k++) if (personEvents[k] >= 0) o.push_back(personEvents[k]);
-    return o;
-}
-std::vector<int> History::eventsAt(int place) const {
-    std::vector<int> o;
-    if (place < 0 || place + 1 >= (int)placeFirst.size()) return o;
-    for (int k = placeFirst[place]; k < placeFirst[place + 1]; k++) if (placeEvents[k] >= 0) o.push_back(placeEvents[k]);
     return o;
 }
 

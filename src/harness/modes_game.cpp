@@ -488,33 +488,29 @@ void Flow::comet() {
     // N0-01 (B-201): park at the first comet near the start; the HUD shows its speed and plunge, the data sheet its distance now
     {
         bool found = false;
-        for (int64_t x = 150; x < 320 && !found; x++)
-            for (int64_t z = 20; z < 140 && !found; z++) {
-                Star s;
-                if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (int bi = 0; bi < (int)sys.bodies.size() && !found; bi++) {
-                    if (sys.bodies[bi].type != PT_COMET) continue;
-                    game.testParkAt(s, bi); run(0.5); shot("comet_map");   // O4: comets are landable, so parking opens the landing map
-                    press(KEY_ESCAPE); run(0.3); shot("comet");
-                    printf("  comet HUD: %s\n", game.cometMotionString(bi).c_str());
-                    press(KEY_I); run(0.1); shot("comet_data"); press(KEY_SPACE);
-                    press(KEY_TAB); run(0.1); shot("comet_list"); press(KEY_ESCAPE);
-                    // O4 (R-303): land on the nucleus: microgravity, no buggy, floating jumps that Ctrl brings down, the tail overhead
-                    press(KEY_C); run(0.2); press(KEY_ENTER); run(8.0); shot("comet_surface");
-                    printf("  on the comet: escape velocity %.1f m/s, %s, '%s'\n", game.testEscapeVelocity(), game.testRangeInfo().c_str(), game.testStatus().c_str());
-                    press(KEY_B); run(0.2); printf("  B on the comet: '%s'\n", game.testStatus().c_str());
-                    in.down[KEY_W] = true; run(3.0); printf("  walking at %.2f m/s (the cap is %.2f)\n", game.testPlayerSpeed(), 0.3 * game.testEscapeVelocity()); in.down[KEY_W] = false;
-                    press(KEY_SPACE); run(4.0); shot("comet_jump"); double up = game.testPlayerAlt();
-                    in.down[KEY_LEFT_CONTROL] = true; run(3.0); in.down[KEY_LEFT_CONTROL] = false;
-                    printf("  a jump: %.2f m up after 4 s, %.2f m after 3 s of Ctrl\n", up, game.testPlayerAlt());
-                    in.mouseDy = -700; game.frame(in, 1.0 / 30); in.newFrame(); run(0.2); shot("comet_sky");
-                    in.mouseDy = 700; game.frame(in, 1.0 / 30); in.newFrame();
-                    press(KEY_N); run(0.2); shot("comet_sectormap"); press(KEY_ESCAPE);
-                    press(KEY_K); run(0.3); press(KEY_Q); run(9.0);
-                    found = true;
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return !found; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && !found; bi++) {
+                if (sys.bodies[bi].type != PT_COMET) continue;
+                game.testParkAt(s, bi); run(0.5); shot("comet_map");   // O4: comets are landable, so parking opens the landing map
+                press(KEY_ESCAPE); run(0.3); shot("comet");
+                printf("  comet HUD: %s\n", game.cometMotionString(bi).c_str());
+                press(KEY_I); run(0.1); shot("comet_data"); press(KEY_SPACE);
+                press(KEY_TAB); run(0.1); shot("comet_list"); press(KEY_ESCAPE);
+                // O4 (R-303): land on the nucleus: microgravity, no buggy, floating jumps that Ctrl brings down, the tail overhead
+                press(KEY_C); run(0.2); press(KEY_ENTER); run(8.0); shot("comet_surface");
+                printf("  on the comet: escape velocity %.1f m/s, %s, '%s'\n", game.testEscapeVelocity(), game.testRangeInfo().c_str(), game.testStatus().c_str());
+                press(KEY_B); run(0.2); printf("  B on the comet: '%s'\n", game.testStatus().c_str());
+                in.down[KEY_W] = true; run(3.0); printf("  walking at %.2f m/s (the cap is %.2f)\n", game.testPlayerSpeed(), 0.3 * game.testEscapeVelocity()); in.down[KEY_W] = false;
+                press(KEY_SPACE); run(4.0); shot("comet_jump"); double up = game.testPlayerAlt();
+                in.down[KEY_LEFT_CONTROL] = true; run(3.0); in.down[KEY_LEFT_CONTROL] = false;
+                printf("  a jump: %.2f m up after 4 s, %.2f m after 3 s of Ctrl\n", up, game.testPlayerAlt());
+                in.mouseDy = -700; game.frame(in, 1.0 / 30); in.newFrame(); run(0.2); shot("comet_sky");
+                in.mouseDy = 700; game.frame(in, 1.0 / 30); in.newFrame();
+                press(KEY_N); run(0.2); shot("comet_sectormap"); press(KEY_ESCAPE);
+                press(KEY_K); run(0.3); press(KEY_Q); run(9.0);
+                found = true;
             }
+        }
     }
 }
 
@@ -522,25 +518,21 @@ void Flow::belt() {
     // O3 (R-302): fly to the first belt near the start, park beside one of its rocks; the capsule refuses; the sheet
     {
         bool found = false;
-        for (int64_t x = 150; x < 320 && !found; x++)
-            for (int64_t z = 20; z < 140 && !found; z++) {
-                Star s;
-                if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                if (sys.belts.empty()) continue;
-                game.testParkAt(s, -1); run(0.3);
-                press(KEY_TAB); run(0.1);
-                for (int i = 0; i < (int)sys.bodies.size(); i++) press(KEY_DOWN);
-                shot("belt_list");
-                press(KEY_ENTER); run(3.0); shot("belt_approach");
-                run(12.0); shot("belt");
-                printf("  belt: %s; parked belt %d; '%s'\n", game.testDebugInfo().c_str(), game.testParkedBelt(), game.testStatus().c_str());
-                press(KEY_I); run(0.1); shot("belt_data"); press(KEY_SPACE);
-                press(KEY_C); run(0.2); printf("  C in the belt: '%s'\n", game.testStatus().c_str());
-                press(KEY_X); run(0.3); shot("belt_rock");
-                printf("  %s\n", game.testBeltDraw().c_str());
-                found = true;
-            }
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return !found; })) {
+            if (sys.belts.empty()) continue;
+            game.testParkAt(s, -1); run(0.3);
+            press(KEY_TAB); run(0.1);
+            for (int i = 0; i < (int)sys.bodies.size(); i++) press(KEY_DOWN);
+            shot("belt_list");
+            press(KEY_ENTER); run(3.0); shot("belt_approach");
+            run(12.0); shot("belt");
+            printf("  belt: %s; parked belt %d; '%s'\n", game.testDebugInfo().c_str(), game.testParkedBelt(), game.testStatus().c_str());
+            press(KEY_I); run(0.1); shot("belt_data"); press(KEY_SPACE);
+            press(KEY_C); run(0.2); printf("  C in the belt: '%s'\n", game.testStatus().c_str());
+            press(KEY_X); run(0.3); shot("belt_rock");
+            printf("  %s\n", game.testBeltDraw().c_str());
+            found = true;
+        }
         if (!found) printf("belt: none found\n");
     }
 }
@@ -573,8 +565,7 @@ void Flow::probe() {
         // (R-406), a flash between the decks (X-02); on to the end, the last frame held under the hiss, Enter gives control back
         Star gs; int gi = -1;
         for (int64_t x = 150; x < 200 && gi < 0; x++) for (int64_t z = 20; z < 80 && gi < 0; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem gsys; gsys.generate(s);
+            Star s; StarSystem gsys; if (!systemAt(x, 0, z, s, gsys, true)) continue;
             for (int i = 0; i < (int)gsys.bodies.size(); i++) if (gsys.bodies[i].type == PT_GASGIANT) { gs = s; gi = i; break; }
         }
         if (gi >= 0) {
@@ -715,7 +706,7 @@ void testAudio() {
         int frames = 0;
         while (frames < sr * 3) {
             if ((frames / 2048) % 6 == 2 && sg.step) st.step = sg.step;
-            if (frames == 0 && sg.engine == 0 && sg.lava == 0) st.beep = 1;
+            if (frames == 0 && sg.engine == 0 && sg.lava == 0) st.beep = BEEP_LOCK;
             synth.render(buf.data(), (int)buf.size(), sr, st);
             for (float v : buf) { if (!std::isfinite(v)) nan++; if (std::fabs(v) >= 0.999f) clip++; pcm.push_back((int16_t)(std::max(-1.f, std::min(1.f, v)) * 32000)); }
             frames += (int)buf.size();
@@ -786,22 +777,18 @@ int runParkings() {
     struct Pick { int64_t x, z; int body; const char* what; };
     std::vector<Pick> picks;
     int nBig = 0, nGiant = 0, nTwin = 0, nGm = 0;
-    for (int64_t x = 185; x < 215 && picks.size() < 12; x++)
-        for (int64_t z = 36; z < 66 && picks.size() < 12; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (const Body& b : sys.bodies) {
-                if (b.type == PT_COMPANION || b.type == PT_COMET || b.parent >= 0) continue;
-                const bool giant = b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR;
-                int moons = 0; double bigM = 0; bool twin = false;
-                for (const Body& m : sys.bodies) if (m.parent == b.index) { moons++; bigM = std::max(bigM, m.radiusKm / b.radiusKm); twin |= m.doublePlanet; }
-                if (twin && nTwin < 2) { picks.push_back({x, z, b.index, "twin"}); nTwin++; break; }
-                if (!giant && bigM > 0.3 && nBig < 4) { picks.push_back({x, z, b.index, "big moon"}); nBig++; break; }
-                if (giant && moons >= 4 && nGiant < 3) { picks.push_back({x, z, b.index, "giant"}); nGiant++; break; }
-                if (giant && moons >= 2 && nGm < 3) { for (const Body& m : sys.bodies) if (m.parent == b.index) { picks.push_back({x, z, m.index, "giant's moon"}); nGm++; break; } break; }
-            }
+    for (auto& [x, z, s, sys] : scanSystems(185, 215, 36, 66, [&] { return picks.size() < 12; })) {
+        for (const Body& b : sys.bodies) {
+            if (b.type == PT_COMPANION || b.type == PT_COMET || b.parent >= 0) continue;
+            const bool giant = b.type == PT_GASGIANT || b.type == PT_SUBSTELLAR;
+            int moons = 0; double bigM = 0; bool twin = false;
+            for (const Body& m : sys.bodies) if (m.parent == b.index) { moons++; bigM = std::max(bigM, m.radiusKm / b.radiusKm); twin |= m.doublePlanet; }
+            if (twin && nTwin < 2) { picks.push_back({x, z, b.index, "twin"}); nTwin++; break; }
+            if (!giant && bigM > 0.3 && nBig < 4) { picks.push_back({x, z, b.index, "big moon"}); nBig++; break; }
+            if (giant && moons >= 4 && nGiant < 3) { picks.push_back({x, z, b.index, "giant"}); nGiant++; break; }
+            if (giant && moons >= 2 && nGm < 3) { for (const Body& m : sys.bodies) if (m.parent == b.index) { picks.push_back({x, z, m.index, "giant's moon"}); nGm++; break; } break; }
         }
+    }
     TestGame game; game.savePrefix = "shots/tests/parkings_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/parkings_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings();
@@ -851,7 +838,7 @@ int runTape(int argc, char** argv) {
     const size_t n = game.testTapeTracks();
     printf("tape: %zu tracks in %s/\n", n, dir.c_str());
     for (size_t i = 0; i < n; i++) printf("  %zu. %s\n", i + 1, game.testTapeTrack(i).c_str());
-    static const char* KN[DECK_KINDS] = {"", "insert", "change", "play", "stop"};
+    static const char* const KN[DECK_KINDS] = {"", "insert", "change", "play", "stop"};
     for (int kind = DECK_INSERT; kind < DECK_KINDS; kind++)
         for (uint32_t seed = 1; seed <= 3; seed++) {
             const std::vector<float> a = deckRender(kind, seed, 22050);

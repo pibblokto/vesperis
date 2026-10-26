@@ -327,7 +327,7 @@ int runForms(int argc, char** argv) {
             int W = cols * CW * scale, H = (rows * (CH + 10) + 12) * scale;
             std::vector<uint32_t> sheet((size_t)W * H, rgb(16, 16, 20));
             RGBCanvas cv{sheet.data(), W, H, scale};
-            const char* heads[cols] = {"NEAR", "NEAR, BROKEN", "LOD 1 CLOSE", "LOD 2 CLOSE", "600 M (X2)", "600 M BROKEN", "2.5 KM (X2)", "2.5 KM BROKEN"};
+            const char* const heads[cols] = {"NEAR", "NEAR, BROKEN", "LOD 1 CLOSE", "LOD 2 CLOSE", "600 M (X2)", "600 M BROKEN", "2.5 KM (X2)", "2.5 KM BROKEN"};
             for (int c = 0; c < cols; c++) drawText(cv, c * CW + 3, 2, heads[c], rgb(200, 200, 160));   // the canvas's scale sizes the glyphs
             for (int r = 0; r < rows; r++) {
                 const FormSample& S = samples[g0 + r];

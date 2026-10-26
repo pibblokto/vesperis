@@ -352,24 +352,21 @@ void Bench::drive() {
 void Bench::belt() {
     {   // O3: a frame inside a belt at 2x, parked beside a rock (the rock field is the cost)
         bool found = false;
-        for (int64_t x = 150; x < 320 && !found; x++)
-            for (int64_t z = 20; z < 140 && !found; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sy; sy.generate(s);
-                if (sy.belts.empty()) continue;
-                game.settings.renderScale = 2; game.applySettings();
-                game.testParkAtBelt(s, 0);
-                Input in5;
-                for (int i = 0; i < 10; i++) { game.frame(in5, 1.0 / 60); in5.newFrame(); }
-                in5.pressed[KEY_X] = true; in5.down[KEY_X] = true; game.frame(in5, 1.0 / 60); in5.newFrame(); in5.down[KEY_X] = false;
-                double sum = 0;
-                for (int i = 0; i < 60; i++) { double t0 = nowSec(); game.frame(in5, 1.0 / 60); in5.newFrame(); sum += (nowSec() - t0) * 1000; }
-                printf("belt 2x      %.2f ms/frame (%s)\n", sum / 60, game.testDebugInfo().c_str());
-                writePNG("shots/tests/bench_belt.png", game.output(), FBW, FBH);
-                budget("belt 2x", sum / 60, 1.1);   // 0.60 after F-10 (F-11: 12 -> 1.1, the median + 0.5)
-                game.settings.renderScale = 1; game.applySettings();
-                found = true;
-            }
+        for (auto& [x, z, s, sy] : scanSystems(150, 320, 20, 140, [&] { return !found; })) {
+            if (sy.belts.empty()) continue;
+            game.settings.renderScale = 2; game.applySettings();
+            game.testParkAtBelt(s, 0);
+            Input in5;
+            for (int i = 0; i < 10; i++) { game.frame(in5, 1.0 / 60); in5.newFrame(); }
+            in5.pressed[KEY_X] = true; in5.down[KEY_X] = true; game.frame(in5, 1.0 / 60); in5.newFrame(); in5.down[KEY_X] = false;
+            double sum = 0;
+            for (int i = 0; i < 60; i++) { double t0 = nowSec(); game.frame(in5, 1.0 / 60); in5.newFrame(); sum += (nowSec() - t0) * 1000; }
+            printf("belt 2x      %.2f ms/frame (%s)\n", sum / 60, game.testDebugInfo().c_str());
+            writePNG("shots/tests/bench_belt.png", game.output(), FBW, FBH);
+            budget("belt 2x", sum / 60, 1.1);   // 0.60 after F-10 (F-11: 12 -> 1.1, the median + 0.5)
+            game.settings.renderScale = 1; game.applySettings();
+            found = true;
+        }
     }
 }
 
@@ -418,7 +415,7 @@ void Bench::probe() {
                     else if (fromBetween >= 0) betweenDone = true;
                 }
                 const double at[2] = {fromHaze + (toHaze - fromHaze) * 0.8, fromBetween + (toBetween - fromBetween) * 0.5};
-                const char* what[2] = {"over the deck", "between the decks"};
+                const char* const what[2] = {"over the deck", "between the decks"};
                 for (int k = 0; k < 2; k++) {
                     game.testProbeSkip(at[k]);
                     for (int i = 0; i < 5; i++) { game.frame(in6, 1.0 / 60); in6.newFrame(); }
@@ -965,8 +962,7 @@ int runSoak(int argc, char** argv) {
     printf("soak: %.0f minutes at %dx\n", minutes, scale);
     int stop = 0;
     for (int64_t x = HOME_SX + 1; nowSec() - w0 < minutes * 60; x++) {
-        Star s; if (!starInSector(x, HOME_SY, HOME_SZ + 3, s)) continue;
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(x, HOME_SY, HOME_SZ + 3, s, sys)) continue;
         int body = -1; for (const Body& b : sys.bodies) if (KINDS[b.type].landable && b.type != PT_COMET && b.radiusKm > 1000) { body = b.index; break; }
         if (body < 0) continue;
         game.testParkAt(s, body); run(2.0);

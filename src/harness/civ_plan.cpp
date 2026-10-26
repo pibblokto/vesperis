@@ -277,8 +277,7 @@ void townChecks(const std::function<void(const char*, bool, const std::string&)>
     double worstMs = 0; std::string worstWhat;
     int goneN = 0, goneStanding = 0; std::string goneWhat;   // B-414: the places left before their people's last age
     for (int a = 0; a < AGE_COUNT; a++) {
-        Star st; if (!starInSector(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, st, true)) continue;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, st, sys, true)) continue;
         if (AGE_WORLDS[a].body >= (int)sys.bodies.size()) continue;
         const BodyGen g = BodyGen::make(sys.bodies[AGE_WORLDS[a].body]);
         if (!worldHadCivilisation(g)) continue;
@@ -565,8 +564,7 @@ int runPlan(int argc, char** argv) {
     mkdir("shots/tests", 0755);
     const int which = takePeopleArg(argc, argv);
     if (argc > 5 && std::string(argv[2]) == "view") {   // `plan view <sx> <sz> <body> [second]`: the people's capital through the telescope from above it
-        Star st; if (!starInSector(atoll(argv[3]), 0, atoll(argv[4]), st, true)) { printf("no star\n"); return 1; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(atoll(argv[3]), 0, atoll(argv[4]), st, sys, true)) { printf("no star\n"); return 1; }
         const int bi = atoi(argv[5]);
         if (bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
         const Body& b = sys.bodies[bi]; const BodyGen g = BodyGen::make(b);
@@ -602,8 +600,7 @@ int runPlan(int argc, char** argv) {
     else { printf("plan <sx> <sz> <body> [second] | plan ages\n"); return 1; }
     const int W = 1024, H = 512;
     for (const AgeWorld& aw : worlds) {
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); continue; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); continue; }
         if (aw.body >= (int)sys.bodies.size()) { printf("no body %d\n", aw.body); continue; }
         const Body& b = sys.bodies[aw.body];
         const BodyGen g = BodyGen::make(b);
@@ -739,8 +736,7 @@ static std::vector<std::string> townLines(const RuinSpec& sp, double ms) {
 // T-02: a people's capital through the surface's renderer: from the air over its edge, the light from the side (the plan: the old core, the
 // streets, the districts, the fields round it), and from a street of its middle at the eye's height, looking along it
 static void townViews(const AgeWorld& aw, int scale) {
-    Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) return;
-    StarSystem sys; sys.generate(st);
+    Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) return;
     if (aw.body >= (int)sys.bodies.size()) return;
     const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
     if (!worldHadCivilisation(g)) return;
@@ -822,13 +818,12 @@ static void townViews(const AgeWorld& aw, int scale) {
 static void featureViews(int scale) {
     for (int age = AGE_MEDIEVAL; age <= AGE_MODERN; age++) {
         const AgeWorld& aw = AGE_SCENE_WORLDS[age];
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) continue;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) continue;
         if (aw.body >= (int)sys.bodies.size()) continue;
         const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
         const PeoplePlan& pp = P->plans[std::min(aw.which, P->peoples - 1)];
-        const char* WHAT[3] = {"harbour", "water", "fields"};
+        const char* const WHAT[3] = {"harbour", "water", "fields"};
         for (int w = 0; w < 3; w++) {
             const PlanPlace* found = nullptr; RuinSpec fsp;
             for (const PlanPlace& p : pp.places) {
@@ -904,8 +899,7 @@ int runTowns(int argc, char** argv) {
     else if (argc > 4) worlds.push_back(AgeWorld{atoll(argv[2]), atoll(argv[3]), atoi(argv[4]), which});
     else { printf("towns <sx> <sz> <body> [second] | towns ages | towns view [<sx> <sz> <body> [second]]\n"); return 1; }
     for (const AgeWorld& aw : worlds) {
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); continue; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); continue; }
         if (aw.body >= (int)sys.bodies.size()) { printf("no body %d\n", aw.body); continue; }
         const Body& b = sys.bodies[aw.body];
         const BodyGen g = BodyGen::make(b);
@@ -982,8 +976,7 @@ int runRoads(int argc, char** argv) {
     if (argc < 5) { printf("roads <sx> <sz> <body index> [latDeg lonDeg]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
     double lat = argc > 6 ? atof(argv[5]) * DEG : 0.2, lon = argc > 6 ? atof(argv[6]) * DEG : 0.7;
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);

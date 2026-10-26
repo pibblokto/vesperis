@@ -208,7 +208,7 @@ void Game::drawDroneRack(const CabinFrame& f) {
         else lampAt(lampP, BANK_RED, std::fmod(realTime, 1.0) < 0.5 ? 60 : 22, 2);
         // the screen's cell
         const double z0 = RACK_Z0 + 0.05 + k * (RACK_Z1 - RACK_Z0 - 0.1) / 3, z1 = z0 + (RACK_Z1 - RACK_Z0 - 0.1) / 3 - 0.02;
-        const double cell = cabin.facing == 11 ? 46 : (docked && here ? (ready ? 38 : 28 + 7 * std::sin(realTime * 2.4)) : (std::fmod(realTime + k * 0.3, 1.2) < 0.6 ? 24 : 14));
+        const double cell = cabin.facing == FACE_BAY ? 46 : (docked && here ? (ready ? 38 : 28 + 7 * std::sin(realTime * 2.4)) : (std::fmod(realTime + k * 0.3, 1.2) < 0.6 ? 24 : 14));
         RasterParams rs; rs.bank = BANK_BAY; rs.grain = &cabinGrain; rs.grainScale = 30.0 * FB_SCALE; rs.grainWeight = 0.5;
         RVert q[4]; const Vec3 pts[4] = {Vec3(RACK_X1 + 0.006, SCREEN_Y0, z1), Vec3(RACK_X1 + 0.006, SCREEN_Y0, z0), Vec3(RACK_X1 + 0.006, SCREEN_Y1, z0), Vec3(RACK_X1 + 0.006, SCREEN_Y1, z1)};
         for (int i = 0; i < 4; i++) { const Vec3 v = toView(pts[i]); q[i].x = v.x; q[i].y = v.y; q[i].z = v.z; q[i].shade = cell * flick; q[i].u = pts[i].x + pts[i].z; q[i].v = pts[i].y * 3 + realTime * 0.4; }

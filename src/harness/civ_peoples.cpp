@@ -1,8 +1,8 @@
 // E-03: the peoples and their histories (A-01, H-02, C-13): `peoples`, `history`, the ages' checks
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
+#include "core/text.h"
 
-static std::string lowerOf(std::string s) { for (char& c : s) c = (char)tolower((unsigned char)c); return s; }
 static std::string withThousands(int64_t n) {
     std::string s = std::to_string(n < 0 ? -n : n), o;
     for (size_t i = 0; i < s.size(); i++) { if (i > 0 && (s.size() - i) % 3 == 0) o += ','; o += s[i]; }
@@ -581,8 +581,7 @@ int runHistory(int argc, char** argv) {
     else if (argc > 4) worlds.push_back(AgeWorld{atoll(argv[2]), atoll(argv[3]), atoi(argv[4]), which});
     else { printf("history <sx> <sz> <body> [second] | history ages | history check\n"); return 1; }
     for (const AgeWorld& aw : worlds) {
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); continue; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); continue; }
         if (aw.body >= (int)sys.bodies.size()) { printf("no body %d\n", aw.body); continue; }
         const Body& b = sys.bodies[aw.body];
         const BodyGen g = BodyGen::make(b);
@@ -958,8 +957,7 @@ int runPeoples(int argc, char** argv) {
     if (argc >= 3 && std::string(argv[2]) == "fresh") return runPeoplesFresh(argc, argv);   // A-03
     if (argc >= 5) {   // one world in full
         int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
-        Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
         if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
         const Body& b = sys.bodies[bi]; BodyGen g = BodyGen::make(b);
         int np = peoplesOf(g);
@@ -1012,8 +1010,7 @@ int runPeoples(int argc, char** argv) {
     int want = argc > 2 ? atoi(argv[2]) : 6;
     int civ = 0, two = 0; double t0 = nowSec();
     for (int64_t x = 150; x < 300 && two < want; x++) for (int64_t z = 20; z < 120 && two < want; z++) {
-        Star s; if (!starInSector(x, 0, z, s, false)) continue;
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, false)) continue;
         for (int bi = 0; bi < (int)sys.bodies.size() && two < want; bi++) {
             const Body& b = sys.bodies[bi];
             if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)

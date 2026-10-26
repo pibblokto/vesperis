@@ -174,6 +174,7 @@ public:
     bool loadNewest();
     std::string saveSummary(const std::string& path) const;
     void newGame();
+    void resetExpedition(bool freshTelescope);
     // ---- the state, the clock, and what the harness shares
     GameState state = GameState::TITLE;
     double gameTime() const { return t; }
@@ -512,6 +513,7 @@ protected:
 
     // ---- space: its update, scene and HUD (autopilot.cpp, scene_draw.cpp, hud.cpp; the status line game.cpp)
     void status(const std::string& m, double secs = 4);
+    void refuse(const std::string& m, double secs = 4);   // the status line and the error beep
     void updateSpace(const Input& in, double dt, double realDt);
     void updateShipMotion(double dt);
     void renderSpace();
@@ -637,7 +639,7 @@ protected:
     bool recordingContext(int rec);
     bool openRecording(int rec);
     void updateRecording(const Input& in, double realDt);
-    void renderRecording(); void renderRecordingHUD(double tt);
+    void renderRecording();
     void recordingAudio();
     void recordingPoster(int rec, std::vector<uint32_t>& out);
     double recordTimeAt(const ProbeRecord& r, double clock) const;
@@ -650,7 +652,6 @@ protected:
     // ---- the global keys and the ship's place (game.cpp)
     std::string distanceString(double km) const;
     void handleGlobalKeys(const Input& in);
-    Vec3 shipWorldPos() const { return ship.pos; }
     // ---- auto-explore: its beginning and end, its mind, the chooser (autoexplore.cpp, autoexplore_state.h)
     AutoState ax;
     int autoSel = 0; GameState autoBack = GameState::MENU;   // the chooser's row; where Esc goes back to

@@ -7,7 +7,9 @@ The base everything draws on: 16-bit pixels in a `Framebuffer`, hashes of intege
 - `raster.h/.cpp`: `Proj`, `RVert`, `RasterParams`, `rasterTriangle`, `rasterLine3`, `setRasterBand`
 - `font.h/.cpp`: the 5x7 HUD font on an `RGBCanvas`: `drawText*`, `textWidth`, `fillRectRGB`, `blendRectRGB`
 - `noise.h/.cpp`: `gnoise2/3`, `fbm2/3`, `ridged3`, `worley3`, `GrainTexture`
-- `rng.h`: `mix64`, `hash2i`/`hash3i`, `unitFromHash`, `Rng`, `xorshift32`, `xorshiftRowStarts`
+- `rng.h`: `mix64`, `hash2i`/`hash3i`, `unitFromHash` (`hash01`), `fnv1a`, `Rng`, `xorshift32`, `xorshiftRowStarts`
+- `sphere.h`: a world's unit vectors: `arcLength`, `offsetUnit`, `offsetFlat`, `slerpUnit`, `towardUpTo`/`towardThrough`, `bearingOf`
+- `clock.h`: `nowMs` (timings only); `text.h`: `lowerOf`
 - `parallel.h/.cpp`: the worker pool (`pool::dispatch`, `pool::run`, `pool::inside`), `parallelFor`, `parallelBands`
 - `png.h/.cpp`: `writePNG`, `writePNGAsync` (its own thread), `pngFlush`, `readPNG`
 - `input.h/.cpp`: `Input`, `Key`, `PadState`; `KeyMap` and `PadMap` (bindings, load and save)
@@ -16,6 +18,7 @@ The base everything draws on: 16-bit pixels in a `Framebuffer`, hashes of intege
 
 ## Rules and traps
 - Everything procedural is a pure function of integer coordinates and seeds (rng.h:1): the same input gives identical output.
+  A copied `Rng` forks its stream: helpers take `Rng&`; the two copies there are, are meant (`rules-galaxy.md`).
 - Pixels are the same at any thread count. A pooled pass is row-pure (a row's result independent of the thread and the chunk)
   or band-pinned (`parallelBands`) (parallel.h:6). Only the main thread dispatches (`pool::contended` stays 0); a dispatch
   inside a job runs alone on its thread (`pool::inside`), so `glowDisc` and `blendRectRGB` called from a job run serially. Whoever sets `setRasterBand` (thread_local) resets it afterwards.

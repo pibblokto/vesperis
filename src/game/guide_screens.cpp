@@ -18,7 +18,7 @@
 #include <sstream>
 
 namespace {
-const char* GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",   // R-408: the sights are marked on the sector map (N), not named here
+const char* const GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",   // R-408: the sights are marked on the sector map (N), not named here
                              "TARGET A STAR BY NAME", "TARGET BY COORDINATES", "RETURN TO THE PREVIOUS STAR", "TARGET THE HOME STAR",
                              "SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", "BACK"};
 const int GUIDE_N = (int)(sizeof(GUIDE_ITEMS) / sizeof(GUIDE_ITEMS[0]));
@@ -41,27 +41,26 @@ void Game::beginTextEntry(const std::string& prompt, int kind, const std::string
 }
 
 void Game::updateGuideMenu(const Input& in) {
-    if (in.wasPressed(KEY_UP)) guideSel = (guideSel + GUIDE_N - 1) % GUIDE_N;
-    if (in.wasPressed(KEY_DOWN)) guideSel = (guideSel + 1) % GUIDE_N;
+    menuStep(in, guideSel, GUIDE_N);
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_G)) { state = guideReturn; return; }
     if (!enterKey(in)) return;
     bool onSurface = guideReturn == GameState::SURFACE;
     switch (guideSel) {
         case 0: if (!onSurface) openStarMap(); else status("THE STAR MAP IS READ FROM THE SHIP", 3); break;
-        case 1: if (sys.valid) beginTextEntry(sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", 1, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string()); else status("NO STAR HERE", 3); break;   // D-02: a drifter's place
+        case 1: if (sys.valid) beginTextEntry(sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string()); else status("NO STAR HERE", 3); break;   // D-02: a drifter's place
         case 2: {
             int bi = onSurface && surf.valid ? surf.site.body : ship.localTarget;
-            if (sys.valid && bi >= 0 && bi < (int)sys.bodies.size()) { textBody = bi; beginTextEntry("NAME THIS WORLD", 2, bodyNamed(bi) ? upper(bodyNameOf(bi)) : std::string()); }
+            if (sys.valid && bi >= 0 && bi < (int)sys.bodies.size()) { textBody = bi; beginTextEntry("NAME THIS WORLD", TEXT_WORLD, bodyNamed(bi) ? upper(bodyNameOf(bi)) : std::string()); }
             else status("NO LOCAL TARGET TO NAME", 3);
             break;
         }
-        case 3: beginTextEntry("NOTE FOR THE LOG", 3, ""); break;
+        case 3: beginTextEntry("NOTE FOR THE LOG", TEXT_NOTE, ""); break;
         case 4: logPage = 0; state = GameState::LOG; break;
         case 5: openGallery(); break;
         case 6: state = GameState::STATS; break;
         case 7: if (!onSurface) openShards(); else status("THE SHARDS ARE READ ON THE SHIP", 3); break;   // C-06
-        case 8: if (!onSurface) beginTextEntry("STAR NAME", 4, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
-        case 9: if (!onSurface) beginTextEntry("SECTOR X Y Z", 5, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 8: if (!onSurface) beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
+        case 9: if (!onSurface) beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
         case 10: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
         case 11: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
         case 12: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
@@ -73,8 +72,7 @@ void Game::updateGuideMenu(const Input& in) {
 
 void Game::renderGuideMenu() {
     const int top = 10, bottom = UH - 6, y0 = top + 18;   // C-06: seventeen items at 9 px; the box grew with them (sixteen already ran into the footer)
-    blendRectRGB(canvas, 40, top, UW - 40, bottom, rgb(0, 0, 0), 215);
-    drawRectRGB(canvas, 40, top, UW - 40, bottom, HUD_DIM);
+    drawPanel(canvas, 40, top, UW - 40, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 6, "THE GUIDE", HUD_AMBER);
     for (int i = 0; i < GUIDE_N; i++) {
         int y = y0 + i * 9;
@@ -100,20 +98,20 @@ void Game::updateTextEntry(const Input& in) {
     if (in.wasPressed(KEY_MINUS) && textBuffer.size() < 28) textBuffer += '-';
     if (in.wasPressed(KEY_PERIOD) && textBuffer.size() < 28) textBuffer += '.';
     if (in.wasPressed(KEY_BACKSPACE) && !textBuffer.empty()) textBuffer.pop_back();
-    if (textKind == 6 && in.wasPressed(KEY_TAB)) { textMarkKind = (textMarkKind + 1) % (MARK_PLACE + 1); audio.beep = 4; }   // R-408: what the mark marks
+    if (textKind == TEXT_MARK && in.wasPressed(KEY_TAB)) { textMarkKind = (textMarkKind + 1) % (MARK_PLACE + 1); audio.beep = BEEP_UI; }   // R-408: what the mark marks
     if (in.wasPressed(KEY_ESCAPE)) { state = guideReturn; textMark = -1; textGalaxyMark = -1; return; }
     if (!in.wasPressed(KEY_ENTER)) return;
     std::string text = textBuffer;
     while (!text.empty() && text.back() == ' ') text.pop_back();
     state = guideReturn;
     switch (textKind) {
-        case 1:
+        case TEXT_STAR:
             if (text.empty() || !sys.valid) return;
             guide.names[starKeyOf(sys.star)] = text; guide.save(guidePath);
             status(fmt(sys.sunless() ? "THE PLACE IS NOW CALLED %s" : "THE STAR IS NOW CALLED %s", text.c_str()), 4);   // D-02
             logEvent("NOTE", (sys.sunless() ? "NAMED THE PLACE WITH NO STAR " : "NAMED THE STAR ") + text);
             break;
-        case 2: {
+        case TEXT_WORLD: {
             if (text.empty() || !sys.valid || textBody < 0 || textBody >= (int)sys.bodies.size()) return;
             guide.names[Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, textBody)] = text; guide.save(guidePath);
             const Body& b = sys.bodies[textBody];   // W-06: the telescope names moons, comets and the second sun too
@@ -122,41 +120,41 @@ void Game::updateTextEntry(const Input& in) {
             logEvent("NOTE", fmt("NAMED A %s %s", what, text.c_str()));
             break;
         }
-        case 8: {   // W-06: a star of the neighbourhood seen through the telescope
+        case TEXT_SKY_STAR: {   // W-06: a star of the neighbourhood seen through the telescope
             if (text.empty()) return;
             guide.names[starKeyOf(textStar)] = text; guide.save(guidePath);
             status(fmt("THE STAR IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", "NAMED A STAR IN THE SKY " + text);
             break;
         }
-        case 3:
+        case TEXT_NOTE:
             if (text.empty()) return;
             logEvent("NOTE", text);
             status("NOTE WRITTEN IN THE LOG", 3);
             break;
-        case 4: targetStarByName(text); break;
-        case 6: finishMark(text); break;   // R-408: a mark placed or renamed (an empty name places an unnamed one)
-        case 10: finishGalaxyMark(text); break;   // G-06: a mark of the galaxy, likewise
-        case 9: {   // X-04: the storm a probe fell into (its screen, its recording)
+        case TEXT_FIND_STAR: targetStarByName(text); break;
+        case TEXT_MARK: finishMark(text); break;   // R-408: a mark placed or renamed (an empty name places an unnamed one)
+        case TEXT_PLACE: finishGalaxyMark(text); break;   // G-06: a mark of the galaxy, likewise
+        case TEXT_STORM: {   // X-04: the storm a probe fell into (its screen, its recording)
             if (text.empty() || textStormKey.empty()) return;
             guide.names[textStormKey] = text; guide.save(guidePath);
             status(fmt("THE STORM IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED A STORM %s", text.c_str()));
             break;
         }
-        case 7: {   // C-04: the piece's name (the shard on the decoder screen)
+        case TEXT_PIECE: {   // C-04: the piece's name (the shard on the decoder screen)
             if (text.empty() || textShardKey.empty()) return;
             guide.names[textShardKey] = text; guide.save(guidePath);
             status(fmt("THE PIECE IS NOW CALLED %s", text.c_str()), 4);
             logEvent("NOTE", fmt("NAMED A PIECE OF THE OLD PEOPLE'S MUSIC %s", text.c_str()));
             break;
         }
-        case 5: {
+        case TEXT_SECTOR: {
             std::istringstream is(text);
             long long x, y, z;
-            if (!(is >> x >> y >> z)) { status("USE THREE NUMBERS: X Y Z", 4); audio.beep = 3; return; }
+            if (!(is >> x >> y >> z)) { refuse("USE THREE NUMBERS: X Y Z"); return; }
             Star s;
-            if (!placeInSector(x, y, z, s, true)) { status(fmt("NO STAR IN SECTOR %lld %lld %lld", x, y, z), 4); audio.beep = 3; return; }   // D-01: or its drifter
+            if (!placeInSector(x, y, z, s, true)) { refuse(fmt("NO STAR IN SECTOR %lld %lld %lld", x, y, z)); return; }   // D-01: or its drifter
             setRemoteStar(s);
             break;
         }
@@ -165,16 +163,15 @@ void Game::updateTextEntry(const Input& in) {
 
 void Game::renderTextEntry() {
     const int top = padKeyboardShown() ? 18 : 70, bottom = top + 60;   // R-418: over the controller's keyboard
-    blendRectRGB(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // R-408: as wide as its last line (it ran past the box)
-    drawRectRGB(canvas, 6, top, UW - 6, bottom, HUD_DIM);
+    drawPanel(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // R-408: as wide as its last line (it ran past the box)
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
     std::string shown = textBuffer + (std::fmod(realTime, 0.8) < 0.4 ? "_" : " ");
     drawTextCentered(canvas, UW / 2, top + 26, shown.c_str(), HUD_WHITE);
-    if (textKind == 6) {   // R-408: what the mark marks, its glyph on the maps
+    if (textKind == TEXT_MARK) {   // R-408: what the mark marks, its glyph on the maps
         std::string k = textMarkKind < LM_COUNT ? fmt("%s %s", LANDMARK_KIND_SYMBOLS[textMarkKind], LANDMARK_KIND_NAMES[textMarkKind]) : std::string("A PLACE");
         drawTextCentered(canvas, UW / 2, top + 38, fmt("MARKS %s - TAB CHANGES", k.c_str()).c_str(), HUD_CYAN);
     }
-    if (textKind == 10) drawTextCentered(canvas, UW / 2, top + 38, trunc(textGalaxyLine, 50).c_str(), HUD_CYAN);   // G-06: the place marked
+    if (textKind == TEXT_PLACE) drawTextCentered(canvas, UW / 2, top + 38, trunc(textGalaxyLine, 50).c_str(), HUD_CYAN);   // G-06: the place marked
     drawTextCentered(canvas, UW / 2, bottom - 12, "LETTERS, DIGITS, SPACE, -   ENTER OK   ESC CANCEL", HUD_DIM);
 }
 
@@ -312,11 +309,10 @@ void Game::openGallery() {
 void Game::updateGallery(const Input& in) {
     int n = (int)galleryItems.size();
     if (n > 0) {
-        if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) gallerySel = (gallerySel + n - 1) % n;
-        if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) gallerySel = (gallerySel + 1) % n;
+        menuStep(in, gallerySel, n, true);
     }
     if (n > 0 && enterKey(in) && galleryItems[gallerySel].rec >= 0) {   // X-04: a recording plays on the ship's screen
-        if (guideReturn == GameState::SURFACE) { status("THE RECORDINGS PLAY ON THE SHIP'S SCREEN", 3); audio.beep = 3; }
+        if (guideReturn == GameState::SURFACE) { refuse("THE RECORDINGS PLAY ON THE SHIP'S SCREEN", 3); }
         else openRecording(galleryItems[gallerySel].rec);
         return;
     }

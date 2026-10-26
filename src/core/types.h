@@ -51,9 +51,6 @@ struct Mat3 {
         r.m[2][0] = r2.x; r.m[2][1] = r2.y; r.m[2][2] = r2.z;
         return r;
     }
-    static Mat3 fromColumns(const Vec3& c0, const Vec3& c1, const Vec3& c2) {
-        return fromRows(c0, c1, c2).transposed();
-    }
     static Mat3 axisAngle(const Vec3& axisIn, double a) {
         Vec3 u = normalize(axisIn);
         double c = std::cos(a), s = std::sin(a), t = 1 - c;

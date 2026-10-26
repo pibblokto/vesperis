@@ -38,7 +38,7 @@ std::vector<std::string> Game::worldNamesAt(const std::string& starKey) const {
 }
 
 void Game::setRemoteStar(const Star& s) {
-    if (sys.valid && s.seed == sys.star.seed) { status("THAT IS THE CURRENT STAR", 3); audio.beep = 3; return; }
+    if (sys.valid && s.seed == sys.star.seed) { refuse("THAT IS THE CURRENT STAR", 3); return; }
     jumpPlot.seed = 0;   // G-06: a target of any other kind is no plotted jump (`plotJump` sets it again after)
     ship.remote = s;
     if (ship.remote.name.empty()) placeInSector(s.sx, s.sy, s.sz, ship.remote, true);
@@ -47,7 +47,7 @@ void Game::setRemoteStar(const Star& s) {
     double ly = length(ship.remote.pos - ship.pos) / SECTOR_KM;
     if (ship.remote.cls == STAR_ROGUE) status(fmt("REMOTE TARGET: %s - NO STAR - %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), ly), 6);   // D-01: a drifter has no class to show
     else status(fmt("REMOTE TARGET: %s (%s) %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), STAR_CLASSES[ship.remote.cls].code, ly), 6);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
 void Game::targetStarByName(const std::string& name) {
@@ -68,7 +68,7 @@ void Game::targetStarByName(const std::string& name) {
         double d = length2(s.pos - ship.pos);
         if (d < bestD) { bestD = d; best = &s; }
     }
-    if (!best) { status(fmt("NO STAR CALLED %s WITHIN %d LY", want.c_str(), 10), 4); audio.beep = 3; return; }
+    if (!best) { refuse(fmt("NO STAR CALLED %s WITHIN %d LY", want.c_str(), 10)); return; }
     Star full; starInSector(best->sx, best->sy, best->sz, full, true);
     setRemoteStar(full);
 }
@@ -80,12 +80,12 @@ void Game::targetPreviousStar() {
         if (sys.valid && sx == sys.star.sx && sy == sys.star.sy && sz == sys.star.sz) continue;
         Star s; if (placeInSector(sx, sy, sz, s, true)) { setRemoteStar(s); state = guideReturn; return; }   // D-01: a drifter visited too
     }
-    status("NO PREVIOUS STAR IN THE HISTORY", 3); audio.beep = 3;
+    refuse("NO PREVIOUS STAR IN THE HISTORY", 3);
 }
 
 void Game::targetHome() {
     int64_t sx, sy, sz;
-    if (guide.home.empty() || !Guide::parseStarKey(guide.home, sx, sy, sz)) { status("NO HOME STAR SET", 3); audio.beep = 3; return; }
+    if (guide.home.empty() || !Guide::parseStarKey(guide.home, sx, sy, sz)) { refuse("NO HOME STAR SET", 3); return; }
     Star s;
     if (!placeInSector(sx, sy, sz, s, true)) { status("THE HOME SECTOR HAS NO STAR", 3); return; }
     setRemoteStar(s);
@@ -104,11 +104,11 @@ void Game::openStarMap() {
 
 void Game::updateStarMap(const Input& in) {
     if (in.wasPressed(KEY_TAB)) {   // G-05: the neighbourhood and the galaxy; G-06: on a plotted jump the stars round its end (the look before the leap)
-        if (mapPage == 1 && ship.mode == ShipState::VIMANA) { status("IN FLIGHT THE MAP SHOWS THE GALAXY", 3); audio.beep = 3; }
+        if (mapPage == 1 && ship.mode == ShipState::VIMANA) { refuse("IN FLIGHT THE MAP SHOWS THE GALAXY", 3); }
         else if (mapPage == 1 && chartPlotted()) {
             gchart.look = true; gchart.lookCentre = ship.remote.pos; gchart.lookNb.update(ship.remote.pos);
-            mapPage = 0; mapZoom = 1.0; audio.beep = 4;
-        } else { gchart.look = false; mapPage = 1 - mapPage; audio.beep = 4; }
+            mapPage = 0; mapZoom = 1.0; audio.beep = BEEP_UI;
+        } else { gchart.look = false; mapPage = 1 - mapPage; audio.beep = BEEP_UI; }
         return;
     }
     if (mapPage == 1) { updateGalaxyChart(in); return; }

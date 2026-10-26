@@ -125,7 +125,7 @@ void Game::takeInstrument() {
     for (const std::string& k : guide.instruments) if (k.compare(0, prefix.size(), prefix) == 0) here++;
     logEvent("INSTRUMENT", fmt("%s OF THE OLD PEOPLE TAKEN ON %s, TO THE CABIN'S CASE (%d FROM THIS WORLD)", what.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here));
     status(fmt("%s OF THE OLD PEOPLE - TO THE CABIN'S CASE", what.c_str()), 5);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 // C-03: E at a shard: the guide, the log, the status
 void Game::takeShard() {
@@ -143,7 +143,7 @@ void Game::takeShard() {
     logEvent("SHARD", fmt("%s OF THE OLD PEOPLE %s %s %s %s ON %s (%d OF %d FOUND THERE)%s", what.c_str(), verb, ns.wall ? "IN" : "FROM", ns.archive ? (std::string("AN ARCHIVE IN ") + buildingPlaceName(ns.place)).c_str() : buildingPlaceName(ns.place),
                           where.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here, total, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
     status(caught ? fmt("%s OF THE OLD PEOPLE - THE RECORDING THE RADAR CAUGHT (%d OF %d)", what.c_str(), here, total) : fmt("%s OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", what.c_str(), here, total), 5);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
 // C-14: a friend's export placed beside the guide as its inbox file: their names into the inbox (yours win), the shards they found

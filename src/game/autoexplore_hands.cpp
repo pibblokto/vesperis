@@ -133,7 +133,7 @@ bool Game::autoCabinToCapsule() {
     const double sx = vx / L * 1.55, sz = vz / L * 1.55, face = std::atan2(-sx, -sz);
     if (!autoCabinWalk(sx, sz, face)) return false;
     autoLook(face, -0.25, 0.8);
-    if (c.facing == 6 && autoEvery(1.0)) autoTap(KEY_E);
+    if (c.facing == FACE_CAGE && autoEvery(1.0)) autoTap(KEY_E);
     return state != GameState::SPACE;
 }
 

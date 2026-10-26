@@ -224,7 +224,7 @@ bool Game::recordingContext(int rec) {
     if (slash == std::string::npos || !Guide::parseStarKey(r.body, sx, sy, sz)) return false;
     const int bi = atoi(r.body.c_str() + slash + 1);
     Star s;
-    if (!placeInSector(sx, sy, sz, s, true)) { status("THE GALAXY WAS REBUILT SINCE THIS RECORDING - ITS STAR IS GONE", 5); audio.beep = 3; return false; }
+    if (!placeInSector(sx, sy, sz, s, true)) { refuse("THE GALAXY WAS REBUILT SINCE THIS RECORDING - ITS STAR IS GONE", 5); return false; }
     const bool here = sys.star.sx == sx && sys.star.sy == sy && sys.star.sz == sz && !sys.bodies.empty();
     if (!here && (replay.here || replay.sys.star.seed != s.seed || replay.sys.bodies.empty())) {
         replay.sys = StarSystem(); replay.sys.generate(s); replay.sys.valid = true;
@@ -233,7 +233,7 @@ bool Game::recordingContext(int rec) {
     }
     replay.here = here;
     const StarSystem& S = here ? sys : replay.sys;
-    if (bi < 0 || bi >= (int)S.bodies.size() || !isProbeGiant(S.bodies[bi].type)) { status("THE GIANT OF THIS RECORDING IS GONE: THE WORLDS WERE REGENERATED", 5); audio.beep = 3; return false; }
+    if (bi < 0 || bi >= (int)S.bodies.size() || !isProbeGiant(S.bodies[bi].type)) { refuse("THE GIANT OF THIS RECORDING IS GONE: THE WORLDS WERE REGENERATED", 5); return false; }
     if (replay.rec != rec || replay.p.seed != r.seed || replay.p.starSeed != s.seed) {
         ProbeState& p = replay.p;
         p = ProbeState();
@@ -257,14 +257,14 @@ bool Game::openRecording(int rec) {
     replay.p.lastFlashSlot = -1;
     state = GameState::RECORDING;
     status(fmt("THE RECORDING OF %s", recordTitle(guide.probes[rec]).c_str()), 4);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
     return true;
 }
 
 void Game::updateRecording(const Input& in, double realDt) {
     if (replay.rec < 0 || replay.rec >= (int)guide.probes.size()) { state = GameState::GALLERY; return; }
     const ProbeRecord& r = guide.probes[replay.rec];
-    if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) { state = GameState::GALLERY; galleryLoaded = -1; audio.beep = 4; return; }
+    if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) { state = GameState::GALLERY; galleryLoaded = -1; audio.beep = BEEP_UI; return; }
     const bool atEnd = replay.clock >= r.endClock;
     replay.fast = in.shift();
     if (in.wasPressed(KEY_SPACE)) { if (atEnd) replay.clock = 0, replay.playing = true; else replay.playing = !replay.playing; }
@@ -299,8 +299,8 @@ void Game::updateRecording(const Input& in, double realDt) {
     replay.lookPitch = clampd(replay.lookPitch - in.mouseDy * rate * (settings.invertY ? -1 : 1), -60 * DEG, 60 * DEG);
     if (in.wasPressed(KEY_X) && !in.ctrl()) replay.lookYaw = replay.lookPitch = 0;
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // the storm it fell into
-        if (r.storm.empty()) { status("THIS PROBE FELL INTO NO STORM", 3); audio.beep = 3; }
-        else { textStormKey = r.storm; guideReturn = GameState::RECORDING; const std::string n = nameOfKey(r.storm); beginTextEntry("NAME THE STORM", 9, n == "UNKNOWN" ? std::string() : upper(n)); }
+        if (r.storm.empty()) { refuse("THIS PROBE FELL INTO NO STORM", 3); }
+        else { textStormKey = r.storm; guideReturn = GameState::RECORDING; const std::string n = nameOfKey(r.storm); beginTextEntry("NAME THE STORM", TEXT_STORM, n == "UNKNOWN" ? std::string() : upper(n)); }
     }
 }
 

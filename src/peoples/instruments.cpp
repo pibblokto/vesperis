@@ -158,7 +158,7 @@ struct Organology {
     double machine = 0.5;          // its chance of a machine for its wax cylinders
 };
 
-double h01(uint64_t seed, uint64_t k) { return unitFromHash(mix64(seed ^ (0xC17A11ULL + k * 0x9E3779B97F4A7C15ULL))); }
+double keyUnit(uint64_t seed, uint64_t k) { return unitFromHash(mix64(seed ^ (0xC17A11ULL + k * 0x9E3779B97F4A7C15ULL))); }
 
 Organology organologyOf(const BodyGen& gNow, const Lore& L) {
     BodyGen gTmp; const BodyGen& g = thenWorld(gNow, gTmp);   // P-04: the world in their time (a dead world's living one)
@@ -184,16 +184,16 @@ Organology organologyOf(const BodyGen& gNow, const Lore& L) {
     if (g.hasTrait(TR_GIANT_FLORA)) wood = std::max(wood, 1.0) * 1.3;
     if (g.hasTrait(TR_LAKELAND)) cane = std::max(cane, 0.5);
     if (desert) { wood *= 0.3; cane *= 0.35; gourd = std::max(gourd * 0.6, 0.3); pith *= 0.3; }
-    if (h01(O.seed, 1) < 0.25) gourd = std::max(gourd, 0.35);
+    if (keyUnit(O.seed, 1) < 0.25) gourd = std::max(gourd, 0.35);
     const bool sea = !desert || g.oldSeaM > -1e8;
     int fauna = 0;
-    if (h01(g.seed, 2) < 0.78) fauna |= 1;
-    if (h01(g.seed, 3) < 0.45) fauna |= 2;
-    if (sea && h01(g.seed, 4) < 0.8) fauna |= 4;
+    if (keyUnit(g.seed, 2) < 0.78) fauna |= 1;
+    if (keyUnit(g.seed, 3) < 0.45) fauna |= 2;
+    if (sea && keyUnit(g.seed, 4) < 0.8) fauna |= 4;
     if (!fauna) fauna = 1;
     const bool cold = g.tempBias < -8 || g.hasTrait(TR_GLACIAL) || g.hasTrait(TR_SNOWBALL) || g.iceCapLat < 52;
     const bool volc = g.hasTrait(TR_CINDER_FIELD) || g.hasTrait(TR_BLACK_SAND) || g.hasTrait(TR_TRAPS) || g.hasTrait(TR_GEYSERS) || g.hasTrait(TR_GLASSED) || g.volcanoes > 0.8;
-    const bool crystal = g.hasTrait(TR_SPIRES) || g.hasTrait(TR_SALT_FLATS) || g.hasTrait(TR_GLASSED) || h01(g.seed, 5) < 0.08;
+    const bool crystal = g.hasTrait(TR_SPIRES) || g.hasTrait(TR_SALT_FLATS) || g.hasTrait(TR_GLASSED) || keyUnit(g.seed, 5) < 0.08;
     for (int m = 0; m < IM_COUNT; m++) {
         double a = 1;
         switch (MATS[m].need) {
@@ -234,7 +234,7 @@ Organology organologyOf(const BodyGen& gNow, const Lore& L) {
     // the plans it leaned to: a log-normal draw each, the genome's push
     O.sym = G.of(GV_SYMMETRY); O.plan = G.of(GV_PLAN); O.roof = G.of(GV_ROOF); O.massing = G.of(GV_MASSING);
     for (int p = 0; p < IP_COUNT; p++) {
-        const double u1 = std::max(1e-9, h01(O.seed, 100 + p)), u2 = h01(O.seed, 300 + p);
+        const double u1 = std::max(1e-9, keyUnit(O.seed, 100 + p)), u2 = keyUnit(O.seed, 300 + p);
         const double gz = std::sqrt(-2 * std::log(u1)) * std::cos(TAU * u2);
         double w = std::exp(1.1 * gz);
         const unsigned f = INSTRUMENT_PLANS[p].flags;
@@ -272,7 +272,7 @@ Organology organologyOf(const BodyGen& gNow, const Lore& L) {
     O.top = clampi(G.of(GV_TOPS), 0, 4); O.deco = clampi(G.of(GV_ORNAMENT), 0, 3); O.motif = G.of(GV_MOTIF);
     O.number = G.number(); O.rhythm = G.of(GV_RHYTHM); O.light = G.of(GV_LIGHT); O.accent = G.accentPlace();
     O.slender = G.at(GV_PROPORTION); O.painted = G.at(GV_PAINTED);
-    O.machine = 0.35 + 0.4 * h01(O.seed, 7);
+    O.machine = 0.35 + 0.4 * keyUnit(O.seed, 7);
     return O;
 }
 
@@ -647,7 +647,7 @@ void traditionMakes(Tradition& T, const BodyGen& g, const Lore& L) {
                 tb.name = T.makes[tb.make].plural;
             }
         }
-        if (a == AGE_INDUSTRIAL && h01(O.seed, 8) < O.machine) T.machine = makeOf(0x3AC4ULL, IC_MACHINE, MR_LEAD);   // the cylinders' machine, where it was made
+        if (a == AGE_INDUSTRIAL && keyUnit(O.seed, 8) < O.machine) T.machine = makeOf(0x3AC4ULL, IC_MACHINE, MR_LEAD);   // the cylinders' machine, where it was made
     }
 }
 

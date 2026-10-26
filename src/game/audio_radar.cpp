@@ -60,7 +60,7 @@ void AudioSynth::rvDerive(RadarVar& v, uint64_t seed) {
 }
 
 const char* AudioSynth::mathsName(uint64_t seed) {
-    static const char* N[8] = {"the primes", "the squares", "Fibonacci's numbers", "the powers of two", "the triangular numbers", "the harmonic series", "a count in binary", "the digits of pi"};
+    static const char* const N[8] = {"the primes", "the squares", "Fibonacci's numbers", "the powers of two", "the triangular numbers", "the harmonic series", "a count in binary", "the digits of pi"};
     RadarVar v; rvDerive(v, seed); return N[std::max(0, std::min(7, v.mathKind))];
 }
 

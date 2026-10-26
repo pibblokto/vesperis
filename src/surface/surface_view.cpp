@@ -1,5 +1,6 @@
 #include "surface_view.h"
 #include "surface_internal.h"
+#include "core/clock.h"
 
 namespace {
 // rotate a local (x east, z north) vector by a heading change
@@ -577,7 +578,6 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
         cloudThr = 1.0 - env.cloudCover * 0.75;
         cloudWx = windDriftX; cloudWz = windDriftZ;
     }
-    auto nowMs = []() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); };
     double tSec = nowMs();
     auto section = [&](int k) { double n = nowMs(); lastRenderMs[k] = n - tSec; tSec = n; };
     setupPalette(fb);

@@ -100,7 +100,7 @@ struct FaceOnColumn { double column = 0, disk = 0, arm = 0, bulge = 0; };
 FaceOnColumn galaxyFaceOnColumn(double sx, double sz);
 // M9-13 regions of the galaxy: where a sector sits decides star classes, names and the backdrop.
 enum GalaxyRegion { REGION_CORE = 0, REGION_BULGE, REGION_ARM, REGION_DISK, REGION_HALO, REGION_CLUSTER, REGION_NEBULA, REGION_OPEN, REGION_COUNT };   // G-02: REGION_OPEN, an open cluster of the disc
-extern const char* REGION_NAMES[REGION_COUNT];
+extern const char* const REGION_NAMES[REGION_COUNT];
 int galaxyRegion(int64_t sx, int64_t sy, int64_t sz);
 // G-03: the galaxy seen from inside. `galaxyColumn` integrates the light of the unresolved stars along a direction from
 // an observer (sector units) behind the dust: the column of stars seen through the extinction in front of each of them

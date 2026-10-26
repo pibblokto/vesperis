@@ -423,7 +423,7 @@ void renderLandformSites(bool search) {   // G-04: `landforms sites search` list
                  shareOver(m.slopes16, 1.0) * 100, (1 - shareOver(m.slopes16, 1.35)) * 100, m.med4);
         char l3[160]; snprintf(l3, sizeof l3, "RELIEF 770 M %.0f M   2 KM %.0f M   16 KM %.0f M   FLOORS %.0f%%   512 M: MEDIAN %.4f P90 %.4f", m.relief770, m.relief2k, m.relief16k, m.floors * 100, percentile(m.slopes512, 0.5), percentile(m.slopes512, 0.9));
         char l4[160]; snprintf(l4, sizeof l4, "LANDING MAP CLASS %s (PROBE %.3f)   COST %.1f US PER 16 M SAMPLE   GEN %d", CLASS_NAMES[m.cls], m.probe, m.usPerSample, GEN_VERSION);
-        const char* lines[4] = {title.c_str(), l2, l3, l4};
+        const char* const lines[4] = {title.c_str(), l2, l3, l4};
         for (int k = 0; k < 4; k++) drawText(sheet.cv, 330, 204 + k * 11, lines[k], k ? rgb(200, 230, 255) : rgb(255, 220, 120));
         sheet.save(std::string("shots/tests/landforms_site_") + L.name + ".png");
         printf("%-20s %s\n", L.name, metricsLine(m).c_str());
@@ -436,7 +436,7 @@ int runMatlod(int argc, char** argv) {
     // <latDeg> <lonDeg> [halfKm] [stepM]` round one place: the share of points whose material differs between
     // neighbouring scales (4/16, 16/64, 64/512, 512/2048 m), the pairs that differ, and the rms height difference
     static const double SCALES[5] = {4, 16, 64, 512, 2048};
-    static const char* STEPS[4] = {"4/16", "16/64", "64/512", "512/2k"};
+    static const char* const STEPS[4] = {"4/16", "16/64", "64/512", "512/2k"};
     struct Agg { long n = 0; long diff[4] = {0, 0, 0, 0}; double h2[4] = {0, 0, 0, 0}; std::map<std::pair<int, int>, long> pairs[4]; };
     auto measure = [&](const StarSystem& sys, int bi, double lat, double lon, double halfM, double stepM, Agg& a) {
         SurfaceSite st; st.init(&sys, bi, lat, lon, 1000.0);
@@ -475,8 +475,7 @@ int runMatlod(int argc, char** argv) {
     };
     if (argc > 2 && std::string(argv[2]) == "spot") {
         if (argc < 9) { printf("matlod spot <sx> <sy> <sz> <body> <latDeg> <lonDeg> [halfKm] [stepM]\n"); return 1; }
-        Star s; if (!starInSector(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), s)) { printf("no star\n"); return 1; }
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), s, sys)) { printf("no star\n"); return 1; }
         int bi = atoi(argv[6]); if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
         double halfM = (argc > 9 ? atof(argv[9]) : 3.0) * 1000.0, stepM = argc > 10 ? atof(argv[10]) : 50.0;
         Agg a; measure(sys, bi, atof(argv[7]) * DEG, atof(argv[8]) * DEG, halfM, stepM, a);
@@ -587,38 +586,34 @@ int runDrain(int argc, char** argv) {
 // B-320: the inland water of the first felisian worlds at 16 m detail: rivers, lakes, pools per thousand samples, the first of each
 int runWater(int argc, char** argv) {
     int wanted = argc > 2 ? atoi(argv[2]) : 3, shown = 0;
-    for (int64_t x = 150; x < 320 && shown < wanted; x++)
-        for (int64_t z = 20; z < 140 && shown < wanted; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && shown < wanted; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type != PT_FELISIAN) continue;
-                BodyGen g = BodyGen::make(b);
-                long n = 0, land = 0, kinds[5] = {0, 0, 0, 0, 0}, wet[5] = {0, 0, 0, 0, 0};
-                double firstLat[5] = {0, 0, 0, 0, 0}, firstLon[5] = {0, 0, 0, 0, 0}; bool have[5] = {false, false, false, false, false};
-                // O6-03: a window of 1.2 x 1.2 degrees round the first land site of the body, at 16 m (the planet's drainage would
-                // take a tile per sample over the whole globe), 400 x 400 samples
-                std::vector<std::pair<double, double>> sites; landSitesOf(sys, bi, 0x3A, 1, sites);
-                double cla = sites[0].first / DEG, cln = sites[0].second;
-                DrainStats ds = drainageStats(g, StarSystem::bodyFromLatLon(cla * DEG, cln), 40);
-                printf("%-16s flood round %.1f %.1f: %d cells, %d channels, %d lake cells, %d sea; largest %.0f km2; downstream lower or level %d of %d; tile %.0f ms\n", b.name.c_str(), cla, cln / DEG,
-                       ds.cells, ds.channels, ds.lakes, ds.sea, ds.maxAcc, ds.monotone, ds.tested, ds.msBuild);
-                for (double la = cla - 0.6; la <= cla + 0.6; la += 0.003)
-                    for (int k = 0; k < 400; k++) {
-                        double ln = cln + (k - 200) * 0.003 * DEG / std::max(0.2, std::cos(cla * DEG));
-                        SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
-                        n++;
-                        if (ss.height > 0) land++;
-                        if (ss.waterKind) { kinds[ss.waterKind]++; if (ss.material == MAT_WATER) { wet[ss.waterKind]++; if (!have[ss.waterKind]) { have[ss.waterKind] = true; firstLat[ss.waterKind] = la; firstLon[ss.waterKind] = ln / DEG; } } }
-                    }
-                printf("%-16s [%s] land %.0f%%: per 1000 samples rivers %.1f (wet %.1f), lakes %.1f (wet %.1f), pools %.1f (wet %.1f), rift lakes %.1f\n", b.name.c_str(), traitList(g).c_str(), 100.0 * land / n,
-                       1000.0 * kinds[1] / n, 1000.0 * wet[1] / n, 1000.0 * kinds[2] / n, 1000.0 * wet[2] / n, 1000.0 * kinds[3] / n, 1000.0 * wet[3] / n, 1000.0 * kinds[4] / n);
-                for (int kd = 1; kd < 5; kd++) if (have[kd]) printf("    first %s at %.2f %.2f\n", kd == 1 ? "river" : (kd == 2 ? "lake" : (kd == 3 ? "pool" : "rift lake")), firstLat[kd], firstLon[kd]);
-                shown++;
-            }
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return shown < wanted; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && shown < wanted; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type != PT_FELISIAN) continue;
+            BodyGen g = BodyGen::make(b);
+            long n = 0, land = 0, kinds[5] = {0, 0, 0, 0, 0}, wet[5] = {0, 0, 0, 0, 0};
+            double firstLat[5] = {0, 0, 0, 0, 0}, firstLon[5] = {0, 0, 0, 0, 0}; bool have[5] = {false, false, false, false, false};
+            // O6-03: a window of 1.2 x 1.2 degrees round the first land site of the body, at 16 m (the planet's drainage would
+            // take a tile per sample over the whole globe), 400 x 400 samples
+            std::vector<std::pair<double, double>> sites; landSitesOf(sys, bi, 0x3A, 1, sites);
+            double cla = sites[0].first / DEG, cln = sites[0].second;
+            DrainStats ds = drainageStats(g, StarSystem::bodyFromLatLon(cla * DEG, cln), 40);
+            printf("%-16s flood round %.1f %.1f: %d cells, %d channels, %d lake cells, %d sea; largest %.0f km2; downstream lower or level %d of %d; tile %.0f ms\n", b.name.c_str(), cla, cln / DEG,
+                   ds.cells, ds.channels, ds.lakes, ds.sea, ds.maxAcc, ds.monotone, ds.tested, ds.msBuild);
+            for (double la = cla - 0.6; la <= cla + 0.6; la += 0.003)
+                for (int k = 0; k < 400; k++) {
+                    double ln = cln + (k - 200) * 0.003 * DEG / std::max(0.2, std::cos(cla * DEG));
+                    SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
+                    n++;
+                    if (ss.height > 0) land++;
+                    if (ss.waterKind) { kinds[ss.waterKind]++; if (ss.material == MAT_WATER) { wet[ss.waterKind]++; if (!have[ss.waterKind]) { have[ss.waterKind] = true; firstLat[ss.waterKind] = la; firstLon[ss.waterKind] = ln / DEG; } } }
+                }
+            printf("%-16s [%s] land %.0f%%: per 1000 samples rivers %.1f (wet %.1f), lakes %.1f (wet %.1f), pools %.1f (wet %.1f), rift lakes %.1f\n", b.name.c_str(), traitList(g).c_str(), 100.0 * land / n,
+                   1000.0 * kinds[1] / n, 1000.0 * wet[1] / n, 1000.0 * kinds[2] / n, 1000.0 * wet[2] / n, 1000.0 * kinds[3] / n, 1000.0 * wet[3] / n, 1000.0 * kinds[4] / n);
+            for (int kd = 1; kd < 5; kd++) if (have[kd]) printf("    first %s at %.2f %.2f\n", kd == 1 ? "river" : (kd == 2 ? "lake" : (kd == 3 ? "pool" : "rift lake")), firstLat[kd], firstLon[kd]);
+            shown++;
         }
+    }
     return 0;
 }
 
@@ -627,35 +622,31 @@ int runClimate(int argc, char** argv) {
     int wanted = argc > 2 ? atoi(argv[2]) : 24, shown = 0;
     int totBio[BIO_COUNT] = {0}; long totN = 0; int iceT = 0, iceCap = 0, iceSnow = 0;
     Rng r(0xC11A);
-    for (int64_t x = 150; x < 320 && shown < wanted; x++)
-        for (int64_t z = 20; z < 140 && shown < wanted; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && shown < wanted; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type != PT_FELISIAN) continue;
-                BodyGen g = BodyGen::make(b);
-                setDrainageEnabled(false);   // O6-03: 1500 random points over the globe would build a tile each; the biome shares do not need the rivers
-                int bio[BIO_COUNT] = {0}; int n = 0, land = 0, inland = 0;
-                for (int k = 0; k < 1500; k++) {
-                    double lat = std::asin(r.range(-1, 1)), lon = r.range(-PI, PI);
-                    SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), 400);
-                    n++; bio[ss.biome]++; if (ss.height > 0) land++;
-                    if (ss.material == MAT_WATER && ss.water > 0.5) inland++;   // E-02: a count of the wetlands' lakes was never printed
-                    if (ss.biome == BIO_ICE && ss.height > 0) {
-                        double T = climateTempC(g, std::fabs(lat) / DEG, ss.height, 0, 0);
-                        double lf = std::fabs(lat) / DEG / 85.0, snowLine = g.snowLine * std::max(0.0, 1.0 - lf * lf);
-                        if (T < -8) iceT++; else if (ss.height > snowLine) iceSnow++; else iceCap++;
-                    }
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return shown < wanted; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && shown < wanted; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type != PT_FELISIAN) continue;
+            BodyGen g = BodyGen::make(b);
+            setDrainageEnabled(false);   // O6-03: 1500 random points over the globe would build a tile each; the biome shares do not need the rivers
+            int bio[BIO_COUNT] = {0}; int n = 0, land = 0, inland = 0;
+            for (int k = 0; k < 1500; k++) {
+                double lat = std::asin(r.range(-1, 1)), lon = r.range(-PI, PI);
+                SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), 400);
+                n++; bio[ss.biome]++; if (ss.height > 0) land++;
+                if (ss.material == MAT_WATER && ss.water > 0.5) inland++;   // E-02: a count of the wetlands' lakes was never printed
+                if (ss.biome == BIO_ICE && ss.height > 0) {
+                    double T = climateTempC(g, std::fabs(lat) / DEG, ss.height, 0, 0);
+                    double lf = std::fabs(lat) / DEG / 85.0, snowLine = g.snowLine * std::max(0.0, 1.0 - lf * lf);
+                    if (T < -8) iceT++; else if (ss.height > snowLine) iceSnow++; else iceCap++;
                 }
-                printf("%-14s tempK %3.0f bias %+5.1f sea %+.2f cap %2.0f snow %4.0f  land %3.0f%% inland water %.1f%% [%s]:", b.name.c_str(), b.tempK, g.tempBias, g.seaLevel, g.iceCapLat, g.snowLine, 100.0 * land / n, 100.0 * inland / n, traitList(g).c_str());
-                for (int k = 1; k < BIO_COUNT; k++) if (bio[k] * 100 / n >= 1) printf(" %s %d%%", BIOME_NAMES[k], bio[k] * 100 / n);
-                printf("\n");
-                for (int k = 0; k < BIO_COUNT; k++) totBio[k] += bio[k];
-                totN += n; shown++;
             }
+            printf("%-14s tempK %3.0f bias %+5.1f sea %+.2f cap %2.0f snow %4.0f  land %3.0f%% inland water %.1f%% [%s]:", b.name.c_str(), b.tempK, g.tempBias, g.seaLevel, g.iceCapLat, g.snowLine, 100.0 * land / n, 100.0 * inland / n, traitList(g).c_str());
+            for (int k = 1; k < BIO_COUNT; k++) if (bio[k] * 100 / n >= 1) printf(" %s %d%%", BIOME_NAMES[k], bio[k] * 100 / n);
+            printf("\n");
+            for (int k = 0; k < BIO_COUNT; k++) totBio[k] += bio[k];
+            totN += n; shown++;
         }
+    }
     printf("all %d worlds:", shown);
     for (int k = 1; k < BIO_COUNT; k++) printf(" %s %.0f%%", BIOME_NAMES[k], 100.0 * totBio[k] / totN);
     printf("\n  land ice by cause: cold %d, over the snow line %d, polar cap %d\n", iceT, iceSnow, iceCap);

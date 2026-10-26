@@ -704,7 +704,7 @@ void unitAuto(const Check& check) {
         // just before it, the hiss after it), never near clipping, alike for a seed and not for two; through the synth over the ducked rest,
         // the deck itself not ducked; -1 hushes it
         const int sr = 22050;
-        static const char* KN[DECK_KINDS] = {"", "insert", "change", "play", "stop"};
+        static const char* const KN[DECK_KINDS] = {"", "insert", "change", "play", "stop"};
         const double atLo[DECK_KINDS] = {0, 1.5, 2.6, 0.4, 0.03}, atHi[DECK_KINDS] = {0, 2.8, 4.2, 0.7, 0.03}, onsetsMin[DECK_KINDS] = {0, 6, 9, 2, 2};
         bool ok = true; std::string det;
         for (int kind = DECK_INSERT; kind < DECK_KINDS; kind++) {
@@ -769,7 +769,7 @@ void unitAuto(const Check& check) {
 void unitStates(const Check& check) {
     using S = GameState;
     auto in = [](S s, std::initializer_list<S> l) { return std::find(l.begin(), l.end(), s) != l.end(); };
-    static const char* NAMES[29] = {"TITLE", "SPACE", "LANDING_MAP", "DESCENT", "SURFACE", "ASCENT", "HELP", "MENU", "SYSTEM_LIST", "DATA",
+    static const char* const NAMES[29] = {"TITLE", "SPACE", "LANDING_MAP", "DESCENT", "SURFACE", "ASCENT", "HELP", "MENU", "SYSTEM_LIST", "DATA",
                                     "SETTINGS", "SLOTS", "GUIDE", "TEXT_ENTRY", "STAR_MAP", "LOG", "STATS", "GALLERY", "SHIPSCREEN", "CONSOLE",
                                     "SECTOR_MAP", "KEYS", "SHARDS", "ALMANAC", "PROBE", "RECORDING", "INSTRUMENTS", "DRONES", "AUTO"};
     std::string bad;

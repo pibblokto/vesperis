@@ -165,7 +165,7 @@ double galaxyBandIrradiance(const double sh[9], const Vec3& n) {
     return std::max(0.0, E) / PI;
 }
 
-const char* REGION_NAMES[REGION_COUNT] = {"GALACTIC CORE", "THE BULGE", "SPIRAL ARM", "THE DISK", "THE HALO", "GLOBULAR CLUSTER", "STAR-FORMING REGION", "OPEN CLUSTER"};
+const char* const REGION_NAMES[REGION_COUNT] = {"GALACTIC CORE", "THE BULGE", "SPIRAL ARM", "THE DISK", "THE HALO", "GLOBULAR CLUSTER", "STAR-FORMING REGION", "OPEN CLUSTER"};
 
 // G-03: a star-forming complex: one in a NEBULA_CELL column of the arms with probability NEBULA_RATE, its centre inside
 // the cell near the plane (the cell test first: it is asked per density call of the region and per frame of the sky).
@@ -428,19 +428,19 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
 }
 
 std::string generateName(uint64_t seed, int style) {
-    static const char* onsets0[] = {"b", "bal", "br", "c", "cr", "d", "dr", "f", "fel", "g", "gr", "k", "kr", "l", "ly",
+    static const char* const onsets0[] = {"b", "bal", "br", "c", "cr", "d", "dr", "f", "fel", "g", "gr", "k", "kr", "l", "ly",
                                     "m", "n", "p", "r", "s", "st", "str", "t", "tr", "th", "v", "vr", "w", "y", "z",
                                     "zh", "sh", "ph", "kl", "gl", "sk", "ts", "x"};
-    static const char* nuclei0[] = {"a", "e", "i", "o", "u", "ai", "ea", "io", "ya", "ey", "oo", "ia", "au", "ei"};
-    static const char* codas0[] = {"", "", "", "", "n", "l", "r", "s", "st", "ck", "sk", "th", "m", "nd", "x", "ng", "rn",
+    static const char* const nuclei0[] = {"a", "e", "i", "o", "u", "ai", "ea", "io", "ya", "ey", "oo", "ia", "au", "ei"};
+    static const char* const codas0[] = {"", "", "", "", "n", "l", "r", "s", "st", "ck", "sk", "th", "m", "nd", "x", "ng", "rn",
                                    "lt", "ss"};
     // hard names of the old core and halo; flowing names of the young arms
-    static const char* onsets1[] = {"k", "kr", "g", "gr", "th", "z", "x", "sk", "d", "dr", "t", "tr", "kh", "gh", "br", "vr"};
-    static const char* nuclei1[] = {"a", "o", "u", "ei", "aa", "au", "o", "u"};
-    static const char* codas1[] = {"k", "r", "n", "x", "th", "rk", "rt", "", "g", "d"};
-    static const char* onsets2[] = {"l", "ly", "m", "n", "s", "sh", "v", "f", "y", "r", "el", "al", "ph", "th", "w", "h"};
-    static const char* nuclei2[] = {"ia", "ea", "ai", "io", "ya", "e", "i", "a", "ie", "ei", "ee"};
-    static const char* codas2[] = {"l", "n", "s", "", "", "", "la", "ne", "ri", "sh", "th"};
+    static const char* const onsets1[] = {"k", "kr", "g", "gr", "th", "z", "x", "sk", "d", "dr", "t", "tr", "kh", "gh", "br", "vr"};
+    static const char* const nuclei1[] = {"a", "o", "u", "ei", "aa", "au", "o", "u"};
+    static const char* const codas1[] = {"k", "r", "n", "x", "th", "rk", "rt", "", "g", "d"};
+    static const char* const onsets2[] = {"l", "ly", "m", "n", "s", "sh", "v", "f", "y", "r", "el", "al", "ph", "th", "w", "h"};
+    static const char* const nuclei2[] = {"ia", "ea", "ai", "io", "ya", "e", "i", "a", "ie", "ei", "ee"};
+    static const char* const codas2[] = {"l", "n", "s", "", "", "", "la", "ne", "ri", "sh", "th"};
     const char* const* onsets = style == 1 ? onsets1 : (style == 2 ? onsets2 : onsets0);
     const char* const* nuclei = style == 1 ? nuclei1 : (style == 2 ? nuclei2 : nuclei0);
     const char* const* codas = style == 1 ? codas1 : (style == 2 ? codas2 : codas0);
@@ -471,7 +471,7 @@ std::string generateName(uint64_t seed, int style) {
 
 std::string romanNumeral(int n) {
     static const int v[] = {10, 9, 5, 4, 1};
-    static const char* s[] = {"X", "IX", "V", "IV", "I"};
+    static const char* const s[] = {"X", "IX", "V", "IV", "I"};
     std::string r;
     if (n <= 0) return "0";
     for (int i = 0; i < 5; i++) while (n >= v[i]) { r += s[i]; n -= v[i]; }

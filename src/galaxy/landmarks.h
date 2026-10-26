@@ -22,8 +22,8 @@ enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_C
                     LM_COUNT };
 // Q-01: the sight a landform trait gives (LM_COUNT none); Q-02: a strewn field's
 int landformSight(int trait);
-extern const char* LANDMARK_KIND_NAMES[LM_COUNT];   // "PEAK", "MESA", ...
-extern const char* LANDMARK_KIND_SYMBOLS[LM_COUNT]; // one glyph for the maps
+extern const char* const LANDMARK_KIND_NAMES[LM_COUNT];   // "PEAK", "MESA", ...
+extern const char* const LANDMARK_KIND_SYMBOLS[LM_COUNT]; // one glyph for the maps
 
 struct Landmark {
     int kind = LM_PEAK;

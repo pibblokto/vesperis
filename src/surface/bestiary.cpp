@@ -3,9 +3,9 @@
 #include "core/rng.h"
 #include <cmath>
 
-const char* PLAN_NAMES[PLAN_COUNT] = {"QUADRUPED", "LONG-NECKED BROWSER", "HEXAPOD CRAWLER", "HOPPER", "BIPED STRIDER", "GIANT WALKER", "FLYER", "SWIMMER"};
-const char* ACTIVITY_NAMES[3] = {"BY DAY", "BY NIGHT", "AT DUSK"};
-const char* TEMPERAMENT_NAMES[3] = {"SHY", "CURIOUS", "INDIFFERENT"};
+const char* const PLAN_NAMES[PLAN_COUNT] = {"QUADRUPED", "LONG-NECKED BROWSER", "HEXAPOD CRAWLER", "HOPPER", "BIPED STRIDER", "GIANT WALKER", "FLYER", "SWIMMER"};
+const char* const ACTIVITY_NAMES[3] = {"BY DAY", "BY NIGHT", "AT DUSK"};
+const char* const TEMPERAMENT_NAMES[3] = {"SHY", "CURIOUS", "INDIFFERENT"};
 
 Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
     Bestiary B;

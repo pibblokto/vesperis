@@ -94,14 +94,14 @@ void Game::launchProbe() {
     logEvent("PROBE", fmt("PROBE %d INTO %s AT %s", probe.id, upper(bodyNameOf(b)).c_str(), latLonString(lat, lon).c_str()));
     status(aimed ? fmt("PROBE AWAY TO %s", latLonString(lat, lon).c_str()) : "PROBE AWAY, UNDER THE SHIP (THE TELESCOPE AIMS IT)", 5);
     statusNext = "SPACE OPENS THE CHUTE ONCE: WHERE TO LINGER"; statusNextSecs = 5;
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
     state = GameState::PROBE;
 }
 
 void Game::watchProbe() {
     if (!probe.active) return;
     state = GameState::PROBE;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::probeCut(const char* why) {
@@ -158,13 +158,13 @@ void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
         state = GameState::SPACE;
         if (ended) { probeRelease(); status("BACK IN THE CABIN", 3); }
         else status("THE PROBE FALLS ON - C WATCHES IT", 5);
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
         return;
     }
     if (saveKey(in)) { saveSlot(currentSlot); return; }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // X-04: the storm it falls into, named
-        if (probe.stormKey.empty() || probe.clock < probeDescentStart()) { status(probe.stormKey.empty() ? "THE PROBE FALLS INTO NO STORM" : "THE STORM IS NAMED ONCE THE PROBE IS IN ITS CLOUDS", 3); audio.beep = 3; }
-        else { textStormKey = probe.stormKey; guideReturn = GameState::PROBE; const std::string n = probeStormName(); beginTextEntry("NAME THE STORM", 9, n.empty() ? n : upper(n)); }
+        if (probe.stormKey.empty() || probe.clock < probeDescentStart()) { refuse(probe.stormKey.empty() ? "THE PROBE FALLS INTO NO STORM" : "THE STORM IS NAMED ONCE THE PROBE IS IN ITS CLOUDS", 3); }
+        else { textStormKey = probe.stormKey; guideReturn = GameState::PROBE; const std::string n = probeStormName(); beginTextEntry("NAME THE STORM", TEXT_STORM, n.empty() ? n : upper(n)); }
         return;
     }
     if (ended) return;
@@ -179,14 +179,14 @@ void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
     probe.camYaw = wrapAngle(probe.camYaw); probe.camPitch = clampd(probe.camPitch, -75 * DEG, 85 * DEG);
     if (in.wasPressed(KEY_SPACE)) {
         double bar = probeBarAt(probe.flight, probe.clock);
-        if (probe.clock < probeDescentStart()) { status("THE CHUTE OPENS IN THE AIR, AFTER THE ENTRY", 3); audio.beep = 3; }
+        if (probe.clock < probeDescentStart()) { refuse("THE CHUTE OPENS IN THE AIR, AFTER THE ENTRY", 3); }
         else if (probe.flight.chuteOpen < 0) {
             probe.flight.chuteOpen = probe.clock; probe.flight.chuteClose = probeChuteCloseAt(probe.flight, probe.clock);
-            status(fmt("CHUTE OPEN AT %.2f ATM - SPACE CUTS IT", atmOf(bar)), 4); audio.beep = 4;
+            status(fmt("CHUTE OPEN AT %.2f ATM - SPACE CUTS IT", atmOf(bar)), 4); audio.beep = BEEP_UI;
         } else if (probe.clock < probe.flight.chuteClose) {
             probe.flight.chuteClose = probe.clock; probe.tornNoted = true;
-            status(fmt("CHUTE CUT AT %.2f ATM", atmOf(bar)), 3); audio.beep = 4;
-        } else { status("THE CHUTE IS GONE", 3); audio.beep = 3; }
+            status(fmt("CHUTE CUT AT %.2f ATM", atmOf(bar)), 3); audio.beep = BEEP_UI;
+        } else { refuse("THE CHUTE IS GONE", 3); }
     }
 }
 

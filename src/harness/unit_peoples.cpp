@@ -14,8 +14,7 @@ void unitCultures(const Check& check) {
         // are built as the bigger settlement's people built
         int civ = 0, two = 0; int64_t fx = -1, fz = -1; int fbi = -1;
         for (int64_t x = 150; x < 300 && two < 12; x++) for (int64_t z = 20; z < 120 && two < 12; z++) {
-            Star s; if (!starInSector(x, 0, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, false)) continue;
             for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
                 const Body& b = sys.bodies[bi];
                 if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
@@ -111,8 +110,7 @@ void unitCultures(const Check& check) {
         {   // the one-people test worlds: one people, no other, the world's own seed, the "other" kinds never drawn
             struct W { int64_t sx, sz; int bi; } ws[2] = {{151, 25, 1}, {153, 70, 2}};
             for (const W& w : ws) {
-                Star ts; if (!starInSector(w.sx, 0, w.sz, ts, true)) { oneOk = false; continue; }
-                StarSystem tsys; tsys.generate(ts); const Body& tb = tsys.bodies[w.bi]; BodyGen tg = BodyGen::make(tb);
+                Star ts; StarSystem tsys; if (!systemAt(w.sx, 0, w.sz, ts, tsys, true)) { oneOk = false; continue; } const Body& tb = tsys.bodies[w.bi]; BodyGen tg = BodyGen::make(tb);
                 Lore L = loreOf(tsys, tb, tg), L2 = loreOf(tsys, tb, tg, 1);
                 if (peoplesOf(tg) != 1 || L.peoples != 1 || L.which != 0 || !L.other.empty() || L.seed != tg.seed || L2.seed != L.seed || L2.which != 0 || peopleAt(tg, 0.3, 0.7) != 0) oneOk = false;
                 std::vector<Shard> sh; shardsOf(tsys, tb, tg, L, SHARDS_PER_WORLD, sh);
@@ -263,8 +261,7 @@ void unitProfiles(const Check& check) {
         auto fail = [&](const std::string& what) { if (bad++ < 4) badWhat += what + "; "; };
         for (int64_t x = HOME_SX - 12; x <= HOME_SX + 12; x++) for (int64_t y = HOME_SY - 12; y <= HOME_SY + 12; y++) for (int64_t z = HOME_SZ - 12; z <= HOME_SZ + 12; z++) {
             if ((x - HOME_SX) * (x - HOME_SX) + (y - HOME_SY) * (y - HOME_SY) + (z - HOME_SZ) * (z - HOME_SZ) > 144) continue;
-            Star s; if (!starInSector(x, y, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, y, z, s, sys, false)) continue;
             for (const Body& b : sys.bodies) {
                 if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
                 BodyGen g = BodyGen::make(b); int np = peoplesOf(g); if (!np) continue;
@@ -315,8 +312,7 @@ void unitProfiles(const Check& check) {
         int ages[AGE_COUNT] = {0}, n = 0, radio = 0; double t0 = nowSec();
         for (int64_t x = HOME_SX - 25; x <= HOME_SX + 25; x++) for (int64_t y = HOME_SY - 25; y <= HOME_SY + 25; y++) for (int64_t z = HOME_SZ - 25; z <= HOME_SZ + 25; z++) {
             if ((x - HOME_SX) * (x - HOME_SX) + (y - HOME_SY) * (y - HOME_SY) + (z - HOME_SZ) * (z - HOME_SZ) > 625) continue;
-            Star s; if (!starInSector(x, y, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, y, z, s, sys, false)) continue;
             for (const Body& b : sys.bodies) {
                 if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
                 BodyGen g = BodyGen::make(b); int np = peoplesOf(g);
@@ -378,8 +374,7 @@ void unitProfiles(const Check& check) {
         int twoWorlds = 0, oneOnAir = 0, bothOnAir = 0, slotsWrong = 0; bool bothSeen = true;
         for (int64_t x = HOME_SX - 25; x <= HOME_SX + 25; x++) for (int64_t y = HOME_SY - 25; y <= HOME_SY + 25; y++) for (int64_t z = HOME_SZ - 25; z <= HOME_SZ + 25; z++) {
             if ((x - HOME_SX) * (x - HOME_SX) + (y - HOME_SY) * (y - HOME_SY) + (z - HOME_SZ) * (z - HOME_SZ) > 625) continue;
-            Star s; if (!starInSector(x, y, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, y, z, s, sys, false)) continue;
             for (const Body& b : sys.bodies) {
                 if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
                 BodyGen g = BodyGen::make(b); if (peoplesOf(g) < 2) continue;
@@ -401,8 +396,7 @@ void unitProfiles(const Check& check) {
             std::vector<TW> tws = {{151, 25, 1, 0}, {153, 70, 2, 0}};
             for (int a = 0; a < AGE_COUNT; a++) if (AGE_WORLDS[a].body >= 0) tws.push_back({AGE_WORLDS[a].sx, AGE_WORLDS[a].sz, AGE_WORLDS[a].body, AGE_WORLDS[a].which});
             for (const TW& t : tws) {
-                Star s; if (!starInSector(t.sx, 0, t.sz, s, true)) continue;
-                StarSystem sys; sys.generate(s); if (t.bi >= (int)sys.bodies.size()) continue;
+                Star s; StarSystem sys; if (!systemAt(t.sx, 0, t.sz, s, sys, true)) continue; if (t.bi >= (int)sys.bodies.size()) continue;
                 const Body& b = sys.bodies[t.bi]; BodyGen g = BodyGen::make(b); if (peoplesOf(g) <= t.which) continue;
                 chartWorlds++;
                 Lore L = loreOf(sys, b, g, t.which); bool listened = peopleAgeOf(g, t.which).radio;
@@ -435,8 +429,7 @@ void unitStory(const Check& check) {
         double readPct[2][11] = {}; bool mono = true, namesKnown = true, tongueSame = true, tongueDistinct = true; int langWords[2] = {0, 0};   // C-06
         bool voiceSame = true, voiceOk = true, speechSame = true, speechOk = true, aligned = true, inventoryOk = true; int badSeg = 0, badWord = 0, speechN = 0; double speechMin = 999, speechMax = 0, speechTot = 0; Voice voices[2];   // C-05
         for (int wi = 0; wi < 2; wi++) {
-            Star s; if (!starInSector(ws[wi].sx, 0, ws[wi].sz, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(ws[wi].sx, 0, ws[wi].sz, s, sys, true)) continue;
             if (ws[wi].bi >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[ws[wi].bi];
             BodyGen g = BodyGen::make(b);
@@ -677,8 +670,7 @@ void unitStory(const Check& check) {
         }
         int worlds = 0, bad = 0;   // every people's world of the sectors near home: twelve shards each, clean and in length
         for (int64_t sx = 150; sx <= 160 && worlds < 60; sx++) for (int64_t sz = 20; sz <= 80 && worlds < 60; sz++) {
-            Star s; if (!starInSector(sx, 0, sz, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) continue;
             for (const Body& b : sys.bodies) {
                 if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
                 BodyGen g = BodyGen::make(b);

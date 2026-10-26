@@ -357,14 +357,14 @@ std::string Game::figureLabel(const std::string& name, int held) const {
 }
 
 void Game::holdChart(bool up) {
-    if (!up) { chartUp = false; status("THE CHART IS PUT DOWN", 3); audio.beep = 4; return; }
+    if (!up) { chartUp = false; status("THE CHART IS PUT DOWN", 3); audio.beep = BEEP_UI; return; }
     if (!shardWorld.valid || !shardWorld.chart.valid || shardHeld.empty()) return;
     chartHeld = shardWorld.chart; chartHeldKey = shardWorld.key; chartHeldIndex = shardWorld.base + shardHeld[shardSel]; chartHeldPeople = shardWorld.lore.people;   // C-13: the world index
     chartHeldLabels.clear();
     for (const ChartFigure& f : chartHeld.figures) chartHeldLabels.push_back(figureLabel(f.name, (int)shardHeld.size()));
     chartUp = true;
     status("THE CHART IS HELD UP - ITS FIGURES SHOW ON THE VIEW", 5);   // 50 characters
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // the chart on the decoder: its object (H-05: the age's way) with the stars, the figures' lines and the people's own marks on it, the

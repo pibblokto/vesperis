@@ -269,8 +269,8 @@ int runSignals(int argc, char** argv) {
     }
     if (wav) {   // the receiver's sounds for the ear: the bed with its events, three of each natural kind, every programme of the first people's world
         makeDir("shots"); makeDir("shots/tests");
-        static const char* NAMES[SIG_KIND_COUNT] = {"people", "pulsar", "comet", "magnetosphere", "drifter"};
-        static const char* PNAMES[RP_COUNT] = {"voice", "whispers", "chant", "numbers", "loop", "beacon", "data", "bell", "siren", "murmur", "music", "morse", "phonograph", "synthetic", "maths"};
+        static const char* const NAMES[SIG_KIND_COUNT] = {"people", "pulsar", "comet", "magnetosphere", "drifter"};
+        static const char* const PNAMES[RP_COUNT] = {"voice", "whispers", "chant", "numbers", "loop", "beacon", "data", "bell", "siren", "murmur", "music", "morse", "phonograph", "synthetic", "maths"};
         static const double RATES[3] = {0.7, 1.7, 3.2};
         { std::vector<int16_t> pcm; RenderStats r = renderKind(-1, 0, 1, 30.0, &pcm); std::string fn = "shots/tests/radar_bed.wav"; writeWav16(fn, pcm, 22050); printf("  bed: 30 s rendered (something in the static every twelve to forty seconds), peak %.3f, rms %.3f -> %s\n", r.peak, r.rms, fn.c_str()); }
         for (int kind = SIG_PULSAR; kind < SIG_KIND_COUNT; kind++)
@@ -324,7 +324,7 @@ int runSignals(int argc, char** argv) {
         {
             RxOpts o; o.gainT = 1; o.sky = 0.4; int ev = 0, kinds = 0;
             std::vector<int16_t> pcm; RenderStats r = renderKind(-1, 0, 1, 120.0, &pcm, o, &ev, &kinds);
-            static const char* EVN[12] = {"a carrier", "a boom", "a moan", "knocks", "a murmur", "a breath", "a scream", "speech backwards", "counting whispered", "a breath at the microphone", "a knock answered", "a choir stopping"};
+            static const char* const EVN[12] = {"a carrier", "a boom", "a moan", "knocks", "a murmur", "a breath", "a scream", "speech backwards", "counting whispered", "a breath at the microphone", "a knock answered", "a choir stopping"};
             std::string heard; for (int k = 0; k < 12; k++) if (kinds & (1 << k)) heard += (heard.empty() ? "" : ", ") + std::string(EVN[k]);
             wavOut("static_x32", r, pcm, fmt(", 120 s, %d events: %s", ev, heard.c_str()));
         }
@@ -374,8 +374,7 @@ int runVoice(int argc, char** argv) {
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
     int want = argc > 5 && std::string(argv[5]) != "wav" ? atoi(argv[5]) : -1;
     bool wav = (argc > 5 && std::string(argv[5]) == "wav") || (argc > 6 && std::string(argv[6]) == "wav");
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
@@ -383,14 +382,14 @@ int runVoice(int argc, char** argv) {
     Lore L = loreOf(sys, b, g, which);
     Tongue T = tongueOf(g, L);
     Voice V = voiceOf(g, L, T);
-    static const char* STRESS[4] = {"the first syllable", "the last syllable", "the last syllable but one", "no syllable (all even)"};
-    static const char* CONTOUR[3] = {"falling through the sentence", "rising to a peak then falling", "level with a drop at the end"};
+    static const char* const STRESS[4] = {"the first syllable", "the last syllable", "the last syllable but one", "no syllable (all even)"};
+    static const char* const CONTOUR[3] = {"falling through the sentence", "rising to a peak then falling", "level with a drop at the end"};
     printf("%s, %s of %s: the voice of the %s (names of style %d)\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), L.people.c_str(), L.style);
     printf("  %s: %.0f Hz with a range of %.2f, %.1f syllables a second, the tract %.2f; breath %.2f, roughness %.2f, nasal %.2f, tremor %.2f, a second tone %.2f at %.2f; the stress on %s, the melody %s%s%s%s\n",
            voiceLine(V).c_str(), V.pitch, V.range, V.rate, V.tract, V.breath, V.rough, V.nasal, V.tremor, V.sub, V.subRatio, STRESS[V.stress], CONTOUR[V.contour],
            V.tonal ? ", a tone on each syllable" : "", V.clicky ? ", clicks for the voiceless stops" : "", V.trill ? ", the r's rolled" : "");
     printf("  sounds (%zu):", V.inventory.size());
-    static const char* KINDS[PK_COUNT] = {"vowel", "stop", "fricative", "nasal", "liquid", "glide", "pause"};
+    static const char* const KINDS[PK_COUNT] = {"vowel", "stop", "fricative", "nasal", "liquid", "glide", "pause"};
     for (int p : V.inventory) printf(" %s(%s%s)", PHONES[p].sym, PHONES[p].kind == PK_VOWEL ? "" : (PHONES[p].voiced ? "voiced " : "voiceless "), KINDS[PHONES[p].kind]);
     printf("\n");
     std::vector<Shard> fifty; shardsOf(sys, b, g, L, SHARDS_PER_WORLD, fifty);

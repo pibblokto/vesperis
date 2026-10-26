@@ -3,6 +3,7 @@
 // square metre of terrain always comes out identical.
 #pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 
 inline uint64_t mix64(uint64_t x) {
@@ -21,6 +22,9 @@ inline uint64_t hashXYZ(uint64_t hxy, int64_t z) { return mix64(hxy ^ ((uint64_t
 inline uint64_t hash3i(int64_t x, int64_t y, int64_t z, uint64_t seed) { return hashXYZ(hashXY(hashX(x, seed), y), z); }
 inline uint64_t hash2i(int64_t x, int64_t y, uint64_t seed) { return hash3i(x, y, 0x5bd1e995, seed); }
 inline double unitFromHash(uint64_t h) { return (double)(h >> 11) * (1.0 / 9007199254740992.0); }
+inline double hash01(uint64_t h) { return unitFromHash(h); }   // the same, short (the surface's drawing reads hundreds)
+// FNV-1a (64 bits) over a string's bytes: what keys a text (a grammar alternative by its rule and line, a word, a frame)
+inline uint64_t fnv1a(const std::string& s) { uint64_t h = 1469598103934665603ULL; for (unsigned char c : s) { h ^= c; h *= 1099511628211ULL; } return h; }
 
 struct Rng {
     uint64_t s;

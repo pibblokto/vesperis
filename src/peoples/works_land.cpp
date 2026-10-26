@@ -32,7 +32,7 @@ uint64_t landSeed(const LandCell& L, int kind) { return mix64(L.h ^ (0xB4180000U
 LandSettle WB::landSettle(const LandCell& L) {
     LandSettle S; double bestKey = -1e18;
     auto take = [&](const Vec3& u, double r, int sclass, int rank, bool river) {
-        const double key = settlementRank(sclass) * 1e7 - arcM(u, L.mid, Rm);
+        const double key = settlementRank(sclass) * 1e7 - arcLength(u, L.mid, Rm);
         if (key > bestKey) { bestKey = key; S.found = true; S.u = u; S.r = r; S.sclass = sclass; S.rank = rank; S.river = river; }
     };
     std::vector<const PlanPlace*> near; planPlacesNear(P, L.mid, 0.75 * LAND_CELL_M, near);

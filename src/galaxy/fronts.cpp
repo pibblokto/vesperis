@@ -46,7 +46,7 @@ Front makeFront(const Body& b, int k, int64_t e, double P, double phase) {
 }
 
 // the bearing (radians from north, clockwise) of a body-frame tangent direction at p
-double bearingOf(const Vec3& dir, const Vec3& p) {
+double bearingOfDir(const Vec3& dir, const Vec3& p) {
     Vec3 east = cross(Vec3(0, 0, 1), p);
     double L = length(east);
     if (L < 1e-9) return 0;
@@ -189,7 +189,7 @@ void frontsAhead(const Body& b, const Vec3& p, double t, double window, std::vec
         fc.tArrive = Ta; fc.strength = f.strength; fc.gain = life * lat; fc.dust = f.dust; fc.slot = f.slot; fc.epoch = f.epoch;
         Vec3 c, n; frontAt(f, Ta, c, n);
         Vec3 from = (n - p * dot(n, p)) * -1.0;
-        fc.fromBearing = bearingOf(from, p);
+        fc.fromBearing = bearingOfDir(from, p);
         // the rain ends where the line is 150 km past the place (times the width), or when the front dies
         double endAt = FRONT_RAIN_END * f.width, Tc = f.dies;
         for (double T2 = Ta + h; T2 < f.dies; T2 += h) {
@@ -265,6 +265,6 @@ double frontMapAt(const std::vector<uint8_t>& m, int W, int H, double lon, doubl
 }
 
 const char* frontCompass(double bearing) {
-    static const char* names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+    static const char* const names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
     return names[(int)std::floor(wrap2pi(bearing) / TAU * 8 + 0.5) & 7];
 }

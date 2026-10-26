@@ -23,10 +23,14 @@ inline std::string sectorName(double latDeg, double lonDeg) { int sx, sy; sector
 // metres as "420 M" or "8.4 KM"
 inline std::string metresString(double m) { return m < 1000 ? fmt("%.0f M", m) : fmt("%.1f KM", m / 1000.0); }
 std::string thousands(double v);   // 13050 -> "13,050" (G-05, C-15)
+// Up and Down (and Left and Right, `sideways`) step a list's choice round its n rows; true when one was pressed
+bool menuStep(const Input& in, int& sel, int n, bool sideways = false);
 
 // HUD colours; `setHudScheme` (M6-01) picks the classic green, amber or a cool white scheme
 extern uint32_t HUD_GREEN, HUD_DIM, HUD_AMBER, HUD_WHITE, HUD_RED, HUD_SHADOW, HUD_CYAN;
 void setHudScheme(int scheme);
+// a screen's panel: `fill` blended at `alpha` (0..255) over x0..x1 by y0..y1 (inclusive), its edge drawn round the same box
+void drawPanel(RGBCanvas& c, int x0, int y0, int x1, int y1, uint32_t fill, int alpha, uint32_t edge = HUD_DIM);
 
 // Key twins (B-002): every F-key function has a letter or control-key alternative.
 inline bool helpKey(const Input& in) { return in.wasPressed(KEY_F1) || (in.wasPressed(KEY_H) && !in.ctrl()) || (in.wasPressed(KEY_SLASH) && in.shift()); }

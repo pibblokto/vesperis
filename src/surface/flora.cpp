@@ -10,13 +10,13 @@
 #include "core/parallel.h"
 #include <mutex>
 #include "core/noise.h"
+#include "core/clock.h"
 #include "core/rng.h"
 #include <cmath>
 #include <algorithm>
 #include <chrono>
 
 namespace {
-inline double h01(uint64_t h) { return unitFromHash(h); }
 // silhouettes: 0 dome (broadleaf), 1 cone (conifer), 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree,
 // B-315: 7 weeping, 8 candelabra, 9 spire
 const double FAM_H0[10] = {6.0, 8.0, 7.0, 18.0, 4.0, 4.0, 3.0, 7.0, 6.0, 14.0};
@@ -32,14 +32,14 @@ void SurfaceView::buildLooks() {
     for (int f = 0; f < 10; f++) {
         uint64_t h = mix64(site.gen.seed ^ (0x100C5ULL + (uint64_t)f * 0x9E3779B97F4A7C15ULL));
         TreeLook& L = looks[f];
-        L.aspect = 0.8 + 0.5 * h01(h);
-        L.clusterR = 0.4 + 0.25 * h01(mix64(h + 1));
-        L.count = 0.75 + 0.6 * h01(mix64(h + 2));
-        L.trunkW = 0.75 + 0.7 * h01(mix64(h + 3));
-        L.lean = h01(mix64(h + 4)) < 0.4 ? 0.0 : 0.03 + 0.1 * h01(mix64(h + 5));
-        L.ragged = 0.7 + 0.8 * h01(mix64(h + 6));
-        L.tone = 0.88 + 0.24 * h01(mix64(h + 7));
-        L.droop = h01(mix64(h + 8));
+        L.aspect = 0.8 + 0.5 * hash01(h);
+        L.clusterR = 0.4 + 0.25 * hash01(mix64(h + 1));
+        L.count = 0.75 + 0.6 * hash01(mix64(h + 2));
+        L.trunkW = 0.75 + 0.7 * hash01(mix64(h + 3));
+        L.lean = hash01(mix64(h + 4)) < 0.4 ? 0.0 : 0.03 + 0.1 * hash01(mix64(h + 5));
+        L.ragged = 0.7 + 0.8 * hash01(mix64(h + 6));
+        L.tone = 0.88 + 0.24 * hash01(mix64(h + 7));
+        L.droop = hash01(mix64(h + 8));
     }
 }
 
@@ -73,8 +73,8 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     if (tv.biome == BIO_SAVANNA) per = 3.0;
     if (tv.biome == BIO_TUNDRA) per = 1.5;
     if (deadWorld) per = stone ? 2.0 : 4.5;   // the stone forest's stumps sparse, the frozen one's skeletons a thinned wood
-    double nx = (tv.material == MAT_FOREST || deadWorld ? dens : tv.veg) * per * (0.6 + 0.8 * h01(mix64(h + 5)));
-    int n = (int)nx + (h01(mix64(h + 6)) < nx - (int)nx ? 1 : 0);   // fractional counts as a probability: scattered trees on grass
+    double nx = (tv.material == MAT_FOREST || deadWorld ? dens : tv.veg) * per * (0.6 + 0.8 * hash01(mix64(h + 5)));
+    int n = (int)nx + (hash01(mix64(h + 6)) < nx - (int)nx ? 1 : 0);   // fractional counts as a probability: scattered trees on grass
     if (n <= 0) return;
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);   // R-304
     double f = seasonPhaseLocal();
@@ -93,7 +93,7 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         uint64_t ht = mix64(h + 41 * (uint64_t)(i + 1));
         TreeInst T;
         T.seed = ht;
-        T.x = cx * cs + h01(ht) * cs; T.z = cz * cs + h01(mix64(ht + 1)) * cs;
+        T.x = cx * cs + hash01(ht) * cs; T.z = cz * cs + hash01(mix64(ht + 1)) * cs;
         if (!site.roads.empty() && site.roadCover(T.x, T.z) > 0.3) continue;   // C-09: nothing grows on the road's bed
         if (!site.marks.empty() && site.markCover(T.x, T.z) > 0.3) continue;   // T-02: nor on a town's streets and squares
         if (!site.edits.empty() && site.editCover(T.x, T.z) > 0.3) continue;   // T-03: nor on a fresh cut, a line's bed, a plain made flat
@@ -107,41 +107,41 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
                 if (near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // A-03: its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
                     const Culture& cu = cultures[near[q]->spec.people == 1 && peoples > 1 ? 1 : 0];
                     double keep = clampd(0.05 + 0.15 * std::log10(std::max(1.0, cu.ageYears / 200.0)), 0.05, 0.33);
-                    if (h01(mix64(ht + 21)) >= keep) { skip = true; break; }   // F-02: before the buildings (one hash; it clears 67-95% of the yards' trees)
+                    if (hash01(mix64(ht + 21)) >= keep) { skip = true; break; }   // F-02: before the buildings (one hash; it clears 67-95% of the yards' trees)
                 }
                 skip = inSettlementBuilding(*near[q], T.x, T.z, 1.5);
             }
             if (skip) continue;
         }
-        bool second = h01(mix64(ht + 9)) < 0.3;
+        bool second = hash01(mix64(ht + 9)) < 0.3;
         T.fam = second ? site.gen.floraFamily2 : site.gen.floraFamily;
         if (fungal) {   // Q-02: the fungal forests: caps on stems, parasols, a few tall stalks, whatever the biome
-            const double u = h01(mix64(ht + 10));
+            const double u = hash01(mix64(ht + 10));
             T.fam = u < 0.74 ? 6 : (u < 0.9 ? 2 : 4);
         } else
         switch (tv.biome) {   // biome overrides (B-315: the cold and the dry choose per planet between two silhouettes)
-            case BIO_TAIGA: case BIO_TUNDRA: T.fam = h01(mix64(site.gen.seed ^ 0x7A16AULL)) < 0.7 ? 1 : 9; break;
-            case BIO_SAVANNA: T.fam = h01(mix64(site.gen.seed ^ 0x5AFAULL)) < 0.6 ? 2 : 8; break;
-            case BIO_WETLAND: if (h01(mix64(ht + 10)) < 0.6) T.fam = h01(mix64(site.gen.seed ^ 0x3E7ULL)) < 0.6 ? 5 : 7; break;
-            case BIO_TROPICAL: if (h01(mix64(ht + 10)) < 0.25) T.fam = 3; break;
+            case BIO_TAIGA: case BIO_TUNDRA: T.fam = hash01(mix64(site.gen.seed ^ 0x7A16AULL)) < 0.7 ? 1 : 9; break;
+            case BIO_SAVANNA: T.fam = hash01(mix64(site.gen.seed ^ 0x5AFAULL)) < 0.6 ? 2 : 8; break;
+            case BIO_WETLAND: if (hash01(mix64(ht + 10)) < 0.6) T.fam = hash01(mix64(site.gen.seed ^ 0x3E7ULL)) < 0.6 ? 5 : 7; break;
+            case BIO_TROPICAL: if (hash01(mix64(ht + 10)) < 0.25) T.fam = 3; break;
             default: break;
         }
         T.fam = clampi(T.fam, 0, 9);
         const TreeLook& L = looks[T.fam];
         double edge = 0.6 + 0.4 * dens;   // smaller at the forest edge and in clearings
         if (tv.biome == BIO_TUNDRA) edge *= 0.45;
-        T.h = (FAM_H0[T.fam] + (FAM_H1[T.fam] - FAM_H0[T.fam]) * h01(mix64(ht + 2))) * treeScale * edge;
-        T.r = T.h * FAM_R[T.fam] * (0.85 + 0.3 * h01(mix64(ht + 3))) * L.aspect;
+        T.h = (FAM_H0[T.fam] + (FAM_H1[T.fam] - FAM_H0[T.fam]) * hash01(mix64(ht + 2))) * treeScale * edge;
+        T.r = T.h * FAM_R[T.fam] * (0.85 + 0.3 * hash01(mix64(ht + 3))) * L.aspect;
         T.cy = T.h * FAM_CY[T.fam];
         {   // the lean: the canopy centre sits off the foot by the tilt, in a hashed direction
-            double lean = L.lean * (0.5 + h01(mix64(ht + 14))), a = h01(mix64(ht + 15)) * TAU;
+            double lean = L.lean * (0.5 + hash01(mix64(ht + 14))), a = hash01(mix64(ht + 15)) * TAU;
             T.lx = std::sin(lean) * T.cy * std::cos(a); T.lz = std::sin(lean) * T.cy * std::sin(a);
         }
-        T.dead = deadWorld || ((tv.material == MAT_FOREST || deadChance > 0.1) && h01(mix64(ht + 77)) < deadChance);
-        if (stone) { T.stump = true; T.h *= 0.12 + 0.22 * h01(mix64(ht + 78)); }   // P-04: broken off a metre or three up
+        T.dead = deadWorld || ((tv.material == MAT_FOREST || deadChance > 0.1) && hash01(mix64(ht + 77)) < deadChance);
+        if (stone) { T.stump = true; T.h *= 0.12 + 0.22 * hash01(mix64(ht + 78)); }   // P-04: broken off a metre or three up
         T.bare = !fungal && deciduous(T.fam) && f < -0.6;   // Q-02: a fungus keeps its cap the year round
         bool autumn = !fungal && deciduous(T.fam) && f < 0 && f >= -0.6;
-        double v = h01(mix64(ht + 12));
+        double v = hash01(mix64(ht + 12));
         T.bank = (second || autumn) ? 5 : (v < 0.15 ? 10 : 3);
         T.dens = dens;
         T.gy = site.groundHeight(T.x, T.z);
@@ -161,19 +161,19 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0BULL);
     LogInst L;
     if (petrified && tv.ltint > 25 && tv.material != MAT_FOREST && tv.material != MAT_SNOW && tv.material != MAT_ICE) {
-        if (h01(mix64(h + 87)) > 0.85 * tv.ltint / 255.0) return;   // a log in most cells where they lie thickest
+        if (hash01(mix64(h + 87)) > 0.85 * tv.ltint / 255.0) return;   // a log in most cells where they lie thickest
         L.stone = true;
     } else {
         if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld) return;
         if ((!deadWorld && tv.material != MAT_FOREST) || tv.veg < 0.3) return;
-        if (h01(mix64(h + 88)) > (stone ? 0.5 : 0.12) * canopyDensityAt(cx * cs + 8, cz * cs + 8, tv.veg) / 0.5) return;   // most of a petrified forest lies fallen
+        if (hash01(mix64(h + 88)) > (stone ? 0.5 : 0.12) * canopyDensityAt(cx * cs + 8, cz * cs + 8, tv.veg) / 0.5) return;   // most of a petrified forest lies fallen
     }
     L.seed = mix64(h + 89);
-    L.x = cx * cs + 2 + h01(L.seed) * (cs - 4); L.z = cz * cs + 2 + h01(mix64(L.seed + 1)) * (cs - 4);
-    L.heading = h01(mix64(L.seed + 2)) * TAU;
-    L.len = 3.5 + 6 * h01(mix64(L.seed + 3));
-    L.radius = 0.25 + 0.35 * h01(mix64(L.seed + 4)) * h01(mix64(L.seed + 6));   // most are slim, a few are giants
-    if (L.stone) { L.len *= 0.4 + 0.5 * h01(mix64(L.seed + 7)); L.radius *= 1.7; }   // Q-02: the stone trunks broken in sections, thick
+    L.x = cx * cs + 2 + hash01(L.seed) * (cs - 4); L.z = cz * cs + 2 + hash01(mix64(L.seed + 1)) * (cs - 4);
+    L.heading = hash01(mix64(L.seed + 2)) * TAU;
+    L.len = 3.5 + 6 * hash01(mix64(L.seed + 3));
+    L.radius = 0.25 + 0.35 * hash01(mix64(L.seed + 4)) * hash01(mix64(L.seed + 6));   // most are slim, a few are giants
+    if (L.stone) { L.len *= 0.4 + 0.5 * hash01(mix64(L.seed + 7)); L.radius *= 1.7; }   // Q-02: the stone trunks broken in sections, thick
     { const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
     if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // C-09: nor across the road
     if (!site.marks.empty() && site.markCover(L.x, L.z) > 0.3) return;   // T-02: nor on a street
@@ -299,7 +299,6 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);
     const int TILE = 8 * FB_SCALE, TX = (FBW + TILE - 1) / TILE, TY = (FBH + TILE - 1) / TILE;
     std::vector<uint16_t> cov((size_t)TX * TY, 0);
-    auto nowMs = []() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); };
     double tSec = nowMs();
     auto section = [&](int k) { double n = nowMs(); st.ms[k] += n - tSec; tSec = n; };
     bool markCov = true;   // F-07: the coverage grid is read by the trees alone: the cells after them mark nothing
@@ -351,8 +350,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         setv(q[0], 0, 0, base * (0.78 + 0.27 * litC), 1.1);
         for (int k = 0; k < nOut; k++) {
             uint64_t hk = mix64(hb + 31 * (k + 1));
-            double a = (k + 0.5 * h01(hk)) * TAU / nOut;
-            double rr = 0.78 + 0.4 * h01(mix64(hk + 1));
+            double a = (k + 0.5 * hash01(hk)) * TAU / nOut;
+            double rr = 0.78 + 0.4 * hash01(mix64(hk + 1));
             double ca = std::cos(a), sa = std::sin(a);
             double lit = ca * sunV.x + sa * sunV.y;   // toward the sun across the disc
             double sh = base * (0.5 + 0.27 * litC + 0.23 * std::max(0.0, lit)) * (sa < 0 ? 0.82 : 1.0);
@@ -488,8 +487,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         if (T.dead) {   // a bare skeleton: four branches, no canopy
             for (int k = 0; k < 4; k++) {
                 uint64_t hb = mix64(T.seed + 200 + k);
-                double a = h01(hb) * TAU, l = T.h * (0.2 + 0.25 * h01(mix64(hb + 1)));
-                double y0 = T.gy + T.h * (0.45 + 0.35 * h01(mix64(hb + 2)));
+                double a = hash01(hb) * TAU, l = T.h * (0.2 + 0.25 * hash01(mix64(hb + 1)));
+                double y0 = T.gy + T.h * (0.45 + 0.35 * hash01(mix64(hb + 2)));
                 double f = y0 - T.gy; double bx = T.x + T.lx * (f / T.cy), bz = T.z + T.lz * (f / T.cy);
                 if (near) limb(bx, y0, bz, bx + std::cos(a) * l, y0 + l * 0.8, bz + std::sin(a) * l, w0 * 0.4, w0 * 0.08, trunkShade, sideLit, nullptr, 0);
                 else line(bx, y0, bz, bx + std::cos(a) * l, y0 + l * 0.8, bz + std::sin(a) * l, trunkShade, BANK_BARK, rPx > 8 ? 2 : 1);
@@ -505,19 +504,19 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         int midN = rPx > 6 ? 3 : 2;
         switch (T.fam) {
             case 0: {   // dome: clusters in an ellipsoid, branches to the first three
-                int nb = T.bare ? 4 : (near ? (int)((8 + 6 * h01(mix64(T.seed + 3))) * L.count) : midN);
+                int nb = T.bare ? 4 : (near ? (int)((8 + 6 * hash01(mix64(T.seed + 3))) * L.count) : midN);
                 for (int k = 0; k < nb; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = h01(hb) * TAU, rr = T.r * (near ? 0.6 : 0.45) * std::sqrt(h01(mix64(hb + 1)));
-                    double ox = std::cos(a) * rr + swx, oz = std::sin(a) * rr + swz, oy = (h01(mix64(hb + 2)) - 0.5) * T.r * (near ? 0.9 : 0.6);
+                    double a = hash01(hb) * TAU, rr = T.r * (near ? 0.6 : 0.45) * std::sqrt(hash01(mix64(hb + 1)));
+                    double ox = std::cos(a) * rr + swx, oz = std::sin(a) * rr + swz, oy = (hash01(mix64(hb + 2)) - 0.5) * T.r * (near ? 0.9 : 0.6);
                     if (k < 3 && near) branchTo(cx + ox, T.gy + T.cy + oy, cz + oz, 0.75);
-                    double cr = near ? cR * (0.9 + 0.3 * h01(mix64(hb + 3))) : T.r * 0.62;
+                    double cr = near ? cR * (0.9 + 0.3 * hash01(mix64(hb + 3))) : T.r * 0.62;
                     cluster(hb, cx + ox, T.gy + T.cy + oy, cz + oz, cr, cr * 0.8, dist, leafBank, tone0, litOf(ox, oy, oz), ragged);
                 }
                 break;
             }
             case 1: {   // cone: clusters stacked up the trunk, narrowing to a tip
-                int nb = near ? (int)((6 + 3 * h01(mix64(T.seed + 3))) * L.count) : 3;
+                int nb = near ? (int)((6 + 3 * hash01(mix64(T.seed + 3))) * L.count) : 3;
                 for (int k = 0; k < nb; k++) {
                     double fk = (k + 0.5) / nb;
                     double rr = T.r * (1.15 - fk) + T.r * 0.12;
@@ -527,11 +526,11 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 break;
             }
             case 2: {   // umbrella: a flat crown on a tall trunk
-                int nb = T.bare ? 3 : (near ? (int)((7 + 4 * h01(mix64(T.seed + 3))) * L.count) : midN);
+                int nb = T.bare ? 3 : (near ? (int)((7 + 4 * hash01(mix64(T.seed + 3))) * L.count) : midN);
                 for (int k = 0; k < nb; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = h01(hb) * TAU, rr = T.r * (near ? 0.6 : 0.4) * std::sqrt(h01(mix64(hb + 1)));
-                    double ox = std::cos(a) * rr + swx, oz = std::sin(a) * rr + swz, oy = (h01(mix64(hb + 2)) - 0.5) * T.h * 0.06;
+                    double a = hash01(hb) * TAU, rr = T.r * (near ? 0.6 : 0.4) * std::sqrt(hash01(mix64(hb + 1)));
+                    double ox = std::cos(a) * rr + swx, oz = std::sin(a) * rr + swz, oy = (hash01(mix64(hb + 2)) - 0.5) * T.h * 0.06;
                     if (k < 3 && near) branchTo(cx + ox, T.gy + T.cy + oy, cz + oz, 0.8);
                     double cr = near ? cR * 1.1 : T.r * 0.7;
                     cluster(hb, cx + ox, T.gy + T.cy + oy, cz + oz, cr, T.h * 0.09, dist, leafBank, tone0, litOf(ox, oy, oz), ragged);
@@ -541,11 +540,11 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             case 3: {   // tiered giant: three canopy layers
                 for (int layer = 0; layer < 3; layer++) {
                     double ly = T.h * (0.45 + 0.25 * layer) - T.cy, lr = T.r * (layer == 2 ? 0.65 : 1.0);
-                    int nb = T.bare ? 2 : (near ? (int)((5 + 3 * h01(mix64(T.seed + 3 + layer))) * L.count) : 2);
+                    int nb = T.bare ? 2 : (near ? (int)((5 + 3 * hash01(mix64(T.seed + 3 + layer))) * L.count) : 2);
                     for (int k = 0; k < nb; k++) {
                         uint64_t hb = mix64(T.seed + 100 + layer * 20 + k);
-                        double a = h01(hb) * TAU, rr = lr * (near ? 0.65 : 0.45) * std::sqrt(h01(mix64(hb + 1)));
-                        double ox = std::cos(a) * rr + swx * (0.5 + 0.5 * layer), oz = std::sin(a) * rr + swz * (0.5 + 0.5 * layer), oy = ly + (h01(mix64(hb + 2)) - 0.5) * T.h * 0.08;
+                        double a = hash01(hb) * TAU, rr = lr * (near ? 0.65 : 0.45) * std::sqrt(hash01(mix64(hb + 1)));
+                        double ox = std::cos(a) * rr + swx * (0.5 + 0.5 * layer), oz = std::sin(a) * rr + swz * (0.5 + 0.5 * layer), oy = ly + (hash01(mix64(hb + 2)) - 0.5) * T.h * 0.08;
                         if (k < 2 && near) branchTo(cx + ox, T.gy + T.cy + oy, cz + oz, (ly + T.cy) * 0.9 / trunkTop);
                         double cr = near ? lr * 0.45 : lr * 0.6;
                         cluster(hb, cx + ox, T.gy + T.cy + oy, cz + oz, cr, cr * 0.65, dist, leafBank, tone0, litOf(ox, oy, oz), ragged);
@@ -554,11 +553,11 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 break;
             }
             case 4: {   // fibrous stalks: tufts on stalks
-                int nb = near ? (int)((7 + 4 * h01(mix64(T.seed + 3))) * L.count) : 3;
+                int nb = near ? (int)((7 + 4 * hash01(mix64(T.seed + 3))) * L.count) : 3;
                 for (int k = 0; k < nb; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = h01(hb) * TAU, rr = T.r * 0.9 * h01(mix64(hb + 1));
-                    double ox = std::cos(a) * rr, oz = std::sin(a) * rr, oy = T.h * (0.5 + 0.5 * h01(mix64(hb + 2)));
+                    double a = hash01(hb) * TAU, rr = T.r * 0.9 * hash01(mix64(hb + 1));
+                    double ox = std::cos(a) * rr, oz = std::sin(a) * rr, oy = T.h * (0.5 + 0.5 * hash01(mix64(hb + 2)));
                     if (near) limb(T.x, T.gy, T.z, T.x + ox, T.gy + oy, T.z + oz, w0 * 0.5, w0 * 0.2, trunkShade, sideLit, &barkTile, texW);
                     else line(T.x, T.gy, T.z, T.x + ox, T.gy + oy, T.z + oz, trunkShade, BANK_BARK, rPx > 8 ? 2 : 1);
                     cluster(hb, T.x + ox, T.gy + oy, T.z + oz, T.r * 0.34, T.r * 0.26, dist, leafBank, tone0, litOf(ox, oy - T.cy, oz), ragged);
@@ -566,10 +565,10 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 break;
             }
             case 5: {   // fern tree: arching fronds from the top, sprays along them
-                int nf = near ? 7 + (int)(3 * h01(mix64(T.seed + 3))) : 5;
+                int nf = near ? 7 + (int)(3 * hash01(mix64(T.seed + 3))) : 5;
                 for (int k = 0; k < nf; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = h01(hb) * TAU + 0.15 * std::sin(t * 1.3 + k) * wind, l = T.r * (0.8 + 0.4 * h01(mix64(hb + 1)));
+                    double a = hash01(hb) * TAU + 0.15 * std::sin(t * 1.3 + k) * wind, l = T.r * (0.8 + 0.4 * hash01(mix64(hb + 1)));
                     double x0 = cx, y0 = T.gy + T.cy, z0 = cz;
                     double x1 = x0 + std::cos(a) * l * 0.55, y1 = y0 + l * (0.35 - 0.2 * L.droop), z1 = z0 + std::sin(a) * l * 0.55;
                     double x2 = x0 + std::cos(a) * l, y2 = y0 - l * (0.25 + 0.3 * L.droop), z2 = z0 + std::sin(a) * l;
@@ -580,41 +579,41 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 break;
             }
             case 6: {   // mushroom tree: a cap on a thick stem, dark underside
-                int nb = near ? (int)((6 + 3 * h01(mix64(T.seed + 3))) * L.count) : 3;
+                int nb = near ? (int)((6 + 3 * hash01(mix64(T.seed + 3))) * L.count) : 3;
                 for (int k = 0; k < nb; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = h01(hb) * TAU, rr = T.r * (near ? 0.5 : 0.35) * std::sqrt(h01(mix64(hb + 1)));
+                    double a = hash01(hb) * TAU, rr = T.r * (near ? 0.5 : 0.35) * std::sqrt(hash01(mix64(hb + 1)));
                     double ox = std::cos(a) * rr, oz = std::sin(a) * rr;
                     cluster(hb, cx + ox, T.gy + T.cy, cz + oz, near ? T.r * 0.55 : T.r * 0.7, T.r * 0.28, dist, leafBank, tone0, litOf(ox, 0, oz), ragged * 0.7);
                 }
                 if (near) {   // the gills under the cap
                     for (int k = 0; k < 12; k++) {
                         uint64_t hb = mix64(T.seed + 300 + k);
-                        double a = h01(hb) * TAU, rr = T.r * (0.3 + 0.6 * h01(mix64(hb + 1)));
+                        double a = hash01(hb) * TAU, rr = T.r * (0.3 + 0.6 * hash01(mix64(hb + 1)));
                         point(cx + std::cos(a) * rr, T.gy + T.cy - T.r * 0.2, cz + std::sin(a) * rr, fogShade(leafBase * 0.4, dist), leafBank, 1);
                     }
                 }
                 break;
             }
             case 7: {   // weeping: a dome with strands hanging from its rim, small clusters along them
-                int nb = T.bare ? 3 : (near ? (int)((6 + 4 * h01(mix64(T.seed + 3))) * L.count) : midN);
+                int nb = T.bare ? 3 : (near ? (int)((6 + 4 * hash01(mix64(T.seed + 3))) * L.count) : midN);
                 for (int k = 0; k < nb; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = h01(hb) * TAU, rr = T.r * (near ? 0.55 : 0.4) * std::sqrt(h01(mix64(hb + 1)));
-                    double ox = std::cos(a) * rr + swx, oz = std::sin(a) * rr + swz, oy = (h01(mix64(hb + 2)) - 0.3) * T.r * 0.7;
+                    double a = hash01(hb) * TAU, rr = T.r * (near ? 0.55 : 0.4) * std::sqrt(hash01(mix64(hb + 1)));
+                    double ox = std::cos(a) * rr + swx, oz = std::sin(a) * rr + swz, oy = (hash01(mix64(hb + 2)) - 0.3) * T.r * 0.7;
                     if (k < 3 && near) branchTo(cx + ox, T.gy + T.cy + oy, cz + oz, 0.75);
-                    double cr = near ? cR * (0.85 + 0.3 * h01(mix64(hb + 3))) : T.r * 0.62;
+                    double cr = near ? cR * (0.85 + 0.3 * hash01(mix64(hb + 3))) : T.r * 0.62;
                     cluster(hb, cx + ox, T.gy + T.cy + oy, cz + oz, cr, cr * 0.75, dist, leafBank, tone0, litOf(ox, oy, oz), ragged);
                 }
                 if (!T.bare) {
-                    int ns = near ? 8 + (int)(4 * h01(mix64(T.seed + 4))) : 5;
+                    int ns = near ? 8 + (int)(4 * hash01(mix64(T.seed + 4))) : 5;
                     double hang = T.cy * (0.5 + 0.4 * L.droop);
                     for (int k = 0; k < ns; k++) {
                         uint64_t hb = mix64(T.seed + 400 + k);
-                        double a = h01(hb) * TAU, rr = T.r * (0.75 + 0.25 * h01(mix64(hb + 1)));
+                        double a = hash01(hb) * TAU, rr = T.r * (0.75 + 0.25 * hash01(mix64(hb + 1)));
                         double sx0 = cx + std::cos(a) * rr + swx, sz0 = cz + std::sin(a) * rr + swz, sy0 = T.gy + T.cy + T.r * 0.1;
                         double sway = wind * 0.25 * std::sin(t * 1.5 + k);
-                        double sx1 = sx0 + wdx * sway + std::cos(a) * T.r * 0.15, sz1 = sz0 + wdz * sway + std::sin(a) * T.r * 0.15, sy1 = sy0 - hang * (0.7 + 0.3 * h01(mix64(hb + 2)));
+                        double sx1 = sx0 + wdx * sway + std::cos(a) * T.r * 0.15, sz1 = sz0 + wdz * sway + std::sin(a) * T.r * 0.15, sy1 = sy0 - hang * (0.7 + 0.3 * hash01(mix64(hb + 2)));
                         double sh = fogShade(leafBase * tone0 * 0.7, dist);
                         line(sx0, sy0, sz0, sx1, sy1, sz1, sh, leafBank, rPx > 10 ? 2 : 1);
                         if (near && dist < 45) { double cr = cR * 0.35; cluster(mix64(hb + 3), (sx0 + sx1) * 0.5, (sy0 + sy1) * 0.5, (sz0 + sz1) * 0.5, cr, cr * 1.3, dist, leafBank, tone0 * 0.9, 0.45, ragged); cluster(mix64(hb + 4), sx1, sy1 + cr, sz1, cr * 0.8, cr, dist, leafBank, tone0 * 0.85, 0.4, ragged); }
@@ -623,12 +622,12 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 break;
             }
             case 8: {   // candelabra: a few thick branches rising from the trunk's top, a ball of leaves on each
-                int nb = 3 + (int)(2.99 * h01(mix64(T.seed + 3)));
+                int nb = 3 + (int)(2.99 * hash01(mix64(T.seed + 3)));
                 double top = T.gy + trunkTop;
                 for (int k = 0; k < nb; k++) {
                     uint64_t hb = mix64(T.seed + 100 + k);
-                    double a = (k + 0.4 * h01(hb)) * TAU / nb, l = T.r * (0.55 + 0.35 * h01(mix64(hb + 1)));
-                    double ex = tx + std::cos(a) * l + swx, ez = tz + std::sin(a) * l + swz, ey = top + T.h * (0.35 + 0.2 * h01(mix64(hb + 2)));
+                    double a = (k + 0.4 * hash01(hb)) * TAU / nb, l = T.r * (0.55 + 0.35 * hash01(mix64(hb + 1)));
+                    double ex = tx + std::cos(a) * l + swx, ez = tz + std::sin(a) * l + swz, ey = top + T.h * (0.35 + 0.2 * hash01(mix64(hb + 2)));
                     if (near || dist < 60) limb(tx, top - w0, tz, ex, ey, ez, w0 * 0.55, w0 * 0.15, trunkShade, sideLit, nullptr, 0);
                     else line(tx, top, tz, ex, ey, ez, trunkShade, BANK_BARK, rPx > 8 ? 2 : 1);
                     if (T.bare) continue;
@@ -639,7 +638,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 break;
             }
             case 9: {   // spire: small clusters stacked up a thin trunk, a bright tip
-                int nb = near ? (int)((6 + 2 * h01(mix64(T.seed + 3))) * L.count) : 3;
+                int nb = near ? (int)((6 + 2 * hash01(mix64(T.seed + 3))) * L.count) : 3;
                 for (int k = 0; k < nb; k++) {
                     double fk = (k + 0.5) / nb;
                     double rr = T.r * (1.15 - 0.8 * fk);
@@ -682,8 +681,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     Vec3 nn = normalize(cross(axis, Vec3(0, 1, 0)));
                     Vec3 upL = normalize(cross(nn, axis)); if (upL.y < 0) { upL = -upL; nn = -nn; }
                     uint64_t hs = mix64(Lg.seed + 5);
-                    bool mossy = !Lg.stone && h01(hs) < 0.45 && (tv.biome == BIO_TEMPERATE || tv.biome == BIO_TROPICAL || tv.biome == BIO_WETLAND || tv.biome == BIO_TAIGA);
-                    bool roots = !Lg.stone && h01(mix64(hs + 1)) < 0.3;
+                    bool mossy = !Lg.stone && hash01(hs) < 0.45 && (tv.biome == BIO_TEMPERATE || tv.biome == BIO_TROPICAL || tv.biome == BIO_WETLAND || tv.biome == BIO_TAIGA);
+                    bool roots = !Lg.stone && hash01(mix64(hs + 1)) < 0.3;
                     const int barkBank = Lg.stone ? 26 : BANK_BARK, woodBank = Lg.stone ? 26 : BANK_WOOD;   // Q-02: the stone's own jasper colours (`setupPalette`)
                     double texW = clampd(1.0 - (dist - 20.0) / 40.0, 0.0, 1.0);
                     Vec3 mid = (A + B) * 0.5;
@@ -731,14 +730,14 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         }
                     }
                     if (dist < 90 && !Lg.stone) {   // broken stubs on the upper half
-                        int ns = 1 + (h01(mix64(hs + 2)) < 0.5 ? 1 : 0);
+                        int ns = 1 + (hash01(mix64(hs + 2)) < 0.5 ? 1 : 0);
                         double stubShade = fogShade(20 + 8 * env.skyBrightness * sunUp, dist);
                         for (int k = 0; k < ns; k++) {
                             uint64_t hk = mix64(hs + 10 + k);
-                            double tt = 0.2 + 0.6 * h01(hk), ang = (0.25 + 0.5 * h01(mix64(hk + 1))) * PI;
+                            double tt = 0.2 + 0.6 * hash01(hk), ang = (0.25 + 0.5 * hash01(mix64(hk + 1))) * PI;
                             Vec3 base = A + (B - A) * tt + nn * (R * std::cos(ang)) + upL * (R * std::sin(ang));
-                            Vec3 dir = normalize(nn * std::cos(ang) + upL * std::sin(ang) + axis * (0.3 * (h01(mix64(hk + 2)) - 0.5)));
-                            double len = R * (1.2 + 1.5 * h01(mix64(hk + 3)));
+                            Vec3 dir = normalize(nn * std::cos(ang) + upL * std::sin(ang) + axis * (0.3 * (hash01(mix64(hk + 2)) - 0.5)));
+                            double len = R * (1.2 + 1.5 * hash01(mix64(hk + 3)));
                             Vec3 tip = base + dir * len;
                             limb(base.x, base.y, base.z, tip.x, tip.y, tip.z, R * 0.25, R * 0.07, stubShade, sideLit, nullptr, 0);
                         }
@@ -747,7 +746,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         const Vec3& E = dot(axis, toCam) > 0 ? A : B;
                         double rootShade = fogShade(18 + 8 * env.skyBrightness * sunUp, dist);
                         for (int k = 0; k < 9; k++) {
-                            double ang = k * TAU / 9 + 0.3 * h01(mix64(hs + 30 + k)), len = R * (1.4 + 0.9 * h01(mix64(hs + 40 + k)));
+                            double ang = k * TAU / 9 + 0.3 * hash01(mix64(hs + 30 + k)), len = R * (1.4 + 0.9 * hash01(mix64(hs + 40 + k)));
                             Vec3 rd = nn * std::cos(ang) + upL * std::sin(ang);
                             Vec3 tip = E + rd * len;
                             if (tip.y < site.groundHeight(tip.x, tip.z) + 0.05) continue;
@@ -760,33 +759,33 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             // ---- undergrowth in forests: ferns, bushes with berries, mushrooms
             if (tv.material == MAT_FOREST && cellDist < 60 && tv.veg > 0.3) {
                 double dens = canopyDensityAt(cx * cs + 8, cz * cs + 8, tv.veg);
-                int nf = (int)(2 + 4 * dens * h01(mix64(h + 61)));
+                int nf = (int)(2 + 4 * dens * hash01(mix64(h + 61)));
                 for (int i = 0; i < nf; i++) {
                     uint64_t hc = mix64(h + 1300 + 31 * i);
-                    double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                    double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                     double gy = site.groundHeight(px, pz);
                     double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
-                    double fl = (0.5 + 0.6 * h01(mix64(hc + 2))) * treeScale;
+                    double fl = (0.5 + 0.6 * hash01(mix64(hc + 2))) * treeScale;
                     if (fl / dist * proj.f < 1.5) continue;
-                    double sh = fogShade(leafBase * 0.62 * (0.85 + 0.3 * h01(mix64(hc + 3))), dist);
+                    double sh = fogShade(leafBase * 0.62 * (0.85 + 0.3 * hash01(mix64(hc + 3))), dist);
                     int nfr = dist < 20 ? 6 : 4;
                     for (int k = 0; k < nfr; k++) {   // arching fronds (B-315: leaf strips close by, lines beyond)
-                        double a = k * TAU / nfr + h01(mix64(hc + 10 + k)) * 0.6 + 0.08 * std::sin(t * 1.7 + px) * wind;
+                        double a = k * TAU / nfr + hash01(mix64(hc + 10 + k)) * 0.6 + 0.08 * std::sin(t * 1.7 + px) * wind;
                         double x1 = px + std::cos(a) * fl * 0.5, y1 = gy + fl * 0.55, z1 = pz + std::sin(a) * fl * 0.5;
                         double x2 = px + std::cos(a) * fl, y2 = gy + fl * 0.25, z2 = pz + std::sin(a) * fl;
                         if (dist < 28) frond(px, gy + 0.05, pz, x1, y1, z1, x2, y2, z2, fl * 0.2, sh, 3);
                         else { line(px, gy, pz, x1, y1, z1, sh, 3, 1); line(x1, y1, z1, x2, y2, z2, sh, 3, 1); }
                     }
                 }
-                if (cellDist < 30 && h01(mix64(h + 62)) < 0.25) {   // mushrooms: tan caps close to the ground
-                    int nm = 2 + (int)(3 * h01(mix64(h + 63)));
+                if (cellDist < 30 && hash01(mix64(h + 62)) < 0.25) {   // mushrooms: tan caps close to the ground
+                    int nm = 2 + (int)(3 * hash01(mix64(h + 63)));
                     for (int i = 0; i < nm; i++) {
                         uint64_t hc = mix64(h + 1400 + i);
-                        double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                        double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                         double gy = site.groundHeight(px, pz);
                         double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
                         if (0.2 / dist * proj.f < 1.0) continue;
-                        point(px, gy + 0.12 + 0.1 * h01(mix64(hc + 2)), pz, fogShade(40 * std::pow(light, 0.7), dist), 9, dist < 6 ? 2 : 1);
+                        point(px, gy + 0.12 + 0.1 * hash01(mix64(hc + 2)), pz, fogShade(40 * std::pow(light, 0.7), dist), 9, dist < 6 ? 2 : 1);
                     }
                 }
             }
@@ -795,40 +794,40 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             // with 0-2 bushes a cell within 200 m
             if ((tv.material == MAT_GRASS || (tv.material == MAT_FOREST && tv.veg < 0.6) || (tv.material == MAT_SAND && tv.biome == BIO_DESERT)) && (tv.veg > 0.2 || tv.biome == BIO_DESERT) && cellDist < 320) {
                 double per = tv.biome == BIO_SAVANNA ? 1.6 : (tv.biome == BIO_TUNDRA ? 0.7 : (tv.biome == BIO_DESERT ? 0.35 : 1.0));
-                double nb = (0.5 + tv.veg * 3.5) * per * h01(mix64(h + 7)) * 1.6;
+                double nb = (0.5 + tv.veg * 3.5) * per * hash01(mix64(h + 7)) * 1.6;
                 if (tv.material == MAT_FOREST) nb *= 0.6;
-                int nbush = (int)nb + (h01(mix64(h + 8)) < nb - (int)nb ? 1 : 0);
+                int nbush = (int)nb + (hash01(mix64(h + 8)) < nb - (int)nb ? 1 : 0);
                 for (int i = 0; i < nbush; i++) {
                     uint64_t hb = mix64(h + 700 + i);
-                    double bx = cx * cs + h01(hb) * cs, bz = cz * cs + h01(mix64(hb + 1)) * cs;
+                    double bx = cx * cs + hash01(hb) * cs, bz = cz * cs + hash01(mix64(hb + 1)) * cs;
                     double dist = std::sqrt((bx - camPos.x) * (bx - camPos.x) + (bz - camPos.z) * (bz - camPos.z));
-                    double bh = (0.5 + 1.5 * h01(mix64(hb + 2)) * (tv.biome == BIO_TUNDRA ? 0.4 : 1.0)) * treeScale;
+                    double bh = (0.5 + 1.5 * hash01(mix64(hb + 2)) * (tv.biome == BIO_TUNDRA ? 0.4 : 1.0)) * treeScale;
                     if (bh / dist * proj.f < 1.2) continue;
                     double gy = site.groundHeight(bx, bz);
                     if (gy < site.waterAt(bx, bz) + 0.3) continue;
-                    int bbank = h01(mix64(hb + 5)) < 0.2 ? 10 : (h01(mix64(hb + 9)) < 0.25 ? 5 : 3);
+                    int bbank = hash01(mix64(hb + 5)) < 0.2 ? 10 : (hash01(mix64(hb + 9)) < 0.25 ? 5 : 3);
                     double tone = tv.biome == BIO_DESERT ? 0.75 : 0.95;
                     cluster(hb, bx, gy + bh * 0.5, bz, bh * 0.55, bh * 0.45, dist, bbank, tone, 0.5 + 0.35 * sunUp * clampd(sd.y, 0, 1), 1.1);
                     if (bh > 1.4 && dist < 120) cluster(mix64(hb + 11), bx + bh * 0.35, gy + bh * 0.42, bz + bh * 0.2, bh * 0.4, bh * 0.35, dist, bbank, tone * 0.92, 0.45 + 0.3 * sunUp, 1.2);
-                    if (dist < 40 && h01(mix64(hb + 6)) < 0.3) {   // berries
-                        int nberry = 3 + (int)(5 * h01(mix64(hb + 7)));
+                    if (dist < 40 && hash01(mix64(hb + 6)) < 0.3) {   // berries
+                        int nberry = 3 + (int)(5 * hash01(mix64(hb + 7)));
                         for (int k = 0; k < nberry; k++) {
                             uint64_t hk = mix64(hb + 40 + k);
-                            double a = h01(hk) * TAU, rr = bh * 0.5 * std::sqrt(h01(mix64(hk + 1)));
-                            point(bx + std::cos(a) * rr, gy + bh * (0.3 + 0.5 * h01(mix64(hk + 2))), bz + std::sin(a) * rr, fogShade(52 * std::pow(light, 0.6), dist), 5, 1);
+                            double a = hash01(hk) * TAU, rr = bh * 0.5 * std::sqrt(hash01(mix64(hk + 1)));
+                            point(bx + std::cos(a) * rr, gy + bh * (0.3 + 0.5 * hash01(mix64(hk + 2))), bz + std::sin(a) * rr, fogShade(52 * std::pow(light, 0.6), dist), 5, 1);
                         }
                     }
                 }
             }
             // ---- R-306: mounds on warm open ground (one cell in six: a cluster of 1-3 earth cones 0.8-2.5 m), and grass tufts
             // out to 120 m, so a plain has something standing on it at every distance
-            if (tv.material == MAT_GRASS && (tv.biome == BIO_SAVANNA || tv.biome == BIO_GRASSLAND) && cellDist < 260 && h01(mix64(h + 79)) < 0.16) {
-                int nm = 1 + (int)(2.99 * h01(mix64(h + 80)));
+            if (tv.material == MAT_GRASS && (tv.biome == BIO_SAVANNA || tv.biome == BIO_GRASSLAND) && cellDist < 260 && hash01(mix64(h + 79)) < 0.16) {
+                int nm = 1 + (int)(2.99 * hash01(mix64(h + 80)));
                 for (int i = 0; i < nm; i++) {
                     uint64_t hm = mix64(h + 2000 + i);
-                    double mx = cx * cs + 3 + h01(hm) * (cs - 6), mz = cz * cs + 3 + h01(mix64(hm + 1)) * (cs - 6);
+                    double mx = cx * cs + 3 + hash01(hm) * (cs - 6), mz = cz * cs + 3 + hash01(mix64(hm + 1)) * (cs - 6);
                     double dist = std::sqrt((mx - camPos.x) * (mx - camPos.x) + (mz - camPos.z) * (mz - camPos.z));
-                    double mh = (0.8 + 1.7 * h01(mix64(hm + 2))) * treeScale, mw = mh * 0.38;
+                    double mh = (0.8 + 1.7 * hash01(mix64(hm + 2))) * treeScale, mw = mh * 0.38;
                     if (mh / dist * proj.f < 1.2) continue;
                     double gy = site.groundHeight(mx, mz);
                     if (gy < site.waterAt(mx, mz) + 0.3) continue;
@@ -843,13 +842,13 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                 if (tv.material == MAT_FOREST) nt /= 2;
                 for (int i = 0; i < nt; i++) {
                     uint64_t hg = mix64(h + 900 + i);
-                    double gx = cx * cs + h01(hg) * cs, gz = cz * cs + h01(mix64(hg + 1)) * cs;
+                    double gx = cx * cs + hash01(hg) * cs, gz = cz * cs + hash01(mix64(hg + 1)) * cs;
                     double gy = site.groundHeight(gx, gz);
                     if (gy < site.waterAt(gx, gz) + 0.1) continue;
-                    double hh = (tall ? 0.8 + 0.6 * h01(mix64(hg + 2)) : 0.25 + 0.45 * h01(mix64(hg + 2))) * treeScale;
+                    double hh = (tall ? 0.8 + 0.6 * hash01(mix64(hg + 2)) : 0.25 + 0.45 * hash01(mix64(hg + 2))) * treeScale;
                     double dist = std::sqrt((gx - camPos.x) * (gx - camPos.x) + (gz - camPos.z) * (gz - camPos.z));
                     if (hh / dist * proj.f < 1.0) continue;
-                    double sh = fogShade(44 * std::pow(light, 0.7) * (0.7 + 0.4 * h01(mix64(hg + 3))), dist);
+                    double sh = fogShade(44 * std::pow(light, 0.7) * (0.7 + 0.4 * hash01(mix64(hg + 3))), dist);
                     double sway = hh * (0.12 + 0.3 * wind) * std::sin(t * 1.6 + gx * 0.35 + gz * 0.2);
                     if (tall) {
                         double mx = gx + wdx * sway * 0.4, mz = gz + wdz * sway * 0.4;
@@ -857,47 +856,47 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         line(mx, gy + hh * 0.6, mz, gx + wdx * sway, gy + hh * 0.95, gz + wdz * sway, sh, 10, 1);
                     } else line(gx, gy, gz, gx + wdx * sway, gy + hh, gz + wdz * sway, sh, 10, 1);
                 }
-                if (bloom && cellDist < 50 && tv.material == MAT_GRASS && (tv.biome == BIO_GRASSLAND || tv.biome == BIO_TEMPERATE || tv.biome == BIO_SAVANNA || tv.biome == BIO_NONE) && h01(mix64(h + 64)) < 0.5) {
-                    int nfl = 3 + (int)(6 * h01(mix64(h + 65)));
-                    int fbank = h01(mix64(h + 66)) < 0.5 ? 5 : 8;
+                if (bloom && cellDist < 50 && tv.material == MAT_GRASS && (tv.biome == BIO_GRASSLAND || tv.biome == BIO_TEMPERATE || tv.biome == BIO_SAVANNA || tv.biome == BIO_NONE) && hash01(mix64(h + 64)) < 0.5) {
+                    int nfl = 3 + (int)(6 * hash01(mix64(h + 65)));
+                    int fbank = hash01(mix64(h + 66)) < 0.5 ? 5 : 8;
                     for (int i = 0; i < nfl; i++) {
                         uint64_t hc = mix64(h + 1500 + i);
-                        double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                        double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                         double gy = site.groundHeight(px, pz);
                         double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
                         if (0.3 / dist * proj.f < 1.0) continue;
-                        point(px, gy + 0.25 + 0.3 * h01(mix64(hc + 2)), pz, fogShade(50 * std::pow(light, 0.6), dist), fbank, 1);
+                        point(px, gy + 0.25 + 0.3 * hash01(mix64(hc + 2)), pz, fogShade(50 * std::pow(light, 0.6), dist), fbank, 1);
                     }
                 }
             }
             // ---- water edges: reeds and cattails; still wetland water: lily pads; dusk: fireflies
             bool shore = tv.water > -1e8f && tv.h < tv.water + 1.5 && tv.h > tv.water - 0.6;
             if (shore && cellDist < 80 && tv.biome != BIO_ICE && tv.biome != BIO_TUNDRA) {
-                int nr = 6 + (int)(8 * h01(mix64(h + 71)));
+                int nr = 6 + (int)(8 * hash01(mix64(h + 71)));
                 for (int i = 0; i < nr; i++) {
                     uint64_t hc = mix64(h + 1600 + i);
-                    double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                    double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                     double gy = site.groundHeight(px, pz), wl = site.waterAt(px, pz);
                     if (gy > wl + 1.5 || gy < wl - 0.6) continue;
                     double base = std::max(gy, wl);
                     double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
-                    double hh = (1.2 + 1.2 * h01(mix64(hc + 2))) * treeScale;
+                    double hh = (1.2 + 1.2 * hash01(mix64(hc + 2))) * treeScale;
                     if (hh / dist * proj.f < 1.0) continue;
                     double sway = hh * (0.08 + 0.25 * wind) * std::sin(t * 1.4 + px * 0.5);
-                    double sh = fogShade(42 * std::pow(light, 0.7) * (0.8 + 0.3 * h01(mix64(hc + 3))), dist);
+                    double sh = fogShade(42 * std::pow(light, 0.7) * (0.8 + 0.3 * hash01(mix64(hc + 3))), dist);
                     line(px, base, pz, px + wdx * sway, base + hh, pz + wdz * sway, sh, 10, dist < 12 ? 2 : 1);
-                    if (h01(mix64(hc + 4)) < 0.4) point(px + wdx * sway, base + hh * 0.92, pz + wdz * sway, fogShade(16, dist), 0, dist < 12 ? 2 : 1);   // the cattail head
+                    if (hash01(mix64(hc + 4)) < 0.4) point(px + wdx * sway, base + hh * 0.92, pz + wdz * sway, fogShade(16, dist), 0, dist < 12 ? 2 : 1);   // the cattail head
                 }
             }
-            if (tv.material == MAT_WATER && tv.biome == BIO_WETLAND && cellDist < 50 && h01(mix64(h + 72)) < 0.6) {
-                int np = 3 + (int)(6 * h01(mix64(h + 73)));
+            if (tv.material == MAT_WATER && tv.biome == BIO_WETLAND && cellDist < 50 && hash01(mix64(h + 72)) < 0.6) {
+                int np = 3 + (int)(6 * hash01(mix64(h + 73)));
                 for (int i = 0; i < np; i++) {
                     uint64_t hc = mix64(h + 1700 + i);
-                    double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                    double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                     double wl = site.waterAt(px, pz);
                     if (wl < -1e8 || site.groundHeight(px, pz) > wl - 0.2) continue;
                     double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
-                    double rr = 0.25 + 0.2 * h01(mix64(hc + 2));
+                    double rr = 0.25 + 0.2 * hash01(mix64(hc + 2));
                     if (rr / dist * proj.f < 1.2) continue;
                     RVert q[6];
                     bool ok = true;
@@ -907,14 +906,14 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     rasterPolygon(fb, q, 6, rp, proj);
                 }
             }
-            if (dusk && cellDist < 40 && (tv.biome == BIO_WETLAND || (tv.material == MAT_FOREST && tv.veg > 0.5)) && h01(mix64(h + 74)) < 0.5) {
-                int nff = 2 + (int)(4 * h01(mix64(h + 75)));
+            if (dusk && cellDist < 40 && (tv.biome == BIO_WETLAND || (tv.material == MAT_FOREST && tv.veg > 0.5)) && hash01(mix64(h + 74)) < 0.5) {
+                int nff = 2 + (int)(4 * hash01(mix64(h + 75)));
                 double glow = clampd((0.35 - env.skyBrightness) / 0.3, 0, 1);
                 for (int i = 0; i < nff; i++) {
                     uint64_t hc = mix64(h + 1800 + i);
-                    double ph = h01(hc) * TAU, sp = 0.3 + 0.4 * h01(mix64(hc + 1));
-                    double px = cx * cs + h01(mix64(hc + 2)) * cs + 1.5 * std::sin(t * sp + ph), pz = cz * cs + h01(mix64(hc + 3)) * cs + 1.5 * std::cos(t * sp * 0.8 + ph);
-                    double py = site.surfaceHeight(px, pz) + 0.5 + 1.5 * h01(mix64(hc + 4)) + 0.3 * std::sin(t * 1.1 + ph);
+                    double ph = hash01(hc) * TAU, sp = 0.3 + 0.4 * hash01(mix64(hc + 1));
+                    double px = cx * cs + hash01(mix64(hc + 2)) * cs + 1.5 * std::sin(t * sp + ph), pz = cz * cs + hash01(mix64(hc + 3)) * cs + 1.5 * std::cos(t * sp * 0.8 + ph);
+                    double py = site.surfaceHeight(px, pz) + 0.5 + 1.5 * hash01(mix64(hc + 4)) + 0.3 * std::sin(t * 1.1 + ph);
                     if (std::sin(t * 3.0 + ph * 3) < 0.3) continue;   // blinking
                     RVert p = vert(px, py, pz, 40 + 20 * glow);
                     if (p.z < NEAR_Z) continue;
@@ -924,20 +923,20 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             // ---- deserts: cacti and succulents; tundra and alpine rock: cushions and lichen
             if (cellDist < 300 && ((tv.material == MAT_SAND && tv.biome == BIO_DESERT) || tv.biome == BIO_TUNDRA || (tv.biome == BIO_ALPINE && cellDist < 60))) {
                 bool cactus = tv.biome == BIO_DESERT;
-                int np = (int)((cactus ? 1.2 : 2.5) * h01(mix64(h + 61)));
+                int np = (int)((cactus ? 1.2 : 2.5) * hash01(mix64(h + 61)));
                 for (int i = 0; i < np; i++) {
                     uint64_t hc = mix64(h + 900 + 31 * i);
-                    double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                    double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                     double gy = site.groundHeight(px, pz);
                     double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
                     if (cactus) {
-                        if (h01(mix64(hc + 9)) < 0.35) {   // a succulent rosette: a flat spray
-                            double rr = 0.3 + 0.4 * h01(mix64(hc + 2));
+                        if (hash01(mix64(hc + 9)) < 0.35) {   // a succulent rosette: a flat spray
+                            double rr = 0.3 + 0.4 * hash01(mix64(hc + 2));
                             if (rr / dist * proj.f < 1.0) continue;
                             cluster(hc, px, gy + rr * 0.3, pz, rr, rr * 0.5, dist, 3, 0.9, 0.6, 0.8);
                             continue;
                         }
-                        double hh = (1.2 + 2.5 * h01(mix64(hc + 2))) * treeScale;
+                        double hh = (1.2 + 2.5 * hash01(mix64(hc + 2))) * treeScale;
                         if (hh / dist * proj.f < 1.5) continue;
                         double sh = fogShade(44 * std::pow(light, 0.7), dist);
                         line(px, gy, pz, px, gy + hh, pz, sh, 3, dist < 40 ? 3 : (dist < 120 ? 2 : 1));
@@ -946,16 +945,16 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                             line(px, ay, pz, px + ad, ay + 0.3 * hh, pz, sh, 3, dist < 40 ? 2 : 1);
                         }
                     } else {
-                        double rr = 0.3 + 0.6 * h01(mix64(hc + 2));
+                        double rr = 0.3 + 0.6 * hash01(mix64(hc + 2));
                         if (rr / dist * proj.f < 1.0) continue;
                         cluster(hc, px, gy + rr * 0.2, pz, rr, rr * 0.35, dist, 3, 0.7, 0.55, 0.9);
                     }
                 }
                 if (!cactus && cellDist < 30 && tv.material != MAT_SNOW) {   // lichen crusts on cold rock
-                    int nl = 3 + (int)(6 * h01(mix64(h + 76)));
+                    int nl = 3 + (int)(6 * hash01(mix64(h + 76)));
                     for (int i = 0; i < nl; i++) {
                         uint64_t hc = mix64(h + 1900 + i);
-                        double px = cx * cs + h01(hc) * cs, pz = cz * cs + h01(mix64(hc + 1)) * cs;
+                        double px = cx * cs + hash01(hc) * cs, pz = cz * cs + hash01(mix64(hc + 1)) * cs;
                         double dist = std::sqrt((px - camPos.x) * (px - camPos.x) + (pz - camPos.z) * (pz - camPos.z));
                         if (0.25 / dist * proj.f < 0.8) continue;
                         point(px, site.groundHeight(px, pz) + 0.05, pz, fogShade(40 * std::pow(light, 0.7), dist), 9, dist < 8 ? 2 : 1);

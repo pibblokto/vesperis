@@ -33,7 +33,7 @@ bool Game::saveSlot(int n) {
     currentSlot = n;
     bool ok = save(slotPath(n));
     status(ok ? fmt("EXPEDITION SAVED TO SLOT %d", n) : "COULD NOT WRITE THE SAVE FILE", 3);
-    if (!ok) audio.beep = 3;
+    if (!ok) audio.beep = BEEP_ERROR;
     return ok;
 }
 
@@ -44,8 +44,8 @@ bool Game::autosave() {
 }
 
 bool Game::loadSlot(int n) {
-    if (!fileExists(slotPath(n))) { status(n == 0 ? "NO AUTOSAVE" : fmt("SLOT %d IS EMPTY", n), 3); audio.beep = 3; return false; }
-    if (!load(slotPath(n))) { audio.beep = 3; return false; }   // load says why (G-01: a star gone with the galaxy)
+    if (!fileExists(slotPath(n))) { refuse(n == 0 ? "NO AUTOSAVE" : fmt("SLOT %d IS EMPTY", n), 3); return false; }
+    if (!load(slotPath(n))) { audio.beep = BEEP_ERROR; return false; }   // load says why (G-01: a star gone with the galaxy)
     if (n > 0) currentSlot = n;
     status(n == 0 ? "AUTOSAVE LOADED" : fmt("EXPEDITION LOADED FROM SLOT %d", n), 3);
     return true;
@@ -100,8 +100,7 @@ void Game::openSlots(bool loadMode) {
 
 void Game::updateSlots(const Input& in) {
     int n = slotLoadMode ? 4 : 3;
-    if (in.wasPressed(KEY_UP)) slotSel = (slotSel + n - 1) % n;
-    if (in.wasPressed(KEY_DOWN)) slotSel = (slotSel + 1) % n;
+    menuStep(in, slotSel, n);
     if (in.wasPressed(KEY_ESCAPE)) { state = GameState::MENU; return; }
     if (enterKey(in)) {
         int slot = slotSel == 3 ? 0 : slotSel + 1;
@@ -112,8 +111,7 @@ void Game::updateSlots(const Input& in) {
 
 void Game::renderSlots() {
     const int top = 44, bottom = UH - 44, y0 = top + 26;
-    blendRectRGB(canvas, 16, top, UW - 16, bottom, rgb(0, 0, 0), 215);
-    drawRectRGB(canvas, 16, top, UW - 16, bottom, HUD_DIM);
+    drawPanel(canvas, 16, top, UW - 16, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 8, slotLoadMode ? "LOAD EXPEDITION" : "SAVE EXPEDITION", HUD_AMBER);
     int n = slotLoadMode ? 4 : 3;
     for (int i = 0; i < n; i++) {
@@ -191,12 +189,7 @@ bool Game::load(const std::string& path) {
     std::string line;
     std::getline(f, line);
     if (line.rfind("vesperis-save", 0) != 0) { status("NOT A VESPERIS SAVE", 3); return false; }   // versions 1 and 2 share the keys below
-    radarOff(); radar = RadarState();   // C-07: the radar is not saved
-    playerStop(); stopInstrument(); player.items.clear(); icase = InstrumentCase();   // C-11: nor what the player and the case had out
-    telescopeOff();                     // W-06: nor the telescope
-    chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10: nor the chart held up
-    probe = ProbeState();                                    // X-01: a falling probe comes back from its own line below
-    bay = DroneBay();                                        // C-18: the bay from its own lines below (the thread's world, if any, is taken when it is done)
+    resetExpedition(false);
     audio.surfaceOff();                                      // B-413: nor the ground's sounds (a ground loaded sets its own)
     int64_t sx = 0, sy = 0, sz = 0; int valid = 0;
     int mode = 0, parked = -1, local = -1, orbiting = 1, hasRemote = 0; int64_t rx = 0, ry = 0, rz = 0;

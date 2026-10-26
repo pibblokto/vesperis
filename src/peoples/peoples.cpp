@@ -18,7 +18,6 @@ const char* const GOVERNMENT_NAMES[GOV_COUNT] = {"chiefs", "a monarchy", "a coun
 const char* const GOVERNMENT_RULERS[GOV_COUNT][2] = {{"chief", "chief"}, {"king", "queen"}, {"first elder", "first elder"}, {"high priest", "high priestess"},
                                                      {"consul", "consul"}, {"speaker", "speaker"}, {"director", "director"}, {"the mind", "the mind"}};
 const char* const ECONOMY_NAMES[ECO_COUNT] = {"hunting", "herding", "farming", "trade", "industry", "information"};
-const char* const VALUE_NAMES[VAL_COUNT] = {"war", "piety", "trade", "learning", "art"};
 const char* const FAITH_NAMES[FAITH_COUNT] = {"the ancestors", "the spirits of the land", "the sky", "many gods", "one god", "a philosophy", "the machine"};
 const char* const RITE_NAMES[RITE_COUNT] = {"the first of the harvest", "a fire kept", "songs", "water poured", "silence", "fasting", "a pilgrimage", "the herd's firstborn", "the dead remembered by name"};
 const char* const HOLY_NAMES[HOLY_COUNT] = {"a temple", "a grove", "a high place", "a spring", "a cave", "the house", "the tombs", "the open sky", "a hall"};

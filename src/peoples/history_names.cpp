@@ -12,8 +12,6 @@ static_assert(sizeof(HISTORY_EVENT_NAMES) / sizeof(HISTORY_EVENT_NAMES[0]) == HE
 const char* const HISTORY_ROLE_NAMES[HR_COUNT] = {"", "ruler", "regent", "founder", "general", "prophet", "maker", "inventor", "explorer", "rebel", "envoy", "artist", "the last"};
 const char* const HISTORY_WAR_KINDS[HW_COUNT] = {"a war between bands", "a war between cities", "a rising", "a war of succession", "a revolution", "a civil war",
                                                  "a war with the other people", "a conquest"};
-const char* const HISTORY_INSTITUTION_KINDS[HI_COUNT] = {"the council", "the priesthood", "the guilds", "the academy", "the company", "the gazette", "the university",
-                                                         "the assembly", "the broadcaster", "the network", "the mind", "the army"};
 
 namespace {
 std::string withCommas(int64_t n) {
@@ -199,7 +197,6 @@ const char* historyEverydayKey(int kind, int thing) {   // H-04's second pass
     }
 }
 const char* historySignPattern(int cause, int stage, int alt) { return SCRIPTS[clampi(cause, 0, CAUSE_COUNT - 1)].signs[clampi(stage, 0, STAGE_COUNT - 1)][alt & 1]; }
-const char* historyLeftWhy(int cause) { return LEFT_BY_CAUSE[clampi(cause, 0, CAUSE_COUNT - 1)]; }
 
 std::string historyKinship(const History& H, int from, int to) {
     if (from < 0 || to < 0 || from >= (int)H.persons.size() || to >= (int)H.persons.size() || from == to) return "";

@@ -93,7 +93,6 @@ constexpr int PADC_NONE = -1, PADC_STD_AXIS = 16, PADC_RAW_BUTTON = 32, PADC_RAW
               PADC_RAW_TRIGGER_INV = 128, PADC_COUNT = 144;
 double padControlValue(const PadState& p, int c);   // how far it is pressed, 0..1 (a stick's half from the centre, a trigger from its rest)
 double padAxisValue(const PadState& p, int c);      // an axis half read signed, -1..1 (its own half positive); a button or a trigger one way, 0..1
-bool padIsAxisHalf(int c);
 std::string padControlName(int c);                  // the file's: "A", "LT+", "B7", "A2-", "H0U", "T5", "T5R"
 int padControlFromName(const std::string& s);       // -1 when unknown
 std::string padControlLabel(int c);                 // the screen's: "A", "D-PAD UP", "LEFT STICK UP", "BUTTON 7", "AXIS 2-", "HAT UP", "AXIS 5"
@@ -104,7 +103,6 @@ std::string padControlLabel(int c);                 // the screen's: "A", "D-PAD
 // changes are kept by device in `vesperis_pad.txt` (the CONTROLS screen writes it)
 enum PadRole { PR_A, PR_B, PR_X, PR_Y, PR_LB, PR_RB, PR_LT, PR_RT, PR_SELECT, PR_START, PR_L3, PR_R3, PR_UP, PR_DOWN, PR_LEFT, PR_RIGHT,
                PR_BUTTONS, PR_WALK_X = PR_BUTTONS, PR_WALK_Y, PR_LOOK_X, PR_LOOK_Y, PR_COUNT };   // a stick's axis is bound to the half read as right, or down
-const char* padRoleName(int r);                     // the file's: "A" .. "RIGHT", "WALK_X" .. "LOOK_Y"
 struct PadRead { bool down[PR_BUTTONS] = {}; double walkX = 0, walkY = 0, lookX = 0, lookY = 0; };   // the sticks past the dead zone (right and down positive)
 struct PadMap {
     int bind[PR_COUNT];

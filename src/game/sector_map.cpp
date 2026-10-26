@@ -54,23 +54,23 @@ void Game::updateSectorMap(const Input& in) {
             for (size_t i = 0; i < in_.size(); i++) if (in_[i].second->index == mapTabMark) { k = (i + 1) % in_.size(); break; }
             mapTabMark = in_[k].second->index; mapCurX = in_[k].second->x; mapCurZ = in_[k].second->z;
         }
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
     }
     mapCurX = clampd(mapCurX, px - hw, px + hw); mapCurZ = clampd(mapCurZ, pz - hh, pz + hh);
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
     if ((enterKey(in) || in.mousePressed[0]) && in.shift()) {   // B-412
         if (onMark >= 0) showMark(onMark);
-        else { status("NO MARK UNDER THE CURSOR", 2); audio.beep = 3; }
+        else { refuse("NO MARK UNDER THE CURSOR", 2); }
     } else if (enterKey(in) || in.mousePressed[0]) { if (onMark >= 0) beginRenameMark(onMark); else beginMark(mapCurX, mapCurZ); return; }
     if (in.wasPressed(KEY_DELETE) || in.wasPressed(KEY_BACKSPACE)) {
         if (onMark >= 0 && onMark == mapDelMark && realTime < mapDelUntil) { removeMark(onMark); mapDelMark = -1; }
-        else if (onMark >= 0) { mapDelMark = onMark; mapDelUntil = realTime + 3; status(fmt("REMOVE %s? DELETE AGAIN", trunc(markLabel(onMark), 24).c_str()), 3); audio.beep = 3; }
-        else { status("NO MARK UNDER THE CURSOR", 2); audio.beep = 3; }
+        else if (onMark >= 0) { mapDelMark = onMark; mapDelUntil = realTime + 3; refuse(fmt("REMOVE %s? DELETE AGAIN", trunc(markLabel(onMark), 24).c_str()), 3); }
+        else { refuse("NO MARK UNDER THE CURSOR", 2); }
     }
     if (in.wasPressed(KEY_M) && !in.ctrl()) {
         if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) { surf.hasWaypoint = false; status("WAYPOINT CLEARED", 3); }
         else { surf.hasWaypoint = true; surf.wpX = mapCurX; surf.wpZ = mapCurZ; status(std::hypot(mapCurX - px, mapCurZ - pz) < 2 * mpp ? std::string("WAYPOINT SET HERE") : fmt("WAYPOINT SET %s AWAY", metresString(std::hypot(mapCurX - px, mapCurZ - pz)).c_str()), 3); }
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_R) && !in.ctrl()) { if (in.shift()) scanToggleSkip(); else scanCycle(); }
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_N)) state = GameState::SURFACE;

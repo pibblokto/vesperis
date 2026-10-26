@@ -12,6 +12,7 @@
 #include "peoples.h"  // A-01: the profile's end (the other people's fate)
 #include "records.h"  // T-04: the records past the fifty, their years
 #include "../core/rng.h"
+#include "../core/text.h"
 #include <algorithm>
 #include <chrono>
 #include <cctype>
@@ -220,7 +221,6 @@ Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g, int which) {
 }
 
 std::string peopleNameOf(const BodyGen& g) { Lore L; loreNames(g, L); return L.people; }
-int loreStyleOf(const BodyGen& g) { Rng rng(g.seed ^ 0x10BE5ULL); double sw[3] = {0.4, 0.3, 0.3}; return rng.pick(sw, 3); }   // C-12: `loreNames`' first draw
 std::string personName(const Lore& L, uint64_t seed, bool female) { return tongueName(tongueOfSeed(L.seed), seed, TN_PERSON, female); }   // C-12; H-04: the tongue's
 std::string personName(const Lore& L, uint64_t seed) { return personName(L, seed, (mix64(seed ^ 0x5E7ULL) & 1) != 0); }
 
@@ -246,7 +246,6 @@ std::string calendarLine(const Lore& L) {   // C-12: no unit of ours: their day 
 // H-03: the grammar
 const VgSchema& shardSchema() { return recordSchema(); }
 std::shared_ptr<const VgGrammar> shardGrammar() { return activeGrammar().G; }
-int shardGrammarGeneration() { return activeGrammar().generation; }
 int shardGrammarFiles(std::vector<std::string>* names) {
     if (names) { names->clear(); for (int i = 0; i < GRAMMAR_FILE_COUNT; i++) names->push_back(GRAMMAR_FILES[i][0]); }
     return GRAMMAR_FILE_COUNT;
@@ -492,8 +491,6 @@ void shardsOf(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore
 // ---------------------------------------------------------------------------
 
 namespace {
-uint64_t strHash(const std::string& s) { uint64_t h = 1469598103934665603ULL; for (unsigned char c : s) { h ^= c; h *= 1099511628211ULL; } return h; }
-std::string lowerOf(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
 // a token of a text: the punctuation before, the word (letters, digits, hyphens, an inner apostrophe), the rest after; a possessive 's counts as after
 void splitToken(const std::string& t, std::string& pre, std::string& core, std::string& post) {
     size_t i = 0, n = t.size();
@@ -591,7 +588,7 @@ void languageOf(const Lore& L, const std::vector<Shard>& records, const Tongue& 
     std::map<std::string, int> roots;
     for (const auto& kv : count) { auto r = rootOf(kv.first, all); out.forms[kv.first] = r; roots[r.first] += kv.second; }
     std::vector<std::pair<std::string, int>> v(roots.begin(), roots.end());
-    std::stable_sort(v.begin(), v.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) { return a.second != b.second ? a.second > b.second : mix64(strHash(a.first)) < mix64(strHash(b.first)); });
+    std::stable_sort(v.begin(), v.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) { return a.second != b.second ? a.second > b.second : mix64(fnv1a(a.first)) < mix64(fnv1a(b.first)); });
     std::set<std::string> given;
     for (const auto& kv : v) {
         out.index[kv.first] = (int)out.words.size(); out.words.push_back(kv.first); out.counts.push_back(kv.second); out.tokens += kv.second;
@@ -629,7 +626,7 @@ int decodeShard(const Shard& s, const Language& L, const Tongue& T, int shardsHe
         if (w.ours.empty()) { w.known = true; w.theirs = w.ours; }
         else if (L.names.count(key) || (afterName && romanNumeral(w.ours))) { w.name = true; w.known = true; w.theirs = w.ours; }   // H-04: "King Nilzhos II"
         else if (numeralLike(key)) {   // a numeral is read from the start; spoken digit by digit in the people's words for them (C-05; H-04: an ordinal's too)
-            static const char* DIGITS[10] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+            static const char* const DIGITS[10] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
             w.known = true; w.theirs.clear();
             for (char c : key) { if (!std::isdigit((unsigned char)c)) break; if (!w.theirs.empty()) w.theirs += '-'; w.theirs += tongueWord(T, DIGITS[c - '0']); }
             if (!allDigits(key)) w.theirs += T.endIng;   // the ordinal's ending, as their own
@@ -667,7 +664,7 @@ int decodeLine(const std::string& text, const Language& L, const Tongue& T, int 
         if (w.ours.empty()) { w.known = true; w.theirs = w.ours; }
         else if (names.count(key) || L.names.count(key) || (afterName && romanNumeral(w.ours))) { w.name = true; w.known = true; w.theirs = w.ours; }
         else if (numeralLike(key)) {
-            static const char* DIGITS[10] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+            static const char* const DIGITS[10] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
             w.known = true; w.theirs.clear();
             for (char c : key) { if (!std::isdigit((unsigned char)c)) break; if (!w.theirs.empty()) w.theirs += '-'; w.theirs += tongueWord(T, DIGITS[c - '0']); }
             if (!allDigits(key)) w.theirs += T.endIng;

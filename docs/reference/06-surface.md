@@ -125,8 +125,8 @@ forest litter, quartz facets with glints. Added in the rasteriser as `grain2` (w
 64x64 micro grain; both fade with distance (`grainWeight`, full within 120 m, 20% beyond 620 m). Rocks use the rock (or, on
 felisian worlds, litter) tile with world-mapped facet coordinates. Blob shadows (`drawBlobShadow`, `BLEND_DARKEN`) sit under
 rocks, trees, creatures, the capsule and the explorer; footprints are a 32-entry ring of small darkened quads left on sand, snow,
-dust and grass. B-311 (2026-09-27): every material has two or three looks chosen per planet and material by hash (`mesoVariant`,
-named by `mesoVariantName`: rock cracked / boulders / layered, sand ripples / playa / pebbly, dust pebbles / regolith / rubble,
+dust and grass. B-311 (2026-09-27): every material has two or three looks chosen per planet and material by hash (`mesoVariant`:
+rock cracked / boulders / layered, sand ripples / playa / pebbly, dust pebbles / regolith / rubble,
 grass tufts / meadow / scrub, snow mottled / sastrugi / crusted, ice faceted / rippled / shattered, basalt plates / ropy / blocky,
 metal hammered / dendritic, sulphur crusty / lobes, graphite flaky / sooty, forest litter / roots, quartz faceted / drusy) with a
 strength of 0.8-1.3 per planet; `buildMacroTile` makes the broad tone tile (three octaves of periodic gradient noise, +-10, a

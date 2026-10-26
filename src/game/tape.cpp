@@ -132,7 +132,7 @@ void Game::tapeStart(bool asked) {
         if (asked) {   // nothing to play: said where a track's name would be
             tape.capAuthor = "NO MUSIC IN THE " + musicDir + " FOLDER";
             tape.capTitle = "MP3, OGG OR WAV FILES, OR A PLAYLIST.TXT";
-            tape.captionT = 0; audio.beep = 3;
+            tape.captionT = 0; audio.beep = BEEP_ERROR;
         }
         return;
     }
@@ -196,7 +196,7 @@ void Game::tapeUpdate(double realDt) {
                 fprintf(stderr, "tape: %s/%s would not play\n", T.dir.c_str(), T.tracks[T.track].file.c_str());
                 if (++T.failed >= n) {
                     T.phase = TAPE_OFF; audio.duck = 1; settings.autoMusic = false; settings.save(settingsPath);
-                    T.capAuthor = "THE TAPE WOULD NOT PLAY"; T.capTitle = "NONE OF ITS FILES COULD BE READ"; T.captionT = 0; audio.beep = 3;
+                    T.capAuthor = "THE TAPE WOULD NOT PLAY"; T.capTitle = "NONE OF ITS FILES COULD BE READ"; T.captionT = 0; audio.beep = BEEP_ERROR;
                     return;
                 }
                 nextCassette();

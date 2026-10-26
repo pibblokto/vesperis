@@ -1,5 +1,6 @@
 // H-06: what a people's read records told of its history (see legends.h)
 #include "legends.h"
+#include "core/text.h"
 #include <set>
 #include <algorithm>
 #include <map>
@@ -7,7 +8,6 @@
 const char* const AGE_TOLD_NAMES[AGE_COUNT] = {"PREHISTORIC", "MEDIEVAL", "INDUSTRIAL", "MODERN", "FUTURISTIC", "FAR FUTURE"};
 
 namespace {
-std::string lowerOf(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
 void addWords(const std::string& name, std::set<std::string>& out) {
     size_t p = 0;
     while (p <= name.size()) {

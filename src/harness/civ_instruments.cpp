@@ -5,8 +5,7 @@
 // C-11: the instruments of an age world's people: each age's (its timbre, family, register, courses) and where they lie over the world's places
 // (the plan's places and the countryside round the capital): how many sites, how many of the people's instruments they hold, by age
 static int printInstruments(const AgeWorld& W, bool quiet = false) {
-    Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) { printf("  no star\n"); return 1; }
-    StarSystem sys; sys.generate(s); if (W.body >= (int)sys.bodies.size()) { printf("  no body\n"); return 1; }
+    Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) { printf("  no star\n"); return 1; } if (W.body >= (int)sys.bodies.size()) { printf("  no body\n"); return 1; }
     const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
     if (!worldHadCivilisation(g)) { printf("  no people\n"); return 1; }
     const Lore L = loreQuick(sys, b, g, W.which);
@@ -98,8 +97,7 @@ static int instrumentsWavs() {
     printf("each age world's instruments of its own age, a phrase each (the case's levels, the master at the game's 0.8):\n");
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& W = AGE_WORLDS[a];
-        Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) { failures++; continue; }
-        StarSystem sys; sys.generate(s); const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
+        Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) { failures++; continue; } const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
         const Lore L = loreQuick(sys, b, g, W.which); const Tradition T = traditionOf(g, L);
         PeopleInstruments P; instrumentsOf(T, L.which, P);
         printf("  %s: the %s (%s)\n", AGE_NAMES[a], L.people.c_str(), traditionLine(T).c_str());
@@ -129,8 +127,7 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
         if (onlyAge >= 0 && age != onlyAge) continue;
         const AgeWorld& aw = AGE_SCENE_WORLDS[age];
         const std::string an = fileWord(AGE_NAMES[age]);
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) { failures++; continue; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) { failures++; continue; }
         const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
         const int which = std::min(aw.which, std::max(0, P->peoples - 1));
@@ -184,7 +181,7 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
         const std::string line = fmt("%s: %s; facing %d, the case %s; %s", an.c_str(), taken ? "taken" : "NOT TAKEN", facing, open ? "open" : "NOT OPEN", info.c_str());
         printf("    %s\n", line.c_str());
         if (lines) lines->push_back(line);
-        if (near < 0 || !taken || !open || !played || facing != 10) failures++;
+        if (near < 0 || !taken || !open || !played || facing != FACE_CASE) failures++;
         press(KEY_ESCAPE); run(0.1);
         remove("shots/tests/test_instruments_guide.txt");
     }
@@ -194,8 +191,7 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
 // C-17: a people near home and its instruments as made (its tradition, its lists, its palette)
 struct MadePeople { std::string world; int age = 0, which = 0; BodyGen g; Lore L; Tradition T; PeopleInstruments P; FormPalette pal; };
 static bool madePeopleOf(int64_t sx, int64_t sy, int64_t sz, int body, int which, MadePeople& out) {
-    Star s; if (!starInSector(sx, sy, sz, s, true)) return false;
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, sy, sz, s, sys, true)) return false;
     if (body < 0 || body >= (int)sys.bodies.size()) return false;
     out.g = BodyGen::make(sys.bodies[body]);
     if (!worldHadCivilisation(out.g) || which >= peoplesOf(out.g)) return false;
@@ -427,8 +423,7 @@ void instrumentChecks(const std::function<void(const char*, bool, const std::str
     int rendered = 0, levelsOk = 0, pitched = 0, pitchOk = 0; std::string bad;
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& W = AGE_WORLDS[a];
-        Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) continue;
-        StarSystem sys; sys.generate(s); if (W.body >= (int)sys.bodies.size()) continue;
+        Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) continue; if (W.body >= (int)sys.bodies.size()) continue;
         const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
         if (!worldHadCivilisation(g)) continue;
         worlds++;

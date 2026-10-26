@@ -2,7 +2,9 @@
 // E-10: grammar.cpp's constants and small helpers, for its parts alone (grammar, grammar_parse, grammar_words): the catalogue's
 // dryness, dialect, fatigue and retries, the string and word tests, an age's or a number's value, a word's vowel sound
 #include "grammar.h"
+#include "../core/clock.h"
 #include "../core/rng.h"
+#include "../core/text.h"
 #include <algorithm>
 #include <chrono>
 #include <cctype>
@@ -26,8 +28,6 @@ constexpr double VG_FATIGUE = 1.2;
 constexpr int VG_DISTINCT = 24;
 constexpr int VG_RETRIES = 6, VG_RETRY_BUDGET = 160;
 
-inline double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-inline std::string lower(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
 inline std::string trim(const std::string& s) {
     size_t a = s.find_first_not_of(" \t"), b = s.find_last_not_of(" \t");
     return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
@@ -47,7 +47,7 @@ inline bool numberOf(const std::string& s, double& out) {
 // the sound a word starts with, for "a" and "an": a vowel's, except the vowels that sound as a consonant (one, a use, a unit, a
 // European) and the silent h (an hour, an heir); a numeral by how it is said (an 8, an 11, an 18)
 inline bool vowelSound(const std::string& word) {
-    std::string w = lower(word);
+    std::string w = lowerOf(word);
     while (!w.empty() && !std::isalnum((unsigned char)w[0])) w.erase(0, 1);
     if (w.empty()) return false;
     if (std::isdigit((unsigned char)w[0])) {

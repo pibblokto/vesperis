@@ -352,8 +352,8 @@ void WB::aqueducts() {
             if (any) break;
         }
         if (!any) return;
-        const Vec3 end = toward(u0, src, r0 + 60, Rm);
-        const double len = arcM(src, end, Rm);
+        const Vec3 end = towardThrough(u0, src, r0 + 60, Rm);
+        const double len = arcLength(src, end, Rm);
         if (len < 1500) return;
         const Vec3 mid = slerpUnit(src, end, 0.5);
         if (!clearOf(mid, 120, true)) return;
@@ -436,8 +436,8 @@ void WB::shrine() {
     if (holy == HOLY_GROVE) { GroundEdit e; e.kind = GE_FLAT; e.r = 20; e.width = 8; e.level = at(site).height; e.tone = ET_CLEARED; e.fades = false; w.edits.push_back(e); }   // its clearing
     const int sAge = w.age; const double sBefore = w.before; const Vec3 sU = site;
     // the way: from the place's edge to the shrine, a beaten track with a cairn or a stela every 600 m, in stretches of three kilometres
-    const Vec3 a = toward(u0, sU, r0 + 80, Rm);
-    const double L = arcM(a, sU, Rm);
+    const Vec3 a = towardThrough(u0, sU, r0 + 80, Rm);
+    const double L = arcLength(a, sU, Rm);
     if (L < 1200) return;
     const double ph1 = rng.uni() * TAU, ph2 = rng.uni() * TAU, amp = std::min(400.0, L * 0.025);
     const int nPts = std::max(2, (int)(L / 100));
@@ -455,7 +455,7 @@ void WB::shrine() {
     for (size_t q0 = 0; q0 + 1 < pts.size(); q0 += 30) {
         const size_t q1 = std::min(pts.size() - 1, q0 + 30);
         const Vec3 mid = pts[(q0 + q1) / 2];
-        Work& s = add(WO_WAY, mid, arcM(pts[q0], pts[q1], Rm) * 0.5 + 40, seedOf(WO_WAY, seg));
+        Work& s = add(WO_WAY, mid, arcLength(pts[q0], pts[q1], Rm) * 0.5 + 40, seedOf(WO_WAY, seg));
         s.age = sAge; s.before = sBefore; s.place = hp; s.planRank = H->places[hp].plan; s.heard = false; s.group = group; s.style = seg++;
         const Frame F(mid, Rm);
         GroundEdit e; e.kind = GE_LINE; e.width = 2.4; e.tone = ET_DARK;
@@ -624,7 +624,7 @@ void WB::fortLine() {
             if (!pp->territory[c] || !G.land[c]) continue;
             int nb[8]; const int nn = G.neighbours(c, nb);
             for (int q = 0; q < nn; q++) if (!pp->territory[nb[q]] && G.land[nb[q]]) {
-                const double d = arcM(G.unitOf(c), cap, Rm);
+                const double d = arcLength(G.unitOf(c), cap, Rm);
                 if (d < best && d > 20000) { best = d; bc = c; outC = nb[q]; }
                 break;
             }
@@ -692,15 +692,15 @@ void WB::battlefields() {
             int other = war.sideA >= 0 ? war.sideA : historySeat(*H, e.year);
             if (other == e.place && war.sideB >= 0) other = war.sideB;
             if (other < 0 || other == e.place) {   // a war at its own seat: they came from the nearest other place
-                double bd = 1e18; for (int q = 0; q < (int)H->places.size(); q++) if (q != e.place && H->placeStands(q, e.year)) { Vec3 uq; double rq; placeAt(q, uq, rq); const double d = arcM(uq, ub, Rm); if (d < bd) { bd = d; other = q; } }
+                double bd = 1e18; for (int q = 0; q < (int)H->places.size(); q++) if (q != e.place && H->placeStands(q, e.year)) { Vec3 uq; double rq; placeAt(q, uq, rq); const double d = arcLength(uq, ub, Rm); if (d < bd) { bd = d; other = q; } }
             }
             if (other < 0) continue;
             placeAt(other, ua, ra);
         }
-        const double sep = arcM(ua, ub, Rm);
+        const double sep = arcLength(ua, ub, Rm);
         if (sep < rb + ra + 2500) continue;
         const double d = clampd(0.3 * sep, rb + 1500, std::min(rb + 7000, sep - ra - 1500));
-        const Vec3 c0 = toward(ub, ua, d, Rm);
+        const Vec3 c0 = towardThrough(ub, ua, d, Rm);
         Vec3 best; double bestS = -1e18; bool any = false;
         for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) {
             const Vec3 u = offsetUnit(c0, i * 350.0, j * 350.0, Rm);
@@ -833,7 +833,7 @@ void WB::antennas() {
     std::vector<std::pair<double, int>> high;
     for (int c = 0; c < G.cells; c++) {
         if (!pp->territory[c] || !G.land[c] || G.relief[c] > 0.3f) continue;
-        const double d = arcM(G.unitOf(c), cap, Rm);
+        const double d = arcLength(G.unitOf(c), cap, Rm);
         if (d < 20000 || d > 300000) continue;
         high.push_back({-(G.height[c] - mean) / 400.0 + G.relief[c] * 2 + rng.uni() * 0.3, c});
     }

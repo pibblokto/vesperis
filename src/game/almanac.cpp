@@ -53,26 +53,25 @@ void Game::openAlmanac() {
     almanacSel = 0; almanacScroll = 0;
     buildAlmanac();
     state = GameState::ALMANAC;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::almanacRunTo(const AlmanacEvent& e) {
     almanacRunning = true; almanacRunT = e.t; almanacRunEvent = e;
     almanacRunLabel = almanacLabelOf(e);
     status(fmt("RUNNING TO %s - T STOPS", almanacRunLabel.c_str()), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::almanacStop(bool arrived) {
     almanacRunning = false; timeWarp = 1;
-    if (arrived) { status(fmt("%s - X1", almanacRunLabel.c_str()), 5); audio.beep = 2; }
+    if (arrived) { status(fmt("%s - X1", almanacRunLabel.c_str()), 5); audio.beep = BEEP_ARRIVE; }
     else status("RUN STOPPED - X1", 2);
 }
 
 void Game::updateAlmanac(const Input& in) {
     int n = (int)almanacEvents.size() + 1;   // the events and the free row
-    if (in.wasPressed(KEY_UP)) almanacSel = (almanacSel + n - 1) % n;
-    if (in.wasPressed(KEY_DOWN)) almanacSel = (almanacSel + 1) % n;
+    menuStep(in, almanacSel, n);
     if (in.wasPressed(KEY_PAGE_UP)) almanacSel = std::max(0, almanacSel - ALMANAC_ROWS);
     if (in.wasPressed(KEY_PAGE_DOWN)) almanacSel = std::min(n - 1, almanacSel + ALMANAC_ROWS);
     if (almanacSel == n - 1) {
@@ -81,7 +80,7 @@ void Game::updateAlmanac(const Input& in) {
     }
     if (in.wasPressed(KEY_ESCAPE)) { state = almanacReturn; return; }
     if (!enterKey(in)) return;
-    if (settings.clockMode == 1) { status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO RUN", 3); audio.beep = 3; return; }
+    if (settings.clockMode == 1) { refuse("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO RUN", 3); return; }
     if (almanacSel == n - 1) { AlmanacEvent e; e.kind = AL_FREE; e.t = t + FREE_STEPS[almanacFree]; e.value = FREE_STEPS[almanacFree]; almanacRunTo(e); }
     else almanacRunTo(almanacEvents[almanacSel]);
     state = almanacReturn == GameState::SHIPSCREEN ? GameState::SPACE : almanacReturn;   // the run is watched from the window
@@ -104,8 +103,7 @@ std::string Game::almanacStateLine() const {
 
 void Game::renderAlmanac() {
     const int top = 10, bottom = UH - 10, x0 = 14;
-    blendRectRGB(canvas, x0, top, UW - x0, bottom, rgb(0, 0, 0), 240);
-    drawRectRGB(canvas, x0, top, UW - x0, bottom, HUD_DIM);
+    drawPanel(canvas, x0, top, UW - x0, bottom, rgb(0, 0, 0), 240);
     const AlmanacPlace& p = almanacAt;
     std::string place;
     if (p.ground && p.sys) place = fmt("%s %.1f%s %.1f%s", trunc(upper(bodyNameOf(p.body)), 14).c_str(), std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W");

@@ -91,7 +91,3 @@ void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bo
 bool rasterPoint3(Framebuffer& fb, const RVert& a, int bank, const Proj& pj, bool ztest, int size = 1);
 // Projects a view-space point; returns false if behind the camera.
 bool projectPoint(const RVert& a, const Proj& pj, double& sx, double& sy);
-// 2D helpers on the index buffer (no depth).
-void fillRect(Framebuffer& fb, int x0, int y0, int x1, int y1, Pix value);
-void fillDisc(Framebuffer& fb, double cx, double cy, double r, Pix value);
-void drawLine2D(Framebuffer& fb, int x0, int y0, int x1, int y1, Pix value);

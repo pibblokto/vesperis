@@ -240,11 +240,11 @@ void Game::chartUnplot() {
 // Enter on the chart: the jump plotted to the cursor's point (R-407's line: the star nearest its end, or back along it to the first
 // stars), or, plotted, flown
 void Game::chartEnter() {
-    if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return; }
+    if (ship.mode == ShipState::VIMANA) { refuse("CANNOT JUMP DURING VIMANA FLIGHT", 3); return; }
     if (chartPlotted()) { state = GameState::SPACE; flyJump(); return; }
     const Vec3 to = chartCursor(), from = ship.pos / SECTOR_KM;
     const double ly = length(to - from);
-    if (gchart.onShip || ly < 1) { status("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); audio.beep = 3; return; }
+    if (gchart.onShip || ly < 1) { refuse("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); return; }
     Star drifter;   // D-02: a drifter of the explorer's under the cursor is the jump's end itself
     const bool snap = chartDrifterAt(to, drifter) && !(sys.valid && sys.star.seed == drifter.seed);
     if (!plotJump(snap ? length(drifter.pos / SECTOR_KM - from) : ly, (to - from) / ly, true, snap ? &drifter : nullptr)) return;
@@ -287,7 +287,7 @@ std::vector<Game::ChartStop> Game::chartStops() const {
 
 void Game::chartNextStop(int dir) {
     const std::vector<ChartStop> stops = chartStops();
-    if (stops.empty()) { status("NOTHING OF YOURS ON THE CHART YET", 3); audio.beep = 3; return; }
+    if (stops.empty()) { refuse("NOTHING OF YOURS ON THE CHART YET", 3); return; }
     const int n = (int)stops.size();
     gchart.stop = gchart.stop < 0 || gchart.stop >= n ? (dir > 0 ? 0 : n - 1) : (gchart.stop + dir + n) % n;
     const ChartStop& st = stops[gchart.stop];
@@ -295,7 +295,7 @@ void Game::chartNextStop(int dir) {
     gchart.curX = st.p.x; gchart.curY = st.p.y; gchart.curZ = st.p.z;
     if (gchart.level > 0) { gchart.follow = false; gchart.cx = st.p.x; gchart.cz = st.p.z; }
     status(fmt("%s - %d OF %d", trunc(st.label, 36).c_str(), gchart.stop + 1, n), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // the explorer's mark of the galaxy within `px` pixels of a place at the chart's level, -1 none
@@ -364,7 +364,7 @@ void Game::beginGalaxyMark(int mi) {
     textGalaxyAt = mi >= 0 ? Vec3(guide.galaxyMarks[mi].x, guide.galaxyMarks[mi].y, guide.galaxyMarks[mi].z) : chartCursor();
     textGalaxyLine = galaxyPlace(textGalaxyAt, false);
     guideReturn = GameState::STAR_MAP;
-    beginTextEntry(mi >= 0 ? "RENAME THE PLACE" : "NAME THE PLACE", 10, mi >= 0 ? upper(guide.galaxyMarks[mi].name) : std::string());
+    beginTextEntry(mi >= 0 ? "RENAME THE PLACE" : "NAME THE PLACE", TEXT_PLACE, mi >= 0 ? upper(guide.galaxyMarks[mi].name) : std::string());
 }
 
 void Game::finishGalaxyMark(const std::string& name) {
@@ -383,7 +383,7 @@ void Game::finishGalaxyMark(const std::string& name) {
     guide.galaxyMarks.push_back(m);
     logEvent("MARK", fmt("%s IN THE GALAXY: %s", name.empty() ? "A MARK" : name.c_str(), galaxyPlace(textGalaxyAt, true).c_str()));   // saves the guide
     status(name.empty() ? "A MARK PLACED - L ON IT NAMES IT" : fmt("MARKED: %s", name.c_str()), 4);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
 // the status over the map's key line (true when one is shown)
@@ -400,7 +400,7 @@ void Game::updateGalaxyChart(const Input& in) {
     if (in.wheel > 0 || in.wasPressed(KEY_EQUAL)) gchart.level = std::min(CHART_LEVELS - 1, gchart.level + 1);
     if (in.wheel < 0 || in.wasPressed(KEY_MINUS)) gchart.level = std::max(0, gchart.level - 1);
     if (gchart.level != was) {
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
         if (!gchart.onShip && gchart.level > 0) {   // G-06: the zoom about the cursor: it keeps its pixel
             double vx, vz; chartCentre(was, vx, vz);
             const double k = chartScale(gchart.level) / chartScale(was);
@@ -408,7 +408,7 @@ void Game::updateGalaxyChart(const Input& in) {
             gchart.follow = false;
         }
     }
-    if (in.wasPressed(KEY_C) || in.wasPressed(KEY_SPACE)) { gchart.follow = true; gchart.onShip = true; chartUnplot(); audio.beep = 4; }
+    if (in.wasPressed(KEY_C) || in.wasPressed(KEY_SPACE)) { gchart.follow = true; gchart.onShip = true; chartUnplot(); audio.beep = BEEP_UI; }
     if (in.wasPressed(KEY_N) && !in.ctrl()) chartNextStop(in.shift() ? -1 : 1);
     const Vec3 cur = chartCursor();
     if (in.wasPressed(KEY_L) && !in.ctrl()) { beginGalaxyMark(galaxyMarkNear(cur.x, cur.z, 4)); return; }
@@ -417,11 +417,11 @@ void Game::updateGalaxyChart(const Input& in) {
         if (mk >= 0 && mk == gchart.delMark && realTime < gchart.delUntil) {
             const std::string name = guide.galaxyMarks[mk].name.empty() ? std::string("A MARK") : upper(guide.galaxyMarks[mk].name);
             guide.galaxyMarks.erase(guide.galaxyMarks.begin() + mk); guide.save(guidePath);
-            gchart.delMark = -1; status(fmt("MARK REMOVED: %s", trunc(name, 30).c_str()), 3); audio.beep = 4;
+            gchart.delMark = -1; status(fmt("MARK REMOVED: %s", trunc(name, 30).c_str()), 3); audio.beep = BEEP_UI;
         } else if (mk >= 0) {
             gchart.delMark = mk; gchart.delUntil = realTime + 3;
-            status(fmt("REMOVE %s? DELETE AGAIN", trunc(guide.galaxyMarks[mk].name.empty() ? std::string("A MARK") : upper(guide.galaxyMarks[mk].name), 24).c_str()), 3); audio.beep = 3;
-        } else { status("NO MARK UNDER THE CURSOR", 2); audio.beep = 3; }
+            refuse(fmt("REMOVE %s? DELETE AGAIN", trunc(guide.galaxyMarks[mk].name.empty() ? std::string("A MARK") : upper(guide.galaxyMarks[mk].name), 24).c_str()), 3);
+        } else { refuse("NO MARK UNDER THE CURSOR", 2); }
     }
     if (enterKey(in) || in.mousePressed[0]) { chartEnter(); if (state != GameState::STAR_MAP) return; }
     // the height over the plane (PgUp, PgDn): two seconds from the plane to the strip's edge, Shift faster
@@ -696,7 +696,7 @@ void Game::renderGalaxyChart() {
         const std::string line = fmt("%s LY %s - %.0f S BY VIMANA", thousands(ly).c_str(), way.c_str(), vimanaSeconds(ly));
         drawTextCentered(canvas, UW / 2, UH - 23, line.c_str(), plotted ? HUD_CYAN : HUD_WHITE);
     } else {
-        const char* items[] = {"YOU", "HOME", "VISITED", "SIGNAL", "TARGET", "MARK"};
+        const char* const items[] = {"YOU", "HOME", "VISITED", "SIGNAL", "TARGET", "MARK"};
         const int N = 6;
         int total = 0;
         for (const char* t : items) total += 9 + textWidth(t) + 10;

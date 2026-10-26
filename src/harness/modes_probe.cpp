@@ -47,8 +47,7 @@ int runProbe(int argc, char** argv) {
         if (nums.size() >= 4) { if (starInSector(nums[0], nums[1], nums[2], t.st, true)) { t.sys.generate(t.st); t.bi = (int)nums[3]; } }
         else {
             for (int64_t x = 150; x < 320 && t.bi < 0; x++) for (int64_t z = 20; z < 140 && t.bi < 0; z++) {
-                Star s; if (!starInSector(x, 0, z, s, true)) continue;
-                StarSystem ss; ss.generate(s);
+                Star s; StarSystem ss; if (!systemAt(x, 0, z, s, ss, true)) continue;
                 for (int i = 0; i < (int)ss.bodies.size(); i++) if (ss.bodies[i].type == PT_GASGIANT) { t.st = s; t.sys = ss; t.bi = i; break; }
             }
         }
@@ -146,8 +145,7 @@ int runProbeGiants() {
     std::vector<G> all;
     for (int64_t x = 150; x < 320 && all.size() < 600; x++)
         for (int64_t z = 20; z < 140 && all.size() < 600; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem ss; ss.generate(s);
+            Star s; StarSystem ss; if (!systemAt(x, 0, z, s, ss, true)) continue;
             for (int i = 0; i < (int)ss.bodies.size(); i++) if (isProbeGiant(ss.bodies[i].type)) all.push_back({x, z, i, giantAtmosphereOf(ss, i), ss.bodies[i].name});
         }
     printf("probe giants: the first twenty of the scan\n");
@@ -212,7 +210,7 @@ int runProbeGiants() {
     auto runsAt = [&](int stage, double u) { std::vector<LayerRun> runs = probeLayerRuns(game, game.testProbeEndClock()); for (const LayerRun& r : runs) if (r.stage == stage) return r.from + (r.to - r.from) * u; return -1.0; };
     // the same stages on the three kinds
     const G* three[3] = {hot, ice, bd};
-    const char* names[3] = {"hot", "ice", "brown"};
+    const char* const names[3] = {"hot", "ice", "brown"};
     for (int q = 0; q < 3; q++) {
         if (!three[q]) { printf("no %s giant in the scan\n", names[q]); continue; }
         if (!launch(*three[q], false, 0, 0)) continue;

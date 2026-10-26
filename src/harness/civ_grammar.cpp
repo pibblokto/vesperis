@@ -389,8 +389,7 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
     {   // H-04's second pass: the everyday in the histories: the fourteen kinds over the test worlds' peoples, each at a place standing, its person alive
         int kinds[HE_COUNT] = {}; int bad = 0, total = 0, events = 0; std::string firstBad;
         for (const GrammarWorld& w : grammarWorlds(8)) {
-            Star st; if (!starInSector(w.sx, w.sy, w.sz, st, true)) continue;
-            StarSystem sys; sys.generate(st);
+            Star st; StarSystem sys; if (!systemAt(w.sx, w.sy, w.sz, st, sys, true)) continue;
             if (w.body >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[w.body]; const BodyGen g = BodyGen::make(b);
             if (!worldHadCivilisation(g) || w.which >= std::max(1, peoplesOf(g))) continue;
@@ -464,14 +463,12 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
     {   // D-05: no other people's records moved: the age and scene worlds' peoples (their histories, record catalogues and homes, every text, their
         // charts' marks) as D-04 left them (the hash pinned: `build/d05/recdump` showed them the same, byte for byte)
         uint64_t h = 0xD05;
-        auto str = [](const std::string& t) { uint64_t x = 1469598103934665603ULL; for (unsigned char c : t) { x ^= c; x *= 1099511628211ULL; } return x; };
         std::set<std::string> seen;
         std::vector<AgeWorld> ws(AGE_WORLDS, AGE_WORLDS + AGE_COUNT); ws.insert(ws.end(), AGE_SCENE_WORLDS, AGE_SCENE_WORLDS + AGE_COUNT);
         int peoples = 0, texts = 0;
         for (const AgeWorld& aw : ws) {
             if (!seen.insert(fmt("%lld %lld %d", (long long)aw.sx, (long long)aw.sz, aw.body)).second) continue;
-            Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) continue;
-            StarSystem sys; sys.generate(st);
+            Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) continue;
             if (aw.body >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[aw.body]; const BodyGen g = BodyGen::make(b);
             if (!worldHadCivilisation(g)) continue;
@@ -488,7 +485,7 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
                 const Lore L = loreOf(sys, b, g, k);
                 for (const ChartMark& m : L.marks) h = hashCombine(h, mix64((uint64_t)m.star.sx * 73856093ULL ^ (uint64_t)m.star.sy * 19349663ULL ^ (uint64_t)m.star.sz * 83492791ULL ^ (uint64_t)(m.body + 2) ^ ((uint64_t)m.how << 40)));
                 std::shared_ptr<const ShardTexts> T = shardTextsOf(sys, b, g, L);
-                if (T) for (const ShardText& t : T->items) { h = hashCombine(h, str(t.text)); texts++; }
+                if (T) for (const ShardText& t : T->items) { h = hashCombine(h, fnv1a(t.text)); texts++; }
             }
         }
         const uint64_t PINNED = 0x13212ef73adea507ULL;   // D-04's (D-05 left them as they were)
@@ -503,8 +500,7 @@ static void printAgeRecords() {
     std::shared_ptr<const VgGrammar> G = shardGrammar();
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& aw = AGE_WORLDS[a];
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) continue;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) continue;
         if (aw.body >= (int)sys.bodies.size()) continue;
         const Body& b = sys.bodies[aw.body]; const BodyGen g = BodyGen::make(b);
         Lore L = loreQuick(sys, b, g, aw.which);

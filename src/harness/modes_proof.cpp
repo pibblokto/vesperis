@@ -8,50 +8,46 @@ int runRegress(bool bless) {
     std::vector<std::pair<std::string, uint64_t>> lines;
     std::vector<std::string> notes;
     int nsys = 0, nmap = 0, nsite = 0;
-    for (int64_t x = 150; x < 260 && (nsys < 5 || nmap < 10 || nsite < 3); x++)
-        for (int64_t z = 20; z < 120 && (nsys < 5 || nmap < 10 || nsite < 3); z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            if (nsys < 5) {
-                uint64_t h = FNV0;
-                h = fnv(h, s.name.data(), s.name.size()); h = fnv(h, &s.cls, sizeof s.cls); h = fnv(h, &s.radiusKm, 8); h = fnv(h, &s.luminosity, 8);
-                for (auto& b : sys.bodies) {
-                    h = fnv(h, b.name.data(), b.name.size()); h = fnv(h, &b.type, sizeof b.type); h = fnv(h, &b.radiusKm, 8);
-                    h = fnv(h, &b.orbitRadiusKm, 8); h = fnv(h, &b.orbitPeriod, 8); h = fnv(h, &b.rotPeriod, 8); h = fnv(h, &b.axialTilt, 8);
-                }
-                lines.push_back({"system_" + std::to_string(nsys), h});
-                notes.push_back(s.name + " (" + std::to_string(sys.bodies.size()) + " bodies)");
-                nsys++;
+    for (auto& [x, z, s, sys] : scanSystems(150, 260, 20, 120, [&] { return (nsys < 5 || nmap < 10 || nsite < 3); })) {
+        if (nsys < 5) {
+            uint64_t h = FNV0;
+            h = fnv(h, s.name.data(), s.name.size()); h = fnv(h, &s.cls, sizeof s.cls); h = fnv(h, &s.radiusKm, 8); h = fnv(h, &s.luminosity, 8);
+            for (auto& b : sys.bodies) {
+                h = fnv(h, b.name.data(), b.name.size()); h = fnv(h, &b.type, sizeof b.type); h = fnv(h, &b.radiusKm, 8);
+                h = fnv(h, &b.orbitRadiusKm, 8); h = fnv(h, &b.orbitPeriod, 8); h = fnv(h, &b.rotPeriod, 8); h = fnv(h, &b.axialTilt, 8);
             }
-            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                const Body& b = sys.bodies[bi];
-                if (nmap < 10) {
-                    PlanetMap m; m.generate(BodyGen::make(b));
-                    uint64_t h = FNV0;
-                    h = fnv(h, m.height.data(), m.height.size() * sizeof(float));
-                    h = fnv(h, m.material.data(), m.material.size()); h = fnv(h, m.albedo.data(), m.albedo.size());
-                    h = fnv(h, m.cloud.data(), m.cloud.size()); h = fnv(h, m.veg.data(), m.veg.size());
-                    lines.push_back({"map_" + std::to_string(nmap), h});
-                    notes.push_back(b.name + " " + KINDS[b.type].name);
-                    nmap++;
+            lines.push_back({"system_" + std::to_string(nsys), h});
+            notes.push_back(s.name + " (" + std::to_string(sys.bodies.size()) + " bodies)");
+            nsys++;
+        }
+        for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+            const Body& b = sys.bodies[bi];
+            if (nmap < 10) {
+                PlanetMap m; m.generate(BodyGen::make(b));
+                uint64_t h = FNV0;
+                h = fnv(h, m.height.data(), m.height.size() * sizeof(float));
+                h = fnv(h, m.material.data(), m.material.size()); h = fnv(h, m.albedo.data(), m.albedo.size());
+                h = fnv(h, m.cloud.data(), m.cloud.size()); h = fnv(h, m.veg.data(), m.veg.size());
+                lines.push_back({"map_" + std::to_string(nmap), h});
+                notes.push_back(b.name + " " + KINDS[b.type].name);
+                nmap++;
+            }
+            if (nsite < 3 && KINDS[b.type].landable) {
+                SurfaceSite site;
+                site.init(&sys, bi, 0.3, 0.7, 0.0);
+                uint64_t h = FNV0;
+                for (int i = 0; i <= 80; i++) {
+                    TerrainVertex v = site.sampleAt(-2000 + i * 50.0, 0.0, 16);
+                    h = fnv(h, &v.h, 4); h = fnv(h, &v.albedo, 4); h = fnv(h, &v.material, 1);
+                    TerrainVertex w = site.sampleAt(0.0, -2000 + i * 50.0, 16);
+                    h = fnv(h, &w.h, 4); h = fnv(h, &w.albedo, 4); h = fnv(h, &w.material, 1);
                 }
-                if (nsite < 3 && KINDS[b.type].landable) {
-                    SurfaceSite site;
-                    site.init(&sys, bi, 0.3, 0.7, 0.0);
-                    uint64_t h = FNV0;
-                    for (int i = 0; i <= 80; i++) {
-                        TerrainVertex v = site.sampleAt(-2000 + i * 50.0, 0.0, 16);
-                        h = fnv(h, &v.h, 4); h = fnv(h, &v.albedo, 4); h = fnv(h, &v.material, 1);
-                        TerrainVertex w = site.sampleAt(0.0, -2000 + i * 50.0, 16);
-                        h = fnv(h, &w.h, 4); h = fnv(h, &w.albedo, 4); h = fnv(h, &w.material, 1);
-                    }
-                    lines.push_back({"site_" + std::to_string(nsite), h});
-                    notes.push_back(b.name + " profile at 0.3 rad N 0.7 rad E");
-                    nsite++;
-                }
+                lines.push_back({"site_" + std::to_string(nsite), h});
+                notes.push_back(b.name + " profile at 0.3 rad N 0.7 rad E");
+                nsite++;
             }
         }
+    }
     std::vector<std::string> differs;
     appendFrameHashes(lines, notes, differs);
     for (const std::string& d : differs) printf("  %-10s DRAWN DIFFERENTLY by one thread\n", d.c_str());
@@ -95,7 +91,7 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
         int savedScale = g_testScale;
         setFramebufferScale(1);
         SpaceRenderer sr; StarNeighborhood nb;
-        const char* want[3] = {"felisian_shore", "cratered_noon", "molten_night"};
+        const char* const want[3] = {"felisian_shore", "cratered_noon", "molten_night"};
         for (const char* name : want)
             for (const CmpScene& sc : CMP_SCENES) {
                 if (std::string(name) != sc.name) continue;

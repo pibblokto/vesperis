@@ -39,7 +39,7 @@ void Game::renderTitle() {
 
 void Game::renderHelp() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), helpPage == 2 ? 245 : 200);
-    static const char* page0[] = {
+    static const char* const page0[] = {
         "STARDRIFTER - FLIGHT CONTROL", "",
         "MOUSE LOOKS, W A S D WALK IN THE CABIN, ARROWS TURN",
         "THE SHIP; E USES A CONSOLE, A SCREEN, THE DECODER",
@@ -60,7 +60,7 @@ void Game::renderHelp() {
         "CTRL+K / F    SCANLINES / FULLSCREEN   ESC MENU",
         "F1 F2 F5 F9 F10 F11 F12 DO THE SAME (MAC: HOLD FN)",
         "PAGE 1/3 - SPACE: NEXT PAGE, ANY OTHER KEY: CLOSE"};
-    static const char* page1[] = {
+    static const char* const page1[] = {
         "SURFACE EXPLORATION", "",
         "MOUSE         LOOK AROUND",
         "W A S D       WALK   SHIFT SPRINT (STAMINA)",
@@ -81,7 +81,7 @@ void Game::renderHelp() {
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
         "CTRL+S  SAVE  P PHOTO  G GUIDE  H HELP  ESC MENU",
         "PAGE 2/3 - SPACE: NEXT PAGE, OTHER KEYS: CLOSE"};
-    static const char* page3[] = {   // R-418: the controller
+    static const char* const page3[] = {   // R-418: the controller
         "CONTROLLER", "",
         "Y          THE COMMANDS: EVERY ACTION HERE, ANY KEY",
         "START MENU  SELECT TAB  D-PAD ARROWS  R STICK LOOKS",
@@ -101,14 +101,14 @@ void Game::renderHelp() {
         "SETTINGS > CONTROLS: EACH BUTTON OF A CONTROLLER",
         "GAMECONTROLLERDB.TXT BESIDE THE GAME: NEW LAYOUTS", "",
         "PAGE 3/3 - SPACE: FIRST PAGE, OTHER KEYS: CLOSE"};
-    static const char* page2[] = {
+    static const char* const page2[] = {
         "CREDITS", "",
         "VESPERIS",
         "VIBE CODED. HEAVILY INSPIRED BY NOCTIS IV",
         "BY ALESSANDRO GHIGNOLA (2001).", "",
         "C++ AND RAYLIB.", "",
         "ANY KEY: BACK"};
-    const char** page = helpPage == 0 ? page0 : (helpPage == 1 ? page1 : (helpPage == 3 ? page3 : page2));
+    const char* const* page = helpPage == 0 ? page0 : (helpPage == 1 ? page1 : (helpPage == 3 ? page3 : page2));
     int n = helpPage == 0 ? (int)(sizeof(page0) / sizeof(page0[0])) : (helpPage == 1 ? (int)(sizeof(page1) / sizeof(page1[0])) : (helpPage == 3 ? (int)(sizeof(page3) / sizeof(page3[0])) : (int)(sizeof(page2) / sizeof(page2[0]))));
     for (int i = 0; i < n; i++) {
         if (!page[i][0]) continue;
@@ -117,12 +117,11 @@ void Game::renderHelp() {
 }
 
 void Game::renderMenu() {
-    const char* items[] = {"RESUME", "AUTO-EXPLORE", "SAVE EXPEDITION", "LOAD EXPEDITION", "SETTINGS", "HELP", "NEW EXPEDITION", "QUIT TO DESKTOP"};   // R-419: AUTO-EXPLORE
+    const char* const items[] = {"RESUME", "AUTO-EXPLORE", "SAVE EXPEDITION", "LOAD EXPEDITION", "SETTINGS", "HELP", "NEW EXPEDITION", "QUIT TO DESKTOP"};   // R-419: AUTO-EXPLORE
     const int n = (int)(sizeof(items) / sizeof(items[0]));
     // box: title, items, one blank line, the hint and the version line (bug B-001: nothing overlaps; R-419: eight rows, the box taller)
     const int top = 34, bottom = UH - 28, itemY0 = top + 22, rowH = 11;
-    blendRectRGB(canvas, 60, top, UW - 60, bottom, rgb(0, 0, 0), 210);
-    drawRectRGB(canvas, 60, top, UW - 60, bottom, HUD_DIM);
+    drawPanel(canvas, 60, top, UW - 60, bottom, rgb(0, 0, 0), 210);
     drawTextCentered(canvas, UW / 2, top + 8, "STARDRIFTER SYSTEMS", HUD_AMBER);
     for (int i = 0; i < n; i++) {
         int y = itemY0 + i * rowH;
@@ -157,25 +156,24 @@ void Game::adjustSetting(int item, int dir) {
         case 17: s.hudColor = (s.hudColor + 3 + dir) % 3; break;
     }
     applySettings();
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::updateKeysScreen(const Input& in) {
     if (!keymap) keymap = &ownKeymap;
     if (keysPage == 1) { updatePadScreen(in); return; }   // R-418: the controller's page
-    if (!keysCapture && in.wasPressed(KEY_TAB)) { keysPage = 1; padUI.screenSel = 0; padUI.capture = -1; audio.beep = 4; return; }
+    if (!keysCapture && in.wasPressed(KEY_TAB)) { keysPage = 1; padUI.screenSel = 0; padUI.capture = -1; audio.beep = BEEP_UI; return; }
     if (keysCapture) {
         if (rawKey == KEY_ESCAPE || (rawKey < 0 && in.wasPressed(KEY_ESCAPE))) { keysCapture = false; return; }   // R-418: a controller's B (no key of the keyboard) cancels too
         if (rawKey >= 32 && rawKey < KEY_MAX) {
             int logical = KEY_ACTIONS[keysSel].key;
             keymap->map[rawKey] = logical;   // pressing rawKey now acts as the action's key
             keysCapture = false;
-            audio.beep = 4;
+            audio.beep = BEEP_UI;
         }
         return;
     }
-    if (in.wasPressed(KEY_UP)) keysSel = (keysSel + KEY_ACTION_COUNT - 1) % KEY_ACTION_COUNT;
-    if (in.wasPressed(KEY_DOWN)) keysSel = (keysSel + 1) % KEY_ACTION_COUNT;
+    menuStep(in, keysSel, KEY_ACTION_COUNT);
     if (in.wasPressed(KEY_LEFT)) keysSel = std::max(0, keysSel - (KEY_ACTION_COUNT + 1) / 2);
     if (in.wasPressed(KEY_RIGHT)) keysSel = std::min(KEY_ACTION_COUNT - 1, keysSel + (KEY_ACTION_COUNT + 1) / 2);
     if (enterKey(in)) { keysCapture = true; return; }
@@ -183,7 +181,7 @@ void Game::updateKeysScreen(const Input& in) {
         int logical = KEY_ACTIONS[keysSel].key;
         for (int k = 0; k < KEY_MAX; k++) if (keymap->map[k] == logical && k != logical) keymap->map[k] = k;
         keymap->map[logical] = logical;
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_ESCAPE)) {
         keymap->save(keysPath);
@@ -196,8 +194,7 @@ void Game::renderKeysScreen() {
     if (!keymap) keymap = &ownKeymap;
     if (keysPage == 1) { renderPadScreen(); return; }   // R-418
     const int top = 6, bottom = UH - 6;
-    blendRectRGB(canvas, 10, top, UW - 10, bottom, rgb(0, 0, 0), 225);
-    drawRectRGB(canvas, 10, top, UW - 10, bottom, HUD_DIM);
+    drawPanel(canvas, 10, top, UW - 10, bottom, rgb(0, 0, 0), 225);
     drawTextCentered(canvas, UW / 2, top + 6, "CONTROLS  [KEYBOARD]  CONTROLLER", HUD_AMBER);   // R-418: Tab turns to the controller's page
     int half = (KEY_ACTION_COUNT + 1) / 2;
     for (int i = 0; i < KEY_ACTION_COUNT; i++) {
@@ -219,8 +216,7 @@ void Game::renderKeysScreen() {
 
 void Game::updateSettingsScreen(const Input& in) {
     const int n = SETTINGS_ITEMS + 1;
-    if (in.wasPressed(KEY_UP)) settingsSel = (settingsSel + n - 1) % n;
-    if (in.wasPressed(KEY_DOWN)) settingsSel = (settingsSel + 1) % n;
+    menuStep(in, settingsSel, n);
     int dir = (in.wasPressed(KEY_RIGHT) ? 1 : 0) - (in.wasPressed(KEY_LEFT) ? 1 : 0);
     if (enterKey(in) && settingsSel < SETTINGS_ITEMS) dir = 1;
     if (dir != 0 && settingsSel < SETTINGS_ITEMS) adjustSetting(settingsSel, dir);
@@ -233,8 +229,7 @@ void Game::updateSettingsScreen(const Input& in) {
 void Game::renderSettings() {
     const Settings& s = settings;
     const int top = 6, bottom = UH - 6, itemY0 = top + 14, rowH = 8;   // 18 items + BACK fit 200 rows at an 8 px pitch (M6-01)
-    blendRectRGB(canvas, 30, top, UW - 30, bottom, rgb(0, 0, 0), 215);
-    drawRectRGB(canvas, 30, top, UW - 30, bottom, HUD_DIM);
+    drawPanel(canvas, 30, top, UW - 30, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 8, "SETTINGS", HUD_AMBER);
     std::string values[SETTINGS_ITEMS] = {
         fmt("%.1f", s.mouseSensitivity), s.invertY ? "ON" : "OFF", fmt("%.0f%c", s.fovDeg, CH_DEGREE),
@@ -242,7 +237,7 @@ void Game::renderSettings() {
         fmt("%dX  (%dX%d)", s.renderScale, 320 * s.renderScale, 200 * s.renderScale), s.mushMode == 0 ? "CLASSIC" : (s.mushMode == 1 ? "SOFT" : (s.mushMode == 2 ? "SHARP" : "FINE")),
         s.shadingMode == 0 ? "FLAT CELLS" : (s.shadingMode == 1 ? "STEPPED" : "SMOOTH"), s.crt ? "ON" : "OFF", s.bloom ? "ON" : "OFF", s.sprintToggle ? "TOGGLE" : "HOLD", fmt("X%.2f", s.sprintSpeed), s.cabin ? "CABIN" : "COCKPIT", s.clockMode ? "REAL TIME (UTC)" : "GAME TIME",
         s.aspect ? "4:3 (TALL PIXELS)" : "SQUARE PIXELS", s.dither ? "ON" : "OFF", s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"), "ENTER TO OPEN"};
-    const char* names[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER", "TERRAIN SHADING", "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
+    const char* const names[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER", "TERRAIN SHADING", "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
     for (int i = 0; i <= SETTINGS_ITEMS; i++) {
         int y = itemY0 + i * rowH;
         bool sel = i == settingsSel;

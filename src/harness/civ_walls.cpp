@@ -417,8 +417,7 @@ int runWalls(int argc, char** argv) {
         for (int a = 0; a < AGE_COUNT; a++) if (AGE_SCENE_WORLDS[a].sx != AGE_WORLDS[a].sx || AGE_SCENE_WORLDS[a].sz != AGE_WORLDS[a].sz) worlds.push_back({AGE_SCENE_WORLDS[a].sx, 0, AGE_SCENE_WORLDS[a].sz, AGE_SCENE_WORLDS[a].body, "scene"});
         worlds.push_back({10549, -8, -5606, 2, "BUBAS"});
         for (const WW& w : worlds) {
-            Star st; if (!starInSector(w.sx, w.sy, w.sz, st, true)) continue;
-            StarSystem sys; sys.generate(st);
+            Star st; StarSystem sys; if (!systemAt(w.sx, w.sy, w.sz, st, sys, true)) continue;
             if (w.body >= (int)sys.bodies.size()) continue;
             const BodyGen g = BodyGen::make(sys.bodies[w.body]);
             if (!worldHadCivilisation(g)) continue;
@@ -479,8 +478,7 @@ int runWalls(int argc, char** argv) {
         int done = 0;
         for (const WW& wd : worlds) {
             if (done >= nWorlds) break;
-            Star st; if (!starInSector(wd.sx, wd.sy, wd.sz, st, true)) continue;
-            StarSystem sys; sys.generate(st);
+            Star st; StarSystem sys; if (!systemAt(wd.sx, wd.sy, wd.sz, st, sys, true)) continue;
             if (wd.body >= (int)sys.bodies.size()) continue;
             const BodyGen g = BodyGen::make(sys.bodies[wd.body]);
             if (!worldHadCivilisation(g)) continue;
@@ -549,8 +547,7 @@ int runWalls(int argc, char** argv) {
         return 0;
     }
     if (what == "at" && argc > 8) {   // `walls at <sx> <sy> <sz> <body> <latDeg> <lonDeg> [radius]`: the pieces near a point, their discs and the drawn slices
-        Star st; if (!starInSector(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, true)) { printf("no star\n"); return 1; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, sys, true)) { printf("no star\n"); return 1; }
         const int bi = atoi(argv[6]); if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
         const BodyGen g = BodyGen::make(sys.bodies[bi]); if (worldHadCivilisation(g)) worldWorksOf(g);
         const double lat = atof(argv[7]) * DEG, lon = atof(argv[8]) * DEG, rad = argc > 9 ? atof(argv[9]) : 4.0;
@@ -578,8 +575,7 @@ int runWalls(int argc, char** argv) {
         return 0;
     }
     if (what == "place" && argc > 8) {   // `walls place <sx> <sy> <sz> <body> <latDeg> <lonDeg>`: the works round a point, their records and what lies at each
-        Star st; if (!starInSector(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, true)) { printf("no star\n"); return 1; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, sys, true)) { printf("no star\n"); return 1; }
         const int bi = atoi(argv[6]); if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
         const BodyGen g = BodyGen::make(sys.bodies[bi]);
         const double lat = atof(argv[7]) * DEG, lon = atof(argv[8]) * DEG;
@@ -604,8 +600,7 @@ int runWalls(int argc, char** argv) {
         return 0;
     }
     if (what == "reach" && argc > 8) {   // `walls reach <sx> <sy> <sz> <body> <latDeg> <lonDeg> [half]`: the walk to a point from round it (the grid as a picture)
-        Star st; if (!starInSector(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, true)) { printf("no star\n"); return 1; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, sys, true)) { printf("no star\n"); return 1; }
         const int bi = atoi(argv[6]); if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
         const BodyGen g = BodyGen::make(sys.bodies[bi]); if (worldHadCivilisation(g)) worldWorksOf(g);
         const double lat = atof(argv[7]) * DEG, lon = atof(argv[8]) * DEG, half = argc > 9 ? atof(argv[9]) : 30.0;
@@ -622,8 +617,7 @@ int runWalls(int argc, char** argv) {
     }
     if (what == "walk" && argc > 9) {   // `walls walk <sx> <sy> <sz> <body> <latDeg> <lonDeg> <headingDeg> [initLat initLon]`: one walk from a point, frame
                                          // by frame (the view set up at the second point, as `walls view` sets it up at the place's middle)
-        Star st; if (!starInSector(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, true)) { printf("no star\n"); return 1; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(atoll(argv[3]), atoll(argv[4]), atoll(argv[5]), st, sys, true)) { printf("no star\n"); return 1; }
         const int bi = atoi(argv[6]); if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body\n"); return 1; }
         const BodyGen g = BodyGen::make(sys.bodies[bi]); if (worldHadCivilisation(g)) worldWorksOf(g);
         const double lat = atof(argv[7]) * DEG, lon = atof(argv[8]) * DEG, heading = atof(argv[9]) * DEG;
@@ -673,8 +667,7 @@ void wallsChecks(const std::function<void(const char*, bool, const std::string&)
     const double t0 = nowSec();
     WallTally T;
     for (int a : {AGE_PREHISTORIC, AGE_INDUSTRIAL, AGE_MODERN}) {
-        Star st; if (!starInSector(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, st, true)) continue;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, st, sys, true)) continue;
         const BodyGen g = BodyGen::make(sys.bodies[AGE_WORLDS[a].body]);
         if (!worldHadCivilisation(g)) continue;
         const int p = std::min(AGE_WORLDS[a].which, std::max(1, peoplesOf(g)) - 1);
@@ -694,8 +687,7 @@ void wallsChecks(const std::function<void(const char*, bool, const std::string&)
     // the scene worlds (their peoples ended lately: most of their works stand): walks, records, a heap stood on
     WalkTally W; RecTally R; int climbed = 0, tried = 0; double bestRise = 0; std::string climbWhat;
     for (int a : {AGE_PREHISTORIC, AGE_MEDIEVAL, AGE_MODERN}) {
-        Star st; if (!starInSector(AGE_SCENE_WORLDS[a].sx, 0, AGE_SCENE_WORLDS[a].sz, st, true)) continue;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(AGE_SCENE_WORLDS[a].sx, 0, AGE_SCENE_WORLDS[a].sz, st, sys, true)) continue;
         const int bi = AGE_SCENE_WORLDS[a].body;
         const BodyGen g = BodyGen::make(sys.bodies[bi]);
         if (!worldHadCivilisation(g)) continue;

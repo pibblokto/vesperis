@@ -474,8 +474,7 @@ void unitDrifters(const Check& check) {
         int sunlit = 0, sunlitBodies = 0;
         for (int64_t x = 150; x < 250 && sunlitBodies < 3000; x++)
             for (int64_t z = 20; z < 100 && sunlitBodies < 3000; z++) {
-                Star st; if (!starInSector(x, 0, z, st, false)) continue;
-                StarSystem sys; sys.generate(st);
+                Star st; StarSystem sys; if (!systemAt(x, 0, z, st, sys, false)) continue;
                 for (const Body& b : sys.bodies) { sunlitBodies++; const BodyGen g = BodyGen::make(b); for (int t = TR_FROZEN_AIR; t <= TR_LIGHTS_IN_WATER; t++) if (g.hasTrait(t)) sunlit++; if (g.dark || g.frozenSeas) sunlit++; }
             }
         check("dark: the drifters' own traits, frozen seas (D-04)", wrongAir == 0 && wrongEmbers == 0 && wrongLights == 0 && leftOn == 0 && frozenWet == 0 && oceanDry == 0 && sunlit == 0 && airs > 0 && embers > 0 && frozenChecked > 0,

@@ -1,8 +1,6 @@
 #include "space_view.h"
 #include "space_internal.h"
 
-int SpaceRenderer::dbgX = -1, SpaceRenderer::dbgY = -1;
-
 double SpaceRenderer::lightFactor(double luminosity, double distKm) { return StarSystem::starLightFactor(luminosity, distKm); }
 
 void drawStarField(Framebuffer& fb, const std::vector<Star>& stars, const Vec3& observer, const Mat3& cam,

@@ -63,7 +63,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
     }
     if (in.wasPressed(KEY_Z) && !in.ctrl()) {
         if (!landingZoomAllowed()) status("THE WHOLE WORLD ALREADY FITS THE MAP", 3);
-        else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = 4; }
+        else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = BEEP_UI; }
     }
     const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // F-02: R once the world's map is made
     if (rMap) {
@@ -80,7 +80,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         }
     }
     if (in.wasPressed(KEY_C)) mapClouds = !mapClouds;   // the original's cloud filter
-    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = 4; }   // R-415: the peoples over the map, off by default
+    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = BEEP_UI; }   // R-415: the peoples over the map, off by default
     if (in.wasPressed(KEY_J)) {   // M5-09: jump to the point where the biggest body in this world's sky stands highest
         int best = -1; double bestAng = 0;
         Vec3 bp = sys.bodyPos(landBody, t);
@@ -119,7 +119,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         surf.cameraOverrideAlt = 1800;
         surf.cameraOverridePitch = -60 * DEG;
         surf.player.yaw = wrap2pi(landLon + 1.0);
-        audio.beep = 2;
+        audio.beep = BEEP_ARRIVE;
         autosave();
     }
     updateShipMotion(dt);

@@ -30,7 +30,7 @@ namespace {
 // of the frames' intervals and of their work without the hold and the swap (F-08: the pacing's wait and the vsync's)
 struct FrameTrace {
     enum { POLL, GAME, AUDIO, SYNTH, SHOT, REC, UPLOAD, DRAW, HOLD, SWAP, WORK, INTERVAL, N };
-    const char* names[N] = {"poll", "game", "audio", "synth", "shot", "rec", "upload", "draw", "hold", "swap", "work", "interval"};
+    const char* const names[N] = {"poll", "game", "audio", "synth", "shot", "rec", "upload", "draw", "hold", "swap", "work", "interval"};
     double sum[N] = {}, worst[N] = {}, v[N] = {};
     int frames = 0, blocks = 0;
     double lastReport = -1;

@@ -19,13 +19,16 @@ RogueVoice rogueVoiceFor(const Signal& s);
 enum RadioSet { RADIO_CAMERA = 0, RADIO_CABIN, RADIO_SUIT };
 constexpr double RADIO_CABIN_LEVEL = 0.45, RADIO_SUIT_LEVEL = 0.4;
 
+// what `AudioState::beep` plays once (audio.cpp: a lock 880 Hz, an arrival 660 Hz and longer, a refusal 220 Hz, a key 1320 Hz)
+enum Beep { BEEP_NONE = 0, BEEP_LOCK, BEEP_ARRIVE, BEEP_ERROR, BEEP_UI };
+
 struct AudioState {
     double hum = 0;        // ship interior hum 0..1
     double engine = 0;     // vimana / approach drive 0..1
     double wind = 0;       // surface wind 0..1
     double rain = 0;       // 0..1
     double lava = 0;       // rumble 0..1
-    int beep = 0;          // >0: play a beep of this kind (1 lock, 2 arrive, 3 error, 4 ui)
+    int beep = 0;          // a Beep to play (BEEP_NONE: none)
     double thunder = 0;    // >0 triggers thunder
     double master = 0.8;   // master volume 0..1 (settings)
     double breath = 0;     // heavy breathing 0..1 (sprint stamina)
@@ -151,7 +154,6 @@ public:
     static std::string rogueLine(uint64_t seed, const RogueVoice& r);
     static void rogueTraits(uint64_t seed, const RogueVoice& r, std::vector<double>& out);
     static double rogueBreathS(uint64_t seed, const RogueVoice& r);   // the breath's period (s): the beam sweeping past once a turning
-    static double roguePulseS(const RogueVoice& r);                    // the moon's pulse's period (s; 0 no moon)
 private:
     double phase1 = 0, phase2 = 0, lfo = 0;
     double humLvl = 0, engLvl = 0, windLvl = 0, rainLvl = 0, lavaLvl = 0, breathLvl = 0, breathPh = 0;

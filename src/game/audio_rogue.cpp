@@ -139,7 +139,6 @@ void AudioSynth::rogueDerive(RadarVar& v, uint64_t seed) {
 }
 
 double AudioSynth::rogueBreathS(uint64_t seed, const RogueVoice& r) { RadarVar v; rogueDerive(v, seed); return breathOf(r, v.rgBreathU); }
-double AudioSynth::roguePulseS(const RogueVoice& r) { return pulseOf(r); }
 
 std::string AudioSynth::rogueLine(uint64_t seed, const RogueVoice& r) {
     RadarVar v; rogueDerive(v, seed);

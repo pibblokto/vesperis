@@ -10,6 +10,7 @@
 #include "towns.h"
 #include "galaxy/planet_features.h"
 #include "core/rng.h"
+#include "core/sphere.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -25,37 +26,6 @@
 #include <unordered_map>
 
 inline bool wetS(const SurfaceSample& s) { return s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water) || s.oldSea > 0.5; }
-inline double arcM(const Vec3& a, const Vec3& b, double Rm) { return std::acos(clampd(dot(a, b), -1, 1)) * Rm; }
-// a point `eastM` and `northM` off a unit vector on the tangent plane's great circles (the plan's and the roads' frame)
-inline Vec3 offsetUnit(const Vec3& u, double eastM, double northM, double Rm) {
-    Vec3 pole(0, 0, 1), east = cross(pole, u);
-    if (length(east) < 1e-9) east = Vec3(0, 1, 0);
-    east = normalize(east);
-    const Vec3 north = cross(u, east);
-    const double d = std::sqrt(eastM * eastM + northM * northM);
-    if (d < 1e-9) return u;
-    const Vec3 dir = (east * eastM + north * northM) / d;
-    return normalize(u * std::cos(d / Rm) + dir * std::sin(d / Rm));
-}
-inline Vec3 slerpUnit(const Vec3& a, const Vec3& b, double t) {
-    const double c = clampd(dot(a, b), -1, 1), w = std::acos(c);
-    if (w < 1e-9) return a;
-    const double s = std::sin(w);
-    return normalize(a * (std::sin((1 - t) * w) / s) + b * (std::sin(t * w) / s));
-}
-inline Vec3 toward(const Vec3& from, const Vec3& to, double m, double Rm) {
-    const double w = std::acos(clampd(dot(from, to), -1, 1));
-    if (w < 1e-12) return from;
-    return slerpUnit(from, to, m / Rm / w);
-}
-// the bearing (from north, clockwise) of `to` seen from `from`
-inline double bearingOf(const Vec3& from, const Vec3& to) {
-    Vec3 pole(0, 0, 1), east = cross(pole, from);
-    if (length(east) < 1e-9) east = Vec3(0, 1, 0);
-    east = normalize(east);
-    const Vec3 north = cross(from, east), d = to - from;
-    return std::atan2(dot(d, east), dot(d, north));
-}
 // a work's own metres: east and north of its middle as the settlements lay theirs out (the latitude and the longitude scaled at the middle)
 struct Frame {
     double lat0, lon0, Rm, cl;
@@ -108,8 +78,8 @@ struct WB {
     // land's work the world's too)
     bool clearOf(const Vec3& u, double r, bool ofWorks = true) {
         if (ofWorks) {
-            for (const Work& w : out) if (arcM(u, w.unit, Rm) < r + w.radiusM + 40) return false;
-            if (world) for (const Work& w : *world) if (arcM(u, w.unit, Rm) < r + w.radiusM + 40) return false;
+            for (const Work& w : out) if (arcLength(u, w.unit, Rm) < r + w.radiusM + 40) return false;
+            if (world) for (const Work& w : *world) if (arcLength(u, w.unit, Rm) < r + w.radiusM + 40) return false;
         }
         if (planCoreAt(P, u, r + 150)) return false;
         double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
@@ -122,7 +92,7 @@ struct WB {
             const int g2 = (int)std::floor(lon / dLon);
             for (int dd = -reach; dd <= reach; dd++) {
                 const CellS& c = cellAt(row, (((g2 + dd) % nLon) + nLon) % nLon);
-                if (c.has && arcM(u, c.u, Rm) < r + c.r + 60) return false;
+                if (c.has && arcLength(u, c.u, Rm) < r + c.r + 60) return false;
             }
         }
         return true;

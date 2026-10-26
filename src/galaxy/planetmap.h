@@ -35,7 +35,7 @@ const char* reliefClass(double slope);
 
 // M9-05 biomes of habitable worlds
 enum Biome { BIO_NONE = 0, BIO_TROPICAL, BIO_SAVANNA, BIO_DESERT, BIO_TEMPERATE, BIO_GRASSLAND, BIO_TAIGA, BIO_TUNDRA, BIO_WETLAND, BIO_ALPINE, BIO_ICE, BIO_OCEAN, BIO_COUNT };
-extern const char* BIOME_NAMES[BIO_COUNT];
+extern const char* const BIOME_NAMES[BIO_COUNT];
 
 struct SurfaceSample {
     double height = 0;      // metres above the reference level (sea level where it exists)

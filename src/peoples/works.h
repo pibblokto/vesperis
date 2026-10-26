@@ -129,7 +129,6 @@ struct WorldWorks {
 std::shared_ptr<const WorldWorks> worldWorksOf(const BodyGen& g);
 std::shared_ptr<const WorldWorks> worldWorksIfReady(const BodyGen& g);   // null while being built or never asked for (a render path)
 std::shared_ptr<WorldWorks> buildWorldWorks(const BodyGen& g);           // built now, not cached (the unit compares it with the cached)
-void worldWorksClearCache();                                             // and the land's
 // the works of the world and of the land whose reach comes within `radiusM` of a point (the scanner's, the landing's, the harness's): the
 // world's waited for; `IfReady` false while they are being built, nothing made (the view's, which never waits). `landRadiusM` (if given)
 // the land's own reach (the view's nearer: it draws the works within a few kilometres)

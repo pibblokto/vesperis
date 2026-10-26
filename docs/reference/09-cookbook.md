@@ -320,7 +320,7 @@ A drifter is a place as a star is: a `Star` of class `STAR_ROGUE` in a sector wi
 
 ## Add a material
 
-`galaxy/kinds.h` enum before `MAT_COUNT` (P-01: the mud, the potash and the brine; P-02: the mats, the stromatolite, the crust and the moss); `planetmap.cpp`: `MATERIAL_NAMES`; `planet_bodygen.cpp`: `matFamily` (the bank it shares: a material of its own colour needs a family whose rep it recolours, as the glass recolours the water), `materialPalette` (its colour per body); `surface/textures.cpp`: `materialHasMesoTile`, a `buildMesoTile` case and the `mesoVariantName` row; `surface/surface_view.cpp`: the specular list if it glints, `drawObjects` and `collectColliders` if rocks avoid it; `src/harness/modes_space.cpp`: the `matCol` of the `maps` renderer. The landing map, the globe and the surface take the colour from `matColor`.
+`galaxy/kinds.h` enum before `MAT_COUNT` (P-01: the mud, the potash and the brine; P-02: the mats, the stromatolite, the crust and the moss); `planetmap.cpp`: `MATERIAL_NAMES`; `planet_bodygen.cpp`: `matFamily` (the bank it shares: a material of its own colour needs a family whose rep it recolours, as the glass recolours the water), `materialPalette` (its colour per body); `surface/textures.cpp`: `materialHasMesoTile` and a `buildMesoTile` case; `surface/surface_view.cpp`: the specular list if it glints, `drawObjects` and `collectColliders` if rocks avoid it; `src/harness/modes_space.cpp`: the `matCol` of the `maps` renderer. The landing map, the globe and the surface take the colour from `matColor`.
 
 ## Add a HUD readout
 
@@ -574,8 +574,8 @@ The texts are written by the grammar engine from the `.vg` files on `src/peoples
 
 1. A feature that reads what happened (a town's old core, a battlefield, a record) takes the history once (`historyOf(sys, b, g,
    people)`, cached; it builds the world's plan first if it must, so ask it off the frame, as the plan is) and reads it by year
-   (`eventsIn`, `reignAt`, `harvestAt`, `populationAt`, `inventionYear`, `historySeat`), by person or place (`eventsOf`, `eventsAt`,
-   `historyKinship`) or by its lists (`places`: the plan's by rank, then a later people's cleared cities; `wars`, `sicknesses`,
+   (`eventsIn`, `reignAt`, `harvestAt`, `inventionYear`, `historySeat`), by person (`eventsOf`, `historyKinship`)
+   or by its lists (`places`: the plan's by rank, then a later people's cleared cities; `wars`, `sicknesses`,
    `institutions`, `families`). A place's `age` is the age of its old core, its `ended` and `fate` how it was left.
 2. A new kind of event: its entry in `HistoryEventKind` with its name (`HISTORY_EVENT_NAMES`) and the slots it fills (the comment by
    it); where the year loop makes it (`randomEvents` for a rate, `setupPlanned` for a year fixed in advance, `collapseYear` for the

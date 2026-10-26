@@ -25,15 +25,10 @@ void testStars() {
     for (int i = 0; i < STAR_DRAWN_COUNT; i++) printf("  %s %-14s %d\n", STAR_CLASSES[i].code, STAR_CLASSES[i].name, counts[i]);
     int typeCounts[PT_COUNT] = {0};
     int moons = 0, planets = 0, systems = 0;
-    for (int64_t x = 150; x < 190; x++)
-        for (int64_t z = 20; z < 60; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys;
-            sys.generate(s);
-            systems++;
-            for (auto& b : sys.bodies) { typeCounts[b.type]++; if (b.parent < 0) planets++; else moons++; }
-        }
+    for (auto& [x, z, s, sys] : scanSystems(150, 190, 20, 60)) {
+        systems++;
+        for (auto& b : sys.bodies) { typeCounts[b.type]++; if (b.parent < 0) planets++; else moons++; }
+    }
     printf("Systems: %d planets: %d moons: %d\n", systems, planets, moons);
     for (int i = 0; i < PT_COUNT; i++) printf("  %-16s %d\n", KINDS[i].name, typeCounts[i]);
     // print a few systems in detail
@@ -301,8 +296,7 @@ void runGalaxy() {
 
 // G-03: the sky from a ship above the home star, toward the core, along the arm and toward the anticentre (`galaxy`)
 static bool galaxySkyFrames(double coreLon) {
-    Star hs; if (!starInSector(HOME_SX, HOME_SY, HOME_SZ, hs)) return false;
-    StarSystem hsys; hsys.generate(hs);
+    Star hs; StarSystem hsys; if (!systemAt(HOME_SX, HOME_SY, HOME_SZ, hs, hsys)) return false;
     double dd = std::max(hs.radiusKm * STAR_CLASSES[hs.cls].firstOrbitMult, STAR_CLASSES[hs.cls].minFirstOrbitKm);
     Vec3 shipPos = hs.pos + Vec3(0, dd, 0);   // above the star: no sun in the frames
     StarNeighborhood snb; snb.update(shipPos);
@@ -474,7 +468,7 @@ int runFlightStability() {
     const Vec3 h = homeStar.pos / SECTOR_KM;
     const Vec3 toCore = normalize(Vec3(GALAXY_CENTRE_SX - h.x, 0, GALAXY_CENTRE_SZ - h.z));
     struct Fl { const char* tag; double ly; Vec3 dir; } fl[2] = {{"core", 10000, toCore}, {"north", 3000, Vec3(0, 1, 0)}};
-    static const char* VIEWS[3] = {"ahead", "back", "aside"};
+    static const char* const VIEWS[3] = {"ahead", "back", "aside"};
     auto lum = [](uint32_t c) { return 0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255); };
     int bad = 0;
     for (const Fl& f : fl)
@@ -591,7 +585,7 @@ int runCrossing() {
     auto lum = [](uint32_t c) { return 0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255); };
     for (int f = 0; f < 2; f++)
         for (int view = 0; view < 3; view++) {
-            static const char* VIEWS[3] = {"ahead", "back", "aside"};
+            static const char* const VIEWS[3] = {"ahead", "back", "aside"};
             BareFlight B(homeStar.pos, fl[f].dir, fl[f].ly);
             printf("bare %s %s:", fl[f].tag, VIEWS[view]);
             for (double s : {0.02, 0.25, 0.5, 0.75, 0.98}) {
@@ -698,87 +692,83 @@ void runSurvey(int wanted) {
     int skySites = 0, sky05 = 0, sky1 = 0, sky3 = 0, sky10 = 0, skyPoint = 0, skyParent = 0, skyMoon = 0, skySister = 0, skyOther = 0, skyTwoSuns = 0;
     int multiples = 0, substellar = 0, comets = 0, doubles = 0, lockedN = 0;
     int parkN[5] = {0}, parkSky[5] = {0}, parkView[5] = {0};   // B-428: at a solid planet, its moon, a giant, a giant's moon, a twin
-    for (int64_t x = 150; x < 320 && bodies < wanted; x++)
-        for (int64_t z = 20; z < 140 && bodies < wanted; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            systems++;
-            if (sys.companion >= 0) multiples++;
-            bool fel = false;
-            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type == PT_SUBSTELLAR) substellar++;
-                if (b.type == PT_COMET) comets++;
-                if (b.doublePlanet && b.parent >= 0) doubles++;
-                if (b.locked) lockedN++;
-                if (b.type != PT_COMPANION && b.type != PT_COMET) {   // B-428: what the parked ship sees of the other worlds, twice a body
-                    const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;
-                    const Body& w = moon ? sys.bodies[b.parent] : b;
-                    const bool gi = w.type == PT_GASGIANT || w.type == PT_SUBSTELLAR;
-                    const int cat = b.doublePlanet ? 4 : (moon ? (gi ? 3 : 1) : (gi ? 2 : 0));
-                    Rng pr(b.seed ^ 0xC40DULL);
-                    for (int k = 0; k < 2; k++) {
-                        double sky, view; parkedNeighbours(sys, bi, pr.range(0, 4e6), sky, view);
-                        parkN[cat]++; if (sky > 5) parkSky[cat]++; if (view > 3) parkView[cat]++;
-                    }
-                }
-                if (!KINDS[b.type].landable) continue;
-                Rng sr(b.seed ^ 0x5C1EULL);
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return bodies < wanted; })) {
+        systems++;
+        if (sys.companion >= 0) multiples++;
+        bool fel = false;
+        for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type == PT_SUBSTELLAR) substellar++;
+            if (b.type == PT_COMET) comets++;
+            if (b.doublePlanet && b.parent >= 0) doubles++;
+            if (b.locked) lockedN++;
+            if (b.type != PT_COMPANION && b.type != PT_COMET) {   // B-428: what the parked ship sees of the other worlds, twice a body
+                const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;
+                const Body& w = moon ? sys.bodies[b.parent] : b;
+                const bool gi = w.type == PT_GASGIANT || w.type == PT_SUBSTELLAR;
+                const int cat = b.doublePlanet ? 4 : (moon ? (gi ? 3 : 1) : (gi ? 2 : 0));
+                Rng pr(b.seed ^ 0xC40DULL);
                 for (int k = 0; k < 2; k++) {
-                    double lat = std::asin(sr.sym(1.0)), lon = sr.range(0, TAU), t = sr.range(0, 4e6);
-                    Vec3 site = sys.surfacePointWorld(bi, t, lat, lon, 0.002);
-                    Vec3 up = normalize(site - sys.bodyPos(bi, t));
-                    double best = 0; int bestKind = -1; bool point = false; int sunsUp = 0;
-                    for (int j = 0; j < (int)sys.bodies.size(); j++) {
-                        if (j == bi) continue;
-                        Vec3 rel = sys.bodyPos(j, t) - site;
-                        double d = length(rel);
-                        if (dot(rel / d, up) < 0.02) continue;
-                        double ang = std::asin(clampd(sys.bodies[j].radiusKm / d, 0, 1)) / DEG;
-                        if (sys.bodies[j].type == PT_COMPANION) { sunsUp++; continue; }
-                        if (sys.bodies[j].parent < 0 && ang < 0.25) point = true;
-                        if (ang > best) { best = ang; bestKind = j == b.parent ? 0 : (sys.bodies[j].parent == bi ? 1 : (sys.bodies[j].parent == b.parent && b.parent >= 0 ? 2 : 3)); }
-                    }
-                    if (dot(normalize(sys.star.pos - site), up) > 0.02) sunsUp++;
-                    skySites++;
-                    if (best > 0.5) { sky05++; if (bestKind == 0) skyParent++; else if (bestKind == 1) skyMoon++; else if (bestKind == 2) skySister++; else skyOther++; }
-                    if (best > 1) sky1++;
-                    if (best > 3) sky3++;
-                    if (best > 10) sky10++;
-                    if (point) skyPoint++;
-                    if (sunsUp >= 2) skyTwoSuns++;
+                    double sky, view; parkedNeighbours(sys, bi, pr.range(0, 4e6), sky, view);
+                    parkN[cat]++; if (sky > 5) parkSky[cat]++; if (view > 3) parkView[cat]++;
                 }
             }
-            bool anyChanged = false;
-            for (const Body& b : sys.bodies) {
-                bodies++;
-                types[b.type]++;
-                if (b.type != drawnKind(b)) { madeFrom[b.type][drawnKind(b)]++; changed++; anyChanged = true; }
-                if (b.locked && sys.star.cls == STAR_RED_DWARF) { rdLocked[b.type]++; rdLockedN++; }
-                {   const int sun = b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION ? sys.bodies[b.parent].starClass : sys.star.cls;   // P-04
-                    if (b.type == PT_SCORCHED_FELISIAN) { deadN++; if (sun >= 0) deadBy[sun]++; if (peoplesHash(b.type, b.seed)) deadPeople++; }
-                    if (b.type == PT_FELISIAN && (sun == STAR_RED_GIANT || sun == STAR_ORANGE_GIANT || sun == STAR_CARBON)) giantLiving++; }
-                if (b.parent < 0) { planets++; moonHist[std::min(7, b.moonCount)]++; } else moons++;
-                if (b.type == PT_FELISIAN) fel = true;
-                tempHist[std::min(5, (int)(b.tempK / 150))]++;
-                gravHist[std::min(4, (int)(b.gravity / 5.0))]++;
-                if (b.type != PT_GASGIANT && matN[b.type] < 40) {
-                    BodyGen g = BodyGen::make(b);
-                    double detail = TAU * g.R * 1000.0 / 48.0 * 0.6;
-                    int cnt[MAT_COUNT] = {0}, tot = 0;
-                    for (int j = 0; j < 12; j++)
-                        for (int i = 0; i < 24; i++) {
-                            double lat = (0.5 - (j + 0.5) / 12) * PI, lon = ((i + 0.5) / 24) * TAU - PI;
-                            cnt[sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), detail).material]++; tot++;
-                        }
-                    for (int m = 0; m < MAT_COUNT; m++) matCov[b.type][m] += (double)cnt[m] / tot;
-                    matN[b.type]++;
+            if (!KINDS[b.type].landable) continue;
+            Rng sr(b.seed ^ 0x5C1EULL);
+            for (int k = 0; k < 2; k++) {
+                double lat = std::asin(sr.sym(1.0)), lon = sr.range(0, TAU), t = sr.range(0, 4e6);
+                Vec3 site = sys.surfacePointWorld(bi, t, lat, lon, 0.002);
+                Vec3 up = normalize(site - sys.bodyPos(bi, t));
+                double best = 0; int bestKind = -1; bool point = false; int sunsUp = 0;
+                for (int j = 0; j < (int)sys.bodies.size(); j++) {
+                    if (j == bi) continue;
+                    Vec3 rel = sys.bodyPos(j, t) - site;
+                    double d = length(rel);
+                    if (dot(rel / d, up) < 0.02) continue;
+                    double ang = std::asin(clampd(sys.bodies[j].radiusKm / d, 0, 1)) / DEG;
+                    if (sys.bodies[j].type == PT_COMPANION) { sunsUp++; continue; }
+                    if (sys.bodies[j].parent < 0 && ang < 0.25) point = true;
+                    if (ang > best) { best = ang; bestKind = j == b.parent ? 0 : (sys.bodies[j].parent == bi ? 1 : (sys.bodies[j].parent == b.parent && b.parent >= 0 ? 2 : 3)); }
                 }
+                if (dot(normalize(sys.star.pos - site), up) > 0.02) sunsUp++;
+                skySites++;
+                if (best > 0.5) { sky05++; if (bestKind == 0) skyParent++; else if (bestKind == 1) skyMoon++; else if (bestKind == 2) skySister++; else skyOther++; }
+                if (best > 1) sky1++;
+                if (best > 3) sky3++;
+                if (best > 10) sky10++;
+                if (point) skyPoint++;
+                if (sunsUp >= 2) skyTwoSuns++;
             }
-            if (fel) felSystems++;
-            if (anyChanged) changedSystems++;
         }
+        bool anyChanged = false;
+        for (const Body& b : sys.bodies) {
+            bodies++;
+            types[b.type]++;
+            if (b.type != drawnKind(b)) { madeFrom[b.type][drawnKind(b)]++; changed++; anyChanged = true; }
+            if (b.locked && sys.star.cls == STAR_RED_DWARF) { rdLocked[b.type]++; rdLockedN++; }
+            {   const int sun = b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION ? sys.bodies[b.parent].starClass : sys.star.cls;   // P-04
+                if (b.type == PT_SCORCHED_FELISIAN) { deadN++; if (sun >= 0) deadBy[sun]++; if (peoplesHash(b.type, b.seed)) deadPeople++; }
+                if (b.type == PT_FELISIAN && (sun == STAR_RED_GIANT || sun == STAR_ORANGE_GIANT || sun == STAR_CARBON)) giantLiving++; }
+            if (b.parent < 0) { planets++; moonHist[std::min(7, b.moonCount)]++; } else moons++;
+            if (b.type == PT_FELISIAN) fel = true;
+            tempHist[std::min(5, (int)(b.tempK / 150))]++;
+            gravHist[std::min(4, (int)(b.gravity / 5.0))]++;
+            if (b.type != PT_GASGIANT && matN[b.type] < 40) {
+                BodyGen g = BodyGen::make(b);
+                double detail = TAU * g.R * 1000.0 / 48.0 * 0.6;
+                int cnt[MAT_COUNT] = {0}, tot = 0;
+                for (int j = 0; j < 12; j++)
+                    for (int i = 0; i < 24; i++) {
+                        double lat = (0.5 - (j + 0.5) / 12) * PI, lon = ((i + 0.5) / 24) * TAU - PI;
+                        cnt[sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), detail).material]++; tot++;
+                    }
+                for (int m = 0; m < MAT_COUNT; m++) matCov[b.type][m] += (double)cnt[m] / tot;
+                matN[b.type]++;
+            }
+        }
+        if (fel) felSystems++;
+        if (anyChanged) changedSystems++;
+    }
     printf("survey: %d systems, %d bodies (%d planets, %d moons); felisian in %d systems (%.0f%%)\n", systems, bodies, planets, moons, felSystems, 100.0 * felSystems / std::max(1, systems));
     printf("types:"); for (int i = 0; i < PT_COUNT; i++) printf("  %s %.1f%%", KINDS[i].name, 100.0 * types[i] / std::max(1, bodies)); printf("\n");
     // P-01: the made kinds: how many bodies changed kind (every draw of their systems made as the drawn kind's), and from what
@@ -803,35 +793,30 @@ void runSurvey(int wanted) {
     {   // P-05: the wanderers over the whole start region (the sample above holds a handful): how many systems caught one, of what kind, how
         // far out past the last planet (its nearest over that orbit), how eccentric, which way round
         int allSys = 0, wanderN = 0, wanderFrozen = 0, wanderRetro = 0, wanderPeople = 0; double wanderEcc = 0, wanderOut = 0;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s); allSys++;
-                for (const Body& b : sys.bodies) {
-                    if (!b.wanderer) continue;
-                    wanderN++; if (b.type == PT_FROZEN_FELISIAN) wanderFrozen++; if (b.orbitIncl > PI / 2) wanderRetro++; wanderEcc += b.ecc;
-                    if (BodyGen::make(b).hasTrait(TR_CIVILISATION)) wanderPeople++;
-                    double last = 0; for (const Body& q : sys.bodies) if (q.parent < 0 && !q.wanderer && q.type != PT_COMET && q.type != PT_COMPANION) last = std::max(last, q.orbitRadiusKm);
-                    if (last > 0) wanderOut += b.orbitRadiusKm * (1 - b.ecc) / last;
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
+allSys++;
+            for (const Body& b : sys.bodies) {
+                if (!b.wanderer) continue;
+                wanderN++; if (b.type == PT_FROZEN_FELISIAN) wanderFrozen++; if (b.orbitIncl > PI / 2) wanderRetro++; wanderEcc += b.ecc;
+                if (BodyGen::make(b).hasTrait(TR_CIVILISATION)) wanderPeople++;
+                double last = 0; for (const Body& q : sys.bodies) if (q.parent < 0 && !q.wanderer && q.type != PT_COMET && q.type != PT_COMPANION) last = std::max(last, q.orbitRadiusKm);
+                if (last > 0) wanderOut += b.orbitRadiusKm * (1 - b.ecc) / last;
             }
+        }
         printf("wanderers: %d in the start region's %d systems (%.1f%%), %d frozen felisian, %d with a people; %d retrograde, eccentricity %.2f on average, the nearest %.2f times the last planet's orbit\n",
                wanderN, allSys, 100.0 * wanderN / std::max(1, allSys), wanderFrozen, wanderPeople, wanderRetro, wanderEcc / std::max(1, wanderN), wanderOut / std::max(1, wanderN));
     }
     {   // P-06: the giants' moons over the start region by kind, the commonest first (their captured moons apart), and the strange moons among all moons
         int giantMoons = 0, kinds[PT_COUNT] = {0}, captured = 0, strange[PT_COUNT] = {0}, allMoons = 0;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (const Body& b : sys.bodies) {
-                    if (b.parent < 0 || b.type == PT_COMET || sys.bodies[b.parent].type == PT_COMPANION) continue;
-                    allMoons++; if (b.type >= PT_GROOVED_ICE && b.type <= PT_SPONGE) strange[b.type]++;
-                    if (!kindHas(drawnKind(sys.bodies[b.parent]), KT_GIANT)) continue;
-                    if (b.orbitPeriod < 0) { captured++; continue; }
-                    giantMoons++; kinds[b.type]++;
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
+            for (const Body& b : sys.bodies) {
+                if (b.parent < 0 || b.type == PT_COMET || sys.bodies[b.parent].type == PT_COMPANION) continue;
+                allMoons++; if (b.type >= PT_GROOVED_ICE && b.type <= PT_SPONGE) strange[b.type]++;
+                if (!kindHas(drawnKind(sys.bodies[b.parent]), KT_GIANT)) continue;
+                if (b.orbitPeriod < 0) { captured++; continue; }
+                giantMoons++; kinds[b.type]++;
             }
+        }
         int order[PT_COUNT]; for (int k = 0; k < PT_COUNT; k++) order[k] = k;
         std::sort(order, order + PT_COUNT, [&](int a, int b) { return kinds[a] != kinds[b] ? kinds[a] > kinds[b] : a < b; });
         printf("giants' moons: %d in the start region (and %d captured):", giantMoons, captured);
@@ -843,21 +828,18 @@ void runSurvey(int wanted) {
     {   // P-07: the giants over the start region by class against their equilibrium temperature (the game's scale), the giants made from a world
         // (the warm zones'), and the yellow stars with a hot one (an alkali or a silicate giant)
         std::vector<double> temps[GK_COUNT]; int fromWorld = 0, yellow = 0, yellowHot = 0;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                bool hot = false;
-                for (const Body& b : sys.bodies) {
-                    if (!isProbeGiant(b.type)) continue;
-                    const int cls = KINDS[b.type].giantClass;
-                    const int gk = cls != GC_NONE ? GK_WATER + (cls - GC_WATER) : (kindHas(b.type, KT_GLOWS) ? GK_BROWN : (isIceGiant(b) ? GK_ICE : GK_GAS));
-                    temps[gk].push_back(b.tempK);
-                    if (!kindHas(drawnKind(b), KT_GIANT)) fromWorld++;
-                    if (b.type == PT_ALKALI || b.type == PT_SILICATE) hot = true;
-                }
-                if (s.cls == STAR_YELLOW) { yellow++; if (hot) yellowHot++; }
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
+            bool hot = false;
+            for (const Body& b : sys.bodies) {
+                if (!isProbeGiant(b.type)) continue;
+                const int cls = KINDS[b.type].giantClass;
+                const int gk = cls != GC_NONE ? GK_WATER + (cls - GC_WATER) : (kindHas(b.type, KT_GLOWS) ? GK_BROWN : (isIceGiant(b) ? GK_ICE : GK_GAS));
+                temps[gk].push_back(b.tempK);
+                if (!kindHas(drawnKind(b), KT_GIANT)) fromWorld++;
+                if (b.type == PT_ALKALI || b.type == PT_SILICATE) hot = true;
             }
+            if (s.cls == STAR_YELLOW) { yellow++; if (hot) yellowHot++; }
+        }
         printf("giants by class (equilibrium K, the game's: the least, the median, the most):");
         for (int k = 0; k < GK_COUNT; k++) {
             std::vector<double>& v = temps[k]; std::sort(v.begin(), v.end());
@@ -876,7 +858,7 @@ void runSurvey(int wanted) {
         printf("  the disc is: the parent %.0f%%, an own moon %.0f%%, a sister moon %.0f%%, another world %.0f%%\n", 100.0 * skyParent / std::max(1, sky05), 100.0 * skyMoon / std::max(1, sky05), 100.0 * skySister / std::max(1, sky05), 100.0 * skyOther / std::max(1, sky05));
     }
     {   // B-428: from the parking, another world wider than 10 deg anywhere in the sky / wider than 6 deg in the view of the world
-        const char* kinds[5] = {"solid planets", "their moons", "giants", "giants' moons", "twins"};
+        const char* const kinds[5] = {"solid planets", "their moons", "giants", "giants' moons", "twins"};
         int n = 0, sk = 0, vw = 0;
         printf("from the ship parked at a world (B-428), another world wider than 10 deg in the sky / wider than 6 deg in the view:");
         for (int k = 0; k < 5; k++) { printf(" %s %.0f%% / %.0f%% of %d;", kinds[k], 100.0 * parkSky[k] / std::max(1, parkN[k]), 100.0 * parkView[k] / std::max(1, parkN[k]), parkN[k]); n += parkN[k]; sk += parkSky[k]; vw += parkView[k]; }

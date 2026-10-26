@@ -3,10 +3,9 @@
 // it names as entities in the writer's eyes, and the plan's directives that pick what it tells by salience.
 #include "genres.h"
 #include "genres_schema.h"
+#include "../core/clock.h"
 
 namespace {
-double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-
 // a place's landmark (the first of these the place's hash ranks that its water and the record's age allow: need 0 none, 1 a coast, 2 a river)
 struct Landmark { const char* text; int need; unsigned ages; };
 constexpr unsigned LP = 1, LM = 2, LI = 4, LMO = 8, LF = 16, LFF = 32;
@@ -121,7 +120,6 @@ struct RecordModel : VgModel {
         return h >= 0 ? h : historySeat(H, y);
     }
     bool alive(int p, int y) const { return H.alive(p, y); }
-    int ageAt(int p, int y) const { return p >= 0 && p < (int)H.persons.size() ? y - H.persons[p].born : 0; }
     int theYear() const { return fixedYear ? fixedYear : year; }
     std::string kinOf(int p, int to) const { return to >= 0 && p >= 0 && p != to ? historyKinship(H, p, to) : std::string(); }
 
@@ -670,7 +668,6 @@ struct RecordModel : VgModel {
         for (int t : toldHere) if (H.events[t].kind == e.kind) { s *= 0.25; break; }
         return s * jitter;
     }
-    void told(int ev, int reg) { toldHere.push_back(ev); }
 
     // ---- the directives ---------------------------------------------------------------------------------------------------------
     static int registerOf(const std::string& r) {

@@ -86,7 +86,6 @@ const char* const SHAPES[] = {"CVC", "CVV?C", "CVVC?", "CVC?", "CV", "VC", "CVF"
                               "C?VF", "C?VC?", "C?VF?", "C?L?VC", "CVL?C?", "C?VL?C", "C?VLC?", "CV", "CVF?", "C?V"};
 constexpr int SHAPES_N = (int)(sizeof(SHAPES) / sizeof(SHAPES[0]));
 
-uint64_t strHashT(const std::string& s) { uint64_t h = 1469598103934665603ULL; for (unsigned char c : s) { h ^= c; h *= 1099511628211ULL; } return h; }
 bool isVowelLetter(char c) { c = (char)std::tolower((unsigned char)c); return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u' || c == 'y'; }
 std::string capWord(std::string s) { if (!s.empty()) s[0] = (char)std::toupper((unsigned char)s[0]); return s; }
 // a name that reads as a rude or silly word of ours is drawn again (anywhere in it for the worst, the whole name for the rest)
@@ -423,7 +422,7 @@ Tongue tongueOf(const BodyGen& g, const Lore& L) { return tongueOfSeed(loreSeed(
 // one syllable for a word of three letters or fewer, two to six, three past that: the people's words run about as long as ours
 std::string tongueWord(const Tongue& T, const std::string& w, int attempt) {
     std::shared_ptr<const Sounds> S = soundsOf(T);
-    Rng rng(mix64(T.seed ^ strHashT(w)) + (uint64_t)attempt * 0x9E3779B97F4A7C15ULL);
+    Rng rng(mix64(T.seed ^ fnv1a(w)) + (uint64_t)attempt * 0x9E3779B97F4A7C15ULL);
     const int len = (int)w.size();
     int syl = len <= 3 ? 1 : (len <= 6 ? 2 : (rng.chance(0.3) ? 2 : 3));
     if (attempt > 0 && rng.chance(0.5)) syl = std::min(3, syl + 1);
@@ -437,7 +436,7 @@ std::string tongueWord(const Tongue& T, const std::string& w, int attempt) {
 std::string tongueTerm(const Tongue& T, const std::string& key) {
     std::shared_ptr<const Sounds> S = soundsOf(T);
     if (!S) return key;
-    Rng rng(mix64(T.seed ^ strHashT(key) ^ 0x7E4A11ULL));
+    Rng rng(mix64(T.seed ^ fnv1a(key) ^ 0x7E4A11ULL));
     const int syl = rng.chance(0.55) ? 2 : (rng.chance(0.6) ? 1 : 3);
     std::string out;
     for (int t = 0; t < 8; t++) {

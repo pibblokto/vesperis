@@ -16,7 +16,6 @@ namespace {
 #define STOP(sym, voiced, locus, nf, nbw, namp) {sym, PK_STOP, voiced, 200, locus, 2400, 200, locus, 2400, nf, nbw, namp, voiced ? 0.045 : 0.055}
 #define FRIC(sym, voiced, locus, nf, nbw, namp, dur) {sym, PK_FRIC, voiced, 250, locus, 2500, 250, locus, 2500, nf, nbw, namp, dur}
 #define SON(sym, kind, a1, a2, a3, dur) {sym, kind, true, a1, a2, a3, a1, a2, a3, 0, 0, 0, dur}
-uint64_t strHashV(const std::string& s) { uint64_t h = 1469598103934665603ULL; for (unsigned char c : s) { h ^= c; h *= 1099511628211ULL; } return h; }
 }
 
 // longest spellings first: the parse takes the first row that matches
@@ -40,7 +39,6 @@ const Phone PHONES[] = {
     SON("w", PK_GLIDE, 300, 650, 2200, 0.055), SON("y", PK_GLIDE, 280, 2200, 3000, 0.05),
 };
 int phoneCount() { return (int)(sizeof(PHONES) / sizeof(PHONES[0])); }
-int phoneOf(const char* sym) { for (int i = 0; i < phoneCount(); i++) if (strcmp(PHONES[i].sym, sym) == 0) return i; return -1; }
 
 void parsePhones(const std::string& word, std::vector<int>& out) {
     out.clear();
@@ -181,7 +179,7 @@ void speechOf(const Voice& V, const std::vector<DecodedWord>& words, uint64_t se
                     double u0 = (double)g / std::max(1, N), u1 = (double)(g + 1) / std::max(1, N);
                     double a = contourAt(V, u0), b = contourAt(V, u1);
                     if (V.tonal) {
-                        int tone = (int)(mix64(strHashV(x.spoken) ^ ((uint64_t)s * 0x9E3779B97F4A7C15ULL)) & 3);
+                        int tone = (int)(mix64(fnv1a(x.spoken) ^ ((uint64_t)s * 0x9E3779B97F4A7C15ULL)) & 3);
                         double r = V.range;
                         if (tone == 0) { a *= 1 + 0.10 * r; b *= 1 + 0.10 * r; } else if (tone == 1) { a *= 1 - 0.08 * r; b *= 1 - 0.08 * r; }
                         else if (tone == 2) { a *= 1 - 0.06 * r; b *= 1 + 0.14 * r; } else { a *= 1 + 0.14 * r; b *= 1 - 0.10 * r; }

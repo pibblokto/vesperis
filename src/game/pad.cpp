@@ -13,8 +13,8 @@
 
 namespace {
 enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };   // R-419: PSP_AUTO auto-explore's profiles
-const char* ROLE_SHORT[PR_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
-const char* ROLE_SCREEN[PR_BUTTONS] = {"A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
+const char* const ROLE_SHORT[PR_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
+const char* const ROLE_SCREEN[PR_BUTTONS] = {"A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
 constexpr double REPEAT_DELAY = 0.4, REPEAT_EVERY = 0.09;   // the arrows held in the menus and the screens
 constexpr double CAPTURE_S = 6;                             // the controller page waits this long for a press
 constexpr int PAD_ROWS = 22;                                // the controller page: sixteen buttons, two sticks, three settings, the reset
@@ -268,9 +268,9 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
                 item("JUMP: TYPE THE LIGHT YEARS", -1, 0, PSP_KEYBOARD);
                 item("CANCEL THE AIM", KEY_R);
             } else {
-                static const char* FACING[12] = {"", "THE GOES CONSOLE", "THE FLIGHT COMPUTER", "THE STAR MAP SCREEN", "THE LANDING SCREEN", "THE TARGET SCREEN", "THE CAPSULE",
+                static const char* const FACING[FACE_COUNT] = {"", "THE GOES CONSOLE", "THE FLIGHT COMPUTER", "THE STAR MAP SCREEN", "THE LANDING SCREEN", "THE TARGET SCREEN", "THE CAPSULE",
                                                   "THE SHARD DECODER", "THE SIGNAL RADAR", "THE TELESCOPE", "THE INSTRUMENT CASE", "THE DRONE BAY"};
-                if (settings.cabin && cabin.facing > 0 && cabin.facing < 12) item(std::string("USE ") + FACING[cabin.facing], KEY_E);
+                if (settings.cabin && cabin.facing > FACE_NOTHING && cabin.facing < FACE_COUNT) item(std::string("USE ") + FACING[cabin.facing], KEY_E);
                 if (ship.mode == ShipState::VIMANA) item("ABORT THE FLIGHT", KEY_V);
                 else {
                     item("AIM AT A STAR", KEY_R);
@@ -430,7 +430,7 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
         case GameState::TEXT_ENTRY:
             if (!padKeyboardShown()) item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
             item("DONE", KEY_ENTER); item("CANCEL", KEY_ESCAPE);
-            if (textKind == 6) item("WHAT IT MARKS: THE NEXT", KEY_TAB);
+            if (textKind == TEXT_MARK) item("WHAT IT MARKS: THE NEXT", KEY_TAB);
             break;
         case GameState::HELP: item("THE NEXT PAGE", KEY_SPACE); item("CLOSE", KEY_ESCAPE); break;
         default: break;
@@ -469,11 +469,11 @@ void Game::openPadScreen() {
 // the menu's controller: up and down (repeating), LB and RB the pages, A runs the line, B, Y or START close it
 void Game::padMenuUpdate(const bool* pressed, double realDt) {
     PadUI& P = padUI;
-    if (pressed[PR_B] || pressed[PR_Y] || pressed[PR_START]) { P.menu = false; audio.beep = 4; return; }
+    if (pressed[PR_B] || pressed[PR_Y] || pressed[PR_START]) { P.menu = false; audio.beep = BEEP_UI; return; }
     auto turn = [&](int dir) {
         P.page = (P.page + 3 + dir) % 3;
         if (P.page == 0 && padItems(0).empty()) P.page = (P.page + 3 + dir) % 3;
-        P.sel = 0; audio.beep = 4;
+        P.sel = 0; audio.beep = BEEP_UI;
     };
     if (pressed[PR_LB] || (P.page != 2 && P.pulse[2])) { turn(-1); return; }
     if (pressed[PR_RB] || (P.page != 2 && P.pulse[3])) { turn(1); return; }
@@ -482,8 +482,8 @@ void Game::padMenuUpdate(const bool* pressed, double realDt) {
     const int n = (int)items.size();
     if (n == 0) return;
     P.sel = std::max(0, std::min(n - 1, P.sel));
-    if (P.pulse[0]) { P.sel = (P.sel + n - 1) % n; audio.beep = 4; }
-    if (P.pulse[1]) { P.sel = (P.sel + 1) % n; audio.beep = 4; }
+    if (P.pulse[0]) { P.sel = (P.sel + n - 1) % n; audio.beep = BEEP_UI; }
+    if (P.pulse[1]) { P.sel = (P.sel + 1) % n; audio.beep = BEEP_UI; }
     if (pressed[PR_A] || pressed[PR_X]) { P.menu = false; padRunItem(items[P.sel]); }
 }
 
@@ -504,10 +504,10 @@ void Game::padKeyboardUpdate(const bool* pressed, bool menuPage) {
         const KbKey& k = rows[P.kRow][P.kCol];
         if (k.key < 0) P.latch ^= (k.key == -1 ? MOD_SHIFT : (k.key == -2 ? MOD_CTRL : MOD_ALT));
         else { padPress(k.key, P.latch); P.latch = 0; }
-        audio.beep = 4;
+        audio.beep = BEEP_UI;
     }
     if (menuPage) return;
-    if (pressed[PR_SELECT]) { P.menu = true; P.page = padItems(0).empty() ? 1 : 0; P.sel = 0; audio.beep = 4; return; }   // the commands over the keyboard
+    if (pressed[PR_SELECT]) { P.menu = true; P.page = padItems(0).empty() ? 1 : 0; P.sel = 0; audio.beep = BEEP_UI; return; }   // the commands over the keyboard
     if (pressed[PR_X]) padPress(KEY_BACKSPACE, 0);
     if (pressed[PR_Y]) padPress(KEY_SPACE, 0);
     const bool digits = P.keyboard && P.kbFor == 1;
@@ -572,7 +572,7 @@ void Game::padFrame(Input& in, double realDt) {
     if (shown) { if (!justUp) padKeyboardUpdate(pressed, false); deliver(); return; }   // the press that brought it up types nothing
     if (ax.on && pressed[PR_SELECT]) { in.pressed[KEY_M] = in.down[KEY_M] = true; pressed[PR_SELECT] = false; }   // R-420: auto-explore's tape (SELECT's own key would end it)
     if (pressed[PR_Y]) {
-        P.menu = true; P.page = padItems(0).empty() ? 1 : 0; P.sel = 0; audio.beep = 4;
+        P.menu = true; P.page = padItems(0).empty() ? 1 : 0; P.sel = 0; audio.beep = BEEP_UI;
         deliver(); return;
     }
     const int ctx = padContext();
@@ -632,16 +632,14 @@ void Game::renderPad() {
         if (!padKeyboardShown()) return;
         const bool digits = P.keyboard && P.kbFor == 1;
         const int y0 = digits ? 4 : UH - 94;   // the aim keeps the crosshair and its jump line clear: the keyboard at the top
-        blendRectRGB(canvas, 8, y0, UW - 8, y0 + 90, rgb(0, 0, 0), 225);
-        drawRectRGB(canvas, 8, y0, UW - 8, y0 + 90, HUD_DIM);
+        drawPanel(canvas, 8, y0, UW - 8, y0 + 90, rgb(0, 0, 0), 225);
         drawTextCentered(canvas, UW / 2, y0 + 3, digits ? "DIGITS: THE LIGHT YEARS  START JUMPS  B CLOSES"
                                                 : (state == GameState::CONSOLE ? "A TYPES  X DELETES  START RUNS  SELECT COMMANDS" : "A TYPES  X DELETES  Y SPACE  START DONE  B CANCELS"), HUD_DIM);
         renderPadKeyboard(20, y0 + 12, false);
         return;
     }
     const int x0 = 14, x1 = UW - 14, y0 = 10, y1 = UH - 10;
-    blendRectRGB(canvas, x0, y0, x1, y1, rgb(0, 0, 0), 242);
-    drawRectRGB(canvas, x0, y0, x1, y1, HUD_DIM);
+    drawPanel(canvas, x0, y0, x1, y1, rgb(0, 0, 0), 242);
     const int ctx = padContext();
     const std::string tabs[3] = {padContextName(ctx), "GENERAL", "KEYS"};
     int tx = x0 + 6;
@@ -729,15 +727,15 @@ void Game::updatePadScreen(const Input& in) {
             P.note = fmt("THE %s STICK IS SET", P.capture == PR_BUTTONS ? "WALK" : "LOOK");
         }
         P.noteUntil = realTime + 3;
-        P.capture = -1; P.resync = true; audio.beep = 4;
+        P.capture = -1; P.resync = true; audio.beep = BEEP_UI;
         return;
     }
-    if (in.wasPressed(KEY_TAB)) { keysPage = 0; audio.beep = 4; return; }
+    if (in.wasPressed(KEY_TAB)) { keysPage = 0; audio.beep = BEEP_UI; return; }
     if (in.wasPressed(KEY_ESCAPE)) {
         if (padMap.dirty && padMap.save(padPath)) padMap.dirty = false;   // only what changed: a file of the explorer's is not rewritten for nothing
         settings.save(settingsPath);
         if (keymap) keymap->save(keysPath);
-        state = keysReturn; audio.beep = 4;
+        state = keysReturn; audio.beep = BEEP_UI;
         return;
     }
     int& s = P.screenSel;
@@ -745,24 +743,23 @@ void Game::updatePadScreen(const Input& in) {
     if (in.wasPressed(KEY_DOWN)) s = s < PR_BUTTONS ? (s % 8 == 7 ? PR_BUTTONS : s + 1) : (s == PAD_ROWS - 1 ? 0 : s + 1);
     const int dir = (in.wasPressed(KEY_RIGHT) ? 1 : 0) - (in.wasPressed(KEY_LEFT) ? 1 : 0);
     if (dir && s < PR_BUTTONS) { s = s < 8 ? s + 8 : s - 8; return; }
-    if (dir && s == 18) { settings.padLookSpeed = std::round((settings.padLookSpeed + 0.1 * dir) * 10) / 10; settings.clampAll(); audio.beep = 4; }
-    if (dir && s == 19) { settings.padInvertY = !settings.padInvertY; audio.beep = 4; }
-    if (dir && s == 20) { settings.padDeadZone = std::round((settings.padDeadZone + 0.02 * dir) * 100) / 100; settings.clampAll(); audio.beep = 4; }
+    if (dir && s == 18) { settings.padLookSpeed = std::round((settings.padLookSpeed + 0.1 * dir) * 10) / 10; settings.clampAll(); audio.beep = BEEP_UI; }
+    if (dir && s == 19) { settings.padInvertY = !settings.padInvertY; audio.beep = BEEP_UI; }
+    if (dir && s == 20) { settings.padDeadZone = std::round((settings.padDeadZone + 0.02 * dir) * 100) / 100; settings.clampAll(); audio.beep = BEEP_UI; }
     if (!enterKey(in)) return;
-    if (s == 19) { settings.padInvertY = !settings.padInvertY; audio.beep = 4; return; }
-    if (s == 21) { padMap.reset(in.pad); P.note = "THIS CONTROLLER IS BACK TO ITS DEFAULTS"; P.noteUntil = realTime + 3; audio.beep = 4; return; }
+    if (s == 19) { settings.padInvertY = !settings.padInvertY; audio.beep = BEEP_UI; return; }
+    if (s == 21) { padMap.reset(in.pad); P.note = "THIS CONTROLLER IS BACK TO ITS DEFAULTS"; P.noteUntil = realTime + 3; audio.beep = BEEP_UI; return; }
     if (s >= 18) return;
-    if (!in.pad.present) { P.note = "NO CONTROLLER"; P.noteUntil = realTime + 3; audio.beep = 3; return; }
+    if (!in.pad.present) { P.note = "NO CONTROLLER"; P.noteUntil = realTime + 3; audio.beep = BEEP_ERROR; return; }
     P.capture = s;   // 16 the walk stick, 17 the look stick
     P.capStep = 0; P.capArmed = false; P.capT = 0; P.capRest = in.pad;   // the axes as they rest now
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::renderPadScreen() {
     const PadUI& P = padUI;
     const int top = 6, bottom = UH - 6;
-    blendRectRGB(canvas, 10, top, UW - 10, bottom, rgb(0, 0, 0), 225);
-    drawRectRGB(canvas, 10, top, UW - 10, bottom, HUD_DIM);
+    drawPanel(canvas, 10, top, UW - 10, bottom, rgb(0, 0, 0), 225);
     drawText(canvas, 16, top + 5, "CONTROLS", HUD_AMBER);
     drawText(canvas, 16 + textWidth("CONTROLS") + 12, top + 5, "KEYBOARD", HUD_DIM);
     drawText(canvas, 16 + textWidth("CONTROLS") + 12 + textWidth("KEYBOARD") + 10, top + 5, "[CONTROLLER]", HUD_WHITE);
@@ -792,7 +789,7 @@ void Game::renderPadScreen() {
         else { x = 20; y = y0 + 8 * 9 + 5 + (row - PR_BUTTONS) * 9; }
         const bool sel = row == P.screenSel;
         const bool held = row < PR_BUTTONS && live.down[row];
-        static const char* REST[6] = {"WALK STICK", "LOOK STICK", "LOOK SPEED", "INVERT LOOK", "DEAD ZONE", "RESET THIS CONTROLLER"};
+        static const char* const REST[6] = {"WALK STICK", "LOOK STICK", "LOOK SPEED", "INVERT LOOK", "DEAD ZONE", "RESET THIS CONTROLLER"};
         const char* label = row < PR_BUTTONS ? ROLE_SCREEN[row] : REST[row - PR_BUTTONS];
         if (sel) drawText(canvas, x - 7, y, ">", HUD_AMBER);
         drawText(canvas, x, y, label, held ? HUD_CYAN : (sel ? HUD_WHITE : HUD_GREEN));

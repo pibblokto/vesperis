@@ -268,7 +268,7 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
     }
     if (ruler) {   // its size: the longest round length that fits a third of the box
         static const double LEN[6] = {0.02, 0.05, 0.1, 0.2, 0.5, 1.0};
-        static const char* LBL[6] = {"2 CM", "5 CM", "10 CM", "20 CM", "50 CM", "1 M"};
+        static const char* const LBL[6] = {"2 CM", "5 CM", "10 CM", "20 CM", "50 CM", "1 M"};
         int k = 0; for (int j = 0; j < 6; j++) if (LEN[j] * P.s <= w * 0.34) k = j;
         const int len = std::max(2, (int)std::lround(LEN[k] * P.s)), x = x0 + 5, y = y0 + h - 6;
         const uint32_t col = rgb(128, 138, 136);

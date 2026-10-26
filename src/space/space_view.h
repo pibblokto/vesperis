@@ -94,7 +94,6 @@ struct DetailPlate {
 
 class SpaceRenderer {
 public:
-    static int dbgX, dbgY;   // debug: print shading terms for this pixel
     Proj proj = Proj::fromHFov(70);
     std::vector<BodyScreenInfo> bodyInfo;
     void render(Framebuffer& fb, const SpaceContext& c);
@@ -156,7 +155,7 @@ private:
 public:
     // M7-02: cache policy and profiling counters (printed by `vesperis_test bench`)
     int mapCacheCap = 24;
-    struct MapStats { int generated = 0, hits = 0, evicted = 0; double genMs = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // F-01: `mapFor` waiting on a map or making it
+    struct MapStats { int generated = 0, hits = 0, evicted = 0; int blocked = 0; double blockedMs = 0; } mapStats;   // F-01: `mapFor` waiting on a map or making it
     std::atomic<long> genMicros{0};
     size_t mapsHeld() const { return maps.size(); }
 private:

@@ -9,8 +9,7 @@ void unitProbe(const Check& check) {
         int giants = 0, bad = 0; std::string why;
         auto clockAt = [](const ProbeFlight& ff, double bar) { double lo = probeDescentStart(), hi = 1e5; for (int i = 0; i < 80; i++) { double m = 0.5 * (lo + hi); if (probeBarAt(ff, m) < bar) lo = m; else hi = m; } return 0.5 * (lo + hi); };
         for (int64_t x = 150; x < 200 && giants < 16; x++) for (int64_t z = 20; z < 80 && giants < 16; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, true)) continue;
             for (const Body& b : sys.bodies) {
                 if (!isProbeGiant(b.type) || giants >= 16) continue;
                 giants++;
@@ -54,8 +53,7 @@ void unitProbe(const Check& check) {
         auto run = [&](double s) { runFrames(game, in, s); };
         Star gs; int gi = -1, other = -1;
         for (int64_t x = 150; x < 200 && gi < 0; x++) for (int64_t z = 20; z < 80 && gi < 0; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, true)) continue;
             for (int i = 0; i < (int)sys.bodies.size(); i++) if (sys.bodies[i].type == PT_GASGIANT) { gs = s; gi = i; other = i == 0 ? 1 : 0; break; }
         }
         bool aimOk = false, launched = false, resumed = false, cut = false, ended = false, back = false, fastOk = false; std::string d1, d2, d3, dFast;
@@ -106,8 +104,7 @@ void unitProbe(const Check& check) {
         // water deck's towers, the water deck's top over its base)
         int giants = 0, badBands = 0, badDecks = 0, points = 0; double worst = 0; std::string why;
         for (int64_t x = 150; x < 200 && giants < 6; x++) for (int64_t z = 20; z < 80 && giants < 6; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, true)) continue;
             for (const Body& b : sys.bodies) {
                 if (!isProbeGiant(b.type) || giants >= 6) continue;
                 giants++;
@@ -148,8 +145,7 @@ void unitProbe(const Check& check) {
         int giants = 0, bad = 0, kinds[GK_COUNT] = {}, decks[4] = {0, 0, 0, 0}; double glowYoung = 0, glowOld = 0, glowBrownMin = 1e9, glowGasMax = 0; int nYoung = 0, nOld = 0;
         std::string why;
         for (int64_t x = 150; x < 320 && giants < 300; x++) for (int64_t z = 20; z < 140 && giants < 300; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, true)) continue;
             for (int bi = 0; bi < (int)sys.bodies.size() && giants < 300; bi++) {
                 const Body& b = sys.bodies[bi];
                 if (!isProbeGiant(b.type)) continue;
@@ -185,8 +181,7 @@ void unitProbe(const Check& check) {
         // it carried by the jet at its centre's latitude), and the deck stands on its dome and higher on its wall
         int storms = 0, bad = 0; std::string why;
         for (int64_t x = 150; x < 320 && storms < 6; x++) for (int64_t z = 20; z < 140 && storms < 6; z++) {
-            Star s; if (!starInSector(x, 0, z, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, true)) continue;
             for (int bi = 0; bi < (int)sys.bodies.size() && storms < 6; bi++) {
                 const Body& b = sys.bodies[bi];
                 if (b.type != PT_GASGIANT) continue;
@@ -242,8 +237,7 @@ void unitProbe(const Check& check) {
         const long long pins[][4] = {{139, -105, -43, 8}, {153, 0, 32, 0}, {150, 0, 73, 1}, {150, 0, 73, 0}, {150, 0, 106, 5}};   // one deck: an ice giant, a gas giant, a brown dwarf; two and three
         int giants = 0, oneDeck = 0, frames = 0, bad = 0; double darkest = 1e9, clipMost = 0; std::string why;
         for (const auto& pin : pins) {
-            Star st; if (!starInSector(pin[0], pin[1], pin[2], st, true)) continue;
-            StarSystem sys; sys.generate(st);
+            Star st; StarSystem sys; if (!systemAt(pin[0], pin[1], pin[2], st, sys, true)) continue;
             const int bi = (int)pin[3];
             if (bi >= (int)sys.bodies.size() || !isProbeGiant(sys.bodies[bi].type)) continue;
             game.testParkAt(st, bi); run(0.3); press(KEY_C); run(0.1);
@@ -372,8 +366,7 @@ void unitProbe(const Check& check) {
         std::vector<G> all;
         for (int64_t x = 150; x < 320 && all.size() < 600; x++)
             for (int64_t z = 20; z < 140 && all.size() < 600; z++) {
-                Star s; if (!starInSector(x, 0, z, s, true)) continue;
-                StarSystem ss; ss.generate(s);
+                Star s; StarSystem ss; if (!systemAt(x, 0, z, s, ss, true)) continue;
                 for (int i = 0; i < (int)ss.bodies.size(); i++) if (isProbeGiant(ss.bodies[i].type)) all.push_back({x, z, i, giantAtmosphereOf(ss, i)});
             }
         const G* gs = nullptr; const G* au = nullptr; const G* ho = nullptr; const G* ha = nullptr;
@@ -431,7 +424,7 @@ void unitProbe(const Check& check) {
         if (ho) for (int k = 0; k < 10; k++) { if (!launch(*ho, true, (5 + 7 * k) * DEG, (40 * k) * DEG)) break; if (game.testProbeHolePath()) { fall(false); break; } }
         if (ha && launch(*ha, false, 0, 0)) fall(false);
         int counts[5] = {0, 0, 0, 0, 0}; bool depths = true;
-        const char* what[5] = {"FELL INTO RED EYE, THE GREAT STORM", "SAW THE WALL OF THE GREAT STORM", "SAW THE AURORA'S CURTAINS", "FELL THROUGH A CLEAR-AIR HOLE", "MET DIAMOND HAIL"};
+        const char* const what[5] = {"FELL INTO RED EYE, THE GREAT STORM", "SAW THE WALL OF THE GREAT STORM", "SAW THE AURORA'S CURTAINS", "FELL THROUGH A CLEAR-AIR HOLE", "MET DIAMOND HAIL"};
         for (const LogEntry& e : game.guide.log) for (int k = 0; k < 5; k++) if (e.kind == "PROBE" && e.text.find(what[k]) != std::string::npos) { counts[k]++; if (k != 1 && k != 2 && e.text.find(" ATM, ") == std::string::npos) depths = false; }
         const std::string stormKey = game.guide.probes.empty() ? std::string() : game.guide.probes[0].storm;
         const bool nameKept = !stormKey.empty() && game.guide.names.count(stormKey) && game.guide.names[stormKey] == "RED EYE";

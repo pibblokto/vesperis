@@ -4,7 +4,9 @@
 #include "works.h"
 #include "peoples.h"
 #include "galaxy/drainage.h"
+#include "core/clock.h"
 #include "core/rng.h"
+#include "core/sphere.h"
 #include "core/noise.h"
 #include "core/parallel.h"
 #include <algorithm>
@@ -24,32 +26,7 @@ const uint32_t NET_KIND_COLOURS[NK_COUNT] = {0xFF648CAFu, 0xFFA0E1F5u, 0xFF2D37D
 
 namespace {
 constexpr int PLAN_ROWS = 360;   // half a degree a row: about 165,000 cells, 30-50 km across on the peoples' worlds
-double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 bool wetSample(const SurfaceSample& s) { return s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water) || s.oldSea > 0.5; }
-double arcKm(const Vec3& a, const Vec3& b, double R) { return std::acos(clampd(dot(a, b), -1, 1)) * R; }
-// a point `eastM` and `northM` off a unit vector, on the tangent plane's great circles (the roads' and the site's frame)
-Vec3 offsetUnit(const Vec3& u, double eastM, double northM, double Rm) {
-    Vec3 pole(0, 0, 1), east = cross(pole, u);
-    if (length(east) < 1e-9) east = Vec3(0, 1, 0);
-    east = normalize(east);
-    const Vec3 north = cross(u, east);
-    const double d = std::sqrt(eastM * eastM + northM * northM);
-    if (d < 1e-9) return u;
-    const Vec3 dir = (east * eastM + north * northM) / d;
-    return normalize(u * std::cos(d / Rm) + dir * std::sin(d / Rm));
-}
-Vec3 slerpUnit(const Vec3& a, const Vec3& b, double t) {
-    const double c = clampd(dot(a, b), -1, 1), w = std::acos(c);
-    if (w < 1e-9) return a;
-    const double s = std::sin(w);
-    return normalize(a * (std::sin((1 - t) * w) / s) + b * (std::sin(t * w) / s));
-}
-// a unit vector moved `m` metres toward another along their great circle
-Vec3 toward(const Vec3& from, const Vec3& to, double m, double Rm) {
-    const double w = std::acos(clampd(dot(from, to), -1, 1));
-    if (w < 1e-12) return from;
-    return slerpUnit(from, to, std::min(1.0, m / Rm / w));
-}
 }   // namespace
 
 // ---- the grid ----------------------------------------------------------------------------------------------------------------
@@ -393,7 +370,7 @@ void planPeople(const BodyGen& gSeason, const PlanGrid& G, int people, int age, 
         const int c = order[k];
         if (c == cap || out.score[c] < cityMin) continue;
         const Vec3& u = units[c];
-        if (hashC.any(u, [&](int o) { return arcKm(units[o], u, G.R) < dCity; })) continue;
+        if (hashC.any(u, [&](int o) { return arcLength(units[o], u, G.R) < dCity; })) continue;
         hashC.add(u, c); hashT.add(u, c); wants.push_back({c, citySC}); made++;
     }
     made = 0;
@@ -401,8 +378,8 @@ void planPeople(const BodyGen& gSeason, const PlanGrid& G, int people, int age, 
         const int c = order[k];
         if (c == cap || out.score[c] < townMin) continue;
         const Vec3& u = units[c];
-        if (hashT.any(u, [&](int o) { return arcKm(units[o], u, G.R) < dTown; })) continue;
-        if (dCity > 0 && hashC.any(u, [&](int o) { return arcKm(units[o], u, G.R) < 0.5 * dCity; })) continue;
+        if (hashT.any(u, [&](int o) { return arcLength(units[o], u, G.R) < dTown; })) continue;
+        if (dCity > 0 && hashC.any(u, [&](int o) { return arcLength(units[o], u, G.R) < 0.5 * dCity; })) continue;
         hashT.add(u, c); wants.push_back({c, townSC}); made++;
     }
     // each place on the fine ground of its cell: dry where it stands and round its core (C-01's site test, and for a capital or a city
@@ -500,7 +477,7 @@ void planPeople(const BodyGen& gSeason, const PlanGrid& G, int people, int age, 
     // routes; the way's kind by the age (an industrial people's rail and canals, a modern people's highways, a crossing over the water)
     const int n = (int)out.places.size();
     if (n >= 2 && rule.way >= 0) {
-        auto dKm = [&](int a, int b) { return arcKm(out.places[a].unit, out.places[b].unit, G.R); };
+        auto dKm = [&](int a, int b) { return arcLength(out.places[a].unit, out.places[b].unit, G.R); };
         auto waterRun = [&](int a, int b, int& longest) {   // the share of a straight way over water (the coarse grid, every third of a cell)
             const double L = dKm(a, b); const int steps = std::max(2, (int)std::ceil(L / (G.sizeKm() / 3)));
             int wetN = 0, run = 0; longest = 0;
@@ -810,7 +787,7 @@ double planCountryside(const WorldPlan& P, double lat, double lon, int people) {
     if (pp.age == AGE_FAR_FUTURE) return 0;
     const Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
     double dMin = 1e9;   // the nearest of the people's places (km)
-    forCellsNear(P.grid, u, 60.0, [&](int c) { for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (p.people == pp.people) dMin = std::min(dMin, arcKm(u, p.unit, P.grid.R)); } });
+    forCellsNear(P.grid, u, 60.0, [&](int c) { for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (p.people == pp.people) dMin = std::min(dMin, arcLength(u, p.unit, P.grid.R)); } });
     if (pp.age == AGE_FUTURISTIC) return 0.7 * std::exp(-dMin / 12.0);   // a futuristic people's pods round its great places alone
     const double base = gridBilinear(P.grid, P.countryside, lat, lon) / 255.0;
     if (base <= 0) return 0;
@@ -821,7 +798,7 @@ const PlanPlace* planCoreAt(const WorldPlan& P, const Vec3& unit, double marginM
     if (P.grid.cells == 0) return nullptr;
     const PlanPlace* hit = nullptr;
     forCellsNear(P.grid, unit, 2.0 + marginM / 1000.0, [&](int c) {
-        for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (!hit && arcKm(unit, p.unit, P.grid.R) * 1000.0 < p.radiusM + marginM) hit = &p; }
+        for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (!hit && arcLength(unit, p.unit, P.grid.R) * 1000.0 < p.radiusM + marginM) hit = &p; }
     });
     return hit;
 }
@@ -830,7 +807,7 @@ void planPlacesNear(const WorldPlan& P, const Vec3& unit, double radiusM, std::v
     out.clear();
     if (P.grid.cells == 0) return;
     forCellsNear(P.grid, unit, radiusM / 1000.0 + 2.0, [&](int c) {
-        for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (arcKm(unit, p.unit, P.grid.R) * 1000.0 - p.radiusM < radiusM) out.push_back(&p); }
+        for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (arcLength(unit, p.unit, P.grid.R) * 1000.0 - p.radiusM < radiusM) out.push_back(&p); }
     });
     std::sort(out.begin(), out.end(), [](const PlanPlace* a, const PlanPlace* b) { return a->people != b->people ? a->people < b->people : a->rank < b->rank; });
 }
@@ -855,8 +832,8 @@ const std::vector<Vec3>& planEdgeWay(const BodyGen& gSeason, const WorldPlan& P,
     const PeoplePlan& pp = P.plans[r.people];
     const PlanPlace& A = pp.places[e.a]; const PlanPlace& B = pp.places[e.b];
     const double Rm = g.R * 1000.0;
-    const Vec3 start = toward(A.unit, B.unit, A.radiusM * 1.06 + 25, Rm), end = toward(B.unit, A.unit, B.radiusM * 1.06 + 25, Rm);
-    const double L = arcKm(start, end, g.R);
+    const Vec3 start = towardUpTo(A.unit, B.unit, A.radiusM * 1.06 + 25, Rm), end = towardUpTo(B.unit, A.unit, B.radiusM * 1.06 + 25, Rm);
+    const double L = arcLength(start, end, g.R);
     const int N = std::max(1, (int)std::ceil(L / PLAN_LEG_KM));
     std::vector<Vec3> way; way.reserve(N + 1);
     way.push_back(start);

@@ -82,7 +82,7 @@ void Game::openInstruments() {
     icase.level = 0; icase.keys.clear(); icase.names.clear(); icase.valid = false;
     icase.notes = 0;
     audio.hum = std::min(audio.hum, 0.2);   // the ship's hum low under what is played (the space view's frames raise it again)
-    state = GameState::INSTRUMENTS; audio.beep = 4;
+    state = GameState::INSTRUMENTS; audio.beep = BEEP_UI;
 }
 
 // C-18: a world's instruments onto the case's list (a world of two peoples: the folder's people's), the first (or the one last played
@@ -100,7 +100,7 @@ void Game::openCaseWorld(int w) {
     for (size_t i = 0; i < icase.keys.size(); i++) if (icase.keys[i] == was) sel = (int)i;
     icase.valid = false;
     if (!icase.keys.empty()) loadInstrument(sel);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 bool Game::loadInstrument(int sel) {
@@ -147,18 +147,17 @@ void Game::updateInstruments(const Input& in, double realDt) {
     for (double& g : icase.glow) g = std::max(0.0, g - realDt * 1.4);
     if (icase.level == 0) {   // C-18: the worlds
         const int nw = (int)icase.worlds.size();
-        if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; audio.beep = 4; return; }
+        if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; audio.beep = BEEP_UI; return; }
         if (nw == 0) return;
-        if (in.wasPressed(KEY_UP)) { icase.worldSel = (icase.worldSel + nw - 1) % nw; audio.beep = 4; }
-        if (in.wasPressed(KEY_DOWN)) { icase.worldSel = (icase.worldSel + 1) % nw; audio.beep = 4; }
+        if (menuStep(in, icase.worldSel, nw)) audio.beep = BEEP_UI;
         if (enterKey(in)) openCaseWorld(icase.worldSel);
         return;
     }
-    if (in.wasPressed(KEY_ESCAPE)) { stopInstrument(); icase.level = 0; icase.valid = false; audio.beep = 4; return; }   // C-18: back to the worlds
+    if (in.wasPressed(KEY_ESCAPE)) { stopInstrument(); icase.level = 0; icase.valid = false; audio.beep = BEEP_UI; return; }   // C-18: back to the worlds
     const int n = (int)icase.keys.size();
     if (n == 0) return;
-    if (in.wasPressed(KEY_UP)) { loadInstrument((icase.sel + n - 1) % n); audio.beep = 4; return; }
-    if (in.wasPressed(KEY_DOWN)) { loadInstrument((icase.sel + 1) % n); audio.beep = 4; return; }
+    if (in.wasPressed(KEY_UP)) { loadInstrument((icase.sel + n - 1) % n); audio.beep = BEEP_UI; return; }
+    if (in.wasPressed(KEY_DOWN)) { loadInstrument((icase.sel + 1) % n); audio.beep = BEEP_UI; return; }
     if (!icase.valid) return;
     if (instrumentPlaysDisc(icase.inst)) {   // the gramophone: Enter winds it and the disc plays through its horn; again stops it
         const bool mine = icase.discOn && audio.piece == &icase.disc;
@@ -180,8 +179,8 @@ void Game::updateInstruments(const Input& in, double realDt) {
         }
         return;
     }
-    if (in.wasPressed(KEY_LEFT)) { icase.regShift = std::max(-1, icase.regShift - 1); audio.beep = 4; }
-    if (in.wasPressed(KEY_RIGHT)) { icase.regShift = std::min(1, icase.regShift + 1); audio.beep = 4; }
+    if (in.wasPressed(KEY_LEFT)) { icase.regShift = std::max(-1, icase.regShift - 1); audio.beep = BEEP_UI; }
+    if (in.wasPressed(KEY_RIGHT)) { icase.regShift = std::min(1, icase.regShift + 1); audio.beep = BEEP_UI; }
     for (int d = 0; d < 10; d++) {
         const int k = DIGIT_KEYS[d];
         if (in.wasPressed(k)) { playInstrumentDegree(d, k); icase.held[d] = true; }

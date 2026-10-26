@@ -216,13 +216,9 @@ void unitBasics(const Check& check) {
         SpaceRenderer sr;
         sr.mapCacheCap = 3;
         int n = 0;
-        for (int64_t x = 150; x < 300 && n < 6; x++)
-            for (int64_t z = 20; z < 120 && n < 6; z++) {
-                Star st;
-                if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sy; sy.generate(st);
-                for (const Body& b : sy.bodies) { if (n >= 6) break; if (b.type == PT_COMPANION) continue; sr.mapFor(b); n++; }
-            }
+        for (auto& [x, z, st, sy] : scanSystems(150, 300, 20, 120, [&] { return n < 6; })) {
+            for (const Body& b : sy.bodies) { if (n >= 6) break; if (b.type == PT_COMPANION) continue; sr.mapFor(b); n++; }
+        }
         check("map cache honours its cap", sr.mapsHeld() <= 3 && sr.mapStats.evicted >= 3, std::to_string(sr.mapsHeld()) + " held, " + std::to_string(sr.mapStats.evicted) + " evicted");
     }
     // O0-02 (B-305): 32 banks, and the second world's families have their own
@@ -305,8 +301,7 @@ void unitBasics(const Check& check) {
         double worstDisc = 0, worstHeat = 0, worstOwn = 0, worstPrimary = 0, worstLight = 0;
         auto scan = [&](int64_t x0, int64_t x1, int64_t y0, int64_t y1, int64_t z0, int64_t z1) {
             for (int64_t x = x0; x < x1; x++) for (int64_t y = y0; y < y1; y++) for (int64_t z = z0; z < z1; z++) {
-                Star s; if (!starInSector(x, y, z, s, false)) continue;
-                StarSystem sys; sys.generate(s);
+                Star s; StarSystem sys; if (!systemAt(x, y, z, s, sys, false)) continue;
                 if (sys.companion < 0) continue;
                 multiples++;
                 const Body& k = sys.bodies[sys.companion];
@@ -378,46 +373,42 @@ void unitBasics(const Check& check) {
         // degrees still, from a giant's inner moons)
         int firstN = 0, firstFar = 0, firstOut = 0, giantN = 0, giantOut = 0, twinN = 0, twinOut = 0;
         int parks = 0, parkBig = 0, solidN = 0, solidBig = 0, twinP = 0, twinBig = 0, sites = 0, disc2 = 0, disc20 = 0, bodies = 0;
-        for (int64_t x = 150; x < 320 && bodies < 2500; x++)
-            for (int64_t z = 20; z < 140 && bodies < 2500; z++) {
-                Star s;
-                if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (const Body& p : sys.bodies) {   // the first moon's orbit (a twin's world: its next moon is keyed off the twin)
-                    if (p.parent >= 0 || p.type == PT_COMPANION || p.type == PT_COMET || p.type != drawnKind(p)) continue;   // P-01: a made world's moons keep its drawn size's orbits
-                    const Body* first = nullptr; bool twin = false;
-                    for (const Body& m : sys.bodies) if (m.parent == p.index) { twin |= m.doublePlanet; if (!first && m.orbitPeriod > 0) first = &m; }
-                    for (const Body& m : sys.bodies) if (m.parent == p.index && m.doublePlanet) { twinN++; const double x0 = m.orbitRadiusKm / p.radiusKm; if (x0 < 12 || x0 > 20) twinOut++; }
-                    if (!first || twin) continue;
-                    const bool giant = p.type == PT_GASGIANT || p.type == PT_SUBSTELLAR;
-                    const double x0 = first->orbitRadiusKm / p.radiusKm, ring = p.rings ? p.ringOuter * 1.35 : 0;
-                    const double lo = 0.95 * std::max(giant ? 4.5 : 5.0, ring), hi = 1.05 * std::max(giant ? 6.0 : 40.0, ring);
-                    if (giant) { giantN++; if (x0 < lo || x0 > hi) giantOut++; }
-                    else { firstN++; if (x0 < lo || x0 > hi) firstOut++; if (x0 > 10) firstFar++; }
-                }
-                for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                    const Body& b = sys.bodies[bi];
-                    if (b.type == PT_COMPANION || b.type == PT_COMET) continue;
-                    bodies++;
-                    Rng pr(b.seed ^ 0xC40DULL);
-                    double sky, view; parkedNeighbours(sys, bi, pr.range(0, 4e6), sky, view);
-                    const bool planet = b.parent < 0 || sys.bodies[b.parent].type == PT_COMPANION;
-                    parks++; if (sky > 5) parkBig++;
-                    if (b.doublePlanet) { twinP++; if (sky > 5) twinBig++; }
-                    else if (planet && b.type != PT_GASGIANT && b.type != PT_SUBSTELLAR) { solidN++; if (sky > 5) solidBig++; }
-                    if (!KINDS[b.type].landable) continue;
-                    Rng gr(b.seed ^ 0x5C1EULL);   // the survey's first site: the biggest disc over the horizon
-                    const double lat = std::asin(gr.sym(1.0)), lon = gr.range(0, TAU), t = gr.range(0, 4e6);
-                    const Vec3 site = sys.surfacePointWorld(bi, t, lat, lon, 0.002), up = normalize(site - sys.bodyPos(bi, t));
-                    double best = 0;
-                    for (int j = 0; j < (int)sys.bodies.size(); j++) {
-                        if (j == bi || sys.bodies[j].type == PT_COMPANION) continue;
-                        const Vec3 rel = sys.bodyPos(j, t) - site; const double d = length(rel);
-                        if (dot(rel / d, up) >= 0.02) best = std::max(best, std::asin(clampd(sys.bodies[j].radiusKm / d, 0, 1)) / DEG);
-                    }
-                    sites++; if (best > 1) disc2++; if (best > 10) disc20++;
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return bodies < 2500; })) {
+            for (const Body& p : sys.bodies) {   // the first moon's orbit (a twin's world: its next moon is keyed off the twin)
+                if (p.parent >= 0 || p.type == PT_COMPANION || p.type == PT_COMET || p.type != drawnKind(p)) continue;   // P-01: a made world's moons keep its drawn size's orbits
+                const Body* first = nullptr; bool twin = false;
+                for (const Body& m : sys.bodies) if (m.parent == p.index) { twin |= m.doublePlanet; if (!first && m.orbitPeriod > 0) first = &m; }
+                for (const Body& m : sys.bodies) if (m.parent == p.index && m.doublePlanet) { twinN++; const double x0 = m.orbitRadiusKm / p.radiusKm; if (x0 < 12 || x0 > 20) twinOut++; }
+                if (!first || twin) continue;
+                const bool giant = p.type == PT_GASGIANT || p.type == PT_SUBSTELLAR;
+                const double x0 = first->orbitRadiusKm / p.radiusKm, ring = p.rings ? p.ringOuter * 1.35 : 0;
+                const double lo = 0.95 * std::max(giant ? 4.5 : 5.0, ring), hi = 1.05 * std::max(giant ? 6.0 : 40.0, ring);
+                if (giant) { giantN++; if (x0 < lo || x0 > hi) giantOut++; }
+                else { firstN++; if (x0 < lo || x0 > hi) firstOut++; if (x0 > 10) firstFar++; }
             }
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& b = sys.bodies[bi];
+                if (b.type == PT_COMPANION || b.type == PT_COMET) continue;
+                bodies++;
+                Rng pr(b.seed ^ 0xC40DULL);
+                double sky, view; parkedNeighbours(sys, bi, pr.range(0, 4e6), sky, view);
+                const bool planet = b.parent < 0 || sys.bodies[b.parent].type == PT_COMPANION;
+                parks++; if (sky > 5) parkBig++;
+                if (b.doublePlanet) { twinP++; if (sky > 5) twinBig++; }
+                else if (planet && b.type != PT_GASGIANT && b.type != PT_SUBSTELLAR) { solidN++; if (sky > 5) solidBig++; }
+                if (!KINDS[b.type].landable) continue;
+                Rng gr(b.seed ^ 0x5C1EULL);   // the survey's first site: the biggest disc over the horizon
+                const double lat = std::asin(gr.sym(1.0)), lon = gr.range(0, TAU), t = gr.range(0, 4e6);
+                const Vec3 site = sys.surfacePointWorld(bi, t, lat, lon, 0.002), up = normalize(site - sys.bodyPos(bi, t));
+                double best = 0;
+                for (int j = 0; j < (int)sys.bodies.size(); j++) {
+                    if (j == bi || sys.bodies[j].type == PT_COMPANION) continue;
+                    const Vec3 rel = sys.bodyPos(j, t) - site; const double d = length(rel);
+                    if (dot(rel / d, up) >= 0.02) best = std::max(best, std::asin(clampd(sys.bodies[j].radiusKm / d, 0, 1)) / DEG);
+                }
+                sites++; if (best > 1) disc2++; if (best > 10) disc20++;
+            }
+        }
         check("moons spread: a system with distance from the ship, discs still in the sky (B-428)",
               firstN > 100 && firstOut == 0 && firstFar * 2 > firstN && giantN > 30 && giantOut == 0 && twinN > 5 && twinOut == 0 &&
               parkBig * 100 < parks * 30 && solidBig * 10 < solidN && twinBig * 100 < twinP * 15 && disc2 * 100 > sites * 28 && disc20 * 200 > sites,
@@ -498,7 +489,7 @@ void unitBasics(const Check& check) {
             sv.render(fb, t, nb.stars, sr, 1.0);
             double seam[4], raw[4];
             sv.testRingSeams(seam, raw);
-            const char* names[4] = {"near ring on lod0", "lod0 on lod1", "lod1 on lod2", "lod2 on lod3"};
+            const char* const names[4] = {"near ring on lod0", "lod0 on lod1", "lod1 on lod2", "lod2 on lod3"};
             for (int k = 0; k < 4; k++)
                 check((std::string("rings meet: ") + names[k]).c_str(), seam[k] >= 0 && seam[k] < 0.01, fmt("gap %.4f m (unmorphed %.1f m)", seam[k], raw[k]));
         }

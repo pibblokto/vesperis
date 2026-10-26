@@ -466,7 +466,7 @@ void Game::drawReadings() {
         if (pl.swimming) row(pl.underwater ? "DIVING" : "SWIMMING", HUD_CYAN);
         if (pl.jetOn || (pl.altAboveGround > 2 && !pl.onGround)) pack({fmt("JET ALT %.0f M", pl.altAboveGround), fmt("VS %+.1f", pl.vy)}, HUD_AMBER);
         if (pl.autoWalk > 0) row(fmt("AUTOWALK %d", pl.autoWalk), HUD_GREEN);
-        static const char* vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
+        static const char* const vn[] = {"", "RADIATION VISOR", "SUPERVISION", "INFRARED", "PLANT VISION"};
         if (visionMode > 0 && visionMode < 5) row(vn[visionMode], HUD_CYAN);
     }
     const bool seat = surf.inVehicle() && !surf.chaseCam;
@@ -475,8 +475,7 @@ void Game::drawReadings() {
     int w = textWidth("READINGS");
     for (const auto& r : rows) w = std::max(w, textWidth(r.first.c_str()));
     const int x0 = UW - 8 - w, n = (int)rows.size() + 1;
-    blendRectRGB(canvas, x0 - 3, y0 - 3, x0 + w + 2, y0 + n * 8 + 1, rgb(0, 0, 0), 150);
-    drawRectRGB(canvas, x0 - 3, y0 - 3, x0 + w + 2, y0 + n * 8 + 1, rgb(40, 52, 40));
+    drawPanel(canvas, x0 - 3, y0 - 3, x0 + w + 2, y0 + n * 8 + 1, rgb(0, 0, 0), 150, rgb(40, 52, 40));
     drawText(canvas, x0, y0, "READINGS", HUD_AMBER);
     for (int i = 0; i < (int)rows.size(); i++) drawText(canvas, x0, y0 + 8 * (i + 1), rows[i].first.c_str(), rows[i].second);
 }

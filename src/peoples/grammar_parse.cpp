@@ -23,7 +23,7 @@ struct Parser {
         if (m.empty()) { error("an empty mark {}"); return false; }
         char c = m[0];
         if (c == '~') {   // H-04: the people's own word for a thing
-            n.type = VgNode::TONGUE; n.s = lower(trim(m.substr(1)));
+            n.type = VgNode::TONGUE; n.s = lowerOf(trim(m.substr(1)));
             if (n.s.empty()) { error("a word of theirs needs a key: {~coin}"); return false; }
             G.tongueKeys.insert(n.s);
             return true;
@@ -188,11 +188,11 @@ struct Parser {
             if (w[0] == "lexicon") {
                 if (w.size() < 3) { error("@lexicon <age|fact> words: the age one of prehistoric, medieval, industrial, modern, futuristic, farfuture"); return; }
                 if (ageOf(w[1]) < 0) {   // H-04: a fact's words (linked against the schema)
-                    for (size_t i = 2; i < w.size(); i++) G.lexFactNames[lower(w[i])] = w[1];
+                    for (size_t i = 2; i < w.size(); i++) G.lexFactNames[lowerOf(w[i])] = w[1];
                     return;
                 }
                 int a = ageOf(w[1]);
-                for (size_t i = 2; i < w.size(); i++) { std::string k = lower(w[i]); auto it = G.lexicon.find(k); if (it == G.lexicon.end() || it->second > a) G.lexicon[k] = a; }
+                for (size_t i = 2; i < w.size(); i++) { std::string k = lowerOf(w[i]); auto it = G.lexicon.find(k); if (it == G.lexicon.end() || it->second > a) G.lexicon[k] = a; }
                 return;
             }
             error("unknown @" + w[0]); return;
@@ -230,9 +230,7 @@ struct Parser {
         VgAlt a; a.rule = cur; a.file = file; a.line = line;
         a.apart = (int)G.apartFiles.size() > file && G.apartFiles[file];   // D-05
         {   // H-04: the alternative's key: its rule's name and its line (a people's dialect reads it; stable while other rules change)
-            uint64_t h = 1469598103934665603ULL;
-            for (unsigned char ch : G.rules[cur].name + "|" + t) { h ^= ch; h *= 1099511628211ULL; }
-            a.key = mix64(h);
+            a.key = mix64(fnv1a(G.rules[cur].name + "|" + t));
         }
         if (t[0] == '(') {
             size_t e = t.find(')');
@@ -386,7 +384,7 @@ struct Linker {
             const VgNode& n = body[i];
             if (n.type == VgNode::CHOICE) for (const auto& o : n.opts) articles(o);
             if (n.type != VgNode::TEXT || i + 1 >= body.size() || body[i + 1].type != VgNode::RULE || body[i + 1].ref < 0) continue;
-            std::string t = lower(n.s);
+            std::string t = lowerOf(n.s);
             bool art = endsWith(t, " a ") || endsWith(t, " an ") || t == "a " || t == "an ";
             int num = numberOfRule(body[i + 1].ref);
             if (art && (num == VN_PLURAL || num == VN_MASS)) error("\"a\" before {" + body[i + 1].s + "}, a " + (num == VN_PLURAL ? "plural" : "mass") + " list");
@@ -460,7 +458,7 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
     for (const VgRule& r : G.rules) for (int ai : r.alts) {
         const VgAlt& a = G.alts[ai];
         if ((a.number != VN_NONE ? a.number : r.number) != VN_PLURAL || a.body.size() != 1 || a.body[0].type != VgNode::TEXT) continue;
-        std::string t = lower(trim(a.body[0].s)); size_t sp = t.rfind(' '); std::string w = sp == std::string::npos ? t : t.substr(sp + 1);
+        std::string t = lowerOf(trim(a.body[0].s)); size_t sp = t.rfind(' '); std::string w = sp == std::string::npos ? t : t.substr(sp + 1);
         if (w.size() > 2 && w.back() == 's' && !endsWith(w, "ss")) G.plurals.insert(w);
     }
     // H-04's second pass: which rules may be drawn again (no directive under them) and which may end a sentence; the distinctive words

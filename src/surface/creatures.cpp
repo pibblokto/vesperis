@@ -6,17 +6,13 @@
 // to the guide.
 #include "surface_view.h"
 #include "core/noise.h"
+#include "core/clock.h"
 #include "core/rng.h"
 #include <cmath>
 #include <algorithm>
 #include <chrono>
 
-namespace {
-inline double h01(uint64_t h) { return unitFromHash(h); }
-inline double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-}
-
-const char* CRITTER_STATE_NAMES[8] = {"IDLE", "WALKING", "GRAZING", "DRINKING", "RESTING", "ALERT", "FLEEING", "CURIOUS"};
+const char* const CRITTER_STATE_NAMES[8] = {"IDLE", "WALKING", "GRAZING", "DRINKING", "RESTING", "ALERT", "FLEEING", "CURIOUS"};
 
 // Encounter design (N3-04): the chance of a herd at a site by its biome; nothing on ice and open sea
 static double encounterChance(int biome) {
@@ -215,11 +211,11 @@ void SurfaceView::updateLife(double dt, double t) {
             if (wantsRest) f.landed = std::max(f.landed, 5.0);   // stay down until the light changes
             double target = f.perched ? f.perchY - std::max(site.groundHeight(f.cx, f.cz), site.waterAt(f.cx, f.cz)) : 0.0;
             f.alt += (target - f.alt) * (1 - std::exp(-dt * 0.4));
-            if (f.landed <= 0) { f.restTimer = 60 + 80 * h01(f.seed ^ (uint64_t)t); f.perched = false; }
+            if (f.landed <= 0) { f.restTimer = 60 + 80 * hash01(f.seed ^ (uint64_t)t); f.perched = false; }
         } else {
             f.alt += (f.cruiseAlt - f.alt) * (1 - std::exp(-dt * 0.5));
             if (f.restTimer <= 0 || wantsRest) {
-                f.landed = 20 + 20 * h01(f.seed);
+                f.landed = 20 + 20 * hash01(f.seed);
                 // a perch: the tallest tree near the flock's centre
                 double a = f.phase + t * f.speed;
                 double fcx = f.cx + std::cos(a) * f.radius, fcz = f.cz + std::sin(a) * f.radius;
@@ -247,8 +243,8 @@ void SurfaceView::updateLife(double dt, double t) {
         if (inBuggy && std::fabs(buggy.speed) > 3 && threatR > 0) threatR = 60;
         bool threatened = dp < threatR;
         if (threatened && c.state != CS_ALERT && c.state != CS_FLEE && !(c.state == CS_CURIOUS && dp > 8)) {
-            c.state = CS_ALERT; c.timer = 0.8 + 0.8 * h01(c.seed ^ (uint64_t)(t * 3)); c.speed = 0; c.headPitch = 0; c.lift = std::min(c.lift, 0.5);
-            if (t - c.calledT > 6) { pendingCalls.push_back({sp.call, sp.callPitch * (0.9 + 0.2 * h01(c.seed))}); c.calledT = t; callsFired++; }
+            c.state = CS_ALERT; c.timer = 0.8 + 0.8 * hash01(c.seed ^ (uint64_t)(t * 3)); c.speed = 0; c.headPitch = 0; c.lift = std::min(c.lift, 0.5);
+            if (t - c.calledT > 6) { pendingCalls.push_back({sp.call, sp.callPitch * (0.9 + 0.2 * hash01(c.seed))}); c.calledT = t; callsFired++; }
         }
         // a first sighting within 60 m
         if (dp < 60 && !seenSpecies.count(c.species)) { seenSpecies.insert(c.species); sightings.push_back(sp.name + "|" + PLAN_NAMES[sp.plan] + "|" + std::to_string((int)dp)); }
@@ -388,12 +384,12 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
     if (env.skyBrightness < 0.3 && kindHas(site.gen.type, KT_FLORA)) {
         for (int i = 0; i < 8; i++) {
             uint64_t he = hash2i((int64_t)std::floor(camPos.x / 60), (int64_t)std::floor(camPos.z / 60) + i * 7, site.gen.seed ^ 0xE7E);
-            if (h01(he) < 0.5) continue;
-            double ex = std::floor(camPos.x / 60) * 60 + h01(mix64(he + 1)) * 60, ez = std::floor(camPos.z / 60) * 60 + h01(mix64(he + 2)) * 60;
-            double blink = std::sin(t * (0.6 + h01(mix64(he + 3))) + h01(mix64(he + 4)) * TAU);
+            if (hash01(he) < 0.5) continue;
+            double ex = std::floor(camPos.x / 60) * 60 + hash01(mix64(he + 1)) * 60, ez = std::floor(camPos.z / 60) * 60 + hash01(mix64(he + 2)) * 60;
+            double blink = std::sin(t * (0.6 + hash01(mix64(he + 3))) + hash01(mix64(he + 4)) * TAU);
             if (blink < -0.2) continue;
             double gy = site.groundHeight(ex, ez) + 0.5;
-            double hd = h01(mix64(he + 5)) * TAU;
+            double hd = hash01(mix64(he + 5)) * TAU;
             for (int k = -1; k <= 1; k += 2) {
                 Vec3 v = toView(ex + std::cos(hd) * 0.12 * k, gy, ez - std::sin(hd) * 0.12 * k);
                 if (v.z < NEAR_Z) continue;
@@ -410,13 +406,13 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         for (int dz = -2; dz <= 2; dz++)
             for (int dx = -2; dx <= 2; dx++) {
                 uint64_t hs = hash2i(ccx + dx, ccz + dz, site.gen.seed ^ 0xF1A);
-                if (h01(hs) > 0.35) continue;
-                double cx = (ccx + dx) * 100.0 + 20 + h01(mix64(hs + 1)) * 60, cz = (ccz + dz) * 100.0 + 20 + h01(mix64(hs + 2)) * 60;
-                double a = t * (0.03 + 0.03 * h01(mix64(hs + 3))) + h01(mix64(hs + 4)) * TAU;
+                if (hash01(hs) > 0.35) continue;
+                double cx = (ccx + dx) * 100.0 + 20 + hash01(mix64(hs + 1)) * 60, cz = (ccz + dz) * 100.0 + 20 + hash01(mix64(hs + 2)) * 60;
+                double a = t * (0.03 + 0.03 * hash01(mix64(hs + 3))) + hash01(mix64(hs + 4)) * TAU;
                 double sx = cx + std::cos(a) * 25, sz = cz + std::sin(a) * 25;
                 double wl = site.waterNowAt(sx, sz);
                 if (wl < -1e8 || site.groundHeight(sx, sz) > wl - 1.5) continue;
-                double surf = std::sin(t * 0.7 + h01(mix64(hs + 5)) * TAU);   // above the water only part of the time
+                double surf = std::sin(t * 0.7 + hash01(mix64(hs + 5)) * TAU);   // above the water only part of the time
                 if (surf < 0.2) continue;
                 double dist = std::sqrt((sx - camPos.x) * (sx - camPos.x) + (sz - camPos.z) * (sz - camPos.z));
                 if (dist > 250 || ssz / dist * proj.f < 1.0) continue;
@@ -496,7 +492,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         if (full && sp.pattern == 2) {   // spots on the flanks
             for (int i = 0; i < 8; i++) {
                 uint64_t hs = mix64(c.seed + 300 + i);
-                Vec3 p = c0 + fwd * ((h01(hs) - 0.5) * bodyLen * 0.9) + side * ((i & 1 ? 1 : -1) * wid * 0.52) + up * ((h01(mix64(hs + 1)) - 0.5) * bodyH * 0.7);
+                Vec3 p = c0 + fwd * ((hash01(hs) - 0.5) * bodyLen * 0.9) + side * ((i & 1 ? 1 : -1) * wid * 0.52) + up * ((hash01(mix64(hs + 1)) - 0.5) * bodyH * 0.7);
                 RVert q = vert(p, shadeOf2(i & 1 ? side : -side, 0.55));
                 if (q.z >= NEAR_Z) rasterPoint3(fb, q, bank, proj, true, 1);
             }

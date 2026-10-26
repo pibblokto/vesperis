@@ -37,8 +37,7 @@ static std::string recordSiteLine(const RecordCatalogue& C, const ShardSite& x) 
 }
 
 static void printRecords(const AgeWorld& aw) {
-    Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); return; }
-    StarSystem sys; sys.generate(st);
+    Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)aw.sx, (long long)aw.sz); return; }
     if (aw.body >= (int)sys.bodies.size()) { printf("no body %d\n", aw.body); return; }
     const Body& b = sys.bodies[aw.body];
     const BodyGen g = BodyGen::make(b);
@@ -104,8 +103,7 @@ static int recordsScenes(int onlyAge = -1, std::vector<std::string>* lines = nul
         if (onlyAge >= 0 && age != onlyAge) continue;
         const AgeWorld& aw = AGE_SCENE_WORLDS[age];
         const char* an = age == AGE_FAR_FUTURE ? "far_future" : AGE_NAMES[age];
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) { failures++; continue; }
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) { failures++; continue; }
         const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
         const int which = std::min(aw.which, std::max(0, P->peoples - 1));
@@ -421,8 +419,7 @@ static void decoderCounts() {
     printf("the counts of each category per world (H-05: past C-02's fifty, music and charts by the age of each record's year):\n");
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& W = AGE_WORLDS[a];
-        Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) continue;
-        StarSystem sys; sys.generate(s); if (W.body >= (int)sys.bodies.size()) continue;
+        Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) continue; if (W.body >= (int)sys.bodies.size()) continue;
         const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, W.which);
         int n[AGE_COUNT][RC_COUNT] = {}, tot[RC_COUNT] = {};
@@ -435,8 +432,7 @@ static void decoderCounts() {
     int peoples[AGE_COUNT] = {}; double rec[AGE_COUNT] = {}, cat[AGE_COUNT][RC_COUNT] = {}, byYear[AGE_COUNT][RC_COUNT] = {};
     int scanned = 0;
     for (int64_t sx = 150; sx <= 230 && scanned < 160; sx++) for (int64_t sz = 20; sz <= 80 && scanned < 160; sz++) {
-        Star s; if (!starInSector(sx, 0, sz, s, false)) continue;
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, false)) continue;
         for (const Body& b : sys.bodies) {
             if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
             const BodyGen g = BodyGen::make(b);
@@ -465,8 +461,7 @@ static int decoderFrames() {
     int failures = 0;
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& W = AGE_WORLDS[a];
-        Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) { failures++; continue; }
-        StarSystem sys; sys.generate(s); if (W.body >= (int)sys.bodies.size()) { failures++; continue; }
+        Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) { failures++; continue; } if (W.body >= (int)sys.bodies.size()) { failures++; continue; }
         const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, W.which);
         // the records of this age by medium; two media a category at most, a recording first where the age made one, then one the ship reads
@@ -503,7 +498,7 @@ static int decoderFrames() {
             if (p.cat == 0) { run(0.1); press(KEY_ENTER); run(0.1); press(KEY_ENTER); run(1.6); }   // the first reading skipped, then the page spoken
             else if (p.cat == 2) { run(0.1); press(KEY_ENTER); run(0.3); }   // a chart's reading skipped
             else run(2.5);
-            static const char* CAT[3] = {"text", "music", "chart"};
+            static const char* const CAT[3] = {"text", "music", "chart"};
             const std::string name = fmt("decoder_%s_%s_%s", fileWord(AGE_NAMES[a]).c_str(), CAT[p.cat], fileWord(RECORD_MEDIUM_NAMES[p.medium]).c_str());
             writePNG(("shots/tests/" + name + ".png").c_str(), game.output(), FBW, FBH);
             const std::string medium = game.audio.medium >= 0 ? RECORD_MEDIUM_NAMES[game.audio.medium] : "-";
@@ -522,8 +517,7 @@ static int decoderWavs() {
     printf("a text and a piece through each medium (the levels as the decoder plays them, the master at the game's 0.8):\n");
     for (int a : {AGE_INDUSTRIAL, AGE_MODERN}) {
         const AgeWorld& W = AGE_WORLDS[a];
-        Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) continue;
-        StarSystem sys; sys.generate(s); const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
+        Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) continue; const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
         Lore L = loreOf(sys, b, g, W.which); Tongue T = tongueOf(g, L);
         std::vector<Shard> sh; shardsOf(sys, b, g, L, L.records, sh);
         Language lang; languageOf(L, sh, T, lang);
@@ -600,7 +594,7 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
         for (int k = 0; k < 4; k++) if (want[k] >= 0) game.guide.shards.insert(key + std::to_string(shardWorldIndex(W.which, want[k])));
         game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.2);
         int ok = 0; std::string detail;
-        static const char* WHAT[4] = {"written", "recorded", "notation", "a recorded piece"};
+        static const char* const WHAT[4] = {"written", "recorded", "notation", "a recorded piece"};
         for (int k = 0; k < 4; k++) {
             if (want[k] < 0 || !game.testShardsOpenIndex(want[k])) { detail += fmt("%s%s NOT opened", detail.empty() ? "" : "; ", WHAT[k]); continue; }
             run(0.3);
@@ -670,8 +664,7 @@ static int decoderPages() {
     int failures = 0;
     for (int a = 0; a < AGE_COUNT; a++) {
         const AgeWorld& W = AGE_WORLDS[a];
-        Star s; if (!starInSector(W.sx, 0, W.sz, s, true)) { failures++; continue; }
-        StarSystem sys; sys.generate(s); if (W.body >= (int)sys.bodies.size()) { failures++; continue; }
+        Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) { failures++; continue; } if (W.body >= (int)sys.bodies.size()) { failures++; continue; }
         const Body& b = sys.bodies[W.body]; const BodyGen g = BodyGen::make(b);
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, W.which);
         const bool closes = a >= AGE_MODERN;

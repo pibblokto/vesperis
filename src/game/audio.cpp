@@ -436,8 +436,8 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         else { rdContent = 0; rdEvT = -1; rdEvNext = 6 + 8 * (0.5 + 0.5 * noise()); rdClock = 0; }
         // beep
         if (beepT >= 0) {
-            double f = beepKind == 1 ? 880 : (beepKind == 2 ? 660 : (beepKind == 3 ? 220 : 1320));
-            double dur = beepKind == 2 ? 0.35 : 0.12;
+            double f = beepKind == BEEP_LOCK ? 880 : (beepKind == BEEP_ARRIVE ? 660 : (beepKind == BEEP_ERROR ? 220 : 1320));
+            double dur = beepKind == BEEP_ARRIVE ? 0.35 : 0.12;
             if (beepT < dur) {
                 double env = std::sin(beepT / dur * 3.14159);
                 s += 0.25 * env * std::sin(beepT * f * 6.2831853);

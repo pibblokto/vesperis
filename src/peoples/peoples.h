@@ -51,7 +51,6 @@ extern const char* const GOVERNMENT_RULERS[GOV_COUNT][2]; // the one at the head
 enum Economy { ECO_HUNTING = 0, ECO_HERDING, ECO_FARMING, ECO_TRADE, ECO_INDUSTRY, ECO_INFORMATION, ECO_COUNT };
 extern const char* const ECONOMY_NAMES[ECO_COUNT];        // "hunting", "herding", "farming", "trade", "industry", "information"
 enum Value { VAL_WAR = 0, VAL_PIETY, VAL_TRADE, VAL_LEARNING, VAL_ART, VAL_COUNT };
-extern const char* const VALUE_NAMES[VAL_COUNT];          // "war", "piety", "trade", "learning", "art"
 enum Faith { FAITH_ANCESTORS = 0, FAITH_LAND, FAITH_SKY, FAITH_MANY_GODS, FAITH_ONE_GOD, FAITH_PHILOSOPHY, FAITH_MACHINE, FAITH_COUNT };
 extern const char* const FAITH_NAMES[FAITH_COUNT];        // "the ancestors", "the spirits of the land", "the sky", "many gods", "one god", "a philosophy", "the machine"
 enum Rite { RITE_FIRST_FRUITS = 0, RITE_FIRE, RITE_SONG, RITE_WATER, RITE_SILENCE, RITE_FAST, RITE_PILGRIMAGE, RITE_ANIMALS, RITE_MEMORY, RITE_COUNT };

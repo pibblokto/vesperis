@@ -315,12 +315,9 @@ void unitPerf(const Check& check) {
         }
         {
             bool done = false;
-            for (int64_t x = 150; x < 340 && !done; x++)
-                for (int64_t z = 20; z < 160 && !done; z++) {
-                    Star cs; if (!starInSector(x, 0, z, cs)) continue;
-                    StarSystem csys; csys.generate(cs);
-                    for (const Body& b : csys.bodies) if (b.type == PT_COMET) { both("a comet", csys, b.index, 20 * DEG, 30 * DEG, 1000.0, -1); done = true; break; }
-                }
+            for (auto& [x, z, cs, csys] : scanSystems(150, 340, 20, 160, [&] { return !done; })) {
+                for (const Body& b : csys.bodies) if (b.type == PT_COMET) { both("a comet", csys, b.index, 20 * DEG, 30 * DEG, 1000.0, -1); done = true; break; }
+            }
         }
         setFramebufferScale(saved);
         check("warm: a fresh site's rings filled on the pool (F-03)", sites == 4 && same == sites && fit == sites && misses > 4 * 4 * SurfaceView::FILL_SERIAL_MAX,

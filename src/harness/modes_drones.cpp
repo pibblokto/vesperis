@@ -10,8 +10,7 @@ static const char* dronePlaceWord(int sclass) {
 
 // a world's items for the drones and three hauls drawn from none held (`drones world <sx> <sz> <body>`)
 static int printDroneWorld(int64_t sx, int64_t sz, int body) {
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (body < 0 || body >= (int)sys.bodies.size()) { printf("no body %d\n", body); return 1; }
     DroneWorld W; droneWorldOf(sys, body, W);
     int kinds[DF_COUNT] = {}, homed = 0;
@@ -41,8 +40,7 @@ static int printDroneWorld(int64_t sx, int64_t sz, int body) {
 static void dronesGame(bool frames, const std::function<void(const char*, bool, const std::string&)>& ck) {
     mkdir("shots/tests", 0755);
     const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
-    Star st; if (!starInSector(W.sx, 0, W.sz, st, true)) { ck("the drone bay: a trip (C-18)", false, "no modern age world"); return; }
-    StarSystem sys; sys.generate(st);
+    Star st; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, st, sys, true)) { ck("the drone bay: a trip (C-18)", false, "no modern age world"); return; }
     const std::string gp = "shots/tests/test_drones_guide.txt";
     remove(gp.c_str());
     TestGame game; game.savePrefix = "shots/tests/test_drones_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = gp;
@@ -63,7 +61,7 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     game.testDronesSettle(); run(0.2);
     const int items = game.testDronesWorldItems(-1, false), texts = game.testDronesWorldItems(DF_TEXT), music = game.testDronesWorldItems(DF_MUSIC), charts = game.testDronesWorldItems(DF_CHART), instr = game.testDronesWorldItems(DF_INSTRUMENT);
     shot("screen_ready");
-    ck("the drone bay: the rack and its screen (C-18)", facing == 11 && open && items > 0 && instr > 0 && charts > 0,
+    ck("the drone bay: the rack and its screen (C-18)", facing == FACE_BAY && open && items > 0 && instr > 0 && charts > 0,
        fmt("facing %d (11 the bay), the screen %s; %s holds %d for them: %d texts, %d music, %d star charts, %d instruments", facing, open ? "open" : "NOT OPEN", sys.bodies[W.body].name.c_str(), items, texts, music, charts, instr));
     // ---- the launch: Enter, the screen gone to the rack, the drones out of their ports one after another
     const std::set<std::string> before = held();

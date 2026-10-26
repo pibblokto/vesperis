@@ -331,29 +331,3 @@ void rasterLine3(Framebuffer& fb, RVert a, RVert b, int bank, const Proj& pj, bo
         }
     }
 }
-
-void fillRect(Framebuffer& fb, int x0, int y0, int x1, int y1, Pix value) {
-    x0 = std::max(0, x0); y0 = std::max(0, y0); x1 = std::min(FBW - 1, x1); y1 = std::min(FBH - 1, y1);
-    for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) fb.idx[y * FBW + x] = value;
-}
-
-void fillDisc(Framebuffer& fb, double cx, double cy, double r, Pix value) {
-    int x0 = std::max(0, (int)std::floor(cx - r)), x1 = std::min(FBW - 1, (int)std::ceil(cx + r));
-    int y0 = std::max(0, (int)std::floor(cy - r)), y1 = std::min(FBH - 1, (int)std::ceil(cy + r));
-    double r2 = r * r;
-    for (int y = y0; y <= y1; y++)
-        for (int x = x0; x <= x1; x++) {
-            double dx = x + 0.5 - cx, dy = y + 0.5 - cy;
-            if (dx * dx + dy * dy <= r2) fb.idx[y * FBW + x] = value;
-        }
-}
-
-void drawLine2D(Framebuffer& fb, int x0, int y0, int x1, int y1, Pix value) {
-    int dx = std::abs(x1 - x0), dy = std::abs(y1 - y0);
-    int steps = std::max(dx, dy);
-    if (steps == 0) { if (x0 >= 0 && y0 >= 0 && x0 < FBW && y0 < FBH) fb.idx[y0 * FBW + x0] = value; return; }
-    for (int i = 0; i <= steps; i++) {
-        int x = x0 + (x1 - x0) * i / steps, y = y0 + (y1 - y0) * i / steps;
-        if (x >= 0 && y >= 0 && x < FBW && y < FBH) fb.idx[y * FBW + x] = value;
-    }
-}

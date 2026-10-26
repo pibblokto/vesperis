@@ -5,6 +5,8 @@
 #include "planet_features.h"
 #include "peoples/ruins.h"
 #include "peoples/works.h"
+#include "core/clock.h"
+#include "core/sphere.h"
 #include "core/noise.h"
 #include <cmath>
 #include <algorithm>
@@ -13,10 +15,10 @@
 #include <atomic>
 #include <chrono>
 
-const char* LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS", "WORKS",
+const char* const LANDMARK_KIND_NAMES[LM_COUNT] = {"PEAK", "MESA", "CANYON RIM", "CRATER", "GEYSER FIELD", "CRYSTAL FIELD", "LAKE", "RUINS", "WORKS",
                                             "CALDERA", "TESSERA", "LABYRINTH", "HOLLOWS", "CRATER CHAIN", "PENITENTES", "COLONNADE", "MUD VOLCANO", "RIVER RIDGE", "PINGO", "MAAR",
                                             "STREWN FIELD"};
-const char* LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#", "%", "@", "X", "[", ":", "8", "!", "|", "&", "/", "\"", "0", ";"};
+const char* const LANDMARK_KIND_SYMBOLS[LM_COUNT] = {"^", "=", "V", "O", "*", "+", "~", "#", "%", "@", "X", "[", ":", "8", "!", "|", "&", "/", "\"", "0", ";"};
 
 int landformSight(int trait) {
     switch (trait) {
@@ -50,14 +52,6 @@ Vec3 cellCentre(const Grid& gr, int ci, int cj, int cols) {
     double lat = -PI / 2 + (ci + 0.5) * gr.dLat, lon = -PI + (cj + 0.5) * TAU / cols;
     return StarSystem::bodyFromLatLon(lat, lon);
 }
-// a point `dx`, `dz` metres east and north of a unit vector
-Vec3 offsetUnit(const BodyGen& g, const Vec3& u, double dx, double dz) {
-    Vec3 pole(0, 0, 1);
-    Vec3 e = cross(pole, u); double el = length(e);
-    if (el < 1e-9) e = Vec3(1, 0, 0); else e = e / el;
-    Vec3 n = cross(u, e);
-    return normalize(u + (e * dx + n * dz) / (g.R * 1000.0));
-}
 }
 
 double landmarkCellDeg(const BodyGen& g) { return gridOf(g).dLat / DEG; }
@@ -79,7 +73,6 @@ std::mutex g_lmMutex;
 std::map<CellKey, CellVal> g_lmCache;
 std::atomic<int> g_lmSearched{0};
 double g_lmMs[3] = {0, 0, 0};
-inline double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 inline uint64_t cellIdOf(const BodyGen& g, int ci, int cj) { return hash3i(ci, cj, (int64_t)(g.seed & 0xffffff), g.seed ^ 0x1A4DULL); }
 bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& out, bool buildTiles, bool& complete);
 bool sightsWorld(const BodyGen& g) { return KINDS[g.type].landable && !kindHas(g.type, KT_NO_SIGHTS); }
@@ -188,7 +181,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         for (int j = 0; j < N; j++)
             for (int i = 0; i < N; i++) {
                 double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
-                SurfaceSample s = sampleSurface(g, offsetUnit(g, c, dx, dz), 500.0);
+                SurfaceSample s = sampleSurface(g, offsetFlat(c, dx, dz, g.R * 1000.0), 500.0);
                 int k = j * N + i;
                 hs[k] = s.height; marks[k] = s.landform; mats[k] = s.material; trs[k] = s.landformTrait;
                 if (s.material == MAT_WATER && s.height < 0) hs[k] = 0;
@@ -252,13 +245,13 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
             int i = best % N, j = best / N;
             double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
             // step outward in eight directions until the mark ends: the rim
-            Vec3 rim = offsetUnit(g, c, dx, dz); double rimH = bestH; bool found = false;
+            Vec3 rim = offsetFlat(c, dx, dz, g.R * 1000.0); double rimH = bestH; bool found = false;
             for (int a = 0; a < 8 && !found; a++) {
                 double ax = std::cos(a * TAU / 8), az = std::sin(a * TAU / 8);
                 for (double d = 60; d <= 900; d += 60) {
-                    Vec3 u = offsetUnit(g, c, dx + ax * d, dz + az * d);
+                    Vec3 u = offsetFlat(c, dx + ax * d, dz + az * d, g.R * 1000.0);
                     SurfaceSample s = sampleSurface(g, u, 64.0);
-                    if (s.landform < 1000 && s.height > bestH - 30) { rim = offsetUnit(g, c, dx + ax * (d - 30), dz + az * (d - 30)); rimH = s.height; found = true; break; }
+                    if (s.landform < 1000 && s.height > bestH - 30) { rim = offsetFlat(c, dx + ax * (d - 30), dz + az * (d - 30), g.R * 1000.0); rimH = s.height; found = true; break; }
                 }
             }
             Landmark& L = sight(LM_CANYON);
@@ -286,7 +279,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
                     if (ci2 != ci || cj2 != cj) continue;
                     double capH = 60 + 160 * unitFromHash(mix64(w.id1 + 8)), rad = 0.3 + 0.25 * unitFromHash(mix64(w.id1 + 9));
                     if (capH <= bestCap) continue;
-                    SurfaceSample sr = sampleSurface(g, offsetUnit(g, cu, rad * 900.0, 0), 64.0);   // the wall stands where the mask does
+                    SurfaceSample sr = sampleSurface(g, offsetFlat(cu, rad * 900.0, 0, g.R * 1000.0), 64.0);   // the wall stands where the mask does
                     if (sr.landform < 1000) continue;
                     bestCap = capH; bestC = cu; bestRad = rad;
                 }
@@ -321,12 +314,12 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
             for (int i = 0; i < 6; i++) {
                 double dx = ((i + 0.5) / 6 - 0.5) * 2 * half, dz = ((j + 0.5) / 6 - 0.5) * 2 * half;
                 int n = 0;
-                for (int k = 0; k < 12; k++) { SurfaceSample s = sampleSurface(g, offsetUnit(g, c, dx + (k % 4) * 11.0, dz + (k / 4) * 13.0), 2.0); if (s.landform >= 1000) n++; }
+                for (int k = 0; k < 12; k++) { SurfaceSample s = sampleSurface(g, offsetFlat(c, dx + (k % 4) * 11.0, dz + (k / 4) * 13.0, g.R * 1000.0), 2.0); if (s.landform >= 1000) n++; }
                 if (n > hits) { hits = n; bx = dx; bz = dz; }
             }
         if (hits >= 3) {
             Landmark& L = sight(LM_CRYSTALS);
-            L.unit = offsetUnit(g, c, bx, bz); L.radiusM = 400; L.prominenceM = 25;
+            L.unit = offsetFlat(c, bx, bz, g.R * 1000.0); L.radiusM = 400; L.prominenceM = 25;
             L.heightM = sampleSurface(g, L.unit, 64.0).height;
         }
     }
@@ -344,7 +337,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         for (int k = 0; k < M * M; k++) {
             double dx, dz; offOf(k, dx, dz);
             double lv; bool known;
-            bool lake = drainageLakeCell(g, offsetUnit(g, c, dx, dz), lv, buildTiles, known);
+            bool lake = drainageLakeCell(g, offsetFlat(c, dx, dz, g.R * 1000.0), lv, buildTiles, known);
             if (!known) complete = false;
             wetAt[k] = lake; levelAt[k] = lv;
             if (lake) { n++; sx += dx; sz += dz; sl += lv; }
@@ -352,7 +345,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         const double cellAreaKm2 = (2 * half / M) * (2 * half / M) * 1e-6;
         if (n >= 3 && n * cellAreaKm2 >= 0.6) {
             S.hasLake0 = true; Landmark& L = S.lake0; L = Landmark(); L.kind = LM_LAKE; L.id = id;
-            L.unit = offsetUnit(g, c, sx / n, sz / n); L.radiusM = std::sqrt(n * cellAreaKm2 * 1e6 / PI); L.heightM = sl / n;
+            L.unit = offsetFlat(c, sx / n, sz / n, g.R * 1000.0); L.radiusM = std::sqrt(n * cellAreaKm2 * 1e6 / PI); L.heightM = sl / n;
         }
         std::vector<std::vector<int>> lakes;
         int comp[M * M]; for (int k = 0; k < M * M; k++) comp[k] = -1;
@@ -383,7 +376,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
             const size_t stride = std::max<size_t>(1, order.size() / 48);
             for (size_t q = 0; q < order.size(); q += (q == 0 ? 1 : stride)) {
                 double dx, dz; offOf(order[q].second, dx, dz);
-                const Vec3 u = offsetUnit(g, c, dx, dz);
+                const Vec3 u = offsetFlat(c, dx, dz, g.R * 1000.0);
                 const SurfaceSample sm = sampleSurface(g, u, 64.0);
                 if (!(sm.water > -1e8 && sm.height < sm.water)) continue;
                 Landmark& L = sight(LM_LAKE);
@@ -435,17 +428,17 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         for (int jj = -4; jj <= 4; jj++)
             for (int ii = -4; ii <= 4; ii++) {
                 double x = dx + ii * step / 4.5, z = dz + jj * step / 4.5;
-                double hh = sampleSurface(g, offsetUnit(g, c, x, z), 64.0).height;
+                double hh = sampleSurface(g, offsetFlat(c, x, z, g.R * 1000.0), 64.0).height;
                 if (hh > bestH) { bestH = hh; bx = x; bz = z; }
             }
         for (int jj = -3; jj <= 3; jj++)   // and once more at 16 m
             for (int ii = -3; ii <= 3; ii++) {
                 double x = bx + ii * 24.0, z = bz + jj * 24.0;
-                double hh = sampleSurface(g, offsetUnit(g, c, x, z), 16.0).height;
+                double hh = sampleSurface(g, offsetFlat(c, x, z, g.R * 1000.0), 16.0).height;
                 if (hh > bestH) { bestH = hh; dx = x; dz = z; }
             }
         Landmark& L = sight(LM_PEAK);
-        L.unit = offsetUnit(g, c, dx, dz); L.heightM = bestH; L.prominenceM = bestH - mean; L.radiusM = 900;
+        L.unit = offsetFlat(c, dx, dz, g.R * 1000.0); L.heightM = bestH; L.prominenceM = bestH - mean; L.radiusM = 900;
     }
     // 9. Q-01: the new landforms' sights. The ones built of points (a great shield's caldera, the chains' craters, the mud volcanoes, the
     // pingos, the maars: `landformFeatures`) by the biggest centred in the cell whose ground carries the landform's mark (its province, its
@@ -492,7 +485,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         const int i = pick % N, j = pick / N;
         const double dx = ((i + 0.5) / N - 0.5) * 2 * half, dz = ((j + 0.5) / N - 0.5) * 2 * half;
         Landmark& L = sight(kind);
-        L.unit = offsetUnit(g, c, dx, dz);
+        L.unit = offsetFlat(c, dx, dz, g.R * 1000.0);
         L.heightM = sampleSurface(g, L.unit, 64.0).height;
         L.radiusM = std::sqrt(n * (2 * half / N) * (2 * half / N) / PI);   // the field's extent in the cell
         L.prominenceM = t == TR_LABYRINTH ? mean - L.heightM : (t == TR_HOLLOWS || t == TR_PENITENTES || t == TR_METEORITES ? 0.0 : L.heightM - mean);

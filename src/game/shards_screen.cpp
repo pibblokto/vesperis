@@ -196,7 +196,7 @@ void Game::markShardRead() {
         const ChartMark& m = shardWorld.chart.mark;
         logEvent("CHART", fmt("A STAR CHART OF THE %s READ: THEY MARKED THE STAR AT SECTOR %lld %lld %lld (%s), %.0f LY FROM %s", upper(shardWorld.lore.people).c_str(), (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz, STAR_CLASSES[m.star.cls].code, m.ly, upper(worldNameOfKey(shardWorld.key)).c_str()));
     } else guide.save(guidePath);
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
 }
 
 // C-18: `shardWorldKeys` and the rest from the guide, the cursor kept on its world
@@ -264,7 +264,7 @@ void Game::openShards() {
     if (shardsTop == 1) playerBuildList();   // C-11: the player's page, as it was left
     guideReturn = GameState::SPACE; returnState = GameState::SPACE;
     state = GameState::SHARDS;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // a world's shard onto the screen: a text speaks from the top (C-05), the computer reading it as it goes when it has not at
@@ -281,7 +281,7 @@ void Game::openShard(int sel) {
         pieceOf(shardWorld.tradition, shardWorld.shards[idx], shardWorld.piece);
         startPiece();
         if (!guide.decoded.count(skey)) { guide.decoded[skey] = shardWorld.lore.records; guide.save(guidePath); toldValid = false; }   // T-04: read at the people's whole count
-        shardsLevel = 2; audio.beep = 4;
+        shardsLevel = 2; audio.beep = BEEP_UI;
         return;
     }
     decodeShard(shardWorld.shards[idx], shardWorld.lang, shardWorld.tongue, n, shardWords);
@@ -291,13 +291,13 @@ void Game::openShard(int sel) {
     if (shardWorld.shards[idx].chart) {   // C-10: a chart draws itself (no voice: a map, not a sound); a first reading at this share takes CHART_READ_S seconds
         const Body& b = shardWorld.sys.bodies[shardWorld.body];
         chartOf(shardWorld.sys, b, BodyGen::make(b), shardWorld.lore, idx, shardWorld.chart);
-        if (shardFresh) { chartT = 0; audio.beep = 4; }
+        if (shardFresh) { chartT = 0; audio.beep = BEEP_UI; }
         shardsLevel = 2;
         return;
     }
     layoutShardText(12, 33, UW - 12, UH - 36);   // H-04: a long text in pages; the voice speaks the opening (C-05: the recording speaks)
     speakShardPage(0);
-    if (shardFresh) audio.beep = 4;
+    if (shardFresh) audio.beep = BEEP_UI;
     shardsLevel = 2;
 }
 
@@ -356,22 +356,21 @@ void Game::updateShards(const Input& in, double realDt) {
         }
     }
     int nw = (int)shardWorldKeys.size();
-    if (shardsLevel == 0 && in.wasPressed(KEY_TAB)) { shardsTop = 1 - shardsTop; if (shardsTop == 1) playerBuildList(); audio.beep = 4; return; }   // C-11: the worlds, the player
+    if (shardsLevel == 0 && in.wasPressed(KEY_TAB)) { shardsTop = 1 - shardsTop; if (shardsTop == 1) playerBuildList(); audio.beep = BEEP_UI; return; }   // C-11: the worlds, the player
     if (shardsLevel == 0 && shardsTop == 1) {   // C-11: the ship's player
         const int n = (int)player.items.size();
         if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; return; }   // it plays on
         if (n == 0) return;
-        if (in.wasPressed(KEY_UP)) player.sel = (player.sel + n - 1) % n;
-        if (in.wasPressed(KEY_DOWN)) player.sel = (player.sel + 1) % n;
+        menuStep(in, player.sel, n);
         if (in.wasPressed(KEY_PAGE_UP)) player.sel = std::max(0, player.sel - 15);
         if (in.wasPressed(KEY_PAGE_DOWN)) player.sel = std::min(n - 1, player.sel + 15);
-        if (enterKey(in)) { playerPlay(player.sel); audio.beep = 4; }
+        if (enterKey(in)) { playerPlay(player.sel); audio.beep = BEEP_UI; }
         if (in.wasPressed(KEY_SPACE) && player.playing >= 0) {
             player.paused = !player.paused;
             if (audio.piece == &player.world.piece) audio.piecePause = player.paused;
             if (audio.speech == &player.world.speech) audio.speechPause = player.paused;
         }
-        if (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) { playerStop(); audio.beep = 4; }
+        if (in.wasPressed(KEY_BACKSPACE) || in.wasPressed(KEY_DELETE)) { playerStop(); audio.beep = BEEP_UI; }
         return;
     }
     if (shardsLevel == 0) {
@@ -380,18 +379,18 @@ void Game::updateShards(const Input& in, double realDt) {
         if (in.wasPressed(KEY_UP)) { shardWorldSel = (shardWorldSel + nw - 1) % nw; prefetchShardWorld(shardWorldSel); }
         if (in.wasPressed(KEY_DOWN)) { shardWorldSel = (shardWorldSel + 1) % nw; prefetchShardWorld(shardWorldSel); }
         if (!enterKey(in)) return;
-        if (!openShardWorld(shardWorldKeys[shardWorldSel], shardWorldWhich[shardWorldSel])) { status("THE DECODER CANNOT FIND THAT WORLD", 3); audio.beep = 3; return; }
+        if (!openShardWorld(shardWorldKeys[shardWorldSel], shardWorldWhich[shardWorldSel])) { refuse("THE DECODER CANNOT FIND THAT WORLD", 3); return; }
         shardSel = -1; listShardsHeld();   // from its first
-        shardsLevel = 1; audio.beep = 4;
+        shardsLevel = 1; audio.beep = BEEP_UI;
         if (!shardHeld.empty() && !shardInFilter(shardHeld[0])) stepShard(1);
     } else if (shardsLevel == 1) {   // H-06: the world's three pages
         int n = (int)shardHeld.size();
         if (in.wasPressed(KEY_ESCAPE)) { shardsLevel = 0; return; }
-        if (in.wasPressed(KEY_TAB)) { shardsPage = (shardsPage + (in.shift() ? 2 : 1)) % 3; audio.beep = 4; return; }
+        if (in.wasPressed(KEY_TAB)) { shardsPage = (shardsPage + (in.shift() ? 2 : 1)) % 3; audio.beep = BEEP_UI; return; }
         if (n == 0) return;
         if (shardsPage == 0) {   // the records: Up/Down through the kind shown, Left/Right the kind (R-417: with Shift held Up/Down run, stopping at the ends)
             if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_RIGHT)) {
-                shardsFilter = (shardsFilter + (in.wasPressed(KEY_RIGHT) ? 1 : 3)) % 4; audio.beep = 4;
+                shardsFilter = (shardsFilter + (in.wasPressed(KEY_RIGHT) ? 1 : 3)) % 4; audio.beep = BEEP_UI;
                 if (!shardInFilter(shardHeld[shardSel])) stepShard(1);
                 return;
             }
@@ -406,8 +405,7 @@ void Game::updateShards(const Input& in, double realDt) {
         } else if (shardsPage == 1) {   // the timeline: along the years (R-416: with Shift held the arrows run, stopping at the ends)
             if (in.shift()) shardSel = std::max(0, std::min(n - 1, shardSel + shardRunSteps(in, realDt, true)));
             else {
-                if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_UP)) shardSel = (shardSel + n - 1) % n;
-                if (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_DOWN)) shardSel = (shardSel + 1) % n;
+                menuStep(in, shardSel, n, true);
             }
             if (in.wasPressed(KEY_PAGE_UP)) shardSel = std::max(0, shardSel - 10);
             if (in.wasPressed(KEY_PAGE_DOWN)) shardSel = std::min(n - 1, shardSel + 10);
@@ -437,7 +435,7 @@ void Game::updateShards(const Input& in, double realDt) {
             textShardKey = heldShardKey(shardHeld[shardSel]);
             auto nm = guide.names.find(textShardKey);
             guideReturn = GameState::SHARDS;
-            beginTextEntry("NAME THE PIECE", 7, nm != guide.names.end() ? upper(nm->second) : std::string());
+            beginTextEntry("NAME THE PIECE", TEXT_PIECE, nm != guide.names.end() ? upper(nm->second) : std::string());
         }
     } else if (shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].chart) {   // C-10: a chart on the screen
         int idx = shardHeld[shardSel];
@@ -465,7 +463,7 @@ void Game::updateShards(const Input& in, double realDt) {
         const bool up = in.wasPressed(KEY_UP) || in.wasPressed(KEY_PAGE_UP), down = in.wasPressed(KEY_DOWN) || in.wasPressed(KEY_PAGE_DOWN);
         if (pages > 1 && (up || down)) {   // a page turned: the voice stops (a first reading is read at once)
             int to = std::max(0, std::min(pages - 1, shardPage + (down ? 1 : -1)));
-            if (to != shardPage) { if (shardFresh) markShardRead(); stopSpeech(); shardPage = to; audio.beep = 4; }
+            if (to != shardPage) { if (shardFresh) markShardRead(); stopSpeech(); shardPage = to; audio.beep = BEEP_UI; }
             return;
         }
         if (in.wasPressed(KEY_LEFT) || up) { stepShard(-1); openShard(shardSel); }

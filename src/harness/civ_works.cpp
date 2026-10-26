@@ -419,8 +419,7 @@ static std::vector<std::shared_ptr<const Work>> galleryPicks(const BodyGen& g, c
     return pick;
 }
 static void worksMap(const AgeWorld& aw, const char* tag) {
-    Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) return;
-    StarSystem sys; sys.generate(st);
+    Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) return;
     if (aw.body >= (int)sys.bodies.size()) return;
     const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
     if (!worldHadCivilisation(g)) return;
@@ -517,8 +516,7 @@ static void worksGallery() {
     setFramebufferScale(scale);
     for (int age = 0; age < AGE_COUNT; age++) {
         const AgeWorld& aw = AGE_SCENE_WORLDS[age];
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) continue;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) continue;
         if (aw.body >= (int)sys.bodies.size()) continue;
         const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
         if (!worldHadCivilisation(g)) continue;
@@ -577,8 +575,7 @@ int runWorks(int argc, char** argv) {
     if (argc > 2 && std::string(argv[2]) == "map") { for (int a = 0; a < AGE_COUNT; a++) worksMap(AGE_SCENE_WORLDS[a], a == AGE_FAR_FUTURE ? "far_future" : AGE_NAMES[a]); return 0; }
     if (argc > 6 && std::string(argv[2]) == "view") {   // `works view <sx> <sz> <body> <a word of the kind's name, or its whole name> [index]`: one work through the renderer
         const AgeWorld aw{atoll(argv[3]), atoll(argv[4]), atoi(argv[5]), which};
-        Star st; if (!starInSector(aw.sx, 0, aw.sz, st, true)) return 1;
-        StarSystem sys; sys.generate(st);
+        Star st; StarSystem sys; if (!systemAt(aw.sx, 0, aw.sz, st, sys, true)) return 1;
         const BodyGen g = BodyGen::make(sys.bodies[aw.body]);
         std::shared_ptr<const WorldWorks> W = worldWorksOf(g);
         const std::string want = argv[6]; const int idx = argc > 7 ? atoi(argv[7]) : 0;

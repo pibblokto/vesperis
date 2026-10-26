@@ -84,7 +84,7 @@ std::string vgPlural(const std::string& noun) {
         {"mouse", "mice"}, {"ox", "oxen"}, {"sheep", "sheep"}, {"fish", "fish"}, {"deer", "deer"}, {"person", "people"}, {"knife", "knives"}, {"wife", "wives"}, {"life", "lives"},
         {"leaf", "leaves"}, {"wolf", "wolves"}, {"half", "halves"}, {"loaf", "loaves"}, {"calf", "calves"}, {"shelf", "shelves"}, {"thief", "thieves"}, {"cattle", "cattle"},
         {"people", "people"}, {"barley", "barley"}, {"millet", "millet"}, {"salt", "salt"}};
-    std::string lw = lower(w);
+    std::string lw = lowerOf(w);
     for (const auto& kv : IRR) if (endsWith(lw, kv.first.c_str()) && (lw.size() == kv.first.size() || !std::isalpha((unsigned char)lw[lw.size() - kv.first.size() - 1]) || kv.first.size() >= 4))
         return pre + w.substr(0, w.size() - kv.first.size()) + kv.second;
     if (endsWith(lw, "s") || endsWith(lw, "x") || endsWith(lw, "z") || endsWith(lw, "ch") || endsWith(lw, "sh")) return pre + w + "es";
@@ -161,7 +161,7 @@ std::string vgFrame(const std::string& s) {
         std::string w = s.substr(p, q - p); p = q + 1;
         if (w.empty()) continue;
         std::string core; for (char c : w) if (std::isalnum((unsigned char)c) || c == '\'') core += c;
-        std::string low = lower(core);
+        std::string low = lowerOf(core);
         if (!core.empty() && std::isdigit((unsigned char)core[0])) out += "# ";
         else if (NUMW.count(low)) out += "# ";
         else if (!first && !core.empty() && std::isupper((unsigned char)core[0]) && low != "i") out += "N ";
@@ -236,7 +236,7 @@ int vgCheck(const VgGrammar& G, const VgRecord& R, int age, int counts[VC_COUNT]
     while (i < t.size()) {
         if (std::isalnum((unsigned char)t[i])) {
             size_t j = i; while (j < t.size() && (std::isalnum((unsigned char)t[j]) || t[j] == '\'' || t[j] == '-')) j++;
-            std::string raw = lower(t.substr(i, j - i)), w = raw;
+            std::string raw = lowerOf(t.substr(i, j - i)), w = raw;
             if (endsWith(w, "'s")) w.resize(w.size() - 2);
             words.push_back({w, raw, punct, i, std::isupper((unsigned char)t[i]) != 0}); punct = false; i = j; continue;
         }

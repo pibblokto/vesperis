@@ -8,21 +8,18 @@ void unitStars(const Check& check) {
         // aurora on most nights (over the HUD's 0.15), a weak field has one rarely; the storms come and go
         int cls[4] = {0, 0, 0, 0}, n = 0, strongN = 0, weakN = 0, stormy = 0, nights = 0;
         double strongLit = 0, weakLit = 0;
-        for (int64_t x = 150; x < 200; x++)
-            for (int64_t z = 20; z < 70; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (int d = 0; d < 20; d++) { nights++; if (auroralStorm(s, d * 86400.0 + 500) > 0.3) stormy++; }
-                for (const Body& b : sys.bodies) {
-                    if (!KINDS[b.type].landable || b.type == PT_COMET) continue;
-                    double m = magneticField(b); cls[magneticClass(m)]++; n++;
-                    if (!KINDS[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
-                    int lit = 0; for (int d = 0; d < 60; d++) if (auroraPotential(sys, b, d * 86400.0 + 1000) > 0.15) lit++;
-                    bool active = starActivity(s.cls) >= 0.7;   // S-01: activity 0.7 and over; S-02: from the table
-                    if (m >= 0.6 && active) { strongLit += lit / 60.0; strongN++; }
-                    else if (m >= 0.08 && m < 0.3) { weakLit += lit / 60.0; weakN++; }
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 200, 20, 70)) {
+            for (int d = 0; d < 20; d++) { nights++; if (auroralStorm(s, d * 86400.0 + 500) > 0.3) stormy++; }
+            for (const Body& b : sys.bodies) {
+                if (!KINDS[b.type].landable || b.type == PT_COMET) continue;
+                double m = magneticField(b); cls[magneticClass(m)]++; n++;
+                if (!KINDS[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
+                int lit = 0; for (int d = 0; d < 60; d++) if (auroraPotential(sys, b, d * 86400.0 + 1000) > 0.15) lit++;
+                bool active = starActivity(s.cls) >= 0.7;   // S-01: activity 0.7 and over; S-02: from the table
+                if (m >= 0.6 && active) { strongLit += lit / 60.0; strongN++; }
+                else if (m >= 0.08 && m < 0.3) { weakLit += lit / 60.0; weakN++; }
             }
+        }
         check("magnetic field: every class occurs", n > 50 && cls[0] > 0 && cls[1] > 0 && cls[2] > 0 && cls[3] > 0, fmt("of %d worlds: none %d, weak %d, moderate %d, strong %d", n, cls[0], cls[1], cls[2], cls[3]));
         check("storms on some nights, not most", nights > 0 && stormy > nights / 20 && stormy < nights / 2, fmt("%d of %d nights over 0.3", stormy, nights));
         check("strong field, active star: most nights", strongN > 0 && strongLit / strongN > 0.7, fmt("%.0f%% of nights lit over %d worlds", strongN ? 100 * strongLit / strongN : 0.0, strongN));
@@ -543,7 +540,7 @@ void unitSky(const Check& check) {
         auto run = [&](double s) { runFrames(game, in, s); };
         // the levels the ground sets, and what they sound like: the game's sound through a fresh synth against the same hum and drive
         // alone, two seconds of each (the one-shots aside: a running synth takes them at once)
-        static const char* GROUND_NAMES[16] = {"wind", "rain", "lava", "breath", "waves", "birds", "leaves", "hooves", "insects", "gear", "skid", "pods", "dunes", "ice", "quake", "quake's onset"};   // Q-03: the ground's songs
+        static const char* const GROUND_NAMES[16] = {"wind", "rain", "lava", "breath", "waves", "birds", "leaves", "hooves", "insects", "gear", "skid", "pods", "dunes", "ice", "quake", "quake's onset"};   // Q-03: the ground's songs
         auto levels = [](const AudioState& a, double* v) { const double l[16] = {a.wind, a.rain, a.lava, a.breath, a.surf, a.birds, a.leaves, a.hoofs, a.insects, a.engineRpm, a.skid, a.rotor, a.dunes, a.ice, a.quake, a.quakeHit}; for (int i = 0; i < 16; i++) v[i] = l[i]; };
         auto heard = [&](const AudioState& a) { double v[16]; levels(a, v); std::string s; for (int i = 0; i < 16; i++) if (v[i] != 0) s += fmt("%s%s %.2f", s.empty() ? "" : " ", GROUND_NAMES[i], v[i]); return s.empty() ? std::string("none") : s; };
         auto quiet = [&](const AudioState& a) { double v[16]; levels(a, v); for (int i = 0; i < 16; i++) if (v[i] != 0) return false; return true; };
@@ -636,29 +633,26 @@ void unitSky(const Check& check) {
         // time, its distance to the comet's orbit the two orbits' least there and more a few widths either side; the almanac
         // gives the same peak
         int tested = 0, bad = 0; std::string why;
-        for (int64_t x = 150; x < 200 && tested < 12; x++)
-            for (int64_t z = 20; z < 80 && tested < 12; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                for (int bi = 0; bi < (int)sys.bodies.size() && tested < 12; bi++) {
-                    if (sys.bodies[bi].parent >= 0) continue;
-                    std::vector<MeteorShower> sh; meteorShowersOf(sys, bi, sh);
-                    for (const MeteorShower& sw : sh) {
-                        tested++;
-                        const Body& W = sys.bodies[sw.world];
-                        double tp = showerPeakAfter(sw, 3.6e6);
-                        Vec3 at = sys.bodyPos(sw.world, tp) - sys.star.pos;
-                        double off = length(at - sw.worldKm) / W.orbitRadiusKm;
-                        double d0 = orbitDistanceKm(sys.bodies[sw.comet], at);
-                        double dm = orbitDistanceKm(sys.bodies[sw.comet], sys.bodyPos(sw.world, tp - 3 * sw.sigma) - sys.star.pos), dp = orbitDistanceKm(sys.bodies[sw.comet], sys.bodyPos(sw.world, tp + 3 * sw.sigma) - sys.star.pos);
-                        AlmanacPlace pl; pl.sys = &sys; pl.t = tp - 3600; pl.window = 7200; pl.ground = true; pl.body = bi; pl.lat = 0.3; pl.lon = 1.1;
-                        std::vector<AlmanacEvent> ev; almanacOf(pl, ev);
-                        double dAl = 1e18; for (const AlmanacEvent& e : ev) if (e.kind == AL_SHOWER && e.body == sw.comet) dAl = std::min(dAl, std::fabs(e.t - tp));
-                        bool ok = off < 2e-3 && std::fabs(d0 - sw.moidKm) < 0.01 * W.orbitRadiusKm && dm > d0 && dp > d0 && dAl < 1.0;
-                        if (!ok) { bad++; why += fmt("%s/%s: off %.4f, d %.0f (moid %.0f), either side %.0f %.0f, almanac %.1f s; ", W.name.c_str(), sys.bodies[sw.comet].name.c_str(), off, d0, sw.moidKm, dm, dp, dAl); }
-                    }
+        for (auto& [x, z, st, sys] : scanSystems(150, 200, 20, 80, [&] { return tested < 12; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && tested < 12; bi++) {
+                if (sys.bodies[bi].parent >= 0) continue;
+                std::vector<MeteorShower> sh; meteorShowersOf(sys, bi, sh);
+                for (const MeteorShower& sw : sh) {
+                    tested++;
+                    const Body& W = sys.bodies[sw.world];
+                    double tp = showerPeakAfter(sw, 3.6e6);
+                    Vec3 at = sys.bodyPos(sw.world, tp) - sys.star.pos;
+                    double off = length(at - sw.worldKm) / W.orbitRadiusKm;
+                    double d0 = orbitDistanceKm(sys.bodies[sw.comet], at);
+                    double dm = orbitDistanceKm(sys.bodies[sw.comet], sys.bodyPos(sw.world, tp - 3 * sw.sigma) - sys.star.pos), dp = orbitDistanceKm(sys.bodies[sw.comet], sys.bodyPos(sw.world, tp + 3 * sw.sigma) - sys.star.pos);
+                    AlmanacPlace pl; pl.sys = &sys; pl.t = tp - 3600; pl.window = 7200; pl.ground = true; pl.body = bi; pl.lat = 0.3; pl.lon = 1.1;
+                    std::vector<AlmanacEvent> ev; almanacOf(pl, ev);
+                    double dAl = 1e18; for (const AlmanacEvent& e : ev) if (e.kind == AL_SHOWER && e.body == sw.comet) dAl = std::min(dAl, std::fabs(e.t - tp));
+                    bool ok = off < 2e-3 && std::fabs(d0 - sw.moidKm) < 0.01 * W.orbitRadiusKm && dm > d0 && dp > d0 && dAl < 1.0;
+                    if (!ok) { bad++; why += fmt("%s/%s: off %.4f, d %.0f (moid %.0f), either side %.0f %.0f, almanac %.1f s; ", W.name.c_str(), sys.bodies[sw.comet].name.c_str(), off, d0, sw.moidKm, dm, dp, dAl); }
                 }
             }
+        }
         check("showers: the peak is the orbits' crossing (W-04)", tested >= 10 && bad == 0, fmt("%d showers, %d wrong %s", tested, bad, why.c_str()));
     }
     {   // W-04: the streaks of the shower scene: dozens over four minutes at the peak, none eight widths off it, each running away from
@@ -691,15 +685,12 @@ void unitSky(const Check& check) {
         auto at = [&](double elDeg, double latDeg) { double e = elDeg * DEG, b = latDeg * DEG; return zodiacalLight(Vec3(std::cos(e) * std::cos(b), std::sin(b), std::sin(e) * std::cos(b)), sun); };
         bool shape = at(30, 0) > 2 * at(30, 25) && at(30, 0) > at(60, 0) && at(60, 0) > at(90, 0) && at(180, 0) > 1.5 * at(150, 0) && at(180, 0) > 1.5 * at(180, 15);
         int sys0 = 0, dusty = 0, young = 0, youngDusty = 0;
-        for (int64_t x = 150; x < 200; x++)
-            for (int64_t z = 20; z < 80; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                if (sys.bodies.empty()) continue;
-                sys0++;
-                if (zodiacalDust(sys, 0) >= ZODIACAL_MIN_DUST) dusty++;
-                if (sys.star.cls == STAR_PROTOSTAR || sys.star.cls == STAR_BLUE_GIANT) { young++; if (zodiacalDust(sys, 0) >= ZODIACAL_MIN_DUST) youngDusty++; }
-            }
+        for (auto& [x, z, st, sys] : scanSystems(150, 200, 20, 80)) {
+            if (sys.bodies.empty()) continue;
+            sys0++;
+            if (zodiacalDust(sys, 0) >= ZODIACAL_MIN_DUST) dusty++;
+            if (sys.star.cls == STAR_PROTOSTAR || sys.star.cls == STAR_BLUE_GIANT) { young++; if (zodiacalDust(sys, 0) >= ZODIACAL_MIN_DUST) youngDusty++; }
+        }
         check("zodiacal light: the cone and its dust (W-04)", shape && young > 0 && youngDusty == young && dusty < sys0 * 0.8 && dusty > sys0 * 0.05,
               fmt("on the plane at 30 deg %.3f, 25 deg off it %.3f, at 60 %.3f, 90 %.3f, 150 %.3f, opposite %.3f; %d of %d systems dusty, %d of %d young ones", at(30, 0), at(30, 25), at(60, 0), at(90, 0), at(150, 0), at(180, 0), dusty, sys0, youngDusty, young));
     }

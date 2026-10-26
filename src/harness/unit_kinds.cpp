@@ -70,29 +70,26 @@ void unitKinds(const Check& check) {
         int made = 0, bad = 0, young = 0; std::string why;
         const uint32_t mainSeq = (1u << STAR_YELLOW) | (1u << STAR_ORANGE) | (1u << STAR_RED_DWARF) | (1u << STAR_BLUE_WHITE) | (1u << STAR_BLUE_GIANT);
         int firstOf[PT_COUNT]; int64_t fx[PT_COUNT], fz[PT_COUNT]; for (int k = 0; k < PT_COUNT; k++) firstOf[k] = -1;
-        for (int64_t x = 150; x < 260; x++)
-            for (int64_t z = 20; z < 120; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                bool archean = false;
-                for (const Body& B : sys.bodies) if (B.type == PT_ARCHEAN) archean = true;
-                for (const Body& B : sys.bodies) {
-                    if (B.type < PT_ARCHEAN || B.type > PT_LICHEN) {
-                        // a young star's felisian worlds are all archean: one left felisian beside an archean world is a people's, or locked, or a giant's star
-                        const bool companionWorld = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION;   // judged by its own sun's class
-                        if (archean && B.type == PT_FELISIAN && !companionWorld && !peopleHash(B.seed) && !B.locked && !(B.parent < 0 && B.rotPeriod == B.orbitPeriod)) { bad++; why = B.name + " left felisian beside its star's archean worlds"; }
-                        continue;
-                    }
-                    made++;
-                    if (firstOf[B.type] < 0) { firstOf[B.type] = B.index; fx[B.type] = x; fz[B.type] = z; }
-                    if (B.type == PT_ARCHEAN) young++;
-                    const int d = drawnKind(B);
-                    const bool planetOfStar = B.parent < 0 || sys.bodies[B.parent].type == PT_COMPANION;
-                    const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
-                    if ((B.type == PT_LICHEN ? d != PT_THINATMO : d != PT_FELISIAN) || !(mainSeq >> cls & 1u)) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
-                    if (B.type != PT_LICHEN && planetOfStar && B.rotPeriod == B.orbitPeriod) { bad++; why = B.name + " is locked and made a " + KINDS[B.type].name; }
+        for (auto& [x, z, st, sys] : scanSystems(150, 260, 20, 120)) {
+            bool archean = false;
+            for (const Body& B : sys.bodies) if (B.type == PT_ARCHEAN) archean = true;
+            for (const Body& B : sys.bodies) {
+                if (B.type < PT_ARCHEAN || B.type > PT_LICHEN) {
+                    // a young star's felisian worlds are all archean: one left felisian beside an archean world is a people's, or locked, or a giant's star
+                    const bool companionWorld = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION;   // judged by its own sun's class
+                    if (archean && B.type == PT_FELISIAN && !companionWorld && !peopleHash(B.seed) && !B.locked && !(B.parent < 0 && B.rotPeriod == B.orbitPeriod)) { bad++; why = B.name + " left felisian beside its star's archean worlds"; }
+                    continue;
                 }
+                made++;
+                if (firstOf[B.type] < 0) { firstOf[B.type] = B.index; fx[B.type] = x; fz[B.type] = z; }
+                if (B.type == PT_ARCHEAN) young++;
+                const int d = drawnKind(B);
+                const bool planetOfStar = B.parent < 0 || sys.bodies[B.parent].type == PT_COMPANION;
+                const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
+                if ((B.type == PT_LICHEN ? d != PT_THINATMO : d != PT_FELISIAN) || !(mainSeq >> cls & 1u)) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
+                if (B.type != PT_LICHEN && planetOfStar && B.rotPeriod == B.orbitPeriod) { bad++; why = B.name + " is locked and made a " + KINDS[B.type].name; }
             }
+        }
         check("living kinds: from felisian (or thin air) worlds whose day is not their year, round living stars; a young star's alike (P-02)", bad == 0 && made > 400 && young > 50,
               fmt("%d made, %d archean%s", made, young, why.empty() ? "" : (": " + why).c_str()));
         std::string out; bool ok = true;
@@ -136,28 +133,25 @@ void unitKinds(const Check& check) {
         int made = 0, bad = 0, perKind[PT_COUNT] = {0}; std::string why;
         const uint32_t dead = (1u << STAR_WHITE_DWARF) | (1u << STAR_PULSAR) | (1u << STAR_NEUTRON);
         int firstOf[PT_COUNT]; int64_t fx[PT_COUNT], fz[PT_COUNT]; for (int k = 0; k < PT_COUNT; k++) firstOf[k] = -1;
-        for (int64_t x = 150; x < 260; x++)
-            for (int64_t z = 20; z < 120; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                for (const Body& B : sys.bodies) {
-                    if (B.type < PT_EYEBALL || B.type > PT_CHEMOTROPH) continue;
-                    made++; perKind[B.type]++;
-                    if (firstOf[B.type] < 0) { firstOf[B.type] = B.index; fx[B.type] = x; fz[B.type] = z; }
-                    const int d = drawnKind(B), pd = B.parent >= 0 ? drawnKind(sys.bodies[B.parent]) : -1;
-                    const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;   // a companion's world by its own sun (P-01's facts)
-                    bool ok = true;
-                    switch (B.type) {
-                        case PT_EYEBALL: ok = (d == PT_OCEAN || d == PT_FELISIAN || d == PT_ICY) && cls == STAR_RED_DWARF && B.parent < 0 && B.locked && B.axialTilt == 0 && !B.doublePlanet; break;
-                        case PT_TERMINATOR: ok = (d == PT_FELISIAN || d == PT_DESERT) && B.parent < 0 && B.locked && B.axialTilt == 0 && !B.doublePlanet; break;
-                        case PT_HYCEAN: ok = d == PT_OCEAN && (B.parent < 0 || sys.bodies[B.parent].type == PT_COMPANION); break;
-                        case PT_AMMONIA: ok = d == PT_OCEAN || d == PT_HYDROCARBON || d == PT_ICY; break;
-                        case PT_SNOWBALL: ok = (d == PT_FELISIAN || d == PT_OCEAN) && !B.locked; break;
-                        default: ok = (d == PT_TECTONIC || d == PT_ROCKY) && ((dead >> cls & 1u) || pd == PT_SUBSTELLAR); break;
-                    }
-                    if (!ok) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
+        for (auto& [x, z, st, sys] : scanSystems(150, 260, 20, 120)) {
+            for (const Body& B : sys.bodies) {
+                if (B.type < PT_EYEBALL || B.type > PT_CHEMOTROPH) continue;
+                made++; perKind[B.type]++;
+                if (firstOf[B.type] < 0) { firstOf[B.type] = B.index; fx[B.type] = x; fz[B.type] = z; }
+                const int d = drawnKind(B), pd = B.parent >= 0 ? drawnKind(sys.bodies[B.parent]) : -1;
+                const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;   // a companion's world by its own sun (P-01's facts)
+                bool ok = true;
+                switch (B.type) {
+                    case PT_EYEBALL: ok = (d == PT_OCEAN || d == PT_FELISIAN || d == PT_ICY) && cls == STAR_RED_DWARF && B.parent < 0 && B.locked && B.axialTilt == 0 && !B.doublePlanet; break;
+                    case PT_TERMINATOR: ok = (d == PT_FELISIAN || d == PT_DESERT) && B.parent < 0 && B.locked && B.axialTilt == 0 && !B.doublePlanet; break;
+                    case PT_HYCEAN: ok = d == PT_OCEAN && (B.parent < 0 || sys.bodies[B.parent].type == PT_COMPANION); break;
+                    case PT_AMMONIA: ok = d == PT_OCEAN || d == PT_HYDROCARBON || d == PT_ICY; break;
+                    case PT_SNOWBALL: ok = (d == PT_FELISIAN || d == PT_OCEAN) && !B.locked; break;
+                    default: ok = (d == PT_TECTONIC || d == PT_ROCKY) && ((dead >> cls & 1u) || pd == PT_SUBSTELLAR); break;
                 }
+                if (!ok) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
             }
+        }
         std::string counts;
         for (int k = PT_EYEBALL; k <= PT_CHEMOTROPH; k++) counts += fmt("%s%s %d", k > PT_EYEBALL ? ", " : "", KINDS[k].name, perKind[k]);
         check("locked and deep kinds: from their sources, the locked ones locked and untilted, none half of a double planet (P-03)", bad == 0 && made > 400,
@@ -234,24 +228,21 @@ void unitDead(const Check& check) {
     // system but as a wanderer (P-05; D's drifters), with no people; about one scorched world in eight with a people of its own
     {
         int made = 0, bad = 0, frozen = 0, frozenWandering = 0, withPeople = 0; std::string why;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                for (const Body& B : sys.bodies) {
-                    if (B.type == PT_FROZEN_FELISIAN) { frozen++; if (B.wanderer && !worldHadCivilisation(BodyGen::make(B))) frozenWandering++; }
-                    if (B.type != PT_SCORCHED_FELISIAN) continue;
-                    made++;
-                    const int d = drawnKind(B);
-                    const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
-                    const bool giant = cls == STAR_RED_GIANT || cls == STAR_ORANGE_GIANT || cls == STAR_CARBON;
-                    bool ok = d == PT_FELISIAN ? giant && !peopleHash(B.seed) && B.thenTempK == B.tempK
-                                               : (d == PT_ROCKY || d == PT_DESERT) && cls == STAR_WHITE_DWARF && B.tempK >= 180 && B.tempK < 260 && !(B.parent >= 0 && !B.doublePlanet && sys.bodies[B.parent].type != PT_COMPANION) &&
-                                                     B.thenTempK >= 265 && B.thenTempK <= 300 && !(d == PT_DESERT && peopleHash(B.seed));
-                    if (!ok) { bad++; why = B.name + " made a SCORCHED FELISIAN from " + KINDS[d].name; }
-                    if (worldHadCivilisation(BodyGen::make(B))) withPeople++;
-                }
+        for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
+            for (const Body& B : sys.bodies) {
+                if (B.type == PT_FROZEN_FELISIAN) { frozen++; if (B.wanderer && !worldHadCivilisation(BodyGen::make(B))) frozenWandering++; }
+                if (B.type != PT_SCORCHED_FELISIAN) continue;
+                made++;
+                const int d = drawnKind(B);
+                const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
+                const bool giant = cls == STAR_RED_GIANT || cls == STAR_ORANGE_GIANT || cls == STAR_CARBON;
+                bool ok = d == PT_FELISIAN ? giant && !peopleHash(B.seed) && B.thenTempK == B.tempK
+                                           : (d == PT_ROCKY || d == PT_DESERT) && cls == STAR_WHITE_DWARF && B.tempK >= 180 && B.tempK < 260 && !(B.parent >= 0 && !B.doublePlanet && sys.bodies[B.parent].type != PT_COMPANION) &&
+                                                 B.thenTempK >= 265 && B.thenTempK <= 300 && !(d == PT_DESERT && peopleHash(B.seed));
+                if (!ok) { bad++; why = B.name + " made a SCORCHED FELISIAN from " + KINDS[d].name; }
+                if (worldHadCivilisation(BodyGen::make(B))) withPeople++;
             }
+        }
         const double share = (double)withPeople / std::max(1, made);
         check("dead kinds: the scorched from a giant's felisian worlds and a white dwarf's rocky and desert planets, never C-01's people's; the frozen only as a wanderer, with no people (P-04, P-05)",
               bad == 0 && frozen == frozenWandering && made > 60 && share > 0.06 && share < 0.2,
@@ -338,8 +329,7 @@ void unitDead(const Check& check) {
         for (int a = 0; a < AGE_COUNT; a++) {
             const AgeWorld& W = SCORCHED_WORLDS[a];
             if (W.body < 0) continue;
-            Star st; if (!starInSector(W.sx, 0, W.sz, st, true)) { wrong++; continue; }
-            StarSystem sys; sys.generate(st);
+            Star st; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, st, sys, true)) { wrong++; continue; }
             if (W.body >= (int)sys.bodies.size() || sys.bodies[W.body].type != PT_SCORCHED_FELISIAN) { wrong++; why = fmt("the %s world is no scorched world", AGE_NAMES[a]); continue; }
             const BodyGen g = BodyGen::make(sys.bodies[W.body]);
             if (peoplesOf(g) > W.which && peopleAgeOf(g, W.which).age == a) held++; else { wrong++; why = fmt("the %s world's people of another age", AGE_NAMES[a]); }
@@ -347,20 +337,17 @@ void unitDead(const Check& check) {
             if (c.wet <= 0.2 && c.paved == (unitFromHash(mix64(peopleGen(g, W.which).seed ^ 0xC09AULL)) < 0.7)) weathered++;
             if (!readWorld(sys, sys.bodies[W.body], g).desert) { wrong++; why = fmt("the %s world's end not the desert's", AGE_NAMES[a]); }
         }
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                int c01 = -1, dead = -1;
-                for (const Body& B : sys.bodies) {
-                    if (B.wanderer || !kindHas(B.type, KT_PEOPLE) || !peoplesHash(B.type, B.seed)) continue;   // P-05: a wanderer keeps no people
-                    if (!deadKind(B.type) && c01 < 0) c01 = B.index;
-                    if (deadKind(B.type) && dead < 0) dead = B.index;
-                }
-                if (dead < 0) continue;
-                systems++;
-                if (systemPeoplesWorld(sys) != (c01 >= 0 ? c01 : dead)) { sysBad++; why = sys.star.name + "'s people's world not C-01's first"; }
+        for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
+            int c01 = -1, dead = -1;
+            for (const Body& B : sys.bodies) {
+                if (B.wanderer || !kindHas(B.type, KT_PEOPLE) || !peoplesHash(B.type, B.seed)) continue;   // P-05: a wanderer keeps no people
+                if (!deadKind(B.type) && c01 < 0) c01 = B.index;
+                if (deadKind(B.type) && dead < 0) dead = B.index;
             }
+            if (dead < 0) continue;
+            systems++;
+            if (systemPeoplesWorld(sys) != (c01 >= 0 ? c01 : dead)) { sysBad++; why = sys.star.name + "'s people's world not C-01's first"; }
+        }
         check("dead kinds: the scorched test worlds' peoples of their ages, built as their time's and weathered as the present's, ended as a desert's; C-01's first on the air (P-04)",
               held == 6 && wrong == 0 && weathered == cultures && systems > 0 && sysBad == 0,
               fmt("%d of 6 test worlds hold their ages, %d of %d cultures weathered dry and built as a living world's; %d systems with a scorched people, %d speaking for the wrong world%s",
@@ -379,46 +366,44 @@ void unitCold(const Check& check) {
     {
         int made = 0, bad = 0, perKind[PT_COUNT] = {0}, systems = 0, wand = 0, wandFrozen = 0, wandBad = 0, captured = 0, capturedMade = 0;
         std::string why, wwhy;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st); systems++;
-                double lastOrbit = 0;
-                for (const Body& B : sys.bodies) if (B.parent < 0 && !B.wanderer && B.type != PT_COMET && B.type != PT_COMPANION) lastOrbit = std::max(lastOrbit, B.orbitRadiusKm);
-                for (const Body& B : sys.bodies) {
-                    if (coldFirst[B.type] < 0 && B.type >= PT_NITROGEN && B.type <= PT_FROST_DWARF) { coldFirst[B.type] = B.index; coldX[B.type] = x; coldZ[B.type] = z; }
-                    if (B.wanderer) {
-                        wand++;
-                        const bool stripped = st.cls == STAR_BLACK_HOLE || st.cls == STAR_WOLF_RAYET;
-                        if (B.type == PT_FROZEN_FELISIAN) wandFrozen++;
-                        const bool ok = B.index == (int)sys.bodies.size() - 1 && B.parent < 0 && B.moonCount == 0 && B.ecc >= 0.4 && B.ecc <= 0.8 && B.orbitIncl >= 25 * DEG && B.orbitIncl <= 155 * DEG &&
-                                        (lastOrbit <= 0 || B.orbitRadiusKm * (1 - B.ecc) >= 1.15 * lastOrbit * (1 - 1e-9)) && (B.type == PT_WANDERER || (B.type == PT_FROZEN_FELISIAN && !stripped)) &&
-                                        !worldHadCivilisation(BodyGen::make(B));
-                        if (!ok) { wandBad++; wwhy = B.name; }
-                        continue;
-                    }
-                    const bool moon = B.parent >= 0 && sys.bodies[B.parent].type != PT_COMPANION && !B.doublePlanet;
-                    const bool giantMoon = moon && kindHas(drawnKind(sys.bodies[B.parent]), KT_GIANT), cap = moon && B.orbitPeriod < 0;
-                    if (cap) { captured++; if (B.type != drawnKind(B)) { capturedMade++; if (B.type != PT_CRYOVOLCANIC) { bad++; why = B.name + " (a captured moon) made a " + KINDS[B.type].name; } } }
-                    if (B.type < PT_NITROGEN || B.type > PT_FROST_DWARF) continue;   // P-06: the strange moons have checks of their own
-                    made++; perKind[B.type]++;
-                    const int d = drawnKind(B);
-                    const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
-                    const bool air = cls != STAR_BLACK_HOLE && cls != STAR_WOLF_RAYET, planetLike = !moon;
-                    const double T = B.tempK;
-                    bool ok = false;
-                    switch (B.type) {
-                        case PT_NITROGEN: ok = d == PT_ICY && T < 60 && air && !giantMoon; break;
-                        case PT_CRYOVOLCANIC: ok = air && giantMoon && (cap ? d == PT_ICY && T < 120 : (d == PT_ICY || d == PT_EUROPAN) && T < 80); break;
-                        case PT_DRY_ICE: ok = air && T >= 140 && T < 200 && !cap && (d == PT_THINATMO || (d == PT_ICY && planetLike && !B.doublePlanet)); break;
-                        case PT_BRINE_DWARF: ok = (d == PT_CRATERED || d == PT_ICY) && T >= 120 && T < 260 && planetLike && !B.doublePlanet; break;
-                        case PT_FROST_DWARF: ok = (d == PT_ICY || d == PT_CRATERED) && T < 45 && !giantMoon; break;
-                        default: ok = false; break;
-                    }
-                    (void)planetLike;
-                    if (!ok) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
+        for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
+systems++;
+            double lastOrbit = 0;
+            for (const Body& B : sys.bodies) if (B.parent < 0 && !B.wanderer && B.type != PT_COMET && B.type != PT_COMPANION) lastOrbit = std::max(lastOrbit, B.orbitRadiusKm);
+            for (const Body& B : sys.bodies) {
+                if (coldFirst[B.type] < 0 && B.type >= PT_NITROGEN && B.type <= PT_FROST_DWARF) { coldFirst[B.type] = B.index; coldX[B.type] = x; coldZ[B.type] = z; }
+                if (B.wanderer) {
+                    wand++;
+                    const bool stripped = st.cls == STAR_BLACK_HOLE || st.cls == STAR_WOLF_RAYET;
+                    if (B.type == PT_FROZEN_FELISIAN) wandFrozen++;
+                    const bool ok = B.index == (int)sys.bodies.size() - 1 && B.parent < 0 && B.moonCount == 0 && B.ecc >= 0.4 && B.ecc <= 0.8 && B.orbitIncl >= 25 * DEG && B.orbitIncl <= 155 * DEG &&
+                                    (lastOrbit <= 0 || B.orbitRadiusKm * (1 - B.ecc) >= 1.15 * lastOrbit * (1 - 1e-9)) && (B.type == PT_WANDERER || (B.type == PT_FROZEN_FELISIAN && !stripped)) &&
+                                    !worldHadCivilisation(BodyGen::make(B));
+                    if (!ok) { wandBad++; wwhy = B.name; }
+                    continue;
                 }
+                const bool moon = B.parent >= 0 && sys.bodies[B.parent].type != PT_COMPANION && !B.doublePlanet;
+                const bool giantMoon = moon && kindHas(drawnKind(sys.bodies[B.parent]), KT_GIANT), cap = moon && B.orbitPeriod < 0;
+                if (cap) { captured++; if (B.type != drawnKind(B)) { capturedMade++; if (B.type != PT_CRYOVOLCANIC) { bad++; why = B.name + " (a captured moon) made a " + KINDS[B.type].name; } } }
+                if (B.type < PT_NITROGEN || B.type > PT_FROST_DWARF) continue;   // P-06: the strange moons have checks of their own
+                made++; perKind[B.type]++;
+                const int d = drawnKind(B);
+                const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
+                const bool air = cls != STAR_BLACK_HOLE && cls != STAR_WOLF_RAYET, planetLike = !moon;
+                const double T = B.tempK;
+                bool ok = false;
+                switch (B.type) {
+                    case PT_NITROGEN: ok = d == PT_ICY && T < 60 && air && !giantMoon; break;
+                    case PT_CRYOVOLCANIC: ok = air && giantMoon && (cap ? d == PT_ICY && T < 120 : (d == PT_ICY || d == PT_EUROPAN) && T < 80); break;
+                    case PT_DRY_ICE: ok = air && T >= 140 && T < 200 && !cap && (d == PT_THINATMO || (d == PT_ICY && planetLike && !B.doublePlanet)); break;
+                    case PT_BRINE_DWARF: ok = (d == PT_CRATERED || d == PT_ICY) && T >= 120 && T < 260 && planetLike && !B.doublePlanet; break;
+                    case PT_FROST_DWARF: ok = (d == PT_ICY || d == PT_CRATERED) && T < 45 && !giantMoon; break;
+                    default: ok = false; break;
+                }
+                (void)planetLike;
+                if (!ok) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
             }
+        }
         std::string counts;
         for (int k = PT_NITROGEN; k <= PT_FROST_DWARF; k++) if (k != PT_WANDERER) counts += fmt("%s%s %d", k > PT_NITROGEN ? ", " : "", KINDS[k].name, perKind[k]);
         check("far cold kinds: from their sources, a captured moon only the cryovolcanic, no air round a black hole or in a Wolf-Rayet wind (P-05)", bad == 0 && made > 600 && capturedMade > 0,
@@ -533,42 +518,39 @@ void unitMoons(const Check& check) {
     {
         int made = 0, bad = 0, perKind[PT_COUNT] = {0}, facing = 0, apexBad = 0, giantMoons = 0, giantStrange = 0;
         double worstApex = 0; std::string why, awhy;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                std::vector<int> place(sys.bodies.size(), 0);
-                for (const Body& B : sys.bodies) {
-                    if (B.parent < 0 || B.wanderer || B.type == PT_COMET) continue;
-                    const Body& P = sys.bodies[B.parent];
-                    if (P.type == PT_COMPANION) continue;
-                    const bool cap = B.orbitPeriod < 0, regular = !cap && !B.doublePlanet;
-                    const int c = cap ? -1 : place[B.parent]++;   // its place as the generator counts it (a twin first)
-                    const bool giant = kindHas(drawnKind(P), KT_GIANT), facingB = B.rotPeriod == B.orbitPeriod;
-                    if (giant && regular) { giantMoons++; if (B.type >= PT_GROOVED_ICE && B.type <= PT_SPONGE) giantStrange++; }
-                    if (B.type == PT_TWO_FACED) {
-                        facing++;
-                        const double t = 0.25 * B.orbitPeriod;
-                        const Vec3 v = normalize(sys.bodyVel(B.index, t) - sys.bodyVel(B.parent, t)), a = sys.bodyFrame(B.index, t).transposed() * B.apexDir;
-                        const double off = std::acos(clampd(dot(normalize(a), v), -1, 1));
-                        worstApex = std::max(worstApex, off);
-                        if (off > 25 * DEG || length(B.apexDir) < 0.99) { apexBad++; awhy = B.name; }   // its tilt, its orbit's inclination, an oval orbit's libration
-                    }
-                    if (B.type < PT_GROOVED_ICE || B.type > PT_SPONGE) continue;   // P-07: the giants have checks of their own
-                    made++; perKind[B.type]++;
-                    if (moonFirst[B.type] < 0) { moonFirst[B.type] = B.index; moonX[B.type] = x; moonZ[B.type] = z; }
-                    const int d = drawnKind(B); const double T = B.tempK;
-                    bool ok = regular;
-                    switch (B.type) {
-                        case PT_GROOVED_ICE: ok = ok && d == PT_ICY && giant && B.radiusKm >= 1900; break;
-                        case PT_TWO_FACED: ok = ok && d == PT_ICY && giant && c >= 3 && facingB && T >= 60; break;
-                        case PT_TIGER_STRIPED: ok = ok && (d == PT_ICY || d == PT_EUROPAN) && giant && c < 2; break;
-                        case PT_PATCHWORK: ok = ok && (d == PT_ICY || d == PT_ROCKY) && c >= 1 && T < 200; break;
-                        default: ok = ok && (d == PT_CRATERED || d == PT_ICY) && !facingB && T < 200; break;   // the sponge
-                    }
-                    if (!ok) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
+        for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
+            std::vector<int> place(sys.bodies.size(), 0);
+            for (const Body& B : sys.bodies) {
+                if (B.parent < 0 || B.wanderer || B.type == PT_COMET) continue;
+                const Body& P = sys.bodies[B.parent];
+                if (P.type == PT_COMPANION) continue;
+                const bool cap = B.orbitPeriod < 0, regular = !cap && !B.doublePlanet;
+                const int c = cap ? -1 : place[B.parent]++;   // its place as the generator counts it (a twin first)
+                const bool giant = kindHas(drawnKind(P), KT_GIANT), facingB = B.rotPeriod == B.orbitPeriod;
+                if (giant && regular) { giantMoons++; if (B.type >= PT_GROOVED_ICE && B.type <= PT_SPONGE) giantStrange++; }
+                if (B.type == PT_TWO_FACED) {
+                    facing++;
+                    const double t = 0.25 * B.orbitPeriod;
+                    const Vec3 v = normalize(sys.bodyVel(B.index, t) - sys.bodyVel(B.parent, t)), a = sys.bodyFrame(B.index, t).transposed() * B.apexDir;
+                    const double off = std::acos(clampd(dot(normalize(a), v), -1, 1));
+                    worstApex = std::max(worstApex, off);
+                    if (off > 25 * DEG || length(B.apexDir) < 0.99) { apexBad++; awhy = B.name; }   // its tilt, its orbit's inclination, an oval orbit's libration
                 }
+                if (B.type < PT_GROOVED_ICE || B.type > PT_SPONGE) continue;   // P-07: the giants have checks of their own
+                made++; perKind[B.type]++;
+                if (moonFirst[B.type] < 0) { moonFirst[B.type] = B.index; moonX[B.type] = x; moonZ[B.type] = z; }
+                const int d = drawnKind(B); const double T = B.tempK;
+                bool ok = regular;
+                switch (B.type) {
+                    case PT_GROOVED_ICE: ok = ok && d == PT_ICY && giant && B.radiusKm >= 1900; break;
+                    case PT_TWO_FACED: ok = ok && d == PT_ICY && giant && c >= 3 && facingB && T >= 60; break;
+                    case PT_TIGER_STRIPED: ok = ok && (d == PT_ICY || d == PT_EUROPAN) && giant && c < 2; break;
+                    case PT_PATCHWORK: ok = ok && (d == PT_ICY || d == PT_ROCKY) && c >= 1 && T < 200; break;
+                    default: ok = ok && (d == PT_CRATERED || d == PT_ICY) && !facingB && T < 200; break;   // the sponge
+                }
+                if (!ok) { bad++; why = B.name + " made a " + KINDS[B.type].name + " from " + KINDS[d].name; }
             }
+        }
         std::string counts; bool every = true;
         for (int k = PT_GROOVED_ICE; k <= PT_SPONGE; k++) { counts += fmt("%s%s %d", k > PT_GROOVED_ICE ? ", " : "", KINDS[k].name, perKind[k]); if (perKind[k] < 30) every = false; }
         check("strange moons: from their sources: a giant's large moons of ice, its outer ones facing it, its inner ones; moons in a resonance, small tumbling ones (P-06)",
@@ -673,32 +655,29 @@ void unitGiants(const Check& check) {
         int giantFirst[PT_COUNT]; int64_t gX[PT_COUNT], gZ[PT_COUNT];
         for (int k = 0; k < PT_COUNT; k++) { giantFirst[k] = -1; gX[k] = gZ[k] = 0; }
         std::string why;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                bool hot = false;
-                for (const Body& B : sys.bodies) {
-                    if (B.type < PT_SUPER_PUFF || B.wanderer) continue;
-                    made++; perKind[B.type]++;
-                    if (giantFirst[B.type] < 0) { giantFirst[B.type] = B.index; gX[B.type] = x; gZ[B.type] = z; }
-                    if (B.type == PT_ALKALI || B.type == PT_SILICATE) hot = true;
-                    const bool compW = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION;
-                    const uint32_t body = compW ? KB_COMPANION_WORLD : (B.parent < 0 ? KB_PLANET : KB_MOON);
-                    const int cls = compW ? sys.bodies[B.parent].starClass : st.cls, d = drawnKind(B);
-                    const KindDef& K = KINDS[B.type];
-                    bool from = false;
-                    for (int i = 0; i < K.nSources; i++) {
-                        const KindSource& S = K.sources[i];
-                        if (!(S.from >> d & 1u) || B.tempK < S.tLo || B.tempK >= S.tHi || !(S.bodies & body) || (S.stars && !(S.stars >> cls & 1u))) continue;
-                        if (S.lock > 0 && !(B.locked && B.rotPeriod == B.orbitPeriod)) continue;
-                        from = true;
-                    }
-                    if (!from || B.doublePlanet) { bad++; why = B.name + " made a " + K.name + " from " + KINDS[d].name + fmt(" at %.0f K", B.tempK); }
-                    for (const Body& M : sys.bodies) if (M.parent == B.index && M.drawnOrbitKm >= 0 && peoplesHash(M.type, M.seed)) { peopleMoved++; why = M.name + ", a people's world, moved"; }
+        for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
+            bool hot = false;
+            for (const Body& B : sys.bodies) {
+                if (B.type < PT_SUPER_PUFF || B.wanderer) continue;
+                made++; perKind[B.type]++;
+                if (giantFirst[B.type] < 0) { giantFirst[B.type] = B.index; gX[B.type] = x; gZ[B.type] = z; }
+                if (B.type == PT_ALKALI || B.type == PT_SILICATE) hot = true;
+                const bool compW = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION;
+                const uint32_t body = compW ? KB_COMPANION_WORLD : (B.parent < 0 ? KB_PLANET : KB_MOON);
+                const int cls = compW ? sys.bodies[B.parent].starClass : st.cls, d = drawnKind(B);
+                const KindDef& K = KINDS[B.type];
+                bool from = false;
+                for (int i = 0; i < K.nSources; i++) {
+                    const KindSource& S = K.sources[i];
+                    if (!(S.from >> d & 1u) || B.tempK < S.tLo || B.tempK >= S.tHi || !(S.bodies & body) || (S.stars && !(S.stars >> cls & 1u))) continue;
+                    if (S.lock > 0 && !(B.locked && B.rotPeriod == B.orbitPeriod)) continue;
+                    from = true;
                 }
-                if (st.cls == STAR_YELLOW) { yellow++; if (hot) yellowHot++; }
+                if (!from || B.doublePlanet) { bad++; why = B.name + " made a " + K.name + " from " + KINDS[d].name + fmt(" at %.0f K", B.tempK); }
+                for (const Body& M : sys.bodies) if (M.parent == B.index && M.drawnOrbitKm >= 0 && peoplesHash(M.type, M.seed)) { peopleMoved++; why = M.name + ", a people's world, moved"; }
             }
+            if (st.cls == STAR_YELLOW) { yellow++; if (hot) yellowHot++; }
+        }
         std::string counts; bool every = true;
         for (int k = PT_SUPER_PUFF; k <= PT_GAS_DWARF; k++) { counts += fmt("%s%s %d", k > PT_SUPER_PUFF ? ", " : "", KINDS[k].name, perKind[k]); if (perKind[k] < 2) every = false; }   // D-04: the giants' (the dark ocean after them)
         const double hotShare = (double)yellowHot / std::max(1, yellow);
@@ -813,44 +792,41 @@ void unitTraits(const Check& check) {
         bool slotsOk = true, factsOk = true; std::string why, fwhy;
         struct Carrier { Star s; int bi = -1; };
         Carrier first[TR_COUNT], acidKarst;
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star st; if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                    const Body& b = sys.bodies[bi];
-                    if (b.type == PT_COMPANION) continue;
-                    const unsigned f = bodyFacts(sys, bi); bodies++;
-                    for (int k = 0; k < BF_COUNT; k++) if ((f >> k) & 1u) factN[k]++;
-                    const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;
-                    const bool want[BF_COUNT] = {b.axialTilt > 60 * DEG, b.rotPeriod < 0, !b.locked && std::fabs(b.rotPeriod) < 1800, b.locked, (moon ? sys.bodies[b.parent].ecc : b.ecc) > 0.2,
-                                                 magneticClass(magneticField(b)) == 3, magneticClass(magneticField(b)) == 0, moon && b.orbitPeriod < 0, b.doublePlanet, b.rings};
-                    for (int k = 0; k < BF_COUNT; k++) if ((((f >> k) & 1u) != 0) != want[k]) { factsOk = false; fwhy = fmt("%s %s", b.name.c_str(), BODY_FACT_NAMES[k]); }
-                    if (!KINDS[b.type].landable) continue;
-                    const BodyGen g = BodyGen::make(b);
-                    if (n < 2000) { mixIn(b.type); mixIn(g.traits[0]); mixIn(g.traits[1]); mixIn(g.traits[2]); }
-                    n++;
-                    const bool people = g.hasTrait(TR_CIVILISATION) || (x == HOME_SX && z == HOME_SZ && b.parent < 0 && b.type == PT_FELISIAN);   // a people's world, or home
-                    bool fit = false;
-                    for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (TRAITS[t].kind == TK_LANDFORM && traitEligible(b.type, t) && !people) fit = true;
-                    int kinds = 0, got = 0;
-                    for (int j = 3; j < TRAIT_SLOTS; j++) {
-                        const int t = g.traits[j];
-                        if (!t) { for (int jj = j + 1; jj < TRAIT_SLOTS; jj++) if (g.traits[jj]) { slotsOk = false; why = b.name + ": a gap"; } break; }
-                        got++; carried[t]++;
-                        if (!first[t].s.seed) { first[t].s = st; first[t].bi = bi; }
-                        if (TRAITS[t].kind == TK_FIRST || !traitEligible(b.type, t) || (people && TRAITS[t].moves) || ((kinds >> TRAITS[t].kind) & 1)) { slotsOk = false; why = b.name + ": " + TRAITS[t].name; }
-                        kinds |= 1 << TRAITS[t].kind;
-                        for (int o = 0; o < TRAIT_SLOTS; o++) {
-                            const int u = g.traits[o];
-                            if (o == j || !u) continue;
-                            if (u == t || TRAITS[t].excludes == u || TRAITS[u].excludes == t || (TRAITS[t].colour && TRAITS[u].colour)) { slotsOk = false; why = b.name + ": " + TRAITS[t].name + " with " + TRAITS[u].name; }
-                        }
+        for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& b = sys.bodies[bi];
+                if (b.type == PT_COMPANION) continue;
+                const unsigned f = bodyFacts(sys, bi); bodies++;
+                for (int k = 0; k < BF_COUNT; k++) if ((f >> k) & 1u) factN[k]++;
+                const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;
+                const bool want[BF_COUNT] = {b.axialTilt > 60 * DEG, b.rotPeriod < 0, !b.locked && std::fabs(b.rotPeriod) < 1800, b.locked, (moon ? sys.bodies[b.parent].ecc : b.ecc) > 0.2,
+                                             magneticClass(magneticField(b)) == 3, magneticClass(magneticField(b)) == 0, moon && b.orbitPeriod < 0, b.doublePlanet, b.rings};
+                for (int k = 0; k < BF_COUNT; k++) if ((((f >> k) & 1u) != 0) != want[k]) { factsOk = false; fwhy = fmt("%s %s", b.name.c_str(), BODY_FACT_NAMES[k]); }
+                if (!KINDS[b.type].landable) continue;
+                const BodyGen g = BodyGen::make(b);
+                if (n < 2000) { mixIn(b.type); mixIn(g.traits[0]); mixIn(g.traits[1]); mixIn(g.traits[2]); }
+                n++;
+                const bool people = g.hasTrait(TR_CIVILISATION) || (x == HOME_SX && z == HOME_SZ && b.parent < 0 && b.type == PT_FELISIAN);   // a people's world, or home
+                bool fit = false;
+                for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (TRAITS[t].kind == TK_LANDFORM && traitEligible(b.type, t) && !people) fit = true;
+                int kinds = 0, got = 0;
+                for (int j = 3; j < TRAIT_SLOTS; j++) {
+                    const int t = g.traits[j];
+                    if (!t) { for (int jj = j + 1; jj < TRAIT_SLOTS; jj++) if (g.traits[jj]) { slotsOk = false; why = b.name + ": a gap"; } break; }
+                    got++; carried[t]++;
+                    if (!first[t].s.seed) { first[t].s = st; first[t].bi = bi; }
+                    if (TRAITS[t].kind == TK_FIRST || !traitEligible(b.type, t) || (people && TRAITS[t].moves) || ((kinds >> TRAITS[t].kind) & 1)) { slotsOk = false; why = b.name + ": " + TRAITS[t].name; }
+                    kinds |= 1 << TRAITS[t].kind;
+                    for (int o = 0; o < TRAIT_SLOTS; o++) {
+                        const int u = g.traits[o];
+                        if (o == j || !u) continue;
+                        if (u == t || TRAITS[t].excludes == u || TRAITS[u].excludes == t || (TRAITS[t].colour && TRAITS[u].colour)) { slotsOk = false; why = b.name + ": " + TRAITS[t].name + " with " + TRAITS[u].name; }
                     }
-                    if (fit) { fits++; if (!got) fitsNone++; }
-                    if (b.type == PT_ACIDIC && g.hasTrait(TR_KARST) && !acidKarst.s.seed) { acidKarst.s = st; acidKarst.bi = bi; }
                 }
+                if (fit) { fits++; if (!got) fitsNone++; }
+                if (b.type == PT_ACIDIC && g.hasTrait(TR_KARST) && !acidKarst.s.seed) { acidKarst.s = st; acidKarst.bi = bi; }
             }
+        }
         check("traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)", h == 0xee430ab584b04f72ULL, fmt("%016llx over %d", (unsigned long long)h, std::min(n, 2000)));
         std::string missing;
         for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (!carried[t] && TRAITS[t].kind != TK_DARK) missing += std::string(" ") + TRAITS[t].name;   // D-04: the dark's own are the drifters' (`rogues dark`)

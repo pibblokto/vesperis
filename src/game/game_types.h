@@ -19,7 +19,7 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        DRONES,         // C-18: the drone bay's screen
                        AUTO };         // R-419: auto-explore's profiles
 
-extern const char* SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
+extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
 
 // E-06: what each state is, a row a state in GameState's order: the traits the frame, the radio, the save and the controller
 // read, the controller's context, the name the harness prints. A new state appends its row (the count and the order are
@@ -94,12 +94,20 @@ struct CabinFrame {
     std::vector<DronePrim> prims[DRONE_COUNT];
 };
 
+// what the explorer faces in the cabin, E using it (`Cabin::facing`; SCREENS' rows): nothing, the GOES console, the flight computer, the
+// star map's, the landing map's and the target's screens, the capsule's cage, the shard decoder, the signal radar, the telescope, the
+// instruments' case, the drone bay
+enum CabinFacing { FACE_NOTHING = 0, FACE_GOES, FACE_FLIGHT, FACE_STAR_MAP, FACE_LANDING, FACE_TARGET, FACE_CAGE, FACE_DECODER, FACE_RADAR, FACE_TELESCOPE, FACE_CASE, FACE_BAY, FACE_COUNT };
+// what a text entry names (`Game::textKind`): the star, a world, a note for the log, a star to find, a sector to go to, a mark, a piece
+// of music, a star of the sky (the telescope's), a storm, a place of the galaxy
+enum TextKind { TEXT_NONE = 0, TEXT_STAR, TEXT_WORLD, TEXT_NOTE, TEXT_FIND_STAR, TEXT_SECTOR, TEXT_MARK, TEXT_PIECE, TEXT_SKY_STAR, TEXT_STORM, TEXT_PLACE };
+
 // M2: the explorer inside the Stardrifter
 struct Cabin {
     double x = 0.4, z = -1.6, yaw = 0, pitch = 0;   // ship-local metres; yaw 0 looks out of the front window
     bool light = true, depolarised = false, onRoof = false;
     double lightLevel = 1;
-    int facing = 0;   // what E would use
+    int facing = FACE_NOTHING;   // what E would use (a CabinFacing)
 };
 
 // the cabin's banks: its hull, the flight computer's screen, its light (cabin.cpp; drone_draw.cpp draws the rack in them)
@@ -108,7 +116,7 @@ const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10;
 // the cage, 0 nothing), the bank its screen is drawn in (9 the flight computer's green, 21-27 the others) and its colour;
 // the prompt under the crosshair takes the colour too
 struct ScreenLook { int bank; RGB col; };
-const ScreenLook SCREENS[12] = {
+const ScreenLook SCREENS[FACE_COUNT] = {
     {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 0: nothing faced
     {21, RGB(1.0f, 0.72f, 0.25f)},            // 1 the GOES console: amber
     {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 2 the flight computer: the green phosphor

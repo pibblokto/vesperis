@@ -9,7 +9,7 @@ const char* const VG_AGES[6] = {"prehistoric", "medieval", "industrial", "modern
 namespace {
 // a count written in words ("twenty", "a hundred", "three hundred") or digits: -1 neither
 long countOf(const std::string& text) {
-    std::string s = lower(trim(text));
+    std::string s = lowerOf(trim(text));
     if (s.empty()) return -1;
     if (std::isdigit((unsigned char)s[0])) { long n = 0; for (char c : s) { if (c == ',') continue; if (!std::isdigit((unsigned char)c)) return -1; n = n * 10 + (c - '0'); } return n; }
     static const std::map<std::string, long> W = {{"no", 0}, {"none", 0}, {"zero", 0}, {"one", 1}, {"a", 1}, {"two", 2}, {"three", 3}, {"four", 4}, {"five", 5}, {"six", 6}, {"seven", 7},
@@ -246,7 +246,7 @@ struct Expander : VgRun {
         auto word = [&](const std::string& w) { if (!sig.empty()) sig += ' '; sig += w; words++; };
         auto finish = [&]() {
             if (words >= 6 && !inFormula) {
-                uint64_t h = 1469598103934665603ULL; for (unsigned char ch : sig) { h ^= ch; h *= 1099511628211ULL; }
+                const uint64_t h = fnv1a(sig);
                 auto it = mem->frames.find(h);
                 if (it != mem->frames.end()) { if (it->second < seq0 && !standing.count(h)) { repeats++; lastRepeats.push_back(h); } }
                 else if (insert) { mem->frames[h] = mem->frameSeq++; journal.push_back({2, 0, h}); }
@@ -264,7 +264,7 @@ struct Expander : VgRun {
                         if (!w.empty()) {
                             if (std::isdigit((unsigned char)w[0])) word("#");
                             else if (std::isupper((unsigned char)w[0]) && w != "I") word("N");
-                            else { std::string l = lower(w); word(numberWordF(l) ? "#" : l); }
+                            else { std::string l = lowerOf(w); word(numberWordF(l) ? "#" : l); }
                             w.clear();
                         }
                         if (ch == '.' || ch == '?' || ch == '!') finish();
@@ -273,7 +273,7 @@ struct Expander : VgRun {
                 }
                 case T_PAR: finish(); break;
                 case T_NAME: word("N"); break;
-                case T_WORD: word(lower(k.s)); break;
+                case T_WORD: word(lowerOf(k.s)); break;
                 case T_ENT: { const int p = k.ent >= 0 && k.ent < (int)M.entities.size() ? M.entities[k.ent].person : 3; word(p == 1 ? "I" : (p == 2 ? "you" : "E")); break; }
                 case T_VERB: word(k.s); break;
                 case T_FBEGIN: fdepth++; inFormula = true; break;
@@ -561,7 +561,7 @@ struct Realiser {
         size_t e = s.size();
         while (e > 0 && !std::isalnum((unsigned char)s[e - 1])) { if (s[e - 1] != ' ') return ""; e--; }
         size_t b = e; while (b > 0 && (std::isalnum((unsigned char)s[b - 1]) || s[b - 1] == '\'')) b--;
-        return lower(s.substr(b, e - b));
+        return lowerOf(s.substr(b, e - b));
     }
     void run(const std::vector<Tok>& toks) {
         for (const Tok& k : toks) {

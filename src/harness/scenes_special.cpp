@@ -181,127 +181,124 @@ static void faceDir(SurfaceView& sv, double t, const Vec3& dirW, double pitchUnd
 }
 bool setupNightScene(int which, SurfaceView& sv, StarSystem& sysOut, StarNeighborhood& nb, double& tOut) {
     const double t0 = 1000;
-    for (int64_t x = 150; x < 200; x++)
-        for (int64_t z = 20; z < 80; z++) {
-            Star st; if (!starInSector(x, 0, z, st)) continue;
-            StarSystem sys; sys.generate(st);
-            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                const Body& B = sys.bodies[bi];
-                if (!KINDS[B.type].landable) continue;
-                const bool atm = KINDS[B.type].atmosphere;
-                BodyGen g = BodyGen::make(B);
-                auto clearSky = [&](double la, double lo, double T) {   // `computeEnvironment`'s pattern cloud (W-03's front scene)
-                    if (!atm) return true;
-                    double drift = T * TAU / (std::fabs(B.rotPeriod) * 3.7) + 1.0;
-                    return clampd(sampleCloudPattern(g, lo + drift, la) * 1.3 + 0.25 * gnoise2(T / 900.0, g.seed & 1023, g.seed), 0, 1) < 0.25;
-                };
-                double bestLat = 0, bestLon = 0, bestT = 0, bestScore = -1e9; Vec3 faceW; double under = 0; std::string what;
-                std::vector<std::pair<double, double>> sites;
-                if (which == 0) {
-                    if (B.parent >= 0 || !atm) continue;
-                    std::vector<MeteorShower> sh; meteorShowersOf(sys, bi, sh);
-                    if (sh.empty() || sh[0].strength < 0.7) continue;
-                    const MeteorShower& s = sh[0];
-                    double tp = showerPeakAfter(s, t0);
-                    Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, tp));
-                    { DrainageOff off; landSitesOf(sys, bi, 0x5A0E, 400, sites); }
-                    for (auto& p : sites) {
-                        double ra = altAt(sys, bi, p.first, p.second, tp, s.radiant), sa = altAt(sys, bi, p.first, p.second, tp, sunW);
-                        if (sa > -18 * DEG || !clearSky(p.first, p.second, tp)) continue;
-                        if (ra > bestScore) { bestScore = ra; bestLat = p.first; bestLon = p.second; bestT = tp; }
-                    }
-                    if (bestScore < 35 * DEG) continue;
-                    faceW = s.radiant; under = 22 * DEG;
-                    what = fmt("the shower of %s (strength %.2f, %.0f a minute at the peak, width %.0f min) at its peak t %.0f, the radiant %.0f deg up", sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.sigma / 60, tp, bestScore / DEG);
-                } else if (which == 1) {
-                    if (!atm || zodiacalDust(sys, bi) < 0.7 || sys.companion >= 0) continue;   // a second sun up would keep the sky lit
-                    Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, t0));
-                    { DrainageOff off; landSitesOf(sys, bi, 0x20D1, 600, sites); }
-                    for (auto& p : sites) {
-                        if (std::fabs(p.first) > 20 * DEG) continue;
-                        double sa = altAt(sys, bi, p.first, p.second, t0, sunW), sLater = altAt(sys, bi, p.first, p.second, t0 + 60, sunW);
-                        if (sLater > sa || !clearSky(p.first, p.second, t0)) continue;   // the evening: the sun going down
-                        double sc = -std::fabs(sa + 20 * DEG);
-                        if (sc > bestScore) { bestScore = sc; bestLat = p.first; bestLon = p.second; bestT = t0; }
-                    }
-                    if (bestScore < -3 * DEG) continue;
-                    faceW = sunW; under = -1;   // where it set, looking 12 degrees up
-                    what = fmt("the zodiacal dust %.2f (%s, %zu belts), the sun %.1f deg down", zodiacalDust(sys, bi), STAR_CLASSES[sys.star.cls].name, sys.belts.size(), -altAt(sys, bi, bestLat, bestLon, bestT, sunW) / DEG);
-                } else if (which == 2) {
-                    if (B.parent >= 0 || B.moonCount == 0) continue;
-                    int moon = -1;
-                    for (int j = 0; j < (int)sys.bodies.size(); j++) {
-                        const Body& M = sys.bodies[j];
-                        if (M.parent != bi) continue;
-                        if (std::asin(clampd(M.radiusKm / (M.orbitRadiusKm - B.radiusKm), 0, 1)) >= 1.0 * DEG) { moon = j; break; }
-                    }
-                    if (moon < 0) continue;
-                    double P = std::fabs(sys.bodies[moon].orbitPeriod);
-                    { DrainageOff off; landSitesOf(sys, bi, 0xEA27, 300, sites); }
-                    for (double T = t0; T < t0 + 2 * P && bestScore < 0; T += P / 240) {
-                        Vec3 bp = sys.bodyPos(bi, T), mp = sys.bodyPos(moon, T);
-                        Vec3 sunW = normalize(sys.star.pos - bp), moonW = normalize(mp - bp);
-                        double el = std::acos(clampd(dot(sunW, moonW), -1, 1));
-                        if (el < 25 * DEG || el > 50 * DEG) continue;
-                        for (auto& p : sites) {
-                            double sa = altAt(sys, bi, p.first, p.second, T, sunW);
-                            if (sa > -12 * DEG || sa < -20 * DEG || !clearSky(p.first, p.second, T)) continue;
-                            Vec3 toMoon = normalize(mp - siteKm(sys, bi, p.first, p.second, T));
-                            double ma = altAt(sys, bi, p.first, p.second, T, toMoon);
-                            if (ma > 12 * DEG && ma > bestScore) { bestScore = ma; bestLat = p.first; bestLon = p.second; bestT = T; }
-                        }
-                    }
-                    if (bestScore < 12 * DEG) continue;
-                    faceW = normalize(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)); under = 6 * DEG;
-                    Vec3 bp = sys.bodyPos(bi, bestT);
-                    what = fmt("%s %.0f deg from the sun, %.0f deg up, %.1f deg across", sys.bodies[moon].name.c_str(), std::acos(clampd(dot(normalize(sys.star.pos - bp), normalize(sys.bodyPos(moon, bestT) - bp)), -1, 1)) / DEG, bestScore / DEG,
-                               2 * std::asin(clampd(sys.bodies[moon].radiusKm / length(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)), 0, 1)) / DEG);
-                } else {
-                    if (B.parent < 0 || sys.bodies[B.parent].type != PT_GASGIANT) continue;
-                    double P = std::fabs(B.orbitPeriod);
-                    { DrainageOff off; landSitesOf(sys, bi, 0x300E, 400, sites); }
-                    for (double T = t0; T < t0 + 2 * P && bestScore < 0; T += P / 360) {
-                        Vec3 bp = sys.bodyPos(bi, T), pp = sys.bodyPos(B.parent, T);
-                        Vec3 sunW = normalize(sys.star.pos - bp), parW = normalize(pp - bp);
-                        if (dot(sunW, parW) > std::cos(150 * DEG)) continue;
-                        for (auto& p : sites) {
-                            double pa = altAt(sys, bi, p.first, p.second, T, parW), sa = altAt(sys, bi, p.first, p.second, T, sunW);
-                            if (sa > -15 * DEG || pa < 6 * DEG || pa > 14 * DEG) continue;   // a low parent, in the frame over the horizon
-                            DrainageOff off;
-                            SurfaceSite probe; probe.init(&sys, bi, p.first, p.second, T);
-                            SiteMetrics m = measureSite(probe, false);
-                            if (m.relief16k < 350 || m.material == MAT_WATER) continue;
-                            bestScore = m.relief16k; bestLat = p.first; bestLon = p.second; bestT = T; break;
-                        }
-                    }
-                    if (bestScore < 0) continue;
-                    Vec3 parW = normalize(sys.bodyPos(B.parent, bestT) - sys.bodyPos(bi, bestT));
-                    faceW = parW; under = 4 * DEG;   // toward the parent, low over the horizon
-                    what = fmt("under %s, %.0f deg up, the shine %.2f, %.0f m of relief over 16 km", sys.bodies[B.parent].name.c_str(), altAt(sys, bi, bestLat, bestLon, bestT, parW) / DEG,
-                               bodyShineAt(sys, B.parent, siteKm(sys, bi, bestLat, bestLon, bestT), bestT, 1.0), bestScore);
+    for (auto& [x, z, st, sys] : scanSystems(150, 200, 20, 80)) {
+        for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+            const Body& B = sys.bodies[bi];
+            if (!KINDS[B.type].landable) continue;
+            const bool atm = KINDS[B.type].atmosphere;
+            BodyGen g = BodyGen::make(B);
+            auto clearSky = [&](double la, double lo, double T) {   // `computeEnvironment`'s pattern cloud (W-03's front scene)
+                if (!atm) return true;
+                double drift = T * TAU / (std::fabs(B.rotPeriod) * 3.7) + 1.0;
+                return clampd(sampleCloudPattern(g, lo + drift, la) * 1.3 + 0.25 * gnoise2(T / 900.0, g.seed & 1023, g.seed), 0, 1) < 0.25;
+            };
+            double bestLat = 0, bestLon = 0, bestT = 0, bestScore = -1e9; Vec3 faceW; double under = 0; std::string what;
+            std::vector<std::pair<double, double>> sites;
+            if (which == 0) {
+                if (B.parent >= 0 || !atm) continue;
+                std::vector<MeteorShower> sh; meteorShowersOf(sys, bi, sh);
+                if (sh.empty() || sh[0].strength < 0.7) continue;
+                const MeteorShower& s = sh[0];
+                double tp = showerPeakAfter(s, t0);
+                Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, tp));
+                { DrainageOff off; landSitesOf(sys, bi, 0x5A0E, 400, sites); }
+                for (auto& p : sites) {
+                    double ra = altAt(sys, bi, p.first, p.second, tp, s.radiant), sa = altAt(sys, bi, p.first, p.second, tp, sunW);
+                    if (sa > -18 * DEG || !clearSky(p.first, p.second, tp)) continue;
+                    if (ra > bestScore) { bestScore = ra; bestLat = p.first; bestLon = p.second; bestT = tp; }
                 }
-                sysOut = sys;
-                sv.init(&sysOut, bi, bestLat, bestLon, bestT);
-                nb.update(sv.site.worldPos(bestT, 0, 0, 0));
-                faceDir(sv, bestT, faceW, under);
-                if (which == 0) {   // the moment of the peak's four minutes with the most streaks in view
-                    Vec3 view(std::sin(sv.player.yaw) * std::cos(sv.player.pitch), std::sin(sv.player.pitch), std::cos(sv.player.yaw) * std::cos(sv.player.pitch));
-                    int most = -1; double tp = bestT;
-                    for (double T = tp - 120; T <= tp + 120; T += 1.0 / 30) {
-                        std::vector<SurfaceView::ShowerMeteor> ms; sv.showerMeteorsAt(T, ms);
-                        int n = 0; for (auto& m : ms) if (dot(m.head, view) > std::cos(25 * DEG) && m.bright > 20) n++;
-                        if (n > most) { most = n; bestT = T; }
-                    }
-                    what += fmt(", %d streaks in view at t %.2f", most, bestT);
+                if (bestScore < 35 * DEG) continue;
+                faceW = s.radiant; under = 22 * DEG;
+                what = fmt("the shower of %s (strength %.2f, %.0f a minute at the peak, width %.0f min) at its peak t %.0f, the radiant %.0f deg up", sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.sigma / 60, tp, bestScore / DEG);
+            } else if (which == 1) {
+                if (!atm || zodiacalDust(sys, bi) < 0.7 || sys.companion >= 0) continue;   // a second sun up would keep the sky lit
+                Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, t0));
+                { DrainageOff off; landSitesOf(sys, bi, 0x20D1, 600, sites); }
+                for (auto& p : sites) {
+                    if (std::fabs(p.first) > 20 * DEG) continue;
+                    double sa = altAt(sys, bi, p.first, p.second, t0, sunW), sLater = altAt(sys, bi, p.first, p.second, t0 + 60, sunW);
+                    if (sLater > sa || !clearSky(p.first, p.second, t0)) continue;   // the evening: the sun going down
+                    double sc = -std::fabs(sa + 20 * DEG);
+                    if (sc > bestScore) { bestScore = sc; bestLat = p.first; bestLon = p.second; bestT = t0; }
                 }
-                sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
-                Input in; sv.update(0.016, in, bestT, false);
-                printf("  %s (%s, sector %lld 0 %lld, body %d) at %.3f %.3f, t %.2f: %s; facing %.0f deg, pitch %.0f\n", B.name.c_str(), KINDS[B.type].name, (long long)x, (long long)z, bi,
-                       bestLat / DEG, bestLon / DEG, bestT, what.c_str(), sv.player.yaw / DEG, sv.player.pitch / DEG);
-                tOut = bestT;
-                return true;
+                if (bestScore < -3 * DEG) continue;
+                faceW = sunW; under = -1;   // where it set, looking 12 degrees up
+                what = fmt("the zodiacal dust %.2f (%s, %zu belts), the sun %.1f deg down", zodiacalDust(sys, bi), STAR_CLASSES[sys.star.cls].name, sys.belts.size(), -altAt(sys, bi, bestLat, bestLon, bestT, sunW) / DEG);
+            } else if (which == 2) {
+                if (B.parent >= 0 || B.moonCount == 0) continue;
+                int moon = -1;
+                for (int j = 0; j < (int)sys.bodies.size(); j++) {
+                    const Body& M = sys.bodies[j];
+                    if (M.parent != bi) continue;
+                    if (std::asin(clampd(M.radiusKm / (M.orbitRadiusKm - B.radiusKm), 0, 1)) >= 1.0 * DEG) { moon = j; break; }
+                }
+                if (moon < 0) continue;
+                double P = std::fabs(sys.bodies[moon].orbitPeriod);
+                { DrainageOff off; landSitesOf(sys, bi, 0xEA27, 300, sites); }
+                for (double T = t0; T < t0 + 2 * P && bestScore < 0; T += P / 240) {
+                    Vec3 bp = sys.bodyPos(bi, T), mp = sys.bodyPos(moon, T);
+                    Vec3 sunW = normalize(sys.star.pos - bp), moonW = normalize(mp - bp);
+                    double el = std::acos(clampd(dot(sunW, moonW), -1, 1));
+                    if (el < 25 * DEG || el > 50 * DEG) continue;
+                    for (auto& p : sites) {
+                        double sa = altAt(sys, bi, p.first, p.second, T, sunW);
+                        if (sa > -12 * DEG || sa < -20 * DEG || !clearSky(p.first, p.second, T)) continue;
+                        Vec3 toMoon = normalize(mp - siteKm(sys, bi, p.first, p.second, T));
+                        double ma = altAt(sys, bi, p.first, p.second, T, toMoon);
+                        if (ma > 12 * DEG && ma > bestScore) { bestScore = ma; bestLat = p.first; bestLon = p.second; bestT = T; }
+                    }
+                }
+                if (bestScore < 12 * DEG) continue;
+                faceW = normalize(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)); under = 6 * DEG;
+                Vec3 bp = sys.bodyPos(bi, bestT);
+                what = fmt("%s %.0f deg from the sun, %.0f deg up, %.1f deg across", sys.bodies[moon].name.c_str(), std::acos(clampd(dot(normalize(sys.star.pos - bp), normalize(sys.bodyPos(moon, bestT) - bp)), -1, 1)) / DEG, bestScore / DEG,
+                           2 * std::asin(clampd(sys.bodies[moon].radiusKm / length(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)), 0, 1)) / DEG);
+            } else {
+                if (B.parent < 0 || sys.bodies[B.parent].type != PT_GASGIANT) continue;
+                double P = std::fabs(B.orbitPeriod);
+                { DrainageOff off; landSitesOf(sys, bi, 0x300E, 400, sites); }
+                for (double T = t0; T < t0 + 2 * P && bestScore < 0; T += P / 360) {
+                    Vec3 bp = sys.bodyPos(bi, T), pp = sys.bodyPos(B.parent, T);
+                    Vec3 sunW = normalize(sys.star.pos - bp), parW = normalize(pp - bp);
+                    if (dot(sunW, parW) > std::cos(150 * DEG)) continue;
+                    for (auto& p : sites) {
+                        double pa = altAt(sys, bi, p.first, p.second, T, parW), sa = altAt(sys, bi, p.first, p.second, T, sunW);
+                        if (sa > -15 * DEG || pa < 6 * DEG || pa > 14 * DEG) continue;   // a low parent, in the frame over the horizon
+                        DrainageOff off;
+                        SurfaceSite probe; probe.init(&sys, bi, p.first, p.second, T);
+                        SiteMetrics m = measureSite(probe, false);
+                        if (m.relief16k < 350 || m.material == MAT_WATER) continue;
+                        bestScore = m.relief16k; bestLat = p.first; bestLon = p.second; bestT = T; break;
+                    }
+                }
+                if (bestScore < 0) continue;
+                Vec3 parW = normalize(sys.bodyPos(B.parent, bestT) - sys.bodyPos(bi, bestT));
+                faceW = parW; under = 4 * DEG;   // toward the parent, low over the horizon
+                what = fmt("under %s, %.0f deg up, the shine %.2f, %.0f m of relief over 16 km", sys.bodies[B.parent].name.c_str(), altAt(sys, bi, bestLat, bestLon, bestT, parW) / DEG,
+                           bodyShineAt(sys, B.parent, siteKm(sys, bi, bestLat, bestLon, bestT), bestT, 1.0), bestScore);
             }
+            sysOut = sys;
+            sv.init(&sysOut, bi, bestLat, bestLon, bestT);
+            nb.update(sv.site.worldPos(bestT, 0, 0, 0));
+            faceDir(sv, bestT, faceW, under);
+            if (which == 0) {   // the moment of the peak's four minutes with the most streaks in view
+                Vec3 view(std::sin(sv.player.yaw) * std::cos(sv.player.pitch), std::sin(sv.player.pitch), std::cos(sv.player.yaw) * std::cos(sv.player.pitch));
+                int most = -1; double tp = bestT;
+                for (double T = tp - 120; T <= tp + 120; T += 1.0 / 30) {
+                    std::vector<SurfaceView::ShowerMeteor> ms; sv.showerMeteorsAt(T, ms);
+                    int n = 0; for (auto& m : ms) if (dot(m.head, view) > std::cos(25 * DEG) && m.bright > 20) n++;
+                    if (n > most) { most = n; bestT = T; }
+                }
+                what += fmt(", %d streaks in view at t %.2f", most, bestT);
+            }
+            sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
+            Input in; sv.update(0.016, in, bestT, false);
+            printf("  %s (%s, sector %lld 0 %lld, body %d) at %.3f %.3f, t %.2f: %s; facing %.0f deg, pitch %.0f\n", B.name.c_str(), KINDS[B.type].name, (long long)x, (long long)z, bi,
+                   bestLat / DEG, bestLon / DEG, bestT, what.c_str(), sv.player.yaw / DEG, sv.player.pitch / DEG);
+            tOut = bestT;
+            return true;
         }
+    }
     printf("  no place for the night scene %d\n", which);
     return false;
 }

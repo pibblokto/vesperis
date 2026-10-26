@@ -22,7 +22,6 @@ Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g, int which = 
 std::string peopleNameOf(const BodyGen& g);   // C-10: what `loreOf` would call the world's people, without the rest (the other peoples a chart names); C-13: a people's by `peopleGen`
 struct Shard;
 Lore loreQuick(const StarSystem& sys, const Body& b, const BodyGen& g, int which = 0);   // C-12: the lore without the chart marks (the names, the span, the calendar, the last): the view's graves, the harness
-int loreStyleOf(const BodyGen& g);                  // C-12: the names' style alone
 // C-12: a person's given name, nine letters at most (the graves'); H-04's second pass: in the people's tongue (`tongueName`), the sex drawn
 // from the seed where none is given
 std::string personName(const Lore& L, uint64_t seed);
@@ -69,7 +68,6 @@ int shardWords(const std::string& text);   // words, for the harness and the uni
 // rebuild, the texts built again). H-04 (2026-10-09): the genres of each age written from the history (peoples/genres.h)
 std::shared_ptr<const VgGrammar> shardGrammar();
 const VgSchema& shardSchema();
-int shardGrammarGeneration();                     // moves on with every reload
 int shardGrammarFiles(std::vector<std::string>* names);
 const char* shardGrammarSource(int file);         // the compiled-in text of a file (the unit compares it with the tree's)
 bool shardGrammarFromDisk(const std::string& dir, std::string& report);   // false: a file unread or the link's errors (in `report`; the grammar is still the one read)

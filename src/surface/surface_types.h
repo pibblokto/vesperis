@@ -167,7 +167,7 @@ struct Flock {
 };
 // N3 creature behaviour states
 enum CritterState { CS_IDLE = 0, CS_WALK, CS_GRAZE, CS_DRINK, CS_REST, CS_ALERT, CS_FLEE, CS_CURIOUS };
-extern const char* CRITTER_STATE_NAMES[8];
+extern const char* const CRITTER_STATE_NAMES[8];
 struct Critter {
     double x = 0, z = 0, heading = 0, speed = 0, timer = 0, size = 1;
     uint64_t seed = 0;

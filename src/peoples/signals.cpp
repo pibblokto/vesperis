@@ -448,7 +448,7 @@ int programmeOf(uint64_t worldSeed, int slot, bool music, int age) {
 namespace {
 // a digit group of four or five in the people's words for the digits, one word spoken digit by digit (as `decodeShard` reads a numeral)
 DecodedWord digitGroup(const Tongue& T, uint64_t h, int year, int k) {
-    static const char* DIGITS[10] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
+    static const char* const DIGITS[10] = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
     DecodedWord w; w.known = true; w.post = ".";
     std::string digits;
     if (k == 0 && year > 0) { digits = std::to_string(year); while (digits.size() < 4) digits = "0" + digits; }

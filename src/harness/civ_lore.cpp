@@ -13,8 +13,7 @@ bool checkChartsByAge(std::string& detail) {
         int charts = 0, bad = 0, byStyle[CHS_COUNT] = {}, ageHas = 0; std::string badWhat; double loreMax = 0;
         auto fail = [&](const std::string& w) { bad++; if (badWhat.size() < 300) badWhat += w + "; "; };
         for (int a = 0; a < AGE_COUNT; a++) {
-            Star s; if (!starInSector(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, s, true)) continue;
-            StarSystem sys; sys.generate(s); if (AGE_WORLDS[a].body >= (int)sys.bodies.size()) continue;
+            Star s; StarSystem sys; if (!systemAt(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, s, sys, true)) continue; if (AGE_WORLDS[a].body >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[AGE_WORLDS[a].body]; BodyGen g = BodyGen::make(b); if (!g.hasTrait(TR_CIVILISATION)) continue;
             const int which = AGE_WORLDS[a].which;
             double t0 = nowSec(); Lore L = loreOf(sys, b, g, which); loreMax = std::max(loreMax, (nowSec() - t0) * 1e3);
@@ -158,8 +157,7 @@ int runShards(int argc, char** argv) {
     int n = argc > 5 ? atoi(argv[5]) : 50; bool full = false; int held = 1;
     if (argc > 6) { if (std::string(argv[6]) == "full") full = true; else held = atoi(argv[6]); }
     if (argc > 7 && std::string(argv[7]) == "full") full = true;
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     return shardsOfWorld(s, sys, bi, which, n, full, held, sx, sz);
 }
 int shardsOfWorld(const Star& s, StarSystem& sys, int bi, int which, int n, bool full, int held, int64_t sx, int64_t sz) {
@@ -251,8 +249,7 @@ static int runChartsAges() {
     for (const auto& wv : worlds) {
         bool all = true; for (int k = 0; k < W; k++) if (wantMore(k)) all = false;
         if ((all && scanned >= AGE_COUNT) || scanned > 400) break;
-        Star s; if (!starInSector(wv[0], 0, wv[1], s, true)) continue;
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(wv[0], 0, wv[1], s, sys, true)) continue;
         for (const Body& b : sys.bodies) {
             if (wv[2] >= 0 && b.index != wv[2]) continue;
             if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: every people's world (a scorched one's too)
@@ -395,13 +392,12 @@ int runCharts(int argc, char** argv) {
     int which = takePeopleArg(argc, argv);   // C-13: `second` for the world's second people
     if (argc < 5) { printf("charts <sx> <sz> <body index> [index]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]); int want = argc > 5 ? atoi(argv[5]) : -1;
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi]; BodyGen g = BodyGen::make(b);
     if (!g.hasTrait(TR_CIVILISATION)) printf("(%s had no people: the charts below are what it would have drawn)\n", b.name.c_str());
     double t0 = nowSec(); Lore L = loreOf(sys, b, g, which); double ms = (nowSec() - t0) * 1e3;
-    static const char* HOW[4] = {"the brightest of their nights", "a people's world among their bright stars", "a people they heard", "far off (H-05)"};
+    static const char* const HOW[4] = {"the brightest of their nights", "a people's world among their bright stars", "a people they heard", "far off (H-05)"};
     printf("%s, %s of %s: the %s drew %d charts (%d of C-02's fifty; the lore in %.1f ms); they mark:\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), L.people.c_str(), (int)L.marks.size(), chartShardsOf(peopleGen(g, which)), ms);
     for (size_t j = 0; j < L.marks.size(); j++) { const ChartMark& m = L.marks[j]; printf("  %zu: %s %s at %lld %lld %lld, %.1f ly: %s%s\n", j, STAR_CLASSES[m.star.cls].code, STAR_CLASSES[m.star.cls].name, (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz, m.ly, HOW[m.how], m.people.empty() ? "" : fmt(" (body %d, the %s)", m.body, m.people.c_str()).c_str()); }
     std::vector<Shard> fifty; shardsOf(sys, b, g, L, L.records, fifty);   // H-05: every chart of the people's records
@@ -620,8 +616,7 @@ int runRuins(int argc, char** argv) {
     if (argc < 5) { printf("ruins <sx> <sz> <body index> [latDeg lonDeg]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
     double lat = argc > 6 ? atof(argv[5]) * DEG : 0.2, lon = argc > 6 ? atof(argv[6]) * DEG : 0.7;
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
@@ -679,8 +674,7 @@ int runGraves(int argc, char** argv) {
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
     double lat = argc > 6 ? atof(argv[5]) * DEG : 0.2, lon = argc > 6 ? atof(argv[6]) * DEG : 0.7;
     int H = argc > 7 ? atoi(argv[7]) : 4;
-    Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    StarSystem sys; sys.generate(s);
+    Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);

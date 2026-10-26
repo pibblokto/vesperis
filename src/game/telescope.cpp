@@ -36,8 +36,8 @@ Proj Game::telescopeProj() const {
 double Game::telescopeFieldDeg() const { return 2 * std::atan(std::tan(settings.fovDeg * 0.5 * DEG) / telescopeZoom()) / DEG; }
 
 void Game::telescopeToggle() {
-    if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); audio.beep = 4; return; }
-    if (ship.mode == ShipState::VIMANA) { status("NOTHING TO SEE IN THE FLIGHT - THE TELESCOPE WAITS", 4); audio.beep = 3; return; }
+    if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); audio.beep = BEEP_UI; return; }
+    if (ship.mode == ShipState::VIMANA) { refuse("NOTHING TO SEE IN THE FLIGHT - THE TELESCOPE WAITS"); return; }
     if (radar.on) radarOff();
     tele.on = true; tele.track = TELE_NONE; tele.offYaw = 0; tele.offPitch = 0;
     cabin.yaw = 0; cabin.pitch = 0;   // the eye is at the eyepiece: the view is the ship's attitude
@@ -45,16 +45,16 @@ void Game::telescopeToggle() {
     telescopeFindTarget();            // what the ship points at is followed from the start: the parked body where the reticle rests (the side faced), another body on its centre
     if (tele.target >= 0 || tele.target == TELE_SUN) { telescopeTrack(tele.target, !(telescopeStabilised() && tele.target == tele.frameBody)); statusNext = statusMsg; statusNextSecs = 3; }
     status("TELESCOPE: +/- ZOOM  ENTER TRACKS  N NAMES  Z STOWS", 4);   // under 52 characters: the line's width (the HUD reads the power)
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 void Game::telescopeOff() { tele.on = false; tele.track = TELE_NONE; tele.target = TELE_NONE; tele.frameBody = -1; }
 
 void Game::telescopeZoomStep(int dir) {
     int s = clampi(tele.step + dir, 1, TELE_MAX_STEP);
-    if (s == tele.step) { audio.beep = 3; return; }
+    if (s == tele.step) { audio.beep = BEEP_ERROR; return; }
     tele.step = s;
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // Enter (and the opening) tracks a body: its centre brought under the reticle (`recentre`), or, under the stabiliser on the
@@ -65,7 +65,7 @@ void Game::telescopeTrack(int id, bool recentre) {
     if (recentre || !held) telescopeAim();
     if (held) telescopeHoldView();
     status(fmt(held ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(id), 26).c_str()), 3);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
 }
 
 // R-405: the stabiliser. A ship parked at a body holds its parking direction and the view's axis in the body's frame while
@@ -166,10 +166,10 @@ void Game::telescopeName() {
         const Body& b = sys.bodies[tele.target];
         textBody = tele.target;
         const char* what = b.type == PT_COMPANION ? "NAME THE SECOND SUN" : (b.type == PT_COMET ? "NAME THE COMET" : (b.parent >= 0 ? "NAME THIS MOON" : "NAME THIS WORLD"));
-        beginTextEntry(what, 2, bodyNamed(tele.target) ? upper(bodyNameOf(tele.target)) : std::string());
-    } else if (tele.target == TELE_SUN && sys.valid) beginTextEntry("NAME THIS STAR", 1, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string());
-    else if (tele.target == TELE_STAR) { textStar = tele.targetStar; beginTextEntry("NAME THE STAR", 8, starNamed(textStar) ? upper(starNameOf(textStar)) : std::string()); }
-    else { status("NOTHING UNDER THE RETICLE TO NAME", 3); audio.beep = 3; }
+        beginTextEntry(what, TEXT_WORLD, bodyNamed(tele.target) ? upper(bodyNameOf(tele.target)) : std::string());
+    } else if (tele.target == TELE_SUN && sys.valid) beginTextEntry("NAME THIS STAR", TEXT_STAR, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string());
+    else if (tele.target == TELE_STAR) { textStar = tele.targetStar; beginTextEntry("NAME THE STAR", TEXT_SKY_STAR, starNamed(textStar) ? upper(starNameOf(textStar)) : std::string()); }
+    else { refuse("NOTHING UNDER THE RETICLE TO NAME", 3); }
 }
 
 // the eyepiece's controls: steering at a rate that falls with the magnification (the offset from the tracked body's centre
@@ -201,9 +201,9 @@ void Game::updateTelescope(const Input& in, double realDt) {
     if (held) telescopeHoldView();
     telescopeFindTarget();
     if (enterKey(in) && !ship.targeting) {
-        if (tele.track != TELE_NONE) { tele.track = TELE_NONE; status("TRACKING OFF", 2); audio.beep = 4; }
+        if (tele.track != TELE_NONE) { tele.track = TELE_NONE; status("TRACKING OFF", 2); audio.beep = BEEP_UI; }
         else if (tele.target >= 0 || tele.target == TELE_SUN) telescopeTrack(tele.target);
-        else { status("NOTHING UNDER THE RETICLE TO TRACK", 3); audio.beep = 3; }
+        else { refuse("NOTHING UNDER THE RETICLE TO TRACK", 3); }
     }
     if (in.wasPressed(KEY_N) && !in.ctrl() && !ship.targeting) telescopeName();
 }

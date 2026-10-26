@@ -78,39 +78,6 @@ int mesoVariant(int material, uint64_t seed) {
     return (int)(unitFromHash(mix64(seed ^ (0x7E5ULL + (uint64_t)material * 0x9E3779B97F4A7C15ULL))) * n) % n;
 }
 
-const char* mesoVariantName(int material, int variant) {
-    static const char* const names[][3] = {
-        {"CRACKED", "BOULDERS", "LAYERED"},          // rock
-        {"RIPPLES", "PLAYA", "PEBBLY"},              // sand
-        {"TUFTS", "MEADOW", "SCRUB"},                // grass
-        {"LITTER", "ROOTS", ""},                     // forest
-        {"MOTTLED", "SASTRUGI", "CRUSTED"},          // snow
-        {"", "", ""},                                // water
-        {"", "", ""},                                // lava
-        {"FACETED", "RIPPLED", "SHATTERED"},         // ice
-        {"", "", ""},                                // cloud
-        {"FACETED", "DRUSY", ""},                    // quartz
-        {"PLATES", "ROPY", "BLOCKY"},                // basalt
-        {"PEBBLES", "REGOLITH", "RUBBLE"},           // dust
-        {"", "", ""},                                // gas
-        {"HAMMERED", "DENDRITIC", ""},               // metal
-        {"CRUSTY", "LOBES", ""},                     // sulphur
-        {"FLAKY", "SOOTY", ""},                      // graphite
-        {"POLYGONS", "", ""},                        // salt (R-305)
-        {"RIPPLED", "", ""},                         // glass (S-03)
-        {"CRACKED", "", ""},                         // mud (P-01)
-        {"CRUSTED", "", ""},                         // potash (P-01)
-        {"", "", ""},                                // brine (P-01)
-        {"WRINKLED", "", ""},                        // mats (P-02)
-        {"LAMINATED", "", ""},                       // stromatolite (P-02)
-        {"ROSETTES", "", ""},                        // crust (P-02)
-        {"CUSHIONS", "", ""},                        // moss (P-02)
-    };
-    static_assert(sizeof(names) / sizeof(names[0]) == MAT_COUNT, "the meso variants' names: a row for every material (P-00)");
-    if (material < 0 || material >= MAT_COUNT || variant < 0 || variant > 2) return "";
-    return names[material][variant];
-}
-
 void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
     g.resize(N);
     Rng rng(seed ^ (0x51ED1ULL * (material + 1)));

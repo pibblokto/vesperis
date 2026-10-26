@@ -9,18 +9,15 @@ int runDataSheet(int argc, char** argv) {
     const int want = argc > 2 ? atoi(argv[2]) : 6;
     struct Cand { Star s; int bi; size_t score; };
     std::vector<Cand> cands;
-    for (int64_t x = 150; x < 340; x++)
-        for (int64_t z = 20; z < 160; z++) {
-            Star s; if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                const Body& b = sys.bodies[bi];
-                if (!KINDS[b.type].landable) continue;
-                const BodyGen g = BodyGen::make(b);
-                const size_t score = std::strlen(KINDS[b.type].description) + describeBody(b, g).size() + traitList(g).size() + factList(sys, bi).size();
-                cands.push_back({s, bi, score});
-            }
+    for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
+        for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+            const Body& b = sys.bodies[bi];
+            if (!KINDS[b.type].landable) continue;
+            const BodyGen g = BodyGen::make(b);
+            const size_t score = std::strlen(KINDS[b.type].description) + describeBody(b, g).size() + traitList(g).size() + factList(sys, bi).size();
+            cands.push_back({s, bi, score});
         }
+    }
     std::stable_sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) { return a.score > b.score; });
     int over = 0;
     for (int k = 0; k < want && k < (int)cands.size(); k++) {
@@ -654,44 +651,41 @@ int runTides(int argc, char** argv) {
     const bool scene = argc > 2 && std::string(argv[2]) == "scene";
     int shown = 0;
     TideSite first;
-    for (int64_t x = 150; x < 340 && (shown < 10 || (scene && first.bi < 0)); x++)
-        for (int64_t z = 20; z < 160 && (shown < 10 || (scene && first.bi < 0)); z++) {
-            Star st; if (!starInSector(x, 0, z, st)) continue;
-            StarSystem sys; sys.generate(st);
-            for (int bi = 0; bi < (int)sys.bodies.size() && (shown < 10 || (scene && first.bi < 0)); bi++) {
-                const Body& b = sys.bodies[bi];
-                if (!KINDS[b.type].landable) continue;
-                const BodyGen g = BodyGen::make(b);
-                if (!g.hasTrait(TR_GREAT_TIDES)) continue;
-                if (shown >= 10 && !kindHas(b.type, KT_SEA)) continue;   // past the ten listed: looking for the scene's world alone
-                TidePull P[16]; const int n = tidePulls(sys, bi, P, 16);
-                printf("%-22s %-12s R %5.0f km, %5.2f Earths, day %5.0f min: forcing %7.0f m, spring range %4.1f m\n", b.name.c_str(), KINDS[b.type].shortName, b.radiusKm, b.massEarths,
-                       std::fabs(b.rotPeriod) / 60.0, b.tideForcingM, g.tideRangeM);
-                for (int k = 0; k < n; k++) {
-                    const bool star = P[k].body < 0 || sys.bodies[P[k].body].type == PT_COMPANION;
-                    const double m = P[k].body < 0 ? sys.star.massFactor * 333000.0 : sys.bodies[P[k].body].massEarths;
-                    const double d = P[k].body < 0 || P[k].body == b.parent ? (b.parent >= 0 && P[k].body < 0 ? sys.bodies[b.parent].orbitRadiusKm : b.orbitRadiusKm) : sys.bodies[P[k].body].orbitRadiusKm;
-                    printf("    pull of %-24s %12.4g Earths at %8.1f radii: %7.0f m (%2.0f%%)\n", star ? (P[k].body < 0 ? "the star" : "the companion") : sys.bodies[P[k].body].name.c_str(),
-                           m, d / b.radiusKm, P[k].forcingM, 100 * P[k].share);
-                }
-                // met at the equator over three days: its range, and the time between its highs
-                const Vec3 u = StarSystem::bodyFromLatLon(0, 0.3);
-                const double day = std::fabs(b.rotPeriod), dt = day / 400.0;
-                double lo = 1e9, hi = -1e9, lastHigh = -1, gaps = 0; int nGaps = 0;
-                double prev2 = tideOffsetM(sys, bi, u, 1000.0 - 2 * dt, g.tideRangeM), prev = tideOffsetM(sys, bi, u, 1000.0 - dt, g.tideRangeM);
-                for (double t = 1000.0; t < 1000.0 + 3 * day; t += dt) {
-                    const double v = tideOffsetM(sys, bi, u, t, g.tideRangeM);
-                    lo = std::min(lo, v); hi = std::max(hi, v);
-                    if (prev > prev2 && prev >= v) { if (lastHigh > 0) { gaps += t - dt - lastHigh; nGaps++; } lastHigh = t - dt; }
-                    prev2 = prev; prev = v;
-                }
-                const double every = nGaps ? gaps / nGaps / 60.0 : 0.0;
-                printf("    at the equator over three days: %.2f to %.2f m (a range of %.1f m), high water every %.0f min\n", lo, hi, hi - lo, every);
-                // the scene's: a sea of water whose tide turns slowly enough to be watched over an hour (high water every 1.5 to 15 hours)
-                if (scene && first.bi < 0 && kindHas(b.type, KT_SEA) && every > 90 && every < 900) { TideSite ts; if (tideFlatSite(sys, bi, ts)) first = ts; }
-                shown++;
+    for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160, [&] { return (shown < 10 || (scene && first.bi < 0)); })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && (shown < 10 || (scene && first.bi < 0)); bi++) {
+            const Body& b = sys.bodies[bi];
+            if (!KINDS[b.type].landable) continue;
+            const BodyGen g = BodyGen::make(b);
+            if (!g.hasTrait(TR_GREAT_TIDES)) continue;
+            if (shown >= 10 && !kindHas(b.type, KT_SEA)) continue;   // past the ten listed: looking for the scene's world alone
+            TidePull P[16]; const int n = tidePulls(sys, bi, P, 16);
+            printf("%-22s %-12s R %5.0f km, %5.2f Earths, day %5.0f min: forcing %7.0f m, spring range %4.1f m\n", b.name.c_str(), KINDS[b.type].shortName, b.radiusKm, b.massEarths,
+                   std::fabs(b.rotPeriod) / 60.0, b.tideForcingM, g.tideRangeM);
+            for (int k = 0; k < n; k++) {
+                const bool star = P[k].body < 0 || sys.bodies[P[k].body].type == PT_COMPANION;
+                const double m = P[k].body < 0 ? sys.star.massFactor * 333000.0 : sys.bodies[P[k].body].massEarths;
+                const double d = P[k].body < 0 || P[k].body == b.parent ? (b.parent >= 0 && P[k].body < 0 ? sys.bodies[b.parent].orbitRadiusKm : b.orbitRadiusKm) : sys.bodies[P[k].body].orbitRadiusKm;
+                printf("    pull of %-24s %12.4g Earths at %8.1f radii: %7.0f m (%2.0f%%)\n", star ? (P[k].body < 0 ? "the star" : "the companion") : sys.bodies[P[k].body].name.c_str(),
+                       m, d / b.radiusKm, P[k].forcingM, 100 * P[k].share);
             }
+            // met at the equator over three days: its range, and the time between its highs
+            const Vec3 u = StarSystem::bodyFromLatLon(0, 0.3);
+            const double day = std::fabs(b.rotPeriod), dt = day / 400.0;
+            double lo = 1e9, hi = -1e9, lastHigh = -1, gaps = 0; int nGaps = 0;
+            double prev2 = tideOffsetM(sys, bi, u, 1000.0 - 2 * dt, g.tideRangeM), prev = tideOffsetM(sys, bi, u, 1000.0 - dt, g.tideRangeM);
+            for (double t = 1000.0; t < 1000.0 + 3 * day; t += dt) {
+                const double v = tideOffsetM(sys, bi, u, t, g.tideRangeM);
+                lo = std::min(lo, v); hi = std::max(hi, v);
+                if (prev > prev2 && prev >= v) { if (lastHigh > 0) { gaps += t - dt - lastHigh; nGaps++; } lastHigh = t - dt; }
+                prev2 = prev; prev = v;
+            }
+            const double every = nGaps ? gaps / nGaps / 60.0 : 0.0;
+            printf("    at the equator over three days: %.2f to %.2f m (a range of %.1f m), high water every %.0f min\n", lo, hi, hi - lo, every);
+            // the scene's: a sea of water whose tide turns slowly enough to be watched over an hour (high water every 1.5 to 15 hours)
+            if (scene && first.bi < 0 && kindHas(b.type, KT_SEA) && every > 90 && every < 900) { TideSite ts; if (tideFlatSite(sys, bi, ts)) first = ts; }
+            shown++;
         }
+    }
     printf("tides: %d worlds with great tides listed\n", std::min(shown, 10));
     if (!scene) return 0;
     if (first.bi < 0) { printf("no flat found\n"); return 1; }
@@ -753,53 +747,44 @@ void renderTraits(const char* want) {
         if (want && nm != want && !(std::string(want) == "new" && TRAITS[tr].kind == TK_LANDFORM) && !(std::string(want) == "q02" && quality)) continue;
         bool done = false;
         for (int pass = TRAITS[tr].kind == TK_FIRST ? 1 : 0; pass < 2 && !done; pass++)   // Q-01: a new landform's on a world turning to its sun first (a locked world's spot may lie in its night); Q-02: a quality's too
-            for (int64_t x = 150; x < 340 && !done; x++)
-                for (int64_t z = 20; z < 160 && !done; z++) {
-                    Star s; if (!starInSector(x, 0, z, s)) continue;
-                    StarSystem sys; sys.generate(s);
-                    for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++) {
-                        const Body& b = sys.bodies[bi];
-                        const bool plain = !b.locked && (!quality || (sys.companion < 0 && std::fabs(std::fabs(b.rotPeriod) - b.orbitPeriod) > 0.01 * b.orbitPeriod   // Q-02: a quality's on a
-                                                                       && !BodyGen::make(b).hasTrait(TR_STORMS) && !BodyGen::make(b).hasTrait(TR_HAZE)));   // single star's world that turns, its sky clear
-                        // Q-02: the tides on a sea of water first (a methane sea's flat is its sand's brown); the aurorae under an air that never rains (rain hides
-                        // them); the milky seas on a living world's shores (an ocean world's are its floes)
-                        const bool liked = (tr != TR_GREAT_TIDES || kindHas(b.type, KT_SEA)) && (tr != TR_GREAT_AURORAE || KINDS[b.type].rain == RAIN_NONE) && (tr != TR_MILKY_SEAS || kindHas(b.type, KT_FLORA));
-                        if (!KINDS[b.type].landable || (pass == 0 && (!plain || !liked)) || !BodyGen::make(b).hasTrait(tr)) continue;
-                        if (quality) { done = qualitySheet(sys, bi, tr, "shots/tests/trait_" + nm + ".png", sr, nb); continue; }   // Q-02: the next carrier where one gives no sheet
-                        traitSheet(sys, bi, tr, "shots/tests/trait_" + nm + ".png", sr, nb);
-                        done = true;
-                    }
+            for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return !done; })) {
+                for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++) {
+                    const Body& b = sys.bodies[bi];
+                    const bool plain = !b.locked && (!quality || (sys.companion < 0 && std::fabs(std::fabs(b.rotPeriod) - b.orbitPeriod) > 0.01 * b.orbitPeriod   // Q-02: a quality's on a
+                                                                   && !BodyGen::make(b).hasTrait(TR_STORMS) && !BodyGen::make(b).hasTrait(TR_HAZE)));   // single star's world that turns, its sky clear
+                    // Q-02: the tides on a sea of water first (a methane sea's flat is its sand's brown); the aurorae under an air that never rains (rain hides
+                    // them); the milky seas on a living world's shores (an ocean world's are its floes)
+                    const bool liked = (tr != TR_GREAT_TIDES || kindHas(b.type, KT_SEA)) && (tr != TR_GREAT_AURORAE || KINDS[b.type].rain == RAIN_NONE) && (tr != TR_MILKY_SEAS || kindHas(b.type, KT_FLORA));
+                    if (!KINDS[b.type].landable || (pass == 0 && (!plain || !liked)) || !BodyGen::make(b).hasTrait(tr)) continue;
+                    if (quality) { done = qualitySheet(sys, bi, tr, "shots/tests/trait_" + nm + ".png", sr, nb); continue; }   // Q-02: the next carrier where one gives no sheet
+                    traitSheet(sys, bi, tr, "shots/tests/trait_" + nm + ".png", sr, nb);
+                    done = true;
                 }
+            }
         if (!done) printf("%-16s: no body carries it in the scanned sectors\n", TRAITS[tr].name);
     }
     if (!want || std::string(want) == "karst" || std::string(want) == "new") {   // Q-01: the karst on an acidic world (it had the name and the sentence and no towers)
         bool done = false;
-        for (int64_t x = 150; x < 340 && !done; x++)
-            for (int64_t z = 20; z < 160 && !done; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++)
-                    if (sys.bodies[bi].type == PT_ACIDIC && BodyGen::make(sys.bodies[bi]).hasTrait(TR_KARST)) done = traitSheet(sys, bi, TR_KARST, "shots/tests/trait_karst_towers_acidic.png", sr, nb) || true;
-            }
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return !done; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++)
+                if (sys.bodies[bi].type == PT_ACIDIC && BodyGen::make(sys.bodies[bi]).hasTrait(TR_KARST)) done = traitSheet(sys, bi, TR_KARST, "shots/tests/trait_karst_towers_acidic.png", sr, nb) || true;
+        }
         if (!done) printf("KARST TOWERS: no acidic world carries them in the scanned sectors\n");
     }
     if (!want) {   // the distribution over the six slots: the scan region's landable bodies
         int cnt[TR_COUNT] = {0}, n = 0, withFirst[4] = {0, 0, 0, 0}, withNew[4] = {0, 0, 0, 0}, people = 0, peopleNew = 0, kindsNew[TK_COUNT] = {0};
-        for (int64_t x = 150; x < 340; x++)
-            for (int64_t z = 20; z < 160; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                    const Body& b = sys.bodies[bi];
-                    if (!KINDS[b.type].landable) continue;
-                    BodyGen g = BodyGen::make(b);
-                    int k1 = 0, k2 = 0;
-                    for (int j = 0; j < 3; j++) if (g.traits[j]) { cnt[g.traits[j]]++; k1++; }
-                    for (int j = 3; j < TRAIT_SLOTS; j++) if (g.traits[j]) { cnt[g.traits[j]]++; k2++; kindsNew[TRAITS[g.traits[j]].kind]++; }
-                    withFirst[k1]++; withNew[k2]++; n++;
-                    if (g.hasTrait(TR_CIVILISATION)) { people++; if (k2) peopleNew++; }
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
+            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+                const Body& b = sys.bodies[bi];
+                if (!KINDS[b.type].landable) continue;
+                BodyGen g = BodyGen::make(b);
+                int k1 = 0, k2 = 0;
+                for (int j = 0; j < 3; j++) if (g.traits[j]) { cnt[g.traits[j]]++; k1++; }
+                for (int j = 3; j < TRAIT_SLOTS; j++) if (g.traits[j]) { cnt[g.traits[j]]++; k2++; kindsNew[TRAITS[g.traits[j]].kind]++; }
+                withFirst[k1]++; withNew[k2]++; n++;
+                if (g.hasTrait(TR_CIVILISATION)) { people++; if (k2) peopleNew++; }
             }
+        }
         printf("traits over %d landable bodies: R-304's three slots none %d, one %d, two %d, three %d; the new three none %d, one %d, two %d, three %d\n", n,
                withFirst[0], withFirst[1], withFirst[2], withFirst[3], withNew[0], withNew[1], withNew[2], withNew[3]);
         printf("  the new slots by kind:"); for (int k = TK_LANDFORM; k < TK_COUNT; k++) printf(" %d", kindsNew[k]); printf(" (landform, water, sky, life, ground, sound, dark); a people's world %d, with a new trait %d\n", people, peopleNew);

@@ -281,8 +281,7 @@ int runGenome(int argc, char** argv) {
     const std::string what = argc > 2 ? argv[2] : "sheet";
     if (what == "print" && argc >= 6) {
         int64_t sx = atoll(argv[3]), sz = atoll(argv[4]); int bi = atoi(argv[5]), which = argc > 6 ? atoi(argv[6]) : 0;
-        Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-        StarSystem sys; sys.generate(s);
+        Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
         if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d\n", bi); return 1; }
         BodyGen g = BodyGen::make(sys.bodies[bi]);
         if (which >= peoplesOf(g)) { printf("%s: no people %d\n", sys.bodies[bi].name.c_str(), which); return 1; }
@@ -484,8 +483,7 @@ int runGenome(int argc, char** argv) {
         if (pairMode && argc >= 13) {   // `genome pair <sx> <sy> <sz> <body> <people>` twice
             for (int k = 0; k < 2; k++) {
                 int64_t sx = atoll(argv[3 + 5 * k]), sy = atoll(argv[4 + 5 * k]), sz = atoll(argv[5 + 5 * k]); int bi = atoi(argv[6 + 5 * k]), which = atoi(argv[7 + 5 * k]);
-                Star s; if (!starInSector(sx, sy, sz, s, true)) { printf("  no star at %lld %lld %lld\n", (long long)sx, (long long)sy, (long long)sz); continue; }
-                StarSystem s2; s2.generate(s); if (bi >= (int)s2.bodies.size()) continue;
+                Star s; StarSystem s2; if (!systemAt(sx, sy, sz, s, s2, true)) { printf("  no star at %lld %lld %lld\n", (long long)sx, (long long)sy, (long long)sz); continue; } if (bi >= (int)s2.bodies.size()) continue;
                 BodyGen gg = BodyGen::make(s2.bodies[bi]); if (which >= peoplesOf(gg)) continue;
                 P.push_back({sx, sy, sz, 0, bi, which, peopleGen(gg, which).seed, s2.bodies[bi].name, 0, 0});
             }

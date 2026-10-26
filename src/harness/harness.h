@@ -54,6 +54,7 @@
 #include <complex>
 #include <map>
 #include <functional>
+#include <optional>
 #include <thread>
 #include <limits>
 #include "space/space_view.h"
@@ -234,7 +235,7 @@ struct TapePump {
     }
 };
 
-static const char* CLASS_NAMES[3] = {"FLAT", "HILLS", "MOUNTAINS"};
+static const char* const CLASS_NAMES[3] = {"FLAT", "HILLS", "MOUNTAINS"};
 
 struct SiteMetrics {
     int cls = 0;                                   // the landing map's class: 0 flat, 1 hills, 2 mountains
@@ -592,6 +593,54 @@ void unitProbe(const Check& check);
 // ---- unit_proof.cpp
 void unitPerf(const Check& check);
 
+// E-12: a star found in its sector (`named`: starInSector's) with its system made; false, the system left as it was, when there is none
+inline bool systemAt(int64_t sx, int64_t sy, int64_t sz, Star& st, StarSystem& sys, bool named = false) {
+    if (!starInSector(sx, sy, sz, st, named)) return false;
+    sys.generate(st);
+    return true;
+}
+// E-12: the sectors x0 <= x < x1 by z0 <= z < z1 of the plane y = 0, x outer, each star with its system made, as the scans' two loops
+// `for x (while go) { for z (while go) { Star s; if (!starInSector(x, 0, z, s)) continue; StarSystem sys; sys.generate(s); ... } }`
+// went, `go` (none: always) asked where their heads asked it: `for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160))`. A
+// `continue` goes on to the next star; a `break` would end the whole scan, where it ended the z loop alone
+struct ScanHit { int64_t x, z; Star s; StarSystem sys; };
+class scanSystems {
+public:
+    scanSystems(int64_t x0, int64_t x1, int64_t z0, int64_t z1, std::function<bool()> go = nullptr)
+        : x0(x0), x1(x1), z0(z0), z1(z1), go(std::move(go)) {}
+    struct End {};
+    struct Iter {
+        scanSystems* r;
+        ScanHit& operator*() const { return *r->hit; }
+        Iter& operator++() { r->next(); return *this; }
+        bool operator!=(End) const { return !r->done; }
+    };
+    Iter begin() { next(); return Iter{this}; }
+    End end() const { return End{}; }
+private:
+    int64_t x0, x1, z0, z1, x = 0, z = 0;
+    bool started = false, done = false;
+    std::function<bool()> go;
+    std::optional<ScanHit> hit;
+    bool goes() { return !go || go(); }
+    void next() {
+        hit.reset();   // the last star's system goes before the next is looked for, as the loops' locals did
+        if (!started) { started = true; x = x0; if (!(x < x1 && goes())) { done = true; return; } z = z0; }
+        else z++;
+        for (;;) {
+            if (z < z1 && goes()) {
+                Star s;
+                if (starInSector(x, 0, z, s)) { hit.emplace(); hit->x = x; hit->z = z; hit->s = s; hit->sys.generate(hit->s); return; }
+                z++;
+                continue;
+            }
+            x++;
+            if (!(x < x1 && goes())) { done = true; return; }
+            z = z0;
+        }
+    }
+};
+
 // the first `maxBodies` bodies of a type in the start region, in the scan order every harness mode uses; `fn(sys, bi)` (P-04: a kind made
 // only where no system is, on the worlds `stageElsewhere` stages it on; P-05: after the real ones, the wanderers)
 template <class F>
@@ -611,18 +660,15 @@ static int forTypeBodies(int type, int maxBodies, bool preferMoon, F fn) {
     const int stagePasses = KINDS[type].elsewhere ? 2 : 1;   // P-05: the real ones first (the wanderers), then the staged
     for (int stagePass = 0; stagePass < stagePasses && found < maxBodies; stagePass++)
     for (int pass = preferMoon ? 0 : 1; pass < 2 && found < maxBodies; pass++)
-        for (int64_t x = 150; x < 340 && found < maxBodies; x++)
-            for (int64_t z = 20; z < 160 && found < maxBodies; z++) {
-                Star s; if (!starInSector(x, 0, z, s)) continue;
-                StarSystem sys; sys.generate(s);
-                for (int bi = 0; bi < (int)sys.bodies.size() && found < maxBodies; bi++) {
-                    const Body& b = sys.bodies[bi];
-                    if (stagePass == 0 ? b.type != type : !stageElsewhere(sys, bi, type)) continue;
-                    if (pass == 0 && b.parent < 0) continue;   // the first pass looks for moons only
-                    found++;
-                    fn(sys, bi);
-                }
+        for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return found < maxBodies; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && found < maxBodies; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (stagePass == 0 ? b.type != type : !stageElsewhere(sys, bi, type)) continue;
+                if (pass == 0 && b.parent < 0) continue;   // the first pass looks for moons only
+                found++;
+                fn(sys, bi);
             }
+        }
     return found;
 }
 

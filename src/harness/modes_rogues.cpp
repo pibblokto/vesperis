@@ -244,7 +244,7 @@ static int runRoguesVoices() {
     if (d.traitA >= 0) printf("  their parameters: the nearest two %.3f apart (of %zu, each 0..1): %s / %s\n", d.traitNearest, [&] { std::vector<double> t; AudioSynth::rogueTraits(0, RogueVoice(), t); return t.size(); }(), AudioSynth::rogueLine(field[d.traitA].sig.seed, field[d.traitA].voice).c_str(), AudioSynth::rogueLine(field[d.traitB].sig.seed, field[d.traitB].voice).c_str());
     printf("  their voice prints (twelfths of an octave, dB), %d pairs: the nearest %.2f, the median %.2f\n", d.pairs, d.nearest, d.median);
     if (d.nearA >= 0) printf("    the nearest pair: %s / %s\n", AudioSynth::rogueLine(field[d.nearA].sig.seed, field[d.nearA].voice).c_str(), AudioSynth::rogueLine(field[d.nearB].sig.seed, field[d.nearB].voice).c_str());
-    static const char* KN[3] = {"pulsars", "comets", "magnetospheres"};
+    static const char* const KN[3] = {"pulsars", "comets", "magnetospheres"};
     for (int k = 0; k < 3; k++) printf("  two %s (20 by seeds of their own, 60 s, 190 pairs): the median %.2f, the nearest %.2f\n", KN[k], d.kindMedian[k], d.kindNearest[k]);
     printf("  every pair of drifters apart by more than two signals of one kind are (the largest median, %.2f): %s\n", d.bar, d.under == 0 ? "yes" : fmt("NO, %d pairs under", d.under).c_str());
     if (d.under > 0) {   // the drifters in the pairs under the bar, the most often first

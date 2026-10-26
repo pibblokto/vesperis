@@ -76,6 +76,7 @@ bool Game::mouseCaptureWanted() const {
 }
 
 void Game::status(const std::string& m, double secs) { statusMsg = m; statusUntil = realTime + secs; }
+void Game::refuse(const std::string& m, double secs) { status(m, secs); audio.beep = BEEP_ERROR; }
 
 std::string Game::epocString() const { return epocOf(t); }
 
@@ -124,20 +125,28 @@ std::string Game::cometMotionString(int bi) const {
 
 // N3: "QUADRUPED", "BROWSER", ...
 const char* Game::shortPlan(int plan) {
-    static const char* names[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "CRAWLER", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER"};
+    static const char* const names[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "CRAWLER", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER"};
     return plan >= 0 && plan < PLAN_COUNT ? names[plan] : "?";
+}
+
+// what an expedition had out goes with it (none of it is saved): the radar, the player and the instruments' case, the telescope (put
+// back to its rest for a new expedition; a load keeps its power and aim), the chart held up, the probe and the drones (a load reads its
+// own probe and bay from the save's lines after this; a drone thread's world, if any, is taken when it is done)
+void Game::resetExpedition(bool freshTelescope) {
+    radarOff(); radar = RadarState();
+    playerStop(); stopInstrument(); player.items.clear(); icase = InstrumentCase();
+    telescopeOff();
+    if (freshTelescope) tele = TelescopeState();
+    chartUp = false; chartHeld = StarChart(); chartT = -1;
+    probe = ProbeState();
+    bay = DroneBay();
 }
 
 void Game::newGame() {
     t = 3.6e6;
     timeWarp = 1;
     almanacRunning = false;   // W-01
-    telescopeOff(); tele = TelescopeState();   // W-06
-    radarOff(); radar = RadarState();   // C-07
-    playerStop(); stopInstrument(); player.items.clear(); icase = InstrumentCase();   // C-11
-    chartUp = false; chartHeld = StarChart(); chartT = -1;   // C-10
-    probe = ProbeState();   // X-01: a new expedition sends nothing
-    bay = DroneBay();       // C-18: nor drones
+    resetExpedition(true);
     // G-02: the home star is pinned (HOME_SX/SZ, chosen with `vesperis_test home`: a yellow star with two living worlds, the
     // first temperate with two moons, the drainage tiles of its default landing site in under a second); the search of a
     // pleasant home system (a yellow/orange star with a felisian planet) is the fallback when a generation change takes it away
@@ -336,8 +345,7 @@ void Game::frame(const Input& inRaw, double realDt) {
             break;
         }
         case GameState::MENU:
-            if (in.wasPressed(KEY_UP)) menuSel = (menuSel + 7) % 8;
-            if (in.wasPressed(KEY_DOWN)) menuSel = (menuSel + 1) % 8;
+            menuStep(in, menuSel, 8);
             if (in.wasPressed(KEY_ESCAPE)) state = returnState;
             if (enterKey(in)) {
                 switch (menuSel) {
@@ -385,8 +393,7 @@ void Game::frame(const Input& inRaw, double realDt) {
         case GameState::SYSTEM_LIST: {
             int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // O3: the belts follow the bodies
             if (n == 0) { state = GameState::SPACE; break; }
-            if (in.wasPressed(KEY_UP)) listSel = (listSel + n - 1) % n;
-            if (in.wasPressed(KEY_DOWN)) listSel = (listSel + 1) % n;
+            menuStep(in, listSel, n);
             if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_TAB)) state = GameState::SPACE;
             auto pick = [&]() { if (listSel < nb) { ship.localTarget = listSel; ship.targetBelt = -1; } else { ship.localTarget = -1; ship.targetBelt = listSel - nb; } };
             if (in.wasPressed(KEY_L)) { pick(); state = GameState::SPACE; status(fmt("LOCAL TARGET: %s", upper(localTargetLabel()).c_str()), 4); }

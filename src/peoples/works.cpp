@@ -1,6 +1,7 @@
 // T-03 (2026-10-09): the works (see works.h)
 #include "works.h"
 #include "works_internal.h"
+#include "../core/clock.h"
 
 const char* const WORK_KIND_NAMES[WO_COUNT] = {"a quarry", "a mine", "a dam", "an aqueduct", "an observatory", "a shrine", "a pilgrims' way", "a necropolis",
     "lines on a plain", "a henge", "a fortified line", "a battlefield", "a launch site", "an antenna field", "a wreck", "a colossus", "a terraformed basin",
@@ -14,10 +15,6 @@ double editLeft(double years, double wet, bool line) {
     if (line) return clampd(1 - (std::log10(std::max(100.0, y)) - 2) / (wet > 0.4 ? 2.4 : 4.5), 0.15, 1);   // lines on a dry plain keep for millennia
     return clampd(1 - (std::log10(std::max(30.0, y)) - 1.5) / (wet > 0.4 ? 2.6 : 3.6), 0.12, 1);
 }
-
-namespace {
-double nowMs() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
-}   // namespace
 
 bool damBreached(const Work& w, const Culture& c) {
     if (w.kind != WO_DAM) return false;
@@ -188,20 +185,11 @@ std::shared_ptr<const Work> buildLandWork(const BodyGen& g, int gLat, int gLon) 
     return landWorkIn(*makeLandCtx(g, worldWorksOf(g)), gLat, ((gLon % n) + n) % n);
 }
 
-void worldWorksClearCache() {
-    {
-        std::lock_guard<std::mutex> lock(g_worksMutex);
-        for (auto it = g_works.begin(); it != g_works.end();) { if (worksReady(it->second.fut)) it = g_works.erase(it); else ++it; }
-    }
-    std::lock_guard<std::mutex> lock(g_landMutex);
-    for (LandSlot& s : g_land) s = LandSlot();
-}
-
 namespace {
 // the world's works whose reach comes within `radiusM`, then the land's cells within `landR` and the farthest a land's work reaches
 void worksAroundOf(const BodyGen& g, const std::shared_ptr<const WorldWorks>& W, const Vec3& unit, double radiusM, double landR, std::vector<std::shared_ptr<const Work>>& out) {
     out.clear();
-    for (const Work& w : W->works) if (arcM(unit, w.unit, W->Rm) < radiusM + w.radiusM) out.push_back(std::shared_ptr<const Work>(W, &w));
+    for (const Work& w : W->works) if (arcLength(unit, w.unit, W->Rm) < radiusM + w.radiusM) out.push_back(std::shared_ptr<const Work>(W, &w));
     radiusM = landR;
     const double Rm = g.R * 1000.0, dLat = landCellLat(g), reach = radiusM + LAND_REACH_MAX;
     double lat, lon; StarSystem::latLonFromBody(unit, lat, lon);
@@ -218,9 +206,9 @@ void worksAroundOf(const BodyGen& g, const std::shared_ptr<const WorldWorks>& W,
         for (int c = c0; c <= c1; c++) {
             const int gl = ((c % n) + n) % n;
             const Vec3 mid = StarSystem::bodyFromLatLon(latc, (gl + 0.5) * w);
-            if (arcM(unit, mid, Rm) > reach + 0.75 * (w * Rm * std::cos(latc) + dLat * Rm)) continue;   // beyond the cell's corners
+            if (arcLength(unit, mid, Rm) > reach + 0.75 * (w * Rm * std::cos(latc) + dLat * Rm)) continue;   // beyond the cell's corners
             std::shared_ptr<const Work> lw = landWorkOf(g, row, gl);
-            if (lw && arcM(unit, lw->unit, Rm) < radiusM + lw->radiusM) out.push_back(std::move(lw));
+            if (lw && arcLength(unit, lw->unit, Rm) < radiusM + lw->radiusM) out.push_back(std::move(lw));
         }
     }
 }

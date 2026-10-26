@@ -22,7 +22,7 @@ std::string traitList(const BodyGen& g) {
     for (int k = 0; k < TRAIT_SLOTS; k++) if (g.traits[k]) { if (!s.empty()) s += ", "; s += TRAITS[g.traits[k]].name; }
     return s;
 }
-const char* BIOME_NAMES[BIO_COUNT] = {"", "TROPICAL FOREST", "SAVANNA", "DESERT", "TEMPERATE FOREST", "GRASSLAND", "TAIGA", "TUNDRA", "WETLAND", "ALPINE", "ICE SHEET", "OCEAN"};
+const char* const BIOME_NAMES[BIO_COUNT] = {"", "TROPICAL FOREST", "SAVANNA", "DESERT", "TEMPERATE FOREST", "GRASSLAND", "TAIGA", "TUNDRA", "WETLAND", "ALPINE", "ICE SHEET", "OCEAN"};
 
 const char* reliefClass(double slope) { return slope < 0.05 ? "FLAT" : (slope < 0.2 ? "HILLS" : "MOUNTAINS"); }   // O6-02: 0.04 / 0.15 before the spectrum
 

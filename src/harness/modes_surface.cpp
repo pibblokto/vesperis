@@ -9,69 +9,65 @@ void renderSurface(int onlyType) {
     bool done[PT_COUNT] = {false};
     int remaining = 0;
     for (int i = 0; i < PT_COUNT; i++) if (KINDS[i].landable && (onlyType < 0 || i == onlyType)) remaining++; else done[i] = true;
-    for (int64_t x = 150; x < 320 && remaining; x++)
-        for (int64_t z = 20; z < 140 && remaining; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && remaining; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (done[b.type]) continue;
-                done[b.type] = true; remaining--;
-                std::string tn = KINDS[b.type].name;
-                for (char& ch : tn) if (ch == ' ') ch = '_';
-                struct Scene { const char* tag; double latDeg; double alt; double yawOff; double pitch; };
-                Scene scenes[] = {{"noon", 12, 45 * DEG, 0.0, 0.0}, {"sunset", 12, 4 * DEG, 0.0, 0.05}, {"night", 12, -40 * DEG, 0.5, 0.15}, {"north", 82, 5 * DEG, 0.0, 0.0}};
-                for (const Scene& sc : scenes) {
-                    SurfaceView sv;
-                    double lon = 0.7 + bi * 0.3;
-                    // choose a forested land site for felisian (full-detail check)
-                    double latUse = sc.latDeg * DEG;
-                    if (b.type == PT_FELISIAN) {
-                        BodyGen g = BodyGen::make(b);
-                        bool found = false;
-                        for (double la = sc.latDeg; la < sc.latDeg + 30 && !found; la += 2)
-                            for (int k = 0; k < 256 && !found; k++) {
-                                double ln = k * TAU / 256;
-                                SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
-                                if (ss.material == MAT_FOREST && ss.height > 20) { lon = ln; latUse = la * DEG; found = true; }
-                            }
-                    }
-                    if (b.type == PT_MOLTEN) {
-                        // land 400 m from a lava lake
-                        BodyGen g = BodyGen::make(b);
-                        bool found = false;
-                        for (double la = sc.latDeg; la < sc.latDeg + 20 && !found; la += 0.02)
-                            for (double ln = 0; ln < TAU && !found; ln += 0.0006) {
-                                SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
-                                if (ss.material == MAT_LAVA && ss.glow > 0.9) { lon = ln + 400.0 / (b.radiusKm * 1000.0); latUse = la * DEG; found = true; }
-                            }
-                    }
-                    sv.init(&sys, bi, latUse, lon, 1000.0);
-                    double t = findTime(sv.site, sc.alt, 1000.0);
-                    sv.init(&sys, bi, latUse, lon, t);
-                    // look toward the sun's azimuth (plus offset)
-                    SunInfo si = sv.site.sun(t);
-                    sv.player.yaw = si.azimuth + sc.yawOff;
-                    sv.player.pitch = sc.pitch;
-                    nb.update(sv.site.worldPos(t, 0, 0, 0));
-                    Input in;
-                    sv.update(0.016, in, t, false);
-                    for (const Body& ob : sys.bodies)   // E-02: the sky's bodies' maps first (made on their thread at the binary's own pace, F-07)
-                        if (ob.type != PT_COMPANION) while (!sr.mapIfReady(ob)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                    Framebuffer fb;
-                    double t0 = nowSec();
-                    sv.render(fb, t, nb.stars, sr, 1.0);
-                    double t1 = nowSec();
-                    fb.mush(2);
-                    std::string fn = "shots/tests/surf_" + tn + "_" + sc.tag + ".png";
-                    saveFB(fb, fn.c_str());
-                    printf("%-16s %-7s %s lat=%.0f sunAlt=%.1f az=%.0f time=%.2f render=%.1f ms  T=%.0fC P=%.2f g=%.1f cloud=%.2f rain=%.2f snow=%.2f sky=%.2f uw=%d rocks=%d/%d\n",
-                           KINDS[b.type].name, sc.tag, b.name.c_str(), sc.latDeg, si.altitude / DEG, si.azimuth / DEG, si.dayFraction,
-                           (t1 - t0) * 1000, sv.env.temperatureC, sv.env.pressureAtm, sv.site.gravity, sv.env.cloudCover, sv.env.rain, sv.env.snow, sv.env.skyBrightness, (int)sv.player.underwater, sv.lastRocksDrawn, sv.lastRocksCandidates);
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return remaining; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && remaining; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (done[b.type]) continue;
+            done[b.type] = true; remaining--;
+            std::string tn = KINDS[b.type].name;
+            for (char& ch : tn) if (ch == ' ') ch = '_';
+            struct Scene { const char* tag; double latDeg; double alt; double yawOff; double pitch; };
+            Scene scenes[] = {{"noon", 12, 45 * DEG, 0.0, 0.0}, {"sunset", 12, 4 * DEG, 0.0, 0.05}, {"night", 12, -40 * DEG, 0.5, 0.15}, {"north", 82, 5 * DEG, 0.0, 0.0}};
+            for (const Scene& sc : scenes) {
+                SurfaceView sv;
+                double lon = 0.7 + bi * 0.3;
+                // choose a forested land site for felisian (full-detail check)
+                double latUse = sc.latDeg * DEG;
+                if (b.type == PT_FELISIAN) {
+                    BodyGen g = BodyGen::make(b);
+                    bool found = false;
+                    for (double la = sc.latDeg; la < sc.latDeg + 30 && !found; la += 2)
+                        for (int k = 0; k < 256 && !found; k++) {
+                            double ln = k * TAU / 256;
+                            SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
+                            if (ss.material == MAT_FOREST && ss.height > 20) { lon = ln; latUse = la * DEG; found = true; }
+                        }
                 }
+                if (b.type == PT_MOLTEN) {
+                    // land 400 m from a lava lake
+                    BodyGen g = BodyGen::make(b);
+                    bool found = false;
+                    for (double la = sc.latDeg; la < sc.latDeg + 20 && !found; la += 0.02)
+                        for (double ln = 0; ln < TAU && !found; ln += 0.0006) {
+                            SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
+                            if (ss.material == MAT_LAVA && ss.glow > 0.9) { lon = ln + 400.0 / (b.radiusKm * 1000.0); latUse = la * DEG; found = true; }
+                        }
+                }
+                sv.init(&sys, bi, latUse, lon, 1000.0);
+                double t = findTime(sv.site, sc.alt, 1000.0);
+                sv.init(&sys, bi, latUse, lon, t);
+                // look toward the sun's azimuth (plus offset)
+                SunInfo si = sv.site.sun(t);
+                sv.player.yaw = si.azimuth + sc.yawOff;
+                sv.player.pitch = sc.pitch;
+                nb.update(sv.site.worldPos(t, 0, 0, 0));
+                Input in;
+                sv.update(0.016, in, t, false);
+                for (const Body& ob : sys.bodies)   // E-02: the sky's bodies' maps first (made on their thread at the binary's own pace, F-07)
+                    if (ob.type != PT_COMPANION) while (!sr.mapIfReady(ob)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                Framebuffer fb;
+                double t0 = nowSec();
+                sv.render(fb, t, nb.stars, sr, 1.0);
+                double t1 = nowSec();
+                fb.mush(2);
+                std::string fn = "shots/tests/surf_" + tn + "_" + sc.tag + ".png";
+                saveFB(fb, fn.c_str());
+                printf("%-16s %-7s %s lat=%.0f sunAlt=%.1f az=%.0f time=%.2f render=%.1f ms  T=%.0fC P=%.2f g=%.1f cloud=%.2f rain=%.2f snow=%.2f sky=%.2f uw=%d rocks=%d/%d\n",
+                       KINDS[b.type].name, sc.tag, b.name.c_str(), sc.latDeg, si.altitude / DEG, si.azimuth / DEG, si.dayFraction,
+                       (t1 - t0) * 1000, sv.env.temperatureC, sv.env.pressureAtm, sv.site.gravity, sv.env.cloudCover, sv.env.rain, sv.env.snow, sv.env.skyBrightness, (int)sv.player.underwater, sv.lastRocksDrawn, sv.lastRocksCandidates);
             }
         }
+    }
 }
 
 // N0-02 (B-202): the diagnosis sheet. For every landable type: the landing map around the sub-solar point,
@@ -87,142 +83,138 @@ void runConsistency() {
     for (int i = 0; i < PT_COUNT; i++) if (KINDS[i].landable) remaining++; else done[i] = true;
     printf("%-14s %-13s %-13s %-13s %6s %6s %6s\n", "type", "map", "globe", "ground", "m-g", "g-s", "m-s");
     double worst = 0; int over = 0; const double THRESH = 60;
-    for (int64_t x = 150; x < 320 && remaining; x++)
-        for (int64_t z = 20; z < 140 && remaining; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && remaining; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (done[b.type]) continue;
-                done[b.type] = true; remaining--;
-                double t = 5000.0;
-                Vec3 bp = sys.bodyPos(bi, t);
-                Vec3 toStar = normalize(sys.star.pos - bp);
-                Mat3 frame = sys.bodyFrame(bi, t);
-                double lat, lon;
-                StarSystem::latLonFromBody(frame * toStar, lat, lon);   // the sub-solar point: noon, sun overhead
-                // the site: within 3 deg of that point, standing on the material that covers most of the globe patch
-                const PlanetMap& pm = sr.mapFor(b);
-                int want = MAT_ROCK;
-                {
-                    int hist[MAT_COUNT] = {0};
-                    for (int yy = -12; yy < 12; yy++) for (int xx = -12; xx < 12; xx++) hist[pm.materialAt(lon + xx * TAU / PlanetMap::W, clampd(lat + yy * PI / PlanetMap::H, -PI / 2, PI / 2))]++;
-                    for (int mm = 1; mm < MAT_COUNT; mm++) if (hist[mm] > hist[want]) want = mm;
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return remaining; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && remaining; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (done[b.type]) continue;
+            done[b.type] = true; remaining--;
+            double t = 5000.0;
+            Vec3 bp = sys.bodyPos(bi, t);
+            Vec3 toStar = normalize(sys.star.pos - bp);
+            Mat3 frame = sys.bodyFrame(bi, t);
+            double lat, lon;
+            StarSystem::latLonFromBody(frame * toStar, lat, lon);   // the sub-solar point: noon, sun overhead
+            // the site: within 3 deg of that point, standing on the material that covers most of the globe patch
+            const PlanetMap& pm = sr.mapFor(b);
+            int want = MAT_ROCK;
+            {
+                int hist[MAT_COUNT] = {0};
+                for (int yy = -12; yy < 12; yy++) for (int xx = -12; xx < 12; xx++) hist[pm.materialAt(lon + xx * TAU / PlanetMap::W, clampd(lat + yy * PI / PlanetMap::H, -PI / 2, PI / 2))]++;
+                for (int mm = 1; mm < MAT_COUNT; mm++) if (hist[mm] > hist[want]) want = mm;
+            }
+            {
+                BodyGen g0 = BodyGen::make(b);
+                bool found = false;
+                for (double r = 0; r < 3.0 * DEG && !found; r += 0.15 * DEG)
+                    for (double a = 0; a < TAU && !found; a += 0.5) {
+                        double la = lat + r * std::cos(a), lo = lon + r * std::sin(a);
+                        SurfaceSample ss = sampleSurface(g0, StarSystem::bodyFromLatLon(la, lo), 16);
+                        if (ss.material == want && (ss.water < -1e8 || ss.material == MAT_WATER)) { lat = la; lon = lo; found = true; }
+                    }
+            }
+            // 1) the globe from 3.5 radii, straight above the point
+            Vec3 shipPos = bp + toStar * (b.radiusKm * 3.5);
+            Vec3 fwd = normalize(bp - shipPos);
+            nb.update(shipPos);
+            Framebuffer fbg; SpaceContext c;
+            c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
+            warmMaps(sr, sys, bi);
+            sr.setupPalette(fbg, &sys, bi, -1, 1.0); sr.render(fbg, c); fbg.mush(2);
+            std::vector<uint32_t> globeRGB(FBW * FBH); fbg.toRGB(globeRGB.data(), 1.0);
+            int wantBank = SpaceRenderer::globeBank(2, sys.bodies[bi].type, want);
+            // the patch around the site's own point on the disc
+            Vec3 siteW = sys.surfacePointWorld(bi, t, lat, lon, 0);
+            Vec3 sv3 = c.cam * (siteW - shipPos);
+            int gx = (int)(sr.proj.cx + sr.proj.f * sv3.x / sv3.z), gy = (int)(sr.proj.cy - sr.proj.f * sv3.y / sv3.z);
+            // 2) the ground at that point, noon, looking down 30 deg
+            SurfaceView sv;
+            sv.init(&sys, bi, lat, lon, t);
+            sv.player.yaw = 0.7; sv.player.pitch = -30 * DEG;
+            nb.update(sv.site.worldPos(t, 0, 0, 0));
+            sv.update(0.016, in, t, false);
+            Framebuffer fbs; sv.render(fbs, t, nb.stars, sr, 1.0); fbs.mush(2);
+            std::vector<uint32_t> surfRGB(FBW * FBH); fbs.toRGB(surfRGB.data(), 1.0);
+            // 3) the landing map of the same body, without the cloud overlay
+            game.testParkAt(s, bi);
+            int tx = (int)(wrap2pi(lon + PI) / TAU * PlanetMap::W), ty = (int)((0.5 - lat / PI) * PlanetMap::H);
+            // averages and the sheet: 24 texels of map (x4), 24 px of globe (x4), 96 px of ground (x1), swatches
+            const int T = 96, GAP = 4;
+            const int SW = 4 * T + 3 * GAP + GAP + 3 * 24 + 2 * 2, SH = T;
+            std::vector<uint32_t> sheet(SW * SH, rgb(0, 0, 0));
+            auto put = [&](int x0, int y0, uint32_t c) { if (x0 >= 0 && y0 >= 0 && x0 < SW && y0 < SH) sheet[y0 * SW + x0] = c; };
+            // averages over the wanted material only (map texels by material, globe pixels by bank), the sheet shows everything
+            double avg[3][3] = {{0}};
+            int nm = 0, ng = 0;
+            for (int yy = 0; yy < 24; yy++)
+                for (int xx = 0; xx < 24; xx++) {
+                    int mtx = ((tx - 12 + xx) % PlanetMap::W + PlanetMap::W) % PlanetMap::W, mty = clampi(ty - 12 + yy, 0, PlanetMap::H - 1);
+                    uint32_t cm = game.testLandingMapTexel(mtx, mty, false);
+                    int gxx = gx - 12 + xx, gyy = gy - 12 + yy;
+                    bool gin = gxx >= 0 && gyy >= 0 && gxx < FBW && gyy < FBH;
+                    uint32_t cg = gin ? globeRGB[gyy * FBW + gxx] : 0;
+                    if (pm.material[mty * PlanetMap::W + mtx] == want) { for (int k = 0; k < 3; k++) avg[0][k] += (cm >> (8 * k)) & 255; nm++; }
+                    if (gin && bankOf(fbg.idx[gyy * FBW + gxx]) == wantBank) { for (int k = 0; k < 3; k++) avg[1][k] += (cg >> (8 * k)) & 255; ng++; }
+                    for (int dy = 0; dy < 4; dy++) for (int dx = 0; dx < 4; dx++) { put(xx * 4 + dx, yy * 4 + dy, cm); put(T + GAP + xx * 4 + dx, yy * 4 + dy, cg); }
                 }
-                {
-                    BodyGen g0 = BodyGen::make(b);
-                    bool found = false;
-                    for (double r = 0; r < 3.0 * DEG && !found; r += 0.15 * DEG)
-                        for (double a = 0; a < TAU && !found; a += 0.5) {
-                            double la = lat + r * std::cos(a), lo = lon + r * std::sin(a);
-                            SurfaceSample ss = sampleSurface(g0, StarSystem::bodyFromLatLon(la, lo), 16);
-                            if (ss.material == want && (ss.water < -1e8 || ss.material == MAT_WATER)) { lat = la; lon = lo; found = true; }
-                        }
-                }
-                // 1) the globe from 3.5 radii, straight above the point
-                Vec3 shipPos = bp + toStar * (b.radiusKm * 3.5);
-                Vec3 fwd = normalize(bp - shipPos);
-                nb.update(shipPos);
-                Framebuffer fbg; SpaceContext c;
-                c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos; c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y)); c.bankBodyA = bi;
-                warmMaps(sr, sys, bi);
-                sr.setupPalette(fbg, &sys, bi, -1, 1.0); sr.render(fbg, c); fbg.mush(2);
-                std::vector<uint32_t> globeRGB(FBW * FBH); fbg.toRGB(globeRGB.data(), 1.0);
-                int wantBank = SpaceRenderer::globeBank(2, sys.bodies[bi].type, want);
-                // the patch around the site's own point on the disc
-                Vec3 siteW = sys.surfacePointWorld(bi, t, lat, lon, 0);
-                Vec3 sv3 = c.cam * (siteW - shipPos);
-                int gx = (int)(sr.proj.cx + sr.proj.f * sv3.x / sv3.z), gy = (int)(sr.proj.cy - sr.proj.f * sv3.y / sv3.z);
-                // 2) the ground at that point, noon, looking down 30 deg
-                SurfaceView sv;
-                sv.init(&sys, bi, lat, lon, t);
-                sv.player.yaw = 0.7; sv.player.pitch = -30 * DEG;
-                nb.update(sv.site.worldPos(t, 0, 0, 0));
-                sv.update(0.016, in, t, false);
-                Framebuffer fbs; sv.render(fbs, t, nb.stars, sr, 1.0); fbs.mush(2);
-                std::vector<uint32_t> surfRGB(FBW * FBH); fbs.toRGB(surfRGB.data(), 1.0);
-                // 3) the landing map of the same body, without the cloud overlay
-                game.testParkAt(s, bi);
-                int tx = (int)(wrap2pi(lon + PI) / TAU * PlanetMap::W), ty = (int)((0.5 - lat / PI) * PlanetMap::H);
-                // averages and the sheet: 24 texels of map (x4), 24 px of globe (x4), 96 px of ground (x1), swatches
-                const int T = 96, GAP = 4;
-                const int SW = 4 * T + 3 * GAP + GAP + 3 * 24 + 2 * 2, SH = T;
-                std::vector<uint32_t> sheet(SW * SH, rgb(0, 0, 0));
-                auto put = [&](int x0, int y0, uint32_t c) { if (x0 >= 0 && y0 >= 0 && x0 < SW && y0 < SH) sheet[y0 * SW + x0] = c; };
-                // averages over the wanted material only (map texels by material, globe pixels by bank), the sheet shows everything
-                double avg[3][3] = {{0}};
-                int nm = 0, ng = 0;
+            if (nm < 8 || ng < 8) {   // too little of the material in view: fall back to everything
+                nm = ng = 0; for (int k = 0; k < 3; k++) avg[0][k] = avg[1][k] = 0;
                 for (int yy = 0; yy < 24; yy++)
                     for (int xx = 0; xx < 24; xx++) {
-                        int mtx = ((tx - 12 + xx) % PlanetMap::W + PlanetMap::W) % PlanetMap::W, mty = clampi(ty - 12 + yy, 0, PlanetMap::H - 1);
-                        uint32_t cm = game.testLandingMapTexel(mtx, mty, false);
+                        uint32_t cm = game.testLandingMapTexel(tx - 12 + xx, ty - 12 + yy, false);
                         int gxx = gx - 12 + xx, gyy = gy - 12 + yy;
-                        bool gin = gxx >= 0 && gyy >= 0 && gxx < FBW && gyy < FBH;
-                        uint32_t cg = gin ? globeRGB[gyy * FBW + gxx] : 0;
-                        if (pm.material[mty * PlanetMap::W + mtx] == want) { for (int k = 0; k < 3; k++) avg[0][k] += (cm >> (8 * k)) & 255; nm++; }
-                        if (gin && bankOf(fbg.idx[gyy * FBW + gxx]) == wantBank) { for (int k = 0; k < 3; k++) avg[1][k] += (cg >> (8 * k)) & 255; ng++; }
-                        for (int dy = 0; dy < 4; dy++) for (int dx = 0; dx < 4; dx++) { put(xx * 4 + dx, yy * 4 + dy, cm); put(T + GAP + xx * 4 + dx, yy * 4 + dy, cg); }
+                        uint32_t cg = (gxx >= 0 && gyy >= 0 && gxx < FBW && gyy < FBH) ? globeRGB[gyy * FBW + gxx] : 0;
+                        for (int k = 0; k < 3; k++) { avg[0][k] += (cm >> (8 * k)) & 255; avg[1][k] += (cg >> (8 * k)) & 255; }
+                        nm++; ng++;
                     }
-                if (nm < 8 || ng < 8) {   // too little of the material in view: fall back to everything
-                    nm = ng = 0; for (int k = 0; k < 3; k++) avg[0][k] = avg[1][k] = 0;
-                    for (int yy = 0; yy < 24; yy++)
-                        for (int xx = 0; xx < 24; xx++) {
-                            uint32_t cm = game.testLandingMapTexel(tx - 12 + xx, ty - 12 + yy, false);
-                            int gxx = gx - 12 + xx, gyy = gy - 12 + yy;
-                            uint32_t cg = (gxx >= 0 && gyy >= 0 && gxx < FBW && gyy < FBH) ? globeRGB[gyy * FBW + gxx] : 0;
-                            for (int k = 0; k < 3; k++) { avg[0][k] += (cm >> (8 * k)) & 255; avg[1][k] += (cg >> (8 * k)) & 255; }
-                            nm++; ng++;
-                        }
-                }
-                int sx0 = FBW / 2 - T / 2, sy0 = (int)(FBH * 0.72) - T / 2;
-                double shadeSum = 0; int bankHist[BANKS] = {0};
-                for (int yy = 0; yy < T; yy++)
-                    for (int xx = 0; xx < T; xx++) {
-                        int px = clampi(sx0 + xx, 0, FBW - 1), py = clampi(sy0 + yy, 0, FBH - 1);
-                        uint32_t cs = surfRGB[py * FBW + px];
-                        for (int k = 0; k < 3; k++) avg[2][k] += (cs >> (8 * k)) & 255;
-                        shadeSum += shadeOf(fbs.idx[py * FBW + px]); bankHist[bankOf(fbs.idx[py * FBW + px])]++;
-                        put(2 * (T + GAP) + xx, yy, cs);
-                    }
-                int groundBank = 0; for (int k = 1; k < BANKS; k++) if (bankHist[k] > bankHist[groundBank]) groundBank = k;
-                for (int k = 0; k < 3; k++) { avg[0][k] /= nm; avg[1][k] /= ng; avg[2][k] /= (double)T * T; }
-                auto dist = [&](int a, int b2) { double d = 0; for (int k = 0; k < 3; k++) d += (avg[a][k] - avg[b2][k]) * (avg[a][k] - avg[b2][k]); return std::sqrt(d); };
-                for (int i = 0; i < 3; i++) {
-                    uint32_t cc = rgb((int)avg[i][0], (int)avg[i][1], (int)avg[i][2]);
-                    for (int yy = 0; yy < T; yy++) for (int xx = 0; xx < 24; xx++) put(3 * (T + GAP) + i * 26 + xx, yy, cc);
-                }
-                std::string tn = KINDS[b.type].name;
-                for (char& ch : tn) if (ch == ' ') ch = '_';
-                std::string fn = "shots/tests/consistency_" + tn + ".png";
-                writePNG(fn.c_str(), sheet.data(), SW, SH);
-                double dmg = dist(0, 1), dgs = dist(1, 2), dms = dist(0, 2);
-                worst = std::max(worst, std::max(dmg, std::max(dgs, dms)));
-                if (hasOpaqueDeck(b.type) && b.type != PT_HYDROCARBON) { if (dms > THRESH) over++; }   // the globe is its cloud deck; the map (C) and the ground are the same ground (P-01: the steam world's too)
-                else if (dmg > THRESH || dgs > THRESH || dms > THRESH) over++;
-                // N1-06: the landing map's relief class against the slope measured on the real terrain
-                const char* cls = game.testReliefClass(lat, lon);
-                double slope = 0;   // O6-02: the regional grade of Game::siteSlope, on the ground's own caches
-                for (int k = 0; k < 4; k++) {
-                    double dx = (k & 1) ? 0 : (k ? -1 : 1), dz = (k & 1) ? (k == 1 ? 1 : -1) : 0;
-                    slope += std::fabs(sv.site.groundHeight(dx * 150, dz * 150) - sv.site.groundHeight(0, 0)) / 150.0 / 8;
-                    slope += std::fabs(sv.site.groundHeight(dx * 600, dz * 600) - sv.site.groundHeight(0, 0)) / 600.0 / 8;
-                }
-                slope /= 0.64;
-                // the map probes points of the function, the ground reads its caches: the classes agree, or the two grades are within 30% (a boundary case)
-                double mapSlope = Game::siteSlope(sv.site);
-                bool reliefOk = std::string(cls) == reliefClass(slope) || std::fabs(mapSlope - slope) <= 0.3 * std::max(mapSlope, slope);
-                printf("%-14s %3.0f,%3.0f,%3.0f   %3.0f,%3.0f,%3.0f   %3.0f,%3.0f,%3.0f   %6.0f %6.0f %6.0f  %s (%s, sun %.0f deg, light %.2f (globe %.2f), %s slope %.3f%s, %s)\n", KINDS[b.type].name,
-                       avg[0][0], avg[0][1], avg[0][2], avg[1][0], avg[1][1], avg[1][2], avg[2][0], avg[2][1], avg[2][2], dmg, dgs, dms,
-                       b.name.c_str(), MATERIAL_NAMES[sv.site.sampleAt(0, 0, 64).material], sv.site.sun(t).altitude / DEG, sv.site.sun(t).lightFactor, SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - bp)),
-                       cls, slope, reliefOk ? "" : " RELIEF MISMATCH", fn.c_str());
-                printf("%-14s ground crop: mean shade %.1f, bank %d (%d%% of the crop); ramp stops 14/34/47 = %d,%d,%d / %d,%d,%d / %d,%d,%d\n", "", shadeSum / (T * T), groundBank, bankHist[groundBank] * 100 / (T * T),
-                       fbs.pal[(groundBank * 64 + 14) * 3], fbs.pal[(groundBank * 64 + 14) * 3 + 1], fbs.pal[(groundBank * 64 + 14) * 3 + 2],
-                       fbs.pal[(groundBank * 64 + 34) * 3], fbs.pal[(groundBank * 64 + 34) * 3 + 1], fbs.pal[(groundBank * 64 + 34) * 3 + 2],
-                       fbs.pal[(groundBank * 64 + 47) * 3], fbs.pal[(groundBank * 64 + 47) * 3 + 1], fbs.pal[(groundBank * 64 + 47) * 3 + 2]);
-                if (!reliefOk) over += 100;
             }
+            int sx0 = FBW / 2 - T / 2, sy0 = (int)(FBH * 0.72) - T / 2;
+            double shadeSum = 0; int bankHist[BANKS] = {0};
+            for (int yy = 0; yy < T; yy++)
+                for (int xx = 0; xx < T; xx++) {
+                    int px = clampi(sx0 + xx, 0, FBW - 1), py = clampi(sy0 + yy, 0, FBH - 1);
+                    uint32_t cs = surfRGB[py * FBW + px];
+                    for (int k = 0; k < 3; k++) avg[2][k] += (cs >> (8 * k)) & 255;
+                    shadeSum += shadeOf(fbs.idx[py * FBW + px]); bankHist[bankOf(fbs.idx[py * FBW + px])]++;
+                    put(2 * (T + GAP) + xx, yy, cs);
+                }
+            int groundBank = 0; for (int k = 1; k < BANKS; k++) if (bankHist[k] > bankHist[groundBank]) groundBank = k;
+            for (int k = 0; k < 3; k++) { avg[0][k] /= nm; avg[1][k] /= ng; avg[2][k] /= (double)T * T; }
+            auto dist = [&](int a, int b2) { double d = 0; for (int k = 0; k < 3; k++) d += (avg[a][k] - avg[b2][k]) * (avg[a][k] - avg[b2][k]); return std::sqrt(d); };
+            for (int i = 0; i < 3; i++) {
+                uint32_t cc = rgb((int)avg[i][0], (int)avg[i][1], (int)avg[i][2]);
+                for (int yy = 0; yy < T; yy++) for (int xx = 0; xx < 24; xx++) put(3 * (T + GAP) + i * 26 + xx, yy, cc);
+            }
+            std::string tn = KINDS[b.type].name;
+            for (char& ch : tn) if (ch == ' ') ch = '_';
+            std::string fn = "shots/tests/consistency_" + tn + ".png";
+            writePNG(fn.c_str(), sheet.data(), SW, SH);
+            double dmg = dist(0, 1), dgs = dist(1, 2), dms = dist(0, 2);
+            worst = std::max(worst, std::max(dmg, std::max(dgs, dms)));
+            if (hasOpaqueDeck(b.type) && b.type != PT_HYDROCARBON) { if (dms > THRESH) over++; }   // the globe is its cloud deck; the map (C) and the ground are the same ground (P-01: the steam world's too)
+            else if (dmg > THRESH || dgs > THRESH || dms > THRESH) over++;
+            // N1-06: the landing map's relief class against the slope measured on the real terrain
+            const char* cls = game.testReliefClass(lat, lon);
+            double slope = 0;   // O6-02: the regional grade of Game::siteSlope, on the ground's own caches
+            for (int k = 0; k < 4; k++) {
+                double dx = (k & 1) ? 0 : (k ? -1 : 1), dz = (k & 1) ? (k == 1 ? 1 : -1) : 0;
+                slope += std::fabs(sv.site.groundHeight(dx * 150, dz * 150) - sv.site.groundHeight(0, 0)) / 150.0 / 8;
+                slope += std::fabs(sv.site.groundHeight(dx * 600, dz * 600) - sv.site.groundHeight(0, 0)) / 600.0 / 8;
+            }
+            slope /= 0.64;
+            // the map probes points of the function, the ground reads its caches: the classes agree, or the two grades are within 30% (a boundary case)
+            double mapSlope = Game::siteSlope(sv.site);
+            bool reliefOk = std::string(cls) == reliefClass(slope) || std::fabs(mapSlope - slope) <= 0.3 * std::max(mapSlope, slope);
+            printf("%-14s %3.0f,%3.0f,%3.0f   %3.0f,%3.0f,%3.0f   %3.0f,%3.0f,%3.0f   %6.0f %6.0f %6.0f  %s (%s, sun %.0f deg, light %.2f (globe %.2f), %s slope %.3f%s, %s)\n", KINDS[b.type].name,
+                   avg[0][0], avg[0][1], avg[0][2], avg[1][0], avg[1][1], avg[1][2], avg[2][0], avg[2][1], avg[2][2], dmg, dgs, dms,
+                   b.name.c_str(), MATERIAL_NAMES[sv.site.sampleAt(0, 0, 64).material], sv.site.sun(t).altitude / DEG, sv.site.sun(t).lightFactor, SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - bp)),
+                   cls, slope, reliefOk ? "" : " RELIEF MISMATCH", fn.c_str());
+            printf("%-14s ground crop: mean shade %.1f, bank %d (%d%% of the crop); ramp stops 14/34/47 = %d,%d,%d / %d,%d,%d / %d,%d,%d\n", "", shadeSum / (T * T), groundBank, bankHist[groundBank] * 100 / (T * T),
+                   fbs.pal[(groundBank * 64 + 14) * 3], fbs.pal[(groundBank * 64 + 14) * 3 + 1], fbs.pal[(groundBank * 64 + 14) * 3 + 2],
+                   fbs.pal[(groundBank * 64 + 34) * 3], fbs.pal[(groundBank * 64 + 34) * 3 + 1], fbs.pal[(groundBank * 64 + 34) * 3 + 2],
+                   fbs.pal[(groundBank * 64 + 47) * 3], fbs.pal[(groundBank * 64 + 47) * 3 + 1], fbs.pal[(groundBank * 64 + 47) * 3 + 2]);
+            if (!reliefOk) over += 100;
         }
+    }
     printf("consistency: %d of %d types over the threshold of %.0f (venusian: map against ground only); worst distance %.0f%s\n", over % 100, landableTypeCount(), THRESH, worst, over >= 100 ? "; RELIEF CLASS MISMATCH" : "");
 }
 
@@ -319,27 +311,23 @@ int runDrive() {
 // N3-01: the bestiary of the first living worlds near the start, and a determinism check
 int runBestiary() {
     int shown = 0, fails = 0;
-    for (int64_t x = 150; x < 320 && shown < 6; x++)
-        for (int64_t z = 20; z < 140 && shown < 6; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && shown < 6; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type != PT_FELISIAN && b.type != PT_OCEAN) continue;
-                BodyGen g = BodyGen::make(b);
-                Bestiary B = Bestiary::make(b, g), B2 = Bestiary::make(b, g);
-                printf("%s (%s): %d land, %d flyers, %d swimmers\n", b.name.c_str(), KINDS[b.type].name, B.landCount, B.flyerCount, B.swimmerCount);
-                for (size_t i = 0; i < B.species.size(); i++) {
-                    const Species& sp = B.species[i];
-                    printf("  %-12s %-20s %4.1f m  gait %d/%d  bank %2d tone %.2f pattern %d crest %d  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d\n", sp.name.c_str(), PLAN_NAMES[sp.plan], sp.size, sp.gait, sp.runGait,
-                           sp.bank, sp.tone, sp.pattern, sp.crest, sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity], TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax);
-                    if (sp.name != B2.species[i].name || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan) fails++;
-                }
-                if (B.species.empty()) fails++;
-                shown++;
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return shown < 6; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && shown < 6; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type != PT_FELISIAN && b.type != PT_OCEAN) continue;
+            BodyGen g = BodyGen::make(b);
+            Bestiary B = Bestiary::make(b, g), B2 = Bestiary::make(b, g);
+            printf("%s (%s): %d land, %d flyers, %d swimmers\n", b.name.c_str(), KINDS[b.type].name, B.landCount, B.flyerCount, B.swimmerCount);
+            for (size_t i = 0; i < B.species.size(); i++) {
+                const Species& sp = B.species[i];
+                printf("  %-12s %-20s %4.1f m  gait %d/%d  bank %2d tone %.2f pattern %d crest %d  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d\n", sp.name.c_str(), PLAN_NAMES[sp.plan], sp.size, sp.gait, sp.runGait,
+                       sp.bank, sp.tone, sp.pattern, sp.crest, sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity], TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax);
+                if (sp.name != B2.species[i].name || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan) fails++;
             }
+            if (B.species.empty()) fails++;
+            shown++;
         }
+    }
     printf("bestiary: %d worlds, %s\n", shown, fails ? "NOT DETERMINISTIC (FAIL)" : "deterministic");
     return fails ? 1 : 0;
 }
@@ -350,39 +338,35 @@ void runEncounters(int wanted) {
     int total = 0, withLife = 0, cellHerds = 0, cellAnimals = 0;
     int perBiome[BIO_COUNT] = {0}, lifeBiome[BIO_COUNT] = {0};
     Rng r(0xE7C0);
-    for (int64_t x = 150; x < 320 && total < wanted; x++)
-        for (int64_t z = 20; z < 140 && total < wanted; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && total < wanted; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type != PT_FELISIAN) continue;
-                for (int k = 0; k < 6 && total < wanted; k++) {
-                    double lat = r.range(-70 * DEG, 70 * DEG), lon = r.range(-PI, PI);
-                    SurfaceSite site; site.init(&sys, bi, lat, lon, 5000.0);
-                    TerrainVertex tv = site.sampleAt(0, 0, 16);
-                    if (tv.material == MAT_WATER) continue;   // sea landings are not in the design
-                    Bestiary B = Bestiary::make(b, site.gen);
-                    std::vector<Critter> cr; std::vector<Flock> fl; std::vector<SurfaceView::Herd> hs;
-                    SurfaceView::planLife(site, B, site.gen.seed ^ (uint64_t)(lat * 1e6) ^ ((uint64_t)(lon * 1e6) << 20), cr, fl, hs);
-                    bool near = false;
-                    for (const Critter& c : cr) if (c.x * c.x + c.z * c.z < 200.0 * 200.0) near = true;
-                    total++; perBiome[tv.biome]++;
-                    if (near) { withLife++; lifeBiome[tv.biome]++; }
-                    {   // B-316: the habitat cells within 900 m of the landing
-                        int gLat0, gLon0; SurfaceView::lifeCellAt(site, 0, 0, gLat0, gLon0);
-                        for (int dl = -2; dl <= 2; dl++)
-                            for (int dn = -3; dn <= 3; dn++) {
-                                SurfaceView::Herd hd; int spi, n;
-                                if (!SurfaceView::planCellHerd(site, B, gLat0 + dl, gLon0 + dn, hd, spi, n)) continue;
-                                if (hd.cx * hd.cx + hd.cz * hd.cz > 900.0 * 900.0) continue;
-                                cellHerds++; cellAnimals += n;
-                            }
-                    }
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return total < wanted; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && total < wanted; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type != PT_FELISIAN) continue;
+            for (int k = 0; k < 6 && total < wanted; k++) {
+                double lat = r.range(-70 * DEG, 70 * DEG), lon = r.range(-PI, PI);
+                SurfaceSite site; site.init(&sys, bi, lat, lon, 5000.0);
+                TerrainVertex tv = site.sampleAt(0, 0, 16);
+                if (tv.material == MAT_WATER) continue;   // sea landings are not in the design
+                Bestiary B = Bestiary::make(b, site.gen);
+                std::vector<Critter> cr; std::vector<Flock> fl; std::vector<SurfaceView::Herd> hs;
+                SurfaceView::planLife(site, B, site.gen.seed ^ (uint64_t)(lat * 1e6) ^ ((uint64_t)(lon * 1e6) << 20), cr, fl, hs);
+                bool near = false;
+                for (const Critter& c : cr) if (c.x * c.x + c.z * c.z < 200.0 * 200.0) near = true;
+                total++; perBiome[tv.biome]++;
+                if (near) { withLife++; lifeBiome[tv.biome]++; }
+                {   // B-316: the habitat cells within 900 m of the landing
+                    int gLat0, gLon0; SurfaceView::lifeCellAt(site, 0, 0, gLat0, gLon0);
+                    for (int dl = -2; dl <= 2; dl++)
+                        for (int dn = -3; dn <= 3; dn++) {
+                            SurfaceView::Herd hd; int spi, n;
+                            if (!SurfaceView::planCellHerd(site, B, gLat0 + dl, gLon0 + dn, hd, spi, n)) continue;
+                            if (hd.cx * hd.cx + hd.cz * hd.cz > 900.0 * 900.0) continue;
+                            cellHerds++; cellAnimals += n;
+                        }
                 }
             }
         }
+    }
     printf("encounters: a herd within 200 m at %d of %d felisian land sites (%.0f%%); B-316: %.1f habitat herds (%.0f animals) within 900 m per site\n", withLife, total, total ? 100.0 * withLife / total : 0.0, total ? (double)cellHerds / total : 0.0, total ? (double)cellAnimals / total : 0.0);
     for (int bm = 0; bm < BIO_COUNT; bm++) if (perBiome[bm]) printf("  %-16s %3d sites, %3.0f%%\n", BIOME_NAMES[bm], perBiome[bm], 100.0 * lifeBiome[bm] / perBiome[bm]);
 }
@@ -398,24 +382,20 @@ void renderLandingMaps() {
     bool done[PT_COUNT] = {false};
     int remaining = 0;
     for (int i = 0; i < PT_COUNT; i++) if (KINDS[i].landable) remaining++; else done[i] = true;
-    for (int64_t x = 150; x < 320 && remaining; x++)
-        for (int64_t z = 20; z < 140 && remaining; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && remaining; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (done[b.type]) continue;
-                done[b.type] = true; remaining--;
-                game.testParkAt(s, bi);
-                for (int f = 0; f < 3; f++) { game.frame(in, 1.0 / 30); in.newFrame(); }
-                std::string tn = KINDS[b.type].name;
-                for (char& ch : tn) if (ch == ' ') ch = '_';
-                std::string fn = "shots/tests/landmap_" + tn + ".png";
-                writePNG(fn.c_str(), game.output(), FBW, FBH);
-                printf("landing map %-16s %s state=%d, darkest shadow on the map now %.2f\n", KINDS[b.type].name, b.name.c_str(), (int)game.state, game.testMapShadowMax());   // O0-04
-            }
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return remaining; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && remaining; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (done[b.type]) continue;
+            done[b.type] = true; remaining--;
+            game.testParkAt(s, bi);
+            for (int f = 0; f < 3; f++) { game.frame(in, 1.0 / 30); in.newFrame(); }
+            std::string tn = KINDS[b.type].name;
+            for (char& ch : tn) if (ch == ' ') ch = '_';
+            std::string fn = "shots/tests/landmap_" + tn + ".png";
+            writePNG(fn.c_str(), game.output(), FBW, FBH);
+            printf("landing map %-16s %s state=%d, darkest shadow on the map now %.2f\n", KINDS[b.type].name, b.name.c_str(), (int)game.state, game.testMapShadowMax());   // O0-04
         }
+    }
 }
 
 static void saveRaw(const char* path, const uint32_t* px, int w, int h) {
@@ -521,7 +501,7 @@ static const ScaleCfg SCALE_CFGS[] = {
     {4, 4, "4x_k4", "E  4X 1280X800, 4X4 MUSH"},
     {4, 5, "4x_k5", "F  4X 1280X800, 5X5 MUSH (CLASSIC)"},
 };
-static const char* SHEET_SCENES[] = {"felisian_forest", "felisian_shore", "felisian_sunset", "cratered_noon", "thinatmo_sunset", "icy_noon", "buggy_seat", "orbit"};
+static const char* const SHEET_SCENES[] = {"felisian_forest", "felisian_shore", "felisian_sunset", "cratered_noon", "thinatmo_sunset", "icy_noon", "buggy_seat", "orbit"};
 
 void renderCompare() {
     mkdir("shots/tests/scale", 0755);
@@ -554,39 +534,35 @@ void renderCompare() {
         }
         // the felisian globe from orbit
         bool done = false;
-        for (int64_t x = 150; x < 320 && !done; x++)
-            for (int64_t z = 20; z < 140 && !done; z++) {
-                Star st;
-                if (!starInSector(x, 0, z, st)) continue;
-                StarSystem sys; sys.generate(st);
-                for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++) {
-                    const Body& b = sys.bodies[bi];
-                    if (b.type != PT_FELISIAN || b.parent >= 0) continue;
-                    double t = 5000.0;
-                    Vec3 bp = sys.bodyPos(bi, t);
-                    Vec3 toStar = normalize(sys.star.pos - bp);
-                    Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
-                    Vec3 shipPos = bp + normalize(toStar * 0.6 + side * 0.8 + Vec3(0, 0.25, 0)) * (b.radiusKm * 3.5);
-                    Vec3 fwd = normalize(bp - shipPos);
-                    nb.update(shipPos);
-                    Framebuffer fb;
-                    SpaceContext c;
-                    c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos;
-                    c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y));
-                    c.bankBodyA = bi;
-                    sr.setupPalette(fb, &sys, bi, -1, 1.0);
-                    double t0 = nowSec();
-                    sr.render(fb, c);
-                    fb.mush(2);
-                    double ms = (nowSec() - t0) * 1000;
-                    fb.toRGB(rgbBuf.data(), 1.0);
-                    std::string base = std::string("shots/tests/scale/orbit_") + cfg.tag;
-                    saveRaw((base + ".raw").c_str(), rgbBuf.data(), FBW, FBH);
-                    writePNG((base + ".png").c_str(), rgbBuf.data(), FBW, FBH);
-                    printf("%-16s %s %dx%d kernel %d  %.1f ms\n", "orbit", cfg.tag, FBW, FBH, g_mushKernel, ms);
-                    done = true;
-                }
+        for (auto& [x, z, st, sys] : scanSystems(150, 320, 20, 140, [&] { return !done; })) {
+            for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++) {
+                const Body& b = sys.bodies[bi];
+                if (b.type != PT_FELISIAN || b.parent >= 0) continue;
+                double t = 5000.0;
+                Vec3 bp = sys.bodyPos(bi, t);
+                Vec3 toStar = normalize(sys.star.pos - bp);
+                Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
+                Vec3 shipPos = bp + normalize(toStar * 0.6 + side * 0.8 + Vec3(0, 0.25, 0)) * (b.radiusKm * 3.5);
+                Vec3 fwd = normalize(bp - shipPos);
+                nb.update(shipPos);
+                Framebuffer fb;
+                SpaceContext c;
+                c.sys = &sys; c.stars = &nb.stars; c.t = t; c.shipPos = shipPos;
+                c.cam = cameraBasis(std::atan2(fwd.x, fwd.z), std::asin(fwd.y));
+                c.bankBodyA = bi;
+                sr.setupPalette(fb, &sys, bi, -1, 1.0);
+                double t0 = nowSec();
+                sr.render(fb, c);
+                fb.mush(2);
+                double ms = (nowSec() - t0) * 1000;
+                fb.toRGB(rgbBuf.data(), 1.0);
+                std::string base = std::string("shots/tests/scale/orbit_") + cfg.tag;
+                saveRaw((base + ".raw").c_str(), rgbBuf.data(), FBW, FBH);
+                writePNG((base + ".png").c_str(), rgbBuf.data(), FBW, FBH);
+                printf("%-16s %s %dx%d kernel %d  %.1f ms\n", "orbit", cfg.tag, FBW, FBH, g_mushKernel, ms);
+                done = true;
             }
+        }
     }
     setFramebufferScale(1);
 }
@@ -662,38 +638,34 @@ void renderGallery(int type) {
     int n = 0;
     Rng r(777 + type);
     setFramebufferScale(1);
-    for (int64_t x = 150; x < 320 && n < 16; x++)
-        for (int64_t z = 20; z < 140 && n < 16; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size() && n < 16; bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type != type || !KINDS[b.type].landable) continue;
-                if (r.chance(0.5)) continue;
-                double lat = std::asin(r.sym(0.9)), lon = r.range(-PI, PI);
-                SurfaceView sv;
-                sv.init(&sys, bi, lat, lon, 1000.0);
-                double t = findTime(sv.site, 35 * DEG, 1000.0);
-                sv.init(&sys, bi, lat, lon, t);
-                sv.player.yaw = r.range(0, TAU); sv.player.pitch = 0.02;
-                nb.update(sv.site.worldPos(t, 0, 0, 0));
-                Input in;
-                sv.update(0.016, in, t, false);
-                Framebuffer fb;
-                sv.render(fb, t, nb.stars, sr, 1.0);
-                fb.mush(2);
-                std::vector<uint32_t> px((size_t)FBW * FBH);
-                fb.toRGB(px.data(), 1.0);
-                int ox = (n % 4) * TW, oy = (n / 4) * TH;
-                for (int y = 0; y < TH; y++) for (int xx = 0; xx < TW; xx++) sheet[(size_t)(oy + y) * TW * 4 + ox + xx] = px[(size_t)y * FBW + xx];
-                std::string label = b.name + "  " + std::to_string((int)(lat / DEG)) + "/" + std::to_string((int)(lon / DEG)) + "  " + MATERIAL_NAMES[sv.site.sampleAt(0, 0, 16).material];
-                for (char& c : label) c = (char)toupper((unsigned char)c);
-                fillRectRGB(cv, ox, oy, ox + textWidth(label.c_str()) + 4, oy + 9, rgb(0, 0, 0));
-                drawText(cv, ox + 2, oy + 1, label.c_str(), rgb(255, 220, 120));
-                n++;
-            }
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return n < 16; })) {
+        for (int bi = 0; bi < (int)sys.bodies.size() && n < 16; bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type != type || !KINDS[b.type].landable) continue;
+            if (r.chance(0.5)) continue;
+            double lat = std::asin(r.sym(0.9)), lon = r.range(-PI, PI);
+            SurfaceView sv;
+            sv.init(&sys, bi, lat, lon, 1000.0);
+            double t = findTime(sv.site, 35 * DEG, 1000.0);
+            sv.init(&sys, bi, lat, lon, t);
+            sv.player.yaw = r.range(0, TAU); sv.player.pitch = 0.02;
+            nb.update(sv.site.worldPos(t, 0, 0, 0));
+            Input in;
+            sv.update(0.016, in, t, false);
+            Framebuffer fb;
+            sv.render(fb, t, nb.stars, sr, 1.0);
+            fb.mush(2);
+            std::vector<uint32_t> px((size_t)FBW * FBH);
+            fb.toRGB(px.data(), 1.0);
+            int ox = (n % 4) * TW, oy = (n / 4) * TH;
+            for (int y = 0; y < TH; y++) for (int xx = 0; xx < TW; xx++) sheet[(size_t)(oy + y) * TW * 4 + ox + xx] = px[(size_t)y * FBW + xx];
+            std::string label = b.name + "  " + std::to_string((int)(lat / DEG)) + "/" + std::to_string((int)(lon / DEG)) + "  " + MATERIAL_NAMES[sv.site.sampleAt(0, 0, 16).material];
+            for (char& c : label) c = (char)toupper((unsigned char)c);
+            fillRectRGB(cv, ox, oy, ox + textWidth(label.c_str()) + 4, oy + 9, rgb(0, 0, 0));
+            drawText(cv, ox + 2, oy + 1, label.c_str(), rgb(255, 220, 120));
+            n++;
         }
+    }
     std::string tn = KINDS[type].name;
     for (char& ch : tn) if (ch == ' ') ch = '_';
     std::string fn = "shots/tests/gallery_" + tn + ".png";
@@ -703,38 +675,34 @@ void renderGallery(int type) {
 
 // Re-anchoring check (KI-007): walk 51 km, the frame moves, positions and headings stay consistent.
 void testReanchor() {
-    for (int64_t x = 150; x < 320; x++)
-        for (int64_t z = 20; z < 140; z++) {
-            Star s;
-            if (!starInSector(x, 0, z, s)) continue;
-            StarSystem sys; sys.generate(s);
-            for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
-                const Body& b = sys.bodies[bi];
-                if (b.type != PT_ROCKY) continue;
-                SurfaceView sv;
-                double t = 1000.0;
-                sv.init(&sys, bi, 62 * DEG, 0.4, t);   // high latitude: meridians converge noticeably
-                sv.relocateCapsule(120, -80);
-                sv.player.x = 51e3; sv.player.z = 3e3; sv.player.yaw = 0.7;
-                Input in;
-                // "before": measured straight from the old frame (update() would already re-anchor)
-                auto measure = [&](double& lat, double& lon, double& cap, double& bear, Vec3& fwd) {
-                    sv.site.latLonAt(sv.player.x, sv.player.z, lat, lon); lat /= DEG; lon /= DEG;
-                    double dx = sv.capsuleX - sv.player.x, dz = sv.capsuleZ - sv.player.z;
-                    cap = std::sqrt(dx * dx + dz * dz); bear = wrap2pi(std::atan2(dx, dz)) / DEG;
-                    fwd = sv.site.unitAt(sv.player.x + 1000 * std::sin(sv.player.yaw), sv.player.z + 1000 * std::cos(sv.player.yaw));
-                };
-                double latB, lonB, capB, bearB, yawB = sv.player.yaw; Vec3 fwdB;
-                measure(latB, lonB, capB, bearB, fwdB);
-                sv.update(0.016, in, t, false);   // re-anchors (distance > 50 km)
-                double latA, lonA, capA, bearA, yawA = sv.player.yaw; Vec3 fwdA;
-                measure(latA, lonA, capA, bearA, fwdA);
-                double fwdErrM = length(fwdA - fwdB) * b.radiusKm * 1000;
-                printf("reanchor on %s: site (%.2f,%.2f) -> (%.4f,%.4f), player at (%.0f,%.0f) m; lat/lon %.4f/%.4f -> %.4f/%.4f; capsule %.0f m %.1f deg -> %.0f m %.1f deg; yaw %.3f -> %.3f; forward point moved %.1f m\n",
-                       b.name.c_str(), 62 * DEG, 0.4, sv.site.lat0, sv.site.lon0, sv.player.x, sv.player.z, latB, lonB, latA, lonA, capB, bearB, capA, bearA, yawB, yawA, fwdErrM);
-                return;
-            }
+    for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140)) {
+        for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
+            const Body& b = sys.bodies[bi];
+            if (b.type != PT_ROCKY) continue;
+            SurfaceView sv;
+            double t = 1000.0;
+            sv.init(&sys, bi, 62 * DEG, 0.4, t);   // high latitude: meridians converge noticeably
+            sv.relocateCapsule(120, -80);
+            sv.player.x = 51e3; sv.player.z = 3e3; sv.player.yaw = 0.7;
+            Input in;
+            // "before": measured straight from the old frame (update() would already re-anchor)
+            auto measure = [&](double& lat, double& lon, double& cap, double& bear, Vec3& fwd) {
+                sv.site.latLonAt(sv.player.x, sv.player.z, lat, lon); lat /= DEG; lon /= DEG;
+                double dx = sv.capsuleX - sv.player.x, dz = sv.capsuleZ - sv.player.z;
+                cap = std::sqrt(dx * dx + dz * dz); bear = wrap2pi(std::atan2(dx, dz)) / DEG;
+                fwd = sv.site.unitAt(sv.player.x + 1000 * std::sin(sv.player.yaw), sv.player.z + 1000 * std::cos(sv.player.yaw));
+            };
+            double latB, lonB, capB, bearB, yawB = sv.player.yaw; Vec3 fwdB;
+            measure(latB, lonB, capB, bearB, fwdB);
+            sv.update(0.016, in, t, false);   // re-anchors (distance > 50 km)
+            double latA, lonA, capA, bearA, yawA = sv.player.yaw; Vec3 fwdA;
+            measure(latA, lonA, capA, bearA, fwdA);
+            double fwdErrM = length(fwdA - fwdB) * b.radiusKm * 1000;
+            printf("reanchor on %s: site (%.2f,%.2f) -> (%.4f,%.4f), player at (%.0f,%.0f) m; lat/lon %.4f/%.4f -> %.4f/%.4f; capsule %.0f m %.1f deg -> %.0f m %.1f deg; yaw %.3f -> %.3f; forward point moved %.1f m\n",
+                   b.name.c_str(), 62 * DEG, 0.4, sv.site.lat0, sv.site.lon0, sv.player.x, sv.player.z, latB, lonB, latA, lonA, capB, bearB, capA, bearA, yawB, yawA, fwdErrM);
+            return;
         }
+    }
 }
 
 // F-01: `reanchor comet [scale]`: the comet's re-anchor (every 0.35 radii, KI-302) on the `comet_day` scene: the update that re-anchors and

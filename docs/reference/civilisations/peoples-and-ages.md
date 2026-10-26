@@ -428,8 +428,8 @@ plan thread building it). Generation 13 holds.
 * **Causes kept**: a famine names its harvest, a battle its war, a peace the last battle, a death the sickness, the battle, the famine
   or the end that caused it (in its season), an accession the death or the term that opened the rule, a regency its accession, a
   place's end the harm that ended it, a sign the sign before it; within a year an effect is never told before its cause.
-* **What it gives the later milestones**: the events of a year (`eventsIn`), a person's and a place's (`eventsOf`, `eventsAt`), the
-  reign of a year (`reignAt`), its harvest and the people's number (`harvestAt`, `populationAt`), the inventions made by then
+* **What it gives the later milestones**: the events of a year (`eventsIn`), a person's (`eventsOf`), the reign of a
+  year (`reignAt`), its harvest (`harvestAt`), the inventions made by then
   (`inventionYear`), the seat (`historySeat`), the sentences of a legends print (`historyEventLine`).
 
 Where to see it:

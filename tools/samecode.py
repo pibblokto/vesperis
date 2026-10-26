@@ -17,7 +17,8 @@ body and the declarations it saw. Then every function definition is normalised:
   - attribute groups by their contents (less `nounwind`, which clang infers differently once a function is extern),
     metadata and comments dropped.
 and the two sides compared per function name, as sets of bodies (an inline function compiled in several files is one).
-It prints the counts, the functions missing or added, and the first lines that differ in each differing function.
+It prints the counts, the functions missing or added, and the first lines that differ in each differing function (twelve of
+each; SAMECODE_ALL=1 prints them all).
 
 With --rename, both sides' C++ names are read demangled (the Xcode `c++filt`) and the renames applied to them and to the
 types' IR names (`%"struct.Game::RadarState"` is `%struct.RadarState`), so a moved type's functions compare under their new
@@ -263,9 +264,10 @@ def main(argv):
     for k in sorted(init):
         if of.get(k) != nf.get(k):
             print('  (start-up code differs: %s, %d old bodies, %d new)' % (k, len(of.get(k, ())), len(nf.get(k, ()))))
+    limit = 10 ** 9 if os.environ.get('SAMECODE_ALL') else 12   # E-12: SAMECODE_ALL=1 lists every difference
     shown = 0
     for k in differ:
-        if shown >= 12:
+        if shown >= limit:
             print('  ... and %d more' % (len(differ) - shown))
             break
         print('  differs: %s (%d old bodies, %d new)' % (k[:160], len(of[k]), len(nf[k])))
@@ -277,10 +279,10 @@ def main(argv):
         shown += 1
     for lab, items in (('missing', missing), ('added', added), ('global differs', gdiffer), ('global missing', gmissing),
                        ('global added', gadded)):
-        for k in items[:12]:
+        for k in items[:limit]:
             print('  %s: %s' % (lab, k[:160]))
-        if len(items) > 12:
-            print('  ... and %d more %s' % (len(items) - 12, lab))
+        if len(items) > limit:
+            print('  ... and %d more %s' % (len(items) - limit, lab))
     return 0 if not (missing or added or differ or gmissing or gadded or gdiffer) else 1
 
 

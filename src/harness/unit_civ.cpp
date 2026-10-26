@@ -20,8 +20,7 @@ void unitCivilisations(const Check& check) {
         // beds the wadis run down to; its settlements are hamlets, villages and towns whose houses are rooms to walk into
         int fel = 0, felC = 0, des = 0, desC = 0, bodyFel = -1, bodyDes = -1; Star firstFel, firstDes; bool haveFel = false, haveDes = false;
         for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
-            Star s; if (!starInSector(x, 0, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, false)) continue;
             for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
                 const Body& b = sys.bodies[bi];
                 if (b.type != PT_FELISIAN && b.type != PT_DESERT) continue;
@@ -263,8 +262,7 @@ void unitRuins(const Check& check) {
         std::string blockedWhat;   // A-03: which rooms' doorways
         std::string wrongWhat, names;
         for (int w = 0; w < 2; w++) {
-            Star s; if (!starInSector(tws[w].sx, 0, tws[w].sz, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(tws[w].sx, 0, tws[w].sz, s, sys, true)) continue;
             if (tws[w].bi >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[tws[w].bi]; BodyGen g = BodyGen::make(b); Culture cu = cultureOf(g);
             if (!g.hasTrait(TR_CIVILISATION)) continue;
@@ -327,8 +325,7 @@ void unitRuins(const Check& check) {
         bool mono = decayOf(200, 0.1) < decayOf(2000, 0.1) && decayOf(2000, 0.1) < decayOf(20000, 0.1) && decayOf(2000, 0.1) < decayOf(2000, 0.9) && decayOf(200, 0.0) < 0.3 && decayOf(30000, 0.9) > 0.8;
         double ageMin = 1e9, ageMax = 0, decMin = 1, decMax = 0; int cultures = 0;
         for (int64_t x = 150; x < 200 && cultures < 300; x++) for (int64_t z = 20; z < 70 && cultures < 300; z++) {
-            Star s; if (!starInSector(x, 0, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, false)) continue;
             for (const Body& b : sys.bodies) { BodyGen g = BodyGen::make(b); if (!g.hasTrait(TR_CIVILISATION)) continue; Culture cu = cultureOf(g); cultures++; ageMin = std::min(ageMin, cu.ageYears); ageMax = std::max(ageMax, cu.ageYears); decMin = std::min(decMin, cu.decay); decMax = std::max(decMax, cu.decay); }
         }
         // the capsule's clearance: a point at the first sited settlement's centre moves out past its edge; a point far from any stays
@@ -360,8 +357,7 @@ void unitCharts(const Check& check) {
         struct TW { int64_t sx, sz; int bi; } tws[2] = {{151, 25, 1}, {153, 70, 2}};
         int worlds = 0, charts = 0, musicToo = 0, bad = 0, figuresN = 0, starsN = 0; std::string badWhat, names; bool same = true;
         for (int w = 0; w < 2; w++) {
-            Star s; if (!starInSector(tws[w].sx, 0, tws[w].sz, s, true)) continue;
-            StarSystem sys; sys.generate(s); if (tws[w].bi >= (int)sys.bodies.size()) continue;
+            Star s; StarSystem sys; if (!systemAt(tws[w].sx, 0, tws[w].sz, s, sys, true)) continue; if (tws[w].bi >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[tws[w].bi]; BodyGen g = BodyGen::make(b); if (!g.hasTrait(TR_CIVILISATION)) continue;
             worlds++; names += (names.empty() ? "" : ", ") + b.name;
             Lore L = loreOf(sys, b, g), L2 = loreOf(sys, b, g);
@@ -411,8 +407,7 @@ void unitCharts(const Check& check) {
         }
         int far = 0, farCharts = 0, how[4] = {0, 0, 0, 0}; double loreMs = 0, loreMax = 0;
         for (int64_t x = 150; x < 200 && far < 40; x++) for (int64_t z = 20; z < 70 && far < 40; z++) {
-            Star s; if (!starInSector(x, 0, z, s, false)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, false)) continue;
             for (const Body& b : sys.bodies) {
                 BodyGen g = BodyGen::make(b); if (!g.hasTrait(TR_CIVILISATION)) continue;
                 far++; double t0 = nowSec(); Lore L = loreOf(sys, b, g); double ms = (nowSec() - t0) * 1e3; loreMs += ms; loreMax = std::max(loreMax, ms);
@@ -490,8 +485,7 @@ void unitRoads(const Check& check) {
         struct TW { int64_t sx, sz; int bi; double latDeg, lonDeg; } tws[2] = {{153, 70, 2, 11.46, 40.11}, {151, 25, 1, 12.0, 4.22}};
         int nodesN = 0, roadsN = 0, lonely = 0, badEnds = 0, wetPts = 0, longWays = 0, steep = 0, asym = 0, notSame = 0, pts = 0; double leftYoung = -1, leftOld = -1, msRoad = 0, maxGrade = 0, lenSum = 0; std::string names;
         for (int w = 0; w < 2; w++) {
-            Star s; if (!starInSector(tws[w].sx, 0, tws[w].sz, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(tws[w].sx, 0, tws[w].sz, s, sys, true)) continue;
             if (tws[w].bi >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[tws[w].bi]; BodyGen g = BodyGen::make(b);
             if (!g.hasTrait(TR_CIVILISATION)) continue;
@@ -638,8 +632,7 @@ void unitGraves(const Check& check) {
         int worlds = 0, lastOk = 0, endsOk = 0, latestOk = 0, dateBad = 0, settleN = 0, graveN = 0, byClass[4] = {0, 0, 0, 0}, countBad = 0, outsideBad = 0, clearBad = 0, dupNames = 0, yearBad = 0, fallenN = 0, emptyN = 0; bool determ = true, idsDistinct = true; double msGraves = 0;
         std::set<uint64_t> ids; std::string calLines, lastLines;
         for (int w = 0; w < 2; w++) {
-            Star s; if (!starInSector(tws[w].sx, 0, tws[w].sz, s, true)) continue;
-            StarSystem sys; sys.generate(s);
+            Star s; StarSystem sys; if (!systemAt(tws[w].sx, 0, tws[w].sz, s, sys, true)) continue;
             if (tws[w].bi >= (int)sys.bodies.size()) continue;
             const Body& b = sys.bodies[tws[w].bi]; BodyGen g = BodyGen::make(b);
             if (!g.hasTrait(TR_CIVILISATION)) continue;

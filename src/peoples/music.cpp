@@ -610,8 +610,8 @@ std::string timbresLine(const Tradition& T, const Piece& P) {
     return listLine(names, 52);
 }
 std::string ensembleLine(const Ensemble& E) {
-    static const char* ROLE[MR_COUNT] = {"lead", "second", "chorus", "chords", "bass", "drone", "alt", "organ", "box", "singer", "bell", "keys", "swarm"};
-    static const char* KROLE[KR_COUNT] = {"low", "high", "tuned", "shake", "back", "tick", "open", "crash", "sub"};
+    static const char* const ROLE[MR_COUNT] = {"lead", "second", "chorus", "chords", "bass", "drone", "alt", "organ", "box", "singer", "bell", "keys", "swarm"};
+    static const char* const KROLE[KR_COUNT] = {"low", "high", "tuned", "shake", "back", "tick", "open", "crash", "sub"};
     std::string s;
     for (size_t i = 0; i < E.voices.size(); i++) { if (i) s += ", "; s += std::string(ROLE[clampi(E.role[i], 0, MR_COUNT - 1)]) + " " + E.voices[i].name; }
     if (!E.kit.empty()) { s += "; kit:"; for (size_t i = 0; i < E.kit.size(); i++) s += std::string(i ? ", " : " ") + KROLE[clampi(E.kitRole[i], 0, KR_COUNT - 1)] + " " + TIMBRE_FAMILY_NAMES[E.kit[i].family]; }

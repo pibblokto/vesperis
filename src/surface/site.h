@@ -196,7 +196,6 @@ struct SurfaceSite {
     // ground height (metres): the near ring's cells where it is drawn (O6-02), else bilinear on lod0
     double groundHeight(double x, double z);
     double groundHeightCoarse(double x, double z);   // lod0 alone (what the near ring blends from)
-    double waterHeight() const { return hasWater ? seaLevel : -1e9; }   // the sea
     // Q-02 (TR_GREAT_TIDES): the sea's offset from its mean level now (the view sets it each frame: `tideOffsetM`). The water as it stands now
     // adds it to the sea's vertices (`waterOf`, `waterNowAt`: the drawing, the shore's cut, the explorer, the vehicles, the rangefinder); what is
     // placed on the ground reads the mean (`waterAt`: a tree or a stone stays where it is whatever the tide)

@@ -55,7 +55,7 @@ void Game::autoStart(int profile, uint64_t seed) {
     if (state != GameState::SPACE && state != GameState::SURFACE) state = returnState == GameState::SURFACE && surf.valid ? GameState::SURFACE : GameState::SPACE;
     padUI.menu = false; padUI.keyboard = false;
     statusMsg.clear(); statusNext.clear();
-    audio.beep = 1;
+    audio.beep = BEEP_LOCK;
     tapeList();                                  // R-420: the tape's tracks (its hint shown if there are any)
     if (settings.autoMusic) tapeStart(false);    // taken up again where it was left
 }
@@ -68,7 +68,7 @@ void Game::autoStop() {
     if (surf.valid) { surf.scanWanted = scanMode >= 0; surf.player.autoWalk = 0; }
     statusNext.clear();   // what its steps queued (a probe's chute hint) is not the player's
     status("AUTO-EXPLORE OFF - THE CONTROLS ARE YOURS", 4);
-    audio.beep = 4;
+    audio.beep = BEEP_UI;
     tapeHalt(false);   // R-420: the music fades with it, its place kept
 }
 
@@ -170,20 +170,18 @@ void Game::autoPlan() {
 // ---------------------------------------------------------------------------------------------------------------------------------------
 // the chooser (the menu's AUTO-EXPLORE, the controller's commands)
 
-void Game::openAutoScreen(GameState back) { autoSel = clampi(settings.autoProfile, 0, AP_COUNT - 1); autoBack = back; state = GameState::AUTO; audio.beep = 4; tapeList(); }
+void Game::openAutoScreen(GameState back) { autoSel = clampi(settings.autoProfile, 0, AP_COUNT - 1); autoBack = back; state = GameState::AUTO; audio.beep = BEEP_UI; tapeList(); }
 
 void Game::updateAutoScreen(const Input& in) {
     const int n = AP_COUNT + 1;   // the profiles and BACK
-    if (in.wasPressed(KEY_UP)) { autoSel = (autoSel + n - 1) % n; audio.beep = 4; }
-    if (in.wasPressed(KEY_DOWN)) { autoSel = (autoSel + 1) % n; audio.beep = 4; }
-    if (in.wasPressed(KEY_ESCAPE) || (enterKey(in) && autoSel == AP_COUNT)) { state = autoBack; audio.beep = 4; return; }
+    if (menuStep(in, autoSel, n)) audio.beep = BEEP_UI;
+    if (in.wasPressed(KEY_ESCAPE) || (enterKey(in) && autoSel == AP_COUNT)) { state = autoBack; audio.beep = BEEP_UI; return; }
     if (enterKey(in)) autoStart(autoSel);
 }
 
 void Game::renderAutoScreen() {
     const int top = 30, bottom = UH - 30, x0 = 8, x1 = UW - 8;
-    blendRectRGB(canvas, x0, top, x1, bottom, rgb(0, 0, 0), 215);
-    drawRectRGB(canvas, x0, top, x1, bottom, HUD_DIM);
+    drawPanel(canvas, x0, top, x1, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 8, "AUTO-EXPLORE", HUD_AMBER);
     for (int i = 0; i <= AP_COUNT; i++) {
         const int y = top + 24 + i * 12;

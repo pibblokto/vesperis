@@ -26,7 +26,6 @@ struct Phone {                  // one sound as the tongue spells it
 };
 extern const Phone PHONES[];    // the whole table, longest spellings first
 int phoneCount();
-int phoneOf(const char* sym);   // the phone spelt so, -1 if none
 
 struct Voice {
     double pitch = 160;         // the voice's base, Hz

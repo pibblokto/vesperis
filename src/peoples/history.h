@@ -218,7 +218,6 @@ struct HistoryWar {
 struct HistorySickness { uint64_t name = 0; int first = 0, last = 0; int waves = 0; int64_t dead = 0; bool made = false; };
 struct HistoryInstitution { int kind = 0; int founded = 0, ended = 0; int place = -1; int founder = -1; uint64_t name = 0; };
 enum HistoryInstitutionKind { HI_COUNCIL = 0, HI_PRIESTHOOD, HI_GUILDS, HI_ACADEMY, HI_COMPANY, HI_GAZETTE, HI_UNIVERSITY, HI_ASSEMBLY, HI_BROADCASTER, HI_NETWORK, HI_MIND, HI_ARMY, HI_COUNT };
-extern const char* const HISTORY_INSTITUTION_KINDS[HI_COUNT];
 struct HistoryFamily {
     uint64_t name = 0;        // the surname's seed (kept from the industrial age, when registers keep them)
     int founder = -1;         // the first of it the history follows (a house's founder names it)
@@ -267,13 +266,11 @@ struct History {
     int reignAt(int year) const;                      // the reign of a year (-1 none: before year 1, after the end)
     int eraAt(int year) const;
     int harvestAt(int year) const;                    // 0 .. 4 (2 an ordinary year; 2 where none is kept)
-    double populationAt(int year) const;
     double sunlightAt(int year) const;                // D-05: 1 where none is kept
     bool placeStands(int place, int year) const { return place >= 0 && place < (int)places.size() && year >= places[place].founded && year <= places[place].ended; }
     bool alive(int person, int year) const { return person >= 0 && person < (int)persons.size() && year >= persons[person].born && year <= persons[person].died; }
     int inventionYear(int id) const;                  // 0 never
     std::vector<int> eventsOf(int person) const;
-    std::vector<int> eventsAt(int place) const;
 };
 
 // the history of a world's people: cached by the world and the people (the last eight); builds the world's plan first if it must
@@ -310,4 +307,3 @@ std::string historyKinship(const History& H, int from, int to);
 // `{mountain}`, `{god}`, `{other}` left for the caller), why a place was left in the collapse ("" where the end took all at once)
 std::string historyWorkName(const History& H, int work);
 const char* historySignPattern(int cause, int stage, int alt);
-const char* historyLeftWhy(int cause);
