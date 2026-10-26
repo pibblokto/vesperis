@@ -2,7 +2,7 @@
 
 `Game` owns the states, the ship, the guide and the audio state; a screen or device is a file of `Game` methods, declared in
 game.h under a `// ----` banner naming that file (the harness's hooks: src/harness/test_game.h). Over 50 KB (read by
-range): chart_draw, pad, shards_screen.
+range): chart_draw, shards_screen.
 
 ## Files
 - `game`: `newGame`, `frame` (its order: 07-game-flow-and-controls.md, "The frame"), `handleGlobalKeys`, `refuse`,
@@ -26,8 +26,8 @@ range): chart_draw, pad, shards_screen.
 - A new state or screen: the cookbook's "Add a game state" names every place to touch.
 - Persisted enums are append-only (`GameState`, `ShipState::Mode`, `AutoProfile`, guide.h's `MARK_*` numbers); one save line
   per field, and `load` ignores unknown keys. `Game`'s data members are never reordered.
-- A state is its row, a way in a row of its list, a cabin device its row in `cabinDevices` (rules-game-screens.md): ask
-  `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states.
+- A state is its row (its controller's page its `padMenu`), a way in a row of its list, a cabin device its row in
+  `cabinDevices` (rules-game-screens.md): ask `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states.
 - `resetExpedition` resets `radar`, `icase`, `chartHeld`, `probe`, `bay` and `tele` by assigning fresh ones: a field moved into
   one is reset with it, and a thread in one would end the game.
 - A text entry opened from a screen sets `guideReturn` to it and is drawn over it.

@@ -46,7 +46,9 @@ Contents:
 ## Proving and timing
 
 - A scratch program linking `build/{core,galaxy,space,surface,game}/*.o` (written as globs, not a zsh variable) reproduces or
-  times in seconds what the unit takes minutes for.
+  times in seconds what the unit takes minutes for. With the harness's objects too (all but `harness/main.o`; it defines
+  `g_testScale`) and a `TestGame` subclass, it is a differential: linked against the old objects before an edit and the new
+  after, U-04's scan held every state's controller pages, names, buttons and drawn menus under 79 knobs to the old in seconds.
 - Prove a refactor against the old binary built from a scratch tree (`git worktree add --detach`, `git archive`, or the old
   sources with the newest harness), keeping the old arithmetic. A generation change is proven by stream and per-body fingerprint
   diffs against the old sources: the draws identical and the peoples' worlds unchanged.
@@ -332,6 +334,10 @@ Contents:
   `Game`, its acts captureless lambdas (C++17 makes their pointers constant; their bodies have the method's access). A row's
   optional columns take default member initializers, so clang and GCC 15 let a row leave them out under `-Wextra`. A `const
   double` is no constant expression; a `constexpr` one is.
+- The command menu's first tab is the context's name where the context is the explorer's (the ship, on foot, a vehicle, the
+  probe, a recording, an instrument played: refined each frame), else the screen's own (U-04): a screen's `padMenu` sets its
+  `title` only where its context is the screen's. A trait two others give (a scene: a base in play) stays their conjunction,
+  so no row holds one without the other.
 - A voice's identity comes from strong narrow lines and resonances, not broad noise (compare voices by LTAS distances). Measure a
   medium's surface in the bare render's quiet windows.
 - raylib's non-looping music end cuts the last block, and stalls starve its stream. Log each swap's return (the refresh it met);

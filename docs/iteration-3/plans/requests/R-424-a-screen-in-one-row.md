@@ -1,6 +1,6 @@
 # R-424: a new screen in one row and a file of its own
 
-status: in progress (planned 2026-10-26 as U-01 to U-06, `docs/ideas/PLAN-screens.md`; U-01 to U-03 done 2026-10-26)
+status: in progress (planned 2026-10-26 as U-01 to U-06, `docs/ideas/PLAN-screens.md`; U-01 to U-04 done 2026-10-26)
 milestone: 1.4.0
 
 ## Request

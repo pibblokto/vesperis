@@ -56,7 +56,7 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `Player`, `Buggy`, `Drone`, `SurfaceEnvironment`, `LocalFront`, `Critter`, `TreeInst`, `Ruin` | surface/surface_types.h | the types beside `SurfaceView` (E-08) |
 | `Game` | game/game.h | orchestration, HUD, menus, save/load; an index of its sections at the top |
 | `GameState` + its traits, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game` |
-| `Game::STATE_ROWS` | game/states.cpp | a state's row: its traits (E-06), its update, picture, `covers` and `away` (U-02) |
+| `Game::STATE_ROWS` | game/states.cpp | a state's row: its traits (E-06), its update, picture, `covers` and `away` (U-02), its controller's page (`padMenu`, U-04) |
 | `Game::escMenu`, `guideMenu`, `shipPages`, `settingRows`, `cabinDevices` | game/*.cpp, each its screen's | the ways in as rows (U-03) |
 | `RadarState`, `ProbeState`, `DroneBay`, `AutoState` ... | game/*_state.h | each subsystem's state, a `Game` member (E-05) |
 | `TestGame` | harness/test_game.h | the harness's `Game`, with the hooks the tests read and set it through (E-05) |
@@ -110,7 +110,7 @@ Text saves in three slots plus an autosave (`vesperis_save_1..3.txt`, `vesperis_
 
 ## M6 additions (2026-09-26)
 
-* `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and, since R-418, the controller's controls and bindings (`PadState`, `PadMap`, `padCapture`; `vesperis_pad.txt`), which `game/pad.cpp` turns into the frame's keys (`Game::padFrame`: the layouts by context, the command menu, the on-screen keyboard, the CONTROLS screen's controller page); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
+* `core/input.cpp`: key names, `KeyMap` (physical-to-logical remap from `vesperis_keys.txt`) and, since R-418, the controller's controls and bindings (`PadState`, `PadMap`, `padCapture`; `vesperis_pad.txt`), which `game/pad.cpp` turns into the frame's keys (`Game::padFrame`: the layouts by context, the command menu, the on-screen keyboard, the CONTROLS screen's controller page; a screen's page and a map's buttons its row's `padMenu`, U-04); `core/fs.h`: `makeDir`/`fileExists` for the Windows build.
 * `platform.h` stays free of the core key enum (raylib defines its own `KEY_*`): the pad is passed as `PlatformPad` and copied into `Input::pad` in `main_raylib.cpp`, which also loads the key map and drives the photo tools and the recorder. R-418: the platform reads the controller through GLFW's joystick calls (declared in `platform_raylib.cpp`; raylib links statically, the dev Makefile too), raw and in its standard layout. The desktop loop body is a `step` lambda so the Emscripten build can hand it to the browser's animation loop.
 * `packaging/` (app bundle and zip scripts; since F-09 the release's six builds: `toolchains.sh`, `build-mac.sh`, `build-win.sh`, `build-linux.sh` in Docker, `build-release.sh`), `web/` (shell page, build script), `.clang-format`, CI `package` job.
 

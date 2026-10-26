@@ -191,6 +191,14 @@ void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: the probe's camera's commands (the controller's first page; its name is its context's)
+void Game::probePad(PadMenu& m) const {
+    if (probe.active && probe.endClock >= 0) m.item("LET IT GO", KEY_ENTER);
+    else m.item("THE CHUTE: OPEN, OR CUT", KEY_SPACE);
+    m.item("CENTRE THE CAMERA", KEY_X); m.item("NAME THE STORM", KEY_N); m.item("PHOTOGRAPH", KEY_P);
+    m.item("BACK TO THE CABIN", KEY_ESCAPE);
+}
+
 // X-03: the screen's stage name (a deck by its cloud)
 std::string Game::probeStageLabel(double c) const {
     int st = probe.endClock >= 0 && c >= probe.endClock ? PS_END : probeStageAt(probe.atm, probe.flight, c);

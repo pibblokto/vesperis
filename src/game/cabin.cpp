@@ -484,6 +484,11 @@ void Game::updateShipScreen(const Input& in, double dt, double realDt) {
     if (has) rows.row[shipScreenSel].act(*this);
 }
 
+// U-04: the flight computer's commands (the controller's first page)
+void Game::shipScreenPad(PadMenu& m) const {
+    m.title = "FLIGHT COMPUTER"; m.item("THE NEXT PAGE", KEY_RIGHT); m.item("THE PAGE BEFORE", KEY_LEFT); m.item("CLOSE", KEY_ESCAPE);
+}
+
 void Game::renderShipScreen() {
     const RowList<ShipPage>& pages = shipPages();
     const int top = 22, bottom = UH - 22;
@@ -601,6 +606,17 @@ void Game::updateConsole(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_BACKSPACE) && !consoleInput.empty()) consoleInput.pop_back();
     if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; return; }
     if (in.wasPressed(KEY_ENTER)) { std::string cmd = consoleInput; consoleInput.clear(); consoleCommand(cmd); }
+}
+
+// U-04: the console's commands (the controller's first page): its keyboard, its commands typed, and what the keyboard's buttons do
+void Game::consolePad(PadMenu& m) const {
+    m.title = "GOES CONSOLE";
+    m.typing = "A TYPES  X DELETES  START RUNS  SELECT COMMANDS";
+    m.item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
+    m.typed("SL: THE STARS NEAR", "SL\n"); m.typed("DL: THIS SYSTEM'S BODIES", "DL\n"); m.typed("WHERE: THE SHIP'S SECTOR", "WHERE\n");
+    m.typed("HOME: TARGET THE HOME STAR", "HOME\n"); m.typed("PREV: TARGET THE STAR BEFORE", "PREV\n"); m.typed("CAT: THE LAST NOTES", "CAT\n");
+    m.typed("HELP: THE COMMANDS", "HELP\n");
+    m.item("CLOSE THE CONSOLE", KEY_ESCAPE);
 }
 
 void Game::renderConsole() {

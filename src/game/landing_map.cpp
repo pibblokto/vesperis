@@ -126,6 +126,24 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
     updateShipMotion(dt);
 }
 
+// U-04: the landing map's controller: its commands, and only the buttons that do something there, in their words (the cursor: the
+// d-pad and the sticks)
+void Game::landingMapPad(PadMenu& m) const {
+    m.title = "LANDING MAP";
+    m.item("LAND HERE", KEY_ENTER);
+    if (landingZoomAllowed()) m.item(landZoom ? "THE WHOLE WORLD" : "ZOOM INTO THE SECTOR", KEY_Z);
+    m.item("A RANDOM LIT SITE", KEY_R);
+    m.item(mapClouds ? "HIDE THE CLOUDS" : "SHOW THE CLOUDS", KEY_C);
+    m.item("UNDER THE SKY'S BIGGEST BODY", KEY_J);
+    m.item(landPeoples ? "HIDE THE PEOPLES" : "THE PEOPLES", KEY_V);
+    m.item("THE ALMANAC OF THE SITE", KEY_T, MOD_CTRL);
+    m.item("BACK TO THE SHIP", KEY_ESCAPE);
+    m.button(PR_A, KEY_ENTER, "LAND"); m.button(PR_B, KEY_ESCAPE, "BACK");
+    if (landZoom) m.button(PR_LT, KEY_Z, "THE WORLD"); else m.button(PR_RT, KEY_Z, "ZOOM IN");   // its zoom is Z, in and out
+    m.button(PR_L3, KEY_LEFT_SHIFT, "BIG STEPS"); m.button(PR_START, KEY_ESCAPE, "BACK");
+    m.sticks = "STICKS MOVE THE CURSOR";
+}
+
 // N1-06: the relief class at a site from the terrain itself: the steepest rise over 150 m and over 600 m
 double Game::siteSlope(const SurfaceSite& probe) {
     // the grade of the region: the mean of eight directional slopes (150 and 600 m in four directions at the

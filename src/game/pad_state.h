@@ -10,6 +10,24 @@ struct PadBind { int role = -1, key = -1, mods = 0; std::string label; };
 
 struct PadItem { std::string label; int key = -1, mods = 0, special = 0; std::string text; };
 
+// a line's special: the keyboard, the controller page, a line typed, a key pressed twice (a removal), auto-explore's profiles
+enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };
+
+// U-04: a screen's controller, as its row's `padMenu` writes it in the screen's file: the command menu's first page (its tab's
+// name and its lines), what the keyboard's buttons do at a typing screen, and a screen's own buttons and what its sticks do there
+// (the maps'; a screen without them has the screens' buttons)
+struct PadMenu {
+    std::string title = "COMMANDS";
+    std::vector<PadItem> items;
+    const char* typing = "A TYPES  X DELETES  Y SPACE  START DONE  B CANCELS";
+    std::vector<PadBind> buttons; const char* sticks = nullptr;
+    void item(const std::string& label, int key, int mods = 0, int special = PSP_NONE) {
+        PadItem it; it.label = label; it.key = key; it.mods = mods; it.special = special; items.push_back(it);
+    }
+    void typed(const std::string& label, const std::string& text) { PadItem it; it.label = label; it.special = PSP_TYPE; it.text = text; items.push_back(it); }
+    void button(int role, int key, const char* label, int mods = 0) { PadBind b; b.role = role; b.key = key; b.mods = mods; b.label = label; buttons.push_back(b); }
+};
+
 struct PadUI {
     bool present = false;                 // a controller was there last frame
     std::string device; bool announce = false;   // the device in use (a new one is announced once in the cabin or on the ground)

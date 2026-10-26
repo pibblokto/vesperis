@@ -193,6 +193,16 @@ void Game::updateInstruments(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: the case's commands (the controller's first page; an instrument played is its context's, THE INSTRUMENT)
+void Game::instrumentsPad(PadMenu& m) const {
+    m.title = "THE CASE";
+    if (icase.level == 0) { if (!icase.worlds.empty()) m.item("OPEN THE FOLDER", KEY_ENTER); m.item("CLOSE THE CASE", KEY_ESCAPE); return; }
+    if (icase.valid && instrumentPlaysDisc(icase.inst)) m.item(icase.discOn ? "STOP THE MACHINE" : "WIND THE MACHINE", KEY_ENTER);
+    else if (icase.valid) { m.item("LOWER", KEY_LEFT); m.item("HIGHER", KEY_RIGHT); m.item("THE NINTH NOTE", KEY_9); m.item("THE TENTH NOTE", KEY_0); }
+    m.item("THE NEXT INSTRUMENT", KEY_DOWN); m.item("THE ONE BEFORE", KEY_UP);
+    m.item("BACK TO THE FOLDERS", KEY_ESCAPE);
+}
+
 // C-18: the case's worlds, a folder each: the world's name and where it is (a world of two peoples: the folder's people, as the decoder's
 // lines), how many it holds
 void Game::renderCaseWorlds() {

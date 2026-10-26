@@ -320,6 +320,15 @@ void Game::updateRecording(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: a recording's commands (the controller's first page; its name is its context's)
+void Game::recordingPad(PadMenu& m) const {
+    m.item(replay.playing ? "PAUSE" : "PLAY", KEY_SPACE);
+    m.item("TO THE START", KEY_HOME); m.item("TO THE END", KEY_END);
+    m.item("THE NEXT LAYER", KEY_PAGE_DOWN); m.item("THE LAYER BEFORE", KEY_PAGE_UP);
+    m.item("CENTRE THE VIEW", KEY_X); m.item("NAME THE STORM", KEY_N);
+    m.item("BACK TO THE GALLERY", KEY_ESCAPE);
+}
+
 void Game::renderRecording() {
     if (replay.rec < 0 || replay.rec >= (int)guide.probes.size() || !replay.p.active) { renderSpace(); return; }
     const ProbeRecord& r = guide.probes[replay.rec];

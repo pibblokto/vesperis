@@ -719,7 +719,7 @@ read by `loadFromDisk`.
 frame's copy of the `Input`, so every action keeps its one code path). Everywhere: Y the commands, START Esc, SELECT Tab, the d-pad the
 arrows, the right stick the mouse (the look: a curve `0.25 v + 0.75 v^3`, 900 mouse pixels a second at full throw times
 `pad_look_speed`, the mouse's sensitivity and, outside the screens, its inversion taken back out; `pad_invert_y` its own). By context
-(`padContext`, `padBindings`, which also give the menu's legend and its hints):
+(`padContext`, `padBindings`, which also give the menu's legend and its hints; a map's buttons are its row's, U-04):
 
 | Context | A | B | X | LB / RB | LT / RT | L3 / R3 | SELECT | left stick |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -749,19 +749,23 @@ not `Shift+R`. The stick's axes each give way to the keys alone (`updateWalking`
 cabin reads `moveX`/`moveY` now too).
 
 **The commands** (Y; `padItems`, `padMenuUpdate`, `renderPad`): a panel over the frame (the game runs on beneath it, the controller
-all the menu's) with three pages, LB/RB or Left/Right between them: the context's, named for it (`THE CABIN`, `THE AIM`, `THE
-TELESCOPE`, `THE RADAR`, `ON FOOT`, `THE BUGGY`, `THE DRONE`, `PHOTO MODE`, `LANDING MAP`, `SECTOR MAP`, `STAR MAP`, `THE GALAXY`,
-`THE DECODER`, `THE CASE`, `THE DRONE BAY`, `THE PROBE`, `THE RECORDING`, `THE ALMANAC`, `DATA SHEET`, `THE ANALYZER`, `FLIGHT
-COMPUTER`, `GOES CONSOLE`, `THE ENTRY`, `HELP`, `VESPERIS` at the title; no page where a screen's own keys are its arrows, Enter and
-Esc), every action of the screen in words with its state (`USE THE FLIGHT COMPUTER` by `cabin.facing`, `VIMANA FLIGHT TO THE TARGET`
-with a remote target, `FIELD AMPLIFICATOR ON`, `TAKE THE RECORD`, `GET IN THE BUGGY`, `AUTOWALK 6`, `THE SCANNER: MARKED SIGHTS IN`,
-`FLY THE PLOTTED JUMP`, `PUT A CHART DOWN` ...); `GENERAL`: the guide, the star map, the log, the data sheet, the warp (`TIME WARP X1
-TO X10`), the almanac, a photograph, photo mode, the panorama, the recorder, save and load (the slot), help, the scanlines, fullscreen,
-`CONTROLLER SETUP`, `AUTO-EXPLORE` (R-419, in space and on the ground), the game menu (each where its key works); `KEYS`: the keyboard below with Shift, Ctrl and Alt latched for the next
-key (every key the game reads: the arrows are the d-pad's and every F key has its twin, B-002). A line runs as its keys (`padRunItem`: a key with its modifiers into a queue delivered one a frame; a mark's removal pressed
-twice; the console's commands typed letter by letter with Enter: `SL: THE STARS NEAR`, `DL`, `WHERE`, `HOME`, `PREV`, `CAT`, `HELP`)
-and closes the menu; A or X runs, B, Y or START close. Each line's right names the button that does it at once in the context (cyan)
-or the key it presses (`(CTRL+T)`); the panel's foot lists the context's buttons in words (`A JUMP  B CROUCH  X USE ...`).
+all the menu's) with three pages, LB/RB or Left/Right between them: the screen's, its row's `padMenu` (U-04: a method in its file),
+named for the context or the screen (`THE CABIN`, `THE AIM`, `THE TELESCOPE`, `THE RADAR`, `ON FOOT`, `THE BUGGY`, `THE DRONE`,
+`PHOTO MODE`, `LANDING MAP`, `SECTOR MAP`, `STAR MAP`, `THE GALAXY`, `THE DECODER`, `THE CASE`, `THE DRONE BAY`, `THE PROBE`,
+`THE RECORDING`, `THE ALMANAC`, `DATA SHEET`, `THE ANALYZER`, `FLIGHT COMPUTER`, `GOES CONSOLE`, `THE ENTRY`, `HELP`, `VESPERIS` at
+the title; no page where a screen's own keys are its arrows, Enter and Esc), every action of the screen in words with its state
+(`USE THE FLIGHT COMPUTER` by `cabin.facing`, `VIMANA FLIGHT TO THE TARGET` with a remote target, `FIELD AMPLIFICATOR ON`,
+`TAKE THE RECORD`, `GET IN THE BUGGY`, `AUTOWALK 6`, `THE SCANNER: MARKED SIGHTS IN`, `FLY THE PLOTTED JUMP`, `PUT A CHART DOWN`
+...); `GENERAL`: the guide, the star map, the log, the data sheet, the warp (`TIME WARP X1 TO X10`), the almanac, a photograph,
+photo mode, the panorama, the recorder, save and load (the slot), help, the scanlines, fullscreen, `CONTROLLER SETUP`,
+`AUTO-EXPLORE` (R-419, in space and on the ground), the game menu (U-04: by the state's traits: help at a base, the title or a
+scene; the guide, the log, a load, auto-explore and the menu in a scene, a base in play; the warp and the almanac by `ST_CLOCK`; the
+photo tools by `ST_PHOTO`; a save in a scene or on the ground); `KEYS`: the keyboard below with Shift, Ctrl and Alt latched for the
+next key (every key the game reads: the arrows are the d-pad's and every F key has its twin, B-002). A line runs as its keys
+(`padRunItem`: a key with its modifiers into a queue delivered one a frame; a mark's removal pressed twice; the console's commands
+typed letter by letter with Enter: `SL: THE STARS NEAR`, `DL`, `WHERE`, `HOME`, `PREV`, `CAT`, `HELP`) and closes the menu; A or X
+runs, B, Y or START close. Each line's right names the button that does it at once in the context (cyan) or the key it presses
+(`(CTRL+T)`); the panel's foot lists the context's buttons in words (`A JUMP  B CROUCH  X USE ...`).
 
 **The keyboard** (`padKeyboardUpdate`, `renderPadKeyboard`): seven rows of ten units (`A`-`T`, `U`-`Z - . / =`, the digits, `SPACE
 BKSP DEL ENTER`, `SHIFT CTRL ALT TAB ESC`, `PGUP PGDN HOME END`); the arrows move over it (up and down keep the place across rows of

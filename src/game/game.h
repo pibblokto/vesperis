@@ -128,7 +128,7 @@ public:
     void echoHeardAt(const SurfaceView::ScanEcho& e, double& x, double& z) const;
     const SurfaceView::ScanEcho* scanNearest(double& hx, double& hz);
     bool scanModeHere(int mode) const;
-    void scanCycle(); void scanToggleSkip();
+    void scanCycle(); void scanToggleSkip(); void scannerPad(PadMenu& m) const;
     std::string echoDetail(const SurfaceView::ScanEcho& e) const;
     void drawScanHUD();
     void drawCompassMark(double bearing, uint32_t col, bool filled);
@@ -191,6 +191,7 @@ public:
         void (Game::*render)();         // its picture: a scene's with its HUD; an overlay's over the scene under it (`renderUnder`)
         bool (Game::*covers)() const;   // an overlay's: true while it covers the whole frame, no scene drawn under it
         void (Game::*away)();           // run each frame another state is current, in the table's order: what its screen stops
+        void (Game::*padMenu)(PadMenu& m) const;   // U-04: its controller's first page, its name, its own buttons (pad_state.h)
     };
     static const StateRow STATE_ROWS[STATE_COUNT];
     // ---- the ways in, U-03: a menu a list of rows, its count read from it (game_types.h's rows; menus.cpp, guide_screens.cpp,
@@ -363,7 +364,7 @@ protected:
     void drawCabin();
     void drawCabinBand(const CabinFrame& f);
     void renderCabinHUD();
-    void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen();
+    void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen(); void shipScreenPad(PadMenu& m) const; void consolePad(PadMenu& m) const;
     void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in, double dt, double realDt); void renderConsole();
     // ---- the shard decoder (shards_screen.cpp, history_screen.cpp, medium_draw.cpp; shard_world.h)
     ShardWorld shardWorld;
@@ -445,6 +446,7 @@ protected:
     std::string shardWorldTitle(int maxName) const;
     std::string worldNameOfKey(const std::string& key) const;
     void openShards(); void openShard(int sel); void updateShards(const Input& in, double dt, double realDt); void renderShards(); void renderPiece(); void shardsAway();
+    void shardsPad(PadMenu& m) const;
     // ---- the ship's player (player.cpp, player_state.h)
     ShipPlayer player;
     int shardsTop = 0;                                 // the decoder's first level: 0 the worlds, 1 the player
@@ -461,12 +463,12 @@ protected:
     // ---- the instruments' case (instruments_screen.cpp, instrument_draw.cpp; case_state.h)
     InstrumentCase icase;
     void openInstruments(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double dt, double realDt); void renderInstruments(); void stopInstrument(); void instrumentsAway();
-    void openCaseWorld(int w);
+    void openCaseWorld(int w); void instrumentsPad(PadMenu& m) const;
     void renderCaseWorlds();
     // ---- the drone bay (drones.cpp, drone_draw.cpp; drone_state.h)
     DroneBay bay;
     std::thread droneJob; std::atomic<bool> droneJobBusy{false}; DroneWorld droneJobOut; uint64_t droneJobStar = 0; int droneJobBody = -1;
-    void openDroneBay(); void updateDroneBay(const Input& in, double dt, double realDt); void renderDroneBay();
+    void openDroneBay(); void updateDroneBay(const Input& in, double dt, double realDt); void renderDroneBay(); void droneBayPad(PadMenu& m) const;
     void droneBayLaunch();
     void updateDrones(double realDt);
     void droneWorldAsk(int body);
@@ -508,17 +510,17 @@ protected:
     std::vector<uint32_t> sectorImg; int sectorImgW = 100, sectorImgH = 80; double sectorImgX = 1e9, sectorImgZ = 1e9; int sectorImgZoom = -1, sectorImgEpoch = -1;
     static constexpr int SECTOR_LEVELS = 6;   // 2, 8, 32, 128, 512 and 2048 km wide (the widest levels only on big worlds)
     int sectorMaxLevel() const;
-    void updateSectorMap(const Input& in, double dt, double realDt); void renderSectorMap();
+    void updateSectorMap(const Input& in, double dt, double realDt); void renderSectorMap(); void sectorMapPad(PadMenu& m) const;
     void applyVision();
     // ---- the guide's screens: the menu, text entry, the log, statistics, the gallery (guide_screens.cpp)
     void openGuide(); void updateGuideMenu(const Input& in, double dt, double realDt); void renderGuideMenu();
     void beginTextEntry(const std::string& prompt, int kind, const std::string& initial); void updateTextEntry(const Input& in, double dt, double realDt); void renderTextEntry();
-    bool textEntryCovers() const;
+    bool textEntryCovers() const; void textEntryPad(PadMenu& m) const;
     void updateLog(const Input& in, double dt, double realDt); void renderLog(); void updateStats(const Input& in, double dt, double realDt); void renderStats();
     std::string statsKindsLine() const; bool statsKindsOverflow() const;
     void openGallery(); void updateGallery(const Input& in, double dt, double realDt); void renderGallery();
     // ---- the star map and the targets (star_map.cpp); the log's events and the visits (names.cpp)
-    void openStarMap(); void updateStarMap(const Input& in, double dt, double realDt); void renderStarMap(); bool starMapCovers() const;
+    void openStarMap(); void updateStarMap(const Input& in, double dt, double realDt); void renderStarMap(); bool starMapCovers() const; void starMapPad(PadMenu& m) const;
     void setRemoteStar(const Star& s); void targetStarByName(const std::string& name); void targetPreviousStar(); void targetHome();
     void logEvent(const std::string& kind, const std::string& text); void noteVisit();
     // ---- the title's and help's state, the arrival, the landing map's probe site
@@ -539,7 +541,7 @@ protected:
     void renderSpace();
     void keepFlightBand();
     void renderSpaceHUD();
-    void renderSpaceScreen();
+    void renderSpaceScreen(); void spacePad(PadMenu& m) const;
     void renderUnder();
     void drawVisor(uint32_t col);
     void drawCommonHUD(bool warp = true);
@@ -552,7 +554,7 @@ protected:
     // ---- the landing map's screen (landing_map.cpp, landing_map_build.cpp)
     void updateLandingMap(const Input& in, double dt, double realDt);
     void renderLandingMap();
-    void renderLandingScreen();
+    void renderLandingScreen(); void landingMapPad(PadMenu& m) const;
     void beginLanding();
     void buildLandingMapBase();
     // ---- the capsule and the ground: their update, scene and HUD (surface_play.cpp, scene_draw.cpp, hud.cpp)
@@ -561,24 +563,24 @@ protected:
     void renderSurfaceScene();
     void renderSurfaceHUD();
     void renderCapsuleScreen();
-    void renderSurfaceScreen();
+    void renderSurfaceScreen(); void surfacePad(PadMenu& m) const;
     // ---- the system list and the data sheet, its forecast and the probes' profiles (data_sheet.cpp, probe_records.cpp)
     // W-03: the forecast at the feet: the next fronts within five days (`frontsAhead`), listed again every thirty seconds of game time
     std::vector<FrontForecast> forecast; double forecastT = -1e18, forecastReal = -1e18; int forecastBody = -1;
     void updateForecast();
     std::string forecastLine() const;
     void updateSystemList(const Input& in, double dt, double realDt);
-    void renderSystemList();
+    void renderSystemList(); void systemListPad(PadMenu& m) const;
     void updateDataSheet(const Input& in, double dt, double realDt);
-    void renderDataSheet();
+    void renderDataSheet(); void dataSheetPad(PadMenu& m) const;
     int dataPage = 0;                     // the data sheet's page (0 the sheet, 1.. a giant's probes' profiles)
     std::vector<int> dataProbes() const;
     void renderProbeProfile(int rec);
     // ---- the title, help, the menu and the settings (menus.cpp); the slots (persistence.cpp)
     void updateTitle(const Input& in, double dt, double realDt);
-    void renderTitle();
+    void renderTitle(); void titlePad(PadMenu& m) const;
     void updateHelp(const Input& in, double dt, double realDt);
-    void renderHelp();
+    void renderHelp(); void helpPad(PadMenu& m) const;
     void updateMenu(const Input& in, double dt, double realDt);
     void renderMenu();
     void updateSettingsScreen(const Input& in, double dt, double realDt);
@@ -613,7 +615,7 @@ protected:
     GameState almanacReturn = GameState::SPACE;
     int almanacSel = 0, almanacScroll = 0, almanacFree = 6;
     bool almanacRunning = false; double almanacRunT = 0; AlmanacEvent almanacRunEvent; std::string almanacRunLabel;
-    void openAlmanac(); void buildAlmanac(); void updateAlmanac(const Input& in, double dt, double realDt); void renderAlmanac();
+    void openAlmanac(); void buildAlmanac(); void updateAlmanac(const Input& in, double dt, double realDt); void renderAlmanac(); void almanacPad(PadMenu& m) const;
     void almanacRunTo(const AlmanacEvent& e); void almanacStop(bool arrived);
     static double almanacWarpFor(double remaining);
     std::string almanacLabelOf(const AlmanacEvent& e) const;
@@ -641,7 +643,7 @@ protected:
     void launchProbe(); void watchProbe(); void probeCut(const char* why); void probeEnd(); void probeRelease();
     void updateProbe(double realDt);
     void updateProbeScreen(const Input& in, double dt, double realDt);
-    void renderProbe();
+    void renderProbe(); void probePad(PadMenu& m) const;
     void renderProbeHUD(const ProbeRecord* rec = nullptr, double clock = 0, double tt = 0);
     void probeHiss();
     void probeSound(double clock, bool watching, bool ended);
@@ -668,7 +670,7 @@ protected:
     bool recordingContext(int rec);
     bool openRecording(int rec);
     void updateRecording(const Input& in, double dt, double realDt);
-    void renderRecording();
+    void renderRecording(); void recordingPad(PadMenu& m) const;
     void recordingAudio();
     void recordingPoster(int rec, std::vector<uint32_t>& out);
     double recordTimeAt(const ProbeRecord& r, double clock) const;

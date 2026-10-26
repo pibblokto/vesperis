@@ -150,6 +150,37 @@ void Game::updateStarMap(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: the star map's controller, each page's: its commands, its buttons, what the sticks do (the galaxy chart's cursor; the
+// neighbourhood turns)
+void Game::starMapPad(PadMenu& m) const {
+    if (mapPage == 1) {   // the galaxy chart
+        m.title = "THE GALAXY";
+        m.item(chartPlotted() ? "FLY THE PLOTTED JUMP" : "PLOT A JUMP TO THE CURSOR", KEY_ENTER);
+        m.item("THE NEXT STOP", KEY_N); m.item("THE STOP BEFORE", KEY_N, MOD_SHIFT);
+        m.item("MARK THE PLACE", KEY_L);
+        m.item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
+        m.item("THE CURSOR BACK TO THE SHIP", KEY_SPACE);
+        m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
+        m.item(chartPlotted() ? "LOOK AT THE PLOTTED END" : "THE NEIGHBOURHOOD", KEY_TAB);
+        m.button(PR_A, KEY_ENTER, chartPlotted() ? "FLY" : "PLOT"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_X, KEY_SPACE, "THE SHIP");
+        m.button(PR_LB, KEY_PAGE_UP, "HIGHER"); m.button(PR_RB, KEY_PAGE_DOWN, "LOWER");
+        m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN"); m.button(PR_L3, KEY_LEFT_SHIFT, "FASTER");
+        m.button(PR_SELECT, KEY_TAB, chartPlotted() ? "LOOK THERE" : "NEIGHBOURHOOD"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
+        m.sticks = "STICKS MOVE THE CURSOR";
+    } else {
+        m.title = "STAR MAP";
+        m.item(gchart.look ? "TAKE THIS STAR AS THE END" : "TARGET THE STAR", KEY_ENTER);
+        m.item("THE NEXT CLASS", KEY_C); m.item("THE CLASS BEFORE", KEY_X); m.item("EVERY CLASS", KEY_0);
+        m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
+        m.item(gchart.look ? "BACK TO THE CHART" : "THE GALAXY", KEY_TAB);
+        m.button(PR_A, KEY_ENTER, gchart.look ? "TAKE THIS STAR" : "TARGET"); m.button(PR_B, KEY_ESCAPE, "CLOSE");
+        m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN");
+        m.button(PR_SELECT, KEY_TAB, gchart.look ? "THE CHART" : "THE GALAXY"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
+        m.sticks = "STICKS TURN IT";
+    }
+    m.item("CLOSE THE MAP", KEY_ESCAPE);
+}
+
 // the galaxy chart covers the frame: no scene under it
 bool Game::starMapCovers() const { return mapPage == 1; }
 

@@ -81,6 +81,25 @@ void Game::updateSectorMap(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_N)) state = GameState::SURFACE;
 }
 
+// U-04: the sector map's controller: its commands, and only the buttons that do something there, in their words (the cursor: the
+// d-pad and the sticks)
+void Game::sectorMapPad(PadMenu& m) const {
+    m.title = "SECTOR MAP";
+    m.item("MARK HERE, OR RENAME THE MARK", KEY_ENTER);
+    m.item("SHOW THE MARK OVER THE VIEW", KEY_ENTER, MOD_SHIFT);
+    m.item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
+    m.item("WAYPOINT AT THE CURSOR", KEY_M);
+    m.item("THE NEXT MARK", KEY_TAB);
+    m.item("THE CURSOR BACK TO YOU", KEY_SPACE);
+    m.item("ZOOM IN", KEY_EQUAL); m.item("ZOOM OUT", KEY_MINUS);
+    scannerPad(m);
+    m.item("CLOSE THE MAP", KEY_ESCAPE);
+    m.button(PR_A, KEY_ENTER, "MARK"); m.button(PR_B, KEY_ESCAPE, "CLOSE"); m.button(PR_X, KEY_SPACE, "BACK TO YOU");
+    m.button(PR_LT, KEY_MINUS, "ZOOM OUT"); m.button(PR_RT, KEY_EQUAL, "ZOOM IN"); m.button(PR_L3, KEY_LEFT_SHIFT, "FASTER");
+    m.button(PR_SELECT, KEY_TAB, "NEXT MARK"); m.button(PR_START, KEY_ESCAPE, "CLOSE");
+    m.sticks = "STICKS MOVE THE CURSOR";
+}
+
 void Game::renderSectorMap() {
     const int MW = 200, MH = 160, ox = 8, oy = 14;   // logical frame
     sectorZoom = std::min(sectorZoom, sectorMaxLevel());

@@ -137,6 +137,12 @@ void Game::scanToggleSkip() {
     audio.beep = BEEP_UI;
 }
 
+// U-04: the scanner's two lines in the controller's commands (the ground's and the sector map's)
+void Game::scannerPad(PadMenu& m) const {
+    m.item(scanMode < 0 ? "THE SCANNER ON" : "THE SCANNER'S NEXT KIND", KEY_R);
+    m.item(scanSkipMarked ? "THE SCANNER: MARKED SIGHTS IN" : "THE SCANNER: MARKED SIGHTS OUT", KEY_R, MOD_SHIFT);
+}
+
 // "A TOWN", "1240 M HIGH", "2.3 KM ACROSS"
 std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     const Landmark& L = e.lm;

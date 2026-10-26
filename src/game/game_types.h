@@ -84,6 +84,8 @@ enum StateTrait : unsigned {
     ST_TYPING = 1 << 7,        // keys type: the global keys rest, the controller's keyboard stays up
     ST_GROUND = 1 << 8,        // on the ground, or on the capsule's way down to it or back up
     ST_SHIP_MOVES = 1 << 9,    // U-02: the ship moves on after its update, by the frame's clock (the star map, the cabin's screens)
+    ST_BASE = 1 << 10,         // U-04: a base, which the screens opened from it go back to (`returnState`): the title, the scenes
+    ST_CLOCK = 1 << 11,        // U-04: the time warp and the almanac are at hand (T, Ctrl+T): the scenes and the landing map
 };
 // the controller's contexts (pad.cpp): what its sticks and buttons do. A state's row names its own; the ground's and the case's
 // are refined as the explorer walks, drives or flies, or plays (`padContext`)

@@ -311,3 +311,36 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     }
     if (flashTimer > 0) flashTimer -= realDt;
 }
+
+// U-04: the ground's commands (the controller's first page; its name is its context's): photo mode's, a vehicle's, on foot
+void Game::surfacePad(PadMenu& m) const {
+    if (!surf.valid) return;
+    if (photoMode) { m.item("END PHOTO MODE", KEY_P, MOD_CTRL); m.item("PANORAMA", KEY_P, MOD_CTRL | MOD_SHIFT); m.item("PHOTOGRAPH", KEY_P); return; }
+    if (surf.inVehicle()) {
+        m.item(surf.inBuggy ? "GET OUT OF THE BUGGY" : "GET OUT OF THE DRONE", KEY_E);
+        m.item(surf.chaseCam ? "THE NOSE CAMERA" : "THE CHASE VIEW", KEY_V);
+    } else {
+        std::string use;
+        if (surf.buggy.deployed && surf.buggyDist() <= 3.5) use = "GET IN THE BUGGY";
+        else if (surf.drone.deployed && surf.droneDist() <= 3.5) use = "GET IN THE DRONE";
+        else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) use = "TAKE THE INSTRUMENT";
+        else if (surf.nearShard.index >= 0) use = "TAKE THE RECORD";
+        else if (surf.env.nearCapsule) use = "BOARD THE CAPSULE";
+        if (!use.empty()) m.item(use, KEY_E);
+        m.item("UNFOLD A BUGGY", KEY_B);
+        m.item("UNFOLD A DRONE", KEY_F);
+    }
+    m.item("CALL THE CAPSULE", KEY_K);
+    m.item("THE SECTOR MAP", KEY_N);
+    scannerPad(m);
+    m.item("MARK WHERE THE CROSSHAIR RESTS", KEY_L);
+    m.item(surf.hasWaypoint ? "CLEAR THE WAYPOINT" : "WAYPOINT AT THE CROSSHAIR", KEY_M);
+    m.item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
+    if (!surf.inVehicle()) {
+        m.item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);
+        m.item("VISION MODE", KEY_V);
+        m.item("CREATURES NEARBY", KEY_X);
+        const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));
+        m.item(next ? fmt("AUTOWALK %d", next) : "STOP THE AUTOWALK", KEY_0 + next);
+    }
+}

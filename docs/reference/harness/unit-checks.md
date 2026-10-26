@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-42 groups, 401 checks in their order; a group's heading gives its file, its function, the render scale it
+42 groups, 402 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -530,6 +530,7 @@ starts at and its count.
 - auto-explore's tape: the cassette deck (R-420)
 - auto-explore's tape: the explorer's folder, else the game's own (R-420)
 
-## states (`unit_navigation.cpp`, `unitStates`, 1x): 1
+## states (`unit_navigation.cpp`, `unitStates`, 1x): 2
 
 - the states' table, the old lists
+- the controller's general page, the old lists

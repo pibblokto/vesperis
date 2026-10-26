@@ -478,7 +478,8 @@ Besides them, five in the harness and the docs. Found on the way: no palette ban
   the frame's picture asks it now).
 - **KI-428 (U-01's survey):** a T typed at the GOES console also multiplies the time warp, and Ctrl+T there opens the almanac: the
   frame asks whether a state simulates, not whether it types. Offered, not fixed.
-- **The almanac's commands:** while a run goes, the controller offers STOP THE RUN (T), which the almanac's screen ignores (U-04).
+- **The almanac's commands:** while a run goes, the controller offers STOP THE RUN (T), which the almanac's screen ignores
+  (KI-431, offered at U-04).
 - **KI-429:** the settings screen's title overlaps its first row (seen once U-01 mended `settings`' picture). Offered, not fixed.
 - **U-02, the table's definition:** clang reads a static member's out-of-class `constexpr` definition as an inline variable, emitted
   only where it is used; GCC 15 reads it as a plain one. states.cpp reads the table out of line, so it holds the one definition
@@ -486,3 +487,8 @@ Besides them, five in the harness and the docs. Found on the way: no palette ban
 - **U-03, on the way:** 07 named eight of the computers' colours and banks 21-27, two devices behind (C-11, C-18). The game's
   note counted game.cpp and audio.cpp among the files over 50 KB (16 and 33 KB now). Both are true now. The unit still presses
   two of the flight computer's rows by number (`testShipScreenRow(0, 2)` and `(0, 4)`); U-06 finds them by label.
+- **U-04, on the way:** one method writes a screen's page and, on a map, its buttons and sticks: the plan had a second column,
+  but a map's buttons share their state with its lines' words. The data sheet's test reads traits and the system (a scene, on
+  the ground or in a system), so it needed no method. The console's keyboard line moved into its row (`typing`). pad.cpp still
+  tests KEYS, the screen its setup line opens (offered there, the line would make the screen its own way back), and the aim's
+  SPACE (`ship.targeting` lasts off it).

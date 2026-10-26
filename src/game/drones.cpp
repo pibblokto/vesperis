@@ -350,6 +350,9 @@ void Game::updateDroneBay(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: the drone bay's commands (the controller's first page)
+void Game::droneBayPad(PadMenu& m) const { m.title = "THE DRONE BAY"; m.item("SEND THE DRONES", KEY_ENTER); m.item("BACK TO THE CABIN", KEY_ESCAPE); }
+
 void Game::renderDroneBay() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
     drawText(canvas, 6, 4, "THE DRONE BAY", HUD_AMBER);

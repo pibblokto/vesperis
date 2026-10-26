@@ -1,4 +1,4 @@
-# Rules: the game's screens: the states' table and the ways in
+# Rules: the game's screens: the states' table, the ways in and the controller
 
 The rules in force for how a game state is made, a line each with the entries behind them (`log/`, by release). A milestone that
 sets or changes one edits its line here; a replaced one moves to `superseded.md` (`docs/CLAUDE.md`). What the screens show and
@@ -19,6 +19,11 @@ their keys: `rules-game.md`.
 - A cabin device is its row in `cabinDevices` plus its picture in `drawCabinBand`; a facing without its row fails to compile [U-03]
 - A row's act keeps its case's calls and their order; an act that opens a screen calls its opener [U-03]
 
+## The controller
+- A screen's controller is its row's `padMenu` in its file: its tab's name and lines, a map's buttons and sticks, a typing screen's keys [U-04]
+- The general page goes by traits: a base, a scene (a base in play), the ground, `ST_CLOCK`, `ST_PHOTO`; pad.cpp tests only KEYS and the aim's state [U-04]
+
 [E-06]: log/6-1.4.0.md
 [U-02]: log/6-1.4.0.md
 [U-03]: log/6-1.4.0.md
+[U-04]: log/6-1.4.0.md

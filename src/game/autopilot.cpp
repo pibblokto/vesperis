@@ -490,3 +490,49 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
         audio.rotor = 0.4 * spin; audio.rotorPitch = 0.25 * spin;
     }
 }
+
+// U-04: the ship's commands (the controller's first page; its name is its context's): the telescope's, the radar's, the aim's,
+// else the ship's and the cabin's
+void Game::spacePad(PadMenu& m) const {
+    const bool inSystem = sys.valid && !sys.bodies.empty() && ship.mode != ShipState::VIMANA;
+    const bool parkedBody = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBody < (int)sys.bodies.size() && ship.parkedBelt < 0;
+    const bool giant = parkedBody && isProbeGiant(sys.bodies[ship.parkedBody].type);
+    if (tele.on) {
+        m.item("ZOOM IN", KEY_PAGE_UP); m.item("ZOOM OUT", KEY_PAGE_DOWN);
+        m.item(tele.track != TELE_NONE ? "STOP TRACKING" : "TRACK THE TARGET", KEY_ENTER);
+        m.item("NAME THE TARGET", KEY_N); m.item("PHOTOGRAPH IT", KEY_P);
+        if (giant) m.item("SEND A PROBE THERE", KEY_C);
+        m.item("STOW THE TELESCOPE", KEY_Z);
+    } else if (radar.on) {
+        m.item("GAIN UP", KEY_PAGE_UP); m.item("GAIN DOWN", KEY_PAGE_DOWN);
+        if (radar.locked >= 0) m.item("FLY TO THE SIGNAL", KEY_ENTER);
+        m.item("LEAVE THE RADAR CAMERA", KEY_B);
+    } else if (ship.targeting) {
+        m.item("LOCK THE STAR IN THE CROSSHAIR", KEY_ENTER);
+        m.item("THE NEXT NEAREST STAR", KEY_N);
+        m.item("JUMP: TYPE THE LIGHT YEARS", -1, 0, PSP_KEYBOARD);
+        m.item("CANCEL THE AIM", KEY_R);
+    } else {
+        if (settings.cabin && cabin.facing > FACE_NOTHING && cabin.facing < FACE_COUNT) m.item(std::string("USE ") + cabinDevices().row[cabin.facing].use, KEY_E);
+        if (ship.mode == ShipState::VIMANA) m.item("ABORT THE FLIGHT", KEY_V);
+        else {
+            m.item("AIM AT A STAR", KEY_R);
+            if (ship.hasRemote) m.item("VIMANA FLIGHT TO THE TARGET", KEY_V);
+        }
+        if (inSystem) { m.item("LOCAL TARGET", KEY_L); m.item("THE ANALYZER", KEY_TAB); }
+        if (inSystem && (ship.localTarget >= 0 || ship.targetBelt >= 0)) {
+            if (ship.mode != ShipState::APPROACH) m.item("FINE APPROACH", KEY_ENTER);
+            m.item("CENTRE ON THE TARGET", KEY_X);
+        }
+        if (ship.mode == ShipState::PARKED) m.item(ship.orbiting ? "FIXED POINT CHASE" : "SYNCHRONOUS ORBIT", KEY_O);
+        if (parkedBody) m.item(giant ? (probe.active ? "THE PROBE'S CAMERA" : "SEND A PROBE") : "DEPLOY THE CAPSULE", KEY_C);
+        m.item("THE TELESCOPE", KEY_Z);
+        m.item("THE SIGNAL RADAR", KEY_B);
+        m.item(fieldAmp ? "FIELD AMPLIFICATOR OFF" : "FIELD AMPLIFICATOR ON", KEY_F);
+        if (settings.cabin) {
+            m.item(cabin.light ? "CABIN LIGHT OFF" : "CABIN LIGHT ON", KEY_U);
+            m.item(cabin.depolarised ? "POLARISE THE HULL" : "GLASS HULL", KEY_Y);
+            if (cabin.onRoof) m.item("BACK INTO THE CABIN", KEY_PAGE_DOWN); else m.item("UP TO THE ROOF DECK", KEY_PAGE_UP);
+        }
+    }
+}

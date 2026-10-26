@@ -86,6 +86,12 @@ void Game::updateAlmanac(const Input& in, double dt, double realDt) {
     state = almanacReturn == GameState::SHIPSCREEN ? GameState::SPACE : almanacReturn;   // the run is watched from the window
 }
 
+// U-04: the almanac's commands (the controller's first page)
+void Game::almanacPad(PadMenu& m) const {
+    m.title = "THE ALMANAC";
+    m.item("RUN THE CLOCK TO IT", KEY_ENTER); if (almanacRunning) m.item("STOP THE RUN", KEY_T); m.item("BACK", KEY_ESCAPE);
+}
+
 // the ground's state now and when it changes: "DAY  DARK IN 2 H 05 MIN"
 std::string Game::almanacStateLine() const {
     const AlmanacPlace& p = almanacAt;

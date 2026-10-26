@@ -95,6 +95,13 @@ void Game::updateTitle(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
 }
 
+// U-04: the title's commands (the controller's first page; its name is its context's)
+void Game::titlePad(PadMenu& m) const {
+    m.item(hasSave ? "CONTINUE" : "BEGIN THE EXPEDITION", KEY_ENTER);
+    if (hasSave) m.item("NEW EXPEDITION", KEY_N);
+    m.item("HELP", KEY_H); m.item("CREDITS", KEY_C); m.item("QUIT", KEY_ESCAPE);
+}
+
 // help: Space turns its pages (not the credits'), any other key closes it
 void Game::updateHelp(const Input& in, double dt, double realDt) {
     bool any = false;
@@ -102,6 +109,9 @@ void Game::updateHelp(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_SPACE) && helpPage != 2) helpPage = helpPage == 0 ? 1 : (helpPage == 1 ? 3 : 0);   // the ship, the surface, the controller
     else if (any) state = returnState;
 }
+
+// U-04: help's commands (the controller's first page)
+void Game::helpPad(PadMenu& m) const { m.title = "HELP"; m.item("THE NEXT PAGE", KEY_SPACE); m.item("CLOSE", KEY_ESCAPE); }
 
 // the Esc menu: Enter does its row's act
 void Game::updateMenu(const Input& in, double dt, double realDt) {

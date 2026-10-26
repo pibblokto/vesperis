@@ -489,6 +489,42 @@ void Game::updateShards(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: the decoder's commands (the controller's first page), its level's: the player's, the worlds', a world's records, a record's
+void Game::shardsPad(PadMenu& m) const {
+    m.title = "THE DECODER";
+    if (shardsLevel == 0 && shardsTop == 1) {
+        m.item("PLAY FROM HERE", KEY_ENTER);
+        if (player.playing >= 0) { m.item(player.paused ? "GO ON" : "PAUSE", KEY_SPACE); m.item("STOP", KEY_BACKSPACE); }
+        m.item("THE WORLDS", KEY_TAB);
+    } else if (shardsLevel == 0) {
+        if (!shardWorldKeys.empty()) m.item("OPEN THE WORLD", KEY_ENTER);
+        m.item("THE SHIP'S PLAYER", KEY_TAB);
+    } else if (shardsLevel == 1) {
+        m.item(shardsPage == 2 ? "OPEN THE RECORD THAT TOLD IT" : "READ THE RECORD", KEY_ENTER);
+        m.item("THE NEXT PAGE", KEY_TAB); m.item("THE PAGE BEFORE", KEY_TAB, MOD_SHIFT);
+        if (shardsPage == 0) { m.item("THE NEXT KIND", KEY_RIGHT); m.item("THE KIND BEFORE", KEY_LEFT); }
+        m.item("BACK TO THE WORLDS", KEY_ESCAPE);
+        return;
+    } else {
+        const bool valid = shardWorld.valid && !shardHeld.empty() && shardSel >= 0 && shardSel < (int)shardHeld.size();
+        const Shard* s = valid ? &shardWorld.shards[shardHeld[shardSel]] : nullptr;
+        if (s && s->music) { if (pieceEnded()) m.item("PLAY IT AGAIN", KEY_ENTER); else m.item(piecePaused ? "GO ON" : "PAUSE", KEY_SPACE); m.item("NAME THE PIECE", KEY_N); }
+        else if (s && s->chart) {
+            if (chartT >= 0) m.item("SKIP THE WAIT", KEY_ENTER);
+            else { m.item("TARGET THE STAR IT MARKS", KEY_ENTER); m.item(chartUp && chartHeldKey == shardWorld.key ? "PUT A CHART DOWN" : "HOLD IT UP TO THE SKY", KEY_O); }
+        } else if (s) {
+            const bool speaking = speechT >= 0 && !speechEnded();
+            m.item(speaking ? "STOP THE VOICE" : "SPEAK THE PAGE", KEY_ENTER);
+            if (speaking) m.item(speechPaused ? "GO ON" : "PAUSE THE VOICE", KEY_SPACE);
+            if (shardPageStart.size() > 1) { m.item("THE NEXT PAGE", KEY_DOWN); m.item("THE PAGE BEFORE", KEY_UP); }
+        }
+        m.item("THE NEXT RECORD", KEY_RIGHT); m.item("THE RECORD BEFORE", KEY_LEFT);
+        m.item("BACK TO THE LIST", KEY_ESCAPE);
+        return;
+    }
+    m.item("CLOSE THE DECODER", KEY_ESCAPE);
+}
+
 // U-02: the decoder's music on its screen only, kept through a text entry naming the piece, and its voice (C-07: or through the
 // radar; C-11: the ship's player plays on)
 void Game::shardsAway() {

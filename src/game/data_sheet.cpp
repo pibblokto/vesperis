@@ -19,6 +19,9 @@ void Game::updateSystemList(const Input& in, double dt, double realDt) {
     if (enterKey(in)) { pick(); state = GameState::SPACE; if (listSel < nb) startApproach(listSel); else startApproachBelt(listSel - nb); }
 }
 
+// U-04: the analyzer's commands (the controller's first page)
+void Game::systemListPad(PadMenu& m) const { m.title = "THE ANALYZER"; m.item("APPROACH IT", KEY_ENTER); m.item("MAKE IT THE TARGET", KEY_L); m.item("CLOSE", KEY_ESCAPE); }
+
 void Game::renderSystemList() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     std::string head = fmt("SYSTEM ANALYZER - %s (%s)", trunc(upper(starNameOf(sys.star)), 16).c_str(), sys.classString().c_str());
@@ -88,6 +91,12 @@ void Game::updateDataSheet(const Input& in, double dt, double realDt) {
     bool any = false;
     for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
     if (any) { state = returnState; dataPage = 0; }
+}
+
+// U-04: the data sheet's commands (the controller's first page)
+void Game::dataSheetPad(PadMenu& m) const {
+    m.title = "DATA SHEET";
+    m.item("THE ALMANAC", KEY_T); if (!dataProbes().empty()) m.item("THE PROBES' PROFILES", KEY_RIGHT); m.item("CLOSE", KEY_ESCAPE);
 }
 
 void Game::renderDataSheet() {

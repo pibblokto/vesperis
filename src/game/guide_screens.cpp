@@ -184,6 +184,14 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
     }
 }
 
+// U-04: a text entry's commands (the controller's first page)
+void Game::textEntryPad(PadMenu& m) const {
+    m.title = "THE ENTRY";
+    if (!padKeyboardShown()) m.item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
+    m.item("DONE", KEY_ENTER); m.item("CANCEL", KEY_ESCAPE);
+    if (textKind == TEXT_MARK) m.item("WHAT IT MARKS: THE NEXT", KEY_TAB);
+}
+
 // a text entry covers the frame over the galaxy chart, the probe's screen or a recording, drawn under it
 bool Game::textEntryCovers() const {
     return (guideReturn == GameState::STAR_MAP && mapPage == 1) || guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING;

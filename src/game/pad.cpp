@@ -4,7 +4,8 @@
 // probe's camera, a recording, an instrument), the left stick walks (in the screens it moves the arrows) and the right stick looks as the
 // mouse does. Y opens the command menu: every action of the screen in words, run as its keys, a page of the general ones and a page of
 // every key; an on-screen keyboard types where the game wants letters; the CONTROLS screen's second page binds the buttons. Whatever the
-// controller does goes through the game's own keys: one code path, and nothing a key does is out of a controller's reach
+// controller does goes through the game's own keys: one code path, and nothing a key does is out of a controller's reach. U-04: a
+// screen's own page, its name and its own buttons are its state's row's `padMenu`, a method in the screen's file (`PadMenu`)
 #include "game.h"
 #include "peoples/instruments.h"
 #include "ui.h"
@@ -12,7 +13,6 @@
 #include <cmath>
 
 namespace {
-enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };   // PSP_AUTO auto-explore's profiles
 const char* const ROLE_SHORT[PR_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
 const char* const ROLE_SCREEN[PR_BUTTONS] = {
         "A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
@@ -49,6 +49,15 @@ int charKey(char c) {
     if (c == '\n') return KEY_ENTER;
     return -1;
 }
+// U-04: a scene, a base in play: the ship, the ground (the general page's guide, log, load, auto-explore and menu)
+bool inScene(GameState s) { return stateHas(s, ST_BASE) && stateHas(s, ST_IN_PLAY); }
+// U-04: the current screen's controller, as its row writes it (a row with none: no lines, the screens' buttons)
+PadMenu padMenuOf(const Game& g) {
+    PadMenu m;
+    const Game::StateRow& r = Game::STATE_ROWS[(int)g.state];
+    if (r.padMenu) (g.*r.padMenu)(m);
+    return m;
+}
 }
 
 int Game::padContext() const {
@@ -58,6 +67,7 @@ int Game::padContext() const {
     return ctx;
 }
 
+// the command menu's first tab: the context's name, else the screen's own
 std::string Game::padContextName(int ctx) const {
     switch (ctx) {
         case PCX_TITLE: return "VESPERIS";
@@ -69,24 +79,7 @@ std::string Game::padContextName(int ctx) const {
         case PCX_RECORDING: return "THE RECORDING";
         case PCX_INSTRUMENT: return "THE INSTRUMENT";
     }
-    switch (state) {
-        case GameState::LANDING_MAP: return "LANDING MAP";
-        case GameState::SECTOR_MAP: return "SECTOR MAP";
-        case GameState::STAR_MAP: return mapPage == 1 ? "THE GALAXY" : "STAR MAP";
-        case GameState::SHARDS: return "THE DECODER";
-        case GameState::INSTRUMENTS: return "THE CASE";
-        case GameState::DRONES: return "THE DRONE BAY";
-        case GameState::ALMANAC: return "THE ALMANAC";
-        case GameState::DATA: return "DATA SHEET";
-        case GameState::SYSTEM_LIST: return "THE ANALYZER";
-        case GameState::SHIPSCREEN: return "FLIGHT COMPUTER";
-        case GameState::CONSOLE: return "GOES CONSOLE";
-        case GameState::TEXT_ENTRY: return "THE ENTRY";
-        case GameState::HELP: return "HELP";
-        case GameState::DESCENT: case GameState::ASCENT: return "THE CAPSULE";
-        case GameState::AUTO: return "AUTO-EXPLORE";
-        default: return "COMMANDS";
-    }
+    return padMenuOf(*this).title;   // a screen's own, its row's (COMMANDS without one)
 }
 
 // the buttons' keys in a context (the d-pad is the arrows, Y the command menu and the sticks walking and looking everywhere)
@@ -157,38 +150,15 @@ void Game::padBindings(int ctx, std::vector<PadBind>& out) const {
             add(PR_LT, KEY_5, "5"); add(PR_RT, KEY_6, "6"); add(PR_L3, KEY_7, "7"); add(PR_R3, KEY_8, "8");
             add(PR_B, KEY_ESCAPE, "BACK"); add(PR_START, KEY_ESCAPE, "BACK");
             break;
-        default:
-            // the maps: only the buttons that do something there, in their words (the cursors: the d-pad, the left stick, the right stick)
-            if (state == GameState::LANDING_MAP) {
-                add(PR_A, KEY_ENTER, "LAND"); add(PR_B, KEY_ESCAPE, "BACK");
-                if (landZoom) add(PR_LT, KEY_Z, "THE WORLD"); else add(PR_RT, KEY_Z, "ZOOM IN");   // its zoom is Z, in and out
-                add(PR_L3, KEY_LEFT_SHIFT, "BIG STEPS"); add(PR_START, KEY_ESCAPE, "BACK");
-                break;
-            }
-            if (state == GameState::SECTOR_MAP) {
-                add(PR_A, KEY_ENTER, "MARK"); add(PR_B, KEY_ESCAPE, "CLOSE"); add(PR_X, KEY_SPACE, "BACK TO YOU");
-                add(PR_LT, KEY_MINUS, "ZOOM OUT"); add(PR_RT, KEY_EQUAL, "ZOOM IN"); add(PR_L3, KEY_LEFT_SHIFT, "FASTER");
-                add(PR_SELECT, KEY_TAB, "NEXT MARK"); add(PR_START, KEY_ESCAPE, "CLOSE");
-                break;
-            }
-            if (state == GameState::STAR_MAP && mapPage == 1) {   // the galaxy chart
-                add(PR_A, KEY_ENTER, chartPlotted() ? "FLY" : "PLOT"); add(PR_B, KEY_ESCAPE, "CLOSE"); add(PR_X, KEY_SPACE, "THE SHIP");
-                add(PR_LB, KEY_PAGE_UP, "HIGHER"); add(PR_RB, KEY_PAGE_DOWN, "LOWER");
-                add(PR_LT, KEY_MINUS, "ZOOM OUT"); add(PR_RT, KEY_EQUAL, "ZOOM IN"); add(PR_L3, KEY_LEFT_SHIFT, "FASTER");
-                add(PR_SELECT, KEY_TAB, chartPlotted() ? "LOOK THERE" : "NEIGHBOURHOOD"); add(PR_START, KEY_ESCAPE, "CLOSE");
-                break;
-            }
-            if (state == GameState::STAR_MAP) {
-                add(PR_A, KEY_ENTER, gchart.look ? "TAKE THIS STAR" : "TARGET"); add(PR_B, KEY_ESCAPE, "CLOSE");
-                add(PR_LT, KEY_MINUS, "ZOOM OUT"); add(PR_RT, KEY_EQUAL, "ZOOM IN");
-                add(PR_SELECT, KEY_TAB, gchart.look ? "THE CHART" : "THE GALAXY"); add(PR_START, KEY_ESCAPE, "CLOSE");
-                break;
-            }
+        default: {   // a screen: its own buttons where its row gives them (the maps'), else these
+            PadMenu m = padMenuOf(*this);
+            if (!m.buttons.empty()) { out = std::move(m.buttons); break; }
             add(PR_A, KEY_ENTER, "ENTER"); add(PR_B, KEY_ESCAPE, "BACK"); add(PR_X, KEY_SPACE, "SPACE");
             add(PR_LB, KEY_PAGE_UP, "PAGE UP"); add(PR_RB, KEY_PAGE_DOWN, "PAGE DOWN");
             add(PR_LT, KEY_MINUS, "ZOOM OUT"); add(PR_RT, KEY_EQUAL, "ZOOM IN");
             add(PR_L3, KEY_LEFT_SHIFT, "SHIFT"); add(PR_SELECT, KEY_TAB, "TAB"); add(PR_START, KEY_ESCAPE, "BACK");
             break;
+        }
     }
 }
 
@@ -197,8 +167,7 @@ std::string Game::padLegend(int ctx, int width) const {
     std::vector<PadBind> binds; padBindings(ctx, binds);
     std::vector<std::string> parts;
     for (const PadBind& b : binds) if (b.role != PR_START) parts.push_back(std::string(ROLE_SHORT[b.role]) + " " + b.label);
-    if (ctx == PCX_SCREEN && (state == GameState::LANDING_MAP || state == GameState::SECTOR_MAP || state == GameState::STAR_MAP))   // what the sticks do on a map
-        parts.push_back(state == GameState::STAR_MAP && mapPage == 0 ? "STICKS TURN IT" : "STICKS MOVE THE CURSOR");
+    if (ctx == PCX_SCREEN) { const PadMenu m = padMenuOf(*this); if (m.sticks) parts.push_back(m.sticks); }   // what the sticks do there (a map's)
     parts.push_back("Y COMMANDS");
     std::string out, line;
     for (const std::string& p : parts) {
@@ -208,233 +177,36 @@ std::string Game::padLegend(int ctx, int width) const {
     return out + line;
 }
 
-// the command menu's pages: 0 the context's actions, 1 the general ones (the keys page is the keyboard). Each runs as the keys it names
+// the command menu's pages: 0 the screen's own (its row's `padMenu`), 1 the general ones (the keys page is the keyboard). Each runs as
+// the keys it names
 std::vector<Game::PadItem> Game::padItems(int page) const {
-    std::vector<PadItem> v;
-    auto item = [&](const std::string& label, int key, int mods = 0, int special = PSP_NONE) { PadItem it; it.label = label; it.key = key; it.mods = mods; it.special = special; v.push_back(it); };
-    auto typed = [&](const std::string& label, const std::string& text) { PadItem it; it.label = label; it.special = PSP_TYPE; it.text = text; v.push_back(it); };
+    if (page != 1) return padMenuOf(*this).items;
+    PadMenu m;   // the general page: its lines by the state's traits (a base, a scene, the ground, the clock's, the photo tools)
     const bool inSystem = sys.valid && !sys.bodies.empty() && ship.mode != ShipState::VIMANA;
-    const bool scene = state == GameState::SPACE || state == GameState::SURFACE;
-    auto scanItems = [&]() {
-        item(scanMode < 0 ? "THE SCANNER ON" : "THE SCANNER'S NEXT KIND", KEY_R);
-        item(scanSkipMarked ? "THE SCANNER: MARKED SIGHTS IN" : "THE SCANNER: MARKED SIGHTS OUT", KEY_R, MOD_SHIFT);
-    };
-    if (page == 1) {
-        if (scene) item("THE GUIDE", KEY_G);
-        if (state == GameState::SPACE) item("THE STAR MAP", KEY_M);
-        if (scene) item("THE LOG", KEY_J);
-        if (state == GameState::SURFACE || (state == GameState::SPACE && inSystem)) item("THE DATA SHEET", KEY_I);
-        if (scene || state == GameState::LANDING_MAP) {
-            item(almanacRunning ? "STOP THE ALMANAC'S RUN" : fmt("TIME WARP X%.0f TO X%.0f", timeWarp, timeWarp >= 10000 ? 1.0 : timeWarp * 10), KEY_T);
-            item("THE ALMANAC", KEY_T, MOD_CTRL);
-        }
-        if (scene || state == GameState::PROBE || state == GameState::RECORDING) {
-            item("PHOTOGRAPH", KEY_P);
-            item(photoMode ? "END PHOTO MODE" : "PHOTO MODE", KEY_P, MOD_CTRL);
-            if (scene) item("PANORAMA", KEY_P, MOD_CTRL | MOD_SHIFT);
-            item(recording ? "STOP RECORDING" : "RECORD THE FRAMES", KEY_R, MOD_CTRL);
-        }
-        if (scene || state == GameState::DESCENT || state == GameState::ASCENT) item(fmt("SAVE (SLOT %d)", currentSlot), KEY_S, MOD_CTRL);
-        if (scene) item(fmt("LOAD (SLOT %d)", currentSlot), KEY_L, MOD_CTRL);
-        if (scene || state == GameState::TITLE) item("HELP", KEY_H);
-        item(settings.scanlines ? "SCANLINES OFF" : "SCANLINES ON", KEY_K, MOD_CTRL);
-        item("FULLSCREEN", KEY_F, MOD_CTRL);
-        if (state != GameState::KEYS) item("CONTROLLER SETUP", -1, 0, PSP_CONTROLLER);
-        if (scene) item("AUTO-EXPLORE", -1, 0, PSP_AUTO);
-        if (scene) item("THE GAME MENU", KEY_ESCAPE);
-        return v;
+    const bool scene = inScene(state), ground = stateHas(state, ST_GROUND);
+    if (scene) m.item("THE GUIDE", KEY_G);
+    if (scene && !ground) m.item("THE STAR MAP", KEY_M);   // from the ship
+    if (scene) m.item("THE LOG", KEY_J);
+    if (scene && (ground || inSystem)) m.item("THE DATA SHEET", KEY_I);
+    if (stateHas(state, ST_CLOCK)) {
+        m.item(almanacRunning ? "STOP THE ALMANAC'S RUN" : fmt("TIME WARP X%.0f TO X%.0f", timeWarp, timeWarp >= 10000 ? 1.0 : timeWarp * 10), KEY_T);
+        m.item("THE ALMANAC", KEY_T, MOD_CTRL);
     }
-    switch (state) {
-        case GameState::TITLE:
-            item(hasSave ? "CONTINUE" : "BEGIN THE EXPEDITION", KEY_ENTER);
-            if (hasSave) item("NEW EXPEDITION", KEY_N);
-            item("HELP", KEY_H); item("CREDITS", KEY_C); item("QUIT", KEY_ESCAPE);
-            break;
-        case GameState::SPACE: {
-            const bool parkedBody = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBody < (int)sys.bodies.size() && ship.parkedBelt < 0;
-            const bool giant = parkedBody && isProbeGiant(sys.bodies[ship.parkedBody].type);
-            if (tele.on) {
-                item("ZOOM IN", KEY_PAGE_UP); item("ZOOM OUT", KEY_PAGE_DOWN);
-                item(tele.track != TELE_NONE ? "STOP TRACKING" : "TRACK THE TARGET", KEY_ENTER);
-                item("NAME THE TARGET", KEY_N); item("PHOTOGRAPH IT", KEY_P);
-                if (giant) item("SEND A PROBE THERE", KEY_C);
-                item("STOW THE TELESCOPE", KEY_Z);
-            } else if (radar.on) {
-                item("GAIN UP", KEY_PAGE_UP); item("GAIN DOWN", KEY_PAGE_DOWN);
-                if (radar.locked >= 0) item("FLY TO THE SIGNAL", KEY_ENTER);
-                item("LEAVE THE RADAR CAMERA", KEY_B);
-            } else if (ship.targeting) {
-                item("LOCK THE STAR IN THE CROSSHAIR", KEY_ENTER);
-                item("THE NEXT NEAREST STAR", KEY_N);
-                item("JUMP: TYPE THE LIGHT YEARS", -1, 0, PSP_KEYBOARD);
-                item("CANCEL THE AIM", KEY_R);
-            } else {
-                if (settings.cabin && cabin.facing > FACE_NOTHING && cabin.facing < FACE_COUNT) item(std::string("USE ") + cabinDevices().row[cabin.facing].use, KEY_E);
-                if (ship.mode == ShipState::VIMANA) item("ABORT THE FLIGHT", KEY_V);
-                else {
-                    item("AIM AT A STAR", KEY_R);
-                    if (ship.hasRemote) item("VIMANA FLIGHT TO THE TARGET", KEY_V);
-                }
-                if (inSystem) { item("LOCAL TARGET", KEY_L); item("THE ANALYZER", KEY_TAB); }
-                if (inSystem && (ship.localTarget >= 0 || ship.targetBelt >= 0)) {
-                    if (ship.mode != ShipState::APPROACH) item("FINE APPROACH", KEY_ENTER);
-                    item("CENTRE ON THE TARGET", KEY_X);
-                }
-                if (ship.mode == ShipState::PARKED) item(ship.orbiting ? "FIXED POINT CHASE" : "SYNCHRONOUS ORBIT", KEY_O);
-                if (parkedBody) item(giant ? (probe.active ? "THE PROBE'S CAMERA" : "SEND A PROBE") : "DEPLOY THE CAPSULE", KEY_C);
-                item("THE TELESCOPE", KEY_Z);
-                item("THE SIGNAL RADAR", KEY_B);
-                item(fieldAmp ? "FIELD AMPLIFICATOR OFF" : "FIELD AMPLIFICATOR ON", KEY_F);
-                if (settings.cabin) {
-                    item(cabin.light ? "CABIN LIGHT OFF" : "CABIN LIGHT ON", KEY_U);
-                    item(cabin.depolarised ? "POLARISE THE HULL" : "GLASS HULL", KEY_Y);
-                    if (cabin.onRoof) item("BACK INTO THE CABIN", KEY_PAGE_DOWN); else item("UP TO THE ROOF DECK", KEY_PAGE_UP);
-                }
-            }
-            break;
-        }
-        case GameState::SURFACE:
-            if (!surf.valid) break;
-            if (photoMode) { item("END PHOTO MODE", KEY_P, MOD_CTRL); item("PANORAMA", KEY_P, MOD_CTRL | MOD_SHIFT); item("PHOTOGRAPH", KEY_P); break; }
-            if (surf.inVehicle()) {
-                item(surf.inBuggy ? "GET OUT OF THE BUGGY" : "GET OUT OF THE DRONE", KEY_E);
-                item(surf.chaseCam ? "THE NOSE CAMERA" : "THE CHASE VIEW", KEY_V);
-            } else {
-                std::string use;
-                if (surf.buggy.deployed && surf.buggyDist() <= 3.5) use = "GET IN THE BUGGY";
-                else if (surf.drone.deployed && surf.droneDist() <= 3.5) use = "GET IN THE DRONE";
-                else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) use = "TAKE THE INSTRUMENT";
-                else if (surf.nearShard.index >= 0) use = "TAKE THE RECORD";
-                else if (surf.env.nearCapsule) use = "BOARD THE CAPSULE";
-                if (!use.empty()) item(use, KEY_E);
-                item("UNFOLD A BUGGY", KEY_B);
-                item("UNFOLD A DRONE", KEY_F);
-            }
-            item("CALL THE CAPSULE", KEY_K);
-            item("THE SECTOR MAP", KEY_N);
-            scanItems();
-            item("MARK WHERE THE CROSSHAIR RESTS", KEY_L);
-            item(surf.hasWaypoint ? "CLEAR THE WAYPOINT" : "WAYPOINT AT THE CROSSHAIR", KEY_M);
-            item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
-            if (!surf.inVehicle()) {
-                item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);
-                item("VISION MODE", KEY_V);
-                item("CREATURES NEARBY", KEY_X);
-                const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));
-                item(next ? fmt("AUTOWALK %d", next) : "STOP THE AUTOWALK", KEY_0 + next);
-            }
-            break;
-        case GameState::LANDING_MAP:
-            item("LAND HERE", KEY_ENTER);
-            if (landingZoomAllowed()) item(landZoom ? "THE WHOLE WORLD" : "ZOOM INTO THE SECTOR", KEY_Z);
-            item("A RANDOM LIT SITE", KEY_R);
-            item(mapClouds ? "HIDE THE CLOUDS" : "SHOW THE CLOUDS", KEY_C);
-            item("UNDER THE SKY'S BIGGEST BODY", KEY_J);
-            item(landPeoples ? "HIDE THE PEOPLES" : "THE PEOPLES", KEY_V);
-            item("THE ALMANAC OF THE SITE", KEY_T, MOD_CTRL);
-            item("BACK TO THE SHIP", KEY_ESCAPE);
-            break;
-        case GameState::SECTOR_MAP:
-            item("MARK HERE, OR RENAME THE MARK", KEY_ENTER);
-            item("SHOW THE MARK OVER THE VIEW", KEY_ENTER, MOD_SHIFT);
-            item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
-            item("WAYPOINT AT THE CURSOR", KEY_M);
-            item("THE NEXT MARK", KEY_TAB);
-            item("THE CURSOR BACK TO YOU", KEY_SPACE);
-            item("ZOOM IN", KEY_EQUAL); item("ZOOM OUT", KEY_MINUS);
-            scanItems();
-            item("CLOSE THE MAP", KEY_ESCAPE);
-            break;
-        case GameState::STAR_MAP:
-            if (mapPage == 1) {
-                item(chartPlotted() ? "FLY THE PLOTTED JUMP" : "PLOT A JUMP TO THE CURSOR", KEY_ENTER);
-                item("THE NEXT STOP", KEY_N); item("THE STOP BEFORE", KEY_N, MOD_SHIFT);
-                item("MARK THE PLACE", KEY_L);
-                item("REMOVE THE MARK", KEY_DELETE, 0, PSP_TWICE);
-                item("THE CURSOR BACK TO THE SHIP", KEY_SPACE);
-                item("ZOOM IN", KEY_EQUAL); item("ZOOM OUT", KEY_MINUS);
-                item(chartPlotted() ? "LOOK AT THE PLOTTED END" : "THE NEIGHBOURHOOD", KEY_TAB);
-            } else {
-                item(gchart.look ? "TAKE THIS STAR AS THE END" : "TARGET THE STAR", KEY_ENTER);
-                item("THE NEXT CLASS", KEY_C); item("THE CLASS BEFORE", KEY_X); item("EVERY CLASS", KEY_0);
-                item("ZOOM IN", KEY_EQUAL); item("ZOOM OUT", KEY_MINUS);
-                item(gchart.look ? "BACK TO THE CHART" : "THE GALAXY", KEY_TAB);
-            }
-            item("CLOSE THE MAP", KEY_ESCAPE);
-            break;
-        case GameState::SHARDS:
-            if (shardsLevel == 0 && shardsTop == 1) {
-                item("PLAY FROM HERE", KEY_ENTER);
-                if (player.playing >= 0) { item(player.paused ? "GO ON" : "PAUSE", KEY_SPACE); item("STOP", KEY_BACKSPACE); }
-                item("THE WORLDS", KEY_TAB);
-            } else if (shardsLevel == 0) {
-                if (!shardWorldKeys.empty()) item("OPEN THE WORLD", KEY_ENTER);
-                item("THE SHIP'S PLAYER", KEY_TAB);
-            } else if (shardsLevel == 1) {
-                item(shardsPage == 2 ? "OPEN THE RECORD THAT TOLD IT" : "READ THE RECORD", KEY_ENTER);
-                item("THE NEXT PAGE", KEY_TAB); item("THE PAGE BEFORE", KEY_TAB, MOD_SHIFT);
-                if (shardsPage == 0) { item("THE NEXT KIND", KEY_RIGHT); item("THE KIND BEFORE", KEY_LEFT); }
-                item("BACK TO THE WORLDS", KEY_ESCAPE);
-                break;
-            } else {
-                const bool valid = shardWorld.valid && !shardHeld.empty() && shardSel >= 0 && shardSel < (int)shardHeld.size();
-                const Shard* s = valid ? &shardWorld.shards[shardHeld[shardSel]] : nullptr;
-                if (s && s->music) { if (pieceEnded()) item("PLAY IT AGAIN", KEY_ENTER); else item(piecePaused ? "GO ON" : "PAUSE", KEY_SPACE); item("NAME THE PIECE", KEY_N); }
-                else if (s && s->chart) {
-                    if (chartT >= 0) item("SKIP THE WAIT", KEY_ENTER);
-                    else { item("TARGET THE STAR IT MARKS", KEY_ENTER); item(chartUp && chartHeldKey == shardWorld.key ? "PUT A CHART DOWN" : "HOLD IT UP TO THE SKY", KEY_O); }
-                } else if (s) {
-                    const bool speaking = speechT >= 0 && !speechEnded();
-                    item(speaking ? "STOP THE VOICE" : "SPEAK THE PAGE", KEY_ENTER);
-                    if (speaking) item(speechPaused ? "GO ON" : "PAUSE THE VOICE", KEY_SPACE);
-                    if (shardPageStart.size() > 1) { item("THE NEXT PAGE", KEY_DOWN); item("THE PAGE BEFORE", KEY_UP); }
-                }
-                item("THE NEXT RECORD", KEY_RIGHT); item("THE RECORD BEFORE", KEY_LEFT);
-                item("BACK TO THE LIST", KEY_ESCAPE);
-                break;
-            }
-            item("CLOSE THE DECODER", KEY_ESCAPE);
-            break;
-        case GameState::INSTRUMENTS:
-            if (icase.level == 0) { if (!icase.worlds.empty()) item("OPEN THE FOLDER", KEY_ENTER); item("CLOSE THE CASE", KEY_ESCAPE); break; }
-            if (icase.valid && instrumentPlaysDisc(icase.inst)) item(icase.discOn ? "STOP THE MACHINE" : "WIND THE MACHINE", KEY_ENTER);
-            else if (icase.valid) { item("LOWER", KEY_LEFT); item("HIGHER", KEY_RIGHT); item("THE NINTH NOTE", KEY_9); item("THE TENTH NOTE", KEY_0); }
-            item("THE NEXT INSTRUMENT", KEY_DOWN); item("THE ONE BEFORE", KEY_UP);
-            item("BACK TO THE FOLDERS", KEY_ESCAPE);
-            break;
-        case GameState::DRONES: item("SEND THE DRONES", KEY_ENTER); item("BACK TO THE CABIN", KEY_ESCAPE); break;
-        case GameState::PROBE:
-            if (probe.active && probe.endClock >= 0) item("LET IT GO", KEY_ENTER);
-            else item("THE CHUTE: OPEN, OR CUT", KEY_SPACE);
-            item("CENTRE THE CAMERA", KEY_X); item("NAME THE STORM", KEY_N); item("PHOTOGRAPH", KEY_P);
-            item("BACK TO THE CABIN", KEY_ESCAPE);
-            break;
-        case GameState::RECORDING:
-            item(replay.playing ? "PAUSE" : "PLAY", KEY_SPACE);
-            item("TO THE START", KEY_HOME); item("TO THE END", KEY_END);
-            item("THE NEXT LAYER", KEY_PAGE_DOWN); item("THE LAYER BEFORE", KEY_PAGE_UP);
-            item("CENTRE THE VIEW", KEY_X); item("NAME THE STORM", KEY_N);
-            item("BACK TO THE GALLERY", KEY_ESCAPE);
-            break;
-        case GameState::ALMANAC: item("RUN THE CLOCK TO IT", KEY_ENTER); if (almanacRunning) item("STOP THE RUN", KEY_T); item("BACK", KEY_ESCAPE); break;
-        case GameState::DATA: item("THE ALMANAC", KEY_T); if (!dataProbes().empty()) item("THE PROBES' PROFILES", KEY_RIGHT); item("CLOSE", KEY_ESCAPE); break;
-        case GameState::SYSTEM_LIST: item("APPROACH IT", KEY_ENTER); item("MAKE IT THE TARGET", KEY_L); item("CLOSE", KEY_ESCAPE); break;
-        case GameState::SHIPSCREEN: item("THE NEXT PAGE", KEY_RIGHT); item("THE PAGE BEFORE", KEY_LEFT); item("CLOSE", KEY_ESCAPE); break;
-        case GameState::CONSOLE:
-            item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
-            typed("SL: THE STARS NEAR", "SL\n"); typed("DL: THIS SYSTEM'S BODIES", "DL\n"); typed("WHERE: THE SHIP'S SECTOR", "WHERE\n");
-            typed("HOME: TARGET THE HOME STAR", "HOME\n"); typed("PREV: TARGET THE STAR BEFORE", "PREV\n"); typed("CAT: THE LAST NOTES", "CAT\n"); typed("HELP: THE COMMANDS", "HELP\n");
-            item("CLOSE THE CONSOLE", KEY_ESCAPE);
-            break;
-        case GameState::TEXT_ENTRY:
-            if (!padKeyboardShown()) item("THE KEYBOARD", -1, 0, PSP_KEYBOARD);
-            item("DONE", KEY_ENTER); item("CANCEL", KEY_ESCAPE);
-            if (textKind == TEXT_MARK) item("WHAT IT MARKS: THE NEXT", KEY_TAB);
-            break;
-        case GameState::HELP: item("THE NEXT PAGE", KEY_SPACE); item("CLOSE", KEY_ESCAPE); break;
-        default: break;
+    if (stateHas(state, ST_PHOTO)) {
+        m.item("PHOTOGRAPH", KEY_P);
+        m.item(photoMode ? "END PHOTO MODE" : "PHOTO MODE", KEY_P, MOD_CTRL);
+        if (scene) m.item("PANORAMA", KEY_P, MOD_CTRL | MOD_SHIFT);
+        m.item(recording ? "STOP RECORDING" : "RECORD THE FRAMES", KEY_R, MOD_CTRL);
     }
-    return v;
+    if (scene || ground) m.item(fmt("SAVE (SLOT %d)", currentSlot), KEY_S, MOD_CTRL);   // the capsule's way down and up too
+    if (scene) m.item(fmt("LOAD (SLOT %d)", currentSlot), KEY_L, MOD_CTRL);
+    if (stateHas(state, ST_BASE)) m.item("HELP", KEY_H);
+    m.item(settings.scanlines ? "SCANLINES OFF" : "SCANLINES ON", KEY_K, MOD_CTRL);
+    m.item("FULLSCREEN", KEY_F, MOD_CTRL);
+    if (state != GameState::KEYS) m.item("CONTROLLER SETUP", -1, 0, PSP_CONTROLLER);   // not on the screen it opens
+    if (scene) m.item("AUTO-EXPLORE", -1, 0, PSP_AUTO);
+    if (scene) m.item("THE GAME MENU", KEY_ESCAPE);
+    return m.items;
 }
 
 // a key into the queue
@@ -459,7 +231,7 @@ bool Game::padKeyboardShown() const {
 
 // the CONTROLS screen on its controller page, from anywhere
 void Game::openPadScreen() {
-    if (state == GameState::SPACE || state == GameState::SURFACE || state == GameState::TITLE) returnState = state;
+    if (stateHas(state, ST_BASE)) returnState = state;
     keysReturn = state; keysPage = 1; keysCapture = false;
     padUI.screenSel = 0; padUI.capture = -1; padUI.menu = false;
     state = GameState::KEYS;
@@ -545,7 +317,7 @@ void Game::padFrame(Input& in, double realDt) {
         P.held[d] = true; P.repeat[d] = first ? 0 : before + realDt;
         P.pulse[d] = first || (P.repeat[d] >= REPEAT_DELAY && (before < REPEAT_DELAY || std::floor((P.repeat[d] - REPEAT_DELAY) / REPEAT_EVERY) > std::floor((before - REPEAT_DELAY) / REPEAT_EVERY)));
     }
-    if (P.announce && (state == GameState::SPACE || state == GameState::SURFACE)) {   // a new controller, said once where the status shows
+    if (P.announce && inScene(state)) {   // a new controller, said once where the status shows
         P.announce = false;
         const std::string name = trunc(upper(in.pad.name[0] ? in.pad.name : "A CONTROLLER"), 22);
         const std::string msg = in.pad.mapped ? fmt("CONTROLLER: %s - Y OPENS THE COMMANDS", name.c_str())
@@ -632,8 +404,7 @@ void Game::renderPad() {
         const bool digits = P.keyboard && P.kbFor == 1;
         const int y0 = digits ? 4 : UH - 94;   // the aim keeps the crosshair and its jump line clear: the keyboard at the top
         drawPanel(canvas, 8, y0, UW - 8, y0 + 90, rgb(0, 0, 0), 225);
-        drawTextCentered(canvas, UW / 2, y0 + 3, digits ? "DIGITS: THE LIGHT YEARS  START JUMPS  B CLOSES"
-                                                : (state == GameState::CONSOLE ? "A TYPES  X DELETES  START RUNS  SELECT COMMANDS" : "A TYPES  X DELETES  Y SPACE  START DONE  B CANCELS"), HUD_DIM);
+        drawTextCentered(canvas, UW / 2, y0 + 3, digits ? "DIGITS: THE LIGHT YEARS  START JUMPS  B CLOSES" : padMenuOf(*this).typing, HUD_DIM);
         renderPadKeyboard(20, y0 + 12, false);
         return;
     }

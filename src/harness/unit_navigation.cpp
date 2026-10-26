@@ -870,7 +870,7 @@ void unitAuto(const Check& check) {
 // `simulating` and its stowing of the radar camera and the telescope, the render switch's overlays, the dark radio's `taken`, the
 // save's `inPlay` and its ground, `mouseCaptureWanted`, the photo tools' scenes, the typing states (the global keys, the controller's
 // keyboard), `padContext`'s contexts, the names the harness printed (modes_game.cpp's `auto`); U-02: the update switch's cases that
-// moved the ship after their screen's update
+// moved the ship after their screen's update; U-04: the controller's general page (pad.cpp), each line where its hand lists put it
 void unitStates(const Check& check) {
     using S = GameState;
     auto in = [](S s, std::initializer_list<S> l) { return std::find(l.begin(), l.end(), s) != l.end(); };
@@ -896,6 +896,8 @@ void unitStates(const Check& check) {
             {ST_TYPING, "typing", in(s, {S::TEXT_ENTRY, S::CONSOLE})},
             {ST_GROUND, "the ground's", in(s, {S::SURFACE, S::DESCENT, S::ASCENT})},
             {ST_SHIP_MOVES, "moving the ship", in(s, {S::STAR_MAP, S::SHIPSCREEN, S::CONSOLE, S::SHARDS, S::INSTRUMENTS, S::DRONES})},
+            {ST_BASE, "a base", in(s, {S::SPACE, S::SURFACE, S::TITLE})},
+            {ST_CLOCK, "the clock's", in(s, {S::SPACE, S::SURFACE, S::LANDING_MAP})},
         };
         for (const auto& t : T)
             if (stateHas(s, t.trait) != t.was && bad.empty()) bad = fmt("%s %s %s", NAMES[i], t.was ? "is no longer" : "is now", t.what);
@@ -904,5 +906,33 @@ void unitStates(const Check& check) {
         if (statePad(s) != pad && bad.empty()) bad = fmt("%s's controller context", NAMES[i]);
         if (strcmp(stateName(s), NAMES[i]) != 0 && bad.empty()) bad = fmt("%s's name", NAMES[i]);
     }
-    check("the states' table, the old lists", bad.empty(), bad.empty() ? "29 states: 10 traits, the controller's contexts, the names" : bad);
+    check("the states' table, the old lists", bad.empty(), bad.empty() ? "29 states: 12 traits, the controller's contexts, the names" : bad);
+    // U-04: the general page in each state, its lines where pad.cpp's hand lists put them (the ship in its home system: the data sheet
+    // there too)
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+    game.newGame();
+    std::string wrong;
+    int lines = 0;
+    for (int i = 0; i < 29; i++) {
+        const S s = (S)i;
+        const bool scene = in(s, {S::SPACE, S::SURFACE});
+        const struct { const char* line; bool was; } L[] = {
+            {"THE GUIDE|", scene}, {"THE STAR MAP|", s == S::SPACE}, {"THE LOG|", scene}, {"THE DATA SHEET|", scene},
+            {"TIME WARP X", in(s, {S::SPACE, S::SURFACE, S::LANDING_MAP})}, {"THE ALMANAC|", in(s, {S::SPACE, S::SURFACE, S::LANDING_MAP})},
+            {"PHOTOGRAPH|", in(s, {S::SPACE, S::SURFACE, S::PROBE, S::RECORDING})}, {"PANORAMA|", scene},
+            {"SAVE (SLOT", in(s, {S::SPACE, S::SURFACE, S::DESCENT, S::ASCENT})}, {"LOAD (SLOT", scene},
+            {"HELP|", in(s, {S::SPACE, S::SURFACE, S::TITLE})}, {"CONTROLLER SETUP|", s != S::KEYS}, {"AUTO-EXPLORE|", scene},
+            {"THE GAME MENU|", scene}, {"FULLSCREEN|", true},
+        };
+        game.setState(s);
+        const std::string page = "\n" + game.testPadItems(1);
+        for (const auto& l : L) {
+            lines++;
+            if ((page.find(std::string("\n") + l.line) != std::string::npos) != l.was && wrong.empty())
+                wrong = fmt("%s %s %s", NAMES[i], l.was ? "lost" : "gained", l.line);
+        }
+    }
+    check("the controller's general page, the old lists", wrong.empty(), wrong.empty() ? fmt("29 states, %d lines where they were", lines) : wrong);
 }

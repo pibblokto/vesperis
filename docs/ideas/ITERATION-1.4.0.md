@@ -77,7 +77,7 @@ twelve kinds are re-cut into the families below (`MILESTONES.md`).
 | 30 | The screens | U-01 | The proof reaches every screen: a tour of every state, its keys and its controller menu; `settings` mended | L | done 2026-10-26 |
 | 31 | The screens | U-02 | The screen table: each state's update, picture and sound in its row; the frame without a switch | L | done 2026-10-26 |
 | 32 | The screens | U-03 | The ways in as rows: the Esc menu, the guide menu, the flight computer, the settings, the cabin's devices | L | done 2026-10-26 |
-| 33 | The screens | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | planned |
+| 33 | The screens | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | done 2026-10-26 |
 | 34 | The screens | U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | planned |
 | 35 | The screens | U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | planned |
 

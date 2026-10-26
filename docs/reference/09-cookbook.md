@@ -335,13 +335,16 @@ Keys are GLFW codes in `core/input.h`; the platform copies raylib's `IsKeyDown/I
 
 Append it to `GameState` (`game/game_types.h`; `STATE_COUNT` names the last state) and its row to `Game::STATE_ROWS`
 (`game/states.cpp`, U-02): its name; its traits (the clock runs, an overlay drawn over its `returnState`'s scene, the cameras
-stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground, the ship moving on); its
-controller context; its `update` and its picture, which the frame runs; an overlay's `covers` if it ever covers the whole frame,
-and an `away` if its screen stops something off it (a sound). The compiler checks the order, and that the row names its update
-and its picture. Code asks `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06). Then:
+stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground, the ship moving on, a base the
+screens go back to, the warp at hand); its controller context; its `update` and its picture, which the frame runs; an overlay's
+`covers` if it ever covers the whole frame, an `away` if its screen stops something off it (a sound), and its controller's page
+(`padMenu`, below). The compiler checks the order, and that the row names its update and its picture. Code asks
+`stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06). Then:
 - its file of `Game` methods, the row's among them (an update takes `(const Input& in, double dt, double realDt)`), declared in
   game.h under a banner naming the file; the function that opens it sets `state`, `returnState` and `guideReturn`;
-- pad.cpp's screen names and `padItems`; `autoScene`;
+- its controller's page, the row's `padMenu` (U-04): a method in its file writing a `PadMenu` (its tab's `title`, `item` and
+  `typed` lines; a screen with buttons of its own, as the maps, `button` and `sticks`; a typing screen, its keys' line);
+  `autoScene`;
 - its way in, a row of a list (U-03; a list's count is read from it, and each row's label and act are asserted): a cabin
   device (a `CabinFacing` before `FACE_COUNT` and its row in `Game::cabinDevices`, cabin.cpp: its spot and reach, its line
   under the crosshair and the controller's "USE" line, its screen's bank and colour, E's act, its body against a wall; its
