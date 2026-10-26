@@ -9,6 +9,7 @@ H = tempfile.mkdtemp()
 open(H + "/msg_bad.txt", "w").write("Title\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_x\n")
 open(H + "/msg_ok.txt", "w").write("Title\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n")
 open(H + "/body_bad.json", "w").write('{"title":"x","body":"see https://claude.ai/code/session_x"}')
+open(H + "/big.cpp", "w").write("// a line of a large source file\n" * 5000)   # 165 KB: over the whole-Read limit
 OLD, NEW = tempfile.mkdtemp(), tempfile.mkdtemp()   # a Makefile from before E-02 (its clean takes build/ whole) and E-02's
 open(OLD + "/Makefile", "w").write("all: x\n\nclean:\n\trm -rf build vesperis vesperis_test\n")
 open(NEW + "/Makefile", "w").write("all: x\n\nclean:\n\trm -rf $(OBJ_DIRS) build/*.o build/*.d vesperis vesperis_test\n")
@@ -16,11 +17,11 @@ S = "Claude-" + "Session"
 L = "claude.ai/" + "code"
 
 cases = [
-    ("read harness whole", "Read", {"file_path": P + "/src/main_headless.cpp"}, P, 2),
-    ("read harness relative", "Read", {"file_path": "src/main_headless.cpp"}, P, 2),
-    ("read harness range", "Read", {"file_path": P + "/src/main_headless.cpp", "offset": 100, "limit": 50}, P, 0),
+    ("read large whole", "Read", {"file_path": H + "/big.cpp"}, P, 2),
+    ("read large relative", "Read", {"file_path": "big.cpp"}, H, 2),
+    ("read large range", "Read", {"file_path": H + "/big.cpp", "offset": 100, "limit": 50}, P, 0),
     ("read small file", "Read", {"file_path": P + "/Makefile"}, P, 0),
-    ("read 10-decisions whole", "Read", {"file_path": P + "/docs/reference/10-decisions.md"}, P, 2),
+    ("read a log whole", "Read", {"file_path": P + "/docs/decisions/log/3-1.3.0.md"}, P, 2),
     ("read png", "Read", {"file_path": P + "/shots/tests/x.png"}, P, 0),
     ("read missing", "Read", {"file_path": "/nope/x.txt"}, P, 0),
     ("commit -m with trailer", "Bash", {"command": f'git commit -m "x\n\n{S}: https://{L}/session_x"'}, P, 2),

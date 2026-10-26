@@ -88,8 +88,6 @@ int giantDeckAt(const GiantAtmosphere& a, double bar);
 int giantLayerAt(const GiantAtmosphere& a, double bar);   // in order down the fall: 0 over the haze, 1 the haze, 2 + 2k in deck k, 3 + 2k under it
 int giantDeckAbove(const GiantAtmosphere& a, double bar);
 int giantStormDeckFrom(const GiantAtmosphere& a, double bar);
-// X-03: the giant's character as lines for the harness (the first: its kind and heat, then its decks, its weather, its rare features)
-std::string giantCharacterText(const GiantAtmosphere& a);
 
 // the stages of a fall, in order
 // (X-03: PS_DECK1 is the first deck, PS_DECK2 any deck under it, PS_BETWEEN the clear air between two; `giantStageName` names
@@ -134,9 +132,6 @@ double giantGlowAt(const GiantAtmosphere& a, double bar, unsigned cut = 0);
 inline double giantJetTurn(const Body& b, double bandCount, double lat, double t) {   // F-07: inline (the globe asks it every pixel)
     return kindHas(b.type, KT_GAS_GIANT) ? TAU * t / b.rotPeriod * 0.06 * std::sin(lat * bandCount) : 0.0;
 }
-// X-03: the turn at a place (body-frame latitude and longitude): the great storm turns whole with its own latitude's jet, its
-// surroundings easing into it, so it keeps its shape while the bands round it shear
-double giantJetAt(const Body& b, const BodyGen& g, double lat, double lon, double t);
 
 // X-02: the giant's bands round a place as the globe paints them: the planet function (galaxy/planetmap) on a grid of the
 // tangent plane (km east and north of the place, out to halfKm), at the jets' drift of a time, so the descent falls into
@@ -206,3 +201,10 @@ std::string giantLayerName(const GiantAtmosphere& a, int layer, bool brief);   /
 // X-04: the storm a probe falls into at its aim (body-frame latitude and longitude, the bands' time): 2 the great storm, 1 one of the
 // globe's storm cells (`id` the cell's: a storm keeps it while it lives, so the explorer's name for it is found again), 0 none
 int giantStormAt(const Body& b, const BodyGen& g, double lat, double lon, double t, uint64_t& id);
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+// X-03: the giant's character as lines for the harness (the first: its kind and heat, then its decks, its weather, its rare features)
+std::string giantCharacterText(const GiantAtmosphere& a);
+// X-03: the turn at a place (body-frame latitude and longitude): the great storm turns whole with its own latitude's jet, its
+// surroundings easing into it, so it keeps its shape while the bands round it shear
+double giantJetAt(const Body& b, const BodyGen& g, double lat, double lon, double t);

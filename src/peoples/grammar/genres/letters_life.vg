@@ -1,0 +1,290 @@
+R"VG(
+# letters_life.vg (H-04, the second pass): the ordinary life between a letter's news (one line each, its own each time in a letter:
+# `letter.ambient`): the children, the husband or the wife, the writer's work, the weather, the sky, the house, the market, the other
+# people. Each line is built of parts (what happened, then how the writer takes it, coordinated by an attribute), and the parts are
+# the people's own things, so a people's letters come out in its own words. letters_life2.vg has the table, the body, the faith, memory,
+# the sayings, the neighbours, the gifts, the town and the feasts.
+
+letter.ambient
+  (once has:$child) {let.kid}
+  (once has:$spouse) {let.sp}
+  (once) {let.work}
+  (once) {let.wx}
+  (once) {let.sky}
+  (once) {let.house}
+  (once) {let.market}
+  (once contact=1) {let.other}
+  (once) {let.table}
+  (once) {let.body}
+  (once) {let.faith}
+  (once has:$you) {let.remember}
+  (once) {let.saying}
+  (once) {let.gossip}
+  (once has:$you) {let.gift}
+  (once) {let.town}
+  (once) {let.feast}
+letter.none
+  {letter.ambient}
+
+# ---- the children ----------------------------------------------------------------------------------------------------------
+
+let.kid
+  (3) {$child:full} {let.kid.does}{let.kid.tail}
+  (2) {let.kid.when} {$child:full} {let.kid.does}{let.kid.tail}
+  (has:$you) You would not know {$child:full} now: {let.kid.now}.
+  {$child:full} says {let.kid.says}.
+let.kid.when
+  {season.this},
+  Since {festival},
+  All of a sudden,
+  Overnight, it seems,
+let.kid.does (share=0.7)
+  has learnt to {let.skill} {=.learnt}
+  can {skill} better than I can, and says so {=.learnt}
+  can count to {n} now and counts the {herd} morning and night {=.count}
+  plays {pastime} from first light until we drag {$child:obj} in {=.play}
+  wants {garment} like the big ones have {=.want}
+  will not eat {food} any more, only {fruit} {=.food}
+  follows the {beast} everywhere, or the {beast} follows; nobody is sure which {=.beast}
+  has taken up {instrument}, and the neighbours have taken up complaining {=.noise}
+  talks to the {bird} on the roof, and they answer {=.odd}
+  helps with the {craft}, which means doing all of it again after {=.help}
+  has made {vessel.one} out of clay, lopsided, and we use it {=.made}
+  builds little {houses} out of mud by the door {=.made}
+  can say {oath} without blushing, which I did not teach {=.oath}
+  fell off the wall {=.fell}
+  has grown a hand's breadth since {festival} {=.grow}
+  names every {beast} in the street, and none of them come {=.odd}
+  (age>=industrial) has started at the school and hates it {=.school}
+  (age>=industrial) reads everything, the labels on the {vessel} included {=.read}
+  sings the {festival} songs all year, and wrong {=.noise}
+  had the fever and is over it, thank {god} {=.ill}
+  wants to be a {$me.trade} like me, poor thing {=.trade}
+  asks where {river} goes, and does not like the answer {=.odd}
+  has found an old {let.tool.n} in the yard and will not give it up {=.made}
+let.kid.tail
+  (3) .
+  (.learnt=1) , and is very proud of it.
+  (.learnt=1) ; the {herd} are less pleased.
+  (.count=1) ; the number comes out different every time.
+  (.play=1) ; the cheating runs in the family.
+  (.fell=1) , which is more than the wall can say.
+  (.noise=1) ; I have no peace.
+  (.food=1 has:$you) ; I said you were the same at that age, and you were.
+  (.school=1 has:$you) ; so did you.
+  (.school=1 !has:$you) ; it will pass.
+  (.made=1) ; it is the ugliest thing in the house and I would not part with it.
+  (.oath=1) ; I suspect the neighbours.
+  (.grow=1) ; nothing fits, and the {garment.n} I made in spring is short already.
+  (.ill=1) ; I did not sleep for three nights, and the child slept through all of it.
+  (.beast=1) ; they will grow old together.
+  (.odd=1) ; I have stopped asking.
+  (.help=1) , and is quicker at it than I was.
+  (.trade=1) ; I have said what the hours are like.
+  (.want=1) ; I have said wait until {festival}, which buys me a season.
+  (.read=1) , and asks what every word means.
+let.kid.now
+  taller than the door, and twice as loud
+  all elbows, and too proud to help with the {herd}
+  quiet as {skyone}, and as hard to read
+  the best at {pastime} in {$me.home}, and impossible about it
+  out from dawn to dark with the {craft} people, black to the elbows
+  lazy, clever and fond of {food}, which is three of the four things I was
+let.kid.says
+  that the {bird} are only {beast:pl} that learnt to fly
+  that {god} must be very old, because the stars are
+  that {mountain} is a sleeping {beast}, and must not be woken
+  that the {crop} grows faster if you sing to it, and has been singing to it
+  that the moon follows us home on purpose
+  that nobody should have to eat {veg} who did not choose to
+  that {$me.trades} are paid in {food}, which is not far wrong
+  (contact=1) that the {other} have no mothers, which I have corrected
+  that the dead are {dead.are}, which is what the old ones say too
+  that {river} must be tired by now
+  that the {herd} talk when we are asleep
+
+# ---- the husband or the wife -----------------------------------------------------------------------------------------------
+
+let.sp
+  (3) {$spouse:full} {let.sp.does}{let.sp.tail}
+  {let.kid.when} {$spouse:full} {let.sp.does}{let.sp.tail}
+let.sp.does (share=0.7)
+  has taken up the {craft} again {=.craft}
+  (has:$you) is well and asks after you {=.ask}
+  (has:$you) says you owe us a visit {=.owe}
+  is asleep by the fire as I write {=.asleep}
+  has quarrelled with the neighbours about the wall again {=.quarrel}
+  has been to {city} and came back with opinions {=.city}
+  is building a new pen for the {herd} {=.build}
+  keeps the accounts now, and finds us poorer every week {=.accounts}
+  has started making {drink} in the back room {=.brew}
+  swears {oath} that next season will be better {=.oath}
+  is mending {garment} for the third time {=.mend}
+  grows {veg} on the roof and argues with the {bird} about them {=.garden}
+  has gone off to {holyplace} for the day {=.away}
+  sold the {beast} and bought another, exactly the same {=.beast}
+  cut {$spouse:poss} hand on {tool} and makes much of it {=.cut}
+  has made friends with the {craft} people by {$me.home.landmark} {=.friends}
+let.sp.tail
+  (2) .
+  (.quarrel=1) ; I keep out of it.
+  (.ask=1) , and sends love.
+  (.owe=1) ; I said nothing, which was agreement.
+  (.city=1) , most of them about the prices.
+  (.build=1) ; the {herd} were not consulted.
+  (.accounts=1) ; I have stopped looking.
+  (.brew=1) , and the whole house smells of it.
+  (.oath=1) ; we have heard that before.
+  (.asleep=1) , so this is the only quiet hour of the day.
+  (.garden=1) ; the {bird} are winning.
+  (.craft=1) , and the house is full of it.
+  (.mend=1) ; it is more patch than {garment.n} now.
+  (.away=1) , so I eat what I like.
+  (.beast=1) ; I cannot tell them apart and nor can the {beast}.
+  (.cut=1) ; it was nothing, and has been nothing for a week.
+  (.friends=1) , and comes home smelling of it.
+
+# ---- the work, by the writer's trade --------------------------------------------------------------------------------------
+
+let.work
+  (3) {let.work.main}{let.work.tail}
+  {let.work.lead} {let.work.main}{let.work.tail}
+let.work.lead
+  As for me,
+  For my part,
+  Here,
+  (temper=wry) You will want to know about the work, so:
+let.work.main (share=0.75)
+  work is slow {=.slow}
+  work is steady {=.steady}
+  there is more work than I can do {=.busy}
+  (age<=medieval) nobody wants a {$me.trade} in {season.now} {=.slow}
+  (age<=medieval) everyone wants a {$me.trade} in {season.now} {=.busy}
+  (age=industrial) the [works are|mill is|yards are] on short time {=.slow}
+  (age>=modern) they have cut the hours again {=.slow}
+  the {craft} sells and the rest does not {=.steady}
+  I have a commission from {hall}, which pays late {=.comm}
+  (has:guilds) the guilds have raised the dues again {=.dues}
+  I have taken an apprentice who knows nothing and eats everything {=.appr}
+  {tool} broke, and the smith wants a fortune for it {=.tool}
+  the work {season.this} is the {crop} and the {herd}, and the {crop} is winning {=.season}
+  I sold {n} {vessel} of {food} at the market and bought {vessel.one} I did not need {=.sold}
+  the {craft} people have taken my best hand {=.hand}
+  I am behind with everything and ahead with nothing {=.busy}
+  (economy=herding|economy2=herding) the {herd} have the run of the hills and I have the run of the {herd} {=.steady}
+  (coast=1) the boats are out every day the weather lets them {=.busy}
+let.work.tail
+  (2) .
+  (.slow=1) , so I sit by the door and watch the road.
+  (.slow=1) , and I have [mended the gate|read three books|slept|taught the {beast} a trick].
+  (.busy=1) , so I am up before the light.
+  (.busy=1) ; I have not seen {$me.home} by daylight in a month.
+  (.steady=1) ; the {herd} do not care either way.
+  (.comm=1) ; I will believe in the money when I hold it.
+  (.dues=1) ; nobody knows what for.
+  (.appr=1) ; I was the same.
+  (.tool=1) ; I am making do with my father's, which was made for a giant.
+  (.season=1) .
+  (.sold=1) .
+  (.hand=1) ; good luck to them.
+
+# ---- the weather --------------------------------------------------------------------------------------------------------------
+
+let.wx
+  (3) {let.wx.main}{let.wx.tail}
+  {let.wx.main}. {let.wx.after}
+let.wx.main (share=0.75)
+  {weather.now} for [a week|nine days|half a moon]
+  {weather.now} {season.this}, worse than anyone remembers
+  {weather.now} again
+  we had {weather.now} at {festival}, of all times
+  {weather.now} all through the season
+  the {crop} stands [green|yellow|flattened] after {weather.now}
+  {weather.now}, and the roads are rivers
+  the old ones said {weather.now} would come when the {bird} flew low, and they flew low, and it came
+  (desert=1) dust in the {food}, dust in the {drink}, dust in the bed
+  (cold=1 seasons=4 season=3) the snow is up to the sills, and the {herd} have stopped complaining
+  (rings=1) the ring's shadow lay across the fields {season.this}
+  (haze=1) the haze has not lifted in a month; we know the sun by rumour
+  (storms=1) the storms come up off {land} every afternoon
+  {weather.now}, and nobody can agree whose fault it is
+let.wx.tail
+  (2) .
+  ; the roof holds, which is more than last year.
+  , and the {herd} in the house with us, which they prefer.
+  ; nobody went out.
+  , and the children are wild with it.
+  ; we burn {fuel} and tell the old stories.
+  ; {exclaim}, as my mother said every year.
+  ; the {bird} have gone somewhere sensible.
+let.wx.after
+  The {vessel} are all out under the leaks.
+  We are all in one room round the {fuel}, for the warmth and the arguing.
+  The {beast} sleeps on the bread oven.
+  Nobody has been to {holyplace} since.
+  The fields will remember it.
+
+# ---- the sky ------------------------------------------------------------------------------------------------------------------
+
+let.sky
+  (3) {let.sky.main}{let.sky.tail}
+let.sky.main (share=0.75)
+  {skynight} {skyverb} last night
+  (has:$you) I read your last letter by {bright}
+  (moons>0) {moon} was full over {mountain} last night
+  (comet=1) the old ones say the hairy star will come back in our lifetime {=.hairy}
+  the stars over {mountain} were thick as {crop} seed last night
+  {skyone} stood over the gate at first light
+  (aurora=1) the lights were in the north again
+  (rings=1) the ring was bright as a blade at dusk
+  (locked=1) the edge of the day crept a little nearer the town again
+  (companion=1) the second sun was up before the first, and the {herd} did not know what to do
+  (moons>1) the moons were both up at noon, pale as two {vessel}
+  (orient=star) {star} rose where our doors face, as it should
+  the {bird} went over in thousands at dusk, south and south and south
+let.sky.tail
+  (!has:.hairy has:$you) , and I thought of you.
+  (!has:.hairy) ; the children sat up to watch.
+  (.hairy=1) ; they have said so for years.
+  (2) .
+  (!has:.hairy) ; I stood in the yard with {vessel.one} in my hands and forgot what I had come out for.
+
+# ---- the house and the street ---------------------------------------------------------------------------------------------
+
+let.house
+  (3) {let.house.main}{let.house.tail}
+let.house.main (share=0.7)
+  the neighbours have a new roof {=.boast}
+  the {roofs} leak again; we put {vessel} under the worst of it {=.leak}
+  we painted the door {colour.holy} for {festival} {=.paint}
+  the {herd} got into the {crop2} {=.herd}
+  (age<=industrial) the path down to {watersrc} washed out in the rain {=.path}
+  (has:$me.home.quarter) there is a new family in {$me.home.quarter} {=.new}
+  {motif.over} over our door are worn smooth, and nobody can cut them like Father did {=.old}
+  we have laid in {fuel} for the cold months {=.fuel}
+  the {beast} had young under the floor {=.young}
+  the {vessel} are full for once {=.full}
+  (has:$me.home.landmark) the wall by {$me.home.landmark} fell in after the rain {=.wall}
+  (land=stilts) one of the stilts under the house is rotten, and we lean a little now {=.lean}
+  (land=terraced) the terrace wall below us slipped, and took the {veg} with it {=.wall}
+  (plan=court) the court is full of {veg} drying on mats {=.full}
+  a {bird.one} has nested over the door, and we come and go by the window {=.nest}
+  we have whitewashed the walls and the {beast} has rubbed against all of them {=.paint}
+let.house.tail
+  (2) .
+  (.boast=1) , and talk of nothing else.
+  (.leak=1) ; the music of it keeps us awake.
+  (.paint=1) ; it looks like the house of someone richer.
+  (.herd=1) ; that is the {crop2} gone, then.
+  (.path=1) ; we go round by the long way and complain the whole of it.
+  (.new=1) ; it is the most that has happened {season.this}.
+  (.new=1) ; nobody knows where they are from, and everyone has a theory.
+  (.old=1) .
+  (.fuel=1) , which smokes and smells and will do.
+  (.young=1) ; the children have named all of them.
+  (.full=1) ; it will not last.
+  (.wall=1) ; nobody was under it, {god} be thanked.
+  (.lean=1) ; the {beast} has noticed.
+  (.nest=1) ; it would be bad luck to move it, and we are not people who need more of that.
+
+)VG"

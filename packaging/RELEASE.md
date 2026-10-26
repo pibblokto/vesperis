@@ -10,7 +10,7 @@ Ubuntu 20.04 in Docker, Windows x86_64/arm64 with llvm-mingw), raylib 5.5 built 
   `build/toolchains`, gitignored and outside the system's tmp cleaner), raylib static per target (`rl-<mac|win>-<arch>/libraylib.a`).
   The Linux raylibs are built in the container on first use (`rl-linux-<aarch64|x86_64>`), from images `vesperis-build:<arch>` that
   `linux.Dockerfile` makes when missing.
-- `make clean` deletes all of `build/`, the toolchains with it, until E-02 changes it.
+- `make clean` removes only the object directories (E-02): the toolchains stay.
 - Docker Desktop must be running, and starting it also starts the user's own containers: ask first, and leave theirs alone. If it
   hangs (the daemon silent, `open -a Docker` only raising the window), killing `com.docker.virtualization` and `com.docker.backend`
   and opening it again brings it back in about 10 s; only on the user's go.
@@ -19,7 +19,7 @@ Ubuntu 20.04 in Docker, Windows x86_64/arm64 with llvm-mingw), raylib 5.5 built 
 
 1. **The release text first:** the version in `CMakeLists.txt` (`CPACK_PACKAGE_VERSION`) and `packaging/make_app.sh`
    (`CFBundleVersion`, and `CFBundleShortVersionString` as the whole version); the README's paragraph (the README ships in the
-   zips); `docs/ideas/MILESTONES.md`'s "Released as" line; PROGRESS's release bullet and Next.
+   zips); `docs/ideas/MILESTONES.md`'s "Released as" line; `docs/STATUS.md`.
 2. **Proven:** `regress` with the workers and with `VESPERIS_THREADS=1`, and `unit`.
 3. **One commit** with a fresh random identity as author and committer: `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` and
    `GIT_COMMITTER_NAME`/`GIT_COMMITTER_EMAIL` set to an 8-hex name and a 12-hex@example.com address (`openssl rand -hex`); the global

@@ -1,6 +1,9 @@
 // Platform-independent input snapshot. Key codes follow the GLFW/raylib
 // numbering so the raylib front end can copy them straight through.
 #pragma once
+#ifdef RAYLIB_H
+#error "core/input.h beside raylib.h: their KEY_* names clash (game code sees src/platform.h; only the platform files see raylib)"
+#endif
 #include <cstring>
 #include <map>
 #include <string>

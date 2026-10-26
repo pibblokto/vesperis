@@ -1,0 +1,369 @@
+R"VG(
+# sunmyth.vg (D-05): the myth of the sun walking away and the fires on the hills, every age's (the later ages' once `dark` >= 2);
+# each sentence built of parts, each people keeping its own few of some (`people=K`). Also genre.omens' late log (the 16 KB a file).
+@apart
+
+genre.sunmyth (words=28..200)
+  (age=prehistoric) {sm.p.wall} {sm.p.walker} {sm.p.way} {sm.p.fires} {sm.p.end}
+  (age=prehistoric) {sm.p.wall} {sm.p.walker} {sm.p.way} {sm.p.fires} {sm.p.read}
+  (tense=past age=medieval) {sm.m.head}\n{sm.tale}\n{sm.fires} {sm.m.close}
+  (tense=past age=medieval) {sm.m.head} {sm.tale} {sm.after} {sm.m.close}
+  (tense=past age>=industrial age<=modern medium=printed) {sm.i.head}\n{sm.tale}\n{sm.after} {sm.i.note}
+  (tense=past age>=industrial age<=modern medium=cylinder|medium=drive|medium=crystal) {sm.v.head}\n{sm.tale} {sm.fires}\n{sm.v.end}
+  (age>=industrial medium=disc|medium=reel) {sm.s.head}\n{sm.song}\n{sm.song.b}\n{sm.song}\n{sm.s.end}
+  (tense=past age>=futuristic medium=crystal|medium=drive|medium=hum) {sm.f.head} {sm.tale}\n{sm.f.reflect}
+
+# the myth: how the sun was, what came for it, how it walked away, where it is now
+
+sm.tale
+  {sm.begin} {sm.cause} {sm.away}
+  {sm.begin} {sm.cause} {sm.away} {sm.now}
+  {sm.cause} {sm.away} {sm.now}
+sm.begin
+  {sm.b.when} {sm.b.what}{sm.b.tail}.
+  {sm.b.when} {sm.b.what}.
+sm.b.when (people=3)
+  In the first days,
+  Long ago,
+  Before the cold,
+  When the {people} were few,
+  In the time of the first {herd},
+  When {mountain} was young,
+sm.b.what (people=6)
+  {god} set the sun on its road round the world
+  the sun walked round our world once a year and never tired of it
+  the sun was a {sm.being} who kept a road of its own
+  the sun lived on the far side of {mountain} and walked over it every morning
+  the sun and {god} walked the year's road together
+  the sun came up over {mountain} every morning like a {sm.being} to its work
+  the sun was as near as a fire, and the {crop} grew wherever it looked
+  (faith=sky) {god.who} kept the sun on a cord, and the year was the cord's length
+  (faith=ancestors) the first of the {people} gave the sun its road, and it kept to it
+  (faith=land) the land and the sun were promised to each other
+sm.b.tail
+  , and it came home every year
+  , and nobody thought it would stop
+  , and the {herd} grew fat in its light
+  , and the year was always the same length
+sm.being (people=2)
+  herder
+  hunter
+  old woman with a lamp
+  great {beast}
+  runner
+  giant with a burning face
+sm.cause
+  {sm.c.lead} {sm.c.thing} {sm.c.did}{sm.c.tail}.
+sm.c.lead
+  But
+  Then
+  One year
+  After many years,
+sm.c.thing
+  (sunway=wanderer) {sunway.thing}
+  (sunway=wanderer) the wanderer, who walked a longer road,
+  (sunway=intruder) a stranger star
+  (sunway=intruder) a star with a bright face
+  (sunway=intruder) {sunway.thing}
+  (sunway=dark) something with no light
+  (sunway=dark) a hungry thing
+  (sunway=dark) a mouth in the sky
+  (sunway=dance) the sun's sister
+  (sunway=dance) {sunway.thing}
+  (sunway=dance) the young sun
+sm.c.did
+  (sunway=wanderer) grew jealous of the sun's road
+  (sunway=wanderer) came nearer every year
+  (sunway=wanderer) leaned on our road with all its weight
+  (sunway=wanderer) wanted the sun's road for itself
+  (sunway=intruder) came out of the dark
+  (sunway=intruder) courted the sun, nearer every night
+  (sunway=intruder) called to the sun from the edge of the sky
+  (sunway=intruder) grew brighter every year
+  (sunway=dark) crept up behind the stars
+  (sunway=dark) passed close, and could not be seen, only felt
+  (sunway=dark) lay down across the road of the year
+  (sunway=dark) came near without a sound
+  (sunway=dance) danced wider every year
+  (sunway=dance) pulled at our world as she danced
+  (sunway=dance) let go of our world's hand
+  (sunway=dance) spun us out of the ring
+sm.c.tail
+  (sunway=wanderer) , and the road bent toward it
+  (sunway=wanderer) , and pulled the year out of shape
+  (sunway=wanderer) , until the road broke
+  (sunway=intruder) , and the sun went to meet it
+  (sunway=intruder) , and the two suns quarrelled over us
+  (sunway=intruder) , until nobody could say which sun was ours
+  (sunway=dark) , and the stars bent away from it in fear
+  (sunway=dark) , and the year fell into it
+  (sunway=dark) , and the road came apart
+  (sunway=dance) , and we went spinning into the dark
+  (sunway=dance) , and the dance went on without us
+  (sunway=dance) , and nobody caught us
+sm.away
+  {sm.a.sun}{sm.a.how}.
+sm.a.sun (people=5)
+  The sun walked away along the new road
+  The sun went where it was pulled
+  The sun turned its back on us
+  The sun went slowly
+  The sun followed it out past {mountain}
+  The sun left without a word
+  The sun went the way of {river}, and further
+  The sun walked out of the year
+sm.a.how (people=6)
+  , a little smaller every year
+  , and the summers went with it
+  , and the warmth went after the summers
+  , and did not look back
+  , and the nights grew longer behind it
+  , and the snow came after it, and then the air itself fell
+  , and the {herd} called after it all one winter
+  , and took the colours with it
+sm.now
+  (dark=3) {sm.n.now}{sm.n.tail}.
+  (dark<=2) {sm.n.still}{sm.n.tail2}.
+sm.n.now (people=4)
+  Now it is a star among the stars
+  Now it is no bigger than {star}
+  Now you can hide it behind your thumb
+  Now it is the brightest star in the sky, and no more
+  Now it is a cold white point over {mountain}
+  Now the {people} count it among the stars
+sm.n.tail
+  , and still walking
+  , going the other way
+  , if you know where to look
+  , and the children do not believe it was ever the sun
+sm.n.still
+  It is walking still
+  It has not gone far yet
+  It can still be seen by day
+sm.n.tail2
+  , smaller every year
+  ; it could still turn round
+  , and the old ones watch it every morning
+sm.fires
+  {sm.f.lead} {sm.f.who} {sm.f.did}{sm.f.why}.
+sm.f.lead
+  So
+  Every night of the first long winter,
+  That winter,
+  From then on,
+sm.f.who (people=2)
+  the {people}
+  the old ones
+  everyone who could walk
+  the young of every village
+sm.f.did (people=5)
+  lit fires on every hill
+  kept the {~hillfire} burning on {mountain}
+  carried {fuel} up to the high places
+  burned the {fuel}, then the {tree}, then the doors of their houses
+  built the fires higher than the houses
+  kept a fire on every roof of {city}
+sm.f.why
+  , so that the sun could see the way back
+  , and sang {~sunsong} to it
+  , until there was nothing left to burn
+  , and in the morning the sun was still small
+sm.after
+  {sm.af.who} {sm.af.what}{sm.af.tail}.
+sm.af.who
+  The children say
+  The old ones say
+  (faith!=philosophy faith!=machine) The priests of {god} say
+  Some of the {people} still say
+sm.af.what (people=5)
+  that the fires were too small
+  that the sun will come back when it is tired of walking
+  that the sun was taken because a fire was once let go out
+  that the sun never looked back at all
+  that it went to warm another people
+  that it is still walking home, the long way round
+  that {god} went with it
+  (dark=3) that the fires on {mountain} should still be lit at {festival}
+sm.af.tail
+  , and they may be right
+  , and nobody argues with them any more
+  , though nobody believes it
+
+# the old age: the story on a wall, a stone, a bone
+
+sm.p.wall (formula)
+  (medium=painted) {pre.wall.where}, a story in {pre.paint}.
+  (medium=painted) A long picture along the wall, to be read walking.
+  (medium=stone) Pecked into {pre.stone.where}: a story.
+  (medium=bone) Cut round a {pre.bone}: a story that goes round it and does not end.
+sm.p.walker
+  {sm.p.sun} {sm.p.goes}.
+sm.p.sun
+  A figure with a round {colour.holy} face
+  The sun, drawn as a figure with legs,
+  A round {colour.holy} face on long legs
+sm.p.goes
+  walks away along it, over {mountain}, its back to the people
+  walks off the edge of the stone, smaller in each picture than the one before
+  stands large over {houses} at the start, and at the end it is a dot
+sm.p.way
+  (sunway=wanderer) Behind it, a bigger round thing with long arms, reaching for it.
+  (sunway=wanderer) Above it, a second round face, larger, its mouth open.
+  (sunway=intruder) Ahead of it, a star with rays, waiting with its arms open.
+  (sunway=intruder) Beside it, a smaller sun with rays, holding its hand.
+  (sunway=dark) Ahead of it, a black ring with nothing in it, and the stars drawn bent round the ring.
+  (sunway=dark) A black ring is drawn across its road, and the road stops there.
+  (sunway=dance) Two round faces dance with their hands joined; in the last picture one of them walks away.
+  (sunway=dance) Two suns drawn turning round each other, and between them our world, falling out.
+sm.p.fires
+  {sm.p.fire1} {sm.p.fire2}.
+sm.p.fire1
+  On every hill a fire is drawn,
+  Figures carry {fuel} up the hills in a line,
+  The fires on the hills are drawn larger than the sun,
+sm.p.fire2
+  and figures beside the fires with their arms raised
+  and the people by the fires are singing, their mouths open
+  and the {herd} are drawn lying down by the fires
+sm.p.read
+  The ship reads it as a story told to children, and painted where they would see it.
+  The ship takes the last figures for a prayer: the fires and the raised arms, again and again.
+sm.p.end
+  (medium=painted) {wall.state}
+  (medium=stone) {stone.state}
+  (medium=bone) The bone is black with handling.
+
+# the medieval telling
+
+sm.m.head (formula)
+  This is how the old ones tell the going of the sun at {$home}.
+  The tale of the sun's walking, as the priests of {holyplace} tell it.
+  (medium=tablet) Set down from the telling of the old ones at {$home}.
+  (medium=scroll|medium=codex) Here is written the oldest tale of the {people}, the tale of the sun that walked.
+  (medium=stone) Cut by the door of {holyplace}, for those who cannot read it: the tale of the sun.
+sm.m.close (formula)
+  So the old ones tell it.
+  (faith!=philosophy faith!=machine) Whether it is true, {god} knows.
+  This is the tale as it was told to me; I have not changed it.
+  (holy=highplace) The fire on the high place is kept for it still.
+
+# the later ages: the story collected, a telling, a song, a reflection
+
+sm.i.head (formula)
+  From the old tales of {$home}, as the country people still tell them.
+  The tale of the walking sun: an old story, set down by the society at {$seat}.
+  (age=modern) The oldest story of the {people}, as it is told to children in {hall.below}.
+sm.i.note
+  The tale is older than the observatories, and it got the sun's road right.
+  The collector adds that every hall below tells it a little differently.
+  It is told now by the lamps, and the children ask what a hill was.
+sm.v.head (formula)
+  (medium=cylinder) Recorded at {$home}: an old woman tells the tale of the sun.
+  (medium=drive) For the children of {hall.below}: the story of the sun that walked away.
+  (medium=crystal) The oldest story, kept as it was told.
+sm.v.end
+  That is the story. Now go to sleep; the lights are going down.
+  (medium=cylinder) The woman laughs at the end, and someone near the machine asks her to tell it again.
+  And that is why we keep the {~hillfire} lit, even down here.
+sm.s.head (formula)
+  The song of the walking sun, as it was sung at {$home}.
+  (medium=disc) A song on the old disc: the sun's song.
+  (medium=reel) A reel from {hall.below}: the children's song of the sun.
+sm.song
+  {sm.s.call>.c}, {.c}, {sm.s.where}; {sm.s.we}.
+sm.s.call
+  come back
+  walk home
+  turn round
+  look back
+sm.s.where
+  over {mountain}
+  the road is long
+  before the snow
+  at the little fires
+sm.s.we
+  the fires are lit and the {herd} are waiting
+  we have kept the {~hillfire} for you all night
+  we will sing {~sunsong} until you hear
+  they are all of us, and we are cold
+sm.song.b
+  The sun walked off and did not say why, and we have been singing ever since.
+  The {crop} is asleep and the {herd} are thin, and the hills are bright with our fires.
+  (sunway=wanderer) The wanderer has it; the wanderer is strong; sing louder, and it will let go.
+  (sunway=intruder) The stranger has it, and it is happy there; sing louder, and it will remember.
+  (sunway=dark) The dark has it, and the dark is deep; sing louder, and it will hear.
+  (sunway=dance) Its sister has it, and they are dancing; sing louder, and it will come back to us.
+sm.s.end
+  The last line is sung by everyone, and the reel crackles over it.
+  The song ends, and someone in the hall starts it again.
+  A fire is lit in the song's last line, and the singers stop there.
+sm.f.head (formula)
+  The oldest story of the {people}, kept because it was right about the walking.
+  (age=farfuture) A story, from before; the archive keeps it with the measurements.
+  The myth of the sun, in the old words.
+sm.f.reflect
+  {sm.fr.a} {sm.fr.b}
+sm.fr.a
+  The myth says the sun walked away; it was we who walked, but the myth was made by people who stood still.
+  We know now what took the sun, and the myth was not far wrong about it.
+  The fires on the hills could not have been seen from where the sun was going.
+  The tellers did not know what {sunway.thing} was, and they drew it anyway.
+  Every child in {hall.below} knows the story before they know the stars.
+  (age=farfuture) The story is the oldest thing we have that is still true of us.
+sm.fr.b
+  They were lit for us.
+  We keep the old story anyway; it has the fires in it.
+  It is kept beside the measurements, and read more often.
+  The archive marks it as the first true record of the loss.
+  Nobody has made a better one.
+
+# the omens' late ages' log (genre.omens, omens.vg's: kept here, a file being under 16 KB)
+
+om.f.head (formula)
+  Sky watch, {$home}: the log, cycle {#year:digits}.
+  The watch's log, {$home}. Kept for the archive.
+  (age=farfuture) What the watchers kept, here, before the change.
+om.f.obs
+  {om.fo.what}. {om.fo.tail}.
+om.fo.what
+  (sunway=wanderer) {sunway.thing}: nearer, as predicted
+  (sunway=wanderer) {sunway.thing} crossed the inner marker [early|on time]
+  (sunway=wanderer) The tracking of {sunway.thing} was handed to the second array
+  (sunway=intruder) The intruder star: closer by the figure we gave last cycle
+  (sunway=intruder) The intruder's light now [rivals|passes] the sun's at the solstice
+  (sunway=intruder) The intruder's motion was confirmed by [three|four] stations
+  (sunway=dark) The lensing round the dark mass grows; the stars there are smeared into arcs
+  (sunway=dark) The dark mass is [nearer|heavier] than the last estimate
+  (sunway=dark) The background stars round the dark mass were mapped again
+  (sunway=dance) The companion's orbit widens again
+  (sunway=dance) The companion's pull on our road was measured [again|at its height]
+  (sunway=dance) The two suns' period was refitted [this cycle|after the solstice]
+  (dark=1) The sun delivers less each cycle
+  (dark=1) The light meters at {$home} were reset to the new noon
+  (dark=1) The noon reading at {$home} fell below the old night's
+om.fo.tail
+  Every model agrees on what that means for our road
+  There is no model in which it misses
+  Our year lengthens with it, a few days each cycle
+  The fields under {city} run on stored heat now
+  The old figures are kept beside the new ones
+  The archive has been told
+  The forecast for the next cycle was not published
+  The halls below were told to make ready
+om.f.fields
+  {om.ff.what}; {om.ff.tail}.
+om.ff.what
+  (harvest<=1) The yields fall again
+  (harvest<=1) The surface crops failed [early|in the first frost]
+  (harvest>=2) The yields held this cycle, against the trend
+  (harvest>=2) The surface crops came in [thin|late], but came in
+  The growers report a cold season
+om.ff.tail
+  the grown halls take the shortfall
+  the growers are moving their plots nearer the warm ground
+  the {crop} stores below are full for now
+  the ration was not changed
+om.f.close (formula)
+  End of entry.
+  The watch continues.
+)VG"

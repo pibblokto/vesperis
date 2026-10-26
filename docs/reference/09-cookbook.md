@@ -1,5 +1,43 @@
 # Cookbook
 
+<!-- contents -->
+Contents:
+- Add a kind of world (P-00)
+  - A kind made from the old draws (P-01)
+- Add a trait (Q-01)
+- Add a quality (Q-02)
+- Add a sound of the ground (Q-03)
+- Reach a place that is not a star, or read the sun where there may be none (D-01)
+- Let the radar hear a new kind of source, or draw where no sun shines (D-02)
+- Give a signal a voice of its own without moving another's (D-03)
+- Light the ground, or give a world in the dark something of its own (D-04)
+- Give a people an end of its own without moving another's (D-05)
+- Add a star class
+- Add a building kind or a settlement plan (C-01)
+- Add a material
+- Add a HUD readout
+- Add a key
+- Add a game state
+- Add a save field
+- Add a palette effect
+- Change terrain detail or draw distance
+- Add a record's genre, a register, a rule or a word (C-02, H-03, H-04)
+- Add a tongue's sound, a name's shape, or an everyday event (H-04's second pass)
+- Move the shards, or add a place they lie (C-03)
+- Tune the decoder: the learning curve or the people's tongue (C-06)
+- Tune the music: a people's tradition or the pieces (C-04)
+- Tune the voice: a people's speech (C-05)
+- Tune the drone (R-403)
+- Read the world's plan from a feature, or add a network kind (T-01)
+- Change a town's plan: a street pattern, a district, a work of the water (T-02)
+- Add a record's medium, or change where records lie (T-04)
+- Add a work, or change where one goes (T-03)
+- Read a people's history, or add an event to it (H-02)
+- Add a variable to the architecture genome (A-04)
+- Add a kind of building to an age (A-03)
+- Time a change, or prove that it draws nothing new (F-01 to F-11)
+<!-- /contents -->
+
 ## Add a kind of world (P-00)
 
 A kind is a row of `KINDS` (`galaxy/kinds.cpp`, `buildKinds`) and, where no ground function fits, a ground function. The code
@@ -34,11 +72,12 @@ cost the space view 3-5%.
      the rain (`RAIN_CLOUDS` with its threshold and span, `RAIN_DRIZZLE`), the dust storms' threshold;
    * the events (`EV_...`: eruptions, fountains, strikes, quakes, devils, vents, jets; `eventMaterial` the ground an
      event stands on) and the rumble.
-3. A ground of its own: a `static void groundX(GroundCtx& c)` in `galaxy/planetmap.cpp` beside the others: its base,
-   then `c.relief(h, rel, hf, reliefAmp(g, rel, hf))` (the relief spectrum, the cliff bands and the plains, the traits'
-   landforms), its features (`c.fb`, `c.rg`, `c.crackAt`, `c.craterStack`, the feature fields), its material, albedo and
-   relief; a `GR_...` id and name (`GROUND_NAMES`) and its case in `sampleSurface`'s dispatch. A material that matters on
-   the ground at a scale the far rings do not draw follows B-404's rules (`matVisible`, `featFade`).
+3. A ground of its own: a `void groundX(GroundCtx& c)` in `galaxy/planet_grounds2.cpp` after the others, declared with
+   them in `planet_internal.h`: its base, then `c.relief(h, rel, hf, reliefAmp(g, rel, hf))` (the relief spectrum, the cliff
+   bands and the plains, the traits' landforms), its features (`c.fb`, `c.rg`, `c.crackAt`, `c.craterStack`, the feature
+   fields), its material, albedo and relief; a `GR_...` id and name (`GROUND_NAMES`) and its case in `sampleSurface`'s
+   dispatch (`planetmap.cpp`). A material that matters on the ground at a scale the far rings do not draw follows B-404's
+   rules (`matVisible`, `featFade`).
 4. A new material: `Material` (before `MAT_COUNT`, 32 at most), `MATERIAL_NAMES`, the meso tile and its variants
    (`surface/textures.cpp`), the harness's `matCol`; its family (`matFamily`), or an accent of the kinds that use it.
 5. Look: `vesperis_test kinds <NAME>` (the globe, the world map in its own colours, the row's facts, standing, from 350 m
@@ -59,7 +98,7 @@ the made kinds in id order, so a kind later in the table takes what the earlier 
 people never changes. The draws stay the drawn kind's: the size comes from the made kind's range on the same draw, the
 colour from its row by hashes, the rings by its own chance where it differs, `untilted` takes a locked world's tilt. Then:
 `survey` says how many changed and from what; `build/p01/stream.cpp` (built against the last release's sources and the
-tree's) proves every draw held; the pinned test worlds (`10-decisions.md`, P-01) are checked.
+tree's) proves every draw held; the pinned test worlds (`docs/decisions/log/6-1.4.0.md`, P-01) are checked.
 
 **A kind on the felisian layer (P-02).** A living kind is a row whose `ground` is `GR_FELISIAN`: the climate, the biomes, the seas, the
 drainage, the flora, the animals and the sounds come with it, and the row says how its world differs (`greenhouseK`, `latGradient`,
@@ -67,7 +106,7 @@ drainage, the flora, the animals and the sounds come with it, and the row says h
 `floraFamily`, `favourTrait`, `fauna`). A way of its own that the layer has not got is a tag (`KT_MICROBIAL`, `KT_ICE_SHEETS`) read where
 it acts, never a test of the kind; every new term reads its field only where the field is not the felisian's, so the felisian world's
 bits stand (`build/p02/fp2.cpp` proves every unmade body the same, field by field and sample by sample). A source `byStar` hashes the
-system's star (every world of a young star alike). Pin a salt where a test world or the home world would move (`build/p02/salt.cpp`).
+system's star (every world of a young star alike). Pin a salt where a test world or the home world would move (`salt scan`).
 A trait the kind should never draw takes a process of its own (P-02 split the snowball's `KS_FREEZE` off the open sea: every kind that
 had the sea got both, so no list moved).
 
@@ -77,7 +116,7 @@ had the sea got both, so no list moved).
 `reachClimate`). A planet made such a kind that then draws a twin is made again as one whose day is not its year (`generate`): nothing to
 do but know it. A moon's source may name its planet's drawn kinds (`source(..., byStar, of(PT_SUBSTELLAR))`: the brown dwarfs' moons).
 A made world that grows pushes its moons out; the companion's clearance and the comets read the drawn orbits, so no star moves. Check
-the regress's and the bench's worlds after a new source (`build/p03/salt.cpp` finds a salt that leaves them as drawn).
+the regress's and the bench's worlds after a new source (`salt scan` finds a salt that leaves them as drawn).
 
 **A dead kind (P-04).** A world that was a living kind and died: `thenGround(k, K[PT_FELISIAN])` gives the row the living kind's draws,
 relief, greenhouse and tints (the same ground in both times) and its `thenKind`; a `cover` says what the present laid over it (a branch at
@@ -103,18 +142,22 @@ of the enum read there from what the loop already has (never a new draw), and th
 Do not reuse `lock` or `sync` for a moon: the living kinds' `lock -1` sources take every body, and their moons would change. A fact a reader
 needs later on the body itself (the two-faced moon's apex, `Body::apexDir`) is set at the end of `generate` for the kind that reads it only,
 from the orbit's elements rather than its positions (four `bodyPos` a moon by differences doubled the generator's time). A test system's moon
-the stream shows changed is kept by pinning the kind's salt with `build/p06/salt.cpp`, a fact the body cannot give back (the resonance, the
-drawn size) taken to qualify.
+the stream shows changed is kept by pinning the kind's salt `salt scan` gives.
 
 **A giant made from a world (P-07's giants).** A made kind with `KT_GIANT` needs a class (`KindDef::giantClass`, `GiantClass` in `kinds.h`):
-the globe's ramp and night side (`space_view.cpp`'s `bodyRamp` and `drawGlobe`), its bands and storms (`giantGlobe`), its kind in the probe
-(`GiantKind` in `galaxy/probe.h`: its deck list, heat, glow, haze, stratosphere, winds) and its light in the descent (`MadeLight` in
-`game/probe.cpp`) read it, and a class whose look is its warmth gives its one-bar temperature across its band of the game's temperatures
-(`oneBarLo..Hi` over `oneBarTLo..THi`). Made from a world, it keeps the drawn world's moons (pushed out three of its radii by `clear`: the
-companion and the comets read their drawn orbits): a twin drawn after it makes it again by the facts it was made by with no giant
-(`drawnFacts`, `KindFacts::paired`), and so does a people's moon it would push (the moons drawn again from the state the planet's turn began
-with: `rngAt`). The X-03 ice giant is a drawn gas giant's: `isIceGiant` reads the class. The salts of the drawn giants' classes were pinned
-with `build/p07/salt.cpp`, which reads the test systems' planets (and B-427's Wolf-Rayet giant) against every source of the kinds.
+the globe's ramp and night side (`space_view.cpp`'s `bodyRamp`, `space_globe.cpp`'s `drawGlobe`), its bands and storms (`giantGlobe`), its
+kind in the probe (`GiantKind` in `galaxy/probe.h`: its deck list, heat, glow, haze, stratosphere, winds) and its light in the descent
+(`MadeLight` in `game/probe_feed.cpp`) read it, and a class whose look is its warmth gives its one-bar temperature across its band of the
+game's temperatures (`oneBarLo..Hi` over `oneBarTLo..THi`). Made from a world, it keeps the drawn world's moons (pushed out three of its
+radii by `clear`: the companion and the comets read their drawn orbits): a twin drawn after it makes it again by the facts it was made by
+with no giant (`drawnFacts`, `KindFacts::paired`), and so does a people's moon it would push (the moons drawn again from the state the
+planet's turn began with: `rngAt`). The X-03 ice giant is a drawn gas giant's: `isIceGiant` reads the class. The salts of the drawn giants'
+classes were pinned so the protected planets (and B-427's Wolf-Rayet giant) stay as drawn.
+
+**The salts (E-07).** `./vesperis_test salt scan [kind|family]` reads every world of the protected systems (`PROTECTED_SYSTEMS`
+in `src/harness/test_worlds.h`: the regress's, the scenes', home's, the probe's, B-427's) with the facts `generate` gives
+`kindOf`, walks each through the made kinds as `kindOf` does, and says for each kind the worlds it reaches and takes, and where it
+takes any, the first salt (its high word stepped) that takes none: a new kind's to pin. The `world-kind` skill has the rest.
 
 ## Add a trait (Q-01)
 
@@ -129,12 +172,12 @@ A trait is a row of `TRAITS` (`galaxy/kinds.cpp`, `buildTraits`) and what reads 
    trait's list moves), a colour trait (one a world), the trait it never comes with (both rows say it), `moves` when it moves the ground or
    what a people's plan reads (then never on a world with a people nor on the home world). The new slots find it by its kind: nothing else to
    wire for the draw.
-3. A landform: its case in `landformsAt` (`planetmap.cpp`): its province (`prov(k, lo, hi)`, a k of its own), its terms (`dhSmooth` moves
-   the smooth ground the rivers and lakes are cut into, `dhFine` the ground alone, `flatten`), the fades (`featFade` by a shaped feature's
-   width, `lodFade` a periodic pattern's, `matVisible` where a material may be decided: B-404, never by a faded value), its material
-   (`setMat`), its `mark` (1 where it is most itself: the galleries' spot and the scanner's samples) at every scale the scanner's 500 m scan
-   reads. Point features stand on a grid of their own (`PointGrid`) with their sizes from the hit's hashes, read by the landform and by
-   `landformFeatures` alike.
+3. A landform: its case in `landformsAt` (`planet_landforms.cpp`): its province (`prov(k, lo, hi)`, a k of its own), its terms
+   (`dhSmooth` moves the smooth ground the rivers and lakes are cut into, `dhFine` the ground alone, `flatten`), the fades (`featFade`
+   by a shaped feature's width, `lodFade` a periodic pattern's, `matVisible` where a material may be decided: B-404, never by a faded
+   value), its material (`setMat`), its `mark` (1 where it is most itself: the galleries' spot and the scanner's samples) at every scale
+   the scanner's 500 m scan reads. Point features stand on a grid of their own (`PointGrid`) with their sizes from the hit's hashes,
+   read by the landform and by `landformFeatures` alike.
 4. Its sight: a `LandmarkKind` before `LM_COUNT` (its name and glyph, `landformSight`, `SCAN_ORDER`, `SCAN_MODE_NAMES` (twelve characters at
    most: the HUD's panel), `echoDetail`, auto-explore's weight and where it stands), its finder in `sightsOfCellUncached` (points from
    `landformFeatures`, kept where their ground carries the mark; a field from the cell's scan, `SurfaceSample::landformTrait`). The guide's
@@ -149,29 +192,30 @@ A trait is a row of `TRAITS` (`galaxy/kinds.cpp`, `buildTraits`) and what reads 
 A trait of the water, the sky, the life or the ground (not a landform) is a row as a landform is (`Add a trait`), `quality(T, id, NAME, phrase,
 needs, kind, moves, colour, excludes)`, and what draws it.
 
-1. Where it needs a fact of the world besides its kind's process (a forcing, a field, a warm sea), its test in `traitFits` (`planetmap.cpp`, read
-   by the new slots' draw): a fact the generator can read from the `Body` (a derived one is set in `StarSystem::generate`'s last step, no draw).
+1. Where it needs a fact of the world besides its kind's process (a forcing, a field, a warm sea), its test in `traitFits`
+   (`planet_bodygen.cpp`, read by the new slots' draw): a fact the generator can read from the `Body` (a derived one is set in
+   `StarSystem::generate`'s last step, no draw).
 2. `moves` when it moves the ground or what stands on it, or takes one of the second people's palette banks on the ground (25-27: free on a world
    without a people); a trait of the sky or a sea's light leaves it off, and then it may come to a people's world and the home world.
 3. What it does: a field in the ground (`landformsAt`, `qualityWater`, a ground function), a colour (`materialPalette`; a water's second colour
    through `SurfaceSample::waterTint`/`lifeTint` and the vertex's and the map's channels; the ground's through `groundTint`), the sky
    (`drawSky`, `computeEnvironment`), objects (an enumerator the drawing and the colliders share, as `forMeteorites`), the globe (bank 31: the
    first disc's water colour). Every field unfaded where it decides a material or a colour (B-404).
-4. Its sheet: a case in `qualitySheet` (`main_headless.cpp`): the frames at the hour and the place it shows, beside the frame without it.
+4. Its sheet: a case in `qualitySheet` (`src/harness/modes_kinds.cpp`): the frames at the hour and the place it shows, beside the frame without it.
 
 ## Add a sound of the ground (Q-03)
 
 A trait heard, not seen: its row is a quality's (`TK_SOUND`, `moves` false: it may come to a people's world and the home world).
 
-1. The cue in `SurfaceView::updateGroundSongs` (`surface_view.cpp`, each frame): a level of the surface's (0..1) from what the explorer or the
+1. The cue in `SurfaceView::updateGroundSongs` (`surface_env.cpp`, each frame): a level of the surface's (0..1) from what the explorer or the
    vehicle stands on and does and from the hour; a field of the planet function's where it needs the ground's shape (as `slipFace`: an output
    beside the others, no height or material moved), read at the near ring's 4 m where its wavelength is short. One-shots a cue of their own
    (`quakeCue`), consumed by the game.
 2. The level in `AudioState` (`audio.h`): cleared in `surfaceOff` (B-413: nothing of the ground aboard), set in `groundSoundsTo`
-   (`game_states.cpp`; the harness's scenes hear through it too), as much of it as `air` carries.
+   (`surface_play.cpp`; the harness's scenes hear through it too), as much of it as `air` carries.
 3. The sound in `AudioSynth::groundSample` (`audio.cpp`): its smoothing in `render`'s loop, its filters' constants in `coefs` (F-07), its gate in
    `render`'s call (silent costs nothing).
-4. Its levels: a row of `groundSounds()` (`main_headless.cpp`): `vesperis_test sounds` writes its WAV with the peak and the rms, and the unit
+4. Its levels: a row of `groundSounds()` (`src/harness/modes_signals.cpp`): `vesperis_test sounds` writes its WAV with the peak and the rms, and the unit
    check bounds them (none at the synth's clamp, the master's 0.8; none silent). A scene with its cue (a finder code and a few lines in the scene
    runner), and the cue check: where its world has it and not without the trait.
 ## Reach a place that is not a star, or read the sun where there may be none (D-01)
@@ -265,18 +309,18 @@ A drifter is a place as a star is: a `Star` of class `STAR_ROGUE` in a sector wi
 ## Add a star class
 
 1. `galaxy/starfield.h/.cpp`: enum value and `STAR_CLASSES` row (D-01: before `STAR_ROGUE`, which stays the last: the picks over the classes stop at `STAR_DRAWN_COUNT`, and a drawn class appended after the drifters' would move it) (code, name, description, colour, radius, variance, luminosity, mass, max planets, rarity, first orbit multiplier, minimum first orbit). Since S-01 a new class is a *variety* with rarity 0: it takes a share of one of the six families in `starVariety` (by region), so the stars it does not claim keep their class and the pinned sites hold; a family row with a weight of its own would re-deal every star.
-2. `space/space_view.cpp` `drawSun`: glow multiplier and disc appearance branch (and the rays for compact stars; S-04: a pass of its own for a feature along the orbital plane, `discUp`; S-05: a feature round the star within a few radii goes in the glow's pass, widening `outerA` to reach it; S-06: a star that is not a disc of light at all takes a function of its own at the top of `drawSun`, `drawBlackHole` is the model, with the frame copied before it bends anything); `starNebulaPatches` if the star lights its own sky; `drawGlobe` if its worlds look different (S-05: `drawStrippedTail`; S-06: `drawAccretionStream` on the companion).
+2. `space/space_sun.cpp` `drawSun`: glow multiplier and disc appearance branch (and the rays for compact stars; S-04: a pass of its own for a feature along the orbital plane, `discUp`; S-05: a feature round the star within a few radii goes in the glow's pass, widening `outerA` to reach it; S-06: a star that is not a disc of light at all takes a function of its own at the top of `drawSun`, `drawBlackHole` is the model, with the frame copied before it bends anything); `starNebulaPatches` if the star lights its own sky; `drawGlobe` if its worlds look different (S-05: `drawStrippedTail`; S-06: `drawAccretionStream` on the companion).
 3. `galaxy/system.cpp` `pickPlanetType`: class modifiers if the class should shape its worlds; `generate` for the locking, the companion chance (`pMultiple`, one entry per class) and `starActivity` for the star's activity (the aurora, the scene finders and the unit check read it).
 4. `game/hud.cpp`: radiation warning distances if hazardous; `galaxy/describe.cpp`: the data sheet's sentence. The star map's filter, the statistics and the analyzer read the table (S-02); nothing in the UI needs a change. A new class is the next code (the plan's table is renumbered as the classes arrive: S10 is the neutron star).
 5. `./vesperis_test space` renders every class from the first orbit; `unit` checks the class mix near home.
 
 ## Add a building kind or a settlement plan (C-01)
 
-`galaxy/ruins.h` `BuildingKind` / `SettlementPlan` and the name tables in `ruins.cpp`; the layout in `layoutSettlement` (place with `Layout::add`, which keeps buildings apart and draws the decay and the seed) and the pieces in `elemsBuilding` (`Form`s, A-02's `galaxy/forms.h`: C-01's boxes and domes or any of the twelve kinds, from the building's own seed at the three levels of detail, building by building in order (the view groups them so each building is drawn at its own level); a piece standing on the ground with `y0` under 0.01 is sunk a metre by the view, a big one stands on the highest ground under it with its foot down to the lowest; each kind's colliders are `formColliders`'). The surface view (`gatherSettlement`, `drawFormItems`, `collectColliders`, `forTrees`) and the landmark finder need no change; `vesperis_test forms sheet` shows a new kind whole and broken at every level, `forms check` walks into it; `vesperis_test unit` checks every house's room and doorway, `scene civilisation_town` shows a town from its gate.
+`peoples/ruins.h` `BuildingKind` / `SettlementPlan` and the name tables in `ruins.cpp`; the layout in `layoutSettlement` (place with `Layout::add`, which keeps buildings apart and draws the decay and the seed) and the pieces in `elemsBuilding` (`Form`s, A-02's `peoples/forms.h`: C-01's boxes and domes or any of the twelve kinds, from the building's own seed at the three levels of detail, building by building in order (the view groups them so each building is drawn at its own level); a piece standing on the ground with `y0` under 0.01 is sunk a metre by the view, a big one stands on the highest ground under it with its foot down to the lowest; each kind's colliders are `formColliders`'). The surface view (`gatherSettlement`, `drawFormItems`, `collectColliders`, `forTrees`) and the landmark finder need no change; `vesperis_test forms sheet` shows a new kind whole and broken at every level, `forms check` walks into it; `vesperis_test unit` checks every house's room and doorway, `scene civilisation_town` shows a town from its gate.
 
 ## Add a material
 
-`galaxy/kinds.h` enum before `MAT_COUNT` (P-01: the mud, the potash and the brine; P-02: the mats, the stromatolite, the crust and the moss); `planetmap.cpp`: `MATERIAL_NAMES`, `matFamily` (the bank it shares: a material of its own colour needs a family whose rep it recolours, as the glass recolours the water), `materialPalette` (its colour per body); `surface/textures.cpp`: `materialHasMesoTile`, a `buildMesoTile` case and the `mesoVariantName` row; `surface/surface_view.cpp`: the specular list if it glints, `drawObjects` and `collectColliders` if rocks avoid it; `main_headless.cpp`: the `matCol` of the map renderer. The landing map, the globe and the surface take the colour from `matColor`.
+`galaxy/kinds.h` enum before `MAT_COUNT` (P-01: the mud, the potash and the brine; P-02: the mats, the stromatolite, the crust and the moss); `planetmap.cpp`: `MATERIAL_NAMES`; `planet_bodygen.cpp`: `matFamily` (the bank it shares: a material of its own colour needs a family whose rep it recolours, as the glass recolours the water), `materialPalette` (its colour per body); `surface/textures.cpp`: `materialHasMesoTile`, a `buildMesoTile` case and the `mesoVariantName` row; `surface/surface_view.cpp`: the specular list if it glints, `drawObjects` and `collectColliders` if rocks avoid it; `src/harness/modes_space.cpp`: the `matCol` of the `maps` renderer. The landing map, the globe and the surface take the colour from `matColor`.
 
 ## Add a HUD readout
 
@@ -288,7 +332,11 @@ Keys are GLFW codes in `core/input.h`; the platform copies raylib's `IsKeyDown/I
 
 ## Add a game state
 
-Add to `GameState`, handle update in `Game::frame`'s first switch and rendering in the second; overlays should render the underlying scene first and set `returnState`. Update `mouseCaptureWanted()` if the cursor should be released.
+Append it to `GameState` and its row to `STATE_ROWS` (`game/game_types.h`): its traits (the clock runs, an overlay drawn over
+its `returnState`, the cameras stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground),
+its controller context and its name; then the places `src/game/CLAUDE.md` lists under "A new state or screen touches": its
+file of `Game` methods, the update switch, a scene's case in the render switch (an overlay is the `default`'s), and its way in.
+Code asks `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06).
 
 ## Add a save field
 
@@ -304,68 +352,71 @@ Palettes are rebuilt every frame (`setupPalette`), so time-varying effects are c
 
 ## Add a record's genre, a register, a rule or a word (C-02, H-03, H-04)
 
-The texts are written by the grammar engine from `src/galaxy/grammar/*.vg` (the format: `12-civilisations.md`, "The grammar engine";
-the records: "The records (H-04)").
+The texts are written by the grammar engine from the `.vg` files on `src/peoples/grammar/`'s shelves (its note; the format:
+`civilisations/records-and-grammar.md`, "The grammar engine"; the records: "The records (H-04)"; the `grammar` skill).
 
-1. Edit the `.vg` file and read the result without a rebuild: `vesperis_test grammar` reads the tree's files, prints the link's errors
+1. Find the rule first: `vesperis_test grammar where <rule|prefix.*>` (its file and line, what names it, what builds its name).
+   Edit the `.vg` file and read the result without a rebuild: `vesperis_test grammar` reads the tree's files, prints the link's errors
    (an unknown rule, fact, entity or field, a guard's unknown key, a rule no root reaches, "a" before a plural list: each with its file and
    line), runs every people's records of the test worlds, the age worlds and the forty nearest home through the checks (every name the
    history's at the record's year), and writes them all to `shots/tests/grammar_texts.txt`; `grammar ages` prints fifty of one people of
    each age to `shots/tests/records_<age>.txt`. Read fifty before judging: the checks catch the grammar, not the sense (a door drunk from,
    twelve elk "turned at bay, its head down", a diary that says "you"). Then `make` (the files are compiled in) and `unit` (it checks the
    tree's files are the text compiled in, each under 16 KB: split a file that grows past it).
-2. A genre is an alternative of `record` in `records.vg`: its age and its media (`age=industrial medium=printed|medium=codex`), what the
-   history must offer (`has:pair`, `has:writer`, `has:dead`, `has:event`, an invention `inv.telegraph=1`), the collapse's `stage` for its
-   witnesses, and a weight (the rule is `steady`: a people's shares hold). Its rule `genre.<name>` (`words=lo..hi`: what it writes, the
-   length check) in the age's file; its heading and closing `(formula)` rules, left out of the measures. Bind its persons with `@cast`
-   and tell the history with `@news`, `@entries`, `@years`, `@death`, `@life` or `@event`; a register's rules are `<register>.<kind>`.
+2. A genre is an alternative of `record` in `core/records.vg`: its age and its media (`age=industrial medium=printed|medium=codex`), what
+   the history must offer (`has:pair`, `has:writer`, `has:dead`, `has:event`, an invention `inv.telegraph=1`), the collapse's `stage` for
+   its witnesses, and a weight (the rule is `steady`: a people's shares hold). Its rule `genre.<name>` (`words=lo..hi`: what it writes, the
+   length check) in a file of its age's shelf (`ages/<age>/`) named for it; its heading and closing `(formula)` rules, left out of the
+   measures. Bind its persons with `@cast` and tell the history with `@news`, `@entries`, `@years`, `@death`, `@life` or `@event`; a
+   register's rules are `<register>.<kind>`.
 3. A register is a way to tell an event: a rule per event kind (`annal.war`, `letter.sickness`), the event bound as `$e` (its fields:
    `{$e.place}`, `{#$e.value:about}`, `$e.won`, `$e.wave`, `$e.out`), `.none` when there is nothing to tell and `.quiet` for an empty year;
-   `registerOf` in `galaxy/genres.cpp` names it (the salience gives a great event told in another register its other side).
+   `registerOf` in `peoples/genres.cpp` names it (the salience gives a great event told in another register its other side).
 4. Compose within a sentence: a part a people draws a hundred times needs many frames (`[a|b|c]` inside a line, two or three slots a
    sentence), and a tail that only fits one part goes with that part (`{=.many}` and `(.many=1)`, or the part and its reactions on one
    line). Persons are entities: `{$me}`, `{$you}`, `{$x}`, `{$kin}`, `{$child}`, `{$spouse}`, `{$ruler}`, `{$founder}` (the realiser writes
    "my mother", then "she" or "my mother" again where a pronoun would not be clear), their cases `{$kin:obj}`, `{$kin:poss}`, a vocative
    `{$you:voc}` (the given name), the name `{$child:name}`; a line that speaks to the reader is guarded `has:$you` (a diary has none). Never
    write "he", "his" or a verb's ending for a person; a verb whose subject changes is `{walk:$x}`, `{be:.w}` after `{rule>.w}`.
-5. A word list is a rule in `world.vg` or `people.vg` with guards on the facts (`desert=1`, `cold=1`, `moons>0`, a trait `erg=1`) and
-   its number (`(pl)`, `(mass)`, `(sing)`: no "a" before a plural); `(keep)` makes it the same all through a record. A new fact is the
-   model's: add it to `RecordFact` and its name in `galaxy/genres.cpp` (the same order) and set it in `recordWorldFacts` (the world and the
-   people) or `yearFacts` (the record's year), never from a site. A word of a later age goes behind a guard (`(age>=medieval) iron`) and
-   into `lexicon.vg`, by age or by the invention that brings it (`@lexicon inv.railway train trains`).
+5. A word list is a rule in `core/world.vg` or `core/people.vg` with guards on the facts (`desert=1`, `cold=1`, `moons>0`, a trait `erg=1`)
+   and its number (`(pl)`, `(mass)`, `(sing)`: no "a" before a plural); `(keep)` makes it the same all through a record. A new fact is the
+   model's: add it to `RecordFact` and its name in `peoples/genres_schema.h` (the same order) and set it in `recordWorldFacts` (the world
+   and the people) or `yearFacts` (the record's year), never from a site. A word of a later age goes behind a guard (`(age>=medieval) iron`)
+   and into `core/lexicon.vg`, by age or by the invention that brings it (`@lexicon inv.railway train trains`).
 6. A number with its noun is `{#n|day}` ("one day", "five days"); a rule of counts is written as it is read ("twenty", "a hundred").
-7. H-04's second pass: make it a people's own. A thing a people names its own way is a culture pool (`culture*.vg`) with `people=K`
-   (each people keeps K of those whose guards hold): one number for every word in it (no "the" in one entry and not in the next: a
-   writer will put "the" before it, or not), and a word of a later age behind its guard. A thing with no word of ours is `{~key}` (their
-   coin, their dish: lowercase, kept by the decoder). A quip, an image, a joke a reader would notice twice is in a rule with `share=0.3`
-   to `0.5`, so each people has its own part of them. A sentence a people draws often is built of parts with two or three of the people's
-   own words in it (its crop, its vessel, its craft, its house, its colour): that is what makes it no other people's; names do not help
-   (the measures mask them). Read `grammar`'s genre table: "between peoples" (the share of the genre's sentences on a frame another
-   people wrote) and "within one" (the people's own repeats); `VESPERIS_TOPFRAMES=8` prints each people's worst. A heading or a closing
-   that is the genre's habit is `(formula)`.
-8. Several writers side by side: each copies the tree (`cp src/galaxy/grammar/*.vg D/`) and the binary, works in its own files with its
+7. H-04's second pass: make it a people's own. A thing a people names its own way is a culture pool (`core/culture_*.vg`) with `people=K`
+   (each people keeps K of those whose guards hold): one number for every word in it (no "the" in one entry and not in the next: a writer
+   will put "the" before it, or not), and a word of a later age behind its guard. A thing with no word of ours is `{~key}` (their coin,
+   their dish: lowercase, kept by the decoder). A quip, an image, a joke a reader would notice twice is in a rule with `share=0.3` to `0.5`,
+   so each people has its own part of them. A sentence a people draws often is built of parts with two or three of the people's own words in
+   it (its crop, its vessel, its craft, its house, its colour): that is what makes it no other people's; names do not help (the measures
+   mask them). Read `grammar`'s genre table: "between peoples" (the share of the genre's sentences on a frame another people wrote) and
+   "within one" (the people's own repeats); `VESPERIS_TOPFRAMES=8` prints each people's worst. A heading or a closing that is the genre's
+   habit is `(formula)`.
+8. Several writers side by side: each copies the tree (`cp -R src/peoples/grammar D`) and the binary, works in its own files with its
    own rule prefix, runs `vesperis_test grammar dir D out D/texts.txt` (from the repository's root), and copies its own files back; a new
-   file is read from disk at once, and compiled in by its line in `galaxy/shards.cpp` (`SRC_...` and `GRAMMAR_FILES`; the unit fails a
-   file the build does not list).
+   file is read from disk at once (the shelves walked), and compiled in by its three lines at the end of `grammar/files.inc` (the unit
+   fails a file the build does not list).
 
 ## Add a tongue's sound, a name's shape, or an everyday event (H-04's second pass)
 
-1. A people's tongue is `galaxy/tongue.cpp`: a consonant set is a row of `CSETS` (codes from `CONS`, each sound with its spellings), a vowel
-   set a row of `VSETS`, a syllable shape a string of `SHAPES` (C, V, L, S, F, `?` after a part it may leave out). A name's shape by its
-   kind is `tongueName`'s switch (a place by its rank: a root, a root and a generic word before or after it, an adjective and a root); the
-   generic words are the `TM_` meanings. A name that reads as a word of ours is caught by `unfortunate` (add the word). `vesperis_test
+1. A people's tongue is `peoples/tongue.cpp`: a consonant set is a row of `CSETS` (codes from `CONS`, each sound with its spellings), a
+   vowel set a row of `VSETS`, a syllable shape a string of `SHAPES` (C, V, L, S, F, `?` after a part it may leave out). A name's shape by
+   its kind is `tongueName`'s switch (a place by its rank: a root, a root and a generic word before or after it, an adjective and a root);
+   the generic words are the `TM_` meanings. A name that reads as a word of ours is caught by `unfortunate` (add the word). `vesperis_test
    tongues 60` shows sixty peoples' names side by side and how often a name tells its people; the unit asks 65% over 24.
-2. An everyday event is a row of `EVERYDAY` in `galaxy/history.cpp` (its kind in `HistoryEventKind`, before `HE_BIRTH` for a public one,
-   after `HE_DEATH` for a family's; its name in `HISTORY_EVENT_NAMES`, `KIND_KEYS` and the event's noun in `galaxy/genres.cpp`; its words
-   with the ages and what each needs; its rate by age and its salience): drawn from the year's own stream (`Builder::everyday`) or a
-   person's (`Builder::family`), it never harms anyone or makes a person, so the rest of the history stays. Then the registers that tell it
-   (`annal.<kind>`, `letter.<kind>`, `news.<kind>`, `log.<kind>`, `song.<kind>`, `sermon.<kind>`) with `$e.what` for its word.
+2. An everyday event is a row of `EVERYDAY` in `peoples/history_tables.h` (its kind in `HistoryEventKind`, before `HE_BIRTH` for a public
+   one, after `HE_DEATH` for a family's; its name in `HISTORY_EVENT_NAMES` (`history_names.cpp`), `KIND_KEYS` (`genres_schema.h`) and the
+   event's noun in `peoples/genres.cpp`; its words with the ages and what each needs; its rate by age and its salience): drawn from the
+   year's own stream (`Builder::everyday`) or a person's (`Builder::family`), it never harms anyone or makes a person, so the rest of the
+   history stays. Then the registers that tell it (`annal.<kind>`, `letter.<kind>`, `news.<kind>`, `log.<kind>`, `song.<kind>`,
+   `sermon.<kind>`) with `$e.what` for its word.
 
 ## Move the shards, or add a place they lie (C-03)
 
-1. The counts per settlement class and the buildings' weights are in `recordSitesOf` (`galaxy/records.cpp`; T-04 replaced C-03's
+1. The counts per settlement class and the buildings' weights are in `recordSitesOf` (`peoples/records.cpp`; T-04 replaced C-03's
    `shardSitesOf`, see "Add a record's medium, or change where records lie");
-   since A-03 the candidate spots are the building's room's (`buildingRoom`, `galaxy/buildings.cpp`: a `case` per kind, in the
+   since A-03 the candidate spots are the building's room's (`buildingRoom`, `peoples/buildings.cpp`: a `case` per kind, in the
    building's own frame, x' across the heading, z' along it; a rectangular room's by its door, `rectSpots`), and the place is
    the building's kind, named by `buildingPlaceName` (the log reads "TAKEN FROM <place>"). A new kind with a room gets a `case`
    there that matches its generator's walls and doorway.
@@ -378,7 +429,7 @@ the records: "The records (H-04)").
 
 ## Tune the decoder: the learning curve or the people's tongue (C-06)
 
-1. `languageShare` (`galaxy/shards.cpp`) is the curve: 0.3 with one shard, linear to 1 with ten; `languageKnown` turns it
+1. `languageShare` (`peoples/shards.cpp`) is the curve: 0.3 with one shard, linear to 1 with ten; `languageKnown` turns it
    into a count of words from the most used down (the share is of the fifty's word uses, so the first words known are the
    articles and the pronouns, and the names come free). A gentler or steeper curve changes nothing saved: the guide keeps
    the count a shard was read with, not the share.
@@ -392,7 +443,7 @@ the records: "The records (H-04)").
 
 ## Tune the music: a people's tradition or the pieces (C-04)
 
-1. `traditionOf` (`galaxy/music.cpp`) draws a world's tradition from the body's seed: the period (the octave, now and
+1. `traditionOf` (`peoples/music.cpp`) draws a world's tradition from the body's seed: the period (the octave, now and
    then stretched or narrow, rarely the twelfth), the scale (five to nine notes from an equal division of 5-24 steps or
    from just ratios, 75-450 cents between neighbours), the resting degree (nearest a fifth, else a fourth), the tonic
    (165-330 Hz), the cycle (3-12 beats in groups of two and three, a four now and then), the subdivision, the tempo
@@ -407,7 +458,7 @@ the records: "The records (H-04)").
    the second voice, the drone and the drum pattern. The notation print of the `music` mode is the place to judge a change
    on paper; `music ... wav` renders it through the real synth for the ear, and the `unit` checks the bounds (15-90 s,
    notes in order and in range, three forms at least a world, the two test worlds' traditions distinct).
-3. The synth (`AudioSynth::musicSample`, `game/audio.cpp`): ten voices, each a note of a timbre (six partials with the
+3. The synth (`AudioSynth::musicSample`, `game/audio_music.cpp`): ten voices, each a note of a timbre (six partials with the
    velocity opening the upper ones, an attack-decay-sustain-release envelope, vibrato after 0.3 s, breath noise; the drum
    a falling thump and noise), the clock in beats wandering by the tradition's drift. `AudioState::pieceGain` is the
    level; a null `piece` stops everything at once (the pointers must outlive the play, which is why the decoder clears
@@ -417,10 +468,10 @@ the records: "The records (H-04)").
 
 ## Tune the voice: a people's speech (C-05)
 
-1. `PHONES` (`galaxy/voice.cpp`) is the table of sounds, one row per spelling the tongue's pools and the names use (longest
+1. `PHONES` (`peoples/voice.cpp`) is the table of sounds, one row per spelling the tongue's pools and the names use (longest
    spellings first: `sh` before `s`): a vowel's three formants (a diphthong's two sets), a stop's locus and burst, a
    fricative's noise band, a sonorant's formants, each with a length. A new spelling in `T_ON`/`T_NU`/`T_CO`
-   (`galaxy/shards.cpp`) or in `generateName`'s pools needs a row, or its letters fall back to the single-letter rows
+   (`peoples/shards.cpp`) or in `generateName`'s pools needs a row, or its letters fall back to the single-letter rows
    (`parsePhones` skips what has none).
 2. `voiceOf` draws a world's voice from the body's seed, leaning with the names' style (hard names lower, rougher,
    clicking and rolling more; flowing names quicker, breathier, trembling more): the pitch (85-286 Hz, the tract longer
@@ -472,16 +523,16 @@ the records: "The records (H-04)").
 
 ## Change a town's plan: a street pattern, a district, a work of the water (T-02)
 
-1. The streets are `townStreets` (`galaxy/towns.cpp`): a pattern is a function of `Net` over a ring (`grid`, `spokes`, `rings`, `organic`,
+1. The streets are `townStreets` (`peoples/towns.cpp`): a pattern is a function of `Net` over a ring (`grid`, `spokes`, `rings`, `organic`,
    `lineTown`, `branching`, `suburbs`), called by `Net::pattern` for each layer's age; a street is laid by `line` (a medieval one crooked by
    its wobble) or `arc`, clipped to its ring by `seg`. The end of `townStreets` clips them to the shore and keeps the one web: a pattern
    needs only lay streets that meet. Widths are `streetHalf` (by rank and age, times the class's `widthK`), the blocks `streetSpacing`.
-2. The buildings are `layoutTown` (`galaxy/ruins.cpp`): `districtAt` says a lot's district, `lotSpec` its building (a dwelling through the
+2. The buildings are `layoutTown` (`peoples/ruins.cpp`): `districtAt` says a lot's district, `lotSpec` its building (a dwelling through the
    layer's `Layout::dwellingSpec`, a work, a tower, a compound, a garden), `setback` and `gapAfter` its place on the street, `density` how
    often a lot is built. A new building placed off a street: `Layout::add` with its fit tested (a rectangle against the others, off the
    streets), then `intrusion` (its own pieces off the streets) and `undoTo` if they reach one; mark its `district`.
 3. A work of the water or the land of an age: `addFeatures` (the harbour by `c.age`, the reservoir, the terraces): its buildings
-   `L.add` with their fit tested or `segmentClear`/`offStreets` first; a new kind gets its generator in `galaxy/buildings.cpp` (see A-03's
+   `L.add` with their fit tested or `segmentClear`/`offStreets` first; a new kind gets its generator in `peoples/buildings.cpp` (see A-03's
    recipe) and its feature flag in `RuinSpec` and `featureList`.
 4. `vesperis_test towns <sx> <sz> <body>` (the plans drawn from above), `towns view` (through the renderer), `towns check` (no building
    across a street, the streets walkable, the old cores, the districts, the harbours, the ground's marks), `ruins check`, `genome reach`
@@ -489,9 +540,9 @@ the records: "The records (H-04)").
 
 ## Add a record's medium, or change where records lie (T-04)
 
-1. A medium is a `RecordMedium` (`galaxy/records.h`, before `RM_COUNT`) with its harness name (`RECORD_MEDIUM_NAMES`) and what the HUD and
+1. A medium is a `RecordMedium` (`peoples/records.h`, before `RM_COUNT`) with its harness name (`RECORD_MEDIUM_NAMES`) and what the HUD and
    the log say of it (`RECORD_MEDIUM_HUD`: a description, never a name); the ages and categories that made it are `mediaOf`'s table in
-   `galaxy/records.cpp` (a weight by the record's age and category, `f` how far into its era the year falls), which `recordMediumFits`
+   `peoples/records.cpp` (a weight by the record's age and category, `f` how far into its era the year falls), which `recordMediumFits`
    (the unit) reads too. Its object is `recordForms`'s case: a few forms in the object's frame (`Obj::add`, `lying`), small, on the floor,
    in the records' parts (`FORM_PART_PALE` .. `FORM_PART_METAL`: banks 29, 30, 31, 17 and 7) or its people's slots (a stone's 0, a
    sleeve's accent 1, a light's 3); no collider (it is picked up).
@@ -506,15 +557,15 @@ the records: "The records (H-04)").
 
 ## Add a work, or change where one goes (T-03)
 
-1. A kind is a `WorkKind` (`galaxy/works.h`, after the last: the guide keeps none, only `LM_WORK` marks) with its name in `WORK_KIND_NAMES`
+1. A kind is a `WorkKind` (`peoples/works.h`, after the last: the guide keeps none, only `LM_WORK` marks) with its name in `WORK_KIND_NAMES`
    and what the scanner hears in `WORK_HEARD` (a description, never a name), and a glyph in the harness's `WORK_GLYPHS`.
-2. Its rule is a member of `WB` (`galaxy/works.cpp`) called in `buildWorldWorks`'s order (the history's works first): probe the ground with
+2. Its rule is a member of `WB` (`peoples/works.cpp`) called in `buildWorldWorks`'s order (the history's works first): probe the ground with
    `at` (64 m, the rivers off) and `grade`, find a place (`summitNear`, `shoreNear`, rings round a place, the plan grid's cells), keep it
    `clearOf` the settlements, the cores and the works before it, then `add` it with its age, its place and its event (`placeAge`, `eraAge`
    for the history's years; `cleared` for a place its people cleared). What it does to the ground is a `GroundEdit` in its own metres (a cut,
    a pit, a ditch, a bowl, a flat, water, lines, terraces); a new kind of edit is drawn in `SurfaceSite::applyEdits` on the rings that can
    show it and listed in `editCover` if nothing should grow on it.
-3. Its pieces are `workSpec`'s case: `Lay::add` buildings in the work's metres (a new kind's generator in `galaxy/buildings.cpp`, A-03's
+3. Its pieces are `workSpec`'s case: `Lay::add` buildings in the work's metres (a new kind's generator in `peoples/buildings.cpp`, A-03's
    recipe; heights over the reference level with `Building::base` and `Form::absolute`), `Lay::plot` for a plot of graves.
 4. `vesperis_test works <sx> <sz> <body>` (its line), `works view ... <word>` (through the renderer), `works gallery`, `works map` (with its
    place), `works check` (and a check of its rule beside the dam's, the quarry's and the battlefield's).
@@ -534,11 +585,11 @@ the records: "The records (H-04)").
 
 ## Add a variable to the architecture genome (A-04)
 
-1. Its entry in `GenomeVar` (`galaxy/genome.h`; the `static_assert` counts thirty-five: a thirty-sixth moves it), its values' enum,
+1. Its entry in `GenomeVar` (`peoples/genome.h`; the `static_assert` counts thirty-five: a thirty-sixth moves it), its values' enum,
    and its row in `GENOME_VARS` (`genome.cpp`): its printed name, its group, its categories (0 a measure with its two ends), the ages
    it acts in (a bit an age: the unit's reach check holds it to them) and its weight among the strongest (0 not one of them; a weight
    moves `genomeMaxDistance` and the alike threshold's meaning). Its draw is its own hash (`genomeOf`): nothing else moves.
-2. Where it acts: a way of the culture (`cultureWays`, `galaxy/buildings.cpp`), a generator reading it (`Gen::gv`, `gf`), the palette
+2. Where it acts: a way of the culture (`cultureWays`, `peoples/buildings.cpp`), a generator reading it (`Gen::gv`, `gf`), the palette
    (`culturePalette`), a plan (`Layout` in `ruins.cpp`: `formOf`, `foundOf`, `dwelling`, `dwellingSpot`, `centre`, `focus`, `stela`,
    the plan's `case`). What a room depends on goes into the `Building` (as `form`, `sides`, `found`, `centred`), so `buildingRoom`
    stays a function of the building alone.
@@ -547,8 +598,8 @@ the records: "The records (H-04)").
 
 ## Add a kind of building to an age (A-03)
 
-1. A `BuildingKind` (`galaxy/ruins.h`, with its `BUILDING_KIND_NAMES` entry: a `static_assert` counts them), its age in
-   `buildingAge` and its place's name in `buildingPlaceName` (`galaxy/buildings.cpp`).
+1. A `BuildingKind` (`peoples/ruins.h`, with its `BUILDING_KIND_NAMES` entry: a `static_assert` counts them), its age in
+   `buildingAge` and its place's name in `buildingPlaceName` (`peoples/buildings.cpp`).
 2. Its generator in `buildings.cpp`: a `Gen` gives the building's frame (`add`, `box`, `lathe` in its metres, the heading turned
    by `dh`), its draws (`U`), its materials' decay (`D`, `Dk` for a piece), and the helpers: `walls4` (a room with its doorway and
    windows), `roof` (never on walls under 92% of their height), `post` (a post to its stump and its hole), `heap`, `fallen` (a tall
@@ -576,4 +627,4 @@ the records: "The records (H-04)").
    `VESPERIS_THREADS=1, 2, 4, 6, 8` (`08-testing-and-tools.md`). A pure function is judged in the frame, on the renderer's own inputs:
    F-10's `atan2`/`asin` pair won a loop of random directions and lost the globe's scanlines.
 5. After: a row that fell gets its budget lowered to about 1.5 times the new median (`runBench`), the numbers go into
-   `08-testing-and-tools.md`'s reference paragraphs, the decision and what was dropped into `10-decisions.md`.
+   `08-testing-and-tools.md`'s reference paragraphs, the decision and what was dropped into `docs/decisions/log/`.

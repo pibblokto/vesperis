@@ -6,15 +6,13 @@
 // every key; an on-screen keyboard types where the game wants letters; the CONTROLS screen's second page binds the buttons. Whatever the
 // controller does goes through the game's own keys: one code path, and nothing a key does is out of a controller's reach
 #include "game.h"
-#include "galaxy/instruments.h"
+#include "peoples/instruments.h"
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
 
 namespace {
-enum PadCtx { PCX_SCREEN, PCX_TITLE, PCX_SHIP, PCX_FOOT, PCX_BUGGY, PCX_DRONE, PCX_PROBE, PCX_RECORDING, PCX_INSTRUMENT };
 enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };   // R-419: PSP_AUTO auto-explore's profiles
-constexpr int MOD_SHIFT = 1, MOD_CTRL = 2, MOD_ALT = 4;
 const char* ROLE_SHORT[PR_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
 const char* ROLE_SCREEN[PR_BUTTONS] = {"A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
 constexpr double REPEAT_DELAY = 0.4, REPEAT_EVERY = 0.09;   // the arrows held in the menus and the screens
@@ -50,19 +48,13 @@ int charKey(char c) {
     if (c == '\n') return KEY_ENTER;
     return -1;
 }
-std::string keyLabel(int key, int mods) { return std::string(mods & MOD_CTRL ? "CTRL+" : "") + (mods & MOD_ALT ? "ALT+" : "") + (mods & MOD_SHIFT ? "SHIFT+" : "") + keyName(key); }
 }
 
 int Game::padContext() const {
-    switch (state) {
-        case GameState::TITLE: return PCX_TITLE;
-        case GameState::SPACE: return PCX_SHIP;
-        case GameState::SURFACE: return !surf.valid ? PCX_SCREEN : (photoMode ? PCX_FOOT : (surf.inBuggy ? PCX_BUGGY : (surf.inDrone ? PCX_DRONE : PCX_FOOT)));
-        case GameState::PROBE: return PCX_PROBE;
-        case GameState::RECORDING: return PCX_RECORDING;
-        case GameState::INSTRUMENTS: return icase.level == 1 && icase.valid && !instrumentPlaysDisc(icase.inst) ? PCX_INSTRUMENT : PCX_SCREEN;
-        default: return PCX_SCREEN;
-    }
+    const int ctx = statePad(state);   // the state's own (its row); on the ground and at the case, what the explorer does there
+    if (ctx == PCX_FOOT) return !surf.valid ? PCX_SCREEN : (photoMode ? PCX_FOOT : (surf.inBuggy ? PCX_BUGGY : (surf.inDrone ? PCX_DRONE : PCX_FOOT)));
+    if (ctx == PCX_INSTRUMENT) return icase.level == 1 && icase.valid && !instrumentPlaysDisc(icase.inst) ? PCX_INSTRUMENT : PCX_SCREEN;
+    return ctx;
 }
 
 std::string Game::padContextName(int ctx) const {
@@ -199,6 +191,7 @@ void Game::padBindings(int ctx, std::vector<PadBind>& out) const {
     }
 }
 
+// the context's buttons in words, wrapped to `width` characters (lines by '\n')
 std::string Game::padLegend(int ctx, int width) const {
     std::vector<PadBind> binds; padBindings(ctx, binds);
     std::vector<std::string> parts;
@@ -445,6 +438,7 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
     return v;
 }
 
+// a key into the queue
 void Game::padPress(int key, int mods) { if (key >= 0 && key < KEY_MAX) padUI.queue.push_back({key, mods}); }
 
 void Game::padRunItem(const PadItem& it) {
@@ -458,11 +452,13 @@ void Game::padRunItem(const PadItem& it) {
     }
 }
 
+// the keyboard over the frame: asked for, or by itself at a text entry and the console
 bool Game::padKeyboardShown() const {
     if (padUI.keyboard) return true;
-    return padUI.present && padUI.active && (state == GameState::TEXT_ENTRY || state == GameState::CONSOLE);
+    return padUI.present && padUI.active && stateHas(state, ST_TYPING);
 }
 
+// the CONTROLS screen on its controller page, from anywhere
 void Game::openPadScreen() {
     if (state == GameState::SPACE || state == GameState::SURFACE || state == GameState::TITLE) returnState = state;
     keysReturn = state; keysPage = 1; keysCapture = false;
@@ -567,7 +563,7 @@ void Game::padFrame(Input& in, double realDt) {
         if (k.second & MOD_ALT) in.down[KEY_LEFT_ALT] = true;
     };
     if (P.keyboard && P.kbFor == 1 && !(state == GameState::SPACE && ship.targeting)) { P.keyboard = false; P.kbFor = 0; }   // the aim's digits went with the aim
-    if (P.keyboard && P.kbFor == 0 && state != GameState::TEXT_ENTRY && state != GameState::CONSOLE) P.keyboard = false;
+    if (P.keyboard && P.kbFor == 0 && !stateHas(state, ST_TYPING)) P.keyboard = false;
     if (state == GameState::KEYS && keysPage == 1 && P.capture >= 0) { deliver(); return; }   // the controller page reads the controller itself
     const bool shown = padKeyboardShown(), justUp = shown && !P.kbShown;
     if (justUp) { P.kRow = P.keyboard && P.kbFor == 1 ? 3 : 0; P.kCol = 0; P.latch = 0; }   // a keyboard just up: its cursor on A (on 1 for the digits)
@@ -688,13 +684,6 @@ void Game::renderPad() {
     if (top > 0) drawText(canvas, x1 - 12, listY - 7, "\x02", HUD_DIM);
     if (top + rows < n) drawText(canvas, x1 - 12, legendY - 11, "\x03", HUD_DIM);
 }
-
-std::string Game::testPadItems(int page) const {
-    std::string s;
-    for (const PadItem& it : padItems(page)) s += it.label + "|" + (it.key >= 0 ? keyLabel(it.key, it.mods) : std::string("*")) + "\n";
-    return s;
-}
-std::string Game::testPadLegend() const { return padLegend(padContext(), 52); }
 
 // ---- the CONTROLS screen's controller page ---------------------------------------------------------------------------------------------
 

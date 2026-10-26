@@ -1,0 +1,199 @@
+R"VG(
+# ending_whoever.vg (H-04; the second pass 2026-10-10): the message to whoever comes (ending_warning.vg's causes are shared): who the people were, how
+# they lived, what the world is like, what happened, what they left, what they ask. A far-future people left many such messages in
+# calm years (`stage<0`: a lamp in a window, not a cry), a falling people one or two in its last years; each is made of the people's
+# own world and ways, so no two worlds' messages read alike.
+
+genre.whoever (words=33..142)
+  {whoever.head}\n{whoever.who} {whoever.lived}\n{whoever.world} {whoever.what}\n{whoever.left} {whoever.ask}
+  {whoever.head}\n{whoever.who} {whoever.what}\n{whoever.left}\n{whoever.ask} {whoever.ask}
+  {whoever.head}\n{whoever.who} {whoever.lived} {whoever.world}\n{whoever.what} {whoever.ask}
+  {whoever.head}\n{whoever.world} {whoever.world}\n{whoever.who} {whoever.left} {whoever.ask}
+  {whoever.head}\n{whoever.who} {whoever.ways}\n{whoever.what}\n{whoever.ask}
+  {whoever.head}\n{whoever.ways} {whoever.lived}\n{whoever.left} {whoever.world}\n{whoever.ask}
+
+whoever.head (formula)
+  To whoever comes:
+  If you are reading this, you came a long way. Welcome.
+  This is for whoever finds it, after us.
+  For the ones who come after: read this first.
+  (age>=modern) If this is playing, someone found it. Hello.
+  Whoever you are, wherever you came from, this is for you.
+  (age>=futuristic) This record will repeat until someone hears it.
+  To the next ones:
+
+whoever.who
+  We were the {people}.
+  Our name was the {people}; you will not know it, as we did not know yours, but you will know our {herd}.
+  (stage<0) We are the {people}, or what is left of us, which is enough to keep the {crop} in.
+  (stage>=0) We are the {people}, the last of them, in {colour.mourn}.
+  We called ourselves the {people}; it means something like {ann.wh.means}, or so the old ones said.
+  We were the {people}, who kept the {herd} and grew {crop} and argued about both.
+  We are the {people}; we lived by {living} and by {craft}, and we were good at both.
+  We were the {people}; you will know our houses by {motif.over} over the doors.
+  We were the {people}. Our colour was {colour.holy}; you will see it everywhere we were.
+  We were the {people}, and we lived by {ann.wh.trade}, at {$home} and round it.
+  (age>=futuristic) We were the {people}. We made {focusword}, and the quiet you are standing in.
+  The {people}: that was us; say it {ann.wh.say}, over {drink}.
+ann.wh.means
+  "the ones who stayed"
+  "the people of the {watersrc.n}"
+  "the ones who count"
+  "the ones under {skyone}"
+  "the {herd} keepers"
+  "the people of {river}"
+ann.wh.trade
+  {craft}
+  {crop} and {herd}
+  boats and {fish}
+  (age>=industrial) machines and patience
+  songs and arguments
+ann.wh.say
+  with the stress on the first part
+  softly
+  the way you would say a friend's name
+  once, out loud
+
+whoever.ways (share=0.7)
+  We buried our dead {ann.buriedshort}, and we sang over them.
+  We wore {colour.mourn} for our dead and {colour.holy} for everything else.
+  We ate {food} and drank {drink}, and we thought them the best in the world.
+  On {festival} there was {feast.custom}; you may keep it if you like.
+  We said {proverb}, and we meant it, mostly.
+  We swore {oath}, and when we swore it we kept it.
+  When a child was born we said: {blessing}.
+  The {people} played {pastime} on long evenings; the rules are in the records.
+  Our music was {instrument}, and singing, and more singing.
+  We counted in {measure.far} and weighed in {measure.load}; the marks are on the posts by the market.
+  We believed that life is {life.is}.
+  We said the dead are {dead.are}. We still say it.
+ann.buriedshort
+  (deadway=barrows) in barrows on the hills
+  (deadway=tombs) in the tombs in the rock
+  (deadway=cemeteries) in the burying grounds outside each town
+  (deadway=towers) up in the towers of the dead
+  (deadway=none) in the river
+
+whoever.lived
+  We lived at {$home} and in the towns round it for {#year|year}, among the {tree}.
+  We counted our years from {city}, and this is the {#year:ord} of them, give or take a {ann.season.any.word}.
+  We lived by {water}, under {mountain}, with the {herd}, for longer than anyone remembers.
+  We were many once: more than you would think, looking at the empty {ann.houses} now.
+  (age>=futuristic) We built {focusword}, and the halls, and the machines that kept them.
+  We lived in {ann.houses} with {roofs}, and we were mostly warm.
+  We lived by {$home.ptrade}, at {$home}, and before that by {crop} and {herd}.
+  We came here {ann.wh.came}, and we stayed {#year|year}.
+  We grew {crop} first, then everything else, and then {crop} again at the end.
+  Our streets were {streets.of}; you can still walk them.
+  We kept the {herd} on the hills and the {crop} in the valleys, and the {fruit} by the doors.
+ann.wh.came
+  over {mountain}
+  down {river}
+  from somewhere nobody remembered
+  a long time ago
+
+whoever.world (share=0.7)
+  {skyone} rises over {mountain}; watch for it, it keeps good time.
+  (moons>0) {moon} comes round every {#number|night} or so, near enough; the tides and the {bird} follow it.
+  The water at {water} is good; we kept it in {vessel} and it never went bad.
+  (desert=1) {watersrc} is deep, but the old ones go down to water still; look for the {colour.holy} marks on the stones.
+  (desert=0) The {crop} grows wild now, in the old fields. It will feed you.
+  The {herd} went wild long ago; they are still about, if you are patient with {food}.
+  {season.now} is gentle here; {season.next} is not, so lay in {fuel} and be ready for it.
+  (aurora=1) In the long nights there are lights in the north; they mean nothing, and the {herd} ignore them, and they are beautiful anyway.
+  The {fruit} on the old trees by the {ann.houses} are good to eat; the small dark ones are not.
+  Do not eat the {veg} that grow by the water; we never did, and we never found out why.
+  (desert=0) The {tree} on the hills burn well and grow back slowly. Cut them slowly.
+  {weather} comes in {season.any}; shut the doors and wait it out.
+  (rings=1) The ring is brightest in {season.now}; we used to sit on the {roofs} and watch it.
+  (comet=1) The hairy star comes back; when it does, the {herd} will know it before you do.
+  (coast=1) The sea is kind in {season.now} and cruel in {season.next}; our boats are pulled up on the shore by the {fish} racks.
+  The {bird} come back every {season.now}; if they stop coming, something is wrong with the {crop}.
+  The {game} on the plains are not afraid. Do not make them afraid.
+  (cold=1) Burn {fuel} for warmth; it is in the sheds behind the houses, more than you need.
+  (rings=0 moons=0) The nights are very dark here, and the stars very close; you get used to it, as the {bird} do.
+
+whoever.what
+  (stage>=0) {cause.what}. There was nothing we could do that we did not try.
+  (stage>=0) We were watching the {crop} and did not see it coming, and then we saw nothing else.
+  (stage>=0) It was {cause.noun} at the end. Before that it was good, mostly; ordinary days.
+  (stage>=0 has:other) The {other} are gone too, or going; look for them as well, and take them {food}.
+  (stage>=0) We argued about what to do over {drink} until there was nothing left to argue about.
+  (stage>=0) {cause.noun} came the way weather comes, and stayed.
+  (stage>=0) We blamed {ruler.the}, and then each other, and then we stopped, because it did not help.
+  (stage>=0) It is not anyone's fault, not even {ruler.the}'s; it is everyone's.
+  (stage>=0 speed=0) It was quick, quicker than the {herd} could run; that was the only mercy in it.
+  (stage>=0 speed=2) It was slow; every year a little less {crop}, until there was not enough.
+  (stage<0) {whoever.calm}
+  (stage<0) {whoever.calm}
+whoever.calm (share=0.7)
+  We are not in trouble; we are only few, and the works are many, and someone should know how they run, like the {craft}.
+  Nothing is wrong; this is only in case, like {fuel} kept by the door.
+  We have time, more than we need, and {food}; we spend some of the time on you.
+  We are well; we are making this the way you would leave a lamp in a window of {ann.house1}.
+  We do not know who you are; we hope you are well, and fond of {food}.
+  The world is quiet and so are we and so are the {herd}, and we like it that way.
+  We are not lonely; we have the {herd} and {pastime}, and we wanted you to know that.
+  We are fewer than we were, and happier, mostly, and the {fruit} are better.
+  The {herd} outnumber us now. We do not mind.
+  We spend the mornings on the {crop} and the evenings on {pastime}.
+  Today it rained on the {roofs}, and we stayed in, and made this.
+  There is {drink} in the cold room in {vessel}; help yourself, we always meant to share it.
+  We are making this on a good day, with {drink}; we wanted you to have a good day from us.
+  Someone suggested over the {food} that we leave a message, and everyone had something to say, so this took a while.
+  Nobody has come for {#nbig} years; we keep the paths clear of {tree.n} roots anyway.
+  We have outlived our troubles, like the {herd} outlive the winter; it is a strange, quiet thing.
+
+whoever.left (share=0.7)
+  We left the records in {vessel} in the room by the gate; they will talk to you if you let them.
+  We left the {colour.holy} doors of the {ann.houses} open; nothing here is locked.
+  We left the {crop} seed in the cold rooms, all of it, labelled.
+  We left {tool} and the other tools oiled and wrapped, the way our mothers taught us.
+  We left the names of everyone we could remember, in {colour.holy}, on the wall by {watersrc}.
+  We left {focusword} standing, with {motif.over} on it; it will stand a long time yet.
+  We left the songs for {instrument}; there are a great many, and some are good.
+  (age>=modern) We left the machines running, for as long as they will run, and the {herd} to keep them company.
+  We left {instrument} by the door. Someone should play it.
+  We left the {vessel} full of seed, sealed with wax, in the dry rooms under {hall}.
+  We left {colour.holy} marks on the doors of the houses that are safe to sleep in.
+  We left the {herd} the grazing on the hill; they will not mind you.
+  We left the {craft} half finished on the benches; finish it, if you can see how.
+  We left {food} in the stores; some of it will keep, the rest will not. Smell it first.
+  We left {tool} and the rest by the sheds, sharp.
+  We left the maps of {river} and the passes over {mountain} in the first of the {ann.houses} you come to.
+
+whoever.ask
+  {whoever.ask.a}
+  {whoever.ask.a}
+  {whoever.ask.b}
+whoever.ask.a (share=0.7)
+  Do not be afraid of what you find here, not even the {herd}.
+  Look at {skyone} for us; we liked it.
+  Remember that we were here, with our {herd} and our {crop}; that is all.
+  Use what you find, and leave the dead where they lie, {ann.buriedshort}.
+  If you have children, tell them about us over {food}; make it a good story.
+  Do not try to find us; there is nothing to find but {motif.over} on the doors.
+  Sit by {water} in the evening with {drink}; that is the best thing here.
+  Say our name once, out loud, so it has been said, and pour out {drink} for us.
+  Plant {crop}; the ground is good for it.
+  Learn one of our songs on {instrument}, any of them.
+  Keep {festival} if you like, with {feast.custom}; it falls in {season.now}.
+  Go up {mountain} on a clear day and look down on the {crop}.
+  Drink {drink} for us once, and think of nothing in particular.
+  Feed the {herd} if they come to the door; we always did.
+  If you build, build with {material}; it lasts here.
+  Do not cut the old {tree} by {holyplace}; we never did.
+  If you find our dead, leave them {ann.buriedshort}; they are used to it.
+  Wear {colour.holy} once, for us.
+whoever.ask.b
+  Be kinder to each other than we were; we were kind, mostly, but count the {herd} together.
+  We were not afraid of each other, mostly; do not be afraid of us or our {herd}.
+  Whatever you find, the {vessel} and the {craft}, it was ours, and now it is yours.
+  {proverb}; we forgot it at the end. Do not forget it.
+  {blessing}.
+  Goodbye. Hello. Both, really.
+ann.season.any.word
+  season
+  year
+  moon
+)VG"

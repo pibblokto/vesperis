@@ -1,7 +1,7 @@
 #include "site.h"
-#include "galaxy/plan.h"
-#include "galaxy/towns.h"
-#include "galaxy/peoples.h"
+#include "peoples/plan.h"
+#include "peoples/towns.h"
+#include "peoples/peoples.h"
 #include "core/parallel.h"
 #include <chrono>
 #include "space/space_view.h"
@@ -465,7 +465,7 @@ void SurfaceSite::ensureRoads(double x, double z) {
         }
         roads.push_back(std::move(sr));
     }
-    // T-01: the plan's ways through the block (galaxy/plan.h): each leg within reach walked once by its kind (a maglev's runs on its pylons:
+    // T-01: the plan's ways through the block (peoples/plan.h): each leg within reach walked once by its kind (a maglev's runs on its pylons:
     // no bed), its id the way's and the leg's
     if (std::shared_ptr<const WorldPlan> P = worldPlanOf(gen)) {
         const double blockM = (ROAD_BLOCK + 1) * ruinCellLat(gen) * R;

@@ -22,4 +22,4 @@ minutes free and about four more under the chute, and nothing on the probe's scr
 * The screen's last line: `MOUSE LOOKS  SHIFT FAST  P PHOTO  ESC CABIN` (`X` still centres the camera).
 * Harness: the unit's probe check holds Shift for a second of the game (the clock 8.0 s on against 1.0 s plain, back to
   one a second after); the flow holds it a second on the probe's screen (`probe_fast`).
-* Docs: 07 (the probe bullet), 08 (the unit check, the flow step), 10-decisions (a section after X-02's).
+* Docs: 07 (the probe bullet), 08 (the unit check, the flow step), the decisions log (a section after X-02's).

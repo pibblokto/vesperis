@@ -1,7 +1,7 @@
 # Idea: caves
 
 Status: discussed 2026-09-30 and 2026-10-01, not designed, not scheduled. The terrain plan
-(`docs/iteration-3/plans/PLAN-terrain-3.md`, sections 6 and 9) left caves out of Terrain
+(`docs/archive/iteration-3/plans/PLAN-terrain-3.md`, sections 6 and 9) left caves out of Terrain
 III because the planet function is a height field: one height per point on the planet,
 which is what lets the orbital map, the landing map and the walking terrain come from the
 same function. A cave is an overhang, and a height field cannot express one. Nothing in

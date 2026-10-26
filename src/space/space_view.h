@@ -7,6 +7,7 @@
 #include "galaxy/starfield.h"
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
+#include "galaxy/planet_features.h"
 #include <map>
 #include <vector>
 #include <memory>
@@ -80,7 +81,7 @@ struct DetailPlate {
     bool drainageWanted = false;
     double radiusM = 0;        // the ground radius the plate covers (what the drainage prefetch is asked for)
     long samples = 0;
-    // T-01: the world plan's places and ways over the plate (galaxy/plan.h), read once the plan is built: the cores' built ground and the
+    // T-01: the world plan's places and ways over the plate (peoples/plan.h), read once the plan is built: the cores' built ground and the
     // ways' beds over the cells as the ground has them (what is seen from orbit is what is walked on)
     struct PlanCore { Vec3 u; double r = 0, alb = 0.45, standing = 1, cosReach = -2; };   // F-07: the cosine of the reach, the acos's pre-test
     struct PlanWay { Vec3 a, b; double half = 3, k = 0.3; };

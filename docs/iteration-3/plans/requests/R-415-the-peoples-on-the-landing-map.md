@@ -1,6 +1,6 @@
 # R-415: the peoples on the landing map
 
-status: done 2026-10-11 (uncommitted)
+status: done 2026-10-11 (released in 1.3.0)
 milestone: 1.3.0 (with R-414, the same message's last part)
 
 ## Request

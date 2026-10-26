@@ -4,13 +4,13 @@
 #include <cstddef>
 #include <string>
 #include <vector>
-struct Piece; struct Tradition; struct Note; struct Timbre; struct Ensemble;   // galaxy/music.h
-struct Speech; struct Voice; struct Segment;                   // galaxy/voice.h
-struct Signal;                                                 // galaxy/signals.h
+struct Piece; struct Tradition; struct Note; struct Timbre; struct Ensemble;   // peoples/music.h
+struct Speech; struct Voice; struct Segment;                   // peoples/voice.h
+struct Signal;                                                 // peoples/signals.h
 constexpr int MEDIUM_AIR = 100;   // C-11: `AudioState::medium` for a recording the radar caught (the receiver's band, the air's hiss, its slow fading)
 
 // D-03 what the synth needs of a drifter (SIG_ROGUE) besides its seed (`rogueVoiceFor` reads it off its signal): what its voice is by its
-// body (RV_*, galaxy/signals.h; a giant's when not told), the period of its turning and of its innermost moon's orbit (the game's seconds;
+// body (RV_*, peoples/signals.h; a giant's when not told), the period of its turning and of its innermost moon's orbit (the game's seconds;
 // 0 no moon) and its power (`drifterPower`)
 struct RogueVoice { int cls = 1; double turnS = 0, moonS = 0, power = 0.6; };
 RogueVoice rogueVoiceFor(const Signal& s);
@@ -69,7 +69,7 @@ struct AudioState {
     const Voice* voice = nullptr;
     bool speechStart = false, speechPause = false, speechDone = false;
     double speechGain = 1.0, speechT = -1;
-    // H-05 what the record on the decoder was made on (RM_*, galaxy/records.h; -1 none: the radar's programmes, the harness's bare renders):
+    // H-05 what the record on the decoder was made on (RM_*, peoples/records.h; -1 none: the radar's programmes, the harness's bare renders):
     // a recording is heard through it (a wax cylinder's horn, crackle and turning, a disc's surface, a reel's hiss and wow, a drive's rot,
     // a crystal's shimmer, the hum under something that hums); a record with no sound of its own is the ship's own rendering, dry.
     // C-11: `MEDIUM_AIR`, a recording the radar caught, as the ship kept it off the air
@@ -93,7 +93,7 @@ struct AudioState {
     int radarKind = -1; double radarPulseHz = 1;
     bool radio = false;
     // the user's second call ("MORE sounds for signals, greater variety in that cosmic horror direction"): the programme a
-    // people's transmission carries (RP_*, galaxy/signals.h; -1 none: the carrier alone) and the signal's seed, from which the
+    // people's transmission carries (RP_*, peoples/signals.h; -1 none: the carrier alone) and the signal's seed, from which the
     // synth draws the signal's own voice (no two pulsars thump alike) and the machines' patterns; `pieceSpeed` slows the piece
     int radarVoice = -1; uint64_t radarSeed = 0; double pieceSpeed = 1;
     // C-15: how far a near signal through a high gain overdrives the receiver (0 clean .. 1 the sound clipped hard)

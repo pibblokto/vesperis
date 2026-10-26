@@ -1,6 +1,6 @@
 # R-410: a radar turned up to hear farther, through the noise
 
-status: done 2026-10-09 (C-15 2026-10-08, C-16 2026-10-09; `docs/ideas/ITERATION-1.3.0.md`)
+status: done 2026-10-09 (C-15 2026-10-08, C-16 2026-10-09; `docs/archive/ideas/ITERATION-1.3.0.md`)
 milestone: 1.3.0
 
 ## Request
@@ -38,7 +38,7 @@ is cheap but would make the signals common, so the sensitivity works through a p
   * The hold to lock grows to eleven seconds for a faint far signal at x32 and the cones narrow.
   * A far signal locked flies like any (thousands of light years on the readout) and is on the galaxy chart.
 
-  The noise and the creepy mixed sounds are C-16 (KI-371). `docs/reference/12-civilisations.md` and `10-decisions.md` (C-15).
+  The noise and the creepy mixed sounds are C-16 (KI-371). `docs/reference/civilisations/radar.md` and `docs/decisions/log/3-1.3.0.md` (C-15).
 * **C-16 (2026-10-09), what the gain lets in.** Turned up, the receiver lets the void through, and each age is on the air.
   * The static rises: its hiss and a crackle grow, the rumble breathes harder, and the band of the galaxy is a rush in the
     beam, loudest toward the core, where a far signal is hardest to pull out.
@@ -53,4 +53,4 @@ is cheap but would make the signals common, so the sensitivity works through a p
     synthetic voice, data and beacons, the far future a beacon of mathematics.
   * The picture's static, the band's glow, a ghost double and tears grow with the gain.
 
-  `docs/reference/12-civilisations.md` (what the gain lets in, with where to listen from home) and `10-decisions.md` (C-16).
+  `docs/reference/civilisations/radar.md` (what the gain lets in, with where to listen from home) and `docs/decisions/log/3-1.3.0.md` (C-16).

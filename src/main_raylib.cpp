@@ -2,7 +2,7 @@
 // scales it to the window with nearest-neighbour filtering.
 #include "platform.h"
 #include "game/game.h"
-#include "galaxy/plan.h"
+#include "peoples/plan.h"
 #include "core/png.h"
 #include "core/fs.h"
 #include <cstdio>
@@ -15,6 +15,14 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
 #endif
+
+// E-05: the platform's frame (platform.h, which keeps clear of core/input.h's key names) is copied into Input and PadState by index
+static_assert(sizeof(PlatformFrameInput::down) == KEY_MAX && sizeof(PlatformFrameInput::pressed) == KEY_MAX &&
+              sizeof(PlatformFrameInput::mouseDown) == sizeof(Input::mouseDown), "the platform's key and mouse states are Input's");
+static_assert(sizeof(PlatformPad::buttons) == PAD_BUTTONS * sizeof(bool) && sizeof(PlatformPad::axes) == PAD_AXES * sizeof(float) &&
+              sizeof(PlatformPad::rawButtons) == PAD_RAW_BUTTONS * sizeof(bool) && sizeof(PlatformPad::rawAxes) == PAD_RAW_AXES * sizeof(float) &&
+              sizeof(PlatformPad::rawHats) == PAD_RAW_HATS && sizeof(PlatformPad::name) == sizeof(PadState::name) &&
+              sizeof(PlatformPad::guid) == sizeof(PadState::guid), "the platform's controller is PadState's");
 
 namespace {
 // F-01: VESPERIS_TRACE=1 times the parts of the real game's frame, which the headless bench never runs (the window's upload and

@@ -4,6 +4,11 @@
 // landmark and name it", and "some sort of echo locator or scanner ... in different modes so you can tune it for ruins or for water
 // to find lakes or for peaks", which can leave the sights already marked out. The sights stay what the terrain makes them
 // (galaxy/landmarks.h); the scanner hears them and the maps show only what the explorer marked
+// R-408: the explorer's marks (Guide::marks) and the surface scanner. `R` on the ground cycles the scanner
+// through the kinds the world can hold (off, ruins, lakes, peaks, craters, canyons, mesas, geysers, crystals), Shift+R leaves
+// the marked sights out or takes them in; `L` marks what the crosshair rests on; the sector map's cursor places, names and
+// removes marks (B-412: and shows one over the view). O6-06's landmarks are no longer markers: a sight is an echo of the scanner
+// until the explorer marks it
 #include "game.h"
 #include "ui.h"
 #include "galaxy/drainage.h"
@@ -41,6 +46,7 @@ static bool markGround(const SurfaceSite& site, const SurfaceMark& m, Game::Site
     return dry;
 }
 
+// the surface's world's marks (rebuilt when the marks, the landing or the frame change)
 const std::vector<Game::SiteMark>& Game::marksHere() {
     if (!surf.valid) { siteMarks.clear(); siteMarksVersion = -1; return siteMarks; }
     if (siteMarksEpoch == surf.siteEpoch && siteMarksBody == surf.site.body && siteMarksVersion == marksVersion && siteMarksCount == guide.marks.size()) {
@@ -64,12 +70,14 @@ const std::vector<Game::SiteMark>& Game::marksHere() {
     return siteMarks;
 }
 
+// the mark of this world nearest a point within a radius (its index in Guide::marks), -1 none
 int Game::markNear(double x, double z, double radiusM) {
     int best = -1; double bd = radiusM * radiusM;
     for (const SiteMark& m : marksHere()) { double d2 = (m.x - x) * (m.x - x) + (m.z - z) * (m.z - z); if (d2 < bd) { bd = d2; best = m.index; } }
     return best;
 }
 
+// its name, else "A MARK" / "A MARK: RUINS"
 std::string Game::markLabel(int mi) const {
     if (mi < 0 || mi >= (int)guide.marks.size()) return "";
     const SurfaceMark& m = guide.marks[mi];
@@ -84,6 +92,7 @@ bool Game::echoMarked(const SurfaceView::ScanEcho& e) {
     return false;
 }
 
+// where the scanner hears it: off by up to 8% of its distance
 // an echo is heard off its place by up to 8% of its distance (3 km at most) in a direction of its own: far, a hint of the way;
 // near, where it is
 void Game::echoHeardAt(const SurfaceView::ScanEcho& e, double& x, double& z) const {
@@ -93,6 +102,7 @@ void Game::echoHeardAt(const SurfaceView::ScanEcho& e, double& x, double& z) con
     x = e.x + std::cos(a) * off * r; z = e.z + std::sin(a) * off * r;
 }
 
+// the nearest sight of the mode (the marked left out, unless taken in), heard at
 const SurfaceView::ScanEcho* Game::scanNearest(double& hx, double& hz) {
     if (scanMode < 0 || !surf.valid) return nullptr;
     const SurfaceView::ScanEcho* best = nullptr; double bd = 1e300;
@@ -105,6 +115,7 @@ const SurfaceView::ScanEcho* Game::scanNearest(double& hx, double& hz) {
     return best;
 }
 
+// the world can hold that kind
 bool Game::scanModeHere(int mode) const { return surf.valid && mode >= 0 && mode < LM_COUNT && ((sightKindsOf(surf.site.gen) >> mode) & 1); }
 
 void Game::scanCycle() {
@@ -126,6 +137,7 @@ void Game::scanToggleSkip() {
     audio.beep = 4;
 }
 
+// "A TOWN", "1240 M HIGH", "2.3 KM ACROSS"
 std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
     const Landmark& L = e.lm;
     switch (L.kind) {
@@ -182,12 +194,16 @@ void Game::drawCompassMark(double bearing, uint32_t col, bool filled) {
     }
 }
 
+// B-412: one mark at a time over the view, none until the explorer picks it (the sector map's Shift+Enter or Shift+click on a
+// mark, again to hide it): the user found every mark within 25 km drawn over the view, their names run into one another
+// the shown mark (Guide::shownMark) when it stands on the surface's world
 const Game::SiteMark* Game::shownMarkHere() {
     if (guide.shownMark < 0) return nullptr;
     for (const SiteMark& m : marksHere()) if (m.index == guide.shownMark) return &m;
     return nullptr;
 }
 
+// that mark shown over the view in place of any other; the shown one hidden
 void Game::showMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     const bool hide = guide.shownMark == mi;
@@ -242,6 +258,7 @@ void Game::beginRenameMark(int mi) {
     beginTextEntry("RENAME THE MARK", 6, upper(guide.marks[mi].name));
 }
 
+// the entry's Enter
 void Game::finishMark(const std::string& name) {
     if (textMark >= 0) {   // a rename (a friend's mark renamed is the explorer's own)
         if (textMark >= (int)guide.marks.size()) return;
@@ -274,6 +291,7 @@ void Game::removeMark(int mi) {
     audio.beep = 4;
 }
 
+// R-408: the sights the explorer named before become marks where they stand (this system's worlds), found on a thread
 // the sights the explorer named under O6-06 (`<world>/L<id>` names, the explorer's and the inbox's) become marks where they stand,
 // with their names and kinds, for this system's worlds; a name whose sight is not found again stays as it was. The cells are found
 // on a thread of their own (a system's dozen names asked a dozen cells and their drainage tiles: seconds on a cold start, which
@@ -314,6 +332,7 @@ void Game::migrateLandmarkNames() {
     });
 }
 
+// the main thread puts the found ones in the guide (every frame)
 void Game::collectMigration() {
     if (!migrateThread.joinable() || migrateBusy.load(std::memory_order_acquire)) return;
     migrateThread.join();
@@ -337,24 +356,4 @@ void Game::collectMigration() {
         status(fmt("YOUR %d NAMED SIGHT%s HERE %s NOW MARKS ON THE MAPS", moved, moved == 1 ? "" : "S", moved == 1 ? "IS" : "ARE"), 6);
     }
     migrateLandmarkNames();   // the ship may be at another system's names by now
-}
-
-std::string Game::testScanInfo() {
-    std::string s = fmt("scan mode %d skip %d scanned %d (%.0f ms), %zu echoes", scanMode, scanSkipMarked ? 1 : 0, surf.scanned ? 1 : 0, surf.scanMs, surf.echoes.size());
-    int kinds[LM_COUNT] = {0};
-    for (const auto& e : surf.echoes) if (e.lm.kind >= 0 && e.lm.kind < LM_COUNT) kinds[e.lm.kind]++;
-    for (int k = 0; k < LM_COUNT; k++) if (kinds[k]) s += fmt(" %s %d", LANDMARK_KIND_NAMES[k], kinds[k]);
-    double hx, hz;
-    if (const SurfaceView::ScanEcho* e = scanNearest(hx, hz))
-        s += fmt("; nearest at %.0f %.0f (%.0f m, %s), heard at %.0f %.0f", e->x, e->z, std::hypot(e->x - surf.player.x, e->z - surf.player.z), echoDetail(*e).c_str(), hx, hz);
-    s += fmt("; %zu marks here", marksHere().size());
-    return s;
-}
-
-bool Game::testEchoTrue(double& x, double& z, double& radius) {
-    double hx, hz;
-    const SurfaceView::ScanEcho* e = scanNearest(hx, hz);
-    if (!e) return false;
-    x = e->x; z = e->z; radius = e->lm.radiusM;
-    return true;
 }

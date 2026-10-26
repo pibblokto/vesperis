@@ -1,0 +1,131 @@
+R"VG(
+# sun_events.vg (D-05): the loss of the sun told in the ordinary registers. The history's HE_SUN events (`$e.sun`: the sun smaller, the year
+# that did not end, the sea frozen from the shore, the air fallen as snow, the last sunrise, the stars at noon) as each register tells an
+# event of its kind (`<register>.sun`: the chronicles, the letters, the news, the logs, the sermons, the songs, the pictures, the lessons, the
+# prehistoric marks, pictures, songs and calendars, the prayers); a drifter's people's alone, so apart.
+@apart
+
+# the omens of the lost sun's way in a chronicle (annal_war_land.vg's `annal.omen` reaches them: that file is full)
+ann.sunomen
+  ($e.omen=wanderer) the wanderer stood over {$e.place} brighter than any star, and brighter than the year before
+  ($e.omen=wanderer) the wanderer grew again, and its light threw shadows at night
+  ($e.omen=intruder) the new star in the east was brighter than it had been the year before
+  ($e.omen=bent) the stars over {$e.place} moved out of their places round a dark place in the sky
+  ($e.omen=dance) the second sun rose later and smaller than the year before
+
+annal.sun
+  ($e.sun=smaller) {ann.lead} the sun was smaller than the year before, and paler{sn.ann.t}
+  ($e.sun=smaller) {ann.lead} the watchers said the sun had shrunk by a finger's width since the last count{sn.ann.t}
+  ($e.sun=noend) {ann.lead} the year did not turn, and the summer did not come{sn.ann.t}
+  ($e.sun=noend) {ann.lead} the days were counted and the summer was counted for, and it did not come{sn.ann.t}
+  ($e.sun=seafrozen) {ann.lead} {sea} froze from the shore at {$e.place}{sn.ann.t}
+  ($e.sun=airsnow) {ann.lead} the air itself fell as snow, and it was hard to breathe{sn.ann.t}
+  ($e.sun=lastsunrise) {ann.lead} the sun rose for the last time over {$e.place}{sn.ann.t}
+  ($e.sun=lastsunrise) {ann.lead} the sun came up over {$e.place} low and white, and in the evening it was a star{sn.ann.t}
+  ($e.sun=noonstars) {ann.lead} the stars stood in the sky at noon{sn.ann.t}
+sn.ann.t
+  (4) .
+  ; the {herd} were brought in.
+  ; the fires were kept all day.
+  ; the {crop} was left standing in the fields.
+  ; nobody went out.
+  ; the old ones said it would pass.
+
+letter.sun
+  ($e.sun=smaller) The sun is smaller this year. Hold up your thumb at noon and it covers it, which it never did. Keep the children warm.
+  ($e.sun=smaller) Everyone here watches the sun at noon now and says nothing. It is smaller. It was smaller last year too.
+  ($e.sun=noend) The summer did not come. The days have been counted twice; it is the year that does not end, they say, and they do not say what comes after.
+  ($e.sun=seafrozen) {sea} froze from the shore this week, and the boats are in the ice at {$e.place}. People walk out on it to look back at the town.
+  ($e.sun=airsnow) The snow that falls now is not water. It falls out of the air itself and smokes when you touch it, and we go about with cloths over our mouths.
+  ($e.sun=lastsunrise) The sun came up this morning, low and white, for a little while, and the old ones said it was the last time. It is evening now, and it is a star.
+  ($e.sun=noonstars) The stars are out at noon. I write this by {kept.light}. Come down to {hall.below} if you can; there is room, and there is {warm.ground}.
+
+news.sun
+  ($e.sun=smaller) The sun smaller again\nThe observers at {$e.place} report that the sun's disc is smaller than at this time last year, and that the fall is faster than they said. {sn.news.t}
+  ($e.sun=noend) No summer this year\nThe summer will not come this year, the observers say; the year itself has grown longer, and it will grow longer still. {sn.news.t}
+  ($e.sun=seafrozen) The sea frozen at {$e.place}\n{sea} has frozen from the shore at {$e.place}, and the harbour is closed by the ice. {sn.news.t}
+  ($e.sun=airsnow) Snow from the air\nThe snow falling over the country is not water but the air itself freezing; breathing masks are to be worn out of doors. {sn.news.t}
+  ($e.sun=lastsunrise) The last sunrise\nThe sun rose this morning for what the observers say is the last time it will be seen as a sun. {sn.news.t}
+  ($e.sun=noonstars) Stars at noon\nThe stars were visible at noon today over the whole country. {sn.news.t}
+sn.news.t
+  The roads above ground are closed.
+  The public are asked to keep calm and keep warm.
+  The shelters under {city} are open to all.
+  Further reports will follow.
+
+log.sun
+  ($e.sun=smaller) {mod.lg.tag} Solar disc measured again; smaller than the last measure. {mod.lg.ack}
+  ($e.sun=noend) {mod.lg.tag} The year has not closed; the seasonal models are void. {mod.lg.ack}
+  ($e.sun=seafrozen) {mod.lg.tag} Sea ice from the shore at {$e.place}; the harbour closed. {mod.lg.ack}
+  ($e.sun=airsnow) {mod.lg.tag} The atmosphere precipitating as snow; surface pressure falling. {mod.lg.ack}
+  ($e.sun=lastsunrise) {mod.lg.tag} Last solar rise observed over {$e.place}. {mod.lg.ack}
+  ($e.sun=noonstars) {mod.lg.tag} Stars visible at local noon. Surface operations ended. {mod.lg.ack}
+
+sermon.sun
+  ($e.sun=smaller) The sun is smaller, and you come to me as if I had made it so. I did not make it, and neither did you. Keep the fires. {=.told}
+  ($e.sun=noend) The summer did not come. {god} has not forgotten the year; {god} is counting it more slowly than we do. {=.told}
+  ($e.sun=seafrozen) {sea} is frozen from the shore. You can walk where the fish were. Walk, then, and bring back what you find. {=.told}
+  ($e.sun=lastsunrise) We saw the sun rise this morning for the last time. Remember it. Tell it to the ones who are born after. {=.told}
+  ($e.sun=noonstars) The stars are out at noon, and you are afraid. They were always there. Now you can see them. {=.told}
+  ($e.sun=airsnow) The air falls as snow. Breathe slowly, and pray with your mouths covered. {=.told}
+
+song.sun
+  ($e.sun=smaller) The sun was smaller over {$e.place} each year,\n{sn.sg.b}\n{song.refrain}
+  ($e.sun=noend) The summer did not come to {$e.place},\n{sn.sg.b}\n{song.refrain}
+  ($e.sun=seafrozen) The sea froze from the shore at {$e.place},\n{sn.sg.b}\n{song.refrain}
+  ($e.sun=airsnow) The air came down as snow on {$e.place},\n{sn.sg.b}\n{song.refrain}
+  ($e.sun=lastsunrise) The sun came up for the last time over {$e.place},\n{sn.sg.b}\n{song.refrain}
+  ($e.sun=noonstars) The stars came out at noon over {$e.place},\n{sn.sg.b}\n{song.refrain}
+sn.sg.b
+  and we went down with the fire into the ground,
+  and we carried the children and the seed below,
+  and nobody sang the morning song again,
+  and the {herd} lay down in the snow and did not get up,
+
+picture.sun
+  ($e.sun=smaller) The sun painted smaller and smaller along the top of the wall, and figures with their hands held up to it.
+  ($e.sun=noend) A row of suns along the wall, each with fewer rays, and no harvest under them.
+  ($e.sun=seafrozen) The sea painted white, and figures standing on it among the boats.
+  ($e.sun=airsnow) White marks falling over everything, even over the fires.
+  ($e.sun=lastsunrise) A sun painted half over the hills in {colour.holy}, and every figure on the wall turned toward it.
+  ($e.sun=noonstars) The sky part of the wall full of stars, and a small sun among them no bigger than a star.
+
+lesson.sun
+  ($e.sun=smaller) {ls.when} the sun was seen to be smaller than the year before. The ones who measured it wrote it down; we still have the measures. {ls.then}
+  ($e.sun=noend) {ls.when} the year did not end, and the summer did not come. {ls.then}
+  ($e.sun=seafrozen) {ls.when} {sea} froze from the shore at {$e.place}. {ls.then}
+  ($e.sun=airsnow) {ls.when} the air fell as snow. What you breathe here was made for you, because of it. {ls.then}
+  ($e.sun=lastsunrise) {ls.when} the sun rose for the last time. Some of the ones who saw it lived to teach your teachers. {ls.then}
+  ($e.sun=noonstars) {ls.when} the stars were first seen at noon. {ls.then}
+
+pre.mark.sun
+  ($e.sun=smaller) A sun cut smaller than the one beside it: the sun going small, {pre.e.when}.
+  ($e.sun=noend) A turn of the year cut, and no summer mark after it, {pre.e.when}.
+  ($e.sun=seafrozen) Wavy lines cut over with straight ones: the water gone hard, {pre.e.when}.
+  ($e.sun=airsnow) Dots cut over everything, close: the air falling, {pre.e.when}.
+  ($e.sun=lastsunrise) A half sun cut over a line, and nothing after it: the last time it came up.
+  ($e.sun=noonstars) Stars cut where the sun's mark should be: the stars in the day.
+pre.pic.sun
+  ($e.sun=smaller) The sun painted small and pale over {mountain}, and the figures wrapped in hides.
+  ($e.sun=noend) The {herd} painted lying down in the snow, and a small sun far over them.
+  ($e.sun=seafrozen) The water painted white, and figures walking on it.
+  ($e.sun=lastsunrise) A half sun over the hills in {colour.holy}, and every figure facing it with its arms out.
+  ($e.sun=noonstars) Stars painted all over the sky part of the wall, and the figures going into a hole in the ground.
+  ($e.sun=airsnow) White painted falling over the fires, and figures with their hands over their mouths.
+pre.song.sun
+  ($e.sun=smaller) The sun grew small over {$e.place},\nand we lit the fires on the hills to call it,\n{pre.refrain}
+  ($e.sun=lastsunrise) The sun came up for the last time over {$e.place},\nand we sang to it until it was a star,\n{pre.refrain}
+  ($e.sun=noonstars) The stars came out in the day,\nand we took the fire down into the ground,\n{pre.refrain}
+  ($e.sun!=smaller $e.sun!=lastsunrise $e.sun!=noonstars) The cold came down on {$e.place},\nand the water went hard and the air fell,\n{pre.refrain}
+pre.cal.sun
+  ($e.sun=smaller) A small sun at one turn, {pre.e.when}.
+  ($e.sun!=smaller) A black sun at one turn: the sun going, {pre.e.when}.
+
+med.pr.sun
+  ($e.sun=smaller) The sun is smaller this year. Do not let it go smaller.
+  ($e.sun=noend) The summer did not come. Send it late, then, but send it.
+  ($e.sun=seafrozen) {sea} is frozen. Keep the boats in the ice until it breaks.
+  ($e.sun=lastsunrise) The sun went down and has not come up. If you have taken it, take us too.
+  ($e.sun=noonstars) The stars are out at noon. Light the way below for us.
+  ($e.sun=airsnow) The air falls as snow. Leave us breath enough to pray with.
+)VG"

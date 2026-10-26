@@ -1,10 +1,10 @@
-// C-11 (2026-10-10): an instrument of the old peoples drawn on the cabin's case. C-17 (2026-10-10): drawn from its parts (galaxy/instruments.h)
+// C-11 (2026-10-10): an instrument of the old peoples drawn on the cabin's case. C-17 (2026-10-10): drawn from its parts (peoples/instruments.h)
 // as it lies, seen from above: the same parts the ruins draw as its object. Each part in its material's colour (its people's own where it takes
 // their banks: stone their structure's, glass their glass, paint their accent, light their light), lit from the upper left (a tube's light
 // side and its shadow, a body's bevel and its dome's sheen, a ball's sheen, a bowl's dark inside), over its shadow on the case's dark cloth;
 // what a key sounds glows as it is played and a string shivers; a ruler under it gives its size. Logical units of the 320 x 200 HUD.
 #include "game.h"
-#include "galaxy/instruments.h"
+#include "peoples/instruments.h"
 #include <cmath>
 #include <algorithm>
 
@@ -277,6 +277,7 @@ void drawInstrumentParts(RGBCanvas& cv, int x0, int y0, int w, int h, const std:
     }
 }
 
+// C-17: its parts (`drawInstrumentParts`)
 void Game::drawInstrumentPicture(int x0, int y0, int w, int h, const Instrument& I, const Tradition& T, const FormPalette& pal, const std::vector<double>& glow, double t) {
     std::vector<InstrumentPart> parts; instrumentParts(T, I, parts);
     drawInstrumentParts(canvas, x0, y0, w, h, parts, pal, glow, t, true);

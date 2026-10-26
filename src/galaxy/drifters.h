@@ -31,8 +31,6 @@ void drifterAt(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName = tr
 // previous and the home, a lock, a record's world) turns into it through this, so a drifter is reached as a star is; the star field, the
 // neighbourhood and the jumps stay the stars' (`starInSector`)
 bool placeInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName = true);
-// the drifters within reachLy of a point (km), nearest first (without names); returns the field cells and clusters it looked at
-int driftersNear(const Vec3& obsKm, double reachLy, std::vector<Star>& out);
 
 // what a drifter is, from its seed alone (`StarSystem::generate` reads it): its kind by the dark's table (section 3: every kind that can be
 // what it is with no sun: the giants and the brown dwarfs most, as the loudest; cold rock and ice; a young molten or tectonic world still
@@ -70,6 +68,10 @@ DrifterPast drifterPast(const Star& d);
 double drifterLeftYears(const Star& d);   // D-05: `drifterPast`'s years alone (no search: the people's end reads it)
 double drifterSpeedKms(const Star& d);    // D-05: and its speed (a chart drawn in the dark: where the drifter was by then)
 inline bool livingSun(int cls) { return cls == STAR_YELLOW || cls == STAR_ORANGE || cls == STAR_RED_DWARF; }
-// D-05: how a drifter's people lost its sun as drawn (`SunWay`, galaxy/peoples.h: the wanderer five in ten, the intruder two, the dark one, the
+// D-05: how a drifter's people lost its sun as drawn (`SunWay`, peoples/peoples.h: the wanderer five in ten, the intruder two, the dark one, the
 // dance two), from its world's seed; the profile takes it where the system it left allows it (a giant, a companion), else the intruder's
 int drifterSunWayOf(uint64_t worldSeed);
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+// the drifters within reachLy of a point (km), nearest first (without names); returns the field cells and clusters it looked at
+int driftersNear(const Vec3& obsKm, double reachLy, std::vector<Star>& out);

@@ -5,13 +5,14 @@
 #             `mask=<regex>` (Python's, no spaces): what of its text moves between runs, replaced by # before comparing
 #             `noise=<glob>` (under shots/): its files known to move between runs, skipped like NOISE (say why below)
 # The unit's noise: its R-408, B-412 and T-03 frames are drawn after it runs frames until a thread has found the cells or the
-# scan (main_headless.cpp's waits), so their trees and grass sway by a clock that the threads' pace sets, and its autosave's
+# scan (the unit's waits), so their trees and grass sway by a clock that the threads' pace sets, and its autosave's
 # clock ends where those waits leave it.
 # Every file an item writes under shots/ is compared (tools/provecmp.py), and its printouts, exit code and file count with them.
 fp_bodies | $V fingerprint bodies | shots/tests/fingerprint_bodies.txt=1 | 
 fp_stream | $V fingerprint stream | shots/tests/fingerprint_stream.txt=1 | 
 fp_peoples | $V fingerprint peoples | shots/tests/fingerprint_peoples.txt=1 | 
 fp_modules | $V fingerprint modules | shots/tests/fingerprint_modules.txt=1 | 
+salt | $V salt scan |  | 
 regress | $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 regress_t1 | VESPERIS_THREADS=1 $V regress | shots/tests/*.png=2 shots/tests/*.txt=1 | 
 screens | $V screens | shots/tests/screens/*.png=96 | 

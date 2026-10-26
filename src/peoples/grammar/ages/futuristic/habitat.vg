@@ -1,0 +1,188 @@
+R"VG(
+# habitat.vg (H-04's second pass): the late ages' habitat as the people built it, the parts the machines' logs, the notes, the
+# votes, the charters and the instructions share. Every pool is the people's own few (`people=K`), and the ruins' own facts steer
+# them (a terraced people keeps its terraces, a people of bridges its bridges, a domed people its domes).
+
+# the systems a habitat keeps (with the article)
+fut.sys (people=12)
+  the water plant
+  the air towers
+  the growing halls
+  the transit line
+  the archive
+  the shield
+  the clinic
+  the cold store
+  the recyclers
+  the pumps under the {fut.block}
+  the sun mirrors
+  the heat exchangers
+  the kitchens of the {fut.block}
+  the seed vault
+  the weather screens
+  the lifts
+  the long stair
+  the {craft} workshops
+  the {herd} pens
+  the observation deck
+  the bells of {holyplace}
+  the {colour.holy} lamps at the {fut.gate}
+  (light=lines) the light lines in the floors
+  (light=lamps) the street lamps
+  (links=bridges) the bridges between the towers
+  (links=tunnels) the tunnels
+  (links=arcades) the arcades
+  (links=colonnades) the colonnades
+  (land=terraced) the terraces
+  (land=stilts) the stilts under the east blocks
+  (land=cliffs) the cliff galleries
+  (land=pits) the sunken gardens
+  (land=mounds) the vents in the mounds
+  (land=ridges) the ridge walk
+  (land=valleys) the valley locks
+  (public=plazas) the fountains in the square
+  (public=courts) the inner courts
+  (public=gardens) the roof gardens
+  (roof=domed) the domes
+  (roof=vaulted) the vaults
+  (roof=stepped) the stepped roofs
+  (inv.elevator=1) the elevator
+  (inv.fusion=1) the fusion core
+  (inv.sleep=1) the sleepers' vault
+  (inv.nano=1) the hives of the small machines
+  (inv.habitat=1) the docking ring
+  (coast=1) the sea gates
+  (desert=1) the sand screens
+  (cold=1) the snow sheds
+
+# a system without its article ("the day the {fut.sys.n} stopped")
+fut.sys.n (people=6)
+  water plant
+  recyclers
+  cold store
+  growing halls
+  archive
+  clinic
+  transit line
+  seed vault
+  air towers
+  weather screens
+  (inv.fusion=1) fusion core
+  (inv.elevator=1) elevator
+
+# the green places, the blocks, the gates, the common places (no article: "the {fut.green}")
+fut.green (people=3)
+  growing halls
+  garden levels
+  glass gardens
+  orchard decks
+  green halls
+  roof farms
+  seed rooms
+  long beds
+  (land=terraced) garden terraces
+  (land=pits) sunken gardens
+  (desert=1) shade gardens
+fut.block (people=3)
+  east blocks
+  north stacks
+  lower terraces
+  old blocks
+  ring houses
+  garden blocks
+  tower blocks
+  river blocks
+  hill houses
+  (land=stilts) stilt houses
+  (land=cliffs) cliff houses
+  (plan=round) round blocks
+  (plan=court) court houses
+fut.gate (people=3)
+  east gate
+  lower doors
+  main doors
+  north door
+  old gate
+  air lock
+  (coast=1) sea gate
+  (links=bridges) long bridge
+  (links=tunnels) tunnel mouth
+  (edge=walls) wall gate
+fut.common (people=3)
+  common room
+  great hall
+  long gallery
+  meeting hall
+  (public=plazas) square
+  (public=plazas) plaza
+  (public=courts) inner court
+  (public=gardens) gardens
+  (public=none) street
+  (links=arcades) arcade
+  (links=colonnades) colonnade
+
+# what a child wanted to be (no article), an old word asked for, the oldest walls, a floor
+fut.dream (people=5)
+  pilot
+  keeper of the archive
+  gardener
+  doctor
+  singer
+  builder of ships
+  teacher
+  watchman
+  machine
+  musician
+fut.oldword (people=5)
+  home
+  rain
+  goodbye
+  the sea
+  snow
+  harvest
+  {crop}
+  the colour of {colour.holy} cloth
+  a stranger
+  a hand of cards
+fut.wall (pl people=2)
+  walls of the {fut.block}
+  foundations
+  old stairs
+  arches over the {fut.gate}
+  tiles in the {fut.common}
+tool.n (people=3)
+  adze
+  sickle
+  spindle
+  awl
+  scraper
+  loom
+  chisel
+  mallet
+fut.game (people=3)
+  dice
+  knucklebones
+  the stone game
+  the board of squares
+  the {~game}
+  riddles
+  (age>=medieval) cards
+  (age>=medieval) the board game of the two kings
+fut.when.past (people=5)
+  at first light
+  before first light
+  at the noon meal
+  at dusk
+  in the night
+  after the second meal
+  at the turn of the night
+  while the residents slept
+  during {feast.custom}
+  at the change of the watch
+fut.floor (people=2)
+  floor of the clinic
+  archive's floor
+  gallery floor
+  new tiles
+  kitchen floor
+)VG"

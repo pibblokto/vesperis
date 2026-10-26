@@ -46,6 +46,8 @@ bool drainageLakeCell(const BodyGen& g, const Vec3& unit, double& level, bool bu
 // scan; the landing map's site probe while the site's tiles are not built yet: a probe must not build them)
 struct DrainageOff { explicit DrainageOff(bool off = true); ~DrainageOff(); bool off; };
 int drainageLatticeN0(double radiusKm);    // cells per degree of the lattice of a world of that radius
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
 // F-03: v after `steps` of `v = v - 0.005f`, bit for bit what that loop computes, a binade at a time (the routing's descent sinking a
 // pit of two cells; the unit checks it against the loop)
 float drainageSink(float v, long steps);

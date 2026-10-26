@@ -1,0 +1,214 @@
+R"VG(
+# letter_events_land.vg (H-04, the second pass): the letter's register (letter_events.vg's conventions): the land and the sky's news, the
+# works and the feasts, the rule, the faith, the roads and the other people, as a person hears them.
+
+# ---- the land and the sky --------------------------------------------------------------------------------------------------
+
+letter.flood
+  (tense=past) The river came over {$e.place} and took [the lower houses|the mill|the bridge|the {herd} that were in the meadows]. [Ours stood.|Ours stood, the neighbours' did not.|We were on the roof all night.]
+  (tense=past) {let.heard} the water is in the streets of {$e.place} to the height of a man. {floodcoda}
+  (tense=past $e.flood=sea) The sea came in over {$e.place} in the night. {floodcoda}
+floodcoda (share=0.8)
+  Everything that floats has gone to the sea, the {vessel} with it, and everything that does not is mud.
+  They are sleeping in {holyplace} and on the roofs.
+  We sent {vessel} of {food} with the carters.
+  The {bird} are standing on the new lakes looking pleased with themselves.
+
+letter.drought
+  (tense=past) No rain [since the spring|all season|for {#$e.value|year}]. [We are down to the stones at {watersrc}.|The {herd} have gone up under {mountain}.|We wash in the same water three times.]
+  (tense=past) The dry has gone on so long that the children do not remember rain. {droughtcoda}
+droughtcoda (share=0.8)
+  We pray at {holyplace} and watch the sky, and the sky watches back.
+  The {crop} stands white in the fields like old men.
+  We carry water in {vessel} from {watersrc}, twice a day, and still the {veg} die.
+
+letter.quake
+  (tense=past) The ground shook at {$e.place}; houses fell. [Ours is cracked from the door to the roof.|We sleep in the yard.|The {vessel} came off every shelf in {$me.home}.]
+  (tense=past) {let.heard} {$e.place} is half down after the shaking. {#$e.value:about} dead, they say, and the rest in the fields.
+
+letter.eruption
+  (tense=past) {mountain} has broken open. The ash is on everything, the roofs, the fields, the bread.
+  (tense=past) Fire out of {mountain}, and ash on {$e.place} like grey snow. [The {herd} will not eat the grass.|We sweep the roof every morning.]
+
+letter.impact
+  (tense=past) Something fell from the sky near {$e.place}. We heard it here. [Nobody knows what it was.|The priests say it is a sign; the priests say everything is a sign.]
+  (tense=past) A fire fell out of the sky at {$e.place} and left a hole a village could stand in.
+
+letter.winter
+  (tense=past) The winter will not end. It is {season.now} by the count, and there is snow on the {crop}.
+  (tense=past) The cold has not let go this year. We burn {fuel} all day and see our breath in bed.
+
+letter.flare
+  (tense=past) The sun flared. Everyone caught in the open is burned, and the {herd} that were out are dead.
+  (tense=past) The sun went white and hot for an hour. We were inside, {god} be thanked; the {bird} were not.
+
+letter.omen
+  ($e.omen=comet) The hairy star is back over {mountain}, as the priests said. [It looks like a torn sail.|The children stay up to watch it.|Nobody sleeps.]
+  ($e.omen=eclipse) The sun went dark at noon, and the {herd} lay down in the fields. I knew it was coming and I was frightened anyway.
+  ($e.omen=aurora) Lights in the north for [three|five] nights, red and green, bright enough to read by, and the {herd} would not settle.
+  ($e.omen=falling) Stars fell over {mountain} all one night. The children counted to a hundred and stopped.
+  ($e.omen=newstar) There is a new star, low in the south over {let.hereplace}; the priests have not decided what it means yet.
+  ($e.omen=redmoon) The moon was red as {colour.any} cloth last night. Everyone has an opinion, and mine is that it was red.
+  ($e.omen=comet) The hairy star hangs over {$e.place} every night now; the {herd} will not settle.
+  ($e.omen=wanderer) The wanderer is so bright now that the {herd} throw two shadows at night. The priests say it will pass. It has not passed in my lifetime.
+  ($e.omen=intruder) The new star is brighter this year than last, and it is not where the old charts put anything. Nobody says what they think.
+  ($e.omen=bent) The watchers say the stars round the north have moved a finger's width since {season.next}. I looked and could not tell. They were frightened, and now I am.
+  ($e.omen=dance) The second sun is further off every year; at midsummer it is only a bright star now. My grandmother said it was as big as a thumbnail when she was a girl.
+
+# ---- the works and the feasts ------------------------------------------------------------------------------------------------
+
+letter.built
+  (tense=past) {$e.work} at {$e.place} is finished, after {#$e.value|year}. {builtcoda}
+  (tense=past) They have finished {$e.work} at {$e.place} at last. {builtcoda}
+builtcoda (share=0.8)
+  It is very fine and nobody can afford to go in, not even for {feast.custom}.
+  We all went to look.
+  The old ones say the old one was better, and smaller, and {walls.of}.
+  It is very large, and the {roofs} leak already.
+  The children climb on it.
+  It is {walls.of} and {colour.holy}, and you can see it from {mountain}.
+  {ruler.the} came to open it and stayed for one cup of {drink}.
+
+letter.festival
+  (tense=past) We kept the {#$e.value:ord} year of {$e.place} at {festival}, [with three days of it|with the whole town dancing|with the {drink} free].
+  (tense=past) {$e.place} is {#$e.value} years old, and kept it with {feast.custom}.
+
+# ---- the rule --------------------------------------------------------------------------------------------------------------
+
+# a place the writer can point to (their landmark, or their town)
+let.hereplace
+  (has:$me.home.landmark) {$me.home.landmark}
+  {$me.home}
+
+letter.accession
+  ($e.a.person!=1 tense=past) {letter.acc.a}; {letter.acc.b}
+  (tense=past $e.a.person=1) I have the rule now, and I have not slept since.
+letter.acc.a
+  {$e.a:full} has the rule now
+  so {$e.a:full} rules us now
+  the news from {city} is that {$e.a:full} has the rule
+  we have a new ruler, {$e.a:full}
+  {let.heard} {$e.a:full} is to rule us
+letter.acc.b (share=0.8)
+  they say {$e.a:name} is fair, and keeps {herd}.
+  we will see what it does to the price of {crop}.
+  nobody had heard of {$e.a:name} a year ago, not even the {craft} people.
+  the taxes on the {herd} will go up; they always do.
+  the old ones say it will make no difference to the {crop}, and they are usually right.
+  there were bonfires of {fuel} on {mountain} for three nights.
+  (has:$e.a.trait) they say {$e.a:name} is {$e.a.trait}, which could mean anything.
+  we drank to {$e.a:obj} in {drink}, which is all the say we have.
+
+letter.rulerdeath
+  (tense=past) {$e.a:full} is dead. [The bells rang all day.|We will see what comes next.|They say it was quick.]
+  (tense=past has:$e.a.epithet) {$e.a:full}, {$e.a.epithet}, is dead. We are all in {colour.mourn}, by order.
+  (tense=past) {let.heard} {$e.a:full} has {death.went}. [Nobody knows who is next.|The market closed for a day.]
+
+letter.ruleend
+  ($e.a.person!=1 tense=past) {$e.a:full} no longer rules. [Nobody will say why out loud.|We heard it from the carters before the crier had it.]
+  (tense=past $e.a.person=1) I no longer rule, and I sleep better than I have in years.
+letter.regency
+  ($e.a.person!=1 tense=past) The child rules now, and {$e.a:full} rules the child, which is the same as ruling us.
+  (tense=past $e.a.person=1) I rule for the child now, which is to say I rule, and the child plays with the {beast}.
+
+letter.government
+  (tense=past) So the rule has changed. [Nothing has changed yet.|The taxes are the same.|We will see.]
+  (tense=past) {let.heard} we are to be ruled differently now. The {herd} have not noticed.
+
+letter.founding (share=0.8)
+  (tense=past) They have founded a new town at {$e.place}, with {herd} and their tools and a great deal of hope.
+  (tense=past) There is a new settlement at {$e.place}; my neighbours are going, {vessel} and all.
+  (tense=past) Families from here have gone to start a town at {$e.place}, and took the {herd} with them.
+  (tense=past) The council has given land at {$e.place} to anyone who will go, and {herd} to start with.
+  (tense=past) They say the water at {$e.place} is good and the {crop} comes up twice, so half the street is packing.
+  (tense=past temper=wry) Everyone is off to {$e.place}; half of them will be back by {season.next}, with the {herd} thinner.
+  (tense=past) I would go to {$e.place} myself, where the new town is, if I were twenty years younger and had the {herd} for it.
+
+letter.migration
+  (tense=past has:$e.place has:$e.place2) Half the young of {$e.place} have gone to {$e.place2}. There is work there, they say, and no {herd} to mind.
+  (tense=past !has:$e.place) Half the young of the villages have gone to the cities, and left the {herd} to the old.
+
+letter.abandoned
+  (tense=past) The last families have left {$e.place}{let.aband.tail}
+let.aband.tail (share=0.8)
+  , and nobody lives there now but the {bird}.
+  ; they took the doors with them, and the {vessel}.
+  ; the gate stands open and the {herd} wander in.
+  , and the {crop} is going back to grass.
+  ; we passed it on the road, and nobody looked.
+letter.exodus
+  (tense=past) {#$e.value:about} have left {$e.place}. [We stood at the gate until the dust took them.|Half the street is empty.|Their doors are open and nobody goes in.]
+letter.sign
+  (tense=past) Here is a thing nobody says aloud: {$e.sign}.
+  (tense=past) You will hear it from others, so hear it from me: {$e.sign}.
+  (tense=past) {let.heard} {$e.sign}. I did not believe it until I saw it.
+
+# ---- what they made, found and believed ------------------------------------------------------------------------------------
+
+letter.invention
+  ($e.a.person!=1 tense=past) {$e.a:name} of {$e.place} has made {$e.invention}, they say. [I will believe it when I see it.|Everyone wants one.|The old ones say it will come to no good.]
+  ($e.a.person!=1 tense=past) There is a new thing, {$e.invention}, out of {$e.place}. {$e.a:name} made it, and everyone has an opinion of it but nobody has seen it.
+  (tense=past $e.a.person=1) I have made {$e.invention}, and nobody believes me yet, least of all the {craft} people.
+letter.discovery
+  ($e.a.person!=1 tense=past) {$e.a:full} has come back from the edge of everything with stories. [Half of them are true, they say, and nobody knows which half.|We will all be going, in our heads.]
+  (tense=past $e.a.person=1) I am back from the edge of everything, with stories nobody at {$me.home} will believe.
+letter.deed
+  ($e.a.person!=1 tense=past) {$e.a:full} of {$e.place} is all anyone talks of; [I do not see the fuss over {$e.a:obj}, myself|I saw {$e.a:obj} once, at the market, buying {veg}].
+  (tense=past $e.a.person=1) Everyone is talking about me, and I do not see the fuss; I bought {veg} at the market like anyone.
+letter.faith
+  (tense=past) There is trouble at {holyplace} over the old words; [each side says {god} agrees with it|we stay home and keep our own lamps, and our own {colour.holy} cloth].
+letter.institution
+  (tense=past) They have founded {$e.instname}, at {$e.place}. [Nobody knows yet what it is for.|It has a seal already, and debts.]
+letter.way
+  (tense=past) {let.way.what} between {$e.place} and {$e.place2} is open. {let.way.then}
+  (tense=past) They have opened {let.way.what2} from {$e.place} to {$e.place2}. {let.way.then}
+  (tense=past) You can go from {$e.place} to {$e.place2} by {let.way.what3} now. {let.way.then}
+let.way.what
+  ($e.out=0) The new path
+  ($e.out=1) The new road
+  ($e.out=2) The railway
+  ($e.out=3) The canal
+  ($e.out=4) The new highway
+  ($e.out=5) The fast line
+  ($e.out=6) The crossing
+let.way.what2
+  ($e.out=0) a path over the hill
+  ($e.out=1) a road, paved as far as {town.edge}
+  ($e.out=2) the railway, and the engine went through with flags on it
+  ($e.out=3) a canal, and the boats go by under the windows
+  ($e.out=4) a highway, wider than our street is long
+  ($e.out=5) a fast line, which nobody trusts yet
+  ($e.out=6) a ferry, with a bell for the far side
+let.way.what3
+  ($e.out=0) the new path
+  ($e.out=1) the road
+  ($e.out=2) train
+  ($e.out=3) boat on the canal
+  ($e.out=4) the highway
+  ($e.out=5) the fast line
+  ($e.out=6) the ferry
+let.way.then
+  It saves {n} days, they say.
+  The carters have stopped complaining for once.
+  The {herd} will not use it; they go round by the old way, as they always did.
+  Everyone went out to look at it, and then everyone came home.
+  The traders say {crop} will be cheaper; the traders say a lot of things.
+  Your aunt says it will bring thieves; it has brought her a cousin, which is worse.
+  It is a fine thing, and nobody I know has the {coin} to use it.
+  We walked along it to {town.edge} and back, for the walk.
+  The old ones say the old way was better, because it was theirs.
+  {proverb}, as they say here; nobody has said it about the road yet, but they will.
+letter.unrest
+  (tense=past $e.unrest=bread) There was a riot at {$e.place} over bread. [Do not come through {$e.place}.|The soldiers came.]
+  (tense=past $e.unrest=strike) The workers at {$e.place} are out. Nobody knows how long.
+  (tense=past $e.unrest=rising|$e.unrest=riot) There was trouble at {$e.place}, and people died; keep away from it, and keep the {herd} in.
+
+# ---- the other people (C-13) -------------------------------------------------------------------------------------------------
+
+letter.contact
+  (tense=past) They say there are people at {$e.place} who are not us: the {other}. [Nobody here has seen one.|They speak like birds, the traders say.|They keep {herd} too, the traders say, but not like ours.]
+letter.treaty
+  (tense=past) There is a treaty with the {other} now. [We will see how long it lasts.|The traders are pleased.]
+letter.otherend
+  (tense=past) Word came that the {other} are gone. Nobody knows where. Nobody knows how.
+)VG"

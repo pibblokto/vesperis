@@ -1,0 +1,203 @@
+R"VG(
+# sermon_everyday.vg (H-04; the second pass 2026-10-10): the sermon's register for the everyday (a fire, a storm, a plague of the fields,
+# a wonder, a trial, a law, a disaster of the works, a fair, the games, the ruler's visit, a price, envoys, a new play): what happened,
+# then what the preacher makes of it (`med.ser.t.*`: the turns shared by the kinds, each in the people's own goods), the words a sermon
+# says them with, and the sermon's news when there is none.
+
+sermon.fire
+  {med.ser.fire} {med.ser.t.help} {=.told}
+  (0.6) {med.ser.fire} {med.ser.t.lesson} {=.told}
+med.ser.fire
+  ($e.what=granary) The granary at {$e.place} burned, and the {crop} with it.
+  ($e.what=temple) Our sister house at {$e.place} burned; {god} was not in the roof, whatever they say.
+  ($e.what=market) The market at {$e.place} burned, stalls and all, and the {med.chr.trades} have nothing to sell.
+  ($e.what=street) Fire took a street at {$e.place}, {#$e.value|house} of it.
+  ($e.what=half) Half of {$e.place} burned, and the other half is sleeping in their neighbours' houses.
+  ($e.what=grass|$e.what=forest) The fire went over the hills by {$e.place}, and the {bird} came down into the town ahead of it.
+  ($e.what=library) The books burned at {$e.place}, and what was in them is in someone's head now, or nowhere.
+  ($e.what=palace|$e.what=harbour|$e.what=mill|$e.what=works|$e.what=tower|$e.what=camp) There was a fire at {$e.place}, and it took {#$e.value|house} before the bucket line could stop it.
+  The fire at {$e.place} began in {med.ser.firebegan} and ended in {#$e.value|house}.
+med.ser.firebegan
+  the {craft}-house
+  a bakery
+  a hayloft
+  a lamp left burning
+  a quarrel
+
+# the turns the kinds share
+med.ser.t.help (share=0.4)
+  Help them; that is the whole sermon.
+  Take {food} and blankets, and do not stay to talk.
+  Whoever has {crop} put by, this is what it was for.
+  Some of you have {material} in your yards. You know what to do with it.
+  The {med.chr.trades} will rebuild; carry the {material} for them.
+  Find room under your {roofs} for the ones who have none.
+  Keep a {vessel.one.n} of water by your own door tonight, and every night.
+  Lend them {tool}, and do not count the days.
+  They will need {fuel} before {season.next}; the rest of us can spare it.
+med.ser.t.lesson (share=0.5)
+  {god} did not light it. Somebody did, carelessly, and somebody else will.
+  A fire is a sermon nobody needs to hear twice.
+  It is not a judgement; it is {weather} and a careless hand.
+  We build in {walls.of} and roof in {material}; we should not be surprised.
+  The old ones built further apart. Now we know why.
+
+sermon.storm
+  {med.ser.storm} {med.ser.t.storm} {=.told}
+med.ser.storm
+  (!has:$e.place) The storm went over us all, the just and the others, and did not ask which was which.
+  (!has:$e.place) After the storm the whole street was out on the roofs, quarrelling about whose tiles were whose.
+  ($e.what=hail has:$e.place) The hail came down on the {crop} at {$e.place} like stones from a sling.
+  ($e.what=wind has:$e.place) The wind took the roofs off at {$e.place}, {roofs} and all.
+  ($e.what=snow) The snow came early and deep, and the {herd} were lost on the hills.
+  ($e.what=dust) The dust came in under every door, and we ate it with the bread.
+  ($e.what=sea has:$e.place) The sea came up in the storm and took the boats at {$e.place}, and some of the men with them.
+  ($e.what=lightning has:$e.place) Lightning struck at {$e.place} and split the old {tree.n} there.
+  ($e.what=rain) It rained until {river} forgot where its banks were.
+med.ser.t.storm (share=0.5)
+  It was not aimed. It only felt aimed.
+  Some of you have roofs to spare; you know what to do.
+  Look in on the old ones; they cannot clear their doorways of {weather} the way you can.
+  Dry your neighbour's bedding before your own.
+  Share the tiles, and the {fuel}, and the bad temper evenly.
+  People will tell you it was a sign. It was {weather}.
+  The {herd} knew it was coming; we did not. Watch the {herd}.
+  It is still in my teeth. It is still in my sermon.
+
+sermon.pest (share=0.8)
+  ($e.what=locusts) The locusts came over {$e.place} like a cloud, and when they went the {crop} went with them. {med.ser.t.pest} {=.told}
+  ($e.what=blight|$e.what=mildew|$e.what=worm) The {crop} is rotting in the fields at {$e.place}. {med.ser.t.pest} {=.told}
+  ($e.what=murrain) The {herd} are dying at {$e.place}, standing up, with their eyes open. Do not eat the meat; I know you are hungry. {=.told}
+  ($e.what=rats) The rats are in the granaries at {$e.place}, among the {vessel}. {med.ser.t.pest} {=.told}
+  ($e.what=wolves) The wolves have come down to {$e.place} for the {herd}. Pen them at night, and keep the children in. {=.told}
+  ($e.what=mites) The {pest} are in everything at {$e.place}. {med.ser.t.pest} {=.told}
+med.ser.t.pest (share=0.6)
+  It is not your sin; it is the damp. Burn what is rotten and share what is not.
+  Get cats. Get many cats.
+  The {bird} will eat some of them, and we will eat what the {bird} leave.
+  Save the seed, whatever else you lose.
+  The old ones had a prayer for this. I have forgotten it. So pray your own.
+
+sermon.wonder (share=0.8)
+  ($e.what=calf) A calf was born at {$e.place} with two heads, and the whole town went to look. {god} makes what {god} makes. Feed it. {=.told}
+  ($e.what=fish) They took a fish from {river} as long as a boat. Some say it is a sign. It is a fish. Share it. {=.told}
+  ($e.what=hoard) A {med.chr.trades.one} digging at {$e.place} found a pot of old coins, and now the whole family loves the {med.chr.trades.one}. {=.told}
+  ($e.what=stone) A stone fell at {$e.place}, black and warm, and the priests have taken it to {holyplace}. I have seen it. It is a stone. {=.told}
+  ($e.what=rain) It rained red at {$e.place}. The old ones say it has happened before. Wash your {garment.n}; it comes out. {=.told}
+  ($e.what=spring) The spring at {$e.place} ran warm for a month. Some went to bathe in it and some to pray in it. It does not mind which. {=.told}
+  ($e.what=beast) A white {beast} was seen at {$e.place}, and everyone has an opinion about it. The {beast} has no opinion about us. {=.told}
+  ($e.what=bones) They dug up great bones at {$e.place}, older than {city}. Whatever owned them did not have a sermon either. {=.told}
+  ($e.what=twins) Three children were born together at {$e.place}, and all three lived. That is a sign of a tired mother. Help her. {=.told}
+  ($e.what=tree) The old {tree.n} at {$e.place} flowered in {season.now}, out of its time. Do not read it. Enjoy it. {=.told}
+  ($e.what=bell) The bell at {$e.place} rang in the night with nobody at the rope. The wind, or {god}. Either way, it is fixed now. {=.told}
+  ($e.what=ruin) They found old walls at {$e.place}, of the ones before us, with {motif.over} on them. They prayed too, I suppose. Pray for them. {=.told}
+
+sermon.trial
+  {med.ser.trial} {med.ser.t.trial} {=.told}
+med.ser.trial
+  ($e.verdict=condemned has:$e.a) {$e.a:full} was condemned at {$e.place} for {$e.what}.
+  ($e.verdict=acquitted has:$e.a) {$e.a:full} was tried for {$e.what} and let go.
+  ($e.verdict=exiled has:$e.a) {$e.a:full} has been sent out of the land for {$e.what}.
+  ($e.verdict=fined has:$e.a) {$e.a:full} paid a fine for {$e.what}, in {coin}.
+  The whole of {$e.place} went to the trial as though {festival} had come early, and brought {food}.
+med.ser.t.trial (share=0.6)
+  Justice is {god}'s; we only do our best with it.
+  Some of you are disappointed. Be disappointed quietly.
+  (has:$e.a) Somewhere a door will open for {$e.a:obj}. Pray it does.
+  Paying is the easy part.
+  A trial is not a feast, and the judges are not the cooks.
+  Whatever you think of the verdict, the {med.chr.trades} at the back of the court were selling {food}, and that is the real sin.
+
+sermon.law
+  There is a new law on {med.law.of}. {med.ser.t.law} {=.told}
+  ($e.what=tax) There is a new tax. I will not tell you to love it. I will tell you to pay it and to pray for whoever spends it. {=.told}
+  ($e.what=drink) The {drink} is forbidden on the rest day now. Some of you are already looking at the door. Sit down. {=.told}
+med.ser.t.law (share=0.6)
+  Keep it. And keep the older law too, the one about your neighbour.
+  It was always meant to be so, by {god}; now it is meant by {ruler.the} as well.
+  It will be broken by {festival}, over the {drink}. Do not be the one who breaks it.
+  The {med.chr.trades} are angry about it. That means it is working.
+  Read it, if you can read; have it read to you if you cannot. It is cut by {town.open}.
+
+sermon.accident
+  {med.ser.acc} {med.ser.t.acc} {=.told}
+med.ser.acc
+  ($e.what=bridge) The bridge at {$e.place} went into the river with the carts on it.
+  ($e.what=bridge) The old bridge at {$e.place} gave way under a cart of {crop}, and the cart was not the only thing it took.
+  ($e.what=mine) The mine at {$e.place} came down on the men in it.
+  ($e.what=mine) At {$e.place} the hill closed over the {med.chr.trades} at {time.of}, and the dogs knew before anyone.
+  ($e.what=ship) The ship went down off {$e.place} with {#$e.value|soul}.
+  ($e.what=ship) A ship of {$e.place} went out in {weather} and did not come back; {#$e.value|soul} on her.
+  ($e.what=tower|$e.what=well) It fell at {$e.place}, and it took {#$e.value|soul} with it.
+  ($e.what=tower|$e.what=well) At {$e.place} it came down in the night, {walls.of} and all, on the people sleeping by it.
+  ($e.what!=bridge $e.what!=mine $e.what!=ship $e.what!=tower $e.what!=well) There was a disaster at {$e.place}, and {#$e.value|soul} are dead of it, {med.ser.accwho}.
+med.ser.accwho
+  most of them {med.chr.trades}
+  some of them children
+  and the {med.chr.trades} who tried to help
+  on a working day, in good weather
+
+med.ser.t.acc (share=0.4)
+  It was nobody's fault, they say. That is what they always say. Find out, and mend it.
+  Someone said it was old. Everyone knew it was old.
+  Their families will be here on the rest day. Make room.
+  The sea does not answer prayers. We do.
+  We build, and it falls, and we build. Build it better.
+  The {med.chr.trades} who did the building are sitting in their houses with the shutters closed. Go and see them; they are grieving too.
+  The {med.chr.trades} of {$e.place} have wrapped their dead in {colour.mourn}, and the street is full of it.
+  Carry {food} to the houses along {streets.of}; there are empty places at those tables now.
+  Next time someone says it is old and will hold, ask them how old, and walk round.
+
+sermon.fair
+  {med.ser.fair} {med.ser.t.fair} {=.told}
+med.ser.fair
+  The fair at {$e.place} brought half the country, and the cutpurses brought the other half.
+  ($e.what=beasts|$e.what=horses) They sold {herd} at the fair at {$e.place} for more than a year's wages.
+  You have all been to the fair at {$e.place}, and come back with {med.ser.fairbuy} and without your {coin}.
+  ($e.what=cloth) The cloth fair at {$e.place} was all {colour.any} this year, and so are your daughters.
+  ($e.what=wine) The wine fair at {$e.place} has given half of you a headache and the other half a debt.
+med.ser.fairbuy
+  {colour.any} ribbons
+  a {vessel.one.n} you did not need
+  a {beast} that will not stay penned
+  {fruit} from the far country
+  a new {garment.n}
+
+med.ser.t.fair (share=0.5)
+  Buy honestly; sell honestly.
+  Remember who fed them.
+  That is what fairs are for.
+  The {med.chr.trades} of {$home} sold well there, and I expect to see it in the tithe.
+  Next year, bring back fewer ribbons and more {crop2} seed.
+
+sermon.games
+  (has:$e.a) {$e.a:full} won {med.games.of} at {$e.place}, and the whole town carried {$e.a:obj} home. Carry the losers home too; they ran as far. {=.told}
+  There were games at {$e.place}, and nobody was killed, which is better than last time. {=.told}
+  The young men of {$home} have been racing the {herd} again. Let them; it is better than the other things young men do with {drink}. {=.told}
+  The games at {$e.place} were won by somebody's son and lost by everybody else's. {med.ser.t.games} {=.told}
+med.ser.t.games
+  That is the way of it.
+  The {herd} did not care, and neither does {god}.
+  Go and congratulate them, and then go back to work.
+
+sermon.visit
+  {$e.a:full} came to {$e.place}, and the streets were swept for the first time since the founding. Keep them swept. {=.told}
+  {$e.a:full} came to {$e.place} and did not come here. {god} is not offended; I am, a little. {=.told}
+  {$e.a:full} came to {$e.place}, and the {med.chr.trades} put out {colour.holy} cloth and raised their prices. {=.told}
+sermon.price
+  ($e.out=1) The price of {$e.what} has gone up again. Somebody is happy about it. Find out who, and ask them for some. {=.told}
+  ($e.out=0) The price of {$e.what} has fallen, and the sellers are crying in the market. Buy from them anyway. {=.told}
+  ($e.out=1) {$e.what} costs more this {season.now} than it did when I was young, and I was young a long time ago. {=.told}
+sermon.embassy
+  ($e.what=others) Envoys of the {other} came to {$e.place}. They bowed the wrong way and ate the wrong things and were very polite. Be polite back. {=.told}
+  ($e.what=city) Envoys came from {$e.place2} to {$e.place} with gifts. Gifts always want something. So do prayers. {=.told}
+  ($e.what=sent) We have sent envoys to the {other}, with {med.ser.gifts}. Pray they come back, and with something better. {=.told}
+med.ser.gifts
+  {colour.holy} cloth
+  {crop} and {drink}
+  the best {craft} we have
+sermon.show
+  There is a new {med.show.of} at {$e.place}, and everyone is talking about it. Good. It means you have something to talk about besides each other. {=.told}
+  (has:$e.a) {$e.a:full} has made a {med.show.of} at {$e.place}, and some of you have seen it twice. {god} has seen it once, and liked it. {=.told}
+
+)VG"

@@ -9,7 +9,7 @@
 
 // Bumped whenever a generator changes what a star, system or surface looks like (M9-17).
 // Star positions are integer hashes and never move; saves and guides record the version.
-constexpr int GEN_VERSION = 16;   // what each bump changed: docs/reference/generations.md
+constexpr int GEN_VERSION = 16;   // what each bump changed: docs/decisions/generations.md
 
 // P-00: the kinds of body are rows of KINDS (galaxy/kinds.h): the enum, what each kind is and how it is drawn, made and shown
 // X-03: an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves (P-07: a gas
@@ -22,6 +22,9 @@ bool isIceGiant(const Body& b);
 // hash of the world's seed falls under that source's share. Never a world with a people (C-01's hash is read first: `peopleHash`)
 struct KindFacts { int drawn = 0; double tempK = 0; int starClass = 0; uint32_t body = KB_PLANET; bool locked = false, sync = false; uint64_t seed = 0, starSeed = 0; int parent = -1; uint32_t moon = 0; bool paired = false; };   // locked: one face to its star (M5-08's: its day its year, a round orbit); sync: its day its year; P-02: starSeed the system's star's (a source `byStar` hashes it); P-03: parent the kind a moon's planet drew (-1 none); P-06: moon what a moon is among its planet's (`MoonFact`; 0 not a moon); P-07: paired a double planet's first half (no giant)
 int kindOf(const KindFacts& f);
+// E-07: whether a world's facts fit a made kind's source, its hash aside: `kindOf`'s test, and the harness's (`salt scan`); `giant`: the
+// source's kind is a giant's, which a double planet's halves never take
+bool kindSourceFits(const KindSource& S, bool giant, const KindFacts& f);
 bool peopleHash(uint64_t seed);   // C-01: one world in eight of the kinds a people may live on had one (the hash `BodyGen::make` reads)
 // P-04: whether a world of a kind had a people: C-01's hash on the felisian and desert worlds, a dead world's own (its row's share and salt:
 // C-01's never fires on a made world, `kindOf` keeps those felisian)
@@ -75,7 +78,7 @@ struct Body {
     Vec3 apexDir;                 // P-06: a two-faced moon (which faces its planet): the direction it travels in its body frame (its leading face's middle, the apex); zero otherwise
     double tideForcingM = 0;      // Q-02: the equilibrium tide its moons and its sun raise (metres, the game's scale: `tideForcingM`), set once the system is made
     // T-02: the sector of the star the body was generated round (`StarSystem::generate` sets it): a world's planet function alone can then find
-    // its system again (`BodyGen::starSx..`, `historyOfWorld` in galaxy/history.h: the history needs the star, the comets, the moons)
+    // its system again (`BodyGen::starSx..`, `historyOfWorld` in peoples/history.h: the history needs the star, the comets, the moons)
     int64_t starSx = 0, starSy = 0, starSz = 0;
     bool starKnown = false;
 };
@@ -220,3 +223,7 @@ inline bool drifterHadPeople(const Body& b) { return b.drifter && b.parent < 0 &
 std::shared_ptr<const StarSystem> formerSystemOf(const StarSystem& dark);
 struct PeoplesWorld { const StarSystem* sys = nullptr; const Body* b = nullptr; std::shared_ptr<const StarSystem> hold; };
 PeoplesWorld peoplesWorldOf(const StarSystem& sys, const Body& b);
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+// `salt scan`'s: while set (this thread's), `kindOf` appends to it each world it reads that may be made (a people's world never)
+extern thread_local std::vector<KindFacts>* t_kindFactsSeen;

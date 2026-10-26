@@ -1,9 +1,10 @@
 #include "landmarks.h"
-#include "plan.h"
-#include "peoples.h"
+#include "peoples/plan.h"
+#include "peoples/peoples.h"
 #include "drainage.h"
-#include "ruins.h"
-#include "works.h"
+#include "planet_features.h"
+#include "peoples/ruins.h"
+#include "peoples/works.h"
 #include "core/noise.h"
 #include <cmath>
 #include <algorithm>
@@ -393,7 +394,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         }
         g_lmMs[1] += nowMs() - tl0;
     }
-    // 7. on a world that had a civilisation (C-01, `galaxy/ruins.*`), its settlements in M4-07's grid of 2 km cells: the biggest of the
+    // 7. on a world that had a civilisation (C-01, `peoples/ruins.*`), its settlements in M4-07's grid of 2 km cells: the biggest of the
     // cell (a town before a village before a hamlet before a monument); the scanner lists every one of them apart (`ruinsNear`)
     if (worldHadCivilisation(g)) {
         double dLat = ruinCellLat(g);   // the ruins' grid (M4-07): 2 km cells of latitude and longitude

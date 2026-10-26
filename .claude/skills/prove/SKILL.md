@@ -6,7 +6,8 @@ description: Prove that a change leaves everything Vesperis makes, draws, plays 
 # Prove a change changes nothing
 
 `tools/prove` runs the battery in `tools/prove.items` and compares it with a snapshot kept in `build/prove/<name>/` (the binary,
-the objects, every item's outputs). `tools/prove items` lists the battery with each item's time.
+the objects, every item's outputs). `tools/prove items` lists the battery with each item's time. The recipe and the tools at
+length: `docs/reference/harness/proof.md`.
 
 ## When
 
@@ -15,7 +16,7 @@ the objects, every item's outputs). `tools/prove items` lists the battery with e
 - **After each step:**
   - a move or an edit: `tools/prove compare <base> <the items it can touch>`;
   - a comment-only or whitespace-only step: `tools/prove objects <base>` (seconds; the engine's and the game's objects are
-    reproducible, the harness's `main_headless.o` is not and is skipped);
+    reproducible; the harness's are skipped: three of its forty vary between compiles);
   - a hot path: the `bench` skill.
 - **The close:** from a clean tree (`make clean && make -j8`), `tools/prove compare <base>` with every item; `unit` and the flow
   pass inside it; `bench check` and pairs (the `bench` skill); then `tools/prove snapshot <id>`, the next milestone's base.
@@ -31,7 +32,8 @@ the objects, every item's outputs). `tools/prove items` lists the battery with e
 
 ## What the items prove
 
-- `fp_bodies`, `fp_stream`, `fp_peoples`, `fp_modules`: what the generators make, as keyed lines (`src/harness/CLAUDE.md`).
+- `fp_bodies`, `fp_stream`, `fp_peoples`, `fp_modules`: what the generators make, as keyed lines (`src/harness/CLAUDE.md`);
+  `salt` (E-07): the made kinds against the protected worlds.
 - `regress`, `regress_t1`: the 24 frame and determinism hashes, with the workers and with one thread.
 - `screens`, `scenes`, `scenes_4x`, `sweeps`, `datasheet`: the pictures (the cabin and menus at every scale, every scene, the
   kinds' sweeps, the data sheets).

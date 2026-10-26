@@ -2,20 +2,33 @@
 
 About 5,700 lines of C++17. No engine: everything is software-rendered into a 320x200 8-bit buffer; raylib only opens the window, reads input, plays an audio stream (and auto-explore's music files beside it, R-420) and blits the buffer.
 
+<!-- contents -->
+Contents:
+- Modules and dependency rules
+- Key types
+- Per-frame data flow
+- Time
+- Persistence
+- Build
+- M6 additions (2026-09-26)
+- Threads (M7, 2026-09-26)
+<!-- /contents -->
+
 ## Modules and dependency rules
 
 ```
 src/core      <- nothing (math, hashing, noise, framebuffer, raster, font, png, input)
-src/galaxy    <- core      (starfield, system, planetmap)
-src/space     <- galaxy    (space_view: stars, suns, globes, rings, sky bodies)
-src/surface   <- space     (site, surface_view)
-src/game      <- surface   (game.cpp core loop; autopilot.cpp ship; hud.cpp; landing_map.cpp; game_states.cpp
-                            descent/surface/overlays; persistence.cpp saves; guide.* + guide_screens.cpp the GUIDE (M3);
-                            ui.* text helpers; settings.*; audio.* (audio_deck.cpp the tape's cassette deck, R-420);
-                            autoexplore.cpp auto-explore, R-419; tape.cpp its tape, R-420)
+src/galaxy    <- core      (the worlds: starfield, system, planetmap; landmarks and planet_bodygen alone read src/peoples)
+src/peoples   <- galaxy    (the peoples: history, plan, towns, works, buildings, ruins, records and the grammar, music, signals)
+src/space     <- peoples   (space_view: stars, the band, render; space_sun, space_globe, space_bodies)
+src/surface   <- space     (site, surface_view: the frame; surface_env, _places, _walk, _palette, _terrain, _sky, _effects)
+src/game      <- surface   (game.cpp the frame; a file per state, screen or device: autopilot.cpp the ship, scene_draw.cpp
+                            the scenes, hud.cpp the HUDs, surface_play.cpp the ground, menus.cpp, landing_map*.cpp, the
+                            GUIDE's names.cpp, guide_screens.cpp and star_map.cpp (M3), probe*.cpp, radar*.cpp, autoexplore*.cpp
+                            (R-419); persistence.cpp saves; ui.*, settings.*; audio*.cpp the synth; src/game/CLAUDE.md the map)
 src/platform.h + platform_raylib.cpp  <- game/audio only (never included by game code)
 src/main_raylib.cpp        entry point for the window build
-src/main_headless.cpp      tests and screenshot generation (no raylib)
+src/harness/               vesperis_test: the modes, the unit, the proofs (no raylib; src/harness/CLAUDE.md)
 ```
 
 Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines `PI` as a macro and `KEY_*` enums that collide with ours; `src/core/input.h` mirrors the GLFW key codes so the platform layer can copy them by number.
@@ -36,10 +49,15 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `placeInSector`, `driftersNear`, `DARK_KINDS` | galaxy/drifters.h | D-01: the drifters, worlds with no sun in sectors without a star; the one resolver from a key to its place (a star, else a drifter) |
 | `KINDS`, `KindDef`, `TRAITS` | galaxy/kinds.h | P-00: the kinds of body and the traits as rows; the tags the code paths read |
 | `BodyGen`, `sampleSurface`, `PlanetMap` | galaxy/planetmap.h | the planet function and its coarse map |
+| `GeyserVent`, `landformFeatures`, the finders | galaxy/planet_features.h | E-07: what stands near a point, from the features the ground builds |
 | `SpaceRenderer`, `SpaceContext`, `BodyScreenInfo` | space/space_view.h | space scene; also draws bodies into planetary skies |
 | `SurfaceSite`, `TerrainCache`, `SunInfo` | surface/site.h | landing site geometry, terrain caches, astronomy |
-| `SurfaceView`, `Player`, `SurfaceEnvironment`, `Flock`, `Critter` | surface/surface_view.h | first-person exploration |
-| `Game`, `GameState`, `ShipState` | game/game.h | orchestration, HUD, menus, save/load |
+| `SurfaceView` | surface/surface_view.h | first-person exploration: its data, then its functions by the file that defines them (E-08) |
+| `Player`, `Buggy`, `Drone`, `SurfaceEnvironment`, `LocalFront`, `Critter`, `TreeInst`, `Ruin` | surface/surface_types.h | the types beside `SurfaceView` (E-08) |
+| `Game` | game/game.h | orchestration, HUD, menus, save/load; an index of its sections at the top |
+| `GameState` + `STATE_ROWS`, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game`; a state's row (E-06) |
+| `RadarState`, `ProbeState`, `DroneBay`, `AutoState` ... | game/*_state.h | each subsystem's state, a `Game` member (E-05) |
+| `TestGame` | harness/test_game.h | the harness's `Game`, with the hooks the tests read and set it through (E-05) |
 | `AudioSynth`, `AudioState` | game/audio.h | procedural audio |
 | `Settings` | game/settings.h | persisted player settings |
 | `Guide`, `LogEntry` | game/guide.h | names, log, statistics, history, home, inbox (M3) |

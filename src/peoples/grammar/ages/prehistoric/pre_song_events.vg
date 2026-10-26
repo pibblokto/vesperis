@@ -1,0 +1,232 @@
+R"VG(
+# pre_song_events.vg (H-04's second pass): the years' events as the prehistoric songs sang them (`@event ... pre.song`), three lines
+# and the people's refrain: the flood, the hunger, the sickness, the fight between bands, the coming into the land, the stones, the
+# herds that came late or did not come, the storm, the fire, the gathering. Every line carries something of the people's own.
+
+@root pre.song.*
+
+pre.song.flood
+  {pre.sf.a}\n{pre.sf.b}\n{pre.sf.c}\n{pre.refrain}
+pre.sf.a
+  The water came up at {$e.place}, the water came up over the {crop},
+  {river} left its bed in {$e.season} and came for us,
+  It rained on {land} and it rained, and {river} was hungry,
+  We heard it in the night, the water talking under {house.one.lc},
+pre.sf.b
+  it took {houses} and it took the {herd},
+  we carried the fire up the hill in {vessel.one},
+  the children on our backs and the old ones on the {herd},
+  it took the drying racks and the winter's {food},
+pre.sf.c
+  and when it went down it went down in a new place, and the {tree} with it,
+  and we came back and built {houses} again in the mud,
+  and the old ones said it had happened when {river} was smaller,
+  and we counted the {herd} on the hill, and the people, and someone was not,
+
+pre.song.famine
+  There was no {crop} in {$e.season}, there was no {crop},\n{pre.sfam.b}\n{pre.sfam.c}\n{pre.refrain}
+  {pre.sfam.a}\n{pre.sfam.b}\n{pre.sfam.c}\n{pre.refrain}
+pre.sfam.a
+  The {game} went away from {land} and did not come back,
+  The {vessel} were empty by the middle of {season.now},
+  The {herd} were thin and then the {herd} were gone,
+pre.sfam.b
+  we ate the seed and then we ate the {tree.n} bark,
+  we boiled the hides and drank the water from {watersrc},
+  the dogs went first, and then the old ones,
+  the children cried for {food} and then the children were quiet,
+pre.sfam.c
+  {#$e.value:about} went hungry to {deadplace},
+  and we sing it so nobody forgets to fill the {vessel},
+  and the ones who lived are the ones who sing to {god},
+
+pre.song.sickness
+  {pre.ssk.a}\n{pre.ssk.b}\n{pre.ssk.c}\n{pre.refrain}
+pre.ssk.a
+  {$e.sickness} came to {$e.place}, nobody asked it in,
+  ($e.wave>1) {$e.sickness} came back, as it always comes back,
+  {$e.sickness} came in {$e.season} with the traders and their {trade.thing},
+  It came at night, it sat by every {fuel} fire,
+pre.ssk.b
+  it took the old ones first, and then the ones who fed the {herd},
+  the hot ones lay in {houses} and the cold ones lay outside,
+  we burned the {fuel} with the bitter smoke and it did not care,
+  nobody went to {watersrc}, nobody went to the {herd},
+pre.ssk.c
+  {#$e.value:about} we carried out to {deadplace},
+  and the camp at {$e.place} was moved, and {houses} left standing empty,
+  and the ones who lived wear {colour.mourn} for it still,
+
+pre.song.battle
+  {pre.sb.a}\n{pre.sb.b}\n{pre.sb.c}\n{pre.refrain}
+pre.sb.a
+  At {$e.place} in {$e.season} the bands stood with {pre.weapon},
+  They came over {land} to {$e.place} with their faces painted,
+  Who was at {$e.place}? Ask the ones who came home,
+  We went down to {$e.place} with {pre.weapon} and shouting,
+pre.sb.b
+  ($e.won=1) and they broke and ran back over the hill;
+  ($e.won=1) and by dark {watersrc} was ours again;
+  ($e.won=0) and they were too many, and we came home few;
+  ($e.won=0) and they took the {herd} and the good ground;
+  ($e.won=draw) and neither gave, and both went home at dark;
+pre.sb.c
+  {#$e.value:about} lay down there and did not get up,
+  the {bird} came down on {$e.place} for days,
+  and the women went out to look for faces, in {colour.mourn},
+  and nobody remembers now if it was for the water or the {herd},
+
+pre.song.war
+  {pre.sw.a}\n{pre.sw.b}\n{pre.sw.c}\n{pre.refrain}
+pre.sw.a
+  The quarrel began over {$e.place} and {watersrc} there,
+  ($e.warkind=other|$e.warkind=conquest) The {other} came out of the hills with their {pre.weapon},
+  It began with a {beast} taken and a word said,
+pre.sw.b
+  and the young ones painted their arms {colour.holy} and went,
+  and the old ones said it would not last the season,
+  and the fires on the hills of {land} were lit every night,
+pre.sw.c
+  and nobody remembers who threw the first {pre.weapon.one},
+  and it lasted longer than the old ones said,
+  and the children played at it with sticks after, which was worse,
+
+pre.song.sack
+  They came to {$e.place} at night with fire,\n{houses} burned and the {herd} were driven off,\n{pre.ssack.c}\n{pre.refrain}
+pre.ssack.c
+  and who was inside, ask the ashes,
+  and the ones who ran over {land} are the ones who sing,
+  and we did not go back to {$e.place} after,
+
+pre.song.coming
+  {pre.scm.a}\n{pre.scm.b}\n{pre.scm.c}\n{pre.refrain}
+pre.scm.a
+  We came into the land {pre.whence},
+  Long ago, before the stones, we came {pre.whence},
+  The first ones walked {pre.whence} with nothing,
+pre.whence
+  ($e.whence=mountain) over {mountain}
+  ($e.whence=sea) over {sea}
+  ($e.whence=north) out of the north
+  ($e.whence=south) out of the south
+  ($e.whence=east|$e.whence=west) from where the sun goes
+  ($e.whence=river) down {river}
+  ($e.whence=dry) across the dry country
+  (!has:$e.whence) from far away
+pre.scm.b
+  we came with the {herd} and the fire in {vessel.one},
+  the old ones carried the bones of the older ones in {vessel},
+  we had {tool} and the dogs and our names,
+pre.scm.c
+  and the land was empty and the land was good, full of {game},
+  and the first one said, here, and it was here,
+  and the {game} did not know us yet,
+
+pre.song.stones
+  We raised the stones where {city} would be,\n{#number} stones for the {#number} winds,\n{pre.sst.c}\n{pre.refrain}
+  We dragged the stones on rollers from the hill,\nwe sang to pull and pulled to sing, with {instrument},\n{pre.sst.c}\n{pre.refrain}
+pre.sst.c
+  and they stand there still, and we are still here,
+  and the shadows tell us when {festival} comes,
+  and the dead sit inside the ring at night, in {colour.mourn},
+
+pre.song.founding
+  {$e.a:name} came to {$e.place} when there was nothing there,\nonly the {tree} and the water and the wind,\nand said: here, and it was here,\n{pre.refrain}
+  {pre.sfo.a}\n{pre.sfo.b}\n{pre.refrain}
+pre.sfo.a
+  They put up the first {pre.hut.n} at {$e.place} in {$e.season},
+  The first fire at {$e.place} was lit from the old fire in {vessel.one},
+pre.sfo.b
+  and the {herd} were put in a ring of thorns, and the children ran,
+  and {$e.place} has been there since, as long as anyone counts the {herd},
+
+pre.song.winter
+  The winter came and the winter stayed,\n{pre.swi.b}\n{pre.swi.c}\n{pre.refrain}
+pre.swi.b
+  the {crop} lay under the snow until it rotted,
+  the {game} went south and did not come back,
+  the ice came into {houses} at night,
+pre.swi.c
+  and we burned everything that would burn, and then the {tree},
+  and {skyone} was small and pale all year,
+  and the old ones gave their {food} to the young,
+
+pre.song.drought
+  No rain, no rain, {watersrc} gave sand,\nthe {herd} lay down in the dry beds of the streams,\n{pre.sdr.c}\n{pre.refrain}
+  The sky was white for {#$e.value|year} and the ground was cracked,\nwe dug for water with {tool} and found dust,\n{pre.sdr.c}\n{pre.refrain}
+pre.sdr.c
+  and we went to the far water with the {herd}, and some did not get there,
+  and when the rain came we stood in it with our mouths open,
+
+pre.song.quake
+  The ground at {$e.place} turned over in its sleep,\nand {houses} came down on the ones inside,\nand we dug with our hands until {skyone} rose,\n{pre.refrain}
+  The ground shook at {$e.place} like a dog shaking water,\nthe {herd} ran and {houses} fell flat,\nand {river} ran the wrong way for a day,\n{pre.refrain}
+pre.song.eruption
+  {mountain} woke up angry, {mountain} woke up red,\nand the ash came down on {$e.place} like snow that does not melt,\n{pre.refrain}
+  Fire came out of the top of the hill at {$e.place},\nthe night was day and the day was night,\nand we ran, and the {herd} ran faster,\n{pre.refrain}
+pre.song.impact
+  A stone came down from the sky at {$e.place},\nand the sky went dark and the {crop} did not come,\n{pre.refrain}
+
+pre.song.rulerdeath
+  {pre.srd.a}\n{pre.srd.b}\n{pre.srd.c}\n{pre.refrain}
+pre.srd.a
+  {$e.a:full} is dead, and the fires are put out for {$e.a:obj},
+  They carried {$e.a:full} out at first light on {pre.bier},
+  Who will sit where {$e.a:name} sat, at the head of the fire,
+  {$e.a:name} has {death.went}, and the {herd} are crying,
+pre.srd.b
+  {$e.a:name} who led us {#$e.a.reigned:words|year},
+  {$e.a:name} who knew every path to {mountain},
+  {$e.a:name} who was hard, and was fair, mostly, over the {herd},
+  and {$e.a:poss} {pre.weapon.one} is laid down beside {$e.a:obj},
+pre.srd.c
+  and nobody speaks at the fire tonight,
+  and the young ones look at each other and wait,
+  and the women keen at the door in {colour.mourn} till dawn,
+  and the new one is afraid, and should be,
+pre.song.death
+  {$e.a:full} is gone, who was known to all,\nthey carried {$e.a:obj} up to {deadplace} with {instrument},\n{pre.refrain}
+
+pre.song.omen
+  ($e.omen=comet) The hairy star came back as the old ones said,\nand we stood in the {crop} and watched it pass,\n{pre.refrain}
+  ($e.omen=eclipse) The sun went out in the middle of the day,\nand the {bird} went to sleep and the dogs howled,\nand then it came back, and we sang this,\n{pre.refrain}
+  ($e.omen!=comet $e.omen!=eclipse) There was a sign in the sky over {$e.place},\nand the old ones said this and the old ones said that over the {food},\n{pre.refrain}
+  ($e.omen=wanderer 3) The wanderer grew bigger over {$e.place} every night,\nand the old ones said it was coming for the {herd},\n{pre.refrain}
+  ($e.omen=intruder 3) A new sun came up where no sun was,\nand the old ones put out their fires and watched it,\n{pre.refrain}
+  ($e.omen=dance 3) The second sun went further off each summer,\nand the children asked where it was going,\n{pre.refrain}
+  ($e.omen=bent 3) The stars moved out of their places over {$e.place},\nand nobody could find the way by them,\n{pre.refrain}
+pre.song.contact
+  Over the hills there were others, and we did not know,\nthey were taller than us and their {pre.weapon} were longer,\nand they held out their hands, and we held out {trade.thing},\n{pre.refrain}
+pre.song.exodus
+  They left {$e.place} with the {herd} and the fire,\nand they did not look back, and we did not wave,\n{pre.refrain}
+
+# the everyday, sung
+pre.song.beasts
+  ($e.what=late) We waited on the ridge and the {game} did not come,\nwe waited till {season.next} and then they came,\nlate, late, and thin, and we were glad,\n{pre.refrain}
+  ($e.what=early) The {game} came early, before the {pre.weapon} were ready,\nwe ran out with the children's spears and the old ones' spears,\n{pre.refrain}
+  ($e.what=none) The {game} did not come, the {game} did not come,\nwe sang to them with {instrument} and they did not come,\nwe ate the {herd} and the {crop} and the dogs looked at us,\n{pre.refrain}
+  ($e.what=many) The {game} came down over {land} like a river,\nso many the ground shook, so many we stopped counting,\n{pre.refrain}
+  ($e.what=great) The great {game.one} came to {$e.place},\nas high as {pre.hut.n}, and its breath was smoke,\nand we took it, and the camp ate for a moon,\n{pre.refrain}
+  ($e.what=killed) The {game.one} turned at {$e.place}, the {game.one} turned,\nand the hunter in front did not get out of the way,\n{pre.refrain}
+pre.song.storm
+  ($e.what=wind) The wind came and took the {roofs} off {$e.place},\nand we held the hides down with our bodies all night,\n{pre.refrain}
+  ($e.what=hail) Stones of ice came down on {$e.place} in {$e.season},\nand the {crop2} lay flat and the {herd} ran,\n{pre.refrain}
+  ($e.what=snow) The snow came up to the {roofs} at {$e.place},\nand we dug out the {herd} one by one, and some were sleeping,\n{pre.refrain}
+  ($e.what=dust) The dust came out of {land} and the day went brown,\nand we tied {material} over our mouths and waited,\n{pre.refrain}
+  ($e.what=sea|$e.what=rain|$e.what=lightning) The sky broke open over {$e.place},\nand the water and the fire came down together on the {tree},\n{pre.refrain}
+pre.song.fire
+  The grass burned from {mountain} to the water,\nwe stood in {river} and watched it go by,\n{pre.refrain}
+  The fire got into {houses} at {$e.place} at night,\nwe carried out the children and the {vessel}, and then nothing,\n{pre.refrain}
+pre.song.wonder
+  At {$e.place} there was a thing nobody had seen,\nand the old ones said it meant this and that over the {food},\nand nothing came of it, and we sing it anyway,\n{pre.refrain}
+pre.song.games
+  (has:$e.a) They ran at {$e.place} from the stone to the {tree.n},\nand {$e.a:name} was in front, and the dogs ran too,\n{pre.refrain}
+  They ran at {$e.place} from the stone to the {tree.n},\nand the old ones bet {vessel} on it,\n{pre.refrain}
+  (has:$e.a) They wrestled at {$e.place} by the {fuel} fire,\nand {$e.a:name} threw them all, one after another,\n{pre.refrain}
+pre.song.fair
+  All the bands came to {$e.place} with their things,\nwe traded {trade.thing} and we traded songs,\nand three girls of {$home} went home with other bands,\n{pre.refrain}
+pre.song.pest
+  The {pest} came in {$e.season} and ate the {crop2},\nwe beat the ground and shouted, and they ate the {crop2},\n{pre.refrain}
+pre.song.none
+  {pre.sh.land}
+)VG"

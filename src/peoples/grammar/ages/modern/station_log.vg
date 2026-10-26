@@ -1,0 +1,239 @@
+R"VG(
+# station_log.vg (H-04, the second pass): the station's log (a reel or a drive, the modern age): a watch through a day at a pumping station, a
+# signal box, a weather station, a harbour office, a lighthouse: the checks, the shifts, the visitors, the weather, the small troubles
+# of a machine and its keepers, and the history's news in the log's register (log.vg, log_everyday.vg). Each people keeps its own stations,
+# its own machines' parts and its own way of closing an entry.
+
+genre.log (words=13..90)
+  {log.head}\n{log.t1} {log.line}\n{log.t2} {@news public log}\n{log.t4} {log.line}\n{log.t5} {log.line}
+  {log.head}\n{log.t2} {@news public log}\n{log.t3} {log.line}\n{log.t5} {log.line}
+  {log.head}\n{log.t1} {log.line}\n{log.t3} {log.line}\n{log.t4} {@news public log}\n{log.t5} {log.line}
+  {log.head}\n{log.t1} {log.line}\n{log.t2} {log.line}\n{log.t3} {@news public log}\n{log.t4} {log.line}\n{log.t5} {log.line}
+
+log.head (formula people=3)
+  Log of the {log.station}, {$home}. Year {#year:digits}, {season.now}.
+  {log.station}, {$home}: the watch log.
+  Watch book of the {log.station} at {$home}, {season.now}.
+  {log.station} at {$home}. Day book, year {#year:digits}.
+  The {log.station}, {$home}. Night and day watch.
+
+log.station (people=3)
+  pumping station
+  weather station
+  signal box
+  power plant
+  observatory
+  water works
+  fire station
+  tram depot
+  {craft} works gatehouse
+  (has:broadcaster) transmitter
+  (coast=1) lighthouse
+  (coast=1) harbour office
+  (desert=0) dam control room
+  (desert=0) lock-keeper's house
+
+log.part (people=3)
+  pump on line one
+  second boiler
+  main transformer
+  north valve
+  old turbine
+  cooling fans
+  intake screen
+  backup generator
+  main switchboard
+  {fuel} hopper
+  (desert=0) river gauge
+  (coast=1) lamp mechanism
+
+log.line
+  (3) {log.ln.check}
+  (2) {log.ln.shift}
+  (2) {log.ln.visit}
+  (2) {log.ln.wx}
+  (2) {log.ln.small}
+  (stage>=1) {log.ln.late}
+
+log.ln.check (share=0.8)
+  Inspection of the {log.part}: {log.ln.state}.
+  The {log.part} running {log.ln.temp}. {log.ln.act}
+  Readings taken on the {log.part}: {log.ln.state}. {mod.lg.ack}
+  Pressure on the {log.part} {log.ln.pressure}. {log.ln.act}
+  The {log.part} {log.ln.sound} since the morning. {log.ln.act}
+log.ln.state (people=3)
+  within limits
+  all in order
+  a little high, as usual
+  low, then normal
+  steady
+  not what the manual says, but steady
+log.ln.temp (people=3)
+  warm
+  hot
+  cold
+  rough
+  quiet for once
+log.ln.pressure (people=2)
+  falling
+  rising
+  holding
+  up and down all day
+log.ln.sound (people=3)
+  knocking
+  whistling
+  silent
+  rattling
+  humming a new note
+log.ln.act (people=3)
+  Watched.
+  Oiled and watched.
+  Reported to the engineer.
+  Left alone, as advised.
+  Logged for the day crew.
+  Struck it once. It stopped.
+
+log.ln.shift (share=0.8)
+  Shift change. Nothing to report.
+  Shift change; {log.ln.relief}. {mod.lg.ack}
+  Night crew in. {#n|hand} present, {log.ln.crew}.
+  Day crew off. The {log.part} handed over {log.ln.handed}.
+  Relief arrived with {food}. {log.ln.shared}.
+  Shift change at the bell. The new hand is {log.ln.newhand}.
+
+log.ln.relief (people=2)
+  the relief late by {#n|minute}
+  the relief early, for once
+  the relief new and nervous
+  the relief wet through
+log.ln.crew (people=2)
+  one sick
+  one asleep
+  all sober
+  one missing
+log.ln.handed (people=2)
+  running
+  warm
+  in a temper
+  as found
+log.ln.shared (people=2)
+  Shared
+  Not shared
+  Eaten before it was logged
+log.ln.newhand (people=2)
+  learning
+  asking questions
+  afraid of the {log.part}
+log.ln.visit (share=0.8)
+  Visitor from {$seat}, {log.ln.visitor}. Shown round. {mod.lg.ack}
+  A call from {$seat} asking for {log.ln.wanted}. {log.ln.sent}.
+  Inspector from the ministry. Went away {log.ln.went}.
+  Schoolchildren from {$home} shown the {log.part}. {log.ln.kids}.
+  Visitor about {log.ln.about}: {log.ln.visitor}. {log.ln.told}.
+log.ln.wanted (people=2)
+  the figures
+  the old logs
+  the spare keys
+  the night readings
+log.ln.sent (people=2)
+  Sent
+  Refused
+  Promised
+  Sent twice
+log.ln.went (people=2)
+  satisfied, or quiet
+  without a word
+  with a list
+  early
+log.ln.kids (people=2)
+  Questions
+  One lost, then found
+  Asked for the {log.part} to be switched on
+log.ln.about (people=3)
+  the noise
+  the smell
+  the lights
+  the water
+  the fence
+log.ln.told (people=2)
+  Told it is the {log.part}
+  Given {drink} and sent home
+  Shown the book
+  Promised a letter
+log.ln.visitor (people=3)
+  an engineer
+  an inspector
+  a journalist
+  a neighbour
+  someone from the {craft} guild
+
+log.ln.wx (share=0.8)
+  Weather: {weather.now}. {log.ln.wxact}.
+  {weather.now} all day. Roof leaking over the {log.part}.
+  (coast=1) Wind off the sea; {log.ln.sea}.
+  (desert=1) Dust in the intake again. {log.ln.dust}.
+  (seasons=4 season=3) Frost on the pipes. {log.ln.frost}.
+  Rain gauge: {log.ln.gauge}.
+
+log.ln.wxact (people=3)
+  Doors closed
+  Gauges read twice
+  Shutters up
+  The yard swept
+  Lamps lit early
+  The roof checked
+log.ln.sea (people=2)
+  the boats in early
+  the harbour lamps lit
+  spray over the yard wall
+  the ferries stopped
+log.ln.dust (people=2)
+  Screens cleaned
+  Filters changed
+  Nothing to be done
+log.ln.frost (people=2)
+  Lagged
+  Thawed with lamps
+  Reported
+log.ln.gauge (people=2)
+  empty
+  half full
+  over the mark
+  stuck again
+log.ln.small (share=0.7)
+  Tea urn repaired.
+  A {beast} in the yard. Left to itself.
+  Children on the fence again. Chased off.
+  The {log.ln.clock} {log.ln.fast} by {#n|minute}. Set right.
+  Someone has painted the gate {colour.any}. Left it.
+  Ate the last of the {food}. More ordered.
+  The wireless picked up {log.ln.music} from {$seat} all night. {log.ln.pleasant}.
+  The cat from the yard got into the {log.part} housing again. Out now.
+  Light bulbs short. Borrowed from the office.
+  A letter came for the old keeper, who left years ago. Kept.
+  Mended the fence with {material}. It will do.
+
+log.ln.clock (people=2)
+  clock
+  station clock
+  yard clock
+  gate clock
+log.ln.fast
+  fast
+  slow
+log.ln.music (people=2)
+  music
+  a play
+  the {festival} songs
+  a talk on {craft}
+log.ln.pleasant (people=2)
+  Pleasant
+  Turned it off
+  Nobody complained
+log.ln.late (share=0.7)
+  Supply short again. Rationed.
+  (stage>=2) Two of the crew did not report. Nobody knows where they are.
+  Spare parts not coming. The {log.part} kept going with wire.
+  Orders from {$seat} contradict yesterday's. Kept both.
+  (stage>=2) The night shift is the day shift now. There is one shift.
+)VG"

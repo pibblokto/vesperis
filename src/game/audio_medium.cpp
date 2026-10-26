@@ -1,4 +1,4 @@
-// H-05 (2026-10-10): what a recording on the decoder was made on, heard (`AudioState::medium`, galaxy/records.h's RM_*). The
+// H-05 (2026-10-10): what a recording on the decoder was made on, heard (`AudioState::medium`, peoples/records.h's RM_*). The
 // industrial age cut its voices and its music in wax: a narrow band through a horn, the needle's crackle, the hiss of the surface
 // swishing round at the cylinder's turn and the turn's wow. The modern age pressed discs (a wider band, a quieter surface, a pop now
 // and then, the slow wow of the turntable) and wound tape on reels (hiss, wow and flutter, a little saturation, a dropout where the
@@ -7,7 +7,7 @@
 // its own (a tablet, a scroll, a page, a bone flute's holes) is the ship's own rendering: it passes untouched. C-11: a recording the radar
 // caught plays on the ship's player as the ship kept it off the air (`MEDIUM_AIR`): the receiver's band, the air's hiss, its slow fading.
 #include "audio.h"
-#include "galaxy/records.h"
+#include "peoples/records.h"
 #include <cmath>
 #include <algorithm>
 

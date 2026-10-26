@@ -86,6 +86,7 @@ void Game::tapeRead(const std::string& dir, std::vector<TapeTrack>& out) {
     }
 }
 
+// the tracks, read again: the explorer's folder, else the game's own
 void Game::tapeList() {
     tape.tracks.clear(); tape.dir.clear();
     std::vector<std::string> dirs{musicDir};
@@ -97,6 +98,7 @@ void Game::tapeList() {
     }
 }
 
+// beside the executable, in a macOS app's Resources, in a Vesperis.app beside a bare binary
 void Game::tapeGameDirs(const std::string& appDir) {
     musicDirsGame.clear();
     if (appDir.empty()) return;
@@ -104,6 +106,7 @@ void Game::tapeGameDirs(const std::string& appDir) {
     musicDirsGame = {a + "music", a + "../Resources/music", a + "Vesperis.app/Contents/Resources/music"};
 }
 
+// a deck sequence begun
 void Game::tapeDeck(int kind) {
     tape.deckSeed++;
     audio.deck = kind;
@@ -112,11 +115,13 @@ void Game::tapeDeck(int kind) {
     tape.t = 0;
 }
 
+// M: on (a cassette put in, or the one in played on) or off (the stop key)
 void Game::tapeToggle() {
     if (tape.phase == TAPE_DECK || tape.phase == TAPE_PLAY) tapeHalt(true);
     else tapeStart(true);
 }
 
+// `asked`: by M (an empty folder is said), else auto-explore taking it up again
 void Game::tapeStart(bool asked) {
     if (tape.phase == TAPE_FADE && audio.musicT >= 0 && !audio.music.empty() && !asked) {   // auto-explore back before its fade ended: the music comes back up
         tape.phase = TAPE_PLAY; tape.t = 1;
@@ -142,6 +147,7 @@ void Game::tapeStart(bool asked) {
     tapeDeck(inDeck ? DECK_PLAY : DECK_INSERT);
 }
 
+// the stop key (the choice off), or auto-explore's end (the music fading, the choice kept)
 void Game::tapeHalt(bool stopKey) {
     if (tape.phase == TAPE_OFF) return;
     if (tape.phase == TAPE_PLAY && audio.musicT >= 0) settings.autoTrackAt = audio.musicT;   // the place kept: where it goes quiet
@@ -159,6 +165,7 @@ void Game::tapeHalt(bool stopKey) {
     if (!moving) tape.gain = 0;
 }
 
+// every frame: the deck's sequence, a track's end, the fades, the duck
 void Game::tapeUpdate(double realDt) {
     TapeState& T = tape;
     if (T.captionT >= 0 && (T.captionT += realDt) > CAP_IN + CAP_HOLD + CAP_OUT) T.captionT = -1;
@@ -209,6 +216,7 @@ void Game::tapeUpdate(double realDt) {
     audio.duck = T.phase == TAPE_FADE ? 1 - (1 - TAPE_DUCK) * T.gain : TAPE_DUCK;
 }
 
+// the caption at the top left
 // the track as it begins: its author and its title at the top left, fading in, held, fading out
 void Game::tapeRender() {
     std::string author, title;
@@ -225,23 +233,10 @@ void Game::tapeRender() {
     }
 }
 
+// the caption's alpha now (0 none) and its words
 double Game::tapeCaption(std::string& author, std::string& title) const {
     author = tape.capAuthor; title = tape.capTitle;
     const double c = tape.captionT;
     if (c < 0) return 0;
     return c < CAP_IN ? c / CAP_IN : (c < CAP_IN + CAP_HOLD ? 1.0 : std::max(0.0, 1 - (c - CAP_IN - CAP_HOLD) / CAP_OUT));
-}
-
-std::string Game::testTapeInfo() const {
-    static const char* PH[] = {"off", "deck", "play", "fade"};
-    std::string author, title;
-    const double a = tapeCaption(author, title);
-    return fmt("%s, track %d of %zu from %.1f s, level %.3f (gain %.2f), duck %.2f, music \"%s\", caption %.2f \"%s / %s\"", PH[clampi(tape.phase, 0, 3)], tape.track,
-               tape.tracks.size(), tape.from, audio.musicGain, tape.gain, audio.duck, audio.music.c_str(), a, author.c_str(), title.c_str());
-}
-
-std::string Game::testTapeTrack(size_t i) const {
-    if (i >= tape.tracks.size()) return std::string();
-    const TapeTrack& k = tape.tracks[i];
-    return fmt("%s | %s | %s | %+.1f dB", k.file.c_str(), k.author.c_str(), k.title.c_str(), k.gainDb);
 }

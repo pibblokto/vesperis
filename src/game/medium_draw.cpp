@@ -1,9 +1,9 @@
 // H-05 (2026-10-10): the decoder names what a record was made on and draws it: a carved bone, a clay tablet, a scroll on its rods, a wax
 // cylinder turning, a disc spinning, a reel's spools, a drive's light, a crystal's glow, something that hums. A record with no sound of its
-// own (a tablet, a page, a bone flute) is read or played by the ship (`recordMediumSounds`, galaxy/records.h); R-414: the line names the
+// own (a tablet, a page, a bone flute) is read or played by the ship (`recordMediumSounds`, peoples/records.h); R-414: the line names the
 // object alone. The picture sits at the right of the shard's date and medium lines (40 x 26 of the 320 x 200 HUD).
 #include "game.h"
-#include "galaxy/records.h"
+#include "peoples/records.h"
 #include <cmath>
 
 namespace {

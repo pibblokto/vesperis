@@ -91,7 +91,7 @@ struct Guide {
     std::set<std::string> heard;                  // C-07: "<body key>/S<index>" of every recording heard on the radar (`heard` lines): taken from the ruins, it is the one the radar caught
     std::set<std::string> graves;                 // C-12: "<body key>/G<id>" of every grave read in the ruins (`grave` lines), like the landmarks
     std::set<std::string> ended;                  // C-12: the worlds whose last recording the decoder read (`ended` lines): their timeline closed
-    std::set<std::string> instruments;            // C-11: "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; galaxy/instruments.h's ids): kept in the cabin's case
+    std::set<std::string> instruments;            // C-11: "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; peoples/instruments.h's ids): kept in the cabin's case
     std::set<std::string> lent;                   // C-14: "<body key>/S<index>" of the shards a friend's inbox file lent (the ones they found and read; `lent` lines): read on the decoder in cyan, never taken, the ruins still hold them
     bool isLent(const std::string& key) const { return lent.count(key) && !shards.count(key); }   // C-14: a friend's, not yet the explorer's own
     int lentCount() const;                        // C-14: how many are lent and not taken since
@@ -109,7 +109,7 @@ struct Guide {
     int creaturesSeen = 0;   // N3-01: first sightings of species (per landing)
     double topSpeedKmh = 0, longestDriveM = 0;   // N4-05: the buggy's records
     int genVersion = 0;      // generation version the guide was last saved with (M9-17)
-    // T-04: the shards' keys are a people's records at people x 1000 + index (galaxy/records.h's `shardWorldIndex`); a guide saved before
+    // T-04: the shards' keys are a people's records at people x 1000 + index (peoples/records.h's `shardWorldIndex`); a guide saved before
     // (no `records 2` line) had C-13's second people at 50 + index, moved here when it is loaded: the shards found are kept by their index (the
     // counts and the language kept, the contents the records' now), `migratedShards` how many of the explorer's own were (the game says so once).
     // B-414: a guide saved before `records 3` keeps its keys, its found shards' contents new (a people's records all of the age it reached)

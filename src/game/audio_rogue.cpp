@@ -23,7 +23,7 @@
 // echoes); under another signal a little worn too. A drifter's beacon (D-05's people) is a machine of C-16's under the voice, slowed and
 // darkened.
 #include "audio.h"
-#include "galaxy/signals.h"
+#include "peoples/signals.h"
 #include "core/rng.h"
 #include <algorithm>
 #include <cmath>

@@ -1,0 +1,280 @@
+R"VG(
+# charts.vg: a star chart's caption (C-10): the figures drawn, the star marked. H-05 (2026-10-10): by the way the chart was made (its
+# record's age and medium, `chartstyle`): a cave's ceiling and a carved bone with the moon's days counted (`tally`, `tallykind` 1 the days
+# of its month, 2 its moons in the year), a painted vault, an astrolabe's plate and a codex's page with the wanderers' paths (`wanderers`),
+# an engraved atlas with its stars numbered (`numbered`, `plate`), a photograph on glass, a survey by magnitudes with the peoples heard
+# (`maglimit`, `heard`), a navigation chart's routes (`figs` the routes, `reached`, `planned`), the far future's places where nothing is
+# (`figs` the places, `signs`, the far mark: `farly`, `farkind`). The facts are the chart's (`shardChartRecord`, peoples/shards.cpp):
+# `figs`, `infig`, `markhow`, `named`, `markpeople`, the record's `tone`, `age`, `medium`.
+
+@root chart
+
+chart (words=6..80)
+  (chartstyle=ceiling) {ceil.open} {figs}. {ceil.tally} {ceil.mark}
+  (chartstyle=bone) {bone.open} {figs}. {bone.tally} {bone.mark}
+  (chartstyle=vault) {vault.open} {figs}. {vault.more} {vault.mark}
+  (chartstyle=astrolabe) {astro.open} {figs}. {astro.ways} {astro.mark}
+  (chartstyle=page) {page.open} {figs}. {page.ways} {page.mark}
+  (chartstyle=atlas) {atlas.open} {figs}. {atlas.numbers} {atlas.mark}
+  (chartstyle=plate) {plate.open} {figs}. {plate.mark}
+  (chartstyle=survey) {survey.open} {figs}. {survey.heard} {survey.mark}
+  (chartstyle=routes) {routes.open} {figs}. {routes.flown} {routes.mark}
+  (chartstyle=beyond) {beyond.open} {figs}. {beyond.mark}
+  (chartstyle=sunmeasure) {smc.open} {smc.what} {smc.mark}
+
+# ---- the oldest: ochre and soot on a cave's ceiling, scratches on a bone ----------------------------------------------------------
+
+ceil.open
+  (tone=ordinary) On the cave's roof, over the fire:
+  (tone=ordinary) Painted where the smoke goes up:
+  (tone=ordinary) The night's animals, in ochre and soot:
+  (tone=ordinary) The sky as the hunters know it:
+  (tone=ordinary) Red for the bright, black for the small:
+  (tone=ordinary) Over the sleeping place, for the children:
+  (tone=ordinary) What comes up over {mountain} in {season.any}:
+  (tone=elegy) The animals {founder} showed us:
+  (tone=elegy) Painted again where the old paint flaked:
+  (tone=elegy) The sky the dead go up into:
+  (tone=warning) Painted larger, for whoever comes:
+  (tone=warning) The sky as it was before the bad years:
+  (tone=warning) Painted deep, where the damp cannot reach:
+
+ceil.tally
+  (tallykind=1) Beside them, {#tally|mark}: the nights of a moon.
+  (tallykind=1) Under them, {#tally|dot}, thin to full to thin.
+  (tallykind=1) Along the edge, {#tally|stroke}, one a night.
+  (tallykind=2) Beside them, {#tally|mark}: the moons of a year.
+  (tallykind=2) Under them, {#tally|ring}, one for each moon.
+  (tallykind=0 moons=0) No moon to count by.
+  (tallykind=0 moons>0) The moon is painted once, white.
+
+ceil.mark
+  The red spot is {chart.mark}.
+  Our hands are beside {chart.mark}.
+  We marked {chart.mark}.
+  Ringed with soot: {chart.mark}.
+
+bone.open
+  (tone=ordinary) Scratched on the bone of a {beast}:
+  (tone=ordinary) Cut into a long bone with a stone:
+  (tone=ordinary) Carried on a bone for the long walk:
+  (tone=ordinary) The hunters' bone, to find the way home:
+  (tone=ordinary) Small cuts for the small, deep for the bright:
+  (tone=elegy) {founder}'s bone, cut again where it wore:
+  (tone=elegy) Buried with the woman who could read it:
+  (tone=warning) Cut deep, so it lasts:
+  (tone=warning) A bone to show the way, for whoever leaves:
+
+bone.tally
+  (tallykind=1) On its edge, {#tally|notch}: a moon's nights.
+  (tallykind=1) Along one side, {#tally|cut}, thin moon to thin moon.
+  (tallykind=2) On its edge, {#tally|notch}: a year's moons.
+  (tallykind=2) Along one side, {#tally|cut}, one a moon.
+  (tallykind=0) Its notches are worn past counting.
+
+bone.mark
+  The deepest cut is {chart.mark}.
+  We marked {chart.mark}.
+  Ringed: {chart.mark}.
+  Follow it to {chart.mark}.
+
+vault.open
+  (tone=ordinary) Gold on blue over the house of {god}:
+  (tone=ordinary) So that those who pray look up at the true sky:
+  (tone=ordinary) The heavens of {city}, in gold leaf:
+  (tone=ordinary) The ceiling of the great hall:
+  (tone=ordinary) Over the sleepers in the guest hall:
+  (tone=elegy) Painted again after the fire:
+  (tone=elegy) The sky over {city} when it was founded:
+  (tone=warning) Painted over the door, the last thing seen:
+  (tone=warning) The vault is cracking; this is what it showed:
+
+vault.more
+  The bright stars are larger.
+  The colours of the figures are gone.
+  It took a whole {season.any} to paint.
+  The guilds paid for the gold.
+  Children learn the figures under it.
+  It took {#n|year} to paint.
+
+vault.mark
+  Gilded twice: {chart.mark}.
+  In silver: {chart.mark}.
+  We marked {chart.mark}.
+  A pearl marks {chart.mark}.
+
+astro.open
+  (tone=ordinary) The plate, cut for the sky of {city}:
+  (tone=ordinary) Turn the rete and the stars rise:
+  (tone=ordinary) By the instrument makers of {city}:
+  (tone=ordinary) Brass, for the hours of the night:
+  (tone=ordinary) The stars that turn about the pole:
+  (tone=elegy) The old plate, recut by the master's daughter:
+  (tone=elegy) The plate {founder}'s scholars carried:
+  (tone=warning) The plate, with this year's corrections:
+  (tone=warning) Cut for a sky that will not stay:
+
+astro.ways
+  (wanderers>1) {#wanderers|wanderer} loop along the sun's road.
+  (wanderers>1) The sun's road, and {#wanderers|wanderer} turning back on it.
+  (wanderers=1) One wanderer turns back on the sun's road.
+  (wanderers=0) The sun's road crosses it.
+  The circles are the equator and the year's turnings.
+
+astro.mark
+  The rule is set at {chart.mark}.
+  The first pointer is {chart.mark}.
+  We marked {chart.mark}.
+
+page.open
+  (tone=ordinary) The figures of the sky, as the old books give them:
+  (tone=ordinary) Set down by the scribes of {city}:
+  (tone=ordinary) Copied at {city} from an older book:
+  (tone=ordinary) Here begins the book of the sky:
+  (tone=elegy) Copied again, the old page worn through:
+  (tone=elegy) As the old masters taught them:
+  (tone=warning) Copied in haste, the figures only:
+  (tone=warning) Whoever finds this book, here is the sky:
+
+page.ways
+  (wanderers>1) In red, the paths of {#wanderers|wanderer}.
+  (wanderers>1) The sun's road in red, {#wanderers|wanderer} on it.
+  (wanderers=1) In red, the one wanderer's path.
+  (wanderers=0) The sun's road is drawn in red.
+
+page.mark
+  In the margin: {chart.mark}.
+  We marked {chart.mark}.
+  Underlined: {chart.mark}.
+
+atlas.open
+  (tone=ordinary) Plate {#plate:digits} of the atlas of {city}:
+  (tone=ordinary) Sheet {#plate:digits}, to the sixth light:
+  (tone=ordinary) From the new catalogue:
+  (tone=ordinary) Plate {#plate:digits}, in the observatory's coordinates:
+  (tone=elegy) Plate {#plate:digits}, after the old charts:
+  (tone=elegy) The atlas's last edition, plate {#plate:digits}:
+  (tone=warning) Plate {#plate:digits}, reprinted in haste:
+  (tone=warning) Plate {#plate:digits}, to find the way by:
+
+atlas.numbers
+  (numbered>0) {#numbered|star} numbered, the brightest first.
+  (numbered>0) The numbers are the catalogue's.
+  The lines are the observatory's.
+
+atlas.mark
+  Ringed: {chart.mark}.
+  We marked {chart.mark}.
+
+plate.open
+  (tone=ordinary) Plate {#plate:digits}, a clear night at {city}. In the field:
+  (tone=ordinary) Through the great glass at {city}. In the field:
+  (tone=ordinary) A long exposure. In the field:
+  (tone=ordinary) Glass plate {#plate:digits}, the sky as it is:
+  (tone=elegy) An old plate from the cellar. In the field:
+  (tone=warning) Plate {#plate:digits}, the year the trouble began:
+
+plate.mark
+  Ringed in ink: {chart.mark}.
+  Scratched on the glass: {chart.mark}.
+  We marked {chart.mark}.
+
+survey.open
+  (tone=ordinary) Field {#plate:digits}, to the {#maglimit:ord} magnitude:
+  (tone=ordinary) Field {#plate:digits} of the survey of {city}:
+  (tone=ordinary) Every star in the field measured:
+  (tone=ordinary) Field {#plate:digits}, each star measured twice:
+  (tone=elegy) The survey's last field:
+  (tone=warning) Field {#plate:digits}, kept on file:
+
+survey.heard
+  (heard>1) Ringed: the {#heard|source} that were heard.
+  (heard>1) {#heard|voice} came from here.
+  (heard=1) Ringed: the one source that was heard.
+  (heard=1) One voice came from here.
+  (heard=0) No voice came from this field.
+  (heard=0) We listened here and heard no one.
+
+survey.mark
+  Marked: {chart.mark}.
+  We marked {chart.mark}.
+  Flagged: {chart.mark}.
+
+routes.open
+  (tone=ordinary) Routes out of {city}:
+  (tone=ordinary) The ways out from home:
+  (tone=ordinary) The home sun at the centre:
+  (tone=ordinary) For the pilots:
+  (tone=ordinary) The crossings, as the pilots' school taught them:
+  (tone=ordinary) [Chart|Sheet] {#plate:digits} of the near stars:
+  (tone=ordinary) What the ships of {city} could reach:
+  (tone=ordinary) Corrected after the last crossing:
+  (tone=ordinary) The near suns and the ways between them:
+  (tone=elegy) The routes the ships took:
+  (tone=elegy) The old routes, kept:
+  (tone=elegy) The crossings the ships never came back from:
+  (tone=warning) The routes still open:
+  (tone=warning) Where the last ships could go:
+  (tone=warning) The ways out, for whoever must leave:
+
+routes.flown
+  (reached>0 planned>0) {#reached|route} flown, {#planned} planned.
+  (reached>0 planned>0) The broken lines were never flown.
+  (reached>0 planned>0) {#planned} of them [were only planned|stayed plans|waited for ships].
+  (reached>0 planned>0) The ships flew {#reached} of them.
+  (reached>0 planned=0) All of them were flown.
+  (reached>0 planned=0) Every one was flown[| and flown back].
+  (reached=0) None was flown.
+  (reached=0) They are plans; no ship went.
+
+routes.mark
+  The main route ends at {chart.mark}.
+  We marked {chart.mark}.
+  The first route went to {chart.mark}.
+  The longest goes to {chart.mark}.
+  Its arrow points to {chart.mark}.
+
+beyond.open
+  What we could not reach:
+  Places where nothing is:
+  For whoever comes after:
+  (signs>1) {#signs|place} where there is nothing:
+  Where the light goes:
+  Past the stars:
+  We went to these and found nothing:
+  What we found when we looked past the light:
+  The empty places, marked so that no one looks again:
+  Where we listened and nothing answered:
+  The places we sent ourselves to:
+  Not stars:
+  Where the others went:
+
+beyond.mark
+  The one that is there: {chart.mark}.
+  The middle is {chart.mark}.
+  Begin with {chart.mark}.
+  Only one of them can be reached: {chart.mark}.
+  Go first to {chart.mark}.
+
+# the star a chart marks: a people heard over the radio's reach, a people's world among the bright stars, or the brightest of their
+# nights (the first such the lore's named star, the next ones by their place in the sky); H-05: the far future's, thousands of light
+# years off
+chart.mark
+  (markhow=2) the star the voices of the {markpeople} come from{chart.infig}
+  (markhow=1) the star of the {markpeople}{chart.infig}
+  (markhow=0 named=0) {star}, the brightest of our nights{chart.infig}
+  (markhow=0 named=1) the star that rises before {festival}{chart.infig}
+  (markhow=0 named=2) the star that stands over {mountain} at midwinter{chart.infig}
+  (markhow=0 named>=3) the star {founder} steered by{chart.infig}
+  (markhow=3 farkind=1) the light toward the heart of everything, {#farly:about} years of light away
+  (markhow=3 farkind=2) a sun in a crowd of old suns, {#farly:about} years of light away
+  (markhow=3 farkind=3) a sun above the road of stars, {#farly:about} years of light away
+  (markhow=3 farkind=4) a sun far along the road of stars, {#farly:about} years of light away
+  (markhow=3 farkind=0) a sun far off
+  (markhow=4) the star that was our sun{chart.infig}
+
+# the figure the marked star is in, if it is in one
+chart.infig
+  (has:infig) , in {infig}
+  (!has:infig)
+)VG"

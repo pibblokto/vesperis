@@ -1,8 +1,20 @@
 # src/surface: on the ground
 
 ## Files
-- `surface_view.h/.cpp` (378 KB; read by range): `SurfaceView`: `update`, `render`, `reanchor`, the sky, the terrain rings,
-  water, walking, the vehicles' cameras, the colliders
+- `surface_view.h` (54 KB): `SurfaceView`, its data first (never reordered), then its functions under a `// ----` banner for each
+  file, the harness's last; `surface_types.h` (13 KB) its types (`Player`, `Buggy`, `Drone`, `SurfaceEnvironment`, `LocalFront`,
+  the creatures, the trees, `Ruin`); `surface_internal.h` what its files share (`SurfaceLook`, `lookFor`, `hash01`)
+- `surface_view.cpp` (44 KB): `init`, `update`, `render`, `reanchor`, the streaming (the ahead worker, `prefetch`), the scanner
+- `surface_env.cpp` (22 KB): `computeEnvironment` (the light, the weather, the fog), the fog seas' floor, the ground's songs
+- `surface_places.cpp` (20 KB): the settlements' and works' cells, the towns' marks, the plan's places; the records, instruments
+  and graves near (`drawShards`); `drawRuins`
+- `surface_walk.cpp` (51 KB): `updateWalking`, the colliders and supports, the boulders' enumerators (`forRocks`...) and
+  `drawObjects`, the capsule, the blob shadows, the footprints
+- `surface_palette.cpp` (25 KB): `lookFor`, `setupPalette`, the lamps (`setupLamps`, `lampAt`)
+- `surface_terrain.cpp` (68 KB): `vertexOf`, the material tiles, the rings' warm, bin and draw, the reflections, the floor,
+  `heightNear`, `rangeToGround`
+- `surface_sky.cpp` (56 KB): the galaxy's band, `drawSky` (637 lines, whole), the shower meteors, `drawVeil`
+- `surface_effects.cpp` (40 KB): the vents' jets, the geysers, spores, plumes and curtains, the lamps left lit, `drawWeather`
 - `site.h/.cpp` (64 KB): `SurfaceSite`, `TerrainCache`: the sun, `groundHeight`, `sampleAt`, the roads and marks near the site
 - `flora.cpp` (71 KB): `forTrees`/`forLogs`, `canopyDensityAt`, `drawFlora`, `drawFloraBand`
 - `creatures.cpp` (37 KB): `planLife`, herds by habitat, `updateLife`, `drawLife`
@@ -26,8 +38,10 @@
   collider is a cylinder (`y0..y1`): anything new that blocks the explorer carries its span (`vesperis_test walls`).
 - `groundHeight` is the ground drawn; the tide is in `waterNowAt`, and placed things read `waterAt`. `initFrame` makes a site that
   is sampled, never drawn. `applyDrainage`'s valley melt lifts exposed low ground: re-blend a dry bed after it.
-- Adding a vehicle (the buggy's pattern): a struct in surface_view.h, its own `surface/*.cpp`, the camera branch in `render`, the
+- A call the compiler inlines stays in its file (the terrain's cell helpers, `materialLook` in `vertexOf`, `mesoFor` in the
+  terrain's draw, `jetStrength`, `bandAt` in `drawSky`): a split crossing one is timed (`bench`).
+- Adding a vehicle (the buggy's pattern): a struct in surface_types.h, its own `surface/*.cpp`, the camera branch in `render`, the
   update dispatch, `reanchor` and `init`, the seat's HUD branch in `game/hud.cpp`, the keys and the audio in
-  `game/game_states.cpp`, a save line, and `inVehicle()` wherever "in the buggy" meant "seated".
+  `game/surface_play.cpp`, a save line, and `inVehicle()` wherever "in the buggy" meant "seated".
 
 More, with the numbers: `docs/reference/lessons.md`, "The surface".

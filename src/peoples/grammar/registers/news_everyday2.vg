@@ -1,0 +1,270 @@
+R"VG(
+# news_everyday2.vg (H-04's second pass): the everyday in the news's register, continued: a law, a trial, envoys, a disaster at the works, a price,
+# a new play or song, the ruler's visit.
+
+# ---- a law ---------------------------------------------------------------------------------------------------------------------
+news.law
+  {news.h.law}\n{news.law.m} {news.law.x}
+news.h.law
+  A new law
+  The new law
+  ($e.what=tax) A new tax
+  ($e.what=curfew) Curfew
+  ($e.what=census) The count of the people
+news.law.m
+  (has:$e.a) {$e.a:full} has decreed that {news.law.what}.
+  It is decreed at {$seat} that {news.law.what}.
+  From the first of {season.next}, {news.law.what}.
+  The law passed this week says, in short, that {news.law.what}.
+news.law.what
+  ($e.what=measures) every measure in the land is to be the measure of {city}, and the old ones broken
+  ($e.what=tax) every house is to pay {n} {coin} a year on its {news.law.taxed}
+  ($e.what=water) the water of {river} is to be shared by turns, each district its day
+  ($e.what=tolls) the tolls on the bridges are doubled, to pay for the bridges
+  ($e.what=curfew) nobody is to be in the streets after the last bell without a lamp and a reason
+  ($e.what=coin) the old {coin} are to be called in and new ones struck, with a new head on them
+  ($e.what=inheritance) a house is to pass to the eldest child, whoever that may be
+  ($e.what=drink) no {drink} is to be sold on the rest day, nor on the day before
+  ($e.what=weapons) no weapon is to be carried within the walls but a kitchen knife
+  ($e.what=school) every child is to be taught to read until the age of {n}
+  ($e.what=census) every house is to be counted, its people and their trades
+  ($e.what=calendar) the year is to begin at {festival} and not in {season.any}
+  ($e.what=dogs) every dog is to have a collar and an owner willing to say so
+  ($e.what=hours) no hand is to work more than {n} hours a day, the owners objecting
+  ($e.what=noise) no {instrument} is to be played after midnight within the town
+  ($e.what=forests) the {tree} of the state forests are not to be cut without a licence
+  ($e.what=rations) bread, salt and {fuel} are to be had by ticket only
+news.law.taxed
+  windows
+  doors
+  hearths
+  {herd}
+news.law.x
+  The {ind.trade.p} are said to be furious.
+  {news.said} that the law was long overdue.
+  Nobody at {$home} has read it through yet except the {ind.trade.p}, who read nothing else.
+  It will be enforced, {news.said}, gently at first.
+  The fine for breaking it is {n} {coin}, or a day in the stocks by {holyplace}.
+ind.trade.p
+  innkeepers
+  carters
+  bakers
+  farmers
+  shopkeepers
+  publicans
+
+# ---- a trial ------------------------------------------------------------------------------------------------------------------
+news.trial
+  {news.h.trial}\n{news.trial.m} {news.trial.v}
+news.h.trial
+  The trial at {$e.place}
+  ($e.verdict=acquitted) Acquitted
+  ($e.verdict=condemned) Guilty
+  (has:$e.a) The case of {$e.a:name}
+news.trial.m
+  (has:$e.a) {$e.a:full} was tried at {$e.place} this week for {news.trial.what}.
+  (has:$e.a has:$e.a.trade) {$e.a:full}, {$e.a.trade}, stood trial at {$e.place} on a charge of {news.trial.what}.
+  (!has:$e.a) A man of {$e.place} whose name the court has withheld was tried for {news.trial.what}.
+  The trial at {$e.place} for {news.trial.what} ended yesterday after {n} days, and the courtroom was full every one of them.
+news.trial.what
+  ($e.what=theft) theft from {holyplace}
+  ($e.what=murder) the murder of a neighbour
+  ($e.what=treason) treason against {ruler.the}
+  ($e.what=heresy) heresy against the faith of {god}
+  ($e.what=forgery) forging the {coin} of the realm
+  ($e.what=fraud) fraud against the {craft} guild
+  ($e.what=smuggling) smuggling {drink} over the border
+  ($e.what=bribery) bribing the market inspectors
+  ($e.what=arson) setting fire to a neighbour's {crop}
+  ($e.what=libel) libel, against the editor of a rival paper
+news.trial.v
+  ($e.verdict=acquitted) The jury acquitted, and the crowd outside cheered, or most of it did.
+  ($e.verdict=acquitted) The verdict was not guilty, and the accused walked out into {town.open} a free {news.trial.who}.
+  ($e.verdict=condemned) The verdict was guilty; the sentence will be given on the rest day.
+  ($e.verdict=condemned) Found guilty, the prisoner said nothing at all.
+  ($e.verdict=exiled) The court has sent the prisoner over the border, never to return on pain of death.
+  ($e.verdict=fined) The court fined the prisoner {n} {coin}, which was paid at once, in small coin, from a bag.
+news.trial.who
+  person
+  citizen
+  neighbour
+
+# ---- envoys --------------------------------------------------------------------------------------------------------------------
+news.embassy
+  ($e.what=city has:$e.place2) Envoys at {$e.place}\nEnvoys from {$e.place2} arrived at {$e.place} this week {news.emb.why}. {news.emb.x}
+  ($e.what=others) The {other} send envoys\nEnvoys of the {other} have come to {$e.place} {news.emb.why}. {news.emb.x}
+  ($e.what=sent) Our envoys go to the {other}\nEnvoys have left {$e.place} for the country of the {other}, {news.emb.sent}. {news.emb.x}
+news.emb.why
+  to talk about the tolls
+  with gifts and a long list of complaints
+  to settle the matter of the border fields
+  to ask for help against the floods
+  for reasons nobody will tell this paper
+news.emb.sent
+  carrying gifts of {craft} and a letter nobody has been allowed to read
+  to talk about trade and, it is hoped, about nothing else
+  with {herd} as gifts, and a guard
+news.emb.x
+  (has:$e.a) The envoy, {$e.a:full}, is said to be a patient {news.emb.man}.
+  They were given dinner at {hall}, and the dinner was long.
+  The talks will go on until {season.next}.
+  Their dress was much admired in {town.open}.
+news.emb.man
+  speaker
+  listener
+  negotiator
+
+# ---- a disaster at the works -----------------------------------------------------------------------------------------------------
+news.accident
+  {news.h.acci}\n{news.acci.m} {news.acci.x}
+news.h.acci
+  Disaster at {$e.place}
+  ($e.what=mine) The mine at {$e.place}
+  ($e.what=bridge) The bridge falls
+  ($e.what=ship) Ship lost
+  ($e.what=train) Railway accident
+  ($e.what=explosion) Explosion at {$e.place}
+  ($e.what=dam) The dam breaks
+news.acci.m
+  ($e.what=bridge) The bridge at {$e.place} gave way under a loaded cart [at noon|in the dusk|on market day], and {#$e.value} went into the river with it.
+  ($e.what=mine) The roof of the mine at {$e.place} came down {news.acci.when}; {#$e.value} men are dead and the digging goes on {news.acci.dig}.
+  ($e.what=ship) The {news.acci.ship} went down off {$e.place} in the gale with {#$e.value} aboard; {n} were saved.
+  ($e.what=train) The night train came off the rails near {$e.place}; {#$e.value} are dead and many more hurt.
+  ($e.what=explosion) An explosion at the works at {$e.place} was heard ten miles away; {#$e.value} are dead.
+  ($e.what=explosion) The {craft} works at {$e.place} blew up {news.acci.when}, killing {#$e.value} and breaking every window in {streets.of}.
+  ($e.what=dam) The dam above {$e.place} broke {news.acci.when}, and the water took {#$e.value} with it, and the {crop} of the valley.
+  ($e.what=aircraft) An aircraft fell on the edge of {$e.place}; all {#$e.value} aboard are dead.
+  ($e.what=reactor) The reactor at {$e.place} has failed; {#$e.value} are dead, and the town is being emptied.
+  ($e.what=habitat) The habitat at {$e.place} was breached; {#$e.value} are dead.
+  ($e.what=tower) A tower being built at {$e.place} fell into the street, killing {#$e.value}.
+  ($e.what=well) The shaft of a new well at {$e.place} collapsed on the diggers; {#$e.value} are dead.
+news.acci.ship
+  ferry from {city}
+  {crop} boat
+  packet boat
+  fishing fleet's biggest boat
+news.acci.x
+  The families are waiting at the gate for news, with {food} and blankets.
+  An inquiry has been promised, and so has compensation, in that order, in {coin}.
+  The owners say everything was done according to the rules, and the rules are being looked at by {news.lookers}.
+  A fund for the families has been opened, and the {craft} guild has given {nbig} {coin}.
+  The bells of {$home} will be rung for them on the rest day, and the dead buried at {deadplace}.
+
+# ---- a price ---------------------------------------------------------------------------------------------------------------------
+news.price
+  {news.h.price}\n{news.price.m} {news.price.x}
+news.h.price
+  ($e.out=1) Prices rise
+  ($e.out=0) Prices fall
+  The price of {news.price.what}
+news.price.m
+  ($e.out=1) The price of {news.price.what} has risen {news.price.by} {season.this}, {news.price.why.up}.
+  ($e.out=0) The price of {news.price.what} has fallen {news.price.by} {season.this}, {news.price.why.down}.
+  ($e.out=1) {news.price.What} is dearer by {#$e.value} in the hundred, and the {news.price.who} say it will go higher.
+  ($e.out=0) {news.price.What} is cheaper by {#$e.value} in the hundred, and nobody can say for how long.
+news.price.what
+  ($e.what=bread) bread
+  ($e.what=salt) salt
+  ($e.what=oil) lamp oil
+  ($e.what=rent) rooms in the town
+  ($e.what=cloth) cloth
+  ($e.what=meat) meat
+  ($e.what=fuel) {fuel}
+  ($e.what=water) water
+news.price.What
+  ($e.what=bread) Bread
+  ($e.what=salt) Salt
+  ($e.what=oil) Lamp oil
+  ($e.what=rent) Rent
+  ($e.what=cloth) Cloth
+  ($e.what=meat) Meat
+  ($e.what=fuel) {fuel}
+  ($e.what=water) Water
+news.price.by
+  ($e.value<15) a little
+  ($e.value>=15 $e.value<35) by a quarter
+  ($e.value>=35) by half
+news.price.why.up
+  the harvest having been poor
+  the carters having raised their charges
+  for no reason anyone will give
+  the {craft} trade buying everything it can
+news.price.why.down
+  the harvest having been good
+  the new road bringing it in from the hills
+  the traders having overbought
+news.price.who
+  bakers
+  shopkeepers
+  dealers
+news.price.x
+  The poor of {$home} will feel it first.
+  The council is asked to fix the price, and has said it will think about it.
+  A loaf at {$home} costs {n} {smallcoin}.
+  The women of the market have their own views, which this paper cannot print.
+
+# ---- a show ------------------------------------------------------------------------------------------------------------------------
+news.show
+  {news.h.show}\n{news.show.m} {news.show.x}
+news.h.show
+  At the theatre
+  A new {news.show.what}
+  ($e.what=pictures|$e.what=statue) The exhibition
+news.show.m
+  (has:$e.a) A new {news.show.what} by {$e.a:full} was given at {$e.place} this week, and {news.show.how}.
+  (has:$e.a) {$e.a:full}'s {news.show.what} has been the talk of {$e.place}; {news.show.how}.
+  The new {news.show.what} at {$e.place} {news.show.how}.
+news.show.what
+  ($e.what=play) play
+  ($e.what=song) song
+  ($e.what=pictures) pictures
+  ($e.what=film) film
+  ($e.what=dance) dance
+  ($e.what=poem) poem
+  ($e.what=statue) statue
+news.show.how
+  the hall was full every night
+  the critics hated it and the audience did not
+  half the audience left and the other half stood
+  nobody can agree what it means, which is said to be the point
+  the {festival} songs will never sound the same
+news.show.x
+  It will be given again at {festival}.
+  Tickets are {n} {smallcoin}, and worth it, this paper thinks.
+  The council has asked to see it first, and then asked to see it again.
+  There is a song in it about {river} that the whole town is already whistling.
+
+# ---- a visit -----------------------------------------------------------------------------------------------------------------
+news.visit
+  (has:$e.a) {news.h.visit}\n{$e.a:full} came to {$e.place} this week, {news.visit.how}. {news.visit.x}
+news.h.visit
+  A visit
+  {$e.a:name} at {$e.place}
+  A royal day
+news.visit.how
+  and was met at the gate by the whole council and most of the town
+  without warning, which caught the council in its shirtsleeves
+  to open the new hall, which was not finished
+  to hear the town's complaints, all of them
+news.visit.x
+  The streets were swept for the first time since {festival}.
+  The children were given a holiday and {food}.
+  The visit lasted a day; the cost will last longer.
+  (has:$e.place.landmark) A tour of {$e.place.landmark} was given, and admired.
+  A {colour.holy} carpet was laid from the gate to {hall}, and the {herd} were kept out of the way.
+news.acci.when
+  in the night shift
+  at the change of shifts
+  {time.of}
+  on the day before {festival}
+news.acci.dig
+  by lamplight
+  with picks and bare hands
+  without rest
+  in shifts of {n}
+news.lookers
+  the council
+  the guild of the {craft} trade
+  a committee of the owners
+  anyone with the time
+)VG"

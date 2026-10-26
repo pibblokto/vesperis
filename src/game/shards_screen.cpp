@@ -1,23 +1,23 @@
 // C-06: the shard decoder on the ship. The shards the explorer took (`Guide::shards`) are read here, at the decoder on the
 // cabin's back wall (or from the flight computer and the guide menu): the worlds they come from, a world's shards by their
 // years, and a shard's text as the ship's computer can read it with the language learnt from that world's shards
-// (`galaxy/shards.h`: `languageShare`, `decodeShard`). C-05: a text shard is a recording that speaks (`galaxy/voice.h`,
+// (`peoples/shards.h`: `languageShare`, `decodeShard`). C-05: a text shard is a recording that speaks (`peoples/voice.h`,
 // `AudioState::speech`): the people's words in the people's voice, and the word being spoken is marked under the text. A
 // shard the computer has not read at the language's current share resolves its words as they are spoken, the end of the
 // recording reads it (Enter skips to the end, Esc leaves it unread); the guide keeps the count it was read with (`decoded`),
 // so a shard re-read after more of its world were found decodes again with fewer gaps. A word not learnt yet shows dim, in
-// the people's own tongue; a name amber; a word read white. C-04: a shard that is a piece of music (`galaxy/music.h`) plays
+// the people's own tongue; a name amber; a word read white. C-04: a shard that is a piece of music (`peoples/music.h`) plays
 // here through the synth (`AudioState::piece`) with its notes drawn as a roll the playhead crosses, the tradition's
 // scale, cycle and timbres named above it; N names the piece (the guide's `names`, keyed like the shard); a piece heard
 // is recorded as read at the world's full count, so it never waits again. The ship's hum is ducked under either. C-10: a
-// shard that is a star chart (`galaxy/charts.h`) draws itself here beside its caption: the hemisphere of the people's sky
+// shard that is a star chart (`peoples/charts.h`) draws itself here beside its caption: the hemisphere of the people's sky
 // round the star they marked, their figures and their names (words of the language, resolving as it is learnt); a first
 // reading draws it over a few seconds; Enter targets the marked star and O holds the chart up to the sky (`drawChartOverlay`).
 // H-06: a world's records on three pages (Tab): the records by their years with their kinds (Left/Right shows one kind), the timeline of
 // the people's eras with the records held on it, and the history as the records read so far tell it (game/history_screen.cpp).
 #include "game.h"
 #include "ui.h"
-#include "galaxy/records.h"   // H-05: the media
+#include "peoples/records.h"   // H-05: the media
 #include "core/rng.h"
 #include <cstdlib>
 #include <algorithm>
@@ -30,17 +30,21 @@ const int SHARD_ROWS = 15;   // a world's shards per page (H-06: under the pages
 int bodyOfKey(const std::string& key) { size_t sl = key.find('/'); return sl == std::string::npos ? -1 : atoi(key.c_str() + sl + 1); }
 }
 
+// C-13: of that people's fifty (C-14: the explorer's own and the lent)
 int Game::shardsHeldOf(const std::string& key, int which) const {   // C-13: of that people's fifty; C-14: the explorer's own and the lent
     std::string prefix = key + "/S"; int n = 0;
     for (const std::string& k : guide.shards) if (k.compare(0, prefix.size(), prefix) == 0 && shardPeopleOf(atoi(k.c_str() + prefix.size())) == which) n++;
     return n + lentOf(key, which);
 }
+// C-14: how many of that people's fifty are lent and not taken
 int Game::lentOf(const std::string& key, int which) const {   // C-14
     std::string prefix = key + "/S"; int n = 0;
     for (const std::string& k : guide.lent) if (k.compare(0, prefix.size(), prefix) == 0 && shardPeopleOf(atoi(k.c_str() + prefix.size())) == which && !guide.shards.count(k)) n++;
     return n;
 }
+// C-14: the open people's shard is a friend's (lent by the inbox, not taken since)
 bool Game::shardLent(int local) const { return guide.isLent(heldShardKey(local)); }
+// C-14: a piece's name, the explorer's own or the inbox's (`foreign`); null when none
 const std::string* Game::shardNameOf(const std::string& key, bool& foreign) const {
     foreign = false;
     auto it = guide.names.find(key);
@@ -49,8 +53,11 @@ const std::string* Game::shardNameOf(const std::string& key, bool& foreign) cons
     if (it != guide.inbox.end()) { foreign = true; return &it->second; }
     return nullptr;
 }
+// C-13: the guide's key of the open people's shard (its world index)
 std::string Game::heldShardKey(int local) const { return shardWorld.key + "/S" + std::to_string(shardWorld.base + local); }
+// C-13: the open people's record in `Guide::ended` (the second people's under "/P1")
 std::string Game::endedKey() const { return shardWorld.key + (shardWorld.which ? "/P1" : ""); }
+// C-13: the world's name, and the people's where the world had two
 std::string Game::shardWorldTitle(int maxName) const {
     std::string name = upper(worldNameOfKey(shardWorld.key));
     return shardWorld.peoples > 1 ? trunc(name, 18) + " - THE " + trunc(upper(shardWorld.lore.people), 9) : trunc(name, maxName);
@@ -64,6 +71,7 @@ std::string Game::worldNameOfKey(const std::string& key) const {   // the explor
     return "UNKNOWN";
 }
 
+// C-06: a shard the decoder has not read at its world's current share (the decoder's screen glows)
 // a shard the guide holds that the computer has not read at its world's current share
 bool Game::shardsPending() const {
     std::map<std::string, int> held;   // C-13: per world and people; C-14: the lent count with the own
@@ -78,6 +86,8 @@ bool Game::shardsPending() const {
     return false;
 }
 
+// C-07: a world's shards, language, voice and tradition, for the decoder and the radar alike (H-04: `wait` false: not until its records are
+// written, on a thread)
 // the world's system from its key, its lore, its fifty and its language; kept while the same world is read
 // C-07: a world's shards, language, voice and tradition built for the decoder or the radar (the key is the caller's)
 bool Game::buildShardWorld(ShardWorld& w, const Star& s, int bi, int which, bool wait) {
@@ -108,6 +118,7 @@ bool Game::buildShardWorld(ShardWorld& w, const Star& s, int bi, int which, bool
     return true;
 }
 
+// H-04: the decoder's worlds list asks for the selected world's records early
 void Game::prefetchShardWorld(int sel) {
     if (sel < 0 || sel >= (int)shardWorldKeys.size()) return;
     const std::string& key = shardWorldKeys[sel];
@@ -188,6 +199,7 @@ void Game::markShardRead() {
     audio.beep = 1;
 }
 
+// C-18: `shardWorldKeys` and the rest from the guide, the cursor kept on its world
 // C-13: an entry a people whose shards are held; a world of two peoples names each (its system generated once here, so a world of two is
 // named as such from the first shard of either). C-18: listed again when the guide holds more while the decoder is open (the drones dock),
 // the cursor kept on its entry
@@ -222,6 +234,7 @@ void Game::listShardWorlds() {
     if (shardWorldSel >= (int)shardWorldKeys.size()) shardWorldSel = 0;
 }
 
+// C-18: `shardHeld` of the open world, the cursor kept on its record
 // the open world's shards held (C-13: its people's; C-14: the explorer's own and the lent, each once), in the order of their years. C-18:
 // listed again as the drones bring more, the cursor kept on its record
 void Game::listShardsHeld() {
@@ -288,6 +301,8 @@ void Game::openShard(int sel) {
     shardsLevel = 2;
 }
 
+// H-04: a long text in pages (the words' places on the screen and where each page starts); the voice speaks the page on the
+// screen (the opening first), from `speechFrom` (the first of its words) to `speechTo`
 // H-04: the shard on the screen in pages: the words laid out at the text's width as they read at this share (a word read as ours, one
 // not learnt in their tongue), a paragraph on a new line a little lower, a page where the text area is full; a page begins at a
 // paragraph or a sentence where one is near (`shardPageStart`); the screen flows a page's words as they are shown in the frame
@@ -568,10 +583,12 @@ void Game::renderShards() {
     }
 }
 
+// a record of the kind the records' page shows
 bool Game::shardInFilter(int local) const {
     if (shardsFilter == 0 || local < 0 || local >= (int)shardWorld.shards.size()) return true;
     return recordKindOf(shardWorld.shards[local]) == shardsFilter - 1;
 }
+// the cursor to the next record held of the kind shown (stop: a single step stops at the ends too)
 // dir +-1: the next record held of the kind the records' page shows, round from the end; more (or `stop`, R-417's run): that many on,
 // stopping at the end
 void Game::stepShard(int dir, bool stop) {
@@ -609,6 +626,7 @@ int Game::shardRunSteps(const Input& in, double realDt, bool leftRight) {
     shardRun.acc -= steps;
     return dir * steps;
 }
+// a record as the list names it ("A LETTER: ...", a piece's form, a chart's caption)
 // a record as the lists name it: a piece by its name once given (C-14: or a friend's), else its form and length; a text, or a chart's caption,
 // in the words the computer last read it with (an unread one all in the people's tongue)
 std::string Game::recordSummary(int idx, int maxChars) const {
@@ -768,28 +786,6 @@ void Game::renderPiece() {
         drawText(canvas, 12, UH - 22, fmt("THE PIECE ENDED   %d NOTES IN %d CYCLES", (int)P.notes.size(), P.cycles).c_str(), HUD_GREEN);
         drawTextCentered(canvas, UW / 2, UH - 10, "ENTER PLAYS IT AGAIN  N NAME  LEFT/RIGHT  ESC BACK", HUD_DIM);
     }
-}
-
-std::string Game::testShardsInfo() const {
-    int read = 0; for (const DecodedWord& w : shardWords) if (w.known) read++;
-    std::string piece;
-    if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].music)
-        piece = fmt("; piece: %s, %.0f s, %zu notes, beat %.1f of %.0f, %s", PIECE_FORM_NAMES[shardWorld.piece.form], shardWorld.piece.seconds, shardWorld.piece.notes.size(), pieceBeatNow(), shardWorld.piece.beats,
-                    pieceEnded() ? "ended" : (piecePaused ? "paused" : (audio.piece ? "playing" : "stopped")));
-    std::string speech;   // C-05
-    if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && !shardWorld.shards[shardHeld[shardSel]].music)
-        speech = fmt("; speech: %.1f of %.1f s, word %d, %s", speechT >= 0 ? speechT : 0.0, shardWorld.speech.seconds, speechT >= 0 ? speechWordAt(shardWorld.speech, speechT) : -1,
-                     speechT < 0 ? "stopped" : (speechEnded() ? "ended" : (speechPaused ? "paused" : "speaking")));
-    int lentN = 0; for (int i : shardHeld) if (shardLent(i)) lentN++;   // C-14
-    std::string page = shardsLevel == 2 && shardPageStart.size() > 1 ? fmt(", page %d of %zu", shardPage + 1, shardPageStart.size()) : std::string();   // H-04
-    return fmt("decoder: level %d, %zu worlds, %zu held of %s (people %d of %d, %d lent), shard %d: %d of %zu words read%s, %s%s%s", shardsLevel, shardWorldKeys.size(), shardHeld.size(), shardWorld.valid ? shardWorld.key.c_str() : "-", shardWorld.which + 1, shardWorld.peoples, lentN,
-               shardSel, read, shardWords.size(), page.c_str(), shardFresh ? fmt("decoding %.0f%%", 100 * clampd(speechT / std::max(shardWorld.speech.seconds, 1e-9), 0, 1)).c_str() : "idle", speech.c_str(), piece.c_str());
-}
-
-bool Game::testShardsOpenIndex(int idx) {
-    if (shardsLevel != 1 || !shardWorld.valid) return false;
-    for (size_t i = 0; i < shardHeld.size(); i++) if (shardHeld[i] == idx) { openShard((int)i); return true; }
-    return false;
 }
 
 // C-10: the star charts on the decoder and held up to the sky are game/chart_draw.cpp's (H-05)

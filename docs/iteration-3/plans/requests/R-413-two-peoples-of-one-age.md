@@ -1,6 +1,6 @@
 # R-413: the two peoples of a world of one age
 
-status: done 2026-10-11 (uncommitted)
+status: done 2026-10-11 (released in 1.3.0)
 milestone: 1.3.0 (after C-18; with C-18's case a folder each people, the same message's other answer)
 
 ## Request

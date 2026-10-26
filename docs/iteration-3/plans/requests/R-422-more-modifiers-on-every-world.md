@@ -1,6 +1,6 @@
 # R-422: more modifiers on every world, and more kinds of them
 
-status: planned 2026-10-21 (block Q of `docs/ideas/ITERATION-1.4.0.md`: Q-01 to Q-03); Q-01 done 2026-10-22 (the six slots, the ten facts, the
+status: done 2026-10-22 (block Q of `docs/ideas/ITERATION-1.4.0.md`: Q-01 to Q-03, planned 2026-10-21); Q-01 done 2026-10-22 (the six slots, the ten facts, the
 eleven landforms and their sights, the karst on the acidic worlds); Q-02 done 2026-10-22 (sixteen traits of the water, the sky, the life and the
 ground, the tides among them); Q-03 done 2026-10-22 (the sounds of the ground: singing dunes, singing ice, quakes): the block's thirty traits done
 milestone: 1.4.0

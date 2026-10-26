@@ -223,11 +223,13 @@ src/core      math, hashing, noise, 8-bit framebuffer + palette + smoothing filt
               scanline rasteriser with depth buffer, 5x7 font, PNG writer, input
 src/galaxy    star field and star classes, system generator, the planet function,
               drainage, landmarks and maps
+src/peoples   the peoples that lived on some worlds: their histories, towns, buildings and ruins,
+              records and their grammar, music and signals
 src/space     star field, suns, ray-traced globes and rings, sky bodies
 src/surface   landing site geometry, terrain caches, sky, terrain, water, objects, life
 src/game      state machine, autopilot, HUD, menus, save/load, audio synthesis
 src/platform_raylib.cpp   window, input and audio via raylib
-src/main_headless.cpp     tests and screenshot generation without a window
+src/harness/              vesperis_test: tests and screenshots without a window (`vesperis_test help`)
 docs/         development notes: bug reports, plans, reference notes
 ```
 

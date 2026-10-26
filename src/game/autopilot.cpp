@@ -1,6 +1,6 @@
 // The Stardrifter: remote and local targeting, Vimana flight, fine approach, parking.
 #include "game.h"
-#include "galaxy/plan.h"
+#include "peoples/plan.h"
 #include "ui.h"
 #include "core/rng.h"
 #include <cstdlib>
@@ -70,6 +70,9 @@ void Game::lockRemoteTarget() {
 // aim names and locks its stars
 Vec3 Game::aimDirection() const { return normalize(viewBasis().transposed() * Vec3(0, 0, 1)); }
 
+// R-407: a jump of any length along the aim: in the aim (R) the digits typed make the distance in light years (`jumpDigits`,
+// to JUMP_MAX_LY), Enter jumps: the star nearest the line's end (galaxy/starfield.h's `jumpTarget`) becomes the remote target
+// and the Vimana flies at once. The console's JUMP runs one along the ship's nose
 // R-407 (the user's request of 2026-10-07: "fly stardrifter in any direction you want for any number of light years ... break the
 // loop with just saying 'now I jump 400 light years in that direction' and boom"): the star nearest the end of the line becomes the
 // remote target and the Vimana flies at once; where the end lies in the void the jump comes back along the line to the first stars.
@@ -78,6 +81,11 @@ void Game::startJump(double ly, const Vec3& dir) {
     if (plotJump(ly, dir, false)) flyJump();
 }
 
+// G-06: a jump plotted before it is flown (the galaxy chart's Enter plots, its second Enter flies; the aim and the console's JUMP do
+// both at once): the star nearest the line's end made the remote target, the line remembered for the log (its length and way, how
+// far short of its end the void sent it, where from, whether the chart plotted it). The flight's start logs the JUMP line
+// (`toggleVimana`, so V flies a plotted target the same way); any other target forgets it (`setRemoteStar`)
+// false when refused (in a flight, no star along the line, the current star); D-02: `place` a drifter the chart snapped to
 bool Game::plotJump(double ly, const Vec3& dir, bool onChart, const Star* place) {
     if (ship.mode == ShipState::VIMANA) { status("CANNOT JUMP DURING VIMANA FLIGHT", 3); audio.beep = 3; return false; }
     ly = clampd(ly, 1, JUMP_MAX_LY);
@@ -95,6 +103,7 @@ bool Game::plotJump(double ly, const Vec3& dir, bool onChart, const Star* place)
     return true;
 }
 
+// the plotted jump flown (the Vimana and its status)
 void Game::flyJump() {
     const double ly = jumpPlot.ly, shortLy = jumpPlot.shortLy;
     toggleVimana();   // the JUMP line
@@ -137,6 +146,7 @@ int Game::pickBodyNearCrosshair() {
     return bestD < 18 * FB_SCALE ? best : -1;
 }
 
+// 3.5 radii; outside the rings; 12 radii for a comet (N0-01)
 // N0-01: a comet is parked at 12 nucleus radii, where its jets and the root of the tail are in view
 double Game::parkDistanceFor(const Body& b) {
     return b.radiusKm * (b.type == PT_COMET ? 12.0 : (b.rings ? std::max(3.5, b.ringOuter + 1.3) : 3.5));
@@ -185,11 +195,13 @@ bool Game::pickBeltRock(int k, double at, int64_t& ir, int64_t& ia, int64_t& iy,
     return best > 0;
 }
 
+// the target's or the parking place's rock at the current time
 bool Game::beltRockNow(BeltRock& rk) const {
     int k = ship.parkedBelt >= 0 ? ship.parkedBelt : ship.targetBelt;
     return sys.beltRockAt(k, ship.rockIr, ship.rockIa, ship.rockIy, ship.rockM, t, rk);
 }
 
+// the parking point beside that rock
 Vec3 Game::beltParkPos(double at) const {
     BeltRock rk;
     int k = ship.parkedBelt >= 0 ? ship.parkedBelt : ship.targetBelt;
@@ -200,6 +212,7 @@ Vec3 Game::beltParkPos(double at) const {
     return rk.pos + dir * ship.rockDist;
 }
 
+// the body's or the belt's name
 std::string Game::localTargetLabel() const {
     if (ship.targetBelt >= 0 && ship.targetBelt < (int)sys.belts.size()) return beltNameOf(ship.targetBelt);
     if (ship.localTarget >= 0 && ship.localTarget < (int)sys.bodies.size()) return bodyLabelOf(ship.localTarget);

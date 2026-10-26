@@ -1,0 +1,268 @@
+R"VG(
+# sunletter.vg (D-05): the letters to the sun, a drifter's people's (`@cast writer`): pleading and bargaining while it dims (`dark` 1), afraid
+# and telling it the news while it goes (2), remembering it from the halls below, a star at noon (3); in each age's way. Each people its own
+# openings and closings; the sentences between built of parts, so a people that wrote to it all through a long dark never writes one twice.
+@apart
+
+genre.sunletter (words=28..200)
+  (6) {@cast writer}{sl.open}\n{sl.body}\n{sl.close}
+  (1) {@cast writer}{sl.open}\n{sl.body}\n{sl.more}\n{sl.close}
+
+sl.body
+  (3 dark=1) {sl.plea} {sl.miss}\n{sl.bargain}
+  (2 dark=1) {sl.miss} {sl.news1} {sl.plea}
+  (2 dark=1) {sl.scold} {sl.bargain} {sl.plea}
+  (2 dark=1) {sl.child} {sl.miss}\n{sl.plea}
+  (2 dark=1) {sl.news1}\n{sl.bargain} {sl.scold}
+  (3 dark=2) {sl.news2} {sl.fear}\n{sl.plea}
+  (2 dark=2) {sl.fear} {sl.news2} {sl.miss}
+  (2 dark=2) {sl.scold} {sl.news2}\n{sl.fear}
+  (2 dark=2) {sl.news2} {sl.child}\n{sl.fear}
+  (3 dark=3) {sl.below} {sl.memory}\n{sl.stars}
+  (2 dark=3) {sl.memory} {sl.below}
+  (2 dark=3) {sl.stars} {sl.memory}
+  (2 dark=3) {sl.child} {sl.below}\n{sl.stars}
+  (2 dark=3) {sl.memory}\n{sl.stars} {sl.miss}
+  (1 dark=3) {sl.below}\n{sl.miss} {sl.stars}
+sl.more
+  (dark<=2) {sl.miss}
+  (dark<=2) {sl.scold}
+  (dark=3) {sl.memory}
+  (dark=3) {sl.stars}
+
+# ---- the opening: each people its own few, by the age and the thing it was made on
+
+sl.open (formula people=4)
+  (age=medieval) To the sun, from {$me:name} of {$home}, greeting.
+  (age=medieval) Sun, I write to you because the priests will not.
+  (age=medieval) To you who stood over {$home} at noon, from {$me:name}:
+  (age=medieval dark>=2) To the sun, wherever it has gone, from {$me:name} at {$home}.
+  (age=medieval medium=tablet) Pressed in clay for the sun, by {$me:name} of {$home}:
+  (age=medieval) Sun, {$me:name} again, who wrote to you [at {festival}|in the spring|last year], and had no answer.
+  (age=industrial medium=printed) An open letter to the sun, printed at the request of our readers, from {$me:name} of {$home}.
+  (age=industrial medium=cylinder) Sun. This is {$me:name}, speaking into the machine at {$home}, for you.
+  (age=industrial medium=cylinder) Are you listening, sun? It is {$me:name}, at {$home}.
+  (age=industrial) Dear Sun,
+  (age=industrial) Dear Sun, forgive the [paper|ink|hand]; it is cold in {$home}.
+  (age=modern medium=reel|medium=disc) Hey. It's {$me:name}, at {$home}. I know you can't hear this.
+  (age=modern medium=reel|medium=disc) This is {$me:name}, recording at {$home}, for the sun.
+  (age=modern medium=printed) To the sun: a letter from {$me:name} of {$home}, which the paper agreed to print.
+  (age=modern medium=drive) To the sun. Not sent. From {$me:name}, {$home}.
+  (age=modern) Sun,
+  (age=modern) Sun, it's {$me:name}. [Again.|Hi.|Don't laugh.]
+  (age=futuristic) To the primary, unsent: from {$me:name}, {$home}.
+  (age=futuristic) A message to the sun, addressed to its last place in the sky, from {$me:name}.
+  (age=farfuture) To the light that was ours, from {$me:name}, who still says its name.
+
+# ---- asking it back
+
+sl.plea (share=0.8)
+  Come back nearer. We will light the fires on the hills every night if you do.
+  Stand where you stood. We ask [nothing else of you|no more than that|only that].
+  Whatever we did, [tell us|let us know], and we will [undo it|make it right|never do it again].
+  Look at us once more at noon, the way you used to over the {crop}.
+  Turn round. You have only to [turn round|look back|stop].
+  The {bird} have not given up on you. Neither have we.
+  Come back by {festival}, and we will not mention any of this.
+  (dark=2) If you cannot come back, then stay where you are. Do not go any further.
+  (dark=2) Wait for us. Wait at least until the children are grown.
+  (dark=2) Leave us a little of you, enough to [grow the {crop}|warm the {herd}|see each other's faces] by.
+  (age>=industrial) Whatever the astronomers say, I am asking you plainly: come back.
+  (age>=industrial) We do not need much of you. A summer. Half a summer.
+
+# ---- what it is missing, what we miss
+
+sl.miss (share=0.8)
+  (dark<=2) The {herd} stand in the yard at noon and look up, as if [waiting for you|you owed them something|they had lost you too].
+  (dark<=2) The {crop} came up thin and white {season.this}, and did not ripen.
+  You missed {festival}. We kept it in the dark, and [nobody sang well|the songs were short|the fires were small].
+  (dark<=2) The children ask why the days are so short. I tell them you are tired.
+  (dark<=2) {river} froze to its bed {season.this}, and the mills stood still.
+  The {tree} by the door has not put out a leaf since [the year before last|you began to go|the first short summer].
+  (dark<=2) The {bird} sit in the [rafters|eaves|bare trees] all day and do not sing.
+  Nobody goes to {holyplace} at noon any more; there is nothing [to go for|there now|to see].
+  (dark=3) Nobody here has seen [a shadow|their own shadow|a shadow on the ground] in {#darkyears|year}.
+  (dark=3) We have forgotten how to [squint|shade our eyes|sit in the shade].
+  (dark=3) The fields are under the snow of the air, and the [ploughs|carts|tools] are [rusting|frozen|lying] where they stood.
+  (dark=3) The doorways up there are drifted to the [lintels|roofs|upper windows] with the air's snow.
+  (age>=industrial) The glasshouses are lit all day, and the {crop} still does not believe them.
+
+# ---- bargaining (while it dims)
+
+sl.bargain (share=0.8)
+  We will give you the first of the {crop}, all of it, every year.
+  We will {rite.imp} every day, instead of once a year.
+  Take {mountain} if you want it. Leave us the [summer|warm months|light].
+  Take the {herd}. Take the {crop2}. Leave us the light.
+  Take {river}, from its springs to {sl.water}, and leave us the summer.
+  We will build you a house on the highest hill, with a door facing the way you used to rise.
+  (age=medieval) The priests say you want a gift. Tell us which, and it is yours.
+
+# ---- scolding it
+
+sl.scold (share=0.8)
+  You were not meant to [leave|go|wander off]. Nobody asked you to.
+  What did {sunway.thing} offer you that we could not?
+  We trusted you more than {god}, and more than [each other|our own eyes|the ground].
+  You stood over our mothers and their mothers, and now you go like a guest who forgot to say goodbye.
+  You could at least have gone in the summer, when we could have watched you go.
+  (age>=modern) You could have warned us. You warned nobody.
+  (dark=2) You are smaller than my thumbnail now. I hope you are ashamed.
+  (dark=2) I held up a {sl.small} today and hid you behind it. That is all you are now.
+
+# ---- the news while it dims (dark 1)
+
+sl.news1 (share=0.8)
+  The summer came late again this year, and left [early|before the {crop} was in|in the middle of the harvest].
+  The harvest froze in the fields [before it was in|in a single night|with the reapers standing in it].
+  The watchers say {sunway.what}, and nobody can stop it.
+  (sunway=wanderer|sunway=intruder) {sunway.thing} is brighter every year, and you are smaller.
+  (sunway=dark|sunway=dance) {sunway.thing} is [nearer|plainer|stranger] every year, and you are smaller.
+  We had snow at {festival}, which nobody living had seen.
+  The {herd} went into the byres at midsummer and would not come out.
+
+# ---- the news while it goes (dark 2)
+
+sl.news2 (share=0.8)
+  (desert=0) The sea froze from the shore {season.this}; the boats are in the ice.
+  (desert=0) The sea is white now, to the edge of the sky.
+  (desert=1) The wells froze in their stones, all of them in [one night|one week|a single cold month].
+  The air itself is falling as snow. We did not know [the air could fall|air was a thing that could freeze|the sky could come down like that].
+  We are taking the children down to {hall.below} [tomorrow|before the next dark|this week].
+  (sunway=wanderer|sunway=intruder|sunway=dance) {sunway.thing} is brighter than you now, even at noon.
+  (sunway=dark) The stars round {sunway.thing} are bent like [reeds in a stream|light in water|a reflection], and you are among them now.
+  At noon now it is like [dusk|evening|lamp-lighting], and at dusk it is night.
+  The {herd} are dead, all but [two|a few|the old ones], which we keep inside.
+  {river} is ice to the bottom, and we [cut it for water|melt it in pots|break it with picks].
+  (age>=industrial) The trains stopped running [last month|in the autumn|this week]; the lines are buried.
+
+# ---- being afraid (while it goes)
+
+sl.fear (share=0.8)
+  I am afraid of the last noon, when you will be one star among the others and I will not [know which|be able to find you|know where to look].
+  The old cannot keep warm. We have buried more of them {season.this} than in ten years before.
+  If this is the last letter, it was written in the cold, by {kept.light}.
+  I dream that you come back, and wake, and it is dark, and I know it will [be dark|stay dark|always be dark].
+  My hands shake [writing this|as I write|holding the pen], and it is not only the cold.
+  The [quiet|stillness|silence] is the worst of it. Nothing moves [outside|up there|in the streets], not even the air.
+  (age>=industrial) The coal will not last. Nothing we have will last as long as the dark.
+
+# ---- the halls below (once it is gone): where, and what it is like
+
+sl.below
+  (3) {sl.be.where}. {sl.be.like}
+  {sl.be.like} {sl.be.eat}
+  {sl.be.where}, {sl.be.how}.
+  (0.5 age>=futuristic) The levels are kept at the old [temperatures|seasons|hours], as if you were still up there.
+  (0.5 age=medieval) The priests have moved {holyplace} down to {warm.ground}. It does not [suit it|sound the same|feel holy].
+  (0.5 age>=industrial) The [fans|pumps|heaters] run day and night, and we have stopped hearing them.
+sl.be.where
+  We live in {hall.below} now, by {warm.ground}
+  We are all in {hall.below} now, those of us that are left
+  Home is {hall.below} now, as near to {warm.ground} as the rock allows
+  We came down to {hall.below} [after the last sunrise|the year the sea froze|when the air fell], and stayed
+  The whole of {$home} lives under the ground now, round {warm.ground}
+sl.be.how
+  and it is warm enough
+  and the children sleep nearest the warm
+  and nobody goes up except to bury the dead
+  and the water runs warm out of the rock
+  and we have stopped counting days
+sl.be.like
+  It is warm enough. It is not you.
+  The halls are warm near {warm.ground} and cold everywhere else, so we live close together.
+  Nobody goes up any more except to bury the dead, and they come back quickly.
+  We sleep in rows, the youngest nearest {warm.ground}.
+  The water runs warm from the rock down here, and we [drink it, and wash in it, and are glad of it|bless it every morning|sit by it to talk].
+  The children have [pale|grey|night] eyes, and they see better in the dark than we do.
+sl.be.eat
+  We eat {dark.food}, grown in the warm by {kept.light}.
+  The {crop} will not grow down here, so we grow {dark.food} instead.
+  There is {dark.food} again for supper, and nobody complains.
+  We keep [two|four|a few] {herd} in the deepest hall, for the milk and for the children to see.
+
+# ---- remembering it (once it is gone): who remembers, and what
+
+sl.memory
+  (5) {sl.me.who} {sl.me.what}
+  (0.7) It has been {#darkyears|year} since you rose. [The children born since think you are a story|The young ones think we made you up|Half of us never saw you at all].
+  (0.6) We still count [the years|the summers|the days] by you, though [there is nothing left to count them by|you are not there to count them|nobody up there keeps them].
+  (0.5 age>=industrial) We have [pictures|paintings|plates] of you. They are not you.
+sl.me.who
+  My mother said
+  My father used to say
+  The old ones tell the children
+  I remember, though nobody believes me,
+  My grandmother swore
+  We tell the children
+  The children are told
+sl.me.what
+  that you were warm on the face, like a hand.
+  that the {crop} was gold when you were high over it.
+  that you made the {river} too bright to look at.
+  that at noon the shadows were short and black, and you could stand on your own.
+  that a whole day could pass without a lamp.
+  that you were too hot to work under, and they lay under the {tree} and complained.
+  that the {bird} sang for you every morning, before anyone was up.
+  that you turned the evening red over {mountain}.
+  that you dried the washing in an hour.
+
+# ---- you, a star among the stars (once it is gone): when we look, and what we see
+
+sl.stars
+  (5) {sl.st.when}, {sl.st.what}.
+  (0.6) [You are a star now|Now you are one star of many|You are only a star], [brighter than the others|a little brighter than the rest|the brightest low over {mountain}], and [no warmer|no warmer than they are|as cold].
+  (0.6) [Somewhere|Up there] in the stars over {$home} is you; the children [take turns guessing which|argue over which one|have each chosen their own].
+  (0.5 sunway=wanderer) {sunway.thing} took you away and [stays near you still|keeps you company]; [we can see you both|the two of you show], two lights among the others.
+sl.st.when
+  At noon, when the doors are opened to the air
+  When I go up to bury our dead
+  From the top of the stair, where the cold begins
+  On the day we still call midsummer
+  When the children ask to see you
+  Every year on the day of the last sunrise
+sl.st.what
+  I look for you among the stars, and I think I find you
+  I say your name to the bright one over {mountain}
+  the watchers point you out, low over {mountain}, and I pretend to see
+  you are there, a little brighter than the rest, and no warmer
+  I stand until my face hurts, looking at the star that was you
+  I find you, or a star like you, and I tell you what has happened
+  the children wave at a star, and I let them think it is you
+
+# ---- the children's words (the writer's own child where the history gives one)
+
+sl.child (share=0.8)
+  (has:$child) {$child:name} asks me to write that you can have the blue cup, if you come back.
+  (has:$child) {$child:name} has drawn you on the wall, round, with lines coming out of you. That is how the children draw you now.
+  (has:$child) {$child:name} says you are only hiding behind {mountain}, and will come out when we stop looking.
+  The children ask after you [every evening|at every meal|before they sleep], and I tell them you are still there, [further off|only further away|a long way off].
+  The youngest have never seen you, and they ask [what you were for|whether you were kind|why we talk about you so much].
+  The children play at being you: one [stands in the middle|holds the lamp] and the others go round, [further and further off|slower and slower|until they let go].
+
+# ---- small things; the sea or the lake a river reached
+
+sl.small
+  coin
+  seed
+  button
+  fingernail
+  bead
+sl.water
+  (coast=1) {sea}
+  (coast=0) the lake
+  (coast=0) the marshes
+
+# ---- the close: each people its own few
+
+sl.close (formula people=4)
+  Come back. {$me:name}.
+  Yours, at {$home}, who waits: {$me:name}.
+  Written at {$home} by {kept.light}, by {$me:name}.
+  (dark=3) From under the ground, {$me:name}.
+  (age=medieval) {god.call}, and come back. {$me:name}.
+  (age>=modern) That's all. Come back if you can. {$me:name}.
+  (age>=futuristic) End of message. {$me:name}, {$home}.
+  (age=farfuture) Kept for you, as we kept everything. {$me:name}.
+  (dark<=2) Whatever happens, {$me:name}.
+)VG"

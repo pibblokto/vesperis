@@ -1,0 +1,189 @@
+R"VG(
+# sermon_news.vg (H-04; the second pass 2026-10-10): the sermon's register (`@news public sermon`: the year's most salient public event,
+# `$e`, as the preacher takes it up), the history's own kinds; the everyday's are sermon_everyday.vg. The frequent ones (a new ruler, a death,
+# a battle, a work finished) are told in two parts, what happened and what the preacher makes of it, each its own turns. `{=.told}`:
+# the second news of a sermon that finds nothing says nothing (`sermon.none`).
+
+sermon.accession
+  {med.ser.acc.a} {med.ser.acc.b} {=.told}
+med.ser.acc.a
+  We have a new ruler, {$e.a:full}.
+  {$e.a:full} rules us now.
+  (has:$e.a.title) There is a new {$e.a.title} at {$seat}, and it is {$e.a:full}.
+  (gov=monarchy) The crown has gone to {$e.a:full}.
+  {$e.a:full} has taken the rule, and the bells have been rung for it, as they would have been for anyone.
+  So it is {$e.a:full} now, at {$seat}.
+med.ser.acc.b (share=0.45)
+  Pray for {$e.a:obj}. It costs less than a {vessel.one.n} of {drink}, and it may help.
+  Some of you are pleased and some of you are not. {god} is neither.
+  Rulers come and go like {weather}; the {crop} has to be cut either way.
+  (has:$e.a.trait) {$e.a:name} is said to be {$e.a.trait}. We shall find out.
+  We will see what {$e.a:name} is. We always see, in the end.
+  I have nothing to say about {$e.a:name} yet, which is the kindest thing a preacher can say.
+  The {herd} have not noticed, and the {crop} has not noticed. Be like them for a while.
+  Pay the tithe and keep the roads, and let {$e.a:name} worry about the rest.
+  The {craft}-houses of {$home} will want something from {$e.a:obj}; they always do.
+  {$e.a:name} came to {holyplace} once as a child and broke a {vessel.one.n}. I forgive {$e.a:obj}. Let us see if {god} does.
+  Hang the {colour.holy} cloth if you like; take it down by {festival}.
+  The last one promised us {crop}. Let us see what this one promises.
+
+sermon.death
+  {med.ser.death.a} {med.ser.death.b} {=.told}
+med.ser.death.a
+  {$e.a:full} is dead.
+  {$e.a:full} has {death.went}.
+  We have buried {$e.a:full}.
+  {$e.a:full} died this {season.now}, at a great age or not, depending on who you ask.
+  (has:$e.a.trait) {$e.a:full}, who was {$e.a.trait}, is gone.
+  We have lost {$e.a:full}, who sat there, by the post.
+med.ser.death.b (share=0.45)
+  You will all have something to say about it. Say it kindly.
+  Some of you owe {$e.a:obj} money. Pay the family.
+  Look at the empty place, and then look at each other.
+  The dead are {dead.are}. Do not keep {$e.a:obj} waiting with quarrels.
+  We wore {colour.mourn} for {$e.a:obj}. Now take it off and go back to work; {$e.a:name} would have.
+  {$e.a:name} was not easy. Neither are you. {god} loves both.
+  Light a lamp for {$e.a:obj} tonight, and then let the lamp go out, and let {$e.a:obj} go.
+  Whatever you thought of {$e.a:name}, the {med.chr.trades} of {$home} are poorer, and so is the street.
+  {$e.a:name} kept the {craft} going at {$home} through three bad years. That is a kind of prayer.
+  There will be {drink} at the house tonight. Go, and leave early.
+  The {herd} at the house do not know yet. Somebody should feed them.
+  When I was young {$e.a:name} gave me {food} at {festival}, and I have not forgotten, and now I cannot pay it back.
+
+sermon.rulerdeath
+  {med.ser.rd.a} {med.ser.rd.b} {=.told}
+med.ser.rd.a
+  {$e.a:full} is dead.
+  {$e.a:full} has {death.went}, and the bells are going.
+  We have buried {$e.a:full}.
+  (has:$e.a.epithet) {$e.a:full} {$e.a.epithet} is dead, and the name was earned or it was not.
+  The rule is empty at {$seat}: {$e.a:full} is dead.
+med.ser.rd.b (share=0.45)
+  Rulers die like the rest of us; that is the one law nobody wrote.
+  Pray for the next one; they will need it more.
+  I will not tell you what {$e.a:name} was like. You know, and so does {god}.
+  Rulers are buried in {colour.holy} and the rest of us in what we have. The ground does not mind.
+  The {herd} will want feeding tomorrow, ruler or no ruler.
+  {time.pass}. They will pass for {$e.a:name} too, and then nobody will remember the quarrels.
+  The great ones go to {deadplace} like the rest of us, and lie no softer.
+  The {med.chr.trades} have put down their tools for a day. Tomorrow they will pick them up, and so will we.
+  The bells will ring until {festival}, and after that the {crop} will want cutting.
+
+sermon.battle
+  {med.ser.bat.a} {med.ser.bat.b} {=.told}
+med.ser.bat.a
+  ($e.won=1) We won at {$e.place}, they say.
+  ($e.won=1) They are ringing the bells for {$e.place}.
+  ($e.won=0|$e.won=draw) We lost at {$e.place}.
+  ($e.won=0|$e.won=draw) Some of you have sons who did not come back from {$e.place}.
+  There was a battle at {$e.place}, and the field there was {crop} last year.
+  The news from {$e.place} has come, and with it the carts.
+med.ser.bat.b (share=0.45)
+  Count the dead before you count the victory.
+  There is no shame in the dead. There is shame in forgetting them.
+  Ring the bells for both sides; there were mothers on both.
+  It will be {crop} again. That is all the comfort I have.
+  The {bird} were over the field before the carts were. Remember that when they sing about it.
+  Feed the ones who came back, and do not ask them about it.
+  Nobody wins a field. The {crop} does, next year.
+  The carts brought them home along the road to {$home}. Go out and meet the carts.
+  Whoever won, the {herd} of that country were eaten by both armies.
+  Somebody's mother at {city2} is wearing {colour.mourn} tonight, and somebody's here.
+
+sermon.sickness (share=0.8)
+  You know what has come to {$e.place}. I will not name it; you have named it enough. {=.told}
+  The sickness is at {$e.place}, and some of you have stopped coming to {holyplace} for fear of it, and sit at home with the {herd}. Come anyway. {=.told}
+  {$e.sickness} is at {$e.place}. The {med.chr.trades} have shut their doors, and so have the rest of you. Open them to the ones who bring you {food}. {=.told}
+  They are burying at {$e.place} every day. When you pray tonight, say their street, if you do not know their names. {=.told}
+  Some say {$e.sickness} is a judgement. Ask them whose. The children at {$e.place} had judged nobody. {=.told}
+  Wash your hands, boil the {drink}, keep away from {$e.place}, and do not call it faith when it is only fear. {=.told}
+sermon.famine (share=0.8)
+  The stores are low, and some of you have full ones. You know who you are, and so does {god}. {=.told}
+  There is no {crop} in the market, and the {herd} are being sold for nothing. Buy one, and feed a house that cannot. {=.told}
+  (has:$e.place) The children at {$e.place} are eating {med.chr.poor}. I ate {food} this morning. So did you. {=.told}
+  Hunger is a quiet thing. It does not knock. Go and look for it. {=.told}
+sermon.war (share=0.8)
+  We are at war. I will not tell you it is just; I will tell you that our sons are in it. {=.told}
+  The war has come as far as {$e.place}. Lock your doors if you like; open them to the ones who come running. {=.told}
+  They have taken the young men for the war, and the {crop} will be cut by the old. Help them, or eat less this winter. {=.told}
+  {$e.war} began without asking me, and it will end without asking me. In between, we bury. {=.told}
+sermon.harvest (share=0.8)
+  ($e.harvest=rich) The {crop} came in heavy. Do not say you did it. You planted it; that is all. {=.told}
+  ($e.harvest=failed|$e.harvest=poor) The {crop} failed. It is not a punishment. It is the weather. Help each other. {=.told}
+  ($e.harvest=rich) The {vessel} are full and the {herd} are fat. This is the year to pay the debts you have been pretending to forget. {=.told}
+  ($e.harvest=failed|$e.harvest=poor) Thin {crop}, thin {herd}, thin tempers. Be kind; everyone is hungry. {=.told}
+  ($e.harvest=rich) There is {crop} enough this year for everyone in {$home}. If anyone goes hungry, it is not the harvest's fault. {=.told}
+sermon.flood (share=0.8)
+  The water came over {$e.place}. Those who lost their houses are sleeping in this hall tonight, and you will feed them. {=.told}
+  {river} came into the houses at {$e.place}, as it does, and we built there anyway, as we do. {=.told}
+  The flood took the {herd} at {$e.place} and left the mud. Go with {tool} and a strong back. {=.told}
+sermon.drought (share=0.8)
+  No rain. I have prayed for it, and you have prayed for it, and it has not come. Pray anyway, and dig {watersrc.n} deeper. {=.told}
+  The {crop} is standing dead in the fields. If you have water, you have more than your neighbour. {=.told}
+  The dust is in everything, even the bread. {god} has not forgotten us; {god} is only slow. {=.told}
+sermon.quake (share=0.8)
+  The ground shook under {$e.place}. It has always shaken; we built on it anyway. Build again. {=.told}
+  At {$e.place} the {roofs} came down and the walls of {walls.of} with them. Those walls were not your sins. Help lift them. {=.told}
+  The ground is not as steady as we thought. Neither are we. {=.told}
+sermon.omen (share=0.8)
+  You have all seen it in the sky. You want me to tell you what it means. It means the sky is wider than we are. {=.told}
+  ($e.omen=comet) The hairy star is back. The old ones saw it and lived; so will you. {=.told}
+  ($e.omen=eclipse) The sun went dark at noon, and the {bird} went to roost. Then it came back. Remember the second part. {=.told}
+  ($e.omen=redmoon) {moon} was red, and half of you have been to the fortune-teller. Bring me what you paid her. {=.told}
+  ($e.omen=aurora) The lights came down from the north, and the children danced. The children were right. {=.told}
+  ($e.omen=falling has:$e.place) A star fell over {$e.place}. Stars fall. People fall. Help each other up. {=.told}
+  ($e.omen=wanderer 3) You have seen the wanderer grow. You ask whether {god} sent it. {god} sent the summer too, and can take it back. Pray for the summer. {=.told}
+  ($e.omen=intruder 3) There is a new star, and the star-watchers are afraid of it. A star is a lamp. Lamps are lit, and carried off. {=.told}
+  ($e.omen=dance 3) The second sun goes further every year, like a daughter leaving home. Let her go, and keep the hearth. {=.told}
+  ($e.omen=bent 3) The stars have moved out of their places, and you come to me as if I had moved them. Put them back with your prayers. {=.told}
+sermon.sign
+  I will say what nobody says: {$e.sign}. Saying it does not make it worse. {=.told}
+  You all know this: {$e.sign}. We can pretend, or we can prepare. {god} prefers the second. {=.told}
+sermon.exodus
+  Half the street has gone. Those of us who stay must keep the lamps for those who went. {=.told}
+  They have gone from {$e.place} with what they could carry. Some of it was ours, I think. Let it go with them. {=.told}
+sermon.eruption
+  {mountain} has opened, and the ash is on {$e.place}. The fields will be good again in our grandchildren's time. Plant anyway. {=.told}
+sermon.impact
+  A stone fell out of the sky near {$e.place}. If {god} were throwing stones at us, {god} would not miss. Help the ones it hit. {=.told}
+sermon.winter
+  The cold has come and will not go. Burn the {fuel} you were keeping, and burn it together, in one house, to save it. {=.told}
+  The long winter is on us. The old ones say they have seen worse. The old ones are lying, kindly. {=.told}
+sermon.built
+  {med.ser.blt.a} {med.ser.blt.b} {=.told}
+med.ser.blt.a
+  They have finished {$e.work} at {$e.place}.
+  {$e.work} stands at {$e.place} now, after {#$e.value|year} of carrying stone.
+  At {$e.place} there is {$e.work} where there was {crop}.
+  (has:$e.a) {$e.a:full} has finished {$e.work} at {$e.place}, and is pleased with it.
+med.ser.blt.b (share=0.45)
+  Go and look at it, and then come back and look at your neighbours, who are {god}'s work, and older, and smell of {herd}.
+  Remember the ones who carried the stone.
+  It is very fine. So is a roof that does not leak, and nobody rings bells for that.
+  Some of you cut the {walls.of} for it. Your children will tell theirs.
+  It will stand longer than we will. That is what it is for.
+  They roofed it in {material}, and it will need mending by your grandchildren. Leave them something for it.
+  It has {motif.over} over the door, and the {bird} are already nesting in them.
+  Some of the stone came from {mountain} and some from the old {med.hp} of {$home}. Remember both.
+sermon.festival
+  {$e.place} has kept its {#$e.value:ord} year. That is a long time to be stubborn in one place among the {herd}. {god} likes stubborn. {=.told}
+sermon.faith
+  ($e.faith=schism) There are two kinds of us now, they say, praying two ways. {god} hears both and is tired of the arguing. {=.told}
+  ($e.faith=reformed) The rites have been changed at {$e.place}, and some of you are angry. {god} was here before the rites. {=.told}
+  ($e.faith=preached) There is a new teacher at {$e.place}, saying new things. Listen. Then think. Then come back here and tell me. {=.told}
+  ($e.faith=persecution|$e.faith=closed) They are hunting the faithful at {$e.place}. Do not hate them; hide the faithful. {=.told}
+sermon.unrest
+  ($e.unrest=bread) They broke the bakers' windows at {$e.place}. They were hungry. Feed them, and the windows will mend themselves. {=.told}
+  ($e.unrest=strike) The workers at {$e.place} have put down their tools. Whatever you think of it, they have children. {=.told}
+  ($e.unrest=strike) There is no {craft} coming out of {$e.place}; the workers are sitting at home and the masters are shouting. Both are tired. {=.told}
+  ($e.unrest=rising|$e.unrest=riot) There was blood in the streets of {$e.place}. Whoever began it, it is ended now. Let it stay ended. {=.told}
+sermon.migration
+  Half the villages have gone to {$e.place2}. The fields are full of {bird} and the town is full of strangers. {god} sees both. {=.told}
+sermon.peace
+  There is peace. It will not bring back the dead; it will stop us making more. Be glad of that much. {=.told}
+  The war is over. Put the spears in the roof and the boys back in the {crop}. {=.told}
+sermon.contact
+  The {other} have come to {$e.place}. They pray differently and eat differently and their children cry the same. {=.told}
+sermon.otherend
+  Word has come that the {other} are gone. We quarrelled with them for a long time. Now there is no one to quarrel with. Mourn them. {=.told}
+)VG"

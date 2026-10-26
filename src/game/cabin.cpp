@@ -14,26 +14,7 @@
 
 namespace {
 const double CAB_HALF = 2.5, CAB_H = 2.4, EYE = 1.6, CAGE_R = 1.0;
-const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10;
 const double GLASS_SHEEN = 16;   // B-411: the shade of the cabin light on a glass hull
-// R-404 (2026-10-06): every computer in a colour of its own, so the one wanted is found at a glance: by `facing` (6 is
-// the cage, 0 nothing), the bank its screen is drawn in (9 the flight computer's green, 21-27 the others) and its colour;
-// the prompt under the crosshair takes the colour too
-struct ScreenLook { int bank; RGB col; };
-const ScreenLook SCREENS[12] = {
-    {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 0: nothing faced
-    {21, RGB(1.0f, 0.72f, 0.25f)},            // 1 the GOES console: amber
-    {BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f)},   // 2 the flight computer: the green phosphor
-    {22, RGB(0.4f, 0.55f, 1.0f)},             // 3 the star map screen: blue
-    {23, RGB(1.0f, 0.45f, 0.8f)},             // 4 the landing map screen: pink (an orange sat too near the radar's red)
-    {24, RGB(0.3f, 0.95f, 0.9f)},             // 5 the target data screen: cyan
-    {BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f)},    // 6 the capsule cage: no screen
-    {25, RGB(0.75f, 0.45f, 1.0f)},            // 7 the shard decoder: violet
-    {26, RGB(1.0f, 0.35f, 0.3f)},             // 8 the signal radar: red
-    {27, RGB(0.8f, 0.9f, 1.0f)},              // 9 the telescope: ice
-    {28, RGB(0.72f, 1.0f, 0.3f)},             // 10 the instruments' case (C-11): lime
-    {29, RGB(1.0f, 1.0f, 0.45f)},             // 11 the drone bay (C-18): a pale yellow
-};
 const int BANK_DRONE_PAINT = 30;   // C-18: the drones' paint, a light warm grey under the cabin's light
 }
 
@@ -347,21 +328,6 @@ void Game::renderCabinHUD() {
         const RGB& c = SCREENS[cabin.facing].col;   // R-404: the prompt in the computer's own colour
         drawTextCentered(canvas, UW / 2, UH / 2 + 12, txt, cabin.facing == 6 ? HUD_AMBER : rgb((int)(c.r * 255), (int)(c.g * 255), (int)(c.b * 255)));
     }
-}
-
-// R-404: the computers with a colour of their own and the smallest distance between two of them (the cage left out)
-int Game::testScreenColours(double& minDist) const {
-    minDist = 9; int n = 0;
-    for (int i = 1; i <= 11; i++) {
-        if (i == 6) continue;
-        n++;
-        for (int j = i + 1; j <= 11; j++) {
-            if (j == 6) continue;
-            const RGB &a = SCREENS[i].col, &b = SCREENS[j].col;
-            minDist = std::min(minDist, (double)std::sqrt((a.r - b.r) * (a.r - b.r) + (a.g - b.g) * (a.g - b.g) + (a.b - b.b) * (a.b - b.b)));
-        }
-    }
-    return n;
 }
 
 // ---------------------------------------------------------------------------

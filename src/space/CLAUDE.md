@@ -1,8 +1,14 @@
 # src/space: the view from the ship
 
 ## Files
-- `space_view.h/.cpp` (147 KB; read by range): `SpaceRenderer`: stars, the galaxy's band, suns (`drawSun`), globes (`drawGlobe`),
-  rings, belts and the kept backdrop; `mapFor`/`mapIfReady` (a body's map), `DetailPlate` (the near body's plate)
+- `space_view.h` (16 KB): `SpaceRenderer`, `DetailPlate` (the near body's plate); `space_internal.h` what its files share (the
+  band's shades)
+- `space_view.cpp` (30 KB): `render`, the stars, the band and the kept backdrop, the flight band, `mapFor`/`mapIfReady` (a body's
+  map), the season, the palette, `drawSkyBodies`
+- `space_sun.cpp` (26 KB): `drawSun` (by angle), the lens flare, a black hole (`drawBlackHole`)
+- `space_globe.cpp` (57 KB): `drawGlobe`, a world's banks, the screen boxes, the telescope's plate (`updatePlate`, `plateFill`),
+  the lights of a dark world
+- `space_bodies.cpp` (21 KB): a belt's rocks, a companion's accretion stream, a stripped giant's tail, a comet's tails
 - `probe_view.h/.cpp` (60 KB): `ProbeView`, `renderProbeView`: the probe's camera inside a giant, composited over the space frame
 
 ## Rules and traps

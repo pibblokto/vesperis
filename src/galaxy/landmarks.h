@@ -14,7 +14,7 @@
 #include <map>
 #include <utility>
 
-enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK,   // T-03: LM_WORK a people's work (galaxy/works.h)
+enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK,   // T-03: LM_WORK a people's work (peoples/works.h)
                     // Q-01: the new landforms' sights, one each (`landformSight`): a great shield's caldera, a tessera's crest, a labyrinth's floor, a
                     // cluster of hollows, a chain's crater, a field of penitentes, a colonnade, a mud volcano, an old river's ridge, a pingo, a maar
                     LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,
@@ -39,10 +39,6 @@ struct Landmark {
 // the sights of one cell, each kind on its own; `hiH` and `mean` are the cell's scan (its highest sample, its mean height); `lake0` is
 // O6-06's lake (the centroid of every lake cell of the drainage, a playa's too), kept for the legacy pick: the scanner's lake is water
 struct CellSights { bool has[LM_COUNT] = {}; Landmark lm[LM_COUNT]; double hiH = 0, mean = 0; bool hasLake0 = false; Landmark lake0; };
-
-// the cell of a point, the grid's cell size in degrees of latitude
-void landmarkCellOf(const BodyGen& g, const Vec3& unit, int& ci, int& cj);
-double landmarkCellDeg(const BodyGen& g);
 // a cell's sights (cached; deterministic): false when the world has none or the cell lies beyond 80 degrees. `buildTiles` false:
 // the lakes are read from the drainage tiles already built (a verdict without them is not kept)
 bool sightsOfCell(const BodyGen& g, int ci, int cj, CellSights& out, bool buildTiles = true);
@@ -54,12 +50,18 @@ void cellsOfLegacyIds(const BodyGen& g, const std::set<uint32_t>& ids, std::map<
 // the sights of the kinds in `kindMask` (bits of LandmarkKind) of the cells within `radiusM` of a point, each within the radius
 void sightsNear(const BodyGen& g, const Vec3& unit, double radiusM, unsigned kindMask, std::vector<Landmark>& out, bool buildTiles = true);
 // every settlement of the 2 km grid within `radiusM` (as the surface view keeps them); T-01: and
-// the world plan's places heard by their size from farther (a capital from 400 km, a city from 200: galaxy/plan.h)
+// the world plan's places heard by their size from farther (a capital from 400 km, a city from 200: peoples/plan.h)
 void ruinsNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out);
-// T-03: the works the scanner hears within `radiusM` (galaxy/works.h; a line's lesser stretches and a pilgrims' way are not heard): built here
+// T-03: the works the scanner hears within `radiusM` (peoples/works.h; a line's lesser stretches and a pilgrims' way are not heard): built here
 // if the world's works are not yet (the scanner's thread may wait); B-418: the land's works with them
 void worksHeardNear(const BodyGen& g, const Vec3& unit, double radiusM, std::vector<Landmark>& out);
 // the kinds a world can hold (bits of LandmarkKind): the scanner's modes there
 unsigned sightKindsOf(const BodyGen& g);
 int landmarkCellsSearched();                // tests: how many cells were searched (not served from the cache) so far
 double landmarkScanMs(int part);            // tests: time spent so far in the cells' scan (0), the lake pass (1), the rest (2)
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+
+// the cell of a point, the grid's cell size in degrees of latitude
+void landmarkCellOf(const BodyGen& g, const Vec3& unit, int& ci, int& cj);
+double landmarkCellDeg(const BodyGen& g);

@@ -1,5 +1,6 @@
 // X-01: a probe's fall into a giant (probe.h): the giant's air and the probe's clock.
 #include "probe.h"
+#include "planet_features.h"
 #include "core/rng.h"
 #include "core/noise.h"
 #include "core/parallel.h"

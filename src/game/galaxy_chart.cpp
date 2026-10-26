@@ -188,18 +188,21 @@ Vec3 sectorCentre(const std::string& key) {   // a star key's sector, its middle
 
 }   // namespace
 
+// the view's centre at a level (sector units), before the pixel grid
 void Game::chartCentre(int level, double& cx, double& cz) const {
     if (level == 0) { cx = GALAXY_CENTRE_SX; cz = GALAXY_CENTRE_SZ; return; }   // the whole disc
     if (gchart.follow) { cx = ship.pos.x / SECTOR_KM; cz = ship.pos.z / SECTOR_KM; return; }
     cx = gchart.cx; cz = gchart.cz;
 }
 
+// the view's centre in pixels of its level (the pixel grid anchored in the galaxy)
 void Game::chartView(long long& I, long long& J) const {
     const double s = chartScale(gchart.level);
     double cx, cz; chartCentre(gchart.level, cx, cz);
     I = std::llround(cx / s); J = std::llround(cz / s);
 }
 
+// a place (sector units) on the face, logical pixels; false off the face
 bool Game::chartProject(double sx, double sz, int& px, int& py) const {
     long long I, J; chartView(I, J);
     const double s = chartScale(gchart.level);
@@ -210,12 +213,15 @@ bool Game::chartProject(double sx, double sz, int& px, int& py) const {
 
 // ---- G-06: the next jump chosen on the chart --------------------------------------------------------------------------------------
 
+// the cursor's point (sector units): the ship's while it sits on it
 Vec3 Game::chartCursor() const { return gchart.onShip ? ship.pos / SECTOR_KM : Vec3(gchart.curX, gchart.curY, gchart.curZ); }
 
+// a jump plotted at the cursor, still the remote target
 bool Game::chartPlotted() const {
     return gchart.plotHere && !gchart.onShip && jumpPlot.seed && jumpPlot.onChart && ship.hasRemote && ship.remote.seed == jumpPlot.seed && ship.mode != ShipState::VIMANA;
 }
 
+// the cursor leaves the ship (to the plane unless its height is what moves); a plot lets go
 void Game::chartLetGo(bool height) {
     if (gchart.onShip) {
         const Vec3 s = ship.pos / SECTOR_KM;
@@ -225,6 +231,7 @@ void Game::chartLetGo(bool height) {
     chartUnplot();
 }
 
+// the plot let go (the target stays), its status with it
 void Game::chartUnplot() {
     if (gchart.plotHere && statusMsg.rfind("PLOTTED", 0) == 0) statusUntil = 0;   // its status goes with it
     gchart.plotHere = false;
@@ -245,6 +252,7 @@ void Game::chartEnter() {
     status("PLOTTED - ENTER FLIES, ESC KEEPS IT FOR V", 4);
 }
 
+// N's stops: the locked signals, home, the named stars, the marks, the systems visited (nearest first in each)
 std::vector<Game::ChartStop> Game::chartStops() const {
     const Vec3 ss = ship.pos / SECTOR_KM;
     std::vector<ChartStop> out, g;
@@ -290,6 +298,7 @@ void Game::chartNextStop(int dir) {
     audio.beep = 4;
 }
 
+// the explorer's mark of the galaxy within `px` pixels of a place at the chart's level, -1 none
 int Game::galaxyMarkNear(double sx, double sz, double px) const {
     const double r = px * chartScale(gchart.level);
     int best = -1; double bd = r * r;
@@ -301,6 +310,7 @@ int Game::galaxyMarkNear(double sx, double sz, double px) const {
     return best;
 }
 
+// what the explorer has within four pixels of a place (the first of the kinds)
 Game::ChartThere Game::chartThere(const Vec3& p) const {
     const double r = 4 * chartScale(gchart.level), r2 = r * r;
     auto near = [&](const std::string& key) { const Vec3 v = sectorCentre(key); return (v.x - p.x) * (v.x - p.x) + (v.z - p.z) * (v.z - p.z) <= r2; };
@@ -338,6 +348,7 @@ bool Game::chartDrifterAt(const Vec3& p, Star& out) const {
     return found;
 }
 
+// "SPIRAL ARM, 13,040 LY FROM THE CORE" (and the height over the plane)
 std::string Game::galaxyPlace(const Vec3& p, bool height) const {
     const GalaxyTerms g = galaxyTerms(p.x, p.y, p.z);
     std::string s = std::string(REGION_NAMES[galaxyRegion((int64_t)std::floor(p.x), (int64_t)std::floor(p.y), (int64_t)std::floor(p.z))]) + ", " +
@@ -346,6 +357,7 @@ std::string Game::galaxyPlace(const Vec3& p, bool height) const {
     return s;
 }
 
+// the entry for a new mark at the cursor (-1) or a mark's new name
 void Game::beginGalaxyMark(int mi) {
     if (mi >= (int)guide.galaxyMarks.size()) return;
     textGalaxyMark = mi;
@@ -374,6 +386,7 @@ void Game::finishGalaxyMark(const std::string& name) {
     audio.beep = 1;
 }
 
+// the status over the map's key line (true when one is shown)
 bool Game::drawMapStatus() {
     if (realTime >= statusUntil || statusMsg.empty()) return false;
     blendRectRGB(canvas, 0, UH - 13, UW - 1, UH - 3, rgb(0, 0, 0), 160);

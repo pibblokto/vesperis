@@ -1,7 +1,7 @@
 # Milestones for 1.1.0 and beyond
 
 The ideas in this directory, cut into milestones with ids to reference in requests, bug
-reports and `PROGRESS.md` ("proceed with C-02"). Each item names the section of its
+reports and the log ("proceed with C-02"). Each item names the section of its
 document. Sizes: S (an afternoon), M (a day or two), L (a week), XL (a milestone of its own).
 Order is a suggestion.
 
@@ -10,7 +10,7 @@ Order is a suggestion.
 **Released as 1.1.0 (2026-10-03), generation 11:** G-01 to G-04, S-01 to S-06, C-01 to C-10 and
 C-12 to C-14 (the C series in its own order on the user's call of 2026-10-02: C-01, C-02,
 C-03, C-06, C-04, C-05, C-07, C-08, C-10, C-09, C-12, C-13, C-14), with R-402, R-403 and
-B-403 to B-406 (`docs/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
+B-403 to B-406 (`docs/archive/iteration-3/plans/PROGRESS.md`). Each table below carries a `Status`
 column: `1.1.0`, `1.2.0`, `1.3.0` or `1.3.1` shipped in that release, `1.4.0` is for the next one.
 
 **Released as 1.2.0 (2026-10-07), generation 12:** the iteration `ITERATION-1.2.0.md`: W-01, W-06, W-03,
@@ -35,7 +35,7 @@ user's request of 2026-10-21 (R-421 thirty to fifty new kinds of world, R-422 mo
 radio), the design in `IDEAS-worlds-and-wanderers.md`: sixteen milestones, P-00 to P-07 (the P series re-cut: the old list's
 twelve kinds are in its families), Q-01 to Q-03 and D-01 to D-05, in that order; generation 16 from P-01. All sixteen done 2026-10-23, committed as 92e580a. Added
 the same day, before the release: the E series (`PLAN-reorganisation.md`), E-01 to E-13, the repo made cheaper to read and
-change, nothing generated or drawn moving; E-01 done 2026-10-23, E-02 2026-10-24.
+change, nothing generated or drawn moving; E-01 done 2026-10-23, E-02 to E-08 2026-10-24, E-09 to E-11 2026-10-25.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -265,15 +265,15 @@ milestone's done-when. Every step is proven identical to the binary before it; n
 | --- | --- | --- | --- |
 | E-01 | What every session loads: the memory, the root CLAUDE.md with the map, the directory notes, the guards; the eight tasks measured | M | 1.4.0, done 2026-10-23 |
 | E-02 | The proof kept: fingerprints of every module, `tools/prove`, the almanac's order explicit, a safe `make clean`, `make check`, clangd | L | 1.4.0, done 2026-10-24 |
-| E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | 1.4.0 |
-| E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | 1.4.0 |
-| E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | 1.4.0 |
-| E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | 1.4.0 |
-| E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | 1.4.0 |
-| E-08 | The views: surface_view and space_view split | L | 1.4.0 |
-| E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | 1.4.0 |
-| E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | 1.4.0 |
-| E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | 1.4.0 |
+| E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | 1.4.0, done 2026-10-24 |
+| E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | 1.4.0, done 2026-10-24 |
+| E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | 1.4.0, done 2026-10-24 |
+| E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | 1.4.0, done 2026-10-24 |
+| E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | 1.4.0, done 2026-10-24 |
+| E-08 | The views: surface_view and space_view split | L | 1.4.0, done 2026-10-24 |
+| E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | 1.4.0, done 2026-10-25 |
+| E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | 1.4.0, done 2026-10-25 |
+| E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | 1.4.0, done 2026-10-25 |
 | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | 1.4.0 |
 | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | 1.4.0 |
 

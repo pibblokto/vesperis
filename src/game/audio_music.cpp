@@ -1,11 +1,11 @@
 // H-05 (2026-10-10): the music's player. C-04's `musicTrigger` and `musicSample` (moved here from audio.cpp) grown for the ages'
-// instruments (galaxy/music.h): every family as partials on a sine table (a sung vowel's harmonics under its formants, brass that
+// instruments (peoples/music.h): every family as partials on a sine table (a sung vowel's harmonics under its formants, brass that
 // brightens as it swells, struck strings dying high first, an organ's stops, a music box's tines, an electric string overdriven, two-
 // operator electric keys and struck glass, a synthesiser's partials under a moving low-pass, pads, swarms of detuned tones, a field's
 // long tones beating), the kits' pieces (skins, a log drum, rattles, claps and sticks, a band's drums, a drum machine, clicks and a
 // sub pulse, jingles, a bullroarer), twenty-eight voices, and a limiter on the music's bus so that stacked chords never clip.
 #include "audio.h"
-#include "galaxy/music.h"
+#include "peoples/music.h"
 #include <algorithm>
 #include <cmath>
 

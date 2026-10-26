@@ -38,4 +38,4 @@ R-401 read `UNKNOWN 4.2` six times over; the star map marks the visited stars wi
   star by a world the explorer named there (`(XOHORT)`) and its card lists them (`YOUR WORLDS THERE: XOHORT`).
 * Harness: three unit checks (the jump of 400 ly from home typed in the aim: 2 ly from the line's end, 39 s, logged, arrived;
   3,000 ly north comes back 580 ly to a star 2,313 ly over the plane, 13,000 ly coreward reaches the core; the aim's labels).
-* Docs: 07 (the remote target, the Vimana, the flight computer, the console), 04 (the jump's search), 10-decisions, 08.
+* Docs: 07 (the remote target, the Vimana, the flight computer, the console), 04 (the jump's search), the decisions log, 08.

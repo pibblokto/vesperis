@@ -27,7 +27,7 @@ ifeq ($(UNAME_S),Darwin)
   endif
 endif
 
-CORE_SRC  := $(wildcard src/core/*.cpp) $(wildcard src/galaxy/*.cpp) $(wildcard src/space/*.cpp) $(wildcard src/surface/*.cpp) $(wildcard src/game/*.cpp)
+CORE_SRC  := $(wildcard src/core/*.cpp) $(wildcard src/galaxy/*.cpp) $(wildcard src/peoples/*.cpp) $(wildcard src/space/*.cpp) $(wildcard src/surface/*.cpp) $(wildcard src/game/*.cpp)
 CORE_OBJ  := $(patsubst src/%.cpp,build/%.o,$(CORE_SRC))
 HARNESS_SRC := $(wildcard src/harness/*.cpp)
 HARNESS_OBJ := $(patsubst src/%.cpp,build/%.o,$(HARNESS_SRC))
@@ -40,7 +40,7 @@ all: vesperis vesperis_test
 vesperis: $(CORE_OBJ) build/main_raylib.o build/platform_raylib.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(RAYLIB_LIBS)
 
-vesperis_test: $(CORE_OBJ) build/main_headless.o $(HARNESS_OBJ)
+vesperis_test: $(CORE_OBJ) $(HARNESS_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 build/platform_raylib.o: src/platform_raylib.cpp
@@ -54,9 +54,9 @@ build/%.o: src/%.cpp
 clean:
 	rm -rf $(OBJ_DIRS) build/*.o build/*.d vesperis vesperis_test
 
-check:
+check: vesperis_test
 	@python3 tools/check.py
 
--include $(CORE_OBJ:.o=.d) $(HARNESS_OBJ:.o=.d) build/main_raylib.d build/main_headless.d build/platform_raylib.d
+-include $(CORE_OBJ:.o=.d) $(HARNESS_OBJ:.o=.d) build/main_raylib.d build/platform_raylib.d
 
 .PHONY: all clean check

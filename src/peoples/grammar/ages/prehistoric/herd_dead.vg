@@ -1,0 +1,297 @@
+R"VG(
+# herd_dead.vg (H-04): more of the prehistoric records (marks.vg's marks and counts and hunt.vg's states of a wall
+# are shared): the herd, the dead's marks, the boundary. H-04's second pass: each in the people's own ways (its herd, its pens, its
+# dead's custom and gifts, its signs), and the herd's years read from the history (`@event ... pre.herdev`).
+
+@root dead.by.* pre.herdev.*
+
+# ---- the herd, painted or counted -------------------------------------------------------------------------------------------
+
+genre.herd (words=24..118)
+  {herd.wall} {herd.line} {herd.line} {herd.line} {herd.end}
+  {herd.wall} {herd.line} {herd.line} {herd.end}
+  (2) {herd.wall} {herd.line} {@event beasts,pest,storm,drought,winter,fair pre.herdev 4} {herd.line} {herd.end}
+
+herd.wall (formula)
+  (medium=painted) The {herd}, painted along the wall in a row.
+  (medium=bone) A {pre.bone} with the {herd} cut on it, very small.
+  The {herd} of {$home}, drawn and counted.
+  (medium=painted) On the rock by the pens, the {herd}, in {colour.holy}.
+  (medium=stone) The {herd}, pecked into a flat stone.
+  (medium=painted) On the wall of the shelter where the {herd} were kept in {season.now}, the {herd}.
+  (medium=stone) A stone by the pens of {$home}, with the {herd} cut round it.
+
+herd.line
+  (once) {herd.part} {herd.what}.
+  (once) {herd.part} {herd.what}.
+  (once) {count.herd}
+  (once) {herd.one}
+  (once) {herd.one}
+  (once harvest<=1) Few {herd}, and thin; their ribs are drawn in {colour.holy}.
+  (once harvest>=3 medium=painted) More {herd} than the wall has room for; the last are drawn on the ceiling.
+  (once) A line of {pre.track} leads away from the {herd}, toward {mountain}: the [summer pasture|water|new ground], perhaps.
+  (once contact=1) Some have the sign of the {other} on their flanks: traded, or taken.
+herd.one (share=0.7)
+  Some are drawn with young beside them: the increase of {season.now}.
+  A figure {pre.fig.dress} walks behind with a stick: the one who keeps the {herd}.
+  One beast is drawn upside down: the one that died.
+  A circle round the whole herd: the pen, or the land that is theirs.
+  Beside them, the sign of {watersrc}: where they drink.
+  A beast with {motif.over} on its flank, drawn twice as large: the best of them, or the one given to {god}.
+  The milk is drawn as white lines from one of them into {vessel.one}.
+  A {beast} is drawn among them, keeping them together.
+  {n} of the {herd} have a cut on the ear, and the rest do not: two owners, or two years.
+  A figure with {tool} works at one of them; the ship cannot say at what.
+  The herd is drawn twice: once going up to the high ground, once coming down, fewer.
+  One beast lies with a figure kneeling by it, a hand on its neck: sick, or being born to.
+  Their horns are painted {colour.holy}, and nothing else is.
+  A fence of upright strokes runs behind them, with a gap where a figure stands.
+  The young are drawn in a row of their own, under their mothers.
+  One is drawn with a load on its back, tied with lines.
+
+herd.part
+  One of the {herd}
+  The one at the front of the {herd}
+  The last of the {herd} in the row
+  The oldest of the {herd}
+  The largest of the {herd}
+  A young one among the {herd}
+  The one in the middle of the {herd}
+  One drawn smaller than the other {herd}{=.small}
+herd.what
+  is drawn with its head turned back
+  has a mark on its flank, a sign of ownership or of {god}
+  is drawn upside down, the one that died
+  (!has:.small) is painted twice as large as the others
+  is lying down, perhaps sick
+  has a figure beside it with a stick
+  (accent!=black) is drawn in black where the others are {colour.holy}
+  is walking away from the rest, toward {mountain}
+  has a rope drawn from its neck to a post
+  is drawn with its mouth open, calling
+  has a small figure riding on its back
+  is drawn with {motif.over} on its back
+  (3 contact=1) has the sign of the {other} on its flank: traded, or taken
+
+herd.end
+  (2) {wall.state}
+  Whoever drew them knew each one of the {herd}, and drew it so.
+  (desert=1) Under them, a line of dots in {colour.holy}: the way to the next water.
+  Children have added their own {herd} at the bottom, small and wobbling.
+  Each of the {herd} has a sign over it; the ship takes them for names.
+  The last of the {herd} is only begun: a back and {pre.begun}.
+pre.begun
+  two horns
+  a tail
+  one leg, drawn twice
+  a {colour.holy} eye
+
+# the herd's years (`@event ... pre.herdev`)
+pre.herdev.beasts
+  ($e.what=late|$e.what=none) The {herd} are drawn waiting at the pens, and the high ground above them is empty: the year the grass came late.
+  ($e.what=late|$e.what=none) The {herd} are drawn thin and close together, a figure with {tool} cutting {pre.fodder} for them: hunger, in {season.now}.
+  ($e.what=early|$e.what=many) The {herd} are drawn going up the hill in a long line, more than in any other row: a good year.
+  ($e.what=early|$e.what=many) The {herd} are drawn with young between their legs, two to each mother: a year of plenty at {$e.place}.
+  ($e.what=great|$e.what=killed) A {game.one} is drawn among the {herd}, larger than any of them: something came down to the pens {pre.e.when}.
+pre.herdev.pest
+  ($e.what=murrain) Many of the {herd} are drawn lying down, and crossed through: the sickness of the beasts, {pre.e.when}.
+  ($e.what=wolves) A beast with its teeth drawn stands over a fallen one of the {herd}: the wolves, {pre.e.when}.
+  ($e.what!=murrain $e.what!=wolves) The {herd} are drawn thin, with small marks over them: the year of the {pest}.
+pre.herdev.storm
+  ($e.what=snow|$e.what=hail) The {herd} are drawn huddled, with flakes over them; some are crossed through.
+  ($e.what=dust) The {herd} are drawn with their heads down and lines blown across them: the dust.
+  ($e.what!=snow $e.what!=hail $e.what!=dust) The {herd} are drawn scattered across the wall: the storm drove them {pre.e.when}.
+pre.herdev.drought
+  The {herd} are drawn at {watersrc}, and {watersrc} is drawn dry: {#$e.value|year} without rain.
+pre.herdev.winter
+  The {herd} are drawn inside {house.one}, with the people, and snow outside: the long winter.
+pre.herdev.fair
+  {n} of the {herd} are drawn walking away behind figures that are not of {$home}: traded at the gathering at {$e.place}.
+pre.herdev.none
+  {herd.part} {herd.what}.
+
+# ---- the dead's marks ------------------------------------------------------------------------------------------------------
+
+genre.dead (words=17..96)
+  {@cast dead}{dead.head} {dead.who} {@death dead.by} {dead.end}
+  {@cast dead}{dead.head} {dead.who} {dead.life} {@death dead.by} {dead.end}
+  {@cast dead}{dead.head} {dead.who} {@death dead.by} {dead.gifts} {dead.end}
+
+dead.head (formula)
+  (medium=stone) On the stone, a figure lying down.
+  (medium=stone) A stone at {deadplace}, cut with signs.
+  (medium=painted) On the wall, a figure lying down, painted in black.
+  (medium=stone) A stone set upright, with marks on the side toward {pre.dead.face}.
+  (medium=painted deadway!=none) Painted by the entrance to {deadplace}: a figure lying down.
+  (medium=painted) On the wall where the dead were laid, a figure in {colour.mourn}.
+  (medium=stone deadway=barrows) A kerb stone of the barrow, cut with a figure.
+  (medium=bone) A {pre.bone} laid with the dead, cut with signs.
+pre.dead.face (people=1)
+  {sun.first} where it rises
+  where {sun.first} goes down
+  {mountain}
+  {river}
+  the sea
+  the camp
+pre.fodder
+  branches
+  reeds
+  the {crop2}
+  bark
+dead.who
+  Beside it, in {colour.holy}, the sign that stands for {$x:name}.
+  The sign is {$x:name}'s; the same sign, in {colour.holy}, is on the {pre.signed} from {$x.home}.
+  ($x.role=ruler) The figure is larger than any other: {$x:name}, who led the band.
+  ($x.age>=50) {pre.stroke} beside it, many: {$x:name}'s winters, {#$x.age}.
+  ($x.age<12) The figure is small: a child. The sign is {$x:name}.
+  Over its head, in {colour.holy}, a sign the ship has seen on the {pre.signed} of {$x.home}: {$x:name}.
+  ($x.gender=she) A woman's figure {pre.fig.dress}, with the sign of {$x:name} beside the head.
+  ($x.gender=he) A man's figure {pre.fig.dress}, with the sign of {$x:name} beside the head.
+  The figure holds {pre.chest} to its chest; the sign beside it is {$x:name}'s.
+  ($x.age>=12) The figure has {motif.over} on its arms, and the sign of {$x:name}.
+  (has:$x.trait) The sign of {$x:name}, and beside it a sign the ship has learned means {$x.trait}.
+
+pre.chest
+  {vessel.one}
+  {tool}
+  {instrument}
+  a {beast}
+  a child
+  a bundle of {material}
+dead.life
+  (has:$x.spouse) A second figure beside it, standing, with its hand on the first: {$x.spouse:name}.
+  ($x.age>=30) Small figures in a row behind it, painted {colour.holy}: the children.
+  A {game.one} drawn at its feet: a hunter.
+  {vessel.one} drawn at its feet: one who made them.
+  {tool} drawn at its hand: {$x.trade}, the ship thinks.
+  ($x.age>=40) A line of figures behind it, each smaller than the last: the children, and theirs.
+
+dead.gifts (people=4)
+  Beside it, the things given: {tool}, {vessel.one}, and a string of beads.
+  Laid with it: {instrument}, broken so it would go with the dead.
+  Drawn at its head: {vessel.one} of {food}, for the road.
+  At its feet, a {beast}, drawn small: given to go with it.
+  Round it, {pre.stroke} in a ring, {#number} of them: the {people}'s number.
+  Laid with it: {garment}, folded, and {fuel} for a fire.
+  Over it, {colour.holy} poured from a bowl, drawn as lines.
+
+dead.by.sickness
+  Red spots on the figure: the sickness took {$x:obj}.
+  The figure is drawn in a row of others, all with spots: {$x:name} went with {$c.sickness}.
+  ($c.wave>1) Red spots, and {pre.sign.dead} {#$c.wave|time}: the sickness that came back took {$x:obj}.
+dead.by.famine
+  An empty bowl beside {$x:obj}: the hunger.
+  {pre.sign.hunger} over the figure: the hungry year took {$x:obj}.
+dead.by.battle
+  A spear across the figure: killed in the fighting at {$c.place}.
+  The figure has {pre.weapon} drawn in it: {$x:name} fell at {$c.place}.
+dead.by.war
+  A spear across the figure, and the sign of another band over it: the quarrel took {$x:obj}.
+dead.by.sack
+  The figure is drawn among burning huts: {$c.place}, the night it was taken.
+dead.by.flood
+  Wavy lines over the figure: the water took {$x:obj}.
+  The figure is drawn under the sign of {river}: the flood at {$c.place}.
+dead.by.quake
+  The figure is drawn under stones: the ground moved at {$c.place}.
+dead.by.eruption
+  Black lines falling on the figure like rain: {mountain} took {$x:obj}.
+dead.by.winter
+  Flakes drawn over the figure: the long winter.
+dead.by.old
+  The figure is bent over a stick, {pre.fig.dress}: {$x:name} was old.
+  The figure's hair is drawn white over the {colour.holy}: {$x:name} lived a long time.
+  {$x:name}'s figure is drawn sitting, as the old sat by the fire.
+  Many {pre.stroke} beside the figure, more than for anyone else: {$x:name} was old.
+  The figure is drawn with a child on each side, {pre.fig.dress}: {$x:name} lived to see the children's children.
+dead.by.illness
+  The figure is drawn lying with a figure kneeling by it, holding {vessel.one}: {$x:name} was ill, and was cared for.
+  A small fire of {fuel} is drawn at the figure's feet, kept lit: the illness was long.
+  The figure lies on {pre.bier}, and a figure with {instrument} sits by it: a long illness, sung over.
+dead.by.young
+  A small figure, and the mother's sign beside it in {colour.mourn}.
+  A small figure in {colour.mourn}, and a bowl of {drink} drawn beside it.
+  A small figure laid in {vessel.one}, the way the {people} laid their children.
+dead.by.childbirth
+  Two figures, one small, one large: {$x:name} and the child.
+  A figure with a small one lying on it: {$x:name}, and the child that came.
+dead.by.cold
+  Flakes drawn over the figure: the cold.
+  The figure is drawn curled up, with flakes round it: the cold took {$x:obj}.
+dead.by.accident
+  The figure is drawn falling from a line that is a cliff.
+  A {game.one} drawn over the figure: the hunt took {$x:obj}.
+dead.by.fire
+  Flames drawn round the figure: the fire.
+dead.by.sea
+  Waves drawn over the figure and a boat turned over: the sea took {$x:obj}.
+dead.by.murdered
+  A spear in the back of the figure, and the sign of the one who did it scratched out.
+dead.by.hard
+  The figure is drawn thin and bent: the hard years took {$x:obj}.
+dead.by.any
+  Nothing says how.
+  The ship finds nothing that says how.
+
+dead.end
+  Round it, the hands of the band, in {colour.holy}: {n}.
+  The stone faces {pre.dead.face}.
+  {god}'s sign is cut over it.
+  The {pre.stroke} are worn; people touched them, for a long time after.
+  (2) {obj.state}
+  The {people} said the dead have {death.went}; the figure's feet point that way.
+  Beside it, a row of small marks: the ones who came to see it laid down.
+  Over it all, {colour.mourn} smeared by fingers, a long time after.
+
+# ---- the boundary: the band's mark at the edge of its land -------------------------------------------------------------------
+
+genre.boundary (words=32..102)
+  {boundary.head} {boundary.line} {boundary.line} {boundary.line} {boundary.end}
+  {boundary.head} {boundary.line} {boundary.line} {boundary.end}
+
+boundary.head (formula)
+  A stone at the edge of {$home}'s land, cut with its sign.
+  The band's mark, on a boulder by the path.
+  A post of stone where two paths meet, with signs on each face.
+  A cairn at the top of the pass, with a flat stone cut with signs.
+  A stone by {river}, where the land of {$home} stops.
+  (has:$home.landmark) A stone near {$home.landmark}, cut with the band's sign.
+
+boundary.line
+  (once) The sign of {$home}, and an arrow in {colour.holy} pointing back toward it.
+  (once) The sign of {river} and the sign of {mountain}, and {pre.sign.herd} between them: the grazing there is theirs.
+  (once) {pre.bnd.hand}
+  (once) {count.walk}
+  (3 once contact=1) Another sign, not theirs, scratched over: the {other} were here too.
+  (once) A {game.one}, and {pre.weapon} crossed over it: the hunting here is theirs.
+  (once) {pre.bnd.more}
+  (once) {pre.bnd.more}
+pre.bnd.hand (people=2)
+  A hand, open: who comes in peace may pass.
+  A hand, closed: who comes for the {herd} will not leave.
+  A hand with a bowl in it: a stranger is fed at {$home}.
+  A hand with a spear across it: no further.
+  Two hands touching: here they meet the next band, and trade.
+pre.bnd.more (share=0.6)
+  The sign of {watersrc}, with a line to it: the water here is shared.
+  {pre.sign.herd}, and a line across it: no {herd} past this stone.
+  A {tree.n} drawn with its roots: the land is held as the {tree} hold it.
+  {motif.over}, cut all round the edge: the {people}'s own.
+  {n} small marks in a row: the bands that agreed to it.
+  A figure lying down, and a {pre.weapon.one} over it: someone died over this line.
+  The sign of {god}, cut deeper than the rest.
+  {pre.sign.walk}, going on past the stone: the path to {count.where}.
+  A fire drawn on the hill: when it burns, the band is gathering.
+
+boundary.end
+  Moss has grown into the marks on the north side.
+  Someone has added a {pre.stroke.one} since; the cut is newer than the {colour.holy} in the rest.
+  The path still passes it.
+  (2) {stone.state}
+  Smaller stones are piled round its foot, one for each who passed, perhaps, and {pre.bnd.left} among them.
+pre.bnd.left
+  a broken {pre.weapon.one}
+  {vessel.one}, empty
+  a {colour.holy} pebble
+  a {game.one}'s horn
+)VG"

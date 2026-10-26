@@ -1,38 +1,37 @@
 # docs: how the work is planned and recorded
 
-The live places: `iteration-3/plans/PROGRESS.md` (the work log; its `## Next` is the current state), `iteration-3/bugs/` (bugs
-and `KNOWN-ISSUES.md`), `iteration-3/plans/requests/`, `ideas/` (`MILESTONES.md`'s ids, `ITERATION-<version>.md`, the plans) and
-`reference/` (how the game works: one truth, edited in place). `bugs/`, `plans/` and `iteration-2/` are iterations 1-2's
-history, and `README.md` is partly stale (E-04 rewrites it). Over 100 KB, read by range after `grep -n '^#'`: PROGRESS.md,
-KNOWN-ISSUES.md and reference/05, 06, 07, 08, 10 (the decisions log, 651 KB) and 12.
+- `STATUS.md`: the state, in one place: the release, what is done, what is next, the proof's base, the next free ids.
+- `decisions/`: `rules-<area>.md`, the rules in force by area (`README.md` says which file; read the area's before changing
+  anything); `log/`, every decision by release (`## ID (date): title`, the newest last in the current release's file);
+  `superseded.md`; `generations.md`, what each `GEN_VERSION` changed.
+- `reference/`: how the game works, one note a topic, edited in place; each opens with its contents. `civilisations/` (five
+  notes), `harness/` (`INDEX.md` and `unit-checks.md` generated, `proof.md`), `lessons.md` (the lessons behind the rules).
+- `iteration-3/bugs/` (the B files, `resolved/`, `KNOWN-ISSUES.md`) and `iteration-3/plans/requests/` (the R files): live.
+- `ideas/`: `MILESTONES.md` (every series' ids), `ITERATION-<version>.md` (the release being made), the plans and ideas still
+  open. `archive/`: finished plans, iterations 1 and 2, iteration 3's O plans and its work log; edited only for links.
 
-## Reference notes
-01 architecture, 02 rendering (banks, draw order), 03 coordinates and units, 04 galaxy and systems, 05 the planet function,
-06 the surface, 07 game flow, controls and the save format, 08 testing and tools (every harness mode), 09 cookbook (recipes),
-10 decisions (a table, then `## ID (date): title` entries, the newest last), 11 notes on the original, 12 civilisations.
+## Reading
 
-## Ids (the next free on 2026-10-23)
-Bugs B-429, requests R-424, known issues KI-419. Milestone ids go by letter series in `ideas/MILESTONES.md` (E is the
-reorganisation, `ideas/PLAN-reorganisation.md`).
+- Over 100 KB (two log files, 06, 07, 08, 05): `grep -n '^#'` first, then a range. A log is never read whole: grep its
+  headings (`grep -n '^## B-428' docs/decisions/log/*.md`), then read the one entry.
 
 ## Touch points
-- **A milestone:** a bullet `* **ID (date): title.**` before PROGRESS.md's `## Next`, ending "Docs: <notes>. Nothing
-  committed.", and the Next paragraph; a `## ID (date): title` entry at the end of `reference/10-decisions.md` (a generation
-  bump also gets a table row and a section at the top of `reference/generations.md`); the reference notes it changes, in place;
-  its row in `ideas/ITERATION-<version>.md` ("done <date>") and in `ideas/MILESTONES.md`; its request's `status:` line; a
-  KNOWN-ISSUES row for what stays.
-- **A bug** (reported in chat; fixed and written together): `iteration-3/bugs/resolved/B-NNN-short-title.md` in the resolved
-  style (`# B-NNN: title`, `status: resolved <date>`, `severity`, `area`, `## Report`, `## Cause`, `## Fix`, `## Verification`),
-  a row in `iteration-3/bugs/README.md`, a 10-decisions entry, a PROGRESS bullet, the notes changed, a KI row for what stays.
-- **A request:** `iteration-3/plans/requests/R-NNN-short-title.md` in R-402's style (`status: done <date>`, `## Request`,
-  `## Done`), then the milestone's touch points.
-- A bug the user fixed by a redesign stays a B: quote the request in its Report and mark the superseded rule in 10-decisions.
-- An issue found and not fixed becomes a KI row, offered to the user. A new series takes a letter no series, bug, request or
-  old roadmap used (check `ideas/MILESTONES.md`).
+
+- **A milestone** (the `milestone` skill): one entry of at most 4 KB at the end of the current release's log, its decisions
+  and why, then a **Verified**, a **Moved** and a **Left** line; a rules line for each rule it sets or changes (a replaced
+  one to `superseded.md`); the reference notes it changes, in place, with no dated additions; the generated pages made
+  again (`help md` into `reference/harness/INDEX.md`, `tools/unitchecks.py`, `tools/contents.py`); a KNOWN-ISSUES row of at
+  most 300 bytes for what stays; `STATUS.md`. At its close: its row in `ideas/MILESTONES.md` and the iteration's, and its
+  request's `status:` line. A generation bump: a row and a section at the top of `decisions/generations.md`.
+- **A bug** (the `bug` skill): its B file is the one narrative, `iteration-3/bugs/resolved/B-NNN-short-title.md` from
+  `TEMPLATE.md`; a row in `iteration-3/bugs/README.md`; the notes it changes; a log entry and a rules line only when a rule
+  changed; a KNOWN-ISSUES row for what stays; `STATUS.md`'s next id.
+- **A request:** its R file from `iteration-3/plans/TEMPLATE-request.md`, its `status:` set when planned and when done;
+  then its milestones' touch points.
+- An issue found and not fixed becomes a KNOWN-ISSUES row, offered to the user. A new series takes a letter no series, bug,
+  request or old roadmap used (`ideas/MILESTONES.md`).
 
 ## Writing
-- Edit in place, in lines of 140 characters or fewer (99 older lines run past 2,000, which the Read tool cuts).
-- Never read a log whole: grep its headings, then read the one entry.
+
+- Lines of 140 characters or fewer (a rule's line up to 160); `make check` refuses one over 2,000 (`tools/docwrap.py` wraps).
 - The music tracks are credited by name only: never their permission or licensing, nor how they were obtained.
-- The lessons behind the CLAUDE.md rules, by area: `reference/lessons.md`.
-- E-04 reorganises this tree (rules by area, the log by release, STATUS.md); until then PROGRESS.md's Next is the state.

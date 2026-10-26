@@ -4,6 +4,20 @@ What earlier milestones learned the hard way, moved out of the session memory in
 CLAUDE.md files next to the code; this is the detail behind them, one lesson a bullet. E-04 folds it into the rules by area.
 Read only the section you need: `grep -n '^## ' docs/reference/lessons.md`.
 
+<!-- contents -->
+Contents:
+- Working on the dev Mac
+- Proving and timing
+- The harness
+- Pixels and the look
+- Space
+- The surface
+- Generation: the worlds
+- Generation: the peoples
+- The records' text
+- Game, screens and sound
+<!-- /contents -->
+
 ## Working on the dev Mac
 
 - Scratch builds use `/usr/bin/clang++`, as the Makefile does: Homebrew's clang 22 comes first on PATH.
@@ -71,7 +85,8 @@ Read only the section you need: `grep -n '^## ' docs/reference/lessons.md`.
   (`PROVE_BIN=<binary> tools/prove snapshot`): take the link line from `make -n -B vesperis_test`, since the order of the
   objects decides the order of start-up.
 - Prove a comment-only or whitespace-only step by the objects (`tools/prove objects`): the engine's and the game's compile
-  byte for byte the same; the harness's `main_headless.o` does not, and is proven by behaviour.
+  byte for byte the same; the harness's too but for three of its forty (E-03: clang varies `voicePrint`, `unitGiants` and
+  `unitSky` between compiles), so the harness is proven by behaviour, and a move of its code by `tools/samecode.py`.
 - Long runs at night met macOS's media analysis and Spotlight indexing the snapshots' thousands of pictures (`mediaanalysisd`,
   `mds_stores`): `tools/prove` items that take 9-34 s took about 15 minutes each, the process held off at nice 5 (E-02). Keep
   `build/` and `shots/` out of Spotlight (System Settings, Spotlight's privacy list), and see the load first (`top -o cpu`).
@@ -81,10 +96,11 @@ Read only the section you need: `grep -n '^## ' docs/reference/lessons.md`.
 - Test worlds: Aieliaalas II (151 0 25, body 1, felisian), Leileashphail III (153 0 70, body 2, desert), Eleinewai I (152 92 0,
   two peoples), Seehio II (151 70 1), Yiothal III (152 50 2). A generation rule ripples into the pinned worlds (`AGE_WORLDS`, the
   two peoples, the wet dam, the radar salts): pin them again by scans.
-- Keep one `Game` alive in the harness (a second corrupts the first); reach private state through test accessors; join worker
-  threads at exit (`atexit`).
-- A mode that drives a `Game` goes below `#include "game/game.h"` (about line 1293). The flow's frames are 1x, the unit's and the
-  modes' 4x; a mode's checks may also run in the unit.
+- Keep one `Game` alive in the harness (a second corrupts the first); reach its state through TestGame's hooks
+  (`src/harness/test_game.h`), never from the game's own files; join worker threads at exit (`atexit`).
+- The flow's frames are 1x, the unit's and the modes' 4x; a mode's checks may also run in the unit. A `Game`'s `applySettings`
+  sets the global render scale and mush (its settings say 4x): every group of the unit after a scripted game draws at 4x, so
+  `UNIT_GROUPS` states each group's starting scale and mush, and a group alone draws as in the full run (E-03).
 - Check the check before the generator: `fmt()` cuts at 512 characters (split the details), prints truncate, and substring counts
   hit field words ("cooldown").
 - Unit checks span several worlds, decays and every instance (one world's doorways hid two defects), and require a rare feature
@@ -112,8 +128,9 @@ Read only the section you need: `grep -n '^## ' docs/reference/lessons.md`.
   held still. Warm a bench row at dt 0 after a scale change (its first frames carry allocations).
 - `load landing` and `load map` never open an unmapped world; `load capital 6 4 0` does (trees); the default `load capital` none.
 - The bench's 13 stable PNGs compare; capital, decoder, landmap, landzoom, photo, radar, sectormap and telescope vary.
-- The sweeps differ by scan order and by the chemotroph flip: compare against the skip build. Run them alone (a busy machine moved
-  18 px of a trait sheet).
+- The sweeps differ by scan order: compare against the skip build. A frame that flips between runs is first a body drawn before its
+  map's thread finished (the chemotroph's sweep frame, E-02: the sweeps wait for every map now). Run them alone (a busy machine
+  moved 18 px of a trait sheet).
 - Reproduce the user's state on copies of their `guide.txt` and `vesperis_save_auto.txt` in a scratch directory.
 - A frame with bodies in view waits for every map first (`testWaitMapOf`, or `SpaceRenderer::mapIfReady` on a view's own
   renderer): the maps are made on their thread at the binary's own pace (F-07), so without the wait a frame moves between runs
@@ -123,8 +140,16 @@ Read only the section you need: `grep -n '^## ' docs/reference/lessons.md`.
   frame lost the parked world's map in three relinks of the base engine and won it in the final one, though the code that draws
   it was the same instructions. A twice-run cannot see it; a move or split (which shifts every later address) shows it. Prove
   such a change innocent by the objects' instructions (objdump, labels and addresses stripped) and by the frame with the wait.
-- The harness's own files go in `src/harness/`, linked only into vesperis_test: a new file there compiles in seconds where an
-  edit to main_headless.cpp costs 35 s.
+- The harness is `src/harness/` (E-03), linked only into vesperis_test: a one-file edit rebuilds in 1-3 s (the one 2 MB file
+  took 35 s).
+- Splitting one file: a static function the split shares loses `static` and gains a declaration, its default arguments moved
+  into it; then whole chunks move (`tools/mover.py`, which rebuilds the old file from the new ones to prove it). Compare each
+  function's IR at -O0 and without exceptions (`tools/samecode.py`): with exceptions, clang's `invoke`s and inferred `nounwind`
+  follow the order it emits functions in, which a split changes. A chunk keeps the comments above it, so a comment the file
+  had already cut off from its function travels with the wrong one (E-03: formsChecks' and agesChecks' sat above roomOpenness).
+- A unit check's fixed start point can lie in an ocean. The flow's `testCabinGoto` takes a pitch (a desk under the window band
+  needs -0.65 from 1.5 m).
+- Pictures that print a time differ between runs by design: the landforms sheets' "COST N US", the town map's "IN N MS".
 - `charts rogues` named a drifter's chart's wanderers from the drifter's own system, but their indices are its former system's
   (`peoplesWorldOf`): it read past `sys.bodies` and printed freed memory, a different line each run (E-02 fixed the printout).
 
@@ -144,8 +169,8 @@ Read only the section you need: `grep -n '^## ' docs/reference/lessons.md`.
   colour per shade.
 - A sub-pixel silhouette is one framebuffer pixel at its own shade: paling it toward the fog makes ghosts. A point on a globe must
   outlive the mush: FB_SCALE+2 wide.
-- The banks are one shared table (`docs/reference/02-rendering.md`): the globe's 31 is body A's, the surface's 25-27 the peoples'
-  (skipped when test-staged).
+- The banks are allocated per view (`docs/reference/02-rendering.md`'s table for each scene), each one thing within it: the
+  globe's 31 is body A's, the surface's 25-27 the peoples' (skipped when test-staged).
 - Per-frame visuals get their own cheap noise (a gradient table at 4 ns against `gnoise2`'s 40 ns). Anchor sampling grids in
   world angle and distance (no shimmer); blend noise values, never coordinates, between frames; noise round a centre uses
   (cos, sin) times the arc's radius.

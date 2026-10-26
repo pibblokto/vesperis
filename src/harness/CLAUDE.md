@@ -1,21 +1,34 @@
-# src/harness: the harness's own files
+# src/harness: vesperis_test (no window, no raylib)
 
-Linked only into `vesperis_test` (the Makefile's `HARNESS_SRC`, CMake's `HARNESS_SOURCES`), never into the game. E-02 began it;
-E-03 moves the rest of `src/main_headless.cpp` here, whose traps are `.claude/rules/harness.md` until then.
+Only `vesperis_test` links it. `vesperis_test help` lists every mode with its arguments and its file; `help md` writes
+`docs/reference/harness/INDEX.md` and `tools/unitchecks.py` the unit's `unit-checks.md` (`make check` compares both).
 
-- `fingerprint.cpp`, `fingerprint.h`: `fingerprint bodies|stream|peoples|modules [n] [out] [full]` (`runFingerprint`), what the
-  generators make as keyed lines for `tools/prove`; `fpHash` (FNV-1a) and `fpPut` (printf onto a string).
-  - bodies: Q-03's fp5, every body of four scan regions; its `all` column is fp5's hash, the others its groups, `gen2` and
-    `ground2` the fields fp5 left out; `dark` lines for the drifters nearest home (all 60 kinds).
-  - stream: P-01's draw-stream tool, the scan region and a far strip of every class.
-  - peoples: D-05's recdump, the fixed worlds and every 6th people's world round home; `full` is recdump's text.
-- `fingerprint_modules.cpp`: `fingerprint modules`, for a fixed sample of worlds what nothing else pins: buildings, ruin
-  layouts, works, roads and the plan, music, instruments, the forms' colliders, tongues, flora, drainage tiles, the almanac.
+- `main.cpp`: start-up (`scale=N`, `shots/tests`), `MODES` (the table `help` prints).
+- `harness.h`: engine headers, `Mode`, `Check`, `UnitGroup`, `SceneCode`; each file's shared functions under its name.
+- `test_game.h`, `test_game.cpp`: `TestGame`, the Game the harness builds, and its hooks (`test*`, `setState`).
+- `test_worlds.h`: the pinned worlds and sites, the protected systems (`salt scan`). `scenes_table.h`: the scenes (`CMP_SCENES`,
+  `findScene`), placed by `scenes_setup.cpp` (`setupSceneForType`: its finders by code family, `SceneFind`) and
+  `scenes_special.cpp` (fixed places).
+- `frames.cpp`, `audio_util.cpp`: frames to PNG, the clock, frames compared, the test scale, scripted moves (`pressKey`,
+  `runFrames`); the receiver headless, WAVs, an FFT, a pitch.
+- Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`,
+  `modes_signals`, `modes_rogues`, `modes_drones`, `modes_game` (the flow: `Flow`'s stages), `modes_input`, `modes_bench`
+  (`Bench`'s stages), `modes_proof`.
+- The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`,
+  `civ_peoples`, `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
+- `unit.cpp`: `UNIT_GROUPS`, `unit [list] [-q] [group ...]`; groups in `unit_basics`, `unit_kinds`, `unit_drifters`,
+  `unit_signals`, `unit_navigation`, `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe`, `unit_proof`.
+- `fingerprint.cpp`, `fingerprint.h`, `fingerprint_modules.cpp`: `fingerprint ...`, keyed lines for `tools/prove`.
 
 Rules:
-- A keyed line is `<what> <key...> <field>=<value> ...`; a value holds no space. A new field goes in a new column, never into
-  an old one's hash, so the old columns still prove the old fields (`tools/keydiff.py` reports a new column apart).
-- The output must be the same at any thread count and between runs: `tools/prove` compares it byte for byte by key.
-- No dynamically initialised globals and nothing self-registering: link order must not move the engine's start-up.
-- Outputs go to `shots/tests/` relative to the working directory (the repo root, or a scratch directory with `src/` linked, as
-  `tools/prove` runs every item).
+- A mode: a `MODES` row (name, group, arguments, one line, file, function), its function in its area's file. No argument
+  runs `stars`; an unknown mode prints "unknown mode" and exits 0.
+- A check goes in its group's function; a new group is a `UNIT_GROUPS` row in the unit's order with the scale and mush the
+  groups before it leave (a scripted game leaves 4x). A check over a region states the count it expects.
+- A new scene code: a `SceneCode`, a finder in the chain, and out of the trait family's `<= SCENE_STAINED_CRACK` range.
+- Outputs go to `shots/tests/`; `tests/` and the grammar are read from the working directory (the repo root, or
+  `tools/prove`'s scratch directory). `records check` reads the `test_settings.txt` that `settings` writes.
+- The unit (minutes at ~280% CPU) and the flow both write `test_guide.txt`: one after the other, under `caffeinate -i`.
+  Never `make` or `git stash` mid-run. A frame of bodies waits for their maps (`testWaitMapOf`, `mapIfReady`).
+- Pictures and sounds: `tools/png.py`, `tools/wav.py` (no PIL or numpy), the `look` skill.
+- No dynamically initialised globals and nothing self-registering. More: `docs/reference/lessons.md`, "The harness".

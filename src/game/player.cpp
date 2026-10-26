@@ -8,7 +8,7 @@
 // the radar listens or the gramophone turns, the player is held and takes up where it was (`AudioState::pieceFrom`, `speechFrom`).
 #include "game.h"
 #include "ui.h"
-#include "galaxy/records.h"
+#include "peoples/records.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -19,6 +19,7 @@ namespace {
 int bodyOfKeyP(const std::string& key) { size_t sl = key.find('/'); return sl == std::string::npos ? -1 : atoi(key.c_str() + sl + 1); }
 std::string mmss(double s) { const int t = (int)std::floor(std::max(0.0, s)); return fmt("%d:%02d", t / 60, t % 60); }
 }
+// its guide key ("<body>/S<index>")
 std::string Game::playerItemKey(const PlayerItem& it) { return it.world + "/S" + std::to_string(shardWorldIndex(it.which, it.local)); }
 
 std::string Game::playerHudLine() const {
@@ -29,6 +30,7 @@ std::string Game::playerHudLine() const {
     return ((int)whole.size() <= room ? whole : ((int)player.title.size() <= room ? player.title : trunc(player.title, room))) + "  " + when;   // the people left out before the title is cut
 }
 
+// the synth's piece or speech is the player's
 bool Game::playerOwns() const { return (audio.piece && audio.piece == &player.world.piece) || (audio.speech && audio.speech == &player.world.speech); }
 
 // the list: what the guide holds that sounds and what the radar caught, each world's pieces and recordings by their years
@@ -96,12 +98,14 @@ void Game::playerBuildList() {
     player.guideVersion = (int)(guide.shards.size() * 7919 + guide.lent.size() * 104729 + guide.heard.size());
 }
 
+// "A LULLABY", "'THE RIVER'", "A WAX CYLINDER", "AIR: A RECORDING"
 std::string Game::playerItemTitle(const PlayerItem& it, const std::string* name) {
     std::string t = it.music ? (name ? "'" + upper(*name) + "'" : std::string(PIECE_FORM_NAMES[std::max(0, std::min(PF_COUNT - 1, it.form))]))
                              : (it.heard ? std::string("A RECORDING") : std::string(RECORD_MEDIUM_HUD[std::max(0, std::min(RM_COUNT - 1, it.medium))]));
     return it.heard ? "AIR: " + t : t;
 }
 
+// from its start
 void Game::playerPlay(int i) {
     if (i < 0 || i >= (int)player.items.size()) return;
     if (playerOwns()) { if (audio.piece == &player.world.piece) { audio.piece = nullptr; audio.tradition = nullptr; } if (audio.speech == &player.world.speech) { audio.speech = nullptr; audio.voice = nullptr; } audio.medium = -1; }
@@ -171,9 +175,10 @@ void Game::playerStop() {
     player.playing = -1; player.paused = false; player.held = false; player.waiting = false; player.t = 0; player.secs = 0; player.syncT = -1;
 }
 
+// every frame: the landing stops it, another's sound holds it, its end moves it on
 void Game::updatePlayer(double realDt) {
     if (player.playing < 0) return;
-    if (state == GameState::DESCENT || state == GameState::SURFACE || state == GameState::ASCENT || state == GameState::TITLE) { playerStop(); return; }   // a landing stops it
+    if (stateHas(state, ST_GROUND) || state == GameState::TITLE) { playerStop(); return; }   // a landing stops it
     const bool mineP = audio.piece && audio.piece == &player.world.piece, mineS = audio.speech && audio.speech == &player.world.speech;
     if (radar.on) {   // the receiver listens: the player holds its place
         if (mineP || mineS) { if (mineP) { audio.piece = nullptr; audio.tradition = nullptr; } if (mineS) { audio.speech = nullptr; audio.voice = nullptr; } audio.medium = -1; }
@@ -236,19 +241,4 @@ void Game::renderPlayerPage() {
     std::string where = upper(worldNameOfKey(s.world)) + " - " + (s.heard ? "CAUGHT BY THE RADAR" : (s.medium >= 0 && s.medium < RM_COUNT ? RECORD_MEDIUM_HUD[s.medium] : "")) + fmt(" - YEAR %d", s.year);
     drawText(canvas, 6, UH - 20, trunc(where, 52).c_str(), HUD_DIM);
     drawTextCentered(canvas, UW / 2, UH - 10, "ENTER PLAY  SPACE PAUSE  BACKSPACE STOP  TAB WORLDS", HUD_DIM);
-}
-
-int Game::testPlayerItems() { playerBuildList(); return (int)player.items.size(); }
-std::string Game::testPlayerItemLine(int i) const {
-    if (i < 0 || i >= (int)player.items.size()) return std::string();
-    const PlayerItem& it = player.items[i];
-    bool foreign = false; const std::string* nm = it.music ? shardNameOf(playerItemKey(it), foreign) : nullptr;
-    return fmt("%s %s%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.music ? "music" : "a recording", it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(), it.seconds > 0 ? fmt(", %.1f s", it.seconds).c_str() : "");
-}
-bool Game::testPlayerPlay(int item) { if (player.items.empty()) playerBuildList(); if (item < 0 || item >= (int)player.items.size()) return false; playerPlay(item); return true; }
-std::string Game::testPlayerInfo() const {
-    if (player.playing < 0) return fmt("the player: nothing plays (%d items, %d played to their end)", (int)player.items.size(), player.finished);
-    return fmt("the player: item %d '%s - %s', %.1f of %.1f s%s%s%s; the synth's piece %s, speech %s, medium %d; %d played to their end", player.playing, player.title.c_str(), player.people.c_str(), player.t, player.secs,
-               player.paused ? ", paused" : "", player.held ? ", held" : "", player.waiting ? ", waiting for its world" : "",
-               audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech == &player.world.speech ? "the player's" : (audio.speech ? "another's" : "none"), audio.medium, player.finished);
 }

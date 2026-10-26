@@ -1,0 +1,91 @@
+R"VG(
+# instruction_reasons.vg (H-04's second pass): the reasons the far future's instructions give for each step and each prohibition (instructions.vg's),
+# the people's own among them.
+
+# ---- why ----------------------------------------------------------------------------------------------------------------------
+
+in.why
+  (3) {in.why.l}
+  (2) We {in.we.did} there {in.we.when}.
+  (1) {in.why.l} {in.why.short}
+in.we.did
+  sat
+  sang
+  said goodbye
+  ate {food}
+  waited for the children
+  argued, and made up
+  watched {skynight}
+  kept {festival}
+  were at {pastime}
+  told the old stories
+in.we.when
+  every evening
+  at the end of the day
+  when it rained
+  for a thousand years
+  until the very end
+  on feast days
+  when we could not sleep
+  {fut.when.past}
+in.why.short
+  Trust it.
+  Go on.
+  You will see.
+  It is yours now.
+in.why.l (share=0.6)
+  It will see you.
+  It knows the way.
+  It will learn your words; any words will do.
+  It remembers us; ask it about us.
+  It will show you the rest.
+  That is where we sat, at the end of the day.
+  Nothing here will hurt you.
+  It has been waiting a long time.
+  It is warm in the long nights.
+  It was the first thing we made here, of {material}, and the last we left running.
+  It is clean; it has been clean since the last {festival} we kept.
+  We did it every day, like feeding the {herd}, and it did us good.
+  It is what the old {people} did, and we kept it.
+  It is a small thing, and it matters.
+  You will understand why after a while, or you will not, and that is all right.
+  We were happiest there.
+  The children loved it; we hope you do.
+  It is older than any of us were, older than the {tree} outside.
+  That is how the place knows you are staying.
+  It is how we said goodbye, and how we say welcome.
+  The place is kinder to people who do it.
+  We left it this way on purpose, with the {colour.holy} cloth on top.
+  It does the place good to be used.
+  Somebody has to, and now it is you.
+  You will like it; we did, after a while.
+  The machines expect it, and they have been patient, like the {herd}.
+  It is the first thing our children learned, before {fut.game}.
+  {proverb}, as our old ones said.
+  Nobody told us to; we wanted to.
+  It keeps the place awake.
+in.why2 (share=0.6)
+  They are older than they look.
+  We never did, and nothing bad happened.
+  There is no need.
+  They are not for you, or for us any more.
+  They will wake when they are ready.
+  It would not hurt you; it would only be confused.
+  It stops by itself, and starts again.
+  It was ours, and we would like it left.
+  We are not sure why; we were told the same.
+  Some things are better not known, and this is one, like the old {craft} workshop's secrets.
+  It is holding something up.
+  We tried once. We were sorry.
+  It belongs to someone who is not coming back from {city2}.
+  The old {people} sealed it, and we trusted them.
+  It is sleeping, and it is very tired.
+  It is not dangerous; it is private.
+  Leave it to the next ones, as we did.
+  It does not want to be found, and we respected that.
+  Our children asked the same, and got the same answer.
+  The reason is in the records, and the records are long.
+  It hums when it is happy. Leave it happy.
+  We promised, a long time ago, and the promise stands.
+  Nothing will come of it but noise, and the {herd} hate noise.
+)VG"

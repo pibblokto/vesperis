@@ -1,6 +1,6 @@
 // Save slots, autosave and the save file format (M0-04).
 #include "game.h"
-#include "galaxy/plan.h"
+#include "peoples/plan.h"
 #include "core/fs.h"
 #include "ui.h"
 #include "core/rng.h"
@@ -67,6 +67,7 @@ bool Game::loadNewest() {
     return true;
 }
 
+// one line for the slot picker, "" if absent
 std::string Game::saveSummary(const std::string& path) const {
     std::ifstream f(path);
     if (!f) return "";
@@ -167,8 +168,8 @@ bool Game::save(const std::string& path) {
     // where the explorer is: on the surface in the surface states, and in every overlay state (menus, guide screens,
     // the title after a load, ...) when the overlay returns to the surface. The title was missing here, so closing
     // the window on the title (or `--frames`) autosaved the expedition as "in space" and lost the landing (2026-09-27)
-    bool inPlay = state == GameState::SPACE || state == GameState::LANDING_MAP || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::PROBE;
-    bool onSurface = surf.valid && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || (!inPlay && returnState == GameState::SURFACE));
+    bool inPlay = stateHas(state, ST_IN_PLAY);
+    bool onSurface = surf.valid && (stateHas(state, ST_GROUND) || (!inPlay && returnState == GameState::SURFACE));
     f << "surface " << (onSurface ? 1 : 0) << "\n";
     if (onSurface) {
         f << "site " << surf.site.body << " " << surf.site.lat0 << " " << surf.site.lon0 << "\n";

@@ -1,0 +1,174 @@
+R"VG(
+# daycount.vg (D-05): the count of the days without a dawn, a drifter's people's in the long dark (the root's `dark=3`; `darkyears` the years
+# since the last sunrise). Every age's way of keeping it: the strokes on a bone, a stone or the wall of the hall below (the ship reading the
+# marks, as the tallies are read), the count kept on a tablet, a scroll or a codex by those whose task it was, a stone cut with the count, a
+# printed count posted in the halls, a reel's or a drive's log, a crystal's reckoning, the far future's hum. The day's number is the years
+# of the dark over their short year (`dc.dayn`: digits, by `darkyears`).
+@apart
+
+genre.daycount (words=22..170)
+  (medium=bone|medium=painted) {dc.mk.head} {dc.mk.line} {dc.mk.line} {dc.mk.end}
+  (medium=bone|medium=painted) {dc.mk.head} {dc.mk.line} {dc.mk.note} {dc.mk.line} {dc.mk.end}
+  (medium=stone age<=prehistoric) {dc.mk.head} {dc.mk.line} {dc.mk.line} {dc.mk.end}
+  (medium=stone age<=prehistoric) {dc.mk.head} {dc.mk.line} {dc.mk.note} {dc.mk.line} {dc.mk.end}
+  (medium=stone age>=medieval) {dc.st.head} {dc.st.line} {dc.st.line} {dc.st.end}
+  (medium=tablet|medium=scroll|medium=codex has:writer) {@cast writer}{dc.cl.head}\n{dc.cl.first}\n{dc.cl.next}\n{dc.cl.close}
+  (medium=tablet|medium=scroll|medium=codex has:writer) {@cast writer}{dc.cl.head}\n{dc.cl.first}\n{dc.cl.next}\n{dc.cl.next}\n{dc.cl.close}
+  (medium=tablet|medium=scroll|medium=codex !has:writer) {dc.cl.head}\n{dc.cl.first}\n{dc.cl.next}\n{dc.cl.next}\n{dc.cl.close}
+  (medium=printed) {dc.pr.head}\n{dc.pr.line}\n{dc.pr.line}\n{dc.pr.end}
+  (medium=printed) {dc.pr.head}\n{dc.pr.line}\n{dc.pr.line}\n{dc.pr.line}\n{dc.pr.end}
+  (medium=reel|medium=drive has:writer) {@cast writer}{dc.lg.head}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.end}
+  (medium=reel|medium=drive has:writer) {@cast writer}{dc.lg.head}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.end}
+  (medium=reel|medium=drive !has:writer) {dc.lg.head}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.line}\n{dc.lg.end}
+  (medium=crystal) {dc.cr.head}\n{dc.cr.line}\n{dc.cr.line}\n{dc.cr.line}\n{dc.cr.end}
+  (medium=crystal) {dc.cr.head}\n{dc.cr.line}\n{dc.cr.line}\n{dc.cr.end}
+  (medium=hum) {dc.hm.head} {dc.hm.line} {dc.hm.line} {dc.hm.end}
+  (medium=hum) {dc.hm.head} {dc.hm.line} {dc.hm.line} {dc.hm.line} {dc.hm.end}
+
+# ---- the numbers: the days of the dark (their year was short), a tally's strokes, a group's ------------------------------------------------
+
+dc.dayn (keep)
+  (darkyears<=1) 41
+  (darkyears<=1) 87
+  (darkyears<=1) 129
+  (darkyears<=1) 166
+  (darkyears>=2 darkyears<=4) 214
+  (darkyears>=2 darkyears<=4) 307
+  (darkyears>=2 darkyears<=4) 388
+  (darkyears>=2 darkyears<=4) 451
+  (darkyears>=5 darkyears<=9) 562
+  (darkyears>=5 darkyears<=9) 719
+  (darkyears>=5 darkyears<=9) 846
+  (darkyears>=5 darkyears<=9) 973
+  (darkyears>=10 darkyears<=24) 1206
+  (darkyears>=10 darkyears<=24) 1577
+  (darkyears>=10 darkyears<=24) 2039
+  (darkyears>=10 darkyears<=24) 2412
+  (darkyears>=25 darkyears<=59) 2873
+  (darkyears>=25 darkyears<=59) 3940
+  (darkyears>=25 darkyears<=59) 4019
+  (darkyears>=25 darkyears<=59) 5512
+  (darkyears>=60 darkyears<=149) 6618
+  (darkyears>=60 darkyears<=149) 8304
+  (darkyears>=60 darkyears<=149) 11240
+  (darkyears>=60 darkyears<=149) 13987
+  (darkyears>=150 darkyears<=399) 16731
+  (darkyears>=150 darkyears<=399) 22406
+  (darkyears>=150 darkyears<=399) 30118
+  (darkyears>=150 darkyears<=399) 38542
+  (darkyears>=400) 41077
+  (darkyears>=400) 66250
+  (darkyears>=400) 104881
+  (darkyears>=400) 151396
+dc.marksn
+  (darkyears<=1) 37
+  (darkyears<=1) 52
+  (darkyears<=1) 118
+  (darkyears>=2 darkyears<=4) 140
+  (darkyears>=2 darkyears<=4) 203
+  (darkyears>=2 darkyears<=4) 266
+  (darkyears>=5) 300
+  (darkyears>=5) 352
+  (darkyears>=5) 418
+dc.group (people=1)
+  five
+  six
+  seven
+  ten
+  twelve
+dc.party (people=2)
+  ice party
+  stair party
+  cold party
+  ice crew
+dc.span (people=1)
+  hand of days
+  turn of the fire
+  sleep
+  watch
+
+# =====================================================================================================================
+# the marks: a bone, a stone, a painted wall (the ship reads them, as it reads the tallies)
+# =====================================================================================================================
+
+dc.mk.head (formula people=4)
+  (medium=bone) A {pre.bone}, cut along its whole length with {pre.stroke}, and no circle among them.
+  (medium=bone) A {pre.bone} worn dark with handling, its {pre.stroke} running end to end and round the end again.
+  (medium=bone) A {pre.bone} kept by the fire, cut with {pre.stroke}; the ship counts {#dc.marksn} on it.
+  (medium=stone) A flat stone from the floor of {hall.below}, its face crowded with {pre.stroke}.
+  (medium=stone) A stone set by {warm.ground}, cut with {pre.stroke} on every side that faces the fire.
+  (medium=stone) A pebble from {warm.ground}, still faintly warm to the ship's hand, scratched with {pre.stroke}.
+  (medium=painted) On the wall of {hall.below}, in {colour.holy}, row on row of {pre.stroke}.
+  (medium=painted) Over {warm.ground}, rows of {pre.stroke} in soot, too many for one hand.
+  (medium=painted) The wall of {hall.below} is covered with {pre.stroke}, low down, where someone sitting could reach.
+  The counts of the dark, as {$home} kept them below.
+  The days without the sun, in {pre.stroke}: the ship counts {#dc.marksn} before the {pre.bone.or} runs out.
+
+dc.mk.line (share=0.7)
+  (once) The {pre.stroke} go in groups of {dc.group}, and every group ends in a small circle crossed through: the ship reads each as a day the sun did not rise.
+  (once) At the start, a circle drawn whole, with lines coming out of it; it is not drawn again.
+  (once) Every {dc.group} {pre.stroke}, a hand pressed in {colour.holy}: one {dc.span} gone, the ship thinks.
+  (once) Among the {pre.stroke}, a small fire drawn every so often: the fire that was kept, or a feast kept without its sun.
+  (once) A {game.one} drawn once, early on, and never again.
+  (once) Some {pre.stroke} are cut deeper than the rest, as if in anger; then they go on as before.
+  (once) {pre.sign.dead}, and the {pre.stroke} do not stop for it.
+  (once) Near the end, two hands cut the {pre.stroke}, one heavy, one light, side by side.
+  (once moons>0) A crescent beside some groups: {moon} came round, and the count went on under it.
+  (once) Over one group, white dots: the snow that fell out of the air, the ship thinks.
+  (once) A figure going down into a hole, and from there on the {pre.stroke} are smaller.
+  (once) A row of small figures holding hands round a fire, between two groups; the count does not stop.
+  (once) One group is cut over a sign the ship has seen before: {sunway.thing}, as their marks drew it.
+  (once) The {pre.stroke} lean toward a circle drawn at the top of the {pre.bone.or}, all of them, like grass to the light.
+  (once) Between the groups, {motif.over}, very small, the {people}'s own sign.
+  (once) The ship counts the groups: {#dc.marksn} {pre.stroke} in all, and the circle for the sun nowhere among them after the first.
+
+dc.mk.note (share=0.7)
+  (once) Some {pre.stroke} are filled with {colour.holy} and the rest are bare: two counts, or two keepers.
+  (once) A stroke, a gap, a stroke: the count was lost once and begun again, the ship thinks.
+  (once) The oldest {pre.stroke} are worn almost smooth where a thumb rested on them.
+  (once) A {pre.stroke.one} longer than the rest every so often: a year of their count, the ship thinks, without its summer.
+  (once) Under the {pre.stroke}, a figure with its arms raised to a circle that is not there.
+
+dc.mk.end
+  The {pre.stroke} run to the end of the {pre.bone.or} and round its edge, still going.
+  The last {pre.stroke} are fresh; whoever cut them stopped in the middle of a group.
+  The count stops after a group of {n}, and the rest of the {pre.bone.or} is bare.
+  At the end, a circle drawn whole again, small, in {colour.holy}: a hope, the ship thinks, or a memory.
+  The last group is cut so lightly it may be a scratch; the ship counts it anyway.
+  The {pre.stroke} go on past where the ship can see them, into the dark of the {pre.bone.or}.
+
+# =====================================================================================================================
+# a stone cut with the count (a later age's: the count kept in words in the stone of the hall below)
+# =====================================================================================================================
+
+dc.st.head (formula people=3)
+  Cut in the stone over {warm.ground}, for the count of the dark:
+  Cut in the wall of {hall.below}, where everyone passes:
+  Set in the floor of {hall.below} at {$home}, the count of the dark:
+  On the lintel of {hall.below}, cut by many hands:
+dc.st.line
+  (once) So many days without the dawn: {#dc.dayn}, and the count goes on below this stone.
+  (once) Here the {people} kept the count of the days since the last sunrise, one stroke a day, as {god} saw it.
+  (once) Day {#dc.dayn}: this stone was cut, the old one being full.
+  (once) Under this stone, the strokes of the first days, when the sun could still be found among the stars.
+  (once) The days of the dark are counted here, so that the children know how long it has been.
+  (once has:festival) {festival} was kept below this stone every year, and the count went on through it.
+dc.st.end
+  Whoever comes after: go on cutting.
+  Count on. {sun} is still out there.
+  {god.keep}, and keep the count.
+  The count is the {people}'s; let no one stop it.
+
+# =====================================================================================================================
+# the count kept on a tablet, a scroll or a codex
+# =====================================================================================================================
+
+dc.cl.head (formula people=4)
+  The count of the days without the dawn, kept at {$home} by the keepers of the fire.
+  (has:$me) The count of the dark, kept by {$me:name} at {$home}, as the one before kept it.
+  The days without the sun, counted at {$home} from the last sunrise.
+  Here the count of the days is set down, so that nobody forgets how long it has been.
+  (faith=onegod|faith=manygods) The days without the sun, counted under {holyplace} at {$home}, in the name of {god}.
+  The book of the days below, at {$home}, from the last sunrise.
+  The reckoning of {hall.below}, from the last sunrise.
+)VG"

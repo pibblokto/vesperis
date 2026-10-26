@@ -127,18 +127,25 @@ const MadeSources& madeSources() {
 }
 }
 
+bool kindSourceFits(const KindSource& S, bool giant, const KindFacts& f) {
+    if (f.paired && giant) return false;   // P-07: a double planet's halves are worlds
+    if (!(S.from >> f.drawn & 1u) || f.tempK < S.tLo || f.tempK >= S.tHi || !(S.bodies & f.body)) return false;
+    if ((S.stars && !(S.stars >> f.starClass & 1u)) || (S.lock > 0 && !f.locked) || (S.lock < 0 && f.sync)) return false;
+    if (S.parents && (f.parent < 0 || !(S.parents >> f.parent & 1u))) return false;   // P-03: a moon of the planets it names (a brown dwarf's)
+    return (f.moon & S.moon) == S.moon;   // P-06: a moon that is what the source names among its planet's moons
+}
+
+thread_local std::vector<KindFacts>* t_kindFactsSeen = nullptr;
+
 int kindOf(const KindFacts& f) {
     if (f.drawn < 0 || f.drawn >= PT_DRAWN_COUNT) return f.drawn;
     if (kindHas(f.drawn, KT_PEOPLE) && peopleHash(f.seed)) return f.drawn;   // a people's world keeps its kind (its towns, records and signal stay)
+    if (t_kindFactsSeen) t_kindFactsSeen->push_back(f);   // E-07: the harness's `salt scan`
     const MadeSources& M = madeSources();
     for (int i = 0; i < M.n; i++) {
         const MadeSource& m = M.src[i];
         const KindSource& S = m.s;
-        if (f.paired && m.giant) continue;   // P-07: a double planet's halves are worlds
-        if (!(S.from >> f.drawn & 1u) || f.tempK < S.tLo || f.tempK >= S.tHi || !(S.bodies & f.body)) continue;
-        if ((S.stars && !(S.stars >> f.starClass & 1u)) || (S.lock > 0 && !f.locked) || (S.lock < 0 && f.sync)) continue;
-        if (S.parents && (f.parent < 0 || !(S.parents >> f.parent & 1u))) continue;   // P-03: a moon of the planets it names (a brown dwarf's)
-        if ((f.moon & S.moon) != S.moon) continue;   // P-06: a moon that is what the source names among its planet's moons
+        if (!kindSourceFits(S, m.giant, f)) continue;
         if (unitFromHash(mix64((S.byStar ? f.starSeed : f.seed) ^ m.salt)) < S.share) return m.kind;   // P-02: a young star's worlds alike
         i = m.next - 1;   // the world qualified for this kind and its hash said no: on to the next kind
     }

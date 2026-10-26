@@ -1,9 +1,9 @@
-// Game orchestration core: construction, settings, the frame loop, global keys, test hooks.
-// autopilot.cpp, hud.cpp, landing_map.cpp, game_states.cpp and persistence.cpp hold the rest.
+// Game orchestration core: construction, settings, the frame loop, global keys.
+// Each state's update and picture is in a file of its own (game.h's banners name them).
 #include "game.h"
-#include "galaxy/works.h"
-#include "galaxy/plan.h"
-#include "galaxy/roads.h"
+#include "peoples/works.h"
+#include "peoples/plan.h"
+#include "peoples/roads.h"
 #include "galaxy/drainage.h"
 #include <chrono>
 #include <thread>
@@ -31,6 +31,7 @@ Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
     state = GameState::TITLE;
 }
 
+// settings and save file (the constructor touches no files)
 void Game::loadFromDisk() {
     settings.load(settingsPath);
     applySettings();
@@ -71,13 +72,14 @@ void Game::applySettings() {
 }
 
 bool Game::mouseCaptureWanted() const {
-    return state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::STAR_MAP || state == GameState::SECTOR_MAP;   // R-408: the mouse moves the map's cursor
+    return stateHas(state, ST_MOUSE);
 }
 
 void Game::status(const std::string& m, double secs) { statusMsg = m; statusUntil = realTime + secs; }
 
 std::string Game::epocString() const { return epocOf(t); }
 
+// X-04: a time's (a recording's)
 std::string Game::epocOf(double secs) {
     int epoc = 6011 + (int)(secs / 1e9);
     int sinister = (int)std::fmod(secs / 1e6, 1000.0);
@@ -85,6 +87,7 @@ std::string Game::epocOf(double secs) {
     return fmt("EPOC %d:%03d.%03d", epoc, sinister, medius);
 }
 
+// M5-05: EPOC:SINISTER.MEDIUS.DEXTER
 std::string Game::epocFullString() const {
     double secs = t;
     int epoc = 6011 + (int)(secs / 1e9);
@@ -94,6 +97,7 @@ std::string Game::epocFullString() const {
     return fmt("EPOC %d:%03d.%03d.%03d", epoc, sinister, medius, dexter);
 }
 
+// M5-05: game seconds from the wall clock (epoch 2026-01-01 UTC)
 double Game::wallClockT() {
     // the original ran on the real clock: here game time 3.6e6 s (a fresh expedition) is 2026-01-01 00:00 UTC
     double unixNow = (double)std::time(nullptr);
@@ -106,6 +110,7 @@ std::string Game::distanceString(double km) const {
     return fmt("%.3f LY", km / SECTOR_KM);
 }
 
+// N0-01: "740 KM/S, PERIAPSIS IN 3.2 H"
 // N0-01 (B-201): a comet's speed and where it is on its plunge; mean anomaly below PI means it has passed periapsis
 std::string Game::cometMotionString(int bi) const {
     const Body& b = sys.bodies[bi];
@@ -117,29 +122,10 @@ std::string Game::cometMotionString(int bi) const {
     return fmt("%.0f KM/S, PERIAPSIS IN %s", spd, hours((TAU - M) / TAU * P).c_str());
 }
 
+// N3: "QUADRUPED", "BROWSER", ...
 const char* Game::shortPlan(int plan) {
     static const char* names[PLAN_COUNT] = {"QUADRUPED", "BROWSER", "CRAWLER", "HOPPER", "STRIDER", "GIANT", "FLYER", "SWIMMER"};
     return plan >= 0 && plan < PLAN_COUNT ? names[plan] : "?";
-}
-
-bool Game::testDriveSetup() {
-    if (state != GameState::SURFACE || !surf.valid) return false;
-    if (surf.inDrone) { surf.drone.landed = true; surf.drone.y = surf.site.surfaceHeight(surf.drone.x, surf.drone.z); surf.toggleDrone(); }   // R-403: out of a flying drone first
-    surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
-    if (!surf.buggy.deployed && !surf.deployBuggy()) return false;
-    surf.buggy.unfold = 1;
-    surf.player.x = surf.buggy.x + 1.5; surf.player.z = surf.buggy.z;
-    return surf.inBuggy || surf.toggleBuggy();
-}
-
-double Game::testDriveOpen() {
-    if (!surf.valid) return 0;
-    double x, z, heading;
-    double run = surf.findOpenRun(x, z, heading);
-    surf.buggy.x = x; surf.buggy.z = z; surf.buggy.y = surf.site.surfaceHeight(x, z); surf.buggy.heading = heading; surf.buggy.speed = 0;
-    surf.buggy.tracks.clear(); surf.buggy.trackHead = 0;
-    surf.player.x = x; surf.player.z = z; surf.player.y = surf.buggy.y; surf.player.yaw = heading;
-    return run;
 }
 
 void Game::newGame() {
@@ -209,7 +195,7 @@ void Game::handleGlobalKeys(const Input& in) {
     if (in.wasPressed(KEY_F11) || (in.ctrl() && in.wasPressed(KEY_F)) || (in.alt() && in.wasPressed(KEY_ENTER))) wantsFullscreenToggle = true;
     if (in.wasPressed(KEY_F10) || (in.ctrl() && in.wasPressed(KEY_K))) { settings.scanlines = !settings.scanlines; settings.save(settingsPath); status(settings.scanlines ? "SCANLINES ON" : "SCANLINES OFF", 2); }
     // M6-05 photo tools
-    bool scene = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::PROBE || state == GameState::RECORDING;   // X-01: the probe's camera too; X-04: a recording
+    bool scene = stateHas(state, ST_PHOTO);
     if (in.ctrl() && in.wasPressed(KEY_P) && !in.shift() && scene) togglePhotoMode();
     if (in.ctrl() && in.wasPressed(KEY_P) && in.shift() && scene) wantsPanorama = true;
     if (in.ctrl() && in.wasPressed(KEY_R) && scene) toggleRecording();
@@ -233,6 +219,7 @@ void Game::toggleRecording() {
     } else status(fmt("RECORDING STOPPED: %d FRAMES", recFrame), 3);
 }
 
+// writes movies/take_NNN/frame_NNNNN.png
 bool Game::recordFrame() {
     if (!recording) return false;
     std::string fn = fmt("%s/take_%03d/frame_%05d.png", moviesDir.c_str(), recTake, recFrame++);
@@ -274,17 +261,15 @@ void Game::frame(const Input& inRaw, double realDt) {
     tapeUpdate(realDt);   // R-420: auto-explore's tape (its deck, its tracks, its fade after auto-explore)
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
-    if (state != GameState::TEXT_ENTRY && state != GameState::CONSOLE && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
+    if (!stateHas(state, ST_TYPING) && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
     if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // C-04: the decoder's music on its screen only (C-07: or through the radar; C-11: the ship's player plays on)
     if (audio.speech && audio.speech == &shardWorld.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                 // C-05: the voice too
     if ((audio.instrument || icase.discOn) && state != GameState::INSTRUMENTS) stopInstrument();                                                       // C-11: an instrument is played at its case
-    if (radar.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS || state == GameState::DRONES)) radarOff();   // C-07: a ship's instrument, off the ship
-    if (tele.on && (state == GameState::SURFACE || state == GameState::DESCENT || state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::TITLE || state == GameState::SHARDS || state == GameState::SECTOR_MAP || state == GameState::PROBE || state == GameState::INSTRUMENTS || state == GameState::DRONES)) telescopeOff();   // W-06: stowed off the window
+    if (radar.on && stateHas(state, ST_STOWS)) radarOff();   // C-07: a ship's instrument, off the ship
+    if (tele.on && stateHas(state, ST_STOWS)) telescopeOff();   // W-06: stowed off the window
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
     collectMigration();   // R-408: the named sights found on the thread become marks
-    bool simulating = state == GameState::SPACE || state == GameState::SURFACE || state == GameState::DESCENT ||
-                      state == GameState::ASCENT || state == GameState::LANDING_MAP || state == GameState::SHIPSCREEN || state == GameState::CONSOLE || state == GameState::SHARDS || state == GameState::PROBE ||
-                      state == GameState::INSTRUMENTS || state == GameState::DRONES;
+    bool simulating = stateHas(state, ST_SIMULATES);
     if (in.wasPressed(KEY_T) && simulating) {
         if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }   // W-01: the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
         else if (almanacRunning) almanacStop(false);
@@ -434,26 +419,7 @@ void Game::frame(const Input& inRaw, double realDt) {
         case GameState::ALMANAC:   // W-01: over the scene it was opened from (the landing map keeps its picture)
             if (almanacScene == 2) renderLandingMap(); else if (almanacScene == 1 && surf.valid) renderSurfaceScene(); else renderSpace();
             renderAlmanac(); break;
-        case GameState::HELP:
-        case GameState::MENU:
-        case GameState::SETTINGS:
-        case GameState::SLOTS:
-        case GameState::GUIDE:
-        case GameState::TEXT_ENTRY:
-        case GameState::STAR_MAP:
-        case GameState::LOG:
-        case GameState::STATS:
-        case GameState::GALLERY:
-        case GameState::SHIPSCREEN:
-        case GameState::CONSOLE:
-        case GameState::SECTOR_MAP:
-        case GameState::SYSTEM_LIST:
-        case GameState::DATA:
-        case GameState::KEYS:
-        case GameState::SHARDS:
-        case GameState::INSTRUMENTS:
-        case GameState::DRONES:
-        case GameState::AUTO:
+        default:   // the overlays (ST_OVERLAY), over the scene they were opened from
             if (state == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); break; }   // G-05: the galaxy chart covers the frame: no scene under it
             if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }   // G-06: a mark's name, over the chart
             if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // X-04: naming the storm over the probe's screen
@@ -488,324 +454,4 @@ void Game::frame(const Input& inRaw, double realDt) {
     }
     if (ax.on) autoRender();   // R-419: its caption in the first seconds, nothing else
     else renderPad();          // R-418: the command menu or the keyboard over everything
-}
-
-void Game::testAimAtNearestStar() {
-    const Star* best = nullptr; double bd = 1e300;
-    for (const Star& s : nb.stars) {
-        if (sys.valid && s.seed == sys.star.seed) continue;
-        double d = length2(s.pos - ship.pos);
-        if (d < bd) { bd = d; best = &s; }
-    }
-    if (!best) return;
-    Vec3 fwd = normalize(best->pos - ship.pos);
-    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
-}
-
-void Game::testAimAtBody(int body) {
-    if (body < 0 || body >= (int)sys.bodies.size()) return;
-    Vec3 fwd = normalize(sys.bodyPos(body, t) - ship.pos);
-    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
-}
-
-std::string Game::testRoadInfo() const {   // C-09
-    std::string s = fmt("zoom roads %d (%.0f ms); site roads %zu (%.1f ms, %s, wear %.2f)", (int)zoomRoads.size(), zoomRoadsMs, surf.site.roads.size(), surf.site.roadsMs, surf.site.roadCultures[0].paved ? "paved" : "beaten", surf.site.roadCultures[0].roadWear);
-    double d, along, hd; const SiteRoad* rd;
-    if (!surf.site.roads.empty() && surf.site.roadAt(surf.player.x, surf.player.z, 30, d, along, hd, rd))
-        s += fmt("; the nearest road %.1f m off (half %.1f), %.0f m along, heading %.0f, left %.2f, cover at the feet %.2f", d, rd->half, along, wrap2pi(hd) / DEG, roadLeft(rd->id, along, rd->wear), surf.site.roadCover(surf.player.x, surf.player.z));
-    else s += "; no road within 30 m";
-    s += fmt("; roads met %zu", roadsMet.size());
-    return s;
-}
-
-bool Game::testWalkToWork(double withinM) {   // T-03
-    if (!surf.valid || surf.inVehicle() || !worldHadCivilisation(surf.site.gen)) return false;
-    const Vec3 here = surf.site.unitAt(surf.player.x, surf.player.z);
-    std::vector<std::shared_ptr<const Work>> near; worksAround(surf.site.gen, here, std::min(withinM, 60000.0), near);   // B-418: the land's within 60 km
-    const std::shared_ptr<const WorldWorks> W = worldWorksOf(surf.site.gen);
-    for (const Work& w : W->works) near.push_back(std::shared_ptr<const Work>(W, &w));   // and the world's wherever they are
-    const Work* best = nullptr; double bd = withinM;
-    for (const std::shared_ptr<const Work>& w : near) { if (!w->heard) continue; const double d = std::acos(clampd(dot(w->unit, here), -1, 1)) * W->Rm; if (d < bd) { bd = d; best = w.get(); } }
-    if (!best) return false;
-    double x, z; surf.site.localAt(best->unit, x, z);
-    const double r = best->radiusM + 150, dx = surf.player.x - x, dz = surf.player.z - z, d = std::max(1.0, std::hypot(dx, dz));
-    surf.player.x = x + dx / d * r; surf.player.z = z + dz / d * r; surf.player.y = surf.site.surfaceHeight(surf.player.x, surf.player.z); surf.player.vx = surf.player.vz = 0;
-    return true;
-}
-
-bool Game::testWalkToRoad(double withinM) {   // C-09
-    double d, along, hd; const SiteRoad* rd;
-    if (surf.site.roads.empty() || !surf.site.roadAt(surf.player.x, surf.player.z, withinM, d, along, hd, rd)) return false;
-    double bestD = 1e9, bx = 0, bz = 0;   // the nearest point of its centre line
-    for (size_t i = 0; i + 1 < rd->x.size(); i++) {
-        double ax = rd->x[i], az = rd->z[i], ex = rd->x[i + 1] - ax, ez = rd->z[i + 1] - az, L2 = ex * ex + ez * ez;
-        double t = L2 > 1e-9 ? clampd(((surf.player.x - ax) * ex + (surf.player.z - az) * ez) / L2, 0, 1) : 0;
-        double qx = ax + ex * t, qz = az + ez * t, dd = std::hypot(surf.player.x - qx, surf.player.z - qz);
-        if (dd < bestD) { bestD = dd; bx = qx; bz = qz; }
-    }
-    surf.player.x = bx; surf.player.z = bz; surf.player.y = surf.site.surfaceHeight(bx, bz); surf.player.yaw = hd; surf.player.vx = surf.player.vz = 0;
-    return true;
-}
-
-void Game::testLandSite() {
-    if (landBody < 0 || landBody >= (int)sys.bodies.size()) return;
-    const PlanetMap& m = spaceR.mapFor(sys.bodies[landBody]);
-    Mat3 frame = sys.bodyFrame(landBody, t);
-    Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
-    double anyLat = 1e9, anyLon = 0;
-    setDrainageEnabled(false);   // S-01: the level check probes the relief without the rivers' tiles (a tile per probe would cost seconds)
-    for (int pass = 0; pass < 2; pass++) {   // grassland first (the herd), then any land
-        Rng r(sys.bodies[landBody].seed ^ 0x1A4DULL);
-        int probed = 0;
-        for (int k = 0; k < 400 && probed < 24; k++) {
-            double la = r.range(-60 * DEG, 60 * DEG), lo = r.range(-PI, PI);
-            if (dot(StarSystem::bodyFromLatLon(la, lo), sunB) < 0.3) continue;
-            if (pass == 0 && m.materialAt(lo, la) != MAT_GRASS) continue;
-            bool land = true;   // the texel and its neighbours two degrees out: a coast or a lake shore is still a swim
-            for (int j = -1; j <= 1 && land; j++)
-                for (int i = -1; i <= 1 && land; i++)
-                    if (m.materialAt(lo + i * 2 * DEG, la + j * 2 * DEG) == MAT_WATER) land = false;
-            if (!land) continue;
-            if (anyLat > 1e8) { anyLat = la; anyLon = lo; }
-            SurfaceSite probe; probe.initFrame(&sys, landBody, la, lo, t); probed++;   // S-01: level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
-            if (siteSlope(probe) < 0.1) { setDrainageEnabled(true); landLat = la; landLon = lo; return; }
-        }
-    }
-    setDrainageEnabled(true);
-    if (anyLat < 1e8) { landLat = anyLat; landLon = anyLon; }
-}
-
-int Game::testLandableBody() const {
-    for (auto& b : sys.bodies) if (KINDS[b.type].landable && b.parent < 0 && b.type != PT_COMET) return b.index;   // O6-03: the flow's buggy steps need gravity (a comet came first since GEN 9)
-    for (auto& b : sys.bodies) if (KINDS[b.type].landable && b.type != PT_COMET) return b.index;
-    for (auto& b : sys.bodies) if (KINDS[b.type].landable && b.parent < 0) return b.index;
-    for (auto& b : sys.bodies) if (KINDS[b.type].landable) return b.index;
-    return -1;
-}
-
-void Game::testParkAt(const Star& s, int body, bool waitMap) {
-    arriveAtStar(s, Vec3(0, 0, -1));
-    if (body < 0 || body >= (int)sys.bodies.size()) return;
-    const Body& b = sys.bodies[body];
-    Vec3 bp = sys.bodyPos(body, t);
-    Vec3 toStar = normalize(sys.star.pos - bp);
-    Vec3 side = normalize(cross(toStar, Vec3(0, 1, 0)));
-    ship.parkDir = normalize(toStar * 0.7 + side * 0.7 + Vec3(0, 0.2, 0));
-    ship.parkDist = parkDistanceFor(b);
-    ship.parkedBody = body; ship.localTarget = body; ship.mode = ShipState::PARKED;
-    ship.pos = bp + ship.parkDir * ship.parkDist;
-    Vec3 fwd = normalize(bp - ship.pos);
-    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
-    nb.update(ship.pos);
-    state = GameState::SPACE;
-    worldPlanPrefetch(spaceR.genFor(b));   // T-01
-    spaceR.setSeason(sys, t);   // F-02: the season the next frame draws (the renderer held the last system's: the map was made for it, then again)
-    if (KINDS[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // F-02: the tests' landing map drawn from their next frame, as before
-}
-
-void Game::testWaitMap() { testWaitMapOf(landBody); }
-void Game::testWaitMapOf(int bi) {   // a wait on the map's thread, not one of the game's blocking calls (`mapStats.blocked` counts the game's)
-    if (bi < 0 || bi >= (int)sys.bodies.size()) return;
-    while (!spaceR.mapIfReady(sys.bodies[bi])) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-}
-
-std::string Game::testBeltDraw() const {
-    int n3 = 0, x0 = 1 << 30, x1 = -1, y0 = 1 << 30, y1 = -1;
-    for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) { Pix p = fb.idx[y * FBW + x]; if (bankOf(p) == 20 && intenOf(p) > 0) { n3++; x0 = std::min(x0, x); x1 = std::max(x1, x); y0 = std::min(y0, y); y1 = std::max(y1, y); } }
-    int a, b; const_cast<Game*>(this)->choosePaletteBodies(a, b);
-    BeltRock rk; std::string where = "no rock";
-    if (beltRockNow(rk)) { Vec3 v = viewBasis() * (rk.pos - ship.pos); Vec3 f = normalize(rk.pos - ship.pos); where = fmt("rock at view (%.0f, %.0f, %.0f) km, %.1f km across, ship %.0f km off; ship yaw %.2f pitch %.2f, rock yaw %.2f pitch %.2f, cabin %.2f/%.2f", v.x, v.y, v.z, 2 * rk.radiusKm, length(rk.pos - ship.pos), ship.yaw, ship.pitch, std::atan2(f.x, f.z), std::asin(clampd(f.y, -1, 1)), cabin.yaw, cabin.pitch); }
-    return fmt("rocks drawn %d (%d meshes), bank-20 pixels %d in x %d..%d y %d..%d, palette bodies %d/%d, cabin %d; %s", spaceR.lastBeltRocks, spaceR.lastBeltMeshes, n3, x0, x1, y0, y1, a, b, (int)settings.cabin, where.c_str());
-}
-
-void Game::testParkAtBelt(const Star& s, int k) {
-    arriveAtStar(s, Vec3(0, 0, -1));
-    if (k < 0 || k >= (int)sys.belts.size()) return;
-    startApproachBelt(k);
-    ship.flightDur = 0.001;   // the next frame completes the approach
-    state = GameState::SPACE;
-}
-
-std::string Game::testHealth() const {
-    auto bad = [](double v) { return !std::isfinite(v); };
-    std::string r;
-    if (bad(ship.pos.x) || bad(ship.pos.y) || bad(ship.pos.z)) r += "ship.pos ";
-    if (bad(ship.yaw) || bad(ship.pitch)) r += "ship.angles ";
-    if (bad(t) || bad(timeWarp) || bad(realTime)) r += "time ";
-    if (surf.valid && (bad(surf.player.x) || bad(surf.player.y) || bad(surf.player.z) || bad(surf.player.yaw) || bad(surf.player.pitch))) r += "player ";
-    if (surf.valid && (bad(surf.capsuleX) || bad(surf.capsuleZ))) r += "capsule ";
-    return r;
-}
-
-void Game::testTypeText(const std::string& s) {
-    Input in;
-    for (char c : s) {
-        in.newFrame();
-        int k = c == ' ' ? KEY_SPACE : (c == '-' ? KEY_MINUS : (c >= '0' && c <= '9' ? KEY_0 + (c - '0') : KEY_A + (toupper((unsigned char)c) - 'A')));
-        in.pressed[k] = true; in.down[k] = true;
-        frame(in, 1.0 / 30);
-    }
-    in.newFrame(); in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true; frame(in, 1.0 / 30);
-}
-
-std::string Game::testDroneInfo() const {   // R-403
-    const Drone& d = surf.drone;
-    return fmt("deployed=%d in=%d landed=%d speed=%.1f m/s alt=%.0f m vs=%+.1f heading=%.0f odometer=%.0f m rotor=%.2f chase=%d", (int)d.deployed, (int)surf.inDrone, (int)d.landed, d.speed, d.altAboveGround, d.vy, wrap2pi(d.heading) / DEG, d.odometer, d.rotor, (int)surf.chaseCam);
-}
-
-bool Game::testFlySetup(double altM) {   // R-403
-    if (state != GameState::SURFACE || !surf.valid) return false;
-    if (surf.inBuggy) surf.toggleBuggy();
-    surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
-    if (!surf.drone.deployed && !surf.deployDrone()) return false;
-    surf.drone.unfold = 1;
-    surf.player.x = surf.drone.x + 1.5; surf.player.z = surf.drone.z;
-    if (!surf.inDrone && !surf.toggleDrone()) return false;
-    surf.drone.landed = false; surf.drone.rotor = 0.8; surf.drone.y = surf.site.surfaceHeight(surf.drone.x, surf.drone.z) + altM; surf.drone.altAboveGround = altM;
-    surf.player.y = surf.drone.y;
-    return true;
-}
-
-std::string Game::testBuggyInfo() const {
-    const Buggy& b = surf.buggy;
-    return fmt("deployed=%d in=%d speed=%.1f m/s heading=%.0f odometer=%.0f m tracks=%zu chase=%d", (int)b.deployed, (int)surf.inBuggy, b.speed, wrap2pi(b.heading) / DEG, b.odometer, b.tracks.size(), (int)surf.chaseCam);
-}
-
-std::string Game::testDebugInfo() const {
-    std::string r = fmt("mode=%d parked=%d local=%d belt=%d/%d yaw=%.2f pitch=%.2f", (int)ship.mode, ship.parkedBody, ship.localTarget, ship.targetBelt, ship.parkedBelt, ship.yaw, ship.pitch);
-    if (ship.parkedBody >= 0 && ship.parkedBody < (int)sys.bodies.size()) {
-        Vec3 fwd = normalize(sys.bodyPos(ship.parkedBody, t) - ship.pos);
-        r += fmt(" bodyYaw=%.2f bodyPitch=%.2f dist=%.0f R=%.0f", std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)), length(sys.bodyPos(ship.parkedBody, t) - ship.pos), sys.bodies[ship.parkedBody].radiusKm);
-    }
-    return r;
-}
-
-std::string Game::testGraveInfo() const {   // C-12
-    const SurfaceView::NearGrave& ng = surf.nearGrave;
-    std::string last = guide.log.empty() ? std::string("-") : guide.log.back().kind + ": " + guide.log.back().text;
-    return fmt("grave: %s; %zu graves in the guide; last log: %s", ng.k >= 0 ? fmt("%s (%.1f m, %s)", ng.line.c_str(), ng.dist, SETTLEMENT_CLASS_NAMES[ng.sclass]).c_str() : "none within reach", guide.graves.size(), last.c_str());
-}
-bool Game::testWalkToGrave() {   // C-12: a metre in front of the nearest settlement's first stone, facing it
-    if (!surf.valid || surf.inVehicle()) return false;
-    bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
-    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (cell.graves.empty()) return;
-        const Grave& g = cell.graves[0];
-        double x = r.x + g.x, z = r.z + g.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
-        if (d < bestD) { bestD = d; sx = x + std::sin(g.heading); sz = z + std::cos(g.heading); yaw = g.heading + PI; found = true; }
-    });
-    if (!found) return false;
-    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz); surf.player.yaw = yaw; surf.player.pitch = -0.35;
-    return true;
-}
-
-int Game::testWalkToRecord(int medium, bool archive) {   // T-04
-    if (!surf.valid || surf.inVehicle()) return -1;
-    double bestD = 1e18; int found = -1; ShardSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
-    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        for (const ShardSite& st : cell.shards) {
-            if (surf.shardsFound.count(st.index) || (medium >= 0 && st.medium != medium) || archive != (st.archive > 0)) continue;
-            const double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
-            if (d >= bestD) continue;
-            bestD = d; found = st.index; site = st; rx = r.x; rz = r.z;
-            const Building& b = cell.spec.buildings[st.building]; bx = r.x + b.x; bz = r.z + b.z;
-        }
-    });
-    if (found < 0) return -1;
-    const double x = rx + site.x, z = rz + site.z;
-    double dx, dz;
-    if (site.wallD > 0) { dx = std::sin(site.heading); dz = std::cos(site.heading); }   // before the wall, facing it
-    else if (site.archive) {   // square to the row: toward the room's middle, or away from the structure a ring of them stands round
-        const double px = std::cos(site.heading), pz = -std::sin(site.heading);
-        double side = px * (bx - x) + pz * (bz - z) < 0 ? -1.0 : 1.0;
-        if (site.outside) side = -side;
-        dx = px * side; dz = pz * side;
-    } else {   // toward its building's middle from a record in a room, away from it at a foot
-        dx = bx - x; dz = bz - z; double L = std::hypot(dx, dz);
-        if (L < 0.3) { dx = std::sin(site.heading); dz = std::cos(site.heading); L = 1; }
-        dx /= L; dz /= L;
-        if (site.outside) { dx = -dx; dz = -dz; }
-    }
-    // the first stand clear of the pieces (a column, a pier, a wall) at a distance that frames it (an archive's row from either side)
-    static const double BACK[2][5] = {{1.25, 1.0, 1.5, 0.8, 1.8}, {1.5, 1.2, 1.9, 1.0, 0.8}};
-    std::vector<SurfaceView::Collider> cols;
-    double sx = x + dx * 1.25, sz = z + dz * 1.25, back = 1.25;
-    bool placed = false;
-    for (int side = 0; side < (site.archive ? 2 : 1) && !placed; side++) {
-        if (side == 1) { dx = -dx; dz = -dz; }
-        for (int k = 0; k < 5 && !placed; k++) {
-            const double bk = site.wallD > 0 ? 0.9 + 0.2 * k : BACK[site.archive ? 1 : 0][k];
-            const double cx = x + dx * bk, cz = z + dz * bk, gy = surf.site.surfaceHeight(cx, cz);
-            surf.collectColliders(cx, cz, cols);
-            bool blocked = false;
-            for (const SurfaceView::Collider& c : cols) if (std::hypot(c.x - cx, c.z - cz) < c.r + 0.3 && c.y1 > gy + 0.4 && c.y0 < gy + 1.8) { blocked = true; break; }
-            if (!blocked) { sx = cx; sz = cz; back = bk; placed = true; }
-        }
-    }
-    if (!placed) { if (site.archive) { dx = -dx; dz = -dz; } sx = x + dx * 1.25; sz = z + dz * 1.25; back = 1.25; }
-    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz);
-    surf.player.yaw = std::atan2(-dx, -dz);
-    surf.player.pitch = site.wallD > 0 ? -0.3 : -std::atan2(1.45, back + 0.4);   // the eye 1.6 m up, the object a little ahead of the frame's middle
-    return found;
-}
-
-int Game::testWalkToInstrument(int age) {   // C-11: before the nearest instrument not taken (of that age), as `testWalkToRecord` stands before a record
-    if (!surf.valid || surf.inVehicle()) return -1;
-    double bestD = 1e18; int found = -1; InstrumentSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
-    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        if (cell.instrumentIds.size() != cell.instruments.size()) return;
-        for (size_t i = 0; i < cell.instruments.size(); i++) {
-            const InstrumentSite& st = cell.instruments[i];
-            const int id = cell.instrumentIds[i];
-            if (id < 0 || surf.instrumentsFound.count(id) || (age >= 0 && st.age != age)) continue;
-            const double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
-            if (d >= bestD) continue;
-            bestD = d; found = id; site = st; rx = r.x; rz = r.z;
-            const Building& b = cell.spec.buildings[st.building]; bx = r.x + b.x; bz = r.z + b.z;
-        }
-    });
-    if (found < 0) return -1;
-    const double x = rx + site.x, z = rz + site.z;
-    double dx = bx - x, dz = bz - z, L = std::hypot(dx, dz);
-    if (L < 0.3) { dx = std::sin(site.heading); dz = std::cos(site.heading); L = 1; }
-    dx /= L; dz /= L;
-    std::vector<SurfaceView::Collider> cols;
-    std::vector<std::pair<double, double>> records;   // the records not taken round it: a stand has the instrument nearer than any (E takes the nearer)
-    surf.forNearbyRuins(x, z, 1, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        for (const ShardSite& st : cell.shards) if (!surf.shardsFound.count(st.index) && std::hypot(r.x + st.x - x, r.z + st.z - z) < 4) records.push_back({r.x + st.x, r.z + st.z});
-    });
-    double sx = x + dx * 1.3, sz = z + dz * 1.3, back = 1.3;
-    bool placed = false;
-    for (int pass = 0; pass < 2 && !placed; pass++)
-        for (int turn = 0; turn < 16 && !placed; turn++) {   // round it until a stand clear of the pieces frames it (first one where nothing else lies nearer)
-            const double a = turn * PI / 8, ux = dx * std::cos(a) - dz * std::sin(a), uz = dx * std::sin(a) + dz * std::cos(a);
-            for (double bk : {1.2, 0.9, 1.6}) {
-                const double cx = x + ux * bk, cz = z + uz * bk, gy = surf.site.surfaceHeight(cx, cz);
-                if (pass == 0) { bool nearer = false; for (const auto& rc : records) if (std::hypot(rc.first - cx, rc.second - cz) < bk + 0.05) nearer = true; if (nearer) continue; }
-                surf.collectColliders(cx, cz, cols);
-                bool blocked = false;
-                for (const SurfaceView::Collider& c : cols) if (std::hypot(c.x - cx, c.z - cz) < c.r + 0.3 && c.y1 > gy + 0.4 && c.y0 < gy + 1.8) { blocked = true; break; }
-                if (!blocked) { sx = cx; sz = cz; back = bk; dx = ux; dz = uz; placed = true; break; }
-            }
-        }
-    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz);
-    surf.player.yaw = std::atan2(-dx, -dz);
-    surf.player.pitch = -std::atan2(1.4, back + 0.3);
-    return found;
-}
-
-bool Game::testWalkToShard() {   // C-13: a metre from the nearest settlement's first shard not yet taken, facing it
-    if (!surf.valid || surf.inVehicle()) return false;
-    bool found = false; double bestD = 1e18, sx = 0, sz = 0, yaw = 0;
-    surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
-        for (const ShardSite& st : cell.shards) {
-            if (surf.shardsFound.count(st.index)) continue;
-            double x = r.x + st.x, z = r.z + st.z, d = std::hypot(x - surf.player.x, z - surf.player.z);
-            if (d < bestD) { bestD = d; sx = x + std::sin(st.heading); sz = z + std::cos(st.heading); yaw = st.heading + PI; found = true; }
-            break;
-        }
-    });
-    if (!found) return false;
-    surf.player.x = sx; surf.player.z = sz; surf.player.y = surf.site.surfaceHeight(sx, sz); surf.player.yaw = yaw; surf.player.pitch = -0.5;
-    return true;
 }

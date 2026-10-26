@@ -1,6 +1,6 @@
 # R-416: the decoder's quick scroll
 
-status: done 2026-10-11 (uncommitted)
+status: done 2026-10-11 (released in 1.3.0)
 milestone: 1.3.0 (after R-415)
 
 ## Request

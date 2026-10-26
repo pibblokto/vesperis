@@ -248,7 +248,7 @@ lines; don't edit"), and each run's tokens are recorded. The prompts are kept, s
 - In a new session, the hooks refuse a whole read of the harness and a commit whose message carries a session link.
 - The eight tasks' baseline is recorded.
 
-**Done 2026-10-23:** `10-decisions.md`'s E-01 entry; the baseline is section 11.
+**Done 2026-10-23:** the log's E-01 entry (`docs/decisions/log/6-1.4.0.md`); the baseline is section 11.
 
 ### E-02. The proof kept (L)
 
@@ -274,7 +274,7 @@ In this order, so that nothing is ever proven against stale objects:
      - no line in src over 2,000 characters;
      - every file named in its directory's CLAUDE.md.
    - The two lines over 2,000 characters go:
-     - system.h:12's GEN_VERSION history moves to `docs/reference/generations.md`, a comment-only change proven by
+     - system.h:12's GEN_VERSION history moves to `docs/decisions/generations.md`, a comment-only change proven by
        `prove objects`; E-04 moves that page into `decisions/`.
      - shards.cpp:401 is wrapped, a whitespace-only change.
    - The `lakes` warning is fixed.
@@ -311,7 +311,7 @@ In this order, so that nothing is ever proven against stale objects:
 - The LSP answers a definition and a symbols request in a .cpp and a .h.
 - The skills and the agent are in `.claude/`.
 
-**Done 2026-10-24:** `10-decisions.md`'s E-02 entry. As built:
+**Done 2026-10-24:** the log's E-02 entry (`docs/decisions/log/6-1.4.0.md`). As built:
 - The fingerprint modes are the harness's first own files, `src/harness/` (linked only into vesperis_test). `fingerprint
   bodies` adds to fp5's hash the fields E-01's baseline found it missing (`gen2`, `ground2`) and the drifters nearest home, so
   all 60 kinds; `fingerprint modules` covers 16 peoples' worlds, 22 drained land sites and the almanacs of 102 systems.
@@ -392,6 +392,23 @@ The library's objects never recompile in this milestone, so only the harness can
 - A one-file harness edit rebuilds in 5 s or less.
 - The harness objects' reproducibility is tried again.
 
+**Done 2026-10-24:** the log's E-03 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- 43 files in `src/harness/` beside E-02's three (the largest 1,334 lines, 94 KB), named a little apart from the list above: `civ_lore` (shards,
+  charts, ruins, graves), `civ_music`, `civ_records` (records and the decoder), `modes_rogues`, `modes_drones`, and the unit's
+  `unit_civ`, `unit_peoples`, `unit_sky`, `unit_probe` (`unit_civ` and `unit_sky` were over 100 KB of long lines).
+- The method as planned: the `git mv`, the linkage edit (a shared static lost `static`, its default arguments moved into its new
+  declaration), `harness.h` and two tables' headers, one domain a step by `tools/mover.py`, each step's IR compared per function by
+  the new `tools/samecode.py` (at -O0 and without exceptions: with them clang's `invoke`s follow its emission order).
+- 41 unit groups, not 30: the `*Checks` are groups of their own. Each states the render scale and mush the groups before it leave
+  (a scripted `Game` sets 4x), so every group alone gives the full run's results.
+- The flow's and the bench's stages are member functions of `Flow` and `Bench` (their lambdas and shared locals the members), so
+  their code reads as before; the scenes' finders likewise of `SceneFind`, whose `continue`s to the next body clang's AST found.
+- The scenes' codes are `SCENE_*` (`SC_` was the settlements'). The modes the battery leaves out were proven by an A/B battery
+  (`PROVE_ITEMS`), recorded before the edits.
+- `TestWorld` and `scanSystems` went to E-12: the 112 star lookups take about 25 forms of failure and the 97 scans their own
+  ranges, orders and exits, so each site's control flow would change, for two or three lines a site.
+- 37 of the 40 harness objects compile the same twice (clang varies `voicePrint`, `unitGiants`, `unitSky`).
+
 ### E-04. The docs for their readers (L)
 
 **First, the long lines:** docs 06, 07 and 08 are rewrapped (38 lines over 2 KB, about 200 KB). The Read tool cuts such lines,
@@ -468,6 +485,17 @@ grammar, sound, radar. Each gets a contents block.
 - No doc line is over 2 KB.
 - `make check` finds `help md` equal to INDEX.md.
 
+**Done 2026-10-24:** the log's E-04 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- The log's files are named by their releases: `0-1.0.0.md` holds the table and everything before 1.0.0 (iteration 3's O
+  series too), so not `0-iterations-1-2.md`.
+- 15 rules files, not 8: seven areas needed a second (`rules-<area>-<topic>.md`) to keep each under 6 KB; `decisions/README.md`
+  says which holds what. 486 rules from 1,040 candidates; 110 superseded.
+- 08's mode tables are lists (a table's row cannot wrap); KNOWN-ISSUES' four long rows go on below its table.
+- The contents blocks are generated (`tools/contents.py`) and `make check` holds them, `INDEX.md`, `unit-checks.md` and the
+  docs' line lengths; it builds the harness first.
+- `PLAN-star-classes.md` (done in 1.1.0) went to the archive too; `10-decisions.md` and `12-civilisations.md` stay as maps.
+- The src comments' paths (twenty headers) proven by `prove objects` (90 the same).
+
 ### E-05. The game's header (L)
 
 **The hooks out:**
@@ -490,6 +518,18 @@ grammar, sound, radar. Each gets a contents block.
 **Done when:**
 - game.h is at most 45 KB.
 - `prove compare` reports everything the same: the screens at every scale, the flow, every WAV.
+
+**Done 2026-10-24:** the log's E-05 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- The order: the state structs out first, so their headers could take the six file-local helpers the hooks shared with their
+  files (as `inline`, rule 3); then the hooks' definitions moved; then TestGame; the comments last. Each step proven alone.
+- 316 hooks are TestGame's (the 333 less the 17 never called, plus `setState`, the harness's alone); the four knobs are
+  `Game::harness`, a `HarnessKnobs` at their offsets.
+- Twelve state headers and `game_types.h`: `shard_world.h` named by its struct; the drone's model in `drone_state.h`,
+  `AutoProfile` in `autoexplore_state.h`. The one-line nested structs (`SiteMark`, `GalleryItem`, `JumpPlot`...) stay in the
+  class.
+- A declaration keeps its line (several on one line stay so); 133 comments moved to their definitions, 56 dropped where the
+  definition's said it already. game.h 42 KB; game.cpp 50 to 28 KB.
+- `main_raylib.cpp` holds the platform's arrays to input.h's constants as well: it is where they are copied.
 
 ### E-06. The game's files (M)
 
@@ -520,6 +560,16 @@ radar_camera).
   game_states.cpp, nor `renderSpace` in hud.cpp).
 - `prove compare` reports everything the same.
 
+**Done 2026-10-24:** the log's E-06 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- The moves first (`tools/mover.py`, `tools/samecode.py`), then each module's helpers placed: one a single file uses stays
+  file-local there, one its files share goes to the module's `_internal.h` as `inline` (rule 3).
+- game_states.cpp is menus.cpp, its surface and data screens moved out; hud.cpp's scenes went to `scene_draw.cpp`.
+- landing_map and radar split (their builders, their camera's picture: each behind a few calls); shards_screen did not,
+  its world being 98 lines behind nine of the screen's calls.
+- game.h's banners name the new files; four sections regrouped by file (declarations only).
+- The table: nine traits as flags, the controller's context, the name. The radar's and the telescope's lists were one:
+  one trait. The render switch's overlay labels became its `default`; the update switch is unchanged.
+
 ### E-07. The worlds (L)
 
 - **planetmap.cpp (326 KB)** splits into:
@@ -543,6 +593,17 @@ radar_camera).
 - `prove compare` reports everything the same.
 - The bench is level.
 
+**Done 2026-10-24:** the log's E-07 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- `tools/mover.py` moves the entities inside an anonymous namespace one by one (`flat`, `open`, `close`, `drop`): the planet
+  files and E-09/E-10's big namespaces need it.
+- planet_internal.h holds the inline helpers and templates as they were, the types the files pass, and 52 functions declared
+  there and defined once (the fields, the relief, `landformsAt`, `felisianSample`, the grounds): a split that crosses an inlined
+  call is timed, not assumed (`fingerprint bodies` in pairs; the zoom's sampling on Heilya I).
+- The hook sections move a comment group whole and only when every function in it is the harness's: 51 entities in 21 headers;
+  a group that holds a function the game needs stays.
+- `salt scan` reads `kindOf`'s own facts (recorded while the harness asks) and its test (`kindSourceFits`), and walks the kinds
+  as `kindOf` does, so it cannot drift from it.
+
 ### E-08. The views (L)
 
 - **surface_view.cpp (323 KB, the hottest file)** splits into:
@@ -561,6 +622,15 @@ radar_camera).
 - No file in src/surface or src/space is over 1,500 lines.
 - `prove compare` reports everything the same.
 - The bench is level.
+
+**Done 2026-10-24:** the log's E-08 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- surface_view.cpp in eight files and space_view.cpp in four, each with its `_internal.h`, the files chosen so that every call
+  the compiler inlined between the old file's functions stays in one file (clang's `-Rpass=inline` read before and after): six
+  cold calls cross in the surface, one in space.
+- surface_view.h's types in `surface_types.h` (the eleven structs, the creatures' states and their names). The class holds its
+  data first, never reordered, then its functions under a banner for each file that defines them, the harness's nine last
+  (`build/e08/step2/regroup.py`, proven item by item); `drawFountains`, declared and never defined, went (E-12's list had it).
+- The surface note is 4.4 KB: E-13 trims the notes over 3 KB.
 
 ### E-09. The peoples' directory (L)
 
@@ -594,6 +664,15 @@ radar_camera).
 - `prove compare` reports everything the same, including `fingerprint modules` and `peoples`.
 - The bench is level.
 
+**Done 2026-10-25:** the log's E-09 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- The move by `git mv`, its includes and comments rewritten by a script; `make check` holds the halves apart with
+  `planet_bodygen.cpp` the second exception (E-07 moved planetmap.cpp's read of the peoples there).
+- buildings.cpp in six files, works.cpp in four, ruins.cpp in three, each with its internal header (`ruins_layout.h` for the
+  ruins). Inlined calls that now cross: `ageExpressed` (public, through `Gen::gv`), the decay functions, the dispatch's
+  generators, the works' finders, `cultureAtAge`; twelve bench pairs level but two single runs, the generation items as fast.
+- `tools/mover.py` takes a banner's namespace line as a wrapper; `tools/clash.py` checks the names a split makes global.
+- The peoples' and the galaxy's notes are 4.8 and 4.7 KB: E-13 trims the notes over 3 KB.
+
 ### E-10. The peoples' texts (L)
 
 **The splits:**
@@ -613,6 +692,16 @@ radar_camera).
 - `prove compare` reports everything the same.
 - The arm64 container's new tree matches its old tree, with the workers and with one thread.
 - The bench is level.
+
+**Done 2026-10-25:** the log's E-10 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- history.cpp in seven files (its tables and its builder in two headers, the builder's phases in three), genres.cpp in two
+  (the schema's .h and .cpp), grammar.cpp in three over an internal header, forms.cpp and music.cpp in two each; the largest
+  left is genres.cpp (1,212 lines).
+- `lore.h` serves four headers (graves, charts, history, music): the others that include shards.h use its records.
+- The inlined calls that now cross are cold (the history's phases, a piece's builders), timed level or a few microseconds.
+- The Linux check: GCC 9.4 cannot compile kinds.cpp's table check (KI-423); with it taken out, the regress and the peoples'
+  fingerprint match e09's and 11f2c8f's in the arm64 container, both ways. The splits moved Linux's last bits in some ground
+  samples and buildings (GCC fuses multiply-adds after inlining); the Mac's and Windows' clang keep theirs.
 
 ### E-11. The grammar's shelves (M)
 
@@ -652,17 +741,31 @@ continue 6 and 7).
 - `fingerprint peoples` is the same.
 - `grammar where` answers for the 409 rules used from other files and for the names built in C++.
 
+**Done 2026-10-25:** the log's E-11 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- `files.inc` replaced the 107 `SRC_` variables and every object compiled the same; the loader and the unit's check share one
+  walk (`shardGrammarTree`).
+- The shelves hold 9, 24, 53, 9 and 12 files, named by topic, uniquely; the station's log (`genre.log`, the modern age's alone) went
+  to `ages/modern/`, not the registers. The files' own comments name the new files.
+- The table of rule prefixes and their files is a page of its own (`docs/reference/civilisations/grammar-files.md`, 17 KB,
+  `grammar where md`, held by `make check`), so the note that loads with every grammar edit stays under 4 KB.
+- `grammar where` answers for all 3,223 rules: 409 named by a mark from another file, 603 names the C++ builds. `grammar schema`
+  prints the words each fact and field takes (`recordSchemaKeys`).
+- Found: the picture register is a root no call expands (KI-424).
+
 ### E-12. The sweep (M)
 
 **Shared helpers** (each proven by the fingerprints, the expression's shape kept):
+- from E-03, the harness's: `TestWorld` (a pinned world's star, system and body: 112 lookups, each keeping its own message and
+  exit) and `scanSystems` (97 sector scans, each keeping its range, order and early exits), proven by the battery and the A/B of
+  the modes it leaves out (`PROVE_ITEMS`);
 - `nowMs` ×7 → `core/clock.h`;
 - `fnv1a` ×5 → `core/rng.h`;
 - the sphere helpers of plan, works and landmarks → a shared header, with both `toward`s named;
 - `lowerOf` ×3;
 - `hash01` ×3 (instruments' different `h01` renamed apart).
 
-**Dead code:** about 18 items referenced nowhere, among them two declarations never defined (`site.h`'s `waterHeight`,
-`surface_view.h`'s `drawFountains`).
+**Dead code:** about 18 items referenced nowhere, among them a declaration never defined (`site.h`'s `waterHeight`;
+`surface_view.h`'s `drawFountains` went in E-08).
 
 **The game's helpers:**
 - `enum Beep` with `refuse(msg)` (191 sites);
@@ -685,8 +788,8 @@ unless it is a bug.
 - Lines over 200 characters in C++ (≈ 1,100 in the engine and the game, more in the harness) are wrapped in whitespace-only
   commits and listed in `.git-blame-ignore-revs`.
 - `.vg` lines are never wrapped: an alternative's key hashes its line.
-- Engine and game wraps are proven by `prove objects`. Harness wraps are proven by `prove compare`, unless E-03 found its
-  objects reproducible.
+- Engine and game wraps are proven by `prove objects`. Harness wraps too where its objects are reproducible (E-03: 37 of 40;
+  `modes_signals`, `unit_kinds` and `unit_sky` by `prove compare`).
 - `make check` then refuses any C++ line over 300.
 
 **Warnings:** the Makefile build has none, and the strict directories (core, galaxy, peoples) build under `-Werror` as
@@ -802,7 +905,7 @@ src/space         space_view (stars, suns, globes, belts) → space_*, probe_vie
 src/surface       site (the landing site's caches), surface_view → surface_* (sky, terrain, water, walking, effects),
                   flora, creatures, bestiary, buggy, drone, forms_draw, textures
 src/game          Game: game.h → *_state.h; game.cpp's frame order; one file per screen or device
-src/harness       → E-03: vesperis_test (main.cpp's registry and `help`, modes_*, civ_*, unit_*, scenes_*, test_worlds)
+src/harness       vesperis_test: main.cpp's MODES and `help`, modes_*, civ_*, unit_* (the unit's groups), scenes_*, test_worlds.h
 src/main_raylib.cpp, src/platform*   the window, input and audio: the only raylib code
 tools/            → E-02: prove (snapshot, compare, objects, bench), benchcmp.py, keydiff.py, png.py, mover.py
 tests/            regress_baseline.txt
@@ -918,7 +1021,8 @@ directories. Nothing does today.
 - **D-05's latent grammar faults:** 'new New', 'old old woman', 'at at', 'Darvar Darvar'.
 - **The radar's heard list** (found by E-01's baseline, section 11): `radarLock` marks a slot heard without checking that its
   programme speaks.
-- **The decision table's generation rows stop at 14:** generations 15 (B-428) and 16 (P-01) have entries but no rows (E-04).
+- **The decision table's generation rows stop at 14:** generations 15 (B-428) and 16 (P-01) have entries but no rows (E-04:
+  done, `docs/decisions/generations.md` has a row a generation).
 ## 11. The eight tasks, measured
 
 E-01's baseline, taken 2026-10-23 at 92e580a (with this plan uncommitted) before E-01 changed anything a session loads. Each task

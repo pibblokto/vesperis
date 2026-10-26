@@ -1,4 +1,4 @@
-// C-10 (2026-10-03): a shard that is a star chart (`galaxy/charts.h`) draws itself on the decoder beside its caption: the hemisphere of
+// C-10 (2026-10-03): a shard that is a star chart (`peoples/charts.h`) draws itself on the decoder beside its caption: the hemisphere of
 // the people's sky round the star they marked, their figures and their names (words of the language, resolving as it is learnt); a
 // first reading draws it over a few seconds; Enter targets the marked star and O holds the chart up to the sky (`drawChartOverlay`).
 // H-05 (2026-10-10): moved here from game/shards_screen.cpp, and drawn in the way of its record's age and medium (`StarChart::style`):
@@ -845,26 +845,4 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
     }
     std::string line = fmt("A CHART OF THE %s HELD UP", upper(chartHeldPeople).c_str());
     drawTextShadow(canvas, UW - 8 - textWidth(line.c_str()), 32, line.c_str(), HUD_DIM, HUD_SHADOW);
-}
-
-std::string Game::testChartInfo() const {
-    std::string s = fmt("chart: level %d", shardsLevel);
-    if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].chart) {
-        const StarChart& C = shardWorld.chart;
-        s += fmt(", on the screen S%d (chart %d of the %s, %s): %zu stars, %zu figures, the mark %s at %lld %lld %lld (how %d, %.0f ly, %s), %s", shardHeld[shardSel], C.which, shardWorld.lore.people.c_str(), CHART_STYLE_NAMES[std::max(0, std::min(CHS_COUNT - 1, C.style))], C.stars.size(), C.figures.size(),
-                 STAR_CLASSES[C.mark.star.cls].code, (long long)C.mark.star.sx, (long long)C.mark.star.sy, (long long)C.mark.star.sz, C.mark.how, C.mark.ly, C.mark.people.empty() ? "no people" : ("the " + C.mark.people).c_str(),
-                 chartT >= 0 ? fmt("reading %.0f%%", 100 * clampd(chartT / CHART_READ_S, 0, 1)).c_str() : (shardFresh ? "unread" : "read"));
-    }
-    s += chartUp ? fmt("; held up: S%d of %s (%zu stars, %zu figures), %d lines drawn", chartHeldIndex, chartHeldKey.c_str(), chartHeld.stars.size(), chartHeld.figures.size(), chartLinesDrawn) : "; none held up";
-    return s;
-}
-
-bool Game::testAimAtChartMark(int figure) {
-    if (!chartUp || !chartHeld.valid) return false;
-    if (figure >= (int)chartHeld.figures.size()) return false;
-    const Star& at = figure < 0 ? chartHeld.mark.star : chartHeld.stars[chartHeld.figures[figure].label].star;
-    Vec3 fwd = normalize(at.pos - ship.pos);
-    ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
-    cabin.yaw = 0; cabin.pitch = 0;
-    return true;
 }

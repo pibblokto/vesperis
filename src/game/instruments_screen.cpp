@@ -1,4 +1,4 @@
-// C-11 (2026-10-10): the instruments' case on the cabin's left wall (galaxy/instruments.h). The instruments taken from the ruins
+// C-11 (2026-10-10): the instruments' case on the cabin's left wall (peoples/instruments.h). The instruments taken from the ruins
 // (`Guide::instruments`) are kept here and played: the one on the screen is drawn from its own numbers (game/instrument_draw.cpp) and sounds
 // with its people's timbre on its people's scale through the synth's instrument voices (`AudioState::instrument`, `instrumentHits`): the keys
 // 1 to 9 and 0 play the scale's degrees from the register's first note up (past the scale's last, the next period's), held while the key is
@@ -10,7 +10,7 @@
 // line as the decoder names them (the user: "in instruments case split instruments by civilization as a decoder does").
 #include "game.h"
 #include "ui.h"
-#include "galaxy/records.h"
+#include "peoples/records.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -129,6 +129,7 @@ void Game::stopInstrument() {
     for (bool& h : icase.held) h = false;
 }
 
+// a note of the one on the screen (`key` holds it; 0 a note of its own length)
 void Game::playInstrumentDegree(int degree, int key) {
     if (!icase.valid || instrumentPlaysDisc(icase.inst) || !audio.instrument) return;
     AudioState::InstrumentNote nt;
@@ -273,13 +274,4 @@ void Game::renderInstruments() {
         drawText(canvas, x + 2, 177, fmt("%d", (d + 1) % 10).c_str(), g > 0.05 ? HUD_AMBER : HUD_DIM);
     }
     drawTextCentered(canvas, UW / 2, UH - 10, "1-9 AND 0 PLAY  LEFT/RIGHT REGISTER  UP/DOWN  ESC", HUD_DIM);   // C-18: Esc to the worlds
-}
-
-std::string Game::testInstrumentInfo() const {
-    if (!icase.valid) return fmt("the case: %d instruments, none on the screen", (int)icase.keys.size());
-    const Timbre* tb = instrumentTimbre(icase.tradition, icase.inst);
-    return fmt("the case: %d instruments; on the screen %s (id %d, people %d, age %s, voice %d, %s), %d courses, register %+d, %d notes played, the synth's timbre %s%s",
-               (int)icase.keys.size(), instrumentName(icase.tradition, icase.inst).c_str(), icase.inst.id, icase.inst.people, AGE_NAMES[std::max(0, std::min(AGE_COUNT - 1, icase.inst.age))], icase.inst.voice,
-               tb ? (tb->name + ", " + TIMBRE_FAMILY_NAMES[std::max(0, std::min(TF_COUNT - 1, tb->family))]).c_str() : "its disc", (int)icase.glow.size(), icase.inst.reg + icase.regShift, icase.notes,
-               audio.instrument == tb && tb ? "set" : (audio.instrument ? "another's" : "none"), icase.discOn ? ", the disc turning" : "");
 }

@@ -1,0 +1,220 @@
+R"VG(
+# lastbroadcast.vg (D-05): the last broadcast of a radio people that lost its sun (its last recording, `@cast last`; the beacon loops it under the
+# drifter's voice), rules `lb.`; and the lessons of the sun after the old time (sunlesson.vg's genre, topics and way, `les.`).
+@apart
+
+genre.lastbroadcast (words=40..135)
+  {@cast last}{lb.body}
+
+lb.body
+  (age<=industrial) {lb.ind.open} {lb.who} {lb.what} {lb.dark} {lb.where} {lb.ask} {lb.ind.close}
+  (age<=industrial) {lb.ind.open} {lb.who} {lb.dark} {lb.what} {lb.gift} {lb.ind.close}
+  (age=modern) {lb.mod.open} {lb.who} {lb.what} {lb.dark} {lb.where} {lb.ask} {lb.mod.close}
+  (age=modern) {lb.mod.open} {lb.who} {lb.dark} {lb.what} {lb.gift} {lb.mod.close}
+  (age=futuristic) {lb.fut.open} {lb.who} {lb.what} {lb.dark} {lb.gift} {lb.fut.close}
+  (age=futuristic) {lb.fut.open} {lb.who} {lb.dark} {lb.where} {lb.ask} {lb.fut.close}
+  (age=farfuture) {lb.ff.open} {lb.what} {lb.dark} {lb.gift} {lb.ff.close}
+  (age=farfuture) {lb.ff.open} {lb.dark} {lb.where} {lb.ask} {lb.ff.close}
+
+lb.ind.open (formula people=2)
+  Calling anyone. Calling anyone. This is the wireless room under {city}.
+  This is the wireless at {hall.below}, calling on every wavelength we have left.
+  This is the last operator at the wireless under {city}. Can anyone hear me?
+  Calling any ship, any people, anyone. This is {$home}.
+lb.ind.close (formula people=2)
+  This is {$home}, closing. The message repeats.
+  I will leave the set running on the last batteries. It will say this again, and again.
+  Repeating. Calling anyone. Repeating.
+lb.mod.open (formula people=2)
+  This is an emergency broadcast from {hall.below}. This message repeats.
+  This is the {city} service, broadcasting from the deep levels on every frequency still working.
+  This is the last voice at the transmitter under {city}.
+  To anyone receiving: this is {$home}, on the emergency band.
+lb.mod.close (formula people=2)
+  This message will repeat until the generators stop.
+  End of message. It repeats from the beginning.
+  If you hear this, we are already gone. The message repeats.
+lb.fut.open (formula people=2)
+  Automated message. Source: {hall.below}, {city}. Priority: the last.
+  This is the archive of the {people} speaking, for whoever comes.
+  Message for whoever comes, repeating on every band the machines can reach.
+  Recorded by the last of the {people}, for the machines to send.
+lb.fut.close (formula people=2)
+  The machines will keep this message going for as long as the heat lasts. It repeats.
+  End of message. Repeating.
+  The message begins again.
+lb.ff.open (formula people=2)
+  This is the {people}. We are ending, and we are not afraid.
+  To whoever is listening: this is the last voice of the {people}.
+  We are the {people}, and this is the last thing we say.
+lb.ff.close (formula people=2)
+  We leave this here, singing to itself, for as long as there is warmth to sing with. It begins again.
+  It begins again.
+  Listen again; it is the same, and it will be.
+
+lb.who (people=3)
+  We are the {people}, of {city} and of the halls below it[, what is left of us|].
+  (has:$me) My name is {$me:name}, and I am the last of the {people}[, as far as I know|].
+  We were the {people}[, and we|; we] [lived|grew up] on this world when it [had a sun|was warm], [like yours|as yours is].
+  You are hearing the {people}, the last of them, [under {mountain}|below {city}].
+  We were the {people}, who kept the {herd} and grew {crop} under a sun of our own.
+lb.what (people=3)
+  Our sun was [lost|taken from us]: {sunway.what}.
+  We watched it [go|happen] for generations: {sunway.what}.
+  It was not war and it was not sickness[ that ended us|]: {sunway.what}.
+  {sunway.what}[, and after that|; after that] the year [did not end|never closed again].
+lb.dark (people=3)
+  [For|These] {#darkyears|year} there has been no [sunrise|dawn][, and|;] the sea is [ice|frozen], the air lies on the ground as snow, and the stars are out at [noon|midday].
+  We have lived {#darkyears|year} in the dark, [at|by] {warm.ground}, eating {dark.food}.
+  [The last sunrise was|The sun last rose] {#darkyears|year} ago[; we have|. We have] [counted|marked] every day since, and kept {kept.light} [burning|going].
+  We went down when the sun went, and we [lived|held on] [there|below] {#darkyears|year}, by {warm.ground}.
+lb.where (people=2)
+  We are below {city}, by {warm.ground}. There is nobody else.
+  Everyone else is dead. I am down here, by the last warm [stone|vent].
+  The others went to sleep by {warm.ground} one by one, and [did not wake|stayed asleep].
+lb.ask (people=2)
+  Our records are [down here|in the halls below], every one of them; take them, read them, tell someone we were here.
+  Do not come to save us[; come|, but come] to [remember|read] us, [that is enough|and that will be enough].
+  If you can [hear|understand] this, you can read the rest[: it is all|, which is all] [down here|in the halls below].
+lb.gift (people=2)
+  If you have a ship, look for the brightest star [behind us|in our sky]: that was our sun, and our road [is still there round it, empty|still circles it, with nobody on it].
+  If you can, [go|fly] to the star we came from, and [tell it we were here|say our name there].
+  Everything we knew is [down here|in the halls below][. It is yours now|, and it is yours]; we have [no more use for it|nobody left to read it].
+
+# ---- the lessons of the sun after the old time (`les.topic` and the rest: sunlesson.vg) -------------------------------------------------
+
+# the medieval: the questions of the sun, set down by a teacher; a hall's wall
+les.med
+  (medium=scroll|medium=codex) {les.med.head}\n{les.topic} {les.topic}\n{les.topic} {les.why}\n{les.med.close}
+  (medium=scroll|medium=codex) {les.med.head}\n{les.topic} {les.topic} {les.topic}\n{les.below} {les.med.close}
+  (medium=scroll|medium=codex) {les.med.head}\n{les.med.teach} {les.topic}\n{les.topic} {les.why} {les.below}\n{les.med.close}
+  (medium!=scroll medium!=codex) {les.med.wall} {les.med.words} {les.med.after}
+les.med.head (formula people=3)
+  The questions of the sun, for the children of {$home}, set down in the {#year:ord} year of {city}, the {#darkyears:ord} without a dawn.
+  For the children born under {mountain}, who never saw it: what the sun was. Set down at {$home} by their teacher.
+  A lesson for the children of the halls, copied fair at {$home} for those who come after.
+  The teaching of the sun, as the old ones gave it, for the young of {$home}.
+  Here is what the sun was, in the old ones' words, for the children of {$home}.
+les.med.teach
+  Children, [listen|hear me], and keep [this as I keep it|these words as I keep them] on this page, for nobody who saw the sun is left to tell you.
+  The old ones who saw the sun are dead; I had it from my [mother|grandmother], who had it from hers. [Here is what they said|This is what they told].
+les.med.close (formula people=2)
+  Learn these, and teach them to your children, so that the sun is not forgotten.
+  Here ends the lesson. {god.keep}.
+  Say them over at the fire until you have them by heart.
+  These are the questions; the answers are the old ones', not mine.
+les.med.wall
+  (medium=painted) Painted on the vault of the children's hall in {hall.below}: the sun as the old ones drew it, {colour.holy} on dark blue, with the {herd} and the {crop} under it, and these words.
+  (medium=painted) On the wall where the children learnt their letters, a sun painted large in {colour.holy}, and under it these words.
+  (medium!=painted) Carved over the door of the children's hall in {hall.below}, under a sun cut deep in the stone.
+  (medium!=painted) Cut on a stone set where the children sat, beside a carved sun with its rays.
+# the industrial: a primer for the schools under the city
+les.ind
+  {les.ind.head}\n{les.topic} {les.topic}\n{les.topic} {les.ind.why}\n{les.ind.ex}
+  {les.ind.head}\n{les.topic} {les.topic} {les.topic}\n{les.ind.below} {les.ind.ex}
+  {les.ind.head}\n{les.topic} {les.ind.why}\n{les.topic} {les.topic} {les.ind.below}\n{les.ind.ex}
+les.ind.head (formula people=3)
+  Lesson {#n}: what the sun was. For the use of the schools of {$home}.
+  A primer of the sun, for the children of the {#darkyears:ord} year of the dark. Lesson {#n}.
+  The sun: a primer for the schools under {city}, the {#n:ord} lesson.
+  For the schools of {hall.below}: the sun, and what it did.
+les.ind.why
+  It was lost because {les.way}.
+  The sun was not taken from us by any fault of ours: {les.way}.
+  [The astronomers|Our observatories] saw it coming [generations|a long time] before the last sunrise: {les.way}.
+les.ind.below
+  [That is why|This is why] we live below, [where the rock is warm|by the warm rock|in the warm ground], and why the lamps are [never let go out|kept burning day and night|tended like children].
+  [That is why|So it is that] the halls are kept at the warmth of the old [summers|springs], and [every child learns|the children learn] to [mend a lamp|tend the boilers|read the gauges].
+les.ind.ex (formula people=2)
+  Exercises: name three things the sun gave us. Ask an old person what the morning was like.
+  Questions for the class: what was a day? What was a shadow? Why is the sea ice?
+  Copy out the lesson twice, and learn the last line by heart.
+  For tomorrow: draw the sun as the old pictures show it.
+
+# the modern: a class on a disc or a reel, a schoolbook
+les.mod
+  (medium=disc|medium=reel|medium=drive) {les.mod.voice}\n{les.topic} {les.topic}\n{les.topic} {les.mod.why}\n{les.mod.close}
+  (medium=disc|medium=reel|medium=drive) {les.mod.voice}\n{les.topic} {les.mod.why}\n{les.topic} {les.topic}\n{les.mod.close}
+  (medium!=disc medium!=reel medium!=drive) {les.mod.text}\n{les.topic} {les.topic} {les.topic}\n{les.mod.why} {les.mod.close}
+les.mod.voice (formula people=3)
+  Good morning, class. Today's lesson is the sun.
+  This is lesson {#n} for the schools of the deep levels: the sun.
+  Lesson {#n}, the sun. Recorded at {$home} for every class in the levels.
+  Settle down, everyone. Today we talk about the sun, which none of you has ever seen.
+les.mod.text (formula people=2)
+  Unit {#n}: the sun. For the schools of {hall.below}.
+  Science for the young, chapter {#n}: our sun.
+  What was the sun? A chapter for the schools of {$home}.
+les.mod.why
+  It was lost because {les.way}.
+  Nobody did this to us: {les.way}.
+  [The scientists|Our astronomers] [watched|measured] it [for generations|for a lifetime]: {les.way}.
+les.mod.close (formula people=2)
+  Next lesson: the deep levels, and how they keep us warm.
+  Homework: ask someone very old what a sunset looked like, if you can find someone that old.
+  That is all for today. Remember: the sun is still there; it is the brightest star in the sky.
+
+# the futuristic: a lesson the machines keep, for the children of the warm levels
+les.fut
+  {les.fut.head}\n{les.topic} {les.fut.p}\n{les.topic}\n{les.fut.why} {les.fut.close}
+  {les.fut.head}\n{les.fut.p} {les.fut.why}\n{les.topic} {les.topic}\n{les.fut.close}
+les.fut.head (formula people=3)
+  A lesson for the children of the warm levels, recorded by their teacher in the {#darkyears:ord} year of the dark.
+  Lesson record, {$home}: the sun. For the archive and the children.
+  For the young of {hall.below}: what the sun was. The machines will keep this lesson.
+  Today's lesson, for the archive: the sun, for the ones who were born after it.
+les.fut.p
+  (once) The light in [the gardens|the green levels|the growing halls] is made to be like the sun's, but the sun was [brighter|stronger|whiter], and it [moved across the sky|went over the sky|rose and set].
+  (once) We [still keep the day|keep the old day|keep the hours]: the levels go [light and dark|bright and dim] as [the surface did|it was] under the sun, though [nobody needs them to|no one would notice if they stopped].
+  (once) The old recordings of the surface show [a blue sky|a sky full of light], [wind in the {tree}|the {herd} in the fields], [the sea moving|people without suits]; [the machines can show you|ask the archive for them].
+  (once) The surface was warm then; people [walked|lived|slept] there [without suits|in the open], under [the sky|the sun], and [nobody thought it strange|it was nothing to them].
+les.fut.why
+  It was lost because {les.way}.
+  [We saw it coming|The machines saw it coming] for [generations|centuries]: {les.way}.
+  Nobody could have stopped it; {les.way}.
+les.fut.close (formula people=2)
+  Tomorrow we will go up to the cold door and look at it: the brightest star, which was ours.
+  End of lesson. The machines will answer your questions; ask them anything.
+  That is the lesson. Be kind to the old ones; they remember the warmth.
+
+# the far future: the thing that hums, a crystal's lesson
+les.ff
+  (medium=hum) {les.ff.hum} {les.ff.why}
+  (medium!=hum) {les.ff.head} {les.ff.p} {les.topic} {les.ff.why} {les.ff.close}
+les.ff.hum
+  [What hums here|The thing that hums here|This humming] is a lesson. Held, it grows warm [in the hand|against the skin], as warm as the sun once was [on the skin|at noon], and a voice in it says, [again and again|over and over|softly], [this is what it was like|this was the sun|remember the warmth].
+  The thing hums at the pitch the old {people} gave the sun; with the hum [comes|rises] a warmth, and a light that [goes slowly|turns] from red to white and back: a day, [made small|kept small|folded up], for children who never had one.
+  [Touched|Held to the ear], it [hums|sings] the old day: the cold [before the dawn|of the night], the [warm|white] noon, the [red|long] evening, then the cold again, in the time a child takes to fall asleep.
+les.ff.head (formula)
+  This is a lesson, kept for the ones born in the dark.
+  For the children of the {people}, who will not see it: the sun.
+les.ff.p
+  For ten thousand years the sun held us and gave us all we had; then it let us go.
+  We keep the day in the halls, light and dark in turn, as the sun kept it, so that you will know what a day was.
+  The sun was warm, and it was always there; that is the whole of what the old ones remember, and it was enough.
+les.ff.why
+  It went because {les.way}; we knew long before, and we [chose to stay|stayed].
+  We did not leave when {les.way}; [this world was ours|we belonged here], sun or no sun.
+  [Long ago|Ten thousand years ago] {les.way}, and the {people} [went down to the warm|stayed with the world]; that is all.
+les.ff.close (formula)
+  Ask the hum again; it will teach you again.
+  Remember it for us.
+
+# ---- the old time's wall, its end (sunlesson.vg's `les.pre`) --------------------------------------------------------------------------
+
+les.pre.then
+  Beside it the same figures crowd round a fire in a hole in the ground, and over them there is [nothing at all|only the dark].
+  Beside it the round sign [is made again|comes again], smaller, then smaller, then a dot among the dots of the stars.
+  Beside it the {herd} lie down, and a line of figures goes into the ground with a fire carried before them.
+les.pre.count
+  Along the bottom runs a count of strokes, {#darkyears:words} of them; the years without it, the ship thinks.
+  Under it all, a row of small figures sit with their hands held out to the round sign as to a fire.
+les.pre.ship
+  The ship takes it for a lesson: the sun as it was, [made|shown] for children who had never seen it.
+  The ship reads it as a teaching for the young: this was the sun, this was its warmth, this was its light on the {herd}.
+  It was made, the ship thinks, so that the ones born in the dark would know what the old ones meant by the sun.
+les.pre.hands
+  Small hand prints cover the lower figures, many of them, children's, pressed there [again and again|over and over].
+  The round sign has been touched so often that the {colour.holy} is worn through to the rock in its middle.
+  It has been made again more than once, each time a little larger, as if the old one had grown small in the telling.
+)VG"

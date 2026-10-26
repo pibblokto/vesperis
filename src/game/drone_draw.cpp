@@ -9,7 +9,7 @@
 #include <cmath>
 
 namespace {
-const int BANK_HULL = 8, BANK_SCREEN = 9, BANK_LIGHT = 10, BANK_AMBER = 21, BANK_EYE = 24, BANK_RED = 26, BANK_BAY = 29, BANK_PAINT = 30;
+const int BANK_AMBER = 21, BANK_EYE = 24, BANK_RED = 26, BANK_BAY = 29, BANK_PAINT = 30;   // the cabin's banks: game_types.h
 // the hull's outline from above (x its right, z its nose): 0 the nose's right corner, round its right side, its tail, its left side
 const double HULL_X[8] = {0.07, 0.16, 0.16, 0.09, -0.09, -0.16, -0.16, -0.07};
 const double HULL_Z[8] = {0.25, 0.12, -0.14, -0.24, -0.24, -0.14, 0.12, 0.25};
@@ -18,7 +18,6 @@ const double DUCT_X = 0.31, DUCT_Z = 0.19, DUCT_Y = 0.19, DUCT_R = 0.09, DUCT_H 
 // the rack against the left wall by the front window (the cabin's metres: +x right, +y up, +z the front window): three shelves, a drone on
 // each facing the room (drone 1 on the top shelf), the bay's screen across its head
 const double RACK_X0 = -2.5, RACK_X1 = -1.88, RACK_Z0 = 0.92, RACK_Z1 = 1.95, RACK_TOP = 1.66, SCREEN_Y0 = 1.38, SCREEN_Y1 = 1.60;
-const double SHELF_Y[DRONE_COUNT] = {1.00, 0.52, 0.04};
 const double RACK_DX = -2.19, RACK_DZ = 1.435;   // where a drone stands on its shelf
 const double BAY_OUT_S = 2.2, DOCK_S = 2.2;      // its way out of the rack into the hull, and back (game/drones.cpp's clock)
 
@@ -154,9 +153,7 @@ bool Game::droneRackPlace(int k, double& x, double& lift, double& blur) const {
     return false;
 }
 
-double Game::testDroneRackX(int k) const { double x, lift, blur; return droneRackPlace(k, x, lift, blur) ? x : -99; }
-double Game::testDroneRackY(int k) const { double x, lift, blur; return droneRackPlace(k, x, lift, blur) && k >= 0 && k < DRONE_COUNT ? SHELF_Y[k] + lift : -99; }
-
+// F-05: the rack's drones for the cabin's bands (their places, poses and models)
 // F-05: the rack's drones for the cabin's bands, once a frame: where each stands, its pose and its model (`drawDroneRack`)
 void Game::droneRackFrame(CabinFrame& f) const {
     f.ready = droneBayReady();
@@ -169,6 +166,7 @@ void Game::droneRackFrame(CabinFrame& f) const {
     }
 }
 
+// the rack and the drones on it, in the cabin (`drawCabinBand`)
 void Game::drawDroneRack(const CabinFrame& f) {
     const Mat3& look = f.look; const Vec3& eye = f.eye;
     const double hullShade = f.hullShade;
@@ -281,6 +279,7 @@ void Game::drawDronePrims(const Mat3& look, const Vec3& eye, const Vec3& origin,
 
 // ---- the drones outside: lights leaving the ship for the world and coming back to it -------------------------------------------------
 
+// the drones leaving the ship and coming back, as lights in the space view
 void Game::drawDroneLights() {
     if (!bay.out || bay.clock < 0 || !droneBayHere()) return;
     const Mat3 look = cameraBasis(cabin.yaw, cabin.pitch);
@@ -337,6 +336,7 @@ void wireLine(RGBCanvas& c, double x0, double y0, double x1, double y1, uint32_t
 }
 }
 
+// a drone in lines on the screen
 void Game::drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, double yaw, uint32_t col) {
     std::vector<DronePrim> prims;
     droneModel(pose, prims);
@@ -375,6 +375,7 @@ void Game::drawDroneWire(int x0, int y0, int w, int h, const DronePose& pose, do
 
 // ---- the bay's map of the world ----------------------------------------------------------------------------------------------------
 
+// the screen's map of a world of this system (F-02: none until the world's map is made)
 void Game::buildDroneMap(int body) {
     bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0;
     if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return;

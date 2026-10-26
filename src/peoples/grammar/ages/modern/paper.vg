@@ -1,0 +1,266 @@
+R"VG(
+# paper.vg (H-04, the second pass): the scientific paper: the people's own world measured (its aquifers and moons, its ring, its comet
+# and its lights, its dunes and ice, its herds' sicknesses and its birds' songs, its old pots and dyes), each sentence built from parts
+# (what was done, where, with what; what came of it), each people's scholars with their own few habits of phrase (`people=K`).
+
+genre.paper (words=21..72)
+  {pp.title}\n{pp.abstract}\n{pp.result}\n{pp.end}
+  {pp.title}\n{pp.abstract} {pp.method}\n{pp.result}\n{pp.end}
+  {pp.title}\n{pp.abstract}\n{pp.result} {pp.result2}\n{pp.end}
+
+pp.title (formula people=3)
+  {pp.topic}: a study at {$home}.
+  On {pp.topic}, with new measurements.
+  {pp.topic}: {#n|year} of observations.
+  Notes on {pp.topic}.
+  A new account of {pp.topic}.
+  {pp.topic}, reconsidered.
+  Towards a theory of {pp.topic}.
+
+pp.topic (share=0.6)
+  the decline of the aquifer
+  the motion of {moon.or}
+  the yield of {crop} under changed conditions
+  the spread of {pp.sick}
+  the record of the weather over {n} decades
+  the songs of the {bird}
+  sickness in the {herd}
+  the oldest houses of {$home}
+  the glazes of the old {mod.pot}
+  the dyes of the {craft} trade
+  the age of {mountain}
+  the {tree} of {land}
+  the flight of the {bird}
+  (comet=1) the orbit of the comet
+  (aurora=1) the lights in the north
+  (rings=1) the shadow of the ring
+  (geysers=1) the hot springs of {mountain}
+  (glacial=1) the retreat of the ice
+  (erg=1) the march of the dunes
+  (saltflats=1) the salt of the flats
+  (companion=1) the second sun
+  (coast=1) the {fish} of {sea}
+  (coast=1 moons>0) the tides of {sea}
+moon.or
+  (moons>0) {moon}
+  (moons=0) {star}
+pp.sick
+  (sick=1) the present sickness
+  (sick=0) disease in the cities
+  fever in the {herd}
+mod.pot (people=2)
+  pots
+  jars
+  bowls
+  tiles
+  cups
+  plates
+
+pp.abstract (share=0.8)
+  We report {pp.what} over {#n|year} at {pp.where}{pp.rep2}.
+  We report the results of a survey of {nbig} {pp.sites}.
+  We revisit {pp.old} with {pp.new}.
+  We compare the records of {$home} with those of {pp.other}, {pp.cmp2}.
+  We describe a new method for {pp.measure}, and {pp.firstres}.
+  We test an old saying of the {$home} markets: {proverb}.
+pp.what (people=2)
+  measurements made
+  observations made
+  counts made
+  samples taken
+  soundings taken
+pp.where (people=3)
+  {$home}
+  the station at {$home}
+  {holyplace}
+  the {craft} works at {$home}
+  the observatory at {$seat}
+  (has:$home.landmark) {$home.landmark}
+pp.rep2 (people=3)
+  (2)
+  , by hand
+  , with the old instruments
+  , in all weathers
+  , with the help of students
+pp.cmp2 (people=2)
+  year by year
+  season by season
+  as far back as they go
+  where they overlap
+pp.sites (people=4)
+  sites
+  households
+  fields
+  springs
+  schools
+  herds of {herd}
+  (coast=1) fishing boats
+pp.old (people=2)
+  the old observations
+  the measurements of the founding years
+  the records of {holyplace}
+  the counts our grandparents made
+pp.new (people=3)
+  new instruments
+  better maps
+  a larger sample
+  a new method
+  the help of the {craft} guild
+pp.other (people=2)
+  {$seat}
+  {city2}
+  the coastal towns
+  the hill country
+pp.firstres (people=2)
+  its first results
+  what it found at once
+  why it took so long
+  what it cannot do
+pp.measure (people=3)
+  measuring the flow of {river}
+  counting the {bird}
+  dating old {material}
+  weighing the {crop} harvest
+  reading the old {mod.pot}
+
+pp.method (share=0.8)
+  Samples were taken at {n} sites along {river}{pp.meth2}.
+  The instruments were built in the {craft} works at {$home}{pp.meth2}.
+  (has:$home.landmark) Observations were made at night from {$home.landmark}{pp.meth2}.
+  The measurements were made by schoolchildren and checked {pp.checked}.
+  The counts were made {time.of}, every day for a year.
+pp.meth2 (people=2)
+  (2)
+  , in all weathers
+  , over {#n|season}
+  , by hand
+pp.checked (people=2)
+  twice
+  by the station staff
+  against the old tables
+
+pp.result (share=0.8)
+  The trend is clear and {pp.trendx}{pp.restail}.
+  The results agree with {pp.pred} to within {pp.within}.
+  The results do not agree with any {pp.model} we have {pp.tried}.
+  The effect is small but {pp.small}{pp.restail}.
+  We find a cycle of about {#n|year}, {pp.cyc}.
+  The old account is wrong in {pp.wrong}{pp.restail}.
+  The data support the older view, {pp.surp}.
+  The {bird} {pp.birdv} {#n|day} earlier than {pp.ago}.
+  The yield of {crop} fell by a {nth} where {pp.cause2}.
+  (stage>=0) The trend, if it continues, will be serious within {pp.gen}.
+  (stage>=1) The trend has continued. We have stopped calling it a trend.
+pp.restail (people=3)
+  (2)
+  , as feared
+  , and nobody is surprised
+  , in every district
+  , and older than we thought
+  , and the farmers saw it first
+pp.within (people=2)
+  the error
+  a hair
+  a day
+  a hand's width
+pp.tried (people=2)
+  tried
+  heard of
+  dared to publish
+pp.ago (people=2)
+  a century ago
+  in the founding years
+  our grandparents said
+  the old almanacs say
+pp.trendx (people=2)
+  accelerating
+  steady
+  slowing
+  seasonal
+pp.pred (people=2)
+  the predictions
+  the old tables
+  the farmers' calendar
+  the observatory's figures
+pp.model (people=2)
+  model
+  table
+  theory
+  explanation
+pp.small
+  real
+  growing
+  clear
+  worrying
+  stubborn
+  everywhere
+  older than the town
+pp.cyc (people=4)
+  as the old almanacs said
+  which nobody had noticed
+  tied to {moon.or}
+  tied to the {crop} harvest
+  close to a lifetime
+  longer than the records
+  that the {herd} keepers swear by
+pp.wrong (people=2)
+  almost every particular
+  its dates
+  its causes
+  everything but its conclusion
+pp.surp (people=2)
+  to our surprise
+  against our expectation
+  which will please the {craft} guild
+  which will please nobody
+pp.birdv (people=2)
+  return
+  nest
+  leave
+pp.cause2 (people=2)
+  the water table dropped
+  the {herd} grazed
+  the winters were warm
+  the old channels silted up
+pp.gen (people=2)
+  a generation
+  our lifetimes
+  {#n|decade}
+
+pp.result2 (share=0.8)
+  We cannot yet say why.
+  A larger study {pp.larger}.
+  The belief, as it turns out, is {pp.half} right.
+  The {bird} noticed it before we did.
+  The {pp.who2} of {$home} knew it {pp.already}.
+pp.larger (people=3)
+  is under way at {$seat}
+  has been promised by {ruler.the}
+  needs money nobody has offered
+  will begin in {season.next}
+  is planned with the {craft} guild
+pp.who2 (people=3)
+  farmers
+  herders
+  old women
+  {craft} workers
+  children
+  (coast=1) fishermen
+pp.already
+  already
+  all along
+  for generations
+pp.half (people=2)
+  half
+  mostly
+  partly
+  entirely
+
+pp.end (formula people=3)
+  Further work is needed.
+  We thank the station staff, who worked through {season.now}.
+  The data are kept at {$home}.
+  We thank the keepers of {holyplace} for the old records.
+  We thank the people of {$home}, who put up with us.
+  (stage>=1) Funding for this work has been withdrawn.
+)VG"

@@ -65,4 +65,4 @@ cell's biggest were never landmarks at all.
   stands; the scanner hears the ruins with the nearest heard within 8%, a mark from the map's cursor leaves it out and Shift+R
   takes it in; the cursor renames, removes and waypoints, and L marks the rangefinder's spot; the marks through the guide and
   the lending); the `landmarks` mode lists the kinds and the scanner's cost; the flow scans and marks.
-* Docs: 06 (the landmarks' section), 07 (the surface keys, the sector map, the guide menu), 08, 10-decisions, 12-civilisations.
+* Docs: 06 (the landmarks' section), 07 (the surface keys, the sector map, the guide menu), 08, the decisions log, the civilisations notes.

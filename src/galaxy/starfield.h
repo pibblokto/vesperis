@@ -62,7 +62,7 @@ struct Star {
     bool valid = false;
 };
 
-// G-01 (2026-10-01): a galaxy of about 200 billion stars with the Milky Way's proportions (`docs/ideas/PLAN-galaxy-scale.md`).
+// G-01 (2026-10-01): a galaxy of about 200 billion stars with the Milky Way's proportions (`docs/archive/ideas/PLAN-galaxy-scale.md`).
 // Sector coordinates are heliocentric like the real galactic frame: the expedition's home sectors stay where they always
 // were and the galactic centre sits at GALAXY_CENTRE (one sector = one light year, so the disc reaches 50,000 sectors).
 constexpr double GALAXY_CENTRE_SX = 12000, GALAXY_CENTRE_SZ = -5500;   // home (sector 185, 0, 45) is 13,050 ly out, on an arm

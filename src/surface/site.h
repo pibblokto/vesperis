@@ -4,8 +4,8 @@
 #pragma once
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
-#include "galaxy/roads.h"
-#include "galaxy/works.h"
+#include "peoples/roads.h"
+#include "peoples/works.h"
 #include <vector>
 #include <algorithm>
 #include <unordered_set>
@@ -33,7 +33,7 @@ struct SiteRoad {
     uint64_t id = 0;
     float half = 3;
     bool paved = true; float wear = 0.2f;   // C-13: the builders' (a road between two peoples' settlements is the bigger settlement's people's)
-    int kind = 1;                            // T-01: the network's kind (galaxy/plan.h's NetKind: a path, a road, rail, a canal, a highway)
+    int kind = 1;                            // T-01: the network's kind (peoples/plan.h's NetKind: a path, a road, rail, a canal, a highway)
     std::vector<float> x, z, along;
     float x0 = 0, z0 = 0, x1 = 0, z1 = 0;
 };
@@ -43,14 +43,14 @@ struct SiteRoad {
 // edge a hedge, a wall or a bank) or an irrigation circle, in local metres, with what the years left of it
 struct GroundMark {
     int kind = 0;            // 0 a street, 1 a square, 2 a field, 3 an irrigation circle
-    int sub = 0;             // a street or a square: 2 asphalt (the modern age), 1 paved, 0 beaten; a field: its `FieldKind` (galaxy/towns.h)
+    int sub = 0;             // a street or a square: 2 asphalt (the modern age), 1 paved, 0 beaten; a field: its `FieldKind` (peoples/towns.h)
     double ax = 0, az = 0, bx = 0, bz = 0;   // a street's ends; a square's, a field's or a circle's centre in (ax, az)
     double half = 0, r = 0, hw = 0, hd = 0, heading = 0;
     float left = 1;          // what the years left of it (1 .. 0)
     uint32_t id = 0;
 };
 
-// T-03: a work's ground (galaxy/works.h's `GroundEdit`) in the site's local metres, with what the years left of it (a ditch silted, a
+// T-03: a work's ground (peoples/works.h's `GroundEdit`) in the site's local metres, with what the years left of it (a ditch silted, a
 // crater filled, lines grown over; a rock cut, a flattened plain and a reservoir keep) and its bounds
 struct SiteEdit {
     int kind = 0, tone = 0;
@@ -136,7 +136,7 @@ struct SurfaceSite {
     bool smallBody = false;      // O4: R under 300 km (comets): exact sphere geometry, no far ring, no floor
     double escapeVelocity = 1e9; // m/s, sqrt(2 g R)
     std::vector<float> ringProf; // O0-01: the ring's density profile when the body has rings (else empty)
-    // C-09: the old roads within the near rings (`galaxy/roads.*`), in local metres, with the culture's paving and wear. The
+    // C-09: the old roads within the near rings (`peoples/roads.*`), in local metres, with the culture's paving and wear. The
     // view builds them after `init` (and again at a reanchor); a probe site does not, so its vertices carry no road.
     // `sampleAt` draws them into the vertices: the road's share of the footprint (`TerrainVertex::road`), the paving as the
     // material on the fine rings, the ground bare and darker, the tone alone on the coarse ones

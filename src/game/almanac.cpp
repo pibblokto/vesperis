@@ -133,16 +133,3 @@ void Game::renderAlmanac() {
     const char* foot = settings.clockMode == 1 ? "REAL-TIME CLOCK: NO RUNNING TO AN EVENT  ESC CLOSE" : "UP/DOWN SELECT  ENTER RUNS TO IT  ESC CLOSE";
     drawTextCentered(canvas, UW / 2, bottom - 9, foot, HUD_DIM);
 }
-
-std::string Game::testAlmanacInfo() const {
-    std::string s = fmt("%s; %s; %zu events", almanacAt.ground ? "ground" : "ship", almanacStateLine().c_str(), almanacEvents.size());
-    for (size_t i = 0; i < almanacEvents.size() && i < 12; i++) s += fmt("%s %s in %s", i ? "," : ":", almanacLabelOf(almanacEvents[i]).c_str(), countdownString(almanacEvents[i].t - t).c_str());
-    if (almanacEvents.size() > 12) s += fmt(", +%zu more", almanacEvents.size() - 12);
-    return s;
-}
-
-bool Game::testAlmanacSelect(int kind, int body) {
-    for (size_t i = 0; i < almanacEvents.size(); i++)
-        if ((kind < 0 || almanacEvents[i].kind == kind) && (body < 0 || almanacEvents[i].body == body)) { almanacSel = (int)i; return true; }
-    return false;
-}

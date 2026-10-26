@@ -25,9 +25,6 @@ struct Front {
     uint64_t seed = 0;              // the world's (the band's texture)
     bool dust = false;              // a dust front (desert and thin-atmosphere worlds) rather than rain
 };
-// the band's texture at a body-frame point: a cloud noise of the world thresholded to 0..1 (holes, streaks and patches), so a band
-// reads as cloud from orbit and the ground's cover under its outer parts varies the same way
-double frontTexture(const Front& f, const Vec3& p);
 
 // the profile of the band, by the distance ahead of the line in metres over the front's width (positive where the front has
 // not come yet): the cloud (0..1), the rain or dust (0..1 before the strength), the wind's rise (0..1), the cold (0..1)
@@ -48,11 +45,6 @@ int frontSlots(const Body& b);
 void frontsOf(const Body& b, double t, std::vector<Front>& out, double ahead = 0);
 // the front's centre and heading at t (body frame)
 void frontAt(const Front& f, double t, Vec3& c, Vec3& n);
-// 0..1: the front's life at t (0 before its birth and after its death, a ramp over the first 15% and the last 20%)
-double frontLife(const Front& f, double t);
-// the signed distance ahead of the front's line (metres, positive where it has not come yet) and the distance along the line
-// from its centre, of a body-frame unit vector at t; 1e18 on the far side of the world
-void frontDistance(const Front& f, double t, const Vec3& p, double R, double& ahead, double& along);
 // 1 inside the line's length, tapering to 0 over its outer fifth
 double frontLateral(const Front& f, double along);
 
@@ -85,3 +77,13 @@ void buildFrontMap(const Body& b, double t, int W, int H, std::vector<uint8_t>& 
 double frontMapAt(const std::vector<uint8_t>& m, int W, int H, double lon, double lat);   // bilinear, 0..1
 
 const char* frontCompass(double bearing);   // "N", "NE", ... "NW"
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+// the band's texture at a body-frame point: a cloud noise of the world thresholded to 0..1 (holes, streaks and patches), so a band
+// reads as cloud from orbit and the ground's cover under its outer parts varies the same way
+double frontTexture(const Front& f, const Vec3& p);
+// 0..1: the front's life at t (0 before its birth and after its death, a ramp over the first 15% and the last 20%)
+double frontLife(const Front& f, double t);
+// the signed distance ahead of the front's line (metres, positive where it has not come yet) and the distance along the line
+// from its centre, of a body-frame unit vector at t; 1e18 on the far side of the world
+void frontDistance(const Front& f, double t, const Vec3& p, double R, double& ahead, double& along);

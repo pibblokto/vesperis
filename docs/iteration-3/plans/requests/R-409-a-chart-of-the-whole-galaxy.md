@@ -1,6 +1,6 @@
 # R-409: a chart of the whole galaxy, and the next jump chosen on it
 
-status: done 2026-10-08 (G-05, G-06 and G-07; `docs/ideas/ITERATION-1.3.0.md`)
+status: done 2026-10-08 (G-05, G-06 and G-07; `docs/archive/ideas/ITERATION-1.3.0.md`)
 milestone: 1.3.0
 
 ## Request
@@ -31,17 +31,17 @@ asked whether the galaxy really holds 200 billion stars, and not scheduled until
   edge-on under it, nine levels from the whole disc (110,000 ly tall) to 430 ly, the globulars, and from level 6 the open clusters
   and the star-forming complexes; the ship (`YOU`), home, the stars visited and the way between them (`Guide::route`), the remote
   target and its line, the signals the radar locked, the named stars; where the ship is (`13,040 LY FROM THE CORE, IN THE PLANE`,
-  the region). `M` opens it in a Vimana flight too. Decisions in `10-decisions.md` (G-05), what stays in KI-366.
+  the region). `M` opens it in a Vimana flight too. Decisions in `docs/decisions/log/3-1.3.0.md` (G-05), what stays in KI-366.
 * **G-06 (2026-10-08):** the next jump chosen on the chart. A cursor (the arrows, the mouse; the view moves with it at the face's edge,
   the zoom keeps its pixel, `PgUp`/`PgDn` its height over the plane) and what lies under it: the region, the stars there (`ONE STAR IN 7
   SECTORS`), its height, the way and the flight from the ship (`5,000 LY COREWARD - 61 S BY VIMANA`), what the explorer has there.
   `Enter` plots the jump to its point by R-407's line (the star nearest the end, the void sending it back to the first stars),
   `Enter` again flies it, `Esc` keeps the target for `V`; on a plotted jump `Tab` looks at the stars round its end, where another can
   be taken; `N` steps through the locked signals, home, the named stars, the marks and the systems visited; `L` names a place of the
-  galaxy (`gmark` lines, lent by an export). Decisions in `10-decisions.md` (G-06), what stays in KI-366.
+  galaxy (`gmark` lines, lent by an export). Decisions in `docs/decisions/log/3-1.3.0.md` (G-06), what stays in KI-366.
 * **G-07 (2026-10-08):** the crossing. The galaxy's band is drawn in a Vimana flight from where the ship is along its line (KI-364: it
   was not drawn in a flight): keyframes built ahead of the ship a share a frame and blended (`SpaceRenderer::flightBand`), the first the
   band the ship was seeing, the last handed to the parked band at the arrival. A jump coreward shows the bulge widening until it fills the
   windows, a jump north the disc dropping away under the side windows; the star-forming regions' patches fade with the flight's speed (at
   a crossing's pace they came and went within a frame). `vesperis_test crossing`, `stability flight`, the bench's `vimana 2x`. Decisions in
-  `10-decisions.md` (G-07), what stays in KI-367.
+  `docs/decisions/log/3-1.3.0.md` (G-07), what stays in KI-367.

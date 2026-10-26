@@ -139,7 +139,7 @@ struct BodyGen {
     double cliffAmount = 0.5;   // O6-04: the share of the steep ground that is cliffed (0..1)
     uint64_t sA = 1, sB = 2, sC = 3, sD = 4, sE = 5, sF = 6, sG = 7;
     // T-02: the body's star's sector and its index in the system (`Body::starSx..`): a reader of the world that needs its system (the
-    // history: the star, the comets, the moons) regenerates it from these (`historyOfWorld`, galaxy/history.h); never read by the terrain
+    // history: the star, the comets, the moons) regenerates it from these (`historyOfWorld`, peoples/history.h); never read by the terrain
     int64_t starSx = 0, starSy = 0, starSz = 0;
     int bodyIndex = -1;
     bool starKnown = false;
@@ -160,11 +160,6 @@ struct BodyGen {
 // a futuristic or far-future drifter's people's)); how many
 int darkTraitsOf(const Body& b, int* out);
 constexpr double EMBERS_SHARE = 0.3;            // of the rock drifters (a young interior, still erupting)
-// D-04 (TR_EMBERS on a world with no lava of its own): its ember fields, where its lava lakes are (the globe's spots of light), and the
-// fields' strength at a point (km on the sphere), 0 outside
-struct EmberField { Vec3 unit; double radiusKm = 0, strength = 0; };
-void emberFieldsOf(const BodyGen& g, std::vector<EmberField>& out);
-double emberFieldAt(const BodyGen& g, const Vec3& p);
 constexpr double LIGHTS_IN_WATER_SHARE = 0.5;   // of the dark oceans (if anything lives there)
 // B-419: what is made on a world is the world's, not its season's. The terrain the explorer sees keeps the season (the winter
 // hemisphere's ice cap and snow line); a reader of the world's made things (a people's plan, its extent, its histories, settlements,
@@ -193,10 +188,6 @@ inline int nowKind(const BodyGen& g) { return g.deadAs >= 0 ? g.deadAs : g.type;
 // biome table and the HUD read the same number. `sub` is dot(unit, lockedDir) on a locked world (0 otherwise).
 double climateTempC(const BodyGen& g, double absLatDeg, double heightM, double winter, double sub);
 double tideRangeAt(const BodyGen& g, const Vec3& unit);   // Q-02: the spring range at a place (the trait's at the equator, by cos^2 of the latitude)
-
-// P-02: an ice age's sheet (KT_ICE_SHEETS): the latitude (degrees) its edge reaches at a point, without the season (the ground is the
-// world's); poleward of it the land lies under the sheet
-double iceSheetEdgeDeg(const BodyGen& g, const Vec3& unit);
 // P-03: how far a point lies inside an ice sheet's edge (0 at the edge, 1 where the sheet is full, under 0 outside): the tundra's and
 // the snowball's by latitude (14 degrees from the edge to the full sheet), a terminator world's by its climate at the sea's level (the edge
 // at -4 C, full at -29, wandering by seven degrees: the night side's)
@@ -205,48 +196,6 @@ double iceSheetIn(const BodyGen& g, const Vec3& unit);
 // R-307: the zenith and horizon colours of a type's sky by day (false: no sky); the surface, the globe's hemisphere light
 // and the landing map read the same pair
 bool typeSky(const BodyGen& g, RGB& zenith, RGB& horizon);
-// R-307: the vents of the geyser basins (TR_GEYSERS) near a point: the centres of the sinter mounds (unit vectors) and their
-// radii in km, the same features the landform builds, so a surface can put an erupting geyser at each
-struct GeyserVent { Vec3 unit; double radiusKm; uint64_t id; };
-void geyserVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
-void hotSpringsNear(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);   // Q-02 (TR_HOT_SPRINGS): the springs' vents within 2.5 km, their pools' radii
-// P-01: the steam world's vents near a point (EV_STEAM_BURSTS): the centres of the sinter mounds of `groundSteam` (where the mound lies
-// in a field of vents on the high ground: a surface finds its sinter under the vent)
-void steamVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
-// P-03: the chemotroph's hot springs near a point (EV_SPRINGS): the pools' centres and radii (km), the same features its ground builds; a
-// surface keeps the ones whose centre lies on the pool's own ground (MAT_BRINE)
-void springVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
-// P-05: the cryovolcanic world's plume vents near a point (EV_PLUMES): the vents on its cap whose dark streaks its ground lays downwind (the
-// unit, `radiusKm` the streak's length, the id); the dry ice world's spiders near a point (EV_SPRING_JETS): their centres in the band round
-// its caps and their reach (km), where its jets break through the seasonal frost; the prevailing wind at a point (a tangent unit vector:
-// the direction the streaks, the fans and the plumes' flags run)
-void plumeVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
-void springJets(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
-Vec3 prevailingWind(const BodyGen& g, const Vec3& unit);
-Vec3 loneMountainOf(const BodyGen& g);   // P-05: the brine dwarf's lone mountain of ice (its centre, a unit vector)
-Vec3 nitrogenBasinOf(const BodyGen& g);  // P-05: the nitrogen world's great plain (the middle of its basin, a unit vector)
-// P-06: the strange moons' features. The two-faced moon's apex (the middle of the face it leads with: `BodyGen::apexDir`, or on a body the
-// harness staged a hashed point of its equator). The tiger stripes: four rifts in the south polar terrain, each a curve in the pole's
-// tangent plane (`off` km across it, bowed by `bow` at its ends, `len` long about `mid`), `stripeDistanceKm` a point's distance from the
-// nearest (km; 1e9 away from the south polar terrain); the curtains' vents along them near a point (EV_CURTAINS: a vent every kilometre, its
-// strength in `radiusKm`). The patchwork's great cliff: the middle of its foot and the unit direction up across it (false: none)
-Vec3 twoFacedApex(const BodyGen& g);
-// Q-01: the great shield (TR_GREAT_SHIELD): its summit's middle, the radius of its cliff ring (km), its height over the plain (m), its caldera's
-// two to four nested pits (their middles, radii in km and depths in m)
-struct GreatShield { Vec3 c; double radKm = 0, heightM = 0; int nPits = 0; Vec3 pit[4]; double pitKm[4] = {0, 0, 0, 0}, pitDepthM[4] = {0, 0, 0, 0}; };
-GreatShield greatShieldOf(const BodyGen& g);
-// Q-01: a new landform's point features round a point (their middles within `halfKm` of it each way): a great shield's caldera pits, the
-// chains' craters, the mud volcanoes, the pingos, the maars (their middles, radii in km, heights or depths in m, an id); the scanner keeps the
-// ones its landform stands at (their ground carries its mark: the province, the cold or the land may hold none there)
-struct LandFeature { Vec3 unit; double radiusKm = 0, heightM = 0; uint64_t id = 0; };
-void landformFeatures(const BodyGen& g, int trait, const Vec3& unit, double halfKm, std::vector<LandFeature>& out);
-struct TigerStripes { Vec3 e1, e2; double off[4], bow[4], len[4], mid[4], ph[4]; };
-TigerStripes tigerStripesOf(const BodyGen& g);
-double stripeYKm(const TigerStripes& T, double R, int k, double along);   // the stripe's line across the plane at `along` km from its middle
-Vec3 stripePoint(const TigerStripes& T, double R, int k, double along);   // the point of stripe k `along` km from its middle (a unit vector)
-double stripeDistanceKm(const TigerStripes& T, double R, const Vec3& unit, int* which = nullptr, double* along = nullptr);
-void curtainVents(const BodyGen& g, const Vec3& unit, std::vector<GeyserVent>& out);
-bool greatCliffOf(const BodyGen& g, Vec3& foot, Vec3& up);
 // M9-14: one generated sentence about a body or a star.
 std::string describeBody(const Body& b, const BodyGen& g);
 std::string describeStar(const Star& s);
@@ -263,15 +212,6 @@ std::string seasonName(double season, double latRad, double axialTilt);
 
 // unit: body-frame unit vector. detailMeters: smallest feature scale to include.
 SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailMeters);
-// X-04: a giant's storm cell at a point of its globe (body frame, unit): the storm term its branch of `sampleSurface` paints
-// (0 where none) and the cell's id (`id`: 0 where none), by which a storm the probe fell into keeps the explorer's name
-double giantStormCell(const BodyGen& g, const Vec3& unit, uint64_t* id = nullptr);
-// O6-02: the relief spectrum alone at a point (metres, and the slope of the sum as rise over run), for tests
-struct Relief { double h = 0, slope = 0; };
-Relief reliefAt(const BodyGen& g, const Vec3& unit, double a0, double ridge, double detailMeters);
-// F-01 (`bench noise`): one of the planet function's terms that walk the features' 27 cells (the round hills of a jittered grid on a
-// shell round the sphere: 2 km cells, metres at p, km), for timing that walk and hashing its results
-double benchFeatureField(const Vec3& p, double R, uint64_t seed);
 // Static cloud pattern (0..1) at lon/lat; animate by offsetting lon.
 double sampleCloudPattern(const BodyGen& g, double lon, double lat);
 
@@ -323,3 +263,15 @@ private:
         return (a + (b - a) * tx) + ((c + (d - c) * tx) - (a + (b - a) * tx)) * ty;
     }
 };
+
+// ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
+
+// P-02: an ice age's sheet (KT_ICE_SHEETS): the latitude (degrees) its edge reaches at a point, without the season (the ground is the
+// world's); poleward of it the land lies under the sheet
+double iceSheetEdgeDeg(const BodyGen& g, const Vec3& unit);
+// O6-02: the relief spectrum alone at a point (metres, and the slope of the sum as rise over run), for tests
+struct Relief { double h = 0, slope = 0; };
+Relief reliefAt(const BodyGen& g, const Vec3& unit, double a0, double ridge, double detailMeters);
+// F-01 (`bench noise`): one of the planet function's terms that walk the features' 27 cells (the round hills of a jittered grid on a
+// shell round the sphere: 2 km cells, metres at p, km), for timing that walk and hashing its results
+double benchFeatureField(const Vec3& p, double R, uint64_t seed);

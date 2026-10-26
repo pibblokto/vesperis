@@ -1,0 +1,139 @@
+R"VG(
+# deephalls.vg (D-05): the rules and the broadcasts of the halls below, a drifter's people's once the sun was going (the root's `dark>=2`): the
+# old ages' painted rules on the wall of the warm cave (the ship reading the figures) and the rules written or cut for the halls under the
+# mountain (who keeps the fire, who goes up for the ice, the shares, the dead carried up, silence in the deep); the later ages' rules posted in
+# the shelters, the announcements of the halls' radio or read out at the shaft (the rations, the heat, the shifts at the warm rock, the air,
+# the lights, the children's hours, the deaths), the charter of the deep levels on a drive or a crystal and its amendments. The people's own
+# things run through them (their food and drink, their vessels, their fuel, their craft, their games, their sayings), so two peoples' halls
+# are not one people's: every pool is a people's share of it.
+@apart
+
+genre.deephalls (words=30..165)
+  (age<=prehistoric medium=painted|medium=stone) {dh.pt.head} {dh.pt.line} {dh.pt.line} {dh.pt.line} {dh.pt.end}
+  (age<=prehistoric medium=painted|medium=stone) {dh.pt.head} {dh.pt.line} {dh.pt.line} {dh.pt.end}
+  (age=medieval medium=painted|medium=stone) {dh.cv.head} {dh.wr.item} {dh.wr.item} {dh.cv.close}
+  (age=medieval medium=scroll|medium=codex|medium=tablet) {dh.wr.head}\n{dh.wr.item}\n{dh.wr.item}\n{dh.wr.item}\n{dh.wr.close}
+  (age=medieval medium=scroll|medium=codex|medium=tablet) {dh.wr.head}\n{dh.wr.item}\n{dh.wr.item}\n{dh.wr.item}\n{dh.wr.item}\n{dh.wr.close}
+  (age>=industrial medium=printed) {dh.pn.head}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.end}
+  (age>=industrial medium=printed) {dh.pn.head}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.end}
+  (age=modern medium=drive) {dh.pn.head}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.item}\n{dh.pn.end}
+  (age>=industrial medium=cylinder|medium=disc|medium=reel) {dh.bc.open}\n{dh.bc.item}\n{dh.bc.item}\n{dh.bc.close}
+  (age>=industrial medium=cylinder|medium=disc|medium=reel) {dh.bc.open}\n{dh.bc.item}\n{dh.bc.item}\n{dh.bc.item}\n{dh.bc.close}
+  (age>=industrial medium=drive|medium=crystal) {dh.ch.head}\n{dh.ch.art}\n{dh.ch.art}\n{dh.ch.art}\n{dh.ch.end}
+  (age>=industrial medium=drive|medium=crystal) {dh.ch.head}\n{dh.ch.pre}\n{dh.ch.art}\n{dh.ch.art}\n{dh.ch.art}\n{dh.ch.end}
+  (age>=industrial medium=drive|medium=crystal) {dh.am.head}\n{dh.am.item}\n{dh.am.item}\n{dh.am.end}
+
+# the halls' own things, a people's few of each
+dh.room (people=3)
+  main hall
+  lower hall
+  dining level
+  old store
+  well room
+  long gallery
+  stone chamber
+dh.stair (people=2)
+  the stair
+  the shaft
+  the long ramp
+  the old adit
+dh.party (people=2)
+  ice party
+  stair party
+  cold party
+  ice crew
+
+# =====================================================================================================================
+# the old time: the rules painted on the wall of the warm cave (the ship reads the figures)
+# =====================================================================================================================
+
+dh.pt.head (formula people=3)
+  (medium=painted) On the wall of {hall.below}, by {warm.ground}, figures in {colour.holy}, in rows the ship reads as rules.
+  (medium=painted) Over the place where the fire was kept, a wall of small figures, each doing one thing.
+  (medium=painted) Painted at the mouth of {hall.below}, where everyone coming down would see: what is done here.
+  (medium=stone) A slab set at the way down into {hall.below}, pecked with figures.
+  (medium=stone) A stone by {warm.ground}, its face covered with figures, rubbed smooth at the height of a hand.
+  The way of living below, as the {people} drew it.
+dh.pt.line (share=0.75)
+  (once) A figure feeding a fire of {fuel}, and beside it {n} {dh.pt.small} sleeping: the fire is kept, and the keepers sleep in turn.
+  (once) Figures climbing up toward white dots and coming down with blocks on their backs: the ice, carried down from above.
+  (once) A row of {vessel}, every one drawn the same size: the shares of the {dark.food}, the same for everyone, the ship thinks.
+  (once) A figure lying down, carried by {n} up toward the white dots: the dead are taken up into the cold.
+  (once) A figure with its hand over its mouth, by the deepest part of the cave: silence there, the ship thinks.
+  (once) The old ones drawn nearest the warm stones, the young further out.
+  (once) Hand-prints in {colour.holy} round the fire, many of them, small and large: everyone who swore to keep it.
+  (once) The {herd} drawn in a pen at the back, and a figure giving them {dark.food}.
+  (once) A circle drawn high up and crossed out; under it the figures going down. Nobody is drawn going back up without ice.
+  (once) A child held up to the fire, and the others' hands raised: a child born below, the ship thinks, shown to the fire.
+  (once) Two figures fighting, and a third pulling them apart, by the fire: no fighting near the fire.
+  (once) Pale shapes drawn growing by the hot stones: the {dark.food} the {people} grew there.
+  (once) A figure working {material} by the fire, and others watching: the {craft} went on below.
+  (once) {bird} drawn on the wall over the fire, the only ones in the cave: the ship thinks they were painted from memory.
+dh.pt.small (pl)
+  small figures
+  sleepers
+  others
+dh.pt.end
+  The figures stop at the edge of the light the fire would have thrown.
+  The last row is unfinished: a fire, and nobody yet beside it.
+  Under it all, {motif.over}, the {people}'s own sign.
+  The wall is black with soot above the figures; the fire burned here a long time.
+  Some figures are painted over newer ones; the rules changed, the ship thinks, or the keepers did.
+
+# =====================================================================================================================
+# the halls under the mountain: the rules written (a scroll, a codex, a tablet) or cut in the stone
+# =====================================================================================================================
+
+dh.wr.head (formula people=4)
+  The rules of {hall.below}, set down at {$seat} by {ruler.the}, for all who live below:
+  These are the rules of the halls, to be read aloud at every gathering below:
+  How we live in {hall.below}, since the sun went: kept by the keepers of the fire.
+  The order of {hall.below}, written so that nobody says they were not told:
+  (faith=onegod|faith=manygods) The rules of {hall.below}, under {god}, who is with us in the dark:
+dh.cv.head (formula people=3)
+  Cut over the door of {hall.below}, for every one who comes down:
+  Cut in the stone by {warm.ground}:
+  On the great stone at the foot of the stair, cut deep:
+
+dh.wr.item (share=0.7)
+  (once) The fire of {fuel} is kept day and night, by turns; whoever lets it go out keeps it alone for a {dh.wr.span}.
+  (once) Those who go up for the ice go [in fours and come down in fours|in threes and come down together|in sixes, roped to each other].
+  (once) The {dark.food} is shared at the fire, the same to every mouth, [the old and the young alike|a full {vessel.one.n} each|the keepers last].
+  (once) The dead are carried up into the cold and laid where the cold keeps them, not {buried} as they were.
+  (once) Silence in the deep halls, where the sleepers are[; whoever wakes them keeps the fire|, by the oath of the keepers|, on pain of the stair].
+  (once) The warm stones are for [the sick and the newborn first, then the old, then everyone else|the mothers and the newborn, then the sick|the old by night and the children by day].
+  (once) No {fuel} is to be burned in the sleeping halls; the air there is for breathing.
+  (once) Every one who is able works the beds of {dark.food} by {warm.ground}, a day in every {n}.
+  (once) The doors to the surface are shut after the {dh.party}, and the cold kept out.
+  (once) The {herd} that are left are kept at the back and fed before anyone eats the seed.
+  (once) Nobody goes up alone, for any reason, at any hour.
+  (once) The names of the summers are said at {festival}, [so that the children know them|and the oldest says them first|one for every year we had].
+  (once) Quarrels are brought to {ruler.the} at the fire and nowhere else.
+  (once) Water is melted from the ice at {warm.ground} and carried in the common {vessel}.
+  (once) Whoever finds a new warm place in the rock tells the keepers, and it is shared.
+  (once) The lamps are lit only in the working halls; the sleeping halls keep the dark.
+  (once) The {craft} goes on in the {dh.room}, so that there is work for every hand that is idle.
+  (once) No {pastime} in the sleeping halls; at the fire after the meal, as long as the keepers allow.
+  (once) Every {garment.n} that is outgrown is given back to the stores for the next child.
+  (once) {feast.custom} is kept below as it was kept above, and the {dark.food} shared out for it.
+  (once) The {drink} is kept for the sick and the newborn, and for {festival}.
+dh.wr.span (people=1)
+  month
+  turn of the count
+  hand of days
+dh.wr.close (formula people=3)
+  These are the rules. Keep them, and we will be here when the sun comes back, if it does.
+  (darkyears>=1) So it is ordered, below {mountain}, in the {#darkyears:ord} year of the dark.
+  (dark=2) So it is ordered, below {mountain}, while the sun goes.
+  {god.keep}, all of you, below.
+  Whoever cannot keep these rules may go up, and see what is there.
+  Read this again at the next gathering.
+dh.cv.close (formula people=2)
+  Keep these, and the fire keeps you.
+  These are the rules of the halls. They were cut so that they would last.
+  So the {people} live below.
+
+# =====================================================================================================================
+# the later ages: the rules posted in the shelters (printed; a modern people's drive the same)
+# =====================================================================================================================
+)VG"

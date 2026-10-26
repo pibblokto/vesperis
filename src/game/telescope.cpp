@@ -57,8 +57,6 @@ void Game::telescopeZoomStep(int dir) {
     audio.beep = 4;
 }
 
-namespace { inline Vec3 forwardOf(double yaw, double pitch) { return Vec3(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch)); } }
-
 // Enter (and the opening) tracks a body: its centre brought under the reticle (`recentre`), or, under the stabiliser on the
 // parked body, the view kept where it is and held
 void Game::telescopeTrack(int id, bool recentre) {
@@ -78,6 +76,7 @@ bool Game::telescopeStabilised() const {
     return tele.on && tele.frameBody >= 0 && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody == tele.frameBody && ship.parkedBelt < 0 && tele.frameBody < (int)sys.bodies.size();
 }
 
+// R-405: the stabiliser (the parking and the view held in the parked body's frame while the eye is at the eyepiece)
 void Game::telescopeHoldFrame() {
     tele.frameBody = -1;
     if (!tele.on || !sys.valid || ship.mode != ShipState::PARKED || ship.parkedBody < 0 || ship.parkedBody >= (int)sys.bodies.size() || ship.parkedBelt >= 0) return;
@@ -135,6 +134,7 @@ void Game::telescopeFindTarget() {
     }
 }
 
+// `plain`: for a text file (DEG for the glyph)
 std::string Game::telescopeTargetName(int id) const {
     if (id >= 0 && sys.valid && id < (int)sys.bodies.size()) return upper(bodyNameOf(id));
     if (id == TELE_SUN && sys.valid) return upper(starNameOf(sys.star));
@@ -208,6 +208,7 @@ void Game::updateTelescope(const Input& in, double realDt) {
     if (in.wasPressed(KEY_N) && !in.ctrl() && !ship.targeting) telescopeName();
 }
 
+// the tracked body, else the one under the reticle, else -1
 int Game::telescopePlateBody() const {
     if (!tele.on || !sys.valid || ship.mode == ShipState::VIMANA) return -1;
     if (tele.track >= 0 && tele.track < (int)sys.bodies.size()) return tele.track;
@@ -274,50 +275,7 @@ void Game::renderTelescopeHUD() {
     drawTextShadow(canvas, 18, UH - 26, "+/- ZOOM  N NAMES  P PHOTO  Z / ESC STOWS", fd, HUD_SHADOW);
 }
 
-void Game::testTelescopeSettle() { Input in; telePlateFinish = true; frame(in, 1.0 / 30); }
-std::string Game::testTelescopePlate() const { return spaceR.plateInfo(); }
-double Game::testTelescopePlateProgress() const { int pb = telescopePlateBody(); return pb >= 0 && spaceR.plate().body == pb ? spaceR.plateProgress() : -1; }
-
-// the plate's own cells (ones that hold their own sample) against the planet function sampled again at the cell's centre
-// and the plate's detail: the same function with the same arguments must give the same numbers
-void Game::testPlateCheck(int n, double& maxAlb, int& matMiss, double& maxH) {
-    const DetailPlate& p = spaceR.plate();
-    maxAlb = 0; matMiss = 0; maxH = 0;
-    if (!p.valid() || p.body < 0 || !sys.valid || p.body >= (int)sys.bodies.size()) { matMiss = -1; return; }
-    const BodyGen& g = spaceR.genFor(sys.bodies[p.body]);
-    DrainageOff off(p.noDrainage);
-    int checked = 0;
-    for (int k = 0; k < n * 8 && checked < n; k++) {
-        int i = (k * 37 + 11) % p.W, j = (k * 53 + 7) % p.H;
-        size_t o = (size_t)j * p.W + i;
-        if (!p.exact[o] || p.material[o] == 255) continue;
-        Vec3 u = SpaceRenderer::plateCellUnit(p, i, j);
-        SurfaceSample ss = sampleSurface(g, u, p.texelM);
-        double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
-        double alb = ss.albedo;
-        if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));
-        maxAlb = std::max(maxAlb, std::fabs(alb - p.albedo[o] / 255.0));
-        if (ss.material != p.material[o]) matMiss++;
-        maxH = std::max(maxH, std::fabs(ss.height - p.height[o]));
-        checked++;
-    }
-    if (!checked) matMiss = -1;
-}
-
-std::string Game::testTelescopeInfo() const {
-    if (!tele.on) return "stowed";
-    return fmt("x%.0f, field %.3f deg, target %d '%s', tracking %d%s, offsets %.5f/%.5f rad, yaw %.4f pitch %.4f", telescopeZoom(), telescopeFieldDeg(), tele.target, telescopeTargetLine().c_str(), tele.track, telescopeStabilised() ? " (stabilised)" : "", tele.offYaw, tele.offPitch, ship.yaw, ship.pitch);
-}
-
-long Game::testPlateBegun() const { return spaceR.plateBegun; }
-
-// the ground under the reticle of the parked body: the central ray's point on its sphere, in the body's frame
-bool Game::testTelescopeGround(double& lat, double& lon) const {
-    int b = ship.parkedBody;
-    if (!sys.valid || ship.mode != ShipState::PARKED || b < 0 || b >= (int)sys.bodies.size()) return false;
-    return viewGround(b, lat, lon);
-}
-
+// the body's ground under the view's centre (W-06's reticle), false when the ray misses
 // the ground of a body under the view's centre (the central ray's first point on its sphere, in the body's frame); false when
 // the ray misses it. X-01 aims the probe with it
 bool Game::viewGround(int b, double& lat, double& lon) const {
@@ -330,39 +288,4 @@ bool Game::viewGround(int b, double& lat, double& lon) const {
     Vec3 u = normalize(sys.bodyFrame(b, t) * (cam.transposed() * ((Vec3(0, 0, tHit) - cv) / R)));
     StarSystem::latLonFromBody(u, lat, lon);
     return true;
-}
-
-bool Game::testGroundScreen(int body, double lat, double lon, double& sx, double& sy) const {
-    if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return false;
-    Vec3 at = sys.bodyPos(body, t) + sys.bodyFrame(body, t).transposed() * StarSystem::bodyFromLatLon(lat, lon) * sys.bodies[body].radiusKm;
-    Vec3 v = viewBasis() * (at - ship.pos);
-    if (v.z <= 0) return false;
-    Proj pj = tele.on ? telescopeProj() : spaceR.proj;
-    sx = pj.cx + pj.f * v.x / v.z; sy = pj.cy - pj.f * v.y / v.z;
-    return true;
-}
-
-bool Game::testSubShip(double& lat, double& lon) const {
-    int b = ship.parkedBody;
-    if (!sys.valid || ship.mode != ShipState::PARKED || b < 0 || b >= (int)sys.bodies.size() || ship.parkedBelt >= 0) return false;
-    StarSystem::latLonFromBody(normalize(sys.bodyFrame(b, t) * ship.parkDir), lat, lon);
-    return true;
-}
-
-bool Game::testBodyScreen(int body, double& sx, double& sy, double& rpx) const {
-    if (body < 0 || body >= (int)spaceR.bodyInfo.size() || spaceR.bodyInfo[body].body != body) return false;
-    const BodyScreenInfo& bi = spaceR.bodyInfo[body];
-    sx = bi.sx; sy = bi.sy; rpx = bi.radiusPx;
-    return bi.inFront;
-}
-
-int Game::testTelescopePick() const {
-    int best = -1; double bestAng = 0;
-    if (!sys.valid) return -1;
-    for (int i = 0; i < (int)sys.bodies.size(); i++) {
-        if (i == ship.parkedBody) continue;
-        double ang = sys.bodies[i].radiusKm / std::max(1.0, length(sys.bodyPos(i, t) - ship.pos));
-        if (ang > bestAng) { bestAng = ang; best = i; }
-    }
-    return best;
 }

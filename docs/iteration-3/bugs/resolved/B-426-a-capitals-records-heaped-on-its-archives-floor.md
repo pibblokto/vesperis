@@ -18,7 +18,7 @@ stockpiles everything in one place".
 * **The archive took every record its place kept.** T-04 gave each record a home (`recordHomesOf`: a place of the plan standing in its
   year, the capital weighing ten, a city four, a town one and a half, a village one) "which always holds it (its archive, else its rooms)",
   and the archive its class's count (the capital's 8 to 14, a prehistoric capital's 4 to 6, a city's 5 to 8, a third of the towns' 3 to 5:
-  `docs/reference/12-civilisations.md`). `recordSitesOf` asked the archive for the larger of its count and the place's own (`std::max(k,
+  `docs/reference/civilisations/built-world.md`). `recordSitesOf` asked the archive for the larger of its count and the place's own (`std::max(k,
   own)`), so it laid them all in its rows (four of 24 at most, half a metre apart across the room). A people of few places left its capital
   a third to a half of its records: a prehistoric people's capital among its villages, a futuristic people's among a handful of towns.
   Yaiphuyiabrus IV (a prehistoric people, 80 records, a capital and forty villages): the capital kept 38; its archive took 31 in two rows

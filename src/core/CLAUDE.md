@@ -17,8 +17,8 @@ The base everything draws on: 16-bit pixels in a `Framebuffer`, hashes of intege
 ## Rules and traps
 - Everything procedural is a pure function of integer coordinates and seeds (rng.h:1): the same input gives identical output.
 - Pixels are the same at any thread count. A pooled pass is row-pure (a row's result independent of the thread and the chunk)
-  or band-pinned (`parallelBands`) (parallel.h:6). Only the main thread dispatches, and the pool is not reentrant: `glowDisc` and
-  `blendRectRGB` dispatch, so they never run inside a job. Whoever sets `setRasterBand` (thread_local) resets it afterwards.
+  or band-pinned (`parallelBands`) (parallel.h:6). Only the main thread dispatches (`pool::contended` stays 0); a dispatch
+  inside a job runs alone on its thread (`pool::inside`), so `glowDisc` and `blendRectRGB` called from a job run serially. Whoever sets `setRasterBand` (thread_local) resets it afterwards.
   After touching parallel.cpp: `vesperis_test pool`, and the unit in a `-fsanitize=thread` build.
 - The look: 32 banks (material ramps) of 2048 intensities, 64 classic shades of 32 each. The mush blends intensities, never
   across banks. A point of light survives the mush only as a size-2 point (3 x 3 at 1x) at 48+ shades; on the chrome bank 7

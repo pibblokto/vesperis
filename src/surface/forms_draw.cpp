@@ -1,4 +1,4 @@
-// A-02: the settlements' forms drawn (galaxy/forms.h). The cells in reach are gathered building by building, each at its own
+// A-02: the settlements' forms drawn (peoples/forms.h). The cells in reach are gathered building by building, each at its own
 // level of detail by its distance; the forms are built, lit and fogged in chunks on the workers, then drawn in bands of rows,
 // every band walking the same polygons in the same order, so the frame is the serial loop's (B-310). C-01's boxes and domes
 // keep their arithmetic and their light, and draw as they did; the peoples' colours are their banks (`FORM_BANKS`).

@@ -113,7 +113,7 @@ enum Trait {
     TR_ARCHIPELAGO, TR_PANGAEA, TR_LAKELAND, TR_SNOWBALL, TR_EXOTIC_SEAS, TR_STORMS, TR_HAZE,
     TR_GIANT_FLORA, TR_LUMINOUS_FLORA, TR_DEAD_FOREST, TR_RED_SOIL, TR_BLACK_SAND, TR_CHALK,
     TR_GLASSED,   // S-03: never drawn; the generator gives it to a neutron star's outer survivors (`Body::glassed`): the flats fused into sheets of glass
-    TR_CIVILISATION,   // C-01: never drawn by the trait draw; `BodyGen::make` gives it to one world in eight of the kinds a people may live on, by a hash of its own (`galaxy/ruins.*`; a dry world's old seas and rivers, `oldSeaM`)
+    TR_CIVILISATION,   // C-01: never drawn by the trait draw; `BodyGen::make` gives it to one world in eight of the kinds a people may live on, by a hash of its own (`peoples/ruins.*`; a dry world's old seas and rivers, `oldSeaM`)
     // Q-01: the new slots' traits (`TraitDef::kind`), drawn in the slots 3-5 alone (the first three draw R-304's, so they stay as drawn): the landforms
     TR_GREAT_SHIELD, TR_TESSERAE, TR_LABYRINTH, TR_HOLLOWS, TR_CRATER_CHAINS, TR_PENITENTES, TR_COLUMNS, TR_MUD_VOLCANOES, TR_INVERTED_RIVERS, TR_PINGOS, TR_MAARS,
     // Q-02: the water, the sky, the life and the ground

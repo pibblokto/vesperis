@@ -58,15 +58,15 @@ twelve kinds are re-cut into the families below (`MILESTONES.md`).
 | 16 | The drifters | D-05 | The people who lost their sun: the history's new end, its records, charts and music, the beacon | XL | done 2026-10-23 |
 | 17 | The repo | E-01 | What every session loads: the memory, the root CLAUDE.md with the map, the directory notes, the guards; the eight tasks measured | M | done 2026-10-23 |
 | 18 | The repo | E-02 | The proof kept: fingerprints of every module, `tools/prove`, the almanac's order explicit, a safe `make clean`, `make check`, clangd | L | done 2026-10-24 |
-| 19 | The repo | E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | planned |
-| 20 | The repo | E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | planned |
-| 21 | The repo | E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | planned |
-| 22 | The repo | E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | planned |
-| 23 | The repo | E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | planned |
-| 24 | The repo | E-08 | The views: surface_view and space_view split | L | planned |
-| 25 | The repo | E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | planned |
-| 26 | The repo | E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | planned |
-| 27 | The repo | E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | planned |
+| 19 | The repo | E-03 | The harness in pieces: `src/harness/`, a mode registry, the unit by groups, the scenes by family | L | done 2026-10-24 |
+| 20 | The repo | E-04 | The docs for their readers: rules by area, the log by release, STATUS, the harness index, an archive, lean touch points | L | done 2026-10-24 |
+| 21 | The repo | E-05 | The game's header: the hooks into the harness, game.h by subsystem, the platform's asserts | L | done 2026-10-24 |
+| 22 | The repo | E-06 | The game's files: the mixed files split, the state table, the new-screen checklist | M | done 2026-10-24 |
+| 23 | The repo | E-07 | The worlds: planetmap split, the engine headers' hook sections, `salt scan` | L | done 2026-10-24 |
+| 24 | The repo | E-08 | The views: surface_view and space_view split | L | done 2026-10-24 |
+| 25 | The repo | E-09 | The peoples' directory: `src/peoples/` with its grammar; buildings, works and ruins split | L | done 2026-10-25 |
+| 26 | The repo | E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | done 2026-10-25 |
+| 27 | The repo | E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | done 2026-10-25 |
 | 28 | The repo | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | planned |
 | 29 | The repo | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | planned |
 
@@ -167,7 +167,7 @@ sounds, the harness's sweeps, scenes and site finders. Groups written out by han
   `vesperis_test kinds` (21 sheets: the companion star is a sun), the cookbook's recipe, the static checks. As built against the plan:
   the archetypes are the old branches as ground functions (merging them would have moved bits; a new kind gives a ground its own
   parameters by its draws), and the scenes keep their table (the rows give the `kinds` sheet its sites through `eventMaterial`). The
-  proof (`10-decisions.md`): a fingerprint of 233,347 bodies, their made generators and 782,922 samples the same; `regress` 24/24 on the
+  proof (`docs/decisions/log/`): a fingerprint of 233,347 bodies, their made generators and 782,922 samples the same; `regress` 24/24 on the
   workers and one thread; `survey 1500` the same; `screens` 96/96; the kinds' sweeps 187/187; `unit` passing; `bench check` within
   all 37 budgets, and against 1.3.2's binary in alternating pairs every row within the noise or faster (the globe reads its kind's
   tags once a globe: read at every pixel, the first build's space rows were 3-5% slower).
@@ -201,7 +201,7 @@ one; its sheet in `kinds`; its share in `survey`.
 * Done when: `kinds furnace` writes the six sheets; the scenes `magma_shore`, `chthonian_plain`, `glass_flow`, `steam_highland`,
   `salt_basin`, `rust_valley`; `survey 1500` gives each kind its share near home and says how many worlds changed kind; unit
   checks (the draw deterministic, no world with a people changed, home felisian, the radar's x1 list unchanged); `GEN_VERSION`
-  16 in `10-decisions.md`; the regress re-blessed, the pinned sites and the age worlds checked and re-pinned where they moved;
+  16 in `docs/decisions/log/`; the regress re-blessed, the pinned sites and the age worlds checked and re-pinned where they moved;
   `bench check` within budgets; the flow passes.
 * **Done 2026-10-21.** The six made kinds (`kindOf`, the rows' sources; `makeKind`), five grounds of their own and the rust world on the
   desert's, three materials (mud, potash, brine), the accents' first users and the tectonic sulphur's own yellow, the steam world's
@@ -210,7 +210,7 @@ one; its sheet in `kinds`; its share in `survey`.
   plan: the sources' temperatures are the game's (its inner orbits reach 350-500 K: a magma ocean from a locked molten world over
   360 K, a chthonian or a glass world over 400 K), a made planet's moons keep their drawn orbits and periods (moved out only where the
   made world would reach them: a people's moon keeps its days), the steam world comes from worlds whose day is not their year and the
-  chthonian from living stars only, the glass world has fields of glass beads and no dunes (no air). The proof (`10-decisions.md`): every draw of 6,866
+  chthonian from living stars only, the glass world has fields of glass beads and no dunes (no air). The proof (`docs/decisions/log/6-1.4.0.md`): every draw of 6,866
   systems the same as 1.3.2's (65,463 bodies), 1,086 made, seven moons moved clear, none of 917 people's worlds changed; `regress` 24/24
   unchanged both ways (none of its worlds is made: nothing to bless); `screens` 96/96; the kinds' sweeps 185 of P-00's 187 the same (the
   tectonic ground's sulphur; the binary world's globe by the sweep's own order, the made kinds drawn before it); the pinned test worlds
@@ -238,7 +238,7 @@ one; its sheet in `kinds`; its share in `survey`.
   dwarf's 230-330), the steppe's salt pinned to keep the home world felisian (Heilya III is a tundra world), the archean's mats on the
   wetter half of the land a felisian world would grow its plants on (the flats alone were 1%, invisible from orbit) and its domes dark
   with mats on a pale flat, the superhabitable's land broken into archipelagos by a smaller continent field and its seas a tenth as
-  deep, the tundra's sheet ending in a cliff. The proof (`10-decisions.md`): every draw of 6,866 systems the same as P-01's, 1,765 made, two
+  deep, the tundra's sheet ending in a cliff. The proof (`docs/decisions/log/6-1.4.0.md`): every draw of 6,866 systems the same as P-01's, 1,765 made, two
   moons moved, none of 917 people's worlds changed; 43,217 of 44,479 bodies bit for bit P-01's in every field and sample (the rest made or
   the two moons); `regress` 24/24 unchanged both ways (nothing to bless); `screens` 96/96; the kinds' sweeps 219 of 235 the same and all
   235 with the new kinds skipped (the scan's order); `unit` 351 checks, none failing; `survey 1500` 3.7% made; the flow passes; `bench
@@ -270,7 +270,7 @@ one; its sheet in `kinds`; its share in `survey`.
   as one that turns (the twin takes its lock); the companion's clearance and the comets read the moons as drawn (a made world pushed a moon
   and moved a companion 8,000 km in the first stream); a black hole's worlds left out (S-06 keeps them airless); three salts pinned so the
   regress's and the bench's worlds stay as drawn; and a bug of P-02's fixed (the tundra's blue ice over its buried cliffs). The proof
-  (`10-decisions.md`): every draw of 6,866 systems P-02's, 1,867 made, 41 moons moved, no people's world and no test world changed; 43,131 of
+  (`docs/decisions/log/6-1.4.0.md`): every draw of 6,866 systems P-02's, 1,867 made, 41 moons moved, no people's world and no test world changed; 43,131 of
   44,467 bodies bit for bit P-02's (the rest made, the moved moons, ten tundra worlds); `regress` 24/24 unchanged both ways (nothing to
   bless); `screens` 96/96; the sweeps P-02's but for the first hydrocarbon world (made an ammonia world), two trait sheets and the scan's
   order; `unit` 354 checks, none failing; `survey 1500` 7.0% made with the red dwarfs' locked worlds by kind; the flow passes; `bench check`
@@ -324,7 +324,7 @@ world in its people's time (then) and the world the explorer walks (now).
   world for its sheet, its scenes and the unit, its harbour scene on a staged world with a people (a drifter's, D-05's, rather than a
   wanderer's: a wanderer keeps none); the white dwarf's sources are its planets, not their moons (a 1,300 km felisian world); the scorched
   peoples' salt held the radar's lists as they were (no re-pin); the scorched test worlds lie 40-200 ly out on the plane (none within 25 ly of
-  home); two more scenes, the dead forests. The proof (`10-decisions.md`): every draw of 6,866 systems P-03's, 166 scorched, no moon moved, no people's world and no test world
+  home); two more scenes, the dead forests. The proof (`docs/decisions/log/6-1.4.0.md`): every draw of 6,866 systems P-03's, 166 scorched, no moon moved, no people's world and no test world
   changed; 44,368 of 44,467 bodies bit for bit P-03's (the other 99 the scorched); `regress` 24/24 unchanged both ways (nothing to bless);
   `screens` 96/96; the sweeps P-03's but for the scan's order (330 of 331 with no scorched world made, the one a frame that flips from run to
   run); `unit` 357 checks, none failing; `survey 1500` 4 scorched of 109 made (7.2%); the flow passes; `bench check` within all 37 budgets,
@@ -356,7 +356,7 @@ world in its people's time (then) and the world the explorer walks (now).
   (P-04's kind's first worlds), none with a people. As built against the plan: the dry ice's salt pinned for the regress's and home's cold
   worlds; a seventh scene (`brine_mountain`, the lone mountain); the frozen felisian's sheet and forest scene on a real wanderer now (its
   harbour still a staged world's: a wanderer keeps no people); the nitrogen and frost dwarf scenes under a sun-like star's light. The proof
-  (`10-decisions.md`): every draw of 6,866 systems P-04's, 1,529 bodies made far cold, 251 wanderers in 251 systems, 7 moons of made planets
+  (`docs/decisions/log/6-1.4.0.md`): every draw of 6,866 systems P-04's, 1,529 bodies made far cold, 251 wanderers in 251 systems, 7 moons of made planets
   moved, no test system's body changed; 43,423 of 44,467 bodies bit for bit P-04's (the rest made, or the 7 moons); `regress` 24/24 unchanged
   both ways; `screens` 96/96; the sweeps P-04's but for the pictures drawn after a new kind's (339 of 339 with no far cold body made); `unit`
   361 checks, none failing; `survey 1500` 9.7% made, the wanderers 3.7% of the start region's systems; the flow passes; `bench check` within
@@ -383,7 +383,7 @@ world in its people's time (then) and the world the explorer walks (now).
   bright ice: on the coal-black face its relief hardly shows); the sponge's salt pinned for the regress's Wyariothmai V-b; the patchwork and the
   sponge under 200 K (a rocky moon of 481 K would have been one of ice); the two-faced moon alone holds its apex (`Body::apexDir`, from its
   orbit's elements: four positions a moon by differences had doubled the generator's time); the sponge's pits on a grid's features projected
-  onto the sphere (a `worley3` cut through it left a pit's middle on a fiftieth of the ground). The proof (`10-decisions.md`): every draw of
+  onto the sphere (a `worley3` cut through it left a pit's middle on a fiftieth of the ground). The proof (`docs/decisions/log/6-1.4.0.md`): every draw of
   6,866 systems P-05's, 1,232 moons made strange (342 grooved, 242 two-faced, 255 sponges, 217 tiger-striped, 176 patchwork), no other body
   changed, no test system's body changed; 43,785 of 44,632 bodies bit for bit P-05's (the other 847 the made moons); `regress` 24/24 unchanged
   both ways; `screens` 96/96; the sweeps P-05's but for the pictures drawn after a new kind's (394 of 395 with no strange moon made, the one
@@ -419,7 +419,7 @@ world in its people's time (then) and the world the explorer walks (now).
   giant's only; no warm stratosphere over an alkali giant (Fortney et al. 2008: a probe met air hotter than where the heat then ended it) and an
   inversion over a silicate giant's; an azure giant's deep blue by Rayleigh's scattering and its camera set for the air round it (the salts'
   haze far under the probe had shown as a white floor); a giant's sheet shows its night side, its limb and the air a probe finds; seen from
-  its moon a hot giant's night side stays dark (left out). The proof (`10-decisions.md`): every draw of 6,866 systems P-06's, 1,037 bodies
+  its moon a hot giant's night side stays dark (left out). The proof (`docs/decisions/log/6-1.4.0.md`): every draw of 6,866 systems P-06's, 1,037 bodies
   made giants (587 water-cloud, 278 gas dwarfs, 67 super-puffs, 66 azure, 28 alkali, 11 silicate), 341 moons of made giants moved (none a
   people's), no other body changed, no test system's body changed; 43,685 of 44,632 bodies bit for bit P-06's (697 made, 250 the moved
   moons); `regress` 24/24 unchanged both ways; `screens` 96/96; the sweeps P-06's but for the pictures drawn after a new kind's (434 of 435 with no giant made, the one the chemotroph's
@@ -459,7 +459,7 @@ Source: `IDEAS-worlds-and-wanderers.md` section 2, R-304 and R-305 (the traits a
   seas away), so 120 bodies change by it alone (the wet worlds' dry landforms keep to their drier parts, the thin-aired worlds' glaciers and
   patterned ground follow their cold); the home world kept like a people's (it drew columnar basalt); RACING DAY on the game's scale (a day under
   half an hour); the facts ten, as listed; the data sheet over pages (a fifth of the sheets ran past the footer already, half would have); the
-  penitentes each a pointed blade in rows; about half the maars crater lakes. The proof (`10-decisions.md`): 18,085 of 44,632 bodies bit for
+  penitentes each a pointed blade in rows; about half the maars crater lakes. The proof (`docs/decisions/log/6-1.4.0.md`): 18,085 of 44,632 bodies bit for
   bit P-07's, 26,427 with a new landform, 120 by the moisture and warmth; `regress` five maps of worlds that drew a landform blessed, then
   24/24 both ways; `screens` 93 of 96 (a home moon's globe in the decoder's window); the sweeps 386 of 447 the same (60 of worlds that drew a
   landform, the chemotroph's flip); `unit` 375 checks, none failing; the flow passes; `bench check` 36 of 37 (the photo's PNG at 11.1 of 11),
@@ -495,7 +495,7 @@ Source: `IDEAS-worlds-and-wanderers.md` section 2, R-304 and R-305 (the traits a
   rock's colour and an accent), white gypsum dunes, meteorite fields (strewn ellipses, iron stones that glint, pits downrange, a scanner mode).
   As built against the plan: the meteorites the dry and frozen grounds' alone (on every airless rock they took a fifth of the scan region's
   worlds); the trait colours in the second people's banks (25-27) and the milky glow in bank 15; the tide lines drawn on the maps as the
-  intertidal band's edges (the sector map's image is a still one). The proof (`10-decisions.md`): the first three slots P-07's; every body whose
+  intertidal band's edges (the sector map's image is a still one). The proof (`docs/decisions/log/6-1.4.0.md`): the first three slots P-07's; every body whose
   six slots are Q-01's hashes as Q-01's (34,531 of 44,632; 10,101 took a Q-02 trait); `regress` three hashes of worlds that drew a trait blessed,
   then 24/24 both ways; `screens` 60 of 96 (the cabin's window at home: its milky seas); the sweeps 415 of 459 (the kinds' sweep worlds that took a
   trait, four landform sheets' worlds); `unit` 380 checks, none failing; the flow passes; `bench check` within all 37 budgets, the pairs with
@@ -522,7 +522,7 @@ Source: `IDEAS-worlds-and-wanderers.md` section 2, R-304 and R-305 (the traits a
   `shots/tests/sound_*.wav`; the hum twice the full wind, the ice's booms and the quake's rumble lowered from the clamp); the scenes
   `singing_dunes`, `singing_ice` and `quakes` with their cues and their sound. As built against the plan: the quakes the plates' worlds under an
   air and the hot moons' (the first build's airless rock took a quarter of the worlds); the scorched worlds keep no singing dunes (no dunes).
-  The proof (`10-decisions.md`): the first three slots P-07's; every body whose six slots are Q-02's hashes as Q-02's (39,558 of 44,632; 5,074
+  The proof (`docs/decisions/log/6-1.4.0.md`): the first three slots P-07's; every body whose six slots are Q-02's hashes as Q-02's (39,558 of 44,632; 5,074
   took a sound); `regress` two hashes back to their earlier selves blessed, then 24/24 both ways; `screens` all 96 Q-01's again (60 Q-02's); the
   sweeps 456 of 475 the same (the sweep worlds and sheet carriers that took a sound); `unit` 383 checks, none failing; the flow passes; `bench
   check` within all 37 budgets, and six pairs with Q-02's binary level at their bests.
@@ -530,7 +530,7 @@ Source: `IDEAS-worlds-and-wanderers.md` section 2, R-304 and R-305 (the traits a
 ## Phase 4: the drifters
 
 Source: `IDEAS-worlds-and-wanderers.md` section 3; the reading of 2026-10-21 (the radar from the galaxy's hash to the speaker;
-the places, the travel and the light); `docs/reference/12-civilisations.md` (C-07, C-15, C-16); `10-decisions.md` R-407 ("a
+the places, the travel and the light); `docs/reference/civilisations/radar.md` (C-07, C-15, C-16); `docs/decisions/log/` R-407 ("a
 jump ends at a star") and O6-02 (the surface's light floor), both rewritten for a system with no sun.
 
 ### D-01: the dark between
@@ -560,7 +560,7 @@ jump ends at a star") and O6-02 (the surface's light floor), both rewritten for 
   long ago) with their density against the stars'; unit checks (no drifter in a sector with a star; the field deterministic;
   a save at a drifter round-trips; the light 0 everywhere on it; no NaN from the anchor: positions, the almanac, the parking);
   frames of an arrival, the parked view and a landing (dark: the night's light); regress and `screens` unchanged (nothing of
-  the stars moved); `10-decisions.md` rewrites R-407's and O6-02's entries for a sunless system.
+  the stars moved); `docs/decisions/log/2-1.2.0.md` rewrites R-407's and O6-02's entries for a sunless system.
 * **Done 2026-10-23.** The drifters' field (`galaxy/drifters.*`): cells of 256 sectors with a salt of their own, up to four candidates a
   cell kept as often as the stars are dense there (twice among the old populations; a globular's own besides) and only in a sector without a
   star, so the drifters are as dense as the stars times 1.4e-7: near home the nearest at 359 ly, 17 within 800, 29 within 1,000 (one for every
@@ -574,7 +574,7 @@ jump ends at a star") and O6-02 (the surface's light floor), both rewritten for 
   As built against the plan: the moons a brown dwarf drifter's glow warms past 205 K were drawn living worlds and are chemotrophs; the
   thermometer stays the airless night's (-270 C on a 36 K rock) for D-04. `rogues` (the list with the stars they left, the density, the
   kinds against the table, a flight there by `V`, the arrival, the parked view and a landing), five unit checks. The proof
-  (`10-decisions.md`): every body of the stream's systems as Q-03's; `regress` 24/24 both ways with nothing blessed; `screens` 96/96 Q-03's;
+  (`docs/decisions/log/6-1.4.0.md`): every body of the stream's systems as Q-03's; `regress` 24/24 both ways with nothing blessed; `screens` 96/96 Q-03's;
   the sweeps 474 of 475 (the chemotroph's known flip); the data sheets 24/24; `unit` 388 checks, none failing; the flow passes; `bench check` within all 37 budgets, level with Q-03's last check row by row.
 
 ### D-02: heard, not seen
@@ -609,7 +609,7 @@ jump ends at a star") and O6-02 (the surface's light floor), both rewritten for 
   glowing drifter's moons lit by it. The survey: the landing map, its zoom, the sector map and the drone bay's map by heights and relief in
   the radar's cold phosphor. As built against the plan: the first light, through the ground's exposure, drew a giant brighter than the band
   behind it and gave way to the band's own exposure; the drone bay's map takes the survey too. `rogues heard` (the lists by step from ten
-  places, the lock, the flight, the discs, a brown dwarf's moon, the survey's maps), three unit checks. The proof (`10-decisions.md`): every
+  places, the lock, the flight, the discs, a brown dwarf's moon, the survey's maps), three unit checks. The proof (`docs/decisions/log/6-1.4.0.md`): every
   body as Q-03's; `regress` 24/24 both ways with nothing blessed; `screens` 96/96, the sweeps 475/475 and the data sheets 24/24 D-01's;
   `signals` as D-01's binary prints it; `unit` 391 checks, none failing; the flow passes, its x32 sweep hearing the six. `bench check` within all 37 budgets, level with D-01's in pairs (the
   telescope's 2x a placement of the code: level in a scratch harness with D-01's globe code against D-02's).
@@ -642,7 +642,7 @@ jump ends at a star") and O6-02 (the surface's light floor), both rewritten for 
   slot for D-05 (`radarVoice`: a machine of C-16's, slowed and darkened). No two alike: over the hundred drifters nearest home every pair's
   voice prints lie at least 4.55 dB apart (the median 7.2), two magnetospheres' 4.19 at the median. As built against the plan: the first
   voices were as alike as two magnetospheres, and the echoes, the answer, the chord, the weights and the plasma's resonances were what set
-  them apart; the synth's cost halved to about 7 ms a second of sound. `rogues voices`, two unit checks. The proof (`10-decisions.md`): every
+  them apart; the synth's cost halved to about 7 ms a second of sound. `rogues voices`, two unit checks. The proof (`docs/decisions/log/6-1.4.0.md`): every
   radar WAV of `signals wav` byte for byte D-02's but the drifter's three; every body as Q-03's; `regress` 24/24 both ways with nothing
   blessed; `screens` 96/96, `signals` and `rogues heard` as D-02's; `unit` 393 checks, none failing; the flow passes. `bench check` within
   all 37 budgets, every row level with D-02's in pairs but the decoder's (0.1-0.4 ms, a frame D-03's code does not run in: the layout).
@@ -679,7 +679,7 @@ jump ends at a star") and O6-02 (the surface's light floor), both rewritten for 
   summit crusts, the stars dimmed and reddened. As built against the plan: the plan's frozen seas came with the traits a world in the dark
   cannot have, which the first survey of the drifters found (aurorae, haze and singing dunes at 40 K, halos round no sun); the dark ocean is
   made, not drawn, so no drifter's kind, power or voice moved; the lights left on are drawn but given to no world until D-05. `rogues dark`,
-  the four scenes, `kinds dark`, four unit checks, the bench's lamp row. The proof (`10-decisions.md`): every body of the stream's systems as
+  the four scenes, `kinds dark`, four unit checks, the bench's lamp row. The proof (`docs/decisions/log/6-1.4.0.md`): every body of the stream's systems as
   Q-03's; `regress` 24/24 both ways with nothing blessed; `screens` 96/96 D-03's; the sweeps 475/475 D-02's; the data sheets 24/24, `signals`,
   `rogues heard`, every radar WAV and `rogues voices` as D-03's binary; `unit` 397 checks, none failing; the flow passes; `bench check`
   within all 38 budgets, every row level with D-03's binary over four pairs (the city's 4x, 0.1-0.3 ms over at first, by the window test's
@@ -758,7 +758,7 @@ together on a drifter). Their story is the lost sun's, and no other world's is.
   history invented before the last sunrise), and such a people goes on inventing to the last sunrise, its railways after the railway; the
   last city is the last place (no dome over a town). `peoples rogues`, `shards drifters` (the test drifters Balyaphebist and Vreikheid,
   fifty records each), `shards rogue`, `grammar rogues`, `charts rogues` (12 of 12), `works rogue`, the beacon in `rogues voices`, the domes
-  and glasshouses in `ruins kinds`; six unit checks. The proof (`10-decisions.md`): every body as D-04's (fp5); every sampled people's
+  and glasshouses in `ruins kinds`; six unit checks. The proof (`docs/decisions/log/6-1.4.0.md`): every body as D-04's (fp5); every sampled people's
   records as D-04's, byte for byte (`recdump`), and the age and scene worlds' pinned; `regress` 24/24 both ways with nothing blessed;
   `screens` 96/96, the sweeps 475/475 and the data sheets 24/24 D-04's (two frames run beside other jobs moved, the same alone); `signals`,
   `rogues heard`, every radar WAV and `rogues voices` (but its beacon) as D-04's; `rogues dark`'s frames and the dark's scenes D-04's; `unit`
@@ -780,3 +780,13 @@ to the binary before it.
   keeps `build/`'s kits and toolchains, `make check`, `compile_flags.txt`, the `prove`, `bench` and `look` skills and the `prover`
   agent. Proven from a clean rebuild: `tools/prove compare e02-base2` everything the same (27 items, 1,271 files; the unit's 403
   checks, the flow and the regress both ways among them); the bench pairs level but for rows bound to the disk.
+
+* **E-03 done 2026-10-24.** The harness in pieces: `src/main_headless.cpp` is `src/harness/` (43 files, the largest 1,334 lines),
+  moved by `tools/mover.py` and proven function by function by `tools/samecode.py`; `MODES` with `help` and `help md`; the unit by
+  its 41 groups (`unit list`, `unit <group> -q`); the flow, the bench and the scene finder by stages and families; the scenes'
+  codes named; the `harness` skill; a one-file harness edit rebuilds in 1-3 s. From a clean rebuild, `tools/prove compare e02`
+  reported everything the same (27 items, 1,271 files: the unit's 403 checks, the flow and the regress both ways among them); the
+  A/B batteries the same but for `parkings`' `_b` frames, which aim at a body without waiting for its map and draw one of two
+  pictures from the old binary too (KI-419); all 41 unit groups pass alone; `bench check` within its 38 budgets in all eight runs
+  of four AB/BA pairs against e02's binary, level but for `buggy 2x` (noisy) and two rows the new binary ran faster (`landzoom Z`
+  0.96, `descent people` 0.94). `tools/prove snapshot e03` is E-04's base.
