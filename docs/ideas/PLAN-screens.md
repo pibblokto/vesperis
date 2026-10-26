@@ -430,6 +430,16 @@ The tasks:
   which plots the air pressure of the world the ship is parked at over the last day; the controller's command menu offers its
   commands, and Escape closes it. Name every file and place that must change, in order."
 
+**The cabin-device task, before** (U-01, 2026-10-26, before any code changed; a `Plan` agent on Opus, alone): 232,940 tokens,
+86 tool uses, 13.5 minutes. It named ten places in the game's code:
+- game_types.h: the state's value, its row, the count, the facing and its `SCREENS` row;
+- the pressure beside the fronts; game.h's banner; the new file; the frame's two switches;
+- cabin.cpp: the palette's loop, `spots[]`, E's switch, the band's dial, the HUD's unsized `names[]`, `PAGE1` with `counts[]` and
+  the render's `n` kept in step, the status column's `default`;
+- pad.cpp: the screen's name, `FACING[]` and its commands; the help's first page.
+
+Besides them, five in the harness and the docs. Found on the way: no palette bank is free in the cabin (all 32 taken).
+
 ## 8. Considered and set aside
 
 - **Screens as classes behind a virtual interface.**
@@ -465,3 +475,7 @@ The tasks:
 - **The cabin's devices:** a facing without its entries gives the controller a null pointer that "USE " is added to, and makes
   the HUD read past its `names[]`. U-03 closes both.
 - **Dead and unread:** two of the controller's screen names are shown by no page (U-04), and no code asks `ST_OVERLAY` (U-02).
+- **KI-428 (U-01's survey):** a T typed at the GOES console also multiplies the time warp, and Ctrl+T there opens the almanac: the
+  frame asks whether a state simulates, not whether it types. Offered, not fixed.
+- **The almanac's commands:** while a run goes, the controller offers STOP THE RUN (T), which the almanac's screen ignores (U-04).
+- **KI-429:** the settings screen's title overlaps its first row (seen once U-01 mended `settings`' picture). Offered, not fixed.

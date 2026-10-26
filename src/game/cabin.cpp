@@ -378,6 +378,8 @@ const char* const PAGE1[] = {"CABIN LIGHT", "HULL POLARISATION", "OBSERVATION DE
         "THE INSTRUMENTS", "THE DRONE BAY"};   // C-07: the radar; W-01: the almanac; C-11: the case; C-18: the drones
 const char* const PAGE2[] = {"SETTINGS", "THE GUIDE", "EXPEDITION LOG", "THE SHARDS", "SAVE THE EXPEDITION"};   // C-06: the shards
 }
+const MenuLabels SHIP_PAGE_LABELS[3] = {{PAGE0, (int)(sizeof(PAGE0) / sizeof(PAGE0[0]))}, {PAGE1, (int)(sizeof(PAGE1) / sizeof(PAGE1[0]))},
+                                        {PAGE2, (int)(sizeof(PAGE2) / sizeof(PAGE2[0]))}};
 
 void Game::updateShipScreen(const Input& in) {
     int counts[3] = {11, 11, 5};

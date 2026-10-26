@@ -194,6 +194,7 @@ static const Mode MODES[] = {
                     return 0;
                 }},
         {"input", "game", "", "M6-02, R-418: the key map and the controller", "modes_input.cpp", [](int argc, char** argv) -> int { return testInput(); }},
+        {"tour", "game", "[state ...]", "U-01: every state opened as the game opens it, its controller menu, its keys and rows; Esc last", "modes_tour.cpp", runTour},
         {"fuzz", "game", "[n]", "M0-08: random keys and mouse for n frames (10,000) across every state", "modes_input.cpp",
                 [](int argc, char** argv) -> int { return runFuzz(argc > 2 ? atoi(argv[2]) : 10000); }},
         {"zoom", "game", "<sx> <sz> <body> <latDeg> <lonDeg> [scale]", "C-09: the landing map's zoom window over a point", "modes_game.cpp", runZoom},

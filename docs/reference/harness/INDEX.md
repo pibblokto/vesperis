@@ -108,6 +108,7 @@ Written by `vesperis_test help md` from `src/harness/main.cpp`'s `MODES`: edit t
 | `settings` |  | the settings file round trip and the settings screen | modes_game.cpp |
 | `audio` |  | M4-09: every family of sound through the synth into a WAV | modes_game.cpp |
 | `input` |  | M6-02, R-418: the key map and the controller | modes_input.cpp |
+| `tour` | `[state ...]` | U-01: every state opened as the game opens it, its controller menu, its keys and rows; Esc last | modes_tour.cpp |
 | `fuzz` | `[n]` | M0-08: random keys and mouse for n frames (10,000) across every state | modes_input.cpp |
 | `zoom` | `<sx> <sz> <body> <latDeg> <lonDeg> [scale]` | C-09: the landing map's zoom window over a point | modes_game.cpp |
 | `drones` | `[frames] \| check \| world <sx> <sz> <body>` | C-18: the drone bay in a game | modes_drones.cpp |

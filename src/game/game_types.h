@@ -20,6 +20,11 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        AUTO };         // auto-explore's profiles
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
+// U-01: a menu's labels in its order, by which the harness finds a row (U-03 makes each menu rows): the Esc menu's and the
+// settings' (game/menus.cpp; the settings' BACK is drawn after theirs), the guide menu's (game/guide_screens.cpp) and the
+// flight computer's three pages (game/cabin.cpp)
+struct MenuLabels { const char* const* label; int count; };
+extern const MenuLabels MENU_LABELS, SETTINGS_LABELS, GUIDE_LABELS, SHIP_PAGE_LABELS[3];
 
 // E-06: what each state is, a row a state in GameState's order: the traits the frame, the radio, the save and the controller
 // read, the controller's context, the name the harness prints. A new state appends its row (the count and the order are

@@ -337,6 +337,7 @@ void applyTestScale(Game& g);
 void pressKey(Game& game, Input& in, int key);
 void runFrames(Game& game, Input& in, double secs);
 void runFramesAtLeastOne(Game& game, Input& in, double secs);
+bool selectRow(TestGame& game, Input& in, const std::string& label);
 
 // ---- audio_util.cpp
 RenderStats renderReceiver(AudioSynth& synth, AudioState& st, double seconds, std::vector<int16_t>* pcm, const std::function<void(double)>& between = nullptr);
@@ -476,6 +477,9 @@ int runAuto(int argc, char** argv);
 // ---- modes_input.cpp
 int runFuzz(int frames);
 int testInput();
+
+// ---- modes_tour.cpp
+int runTour(int argc, char** argv);
 
 // ---- modes_bench.cpp
 void fillBenchGuide(Guide& G);

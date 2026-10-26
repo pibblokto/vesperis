@@ -6,7 +6,8 @@ range): game, audio, chart_draw, pad, shards_screen.
 
 ## Files
 - `game`: `newGame`, `frame` (its order: 07-game-flow-and-controls.md, "The frame"), `handleGlobalKeys`, `refuse`,
-  `resetExpedition`. `game_types.h`: `GameState`, `STATE_ROWS`, `CabinFacing`, `TextKind`, `SCREENS`
+  `resetExpedition`. `game_types.h`: `GameState`, `STATE_ROWS`, `CabinFacing`, `TextKind`, `SCREENS`, `MenuLabels` (a
+  menu's labels, by which the harness finds a row)
 - A subsystem's state, a `Game` member: `landing_state`, `pad_state`, `chart_state`, `shard_world`, `radar_state`,
   `player_state`, `case_state`, `drone_state`, `telescope_state`, `probe_state`, `autoexplore_state`, `tape_state`; a split
   one's shared helpers: `autoexplore_internal`, `probe_internal`, `radar_internal`, `audio_internal`

@@ -16,7 +16,8 @@ changing anything there.
 - `rules-game-devices.md`: the cabin's instruments, the radar, the decoder and the player, the probe and photos, flight, maps and
   marks.
 - `rules-audio.md`: the synth, levels, voices, music and instruments, the radar's and the drifters' sounds, the tape.
-- `rules-harness.md`: the harness's code, the unit and the flow, scenes and test worlds, frames that repeat.
+- `rules-harness.md`: the harness's code, the unit, the flow and the tour, frames that repeat.
+- `rules-harness-scenes.md`: the scenes, the pinned sites and the test worlds.
 - `rules-harness-proof.md`: the regress, the battery, proofs by area, reading a difference, the bench, timing pairs.
 - `rules-process.md`: working with the user, proving and fixing, recording the work.
 - `rules-process-build.md`: the platform and the names, the builds, warnings, releases.

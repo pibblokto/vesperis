@@ -132,8 +132,11 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-423 | S2 | release | GCC 9.4, the Linux zips' compiler, crashes on kinds.cpp (an internal compiler error evaluating `static_assert(kindsOk(BUILT_KINDS))`, P-01's table check): 1.4.0's Linux builds fail until it compiles there. | open (E-10, 2026-10-25: found, offered) |
 | KI-424 | S4 | peoples | The grammar's picture register (`registers/picture.vg`, 51 rules; `picture.sun`) is a root no call expands (no `{@event ... picture}`; `genre.picture` tells by `pre.pic`): dead text in the word counts, so removing it moves texts. | open (E-11, 2026-10-25: found, offered) |
 | KI-425 | S4 | radar | `radarLock` (radar.cpp) marks the slot on the air heard without `radarStartContent`'s `r.prog.speaks` test: a lock during a machine programme or a piece logs a recording heard whose words never aired (E-01's run; again at E-13). | open (E-13, 2026-10-26: found, offered) |
-| KI-426 | S4 | harness | `testSettings` counts three rows down the Esc menu to SETTINGS; R-419 put AUTO-EXPLORE second, so `settings` pictures the load page and its +5 to the view never happens, and nothing fails. | open (U-01 mends it; found 2026-10-26) |
+| KI-426 | S4 | harness | `testSettings` counted three rows down the Esc menu to SETTINGS; R-419 put AUTO-EXPLORE second, so `settings` pictured the load page and its +5 to the view never happened. Rows are found by label now. | resolved 2026-10-26 (U-01) |
 | KI-427 | S2 | probe | Naming a storm in a recording (N) left `guideReturn` at RECORDING: Esc then went from the recording to the gallery and back to it, holding the explorer until they quit. | resolved 2026-10-26 (B-429) |
+| KI-428 | S3 | game | Typing a T at the GOES console (CAT, CAST, ST) also multiplies the time warp, and Ctrl+T there opens the almanac: the frame's T asks whether the state simulates, not whether it types. | open (found 2026-10-26 in U-01's survey) |
+| KI-429 | S4 | game | The settings screen's title overlaps its first row: the rows start 6 px under it (`renderSettings`, 19 rows and BACK at an 8 px pitch). Seen once U-01 mended `settings`' picture. | open (found 2026-10-26) |
+| KI-430 | S4 | harness | The unit's `unit_lent_piece.png` (a lent piece open on the decoder) moved between u01's two snapshot runs, once in five runs since b429: a race its frame waits on nothing for. u01 holds it as noise. | open (found 2026-10-26, U-01's close) |
 
 ## The long rows, continued
 

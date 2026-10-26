@@ -100,3 +100,12 @@ void runFramesAtLeastOne(Game& game, Input& in, double secs) {
     int n = std::max(1, (int)(secs * 30));
     for (int i = 0; i < n; i++) { game.frame(in, 1.0 / 30); in.newFrame(); }
 }
+// U-01 (KI-426): the open menu's row of that label selected by Down or Up, a key a frame: found by its label (the game's own,
+// `testMenuRows`), never counted; false when the menu has no such row
+bool selectRow(TestGame& game, Input& in, const std::string& label) {
+    const std::vector<std::string> rows = game.testMenuRows();
+    const int k = (int)(std::find(rows.begin(), rows.end(), label) - rows.begin());
+    if (k >= (int)rows.size()) return false;
+    for (int i = 0; i < (int)rows.size() && game.testMenuSel() != k; i++) pressKey(game, in, game.testMenuSel() < k ? KEY_DOWN : KEY_UP);
+    return game.testMenuSel() == k;
+}

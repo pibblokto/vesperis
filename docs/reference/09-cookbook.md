@@ -343,8 +343,11 @@ needs is a column, not a list of states (E-06). Then every place a state or scre
 - the sounds stopped at the frame's start if it plays one; pad.cpp's screen names and `padItems`; `autoScene`;
 - its way in: a cabin spot (a `CabinFacing`: `updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1` or
   `PAGE2` appended, `counts[]` and `n` both), the Esc menu (game.cpp's `menuStep(in, menuSel, 8)` and menus.cpp's `items[]`) or
-  the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 16 rows at 9 px);
-- in the harness: a `screens` capture, and a TestGame hook if a check needs one.
+  the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 16 rows at 9 px); a menu's labels are its `MenuLabels`
+  (game_types.h), by which the harness finds a row;
+- in the harness: its stop in `modes_tour.cpp`'s `STOPS` (how the game opens it, its keys; the count and the order are
+  asserted, so the build fails without it), a `screens` capture if a frame needs its scales, and a TestGame hook if a check needs
+  one; `tools/prove compare <base> tour` then shows its run.
 
 ## Add a save field
 

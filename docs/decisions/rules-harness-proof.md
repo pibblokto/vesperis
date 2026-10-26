@@ -16,7 +16,7 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 - Each item of `tools/prove.items` declares the files it writes (`expect`); every file is compared by kind and counted [E-02]
 - An item's masks (`mask=`) and known noise (`noise=`, with its reason) are declared in `tools/prove.items` alone [E-02]
 - Noise is fixed at its cause: the only declared noise is the unit's six scanner and map frames and its autosave [E-02]
-- The unit and the flow are references only from an empty `shots/tests` (the flow makes every save it loads); a snapshot runs them twice [F-01], [F-07], [E-02]
+- The unit, the flow, `tour` and `input` start from an empty `shots/tests` (the flow makes its saves); a snapshot runs them twice [F-01], [F-07], [E-02], [U-01]
 - Modes the battery leaves out are proven by an A/B items file recorded with the binary before the change (`PROVE_ITEMS`) [E-03]
 - A harness change is proven against the base's engine objects relinked with the new harness (`PROVE_BIN`), the base of a new column [E-02]
 - A comment-only or build-flag step is proven by `tools/prove objects <base>` after a clean rebuild; the harness's own objects, by behaviour [E-02], [E-03]
@@ -83,3 +83,4 @@ behind them (`log/`, by release). A milestone that sets or changes one edits its
 [E-02]: log/6-1.4.0.md
 [E-03]: log/6-1.4.0.md
 [E-05]: log/6-1.4.0.md
+[U-01]: log/6-1.4.0.md

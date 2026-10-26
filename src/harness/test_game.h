@@ -399,4 +399,9 @@ public:
     int testGallerySel() const { return gallerySel; }
     void testGalleryPick(int i) { gallerySel = i; }
     void testProbeLookAt(double yaw, double pitch) { probe.camYaw = yaw; probe.camPitch = pitch; }
+    // ---- the tour (U-01, modes_tour.cpp): the open menu's rows by label, and what the open screen has selected
+    std::vector<std::string> testMenuRows() const;   // the Esc menu's, the settings' (BACK last), the guide's, the flight computer's page; none elsewhere
+    int testMenuSel() const;                         // that menu's selected row (-1 without one)
+    std::string testSelection() const;               // the open screen's row, page or level as the tour prints it (no return variable)
+    void testSettle();                               // what threads build waited for at one instant: the system's maps, the scanner's search
 };

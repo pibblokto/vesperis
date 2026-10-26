@@ -24,6 +24,7 @@ const char* const GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORL
                              "SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", "BACK"};
 const int GUIDE_N = (int)(sizeof(GUIDE_ITEMS) / sizeof(GUIDE_ITEMS[0]));
 }
+const MenuLabels GUIDE_LABELS = {GUIDE_ITEMS, GUIDE_N};
 
 // ---------------------------------------------------------------------------
 // guide menu

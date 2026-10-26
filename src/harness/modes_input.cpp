@@ -386,8 +386,8 @@ int testInput() {
             Input gi;
             auto press = [&](int key) { pressKey(game, gi, key); };
             press(KEY_ENTER); for (int i = 0; i < 3; i++) game.frame(gi, 1.0 / 30);
-            press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER);   // menu > settings (R-419: a row further)
-            for (int i = 0; i < 18; i++) press(KEY_DOWN);   // KEY BINDINGS
+            press(KEY_ESCAPE); selectRow(game, gi, "SETTINGS"); press(KEY_ENTER);   // menu > settings > CONTROLS, by their labels (U-01)
+            selectRow(game, gi, "CONTROLS");
             press(KEY_ENTER);
             bool opened = game.state == GameState::KEYS;
             press(KEY_ENTER);                                 // rebind FORWARD

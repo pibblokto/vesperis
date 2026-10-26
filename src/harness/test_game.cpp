@@ -848,3 +848,71 @@ int TestGame::testScreenColours(double& minDist) const {
     }
     return n;
 }
+
+// U-01: the open menu's rows by label (the game's own labels, game_types.h's MenuLabels): a row is found by its label, never
+// counted; the settings' BACK is drawn after their rows, not one of them
+std::vector<std::string> TestGame::testMenuRows() const {
+    const MenuLabels* m = state == GameState::MENU ? &MENU_LABELS : state == GameState::GUIDE ? &GUIDE_LABELS : state == GameState::SETTINGS ? &SETTINGS_LABELS
+                        : state == GameState::SHIPSCREEN ? &SHIP_PAGE_LABELS[std::max(0, std::min(2, shipScreenPage))] : nullptr;
+    std::vector<std::string> rows;
+    if (m) for (int i = 0; i < m->count; i++) rows.push_back(m->label[i]);
+    if (state == GameState::SETTINGS) rows.push_back("BACK");
+    return rows;
+}
+int TestGame::testMenuSel() const {
+    switch (state) {
+        case GameState::MENU: return menuSel;
+        case GameState::GUIDE: return guideSel;
+        case GameState::SETTINGS: return settingsSel;
+        case GameState::SHIPSCREEN: return shipScreenSel;
+        default: return -1;
+    }
+}
+
+// U-01: what the open screen has selected, as the tour prints it after each key (a list of the states' variables until U-06
+// reads the rows). The return variables are left out: the tour shows them as where Esc goes, so folding them moves no line
+std::string TestGame::testSelection() const {
+    switch (state) {
+        case GameState::TITLE: return wantsQuit ? "quits" : "-";
+        case GameState::SPACE:
+            return fmt("target %d facing %d%s%s%s%s", ship.localTarget, cabin.facing, ship.targeting ? " aiming" : "", radar.on ? " radar" : "", tele.on ? " telescope" : "",
+                       ship.mode != ShipState::PARKED ? fmt(" mode %d", (int)ship.mode).c_str() : "");
+        case GameState::LANDING_MAP: return fmt("at %.2f %.2f zoom %d%s%s", landLat / DEG, landLon / DEG, landZoom, mapClouds ? " clouds" : "", landPeoples ? " peoples" : "");
+        case GameState::DESCENT: case GameState::ASCENT: return fmt("%.2f s", transT);
+        case GameState::SURFACE: return fmt("vision %d%s", visionMode, readings ? " readings" : "");
+        case GameState::HELP: return fmt("page %d", helpPage);
+        case GameState::MENU: return fmt("row %d%s", menuSel, wantsQuit ? " quits" : "");
+        case GameState::SYSTEM_LIST: return fmt("row %d", listSel);
+        case GameState::DATA: return fmt("page %d", dataPage);
+        case GameState::SETTINGS: return fmt("row %d", settingsSel);
+        case GameState::SLOTS: return fmt("row %d %s", slotSel, slotLoadMode ? "load" : "save");
+        case GameState::GUIDE: return fmt("row %d", guideSel);
+        case GameState::TEXT_ENTRY: return fmt("kind %d '%s'", textKind, textBuffer.c_str());
+        case GameState::STAR_MAP: return mapPage == 1 ? fmt("page 1 level %d", gchart.level) : fmt("page 0 zoom %.2f", mapZoom);
+        case GameState::LOG: return fmt("page %d", logPage);
+        case GameState::STATS: return statsKinds ? "the kinds" : "-";
+        case GameState::GALLERY: return fmt("item %d of %d", gallerySel, (int)galleryItems.size());
+        case GameState::SHIPSCREEN: return fmt("page %d row %d", shipScreenPage, shipScreenSel);
+        case GameState::CONSOLE: return fmt("'%s', %d lines", consoleInput.c_str(), (int)consoleLines.size());
+        case GameState::SECTOR_MAP: return fmt("zoom %d", sectorZoom);
+        case GameState::KEYS: return fmt("page %d row %d%s", keysPage, keysPage == 1 ? padUI.screenSel : keysSel, keysCapture || padUI.capture >= 0 ? " capturing" : "");
+        case GameState::SHARDS:
+            return fmt("level %d top %d page %d row %d", shardsLevel, shardsTop, shardsPage, shardsLevel > 0 ? shardSel : (shardsTop == 1 ? player.sel : shardWorldSel));
+        case GameState::ALMANAC: return fmt("row %d free %d", almanacSel, almanacFree);
+        case GameState::PROBE: return fmt("clock %.2f%s", probe.clock, probe.endClock >= 0 ? " ended" : "");
+        case GameState::RECORDING: return fmt("clock %.2f %s", replay.clock, replay.playing ? "playing" : "paused");
+        case GameState::INSTRUMENTS: return fmt("level %d folder %d item %d", icase.level, icase.worldSel, icase.sel);
+        case GameState::DRONES: return fmt("top %d", bay.listTop);
+        case GameState::AUTO: return fmt("row %d", autoSel);
+    }
+    return "?";
+}
+
+// U-01: what threads build, waited for at one instant (between two frames, so no clock moves while they work): every map of
+// the system asked for and made (a season's new map among them; the cache held large enough that asking for every body of a
+// giant's crowded system evicts none), the scanner's search done (the next frame collects it)
+void TestGame::testSettle() {
+    spaceR.mapCacheCap = std::max(spaceR.mapCacheCap, 128);
+    for (const Body& b : sys.bodies) while (!spaceR.mapIfReady(b)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    while (surf.scanBusy.load(std::memory_order_acquire)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+}

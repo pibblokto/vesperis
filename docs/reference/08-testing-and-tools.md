@@ -122,8 +122,9 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   placed and removed, X home), the commands' buggy, X into it and RT driving), 24 PASS lines, and the overlays as drawn
   (`shots/tests/pad_*.png`: the commands in the cabin, their general and keys pages, on foot and in the buggy, over the landing
   map, the sector map, the star map and the galaxy chart; the keyboards of the aim, a text entry and the console; the controller
-  page; the help's third page); N5-05: drives the key bindings screen through a `Game` (opens it from the settings, rebinds
-  FORWARD to Z with a raw key, resets, saves and reloads `shots/test_keys2.txt`) (output: stdout, exit code, `shots/keys.png`)
+  page; the help's third page); N5-05: drives the key bindings screen through a `Game` (opens it from the settings' CONTROLS,
+  each row found by its label since U-01, rebinds FORWARD to Z with a raw key, resets, saves and reloads
+  `shots/test_keys2.txt`) (output: stdout, exit code, `shots/keys.png`; a battery item since U-01)
 * `seasons`: M5-06: the day length at 82 N on a tilted felisian world at both solstices (polar day against polar night); fails
   when they match (output: stdout)
 * `audio`: M4-09: renders eight sound stages (ship, vimana, shore, desert storm, mountain rain, lava, N2-06 forest with `leaves`
@@ -250,8 +251,22 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   then the score) and whether it is the pinned one; about two minutes (output: stdout)
 * `gallery <type>`: M9-01: 16 random landing sites of a type (0-12) as a 4x4 contact sheet at 1x (output:
   `shots/gallery_<TYPE>.png`)
-* `settings`: round-trips `Settings` through a file, loads it into a `Game`, opens the settings screen and changes the FOV
-  (output: `shots/settings.png`, stdout)
+* `settings`: round-trips `Settings` through a file, loads it into a `Game`, opens the settings screen and changes the FOV,
+  each row found by its label (`selectRow`; U-01 mended KI-426: three rows down had been the load page since R-419) (output:
+  `shots/settings.png`, stdout)
+* `tour [state ...]`: U-01: every state, in `GameState`'s order, opened as the game opens it from a fresh game at the same start
+  (the home system, parked at its first world, every map waited for): its picture; the controller's command menu, each page's
+  lines and picture; then its keys one a frame, its help's and its footer's, every row of the Esc menu, the guide menu, the
+  flight computer's three pages and the settings entered by its label (`TestGame::testMenuRows`, the game's own labels), E at each
+  of the cabin's eleven devices found by the controller's "USE ..." line. After each key it prints the state, what is selected
+  (`testSelection`, no return variable) and the frame's hash, with a picture at each change of state. A key that leaves the state
+  is followed by Esc, four at most (a screen that will not let go is printed, not waited on), then by a fresh game opened again;
+  what writes a save or leaves the start (NEW EXPEDITION, QUIT, a flight, a landing, a save) runs last, and Esc after all. After
+  every frame what threads build is waited for at one instant (`testSettle`: every map of the system, the cache held large enough;
+  the scanner). Its probe falls into the first great storm the unit's probe group finds (named from the probe and from its
+  recording), the shard decoder reads three records of Aieliaalas II, the case holds two instruments. About three minutes; the same
+  twice and by one thread (output: stdout, `shots/tests/tour/NN_state_*.png`, each state's saves, guide, settings and keys under
+  its prefix)
 * `landmaps`: opens the landing map of one body per landable type through `TestGame::testParkAt` and prints the darkest shadow on the
   map now (O0-04: moons and parents cast them; 1.00 on four of the thirteen maps on 2026-09-27) (output:
   `shots/landmap_<TYPE>.png`)

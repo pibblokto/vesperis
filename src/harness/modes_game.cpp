@@ -786,8 +786,11 @@ void testSettings() {
     Input in;
     auto press = [&](int key) { pressKey(game, in, key); };
     press(KEY_ENTER); press(KEY_ESCAPE);
-    press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER);
-    press(KEY_DOWN); press(KEY_DOWN); press(KEY_RIGHT);   // field of view +5
+    const bool found = selectRow(game, in, "SETTINGS");   // U-01 (KI-426): by its label (three rows down was the load page after R-419)
+    press(KEY_ENTER);
+    const bool fov = selectRow(game, in, "FIELD OF VIEW");
+    press(KEY_RIGHT);   // field of view +5
+    if (!found || !fov) printf("settings: the rows not found (SETTINGS %d, FIELD OF VIEW %d)\n", (int)found, (int)fov);
     writePNG("shots/tests/settings.png", game.output(), FBW, FBH);
     press(KEY_ESCAPE);
     Settings r2; r2.load("shots/tests/test_settings.txt");

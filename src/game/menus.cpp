@@ -21,8 +21,14 @@ static const KeyAction KEY_ACTIONS[] = {{KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BAC
         {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
         {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
+const char* const MENU_ITEMS[] = {"RESUME", "AUTO-EXPLORE", "SAVE EXPEDITION", "LOAD EXPEDITION", "SETTINGS", "HELP", "NEW EXPEDITION", "QUIT TO DESKTOP"};   // R-419: AUTO-EXPLORE
+const char* const SETTINGS_NAMES[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER",
+        "TERRAIN SHADING", "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
 
 }
+
+const MenuLabels MENU_LABELS = {MENU_ITEMS, (int)(sizeof(MENU_ITEMS) / sizeof(MENU_ITEMS[0]))};
+const MenuLabels SETTINGS_LABELS = {SETTINGS_NAMES, SETTINGS_ITEMS};
 
 void Game::renderTitle() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 90);
@@ -118,8 +124,8 @@ void Game::renderHelp() {
 }
 
 void Game::renderMenu() {
-    const char* const items[] = {"RESUME", "AUTO-EXPLORE", "SAVE EXPEDITION", "LOAD EXPEDITION", "SETTINGS", "HELP", "NEW EXPEDITION", "QUIT TO DESKTOP"};   // R-419: AUTO-EXPLORE
-    const int n = (int)(sizeof(items) / sizeof(items[0]));
+    const char* const* items = MENU_ITEMS;
+    const int n = (int)(sizeof(MENU_ITEMS) / sizeof(MENU_ITEMS[0]));
     // box: title, items, one blank line, the hint and the version line (bug B-001: nothing overlaps; R-419: eight rows, the box taller)
     const int top = 34, bottom = UH - 28, itemY0 = top + 22, rowH = 11;
     drawPanel(canvas, 60, top, UW - 60, bottom, rgb(0, 0, 0), 210);
@@ -238,8 +244,7 @@ void Game::renderSettings() {
             s.mushMode == 0 ? "CLASSIC" : (s.mushMode == 1 ? "SOFT" : (s.mushMode == 2 ? "SHARP" : "FINE")), s.shadingMode == 0 ? "FLAT CELLS" : (s.shadingMode == 1 ? "STEPPED" : "SMOOTH"),
             s.crt ? "ON" : "OFF", s.bloom ? "ON" : "OFF", s.sprintToggle ? "TOGGLE" : "HOLD", fmt("X%.2f", s.sprintSpeed), s.cabin ? "CABIN" : "COCKPIT", s.clockMode ? "REAL TIME (UTC)" : "GAME TIME",
             s.aspect ? "4:3 (TALL PIXELS)" : "SQUARE PIXELS", s.dither ? "ON" : "OFF", s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"), "ENTER TO OPEN"};
-    const char* const names[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER", "TERRAIN SHADING",
-            "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
+    const char* const* names = SETTINGS_NAMES;
     for (int i = 0; i <= SETTINGS_ITEMS; i++) {
         int y = itemY0 + i * rowH;
         bool sel = i == settingsSel;
