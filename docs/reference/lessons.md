@@ -312,7 +312,11 @@ Contents:
   a 320 px line 53 (52 with the margins); the warp line owns y 24 on the right. Never truncate a label or a HUD line: drop a part,
   or place it.
 - Map labels need overlap avoidance (dy 0, ±9, ±18) and priorities (YOU and the cursor first); knots stay dimmer than markers;
-  markers on lit maps get a dark rim. The cabin computers' screen colours stay at least 0.3 apart in RGB.
+  markers on lit maps get a dark rim. The cabin computers' screen colours stay at least 0.3 apart in RGB. The landing map's zoom
+  never computes tiles.
+- The HUD at 1x is green (120, 230, 150), white (230, 235, 240) and amber (240, 190, 90): count them to judge an underline.
+- Something to look through (the telescope, a camera) is a camera mode, a feed over the frame with the cabin gone, not a HUD
+  overlay. A mystery signal's readout withholds what sent it: the sound carries it.
 - Show a count in the other screen's words ("held OF total"), never "left" beside "total", and keep it live: the user reads
   numbers literally. Paring the UI down deletes features outright; it does not hide them.
 - Charts: normalise the density to the core's column and weight the arms by light; "N STARS IN 10 LY" counts the 21-sector cube.

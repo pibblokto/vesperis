@@ -5,15 +5,15 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
 
 - `main.cpp`: start-up (`scale=N`, `shots/tests`), `MODES` (the table `help` prints).
 - `harness.h`: engine headers, `Mode`, `Check`, `UnitGroup`, `SceneCode`, `systemAt` (a star and its system) and `scanSystems` (the
-  sectors' systems as the scans' two loops took them); each file's shared functions under its name.
+  sectors' systems in the two loops' order); each file's shared functions under its name.
 - `test_game.h`, `test_game.cpp`: `TestGame`, the Game the harness builds, and its hooks (`test*`, `setState`).
 - `test_worlds.h`: the pinned worlds and sites, the protected systems (`salt scan`). `scenes_table.h`: the scenes (`CMP_SCENES`,
   `findScene`), placed by `scenes_setup.cpp` (`setupSceneForType`: its finders by code family, `SceneFind`) and
   `scenes_special.cpp` (fixed places).
-- `frames.cpp`, `audio_util.cpp`: frames to PNG, the clock, frames compared, the test scale, scripted moves (`pressKey`,
+- `frames.cpp`, `audio_util.cpp`: frames to PNG and compared, the clock, the test scale, scripted moves (`pressKey`,
   `runFrames`); the receiver headless, WAVs, an FFT, a pitch.
 - Modes by area: `modes_galaxy`, `modes_space`, `modes_probe`, `modes_surface`, `modes_terrain`, `modes_kinds`,
-  `modes_signals`, `modes_rogues`, `modes_drones`, `modes_game` (the flow: `Flow`'s stages), `modes_input`, `modes_bench`
+  `modes_signals`, `modes_rogues`, `modes_drones`, `modes_game` (the flow, `Flow`), `modes_input`, `modes_bench`
   (`Bench`'s stages), `modes_proof`.
 - The peoples' modes, each with its `*Checks`: `civ_forms`, `civ_genome`, `civ_walls`, `civ_plan`, `civ_works`,
   `civ_peoples`, `civ_lore`, `civ_music`, `civ_records`, `civ_instruments`, `civ_grammar`.
@@ -29,7 +29,7 @@ Rules:
 - A new scene code: a `SceneCode`, a finder in the chain, and out of the trait family's `<= SCENE_STAINED_CRACK` range.
 - Outputs go to `shots/tests/`; `tests/` and the grammar are read from the working directory (the repo root, or
   `tools/prove`'s scratch directory). `records check` reads the `test_settings.txt` that `settings` writes.
-- The unit (minutes at ~280% CPU) and the flow both write `test_guide.txt`: one after the other, under `caffeinate -i`.
-  Never `make` or `git stash` mid-run. A frame of bodies waits for their maps (`testWaitMapOf`, `mapIfReady`).
-- Pictures and sounds: `tools/png.py`, `tools/wav.py` (no PIL or numpy), the `look` skill.
+- The unit and the flow both write `test_guide.txt` (the root note's rule). A frame of bodies waits for their maps
+  (`testWaitMapOf`, `mapIfReady`).
+- Pictures and sounds: the `look` skill.
 - No dynamically initialised globals and nothing self-registering. More: `docs/reference/lessons.md`, "The harness".

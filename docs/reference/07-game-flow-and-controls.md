@@ -3,6 +3,7 @@
 <!-- contents -->
 Contents:
 - States (`GameState`)
+- The frame (`Game::frame`, game.cpp)
 - Ship (`ShipState`)
 - Landing map (`LANDING_MAP`)
 - Surface controls
@@ -36,6 +37,14 @@ MENU -> AUTO (R-419: AUTO-EXPLORE, the menu's second row; the controller's comma
 ```
 
 `returnState` remembers where an overlay came from and is set explicitly by every overlay entry (B-006). Only SPACE, SURFACE, DESCENT, ASCENT and LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's camera).
+
+## The frame (`Game::frame`, game.cpp)
+
+`padFrame` → auto-explore's input → `tapeUpdate` → `handleGlobalKeys` (not while `ST_TYPING`) → screens' sounds stopped off
+their states, the cameras off on `ST_STOWS` → `noteVisit` → the clock (`ST_SIMULATES`: time warp, the almanac) → autosave →
+`updateProbe`, `updateDrones` → the update `switch (state)` → `probeAudio`, `darkRadio`, `updatePlayer` → the render `switch`
+(a scene's case; `default`, the `ST_OVERLAY` states, draws `returnState`'s scene first) → `autoRender` or `renderPad`. Then the
+platform pumps the synth (`platformAudioPump`), which reads the `AudioState` pointers on the main thread.
 
 ## Ship (`ShipState`)
 

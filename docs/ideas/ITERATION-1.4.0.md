@@ -68,7 +68,7 @@ twelve kinds are re-cut into the families below (`MILESTONES.md`).
 | 26 | The repo | E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | done 2026-10-25 |
 | 27 | The repo | E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | done 2026-10-25 |
 | 28 | The repo | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | done 2026-10-26 |
-| 29 | The repo | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | planned |
+| 29 | The repo | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | done 2026-10-26 |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md`
 gets `1.4.0, done <date>`. This table is the order.

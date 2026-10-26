@@ -12,8 +12,8 @@
 
 ## Reading
 
-- Over 100 KB (two log files, 06, 07, 08, 05): `grep -n '^#'` first, then a range. A log is never read whole: grep its
-  headings (`grep -n '^## B-428' docs/decisions/log/*.md`), then read the one entry.
+- Over 100 KB (two log files, 05 to 08, KNOWN-ISSUES.md): `grep -n '^#'` (or the id) first, then a range. A log is never
+  read whole: grep its headings (`grep -n '^## B-428' docs/decisions/log/*.md`), then read the one entry.
 
 ## Touch points
 

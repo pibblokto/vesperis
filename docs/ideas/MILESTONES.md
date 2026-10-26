@@ -35,7 +35,7 @@ user's request of 2026-10-21 (R-421 thirty to fifty new kinds of world, R-422 mo
 radio), the design in `IDEAS-worlds-and-wanderers.md`: sixteen milestones, P-00 to P-07 (the P series re-cut: the old list's
 twelve kinds are in its families), Q-01 to Q-03 and D-01 to D-05, in that order; generation 16 from P-01. All sixteen done 2026-10-23, committed as 92e580a. Added
 the same day, before the release: the E series (`PLAN-reorganisation.md`), E-01 to E-13, the repo made cheaper to read and
-change, nothing generated or drawn moving; E-01 done 2026-10-23, E-02 to E-08 2026-10-24, E-09 to E-11 2026-10-25, E-12 2026-10-26.
+change, nothing generated or drawn moving; E-01 done 2026-10-23, E-02 to E-08 2026-10-24, E-09 to E-11 2026-10-25, E-12 and E-13 2026-10-26.
 
 **Left for later:** the V series (the surface picture, parked), S-07, W-05, the L and K series (C-11, skipped under KI-347 in 1.1.0, done in 1.3.0 on 2026-10-10: the iteration's twenty are done, and C-17 added after them); W-02 comes into 1.4.0 as Q-02's great tides.
 Two additions of the user's are in `IDEAS-ruins-shards-signals.md` section 5 (ruins with a
@@ -275,7 +275,7 @@ milestone's done-when. Every step is proven identical to the binary before it; n
 | E-10 | The peoples' texts: history, genres, grammar.cpp, forms and music split, `lore.h`; the Linux check | L | 1.4.0, done 2026-10-25 |
 | E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | 1.4.0, done 2026-10-25 |
 | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | 1.4.0, done 2026-10-26 |
-| E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | 1.4.0 |
+| E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | 1.4.0, done 2026-10-26 |
 
 ## Suggested order for 1.2.0
 

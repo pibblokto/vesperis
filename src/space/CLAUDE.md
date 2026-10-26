@@ -12,11 +12,11 @@
 - `probe_view.h/.cpp` (60 KB): `ProbeView`, `renderProbeView`: the probe's camera inside a giant, composited over the space frame
 
 ## Rules and traps
-- The backdrop is kept while the camera is still. `SpaceRenderer::BackdropKey` (space_view.h:169) holds every input of that
+- The backdrop is kept while the camera is still. `SpaceRenderer::BackdropKey` (space_view.h) holds every input of that
   pass (the camera, `Proj`, the size, `bandGen`): a new input belongs in it, and every write of `bandMap` bumps `bandGen`.
 - A body's map builds on its own thread: `mapIfReady` is null until it is done, `mapFor` waits. Frame paths ask; they never wait.
 - Maps and BodyGens follow the season: `setSeason` before rendering a system at a time t.
-- The banks (space_view.h:112; `docs/reference/02-*` has the table): 0 stars, 1 sun, 2/3 bodies A/B, 6/7 water, 11 and 13-15
+- The banks (space_view.h's `Palette banks:`; `docs/reference/02-*` has the table): 0 stars, 1 sun, 2/3 bodies A/B, 6/7 water, 11 and 13-15
   body A, 16-19 body B, 12 the companion, 20 belt rocks, 8-10 the cabin.
 - What is in the sky is where the maths puts it. The sun is drawn by its angle per pixel; a globe is culled only behind the
   camera; depth is in metres.

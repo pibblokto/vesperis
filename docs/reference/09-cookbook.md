@@ -19,6 +19,7 @@ Contents:
 - Add a key
 - Add a game state
 - Add a save field
+- Add a vehicle
 - Add a palette effect
 - Change terrain detail or draw distance
 - Add a record's genre, a register, a rule or a word (C-02, H-03, H-04)
@@ -334,13 +335,26 @@ Keys are GLFW codes in `core/input.h`; the platform copies raylib's `IsKeyDown/I
 
 Append it to `GameState` and its row to `STATE_ROWS` (`game/game_types.h`): its traits (the clock runs, an overlay drawn over
 its `returnState`, the cameras stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground),
-its controller context and its name; then the places `src/game/CLAUDE.md` lists under "A new state or screen touches": its
-file of `Game` methods, the update switch, a scene's case in the render switch (an overlay is the `default`'s), and its way in.
-Code asks `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06).
+its controller context and its name; `STATE_COUNT` names the last state. Code asks `stateHas(state, ST_...)`; a trait new code
+needs is a column, not a list of states (E-06). Then every place a state or screen touches:
+- its file of `Game` methods, declared in game.h under a banner naming the file; the function that opens it sets `state`,
+  `returnState` and `guideReturn`;
+- the update switch, and a scene's case in the render switch (an overlay is drawn in the `default`'s if/else chain);
+- the sounds stopped at the frame's start if it plays one; pad.cpp's screen names and `padItems`; `autoScene`;
+- its way in: a cabin spot (a `CabinFacing`: `updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1` or
+  `PAGE2` appended, `counts[]` and `n` both), the Esc menu (game.cpp's `menuStep(in, menuSel, 8)` and menus.cpp's `items[]`) or
+  the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 17 rows at 9 px);
+- in the harness: a `screens` capture, and a TestGame hook if a check needs one.
 
 ## Add a save field
 
 Append a `key value...` line in `save()` and parse it in `load()`; unknown keys are ignored by older builds, so this is backward compatible. Bump the header only for incompatible layouts.
+
+## Add a vehicle
+
+The buggy's pattern: a struct in `surface/surface_types.h`, its own `surface/*.cpp`, the camera branch in `render`, the update
+dispatch, `reanchor` and `init`, the seat's HUD branch in `game/hud.cpp`, the keys and the audio in `game/surface_play.cpp`, a
+save line, and `inVehicle()` wherever "in the buggy" meant "seated".
 
 ## Add a palette effect
 

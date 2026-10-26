@@ -131,6 +131,7 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-422 | S4 | galaxy | P-01's clearance moves a made world's moons to 3 of its radii (`system.cpp`), inside the parking's 3.5 (`parkDistanceFor`): from there such a moon can cross its world. | open (E-04, 2026-10-24: found, offered; a fix moves generation) |
 | KI-423 | S2 | release | GCC 9.4, the Linux zips' compiler, crashes on kinds.cpp (an internal compiler error evaluating `static_assert(kindsOk(BUILT_KINDS))`, P-01's table check): 1.4.0's Linux builds fail until it compiles there. | open (E-10, 2026-10-25: found, offered) |
 | KI-424 | S4 | peoples | The grammar's picture register (`registers/picture.vg`, 51 rules; `picture.sun`) is a root no call expands (no `{@event ... picture}`; `genre.picture` tells by `pre.pic`): dead text in the word counts, so removing it moves texts. | open (E-11, 2026-10-25: found, offered) |
+| KI-425 | S4 | radar | `radarLock` (radar.cpp) marks the slot on the air heard without `radarStartContent`'s `r.prog.speaks` test: a lock during a machine programme or a piece logs a recording heard whose words never aired (E-01's run; again at E-13). | open (E-13, 2026-10-26: found, offered) |
 
 ## The long rows, continued
 

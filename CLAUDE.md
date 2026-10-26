@@ -41,9 +41,7 @@ docs/           STATUS.md (the state), decisions/ (the rules, the log), referenc
 build/          objects (all `make clean` removes), prove/ (the snapshots), toolchains/, perf-baselines/, old kits
 ```
 
-Each source directory's CLAUDE.md names its files and their traps, and `docs/reference/lessons.md` holds the lessons
-behind them by area.
-The E series (`docs/ideas/PLAN-reorganisation.md`) reorganises this tree; the maps change with it.
+Each source directory's CLAUDE.md names its files and traps; `docs/reference/lessons.md` holds the lessons behind them.
 
 ## Rules
 
@@ -85,10 +83,11 @@ What each milestone, bug or request writes, and where: `docs/CLAUDE.md` (the ski
 
 ## Shell and machine
 
-* zsh: unquoted variables are not word-split (use arrays or `${=w}`); quote a word that starts with `=`.
+* zsh: unquoted variables are not word-split (use arrays or `${=w}`); quote a word that starts with `=`; write
+  `${rev}:path`, as `$rev:path` takes `:t`, `:h` or `:s` for modifiers.
 * No `cmake` (CMakeLists.txt serves the other platforms), no `timeout`, no numpy (`tools/wav.py` reads WAVs).
 * `.claude/hooks/guard.py` refuses a whole Read of a file over 100 KB, a session link in a commit, tag, PR or
-  release, `rm -rf build`, and a `make clean` whose Makefile would take build/ whole (a checkout before E-02).
+  release (anywhere in the command), `rm -rf build`, and a `make clean` whose Makefile would take build/ whole.
 
 ## Release
 

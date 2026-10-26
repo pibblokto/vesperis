@@ -815,6 +815,14 @@ CMake's do.
 - **The old proof kits** (9.4 GB in `build/p00` … `build/d05`) are deleted on the user's word. `perf-baselines`' binaries and
   the series' snapshots stay.
 
+**Done 2026-10-26:** the log's E-13 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- The notes: every directory's at 3 KB or under and the root at 6.6 KB (the ten went from 45.1 to 33.2 KB). The checklists and
+  the frame's order moved to the cookbook and 07, and nine stale `file:line` references became names.
+- The measurement: 1,076,138 tokens for the eight (E-01's 1,328,318: -19%) and 356 tool uses (399), in section 11.
+- Section 2's targets are met (the numbers are in the log); installing the LSP is the user's.
+- The battery found `tape` racing the home system's maps; it now waits for them, as E-02 made the other modes wait.
+- The old kits wait for the user's word.
+
 ## 5. The proof, every milestone the same
 
 - **At the start:** the previous milestone's snapshot exists (`build/prove/<id>`).
@@ -1100,3 +1108,23 @@ What the runs found on the way:
 - **The unit's frames** `unit_r408_*`, `unit_b412_*` and `unit_t03_scan` are not repeatable: their trees and grass sway with a
   clock that the unit's waits on threads advance.
 - **A scene makes an empty `shots/tests/shots/tests`** (a path joined twice).
+
+**E-13's run** (2026-10-26): the same eight prompts the same way, at 0288255 with E-13's notes in the tree.
+
+| Task | Tokens | Against E-01 | Tool uses | Minutes | What it read |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 1. Unit check | 136,727 | +2% | 42 | 5.9 | the harness skill and note, unit.cpp, harness.h (~170), unit_basics (464), system.cpp |
+| 2. Harness mode | 97,052 | -2% | 33 | 3.9 | the harness skill and note, main.cpp, harness.h, modes_galaxy (~290), 08 (~120) |
+| 3. Radar path | 125,761 | -15% | 37 | 4.3 | the game and peoples notes, radar.cpp, audio.cpp (~350), audio_radar, signals |
+| 4. Game screen | 200,212 | +13% | 82 | 9.9 | the cookbook's recipe, game_types.h, game.cpp, persistence.cpp, cabin, pad, 07 |
+| 5. Find the rule | 195,516 | -39% | 65 | 8.3 | eleven rules files (seven whole), the notes, ruins.h, three logs (~270 lines) |
+| 6. Prove unchanged | 117,806 | -37% | 30 | 8.3 | planetmap.cpp, tools/prove and its items, proof.md, samecode, mover |
+| 7. Start a milestone | 68,921 | -6% | 23 | 4.1 | CLAUDE.md, the milestone skill, STATUS, MILESTONES (~75), this plan (~36) |
+| 8. Change the grammar | 134,143 | -30% | 44 | 8.9 | the grammar skill and note, its rules, grammar-files.md, two .vg in part |
+| **All eight** | **1,076,138** | **-19%** | **356** | **53.6** | |
+
+The answers hold up against the tree. The reading took the new routes: the rules by area instead of 10-decisions (task 5), the
+proof's recipe and tools instead of the old kits (task 6), and the grammar's skill and note instead of two .vg files whole (task
+8). Task 4 read more and named more places: fourteen, among them the controller's commands, a `screens` capture and a unit
+check. The minutes are wall-clock, with eight at once, so they move with the service. Found: E-01's radar finding is still in the
+code (KI-425); `sampleSurface` inlines `qualityWater`, `tidalFlat` and `tideRangeAt`, so a split keeps them in its file.

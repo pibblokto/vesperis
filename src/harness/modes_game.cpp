@@ -995,6 +995,7 @@ int runTape(int argc, char** argv) {
     writePNG("shots/tests/tape_00.png", game.output(), FBW, FBH);   // the chooser
     if (n == 0) { pngFlush(); printf("tape: no tracks, so no captions\n"); return 0; }
     game.autoStart(AP_PLANETFALL, 3);
+    for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // every map first (made on their thread at a binary's own pace)
     TapePump pump; pump.len = 12;
     Input in; const double dt = 1.0 / 30;
     auto frame = [&]() { game.frame(in, dt); in.newFrame(); pump.step(game.audio, dt); };
