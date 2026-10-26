@@ -343,7 +343,7 @@ needs is a column, not a list of states (E-06). Then every place a state or scre
 - the sounds stopped at the frame's start if it plays one; pad.cpp's screen names and `padItems`; `autoScene`;
 - its way in: a cabin spot (a `CabinFacing`: `updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1` or
   `PAGE2` appended, `counts[]` and `n` both), the Esc menu (game.cpp's `menuStep(in, menuSel, 8)` and menus.cpp's `items[]`) or
-  the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 17 rows at 9 px);
+  the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 16 rows at 9 px);
 - in the harness: a `screens` capture, and a TestGame hook if a check needs one.
 
 ## Add a save field

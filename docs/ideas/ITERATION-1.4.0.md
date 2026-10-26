@@ -32,6 +32,11 @@ any further"): thirteen milestones, E-01 to E-13, that make the repo cheaper for
 docs indexed, game.h and the largest files by subsystem, a permanent proof kit, CLAUDE.md files and skills). Nothing generated,
 drawn, played or saved changes. The plan, its measurements and each milestone's done-when are `PLAN-reorganisation.md`.
 
+**The screens** (added 2026-10-26, after E-13, on the user's request R-424: "I will have tons of those"): six milestones, U-01
+to U-06. A new screen or device becomes a row of one table and a file of its own, which the frame, the menus, the controller
+and the harness read. Nothing generated, drawn, played or saved changes. The plan, its measurements and each milestone's
+done-when are `PLAN-screens.md`.
+
 Left out on purpose: the V series (parked), S-07, W-05, the L and K series, the shepherd moon (P-11 of the old list, a place)
 and the pelagic island (P-12, kept for a later trait). W-02 (tides) comes in as the GREAT TIDES trait (Q-02). The old P list's
 twelve kinds are re-cut into the families below (`MILESTONES.md`).
@@ -69,6 +74,12 @@ twelve kinds are re-cut into the families below (`MILESTONES.md`).
 | 27 | The repo | E-11 | The grammar's shelves: a manifest, folders by role, files named by topic, `grammar where` | M | done 2026-10-25 |
 | 28 | The repo | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | done 2026-10-26 |
 | 29 | The repo | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | done 2026-10-26 |
+| 30 | The screens | U-01 | The proof reaches every screen: a tour of every state, its keys and its controller menu; `settings` mended | L | planned |
+| 31 | The screens | U-02 | The screen table: each state's update, picture and sound in its row; the frame without a switch | L | planned |
+| 32 | The screens | U-03 | The ways in as rows: the Esc menu, the guide menu, the flight computer, the settings, the cabin's devices | L | planned |
+| 33 | The screens | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | planned |
+| 34 | The screens | U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | planned |
+| 35 | The screens | U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | planned |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md`
 gets `1.4.0, done <date>`. This table is the order.

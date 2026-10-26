@@ -277,6 +277,22 @@ milestone's done-when. Every step is proven identical to the binary before it; n
 | E-12 | The sweep: shared helpers, dead code, comments by the policy, long lines, the warnings | M | 1.4.0, done 2026-10-26 |
 | E-13 | The close: the CLAUDE.md tree audited, the eight tasks measured again, the old kits | S-M | 1.4.0, done 2026-10-26 |
 
+## U: the screens (`PLAN-screens.md`) — nothing generated or drawn changes, no generation change
+
+Planned 2026-10-26 for 1.4.0, after E-13 and before the release, on the user's request (R-424): "I will have tons of those". A
+new screen or device becomes a row of one table and a file of its own; the frame, the menus, the controller and the harness
+find it from its row. The plan holds the places a screen touches today, the targets, the rules and each milestone's done-when.
+Every step is proven identical to the binary before it, and nothing is blessed.
+
+| Id | Item | Size | Status |
+| --- | --- | --- | --- |
+| U-01 | The proof reaches every screen: a tour of every state, its keys and its controller menu; `settings` mended | L | 1.4.0 |
+| U-02 | The screen table: each state's update, picture and sound in its row; the frame without a switch | L | 1.4.0 |
+| U-03 | The ways in as rows: the Esc menu, the guide menu, the flight computer, the settings, the cabin's devices | L | 1.4.0 |
+| U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | 1.4.0 |
+| U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | 1.4.0 |
+| U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | 1.4.0 |
+
 ## Suggested order for 1.2.0
 
 1.1.0 shipped the G and S bump, the C series but C-11, and the aurora's two items. For 1.2.0:
