@@ -4,7 +4,7 @@ Written by `tools/unitchecks.py` from `UNIT_GROUPS` (`src/harness/unit.cpp`) and
 rather than edit this page (`make check` compares). `vesperis_test unit list` names the groups;
 `vesperis_test unit <group> -q` runs one and prints its failures. A check in a loop is one line here.
 
-42 groups, 400 checks in their order; a group's heading gives its file, its function, the render scale it
+42 groups, 401 checks in their order; a group's heading gives its file, its function, the render scale it
 starts at and its count.
 
 ## noise (`unit_basics.cpp`, `unitNoise`, 1x): 9
@@ -489,7 +489,7 @@ starts at and its count.
 - zodiacal light: the cone and its dust (W-04)
 - earthshine: a crescent's night side (W-04)
 
-## probe (`unit_probe.cpp`, `unitProbe`, 1x): 14
+## probe (`unit_probe.cpp`, `unitProbe`, 1x): 15
 
 - probe: the giant's air and the clock (X-01)
 - probe: aimed by the telescope (X-01)
@@ -505,6 +505,7 @@ starts at and its count.
 - probe: the recording plays from the gallery as it fell (X-04)
 - probe: two places of one giant, two profiles (X-04)
 - probe: what it crosses goes to the log with its depth (X-04)
+- probe: a storm renamed in its recording, then Esc to the gallery and to the ship (B-429)
 
 ## perf (`unit_proof.cpp`, `unitPerf`, 4x): 13
 

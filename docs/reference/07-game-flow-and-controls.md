@@ -32,7 +32,7 @@ SPACE -> INSTRUMENTS (C-11: the instruments' case on the cabin's left wall, or t
 SPACE -> DRONES (C-18: the drone bay's screen, from its rack on the cabin's left wall by the front window or the flight computer's devices page; Enter sends the drones and returns to SPACE, Esc or E returns to SPACE)
 SPACE/SURFACE/LANDING_MAP -> ALMANAC (W-01: Ctrl+T; DATA -> ALMANAC with T; the flight computer's devices page); Esc returns where it came from, Enter starts a run to the row and returns to the scene
 SPACE -> PROBE (X-01: C parked at a giant launches a probe and shows its camera; C, E at the landing screen or the cage watch a probe that falls; Esc, E or C go back to the cabin, the probe falling on; at its end Enter or Esc let it go)
-GALLERY -> RECORDING (X-04: Enter on a probe's recording plays it on the ship's screen; Esc or Enter back to the gallery; on the ground the gallery says the recordings play on the ship)
+GALLERY -> RECORDING (X-04: Enter on a probe's recording plays it on the ship's screen; Esc or Enter back to the gallery, whose Esc returns to SPACE, a storm named (`N`) or not (B-429); on the ground the gallery says the recordings play on the ship)
 MENU -> AUTO (R-419: AUTO-EXPLORE, the menu's second row; the controller's commands' general page too) -> SPACE or SURFACE playing on its own (Enter); Esc back; any key, click, mouse motion or button gives the controls back (R-420: but `M`, a controller's `SELECT`, starts and stops its tape)
 ```
 

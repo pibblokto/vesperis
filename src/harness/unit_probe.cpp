@@ -477,5 +477,27 @@ void unitProbe(const Check& check) {
                 gs && au && ho && ha && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 1 && counts[4] == 1 && depths && nameKept,
                 fmt("storm %d, wall %d, aurora %d, hole %d, hail %d (each once), depths %d; the storm '%s' named: '%s'", counts[0], counts[1], counts[2], counts[3], counts[4], depths,
                         stormKey.c_str(), named.c_str()));
+        // B-429: the storm renamed in its recording (N), then Esc to the gallery and Esc to the ship; the entry took the gallery's
+        // way back (`guideReturn`), and the two held the explorer between them (KI-427)
+        int pick = -1;
+        GameState seen[5] = {GameState::TITLE, GameState::TITLE, GameState::TITLE, GameState::TITLE, GameState::TITLE};
+        if (!stormKey.empty()) {
+            game.testOpenGallery(); run(0.05);
+            for (int i = 0; i < game.testGalleryItems(); i++) if (game.testGalleryRec(i) == 0) pick = i;
+        }
+        if (pick >= 0) {
+            game.testGalleryPick(pick); press(KEY_ENTER); run(0.05); seen[0] = game.state;
+            press(KEY_N); run(1.0 / 30); seen[1] = game.state;
+            for (int k = 0; k < 7; k++) press(KEY_BACKSPACE);   // "RED EYE" cleared
+            game.testTypeText("OLD RED"); run(1.0 / 30); seen[2] = game.state;
+            press(KEY_ESCAPE); run(0.05); seen[3] = game.state;
+            press(KEY_ESCAPE); run(0.05); seen[4] = game.state;
+        }
+        const bool renamed = !stormKey.empty() && game.guide.names.count(stormKey) && game.guide.names[stormKey] == "OLD RED";
+        check("probe: a storm renamed in its recording, then Esc to the gallery and to the ship (B-429)",
+                pick >= 0 && seen[0] == GameState::RECORDING && seen[1] == GameState::TEXT_ENTRY && renamed && seen[2] == GameState::RECORDING &&
+                        seen[3] == GameState::GALLERY && seen[4] == GameState::SPACE,
+                fmt("the gallery's item %d: %s, N %s, renamed %d, %s; Esc %s, Esc %s", pick, stateName(seen[0]), stateName(seen[1]), renamed, stateName(seen[2]),
+                        stateName(seen[3]), stateName(seen[4])));
     }
 }

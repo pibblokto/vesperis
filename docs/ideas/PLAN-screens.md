@@ -162,7 +162,8 @@ the game):
   - INSTRUMENTS, and SHIPSCREEN's rows.
 - It prints only what a step must keep. The return variables show only as where Esc goes, so folding them later (U-05) changes
   no line.
-- Esc is pressed a bounded number of times, so KI-427's loop between a recording and the gallery is recorded as it is.
+- Esc is pressed a bounded number of times, so a screen that will not let go is recorded, not waited on (KI-427's loop between a
+  recording and the gallery was one, until B-429).
 - **It is deterministic,** built the way the flow is: it runs `twice` in the battery, and a file that moves is named with its
   cause, then fixed or masked.
   - Each state starts from a fresh game at the same start. The rows that leave that start (NEW EXPEDITION, QUIT, VIMANA,
@@ -189,7 +190,7 @@ the game):
 **Done when:**
 - Each of the 29 states has its picture, its keys and its controller menu in the battery, and every menu row is entered.
 - `tour` gives the same output twice, and with one thread.
-- `tools/prove compare e13` reports every item the same except the mended `settings` and the new items.
+- `tools/prove compare b429` reports every item the same except the mended `settings` and the new items.
 - `tools/prove snapshot u01` is taken.
 
 ### U-02. The screen table (L)
@@ -341,8 +342,8 @@ An exit that is an action's, not Esc's, stays the action's own: a slot saved goe
   - `guideReturn` read as `targetHome`'s destination;
   - the almanac opened from DATA going back past DATA;
   - KEYS drawn over the scene but closed to its opener.
-- **`guideReturn` folds only once KI-427 is fixed.** Naming a storm in a recording leaves it at RECORDING, and the gallery's Esc
-  then loops back to the recording. Folding it would change that. The fix is its own bug, on the user's word, proven alone.
+- **`guideReturn` folds now that KI-427 is fixed** (B-429, 2026-10-26). Naming a storm in a recording left it at RECORDING, and
+  the gallery's Esc looped back to the recording. The recording now sets the gallery's way back, the ship's, again as it returns.
 
 **The assignments:**
 - The 70 literal assignments outside the openers become `openScreen` (an entry) or `closeScreen` (an exit that goes back), or
@@ -391,7 +392,7 @@ An exit that is an action's, not Esc's, stays the action's own: a slot saved goe
 
 ## 5. The proof, every milestone the same
 
-- **The base:** `build/prove/e13` until U-01 takes `u01`. Each milestone's snapshot is the next one's base.
+- **The base:** `build/prove/b429` (B-429's fix on e13) until U-01 takes `u01`. Each milestone's snapshot is the next one's base.
 - **After each step:** `tools/prove compare <base>` on the items the step can touch: `tour`, `screens`, `flow`, `input`, `unit`
   and `settings`.
 - **At the close:**
@@ -402,7 +403,7 @@ An exit that is an action's, not Esc's, stays the action's own: a slot saved goe
 - **How it runs:** through the `prover` agent, under `caffeinate -i`, alone (`docs/reference/harness/proof.md`).
 - **The disk:** each snapshot takes about 0.8 GB, and a compare's outputs as much again; the series takes six snapshots.
   - The E series' snapshots `build/prove/e02` to `e12` (11.6 GB) were deleted on the user's word on 2026-10-26: 15 GB free.
-  - e13 stays, and the old kits `build/p00` to `build/d05` (8.9 GB) stay until the user says.
+  - e13 and b429 stay, and the old kits `build/p00` to `build/d05` (8.9 GB) stay until the user says.
 
 ## 6. Decided by default (the user may change them)
 
@@ -453,10 +454,10 @@ The tasks:
 
 ## 9. Found on the way
 
-- **KI-427, a trap:** naming a storm in a recording (N) sets `guideReturn` to RECORDING, and nothing restores it.
-  - From then on, Esc or Enter in the recording goes to the gallery, and Esc or Enter in the gallery goes back to the
-    recording. The explorer cannot get out without quitting.
-  - The fix is its own bug, offered to the user; U-05 folds `guideReturn` only after it.
+- **KI-427, a trap:** naming a storm in a recording (N) set `guideReturn` to RECORDING, and nothing restored it.
+  - From then on, Esc or Enter in the recording went to the gallery, and Esc or Enter in the gallery went back to the
+    recording. The explorer could not get out without quitting.
+  - Fixed on the user's word as B-429 (2026-10-26), before U-01: the recording sets the gallery's way back again.
 - **KI-426:** the `settings` item pictures the load page and never changes the field of view. It counts three rows down the Esc
   menu, and R-419 put AUTO-EXPLORE above SETTINGS. U-01 mends it.
 - **The guide menu's row count:** the cookbook said 17 rows; there are 16, and it was corrected on 2026-10-26. The code's comment

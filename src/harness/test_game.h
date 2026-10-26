@@ -397,5 +397,6 @@ public:
     int testGalleryItems() const { return (int)galleryItems.size(); }
     int testGalleryRec(int i) const { return i >= 0 && i < (int)galleryItems.size() ? galleryItems[i].rec : -2; }
     int testGallerySel() const { return gallerySel; }
+    void testGalleryPick(int i) { gallerySel = i; }
     void testProbeLookAt(double yaw, double pitch) { probe.camYaw = yaw; probe.camPitch = pitch; }
 };

@@ -24,7 +24,7 @@ The user replied: "That's sad, I will have tons of those." Offered a table of sc
   become lists of rows with no counts kept in step.
 * **U-04, the controller from the row:** a screen's commands, name and buttons come from its row; the general page reads traits.
 * **U-05, a screen's life:** one way in (`openScreen`) and one way back (each row's `back`), with the return variables folded
-  where the tour proves them alike. `guideReturn` waits for KI-427's fix. A screen gets its own save lines and its reset.
+  where the tour proves them alike. `guideReturn` too, now that B-429 fixed KI-427. A screen gets its own save lines and its reset.
 * **U-06, the close:** the harness reads the table, the cookbook's recipe shrinks to five places in the code, and the
   game-screen and cabin-device tasks are measured again.
 
