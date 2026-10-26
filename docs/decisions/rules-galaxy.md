@@ -19,6 +19,7 @@ Systems, kinds of world, the almanac and the probe: `rules-galaxy-worlds.md`.
 - Picks stop at `PT_DRAWN_COUNT` and `STAR_DRAWN_COUNT` (`Rng::pick` falls to the last): what lies past them is given, never drawn [P-01], [D-01], [D-05]
 - Moved code keeps each float expression's shape (clang fuses a multiply-add within one); a term a row lacks is skipped, not added as 0 [P-00]
 - The noise keeps its bits: `hash3i` composes `hashX`, `hashXY`, `hashXYZ`; `grad3` uses Perlin's selects; `ifloor` is `std::floor`'s everywhere [F-07]
+- A copied `Rng` forks its stream: helpers take `Rng&`; the two copies are meant (system.cpp's moons drawn again, a refrain) [E-12]
 
 ## Protected and pinned
 - The home star Heilya is pinned (`HOME_SX/SY/SZ`), yellow; its sector hash 0.142 sits under the density 0.152: a retune over 1/15 loses it [G-02], [S-04]
@@ -35,7 +36,7 @@ Systems, kinds of world, the almanac and the probe: `rules-galaxy-worlds.md`.
 - A star is a function of its sector alone, never moved by system or surface draws; `StarNeighborhood::update` keeps a fresh walk's order [M9], [F-02]
 - Heliocentric: home keeps its sectors, the centre is sector (12000, 0, -5500) (`galaxyTerms`); a sector, a light year, holds any system [G-01], [table]
 - A new class is a variety: `starVariety` claims a share of a family by region by `mix64(seed ^ salt)` (never a plain XOR), from the stars left [S-01], [S-04]
-- A star class brings its table row, a `describeStar` sentence and a `starActivity(cls)` entry, the one activity table [S-01], [S-02]
+- A star class brings its table row, a `describeStar` sentence and its `starActivity(cls)` entry [S-01], [S-02]
 - A cluster lies inside its cell, so a density query hashes one cell, not 27 [G-02]
 - A drifter lies only in a sector with no star (`sectorHoldsStar`), on a field of its own salt: no star, system, sky or surface moves [D-01]
 - The starfield, the neighbourhood, the aim, `jumpTarget` and a new game hold stars alone; a drifter is reached by its sector (`placeInSector`) [R-407], [D-01]
@@ -84,3 +85,4 @@ Systems, kinds of world, the almanac and the probe: `rules-galaxy-worlds.md`.
 [D-04]: log/6-1.4.0.md
 [D-05]: log/6-1.4.0.md
 [E-02]: log/6-1.4.0.md
+[E-12]: log/6-1.4.0.md

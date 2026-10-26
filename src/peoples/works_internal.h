@@ -1,6 +1,6 @@
 #pragma once
-// E-09: what works.cpp's parts share, for them alone (works, works_sites, works_land, works_pieces): the includes, the
-// helpers on the unit sphere and in a work's own metres, the land's grid, and the builder (`WB`), whose members the parts define
+// E-09: what works.cpp's parts share, for them alone (works, works_sites, works_land, works_pieces): the includes (the sphere's
+// helpers: core/sphere.h), a work's own metres, the land's grid, and the builder (`WB`), whose members the parts define
 #include "works.h"
 #include "plan.h"
 #include "history.h"

@@ -11,9 +11,9 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 - surface_view.h holds SurfaceView's data first, never reordered, then its functions under a banner a file, the harness's last [E-08]
 - A state's traits are its row in `STATE_ROWS` (`game_types.h`), asked by `stateHas`: a trait new code needs is a column, not a list [E-06]
 - An engine header's declarations only the harness needs sit behind its `// ---- the harness's` banner, a comment group whole [E-07]
-- `make check` (`tools/check.py`): raylib only in the platform files, the layering, no src line over 2,000 characters, each file in its note [E-02]
+- `make check` (`tools/check.py`): raylib only in the platform files, the layering, no C++ line over 300, each file in its note [E-02], [E-12]
 - src/galaxy reads src/peoples in `landmarks.cpp` and `planet_bodygen.cpp` alone (`make check`) [E-09]
-- The names stay: binaries `vesperis` and `vesperis_test`, env `VESPERIS_TRACE`, `_SKIP`, `_NODRAIN`, `_THREADS`, CMake options `VESPERIS_*` [Release 1.0.0]
+- The names stay: binaries `vesperis`, `vesperis_test`, env `VESPERIS_TRACE`, `_SKIP`, `_NODRAIN`, `_THREADS`, CMake's `VESPERIS_*` [Release 1.0.0]
 
 ## The dev build
 - The Makefile stays at `-O2` (the bench measures the code, not the flags); the release flags live in `packaging/`'s scripts [F-09]
@@ -24,16 +24,16 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 - A change to `.claude/hooks/guard.py` is proven by `python3 .claude/hooks/test_guard.py`, every case as expected [E-01], [E-02]
 
 ## Warnings and portability
-- CMake makes warnings errors in core/, galaxy/ and peoples/ only (`VESPERIS_WERROR`) [M7-06], [E-09]
+- core/, galaxy/ and peoples/ build with warnings as errors: CMake's `VESPERIS_WERROR`, the Makefile's `WERROR` [M7-06], [E-09], [E-12]
 - A new engine directory goes in the Makefile's `CORE_SRC`, CMake's two globs, the release scripts' `find`s and `tools/prove`'s objects [E-09]
 - A count that can pass 2^31 is `long long` or `int64_t`, never `long` nor narrowed through one: Windows' `long` is 32 bits [B-424]
-- Windows builds compile with `-Wshorten-64-to-32` (`build-win.sh`) and the tree has none; `build-release.sh` prints each build's warnings [B-424], [F-09]
+- Windows builds compile with `-Wshorten-64-to-32` (`build-win.sh`), the tree has none; `build-release.sh` prints each build's warnings [B-424], [F-09]
 
 ## Releases
 - A release is everything done since the last, nothing held back, and the user calls it [Release 1.1.0..1.3.0]
-- Its scope is read from `ideas/MILESTONES.md` and the iteration's file; at the release the rows not done are marked the next version [Release 1.1.0..1.3.0]
-- A release follows `packaging/RELEASE.md` (the `release` skill): one commit, regress both ways and the unit passing, the six zips built from it [E-01], [E-04]
-- The PR's merge keeps the built commit's tree (`git rev-parse <sha>^{tree}`), the tag goes on the merge, the release is a draft until its zips are up [E-01]
+- Its scope is read from `ideas/MILESTONES.md` and the iteration's file; at the release the rows not done go to the next version [Release 1.1.0..1.3.0]
+- A release follows `packaging/RELEASE.md` (the `release` skill): one commit, regress both ways, the unit passing, the six zips from it [E-01], [E-04]
+- The PR's merge keeps the built commit's tree (`git rev-parse <sha>^{tree}`), the tag on the merge, the release a draft until its zips are up [E-01]
 - Version strings live only in `CMakeLists.txt` and `packaging/make_app.sh`; the game shows no version [Release 1.1.0]
 - A release brings the README's paragraph and its keys up to date with what it adds (the README ships in the zips) [Release 1.3.0]
 - After it: `MILESTONES.md`'s "Released as" line, the iteration's files to `archive/ideas/`, the next release's entries in a new `log/` file [E-04]
@@ -68,3 +68,4 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 [E-07]: log/6-1.4.0.md
 [E-08]: log/6-1.4.0.md
 [E-09]: log/6-1.4.0.md
+[E-12]: log/6-1.4.0.md

@@ -3,7 +3,7 @@
 ## Files
 - `surface_view.h` (54 KB): `SurfaceView`, its data first (never reordered), then its functions under a `// ----` banner for each
   file, the harness's last; `surface_types.h` (13 KB) its types (`Player`, `Buggy`, `Drone`, `SurfaceEnvironment`, `LocalFront`,
-  the creatures, the trees, `Ruin`); `surface_internal.h` what its files share (`SurfaceLook`, `lookFor`, `hash01`)
+  the creatures, the trees, `Ruin`); `surface_internal.h` what its files share (`SurfaceLook`, `lookFor`)
 - `surface_view.cpp` (44 KB): `init`, `update`, `render`, `reanchor`, the streaming (the ahead worker, `prefetch`), the scanner
 - `surface_env.cpp` (22 KB): `computeEnvironment` (the light, the weather, the fog), the fog seas' floor, the ground's songs
 - `surface_places.cpp` (20 KB): the settlements' and works' cells, the towns' marks, the plan's places; the records, instruments

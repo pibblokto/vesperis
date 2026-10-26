@@ -5,7 +5,7 @@
 - The layering: src/core includes only src/core; src/galaxy (the worlds) only src/core and itself, but for the worlds' two
   readers of the peoples (E-09: landmarks.cpp, planet_bodygen.cpp); src/peoples only src/core, src/galaxy and itself;
   src/space and src/surface nothing of src/game, nor platform.h.
-- No line in src over 2,000 characters (the Read tool cuts such a line).
+- No C++ line in src over 300 characters (E-12 wrapped those over 200; a `.vg` line is never wrapped: its text is its key).
 - Every .cpp and .h is named in its directory's CLAUDE.md (src/'s own files in the root CLAUDE.md), by its name without the
   extension, so that the maps stay true.
 - E-04: no line in docs/ over 2,000 characters either; the generated pages are what their sources give:
@@ -29,6 +29,7 @@ LOWER = {'core': {'core'}, 'galaxy': {'core', 'galaxy'}, 'peoples': {'core', 'ga
          'space': None, 'surface': None}   # None: anything but game/ and platform.h
 WORLDS_READING_PEOPLES = {'galaxy/landmarks.cpp', 'galaxy/planet_bodygen.cpp'}   # E-09: the scanner's sights; a world's people
 LONG = 2000
+LONG_CPP = 300   # E-12: src's C++ lines
 
 
 def sources():
@@ -90,8 +91,8 @@ def main():
         with open(path, encoding='utf-8', errors='replace') as f:
             lines = f.read().split('\n')
         for i, line in enumerate(lines, 1):
-            if len(line) > LONG:
-                problems.append('src/%s:%d: a line of %d characters (over %d)' % (rel, i, len(line), LONG))
+            if len(line) > LONG_CPP:
+                problems.append('src/%s:%d: a line of %d characters (over %d)' % (rel, i, len(line), LONG_CPP))
             if RAYLIB.match(line) and rel != 'platform_raylib.cpp':
                 problems.append('src/%s:%d: includes raylib (only platform_raylib.cpp may)' % (rel, i))
             m = INCLUDE.match(line)

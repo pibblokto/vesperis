@@ -1,0 +1,6 @@
+# Commits that changed no code, only comments or whitespace: git blame skips them. GitHub's blame reads this file on its
+# own; here, `git blame --ignore-revs-file .git-blame-ignore-revs` (or `git config blame.ignoreRevsFile .git-blame-ignore-revs`).
+# E-12: the comments by the policy
+5114cd56059faddcb3c6121297ad755e3e11a033
+# E-12: the long lines wrapped
+ed43cdd7c4940111b6937e2a9e308b9cfe4973cb

@@ -57,7 +57,7 @@ their states, the cameras off on `ST_STOWS` → `noteVisit` → the clock (`ST_S
   `returnState` and `guideReturn`
 - the update switch; a scene's case in the render switch (an overlay is drawn in the `default`'s if/else chain)
 - the sounds stopped at the frame's start if it plays one; pad.cpp's screen names and `padItems`; `autoScene`
-- its way in: a cabin `facing` spot (`updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1`/`PAGE2`
+- its way in: a cabin `facing` spot (a `CabinFacing`: `updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1`/`PAGE2`
   appended, `counts[]` and `n` both), the Esc menu (`% 8` and `items[]`) or the guide menu (`GUIDE_ITEMS`, the shifted
   `case` numbers, 17 rows at 9 px)
 - in the harness: a `screens` capture, a TestGame hook if a check needs one
@@ -68,8 +68,10 @@ their states, the cameras off on `ST_STOWS` → `noteVisit` → the clock (`ST_S
 - A state's traits are its row: code asks `stateHas(state, ST_...)`, and a trait new code needs is a column, not a list of
   states; unit `states` holds the first 29 rows to the lists they replaced.
 - A split subsystem's files share helpers through its `_internal.h` (`inline`); a helper one file uses stays in that file.
-- `radar`, `icase`, `chartHeld`, `probe`, `bay` and `tele` are reset by assigning a fresh one (`newGame`, `load`): a field moved
+- `radar`, `icase`, `chartHeld`, `probe`, `bay` and `tele` are reset by assigning a fresh one (`resetExpedition`): a field moved
   into one gains a reset, and a thread in one would end the game.
+- A screen's helpers (ui.h): `drawPanel` (its box and edge), `menuStep` (Up and Down round a list), `refuse` (the status line and
+  `BEEP_ERROR`); a beep is a `Beep`, a text entry's kind a `TextKind`.
 - A text entry opened from a screen sets `guideReturn` to it; the screen's own Esc names its return state; TEXT_ENTRY's render
   draws the screen under the box when `guideReturn` is that screen.
 - Sound: the synth reads `AudioState` pointers on the main thread after `frame` (`platformAudioPump`). Their owner clears them

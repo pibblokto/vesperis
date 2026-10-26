@@ -47,9 +47,12 @@ build/platform_raylib.o: src/platform_raylib.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(RAYLIB_CFLAGS) -c -o $@ $<
 
+# E-12: the strict directories build with warnings as errors, as CMake's (VESPERIS_WERROR); `make WERROR=` builds them without
+STRICT_DIRS := core galaxy peoples
+WERROR := -Werror
 build/%.o: src/%.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(if $(filter $(STRICT_DIRS),$(firstword $(subst /, ,$*))),$(WERROR)) -c -o $@ $<
 
 clean:
 	rm -rf $(OBJ_DIRS) build/*.o build/*.d vesperis vesperis_test

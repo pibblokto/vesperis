@@ -4,7 +4,8 @@ Only `vesperis_test` links it. `vesperis_test help` lists every mode with its ar
 `docs/reference/harness/INDEX.md` and `tools/unitchecks.py` the unit's `unit-checks.md` (`make check` compares both).
 
 - `main.cpp`: start-up (`scale=N`, `shots/tests`), `MODES` (the table `help` prints).
-- `harness.h`: engine headers, `Mode`, `Check`, `UnitGroup`, `SceneCode`; each file's shared functions under its name.
+- `harness.h`: engine headers, `Mode`, `Check`, `UnitGroup`, `SceneCode`, `systemAt` (a star and its system) and `scanSystems` (the
+  sectors' systems as the scans' two loops took them); each file's shared functions under its name.
 - `test_game.h`, `test_game.cpp`: `TestGame`, the Game the harness builds, and its hooks (`test*`, `setState`).
 - `test_worlds.h`: the pinned worlds and sites, the protected systems (`salt scan`). `scenes_table.h`: the scenes (`CMP_SCENES`,
   `findScene`), placed by `scenes_setup.cpp` (`setupSceneForType`: its finders by code family, `SceneFind`) and

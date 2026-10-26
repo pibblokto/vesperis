@@ -797,6 +797,16 @@ CMake's do.
 
 **Done when:** the comment and wrap commits are proven as above, and `prove compare` reports everything the same for the rest.
 
+**Done 2026-10-26:** the log's E-12 entry (`docs/decisions/log/6-1.4.0.md`). As built:
+- Dead code: 24 items (the linker's dead lists of both binaries, crossed with the sources), `waterHeight` among them.
+- The shared helpers as listed, the sphere's in `core/sphere.h` (`towardUpTo`, `towardThrough`); the game's `refuse` 57 sites,
+  `menuStep` 13 lists, `drawPanel` 14 panels (the blended ones with their edge; the plan's 45 counted every box call).
+- The harness: `scanSystems` is a range mirroring the two loops (52 scans); the plan's `TestWorld` became `systemAt` (82 lookups), a
+  function keeping each site's names and failure. Scans with a break at their level, a star filter or another stop stay loops.
+- Rng copies: two, both meant (system.cpp's moons drawn again, music_ages.cpp's refrain), in `rules-galaxy.md`.
+- Committed with E-03 to E-11 on the user's word, from each step's tree (`build/e12/trees.txt`): the comment and wrap steps are
+  commits of their own, listed in `.git-blame-ignore-revs`.
+
 ### E-13. The close (S-M)
 
 - **The CLAUDE.md tree:** audited with claude-md-improver, and every directory's map checked by `make check`.

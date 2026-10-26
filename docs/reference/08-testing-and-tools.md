@@ -1912,9 +1912,10 @@ The harness is `src/harness/` (46 files with E-02's fingerprints; `src/harness/C
 - `tools/mover.py` (`list`, `move <manifest>`, `verify`, `xref`) moves whole top-level chunks (a function, a type, a table, a
   namespace, with the comments above them) between files and rebuilds the old file from the new ones to prove a move.
   `tools/samecode.py [-I<dir>] <old files> -- <new files>` compiles both sides to IR at -O0 without exceptions and compares
-  every function by name (a lambda by its function, a constant by its contents): a move changes none.
+  every function by name (a lambda by its function, a constant by its contents): a move changes none; `--rename` reads names
+  that changed, `SAMECODE_ALL=1` lists every difference (twelve of each by default).
 - `PROVE_ITEMS=<file> tools/prove ...` runs another battery of the same form: E-03's A/B of the modes the battery leaves out
   (`build/e03/ab_modes.items`, recorded before the edits with `PROVE_BIN` at the old binary). The landforms sheets and the
-  towns' capital map print a time into their pictures: they differ between runs.
+  towns' maps print a time into their pictures: they differ between runs (E-12's A/B: `build/e12/ab_modes.items`, 46 items).
 - A one-file harness edit rebuilds in 1-3 s. The harness's objects compile the same twice but for three
   (`modes_signals`, `unit_kinds`, `unit_sky`), so `tools/prove objects` still leaves the harness to its behaviour.

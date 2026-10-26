@@ -42,6 +42,14 @@ Contents:
   copy is put through the rename map (old name to new); a comment edited in a data file is proven by its lines (the same count,
   only `#` lines differ) and by what the data makes (`grammar out F`: the texts byte for byte). A constant hoisted out of a function
   is `samecode.py --rename '<function>::NAME=NAME'`.
+- **A sweep's steps** (E-12): a step's base is the tree after the step before (a private index's `git write-tree`: HEAD, the index and
+  the refs untouched), so `samecode.py` compares that step alone (`SAMECODE_ALL=1` lists every function that differs: each must hold
+  an edited site). A comment-only or whitespace-only step on a harness object that varies between compiles is proven by its
+  preprocessed source (`clang++ -E -P`) against the base's, the same, or the same with adjacent string literals joined (a literal
+  split in two compiles alike). A harness edit the battery cannot see is proven by an A/B items file (`PROVE_ITEMS`) recorded
+  with the binary before it. A comment-only or whitespace-only step is a commit of its own, listed in `.git-blame-ignore-revs`
+  (GitHub's blame skips it; here `git blame --ignore-revs-file .git-blame-ignore-revs`); a commit made from a step's tree is
+  `git commit-tree <tree> -p <parent>`.
 - **At the close:** from a clean build (`make clean && make -j8`) the whole battery, `tools/prove compare <base>`, the unit and
   the flow inside it; `bench check` and its pairs; then `tools/prove snapshot <id>`, the next milestone's base.
 - **Alone, awake, in the background:** `caffeinate -i`, the output to a file, nothing else building or running. The Mac sleeps
@@ -148,14 +156,14 @@ others.
   every save it loads) and two runs draw the same 179 files. The unit's six scanner and map frames (R-408, B-412, T-03) and its
   autosave move between runs: it runs frames until a thread has found the cells or the scan, so the trees and grass sway, and
   the clock ends, where the threads' pace leaves them. Its printout (the 403 checks) and its other files are compared.
-- `datasheet`, `surface` (the sweeps), `rogues heard` and the unit's lent piece wait for every body's map before a frame (E-02), as the flow and
-  the regress have since F-07: the maps are made on their thread at the binary's own pace, and a frame drawn before one moved
-  between runs by a faint disc or a dim background.
+- `datasheet`, `surface` (the sweeps), `rogues heard` and the unit's lent piece wait for every body's map before a frame (E-02), as
+  the flow and the regress do (F-07): the maps are made on their thread at the binary's own pace, and a frame drawn before one
+  would move between runs by a faint disc or a dim background.
 - `PROVE_BIN=<binary>` runs a new snapshot or a compare with another binary: E-02 relinked e02-base's saved engine objects with
   its final harness (`e02-base2`) to give the new fingerprint columns a base.
 - `PROVE_HOME` (the main checkout's `build/prove` by default, found through git) lets a worktree use those snapshots.
 
 The skills `prove`, `bench` and `look` (`.claude/skills/`) say when and how; the `prover` agent (`.claude/agents/`) runs the
 battery and returns its verdict. `tools/png.py` (stats, crop, montage, diff) and `tools/wav.py` (stats, events, pitch) read the
-outputs without numpy. `make check` (`tools/check.py`) holds the layout: raylib only in the platform file, the layering, no line
-in src over 2,000 characters, every source file named in its directory's CLAUDE.md.
+outputs without numpy. `make check` (`tools/check.py`) holds the layout: raylib only in the platform file, the layering, no C++
+line in src over 300 characters (E-12), every source file named in its directory's CLAUDE.md.
