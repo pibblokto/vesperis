@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <ctime>
 
-// M4-02: the sector map: heights, water, the capsule, the buggy, the waypoint and you (R-414: M4-02's trail of where you walked is gone;
+// the sector map: heights, water, the capsule, the buggy, the waypoint and you (R-414: M4-02's trail of where you walked is gone;
 // the user: "remove these lines that show what routes you traveled - they seem to be a good idea but they confuse you a lot").
 static const double SECTOR_HALF_W[6] = {1000, 4000, 16000, 64000, 256000, 1024000};   // metres (Game::SECTOR_LEVELS)
 static const double SECTOR_DETAIL[6] = {16, 64, 512, 2048, 4096, 16384};
@@ -58,7 +58,7 @@ void Game::updateSectorMap(const Input& in) {
     }
     mapCurX = clampd(mapCurX, px - hw, px + hw); mapCurZ = clampd(mapCurZ, pz - hh, pz + hh);
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
-    if ((enterKey(in) || in.mousePressed[0]) && in.shift()) {   // B-412
+    if ((enterKey(in) || in.mousePressed[0]) && in.shift()) {
         if (onMark >= 0) showMark(onMark);
         else { refuse("NO MARK UNDER THE CURSOR", 2); }
     } else if (enterKey(in) || in.mousePressed[0]) { if (onMark >= 0) beginRenameMark(onMark); else beginMark(mapCurX, mapCurZ); return; }
@@ -99,7 +99,7 @@ void Game::renderSectorMap() {
                     hs[y * sectorImgW + x] = tv[y * sectorImgW + x].h;
                 }
         });
-        // O2: the same colouring as the landing map (material ramps, exposure rule, hillshade from the north-west), so
+        // the same colouring as the landing map (material ramps, exposure rule, hillshade from the north-west), so
         // the map you land by and the map you walk by agree
         MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
         mapRampsFor(body, ramps, lf, atmo);
@@ -107,7 +107,7 @@ void Game::renderSectorMap() {
         double sum2 = 0; int cnt = 0;
         for (int y = 0; y < sectorImgH; y++) for (int x = 0; x < sectorImgW; x++) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y - 1) - hAt(x, y + 1); sum2 += gx * gx + gy * gy; cnt++; }
         double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * cell));   // a 3% grade at most for full shading
-        const bool survey = sys.sunless();   // D-02: the survey look of a world with no sun, by the frame's heights
+        const bool survey = sys.sunless();   // the survey look of a world with no sun, by the frame's heights
         double hLo = 0, hHi = 1; if (survey) surveyRange(hs.data(), hs.size(), hLo, hHi);
         for (int y = 0; y < sectorImgH; y++)
             for (int x = 0; x < sectorImgW; x++) {
@@ -115,10 +115,10 @@ void Game::renderSectorMap() {
                 double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y - 1) - hAt(x, y + 1);
                 double shade = clampd(1.0 + k * 0.7071 * (gx + gy), 0.5, 1.5);
                 int mat = v.material;
-                if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // Q-02: a tidal flat its wet sand
+                if (v.water > -1e8f && v.h < v.water && !(v.material == MAT_SAND && surf.site.seaVertex(v))) mat = MAT_WATER;   // a tidal flat its wet sand
                 sectorImg[y * sectorImgW + x] = mapColor(ramps, mat, v.albedo, lf, atmo, shade, survey ? surveyHeight(v.h, hLo, hHi) : -1);
             }
-        if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // Q-02: the tide lines, the high water's pale along the flat's landward edge, the low water's dark
+        if (surf.site.gen.tideRangeM > 0 && surf.site.hasWater) {   // the tide lines, the high water's pale along the flat's landward edge, the low water's dark
             const double S = surf.site.seaLevel;
             for (int y = 0; y + 1 < sectorImgH; y++)
                 for (int x = 0; x + 1 < sectorImgW; x++) {
@@ -132,7 +132,7 @@ void Game::renderSectorMap() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     int S = FB_SCALE;
     double shiftX = (px - sectorImgX) / mpp, shiftZ = (pz - sectorImgZ) / mpp;   // the image is a little stale between rebuilds
-    // F-05: the image's column of every pixel column and its row of every pixel row, by the per-pixel expressions, then the rows on the pool
+    // the image's column of every pixel column and its row of every pixel row, by the per-pixel expressions, then the rows on the pool
     static std::vector<int> ixs, iys;
     ixs.resize(MW * S); iys.resize(MH * S);
     for (int x = 0; x < MW * S; x++) ixs[x] = (int)((x / (double)S + shiftX) / 2);
@@ -145,7 +145,7 @@ void Game::renderSectorMap() {
                 canvas.px[(size_t)(oy * S + y) * FBW + ox * S + x] = col;
             }
     });
-    if (surf.localFront.on) {   // W-03: the nearest front's rain line across the map and its band behind it, hatched
+    if (surf.localFront.on) {   // the nearest front's rain line across the map and its band behind it, hatched
         const LocalFront& F = surf.localFront;
         const double s0 = FRONT_RAIN_END * F.width;
         const uint32_t lineC = F.dust ? HUD_AMBER : HUD_CYAN;
@@ -159,8 +159,8 @@ void Game::renderSectorMap() {
     drawRectRGB(canvas, ox - 1, oy - 1, ox + MW, oy + MH, HUD_DIM);
     auto mark = [&](double wx, double wz, int& sx, int& sy) { sx = ox + MW / 2 + (int)((wx - px) / mpp); sy = oy + MH / 2 - (int)((wz - pz) / mpp); return sx >= ox && sy >= oy && sx < ox + MW && sy < oy + MH; };
     int sx, sy;
-    if (sectorZoom >= 2) {   // O2: the sector grid with the sectors' names on the wide levels
-        // B-402: the grid's step grows with the zoom (1, 2, 5, 10, 15, 30 degrees) so its lines stay at least 24 px apart;
+    if (sectorZoom >= 2) {   // the sector grid with the sectors' names on the wide levels
+        // the grid's step grows with the zoom (1, 2, 5, 10, 15, 30 degrees) so its lines stay at least 24 px apart;
         // the one-degree cells carry the sectors' names when they are wide enough, the coarser lines their latitude and longitude
         auto toPx = [&](double lat, double lon, int& gx, int& gy) { double x, z; surf.site.localAt(StarSystem::bodyFromLatLon(lat, lon), x, z); gx = ox + MW / 2 + (int)((x - px) / mpp); gy = oy + MH / 2 - (int)((z - pz) / mpp); };
         double pxPerDeg = DEG * surf.site.R / mpp;
@@ -202,8 +202,8 @@ void Game::renderSectorMap() {
     }
     if (mark(surf.capsuleX, surf.capsuleZ, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_AMBER); drawText(canvas, sx + 4, sy - 3, "CAPSULE", HUD_AMBER); }
     if (surf.buggy.deployed && mark(surf.buggy.x, surf.buggy.z, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_CYAN); drawText(canvas, sx + 4, sy - 3, "BUGGY", HUD_CYAN); }
-    if (surf.drone.deployed && mark(surf.drone.x, surf.drone.z, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_CYAN); drawText(canvas, sx + 4, sy - 3, "DRONE", HUD_CYAN); }   // R-403
-    if (scanMode >= 0) {   // R-408: the scanner's echoes of its mode where it hears them (the marked left out unless taken in), the nearest 30
+    if (surf.drone.deployed && mark(surf.drone.x, surf.drone.z, sx, sy)) { drawRectRGB(canvas, sx - 2, sy - 2, sx + 2, sy + 2, HUD_CYAN); drawText(canvas, sx + 4, sy - 3, "DRONE", HUD_CYAN); }
+    if (scanMode >= 0) {   // the scanner's echoes of its mode where it hears them (the marked left out unless taken in), the nearest 30
         std::vector<std::pair<double, const SurfaceView::ScanEcho*>> heard;
         for (const SurfaceView::ScanEcho& e : surf.echoes) if (e.lm.kind == scanMode && !(scanSkipMarked && echoMarked(e))) heard.push_back({(e.x - px) * (e.x - px) + (e.z - pz) * (e.z - pz), &e});
         std::sort(heard.begin(), heard.end(), [](const auto& a, const auto& b2) { return a.first < b2.first; });
@@ -216,7 +216,7 @@ void Game::renderSectorMap() {
         }
     }
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
-    {   // R-408: the explorer's marks (a friend's in cyan): the glyph of what they mark (a place: a small diamond), the names of the
+    {   // the explorer's marks (a friend's in cyan): the glyph of what they mark (a place: a small diamond), the names of the
         // nearest twelve where they do not run into one another; B-412: the one shown over the view boxed, its name first
         std::vector<std::pair<double, const SiteMark*>> shown;
         for (const SiteMark& m : marksHere()) if (mark(m.x, m.z, sx, sy)) shown.push_back({m.index == guide.shownMark ? -1.0 : (m.x - px) * (m.x - px) + (m.z - pz) * (m.z - pz), &m});
@@ -247,7 +247,7 @@ void Game::renderSectorMap() {
         drawLineRGB(canvas, cx, cy, cx + (int)(hx * 6), cy - (int)(hz * 6), HUD_WHITE);
         drawRectRGB(canvas, cx - 1, cy - 1, cx + 1, cy + 1, HUD_WHITE);
     }
-    if (mark(mapCurX, mapCurZ, sx, sy)) {   // R-408: the cursor
+    if (mark(mapCurX, mapCurZ, sx, sy)) {   // the cursor
         const uint32_t cc = HUD_AMBER;
         drawLineRGB(canvas, sx - 7, sy, sx - 3, sy, cc); drawLineRGB(canvas, sx + 3, sy, sx + 7, sy, cc);
         drawLineRGB(canvas, sx, sy - 7, sx, sy - 3, cc); drawLineRGB(canvas, sx, sy + 3, sx, sy + 7, cc);
@@ -256,24 +256,24 @@ void Game::renderSectorMap() {
     drawText(canvas, tx, oy, "SECTOR MAP", HUD_AMBER);
     drawText(canvas, tx, oy + 9, fmt("%.0f KM WIDE", 2 * hw / 1000).c_str(), HUD_GREEN);
     drawText(canvas, tx, oy + 18, "+/- ZOOM N CLOSE", HUD_DIM);
-    {   // R-408: the cursor: its way and distance from the explorer, its place, the mark or the waypoint under it
+    {   // the cursor: its way and distance from the explorer, its place, the mark or the waypoint under it
         const double cd = std::hypot(mapCurX - px, mapCurZ - pz);
         double clat, clon; surf.site.latLonAt(mapCurX, mapCurZ, clat, clon);
         const double la = clat / DEG, lo = wrapAngle(clon) / DEG;
         drawText(canvas, tx, oy + 31, "CURSOR", HUD_DIM);
         drawText(canvas, tx, oy + 40, cd < 2 * mpp ? "HERE" : fmt("%s %s", metresString(cd).c_str(), compassName(wrap2pi(std::atan2(mapCurX - px, mapCurZ - pz)))).c_str(), HUD_WHITE);
         drawText(canvas, tx, oy + 49, fmt("%.2f%s %.2f%s", std::fabs(la), la >= 0 ? "N" : "S", std::fabs(lo), lo >= 0 ? "E" : "W").c_str(), HUD_DIM);
-        drawText(canvas, tx, oy + 58, fmt("S %s", sectorName(la, lo).c_str()).c_str(), HUD_CYAN);   // O2
+        drawText(canvas, tx, oy + 58, fmt("S %s", sectorName(la, lo).c_str()).c_str(), HUD_CYAN);
         if (onMark >= 0) {
             drawText(canvas, tx, oy + 67, trunc(markLabel(onMark), 17).c_str(), guide.marks[onMark].lent ? HUD_CYAN : HUD_AMBER);
-            drawText(canvas, tx, oy + 76, onMark == guide.shownMark ? "SHIFT+ENTER HIDES" : "SHIFT+ENTER SHOWS", HUD_DIM);   // B-412: over the view
+            drawText(canvas, tx, oy + 76, onMark == guide.shownMark ? "SHIFT+ENTER HIDES" : "SHIFT+ENTER SHOWS", HUD_DIM);   // over the view
         }
         else if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) drawText(canvas, tx, oy + 67, "THE WAYPOINT", HUD_WHITE);
     }
-    {   // R-408: the scanner
+    {   // the scanner
         if (scanMode < 0) drawText(canvas, tx, oy + 89, "R SCANNER OFF", HUD_DIM);
         else {
-            drawText(canvas, tx, oy + 89, fmt("SCAN %s", SCAN_MODE_NAMES[scanMode]).c_str(), HUD_CYAN);   // Q-01: the scanner's own names
+            drawText(canvas, tx, oy + 89, fmt("SCAN %s", SCAN_MODE_NAMES[scanMode]).c_str(), HUD_CYAN);   // the scanner's own names
             double hx, hz; const SurfaceView::ScanEcho* e = scanModeHere(scanMode) && surf.scanned ? scanNearest(hx, hz) : nullptr;
             if (!scanModeHere(scanMode)) drawText(canvas, tx, oy + 98, "NONE ON THIS WORLD", HUD_DIM);
             else if (!surf.scanned) drawText(canvas, tx, oy + 98, "SCANNING", HUD_DIM);
@@ -286,7 +286,7 @@ void Game::renderSectorMap() {
         }
     }
     drawText(canvas, tx, oy + 127, fmt("ELEV %+.0f", surf.player.y).c_str(), HUD_DIM);
-    for (const FrontForecast& f : forecast) {   // W-03: the next front, or the one overhead
+    for (const FrontForecast& f : forecast) {   // the next front, or the one overhead
         if (f.tClear <= t) continue;
         const uint32_t c = f.dust ? HUD_AMBER : HUD_CYAN;
         drawText(canvas, tx, oy + 144, f.dust ? "DUST FRONT" : "RAIN FRONT", c);

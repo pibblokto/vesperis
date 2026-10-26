@@ -16,22 +16,22 @@
 #include "galaxy/landmarks.h"
 #include "galaxy/almanac.h"
 #include "galaxy/fronts.h"
-#include "galaxy/nights.h"   // W-04
+#include "galaxy/nights.h"
 #include "peoples/ruins.h"
 #include "peoples/shards.h"
 #include "peoples/music.h"
 #include "peoples/voice.h"
 #include "peoples/signals.h"
-#include "peoples/charts.h"   // C-10
-#include "peoples/peoples.h"  // A-01
-#include "peoples/buildings.h" // A-03
-#include "peoples/plan.h"      // T-01
-#include "peoples/history.h"   // H-02
-#include "peoples/towns.h"     // T-02
-#include "peoples/works.h"     // T-03
-#include "peoples/records.h"   // T-04
-#include "peoples/genres.h"    // H-04
-#include "harness/fingerprint.h"   // E-02
+#include "peoples/charts.h"
+#include "peoples/peoples.h"
+#include "peoples/buildings.h"
+#include "peoples/plan.h"
+#include "peoples/history.h"
+#include "peoples/towns.h"
+#include "peoples/works.h"
+#include "peoples/records.h"
+#include "peoples/genres.h"
+#include "harness/fingerprint.h"
 #include <set>
 #include <cstring>
 #include <cstdio>
@@ -44,11 +44,11 @@
 #include <sstream>
 #include <dirent.h>
 #if defined(__APPLE__) || defined(__linux__)
-#include <sys/resource.h>   // F-01: the process's CPU time (`load`, `soak`)
+#include <sys/resource.h>   // the process's CPU time (`load`, `soak`)
 #include <unistd.h>
 #endif
 #ifdef __APPLE__
-#include <mach/mach.h>       // F-01: its threads and resident memory
+#include <mach/mach.h>       // its threads and resident memory
 #endif
 #include <cmath>
 #include <complex>
@@ -62,7 +62,7 @@
 #include "core/input.h"
 #include "game/game.h"
 #include "game/ui.h"
-#include "harness/test_game.h"   // E-05: TestGame, Game with its hooks
+#include "harness/test_game.h"   // TestGame, Game with its hooks
 
 // Two RGB frames compared pixel for pixel (`pngdiff`, `bothways`, the unit's both-ways checks): how many pixels differ, the largest step of
 // one channel, the first differing pixel, the rows they span and how many fall in each eighth of the frame's height
@@ -161,7 +161,7 @@ enum SceneCode : int {
 };
 
 // M7-03 unit tests: frame maths, the sun against analytic cases, noise statistics, name lengths, the Kepler solver
-// C-07: the receiver's renders (the unit and `signals wav`): a people's world (its voice, tongue, shards, language and tradition),
+// the receiver's renders (the unit and `signals wav`): a people's world (its voice, tongue, shards, language and tradition),
 // a programme of it through the synth at full clarity with a loop's and a numbers station's repeats as the game does them, a
 // natural signal by its seed, and a WAV writer
 struct PeopleWorld { bool valid = false; StarSystem sys; int body = -1; Lore lore; Tongue tongue; Voice voice; std::vector<Shard> shards; Language lang; Tradition tradition; int firstText = -1, firstMusic = -1; uint64_t seed = 0; std::string name; };
@@ -173,7 +173,7 @@ struct RenderStats { double rms = 0, peak = 0; int nan = 0, clip = 0; };
 struct RxOpts {
     double gainT = 0, sky = 0, wear = 0, clarity = 1, drive = 0; int age = -1; bool music = false; int slot = -1;
     int kind2 = -1, voice2 = -1, age2 = -1; uint64_t seed2 = 0; double pulse2 = 1, sig2 = 0, het = 0, hetHz = 800, intermod = 0;
-    RogueVoice rogue, rogue2; int voice = -1, set = RADIO_CAMERA; double level = 1, hum = 0;   // D-03: a drifter's (and its beacon), the radio it is heard on, the ship's hum beside it
+    RogueVoice rogue, rogue2; int voice = -1, set = RADIO_CAMERA; double level = 1, hum = 0;   // a drifter's (and its beacon), the radio it is heard on, the ship's hum beside it
 };
 
 // D-03: a drifter as the voice's synth takes it (its class, turning, moon and power), from its place: its system generated
@@ -413,7 +413,7 @@ int runDataSheet(int argc, char** argv);
 int runTides(int argc, char** argv);
 void renderTraits(const char* want);
 int runKinds(int argc, char** argv);
-int runSaltScan(int argc, char** argv);   // E-07
+int runSaltScan(int argc, char** argv);
 
 // ---- modes_signals.cpp
 bool peopleWorldOf(const Star& s, int bi, PeopleWorld& w);
@@ -437,7 +437,7 @@ int runSounds(int argc, char** argv);
 int runRogues(int argc, char** argv);
 
 // ---- modes_drones.cpp
-void droneChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // C-18
+void droneChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 int runDrones(int argc, char** argv);
 
 // ---- modes_game.cpp
@@ -485,7 +485,7 @@ void genomeChecks(const std::function<void(const char*, bool, const std::string&
 int runGenome(int argc, char** argv);
 
 // ---- civ_walls.cpp
-void wallsChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // B-420, B-421
+void wallsChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 int runWalls(int argc, char** argv);
 
 // ---- civ_plan.cpp
@@ -524,22 +524,22 @@ int runShards(int argc, char** argv);
 int runMusic(int argc, char** argv);
 
 // ---- civ_records.cpp
-void recordsChecks(const std::function<void(const char*, bool, const std::string&)>& check);       // T-04
-void mediaChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // H-05
-void historyPageChecks(const std::function<void(const char*, bool, const std::string&)>& check);   // H-06
+void recordsChecks(const std::function<void(const char*, bool, const std::string&)>& check);
+void mediaChecks(const std::function<void(const char*, bool, const std::string&)>& check);
+void historyPageChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 void recordPlacesOf(const BodyGen& g, int people, std::vector<RecordPlace>& out, int countryside = 9);
 std::string fileWord(std::string s);
 int runDecoder(int argc, char** argv);
 int runRecords(int argc, char** argv);
 
 // ---- civ_instruments.cpp
-void instrumentChecks(const std::function<void(const char*, bool, const std::string&)>& check);    // C-11
-void playerChecks(const std::function<void(const char*, bool, const std::string&)>& check);        // C-11
-void makerChecks(const std::function<void(const char*, bool, const std::string&)>& check);         // C-17
+void instrumentChecks(const std::function<void(const char*, bool, const std::string&)>& check);
+void playerChecks(const std::function<void(const char*, bool, const std::string&)>& check);
+void makerChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 int runInstruments(int argc, char** argv);
 
 // ---- civ_grammar.cpp
-void grammarChecks(const std::function<void(const char*, bool, const std::string&)>& check);       // H-03
+void grammarChecks(const std::function<void(const char*, bool, const std::string&)>& check);
 double nameClassify(const std::vector<std::vector<std::string>>& names);                           // H-04's second pass
 int runTongues(int argc, char** argv);
 int runGrammar(int argc, char** argv);
@@ -646,7 +646,7 @@ private:
 template <class F>
 static int forTypeBodies(int type, int maxBodies, bool preferMoon, F fn) {
     int found = 0;
-    if (type == PT_DARK_OCEAN) {   // D-04: the drifters' own kind: the drifters nearest home (no system holds one)
+    if (type == PT_DARK_OCEAN) {   // the drifters' own kind: the drifters nearest home (no system holds one)
         Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, false);
         std::vector<Star> near; driftersNear(home.pos, 4000, near);
         for (const Star& d0 : near) {
@@ -657,7 +657,7 @@ static int forTypeBodies(int type, int maxBodies, bool preferMoon, F fn) {
         }
         return found;
     }
-    const int stagePasses = KINDS[type].elsewhere ? 2 : 1;   // P-05: the real ones first (the wanderers), then the staged
+    const int stagePasses = KINDS[type].elsewhere ? 2 : 1;   // the real ones first (the wanderers), then the staged
     for (int stagePass = 0; stagePass < stagePasses && found < maxBodies; stagePass++)
     for (int pass = preferMoon ? 0 : 1; pass < 2 && found < maxBodies; pass++)
         for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return found < maxBodies; })) {

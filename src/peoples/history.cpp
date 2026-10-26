@@ -20,7 +20,7 @@ int History::eraAt(int year) const {
     return eras.empty() ? 0 : (int)eras.size() - 1;
 }
 int History::harvestAt(int year) const { const int i = year - yearsFrom; return i >= 0 && i < (int)harvest.size() ? harvest[i] : 2; }
-double History::sunlightAt(int year) const {   // D-05
+double History::sunlightAt(int year) const {
     if (sunlight.empty()) return 1;
     const int i = clampi(year - yearsFrom, 0, (int)sunlight.size() - 1);
     return year < yearsFrom ? 1.0 : sunlight[i];
@@ -36,7 +36,7 @@ std::vector<int> History::eventsOf(int person) const {
 std::shared_ptr<History> buildHistory(const StarSystem& sys0, const Body& b0, const BodyGen& gSeason, int people) {
     const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
     const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
-    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // the world's, not its season's (P-04: in its people's time)
     const double t0 = nowMs();
     auto H = std::make_shared<History>();
     const int n = std::max(1, peoplesOf(g));
@@ -88,7 +88,7 @@ std::shared_ptr<const History> historyOf(const StarSystem& sys, const Body& b, c
     return h;
 }
 
-std::shared_ptr<const History> historyOfWorld(const BodyGen& gSeason, int people) {   // T-02
+std::shared_ptr<const History> historyOfWorld(const BodyGen& gSeason, int people) {
     BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     const std::pair<uint64_t, int> key(g.seed, people > 0 ? 1 : 0);
     {

@@ -258,7 +258,7 @@ int vgCheck(const VgGrammar& G, const VgRecord& R, int age, int counts[VC_COUNT]
         }
         if ((p.w == "a" || p.w == "an" || p.w == "one") && G.plurals.count(x.w)) fail(VC_PLURAL, "'" + p.w + " " + x.w + "'");
         if ((p.w == "a" || p.w == "an" || p.w == "the") && (x.w == "a" || x.w == "an" || x.w == "the") && p.raw != x.raw) fail(VC_ARTICLE, "'" + p.w + " " + x.w + "'");   // H-04's second pass: "a the rains" (a list that carries its article)
-        const bool regnal = p.w == "i" && k >= 2 && !p.afterPunct && words[k - 2].cap;   // H-04: "King Nilzhos I is dead" (a name before the numeral)
+        const bool regnal = p.w == "i" && k >= 2 && !p.afterPunct && words[k - 2].cap;   // "King Nilzhos I is dead" (a name before the numeral)
         // H-04's second pass: the pronoun is not the verb's subject after a preposition or in a wish ("to you is", "as if it were")
         static const std::set<std::string> NOT_SUBJECT = {"if", "as", "to", "for", "with", "of", "at", "by", "from", "about", "than", "like", "on", "into", "without"};
         const bool notSubject = k >= 2 && !p.afterPunct && NOT_SUBJECT.count(words[k - 2].w) > 0;

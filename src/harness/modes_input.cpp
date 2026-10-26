@@ -39,7 +39,7 @@ int runFuzz(int frames) {
 }
 
 // M6-02: the key map file and the gamepad mapping, checked without a window
-// R-418: the controller: the bindings (a known device's standard layout, a raw device's guess, the capture, the file a device), then the
+// the controller: the bindings (a known device's standard layout, a raw device's guess, the capture, the file a device), then the
 // game driven by a controller alone: the title, the cabin (walking, using, the command menu and its pages, the keys page, the aim's digits),
 // the guide's text entry by the keyboard, the controller page (a button set from the next press, the reset), a landing, on foot (a jump,
 // a sprint, the menu's buggy) and the buggy (in, the throttle). PNGs of each overlay in shots/tests/pad_*.png
@@ -345,7 +345,7 @@ int testInput() {
         // N5-05: the key bindings screen: open it from the settings, rebind FORWARD to Z, reset it, save
         {
             TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys2.txt"; game.guidePath = "shots/tests/test_guide.txt";
-            game.padPath = "shots/tests/test_pad2.txt";   // R-418: the CONTROLS screen saves the controller's file too
+            game.padPath = "shots/tests/test_pad2.txt";   // the CONTROLS screen saves the controller's file too
             KeyMap km2; game.keymap = &km2;
             Input gi;
             auto press = [&](int key) { pressKey(game, gi, key); };
@@ -370,6 +370,6 @@ int testInput() {
         if (!good) fails++;
         printf("key names: %s %s %s %s\n", keyName(keyFromName("lshift")).c_str(), keyName(keyFromName("F12")).c_str(), keyName(keyFromName("space")).c_str(), keyName(KEY_PAGE_UP).c_str());
     }
-    fails += testPad();   // R-418
+    fails += testPad();
     return fails;
 }

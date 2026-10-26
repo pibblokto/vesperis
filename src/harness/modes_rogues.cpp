@@ -2,7 +2,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// D-02: `rogues heard`: what the radar hears of the drifters from home, the three C-series worlds and the six age worlds at each step of the
+// `rogues heard`: what the radar hears of the drifters from home, the three C-series worlds and the six age worlds at each step of the
 // gain (none at x1; the gain each needs, its distance, what it is), then the radar in the game: at home the dial up, the nearest drifter heard
 // locked at its own step (shots/tests/rogue_radar_lock.png, the readout's status and the log), Enter flies there (rogue_heard_arrival.png:
 // the HUD's brackets on it), the black disc from 60 radii (rogue_disc_60.png) and from orbit (rogue_disc_orbit.png; a brown dwarf's largest
@@ -38,7 +38,7 @@ static int runRoguesHeard() {
     TestGame game; game.savePrefix = "shots/tests/rogues_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/rogues_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings(); applyTestScale(game); game.setState(GameState::SPACE);
-    for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // E-02: every map first (F-07)
+    for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // every map first
     Input in;
     auto run = [&](double secs) { runFramesAtLeastOne(game, in, secs); };
     auto press = [&](int key) { pressKey(game, in, key); };
@@ -138,7 +138,7 @@ static int runRoguesHeard() {
 // field's density, sampled); the kinds' shares within three times as far against the dark's table; then the nearest landable one visited as
 // the game reaches it (the console's way until the radar finds them, D-02): the arrival (shots/tests/rogue_arrival.png), the parked view
 // (rogue_parked.png) and a landing (rogue_landing.png: the night's light alone)
-// D-03: `rogues voices`: a voice for every drifter. The drifters the radar hears at x32 from home, the three C-series worlds and the six age
+// `rogues voices`: a voice for every drifter. The drifters the radar hears at x32 from home, the three C-series worlds and the six age
 // worlds, each's voice in words and numbers; twelve WAVs (shots/tests/rogue_voice_*.wav): eight voices whole as at the drifter (the first two
 // brown dwarfs and the first two giants heard, the nearest young, metal, rocky and icy worlds of the field), the first heard from home as the
 // radar hears it at its step (worn, locked), a drifter under a people's voice at x18, the cabin's radio at a drifter (the ship's hum beside it)
@@ -223,7 +223,7 @@ static int runRoguesVoices() {
             printf("  %-34s %4.0f s, rms %.3f, peak %.3f, %d clipped: a beacon under %s's voice, slowed and darkened (D-05's slot)\n", "rogue_beacon_slot.wav", 40.0, r.rms, r.peak, r.clip, KINDS[g.sig.bodyType].name);
         }
     }
-    // D-05: the test drifters' beacons as the radar plays them locked (a radio people's last broadcast under its drifter's voice)
+    // the test drifters' beacons as the radar plays them locked (a radio people's last broadcast under its drifter's voice)
     for (const AgeWorld& aw : TEST_DRIFTERS) {
         Star d; if (!placeInSector(aw.sx, aw.sy, aw.sz, d, true)) continue;
         BeaconInfo bi; std::vector<int16_t> pcm; RxOpts o; o.clarity = 0.85;
@@ -339,9 +339,9 @@ static int runRoguesDark() {
 }
 
 int runRogues(int argc, char** argv) {
-    if (argc > 2 && std::string(argv[2]) == "heard") return runRoguesHeard();   // D-02
-    if (argc > 2 && std::string(argv[2]) == "dark") return runRoguesDark();     // D-04
-    if (argc > 2 && std::string(argv[2]) == "voices") return runRoguesVoices();   // D-03
+    if (argc > 2 && std::string(argv[2]) == "heard") return runRoguesHeard();
+    if (argc > 2 && std::string(argv[2]) == "dark") return runRoguesDark();
+    if (argc > 2 && std::string(argv[2]) == "voices") return runRoguesVoices();
     const double R = argc > 2 ? std::max(10.0, atof(argv[2])) : 1000.0;
     Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, true);
     std::vector<Star> near;

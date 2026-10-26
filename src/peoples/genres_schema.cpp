@@ -72,7 +72,7 @@ void recordWorldFacts(const StarSystem& sys0, const Body& b0, const BodyGen& g, 
     set(F_OTHERFATE, L.other.empty() ? std::string() : std::to_string(L.otherFate));
     flag(F_DESERT, L.desert);
     flag(F_TILTED, std::fabs(b.axialTilt) / DEG_ > 8);
-    const double tempC = (b.thenTempK > 0 ? b.thenTempK : b.tempK) + g.tempBias - 273.15;   // P-04: a dead world's in their time
+    const double tempC = (b.thenTempK > 0 ? b.thenTempK : b.tempK) + g.tempBias - 273.15;   // a dead world's in their time
     flag(F_COLD, tempC < 5);
     set(F_MOONS, std::to_string(L.moons));
     flag(F_RINGS, b.rings);
@@ -86,7 +86,7 @@ void recordWorldFacts(const StarSystem& sys0, const Body& b0, const BodyGen& g, 
     flag(F_HIGHMOUNTAINS, g.mountainAmp > 2000);
     int cls = sys.star.cls;   // the sun: the class of the star the world circles (a companion's world has the companion's)
     if (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION) cls = sys.bodies[b.parent].starClass;
-    if (cls < 0 || cls >= STAR_DRAWN_COUNT) cls = 0;   // D-01: a drifter's world has no class of sun (D-05 reads the star it left)
+    if (cls < 0 || cls >= STAR_DRAWN_COUNT) cls = 0;   // a drifter's world has no class of sun (D-05 reads the star it left)
     set(F_SUNCLASS, std::to_string(cls));
     const int f1 = g.floraFamily >= 0 && g.floraFamily < 10 ? g.floraFamily : 0;
     const int f2 = g.floraFamily2 >= 0 && g.floraFamily2 < 10 && g.floraFamily2 != f1 ? g.floraFamily2 : -1;

@@ -14,7 +14,7 @@
 #include <algorithm>
 
 namespace {
-// X-04: the flashes over a stretch of the clock (each slot's flash, its strength looked at past its start)
+// the flashes over a stretch of the clock (each slot's flash, its strength looked at past its start)
 int flashCount(const GiantAtmosphere& a, const ProbeFlight& f, uint64_t seed, double c0, double c1) {
     int n = 0;
     for (int slot = (int)std::floor(c0 / FLASH_SLOT); slot * FLASH_SLOT < c1; slot++) {
@@ -193,7 +193,7 @@ void Game::probeKeep(int cause) {
     probe.lastFrame = rgbBuf;
     makeDir(shotsDir);
     const std::string fn = fmt("%s/probe_%d.png", shotsDir.c_str(), r.id);
-    writePNGAsync(fn.c_str(), rgbBuf.data(), FBW, FBH);   // F-02: on the writer's thread (the gallery flushes before it lists)
+    writePNGAsync(fn.c_str(), rgbBuf.data(), FBW, FBH);   // on the writer's thread (the gallery flushes before it lists)
     if (FILE* f = fopen((fn.substr(0, fn.size() - 4) + ".txt").c_str(), "w")) { fprintf(f, "%s - %s\n", recordTitle(r).c_str(), recordLine(r).c_str()); fclose(f); }
     const int at = guide.probeIndexBySeed(r.seed);
     if (at >= 0) guide.probes[at] = r; else guide.probes.push_back(r);

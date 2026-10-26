@@ -8,9 +8,9 @@
 #include <algorithm>
 
 // C-04/H-05: the music's player (`musicTrigger`, `musicVoice`, `musicSample`) is game/audio_music.cpp
-// C-07: the radar's receiver (`radarSample`, its channels and machines) is game/audio_radar.cpp
+// the radar's receiver (`radarSample`, its channels and machines) is game/audio_radar.cpp
 
-// C-05: one sample of the speech: the segment due and its sound's targets (the formants, the voicing, the breath, the noise band)
+// one sample of the speech: the segment due and its sound's targets (the formants, the voicing, the breath, the noise band)
 // smoothed into the running values; the glottal source (jitter and shimmer by the roughness, a tremor, a second tone under);
 // four formants in cascade and a nasal resonance beside; the noise through its band. A stop's closure is silence (a voice bar
 // when voiced), its burst noise decaying with aspiration after, a click a short sharp burst
@@ -231,7 +231,7 @@ double AudioSynth::groundSample(double dt, AudioState& st) {
 
 void AudioSynth::coefs(double dt) {
     co.kF = 1 - std::exp(-dt / 0.02); co.kUp = 1 - std::exp(-dt / 0.006); co.kDown = 1 - std::exp(-dt / 0.012); co.kN = 1 - std::exp(-dt / 0.003);
-    co.kDuneHz = 1 - std::exp(-dt / 0.5); co.kDuneHiss = 1 - std::exp(-TAU_ * 600 * dt); co.kIceFar = 1 - std::exp(-TAU_ * 1500 * dt); co.kIceThud = 1 - std::exp(-TAU_ * 150 * dt); co.kQuake = 1 - std::exp(-TAU_ * 80 * dt);   // Q-03
+    co.kDuneHz = 1 - std::exp(-dt / 0.5); co.kDuneHiss = 1 - std::exp(-TAU_ * 600 * dt); co.kIceFar = 1 - std::exp(-TAU_ * 1500 * dt); co.kIceThud = 1 - std::exp(-TAU_ * 150 * dt); co.kQuake = 1 - std::exp(-TAU_ * 80 * dt);
     static const double BW[4] = {80, 100, 150, 250};
     for (int i = 0; i < 4; i++) co.rS[i] = std::exp(-PI_ * BW[i] * dt);
     co.rNasal = std::exp(-PI_ * 120 * dt);
@@ -251,26 +251,26 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
     if (st.step > 0) { stepT = 0; stepKind = st.step; stepGainCur = st.stepGain; st.step = 0; }
     if (st.deck != 0) { if (st.deck > 0) deckBuf = deckRender(st.deck, st.deckSeed, sr); else deckBuf.clear(); deckI = 0; st.deck = 0; }   // R-420: the cassette deck's sequence (-1 hushes it)
     const double kDuck = 1 - std::exp(-dt / 0.5);
-    // C-04 the music: a start from the top; a null piece stops every voice at once
+    // the music: a start from the top; a null piece stops every voice at once
     if (st.pieceStart) {
         st.pieceStart = false; mPiece = st.piece; mNext = 0; mBeat = 0; mT = 0; for (MVoice& v : mv) v = MVoice(); mOn = mPiece && st.tradition && !mPiece->notes.empty(); st.pieceDone = !mOn;
-        if (mOn && st.pieceFrom > 0) {   // C-11: taken up again where it was held (the notes begun before it are not struck again)
+        if (mOn && st.pieceFrom > 0) {   // taken up again where it was held (the notes begun before it are not struck again)
             mBeat = st.pieceFrom; mT = st.pieceFrom * 60.0 / std::max(1.0, mPiece->bpm); mLimEnv = 0; mLimGain = 1;
             while (mNext < mPiece->notes.size() && mPiece->notes[mNext].t < mBeat) mNext++;
         }
         st.pieceFrom = 0;
     }
     if (!st.piece || !st.tradition || st.piece != mPiece) { if (mOn || mPiece) { for (MVoice& v : mv) v = MVoice(); mOn = false; mPiece = nullptr; } }
-    // C-05 the voice: a start from the top; a null speech stops it at once, the resonators cleared
-    if (st.speechStart && st.radio) { rdCueT = 0; rdCuePh = 0; }   // C-07: the receiver's cue at a programme's start
+    // the voice: a start from the top; a null speech stops it at once, the resonators cleared
+    if (st.speechStart && st.radio) { rdCueT = 0; rdCuePh = 0; }   // the receiver's cue at a programme's start
     if (st.speechStart) {
         st.speechStart = false; spSpeech = st.speech; spNext = 0; spSeg = -1; spT = 0; spVoiceAmp = spBreathAmp = spNzAmp = spNasal = 0; spPh = spSubPh = 0; spJit = spShim = 1; spLpB = 0;
         for (int i = 0; i < 6; i++) spY1[i] = spY2[i] = 0;
         spOn = spSpeech && st.voice && !spSpeech->segs.empty(); st.speechDone = !spOn;
-        if (spOn && st.speechFrom > 0) spT = std::min(st.speechFrom, spSpeech->seconds);   // C-11: taken up again where it was held
+        if (spOn && st.speechFrom > 0) spT = std::min(st.speechFrom, spSpeech->seconds);   // taken up again where it was held
         st.speechFrom = 0;
     }
-    // C-11 the instrument played in the cabin: another instrument (or none) silences the last one's notes; the notes struck, the keys let go
+    // the instrument played in the cabin: another instrument (or none) silences the last one's notes; the notes struck, the keys let go
     if (st.instrument != ivTimbre) { for (MVoice& v : iv) v = MVoice(); ivTimbre = st.instrument; iLimEnv = 0; iLimGain = 1; }
     if (!st.instrumentHits.empty()) { for (const AudioState::InstrumentNote& h : st.instrumentHits) instrumentTrigger(h, dt); st.instrumentHits.clear(); }
     if (!st.instrumentUps.empty()) {
@@ -288,9 +288,9 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         rpmLvl += (st.engineRpm - rpmLvl) * k * 2;
         skidLvl += (st.skid - skidLvl) * k;
         rotorLvl += (st.rotor - rotorLvl) * k; rotorPitchLvl += (st.rotorPitch - rotorPitchLvl) * k;
-        radarLvl += (st.radar - radarLvl) * k; radarSigLvl += (st.radarSignal - radarSigLvl) * k * 2;   // C-07
-        rdDriveLvl += (st.radarDrive - rdDriveLvl) * k * 2;   // C-15
-        rdGainLvl += (st.radarGainT - rdGainLvl) * k * 2; rdSkyLvl += (st.radarSky - rdSkyLvl) * k; rdWearLvl += (st.radarWear - rdWearLvl) * k;   // C-16
+        radarLvl += (st.radar - radarLvl) * k; radarSigLvl += (st.radarSignal - radarSigLvl) * k * 2;
+        rdDriveLvl += (st.radarDrive - rdDriveLvl) * k * 2;
+        rdGainLvl += (st.radarGainT - rdGainLvl) * k * 2; rdSkyLvl += (st.radarSky - rdSkyLvl) * k; rdWearLvl += (st.radarWear - rdWearLvl) * k;
         rdGhostLvl += (st.radarGhost - rdGhostLvl) * k * 3; rdSig2Lvl += (st.radarSignal2 - rdSig2Lvl) * k * 2; rdHetLvl += (st.radarHet - rdHetLvl) * k * 2; rdImLvl += (st.radarIntermod - rdImLvl) * k * 2;
         rdGhostWordLvl += ((st.radarGhostWord ? 1.0 : 0.0) - rdGhostWordLvl) * k * 6;
         if (st.thud > 0 && thudT < 0) { thudT = 0; thudAmp = st.thud; }
@@ -303,7 +303,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         breathLvl += (st.breath - breathLvl) * k;
         surfLvl += (st.surf - surfLvl) * k;
         birdLvl += (st.birds - birdLvl) * k;
-        duneLvl += (st.dunes - duneLvl) * k * 2; iceLvl += (st.ice - iceLvl) * k; quakeLvl += (st.quake - quakeLvl) * k * 4;   // Q-03
+        duneLvl += (st.dunes - duneLvl) * k * 2; iceLvl += (st.ice - iceLvl) * k; quakeLvl += (st.quake - quakeLvl) * k * 4;
         lfo += dt * 0.23;
         double s = 0;
         // hum: two low sines with slow beating
@@ -314,9 +314,9 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         lp1 += (n - lp1) * 0.08f;
         lp2 += (lp1 - lp2) * 0.08f;
         s += engLvl * (0.5 * lp2 + 0.12 * std::sin(phase1 * 6.2831853 * 3.0 * (1 + engLvl)));
-        if (engLvl > 0.05 && rpmLvl > 0.001) s += engLvl * 0.08 * std::sin(phase1 * 6.2831853 * (9.0 + 12.0 * rpmLvl));   // N4-04 the gear's pitch on top of the drive
-        if (skidLvl > 0.02) { float n4 = noise(); lpK += (n4 - lpK) * 0.25f; s += skidLvl * 0.16 * lpK; }   // N4-04 tyres sliding
-        if (rotorLvl > 0.01) {   // R-403 the drone's pods: a blade-pass whine (a fundamental with two harmonics, beating between the four pods) over a low rush of air
+        if (engLvl > 0.05 && rpmLvl > 0.001) s += engLvl * 0.08 * std::sin(phase1 * 6.2831853 * (9.0 + 12.0 * rpmLvl));   // the gear's pitch on top of the drive
+        if (skidLvl > 0.02) { float n4 = noise(); lpK += (n4 - lpK) * 0.25f; s += skidLvl * 0.16 * lpK; }   // tyres sliding
+        if (rotorLvl > 0.01) {   // the drone's pods: a blade-pass whine (a fundamental with two harmonics, beating between the four pods) over a low rush of air
             rotorPh += dt * (70.0 + 90.0 * rotorPitchLvl);
             double w = std::sin(rotorPh * 6.2831853) + 0.5 * std::sin(rotorPh * 6.2831853 * 2.01) + 0.25 * std::sin(rotorPh * 6.2831853 * 3.02);
             double beat = 0.8 + 0.2 * std::sin(lfo * 6.2831853 * 6.1) * std::sin(lfo * 6.2831853 * 4.3);
@@ -329,7 +329,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         double gust = 0.6 + 0.4 * std::sin(lfo * 6.28 * (0.5 + 1.2 * st.windTone)) * std::sin(lfo * 6.28 * 0.37);
         s += windLvl * 0.9 * lp3 * gust;
         if (st.windTone > 0.85) s += windLvl * 0.06 * std::sin(phase1 * 6.2831853 * 14.0 * (1 + 0.3 * std::sin(lfo * 6.28 * 0.9)));   // the whistle
-        if (callT >= 0) {   // N3-05 creature calls: chirp (a rising sine), low (a slow growl with vibrato), hoot (two soft notes), click (four noise ticks)
+        if (callT >= 0) {   // creature calls: chirp (a rising sine), low (a slow growl with vibrato), hoot (two soft notes), click (four noise ticks)
             double p = callPitchCur, v = 0;
             switch (callKind) {
                 case 1: { double dur = 0.18; if (callT < dur) v = 0.14 * std::sin(callT / dur * 3.14159) * std::sin(6.2831853 * callT * (1800 + 1400 * callT / dur) * p); else callT = -2; break; }
@@ -339,18 +339,18 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
             }
             if (callT >= 0) { s += v; callT += dt; } else callT = -1;
         }
-        if (hoofLvl > 0.01) {   // N3-05 hoof and paw steps: soft thumps at a pace that quickens with the level
+        if (hoofLvl > 0.01) {   // hoof and paw steps: soft thumps at a pace that quickens with the level
             hoofT += dt;
             double period = 0.42 / (0.5 + hoofLvl);
             if (hoofT > period) hoofT -= period;
             if (hoofT < 0.06) s += hoofLvl * 0.14 * std::exp(-hoofT * 45) * std::sin(6.2831853 * hoofT * 70);
         }
-        if (insectLvl > 0.01) {   // N3-05 insects: a thin buzz, amplitude-modulated
+        if (insectLvl > 0.01) {   // insects: a thin buzz, amplitude-modulated
             float n3 = noise();
             lpI += (n3 - lpI) * 0.6f; lpI2 += (lpI - lpI2) * 0.6f;
             s += insectLvl * 0.035 * (lpI - lpI2) * (0.6 + 0.4 * std::sin(6.2831853 * 48 * lfo));
         }
-        if (leavesLvl > 0.001) {   // N2-06 leaves: a brighter, band-passed hiss that swells with the gusts
+        if (leavesLvl > 0.001) {   // leaves: a brighter, band-passed hiss that swells with the gusts
             float n2 = noise();
             lpL += (n2 - lpL) * 0.35f;
             hpL += (lpL - hpL) * 0.04f;
@@ -388,13 +388,13 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         s += lavaLvl * 0.25 * lp2 * (0.5 + 0.5 * std::sin(lfo * 6.28 * 2.3));
         // breathing: slow noise pulses, faster when more winded
         if (breathLvl > 0.01) { breathPh += dt * (0.7 + 1.1 * breathLvl); double env = std::pow(std::max(0.0, std::sin(breathPh * 6.2831853)), 3.0); s += breathLvl * 0.22 * env * lp3; }
-        if (duneLvl > 0.002 || iceLvl > 0.002 || iceT >= 0 || quakeLvl > 0.002 || qkT >= 0 || st.quakeHit > 0) s += groundSample(dt, st);   // Q-03 the sounds of the ground
-        {   // C-04 the music, C-05 the voice; C-07: through the radar's receiver when the radar owns them: a band of 250 Hz to 2.6 kHz,
+        if (duneLvl > 0.002 || iceLvl > 0.002 || iceT >= 0 || quakeLvl > 0.002 || qkT >= 0 || st.quakeHit > 0) s += groundSample(dt, st);   // the sounds of the ground
+        {   // the music, C-05 the voice; C-07: through the radar's receiver when the radar owns them: a band of 250 Hz to 2.6 kHz,
             // a tape's wow (slight under a voice, heavy under a slowed piece), a slow fading, and only as much of it as the beam has
             double m = musicSample(dt, st) + speechSample(dt, st);
             rdContent = 0;
             if (st.radio) {   // and ghosted: a metallic ring under it, a slow fade, dropouts now and then; it joins the receiver's bed and echo below
-                // C-16: a far signal's content comes through narrower and drifting in pitch (`radarWear`); a phonograph's through its
+                // a far signal's content comes through narrower and drifting in pitch (`radarWear`); a phonograph's through its
                 // horn (a hump in the middle, the needle's edge, the turntable's wow); a synthetic voice with a ring under it and its
                 // samples held on a coarse clock; a word heard before, back out of the static, as from as far as anything is
                 const bool ghost = st.radarGhostWord;
@@ -412,7 +412,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
                 rdWow[rdWowI] = (float)x0;
                 rdWowT += dt;
                 double d = 0.04 + (slowed ? 0.028 * (1 + std::sin(6.2831853 * 0.35 * rdWowT)) : 0.0025 * (1 + std::sin(6.2831853 * 0.8 * rdWowT))) + 0.0015 * std::sin(6.2831853 * 7.3 * rdWowT);
-                d += wear * (0.022 * (1 + std::sin(TAU_ * 0.083 * rdWowT)) + 0.012 * (1 + std::sin(TAU_ * 0.027 * rdWowT + 2.0)));   // C-16: the pitch drifting
+                d += wear * (0.022 * (1 + std::sin(TAU_ * 0.083 * rdWowT)) + 0.012 * (1 + std::sin(TAU_ * 0.027 * rdWowT + 2.0)));   // the pitch drifting
                 if (horn) d += 0.0012 * (1 + std::sin(TAU_ * rdCh[0].v.turnHz * rdWowT));
                 auto tap = [&](double back) { double pos = (double)rdWowI - back * sr; while (pos < 0) pos += rdWow.size(); size_t i0 = (size_t)pos % rdWow.size(), i1 = (i0 + 1) % rdWow.size(); double fr = pos - std::floor(pos); return rdWow[i0] * (1 - fr) + rdWow[i1] * fr; };
                 double x = tap(d);
@@ -423,16 +423,16 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
                 rdDropT -= dt;
                 if (rdDropT <= 0) { bool gap = 0.5 + 0.5 * noise() < 0.22; rdDrop = gap ? 0.1 : 1.0; rdDropT = gap ? 0.12 + 0.35 * (0.5 + 0.5 * noise()) : 1.5 + 4.0 * (0.5 + 0.5 * noise()); }
                 rdDropLvl += (rdDrop - rdDropLvl) * 0.003;
-                double through = ghost ? 0.5 * rdGhostWordLvl : radarSigLvl;   // C-16: a ghost's word at a level of its own, never dropped
+                double through = ghost ? 0.5 * rdGhostWordLvl : radarSigLvl;   // a ghost's word at a level of its own, never dropped
                 rdContent = x * (0.78 + 0.22 * std::sin(6.2831853 * rdRing)) * (whispers ? 2.2 : 1.6) * (1 + 0.6 * wear) * through * fade * (ghost ? 1.0 : rdDropLvl);
                 m = 0;
-            } else if (st.medium >= 0 || mdLvl > 1e-4) m = mediumSample(m, dt, st);   // H-05: a recording on the decoder through what it was made on
+            } else if (st.medium >= 0 || mdLvl > 1e-4) m = mediumSample(m, dt, st);   // a recording on the decoder through what it was made on
             s += m;
         }
-        if (ivTimbre) s += instrumentSample(dt, st);   // C-11: an instrument played in the cabin, dry
-        prLvl += (st.probe - prLvl) * k * 2;   // X-01 the probe's relay
+        if (ivTimbre) s += instrumentSample(dt, st);   // an instrument played in the cabin, dry
+        prLvl += (st.probe - prLvl) * k * 2;   // the probe's relay
         if (prLvl > 0.003 || st.probeThunder > 0) s += probeSample(dt, st);
-        if (radarLvl > 0.005) s += radarSample(dt, st);   // C-07 the receiver (the radar camera)
+        if (radarLvl > 0.005) s += radarSample(dt, st);   // the receiver (the radar camera)
         else { rdContent = 0; rdEvT = -1; rdEvNext = 6 + 8 * (0.5 + 0.5 * noise()); rdClock = 0; }
         // beep
         if (beepT >= 0) {
@@ -451,7 +451,7 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
                 thunderT += dt;
             } else thunderT = -1;
         }
-        duckLvl += (st.duck - duckLvl) * kDuck;   // R-420: everything under the tape's music, the deck over it
+        duckLvl += (st.duck - duckLvl) * kDuck;   // everything under the tape's music, the deck over it
         s *= duckLvl;
         if (deckI < deckBuf.size()) s += deckBuf[deckI++];
         out[i] = (float)(std::max(-1.0, std::min(1.0, s)) * st.master);

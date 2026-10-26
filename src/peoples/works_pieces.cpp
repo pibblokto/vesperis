@@ -27,7 +27,7 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
     r.sclass = SC_WORKS; r.plan = SP_LONE; r.lat = w.lat; r.lon = w.lon; r.heading = w.heading; r.size = w.radiusM;
     r.seed = w.seed; r.people = w.people; r.work = w.kind; r.buildAge = w.age; r.before = w.before;
     r.site.desert = kindHas(g.type, KT_DRY);
-    { const int now = nowKind(g); r.site.drift = kindHas(now, KT_DRY) ? 1 : (KINDS[now].cover == DC_FROZEN ? 2 : 0); }   // P-04: the present's drifts
+    { const int now = nowKind(g); r.site.drift = kindHas(now, KT_DRY) ? 1 : (KINDS[now].cover == DC_FROZEN ? 2 : 0); }   // the present's drifts
     r.site.wind = g.windAngle + (w.lat < 0 ? PI : 0) + (int)std::floor(std::fabs(w.lat) / (30 * DEG)) * 0.9;
     const double Rm = g.R * 1000.0;
     const Frame F(w.unit, Rm);
@@ -175,7 +175,7 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     break;
                 case HOLY_SPRING:
                     L.add(BK_CISTERN, 0, 0, H, 4, 4, 1.8);
-                    L.at(H, 0, 0, 0, -17, x, z);   // B-421: its doorway facing the spring, a way between (at 12 m the cistern stood a metre before it)
+                    L.at(H, 0, 0, 0, -17, x, z);   // its doorway facing the spring, a way between (at 12 m the cistern stood a metre before it)
                     if (a == AGE_PREHISTORIC) L.add(BK_STONE_CIRCLE, x, z, H, 6, 6, 1.8);
                     else L.add(BK_TEMPLE, x, z, H, 5, 7, 6);
                     break;
@@ -435,7 +435,7 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     for (int s = -1; s <= 1; s += 2) { L.at(H, 0, 0, s * 18, hill ? -40 : -30, x, z); L.add(BK_MAST, x, z, H, 1, 1, 22 + 6 * rng.uni()); }
                     L.at(H, 0, 0, 14, 16, x, z); L.add(BK_BUNKER, x, z, H, 4, 3, 3, 1);
                     break;
-                case 5:   // D-05: a medieval people that lost its sun's halls under the mountain: their mouth in the rock, a gatehouse before it, walls either side
+                case 5:   // a medieval people that lost its sun's halls under the mountain: their mouth in the rock, a gatehouse before it, walls either side
                     L.add(BK_PORTAL, 0, 0, H, 4.5, 1, 6);
                     L.at(H, 0, 0, 0, 16, x, z); L.add(BK_GATE, x, z, H, 3.5, 1.4, 6);
                     for (int s = -1; s <= 1; s += 2) { L.at(H, 0, 0, s * 11.5, 16, x, z); L.add(BK_WALL, x, z, H, 7, 1.0, 5); }
@@ -447,14 +447,14 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
             }
             break;
         }
-        case WO_DOME: {   // D-05: the dome over the warm ground (`width` its radius), its door toward its place
+        case WO_DOME: {   // the dome over the warm ground (`width` its radius), its door toward its place
             const double rad = w.width;
             if (w.style == 0) L.add(BK_ROTUNDA, 0, 0, H, rad, rad, 6 + rad * 0.25);   // a medieval people's vaulted hall over its spring
             else if (w.style == 3) L.add(BK_HABITAT, 0, 0, H, rad, rad, 8);
             else L.add(BK_DOME, 0, 0, H, rad, rad, 2.6, w.style == 1 ? 0 : (w.style == 2 ? 1 : 2));
             break;
         }
-        case WO_GREENHOUSE: {   // D-05: the glasshouses in rows (`width` and `length` the block's half extents), their long sides along `heading`
+        case WO_GREENHOUSE: {   // the glasshouses in rows (`width` and `length` the block's half extents), their long sides along `heading`
             const int st = clampi(w.style, 0, 2);
             const double hw = st == 0 ? 4.0 : (st == 1 ? 4.5 : 6.0), hd = st == 0 ? 12.0 : (st == 1 ? 18.0 : 20.0), h = st == 2 ? hw * 0.9 : hw;
             const int rows = std::max(1, (int)std::lround((2 * w.width + 3) / (2 * hw + 3))), per = std::max(1, (int)std::lround((2 * w.length + 4) / (2 * hd + 4)));
@@ -493,7 +493,7 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
             L.add(BK_LIGHTHOUSE, 0, 0, H, 3.4 + 1.2 * rng.uni(), 3.4, w.height, 0);
             break;
         }
-        case WO_FORT: {   // B-418: on its height, its gate toward the settlement it guarded (`heading`)
+        case WO_FORT: {   // on its height, its gate toward the settlement it guarded (`heading`)
             double x, z;
             switch (w.style) {
                 case 0: {   // a hill fort: its rings of bank inside their ditches (the edits) in stretches each on its own ground (the rampart follows
@@ -510,7 +510,7 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     }
                     const double inner = std::max(10.0, w.width - rings * 18);
                     const int nh = 3 + rng.irange(5);
-                    std::vector<std::pair<double, double>> huts;   // B-421: each clear of the others (two stood through each other, one's doorway in the other's wall)
+                    std::vector<std::pair<double, double>> huts;   // each clear of the others (two stood through each other, one's doorway in the other's wall)
                     for (int k = 0; k < nh; k++) {
                         const double a = rng.uni() * TAU, d = inner * 0.6 * std::sqrt(rng.uni()), hh = rng.uni() * TAU, hw = 2.6 + rng.uni(), hd = 2.6 + rng.uni();
                         const double hx = std::sin(a) * d, hz = std::cos(a) * d;

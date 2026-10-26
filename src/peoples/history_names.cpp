@@ -184,7 +184,7 @@ const char* ofKind(int kind) {
 }
 }
 
-std::string historyWorkName(const History& H, int work) { return workName(H, work); }   // H-04
+std::string historyWorkName(const History& H, int work) { return workName(H, work); }
 const char* historyEverydayKey(int kind, int thing) {   // H-04's second pass
     for (int k = 0; k < EVERYDAY_N; k++) if (EVERYDAY[k].kind == kind) return thing >= 0 && thing < EVERYDAY[k].n ? EVERYDAY[k].words[thing].key : EVERYDAY[k].words[0].key;
     switch (kind) {
@@ -369,7 +369,7 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
         case HE_OMEN: {
             static const char* const OM[10] = {"the comet returned", "the sun went dark at noon", "lights filled the night sky", "stars fell all night", "a new star shone for a season", "the moon turned red",
                                                "the wanderer grew brighter in the sky, year after year", "a new star grew brighter each year", "the stars bent round a place where nothing shone",
-                                               "the second sun drew further off each year"};   // D-05: the lost sun's four
+                                               "the second sun drew further off each year"};   // the lost sun's four
             s = OM[clampi(e.thing, 0, 9)] + (e.thing != 0 && e.thing != 4 && e.thing < 6 ? std::string(" over ") + L(e.place) : std::string());
             break;
         }
@@ -454,7 +454,7 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
                                                                           : (w == 8 ? std::string(WHI[w]) + (e.place2 >= 0 ? L(e.place2) : std::string("the warm ground")) : std::string(WHI[w])));
             break;
         }
-        case HE_SUN: {   // D-05: the sun going, as it was seen
+        case HE_SUN: {   // the sun going, as it was seen
             static const char* const SU[6] = {"the sun had grown smaller", "the year did not end: the summer did not come back", "the sea froze from the shore at {place}",
                                               "the air itself fell as snow", "the sun rose for the last time", "the stars stood in the sky at noon"};
             s = fillText(H, SU[clampi(e.thing, 0, 5)], e.place, e.year) + (e.thing == 4 && e.place >= 0 ? std::string(" over ") + L(e.place) : std::string());

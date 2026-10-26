@@ -53,7 +53,7 @@ void renderSurface(int onlyType) {
                 nb.update(sv.site.worldPos(t, 0, 0, 0));
                 Input in;
                 sv.update(0.016, in, t, false);
-                for (const Body& ob : sys.bodies)   // E-02: the sky's bodies' maps first (made on their thread at the binary's own pace, F-07)
+                for (const Body& ob : sys.bodies)   // the sky's bodies' maps first (made on their thread at the binary's own pace, F-07)
                     if (ob.type != PT_COMPANION) while (!sr.mapIfReady(ob)) std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 Framebuffer fb;
                 double t0 = nowSec();
@@ -192,9 +192,9 @@ void runConsistency() {
             worst = std::max(worst, std::max(dmg, std::max(dgs, dms)));
             if (hasOpaqueDeck(b.type) && b.type != PT_HYDROCARBON) { if (dms > THRESH) over++; }   // the globe is its cloud deck; the map (C) and the ground are the same ground (P-01: the steam world's too)
             else if (dmg > THRESH || dgs > THRESH || dms > THRESH) over++;
-            // N1-06: the landing map's relief class against the slope measured on the real terrain
+            // the landing map's relief class against the slope measured on the real terrain
             const char* cls = game.testReliefClass(lat, lon);
-            double slope = 0;   // O6-02: the regional grade of Game::siteSlope, on the ground's own caches
+            double slope = 0;   // the regional grade of Game::siteSlope, on the ground's own caches
             for (int k = 0; k < 4; k++) {
                 double dx = (k & 1) ? 0 : (k ? -1 : 1), dz = (k & 1) ? (k == 1 ? 1 : -1) : 0;
                 slope += std::fabs(sv.site.groundHeight(dx * 150, dz * 150) - sv.site.groundHeight(0, 0)) / 150.0 / 8;
@@ -334,7 +334,7 @@ int runBestiary() {
 
 // N3-04: encounter density over random felisian sites: the share with a herd within 200 m, per biome
 void runEncounters(int wanted) {
-    setDrainageEnabled(false);   // O6-03: hundreds of sites over the globe, a tile each; the herds do not need the rivers
+    setDrainageEnabled(false);   // hundreds of sites over the globe, a tile each; the herds do not need the rivers
     int total = 0, withLife = 0, cellHerds = 0, cellAnimals = 0;
     int perBiome[BIO_COUNT] = {0}, lifeBiome[BIO_COUNT] = {0};
     Rng r(0xE7C0);
@@ -354,7 +354,7 @@ void runEncounters(int wanted) {
                 for (const Critter& c : cr) if (c.x * c.x + c.z * c.z < 200.0 * 200.0) near = true;
                 total++; perBiome[tv.biome]++;
                 if (near) { withLife++; lifeBiome[tv.biome]++; }
-                {   // B-316: the habitat cells within 900 m of the landing
+                {   // the habitat cells within 900 m of the landing
                     int gLat0, gLon0; SurfaceView::lifeCellAt(site, 0, 0, gLat0, gLon0);
                     for (int dl = -2; dl <= 2; dl++)
                         for (int dn = -3; dn <= 3; dn++) {
@@ -393,7 +393,7 @@ void renderLandingMaps() {
             for (char& ch : tn) if (ch == ' ') ch = '_';
             std::string fn = "shots/tests/landmap_" + tn + ".png";
             writePNG(fn.c_str(), game.output(), FBW, FBH);
-            printf("landing map %-16s %s state=%d, darkest shadow on the map now %.2f\n", KINDS[b.type].name, b.name.c_str(), (int)game.state, game.testMapShadowMax());   // O0-04
+            printf("landing map %-16s %s state=%d, darkest shadow on the map now %.2f\n", KINDS[b.type].name, b.name.c_str(), (int)game.state, game.testMapShadowMax());
         }
     }
 }
@@ -417,7 +417,7 @@ static bool loadRaw(const char* path, std::vector<uint32_t>& px, int& w, int& h)
 // luminance between consecutive frames, per region (a box of 40 logical pixels round the sun, the sky, the ground),
 // and a heat map of where the picture moves (`shots/tests/stability_<scene>.png`, the last frame beside it). What
 // should move: water, leaves, weather, creatures, the granulation of the sun. What should not: the sun's glow.
-// B-313: `stability <scene> <metres per frame>` walks the camera forward instead: the far-ground band (rows 42-62%
+// `stability <scene> <metres per frame>` walks the camera forward instead: the far-ground band (rows 42-62%
 // of the frame, ground beyond a few tens of metres) reports the mean change and the share of its pixels that jump by
 // more than 40 levels in a frame, which is what a terrain ring popping cell by cell does and parallax does not; the
 // sheet is `stability_<scene>_walk.png`
@@ -438,7 +438,7 @@ int runStability(const char* want, double walk) {
         std::vector<double> heat((size_t)FBW * FBH, 0);
         std::vector<int> pops((size_t)FBW * FBH, 0);
         double sunSx = -1, sunSy = -1;
-        long flips = 0;   // B-319: pixels that swap between the sky bank and anything else from one frame to the next (a far tree flickering against the sky)
+        long flips = 0;   // pixels that swap between the sky bank and anything else from one frame to the next (a far tree flickering against the sky)
         std::vector<uint8_t> banks((size_t)FBW * FBH), prevBanks;
         auto lum = [](uint32_t c) { return 0.3 * (c & 255) + 0.59 * ((c >> 8) & 255) + 0.11 * ((c >> 16) & 255); };
         for (int k = 0; k < N; k++) {
@@ -757,7 +757,7 @@ int runScene(int argc, char** argv) {
                 else printf("  fountain staged: no lava 160-420 m ahead\n");
                 if (sc.type == PT_TECTONIC) sv.quake = 0.8;
             }
-            if (sc.type == PT_STEAM) {   // P-01: the clock moved to a moment the nearest vent ahead bursts (`steamVents` on their sinter)
+            if (sc.type == PT_STEAM) {   // the clock moved to a moment the nearest vent ahead bursts (`steamVents` on their sinter)
                 uint64_t best = 0; double bd = 1e18;
                 std::vector<GeyserVent> vents; steamVents(sv.site.gen, sv.site.unitAt(sv.player.x, sv.player.z), vents);
                 for (const GeyserVent& v : vents) {
@@ -785,7 +785,7 @@ int runScene(int argc, char** argv) {
             }
             if (sc.type == PT_DESERT) { SurfaceView::DustDevil d; d.x = sv.player.x + fx * 130 - fz * 20; d.z = sv.player.z + fz * 130 + fx * 20; d.height = 70; d.radius = 12; d.age = 40; d.life = 300; d.phase = 1.0; sv.devils.push_back(d); }
         }
-        // Q-03: the sounds of the ground: the ice's and the quake's cue before the frame, the dunes' walk after it (their frame from the crest)
+        // the sounds of the ground: the ice's and the quake's cue before the frame, the dunes' walk after it (their frame from the crest)
         SceneSound snd; const bool heard = sc.wantMat <= SCENE_SINGING_DUNES && sc.wantMat >= SCENE_QUAKES;
         double slopeDeg = 0;
         if (heard) {
@@ -805,7 +805,7 @@ int runScene(int argc, char** argv) {
         Framebuffer fb;
         sv.render(fb, t, nb.stars, sr, 1.0);
         fb.mush(2);
-        if (sv.inBuggy && !sv.chaseCam) sv.cameraFeed(fb, t);   // R-204: the nose camera's picture
+        if (sv.inBuggy && !sv.chaseCam) sv.cameraFeed(fb, t);   // the nose camera's picture
         if (heard) {
             const double atFrame = sv.quake;
             sceneSoundRun(sv, t, sc.wantMat == SCENE_SINGING_DUNES ? 7.5 : (sc.wantMat == SCENE_SINGING_ICE ? 17.0 : 10.5), sc.wantMat == SCENE_SINGING_DUNES ? 2.5 : 0.0, snd);
@@ -822,22 +822,22 @@ int runScene(int argc, char** argv) {
         std::string fn = std::string("shots/tests/scene_") + sc.name + ".png";
         saveFB(fb, fn.c_str());
         printf("%s -> %s (sun alt %.1f)\n", sc.name, fn.c_str(), sv.env.sun.altitude / DEG);
-        if (sc.wantMat <= SCENE_ROGUE_LAMP && sc.wantMat >= SCENE_DARK_OCEAN) {   // D-04: the place, its warmth and air, and the lamp's light on the ground ahead
+        if (sc.wantMat <= SCENE_ROGUE_LAMP && sc.wantMat >= SCENE_DARK_OCEAN) {   // the place, its warmth and air, and the lamp's light on the ground ahead
             const Body& db = sys.bodies[sv.site.body];
             const BodyGen& dg = sv.site.gen;
             printf("  %s (%s, %.0f km, own heat %.0f K): %s; %+.0f C, %.2g atm, the lamp %s (its light 8 m ahead on the ground %.2f)\n", db.name.c_str(), KINDS[db.type].name, db.radiusKm, db.heatK,
                    traitList(dg).c_str(), sv.env.temperatureC, sv.env.pressureAtm, sv.lamp ? "on" : "off",
                    sv.lampAt(Vec3(sv.player.x + 8 * std::sin(sv.player.yaw), sv.site.groundHeight(sv.player.x + 8 * std::sin(sv.player.yaw), sv.player.z + 8 * std::cos(sv.player.yaw)), sv.player.z + 8 * std::cos(sv.player.yaw))));
         }
-        if (sc.wantMat == SCENE_ROGUE_LAMP) {   // D-04: the same without the lamp
+        if (sc.wantMat == SCENE_ROGUE_LAMP) {   // the same without the lamp
             sv.lamp = false;
             Framebuffer fbo; sv.render(fbo, t, nb.stars, sr, 1.0); fbo.mush(2);
             const std::string fo = std::string("shots/tests/scene_") + sc.name + "_off.png";
             saveFB(fbo, fo.c_str());
             printf("  the lamp off -> %s\n", fo.c_str());
         }
-        if (sc.wantMat <= SCENE_FRONT_FAR && sc.wantMat >= SCENE_FRONT_BEHIND) printf("  front: %s\n", surfaceFrontInfo(sv).c_str());   // W-03
-        if (sc.wantMat == SCENE_METEOR_SHOWER) {   // W-04: twenty seconds of the shower in one picture (each pixel its brightest), the streaks fanning from the radiant
+        if (sc.wantMat <= SCENE_FRONT_FAR && sc.wantMat >= SCENE_FRONT_BEHIND) printf("  front: %s\n", surfaceFrontInfo(sv).c_str());
+        if (sc.wantMat == SCENE_METEOR_SHOWER) {   // twenty seconds of the shower in one picture (each pixel its brightest), the streaks fanning from the radiant
             std::vector<uint32_t> acc(FBW * FBH, 0xFF000000u), one(FBW * FBH);
             int streaks = 0;
             for (int k = 0; k < 200; k++) {
@@ -856,20 +856,20 @@ int runScene(int argc, char** argv) {
             writePNG(fn4.c_str(), acc.data(), FBW, FBH);
             printf("  twenty seconds (%d streak-frames alight in the sky) -> %s\n", streaks, fn4.c_str());
         }
-        if (sc.wantMat <= SCENE_METEOR_SHOWER && sc.wantMat >= SCENE_MOONLIT)   // W-04: the night's lights
+        if (sc.wantMat <= SCENE_METEOR_SHOWER && sc.wantMat >= SCENE_MOONLIT)   // the night's lights
             printf("  night: the moonlight %.2f from %s at %.0f deg (sun %.1f deg), the zodiacal dust %.2f, %zu shower%s (activity %.2f)\n", sv.env.moonLight, sv.env.moonBody >= 0 ? sys.bodies[sv.env.moonBody].name.c_str() : "none",
                    std::asin(clampd(sv.env.moonDir.y, -1, 1)) / DEG, sv.env.sun.altitude / DEG, sv.zodiDust, sv.showers.size(), sv.showers.size() == 1 ? "" : "s", sv.showers.empty() ? 0.0 : showerActivity(sv.showers[0], t));
-        if (sc.wantMat <= SCENE_AURORA && sc.wantMat >= SCENE_AURORA_CURTAIN)   // B-403: the aurora's numbers
+        if (sc.wantMat <= SCENE_AURORA && sc.wantMat >= SCENE_AURORA_CURTAIN)   // the aurora's numbers
             printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), field %.2f (%s), storm %.2f, R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora, STAR_CLASSES[sys.star.cls].name, sv.env.latDeg,
                    SurfaceView::auroraOvalLat(sys.bodies[sv.site.body]), sv.lastAuroraP0, magneticField(sys.bodies[sv.site.body]), MAGNETIC_CLASS_NAMES[magneticClass(magneticField(sys.bodies[sv.site.body]))], sv.env.auroraStorm,
                    sv.site.R / 1000.0, sv.env.skyBrightness, sv.env.cloudCover, sv.flocks.size());
-        if (sc.wantMat == SCENE_TOWN || sc.wantMat == SCENE_SHARD || sc.wantMat == SCENE_HARBOUR || sc.wantMat == SCENE_TERRACES || sc.wantMat == SCENE_ROAD || sc.wantMat == SCENE_GRAVES || sc.wantMat == SCENE_SECOND_PEOPLE || (sc.wantMat <= SCENE_AGE_PREHISTORIC && sc.wantMat >= SCENE_AGE_FAR_FUTURE))   // A-03: the ages' scenes too; C-01; C-03: the shards drawn and the one within reach; C-08; C-09; C-12: the grave within reach
+        if (sc.wantMat == SCENE_TOWN || sc.wantMat == SCENE_SHARD || sc.wantMat == SCENE_HARBOUR || sc.wantMat == SCENE_TERRACES || sc.wantMat == SCENE_ROAD || sc.wantMat == SCENE_GRAVES || sc.wantMat == SCENE_SECOND_PEOPLE || (sc.wantMat <= SCENE_AGE_PREHISTORIC && sc.wantMat >= SCENE_AGE_FAR_FUTURE))   // the ages' scenes too; C-01; C-03: the shards drawn and the one within reach; C-08; C-09; C-12: the grave within reach
             printf("  ruins: %d pieces drawn in %.2f ms, %d shards drawn%s%s\n", sv.lastRuinElems, sv.lastRuinMs, sv.lastShardsDrawn,
                    sv.nearShard.index >= 0 ? fmt(", shard %d within reach (%s, %.1f m)", sv.nearShard.index, buildingPlaceName(sv.nearShard.place), sv.nearShard.dist).c_str() : "",
                    sv.nearGrave.k >= 0 ? fmt(", grave %d within reach (%s, %.1f m)", sv.nearGrave.k, sv.nearGrave.line.c_str(), sv.nearGrave.dist).c_str() : "");
-        if (sc.wantMat == SCENE_HERD || sc.wantMat == SCENE_HERD_NEAR || sc.wantMat == SCENE_HERD_FAR || sc.wantMat == SCENE_CREATURES)   // N3: the herd's states and the cost of life
+        if (sc.wantMat == SCENE_HERD || sc.wantMat == SCENE_HERD_NEAR || sc.wantMat == SCENE_HERD_FAR || sc.wantMat == SCENE_CREATURES)   // the herd's states and the cost of life
             printf("  herd: %s; life update %.2f ms, draw %.2f ms\n", sv.testHerdStates().c_str(), sv.lastLifeMs[0], sv.lastLifeMs[1]);
-        if (sc.wantMat == SCENE_FOREST || sc.wantMat <= SCENE_BIOME) {   // N2: what the vegetation did
+        if (sc.wantMat == SCENE_FOREST || sc.wantMat <= SCENE_BIOME) {   // what the vegetation did
             const TerrainVertex& tvp = sv.site.lod0.at((int)std::floor(sv.player.x / 16), (int)std::floor(sv.player.z / 16));
             double cov = sv.testCanopyCoverage(200);
             printf("  biome %s, veg %.2f; trees drawn %d (near %d, mid %d, far %d), flora points %d; canopy coverage of the forest ground within 200 m: %.0f%%%s\n", BIOME_NAMES[tvp.biome], tvp.veg,
@@ -879,7 +879,7 @@ int runScene(int argc, char** argv) {
                    sv.seasonPhaseLocal(), sv.env.fogDistance, sv.env.windKnots, fb.pal[14 * 3], fb.pal[14 * 3 + 1], fb.pal[14 * 3 + 2], fb.pal[34 * 3], fb.pal[34 * 3 + 1], fb.pal[34 * 3 + 2],
                    bankOf(fb.idx[(FBH * 3 / 5) * FBW + FBW / 2]), shadeOf(fb.idx[(FBH * 3 / 5) * FBW + FBW / 2]));
         }
-        {   // N1: what the lower half is drawn with (bank histogram, mean shade, the majority bank's ramp stops)
+        {   // what the lower half is drawn with (bank histogram, mean shade, the majority bank's ramp stops)
             int hist[BANKS] = {0}; double sum = 0; int n = 0;
             for (int y = FBH / 2; y < FBH; y++) for (int x = 0; x < FBW; x++) { hist[bankOf(fb.idx[y * FBW + x])]++; sum += shadeOf(fb.idx[y * FBW + x]); n++; }
             int mb = 0; for (int k = 1; k < BANKS; k++) if (hist[k] > hist[mb]) mb = k;
@@ -942,13 +942,13 @@ int runSpot(int argc, char** argv) {
     std::string kind = argv[9];
     double pitchDeg = argc > 10 ? atof(argv[10]) : 0, yawDeg = argc > 11 ? atof(argv[11]) : 0, alt = argc > 12 ? atof(argv[12]) : 1500;
     SpaceRenderer sr; StarNeighborhood nb; SurfaceView sv;
-    { const BodyGen g = BodyGen::make(sys.bodies[bi]); if (worldHadCivilisation(g)) worldWorksOf(g); }   // B-418: the plan and the works as the approach builds them
+    { const BodyGen g = BodyGen::make(sys.bodies[bi]); if (worldHadCivilisation(g)) worldWorksOf(g); }   // the plan and the works as the approach builds them
     sv.init(&sys, bi, lat, lon, t);
     nb.update(sv.site.worldPos(t, 0, 0, 0));
     const Body& b = sys.bodies[bi];
     printf("%s (%s) at %.3f %.3f, t %.1f, sea %s %.1f, ground %.1f water %.1f\n", b.name.c_str(), KINDS[b.type].name, lat / DEG, lon / DEG, t, sv.site.hasWater ? "yes" : "no", sv.site.seaLevel, sv.site.groundHeight(0, 0), sv.site.waterAt(0, 0));
     printf("  %zu works within %.0f km (the world's %s); the explorer at %.0f %.0f\n", sv.workNear.size(), SurfaceView::PLAN_NEAR_M / 1000, sv.worksHere ? "built" : "NOT BUILT", sv.player.x, sv.player.z);
-    for (const SurfaceView::WorkNear& wn : sv.workNear) if (std::hypot(wn.x - sv.player.x, wn.z - sv.player.z) - wn.radius < 4000 || getenv("SPOT_WORKS"))   // T-03, B-418: the works the view draws round the spot
+    for (const SurfaceView::WorkNear& wn : sv.workNear) if (std::hypot(wn.x - sv.player.x, wn.z - sv.player.z) - wn.radius < 4000 || getenv("SPOT_WORKS"))   // the works the view draws round the spot
         printf("  %s%s %.0f m off at %.0f %.0f (its reach %.0f, its ground %.0f m)\n", WORK_KIND_NAMES[wn.work->kind], wn.work->land ? "" : " (the world's)", std::hypot(wn.x - sv.player.x, wn.z - sv.player.z), wn.x, wn.z, wn.radius, wn.work->ground);
     if (kind == "swim") {
         // the nearest water at least 3 m deep within 3 km, the player afloat in it

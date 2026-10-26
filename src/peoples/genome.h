@@ -24,7 +24,7 @@ enum GenomeVar {
     GV_LAND, GV_ORIENT, GV_STREETS, GV_PUBLIC, GV_GROUPING, GV_EDGE, GV_LINKS,
     // meaning
     GV_FOCUS, GV_CENTRE, GV_MONUMENTS, GV_DEAD, GV_SAMENESS, GV_LASTING,
-    // R-412: the people's own within its age's ways, every one read through the age (the age speaks first: B-415). Its roofs: their pitch,
+    // the people's own within its age's ways, every one read through the age (the age speaks first: B-415). Its roofs: their pitch,
     // their eaves, what rises from them, their gables' ends, their colour
     GV_PITCH, GV_EAVES, GV_ROOFLINE, GV_GABLES, GV_ROOFING,
     // its walls: their colours from house to house, the windows' surrounds, what stands out from the fronts, the doorways, the corners
@@ -60,7 +60,6 @@ enum Focus { FO_SPIRE = 0, FO_DOME, FO_GATE, FO_TOWER, FO_COLOSSUS, FO_MAST, FO_
 enum Centre { CE_TEMPLE = 0, CE_PALACE, CE_ASSEMBLY, CE_MARKET, CE_TOMB, CE_MACHINE };
 enum Monuments { MN_STELAE = 0, MN_OBELISKS, MN_COLOSSI, MN_ARCHES, MN_PILLARS };
 enum Dead { DE_BARROWS = 0, DE_TOMBS, DE_CEMETERIES, DE_TOWERS, DE_NOTHING };
-// R-412
 enum Eaves { EV_FLUSH = 0, EV_OVERHANGING, EV_DEEP, EV_FLARED };                          // a flat roof's slab: flush, a lip, a deep slab, a cornice
 enum Roofline { RL_PLAIN = 0, RL_DORMERS, RL_GABLETS, RL_CRESTED, RL_LANTERN };          // a flat roof's: bare, a pergola, tanks, rails, a lantern
 enum Gables { GB_PLAIN = 0, GB_STEPPED, GB_CURVED, GB_PEDIMENT, GB_HALF_HIPPED };

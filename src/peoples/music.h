@@ -8,7 +8,7 @@
 // song...) by the shard's tone. The notes are beats and scale degrees; `AudioSynth` plays them (`game/audio.h`) and the
 // decoder screen draws them (`game/shards_screen.cpp`). After two pieces of a world the listener knows the tradition.
 //
-// H-05 (2026-10-10): the tradition gains the age as an axis. What a people heard as its own holds through its ages (the scale and
+// the tradition gains the age as an axis. What a people heard as its own holds through its ages (the scale and
 // its tuning, the tonic, the cycle, the ornament, the swing of its subdivisions, the singers' voice: its speakers', `voiceOf`), and
 // each age it lived through brings its own ensemble (`Ensemble`, `Tradition::ages`), forms and texture, chosen by the age of the
 // record's year (`Shard::recordAge`: a modern people's medieval hymn is medieval):
@@ -60,7 +60,7 @@ struct Timbre {
     double tone = 0;        // a percussion piece's pitch, Hz (a log drum's, a snare's tone); a field's beating, Hz
     int kind = 0;           // a variant within the family (a hand clap or sticks; a closed or an open hat; a barrel organ's tremolo)
     std::string name;       // the instrument as the decoder names it ("A BONE FLUTE", "A DRUM MACHINE"; C-17: the made one's, "A SHELL PIPE")
-    int make = -1;          // C-17: the instrument it is as its people made it (`Tradition::makes`), -1 none (a voice, a church's organ, a piano)
+    int make = -1;          // the instrument it is as its people made it (`Tradition::makes`), -1 none (a voice, a church's organ, a piano)
 };
 
 // C-17 (2026-10-10): an instrument as its people made it (peoples/instruments.*): what sounds in it and the plan it is built on, its
@@ -120,14 +120,14 @@ struct Tradition {
     double ornamentChance = 0.3;
     int rest = 0;                // the degree the phrases rest on besides the tonic (the one nearest a fifth, else a fourth)
     uint64_t seed = 0;
-    // H-05: the people's own through its ages, and its ensemble of each age
+    // the people's own through its ages, and its ensemble of each age
     double swing = 0;            // the second of two subdivisions late by this share of one (0 even .. 0.3 a lilt)
     std::vector<int> vowels;     // the vowels its singers sing (0 a, 1 e, 2 i, 3 o, 4 u: the tongue's own)
     double density = 1;          // how busy its lines are against an age's middle
     int refrain = 0;             // a refrain it comes back to: the seed of a phrase its chants and its choruses share
     bool octaves = false;        // its choruses sing in octaves (the low voices under the answer)
     Ensemble ages[AGE_COUNT];
-    // C-17: its instruments as made (`traditionMakes`, peoples/instruments.h: each voice's and kit piece's that a hand made), and the machine of
+    // its instruments as made (`traditionMakes`, peoples/instruments.h: each voice's and kit piece's that a hand made), and the machine of
     // the industrial age that played its wax cylinders where it made one (-1 none)
     std::vector<InstrumentMake> makes;
     int machine = -1;
@@ -138,13 +138,13 @@ double traditionCents(const Tradition& T, int degree);   // its cents above the 
 
 enum PieceForm {
     PF_DANCE = 0, PF_LULLABY, PF_WORK, PF_HYMN, PF_HARVEST, PF_LOVE, PF_FESTIVAL, PF_LAMENT, PF_MARCH, PF_WARNING, PF_LAST,   // C-04's
-    PF_CHANT, PF_RINGDANCE, PF_HUNT, PF_KEENING, PF_HEALING,                                                               // H-05: the prehistoric
+    PF_CHANT, PF_RINGDANCE, PF_HUNT, PF_KEENING, PF_HEALING,                                                               // the prehistoric
     PF_PROCESSION, PF_BALLAD,                                                                                              // the medieval (and a ballad in later ages)
     PF_TURNING, PF_ANTHEM, PF_PARLOUR, PF_MUSICBOX, PF_OVERTURE, PF_FUNERAL,                                               // the industrial
     PF_SONG, PF_DANCEREC, PF_JINGLE, PF_THEME, PF_PROTEST, PF_REQUIEM,                                                     // the modern
     PF_PROCESS, PF_SWARM, PF_SYNSONG, PF_DRIFT, PF_SIGNAL, PF_ELEGY,                                                       // the futuristic
     PF_FIELD, PF_TURNFIELD, PF_BELLFIELD, PF_STANDING,                                                                     // the far future
-    PF_DAWN, PF_LASTSUN,   // D-05: the people who lost their sun: a dawn song to call it up (its line climbing), the last sunrise (an arch, then down)
+    PF_DAWN, PF_LASTSUN,   // the people who lost their sun: a dawn song to call it up (its line climbing), the last sunrise (an arch, then down)
     PF_COUNT
 };
 constexpr int PF_DRAWN_COUNT = PF_DAWN;               // D-05: the forms every other people's pieces draw among (a rounding's fall-through stays on the last)
@@ -157,7 +157,7 @@ struct Note {
     double vel = 0.7;
     int slideFrom = -1000;   // a slide: the degree the note glides from over its start
     int vowel = -1;          // H-05: a sung note's vowel (0 a .. 4 u), -1 the voice's own
-    double bend = 0;         // H-05: cents off the degree (the futuristic swarms' microtones)
+    double bend = 0;         // cents off the degree (the futuristic swarms' microtones)
 };
 struct Piece {
     int form = 0;
@@ -168,7 +168,7 @@ struct Piece {
     std::vector<Note> notes;     // by their start
     uint64_t seed = 0;
     int age = AGE_MEDIEVAL;      // H-05: the ensemble it is played on (`Tradition::ages`)
-    double drift = 0.03;         // H-05: the tempo's wander as played (none from a machine)
+    double drift = 0.03;         // the tempo's wander as played (none from a machine)
 };
 void pieceOf(const Tradition& T, const Shard& s, Piece& out);
 bool pieceHasDrum(const Piece& P);

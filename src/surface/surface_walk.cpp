@@ -6,8 +6,8 @@
 
 // Blob shadow (M10-11): a dark ellipse on the ground under an object, stretched away from the sun.
 void SurfaceView::drawBlobShadow(Framebuffer& fb, double x, double z, double radius, double height) {
-    if (!env.hasSun2 || env.sun2Share < 0.05 || env.sun2Share > 0.95) { drawBlobShadowFrom(fb, x, z, radius, height, env.sun.dirLocal, env.glow); return; }   // B-425: as strong as the light (a far sun alone casts a faint one)
-    // M5-01 double shadows: one per sun, each as strong as its share of the light
+    if (!env.hasSun2 || env.sun2Share < 0.05 || env.sun2Share > 0.95) { drawBlobShadowFrom(fb, x, z, radius, height, env.sun.dirLocal, env.glow); return; }   // as strong as the light (a far sun alone casts a faint one)
+    // double shadows: one per sun, each as strong as its share of the light
     drawBlobShadowFrom(fb, x, z, radius, height, env.sunDisc.dirLocal, 1 - env.sun2Share);
     drawBlobShadowFrom(fb, x, z, radius, height, env.sun2.dirLocal, env.sun2Share);
 }
@@ -95,7 +95,7 @@ void SurfaceView::settlementColliders(const Ruin& r, const RuinCell& cell, doubl
         double ex = r.x + e.x, ez = r.z + e.z, reach = 40 + std::max(e.hx + e.hz, formReach(e));
         if ((ex - x) * (ex - x) + (ez - z) * (ez - z) > reach * reach) continue;
         discs.clear();
-        if (e.absolute) {   // T-03: a dam's wall, an aqueduct's arches: their heights are the reference level's
+        if (e.absolute) {   // a dam's wall, an aqueduct's arches: their heights are the reference level's
             Form f = e; f.y0 = 0; f.y1 = e.y1 - e.y0; f.absolute = false;
             formColliders(f, discs);
             for (const FormDisc& q : discs) out.push_back({r.x + q.x, r.z + q.z, q.r, 3, e.y0 + q.y0, e.y0 + q.y1});
@@ -103,7 +103,7 @@ void SurfaceView::settlementColliders(const Ruin& r, const RuinCell& cell, doubl
         }
         formColliders(e, discs);
         if (discs.empty()) continue;
-        double gy, skirt;   // B-420: the piece's foot where it is drawn (a big one on the highest ground under it, its sides down to the lowest); none
+        double gy, skirt;   // the piece's foot where it is drawn (a big one on the highest ground under it, its sides down to the lowest); none
         if (!pieceFootNear(e, ex, ez, gy, skirt)) continue;   // where it is not drawn (under water)
         for (const FormDisc& q : discs) out.push_back({r.x + q.x, r.z + q.z, q.r, 3, gy + q.y0 - (e.y0 < 0.01 && q.y0 <= e.y0 + 0.01 ? skirt : 0.0), gy + q.y1});
     }
@@ -129,7 +129,7 @@ void SurfaceView::collectSupports(double x, double z, double reach) {
         }
     };
     forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) { take(r, cell); });
-    for (const RuinCell& c : placedCells) take(c.r, c);   // A-02 (tests)
+    for (const RuinCell& c : placedCells) take(c.r, c);   // (tests)
 }
 
 // B-420: the floor at a point for feet at `feet`: the ground, or the highest drawn surface of a heap, a bank, a barrow or a tier there that is
@@ -156,7 +156,7 @@ double SurfaceView::floorAt(double x, double z, double feet, bool* blocked) {
 // costlier ones after it). The colliders mirrored the drawing's formulas and missed its last three tests: a boulder left off a street or a
 // quarry's floor still stood there, unseen. Returns the cell's candidates (the bench's count)
 namespace {
-void rockParams(int type, double& density, double& scale) { density = KINDS[type].rockDensity; scale = KINDS[type].rockScale; }   // P-00: the kind's boulders
+void rockParams(int type, double& density, double& scale) { density = KINDS[type].rockDensity; scale = KINDS[type].rockScale; }   // the kind's boulders
 }   // namespace
 int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, double, double)>& keep, const std::function<void(const RockInst&)>& fn) {
     const double cs = 16;
@@ -166,25 +166,25 @@ int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, doubl
     const TerrainVertex& tv = site.lod0.at(cx, cz);
     double rd = rockDensity;
     if (livingGround(type) && (tv.material == MAT_GRASS || tv.material == MAT_ROCK) && tv.biome != BIO_WETLAND) rd = 0.7;   // R-306: open ground carries more stone
-    rd *= 1 + 5.0 * tv.scree / 255.0;   // O6-04: boulder fields on the scree under the cliffs
+    rd *= 1 + 5.0 * tv.scree / 255.0;   // boulder fields on the scree under the cliffs
     int nrocks = (int)(rd * 2.0 * hash01(h));
-    if (livingGround(type) && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // R-306: an outcrop of three
-    if (tv.material == MAT_SAND || tv.material == MAT_WATER || tv.material == MAT_LAVA || tv.material == MAT_MATS || tv.material == MAT_STROMATOLITE) nrocks = 0;   // P-02: nor on the mats' sediment
-    else if ((tv.material == MAT_BRINE || tv.material == MAT_SALT) && (kindHas(type, KT_VENT_LIFE) || site.gen.hasTrait(TR_GYPSUM) || site.gen.hasTrait(TR_HOT_SPRINGS))) nrocks = 0;   // P-03: nor in a spring or on its sinter; Q-02: nor on the gypsum's dunes, a hot spring's terraces
-    if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // S-03: a few blast-thrown boulders on the sheets
+    if (livingGround(type) && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // an outcrop of three
+    if (tv.material == MAT_SAND || tv.material == MAT_WATER || tv.material == MAT_LAVA || tv.material == MAT_MATS || tv.material == MAT_STROMATOLITE) nrocks = 0;   // nor on the mats' sediment
+    else if ((tv.material == MAT_BRINE || tv.material == MAT_SALT) && (kindHas(type, KT_VENT_LIFE) || site.gen.hasTrait(TR_GYPSUM) || site.gen.hasTrait(TR_HOT_SPRINGS))) nrocks = 0;   // nor in a spring or on its sinter; Q-02: nor on the gypsum's dunes, a hot spring's terraces
+    if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // a few blast-thrown boulders on the sheets
     if (nrocks <= 0) return 0;
-    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;   // C-08: no rock in a room (the settlements near, found once a cell when a rock asks)
+    const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;   // no rock in a room (the settlements near, found once a cell when a rock asks)
     for (int i = 0; i < nrocks; i++) {
         const uint64_t hr = mix64(h + 17 * (i + 1));
         RockInst R;
         R.x = cx * cs + hash01(hr) * cs; R.z = cz * cs + hash01(mix64(hr + 1)) * cs; R.h = hr;
-        R.size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // O6-04: bigger on the scree
+        R.size = rockScale * (0.35 + 2.0 * std::pow(hash01(mix64(hr + 2)), 2.5)) * (1 + 0.6 * tv.scree / 255.0);   // bigger on the scree
         if (keep && !keep(R.x, R.z, R.size)) continue;
         if (nNear < 0) nNear = settlementsNear(cx * cs + 8, cz * cs + 8, near);
         { bool in = false; for (int q = 0; q < nNear && !in; q++) in = inSettlementBuilding(*near[q], R.x, R.z, 1.0); if (in) continue; }
-        if (!site.roads.empty() && site.roadCover(R.x, R.z) > 0.3) continue;   // C-09: no rock on the road's bed
-        if (!site.marks.empty() && site.markCover(R.x, R.z) > 0.3) continue;   // T-02: nor on a street
-        if (!site.edits.empty() && site.editCover(R.x, R.z) > 0.3) continue;   // T-03: nor on a work's ground
+        if (!site.roads.empty() && site.roadCover(R.x, R.z) > 0.3) continue;   // no rock on the road's bed
+        if (!site.marks.empty() && site.markCover(R.x, R.z) > 0.3) continue;   // nor on a street
+        if (!site.edits.empty() && site.editCover(R.x, R.z) > 0.3) continue;   // nor on a work's ground
         R.gy = site.groundHeight(R.x, R.z);
         if (R.gy < site.waterAt(R.x, R.z)) continue;
         fn(R);
@@ -267,24 +267,24 @@ void SurfaceView::forMeteorites(int cx, int cz, const std::function<void(const R
 // Rocks larger than 0.6 m and tree trunks in the 3x3 cells around (x, z), as cylinders (M8-05). B-420: from the enumerators that draw them
 void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& out) {
     out.clear();
-    const bool microbial = kindHas(site.gen.type, KT_MICROBIAL), ventLife = kindHas(site.gen.type, KT_VENT_LIFE);   // P-02, P-03
-    const bool meteorites = site.gen.hasTrait(TR_METEORITES);   // Q-02
+    const bool microbial = kindHas(site.gen.type, KT_MICROBIAL), ventLife = kindHas(site.gen.type, KT_VENT_LIFE);
+    const bool meteorites = site.gen.hasTrait(TR_METEORITES);
     double cs = 16;
     int pcx = (int)std::floor(x / cs), pcz = (int)std::floor(z / cs);
-    // C-01: a settlement's standing pieces as rows of discs along their walls (within 40 m)
+    // a settlement's standing pieces as rows of discs along their walls (within 40 m)
     forNearbyRuins(x, z, 1, [&](const Ruin& r, const RuinCell& cell, int) {
         settlementColliders(r, cell, x, z, out);
     });
-    for (const RuinCell& c : placedCells) settlementColliders(c.r, c, x, z, out);   // A-02 (tests)
+    for (const RuinCell& c : placedCells) settlementColliders(c.r, c, x, z, out);   // (tests)
     for (int cz = pcz - 1; cz <= pcz + 1; cz++)
         for (int cx = pcx - 1; cx <= pcx + 1; cx++) {
             forRocks(cx, cz, [](double, double, double size) { return size >= 0.6; },   // a smaller one is stepped over
                      [&](const RockInst& R) { out.push_back({R.x, R.z, R.size * 0.8, 0, R.gy - R.size * 0.15, R.gy + R.size * 1.15}); });   // the peak stands up to 1.3 sizes over a base sunk 0.15
-            // N2: trunks and fallen logs from the same enumerators that draw them
-            forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + (T.stump ? T.r * 0.14 : T.h * 0.02), 1, T.gy - 0.3, T.gy + T.h}); });   // P-04: a stone stump's girth
-            if (microbial) forDomes(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.85, 0, R.gy - 0.2, R.gy + 0.55 * R.size + 0.2}); });   // P-02
-            if (ventLife) forChimneys(cx, cz, [&](const RockInst& R) { out.push_back({R.x, R.z, R.size, 0, R.gy - 0.1, R.gy + chimneyHeight(R.h)}); });   // P-03
-            if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.9, 0, R.gy - 0.1, R.gy + 0.8 * R.size}); });   // Q-02
+            // trunks and fallen logs from the same enumerators that draw them
+            forTrees(cx, cz, [&](const TreeInst& T) { out.push_back({T.x, T.z, 0.12 + (T.stump ? T.r * 0.14 : T.h * 0.02), 1, T.gy - 0.3, T.gy + T.h}); });   // a stone stump's girth
+            if (microbial) forDomes(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.85, 0, R.gy - 0.2, R.gy + 0.55 * R.size + 0.2}); });
+            if (ventLife) forChimneys(cx, cz, [&](const RockInst& R) { out.push_back({R.x, R.z, R.size, 0, R.gy - 0.1, R.gy + chimneyHeight(R.h)}); });
+            if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) { if (R.size >= 0.6) out.push_back({R.x, R.z, R.size * 0.9, 0, R.gy - 0.1, R.gy + 0.8 * R.size}); });
             forLogs(cx, cz, [&](const LogInst& L) {
                 double dx = std::sin(L.heading), dz = std::cos(L.heading), lg = site.groundHeight(L.x, L.z);
                 for (int k = -1; k <= 1; k++) out.push_back({L.x + dx * L.len * 0.33 * k, L.z + dz * L.len * 0.33 * k, L.radius + 0.35, 2, lg - 1.0, lg + 2 * L.radius + 0.6});
@@ -296,7 +296,7 @@ void SurfaceView::collectColliders(double x, double z, std::vector<Collider>& ou
 // (R-204: you can always redeploy)
 bool SurfaceView::deployBuggy() {
     if (inVehicle()) return false;
-    if (site.escapeVelocity < 30) return false;   // O4: on a comet the buggy would float off at the first bump
+    if (site.escapeVelocity < 30) return false;   // on a comet the buggy would float off at the first bump
     double dx = capsuleX - player.x, dz = capsuleZ - player.z;
     if (dx * dx + dz * dz > 10.0 * 10.0) return false;
     // beside the capsule, away from the explorer
@@ -354,7 +354,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         for (int k = 0; k <= 9; k++) if (in.wasPressed(KEY_0 + k) && !in.ctrl()) p.autoWalk = k;
         fwd = (in.isDown(KEY_W) || in.isDown(KEY_UP) ? 1 : 0) - (in.isDown(KEY_S) || in.isDown(KEY_DOWN) ? 1 : 0);
         str = (in.isDown(KEY_D) ? 1 : 0) - (in.isDown(KEY_A) ? 1 : 0);
-        if (in.moveY != 0) fwd = in.moveY;   // M6-02: an analogue stick; R-418: each axis on its own
+        if (in.moveY != 0) fwd = in.moveY;   // an analogue stick; R-418: each axis on its own
         if (in.moveX != 0) str = in.moveX;
         if (in.ctrl()) { fwd = 0; str = 0; }   // Ctrl+S saves, Ctrl+L loads: not a walk
         if (fwd < 0) p.autoWalk = 0;
@@ -378,8 +378,8 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     if (p.swimming) { p.swimStamina = clampd(p.swimStamina - dt * 2.0, 0, 100); } else p.swimStamina = clampd(p.swimStamina + dt * 10, 0, 100);
     double sprintMul = clampd(sprintMultiplier * std::pow(1.0 / std::max(gRel, 0.2), 0.44), 1.5, 4.0);
     double speed = 4.2 * (1.0 + (sprintMul - 1.0) * p.sprintRamp) * p.speedMul;
-    if (gRel > 1.5) speed *= 0.85;           // heavy worlds (M8-09)
-    if (site.escapeVelocity < 30) speed = std::min(speed, 0.3 * site.escapeVelocity);   // O4 microgravity: any faster and you would leave the ground
+    if (gRel > 1.5) speed *= 0.85;           // heavy worlds
+    if (site.escapeVelocity < 30) speed = std::min(speed, 0.3 * site.escapeVelocity);   // microgravity: any faster and you would leave the ground
     if (p.crouch) speed *= 0.5;
     if (p.swimming) speed *= 0.45 * (p.swimStamina > 0.5 ? 1.0 : 0.5);
     p.fovKick = 4.0 * p.sprintRamp;
@@ -387,17 +387,17 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     double tx = (sy * fwd + cy * str), tz = (cy * fwd - sy * str);
     double tl = std::sqrt(tx * tx + tz * tz);
     if (tl > 1 && p.autoWalk == 0) { tx /= tl; tz /= tl; }
-    // B-420: what the explorer may stand on beside the ground: the heaps, banks, barrows and tiers near it (inside one, as after a landing on it,
+    // what the explorer may stand on beside the ground: the heaps, banks, barrows and tiers near it (inside one, as after a landing on it,
     // it stands on its top)
     collectSupports(p.x, p.z);
     auto footing = [&](double x, double z, bool* blocked = nullptr) { bool in = false; double f = floorAt(x, z, p.y, &in); if (in && blocked) *blocked = true; return f; };
     bool insideHere = false; floorAt(p.x, p.z, p.y, &insideHere);
     // wading (M8-08): slower with depth until swimming takes over
     double groundHere = insideHere ? floorAt(p.x, p.z, 1e9) : footing(p.x, p.z);
-    double waterHere = site.waterNowAt(p.x, p.z);   // Q-02: the tide's
+    double waterHere = site.waterNowAt(p.x, p.z);   // the tide's
     double depthHere = waterHere > -1e8 ? clampd(waterHere - groundHere, 0, 1.2) : 0;
-    if (!p.swimming && p.onGround && depthHere > 0) speed *= 1.0 - 0.55 * depthHere / 1.2;   // B-406: wading, not flying over
-    double accel = p.onGround ? (gRel > 1.5 ? 6.0 : 10.0) : (g < 3.0 ? 4.0 : 2.0);   // air control (M8-09)
+    if (!p.swimming && p.onGround && depthHere > 0) speed *= 1.0 - 0.55 * depthHere / 1.2;   // wading, not flying over
+    double accel = p.onGround ? (gRel > 1.5 ? 6.0 : 10.0) : (g < 3.0 ? 4.0 : 2.0);   // air control
     if (p.jetOn) accel = 6.0;
     double k = 1 - std::exp(-dt * accel);
     p.vx += (tx * speed - p.vx) * k;
@@ -409,17 +409,17 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         p.onGround = false;
     }
     // jetpack (M8-03): hold Space in the air; heat limits continuous burns. B-406: it fires from the water's surface too (afloat,
-    // not diving), so a lake is crossed and left by air; it used to be a trap
+    // not diving), so a lake is crossed and left by air, never a trap
     p.jetOn = false;
     bool afloat = p.swimming && !p.diving && !p.underwater;
     if (controlsEnabled && in.isDown(KEY_SPACE) && (!p.onGround || afloat) && (!p.swimming || afloat) && p.jetHeat < 100 && p.altAboveGround < 300) {
         p.jetOn = true;
         p.vy += (g + 3.0) * dt;
-        double vcap = site.escapeVelocity < 30 ? 0.35 * site.escapeVelocity : 12.0;   // O4: never toward escape velocity
+        double vcap = site.escapeVelocity < 30 ? 0.35 * site.escapeVelocity : 12.0;   // never toward escape velocity
         if (p.vy > vcap) p.vy = vcap;
         p.jetHeat = std::min(100.0, p.jetHeat + dt * 5.0);
     } else p.jetHeat = std::max(0.0, p.jetHeat - dt * 8.0);
-    // O4: on light worlds Ctrl in the air fires the thrusters downward (a jump on a comet floats for minutes otherwise)
+    // on light worlds Ctrl in the air fires the thrusters downward (a jump on a comet floats for minutes otherwise)
     if (controlsEnabled && in.ctrl() && !p.onGround && !p.swimming && g < 1.0) p.vy -= 3.0 * dt;
     // diving (M8-08): Ctrl while swimming goes under, buoyancy brings you back
     p.diving = p.swimming && controlsEnabled && in.ctrl();
@@ -449,7 +449,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         p.vz -= gz / sl * g * std::sin(ang) * 0.8 * dt;
         nx = p.x + p.vx * dt; nz = p.z + p.vz * dt;
     }
-    // B-420: a heap's, a bank's or a tier's side more than a step high, or steeper than the ground's climb, is walked into, not up: the move
+    // a heap's, a bank's or a tier's side more than a step high, or steeper than the ground's climb, is walked into, not up: the move
     // along it where one axis is free
     if (!insideHere && !p.swimming && p.onGround) {
         auto barred = [&](double x, double z) {
@@ -469,12 +469,12 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
             if (!bx) { nz = p.z; p.vz = 0; } else if (!bz) { nx = p.x; p.vx = 0; } else { nx = p.x; nz = p.z; p.vx = p.vz = 0; }
         }
     }
-    // collision with rocks and trunks (M8-05)
+    // collision with rocks and trunks
     {
         static std::vector<Collider> cols;
         collectColliders(nx, nz, cols);
         for (const Collider& c : cols) {
-            if (p.y > c.y1 - 0.1 || p.y + 1.6 < c.y0) continue;   // B-405: risen above it (the jetpack, a slope) or under it
+            if (p.y > c.y1 - 0.1 || p.y + 1.6 < c.y0) continue;   // risen above it (the jetpack, a slope) or under it
             double dx = nx - c.x, dz = nz - c.z;
             double d2 = dx * dx + dz * dz, rr = c.r + 0.35;
             if (d2 < rr * rr && d2 > 1e-9) {
@@ -504,9 +504,9 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
         }
     }
     bool insideNow = false; floorAt(p.x, p.z, p.y, &insideNow);
-    double ground = insideNow ? floorAt(p.x, p.z, 1e9) : floorAt(p.x, p.z, p.y);   // B-420: the footing (a heap, a bank, a tier), the ground else
+    double ground = insideNow ? floorAt(p.x, p.z, 1e9) : floorAt(p.x, p.z, p.y);   // the footing (a heap, a bank, a tier), the ground else
     double water = site.waterNowAt(p.x, p.z);
-    // B-406 (2026-10-02): deep water is swum once the body is down at its surface; above it the air is the air, so the jetpack
+    // deep water is swum once the body is down at its surface; above it the air is the air, so the jetpack
     // flies over a lake (the old rule made the explorer swim the moment the ground under them was 0.4 m under water, whatever
     // their height: a jet over the shore was pulled down to the float level)
     bool deep = water > -1e8 && ground < water - 0.4;
@@ -517,7 +517,7 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     p.swimming = deep && (p.y <= floatY + 0.3 || (wasSwimming && !p.jetOn && p.y <= floatY + 0.6));
     bool wasOnGround = p.onGround;
     if (p.y <= floor) {
-        if (!wasOnGround && !p.swimming && p.vy < -3.0) p.landDip = std::min(0.4, -p.vy * 0.045 * (gRel > 1.5 ? 1.4 : 1.0));   // landing dip (M8-01)
+        if (!wasOnGround && !p.swimming && p.vy < -3.0) p.landDip = std::min(0.4, -p.vy * 0.045 * (gRel > 1.5 ? 1.4 : 1.0));   // landing dip
         p.y = floor;
         if (p.vy < 0) p.vy = 0;
         p.onGround = true;
@@ -527,11 +527,11 @@ void SurfaceView::updateWalking(double dt, const Input& in, double t, bool contr
     if (p.swimming) {
         p.onGround = true;
         if (p.diving) { p.vy = std::max(p.vy, -1.5); p.y = std::max(p.y - 1.5 * dt, std::max(ground + 0.3, water - 3.5)); }
-        else if (!p.jetOn) { p.vy = std::max(p.vy, -1.0); p.y += (floor - p.y) * (1 - std::exp(-dt * 4)); }   // B-406: the jet lifts out of the water
+        else if (!p.jetOn) { p.vy = std::max(p.vy, -1.0); p.y += (floor - p.y) * (1 - std::exp(-dt * 4)); }   // the jet lifts out of the water
     }
     p.underwater = p.swimming && water > -1e8 && (p.y + p.eyeHeight < water - 0.05);
     p.altAboveGround = std::max(0.0, p.y - ground);
-    // head bob and sway (M8-01)
+    // head bob and sway
     double hs = std::sqrt(p.vx * p.vx + p.vz * p.vz);
     if (p.onGround && hs > 0.3 && !p.swimming) {
         p.stridePhase += hs * dt / (p.sprinting ? 2.4 : 1.6);
@@ -557,8 +557,8 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
     int radius = 22;
     lastRocksDrawn = 0; lastRocksCandidates = 0;
     const bool flora = kindHas(type, KT_FLORA), microbial = kindHas(type, KT_MICROBIAL), ventLife = kindHas(type, KT_VENT_LIFE);   // P-02: the stromatolites' pass on a microbial world alone (its std::function a cell otherwise); P-03 the chimneys' on a vent-life world
-    const bool meteorites = site.gen.hasTrait(TR_METEORITES);   // Q-02
-    RasterParams rp; rp.bank = (flora || KINDS[type].accent[1] >= 0) ? 0 : 3;   // N1-03: boulders in the rock colour (bank 3 is the forest on living worlds, P-00: an accent's where a kind lends it)
+    const bool meteorites = site.gen.hasTrait(TR_METEORITES);
+    RasterParams rp; rp.bank = (flora || KINDS[type].accent[1] >= 0) ? 0 : 3;   // boulders in the rock colour (bank 3 is the forest on living worlds, P-00: an accent's where a kind lends it)
     rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE;
     rp.grain2 = mesoFor(flora ? MAT_FOREST : MAT_ROCK); rp.grain2Scale = 4.0;   // facets and lichen speckle
     RasterParams rpPlain; rpPlain.bank = rp.bank;
@@ -593,7 +593,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     if (n.y < 0) n = -n;
                     double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
                     double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
-                    if (nLamps) light += (1 - amb) * lampAt((p0 + p1 + peak) * (1.0 / 3.0), &n);   // D-04
+                    if (nLamps) light += (1 - amb) * lampAt((p0 + p1 + peak) * (1.0 / 3.0), &n);
                     double shade = 50 * std::pow(light, 0.6);
                     shade = fogShade(shade, dist);
                     RVert tri[3];
@@ -606,7 +606,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     rasterTriangle(fb, tri, rp, proj);
                 }
             });
-            // Q-02: a strewn field's iron meteorites: dark lumps pitted with thumbprints, their fusion crust black-brown in the chrome's ramp,
+            // a strewn field's iron meteorites: dark lumps pitted with thumbprints, their fusion crust black-brown in the chrome's ramp,
             // a facet that faces the sun from the eye's side glinting
             if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) {
                 const double dist = std::sqrt((R.x - camPos.x) * (R.x - camPos.x) + (R.z - camPos.z) * (R.z - camPos.z));
@@ -622,7 +622,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     const Vec3& p0 = ring[a]; const Vec3& p1 = ring[(a + 1) % NA];
                     Vec3 n = normalize(cross(p1 - p0, top - p0)); if (n.y < 0) n = -n;
                     const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
-                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + top) * (1.0 / 3.0), &n) : 0.0);   // D-04: the lamp
+                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + top) * (1.0 / 3.0), &n) : 0.0);   // the lamp
                     const double glint = std::pow(std::max(0.0, dot(normalize(toCam + sd), n)), 40.0) * sunUp;
                     const double shade = fogShade(5 + 9 * light + (glint > 0.4 ? 30 : 0), dist);   // black-brown, the chrome's bright stops a glint's alone
                     RVert tri[3]; const Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(top.x, top.y, top.z)};
@@ -645,14 +645,14 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     double w = 0.25 + 0.3 * hash01(mix64(hc + 4));
                     Vec3 p0(rx + std::cos(a0) * w, gy, rz + std::sin(a0) * w), p1(rx - std::cos(a0) * w, gy, rz - std::sin(a0) * w);
                     Vec3 pk(rx + 0.2 * w, gy + hgt, rz);
-                    double shade = fogShade(46 + 14 * std::max(sunUp, std::min(1.0, nLamps ? lampAt(Vec3(rx, gy + 0.5 * hgt, rz)) : 0.0)) * hash01(mix64(hc + 5)), dist);   // D-04: the lamp lights its facets
+                    double shade = fogShade(46 + 14 * std::max(sunUp, std::min(1.0, nLamps ? lampAt(Vec3(rx, gy + 0.5 * hgt, rz)) : 0.0)) * hash01(mix64(hc + 5)), dist);   // the lamp lights its facets
                     RVert tri[3];
                     Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(pk.x, pk.y, pk.z)};
                     for (int q = 0; q < 3; q++) { tri[q].x = vs[q].x; tri[q].y = vs[q].y; tri[q].z = vs[q].z; tri[q].shade = shade; }
                     rasterTriangle(fb, tri, rp2, proj);
                 }
             }
-            // P-02: stromatolites, low lumpy domes dark with the mats that grow over them (the mats' bank, the kind's first accent: bank 10) on the
+            // stromatolites, low lumpy domes dark with the mats that grow over them (the mats' bank, the kind's first accent: bank 10) on the
             // reef flat's pale carbonate (Shark Bay's), lit like the boulders
             if (microbial) forDomes(cx, cz, [&](const RockInst& R) {
                 const double dist = std::sqrt((R.x - camPos.x) * (R.x - camPos.x) + (R.z - camPos.z) * (R.z - camPos.z));
@@ -672,7 +672,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                 auto face = [&](const Vec3& p0, const Vec3& p1, const Vec3& p2) {
                     Vec3 n = normalize(cross(p1 - p0, p2 - p0)); if (n.y < 0) n = -n;
                     const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
-                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + p2) * (1.0 / 3.0), &n) : 0.0);   // D-04: the lamp
+                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + p2) * (1.0 / 3.0), &n) : 0.0);   // the lamp
                     const double shade = fogShade(42 * std::pow(light, 0.6), dist);   // darker than the flat they stand on
                     RVert tri[3]; const Vec3 ws[3] = {p0, p1, p2};
                     for (int q = 0; q < 3; q++) {
@@ -688,7 +688,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                 }
                 lastRocksDrawn++;
             });
-            // P-03: sinter chimneys, slim pale cones on the sinter round the springs (the sinter's bank, the kind's second accent: bank 3)
+            // sinter chimneys, slim pale cones on the sinter round the springs (the sinter's bank, the kind's second accent: bank 3)
             if (ventLife) forChimneys(cx, cz, [&](const RockInst& R) {
                 const double dist = std::sqrt((R.x - camPos.x) * (R.x - camPos.x) + (R.z - camPos.z) * (R.z - camPos.z));
                 const double hgt = chimneyHeight(R.h);
@@ -709,7 +709,7 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                 auto face = [&](const Vec3& p0, const Vec3& p1, const Vec3& p2) {
                     Vec3 n = normalize(cross(p1 - p0, p2 - p0)); if (n.y < 0) n = -n;
                     const double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
-                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + p2) * (1.0 / 3.0), &n) : 0.0);   // D-04: the lamp
+                    const double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt((p0 + p1 + p2) * (1.0 / 3.0), &n) : 0.0);   // the lamp
                     const double shade = fogShade(50 * std::pow(light, 0.6), dist);
                     RVert tri[3]; const Vec3 ws[3] = {p0, p1, p2};
                     for (int q = 0; q < 3; q++) {
@@ -749,7 +749,7 @@ void SurfaceView::drawCapsule(Framebuffer& fb, double t) {
                 Vec3(std::cos(a0) * std::cos(e1), std::sin(e1), std::sin(a0) * std::cos(e1))};
             Vec3 n = normalize(pts[0] + pts[1] + pts[2] + pts[3]);
             double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp;
-            if (nLamps) light = std::min(1.0, light + (1 - ambient) * lampAt(Vec3(cx + n.x * rad, cy + 0.2 + n.y * rad * 0.8, cz + n.z * rad), &n));   // D-04
+            if (nLamps) light = std::min(1.0, light + (1 - ambient) * lampAt(Vec3(cx + n.x * rad, cy + 0.2 + n.y * rad * 0.8, cz + n.z * rad), &n));
             double shade = 34 + 26 * light;
             RVert q[4];
             for (int i = 0; i < 4; i++) {

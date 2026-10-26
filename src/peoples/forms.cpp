@@ -173,7 +173,7 @@ void boxMesh(FormMesh& m, const Form& e, const Vec3& foot, double skirt) {
         }
         Vec3 q[4] = {P(t0, -W, top), P(t1, -W, top), P(t1, W, top), P(t0, W, top)};
         B.flat(q, 4, B.D(0, 1, 0));
-        if (e.tilt != 0 || e.y0 > 0.3) {   // B-420: its underside where it shows (a box lying on its side: its foot's end was open, the inside seen through it)
+        if (e.tilt != 0 || e.y0 > 0.3) {   // its underside where it shows (a box lying on its side: its foot's end was open, the inside seen through it)
             Vec3 u[4] = {P(t0, -W, ylo), P(t0, W, ylo), P(t1, W, ylo), P(t1, -W, ylo)};
             B.flat(u, 4, B.D(0, -1, 0));
         }
@@ -290,8 +290,8 @@ void latheMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double ski
             cut.push_back({a.r + (b.r - a.r) * t, yc, true});
             break;
         }
-        prof = cut; open = e.tilt <= 0.3; jag = std::min(0.25 * (yc - e.y0), 0.06 * (e.y1 - e.y0) + 0.5 * e.hx) * e.broken; holes = e.tilt > 0.3 ? 0.0 : 0.25 * e.broken;   // B-420: a fallen shaft whole underneath and closed at its break (its hollow showed a way in that its body barred)
-        // B-420: the holes in the top stretch of the wall alone, over 2.2 m (a stretch from the foot left a gap down to the ground that the
+        prof = cut; open = e.tilt <= 0.3; jag = std::min(0.25 * (yc - e.y0), 0.06 * (e.y1 - e.y0) + 0.5 * e.hx) * e.broken; holes = e.tilt > 0.3 ? 0.0 : 0.25 * e.broken;   // a fallen shaft whole underneath and closed at its break (its hollow showed a way in that its body barred)
+        // the holes in the top stretch of the wall alone, over 2.2 m (a stretch from the foot left a gap down to the ground that the
         // explorer saw through and could not walk through)
         const double hy = e.y0 + 2.2;
         const size_t K = prof.size();

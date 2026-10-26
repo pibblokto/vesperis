@@ -1,32 +1,10 @@
-// C-11 (2026-10-10): the instruments the peoples left (`docs/archive/ideas/ITERATION-1.3.0.md`, C-11). A people played its music on the instruments
-// of each age it lived through (H-05's `Ensemble`, `Tradition::ages`): what a hand could carry of them lies in its ruins, beside the music
-// records of their age (a third of the music records, by the record: every copy of that record has it beside it, and taking it once takes
-// every copy, as with the records), and is played from the cabin: its people's own timbre (the ensemble's voice it is) on its people's own
-// scale (the tradition's degrees and its period), a key a degree.
-//
-// C-17 (2026-10-10): the instruments' maker. C-11's were 49 fixed kinds chosen by the age (every prehistoric people's bone flute, every
-// industrial people's gramophone); now each is built from parts by its people's own way of making:
-//
-// * what sounds in it is its voice's (the timbre's family: an edge-blown pipe, a reed, lips, a plucked, a bowed string, struck metal or
-//   stone, a skin, a whirled blade, a machine: `InstrumentClass`); the plan it is built on is drawn from the people's leanings among its
-//   class's (a straight pipe, a vessel, a raft, a ring of pipes; a necked body, a frame, a harp, a board, a ring of strings; bars, bowls,
-//   bells, a gong, ringing stones ...: `InstrumentPlan`), each people loving a few above the rest and keeping them through its ages;
-// * its materials are what its world gave it in its age (`InstrumentMaterial`): wood, stalks, gourds and pith where plants grew of those
-//   families, bone, horn, hide and gut, chitin, shell and coral from its animals and its seas, ice in the cold, obsidian by the volcanoes,
-//   stone and clay; the metals from the medieval age, brass and steel from the industrial, the made materials after; the people loving a
-//   few of them above the rest;
-// * its style is the people's architecture genome's (peoples/genome.h): its bodies' outline from the plan, the profile and the roof (a
-//   rectangle, a circle, a polygon of the people's number, a waist, a taper, a dome), its holes and sound holes the shape of its windows,
-//   its heads its buildings' tops, its ornament and motif, its symmetry (a radial people's pipes in a ring, its strings a wheel), the
-//   rhythm of its holes and keys, its proportions, its paint, its light in the late ages;
-// * its numbers are its people's scale's: a pipe's holes, a raft's tubes and a harp's strings by the degrees, the frets by the tuning;
-// * one list of parts (`InstrumentPart`: tubes, outlined bodies, discs, balls, boxes, rings, strings, marks) is both the object lying in
-//   the ruins (`instrumentForms`: A-02's forms, an outlined body a `FK_PLATE`) and the picture in the cabin's case (game/instrument_draw.cpp,
-//   seen from above as it lies); its name is what it is made of and how ("A SHELL PIPE", "A STRUNG GOURD", "BRONZE BOWLS"), the timbre's
-//   name the decoder gives the piece's instruments the same (`Timbre::name`).
-//
-// The industrial age's machine that played the wax cylinders (C-11's gramophone) is made only where the people made one, in a form of its
-// own. The sound is the voice's as it was (the music is unchanged); what the make adds is the thing that made it.
+// The instruments the peoples left (C-17; docs/reference/civilisations/sound.md): what a hand could carry of an age's ensemble lies in its
+// ruins beside a third of that age's music records, and is played from the cabin in its people's own timbre on its people's own scale, a
+// key a degree. Each is built by its people's way of making: its class from the timbre's family (`InstrumentClass`), its plan from the
+// people's leanings among the class's (`InstrumentPlan`), its materials from what its world gave its age (`InstrumentMaterial`), its style
+// from the architecture genome (peoples/genome.h), its numbers from the scale. One list of parts (`InstrumentPart`) is both the object in
+// the ruins (`instrumentForms`) and the picture in the cabin's case (game/instrument_draw.cpp); its name says what it is made of and how.
+// The industrial age's cylinder machine is made only where its people made one; the sound is the voice's, unchanged.
 #pragma once
 #include "music.h"
 #include "forms.h"
@@ -131,7 +109,7 @@ struct Instrument {
     bool disc = false;   // C-17: the machine that played the wax cylinders (C-11's gramophone): Enter winds it
     int slot = 0;        // its place in the age's list
     int id = 0;          // the guide's: people x 1000 + age x 100 + slot (`<body>/I<id>`)
-    int make = -1;       // C-17: its make (`Tradition::makes`)
+    int make = -1;       // its make (`Tradition::makes`)
     int reg = 0;         // its register: the period its first key plays in (-1 a bass, +1 a flute's)
     uint64_t seed = 0;   // the make's
 };

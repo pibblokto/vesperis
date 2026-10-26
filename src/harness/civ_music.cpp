@@ -2,11 +2,11 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// C-04: `music <sx> <sz> <body index> [index] [wav]`: a world's musical tradition (its scale in cents, its cycle, its tempo, its
+// `music <sx> <sz> <body index> [index] [wav]`: a world's musical tradition (its scale in cents, its cycle, its tempo, its
 // timbres, its ornament and texture), the pieces among its fifty shards (index, year, tone, form, length, notes), then one piece
 // (the given index, else the first piece) as notation: a line per voice per cycle, a degree at each subdivision ('.' a held note,
 // '-' silence, 'o'/'x' the drum's skins); `wav` renders it through the synth to shots/tests/music_<sx>_<sz>_<body>_S<index>.wav
-// H-05: a piece through the synth (the game's master level, as C-04's and C-05's renders): its peak, rms, non-finite and at-the-ceiling counts,
+// a piece through the synth (the game's master level, as C-04's and C-05's renders): its peak, rms, non-finite and at-the-ceiling counts,
 // whether it ended, the synth's time; `fn` a WAV when given
 struct MusicRender { double peak = 0, rms = 0, secs = 0, ms = 0, loudest = 0; int nan = 0, clip = 0; bool done = false; };
 static MusicRender renderMusicWav(const Tradition& T, const Piece& P, const std::string& fn) {
@@ -208,9 +208,9 @@ static int musicDecoderFrames() {
 }
 
 int runMusic(int argc, char** argv) {
-    if (argc > 2 && std::string(argv[2]) == "ages") return runMusicAges(argc, argv);   // H-05
+    if (argc > 2 && std::string(argv[2]) == "ages") return runMusicAges(argc, argv);
     int which = takePeopleArg(argc, argv);   // C-13: `second` for the world's second people
-    // H-05: `age=N` and `tone=N` play the record as if it were of that age and tone (the harness's comparisons)
+    // `age=N` and `tone=N` play the record as if it were of that age and tone (the harness's comparisons)
     int forceAge = -1, forceTone = -1; std::vector<std::string> rest;
     for (int i = 2; i < argc; i++) { std::string x = argv[i]; if (x.compare(0, 4, "age=") == 0) forceAge = atoi(x.c_str() + 4); else if (x.compare(0, 5, "tone=") == 0) forceTone = atoi(x.c_str() + 5); else rest.push_back(x); }
     if (rest.size() < 3) { printf("music <sx> <sz> <body index> [index] [wav] [age=N] [tone=N] [second] | music ages [wav]\n"); return 1; }

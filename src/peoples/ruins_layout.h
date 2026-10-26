@@ -16,7 +16,7 @@
 #include <mutex>
 #include <unordered_map>
 
-// A-03: the age's scale of a settlement's plan: its spacing and its radius (a prehistoric camp's huts closer than a medieval town's
+// the age's scale of a settlement's plan: its spacing and its radius (a prehistoric camp's huts closer than a medieval town's
 // houses, an industrial town's rows wider apart, a modern town's blocks wider still); the futuristic and far-future ages' own
 inline double ageScale(int age) { static const double S[AGE_COUNT] = {0.85, 1.0, 1.85, 2.4, 1.0, 1.0}; return S[clampi(age, 0, AGE_COUNT - 1)]; }
 
@@ -68,7 +68,7 @@ struct Layout {
     // massing's footprint and height, its appetite for height, an arcade on the next house
     double spread = 1, footK = 1, hdK = 1, heightK = 1, towerK = 1;
     bool arcadeNext = false, rectNext = false;   // the next house arcaded along its front; the next on a rectangle (a row's)
-    // T-02: a town's plan: the buildings by cells, and its streets (a building placed with its fit tested keeps off them)
+    // a town's plan: the buildings by cells, and its streets (a building placed with its fit tested keeps off them)
     BuildingGrid* grid = nullptr;
     const StreetGrid* sgrid = nullptr;
     const std::vector<Street>* streets = nullptr;
@@ -82,9 +82,9 @@ struct Layout {
             default: footK = 1.06; heightK = 1.15; break;   // stepped
         }
         towerK = 0.7 + 0.8 * G.at(GV_HEIGHT);
-        if (age >= AGE_MEDIEVAL && age <= AGE_FUTURISTIC) heightK *= 0.82 + 0.56 * G.at(GV_STOREYS);   // R-412: its dwellings' storeys within its age's
+        if (age >= AGE_MEDIEVAL && age <= AGE_FUTURISTIC) heightK *= 0.82 + 0.56 * G.at(GV_STOREYS);   // its dwellings' storeys within its age's
     }
-    // R-412: a house's or a villa's frontage as its people turned it to the street (a medieval or an industrial people's): its gable (a narrow,
+    // a house's or a villa's frontage as its people turned it to the street (a medieval or an industrial people's): its gable (a narrow,
     // deep house, its ridge running back from the street) or its eaves (a wide, shallow one, its ridge along the street)
     void frontage(BSpec& s) const {
         if (!(age == AGE_MEDIEVAL || age == AGE_INDUSTRIAL) || !(s.kind == BK_HOUSE || s.kind == BK_VILLA)) return;
@@ -92,7 +92,7 @@ struct Layout {
     }
     double var(double lo, double span) { return lo + span * clampd(0.5 + (rng.uni() - 0.5) * spread, 0, 1); }   // a draw spread by the people's sameness
     bool fits(double x, double z, double rad) const {
-        if (grid) {   // T-02
+        if (grid) {
             int i0, i1, j0, j1; grid->range(x, z, rad + 1.2, i0, i1, j0, j1);
             for (int j = j0; j <= j1; j++) for (int i = i0; i <= i1; i++)
                 for (int k : grid->cells[(size_t)j * grid->n + i]) {
@@ -108,7 +108,7 @@ struct Layout {
         }
         return true;
     }
-    // T-02: a town's buildings are tested as rectangles (a row's houses side by side, a terrace's long rows), not as their circles
+    // a town's buildings are tested as rectangles (a row's houses side by side, a terrace's long rows), not as their circles
     bool obb = false;
     bool fitsRect(double x, double z, double heading, double hw, double hd, double margin) const {
         const double ux = std::cos(heading), uz = -std::sin(heading), vx = std::sin(heading), vz = std::cos(heading);
@@ -133,7 +133,7 @@ struct Layout {
         for (const Building& b : r.buildings) if (overlaps(b)) return false;
         return true;
     }
-    // T-02: the buildings from index n on taken back (a town's lot that did not fit its street after all)
+    // the buildings from index n on taken back (a town's lot that did not fit its street after all)
     void undoTo(size_t n) {
         while (r.buildings.size() > n) {
             const int idx = (int)r.buildings.size() - 1;
@@ -145,7 +145,7 @@ struct Layout {
             r.buildings.pop_back();
         }
     }
-    // T-02: how far the standing pieces of the buildings from index n on reach into a street's corridor where the explorer walks (their
+    // how far the standing pieces of the buildings from index n on reach into a street's corridor where the explorer walks (their
     // colliders from the ankle to over the head: a mill's chimney, a mound's bank, a jetty, a porch's posts; what fell is walked round),
     // 0 none: what a building's own pieces reach past its footprint
     double intrusion(size_t n, const SiteRead& st, double exX = 1e18, double exZ = 1e18) const {   // (exX, exZ): the streets through it left out (a gate's own)
@@ -167,7 +167,7 @@ struct Layout {
         }
         return worst;
     }
-    // T-02: a rectangle keeps off the town's streets (their corridors and half a metre)
+    // a rectangle keeps off the town's streets (their corridors and half a metre)
     bool offStreets(double x, double z, double heading, double hw, double hd) const {
         if (!sgrid || !streets) return true;
         const double rad = std::sqrt(hw * hw + hd * hd) + 1;
@@ -181,7 +181,7 @@ struct Layout {
         sgrid->near(x - rad, z - rad, x + rad, z + rad, [&](int k) { if (clear && streetPointDist((*streets)[k], x, z) < rad + (*streets)[k].half) clear = false; });
         return clear;
     }
-    // A-04: a building's plan's form (its people's; another now and then where its houses vary; a court where the people built inward)
+    // a building's plan's form (its people's; another now and then where its houses vary; a court where the people built inward)
     int formOf(int kind, double x, double z) const {
         switch (kind) {
             case BK_HOUSE: case BK_HUT: case BK_VILLA: case BK_SUBURB: case BK_BLOCK: case BK_TOWER: case BK_ROTUNDA: case BK_POD: case BK_TEMPLE: break;
@@ -193,7 +193,7 @@ struct Layout {
         const double var = G.at(GV_SAMENESS);
         if (var > 0.6 && unitFromHash(h) < (var - 0.6) * 1.5) { static const int ALT[3] = {PF_RECT, PF_CIRCLE, PF_POLYGON}; f = ALT[std::min(2, (int)(unitFromHash(mix64(h + 1)) * 3))]; }
         if (G.of(GV_PUBLIC) == PU_COURTS && age >= AGE_MEDIEVAL && (kind == BK_HOUSE || kind == BK_VILLA || kind == BK_BLOCK) && unitFromHash(mix64(h + 2)) < 0.6) f = PF_COURT;
-        // B-414: an industrial or a modern people's villas, houses and blocks on the age's plans (a rectangle, an L, a court); the round and the
+        // an industrial or a modern people's villas, houses and blocks on the age's plans (a rectangle, an L, a court); the round and the
         // many-sided plans are the hand-made ages' and the futuristic's, kept on the people's own temples, rotundas and towers
         if (age >= AGE_INDUSTRIAL && age <= AGE_MODERN && (kind == BK_VILLA || kind == BK_SUBURB || kind == BK_BLOCK) && (f == PF_CIRCLE || f == PF_POLYGON || f == PF_ELLIPSE)) f = PF_RECT;
         switch (kind) {
@@ -206,7 +206,7 @@ struct Layout {
         }
         return f;
     }
-    // A-04: what a dwelling stands on, by its people's relation to the land. B-415: a pit, a cut in the rock and a terrace's kerb are the
+    // what a dwelling stands on, by its people's relation to the land. B-415: a pit, a cut in the rock and a terrace's kerb are the
     // hand-made ages' (an industrial row or a modern block stands on the street); a podium (a people of mounds) and a modern block's pilotis
     // (a people of stilts) are any age's
     int foundOf(int kind) const {
@@ -228,9 +228,9 @@ struct Layout {
         if (form == PF_FREE && kind == BK_HOUSE) hd = std::max(hd, 4.2);
         double rad = std::sqrt(hw * hw + hd * hd) + 1.2;
         if (checkFit && !(obb ? fitsRect(x, z, heading, hw, hd, 0.02) : fits(x, z, rad))) return false;
-        if (checkFit && !offStreets(x, z, heading, hw, hd)) return false;   // T-02
+        if (checkFit && !offStreets(x, z, heading, hw, hd)) return false;
         Building b; b.kind = kind; b.x = x; b.z = z; b.heading = heading; b.hw = hw; b.hd = hd; b.hWall = hWall * c.tall; b.thick = thick;
-        b.luck = clampd(luckS + rng.sym(0.25), -0.4, 0.4);   // C-01's decay draw: the building's fortune now (A-03)
+        b.luck = clampd(luckS + rng.sym(0.25), -0.4, 0.4);   // C-01's decay draw: the building's fortune now
         b.door = kind == BK_HOUSE ? rng.irange(4) : 0;
         b.seed = rng.next();
         b.age = age;
@@ -238,14 +238,14 @@ struct Layout {
         if (kind == BK_HIGHRISE) b.style = unitFromHash(mix64(b.seed ^ 0xA03F0ULL)) < 0.6 ? c.towerForm : std::min(3, (int)(unitFromHash(mix64(b.seed ^ 0xA03F1ULL)) * 4));   // the people's form, and others
         if (kind == BK_HOUSE && arcadeNext) b.style = 1;   // an arcade along its front
         if (kind == BK_HIGHRISE || (kind == BK_TWIN && age == AGE_MODERN)) b.hWall = std::min(b.hWall, 650.0);   // the tallest a modern people raised
-        // A-04: what its room reads of the genome
+        // what its room reads of the genome
         b.form = kind == BK_TEMPLE && b.style != 3 ? PF_RECT : form;
         b.sides = G.number();
         b.found = foundOf(kind);
         if (b.found == FD_STILTS && b.form != PF_RECT) b.found = FD_GROUND;
         b.centred = G.of(GV_SYMMETRY) == SY_BILATERAL || G.of(GV_SYMMETRY) == SY_RADIAL || G.of(GV_PROFILE) == WP_BULGING;
         if (b.form == PF_FREE || b.form == PF_COURT) b.door = 0;
-        b.before = r.before;   // T-02: a place left before the end
+        b.before = r.before;   // a place left before the end
         r.buildings.push_back(b);
         if (grid) grid->insert(r.buildings.back(), (int)r.buildings.size() - 1);
         return true;
@@ -253,7 +253,7 @@ struct Layout {
     // a dwelling at a spot, the age's: C-01's houses (a rotunda now and then, a heap where one fell); a camp's tent rings and huts, a
     // village's longhouses; terraced rows, tenements near an industrial town's middle and villas at its edge; blocks of flats and
     // suburban houses; a futuristic people's pods. A-04: their sizes by the people's massing and sameness
-    // T-02: the dwelling's kind and size alone (`d` its distance from the centre over the radius), the town's lots placing it
+    // the dwelling's kind and size alone (`d` its distance from the centre over the radius), the town's lots placing it
     bool dwellingSpec(double d, BSpec& s) {
         const double u = rng.uni();
         const double F = footK, Hk = heightK;
@@ -273,7 +273,7 @@ struct Layout {
             }
             case AGE_MODERN: {
                 if (u < 0.04) return set(BK_RUBBLE, 6, 6, 1.0, 0.5);
-                if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && d < 0.7) {   // T-01: a city's middle, its towers by the people's appetite for height, blocks round them
+                if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && d < 0.7) {   // a city's middle, its towers by the people's appetite for height, blocks round them
                     if (d < 0.4 && rng.uni() < 0.25 + 0.6 * G.at(GV_HEIGHT)) { const double hw = 10 + 5 * rng.uni(); return set(BK_HIGHRISE, hw, hw * (0.75 + 0.25 * rng.uni()), (60 + 220 * rng.uni()) * (1.1 - d) * towerK, 0.5); }
                     return set(BK_BLOCK, var(11, 4) * F, var(6.0, 2.5) * F * hdK, (18 + 30 * rng.uni() * (1.2 - d)) * Hk, 0.4);
                 }
@@ -295,17 +295,17 @@ struct Layout {
         if (!dwellingSpec(std::sqrt(x * x + z * z) / std::max(1.0, r.size), s)) return false;
         return add(s.kind, x, z, heading, s.hw, s.hd, s.h, s.thick, true, s.style);
     }
-    // A-04: a dwelling's spot as the people grouped its houses: alone; three joined in a row, their fronts to the street; a compound of
+    // a dwelling's spot as the people grouped its houses: alone; three joined in a row, their fronts to the street; a compound of
     // two or three round a court, a low wall round them, its gap to the street. Returns the houses placed
     int dwellingSpot(double x, double z, double heading) {
         const int gr = G.of(GV_GROUPING);
         if (age >= AGE_FUTURISTIC || gr == GR_DETACHED || (gr == GR_ROWS && age == AGE_INDUSTRIAL)) return dwelling(x, z, heading) ? 1 : 0;
-        // T-01: an industrial or a modern city's middle is built up, not grouped (its tenements, its blocks and towers)
+        // an industrial or a modern city's middle is built up, not grouped (its tenements, its blocks and towers)
         if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && (age == AGE_INDUSTRIAL || age == AGE_MODERN) && std::sqrt(x * x + z * z) < 0.6 * std::max(1.0, r.size)) return dwelling(x, z, heading) ? 1 : 0;
         const double fxh = std::sin(heading), fzh = std::cos(heading), sxh = std::cos(heading), szh = -std::sin(heading);
         if (gr == GR_ROWS) {   // three joined side by side (the medieval houses, the prehistoric longhouses, a modern street of terraced houses)
             double hw = age == AGE_MODERN ? 3.4 : (age == AGE_PREHISTORIC ? 2.2 : 2.7), hd = age == AGE_MODERN ? 5.0 : (age == AGE_PREHISTORIC ? 5.5 : 3.6);
-            if (age == AGE_MEDIEVAL && G.of(GV_FRONTAGE) == FR_EAVES) std::swap(hw, hd);   // R-412: their eaves to the street
+            if (age == AGE_MEDIEVAL && G.of(GV_FRONTAGE) == FR_EAVES) std::swap(hw, hd);   // their eaves to the street
             const double step = 2 * hw + 0.05;
             if (!fits(x, z, std::sqrt(9 * hw * hw + hd * hd) + 1.0)) return 0;
             const int kind = age == AGE_MODERN ? BK_SUBURB : (age == AGE_PREHISTORIC ? BK_LONGHOUSE : BK_HOUSE);
@@ -317,7 +317,7 @@ struct Layout {
                 if (kind == BK_LONGHOUSE) { if (add(kind, ox * 1.0 + sxh * k * 1.6, oz + szh * k * 1.6, heading, hw, hd, h, 0.8, false)) placed++; }   // a longhouse's walls of turf apart
                 else if (add(kind, ox, oz, heading, hw, hd, h, 0.45, false)) placed++;
                 if (kind == BK_HOUSE && placed) r.buildings.back().door = 0;   // their doorways to the street
-                if (placed) r.buildings.back().joined = true;   // R-412
+                if (placed) r.buildings.back().joined = true;
             }
             rectNext = false;
             return placed;
@@ -348,7 +348,7 @@ struct Layout {
             else { if (add(BK_HOUSE, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.45, false)) { placed++; if (r.buildings.back().form == PF_RECT || r.buildings.back().form == PF_FREE) r.buildings.back().door = 0; } }
         }
         if (placed == 0) return 0;
-        for (size_t i = r.buildings.size() - placed; i < r.buildings.size(); i++) r.buildings[i].joined = true;   // R-412: round their court
+        for (size_t i = r.buildings.size() - placed; i < r.buildings.size(); i++) r.buildings[i].joined = true;   // round their court
         for (int s = -1; s <= 1; s += 2)   // the court's walls on its two open sides (its gap to the street)
             add(BK_WALL, x + sxh * s * (R + 0.6) + fxh * 0.5, z + szh * s * (R + 0.6) + fzh * 0.5, heading + PI / 2, R * 0.55, 0.3, age == AGE_PREHISTORIC ? 1.0 : 1.4, 0.6, false);
         return placed;
@@ -418,7 +418,7 @@ struct Layout {
         return add(BK_FOCUS, x, z, heading, hw, hd, fo == FO_MAST || fo == FO_SPIRE || fo == FO_TOWER || fo == FO_OBELISK || fo == FO_COLOSSUS ? h * towerK : h, 0.5, true, fo);
     }
     // a tower toward a town's edge, the age's: C-01's tower (a keep); a standing stone; a mill with its chimney or a water tower; a tower;
-    // A-04: two joined by their bridge (a people of bridges), all of them as tall as the people's appetite for height
+    // two joined by their bridge (a people of bridges), all of them as tall as the people's appetite for height
     bool tower(double x, double z, double heading) {
         const double u = rng.uni();
         const bool twin = G.of(GV_LINKS) == LK_BRIDGES && age >= AGE_MEDIEVAL;

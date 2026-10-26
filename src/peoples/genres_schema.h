@@ -38,13 +38,13 @@ enum RecordFact {
     F_Y, F_Y0, F_Y1, F_GAP,
     // H-04's second pass: the people's buildings as the ruins show them (the genome read through the age: `Culture`), its sacred colour
     F_PLAN, F_ROOF, F_ORNAMENT, F_MOTIF, F_TOPS, F_ACCENT, F_LAND, F_STREETS, F_PUBLIC, F_EDGE, F_LINKS, F_LIGHT, F_WALLS, F_HUTS, F_TOWERS,
-    // H-05 (CHARTS): a chart's caption reads the way it was made and what that way shows (`shardChartRecord`, peoples/shards.cpp)
+    // CHARTS: a chart's caption reads the way it was made and what that way shows (`shardChartRecord`, peoples/shards.cpp)
     F_CHARTSTYLE, F_TALLY, F_TALLYKIND, F_WANDERERS, F_NUMBERED, F_PLATE, F_MAGLIMIT, F_HEARD, F_ROUTES, F_REACHED, F_PLANNED, F_FARLY, F_FARKIND, F_SIGNS,
-    F_PAST,   // B-414: the people had an age before the record's (a history's: `@past`)
-    // D-05: a drifter's people's sun in the record's year (`dark`: 0 as ever, 1 dimming, 2 going, 3 gone: the years after the last sunrise), the
+    F_PAST,   // the people had an age before the record's (a history's: `@past`)
+    // a drifter's people's sun in the record's year (`dark`: 0 as ever, 1 dimming, 2 going, 3 gone: the years after the last sunrise), the
     // years since the last sunrise (`darkyears`), how they lost it (`sunway`: wanderer, intruder, dark, dance; empty for every other people)
     F_DARK, F_DARKYEARS, F_SUNWAY,
-    F_SUNSIZE, F_SUNFROM,   // D-05: the sun's disc in a row of the observatory's table (`@suntable`) and at its first measure, in the people's own parts
+    F_SUNSIZE, F_SUNFROM,   // the sun's disc in a row of the observatory's table (`@suntable`) and at its first measure, in the people's own parts
     F_FIXED_COUNT
 };
 const char* const FACT_NAMES[F_FIXED_COUNT] = {
@@ -60,8 +60,8 @@ const char* const FACT_NAMES[F_FIXED_COUNT] = {
     "y", "y0", "y1", "gap",
     "plan", "roof", "ornament", "motif", "tops", "accent", "land", "streets", "public", "edge", "links", "light", "walls", "huts", "towers",
     "chartstyle", "tally", "tallykind", "wanderers", "numbered", "plate", "maglimit", "heard", "routes", "reached", "planned", "farly", "farkind", "signs",   // H-05 (CHARTS)
-    "past",   // B-414
-    "dark", "darkyears", "sunway", "sunsize", "sunfrom"};   // D-05
+    "past",
+    "dark", "darkyears", "sunway", "sunsize", "sunfrom"};
 constexpr int NAME_FACTS = F_FOUNDERNAME + 1;
 
 // the inventions by the history's names (`historyInventionName`), each a fact while it exists: `inv.railway`
@@ -111,7 +111,7 @@ const char* const FIELD_NAMES[FD_COUNT] = {
     "age", "born", "died", "trade", "trades", "title", "role", "alive", "kin", "yourkin", "family", "dead", "reigned", "children",
     "rank", "coast", "river", "founded", "years", "stands", "gone", "far",
     "what", "verdict", "epithet", "trait", "ptrade", "landmark", "quarter",
-    "sun"};   // D-05
+    "sun"};
 enum RecordDirective { D_CAST = 0, D_NEWS, D_ENTRIES, D_YEARS, D_DEATH, D_DEED, D_LIFE, D_EVENT, D_DIGEST, D_PAST, D_SUNTABLE, D_COUNT };
 const char* const DIRECTIVE_NAMES[D_COUNT] = {"cast", "news", "entries", "years", "death", "deed", "life", "event", "digest", "past", "suntable"};   // D-05: `suntable`
 

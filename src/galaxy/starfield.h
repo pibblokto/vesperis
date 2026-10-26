@@ -99,7 +99,7 @@ double galaxyFieldDensity(double sx, double sy, double sz);
 struct FaceOnColumn { double column = 0, disk = 0, arm = 0, bulge = 0; };
 FaceOnColumn galaxyFaceOnColumn(double sx, double sz);
 // M9-13 regions of the galaxy: where a sector sits decides star classes, names and the backdrop.
-enum GalaxyRegion { REGION_CORE = 0, REGION_BULGE, REGION_ARM, REGION_DISK, REGION_HALO, REGION_CLUSTER, REGION_NEBULA, REGION_OPEN, REGION_COUNT };   // G-02: REGION_OPEN, an open cluster of the disc
+enum GalaxyRegion { REGION_CORE = 0, REGION_BULGE, REGION_ARM, REGION_DISK, REGION_HALO, REGION_CLUSTER, REGION_NEBULA, REGION_OPEN, REGION_COUNT };   // REGION_OPEN, an open cluster of the disc
 extern const char* const REGION_NAMES[REGION_COUNT];
 int galaxyRegion(int64_t sx, int64_t sy, int64_t sz);
 // G-03: the galaxy seen from inside. `galaxyColumn` integrates the light of the unresolved stars along a direction from
@@ -120,7 +120,7 @@ void buildGalaxyBand(const Vec3& obsSectors, std::vector<float>& map, int W, int
 void buildGalaxyBandCells(const Vec3& obsSectors, std::vector<float>& map, int W, int H, int c0, int c1);
 // N5-01: nebula patches of the star-forming regions around an observer (sector coordinates): a direction, an
 // angular radius (radians), a tone (0 blue, 1 red, 2 white) and a strength; nebulaGlow is their glow 0..1 in a direction.
-// G-03: the patches belong to star-forming complexes, one in a NEBULA_CELL ly column of the arms with probability
+// the patches belong to star-forming complexes, one in a NEBULA_CELL ly column of the arms with probability
 // NEBULA_RATE, its 3-6 patches within NEBULA_RADIUS ly of a centre near the plane; the complex is the STAR-FORMING
 // REGION of `galaxyRegion` (within NEBULA_RADIUS of the centre) and its patches fade out at NEBULA_SEEN ly (the 14 ly
 // cells at 15% of N5-01 put three to six patches in nearly every sky of the arm).
@@ -147,7 +147,7 @@ bool starInSector(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName =
 // the bulge and the clusters). A new variety claims its share and leaves every other star as it was, so the pinned
 // sites, the home star and the regress hold unless one of their stars is claimed. S-03: the neutron star takes a share of
 // the pulsars (more in the old populations). S-04: the protostar out of the stars that stayed yellow where stars form.
-// S-05: the Wolf-Rayet star out of the blue giants that stayed (a fifth along the arms and where stars form, fewer in the
+// the Wolf-Rayet star out of the blue giants that stayed (a fifth along the arms and where stars form, fewer in the
 // core, the bulge and the disc, none in the halo or a globular: no massive star is old). S-06: the black hole out of the
 // pulsars that stayed (a quarter in the core, a fifth in the bulge, one in seven in a globular, one in ten in the halo, one in
 // sixteen in the arms and the disc, one in thirty where stars form).

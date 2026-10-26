@@ -16,12 +16,12 @@
 #include <cstdint>
 
 enum SettlementClass { SC_HAMLET = 0, SC_VILLAGE, SC_TOWN, SC_MONUMENT,   // a monument: one building alone in the countryside
-                       SC_CITY, SC_CAPITAL,                                  // T-01: the plan's cities and its capital (peoples/plan.h), their cores spanning cells
-                       SC_WORKS };                                           // T-01: a cell that holds only a network's works (a maglev's pylons): no shards, no graves
+                       SC_CITY, SC_CAPITAL,                                  // the plan's cities and its capital (peoples/plan.h), their cores spanning cells
+                       SC_WORKS };                                           // a cell that holds only a network's works (a maglev's pylons): no shards, no graves
 enum SettlementPlan { SP_CLUSTER = 0, SP_STREET, SP_RADIAL, SP_GRID, SP_LONE, SP_GREAT };   // A-03: SP_GREAT the futuristic age's few great structures
 enum BuildingKind { BK_HOUSE = 0, BK_HALL, BK_TOWER, BK_ROTUNDA, BK_GATE, BK_PLATFORM, BK_COLONNADE, BK_STELA, BK_RUBBLE, BK_WALL,
                     BK_QUAY, BK_MOLE, BK_BOLLARD, BK_TERRACE, BK_CISTERN, BK_WINDWALL, BK_CAIRN,   // C-08: what the terrain asked for
-                    // A-03: the ages' own (peoples/buildings.h); C-01's ten are the medieval age's
+                    // the ages' own (peoples/buildings.h); C-01's ten are the medieval age's
                     BK_HUT, BK_LONGHOUSE, BK_TENT_RING, BK_STONE_CIRCLE, BK_MENHIR, BK_DOLMEN, BK_PALISADE,                       // prehistoric
                     BK_TEMPLE, BK_WALL_TOWER,                                                                                    // medieval
                     BK_ROW, BK_TENEMENT, BK_VILLA, BK_CHURCH, BK_TOWN_HALL, BK_STATION, BK_MILL, BK_GASOMETER, BK_WATER_TOWER,   // industrial
@@ -29,22 +29,22 @@ enum BuildingKind { BK_HOUSE = 0, BK_HALL, BK_TOWER, BK_ROTUNDA, BK_GATE, BK_PLA
                     BK_BLOCK, BK_SUBURB, BK_HIGHRISE, BK_STADIUM, BK_MAST, BK_POWER, BK_TANKS,                                   // modern
                     BK_ARCOLOGY, BK_HABITAT, BK_SPIRE, BK_RING, BK_MAGLEV, BK_WRECK, BK_POD,                                     // futuristic
                     BK_SPIKE, BK_HALO, BK_PILLARS, BK_SHAFT, BK_MONOLITH,                                                        // far future
-                    // A-04: the genome's: the focal accent (its style the `Focus`), a windmill (a medieval people's machine), an aqueduct (a
+                    // the genome's: the focal accent (its style the `Focus`), a windmill (a medieval people's machine), an aqueduct (a
                     // people of the valleys), two towers joined by a bridge (a people of bridges), a tunnel's mouth (a people of tunnels)
                     BK_FOCUS, BK_WINDMILL, BK_AQUEDUCT, BK_TWIN, BK_PORTAL,
-                    // T-02: a harbour's crane (style 0 an industrial people's jib crane, 1 a modern people's gantry), a container yard's stacks,
+                    // a harbour's crane (style 0 an industrial people's jib crane, 1 a modern people's gantry), a container yard's stacks,
                     // a town's reservoir (style 0 a basin of masonry in its bank, 1 a round tank of concrete)
                     BK_CRANE, BK_CONTAINERS, BK_RESERVOIR,
-                    // T-03: the works' (peoples/works.h): earth (a barrow, a long barrow, a spoil heap, a bank, a ring bank: `style`), a dam's wall, a
+                    // the works' (peoples/works.h): earth (a barrow, a long barrow, a spoil heap, a bank, a ring bank: `style`), a dam's wall, a
                     // dish, a tomb, a redoubt or a casemate, a pillbox, dragon's teeth, a machine's wreck (a tank, a haul truck), an aircraft's, a
                     // ship's, a launch pad and its tower, a great hall (an assembly building, a mine's mill), a colossus, a wind turbine, a
                     // lighthouse, a lattice, a quarry's derrick, cut blocks, a sphere on its point, an elevator's anchor and its ribbon, a trilithon,
                     // a conveyor
                     BK_MOUND, BK_DAM, BK_DISH, BK_TOMB, BK_FORT, BK_BUNKER, BK_TEETH, BK_VEHICLE, BK_AIRCRAFT, BK_SHIP, BK_LAUNCHPAD, BK_HANGAR,
                     BK_COLOSSUS, BK_TURBINE, BK_LIGHTHOUSE, BK_LATTICE, BK_DERRICK, BK_BLOCKS, BK_SPHERE, BK_TETHER, BK_TRILITHON, BK_CONVEYOR,
-                    // R-412: the people's street furniture (`style` its `Furniture`: a well, a lamp, a fountain, a figure on its plinth)
+                    // the people's street furniture (`style` its `Furniture`: a well, a lamp, a fountain, a figure on its plinth)
                     BK_FURNITURE,
-                    // D-05: a people that lost its sun: a dome over the warm ground (`style` 0 an industrial people's iron ribs and glass on a
+                    // a people that lost its sun: a dome over the warm ground (`style` 0 an industrial people's iron ribs and glass on a
                     // ring of brick, 1 a modern people's steel and glass on a ring of concrete, 2 the far future's whole), a glasshouse (0 an
                     // industrial people's iron and glass on low walls of brick, 1 a modern people's tunnel of hoops, 2 a later people's vault)
                     BK_DOME, BK_GREENHOUSE,
@@ -64,31 +64,31 @@ struct Culture {
     double buried = 0;      // how deep its walls sank into the ground (metres at full decay): a desert's drifted sand
     // C-08 weathering by age: how long ago the people ended (years, 200 to 40,000, log-uniform from the seed) and how wet the
     // world is (0 a desert .. 1 a rainy felisian); the base decay is theirs now (`decayOf`), the sand drifts grow with the age.
-    // A-01: the years are the profile's (`peopleAgeOf`, peoples/peoples.h: C-08's span for the first two ages, longer for the late
+    // the years are the profile's (`peopleAgeOf`, peoples/peoples.h: C-08's span for the first two ages, longer for the late
     // ones), and the weathering reads them over the age's durability (`weatherYears`: a late people's works outlast the years)
     double ageYears = 2000, wet = 0.5;
-    int age = 1;                 // A-01: the age the people reached (Age: 0 prehistoric .. 5 far future)
-    double weatherYears = 2000;  // A-01: the years as the weather counts them (ageYears over `ageDurability`)
-    // C-09 the roads (`peoples/roads.*`): half the width (metres, 2.5-4; broader between towns), paved with stone (the rock
+    int age = 1;                 // the age the people reached (Age: 0 prehistoric .. 5 far future)
+    double weatherYears = 2000;  // the years as the weather counts them (ageYears over `ageDurability`)
+    // the roads (`peoples/roads.*`): half the width (metres, 2.5-4; broader between towns), paved with stone (the rock
     // family's material) or beaten (the ground's own, bare and darker), and the share of their length that is gone (the
     // age's and the rain's: a tenth of a young desert people's, over half of a twenty-millennia people's on a wet world)
     double roadHalf = 3; bool paved = true; double roadWear = 0.2;
-    int people = 0;         // C-13: which of the world's peoples this is (0 the first; 1 the second, where the world had two)
-    // A-02: its colours and windows (peoples/forms.h). A-03: the age's materials in its four slots. A-04: the genome's colours through
+    int people = 0;         // which of the world's peoples this is (0 the first; 1 the second, where the world had two)
+    // its colours and windows (peoples/forms.h). A-03: the age's materials in its four slots. A-04: the genome's colours through
     // the age's materials (the structure, the accent, the roofing or metal and glass, timber or light: `culturePalette`, peoples/buildings.h)
     FormPalette palette;
-    // A-04: the architecture genome (peoples/genome.h), the people's own through its ages; the ways below are it read through the age
+    // the architecture genome (peoples/genome.h), the people's own through its ages; the ways below are it read through the age
     // (`cultureWays`, peoples/buildings.h), and C-01's `tall`, `plan`, `towers`, `style` and `stoneRoofs` above are its proportion, its
     // streets, its appetite for height, its structure and its roofs now
     Genome genome;
     int technique = TQ_POST_LINTEL;   // the age's way of spanning (`techniqueOf`)
-    // A-03, the genome's since A-04: the roof (`RoofForm`), the temple (0 a basilica with its tower, 1 a hall under a dome with minarets,
+    // the genome's: the roof (`RoofForm`), the temple (0 a basilica with its tower, 1 a hall under a dome with minarets,
     // 2 a stepped mass, 3 a round temple under a dome or a cone), the huts (0 wattle on posts, 1 dry stone), the towers (0 a slab, 1
     // setbacks, 2 a cylinder, 3 a prism, 4 boxes cantilevered off a core, 5 a shell's waist), the great structure (the arcology: 0 a stepped
     // pyramid, 1 a cone, 2 grown; the far future's: 0 a spike, 1 a ring, 2 pillars, 3 a shaft, 4 a solid)
     int roof = RF_PITCHED, temple = 0, hut = 0, towerForm = 0, great = 0;
-    double life = 1.0;   // A-04: its works' lifetimes over its age's materials' (built light 0.5 .. built to last 2: `GV_LASTING`)
-    uint64_t seed = 0;   // T-02: the people's seed (`peopleGen(g, people).seed`): its ways read again in an older age (`cultureAtAge`)
+    double life = 1.0;   // its works' lifetimes over its age's materials' (built light 0.5 .. built to last 2: `GV_LASTING`)
+    uint64_t seed = 0;   // the people's seed (`peopleGen(g, people).seed`): its ways read again in an older age (`cultureAtAge`)
 };
 // C-13: the peoples of a world. One world in five of those that had a civilisation had two, each with a culture, a lore, a
 // tongue, a voice, a music and fifty recordings of its own: `peopleGen` is the generator a people's draws read (the world's
@@ -124,22 +124,22 @@ struct Building {
     double luck = 0;        // A-03: its fortune against the weather (the settlement's and its own, -0.4..0.4): a material half gone is more
                             // or less gone in it (`buildingDecay`, peoples/buildings.h); C-01's one decay is its materials' now
     int door = 0;           // the side with the doorway: 0 front (+z'), 1 right (+x'), 2 back (-z'), 3 left (-x'); -1 none
-    int age = 1;            // A-03: the age whose way built it (its kind's; B-414: its people's last, a work's pieces their work's)
-    int style = 0;          // A-03: the kind's form its culture chose (a temple: `Culture::temple`; a tower: `towerForm`), so a room is known without the culture
-    // A-04: what its people's genome made of it that its room reads (so a room is still known without the culture): its plan's form
+    int age = 1;            // the age whose way built it (its kind's; B-414: its people's last, a work's pieces their work's)
+    int style = 0;          // the kind's form its culture chose (a temple: `Culture::temple`; a tower: `towerForm`), so a room is known without the culture
+    // what its people's genome made of it that its room reads (so a room is still known without the culture): its plan's form
     // (`PlanForm`: a rectangle, a circle, a polygon of `sides`, an ellipse, an L, a court), what it stands on (`Foundation`), and its
     // doorway in the middle of its wall (a people of bilateral symmetry, or of bulging walls)
     int form = PF_RECT, sides = 0, found = 0;
     bool centred = false;
     uint64_t seed = 0;
-    // T-02: the town's district it stands in (`District`, peoples/towns.h) and how many years before its people's end it was left (a town
+    // the town's district it stands in (`District`, peoples/towns.h) and how many years before its people's end it was left (a town
     // the history says was left early: its decay counts them too; 0 used to the end)
     int district = 0;
     double before = 0;
-    // T-03: a work whose forms stand at heights over the reference level, not over the ground at their foot (a dam's wall from its valley's
+    // a work whose forms stand at heights over the reference level, not over the ground at their foot (a dam's wall from its valley's
     // floor to its crest, an aqueduct's arches to its channel): the height they rise from (-1e9: the ground's, as every building's)
     double base = -1e9;
-    // R-412: how deep its front yard is to the street it fronts (a town's lots; 0 none known): what bounds it, where its people bounded yards;
+    // how deep its front yard is to the street it fronts (a town's lots; 0 none known): what bounds it, where its people bounded yards;
     // whether it stands in a row or a compound (its neighbours at its sides: no turrets on its corners, no garden behind it)
     double yard = 0;
     bool joined = false;
@@ -149,7 +149,7 @@ struct Building {
 // sunk in; a cut in the rock round it; a terrace's kerb (B-416: the pits, the cuts and the kerbs the hand-made ages')
 enum Foundation { FD_GROUND = 0, FD_STILTS, FD_MOUND, FD_PIT, FD_CUT, FD_TERRACE };
 // the drawn pieces are `Form`s (A-02, peoples/forms.h): C-01's boxes (walls, columns, slabs, blocks) and domes among the forms of the ages
-// C-08: what the terrain round a settlement says (`readSite`: samples of the planet function at 64 m, no tile built), read once
+// what the terrain round a settlement says (`readSite`: samples of the planet function at 64 m, no tile built), read once
 // when the layout is made and kept with it: the harbour, the terraces, the cisterns, the wind walls and the cairns come from it
 struct SiteRead {
     double slope = 0;       // the grade across the settlement (rise over run) and the heading the ground falls toward
@@ -161,7 +161,7 @@ struct SiteRead {
     double ridgeDir = 0;    // the heading of the highest ground round the settlement
     double wind = 0;        // the prevailing wind's heading here (where it blows from), from the world's wind angle, the hemisphere and the band
     bool desert = false;
-    // P-04: the present's (a dead world's people built on its then-world): what the wind drifts against the walls (0 nothing, 1 sand on a dry
+    // the present's (a dead world's people built on its then-world): what the wind drifts against the walls (0 nothing, 1 sand on a dry
     // world, 2 snow on a frozen one) and a shore whose sea is ice now
     int drift = 0;
     bool shoreIce = false;
@@ -183,14 +183,14 @@ struct RuinSpec {
     int plan = 0;           // SettlementPlan
     bool walled = false;    // a town wall round it
     std::vector<Building> buildings;
-    SiteRead site;          // C-08: what the terrain said
-    bool harbour = false, terraced = false, cistern = false, windwall = false, cairns = false;   // C-08: the features it got
-    int harbourKind = 0;      // T-02: the harbour by the age: 0 a quay (C-08's), 1 a dock and its cranes, 2 a container port
-    bool reservoir = false;   // T-02: an industrial or a modern town's reservoir
-    // T-01: a place of the world's plan (peoples/plan.h): its rank in the people's founding (-1 the countryside's, hashed in its cell) and
+    SiteRead site;          // what the terrain said
+    bool harbour = false, terraced = false, cistern = false, windwall = false, cairns = false;   // the features it got
+    int harbourKind = 0;      // the harbour by the age: 0 a quay (C-08's), 1 a dock and its cranes, 2 a container port
+    bool reservoir = false;   // an industrial or a modern town's reservoir
+    // a place of the world's plan (peoples/plan.h): its rank in the people's founding (-1 the countryside's, hashed in its cell) and
     // the buildings its core holds (a capital's and a city's: the layout's count; 0 the class's own draw)
     int rank = -1, wanted = 0;
-    // T-02: the town's plan (peoples/towns.h): its streets, its squares, its fields, its layers by age (B-414: one, its people's last); the age
+    // the town's plan (peoples/towns.h): its streets, its squares, its fields, its layers by age (B-414: one, its people's last); the age
     // it was built in (-1 its people's: B-414, every settlement's; a work's pieces their work's), and the years before the end it was left
     std::vector<Street> streets;
     std::vector<Plaza> plazas;
@@ -199,7 +199,7 @@ struct RuinSpec {
     int buildAge = -1;        // -1 the people's own age
     double before = 0;        // years before the people's end it was left (0: used to the end)
     int founded = 0;          // the year of its founding in the people's count (the history's; 0 unknown: the countryside's)
-    int work = -1;            // T-03: a work's pieces (`WorkKind`, peoples/works.h; `sclass` SC_WORKS), -1 a settlement's
+    int work = -1;            // a work's pieces (`WorkKind`, peoples/works.h; `sclass` SC_WORKS), -1 a settlement's
 };
 inline bool worldHadCivilisation(const BodyGen& g) { return g.hasTrait(TR_CIVILISATION); }   // the worlds with ruins (B-417: no others)
 // the 2 km grid (M4-07): the cell of a point (gLon unwrapped, from the longitude given), and a row's number of cells
@@ -235,6 +235,6 @@ bool settlementClear(const RuinSpec& r, double x, double z, double margin);
 void ruinElements(const RuinSpec& r, const Culture& c, int lod, std::vector<Form>& out);
 
 // ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
-// C-03: the doorway's midpoint of a building with one, in the settlement's metres; false for the rest. A-03: its room's
+// the doorway's midpoint of a building with one, in the settlement's metres; false for the rest. A-03: its room's
 // (`buildingRoom`, peoples/buildings.h)
 bool buildingDoor(const Building& b, double& dx, double& dz);

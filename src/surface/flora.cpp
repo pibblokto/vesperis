@@ -18,7 +18,7 @@
 
 namespace {
 // silhouettes: 0 dome (broadleaf), 1 cone (conifer), 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree,
-// B-315: 7 weeping, 8 candelabra, 9 spire
+// 7 weeping, 8 candelabra, 9 spire
 const double FAM_H0[10] = {6.0, 8.0, 7.0, 18.0, 4.0, 4.0, 3.0, 7.0, 6.0, 14.0};
 const double FAM_H1[10] = {12.0, 16.0, 13.0, 28.0, 8.0, 7.0, 6.0, 13.0, 11.0, 30.0};
 const double FAM_R[10] = {0.36, 0.22, 0.45, 0.35, 0.30, 0.42, 0.45, 0.40, 0.42, 0.14};    // canopy radius as a fraction of the height
@@ -76,12 +76,12 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
     double nx = (tv.material == MAT_FOREST || deadWorld ? dens : tv.veg) * per * (0.6 + 0.8 * hash01(mix64(h + 5)));
     int n = (int)nx + (hash01(mix64(h + 6)) < nx - (int)nx ? 1 : 0);   // fractional counts as a probability: scattered trees on grass
     if (n <= 0) return;
-    double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);   // R-304
+    double treeScale = std::sqrt(9.8 / std::max(site.gravity, 1.0)) * (site.gen.hasTrait(TR_GIANT_FLORA) ? 1.9 : 1.0);
     double f = seasonPhaseLocal();
-    double deadChance = site.gen.hasTrait(TR_DEAD_FOREST) ? 0.6 : 0.03;   // R-304: a dying world
-    const bool fungal = site.gen.hasTrait(TR_FUNGAL);   // Q-02
-    // C-01: no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone);
-    // A-03: a twentieth of them two centuries after the end, a third after ten thousand years
+    double deadChance = site.gen.hasTrait(TR_DEAD_FOREST) ? 0.6 : 0.03;   // a dying world
+    const bool fungal = site.gen.hasTrait(TR_FUNGAL);
+    // no tree stands in a settlement's buildings, and its streets and yards keep one in three (the town is overgrown, not gone);
+    // a twentieth of them two centuries after the end, a third after ten thousand years
     const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = 0;
     if (worldHadCivilisation(site.gen))
         forNearbyRuins(cx * cs + 8, cz * cs + 8, 1, [&](const Ruin& r, const RuinCell& c, int) {
@@ -94,9 +94,9 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         TreeInst T;
         T.seed = ht;
         T.x = cx * cs + hash01(ht) * cs; T.z = cz * cs + hash01(mix64(ht + 1)) * cs;
-        if (!site.roads.empty() && site.roadCover(T.x, T.z) > 0.3) continue;   // C-09: nothing grows on the road's bed
-        if (!site.marks.empty() && site.markCover(T.x, T.z) > 0.3) continue;   // T-02: nor on a town's streets and squares
-        if (!site.edits.empty() && site.editCover(T.x, T.z) > 0.3) continue;   // T-03: nor on a fresh cut, a line's bed, a plain made flat
+        if (!site.roads.empty() && site.roadCover(T.x, T.z) > 0.3) continue;   // nothing grows on the road's bed
+        if (!site.marks.empty() && site.markCover(T.x, T.z) > 0.3) continue;   // nor on a town's streets and squares
+        if (!site.edits.empty() && site.editCover(T.x, T.z) > 0.3) continue;   // nor on a fresh cut, a line's bed, a plain made flat
         if (nNear) {
             bool skip = false;
             for (int q = 0; q < nNear && !skip; q++) {
@@ -104,10 +104,10 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
                 double dx = T.x - r.x, dz = T.z - r.z;
                 if (dx * dx + dz * dz > (r.reach + 40) * (r.reach + 40)) continue;
                 if (near[q]->spec.work < 0 && std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond (T-03: a work has none)
-                if (near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // A-03: its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
+                if (near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
                     const Culture& cu = cultures[near[q]->spec.people == 1 && peoples > 1 ? 1 : 0];
                     double keep = clampd(0.05 + 0.15 * std::log10(std::max(1.0, cu.ageYears / 200.0)), 0.05, 0.33);
-                    if (hash01(mix64(ht + 21)) >= keep) { skip = true; break; }   // F-02: before the buildings (one hash; it clears 67-95% of the yards' trees)
+                    if (hash01(mix64(ht + 21)) >= keep) { skip = true; break; }   // before the buildings (one hash; it clears 67-95% of the yards' trees)
                 }
                 skip = inSettlementBuilding(*near[q], T.x, T.z, 1.5);
             }
@@ -115,7 +115,7 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         }
         bool second = hash01(mix64(ht + 9)) < 0.3;
         T.fam = second ? site.gen.floraFamily2 : site.gen.floraFamily;
-        if (fungal) {   // Q-02: the fungal forests: caps on stems, parasols, a few tall stalks, whatever the biome
+        if (fungal) {   // the fungal forests: caps on stems, parasols, a few tall stalks, whatever the biome
             const double u = hash01(mix64(ht + 10));
             T.fam = u < 0.74 ? 6 : (u < 0.9 ? 2 : 4);
         } else
@@ -138,8 +138,8 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
             T.lx = std::sin(lean) * T.cy * std::cos(a); T.lz = std::sin(lean) * T.cy * std::sin(a);
         }
         T.dead = deadWorld || ((tv.material == MAT_FOREST || deadChance > 0.1) && hash01(mix64(ht + 77)) < deadChance);
-        if (stone) { T.stump = true; T.h *= 0.12 + 0.22 * hash01(mix64(ht + 78)); }   // P-04: broken off a metre or three up
-        T.bare = !fungal && deciduous(T.fam) && f < -0.6;   // Q-02: a fungus keeps its cap the year round
+        if (stone) { T.stump = true; T.h *= 0.12 + 0.22 * hash01(mix64(ht + 78)); }   // broken off a metre or three up
+        T.bare = !fungal && deciduous(T.fam) && f < -0.6;   // a fungus keeps its cap the year round
         bool autumn = !fungal && deciduous(T.fam) && f < 0 && f >= -0.6;
         double v = hash01(mix64(ht + 12));
         T.bank = (second || autumn) ? 5 : (v < 0.15 ? 10 : 3);
@@ -153,7 +153,7 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
 // fallen logs in the forest (colliders too)
 void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst&)>& fn) {
     const bool deadWorld = deadKind(site.gen.type), stone = KINDS[site.gen.type].cover == DC_SCORCHED;   // P-04: a dead world's fallen trunks (stone on a scorched one)
-    const bool petrified = site.gen.hasTrait(TR_PETRIFIED);   // Q-02: a petrified forest's trunks where the ground keeps its density (`ltint`)
+    const bool petrified = site.gen.hasTrait(TR_PETRIFIED);   // a petrified forest's trunks where the ground keeps its density (`ltint`)
     if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld && !petrified) return;
     const TerrainVertex& tv = site.lod0.at(cx, cz);
     if (tv.water > -1e8f && tv.h < tv.water + 0.5) return;
@@ -173,11 +173,11 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     L.heading = hash01(mix64(L.seed + 2)) * TAU;
     L.len = 3.5 + 6 * hash01(mix64(L.seed + 3));
     L.radius = 0.25 + 0.35 * hash01(mix64(L.seed + 4)) * hash01(mix64(L.seed + 6));   // most are slim, a few are giants
-    if (L.stone) { L.len *= 0.4 + 0.5 * hash01(mix64(L.seed + 7)); L.radius *= 1.7; }   // Q-02: the stone trunks broken in sections, thick
-    { const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // C-08: no log in a room
-    if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // C-09: nor across the road
-    if (!site.marks.empty() && site.markCover(L.x, L.z) > 0.3) return;   // T-02: nor on a street
-    if (!site.edits.empty() && site.editCover(L.x, L.z) > 0.3) return;   // T-03: nor on a work's ground
+    if (L.stone) { L.len *= 0.4 + 0.5 * hash01(mix64(L.seed + 7)); L.radius *= 1.7; }   // the stone trunks broken in sections, thick
+    { const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // no log in a room
+    if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // nor across the road
+    if (!site.marks.empty() && site.markCover(L.x, L.z) > 0.3) return;   // nor on a street
+    if (!site.edits.empty() && site.editCover(L.x, L.z) > 0.3) return;   // nor on a work's ground
     fn(L);
 }
 
@@ -212,11 +212,11 @@ static int floraBands() { return std::min(8, FBH / 32); }
 // band that holds its canopy's centre
 void SurfaceView::drawFlora(Framebuffer& fb, double t) {
     lastFloraBandN = 0;
-    const bool deadWorld = deadKind(site.gen.type);   // P-04: a dead world's old forests (their trees and fallen trunks alone)
-    if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld && !site.gen.hasTrait(TR_PETRIFIED)) return;   // Q-02: a petrified forest's trunks
+    const bool deadWorld = deadKind(site.gen.type);   // a dead world's old forests (their trees and fallen trunks alone)
+    if (!kindHas(site.gen.type, KT_FLORA) && !deadWorld && !site.gen.hasTrait(TR_PETRIFIED)) return;   // a petrified forest's trunks
     lastTreesDrawn = 0; lastFloraPoints = 0; lastFloraPolys = 0; lastNearTrees = lastMidTrees = lastFarTrees = 0; lastTreesHidden = 0; lastTreesVisited = 0;
     for (double& m : lastFloraMs) m = 0;
-    const auto tl0 = std::chrono::steady_clock::now();   // F-01
+    const auto tl0 = std::chrono::steady_clock::now();
     {   // the cells near to far (N2-04), within the 70 degree view with a margin, and their trees with the rows each can touch
         const double cs = 16;
         const int radius = 24;
@@ -264,7 +264,7 @@ void SurfaceView::drawFlora(Framebuffer& fb, double t) {
         lastTreesDrawn += st.treesDrawn; lastFloraPoints += st.floraPoints; lastFloraPolys += st.floraPolys; lastTreesVisited += st.treesVisited;
         lastNearTrees += st.nearTrees; lastMidTrees += st.midTrees; lastFarTrees += st.farTrees; lastTreesHidden += st.treesHidden;
         for (int k = 0; k < 2; k++) lastFloraMs[k] = std::max(lastFloraMs[k], st.ms[k]);
-        if (lastFloraBandN < TRACE_BANDS) { BandTrace& b = lastFloraBands[lastFloraBandN++]; b = BandTrace(); b.y0 = yb; b.y1 = ye; b.ms = bandMs; b.walked = st.treesVisited; b.drawn = st.treesDrawn; }   // F-01
+        if (lastFloraBandN < TRACE_BANDS) { BandTrace& b = lastFloraBands[lastFloraBandN++]; b = BandTrace(); b.y0 = yb; b.y1 = ye; b.ms = bandMs; b.walked = st.treesVisited; b.drawn = st.treesDrawn; }
     });
     std::sort(lastFloraBands, lastFloraBands + lastFloraBandN, [](const BandTrace& a, const BandTrace& b) { return a.y0 < b.y0; });
 }
@@ -280,8 +280,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     auto fogShade = [&](double shade, double dist) { double f = 1 - std::exp(-(dist / fogD + wallHere)); return shade + (63 - shade) * f; };
     double light = ambient + (1 - ambient) * sunUp * lf;
     double leafBase = 48 * std::pow(light, 0.7);
-    if (site.gen.hasTrait(TR_LUMINOUS_FLORA)) leafBase = std::max(leafBase, 40 * clampd((0.45 - env.skyBrightness) / 0.45, 0, 1));   // R-304: the canopies glow at night
-    // D-04: the explorer's lamp on a tree or a cell: the band's light raised by the lamp's at the canopy's or the cell's middle (the trees' and the
+    if (site.gen.hasTrait(TR_LUMINOUS_FLORA)) leafBase = std::max(leafBase, 40 * clampd((0.45 - env.skyBrightness) / 0.45, 0, 1));   // the canopies glow at night
+    // the explorer's lamp on a tree or a cell: the band's light raised by the lamp's at the canopy's or the cell's middle (the trees' and the
     // cells' shades all start from `light` and `leafBase`)
     const double light0 = light, leafBase0 = leafBase;
     auto lampOn = [&](const Vec3& p) {
@@ -301,7 +301,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     std::vector<uint16_t> cov((size_t)TX * TY, 0);
     double tSec = nowMs();
     auto section = [&](int k) { double n = nowMs(); st.ms[k] += n - tSec; tSec = n; };
-    bool markCov = true;   // F-07: the coverage grid is read by the trees alone: the cells after them mark nothing
+    bool markCov = true;   // the coverage grid is read by the trees alone: the cells after them mark nothing
     // a tree (or its hiding) counts once: in the band that holds the row of its canopy centre
     auto inBand = [&](double x, double y, double z) { Vec3 v = toView(x, y, z); if (v.z < NEAR_Z) return bandY0 == 0; int sy = clampi((int)(proj.cy - proj.f * v.y / v.z), 0, FBH - 1); return sy >= bandY0 && sy < bandY1; };
     auto vert = [&](double x, double y, double z, double shade) { RVert q; Vec3 v = toView(x, y, z); q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade; return q; };
@@ -319,7 +319,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         }
         st.floraPoints++;
     };
-    // B-315: a leaf cluster: a ragged disc facing the camera (a fan round its centre with 6-10 rim vertices of hashed radii),
+    // a leaf cluster: a ragged disc facing the camera (a fan round its centre with 6-10 rim vertices of hashed radii),
     // cut by the leaf-edge noise in the rasteriser (the vertex weight is 1.1 at the centre and 0.3 at the rim, so the rim
     // breaks into tufts and a few holes open inside), shaded by which side of the canopy it sits on (litC), by the sun's
     // side of the disc and darker underneath, and textured with the leaf tile at 12 texels a metre (bilinear close by,
@@ -359,11 +359,11 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         }
         q[nOut + 1] = q[1];
         RasterParams rp; rp.bank = bank;
-        // B-319: the leaf tile fades out under six logical pixels of radius too: a texel a pixel boiled under every far
+        // the leaf tile fades out under six logical pixels of radius too: a texel a pixel boiled under every far
         // canopy as the camera moved
         double tileF = smoothstep(2.5 * S, 6.0 * S, pxR);
         if (tileF > 0.02) { rp.grain2 = &leafTile; rp.grain2Scale = 1.0; rp.grainWeight = clampd(1.0 - (dist - 60.0) / 80.0, 0.25, 1.0) * tileF; }
-        // B-319: a small disc keeps a whole rim: below eight pixels of radius the edge noise (a texel a pixel) tore a
+        // a small disc keeps a whole rim: below eight pixels of radius the edge noise (a texel a pixel) tore a
         // different set of pixels out of it every time the camera moved a fraction of a pixel, and every far tree
         // sparkled; the ragged edge fades in between 3 and 8 logical pixels
         double ragF = smoothstep(3.0 * S, 8.0 * S, pxR);
@@ -393,7 +393,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         rasterPolygon(fb, q, 4, rp, proj);
         st.floraPolys++;
     };
-    // B-315: a frond (the fern tree's and the undergrowth's): a leaf-shaped strip from the base over a mid point to the tip,
+    // a frond (the fern tree's and the undergrowth's): a leaf-shaped strip from the base over a mid point to the tip,
     // widest at the mid point, with a full weight down its centre line and 0.3 at the edges, so the leaf-edge cutout
     // serrates both edges into leaflets; the leaf tile mottles it. The shade comes fogged
     auto frond = [&](double x0, double y0, double z0, double x1, double y1, double z1, double x2, double y2, double z2, double w, double shade, int bank) {
@@ -424,7 +424,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         }
     };
     double sideLit = dot(right, sd) * sunUp;
-    // N2-04: cells near to far (floraCells, listed by drawFlora), and a coverage grid of 8x8 (1x) tiles: a tree whose
+    // cells near to far (floraCells, listed by drawFlora), and a coverage grid of 8x8 (1x) tiles: a tree whose
     // canopy falls entirely on tiles already filled by nearer canopies is skipped (a forest is many trees deep; the
     // hidden ones cost the most)
     const std::vector<FloraCell>& cells = floraCells;
@@ -439,32 +439,32 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         return true;
     };
     // ---- trees (the frame's list, near to far; only those whose rows reach this band)
-    const bool fungalWorld = site.gen.hasTrait(TR_FUNGAL);   // Q-02
+    const bool fungalWorld = site.gen.hasTrait(TR_FUNGAL);
     auto drawTree = [&](const TreeInst& T, double dist) {
         wallHere = rainWall(T.x, T.z, dist) + fogSeaWall(T.x, T.gy + 0.4 * T.h, T.z, dist);   // Q-02: a tree in the fog sea
         double rPx = T.r / dist * proj.f / FB_SCALE;   // 1x pixels
         double cx = T.x + T.lx, cz = T.z + T.lz;       // the canopy's centre
-        const double lampT = lampOn(Vec3(cx, T.gy + T.cy, cz));   // D-04
+        const double lampT = lampOn(Vec3(cx, T.gy + T.cy, cz));
         bool counts = inBand(cx, T.gy + T.cy, cz);
         if (dist > 40 && covered(cx, T.gy + T.cy, cz, T.r)) { if (counts) st.treesHidden++; return; }
         if (counts) st.treesDrawn++;
         const TreeLook& L = looks[T.fam];
         double trunkShade = fogShade((T.dead ? 24 : 17) + 11 * env.skyBrightness * sunUp + 20 * std::min(1.0, lampT), dist);   // bark: the dark to mid stops of its own bank (B-315); D-04: the lamp's
-        // N2-06: the canopy sways with the wind (cluster centres shift along the wind, more at the top)
+        // the canopy sways with the wind (cluster centres shift along the wind, more at the top)
         double swayA = wind * T.r * 0.12 * std::sin(t * 1.2 + T.x * 0.3 + T.z * 0.17), swx = wdx * swayA, swz = wdz * swayA;
         // blob shadows only where trees stand apart: under a closed canopy the darker floor (N2-02) is the shade,
         // and stacked darkening polygons would go black
         if (dist < 120 && !T.dead && T.dens < 0.5) drawBlobShadow(fb, cx, cz, T.r * 0.9, T.cy);
         int leafBank = T.bare ? 0 : T.bank;
         double tone0 = (T.bare ? 0.5 : 1.0) * L.tone;
-        double ragged = L.ragged * (fungalWorld && (T.fam == 6 || T.fam == 2) ? 0.25 : 1.0);   // Q-02: a fungus' cap smooth-edged
+        double ragged = L.ragged * (fungalWorld && (T.fam == 6 || T.fam == 2) ? 0.25 : 1.0);   // a fungus' cap smooth-edged
         // a cluster's share of the light from its place in the canopy: the top and the sun's side bright, the far side and
         // the underside dark
         auto litOf = [&](double ox, double oy, double oz) { Vec3 d = normalize(Vec3(ox, oy + T.r * 0.35, oz)); return clampd(0.5 + 0.5 * dot(d, sd), 0, 1) * sunUp + 0.5 * (1 - sunUp); };
         double w0 = T.h * (T.fam == 3 ? 0.04 : (T.fam == 6 ? 0.12 : (T.fam == 9 ? 0.015 : 0.02))) * L.trunkW, w1 = T.fam == 6 ? w0 * 0.85 : w0 * 0.45;
         double trunkTop = T.fam == 1 ? T.h * 0.35 : (T.fam == 3 ? T.h * 0.55 : (T.fam == 8 ? T.h * 0.45 : (T.fam == 9 ? T.h * 0.5 : T.cy)));
         if (T.dead) trunkTop = T.h * 0.85;
-        if (T.stump) {   // P-04: a stone stump, thick and broken, no branches
+        if (T.stump) {   // a stone stump, thick and broken, no branches
             if (rPx < 3.5) { line(T.x, T.gy, T.z, T.x, T.gy + T.h, T.z, trunkShade, BANK_BARK, 1); return; }
             limb(T.x, T.gy - 0.2, T.z, T.x, T.gy + T.h, T.z, T.r * 0.14, T.r * 0.11, trunkShade, sideLit, &barkTile, clampd(1.0 - (dist - 25.0) / 60.0, 0.0, 1.0));   // the trunk's girth (its canopy's measure)
             return;
@@ -663,7 +663,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             int cx = cr.cx, cz = cr.cz;
             double cellDist = cr.d;
             const TerrainVertex& tv = site.lod0.at(cx, cz);
-            lampOn(Vec3((cx + 0.5) * cs, tv.h + 0.5, (cz + 0.5) * cs));   // D-04
+            lampOn(Vec3((cx + 0.5) * cs, tv.h + 0.5, (cz + 0.5) * cs));
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0BULL);
             bool underwater = tv.water > -1e8f && tv.h < tv.water + 0.5;
             // ---- fallen logs (B-315): a six-sided trunk along its heading, sunk a third into the ground, bark-textured,
@@ -683,7 +683,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     uint64_t hs = mix64(Lg.seed + 5);
                     bool mossy = !Lg.stone && hash01(hs) < 0.45 && (tv.biome == BIO_TEMPERATE || tv.biome == BIO_TROPICAL || tv.biome == BIO_WETLAND || tv.biome == BIO_TAIGA);
                     bool roots = !Lg.stone && hash01(mix64(hs + 1)) < 0.3;
-                    const int barkBank = Lg.stone ? 26 : BANK_BARK, woodBank = Lg.stone ? 26 : BANK_WOOD;   // Q-02: the stone's own jasper colours (`setupPalette`)
+                    const int barkBank = Lg.stone ? 26 : BANK_BARK, woodBank = Lg.stone ? 26 : BANK_WOOD;   // the stone's own jasper colours (`setupPalette`)
                     double texW = clampd(1.0 - (dist - 20.0) / 40.0, 0.0, 1.0);
                     Vec3 mid = (A + B) * 0.5;
                     Vec3 toCam = normalize(Vec3(camPos.x - mid.x, camPos.y - mid.y, camPos.z - mid.z));
@@ -695,7 +695,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         Vec3 N = nn * std::cos(am) + upL * std::sin(am);
                         if (dot(N, toCam) < -0.05) continue;
                         double amb = ambient * (0.55 + 0.45 * std::max(0.0, N.y));
-                        double lt = amb + (1 - amb) * std::max(0.0, dot(N, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(mid, &N) : 0.0);   // D-04: the lamp
+                        double lt = amb + (1 - amb) * std::max(0.0, dot(N, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(mid, &N) : 0.0);   // the lamp
                         bool moss = mossy && N.y > 0.45;
                         double shade = fogShade((moss ? 12 : 16) + (moss ? 20 : 26) * std::pow(lt, 0.7), dist);   // never darker than a trunk
                         RVert q[4] = {vert(ring(A, a0).x, ring(A, a0).y, ring(A, a0).z, shade), vert(ring(A, a1).x, ring(A, a1).y, ring(A, a1).z, shade),
@@ -714,7 +714,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         const Vec3& E = endB ? B : A;
                         Vec3 N = endB ? axis : -axis;
                         double amb = ambient * 0.8;
-                        double lt = amb + (1 - amb) * std::max(0.0, dot(N, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(E, &N) : 0.0);   // D-04
+                        double lt = amb + (1 - amb) * std::max(0.0, dot(N, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(E, &N) : 0.0);
                         double wood = fogShade(44 * std::pow(lt, 0.6), dist), bark = fogShade(26 * std::pow(lt, 0.7), dist);
                         RVert q[8]; bool ok = true;
                         for (int k = 0; k < 8; k++) { Vec3 pnt = ring(E, k * TAU / 8); q[k] = vert(pnt.x, pnt.y, pnt.z, bark); if (q[k].z < NEAR_Z) ok = false; }
@@ -754,7 +754,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         }
                     }
                 });
-            if (deadKind(site.gen.type)) continue;   // P-04: on a dead world nothing else grows
+            if (deadKind(site.gen.type)) continue;   // on a dead world nothing else grows
             if (underwater && !(tv.material == MAT_WATER && tv.biome == BIO_WETLAND)) continue;
             // ---- undergrowth in forests: ferns, bushes with berries, mushrooms
             if (tv.material == MAT_FOREST && cellDist < 60 && tv.veg > 0.3) {
@@ -831,7 +831,7 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     if (mh / dist * proj.f < 1.2) continue;
                     double gy = site.groundHeight(mx, mz);
                     if (gy < site.waterAt(mx, mz) + 0.3) continue;
-                    double lit = ambient + (1 - ambient) * std::max(0.0, dot(normalize(Vec3(-right.x, 0.8, -right.z)), sd)) * sunUp * lf + (light - light0);   // D-04: the cell's lamp
+                    double lit = ambient + (1 - ambient) * std::max(0.0, dot(normalize(Vec3(-right.x, 0.8, -right.z)), sd)) * sunUp * lf + (light - light0);   // the cell's lamp
                     limb(mx, gy - 0.1, mz, mx, gy + mh, mz, mw, mw * 0.18, fogShade(38 * std::pow(lit, 0.7), dist), sideLit, dist < 30 ? &barkTile : nullptr, 0.5);
                 }
             }

@@ -168,7 +168,7 @@ struct Parser {
             while (p < ln.size()) { size_t q = ln.find_first_of(" \t", p); if (q == std::string::npos) q = ln.size(); if (q > p) w.push_back(ln.substr(p, q - p)); p = q + 1; }
             if (w.empty()) { error("an empty @ line"); return; }
             if (w[0] == "root") { for (size_t i = 1; i < w.size(); i++) G.roots.push_back(w[i]); return; }
-            if (w[0] == "apart") {   // D-05
+            if (w[0] == "apart") {
                 if (w.size() == 1) { if ((int)G.apartFiles.size() <= file) G.apartFiles.resize(file + 1, 0); G.apartFiles[file] = 1; return; }
                 for (size_t i = 1; i < w.size(); i++) {
                     const size_t q = w[i].find('=');
@@ -177,7 +177,7 @@ struct Parser {
                 }
                 return;
             }
-            if (w[0] == "instead") {   // D-05
+            if (w[0] == "instead") {
                 if (w.size() != 4) { error("@instead <guard> <rule> <rule2>"); return; }
                 VgInstead I;
                 if (!parseCond(w[1], I.cond)) { error("@instead: a guard: " + w[1]); return; }
@@ -187,7 +187,7 @@ struct Parser {
             }
             if (w[0] == "lexicon") {
                 if (w.size() < 3) { error("@lexicon <age|fact> words: the age one of prehistoric, medieval, industrial, modern, futuristic, farfuture"); return; }
-                if (ageOf(w[1]) < 0) {   // H-04: a fact's words (linked against the schema)
+                if (ageOf(w[1]) < 0) {   // a fact's words (linked against the schema)
                     for (size_t i = 2; i < w.size(); i++) G.lexFactNames[lowerOf(w[i])] = w[1];
                     return;
                 }
@@ -228,8 +228,8 @@ struct Parser {
         }
         if (cur < 0) { error("an alternative outside a rule"); return; }
         VgAlt a; a.rule = cur; a.file = file; a.line = line;
-        a.apart = (int)G.apartFiles.size() > file && G.apartFiles[file];   // D-05
-        {   // H-04: the alternative's key: its rule's name and its line (a people's dialect reads it; stable while other rules change)
+        a.apart = (int)G.apartFiles.size() > file && G.apartFiles[file];
+        {   // the alternative's key: its rule's name and its line (a people's dialect reads it; stable while other rules change)
             a.key = mix64(fnv1a(G.rules[cur].name + "|" + t));
         }
         if (t[0] == '(') {
@@ -426,7 +426,7 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
         if (I.fromRule < 0) L.error("@instead: no rule " + I.from);
         if (I.toRule < 0) L.error("@instead: no rule " + I.to);
     }
-    G.lexFact.clear();   // H-04: the words a fact allows
+    G.lexFact.clear();   // the words a fact allows
     for (const auto& kv : G.lexFactNames) {
         auto it = L.facts.find(kv.second);
         if (it == L.facts.end()) G.errors.push_back("@lexicon " + kv.second + ": no such fact (for '" + kv.first + "')");
@@ -443,7 +443,7 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
         int r = G.rule(root);
         if (r < 0) G.errors.push_back("@root " + root + ": no rule"); else L.reach(r);
     }
-    for (bool more = true; more;) {   // D-05: a swapped rule's stand-in is reached where the rule is
+    for (bool more = true; more;) {   // a swapped rule's stand-in is reached where the rule is
         more = false;
         for (const VgInstead& I : G.insteads) if (I.fromRule >= 0 && I.toRule >= 0 && G.rules[I.fromRule].used && !G.rules[I.toRule].used) { L.reach(I.toRule); more = true; }
     }
@@ -496,7 +496,7 @@ bool vgLink(VgGrammar& G, const VgSchema& S) {
         std::vector<std::vector<std::string>> altWords(G.alts.size());
         for (size_t ai = 0; ai < G.alts.size(); ai++) {
             std::set<std::string> ws;
-            const bool apart = G.alts[ai].apart;   // D-05: its words its own, counted for none (the others' distinctive words stay theirs)
+            const bool apart = G.alts[ai].apart;   // its words its own, counted for none (the others' distinctive words stay theirs)
             for (const VgNode& n : G.alts[ai].body) {
                 if (n.type != VgNode::TEXT) continue;
                 std::string w;

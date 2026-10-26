@@ -85,7 +85,7 @@ double rectBody(Gen& g, Walls W, int rf, int roofMat, double hs[4], bool cells) 
     double rise = 0;
     if (n == 1) {
         rise = roof(g, mainRoof, W.cx, W.cz, W.hw, W.hd, hmin, W.h, 0.8, mainRoof == RF_FLAT && !stepped ? roofMat : (stepped ? W.mat : roofMat));
-        if (mainRoof == RF_PITCHED) gables(g, W, hs, 0.8);   // B-415
+        if (mainRoof == RF_PITCHED) gables(g, W, hs, 0.8);
     } else {   // a roof a cell: gables across the long side, a row of them
         const bool alongZ = W.hd >= W.hw;
         const int rl = g.c.age >= AGE_MEDIEVAL && g.c.age <= AGE_INDUSTRIAL && g.lod == 0 && dwellingKind(g.b.kind) ? g.gv(GV_ROOFLINE) : RL_PLAIN;
@@ -109,7 +109,7 @@ double rectBody(Gen& g, Walls W, int rf, int roofMat, double hs[4], bool cells) 
         if (rf == RF_PITCHED) gables(g, U, hu, 0.8);
         houseTops(g, rf, U.cx, U.cz, U.hw, U.hd, g.sink + U.y0 + hmu, riseU, roofMat, W.mat);
     } else if (hmin >= 0.92 * W.h) houseTops(g, n > 1 ? RF_FLAT : rf, W.cx, W.cz, W.hw, W.hd, g.sink + W.y0 + hmin, rise, roofMat, W.mat);
-    houseDress(g, W, hs, hmin, mainRoof, rise, mainRoof == RF_FLAT && !stepped ? roofMat : roofMat, !stepped && n == 1);   // R-412
+    houseDress(g, W, hs, hmin, mainRoof, rise, mainRoof == RF_FLAT && !stepped ? roofMat : roofMat, !stepped && n == 1);
     return hmin;
 }
 
@@ -145,7 +145,7 @@ void genHouse(Gen& g) {
             const double rise = roundRoof(g, rf, 0, 0, R.rx + b.thick * 0.5, R.rz + b.thick * 0.5, R.segs, hmin, b.hWall, 0.8, roofMat);
             if (hmin >= 0.92 * b.hWall) roundTops(g, rf, g.sink + y0 + hmin, rise, 1.0, roofMat);
             foundation(g, R.rx, R.rz, 0, 0, mat);
-            ringDress(g, R, hmin);   // R-412
+            ringDress(g, R, hmin);
             yardOf(g, R.rx, R.rz, -1, 0, mat);
             drifts(g, R.rx, R.rz, Dm);
             return;
@@ -179,7 +179,7 @@ void genHouse(Gen& g) {
         default: {   // C-01's rectangle: the doorway on its side, the window opposite, an inner wall now and then, the columns of a hall
             Walls W; W.hw = b.hw; W.hd = b.hd; W.h = b.hWall; W.thick = b.thick; W.door = b.door; W.mat = mat; W.slot = wallSlot(g, mat); W.y0 = y0;
             const double doorL = (b.door == 0 || b.door == 2) ? b.hw : b.hd; W.doorPos = doorPos = houseDoorPos(b, doorL);
-            const bool works = c.age >= AGE_INDUSTRIAL;   // B-415: an industrial people's warehouse: its tall windows, its parapet, its iron columns
+            const bool works = c.age >= AGE_INDUSTRIAL;   // an industrial people's warehouse: its tall windows, its parapet, its iron columns
             W.window = !works; W.glyphs = !works; W.pattern = works ? 2 : 1; W.parapet = parapetRoof(c) ? 0.8 : 0;
             const double hmin = rectBody(g, W, b.kind == BK_HALL && rf == RF_FLAT ? RF_FLAT : rf, roofMat, hs, b.kind == BK_HOUSE);
             if (b.kind == BK_HOUSE && g.lod == 0 && g.U(30) < 0.45) {   // an inner wall from the wall opposite the door, three fifths of the way in, beside the
@@ -206,7 +206,7 @@ void genHouse(Gen& g) {
     double doorX, doorZ; doorMid(doorSide, doorPos, b.hw, b.form == PF_FREE ? b.hd : b.hd, doorX, doorZ);
     rubble(g, b.hw, b.hd, hs, b.hWall, doorX, doorZ, wallSlot(g, mat), mat);
     foundation(g, b.hw, b.hd, doorSide, doorPos, mat);
-    yardOf(g, b.hw, b.hd, doorSide, doorPos, mat);   // R-412
+    yardOf(g, b.hw, b.hd, doorSide, doorPos, mat);
     drifts(g, b.hw, b.hd, Dm);
 }
 
@@ -313,7 +313,7 @@ void genRotunda(Gen& g) {   // C-01's: a ring of wall, its doorway a segment lef
     double rise = roundRoof(g, rf, 0, 0, R.rx + b.thick * 0.5, R.rz + b.thick * 0.5, R.segs, hmin, b.hWall, 0.8, rm);
     if (pod && rf == RF_DOMED) { for (Form& e : g.out) if (e.building == g.bi && e.kind == FK_DOME) { e.slot = 2; e.sub = 1; e.y1 = e.y0 + (e.hx) * 0.55; rise = e.y1 - (g.sink + hmin); } }   // a pod's saucer of glass
     if (hmin >= 0.92 * b.hWall) roundTops(g, rf, g.sink + hmin, rise, 1.0, rm);
-    if (pod) podDress(g, R.rx, R.rz, b.hWall, hmin, R.segs, R.door, R.doorSegs);   // R-412
+    if (pod) podDress(g, R.rx, R.rz, b.hWall, hmin, R.segs, R.door, R.doorSegs);
     drifts(g, R.rx, R.rz, Dm);
 }
 
@@ -521,7 +521,7 @@ void genFeature(Gen& g) {
             for (int k = 0; k < N; k++) {
                 double a = (k + 0.5) * TAU / N, h = std::max(0.4, b.hWall * (1 - Dm * (0.1 + 0.6 * g.U(10 + k))));
                 hmin = std::min(hmin, h);
-                g.box(std::sin(a) * rr, std::cos(a) * rr, a, half, ht, sink, sink + h, 0, mat);   // A-04: along the ring (C-08's stood across it)
+                g.box(std::sin(a) * rr, std::cos(a) * rr, a, half, ht, sink, sink + h, 0, mat);   // along the ring (C-08's stood across it)
             }
             if (Dm < 0.5) g.box(0, 0, 0, rr * 0.5, rr * 0.5, sink + hmin - 0.1, sink + hmin + 0.25, 0, mat, 2);   // what is left of the lid
             if (g.lod == 0) {   // the channel: two low walls a metre apart, 6-14 m out along the heading (upslope)

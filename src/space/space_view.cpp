@@ -98,7 +98,7 @@ void SpaceRenderer::frontCoarse(FrontMap& fm) {   // W-03: the blocks that hold 
         }
 }
 
-const SpaceRenderer::FrontMap* SpaceRenderer::frontsFor(const Body& b, double t) {   // W-03
+const SpaceRenderer::FrontMap* SpaceRenderer::frontsFor(const Body& b, double t) {
     if (!worldHasFronts(b)) return nullptr;
     for (FrontMap& fc : frontMaps)
         if (fc.seed == b.seed && !fc.cloud.empty()) {
@@ -204,29 +204,29 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     // blue and red star ramps (KI-008: stars stay coloured whatever the bodies use)
     setRamp(fb.pal, 4, {{0, RGB(0, 0, 0)}, {30, RGB(0.35f, 0.45f, 0.9f)}, {63, RGB(0.85f, 0.9f, 1)}});
     setRamp(fb.pal, 5, {{0, RGB(0, 0, 0)}, {30, RGB(0.8f, 0.35f, 0.2f)}, {63, RGB(1, 0.85f, 0.7f)}});
-    if (sys && sys->valid && sys->companion >= 0) {   // M5-01: the second sun in its own colour
+    if (sys && sys->valid && sys->companion >= 0) {   // the second sun in its own colour
         RGB kc = sys->bodies[sys->companion].color;
         setRamp(fb.pal, 12, {{0, RGB(0, 0, 0)}, {24, kc * 0.55f}, {48, kc}, {63, lerp(kc, white, 0.75f)}});
     }
-    auroraBank12 = sys && sys->valid && sys->sunless();   // D-02: no second sun: bank 12 holds a drifter's aurorae (hydrogen's pink and violet)
+    auroraBank12 = sys && sys->valid && sys->sunless();   // no second sun: bank 12 holds a drifter's aurorae (hydrogen's pink and violet)
     if (auroraBank12) setRamp(fb.pal, 12, {{0, RGB(0, 0, 0)}, {12, RGB(0.22f, 0.05f, 0.2f)}, {24, RGB(0.55f, 0.16f, 0.5f)}, {40, RGB(0.85f, 0.4f, 0.75f)}, {63, RGB(1, 0.85f, 0.95f)}});
     auto lightOf = [&]() { return sys && sys->valid ? lerp(sys->star.color, white, 0.5f) : white; };
     auto genOf = [&](int bi) -> const BodyGen* { return sys && bi >= 0 && bi < (int)sys->bodies.size() ? &genFor(sys->bodies[bi]) : nullptr; };
-    // N1-02: the body bank carries the rock family in the material palette's colour; molten and substellar keep their glow ramps
+    // the body bank carries the rock family in the material palette's colour; molten and substellar keep their glow ramps
     auto bodyRamp = [&](int bank, int bi) {
         const BodyGen* g = genOf(bi);
         if (!g) { setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {63, RGB(0.7f, 0.7f, 0.7f)}}); return; }
         const Body& b = sys->bodies[bi];
         RGB c = g->matColor[familyRep(b.type, FAM_ROCK)] * lightOf();
-        if (isLavaWorld(b.type) || (g->dark && g->hasTrait(TR_EMBERS))) {   // D-04: a drifter's ember fields glow in the lava's stops
+        if (isLavaWorld(b.type) || (g->dark && g->hasTrait(TR_EMBERS))) {   // a drifter's ember fields glow in the lava's stops
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {30, c * 0.8f}, {46, RGB(0.55f, 0.28f, 0.18f)}, {52, RGB(0.9f, 0.3f, 0.05f)}, {58, RGB(1, 0.6f, 0.1f)}, {63, RGB(1, 0.95f, 0.6f)}});
-        } else if (kindHas(b.type, KT_GLOWS)) {   // M5-02: its own dull red glow, hotter toward the bright end
+        } else if (kindHas(b.type, KT_GLOWS)) {   // its own dull red glow, hotter toward the bright end
             RGB gc = b.color;
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {10, gc * 0.35f}, {30, gc}, {46, lerp(gc, RGB(1, 0.55f, 0.25f), 0.6f)}, {58, RGB(1, 0.75f, 0.4f)}, {63, RGB(1, 0.9f, 0.7f)}});
-        } else if (KINDS[b.type].giantClass == GC_ALKALI) {   // P-07: its night's dull red glow low in the ramp, the dark slate of its lit air over it
+        } else if (KINDS[b.type].giantClass == GC_ALKALI) {   // its night's dull red glow low in the ramp, the dark slate of its lit air over it
             const RGB red(0.40f, 0.08f, 0.04f);
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {6, RGB(0.19f, 0.035f, 0.02f)}, {13, red}, {19, RGB(0.11f, 0.05f, 0.07f)}, {32, c * 0.8f}, {46, c}, {56, lerp(c, white, 0.12f)}, {63, lerp(c, white, 0.28f)}});
-        } else if (KINDS[b.type].giantClass == GC_SILICATE) {   // P-07: the glow of its night and its terminator low in the ramp (red to orange), its clouds of rock over it
+        } else if (KINDS[b.type].giantClass == GC_SILICATE) {   // the glow of its night and its terminator low in the ramp (red to orange), its clouds of rock over it
             const RGB ember(0.78f, 0.24f, 0.05f), flame(0.96f, 0.52f, 0.16f);
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {7, RGB(0.34f, 0.05f, 0.02f)}, {15, ember}, {21, flame}, {30, lerp(flame, c, 0.6f)}, {44, c}, {56, lerp(c, white, 0.18f)}, {63, lerp(c, white, 0.4f)}});
         } else if (hasOpaqueDeck(b.type)) {   // the globe is its cloud (or haze) deck
@@ -235,14 +235,14 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     };
     bodyRamp(2, bodyA);
     bodyRamp(3, bodyB);
-    {   // O3 bank 20: the belt rocks' warm grey under the star's light
+    {   // bank 20: the belt rocks' warm grey under the star's light
         RGB lc = lightOf();
         setRamp(fb.pal, 20, {{0, RGB(0, 0, 0)}, {14, RGB(0.11f, 0.10f, 0.09f) * lc}, {34, RGB(0.30f, 0.27f, 0.25f) * lc}, {47, RGB(0.48f, 0.44f, 0.40f) * lc}, {56, RGB(0.66f, 0.62f, 0.58f) * lc}, {63, RGB(0.9f, 0.87f, 0.84f) * lc}});
     }
     auto waterRamp = [&](int bank, int bi) {
         const BodyGen* g = genOf(bi);
-        RGB oc = (g ? g->matColor[familyRep(g->type, FAM_WATER)] : RGB(0.10f, 0.28f, 0.62f)) * lightOf();   // P-01: the family's own (the glass world's glass)
-        if (g && g->hasTrait(TR_LIGHTS_IN_WATER)) {   // D-04: a dark ocean's own light in the upper stops (its water never lit higher)
+        RGB oc = (g ? g->matColor[familyRep(g->type, FAM_WATER)] : RGB(0.10f, 0.28f, 0.62f)) * lightOf();   // the family's own (the glass world's glass)
+        if (g && g->hasTrait(TR_LIGHTS_IN_WATER)) {   // a dark ocean's own light in the upper stops (its water never lit higher)
             const RGB L = g->waterTintColour;
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {44, L * 0.35f}, {54, L * 0.75f}, {63, lerp(L, white, 0.35f)}});
             return;
@@ -251,7 +251,7 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     };
     waterRamp(6, bodyA);
     waterRamp(7, bodyB);
-    {   // Q-02 bank 31: the first disc's water trait colour (a bloom's or a lagoon's, else a pink lake's) in a water's ramp (the second disc's water
+    {   // bank 31: the first disc's water trait colour (a bloom's or a lagoon's, else a pink lake's) in a water's ramp (the second disc's water
         // stays its own: the cabin holds the other free banks)
         const BodyGen* g = genOf(bodyA);
         if (g && (g->hasTrait(TR_BLOOMS) || g->hasTrait(TR_REEFS) || g->hasTrait(TR_PINK_LAKES))) {
@@ -259,8 +259,8 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
             setRamp(fb.pal, 31, {{0, RGB(0, 0, 0)}, {14, oc * 0.3f}, {34, oc * 0.7f}, {47, oc}, {56, lerp(oc, white, 0.5f)}, {63, white}});
         }
     }
-    // O0-02 (B-305): each world with a disc gets its own family banks in its own colours (they used to be shared, and the
-    // smaller world borrowed the bigger one's sand and snow: a world changed colour as you approached its neighbour)
+    // each world with a disc gets its own family banks in its own colours (shared, the smaller world would
+    // borrow the bigger one's sand and snow: a world changing colour as its neighbour nears)
     static const int famBankA[FAM_COUNT] = {-1, -1, 11, 15, 13, 14}, famBankB[FAM_COUNT] = {-1, -1, 16, 19, 17, 18};
     for (int which = 0; which < 2; which++) {
         int bi = which == 0 ? bodyA : bodyB;
@@ -366,21 +366,21 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         Vec3 obs = c.shipPos / SECTOR_KM;
         const std::vector<float>* bandSrc = &bandMap;
         if (c.vimana) bandSrc = &flightBand(c);
-        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; bandGen++; parkedBandBuilds++; }   // G-03: rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
+        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; bandGen++; parkedBandBuilds++; }   // rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
         Mat3 camT = c.cam.transposed();
         double invf = 1.0 / proj.f;
         const int step = 2;
         NebulaPatch nebP[18];
-        int nebN = c.nebulae ? nebulaPatches(obs, nebP, 16) : 0;   // N5-01: the star-forming region's patches, blue, red or white
+        int nebN = c.nebulae ? nebulaPatches(obs, nebP, 16) : 0;   // the star-forming region's patches, blue, red or white
         if (c.vimana && c.flightDur > 0 && nebN) {
-            // G-07: the patches lie within 42 ly, so past a few tens of light years a second they would come and go within a frame or two
+            // the patches lie within 42 ly, so past a few tens of light years a second they would come and go within a frame or two
             // (a 30-degree disc for one frame): a flight fades them by its speed, half at 15 ly a second, seen as it sets off and arrives
             const double u = clampd(c.flightT / c.flightDur, 0, 1), v = length(c.flightTo - c.flightFrom) / SECTOR_KM * 6 * u * (1 - u) / c.flightDur;
             const double fade = 1.0 / (1.0 + (v / 15) * (v / 15));
             for (int i = 0; i < nebN; i++) nebP[i].inten *= fade;
         }
-        if (c.sys && c.sys->valid) nebN += starNebulaPatches(c.sys->star, normalize(c.sys->star.pos - c.shipPos), nebP + nebN);   // S-04: a protostar's own cloud
-        // F-07: outside a flight and without patches the layer is a function of the key: kept while the camera is still
+        if (c.sys && c.sys->valid) nebN += starNebulaPatches(c.sys->star, normalize(c.sys->star.pos - c.shipPos), nebP + nebN);   // a protostar's own cloud
+        // outside a flight and without patches the layer is a function of the key: kept while the camera is still
         const bool keyed = !c.vimana && nebN == 0;
         BackdropKey key{};
         if (keyed) {
@@ -398,7 +398,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
                         Vec3 d = normalize(Vec3((x + 0.5 - proj.cx) * invf, -(y + 0.5 - proj.cy) * invf, 1.0));
                         Vec3 dw = camT * d;
                         double band = sampleGalaxyBand(*bandSrc, dw);
-                        Pix pv = pix(0, band * BAND_SHADES);   // G-03: the map is the brightness itself
+                        Pix pv = pix(0, band * BAND_SHADES);   // the map is the brightness itself
                         if (nebN) {
                             int tone;
                             double g = nebulaGlow(nebP, nebN, dw, tone);
@@ -417,7 +417,7 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         drawStarField(fb, *c.stars, c.shipPos, c.cam, proj, c.starIntensity, 0, true, nullptr, 0, c.vimana ? c.vimanaSpeed : 0, c.vimanaDirView);
     if (!c.sys || !c.sys->valid) return;
     const StarSystem& sys = *c.sys;
-    // M9-12 asteroid belts: a sparkle band of hashed rocks in the orbital plane
+    // asteroid belts: a sparkle band of hashed rocks in the orbital plane
     for (size_t bi = 0; bi < sys.belts.size(); bi++) {
         const Belt& bl = sys.belts[bi];
         double angT = TAU * c.t / bl.period;
@@ -445,15 +445,15 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         double dist = length(v);
         double angR = std::asin(clampd(sys.star.radiusKm / dist, 0, 1));
         double inten = clampd(0.6 + 0.4 * std::log10(1 + sys.star.luminosity), 0.7, 1.0);
-        Vec3 discUp = c.cam * Vec3(0, 1, 0);   // S-04: the orbital plane's normal, for a protostar's disc
+        Vec3 discUp = c.cam * Vec3(0, 1, 0);   // the orbital plane's normal, for a protostar's disc
         drawSun(fb, sys.star, v / dist, angR, c.t, inten, 1, false, 0, false, proj, &discUp);
-        if (!c.vimana && v.z > 0 && sys.star.cls != STAR_BLACK_HOLE) {   // S-06: no flare from a hole
+        if (!c.vimana && v.z > 0 && sys.star.cls != STAR_BLACK_HOLE) {   // no flare from a hole
             double sx = proj.cx + proj.f * v.x / v.z, sy = proj.cy - proj.f * v.y / v.z;
             double rpx = proj.f * std::tan(angR) * (dist / v.z);
             drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), inten * 0.7, 1, proj);
         }
     }
-    updatePlate(c);   // W-06: the telescope's plate of its body, kept, begun or built on within the budget
+    updatePlate(c);   // the telescope's plate of its body, kept, begun or built on within the budget
     // bodies sorted far to near so nearer globes overwrite (depth buffer handles the rest)
     std::vector<std::pair<double, int>> order;
     for (int i = 0; i < (int)sys.bodies.size(); i++) {
@@ -464,13 +464,13 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
     bodyInfo.resize(sys.bodies.size());
     for (auto& pr : order) {
         int i = pr.second;
-        if (i == c.excludeBody) continue;   // X-02: the probe's sky draws the space beyond a giant's air without the giant
+        if (i == c.excludeBody) continue;   // the probe's sky draws the space beyond a giant's air without the giant
         int bank = (i == c.bankBodyA) ? 2 : (i == c.bankBodyB ? 3 : 0);
         drawGlobe(fb, c, i, bank, bodyInfo[i]);
-        if (strippedByWind(sys, i)) drawStrippedTail(fb, c, i, bank);   // S-05, B-427: after its globe, behind what is nearer
+        if (strippedByWind(sys, i)) drawStrippedTail(fb, c, i, bank);   // after its globe, behind what is nearer
     }
     lastBeltRocks = lastBeltMeshes = 0;
-    if (!c.skyMode) for (size_t k = 0; k < sys.belts.size(); k++) drawBeltRocks(fb, c, (int)k);   // O3: the rocks around a ship inside a belt
+    if (!c.skyMode) for (size_t k = 0; k < sys.belts.size(); k++) drawBeltRocks(fb, c, (int)k);   // the rocks around a ship inside a belt
 }
 
 void SpaceRenderer::drawSkyBodies(Framebuffer& fb, const SpaceContext& c) {

@@ -6,11 +6,11 @@
 // Everything is drawn from the shard's own seed, so a shard is the same text every time.
 #include "shards.h"
 #include "buildings.h"
-#include "charts.h"   // C-10: the charts' marks and the chart a caption names
-#include "grammar.h"  // H-03: the engine
-#include "genres.h"   // H-04: the records' model
-#include "peoples.h"  // A-01: the profile's end (the other people's fate)
-#include "records.h"  // T-04: the records past the fifty, their years
+#include "charts.h"   // the charts' marks and the chart a caption names
+#include "grammar.h"  // the engine
+#include "genres.h"   // the records' model
+#include "peoples.h"  // the profile's end (the other people's fate)
+#include "records.h"  // the records past the fifty, their years
 #include "../core/rng.h"
 #include "../core/text.h"
 #include <algorithm>
@@ -50,7 +50,7 @@ std::string shortName(Rng& rng, int style, size_t maxLen) {
 // desert and elegies on a felisian world, so one shard of a world closes its record (one draw either way: the stream stays)
 int pickTone(bool desert, bool dark, double age, Rng& rng) {
     double w[ST_TONE_COUNT];
-    if (dark) {   // D-05: the sun going in their last years, the long dark after it
+    if (dark) {   // the sun going in their last years, the long dark after it
         if (age > 0.85) { w[0] = 0.15; w[1] = 0.45; w[2] = 0.4; w[3] = 0; }
         else if (age >= 0.6) { w[0] = 0.55; w[1] = 0.2; w[2] = 0.25; w[3] = 0; }
         else { w[0] = 0.83; w[1] = 0.12; w[2] = 0.05; w[3] = 0; }
@@ -103,19 +103,19 @@ GrammarState activeGrammar() {
 // the child are drawn and set aside: the records' persons are the history's)
 Shard shardDraw(const BodyGen& g, const Lore& L, int index) {
     Shard s;
-    BodyGen pg = g; pg.seed = loreSeed(g, L);   // C-13: the people's draws, whichever generator the caller holds
+    BodyGen pg = g; pg.seed = loreSeed(g, L);   // the people's draws, whichever generator the caller holds
     s.seed = mix64(pg.seed ^ 0x5A4D5ULL) + (uint64_t)index * 0x9E3779B97F4A7C15ULL;
     Rng rng(s.seed);
     s.age = rng.uni();
-    s.last = index == (L.last >= 0 ? L.last : lastShardOf(pg));   // C-12: the last recording: the latest of all, the end's tone
+    s.last = index == (L.last >= 0 ? L.last : lastShardOf(pg));   // the last recording: the latest of all, the end's tone
     if (s.last) s.age = 1.0;
-    {   // T-04: the year the people's records give it (its share of their years, the later the likelier), C-02's share of the lore's span else
+    {   // the year the people's records give it (its share of their years, the later the likelier), C-02's share of the lore's span else
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, L.which);
         bool in = C && index >= 0 && index < C->count;
         s.year = in ? C->entries[index].year : 1 + (int)std::lround(s.age * L.spanYears);
-        if (in) { s.recordAge = C->entries[index].age; s.medium = C->entries[index].medium; }   // H-05: the age of its year and what it was made on
+        if (in) { s.recordAge = C->entries[index].age; s.medium = C->entries[index].medium; }   // the age of its year and what it was made on
     }
-    {   // C-12: the date within the year, from the seed and not the stream (the texts stayed where C-02 left them)
+    {   // the date within the year, from the seed and not the stream (the texts stayed where C-02 left them)
         uint64_t h = mix64(s.seed ^ 0xCA1E0ULL);
         if (L.months > 0) s.month = 1 + (int)(h % (uint64_t)L.months);
         int days = L.calendar == 1 ? L.monthDays : (L.calendar == 0 ? std::max(1, (int)std::lround(L.yearDays)) : 0);
@@ -125,10 +125,10 @@ Shard shardDraw(const BodyGen& g, const Lore& L, int index) {
     (void)rng.irange(9);                // C-02's kin
     (void)shortName(rng, L.style, 7);   // C-02's child
     s.tone = pickTone(L.desert, L.dark, s.age, rng);
-    if (s.last) s.tone = ST_END;   // C-12
-    s.music = recordIsMusic(pg, L.records, index);   // C-04: a piece of music (the tone stays, the piece's form follows it); T-04: past the fifty too
-    if (g.drifter) s.dark = sunDarkAt(g, L.which, s.year);   // D-05
-    s.chart = !s.music && recordChartIndex(pg, L.records, index) >= 0;   // C-10: a star chart: its caption names its figures and the star it marks
+    if (s.last) s.tone = ST_END;
+    s.music = recordIsMusic(pg, L.records, index);   // a piece of music (the tone stays, the piece's form follows it); T-04: past the fifty too
+    if (g.drifter) s.dark = sunDarkAt(g, L.which, s.year);
+    s.chart = !s.music && recordChartIndex(pg, L.records, index) >= 0;   // a star chart: its caption names its figures and the star it marks
     return s;
 }
 
@@ -192,23 +192,23 @@ Lore loreQuick(const StarSystem& sys0, const Body& b0, const BodyGen& g, int whi
     const PeoplesWorld PW = peoplesWorldOf(sys0, b0);   // D-05: a drifter's people's world at its former orbit
     const StarSystem& sys = *PW.sys; const Body& b = *PW.b;
     Lore L;
-    L.peoples = peoplesOf(g) > 1 ? 2 : 1;   // C-13: a world without the trait is read as one people (the harness's "what it would have said")
+    L.peoples = peoplesOf(g) > 1 ? 2 : 1;   // a world without the trait is read as one people (the harness's "what it would have said")
     L.which = which > 0 && L.peoples > 1 ? 1 : 0;
     const BodyGen pg = peopleGen(g, L.which);
     L.seed = pg.seed;
     loreNames(pg, L);
     calendarOf(sys, b, L);
-    L.desert = kindHas(livingKindOf(b.type), KT_DRY);   // P-04: the world of their time
-    L.dark = g.drifter;   // D-05: the people who lost their sun
+    L.desert = kindHas(livingKindOf(b.type), KT_DRY);   // the world of their time
+    L.dark = g.drifter;   // the people who lost their sun
     L.last = lastShardOf(pg);
-    L.records = recordCountOf(g, L.which);   // T-04: the people's records, and their years the history's (the founding, year 1, to the end)
+    L.records = recordCountOf(g, L.which);   // the people's records, and their years the history's (the founding, year 1, to the end)
     const PeopleAge pa = peopleAgeOf(g, L.which);
     L.endYear = std::max(2, pa.lastYear);
     L.spanYears = L.endYear - 1;
     L.ageFrom = std::min(ageFromOf(pa), L.spanYears);
-    if (L.peoples > 1) {   // C-13: the other people by name, and whether they ended before this people, with them or after
+    if (L.peoples > 1) {   // the other people by name, and whether they ended before this people, with them or after
         L.other = peopleNameOf(peopleGen(g, 1 - L.which));
-        if (!peoplesEndedTogether(g)) L.otherFate = peopleAgeOf(g, 1 - L.which).endedYearsAgo > peopleAgeOf(g, L.which).endedYearsAgo ? -1 : 1;   // A-01: the profile's end
+        if (!peoplesEndedTogether(g)) L.otherFate = peopleAgeOf(g, 1 - L.which).endedYearsAgo > peopleAgeOf(g, L.which).endedYearsAgo ? -1 : 1;   // the profile's end
     }
     return L;
 }
@@ -216,7 +216,7 @@ Lore loreQuick(const StarSystem& sys0, const Body& b0, const BodyGen& g, int whi
 Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g, int which) {
     Lore L = loreQuick(sys, b, g, which);
     BodyGen pg = g; pg.seed = L.seed;   // C-13: the people's draws
-    chartMarksOf(sys, b, pg, L.marks, recordChartCount(pg, L.records));   // C-10: the stars their charts mark (the sky scanned once, a few milliseconds); T-04: every chart's
+    chartMarksOf(sys, b, pg, L.marks, recordChartCount(pg, L.records));   // the stars their charts mark (the sky scanned once, a few milliseconds); T-04: every chart's
     return L;
 }
 
@@ -224,7 +224,7 @@ std::string peopleNameOf(const BodyGen& g) { Lore L; loreNames(g, L); return L.p
 std::string personName(const Lore& L, uint64_t seed, bool female) { return tongueName(tongueOfSeed(L.seed), seed, TN_PERSON, female); }   // C-12; H-04: the tongue's
 std::string personName(const Lore& L, uint64_t seed) { return personName(L, seed, (mix64(seed ^ 0x5E7ULL) & 1) != 0); }
 
-std::string shardDate(const Lore& L, const Shard& s) {   // C-12
+std::string shardDate(const Lore& L, const Shard& s) {
     std::string d = "year " + std::to_string(s.year) + " of " + L.city;
     if (L.calendar == 1) d += ", moon " + std::to_string(s.month) + ", day " + std::to_string(s.day);
     else if (L.calendar == 0) d += ", day " + std::to_string(s.day);
@@ -420,7 +420,7 @@ bool shardChartRecord(const StarSystem& sys, const Body& b, const BodyGen& g, co
     int named = 0; for (int j = 0; j < ch.which; j++) if (L.marks[j].how == 0) named++;   // the first star of no people is the one the lore names
     GrammarState st = activeGrammar();
     const VgSchema& S = recordSchema();
-    struct ChartModel : VgModel {   // H-05 (CHARTS): the people's own words for their things (`{~key}`), as the records have them
+    struct ChartModel : VgModel {   // CHARTS: the people's own words for their things (`{~key}`), as the records have them
         uint64_t people = 0;
         bool tongue(const std::string& key, std::string& out) override { out = tongueTerm(tongueOfSeed(people), key); return !out.empty(); }
     } M;
@@ -429,7 +429,7 @@ bool shardChartRecord(const StarSystem& sys, const Body& b, const BodyGen& g, co
     M.bound.assign(S.entities.size(), -1);
     M.culture = mix64(loreSeed(g, L) ^ 0xC0170E5ULL);   // H-04's second pass: the people's dialect
     M.set(S, "tone", SHARD_TONE_FACTS[std::max(0, std::min(ST_TONE_COUNT - 1, d.tone))]);
-    {   // H-04: the season the chart was drawn in (its date's, as a record's)
+    {   // the season the chart was drawn in (its date's, as a record's)
         const int seasons = std::atoi(M.facts[std::find(S.facts.begin(), S.facts.end(), std::string("seasons")) - S.facts.begin()].c_str());
         const int n = std::max(1, seasons);
         M.set(S, "season", std::to_string(L.months > 0 && d.month > 0 ? std::min(n - 1, (d.month - 1) * n / std::max(1, L.months)) : (int)(mix64(d.seed ^ 0x5EA50ULL) % (uint64_t)n)));
@@ -439,7 +439,7 @@ bool shardChartRecord(const StarSystem& sys, const Body& b, const BodyGen& g, co
     M.set(S, "markhow", std::to_string(ch.mark.how));
     M.set(S, "named", std::to_string(std::min(named, 3)));
     M.set(S, "markpeople", ch.mark.people.empty() ? std::string("others") : ch.mark.people);
-    {   // H-05 (CHARTS): the way it was made (its record's age and medium) and what that way shows
+    {   // CHARTS: the way it was made (its record's age and medium) and what that way shows
         static const char* const AGES[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
         static const char* const MEDIA[RM_COUNT] = {"bone", "stone", "painted", "tablet", "scroll", "codex", "plate", "cylinder", "glass", "printed", "reel", "disc", "drive", "crystal", "hum"};
         M.set(S, "age", AGES[std::max(0, std::min(AGE_COUNT - 1, ch.age))]);
@@ -451,7 +451,7 @@ bool shardChartRecord(const StarSystem& sys, const Body& b, const BodyGen& g, co
         M.set(S, "plate", std::to_string(ch.plate)); M.set(S, "maglimit", std::to_string(ch.magLimit)); M.set(S, "heard", std::to_string(ch.heardN));
         M.set(S, "routes", std::to_string(ch.reached + ch.planned)); M.set(S, "reached", std::to_string(ch.reached)); M.set(S, "planned", std::to_string(ch.planned));
         M.set(S, "farly", std::to_string((int)std::lround(ch.farLy))); M.set(S, "farkind", std::to_string(ch.farKind)); M.set(S, "signs", std::to_string(ch.signs));
-        if (ch.style == CHS_SUNMEASURE && !ch.sunCurve.empty()) {   // D-05: the sun's measure: its measures, the first and the last
+        if (ch.style == CHS_SUNMEASURE && !ch.sunCurve.empty()) {   // the sun's measure: its measures, the first and the last
             const double last = ch.sunCurve.back()[1];
             char buf[32]; if (last >= 10) snprintf(buf, sizeof buf, "%d", (int)std::lround(last)); else snprintf(buf, sizeof buf, "%.1f", last);
             M.set(S, "tally", std::to_string((int)ch.sunCurve.size())); M.set(S, "sunfrom", std::to_string(ch.sunUnits)); M.set(S, "sunsize", buf);
@@ -459,7 +459,7 @@ bool shardChartRecord(const StarSystem& sys, const Body& b, const BodyGen& g, co
     }
     R.seed = mix64(d.seed ^ 0xC4A2CULL); R.tense = VG_PRESENT;
     vgRecord(*st.G, "chart", M, nullptr, R);
-    R.names.insert(R.names.end(), R.theirs.begin(), R.theirs.end());   // H-05 (CHARTS): their own words, kept as the names are
+    R.names.insert(R.names.end(), R.theirs.begin(), R.theirs.end());   // CHARTS: their own words, kept as the names are
     if (people) *people = ch.mark.people;
     return true;
 }
@@ -474,7 +474,7 @@ Shard shardOf(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore
         if (shardChartRecord(sys, b, g, L, index, R, &s.child)) { s.text = R.text; s.names = R.names; }   // the child: the other people's name, kept as it is by the decoder
         return s;
     }
-    if (index >= 0 && index < L.records) {   // H-04: a text record, as its people's catalogue wrote it (past the records: none)
+    if (index >= 0 && index < L.records) {   // a text record, as its people's catalogue wrote it (past the records: none)
         std::shared_ptr<const ShardTexts> T = shardTextsOf(sys, b, g, L);
         if (index < (int)T->items.size()) { const ShardText& t = T->items[index]; s.text = t.text; s.kind = t.kind; s.names = t.rec.names; s.names.insert(s.names.end(), t.rec.theirs.begin(), t.rec.theirs.end()); }
     }
@@ -571,7 +571,7 @@ void languageOf(const Lore& L, const std::vector<Shard>& records, const Tongue& 
     if (!L.other.empty()) addNameWords(L.other, out.names);   // C-13: the other people's name, kept as it is
     for (const Shard& s : records) {
         if (!s.child.empty()) addNameWords(s.child, out.names);
-        for (const std::string& nm : s.names) addNameWords(nm, out.names);   // H-04: every name the records wrote
+        for (const std::string& nm : s.names) addNameWords(nm, out.names);   // every name the records wrote
     }
     std::map<std::string, int> count;   // the words as written (a ruler's number after a name is the name's)
     for (const Shard& s : records) {
@@ -631,7 +631,7 @@ int decodeShard(const Shard& s, const Language& L, const Tongue& T, int shardsHe
             for (char c : key) { if (!std::isdigit((unsigned char)c)) break; if (!w.theirs.empty()) w.theirs += '-'; w.theirs += tongueWord(T, DIGITS[c - '0']); }
             if (!allDigits(key)) w.theirs += T.endIng;   // the ordinal's ending, as their own
         }
-        else {   // H-04: by its root: known when the root is; the people's word for the root and their ending
+        else {   // by its root: known when the root is; the people's word for the root and their ending
             auto f = L.forms.find(key);
             const std::string root = f != L.forms.end() ? f->second.first : key;
             const int end = f != L.forms.end() ? f->second.second : 0;

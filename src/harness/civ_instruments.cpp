@@ -2,7 +2,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// C-11: the instruments of an age world's people: each age's (its timbre, family, register, courses) and where they lie over the world's places
+// the instruments of an age world's people: each age's (its timbre, family, register, courses) and where they lie over the world's places
 // (the plan's places and the countryside round the capital): how many sites, how many of the people's instruments they hold, by age
 static int printInstruments(const AgeWorld& W, bool quiet = false) {
     Star s; StarSystem sys; if (!systemAt(W.sx, 0, W.sz, s, sys, true)) { printf("  no star\n"); return 1; } if (W.body >= (int)sys.bodies.size()) { printf("  no body\n"); return 1; }
@@ -169,7 +169,7 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
         game.testCabinGoto(-1.9, -1.38, -PI / 2, -0.25); run(0.2);
         const int facing = game.testCabinFacing();
         press(KEY_E); run(0.2);
-        press(KEY_ENTER); run(0.2);   // C-18: the case opens on its worlds (this one first, the ship over it): Enter opens it
+        press(KEY_ENTER); run(0.2);   // the case opens on its worlds (this one first, the ship over it): Enter opens it
         const bool open = game.state == GameState::INSTRUMENTS && game.testCaseLevel() == 1;
         const std::string info0 = game.testInstrumentInfo();
         const bool disc = info0.find("its disc") != std::string::npos;
@@ -280,7 +280,7 @@ static int instrumentsPlans(int peoples, int scale) {
 }
 // C-17: how far apart the peoples' instruments are: for each age and class the first make of each people's; pairs sharing the plan, the plan
 // and the body's material, the whole look; the plans and names in use; the prehistoric bone pipes, the industrial machines
-// C-17: an instrument drawn small as the case draws it (no ruler), and how far two such pictures are apart (the mean of the channels' differences, 0..255)
+// an instrument drawn small as the case draws it (no ruler), and how far two such pictures are apart (the mean of the channels' differences, 0..255)
 static std::vector<uint32_t> instrumentThumb(const std::vector<InstrumentPart>& parts, const FormPalette& pal) {
     const int W = 144, H = 80;
     std::vector<uint32_t> buf((size_t)W * H, 0);
@@ -516,7 +516,7 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
           fmt("%d items on the page%s; %s", n, game.testShardsTop() == 1 ? "" : " (NOT the player's page)", n > 0 ? game.testPlayerItemLine(0).c_str() : "-"));
     for (int k = 0; k < pi; k++) press(KEY_DOWN);
     press(KEY_ENTER);
-    // KI-410 (F-07): the world's records are written on a thread the first time: the wait held at one instant (frames at dt 0), so a
+    // the world's records are written on a thread the first time: the wait held at one instant (frames at dt 0), so a
     // loaded machine's late thread is not read as a piece that did not play
     for (const double tw = nowSec(); game.testPlayerWaiting() && nowSec() - tw < 20;) { std::this_thread::sleep_for(std::chrono::milliseconds(2)); game.frame(gi, 0); gi.newFrame(); }
     run(0.3);
@@ -603,8 +603,8 @@ int runInstruments(int argc, char** argv) {
         int f = 0; for (int a = 0; a < AGE_COUNT; a++) if (age < 0 || a == age) f += instrumentsSheet(a, n, scale);
         return f ? 1 : 0;
     }
-    if (what == "plans") { const int k = argc > 3 ? std::max(1, atoi(argv[3])) : 2, scale = argc > 4 ? std::max(1, atoi(argv[4])) : 1; return instrumentsPlans(k, scale); }   // C-17: every plan
-    if (what == "distinct") return instrumentsDistinct(argc > 3 ? std::max(2, atoi(argv[3])) : 100);   // C-17: the measure
+    if (what == "plans") { const int k = argc > 3 ? std::max(1, atoi(argv[3])) : 2, scale = argc > 4 ? std::max(1, atoi(argv[4])) : 1; return instrumentsPlans(k, scale); }   // every plan
+    if (what == "distinct") return instrumentsDistinct(argc > 3 ? std::max(2, atoi(argv[3])) : 100);   // the measure
     if (what == "check") {   // the unit's C-11 checks alone (the instruments' and the player's)
         int failures = 0; const Check ck = modeCheck(failures);
         instrumentChecks(ck); makerChecks(ck); playerChecks(ck);

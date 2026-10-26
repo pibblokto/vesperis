@@ -51,12 +51,12 @@ void AudioSynth::rvDerive(RadarVar& v, uint64_t seed) {
     v.bellF = 160 + 200 * u(61); v.bellPeriod = 3 + 5 * u(62); v.bellDecay = 3 + 4 * u(63); v.bellFar = 0.1 + 0.25 * u(64);
     v.sirenTwo = u(71) < 0.45; v.sirenF = 280 + 240 * u(72); v.sirenRatio = 1.25 + 0.4 * u(73); v.sirenCycle = v.sirenTwo ? 0.4 + 0.5 * u(74) : 1.2 + 2.0 * u(74); v.sirenSwell = 9 + 11 * u(75);
     v.murRate = 3 + 1.5 * u(81); v.murF0[0] = 95 + 35 * u(82); v.murF0[1] = 130 + 50 * u(83); v.murF0[2] = 180 + 70 * u(84);
-    v.sparkHz = 260 + 480 * u(101); v.ringF = 1100 + 1400 * u(102); v.quench = u(103) < 0.5; v.morseUnit = 0.055 + 0.05 * u(104); v.sparkDecay = 2200 + 2800 * u(105);   // C-16
+    v.sparkHz = 260 + 480 * u(101); v.ringF = 1100 + 1400 * u(102); v.quench = u(103) < 0.5; v.morseUnit = 0.055 + 0.05 * u(104); v.sparkDecay = 2200 + 2800 * u(105);
     v.turnHz = 1.25 + 0.1 * u(111); v.hornF = 850 + 450 * u(112); v.surface = 0.5 + u(113);
     v.ringHz = 38 + 34 * u(121); v.holdHz = 4500 + 3000 * u(122); v.whineHz = 3200 + 1400 * u(131);
     v.mathKind = (int)(u(141) * 7.99); v.mathF = 330 * std::pow(2.0, 1.4 * u(142)); v.mathPip = 0.05 + 0.035 * u(143); v.mathGap = 0.07 + 0.06 * u(144); v.mathRest = 0.55 + 0.5 * u(145);
     v.carrier2F = 1200 + 300 * (u(151) - 0.5);
-    rogueDerive(v, seed);   // D-03
+    rogueDerive(v, seed);
 }
 
 const char* AudioSynth::mathsName(uint64_t seed) {
@@ -178,7 +178,7 @@ void AudioSynth::machineInto(double& sig, RadarChannel& c, double dt, int voice,
             sig += (main && spOn ? 0.05 : 0.0) * (2 * (c.loopPh - std::floor(c.loopPh)) - 1) + 0.05 * c.sparkLp;
             break;
         }
-        case RP_MORSE: {   // C-16: spark-gap Morse. A spark at the gap's rate, each a damped ring and a crack, keyed in the people's code:
+        case RP_MORSE: {   // spark-gap Morse. A spark at the gap's rate, each a damped ring and a crack, keyed in the people's code:
             // the game's keying for the centred signal (from its top when the programme begins), a hand of the synth's own under another
             bool on = false;
             if (main && st.radarCode && !st.radarCode->empty()) {
@@ -215,7 +215,7 @@ void AudioSynth::machineInto(double& sig, RadarChannel& c, double dt, int voice,
             }
             break;
         }
-        case RP_PHONOGRAPH: {   // C-16: the record's surface under the recording: a hiss, a crackle, a tick at every turn, the motor
+        case RP_PHONOGRAPH: {   // the record's surface under the recording: a hiss, a crackle, a tick at every turn, the motor
             c.phonoPh += dt * v.turnHz;
             if (c.phonoPh >= 1) { c.phonoPh -= 1; c.phonoClickT = 0; }
             if (c.phonoClickT >= 0) { sig += 0.5 * v.surface * n2 * std::exp(-c.phonoClickT * 700); c.phonoClickT += dt; if (c.phonoClickT > 0.012) c.phonoClickT = -1; }
@@ -225,7 +225,7 @@ void AudioSynth::machineInto(double& sig, RadarChannel& c, double dt, int voice,
             sig += 0.12 * v.surface * c.phonoLp + 0.05 * std::sin(TAU_ * 30 * c.clock) * (0.6 + 0.4 * std::sin(TAU_ * v.turnHz * c.clock));
             break;
         }
-        case RP_MATHS: {   // C-16: the beacon that is mathematics: a group of pure pips a term, a pause, the next term; a rest, again
+        case RP_MATHS: {   // the beacon that is mathematics: a group of pure pips a term, a pause, the next term; a rest, again
             c.mathT += dt;
             if (c.mathRest) { if (c.mathT >= 2.5 + 3 * v.mathRest) { c.mathRest = false; c.mathT = 0; c.mathTerm = 0; c.mathPip = 0; } break; }
             int n; uint32_t bits; double tone;
@@ -254,7 +254,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
         rvDerive(c.v, seed); c.seed = seed;
         c.codeI = 0; c.codeT = 0; c.codeLcg = seed | 1; c.codeLeft = 4; c.elemLeft = 2; c.letterLeft = 4; c.codeOn = false;
         c.mathTerm = 0; c.mathPip = 0; c.mathT = 0; c.mathRest = false;
-        c.rgCls = -1; c.rgPh = -1; c.rgMotT = -1; c.rgPulseT = -1; c.rgArcT = -1; c.rgMoonT = 0;   // D-03: a drifter's turning from where it is first heard
+        c.rgCls = -1; c.rgPh = -1; c.rgMotT = -1; c.rgPulseT = -1; c.rgArcT = -1; c.rgMoonT = 0;   // a drifter's turning from where it is first heard
     }
     const RadarVar& v = c.v;
     float n2 = noise();
@@ -263,7 +263,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
     auto uni = [&]() { return 0.5 + 0.5 * noise(); };
     switch (kind) {
         case 0: {   // a people's transmission: the carrier, and the programme on the air
-            // C-16: the carrier by the age. The modern age's is C-07's (a tone that drifts under the voice, beating slowly); the late
+            // the carrier by the age. The modern age's is C-07's (a tone that drifts under the voice, beating slowly); the late
             // industrial age has none, only the spark's rasp, faint, between the keying; the futuristic a thin whine high up that
             // flutters as data runs under it; the far future a pure tone that never moves (the hydrogen line's 1,420, in the audio)
             switch (age) {
@@ -282,7 +282,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
                 }
             }
             machineInto(sig, c, dt, voice, n2, st, main);
-            if (!main && speakingProgramme(voice)) {   // C-16: under another, a broadcast's voice is the shape of one, babbling
+            if (!main && speakingProgramme(voice)) {   // under another, a broadcast's voice is the shape of one, babbling
                 Phantom& p = c.phan[0];
                 if (p.f0Base != v.murF0[1]) { p = Phantom(); p.f0Base = v.murF0[1]; p.f0 = p.f0T = p.f0Base; }
                 double x = phantomSample(p, dt, v.murRate, voice == RP_WHISPERS ? 0.95 : 0.2, voice == RP_SYNTHETIC ? 0.0 : 0.3);
@@ -347,7 +347,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
             }
             break;
         }
-        case 4:     // D-03: a drifter's voice (audio_rogue.cpp)
+        case 4:     // a drifter's voice (audio_rogue.cpp)
             sig = rogueSample(c, dt, main ? st.radarRogue : rdRogue2, voice, n2, st, main);
             break;
         case 3: {   // a magnetosphere: whistlers falling slowly from 2 kHz, bursts of chorus, a band of hiss that breathes, and a choir of three voices (by its seed quarter-tones, fifths, a cluster or octaves) that comes and goes; some crack with lightning (sferics and tweeks), some roar
@@ -392,7 +392,7 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
 // through an echo. `rdContent` was set by the caller from the piece or the speech on the air
 double AudioSynth::radarSample(double dt, AudioState& st) {
     float n2 = noise();
-    double bed = 0, ev = 0, close = 0;   // C-16: `close` is heard dry (a breath at the microphone, a knock's answer), out of the echo
+    double bed = 0, ev = 0, close = 0;   // `close` is heard dry (a breath at the microphone, a knock's answer), out of the echo
     rdClock += dt;
     auto uni = [&]() { return 0.5 + 0.5 * noise(); };
     const double gT = rdGainLvl;
@@ -413,11 +413,11 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
     rdN1 += (n2 - rdN1) * 0.6;
     double swell = 0.75 + 0.25 * std::sin(lfo * TAU_ * 0.31) * std::sin(lfo * TAU_ * 0.53);
     bed += 0.07 * (1 + 1.6 * gT) * (n2 - 0.5 * rdN1) * swell;
-    if (gT > 0) {   // C-16: the crackle, clicks at up to fifty-five a second, now and then a louder one
+    if (gT > 0) {   // the crackle, clicks at up to fifty-five a second, now and then a louder one
         if (rdCrkT < 0 && uni() < dt * 55 * gT) { rdCrkT = 0; double a = uni(); rdCrkA = (0.08 + 0.4 * a * a) * (uni() < 0.08 ? 2.2 : 1.0); }
         if (rdCrkT >= 0) { bed += rdCrkA * n2 * std::exp(-rdCrkT * 2500); rdCrkT += dt; if (rdCrkT > 0.004) rdCrkT = -1; }
     }
-    {   // C-16: the galaxy's own noise in the beam, a rushing that scintillates: loud toward the band and the core, faint at the poles
+    {   // the galaxy's own noise in the beam, a rushing that scintillates: loud toward the band and the core, faint at the poles
         double g = rdSkyLvl * (0.15 + 0.85 * gT);
         if (g > 0.002) {
             float n3 = noise();
@@ -426,7 +426,7 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
             bed += 0.5 * g * (rdGalLp - rdGalHp) * (0.7 + rdScint);
         }
     }
-    if (rdGhostLvl > 0.003) {   // C-16: a false rise, the static gathering into almost a tone, wavering, then gone again
+    if (rdGhostLvl > 0.003) {   // a false rise, the static gathering into almost a tone, wavering, then gone again
         rdGhostF += ((520 + 380 * std::sin(TAU_ * 0.13 * rdClock) * std::sin(TAU_ * 0.041 * rdClock + 1.0)) - rdGhostF) * 0.0005;
         bed += 2.6 * rdGhostLvl * resonate(n2, rdGhostF, 4 + 26 * (1 - rdGhostLvl), dt, rdGhY1, rdGhY2);
     }
@@ -540,7 +540,7 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
     if (st.radarKind2 >= 0) { rdKind2 = st.radarKind2; rdVoice2 = st.radarVoice2; rdAge2 = st.radarAge2; rdSeed2 = st.radarSeed2; rdPulse2 = st.radarPulseHz2; rdRogue2 = st.radarRogue2; }
     double sig2 = rdSig2Lvl > 0.002 && rdKind2 >= 0 ? channelSample(rdCh[1], dt, rdKind2, rdVoice2, rdPulse2, rdSeed2, rdAge2, st, false) : 0;
     double main = 0.45 * sig * radarSigLvl + 0.8 * rdContent, under = 0.4 * sig2 * rdSig2Lvl, mix = 0;
-    // C-16: a far signal worn by the way: deep slow fades, dropouts, and two or three echoes of itself (the paths it came by); a word
+    // a far signal worn by the way: deep slow fades, dropouts, and two or three echoes of itself (the paths it came by); a word
     // heard before, back out of the static, echoes as from as far
     double echoes = std::max(rdWearLvl, rdGhostWordLvl > 0.01 ? 1.0 : 0.0);
     if (rdWearLvl > 0.005) {
@@ -559,13 +559,13 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
         main += echoes * (0.42 * tapW(0.131) + 0.27 * tapW(0.293) + 0.17 * tapW(0.467));
         rdWornI = (rdWornI + 1) % rdWorn.size();
     }
-    // C-16: two peoples' carriers beat into a whistle that slides as the beam moves; at the top steps the two ring against each other
+    // two peoples' carriers beat into a whistle that slides as the beam moves; at the top steps the two ring against each other
     rdHetF += (st.radarHetHz - rdHetF) * co.kHet;
     rdHetPh += dt * rdHetF;
     if (rdHetLvl > 0.002) mix += rdHetLvl * 0.075 * (std::sin(TAU_ * rdHetPh) + 0.15 * std::sin(2 * TAU_ * rdHetPh)) * (0.75 + 0.25 * std::sin(TAU_ * 5.5 * rdClock));
     if (rdImLvl > 0.002) { rdImPh += dt * (rdHetF * 1.37 + 230); mix += rdImLvl * (0.9 * main * std::sin(TAU_ * rdImPh) + 0.5 * std::tanh(5 * main) * std::tanh(5 * under)); }
     double hot = main + under + mix;
-    if (rdDriveLvl > 0.002) {   // C-15: a near signal through a high gain overdrives the receiver: the signal pushed into a hard knee, buzzing and flat
+    if (rdDriveLvl > 0.002) {   // a near signal through a high gain overdrives the receiver: the signal pushed into a hard knee, buzzing and flat
         double sq = 0.22 * std::tanh(hot * 9.0);
         hot += (sq - hot) * rdDriveLvl;
     }
@@ -575,9 +575,9 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
     if (rdEcho.size() != 8192) { rdEcho.assign(8192, 0.0f); rdEchoI = 0; }
     double e = rdEcho[rdEchoI]; rdEchoLp += (e - rdEchoLp) * 0.3;
     rdEcho[rdEchoI] = (float)(dry + rdEchoLp * fb); rdEchoI = (rdEchoI + 1) % rdEcho.size();
-    const double out = radarLvl * ((dry + 0.55 * rdEchoLp) * (1 - 0.15 * gT) + close);   // C-16: the whole held near C-07's level as the floor rises
+    const double out = radarLvl * ((dry + 0.55 * rdEchoLp) * (1 - 0.15 * gT) + close);   // the whole held near C-07's level as the floor rises
     if (st.radarSet != RADIO_SUIT) return out;
-    // D-03: the suit's radio on a drifter's ground, a small set's band (about 300 Hz to 3 kHz), driven a little into its speaker
+    // the suit's radio on a drifter's ground, a small set's band (about 300 Hz to 3 kHz), driven a little into its speaker
     rdSetHp += (out - rdSetHp) * (1 - std::exp(-TAU_ * 300 * dt)); const double h = out - rdSetHp;
     const double k = 1 - std::exp(-TAU_ * 3000 * dt);
     rdSetLp1 += (h - rdSetLp1) * k; rdSetLp2 += (rdSetLp1 - rdSetLp2) * k;

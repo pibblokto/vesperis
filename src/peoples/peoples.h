@@ -76,7 +76,7 @@ struct PeopleAge {
                                     // it left its star, `drifterLeftYears`, so less: 30-90% of those years)
     bool radio = false;             // they had radio before the end (late in the industrial age, and every later age)
     int radioYear = 0;              // the year it began in their count (radio only)
-    // H-02: how long each whole age ran for them, as drawn (the age reached was cut by the end: the history reads how far into it
+    // how long each whole age ran for them, as drawn (the age reached was cut by the end: the history reads how far into it
     // they got; the far future's is its own span)
     double fullYears[AGE_COUNT] = {0, 0, 0, 0, 0, 0};
 };
@@ -91,7 +91,7 @@ int peoplesOnAir(const BodyGen& g);                        // the peoples of a w
 // the whole profile (`docs/archive/ideas/RESEARCH-records.md`, section 6, item 1)
 struct PeopleProfile : PeopleAge {
     uint64_t seed = 0;              // the people's own (`peopleGen`)
-    int which = 0, peoples = 1;     // C-13
+    int which = 0, peoples = 1;
     int cause = CAUSE_FAMINE;       // what ended them (shared by two peoples that ended together)
     int collapseYear = 1;           // the year the collapse began (the warning) in their count
     int collapseYears = 1;          // how long it took

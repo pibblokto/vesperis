@@ -1,30 +1,11 @@
-// H-02 (2026-10-09): the history (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 8; the data model of
-// `docs/archive/ideas/RESEARCH-records.md`, section 6). A people gets a history before its towns, its works and its records are made, so
-// they can read it (Dwarf Fortress's order: the history first, then the sites' detail and the legends that tell it). Deterministic
-// from the profile (A-01: the age, the eras and their governments, the cause of the collapse and its stages, the peak, the values),
-// the plan (T-01: the places by their rank in the founding, the territory, the ways) and the world (its rivers and coasts, its
-// volcanoes, its comets and belts, a red dwarf's flares, an eccentric orbit's winters, its moons): built in a few milliseconds.
-//
-// * The eras: one per age passed, each with the people's name for it, its government (changed once within it, by a reform, a
-//   revolution or a founding of a kingdom), its faith and what it lived by.
-// * The places: the plan's, founded in its order (the capital at year 1, the reckoning's start), each in the era whose ground
-//   suited it (a modern people's old cities in the medieval age, its mill towns in the industrial), some left early (sacked,
-//   struck by a sickness, a flood, the mine closed), every one left by the end (the collapse's order, the last place last); a
-//   futuristic or far-future people's older cities, which its plan no longer draws, kept as places it cleared.
-// * The persons: the rulers by the government (a monarchy's houses and heirs, regents, usurpers; chiefs, elders, priests, consuls
-//   by their terms; the machine's rule a person of none), the figures (founders, generals, prophets, makers, inventors, explorers,
-//   rebels, the last), and ten families followed through the last thousand years: births, marriages, moves and deaths with their
-//   causes, so a record can say "my daughter-in-law" and be right.
-// * The events: foundings, accessions and deaths of rulers, reforms, wars with their battles, sieges and peace, sicknesses in
-//   waves, harvests and famines, floods, droughts, earthquakes, eruptions, impacts, flares, long winters, works finished, ways
-//   opened, festivals, omens (the comet's real returns), inventions, discoveries, faiths, institutions, unrest, migrations, the
-//   other people's meeting and wars (C-13, shared by both histories), and the collapse by its cause in its four stages (the signs,
-//   the onset, the crisis, the end) to its last place and its last person. Each keeps its cause (a famine its failed harvest, a
-//   battle its war, a death the sickness or the battle that caused it, in its season).
-//
-// Not drawn yet: T-02 reads the places' founding ages for the old cores and an early end for an older style, T-03 the battles and
-// the works, T-04 the last place for the last recording, H-04 the whole of it. `vesperis_test history <sx> <sz> <body>` prints it
-// as Dwarf Fortress's legends would.
+// A people's history (H-02; docs/reference/civilisations/peoples-and-ages.md), made before its towns, works and records so they can read
+// it: deterministic from the profile (the age, the eras and governments, the collapse's cause and stages, the values), the plan (the places
+// by their rank, the territory, the ways) and the world (its rivers and coasts, volcanoes, comets, flares, winters, moons), in a few
+// milliseconds. The eras (one an age passed, named, each with its government, faith and living), the places (founded in the plan's order,
+// some left early, every one left by the end, the last last), the persons (the rulers by the government, the figures, ten families through
+// the last thousand years) and the events (foundings, reigns, wars and battles, sicknesses, harvests, disasters, works, omens, inventions,
+// faiths, institutions, unrest, the other people, the collapse in four stages), each keeping its cause. `vesperis_test history <sx> <sz>
+// <body>` prints it as a legends page.
 #pragma once
 #include "peoples.h"
 #include "plan.h"
@@ -109,7 +90,7 @@ enum HistoryEventKind {
     HE_BEASTS,         // the herds and the game (thing: late, early, none, many, a great one taken, one that killed; value: the dead)
     HE_SHOW,           // a play, a song, pictures, a film shown first (thing: its kind; a: who made it; place)
     HE_VISIT,          // the ruler at place (a: the ruler)
-    HE_SUN,            // D-05: the loss of the sun seen (thing: 0 the sun smaller, 1 the year that did not end, 2 the sea frozen from the shore, 3 the air
+    HE_SUN,            // the loss of the sun seen (thing: 0 the sun smaller, 1 the year that did not end, 2 the sea frozen from the shore, 3 the air
                        // falling as snow, 4 the last sunrise, 5 the stars at noon; place: where it was seen)
     // a family's (private)
     HE_BIRTH,          // a born to b (mother) and c (father) at place
@@ -259,14 +240,14 @@ struct History {
     int yearsFrom = 1;                    // `harvest` and `population` start here
     std::vector<uint8_t> harvest;         // 0 failed .. 4 rich
     std::vector<float> population;
-    std::vector<float> sunlight;          // D-05: a drifter's people's sun by year, its light over their old sun's (1 before the loss, nothing after the
+    std::vector<float> sunlight;          // a drifter's people's sun by year, its light over their old sun's (1 before the loss, nothing after the
                                           // last sunrise but the stars'); empty for every other people
 
     int eventsIn(int year, int& from) const;          // the events of a year: their count, the first's index in `from`
     int reignAt(int year) const;                      // the reign of a year (-1 none: before year 1, after the end)
     int eraAt(int year) const;
     int harvestAt(int year) const;                    // 0 .. 4 (2 an ordinary year; 2 where none is kept)
-    double sunlightAt(int year) const;                // D-05: 1 where none is kept
+    double sunlightAt(int year) const;                // 1 where none is kept
     bool placeStands(int place, int year) const { return place >= 0 && place < (int)places.size() && year >= places[place].founded && year <= places[place].ended; }
     bool alive(int person, int year) const { return person >= 0 && person < (int)persons.size() && year >= persons[person].born && year <= persons[person].died; }
     int inventionYear(int id) const;                  // 0 never

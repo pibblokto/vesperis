@@ -78,7 +78,7 @@ static uint64_t drawingHash(const std::vector<Form>& el, const FormPalette& P) {
     if (slot[3]) mixd(P.glow);
     if (pat) for (int k = 0; k < P.nWindows; k++) {
         const WindowSpec& W = P.windows[k]; mixd(W.bay); mixd(W.storey); mixd(W.w); mixd(W.h); mixd(W.sill); mixd(W.shape); mixd(W.group); mixd(W.scatter); mixd(W.lit);
-        mixd(W.frame); mixd(W.frameShade); mixd(W.shutter); mixd(W.shutterShade); mixd(W.stripe); mixd(W.stripeShade); mixd(W.dado); mixd(W.dadoShade);   // R-412
+        mixd(W.frame); mixd(W.frameShade); mixd(W.shutter); mixd(W.shutterShade); mixd(W.stripe); mixd(W.stripeShade); mixd(W.dado); mixd(W.dadoShade);
     }
     return h;
 }
@@ -404,13 +404,13 @@ int runGenome(int argc, char** argv) {
     mkdir("shots/tests", 0755);
     SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
     const std::string worldName = (what == "sheet" || what == "street") && argc > 6 ? argv[6] : (what == "dress" && argc > 5 ? argv[5] : "desert");
-    if (!setupSceneForType(worldName == "felisian" ? PT_FELISIAN : PT_DESERT, 15, 40 * DEG, 1.3, 0.0, sv, sys, nb, t, worldName == "felisian" ? SCENE_BIOME - BIO_GRASSLAND : SCENE_ANY)) { printf("no body\n"); return 1; }   // B-415: a felisian world's grassland (its first site was the sea)
+    if (!setupSceneForType(worldName == "felisian" ? PT_FELISIAN : PT_DESERT, 15, 40 * DEG, 1.3, 0.0, sv, sys, nb, t, worldName == "felisian" ? SCENE_BIOME - BIO_GRASSLAND : SCENE_ANY)) { printf("no body\n"); return 1; }   // a felisian world's grassland (its first site was the sea)
     sv.flocks.clear(); sv.critters.clear(); sv.relocateCapsule(-4000, -4000);
     const BodyGen& g = sv.site.gen;
     int gLat, gLon; sv.ruinCellAt(0, 0, gLat, gLon);
     Framebuffer fb; std::vector<uint32_t> rgbBuf((size_t)FBW * FBH);
     const uint32_t ink = rgb(200, 205, 190), head = rgb(235, 225, 170);
-    if (what == "dress") {   // R-412: `genome dress [scale] [age|all] [desert|felisian] [high]`: each of the age's own variables a row, its values across, on one plain genome
+    if (what == "dress") {   // `genome dress [scale] [age|all] [desert|felisian] [high]`: each of the age's own variables a row, its values across, on one plain genome
         const std::string which = argc > 4 ? argv[4] : "all";
         const bool high = argc > 6 && std::string(argv[6]) == "high";
         const double years = argc > 7 ? atof(argv[7]) : 5;
@@ -512,7 +512,7 @@ int runGenome(int argc, char** argv) {
         printf("  -> %s\n", fn.c_str());
         return 0;
     }
-    if (what == "street") {   // B-415: the same peoples at every age but the far future's, each town seen from inside it
+    if (what == "street") {   // the same peoples at every age but the far future's, each town seen from inside it
         const int n = argc > 4 ? std::max(1, atoi(argv[4])) : 6;
         const double years = argc > 5 ? atof(argv[5]) : 30;
         const bool drone = argc > 7 && std::string(argv[7]) == "drone";
@@ -534,7 +534,7 @@ int runGenome(int argc, char** argv) {
             const Genome G = genomeOf(P[r].seed);
             drawText(cv, 3, (16 * scale + r * rowH + FBH) / scale + 2, fmt("%d. %s: %s %s %s, ROOF %s, PLAN %s, %s %s, GLAZING %.2f %s", r + 1, P[r].world.c_str(), genomeValue(G, GV_BASE).c_str(), genomeValue(G, GV_PAINTED).c_str(), genomeValue(G, GV_ACCENT).c_str(),
                                                                                   genomeValue(G, GV_ROOF).c_str(), genomeValue(G, GV_PLAN).c_str(), genomeValue(G, GV_PROFILE).c_str(), genomeValue(G, GV_OPENING).c_str(), G.at(GV_SHARE), genomeValue(G, GV_RHYTHM).c_str()).c_str(), ink);
-            // R-412: its own within its age's ways
+            // its own within its age's ways
             drawText(cv, 3, (16 * scale + r * rowH + FBH) / scale + 3 + FONT_LINE, fmt("   %s ROOFING, PITCH %.2f, EAVES %s, ROOFLINE %s, GABLES %s; %s, TRIM %s, %s, ENTRANCE %s, CORNERS %s; STOREYS %.2f, %s, SETBACK %.2f, BOUNDARY %s, FURNITURE %s, POLES %s",
                                                                                                   genomeValue(G, GV_ROOFING).c_str(), G.at(GV_PITCH), genomeValue(G, GV_EAVES).c_str(), genomeValue(G, GV_ROOFLINE).c_str(), genomeValue(G, GV_GABLES).c_str(), genomeValue(G, GV_POLYCHROMY).c_str(),
                                                                                                   genomeValue(G, GV_TRIM).c_str(), genomeValue(G, GV_PROJECTIONS).c_str(), genomeValue(G, GV_ENTRANCE).c_str(), genomeValue(G, GV_CORNERS).c_str(), G.at(GV_STOREYS), genomeValue(G, GV_FRONTAGE).c_str(),

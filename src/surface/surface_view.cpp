@@ -45,7 +45,7 @@ void SurfaceView::prefetchAhead() {
     double speed = std::sqrt(vx * vx + vz * vz);
     if (speed < 1.0) return;
     double dx = vx / speed, dz = vz / speed;
-    // O6-02: the near ring sweeps fastest, so it takes every other job: near, lod0, near, lod1 (lod0 while it is off)
+    // the near ring sweeps fastest, so it takes every other job: near, lod0, near, lod1 (lod0 while it is off)
     aheadCache = (aheadCache + 1) & 3;
     int which = (aheadCache & 1) == 0 ? 2 : (aheadCache == 1 ? 0 : 1);
     if (which == 2 && (nearBlend <= 0 || !ringN)) which = 0;
@@ -91,16 +91,16 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     tick("start");
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
-    site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // C-09: the old roads round the site, before anything samples the ground
-    site.clearMarks(); markCheckX = markCheckZ = 1e18;   // T-02
-    site.clearEdits(); workCells.clear(); workNear.clear(); workEdited.clear();   // T-03
-    worksHere = worldHadCivilisation(site.gen) ? worldWorksIfReady(site.gen) : nullptr;   // T-03: the world's works when built (never waited for)
+    site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // the old roads round the site, before anything samples the ground
+    site.clearMarks(); markCheckX = markCheckZ = 1e18;
+    site.clearEdits(); workCells.clear(); workNear.clear(); workEdited.clear();
+    worksHere = worldHadCivilisation(site.gen) ? worldWorksIfReady(site.gen) : nullptr;   // the world's works when built (never waited for)
     tick("site");
     grain.generate(site.gen.seed ^ 0x77, 9, 1);
     grainFine.generate(site.gen.seed ^ 0x99, 4, 0);
-    grainEdge.generate(site.gen.seed ^ 0x5E, 64, 1);   // B-311: the wobble of material boundaries
-    buildMacroTile(grainMacro, site.gen.seed);          // B-311: slow tone patches within a material
-    buildLeafTiles(leafTile, leafEdge, site.gen.seed);   // B-315: the vegetation's tiles and looks
+    grainEdge.generate(site.gen.seed ^ 0x5E, 64, 1);   // the wobble of material boundaries
+    buildMacroTile(grainMacro, site.gen.seed);          // slow tone patches within a material
+    buildLeafTiles(leafTile, leafEdge, site.gen.seed);   // the vegetation's tiles and looks
     buildBarkTile(barkTile, site.gen.seed);
     buildLooks();
     buildDirLUT();
@@ -111,7 +111,7 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     vc3.assign((size_t)1 << 12, VtxCache());
     vcN.assign((size_t)1 << 16, VtxCache());
     computeRings();
-    drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);   // O6-03: the drainage tiles the rings will read, before the caches fill
+    drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);   // the drainage tiles the rings will read, before the caches fill
     tick("drainage");
     nearBlend = ringN ? 1.0 : 0.0;
     lastRange = -1;
@@ -124,8 +124,8 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     player.y = site.surfaceHeight(player.x, player.z);
     player.yaw = 0.3; player.pitch = 0.0;
     player.onGround = true;
-    buggy = Buggy(); inBuggy = false; chaseCam = false;   // B-205: no buggy carries over to a new landing
-    drone = Drone(); inDrone = false;                      // R-403: nor a drone
+    buggy = Buggy(); inBuggy = false; chaseCam = false;   // no buggy carries over to a new landing
+    drone = Drone(); inDrone = false;                      // nor a drone
     lastWindUpdate = -1; lastEnvT = -1;
     prefetchStage = 0; prefetchRing = 0;
     for (int m = 0; m < MAT_COUNT; m++) mesoBuilt[m] = false;
@@ -133,29 +133,29 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     ruinCells.clear(); supportMeshes.clear(); supports.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;   // C-01; C-13: the world's peoples, each with a culture and a lore (B-420: the footings' meshes with them)
     for (int k = 0; k < 2; k++) {
         cultures[k] = k < peoples ? cultureOf(site.gen, k) : Culture();
-        lores[k] = worldHadCivilisation(site.gen) && k < peoples ? loreQuick(*site.sys, site.sys->bodies[site.body], site.gen, k) : Lore();   // C-12: for the graves' names and years
-        palettes[k] = cultures[k].palette;   // A-02: its colours and windows
-        traditions[k] = worldHadCivilisation(site.gen) && k < peoples ? traditionOf(site.gen, lores[k]) : Tradition();   // C-11: its music, its instruments
+        lores[k] = worldHadCivilisation(site.gen) && k < peoples ? loreQuick(*site.sys, site.sys->bodies[site.body], site.gen, k) : Lore();   // for the graves' names and years
+        palettes[k] = cultures[k].palette;   // its colours and windows
+        traditions[k] = worldHadCivilisation(site.gen) && k < peoples ? traditionOf(site.gen, lores[k]) : Tradition();   // its music, its instruments
         if (worldHadCivilisation(site.gen) && k < peoples) instrumentsOf(traditions[k], lores[k].which, instrumentSets[k]); else instrumentSets[k] = PeopleInstruments();
     }
-    placedCells.clear();   // A-02 (tests)
-    refreshPlanNear();     // T-01: the plan's places round the landing (the plan was built at the approach)
-    ensureTownMarks();     // T-02: the towns' streets and fields in the ground, before anything samples it
-    if (!site.edits.empty()) { capsuleY = site.surfaceHeight(capsuleX, capsuleZ); player.y = site.surfaceHeight(player.x, player.z); }   // T-03: on the works' ground
+    placedCells.clear();   // (tests)
+    refreshPlanNear();     // the plan's places round the landing (the plan was built at the approach)
+    ensureTownMarks();     // the towns' streets and fields in the ground, before anything samples it
+    if (!site.edits.empty()) { capsuleY = site.surfaceHeight(capsuleX, capsuleZ); player.y = site.surfaceHeight(player.x, player.z); }   // on the works' ground
     nearGrave = NearGrave();
-    shardsFound.clear(); nearShard = NearShard();   // C-03 (the game refills the set from the guide after this)
-    instrumentsFound.clear(); nearInstrument = NearInstrument();   // C-11 (likewise)
-    hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // B-303: nothing of the last landing shows on this one's map
-    quakeCue = 0; duneSong = 0; iceSong = 0; duneHz = duneSongHz(site.gen, site.gravity);   // Q-03
+    shardsFound.clear(); nearShard = NearShard();   // (the game refills the set from the guide after this)
+    instrumentsFound.clear(); nearInstrument = NearInstrument();   // (likewise)
+    hasWaypoint = false; eruptions.clear(); nextEruption = 30; devils.clear(); nextDevil = 20; quake = 0; nextQuake = 45; siteEpoch++;   // nothing of the last landing shows on this one's map
+    quakeCue = 0; duneSong = 0; iceSong = 0; duneHz = duneSongHz(site.gen, site.gravity);
     tick("capsule+misc");
-    joinScan(); echoes.clear(); scanned = false;   // R-408: the last site's echoes are gone; the scanner asks again
+    joinScan(); echoes.clear(); scanned = false;   // the last site's echoes are gone; the scanner asks again
     tick("scan");
-    spawnLife(lat, lon);   // N3: herds and flocks from the world's bestiary
+    spawnLife(lat, lon);   // herds and flocks from the world's bestiary
     tick("life");
     buildBandMap();
-    meteorShowersOf(*sys, bodyIndex, showers);   // W-04
+    meteorShowersOf(*sys, bodyIndex, showers);
     zodiDust = zodiacalDust(*sys, bodyIndex);
-    lavaGlow = isLavaWorld(site.gen.type) || (site.gen.dark && site.gen.hasTrait(TR_EMBERS));   // D-04
+    lavaGlow = isLavaWorld(site.gen.type) || (site.gen.dark && site.gen.hasTrait(TR_EMBERS));
     waterLights = site.gen.hasTrait(TR_LIGHTS_IN_WATER) && site.hasWater;
     computeEnvironment(t);
     tick("band+env");
@@ -171,7 +171,7 @@ void SurfaceView::computeRings() {
         int r = std::min(base[k], (int)std::floor(1.15 * site.R / cells[k]));
         ringR[k] = r < 4 ? 0 : r;
     }
-    ringN = std::min(30, (int)std::floor(1.15 * site.R / 4));   // O6-02: 30 cells of 4 m
+    ringN = std::min(30, (int)std::floor(1.15 * site.R / 4));   // 30 cells of 4 m
     if (ringN < 4) ringN = 0;
     invTwoR = 0.5 / site.R;
 }
@@ -179,9 +179,9 @@ void SurfaceView::computeRings() {
 // O6-02: the near ring follows the explorer (or the buggy); B-313: at every speed
 void SurfaceView::updateNearRing(double dt) {
     (void)dt;
-    // B-313: the near ring is on at every speed (the buggy's suspension soaks up its relief, updateBuggy); it used to fade
-    // out above 12 m/s and back in as the buggy slowed, and the 4 m relief rising over half a second as you stopped
-    // and got out read as the hills changing shape in front of you
+    // the near ring is on at every speed (the buggy's suspension soaks up its relief, updateBuggy): faded out above
+    // 12 m/s and back in as the buggy slowed, the 4 m relief rising over half a second as the explorer stops and gets out
+    // would read as the hills changing shape
     nearBlend = (ringN && cameraOverrideAlt < 60) ? 1.0 : 0.0;
     double cx = inBuggy ? buggy.x : player.x, cz = inBuggy ? buggy.z : player.z;
     site.nearBlend = nearBlend; site.nearX = cx; site.nearZ = cz; site.nearR = ringN;
@@ -245,23 +245,23 @@ void SurfaceView::prefetch(double budgetMs) {
 
 void SurfaceView::reanchor() {
     const auto ta0 = std::chrono::steady_clock::now();   // F-01: the parts' ms under VESPERIS_TRACE (KI-302: a comet's every 0.35 radii)
-    joinAhead();   // M7-01: cell coordinates change with the anchor
+    joinAhead();   // cell coordinates change with the anchor
     double lat, lon;
     site.latLonAt(player.x, player.z, lat, lon);
     Vec3 capU = site.unitAt(capsuleX, capsuleZ);
     Vec3 bugU = site.unitAt(buggy.x, buggy.z);
-    Vec3 drnU = site.unitAt(drone.x, drone.z);   // R-403
-    Vec3 wpU = site.unitAt(wpX, wpZ);   // B-303: the waypoint moves with the frame too
+    Vec3 drnU = site.unitAt(drone.x, drone.z);
+    Vec3 wpU = site.unitAt(wpX, wpZ);   // the waypoint moves with the frame too
     Vec3 oldNorth = site.north0;
     const StarSystem* sys = site.sys;
     int body = site.body;
     const auto ta1 = std::chrono::steady_clock::now();
     site.init(sys, body, lat, lon, lastT);
     const auto ta2 = std::chrono::steady_clock::now();
-    site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // C-09: the roads in the new frame's metres
+    site.clearRoads(); site.ensureRoads(0, 0); roadBuildX = 0; roadBuildZ = 0;   // the roads in the new frame's metres
     const auto ta3 = std::chrono::steady_clock::now();
-    site.clearMarks(); markCheckX = markCheckZ = 1e18;   // T-02: added again from the cells in the new frame
-    site.clearEdits(); workCells.clear(); workEdited.clear();   // T-03: the works too
+    site.clearMarks(); markCheckX = markCheckZ = 1e18;   // added again from the cells in the new frame
+    site.clearEdits(); workCells.clear(); workEdited.clear();   // the works too
     double cx, cz;
     site.localAt(capU, cx, cz);
     // headings are measured from local north, which turns with the meridians
@@ -274,18 +274,18 @@ void SurfaceView::reanchor() {
     capsuleY = site.surfaceHeight(cx, cz);
     site.localAt(wpU, wpX, wpZ);
     siteEpoch++;
-    ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();   // C-01: the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
-    refreshPlanNear();   // T-01: the plan's places in the new frame's metres
-    ensureTownMarks();   // T-02
+    ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();   // the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
+    refreshPlanNear();   // the plan's places in the new frame's metres
+    ensureTownMarks();
     if (buggy.deployed) {   // the buggy moves with the frame too (B-205); a driven buggy is where the player is
         if (inBuggy) { buggy.x = 0; buggy.z = 0; }
         else { double bx, bz; site.localAt(bugU, bx, bz); buggy.x = bx; buggy.z = bz; }
         buggy.heading = wrap2pi(buggy.heading + dyaw);
         buggy.y = site.surfaceHeight(buggy.x, buggy.z);
-        buggy.groundY = -1e9;   // B-307: the contact height is in the old frame
+        buggy.groundY = -1e9;   // the contact height is in the old frame
         buggy.tracks.clear(); buggy.trackHead = 0; buggy.puffs.clear();
     }
-    if (drone.deployed) {   // R-403: the drone too; a flown drone is where the player is, at its height
+    if (drone.deployed) {   // the drone too; a flown drone is where the player is, at its height
         if (inDrone) { drone.x = 0; drone.z = 0; }
         else { double dx, dz; site.localAt(drnU, dx, dz); drone.x = dx; drone.z = dz; drone.y = site.surfaceHeight(dx, dz); }
         drone.heading = wrap2pi(drone.heading + dyaw);
@@ -300,12 +300,12 @@ void SurfaceView::reanchor() {
     vcN.assign((size_t)1 << 16, VtxCache());
     computeRings();
     const auto ta4 = std::chrono::steady_clock::now();
-    drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);   // O6-03
+    drainagePrefetch(site.gen, site.up0, drawRadiusM() + 3000.0, false);
     const auto ta5 = std::chrono::steady_clock::now();
-    for (ScanEcho& e : echoes) site.localAt(e.lm.unit, e.x, e.z);   // R-408: the same echoes, in the new frame (a scan under way is taken in it)
+    for (ScanEcho& e : echoes) site.localAt(e.lm.unit, e.x, e.z);   // the same echoes, in the new frame (a scan under way is taken in it)
     flocks.clear(); critters.clear(); herds.clear(); habitatT = -1e9;   // they lived near the old origin, 50 km away (B-316: the habitat cells respawn theirs)
     prefetchStage = 0; prefetchRing = 0;
-    anchorFrame = frameStamp;   // F-01: the next frames' warm lines are traced (the rings' refill)
+    anchorFrame = frameStamp;   // the next frames' warm lines are traced (the rings' refill)
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
     if (trace) {
         auto ms = [](std::chrono::steady_clock::time_point a, std::chrono::steady_clock::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
@@ -330,7 +330,7 @@ void SurfaceView::startScan() {
         std::vector<Landmark> cells, ruins;
         sightsNear(g, at, SCAN_RANGE, sightKindsOf(g) & ~(1u << LM_RUIN) & ~(1u << LM_WORK), cells);
         ruinsNear(g, at, SCAN_RANGE, ruins);
-        std::vector<Landmark> works; worksHeardNear(g, at, SCAN_RANGE, works);   // T-03
+        std::vector<Landmark> works; worksHeardNear(g, at, SCAN_RANGE, works);
         *out = cells; out->insert(out->end(), ruins.begin(), ruins.end()); out->insert(out->end(), works.begin(), works.end());
         *ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         busy->store(false, std::memory_order_release);
@@ -381,13 +381,13 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     if (!valid) return;
     if (dt > 0.1) dt = 0.1;
     updateNearRing(dt);   // O6-02: before the movement, so the ground underfoot is the ground drawn
-    waterRecords();       // B-421
+    waterRecords();
     if (inBuggy) updateBuggy(dt, in, t);
-    else if (inDrone) updateDrone(dt, in, t);   // R-403
+    else if (inDrone) updateDrone(dt, in, t);
     else updateWalking(dt, in, t, controlsEnabled);
-    prefetchAhead();   // M7-01
-    collectScan();   // R-408
-    if (scanWanted && !scanBusy.load(std::memory_order_acquire)) {   // R-408: the scanner on: a first scan, and another every SCAN_STEP
+    prefetchAhead();
+    collectScan();
+    if (scanWanted && !scanBusy.load(std::memory_order_acquire)) {   // the scanner on: a first scan, and another every SCAN_STEP
         double sx = 0, sz = 0; if (scanned) site.localAt(scanU, sx, sz);
         if (!scanned || std::hypot(player.x - sx, player.z - sz) > SCAN_STEP) startScan();
     }
@@ -399,7 +399,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         buggy.speed *= std::exp(-dt * 2.0);
         buggy.y = site.surfaceHeight(buggy.x, buggy.z);
     }
-    // R-403: the drone's downwash settles, an unfolding drone keeps unfolding, a parked one sits on the ground with its pods winding down
+    // the drone's downwash settles, an unfolding drone keeps unfolding, a parked one sits on the ground with its pods winding down
     for (auto& p : drone.puffs) p.age += (float)dt;
     drone.puffs.erase(std::remove_if(drone.puffs.begin(), drone.puffs.end(), [](const Buggy::Puff& p) { return p.age > 1.5f; }), drone.puffs.end());
     if (drone.deployed && drone.unfold < 1) drone.unfold = std::min(1.0, drone.unfold + dt / 2.0);
@@ -408,32 +408,32 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         drone.rotor *= std::exp(-dt * 0.8); drone.fanSpin += dt * TAU * (2.0 + 22.0 * drone.rotor);
         drone.vibration *= std::exp(-dt * 4); drone.jolt *= std::exp(-dt * 5);
     }
-    {   // KI-007: keep the local frame close: 50 km on a planet, a third of the radius on a small body (O4)
+    {   // keep the local frame close: 50 km on a planet, a third of the radius on a small body
         double reach = std::min(50e3, 0.35 * site.R);
         if (player.x * player.x + player.z * player.z > reach * reach) reanchor();
     }
-    if (!worksHere && worldHadCivilisation(site.gen) && (worksHere = worldWorksIfReady(site.gen))) { refreshPlanNear(); markCheckX = markCheckZ = 1e18; }   // T-03: the works come in when built
-    if (worldHadCivilisation(site.gen) && std::hypot(player.x - planNearX, player.z - planNearZ) > 1000) refreshPlanNear();   // T-01
-    if (worldHadCivilisation(site.gen) && std::hypot(player.x - markCheckX, player.z - markCheckZ) > 250) ensureTownMarks();   // T-02: the towns coming into reach
-    if (!site.roadCells.empty()) {   // C-09: the roads grow with the explorer: two cells from the last build, the next block (the worker joined first: the vertices read the list)
+    if (!worksHere && worldHadCivilisation(site.gen) && (worksHere = worldWorksIfReady(site.gen))) { refreshPlanNear(); markCheckX = markCheckZ = 1e18; }   // the works come in when built
+    if (worldHadCivilisation(site.gen) && std::hypot(player.x - planNearX, player.z - planNearZ) > 1000) refreshPlanNear();
+    if (worldHadCivilisation(site.gen) && std::hypot(player.x - markCheckX, player.z - markCheckZ) > 250) ensureTownMarks();   // the towns coming into reach
+    if (!site.roadCells.empty()) {   // the roads grow with the explorer: two cells from the last build, the next block (the worker joined first: the vertices read the list)
         double dx = player.x - roadBuildX, dz = player.z - roadBuildZ, two = 2 * ruinCellLat(site.gen) * site.R;
         if (dx * dx + dz * dz > two * two) {
-            const auto tr0 = std::chrono::steady_clock::now();   // F-01: a rebuild's ms on the main thread (the worker's join with it)
+            const auto tr0 = std::chrono::steady_clock::now();   // a rebuild's ms on the main thread (the worker's join with it)
             joinAhead(); site.ensureRoads(player.x, player.z); roadBuildX = player.x; roadBuildZ = player.z;
             lastRoadsMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count(); roadsBuilds++;
             static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
             if (trace) fprintf(stderr, "  roads grown %d: %.1f ms (%zu roads held)\n", roadsBuilds, lastRoadsMs, site.roads.size());
         }
     }
-    if (t - drainCheckT > 3.0) {   // O6-03: the drainage tiles the far ring will reach next, computed ahead on their own thread
+    if (t - drainCheckT > 3.0) {   // the drainage tiles the far ring will reach next, computed ahead on their own thread
         drainCheckT = t;
         Vec3 u = site.unitAt(player.x, player.z);
         if (!drainageReady(site.gen, u, drawRadiusM() + 9000.0)) drainagePrefetch(site.gen, u, drawRadiusM() + 9000.0, true);
     }
-    // M4-08: eruptions every minute or so on molten and volcanic worlds, within 400 m. R-307: a tectonic world's fountains
+    // eruptions every minute or so on molten and volcanic worlds, within 400 m. R-307: a tectonic world's fountains
     // rise from its fissures (the nearest lava cell of the 16 m ring within 600 m) every 15-40 s and last 25 s; a bombarded
     // world takes a meteorite every 20-60 s within 1.2 km, and shakes for a moment
-    const uint32_t events = KINDS[site.gen.type].events;   // P-00: the kind's events
+    const uint32_t events = KINDS[site.gen.type].events;   // the kind's events
     if (events & (EV_ERUPTIONS | EV_FOUNTAINS | EV_STRIKES)) {
         nextEruption -= dt;
         if (nextEruption <= 0) {
@@ -458,7 +458,7 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         }
         eruptions.erase(std::remove_if(eruptions.begin(), eruptions.end(), [t](const Eruption& e) { return t - e.start > (e.kind == 1 ? 30 : 9); }), eruptions.end());
     }
-    // R-307: the ground shakes on a tectonic world: a quake every 60-180 s, ten seconds long, the camera trembling by it. Q-03: on a world with
+    // the ground shakes on a tectonic world: a quake every 60-180 s, ten seconds long, the camera trembling by it. Q-03: on a world with
     // QUAKES every one and a half to four minutes; the quake's own sound at its onset (the tectonic world's thunder before)
     if ((events & EV_QUAKES) || site.gen.hasTrait(TR_QUAKES)) {
         nextQuake -= dt;
@@ -466,8 +466,8 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
     }
     quake *= std::exp(-dt / 4.0);
     if (quake < 0.01) quake = 0;
-    updateGroundSongs(dt, t);   // Q-03
-    // R-307: dust devils on a desert world (and in a thin-air dust storm): up to four within 500 m, born every 20-50 s, each
+    updateGroundSongs(dt, t);
+    // dust devils on a desert world (and in a thin-air dust storm): up to four within 500 m, born every 20-50 s, each
     // walking with the wind for two to five minutes
     if (((events & EV_DEVILS) || ((events & EV_STORM_DEVILS) && env.dust > 0.3)) && env.skyBrightness > 0.3) {
         nextDevil -= dt;
@@ -506,7 +506,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
             yaw = buggy.heading;   // the chase camera follows the heading
             pitch = -12 * DEG;
         } else {
-            // R-204: the eye is the camera pod on the nose, bolted to the hull: it pans within the pod's range, takes the
+            // the eye is the camera pod on the nose, bolted to the hull: it pans within the pod's range, takes the
             // chassis' pitch and roll, and trembles with the speed and the ground as a smooth sum of sines (at most
             // 1.5 cm and 0.4 deg; B-203: the old per-frame random offsets were the shaking), dipping after a thump
             Vec3 mount = buggyCameraMount();
@@ -519,7 +519,7 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
             pitch = player.pitch + buggy.pitch * std::cos(look) - buggy.roll * std::sin(look) + amp * 0.45 * std::sin(t * TAU * 9.1) + buggy.jolt * 0.03;
             roll = buggy.roll * std::cos(look);
         }
-    } else if (inDrone) {   // R-403
+    } else if (inDrone) {
         double hx = std::sin(drone.heading), hz = std::cos(drone.heading);
         if (chaseCam) {
             camX = drone.x - hx * 7.0; camZ = drone.z - hz * 7.0;
@@ -543,8 +543,8 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
         // head sway: a small lateral offset along the right vector
         camX += std::cos(player.yaw) * player.bobX; camZ -= std::sin(player.yaw) * player.bobX;
     }
-    if (freeCam) { camX = freePos.x; camZ = freePos.z; eyeY = freePos.y; yaw = freeYaw; pitch = freePitch; roll = 0; }   // M6-05
-    if (quake > 0 && cameraOverrideAlt < 0) {   // R-307: the ground's shaking, a slow heave with a fine tremor on it
+    if (freeCam) { camX = freePos.x; camZ = freePos.z; eyeY = freePos.y; yaw = freeYaw; pitch = freePitch; roll = 0; }
+    if (quake > 0 && cameraOverrideAlt < 0) {   // the ground's shaking, a slow heave with a fine tremor on it
         double q = quake * (0.4 + 0.6 * std::sin(t * 1.3));
         pitch += q * (1.1 * DEG * std::sin(t * 9.7) + 0.3 * DEG * std::sin(t * 23.1));
         roll += q * 0.8 * DEG * std::sin(t * 7.3 + 1.0);
@@ -552,13 +552,13 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     }
     camPos = Vec3(camX, eyeY, camZ);
     camLocal = cameraBasis(yaw, pitch);
-    {   // B-322: the picture follows the eye, not the body: under the drawn water surface (a dive's first frames, the eye
+    {   // the picture follows the eye, not the body: under the drawn water surface (a dive's first frames, the eye
         // within a few centimetres of the surface, the free camera) everything is seen through water
         double wlEye = site.hasWater || site.gen.liquidLevel > -1e8 ? site.waterNowAt(camX, camZ) : -1e9;
         viewUnderwater = wlEye > -1e8 && eyeY < wlEye + 0.03;
         if (viewUnderwater) env.fogDistance = std::min(env.fogDistance, 22.0);
     }
-    if (env.fogSea > 0) {   // Q-02: an eye inside the fog sea sees a few hundred metres
+    if (env.fogSea > 0) {   // an eye inside the fog sea sees a few hundred metres
         const double in = smoothstep(env.fogSeaTop + 6.0, env.fogSeaTop - 14.0, eyeY);
         if (in > 0) env.fogDistance = std::min(env.fogDistance, env.fogDistance + (240.0 - env.fogDistance) * in);
     }
@@ -569,12 +569,12 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
         if (std::fabs(wantF - proj.f) > proj.f * 0.012) { proj = Proj::fromHFov(baseFov + player.fovKick); buildDirLUT(); }
     }
     lastT = t;
-    waterWdx = std::sin(env.windDir), waterWdz = std::cos(env.windDir);   // F-04: the water corners' (waterCorner)
+    waterWdx = std::sin(env.windDir), waterWdz = std::cos(env.windDir);   // the water corners' (waterCorner)
     waterSunUp = smoothstep(-0.03, 0.06, env.sun.dirLocal.y);
-    setupLamps();   // D-04
+    setupLamps();
     {
         SurfaceLook L = lookFor(site.gen, site.sys->star);
-        cloudShadows = site.atmosphere && L.cloudsLayer && (env.cloudCover > 0.03 || localFront.on) && !hasOpaqueDeck(site.gen.type);   // W-03: a front's deck in reach counts
+        cloudShadows = site.atmosphere && L.cloudsLayer && (env.cloudCover > 0.03 || localFront.on) && !hasOpaqueDeck(site.gen.type);   // a front's deck in reach counts
         cloudThr = 1.0 - env.cloudCover * 0.75;
         cloudWx = windDriftX; cloudWz = windDriftZ;
     }
@@ -583,23 +583,23 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     setupPalette(fb);
     if (fade < 1) scalePalette(fb.pal, fade);
     fb.clearDepth();
-    floorH = floorHeight();   // B-408: the sky's galactic band reaches down to its horizon
+    floorH = floorHeight();   // the sky's galactic band reaches down to its horizon
     drawSky(fb, t, stars, sr);
     section(0);
     int r0 = ringR[0], r1 = ringR[1], r2 = ringR[2], r3 = ringR[3];
-    int rN = nearBlend > 0 ? ringN : 0;   // O6-02: the near ring (B-313: at every speed, on foot and in the buggy; off when the capsule is high)
+    int rN = nearBlend > 0 ? ringN : 0;   // the near ring (B-313: at every speed, on foot and in the buggy; off when the capsule is high)
     if (cameraOverrideAlt > 800) r0 = 0;          // high above the site the 16 m cells are invisible
     else if (cameraOverrideAlt > 300) r0 = std::min(r0, 16);
-    {   // B-310: the rings near to far, each thread drawing every ring within its band of rows (the vertex caches and the
+    {   // the rings near to far, each thread drawing every ring within its band of rows (the vertex caches and the
         // tiles are filled first, serially, so the threads only read; the pixels come out as the serial loop's)
         struct Ring { TerrainCache* c; std::vector<VtxCache>* vc; int r; double cover; };
-        // B-313: a coarser ring skips the cells the finer one covers, up to a cell of overlap (it used to overlap by two or
-        // three cells: 4 km of both rings drawn at the far edge); the finer ring's edge is morphed onto the coarser surface.
-        // B-318: the cover is a radius in metres, tested against every corner of a coarse cell (`cellCovered`): a finer ring
+        // a coarser ring skips the cells the finer one covers, up to a cell of overlap (two or three cells would
+        // draw 4 km of both rings at the far edge); the finer ring's edge is morphed onto the coarser surface.
+        // the cover is a radius in metres, tested against every corner of a coarse cell (`cellCovered`): a finer ring
         // of rf cells draws the cells whose centre lies within rf, so any point within rf - 0.71 cells lies in one of them
         auto coverOf = [](int rf, double csf) { return rf > 0 ? (rf - 0.71) * csf : 0.0; };
         Ring rings[5] = {{&site.lodN, &vcN, rN, 0}, {&site.lod0, &vc0, r0, coverOf(rN, 4)}, {&site.lod1, &vc1, r1, coverOf(r0, 16)},
-                         {&site.lod2, &vc2, r2, coverOf(r1, 64)}, {&site.lod3, &vc3, r3, coverOf(r2, 512)}};   // O1: the far ring to 53 km
+                         {&site.lod2, &vc2, r2, coverOf(r1, 64)}, {&site.lod3, &vc3, r3, coverOf(r2, 512)}};   // the far ring to 53 km
         // the morph band of a ring reaches from the finer ring's edge (plus two cells) to its own edge: the gap between
         // two rings is two octaves of the relief (hundreds of metres at the 13 km edge, KI-310), and a narrow band would
         // twist the cells; the near ring keeps a full-detail core of ten cells (40 m) round the camera
@@ -612,12 +612,12 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
             double cover = k == 0 ? 10.0 : (rings[k - 1].r > 0 ? rings[k - 1].r * (double)rings[k - 1].c->cellSize / g.c->cellSize : 10.0);
             int band = std::max(4, (int)std::floor(g.r - cover - 2));
             if (k == 0) { site.nearBand = band; }
-            if (k == 1) { site.lod0R = g.r; site.lod0Band = coarse ? band : 0; site.camX = camPos.x; site.camZ = camPos.z; }   // B-319: groundHeight follows lod0's morph
+            if (k == 1) { site.lod0R = g.r; site.lod0Band = coarse ? band : 0; site.camX = camPos.x; site.camZ = camPos.z; }   // groundHeight follows lod0's morph
             warmTerrainLOD(*g.c, *g.vc, g.r, g.cover, coarse ? coarse->c : nullptr, coarse ? coarse->vc : nullptr, band);
         }
         morphCoarse = nullptr; morphBand = 0;
         section(1);
-        // F-04: the cells binned once, on the pool by rows of cells (every ring's rows in one dispatch), then each band thread draws
+        // the cells binned once, on the pool by rows of cells (every ring's rows in one dispatch), then each band thread draws
         // the cells that reach its rows
         bool outermost[5]; int firstRow[6], rowsAll = 0;
         for (int k = 0; k < 5; k++) {
@@ -648,14 +648,14 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
             for (int k = 0; k < 5; k++) if (rings[k].r > 0) for (int n : terrainBins[k].count) lastTerrainCells += n;
             lastTerrainBinMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb0).count();
         }
-        // F-05: the reflections gathered (serially: they fill the caches on a miss) for the bands to draw after the rings; the floor is
+        // the reflections gathered (serially: they fill the caches on a miss) for the bands to draw after the rings; the floor is
         // drawn first in every band, as it was drawn before the rings
         static const char* skipEnv2 = std::getenv("VESPERIS_SKIP");
         const bool reflections = site.hasWater && !(skipEnv2 && std::strstr(skipEnv2, "refl"));
         if (reflections) gatherReflections();
-        static const bool traceBands = std::getenv("VESPERIS_TRACE") != nullptr;   // F-01: each band's time split (its ms and rows always)
+        static const bool traceBands = std::getenv("VESPERIS_TRACE") != nullptr;   // each band's time split (its ms and rows always)
         std::atomic<int> bandSlot{0};
-        // F-06: the frame's rows dealt in chunks (a quarter of a thread's share): the chunk that holds the horizon's thousands of small cells
+        // the frame's rows dealt in chunks (a quarter of a thread's share): the chunk that holds the horizon's thousands of small cells
         // is one of thirty-odd, and the threads take the others meanwhile (cuts by a cost per cell and row lost: 4.31 -> 5.09 ms at 4x)
         parallelFor(FBH, 32, [&](int yb, int ye) {
             const auto tb0 = std::chrono::steady_clock::now();
@@ -685,19 +685,19 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     drawFlora(fb, t);
     section(4);
     drawRuins(fb);
-    drawShards(fb, t);   // C-03: after the walls, so the depth test hides what lies behind them
+    drawShards(fb, t);   // after the walls, so the depth test hides what lies behind them
     if (buggy.deployed) drawBuggy(fb, t);
-    if (drone.deployed) drawDrone(fb, t);   // R-403
+    if (drone.deployed) drawDrone(fb, t);
     drawLife(fb, t);
-    if (cameraOverrideAlt < 0) drawCapsule(fb, t);   // B-322: while the capsule flies (the descent, the ascent) it is not on the ground: its beacon beam, seen from above, cut a bright line across the land
+    if (cameraOverrideAlt < 0) drawCapsule(fb, t);   // while the capsule flies (the descent, the ascent) it is not on the ground: its beacon beam, seen from above, cut a bright line across the land
     drawWeather(fb, t);
     drawVeil(fb);
     section(5);
-    // O1: what the crosshair rests on, for the HUD's range readout and M (skipped while the capsule flies)
+    // what the crosshair rests on, for the HUD's range readout and M (skipped while the capsule flies)
     lastRange = cameraOverrideAlt >= 0 ? -1 : rangeToGround(drawRadiusM(), lastRangeX, lastRangeZ, lastRangeWater);
     { static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr; if (trace && frameStamp <= 3) {
         fprintf(stderr, "  render %d: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", frameStamp, lastRenderMs[0], lastRenderMs[1], lastRenderMs[2], lastRenderMs[3], lastRenderMs[4], lastRenderMs[5]);
-        for (int f = 0; f < 2; f++) { const std::string bl = bandTraceLine(f == 1); if (!bl.empty()) fprintf(stderr, "    %s\n", bl.c_str()); }   // F-01
+        for (int f = 0; f < 2; f++) { const std::string bl = bandTraceLine(f == 1); if (!bl.empty()) fprintf(stderr, "    %s\n", bl.c_str()); }
     } }
 }
 
@@ -708,7 +708,7 @@ std::string SurfaceView::bandTraceLine(bool flora) const {
     if (n == 0) return std::string();
     char buf[160];
     std::string s = "flora bands:";
-    if (!flora) { snprintf(buf, sizeof buf, "terrain bands (%d cells binned in %.2f ms, %d in every band):", lastTerrainCells, lastTerrainBinMs, lastTerrainAllRows); s = buf; }   // F-04
+    if (!flora) { snprintf(buf, sizeof buf, "terrain bands (%d cells binned in %.2f ms, %d in every band):", lastTerrainCells, lastTerrainBinMs, lastTerrainAllRows); s = buf; }
     for (int i = 0; i < n; i++) {
         const BandTrace& b = bs[i];
         if (flora) snprintf(buf, sizeof buf, " %d-%d %.2f ms (%d visited, %d drawn)%s", b.y0, b.y1, b.ms, b.walked, b.drawn, i + 1 < n ? "," : "");

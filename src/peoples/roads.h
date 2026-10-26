@@ -40,8 +40,8 @@ struct Road {
     double maxGrade = 0;    // the steepest step (rise over run)
     double halfWidth = 3;   // metres: the culture's, broader between towns
     int bends = 0;          // steps that were not the straight one
-    int kind = 1;           // T-01: the network's kind (peoples/plan.h's NetKind: C-09's roads NK_ROAD)
-    bool trunk = false;     // T-01: on the trunk between the capital and the cities
+    int kind = 1;           // the network's kind (peoples/plan.h's NetKind: C-09's roads NK_ROAD)
+    bool trunk = false;     // on the trunk between the capital and the cities
 };
 
 struct RoadPair { RoadNode a, b; uint64_t id = 0; };   // two joined settlements, a's cell before b's, not walked yet

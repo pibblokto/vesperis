@@ -85,7 +85,7 @@ int runRegress(bool bless) {
 // M7-04 frame hashes (defined after the scene helpers it uses)
 static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lines, std::vector<std::string>& notes, std::vector<std::string>& differs) {
     const uint64_t FNV0 = 1469598103934665603ULL;
-    // M7-04 frame hashes: three fixed surface scenes and one space frame at 1x (the framebuffer indices, before the RGB conversion); F-11:
+    // frame hashes: three fixed surface scenes and one space frame at 1x (the framebuffer indices, before the RGB conversion); F-11:
     // the forest at 4x and the cabin at 1x, each also drawn by one thread (`differs` names a frame one thread draws differently)
     {
         int savedScale = g_testScale;
@@ -128,7 +128,7 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
             if (done) break;
         }
         mkdir("shots", 0755); mkdir("shots/tests", 0755);
-        {   // F-11: the forest at 4x (the bench's `felisian_forest`, B-423's frame: the flora's bands pinned per scale), then drawn again by
+        {   // the forest at 4x (the bench's `felisian_forest`, B-423's frame: the flora's bands pinned per scale), then drawn again by
             // the workers and by one thread (B-310's rule within the run; `VESPERIS_THREADS=1 regress` checks it between runs)
             setFramebufferScale(4);
             for (const CmpScene& sc : CMP_SCENES) {
@@ -148,7 +148,7 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
                 break;
             }
         }
-        {   // F-11: the cabin at 1x through the game: the start's parking, the light on and the hull polarised (`screens`' cabin), every
+        {   // the cabin at 1x through the game: the start's parking, the light on and the hull polarised (`screens`' cabin), every
             // map of the system made; the game's picture (the RGB with the HUD) at one instant once it holds still, then by one thread
             TestGame game; game.savePrefix = "shots/tests/regress_save"; game.settingsPath = "shots/tests/regress_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/regress_guide.txt";
             remove(game.guidePath.c_str()); remove(game.settingsPath.c_str());

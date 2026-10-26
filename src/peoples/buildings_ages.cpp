@@ -52,7 +52,7 @@ void genHut(Gen& g) {   // a hut on the people's plan: a ring of dry stone, or w
             else roof(g, rf, 0, 0, b.hw, b.hd, hmin, h, 1.05, MT_TIMBER);
         }
         if (g.lod == 0) for (int k = 0; k < 4; k++) { double a = k * PI / 2 + 0.4; g.box(std::sin(a) * 0.45, std::cos(a) * 0.45, a, 0.17, 0.13, 0, 0.16, 0, MT_DRYSTONE, 3); }
-        if (hmin > 0.92 * h) hutEntrance(g, b.hw, b.hd, 0, h, stone);   // R-412: its entrance, its pole, its yard
+        if (hmin > 0.92 * h) hutEntrance(g, b.hw, b.hd, 0, h, stone);   // its entrance, its pole, its yard
         hutPole(g, b.hw * 0.6 + 1.0, b.hd + 1.5);
         if (!b.joined) hutRing(g, b.hw + 0.4, b.hd + 0.4, 0);
         return;
@@ -89,7 +89,7 @@ void genHut(Gen& g) {   // a hut on the people's plan: a ring of dry stone, or w
         if (stone || Dt < 0.35) { const double h2 = ringWalls(g, R2); if (h2 > 0.92 * R2.h && Dt < 0.5) { Form& e = g.add(FK_LATHE, 1, 0, R2.cz, 0, R2.rx + 0.4, R2.rz + 0.4, g.sink + h2 - 0.1, g.sink + h2 + R2.rx * 1.1, g.roofSlot(MT_TIMBER), MT_TIMBER); e.p[0] = 0.04; } }
     }
     const double sinkSave = g.sink; hutRoof(g, rx, rz, hmin, h, stone); g.sink = sinkSave;
-    if (g.lod == 0 && hmin > 0.92 * h) {   // A-04: the accent where the people put it
+    if (g.lod == 0 && hmin > 0.92 * h) {   // the accent where the people put it
         const double am = (door + 0.5 * dseg) * TAU / N;
         if (g.accentOn(AP_BANDS) && (stone || Dt < 0.35)) for (int k = 0; k < N; k++) { if (inDoor(k)) continue; const double a0 = k * TAU / N, a1 = (k + 1) * TAU / N, x0 = std::sin(a0) * rx, z0 = std::cos(a0) * rz, x1 = std::sin(a1) * rx, z1 = std::cos(a1) * rz, dx = x1 - x0, dz = z1 - z0, ch = std::sqrt(dx * dx + dz * dz);
                                                                      g.box(0.5 * (x0 + x1) - dz / ch * 0.08, 0.5 * (z0 + z1) + dx / ch * 0.08, std::atan2(-dz, dx), ch * 0.5 + 0.1, stone ? 0.38 : 0.12, g.sink + h * 0.45, g.sink + h * 0.45 + 0.3, 1, stone ? MT_DRYSTONE : MT_TIMBER, 4); }
@@ -97,7 +97,7 @@ void genHut(Gen& g) {   // a hut on the people's plan: a ring of dry stone, or w
         if (g.accentOn(AP_TOPS) && g.D(MT_TIMBER) < 0.4 && c.roof != RF_OPEN) g.lathe(0, 0, 0, 0.09, g.sink + h, g.sink + h + std::max(rx, rz) * 1.7, 1, MT_TIMBER, 4);
     }
     if (g.lod == 0) for (int k = 0; k < 4; k++) { double a = k * PI / 2 + 0.4; g.box(std::sin(a) * 0.45, std::cos(a) * 0.45, a, 0.17, 0.13, 0, 0.16, 0, MT_DRYSTONE, 3); }
-    {   // R-412: its entrance, its pole by the door, its yard
+    {   // its entrance, its pole by the door, its yard
         const double am = (door + 0.5 * dseg) * TAU / N;
         if (hmin > 0.92 * h || !stone) hutEntrance(g, rx, rz, am, h, stone);
         const double pa = am + 0.62, pr = std::max(rx, rz) + 1.5;
@@ -171,7 +171,7 @@ void genStoneCircle(Gen& g) {
         for (int k = 0; k < n; k++) {
             double a = k * TAU / n, w = 0.45 + 0.4 * g.U(10 + k), hh = h * (0.75 + 0.35 * g.U(40 + k));
             if (lintels) hh = h;
-            standingStone(g, std::sin(a) * R, std::cos(a) * R, a, w, 0.3 + 0.2 * g.U(70 + k), hh, 100 + k, false);   // A-04: its broad face to the middle
+            standingStone(g, std::sin(a) * R, std::cos(a) * R, a, w, 0.3 + 0.2 * g.U(70 + k), hh, 100 + k, false);   // its broad face to the middle
             up[k] = g.Dk(MT_DRYSTONE, 100 + k) < 0.3;
         }
         if (lintels && g.lod < 2)   // a lintel on each upright pair of the even ones; fallen beside them otherwise
@@ -205,8 +205,8 @@ void genDolmen(Gen& g) {   // a chamber of slabs under its capstone, open at the
     const Building& b = g.b;   // where the people's centre was a tomb, `style` 1, its passage open)
     const double hw = b.hw, hd = b.hd, h = b.hWall;
     const double d0 = g.Dk(MT_DRYSTONE, 10), d1 = g.Dk(MT_DRYSTONE, 11), d2 = g.Dk(MT_DRYSTONE, 12);
-    // a slab fallen lies outward (T-02: it used to tip along the chamber, into it half the time: a later people's dolmens in its fields showed
-    // it), its foot at its wall's line
+    // a slab fallen lies outward (tipping along the chamber, it would fall into it half the
+    // time), its foot at its wall's line
     auto slab = [&](double lx, double lz, double dh, double out, double hx, double d) {
         if (d > 0.9) return;
         Form& e = g.box(lx, lz, dh, hx, 0.22, 0, h, 0, MT_DRYSTONE, 0);
@@ -259,7 +259,7 @@ void genRow(Gen& g) {
     const int rf = ageRoof(c, c.roof);
     double hs[4]; const double hmin = walls4(g, W, hs);
     const int houses = std::max(2, (int)std::lround(b.hw * 2 / 5.5));
-    const bool cells = !parapet && (g.gv(GV_MODULAR) == 1 || c.roof == RF_STEPPED || g.gv(GV_FRONTAGE) == FR_GABLES);   // R-412: a gable a house to the street
+    const bool cells = !parapet && (g.gv(GV_MODULAR) == 1 || c.roof == RF_STEPPED || g.gv(GV_FRONTAGE) == FR_GABLES);   // a gable a house to the street
     const int rm = roofMaterial(g, rf, mat);
     double rise = 0;
     if (cells) {   // a roof a house, gabled to the street
@@ -274,7 +274,7 @@ void genRow(Gen& g) {
         rise = roof(g, rf, 0, 0, b.hw, b.hd, hmin, b.hWall, parapet ? 0.35 : 0.7, rm);
         if (rf == RF_PITCHED) gables(g, W, hs, 0.7);   // the row's two ends
     }
-    houseDress(g, W, hs, hmin, rf, rise, rm, !cells && !parapet);   // R-412
+    houseDress(g, W, hs, hmin, rf, rise, rm, !cells && !parapet);
     if (g.lod < 2 && hmin > 0.92 * b.hWall) {   // the chimney stacks on the party walls, through the ridge
         for (int k = 0; k <= houses; k++) stack(g, (-b.hw + 2 * b.hw * k / houses) * 0.97, 0, 0.35, 0.7, g.sink + hmin, g.sink + hmin + b.hd * 0.7 + 1.1, mat);
         if (g.gv(GV_TOPS) == TP_FINIALS) houseTops(g, cells ? RF_FLAT : rf, 0, 0, b.hw, b.hd, g.sink + hmin, rise, rm, mat);
@@ -282,7 +282,7 @@ void genRow(Gen& g) {
     double dx, dz; doorMid(0, W.doorPos, b.hw, b.hd, dx, dz);
     rubble(g, b.hw, b.hd, hs, b.hWall, dx, dz, 0, mat);
     foundation(g, b.hw, b.hd, 0, W.doorPos, mat);
-    yardOf(g, b.hw, b.hd, 0, W.doorPos, mat);   // R-412
+    yardOf(g, b.hw, b.hd, 0, W.doorPos, mat);
     drifts(g, b.hw, b.hd, Dm);
 }
 
@@ -301,12 +301,12 @@ void genTenement(Gen& g) {
         const double rise = roof(g, rf, 0, 0, b.hw * 0.95, b.hd * 0.95, hmin, b.hWall, parapet ? 0.3 : 0.5, rm);
         for (int q = 0; q < 4; q++) stack(g, (q % 2 ? 1 : -1) * b.hw * 0.62, (q < 2 ? 1 : -1) * b.hd * 0.3, 0.6, 0.35, g.sink + hmin, g.sink + hmin + rise * 0.75 + 1.4, mat);
         if (g.gv(GV_TOPS) == TP_FINIALS) houseTops(g, rf, 0, 0, b.hw, b.hd, g.sink + hmin, rise, rm, mat);
-        houseDress(g, W, hs, hmin, rf, rise, rm, !parapet);   // R-412
+        houseDress(g, W, hs, hmin, rf, rise, rm, !parapet);
     } else houseDress(g, W, hs, hmin, RF_HIPPED, 0, MT_TIMBER, false);
     double dx, dz; doorMid(0, W.doorPos, b.hw, b.hd, dx, dz);
     rubble(g, b.hw, b.hd, hs, b.hWall, dx, dz, 0, mat);
     foundation(g, b.hw, b.hd, 0, W.doorPos, mat);
-    yardOf(g, b.hw, b.hd, 0, W.doorPos, mat);   // R-412
+    yardOf(g, b.hw, b.hd, 0, W.doorPos, mat);
 }
 
 // two storeys under its roof, its chimney (A-04: on the people's plan: a round villa, an L, a court). B-415: the age's slate roof (behind a
@@ -322,7 +322,7 @@ void genVilla(Gen& g) {
         const double hmin = ringWalls(g, R);
         roundRoof(g, rf, 0, 0, R.rx + 0.3, R.rz + 0.3, R.segs, hmin, b.hWall, 0.62, rm);
         foundation(g, R.rx, R.rz, 0, 0, mat);
-        ringDress(g, R, hmin);   // R-412
+        ringDress(g, R, hmin);
         yardOf(g, R.rx, R.rz, -1, 0, mat);
         return;
     }
@@ -336,7 +336,7 @@ void genVilla(Gen& g) {
     double dx, dz; doorMid(0, 0, b.hw, b.hd, dx, dz);
     rubble(g, b.hw, b.hd, hs, b.hWall, dx, dz, 0, mat);
     foundation(g, b.hw, b.hd, 0, 0, mat);
-    yardOf(g, b.hw, b.hd, 0, 0, mat);   // R-412
+    yardOf(g, b.hw, b.hd, 0, 0, mat);
 }
 
 // a church: a nave under its roof (the people's), its towers where the people's symmetry sets them, their spires (a people of spires:
@@ -347,10 +347,10 @@ void genChurch(Gen& g) {
     g.sink = -c.buried * Dm * 0.5;
     Walls W; W.hw = b.hw; W.hd = b.hd; W.h = b.hWall; W.thick = 0.8; W.door = 0; W.doorPos = 0; W.mat = mat; W.pattern = 3; W.glyphs = true;   // B-415: its own windows, tall
     double hs[4]; const double hmin = walls4(g, W, hs);
-    const int rf = c.roof == RF_FLAT || c.roof == RF_OPEN || c.roof == RF_SADDLE || c.roof == RF_STEPPED ? RF_PITCHED : c.roof;   // B-415: a saddle's shell and a stepped crown gabled
+    const int rf = c.roof == RF_FLAT || c.roof == RF_OPEN || c.roof == RF_SADDLE || c.roof == RF_STEPPED ? RF_PITCHED : c.roof;   // a saddle's shell and a stepped crown gabled
     roof(g, rf, 0, 0, b.hw, b.hd, hmin, b.hWall, 1.0, roofMaterial(g, rf, mat));
     if (rf == RF_PITCHED) gables(g, W, hs, 1.0);
-    entranceAt(g, W, wallsHalf(g, W), W.h);   // R-412: its doorway's and its corners' (its towers stand at its front's corners: no turrets)
+    entranceAt(g, W, wallsHalf(g, W), W.h);   // its doorway's and its corners' (its towers stand at its front's corners: no turrets)
     if (g.gv(GV_CORNERS) != CO_TURRETS) cornersOf(g, W, hs, wallsHalf(g, W), roofMaterial(g, rf, mat));
     const double hgt = 0.7 + 0.8 * g.gf(GV_HEIGHT), tr = std::max(3.0, b.hw * 0.5);
     if (g.gv(GV_FOCUS) == FO_DOME && hmin > 0.92 * b.hWall) {   // a dome on a drum over the crossing
@@ -386,7 +386,7 @@ void genTownHall(Gen& g) {
     double hs[4]; const double hmin = walls4(g, W, hs);
     const int rf = c.roof == RF_PITCHED || c.roof == RF_FLAT || c.roof == RF_OPEN || c.roof == RF_SADDLE || c.roof == RF_STEPPED ? RF_HIPPED : c.roof;
     roof(g, rf, 0, 0, b.hw, b.hd, hmin, b.hWall, 0.45, roofMaterial(g, rf, mat));
-    entranceAt(g, W, wallsHalf(g, W), W.h);   // R-412: its doorway's and its corners'
+    entranceAt(g, W, wallsHalf(g, W), W.h);   // its doorway's and its corners'
     cornersOf(g, W, hs, wallsHalf(g, W), roofMaterial(g, rf, mat));
     if (hmin > 0.92 * b.hWall) {
         const double hgt = 0.7 + 0.8 * g.gf(GV_HEIGHT);
@@ -422,10 +422,10 @@ void genStation(Gen& g) {
     if (b.style == 0) {
         W.parapet = parapetRoof(c) ? 1.0 : 0;
         const double hmin = walls4(g, W, hs);
-        const int rf = ageRoof(c, c.roof);   // B-415: the age's
+        const int rf = ageRoof(c, c.roof);   // the age's
         roof(g, rf, 0, W.cz, b.hw, fd, hmin, b.hWall, 0.45, roofMaterial(g, rf, mat));
         if (rf == RF_PITCHED) gables(g, W, hs, 0.45);
-        entranceAt(g, W, wallsHalf(g, W), W.h);   // R-412
+        entranceAt(g, W, wallsHalf(g, W), W.h);
         cornersOf(g, W, hs, wallsHalf(g, W), roofMaterial(g, rf, mat));
         if (c.technique == TQ_ARCH_VAULT && g.lod < 2 && hmin > 0.92 * b.hWall) {   // an arcade along its front
             Form& e = g.add(FK_ARCH, archSub(g), 0, b.hd + 2.2, 0, b.hw, 0.4, g.sink, g.sink + std::min(b.hWall * 0.55, 6.0), g.doorSlot(), mat, 4);
@@ -456,7 +456,7 @@ void genMill(Gen& g) {
     const Building& b = g.b; const Culture& c = g.c;
     const int mat = brickOf(c); const double Dm = g.D(mat);
     g.sink = -c.buried * Dm * 0.5;
-    // B-414: its doorway in its front to the street (on its side a neighbour of the works stood against it) and its chimney within its own
+    // its doorway in its front to the street (on its side a neighbour of the works stood against it) and its chimney within its own
     // ground at its back end (beside it, it stood at a neighbour's doorway): an industrial people's towns are all mills and rows now
     const bool parapet = parapetRoof(c);
     Walls W; W.hw = b.hw; W.hd = b.hd; W.h = b.hWall; W.thick = 0.7; W.door = 0; W.doorPos = 0; W.mat = mat; W.pattern = 2; W.parapet = parapet ? 1.0 : 0;
@@ -469,7 +469,7 @@ void genMill(Gen& g) {
         } else {
             const double rise = roof(g, rf, 0, 0, b.hw, b.hd, hmin, b.hWall, parapet ? 0.3 : 0.5, rm);
             if (rf == RF_PITCHED) gables(g, W, hs, 0.5);
-            if (!parapet) rooflineOf(g, W, hmin, rf, rise, rm);   // R-412: its ventilators, its cresting
+            if (!parapet) rooflineOf(g, W, hmin, rf, rise, rm);   // its ventilators, its cresting
         }
     }
     cornersOf(g, W, hs, wallsHalf(g, W), rm);
@@ -525,10 +525,10 @@ void genHeadframe(Gen& g) {   // the iron frame over a shaft with its wheel, the
     if (Di < 0.45) { Form& w = g.add(FK_TORUS, 0, 0, b.hd * 0.45, 0, 2.2, 2.2, H - 4.6, H, g.ironSlot(), MT_IRON); w.p[0] = 0.22; w.tilt = PI / 2; }
     Walls W; W.cz = -b.hd * 0.3; W.hw = 5; W.hd = 6.5; W.h = 8; W.thick = 0.6; W.door = 0; W.doorPos = 0; W.mat = mat; W.pattern = 2; W.k0 = 30;
     double hs[4]; const double hmin = walls4(g, W, hs);
-    const int rf = ageRoof(c, c.roof);   // B-415: the age's
+    const int rf = ageRoof(c, c.roof);   // the age's
     const double rise = roof(g, rf, 0, W.cz, W.hw, W.hd, hmin, W.h, 0.6, roofMaterial(g, rf, mat));
     if (rf == RF_PITCHED) gables(g, W, hs, 0.6);
-    rooflineOf(g, W, hmin, rf, rise, roofMaterial(g, rf, mat));   // R-412: its ventilator, its cresting
+    rooflineOf(g, W, hmin, rf, rise, roofMaterial(g, rf, mat));   // its ventilator, its cresting
     cornersOf(g, W, hs, wallsHalf(g, W), roofMaterial(g, rf, mat));
     const double sH = 26, h = sH * tallShare(Dm * 1.1, g.U(40));
     Form& s = g.lathe(5, 5.5, W.cz - 4, 1.2, 0, h, 0, mat); s.p[0] = 0.7; s.broken = h < sH * 0.97 ? 0.25 : 0;
@@ -589,13 +589,13 @@ void genBlock(Gen& g) {
         W.crenels = g.gv(GV_TOPS) == TP_CRENELS;
         hmin = walls4(g, W, hs);
         if (hmin > 0.95 * b.hWall) {   // the flat roof, its lift house (B-415: a lift house a module's where the people built in cells)
-            const double se = g.slabEave(), th = g.c.genome.of(GV_EAVES) == EV_FLARED ? 0.9 : 0.3;   // R-412: its slab flush, a lip, deep, a cornice
+            const double se = g.slabEave(), th = g.c.genome.of(GV_EAVES) == EV_FLARED ? 0.9 : 0.3;   // its slab flush, a lip, deep, a cornice
             g.box(W.cx, W.cz, 0, W.hw + se, W.hd + se, g.sink + y0 + hmin - 0.3, g.sink + y0 + hmin + th, g.roofSlot(MT_CONCRETE), MT_CONCRETE, 2);
             const int nl = g.gv(GV_MODULAR) == 1 ? std::max(2, (int)std::lround(W.hw * 2 / 11)) : 1;
             if (g.lod < 2) for (int k = 0; k < nl; k++) g.box(W.cx + (nl == 1 ? W.hw * 0.3 : -W.hw + (k + 0.5) * 2 * W.hw / nl), W.cz, 0, nl == 1 ? 2.5 : std::min(2.5, W.hw / nl * 0.55), std::min(2.2, W.hd - 0.3), g.sink + y0 + hmin + 0.3, g.sink + y0 + hmin + 3.2, 0, MT_CONCRETE);
             houseTops(g, RF_FLAT, W.cx, W.cz, W.hw, W.hd, g.sink + y0 + hmin + 0.3, 0, MT_CONCRETE, MT_CONCRETE);
         }
-        if (b.style == 0 && !bent) houseDress(g, W, hs, hmin, RF_FLAT, 0.3, MT_CONCRETE, true);   // R-412
+        if (b.style == 0 && !bent) houseDress(g, W, hs, hmin, RF_FLAT, 0.3, MT_CONCRETE, true);
     } else hmin = rectBody(g, W, rf, rm, hs, b.style == 0);
     if (bent && g.lod < 2) {   // the wing bent back from one end
         Walls V = W; V.cx = (g.U(43) < 0.5 ? -1 : 1) * b.hw * 0.7; V.cz = -b.hd * 0.45; V.hw = b.hw * 0.3; V.hd = b.hd * 0.55; V.door = -1; V.k0 = 30; V.glyphs = false; V.crenels = false;
@@ -604,7 +604,7 @@ void genBlock(Gen& g) {
     }
     if (g.lod == 0 && hmin < 0.7 * b.hWall) g.heap(0, -b.hd - 3, b.hw * 0.9, 4, std::min(5.0, (b.hWall - hmin) * 0.12), 0, MT_CONCRETE);
     foundation(g, b.hw, b.hd, 0, W.doorPos, MT_CONCRETE);
-    if (b.style == 0) yardOf(g, b.hw, b.hd, 0, W.doorPos, MT_CONCRETE);   // R-412
+    if (b.style == 0) yardOf(g, b.hw, b.hd, 0, W.doorPos, MT_CONCRETE);
 }
 
 void genSuburb(Gen& g) {   // a house of one or two storeys, its roof (the people's, or another where its houses vary), on the people's plan
@@ -618,7 +618,7 @@ void genSuburb(Gen& g) {   // a house of one or two storeys, its roof (the peopl
         const double hmin = ringWalls(g, R);
         roundRoof(g, rf, 0, 0, R.rx + 0.3, R.rz + 0.3, R.segs, hmin, b.hWall, 0.5, rm);
         foundation(g, R.rx, R.rz, 0, 0, MT_MASONRY);
-        ringDress(g, R, hmin);   // R-412
+        ringDress(g, R, hmin);
         yardOf(g, R.rx, R.rz, -1, 0, MT_MASONRY);
         return;
     }
@@ -627,7 +627,7 @@ void genSuburb(Gen& g) {   // a house of one or two storeys, its roof (the peopl
     double dx, dz; doorMid(0, W.doorPos, b.hw, b.hd, dx, dz);
     rubble(g, b.hw, b.hd, hs, b.hWall, dx, dz, 0, MT_MASONRY);
     foundation(g, b.hw, b.hd, 0, W.doorPos, MT_MASONRY);
-    yardOf(g, b.hw, b.hd, 0, W.doorPos, MT_MASONRY);   // R-412
+    yardOf(g, b.hw, b.hd, 0, W.doorPos, MT_MASONRY);
 }
 
 // a tower: its lobby a storey of walls round a room with its doorway, the shaft over it to `H` in the people's form (`Building::style`:

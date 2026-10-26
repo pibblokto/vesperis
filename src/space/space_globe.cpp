@@ -3,7 +3,7 @@
 // the lights of a world in the dark
 #include "space_internal.h"
 
-// D-02: a globe with no sun lit by the band alone, in the band's own exposure: its albedo times the irradiance over pi (0.105 facing the
+// a globe with no sun lit by the band alone, in the band's own exposure: its albedo times the irradiance over pi (0.105 facing the
 // core from the drifters near home, 0.012-0.034 facing away) taken back to the band's tone (the 0.7 power) and drawn at three times the
 // band's 24 shades: a mid albedo's side toward the core 9, the far side 3 to 4, a dark rock's 2 to 4 (a black disc where the stars stop),
 // under the band behind it (the plane 8-10, the bulge 21)
@@ -157,7 +157,7 @@ void SpaceRenderer::plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket
 void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
     long long left = budget > 0 ? budget : (1LL << 40);   // B-424: long long (Windows' long is 32 bits: 1L << 40 left the photo's plate unread)
     const double Rm = g.R * 1000.0;
-    if (!p.planRead && worldHadCivilisation(g)) {   // T-01: the plan's cores and ways in reach of the plate (it is built at the approach; until then not)
+    if (!p.planRead && worldHadCivilisation(g)) {   // the plan's cores and ways in reach of the plate (it is built at the approach; until then not)
         if (std::shared_ptr<const WorldPlan> P = worldPlanIfReady(g)) {
             p.planRead = true;
             const double reach = p.radiusM + 3000;
@@ -190,10 +190,10 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
         int L = DetailPlate::BLOCKS[p.pass];
         int bw = (p.W + L - 1) / L, bh = (p.H + L - 1) / L, nBlocks = bw * bh;
         if (p.next >= nBlocks) { p.pass++; p.next = 0; continue; }
-        int count = (int)std::min<long long>(nBlocks - p.next, left), first = p.next;   // B-424: not min<long> (2^40 is 0 in Windows' long)
+        int count = (int)std::min<long long>(nBlocks - p.next, left), first = p.next;   // not min<long> (2^40 is 0 in Windows' long)
         std::atomic<long> taken{0};
         bool noDrain = p.noDrainage;
-        // F-06: the blocks dealt 64 at a time (a block costs a sample, a copy or nothing: the threads' shares even out); the same
+        // the blocks dealt 64 at a time (a block costs a sample, a copy or nothing: the threads' shares even out); the same
         // blocks land in the same frames whoever takes them
         parallelFor(count, 32, [&](int k0, int k1) {
             DrainageOff off(noDrain);
@@ -208,10 +208,10 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         SurfaceSample s = sampleSurface(g, u, p.texelM);
                         double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
                         double alb = s.albedo;
-                        if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));   // M9-10: the polar vortex, as the map has it
+                        if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));   // the polar vortex, as the map has it
                         int mat = s.material;
-                        for (const DetailPlate::PlanCore& k : p.cores) {   // T-01: a core's built ground, its share of the cell, less what the years took
-                            if (dot(u, k.u) < k.cosReach - 1e-9) continue;   // F-07: surely out of reach (the angle's margin is far over acos's rounding)
+                        for (const DetailPlate::PlanCore& k : p.cores) {   // a core's built ground, its share of the cell, less what the years took
+                            if (dot(u, k.u) < k.cosReach - 1e-9) continue;   // surely out of reach (the angle's margin is far over acos's rounding)
                             const double d = std::acos(clampd(dot(u, k.u), -1, 1)) * Rm;
                             if (d > k.r + p.texelM) continue;
                             const double f = clampd((k.r - d) / p.texelM + 0.5, 0, 1) * std::min(1.0, k.r / std::max(1.0, p.texelM)) * k.standing;
@@ -374,9 +374,9 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     info.distKm = dist;
     info.inFront = cv.z > 0;
     double R = b.radiusKm;
-    // O0-03 (B-304): a globe is skipped only when the whole sphere lies behind the camera plane. It used to be skipped as
-    // soon as its centre did, so a huge parent in a moon's sky vanished the moment the camera looked down while its
-    // limb still filled the top of the frame. With the centre behind, the rays are tested over the whole frame.
+    // O0-03 (B-304): a globe is skipped only when the whole sphere lies behind the camera plane. Skipping it as soon as its
+    // centre is behind would make a huge parent in a moon's sky vanish the moment the camera looks down, its limb still
+    // filling the top of the frame. With the centre behind, the rays are tested over the whole frame.
     if (cv.z + R <= 0) { info.radiusPx = 0; return; }
     double cz = cv.z;
     double angR = std::asin(clampd(R / dist, 0, 1));
@@ -390,27 +390,27 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     }
     info.radiusPx = rpx;
     if (b.type == PT_COMPANION) {
-        // M5-01: the second sun; the surface draws its own (see SurfaceView::drawSky), space draws it here, depth-tested
+        // the second sun; the surface draws its own (see SurfaceView::drawSky), space draws it here, depth-tested
         if (c.skyMode) { info.radiusPx = 0; return; }
         Star ks = sys.companionStar();
         double inten = clampd(0.6 + 0.4 * std::log10(1 + ks.luminosity), 0.7, 1.0);
-        if (sys.star.cls == STAR_BLACK_HOLE) drawAccretionStream(fb, c, bi, 12);   // S-06: drawn out: its gas streams to the hole's disc, under its own disc
-        drawSun(fb, ks, cv / dist, angR, c.t, inten, 12, false, 0, true, proj);   // B-308: by angle, whatever the size
+        if (sys.star.cls == STAR_BLACK_HOLE) drawAccretionStream(fb, c, bi, 12);   // drawn out: its gas streams to the hole's disc, under its own disc
+        drawSun(fb, ks, cv / dist, angR, c.t, inten, 12, false, 0, true, proj);   // by angle, whatever the size
         return;
     }
-    StarSystem::Light light = sys.lightAt(posW, c.t);   // M5-01: bodies near the companion are lit by it
+    StarSystem::Light light = sys.lightAt(posW, c.t);   // bodies near the companion are lit by it
     Vec3 starDirW = light.dir;
     double lf = clampd(light.factor, 0, 1.15);
     if (b.type == PT_COMET) drawCometTail(fb, c, bi, c.skyMode ? 1 : bank, rpx);
     const KindDef& pt = KINDS[b.type];
-    const bool gasGiant = kindHas(b.type, KT_GAS_GIANT), glows = kindHas(b.type, KT_GLOWS), deck = hasOpaqueDeck(b.type);   // P-00: once a globe, not a pixel
-    // P-07: a made giant's class: the hot giants' night glow (a silicate giant's brighter toward the evening terminator, where its day's heat flows
+    const bool gasGiant = kindHas(b.type, KT_GAS_GIANT), glows = kindHas(b.type, KT_GLOWS), deck = hasOpaqueDeck(b.type);   // once a globe, not a pixel
+    // a made giant's class: the hot giants' night glow (a silicate giant's brighter toward the evening terminator, where its day's heat flows
     // over on the jet, dimmed and streaked toward the morning by the iron that condenses and rains out: Ehrenreich et al. 2020), the lightning of
     // a water cloud's only, a hazy giant's soft wide limb
     const int giantCls = KINDS[b.type].giantClass;
     const bool nightGlow = giantCls == GC_ALKALI || giantCls == GC_SILICATE, lightning = gasGiant && (giantCls == GC_NONE || giantCls == GC_WATER);
     const double limbHaze = giantCls == GC_DWARF ? 0.5 : (giantCls == GC_PUFF ? 0.8 : 0.0);
-    // B-317: in a sky the depth is written in metres, the terrain's unit (it was the kilometre: a moon 20,000 km away read
+    // in a sky the depth is written in metres, the terrain's unit (it was the kilometre: a moon 20,000 km away read
     // as 20 km, so hills beyond that failed the depth test against it and the moon stood in the ground); in space the
     // kilometre stays, since the whole scene is in kilometres
     const double depthUnit = c.skyMode ? 1000.0 : 1.0;
@@ -421,13 +421,13 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         double phase = 0.5 + 0.5 * dot(toShip, starDirW);
         double v = c.skyMode ? clampd((30 + 26 * phase * pt.albedo * lf + 8 * (rpx / (1.2 * FB_SCALE))) * (0.35 + 0.65 * c.skyDark), 6, 60)
                              : clampd(18 + 30 * phase * pt.albedo * lf + 10 * (rpx / (1.2 * FB_SCALE)), 6, 55);
-        if (sys.sunless() && !glows) {   // D-02: no sun: a dark world is no point of light (a molten one a faint ember; D-04: and a young interior's fields)
+        if (sys.sunless() && !glows) {   // no sun: a dark world is no point of light (a molten one a faint ember; D-04: and a young interior's fields)
             const BodyGen& fg = genFor(b);
             if (!isLavaWorld(b.type) && !fg.hasTrait(TR_EMBERS)) return;
             v = c.skyMode ? 30 : 12;
         }
         if (glows) v = std::max(v, 40.0);
-        if (giantCls == GC_SILICATE) v = std::max(v, 30.0);   // P-07: it glows
+        if (giantCls == GC_SILICATE) v = std::max(v, 30.0);   // it glows
         if (b.type == PT_COMET) v = std::max(v, 36.0 * c.skyDark);
         int side = c.skyMode ? FB_SCALE + 1 : FB_SCALE;
         int x = (int)info.sx - (side - FB_SCALE) / 2, y = (int)info.sy - (side - FB_SCALE) / 2;
@@ -440,7 +440,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
             }
         return;
     }
-    const PlanetMap* mapPtr = mapIfReady(b);   // drawn flat until the background generation is done (M9-15)
+    const PlanetMap* mapPtr = mapIfReady(b);   // drawn flat until the background generation is done
     const bool haveMap = mapPtr != nullptr;
     static const PlanetMap emptyMap;
     const PlanetMap& map = haveMap ? *mapPtr : emptyMap;
@@ -448,7 +448,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
     Mat3 frame = sys.bodyFrame(bi, c.t);
     Mat3 camT = c.cam.transposed();
     Mat3 frameT = frame.transposed();
-    // W-06: the telescope's plates for this body (the current, then the previous as the fallback), their axes in the world
+    // the telescope's plates for this body (the current, then the previous as the fallback), their axes in the world
     // and the weight of their relief shading (the map's is 5 over its 50 km, where the function's slopes are a few
     // thousandths; a plate's slopes at a few hundred metres are a tenth, so the weight runs from 2.5 there to 6 at 1.5 km)
     const DetailPlate* pl[2] = {nullptr, nullptr}; Vec3 plE1W[2], plE2W[2]; double plK[2] = {0, 0}; int npl = 0;
@@ -458,20 +458,20 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
             if (!q.valid() || q.body != bi || q.seed != b.seed || q.samples <= 0) continue;
             pl[npl] = &q; plE1W[npl] = frameT * q.e1; plE2W[npl] = frameT * q.e2; plK[npl] = 2.5 + 3.5 * smoothstep(200.0, 1500.0, q.texelM); npl++;
         }
-    bool atmosphere = bodyHasAir(b);   // D-04: an air fallen as snow in the dark has no limb
+    bool atmosphere = bodyHasAir(b);   // an air fallen as snow in the dark has no limb
     const bool ownCloudV = atmosphere && (deck || gasGiant);
-    double bubble = atmosphere ? (giantCls == GC_PUFF ? 1.22 : (giantCls == GC_DWARF ? 1.07 : 1.045)) : 1.0;   // P-07: a hazy giant's air reaches far over its clouds
-    const FrontMap* fmap = (atmosphere && !deck && worldHasFronts(b)) ? frontsFor(b, c.t) : nullptr;   // W-03: the fronts' bands
+    double bubble = atmosphere ? (giantCls == GC_PUFF ? 1.22 : (giantCls == GC_DWARF ? 1.07 : 1.045)) : 1.0;   // a hazy giant's air reaches far over its clouds
+    const FrontMap* fmap = (atmosphere && !deck && worldHasFronts(b)) ? frontsFor(b, c.t) : nullptr;   // the fronts' bands
     const int frontCW = PlanetMap::W / FRONT_BLOCK, frontCH = PlanetMap::H / FRONT_BLOCK;
     const bool dustFronts = kindHas(b.type, KT_DUST);
-    // B-312: the box is the exact screen extent of the sphere (its projection is a conic that reaches farther from the
+    // the box is the exact screen extent of the sphere (its projection is a conic that reaches farther from the
     // projected centre the nearer the centre is to the edge of the view: a box of radius rpx round the centre cut the
     // limb off, and a huge parent vanished from a moon's sky as soon as its centre left the frame to the left or the
     // right), the whole frame when the sphere reaches the camera plane, and the projected outer circle of the rings
     int x0, x1, y0, y1;
     sphereBox(cv, R * bubble, proj, x0, x1, y0, y1);
     double ambient = atmosphere ? 0.10 : 0.05;
-    // D-02: a system with no sun. No side faces a sun (every term of the sun's off: the shadows, the relief, the limb), the floor is the band's
+    // a system with no sun. No side faces a sun (every term of the sun's off: the shadows, the relief, the limb), the floor is the band's
     // light (`galaxyBandLight`: the hemisphere toward the bright band faintly lit, the core's way the brightest), a glowing drifter lights
     // its moons on the side facing it (W-04's earthshine, ungated) and the drifter's own glows stay: a brown dwarf's heat, lava, lightning
     // in a giant's night, the aurorae of a giant's or a brown dwarf's poles (bank 12: no second sun here)
@@ -485,7 +485,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         auroraLat = (66 + 10 * unitFromHash(h)) * DEG; auroraW = (1.6 + 1.4 * unitFromHash(mix64(h + 1))) * DEG;
         auroraV = 18 + 12 * clampd(drifterPower(sys.star) / 2, 0, 1);
     }
-    // W-04: the earthshine: a moon's night side lit by its parent's day side (`bodyShineAt`, the light the ground's planetshine
+    // the earthshine: a moon's night side lit by its parent's day side (`bodyShineAt`, the light the ground's planetshine
     // reads at night), so a thin crescent shows the rest of its disc faintly and a moon's night seen from space is its parent's
     double shineP = 0; Vec3 shineDirW;
     if (b.parent >= 0 && b.parent < (int)sys.bodies.size()) {
@@ -493,7 +493,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         shineDirW = normalize(sys.bodyPos(b.parent, c.t) - posW);
     }
     double cloudDrift = cloudDriftOf(b, c.t);
-    double plCs[2] = {1, 1}, plSn[2] = {0, 0};   // F-07: a plate's cloud turn where there is no jet (the angle as the pixel wrote it)
+    double plCs[2] = {1, 1}, plSn[2] = {0, 0};   // a plate's cloud turn where there is no jet (the angle as the pixel wrote it)
     for (int k = 0; k < npl; k++) { const double ang = 0.0 + cloudDrift - pl[k]->cloudDrift0; plCs[k] = std::cos(ang); plSn[k] = std::sin(ang); }
     double R2 = R * R;
     double c2 = dot(cv, cv);
@@ -507,7 +507,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         x0 = std::min(x0, rx0); x1 = std::max(x1, rx1); y0 = std::min(y0, ry0); y1 = std::max(y1, ry1);
     }
     if (x0 > x1 || y0 > y1) return;
-    // M1-08: moons and the parent cast shadows on this globe; rings shade it too. F-07: a body that can shade no lit point this
+    // moons and the parent cast shadows on this globe; rings shade it too. F-07: a body that can shade no lit point this
     // frame is left out (the loop would leave its shadow at 0): its shadow's cylinder passes wide of the globe (a point's distance
     // from the axis is at least the centre's less R), or it is behind the globe from the star and clear of it (a lit point's
     // `along` is under the centre's); the slack is far over the rounding of either side
@@ -525,15 +525,15 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
             occ.push_back(o);
         }
     double invf = 1.0 / proj.f;
-    // N1-02: each material's bank on this globe (its family's, the accents' among them; a giant and a deck draw in the body's), once a globe
+    // each material's bank on this globe (its family's, the accents' among them; a giant and a deck draw in the body's), once a globe
     int matBank[MAT_COUNT];
     for (int m = 0; m < MAT_COUNT; m++) matBank[m] = (kindHas(b.type, KT_GIANT) || deck) ? bank : globeBank(bank, b.type, m);
-    // Q-02: the water's trait colours from the map (the first disc's in bank 31: a bloom's streaks, a lagoon, a pink lake), a milky sea's glow on
+    // the water's trait colours from the map (the first disc's in bank 31: a bloom's streaks, a lagoon, a pink lake), a milky sea's glow on
     // the night side in the water's own ramp (its pale upper stops)
     const bool tintMap = haveMap && !map.ltint.empty() && !c.skyMode;
     const bool tintBank31 = tintMap && bank == 2 && (bgen.hasTrait(TR_BLOOMS) || bgen.hasTrait(TR_REEFS) || bgen.hasTrait(TR_PINK_LAKES));
     const bool pinkLakes = bgen.hasTrait(TR_PINK_LAKES), milkyGlow = tintMap && bgen.hasTrait(TR_MILKY_SEAS);
-    const bool waterLights = tintMap && bgen.hasTrait(TR_LIGHTS_IN_WATER);   // D-04: a dark ocean's shoals of light
+    const bool waterLights = tintMap && bgen.hasTrait(TR_LIGHTS_IN_WATER);   // a dark ocean's shoals of light
     parallelFor(y1 - y0 + 1, 48, [&](int rb, int re) {
     for (int y = y0 + rb; y < y0 + re; y++) {
         for (int x = x0; x <= x1; x++) {
@@ -551,7 +551,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 Vec3 p = d * tHit;
                 Vec3 nV = (p - cv) / R;
                 Vec3 nW = camT * nV;
-                double lit = dark ? -1.0 : dot(nW, starDirW);   // D-02: no sun
+                double lit = dark ? -1.0 : dot(nW, starDirW);   // no sun
                 if (lit > 0 && (!occ.empty() || rings)) {
                     Vec3 surfW = posW + nW * R;
                     double shadow = 0;
@@ -579,22 +579,22 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 Vec3 bf = frame * nW;
                 double lat = std::asin(clampd(bf.z, -1, 1));
                 double lon = std::atan2(bf.y, bf.x);
-                double jet = gasGiant ? giantJetTurn(b, bgen.bandCount, lat, c.t) : 0.0;   // M9-10 zonal jets (X-02: galaxy/probe.h, the descent reads the same)
+                double jet = gasGiant ? giantJetTurn(b, bgen.bandCount, lat, c.t) : 0.0;   // zonal jets (X-02: galaxy/probe.h, the descent reads the same)
                 lon += jet;
-                // W-06: the plate's cell under this point (the point turned by the jet, the plate being body-fixed): the
+                // the plate's cell under this point (the point turned by the jet, the plate being body-fixed): the
                 // current plate first, the previous where the current has no cell yet, the map where neither has
                 Vec3 bfG = jet != 0.0 ? rotZ(bf, jet) : bf;
                 PlateHit ph; int phk = -1;
                 for (int k = 0; k < npl && !ph.ok; k++) { ph = plateFind(*pl[k], bfG); if (ph.ok) phk = k; }
                 double alb = ph.ok ? plateAlbedo(ph) : (haveMap ? map.albedoAt(lon, lat) : pt.albedo);
                 int mat = ph.ok ? plateMaterial(ph) : (haveMap ? map.materialAt(lon, lat) : MAT_ROCK);
-                int tintPb = -1; double glowW = 0;   // Q-02
+                int tintPb = -1; double glowW = 0;
                 if ((tintBank31 || milkyGlow || waterLights) && mat == MAT_WATER) {
                     const int ti = map.texelIndex(lon, lat);
                     if (tintBank31 && std::max(map.lifeTintAt(ti), pinkLakes ? map.waterTintAt(ti) : 0.0) > 0.5) tintPb = 31;
                     if (milkyGlow || waterLights) glowW = map.waterTintAt(ti);
                 }
-                if ((ph.ok || haveMap) && gasGiant) {   // N5-03 (M9-10): storms grow and fade over about a day, band by band
+                if ((ph.ok || haveMap) && gasGiant) {   // storms grow and fade over about a day, band by band
                     double st = ph.ok ? plateVeg(ph) : map.veg[map.texelIndex(lon, lat)] / 255.0;
                     if (st > 0.01) {
                         double gain = 0.55 + 0.45 * std::sin(c.t / 86400.0 * 0.9 + lat * 4.0 + (double)(b.seed & 255) * 0.02);
@@ -602,10 +602,10 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     }
                 }
                 if (!gasGiant && !c.skyMode && !dark) {
-                    // M9-15 relief shading: slopes facing the star brighten, slopes facing away darken
-                    // B-407 (2026-10-06): a surface rising toward the star tilts its normal away from it (a ramp rising east
+                    // relief shading: slopes facing the star brighten, slopes facing away darken
+                    // a surface rising toward the star tilts its normal away from it (a ramp rising east
                     // faces west), so the slope's term is taken off `lit`; M9-15 added it, and ridges were lit from the wrong side
-                    if (ph.ok) {   // W-06: from the plate's heights along its axes, the rim's foreshortening taken out, held within +-0.7
+                    if (ph.ok) {   // from the plate's heights along its axes, the rim's foreshortening taken out, held within +-0.7
                         double ga, gb; plateSlopes(ph, ga, gb);
                         double cc = clampd(dot(bfG, ph.p->u0), 0.05, 1.0);
                         lit = clampd(lit - clampd(plK[phk] * cc * (ga * dot(starDirW, plE1W[phk]) + gb * dot(starDirW, plE2W[phk])), -0.7, 0.7), -1, 1);
@@ -621,24 +621,24 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 }
                 double shade = ambient + (1 - ambient) * smoothstep(-0.08, 0.25, lit) * std::max(0.0, lit * 0.6 + 0.4 * std::max(0.0, lit));
                 shade = ambient + (1 - ambient) * clampd(lit * 1.1 + 0.05, 0, 1) * lf;
-                // W-04: the parent's light past the terminator (it fades in over the first tenth, where the sun's own fades out)
+                // the parent's light past the terminator (it fades in over the first tenth, where the sun's own fades out)
                 double earth = shineP > 0.002 && lit < 0 ? (1 - ambient) * 0.6 * shineP * std::max(0.0, dot(nW, shineDirW)) * smoothstep(0.0, -0.1, lit) : 0.0;
                 if (earth > 0 && !c.skyMode) shade += earth;
-                if (glows) shade = std::max(shade, bgen.selfGlow * (0.3 + 0.7 * alb) * (dark ? 0.55 + 0.45 * std::sqrt(clampd(viewCos, 0, 1)) : 1.0));   // M5-02: it glows on its own, bands and all (D-02: darkening to its limb, its glow the whole of it)
+                if (glows) shade = std::max(shade, bgen.selfGlow * (0.3 + 0.7 * alb) * (dark ? 0.55 + 0.45 * std::sqrt(clampd(viewCos, 0, 1)) : 1.0));   // it glows on its own, bands and all (D-02: darkening to its limb, its glow the whole of it)
                 double v = 0;
-                if (!ownCloudV) {   // F-07: an opaque deck's and a giant's value is their clouds' (below), the ground's never read
-                    v = exposureStop(alb, shade, atmosphere);   // N1-05: the ground's exposure rule
+                if (!ownCloudV) {   // an opaque deck's and a giant's value is their clouds' (below), the ground's never read
+                    v = exposureStop(alb, shade, atmosphere);   // the ground's exposure rule
                     if (mat == MAT_LAVA) v = std::max(v, 50.0 + 10.0 * alb);
                 }
                 bool cloudy = false;
                 if (atmosphere) {
                     double cl = 0.0; bool gotCl = false;
-                    for (int k = 0; k < npl && !gotCl; k++) {   // W-06: the plate's cloud, the point turned by the drift since the build
+                    for (int k = 0; k < npl && !gotCl; k++) {   // the plate's cloud, the point turned by the drift since the build
                         PlateHit pc = plateFind(*pl[k], jet == 0.0 ? rotZcs(bf, plCs[k], plSn[k]) : rotZ(bf, jet + cloudDrift - pl[k]->cloudDrift0));
                         if (pc.ok) { cl = plateCloud(pc); gotCl = true; }
                     }
                     if (!gotCl) cl = haveMap ? map.cloudAt(lon + cloudDrift, lat) : 0.0;
-                    if (fmap) {   // W-03: a front's band over the pattern (body-fixed moving features: no drift); a dust front is a haze in the ground's own bank
+                    if (fmap) {   // a front's band over the pattern (body-fixed moving features: no drift); a dust front is a haze in the ground's own bank
                         double u = (lon + PI) * (1.0 / TAU); if (u < 0) u += 1; else if (u >= 1) u -= 1;
                         int bx = std::min(frontCW - 1, (int)(u * frontCW)), by = clampi((int)((0.5 - lat / PI) * frontCH), 0, frontCH - 1);
                         if (fmap->coarse[(size_t)by * frontCW + bx]) {
@@ -650,18 +650,18 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (deck) { v = 63.0 * (0.6 + 0.4 * cl) * shade; }
                     else if (gasGiant) { v = 63.0 * std::pow(alb, 0.7) * shade * 1.05; }
                     else { v = v + (63.0 * 0.92 * shade - v) * cl; cloudy = cl > 0.6; }
-                    if (lit + 0.2 > 0) {   // F-07: else the term is +0 (the night side)
-                        const double edge = 1.0 - clampd(viewCos, 0, 1), limb = edge * edge * edge;   // F-10: the cube as products
+                    if (lit + 0.2 > 0) {   // else the term is +0 (the night side)
+                        const double edge = 1.0 - clampd(viewCos, 0, 1), limb = edge * edge * edge;   // the cube as products
                         v += 14.0 * limb * clampd(lit + 0.2, 0, 1) * lf;
-                        if (limbHaze > 0) v += (40.0 * clampd(lit + 0.25, 0, 1) * lf - v) * limbHaze * edge * edge;   // P-07: the haze pale over the limb
+                        if (limbHaze > 0) v += (40.0 * clampd(lit + 0.25, 0, 1) * lf - v) * limbHaze * edge * edge;   // the haze pale over the limb
                     }
                 }
-                if (lightning && lit < -0.05 && !c.skyMode) {   // M9-10 lightning on the night side
+                if (lightning && lit < -0.05 && !c.skyMode) {   // lightning on the night side
                     if (unitFromHash(hash3i(x >> 2, y >> 2, (int64_t)(c.t * 4), b.seed)) < 0.0025) v = 58;
                 }
-                if (glowW > 0.2 && lit < 0.05 && !cloudy && !waterLights) v = std::max(v, (46.0 + 10.0 * glowW) * smoothstep(0.2, 0.6, glowW) * smoothstep(0.05, -0.15, lit));   // Q-02: a milky sea's glow on the night side, pale
-                if (waterLights && glowW > 0.06) v = std::max(v, 37.0 + 35.0 * std::min(glowW, 0.2));   // D-04: the shoals' faint sheen, toward the light's own stops (from 44)
-                if (nightGlow && lit < 0.12) {   // P-07: the hot giant's night side glowing (the ramp's low end), coming up through the terminator
+                if (glowW > 0.2 && lit < 0.05 && !cloudy && !waterLights) v = std::max(v, (46.0 + 10.0 * glowW) * smoothstep(0.2, 0.6, glowW) * smoothstep(0.05, -0.15, lit));   // a milky sea's glow on the night side, pale
+                if (waterLights && glowW > 0.06) v = std::max(v, 37.0 + 35.0 * std::min(glowW, 0.2));   // the shoals' faint sheen, toward the light's own stops (from 44)
+                if (nightGlow && lit < 0.12) {   // the hot giant's night side glowing (the ramp's low end), coming up through the terminator
                     const double night = smoothstep(0.12, -0.3, lit);
                     double glowV = 12.0 * (0.85 + 0.3 * (alb - 0.5));
                     if (giantCls == GC_SILICATE) {   // the night's longitude past the evening terminator (east of the substellar point along the turn)
@@ -673,9 +673,9 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     }
                     v = std::max(v, glowV * night);
                 }
-                if (dark && !c.skyMode) v = std::max(v, DARK_BAND_SHADES * std::pow(alb * galaxyBandIrradiance(bandSH, nW), BAND_GAMMA));   // D-02: the band's light
+                if (dark && !c.skyMode) v = std::max(v, DARK_BAND_SHADES * std::pow(alb * galaxyBandIrradiance(bandSH, nW), BAND_GAMMA));   // the band's light
                 sphereVal = clampd(v, 0, 63);
-                int auroraPix = -1;   // D-02: the oval round each pole, its curtains brightening and fading along it
+                int auroraPix = -1;   // the oval round each pole, its curtains brightening and fading along it
                 if (aurorae) {
                     const double off = (std::fabs(lat) - auroraLat) / auroraW;
                     if (off > -3 && off < 3) {
@@ -690,19 +690,19 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                     if (iz > fb.invz[o]) {
                         double lv = sphereVal / 63.0;
                         // everything that faces the star is drawn as a solid disc; the night side only occludes,
-                        // except a substellar object, whose glow shows through the night (M5-02)
+                        // except a substellar object, whose glow shows through the night
                         if (glows) fb.idx[o] = pix(13, 16 + 28 * clampd(lv, 0, 1));   // bank 13: its own dull red glow
                         else if (lit > -0.03) fb.idx[o] = pix(bank, 43 + 20 * clampd(lv * 1.15, 0.05, 1.0));
-                        else if (earth > 0.0005) {   // W-04: the earthshine, just over the black of the sky bank and under the lit side's 43, where it beats the sky there
+                        else if (earth > 0.0005) {   // the earthshine, just over the black of the sky bank and under the lit side's 43, where it beats the sky there
                             double ev = 30 + 0.45 * exposureStop(alb, earth, false);
                             if (ev > shadeOf(fb.idx[o])) fb.idx[o] = pix(bank, std::min(42.0, ev));
                         }
                         fb.invz[o] = (float)iz;
                     }
                 } else if (iz > fb.invz[o]) {
-                    // N1-02: the material's family bank (oceans since M1-06); thick cloud goes to the snow bank so it reads white
+                    // the material's family bank (oceans since M1-06); thick cloud goes to the snow bank so it reads white
                     int pb = matBank[cloudy ? MAT_CLOUD : mat];
-                    if (tintPb >= 0 && !cloudy) pb = tintPb;   // Q-02
+                    if (tintPb >= 0 && !cloudy) pb = tintPb;
                     fb.idx[o] = auroraPix >= 0 ? pix(12, auroraPix) : pix(pb, sphereVal); fb.invz[o] = (float)iz;
                 }
             } else if (atmosphere && !c.skyMode) {
@@ -741,7 +741,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                                 double shadow = (tcs > 0 && closest2 < R2) ? 0.12 : 1.0;
                                 double litRing = std::fabs(dot(b.spinAxis, starDirW)) * 0.7 + 0.3;
                                 double v = 63.0 * dens * litRing * shadow * lf * 0.9;
-                                if (c.skyMode) v = 36.0 + 27.0 * std::pow(clampd(dens * 1.3, 0, 1), 0.4) * (0.5 + 0.5 * litRing) * shadow * lf;   // M5-04/O0-01: rings in a sky read like a moon (the sky bank is black below 30)
+                                if (c.skyMode) v = 36.0 + 27.0 * std::pow(clampd(dens * 1.3, 0, 1), 0.4) * (0.5 + 0.5 * litRing) * shadow * lf;   // rings in a sky read like a moon (the sky bank is black below 30)
                                 double iz = 1.0 / (tr * d.z * depthUnit);
                                 if (iz > fb.invz[o] || (!hitSphere)) {
                                     if (iz > fb.invz[o]) {
@@ -761,7 +761,7 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
         }
     }
     });
-    if (!c.skyMode && (bgen.hasTrait(TR_LIGHTS_LEFT_ON) || (dark && bgen.hasTrait(TR_EMBERS) && !isLavaWorld(b.type)))) drawDarkLights(fb, c, bi, bank, posW, frameT, R, depthUnit, starDirW, dark);   // D-04
+    if (!c.skyMode && (bgen.hasTrait(TR_LIGHTS_LEFT_ON) || (dark && bgen.hasTrait(TR_EMBERS) && !isLavaWorld(b.type)))) drawDarkLights(fb, c, bi, bank, posW, frameT, R, depthUnit, starDirW, dark);
 }
 
 // D-04: the lights of a world in the dark, over its disc: a young interior's ember fields (TR_EMBERS: a spot of the lava ramp's glow each, as wide

@@ -12,7 +12,7 @@ void renderMaps() {
         for (auto& b : sys.bodies) {
             if (done[b.type] && !(b.type == PT_FELISIAN && b.locked && !lockedDone)) continue;
             if (b.type == PT_COMPANION) { done[b.type] = true; remaining--; continue; }   // a sun has no map
-            bool lockedShot = b.type == PT_FELISIAN && b.locked && done[b.type];   // M5-08: one extra map of a locked living world
+            bool lockedShot = b.type == PT_FELISIAN && b.locked && done[b.type];   // one extra map of a locked living world
             if (lockedShot) lockedDone = true;
             else { done[b.type] = true; remaining--; }
             BodyGen g = BodyGen::make(b);
@@ -36,7 +36,7 @@ void renderMaps() {
                     int hv = clampi((int)(128 + h / 40.0), 0, 255);
                     uint32_t hc = rgb(hv, hv, hv);
                     static const uint32_t matCol[] = {rgb(120, 110, 100), rgb(220, 200, 140), rgb(90, 160, 60), rgb(30, 90, 30), rgb(240, 240, 250), rgb(20, 50, 140), rgb(255, 120, 20), rgb(200, 220, 255), rgb(255, 255, 255), rgb(240, 220, 235), rgb(60, 55, 55), rgb(160, 130, 110), rgb(200, 180, 140), rgb(120, 115, 112), rgb(230, 200, 90), rgb(40, 40, 42), rgb(236, 233, 224), rgb(30, 42, 36), rgb(110, 92, 76), rgb(196, 118, 106), rgb(118, 152, 78),
-                                                      rgb(120, 58, 92), rgb(150, 140, 104), rgb(200, 118, 40), rgb(78, 104, 40)};   // P-02: mats, stromatolite, crust, moss
+                                                      rgb(120, 58, 92), rgb(150, 140, 104), rgb(200, 118, 40), rgb(78, 104, 40)};   // mats, stromatolite, crust, moss
                     static_assert(sizeof(matCol) / sizeof(matCol[0]) == MAT_COUNT, "a map colour for every material (P-00)");
                     uint32_t mc = matCol[m.material[i]];
                     img[PlanetMap::W * PlanetMap::H + i] = (xx < PlanetMap::W / 2) ? hc : mc;
@@ -141,7 +141,7 @@ void renderSpace() {
             for (char& ch : fn) if (ch == ' ') ch = '_';
             saveFB(fb, fn.c_str());
             printf("globe %-16s %s R=%.0f rings=%d star=%s\n", KINDS[b.type].name, b.name.c_str(), b.radiusKm, (int)b.rings, STAR_CLASSES[s.cls].code);
-            if (b.type == PT_GASGIANT) {   // N5-03: the storms a day later
+            if (b.type == PT_GASGIANT) {   // the storms a day later
                 const uint64_t FNV0 = 1469598103934665603ULL;
                 uint64_t h0 = fnv(FNV0, fb.idx.data(), fb.idx.size() * sizeof(Pix));
                 Framebuffer fb2; SpaceContext c2 = c; c2.t = t + 86400;
@@ -153,7 +153,7 @@ void renderSpace() {
             }
         }
     }
-    // O3 (R-302): the rocks of a belt seen from beside the biggest rock near an anchor in the belt
+    // the rocks of a belt seen from beside the biggest rock near an anchor in the belt
     {
         bool found = false;
         for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return !found; })) {
@@ -179,7 +179,7 @@ void renderSpace() {
         }
         if (!found) printf("belt: none found in the scanned sectors\n");
     }
-    // N5-01: the sky from a star-forming region: nebula patches over the star field
+    // the sky from a star-forming region: nebula patches over the star field
     {
         bool found = false;
         for (int64_t x = 100; x < 500 && !found; x += 2)
@@ -261,7 +261,7 @@ void renderSpace() {
                 Vec3 away = normalize(bp - s.pos);
                 double refKm = sys.bodies[0].type == PT_COMET ? AU_GAME_KM : sys.bodies[0].orbitRadiusKm;
                 double lenKm = refKm * 0.5;
-                // seen from above the orbital plane, so the dust tail's curve along the orbit shows (N0-01)
+                // seen from above the orbital plane, so the dust tail's curve along the orbit shows
                 Vec3 vel = sys.bodyVel(bi, t);
                 Vec3 side = normalize(cross(away, vel));
                 Vec3 back = normalize(-vel);
@@ -279,7 +279,7 @@ void renderSpace() {
                 saveFB(fb, "shots/tests/space_comet.png");
                 printf("comet %s: a=%.3g km e=%.2f q=%.3g km period %.1f d, at periapsis %.3g km from the star, %.0f km/s -> shots/space_comet.png\n", b.name.c_str(), b.orbitRadiusKm, b.ecc,
                        b.orbitRadiusKm * (1 - b.ecc), b.orbitPeriod / 86400, length(bp - s.pos), length(sys.bodyVel(bi, t)));
-                // N0-01 (B-201): the tail streams (frames 5 s apart differ, the knots moved), the comet drifts against
+                // the tail streams (frames 5 s apart differ, the knots moved), the comet drifts against
                 // the sky at x100 seen from the first planet, and the parking view shows the jets moving
                 {
                     const uint64_t FNV0 = 1469598103934665603ULL;
@@ -321,8 +321,8 @@ void renderSpace() {
                 cometDone = true;
             }
     }
-    renderTelescopeFrames(sr, nb);   // W-06
-    renderFrontFrames(sr, nb);       // W-03
+    renderTelescopeFrames(sr, nb);
+    renderFrontFrames(sr, nb);
 }
 
 // W-06: a frame through the telescope: the view from `shipPos` on `aim`, magnified `zoom` times (the focal length multiplied,
@@ -611,7 +611,7 @@ void renderMoonSky() {
             if (!eclipseDone && par.type == PT_GASGIANT) { renderEclipse(sr, nb, sys, bi); eclipseDone = true; }
         }
     }
-    // M5-04 / M5-02: a moon of a ringed planet, and a moon of a substellar object at night
+    // a moon of a ringed planet, and a moon of a substellar object at night
     bool ringsDone = false, subDone = false;
     for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return !(ringsDone && subDone); })) {
         for (int bi = 0; bi < (int)sys.bodies.size() && !(ringsDone && subDone); bi++) {
@@ -675,7 +675,7 @@ void renderMoonSky() {
             if (wantSub) subDone = true; else ringsDone = true;
         }
     }
-    // M5-04: the rings of a ringed world seen from its own surface, by day and by night
+    // the rings of a ringed world seen from its own surface, by day and by night
     bool surfDone = false;
     for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return !surfDone; })) {
         for (int bi = 0; bi < (int)sys.bodies.size() && !surfDone; bi++) {

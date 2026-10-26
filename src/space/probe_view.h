@@ -1,19 +1,9 @@
-// X-02 (2026-10-07): the probe's camera inside a giant, the descent's stages drawn from the decks' fields (galaxy/probe.h).
-// Over the clouds the ammonia deck is a landscape to the curved horizon: its tops (the globe's bands lifting the zones and
-// dropping the belts, cloud streets, billows, thunderheads casting their shadows, the rings' shadow) marched outward one
-// azimuth at a time into a panorama of the frame (front to back, each sample filling the rows it rises over), lit by the
-// sun with the terminator crossing it; the air over it is the sky's in-scatter, through which the space renderer's frame
-// shows (the stars, the sun's disc, the moons) as much as the air above lets it, and the rings' arc. Inside a deck the
-// picture is a fog marched along each ray (a coarser grid): its density follows the deck's top and base with layers and
-// pockets, its light comes down through it (bright under the top, dim at the base, toward the sun's side), the lamp's
-// beam and the lightning light it from within. Between the decks the floor (the water deck's towers, the lightning inside
-// them, a channel through the clear air now and then) and the ceiling (the ammonia deck's underside in its pouches) are
-// two panoramas meeting in the haze. The layers composite in RGB (the fog over a deck of another colour, the haze over
-// both): every colour still comes from a palette ramp over the 64 shades, at the logical resolution, spread over the frame.
-// X-03 (2026-10-07): one to three decks (each its cloud's colour), the clear-air holes (a deck's panorama shows the deck under
-// it through them, their walls round the probe falling through one), the deep's glow from below (through the decks' tops, onto
-// their undersides, in the fog and the clear air), the polar aurorae's curtains over the clouds, a carbon-rich giant's diamond
-// hail in the lamp, and the rare giant's sight.
+// The probe's camera inside a giant (X-02; docs/reference/02-rendering.md; the decks' fields: galaxy/probe.h). Over the clouds the top deck
+// is a landscape to the curved horizon (its tops marched outward an azimuth at a time into a panorama, lit with the terminator crossing it)
+// under the sky's in-scatter, through which the space renderer's frame and the rings' arc show; inside a deck a fog is marched along each
+// ray (a coarser grid) lit from above, by the lamp and the lightning; between the decks a floor and a ceiling meet in the haze. One to
+// three decks, the clear-air holes, the deep's glow, the polar aurorae, a carbon-rich giant's diamond hail and the rare giant's sight. The
+// layers composite in RGB, every colour from a palette ramp over the 64 shades at the logical resolution.
 #pragma once
 #include "core/framebuffer.h"
 #include "core/raster.h"
@@ -54,13 +44,13 @@ struct ProbeView {
     // round the probe (scattered toward the camera, most from under it)
     double glowTop[GIANT_MAX_DECKS] = {0, 0, 0}, glowUnder[GIANT_MAX_DECKS] = {0, 0, 0}, glowAir = 0;
     RGB glowCol = RGB(0.78f, 0.24f, 0.08f);
-    // X-03: the aurora's curtains: their strength (against the exposure, over the dark of the sky), the way toward the magnetic
+    // the aurora's curtains: their strength (against the exposure, over the dark of the sky), the way toward the magnetic
     // pole (local, horizontal), the oval's distance along it (km), the curtains' lower border (km over one bar) and their
     // profile's depth (km), the lower curtain's and the tops' colours
     double aurora = 0, auroraP0 = 0, auroraH0 = 400, auroraH = 60; Vec3 auroraDir = Vec3(0, 0, 1);
     RGB auroraLow = RGB(0.85f, 0.25f, 0.65f), auroraHigh = RGB(0.45f, 0.2f, 0.85f);
-    double hail = 0;                 // X-03: diamond hail glinting in the lamp (0..1)
-    double sight = 0; Vec3 sightPos, sightAxis = Vec3(1, 0, 0);   // X-03: the rare giant's sight (0..1), its place and its long axis (local, km)
+    double hail = 0;                 // diamond hail glinting in the lamp (0..1)
+    double sight = 0; Vec3 sightPos, sightAxis = Vec3(1, 0, 0);   // the rare giant's sight (0..1), its place and its long axis (local, km)
     double zenShade = 24, horShade = 54;      // the air's shades overhead and at the horizon
     // the rings (local, km from the probe)
     bool rings = false; Vec3 ringN = Vec3(0, 1, 0), ringC; double ringR0 = 0, ringR1 = 0, ringLit = 1; const std::vector<float>* ringProf = nullptr;
@@ -83,7 +73,7 @@ double probeSpaceShows(const ProbeView& v);
 struct ProbeViewStats {
     int floor = -1, ceil = -1, fog = -1;      // the decks drawn as the floor, the ceiling, the fog (-1 none)
     bool inHole = false;                      // X-03: the probe in a clear-air hole (the floor's walls round it)
-    double aurora = 0;                        // X-03: the aurora's mean light over the frame
+    double aurora = 0;                        // the aurora's mean light over the frame
     double covFloor = 0, covCeil = 0, fogT = 1;   // the frame's share the floor and the ceiling fill, the fog's mean transmittance
     double shadeFloor = 0, shadeCeil = 0;     // their mean shades
     int columns = 0, rows = 0;                // a panorama's size

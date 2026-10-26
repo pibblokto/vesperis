@@ -2,9 +2,9 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// R-402, S-01 to S-06, B-427: the fields, the star classes, the strange stars
+// the fields, the star classes, the strange stars
 void unitStars(const Check& check) {
-    {   // R-402: magnetic fields and the star's storms: every class occurs; at the oval, a strong field round an active star keeps an
+    {   // magnetic fields and the star's storms: every class occurs; at the oval, a strong field round an active star keeps an
         // aurora on most nights (over the HUD's 0.15), a weak field has one rarely; the storms come and go
         int cls[4] = {0, 0, 0, 0}, n = 0, strongN = 0, weakN = 0, stormy = 0, nights = 0;
         double strongLit = 0, weakLit = 0;
@@ -15,7 +15,7 @@ void unitStars(const Check& check) {
                 double m = magneticField(b); cls[magneticClass(m)]++; n++;
                 if (!KINDS[b.type].atmosphere || hasOpaqueDeck(b.type)) continue;
                 int lit = 0; for (int d = 0; d < 60; d++) if (auroraPotential(sys, b, d * 86400.0 + 1000) > 0.15) lit++;
-                bool active = starActivity(s.cls) >= 0.7;   // S-01: activity 0.7 and over; S-02: from the table
+                bool active = starActivity(s.cls) >= 0.7;   // activity 0.7 and over; S-02: from the table
                 if (m >= 0.6 && active) { strongLit += lit / 60.0; strongN++; }
                 else if (m >= 0.08 && m < 0.3) { weakLit += lit / 60.0; weakN++; }
             }
@@ -25,7 +25,7 @@ void unitStars(const Check& check) {
         check("strong field, active star: most nights", strongN > 0 && strongLit / strongN > 0.7, fmt("%.0f%% of nights lit over %d worlds", strongN ? 100 * strongLit / strongN : 0.0, strongN));
         check("weak field: rarely", weakN > 0 && weakLit / weakN < 0.25, fmt("%.0f%% of nights lit over %d worlds", weakN ? 100 * weakLit / weakN : 0.0, weakN));
     }
-    {   // S-01: the star classes. The varieties take their share of the families near home (red dwarfs the commonest class, every class present)
+    {   // the star classes. The varieties take their share of the families near home (red dwarfs the commonest class, every class present)
         int n = 0, cls[STAR_DRAWN_COUNT] = {0};
         for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (starInSector(x, y, z, s, false)) { n++; cls[s.cls]++; } }
         int most = 0; bool all = true; std::string mixs;
@@ -57,7 +57,7 @@ void unitStars(const Check& check) {
         check("red dwarf: near worlds locked", rdWorlds > 30 && rdLocked > rdWorlds * 0.7, fmt("%d of %d", rdLocked, rdWorlds));
         check("carbon star: carbon worlds", csSys > 5 && ySys > 5 && (double)csCarbon / csSys > 2.0 * (double)yCarbon / ySys, fmt("%d of %d systems against %d of %d round yellow stars", csCarbon, csSys, yCarbon, ySys));
     }
-    {   // S-03: the neutron star. A share of the pulsars near home; its systems keep no living, cloudy, oceanic, quartz or giant world
+    {   // the neutron star. A share of the pulsars near home; its systems keep no living, cloudy, oceanic, quartz or giant world
         // and most of those with planets have a glassed outer survivor; on such a world the glass covers 15-85% of the land at 16 m
         // and the 512 m ring (the sheets do not follow the rings' fades, B-404); every neutron star of the scan is described
         int ns = 0, bad = 0, withPlanets = 0, glassedSys = 0, belts = 0;
@@ -101,7 +101,7 @@ void unitStars(const Check& check) {
                   fmt("%zu worlds, %.0f%% of the land on average, the 16 m and 512 m shares %.0f points apart at most (%s)", glassedBodies.size(), 100 * mean, 100 * worst, names.c_str()));
         }
     }
-    {   // S-04: the protostar. A trickle along the arm (a few near home), a large share of the yellow family in a star-forming complex;
+    {   // the protostar. A trickle along the arm (a few near home), a large share of the yellow family in a star-forming complex;
         // its systems are belts with at most two young worlds and no evolved one; its cloud glows toward the star from its worlds
         int armY = 0, armP = 0, nebY = 0, nebP = 0, ps = 0, withBelt = 0, evolved = 0, worlds = 0; bool nebFound = false;
         for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (!starInSector(x, y, z, s, false)) continue; if (s.cls == STAR_YELLOW) armY++; if (s.cls == STAR_PROTOSTAR) armP++; }
@@ -134,7 +134,7 @@ void unitStars(const Check& check) {
         check("protostars: belts and young worlds only", ps >= 3 && withBelt >= ps * 0.85 && evolved == 0, fmt("%d stars, %d with a belt, %d worlds, %d evolved", ps, withBelt, worlds, evolved));
         check("protostar: its cloud glows round it", !first.empty() && glow > 0.4, fmt("glow %.2f a fifth of a radian from the star, the first world %s", glow, first.c_str()));
     }
-    {   // S-05: the Wolf-Rayet star. A share of the blue giants that stayed near home (rare; none in a globular), systems of few
+    {   // the Wolf-Rayet star. A share of the blue giants that stayed near home (rare; none in a globular), systems of few
         // bare worlds under a wind that stripped every atmosphere, and the shell of shed gas drawn as a ring round the sun
         int armB = 0, armW = 0, globN = 0, globW = 0, ws = 0, worlds = 0, aired = 0, bomb = 0, withPlanets = 0, withBelt = 0, giants = 0;
         for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (!starInSector(x, y, z, s, false)) continue; if (s.cls == STAR_BLUE_GIANT) armB++; if (s.cls == STAR_WOLF_RAYET) armW++; }
@@ -152,7 +152,7 @@ void unitStars(const Check& check) {
             for (const Body& b : sys.bodies) {
                 if (b.type == PT_COMET || b.type == PT_COMPANION || (b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION)) continue;
                 worlds++; any = true;
-                if (kindHas(b.type, KT_GIANT)) giants++;   // P-07: whatever its class (a far giant this warm an azure or a water-cloud giant)
+                if (kindHas(b.type, KT_GIANT)) giants++;   // whatever its class (a far giant this warm an azure or a water-cloud giant)
                 else if (KINDS[b.type].atmosphere) aired++;
                 if (b.type == PT_BOMBARDED) hasBomb = true;
             }
@@ -171,7 +171,7 @@ void unitStars(const Check& check) {
         double atRing = radial(5.0), inside = radial(3.2), outside = radial(7.0);
         check("Wolf-Rayet star: the shell's ring round the sun", found && atRing > inside + 3 && atRing > outside + 3, fmt("shade %.1f at 5 radii, %.1f at 3.2, %.1f at 7 (%s)", atRing, inside, outside, found ? w.name.c_str() : "no star"));
     }
-    {   // B-427: the envelope the wind strips from a Wolf-Rayet star's giant (S-05), the user's (18071 1 -19950, body 1) from 2.5 radii: in
+    {   // the envelope the wind strips from a Wolf-Rayet star's giant (S-05), the user's (18071 1 -19950, body 1) from 2.5 radii: in
         // its own bank and dim (the discs heaped to the ramp's white in a blob behind it), hidden by the globe from the sun's side and
         // over the globe from the night side (a second tail drawn over the frame lights the globe's pixels only where it is in front)
         Star s; bool ok = starInSector(18071, 1, -19950, s, true);
@@ -206,7 +206,7 @@ void unitStars(const Check& check) {
               fmt("off the globe: %d at shade 48 and up in its bank or the band's, %d / %d / %d in its bank at 6-48 from the sun's side, side-on, the night side; a second tail lit %d / %d / %d of the globe's %d / %d / %d pixels",
                   white, own[0], own[1], own[2], gain[0], gain[1], gain[2], globe[0], globe[1], globe[2]));
     }
-    {   // S-06: the black hole. A share of the pulsars that stayed, most in the core; systems of rubble and rocks with a close companion
+    {   // the black hole. A share of the pulsars that stayed, most in the core; systems of rubble and rocks with a close companion
         // in half; and the lens: a star right behind the hole becomes an Einstein ring, the shadow is black, the far sky untouched
         int armP = 0, armB = 0, armN = 0, coreN = 0, coreB = 0, bs = 0, worlds = 0, bad = 0, comps = 0, closeComps = 0, withBelt = 0;
         for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) { Star s; if (!starInSector(x, y, z, s, false)) continue; armN++; if (s.cls == STAR_PULSAR) armP++; if (s.cls == STAR_BLACK_HOLE) armB++; }
@@ -253,7 +253,7 @@ void unitStars(const Check& check) {
 
 // W-01, W-06, B-413, W-03, W-04: the almanac, the telescope, the ground's sounds, the fronts, the showers
 void unitSky(const Check& check) {
-    {   // W-01: the almanac. On the three test places every event listed is where the geometry says: the site's own sun and
+    {   // the almanac. On the three test places every event listed is where the geometry says: the site's own sun and
         // frame (`SurfaceSite::sun`, `localFrame`, `worldPos`) re-read at the time given, with the crossing's direction and the
         // extremum's neighbours; from the ship parked at the giant the same with the autopilot's lap; then a game runs to one
         std::vector<AlmanacTestPlace> places; almanacTestPlaces(places);
@@ -279,7 +279,7 @@ void unitSky(const Check& check) {
                     case AL_DUSK: case AL_DAWN: { SunInfo s = site.sun(T), sb = site.sun(T - 20), sa = site.sun(T + 20); err = std::fabs(std::sin(s.altitude) + 0.12); ok = err < 2e-5 && ((sa.altitude > sb.altitude) == (e.kind == AL_DAWN)); break; }
                     case AL_RISE: case AL_SET: { double ar, arb, ara, a = altOf(e.body, T, ar), ab = altOf(e.body, T - 20, arb), aa = altOf(e.body, T + 20, ara); err = std::fabs(a + ar); ok = err < 2e-5 && ((aa > ab) == (e.kind == AL_RISE)); break; }
                     case AL_FULL: case AL_NEW: { double d = 0.01 * std::fabs(sys.bodies[e.body].orbitPeriod), k = litOf(e.body, T), kb = litOf(e.body, T - d), ka = litOf(e.body, T + d); err = std::fabs(k - e.value); ok = err < 1e-6 && (e.kind == AL_FULL ? (k >= kb && k >= ka) : (k <= kb && k <= ka)); break; }
-                    case AL_ECLIPSE: {   // B-428: a disc wholly inside the sun's (a transit) or over it covers the discs' ratio, flat but for the body's
+                    case AL_ECLIPSE: {   // a disc wholly inside the sun's (a transit) or over it covers the discs' ratio, flat but for the body's
                         // distance: the time listed is the middle, the centres nearest (a solid world's moon far out is smaller than its sun)
                         SunInfo s = site.sun(T); err = std::fabs(s.eclipse - e.value);
                         auto sepOf = [&](double U, double& rb) { Mat3 L = site.localFrame(U); Vec3 rel = sys.bodyPos(e.body, U) - site.worldPos(U, 0, 0, 0); double d = length(rel);
@@ -293,7 +293,7 @@ void unitSky(const Check& check) {
                     case AL_RING_CLEAR: ok = site.sun(T - 30).ringShadow >= 1e-4 && site.sun(T + 30).ringShadow < 1e-4; break;
                     case AL_PERIAPSIS: { double M = sys.meanAnomaly(e.body, T); err = std::min(M, TAU - M); ok = err < 1e-6; break; }
                     case AL_APOAPSIS: err = std::fabs(sys.meanAnomaly(e.body, T) - PI); ok = err < 1e-6; break;
-                    case AL_FRONT: case AL_FRONT_CLEAR: {   // W-03: the ground's own rain (or dust) is zero on one side of the moment and above zero on the other
+                    case AL_FRONT: case AL_FRONT_CLEAR: {   // the ground's own rain (or dust) is zero on one side of the moment and above zero on the other
                         std::vector<Front> fs; frontsOf(sys.bodies[bi], T, fs, 0); FrontWeather wb, wa;
                         Vec3 u = StarSystem::bodyFromLatLon(site.lat0, site.lon0);
                         frontWeatherAt(fs, u, T - 20, site.R, wb); frontWeatherAt(fs, u, T + 20, site.R, wa);
@@ -380,7 +380,7 @@ void unitSky(const Check& check) {
             remove("shots/tests/unit_guide.txt");
         }
     }
-    {   // W-06: the telescope in a game parked at the home world: the magnification multiplies the disc exactly, the world is tracked
+    {   // the telescope in a game parked at the home world: the magnification multiplies the disc exactly, the world is tracked
         // from the start and held on the reticle while the ship orbits, the mouse steers the offset at the rate of the magnification,
         // Enter lets go, N names what the reticle rests on, the photo's caption says so, the sun is read by its class, Z stows
         TestGame game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
@@ -438,7 +438,7 @@ void unitSky(const Check& check) {
         check("telescope: the sun on the reticle", game.testTelescopeTarget() == -2 && line.find("STAR") != std::string::npos && line.size() <= 52, fmt("target %d '%s'", game.testTelescopeTarget(), line.c_str()));
         press(KEY_Z); run(0.1); game.testAimAtBody(B); run(0.1); game.testBodyScreen(B, sx, sy, r);
         check("telescope: Z stows and the view is the setting's again", !game.testTelescopeOn() && std::fabs(r / r0 - 1) < 0.01, fmt("disc %.1f px (%.1f before); %s", r, r0, game.testTelescopeInfo().c_str()));
-        {   // R-405: stowed, the lap goes on from where the ship is; with Shift held the arrows carry the parked ship round its world (east along the parallel, north along the meridian, twenty degrees a second) with the world kept in the window; the telescope opened then holds the side faced
+        {   // stowed, the lap goes on from where the ship is; with Shift held the arrows carry the parked ship round its world (east along the parallel, north along the meridian, twenty degrees a second) with the world kept in the window; the telescope opened then holds the side faced
             Vec3 pd0 = game.testParkDir(); run(1.0); Vec3 pd1 = game.testParkDir();
             double lapDeg = std::acos(clampd(dot(pd0, pd1), -1, 1)) / DEG;
             check("telescope: stowed, the lap goes on", lapDeg > 0.2, fmt("the parking moved %.2f deg in a second", lapDeg));
@@ -503,7 +503,7 @@ void unitSky(const Check& check) {
             double minDist = 0; int n = game.testScreenColours(minDist);
             check("cabin: every computer in a colour of its own", n == 10 && minDist > 0.3, fmt("%d computers, the instruments' case (C-11) and the drone bay (C-18), the nearest two %.2f apart in RGB", n, minDist));
         }
-        {   // B-411: the light through a glass hull. Y makes the hull glass (the outside tinted through the walls, the floor and the
+        {   // the light through a glass hull. Y makes the hull glass (the outside tinted through the walls, the floor and the
             // ceiling); what stands in the room stays solid, U lights it and catches a sheen on the glass, and says the hull is glass.
             // Before, the consoles and the desks went to glass with the walls and U changed nothing to be seen: the cabin looked dark
             // and broken whatever the light
@@ -528,7 +528,7 @@ void unitSky(const Check& check) {
         }
         remove("shots/tests/unit_guide.txt");
     }
-    {   // B-413: the ground's sounds stay on the ground. Landed on the home world, a sprint winds the explorer (the breathing) in the
+    {   // the ground's sounds stay on the ground. Landed on the home world, a sprint winds the explorer (the breathing) in the
         // wind (and whatever else the place has: waves, birds, leaves, hooves, insects); Q at the capsule, and neither the capsule's
         // climb nor the ship hears any of it, nor a save of the ship loaded on the ground. Before, the ship silenced the wind, the rain
         // and the lava only: the rest went on aboard at its last level until another landing, whatever was loaded
@@ -540,7 +540,7 @@ void unitSky(const Check& check) {
         auto run = [&](double s) { runFrames(game, in, s); };
         // the levels the ground sets, and what they sound like: the game's sound through a fresh synth against the same hum and drive
         // alone, two seconds of each (the one-shots aside: a running synth takes them at once)
-        static const char* const GROUND_NAMES[16] = {"wind", "rain", "lava", "breath", "waves", "birds", "leaves", "hooves", "insects", "gear", "skid", "pods", "dunes", "ice", "quake", "quake's onset"};   // Q-03: the ground's songs
+        static const char* const GROUND_NAMES[16] = {"wind", "rain", "lava", "breath", "waves", "birds", "leaves", "hooves", "insects", "gear", "skid", "pods", "dunes", "ice", "quake", "quake's onset"};   // the ground's songs
         auto levels = [](const AudioState& a, double* v) { const double l[16] = {a.wind, a.rain, a.lava, a.breath, a.surf, a.birds, a.leaves, a.hoofs, a.insects, a.engineRpm, a.skid, a.rotor, a.dunes, a.ice, a.quake, a.quakeHit}; for (int i = 0; i < 16; i++) v[i] = l[i]; };
         auto heard = [&](const AudioState& a) { double v[16]; levels(a, v); std::string s; for (int i = 0; i < 16; i++) if (v[i] != 0) s += fmt("%s%s %.2f", s.empty() ? "" : " ", GROUND_NAMES[i], v[i]); return s.empty() ? std::string("none") : s; };
         auto quiet = [&](const AudioState& a) { double v[16]; levels(a, v); for (int i = 0; i < 16; i++) if (v[i] != 0) return false; return true; };
@@ -571,7 +571,7 @@ void unitSky(const Check& check) {
               quiet(climbing) && quiet(aboard) && quiet(loaded) && rmsAboard < 1e-9 && rmsLoaded < 1e-9, detail);
         for (const char* f : {"shots/tests/test_b413_save_1.txt", "shots/tests/test_b413_save_2.txt", "shots/tests/test_b413_save_auto.txt", "shots/tests/test_b413_guide.txt"}) remove(f);
     }
-    {   // W-03: the fronts. On the pinned plain of the first felisian world the next front's forecast is the moment the ground's own
+    {   // the fronts. On the pinned plain of the first felisian world the next front's forecast is the moment the ground's own
         // rain begins (the front's rain zero twenty seconds before the time given and above zero twenty after, the other way round
         // at the clearing), the almanac lists the same two moments, the map's band (the globe's overlay) agrees with the ground's
         // cloud under it, and a game landed there reads the forecast on its data sheet with the front's line on its sector map
@@ -629,7 +629,7 @@ void unitSky(const Check& check) {
             remove("shots/tests/unit_guide.txt");
         }
     }
-    {   // W-04: a shower peaks when the world is at the point of its orbit nearest the comet's: the world there at the peak's
+    {   // a shower peaks when the world is at the point of its orbit nearest the comet's: the world there at the peak's
         // time, its distance to the comet's orbit the two orbits' least there and more a few widths either side; the almanac
         // gives the same peak
         int tested = 0, bad = 0; std::string why;
@@ -655,7 +655,7 @@ void unitSky(const Check& check) {
         }
         check("showers: the peak is the orbits' crossing (W-04)", tested >= 10 && bad == 0, fmt("%d showers, %d wrong %s", tested, bad, why.c_str()));
     }
-    {   // W-04: the streaks of the shower scene: dozens over four minutes at the peak, none eight widths off it, each running away from
+    {   // the streaks of the shower scene: dozens over four minutes at the peak, none eight widths off it, each running away from
         // the radiant along a great circle through it
         StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0;
         bool have = setupNightScene(0, sv, sys, nb, t);
@@ -679,7 +679,7 @@ void unitSky(const Check& check) {
         }
         check("showers: streaks from the radiant (W-04)", have && atPeak >= 300 && offPeak == 0 && wrong == 0, fmt("%d streak-frames over the peak's four minutes at ten a second, %d eight widths after it, %d not running from the radiant", atPeak, offPeak, wrong));
     }
-    {   // W-04: the zodiacal light: brighter on the plane than off it, falling away from the sun, the faint patch opposite it; dust from
+    {   // the zodiacal light: brighter on the plane than off it, falling away from the sun, the faint patch opposite it; dust from
         // a young star and a near belt, none in most systems
         Vec3 sun(1, 0, 0);
         auto at = [&](double elDeg, double latDeg) { double e = elDeg * DEG, b = latDeg * DEG; return zodiacalLight(Vec3(std::cos(e) * std::cos(b), std::sin(b), std::sin(e) * std::cos(b)), sun); };
@@ -694,7 +694,7 @@ void unitSky(const Check& check) {
         check("zodiacal light: the cone and its dust (W-04)", shape && young > 0 && youngDusty == young && dusty < sys0 * 0.8 && dusty > sys0 * 0.05,
               fmt("on the plane at 30 deg %.3f, 25 deg off it %.3f, at 60 %.3f, 90 %.3f, 150 %.3f, opposite %.3f; %d of %d systems dusty, %d of %d young ones", at(30, 0), at(30, 25), at(60, 0), at(90, 0), at(150, 0), at(180, 0), dusty, sys0, youngDusty, young));
     }
-    {   // W-04: the earthshine: on the earthshine scene's crescent the disc's night side is drawn, under the lit side's 43 and over the
+    {   // the earthshine: on the earthshine scene's crescent the disc's night side is drawn, under the lit side's 43 and over the
         // sky's black
         StarSystem sys; SurfaceView sv; StarNeighborhood nb; double t = 0; SpaceRenderer sr;
         bool have = setupNightScene(2, sv, sys, nb, t);

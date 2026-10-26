@@ -2,7 +2,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// T-01: a people's map of its world. On the six age worlds (`AGE_WORLDS`): the plan the same twice and on the workers, within a second and a
+// a people's map of its world. On the six age worlds (`AGE_WORLDS`): the plan the same twice and on the workers, within a second and a
 // half on a thread; its places dry where they stand and round their cores, the capital on the territory's best ground (dry, gentle, its
 // score in the top tenth, by the water before the futuristic age), the networks reaching every place from the capital; the cells read it
 // (no settlement on land outside every territory, none in a city's core but the city); a city's core that spans cells drawn whole and walked
@@ -173,7 +173,7 @@ void planChecks(const std::function<void(const char*, bool, const std::string&)>
             const double Rm = w.g.R * 1000.0;
             const Vec3 far = StarSystem::bodyFromLatLon(cap.lat + 150e3 / Rm, cap.lon);
             std::vector<Landmark> echoes; ruinsNear(w.g, far, 40000, echoes);
-            for (const Landmark& L : echoes) if (L.id == cap.seed && L.sub == SC_CAPITAL) heard = true;   // B-417: a ruin's echo its class
+            for (const Landmark& L : echoes) if (L.id == cap.seed && L.sub == SC_CAPITAL) heard = true;   // a ruin's echo its class
             // a way on the ground: the site at the middle of the capital's first highway or road
             for (const PlanEdge& e : pp.edges) {
                 if (e.a != 0 && e.b != 0) continue;
@@ -191,7 +191,7 @@ void planChecks(const std::function<void(const char*, bool, const std::string&)>
         check("the plan on the ship and the ground: the zoom shows a modern capital's core and its highways, the scanner hears it from 150 km, a way's legs on the ground (T-01)", cores >= 1 && highways >= 1 && heard && siteWays >= 1,
               fmt("the zoom over the capital: %d cores, %d highways; the capital %s from 150 km; the capital's first %s: %d legs at the site", cores, highways, heard ? "heard" : "NOT heard", kinds.c_str(), siteWays));
     }
-    {   // R-415: the landing map's peoples (V), off as the map opens: the marks of ruins hidden, the zoom the land alone; on: the marks, the places a
+    {   // the landing map's peoples (V), off as the map opens: the marks of ruins hidden, the zoom the land alone; on: the marks, the places a
         // few held records were kept at (one each), and with all of a people's records held its whole map (its land, every place, its ways); the
         // zoom's rings and the capital named
         const AgeWorld& W = AGE_WORLDS[AGE_MODERN];
@@ -237,7 +237,7 @@ void planChecks(const std::function<void(const char*, bool, const std::string&)>
               fmt("off at first %s; on: the mark %d, places %d with none held; %d held: %d places drawn of %zu homes, %d ways; all %d held: %d places of %zu, %d ways, %d land pixels, the capital named %d; the zoom: %d rings, the capital %d, %d pixels the layer's",
                   offFirst ? "yes" : "NO", marksOn, placesNone, (n0 + 8) / 9, placesSome, ranks.size(), waysSome, n0, placesAll, P->plans[0].places.size(), waysAll, landAll, capitalAll, rings, capitalZoom, differ));
     }
-    {   // B-422: the landing map's cursor asked for the drainage tiles of every place it stepped to (Shift held: 46 threads, every core busy, the
+    {   // the landing map's cursor asked for the drainage tiles of every place it stepped to (Shift held: 46 threads, every core busy, the
         // Enter after it three seconds): held, it asks for none of the places it passes; at rest, 0.4 s on, for the place it stopped at
         StarSystem fs; int fb = -1;
         const bool have = firstBodyOfType(PT_FELISIAN, fs, fb);
@@ -285,7 +285,7 @@ void townChecks(const std::function<void(const char*, bool, const std::string&)>
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g); const PeoplePlan& pp = P->plans[people];
         const Culture cu = cultureOf(g, people);
         std::shared_ptr<const History> H = historyOfWorld(g, people);
-        if (H) for (const HistoryPlace& hp : H->places) {   // B-414: left before the last age began: nothing of it on the ground
+        if (H) for (const HistoryPlace& hp : H->places) {   // left before the last age began: nothing of it on the ground
             if (hp.plan < 0 || hp.plan >= (int)pp.places.size() || hp.fate != HP_EARLY || hp.ended >= ageFromOf(H->profile)) continue;
             goneN++;
             RuinSpec q; if (ruinOfCell(g, pp.places[hp.plan].gLat, pp.places[hp.plan].gLon, q, false) && q.rank == hp.plan) { goneStanding++; if (goneWhat.size() < 200) goneWhat += fmt("%s%s's rank %d still stands", goneWhat.empty() ? "" : "; ", sys.bodies[AGE_WORLDS[a].body].name.c_str(), hp.plan); }
@@ -293,7 +293,7 @@ void townChecks(const std::function<void(const char*, bool, const std::string&)>
         std::vector<int> ranks;
         if (!pp.places.empty()) ranks.push_back(0);
         for (const PlanPlace& p : pp.places) if (p.sclass == SC_CITY) { ranks.push_back(p.rank); break; }
-        if (H) for (int i = 1; i < (int)pp.places.size() && i < (int)H->places.size(); i++) if (H->places[i].fate == HP_EARLY && H->places[i].ended >= ageFromOf(H->profile) && townOrGreater(pp.places[i].sclass)) { ranks.push_back(i); break; }   // B-414: left in the last age (one left before it is gone)
+        if (H) for (int i = 1; i < (int)pp.places.size() && i < (int)H->places.size(); i++) if (H->places[i].fate == HP_EARLY && H->places[i].ended >= ageFromOf(H->profile) && townOrGreater(pp.places[i].sclass)) { ranks.push_back(i); break; }   // left in the last age (one left before it is gone)
         for (int rk : ranks) {
             const PlanPlace& p = pp.places[rk];
             T t; t.cu = cu; t.rank = rk; t.worldAge = cu.age;
@@ -981,7 +981,7 @@ int runRoads(int argc, char** argv) {
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
     if (!g.hasTrait(TR_CIVILISATION)) { printf("%s: no civilisation, no roads\n", b.name.c_str()); return 0; }
-    int np = std::max(1, peoplesOf(g)); Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()};   // C-13: a road is its people's build
+    int np = std::max(1, peoplesOf(g)); Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()};   // a road is its people's build
     for (int k = 0; k < np; k++) printf("%s, %s, R %.0f km: %sthe roads %s, %.1f m wide (half %.2f), wear %.2f (the end %.0f years ago, wet %.2f)\n", b.name.c_str(), KINDS[b.type].name, b.radiusKm, np > 1 ? fmt("people %d: ", k + 1).c_str() : "",
            cs[k].paved ? "paved with stone" : "beaten tracks", 2 * cs[k].roadHalf, cs[k].roadHalf, cs[k].roadWear, cs[k].ageYears, cs[k].wet);
     int gLat0, gLon0; ruinCellOf(g, lat, lon, gLat0, gLon0);

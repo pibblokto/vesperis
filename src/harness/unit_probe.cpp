@@ -1,9 +1,9 @@
 // E-03: the unit's probe (group `probe`)
 #include "harness/harness.h"
 
-// X-01 to X-04, B-409: the probe
+// the probe
 void unitProbe(const Check& check) {
-    {   // X-01: the probe's air and clock on the first giants of the scan: the height falls and the temperature rises with the pressure
+    {   // the probe's air and clock on the first giants of the scan: the height falls and the temperature rises with the pressure
         // below the tropopause, the one-bar level is at height zero, the stages follow in their order along the clock to the end, which
         // comes at the hull's pressure or the heat's, and the chute holds the pressure's growth to a quarter of its pace over its span
         int giants = 0, bad = 0; std::string why;
@@ -25,7 +25,7 @@ void unitProbe(const Check& check) {
                 }
                 if (std::fabs(giantAltitudeKm(a, 1.0)) > 1e-9) { ok = false; w = "one bar"; }
                 int last = -1, lastLayer = -1; double endC = probeEndClock(a, f);
-                for (double c = 0; c < endC + 1; c += 0.5) {   // X-03: the layers in order (a stage comes back between three decks)
+                for (double c = 0; c < endC + 1; c += 0.5) {   // the layers in order (a stage comes back between three decks)
                     int st = probeStageAt(a, f, c);
                     if (st >= PS_ABOVE && st <= PS_DEEP) { int ly = giantLayerAt(a, probeBarAt(f, c)); if (ly < lastLayer) { ok = false; w = "order"; } lastLayer = ly; }
                     else if (st < last && st != PS_END) { ok = false; w = "order"; }
@@ -43,7 +43,7 @@ void unitProbe(const Check& check) {
         }
         check("probe: the giant's air and the clock (X-01)", giants >= 10 && bad == 0, fmt("%d giants, %d wrong %s", giants, bad, why.c_str()));
     }
-    {   // X-01: a probe in a game. Parked at a giant with the telescope's reticle on its disc, C sends the probe to the ground under the
+    {   // a probe in a game. Parked at a giant with the telescope's reticle on its disc, C sends the probe to the ground under the
         // reticle and the screen becomes its camera; saved in the descent and loaded, it falls on from the same clock on its screen; the
         // ship leaving its parking cuts the relay; a second probe falls to its end, the last frame held until Enter gives control back
         TestGame game; game.savePrefix = "shots/tests/unit_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_guide.txt";
@@ -68,7 +68,7 @@ void unitProbe(const Check& check) {
             double off = std::acos(clampd(dot(StarSystem::bodyFromLatLon(tl, tn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG, offShip = std::acos(clampd(dot(StarSystem::bodyFromLatLon(sl, sn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG;
             aimOk = onDisc && off < 0.3 && offShip > 2;
             d1 = fmt("the probe sent %.3f deg from the reticle's ground (%.1f deg from under the ship)", off, offShip);
-            {   // R-406: a second watched plainly, a second with Shift held
+            {   // a second watched plainly, a second with Shift held
                 double ca = game.testProbeClock(); run(1.0);
                 double cb = game.testProbeClock(); in.down[KEY_LEFT_SHIFT] = true; run(1.0); in.down[KEY_LEFT_SHIFT] = false;
                 double cc = game.testProbeClock(); run(0.5);
@@ -98,7 +98,7 @@ void unitProbe(const Check& check) {
         check("probe: saved and resumed in the descent (X-01)", resumed, d2);
         check("probe: leaving cuts the relay; the end (X-01)", cut && ended && back, fmt("cut %d, ended %d, back %d; %s", (int)cut, (int)ended, (int)back, d3.c_str()));
     }
-    {   // X-02: the descent's clouds read the globe. On the first giants of the scan, round three aim points each: the bands are the
+    {   // the descent's clouds read the globe. On the first giants of the scan, round three aim points each: the bands are the
         // globe's own (the planet function at the jets' drift of the time, against the world map's albedo there, which smooths it
         // over its texels), and the decks keep their order everywhere (the ammonia deck's top over its base, its base over the
         // water deck's towers, the water deck's top over its base)
@@ -125,7 +125,7 @@ void unitProbe(const Check& check) {
                         if (std::fabs(globe - al) > 0.1) { badBands++; if (why.empty()) why = fmt("%s body %d: %.2f against the globe's %.2f", s.name.c_str(), b.index, al, globe); }
                     }
                     GiantDecks D; D.init(a, &B, h);
-                    for (int q = 0; q < 300; q++) {   // X-03: every deck of the giant's, one to three
+                    for (int q = 0; q < 300; q++) {   // every deck of the giant's, one to three
                         double px = (unitFromHash(mix64(h ^ (q * 2 + 7))) - 0.5) * 2 * half, pz = (unitFromHash(mix64(h ^ (q * 2 + 8))) - 0.5) * 2 * half;
                         for (int k = 0; k < D.n; k++) {
                             double tk = D.top(k, px, pz, 0), bk = D.base(k, px, pz, 0), tn = k + 1 < D.n ? D.top(k + 1, px, pz, 0) : -1e9;
@@ -138,7 +138,7 @@ void unitProbe(const Check& check) {
         check("probe: the clouds are the globe's bands (X-02)", giants >= 4 && badBands == 0, fmt("%d giants, %d points, worst %.3f; %s", giants, points, worst, why.c_str()));
         check("probe: the decks keep their order (X-02)", giants >= 4 && badDecks == 0, fmt("%d giants, %d out of order; %s", giants, badDecks, why.c_str()));
     }
-    {   // X-03: every giant its own character, on the first 300 giants of the scan: one to three decks, each where the adiabat
+    {   // every giant its own character, on the first 300 giants of the scan: one to three decks, each where the adiabat
         // crosses its cloud's temperature (the abundance's shift), from the top down with a clear band between; the kinds as
         // defined (an ice giant a small blue gas giant, a brown dwarf the substellar type) and all three among them; a brown
         // dwarf's glow over every gas giant's, a young giant's over the old ones' on the whole; the decks' counts all used
@@ -158,7 +158,7 @@ void unitProbe(const Check& check) {
                 for (int k = 0; k < a.decks && w.empty(); k++) {
                     if (!(a.top[k] < a.base[k] && (k == 0 || a.top[k] >= a.base[k - 1] * 1.249))) w = fmt("deck %d %.3f-%.3f bar", k, a.top[k], a.base[k]);
                     const double want = CLOUD_SPECIES[a.species[k]].condK * std::pow(c.abundance, 0.6 * 0.286), got = giantTemperatureK(a, a.base[k]);
-                    const double reach = a.reach;   // P-07: the heat's end or a hot giant's 32 bar
+                    const double reach = a.reach;   // the heat's end or a hot giant's 32 bar
                     if (w.empty() && std::fabs(reach - ((c.kind == GK_AZURE || c.kind == GK_ALKALI || c.kind == GK_SILICATE) ? 32.0 : std::min(32.0, std::pow(a.heatK / a.t1K, 1 / 0.286)))) > 1e-9) w = "the decks' reach";
                     const bool fallback = a.decks == 1 && a.species[0] == CS_SALT && std::fabs(a.base[0] - 0.8 * reach) < 1e-6 * reach;   // nothing condenses within the reach: the salts' haze over the end
                     if (w.empty() && !fallback && std::fabs(got / want - 1) > 0.02 && a.base[k] < 31.9) w = fmt("deck %d (%s) base at %.0f K, its cloud's %.0f", k, CLOUD_SPECIES[a.species[k]].name, got, want);
@@ -176,7 +176,7 @@ void unitProbe(const Check& check) {
               fmt("%d giants (%d gas, %d ice, %d brown; 1/2/3 decks %d/%d/%d), %d wrong %s; glow brown >= %.2f, gas <= %.2f, young %.3f, old %.3f", giants, kinds[0], kinds[1], kinds[2], decks[1], decks[2], decks[3], bad, why.c_str(),
                   glowBrownMin, glowGasMax, glowYoung / std::max(1, nYoung), glowOld / std::max(1, nOld)));
     }
-    {   // X-03: a great storm is the globe's (GEN 12): the planet function's oval differs from the bands round it by its tone, the
+    {   // a great storm is the globe's (GEN 12): the planet function's oval differs from the bands round it by its tone, the
         // descent's bands sampled at the storm see the same albedo as the map, its turn keeps it whole a day later (every point of
         // it carried by the jet at its centre's latitude), and the deck stands on its dome and higher on its wall
         int storms = 0, bad = 0; std::string why;
@@ -223,7 +223,7 @@ void unitProbe(const Check& check) {
         }
         check("probe: the great storm is the globe's (X-03)", storms >= 4 && bad == 0, fmt("%d great storms, %d wrong %s", storms, bad, why.c_str()));
     }
-    {   // B-409: no giant's picture black, nor all one clipped colour. A giant with one deck (one in eight: Sashihene VIII, an ice
+    {   // no giant's picture black, nor all one clipped colour. A giant with one deck (one in eight: Sashihene VIII, an ice
         // giant with the water deck alone) went black from its deck's top down: the deck's base was tinted by a smoothstep whose
         // edges were one (0/0, a NaN through the air's and the fog's colours); a brown dwarf's fog clipped to a flat orange at its
         // first deck's base. Giants of each kind with one deck and with more, without the HUD and the static: each deck's middle
@@ -265,7 +265,7 @@ void unitProbe(const Check& check) {
         check("probe: no giant's picture black or clipped flat (B-409)", giants == 5 && oneDeck == 3 && frames >= 20 && bad == 0,
               fmt("%d giants (%d with one deck), %d frames, %d wrong; darkest mean %.1f, most clipped %.0f%%%s", giants, oneDeck, frames, bad, darkest, clipMost * 100, why.c_str()));
     }
-    {   // X-04: what comes back. A probe into Wailie VI (150 0 106 body 5), its camera turned on the way, to its end: the record in the
+    {   // what comes back. A probe into Wailie VI (150 0 106 body 5), its camera turned on the way, to its end: the record in the
         // guide (the tracks, the profile, the layers it found) and its final image beside the photographs; the guide read back and
         // exported to a friend (C-14's lending): every number the same, the lent one marked and not lent on. The recording from the
         // gallery: its frame at a clock is the live frame of that clock (the descent drawn again), the arrows go deeper. A second and a
@@ -360,7 +360,7 @@ void unitProbe(const Check& check) {
         check("probe: two places of one giant, two profiles (X-04)", game.guide.probes.size() == 3 && matched >= 20 && (dw > 10 || dTop > 0.02) && game.guide.probesSent == 3 && game.guide.deepestProbeKm() > 50,
               fmt("%zu records, %d depths matched, the wind %.0f m/s apart at most, the first deck's top %.1f%% apart; sent %d, the deepest %.0f km", game.guide.probes.size(), matched, dw, dTop * 100, game.guide.probesSent, game.guide.deepestProbeKm()));
     }
-    {   // X-04: what a probe crosses goes to the log with its depth, once: the great storm (named on the probe's screen: the name in the
+    {   // what a probe crosses goes to the log with its depth, once: the great storm (named on the probe's screen: the name in the
         // guide and the log), its wall from outside, the aurora's curtains, a clear-air hole, diamond hail
         struct G { int64_t sx, sz; int bi; GiantAtmosphere a; };
         std::vector<G> all;

@@ -42,7 +42,6 @@ const char* const V_FOCUS[] = {"SPIRE", "DOME", "GATE", "TOWER", "COLOSSUS", "MA
 const char* const V_CENTRE[] = {"TEMPLE", "PALACE", "ASSEMBLY", "MARKET", "TOMB", "MACHINE"};
 const char* const V_MONUMENTS[] = {"STELAE", "OBELISKS", "COLOSSI", "ARCHES", "PILLARS"};
 const char* const V_DEAD[] = {"BARROWS", "TOMBS", "CEMETERIES", "TOWERS OF SILENCE", "NOTHING"};
-// R-412
 const char* const V_EAVES[] = {"FLUSH", "OVERHANGING", "DEEP", "FLARED"};
 const char* const V_ROOFLINE[] = {"PLAIN", "DORMERS", "GABLETS", "CRESTED", "LANTERNS"};
 const char* const V_GABLES[] = {"PLAIN", "STEPPED", "CURVED", "PEDIMENTED", "HALF-HIPPED"};
@@ -92,14 +91,14 @@ const GenomeVarInfo GENOME_VARS[GV_COUNT] = {
     {"BASE", "COLOUR", GENOME_BASES, V_BASE, nullptr, nullptr, ALL, 2.0},
     {"ACCENT", "COLOUR", GENOME_ACCENTS * 4, V_ACCENT, nullptr, nullptr, ALL, 1.0},
     {"FINISH", "COLOUR", 2, V_PAINTED, nullptr, nullptr, P | M | MO, 0},   // B-415: an industrial people built in brick, painted or not
-    {"TINT", "COLOUR", GENOME_TINTS, V_TINT, nullptr, nullptr, F, 0},   // B-415: a modern ruin's glass gone within years, its metal roofs with B-415's flat ones
+    {"TINT", "COLOUR", GENOME_TINTS, V_TINT, nullptr, nullptr, F, 0},   // a modern ruin's glass gone within years, its metal roofs with B-415's flat ones
     {"LIGHT", "COLOUR", 3, V_LIGHT, nullptr, nullptr, FF, 0},
     {"LAND", "PLACE", 7, V_LAND, nullptr, nullptr, P | M | I | MO, 0},
     {"FACING", "PLACE", 6, V_ORIENT, nullptr, nullptr, ALL, 0},
     {"STREETS", "PLACE", 7, V_STREETS, nullptr, nullptr, M | I | MO, 0.5},
     {"PUBLIC", "PLACE", 4, V_PUBLIC, nullptr, nullptr, M | I | MO, 0},
     {"GROUPING", "PLACE", 3, V_GROUPING, nullptr, nullptr, P | M | I | MO, 0},
-    {"EDGE", "PLACE", 3, V_EDGE, nullptr, nullptr, P | M, 0},   // T-02: an industrial town is not walled (its medieval core keeps its wall)
+    {"EDGE", "PLACE", 3, V_EDGE, nullptr, nullptr, P | M, 0},   // an industrial town is not walled (its medieval core keeps its wall)
     {"LINKS", "PLACE", 5, V_LINKS, nullptr, nullptr, M | I | MO | F, 0},
     {"FOCUS", "MEANING", 10, V_FOCUS, nullptr, nullptr, ALL, 1.0},
     {"CENTRE", "MEANING", 6, V_CENTRE, nullptr, nullptr, P | M | I | MO | F, 0.5},
@@ -107,7 +106,7 @@ const GenomeVarInfo GENOME_VARS[GV_COUNT] = {
     {"THE DEAD", "MEANING", 5, V_DEAD, nullptr, nullptr, P | M | I | MO | F, 0},
     {"HOUSES", "MEANING", 0, nullptr, "ALIKE", "VARIED", P | M | I | MO | F, 0},
     {"BUILT", "MEANING", 0, nullptr, "LIGHT", "TO LAST", P | M | I | MO, 0},
-    // R-412: the people's own within its age's ways
+    // the people's own within its age's ways
     {"PITCH", "ROOFS", 0, nullptr, "SHALLOW", "STEEP", P | M | I, 0.6},
     {"EAVES", "ROOFS", 4, V_EAVES, nullptr, nullptr, P | M | I | MO, 0.5},
     {"ROOFLINE", "ROOFS", 5, V_ROOFLINE, nullptr, nullptr, M | I | MO, 0.4},

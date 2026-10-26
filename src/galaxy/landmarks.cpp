@@ -33,7 +33,7 @@ int landformSight(int trait) {
         case TR_INVERTED_RIVERS: return LM_RIDGE;
         case TR_PINGOS: return LM_PINGO;
         case TR_MAARS: return LM_MAAR;
-        case TR_METEORITES: return LM_METEORITES;   // Q-02
+        case TR_METEORITES: return LM_METEORITES;
         default: return LM_COUNT;
     }
 }
@@ -112,7 +112,7 @@ bool legacyLandmarkOf(const CellSights& s, Landmark& out) {
             return true;
         }
         if (!s.has[k]) continue;
-        if (k == LM_RUIN && s.hiH - s.mean >= 150 && s.hiH > 0) continue;   // O6-06: a peak of 150 m over the cell came before the ruins
+        if (k == LM_RUIN && s.hiH - s.mean >= 150 && s.hiH > 0) continue;   // a peak of 150 m over the cell came before the ruins
         out = s.lm[k];
         return true;
     }
@@ -142,8 +142,8 @@ unsigned sightKindsOf(const BodyGen& g) {
     if (g.hasTrait(TR_GEYSERS)) m |= 1u << LM_GEYSERS;
     if (kindHas(g.type, KT_CRYSTAL) && g.hasTrait(TR_SPIRES)) m |= 1u << LM_CRYSTALS;
     if (typeHasDrainage(g.type) && kindHas(g.type, KT_WET)) m |= 1u << LM_LAKE;
-    if (worldHadCivilisation(g)) m |= (1u << LM_RUIN) | (1u << LM_WORK);   // C-01, T-03 (B-417: no ruins on a world without a people)
-    for (int k = 0; k < TRAIT_SLOTS; k++) { const int lm = landformSight(g.traits[k]); if (lm < LM_COUNT) m |= 1u << lm; }   // Q-01
+    if (worldHadCivilisation(g)) m |= (1u << LM_RUIN) | (1u << LM_WORK);   // (B-417: no ruins on a world without a people)
+    for (int k = 0; k < TRAIT_SLOTS; k++) { const int lm = landformSight(g.traits[k]); if (lm < LM_COUNT) m |= 1u << lm; }
     return m;
 }
 
@@ -201,7 +201,7 @@ bool sightsOfCellUncached(const BodyGen& g, int ci, int cj, CellSights& S, bool 
         double bestR = 0; Vec3 bestC; double bestDep = 0;
         struct Grd { double cellKm, density; } grids[MAX_CRATER_GRIDS]; int ng = 0;
         const KindDef& K = KINDS[g.type];
-        for (int k = 0; k < K.nCraters; k++) {   // P-00: the kind's crater stack's landmark grids (the same cells and densities `sampleSurface` sums)
+        for (int k = 0; k < K.nCraters; k++) {   // the kind's crater stack's landmark grids (the same cells and densities `sampleSurface` sums)
             const CraterGrid& e = K.craters[k];
             if (!e.sight) continue;
             grids[ng++] = {e.cellRel ? g.R * e.cell : e.cell, e.densMode == CD_REL ? g.craterDensity * e.dens : e.dens};
@@ -545,7 +545,7 @@ void ruinsNear(const BodyGen& gSeason, const Vec3& unit, double radiusM, std::ve
             out.push_back(L);
         }
     }
-    // T-01: the world plan's places heard by their size from beyond the cells' reach (a capital from 400 km, a city from 200, a town of the
+    // the world plan's places heard by their size from beyond the cells' reach (a capital from 400 km, a city from 200, a town of the
     // plan from 80, a band's seat from 40; a futuristic people's great places from 300 and 120; a far-future work from 1,500)
     {
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);

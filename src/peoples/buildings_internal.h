@@ -40,7 +40,7 @@ inline int ringSegs(int form, int sides, double r) { return form == PF_POLYGON ?
 // B-415: the people's own great buildings (its temples, churches, town halls, palaces, keeps and towers, its focal accent, monuments,
 // gates, platforms, rotundas, joined towers, aqueducts and tunnels), where its genome speaks fully in every age; the rest are everyday
 // buildings (its houses, rows, tenements, villas, blocks, halls, mills and works), where the age speaks first
-// R-412: the people's dwellings (its houses, rows, tenements, villas, blocks, suburban houses, rotundas and pods), where its own colours and
+// the people's dwellings (its houses, rows, tenements, villas, blocks, suburban houses, rotundas and pods), where its own colours and
 // dress show from house to house
 inline bool dwellingKind(int kind) {
     return kind == BK_HOUSE || kind == BK_ROW || kind == BK_TENEMENT || kind == BK_VILLA || kind == BK_BLOCK || kind == BK_SUBURB || kind == BK_ROTUNDA || kind == BK_POD;
@@ -58,7 +58,7 @@ struct Gen {
     double sx, sz, fx, fz, sink = 0;
     int pieces = 0;
     bool great;   // B-415: one of the people's great buildings (`greatKind`)
-    // R-412: a dwelling of a people that painted each house its own (`GV_POLYCHROMY`): its walls' shades over the slot's, and its walls in the
+    // a dwelling of a people that painted each house its own (`GV_POLYCHROMY`): its walls' shades over the slot's, and its walls in the
     // accent now and then
     float tone = 0; bool painted = false;
     Gen(const Building& bb, const Culture& cc, const SiteRead& ss, int l, std::vector<Form>& o, int i)
@@ -71,7 +71,7 @@ struct Gen {
     double D(int m) const { return buildingDecay(b, c, m); }
     // a piece's own decay: the building's, spread by the piece's draw where the material is half gone (a stone of a circle, a post, a span)
     double Dk(int m, int k) const { double d = D(m); return clampd(d + (U(k) - 0.5) * 1.2 * 4 * d * (1 - d), 0, 1); }
-    // A-04: the genome; B-415: as the age built it (`ageExpressed`)
+    // the genome; B-415: as the age built it (`ageExpressed`)
     int gv(int v) const { return ageExpressed(c, v, great); }
     double gf(int v) const { return c.genome.at(v); }
     bool accentOn(int place) const { return c.genome.accentPlace() == place; }
@@ -82,7 +82,7 @@ struct Gen {
     int doorSlot() const { return accentOn(AP_DOORS) ? 1 : 0; }
     int timberSlot() const { return c.age >= AGE_FUTURISTIC ? 2 : 3; }
     int ironSlot() const { return c.age >= AGE_FUTURISTIC ? 2 : 3; }
-    // R-412: the people's pitch over its roofs' (the hand-made and the industrial ages'), its eaves' overhang on a pitched, hipped or conical roof
+    // the people's pitch over its roofs' (the hand-made and the industrial ages'), its eaves' overhang on a pitched, hipped or conical roof
     // (a flat roof's slab: `slabEave`)
     double pitchK() const { return c.age <= AGE_INDUSTRIAL ? 0.62 + 0.76 * gf(GV_PITCH) : 1.0; }
     double eave() const { static const double E[4] = {0.12, 0.45, 1.0, 0.7}; return c.age <= AGE_MODERN ? E[clampi(c.genome.of(GV_EAVES), 0, 3)] : 0.45; }
@@ -146,7 +146,7 @@ inline int ageDome(const Gen& g, int prof) {
 // `h` by the material's decay (a wall over 8 m by the tall share, its top ragged); the doorway (1.8 m: a lintel over it and, where the
 // wall is tall, the wall over the lintel) in the side `door` at `doorPos` along its axis; C-01's window in the wall opposite; the
 // windows' pattern on them; at level 1 the walls whole, at level 2 one box. The heights each wall stands to are in `hs`.
-// A-04: the people's profile (battered walls leaning in on a thicker foot, bulging ones with their rounded buttresses, an upper storey
+// the people's profile (battered walls leaning in on a thicker foot, bulging ones with their rounded buttresses, an upper storey
 // jettied out or set back over 4.5 m, a low wall's plinth) and its dress (`dress`: the bands, the cornice, the expressed frame, the
 // door's surround, the glyphs round every side of a carved people's, the crenels along the tops)
 struct Walls {
@@ -154,10 +154,10 @@ struct Walls {
     int door = 0; double doorPos = 0; bool window = false, glyphs = false;
     int mat = MT_MASONRY, slot = 0, pattern = 0, part = 0, k0 = 10;
     bool whole = false;   // standing whole whatever the decay (a storey that holds up what stands on it)
-    int profile = -1;     // A-04: `WallProfile`, -1 the people's (`dress` false: upright)
-    bool dress = true;    // A-04: the people's dress on them (a work's walls go bare)
-    bool crenels = false; // A-04: merlons along the tops of the walls that stand whole (a flat roof's or a keep's)
-    double parapet = 0;   // B-415: a parapet this high along the tops of the walls that stand whole (an industrial people's low roof behind it)
+    int profile = -1;     // `WallProfile`, -1 the people's (`dress` false: upright)
+    bool dress = true;    // the people's dress on them (a work's walls go bare)
+    bool crenels = false; // merlons along the tops of the walls that stand whole (a flat roof's or a keep's)
+    double parapet = 0;   // a parapet this high along the tops of the walls that stand whole (an industrial people's low roof behind it)
 };
 struct WallsOut { double hmin = 0, thick = 0.5, top = 0; };   // the lowest wall, the walls' thickness as built
 

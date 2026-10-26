@@ -12,7 +12,7 @@
 
 // the picture as the radar camera gives it: a cold phosphor (the palette toward blue-green, lifted off black), scanlines, a band
 // rolling down, a vignette, and static by the clarity (noise on every pixel, snow in flecks) that thins as a signal comes through.
-// C-16: with the gain the static and the snow thicken, the radio sky the receiver hears glows through the phosphor (the band's
+// with the gain the static and the snow thicken, the radio sky the receiver hears glows through the phosphor (the band's
 // brightness, on a coarse grid of directions), the star field ghosts a faint double, the rolling band runs faster and the picture
 // tears now and then (a band of rows thrown sideways for an eighth of a second)
 void Game::radarCameraFeed(Framebuffer& fb) {
@@ -57,7 +57,7 @@ void Game::radarCameraFeed(Framebuffer& fb) {
     if (dblK > 0 || tearY0 >= 0) orig = fb.idx;
     int bandY = (int)(std::fmod(radar.rollPh, 1.0) * (FBH + 40 * S)) - 20 * S;   // rolls down the picture every 6 s at x1 (C-16: 2.4 s at x32)
     int noiseAmp = (int)(40 + 150 * statik + 50 * gT), snowOdds = (int)(2 + 40 * statik + 25 * gT);   // intensity units (32 a shade); flecks per 4096 pixels
-    static std::vector<uint32_t> rowStart;   // F-05: the rows on the pool, each band from its first row's noise state (xorshiftRowStarts)
+    static std::vector<uint32_t> rowStart;   // the rows on the pool, each band from its first row's noise state (xorshiftRowStarts)
     xorshiftRowStarts((uint32_t)(realTime * 60) * 2654435761u + 0x51A7u, FBW, FBH, rowStart);
     parallelFor(FBH, 32, [&](int yb, int ye) {
         uint32_t rs = rowStart[yb];
@@ -139,11 +139,11 @@ void Game::renderRadarCamera() {
         }
         int mh = (int)(clampd(r.reading, 0, 1) * h);
         drawRectRGB(canvas, bx1 + 4, by0, bx1 + 12, by1, fd);
-        if (mh > 0) fillRectRGB(canvas, bx1 + 5, by1 - 1 - mh, bx1 + 11, by1 - 1, r.overload ? HUD_RED : (r.locked >= 0 ? HUD_AMBER : HUD_GREEN));   // C-15: pinned red by an overload
-        std::string right = r.locked >= 0 ? "LOCKED" : (r.overload ? "OVERLOAD" : (r.holdT > 0 && r.nothingT <= 0 ? "LOCKING" : "SWEEP"));   // C-16: a false rise's hold empties under SWEEP
+        if (mh > 0) fillRectRGB(canvas, bx1 + 5, by1 - 1 - mh, bx1 + 11, by1 - 1, r.overload ? HUD_RED : (r.locked >= 0 ? HUD_AMBER : HUD_GREEN));   // pinned red by an overload
+        std::string right = r.locked >= 0 ? "LOCKED" : (r.overload ? "OVERLOAD" : (r.holdT > 0 && r.nothingT <= 0 ? "LOCKING" : "SWEEP"));   // a false rise's hold empties under SWEEP
         drawText(canvas, bx1 + 12 - textWidth(right.c_str()), by1 + 4, right.c_str(), r.locked >= 0 ? HUD_AMBER : (r.overload ? HUD_RED : fd));
         drawText(canvas, bx0, by1 + 4, "RECEIVER", fd);
-        std::string gain = fmt("GAIN X%.0f", G);   // C-15: the dial, by the scope (the reach is the transmitter's: not printed)
+        std::string gain = fmt("GAIN X%.0f", G);   // the dial, by the scope (the reach is the transmitter's: not printed)
         drawText(canvas, bx0 + textWidth("RECEIVER") + 8, by1 + 4, gain.c_str(), G > 1 ? HUD_CYAN : fd);
     }
     // the source: a smudge of static where the beam's middle lobe has it (found, not handed: nothing shows outside ten degrees),
@@ -161,7 +161,7 @@ void Game::renderRadarCamera() {
                     drawLineRGB(canvas, sx - 5, sy, sx, sy - 5, HUD_AMBER); drawLineRGB(canvas, sx, sy - 5, sx + 5, sy, HUD_AMBER);
                     drawLineRGB(canvas, sx + 5, sy, sx, sy + 5, HUD_AMBER); drawLineRGB(canvas, sx, sy + 5, sx - 5, sy, HUD_AMBER);
                 } else if (g > 0.35) {
-                    double dens = (g - 0.35) / 0.65 * std::min(1.0, src < (int)r.level.size() ? r.level[src] : s.strength);   // C-15: by its level at this gain
+                    double dens = (g - 0.35) / 0.65 * std::min(1.0, src < (int)r.level.size() ? r.level[src] : s.strength);   // by its level at this gain
                     uint32_t rs = (uint32_t)(realTime * 30) * 2654435761u + (uint32_t)src;
                     int rad = 4 + (int)(5 * dens);
                     for (int dy = -rad; dy <= rad; dy++) for (int dx = -rad; dx <= rad; dx++) {
@@ -175,7 +175,7 @@ void Game::renderRadarCamera() {
             }
         } else if (r.locked >= 0) { double ang = std::atan2(-v.y, v.x); drawText(canvas, UW / 2 + (int)(std::cos(ang) * 140) - 2, UH / 2 + (int)(std::sin(ang) * 85) - 3, "+", HUD_AMBER); }
     }
-    // C-16: a false rise smudges the static as a source would where nothing outshines it within the middle lobe: the instrument
+    // a false rise smudges the static as a source would where nothing outshines it within the middle lobe: the instrument
     // cannot tell, the hold can
     if (r.rise.on && r.locked < 0 && r.riseAngle < 10 * DEG && (src < 0 || r.riseGain > r.gain[src])) {
         Mat3 cam = viewBasis();
@@ -204,28 +204,28 @@ void Game::renderRadarCamera() {
             l1 = "A SIGNAL FROM THIS SYSTEM";
             l2 = fmt("%s", trunc(upper(bodyNameOf(s.body)), 30).c_str());
             l3 = "ENTER APPROACHES IT";
-        } else if (s.kind == SIG_ROGUE) {   // D-02: the distance and no star at the source, nothing more (the sound tells, the readout never does)
+        } else if (s.kind == SIG_ROGUE) {   // the distance and no star at the source, nothing more (the sound tells, the readout never does)
             Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
             l1 = "NO STAR AT THE SOURCE";
             l2 = thousands(s.distLy) + " LY" + (guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");
             l3 = "ENTER FLIES THERE";
-        } else {   // C-15: thousands of light years at the top steps (the line within its 52 characters: the name gives way first)
+        } else {   // thousands of light years at the top steps (the line within its 52 characters: the name gives way first)
             Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
-            std::string ly = thousands(s.distLy), tail = fmt(" (%s)  %s LY%s", STAR_CLASSES[full.cls].code, ly.c_str(), guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");   // R-407: a loop back to a system seen says so
+            std::string ly = thousands(s.distLy), tail = fmt(" (%s)  %s LY%s", STAR_CLASSES[full.cls].code, ly.c_str(), guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");   // a loop back to a system seen says so
             l1 = "A SIGNAL FROM " + trunc(upper(starNameOf(full)), (size_t)clampi(52 - 14 - (int)tail.size(), 6, 16)) + tail;
             std::string sector = fmt("SECTOR %lld %lld %lld", (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz);
             l2 = sector + " - THE SIGNAL IS " + ly + " YEARS OLD";
             if (l2.size() > 52) l2 = sector + " - " + ly + " YEARS OLD";
             l3 = "ENTER LOCKS THE STAR AND FLIES THERE";
         }
-    } else if (r.overload) { l1 = "OVERLOADED - TURN THE GAIN DOWN"; c1 = HUD_RED; }   // C-15: backing the gain off is part of the play
-    else if (r.nothingT > 0) { l1 = "NOTHING THERE"; c1 = fc; }   // C-16: a false rise held empties
+    } else if (r.overload) { l1 = "OVERLOADED - TURN THE GAIN DOWN"; c1 = HUD_RED; }   // backing the gain off is part of the play
+    else if (r.nothingT > 0) { l1 = "NOTHING THERE"; c1 = fc; }   // a false rise held empties
     else if (r.holdT > 0) { l1 = fmt("LOCKING %.0f%% - HOLD STEADY", 100 * clampd(r.holdT / std::max(r.lockSecs, 0.1), 0, 1)); c1 = HUD_CYAN; }
-    else if (r.gainStep > 0 && !r.deepReady) { l1 = "LISTENING DEEPER..."; c1 = HUD_CYAN; }   // C-15: the far scan, a slice a frame
-    else if ((r.best >= 0 && r.bestGain > 0.06 && (G <= 1 || r.bestAngle < 10 * DEG)) || (r.rise.on && !r.rise.spent && r.riseGain > 0.06 && r.riseAngle < 10 * DEG)) { l1 = "A RISE - CENTRE IT AND HOLD TO LOCK"; c1 = HUD_GREEN; }   // C-15: over x1 the side lobes rise everywhere: the middle lobe's (C-16: a false rise's too)
+    else if (r.gainStep > 0 && !r.deepReady) { l1 = "LISTENING DEEPER..."; c1 = HUD_CYAN; }   // the far scan, a slice a frame
+    else if ((r.best >= 0 && r.bestGain > 0.06 && (G <= 1 || r.bestAngle < 10 * DEG)) || (r.rise.on && !r.rise.spent && r.riseGain > 0.06 && r.riseAngle < 10 * DEG)) { l1 = "A RISE - CENTRE IT AND HOLD TO LOCK"; c1 = HUD_GREEN; }   // over x1 the side lobes rise everywhere: the middle lobe's (C-16: a false rise's too)
     else l1 = "SWEEP THE SKY - A RISE ON THE METER IS A SIGNAL";
     drawTextCentered(canvas, cx, UH - 54, l1.c_str(), c1);
     if (!l2.empty()) drawTextCentered(canvas, cx, UH - 46, l2.c_str(), fc);
     if (!l3.empty()) drawTextCentered(canvas, cx, UH - 38, l3.c_str(), HUD_GREEN);
-    drawTextShadow(canvas, 18, UH - 26, "+/- GAIN  B / ESC LEAVES THE CAMERA", fd, HUD_SHADOW);   // C-15: the telescope's place, clear of the bracket's upright
+    drawTextShadow(canvas, 18, UH - 26, "+/- GAIN  B / ESC LEAVES THE CAMERA", fd, HUD_SHADOW);   // the telescope's place, clear of the bracket's upright
 }

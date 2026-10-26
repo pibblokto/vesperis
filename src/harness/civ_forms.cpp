@@ -53,7 +53,7 @@ static std::vector<FormSample> formSamples() {
     one("SWEEP: AN AMPHITHEATRE", {at(makeForm(FK_SWEEP, 0, 32, 32, 0, 13, {3.6, 9, 1.5, 6}), -16 * std::sin(1.8), -16 * std::cos(1.8))}, 84, 14); s.back().eye = 60;
     one("SWEEP: A BATTERED DAM", {makeForm(FK_SWEEP, 1, 0, 35, 0, 22, {0, 7, 2})}, 72, 23);
     one("BLOB: A GROWN FORM", {makeForm(FK_BLOB, 0, 9, 8, 0, 13, {3, 0.7})}, 24, 22);
-    { Form p = makeForm(FK_PLATE, 2, 5, 9, 0, 1.2, {0.6, 0.3, 3, 1.5}); one("PLATE: AN OUTLINED BODY", {p}, 22, 4); s.back().eye = 14; }   // C-17
+    { Form p = makeForm(FK_PLATE, 2, 5, 9, 0, 1.2, {0.6, 0.3, 3, 1.5}); one("PLATE: AN OUTLINED BODY", {p}, 22, 4); s.back().eye = 14; }
     {   // R-412: pales, spear-tipped bars on a low wall, wattle, a balustrade, end to end across the way
         auto across = [&](Form f, double x) { f = at(f, x, 0); f.heading = PI / 2; return f; };
         Form a = across(makeForm(FK_FENCE, 0, 0.03, 1.45, 0, 1.3, {0.2, 0.6, 0, 0.12}), -4.5), b = across(makeForm(FK_FENCE, 1, 0.015, 1.45, 0.5, 1.6, {0.13, 0.25, 0, 0.1}, 0, 3), -1.5);
@@ -192,7 +192,7 @@ void formsCamera(SurfaceView& sv, double eyeH, double tx, double ty, double tz, 
 
 // A-02: the forms' unit checks (also `forms check`, alone)
 void formsChecks(const std::function<void(const char*, bool, const std::string&)>& check) {
-    {   // A-02: the forms (peoples/forms.h): every kind whole and broken at the three levels, walked into, the city frame the serial loop's,
+    {   // the forms (peoples/forms.h): every kind whole and broken at the three levels, walked into, the city frame the serial loop's,
         // the peoples' banks
         std::vector<FormSample> samples = formSamples();
         int meshes = 0, empty = 0, nonFinite = 0, outside = 0, unbroken = 0, kinds = 0; std::string firstBad;
@@ -260,7 +260,7 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
                     }
                     const double ax = svW.player.x - fx, az = svW.player.z - fz, along = ax * std::sin(yaw) + az * std::cos(yaw);
                     // a form is touched (the explorer stopped against it or slid round it) and never entered; an opening is walked through;
-                    // B-420: one stood on (a bank, a heap, an amphitheatre's tiers) stops the explorer at a side more than a step high or is climbed
+                    // one stood on (a bank, a heap, an amphitheatre's tiers) stops the explorer at a side more than a step high or is climbed
                     bool walkable = true; for (const Form& f : S.forms) walkable = walkable && formWalkable(f);
                     bool ok = walkable ? (along < 0 || svW.player.y - svW.site.groundHeight(svW.player.x, svW.player.z) > 0.3) : pen < 0.06 && (through ? along > 2 : gapMin < 0.15);
                     walks++; if (ok) walkOk++; if (through && ok) passes++;
@@ -271,7 +271,7 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
               fmt("%d walks (each sample whole and broken), %d as they should (touched and never entered; through a gate, an arcade, a hall, between masts or a lattice's legs, under a saddle: %d)%s%s", walks, walkOk, passes, walkBad.empty() ? "" : "; ", walkBad.c_str()));
         // the peoples' banks: a people that built of its ground's own material has its structure's ramp that bank's
         {
-            svW.palettes[0].own[0] = true; svW.palettes[0].tint[0] = 0;   // A-04: a people of its ground's own stone, untinted (a people's own is tinted toward its base colour)
+            svW.palettes[0].own[0] = true; svW.palettes[0].tint[0] = 0;   // a people of its ground's own stone, untinted (a people's own is tinted toward its base colour)
             Framebuffer fbP; Input inP; svW.testClearPlaced(); svW.update(1.0 / 30, inP, tW, false); svW.render(fbP, tW, nbW.stars, srW, 1.0);
             const int own = svW.cultures[0].family == 1 ? 9 : 0;
             bool same = svW.palettes[0].own[0] && std::memcmp(&fbP.pal[FORM_BANKS[0][0] * 64 * 3], &fbP.pal[own * 64 * 3], 64 * 3) == 0;

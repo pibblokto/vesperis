@@ -295,13 +295,13 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
                     }
                     break;
                 }
-                case MAT_SALT: {   // R-305: a crust cracked into polygons, the plates faintly domed, the cracks dark
+                case MAT_SALT: {   // a crust cracked into polygons, the plates faintly domed, the cracks dark
                     pworley(x, y, 9, sA, f1, f2, id);
                     v += (double)((int)(id % 5) - 2) * 1.5 + 4.0 * (1 - clampd(f1 / 0.5, 0, 1));
                     if (f2 - f1 < 0.07) v -= 12 * (1 - (f2 - f1) / 0.07);
                     break;
                 }
-                case MAT_MUD: {   // P-01: hot mud drying in cracked plates round slick hollows, the bubbles' pits
+                case MAT_MUD: {   // hot mud drying in cracked plates round slick hollows, the bubbles' pits
                     pworley(x, y, 6, sA, f1, f2, id);
                     if (f2 - f1 < 0.06) v -= 8 * (1 - (f2 - f1) / 0.06);
                     v += 3 * pvalue(x, y, 5, sB);
@@ -309,13 +309,13 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
                     if (f1 < 0.12 && (id % 4) == 0) v -= 6 * (1 - f1 / 0.12);
                     break;
                 }
-                case MAT_POTASH: {   // P-01: the last salts' crust, finer polygons than the halite's, mottled with iron
+                case MAT_POTASH: {   // the last salts' crust, finer polygons than the halite's, mottled with iron
                     pworley(x, y, 14, sA, f1, f2, id);
                     v += (double)((int)(id % 7) - 3) * 1.2 + 2.5 * pvalue(x, y, 9, sB);
                     if (f2 - f1 < 0.06) v -= 9 * (1 - (f2 - f1) / 0.06);
                     break;
                 }
-                case MAT_MATS: {   // P-02: a microbial mat's wrinkled skin, its gas blisters and the shrinkage cracks where it dries
+                case MAT_MATS: {   // a microbial mat's wrinkled skin, its gas blisters and the shrinkage cracks where it dries
                     v += 3.5 * ripples(x, y, windA, 5.0, 0.7, sA) + 2 * pvalue(x, y, 6, sB);
                     pworley(x, y, 10, sC, f1, f2, id);
                     if (f1 < 0.18 && (id % 3) == 0) v += 6 * (1 - f1 / 0.18);
@@ -323,14 +323,14 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
                     if (f2 - f1 < 0.04) v -= 7 * (1 - (f2 - f1) / 0.04);
                     break;
                 }
-                case MAT_STROMATOLITE: {   // P-02: the reef flat's heads packed together, laminae round each, dark sediment between
+                case MAT_STROMATOLITE: {   // the reef flat's heads packed together, laminae round each, dark sediment between
                     pworley(x, y, 7, sA, f1, f2, id);
                     v += 4.0 * (1 - clampd(f1 / 0.55, 0, 1)) + 2.5 * std::sin(f1 * 34.0 + (double)(id % 7));
                     if (f2 - f1 < 0.07) v -= 9 * (1 - (f2 - f1) / 0.07);
                     v += 1.5 * pvalue(x, y, 16, sB);
                     break;
                 }
-                case MAT_CRUST: {   // P-02: lichen rosettes with lobed rims, a few black thalli among them, bare grain between
+                case MAT_CRUST: {   // lichen rosettes with lobed rims, a few black thalli among them, bare grain between
                     pworley(x, y, 12, sA, f1, f2, id);
                     const double r = 0.28 + 0.25 * unitFromHash(mix64(id + 11)) + 0.06 * pvalue(x, y, 32, sC);
                     if (f1 < r) v += 5 * (1 - f1 / r) + ((id % 5) == 0 ? -14 : 0);
@@ -338,13 +338,13 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
                     v += 2 * pvalue(x, y, 24, sB);
                     break;
                 }
-                case MAT_MOSS: {   // P-02: soft cushions of moss, dark seams between them
+                case MAT_MOSS: {   // soft cushions of moss, dark seams between them
                     v += 5 * pvalue(x, y, 10, sA) + 3 * pvalue(x, y, 22, sB);
                     pworley(x, y, 14, sC, f1, f2, id);
                     if (f2 - f1 < 0.08) v -= 6 * (1 - (f2 - f1) / 0.08);
                     break;
                 }
-                case MAT_GLASS: {   // S-03: a melt frozen in ripples, pocked with bubble pits, a few hairline cracks
+                case MAT_GLASS: {   // a melt frozen in ripples, pocked with bubble pits, a few hairline cracks
                     v += 4 * pvalue(x, y, 7, sA) + 2 * pvalue(x, y, 19, sB);
                     pworley(x, y, 16, sC, f1, f2, id);
                     if (f1 < 0.1 && (id % 3) == 0) v -= 7 * (1 - f1 / 0.1);
@@ -375,7 +375,7 @@ void buildMesoTile(GrainTexture& g, int material, uint64_t seed) {
 
 // B-311: the broad tone tile: three octaves of periodic gradient noise, +-10, that the rasteriser adds at two metres a texel
 // (patches of 23, 43 and 85 m) so the ground of one material is not one flat tone from cell to cell.
-// F-03: this tile, the leaves' and the bark's are made at a landing's first frame (7 ms together, alone): their rows on the pool (a
+// this tile, the leaves' and the bark's are made at a landing's first frame (7 ms together, alone): their rows on the pool (a
 // texel is a function of its place and the seed)
 void buildMacroTile(GrainTexture& g, uint64_t seed) {
     g.resize(N);

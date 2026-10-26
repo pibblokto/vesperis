@@ -27,9 +27,9 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
         {   // C-03: and its shards; C-12: and its graves, their stones drawn with the pieces; C-13: in its people's culture and lore
             const Culture& cu = cultures[c.spec.people == 1 && peoples > 1 ? 1 : 0]; const Lore& lo = lores[c.spec.people == 1 && peoples > 1 ? 1 : 0];
             for (int l = 0; l < 3; l++) ruinElements(c.spec, cu, l, c.elems[l]); recordSitesOf(site.gen, c.spec, cu, c.shards, &c.instruments); gravesOf(lo, c.spec, cu, c.graves); graveElements(c.graves, cu, 0, c.elems[0]);
-            recordObjects(c);   // T-04
-            instrumentObjects(c);   // C-11
-            groupPieces(c);   // A-02: each building's pieces, for its own level of detail
+            recordObjects(c);
+            instrumentObjects(c);
+            groupPieces(c);   // each building's pieces, for its own level of detail
         }
     }
     return &c;
@@ -49,7 +49,7 @@ const SurfaceView::RuinCell* SurfaceView::workCell(const Work& w) const {
     const int k = w.people == 1 && peoples > 1 ? 1 : 0;
     for (int l = 0; l < 3; l++) ruinElements(c.spec, cultures[k], l, c.elems[l]);
     gravesOf(lores[k], c.spec, cultures[k], c.graves); graveElements(c.graves, cultures[k], 0, c.elems[0], true);
-    recordSitesOf(site.gen, c.spec, cultures[k], c.shards); recordObjects(c);   // T-04: the works that kept records (the last shelter's last recording)
+    recordSitesOf(site.gen, c.spec, cultures[k], c.shards); recordObjects(c);   // the works that kept records (the last shelter's last recording)
     groupPieces(c);
     return &c;
 }
@@ -85,7 +85,7 @@ void SurfaceView::ensureTownMarks() {
     }
 }
 
-void SurfaceView::refreshPlanNear() {   // T-01
+void SurfaceView::refreshPlanNear() {
     planNear.clear(); workNear.clear(); planNearX = player.x; planNearZ = player.z;
     if (!worldHadCivilisation(site.gen)) return;
     std::shared_ptr<const WorldPlan> P = worldPlanOf(site.gen);
@@ -113,13 +113,13 @@ void SurfaceView::drawRuins(Framebuffer& fb) {
     if (!worldHadCivilisation(site.gen) && placedCells.empty()) return;
     auto tr0 = std::chrono::steady_clock::now();
     formItems.clear();
-    for (const RuinCell& c : placedCells) gatherSettlement(c.r, c, std::hypot(c.r.x - camPos.x, c.r.z - camPos.z));   // A-02 (tests)
+    for (const RuinCell& c : placedCells) gatherSettlement(c.r, c, std::hypot(c.r.x - camPos.x, c.r.z - camPos.z));   // (tests)
     static uint32_t drawStamp = 0; drawStamp++;
     forNearbyRuins(camPos.x, camPos.z, 2, [&](const Ruin& r, const RuinCell& cell, int) {
         cell.drawn = drawStamp;
         gatherSettlement(r, cell, std::hypot(r.x - camPos.x, r.z - camPos.z));
     });
-    // T-01: the plan's places beyond the cells' reach, to PLAN_NEAR_M: a far city's skyline (each building at its level of detail, the far
+    // the plan's places beyond the cells' reach, to PLAN_NEAR_M: a far city's skyline (each building at its level of detail, the far
     // ones a silhouette where they stand a pixel high)
     for (const PlanNear& pn : planNear) {
         const double d = std::hypot(pn.x - camPos.x, pn.z - camPos.z);
@@ -127,7 +127,7 @@ void SurfaceView::drawRuins(Framebuffer& fb) {
         const RuinCell* c = ruinCell(pn.gLat, pn.gLon);
         if (c->has && c->drawn != drawStamp) { c->drawn = drawStamp; gatherSettlement(c->r, *c, d); }
     }
-    gatherRecords();   // T-04
+    gatherRecords();
     lastRuinElems = (int)formItems.size();
     drawFormItems(fb);
     lastRuinMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tr0).count();
@@ -264,7 +264,7 @@ void SurfaceView::gatherRecords() {
             }
         }
         if (cell.instrumentFirst.size() != cell.instruments.size() + 1 || cell.instrumentIds.size() != cell.instruments.size()) return;
-        for (size_t k = 0; k < cell.instruments.size(); k++) {   // C-11: the instruments beside them, till taken
+        for (size_t k = 0; k < cell.instruments.size(); k++) {   // the instruments beside them, till taken
             const InstrumentSite& s = cell.instruments[k];
             if (cell.instrumentIds[k] < 0 || instrumentsFound.count(cell.instrumentIds[k])) continue;
             const double x = r.x + s.x, z = r.z + s.z, dx = x - camPos.x, dz = z - camPos.z, d = std::sqrt(dx * dx + dz * dz);
@@ -274,7 +274,7 @@ void SurfaceView::gatherRecords() {
             const double fog = 1 - std::exp(-d / env.fogDistance);
             for (int i = cell.instrumentFirst[k]; i < cell.instrumentFirst[k + 1]; i++) {
                 const Form& e = cell.instrumentForms[i];
-                if (d > 7 && (e.kind == FK_CABLE || formReach(e) < 0.012 * d / 7)) continue;   // C-17: far off, its strings and its small parts are under a pixel
+                if (d > 7 && (e.kind == FK_CABLE || formReach(e) < 0.012 * d / 7)) continue;   // far off, its strings and its small parts are under a pixel
                 formItems.push_back({&e, Vec3(r.x + e.x, gy, r.z + e.z), 0.0, d, fog, 0, people});
                 lastRecordForms++;
             }
@@ -305,7 +305,7 @@ void SurfaceView::drawShards(Framebuffer& fb, double t) {
             lastShardsDrawn++;
         }
         if (cell.instrumentIds.size() != cell.instruments.size()) return;
-        for (size_t k = 0; k < cell.instruments.size(); k++) {   // C-11: an instrument's light: a double pulse, so it is told from a record's at a glance
+        for (size_t k = 0; k < cell.instruments.size(); k++) {   // an instrument's light: a double pulse, so it is told from a record's at a glance
             const int id = cell.instrumentIds[k];
             if (id < 0 || instrumentsFound.count(id)) continue;
             const InstrumentSite& s = cell.instruments[k];

@@ -44,7 +44,7 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
             default: s.size = 4 + 4 * r.uni(); s.gait = GAIT_WALK; s.runGait = GAIT_WALK; s.walkSpeed = 0.6 + 0.3 * r.uni(); s.runSpeed = 1.5; s.herdMin = 1; s.herdMax = 2;
                 s.bodyLen = s.size * 1.6; s.neckLen = s.size * (0.4 + 0.5 * r.uni()); s.headLen = s.size * 0.35; s.tailLen = s.size * 0.9; s.legLen = s.size * 1.0; break;
         }
-        if (fa == FA_COLD && s.plan != PLAN_HEXAPOD) {   // P-02: bigger, the neck and the tail short against the cold
+        if (fa == FA_COLD && s.plan != PLAN_HEXAPOD) {   // bigger, the neck and the tail short against the cold
             s.size *= 1.3; s.bodyLen *= 1.3; s.headLen *= 1.3; s.legLen *= 1.2; s.neckLen *= 1.05; s.tailLen *= 0.6;
             s.herdMin += 2; s.herdMax += 6;
         }
@@ -55,7 +55,7 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
         if (s.habitat == BIO_DESERT) { wb[2] = 8; wb[0] = 1; }
         if (s.habitat == BIO_TEMPERATE || s.habitat == BIO_TROPICAL || s.habitat == BIO_WETLAND) { wb[0] = 5; wb[3] = 3; }
         static const int banks[5] = {3, 10, 9, 0, 5};
-        static const int coldBanks[5] = {8, 10, 9, 0, 3};   // P-02: a white coat in place of the second flora's
+        static const int coldBanks[5] = {8, 10, 9, 0, 3};   // a white coat in place of the second flora's
         s.bank = (fa == FA_COLD ? coldBanks : banks)[r.pick(wb, 5)];
         s.tone = 0.45 + 0.5 * r.uni();
         s.pattern = r.irange(4);

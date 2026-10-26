@@ -22,6 +22,6 @@ void gravesOf(const Lore& L, const RuinSpec& r, const Culture& c, std::vector<Gr
 // the stones as pieces to draw at the whole level of detail (lod 0; the far levels draw none), appended: a standing slab 0.64 m
 // wide and 0.16 m thick with its glyphs, or the same lying flat; A-04: round them the people's way with its dead (`GV_DEAD`): a barrow
 // behind each stone, a tomb, a low wall round the cemetery, a tower of silence, nothing
-// T-03: `stonesOnly` for a work's plots (a necropolis, a battlefield's war graves): the stones alone, its tombs and walls its own buildings
+// `stonesOnly` for a work's plots (a necropolis, a battlefield's war graves): the stones alone, its tombs and walls its own buildings
 void graveElements(const std::vector<Grave>& graves, const Culture& c, int lod, std::vector<Form>& out, bool stonesOnly = false);
 std::string graveLine(const Lore& L, const Grave& g);   // "Thaelu, years 140 to 212 of Kethra" (born before the founding: "Thaelu, to year 212 of Kethra")

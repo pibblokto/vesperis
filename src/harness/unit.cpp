@@ -2,10 +2,10 @@
 // unit_*.cpp, the peoples' *Checks in the civ_ files), each from the scale and mush it starts at in the full run
 #include "harness/harness.h"
 #if defined(__APPLE__) || defined(__linux__)
-#include <fcntl.h>   // E-03: `unit -q`'s /dev/null
+#include <fcntl.h>   // `unit -q`'s /dev/null
 #endif
 
-// E-03: `unit -q`: stdout goes to /dev/null while the groups run, so only the failures (written to the stdout saved) and the count
+// `unit -q`: stdout goes to /dev/null while the groups run, so only the failures (written to the stdout saved) and the count
 // show; where there is no dup2 (Windows), only the checks' own lines are held back
 QuietStdout::QuietStdout(bool on) {
     if (!on) return;

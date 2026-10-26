@@ -4,7 +4,7 @@
 
 namespace {
 
-// P-03: the chemotroph's spring fields: the rifts' floors and scattered fields on the plains (tens of kilometres, so a pool is never cut by
+// the chemotroph's spring fields: the rifts' floors and scattered fields on the plains (tens of kilometres, so a pool is never cut by
 // their edge), a spring a 0.5 km cell at most; `springVents` visits the same features
 inline double springField(const GroundCtx& c, double rift) { return std::max(smoothstep(0.5, 0.8, rift), smoothstep(0.3, 0.5, fbm3(c.p / (c.R * 0.06), c.g.sG + 31, 3))); }   // unfaded: the map's and the ground's alike
 }   // namespace
@@ -605,7 +605,7 @@ void groundSponge(GroundCtx& c) {
 }
 
 // P-00: a giant's clouds: bands, storms, a great storm (gas giants, brown dwarfs)
-// D-04: the dark ocean (Stevenson 1999): one sea over the whole world, its floor an abyssal plain a kilometre and a half down, kept liquid by
+// the dark ocean (Stevenson 1999): one sea over the whole world, its floor an abyssal plain a kilometre and a half down, kept liquid by
 // its rock's own heat under hundreds of bars of hydrogen. Where its shield volcanoes break the surface, islands of black basalt (lava that met
 // the sea: Hawaii's and Iceland's): shields 8-21 km round on a 70 km grid, thickest and tallest over the hot spots' swells (the archipelagos: a
 // few hundredths of the world above the sea), their flanks streaked
@@ -705,13 +705,13 @@ void groundGiant(GroundCtx& c) {
     double l = lat + turb + turb2;
     double bands = 0.5 + g.bandContrast * (0.28 * std::sin(l * g.bandCount) + 0.15 * std::sin(l * g.bandCount * 2.3 + 1.0) +
                    0.08 * std::sin(l * g.bandCount * 5.1 + 2.0));   // X-03: an ice giant's faint
-    if (c.K.giantClass == GC_WATER) bands += 0.16;   // P-07: water's clouds the brightest (a Bond albedo of 0.8)
-    double storm = giantStormCell(g, unit);   // X-03: the giant's own share
+    if (c.K.giantClass == GC_WATER) bands += 0.16;   // water's clouds the brightest (a Bond albedo of 0.8)
+    double storm = giantStormCell(g, unit);   // the giant's own share
     s.height = 0;
     s.material = MAT_GAS;
     s.albedo = clampd(bands + 0.35 * storm, 0.22, 1.0);
-    s.veg = storm;   // N5-03: the storm term kept apart (the map's veg channel) so the globe can let storms grow and fade with time
-    if (g.gsOn) {   // X-03: the great storm (in the albedo, not the storm term: it does not fade), its bands swirled round its centre
+    s.veg = storm;   // the storm term kept apart (the map's veg channel) so the globe can let storms grow and fade with time
+    if (g.gsOn) {   // the great storm (in the albedo, not the storm term: it does not fade), its bands swirled round its centre
         const double lon = std::atan2(unit.y, unit.x);
         const double ex = wrapAngle(lon - g.gsLon) * std::cos(g.gsLat) / g.gsA, ey = (lat - g.gsLat) / g.gsB, d = std::sqrt(ex * ex + ey * ey);
         if (d < 1.6) {

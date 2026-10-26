@@ -50,7 +50,7 @@ void Framebuffer::mush(int passes) {
             memcpy(d + (size_t)(H - 2) * W, s + (size_t)(H - 2) * W, 2 * (size_t)W * sizeof(Pix));
         } else {
             // general k x k box starting one row below (windows clamped at the right edge and the bottom), bank from one row below.
-            // F-07: a band of rows slides the column sums of its k rows down a row at a time and a k-wide window along them (the
+            // a band of rows slides the column sums of its k rows down a row at a time and a k-wide window along them (the
             // box's sum whatever the order of its terms), the row under the pixel giving the bank and leaving the sums in one read;
             // the quotient by a multiply and a shift, exact while sum x divisor < 2^32 (sum <= 2047 k^2, divisor <= k^2: every k to 38)
             const bool recip = k <= 38;
@@ -100,7 +100,7 @@ void Framebuffer::glowDisc(double cx, double cy, double radius, double coreRadiu
     x0 = std::max(x0, 0); y0 = std::max(y0, 0); x1 = std::min(x1, FBW - 1); y1 = std::min(y1, FBH - 1);
     if (maxAdd <= 0) return;   // F-05: every pixel's add would be 0 (a dim veil walked a disc of 0.9 M pixels at 4x for nothing)
     double r2 = radius * radius;
-    // F-05: the rows on the pool (a pixel is written once, by its row; a small disc stays on the caller under the threshold). Every
+    // the rows on the pool (a pixel is written once, by its row; a small disc stays on the caller under the threshold). Every
     // caller is on the main thread outside a pool job (the pool is not reentrant)
     parallelFor(y1 - y0 + 1, 32, [&](int rb, int re) {
         for (int y = y0 + rb; y < y0 + re; y++) {

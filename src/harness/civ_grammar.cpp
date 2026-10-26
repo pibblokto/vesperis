@@ -2,7 +2,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// H-03: the grammar engine. `grammarEngineCases`: a small grammar whose every rule must give one text (the realiser's pronouns, verbs,
+// the grammar engine. `grammarEngineCases`: a small grammar whose every rule must give one text (the realiser's pronouns, verbs,
 // numbers, plurals, articles, attributes, `once`, `keep`, guards, a directive, a path, a person brought in, a letter's I and you, a kept
 // word's agreement, the seams), the link's errors on a broken grammar, the checks on planted faults
 namespace {
@@ -221,11 +221,11 @@ struct GrammarRun {
     double rep50 = 0, rep100 = 0, repAll = 0, dist50 = 0, d2sum = 0, d3sum = 0; int n50 = 0, n100 = 0;   // d2/d3: distinct 2/3-grams, summed over the peoples
     std::vector<std::string> sampleTexts;            // the first people's (the most repeated frames)
     std::vector<std::vector<std::string>> sampleForms;
-    // H-04: by genre (its name): the records, their words, the shortest and the longest, and the texts (for the genre's own measures)
+    // by genre (its name): the records, their words, the shortest and the longest, and the texts (for the genre's own measures)
     struct Genre { int n = 0; long words = 0; int minW = 1 << 30, maxW = 0; std::vector<std::string> texts; std::vector<std::vector<std::string>> forms; std::vector<int> peopleOf; };
     std::map<std::string, Genre> genres;
     int byAge[AGE_COUNT] = {};                        // the texts of each age
-    int sides = 0, sidesEvents = 0;                   // H-04: events told by two registers or more (one event from several sides)
+    int sides = 0, sidesEvents = 0;                   // events told by two registers or more (one event from several sides)
     std::vector<std::string> sidesSample;             // the first such, its tellings
     // H-04's second pass: one people's sentences against the others': each people's long sentences' frames (its first hundred texts)
     std::vector<std::vector<std::string>> peopleFrames;
@@ -268,7 +268,7 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
         std::vector<std::string> why;
         if (vgCheck(*G, x.rec, x.age, R.counts, &why) && R.failures.size() < 5000)
             R.failures.push_back(fmt("%s S%zu (%s, %s): %s\n      %s", b.name.c_str(), i, VG_AGES[std::max(0, x.age)], gname.c_str(), why[0].c_str(), x.text.c_str()));
-        if (H) for (const std::string& nm : x.rec.names) {   // H-04: every name the history's (or the lore's) at the record's year
+        if (H) for (const std::string& nm : x.rec.names) {   // every name the history's (or the lore's) at the record's year
             R.namesTold++;
             if (!recordNameKnown(*H, L, x.year, nm)) { R.namesBad++; if (R.failures.size() < 5000) R.failures.push_back(fmt("%s S%zu (%s): the name '%s' is not the history's in year %d", b.name.c_str(), i, gname.c_str(), nm.c_str(), x.year)); }
         }
@@ -279,7 +279,7 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
         }
         if (print < 0 || (int)texts.size() <= print) printf("  %s S%zu %s: %s\n", b.name.c_str(), i, gname.c_str(), x.text.c_str());
     }
-    for (const auto& kv : toldBy) {   // H-04: one event from several sides: told in two genres or more
+    for (const auto& kv : toldBy) {   // one event from several sides: told in two genres or more
         std::set<std::string> gs; for (const auto& p : kv.second) gs.insert(p.first);
         if (gs.size() < 2) continue;
         R.sidesEvents++; R.sides += (int)kv.second.size();
@@ -316,7 +316,7 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
     if (texts.size() >= 100) { VgMeasure m = measure(100); R.rep100 += m.longS ? 100.0 * m.longRep / m.longS : 0; R.n100++; }
     VgMeasure all = measure(texts.size()); R.repAll += all.longS ? 100.0 * all.longRep / all.longS : 0; R.d2sum += all.d2; R.d3sum += all.d3;
     if (R.sampleTexts.empty()) { R.sampleTexts = texts; R.sampleForms = forms; }
-    if (getenv("VESPERIS_TOPFRAMES")) {   // H-04: a people's own most repeated frames (the tuning's)
+    if (getenv("VESPERIS_TOPFRAMES")) {   // a people's own most repeated frames (the tuning's)
         std::vector<const std::vector<std::string>*> f; for (const auto& x : forms) f.push_back(&x);
         std::vector<std::pair<int, std::string>> top; vgTopFrames(texts, atoi(getenv("VESPERIS_TOPFRAMES")), top, &f);
         printf("  -- %s's most repeated frames:\n", b.name.c_str());
@@ -353,7 +353,7 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
                   G->errors.empty() ? "" : (": " + G->errors[0]).c_str(), same, read, biggestName.c_str(), biggest));
     }
     {   // H-04's second pass: every .vg in the tree compiled in (the harness reads a new file from disk before the build lists it);
-        // E-09: and every one compiled in found there, so an empty or missing folder fails; E-11: the loader's list, its folders walked
+        // and every one compiled in found there, so an empty or missing folder fails; E-11: the loader's list, its folders walked
         std::vector<std::string> names; shardGrammarFiles(&names);
         const std::vector<std::string> tree = shardGrammarTree("src/peoples/grammar");
         int missing = 0; std::string first;
@@ -413,7 +413,7 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
         check("history: the everyday of the quiet years and of the families, the twenty-one kinds over the test worlds' peoples, each at a place standing, its persons alive, the families' private (H-04's second pass)",
               present == (HE_VISIT - HE_FAIR + 1) + (HE_BETROTHAL - HE_ILLNESS + 1) && bad == 0, fmt("%d everyday events of %d (%s); %d out of place%s", total, events, list.c_str(), bad, firstBad.empty() ? "" : (": " + firstBad).c_str()));
     }
-    {   // H-04: the records of the test worlds' peoples (the C series' two, the world of two peoples, the six age worlds): every check at zero, every name
+    {   // the records of the test worlds' peoples (the C series' two, the world of two peoples, the six age worlds): every check at zero, every name
         // the history's at the record's year, each age's genres told, one event from several sides, the same twice and alone, the cost
         GrammarRun R;
         std::vector<GrammarWorld> W = grammarWorlds(0);
@@ -442,7 +442,7 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
               fmt("texts of %d ages, %d genres told on the %d peoples; %d events told in two genres or more; a text %.1f us on average (%.0f at most), a people's texts %.1f ms on average with its history (%.1f at most); %d words a text (%d-%d)",
                   ages, genres, R.peoples, R.sidesEvents, usMean, R.usMax, R.peoples ? R.msSum / R.peoples : 0.0, R.msMax, R.texts ? (int)(R.words / R.texts) : 0, R.minW, R.maxW));
     }
-    {   // D-05: the test drifters' peoples' records (the Reimempel, medieval; the Ghaiwuwutxu and the Ainyiny, modern): every check at zero, every name
+    {   // the test drifters' peoples' records (the Reimempel, medieval; the Ghaiwuwutxu and the Ainyiny, modern): every check at zero, every name
         // the history's at its year, their own genres told
         GrammarRun R;
         for (const AgeWorld& d : TEST_DRIFTERS) {
@@ -460,7 +460,7 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
               fmt("%d peoples, %d records, %d texts; %s; %d names, %d not the history's; their genres: %s", R.peoples, R.records, R.texts, fails ? counts.c_str() : "every check at zero", R.namesTold, R.namesBad, list.c_str()));
         if (!R.failures.empty()) check("records of the lost sun: the first failure", false, R.failures[0]);
     }
-    {   // D-05: no other people's records moved: the age and scene worlds' peoples (their histories, record catalogues and homes, every text, their
+    {   // no other people's records moved: the age and scene worlds' peoples (their histories, record catalogues and homes, every text, their
         // charts' marks) as D-04 left them (the hash pinned: `build/d05/recdump` showed them the same, byte for byte)
         uint64_t h = 0xD05;
         std::set<std::string> seen;
@@ -968,7 +968,7 @@ int runGrammar(int argc, char** argv) {
         else if (a == "print" && i + 1 < argc) { std::string v = argv[++i]; print = v == "all" ? -1 : atoi(v.c_str()); }
         else if (a == "ages") ages = true;
         else if (a == "rogues") rogues = true;   // D-05: the drifters' peoples within 3,000 ly of home besides
-        else if (a.compare(0, 7, "rogues=") == 0) { rogues = true; roguesLy = atof(a.c_str() + 7); }   // D-05: within that many
+        else if (a.compare(0, 7, "rogues=") == 0) { rogues = true; roguesLy = atof(a.c_str() + 7); }   // within that many
         else if (a == "out" && i + 1 < argc) textsOut = argv[++i];   // H-04's second pass: the texts' file (writers working side by side)
         else if (a == "late" && i + 1 < argc) late = atoi(argv[++i]);   // H-04's second pass: the nearest peoples of the modern age and later besides (the measure at 100 texts)
         else if (a == "compare" && i + 1 < argc) compareWith = argv[++i];
@@ -978,7 +978,7 @@ int runGrammar(int argc, char** argv) {
             printf("grammar check: %d failure%s\n", failures, failures == 1 ? "" : "s");
             return failures ? 1 : 0;
         }
-        else if (a == "where") return grammarWhere(argc - i - 1, argv + i + 1, dir, embedded);   // E-11
+        else if (a == "where") return grammarWhere(argc - i - 1, argv + i + 1, dir, embedded);
         else if (a == "schema") return grammarSchema();
     }
     if (!embedded) {
@@ -1004,7 +1004,7 @@ int runGrammar(int argc, char** argv) {
             if (!dup) { W.push_back({p.x, p.y, p.z, p.body, p.which}); added++; }
         }
     }
-    if (rogues) for (const Star& d : drifterPeoplesNearHome(roguesLy)) {   // D-05
+    if (rogues) for (const Star& d : drifterPeoplesNearHome(roguesLy)) {
         StarSystem ds; ds.generate(d);
         const int np = std::max(1, peoplesOf(BodyGen::make(ds.bodies[0])));
         for (int k = 0; k < np; k++) W.push_back({d.sx, d.sy, d.sz, 0, k});
@@ -1048,7 +1048,7 @@ int runGrammar(int argc, char** argv) {
         std::vector<std::pair<int, std::string>> top; vgTopFrames(R.sampleTexts, 8, top, &f);
         for (const auto& t : top) printf("    x%d  %s\n", t.first, t.second.c_str());
     }
-    {   // H-04: the genres: how many, their lengths, their own repetition over every people's
+    {   // the genres: how many, their lengths, their own repetition over every people's
         printf("the genres (records, words: mean, shortest, longest; repeated frames within the genre over every people's; H-04's second pass: the share of its\n"
                "sentences on a frame two peoples or more wrote in it, and within one people the share on a frame that people wrote twice):\n");
         for (const auto& kv : R.genres) {
@@ -1083,7 +1083,7 @@ int runGrammar(int argc, char** argv) {
         printf("%s\n", shown == 0 ? " none" : "");
     }
     if (ages) { printf("fifty records of one people per age, for reading:\n"); printAgeRecords(); }
-    if (!compareWith.empty()) {   // H-04: against C-02's texts of the same peoples
+    if (!compareWith.empty()) {   // against C-02's texts of the same peoples
         std::vector<OldPeople> old = readOldTexts(compareWith);
         double r50 = 0, r100 = 0, rAll = 0, d50 = 0, w = 0, g2 = 0, g3 = 0; int n50 = 0, n100 = 0, nAll = 0, texts = 0;
         for (const OldPeople& p : old) {

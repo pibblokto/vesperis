@@ -1,21 +1,10 @@
-// H-04 (2026-10-09): the records' texts (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 9; `docs/archive/ideas/RESEARCH-records.md`,
-// sections 3 and 6). A people's records are written from its history by the grammar (peoples/grammar.h; the files in peoples/grammar/):
-//
-// * The genre is the grammar's (`record`, its root): by the age of the record's year and the medium T-04 made it in (a tally on a bone,
-//   an annal on a tablet, a newspaper on printed pages, a machine's log on a drive), weighed by what the history offers at the date (a
-//   letter needs two of a family alive, an epitaph a death, a timetable a railway), so a people writes as its age wrote.
-// * The model (`RecordModel`) gives the grammar the dozens of inputs: the world (its sky, its land, its water and its seasons), the
-//   people (its faith, what it lived by and valued, its sacred number and its focal work, how it kept its dead), the history at the
-//   record's date (the era and its government, the ruler and the reign's year, the war or the sickness of the time, the harvest, the
-//   inventions there were, the institutions, the stage of the collapse), the record (its writer, reader and subject, cast from the
-//   history's persons alive at the date; its place; its season; the writer's temper) and the other people.
-// * The plan's directives pick what a record tells (`@news`, `@entries`, `@years`, `@death`, `@deed`, `@life`, `@event`): the events
-//   near its date by salience (the event's weight, how near it was, its place, the writer's stake), each told in the register of the
-//   genre (`annal.<kind>`, `letter.<kind>`, `news.<kind>`, `song.<kind>`, `log.<kind>`, `picture.<kind>`). A people's records are one
-//   catalogue: an event told already counts half, a great one told by another register counts more (the annal, the letter and the song
-//   of one event), and the grammar's memory spreads its alternatives.
-// * Every person and place a record names is the history's, alive or standing at the date (the harness and the unit check it); the
-//   collapse is told late and from many sides because the history puts it late and the genres of its years are its witnesses.
+// The records' texts (H-04; docs/reference/civilisations/records-and-grammar.md): written from a people's history by the grammar
+// (peoples/grammar.h, peoples/grammar/). The genre is the grammar's root's (`record`) by the record's age and medium, weighed by what the
+// history offers at its date; the model (`RecordModel`) gives the grammar its inputs (the world, the people, the history at the date, the
+// record's writer, reader, subject, place and season, the other people); the plan's directives (`@news`, `@entries`, `@years`, `@death`,
+// `@deed`, `@life`, `@event`) pick the events near the date by salience, each told in the genre's register (`annal.<kind>`, ...). A
+// people's records are one catalogue (an event told already counts less), and every person and place a record names is the history's, alive
+// or standing at the date.
 #pragma once
 #include "grammar.h"
 #include "shards.h"

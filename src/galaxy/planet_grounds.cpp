@@ -2,18 +2,18 @@
 // features and materials: cratered to ammonia (the rest in planet_grounds2.cpp)
 #include "planet_internal.h"
 
-// P-00: the cratered airless ground: maria between rolling highlands, the crater stack (cratered worlds)
+// the cratered airless ground: maria between rolling highlands, the crater stack (cratered worlds)
 void groundCratered(GroundCtx& c) {
     const BodyGen& g = c.g; SurfaceSample& s = c.s; CraterMarks& cm = c.cm; const double& rimBright = c.cm.rimBright;
     const double R = c.R, massif = c.massif, hillsF = c.hillsF;
     double base = c.fb(R * 0.5, g.sA, 5);
     double mare = smoothstep(0.15, 0.4, base);
     double h = base * g.mountainAmp * (1 - 0.8 * mare);
-    // O6-02: rolling highlands between the maria (the 20 km hills and the 400 m detail of generation 5 are gone)
+    // rolling highlands between the maria (the 20 km hills and the 400 m detail of generation 5 are gone)
     double rel = (1 - mare) * massif, hf = std::max(hillsF, 0.6 * (1 - mare));
-    c.relief(h, rel, hf, reliefAmp(g, rel, hf) * (1 - 0.7 * mare));   // P-00: the skeleton (the maria smooth the relief)
+    c.relief(h, rel, hf, reliefAmp(g, rel, hf) * (1 - 0.7 * mare));   // the skeleton (the maria smooth the relief)
     double cr = 0;
-    c.craterStack(cr);   // P-00: the kind's eight grids (M9-06: the 0.5 km pass denser in the secondary fields near large craters)
+    c.craterStack(cr);   // the kind's eight grids (M9-06: the 0.5 km pass denser in the secondary fields near large craters)
     h += cr * (1 - 0.5 * mare);
     s.height = h;
     double flooded = clampd(cm.flooded, 0, 1);
@@ -30,11 +30,11 @@ void groundMolten(GroundCtx& c) {
     double roughL = c.rg(R * 0.15, g.sC, 2);
     bool caldera = false;
     double h = base * 1600.0 + roughL * g.mountainAmp * 0.5;
-    double zone = smoothstep(0.45, 0.85, roughL), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: the rough belts carry the relief spectrum
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = smoothstep(0.45, 0.85, roughL), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // the rough belts carry the relief spectrum
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     if (scaleVisible(R * 0.25, detailM)) h += volcanoField(p, R, R * 0.25, g.volcanoes * 0.6, g.sD, 2800.0, caldera);
     if (scaleVisible(30.0, detailM)) h += volcanoField(p, R, 30.0, g.volcanoes * 0.8, g.sD + 3, 700.0, caldera);
-    LavaOut lf = lavaFlows(p, R, 30.0, g.volcanoes * 0.8, g.sD + 3, detailM);   // O6-05: tongues and pit chains from the cones
+    LavaOut lf = lavaFlows(p, R, 30.0, g.volcanoes * 0.8, g.sD + 3, detailM);   // tongues and pit chains from the cones
     h += lf.dh;
     s.height = h;
     s.relief = clampd(roughL + 0.5 * rel + 0.5 * rf.slope, 0, 1);
@@ -58,8 +58,8 @@ void groundVenusian(GroundCtx& c) {
     double base = c.fb(R * 0.45, g.sA, 5);
     double h = base * g.mountainAmp + tec.uplift * 800.0;
     { double chainR = c.rg(45.0, g.sC + 2, 6); h += tec.chain * (chainR * chainR * g.chainAmp * 0.7) - tec.rift * 800.0 + tec.ridge * 400.0; }
-    double zone = clampd(smoothstep(0.1, 0.6, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: tesserae on the highlands and along the chains
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = clampd(smoothstep(0.1, 0.6, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // tesserae on the highlands and along the chains
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     if (scaleVisible(R * 0.08, detailM)) h += domeField(p, R, R * 0.08, 0.3, g.sD, 0.35, 700.0, 0.85) * lodFade(R * 0.08, detailM);
     if (scaleVisible(3.0, detailM)) h += domeField(p, R, 3.0, 0.3, g.sD + 1, 0.4, 40.0, 0.9);
     s.height = h;
@@ -75,18 +75,18 @@ void groundRocky(GroundCtx& c) {
     double creaseL = c.rg(R * 0.15, g.sA, 2);
     double base = c.fb(R * 0.45, g.sB, 4);
     double h = creaseL * g.mountainAmp + base * 600.0;
-    {   // M9-02: chains and rifts across the crust
+    {   // chains and rifts across the crust
         double chainR = c.rg(40.0, g.sA + 2, 7);
         h += tec.chain * (chainR * chainR * g.chainAmp * 0.8 + std::fabs(chainR) * 500.0) + tec.uplift * 600.0;
         h -= tec.rift * 900.0 * (0.5 + 0.5 * std::fabs(c.fb(50.0, g.sA + 3, 3)));
         h += tec.ridge * 500.0 * std::fabs(c.rg(35.0, g.sA + 4, 5));
     }
-    double zone = clampd(smoothstep(0.3, 0.7, creaseL) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: creased ridges (the 20 km crease, the 4 km hills and the detail are gone)
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = clampd(smoothstep(0.3, 0.7, creaseL) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // creased ridges (the 20 km crease, the 4 km hills and the detail are gone)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     if (scaleVisible(R * 0.3, detailM)) h += domeField(p, R, R * 0.3, 0.2, g.sD + 7, 0.4, 900.0, 0.6) * lodFade(R * 0.3, detailM);   // old shield volcanoes
     if (scaleVisible(0.25, detailM)) h += domeField(p, R, 0.25, g.boulderDensity, g.sD, 0.16, 14.0, 0.0);
     if (scaleVisible(0.06, detailM)) h += domeField(p, R, 0.06, g.boulderDensity * 0.7, g.sD + 2, 0.2, 3.0, 0.0);
-    c.craterStack(h);   // P-00: the kind's crater stack
+    c.craterStack(h);   // the kind's crater stack
     s.height = h;
     s.material = MAT_ROCK;
     s.albedo = 0.28 + 0.18 * creaseL + 0.05 * base + 0.06 * clampd(rf.slope * 2.0, 0, 1);
@@ -103,28 +103,28 @@ void groundThinAir(GroundCtx& c) {
     double canyon = std::pow(clampd(canyonN, 0, 1), 9.0);
     double mtnMask = smoothstep(0.3, 0.7, mtnL) * smoothstep(-0.2, 0.4, base);
     double h = base * 1800.0 + mtnL * mtnL * g.mountainAmp * mtnMask - canyon * 2200.0;
-    {   // M9-02 chains and rifts, M9-07 shield volcanoes with dark lava plains around them
+    {   // chains and rifts, M9-07 shield volcanoes with dark lava plains around them
         double chainR = c.rg(40.0, g.sC + 2, 7);
         h += tec.chain * (chainR * chainR * g.chainAmp * 0.9 + std::fabs(chainR) * 500.0) + tec.uplift * 900.0;
         h -= tec.rift * 1500.0 * (0.5 + 0.5 * std::fabs(c.fb(50.0, g.sC + 3, 3)));
         h += tec.ridge * 600.0 * std::fabs(c.rg(35.0, g.sC + 4, 5));
     }
-    // O6-02: the relief spectrum (the 30 km ridges, the 8 km hills and the 400 m detail of generation 5 are gone)
+    // the relief spectrum (the 30 km ridges, the 8 km hills and the 400 m detail of generation 5 are gone)
     double zone = clampd(mtnMask + 0.8 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);
     double relief0 = clampd(rel + 0.25 * hf, 0, 1);
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     bool shieldCal = false;
     double shield = 0;
     if (scaleVisible(R * 0.35, detailM)) { shield = volcanoField(p, R, R * 0.35, 0.28, g.sD + 11, 1400.0, shieldCal) * lodFade(R * 0.35, detailM); h += shield; }
-    c.craterStack(h);   // P-00: the kind's crater stack
-    if (h < 200) { const double share = smoothstep(200, -300, h); double lee = 0; h += duneField(p, g, lat, g.duneAmp, detailM, &lee) * share; s.slipFace = share * lee; }   // dune seas in the lowlands (M9-08)
-    applyDrainage(g, unit, detailM, h, nullptr, rf.slope, false, false, 0.5, DA);   // O6-03: the old valley networks, dry, with dust flats in the basins
+    c.craterStack(h);   // the kind's crater stack
+    if (h < 200) { const double share = smoothstep(200, -300, h); double lee = 0; h += duneField(p, g, lat, g.duneAmp, detailM, &lee) * share; s.slipFace = share * lee; }   // dune seas in the lowlands
+    applyDrainage(g, unit, detailM, h, nullptr, rf.slope, false, false, 0.5, DA);   // the old valley networks, dry, with dust flats in the basins
     s.height = h;
     s.relief = clampd(relief0 + 0.5 * rf.slope, 0, 1);
     double capEdge = g.iceCapLat + 5.0 * gnoise3(p / (R * 0.15), g.sF + 7);
     if (absLatDeg > capEdge) { s.material = MAT_ICE; s.albedo = 0.85; }
-    else if (DA.playa > 0.3) { s.material = MAT_DUST; s.albedo = 0.56 + 0.06 * base; }   // O6-03: a dust flat in a closed basin
-    else if (relief0 + 0.5 * rf.slopeM > 0.6 && h > 1500) { s.material = MAT_ROCK; s.albedo = 0.35; }   // B-404: the material chain's slope, not `s.relief` (whose slope is the ring's own)
+    else if (DA.playa > 0.3) { s.material = MAT_DUST; s.albedo = 0.56 + 0.06 * base; }   // a dust flat in a closed basin
+    else if (relief0 + 0.5 * rf.slopeM > 0.6 && h > 1500) { s.material = MAT_ROCK; s.albedo = 0.35; }   // the material chain's slope, not `s.relief` (whose slope is the ring's own)
     else if (shield > 400 || shieldCal) { s.material = MAT_BASALT; s.albedo = 0.22 + 0.06 * base; }
     else { s.material = MAT_DUST; s.albedo = 0.42 + 0.12 * base + 0.10 * clampd(rimBright, 0, 1) - 0.12 * canyon + 0.25 * clampd(cm.rays, 0, 1) - 0.1 * clampd(cm.flooded, 0, 1); }
 }
@@ -135,13 +135,13 @@ void groundIce(GroundCtx& c) {
     const double R = c.R, detailM = c.detailM, massif = c.massif, hillsF = c.hillsF;
     double base = c.fb(R * 0.45, g.sA, 5);
     double h = base * g.mountainAmp;
-    double zone = smoothstep(0.1, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: ridged uplands on the high ground (the 6 km hills and the detail are gone)
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = smoothstep(0.1, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // ridged uplands on the high ground (the 6 km hills and the detail are gone)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     Crack c1 = c.crackAt(R * 0.15, g.sF, g.fractureWidth, 1.0), c2 = c.crackAt(12.0, g.sF + 3, g.fractureWidth, 0.8), c3 = c.crackAt(1.2, g.sF + 5, g.fractureWidth * 1.3, 0.6);
-    double crack = std::max(c1.h, std::max(c2.h, c3.h)), crackM = std::max(c1.m, std::max(c2.m, c3.m));   // B-404: the relief by the faded lines, the rock by the unfaded ones
+    double crack = std::max(c1.h, std::max(c2.h, c3.h)), crackM = std::max(c1.m, std::max(c2.m, c3.m));   // the relief by the faded lines, the rock by the unfaded ones
     h -= crack * 60.0;
-    c.craterStack(h);   // P-00: the kind's crater stack
-    // M9-07 cryovolcanoes (bright fresh domes) and geyser fields (bright spots on the ground)
+    c.craterStack(h);   // the kind's crater stack
+    // cryovolcanoes (bright fresh domes) and geyser fields (bright spots on the ground)
     double fresh = 0;
     if (scaleVisible(25.0, detailM)) { double cv = domeField(p, R, 25.0, 0.12, g.sD + 21, 0.25, 140.0, 0.0); h += cv; fresh += cv / 140.0; }
     if (scaleVisible(2.0, detailM)) fresh += domeField(p, R, 2.0, 0.08, g.sD + 22, 0.15, 1.0, 0.0);
@@ -157,10 +157,10 @@ void groundQuartz(GroundCtx& c) {
     const double R = c.R, detailM = c.detailM, massif = c.massif, hillsF = c.hillsF;
     double base = c.fb(R * 0.35, g.sA, 5);
     double h = base * g.mountainAmp;
-    double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: rounded mounds (ridge near 0, low ground smoothed; the 3.5 km rounded hills are gone)
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // rounded mounds (ridge near 0, low ground smoothed; the 3.5 km rounded hills are gone)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     if (scaleVisible(R * 0.06, detailM)) h += domeField(p, R, R * 0.06, 0.4, g.sD, 0.3, 500.0, 0.0) * lodFade(R * 0.06, detailM);
-    c.craterStack(h);   // P-00: the kind's crater stack
+    c.craterStack(h);   // the kind's crater stack
     s.height = h;
     s.material = MAT_QUARTZ;
     s.albedo = 0.78 + 0.12 * base;
@@ -173,11 +173,11 @@ void groundOcean(GroundCtx& c) {
     const double R = c.R, lat = c.lat, absLatDeg = c.absLatDeg;
     // one global sea; ice floes drift toward the poles (plates with water gaps). B-322: the floe zone lies over a shallow
     // shelf sea (the floor at 5-8 m; the open ocean stays at 150 m) and every plate rises out of it through a submerged
-    // ice foot, so the shore is the water plane's contour on a continuous surface at every ring: it used to be a jump
-    // from +1 m to -150 m between two vertices, a stair of cells from the air and a cliff face from the water
+    // ice foot, so the shore is the water plane's contour on a continuous surface at every ring (not a jump from +1 m
+    // to -150 m between two vertices: a stair of cells from the air and a cliff face from the water)
     double swell = c.fb(2.0, g.sB, 4) * g.hillAmp;
     double capEdge = g.iceCapLat + 8.0 * gnoise3(p / (R * 0.2), g.sF + 7) - 8.0 * clampd(lat >= 0 ? -g.season : g.season, 0, 1);
-    double nightIce = g.locked && !c.K.evenClimate ? clampd((-dot(unit, g.lockedDir) - 0.05) / 0.3, 0, 1) : 0.0;   // M5-08: the night side freezes over (P-03: not under a hycean's air)
+    double nightIce = g.locked && !c.K.evenClimate ? clampd((-dot(unit, g.lockedDir) - 0.05) / 0.3, 0, 1) : 0.0;   // the night side freezes over (P-03: not under a hycean's air)
     double cover = std::max(smoothstep(capEdge - 12, capEdge + 6, absLatDeg), nightIce);       // the share of the plates that are ice
     double shelf = smoothstep(0.0, 0.04, cover);   // the whole floe zone (the plates appear at any cover) lies on the shelf
     double floor = (-150.0 + swell) + ((-6.5 + 0.3 * swell) - (-150.0 + swell)) * shelf;
@@ -203,19 +203,19 @@ void groundOcean(GroundCtx& c) {
 void groundEuropan(GroundCtx& c) {
     const BodyGen& g = c.g; const Vec3& p = c.p; SurfaceSample& s = c.s; const double& rimBright = c.cm.rimBright;
     const double R = c.R, detailM = c.detailM, massif = c.massif, hillsF = c.hillsF;
-    // R-307: an ice shell over a hidden ocean: a plain a few tens of metres in relief, crossed by lineae (double ridges
+    // an ice shell over a hidden ocean: a plain a few tens of metres in relief, crossed by lineae (double ridges
     // with a trough between, stained red-brown by what wells up through them), chaos terrain where the shell broke
     // into rafts, a few craters. The water geysers stand on the lineae (`drawGeysers` finds the stained cells)
     double base = c.fb(R * 0.5, g.sA, 4);
     double h = base * 60.0;
     double zone = smoothstep(0.3, 0.7, base), rel = zone * massif * 0.3, hf = hillsF * 0.3;
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     double stain = 0, band = 0;
     auto lineae = [&](double cellKm, double ridgeM, double troughM, double spanM, uint64_t seed, double fadeKm) {
-        // B-404: the ridges fade with the sampling scale as before; the stain (three spans wide: the dust) is unfaded
-        // wherever it spans half a cell, so the three sets' brown bands lie on the same ground in every ring (they
-        // used to follow the fade: the 6 km set's bands ended at the near ring's edge, the 40 km set's at the 16 m ring's)
-        double f = featFade(spanM * 4.0 / 1000.0, detailM);   // the double ridge and its trough, four spans wide (it was `lodFade(fadeKm)`: the 12 m ridges stood at 41% in the 16 m ring)
+        // the ridges fade with the sampling scale as before; the stain (three spans wide: the dust) is unfaded
+        // wherever it spans half a cell, so the three sets' brown bands lie on the same ground in every ring (following
+        // the fade, the 6 km set's bands would end at the near ring's edge, the 40 km set's at the 16 m ring's)
+        double f = featFade(spanM * 4.0 / 1000.0, detailM);   // the double ridge and its trough, four spans wide (`lodFade(fadeKm)` would leave the 12 m ridges at 41% in the 16 m ring)
         bool mv = matVisible(spanM * 3.0 / 1000.0, detailM);
         (void)fadeKm;
         if (f <= 0 && !mv) return;
@@ -241,9 +241,9 @@ void groundEuropan(GroundCtx& c) {
     if (chaosMask > 0 && scaleVisible(3.0, detailM)) {
         Worley3 cw = worley3(p / 3.0, g.sF + 9);
         double edge = smoothstep(0.02, 0.07, cw.f2 - cw.f1);
-        h += chaosMask * edge * (60.0 * unitFromHash(cw.id1) - 30.0) * featFade(3.0, detailM);   // B-404: the rafts by their own size (the 512 m ring draws them)
+        h += chaosMask * edge * (60.0 * unitFromHash(cw.id1) - 30.0) * featFade(3.0, detailM);   // the rafts by their own size (the 512 m ring draws them)
     }
-    c.craterStack(h);   // P-00: the kind's crater stack
+    c.craterStack(h);   // the kind's crater stack
     s.height = h;
     s.material = stain > 0.5 ? MAT_DUST : MAT_ICE;
     s.albedo = stain > 0.5 ? 0.40 - 0.1 * stain : (0.72 + 0.08 * base + 0.1 * clampd(rimBright, 0, 1) - 0.15 * chaosMask) * (1 - 0.35 * stain);
@@ -254,13 +254,13 @@ void groundEuropan(GroundCtx& c) {
 void groundTectonic(GroundCtx& c) {
     const BodyGen& g = c.g; const Vec3& p = c.p; SurfaceSample& s = c.s; const Tectonics& tec = c.tec;
     const double R = c.R, detailM = c.detailM, massif = c.massif, hillsF = c.hillsF;
-    // R-307: a seismic world: rift valleys where the crust pulls apart (their floors flat, 800 m down), fissures on the
+    // a seismic world: rift valleys where the crust pulls apart (their floors flat, 800 m down), fissures on the
     // floors running with lava (`drawFountains` stands its fountains on them), fault-block ranges, ash plains, sulphur
     // crusts round the vents, a few volcanoes
     double base = c.fb(R * 0.4, g.sA, 5);
     double h = base * g.mountainAmp * 0.6 + tec.uplift * 700.0;
     double zone = clampd(smoothstep(0.1, 0.6, base) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     double hS = h - (rf.h - rf.hCoarse);
     Worley3 rw = worley3(p / (R * 0.3), g.sF + 5);
     double dRift = (rw.f2 - rw.f1) * R * 0.3 * 500.0;   // metres from the rift axis
@@ -277,9 +277,9 @@ void groundTectonic(GroundCtx& c) {
     bool caldera = false;
     if (scaleVisible(R * 0.2, detailM)) h += volcanoField(p, R, R * 0.2, g.volcanoes * 0.5, g.sD, 2200.0, caldera) * lodFade(R * 0.2, detailM);
     if (scaleVisible(20.0, detailM)) h += volcanoField(p, R, 20.0, g.volcanoes * 0.7, g.sD + 3, 500.0, caldera);
-    LavaOut lf = lavaFlows(p, R, 20.0, g.volcanoes * 0.7, g.sD + 3, detailM);   // O6-05
+    LavaOut lf = lavaFlows(p, R, 20.0, g.volcanoes * 0.7, g.sD + 3, detailM);
     h += lf.dh;
-    c.craterStack(h);   // P-00: the kind's crater stack
+    c.craterStack(h);   // the kind's crater stack
     s.height = h;
     double ash = c.fb(R * 0.1, g.sC + 8, 3);
     if (lava > 0.5 || caldera) { s.material = MAT_LAVA; s.glow = 1.0; s.albedo = 1.0; }
@@ -294,18 +294,18 @@ void groundTectonic(GroundCtx& c) {
 void groundDesert(GroundCtx& c) {
     const BodyGen& g = c.g; const Vec3& unit = c.unit; const Vec3& p = c.p; SurfaceSample& s = c.s; const double& rimBright = c.cm.rimBright; const Tectonics& tec = c.tec; DrainApply& DA = c.DA;
     const double R = c.R, detailM = c.detailM, lat = c.lat, massif = c.massif, hillsF = c.hillsF;
-    // R-307: a dry world under a dusty sky: hamada plains, mesas where the flats terrace, canyons, ergs in the basins
+    // a dry world under a dusty sky: hamada plains, mesas where the flats terrace, canyons, ergs in the basins
     // with salt pans at their floors (the dust devils and storms are the surface's, `computeEnvironment`)
     double base = c.fb(R * 0.5, g.sA, 5);
     double h = base * 1400.0 + tec.uplift * 600.0;
     { double chainR = c.rg(40.0, g.sC + 2, 6); h += tec.chain * (chainR * chainR * g.chainAmp * 0.6) - tec.rift * 700.0 + tec.ridge * 300.0; }
     double zone = clampd(smoothstep(0.2, 0.7, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.5 * zone);
     double relief0 = clampd(rel + 0.25 * hf, 0, 1);
-    double hRel, hS; ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf), &hRel, &hS, false);   // P-00: the skeleton without the cliff bands (the mesas terrace below); hS the smooth ground before the landforms
+    double hRel, hS; ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf), &hRel, &hS, false);   // the skeleton without the cliff bands (the mesas terrace below); hS the smooth ground before the landforms
     double canyonN = c.rg(R * 0.3, g.sF, 2);
     double canyon = std::pow(clampd(canyonN, 0, 1), 8.0);
     h -= canyon * 900.0;
-    double oldSea = 0, seaDepth = 0, bedH = 0;   // C-01: a dead world's seas, dry: the bed a sediment floor keeping a tenth of the relief, deeper offshore
+    double oldSea = 0, seaDepth = 0, bedH = 0;   // a dead world's seas, dry: the bed a sediment floor keeping a tenth of the relief, deeper offshore
     if (g.oldSeaM > -1e8) {            // (a canyon under the level was a sound of the sea), the old shore a bench of beach ridges a few metres
         double hC = hRel - canyon * 900.0;   // over the level (the coastal flats the people lived on). The level cuts the coarse ground with its
         oldSea = smoothstep(g.oldSeaM + 1.5, g.oldSeaM - 1.5, hC);   // canyons in a band of 3 m: the shore is a low scarp, not a ramp
@@ -324,16 +324,16 @@ void groundDesert(GroundCtx& c) {
     double salt = 0;
     if (basin > 0.7 && h < 80) { double pan = smoothstep(0.7, 0.9, basin); h += (hS - 4.0 - h) * pan; salt = pan; }
     if (basin > 0.2 && salt < 0.5) { const double share = smoothstep(0.2, 0.5, basin); double lee = 0; h += duneField(p, g, lat, g.duneAmp * (0.6 + 0.4 * basin), detailM, &lee) * share; s.slipFace = share * lee; }
-    c.craterStack(h);   // P-00: the kind's crater stack
-    applyDrainage(g, unit, detailM, h, &hS, rf.slope, false, false, g.oldSeaM > -1e8 ? 0.75 : 0.5, DA);   // O6-03: wadis, and playas in the closed basins (C-01: a dead world's rivers ran wetter: a denser net)
-    if (oldSea > 0) h += (bedH - h) * oldSea;   // C-01: the bed again: a wadi's valley reaching down over the shore lifted the bed toward its banks, and the craters and dunes are the sea's silt now
+    c.craterStack(h);   // the kind's crater stack
+    applyDrainage(g, unit, detailM, h, &hS, rf.slope, false, false, g.oldSeaM > -1e8 ? 0.75 : 0.5, DA);   // wadis, and playas in the closed basins (C-01: a dead world's rivers ran wetter: a denser net)
+    if (oldSea > 0) h += (bedH - h) * oldSea;   // the bed again: a wadi's valley reaching down over the shore lifted the bed toward its banks, and the craters and dunes are the sea's silt now
     s.height = h;
     if (salt > 0.5 || DA.playa > 0.3) { s.material = MAT_SALT; s.albedo = 0.85; }
     else if (DA.bed > 0.4) { s.material = MAT_SAND; s.albedo = 0.6 + 0.1 * base; }   // the wadi's bed
     else if (basin > 0.5) { s.material = MAT_SAND; s.albedo = 0.6 + 0.1 * base; }
     else if (relief0 > 0.5 || canyon > 0.3) { s.material = MAT_ROCK; s.albedo = 0.4 + 0.1 * base; }
     else { s.material = MAT_DUST; s.albedo = 0.46 + 0.12 * base + 0.1 * clampd(rimBright, 0, 1); }
-    if (oldSea > 0.5 && DA.bed < 0.4) {   // C-01: the seabed's silt, the last brine's salt in the deeps; the old beaches along the shore
+    if (oldSea > 0.5 && DA.bed < 0.4) {   // the seabed's silt, the last brine's salt in the deeps; the old beaches along the shore
         if (seaDepth > 420.0 + 150.0 * c.fb(R * 0.05, g.sG + 9, 2)) { s.material = MAT_SALT; s.albedo = 0.82; }
         else { s.material = MAT_ROCK; s.albedo = 0.36 + 0.05 * base; }   // the silt crust of the floor: the rock's brown, darker than the hamada
     } else if (g.oldSeaM > -1e8 && oldSea < 0.5 && hRel - canyon * 900.0 - g.oldSeaM < 6.0 && DA.bed < 0.4 && salt < 0.5) { s.material = MAT_SAND; s.albedo = 0.62; }
@@ -345,20 +345,20 @@ void groundDesert(GroundCtx& c) {
 void groundHydrocarbon(GroundCtx& c) {
     const BodyGen& g = c.g; const Vec3& unit = c.unit; const Vec3& p = c.p; SurfaceSample& s = c.s; const double& rimBright = c.cm.rimBright; DrainApply& DA = c.DA;
     const double R = c.R, detailM = c.detailM, lat = c.lat, absLatDeg = c.absLatDeg, massif = c.massif, hillsF = c.hillsF;
-    // R-307: under the orange haze: rounded hills of ice-rock, belts of dark tholin dunes in the low latitudes, seas
+    // under the orange haze: rounded hills of ice-rock, belts of dark tholin dunes in the low latitudes, seas
     // and lakes of methane in the lowlands and toward the poles (the liquid at the reference level, the post-step
     // below), dry channels cut down to them, cryovolcanic domes
     double base = c.fb(R * 0.45, g.sA, 5);
     double h = base * 700.0 + 130.0 - 170.0 * smoothstep(50.0, 75.0, absLatDeg);
     double zone = smoothstep(0.2, 0.7, base), rel = zone * massif * 0.6, hf = std::max(hillsF, 0.5 * zone);
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     double chan = c.crackAt(30.0, g.sF + 4, 0.06, 1.0).h;   // channels: shallow valleys on 30 km cells, deeper toward the sea
     h -= chan * 25.0 * smoothstep(400.0, 50.0, h);
     double dunes = smoothstep(35.0, 20.0, absLatDeg) * smoothstep(0.0, 0.3, c.fb(R * 0.12, g.sG + 5, 3)) * smoothstep(300.0, 60.0, h) * smoothstep(0.0, 20.0, h);
     if (dunes > 0.05) { double lee = 0; h += duneField(p, g, lat, g.duneAmp, detailM, &lee) * dunes; s.slipFace = dunes * lee; }
     if (scaleVisible(25.0, detailM)) h += domeField(p, R, 25.0, 0.08, g.sD + 21, 0.25, 180.0, 0.0);
-    c.craterStack(h);   // P-00: the kind's crater stack
-    applyDrainage(g, unit, detailM, h, nullptr, rf.slope, true, true, 0.5, DA);   // O6-03: rivers of methane to the seas, lakes in the depressions
+    c.craterStack(h);   // the kind's crater stack
+    applyDrainage(g, unit, detailM, h, nullptr, rf.slope, true, true, 0.5, DA);   // rivers of methane to the seas, lakes in the depressions
     s.height = h;
     s.material = dunes > 0.4 ? MAT_SAND : MAT_ICE;
     if (DA.level > -1e8 && h < DA.level) { s.material = MAT_WATER; s.water = DA.level; s.albedo = 0.2; }
@@ -370,14 +370,14 @@ void groundHydrocarbon(GroundCtx& c) {
 void groundBombarded(GroundCtx& c) {
     const BodyGen& g = c.g; SurfaceSample& s = c.s; CraterMarks& cm = c.cm; const double& rimBright = c.cm.rimBright;
     const double R = c.R, massif = c.massif, hillsF = c.hillsF;
-    // R-307: a young surface under a rain of rock: craters at every scale with sharp rims and bright rays over a dark
+    // a young surface under a rain of rock: craters at every scale with sharp rims and bright rays over a dark
     // glassy regolith; the strikes themselves are the surface's (`drawImpacts`)
     double base = c.fb(R * 0.4, g.sA, 5);
     double h = base * g.mountainAmp * 0.6;
     double zone = smoothstep(0.2, 0.6, base), rel = zone * massif * 0.7, hf = std::max(hillsF, 0.5 * zone);
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     double cr = 0;
-    c.craterStack(cr, true);   // P-00: the kind's crater stack
+    c.craterStack(cr, true);   // the kind's crater stack
     h += cr;
     s.height = h;
     s.material = MAT_DUST;
@@ -389,22 +389,22 @@ void groundBombarded(GroundCtx& c) {
 void groundAcidic(GroundCtx& c) {
     const BodyGen& g = c.g; const Vec3& unit = c.unit; const Vec3& p = c.p; SurfaceSample& s = c.s; const Tectonics& tec = c.tec; DrainApply& DA = c.DA;
     const double R = c.R, detailM = c.detailM, massif = c.massif, hillsF = c.hillsF;
-    // R-307: a corrosive world: the rock bleached and eaten into karst (sinkholes at 300 m, towers in the wettest
+    // a corrosive world: the rock bleached and eaten into karst (sinkholes at 300 m, towers in the wettest
     // basins), sulphur crusts by the shores, seas of dilute acid at the reference level (the post-step below)
     double base = c.fb(R * 0.45, g.sA, 5);
     double h = base * g.mountainAmp * 0.8 + 150.0 + tec.uplift * 600.0;
     { double chainR = c.rg(45.0, g.sC + 2, 6); h += tec.chain * (chainR * chainR * g.chainAmp * 0.6) - tec.rift * 600.0; }
     double zone = clampd(smoothstep(0.1, 0.6, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.5 * zone);
     double relief0 = clampd(rel + 0.25 * hf, 0, 1);
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     double low = smoothstep(600.0, 150.0, h) * (1 - smoothstep(0.3, 0.5, relief0));
     if (low > 0.1 && scaleVisible(0.3, detailM)) {
         Worley3 kw = worley3(p / 0.3, g.sF + 12);
         h -= 9.0 * low * smoothstep(0.55, 0.15, kw.f1) * lodFade(0.3, detailM);
     }
     if (low > 0.5 && scaleVisible(1.5, detailM)) h += domeField(p, R, 1.5, 0.25, g.sD + 13, 0.12, 70.0, 0.0) * low;
-    c.craterStack(h);   // P-00: the kind's crater stack
-    applyDrainage(g, unit, detailM, h, nullptr, rf.slope, true, true, 0.5, DA);   // O6-03: rivers of dilute acid, lakes in the karst basins
+    c.craterStack(h);   // the kind's crater stack
+    applyDrainage(g, unit, detailM, h, nullptr, rf.slope, true, true, 0.5, DA);   // rivers of dilute acid, lakes in the karst basins
     s.height = h;
     double crust = smoothstep(40.0, 5.0, h) * smoothstep(0.35, 0.15, relief0);
     if (DA.level > -1e8 && h < DA.level) { s.material = MAT_WATER; s.water = DA.level; s.albedo = 0.22; }
@@ -419,10 +419,10 @@ void groundMetal(GroundCtx& c) {
     const double R = c.R, massif = c.massif, hillsF = c.hillsF;
     double base = c.fb(R * 0.4, g.sA, 5);
     double h = base * g.mountainAmp;
-    double zone = smoothstep(-0.2, 0.5, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02: sharp iron ridges (the 30 km crease and the 4 km hills are gone)
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = smoothstep(-0.2, 0.5, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // sharp iron ridges (the 30 km crease and the 4 km hills are gone)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     double cr = 0;
-    c.craterStack(cr, true);   // P-00: the kind's crater stack
+    c.craterStack(cr, true);   // the kind's crater stack
     h += cr;
     s.height = h;
     s.material = MAT_METAL;
@@ -437,11 +437,11 @@ void groundVolcanic(GroundCtx& c) {
     double base = c.fb(R * 0.4, g.sA, 4);
     bool caldera = false;
     double h = base * g.mountainAmp * 0.5;
-    double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02 (the 5 km hills and the detail are gone)
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
+    double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // (the 5 km hills and the detail are gone)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     if (scaleVisible(R * 0.2, detailM)) h += volcanoField(p, R, R * 0.2, g.volcanoes, g.sD, 3200.0, caldera) * lodFade(R * 0.2, detailM);
     if (scaleVisible(25.0, detailM)) h += volcanoField(p, R, 25.0, g.volcanoes * 0.9, g.sD + 3, 900.0, caldera);
-    LavaOut lf = lavaFlows(p, R, 25.0, g.volcanoes * 0.9, g.sD + 3, detailM);   // O6-05
+    LavaOut lf = lavaFlows(p, R, 25.0, g.volcanoes * 0.9, g.sD + 3, detailM);
     h += lf.dh;
     if (scaleVisible(4.0, detailM)) h += domeField(p, R, 4.0, 0.25, g.sD + 5, 0.3, 40.0, 0.0);
     s.height = h;
@@ -465,9 +465,9 @@ void groundCarbon(GroundCtx& c) {
     const double R = c.R, massif = c.massif, hillsF = c.hillsF;
     double base = c.fb(R * 0.45, g.sA, 5);
     double h = base * g.mountainAmp;
-    double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // O6-02 (the 6 km hills and the detail are gone)
-    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // P-00: the relief spectrum, the cliffs and plains (O6-04), the traits' landforms (R-305)
-    c.craterStack(h);   // P-00: the kind's crater stack
+    double zone = smoothstep(0.0, 0.6, base), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // (the 6 km hills and the detail are gone)
+    ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
+    c.craterStack(h);   // the kind's crater stack
     s.height = h;
     Worley3 dw = worley3(p / (R * 0.1), g.sF + 2);
     bool diamond = unitFromHash(dw.id1) < 0.18 && dw.f1 < 0.45;

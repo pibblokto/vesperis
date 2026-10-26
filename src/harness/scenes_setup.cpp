@@ -1,7 +1,7 @@
 // E-03: the scenes' placement: setupSceneForType puts a scene's world, site, hour and view by its type and code (scenes_table.h)
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
-// W-03: the first felisian world's pinned plain and the first front worth a scene that reaches it after t0: a strong one (the
+// the first felisian world's pinned plain and the first front worth a scene that reaches it after t0: a strong one (the
 // peak rain over a half) arriving by day (the sun over ten degrees); false when none within the window
 bool pinnedPlainFront(StarSystem& sys, int& bi, double t0, FrontForecast& fc, double window) {
     if (!firstBodyOfType(PT_FELISIAN, sys, bi)) return false;
@@ -40,7 +40,7 @@ struct SceneFind {
     double& facePitchOut;
     double& t0Use;
     bool& placed;
-    // P-03: a clear hour: of `tries` starts `stepS` apart, the first whose hour of the light asked has no rain or snow and the sky not
+    // a clear hour: of `tries` starts `stepS` apart, the first whose hour of the light asked has no rain or snow and the sky not
     // overcast (a hycean's haze is the sight, an eyeball's open sea; the weather hides them), or -1
     double clearHour(double la, double ln, double t0, double stepS, int tries) {
         for (int d = 0; d < tries; d++) {
@@ -138,7 +138,7 @@ bool SceneFind::geysers() {   // a geyser basin
 }
 
 bool SceneFind::groundSounds() {   // Q-03: the dunes, the ice, the quakes
-    // Q-03: -99 a slip face of the singing dunes: the first sand or dust of the latitudes asked on a dune's lee (4 m samples, the near
+    // -99 a slip face of the singing dunes: the first sand or dust of the latitudes asked on a dune's lee (4 m samples, the near
     // ring's), then within 120 m of it the steepest of the lee's points as the ground is drawn (the drainage on: it softens some
     // worlds' dunes; the slope over 4, 8 and 16 m either side, the least: a face, not a ledge), 15 degrees at least (the felisian
     // worlds' dunes are gentle: the frame would show a plain), the site on it facing down; -100 the singing ice: the first flat ice; -101 a world with quakes: the first land
@@ -180,11 +180,11 @@ bool SceneFind::groundSounds() {   // Q-03: the dunes, the ice, the quakes
 }
 
 bool SceneFind::aurora() {   // B-403, R-402: under an aurora
-    // B-403: the aurora scenes: any site of the type at the latitude asked (the star was chosen above); -42 wants a
+    // the aurora scenes: any site of the type at the latitude asked (the star was chosen above); -42 wants a
     // clear-air world with another body of the system (a moon, the parent) at least 0.6 degrees across and 35-65
     // degrees up at the darkest hour (the main curtain hangs overhead there), the biggest of them, and faces it
     if (!KINDS[b.type].atmosphere || hasOpaqueDeck(b.type)) return false;
-    {   // R-402: a night with curtains: of the next thirty nights, the darkest hour with the strongest potential, over 0.45
+    {   // a night with curtains: of the next thirty nights, the darkest hour with the strongest potential, over 0.45
         SurfaceSite probe; probe.init(&sys, bi, latUse, lon, 1000.0);
         double bestPot = 0, period = std::fabs(b.rotPeriod);
         for (int dd = 0; dd < 30; dd++) {
@@ -235,7 +235,7 @@ bool SceneFind::aurora() {   // B-403, R-402: under an aurora
 }
 
 bool SceneFind::rustValley() {   // P-02: a rust valley
-    // P-01: a dry valley: a land window with a network of channels (the flood's own cells, as the river finder's), then in it
+    // a dry valley: a land window with a network of channels (the flood's own cells, as the river finder's), then in it
     // a valley floor (the wadi's sand, the drainage on) 10 m and more under the ground 150 m out to both sides; the site 90 m
     // up one side, facing across (a planet: a moon's sun at the asked height can be its parent's eclipse)
     if (b.parent >= 0) return false;
@@ -274,7 +274,7 @@ bool SceneFind::rustValley() {   // P-02: a rust valley
 }
 
 bool SceneFind::archeanFlats() {   // P-02: archean flats
-    // P-02: an archean reef flat: on its stromatolites, the reef going on 16-48 m in some direction and the sea beyond within 200 m;
+    // an archean reef flat: on its stromatolites, the reef going on 16-48 m in some direction and the sea beyond within 200 m;
     // faced that way, across the reef to the water
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 40 && !found; la += 0.25)
@@ -298,7 +298,7 @@ bool SceneFind::archeanFlats() {   // P-02: archean flats
 }
 
 bool SceneFind::tundraIce() {   // P-02: tundra ice
-    // P-02: a tundra's ice sheet: along each meridian the sheet's own edge (`iceSheetEdgeDeg`, north of the equator), and there
+    // a tundra's ice sheet: along each meridian the sheet's own edge (`iceSheetEdgeDeg`, north of the equator), and there
     // flat land (grass, under 900 m, not steep) 220 m short of it with the sheet's wall standing 15 m over it 60 m past the edge;
     // the site there, facing the wall
     bool found = false; const double Rm = b.radiusKm * 1000.0, back = 220.0 / Rm / DEG, past = 60.0 / Rm / DEG;
@@ -327,7 +327,7 @@ bool SceneFind::tundraIce() {   // P-02: tundra ice
 }
 
 bool SceneFind::hothouseOrSteppe() {   // P-03: a hothouse swamp or a steppe
-    // P-02: -68 a hothouse's swamp: wetland grass past the asked latitude with forest within 300 m in some direction, faced; -69 a
+    // -68 a hothouse's swamp: wetland grass past the asked latitude with forest within 300 m in some direction, faced; -69 a
     // steppe's open plain: grass on the grassland or the savanna with grass at the eight samples 250 and 600 m round it
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 30 && !found; la += 0.5)
@@ -356,7 +356,7 @@ bool SceneFind::hothouseOrSteppe() {   // P-03: a hothouse swamp or a steppe
 }
 
 bool SceneFind::eyeballShore() {   // P-03: an eyeball world's shore
-    // P-03: an eyeball's ice front: along 72 great circles from the substellar point, round the pupil's reach, the first ground of the
+    // an eyeball's ice front: along 72 great circles from the substellar point, round the pupil's reach, the first ground of the
     // sea glacier over the floes (its cliff's top, 5 m over the sea, found to a metre); the site 40 m in from it, facing the open sea
     // and the fixed sun, whose height there is the light (`alt`)
     if (!g.locked || g.hasTrait(TR_HAZE)) return false;   // a haze hides the sea from its edge
@@ -388,7 +388,7 @@ bool SceneFind::eyeballShore() {   // P-03: an eyeball world's shore
 }
 
 bool SceneFind::terminatorRing() {   // P-03: the terminator ring
-    // P-03: a terminator world's ring: grass where the fixed sun stands at the light asked (within a degree), with forest within 300 m
+    // a terminator world's ring: grass where the fixed sun stands at the light asked (within a degree), with forest within 300 m
     // toward the sun (within 90 degrees of it), faced: the trees against the glow of a sunset that never ends
     if (!g.locked) return false;
     bool found = false; const double Rm = b.radiusKm * 1000.0;
@@ -417,7 +417,7 @@ bool SceneFind::terminatorRing() {   // P-03: the terminator ring
 }
 
 bool SceneFind::hyceanSea() {   // P-03: a hycean sea
-    // P-03: a hycean's sea in a clear hour of the next twenty days (its haze is the sight; its rain hides it)
+    // a hycean's sea in a clear hour of the next twenty days (its haze is the sight; its rain hides it)
     const double tc = clearHour(latUse, lon, 1000.0, std::fabs(b.rotPeriod), 20);
     if (tc < 0) return false;
     t0Use = tc;
@@ -425,7 +425,7 @@ bool SceneFind::hyceanSea() {   // P-03: a hycean sea
 }
 
 bool SceneFind::ammoniaShore() {   // P-05: an ammonia shore
-    // P-03: an ammonia sea's shore: silt 0.5-4 m over the sea with its water within 150 m in some direction and a slab of ice afloat
+    // an ammonia sea's shore: silt 0.5-4 m over the sea with its water within 150 m in some direction and a slab of ice afloat
     // there; faced
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 50 && !found; la += 0.5)
@@ -449,7 +449,7 @@ bool SceneFind::ammoniaShore() {   // P-05: an ammonia shore
 }
 
 bool SceneFind::snowballBelt() {   // P-05: a snowball's belt
-    // P-03: a snowball's belt: along each meridian north from the equator, the first ice standing 5 m over the sea with open water 300 m
+    // a snowball's belt: along each meridian north from the equator, the first ice standing 5 m over the sea with open water 300 m
     // south of it (the sea glacier's cliff or the sheet's), found to a metre; the site 40 m north of it, facing south over the water;
     // at an equinox (the belt where the generator's own ground puts it)
     bool found = false; const double Rm = b.radiusKm * 1000.0, step = 300.0 / Rm / DEG;
@@ -486,7 +486,7 @@ bool SceneFind::snowballBelt() {   // P-05: a snowball's belt
 }
 
 bool SceneFind::chemotrophVents() {   // P-05: chemotroph vents
-    // P-03: a chemotroph's spring: the first mats or sinter of the scan (the basins a globe shows), then of `springVents` round it the
+    // a chemotroph's spring: the first mats or sinter of the scan (the basins a globe shows), then of `springVents` round it the
     // nearest pool on its own ground; the site 35 m from it on the mats or the sinter, facing it
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 50 && !found; la += 0.5)
@@ -514,7 +514,7 @@ bool SceneFind::chemotrophVents() {   // P-05: chemotroph vents
 }
 
 bool SceneFind::deadForest() {   // P-04: a frozen or scorched forest
-    // P-04: a dead world's old forest (its density kept in `veg`): along each meridian from the asked latitude, the first ground whose
+    // a dead world's old forest (its density kept in `veg`): along each meridian from the asked latitude, the first ground whose
     // forest was dense at 512 m and at 16 m, facing where it is densest 60 m round
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 40 && !found; la += 0.25)
@@ -535,7 +535,7 @@ bool SceneFind::deadForest() {   // P-04: a frozen or scorched forest
 }
 
 bool SceneFind::scorchedSeabed() {   // P-04: a scorched seabed
-    // P-04: a scorched world's old seabed under its giant: along each meridian from the asked latitude, the first old shore (land at 512 m
+    // a scorched world's old seabed under its giant: along each meridian from the asked latitude, the first old shore (land at 512 m
     // with the bed 900 m south of it and 80 m under it: a shore that drops, not a flat), the site on the bed 900 m out, facing the shore
     if (sys.star.cls != STAR_RED_GIANT && sys.star.cls != STAR_ORANGE_GIANT && sys.star.cls != STAR_CARBON) return false;
     bool found = false; const double Rm = b.radiusKm * 1000.0, dla = 900.0 / Rm;
@@ -554,7 +554,7 @@ bool SceneFind::scorchedSeabed() {   // P-04: a scorched seabed
 }
 
 bool SceneFind::nitrogenCells() {   // P-05: nitrogen cells
-    // P-05: a nitrogen plain among its cells under a sun-like light: from the great plain's middle out along each bearing (every 10
+    // a nitrogen plain among its cells under a sun-like light: from the great plain's middle out along each bearing (every 10
     // degrees), the first plain ground at 512 m with a block of water ice standing 400 m over it 9 km further out, facing it
     if (sys.star.cls != STAR_YELLOW && sys.star.cls != STAR_ORANGE && sys.star.cls != STAR_RED_DWARF) return false;
     bool found = false; const double Rkm = b.radiusKm;
@@ -576,7 +576,7 @@ bool SceneFind::nitrogenCells() {   // P-05: nitrogen cells
 }
 
 bool SceneFind::wandererSnow() {   // P-05: a wanderer's snow
-    // P-05: a wanderer's snow plain: along each meridian from the asked latitude, the first snow at 512 m with the old world's highland
+    // a wanderer's snow plain: along each meridian from the asked latitude, the first snow at 512 m with the old world's highland
     // bare (rock or its dark ground at 512 m, 250 m higher) 1.5 km off in one of eight directions, facing it
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 50 && !found; la += 0.5)
@@ -597,7 +597,7 @@ bool SceneFind::wandererSnow() {   // P-05: a wanderer's snow
 }
 
 bool SceneFind::brineFaculae() {   // P-05: brine faculae
-    // P-05: a brine dwarf's faculae: the first salt of a scan at 64 m that the 512 m ring does not see (a young crater a few kilometres
+    // a brine dwarf's faculae: the first salt of a scan at 64 m that the 512 m ring does not see (a young crater a few kilometres
     // across, 30 km and more from the lone mountain); along the first of eight bearings where the salt ends within 4 km, the stand on the
     // salt 300 m in from its edge, facing across it to the crater's far wall
     bool found = false; const double Rm = b.radiusKm * 1000.0;
@@ -624,7 +624,7 @@ bool SceneFind::brineFaculae() {   // P-05: brine faculae
 }
 
 bool SceneFind::frostDwarf() {   // P-05: a frost dwarf
-    // P-05: a frost dwarf under a sun-like light: the first tholin of a scan at 512 m, the stand 60 m off on the frost, facing it
+    // a frost dwarf under a sun-like light: the first tholin of a scan at 512 m, the stand 60 m off on the frost, facing it
     if (sys.star.cls != STAR_YELLOW && sys.star.cls != STAR_ORANGE && sys.star.cls != STAR_RED_DWARF) return false;
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 60 && !found; la += 0.5)
@@ -643,7 +643,7 @@ bool SceneFind::frostDwarf() {   // P-05: a frost dwarf
 }
 
 bool SceneFind::groovedLanes() {   // P-06: a grooved moon's lanes
-    // P-06: a grooved moon's lane: along each meridian from the asked latitude, the first dark ground at 512 m with the lane's bright ice
+    // a grooved moon's lane: along each meridian from the asked latitude, the first dark ground at 512 m with the lane's bright ice
     // 4 and 8 km off in one of eight directions and lower; the stand 6 km into the lane (it lies below the dark ground's horizon), facing on
     // across its grooves
     bool found = false; const double Rm = b.radiusKm * 1000.0;
@@ -681,7 +681,7 @@ bool SceneFind::groovedLanes() {   // P-06: a grooved moon's lanes
 }
 
 bool SceneFind::twoFacedBoundary() {   // P-06: a two-faced moon's boundary
-    // P-06: a two-faced moon's boundary: along each meridian from the asked latitude, the first bright ice at 64 m with bright ice 300 m behind it
+    // a two-faced moon's boundary: along each meridian from the asked latitude, the first bright ice at 64 m with bright ice 300 m behind it
     // and the dark face from 100 m ahead to 2 km (a small moon's horizon is a kilometre or two away) in one of eight directions; facing along the edge
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 40 && !found; la += 0.5)
@@ -722,7 +722,7 @@ bool SceneFind::twoFacedRidge() {   // P-06: a two-faced moon's ridge
 }
 
 bool SceneFind::spongePits() {   // P-06: sponge pits
-    // P-06: a sponge's pit from its rim: along each meridian from the asked latitude, the first dark floor at 512 m; along the first of eight
+    // a sponge's pit from its rim: along each meridian from the asked latitude, the first dark floor at 512 m; along the first of eight
     // bearings whose ground rises 1.5 km and more within 12 km, the highest point of it (the rim), the stand on it, facing back over the floor
     bool found = false; const double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 40 && !found; la += 0.5)
@@ -748,13 +748,13 @@ bool SceneFind::spongePits() {   // P-06: sponge pits
 }
 
 bool SceneFind::traitGround() {   // R-307, P-01, P-02: a kind's own ground (a crack, a fissure, dunes, a shore, a vent, a flow, moss)
-    // R-307: the new types' scenes: -30 a stained crack (europan), -31 a lava fissure (tectonic), -32 dunes
+    // the new types' scenes: -30 a stained crack (europan), -31 a lava fissure (tectonic), -32 dunes
     // (desert), -33 / -35 the shore of a methane or an acid sea, -34 a rayed plain (bombarded); P-01: -37 the magma sea (the
     // standing point where the fixed sun stands at the light asked), -38 a steam vent's sinter, -39 a brine pool, -55 a glass
     // flow, each faced; P-02: -59 a lichen world's moss, faced from 20-50 m
     int mat = wantMat == SCENE_STAINED_CRACK ? MAT_DUST : (wantMat == SCENE_LAVA_FISSURE || wantMat == SCENE_MAGMA_SHORE ? MAT_LAVA : (wantMat == SCENE_DUNES ? MAT_SAND : (wantMat == SCENE_STEAM_VENT ? MAT_SALT : (wantMat == SCENE_BRINE_POOL ? MAT_BRINE : (wantMat == SCENE_GLASS_FLOW ? MAT_GLASS : (wantMat == SCENE_LICHEN ? MAT_MOSS : MAT_WATER))))));
-    const int standOn = wantMat == SCENE_LICHEN ? MAT_CRUST : -1;   // P-02: the moss faced from its crusts
-    const bool faceIt = wantMat == SCENE_MAGMA_SHORE || wantMat == SCENE_STEAM_VENT || wantMat == SCENE_BRINE_POOL || wantMat == SCENE_GLASS_FLOW || wantMat == SCENE_LICHEN;   // P-02: -59 a lichen world's moss
+    const int standOn = wantMat == SCENE_LICHEN ? MAT_CRUST : -1;   // the moss faced from its crusts
+    const bool faceIt = wantMat == SCENE_MAGMA_SHORE || wantMat == SCENE_STEAM_VENT || wantMat == SCENE_BRINE_POOL || wantMat == SCENE_GLASS_FLOW || wantMat == SCENE_LICHEN;   // -59 a lichen world's moss
     bool nearOnly = wantMat == SCENE_METHANE_SHORE || wantMat == SCENE_ACID_SHORE || wantMat == SCENE_LAVA_FISSURE || faceIt;   // stand 60-150 m from it
     bool found = false;
     double faceYaw = 1e9;
@@ -786,7 +786,7 @@ bool SceneFind::traitGround() {   // R-307, P-01, P-02: a kind's own ground (a c
                     if (s2.material == mat || (s2.water > -1e8 && s2.height < s2.water + 0.3)) continue;
                     if (standOn >= 0 && s2.material != standOn) continue;
                     if (wantMat == SCENE_MAGMA_SHORE && std::fabs(90.0 - std::acos(clampd(dot(StarSystem::bodyFromLatLon(la * DEG + dlat, ln + dlon), g.lockedDir), -1, 1)) / DEG - alt / DEG) > 2.0) continue;
-                    if (faceIt && wantMat != SCENE_MAGMA_SHORE) {   // P-01: clear of it for 40 m round (a pool or a flow at the feet filled the view)
+                    if (faceIt && wantMat != SCENE_MAGMA_SHORE) {   // clear of it for 40 m round (a pool or a flow at the feet filled the view)
                         bool clearAround = true;
                         for (int q = 0; q < 8 && clearAround; q++) {
                             const double qr = wantMat == SCENE_LICHEN ? 12.0 : 40.0, qa = q * TAU / 8, ql = std::cos(qa) * qr / Rm, qn = std::sin(qa) * qr / (Rm * std::cos(la * DEG));
@@ -795,7 +795,7 @@ bool SceneFind::traitGround() {   // R-307, P-01, P-02: a kind's own ground (a c
                         if (!clearAround) continue;
                     }
                     lon = ln + dlon; latUse = la * DEG + dlat; found = true;
-                    if (faceIt) faceYaw = std::atan2(-dlon * Rm * std::cos(la * DEG), -dlat * Rm);   // P-01: back toward it
+                    if (faceIt) faceYaw = std::atan2(-dlon * Rm * std::cos(la * DEG), -dlat * Rm);   // back toward it
                 }
             }
         }
@@ -806,7 +806,7 @@ bool SceneFind::traitGround() {   // R-307, P-01, P-02: a kind's own ground (a c
 }
 
 bool SceneFind::neutronGlass() {   // S-03: a neutron star's glass
-    // S-03: a glassed world: the first glass sheet of the scan at 16 m with glass on the eight samples 100 m round it
+    // a glassed world: the first glass sheet of the scan at 16 m with glass on the eight samples 100 m round it
     if (!g.hasTrait(TR_GLASSED)) return false;
     bool found = false; double Rm = b.radiusKm * 1000.0;
     for (double la = latDeg; la < latDeg + 40 && !found; la += 1.0)
@@ -823,7 +823,7 @@ bool SceneFind::neutronGlass() {   // S-03: a neutron star's glass
 }
 
 bool SceneFind::biome() {   // N2: a site of one biome
-    // N2: a site of one biome (wantMat = -10 - biome), on land (S-04: the codes under -21 are the other finders', and
+    // a site of one biome (wantMat = -10 - biome), on land (S-04: the codes under -21 are the other finders', and
     // -44 wants the type's default spot: this branch swallowed it and found no biome 34)
     int wantBio = SCENE_BIOME - wantMat;
     bool found = false;
@@ -839,13 +839,13 @@ bool SceneFind::biome() {   // N2: a site of one biome
 }
 
 bool SceneFind::inlandWater() {   // B-320: a river or a lake
-    // B-320: inland water: the first river (-21) or lake (-22) of the scan (`SurfaceSample::waterKind`), then
+    // inland water: the first river (-21) or lake (-22) of the scan (`SurfaceSample::waterKind`), then
     // the nearest dry land round it, 20-300 m out; the site stands there facing the water
     bool found = false;
     double Rm = b.radiusKm * 1000.0;
     int wantKind = wantMat == SCENE_RIVER ? 1 : 2;
     int hits = 0, noLand = 0;
-    // O6-03: a land window first (coarse, no drainage), then its tile's flood: the window is scanned at 16 m only
+    // a land window first (coarse, no drainage), then its tile's flood: the window is scanned at 16 m only
     // where the flood has channels (or lakes), the drainage on
     double wla = 1e9, wln = 0;
     for (double la = latDeg; la < latDeg + 40 && wla > 1e8; la += 1.0)
@@ -887,7 +887,7 @@ bool SceneFind::inlandWater() {   // B-320: a river or a lake
 }
 
 bool SceneFind::herdOrBuggy() {   // N3, N4: a herd, the buggy
-    // N3/N4: open grassland, so a herd or the buggy can be seen
+    // open grassland, so a herd or the buggy can be seen
     bool found = false;
     for (double la = latDeg; la < latDeg + 30 && !found; la += 1.5)
         for (int k = 0; k < 360 && !found; k++) {
@@ -901,14 +901,14 @@ bool SceneFind::herdOrBuggy() {   // N3, N4: a herd, the buggy
 }
 
 bool SceneFind::forest() {   // G-04: a deep forest
-    // N2: deep forest (dense vegetation), for the coverage and the bench
+    // deep forest (dense vegetation), for the coverage and the bench
     bool found = false;
     for (double la = latDeg; la < latDeg + 30 && !found; la += 1.5)
         for (int k = 0; k < 360 && !found; k++) {
             double ln = k * TAU / 360;
             SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
             if (ss.material != MAT_FOREST || ss.veg <= 0.75 || ss.height <= 5) continue;
-            // G-04: the eight samples 100 m round it as well: the scan's first dense cell stood at a wood's edge (a fifth of the ground under canopy)
+            // the eight samples 100 m round it as well: the scan's first dense cell stood at a wood's edge (a fifth of the ground under canopy)
             int dense = 0; double Rm = b.radiusKm * 1000.0;
             for (int j = -1; j <= 1; j++)
                 for (int i = -1; i <= 1; i++) {
@@ -935,11 +935,11 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
                 Ruin ru;
                 if (!sv.ruinAt(gLat0 + dl, gLon0 + dn, ru)) continue;
                 if (wantMat == SCENE_HARBOUR && !ru.spec->harbour) continue;
-                if (wantMat == SCENE_SECOND_PEOPLE && ru.spec->people != 1) continue;   // C-13: the second people's
+                if (wantMat == SCENE_SECOND_PEOPLE && ru.spec->people != 1) continue;   // the second people's
                 if (wantMat == SCENE_TERRACES && !ru.spec->terraced) continue;
                 std::vector<Road> rds;
                 if (wantMat == SCENE_ROAD) { roadsOfCell(sv.site.gen, gLat0 + dl, gLon0 + dn, rds); if (rds.empty()) continue; }
-                if (wantMat == SCENE_GRAVES) { std::vector<Grave> gr; gravesOf(sv.lores[ru.spec->people], *ru.spec, sv.cultures[ru.spec->people], gr); if (gr.size() < 3) continue; }   // C-12: a burial ground of three stones at least
+                if (wantMat == SCENE_GRAVES) { std::vector<Grave> gr; gravesOf(sv.lores[ru.spec->people], *ru.spec, sv.cultures[ru.spec->people], gr); if (gr.size() < 3) continue; }   // a burial ground of three stones at least
                 double d = std::sqrt(ru.x * ru.x + ru.z * ru.z);
                 int cls = settlementRank(ru.spec->sclass);
                 if (cls > bestClass || (cls == bestClass && d < bestD)) { best = ru; bestSpec = *ru.spec; bestClass = cls; bestD = d; found = true; bestRoads = rds; }
@@ -953,7 +953,7 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
     double la2, lo2, out = ext + 9;   // outside the gate (the street's axis), looking down the street
     double standX = best.x + std::sin(h0) * out, standZ = best.z + std::cos(h0) * out, yaw = h0 + PI, pitch = 0.0;
     std::string shardLine;
-    if (wantMat == SCENE_SHARD) {   // C-03: on the floor of the room of the settlement's first shard, 1.9 m from it toward the room's middle (a stela: in front of it), looking down at it
+    if (wantMat == SCENE_SHARD) {   // on the floor of the room of the settlement's first shard, 1.9 m from it toward the room's middle (a stela: in front of it), looking down at it
         std::vector<ShardSite> sites; recordSitesOf(sv.site.gen, bestSpec, sv.cultures[bestSpec.people], sites);
         if (sites.empty()) { printf("  %s: the settlement holds no shard\n", b.name.c_str()); return false; }
         const ShardSite& s = sites[0]; const Building& bd = bestSpec.buildings[s.building];
@@ -965,7 +965,7 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
         yaw = std::atan2(shx - standX, shz - standZ); pitch = -0.42;
         shardLine = fmt("  shard %d of the settlement's %zu: %s (%s %d), %.1f m from the building's centre; the explorer 1.9 m from it", s.index, sites.size(), buildingPlaceName(s.place), BUILDING_KIND_NAMES[bd.kind], s.building, L);
     }
-    if (wantMat == SCENE_HARBOUR) {   // C-08: at the quay's end away from the mole, a few metres up the beach, looking along the quay at the mole's far end
+    if (wantMat == SCENE_HARBOUR) {   // at the quay's end away from the mole, a few metres up the beach, looking along the quay at the mole's far end
         const SiteRead& st = bestSpec.site;
         const Building* quay = nullptr; const Building* mole = nullptr;
         for (const Building& bd : bestSpec.buildings) { if (bd.kind == BK_QUAY && !quay) quay = &bd; if (bd.kind == BK_MOLE && !mole) mole = &bd; }
@@ -977,9 +977,9 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
             double mx = best.x + mole->x + sx * mole->hd * 0.8, mz = best.z + mole->z + sz * mole->hd * 0.8;
             yaw = std::atan2(mx - standX, mz - standZ); pitch = -0.02;
         } else { double q = st.shoreDist - 3.0; standX = best.x + sx * (q - 20); standZ = best.z + sz * (q - 20); yaw = st.shoreDir; pitch = -0.03; }
-        if (st.shoreIce) { const double q = st.shoreDist + 70.0; standX = best.x + sx * q; standZ = best.z + sz * q; yaw = st.shoreDir + PI; pitch = 0.0; }   // P-04: out on the sea's ice, facing the harbour
+        if (st.shoreIce) { const double q = st.shoreDist + 70.0; standX = best.x + sx * q; standZ = best.z + sz * q; yaw = st.shoreDir + PI; pitch = 0.0; }   // out on the sea's ice, facing the harbour
         shardLine = fmt("  the harbour: the shore %.0f m from the centre at %.0f deg%s; features: %s", st.shoreDist, st.shoreDir / DEG, st.shoreDry ? " (the old sea, dry)" : (st.shoreIce ? " (the sea frozen)" : ""), featureList(bestSpec).c_str());
-    } else if (wantMat == SCENE_ROAD) {   // C-09: on the settlement's longest road, 60 m out from its edge, looking along it toward the other end
+    } else if (wantMat == SCENE_ROAD) {   // on the settlement's longest road, 60 m out from its edge, looking along it toward the other end
         const Road* rd = &bestRoads[0];
         for (const Road& r : bestRoads) if (r.lengthM > rd->lengthM) rd = &r;
         bool fromA = roadCellKey(sv.site.gen, rd->a.gLat, rd->a.gLon) == roadCellKey(sv.site.gen, gLat0, gLon0) || roadDistanceM(sv.site.gen, rd->a.unit, sv.site.unitAt(best.x, best.z)) < roadDistanceM(sv.site.gen, rd->b.unit, sv.site.unitAt(best.x, best.z));
@@ -994,7 +994,7 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
                         SETTLEMENT_CLASS_NAMES[rd->a.sclass], rd->a.gLat, rd->a.gLon, SETTLEMENT_CLASS_NAMES[rd->b.sclass], rd->b.gLat, rd->b.gLon, rd->lengthM, rd->straightM, rd->bends, rd->maxGrade, 2 * rd->halfWidth,
                         fromA ? "from its a end" : "from its b end", sv.cultures[bestSpec.people].paved ? "paved" : "beaten", sv.cultures[bestSpec.people].roadWear, along, bestRoads.size() > 1 ? fmt(" (%zu roads at this settlement)", bestRoads.size()).c_str() : "");
         roadStand = true;
-    } else if (wantMat == SCENE_GRAVES) {   // C-12: two metres before the first row of stones, at its end, looking along the row toward the ruins
+    } else if (wantMat == SCENE_GRAVES) {   // two metres before the first row of stones, at its end, looking along the row toward the ruins
         std::vector<Grave> gr; gravesOf(sv.lores[bestSpec.people], bestSpec, sv.cultures[bestSpec.people], gr);
         const Grave& g0 = gr[0]; const Grave& g1 = gr[std::min<size_t>(2, gr.size() - 1)];
         double fx = std::sin(g0.heading), fz = std::cos(g0.heading);   // the stones face the settlement
@@ -1003,7 +1003,7 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
         yaw = std::atan2(ax - standX, az - standZ); pitch = -0.12;
         int fallenN = 0; for (const Grave& x : gr) if (x.fallen) fallenN++;
         shardLine = fmt("  the graves: %zu stones (%d fallen), %.0f m out from the centre, facing %.0f deg; the first %s; the calendar: %s; the span %d years", gr.size(), fallenN, std::sqrt(g0.x * g0.x + g0.z * g0.z), g0.heading / DEG, graveLine(sv.lores[bestSpec.people], g0).c_str(), calendarLine(sv.lores[bestSpec.people]).c_str(), sv.lores[bestSpec.people].spanYears + 1);
-    } else if (wantMat == SCENE_TERRACES) {   // C-08: below the slope, looking up across the terraces
+    } else if (wantMat == SCENE_TERRACES) {   // below the slope, looking up across the terraces
         const SiteRead& st = bestSpec.site;
         double dx = std::sin(st.downhill), dz = std::cos(st.downhill);
         standX = best.x + dx * (bestSpec.size + 12); standZ = best.z + dz * (bestSpec.size + 12); yaw = st.downhill + PI; pitch = 0.06;
@@ -1017,7 +1017,7 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
     if (wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES) { sv.player.x = 0; sv.player.z = 0; sv.player.y = sv.site.surfaceHeight(0, 0); }   // at the stand point itself (`init` puts the explorer 6, -4 from the origin)
     sv.relocateCapsule(-std::sin(yaw) * 14, -std::cos(yaw) * 14);   // the capsule behind the camera, out of the picture
     if (!shardLine.empty()) printf("%s\n", shardLine.c_str());
-    if (roadStand) {   // C-09: the road under the camera and twenty metres ahead, against the ground as it is (a probe site has no roads)
+    if (roadStand) {   // the road under the camera and twenty metres ahead, against the ground as it is (a probe site has no roads)
         SurfaceSite probe; probe.init(&sys, bi, la2, lo2, t);
         for (int q = 0; q < 2; q++) {
             double px = std::sin(yaw) * 20 * q, pz = std::cos(yaw) * 20 * q, d, along, hd; const SiteRoad* rd;
@@ -1032,7 +1032,7 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
            SETTLEMENT_CLASS_NAMES[bestSpec.sclass], bestSpec.buildings.size(), houses, towers, bestSpec.walled ? ", walled" : "", bestSpec.plan, bestSpec.size, bestD / 1000.0,
            bestSpec.people + 1, sv.peoples, sv.cultures[bestSpec.people].style, sv.cultures[bestSpec.people].family, sv.cultures[bestSpec.people].tall, sv.cultures[bestSpec.people].decay, sv.cultures[bestSpec.people].ageYears, sv.cultures[bestSpec.people].stoneRoofs ? "stone" : "no", sv.cultures[bestSpec.people].buried,
            bestSpec.site.slope, bestSpec.site.shoreDist < 1e8 ? fmt("%.0f m%s", bestSpec.site.shoreDist, bestSpec.site.shoreDry ? " (dry)" : "").c_str() : "none", bestSpec.site.relief,
-           featureList(bestSpec).empty() ? "" : "; features: ", featureList(bestSpec).c_str());   // C-08
+           featureList(bestSpec).empty() ? "" : "; features: ", featureList(bestSpec).c_str());
     return true;
 }
 
@@ -1090,45 +1090,45 @@ bool SceneFind::deadSea(double& t, SunInfo& si) {   // C-01: a dead desert world
 bool setupSceneForType(int type, double latDeg, double alt, double yawOff, double pitch, SurfaceView& sv, StarSystem& sys,
                               StarNeighborhood& nb, double& tOut, int wantMat) {
     if (wantMat == SCENE_PINNED_MOUNTAIN) return setupPinnedMountainScene(alt, yawOff, pitch, sv, sys, nb, tOut);   // B-313: the pinned mountain site of the O6 review
-    if (wantMat <= SCENE_FRONT_FAR && wantMat >= SCENE_FRONT_BEHIND) return setupFrontScene(SCENE_FRONT_FAR - wantMat, pitch, sv, sys, nb, tOut);   // W-03: the fronts' scenes on the pinned plain
+    if (wantMat <= SCENE_FRONT_FAR && wantMat >= SCENE_FRONT_BEHIND) return setupFrontScene(SCENE_FRONT_FAR - wantMat, pitch, sv, sys, nb, tOut);   // the fronts' scenes on the pinned plain
     if (wantMat <= SCENE_METEOR_SHOWER && wantMat >= SCENE_MOONLIT) return setupNightScene(SCENE_METEOR_SHOWER - wantMat, sv, sys, nb, tOut);
     if (wantMat <= SCENE_AGE_PREHISTORIC && wantMat >= SCENE_AGE_FAR_FUTURE) return setupAgeScene(SCENE_AGE_PREHISTORIC - wantMat, alt, pitch, sv, sys, nb, tOut);   // A-03   // W-04
-    if (wantMat <= SCENE_ROGUE_LAMP && wantMat >= SCENE_DARK_OCEAN) return setupDarkScene(SCENE_ROGUE_LAMP - wantMat, pitch, sv, sys, nb, tOut);   // D-04
-    const int stagePasses = type >= 0 && KINDS[type].elsewhere ? 2 : 1;   // P-05: a kind made only where no system is: the real ones first (the wanderers), then staged
+    if (wantMat <= SCENE_ROGUE_LAMP && wantMat >= SCENE_DARK_OCEAN) return setupDarkScene(SCENE_ROGUE_LAMP - wantMat, pitch, sv, sys, nb, tOut);
+    const int stagePasses = type >= 0 && KINDS[type].elsewhere ? 2 : 1;   // a kind made only where no system is: the real ones first (the wanderers), then staged
     for (int stagePass = 0; stagePass < stagePasses; stagePass++)
     for (int64_t x = 150; x < 320; x++)
         for (int64_t z = 20; z < 140; z++) {
             Star s;
             if (!starInSector(x, 0, z, s)) continue;
             sys.generate(s);
-            if (wantMat <= SCENE_AURORA && wantMat >= SCENE_AURORA_CURTAIN && starActivity(sys.star.cls) < 0.7) continue;   // B-403: an active star (S-02: the activity table, so every class that drives the nights counts)
-            if (wantMat == SCENE_NEUTRON_GLASS && sys.star.cls != STAR_NEUTRON) continue;   // S-03: a glassed world belongs to a neutron star
-            if (wantMat == SCENE_PROTOSTAR && sys.star.cls != STAR_PROTOSTAR) continue;   // S-04: a world of a protostar
-            if (wantMat == SCENE_WOLF_RAYET && sys.star.cls != STAR_WOLF_RAYET) continue;   // S-05: a world of a Wolf-Rayet star
-            if (wantMat == SCENE_BLACK_HOLE && sys.star.cls != STAR_BLACK_HOLE) continue;   // S-06: a world of a black hole
+            if (wantMat <= SCENE_AURORA && wantMat >= SCENE_AURORA_CURTAIN && starActivity(sys.star.cls) < 0.7) continue;   // an active star (S-02: the activity table, so every class that drives the nights counts)
+            if (wantMat == SCENE_NEUTRON_GLASS && sys.star.cls != STAR_NEUTRON) continue;   // a glassed world belongs to a neutron star
+            if (wantMat == SCENE_PROTOSTAR && sys.star.cls != STAR_PROTOSTAR) continue;   // a world of a protostar
+            if (wantMat == SCENE_WOLF_RAYET && sys.star.cls != STAR_WOLF_RAYET) continue;   // a world of a Wolf-Rayet star
+            if (wantMat == SCENE_BLACK_HOLE && sys.star.cls != STAR_BLACK_HOLE) continue;   // a world of a black hole
             for (int bi = 0; bi < (int)sys.bodies.size(); bi++) {
                 const Body& b = sys.bodies[bi];
-                if (type >= 0 && (stagePass == 0 ? b.type != type : !stageElsewhere(sys, bi, type))) continue;   // P-04: a kind made where no system is, staged (P-05: after the real ones)
-                if (type < 0 && (!KINDS[b.type].landable || b.type == PT_COMET)) continue;   // R-307: a trait scene on any world
+                if (type >= 0 && (stagePass == 0 ? b.type != type : !stageElsewhere(sys, bi, type))) continue;   // a kind made where no system is, staged (P-05: after the real ones)
+                if (type < 0 && (!KINDS[b.type].landable || b.type == PT_COMET)) continue;   // a trait scene on any world
                 double lon = 0.7 + bi * 0.3, latUse = latDeg * DEG;
-                if (wantMat == SCENE_AURORA_ZENITH) latUse = SurfaceView::auroraOvalLat(b) * DEG;   // B-403: right under the auroral oval
-                if (wantMat == SCENE_AURORA_CURTAIN) latUse = (SurfaceView::auroraOvalLat(b) - 1) * DEG;   // R-402: the main curtain a degree poleward: overhead and across the sky
+                if (wantMat == SCENE_AURORA_ZENITH) latUse = SurfaceView::auroraOvalLat(b) * DEG;   // right under the auroral oval
+                if (wantMat == SCENE_AURORA_CURTAIN) latUse = (SurfaceView::auroraOvalLat(b) - 1) * DEG;   // the main curtain a degree poleward: overhead and across the sky
                 BodyGen g = BodyGen::make(b);
                 if (wantMat == SCENE_GEYSERS && !g.hasTrait(TR_GEYSERS)) continue;
-                if ((wantMat == SCENE_SINGING_DUNES && !g.hasTrait(TR_SINGING_DUNES)) || (wantMat == SCENE_SINGING_ICE && !g.hasTrait(TR_SINGING_ICE)) || (wantMat == SCENE_QUAKES && !g.hasTrait(TR_QUAKES))) continue;   // Q-03
-                if (wantMat <= SCENE_SINGING_DUNES && wantMat >= SCENE_QUAKES && KINDS[b.type].pressureLo < 0.3) continue;   // Q-03: an air that carries the sound whole
-                if (wantMat == SCENE_SINGING_DUNES && (b.type == PT_HYDROCARBON || hasOpaqueDeck(b.type))) continue;   // Q-03: dunes no haze hides
-                if ((wantMat == SCENE_TOWN || wantMat == SCENE_DEAD_SEA || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) && !g.hasTrait(TR_CIVILISATION)) continue;   // C-01: a world that had a people; C-09; C-12; C-13
-                if (wantMat == SCENE_SECOND_PEOPLE && peoplesOf(g) < 2) continue;   // C-13: a world of two peoples
-                // O6-03: the scans below sample a whole planet at 16 m: without the drainage (a tile per sample); the river and lake
+                if ((wantMat == SCENE_SINGING_DUNES && !g.hasTrait(TR_SINGING_DUNES)) || (wantMat == SCENE_SINGING_ICE && !g.hasTrait(TR_SINGING_ICE)) || (wantMat == SCENE_QUAKES && !g.hasTrait(TR_QUAKES))) continue;
+                if (wantMat <= SCENE_SINGING_DUNES && wantMat >= SCENE_QUAKES && KINDS[b.type].pressureLo < 0.3) continue;   // an air that carries the sound whole
+                if (wantMat == SCENE_SINGING_DUNES && (b.type == PT_HYDROCARBON || hasOpaqueDeck(b.type))) continue;   // dunes no haze hides
+                if ((wantMat == SCENE_TOWN || wantMat == SCENE_DEAD_SEA || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) && !g.hasTrait(TR_CIVILISATION)) continue;   // a world that had a people; C-09; C-12; C-13
+                if (wantMat == SCENE_SECOND_PEOPLE && peoplesOf(g) < 2) continue;   // a world of two peoples
+                // the scans below sample a whole planet at 16 m: without the drainage (a tile per sample); the river and lake
                 // finders (-21, -22) scan the flood's own cells instead (`drainageStats`) and turn it back on for the fine samples
                 struct DrainOff { bool was; DrainOff() : was(drainageEnabled()) { setDrainageEnabled(false); } ~DrainOff() { setDrainageEnabled(was); } } drainOff;
                 bool lookAtWater = false;
-                double faceYawOut = 1e9, facePitchOut = 1e9;   // R-307: a scene finder may choose the view's direction
-                double t0Use = 1000.0;   // R-402: the aurora scenes choose the night of the month with the strongest potential
-                bool placed = false;     // G-04: the finder chose the spot (or the longitude matters): the light must come from the time alone
+                double faceYawOut = 1e9, facePitchOut = 1e9;   // a scene finder may choose the view's direction
+                double t0Use = 1000.0;   // the aurora scenes choose the night of the month with the strongest potential
+                bool placed = false;     // the finder chose the spot (or the longitude matters): the light must come from the time alone
                 SceneFind f{latDeg, alt, sv, sys, nb, wantMat, bi, b, g, lon, latUse, lookAtWater, faceYawOut, facePitchOut,
-                            t0Use, placed};   // E-03: the finders below are its member functions
+                            t0Use, placed};   // the finders below are its member functions
                 if (wantMat == MAT_SAND) {
                     if (!f.sand()) continue;
                 } else if (wantMat == SCENE_GEYSERS) {
@@ -1163,19 +1163,19 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (!f.scorchedSeabed()) continue;
                 } else if (wantMat == SCENE_NITROGEN_CELLS) {
                     if (!f.nitrogenCells()) continue;
-                } else if (wantMat == SCENE_CRYO_PLUME) {   // P-05: 25 km across the wind from a cryovolcanic world's plume, facing it
+                } else if (wantMat == SCENE_CRYO_PLUME) {   // 25 km across the wind from a cryovolcanic world's plume, facing it
                     Vec3 vent; if (!plumeStand(sys, bi, vent, latUse, lon)) continue;
                     double vla, vlo; StarSystem::latLonFromBody(vent, vla, vlo);
                     faceYawOut = std::atan2(wrapAngle(vlo - lon) * std::cos(latUse), vla - latUse);
                     placed = true;
-                } else if (wantMat == SCENE_SPIDERS) {   // P-05: 60 m south of a spider on a dry ice world's spring frost, facing it (the clock moved to its jet below)
+                } else if (wantMat == SCENE_SPIDERS) {   // 60 m south of a spider on a dry ice world's spring frost, facing it (the clock moved to its jet below)
                     Vec3 vent; if (!springStand(sys, bi, t0Use, vent, latUse, lon)) continue;
                     faceYawOut = 0; placed = true;
                 } else if (wantMat == SCENE_WANDERER_SNOW) {
                     if (!f.wandererSnow()) continue;
                 } else if (wantMat == SCENE_BRINE_FACULAE) {
                     if (!f.brineFaculae()) continue;
-                } else if (wantMat == SCENE_BRINE_MOUNTAIN) {   // P-05: the brine dwarf's lone mountain from 25 km across its plain, facing it
+                } else if (wantMat == SCENE_BRINE_MOUNTAIN) {   // the brine dwarf's lone mountain from 25 km across its plain, facing it
                     const Vec3 mtn = loneMountainOf(g);
                     double mla, mlo; StarSystem::latLonFromBody(mtn, mla, mlo);
                     const double Rm = b.radiusKm * 1000.0;
@@ -1186,14 +1186,14 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (!f.groovedLanes()) continue;
                 } else if (wantMat == SCENE_TWO_FACED_BOUNDARY) {
                     if (!f.twoFacedBoundary()) continue;
-                } else if (wantMat == SCENE_TWO_FACED_RIDGE) {   // P-06: a two-faced moon's equatorial ridge from 25 km south of its crest where it stands highest over its foot on the bright ice
+                } else if (wantMat == SCENE_TWO_FACED_RIDGE) {   // a two-faced moon's equatorial ridge from 25 km south of its crest where it stands highest over its foot on the bright ice
                     if (!f.twoFacedRidge()) continue;
-                } else if (wantMat == SCENE_TIGER_STRIPES) {   // P-06: 1.5 km from the middle of a tiger-striped moon's second stripe, facing 4 km along it
+                } else if (wantMat == SCENE_TIGER_STRIPES) {   // 1.5 km from the middle of a tiger-striped moon's second stripe, facing 4 km along it
                     Vec3 vent; if (!curtainStand(sys, bi, vent, latUse, lon)) continue;
                     double vla, vlo; StarSystem::latLonFromBody(vent, vla, vlo);
                     faceYawOut = std::atan2(wrapAngle(vlo - lon) * std::cos(latUse), vla - latUse);
                     placed = true;
-                } else if (wantMat == SCENE_PATCHWORK_CLIFF) {   // P-06: the patchwork's great cliff from its corona's floor 25 km in from its foot, facing it
+                } else if (wantMat == SCENE_PATCHWORK_CLIFF) {   // the patchwork's great cliff from its corona's floor 25 km in from its foot, facing it
                     Vec3 foot, upDir; if (!greatCliffOf(g, foot, upDir)) continue;
                     const Vec3 st = normalize(foot - upDir * (25.0 / b.radiusKm));
                     StarSystem::latLonFromBody(st, latUse, lon);
@@ -1202,7 +1202,7 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     placed = true;
                 } else if (wantMat == SCENE_SPONGE_PITS) {
                     if (!f.spongePits()) continue;
-                } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE && wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD && wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // S-03: -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
+                } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE && wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD && wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
                     if (!f.traitGround()) continue;
                 } else if (wantMat == SCENE_NEUTRON_GLASS) {
                     if (!f.neutronGlass()) continue;
@@ -1215,9 +1215,9 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 } else if (wantMat == SCENE_FOREST) {
                     if (!f.forest()) continue;
                 } else if ((wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) && g.hasTrait(TR_CIVILISATION) &&
-                           planPlacePoint(g, wantMat == SCENE_SECOND_PEOPLE ? 1 : 0, latUse, lon, wantMat == SCENE_HARBOUR)) {   // T-01: the settlements stand in the peoples' lands: from a town of the plan (a place by the water for a harbour)
+                           planPlacePoint(g, wantMat == SCENE_SECOND_PEOPLE ? 1 : 0, latUse, lon, wantMat == SCENE_HARBOUR)) {   // the settlements stand in the peoples' lands: from a town of the plan (a place by the water for a harbour)
                     placed = true;
-                } else if (wantMat == SCENE_SECOND_PEOPLE) {   // C-13: deep on the second people's side of the divide, on land near the asked latitude; the nearest settlement of theirs from there
+                } else if (wantMat == SCENE_SECOND_PEOPLE) {   // deep on the second people's side of the divide, on land near the asked latitude; the nearest settlement of theirs from there
                     Vec3 u = peopleSidePoint(g, 1, latUse); StarSystem::latLonFromBody(u, latUse, lon); placed = true;
                 } else if (b.type == PT_FELISIAN) {
                     bool found = false;
@@ -1236,11 +1236,11 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                             if (ss.material == MAT_LAVA && ss.glow > 0.9) { lon = ln + 400.0 / (b.radiusKm * 1000.0); latUse = la * DEG; found = true; placed = true; }
                         }
                 }
-                setDrainageEnabled(drainOff.was);   // O6-03: the site samples the real ground
+                setDrainageEnabled(drainOff.was);   // the site samples the real ground
                 sv.init(&sys, bi, latUse, lon, t0Use);
                 double sunErr = 0, t = findTime(sv.site, alt, t0Use, &sunErr);
                 if (sunErr > 1.0 * DEG && !placed) {
-                    // G-04: a world locked to its star has one longitude with that light (the scan's first cratered world, the regress's
+                    // a world locked to its star has one longitude with that light (the scan's first cratered world, the regress's
                     // cratered_noon, kept its night side): the longitude whose sun stands nearest the target, then the time there
                     double bestLon = lon;
                     for (int k = 0; k < 72; k++) {
@@ -1258,15 +1258,15 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 SunInfo si = sv.site.sun(t);
                 sv.player.yaw = faceYawOut < 1e8 ? faceYawOut : si.azimuth + yawOff;
                 sv.player.pitch = facePitchOut < 1e8 ? facePitchOut : pitch;
-                if (type >= PT_ARCHEAN) sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // P-02: the capsule behind the view
+                if (type >= PT_ARCHEAN) sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
                 printf("  site: %s of %s (sector %lld 0 %lld), lat %.2f lon %.2f, the light at %.1f degrees (%.0f asked)\n", b.name.c_str(), s.name.c_str(), (long long)x, (long long)z, latUse / DEG, lon / DEG, effectiveSunAlt(sv.site, t) / DEG, alt / DEG);
-                if (wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) {   // C-01: the nearest settlement (a town before a village before a hamlet, within the first five rings of
+                if (wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) {   // the nearest settlement (a town before a village before a hamlet, within the first five rings of
                     if (!f.settlement(t, si)) continue;
                 }
-                if (wantMat == SCENE_DEAD_SEA) {   // C-01: the old shore of a dead desert world (its seas are the size of continents, so the whole world is scanned at
+                if (wantMat == SCENE_DEAD_SEA) {   // the old shore of a dead desert world (its seas are the size of continents, so the whole world is scanned at
                     if (!f.deadSea(t, si)) continue;
                 }
-                if (wantMat == SCENE_BUGGY_SEAT || wantMat == SCENE_BUGGY_PARKED) {   // N4: the buggy from the seat (-8) and parked, seen from 5 m (-9), by day on open ground
+                if (wantMat == SCENE_BUGGY_SEAT || wantMat == SCENE_BUGGY_PARKED) {   // the buggy from the seat (-8) and parked, seen from 5 m (-9), by day on open ground
                     sv.relocateCapsule(sv.player.x + 4, sv.player.z + 2);
                     if (!sv.deployBuggy()) continue;
                     sv.buggy.unfold = 1;
@@ -1274,7 +1274,7 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (wantMat == SCENE_BUGGY_SEAT) { sv.player.x = sv.buggy.x + 1.5; sv.player.z = sv.buggy.z; if (!sv.toggleBuggy()) continue; sv.buggy.steer = 12 * DEG; sv.player.pitch = -0.06; }
                     else { sv.player.x = sv.buggy.x - 4.2; sv.player.z = sv.buggy.z - 3.0; double dx = sv.buggy.x - sv.player.x, dz = sv.buggy.z - sv.player.z; sv.player.yaw = std::atan2(dx, dz); sv.player.pitch = -0.12; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z); }
                 }
-                if (wantMat == SCENE_CREATURES) {   // N3: one creature of each land species 5 m ahead, side on, standing still
+                if (wantMat == SCENE_CREATURES) {   // one creature of each land species 5 m ahead, side on, standing still
                     if (sv.critters.empty()) continue;
                     std::vector<Critter> keep;
                     for (int spi = 0; spi < sv.bestiary.landCount; spi++) {
@@ -1309,14 +1309,14 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 nb.update(sv.site.worldPos(t, 0, 0, 0));
                 Input in;
                 sv.update(0.016, in, t, false);
-                if (wantMat == SCENE_FOREST) {   // G-04: the canopy the scene's check wants (three fifths of the forest ground within 200 m), or the next world: a temperate family covers a fifth
+                if (wantMat == SCENE_FOREST) {   // the canopy the scene's check wants (three fifths of the forest ground within 200 m), or the next world: a temperate family covers a fifth
                     double cov = sv.testCanopyCoverage(200);
                     if (cov < 0.6) { printf("  %s: %.0f%% of the forest ground under canopy at its densest wood: the next world\n", b.name.c_str(), cov * 100); continue; }
                 }
-                if (type >= PT_ARCHEAN && type < PT_NITROGEN && sv.site.atmosphere && alt > 10 * DEG && sv.env.skyBrightness < 0.3) {   // P-02: the light asked is a dim companion's (a binary's): the next world (P-05: the far cold's skies are dark)
+                if (type >= PT_ARCHEAN && type < PT_NITROGEN && sv.site.atmosphere && alt > 10 * DEG && sv.env.skyBrightness < 0.3) {   // the light asked is a dim companion's (a binary's): the next world (P-05: the far cold's skies are dark)
                     printf("  %s: the sky at %.2f under the light asked: the next world\n", b.name.c_str(), sv.env.skyBrightness); continue;
                 }
-                if (wantMat == SCENE_SPIDERS) {   // P-05: the clock moved to the moment the nearest spider's jet ahead bursts
+                if (wantMat == SCENE_SPIDERS) {   // the clock moved to the moment the nearest spider's jet ahead bursts
                     std::vector<GeyserVent> vents; springJets(sv.site.gen, sv.site.unitAt(sv.player.x, sv.player.z), vents);
                     uint64_t bestId = 0; double bd = 1e18;
                     for (const GeyserVent& v : vents) { double vx, vz; sv.site.localAt(v.unit, vx, vz); const double d = (vx - sv.player.x) * (vx - sv.player.x) + (vz - sv.player.z) * (vz - sv.player.z); if (d < bd) { bd = d; bestId = v.id; } }

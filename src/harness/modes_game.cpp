@@ -1,7 +1,7 @@
 // E-03: the scripted game: `flow` (an expedition), `settings`, `audio`, `zoom`, `parkings`, `tape`, `tail`, `auto`
 #include "harness/harness.h"
 
-// E-03: the flow's state: the game, its input, the clock, and what every stage does to them (run, press, shot); each stage is a
+// the flow's state: the game, its input, the clock, and what every stage does to them (run, press, shot); each stage is a
 // member function, so that its code reads as it did in one function
 struct Flow {
     TestGame game;
@@ -18,17 +18,17 @@ struct Flow {
         printf("%-14s state=%d status='%s'  (%.1f s)\n", name, (int)game.state, game.testStatus().c_str(), nowSec() - t0);
     }
     void title();   // the title, the attract mode, the credits, space, the cabin, the console and the ship's screen
-    void decoder();   // C-06: the shard decoder on the back wall
+    void decoder();   // the shard decoder on the back wall
     void cabin();   // the roof, the glass hull, the back wall's sets, the case, the telescope's set, the list, the data, the almanac
-    void telescope();   // W-06: the telescope; then the help screen and the orbit view
-    void radar();   // C-07: the signal radar
-    void starmap();   // M3: the star renamed, the star map and the galaxy, targeting, the flight and the arrival
+    void telescope();   // the telescope; then the help screen and the orbit view
+    void radar();   // the signal radar
+    void starmap();   // the star renamed, the star map and the galaxy, targeting, the flight and the arrival
     void landing();   // the landing and the ground: the approach, the descent, the walk, the buggy, the water
-    void comet();   // N0-01: a comet
-    void belt();   // O3: a belt
-    void chart();   // G-06: the next jump chosen on the chart
-    void probe();   // X-01: the probe
-    void roads();   // C-09: the old roads on the landing zoom
+    void comet();   // a comet
+    void belt();   // a belt
+    void chart();   // the next jump chosen on the chart
+    void probe();   // the probe
+    void roads();   // the old roads on the landing zoom
     void reload();   // the saves loaded again: the newest, then slot 2 mid-descent
 };
 
@@ -43,12 +43,12 @@ void Flow::title() {
     applyTestScale(game);
     t0 = nowSec();
     run(0.5); shot("title");
-    game.testAttract(30); run(0.3); shot("attract");   // M6-06
+    game.testAttract(30); run(0.3); shot("attract");
     press(KEY_C); run(0.1); shot("credits"); press(KEY_ESCAPE); run(0.1);
     press(KEY_ENTER);
-    for (int i = 0; i < (int)game.testSystem().bodies.size(); i++) game.testWaitMapOf(i);   // F-07: the system's maps first (made on their thread at a binary's own pace)
+    for (int i = 0; i < (int)game.testSystem().bodies.size(); i++) game.testWaitMapOf(i);   // the system's maps first (made on their thread at a binary's own pace)
     run(1.0); shot("space"); printf("  %s\n", game.testDebugInfo().c_str());
-    // M2: walk to the GOES console, use it, then the front computer, the roof and the glass hull
+    // walk to the GOES console, use it, then the front computer, the roof and the glass hull
     game.testCabinGoto(-1.2, 0.0, -PI / 2); run(0.2); shot("cabin"); printf("  facing %d\n", game.testCabinFacing());
     press(KEY_E); run(0.1); game.testTypeText("SL 4"); run(0.1); shot("console"); press(KEY_ESCAPE);
     game.testCabinGoto(0.0, 1.3, 0.0); run(0.2); press(KEY_E); run(0.1); shot("shipscreen"); press(KEY_ESCAPE);
@@ -60,17 +60,17 @@ void Flow::decoder() {
         press(KEY_E); run(0.1); shot("shards_none"); press(KEY_ESCAPE); run(0.1);
         for (int i = 0; i < 3; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
         press(KEY_E); run(0.1); shot("shards_worlds"); press(KEY_ENTER); run(0.1); shot("shards_list");
-        game.testShardsOpenIndex(2); run(1.2); shot("shards_decoding"); printf("  %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");   // C-04: by index, S1 of the three being a piece; C-05: the words resolve as the recording speaks
+        game.testShardsOpenIndex(2); run(1.2); shot("shards_decoding"); printf("  %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");   // by index, S1 of the three being a piece; C-05: the words resolve as the recording speaks
         press(KEY_ENTER); run(0.2); shot("shards_text"); printf("  the wait skipped: %s\n", game.testShardsInfo().c_str());
         press(KEY_RIGHT); run(0.1); press(KEY_ENTER); run(0.2); printf("  the next, the wait skipped: %s\n", game.testShardsInfo().c_str());
         press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
         for (int i = 3; i < 10; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
         press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1); shot("shards_list10");
         game.testShardsOpenIndex(0); run(0.2); press(KEY_ENTER); run(0.2); shot("shards_full"); printf("  %s\n", game.testShardsInfo().c_str());
-        press(KEY_ENTER); run(1.5); shot("shards_speaking"); printf("  spoken again: %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");   // C-05: a read shard spoken again, the word being spoken underlined
+        press(KEY_ENTER); run(1.5); shot("shards_speaking"); printf("  spoken again: %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");   // a read shard spoken again, the word being spoken underlined
         press(KEY_SPACE); run(0.3); printf("  paused: %s\n", game.testShardsInfo().c_str());
         press(KEY_ESCAPE); run(0.1); printf("  after esc: level %d, the synth: %s\n", game.testShardsLevel(), game.audio.speech ? "a speech STILL set" : "stopped");
-        {   // H-04: a long record (the longest of the people's first sixty, added to the guide) on the decoder: its opening spoken, Down turns the page
+        {   // a long record (the longest of the people's first sixty, added to the guide) on the decoder: its opening spoken, Down turns the page
             int longest = -1, most = 0;
             { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); const Body& mb = msys.bodies[1]; BodyGen mg = BodyGen::make(mb); Lore mL = loreOf(msys, mb, mg);
                 for (int i = 0; i < 60 && i < mL.records; i++) { Shard x = shardOf(msys, mb, mg, mL, i); int nw = shardWords(x.text); if (!x.music && !x.chart && nw > most) { most = nw; longest = i; } } } }
@@ -85,7 +85,7 @@ void Flow::decoder() {
                 } else printf("  the long record S%d could not be opened\n", longest);
             }
         }
-        {   // C-04: the first piece of music among the ten plays on the screen, is named, and stops when the screen is left
+        {   // the first piece of music among the ten plays on the screen, is named, and stops when the screen is left
             int mi = -1;
             for (int i = 0; i < 10 && mi < 0; i++) { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); const Body& mb = msys.bodies[1]; BodyGen mg = BodyGen::make(mb); Lore mL = loreOf(msys, mb, mg); if (shardOf(msys, mb, mg, mL, i).music) mi = i; } }
             if (mi >= 0 && game.testShardsOpenIndex(mi)) {
@@ -95,7 +95,7 @@ void Flow::decoder() {
                 press(KEY_ESCAPE); run(0.1); printf("  after esc: level %d, the synth: %s\n", game.testShardsLevel(), game.audio.piece ? "a piece STILL set" : "stopped");
             } else printf("  no piece of music among the first ten shards (index %d)\n", mi);
         }
-        {   // C-10: the first star chart among the fifty, added to the guide and opened by index: the reading (the stars appear, then the
+        {   // the first star chart among the fifty, added to the guide and opened by index: the reading (the stars appear, then the
             // figures, then their names), the wait skipped, the chart held up, the view turned onto the star it marks in space, then put down
             int ci = -1; { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); BodyGen mg = BodyGen::make(msys.bodies[1]); for (int i = 0; i < SHARDS_PER_WORLD && ci < 0; i++) if (shardIsChart(mg, i)) ci = i; } }
             if (ci >= 0) {
@@ -112,7 +112,7 @@ void Flow::decoder() {
                 } else printf("  the chart S%d could not be opened\n", ci);
             } else printf("  no star chart among the fifty\n");
         }
-        {   // C-12: the world's last recording added to the guide and read (the wait skipped): the log notes it, the list's timeline closes
+        {   // the world's last recording added to the guide and read (the wait skipped): the log notes it, the list's timeline closes
             int li = -1; { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); li = lastShardOf(BodyGen::make(msys.bodies[1])); } }
             if (li >= 0) {
                 game.guide.shards.insert("151,0,25/1/S" + std::to_string(li));
@@ -120,7 +120,7 @@ void Flow::decoder() {
                 if (game.testShardsOpenIndex(li)) {
                     run(0.3); press(KEY_ENTER); run(0.2); shot("shards_last"); printf("  the last recording S%d read: %s; worlds ended %zu; last log: %s\n", li, game.testShardsInfo().c_str(), game.guide.ended.size(), game.guide.log.empty() ? "-" : game.guide.log.back().text.c_str());
                     press(KEY_ESCAPE); run(0.1); shot("shards_timeline");
-                    // H-06: the world's pages: Tab to the timeline of its eras, Tab to its history as the shards read tell it, Tab back to the records
+                    // the world's pages: Tab to the timeline of its eras, Tab to its history as the shards read tell it, Tab back to the records
                     press(KEY_TAB); run(0.1); shot("shards_eras");
                     press(KEY_TAB); run(0.1); shot("shards_history"); printf("  %s\n", game.testHistoryInfo().c_str());
                     { const std::vector<std::string> hl = game.testLegendLines(); for (size_t k = 0; k < hl.size() && k < 6; k++) printf("    %s\n", hl[k].c_str()); }
@@ -128,7 +128,7 @@ void Flow::decoder() {
                 } else printf("  the last recording S%d could not be opened\n", li);
             } else printf("  no last recording found\n");
         }
-        {   // C-13: a world of two peoples on the decoder: three shards of each people of Eleinewai I (152 0 92, the Ghotokhor and the
+        {   // a world of two peoples on the decoder: three shards of each people of Eleinewai I (152 0 92, the Ghotokhor and the
             // Khokurt) added to the guide, the decoder opened again lists the world once a people, named; the second people's list opened
             for (int i = 0; i < 3; i++) { game.guide.shards.insert("152,0,92/0/S" + std::to_string(i)); game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, i))); }
             press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
@@ -137,7 +137,7 @@ void Flow::decoder() {
             press(KEY_DOWN); press(KEY_DOWN); run(0.1); press(KEY_ENTER); run(0.1);
             shot("shards_second_people"); printf("  the second people's list: %s\n", game.testShardsInfo().c_str());
         }
-        {   // C-14: lending: the guide so far (the shards taken and read above, the piece named) saved as the inbox file, then a fresh guide in
+        {   // lending: the guide so far (the shards taken and read above, the piece named) saved as the inbox file, then a fresh guide in
             // the same game imports it (the names into the inbox, the shards found and read lent): its decoder lists the world with the lent rows
             // in cyan and plays the friend's piece under the friend's name; the guide is put back after (a second `Game` alive beside the first
             // corrupts the first: the harness keeps to one)
@@ -155,7 +155,7 @@ void Flow::decoder() {
             game.guide = kept; game.guide.save(game.guidePath);
             remove("shots/tests/test_guide_inbox.txt");
         }
-        {   // C-11: the ship's player: Tab at the decoder's worlds turns to it (the pieces and recordings held, what the radar caught); the first
+        {   // the ship's player: Tab at the decoder's worlds turns to it (the pieces and recordings held, what the radar caught); the first
             // piece played and left playing as the decoder closes: the radar below holds it, the flight carries it on the space HUD, the landing stops it
             game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
             press(KEY_TAB); run(0.1);
@@ -176,13 +176,13 @@ void Flow::cabin() {
     press(KEY_PAGE_UP); run(0.3); shot("roof"); press(KEY_PAGE_DOWN); run(0.1);
     press(KEY_Y); game.testCabinGoto(1.4, -0.9, -0.35, -0.2); run(0.6); shot("cabin_glass_lit");   // B-411: the glass hull with the light on, across the room: what stands in it solid, a sheen on the glass
     press(KEY_U); run(1.0); shot("cabin_glass"); press(KEY_Y); press(KEY_U); run(0.1);
-    game.testCabinGoto(0.0, 0.2, PI, -0.42); run(0.2); shot("cabin_back");   // R-404: the back wall's three sets in their colours (the decoder, the radar, the telescope), the head bent to the desks
-    game.testCabinGoto(-1.1, -1.38, -PI / 2, -0.55); run(0.2); shot("cabin_case"); printf("  facing %d (10 is the instruments' case)\n", game.testCabinFacing());   // C-11: the case on the left wall
-    game.testCabinGoto(1.55, -0.95, PI, -0.6); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());   // W-06: the telescope's set, from where its screen is in the frame
+    game.testCabinGoto(0.0, 0.2, PI, -0.42); run(0.2); shot("cabin_back");   // the back wall's three sets in their colours (the decoder, the radar, the telescope), the head bent to the desks
+    game.testCabinGoto(-1.1, -1.38, -PI / 2, -0.55); run(0.2); shot("cabin_case"); printf("  facing %d (10 is the instruments' case)\n", game.testCabinFacing());   // the case on the left wall
+    game.testCabinGoto(1.55, -0.95, PI, -0.6); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());   // the telescope's set, from where its screen is in the frame
     press(KEY_E); run(0.3); shot("telescope_set"); printf("  from the set: %s\n", game.testTelescopeInfo().c_str()); press(KEY_Z); run(0.1);
     press(KEY_TAB); run(0.1); shot("list"); press(KEY_ESCAPE);
     press(KEY_I); run(0.1); shot("data"); press(KEY_SPACE);
-    in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_ship"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // W-01: the system's events from the parking
+    in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_ship"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // the system's events from the parking
 }
 
 void Flow::telescope() {
@@ -212,7 +212,7 @@ void Flow::telescope() {
             printf("  photo: %s\n", game.screenshotCaption().c_str());
         }
         press(KEY_Z); run(0.1); printf("  stowed: %s\n", game.testTelescopeInfo().c_str());
-        game.testAimAtBody(game.testParkedBody()); game.testCabinGoto(0.0, -1.0, 0.0, 0.0); run(0.2);   // R-405: a second of Shift+Right carries the ship round the world, the world kept in the window (after the telescope, whose moon is lit from the parking it had)
+        game.testAimAtBody(game.testParkedBody()); game.testCabinGoto(0.0, -1.0, 0.0, 0.0); run(0.2);   // a second of Shift+Right carries the ship round the world, the world kept in the window (after the telescope, whose moon is lit from the parking it had)
         in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(1.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false;
         shot("orbit_turn"); printf("  Shift+Right for a second: '%s'\n", game.testStatus().c_str());
     }
@@ -235,7 +235,7 @@ void Flow::radar() {
             run(5.5); shot("radar_lock"); printf("  %s\n", game.testRadarInfo().c_str());
             press(KEY_ENTER); run(1.0); shot("radar_flight"); printf("  Enter: '%s'; %s; the synth: %s\n", game.testStatus().c_str(), game.testRadarInfo().c_str(), game.audio.radio ? "STILL the radar's" : "released");   // the Vimana flight to the signal's star, the camera left
             press(KEY_V); run(0.3); printf("  the flight aborted for the rest of the flow: '%s' (%s)\n", game.testStatus().c_str(), game.testDebugInfo().c_str());
-            // C-15: the gain up to x32 (the far scan a slice a frame), the view onto the farthest people's signal x32 hears, the longer
+            // the gain up to x32 (the far scan a slice a frame), the view onto the farthest people's signal x32 hears, the longer
             // hold, the lock with its thousands of light years, Enter flies there; V aborts at once, so the flow goes on from where
             // C-07's flight left it
             press(KEY_B); run(0.1);
@@ -262,16 +262,16 @@ void Flow::starmap() {
     game.testTypeText("HOME OF CATS"); run(0.1);
     printf("  renamed star: '%s'\n", game.testStarName().c_str());
     press(KEY_M); run(0.3); shot("starmap");
-    press(KEY_TAB); run(0.2); shot("starmap_galaxy"); printf("  the galaxy chart: page %d, level %d, built in %.1f ms\n", game.testMapPage(), 0, game.testChartBuildMs());   // G-05: the whole disc
+    press(KEY_TAB); run(0.2); shot("starmap_galaxy"); printf("  the galaxy chart: page %d, level %d, built in %.1f ms\n", game.testMapPage(), 0, game.testChartBuildMs());   // the whole disc
     for (int i = 0; i < 4; i++) press(KEY_EQUAL);
     run(0.2); shot("starmap_galaxy_x16"); printf("  four steps in: built in %.1f ms, the ship's crosshair at %d %d\n", game.testChartBuildMs(), game.testChartYouX(), game.testChartYouY());
     for (int i = 0; i < 4; i++) press(KEY_MINUS);
     press(KEY_TAB); run(0.1); press(KEY_ESCAPE);
     press(KEY_R); press(KEY_N); run(0.2); shot("targeting");
     press(KEY_ENTER); run(0.2);
-    press(KEY_V); run(3.0); shot("vimana"); printf("  the player in the flight: %s; its line '%s'\n", game.testPlayerInfo().c_str(), game.testPlayerHud().c_str());   // C-11
-    press(KEY_M); run(0.3); shot("starmap_flight"); printf("  M in the flight: state %d, page %d\n", (int)game.state, game.testMapPage()); press(KEY_ESCAPE);   // G-05: the galaxy, the line flown
-    run(12.0); shot("arrived"); printf("  the player on arrival: %s\n", game.testPlayerInfo().c_str());   // C-11
+    press(KEY_V); run(3.0); shot("vimana"); printf("  the player in the flight: %s; its line '%s'\n", game.testPlayerInfo().c_str(), game.testPlayerHud().c_str());
+    press(KEY_M); run(0.3); shot("starmap_flight"); printf("  M in the flight: state %d, page %d\n", (int)game.state, game.testMapPage()); press(KEY_ESCAPE);   // the galaxy, the line flown
+    run(12.0); shot("arrived"); printf("  the player on arrival: %s\n", game.testPlayerInfo().c_str());
 }
 
 void Flow::landing() {
@@ -284,7 +284,7 @@ void Flow::landing() {
         if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); parkedByTest = true; printf("  only comets here: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
     }
     if (lb >= 0) {
-        // G-01: approach unless the test parked the ship itself (the old check compared the star's generated name with
+        // approach unless the test parked the ship itself (the old check compared the star's generated name with
         // the scan's first felisian system, Skeatoltdos, which the comet case parks at; a pinned name breaks with the galaxy)
         if (!parkedByTest) {
             game.testAimAtBody(lb);
@@ -292,31 +292,31 @@ void Flow::landing() {
             for (int i = 0; i < lb; i++) press(KEY_DOWN);
             press(KEY_ENTER); run(2.0); shot("approach");
             run(9.0); shot("orbit"); printf("  %s\n", game.testDebugInfo().c_str());
-            press(KEY_C); game.testWaitMap(); run(0.2);   // F-02: the map's frames below (the screen reads the world on the map's thread)
+            press(KEY_C); game.testWaitMap(); run(0.2);   // the map's frames below (the screen reads the world on the map's thread)
         }
         if (game.testBodyType(lb) != PT_FELISIAN) {
-            // G-04: the landing below (the walk, the herd, the water) wants a living world: the arrival's world gave the approach
+            // the landing below (the walk, the herd, the water) wants a living world: the arrival's world gave the approach
             // frames; park at the scan's first felisian world now (the pinned home's nearest star holds none)
             StarSystem fs; int fb = -1;
             if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); printf("  no living world at this star: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
         }
         shot("landing_map");
         press(KEY_R); run(0.1); shot("landing_map2");
-        in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_site"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // W-01: the cursor's site
-        press(KEY_Z); run(0.3); shot("landing_zoom"); press(KEY_Z); run(0.1);   // O2 (R-301): the sector zoom
-        press(KEY_J); run(0.1); shot("landing_sky");   // M5-09
-        game.testLandSite(); run(0.1);   // G-04: a lit land site from the body's seed (J leaves the cursor under the moon: in the sea at Heilya II; R is seeded by the clock)
-        press(KEY_ENTER); run(2.0); shot("descent"); printf("  the player at the descent: %s\n", game.testPlayerInfo().c_str());   // C-11: a landing stops it
+        in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_site"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // the cursor's site
+        press(KEY_Z); run(0.3); shot("landing_zoom"); press(KEY_Z); run(0.1);   // the sector zoom
+        press(KEY_J); run(0.1); shot("landing_sky");
+        game.testLandSite(); run(0.1);   // a lit land site from the body's seed (J leaves the cursor under the moon: in the sea at Heilya II; R is seeded by the clock)
+        press(KEY_ENTER); run(2.0); shot("descent"); printf("  the player at the descent: %s\n", game.testPlayerInfo().c_str());   // a landing stops it
         game.currentSlot = 2; in.down[KEY_LEFT_CONTROL] = true; press(KEY_S); in.down[KEY_LEFT_CONTROL] = false;   // save mid-descent to slot 2
         game.currentSlot = 1;
         run(6.0); shot("surface");
-        printf("  %s\n", game.testRangeInfo().c_str());   // O1: the rangefinder
-        printf("  fronts: %s\n", game.testFrontInfo().c_str());   // W-03: the forecast at the feet
+        printf("  %s\n", game.testRangeInfo().c_str());   // the rangefinder
+        printf("  fronts: %s\n", game.testFrontInfo().c_str());   // the forecast at the feet
         in.down[KEY_W] = true; run(3.0); in.down[KEY_W] = false;
         in.mouseDx = 400; game.frame(in, 1.0 / 30); in.newFrame();
         run(0.5); shot("surface2");
-        press(KEY_TAB); run(0.2); shot("surface_readings"); press(KEY_TAB); run(0.1);   // R-414: the readings (Tab) over the view and away again
-        // M8: sprint, jump + jetpack, the buggy
+        press(KEY_TAB); run(0.2); shot("surface_readings"); press(KEY_TAB); run(0.1);   // the readings (Tab) over the view and away again
+        // sprint, jump + jetpack, the buggy
         in.down[KEY_W] = true; in.down[KEY_LEFT_SHIFT] = true; run(2.5); shot("sprint"); in.down[KEY_LEFT_SHIFT] = false; in.down[KEY_W] = false;
         printf("  sprint: stamina %.0f, speed %.1f m/s\n", game.testPlayerStamina(), game.testPlayerSpeed());
         press(KEY_SPACE); in.down[KEY_SPACE] = true; run(2.5); shot("jetpack"); in.down[KEY_SPACE] = false;
@@ -326,7 +326,7 @@ void Flow::landing() {
         press(KEY_B); run(2.5);                      // unfold
         game.testWalkToBuggy();
         press(KEY_E); run(0.2); shot("buggy_seat");
-        // N4-02: a long drive on open ground; frames at speed, airborne if it happens, the chase view
+        // a long drive on open ground; frames at speed, airborne if it happens, the chase view
         {
             bool airShot = false; double top = 0;
             double openRun = game.testDriveOpen();
@@ -338,7 +338,7 @@ void Flow::landing() {
                 if (i == 30 * 8) { in.down[KEY_D] = true; }
                 if (i == 30 * 9) { in.down[KEY_D] = false; }
                 if (i == 30 * 20) shot("buggy_drive");
-                if (i == 30 * 21 || i == 30 * 22) in.pressed[KEY_TAB] = true;   // R-414: the buggy's readings
+                if (i == 30 * 21 || i == 30 * 22) in.pressed[KEY_TAB] = true;   // the buggy's readings
                 if (i == 30 * 21 + 6) shot("buggy_readings");
                 top = std::max(top, game.testBuggySpeed());
                 if (!airShot && game.testBuggyAirborne()) { shot("buggy_air"); airShot = true; }
@@ -348,14 +348,14 @@ void Flow::landing() {
         press(KEY_V); run(0.2); shot("buggy_chase"); in.down[KEY_W] = false; run(1.5);
         printf("  buggy: %s\n", game.testBuggyInfo().c_str());
         press(KEY_E); run(0.5);
-        {   // B-205 / R-204: the capsule always comes; B at it unfolds a new buggy and scraps the old one
+        {   // the capsule always comes; B at it unfolds a new buggy and scraps the old one
             press(KEY_K); run(0.3);
             bool recalled = game.testStatus().find("RECALLED") != std::string::npos;
             press(KEY_B); run(0.3);
             bool scrapped = game.testStatus().find("SCRAPPED") != std::string::npos;
             printf("  recall with the buggy out: %s; B redeploys: %s (%s)\n", recalled ? "ok" : "FAIL", scrapped ? "ok" : "FAIL", game.testBuggyInfo().c_str());
         }
-        {   // R-403: the drone: F unfolds it at the capsule, E gets in, Space lifts it and climbs, a flight at full thrust with a turn,
+        {   // the drone: F unfolds it at the capsule, E gets in, Space lifts it and climbs, a flight at full thrust with a turn,
             // the chase view, S brakes it, Shift brings it down and lands it, E out; the capsule is recalled beside the landing
             press(KEY_F); run(2.5);
             bool unfolded = game.testDroneInfo().find("deployed=1") != std::string::npos;
@@ -370,7 +370,7 @@ void Flow::landing() {
                 if (i == 30 * 9) in.down[KEY_D] = true;
                 if (i == 30 * 11) in.down[KEY_D] = false;
                 if (i == 30 * 12) shot("drone_flight");
-                if (i == 30 * 13 || i == 30 * 14) in.pressed[KEY_TAB] = true;   // R-414: the drone's readings
+                if (i == 30 * 13 || i == 30 * 14) in.pressed[KEY_TAB] = true;   // the drone's readings
                 if (i == 30 * 13 + 6) shot("drone_readings");
                 top = std::max(top, game.testDroneSpeed()); altMax = std::max(altMax, game.testDroneAlt());
             }
@@ -388,24 +388,24 @@ void Flow::landing() {
         }
         press(KEY_M); run(0.2);
         press(KEY_N); run(0.2); shot("sectormap");
-        for (int i = 0; i < 5; i++) {   // O1-04: out to the widest level this world allows, a frame per level (B-402: the grid's step)
+        for (int i = 0; i < 5; i++) {   // out to the widest level this world allows, a frame per level (B-402: the grid's step)
             press(KEY_MINUS); run(0.3);
             if (i < 4) shot((std::string("sectormap_z") + std::to_string(i + 1)).c_str());
         }
         shot("sectormap_wide"); printf("  %s\n", game.testMarksInfo().c_str());
         for (int i = 0; i < 5; i++) press(KEY_EQUAL);
         press(KEY_ESCAPE);
-        {   // R-408: the scanner (R) through the world's modes to the first, its lines and the compass's mark; a mark at the crosshair (L), then
+        {   // the scanner (R) through the world's modes to the first, its lines and the compass's mark; a mark at the crosshair (L), then
             // the sector map with the mark and the echoes; the mark removed again from the map (Delete twice) so the flow's guide stays as it was.
-            // B-412: the mark is not over the view until the map's Shift+Enter shows it (boxed on the map), then over the view with its
+            // the mark is not over the view until the map's Shift+Enter shows it (boxed on the map), then over the view with its
             // diamond on the compass
             press(KEY_R);
-            // F-05: the scan's thread waited for at one instant (frames at dt 0): frames of 1/30 s while it worked put a faster binary's
+            // the scan's thread waited for at one instant (frames at dt 0): frames of 1/30 s while it worked put a faster binary's
             // clock ahead (more frames in the scan's 50 ms), and every picture after this one with it
             for (int i = 0; i < 3000 && !game.testScanned(); i++) { game.frame(in, 0); in.newFrame(); std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
             run(0.2); shot("scan_hud"); printf("  scanner: %s\n", game.testScanInfo().c_str());
             const double pitch0 = game.testPitch();
-            game.testSetPitch(-0.06); run(0.1);   // B-412: the crosshair on the ground ahead (level, it rests on the sky and L marks the feet)
+            game.testSetPitch(-0.06); run(0.1);   // the crosshair on the ground ahead (level, it rests on the sky and L marks the feet)
             press(KEY_L); game.testTypeText("FLOW MARK"); run(0.3); shot("scan_marked");
             game.testSetPitch(pitch0);
             press(KEY_N); run(0.2);
@@ -422,13 +422,13 @@ void Flow::landing() {
             while (game.testScanMode() >= 0) press(KEY_R);   // the scanner off again
         }
         press(KEY_X); run(0.2); shot("creatures");
-        // N3-03: walk up to the first herd and log how it reacts
+        // walk up to the first herd and log how it reacts
         if (game.testGotoHerd(34)) {
             run(0.5); shot("herd_approach"); printf("  herd before: %s\n", game.testHerdStates().c_str());
             in.down[KEY_W] = true; run(4.0); in.down[KEY_W] = false; run(0.5);
             press(KEY_X); run(0.1); shot("herd_flee"); printf("  herd after walking in: %s\n", game.testHerdStates().c_str());
         } else printf("  no herd at this site\n");
-        // M6-05 photo tools: photo mode with the free camera, a panorama, three recorded frames
+        // photo tools: photo mode with the free camera, a panorama, three recorded frames
         in.down[KEY_LEFT_CONTROL] = true; press(KEY_P); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("photo");
         in.down[KEY_W] = true; in.down[KEY_SPACE] = true; run(0.6); in.down[KEY_W] = false; in.down[KEY_SPACE] = false; shot("photo_flight");
         {
@@ -441,7 +441,7 @@ void Flow::landing() {
         in.down[KEY_LEFT_CONTROL] = true; press(KEY_R); in.down[KEY_LEFT_CONTROL] = false; run(0.1);
         in.down[KEY_LEFT_CONTROL] = true; press(KEY_R); in.down[KEY_LEFT_CONTROL] = false;
         printf("recorder: take %d, %d frames%s\n", game.recTake, game.recFrame, game.recFrame >= 3 ? " (ok)" : " FAIL");
-        {   // W-01: the almanac under the feet, Enter on its first event, the run watched until the clock lands on it (the time-lapse frame of M5-06 was here)
+        {   // the almanac under the feet, Enter on its first event, the run watched until the clock lands on it (the time-lapse frame of M5-06 was here)
             in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac"); printf("  %s\n", game.testAlmanacInfo().c_str());
             press(KEY_ENTER); run(0.3); shot("almanac_run");
             double target = game.testAlmanacTarget(), tStart = game.gameTime(), peak = 0; int frames = 0;
@@ -451,7 +451,7 @@ void Flow::landing() {
             printf("  the run: %.0f s of game time in %d frames at a peak of x%.0f, %.3f s off the event, warp x%.0f, '%s'\n", target - tStart, frames, peak, off, warpAfter, game.testStatus().c_str());
         }
         press(KEY_V); press(KEY_V); run(0.1); shot("supervision"); press(KEY_V); press(KEY_V); press(KEY_V);
-        // M3: a note, the log, the statistics and the gallery
+        // a note, the log, the statistics and the gallery
         press(KEY_G); press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); game.testTypeText("STRANGE RED TREES HERE"); run(0.1);
         press(KEY_J); run(0.1); shot("log"); press(KEY_ESCAPE);
         press(KEY_G); for (int i = 0; i < 6; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("stats"); press(KEY_ESCAPE);
@@ -462,20 +462,20 @@ void Flow::landing() {
         printf("  log entries: %d\n", game.testLogEntries());
         for (int i = 0; i < 3; i++) press(KEY_T);
         run(4.0); shot("surface3");
-        press(KEY_I); run(0.1); shot("surface_data"); printf("  fronts: %s\n", game.testFrontInfo().c_str()); press(KEY_SPACE);   // W-03: the data sheet's FORECAST line
+        press(KEY_I); run(0.1); shot("surface_data"); printf("  fronts: %s\n", game.testFrontInfo().c_str()); press(KEY_SPACE);   // the data sheet's FORECAST line
         press(KEY_ESCAPE); run(0.1); shot("menu");
-        press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("auto"); press(KEY_ESCAPE); run(0.1);   // R-419: auto-explore's chooser, Esc back to the menu (on its row)
+        press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("auto"); press(KEY_ESCAPE); run(0.1);   // auto-explore's chooser, Esc back to the menu (on its row)
         press(KEY_DOWN); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("settings"); press(KEY_ESCAPE); press(KEY_ESCAPE);
         press(KEY_ESCAPE); press(KEY_DOWN); press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("slots"); press(KEY_ENTER); run(0.1);   // menu > save > slot 1 (R-419: AUTO-EXPLORE the second row)
         press(KEY_K); run(0.5);
         press(KEY_Q); run(3.0); shot("ascent");
         run(6.0); shot("back_in_space");
-        {   // B-205: a second landing (same world, another site) starts with no buggy
+        {   // a second landing (same world, another site) starts with no buggy
             printf("  before the second landing: %s\n", game.testMarksInfo().c_str());
             press(KEY_C); run(0.3); press(KEY_ENTER); run(8.0); shot("second_landing");
             bool none = game.testBuggyInfo().find("deployed=0") != std::string::npos;
             printf("  second landing: %s -> %s\n", game.testBuggyInfo().c_str(), none ? "no buggy (ok)" : "FAIL: the buggy carried over");
-            std::string marks = game.testMarksInfo();   // B-303: the waypoint of the first landing must be gone (R-414: no trail any more)
+            std::string marks = game.testMarksInfo();   // the waypoint of the first landing must be gone (R-414: no trail any more)
             bool fresh = marks.find("waypoint=0") != std::string::npos;
             press(KEY_N); run(0.2); shot("second_sectormap"); press(KEY_ESCAPE);
             printf("  marks after the second landing: %s -> %s\n", marks.c_str(), fresh ? "fresh (ok)" : "FAIL: the old landing's marks carried over");
@@ -491,12 +491,12 @@ void Flow::comet() {
         for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return !found; })) {
             for (int bi = 0; bi < (int)sys.bodies.size() && !found; bi++) {
                 if (sys.bodies[bi].type != PT_COMET) continue;
-                game.testParkAt(s, bi); run(0.5); shot("comet_map");   // O4: comets are landable, so parking opens the landing map
+                game.testParkAt(s, bi); run(0.5); shot("comet_map");   // comets are landable, so parking opens the landing map
                 press(KEY_ESCAPE); run(0.3); shot("comet");
                 printf("  comet HUD: %s\n", game.cometMotionString(bi).c_str());
                 press(KEY_I); run(0.1); shot("comet_data"); press(KEY_SPACE);
                 press(KEY_TAB); run(0.1); shot("comet_list"); press(KEY_ESCAPE);
-                // O4 (R-303): land on the nucleus: microgravity, no buggy, floating jumps that Ctrl brings down, the tail overhead
+                // land on the nucleus: microgravity, no buggy, floating jumps that Ctrl brings down, the tail overhead
                 press(KEY_C); run(0.2); press(KEY_ENTER); run(8.0); shot("comet_surface");
                 printf("  on the comet: escape velocity %.1f m/s, %s, '%s'\n", game.testEscapeVelocity(), game.testRangeInfo().c_str(), game.testStatus().c_str());
                 press(KEY_B); run(0.2); printf("  B on the comet: '%s'\n", game.testStatus().c_str());
@@ -569,7 +569,7 @@ void Flow::probe() {
             for (int i = 0; i < (int)gsys.bodies.size(); i++) if (gsys.bodies[i].type == PT_GASGIANT) { gs = s; gi = i; break; }
         }
         if (gi >= 0) {
-            game.testParkAt(gs, gi); game.testWaitMapOf(gi); run(0.3);   // F-07: the giant's map first (made at a binary's own pace, the shot had it or not)
+            game.testParkAt(gs, gi); game.testWaitMapOf(gi); run(0.3);   // the giant's map first (made at a binary's own pace, the shot had it or not)
             game.testAimAtBody(gi); press(KEY_Z); in.down[KEY_UP] = true; run(0.25); in.down[KEY_UP] = false; run(0.2); shot("probe_aim"); printf("  %s\n", game.testTelescopeInfo().c_str());
             press(KEY_C); run(2.0); shot("probe_fall"); printf("  C: '%s'; %s\n", game.testStatus().c_str(), game.testProbeInfo().c_str());
             game.testProbeSkip(PROBE_FALL_S + 5); run(0.1); shot("probe_entry");
@@ -578,7 +578,7 @@ void Flow::probe() {
             game.currentSlot = 3; in.down[KEY_LEFT_CONTROL] = true; press(KEY_S); in.down[KEY_LEFT_CONTROL] = false; game.currentSlot = 1;   // saved in the descent
             press(KEY_ESCAPE); run(0.3); shot("probe_cabin"); printf("  Esc: state %d, '%s'\n", (int)game.state, game.testStatus().c_str());
             press(KEY_C); run(0.2); printf("  C again: state %d (24 the probe's screen)\n", (int)game.state);
-            {   // R-406: Shift held a second runs the relay's clock eight seconds; X-02: the clear band between the decks, a flash in its floor
+            {   // Shift held a second runs the relay's clock eight seconds; X-02: the clear band between the decks, a flash in its floor
                 double c0 = game.testProbeClock(); in.down[KEY_LEFT_SHIFT] = true; run(1.0); shot("probe_fast"); in.down[KEY_LEFT_SHIFT] = false;
                 printf("  Shift held a second (R-406): the clock %.1f -> %.1f s\n", c0, game.testProbeClock());
                 double cb = -1;
@@ -587,9 +587,9 @@ void Flow::probe() {
             }
             game.testProbeSkip(1e6); run(0.3); shot("probe_lost"); printf("  the end: %s; log: %s\n", game.testProbeInfo().c_str(), game.guide.log.empty() ? "-" : game.guide.log.back().text.c_str());
             press(KEY_ENTER); run(0.2); printf("  Enter: state %d, probe %s, '%s'\n", (int)game.state, game.testProbeActive() ? "STILL ACTIVE" : "let go", game.testStatus().c_str());
-            // X-04: what came back. The gallery's newest item is its recording (its final image); Enter plays it on the screen, the
+            // what came back. The gallery's newest item is its recording (its final image); Enter plays it on the screen, the
             // arrows go down it by depth; the statistics count it; the giant's data sheet draws its profile
-            press(KEY_G); for (int i = 0; i < 5; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.2); shot("probe_gallery");   // R-408: the menu lost its landmark row
+            press(KEY_G); for (int i = 0; i < 5; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.2); shot("probe_gallery");   // the menu lost its landmark row
             printf("  gallery (X-04): %d items, the newest %s; '%s'\n", game.testGalleryItems(), game.testGalleryRec(game.testGallerySel()) >= 0 ? "the probe's recording" : "A PHOTOGRAPH", game.guide.probes.empty() ? "no record" : game.guide.probes.back().body.c_str());
             press(KEY_ENTER); run(2.0); shot("probe_recording"); printf("  Enter: state %d (25 the recording), clock %.1f s, '%s'\n", (int)game.state, game.testRecordingClock(), game.testStatus().c_str());
             in.down[KEY_RIGHT] = true; run(1.4); in.down[KEY_RIGHT] = false; run(0.1); shot("probe_recording_deep"); printf("  Right held: clock %.1f s\n", game.testRecordingClock());
@@ -612,7 +612,7 @@ void Flow::roads() {
             game.testLandCursor(la / DEG, lo / DEG); run(0.2);
             press(KEY_Z); press(KEY_V); run(0.5); shot("roads_zoom"); printf("  %s; the plan's cores %d, its roads %d; %s\n", game.testRoadInfo().c_str(), game.testZoomCores(), game.testZoomWays(NK_ROAD), game.testLandPeoplesInfo().c_str());
             press(KEY_V); press(KEY_Z); run(0.1); press(KEY_ESCAPE); run(0.1);
-            // C-18: the drone bay over the same world: the rack, its screen, the drones sent (out of their ports), down there searching, back
+            // the drone bay over the same world: the rack, its screen, the drones sent (out of their ports), down there searching, back
             game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);
             shot("drones_rack"); printf("  facing %d (11 is the drone bay)\n", game.testCabinFacing());
             press(KEY_E); run(0.1); game.testDronesSettle(); run(0.1); shot("drones_bay");
@@ -697,8 +697,8 @@ void testAudio() {
     struct Stage { const char* name; double hum, engine, wind, tone, rain, lava, surf, birds, breath; int step; double leaves; };
     const Stage stages[] = {{"ship", 0.6, 0, 0, 0.5, 0, 0, 0, 0, 0, 0, 0}, {"vimana", 0.6, 0.9, 0, 0.5, 0, 0, 0, 0, 0, 0, 0}, {"shore", 0.05, 0, 0.4, 0.25, 0, 0, 0.6, 0.6, 0, 1, 0},
                             {"desert storm", 0.05, 0, 1.0, 0.6, 0, 0, 0, 0, 0.4, 2, 0}, {"mountain rain", 0.05, 0, 0.6, 1.0, 0.8, 0, 0, 0, 0, 3, 0}, {"lava", 0.05, 0, 0, 0.5, 0, 0.6, 0, 0, 0, 0, 0},
-                            {"forest", 0.05, 0, 0.35, 0.5, 0, 0, 0, 0.4, 0, 1, 0.8},   // N2-06
-                            {"buggy", 0.05, 0.6, 0.5, 0.5, 0, 0, 0, 0, 0, 0, 0}};   // N4-04 (engine, rpm and skid set below)
+                            {"forest", 0.05, 0, 0.35, 0.5, 0, 0, 0, 0.4, 0, 1, 0.8},
+                            {"buggy", 0.05, 0.6, 0.5, 0.5, 0, 0, 0, 0, 0, 0, 0}};   // (engine, rpm and skid set below)
     std::vector<float> buf(2048);
     for (const Stage& sg : stages) {
         AudioState st; st.hum = sg.hum; st.engine = sg.engine; st.wind = sg.wind; st.windTone = sg.tone; st.rain = sg.rain; st.lava = sg.lava; st.surf = sg.surf; st.birds = sg.birds; st.breath = sg.breath; st.leaves = sg.leaves;
@@ -728,7 +728,7 @@ void testAudio() {
 int runZoom(int argc, char** argv) {
     if (argc < 7) { printf("zoom <sx> <sz> <body index> <latDeg|site|capital> <lonDeg> [scale]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
-    const std::string at = argv[5];   // F-01: `site` keeps the landing map's own cursor, `capital` the first people's capital's core
+    const std::string at = argv[5];   // `site` keeps the landing map's own cursor, `capital` the first people's capital's core
     double latDeg = atof(argv[5]), lonDeg = atof(argv[6]); int scale = argc > 7 ? atoi(argv[7]) : 4;
     Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
     TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
@@ -768,10 +768,10 @@ int runZoom(int argc, char** argv) {
 // `capital`: standing 400 m outside an age test world's capital (the industrial's by default, felisian), facing it, the flora's listing
 // timed (a settlement's buildings tested against every tree); `probe`: the launch from the ringed test giant (the handover, KI-361);
 // `roads`: on foot near the modern capital, moved two ruin cells at a time: each rebuild of the site's roads on the main thread timed
-// B-427: a Wolf-Rayet star's gas giant and the envelope its wind strips (S-05): parked at the giant, carried round it by Shift and the
+// a Wolf-Rayet star's gas giant and the envelope its wind strips (S-05): parked at the giant, carried round it by Shift and the
 // arrows as a player is, a frame every 45 degrees; then from 12 and 40 radii, from a moon, through the cabin's window and at 1x.
 // `tail [sx sy sz body]` (the user's giant by default)
-// B-428: the parked ship's views near home of the scenes that were crowded (a solid world with a big moon, a twin, a giant with
+// the parked ship's views near home of the scenes that were crowded (a solid world with a big moon, a twin, a giant with
 // four moons or more, a giant's moon): parked as a player is, then from the same place the eyes on the biggest other disc
 int runParkings() {
     struct Pick { int64_t x, z; int body; const char* what; };

@@ -2,7 +2,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// F-01: the process as B-422 measured it: its CPU seconds (all threads), its threads alive and running now, its resident memory (MB);
+// the process as B-422 measured it: its CPU seconds (all threads), its threads alive and running now, its resident memory (MB);
 // macOS and Linux (elsewhere zeros)
 struct ProcSample { double cpuS = 0; int threads = 0, running = 0; double rssMB = 0; };
 static ProcSample procSample() {
@@ -81,7 +81,7 @@ int runBenchForest() {
     for (int i = 0; i < 150; i++) { sv.update(1.0 / 30, in, t + i * 0.033, false); sv.render(fb, t + i * 0.033, nb.stars, sr, 1.0); fb.mush(2); }
     printf("forest 4x x150: %.2f ms/frame (sections sky %.1f warm %.1f terrain %.1f objects %.1f flora %.1f rest %.1f; trees %.1f ms)\n", (nowSec() - t0) * 1000 / 150,
            sv.lastRenderMs[0], sv.lastRenderMs[1], sv.lastRenderMs[2], sv.lastRenderMs[3], sv.lastRenderMs[4], sv.lastRenderMs[5], sv.lastFloraMs[0]);
-    printf("  %s\n  %s\n", sv.bandTraceLine(false).c_str(), sv.bandTraceLine(true).c_str());   // F-01: the last frame's bands
+    printf("  %s\n  %s\n", sv.bandTraceLine(false).c_str(), sv.bandTraceLine(true).c_str());   // the last frame's bands
     return 0;
 }
 
@@ -102,10 +102,10 @@ struct Bench {
         printf("%-12s %.2f ms/frame\n", name, dt);
         return dt;
     }
-    // F-11: five frames at one instant after a scale's change, before a row's timed frames: the first frames at a new scale allocate its
+    // five frames at one instant after a scale's change, before a row's timed frames: the first frames at a new scale allocate its
     // buffers and tables (on the swapping Mac one run's space 4x read 11.0 ms against 6.4-6.6), and the timeline stays the rows' before
     void settle() { for (int i = 0; i < 5; i++) { game.frame(in, 0); in.newFrame(); } }
-    // M7-04 performance budgets. F-11: about 1.5x the dev Mac's medians after F-10 (an M4 of four performance and six efficiency cores;
+    // performance budgets. F-11: about 1.5x the dev Mac's medians after F-10 (an M4 of four performance and six efficiency cores;
     // at least the median + 0.5 ms), so a change that gives a gain back fails; `bench check <factor>` multiplies them for another machine
     // or one thread
     void budget(const char* name, double ms, double limit) { limit *= slack; bool ok = ms <= limit; printf("budget %-14s %.1f ms (limit %g) %s\n", name, ms, limit, ok ? "ok" : "EXCEEDED"); if (!ok) fails++; }
@@ -113,16 +113,16 @@ struct Bench {
     void space();   // the start: space at each scale, the telescope at its deepest
     void descent();   // the landing map, the drainage tiles, the descent's first frames
     void surface();   // the ground: the first frames, each scale with its sections, the sprint, the turns, the map cache
-    void forest();   // N2-04: a forest at 2x through the surface renderer alone
-    void lamp();   // D-04: the lamp at 4x on a drifter in the dark
-    void city();   // A-02: the test city at 2x
-    void herd();   // N3: a herd at 1x
-    void drive();   // N4-02: the driving frame at 2x
-    void belt();   // O3: inside a belt at 2x
-    void vimana();   // G-07: a flight's frame at 2x
-    void probe();   // X-02: the probe's camera at 2x
-    void people();   // T-01: the descent onto a people's world, its capital at 2x
-    void unbudgeted();   // F-01: the rows without budgets
+    void forest();   // a forest at 2x through the surface renderer alone
+    void lamp();   // the lamp at 4x on a drifter in the dark
+    void city();   // the test city at 2x
+    void herd();   // a herd at 1x
+    void drive();   // the driving frame at 2x
+    void belt();   // inside a belt at 2x
+    void vimana();   // a flight's frame at 2x
+    void probe();   // the probe's camera at 2x
+    void people();   // the descent onto a people's world, its capital at 2x
+    void unbudgeted();   // the rows without budgets
     void budgets();   // the budgets
 };
 
@@ -145,14 +145,14 @@ void Bench::space() {
 void Bench::descent() {
     game.settings.renderScale = 1; game.applySettings();
     press(KEY_C);   // G-02: no R: it picked a random lit site seeded by the clock, whose tiles took 0.4-3.2 s by luck (KI-338); the default site is the measure
-    game.testWaitMap();   // F-02: no map thread beside the descent's frames
-    {   // O6-03: a player looks at the map for a moment; the drainage tiles of the site are computed meanwhile (up to 3 s here)
+    game.testWaitMap();   // no map thread beside the descent's frames
+    {   // a player looks at the map for a moment; the drainage tiles of the site are computed meanwhile (up to 3 s here)
         int waited = 0; double tw0 = nowSec();
         for (; nowSec() - tw0 < 3.0 && !game.testDrainageReady(); waited++) { game.frame(in, 1.0 / 60); in.newFrame(); }
         printf("landing map  %.2f s (%d frames) until the drainage tiles were ready (%s, %d tiles held)\n", nowSec() - tw0, waited, game.testBodyTypes().c_str(), drainageTilesHeld());
     }
     {
-        // the first descent frames used to hitch (KI-009): time them
+        // the first descent frames can hitch (KI-009): time them
         in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true;
         double worst = 0, first = 0;
         for (int i = 0; i < 60; i++) {
@@ -183,14 +183,14 @@ void Bench::surface() {
         if (s == 4) surface4x = ms;
         const double* r = game.testRenderMs();
         printf("             sections: sky %.1f, warm %.1f, terrain %.1f, objects %.1f, flora %.1f, rest %.1f ms\n", r[0], r[1], r[2], r[3], r[4], r[5]);
-        for (int f = 0; f < 2; f++) { const std::string bl = game.testSurface().bandTraceLine(f == 1); if (!bl.empty()) printf("             %s\n", bl.c_str()); }   // F-01: the last frame's bands
+        for (int f = 0; f < 2; f++) { const std::string bl = game.testSurface().bandTraceLine(f == 1); if (!bl.empty()) printf("             %s\n", bl.c_str()); }   // the last frame's bands
     }
     game.settings.renderScale = 1; game.applySettings(); settle();
     bench("surface", 120);
     writePNG("shots/tests/bench_surface.png", game.output(), FBW, FBH);
     printf("  state=%d %s\n", (int)game.state, game.testStatus().c_str());
     in.down[KEY_W] = true; in.down[KEY_LEFT_SHIFT] = true;
-    {   // M7-01: a sprint of four seconds; the worst frame shows whether the caches stall
+    {   // a sprint of four seconds; the worst frame shows whether the caches stall
         double worst = 0, sum = 0;
         for (int i = 0; i < 240; i++) { double t0 = nowSec(); game.frame(in, 1.0 / 60); double ms = (nowSec() - t0) * 1000; in.newFrame(); worst = std::max(worst, ms); sum += ms; }
         printf("surface-run  %.2f ms/frame, worst %.1f ms, %d cells delivered by the prefetch worker\n", sum / 240, worst, game.testAheadCells());
@@ -206,7 +206,7 @@ void Bench::surface() {
     for (int i = 0; i < 3; i++) press(KEY_T);
     for (int i = 0; i < 60 * 6; i++) { game.frame(in, 1.0 / 60); in.newFrame(); }
     writePNG("shots/tests/bench_surface4.png", game.output(), FBW, FBH);
-    // M7-02 map cache counters
+    // map cache counters
     const SpaceRenderer::MapStats& ms = game.testMapStats();
     printf("maps         %d generated (%.0f ms each on the worker), %d hits, %d evicted, %zu held (cap 24)\n", ms.generated, ms.generated ? game.testGenMicros() / 1000.0 / ms.generated : 0.0, ms.hits, ms.evicted, game.testMapsHeld());
 }
@@ -225,9 +225,9 @@ void Bench::forest() {
             printf("forest 2x    %.2f ms/frame (%d trees: near %d mid %d far %d, %d hidden behind canopy, %d flora points; flora sections trees %.1f, cells %.1f ms)\n", ms, sv2.lastTreesDrawn,
                    sv2.lastNearTrees, sv2.lastMidTrees, sv2.lastFarTrees, sv2.lastTreesHidden, sv2.lastFloraPoints, sv2.lastFloraMs[0], sv2.lastFloraMs[1]);
             saveFB(fb2, "shots/tests/bench_forest.png");
-            budget("forest 2x", ms, 8.2);   // N2-04: a tropical giant forest, the densest case (12 ms on an M4 then, 5.46 after F-10; the budget 14 -> 8.2)
+            budget("forest 2x", ms, 8.2);   // a tropical giant forest, the densest case (12 ms on an M4 then, 5.46 after F-10; the budget 14 -> 8.2)
         }
-        setFramebufferScale(4);   // the same forest at 4x (the default picture since B-310)
+        setFramebufferScale(4);   // the same forest at 4x (the default picture)
         { SpaceRenderer sr4; StarNeighborhood nb4; StarSystem sys4; SurfaceView sv4; double t4 = 0;
           if (setupSceneForType(PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, sv4, sys4, nb4, t4, SCENE_FOREST)) {
             Framebuffer fb4; Input in4;
@@ -237,14 +237,14 @@ void Bench::forest() {
             double ms = (nowSec() - t0) * 1000 / 30;
             printf("forest 4x    %.2f ms/frame (flora sections trees %.1f, cells %.1f ms; %d trees listed, %d visits over the bands)\n", ms, sv4.lastFloraMs[0], sv4.lastFloraMs[1], sv4.lastTreesListed, sv4.lastTreesVisited);
             budget("forest 4x", ms, 13);   // 8.37 after F-10 (F-11: 24 -> 13)
-            printf("             %s\n             %s\n", sv4.bandTraceLine(false).c_str(), sv4.bandTraceLine(true).c_str());   // F-01
-            {   // F-01: the same forest at the game's kernel (the game's fine mush at 4x is 3x3; the row above runs setFramebufferScale's 5x5)
+            printf("             %s\n             %s\n", sv4.bandTraceLine(false).c_str(), sv4.bandTraceLine(true).c_str());
+            {   // the same forest at the game's kernel (the game's fine mush at 4x is 3x3; the row above runs setFramebufferScale's 5x5)
                 const int k0 = g_mushKernel; g_mushKernel = 3;
                 const double t3 = nowSec();
                 for (int i = 0; i < 30; i++) { sv4.update(1.0 / 30, in4, t4 + i * 0.033, false); sv4.render(fb4, t4 + i * 0.033, nb4.stars, sr4, 1.0); fb4.mush(2); }
                 const double ms3 = (nowSec() - t3) * 1000 / 30;
                 printf("forest 4x    %.2f ms/frame at the game's 3x3 mush (F-01)\n", ms3);
-                budget("forest 4x 3x3", ms3, 12);   // F-11: 7.97 after F-10
+                budget("forest 4x 3x3", ms3, 12);   // 7.97 after F-10
                 g_mushKernel = k0;
             }
         } }
@@ -270,7 +270,7 @@ void Bench::lamp() {
             svL.lamp = true; const double on = time30();
             printf("lamp 4x      %.2f ms/frame lit, %.2f unlit (a rocky drifter's ground in the dark)\n", on, off);
             saveFB(fbL, "shots/tests/bench_lamp.png");
-            budget("lamp 4x", on, 7.0);   // D-04: 4.7 lit, 4.7 unlit (the first check's)
+            budget("lamp 4x", on, 7.0);   // 4.7 lit, 4.7 unlit (the first check's)
         }
         setFramebufferScale(saved);
     }
@@ -329,7 +329,7 @@ void Bench::drive() {
             writePNG("shots/tests/bench_buggy.png", game.output(), FBW, FBH);
             budget("buggy 2x", sum / 60, 6.1);   // 4.02 after F-10 (F-11: 14 -> 6.1)
         }
-        if (game.testFlySetup(200)) {   // R-403: the drone 200 m up at full thrust, the camera tilted down 30 deg: the ground from the air
+        if (game.testFlySetup(200)) {   // the drone 200 m up at full thrust, the camera tilted down 30 deg: the ground from the air
             Input in5; in5.down[KEY_W] = true; game.testSetPitch(-30 * DEG);
             double sum = 0, worst = 0;
             for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in5, 1.0 / 30); in5.newFrame(); in5.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
@@ -337,7 +337,7 @@ void Bench::drive() {
             writePNG("shots/tests/bench_drone.png", game.output(), FBW, FBH);
             budget("drone 2x", sum / 60, 3.3);   // 2.20 after F-10 (F-11: 16 -> 3.3)
         }
-        game.settings.renderScale = 4; game.applySettings();   // and at 4x, the default picture (B-310)
+        game.settings.renderScale = 4; game.applySettings();   // and at 4x, the default picture
         if (game.testDriveSetup()) {
             Input in4; in4.down[KEY_W] = true;
             double sum = 0, worst = 0;
@@ -411,7 +411,7 @@ void Bench::probe() {
                 for (double c = 0; c <= endC; c += 0.25) {
                     int st2 = game.testProbeStageAt(c);
                     if (st2 == PS_HAZE) { if (fromHaze < 0) fromHaze = c; toHaze = c; }
-                    if (st2 == PS_BETWEEN && !betweenDone) { if (fromBetween < 0) fromBetween = c; toBetween = c; }   // X-03: the first clear band
+                    if (st2 == PS_BETWEEN && !betweenDone) { if (fromBetween < 0) fromBetween = c; toBetween = c; }   // the first clear band
                     else if (fromBetween >= 0) betweenDone = true;
                 }
                 const double at[2] = {fromHaze + (toHaze - fromHaze) * 0.8, fromBetween + (toBetween - fromBetween) * 0.5};
@@ -470,13 +470,13 @@ void Bench::people() {
             capital2x = sum / 60;
             printf("capital 2x   %.2f ms/frame, worst %.1f ms (%s; the forms %.2f ms: %d items, %d polygons, %d lines)\n", capital2x, worst, game.testStatus().c_str(), game.testSurface().lastRuinMs, game.testSurface().lastRuinElems, game.testSurface().lastFormPolys, game.testSurface().lastFormLines);
             writePNG("shots/tests/bench_capital.png", game.output(), FBW, FBH);
-            {   // F-01: the capital at 4x (no budget)
+            {   // the capital at 4x (no budget)
                 game.settings.renderScale = 4; game.applySettings();
                 for (int i = 0; i < 10; i++) { game.frame(in8, 1.0 / 60); in8.newFrame(); }
                 sum = 0; worst = 0;
                 for (int i = 0; i < 60; i++) { const double t0 = nowSec(); game.frame(in8, 1.0 / 60); in8.newFrame(); const double msF = (nowSec() - t0) * 1000; sum += msF; worst = std::max(worst, msF); }
                 printf("capital 4x   %.2f ms/frame, worst %.1f ms (the forms %.2f ms; F-01)\n", sum / 60, worst, game.testSurface().lastRuinMs);
-                budget("capital 4x", sum / 60, 8.3);   // F-11: 5.48 after F-10
+                budget("capital 4x", sum / 60, 8.3);   // 5.48 after F-10
             }
             game.settings.renderScale = 1; game.applySettings();
         }
@@ -491,7 +491,7 @@ void Bench::unbudgeted() {
         Input inF;
         auto stepF = [&]() { game.frame(inF, 1.0 / 60); inF.newFrame(); };
         auto pressF = [&](int key) { inF.pressed[key] = true; inF.down[key] = true; stepF(); inF.down[key] = false; };
-        auto rowF = [&](const char* name, int frames, const std::function<void()>& each, double limit) {   // F-11: a limit of 0, no budget
+        auto rowF = [&](const char* name, int frames, const std::function<void()>& each, double limit) {   // a limit of 0, no budget
             double sum = 0, worst = 0;
             for (int i = 0; i < frames; i++) { const double t0 = nowSec(); each(); const double ms = (nowSec() - t0) * 1000; sum += ms; worst = std::max(worst, ms); }
             printf("%-12s %.2f ms/frame, worst %.1f ms (F-01%s)\n", name, sum / frames, worst, limit > 0 ? "" : ", no budget");
@@ -501,7 +501,7 @@ void Bench::unbudgeted() {
         game.settings.renderScale = 4; game.applySettings();
         if (game.state == GameState::SURFACE) {   // the people's world of the capital's rows: its sector map (N)
             pressF(KEY_N); for (int i = 0; i < 10; i++) stepF();
-            rowF("sectormap 4x", 60, stepF, 8.2);   // F-11: 5.42 after F-10
+            rowF("sectormap 4x", 60, stepF, 8.2);   // 5.42 after F-10
             writePNG("shots/tests/bench_sectormap.png", game.output(), FBW, FBH);
             pressF(KEY_ESCAPE);
         }
@@ -521,7 +521,7 @@ void Bench::unbudgeted() {
             const double tz0 = nowSec(); pressF(KEY_Z); const double zMs = (nowSec() - tz0) * 1000;
             const double* zp = game.testZoomBuildMs();
             printf("landzoom     Z: a frame of %.1f ms (the build: samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms)\n", zMs, zp[0], zp[1], zp[2], zp[3], zp[4]);
-            budget("landzoom Z", zMs, 22);   // F-11: 14.45 after F-10
+            budget("landzoom Z", zMs, 22);   // 14.45 after F-10
             rowF("landzoom 4x", 120, shiftRight, 3.9);   // Shift+Right held: 0.05 degrees a frame, the window built again as the cursor leaves three quarters of it; F-11: 2.56 after F-10
             inF.down[KEY_LEFT_SHIFT] = false; inF.down[KEY_RIGHT] = false;
             printf("             %d builds in the 120 frames, the last: samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms\n", game.testZoomBuilds() - zb0 - 1, zp[0], zp[1], zp[2], zp[3], zp[4]);
@@ -529,7 +529,7 @@ void Bench::unbudgeted() {
             pressF(KEY_Z); pressF(KEY_ESCAPE); for (int i = 0; i < 10; i++) stepF();   // to space, parked
             if (game.state == GameState::SPACE) {
                 pressF(KEY_B); for (int i = 0; i < 10; i++) stepF();   // the radar camera
-                rowF("radar 4x", 60, stepF, 3.8);   // F-11: 2.52 after F-10
+                rowF("radar 4x", 60, stepF, 3.8);   // 2.52 after F-10
                 writePNG("shots/tests/bench_radar.png", game.output(), FBW, FBH);
                 pressF(KEY_B); for (int i = 0; i < 5; i++) stepF();
                 // a recorded frame (one PNG a frame) and a photo's PNG alone
@@ -538,19 +538,19 @@ void Bench::unbudgeted() {
                 double recMs = 0;
                 rowF("recording 4x", 30, [&]() { stepF(); const double t0 = nowSec(); game.recordFrame(); recMs += (nowSec() - t0) * 1000; }, 0);   // the writer's pace: no budget
                 game.toggleRecording();
-                const double tq = nowSec(); pngFlush(); const double queueMs = (nowSec() - tq) * 1000;   // F-02: the writer's queue out before the rows below
+                const double tq = nowSec(); pngFlush(); const double queueMs = (nowSec() - tq) * 1000;   // the writer's queue out before the rows below
                 double pngMs = 1e9; for (int i = 0; i < 5; i++) { const double t0 = nowSec(); writePNG("shots/tests/bench_photo.png", game.output(), FBW, FBH); pngMs = std::min(pngMs, (nowSec() - t0) * 1000); }
                 printf("             the recorder's PNG %.1f ms a frame on the main thread (F-02: the copy for the writer's thread; its queue out %.1f ms after); a photo's PNG at %dx%d %.1f ms (the best of five)\n", recMs / 30, queueMs, FBW, FBH, pngMs);
-                budget("photo PNG", pngMs, 11);   // F-11: 7.2 after F-10
+                budget("photo PNG", pngMs, 11);   // 7.2 after F-10
                 // the telescope at its deepest on the home world (the 2x row's view at 4x)
                 game.testAimAtBody(game.testParkedBody()); pressF(KEY_Z); for (int i = 0; i < 9; i++) pressF(KEY_EQUAL);
-                rowF("telescope 4x", 60, stepF, 28);   // F-11: 18.33 after F-10
+                rowF("telescope 4x", 60, stepF, 28);   // 18.33 after F-10
                 pressF(KEY_Z); for (int i = 0; i < 5; i++) stepF();
                 // the decoder with a world's records listed (the flow's world)
                 for (int i = 0; i < 12; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
                 game.testCabinGoto(0.0, -0.8, PI, -0.65); for (int i = 0; i < 5; i++) stepF();
                 pressF(KEY_E); for (int i = 0; i < 10; i++) stepF();
-                if (game.state == GameState::SHARDS) { rowF("decoder 4x", 60, stepF, 6.4); writePNG("shots/tests/bench_decoder.png", game.output(), FBW, FBH); }   // F-11: 4.22 after F-10
+                if (game.state == GameState::SHARDS) { rowF("decoder 4x", 60, stepF, 6.4); writePNG("shots/tests/bench_decoder.png", game.output(), FBW, FBH); }   // 4.22 after F-10
                 else printf("decoder 4x   not opened (state %d)\n", (int)game.state);
                 pressF(KEY_ESCAPE); pressF(KEY_ESCAPE); for (int i = 0; i < 5; i++) stepF();
             } else printf("radar 4x     not in space (state %d)\n", (int)game.state);
@@ -569,7 +569,7 @@ void Bench::unbudgeted() {
                     const double msS = (nowSec() - t0) * 1000 / 30;
                     printf("%-12s %.2f ms/frame (the sun %.0f deg up; sky %.1f, terrain %.1f, the rest with the veil %.1f ms; F-01)\n", k == 0 ? "sunward 4x" : "sunaway 4x", msS,
                            si.altitude / DEG, svS.lastRenderMs[0], svS.lastRenderMs[2], svS.lastRenderMs[5]);
-                    budget(k == 0 ? "sunward 4x" : "sunaway 4x", msS, k == 0 ? 8.5 : 6.2);   // F-11: 5.66 and 4.10 after F-10
+                    budget(k == 0 ? "sunward 4x" : "sunaway 4x", msS, k == 0 ? 8.5 : 6.2);   // 5.66 and 4.10 after F-10
                     if (k == 0) saveFB(fbS, "shots/tests/bench_sunward.png");
                 }
                 {   // a sprint at 4x facing away from the sun: Shift and W held for a second, then let go (the FOV kick rebuilds the direction table)
@@ -583,7 +583,7 @@ void Bench::unbudgeted() {
                     std::vector<double> sorted = fr; std::sort(sorted.begin(), sorted.end()); base = sorted[sorted.size() / 2];
                     for (double v : fr) { sum += v; worst = std::max(worst, v); if (v > base + 1.5) over++; }
                     printf("sprint 4x    %.2f ms/frame over 120 (a second's sprint and its stop), median %.2f, worst %.1f ms, %d frames over the median + 1.5 ms (F-01)\n", sum / 120, base, worst, over);
-                    budget("sprint 4x", sum / 120, 5.7);   // F-11: 3.77 after F-10
+                    budget("sprint 4x", sum / 120, 5.7);   // 3.77 after F-10
                 }
             }
             setFramebufferScale(saved);
@@ -602,7 +602,7 @@ void Bench::unbudgeted() {
                 for (int i = 0; i < 30; i++) { svC.update(1.0 / 30, inC, tC + i * 0.033, false); svC.render(fbC, tC + i * 0.033, nbC.stars, srC, 1.0); fbC.mush(2); }
                 const double msC = (nowSec() - t0) * 1000 / 30;
                 printf("city 4x      %.2f ms/frame from its edge (the forms %.2f ms; F-01)\n", msC, svC.lastRuinMs);
-                budget("city 4x", msC, 8.3);   // F-11: 5.52 after F-10
+                budget("city 4x", msC, 8.3);   // 5.52 after F-10
             }
             setFramebufferScale(saved);
         }
@@ -618,7 +618,7 @@ void Bench::unbudgeted() {
                     for (double c = 0; c <= endC; c += 0.25) if (game.testProbeStageAt(c) == PS_HAZE) { if (fromHaze < 0) fromHaze = c; toHaze = c; }
                     game.testProbeSkip(fromHaze + (toHaze - fromHaze) * 0.8);
                     for (int i = 0; i < 5; i++) stepF();
-                    rowF("probe 4x", 60, stepF, 13);   // F-11: 8.66 after F-10
+                    rowF("probe 4x", 60, stepF, 13);   // 8.66 after F-10
                 } else printf("probe 4x     no probe launched ('%s')\n", game.testStatus().c_str());
             }
         }
@@ -634,7 +634,7 @@ void Bench::unbudgeted() {
                 const SpaceRenderer::MapStats& m1 = game.testMapStats();
                 printf("arrival 4x   first frame %.1f ms, %.2f ms/frame over 120, worst %.1f ms; %d maps generated, %d blocking map calls (%.0f ms) (F-01)\n", first, sum / 120, worst,
                        m1.generated - m0.generated, m1.blocked - m0.blocked, m1.blockedMs - m0.blockedMs);
-                budget("arrival 4x", sum / 120, 6.6);   // F-11: 4.38 after F-10 (the first frame without one: 11.8-20.3 by its maps' threads)
+                budget("arrival 4x", sum / 120, 6.6);   // 4.38 after F-10 (the first frame without one: 11.8-20.3 by its maps' threads)
             }
         }
         {   // the guide's save and load at the player's size (every logged event saves it: a sector crossed, a sighting, a mark, a photo, the autosave)
@@ -645,8 +645,8 @@ void Bench::unbudgeted() {
             for (int i = 0; i < 3; i++) { Guide L; const double t0 = nowSec(); L.load(gp); load = std::min(load, (nowSec() - t0) * 1000); }
             struct stat st; stat(gp.c_str(), &st);
             printf("guide        a save %.1f ms, a load %.1f ms (the best of five and of three; %lld bytes of the player's composition; F-01)\n", save, load, (long long)st.st_size);
-            budget("guide save", save, 1.5);   // F-11: 0.95 after F-10 (every logged event saves it)
-            budget("guide load", load, 23);    // F-11: 14.85
+            budget("guide save", save, 1.5);   // 0.95 after F-10 (every logged event saves it)
+            budget("guide load", load, 23);    // 14.85
             remove(gp.c_str());
         }
         game.settings.renderScale = 1; game.applySettings();
@@ -655,16 +655,16 @@ void Bench::unbudgeted() {
 
 void Bench::budgets() {
     budget("space 2x", space2x, 3.1);           // 2.02 after F-10 (F-11: 12 -> 3.1)
-    budget("space 4x", space4x, 9.5);           // F-11: 6.33 after F-10 (a still camera: the backdrop kept)
-    budget("vimana 2x", vimana2x, 2.0);         // G-07: a flight's frame, the band from its keyframes; 1.32 after F-10 (F-11: 12 -> 2)
-    budget("telescope 2x", telescope2x, 13);    // W-06: the deepest magnification, the globe over the whole frame; 8.64 after F-10 (F-11: 16 -> 13)
-    budget("probe 2x", probe2x, 8.9);           // X-02: the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)
+    budget("space 4x", space4x, 9.5);           // 6.33 after F-10 (a still camera: the backdrop kept)
+    budget("vimana 2x", vimana2x, 2.0);         // a flight's frame, the band from its keyframes; 1.32 after F-10 (F-11: 12 -> 2)
+    budget("telescope 2x", telescope2x, 13);    // the deepest magnification, the globe over the whole frame; 8.64 after F-10 (F-11: 16 -> 13)
+    budget("probe 2x", probe2x, 8.9);           // the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)
     budget("surface 2x", surface2x, 2.8);       // 1.82 after F-10 (F-11: 16 -> 2.8)
-    budget("surface 4x", surface4x, 4.5);       // F-11: 2.97 after F-10
-    budget("descent first", descentFirst, 26);   // O6-03: the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in. F-03: 40 -> 22 ms (the fill, the textures and the meso tiles on the pool), the budget 80 -> 35; F-11: 16.95 after F-10, 35 -> 26
-    budget("descent people", descentPeople, 62);   // T-01: onto a people's world beside its capital, its plan built at the parking. F-03: 79 -> 45 ms, the budget 80 -> 70; F-11: 41.1 after F-10 (51.7 in one run of four), 70 -> 62
-    budget("capital 2x", capital2x, 5.4);       // T-01: the modern test world's capital from its edge; 3.58 after F-10 (F-11: 16 -> 5.4)
-    budget("sprint worst", runWorst, 10);       // M7-01: the sprint's worst frame shows a cache's stall; 1.7 after F-10, 6.6 in one run of eight by the machine alone (F-11: 40 -> 10)
+    budget("surface 4x", surface4x, 4.5);       // 2.97 after F-10
+    budget("descent first", descentFirst, 26);   // the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in. F-03: 40 -> 22 ms (the fill, the textures and the meso tiles on the pool), the budget 80 -> 35; F-11: 16.95 after F-10, 35 -> 26
+    budget("descent people", descentPeople, 62);   // onto a people's world beside its capital, its plan built at the parking. F-03: 79 -> 45 ms, the budget 80 -> 70; F-11: 41.1 after F-10 (51.7 in one run of four), 70 -> 62
+    budget("capital 2x", capital2x, 5.4);       // the modern test world's capital from its edge; 3.58 after F-10 (F-11: 16 -> 5.4)
+    budget("sprint worst", runWorst, 10);       // the sprint's worst frame shows a cache's stall; 1.7 after F-10, 6.6 in one run of eight by the machine alone (F-11: 40 -> 10)
 }
 
 int runBench(bool check, double slack) {

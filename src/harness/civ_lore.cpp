@@ -2,9 +2,9 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// H-05: the star charts by age (the unit's check, and `charts check` alone)
+// the star charts by age (the unit's check, and `charts check` alone)
 bool checkChartsByAge(std::string& detail) {
-    {   // H-05: the star charts by age. Over every chart of the six age worlds' peoples: drawn in the way of its record's age and medium; the oldest
+    {   // the star charts by age. Over every chart of the six age worlds' peoples: drawn in the way of its record's age and medium; the oldest
         // with animals and the moon's own count (the days of its month, or its moons in the year), the medieval with creatures and heroes, an astrolabe
         // with their equator and the ecliptic, a page with the ecliptic, the wanderers' ways within the field; an atlas with their grid and the stars
         // numbered by brightness; a survey with its magnitudes and only the peoples the lore heard ringed; a navigation chart from their own star to
@@ -90,13 +90,13 @@ bool checkChartsByAge(std::string& detail) {
 // is strongest (a scan of the sphere at 200 m detail by `SurfaceSample::landform`), a hillshade of 8 km round the spot, a
 // standing frame from 250 m west of it and an aerial frame 350 m up; one sheet per trait in `shots/tests/trait_*.png`.
 // Then the share of the first 300 bodies carrying each trait
-// C-01: `ruins <sx> <sz> <body index> [latDeg lonDeg]`: a world's culture, the old seas, and the settlements of the 31 x 31 ruin cells
+// `ruins <sx> <sz> <body index> [latDeg lonDeg]`: a world's culture, the old seas, and the settlements of the 31 x 31 ruin cells
 // round a point with the site test's verdict and its reasons (the planet function read without the drainage, as the view reads it)
-// C-02: `shards <sx> <sz> <body index> [n] [full | <held> [full]]`: a world's lore, then (C-06) its people's tongue and the words of
+// `shards <sx> <sz> <body index> [n] [full | <held> [full]]`: a world's lore, then (C-06) its people's tongue and the words of
 // its language the computer learns first, then its first n shards (default fifty) as the decoder reads them with `held` shards
 // of the world in hand (default one: about a third of the words, the rest in the people's tongue; ten: the whole text), in the
 // order of their years with the tone and the kind of each; `full` prints the whole text under each
-// D-05: the drifters near home that kept a people, nearest first (within 3,000 ly: thirteen)
+// the drifters near home that kept a people, nearest first (within 3,000 ly: thirteen)
 std::vector<Star> drifterPeoplesNearHome(double reachLy) {
     Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, true);
     std::vector<Star> near, out; driftersNear(home.pos, reachLy, near);
@@ -109,7 +109,7 @@ std::vector<Star> drifterPeoplesNearHome(double reachLy) {
 }
 int runShards(int argc, char** argv) {
     int which = takePeopleArg(argc, argv);   // C-13: `second` for the world's second people
-    if (argc >= 4 && std::string(argv[2]) == "rogue") {   // D-05: `shards rogue <k> [n] [full | <held> [full]] [disk]`: the k-th drifter people nearest home
+    if (argc >= 4 && std::string(argv[2]) == "rogue") {   // `shards rogue <k> [n] [full | <held> [full]] [disk]`: the k-th drifter people nearest home
         std::string disk;   // `disk` the tree's grammar files, `disk=<dir>` another copy's (writers side by side)
         for (int i = 3; i < argc; i++) {
             const std::string a = argv[i];
@@ -141,7 +141,7 @@ int runShards(int argc, char** argv) {
         printf("the drifter people %d nearest home: %s, sector %lld %lld %lld\n", k, s.name.c_str(), (long long)s.sx, (long long)s.sy, (long long)s.sz);
         return shardsOfWorld(s, sys, 0, which, n, full, held, s.sx, s.sz);
     }
-    if (argc >= 3 && std::string(argv[2]) == "drifters") {   // D-05: `shards drifters [n] [held]`: the test drifters' records (fifty each), read in full
+    if (argc >= 3 && std::string(argv[2]) == "drifters") {   // `shards drifters [n] [held]`: the test drifters' records (fifty each), read in full
         const int n = argc > 3 ? atoi(argv[3]) : 50; int rc = 0;
         const bool full = argc <= 4; const int held = argc > 4 ? atoi(argv[4]) : 1;   // a number of shards held: as decoded with them
         for (const AgeWorld& aw : TEST_DRIFTERS) {
@@ -186,14 +186,14 @@ int shardsOfWorld(const Star& s, StarSystem& sys, int bi, int which, int n, bool
     std::vector<int> order(n); for (int i = 0; i < n; i++) order[i] = i;
     std::sort(order.begin(), order.end(), [&](int a, int c) { return sh[a].year < sh[c].year; });
     int tones[ST_TONE_COUNT] = {0, 0, 0, 0}; int words = 0, read = 0, pieces = 0;
-    Tradition trad = traditionOf(g, L);   // C-04
+    Tradition trad = traditionOf(g, L);
     for (int i : order) {
         const Shard& x = sh[i];
         tones[x.tone]++;
         if (x.music) { Piece P; pieceOf(trad, x, P); pieces++; printf("%3d  year %3d  %-8s  %-14s [music] %s, %.0f s, %zu notes\n", i, x.year, SHARD_TONE_NAMES[x.tone], "music", PIECE_FORM_NAMES[P.form], P.seconds, P.notes.size()); continue; }
         words += shardWords(x.text);
         std::vector<DecodedWord> w; read += decodeShard(x, lang, T, held, w);
-        printf("%3d  year %3d  %-8s  %-14s %s\n", i, x.year, SHARD_TONE_NAMES[x.tone], x.chart ? "star chart" : shardKindName(x.kind), decodedText(w).c_str());   // C-10: a chart by its caption (`charts` draws it)
+        printf("%3d  year %3d  %-8s  %-14s %s\n", i, x.year, SHARD_TONE_NAMES[x.tone], x.chart ? "star chart" : shardKindName(x.kind), decodedText(w).c_str());   // a chart by its caption (`charts` draws it)
         if (full) printf("%40s %s\n", "", x.text.c_str());
     }
     printf("tones: ordinary %d, elegy %d, warning %d, the end %d; %d pieces of music; %.0f words a text; %d of %d words read with %d shard%s held\n", tones[0], tones[1], tones[2], tones[3], pieces, n - pieces > 0 ? (double)words / (n - pieces) : 0.0, read, words, held, held == 1 ? "" : "s");
@@ -204,11 +204,11 @@ int shardsOfWorld(const Star& s, StarSystem& sys, int bi, int which, int n, bool
 // its stress and melody, its marks) and the sounds its tongue uses, then one text shard (the given index, else the first text)
 // as it is spoken: each word as the decoder gives it with the language whole, the people's word, its sounds and its span in
 // seconds; `wav` renders it through the synth to shots/tests/voice_<sx>_<sz>_<body>_S<index>.wav
-// C-10: `charts <sx> <sz> <body index> [index]`: the stars a world's charts mark (the peoples it knew, the brightest of its
+// `charts <sx> <sz> <body index> [index]`: the stars a world's charts mark (the peoples it knew, the brightest of its
 // nights), then each chart: its figures with their stars (the chart's x y, the brightness, the class, the sector, the light
 // years from the world) and its caption; with an index, that chart sketched (the field 61 x 31: the mark '@', a bright star
 // '*', a faint one '.', a figure's label star its letter)
-// H-05: `charts ages`: a chart of each way (the oldest's cave ceiling and bone, the medieval vault, astrolabe and page, the industrial atlas
+// `charts ages`: a chart of each way (the oldest's cave ceiling and bone, the medieval vault, astrolabe and page, the industrial atlas
 // and photograph, the modern survey on glass, printed and on a drive, the futuristic navigation chart, the far future's) found among the age
 // worlds' records (and the worlds near home where an age world has none), printed with what its way shows, and drawn on the decoder in a
 // `Game` at 2x: shots/tests/chart_age_<way>.png; then one held up to the sky at the people's own star of each of three ways
@@ -355,7 +355,7 @@ static int runChartsRogues() {
                p.which ? ", second people" : "", loreQuick(sys, sys.bodies[0], g, p.which).people.c_str(), p.index, AGE_NAMES[p.ch.age], RECORD_MEDIUM_NAMES[p.ch.medium], CHART_STYLE_NAMES[p.ch.style],
                shardDrawOf(g, loreQuick(sys, sys.bodies[0], g, p.which), p.index).year, p.ch.mark.star.name.c_str(), p.ch.mark.how, p.ch.mark.ly);
         if (kind == 0) { printf("   the disc, year by year:"); for (const auto& v : p.ch.sunCurve) printf(" %d:%.1f", (int)v[0], v[1]); printf(" (in %d parts)\n", p.ch.sunUnits); }
-        else { const PeoplesWorld PW = peoplesWorldOf(sys, sys.bodies[0]); printChartWay(*PW.sys, p.ch); }   // E-02: the wanderers are its former system's
+        else { const PeoplesWorld PW = peoplesWorldOf(sys, sys.bodies[0]); printChartWay(*PW.sys, p.ch); }   // the wanderers are its former system's
         printf("   caption: %s\n", p.caption.c_str());
         TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.settings.renderScale = 2; game.applySettings();
@@ -386,10 +386,10 @@ static int runChartsRogues() {
 }
 
 int runCharts(int argc, char** argv) {
-    if (argc > 2 && std::string(argv[2]) == "ages") return runChartsAges();   // H-05
-    if (argc > 2 && std::string(argv[2]) == "rogues") return runChartsRogues();   // D-05
+    if (argc > 2 && std::string(argv[2]) == "ages") return runChartsAges();
+    if (argc > 2 && std::string(argv[2]) == "rogues") return runChartsRogues();
     if (argc > 2 && std::string(argv[2]) == "check") { std::string d; bool ok = checkChartsByAge(d); printf("star charts by age: %s\n  %s\n", ok ? "ok" : "FAIL", d.c_str()); return ok ? 0 : 1; }   // H-05: the unit's check alone
-    int which = takePeopleArg(argc, argv);   // C-13: `second` for the world's second people
+    int which = takePeopleArg(argc, argv);   // `second` for the world's second people
     if (argc < 5) { printf("charts <sx> <sz> <body index> [index]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]); int want = argc > 5 ? atoi(argv[5]) : -1;
     Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
@@ -400,7 +400,7 @@ int runCharts(int argc, char** argv) {
     static const char* const HOW[4] = {"the brightest of their nights", "a people's world among their bright stars", "a people they heard", "far off (H-05)"};
     printf("%s, %s of %s: the %s drew %d charts (%d of C-02's fifty; the lore in %.1f ms); they mark:\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), L.people.c_str(), (int)L.marks.size(), chartShardsOf(peopleGen(g, which)), ms);
     for (size_t j = 0; j < L.marks.size(); j++) { const ChartMark& m = L.marks[j]; printf("  %zu: %s %s at %lld %lld %lld, %.1f ly: %s%s\n", j, STAR_CLASSES[m.star.cls].code, STAR_CLASSES[m.star.cls].name, (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz, m.ly, HOW[m.how], m.people.empty() ? "" : fmt(" (body %d, the %s)", m.body, m.people.c_str()).c_str()); }
-    std::vector<Shard> fifty; shardsOf(sys, b, g, L, L.records, fifty);   // H-05: every chart of the people's records
+    std::vector<Shard> fifty; shardsOf(sys, b, g, L, L.records, fifty);   // every chart of the people's records
     int byStyle[CHS_COUNT] = {};
     for (int i = 0; i < (int)fifty.size(); i++) {
         if (!fifty[i].chart) continue;
@@ -408,7 +408,7 @@ int runCharts(int argc, char** argv) {
         byStyle[ch.style]++;
         printf("S%d (chart %d, year %d, %s; %s on %s: %s): %zu stars, the mark %s at %lld %lld %lld (how %d, %.1f ly), %zu figures\n", i, ch.which, fifty[i].year, SHARD_TONE_NAMES[fifty[i].tone], AGE_NAMES[ch.age], RECORD_MEDIUM_NAMES[ch.medium],
                CHART_STYLE_NAMES[ch.style], ch.stars.size(), STAR_CLASSES[ch.mark.star.cls].code, (long long)ch.mark.star.sx, (long long)ch.mark.star.sy, (long long)ch.mark.star.sz, ch.mark.how, ch.mark.ly, ch.figures.size());
-        {   // H-05: what its way shows
+        {   // what its way shows
             std::string w;
             if (ch.tallyKind) w += fmt(" the moon's count %d (%s);", ch.tally, ch.tallyKind == 1 ? "the days of its month" : "its moons in the year");
             if (!ch.curves.empty()) { int k[6] = {}; for (const ChartCurve& c : ch.curves) k[std::min(5, std::max(0, c.kind))]++; w += fmt(" curves: %d equator, %d tropic, %d ecliptic, %d declination, %d hour runs;", k[0], k[1], k[2], k[3], k[4]); }
@@ -548,7 +548,7 @@ static int runRuinsKinds(int argc, char** argv) {
         {BK_HABITAT, 4, 55, 55, 33, 0, "HABITAT"}, {BK_SPIRE, 4, 20, 20, 700, 0, "SPIRE"}, {BK_RING, 4, 100, 6, 200, 0, "RING"}, {BK_MAGLEV, 4, 3, 140, 23, 0, "MAGLEV"},
         {BK_WRECK, 4, 18, 100, 30, 0, "WRECK"}, {BK_POD, 4, 10, 10, 3.4, 0, "POD"},
         {BK_SPIKE, 5, 80, 80, 1500, 0, "SPIKE"}, {BK_HALO, 5, 300, 6, 600, 0, "HALO"}, {BK_PILLARS, 5, 15, 400, 400, 0, "PILLARS"}, {BK_SHAFT, 5, 90, 90, 2, 0, "SHAFT"}, {BK_MONOLITH, 5, 150, 150, 300, 0, "MONOLITH"}};
-    // A-04: the genome's works and the kinds' new forms, a page of their own (each in its age's way: `ruins_kinds_genome_<scale>x.png`)
+    // the genome's works and the kinds' new forms, a page of their own (each in its age's way: `ruins_kinds_genome_<scale>x.png`)
     static const K WORKS[] = {
         {BK_FOCUS, 1, 3, 3, 40, FO_SPIRE, "FOCUS, SPIRE"}, {BK_FOCUS, 1, 8, 8, 13, FO_DOME, "FOCUS, DOME"}, {BK_FOCUS, 1, 4, 4, 12, FO_GATE, "FOCUS, GATE"}, {BK_FOCUS, 1, 3, 3, 25, FO_TOWER, "FOCUS, TOWER"},
         {BK_FOCUS, 1, 2.5, 2.5, 18, FO_COLOSSUS, "FOCUS, COLOSSUS"}, {BK_FOCUS, 2, 2.5, 2.5, 40, FO_MAST, "FOCUS, MAST (INDUSTRIAL)"}, {BK_FOCUS, 1, 6, 6, 12, FO_RING, "FOCUS, RING"},
@@ -559,7 +559,7 @@ static int runRuinsKinds(int argc, char** argv) {
         {BK_STADIUM, 1, 16, 16, 7, 0, "AMPHITHEATRE"}, {BK_AQUEDUCT, 1, 1.4, 40, 14, 0, "AQUEDUCT"}, {BK_TWIN, 1, 10, 3, 18, 0, "TWIN TOWERS"}, {BK_PORTAL, 1, 2.4, 3.5, 4.8, 0, "TUNNEL"},
         {BK_TOWN_HALL, 2, 16, 11, 16, 1, "TOWN HALL, DOME"}, {BK_TOWN_HALL, 2, 16, 11, 16, 2, "TOWN HALL, SPIRE"}, {BK_STATION, 2, 14, 22, 11, 1, "MARKET HALL (INDUSTRIAL)"},
         {BK_BLOCK, 3, 32, 20, 12, 1, "MALL"}, {BK_TEMPLE, 3, 10, 20, 18, 0, "TEMPLE (MODERN)"}, {BK_TWIN, 3, 35, 11, 160, 0, "TWIN TOWERS (MODERN)"},
-        // D-05: a people that lost its sun's domes over the warm ground and its glasshouses
+        // a people that lost its sun's domes over the warm ground and its glasshouses
         {BK_DOME, 2, 30, 30, 2.6, 0, "DOME (INDUSTRIAL)"}, {BK_DOME, 3, 32, 32, 2.6, 1, "DOME (MODERN)"}, {BK_DOME, 5, 34, 34, 2.6, 2, "DOME (FAR FUTURE)"},
         {BK_GREENHOUSE, 2, 4, 12, 4, 0, "GLASSHOUSE (INDUSTRIAL)"}, {BK_GREENHOUSE, 3, 4.5, 18, 4.5, 1, "GLASSHOUSE (MODERN)"}, {BK_GREENHOUSE, 4, 6, 20, 5.4, 2, "GLASSHOUSE (FUTURISTIC)"}};
     const int cols = (int)years.size(), CW = FBW / 2, CH = FBH / 2;
@@ -606,8 +606,8 @@ static int runRuinsKinds(int argc, char** argv) {
 }
 
 int runRuins(int argc, char** argv) {
-    if (argc >= 3 && std::string(argv[2]) == "ages") return runRuinsAges(argc, argv);   // A-03
-    if (argc >= 3 && std::string(argv[2]) == "kinds") return runRuinsKinds(argc, argv);   // A-03
+    if (argc >= 3 && std::string(argv[2]) == "ages") return runRuinsAges(argc, argv);
+    if (argc >= 3 && std::string(argv[2]) == "kinds") return runRuinsKinds(argc, argv);
     if (argc >= 3 && std::string(argv[2]) == "check") {   // A-03: the unit's checks of the ages' buildings alone
         int fails = 0;
         agesChecks(Check{nullptr, &fails});
@@ -620,7 +620,7 @@ int runRuins(int argc, char** argv) {
     if (bi < 0 || bi >= (int)sys.bodies.size()) { printf("no body %d of %zu\n", bi, sys.bodies.size()); return 1; }
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
-    int np = std::max(1, peoplesOf(g)); Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()}; const Culture& c = cs[0];   // C-13
+    int np = std::max(1, peoplesOf(g)); Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()}; const Culture& c = cs[0];
     printf("%s, %s, R %.0f km: %s; culture style %d, family %d, tall %.2f, decay %.2f (the end %.0f years ago, wet %.2f), %s roofs, towns' plan %d, towers %d, buried %.1f m; the sea stood at %.0f m\n",
            b.name.c_str(), KINDS[b.type].name, b.radiusKm, g.hasTrait(TR_CIVILISATION) ? "a people lived here" : "no civilisation", c.style, c.family, c.tall, c.decay, c.ageYears, c.wet,
            c.stoneRoofs ? "stone" : "no", c.plan, (int)c.towers, c.buried, g.oldSeaM > -1e8 ? g.oldSeaM : 0.0);
@@ -628,7 +628,7 @@ int runRuins(int argc, char** argv) {
                        cs[1].stoneRoofs ? "stone" : "no", cs[1].plan, (int)cs[1].towers, cs[1].buried, peoplesEndedTogether(g) ? "the two ended together" : "the two ended apart");
     int gLat0, gLon0; ruinCellOf(g, lat, lon, gLat0, gLon0);
     int cnt[7] = {}, ok[7] = {}, printed = 0, shardsN[7] = {};   // by the class (a city's and the capital's cells too)
-    int harbours = 0, dryHarbours = 0, terraced = 0, cisterns = 0, windwalls = 0, cairns = 0;   // C-08
+    int harbours = 0, dryHarbours = 0, terraced = 0, cisterns = 0, windwalls = 0, cairns = 0;
     DrainageOff off;
     for (int dl = -15; dl <= 15; dl++)
         for (int dn = -15; dn <= 15; dn++) {
@@ -637,7 +637,7 @@ int runRuins(int argc, char** argv) {
             cnt[sp.sclass]++;
             bool good = ruinSiteOk(g, sp);
             std::vector<ShardSite> ss; recordSitesOf(g, sp, cs[sp.people], ss); shardsN[sp.sclass] += (int)ss.size();   // C-03; C-13: its people's; T-04: its records
-            if (good) { ok[sp.sclass]++; if (sp.harbour) { harbours++; if (sp.site.shoreDry) dryHarbours++; } if (sp.terraced) terraced++; if (sp.cistern) cisterns++; if (sp.windwall) windwalls++; if (sp.cairns) cairns++; }   // C-08
+            if (good) { ok[sp.sclass]++; if (sp.harbour) { harbours++; if (sp.site.shoreDry) dryHarbours++; } if (sp.terraced) terraced++; if (sp.cistern) cisterns++; if (sp.windwall) windwalls++; if (sp.cairns) cairns++; }
             if (printed < 14 || (good && printed < 20)) {
                 Vec3 u = StarSystem::bodyFromLatLon(sp.lat, sp.lon);
                 SurfaceSample s0 = sampleSurface(g, u, 64.0);
@@ -654,8 +654,8 @@ int runRuins(int argc, char** argv) {
                        s0.water > -1e8 ? "yes" : "none", wet, sea, hmax - hmin, 0.5 * sp.size);
                 printf("           the terrain: slope %.3f falling to %.0f deg, the shore %s, relief %.2f, the ridge at %.0f deg, the wind from %.0f deg%s%s\n", sp.site.slope, sp.site.downhill / DEG,
                        sp.site.shoreDist < 1e8 ? fmt("%.0f m at %.0f deg%s", sp.site.shoreDist, sp.site.shoreDir / DEG, sp.site.shoreDry ? " (dry)" : "").c_str() : "none within 500 m", sp.site.relief, sp.site.ridgeDir / DEG, sp.site.wind / DEG,
-                       featureList(sp).empty() ? "" : "; features: ", featureList(sp).c_str());   // C-08
-                if (!ss.empty()) { printf("           shards:"); for (const ShardSite& s : ss) printf("  %d in %s %d (%s, %.0f %.0f)", s.index, BUILDING_KIND_NAMES[sp.buildings[s.building].kind], s.building, buildingPlaceName(s.place), s.x, s.z); printf("\n"); }   // C-03
+                       featureList(sp).empty() ? "" : "; features: ", featureList(sp).c_str());
+                if (!ss.empty()) { printf("           shards:"); for (const ShardSite& s : ss) printf("  %d in %s %d (%s, %.0f %.0f)", s.index, BUILDING_KIND_NAMES[sp.buildings[s.building].kind], s.building, buildingPlaceName(s.place), s.x, s.z); printf("\n"); }
                 printed++;
             }
         }
@@ -669,7 +669,7 @@ int runRuins(int argc, char** argv) {
 // (`lastShardOf`: the index, the year, the text), then the graves (`peoples/graves.h`) of the settlements within `cells` (default 4)
 // of the point's ruin cell: each settlement's class and count, each stone's name, years, standing or fallen, and its place
 int runGraves(int argc, char** argv) {
-    int which = takePeopleArg(argc, argv);   // C-13: `second` for the world's second people
+    int which = takePeopleArg(argc, argv);   // `second` for the world's second people
     if (argc < 5) { printf("graves <sx> <sz> <body index> [latDeg lonDeg] [cells]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
     double lat = argc > 6 ? atof(argv[5]) * DEG : 0.2, lon = argc > 6 ? atof(argv[6]) * DEG : 0.7;
@@ -679,7 +679,7 @@ int runGraves(int argc, char** argv) {
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
     if (!g.hasTrait(TR_CIVILISATION)) { printf("%s: no civilisation, no graves\n", b.name.c_str()); return 0; }
-    int np = std::max(1, peoplesOf(g)); which = np > 1 ? which : 0;   // C-13: each settlement's graves are its people's
+    int np = std::max(1, peoplesOf(g)); which = np > 1 ? which : 0;   // each settlement's graves are its people's
     Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()}; Lore Ls[2] = {loreQuick(sys, b, g, 0), np > 1 ? loreQuick(sys, b, g, 1) : Lore()};
     const Culture& c = cs[which]; const Lore& L = Ls[which]; (void)c;
     printf("%s, %s: the %s count %s; %d years from the founding of %s to the last recording, their year %.1f of their days, %d moons\n", b.name.c_str(), KINDS[b.type].name, L.people.c_str(), calendarLine(L).c_str(), L.spanYears + 1, L.city.c_str(), L.yearDays, L.moons);

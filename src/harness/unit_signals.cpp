@@ -2,9 +2,9 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// C-07, C-15, C-16: the signals, the gain, the ages on the air
+// the signals, the gain, the ages on the air
 void unitSignals(const Check& check) {
-    {   // C-07: the signals are a property of the galaxy: the same twice from home, every people's signal's star has a people's world in a
+    {   // the signals are a property of the galaxy: the same twice from home, every people's signal's star has a people's world in a
         // transmitter sector, every pulsar signal's star a pulsar, all within reach and sorted by distance, rare (one to a dozen within
         // 200 ly on the arm); the beam's gain falls off its axis; the broadcast's chain never repeats a recording twice running
         Vec3 home((HOME_SX + 0.5) * SECTOR_KM, (HOME_SY + 0.5) * SECTOR_KM, (HOME_SZ + 0.5) * SECTOR_KM);
@@ -19,7 +19,7 @@ void unitSignals(const Check& check) {
                 people++;
                 Signal again; bool has = starSignal(s.star, again);
                 if (!has || again.kind != SIG_PEOPLE || again.body != s.body || !sectorTransmits(s.star.sx, s.star.sy, s.star.sz) || s.distLy > SIGNAL_REACH_LY) bad++;
-                if (!kindHas(s.bodyType, KT_PEOPLE)) bad++;   // P-04: a scorched world's people too
+                if (!kindHas(s.bodyType, KT_PEOPLE)) bad++;   // a scorched world's people too
             } else if (s.kind == SIG_PULSAR) { pulsars++; if (s.star.cls != STAR_PULSAR || s.pulseHz <= 0 || s.distLy > SIGNAL_REACH_LY) bad++; }
             else bad++;
             if (s.strength <= 0 || s.strength > 1) bad++;
@@ -30,7 +30,7 @@ void unitSignals(const Check& check) {
         check("signals: hashed, rare and far (C-07)", same && bad == 0 && people >= 1 && people <= 12 && gainOk && chainBad == 0,
               fmt("%zu signals from home (%d of a people, %d pulsars) over %d cells in %.1f ms, %s, the farthest %.0f ly, %d wrong, the chain %d wrong", a.size(), people, pulsars, cells, ms, first.c_str(), maxLy, bad, chainBad));
     }
-    {   // C-07: the radar in the game: B switches it on at home, the view turned onto the first people's signal hears its recording through
+    {   // the radar in the game: B switches it on at home, the view turned onto the first people's signal hears its recording through
         // the static (a piece or a speech on the synth, the radar's), the hold locks within eight seconds, Enter sets the remote target on
         // the signal's star (the local target when it is of this system), the view turned forty degrees away loses the lock, B off releases the synth
         TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
@@ -44,7 +44,7 @@ void unitSignals(const Check& check) {
         bool aimed = who >= 0 && game.testAimAtSignal(who);
         run(1.0);
         auto onAir = [&]() { return game.audio.radio && (game.audio.piece || game.audio.speech || game.testRadarProgramme() >= RP_BEACON); };   // a programme on the air: a recording, or one of the world's machines
-        double heardAt = 1.0;   // H-04: the world's records are written on a thread the first time (its history and plan: a few hundred milliseconds), the carrier alone till then
+        double heardAt = 1.0;   // the world's records are written on a thread the first time (its history and plan: a few hundred milliseconds), the carrier alone till then
         for (double t0 = nowSec(); !onAir() && nowSec() - t0 < 8; heardAt += 0.1) run(0.1);
         bool heard = onAir();
         int programme = game.testRadarProgramme();
@@ -73,7 +73,7 @@ void unitSignals(const Check& check) {
                   local ? "a signal of this system" : fmt("arrived at %s after %.0f s: %s", arrived ? wantName.c_str() : "NOWHERE", flewFor, people ? "a people's world there" : "NO people's world").c_str()));
         remove("shots/tests/test_guide.txt");
     }
-    {   // C-07: the receiver through the synth: the bed alone and each kind of signal at full clarity, three seconds each, finite, under the ceiling, audible; silent once off
+    {   // the receiver through the synth: the bed alone and each kind of signal at full clarity, three seconds each, finite, under the ceiling, audible; silent once off
         AudioSynth synth; AudioState st; const int sr = 22050; std::vector<float> buf(2048);
         std::string detail; bool ok = true;
         for (int kind = -1; kind < SIG_KIND_COUNT; kind++) {
@@ -93,7 +93,7 @@ void unitSignals(const Check& check) {
         double stopRms = std::sqrt(ssum / std::max(1L, scnt));
         check("radar: the receiver through the synth (C-07)", ok && stopRms < 0.003, detail + fmt("off: %.4f", stopRms));
     }
-    {   // C-07 (the user's second call, more sounds): the receiver's variety. Three seeds of each natural kind and every programme of the
+    {   // (the user's second call, more sounds): the receiver's variety. Three seeds of each natural kind and every programme of the
         // first people's world heard from home, three seconds each, finite, under the ceiling, audible; the world's broadcast has a
         // character (four to six of the eleven programmes over its fifty slots, the voice the commonest, the same twice); the bed's
         // events over forty seconds leave it finite and under the ceiling
@@ -119,7 +119,7 @@ void unitSignals(const Check& check) {
         bool character = have && same && distinct >= 4 && distinct <= 6 && most == RP_VOICE;
         check("radar: the receiver's variety (C-07)", ok && character, fmt("%s: %d renders%s, the programmes' rms %.3f-%.3f; the broadcast of %s: %s", have ? "ok" : "NO people's world", rendered, detail.empty() ? "" : (" - " + detail).c_str(), lo, hi, have ? w.name.c_str() : "?", mix.c_str()));
     }
-    {   // C-15: the gain. From home the six steps' lists: x1 is C-07's under A-01's rule (every signal within 200 ly, the loud pulsars
+    {   // the gain. From home the six steps' lists: x1 is C-07's under A-01's rule (every signal within 200 ly, the loud pulsars
         // within 25, the three peoples A-01 pinned), each list holds the one before, each step adds one to three peoples from home and
         // the three C-series worlds (the pin) and the farthest at x32 is about 6,000 ly; every far signal is heard from its step and not
         // below (within its reach at that gain, beyond it at the step under), its power its sector's; the scan in slices finds what the
@@ -154,7 +154,7 @@ void unitSignals(const Check& check) {
         }
         for (const Signal& x : L[SIGNAL_GAIN_STEPS - 1]) {
             if (x.kind == SIG_PEOPLE) far32 = std::max(far32, x.distLy);
-            if (x.needGain <= 1 || x.kind == SIG_ROGUE) continue;   // D-02: the drifters by their own law (their own check)
+            if (x.needGain <= 1 || x.kind == SIG_ROGUE) continue;   // the drifters by their own law (their own check)
             far++;
             int first = -1; for (int k = 0; k < SIGNAL_GAIN_STEPS && first < 0; k++) if (has(L[k], x)) first = k;
             bool ok = first > 0 && SIGNAL_GAINS[first] >= x.needGain - 1e-9 && SIGNAL_GAINS[first - 1] < x.needGain;
@@ -190,7 +190,7 @@ void unitSignals(const Check& check) {
               fmt("x1 %s C-07's (%zu signals, %d wrong, the pinned three %d); the peoples each step adds from home and the C-series worlds %s%s; %zu at x32 from home, %d far (%d wrong), the farthest people %.0f ly; %d within reach silent (their light left before their radio), %d of them heard; nested %s; the slices %s (%d of 997 cells); twice %s; x32 in %.1f ms",
                   x1Same ? "is" : "is NOT", L[0].size(), x1Bad, pinned, adds.c_str(), addsOk ? "" : " (NOT one to three)", L[SIGNAL_GAIN_STEPS - 1].size(), far, stepBad, far32, silent, silentHeard, nestBad ? "NO" : "yes", slicesSame ? "the same" : "DIFFER", slices, twice ? "the same" : "DIFFERS", ms32));
     }
-    {   // C-15: the gain in the game. At home B and the dial up five steps: the far scan done within ten frames, the list grown by what x32
+    {   // the gain in the game. At home B and the dial up five steps: the far scan done within ten frames, the list grown by what x32
         // hears; on the Ghutreig (90 ly) at x32 the receiver overloads (the meter pinned, the hold refused) and at x1 locks within eight
         // seconds, the hold at x32 over twice x1's on the same signal; the farthest people's signal locks at x32 within sixteen seconds,
         // the gain turned down under it loses it, and locked again Enter flies there
@@ -232,7 +232,7 @@ void unitSignals(const Check& check) {
                   n1, n32, frames, overload ? "overloads" : "does NOT overload", secs32, secs1, lockAt, farLy, need, farAt, farSecs, sank ? "loses it" : "does NOT lose it", lost.c_str(), again, st.c_str()));
         remove("shots/tests/test_guide.txt");
     }
-    {   // C-16: what the gain lets in, the receiver. The renders hold C-07's levels at every gain (the bed at x1, x11 and x32 toward a pole,
+    {   // what the gain lets in, the receiver. The renders hold C-07's levels at every gain (the bed at x1, x11 and x32 toward a pole,
         // the band's plane and the core; a near voice at three gains and a far one worn at three; two broadcasts mixed with the whistle and
         // the ring; a pulsar under a voice; each age's programmes): finite, never clipped, the rms within C-07's (0.02-0.13); the top
         // step's static has at least twice the events of x1's in the same two minutes, the stranger kinds among them and none at x1
@@ -266,7 +266,7 @@ void unitSignals(const Check& check) {
         check("radar: what the gain lets in, the receiver (C-16)", ok && have && more,
               fmt("%d renders%s, rms %.3f-%.3f; events in two minutes x1 %d, x32 %d (%d of the five stranger kinds there, x1 %d)", rendered, detail.empty() ? "" : (" - " + detail).c_str(), lo, hi, ev1, ev32, strange32, strange1));
     }
-    {   // C-16: each age on the air. The programmes by age (the age worlds' fifty slots: the industrial Morse or a phonograph, never data;
+    {   // each age on the air. The programmes by age (the age worlds' fifty slots: the industrial Morse or a phonograph, never data;
         // the futuristic a synthetic voice, data, a beacon or the rare piece; the far future mathematics or a synthetic voice; the modern
         // C-07's eleven), every people heard from home at x32 of a radio age, a Morse keying of the words
         int ageBad = 0; std::string ageMix;
@@ -300,7 +300,7 @@ void unitSignals(const Check& check) {
         check("radar: each age on the air (C-16)", ageBad == 0 && heardBad == 0 && nAges >= 3 && morseOk,
               fmt("the programmes by age %s (%s); the peoples heard from home at x32 of %d radio ages, %d of none; Morse %s (%s)", ageBad ? "WRONG" : "right", ageMix.c_str(), nAges, heardBad, morseOk ? "keyed" : "NOT KEYED", morseLine.c_str()));
     }
-    {   // C-16: the top step in the game: at home at x32 two signals in the wide lobe both on the air (none under at x1, C-07's receiver) and
+    {   // the top step in the game: at home at x32 two signals in the wide lobe both on the air (none under at x1, C-07's receiver) and
         // the synth finite with both; a false rise turned onto fills the hold part way and empties (NOTHING THERE), never a lock; a word of a
         // recording heard comes back out of the static while nothing is on the air, that recording's, never logged
         TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";

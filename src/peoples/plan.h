@@ -1,22 +1,11 @@
-// T-01 (2026-10-09): a people's map of its world (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 5). Until T-01 every
-// 2 km cell of a civilised world was hashed on its own (C-01: a third of them held a settlement, the whole world over). The plan
-// reads the world once, coarsely (`PlanGrid`: the planet function on a grid of half a degree, about 165,000 cells: the land of the
-// people's time, the height, the roughness, the climate, the coast's distance, the rivers of a flow over the grid, the fertility,
-// the coal and the ore), scores where each age would settle (water and good land always; hills for defence in the medieval age;
-// coal, ore and rivers in the industrial; the coasts in the modern; anything the futuristic and far-future peoples chose; the
-// genome's relation to the land on top: a people of ridges, valleys, cliffs, stilts...), grows the people's territory from its
-// capital over the land it could reach until it holds the share its profile says (`PeopleExtent::held`), and lays down its places
-// by rank: the capital, the cities and the towns (a prehistoric people's gathering place and the seats of its bands, a futuristic
-// people's few great places, the far future's one to three works), spaced as the age travelled, each with its rank in the founding
-// (for the history, H-02), its population at the height and the core the ground draws (`radiusM`, `buildings`). The countryside
-// (hamlets, villages, the market towns) stays the 2 km cells' own, by a density the plan gives each cell (`planCountryside`: the
-// territory, its land, the nearness of its towns), so no settlement stands outside the land a people held. The networks join the
-// places as the age travelled (paths, roads, rail and canals, highways, maglev; a sea crossing where the way was over water): the
-// relative neighbourhood graph of the places and its minimum spanning tree, the trunk between the capital and the cities; a way's
-// waypoints (`planEdgeWay`) settle on dry, gentle ground every few kilometres and the ground walks the legs between them as C-09
-// walked its roads. The cells read the plan (`ruinOfCell`), the view draws a city whose core spans cells whole, the maps and the
-// telescope draw the cores and the networks where the ground has them. Built once a world (`worldPlanOf`, cached), on a thread of
-// its own at the approach (`worldPlanPrefetch`); deterministic (the grid's samples are independent, the rest serial).
+// A people's map of its world (T-01; docs/reference/civilisations/built-world.md). The plan reads the world once, coarsely (`PlanGrid`: the
+// planet function on a half-degree grid, about 165,000 cells: land, height, roughness, climate, coasts, rivers, fertility, coal and ore),
+// scores where each age would settle (with the genome's relation to the land), grows the territory from the capital to the share its
+// profile holds (`PeopleExtent::held`) and lays down its places by rank (the capital, the cities, the towns; each with its rank in the
+// founding, its population at the height and the core the ground draws), spaced as the age travelled. The countryside stays the 2 km cells'
+// own by the density the plan gives each cell (`planCountryside`). The networks join the places as the age travelled (the relative
+// neighbourhood graph, its spanning tree, the trunk; a way's waypoints on dry gentle ground: `planEdgeWay`). Built once a world
+// (`worldPlanOf`, cached) on a thread of its own at the approach (`worldPlanPrefetch`); deterministic.
 #pragma once
 #include "ruins.h"
 #include <memory>

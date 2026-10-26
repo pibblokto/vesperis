@@ -59,9 +59,9 @@ bool firstBodyOfType(int type, StarSystem& sysOut, int& biOut) {
 
 // B-307: the buggy rolls down a mountain slope. The steepest straight descent of 200 m within 500 m of the capsule of
 // the pinned felisian mountain site (grade 0.12 .. 0.45, no water), driven at full throttle: it must stay on its wheels
-// (under a tenth of the frames airborne, at most two landings) and get to the bottom fast. It used to launch every time
-// the ground dropped faster than 3 m/s, land with a thump and 15% of its speed gone, and launch again: a ladder.
-int runDescent(double latDeg, double lonDeg) {   // G-04: `descent [latDeg lonDeg]` tries another site of the world
+// (under a tenth of the frames airborne, at most two landings) and get to the bottom fast. A buggy launched each time the
+// ground drops faster than 3 m/s lands with a thump, 15% of its speed gone, and launches again: a ladder.
+int runDescent(double latDeg, double lonDeg) {   // `descent [latDeg lonDeg]` tries another site of the world
     std::vector<StarSystem> systems; std::vector<int> bodyOf;
     forTypeBodies(PT_FELISIAN, 1, false, [&](const StarSystem& sys, int bi) { systems.push_back(sys); bodyOf.push_back(bi); });
     if (systems.empty()) { printf("descent: no felisian body\n"); return 1; }
@@ -83,7 +83,7 @@ int runDescent(double latDeg, double lonDeg) {   // G-04: `descent [latDeg lonDe
                 if (grade < 0.12 || grade > 0.45 || grade <= bestGrade) continue;
                 bool ok = true; double hp = h0, hpp = h0;
                 std::vector<SurfaceView::Collider> cols;
-                // G-04: every 2 m (10 m steps let a ledge through: the buggy launched from it), from the start itself (a rock
+                // every 2 m (10 m steps let a ledge through: the buggy launched from it), from the start itself (a rock
                 // beside the start held it for ten seconds); no step up over 0.3 m, none down over 1.6 m (a cliff), a steady
                 // grade (the profile bends under 0.5 m per 2 m step: the GEN 10 slopes are broken ground, and a bump of a metre
                 // at 100 km/h is a jump, not the ladder B-307 tested), no water
@@ -92,7 +92,7 @@ int runDescent(double latDeg, double lonDeg) {   // G-04: `descent [latDeg lonDe
                     if (hh > hp + 0.3 || hh < hp - 1.6 || hh < sv.site.waterAt(x, z) + 0.5) ok = false;
                     if (d >= 4 && std::fabs(hpp - 2 * hp + hh) > 0.5) ok = false;
                     hpp = hp; hp = hh;
-                    // G-04: no rock over 0.9 m, trunk, log or ruin within 3 m of the line, as `findOpenRun` asks (an alpine
+                    // no rock over 0.9 m, trunk, log or ruin within 3 m of the line, as `findOpenRun` asks (an alpine
                     // site's boulders stopped the buggy at 37 m); small rocks are bumps the wheels ride over
                     sv.collectColliders(x, z, cols);
                     for (const SurfaceView::Collider& c : cols) {
@@ -113,7 +113,7 @@ int runDescent(double latDeg, double lonDeg) {   // G-04: `descent [latDeg lonDe
     Input in;
     int frames = 0, air = 0, landings = 0; bool wasAir = false; double along = 0, sumSpeed = 0, arriveT = -1, thumps = 0;
     double hx = std::sin(bh), hz = std::cos(bh);
-    std::string trace;   // G-04: where it got every two seconds (along, across, speed, heading error), to see a stall
+    std::string trace;   // where it got every two seconds (along, across, speed, heading error), to see a stall
     for (int i = 0; i < 60 * 25 && along < LEN; i++) {
         in.newFrame(); in.down[KEY_W] = true;
         double err = wrapAngle(bh - sv.buggy.heading);
@@ -184,16 +184,16 @@ static int judgeClass(int cls, const ClassAgg& a, bool smallBody, bool craterFie
         range("median", med16, 0.25, 0.45, nullptr, "%.2f");
         range("2km", a.r2k, 500, 1200, nullptr, "%.0fm");
         range("16km", a.r16k, 1500, craterFields ? 5000 : 3500, nullptr, "%.0fm");   // a basin's wall in the window adds kilometres
-        range("cliffs", cliff * 100, 3, 8, nullptr, "%.1f%%");   // O6-04
+        range("cliffs", cliff * 100, 3, 8, nullptr, "%.1f%%");
         range("walkable", walk * 100, 90, 100, nullptr, "%.0f%%");
-        range("floors", a.floors * 100, 15, 100, nullptr, "%.0f%%");   // O6-03: the valley floors
+        range("floors", a.floors * 100, 15, 100, nullptr, "%.0f%%");   // the valley floors
     } else if (cls == 1) {
         range("median", med16, 0.08, 0.15, nullptr, "%.2f");
         range("2km", a.r2k, 120, craterFields ? 450 : 250, nullptr, "%.0fm");   // a crater in the window adds its depth
         range("floors", a.floors * 100, 25, 100, craterFields ? "O6-05" : nullptr, "%.0f%%");   // crater floors and terraces come with the second landform library
     } else {
         range("median", med16, 0.01, craterFields ? 0.09 : 0.04, nullptr, "%.3f");   // a plain of a cratered type is a crater field
-        range("broken p90", p90, 0.06, 10, nullptr, "%.3f");   // O6-04
+        range("broken p90", p90, 0.06, 10, nullptr, "%.3f");
         range("broken 770m", a.r770, 6, 1e9, nullptr, "%.0fm");
     }
     return fails;
@@ -203,7 +203,7 @@ int g_terrainType = -1;   // `terrain <type id>`: one type only (the tuning loop
 int runTerrainStats() {
     // O5 (before O6-02): microseconds per 16 m sample on the development Mac, measured by this harness; the budget is 2x
     static const double O5_COST[] = {0.8, 1.1, 0.5, 0.8, 0.9, 1.3, 0, 0.9, 0.4, 0.2, 0.8, 0.4, 0.5, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   // P-00: 0 for the kinds after O5 (no figure to hold them to)
+                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   // 0 for the kinds after O5 (no figure to hold them to)
 static_assert(sizeof(O5_COST) / sizeof(O5_COST[0]) == PT_COUNT, "an O5 cost (or 0) for every kind");
     printf("%-16s %-9s %3s | %5s | %-40s | %5s %6s %6s | %6s | %-13s | %s\n", "type", "class", "n", "4m", "16 m: med  p90   max  cliff  walk", "770m", "2km", "16km", "floors", "512m: med p90", "cost us (O5, x)");
     int fails = 0, later = 0, rows = 0, rowsOk = 0;
@@ -221,7 +221,7 @@ static_assert(sizeof(O5_COST) / sizeof(O5_COST[0]) == PT_COUNT, "an O5 cost (or 
         parallelFor((int)sites.size(), 1, [&](int b, int e) {
             for (int i = b; i < e; i++) {
                 SurfaceSite st; st.init(&systems[sysOf[i]], bodyOf[sysOf[i]], sites[i].first, sites[i].second, 1000.0); ms[i] = measureSite(st, false);
-                if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 0 && typeHasDrainage(type) && i < 6) {   // O6-07: what flattens a plain (the flat class's median grade)
+                if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 0 && typeHasDrainage(type) && i < 6) {   // what flattens a plain (the flat class's median grade)
                     std::vector<double> sOther, sValley, sWater, sLake; int n = 0;
                     for (int z = -24; z < 24; z++) for (int x = -24; x < 24; x++) {
                         double h00 = st.sampleAt(x * 16.0, z * 16.0, 16).h, h10 = st.sampleAt(x * 16.0 + 16, z * 16.0, 16).h, h01 = st.sampleAt(x * 16.0, z * 16.0 + 16, 16).h;
@@ -235,7 +235,7 @@ static_assert(sizeof(O5_COST) / sizeof(O5_COST[0]) == PT_COUNT, "an O5 cost (or 
                     fprintf(stderr, "  flat site %.3f %.3f: water %zu (med %.4f) lake %zu (%.4f) valley %zu (%.4f) other %zu (%.4f) of %d; site median %.4f\n", sites[i].first / DEG, sites[i].second / DEG,
                             sWater.size(), med(sWater), sLake.size(), med(sLake), sValley.size(), med(sValley), sOther.size(), med(sOther), n, percentile(ms[i].slopes16, 0.5));
                 }
-                if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 2 && typeHasDrainage(type)) {   // O6-07: what the drainage says over a mountain window (the floors' tuning)
+                if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 2 && typeHasDrainage(type)) {   // what the drainage says over a mountain window (the floors' tuning)
                     int nearN = 0, valleyN = 0, floorN = 0, lakeN = 0; double accMax = 0;
                     for (int z = -16; z < 16; z++) for (int x = -16; x < 16; x++) {
                         DrainInfo D = drainageAt(st.gen, st.unitAt(x * 64.0 + 32, z * 64.0 + 32), 64.0, 0.5);
@@ -381,9 +381,9 @@ void renderLandforms(int type, int wantCls) {
 struct LandformSite { const char* name; int type; bool moon; int wantCls; double latDeg, lonDeg; };
 static const LandformSite LANDFORM_SITES[] = {
     {"felisian_mountains", PT_FELISIAN, false, 2, PIN_MOUNTAIN_LAT, PIN_MOUNTAIN_LON},   // pinned 2026-09-27 on the generation-5 function; O6-03: re-pinned on the GEN 10 bodies (the type table of GEN 9 had moved every world)
-    {"felisian_plain", PT_FELISIAN, false, 0, PIN_PLAIN_LAT, PIN_PLAIN_LON},   // S-01: re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
+    {"felisian_plain", PT_FELISIAN, false, 0, PIN_PLAIN_LAT, PIN_PLAIN_LON},   // re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
     {"thinatmo_hills", PT_THINATMO, false, 1, 44.433, 135.970},
-    {"cratered_moon", PT_CRATERED, true, 1, -13.184, 175.712},   // S-01: re-pinned on Wyariothmai II-a, the scan's first cratered moon since the claim (43.934 / -41.488 before)
+    {"cratered_moon", PT_CRATERED, true, 1, -13.184, 175.712},   // re-pinned on Wyariothmai II-a, the scan's first cratered moon since the claim (43.934 / -41.488 before)
 };
 void renderLandformSites(bool search) {   // G-04: `landforms sites search` lists six candidates of each site's class on its world (as a 0/0 pin does)
     SpaceRenderer sr; StarNeighborhood nb;
@@ -400,11 +400,11 @@ void renderLandformSites(bool search) {   // G-04: `landforms sites search` list
             bool found = false; int listed = 0;
             for (auto& s : sites) {
                 SurfaceSite st; st.init(&sys, bi, s.first, s.second, 1000.0);
-                if (sys.bodies[bi].locked && st.sun(1000.0).altitude < 10 * DEG) continue;   // S-01: a world locked to its star has a day side and a night side for good: the sheets and the stability frames want the light
+                if (sys.bodies[bi].locked && st.sun(1000.0).altitude < 10 * DEG) continue;   // a world locked to its star has a day side and a night side for good: the sheets and the stability frames want the light
                 SiteMetrics m = measureSite(st, false);
                 if (m.cls != L.wantCls || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;
                 if (!found) { lat = s.first; lon = s.second; found = true; }
-                printf("%s: %s lat %.3f lon %.3f (%s, %s)\n", L.name, found && listed == 0 ? "pin" : "or ", s.first / DEG, s.second / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material]);   // G-04: the first six candidates, for `descent lat lon`
+                printf("%s: %s lat %.3f lon %.3f (%s, %s)\n", L.name, found && listed == 0 ? "pin" : "or ", s.first / DEG, s.second / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material]);   // the first six candidates, for `descent lat lon`
                 if (++listed >= 6) break;
             }
             if (!found) { printf("%s: no site of class %s found\n", L.name, CLASS_NAMES[L.wantCls]); continue; }
@@ -593,7 +593,7 @@ int runWater(int argc, char** argv) {
             BodyGen g = BodyGen::make(b);
             long n = 0, land = 0, kinds[5] = {0, 0, 0, 0, 0}, wet[5] = {0, 0, 0, 0, 0};
             double firstLat[5] = {0, 0, 0, 0, 0}, firstLon[5] = {0, 0, 0, 0, 0}; bool have[5] = {false, false, false, false, false};
-            // O6-03: a window of 1.2 x 1.2 degrees round the first land site of the body, at 16 m (the planet's drainage would
+            // a window of 1.2 x 1.2 degrees round the first land site of the body, at 16 m (the planet's drainage would
             // take a tile per sample over the whole globe), 400 x 400 samples
             std::vector<std::pair<double, double>> sites; landSitesOf(sys, bi, 0x3A, 1, sites);
             double cla = sites[0].first / DEG, cln = sites[0].second;
@@ -627,13 +627,13 @@ int runClimate(int argc, char** argv) {
             const Body& b = sys.bodies[bi];
             if (b.type != PT_FELISIAN) continue;
             BodyGen g = BodyGen::make(b);
-            setDrainageEnabled(false);   // O6-03: 1500 random points over the globe would build a tile each; the biome shares do not need the rivers
+            setDrainageEnabled(false);   // 1500 random points over the globe would build a tile each; the biome shares do not need the rivers
             int bio[BIO_COUNT] = {0}; int n = 0, land = 0, inland = 0;
             for (int k = 0; k < 1500; k++) {
                 double lat = std::asin(r.range(-1, 1)), lon = r.range(-PI, PI);
                 SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(lat, lon), 400);
                 n++; bio[ss.biome]++; if (ss.height > 0) land++;
-                if (ss.material == MAT_WATER && ss.water > 0.5) inland++;   // E-02: a count of the wetlands' lakes was never printed
+                if (ss.material == MAT_WATER && ss.water > 0.5) inland++;   // a count of the wetlands' lakes was never printed
                 if (ss.biome == BIO_ICE && ss.height > 0) {
                     double T = climateTempC(g, std::fabs(lat) / DEG, ss.height, 0, 0);
                     double lf = std::fabs(lat) / DEG / 85.0, snowLine = g.snowLine * std::max(0.0, 1.0 - lf * lf);

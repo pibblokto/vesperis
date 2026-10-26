@@ -2,10 +2,10 @@
 // E-03: the worlds and places the modes and the unit stand on, pinned: the ages' worlds, the scorched
 // and the drifting peoples' worlds, the review sites
 #include "harness/harness.h"
-// A-01: the age test worlds, the nearest people of each age to home on the harness's plane (sector y 0, where every mode's
+// the age test worlds, the nearest people of each age to home on the harness's plane (sector y 0, where every mode's
 // `<sx> <sz> <body>` reaches; `second` for a second people), found by `peoples ages` and pinned here; the unit checks each still
 // has its age, and the mode says when one moved
-struct AgeWorld { int64_t sx, sz; int body, which; int64_t sy = 0; };   // D-05: `sy` a drifter's (off the plane)
+struct AgeWorld { int64_t sx, sz; int body, which; int64_t sy = 0; };   // `sy` a drifter's (off the plane)
 static const AgeWorld AGE_WORLDS[AGE_COUNT] = {
     {198, 55, 10, 0},   // prehistoric, 9.5 ly: Navio V-a (felisian), the Witniikh
     {200, 41, 1, 0},    // medieval, 7.1 ly: Faiyiari II (desert), the Ta-Zhozo
@@ -36,7 +36,7 @@ static const AgeWorld TEST_DRIFTERS[2] = {
     {1728, -575, 0, 0, 740},    // 1,812 ly: Balyaphebist (frozen felisian), the Reimempel: medieval, by the intruder
     {177, -1246, 0, 0, 950}};   // 1,604 ly: Vreikheid (desert), the Ghaiwuwutxu and the Ainyiny: modern with radio, by the wanderer; their beacons
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
-static constexpr double PIN_MOUNTAIN_LAT = -48.030, PIN_MOUNTAIN_LON = 152.547;   // S-01: re-pinned on Wyariothmai I, the day side of a world locked to its red dwarf (the G-04 pin's world, Wyariothmai III, is an ocean world since the star was claimed; of the five lit mountain candidates this one has a steady slope for `descent`)
+static constexpr double PIN_MOUNTAIN_LAT = -48.030, PIN_MOUNTAIN_LON = 152.547;   // re-pinned on Wyariothmai I, the day side of a world locked to its red dwarf (the G-04 pin's world, Wyariothmai III, is an ocean world since the star was claimed; of the five lit mountain candidates this one has a steady slope for `descent`)
 static constexpr double PIN_PLAIN_LAT = -55.154, PIN_PLAIN_LON = -122.371;   // W-03: the pinned felisian plain (`felisian_plain` of `landforms sites`, S-01's re-pin on Wyariothmai I's day side): the fronts' scenes, frames and checks stand on it
 static constexpr double PIN_FRONT_LAT = -26.555, PIN_FRONT_LON = 166.809;   // W-03: the fronts' scenes' site on the same world: flat land by day under a clear pattern sky with a strong front coming (0/0: search and print what to pin)
 // E-07: the systems whose worlds a made kind must leave as drawn (rules-galaxy.md, "Protected and pinned"; the unit's pins name the

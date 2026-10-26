@@ -49,7 +49,7 @@ struct Input {
     bool pressed[KEY_MAX];
     double mouseDx = 0, mouseDy = 0;
     double moveX = 0, moveY = 0;   // M6-02: analogue movement from a controller's stick (-1..1, forward and right positive), 0 when keys are used
-    PadState pad;                  // R-418: the controller this frame (the game translates it: game/pad.cpp)
+    PadState pad;                  // the controller this frame (the game translates it: game/pad.cpp)
     int wheel = 0;
     bool mouseDown[3];
     bool mousePressed[3];
@@ -82,7 +82,7 @@ struct KeyMap {
     bool load(const std::string& path);
     bool identity() const;
     void apply(Input& in) const;
-    bool save(const std::string& path) const;   // N5-05: writes the pairs that differ from the identity
+    bool save(const std::string& path) const;   // writes the pairs that differ from the identity
 };
 
 // R-418: a physical control of the controller, as a number: the standard layout's buttons (0-14, `PadButton`), the halves of its axes

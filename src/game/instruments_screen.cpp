@@ -4,7 +4,7 @@
 // 1 to 9 and 0 play the scale's degrees from the register's first note up (past the scale's last, the next period's), held while the key is
 // down; Left and Right move the register a period down or up; Up and Down take another from the case. The gramophone plays its disc instead
 // (Enter winds it): a piece of its people's age, heard through its horn. The ship's player plays on under an instrument (one may play along).
-// C-18 (2026-10-11): the case opens on its worlds, a folder each as the decoder's shards are kept (the user: "make it so that instruments are
+// the case opens on its worlds, a folder each as the decoder's shards are kept (the user: "make it so that instruments are
 // also separated by planet/world as shards are so you open specific planet as a folder"): Enter opens a world and its instruments are the
 // list (Up and Down within it), Esc closes the world and Esc again the case. A world of two peoples is a folder each people, named on its
 // line as the decoder names them (the user: "in instruments case split instruments by civilization as a decoder does").
@@ -153,7 +153,7 @@ void Game::updateInstruments(const Input& in, double realDt) {
         if (enterKey(in)) openCaseWorld(icase.worldSel);
         return;
     }
-    if (in.wasPressed(KEY_ESCAPE)) { stopInstrument(); icase.level = 0; icase.valid = false; audio.beep = BEEP_UI; return; }   // C-18: back to the worlds
+    if (in.wasPressed(KEY_ESCAPE)) { stopInstrument(); icase.level = 0; icase.valid = false; audio.beep = BEEP_UI; return; }   // back to the worlds
     const int n = (int)icase.keys.size();
     if (n == 0) return;
     if (in.wasPressed(KEY_UP)) { loadInstrument((icase.sel + n - 1) % n); audio.beep = BEEP_UI; return; }
@@ -223,7 +223,7 @@ void Game::renderCaseWorlds() {
 
 void Game::renderInstruments() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 225);
-    if (icase.level == 0) { renderCaseWorlds(); return; }   // C-18
+    if (icase.level == 0) { renderCaseWorlds(); return; }
     const int n = (int)icase.keys.size();
     const bool inRange = icase.worldSel >= 0 && icase.worldSel < (int)icase.worlds.size();
     const std::string wname = inRange ? upper(worldNameOfKey(icase.worlds[icase.worldSel])) : std::string("?");
@@ -247,7 +247,7 @@ void Game::renderInstruments() {
     const Instrument& I = icase.inst;
     const bool disc = instrumentPlaysDisc(I);
     drawInstrumentPicture(122, 16, 192, 104, I, icase.tradition, icase.palette, icase.glow, realTime);
-    // R-414: the instrument's name alone (the user: "On the right you again see that it's 'From <planet>' and coordinates. No need for that -
+    // the instrument's name alone (the user: "On the right you again see that it's 'From <planet>' and coordinates. No need for that -
     // you already know where it is from when you open a name of the planet/civilization in instruments case"): C-11's "OF THE ..." and
     // C-17's "FROM <world> (<sector> / <body>)" went to the title, the folder's own
     drawText(canvas, 124, 124, trunc(instrumentName(icase.tradition, I), 31).c_str(), HUD_WHITE);
@@ -260,7 +260,7 @@ void Game::renderInstruments() {
         drawTextCentered(canvas, UW / 2, UH - 10, "ENTER WINDS IT  UP/DOWN ANOTHER  ESC THE WORLDS", HUD_DIM);
         return;
     }
-    drawText(canvas, 124, 135, trunc(traditionLine(icase.tradition), showReg ? 23 : 31).c_str(), HUD_GREEN);   // C-17: room for the register's word
+    drawText(canvas, 124, 135, trunc(traditionLine(icase.tradition), showReg ? 23 : 31).c_str(), HUD_GREEN);   // room for the register's word
     if (showReg) drawText(canvas, UW - 6 - textWidth(reg), 135, reg, HUD_CYAN);
     // the keys: a bar a degree, as high as its pitch over the register's first note (the scale's own steps), lit while it sounds
     const int sc = std::max(1, (int)icase.tradition.scale.size());
@@ -272,5 +272,5 @@ void Game::renderInstruments() {
         fillRectRGB(canvas, x, 174 - h, x + 9, 174, col);
         drawText(canvas, x + 2, 177, fmt("%d", (d + 1) % 10).c_str(), g > 0.05 ? HUD_AMBER : HUD_DIM);
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, "1-9 AND 0 PLAY  LEFT/RIGHT REGISTER  UP/DOWN  ESC", HUD_DIM);   // C-18: Esc to the worlds
+    drawTextCentered(canvas, UW / 2, UH - 10, "1-9 AND 0 PLAY  LEFT/RIGHT REGISTER  UP/DOWN  ESC", HUD_DIM);   // Esc to the worlds
 }

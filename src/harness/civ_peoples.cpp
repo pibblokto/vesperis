@@ -287,7 +287,7 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
                 }
             }
         }
-        const double LO[AGE_COUNT] = {2, 25, 40, 100, 300, 150}, HI[AGE_COUNT] = {25, 120, 130, 800, 2500, 4000};   // A-04: a lofty, ambitious people's towers to 650 m, their masts over them
+        const double LO[AGE_COUNT] = {2, 25, 40, 100, 300, 150}, HI[AGE_COUNT] = {25, 120, 130, 800, 2500, 4000};   // a lofty, ambitious people's towers to 650 m, their masts over them
         bool heights = true, kinds = true;
         for (int a = 0; a < AGE_COUNT; a++) {
             if (tallest[a] < LO[a] || tallest[a] > HI[a]) heights = false;
@@ -301,7 +301,7 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
     }
     {   // the plan's examples
         // a wooden village after a thousand years: rings of post holes (no timber standing over a step, eight holes or more a hut)
-        Culture cv = cultureAs(g, 0, AGE_PREHISTORIC, 1000);   // A-04: a people of round huts apart, built neither light nor to last
+        Culture cv = cultureAs(g, 0, AGE_PREHISTORIC, 1000);   // a people of round huts apart, built neither light nor to last
         cv.genome.set(GV_PLAN, PF_CIRCLE); cv.genome.set(GV_GROUPING, GR_DETACHED); cv.genome.v[GV_LASTING] = 0.5; cv.genome.v[GV_SAMENESS] = 0.1; cultureWays(cv, peopleGen(g, 0).seed); cv.hut = 0;
         int huts = 0, ringed = 0, standing = 0;
         for (int k = 0; k < 6; k++) {
@@ -317,7 +317,7 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
         }
         // a concrete tower after three thousand years: a stump (what stands of its concrete under a fifth of its height; what fell lies)
         Culture cm = cultureAs(g, 0, AGE_MODERN, 3000);
-        cm.genome.v[GV_LASTING] = 0.5; cultureWays(cm, peopleGen(g, 0).seed);   // A-04: the material's own years (a people built to last outlasts them)
+        cm.genome.v[GV_LASTING] = 0.5; cultureWays(cm, peopleGen(g, 0).seed);   // the material's own years (a people built to last outlasts them)
         int towers = 0, stumps = 0; double worst = 0;
         for (int k = 0; k < 8; k++) {
             RuinSpec sp; settlementOf(g, gLat0 + 50 + k, gLon0, cm, SC_TOWN, sp);
@@ -706,9 +706,9 @@ static int runPeoplesAges(int argc, char** argv) {
     for (const Near& n : stars) {
         Star s; starInSector(n.x, n.y, n.z, s, true);
         StarSystem sys; sys.generate(s);
-        const int pw = sectorTransmits(n.x, n.y, n.z) ? systemPeoplesWorld(sys) : -1;   // P-04: the system's people's world is the one on the air
+        const int pw = sectorTransmits(n.x, n.y, n.z) ? systemPeoplesWorld(sys) : -1;   // the system's people's world is the one on the air
         for (const Body& b : sys.bodies) {
-            if (!kindHas(b.type, KT_PEOPLE)) continue;   // P-04: a scorched world's people too
+            if (!kindHas(b.type, KT_PEOPLE)) continue;   // a scorched world's people too
             BodyGen g = BodyGen::make(b);
             int np = peoplesOf(g); if (!np) continue;
             worlds++;
@@ -783,7 +783,7 @@ static int runPeoplesAges(int argc, char** argv) {
         printf("  %-11s %5.1f ly: %lld %lld body %d%s, %s%s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.z, f.body, f.which ? " second" : "", f.name.c_str(), same ? "" : fmt("  (PINNED %lld %lld body %d%s)", (long long)w.sx, (long long)w.sz, w.body, w.which ? " second" : "").c_str());
     }
     printf("%s\n", moved ? "the pinned test worlds (AGE_WORLDS) differ from these: pin them again" : "the pinned test worlds (AGE_WORLDS) hold");
-    // P-04: the scorched worlds' test worlds, the nearest scorched people of each age on the plane (they are rare: within 300 ly)
+    // the scorched worlds' test worlds, the nearest scorched people of each age on the plane (they are rare: within 300 ly)
     Found dead[AGE_COUNT]; left = AGE_COUNT;
     std::vector<Near> wide;
     for (int64_t x = HOME_SX - 300; x <= HOME_SX + 300; x++) for (int64_t z = HOME_SZ - 300; z <= HOME_SZ + 300; z++) {
@@ -950,11 +950,11 @@ static int runPeoplesRogues(int argc, char** argv) {
 }
 
 int runPeoples(int argc, char** argv) {
-    if (argc >= 3 && std::string(argv[2]) == "rogues") return runPeoplesRogues(argc, argv);   // D-05
-    if (argc >= 3 && std::string(argv[2]) == "map") return runPeoplesMap(argc, argv);     // R-415
-    if (argc >= 3 && std::string(argv[2]) == "scorched") return runPeoplesScorched(argc, argv);   // P-04
-    if (argc >= 3 && std::string(argv[2]) == "ages") return runPeoplesAges(argc, argv);   // A-01
-    if (argc >= 3 && std::string(argv[2]) == "fresh") return runPeoplesFresh(argc, argv);   // A-03
+    if (argc >= 3 && std::string(argv[2]) == "rogues") return runPeoplesRogues(argc, argv);
+    if (argc >= 3 && std::string(argv[2]) == "map") return runPeoplesMap(argc, argv);
+    if (argc >= 3 && std::string(argv[2]) == "scorched") return runPeoplesScorched(argc, argv);
+    if (argc >= 3 && std::string(argv[2]) == "ages") return runPeoplesAges(argc, argv);
+    if (argc >= 3 && std::string(argv[2]) == "fresh") return runPeoplesFresh(argc, argv);
     if (argc >= 5) {   // one world in full
         int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]);
         Star s; StarSystem sys; if (!systemAt(sx, 0, sz, s, sys, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
@@ -971,7 +971,7 @@ int runPeoples(int argc, char** argv) {
             printf("  people %d, the %s: names of style %d (god %s, river %s, mountain %s, sea %s, towns %s and %s, founder %s, moon %s, star %s, festival %s); %d years from the founding; %s; the last S%d\n", k + 1, L[k].people.c_str(), L[k].style,
                    L[k].god.c_str(), L[k].river.c_str(), L[k].mountain.c_str(), L[k].sea.c_str(), L[k].city.c_str(), L[k].city2.c_str(), L[k].founder.c_str(), L[k].moon.c_str(), L[k].star.c_str(), L[k].festival.c_str(), L[k].spanYears + 1, calendarLine(L[k]).c_str(), L[k].last);
             printf("    culture: style %d, family %d, tall %.2f, %s roofs, towns' plan %d, towers %d, decay %.2f (the end %.0f years ago, weathered as %.0f, wet %.2f), buried %.1f m; roads %s, %.1f m wide, wear %.2f\n", C[k].style, C[k].family, C[k].tall, C[k].stoneRoofs ? "stone" : "no", C[k].plan, (int)C[k].towers, C[k].decay, C[k].ageYears, C[k].weatherYears, C[k].wet, C[k].buried, C[k].paved ? "paved" : "beaten", 2 * C[k].roadHalf, C[k].roadWear);
-            printProfile(peopleProfileOf(sys, b, g, k), "    ");   // A-01
+            printProfile(peopleProfileOf(sys, b, g, k), "    ");
             Tongue T = tongueOf(g, L[k]); Voice V = voiceOf(g, L[k], T); Tradition Tr = traditionOf(g, L[k]); Language lang; languageOf(L[k], sh, T, lang);
             printf("    voice: %s; music: %s, %s; %d words in the language\n", voiceLine(V).c_str(), traditionLine(Tr).c_str(), timbresLine(Tr, Tr.hasDrum).c_str(), (int)lang.words.size());
             if (np > 1) {

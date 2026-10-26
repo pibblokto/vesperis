@@ -32,25 +32,25 @@ int pickPlanetType(Rng& rng, double tempK, int starClass, bool isMoon, int paren
     const int zone = tempK > 600 ? 0 : (tempK > 345 ? 1 : (tempK > 205 ? 2 : (tempK > 120 ? 3 : 4)));
     for (int k = 0; k < PT_DRAWN_COUNT; k++) w[k] = KINDS[k].zones[zone];
     auto apply = [&](int r) { for (int k = 0; k < PT_DRAWN_COUNT; k++) { const WeightOp& o = KINDS[k].rules[r]; if (o.mul != 1 || o.add != 0) w[k] = w[k] * o.mul + o.add; } };
-    if (starClass == STAR_WHITE_DWARF || starClass == STAR_PULSAR || starClass == STAR_NEUTRON || starClass == STAR_BLACK_HOLE) {   // S-06: a black hole's are the dead stars' and less
-        apply(WR_DEAD);   // R-307: the dead star stripped the thick airs
+    if (starClass == STAR_WHITE_DWARF || starClass == STAR_PULSAR || starClass == STAR_NEUTRON || starClass == STAR_BLACK_HOLE) {   // a black hole's are the dead stars' and less
+        apply(WR_DEAD);   // the dead star stripped the thick airs
         if (starClass == STAR_PULSAR) apply(WR_PULSAR);
-        if (starClass == STAR_NEUTRON) apply(WR_NEUTRON);   // S-03: the survivors of the supernova: bare cores, captured rocks; no giant kept its envelope
-        if (starClass == STAR_BLACK_HOLE) apply(WR_BLACK_HOLE);   // S-06: wandering rocks and ice, nothing with an air
+        if (starClass == STAR_NEUTRON) apply(WR_NEUTRON);   // the survivors of the supernova: bare cores, captured rocks; no giant kept its envelope
+        if (starClass == STAR_BLACK_HOLE) apply(WR_BLACK_HOLE);   // wandering rocks and ice, nothing with an air
     }
-    if (starClass == STAR_PROTOSTAR) apply(WR_PROTOSTAR);   // S-04: worlds still forming: molten and bombarded, no air or sea had time to come, no giant has finished gathering
+    if (starClass == STAR_PROTOSTAR) apply(WR_PROTOSTAR);   // worlds still forming: molten and bombarded, no air or sea had time to come, no giant has finished gathering
     if (starClass == STAR_RED_GIANT) apply(WR_RED_GIANT);
     if (starClass == STAR_BLUE_GIANT) apply(WR_BLUE_GIANT);
-    if (starClass == STAR_BLUE_WHITE) apply(WR_BLUE_WHITE);       // S-01: bare rock and ice under the ultraviolet
+    if (starClass == STAR_BLUE_WHITE) apply(WR_BLUE_WHITE);       // bare rock and ice under the ultraviolet
     if (starClass == STAR_ORANGE_GIANT) apply(WR_ORANGE_GIANT);   // the thawed ice worlds of an old star
     if (starClass == STAR_CARBON) apply(WR_CARBON_STAR);          // the soot falls on every world
-    if (isMoon) apply(parentType >= 0 && kindHas(parentType, KT_GIANT) ? WR_MOON_OF_GIANT : WR_MOON_OF_WORLD);   // M9-16: moons draw from their own table; R-307: tides heat a giant's inner moons
-    if (starClass == STAR_WOLF_RAYET) {   // S-05: the wind stripped every atmosphere and sublimed the near ice; what is left is bare, cratered and bombarded
+    if (isMoon) apply(parentType >= 0 && kindHas(parentType, KT_GIANT) ? WR_MOON_OF_GIANT : WR_MOON_OF_WORLD);   // moons draw from their own table; R-307: tides heat a giant's inner moons
+    if (starClass == STAR_WOLF_RAYET) {   // the wind stripped every atmosphere and sublimed the near ice; what is left is bare, cratered and bombarded
         for (int k = 0; k < PT_DRAWN_COUNT; k++) if (KINDS[k].atmosphere && !kindHas(k, KT_GIANT)) w[k] = 0;
         apply(WR_WOLF_RAYET);
     }
     if (sizeRand < 0.3) apply(WR_SMALL);
-    return rng.pick(w, PT_DRAWN_COUNT);   // P-01: the drawn kinds alone (the pick's fall-through is the last of them, as in generation 15)
+    return rng.pick(w, PT_DRAWN_COUNT);   // the drawn kinds alone (the pick's fall-through is the last of them, as in generation 15)
 }
 
 // P-00: the colour from afar is the kind's: each channel base + var h of one draw h (or base + var (1 - h)), or one of four by a second draw
@@ -90,7 +90,7 @@ void makeKind(Body& b, const KindFacts& f, double sizeRand, double maxR, bool ke
     b.color = madeColour(made, b.seed);
     if (K.untilted) b.axialTilt = 0;   // the spin frame and the locked face are set from it at the end of `generate`
     if ((f.body & KB_PLANET) && K.ringChance != D.ringChance) b.rings = unitFromHash(mix64(b.seed ^ 0x7121ULL)) < K.ringChance;   // the chthonian's ring of what it lost
-    if (K.thenKind >= 0) b.thenTempK = f.drawn == K.thenKind ? f.tempK : 265.0 + 35.0 * unitFromHash(mix64(b.seed ^ 0x7E4E7ULL));   // P-04: the world as drawn, else a living climate
+    if (K.thenKind >= 0) b.thenTempK = f.drawn == K.thenKind ? f.tempK : 265.0 + 35.0 * unitFromHash(mix64(b.seed ^ 0x7E4E7ULL));   // the world as drawn, else a living climate
 }
 }
 
@@ -101,7 +101,7 @@ bool peoplesHash(int type, uint64_t seed) {
     if (!(K.tags & KT_PEOPLE)) return false;
     return K.thenKind >= 0 ? unitFromHash(mix64(seed ^ K.peopleSalt)) < K.peopleShare : peopleHash(seed);
 }
-bool drifterPeoplesHash(int type, uint64_t seed) {   // D-05
+bool drifterPeoplesHash(int type, uint64_t seed) {
     if (type == PT_FROZEN_FELISIAN) return unitFromHash(mix64(seed ^ KINDS[type].peopleSalt)) < DRIFTER_PEOPLE_SHARE;
     if (type == PT_DESERT) return unitFromHash(mix64(seed ^ DRIFTER_PEOPLE_SALT)) < DRIFTER_PEOPLE_SHARE;
     return false;
@@ -131,8 +131,8 @@ bool kindSourceFits(const KindSource& S, bool giant, const KindFacts& f) {
     if (f.paired && giant) return false;   // P-07: a double planet's halves are worlds
     if (!(S.from >> f.drawn & 1u) || f.tempK < S.tLo || f.tempK >= S.tHi || !(S.bodies & f.body)) return false;
     if ((S.stars && !(S.stars >> f.starClass & 1u)) || (S.lock > 0 && !f.locked) || (S.lock < 0 && f.sync)) return false;
-    if (S.parents && (f.parent < 0 || !(S.parents >> f.parent & 1u))) return false;   // P-03: a moon of the planets it names (a brown dwarf's)
-    return (f.moon & S.moon) == S.moon;   // P-06: a moon that is what the source names among its planet's moons
+    if (S.parents && (f.parent < 0 || !(S.parents >> f.parent & 1u))) return false;   // a moon of the planets it names (a brown dwarf's)
+    return (f.moon & S.moon) == S.moon;   // a moon that is what the source names among its planet's moons
 }
 
 thread_local std::vector<KindFacts>* t_kindFactsSeen = nullptr;
@@ -146,7 +146,7 @@ int kindOf(const KindFacts& f) {
         const MadeSource& m = M.src[i];
         const KindSource& S = m.s;
         if (!kindSourceFits(S, m.giant, f)) continue;
-        if (unitFromHash(mix64((S.byStar ? f.starSeed : f.seed) ^ m.salt)) < S.share) return m.kind;   // P-02: a young star's worlds alike
+        if (unitFromHash(mix64((S.byStar ? f.starSeed : f.seed) ^ m.salt)) < S.share) return m.kind;   // a young star's worlds alike
         i = m.next - 1;   // the world qualified for this kind and its hash said no: on to the next kind
     }
     return f.drawn;
@@ -164,22 +164,22 @@ void StarSystem::generate(const Star& s) {
     Rng rng(s.seed ^ 0x51A7E11ULL);
     int np = rogue ? 0 : (rng.irange(ci.maxPlanets + 1) + rng.irange(ci.maxPlanets + 1) + 1) / 2;
     if (s.cls == STAR_PULSAR && rng.chance(0.3)) np = 0;
-    if (s.cls == STAR_NEUTRON && rng.chance(0.25)) np = 0;   // S-03: a quarter of the neutron stars keep nothing but debris
-    if (s.cls == STAR_PROTOSTAR && rng.chance(0.35)) np = 0;   // S-04: a third of the protostars have no world yet, only the disc
-    if (s.cls == STAR_WOLF_RAYET && rng.chance(0.4)) np = 0;   // S-05: two Wolf-Rayet systems in five are rubble
-    if (s.cls == STAR_BLACK_HOLE && rng.chance(0.5)) np = 0;   // S-06: half the black holes keep nothing but rubble
+    if (s.cls == STAR_NEUTRON && rng.chance(0.25)) np = 0;   // a quarter of the neutron stars keep nothing but debris
+    if (s.cls == STAR_PROTOSTAR && rng.chance(0.35)) np = 0;   // a third of the protostars have no world yet, only the disc
+    if (s.cls == STAR_WOLF_RAYET && rng.chance(0.4)) np = 0;   // two Wolf-Rayet systems in five are rubble
+    if (s.cls == STAR_BLACK_HOLE && rng.chance(0.5)) np = 0;   // half the black holes keep nothing but rubble
     // orbit radii: Kepler-like accumulation as in the original, limited beyond the 8th orbit
     double key = std::max(s.radiusKm * ci.firstOrbitMult, ci.minFirstOrbitKm) * (0.8 + 0.5 * rng.uni());
-    // S-05: a Wolf-Rayet star keeps, two times in five, one giant far out beyond its bare worlds (its zones within four orbits are
+    // a Wolf-Rayet star keeps, two times in five, one giant far out beyond its bare worlds (its zones within four orbits are
     // too hot for one to form), the last body at 2.5-3.5 times the next orbit's key: its envelope streams away in the wind
     int farGiant = (s.cls == STAR_WOLF_RAYET && rng.chance(0.45)) ? np : -1;
     if (farGiant >= 0) np++;
-    std::vector<double> drawnR;   // P-01: each planet's radius as drawn (its moons' orbits and sizes follow it, pushed clear of a made kind's)
+    std::vector<double> drawnR;   // each planet's radius as drawn (its moons' orbits and sizes follow it, pushed clear of a made kind's)
     std::vector<char> drawnRings;
-    std::vector<Body> asDrawn;    // P-03: each planet as drawn and its size draw, to make it again if a twin takes its lock (the moons below)
+    std::vector<Body> asDrawn;    // each planet as drawn and its size draw, to make it again if a twin takes its lock (the moons below)
     std::vector<double> drawnSize;
-    std::vector<KindFacts> drawnFacts;   // P-07: and the facts it was made by (a giant with a twin is made again by them, with no giant)
-    std::vector<double> drawnOrbit;   // P-03: every body's orbit as drawn, a moon's before a made world pushed it out (the companion's clearance and
+    std::vector<KindFacts> drawnFacts;   // and the facts it was made by (a giant with a twin is made again by them, with no giant)
+    std::vector<double> drawnOrbit;   // every body's orbit as drawn, a moon's before a made world pushed it out (the companion's clearance and
                                       // the comets read these: no star and no comet moves for a made world)
     for (int n = 0; n < np; n++) {
         Body b;
@@ -194,7 +194,7 @@ void StarSystem::generate(const Star& s) {
         const KindDef& pt = KINDS[b.type];
         b.radiusKm = pt.minRadiusKm + (pt.maxRadiusKm - pt.minRadiusKm) * sizeRand;
         double densityRel = pt.density;
-        if (pt.tags & KT_GLOWS) b.luminosity = 0.0008 + 0.004 * rng.uni();   // M5-02: it warms its moons and glows at night
+        if (pt.tags & KT_GLOWS) b.luminosity = 0.0008 + 0.004 * rng.uni();   // it warms its moons and glows at night
         b.massEarths = std::pow(b.radiusKm / 6371.0, 3) * densityRel;
         b.gravity = 9.8 * b.massEarths / std::pow(b.radiusKm / 6371.0, 2);
         b.orbitPeriod = ORBIT_K * std::pow(b.orbitRadiusKm, 1.5) / std::sqrt(s.massFactor);
@@ -214,25 +214,25 @@ void StarSystem::generate(const Star& s) {
         b.ringInner = 1.35 + 0.6 * rng.uni();
         b.ringOuter = b.ringInner + 0.5 + 1.6 * rng.uni();
         b.color = typeColor(b.type, rng);
-        {   // M5-03 eccentricity from its own stream: most orbits are nearly round, a few are clearly oval
+        {   // eccentricity from its own stream: most orbits are nearly round, a few are clearly oval
             Rng er(b.seed ^ 0x0ECCULL);
             b.ecc = er.chance(0.6) ? er.range(0, 0.06) : (er.chance(0.8) ? er.range(0.06, 0.15) : er.range(0.15, 0.3));
             b.argPeri = er.range(0, TAU);
         }
-        if (s.cls == STAR_RED_DWARF && n < 3) b.ecc *= 0.3;   // S-01: the tides of a red dwarf round the near orbits, so the locked face holds (M5-08 asks for e <= 0.05)
+        if (s.cls == STAR_RED_DWARF && n < 3) b.ecc *= 0.3;   // the tides of a red dwarf round the near orbits, so the locked face holds (M5-08 asks for e <= 0.05)
         drawnR.push_back(b.radiusKm); drawnRings.push_back(b.rings); asDrawn.push_back(b); drawnSize.push_back(sizeRand); drawnOrbit.push_back(b.orbitRadiusKm);
-        {   // P-01: the kind it is made (every draw above was the drawn kind's), locked as the end of `generate` will find it
+        {   // the kind it is made (every draw above was the drawn kind's), locked as the end of `generate` will find it
             KindFacts f; f.drawn = b.type; f.tempK = b.tempK; f.starClass = s.cls; f.body = KB_PLANET; f.sync = lockedNear && b.rotPeriod > 0; f.locked = f.sync && b.ecc <= 0.05; f.seed = b.seed; f.starSeed = s.seed;
             drawnFacts.push_back(f);
             makeKind(b, f, sizeRand, 1e18, false);
         }
         b.name = s.name + " " + romanNumeral(n + 1);
         bodies.push_back(b);
-        double next = b.orbitRadiusKm * (1.32 + 0.45 * rng.uni());   // M9-16: tighter spacing, more worlds in the temperate band
+        double next = b.orbitRadiusKm * (1.32 + 0.45 * rng.uni());   // tighter spacing, more worlds in the temperate band
         if (pt.tags & KT_GIANT) next *= 1.25;
         key = n < 8 ? next : b.orbitRadiusKm * (1.18 + 0.12 * rng.uni());
     }
-    if (rogue) {   // D-01: the drifter on the anchor: no orbit (a period no clock reaches), its kind, size and warmth by the dark's table
+    if (rogue) {   // the drifter on the anchor: no orbit (a period no clock reaches), its kind, size and warmth by the dark's table
         // (`drifterBody`), its spin and its rings by a stream of its own; a living world frozen keeps the climate it had, as P-04's do
         const DrifterBody db = drifterBody(s);
         const KindDef& K = KINDS[db.type];
@@ -241,11 +241,11 @@ void StarSystem::generate(const Star& s) {
         b.index = 0; b.parent = -1;
         b.seed = hashCombine(s.seed, 1000);
         b.type = db.type;
-        if (db.drawnType != db.type) b.drawnType = db.drawnType;   // D-04: a dark ocean, made from a rocky drifter (its moons are the rocky's)
+        if (db.drawnType != db.type) b.drawnType = db.drawnType;   // a dark ocean, made from a rocky drifter (its moons are the rocky's)
         b.radiusKm = db.radiusKm;
         b.massEarths = std::pow(b.radiusKm / 6371.0, 3) * K.density;
         b.gravity = 9.8 * b.massEarths / std::pow(b.radiusKm / 6371.0, 2);
-        if (K.tags & KT_GLOWS) b.luminosity = 0.0008 + 0.004 * dr.uni();   // a brown dwarf's glow lights its moons (M5-02)
+        if (K.tags & KT_GLOWS) b.luminosity = 0.0008 + 0.004 * dr.uni();   // a brown dwarf's glow lights its moons
         b.orbitRadiusKm = 0; b.orbitPeriod = 1e18;
         b.heatK = b.tempK = db.heatK;
         b.rotPeriod = (1200 + 12000 * dr.uni() * dr.uni()) * (dr.uni() < 0.08 ? -1 : 1);
@@ -257,21 +257,21 @@ void StarSystem::generate(const Star& s) {
         b.ringInner = 1.35 + 0.6 * dr.uni(); b.ringOuter = b.ringInner + 0.5 + 1.6 * dr.uni();
         b.color = madeColour(b.type, b.seed);
         if (K.thenKind >= 0) b.thenTempK = 265.0 + 35.0 * dr.uni();
-        else if (drifterPeoplesHash(b.type, b.seed)) b.thenTempK = 270.0 + 50.0 * unitFromHash(mix64(b.seed ^ 0xD05E7ULL));   // D-05: a desert's people's warm dry climate
+        else if (drifterPeoplesHash(b.type, b.seed)) b.thenTempK = 270.0 + 50.0 * unitFromHash(mix64(b.seed ^ 0xD05E7ULL));   // a desert's people's warm dry climate
         b.name = s.name;
         bodies.push_back(b);
         drawnR.push_back(db.drawnRadiusKm); drawnRings.push_back(b.rings); asDrawn.push_back(b); drawnSize.push_back(0.5); drawnOrbit.push_back(0);
         KindFacts f; f.drawn = drawnKind(b); f.tempK = b.tempK; f.starClass = s.cls; f.body = KB_PLANET; f.seed = b.seed; f.starSeed = s.seed;
         drawnFacts.push_back(f);
     }
-    if (s.cls == STAR_NEUTRON) {   // S-03: the blast fused the surfaces of the outermost one or two survivors (the near ones were vaporised; ice took none)
+    if (s.cls == STAR_NEUTRON) {   // the blast fused the surfaces of the outermost one or two survivors (the near ones were vaporised; ice took none)
         int want = unitFromHash(mix64(s.seed ^ 0x61A55ULL)) < 0.5 ? 2 : 1, marked = 0;
         for (int n = (int)bodies.size() - 1; n >= 0 && marked < want; n--) {
-            if (kindHas(drawnKind(bodies[n]), KT_GLASSABLE)) { bodies[n].glassed = true; marked++; }   // P-01: as drawn
+            if (kindHas(drawnKind(bodies[n]), KT_GLASSABLE)) { bodies[n].glassed = true; marked++; }   // as drawn
         }
     }
-    // M9-12 asteroid belts in wide gaps (and sometimes beyond the last planet); S-03: a neutron star's system is mostly debris;
-    // S-04: a protostar's is the disc itself: a belt inside the first orbit, one in nearly every gap and one beyond
+    // asteroid belts in wide gaps (and sometimes beyond the last planet); S-03: a neutron star's system is mostly debris;
+    // a protostar's is the disc itself: a belt inside the first orbit, one in nearly every gap and one beyond
     if (s.cls == STAR_PROTOSTAR && !bodies.empty() && rng.chance(0.7)) {
         Belt bl;
         bl.innerKm = std::max(bodies[0].orbitRadiusKm * 0.45, s.radiusKm * 3.0); bl.outerKm = bodies[0].orbitRadiusKm * 0.8;
@@ -283,7 +283,7 @@ void StarSystem::generate(const Star& s) {
     }
     for (int n = 0; n + 1 < (int)bodies.size(); n++) {
         double r0 = bodies[n].orbitRadiusKm, r1 = bodies[n + 1].orbitRadiusKm;
-        if ((r1 / r0 > 1.65 && rng.chance(0.55)) || rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.5 : (s.cls == STAR_PROTOSTAR ? 0.9 : (s.cls == STAR_WOLF_RAYET ? 0.35 : 0.12)))) {   // S-05: the rubble of the stripped worlds; S-06: a black hole's like a neutron star's
+        if ((r1 / r0 > 1.65 && rng.chance(0.55)) || rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.5 : (s.cls == STAR_PROTOSTAR ? 0.9 : (s.cls == STAR_WOLF_RAYET ? 0.35 : 0.12)))) {   // the rubble of the stripped worlds; S-06: a black hole's like a neutron star's
             Belt bl;
             bl.innerKm = r0 * 1.22; bl.outerKm = r1 * 0.82;
             double mid = 0.5 * (bl.innerKm + bl.outerKm);
@@ -295,7 +295,7 @@ void StarSystem::generate(const Star& s) {
     }
     if (!rogue && (!bodies.empty() || s.cls == STAR_NEUTRON || s.cls == STAR_PROTOSTAR || s.cls == STAR_WOLF_RAYET || s.cls == STAR_BLACK_HOLE) && rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.75 : (s.cls == STAR_PROTOSTAR ? 0.95 : (s.cls == STAR_WOLF_RAYET ? 0.5 : 0.3)))) {
         Belt bl;
-        double last = bodies.empty() ? ci.minFirstOrbitKm * 2.0 : bodies.back().orbitRadiusKm;   // S-03: a neutron star without worlds keeps its debris; S-04: a protostar's disc
+        double last = bodies.empty() ? ci.minFirstOrbitKm * 2.0 : bodies.back().orbitRadiusKm;   // a neutron star without worlds keeps its debris; S-04: a protostar's disc
         bl.innerKm = last * 1.5; bl.outerKm = last * 2.2;
         double mid = 0.5 * (bl.innerKm + bl.outerKm);
         bl.period = ORBIT_K * std::pow(mid, 1.5) / std::sqrt(s.massFactor);
@@ -306,9 +306,9 @@ void StarSystem::generate(const Star& s) {
     // moons
     int npl = (int)bodies.size();
     for (int n = 0; n < npl; n++) {
-        const Rng rngAt = rng; const Body planetAt = bodies[n]; const size_t bodiesAt = bodies.size();   // P-07: to draw its moons again (below)
+        const Rng rngAt = rng; const Body planetAt = bodies[n]; const size_t bodiesAt = bodies.size();   // to draw its moons again (below)
         Body p = bodies[n];   // copy: push_back below would invalidate a reference
-        const KindDef& pt = KINDS[drawnKind(p)];   // P-01: the moons are drawn as the drawn kind's, in its number, and their orbits and
+        const KindDef& pt = KINDS[drawnKind(p)];   // the moons are drawn as the drawn kind's, in its number, and their orbits and
         const double pR = drawnR[n];               // periods kept round its drawn size (a people's moon keeps its days), pushed clear of a made kind's (`clear`)
         bool made = p.type != drawnKind(p);
         auto clear = [&](double orbitKm, double radii) { return made ? std::max(orbitKm, p.radiusKm * radii) : orbitKm; };
@@ -317,11 +317,11 @@ void StarSystem::generate(const Star& s) {
         int nm = maxm > 0 ? (rng.irange(maxm + 1) + rng.irange(maxm + 1)) / 2 : 0;
         if (giant) nm = 2 + rng.irange(maxm - 1);
         if (n == 0 && !giant) nm = std::min(nm, 1);
-        if (rogue && p.type == PT_EUROPAN) nm = std::max(nm, 1);   // D-01: a europan drifter's ocean is kept by a moon's tides
+        if (rogue && p.type == PT_EUROPAN) nm = std::max(nm, 1);   // a europan drifter's ocean is kept by a moon's tides
         if ((int)bodies.size() + nm > 60) nm = 60 - (int)bodies.size();
-        // M5-09: about 7% of the solid mid-sized planets are double planets: a twin of 0.55-0.95 radii at 12-20 radii (B-428; 5-9 before), both locked to each other
+        // about 7% of the solid mid-sized planets are double planets: a twin of 0.55-0.95 radii at 12-20 radii (B-428; 5-9 before), both locked to each other
         bool twin = (pt.tags & KT_TWIN) && rng.chance(0.07) && (int)bodies.size() < 59;
-        if (twin && made && (lockedKind(p.type) || kindHas(p.type, KT_GIANT))) {   // P-03: a double planet keeps its face to its partner, not to its star
+        if (twin && made && (lockedKind(p.type) || kindHas(p.type, KT_GIANT))) {   // a double planet keeps its face to its partner, not to its star
             // (its day is the twin's month, below): a world made a kind of the locked (the eyeball, the terminator) is made again, as drawn, as one
             // whose day is not its year; P-07: nor is a double planet's half a giant: one made a giant is made again by the facts it was made by,
             // with no giant (so it is what it would have been without them)
@@ -337,17 +337,17 @@ void StarSystem::generate(const Star& s) {
         if (twin) nm = std::max(nm, 1);
         p.moonCount = nm;
         bodies[n].moonCount = nm;
-        // B-314 (GEN 7): the first moon orbits at 4.5-6 radii, and outside the rings by a third of their outer radius. From
+        // GEN 7: the first moon orbits at 4.5-6 radii, and outside the rings by a third of their outer radius. From
         // 2.8 radii the parent's disc was 42 degrees across (60% of the view), and a moon inside the rings (they reach
         // 4 radii) saw them fill the sky; from 4.5 radii the disc is 26 degrees, a wall of a planet still, and the rings
         // a band (M5-09 had 2.8-4.2 radii; 3.5-6.5 before that). The same random draw, so the rest of the system holds.
-        // B-428 (GEN 15): a solid world's first moon at 5-40 radii, even in the logarithm (most near 14). At 4.5-6 radii a world
+        // GEN 15: a solid world's first moon at 5-40 radii, even in the logarithm (most near 14). At 4.5-6 radii a world
         // and its moon hung side by side from the parked ship (3.5 radii, inside the moon's orbit), a twin 5-9 radii off beside
         // it: a system in a pocket. A giant's stays at 4.5-6 (the giant over its inner moons, as Jupiter over Io)
         const double u = rng.uni();
         double mkey = pR * std::max(giant ? 4.5 + 1.5 * u : 5.0 * std::pow(8.0, u), drawnRings[n] ? p.ringOuter * 1.35 : 0.0);
-        double dkey = mkey, dPrev = 0;   // P-03: the drawn chain beside the pushed one
-        mkey = clear(mkey, std::max(3.0, p.rings ? p.ringOuter * 1.35 : 0.0));   // P-01: three of the made world's radii, outside its rings
+        double dkey = mkey, dPrev = 0;   // the drawn chain beside the pushed one
+        mkey = clear(mkey, std::max(3.0, p.rings ? p.ringOuter * 1.35 : 0.0));   // three of the made world's radii, outside its rings
         double prevMoonR = 0;
         for (int c = 0; c < nm; c++) {
             if (c == 0 && twin) {
@@ -356,12 +356,12 @@ void StarSystem::generate(const Star& s) {
                 m.parent = n;
                 m.seed = hashCombine(p.seed, 500);
                 const double tw = pR * (12.0 + 8.0 * rng.uni());
-                m.orbitRadiusKm = clear(tw, 3.0);   // B-428: as Charon from Pluto (5-9 radii before)
+                m.orbitRadiusKm = clear(tw, 3.0);   // as Charon from Pluto (5-9 radii before)
                 m.tempK = p.tempK * (0.95 + 0.1 * rng.uni());
-                if (rogue) m.heatK = m.tempK = 20.0 + 35.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // D-01: its own
+                if (rogue) m.heatK = m.tempK = 20.0 + 35.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // its own
                 m.type = pickPlanetType(rng, m.tempK, s.cls, false, -1, 0.5);
                 if (kindHas(m.type, KT_GIANT)) m.type = PT_ROCKY;
-                if (rogue && m.type == PT_FELISIAN) m.type = PT_CHEMOTROPH;   // D-01: as a moon in the dark
+                if (rogue && m.type == PT_FELISIAN) m.type = PT_CHEMOTROPH;   // as a moon in the dark
                 m.radiusKm = pR * (0.55 + 0.4 * rng.uni());
                 double densityRel = KINDS[m.type].density;
                 m.massEarths = std::pow(m.radiusKm / 6371.0, 3) * densityRel;
@@ -377,7 +377,7 @@ void StarSystem::generate(const Star& s) {
                 m.axialTilt = rng.range(0, 6 * DEG);
                 m.axisAzimuth = rng.range(0, TAU);
                 m.color = typeColor(m.type, rng);
-                { KindFacts f; f.drawn = m.type; f.tempK = m.tempK; f.starClass = s.cls; f.body = KB_TWIN; f.seed = m.seed; f.starSeed = s.seed; f.parent = drawnKind(p); makeKind(m, f, 0.5, 0, true); }   // P-01: a twin keeps its share of its partner's size
+                { KindFacts f; f.drawn = m.type; f.tempK = m.tempK; f.starClass = s.cls; f.body = KB_TWIN; f.seed = m.seed; f.starSeed = s.seed; f.parent = drawnKind(p); makeKind(m, f, 0.5, 0, true); }   // a twin keeps its share of its partner's size
                 m.name = p.name + "-" + (char)('a' + c);
                 m.doublePlanet = true;
                 bodies[n].doublePlanet = true;
@@ -395,22 +395,22 @@ void StarSystem::generate(const Star& s) {
             const double jit = 1.0 + rng.sym(0.05);
             m.orbitRadiusKm = mkey * jit;
             double dO = dkey * jit;
-            // M9-12 resonances: every other moon locks its period to the previous one (2:1 or 3:2)
-            bool resonant = false;   // P-06: read by the strange moons' sources
+            // resonances: every other moon locks its period to the previous one (2:1 or 3:2)
+            bool resonant = false;   // read by the strange moons' sources
             if (c >= 1 && rng.chance(0.45)) { const double f = std::pow(rng.chance(0.5) ? 2.0 : 1.5, 2.0 / 3.0); m.orbitRadiusKm = std::max(prevMoonR * 1.2, prevMoonR * f); dO = std::max(dPrev * 1.2, dPrev * f); resonant = true; }
             prevMoonR = m.orbitRadiusKm; dPrev = dO;
             m.tempK = p.tempK * (0.9 + 0.1 * rng.uni());
-            if (rogue) m.tempK = 20.0 + 30.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // D-01: its own warmth, not its planet's sunlight
-            if (giant && c < 2) m.tempK += 60.0 * (2 - c);   // M9-12 tidal heating of the inner moons
+            if (rogue) m.tempK = 20.0 + 30.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // its own warmth, not its planet's sunlight
+            if (giant && c < 2) m.tempK += 60.0 * (2 - c);   // tidal heating of the inner moons
             if (rogue) m.heatK = m.tempK;
-            if (pt.tags & KT_GLOWS) m.tempK = std::pow(std::pow(m.tempK, 4) + std::pow(equilibriumTemp(p.luminosity, m.orbitRadiusKm), 4), 0.25);   // M5-02: warmed by the parent's glow
+            if (pt.tags & KT_GLOWS) m.tempK = std::pow(std::pow(m.tempK, 4) + std::pow(equilibriumTemp(p.luminosity, m.orbitRadiusKm), 4), 0.25);   // warmed by the parent's glow
             double sizeRand = rng.uni() * rng.uni();
-            if (c == 0 && !giant && rng.chance(0.5)) sizeRand = 0.5 + 0.5 * rng.uni();   // M5-09: half the first moons are big
+            if (c == 0 && !giant && rng.chance(0.5)) sizeRand = 0.5 + 0.5 * rng.uni();   // half the first moons are big
             m.type = pickPlanetType(rng, m.tempK, s.cls, true, drawnKind(p), sizeRand);
             if (kindHas(m.type, KT_INNER_MOON) && c >= 2) m.type = PT_ICY;   // only the inner moons are heated enough (R-307: tectonic moons too)
-            if (rogue && m.type == PT_FELISIAN) m.type = PT_CHEMOTROPH;   // D-01: no living world in the dark: a moon a brown dwarf warms lives by its own heat
+            if (rogue && m.type == PT_FELISIAN) m.type = PT_CHEMOTROPH;   // no living world in the dark: a moon a brown dwarf warms lives by its own heat
             const KindDef& mt = KINDS[m.type];
-            double maxR = giant ? 6500.0 : pR * 0.5;   // M5-09: the largest moon may reach half the planet's radius (0.42 before)
+            double maxR = giant ? 6500.0 : pR * 0.5;   // the largest moon may reach half the planet's radius (0.42 before)
             m.radiusKm = std::min(maxR, mt.minRadiusKm + (mt.maxRadiusKm - mt.minRadiusKm) * sizeRand);
             if (m.radiusKm < 600) m.radiusKm = 600 + 400 * rng.uni();
             double densityRel = mt.density;
@@ -420,7 +420,7 @@ void StarSystem::generate(const Star& s) {
             m.orbitPeriod = MOON_K * std::pow(m.orbitRadiusKm, 1.5) / std::sqrt(std::max(0.05, pmass));
             m.orbitPhase0 = rng.range(0, TAU);
             m.orbitIncl = rng.sym(6 * DEG);
-            { Rng er(m.seed ^ 0x0ECCULL); m.ecc = er.range(0, 0.04); m.argPeri = er.range(0, TAU); }   // M5-03
+            { Rng er(m.seed ^ 0x0ECCULL); m.ecc = er.range(0, 0.04); m.argPeri = er.range(0, TAU); }
             m.orbitNode = rng.range(0, TAU);
             m.rotPeriod = rng.chance(0.7) ? m.orbitPeriod : 900 + 7000 * rng.uni();
             m.rotPhase0 = rng.range(0, TAU);
@@ -437,10 +437,10 @@ void StarSystem::generate(const Star& s) {
             m.name = p.name + "-" + (char)('a' + c);
             if (dO != m.orbitRadiusKm) m.drawnOrbitKm = dO;
             bodies.push_back(m); drawnOrbit.push_back(dO);
-            double grow = c < 2 ? (giant ? 1.35 + 0.5 * rng.uni() : 1.6 + 0.8 * rng.uni()) : (1.25 + 0.3 * rng.uni());   // M5-09: giants' inner moons closer together
+            double grow = c < 2 ? (giant ? 1.35 + 0.5 * rng.uni() : 1.6 + 0.8 * rng.uni()) : (1.25 + 0.3 * rng.uni());   // giants' inner moons closer together
             mkey = m.orbitRadiusKm * grow; dkey = dO * grow;
         }
-        // M9-12 captured moons: gas giants sometimes hold a small body far out on a tilted, retrograde orbit
+        // captured moons: gas giants sometimes hold a small body far out on a tilted, retrograde orbit
         if (giant && rng.chance(0.18) && (int)bodies.size() < 60) {
             Body m;
             m.index = (int)bodies.size();
@@ -449,7 +449,7 @@ void StarSystem::generate(const Star& s) {
             const double cap = pR * (20 + 20 * rng.uni());
             m.orbitRadiusKm = clear(cap, 3.0);
             m.tempK = p.tempK;
-            if (rogue) m.heatK = m.tempK = 20.0 + 25.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // D-01: its own
+            if (rogue) m.heatK = m.tempK = 20.0 + 25.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // its own
             m.type = rng.chance(0.5) ? PT_CRATERED : PT_ICY;
             m.radiusKm = 300 + 600 * rng.uni();
             double densityRel = KINDS[m.type].density;
@@ -466,8 +466,8 @@ void StarSystem::generate(const Star& s) {
             m.axisAzimuth = rng.range(0, TAU);
             m.color = typeColor(m.type, rng);
             m.name = p.name + "-" + (char)('a' + nm);
-            { Rng er(m.seed ^ 0x0ECCULL); m.ecc = er.range(0.1, 0.4); m.argPeri = er.range(0, TAU); }   // M5-03: captured orbits are oval
-            {   // P-05: the kind it is made (a captured moon's own: KB_CAPTURED, so no kind of P-01..P-04 takes one), its size draw from its radius's
+            { Rng er(m.seed ^ 0x0ECCULL); m.ecc = er.range(0.1, 0.4); m.argPeri = er.range(0, TAU); }   // captured orbits are oval
+            {   // the kind it is made (a captured moon's own: KB_CAPTURED, so no kind of P-01..P-04 takes one), its size draw from its radius's
                 KindFacts f; f.drawn = m.type; f.tempK = m.tempK; f.starClass = s.cls; f.body = KB_CAPTURED; f.seed = m.seed; f.starSeed = s.seed; f.parent = drawnKind(p);
                 makeKind(m, f, clampd((m.radiusKm - 300.0) / 600.0, 0, 1), 6500.0, false);
             }
@@ -475,7 +475,7 @@ void StarSystem::generate(const Star& s) {
             bodies.push_back(m); drawnOrbit.push_back(cap);
             bodies[n].moonCount++;
         }
-        if (made && kindHas(bodies[n].type, KT_GIANT)) {   // P-07: a made giant never moves a people's moon (its month and its day, so its calendar, stay
+        if (made && kindHas(bodies[n].type, KT_GIANT)) {   // a made giant never moves a people's moon (its month and its day, so its calendar, stay
             // where 1.3.2 put them): one that would is made again by the facts it was made by with no giant, and its moons drawn again (the same
             // draws, as the drawn kind's) in the room its drawn size gave them
             bool moved = false;
@@ -492,11 +492,11 @@ void StarSystem::generate(const Star& s) {
             }
         }
     }
-    // M5-07 comets: one or two per system on long, oval, tilted orbits that dive in past the planets (D-01: none round a drifter)
+    // comets: one or two per system on long, oval, tilted orbits that dive in past the planets (D-01: none round a drifter)
     if (!rogue) {
         Rng cr(s.seed ^ 0xC0E7ULL);
         int nc = cr.chance(0.45) ? 1 + cr.irange(2) : 0;
-        double outer = bodies.empty() ? ci.minFirstOrbitKm * 12 : drawnOrbit.back();   // P-03: as drawn
+        double outer = bodies.empty() ? ci.minFirstOrbitKm * 12 : drawnOrbit.back();   // as drawn
         for (int k = 0; k < nc && (int)bodies.size() < 60; k++) {
             Body c;
             c.index = (int)bodies.size();
@@ -523,13 +523,13 @@ void StarSystem::generate(const Star& s) {
             bodies.push_back(c); drawnOrbit.push_back(c.orbitRadiusKm);
         }
     }
-    // M5-01 companion stars: a second sun as a body, close in (the planets circle both) or far out with worlds of its own (D-01: no drifter)
+    // companion stars: a second sun as a body, close in (the planets circle both) or far out with worlds of its own (D-01: no drifter)
     if (!rogue) {
         Rng kr(s.seed ^ 0xB1A2ULL);
-        static const double pMultiple[STAR_DRAWN_COUNT] = {0.18, 0.2, 0.28, 0.12, 0.24, 0.15, 0.22, 0.26, 0.14, 0.1, 0.2, 0.35, 0.4, 0.5};   // S-01: the varieties' chances; S-03: the neutron star's; S-04: young stars come in pairs; S-05: most Wolf-Rayet stars have one; S-06: half the black holes drink a companion
+        static const double pMultiple[STAR_DRAWN_COUNT] = {0.18, 0.2, 0.28, 0.12, 0.24, 0.15, 0.22, 0.26, 0.14, 0.1, 0.2, 0.35, 0.4, 0.5};   // the varieties' chances; S-03: the neutron star's; S-04: young stars come in pairs; S-05: most Wolf-Rayet stars have one; S-06: half the black holes drink a companion
         if (kr.chance(pMultiple[s.cls]) && (int)bodies.size() < 56) {
-            double w[STAR_DRAWN_COUNT] = {1.0, 1.6, (s.cls == STAR_BLUE_GIANT || s.cls == STAR_BLUE_WHITE || s.cls == STAR_WOLF_RAYET) ? 0.6 : 0.0, s.cls == STAR_BLACK_HOLE ? 0.0 : 0.15, 0.9, 0.05};   // S-06: a black hole's companion is close, never a giant   // the families; a variety takes its share below
-            int cls = starVariety(kr.pick(w, STAR_DRAWN_COUNT), galaxyRegion(s.sx, s.sy, s.sz), hashCombine(s.seed, 901));   // S-01
+            double w[STAR_DRAWN_COUNT] = {1.0, 1.6, (s.cls == STAR_BLUE_GIANT || s.cls == STAR_BLUE_WHITE || s.cls == STAR_WOLF_RAYET) ? 0.6 : 0.0, s.cls == STAR_BLACK_HOLE ? 0.0 : 0.15, 0.9, 0.05};   // a black hole's companion is close, never a giant   // the families; a variety takes its share below
+            int cls = starVariety(kr.pick(w, STAR_DRAWN_COUNT), galaxyRegion(s.sx, s.sy, s.sz), hashCombine(s.seed, 901));
             const StarClassInfo& cc = STAR_CLASSES[cls];
             Body k;
             k.index = (int)bodies.size();
@@ -546,12 +546,12 @@ void StarSystem::generate(const Star& s) {
             bool worlds = !bodies.empty() && bodies[0].type != PT_COMET;
             double firstOrbit = worlds ? bodies[0].orbitRadiusKm : ci.minFirstOrbitKm;
             double closeR = (s.radiusKm + k.radiusKm) * (3.0 + 3.0 * kr.uni());
-            // B-425: the worlds circle a close companion with the primary, and their warmth is the primary's alone (`pickPlanetType` read
+            // the worlds circle a close companion with the primary, and their warmth is the primary's alone (`pickPlanetType` read
             // that), so a close one is dim beside it and no wider than it in the first world's sky at its nearest; else it is far (a white
             // dwarf's yellow companion was 20-28 degrees across over worlds it would have scorched)
             double firstPeri = worlds ? firstOrbit * (1 - bodies[0].ecc) : firstOrbit, nearK = firstPeri - closeR * 1.1;
             bool modest = !worlds || (k.luminosity <= CLOSE_LIGHT * s.luminosity && nearK > 0 && k.radiusKm / nearK <= s.radiusKm / firstPeri);
-            bool close = (kr.chance(0.35) && closeR < 0.4 * firstOrbit && modest) || s.cls == STAR_BLACK_HOLE;   // S-06: a black hole's companion is close, being drawn out
+            bool close = (kr.chance(0.35) && closeR < 0.4 * firstOrbit && modest) || s.cls == STAR_BLACK_HOLE;   // a black hole's companion is close, being drawn out
             k.orbitRadiusKm = close ? closeR : outerOrbitKm() * (2.5 + 5.0 * kr.uni());
             k.orbitPhase0 = kr.range(0, TAU);
             k.orbitIncl = kr.sym(close ? 3 * DEG : 25 * DEG);
@@ -568,7 +568,7 @@ void StarSystem::generate(const Star& s) {
             k.moonCount = np2;
             double key2 = std::max(k.radiusKm * cc.firstOrbitMult, cc.minFirstOrbitKm) * (0.8 + 0.5 * kr.uni());
             if (!close) {
-                // B-425: a far companion keeps its distance. Its orbit was drawn from the primary's widest one alone, so a red giant came within
+                // a far companion keeps its distance. Its orbit was drawn from the primary's widest one alone, so a red giant came within
                 // its own radius of a red dwarf's worlds (60 degrees of their sky and more, and on the inner side of its orbit inside it). At its
                 // closest approach it now stays far enough from the primary's farthest world (a planet's apoapsis and its widest moon) that it spans
                 // COMPANION_DISC of that sky at most and its light alone would warm the world to COMPANION_HEAT_K at most; its own worlds keep
@@ -578,7 +578,7 @@ void StarSystem::generate(const Star& s) {
                 for (const Body& b : bodies) {
                     if (b.type == PT_COMET) continue;
                     const Body& p = b.parent < 0 ? b : bodies[b.parent];
-                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : drawnOrbit[b.index] * (1 + b.ecc)));   // P-03: a moon's orbit as drawn
+                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : drawnOrbit[b.index] * (1 + b.ecc)));   // a moon's orbit as drawn
                 }
                 double own = np2 > 0 ? key2 * 1.08 * std::pow(1.9 * 1.08, np2 - 1) * 1.1 : 0;
                 double view = k.radiusKm / std::sin(0.5 * COMPANION_DISC);
@@ -618,20 +618,20 @@ void StarSystem::generate(const Star& s) {
                 b.ringOuter = b.ringInner + 0.5 + 1.6 * kr.uni();
                 b.color = typeColor(b.type, kr);
                 { Rng er(b.seed ^ 0x0ECCULL); b.ecc = er.range(0, 0.1); b.argPeri = er.range(0, TAU); }
-                { KindFacts f; f.drawn = b.type; f.tempK = b.tempK; f.starClass = cls; f.body = KB_COMPANION_WORLD; f.sync = b.rotPeriod == b.orbitPeriod; f.seed = b.seed; f.starSeed = s.seed; makeKind(b, f, sizeRand, 1e18, false); }   // P-01 (never locked: `locked` is the primary's planets')
+                { KindFacts f; f.drawn = b.type; f.tempK = b.tempK; f.starClass = cls; f.body = KB_COMPANION_WORLD; f.sync = b.rotPeriod == b.orbitPeriod; f.seed = b.seed; f.starSeed = s.seed; makeKind(b, f, sizeRand, 1e18, false); }   // (never locked: `locked` is the primary's planets')
                 b.name = s.name + " B " + romanNumeral(n + 1);
                 bodies.push_back(b);
                 key2 = b.orbitRadiusKm * (1.4 + 0.5 * kr.uni());
             }
         }
     }
-    // P-05: a wanderer. One system in twenty-five caught a rogue world passing through it (Parker and Quanz 2012; Perets and Kouwenhoven 2012:
+    // a wanderer. One system in twenty-five caught a rogue world passing through it (Parker and Quanz 2012; Perets and Kouwenhoven 2012:
     // a few stars in a hundred, most in the cluster they were born in): an extra body after the system's own, drawn from a stream of its own
     // (no draw of the system's, so nothing else moves), its nearest 1.15-1.75 times the last planet's orbit out, eccentric (0.4-0.8), steep or
     // retrograde (25-155 degrees), no moons, clear of a far companion (none where it would break B-425's rule as the farthest world). Most are
     // the wanderer kind (an old world's ground under its air fallen as snow), one in five a living world that froze (the frozen felisian, never
     // round a black hole or in a Wolf-Rayet wind: no air keeps there, S-05 and S-06); none kept a people (the lost sun is the drifters' story)
-    if (!rogue) {   // D-01: a drifter catches none
+    if (!rogue) {   // a drifter catches none
         const uint64_t wh = mix64(s.seed ^ WANDERER_SALT);
         if (unitFromHash(wh) < WANDERER_SHARE && (int)bodies.size() < 60) {
             Rng wr(wh);
@@ -682,7 +682,7 @@ void StarSystem::generate(const Star& s) {
         b.ref0 = normalize(cross(any, b.spinAxis));
         b.ref1 = cross(b.spinAxis, b.ref0);
     }
-    // M5-08: planets whose day equals their year keep one face toward their sun; remember that face
+    // planets whose day equals their year keep one face toward their sun; remember that face
     for (int i = 0; i < (int)bodies.size(); i++) {
         Body& b = bodies[i];
         if (b.parent >= 0 || b.type == PT_COMET || b.type == PT_COMPANION || b.ecc > 0.05) continue;
@@ -690,7 +690,7 @@ void StarSystem::generate(const Star& s) {
         b.locked = true;
         b.lockedDir = bodyFrame(i, 0) * normalize(star.pos - bodyPos(i, 0));
     }
-    // P-06: the two-faced moon faces its planet (its day its month), so it travels with one face forward: remember that face as the locked face
+    // the two-faced moon faces its planet (its day its month), so it travels with one face forward: remember that face as the locked face
     // is (its dark one; the only reader, so the only moons that hold it)
     for (int i = 0; i < (int)bodies.size(); i++) {
         Body& b = bodies[i];
@@ -701,7 +701,7 @@ void StarSystem::generate(const Star& s) {
         b.apexDir = bodyFrame(i, 0) * normalize(v * std::cos(ph) - u * std::sin(ph));
     }
     for (Body& b : bodies) { b.starSx = star.sx; b.starSy = star.sy; b.starSz = star.sz; b.starKnown = true; b.drifter = rogue; }   // T-02; D-01
-    for (Body& b : bodies) b.tideForcingM = tideForcingM(*this, b.index);   // Q-02: a derived fact (no draw), the trait's to read
+    for (Body& b : bodies) b.tideForcingM = tideForcingM(*this, b.index);   // a derived fact (no draw), the trait's to read
 }
 
 // O3: belt rocks. The belt is cut into rings of BELT_CELL_KM in radius; each ring turns as one at the Kepler rate of its
@@ -953,9 +953,9 @@ double starActivity(int cls) {   // S-01: flare stars and hot stars drive the ni
         case STAR_BLUE_GIANT: return 1.0;
         case STAR_PULSAR: return 0.9;
         case STAR_NEUTRON: return 0.85;
-        case STAR_PROTOSTAR: return 0.9;   // S-04: a young star's wind and flares
-        case STAR_WOLF_RAYET: return 1.0;   // S-05: the wind that strips its worlds
-        case STAR_BLACK_HOLE: return 0.9;   // S-06: the disc's x-rays
+        case STAR_PROTOSTAR: return 0.9;   // a young star's wind and flares
+        case STAR_WOLF_RAYET: return 1.0;   // the wind that strips its worlds
+        case STAR_BLACK_HOLE: return 0.9;   // the disc's x-rays
         case STAR_RED_DWARF: return 0.8;
         case STAR_BLUE_WHITE: return 0.7;
         case STAR_ORANGE: return 0.55;
@@ -966,7 +966,7 @@ double starActivity(int cls) {   // S-01: flare stars and hot stars drive the ni
 
 double auroraPotentialAt(const StarSystem& sys, const Body& b, double storm) {
     if (!bodyHasAir(b) || hasOpaqueDeck(b.type)) return 0;   // D-04: no air left to light
-    double activity = starActivity(sys.star.cls);   // S-02: the one table
+    double activity = starActivity(sys.star.cls);   // the one table
     double mag = magneticField(b);
     double steady = 0.6 * smoothstep(0.5, 1.0, mag);                                            // a strong field keeps a glow every night
     double driven = std::pow(storm, 0.7) * smoothstep(0.03, 0.4, mag) * (0.7 + 0.3 * mag);     // the storm lights the rest

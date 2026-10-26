@@ -1,5 +1,5 @@
 // E-09: the works: the genome's own (the focal accent, the aqueduct, the joined towers, the portal), the harbour's and the
-// water's (T-02), and the works' kinds outside the towns (T-03)
+// water's (T-02), and the works' kinds outside the towns
 #include "buildings_internal.h"
 
 // ---- A-04: the genome's own works -----------------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ void genFocus(Gen& g) {
         }
         case FO_TOWER: {
             TowerOut T = towerShaft(g, 0, 0, b.hw, H, pre ? MT_DRYSTONE : mat, 10, 2);
-            if (T.whole && !pre && c.age >= AGE_MODERN && g.lod < 2) { Form& p = g.add(FK_LATHE, 4, 0, 0, 0, b.hw * 2.2, b.hw * 2.2, g.sink + H * 0.8, g.sink + H * 0.88, 0, mat); p.p[0] = 0.3; }   // B-415: a modern people's tower of the air, its pod
+            if (T.whole && !pre && c.age >= AGE_MODERN && g.lod < 2) { Form& p = g.add(FK_LATHE, 4, 0, 0, 0, b.hw * 2.2, b.hw * 2.2, g.sink + H * 0.8, g.sink + H * 0.88, 0, mat); p.p[0] = 0.3; }   // a modern people's tower of the air, its pod
             if (T.whole && !pre) towerTop(g, 0, 0, T.rTop, T.h, H, mat, false, 0);
             break;
         }
@@ -112,7 +112,7 @@ void genAqueduct(Gen& g) {
     const int mat = greatOf(b, c); const double Dm = g.D(mat), H = b.hWall;
     const int sub = archSub(g);
     const int tiers = H > 28 ? 3 : (H > 14 ? 2 : 1), n = std::max(3, (int)std::lround(2 * b.hd / 7.0));
-    const bool abs = b.base > -1e8;   // T-03: a work's arcade from its line's low ground to its channel, over the reference level
+    const bool abs = b.base > -1e8;   // a work's arcade from its line's low ground to its channel, over the reference level
     const double y00 = abs ? b.base : g.sink;
     for (int t = 0; t < tiers; t++) {
         const double y0 = H * t / tiers, y1 = H * (t + 1) / tiers;

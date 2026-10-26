@@ -23,24 +23,24 @@
 // material ramp at the ground's noon stop of the texel's albedo, times the north-west hillshade from the
 // height map and the star's light; lava emissive; optional cloud overlay. Rebuilt only when the body or
 // the cloud toggle changes; the day/night term is applied per frame.
-// O2: the material ramps of a world under its star's light (the same as the globe and the ground, N1-05), and one
+// the material ramps of a world under its star's light (the same as the globe and the ground, N1-05), and one
 // texel colour from them: the ground's exposure rule times a hillshade, lava hot
 void Game::mapRampsFor(const Body& b, MatRamp* ramps, double& lf, bool& atmo) {
     const BodyGen& g = spaceR.genFor(b);
     RGB lightC = lerp(sys.star.color, RGB(1, 1, 1), 0.5f);
-    lf = sys.sunless() ? 1.0 : clampd(sys.lightAt(sys.bodyPos(b.index, t), t).factor, 0, 1.15);   // D-02: the survey's colours at the noon stop
-    atmo = bodyHasAir(b);   // D-04
+    lf = sys.sunless() ? 1.0 : clampd(sys.lightAt(sys.bodyPos(b.index, t), t).factor, 0, 1.15);   // the survey's colours at the noon stop
+    atmo = bodyHasAir(b);
     RGB skyL; bool hasSky = false;
     if (atmo) {
         RGB zen, hor;
-        typeSky(g, zen, hor);   // R-307: the one pair per type
+        typeSky(g, zen, hor);   // the one pair per type
         skyL = lerp(zen, hor, 0.5f) * lightC; hasSky = true;
     }
     for (int mm = 0; mm < MAT_COUNT; mm++) ramps[mm] = materialRamp(g.matColor[mm] * lightC, hasSky ? &skyL : nullptr, 1.0);
 }
 
 // D-02: `survey` 0..1, a sunless world's survey look at that height
-// D-02: the survey look of a world with no sun, the ship's altimeter and not its camera (the maps went black at a light of 0): the ground's
+// the survey look of a world with no sun, the ship's altimeter and not its camera (the maps went black at a light of 0): the ground's
 // colour at the noon stop, two parts in three the radar camera's cold phosphor, its brightness by the height (the map's lows dark, its highs
 // pale) times the relief's hillshade; lava keeps its glow
 uint32_t Game::mapColor(const MatRamp* ramps, int mat, double albedo, double lf, bool atmo, double shade, double survey) {
@@ -114,7 +114,7 @@ void Game::buildLandingMapBase() {
 
 // O2 (R-301): the landing map's zoom into the cursor's sector (Z): a window two sectors wide and one tall, sampled
 // from the planet function at the far ring's detail, with the sector grid drawn over it
-// O2 (R-301): the zoom window: one sector tall (a degree of latitude), two sectors' worth of ground wide (the frame is
+// the zoom window: one sector tall (a degree of latitude), two sectors' worth of ground wide (the frame is
 // 2:1), sampled from the planet function at the far ring's detail (64-512 m), coloured like the whole-world map. The
 // hillshade is normalised over the window, capped so a plain does not turn into a mountain range.
 void Game::buildLandingZoom() {
@@ -125,7 +125,7 @@ void Game::buildLandingZoom() {
     zoomHalfLon = zoomHalfLat * 2.0 / std::max(std::cos(zoomLat), 0.15);
     double texelM = 2 * zoomHalfLat * b.radiusKm * 1000.0 / ZH;
     double detail = clampd(0.6 * texelM, 64, 512);
-    // O6-03: the window reads the drainage (rivers as bands, lakes) from tiles already built; a window whose tiles are
+    // the window reads the drainage (rivers as bands, lakes) from tiles already built; a window whose tiles are
     // not built yet is drawn without the drainage at once, its tiles are asked for on the worker, and the window is
     // drawn again when they are there (the zoom itself must not compute tiles: nine of them took two seconds)
     const Vec3 zoomCentre = StarSystem::bodyFromLatLon(zoomLat, zoomLon);
@@ -135,7 +135,7 @@ void Game::buildLandingZoom() {
     const bool dry = zoomDry;
     zoomImg.assign(ZW * ZH, 0); zoomEmissive.assign(ZW * ZH, 0); zoomUnit.assign(ZW * ZH, Vec3());
     std::vector<float> hs(ZW * ZH), albs(ZW * ZH); std::vector<uint8_t> mats(ZW * ZH);
-    auto zt = std::chrono::steady_clock::now();   // F-01: the build's parts
+    auto zt = std::chrono::steady_clock::now();   // the build's parts
     auto zoomPart = [&](int k) { auto n = std::chrono::steady_clock::now(); zoomBuildMs[k] = std::chrono::duration<double, std::milli>(n - zt).count(); zt = n; };
     for (double& ms : zoomBuildMs) ms = 0;
     zoomBuilds++;
@@ -159,7 +159,7 @@ void Game::buildLandingZoom() {
     for (int y = 0; y < ZH; y += 2)
         for (int x = 0; x < ZW; x += 2) { double gx = hAt(x + 1, y) - hAt(x - 1, y), gy = hAt(x, y + 1) - hAt(x, y - 1); sum2 += gx * gx + gy * gy; cnt++; }
     double k = std::min(0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9), 0.5 / (0.03 * 2 * texelM));   // a 3% grade at most for full shading
-    const bool survey = sys.sunless();   // D-02: the window's heights the survey's (its lows dark, its highs pale)
+    const bool survey = sys.sunless();   // the window's heights the survey's (its lows dark, its highs pale)
     double hLo = 0, hHi = 1; if (survey) surveyRange(hs.data(), hs.size(), hLo, hHi);
     for (int y = 0; y < ZH; y++)
         for (int x = 0; x < ZW; x++) {
@@ -169,7 +169,7 @@ void Game::buildLandingZoom() {
             zoomImg[i] = mapColor(ramps, mats[i], albs[i], lf, atmo, shade, survey ? surveyHeight(hs[i], hLo, hHi) : -1);
             zoomEmissive[i] = mats[i] == MAT_LAVA;
         }
-    if (g.tideRangeM > 0) {   // Q-02: the tide lines over the flats (the high water's pale, the low water's dark), as the sector map draws them
+    if (g.tideRangeM > 0) {   // the tide lines over the flats (the high water's pale, the low water's dark), as the sector map draws them
         const double S = g.liquidLevel > -1e8 ? g.liquidLevel : 0.0;
         for (int y = 0; y + 1 < ZH; y++)
             for (int x = 0; x + 1 < ZW; x++) {
@@ -180,8 +180,8 @@ void Game::buildLandingZoom() {
             }
     }
     zoomPart(1);
-    zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // C-09: the old roads of the window (`peoples/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
-    zoomCivImg = zoomImg; zoomPlaces.clear();   // R-415: the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
+    zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // the old roads of the window (`peoples/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
+    zoomCivImg = zoomImg; zoomPlaces.clear();   // the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
     if (worldHadCivilisation(g)) {
         auto tr0 = std::chrono::steady_clock::now();
         auto texel = [&](const Vec3& u, float& x, float& y) { double la, lo; StarSystem::latLonFromBody(u, la, lo); x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW); y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH); };
@@ -199,7 +199,7 @@ void Game::buildLandingZoom() {
             addLine(r.pts, NK_ROAD);
         }
         zoomPart(2);
-        // T-01: the world plan's ways through the window (their waypoints: a leg's walk wanders less than a texel) and its places' cores,
+        // the world plan's ways through the window (their waypoints: a leg's walk wanders less than a texel) and its places' cores,
         // each a disc of its built ground over the map (the core's share of a texel, darkened by the years: what the ground holds)
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
         std::vector<PlanEdgeRef> es; planEdgesNear(*P, zoomCentre, zoomRadiusM, es);
@@ -209,7 +209,7 @@ void Game::buildLandingZoom() {
         MatRamp ramps2[MAT_COUNT]; double lf2; bool atmo2; mapRampsFor(b, ramps2, lf2, atmo2);
         const uint32_t rock = mapColor(ramps2, familyRep(g.type, FAM_ROCK), 0.45, lf2, atmo2, 1.0);
         for (const PlanPlace* p : ps) {
-            zoomPlaces.push_back({p->people, p->rank, p->sclass, p->unit, p->radiusM / texelM});   // R-415: for the places the explorer knows
+            zoomPlaces.push_back({p->people, p->rank, p->sclass, p->unit, p->radiusM / texelM});   // for the places the explorer knows
             const Culture cu = cultureOf(g, p->people);
             const RGB pc = cu.palette.colour[0];
             const double rr = (rock & 255) * 0.5 + pc.r * 140, gg = ((rock >> 8) & 255) * 0.5 + pc.g * 140, bb = ((rock >> 16) & 255) * 0.5 + pc.b * 140;

@@ -2,9 +2,9 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// P-00 to P-03: the kind table, the made kinds, the living worlds, the locked and the deep
+// the kind table, the made kinds, the living worlds, the locked and the deep
 void unitKinds(const Check& check) {
-    // P-00: the kind table. The trait eligibility of 1.3.2's 33 traits over its 22 kinds is kept (the traits by tags: a kind or a trait
+    // the kind table. The trait eligibility of 1.3.2's 33 traits over its 22 kinds is kept (the traits by tags: a kind or a trait
     // appended may only add), the old landform-or-world split is the traits' classes, every kind's names fit the screens and the files
     {
         static const uint32_t ELIGIBLE_132[33] = {0x000000, 0x2604bc, 0x241138, 0x200008, 0x2408bd, 0x3614be, 0x000028, 0x040138, 0x06083f, 0x114490, 0x0940a8,
@@ -26,7 +26,7 @@ void unitKinds(const Check& check) {
         }
         check("kinds: names safe, short names in ten characters, a ground for every landable kind", names, bad);
     }
-    // P-01: the made kinds. Over the systems of the scan region nearest home, generated twice: every made body was drawn as one of its
+    // the made kinds. Over the systems of the scan region nearest home, generated twice: every made body was drawn as one of its
     // kind's sources, no world with a people changed kind, the systems the same twice; about one body in fifty made; the home world felisian
     {
         int systems = 0, bodiesN = 0, made = 0, people = 0, bad = 0, again = 0, perKind[PT_COUNT] = {0};
@@ -61,7 +61,7 @@ void unitKinds(const Check& check) {
         }
         check("made kinds: the home world felisian, Heilya II (P-01 to P-04)", home, hw);
     }
-    // P-02: the living worlds. Made only from felisian worlds (the lichen world from thin airs) whose day is not their year, round a star
+    // the living worlds. Made only from felisian worlds (the lichen world from thin airs) whose day is not their year, round a star
     // still burning its hydrogen; the archean by its star's hash, so every felisian world of a young star is archean unless a people's;
     // and the first world of each kind in the scan region, sampled on its map's grid, has its ground: the archean no plant and its mats,
     // the hothouse no ice on its low polar land, the tundra its sheets, the lichen world its crusts and moss, the steppe its grass, the
@@ -123,7 +123,7 @@ void unitKinds(const Check& check) {
         }
         check("living grounds: each kind's signature on its first world (P-02)", ok, out);
     }
-    // P-03: the locked and the deep. Each made only from its sources: the eyeball from a red dwarf's locked ocean, felisian or icy planet, the
+    // the locked and the deep. Each made only from its sources: the eyeball from a red dwarf's locked ocean, felisian or icy planet, the
     // terminator from a locked felisian or desert planet, both untilted and neither half of a double planet (a twin takes the lock: `generate`
     // makes it again); the hycean from an ocean, the ammonia world from an ocean, a methane world or an icy one, the snowball from a felisian or
     // an ocean world whose day is not its year, the chemotroph from a tectonic or rocky world of a dead star or a brown dwarf's moon; the test
@@ -223,7 +223,7 @@ void unitKinds(const Check& check) {
 
 // P-04: the dead worlds, their two times, their peoples
 void unitDead(const Check& check) {
-    // P-04: the dead worlds. The scorched made only from its sources (a giant's felisian worlds, a white dwarf's rocky and desert planets at
+    // the dead worlds. The scorched made only from its sources (a giant's felisian worlds, a white dwarf's rocky and desert planets at
     // 180-260 K), never a people's world of C-01, its then-world's climate the drawn felisian's (else a living one's); the frozen made in no
     // system but as a wanderer (P-05; D's drifters), with no people; about one scorched world in eight with a people of its own
     {
@@ -248,7 +248,7 @@ void unitDead(const Check& check) {
               bad == 0 && frozen == frozenWandering && made > 60 && share > 0.06 && share < 0.2,
               fmt("%d scorched, %d of them with a people (%.0f%%), %d frozen (%d wanderers without a people)%s", made, withPeople, 100 * share, frozen, frozenWandering, why.empty() ? "" : (": " + why).c_str()));
     }
-    // P-04: a dead world's two times. On each scorched test world (`SCORCHED_WORLDS`: the nearest scorched people of each age) and on a frozen world
+    // a dead world's two times. On each scorched test world (`SCORCHED_WORLDS`: the nearest scorched people of each age) and on a frozen world
     // the harness stages with a people (its own felisian world without C-01's people, the first of the scan's with the frozen kind's people): at
     // every place of its peoples' plans on dry ground then (where a town stands: the plan's grid is too coarse for the drainage's lakes) the now's
     // ground stands at the then-world's height (without the drainage, and with it at three), no living ground is left under the cover, the plan
@@ -321,7 +321,7 @@ void unitDead(const Check& check) {
               fmt("%zu worlds (%s); %d places on dry ground then (%d in its water): %d off (worst %.3g m), %d of %d drained off, %d under a living ground, %d of %d on the plan's land; the frozen sea: %d of %d points water then and the old sea now",
                   worlds.size(), out.c_str(), places, wetThen, off, worst, offDrained, drained, covered, planLandOk, planLand, seaWet, seaPoints));
     }
-    // P-04: the dead worlds' peoples: each scorched test world's people of its age; its culture built as its time's (a living world's) and weathered as the
+    // the dead worlds' peoples: each scorched test world's people of its age; its culture built as its time's (a living world's) and weathered as the
     // present's (dry: the desert's wet and burial), its end by the desert's world factors; a system with a people of C-01's speaks for it on the air
     // and in the charts (no 1.3.2 signal moved: the system's people's world is C-01's first)
     {
@@ -340,7 +340,7 @@ void unitDead(const Check& check) {
         for (auto& [x, z, st, sys] : scanSystems(150, 340, 20, 160)) {
             int c01 = -1, dead = -1;
             for (const Body& B : sys.bodies) {
-                if (B.wanderer || !kindHas(B.type, KT_PEOPLE) || !peoplesHash(B.type, B.seed)) continue;   // P-05: a wanderer keeps no people
+                if (B.wanderer || !kindHas(B.type, KT_PEOPLE) || !peoplesHash(B.type, B.seed)) continue;   // a wanderer keeps no people
                 if (!deadKind(B.type) && c01 < 0) c01 = B.index;
                 if (deadKind(B.type) && dead < 0) dead = B.index;
             }
@@ -357,7 +357,7 @@ void unitDead(const Check& check) {
 
 // P-05: the far cold and its grounds
 void unitCold(const Check& check) {
-    // P-05: the far cold. Over the scan region: each far cold kind made only from its sources (the drawn kind, the temperature band, the body's
+    // the far cold. Over the scan region: each far cold kind made only from its sources (the drawn kind, the temperature band, the body's
     // class: a giant's captured moon only the cryovolcanic, no air kind round a black hole or in a Wolf-Rayet wind); the wanderers a few systems
     // in a hundred, each its system's last body, far past the last planet on an eccentric, steep or retrograde orbit, no moon, no people, about
     // one in five a frozen felisian (never round a black hole or in a Wolf-Rayet wind); the regress's and home's cold worlds as drawn
@@ -385,7 +385,7 @@ systems++;
                 const bool moon = B.parent >= 0 && sys.bodies[B.parent].type != PT_COMPANION && !B.doublePlanet;
                 const bool giantMoon = moon && kindHas(drawnKind(sys.bodies[B.parent]), KT_GIANT), cap = moon && B.orbitPeriod < 0;
                 if (cap) { captured++; if (B.type != drawnKind(B)) { capturedMade++; if (B.type != PT_CRYOVOLCANIC) { bad++; why = B.name + " (a captured moon) made a " + KINDS[B.type].name; } } }
-                if (B.type < PT_NITROGEN || B.type > PT_FROST_DWARF) continue;   // P-06: the strange moons have checks of their own
+                if (B.type < PT_NITROGEN || B.type > PT_FROST_DWARF) continue;   // the strange moons have checks of their own
                 made++; perKind[B.type]++;
                 const int d = drawnKind(B);
                 const int cls = B.parent >= 0 && sys.bodies[B.parent].type == PT_COMPANION ? sys.bodies[B.parent].starClass : st.cls;
@@ -424,7 +424,7 @@ systems++;
         }
         check("far cold kinds: the regress's and home's cold worlds as drawn (P-05)", pinsOk, pins.empty() ? "Seapheeseeri II and I-a, Iaphiath I-III, Feeyeithis V, Wyariothmai IV-V, Heilya IV, V and IV-a" : pins);
     }
-    // P-05: the far cold's grounds, each kind's signature on its first world: the nitrogen's great plain at its level, dark tholin at the low
+    // the far cold's grounds, each kind's signature on its first world: the nitrogen's great plain at its level, dark tholin at the low
     // latitudes; the cryovolcanic cap in the south and a plume's dark streak downwind of its vent; the dry ice caps, their band's frost in the
     // hemisphere's winter and gone by its summer, its spiders' jets only under that frost; the wanderer's snow in its lowlands and its highest
     // ground bare; the brine dwarf's lone mountain three kilometres and more over its plain and salt on its young craters' floors;
@@ -509,7 +509,7 @@ systems++;
 
 // P-06: the strange moons and their grounds
 void unitMoons(const Check& check) {
-    // P-06: the strange moons. Over the scan region: each made only from its sources (the drawn kind, a giant's moon for the grooved, the two-faced
+    // the strange moons. Over the scan region: each made only from its sources (the drawn kind, a giant's moon for the grooved, the two-faced
     // and the tiger-striped, the moon's place among its planet's moons and its spin, the patchwork and the sponge under 200 K), the grooved large;
     // every two-faced moon keeps its apex forward (a quarter of its month on, within 25 degrees of its motion round its planet); the
     // regress's and home's moons as drawn
@@ -536,7 +536,7 @@ void unitMoons(const Check& check) {
                     worstApex = std::max(worstApex, off);
                     if (off > 25 * DEG || length(B.apexDir) < 0.99) { apexBad++; awhy = B.name; }   // its tilt, its orbit's inclination, an oval orbit's libration
                 }
-                if (B.type < PT_GROOVED_ICE || B.type > PT_SPONGE) continue;   // P-07: the giants have checks of their own
+                if (B.type < PT_GROOVED_ICE || B.type > PT_SPONGE) continue;   // the giants have checks of their own
                 made++; perKind[B.type]++;
                 if (moonFirst[B.type] < 0) { moonFirst[B.type] = B.index; moonX[B.type] = x; moonZ[B.type] = z; }
                 const int d = drawnKind(B); const double T = B.tempK;
@@ -568,7 +568,7 @@ void unitMoons(const Check& check) {
         }
         check("strange moons: the regress's and home's moons as drawn (P-06)", pinsOk, pins.empty() ? "Seapheeseeri II-a, Wyariothmai IV-a and V-b, Iaphiath I-a, Feeyeithis IV-a, Heilya II-b" : pins);
     }
-    // P-06: the strange moons' grounds, each kind's signature on its first moon: the grooved moon's lanes of bright ice and its dark polygons between;
+    // the strange moons' grounds, each kind's signature on its first moon: the grooved moon's lanes of bright ice and its dark polygons between;
     // the two-faced moon's apex coal-black and the point opposite bright, its ridge kilometres over the plain south of it; the tiger-striped moon
     // white all over, its stripes' middles blue ice in a rift with their jets; the patchwork's great cliff ten kilometres and more over its foot;
     // the sponge's pits kilometres deep, dark dust in their floors
@@ -644,7 +644,7 @@ void unitMoons(const Check& check) {
 
 // P-07: the giants
 void unitGiants(const Check& check) {
-    // P-07: the giants. Over the scan region: each made only from its sources (the drawn kind, the temperature band on the game's scale, the body, the
+    // the giants. Over the scan region: each made only from its sources (the drawn kind, the temperature band on the game's scale, the body, the
     // star, a hot giant only from a planet locked to its star, never a double planet's half), no people's moon moved by one, a hot giant round about one
     // yellow star in a hundred; each class's air on its first giant (the water-cloud's water on top, the azure clear to the deep, the alkali dark with no
     // stratosphere hotter than where the heat ends a probe, the silicate's rock over iron, the gas dwarf's haze and its rich air, the super-puff's weak
@@ -679,7 +679,7 @@ void unitGiants(const Check& check) {
             if (st.cls == STAR_YELLOW) { yellow++; if (hot) yellowHot++; }
         }
         std::string counts; bool every = true;
-        for (int k = PT_SUPER_PUFF; k <= PT_GAS_DWARF; k++) { counts += fmt("%s%s %d", k > PT_SUPER_PUFF ? ", " : "", KINDS[k].name, perKind[k]); if (perKind[k] < 2) every = false; }   // D-04: the giants' (the dark ocean after them)
+        for (int k = PT_SUPER_PUFF; k <= PT_GAS_DWARF; k++) { counts += fmt("%s%s %d", k > PT_SUPER_PUFF ? ", " : "", KINDS[k].name, perKind[k]); if (perKind[k] < 2) every = false; }   // the giants' (the dark ocean after them)
         const double hotShare = (double)yellowHot / std::max(1, yellow);
         check("giants: from their sources, never a double planet's half, no people's moon moved, a hot giant round a yellow star in a hundred (P-07)",
               bad == 0 && peopleMoved == 0 && every && made > 400 && hotShare > 0.004 && hotShare < 0.025,
@@ -780,7 +780,7 @@ void unitGiants(const Check& check) {
 
 // Q-01: the six slots, the facts and the eleven landforms
 void unitTraits(const Check& check) {
-    // Q-01: the six slots, the facts and the eleven landforms. Over the scan region's landable worlds: the first three slots as P-07 drew them (a
+    // the six slots, the facts and the eleven landforms. Over the scan region's landable worlds: the first three slots as P-07 drew them (a
     // hash of the first 2,000 worlds' kinds and slots, from P-07's binary), the new three of distinct kinds of trait, each eligible on its kind,
     // none a trait a slot before it excludes, none moving a people's ground, packed; a fifth of the worlds a new landform fits with none; every new
     // landform carried; home's ground as it was. Every body's facts as its orbit and spin say, each fact seen. A sight's kind through the guide's file (R-408's numbers kept).
@@ -829,7 +829,7 @@ void unitTraits(const Check& check) {
         }
         check("traits: the first three slots as P-07 drew them over 2,000 worlds (Q-01)", h == 0xee430ab584b04f72ULL, fmt("%016llx over %d", (unsigned long long)h, std::min(n, 2000)));
         std::string missing;
-        for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (!carried[t] && TRAITS[t].kind != TK_DARK) missing += std::string(" ") + TRAITS[t].name;   // D-04: the dark's own are the drifters' (`rogues dark`)
+        for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) if (!carried[t] && TRAITS[t].kind != TK_DARK) missing += std::string(" ") + TRAITS[t].name;   // the dark's own are the drifters' (`rogues dark`)
         const double noneShare = fits ? (double)fitsNone / fits : 1.0;
         check("traits: the new slots of distinct kinds, eligible, none excluded or moving a people's ground, packed; a fifth with none (Q-01)", slotsOk && missing.empty() && noneShare > 0.15 && noneShare < 0.25,
               fmt("%s%s; %d of the %d worlds a new landform fits have none (%.1f%%)", why.c_str(), missing.empty() ? "" : (" not carried:" + missing).c_str(), fitsNone, fits, 100.0 * noneShare));
@@ -870,7 +870,7 @@ void unitTraits(const Check& check) {
         }
         check("traits: each new landform marks its ground and the scanner hears its sight there (Q-01)", sightsOk, sights);
         }
-        // Q-02: the water, the sky, the life and the ground. Each carrier fits its world (its kind's process; the tides a forcing over the
+        // the water, the sky, the life and the ground. Each carrier fits its world (its kind's process; the tides a forcing over the
         // threshold and a range within 5-16 m, the aurorae a strong field, the reefs a warm sea); the tides as their pulls say (a pull's forcing
         // its m/M R^4/d^3, the range met at the equator over a day the trait's within a tenth, none at a pole) and their flats wet sand under
         // the sea's plane; the waters' colours (a milky sea's patches, a bloom's streaks, a reef's lagoon shallow and turquoise, a pink lake's
@@ -994,7 +994,7 @@ void unitTraits(const Check& check) {
                   strata > 5 && gyp > 5 && petr > 5 && springPool > 0 && springSinter > 0 && !heard.empty(),
                   fmt("strata %d, gypsum %d, petrified %d, a spring's pool %d and sinter %d, strewn fields heard %zu", strata, gyp, petr, springPool, springSinter, heard.size()));
         }
-        // Q-03: the sounds of the ground. Each trait carried on a world it fits (its kind's process; an air for the dunes and the ice; the singing
+        // the sounds of the ground. Each trait carried on a world it fits (its kind's process; an air for the dunes and the ice; the singing
         // dunes' world has slip faces of sand, the singing ice's ice); each sound through the synth within its levels (none at the synth's clamp, none
         // silent), the dunes at their note or its octave, the ice oftener at dusk than at noon, a quake through the boots without the air's rattle and
         // roar; each cue where its world has it and nowhere else (a slip face walked down hums, standing on it or the same walk without the trait is

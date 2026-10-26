@@ -2,7 +2,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// D-05: a history's events, persons and places as a hash (the decoder's and the ground's compared)
+// a history's events, persons and places as a hash (the decoder's and the ground's compared)
 static uint64_t historyHash(const History& H) {
     uint64_t h = 0xD05A15ULL;
     auto mixIn = [&](int64_t v) { h = mix64(h ^ (uint64_t)v); };
@@ -15,7 +15,7 @@ static uint64_t historyHash(const History& H) {
 
 // D-01 to D-05: the drifters, heard, their voices, their dark, their peoples
 void unitDrifters(const Check& check) {
-    // D-01: the drifters. Their field round home and in a globular cluster, each one's sector without a star and its key naming it; the field
+    // the drifters. Their field round home and in a globular cluster, each one's sector without a star and its key naming it; the field
     // the same however it is asked (a hash of the nearest pinned); a save at one and a target of another kept through a load; no light, no
     // season and no sun but at the nadir anywhere on their worlds; nothing undefined from the anchor the drifter sits on
     {
@@ -143,7 +143,7 @@ void unitDrifters(const Check& check) {
                       length(g2.testShipPos() - at), g2.testParkedBody(), hasRem && rem.cls == STAR_ROGUE && rem.seed == d2.seed ? "the drifter's" : "LOST"));
         }
     }
-    // D-02: heard, not seen. The drifters by their own law from home, the three C-series worlds and the six age worlds; the radar in the game
+    // heard, not seen. The drifters by their own law from home, the three C-series worlds and the six age worlds; the radar in the game
     // hearing one, locking it, the chart's plot landing at it, its place named; the black disc and the survey's maps by their numbers
     {
         struct At { int64_t x, y, z; };
@@ -189,7 +189,7 @@ void unitDrifters(const Check& check) {
               fmt("from home%s; at x32 from the ten places %s; at x1 %d anywhere, %d off their law; the slices of 97 cells (%d) %d of %zu, %d not the whole scan's; asked twice %d",
                   steps.c_str(), lines.c_str(), atX1, wrong, slices, sliced, home32.size(), slicedOut, again32));
     }
-    {   // D-02: the radar in the game. At home at x1 no drifter in the list; the dial up, the nearest heard at its own step, aimed and held,
+    {   // the radar in the game. At home at x1 no drifter in the list; the dial up, the nearest heard at its own step, aimed and held,
         // locks: the status says there is no star, the log no class, the lock's key the sector's; off, the chart's first stop is it (A
         // SIGNAL at its place), Enter plots it (the remote the drifter), Enter flies, the ship comes out 40-80 radii off with it the local
         // target; the guide notes the visit and names the place
@@ -246,7 +246,7 @@ void unitDrifters(const Check& check) {
                   x1, x32, ly, need, SIGNAL_GAINS[step], lockAt, lockSt.c_str(), trunc(logged, 70).c_str(), stopSt.c_str(), stopOk ? "at it" : "ASTRAY", plotted, flying, arrived, off, game.testLocalTarget(), visited, named));
         remove(game.guidePath.c_str());
     }
-    {   // D-02: the black disc and the survey, by their numbers. Parked at the nearest giant drifter: no sun drawn (the sun's bank empty), the
+    {   // the black disc and the survey, by their numbers. Parked at the nearest giant drifter: no sun drawn (the sun's bank empty), the
         // globe a dark disc (its pixels' shade under the band's plane on average, at most one in a thousand over 30: a lightning's flash in its
         // night, a star through its rings) with its aurorae; the band's light on its coreward side over its far side's; the landing map of the
         // nearest landable drifter lit all over in the survey (not black, no night side)
@@ -294,7 +294,7 @@ void unitDrifters(const Check& check) {
                   gi >= 0 ? length(near[gi].pos - home.pos) / SECTOR_KM : 0.0, sunPx, discPx, discMean, discMax, brightIn, aurPx, lightOk ? "yes" : "NO", mapMean, mapLeft, mapRight));
         remove(game.guidePath.c_str());
     }
-    {   // D-03: a voice for every drifter, through the synth. Of the hundred drifters nearest home, the first of each kind of voice (a brown
+    {   // a voice for every drifter, through the synth. Of the hundred drifters nearest home, the first of each kind of voice (a brown
         // dwarf, a giant, a young, a metal and a small world) over a breath, with its moon and without (a moon of four hours given one that has
         // none), through the receiver at full clarity; the brown dwarf worn at x32 and locked, the giant under a people's voice at x18, the
         // cabin's radio and the suit's: each finite, at most 20 samples clipped, no peak at 1, the rms within C-07's 0.02-0.13. A beacon in its
@@ -347,7 +347,7 @@ void unitDrifters(const Check& check) {
               fmt("%d renders%s, rms %.3f-%.3f; a beacon in its slot %s; the same twice %s; the 24 nearest home: the nearest pair %.2f apart, the median %.2f; two magnetospheres' median %.2f",
                   (int)jobs.size() + 2, detail.empty() ? "" : (" - " + detail).c_str(), lo, hi, beaconOk ? "heard" : "NOT HEARD", same ? "yes" : "NO", d.nearest, d.median, d.bar));
     }
-    {   // D-03: a drifter's voice in the game. At home the radar tuned to the nearest drifter at its step: the receiver plays it as a drifter by
+    {   // a drifter's voice in the game. At home the radar tuned to the nearest drifter at its step: the receiver plays it as a drifter by
         // what it is (its class, its turning, its moon, its power as its system has them); locked and flown to, the camera off, the cabin's radio
         // carries it; the camera on, the camera's; the decoder takes the synth (nothing); on a landable drifter's ground the suit's radio, faint;
         // at a star's system nothing at all
@@ -414,7 +414,7 @@ void unitDrifters(const Check& check) {
                   ly, SIGNAL_GAINS[step], who >= 0 ? ROGUE_VOICE_NAMES[std::max(0, std::min((int)RV_COUNT - 1, hv.cls))] : "nothing", hv.turnS, hv.moonS, hv.power, onRadar ? "as its system has it" : "NOT AS ITS SYSTEM HAS IT", lockAt, there, cabin, cabinLvl, camera, back, decoder, suit, suitLvl, suitSet, quiet ? "nothing" : "STILL HEARD"));
         remove(game.guidePath.c_str());
     }
-    {   // D-04: the drifters' kinds by the dark's table: every drifter within 3,000 ly of home drawn as a kind of the table, made a dark ocean only from a
+    {   // the drifters' kinds by the dark's table: every drifter within 3,000 ly of home drawn as a kind of the table, made a dark ocean only from a
         // rocky one (its size and heat in the dark ocean's ranges, its system's moons the rocky drifter's: drawn as it), the kinds' shares the table's
         Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, false);
         std::vector<Star> near; driftersNear(home.pos, 3000, near);
@@ -440,7 +440,7 @@ void unitDrifters(const Check& check) {
         const double oceanShare = drawn[PT_ROCKY] ? (double)oceans / drawn[PT_ROCKY] : 0;
         check("dark: the drifters' kinds by the dark's table (D-04)", !near.empty() && bad == 0 && offShare == 0 && oceanShare > 0.2 && oceanShare < 0.6,
               fmt("%zu drifters, %d off the table%s; drawn against the table:%s; dark oceans %d of the %d rocky (%.2f)", near.size(), bad, why.c_str(), shares.c_str(), oceans, drawn[PT_ROCKY], oceanShare));
-        // D-04: the drifters' own traits and the ground in the dark, over the same systems' landable bodies: FROZEN AIR exactly where the air is colder
+        // the drifters' own traits and the ground in the dark, over the same systems' landable bodies: FROZEN AIR exactly where the air is colder
         // than its freezing, EMBERS on every lava world and on none of ice, LIGHTS IN THE WATER on dark oceans alone, LIGHTS LEFT ON on none yet (D-05's);
         // a frozen sea's world with no liquid on its ground (400 samples), a dark ocean's sea liquid; and none of the four on a world with a sun
         int bodies = 0, wrongAir = 0, wrongEmbers = 0, wrongLights = 0, leftOn = 0, frozenWet = 0, oceanDry = 0, frozenChecked = 0, embers = 0, airs = 0;
@@ -481,7 +481,7 @@ void unitDrifters(const Check& check) {
               fmt("%d bodies: frozen air %d (%d off its rule), embers %d (%d wrong), lights in water off a dark ocean %d, lights left on %d; %d seas read: %d frozen with liquid, %d dark oceans dry; %d worlds with a sun: %d with the dark's own",
                   bodies, airs, wrongAir, embers, wrongEmbers, wrongLights, leftOn, frozenChecked, frozenWet, oceanDry, sunlitBodies, sunlit));
     }
-    {   // D-04: on a drifter's ground: the thermometer by the world's own heat, an air fallen as snow no air (no wind, a trace of pressure), a dark ocean's air
+    {   // on a drifter's ground: the thermometer by the world's own heat, an air fallen as snow no air (no wind, a trace of pressure), a dark ocean's air
         // and sea; and the explorer's lamp, which lights the ground by night and changes nothing by day
         StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
         bool rockOk = false, airOk = false, oceanOk = false; std::string rd, ad, od;
@@ -524,7 +524,7 @@ void unitDrifters(const Check& check) {
         check("surface: the explorer's lamp by night, nothing by day (D-04)", dayDiff == 0 && nightOn > nightOff + 4 && darkOn > darkOff + 4,
               fmt("a dayside frame lit and unlit: %d pixels differ; the lower third at night %.1f -> %.1f, on a drifter %.1f -> %.1f", dayDiff, nightOff, nightOn, darkOff, darkOn));
     }
-    {   // D-05: the people who lost their sun. One frozen felisian or desert drifter in four kept a people (its own hash), each its former star found,
+    {   // the people who lost their sun. One frozen felisian or desert drifter in four kept a people (its own hash), each its former star found,
         // its peoples' cause the loss of the sun in its order (the warning, the last sunrise, the end), two peoples on one ending together
         Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, true);
         std::vector<Star> near; driftersNear(home.pos, 3000, near);
@@ -556,7 +556,7 @@ void unitDrifters(const Check& check) {
               fmt("%d of %d frozen felisian or desert drifters within 3,000 ly (%.0f%%) with %d peoples; %d without a former star, %d not lost by the sun, %d out of order, %d pairs apart; the ways %d, %d, %d, %d%s",
                   withPeople, cand, 100 * share, peoples, unfound, badCause, badLine, apart, ways[0], ways[1], ways[2], ways[3], why.empty() ? "" : (" - " + why).c_str()));
     }
-    {   // D-05: a drifter's people's history the same from the decoder (its system: built anew) and from the ground (the planet function alone, as the
+    {   // a drifter's people's history the same from the decoder (its system: built anew) and from the ground (the planet function alone, as the
         // site has it: the towns, the works and the records' homes read it)
         int same = 0, n = 0; std::string why;
         for (const AgeWorld& aw : TEST_DRIFTERS) {
@@ -574,7 +574,7 @@ void unitDrifters(const Check& check) {
         }
         check("history: a drifter's people's the same from the decoder and from the ground (D-05)", n == 3 && same == n, fmt("%d of %d the same%s", same, n, why.empty() ? "" : (" - " + why).c_str()));
     }
-    {   // D-05: the works of the end on Vreikheid (two modern peoples): a shelter by each of the last places, the last holding the last recording and
+    {   // the works of the end on Vreikheid (two modern peoples): a shelter by each of the last places, the last holding the last recording and
         // the others the last records of their own years; a dome over warm ground by each with its glasshouses and a record or two; the graves by the last
         Star d; placeInSector(TEST_DRIFTERS[1].sx, TEST_DRIFTERS[1].sy, TEST_DRIFTERS[1].sz, d, true);
         StarSystem dsys; dsys.generate(d);
@@ -602,7 +602,7 @@ void unitDrifters(const Check& check) {
               fmt("%s: %d shelters (%d the last), %d domes over warm ground, %d glasshouses, %d graves of the last generations; the last recordings %d in the last shelters, %d elsewhere; %d records in the domes, %d in the other shelters (%d of years after theirs)",
                   d.name.c_str(), shelters, lastShelters, domes, glass, graves, lastIn, lastElse, domeRecs, earlyRecs, late));
     }
-    {   // D-05: the beacon. Vreikheid's radio people's last broadcast (its last recording) under its voice, none on Balyaphebist (medieval); through the
+    {   // the beacon. Vreikheid's radio people's last broadcast (its last recording) under its voice, none on Balyaphebist (medieval); through the
         // receiver its levels C-07's; in the game the cabin's radio carries its machine under the voice, and the radar camera on the drifter speaks the
         // message and, locked, hears it (`Guide::heard`)
         Star d0, d1; placeInSector(TEST_DRIFTERS[0].sx, TEST_DRIFTERS[0].sy, TEST_DRIFTERS[0].sz, d0, true); placeInSector(TEST_DRIFTERS[1].sx, TEST_DRIFTERS[1].sy, TEST_DRIFTERS[1].sz, d1, true);

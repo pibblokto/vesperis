@@ -23,11 +23,11 @@ struct RadarState {
     int locked = -1; uint64_t lockedSeed = 0; int lockedKind = -1; double lostT = 0;
     double clarity = 0;                     // how much of the signal comes through the static (the synth's radarSignal)
     ShardWorld world; uint64_t worldSeed = 0; int worldWhich = -1;   // the people's world in the beam, built once (C-13: once per people on the air)
-    uint64_t pendingSeed = 0; double pendingAt = -10;               // H-04: a world whose records are being written (the carrier alone until they are)
+    uint64_t pendingSeed = 0; double pendingAt = -10;               // a world whose records are being written (the carrier alone until they are)
     int shard = -1; double contentT = -1, contentSecs = 0; bool contentMusic = false; double awayT = 0;
     Programme prog; int loopI = 0; double loopAt = 0;   // the programme on the air (peoples/signals.h), the repeat a loop or a numbers station is at and when it began
     Rng rng{0x5161};
-    // C-15 the gain: the dial (SIGNAL_GAINS, x1 to x32; kept while the radar is off, not saved), what it hears beyond 200 ly from the
+    // the gain: the dial (SIGNAL_GAINS, x1 to x32; kept while the radar is off, not saved), what it hears beyond 200 ly from the
     // scan's sector (the whole dial's at once, each by its `needGain`), found a slice a frame by `deep` (LISTENING DEEPER meanwhile)
     int gainStep = 0;
     std::vector<Signal> deep; SignalScan deepScan; bool deepRunning = false, deepReady = false; double deepMs = 0; int deepFrames = 0;
@@ -35,7 +35,7 @@ struct RadarState {
     int aim = -1; double aimAngle = 0;      // the loudest within the lock cone: the one the hold is on
     bool overload = false;                  // the aim overloads the receiver: the meter pinned, the hold refused
     double sum = 0, floorNow = 0;           // the beam's sum over the signals and the static's floor this frame (the harness)
-    // C-16 what the gain lets in: the age of the slot's people on the air, the band's brightness in the beam (the galaxy's own
+    // what the gain lets in: the age of the slot's people on the air, the band's brightness in the beam (the galaxy's own
     // noise), the signal under the one heard (an index into `all`: the loudest other in the wide lobe), the rolling band's phase
     int progAge = -1; double sky = 0; int under = -1; double rollPh = 0;
     // a false rise: the noise's ghost in a direction near the beam at the top steps, living some seconds; held, the hold fills
@@ -45,5 +45,5 @@ struct RadarState {
     // a word of a recording heard before (`Guide::heard`) coming back out of the static at the top steps while nothing is on the
     // air: its world (when it is not the radar's), the word spoken in the world's voice, when the next may come
     ShardWorld wordWorld; Speech wordSpeech; Voice wordVoice; double wordNext = 30, wordT = -1; int words = 0; std::string wordKey, wordSaid;
-    std::map<uint64_t, DrifterBeacon> beacons;   // D-05: a drifter's beacon by its signal's seed, decided once (`drifterBeaconIfReady`)
+    std::map<uint64_t, DrifterBeacon> beacons;   // a drifter's beacon by its signal's seed, decided once (`drifterBeaconIfReady`)
 };

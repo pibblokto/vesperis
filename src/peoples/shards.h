@@ -4,7 +4,7 @@
 // function (its sun, its sky, its land, its water, its crops and seasons) and a grammar of templates by kind and tone.
 // Deterministic from the body's seed and the shard's index, no language model; judged on paper first (`vesperis_test
 // shards`), the audio and the finding come in the later C milestones (`docs/archive/ideas/IDEAS-ruins-shards-signals.md`).
-// H-03 (2026-10-09): the grammar is the engine's (peoples/grammar.h) and its files peoples/grammar's (files.inc); a people's texts are
+// the grammar is the engine's (peoples/grammar.h) and its files peoples/grammar's (files.inc); a people's texts are
 // built as one catalogue (`shardTextsOf`), the engine's memory across its records.
 #include "galaxy/system.h"
 #include "galaxy/planetmap.h"
@@ -39,16 +39,16 @@ struct Shard {
     double age = 0;         // 0 the founding .. 1 the end: the catastrophe's worlds darken with it
     int year = 0;           // the world's own count from the founding
     int month = 0, day = 0; // C-12: the date within the year in the people's reckoning (`shardDate`); 0 where they counted none
-    bool last = false;      // C-12: the world's last recording (`lastShardOf`): the latest of the fifty, the end's tone, the one that closes the timeline
+    bool last = false;      // the world's last recording (`lastShardOf`): the latest of the fifty, the end's tone, the one that closes the timeline
     std::string text;       // the whole text, as the decoder gives it once the language is learnt (C-06); empty for a piece of music
     std::string child;      // the child it names, when its kind names one: a name the decoder keeps as it is
-    bool music = false;     // C-04: a piece of music, not a text (`pieceOf`, peoples/music.h): twelve to eighteen of the fifty (`shardIsMusic`)
-    bool chart = false;     // C-10: a star chart (`chartOf`, peoples/charts.h): three to five of the fifty (`shardIsChart`); `text` is its caption, which names its figures and the star it marks
+    bool music = false;     // a piece of music, not a text (`pieceOf`, peoples/music.h): twelve to eighteen of the fifty (`shardIsMusic`)
+    bool chart = false;     // a star chart (`chartOf`, peoples/charts.h): three to five of the fifty (`shardIsChart`); `text` is its caption, which names its figures and the star it marks
     uint64_t seed = 0;
-    std::vector<std::string> names;   // H-04: the proper names its text wrote (the history's persons and places, the lore's): the decoder keeps them
-    int recordAge = -1;     // H-05: the age of its year (AGE_*, the record's era: a modern people's medieval hymn is medieval), -1 past the records
-    int medium = -1;        // H-05: what it was made on (RM_*, peoples/records.h: a clay tablet, a wax cylinder, a disc), -1 past the records
-    int dark = 0;           // D-05: a drifter's people's sun in its year (`sunDarkAt`: 0 as ever .. 3 gone): its music by the cold
+    std::vector<std::string> names;   // the proper names its text wrote (the history's persons and places, the lore's): the decoder keeps them
+    int recordAge = -1;     // the age of its year (AGE_*, the record's era: a modern people's medieval hymn is medieval), -1 past the records
+    int medium = -1;        // what it was made on (RM_*, peoples/records.h: a clay tablet, a wax cylinder, a disc), -1 past the records
+    int dark = 0;           // a drifter's people's sun in its year (`sunDarkAt`: 0 as ever .. 3 gone): its music by the cold
 };
 int musicShardsOf(const BodyGen& g);              // C-04: how many of the world's fifty are music (12..18)
 bool shardIsMusic(const BodyGen& g, int index);   // C-04: whether that one is
@@ -76,7 +76,7 @@ std::vector<std::string> shardGrammarTree(const std::string& dir);   // E-11: th
 // less): cached by the people (the last eight); the music and the charts empty. `rec` is what the engine reported (the harness's checks)
 // age: the record's year's (T-04); H-04: its year, the history's events it told (in order; H-06: then the death an epitaph is about, the end the last
 // recording tells), its writer, reader and subject (persons, -1 none)
-// H-06: `ways`, the people's ways the text expressed: the facts its drawn alternatives were guarded by ("faith" = "manygods", "deadway" = "barrows",
+// `ways`, the people's ways the text expressed: the facts its drawn alternatives were guarded by ("faith" = "manygods", "deadway" = "barrows",
 // "cause" = "drying": a line written for a people of many gods, for one that buried its dead in barrows, for the drying that ended it)
 struct ShardText { std::string text; int kind = -1; int age = -1; int year = 0; VgRecord rec; std::vector<int> told; int writer = -1, reader = -1, subject = -1;
                    std::vector<std::pair<std::string, std::string>> ways; };
@@ -92,7 +92,7 @@ void shardTextsPrefetch(const StarSystem& sys, const Body& b, const BodyGen& g, 
 // them). C-13: the fifty are a people's. T-04: a people left 80 to 200 (`recordCountOf`, peoples/records.h), C-02's fifty the first of them;
 // where they lie, their objects and the world's indices are peoples/records.h's (`recordSitesOf`, `shardWorldIndex`)
 
-// C-06 (2026-10-02): the decoding on the ship. A shard is in the people's own tongue; the ship's computer learns the
+// the decoding on the ship. A shard is in the people's own tongue; the ship's computer learns the
 // language from the shards the explorer holds of that world, the words its fifty use most first, so the first shard read
 // gives about a third of its words, each further shard of the world more and the tenth all (`languageShare`,
 // `languageKnown`). What is not learnt yet shows as the people's own word (`Tongue`: the shapes of their words, drawn
@@ -101,17 +101,17 @@ void shardTextsPrefetch(const StarSystem& sys, const Body& b, const BodyGen& g, 
 // its world were found decodes again with fewer gaps, and the whole text is what ten shards give
 // the people's tongue (`Tongue`, `tongueOf`, `tongueWord`): peoples/tongue.h (H-04's second pass: the whole naming language)
 
-// H-04: the language is learnt by root words (lemmas): "walk", "walks" and "walked" are one word of theirs with their own endings, so
+// the language is learnt by root words (lemmas): "walk", "walks" and "walked" are one word of theirs with their own endings, so
 // the tongue of a people's two hundred records grows by its roots and not by every form of them; the share learnt is reached by the
 // people's number of records (ten shards for C-02's fifty, more for a people that left more)
 struct Language {
     std::vector<std::string> words, theirs;   // the roots of the people's records (lowercase, the names and the numerals left out), the most used first, and the people's word for each
     std::vector<int> counts;
     std::map<std::string, int> index;         // a root's rank
-    std::map<std::string, std::pair<std::string, int>> forms;   // H-04: a word as written -> its root and its ending (0 none, 1 "-s", 2 "-ed", 3 "-ing")
+    std::map<std::string, std::pair<std::string, int>> forms;   // a word as written -> its root and its ending (0 none, 1 "-s", 2 "-ed", 3 "-ing")
     std::set<std::string> names;              // every name the records wrote (the history's persons and places, the lore's), lowercase, word by word: kept as they are
     int tokens = 0;                           // the words of the records, the names left out
-    int records = 50;                         // H-04: the people's records (the share's reach)
+    int records = 50;                         // the people's records (the share's reach)
 };
 void languageOf(const Lore& L, const std::vector<Shard>& records, const Tongue& T, Language& out);
 double languageShare(int shardsHeld, int records = 50);  // 0 with none, 0.3 with one, 1 with ten of fifty records (H-04: of eighty; more of more, up to 24)

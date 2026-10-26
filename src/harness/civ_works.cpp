@@ -2,18 +2,18 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// T-02: the towns' checks. The towns: each age world's capital, its first city and a place it left early, a town and a village of its
+// the towns' checks. The towns: each age world's capital, its first city and a place it left early, a town and a village of its
 // countryside; every street pattern in each age of streets (a town laid out at one cell of the medieval world); the harbours of three ages on a
 // coast. Each: no building across a street (a gate stands on its street, a maglev's pylons over everything); the streets walkable (the explorer
 // on every street's line clear of every collider but where something fell across it, and the web joined); B-414: one age a world (every town
 // all of its people's age, a place left before that age not on the ground, one left early in it weathered longer); the districts and works by the
 // age (a modern capital's towers, ring road and suburbs, an industrial one's mills and station, a medieval one's wall and gates, a harbour's
 // quay, dock and container port); the ground's marks (a street's vertex paved, a field's toned)
-// T-03: the works' checks over the age worlds and the ages' scene worlds, a world at a time (its plan, histories and works in the caches while it
+// the works' checks over the age worlds and the ages' scene worlds, a world at a time (its plan, histories and works in the caches while it
 // is checked): a dam across its valley holding its reservoir (or its old bed), a quarry in the rock its town was built of, a battlefield between
 // the two sides of its war, the scanner hearing them, the works the same twice and clear of the cities' cores, every kind somewhere, their forms
 // sound
-// B-418: the land's works of a people round its first `nPlaces` places (within `radiusM` of each) and round `nPoints` points of its land (drawn
+// the land's works of a people round its first `nPlaces` places (within `radiusM` of each) and round `nPoints` points of its land (drawn
 // from the plan's grid), each once
 void landWorksOf(const BodyGen& g, int people, int nPlaces, double radiusM, int nPoints, std::vector<std::shared_ptr<const Work>>& out) {
     out.clear();
@@ -35,7 +35,7 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
     const double t0 = nowSec();
     int dams = 0, damBad = 0, damWet = 0, damBeds = 0, damBreached = 0; std::string damWhy;
     int quarries = 0, qBad = 0; std::string qWhy;
-    int landN = 0, landOut = 0, landTouch = 0, landClose = 0, landAsked = 0, landSame = 0, covPts = 0, covHeard = 0, covPlaces = 0, covPlacesHeard = 0, covSum = 0;   // B-418
+    int landN = 0, landOut = 0, landTouch = 0, landClose = 0, landAsked = 0, landSame = 0, covPts = 0, covHeard = 0, covPlaces = 0, covPlacesHeard = 0, covSum = 0;
     std::string landWhy, covWhy;
     int fields = 0, fBad = 0, fJoint = 0; std::string fWhy;
     int heard = 0, hMissed = 0, unheard = 0; std::string hWhy;
@@ -47,7 +47,7 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
     std::vector<AgeWorld> worlds(AGE_WORLDS, AGE_WORLDS + AGE_COUNT);
     worlds.insert(worlds.end(), AGE_SCENE_WORLDS, AGE_SCENE_WORLDS + AGE_COUNT);
     worlds.push_back(AgeWorld{196, 66, 7, 0});
-    worlds.push_back(TEST_DRIFTERS[1]);   // D-05: a drifter's modern peoples (their works of the end: the shelters, the domes and their glasshouses)
+    worlds.push_back(TEST_DRIFTERS[1]);   // a drifter's modern peoples (their works of the end: the shelters, the domes and their glasshouses)
     for (const AgeWorld& aw : worlds) {
             if (!seen.insert(fmt("%lld %lld %d", (long long)aw.sx, (long long)aw.sz, aw.body)).second) continue;
             Star st; if (!placeInSector(aw.sx, aw.sy, aw.sz, st, true)) continue;
@@ -148,7 +148,7 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
                     else if (found) heard++; else unheard++;
                 }
             }
-            // B-418: the land's works round each people's first places and at points of its land: a quarry's face in the rock of a stone-built
+            // the land's works round each people's first places and at points of its land: a quarry's face in the rock of a stone-built
             // people, a pit cut under the ground; each inside its cell with its reach (no two touch), clear of the settlements, the cities' cores
             // and the world's works; the same built again; heard from their middles
             for (int p = 0; p < peoplesOf(g); p++) {
@@ -234,7 +234,7 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
     check("works: a quarry's face in the rock of a stone-built people, its pit under the ground (T-03, B-418)", quarries >= 10 && qBad == 0, fmt("%d of the land's quarries: %s", quarries, qBad ? qWhy.c_str() : "each face in the exposed rock of a people that built in stone, cut into the hill, each pit's floor under the ground"));
     check("works: the land's, each inside its cell, none touching, clear of the settlements, the cores and the world's, the same built again (B-418)", landN >= 100 && landOut == 0 && landTouch == 0 && landClose == 0 && landSame == landAsked,
           fmt("%d of the land's works round the test worlds' first places and at points of their land: %d over their cell's edge, %d touching, %d on a settlement, a core or a world's work; %d of %d the same built again%s%s", landN, landOut, landTouch, landClose, landSame, landAsked, landWhy.empty() ? "" : "; ", landWhy.c_str()));
-    {   // B-419: the plan, the people's extent, a cell's settlement, the world's works and the land's: the same from a generator made in winter and in
+    {   // the plan, the people's extent, a cell's settlement, the world's works and the land's: the same from a generator made in winter and in
         // summer as from one made at the year's mean (the explorer's site and the approach make theirs in the season of the moment)
         int same = 0, asked = 0; std::string why;
         Star st; if (starInSector(AGE_WORLDS[AGE_INDUSTRIAL].sx, 0, AGE_WORLDS[AGE_INDUSTRIAL].sz, st, true)) {
@@ -403,12 +403,12 @@ static void workFrame(const StarSystem& sys, int body, const BodyGen& g, const W
 // T-03: `works map`: on each age's scene world, an inset for each kind of work its people made (the gallery's), framing it with the place its rule
 // tied it to: the ground shaded by its slope, the water, the places' cores, the ways, the work's reach, a battlefield's two sides; the rule said
 // under it (`shots/tests/works_map_<age>.png`)
-static const char WORK_GLYPHS[WO_COUNT + 1] = "QMDAOSWNGHFBLRVCTX?EIKUP";   // D-05: a dome, glasshouses
+static const char WORK_GLYPHS[WO_COUNT + 1] = "QMDAOSWNGHFBLRVCTX?EIKUP";   // a dome, glasshouses
 // one work of each kind a people made (a strange work of each style): the world's, else the land's round its first places and at points of its land
 static std::vector<std::shared_ptr<const Work>> galleryPicks(const BodyGen& g, const std::shared_ptr<const WorldWorks>& W, int people) {
     std::vector<std::shared_ptr<const Work>> all;
     for (const Work& w : W->works) if (w.people == people) all.push_back(std::shared_ptr<const Work>(W, &w));
-    std::vector<std::shared_ptr<const Work>> lw; landWorksOf(g, people, 12, 20000, 40, lw);   // B-418
+    std::vector<std::shared_ptr<const Work>> lw; landWorksOf(g, people, 12, 20000, 40, lw);
     all.insert(all.end(), lw.begin(), lw.end());
     std::vector<std::shared_ptr<const Work>> pick;
     for (int k = 0; k < WO_COUNT; k++) {
@@ -565,7 +565,7 @@ int runWorks(int argc, char** argv) {
         return failures ? 1 : 0;
     }
     if (argc > 2 && std::string(argv[2]) == "gallery") { worksGallery(); return 0; }
-    if (argc > 3 && std::string(argv[2]) == "rogue") {   // D-05: the k-th drifter's people nearest home (`peoples rogues`' order)
+    if (argc > 3 && std::string(argv[2]) == "rogue") {   // the k-th drifter's people nearest home (`peoples rogues`' order)
         const std::vector<Star> ds = drifterPeoplesNearHome(argc > 4 ? atof(argv[4]) : 6000);
         const int k = atoi(argv[3]);
         if (k < 0 || k >= (int)ds.size()) { printf("no drifter's people %d (of %zu)\n", k, ds.size()); return 1; }

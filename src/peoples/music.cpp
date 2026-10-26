@@ -13,7 +13,7 @@ const char* const PIECE_FORM_NAMES[] = {"A DANCE", "A LULLABY", "A WORK SONG", "
                                                 "A SONG", "A DANCE RECORD", "A JINGLE", "A THEME", "A PROTEST SONG", "A REQUIEM",
                                                 "A PROCESS", "A SWARM", "A SYNTHETIC SONG", "A DRIFT", "A SIGNAL", "AN ELEGY",
                                                 "A FIELD", "A FIELD THAT TURNS", "A FIELD OF BELLS", "A STANDING TONE",
-                                                "A DAWN SONG", "THE LAST SUNRISE"};   // D-05
+                                                "A DAWN SONG", "THE LAST SUNRISE"};
 static_assert(sizeof(PIECE_FORM_NAMES) / sizeof(PIECE_FORM_NAMES[0]) == PF_COUNT, "a name a form");
 bool timbrePercussive(int family) { return family == TF_DRUM || (family >= TF_LOG && family < TF_COUNT); }
 
@@ -525,7 +525,7 @@ Tradition traditionOf(const BodyGen& g, const Lore& L) {
     { double sw[4] = {1.5, 1.5, 1.5, 1}; T.second = rng.pick(sw, 4); }
     { double ow[5] = {1.5, 1.5, 1, 1.2, 1}; T.ornament = rng.pick(ow, 5); }
     T.ornamentChance = rng.range(0.2, 0.5);
-    // H-05: what holds through the people's ages (a stream of its own, so C-04's draws above stay), then each age's ensemble from its own
+    // what holds through the people's ages (a stream of its own, so C-04's draws above stay), then each age's ensemble from its own
     Rng hr(mix64(T.seed ^ 0x405A6E5ULL));
     T.swing = T.sub == 2 && hr.chance(0.45) ? hr.range(0.08, 0.28) : 0;
     T.density = hr.range(0.88, 1.18);
@@ -543,7 +543,7 @@ Tradition traditionOf(const BodyGen& g, const Lore& L) {
         const Voice V = voiceOf(g, L, tg);
         for (int a = 0; a < AGE_COUNT; a++) { Rng er(mix64(T.seed ^ (0xA6E5ULL + (uint64_t)(a + 1) * 0x9E3779B97F4A7C15ULL))); T.ages[a] = makeEnsemble(T, a, er, V, L.style); }
     }
-    traditionMakes(T, g, L);   // C-17: the instruments as the people made them (streams of their own: the sound above stays), their names
+    traditionMakes(T, g, L);   // the instruments as the people made them (streams of their own: the sound above stays), their names
     return T;
 }
 
@@ -624,7 +624,7 @@ void pieceOf(const Tradition& T, const Shard& s, Piece& P) {
     P.age = clampi(s.recordAge >= 0 ? s.recordAge : AGE_MEDIEVAL, 0, AGE_COUNT - 1);   // H-05: the record's age (C-04's pieces were the medieval's)
     const Ensemble& E = T.ages[P.age];
     P.form = formOf(s.tone, P.age, rng, s.dark);
-    const int built = composedAs(P.form, P.age);   // D-05: a dawn song or the last sunrise in its age's hymn's or lament's way
+    const int built = composedAs(P.form, P.age);   // a dawn song or the last sunrise in its age's hymn's or lament's way
     P.drift = E.drift;
     P.bpm = std::min(190.0, std::max(P.age >= AGE_INDUSTRIAL ? 52.0 : 44.0, T.bpm * E.tempo * formTempo(built, P.age) * rng.range(0.92, 1.08)));
     Bld b(T, E, P, rng);
@@ -636,7 +636,7 @@ void pieceOf(const Tradition& T, const Shard& s, Piece& P) {
         case AGE_FUTURISTIC: buildFuturistic(b, built); break;
         default: buildFarFuture(b, built); break;
     }
-    if (built != P.form) {   // D-05: the dawn song's line climbs as it goes (the sun called up), the last sunrise's rises to its middle and sinks below where it began
+    if (built != P.form) {   // the dawn song's line climbs as it goes (the sun called up), the last sunrise's rises to its middle and sinks below where it began
         double len = 1; for (const Note& nt : P.notes) len = std::max(len, nt.t + nt.dur);
         for (Note& nt : P.notes) {
             if (nt.voice < 0) continue;   // the kit keeps its pieces

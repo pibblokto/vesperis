@@ -115,7 +115,7 @@ public:
     // ---- marks and the surface scanner (marks.cpp)
     int scanMode = -1;                 // -1 off, else the LandmarkKind the scanner listens for
     int dataSheetBottom = 0;           // Q-01: the data sheet's lowest next line's top over its pages, as last drawn (`testDataSheetBottom`)
-    int dataSheetPages = 1;            // Q-01: the body's sheet's pages, as last drawn (RIGHT and LEFT step through them, then the probes' profiles)
+    int dataSheetPages = 1;            // the body's sheet's pages, as last drawn (RIGHT and LEFT step through them, then the probes' profiles)
     bool scanSkipMarked = true;        // a sight with one of the explorer's marks on it is left out
     std::string worldKeyOf(int bi) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi); }
     struct SiteMark { int index = -1; double x = 0, z = 0, y = 0; bool dry = false; };   // a mark of the surface's world in local metres, its ground's height (B-422: dry, read without the rivers until their tiles are built)
@@ -208,18 +208,18 @@ protected:
     // ---- the landing map: its cursor, zoom, peoples layer and shadows (landing_map.cpp, landing_map_build.cpp, landing_state.h)
     double landLat = 0, landLon = 0;   // radians
     double drainLat = 1e9, drainLon = 1e9;   // O6-03: the site whose drainage tiles were last asked for ahead of the landing
-    double landSeenLat = 1e9, landSeenLon = 1e9, landMovedT = -1e9;   // B-422: where the cursor was last frame and when it last moved (its tiles asked for once it rests)
+    double landSeenLat = 1e9, landSeenLon = 1e9, landMovedT = -1e9;   // where the cursor was last frame and when it last moved (its tiles asked for once it rests)
     int landBody = -1;
     int landZoom = 0;
     static constexpr int ZW = 256, ZH = 128;
     std::vector<uint32_t> zoomImg; std::vector<uint8_t> zoomEmissive; std::vector<Vec3> zoomUnit;
-    std::vector<uint8_t> zoomFront; double zoomFrontT = -1e18, zoomFrontLat = 1e9, zoomFrontLon = 1e9;   // W-03: the fronts' bands over the window
+    std::vector<uint8_t> zoomFront; double zoomFrontT = -1e18, zoomFrontLat = 1e9, zoomFrontLon = 1e9;   // the fronts' bands over the window
     double zoomLat = 1e9, zoomLon = 1e9, zoomHalfLat = 0, zoomHalfLon = 0;
-    bool zoomDry = false; double zoomPrefetchT = -1e9;   // O6-03: the zoom was drawn without the drainage (its tiles were not built); rebuilt when they are
+    bool zoomDry = false; double zoomPrefetchT = -1e9;   // the zoom was drawn without the drainage (its tiles were not built); rebuilt when they are
     uint64_t zoomSeed = 0;
-    std::vector<std::vector<std::pair<float, float>>> zoomRoads;   // C-09: the old roads of the window (texel coordinates), drawn as faint lines over it
-    std::vector<int> zoomRoadKinds;                                  // T-01: each line's kind (peoples/plan.h's NetKind: C-09's lanes are roads)
-    int zoomCores = 0;                                               // T-01: the plan's places whose cores the window shows
+    std::vector<std::vector<std::pair<float, float>>> zoomRoads;   // the old roads of the window (texel coordinates), drawn as faint lines over it
+    std::vector<int> zoomRoadKinds;                                  // each line's kind (peoples/plan.h's NetKind: C-09's lanes are roads)
+    int zoomCores = 0;                                               // the plan's places whose cores the window shows
     bool landPeoples = false;
     std::vector<uint32_t> zoomCivImg;                                // the zoom with the places' cores (`zoomImg` the land alone)
     std::vector<ZoomPlace> zoomPlaces;                               // the plan's places in the window (their core's radius in texels)
@@ -229,8 +229,8 @@ protected:
     std::vector<uint8_t> landTerr;                         // bit 0 the first people's land, 1 its frontier; bits 2 and 3 the second's
     void drawLandPeoples(int ox, int oy, int cx, int cy);
     struct { int places = 0, ways = 0, land = 0, marks = 0, rings = 0, capital = 0; } landDrawn;   // what the layer drew last (the harness)
-    double zoomRoadsMs = 0;                                          // C-09: what the window's network cost at the last build
-    double zoomBuildMs[5] = {0, 0, 0, 0, 0}; int zoomBuilds = 0;   // F-01: the last build's samples, colours, roads, plan ways and places' cores (ms); builds so far
+    double zoomRoadsMs = 0;                                          // what the window's network cost at the last build
+    double zoomBuildMs[5] = {0, 0, 0, 0, 0}; int zoomBuilds = 0;   // the last build's samples, colours, roads, plan ways and places' cores (ms); builds so far
     void buildLandingZoom();
     bool landingZoomAllowed() const;
     std::vector<uint8_t> mapShadow, zoomShadow;
@@ -260,9 +260,9 @@ protected:
     std::vector<uint8_t> mapEmissive;
     int menuSel = 0;
     int settingsSel = 0;
-    int keysSel = 0;               // N5-05 key bindings screen
+    int keysSel = 0;               // key bindings screen
     bool keysCapture = false;
-    int keysPage = 0;              // R-418: the CONTROLS screen's pages, 0 the keyboard, 1 the controller (Tab)
+    int keysPage = 0;              // the CONTROLS screen's pages, 0 the keyboard, 1 the controller (Tab)
     GameState keysReturn = GameState::SETTINGS;   // where it goes back to (the command menu opens it from anywhere)
     void updateKeysScreen(const Input& in);
     void renderKeysScreen();
@@ -332,7 +332,7 @@ protected:
     std::vector<uint32_t> galleryPix; int galleryW = 0, galleryH = 0; bool galleryOk = false; std::string galleryCaption;
     double walkMax = 0, lastWalkX = 0, lastWalkZ = 0, lastOdometer = 0;
     double drivenLanding = 0;     // metres driven this landing, over every buggy deployed (the launch log)
-    double flownLanding = 0;      // R-403: metres flown this landing
+    double flownLanding = 0;      // metres flown this landing
     bool visitNoted = false;
     // ---- the cabin, the flight computer and the console (cabin.cpp)
     Cabin cabin;
@@ -366,10 +366,10 @@ protected:
     void renderShardRecords(); void renderShardTimeline(); void renderShardHistory(); void drawShardPagesStrip(const std::string& right);
     std::string recordSummary(int local, int maxChars) const;
 
-    std::vector<std::string> shardWorldKeys, shardWorldLabels; std::vector<int> shardWorldWhich;   // C-13: an entry a people whose shards are held, labelled with the people's name where the world had two
-    std::vector<int> shardWorldTotals;           // T-04: how many records each entry's people left (`recordCountOf`)
+    std::vector<std::string> shardWorldKeys, shardWorldLabels; std::vector<int> shardWorldWhich;   // an entry a people whose shards are held, labelled with the people's name where the world had two
+    std::vector<int> shardWorldTotals;           // how many records each entry's people left (`recordCountOf`)
     std::vector<int> shardHeld;                  // the open world's shards held, in the order of their years
-    size_t shardsListed = 0;                     // C-18: the guide's shards and lent ones when the lists were made (the drones bring more while they are open)
+    size_t shardsListed = 0;                     // the guide's shards and lent ones when the lists were made (the drones bring more while they are open)
     void listShardWorlds();
     void listShardsHeld();
     int shardsLevel = 0, shardWorldSel = 0, shardSel = 0;
@@ -378,15 +378,15 @@ protected:
     std::vector<WordAt> shardLayout; std::vector<int> shardPageStart; int shardPage = 0, speechFrom = 0, speechTo = 0;
     void layoutShardText(int x0, int y0, int maxX, int maxY);
     void speakShardPage(int page);
-    bool shardFresh = false;                     // C-05: a first reading at this share: the words resolve as the recording speaks them, and its end reads the shard
-    double speechT = -1, speechSyncT = -1; bool speechPaused = false;   // C-05: the game's own clock into the speech (synced to the synth's when it runs), paused
+    bool shardFresh = false;                     // a first reading at this share: the words resolve as the recording speaks them, and its end reads the shard
+    double speechT = -1, speechSyncT = -1; bool speechPaused = false;   // the game's own clock into the speech (synced to the synth's when it runs), paused
     void startSpeech(); void stopSpeech(); bool speechEnded() const; void markShardRead();
     std::string mediumLine(const Shard& s) const;
     void drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double t);
-    // C-04 a piece on the screen: the game's own clock into it (synced to the synth's beat when the synth runs), paused, the shard being named
+    // a piece on the screen: the game's own clock into it (synced to the synth's beat when the synth runs), paused, the shard being named
     double pieceT = -1, pieceSyncBeat = -1, humBeforePiece = -1; bool piecePaused = false;
     std::string textShardKey;
-    std::string textStormKey;   // X-04: the storm a text entry of kind 9 names
+    std::string textStormKey;   // the storm a text entry of kind 9 names
     void startPiece(); void stopPiece(); double pieceBeatNow() const; bool pieceEnded() const;
     bool openShardWorld(const std::string& key, int which = 0);
     bool buildShardWorld(ShardWorld& w, const Star& s, int bi, int which = 0, bool wait = true);
@@ -487,7 +487,7 @@ protected:
     void drawReadings();
     int sectorZoom = 1;
     std::vector<uint32_t> sectorImg; int sectorImgW = 100, sectorImgH = 80; double sectorImgX = 1e9, sectorImgZ = 1e9; int sectorImgZoom = -1, sectorImgEpoch = -1;
-    static constexpr int SECTOR_LEVELS = 6;   // O1-04: 2, 8, 32, 128, 512 and 2048 km wide (the widest levels only on big worlds)
+    static constexpr int SECTOR_LEVELS = 6;   // 2, 8, 32, 128, 512 and 2048 km wide (the widest levels only on big worlds)
     int sectorMaxLevel() const;
     void updateSectorMap(const Input& in); void renderSectorMap();
     void applyVision();
@@ -544,7 +544,7 @@ protected:
     std::string forecastLine() const;
     void renderSystemList();
     void renderDataSheet();
-    int dataPage = 0;                     // X-04: the data sheet's page (0 the sheet, 1.. a giant's probes' profiles)
+    int dataPage = 0;                     // the data sheet's page (0 the sheet, 1.. a giant's probes' profiles)
     std::vector<int> dataProbes() const;
     void renderProbeProfile(int rec);
     // ---- the title, help, the menu and the settings (menus.cpp); the slots (persistence.cpp)

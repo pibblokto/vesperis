@@ -26,11 +26,11 @@ struct ProbeState {
     int lastFlashSlot = -1;              // the lightning's last slot heard (the thunder's trigger)
     bool tornNoted = false;              // the chute's tearing announced
     bool fast = false;                   // R-406: Shift held on the probe's screen this frame (set in Game::frame before the clock runs): eight times as fast
-    GiantBands bands;                    // X-02: the globe's bands round the aim at the launch (built at the launch and after a load)
-    GiantDecks decks;                    // X-02: the decks' fields (its bands pointer refreshed before every use)
-    bool holePath = false;               // X-03: this descent falls through a clear-air hole (the decks' `path` holes over its way)
-    double sightClock = -1;              // X-03: on the rare giant, the clock the sight passes the lamp at (-1 none)
-    // X-04: what comes back (the record, galaxy-side numbers above, is kept in the guide at the end or the cut)
+    GiantBands bands;                    // the globe's bands round the aim at the launch (built at the launch and after a load)
+    GiantDecks decks;                    // the decks' fields (its bands pointer refreshed before every use)
+    bool holePath = false;               // this descent falls through a clear-air hole (the decks' `path` holes over its way)
+    double sightClock = -1;              // on the rare giant, the clock the sight passes the lamp at (-1 none)
+    // what comes back (the record, galaxy-side numbers above, is kept in the guide at the end or the cut)
     int id = 0;                          // its number (PROBE 3)
     std::vector<double> camTrack;        // the explorer's turns of its camera where they changed (clock, yaw, pitch)
     std::vector<double> timeTrack;       // the game's time along the fall where its pace changed (clock, t)

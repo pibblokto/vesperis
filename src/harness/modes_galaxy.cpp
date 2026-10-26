@@ -113,7 +113,7 @@ void runGalaxy() {
     printf("stars: %.1f billion (%.0f%% within 5,000 ly, %.0f%% inside home's radius, %.0f%% within 25,000, %.1f%% beyond 50,000)\n", total / 1e9,
            100 * within[0] / total, 100 * within[1] / total, 100 * within[2] / total, 100 * (1 - within[3] / total));
     printf("  by region:"); for (int k = 0; k < REGION_COUNT; k++) printf("  %s %.1f%%", REGION_NAMES[k], 100 * byRegion[k] / total); printf("\n");
-    // G-02: the clusters: every globular of the galaxy (the cells within 60,000 ly of the centre), the open clusters within 1,500 ly of home
+    // the clusters: every globular of the galaxy (the cells within 60,000 ly of the centre), the open clusters within 1,500 ly of home
     Vec3 homeS(hx + 0.5, 0.5, hz + 0.5);
     struct Knot { double dist; Vec3 c; double R; };
     std::vector<Knot> globs, opens;
@@ -194,7 +194,7 @@ void runGalaxy() {
     printf("the new-game search (400 sectors): %d stars;", stars);
     for (int i = 0; i < STAR_DRAWN_COUNT; i++) printf(" %s %d", STAR_CLASSES[i].code, cls[i]);
     printf("; regions:"); for (int k = 0; k < REGION_COUNT; k++) if (reg[k]) printf(" %s %d", REGION_NAMES[k], reg[k]); printf("\n");
-    {   // G-02: the pinned home star, and the search's own pick (the fallback)
+    {   // the pinned home star, and the search's own pick (the fallback)
         Star hs; bool ok = starInSector(HOME_SX, HOME_SY, HOME_SZ, hs);
         if (ok) printf("  the home star is pinned at sector %lld %lld %lld: %s (%s, exists while the density stays above %.3f)\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ, hs.name.c_str(), STAR_CLASSES[hs.cls].name, unitFromHash(sectorSeed(HOME_SX, HOME_SY, HOME_SZ)));
         else printf("  the pinned home sector %lld %lld %lld holds NO star: the game falls back to the search\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ);
@@ -214,7 +214,7 @@ void runGalaxy() {
     NebulaPatch np[16]; int nn = nebulaPatches(Vec3(hx + 0.5, 0.5, hz + 0.5), np, 16);
     printf("the neighbourhood: %zu stars in the 21-sector cube (%.1f%% of its sectors), %d within 10 ly of home, the nearest star %.2f ly away on average, %d nebula patches in home's sky\n",
            nb.stars.size(), 100.0 * nb.stars.size() / (21.0 * 21 * 21), near10, nnN ? nnSum / nnN : 0.0, nn);
-    {   // G-03: the star-forming complexes within 300 ly of home, and the nearest
+    {   // the star-forming complexes within 300 ly of home, and the nearest
         int nComplex = 0; double nearest = 1e9; Vec3 nearC;
         for (int64_t cz = (int64_t)std::floor((hz - 300) / NEBULA_CELL); cz <= (int64_t)std::floor((hz + 300) / NEBULA_CELL); cz++)
             for (int64_t cx = (int64_t)std::floor((hx - 300) / NEBULA_CELL); cx <= (int64_t)std::floor((hx + 300) / NEBULA_CELL); cx++) {
@@ -225,7 +225,7 @@ void runGalaxy() {
         printf("  star-forming complexes within 300 ly of home: %d (one per %.0f ly of the arm's plane on average); the nearest %.0f ly away at sector %lld %lld %lld, its patches in sight from %.0f ly\n",
                nComplex, nComplex ? std::sqrt(PI * 300 * 300 / nComplex) : 0.0, nearest, (long long)std::floor(nearC.x), (long long)std::floor(nearC.y), (long long)std::floor(nearC.z), NEBULA_SEEN);
     }
-    {   // G-03: the band from home: the columns of starlight and the dust in the named directions, the map's cost, its picture and the sky from the ship
+    {   // the band from home: the columns of starlight and the dust in the named directions, the map's cost, its picture and the sky from the ship
         Vec3 obs(hx + 0.5, 0.5, hz + 0.5);
         double coreLon = std::atan2(GALAXY_CENTRE_SZ - obs.z, GALAXY_CENTRE_SX - obs.x);
         struct D { const char* name; double lon, lat; } dirs[] = {{"the core, in the plane", coreLon, 0}, {"the core, 4 degrees above", coreLon, 4 * DEG}, {"the core, 12 above", coreLon, 12 * DEG}, {"along the arm", coreLon + PI / 2, 0}, {"the anticentre", coreLon + PI, 0}, {"the anticentre, 10 above", coreLon + PI, 10 * DEG}, {"30 degrees up", coreLon + PI, 30 * DEG}, {"the pole", 0, 0.5 * PI - 1e-6}};
@@ -273,7 +273,7 @@ void runGalaxy() {
     {
         int hi = (int)((hx - GALAXY_CENTRE_SX + half) / (2 * half) * W), hj = (int)((hz - GALAXY_CENTRE_SZ + half) / (2 * half) * H);
         for (int a = 0; a < 48; a++) { int x = hi + (int)std::lround(5 * std::cos(a / 48.0 * TAU)), y = hj + (int)std::lround(5 * std::sin(a / 48.0 * TAU)); if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF00FF00u; }
-        for (const Knot& g : globs) {   // G-02: the globulars as orange dots
+        for (const Knot& g : globs) {   // the globulars as orange dots
             int gi = (int)((g.c.x - GALAXY_CENTRE_SX + half) / (2 * half) * W), gj = (int)((g.c.z - GALAXY_CENTRE_SZ + half) / (2 * half) * H);
             for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { int x = gi + dx, y = gj + dy; if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF2090FFu; }
         }
@@ -369,7 +369,7 @@ int runChart() {
         places("core");
     } else printf("no star found by the core\n");
     printf("frames: shots/tests/chart_home_<level>.png, chart_north_<level>.png, chart_core_<level>.png\n");
-    {   // G-06: the next jump chosen on the chart, from home: the cursor 5,000 ly coreward in the plane, plotted (Enter), the look round its
+    {   // the next jump chosen on the chart, from home: the cursor 5,000 ly coreward in the plane, plotted (Enter), the look round its
         // end (Tab), flown (Tab back, Enter) and the chart again at the arrival; a mark named over the disc (L); the stops (N); into the halo
         TestGame g; g.savePrefix = "shots/tests/test_save"; g.settingsPath = "shots/tests/test_settings.txt"; g.keysPath = "shots/tests/test_keys.txt"; g.guidePath = "shots/tests/test_guide.txt";
         g.newGame(); g.setState(GameState::SPACE);
@@ -661,7 +661,7 @@ void runHome() {
 
 // ---- survey and gallery (M9-01) ------------------------------------------------------------
 // survey [N]: distributions over N bodies of the start region; gallery <type>: 16 random sites in one sheet.
-// B-428: what a parked ship sees of the other worlds. From the game's parking (`testParkAt`'s side of the world, `parkDistanceFor`
+// what a parked ship sees of the other worlds. From the game's parking (`testParkAt`'s side of the world, `parkDistanceFor`
 // out) at time t: the angular radius in degrees of the biggest other world anywhere in the sky, and of the biggest in the default
 // 70-degree view of the world
 void parkedNeighbours(const StarSystem& sys, int bi, double t, double& skyDeg, double& viewDeg) {
@@ -682,16 +682,16 @@ void parkedNeighbours(const StarSystem& sys, int bi, double t, double& skyDeg, d
 void runSurvey(int wanted) {
     int types[PT_COUNT] = {0}, planets = 0, moons = 0, systems = 0, felSystems = 0;
     int madeFrom[PT_COUNT][PT_DRAWN_COUNT] = {{0}}, changed = 0, changedSystems = 0;   // P-01: the made kinds and what they were drawn as
-    int rdLocked[PT_COUNT] = {0}, rdLockedN = 0;   // P-03: the red dwarfs' locked worlds by kind
-    int deadBy[STAR_CLASS_COUNT] = {0}, deadN = 0, deadPeople = 0, giantLiving = 0;   // P-04: the scorched worlds by their sun, with a people; a giant's felisian worlds still living
+    int rdLocked[PT_COUNT] = {0}, rdLockedN = 0;   // the red dwarfs' locked worlds by kind
+    int deadBy[STAR_CLASS_COUNT] = {0}, deadN = 0, deadPeople = 0, giantLiving = 0;   // the scorched worlds by their sun, with a people; a giant's felisian worlds still living
     int tempHist[6] = {0}, gravHist[5] = {0}, moonHist[8] = {0};
     double matCov[PT_COUNT][MAT_COUNT] = {{0}};
     int matN[PT_COUNT] = {0};
     int bodies = 0;
-    // M5-09 (R-001): what hangs in the sky at random landing sites and times
+    // what hangs in the sky at random landing sites and times
     int skySites = 0, sky05 = 0, sky1 = 0, sky3 = 0, sky10 = 0, skyPoint = 0, skyParent = 0, skyMoon = 0, skySister = 0, skyOther = 0, skyTwoSuns = 0;
     int multiples = 0, substellar = 0, comets = 0, doubles = 0, lockedN = 0;
-    int parkN[5] = {0}, parkSky[5] = {0}, parkView[5] = {0};   // B-428: at a solid planet, its moon, a giant, a giant's moon, a twin
+    int parkN[5] = {0}, parkSky[5] = {0}, parkView[5] = {0};   // at a solid planet, its moon, a giant, a giant's moon, a twin
     for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return bodies < wanted; })) {
         systems++;
         if (sys.companion >= 0) multiples++;
@@ -702,7 +702,7 @@ void runSurvey(int wanted) {
             if (b.type == PT_COMET) comets++;
             if (b.doublePlanet && b.parent >= 0) doubles++;
             if (b.locked) lockedN++;
-            if (b.type != PT_COMPANION && b.type != PT_COMET) {   // B-428: what the parked ship sees of the other worlds, twice a body
+            if (b.type != PT_COMPANION && b.type != PT_COMET) {   // what the parked ship sees of the other worlds, twice a body
                 const bool moon = b.parent >= 0 && sys.bodies[b.parent].type != PT_COMPANION;
                 const Body& w = moon ? sys.bodies[b.parent] : b;
                 const bool gi = w.type == PT_GASGIANT || w.type == PT_SUBSTELLAR;
@@ -746,7 +746,7 @@ void runSurvey(int wanted) {
             types[b.type]++;
             if (b.type != drawnKind(b)) { madeFrom[b.type][drawnKind(b)]++; changed++; anyChanged = true; }
             if (b.locked && sys.star.cls == STAR_RED_DWARF) { rdLocked[b.type]++; rdLockedN++; }
-            {   const int sun = b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION ? sys.bodies[b.parent].starClass : sys.star.cls;   // P-04
+            {   const int sun = b.parent >= 0 && sys.bodies[b.parent].type == PT_COMPANION ? sys.bodies[b.parent].starClass : sys.star.cls;
                 if (b.type == PT_SCORCHED_FELISIAN) { deadN++; if (sun >= 0) deadBy[sun]++; if (peoplesHash(b.type, b.seed)) deadPeople++; }
                 if (b.type == PT_FELISIAN && (sun == STAR_RED_GIANT || sun == STAR_ORANGE_GIANT || sun == STAR_CARBON)) giantLiving++; }
             if (b.parent < 0) { planets++; moonHist[std::min(7, b.moonCount)]++; } else moons++;
@@ -771,26 +771,26 @@ void runSurvey(int wanted) {
     }
     printf("survey: %d systems, %d bodies (%d planets, %d moons); felisian in %d systems (%.0f%%)\n", systems, bodies, planets, moons, felSystems, 100.0 * felSystems / std::max(1, systems));
     printf("types:"); for (int i = 0; i < PT_COUNT; i++) printf("  %s %.1f%%", KINDS[i].name, 100.0 * types[i] / std::max(1, bodies)); printf("\n");
-    // P-01: the made kinds: how many bodies changed kind (every draw of their systems made as the drawn kind's), and from what
+    // the made kinds: how many bodies changed kind (every draw of their systems made as the drawn kind's), and from what
     printf("made kinds: %d bodies of %d changed kind (%.1f%%), in %d of %d systems\n", changed, bodies, 100.0 * changed / std::max(1, bodies), changedSystems, systems);
     for (int k = PT_DRAWN_COUNT; k < PT_COUNT; k++) {
         printf("  %-12s %4d:", KINDS[k].name, types[k]);
         for (int d = 0; d < PT_DRAWN_COUNT; d++) if (madeFrom[k][d]) printf(" %d from %s", madeFrom[k][d], KINDS[d].name);
         printf("\n");
     }
-    {   // P-03: what the red dwarfs' locked worlds are, the commonest first
+    {   // what the red dwarfs' locked worlds are, the commonest first
         printf("red dwarfs' locked worlds: %d:", rdLockedN);
         int order[PT_COUNT]; for (int k = 0; k < PT_COUNT; k++) order[k] = k;
         std::sort(order, order + PT_COUNT, [&](int a, int b) { return rdLocked[a] != rdLocked[b] ? rdLocked[a] > rdLocked[b] : a < b; });
         for (int i = 0; i < PT_COUNT && rdLocked[order[i]] > 0; i++) printf(" %s %d", KINDS[order[i]].name, rdLocked[order[i]]);
         printf("\n");
     }
-    {   // P-04: the dead worlds: the scorched by their sun, those with a people; the giants' felisian worlds left living (C-01's peoples' among them)
+    {   // the dead worlds: the scorched by their sun, those with a people; the giants' felisian worlds left living (C-01's peoples' among them)
         printf("dead worlds: %d scorched (", deadN);
         bool first = true; for (int c = 0; c < STAR_CLASS_COUNT; c++) if (deadBy[c]) { printf("%s%s %d", first ? "" : ", ", STAR_CLASSES[c].name, deadBy[c]); first = false; }
         printf("), %d with a people; a giant's felisian worlds left living %d\n", deadPeople, giantLiving);
     }
-    {   // P-05: the wanderers over the whole start region (the sample above holds a handful): how many systems caught one, of what kind, how
+    {   // the wanderers over the whole start region (the sample above holds a handful): how many systems caught one, of what kind, how
         // far out past the last planet (its nearest over that orbit), how eccentric, which way round
         int allSys = 0, wanderN = 0, wanderFrozen = 0, wanderRetro = 0, wanderPeople = 0; double wanderEcc = 0, wanderOut = 0;
         for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
@@ -806,7 +806,7 @@ allSys++;
         printf("wanderers: %d in the start region's %d systems (%.1f%%), %d frozen felisian, %d with a people; %d retrograde, eccentricity %.2f on average, the nearest %.2f times the last planet's orbit\n",
                wanderN, allSys, 100.0 * wanderN / std::max(1, allSys), wanderFrozen, wanderPeople, wanderRetro, wanderEcc / std::max(1, wanderN), wanderOut / std::max(1, wanderN));
     }
-    {   // P-06: the giants' moons over the start region by kind, the commonest first (their captured moons apart), and the strange moons among all moons
+    {   // the giants' moons over the start region by kind, the commonest first (their captured moons apart), and the strange moons among all moons
         int giantMoons = 0, kinds[PT_COUNT] = {0}, captured = 0, strange[PT_COUNT] = {0}, allMoons = 0;
         for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
             for (const Body& b : sys.bodies) {
@@ -825,7 +825,7 @@ allSys++;
         for (int k = PT_GROOVED_ICE; k <= PT_SPONGE; k++) printf("%s %s %d", k > PT_GROOVED_ICE ? "," : "", KINDS[k].name, strange[k]);
         printf("\n");
     }
-    {   // P-07: the giants over the start region by class against their equilibrium temperature (the game's scale), the giants made from a world
+    {   // the giants over the start region by class against their equilibrium temperature (the game's scale), the giants made from a world
         // (the warm zones'), and the yellow stars with a hot one (an alkali or a silicate giant)
         std::vector<double> temps[GK_COUNT]; int fromWorld = 0, yellow = 0, yellowHot = 0;
         for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160)) {
@@ -857,7 +857,7 @@ allSys++;
                skySites, 100.0 * sky05 / skySites, 100.0 * sky1 / skySites, 100.0 * sky3 / skySites, 100.0 * sky10 / skySites, 100.0 * skyPoint / skySites, 100.0 * skyTwoSuns / skySites);
         printf("  the disc is: the parent %.0f%%, an own moon %.0f%%, a sister moon %.0f%%, another world %.0f%%\n", 100.0 * skyParent / std::max(1, sky05), 100.0 * skyMoon / std::max(1, sky05), 100.0 * skySister / std::max(1, sky05), 100.0 * skyOther / std::max(1, sky05));
     }
-    {   // B-428: from the parking, another world wider than 10 deg anywhere in the sky / wider than 6 deg in the view of the world
+    {   // from the parking, another world wider than 10 deg anywhere in the sky / wider than 6 deg in the view of the world
         const char* const kinds[5] = {"solid planets", "their moons", "giants", "giants' moons", "twins"};
         int n = 0, sk = 0, vw = 0;
         printf("from the ship parked at a world (B-428), another world wider than 10 deg in the sky / wider than 6 deg in the view:");

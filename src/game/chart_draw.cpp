@@ -1,7 +1,7 @@
 // C-10 (2026-10-03): a shard that is a star chart (`peoples/charts.h`) draws itself on the decoder beside its caption: the hemisphere of
 // the people's sky round the star they marked, their figures and their names (words of the language, resolving as it is learnt); a
 // first reading draws it over a few seconds; Enter targets the marked star and O holds the chart up to the sky (`drawChartOverlay`).
-// H-05 (2026-10-10): moved here from game/shards_screen.cpp, and drawn in the way of its record's age and medium (`StarChart::style`):
+// a star chart drawn in the way of its record's age and medium (`StarChart::style`):
 // ochre and soot on a cave's ceiling with the animals painted under the stars and the moon's days in a row of soot; the brightest
 // scratched on a bone with the moon's nights notched on its edge; a vault painted blue with gold stars; an astrolabe's brass plate with
 // its graduated limb, their equator, tropics and ecliptic engraved, the rete's pointers and the rule; a codex's page in brown and red
@@ -377,9 +377,9 @@ void Game::renderChart() {
     const Shard& s = shardWorld.shards[idx]; const StarChart& C = shardWorld.chart;
     std::string head = fmt("%s - SHARD %d OF %d", shardWorldTitle(30).c_str(), shardSel + 1, n);
     drawText(canvas, 6, 4, head.c_str(), HUD_AMBER);
-    if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // C-14: a friend's, credited
+    if (shardLent(idx)) drawText(canvas, 6 + textWidth(head.c_str()) + 2 * FONT_ADV, 4, "LENT", HUD_CYAN);   // a friend's, credited
     drawText(canvas, 6, 13, fmt("YEAR %d OF %s", s.year, upper(shardWorld.lore.city).c_str()).c_str(), HUD_DIM);
-    {   // H-05: the way it was made
+    {   // the way it was made
         const std::string way = C.valid ? chartStyleLine(C.style, C.medium) : std::string();
         std::string line = fmt("A STAR CHART OF THE %s", upper(shardWorld.lore.people).c_str()) + (way.empty() ? "" : ", " + way);
         if (line.size() > 52) line = fmt("THE %s, ", trunc(upper(shardWorld.lore.people), 12).c_str()) + way;
@@ -391,7 +391,7 @@ void Game::renderChart() {
     bool held = chartUp && chartHeldKey == key && chartHeldIndex == shardWorld.base + idx;
     Painter P{canvas};
     if (!C.valid) drawTextCentered(canvas, CX, CY, "NO CHART", HUD_DIM);
-    else if (C.style == CHS_SUNMEASURE) drawSunMeasure(P, C, u, mix64(C.seed ^ 0xD4A3ULL));   // D-05
+    else if (C.style == CHS_SUNMEASURE) drawSunMeasure(P, C, u, mix64(C.seed ^ 0xD4A3ULL));
     else {
         const uint64_t bkey = mix64(C.seed ^ (uint64_t)C.style * 0x9E37ULL ^ (uint64_t)C.medium);
         if (g_back.key != bkey) buildBackdrop(C, bkey);
@@ -772,7 +772,7 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
     std::vector<double> sx(N), sy(N); std::vector<char> ok(N, 0); std::vector<Vec3> vv(N);
     for (size_t k = 0; k < N; k++) {
         Vec3 d = C.stars[k].star.pos - obs;
-        if (length2(d) < 1e-6) continue;   // H-05: the ship at a route's own star
+        if (length2(d) < 1e-6) continue;   // the ship at a route's own star
         if (localFrame) { Vec3 l = (*localFrame) * d; if (l.y < 0.01 * length(l)) continue; }
         Vec3 v = cam * d; vv[k] = v;
         if (v.z <= 1e-9) continue;
@@ -825,7 +825,7 @@ void Game::drawChartOverlay(const Mat3& cam, const Vec3& obs, const Proj& pj, co
         int lb = fg.label;
         if (ok[lb] && sx[lb] > 2 && sy[lb] > 30 && sx[lb] < UW - 40 && sy[lb] < UH - 30 && i < chartHeldLabels.size()) { int tw = textWidth(chartHeldLabels[i].c_str()), lx = (int)sx[lb] + 4; drawText(canvas, lx, labelY(lx, (int)sy[lb] - 3, tw), chartHeldLabels[i].c_str(), HUD_DIM); }
     }
-    for (size_t k = 0; k < N; k++) {   // H-05: the far future's places where nothing is
+    for (size_t k = 0; k < N; k++) {   // the far future's places where nothing is
         if (!C.stars[k].sign || !ok[k]) continue;
         const int px = (int)std::lround(sx[k]), py = (int)std::lround(sy[k]);
         for (int i = 0; i < 16; i++) skyDot((int)std::lround(px + 4 * std::cos(TAU * i / 16)), (int)std::lround(py + 4 * std::sin(TAU * i / 16)), lineCol);

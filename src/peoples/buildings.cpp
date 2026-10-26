@@ -2,7 +2,7 @@
 // every age's that built them), drawn as they were but for their materials' decay and their roofs; every other kind is new. Each
 // generator reads its building's seed (`U`), its materials' decay (`D`, `Dk` for a piece of it), and its people's ways of building,
 // and writes A-02's forms in the building's frame: x' across its heading, z' along it (the front, side 0, faces +z').
-// A-04: the people's ways are its genome's (peoples/genome.h) read through its age (`cultureWays`): the plan's form and the roof, the
+// the people's ways are its genome's (peoples/genome.h) read through its age (`cultureWays`): the plan's form and the roof, the
 // walls' profile and their dress (bands, a cornice, an expressed frame, the door's surround, the glyphs), the tops, the towers'
 // sections, the motif on the great buildings, the focal accent, the colours (`culturePalette`); the slots by what a piece is
 // (`Gen::roofSlot` and the rest: the accent where the people put it).
@@ -37,7 +37,7 @@ double materialDecay(int m, double years, double wet) {
 }
 
 double buildingDecay(const Building& b, const Culture& c, int m) {   // the luck's spread C-01's (a quarter) where the material is half gone;
-    const double d = materialDecay(m, c.ageYears / std::max(0.1, c.life), c.wet);   // A-04: the years over its people's lifetimes (built light, built to last)
+    const double d = materialDecay(m, c.ageYears / std::max(0.1, c.life), c.wet);   // the years over its people's lifetimes (built light, built to last)
     return clampd(d + b.luck * 2.5 * d * (1 - d), 0, 1);
 }
 
@@ -54,14 +54,14 @@ int buildingAge(int k) {
         case BK_GATE: case BK_PLATFORM: case BK_COLONNADE: case BK_STELA: case BK_RUBBLE: case BK_WALL:
         case BK_QUAY: case BK_MOLE: case BK_BOLLARD: case BK_TERRACE: case BK_CISTERN: case BK_WINDWALL: case BK_CAIRN:
         case BK_FOCUS: case BK_AQUEDUCT: case BK_TWIN: case BK_PORTAL: return -1;
-        case BK_CRANE: case BK_RESERVOIR: return -1;   // T-02: an industrial people's and a modern people's in their ways
+        case BK_CRANE: case BK_RESERVOIR: return -1;   // an industrial people's and a modern people's in their ways
         case BK_CONTAINERS: return AGE_MODERN;
-        // T-03: the works' kinds: earth, a dam, a tomb, a fort, a ship, a colossus, a lighthouse, a derrick, cut blocks and a conveyor in each
+        // the works' kinds: earth, a dam, a tomb, a fort, a ship, a colossus, a lighthouse, a derrick, cut blocks and a conveyor in each
         // age's way; the machines' the modern age's, the tether the futuristic's, the lattice and the sphere the far future's, a trilithon the
         // old time's
         case BK_MOUND: case BK_DAM: case BK_TOMB: case BK_FORT: case BK_SHIP: case BK_COLOSSUS: case BK_LIGHTHOUSE: case BK_DERRICK: case BK_BLOCKS:
         case BK_CONVEYOR: case BK_HANGAR: case BK_FURNITURE: return -1;
-        case BK_DOME: case BK_GREENHOUSE: return -1;   // D-05: in the way of the age that lost its sun
+        case BK_DOME: case BK_GREENHOUSE: return -1;   // in the way of the age that lost its sun
         case BK_DISH: case BK_BUNKER: case BK_TEETH: case BK_VEHICLE: case BK_AIRCRAFT: case BK_LAUNCHPAD: case BK_TURBINE: return AGE_MODERN;
         case BK_TETHER: return AGE_FUTURISTIC;
         case BK_LATTICE: case BK_SPHERE: return AGE_FAR_FUTURE;
@@ -109,7 +109,7 @@ const char* buildingPlaceName(int k) {
         case BK_AQUEDUCT: return "THE FOOT OF AN AQUEDUCT";
         case BK_TWIN: return "THE FOOT OF A TOWER";
         case BK_PORTAL: return "THE MOUTH OF A TUNNEL";
-        case BK_TOMB: return "A TOMB";                       // T-03
+        case BK_TOMB: return "A TOMB";
         case BK_BUNKER: return "A BUNKER";
         case BK_FORT: return "A FORT";
         case BK_LIGHTHOUSE: return "THE FOOT OF A LIGHTHOUSE";
@@ -123,7 +123,7 @@ const char* buildingPlaceName(int k) {
         case BK_TRILITHON: return "A TRILITHON";
         case BK_GATE: return "A GATE";
         case BK_WALL_TOWER: return "A WALL'S TOWER";
-        case BK_DOME: return "A DOME";                       // D-05
+        case BK_DOME: return "A DOME";
         case BK_GREENHOUSE: return "A GLASSHOUSE";
         default: return "A RUIN";
     }
@@ -207,10 +207,10 @@ void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int 
         case BK_AQUEDUCT: genAqueduct(g); break;
         case BK_TWIN: genTwin(g); break;
         case BK_PORTAL: genPortal(g); break;
-        case BK_CRANE: genCrane(g); break;           // T-02
+        case BK_CRANE: genCrane(g); break;
         case BK_CONTAINERS: genContainers(g); break;
         case BK_RESERVOIR: genReservoir(g); break;
-        case BK_MOUND: genMound(g); break;           // T-03
+        case BK_MOUND: genMound(g); break;
         case BK_DAM: genDam(g); break;
         case BK_DISH: genDish(g); break;
         case BK_TOMB: genTomb(g); break;
@@ -232,8 +232,8 @@ void buildingForms(const Building& b, const Culture& c, const SiteRead& st, int 
         case BK_TETHER: genTether(g); break;
         case BK_TRILITHON: genTrilithon(g); break;
         case BK_CONVEYOR: genConveyor(g); break;
-        case BK_FURNITURE: genFurniture(g); break;   // R-412
-        case BK_DOME: genDome(g); break;             // D-05
+        case BK_FURNITURE: genFurniture(g); break;
+        case BK_DOME: genDome(g); break;
         case BK_GREENHOUSE: genGreenhouse(g); break;
         default: break;
     }
@@ -368,7 +368,7 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
         case BK_STATION:
             if (b.style == 1) { R.hw = std::min(b.hw * 0.9, 18.0); R.hd = b.hd; R.spots = {{0, 0}, {0, -b.hd * 0.5}, {0, b.hd * 0.5}}; return true; }   // the market hall's floor under its vault
             rectRoom(b, R, 0, b.hd - 5.5, b.hw, 5.5, 0, 0); rectSpots(R, 0, 0, b.hd - 5.5, b.hw, 5.5); return true;
-        case BK_MILL: {   // B-414: its doorway in its front, its floor to the chimney's heap in its back end
+        case BK_MILL: {   // its doorway in its front, its floor to the chimney's heap in its back end
             const double back = millFloorBack(b), cz = 0.5 * (back + b.hd), hd = 0.5 * (b.hd - back);
             rectRoom(b, R, 0, cz, b.hw, hd, 0, 0); rectSpots(R, 0, 0, cz, b.hw, hd); return true;
         }
@@ -400,18 +400,18 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
         case BK_AQUEDUCT: { R.outside = true; const double bay = 2 * b.hd / std::max(3, (int)std::lround(2 * b.hd / 7.0)); R.spots = {{0, -b.hd + bay * 0.5}, {0, -b.hd + bay * 1.5}}; return true; }   // under its arches
         case BK_TWIN: R.outside = true; R.spots = {{0, 0}, {0, b.hd + 2.0}}; return true;   // between its towers
         case BK_PORTAL: R.outside = true; R.spots = {{0, 2.6}, {1.2, 3.4}}; return true;   // in its mouth's cutting
-        case BK_DOME: {   // D-05: the floor inside its ring (the far future's: at its foot)
+        case BK_DOME: {   // the floor inside its ring (the far future's: at its foot)
             if (b.style == 2) { R.outside = true; R.spots = {{0, b.hw + 2.5}, {b.hw + 2.5, 0}}; return true; }
             const int segs = domeRingSegs(b.hw), ds = ringDoorSegs(b.hw, segs);
             roundRoom(b, R, b.hw, b.hw, segs, ringDoorFirst(b, segs, ds), ds); return true;
         }
         case BK_GREENHOUSE: rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0); R.spots = {{0, -b.hd * 0.6}, {0, 0}, {0, b.hd * 0.5}}; return true;   // along its middle walk
-        // T-04: where the works keep a record: at the foot of a mast (a station's hut), a dish, a tomb, a barrow, a blockhouse, a hangar, a
+        // where the works keep a record: at the foot of a mast (a station's hut), a dish, a tomb, a barrow, a blockhouse, a hangar, a
         // lighthouse, a trilithon, a fort, outside each side
         case BK_MAST: case BK_DISH: case BK_TOMB: case BK_MOUND: case BK_BUNKER: case BK_HANGAR: case BK_LIGHTHOUSE: case BK_TRILITHON: case BK_FORT: {
             R.outside = true; R.hw = b.hw; R.hd = b.hd;
             const double m = b.kind == BK_MAST || b.kind == BK_LIGHTHOUSE ? 1.8 : 1.4;
-            // B-421: off an earthwork's own banks: a heap, a long barrow or a bank beyond its length too (`genMound`'s hw by hd), a ring bank
+            // off an earthwork's own banks: a heap, a long barrow or a bank beyond its length too (`genMound`'s hw by hd), a ring bank
             // inside its ring first and beyond its foot; a redoubt by its casemate inside its ring bank (the spots stood on the banks, under them)
             double hx = b.hw + m, hz = (b.kind == BK_DISH || (b.kind == BK_MOUND && (b.style == 0 || b.style == 2)) ? b.hw : b.hd) + m;
             if (b.kind == BK_FORT && b.style == 0) { hx = b.hw * 0.3 + m; hz = b.hw * 0.22 + m; }
@@ -469,7 +469,7 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
         if (W.group > 1) W.w = std::min(0.9, W.w * (1 + 0.45 * (W.group - 1)));   // a pair or a group spans more of its bay
         return W;
     };
-    // B-415: a window of the age: its bay and storey (m), its width and height as shares of them (a group's lights together), its sill, its
+    // a window of the age: its bay and storey (m), its width and height as shares of them (a group's lights together), its sill, its
     // shape, its lights, the share of the cells left blank, how dark
     auto spec = [](double bay, double storey, double w, double h, double sill, int shp, int lights, double blank, double dark) {
         WindowSpec W; W.bay = bay; W.storey = storey; W.w = w; W.h = h; W.sill = sill; W.shape = shp; W.group = shp == 4 ? 1 : lights; W.scatter = shp == 4 ? 0 : blank; W.dark = dark;
@@ -480,12 +480,12 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
     switch (c.age) {
         case AGE_PREHISTORIC:   // dry stone of the ground's rock (or daubed in the base), thatch and hide, the dark of timber and a post's hole
             P.own[0] = !painted; P.tint[0] = 0.25f; P.colour[0] = base;
-            P.colour[2] = lerp(genomeRoofing(G, AGE_PREHISTORIC), base, 0.15f);   // R-412: its thatch, its reed, its heather, its turf, its hides
+            P.colour[2] = lerp(genomeRoofing(G, AGE_PREHISTORIC), base, 0.15f);   // its thatch, its reed, its heather, its turf, its hides
             P.colour[3] = RGB(0.22f, 0.17f, 0.13f);
             break;
         case AGE_MEDIEVAL: {   // C-01's walls of the rock (or adobe) tinted toward the base, or painted in it; the roofing; timber
             P.own[0] = !painted; P.tint[0] = 0.3f; P.colour[0] = base;
-            P.colour[2] = genomeRoofing(G, AGE_MEDIEVAL);   // R-412: its thatch, tiles, shingles, slate or copper (A-04 drew it among three by the base)
+            P.colour[2] = genomeRoofing(G, AGE_MEDIEVAL);   // its thatch, tiles, shingles, slate or copper (A-04 drew it among three by the base)
             P.colour[3] = RGB(0.36f, 0.27f, 0.19f);
             auto small = [&](double bay, double storey, double w, double h, double sill, int shp) {
                 const double gw = std::min(0.5, w * (1 + 0.35 * (group - 1)));
@@ -501,7 +501,7 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
         }
         case AGE_INDUSTRIAL: {   // its brick (B-415: every industrial people's), slate, iron gone to rust
             P.colour[0] = BRICK[G.of(GV_BASE)];
-            P.colour[2] = genomeRoofing(G, AGE_INDUSTRIAL);   // R-412: its slate, tiles or copper (A-04: slate or a brown sheet)
+            P.colour[2] = genomeRoofing(G, AGE_INDUSTRIAL);   // its slate, tiles or copper (A-04: slate or a brown sheet)
             P.colour[3] = RGB(0.34f, 0.25f, 0.20f);
             const int pair = group > 1 ? 2 : 1, lancets = std::min(group, 3);
             P.windows[0] = spec(2.8, 3.4, pair > 1 ? 0.46 + 0.1 * s : 0.3 + 0.12 * s, 0.5 + 0.16 * s, 0.27, sash, pair, 0, 18);
@@ -532,7 +532,7 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
             P.colour[2] = lerp(tint, white, 0.25f);
             P.colour[3] = genomeLight(G);
             P.windows[0] = win(6.0, 5.0, 1.0, 1.0, 0.4, 4, 14); P.windows[0].w = 1.0; P.windows[0].h = 0.15 + 0.25 * G.at(GV_SHARE);
-            P.windows[1] = win(5.0, 5.0, 1.0, 1.0, 0.3, shape == 1 || shape == 6 ? 3 : shape, 14); P.nWindows = 2;   // B-415: an arched or a keyholed people's portholes
+            P.windows[1] = win(5.0, 5.0, 1.0, 1.0, 0.3, shape == 1 || shape == 6 ? 3 : shape, 14); P.nWindows = 2;   // an arched or a keyholed people's portholes
             break;
         default: {   // the far future: its one material at the base's extreme, its accent, the black of a shaft's mouth, its light up it
             const float l = luma(base);
@@ -547,7 +547,7 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
             break;
         }
     }
-    // R-412: the people's dress on its walls, read through the age: the windows' surrounds lighter or darker than the wall, or shutters beside
+    // the people's dress on its walls, read through the age: the windows' surrounds lighter or darker than the wall, or shutters beside
     // them (the hand-made and the industrial ages' and a modern people's: `GV_TRIM`); its walls of one colour, a dado of another under the
     // first storey's windows (a medieval people's plinth, an industrial people's stucco ground floor, a modern people's base), courses of two
     // colours (a medieval people's striped stone, an industrial people's polychrome brick, a modern or a futuristic people's bands), or each

@@ -1,44 +1,13 @@
-// H-03 (2026-10-09): the grammar engine (`docs/archive/ideas/RESEARCH-records.md`, sections 4 and 5: the formalism H-01 chose). A record's
-// text is written by a small attribute grammar over a realiser:
-//
-// * The grammar (`VgGrammar`) is plain text files (`.vg`, `peoples/grammar/`), compiled into the game as raw strings and read from
-//   disk by the harness (`vesperis_test grammar`), so a rule is edited and reprinted without a rebuild. A rule is a name at a line's
-//   start and its alternatives the indented lines under it; an alternative is a weight, guards on the inputs, `once`, a tense and a
-//   text of marks: `{rule}`, `{fact}`, `[a|b]`, `{$x}` (an entity), `{lemma:$x}` (a verb), `{#n|noun}` (a number), `{=.x:v}` (an
-//   attribute passed up), `{rule>.x}` (a word kept with its number), `{+$x:?}` (a person the text brings in), `{@directive}` (the
-//   record's plan), `\n`. The format is documented in `docs/reference/civilisations/records-and-grammar.md` ("The grammar
-//   engine").
-// * The expansion draws by weight from the alternatives whose guards hold, the ones the record has not used first, the ones the
-//   people's other records used less (`VgMemory`: a world's records are one catalogue); a rule declared `keep` says the same thing
-//   all through a record (one crop).
-// * The realiser writes the English: an entity's first mention in full ("my mother", "Aiwya"), a pronoun after only where it is
-//   clear (the last of its gender within a sentence, and no person since whose gender the reader cannot know: the people's names
-//   do not say it), its case (her, his, herself); verbs by tense, person and number; numbers
-//   with their nouns ("one year", "two years"); "a" or "an"; the spaces, the capitals and the stops. The grammar never writes "he",
-//   "his" or a verb's ending for an entity, so C-02's "him mother" and "a lizards" cannot be written.
-// * The checks (`vgCheck`) read a realised record for what the construction cannot rule out: a mark left, a doubled word, a wrong
-//   article, an article before a plural, a pronoun disagreeing with its verb, a length out of its rule's range, a word of a later
-//   age (the lexicon, `@lexicon`); the measures (`vgMeasure`) count the sentences on a repeated frame.
-//
-// Deterministic: a record is a function of its seed, its model and the catalogue's memory (drawn in index order).
-//
-// H-04 (2026-10-09): what the records' genres needed of it: a proper name inside a fact's or a field's words or an entity's forms is
-// marked (`VG_NAME_BEGIN` .. `VG_NAME_END`: "the War of \1Kauza\2") and kept with the record's names (the decoder never translates a
-// name); a rule declared `formula` (a letter's greeting, a year's heading) is left out of the measures; `@lexicon <fact> words` are the
-// words a record may write only when its model sets the fact (the railway before the railway opened is an anachronism within its age);
-// a directive asks whether a rule exists (`VgRun::has`); round numbers run to the millions.
-//
-// H-04, the second pass (2026-10-10): what makes a people's records its own and keeps them from saying a thing twice.
-// * A people's dialect: the model's `culture` (the people's seed) weighs every alternative for that people (`VG_DIALECT`: a word or a
-//   turn one people reaches for first, another hardly uses), and a rule declared `people=K` (or `share=F`) keeps only K of its
-//   alternatives (a share F of them) for a people, by the same seed: their crops, their vessels, their oaths and their sayings.
-// * A sentence said once: the memory keeps the frame of every sentence a people's records wrote (names, persons and numbers masked);
-//   a rule that writes a whole sentence and asks nothing of the model (no directive under it) is drawn again when a sentence it
-//   finished is on a frame the people wrote before (`VG_RETRIES` a rule, a record's budget), the draws undone.
-// * A word worn out: a distinctive word (in few alternatives of the grammar) weighs its alternatives down by the people's uses of it
-//   (`VG_FATIGUE`), so "jars" and "the well" do not come back record after record.
-// * Their own words: `{~key}` writes the people's own word for a thing of theirs that has none of ours (their coin, their dish, their
-//   beast), from the model's tongue (`VgModel::tongue`); the decoder keeps it as it keeps a name (`VgRecord::theirs`).
+// The grammar engine (H-03; the format and the engine: docs/reference/civilisations/records-and-grammar.md). A record's text is a small
+// attribute grammar over a realiser: the `.vg` files (peoples/grammar/, compiled in, read from disk by the harness) hold the rules, each a
+// name and its indented alternatives (a weight, guards, `once`, a tense, a text of marks); the expansion draws by weight from the
+// alternatives whose guards hold, the unused first and the ones the people's other records used less (`VgMemory`: a world's records are one
+// catalogue), with each people's dialect, its sentences said once and its distinctive words worn out (VG_DIALECT, VG_RETRIES, VG_FATIGUE);
+// the realiser writes the English (a first mention in full, a pronoun only where it is clear, the verbs by tense, person and number, the
+// numbers with their nouns, "a" or "an", the spaces and the capitals), so the grammar never writes "he" or a verb's ending for an entity.
+// The checks (`vgCheck`) read a realised record for what the construction cannot rule out; the measures (`vgMeasure`) count the repeated
+// frames. A record is a function of its seed, its model and the catalogue's memory (drawn in index order); a name inside a fact's words is
+// marked (VG_NAME_BEGIN .. VG_NAME_END) and never translated.
 #pragma once
 #include <cstdint>
 #include <string>
@@ -138,7 +107,7 @@ struct VgRule {
     int number = VN_NONE;     // a word list's: `(pl)`, `(mass)`, `(sing)`
     bool keep = false;        // `(keep)`: the first draw holds for the whole record
     bool steady = false;      // `(steady)`: its weights hold across a people's records (no catalogue dryness: C-02's kinds keep their shares)
-    bool formula = false;     // `(formula)`: a genre's formula (a greeting, a heading, a blessing): the measures leave its sentences out (H-04)
+    bool formula = false;     // `(formula)`: a genre's formula (a greeting, a heading, a blessing): the measures leave its sentences out
     int wordsLo = 0, wordsHi = 0;   // `(words=8..70)`: a record it writes is that long (the check)
     int peopleK = 0;          // `(people=K)`: a people keeps K of its alternatives (0 all)
     double share = 0;         // `(share=F)`: a people keeps that share of them (0 all)
@@ -162,7 +131,7 @@ struct VgGrammar {
     std::unordered_set<std::string> plurals;                 // the plural words of the `(pl)` lists (the check: no "a" or "one" before them)
     std::vector<std::string> words;                          // the distinctive words (in few alternatives): the fatigue's, by index
     std::unordered_set<std::string> tongueKeys;              // the `{~key}` the texts ask the model for
-    // D-05: a population's own lines kept apart from the others' (`@apart` alone: a file's every alternative; `@apart key=value`: every
+    // a population's own lines kept apart from the others' (`@apart` alone: a file's every alternative; `@apart key=value`: every
     // alternative with that guard, in any file): a word of theirs never makes a word of the others' common, so no other people's records move;
     // and the rules a guard swaps (`@instead`)
     std::vector<char> apartFiles;
@@ -200,11 +169,11 @@ struct VgRecord {
     int words = 0, lo = 0, hi = 0;   // the words and the length its rules declared (0 none)
     std::vector<int> used;    // the alternatives drawn, in order
     std::vector<std::string> names;   // the proper names written (the decoder keeps them)
-    std::vector<std::string> theirs;  // H-04: the people's own words written (`{~key}`; the decoder keeps them as names)
-    std::vector<std::string> formulas;   // H-04: the frames of the sentences its formula rules wrote (`vgFrame`; the measures leave them out)
+    std::vector<std::string> theirs;  // the people's own words written (`{~key}`; the decoder keeps them as names)
+    std::vector<std::string> formulas;   // the frames of the sentences its formula rules wrote (`vgFrame`; the measures leave them out)
     std::vector<std::string> diag;    // what could not be written ("no alternative of x", "an a before a plural") and the realiser's notes
     double us = 0;            // the microseconds it took
-    int retries = 0;          // H-04: the rule draws undone for a repeated frame
+    int retries = 0;          // the rule draws undone for a repeated frame
 };
 // expands the root with the model's facts and entities, then realises it; false (with `diag`) when it could not
 bool vgRecord(const VgGrammar& G, const std::string& root, VgModel& M, VgMemory* mem, VgRecord& R);

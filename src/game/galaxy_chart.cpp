@@ -6,7 +6,7 @@
 // steps over anything 30 ly thick). Nothing on it has a name: the explorer's things are drawn over it (the ship, home, the stars
 // visited (R-414: not the way between them), the remote target and its line, the signals the radar locked, the stars named at the close
 // levels).
-// G-06 (2026-10-08): the next jump chosen on it ("the ability to select on that map where to jump next"): a cursor with what lies under
+// the next jump chosen on it ("the ability to select on that map where to jump next"): a cursor with what lies under
 // it (the region, the stars there, its height, the way and the flight from the ship, what the explorer has there), Enter plots the jump
 // to its point by R-407's line (`plotJump`) and flies it on a second Enter, Tab looks at the stars round the plotted end first, N steps
 // through the explorer's things, L marks a place of the galaxy with a name (`Guide::galaxyMarks`, lent like R-408's marks).
@@ -245,7 +245,7 @@ void Game::chartEnter() {
     const Vec3 to = chartCursor(), from = ship.pos / SECTOR_KM;
     const double ly = length(to - from);
     if (gchart.onShip || ly < 1) { refuse("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); return; }
-    Star drifter;   // D-02: a drifter of the explorer's under the cursor is the jump's end itself
+    Star drifter;   // a drifter of the explorer's under the cursor is the jump's end itself
     const bool snap = chartDrifterAt(to, drifter) && !(sys.valid && sys.star.seed == drifter.seed);
     if (!plotJump(snap ? length(drifter.pos / SECTOR_KM - from) : ly, (to - from) / ly, true, snap ? &drifter : nullptr)) return;
     gchart.plotHere = true;
@@ -264,7 +264,7 @@ std::vector<Game::ChartStop> Game::chartStops() const {
         if (taken.count(k) || !Guide::parseStarKey(k, x, y, z)) return;
         taken.insert(k);
         Star st; const bool at = placeInSector(x, y, z, st, false);
-        g.push_back({at ? st.pos / SECTOR_KM : Vec3(x + 0.5, y + 0.5, z + 0.5), at && st.cls == STAR_ROGUE && label == "A STAR VISITED" ? std::string("VISITED - NO STAR") : label, col});   // D-02
+        g.push_back({at ? st.pos / SECTOR_KM : Vec3(x + 0.5, y + 0.5, z + 0.5), at && st.cls == STAR_ROGUE && label == "A STAR VISITED" ? std::string("VISITED - NO STAR") : label, col});
     };
     auto kind = [&]() {   // a kind's stops, nearest the ship first
         std::stable_sort(g.begin(), g.end(), [&](const ChartStop& a, const ChartStop& b) { return length2(a.p - ss) < length2(b.p - ss); });
@@ -496,12 +496,12 @@ void Game::renderGalaxyChart() {
         draw(x, y, c);
     };
     auto cross = [&](int x, int y, uint32_t c) { for (int d = 2; d <= 5; d++) { dot(x + d, y, c); dot(x - d, y, c); dot(x, y + d, c); dot(x, y - d, c); } };
-    auto pennant = [&](int x, int y, uint32_t c) {   // G-06: a mark of the galaxy, its foot at the place
+    auto pennant = [&](int x, int y, uint32_t c) {   // a mark of the galaxy, its foot at the place
         for (int k = 0; k <= 5; k++) dot(x, y - k, c);
         for (int k = 1; k <= 3; k++) dot(x + k, y - 5, c);
         dot(x + 1, y - 4, c); dot(x + 2, y - 4, c); dot(x + 1, y - 3, c);
     };
-    auto corners = [&](int x, int y, uint32_t c) {   // G-06: the cursor, open round what lies under it
+    auto corners = [&](int x, int y, uint32_t c) {   // the cursor, open round what lies under it
         for (int k = 0; k < 3; k++) {
             dot(x - 4 + k, y - 4, c); dot(x - 4, y - 4 + k, c); dot(x + 4 - k, y - 4, c); dot(x + 4, y - 4 + k, c);
             dot(x - 4 + k, y + 4, c); dot(x - 4, y + 4 - k, c); dot(x + 4 - k, y + 4, c); dot(x + 4, y + 4 - k, c);
@@ -565,7 +565,7 @@ void Game::renderGalaxyChart() {
         named(guide.names, HUD_GREEN);
         named(guide.inbox, HUD_CYAN);
     }
-    // the signals the radar locked: rings in the radar's red (KI-349)
+    // the signals the radar locked: rings in the radar's red
     for (const auto& kv : guide.signals) {
         const Vec3 v = sectorCentre(kv.first); int x, y;
         if (chartProject(v.x, v.z, x, y)) ring(x, y, 3, HUD_RED);
@@ -601,7 +601,7 @@ void Game::renderGalaxyChart() {
         drawTextShadow(canvas, lx, ay, "YOU", HUD_WHITE, HUD_SHADOW);
         gchart.youX = gchart.youY = -9999;
     }
-    // G-06: the cursor, and what the explorer has under it
+    // the cursor, and what the explorer has under it
     gchart.curPX = gchart.curPY = -9999;
     if (curIn) {
         shadowed(corners, ccx, ccy, HUD_WHITE);

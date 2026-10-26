@@ -3,7 +3,7 @@
 // the sky going dark and light, the bodies' rises and sets, their phases, a body over the sun, the world's own ring
 // over the sun; from the ship the moons across, behind, shadowing and shadowed by the parked body, the planets meeting
 // in the sky, a body across the sun, a comet's plunge. A registry of finders in almanac.cpp, W-03's fronts and W-04's showers
-// among them (E-02: listed there, no longer added at start-up). The game's screen and the run-to-it live in `game/almanac.cpp`.
+// among them (listed there in order: start-up code would take the link's). The game's screen and the run-to-it live in `game/almanac.cpp`.
 #pragma once
 #include "system.h"
 #include <vector>
@@ -23,8 +23,8 @@ enum AlmanacKind {
     AL_SHADOW, AL_ECLIPSED,      // a moon's shadow reaches the parked body; a moon enters the parked body's shadow
     AL_CONJUNCTION,              // two planets within two degrees of each other in the ship's sky (value: the least separation, radians)
     AL_SUN_TRANSIT,              // a body touches the sun's disc as seen from the ship (first contact)
-    AL_FRONT, AL_FRONT_CLEAR,    // W-03: a front's line reaches the place (the rain or the dust begins; value: the bearing it comes from) and its rain ends
-    AL_SHOWER,                   // W-04: a meteor shower's peak (body: the comet whose stream it is; value: the meteors a minute at the peak with the radiant overhead)
+    AL_FRONT, AL_FRONT_CLEAR,    // a front's line reaches the place (the rain or the dust begins; value: the bearing it comes from) and its rain ends
+    AL_SHOWER,                   // a meteor shower's peak (body: the comet whose stream it is; value: the meteors a minute at the peak with the radiant overhead)
     AL_FREE,                     // the menu's free row: "run for N" (no finder gives it)
     AL_COUNT
 };

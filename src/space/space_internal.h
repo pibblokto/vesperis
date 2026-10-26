@@ -6,8 +6,8 @@
 #include "peoples/roads.h"
 #include "galaxy/probe.h"
 #include "galaxy/fronts.h"
-#include "galaxy/nights.h"   // W-04: the earthshine
-#include "galaxy/drifters.h"   // D-02: a drifter's aurorae by its power
+#include "galaxy/nights.h"   // the earthshine
+#include "galaxy/drifters.h"   // a drifter's aurorae by its power
 #include "core/noise.h"
 #include "core/rng.h"
 #include "core/parallel.h"
@@ -18,4 +18,4 @@
 #include <algorithm>
 #include <cstring>
 
-static constexpr double BAND_SHADES = 24.0;   // G-03: the galactic band at full brightness, in shades of bank 0 (the ramp's dim blue-grey stop is at 20): the bulge 21, the plane 8-10
+static constexpr double BAND_SHADES = 24.0;   // the galactic band at full brightness, in shades of bank 0 (the ramp's dim blue-grey stop is at 20): the bulge 21, the plane 8-10

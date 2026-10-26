@@ -16,7 +16,7 @@ static std::string tapeTestDir() {
 
 // O3, B-410, R-407, G-05 to G-07: the belts, the approach, the jump, the chart, the flight
 void unitNavigation(const Check& check) {
-    // O3 (R-302): belt rocks keep their identity as the belt shears
+    // belt rocks keep their identity as the belt shears
     {
         Star bs; StarSystem bsys; bool have = false;
         for (int64_t x = 150; x < 320 && !have; x++)
@@ -46,7 +46,7 @@ void unitNavigation(const Check& check) {
             }
         }
     }
-    {   // B-410: a planet approached from a belt's parking parks at the planet. The approach kept the belt's parking, so at its end the
+    {   // a planet approached from a belt's parking parks at the planet. The approach kept the belt's parking, so at its end the
         // parked ship was put back beside its rock; the flight computer's next target kept the belt targeted, so its approach flew to the rock
         Star bs; StarSystem bsys; int pi = -1;
         for (int64_t x = 150; x < 320 && pi < 0; x++)
@@ -84,7 +84,7 @@ void unitNavigation(const Check& check) {
         check("a planet approached from a belt keeps its parking (B-410)", pi >= 0 && inBelt && listOk && computerOk,
               fmt("%s %lld %lld body %d: from the list %s (%s); from the flight computer %s (%s)", bs.name.c_str(), (long long)bs.sx, (long long)bs.sz, pi, listOk ? "ok" : "PULLED BACK", w1.c_str(), computerOk ? "ok" : "PULLED BACK", w2.c_str()));
     }
-    {   // R-407: a jump of any length along the aim. From home the aim (R), 4 0 0 typed and Enter: the star nearest the line's end becomes the
+    {   // a jump of any length along the aim. From home the aim (R), 4 0 0 typed and Enter: the star nearest the line's end becomes the
         // remote target, the Vimana flies at once (its length by `vimanaSeconds`) and the ship comes out at that star; a jump north out of
         // the disc comes back along the line to the first stars; the aim's markers say the distance where the star has no name, VISITED
         // where the ship has been
@@ -131,7 +131,7 @@ void unitNavigation(const Check& check) {
         check("the aim's markers name no UNKNOWN, say VISITED", unnamed == 6 && bare == 6 && homeLabel.find("VISITED") != std::string::npos,
               fmt("%d of %d bare ('%s'); home '%s'", bare, unnamed, sample.c_str(), homeLabel.c_str()));
     }
-    {   // G-05: the galaxy chart. From home the star map's Tab turns to the galaxy; at every level the ship's crosshair is drawn within a
+    {   // the galaxy chart. From home the star map's Tab turns to the galaxy; at every level the ship's crosshair is drawn within a
         // pixel of where the level's scale puts it from the view's centre (the galactic centre on the whole disc, the ship from level 1),
         // found in the frame by its four white arms; three arrivals are the stars visited, with no line between them (R-414: G-05's route
         // is gone, from the chart and from the guide's file); in a Vimana flight M opens the galaxy page and Tab keeps it there
@@ -169,7 +169,7 @@ void unitNavigation(const Check& check) {
         std::string keys[3];
         for (size_t k = 0; k < stops.size() && k < 3; k++) { game.testArriveAt(stops[k]); run(0.1); keys[k] = Guide::starKey(stops[k].sx, stops[k].sy, stops[k].sz); }
         game.testChartLevel(Game::CHART_LEVELS - 1); game.testChartFollow(); run(0.05);
-        // R-414: the stars visited, a dot each; no line of the way the ship came between them (G-05's route, in its green, is gone)
+        // the stars visited, a dot each; no line of the way the ship came between them (G-05's route, in its green, is gone)
         bool visited = stops.size() == 3;
         for (const std::string& k : keys) visited = visited && game.guide.visited.count(k);
         int routeGreen = 0;
@@ -196,7 +196,7 @@ void unitNavigation(const Check& check) {
         check("the galaxy page in a Vimana flight (G-05)", leftOn == 0 && flying && open && inFlight == 1 && afterTab == 1,
               fmt("left on page %d; flying %d; M opens the map %d on page %d; after Tab page %d ('%s')", leftOn, flying, open, inFlight, afterTab, game.testStatus().c_str()));
     }
-    {   // G-06: the next jump chosen on the chart. From home the cursor 5,000 ly coreward in the plane: Enter plots the star nearest the point
+    {   // the next jump chosen on the chart. From home the cursor 5,000 ly coreward in the plane: Enter plots the star nearest the point
         // (the remote target), Esc keeps it, M opens the chart on it still plotted; Tab looks at the stars round its end, where another is
         // taken and stays the plot; Enter flies (the flight of `vimanaSeconds`, the JUMP line says the chart) and the ship comes out there, the
         // chart's crosshair on it. A plot into the halo comes back to the stars as R-407's jump does (the same star as `jumpTarget`'s). L marks
@@ -312,7 +312,7 @@ void unitNavigation(const Check& check) {
               fmt("renamed %d; asked %d; left %zu ('%s')", renamed, asked, gm.size(), game.testStatus().c_str()));
         press(KEY_ESCAPE); run(0.05);
     }
-    {   // G-07: the band in a Vimana flight, 5,000 ly coreward from home, a frame every sixtieth of a second: the first frame draws the
+    {   // the band in a Vimana flight, 5,000 ly coreward from home, a frame every sixtieth of a second: the first frame draws the
         // band the ship was seeing (the parked map, nothing built at once), no frame moves a cell of it by a twentieth of its range, the
         // last is the band built at the end and is handed to the parked band (a frame at the arrival builds nothing); the keyframes are
         // half a second apart here and closer through the core (26,000 ly from home to the far side), where the centre turns fast
@@ -356,7 +356,7 @@ void unitNavigation(const Check& check) {
 
 // R-408: the sights by kind and the explorer's marks
 void unitSights(const Check& check) {
-    {   // R-408: the sights by kind and the explorer's marks. On Aieliaalas II (a people's world): the cells round a mountain place give lakes
+    {   // the sights by kind and the explorer's marks. On Aieliaalas II (a people's world): the cells round a mountain place give lakes
         // that are water where they are heard (a playa or a frozen basin is no lake) and peaks over the ground round them; a sight named under O6-06 (`<world>/L<id>`) becomes a mark where it
         // stands at the arrival; on the ground the scanner (R) hears the ruins, the nearest heard within 8% of its distance; a mark placed on
         // it from the map's cursor leaves it out (the next ruin is the nearest), Shift+R takes it in again; the map's Enter renames, Delete
@@ -449,9 +449,9 @@ void unitSights(const Check& check) {
               fmt("%d ruins heard; the nearest %.0f m off, heard %.0f m from it; marked from the map: %s, the next nearest %s, taken in again %s", ruins, dist, std::hypot(hx - ex, hz - ez), placed ? "yes" : "NO", next ? fmt("%.0f m off", std::hypot(ex2 - px, ez2 - pz)).c_str() : "THE SAME", back ? "yes" : "NO"));
         check("the map's cursor renames, removes, waypoints; L marks", renamed && armed && removed && waypoint && range > 0 && looked,
               fmt("renamed %d, armed %d, removed %d, waypoint %d; L at %.0f m: %s", renamed, armed, removed, waypoint, range, looked ? "marked there" : "NOT there"));
-        {   // T-03: R again: the works, heard in the same scan; a work's mark and a place's kept in the guide's file by R-408's numbers
+        {   // R again: the works, heard in the same scan; a work's mark and a place's kept in the guide's file by R-408's numbers
             press(KEY_R); run(0.1);
-            const int wmode = game.testScanMode(), works0 = game.testEchoes(LM_WORK);   // B-418: heard at the landing in a people's land
+            const int wmode = game.testScanMode(), works0 = game.testEchoes(LM_WORK);   // heard at the landing in a people's land
             const bool walked = game.testWalkToWork(1e9);   // to the nearest (the frame re-anchored there if it is far), asked again
             if (walked) for (int i = 0; i < 30 * 40 && game.testEchoes(LM_WORK) == 0; i++) run(1.0 / 30);
             run(0.2);
@@ -470,8 +470,8 @@ void unitSights(const Check& check) {
             check("the scanner's WORKS mode in the game, a work's mark kept (T-03, B-418)", wmode == LM_WORK && works0 > 0 && works > 0 && walked && wheard && wd < wr + 500 && kept,
                   fmt("R after RUINS: mode %d (%s), %d works heard at the landing (B-418: some within 40 km), %d after walking to the nearest%s, its middle %.0f m off (its reach %.0f); %s; the marks written as kinds %s(R-408's place 8, a work 9) and read back %s", wmode, wmode == LM_WORK ? "WORKS" : "not WORKS", works0, works, walked ? "" : " (NOT WALKED)", wd, wr, winfo.c_str(), kinds.c_str(), kept ? "as they were" : "WRONG"));
         }
-        {   // B-412: the user saw two of their marks' names run into each other over the view (one behind the other on a line of sight):
-            // R-408 drew every mark within 25 km. Now none is drawn until the explorer shows one from the map (Shift+Enter or
+        {   // the user saw two of their marks' names run into each other over the view (one behind the other on a line of sight):
+            // drew every mark within 25 km. Now none is drawn until the explorer shows one from the map (Shift+Enter or
             // Shift+click on it), one at a time, again to hide it; the choice kept through a removal and in the guide. Two marks in a
             // line ahead, 350 m and 1.8 km; the HUD's white counted over the frame (the sun's line left out), against the marks taken away
             while (game.testScanMode() >= 0) press(KEY_R);   // the scanner off (its lines, its mark on the compass)
@@ -543,7 +543,7 @@ void unitSights(const Check& check) {
                   fmt("Shift+Enter on the shown one %s (white %d px), on no mark %s; a mark before it removed: %s, read back from the guide %s; itself removed: %s",
                       hideFar ? "hides it" : "DOES NOT", hidden, onNothing ? "nothing" : "SOMETHING", keptShown ? "still shown" : "LOST", keptFile ? "shown" : "NOT", goneWith ? "none shown" : "STILL SET"));
         }
-        {   // B-422: the user's landings froze for 5-7 s: the readings (Tab), the scanner (R) or a shown mark asked for the world's marks,
+        {   // the user's landings froze for 5-7 s: the readings (Tab), the scanner (R) or a shown mark asked for the world's marks,
             // whose ground was read with the rivers, and every mark far off built a drainage tile of a degree on the main thread (their
             // nineteen on BUBAS: 8 s). Eight marks far across this world, none of their tiles built: read at once, without the rivers,
             // no tile built for them; one's tiles built, the look two seconds on reads it with them
@@ -590,7 +590,7 @@ void unitSights(const Check& check) {
 
 // R-419, R-420: auto-explore and its tape
 void unitAuto(const Check& check) {
-    {   // R-419: auto-explore from the home parking: the menu's second row opens the chooser on the profile chosen last, Enter begins it; it walks
+    {   // auto-explore from the home parking: the menu's second row opens the chooser on the profile chosen last, Enter begins it; it walks
         // to the front window and looks at the world, the eye never turning faster than a hand's limits (the head's spring 43 degrees a second,
         // the ship's nose 26: under 60 together); a key gives the controls back and is not acted on (G opens no guide)
         TestGame game;
@@ -620,7 +620,7 @@ void unitAuto(const Check& check) {
         check("auto-explore: begun from the menu, eased, given back (R-419)", chooser && began && on && window && maxTurn < 60 && back,
               fmt("chooser %d on %d, %d frames, steps %zu (window %d), the fastest turn %.0f deg/s; G: auto %d, state %d", (int)chooser, (int)began, frames, steps.size(), (int)window, maxTurn, (int)game.autoOn(), (int)game.state));
     }
-    {   // R-420: auto-explore's tape. M begins it: the deck puts a cassette in and plays it, the track starting as the sequence moves the tape,
+    {   // auto-explore's tape. M begins it: the deck puts a cassette in and plays it, the track starting as the sequence moves the tape,
         // its author and title fading in at the top left and gone after a few seconds, the game's own sounds ducked; at a track's end the next
         // cassette, round to the first; M again the stop key (the place kept), once more the play key from there; the controller's SELECT the
         // same; a key the end, the music fading with auto-explore, taken up again as it begins. A file listed but gone is left out, one that
@@ -700,7 +700,7 @@ void unitAuto(const Check& check) {
                   listed, (int)inserted, lead1, atInsert, (int)started1, (int)first, capIn, capWhole, capGone, (int)credit1, duck, (int)changed, lead2, atChange, (int)second, (int)round,
                   (int)stopKey, (int)cut, placeAt, keptAt, duckOff, (int)resumed, (int)select, (int)ended, (int)faded, g1, g2, (int)again, (int)passed, (int)empty));
     }
-    {   // R-420: the deck's sequences: each kind's parts at their times (onsets counted), the tape moving where it should (the play key's ka-chunk
+    {   // the deck's sequences: each kind's parts at their times (onsets counted), the tape moving where it should (the play key's ka-chunk
         // just before it, the hiss after it), never near clipping, alike for a seed and not for two; through the synth over the ducked rest,
         // the deck itself not ducked; -1 hushes it
         const int sr = 22050;
@@ -736,7 +736,7 @@ void unitAuto(const Check& check) {
         const bool mixOk = std::fabs(ducked / plain - 0.35) < 0.005 && diff < 1e-5 && hushed == 0;
         check("auto-explore's tape: the cassette deck (R-420)", ok && mixOk, det + fmt("; the hum ducked to %.3f of itself, the deck through the synth within %.1e, hushed %.4f", ducked / plain, diff, hushed));
     }
-    {   // R-420: where the tape is read: the explorer's `music` folder when it holds a track, else the game's own beside the executable (in a
+    {   // where the tape is read: the explorer's `music` folder when it holds a track, else the game's own beside the executable (in a
         // macOS app's Resources from its executable, the app's from a bare binary beside it); a folder's playlist first, then the sound
         // files it does not list, by name
         const std::string own = tapeTestDir(), app = "shots/tests/unit_tape_app", res = app + "/Vesperis.app/Contents/Resources/music";
@@ -762,7 +762,7 @@ void unitAuto(const Check& check) {
     }
 }
 
-// E-06: the states' table (game_types.h) holds, for the 29 states there were, the lists the game kept by hand until E-06: `frame`'s
+// E-06: the states' table (game_types.h) holds, for its first 29 states, what the hand-kept lists it replaced held: `frame`'s
 // `simulating` and its stowing of the radar camera and the telescope, the render switch's overlays, the dark radio's `taken`, the
 // save's `inPlay` and its ground, `mouseCaptureWanted`, the photo tools' scenes, the typing states (the global keys, the controller's
 // keyboard), `padContext`'s contexts, and the names the harness printed (modes_game.cpp's `auto`)

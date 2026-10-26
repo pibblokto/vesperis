@@ -64,7 +64,7 @@ void addFeatures(Layout& L, RuinSpec& r, const Culture& c) {
             for (size_t i = first; i < r.buildings.size(); i++) r.buildings[i].district = DI_HARBOUR;
         }
     }
-    // T-02: a reservoir upslope of an industrial or a modern town (on a desert where there is room; on a living world a town's on a slope): a
+    // a reservoir upslope of an industrial or a modern town (on a desert where there is room; on a living world a town's on a slope): a
     // basin of masonry in its bank, a round tank of concrete
     if ((ft & FT_RESERVOIR) && r.sclass != SC_MONUMENT && r.sclass != SC_HAMLET && r.sclass != SC_WORKS &&
         (st.desert ? rng.chance(big ? 0.8 : 0.4) : (townOrGreater(r.sclass) && st.slope > 0.02 && rng.chance(0.5)))) {
@@ -77,11 +77,11 @@ void addFeatures(Layout& L, RuinSpec& r, const Culture& c) {
         }
     }
     // the terraces
-    const bool terracer = c.genome.of(GV_LAND) == LD_TERRACED && c.age <= AGE_MODERN;   // A-04: a people of terraces terraced any slope, in any age
+    const bool terracer = c.genome.of(GV_LAND) == LD_TERRACED && c.age <= AGE_MODERN;   // a people of terraces terraced any slope, in any age
     if (((ft & FT_TERRACES) || terracer) && st.slope > (terracer ? 0.02 : 0.06) && r.sclass != SC_MONUMENT) {
         double step = clampd(1.4 / st.slope, 8, 30), h = 1.3 + 0.6 * rng.uni();
         double dx = std::sin(st.downhill), dz = std::cos(st.downhill), ax = std::cos(st.downhill), az = -std::sin(st.downhill);
-        const double Rt = std::min(R, 80.0);   // A-03: the terraces of the gardens round a village's or a town's middle (a wider town's would run to hundreds)
+        const double Rt = std::min(R, 80.0);   // the terraces of the gardens round a village's or a town's middle (a wider town's would run to hundreds)
         double d0 = -std::floor(Rt / step) * step + step * rng.uni();
         int segs = 0;
         for (double d = d0; d < Rt; d += step) {
@@ -109,7 +109,7 @@ void addFeatures(Layout& L, RuinSpec& r, const Culture& c) {
             for (int k = 0; k < segs; k++) {
                 double a = st.wind + (-0.95 + 1.9 * (k + 0.5) / segs);
                 if (rng.chance(0.15)) continue;   // fallen
-                if (!L.offStreets(std::sin(a) * rw, std::cos(a) * rw, a + PI / 2, 3.5, 0.5)) continue;   // T-02: a gap where a street goes out
+                if (!L.offStreets(std::sin(a) * rw, std::cos(a) * rw, a + PI / 2, 3.5, 0.5)) continue;   // a gap where a street goes out
                 if (L.add(BK_WINDWALL, std::sin(a) * rw, std::cos(a) * rw, a + PI / 2, 3.5, 0.5, hWall, 0.5, false)) placed++;
             }
             r.windwall = placed > 0;
@@ -120,7 +120,7 @@ void addFeatures(Layout& L, RuinSpec& r, const Culture& c) {
         int n = 3 + rng.irange(4), placed = 0;
         for (int k = 0; k < n; k++) {
             double d = R + 12 + 14 * k + rng.sym(3), a = st.ridgeDir + rng.sym(0.12);
-            if (!L.offStreets(std::sin(a) * d, std::cos(a) * d, a, 1.1, 1.1)) continue;   // T-02
+            if (!L.offStreets(std::sin(a) * d, std::cos(a) * d, a, 1.1, 1.1)) continue;
             if (L.add(BK_CAIRN, std::sin(a) * d, std::cos(a) * d, a, 1.1, 1.1, 2.1, 0.5, false)) placed++;
         }
         r.cairns = placed > 0;
@@ -135,8 +135,8 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
     settlementSize(r, rng, n, R, c, &mon);
     r.size = R;
     r.site = readSite(g, r);   // C-08: the terrain round it, read before anything is placed (no draw of the layout's stream)
-    L.luckS = rng.sym(0.15);   // C-01's settlement's decay draw: its fortune now (A-03)
-    // T-02: a village, a town or a city of a medieval, an industrial or a modern people (or of a place left in one of those ages): its plan by
+    L.luckS = rng.sym(0.15);   // C-01's settlement's decay draw: its fortune now
+    // a village, a town or a city of a medieval, an industrial or a modern people (or of a place left in one of those ages): its plan by
     // its ages (`layoutTown`); a camp, a hamlet, a futuristic people's great places and a lone monument as before
     {
         TownHist own; own.ages.push_back(c.age);
@@ -150,11 +150,11 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
     }
     const double h0 = r.heading, S = ageScale(c.age);
     const double fx = std::sin(h0), fz = std::cos(h0), sx = std::cos(h0), sz = -std::sin(h0);   // along the heading, and across it
-    // A-04: the people's edge (a wall, a bank and its ditch, nothing) round its towns, and a village now and then, to the industrial age
+    // the people's edge (a wall, a bank and its ditch, nothing) round its towns, and a village now and then, to the industrial age
     const int edge = G.of(GV_EDGE), streets = G.of(GV_STREETS), pub = G.of(GV_PUBLIC), links = G.of(GV_LINKS), land = G.of(GV_LAND);
     r.walled = c.age <= AGE_INDUSTRIAL && edge != ED_NOTHING && r.sclass >= SC_VILLAGE && r.sclass != SC_MONUMENT && rng.chance(townOrGreater(r.sclass) ? 0.85 : 0.3);
-    const double towerShare = 0.5 + 1.5 * G.at(GV_HEIGHT);   // A-04: how many towers the people raised
-    // A-03: a work of the industrial or modern age beside a hamlet or a village (a pit's headframe, a mill; tanks, a mast)
+    const double towerShare = 0.5 + 1.5 * G.at(GV_HEIGHT);   // how many towers the people raised
+    // a work of the industrial or modern age beside a hamlet or a village (a pit's headframe, a mill; tanks, a mast)
     auto work = [&](double x, double z, double head) {
         if (c.age == AGE_INDUSTRIAL) {
             if (r.site.relief > 0.15 && rng.chance(0.5)) return L.add(BK_HEADFRAME, x, z, head, 20 + 6 * rng.uni(), 16 + 4 * rng.uni(), 20 + 8 * rng.uni(), 0.5);
@@ -166,7 +166,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
         }
         return false;
     };
-    // A-04: the focal accent before the centre (a town's, and a village's half the time), where the centre does not carry it
+    // the focal accent before the centre (a town's, and a village's half the time), where the centre does not carry it
     auto focusBefore = [&](double front, double scale) {
         if (r.plan != SP_GRID && c.age < AGE_FUTURISTIC)   // the people's monuments flanking the centre's front (the grid's are its plaza's)
             for (int side = -1; side <= 1; side += 2) L.stela(side * 4.5 * sx + fx * (front + 3), side * 4.5 * sz + fz * (front + 3), h0, 3.0 + 2.0 * rng.uni(), true);
@@ -187,7 +187,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
         }
         case SP_CLUSTER: {   // houses scattered (A-04: an organic people's towns and villages round their centre)
             if (r.sclass != SC_HAMLET) { L.centre(0, 0, h0, townOrGreater(r.sclass), false); const Building& cb = r.buildings.back(); focusBefore(cb.hd + 2, townOrGreater(r.sclass) ? 1.0 : 0.6); }
-            const int triesMax = r.sclass == SC_CITY || r.sclass == SC_CAPITAL ? 8 : 20;   // T-01: a city's core is full sooner
+            const int triesMax = r.sclass == SC_CITY || r.sclass == SC_CAPITAL ? 8 : 20;   // a city's core is full sooner
             for (int k = 0, placed = 0; k < n && placed < n; k++)
                 for (int tries = 0; tries < triesMax; tries++) {
                     double a = rng.uni() * TAU, rr = R * 0.85 * std::sqrt(rng.uni());
@@ -252,7 +252,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
                         }
                     }
             } else {
-                const bool bigCore = r.sclass == SC_CITY || r.sclass == SC_CAPITAL;   // T-01: a city's rings, a street's width apart
+                const bool bigCore = r.sclass == SC_CITY || r.sclass == SC_CAPITAL;   // a city's rings, a street's width apart
                 int rings = bigCore ? std::max(2, (int)(R / (14.0 * S))) : (r.sclass == SC_TOWN ? 2 : 1);
                 for (int ring = 0; ring < rings && placed < n; ring++) {
                     double rr = bigCore ? R * (0.22 + 0.73 * ring / (rings - 1.0)) : R * (rings == 1 ? 0.6 : (ring == 0 ? 0.45 : 0.82));
@@ -276,7 +276,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
             // streets along the heading and across it, blocks of 17 x 15 m (the age's scale); the plaza at the centre: C-01's platform,
             // colonnade and stelae, or the age's centre (A-04: the people's) with its monuments before it and its focal accent; a hall
             // beside it (a station, a stadium farther out); a tower or two toward the edge (a modern town's towers in its middle);
-            // A-04: a plaza kept open round the centre, gardens, the plaza's houses arcaded, colonnades along the main street
+            // a plaza kept open round the centre, gardens, the plaza's houses arcaded, colonnades along the main street
             double bx = (17.0 + 3.0 * rng.uni()) * S, bz = (15.0 + 3.0 * rng.uni()) * S;
             const bool c01 = c.age == AGE_MEDIEVAL && G.of(GV_CENTRE) == CE_TEMPLE && rng.chance(0.35);   // C-01's plaza
             if (c01) {
@@ -312,7 +312,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
                 }
             std::sort(nodes.begin(), nodes.end());
             bool hallDone = c.age == AGE_INDUSTRIAL || c.age == AGE_MODERN; int towersDone = 0, placed = 0;
-            const int towersMax = (int)std::lround((c.age == AGE_INDUSTRIAL ? 4 : 2) * towerShare * (r.sclass == SC_CITY || r.sclass == SC_CAPITAL ? R / 120.0 : 1.0));   // T-01: a city's many
+            const int towersMax = (int)std::lround((c.age == AGE_INDUSTRIAL ? 4 : 2) * towerShare * (r.sclass == SC_CITY || r.sclass == SC_CAPITAL ? R / 120.0 : 1.0));   // a city's many
             const double plaza = pub == PU_PLAZAS ? R * 0.24 : 0;
             int gardenK = 0;
             for (const auto& nd : nodes) {
@@ -347,7 +347,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
                 for (int j = -2; j <= 2; j++) for (int side = -1; side <= 1; side += 2) { if (j == 0) continue; L.add(BK_COLONNADE, sx * side * bx * 0.5 + fx * j * bz, sz * side * bx * 0.5 + fz * j * bz, h0, 0.5, bz * 0.42, 3.5, 0.4, true); }
             break;
         }
-        case SP_GREAT: {   // A-03: a futuristic people's few great structures and the land between left wild
+        case SP_GREAT: {   // a futuristic people's few great structures and the land between left wild
             if (r.sclass == SC_HAMLET) {
                 for (int k = 0; k < n; k++)
                     for (int tries = 0; tries < 20; tries++) { double a = rng.uni() * TAU, rr = R * 0.8 * std::sqrt(rng.uni()); if (L.dwelling(std::sin(a) * rr, std::cos(a) * rr, rng.uni() * TAU)) break; }
@@ -355,7 +355,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
             }
             const bool town = townOrGreater(r.sclass);
             const double A = (0.75 + 0.8 * G.at(GV_AMBITION)) * (r.sclass == SC_CAPITAL ? 1.25 : 1.0);
-            switch (G.of(GV_CENTRE)) {   // A-04: the people's centre: a spire, its arcology, a dome, a ring, a stepped tomb, a ring's machine
+            switch (G.of(GV_CENTRE)) {   // the people's centre: a spire, its arcology, a dome, a ring, a stepped tomb, a ring's machine
                 case CE_TEMPLE: { double rr = (18 + 10 * rng.uni()) * A; L.add(BK_SPIRE, 0, 0, h0, rr, rr, ((town ? 600 : 350) + 400 * rng.uni()) * L.towerK, 0.5, false); break; }
                 case CE_ASSEMBLY: { double rr = ((town ? 70 : 40) + 30 * rng.uni()) * A; L.add(BK_HABITAT, 0, 0, h0, rr, rr, rr * 0.6, 0.5, false); break; }
                 case CE_MARKET: case CE_MACHINE: { double rr = ((town ? 70 : 45) + 40 * rng.uni()) * A; L.add(BK_RING, 0, 0, h0 + PI / 2, rr, 6, 2 * rr, 0.5, false); break; }
@@ -394,14 +394,14 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
         }
     }
     if (r.walled) {   // the town wall: a ring of segments, a stretch fallen here and there, a gate at each end of the street's axis;
-                      // A-03: a palisade on its bank and a gate of two posts, or walls with round towers at their joints and gatehouses;
-                      // A-04: a bank and its ditch where the people dug its edge
-        double reach = 0;   // C-08: outside every building (a wall through a house blocked its doorway on the desert test world)
+                      // a palisade on its bank and a gate of two posts, or walls with round towers at their joints and gatehouses;
+                      // a bank and its ditch where the people dug its edge
+        double reach = 0;   // outside every building (a wall through a house blocked its doorway on the desert test world)
         for (const Building& b : r.buildings) reach = std::max(reach, std::sqrt(b.x * b.x + b.z * b.z) + std::sqrt(b.hw * b.hw + b.hd * b.hd));
         const bool pal = c.age == AGE_PREHISTORIC || edge == ED_DITCHES;
-        double rw = std::max(R * 1.04, reach + 3.0 + (!pal && c.towers ? 3.6 : 0.0));   // A-03: and its round towers' width (they stood in two doorways)
+        double rw = std::max(R * 1.04, reach + 3.0 + (!pal && c.towers ? 3.6 : 0.0));   // and its round towers' width (they stood in two doorways)
         int segs = 10 + rng.irange(5);
-        if (r.sclass == SC_CITY || r.sclass == SC_CAPITAL) segs = std::max(segs, (int)(TAU * rw / 45.0));   // T-01: a city's wall in stretches of a town's
+        if (r.sclass == SC_CITY || r.sclass == SC_CAPITAL) segs = std::max(segs, (int)(TAU * rw / 45.0));   // a city's wall in stretches of a town's
         double hWall = 4.0 + 2.0 * rng.uni();
         if (pal) hWall *= 0.65;
         std::vector<double> rad(segs);
@@ -427,7 +427,7 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
             }
         }
     }
-    // A-04: the people's relation to the land: a high place toward the ridge (a stepped platform and its shrine), an aqueduct coming down
+    // the people's relation to the land: a high place toward the ridge (a stepped platform and its shrine), an aqueduct coming down
     // from the high ground; the people's tunnels' mouths
     if (r.sclass >= SC_VILLAGE && r.sclass != SC_MONUMENT && c.age <= AGE_MODERN) {
         const double rd = r.site.ridgeDir;
@@ -439,6 +439,6 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
         if (links == LK_TUNNELS && c.age >= AGE_MEDIEVAL)
             for (int k = 0, made = 0; k < 12 && made < 3; k++) { const double a = rng.uni() * TAU, d = R * (0.3 + 0.6 * rng.uni()); if (L.add(BK_PORTAL, std::sin(a) * d, std::cos(a) * d, a, 2.4, 3.5, 4.8, 0.8, true)) made++; }
     }
-    addFeatures(L, r, c);   // C-08: after the plan and the wall, so the earlier draws stay where C-01 left them
-    if (c.age == AGE_FUTURISTIC && r.plan == SP_GREAT && r.sclass != SC_HAMLET) placeFurniture(L, r, R);   // R-412
+    addFeatures(L, r, c);   // after the plan and the wall, so the earlier draws stay where C-01 left them
+    if (c.age == AGE_FUTURISTIC && r.plan == SP_GREAT && r.sclass != SC_HAMLET) placeFurniture(L, r, R);
 }

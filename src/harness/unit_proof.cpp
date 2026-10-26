@@ -3,9 +3,9 @@
 #include "harness/test_worlds.h"
 #include "harness/scenes_table.h"
 
-// F-01 to F-07: the frames by any thread count, bit for bit
+// the frames by any thread count, bit for bit
 void unitPerf(const Check& check) {
-    {   // F-01: the frames the regress never hashes, drawn by the workers and by one thread in one run (B-310's contract, A-02's template),
+    {   // the frames the regress never hashes, drawn by the workers and by one thread in one run (B-310's contract, A-02's template),
         // at 4x: the shore through the surface renderer, and through the game the cabin (the light on and off, the hull glass, the roof, the
         // drones out at the rack and outside the window), the radar camera, the landing map whole and zoomed, the ground, the nose camera and
         // the sector map. A game's frame is drawn at one instant (`frame(in, 0)`): the workers' twice (a frame that changes by itself says so),
@@ -17,7 +17,7 @@ void unitPerf(const Check& check) {
             if (a == a2 && a == s) same++;
             else bad += fmt("%s%s %s", bad.empty() ? "" : "; ", what, a != a2 ? "not the same twice" : "DIFFERS with one thread");
         };
-        for (int sc : {1, 2, 4}) {   // B-423: the forest (the `felisian_forest` scene)
+        for (int sc : {1, 2, 4}) {   // the forest (the `felisian_forest` scene)
             setFramebufferScale(sc);
             SpaceRenderer srF; StarNeighborhood nbF; StarSystem sysF; SurfaceView svF; double tF = 0;
             if (setupSceneForType(PT_FELISIAN, 12, 35 * DEG, 0.6, -0.03, svF, sysF, nbF, tF, SCENE_FOREST)) {
@@ -104,7 +104,7 @@ void unitPerf(const Check& check) {
         setFramebufferScale(saved);
         check("threads: the frames the regress skips (F-01, B-423)", frames >= 20 && same == frames, fmt("%d frames (the forest at 1x, 2x and 4x also with three threads; the rest at 4x) the same with %d threads and with one: %d%s%s", frames, parallelThreads(), same, bad.empty() ? "" : "; ", bad.c_str()));
     }
-    {   // F-06: the picture is the thread count's no more: six scenes at 4x (the forest's flora and terrain, the shore's water and reflections,
+    {   // the picture is the thread count's no more: six scenes at 4x (the forest's flora and terrain, the shore's water and reflections,
         // a town's forms, the aurora's grid, the protostar's strip, the black hole's lens) drawn with one thread and with two, four, six and
         // eight, the rows dealt to whichever thread is free
         const int saved = g_testScale; setFramebufferScale(4);
@@ -129,7 +129,7 @@ void unitPerf(const Check& check) {
         const long contended = pool::contended();   // a dispatch from a thread beside the main one's (it runs alone: none wanted)
         check("threads: the picture whatever the count (F-06)", scenes == 6 && same == scenes && contended == 0, fmt("%d scenes at 4x the same with one thread and with two, four, six and eight: %d%s%s; %ld dispatches from another thread in this run", scenes, same, bad.empty() ? "" : "; ", bad.c_str(), contended));
     }
-    {   // F-02: the probes' lines in the guide made once: a guide saved, loaded and saved again is the same file byte for byte (the second
+    {   // the probes' lines in the guide made once: a guide saved, loaded and saved again is the same file byte for byte (the second
         // save writes the load's lines), so is a third, and a friend's import carries the lines of the file it read
         Guide G; fillBenchGuide(G);
         const std::string a = "shots/tests/f02_guide_a.txt", b = "shots/tests/f02_guide_b.txt", c = "shots/tests/f02_guide_c.txt";
@@ -149,7 +149,7 @@ void unitPerf(const Check& check) {
                   B == C ? "the same" : "DIFFERENT", cached ? "yes" : "NO", imported ? "carried" : "NOT CARRIED", saveMs));
         remove(a.c_str()); remove(b.c_str()); remove(c.c_str());
     }
-    {   // F-02: the PNG writer's thread writes the call's bytes; a picture of noise (every byte in every place, 47 stored blocks at 4x's size)
+    {   // the PNG writer's thread writes the call's bytes; a picture of noise (every byte in every place, 47 stored blocks at 4x's size)
         // read back as drawn; the IEND chunk's CRC the one every PNG has (0xAE426082); a run of six behind a full queue keeps its order
         bool ok = true; std::string det;
         const int sizes[3][2] = {{1280, 800}, {320, 200}, {7, 3}};
@@ -183,7 +183,7 @@ void unitPerf(const Check& check) {
         }
         check("png: the writer's thread writes the call's bytes (F-02)", ok, det);
     }
-    {   // F-02: the star neighbourhood kept across moves: the stars of the sectors the new cube shares with the last taken from it, in the order a
+    {   // the star neighbourhood kept across moves: the stars of the sectors the new cube shares with the last taken from it, in the order a
         // fresh walk finds them; fifty steps of a flight coreward (a fraction of a sector to a few, up and down), a jump far off and back
         StarNeighborhood inc; int steps = 0, same = 0; size_t most = 0; double incMs = 0, freshMs = 0;
         const Vec3 home((HOME_SX + 0.5) * SECTOR_KM, 0.5 * SECTOR_KM, (HOME_SZ + 0.5) * SECTOR_KM);
@@ -208,7 +208,7 @@ void unitPerf(const Check& check) {
         check("stars: the neighbourhood kept across moves (F-02)", steps == 53 && same == steps && most > 50,
               fmt("%d of %d positions the fresh walk's stars in its order (up to %zu stars); %.2f ms kept against %.2f fresh", same, steps, most, incMs, freshMs));
     }
-    {   // F-02: the landing map and the drone bay open at once on a world not yet mapped (the landing map READING THE WORLD, the bay THE MAP
+    {   // the landing map and the drone bay open at once on a world not yet mapped (the landing map READING THE WORLD, the bay THE MAP
         // IS BEING DRAWN; a world not mapped held them 150-200 ms a map before), the map drawn once its thread has made it; Enter still lands
         TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_f02.txt";
         remove(game.guidePath.c_str());
@@ -256,7 +256,7 @@ void unitPerf(const Check& check) {
                   blocked, bay ? "open with its map being drawn" : "NOT OPEN AS EXPECTED", bayLater ? "drawn later" : "NOT DRAWN", landed ? "lands" : "DOES NOT LAND"));
         remove(game.guidePath.c_str());
     }
-    {   // F-03: a fresh site's first frame (every cell of its rings a miss: the warm's fill on the pool) drawn by the workers and by one
+    {   // a fresh site's first frame (every cell of its rings a miss: the warm's fill on the pool) drawn by the workers and by one
         // thread: the same picture and the same five caches, every field of every vertex. The home world's default site from the descent's
         // height and standing, the modern test world beside its capital standing (its roads, streets and works in the samples) and a comet
         // standing; each one's rings fit their tori (2r + 3 cells a side within 1 << logN, F-04: 2r + 5, so the fill's cells have distinct slots)
@@ -287,7 +287,7 @@ void unitPerf(const Check& check) {
                     int r[5]; sv.testRings(r);
                     const TerrainCache* cs[5] = {&sv.site.lod0, &sv.site.lod1, &sv.site.lod2, &sv.site.lod3, &sv.site.lodN};
                     bool ok = true;
-                    for (int k = 0; k < 5; k++) if (r[k] > 0 && 2 * r[k] + 5 > (1 << cs[k]->logN)) ok = false;   // F-04: 2r + 5 (the disc's reach on a lava world)
+                    for (int k = 0; k < 5; k++) if (r[k] > 0 && 2 * r[k] + 5 > (1 << cs[k]->logN)) ok = false;   // 2r + 5 (the disc's reach on a lava world)
                     if (ok) fit++; else bad += fmt("%s%s: a ring's disc wider than its torus", bad.empty() ? "" : "; ", what);
                 }
             }
@@ -323,7 +323,7 @@ void unitPerf(const Check& check) {
         check("warm: a fresh site's rings filled on the pool (F-03)", sites == 4 && same == sites && fit == sites && misses > 4 * 4 * SurfaceView::FILL_SERIAL_MAX,
               fmt("%d first frames the same with %d threads and with one, frame and caches: %d; the rings within their tori: %d; cells sampled (%s)%s%s", sites, parallelThreads(), same, fit, seen.c_str(), bad.empty() ? "" : "; ", bad.c_str()));
     }
-    {   // F-03: the routing's descent sinking a pit of two cells a binade at a time (`drainageSink`) is the float loop it stands for, bit for
+    {   // the routing's descent sinking a pit of two cells a binade at a time (`drainageSink`) is the float loop it stands for, bit for
         // bit: powers of two and their neighbours either side, zero, the binade where the step rounds by parity, and random starts and counts
         Rng rng(0xF03ULL);
         int cases = 0, differ = 0; long steps = 0; std::string first;
@@ -348,7 +348,7 @@ void unitPerf(const Check& check) {
         check("drainage: the two-cell pit sunk a binade at a time (F-03)", differ == 0 && cases > 2000,
               fmt("%d cases, %ld steps of the loop, %d differ%s", cases, steps, differ, first.c_str()));
     }
-    {   // F-04: the terrain's cells binned once a frame by the rows their pieces reach: the frame the same with the pool's threads and with
+    {   // the terrain's cells binned once a frame by the rows their pieces reach: the frame the same with the pool's threads and with
         // one, three and five (other band edges: a cell missing from a band its pieces reach would leave a hole there), and no corner the
         // bin found unwarmed; scenes with a sea and its shore cuts, a lake, a comet's curved disc and the nose camera, at 1x, 2x and 4x
         const int saved = g_testScale;
@@ -375,7 +375,7 @@ void unitPerf(const Check& check) {
         check("terrain: the cells binned by their rows (F-04)", frames == 36 && same == frames && stale == 0 && cells > 0,
               fmt("%d frames the same with %d threads and with one, three and five: %d; %d cells binned (%d in every band), %d corners unwarmed%s%s", frames, parallelThreads(), same, cells, every, stale, bad.empty() ? "" : "; ", bad.c_str()));
     }
-    {   // F-05: the camera feeds' noise by rows: the state at every row's start from the row's jump (a 32x32 bit matrix) is the state the
+    {   // the camera feeds' noise by rows: the state at every row's start from the row's jump (a 32x32 bit matrix) is the state the
         // serial walk reaches there, a row of FBW steps at a time, at every scale's width, for seeds of both feeds and the extremes
         int rows = 0, same = 0; std::string bad;
         for (int sc = 1; sc <= 4; sc++) {
@@ -394,7 +394,7 @@ void unitPerf(const Check& check) {
         }
         check("feeds: the noise's rows from the jump (F-05)", rows > 0 && same == rows, fmt("%d rows at four widths and five seeds, %d start as the serial walk%s%s", rows, same, bad.empty() ? "" : ": ", bad.c_str()));
     }
-    {   // F-07: wrap2pi's turns without fmod give fmod's bits: a sweep over three turns either way, the values next to every turn's edge
+    {   // wrap2pi's turns without fmod give fmod's bits: a sweep over three turns either way, the values next to every turn's edge
         // and the specials, against the formula it had
         auto old = [](double a) { a = std::fmod(a, TAU); if (a < 0) a += TAU; return a; };
         std::vector<double> xs = {0.0, -0.0, TAU, -TAU, 2 * TAU, -2 * TAU, 3 * TAU, PI, -PI, 1e-300, -1e-300, 4.9e-324, -4.9e-324, 1e300, -1e300,
@@ -416,7 +416,7 @@ void unitPerf(const Check& check) {
         }
         check("wrap2pi: a turn either side without fmod, the bits it had (F-07)", same == xs.size(), fmt("%zu values, %zu the same%s", xs.size(), same, bad.c_str()));
     }
-    {   // F-07: the floors to an integer against std::floor: the truncation's form (baseline x86-64's) and the one this build uses, over the
+    {   // the floors to an integer against std::floor: the truncation's form (baseline x86-64's) and the one this build uses, over the
         // integers and their neighbours to 2^40 either way, the halves, -0.0, and two million values at the scales the noise and maps see
         std::vector<double> xs = {0.0, -0.0, 0.5, -0.5, 1e-300, -1e-300, 4.9e-324, -4.9e-324, 2147483647.0, -2147483648.0, 9.0e15, -9.0e15};
         for (double e = 1; e < 1.1e12; e *= 2)
@@ -432,7 +432,7 @@ void unitPerf(const Check& check) {
         }
         check("ifloor: the truncation's floor and this build's, std::floor's integer (F-07)", same == xs.size(), fmt("%zu values, %zu the same%s", xs.size(), same, bad.c_str()));
     }
-    {   // F-07: the mush's quotient as a multiply and a shift (`(sum x m) >> 32`, m = 2^32 / d + 1, d = rows x k): every sum of a box of
+    {   // the mush's quotient as a multiply and a shift (`(sum x m) >> 32`, m = 2^32 / d + 1, d = rows x k): every sum of a box of
         // intensities (to 2047 d) for the kernels to 8, and for every kernel to 38 the sums either side of each multiple of d (where a
         // short reciprocal would first be wrong)
         long tested = 0, wrong = 0; std::string bad;
@@ -449,7 +449,7 @@ void unitPerf(const Check& check) {
             }
         check("mush: the box's quotient by a multiply and a shift (F-07)", wrong == 0, fmt("%ld quotients, %ld wrong%s", tested, wrong, bad.c_str()));
     }
-    {   // F-01: the pool's dispatch, printed and not checked (it decides F-06's spin): an empty parallelFor over eight bands after a rest of
+    {   // the pool's dispatch, printed and not checked (it decides F-06's spin): an empty parallelFor over eight bands after a rest of
         // 2 ms (the workers parked, as at a frame's first pass) and fifteen back to back (a surface frame dispatches about fifteen)
         auto empty = [](int, int) {};
         for (int i = 0; i < 200; i++) parallelFor(8, 1, empty);

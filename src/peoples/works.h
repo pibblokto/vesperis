@@ -1,44 +1,11 @@
-// T-03 (2026-10-09): the works (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 6: "it can be virtually anything"). Until T-03 a
-// people's works stood in its towns (the mills, the stations, the harbours, a modern city's stadium and power station) or were its plan's
-// (a far-future people's one to three structures, a futuristic people's maglev). Everything else people made outside their towns is here,
-// each placed by a rule of the terrain or by its people's history (H-02), and built in the way of its people's last age (B-414: a world shows
-// only the age its people reached; a work of a place left before that age, a battle of an earlier age, a later people's old stones are gone):
-//
-// * by the terrain: a quarry in the rock its town was built of (a face cut into the hillside in benches, an open pit; a prehistoric
-//   people's flint pits), a mine where the plan read coal and ore (adits, headframes and their spoil, an open pit), a dam at a valley's
-//   narrows holding its reservoir, an aqueduct from a spring on higher ground carried over the low ground on arches, an observatory on the
-//   highest summit near its town, a shrine where its people's holy place was (a summit, a spring, a cave, a grove, the open sky) and the
-//   pilgrims' way to it, a necropolis on the slope facing its city, lines and figures on a flat dry plain, a henge or rows of standing
-//   stones on open ground, a fortified line along the frontier, a launch site near the equator, an antenna field on a high plain, wrecks
-//   on the shore, a colossus over its capital or at its harbour's mouth, a terraformed basin, wind farms on the ridges, a lighthouse on
-//   a headland, the far future's inexplicable (a plain made flat, pillars to the horizon, a mountain cut into terraces, a lattice over a
-//   valley, a sphere on its point);
-// * by the history: a battlefield between the two sides of a war where the history fought its battle (cairns over the dead, barrows and
-//   a memorial, trenches and shell craters, craters and the wrecks of machines, glassed craters), a dam, a mine, an aqueduct, an
-//   observatory, a lighthouse, a launch site where the history finished one, the last shelter by the place the collapse ended in.
-// * D-05, the works of the end of a people that lost its sun: the last shelter a hall into the rock by the warmest ground, a shelter by each
-//   of the last places it left before (their last records with them), domes over the warm ground by those places (a medieval people's
-//   vaulted hall over its spring, the later ages' ribs of iron or steel and their glass, a futuristic people's habitat) with their glasshouses
-//   in rows, and the graves of the last generations by the last shelter; the last city is its last place, the lights left on (D-04) its
-//   late peoples'.
-//
-// The world's works are made once (`worldWorksOf`, cached, on the plan's thread after the histories): each a place, a size, its age and
-// the years before the end it was left, the numbers its rule found (a dam's floor, crest and reservoir), and what it does to the ground
-// (`GroundEdit`: a cut, a pit, a ditch, a crater, a flattened plain, a reservoir's water, lines). The surface draws the ground's edits into
-// the terrain (`SurfaceSite::addWorkEdits`) and the work's pieces as a settlement's (`workSpec`: buildings of the works' kinds, peoples/
-// buildings.h); the scanner hears them (WORKS, galaxy/landmarks.h) and the explorer marks them.
-//
-// B-418: the works of the land. T-03 made every work once a world, each rule a handful a people (24 quarries, 4 necropolises, 4 wrecks)
-// for the hundreds of places of a people that held a third of its world: from nine landings in ten the scanner heard none within 40 km.
-// The world's works are the history's and the world's great ones now (the battlefields, the dams, the aqueducts, the observatories, the
-// lighthouses the history lit, the launch sites, the holy place and its way, the colossus, the fortified line, the antenna field, the
-// terraformed basins, the far future's, the lines on the plains, the last shelter, the mines the history sank); a people's everyday works
-// are its land's (`landWorkOf`): a grid of cells of LAND_CELL_M, a cell holding one where the countryside's density (`planCountryside`:
-// the people's land, thicker near its places) by its age's appetite draws it, the kind what the cell's ground offered that age (a
-// quarry where its rock shows, flint pits on a prehistoric people's open ground, a mine where the plan read coal and ore, a necropolis
-// facing the settlement it served, standing stones, a wreck on a shore or a plain, a wind farm on a ridge, a shrine where the people's
-// holy place would be, a lighthouse on a headland), sited by the kind's rule inside the cell (its reach and a margin inside, so no two
-// touch), clear of the settlements, the cities' cores and the world's works. Made when first asked and kept (a few milliseconds a work).
+// A people's works outside its towns (T-03; docs/reference/civilisations/built-world.md): quarries, mines, dams, aqueducts, observatories,
+// shrines and their ways, necropolises, lines on the plains, standing stones, fortified lines, launch sites, wrecks, colossi, lighthouses,
+// terraformed basins, the far future's, the battlefields, the last shelters and their domes. The world's works are the history's and the
+// world's great ones, made once (`worldWorksOf`, cached, on the plan's thread after the histories); a land's everyday works are its cells'
+// (`landWorkOf`: a grid of LAND_CELL_M, one where the countryside's density draws it, sited by its kind's rule clear of the settlements and
+// the world's works, made when first asked). Each is built in its people's last age: a place, a size, its age and the years before the end
+// it was left, the numbers its rule found, and what it does to the ground (`GroundEdit`), which the surface draws into the terrain
+// (`SurfaceSite::addWorkEdits`) with its pieces as a settlement's (`workSpec`); the scanner hears them.
 #pragma once
 #include "ruins.h"
 #include <memory>
@@ -49,8 +16,8 @@
 enum WorkKind {
     WO_QUARRY = 0, WO_MINE, WO_DAM, WO_AQUEDUCT, WO_OBSERVATORY, WO_SHRINE, WO_WAY, WO_NECROPOLIS, WO_GEOGLYPH, WO_HENGE, WO_FORT_LINE,
     WO_BATTLEFIELD, WO_LAUNCH, WO_ANTENNA, WO_WRECK, WO_COLOSSUS, WO_TERRAFORM, WO_SHELTER, WO_STRANGE, WO_WINDFARM, WO_LIGHTHOUSE,
-    WO_FORT,   // B-418: a fort on a height in its age's way (`style`: 0 a hill fort's rings of bank, 1 a castle, 2 a redoubt, 3 pillboxes round a blockhouse)
-    // D-05: a people that lost its sun's: a dome over the warm ground by its last places (`style`: 0 a medieval people's hall over its spring, 1 an
+    WO_FORT,   // a fort on a height in its age's way (`style`: 0 a hill fort's rings of bank, 1 a castle, 2 a redoubt, 3 pillboxes round a blockhouse)
+    // a people that lost its sun's: a dome over the warm ground by its last places (`style`: 0 a medieval people's hall over its spring, 1 an
     // industrial people's of iron and glass, 2 a modern people's of steel and glass, 3 a futuristic people's habitat, 4 the far future's), and its
     // glasshouses in rows beside it
     WO_DOME, WO_GREENHOUSE,
@@ -110,7 +77,7 @@ struct Work {
     int war = -1;
     Vec3 sideA, sideB;
     bool heard = true;         // the scanner hears it (a pilgrims' way's stretches and a line's lesser stretches are not)
-    bool land = false;         // B-418: one of the land's (`landWorkOf`), not of the world's list
+    bool land = false;         // one of the land's (`landWorkOf`), not of the world's list
     uint32_t group = 0;        // the stretches of one line (a fortified line, a pilgrims' way, pillars to the horizon) share it
     std::vector<GroundEdit> edits;
 };
@@ -142,7 +109,7 @@ void workSpec(const BodyGen& g, const Work& w, RuinSpec& out);
 double editLeft(double years, double wet, bool line = false);
 
 // ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
-// B-418: the land's works. The grid: rows of LAND_CELL_M of latitude, each row's cells at least as wide (`landCellOf`, the longitude as
+// the land's works. The grid: rows of LAND_CELL_M of latitude, each row's cells at least as wide (`landCellOf`, the longitude as
 // given; `landCellsAround`, a row's count). A cell's work, null where it holds none: made when first asked (the world's works waited for:
 // the land's keep clear of them) and kept, the last two worlds'; `buildLandWork` makes it now, not kept (the unit compares the two)
 constexpr double LAND_CELL_M = 8000;

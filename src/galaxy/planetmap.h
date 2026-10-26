@@ -14,7 +14,7 @@ struct BodyGen;
 extern const char* const MATERIAL_NAMES[MAT_COUNT];
 std::string traitList(const BodyGen& g);   // R-304: "CANYON LANDS, SALT FLATS" or ""
 // N1-01: the family a material belongs to (its nature: the works and the roads read it); `matFamilyOn` is the family it is drawn in
-// on a kind (its bank in every view): a kind without flora may lend the grass and forest families to its two accents (P-00)
+// on a kind (its bank in every view): a kind without flora may lend the grass and forest families to its two accents
 int matFamily(int material);
 int matFamilyOn(int type, int material);
 // the material that stands for a family on a kind (rock: basalt on volcanic worlds, graphite on carbon worlds...: the row's `famRep`, an accent for grass and forest)
@@ -45,20 +45,20 @@ struct SurfaceSample {
     double glow = 0;        // emissive 0..1 (lava)
     double relief = 0;      // 0..1 mountain-ness (used for texture/rock placement)
     double water = -1e9;    // height of the water surface here (sea 0, lakes and rivers above), -1e9 none (M9-04)
-    int biome = BIO_NONE;   // M9-05
-    double landform = 0;    // R-305: how much the traits' landforms shape this point (metres moved, plus 40 x flatten), for the galleries
-    int waterKind = 0;      // B-320: 0 none or the sea, 1 a river, 2 a lake, 3 a wetland pool, 4 a rift lake (the water plane here, wet or bank)
-    double shore = 1e9;     // B-322: signed distance to the water's edge in metres where the water is a feature with an outline (rivers,
+    int biome = BIO_NONE;
+    double landform = 0;    // how much the traits' landforms shape this point (metres moved, plus 40 x flatten), for the galleries
+    int waterKind = 0;      // 0 none or the sea, 1 a river, 2 a lake, 3 a wetland pool, 4 a rift lake (the water plane here, wet or bank)
+    double shore = 1e9;     // signed distance to the water's edge in metres where the water is a feature with an outline (rivers,
                             // lakes): negative in the water, positive on the bank; 1e9 unknown (the sea, pools: the height over the level stands in)
-    double scree = 0;       // O6-04: 0..1 loose rock: the talus at a cliff's foot, the steep flanks (boulder fields, no flora)
-    double oldSea = 0;      // C-01: 0..1 the dry bed of a dead desert world's sea (the drainage's outlet, the finders' shore)
-    int landformTrait = 0;  // Q-01: the trait whose landform marks this point (the last to set `LandOut::mark`), 0 none: the scanner's sights by trait
-    // Q-02: the water's colours of the world's traits here, 0..1 (`qualityWater`): the water kind's (a pink lake, a milky sea's patch that glows at
+    double scree = 0;       // 0..1 loose rock: the talus at a cliff's foot, the steep flanks (boulder fields, no flora)
+    double oldSea = 0;      // 0..1 the dry bed of a dead desert world's sea (the drainage's outlet, the finders' shore)
+    int landformTrait = 0;  // the trait whose landform marks this point (the last to set `LandOut::mark`), 0 none: the scanner's sights by trait
+    // the water's colours of the world's traits here, 0..1 (`qualityWater`): the water kind's (a pink lake, a milky sea's patch that glows at
     // night) and the life kind's (an algal bloom's streak, a barrier reef's lagoon); the surface, the globe and the maps draw them in their own
     // colours (`BodyGen::waterTintColour`, `lifeTintColour`)
     double waterTint = 0, lifeTint = 0;
-    double groundTint = 0;  // Q-02: the ground trait's field here, 0..1: a meteorites' strewn field's stones (the surface's objects), a rainbow stratum's accent
-    double slipFace = 0;    // Q-03: how much this point is a sand dune's slip face, 0..1 (its lee, downwind of the crest, where the sand slides: the singing
+    double groundTint = 0;  // the ground trait's field here, 0..1: a meteorites' strewn field's stones (the surface's objects), a rainbow stratum's accent
+    double slipFace = 0;    // how much this point is a sand dune's slip face, 0..1 (its lee, downwind of the crest, where the sand slides: the singing
                             // dunes' hum; the dune field's share times the lee's, whatever the face's steepness; not a gypsum's dunes, nor snow's drifts)
 };
 
@@ -84,7 +84,7 @@ struct BodyGen {
     double boulderDensity = 0.3;
     double volcanoes = 0.4;
     double bandCount = 8;   // gas giants
-    // X-03 (GEN 12): a giant's character on its globe (hashed, the rng stream stays): the share of the storms' cells that hold a
+    // GEN 12: a giant's character on its globe (hashed, the rng stream stays): the share of the storms' cells that hold a
     // storm (the plain giant's 0.15), the bands' contrast (an ice giant's faint under its haze), and a great storm, an oval the size
     // of a moon at its own latitude (its centre in the pattern's frame, its semi-axes in radians of arc east and north, +1 bright
     // or -1 dark); `giantJetAt` (galaxy/probe.h) turns it whole with its own latitude's jet
@@ -93,39 +93,39 @@ struct BodyGen {
     RGB color, color2;      // primary/secondary tints
     RGB skyTint;            // for atmospheres
     RGB vegColor;           // vegetation (felisian)
-    RGB vegColor2;          // N2-05: the second flora family's colour (hashed, related to vegColor)
-    // M9-02 tectonics, M9-08 dunes
+    RGB vegColor2;          // the second flora family's colour (hashed, related to vegColor)
+    // tectonics, M9-08 dunes
     bool tectonic = false;  // plates shape the surface
     double plateK = 0.8;    // worley frequency on the unit sphere (about 4 pi k^2 plates)
     double chainAmp = 2500; // height of convergent mountain chains, metres
     double duneWl = 0.25;   // dune wavelength, km
     double windAngle = 0;   // prevailing wind, radians
     int duneStyle = 0;      // 0 transverse, 1 barchan, 2 star
-    double season = 0;      // M9-09: +1 northern summer .. -1 northern winter, scaled by the tilt
-    double tempBias = 0;    // M9-05: climate offset from the body's equilibrium temperature, degrees
-    double latGradient = 1; // P-02: the living climate's contrast from the equator to the poles (the kind's: a hothouse's flat, an ice age's steep)
-    double seaDepth = 1;    // P-02: the living ground's seas' depth factor (the kind's: a superhabitable world's shelf seas)
-    double grassBand = 0;   // P-02: the living biomes' grass band widened (the kind's: a steppe's)
-    double subContrast = 45;   // P-03: a locked living world's day-night contrast (M5-08's; the kind's: a terminator world's sharper)
+    double season = 0;      // +1 northern summer .. -1 northern winter, scaled by the tilt
+    double tempBias = 0;    // climate offset from the body's equilibrium temperature, degrees
+    double latGradient = 1; // the living climate's contrast from the equator to the poles (the kind's: a hothouse's flat, an ice age's steep)
+    double seaDepth = 1;    // the living ground's seas' depth factor (the kind's: a superhabitable world's shelf seas)
+    double grassBand = 0;   // the living biomes' grass band widened (the kind's: a steppe's)
+    double subContrast = 45;   // a locked living world's day-night contrast (M5-08's; the kind's: a terminator world's sharper)
     double riverDensity = 0.6;
-    double lakeDensity = 0.3;    // B-320: the share of 7 km cells that hold a lake (in wet, low country)
-    int traits[TRAIT_SLOTS] = {0, 0, 0, 0, 0, 0};   // R-304: TR_NONE-padded; Q-01: the first three R-304's, the last three by kind of trait (each TR_NONE-padded)
+    double lakeDensity = 0.3;    // the share of 7 km cells that hold a lake (in wet, low country)
+    int traits[TRAIT_SLOTS] = {0, 0, 0, 0, 0, 0};   // TR_NONE-padded; Q-01: the first three R-304's, the last three by kind of trait (each TR_NONE-padded)
     bool hasTrait(int t) const { for (int k = 0; k < TRAIT_SLOTS; k++) if (traits[k] == t) return true; return false; }
     bool anyTrait() const { for (int k = 0; k < TRAIT_SLOTS; k++) if (traits[k]) return true; return false; }
-    double liquidLevel = -1e9;   // R-304 (TR_EXOTIC_SEAS): the level of a liquid that is not water (metres); -1e9 none
-    double tideRangeM = 0;       // Q-02 (TR_GREAT_TIDES): the spring range on the coast at the equator (`tideRangeOf`); 0 no tides (`tideRangeAt`: a place's)
-    RGB waterTintColour, lifeTintColour;   // Q-02: the pink lakes' pink, the milky seas' glow; the blooms' red or green, the lagoons' turquoise
-    double seaReachDeg = 0;      // P-01: a magma ocean's sea reaches this far from the substellar point (degrees)
-    double contScale = 1;        // R-304 (TR_PANGAEA): the continent field's wavelength factor
-    double islandDensity = 0.18; // R-304 (TR_ARCHIPELAGO): the volcanic islands' density
-    double oldSeaM = -1e9;       // C-01 (TR_CIVILISATION on a desert): the level its seas stood at (metres), dry now; -1e9 none
-    int floraFamily = 0, floraFamily2 = 0;   // N2-01 silhouettes: 0 dome, 1 cone, 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree; B-315: 7 weeping, 8 candelabra, 9 spire
-    bool locked = false;    // M5-08: one face toward the star; the climate follows the sub-stellar point
+    double liquidLevel = -1e9;   // TR_EXOTIC_SEAS: the level of a liquid that is not water (metres); -1e9 none
+    double tideRangeM = 0;       // TR_GREAT_TIDES: the spring range on the coast at the equator (`tideRangeOf`); 0 no tides (`tideRangeAt`: a place's)
+    RGB waterTintColour, lifeTintColour;   // the pink lakes' pink, the milky seas' glow; the blooms' red or green, the lagoons' turquoise
+    double seaReachDeg = 0;      // a magma ocean's sea reaches this far from the substellar point (degrees)
+    double contScale = 1;        // TR_PANGAEA: the continent field's wavelength factor
+    double islandDensity = 0.18; // TR_ARCHIPELAGO: the volcanic islands' density
+    double oldSeaM = -1e9;       // TR_CIVILISATION on a desert: the level its seas stood at (metres), dry now; -1e9 none
+    int floraFamily = 0, floraFamily2 = 0;   // silhouettes: 0 dome, 1 cone, 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree; B-315: 7 weeping, 8 candelabra, 9 spire
+    bool locked = false;    // one face toward the star; the climate follows the sub-stellar point
     Vec3 lockedDir;         // body-frame unit vector of the sub-stellar point
-    Vec3 apexDir;           // P-06: a two-faced moon: the body-frame direction it travels (`Body::apexDir`; zero otherwise)
-    double selfGlow = 0;    // M5-02: substellar objects shine on their own (0..1)
-    RGB matColor[MAT_COUNT];   // N1-01: the colour of every material on this body (no star light), used by globe, map and ground
-    // O6-02: the relief spectrum (hashed from the seed; the rng stream stays as in generation 5). A self-affine sum of
+    Vec3 apexDir;           // a two-faced moon: the body-frame direction it travels (`Body::apexDir`; zero otherwise)
+    double selfGlow = 0;    // substellar objects shine on their own (0..1)
+    RGB matColor[MAT_COUNT];   // the colour of every material on this body (no star light), used by globe, map and ground
+    // the relief spectrum (hashed from the seed; the rng stream stays as in generation 5). A self-affine sum of
     // octaves from reliefWl0 km down to the sampling scale, amplitude a0 (wl / wl0)^H, whose a0 is reliefFlat on the
     // plains, reliefHill in hill country and reliefMtn in the mountains (metres); see `reliefSum` in planetmap.cpp.
     double reliefWl0 = 16;      // km, the longest wavelength (a quarter of the radius at most)
@@ -135,22 +135,22 @@ struct BodyGen {
     double reliefErosion = 4;   // octave weight 1 / (1 + reliefErosion slope^2): steep ground stops gathering detail
     double reliefHybrid = 0.6;  // 0..1 how much low ground is smoothed (valley floors)
     double reliefFlat = 55, reliefHill = 300, reliefMtn = 900;
-    double cliffStep = 40;      // O6-04: the height of the cliff bands on steep ground (metres), hashed
-    double cliffAmount = 0.5;   // O6-04: the share of the steep ground that is cliffed (0..1)
+    double cliffStep = 40;      // the height of the cliff bands on steep ground (metres), hashed
+    double cliffAmount = 0.5;   // the share of the steep ground that is cliffed (0..1)
     uint64_t sA = 1, sB = 2, sC = 3, sD = 4, sE = 5, sF = 6, sG = 7;
-    // T-02: the body's star's sector and its index in the system (`Body::starSx..`): a reader of the world that needs its system (the
+    // the body's star's sector and its index in the system (`Body::starSx..`): a reader of the world that needs its system (the
     // history: the star, the comets, the moons) regenerates it from these (`historyOfWorld`, peoples/history.h); never read by the terrain
     int64_t starSx = 0, starSy = 0, starSz = 0;
     int bodyIndex = -1;
     bool starKnown = false;
-    // P-04: a dead world (`deadKind`): its present's mean temperature at the sea's level, as the HUD reads it without the day (its climate,
+    // a dead world (`deadKind`): its present's mean temperature at the sea's level, as the HUD reads it without the day (its climate,
     // `tempBias`, is its then-world's: the ground is the same in both times); a then-world's copy (`thenWorld`) keeps the dead kind it is now
     double nowTempC = 0;
     int deadAs = -1;
-    // D-04: a body of a system with no sun (a drifter and its moons): its own traits given (`darkTraitsOf`), the ground's dark cover read
+    // a body of a system with no sun (a drifter and its moons): its own traits given (`darkTraitsOf`), the ground's dark cover read
     // (`darkGround`: its liquid frozen at its level where `frozenSeas`, its air's snow, a young interior's lava lakes)
     bool dark = false, frozenSeas = false;
-    // D-05: a body of a drifter's system: a people's world there lost its sun (its then-world keeps the flag: the profile, the history and the
+    // a body of a drifter's system: a people's world there lost its sun (its then-world keeps the flag: the profile, the history and the
     // records read the loss through it)
     bool drifter = false;
     static BodyGen make(const Body& b, double season = 0);
@@ -175,11 +175,11 @@ inline const BodyGen& unseasoned(const BodyGen& g, BodyGen& tmp) { if (g.season 
 inline const BodyGen& thenWorld(const BodyGen& g, BodyGen& tmp) {
     if (!deadKind(g.type)) {
         if (!(g.dark && g.hasTrait(TR_CIVILISATION))) return unseasoned(g, tmp);
-        tmp = g; tmp.season = 0; tmp.dark = false; tmp.frozenSeas = false;   // D-05: a drifter's people's world (a desert) had its sun
+        tmp = g; tmp.season = 0; tmp.dark = false; tmp.frozenSeas = false;   // a drifter's people's world (a desert) had its sun
         return tmp;
     }
     tmp = g; tmp.deadAs = g.type; tmp.type = KINDS[g.type].thenKind; tmp.season = 0;
-    tmp.dark = false; tmp.frozenSeas = false;   // D-04: in its people's time it had its sun
+    tmp.dark = false; tmp.frozenSeas = false;   // in its people's time it had its sun
     return tmp;
 }
 inline int nowKind(const BodyGen& g) { return g.deadAs >= 0 ? g.deadAs : g.type; }   // P-04: the kind the explorer walks (a then-world's: the dead kind)
@@ -222,7 +222,7 @@ struct PlanetMap {
     std::vector<uint8_t> albedo;   // 0..255
     std::vector<uint8_t> cloud;    // 0..255
     std::vector<uint8_t> veg;
-    std::vector<uint8_t> wtint, ltint;   // Q-02: the water's trait colours (`SurfaceSample::waterTint`, `lifeTint`), 0..255; empty on a world with none
+    std::vector<uint8_t> wtint, ltint;   // the water's trait colours (`SurfaceSample::waterTint`, `lifeTint`), 0..255; empty on a world with none
     uint64_t seed = 0;
     std::atomic<bool> valid{false};     // set when a (possibly background) generation finished
     std::atomic<bool> generating{false};
@@ -231,7 +231,7 @@ struct PlanetMap {
     PlanetMap(const PlanetMap&) = delete;
     PlanetMap& operator=(const PlanetMap&) = delete;
     void generate(const BodyGen& g);
-    // F-07: the lookups inline (the globe reads seven a pixel; a call each from another file reloaded the data and wrapped the
+    // the lookups inline (the globe reads seven a pixel; a call each from another file reloaded the data and wrapped the
     // longitude again)
     int texelIndex(double lon, double lat) const {   // nearest texel
         double fx = (wrap2pi(lon + PI) / TAU) * W;
@@ -244,7 +244,7 @@ struct PlanetMap {
     double cloudAt(double lon, double lat) const { return bilinear(cloud, lon, lat) / 255.0; }
     double heightAt(double lon, double lat) const { return bilinear(height, lon, lat); }
     int materialAt(double lon, double lat) const { return material[texelIndex(lon, lat)]; }
-    double waterTintAt(int i) const { return wtint.empty() ? 0.0 : wtint[i] / 255.0; }   // Q-02 (a texel's index)
+    double waterTintAt(int i) const { return wtint.empty() ? 0.0 : wtint[i] / 255.0; }   // (a texel's index)
     double lifeTintAt(int i) const { return ltint.empty() ? 0.0 : ltint[i] / 255.0; }
 
 private:
@@ -266,7 +266,7 @@ private:
 
 // ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
 
-// P-02: an ice age's sheet (KT_ICE_SHEETS): the latitude (degrees) its edge reaches at a point, without the season (the ground is the
+// an ice age's sheet (KT_ICE_SHEETS): the latitude (degrees) its edge reaches at a point, without the season (the ground is the
 // world's); poleward of it the land lies under the sheet
 double iceSheetEdgeDeg(const BodyGen& g, const Vec3& unit);
 // O6-02: the relief spectrum alone at a point (metres, and the slope of the sum as rise over run), for tests

@@ -12,7 +12,7 @@
 #include <cmath>
 
 namespace {
-enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };   // R-419: PSP_AUTO auto-explore's profiles
+enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };   // PSP_AUTO auto-explore's profiles
 const char* const ROLE_SHORT[PR_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
 const char* const ROLE_SCREEN[PR_BUTTONS] = {"A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
 constexpr double REPEAT_DELAY = 0.4, REPEAT_EVERY = 0.09;   // the arrows held in the menus and the screens
@@ -83,7 +83,7 @@ std::string Game::padContextName(int ctx) const {
         case GameState::TEXT_ENTRY: return "THE ENTRY";
         case GameState::HELP: return "HELP";
         case GameState::DESCENT: case GameState::ASCENT: return "THE CAPSULE";
-        case GameState::AUTO: return "AUTO-EXPLORE";   // R-419
+        case GameState::AUTO: return "AUTO-EXPLORE";
         default: return "COMMANDS";
     }
 }
@@ -239,7 +239,7 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
         item(settings.scanlines ? "SCANLINES OFF" : "SCANLINES ON", KEY_K, MOD_CTRL);
         item("FULLSCREEN", KEY_F, MOD_CTRL);
         if (state != GameState::KEYS) item("CONTROLLER SETUP", -1, 0, PSP_CONTROLLER);
-        if (scene) item("AUTO-EXPLORE", -1, 0, PSP_AUTO);   // R-419
+        if (scene) item("AUTO-EXPLORE", -1, 0, PSP_AUTO);
         if (scene) item("THE GAME MENU", KEY_ESCAPE);
         return v;
     }
@@ -318,7 +318,7 @@ std::vector<Game::PadItem> Game::padItems(int page) const {
             item(surf.hasWaypoint ? "CLEAR THE WAYPOINT" : "WAYPOINT AT THE CROSSHAIR", KEY_M);
             item(readings ? "PUT THE READINGS AWAY" : "THE READINGS", KEY_TAB);
             if (!surf.inVehicle()) {
-                item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);   // D-04
+                item(surf.lamp ? "PUT THE LAMP OUT" : "LIGHT THE LAMP", KEY_U);
                 item("VISION MODE", KEY_V);
                 item("CREATURES NEARBY", KEY_X);
                 const int aw = surf.player.autoWalk, next = aw == 0 ? 3 : (aw < 6 ? 6 : (aw < 9 ? 9 : 0));
@@ -445,7 +445,7 @@ void Game::padRunItem(const PadItem& it) {
     switch (it.special) {
         case PSP_KEYBOARD: padUI.keyboard = true; padUI.kbFor = state == GameState::SPACE && ship.targeting ? 1 : 0; padUI.kRow = padUI.kbFor == 1 ? 3 : 0; padUI.kCol = 0; padUI.latch = 0; return;
         case PSP_CONTROLLER: openPadScreen(); return;
-        case PSP_AUTO: returnState = state; openAutoScreen(state); return;   // R-419
+        case PSP_AUTO: returnState = state; openAutoScreen(state); return;
         case PSP_TYPE: for (char c : it.text) padPress(charKey(c), 0); return;
         case PSP_TWICE: padPress(it.key, it.mods); padPress(it.key, it.mods); return;
         default: padPress(it.key, it.mods); return;

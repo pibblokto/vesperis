@@ -14,19 +14,19 @@ static const Mode MODES[] = {
      }},
     {"galaxy", "galaxy", "", "G-01: the density function in numbers, the home sectors, the sky from above the home star", "modes_galaxy.cpp",
      [](int argc, char** argv) -> int {
-         runGalaxy(); return 0;   // G-01
+         runGalaxy(); return 0;
      }},
     {"chart", "galaxy", "", "G-05: the chart's column against the field, its cost, and the star map's galaxy page at every level", "modes_galaxy.cpp",
      [](int argc, char** argv) -> int {
-         return runChart();   // G-05
+         return runChart();
      }},
     {"crossing", "galaxy", "", "G-07: two long flights from home through the cabin, ahead and aside", "modes_galaxy.cpp",
      [](int argc, char** argv) -> int {
-         return runCrossing();   // G-07
+         return runCrossing();
      }},
     {"home", "galaxy", "", "G-02: the new-game search's candidates, each parked at its first living world and timed", "modes_galaxy.cpp",
      [](int argc, char** argv) -> int {
-         runHome(); return 0;   // G-02
+         runHome(); return 0;
      }},
     {"survey", "galaxy", "[n]", "M9-01: distributions over n bodies near the start (2,000): types, heat, gravity, moons, materials, the sky", "modes_galaxy.cpp",
      [](int argc, char** argv) -> int {
@@ -53,8 +53,8 @@ static const Mode MODES[] = {
     {"probe", "space", "[<sx> <sy> <sz> <body>] [chute] [night] [wav] | giants | stability [scale]", "X-01: a giant's air and a probe's fall into it; X-03: the giants' characters; X-02: the decks held still", "modes_probe.cpp",
      [](int argc, char** argv) -> int {
          if (argc > 2 && std::string(argv[2]) == "stability") return runProbeStability();
-         if (argc > 2 && std::string(argv[2]) == "giants") return runProbeGiants();   // X-03
-         return runProbe(argc, argv);   // X-01
+         if (argc > 2 && std::string(argv[2]) == "giants") return runProbeGiants();
+         return runProbe(argc, argv);
      }},
     {"surface", "surface", "[type]", "every landable type (or one) at noon, sunset, night and at 82 degrees", "modes_surface.cpp",
      [](int argc, char** argv) -> int {
@@ -85,8 +85,8 @@ static const Mode MODES[] = {
      }},
     {"stability", "surface", "[scene] [metres per frame] [scale] | flight [scale] | skyline [scale]", "B-309: what moves in a scene's frames; G-07: the band in the flights; A-02: the city's skyline", "modes_surface.cpp",
      [](int argc, char** argv) -> int {
-         if (argc > 2 && std::string(argv[2]) == "flight") { if (argc > 3) setFramebufferScale(atoi(argv[3])); return runFlightStability(); }   // G-07
-         if (argc > 2 && std::string(argv[2]) == "skyline") { const char* a[] = {argv[0], "forms", "stability", argc > 3 ? argv[3] : "2"}; return runForms(4, (char**)a); }   // A-02
+         if (argc > 2 && std::string(argv[2]) == "flight") { if (argc > 3) setFramebufferScale(atoi(argv[3])); return runFlightStability(); }
+         if (argc > 2 && std::string(argv[2]) == "skyline") { const char* a[] = {argv[0], "forms", "stability", argc > 3 ? argv[3] : "2"}; return runForms(4, (char**)a); }
          if (argc > 4) setFramebufferScale(atoi(argv[4])); return runStability(argc > 2 ? argv[2] : nullptr, argc > 3 ? atof(argv[3]) : 0.0);   // B-309; B-313: `stability <scene> [metres per frame] [scale]`
      }},
     {"compare", "surface", "", "B-310: eight scenes in six configurations of the render scale and the mush", "modes_surface.cpp",
@@ -103,7 +103,7 @@ static const Mode MODES[] = {
      }},
     {"reanchor", "surface", "[comet [scale]]", "KI-007: a 51 km walk across the site's re-anchor; F-01: the comet's re-anchor timed", "modes_surface.cpp",
      [](int argc, char** argv) -> int {
-         if (argc > 2 && std::string(argv[2]) == "comet") return runReanchorComet(argc, argv);   // F-01
+         if (argc > 2 && std::string(argv[2]) == "comet") return runReanchorComet(argc, argv);
          testReanchor(); return 0;
      }},
     {"terrain", "terrain", "[type]", "O6-01: 48 land sites a landable type on four grids, judged by relief class", "modes_terrain.cpp",
@@ -123,7 +123,7 @@ static const Mode MODES[] = {
     {"kinds", "kinds", "[name|ground|family]", "P-00: a sheet a kind of world (or a ground's kinds, a family's)", "modes_kinds.cpp", runKinds},
     {"traits", "kinds", "[name|new|karst]", "R-304, Q-01: the first body with each landform trait, its sheet", "modes_kinds.cpp",
      [](int argc, char** argv) -> int {
-         renderTraits(argc > 2 ? argv[2] : nullptr); return 0;   // R-304/R-305
+         renderTraits(argc > 2 ? argv[2] : nullptr); return 0;
      }},
     {"tides", "kinds", "[scene]", "Q-02: the great tides of the scan region's first worlds that have them", "modes_kinds.cpp", runTides},
     {"datasheet", "kinds", "[n]", "Q-01: the n data sheets that run longest, in space and on the ground, a page a frame", "modes_kinds.cpp", runDataSheet},
@@ -175,7 +175,7 @@ static const Mode MODES[] = {
     {"drones", "game", "[frames] | check | world <sx> <sz> <body>", "C-18: the drone bay in a game", "modes_drones.cpp", runDrones},
     {"parkings", "game", "", "B-428: twelve parkings of the scenes that were crowded", "modes_game.cpp",
      [](int argc, char** argv) -> int {
-         return runParkings();   // B-428
+         return runParkings();
      }},
     {"tape", "game", "[dir]", "R-420: auto-explore's tape, its tracks and the deck's sequences", "modes_game.cpp", runTape},
     {"tail", "game", "[<sx> <sy> <sz> <body>]", "B-427: a Wolf-Rayet star's giant and the tail its wind strips", "modes_game.cpp", runTail},
@@ -191,16 +191,16 @@ static const Mode MODES[] = {
     {"bothways", "proof", "<scene> [scale]", "F-01: a scene by the workers and by one thread", "modes_proof.cpp", runBothWays},
     {"suncone", "proof", "", "F-05: the sun's cone test swept to the frame's corner", "modes_proof.cpp",
      [](int argc, char** argv) -> int {
-         return runSunCone();   // F-05
+         return runSunCone();
      }},
     {"bench", "bench", "[check [slack]] | forest | noise", "the frame's costs; `check` against the 38 budgets", "modes_bench.cpp",
      [](int argc, char** argv) -> int {
-         if (argc > 2 && std::string(argv[2]) == "noise") return runBenchNoise();   // F-01
-         return argc > 2 && std::string(argv[2]) == "forest" ? runBenchForest() : runBench(argc > 2 && std::string(argv[2]) == "check", argc > 3 ? std::max(0.1, atof(argv[3])) : 1.0);   // F-11: `bench check <factor>`
+         if (argc > 2 && std::string(argv[2]) == "noise") return runBenchNoise();
+         return argc > 2 && std::string(argv[2]) == "forest" ? runBenchForest() : runBench(argc > 2 && std::string(argv[2]) == "check", argc > 3 ? std::max(0.1, atof(argv[3])) : 1.0);   // `bench check <factor>`
      }},
     {"pool", "bench", "", "F-06: the pool's dispatch timed and its dealing checked", "modes_bench.cpp",
      [](int argc, char** argv) -> int {
-         return runPool();   // F-06
+         return runPool();
      }},
     {"load", "bench", "landing | map | arrival | drive | capital | probe | roads [seconds] [scale] [age]", "B-422: the cores kept busy and the pace", "modes_bench.cpp", runLoad},
     {"soak", "bench", "[minutes] [scale]", "F-01: a long expedition at 4x", "modes_bench.cpp", runSoak},
@@ -234,8 +234,8 @@ static int runHelp(int argc, char** argv) {
 int main(int argc, char** argv) {
     std::atexit(worldPlanThreadsJoin);   // C-18: a plan's prefetch still writing its histories and works is waited for before their caches go
     makeDir("shots");
-    makeDir("shots/tests");   // O7-01: every harness output lands here; shots/ itself holds the player's screenshots
-    Game::musicDirDefault = "shots/tests/tape_none";   // R-420: a player's own music folder plays in no check (`tape` reads it on purpose)
+    makeDir("shots/tests");   // every harness output lands here; shots/ itself holds the player's screenshots
+    Game::musicDirDefault = "shots/tests/tape_none";   // a player's own music folder plays in no check (`tape` reads it on purpose)
     // `scale=N` anywhere on the command line renders at that resolution scale
     std::vector<char*> args;
     for (int i = 0; i < argc; i++) {

@@ -150,11 +150,11 @@ bool starSignal(const Star& s, Signal& out) {
         const Body& b = sys.bodies[pw];
         BodyGen g = BodyGen::make(b);
         int air = peoplesOnAir(g);
-        if (!air) return false;   // A-01: the system's people's world had no radio: nothing of it is on the air
+        if (!air) return false;   // the system's people's world had no radio: nothing of it is on the air
         out = Signal(); out.kind = SIG_PEOPLE; out.star = s; out.body = b.index; out.bodyType = b.type; out.seed = b.seed; out.pos = s.pos;
         for (int k = 0; k < 2; k++) if (air & (1 << k)) {
-            PeopleAge pa = peopleAgeOf(g, k); out.airYears = std::max(out.airYears, pa.endedYearsAgo + (pa.lastYear - pa.radioYear));   // C-15
-            if (out.age < 0) out.age = pa.age;   // C-16: the first people on the air
+            PeopleAge pa = peopleAgeOf(g, k); out.airYears = std::max(out.airYears, pa.endedYearsAgo + (pa.lastYear - pa.radioYear));
+            if (out.age < 0) out.age = pa.age;   // the first people on the air
         }
         return true;
     }
@@ -190,7 +190,7 @@ int signalsNear(const Vec3& obsKm, std::vector<Signal>& out, double reachLy, dou
         int n = transmitterCell(cx, cy, cz, sx, sy, sz);
         for (int k = 0; k < n; k++) near(sx[k], sy[k], sz[k]);
     }
-    for (int64_t cx = floorDiv(ox - R, SIGNAL_DEEP_CELL); cx <= floorDiv(ox + R, SIGNAL_DEEP_CELL); cx++)   // C-15: the strong ones within the reach too
+    for (int64_t cx = floorDiv(ox - R, SIGNAL_DEEP_CELL); cx <= floorDiv(ox + R, SIGNAL_DEEP_CELL); cx++)   // the strong ones within the reach too
     for (int64_t cy = floorDiv(oy - R, SIGNAL_DEEP_CELL); cy <= floorDiv(oy + R, SIGNAL_DEEP_CELL); cy++)
     for (int64_t cz = floorDiv(oz - R, SIGNAL_DEEP_CELL); cz <= floorDiv(oz + R, SIGNAL_DEEP_CELL); cz++) {
         cells++;
@@ -212,7 +212,7 @@ int signalsNear(const Vec3& obsKm, std::vector<Signal>& out, double reachLy, dou
         sig.distLy = d / SECTOR_KM; sig.strength = signalStrengthAt(sig.distLy, SIGNAL_PULSAR_REACH_LY) * 0.8;
         out.push_back(sig);
     }
-    if (gain > 1) {   // C-15: what the gain carries from beyond the reach, the whole scan at once (the radar spreads it over frames)
+    if (gain > 1) {   // what the gain carries from beyond the reach, the whole scan at once (the radar spreads it over frames)
         SignalScan scan; scan.begin(obsKm, gain, reachLy);
         while (!scan.step(1 << 20)) {}
         cells += scan.cells;
@@ -281,7 +281,7 @@ void SignalScan::considerDrifter(int64_t x, int64_t y, int64_t z) {
     for (const Signal& e : out) if (e.star.seed == s.seed) return;   // a cluster's and a cell's alike, found once
     Signal sig; sig.kind = SIG_ROGUE; sig.star = s; sig.body = 0; sig.bodyType = drifterBody(s).type; sig.seed = s.seed; sig.pos = s.pos;
     sig.distLy = d; sig.power = pw; sig.needGain = need; sig.strength = signalStrengthAtGain(sig, gain);
-    { StarSystem sys; sys.generate(s); rogueVoiceOf(sys, sig); }   // D-03: its voice's turning and moon
+    { StarSystem sys; sys.generate(s); rogueVoiceOf(sys, sig); }   // its voice's turning and moon
     out.push_back(sig);
 }
 
@@ -312,7 +312,7 @@ bool SignalScan::step(int budget) {
             int64_t sx[SIGNAL_MAX_CANDIDATES], sy[SIGNAL_MAX_CANDIDATES], sz[SIGNAL_MAX_CANDIDATES];
             int n = transmitterCell(c[0], c[1], c[2], sx, sy, sz);
             for (int k = 0; k < n; k++) consider(sx[k], sy[k], sz[k], weakPower(sx[k], sy[k], sz[k]));
-        } else if (layer == 2) {   // D-02: the drifters' field
+        } else if (layer == 2) {   // the drifters' field
             int64_t sx[DRIFT_CELL_MAX], sy[DRIFT_CELL_MAX], sz[DRIFT_CELL_MAX];
             const int n = drifterCell(c[0], c[1], c[2], sx, sy, sz);
             for (int k = 0; k < n; k++) considerDrifter(sx[k], sy[k], sz[k]);
@@ -333,20 +333,20 @@ void localSignals(const StarSystem& sys, const Vec3& obsKm, double t, std::vecto
         Vec3 p = sys.bodyPos(b.index, t);
         double d = length(p - obsKm);
         if (d < 1.0) continue;
-        if (b.drifter && b.index == 0) {   // D-02: the drifter itself, whatever its kind, louder near (as a magnetosphere is, by its power)
+        if (b.drifter && b.index == 0) {   // the drifter itself, whatever its kind, louder near (as a magnetosphere is, by its power)
             Signal sig; sig.kind = SIG_ROGUE; sig.star = sys.star; sig.body = 0; sig.bodyType = b.type; sig.pos = p; sig.seed = sys.star.seed; sig.local = true;
             sig.distLy = d / SECTOR_KM; sig.power = drifterPower(sys.star);
             sig.strength = clampd(0.45 + 0.25 * std::log10(1 + 10 * sig.power), 0.35, 0.95) * clampd(1.4 - d / (6 * AU_GAME_KM), 0.3, 1.0);
-            rogueVoiceOf(sys, sig);   // D-03
+            rogueVoiceOf(sys, sig);
             out.push_back(sig);
             continue;
         }
         bool onAir = false;
-        if (b.index == pw) onAir = peoplesOnAir(BodyGen::make(b)) != 0;   // A-01: only a people that had radio; the first people's world is the system's
+        if (b.index == pw) onAir = peoplesOnAir(BodyGen::make(b)) != 0;   // only a people that had radio; the first people's world is the system's
         if (onAir) {   // the people of this very system
             Signal sig; sig.kind = SIG_PEOPLE; sig.star = sys.star; sig.body = b.index; sig.bodyType = b.type; sig.pos = p; sig.seed = b.seed; sig.local = true;
             sig.distLy = d / SECTOR_KM; sig.strength = 1.0;
-            { BodyGen g = BodyGen::make(b); sig.age = peopleAgeOf(g, (peoplesOnAir(g) & 1) ? 0 : 1).age; }   // C-16
+            { BodyGen g = BodyGen::make(b); sig.age = peopleAgeOf(g, (peoplesOnAir(g) & 1) ? 0 : 1).age; }
             out.push_back(sig);
             continue;
         }
@@ -397,7 +397,7 @@ std::string signalSourceLine(const Signal& s) {
         case SIG_PEOPLE: return art(std::string(KINDS[s.bodyType].name) + " WORLD OF " + art(STAR_CLASSES[s.star.cls].name));
         case SIG_PULSAR: { char buf[64]; snprintf(buf, sizeof buf, "A PULSAR, %.1f PULSES A SECOND", s.pulseHz); return buf; }
         case SIG_COMET: { char buf[64]; snprintf(buf, sizeof buf, "A COMET OUTGASSING %.1f AU FROM THE SUN", s.detail); return buf; }
-        case SIG_ROGUE: return s.bodyType >= 0 ? art(KINDS[s.bodyType].name) + " WITH NO STAR" : "A WORLD WITH NO STAR";   // D-02
+        case SIG_ROGUE: return s.bodyType >= 0 ? art(KINDS[s.bodyType].name) + " WITH NO STAR" : "A WORLD WITH NO STAR";
         default: return s.bodyType >= 0 ? "THE MAGNETOSPHERE OF " + art(KINDS[s.bodyType].name) : "A MAGNETOSPHERE";
     }
 }
@@ -509,16 +509,16 @@ void programmeFor(uint64_t worldSeed, int slot, bool music, int year, const Voic
             out.seconds = morseSeconds(out.code, out.unit) + 2.0;
             break;
         }
-        case RP_PHONOGRAPH:   // C-16: the recording played into the transmitter from a phonograph: the voice as it is, or the piece near its speed
+        case RP_PHONOGRAPH:   // the recording played into the transmitter from a phonograph: the voice as it is, or the piece near its speed
             out.speaks = true;
             if (music) { out.piece = true; out.pieceSpeed = 0.94 + 0.06 * unit(mix64(h ^ 13)); }
             else out.words = text;
             break;
-        case RP_SYNTHETIC:    // C-16: a synthetic voice reading it: one pitch, no breath, no tremor, every syllable alike, a little quick
+        case RP_SYNTHETIC:    // a synthetic voice reading it: one pitch, no breath, no tremor, every syllable alike, a little quick
             out.speaks = true; out.words = text;
             out.voice.range = 0.12; out.voice.breath = 0.02; out.voice.rough = 0; out.voice.tremor = 0; out.voice.nasal = 0; out.voice.sub = 0;
             out.voice.contour = 2; out.voice.stress = 3; out.voice.rate = V.rate * 1.08; break;
-        case RP_MATHS: out.machine = true; out.seconds = 30 + 20 * unit(mix64(h ^ 17)); break;   // C-16: the synth counts it from the seed
+        case RP_MATHS: out.machine = true; out.seconds = 30 + 20 * unit(mix64(h ^ 17)); break;   // the synth counts it from the seed
         case RP_VOICE: out.speaks = true; out.words = text; break;
         case RP_WHISPERS:   // close to the microphone, slower, the melody flattened
             out.speaks = true; out.words = text;

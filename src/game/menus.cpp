@@ -75,13 +75,13 @@ void Game::renderHelp() {
         "  THE MOUSE PANS THE NOSE CAMERA 70 DEG",
         "M  WAYPOINT AT THE CROSSHAIR   K  CALL THE CAPSULE",
         "R / SHIFT+R   SCANNER MODE / THE MARKED OUT OR IN",
-        "L / U         MARK AT THE CROSSHAIR / THE LAMP",   // D-04
+        "L / U         MARK AT THE CROSSHAIR / THE LAMP",
         "N             MAP: ENTER MARKS, SHIFT+ENTER SHOWS",
-        "TAB           THE READINGS: TIME, SUN, AIR, GROUND",   // R-414
+        "TAB           THE READINGS: TIME, SUN, AIR, GROUND",
         "I (F2)  DATA  T  TIME WARP  CTRL+T  THE ALMANAC",
         "CTRL+S  SAVE  P PHOTO  G GUIDE  H HELP  ESC MENU",
         "PAGE 2/3 - SPACE: NEXT PAGE, OTHER KEYS: CLOSE"};
-    static const char* const page3[] = {   // R-418: the controller
+    static const char* const page3[] = {   // the controller
         "CONTROLLER", "",
         "Y          THE COMMANDS: EVERY ACTION HERE, ANY KEY",
         "START MENU  SELECT TAB  D-PAD ARROWS  R STICK LOOKS",
@@ -150,8 +150,8 @@ void Game::adjustSetting(int item, int dir) {
         case 11: s.sprintToggle = !s.sprintToggle; break;
         case 12: s.sprintSpeed += 0.25 * dir; break;
         case 13: s.cabin = !s.cabin; break;
-        case 14: s.clockMode = 1 - s.clockMode; break;   // M5-05
-        case 15: s.aspect = 1 - s.aspect; break;          // M6-01
+        case 14: s.clockMode = 1 - s.clockMode; break;
+        case 15: s.aspect = 1 - s.aspect; break;
         case 16: s.dither = !s.dither; break;
         case 17: s.hudColor = (s.hudColor + 3 + dir) % 3; break;
     }
@@ -164,7 +164,7 @@ void Game::updateKeysScreen(const Input& in) {
     if (keysPage == 1) { updatePadScreen(in); return; }   // R-418: the controller's page
     if (!keysCapture && in.wasPressed(KEY_TAB)) { keysPage = 1; padUI.screenSel = 0; padUI.capture = -1; audio.beep = BEEP_UI; return; }
     if (keysCapture) {
-        if (rawKey == KEY_ESCAPE || (rawKey < 0 && in.wasPressed(KEY_ESCAPE))) { keysCapture = false; return; }   // R-418: a controller's B (no key of the keyboard) cancels too
+        if (rawKey == KEY_ESCAPE || (rawKey < 0 && in.wasPressed(KEY_ESCAPE))) { keysCapture = false; return; }   // a controller's B (no key of the keyboard) cancels too
         if (rawKey >= 32 && rawKey < KEY_MAX) {
             int logical = KEY_ACTIONS[keysSel].key;
             keymap->map[rawKey] = logical;   // pressing rawKey now acts as the action's key
@@ -185,14 +185,14 @@ void Game::updateKeysScreen(const Input& in) {
     }
     if (in.wasPressed(KEY_ESCAPE)) {
         keymap->save(keysPath);
-        if (padMap.dirty && padMap.save(padPath)) padMap.dirty = false;   // R-418
+        if (padMap.dirty && padMap.save(padPath)) padMap.dirty = false;
         state = keysReturn;
     }
 }
 
 void Game::renderKeysScreen() {
     if (!keymap) keymap = &ownKeymap;
-    if (keysPage == 1) { renderPadScreen(); return; }   // R-418
+    if (keysPage == 1) { renderPadScreen(); return; }
     const int top = 6, bottom = UH - 6;
     drawPanel(canvas, 10, top, UW - 10, bottom, rgb(0, 0, 0), 225);
     drawTextCentered(canvas, UW / 2, top + 6, "CONTROLS  [KEYBOARD]  CONTROLLER", HUD_AMBER);   // R-418: Tab turns to the controller's page

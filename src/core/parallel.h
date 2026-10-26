@@ -1,9 +1,8 @@
-// Row-band parallelism for the per-pixel passes (M10-08) and the band-parallel drawing (B-310). Since B-310 the workers are a
-// persistent pool: a frame dispatches a dozen parallel regions (sky, terrain, flora, the mush passes, the RGB conversion), and
-// creating threads for each cost more than a millisecond per frame. F-06: the pool deals its work. A dispatch cuts its range into
-// chunks that the caller and the workers take from a counter until none is left, so a performance core takes more of them than an
-// efficiency core and a band of heavy rows no longer holds up the frame, and the caller starts on them at once (the workers join as
-// they wake). The pictures are the serial loop's whoever draws a row: every pass is row-pure (a row's result does not depend on which
+// Row-band parallelism for the per-pixel passes and the band-parallel drawing (B-310): a persistent pool of workers, since a frame
+// dispatches a dozen parallel regions (sky, terrain, flora, the mush passes, the RGB conversion) and creating threads for each would cost
+// more than a millisecond a frame. A dispatch cuts its range into chunks that the caller and the workers take from a counter until none
+// is left, so a performance core takes more of them than an efficiency core, a band of heavy rows holds up no frame, and the caller
+// starts on them at once (the workers join as they wake). The pictures are the serial loop's whoever draws a row: every pass is row-pure (a row's result does not depend on which
 // thread makes it or where its chunk begins) or band-pinned (`parallelBands`).
 #pragma once
 #include <thread>

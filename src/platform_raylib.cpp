@@ -122,7 +122,7 @@ void ensurePostShader() {
 AudioStream gStream;
 std::vector<float> gAbuf;
 bool gAudioOk = false;
-PlatformPresentTimes gPresentTimes;   // F-01
+PlatformPresentTimes gPresentTimes;
 PlatformAudioTimes gAudioTimes;
 double msSince(std::chrono::steady_clock::time_point t0) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
 // R-420: auto-explore's tape beside the synth, raylib's music stream (the file decoded as it plays, at its own rate, in stereo). A thread
@@ -239,7 +239,7 @@ bool platformInit(int w, int h, const char* title) {
     pacePeriod();
 #endif
     SetExitKey(0);
-    // R-418: SDL's controller database beside the game (`gamecontrollerdb.txt`: the community's file, or a line of one's own) teaches GLFW
+    // SDL's controller database beside the game (`gamecontrollerdb.txt`: the community's file, or a line of one's own) teaches GLFW
     // the layout of the controllers its own list lacks
     if (FileExists("gamecontrollerdb.txt")) {
         char* db = LoadFileText("gamecontrollerdb.txt");

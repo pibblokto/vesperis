@@ -8,7 +8,7 @@
 #include <algorithm>
 
 namespace {
-// B-414: a death in the years of the age the people reached (`Lore::ageFrom`) while the place stood (one left early: before it was left)
+// a death in the years of the age the people reached (`Lore::ageFrom`) while the place stood (one left early: before it was left)
 int diedIn(const Lore& L, const RuinSpec& r, Rng& rng) {
     const int end = L.endYear > 0 ? L.endYear : L.spanYears + 1, from = std::max(1, std::min(L.ageFrom, L.spanYears));
     const int to = std::max(from, std::min(L.spanYears, end - (int)std::lround(std::max(0.0, r.before))));
@@ -51,7 +51,7 @@ void gravesOf(const Lore& L, const RuinSpec& r, const Culture& c, std::vector<Gr
         case SC_HAMLET: want = 1 + rng.irange(3); break;
         case SC_VILLAGE: want = 3 + rng.irange(4); break;
         case SC_TOWN: want = 6 + rng.irange(7); break;
-        case SC_CITY: want = 10 + rng.irange(9); break;      // T-01
+        case SC_CITY: want = 10 + rng.irange(9); break;
         case SC_CAPITAL: want = 14 + rng.irange(11); break;
         default: want = rng.chance(0.33) ? 1 : 0; break;
     }
@@ -106,7 +106,7 @@ void graveElements(const std::vector<Grave>& graves, const Culture& c, int lod, 
         Form e; e.kind = kind; e.x = x; e.z = z; e.heading = heading; e.hx = hx; e.hz = hz; e.y0 = y0; e.y1 = y1; e.part = part; e.building = -1; e.material = m;
         out.push_back(e); return out.back();
     };
-    // A-04: the people's way with its dead round C-01's stones: a barrow behind each (earth, no higher than a step), a tomb (a small
+    // the people's way with its dead round C-01's stones: a barrow behind each (earth, no higher than a step), a tomb (a small
     // house of the age's stone, open toward its stone), a low wall round the cemetery, a tower of silence (a ring of high wall round them,
     // its gap toward the settlement)
     double cx = 0, cz = 0, rr = 0;

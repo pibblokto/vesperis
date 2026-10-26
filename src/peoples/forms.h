@@ -29,9 +29,9 @@ enum FormKind {
     FK_SWEEP,     // a section swept along a path (sub 0 an arc round the foot, 1 a straight line along the heading): a curved wall, a dam,
                   // an amphitheatre's tiers, an embankment. Broken: gaps, a ragged top
     FK_BLOB,      // a grown form: a lumpy body and its lobes. Broken: cracked open at the top
-    FK_PLATE,     // C-17: a flat body of a drawn outline (an instrument's: a gourd's face, a box, a slab), its sides upright from y0 to y1, its
+    FK_PLATE,     // a flat body of a drawn outline (an instrument's: a gourd's face, a box, a slab), its sides upright from y0 to y1, its
                   // top flat or domed. Broken: a bite out of its rim
-    FK_FENCE,     // R-412: a fence along the heading, 2 hz long and 2 hx deep, from y0 to y1 (sub 0 pales on two rails, 1 bars between a bottom and
+    FK_FENCE,     // a fence along the heading, 2 hz long and 2 hx deep, from y0 to y1 (sub 0 pales on two rails, 1 bars between a bottom and
                   // a top rail, 2 wattle hurdles between their stakes, 3 a balustrade's balusters between its plinth and its handrail): a yard's
                   // boundary, a balcony's or a gallery's rail, an iron cresting along a ridge. Broken: pales gone, stretches of them fallen
     FK_COUNT
@@ -79,10 +79,10 @@ struct Form {
     int slot = 0;           // the people's palette: 0 the structure, 1 the accent, 2 metal and glass, 3 light
     int pattern = 0;        // windows on its faces: 0 none, k the people's `windows[k - 1]`
     int building = -1;
-    int material = -1;      // A-03: what it is built of (`BuiltMaterial`, peoples/buildings.h), whose decay it shows; -1 none (the drifts' sand)
-    bool absolute = false;  // T-03: y0 and y1 are heights over the reference level, not over the ground at its foot (a dam's wall across its
+    int material = -1;      // what it is built of (`BuiltMaterial`, peoples/buildings.h), whose decay it shows; -1 none (the drifts' sand)
+    bool absolute = false;  // y0 and y1 are heights over the reference level, not over the ground at its foot (a dam's wall across its
                             // valley, an aqueduct's arches to their channel): drawn and walked into where they are whatever the ground does
-    float tone = 0;         // R-412: shades over its slot's (a house painted a little lighter or darker than its neighbours: `GV_POLYCHROMY`)
+    float tone = 0;         // shades over its slot's (a house painted a little lighter or darker than its neighbours: `GV_POLYCHROMY`)
 };
 
 // T-04: a record's object (peoples/records.h) in the records' own banks: bone, parchment and paper pale; wax, leather, vinyl, a glass plate and a
@@ -99,9 +99,9 @@ struct WindowSpec {
     double dark = 14;                 // how much darker than its wall (shades)
     bool lit = false;                 // it glows (the light's ramp), whatever the sun
     double fromY = 0;                 // none under this height over the foot (a plinth, the doors' storey)
-    int group = 1;                    // A-04: lights to a window (a pair, a group), split by their mullions
-    double scatter = 0;               // A-04: the share of the cells left blank (a people that set its windows at random)
-    // R-412: the people's dress on the wall round its windows (`FacePattern`'s, shades off the wall): a surround a share of the bay wide,
+    int group = 1;                    // lights to a window (a pair, a group), split by their mullions
+    double scatter = 0;               // the share of the cells left blank (a people that set its windows at random)
+    // the people's dress on the wall round its windows (`FacePattern`'s, shades off the wall): a surround a share of the bay wide,
     // shutters each side, courses so many metres high (every other one off), a dado so many metres high
     double frame = 0, frameShade = 0, shutter = 0, shutterShade = 0, stripe = 0, stripeShade = 0, dado = 0, dadoShade = 0;
 };
@@ -112,8 +112,8 @@ struct FormPalette {
     bool own[4] = {true, false, false, false};
     WindowSpec windows[4];
     int nWindows = 0;
-    float tint[4] = {1, 1, 1, 1};     // A-04: where a slot is the ground's own, how far it is tinted toward `colour` (0 the ground's, 1 the colour)
-    bool glow = true;                 // A-04: slot 3 is light (the futuristic and the far future's); else a material lit like the rest (timber, rust)
+    float tint[4] = {1, 1, 1, 1};     // where a slot is the ground's own, how far it is tinted toward `colour` (0 the ground's, 1 the colour)
+    bool glow = true;                 // slot 3 is light (the futuristic and the far future's); else a material lit like the rest (timber, rust)
 };
 constexpr int FORM_SLOTS = 4;
 extern const int FORM_BANKS[2][FORM_SLOTS];   // a people's four banks: the first people's 18, 19, 20, 24, the second's 25, 26, 27, 28

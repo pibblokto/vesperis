@@ -30,22 +30,22 @@ struct Lore {
     bool desert = false;    // the catastrophe's worlds (a felisian world went on without its people)
     bool dark = false;      // D-05: a drifter's people, who lost their sun (their tones darken toward the end: `pickTone`)
     int spanYears = 300;    // the years between the founding and the last shard
-    // C-12: their calendar (`loreQuick`): the day is the world's turn, the month the nearest moon's round in those days, the year
+    // their calendar (`loreQuick`): the day is the world's turn, the month the nearest moon's round in those days, the year
     // the orbit; `calendar` 0 days and years, 1 moons, days and years, 2 moons and years (the day is the year: a locked world),
     // 3 years alone; `last` the index of the world's last recording (`lastShardOf`)
     int monthDays = 0, months = 0, calendar = 0, last = -1;
-    std::vector<ChartMark> marks;   // C-10: the stars their charts mark, one per chart (`chartShardsOf`), the peoples they knew first
-    // C-13: which of the world's peoples this lore is (`peoplesOf`, peoples/ruins.h), the seed its draws read (`peopleGen`: the
+    std::vector<ChartMark> marks;   // the stars their charts mark, one per chart (`chartShardsOf`), the peoples they knew first
+    // which of the world's peoples this lore is (`peoplesOf`, peoples/ruins.h), the seed its draws read (`peopleGen`: the
     // world's own for the first people), and, where the world had two, the other people's name and their fate against this
     // people's end (-1 they ended first, 0 together, 1 they went on), which the grammar's "other" kinds speak of
     int which = 0, peoples = 1;
     uint64_t seed = 0;
     std::string other;
     int otherFate = 0;
-    // T-04: how many records the people left (`recordCountOf`, peoples/records.h: 80 to 200, C-02's fifty the first) and the year of its end
+    // how many records the people left (`recordCountOf`, peoples/records.h: 80 to 200, C-02's fifty the first) and the year of its end
     // in its own count (`PeopleAge::lastYear`): the shards are dated in the people's history now, `spanYears` the end's year less one
     int records = SHARDS_PER_WORLD, endYear = 0;
-    int ageFrom = 1;   // B-414: the first year of the age they reached (`ageFromOf`): their graves and records are of its years
+    int ageFrom = 1;   // the first year of the age they reached (`ageFromOf`): their graves and records are of its years
 };
 // C-13: the seed a people's functions draw from: the lore's (the people's), the world's for a lore built without one. The
 // functions that take a lore (`shardOf`, `tongueOf`, `voiceOf`, `traditionOf`, `chartOf`) read it and never the generator's

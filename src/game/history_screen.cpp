@@ -241,7 +241,7 @@ void Game::renderShardTimeline() {
         drawText(canvas, 12, 167, mediumLine(s).c_str(), HUD_DIM);
         drawText(canvas, 12, 176, recordSummary(idx, 49).c_str(), read ? HUD_GREEN : HUD_DIM);
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, "ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK", HUD_DIM);   // R-416
+    drawTextCentered(canvas, UW / 2, UH - 10, "ARROWS  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK", HUD_DIM);
 }
 
 // the history as the records read so far tell it: the age once told, the events learnt under their eras (a name amber, a word read green,
@@ -305,5 +305,5 @@ void Game::renderShardHistory() {
             fillRectRGB(canvas, UW - 9, a, UW - 7, std::max(a + 2, b), HUD_DIM);
         }
     }
-    drawTextCentered(canvas, UW / 2, UH - 10, ne > 0 ? "UP/DOWN  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK" : "TAB PAGE  ESC BACK", HUD_DIM);   // R-416
+    drawTextCentered(canvas, UW / 2, UH - 10, ne > 0 ? "UP/DOWN  SHIFT FAST  ENTER READ  TAB PAGE  ESC BACK" : "TAB PAGE  ESC BACK", HUD_DIM);
 }

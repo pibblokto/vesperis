@@ -47,11 +47,11 @@ bool roadNodeOfCell(const BodyGen& gSeason, int gLat, int gLon, RoadNode& out) {
     { DrainageOff off; if (!ruinSiteOk(g, sp)) return false; }
     out.gLat = gLat; out.gLon = wrapLon(g, gLat, gLon);
     out.lat = sp.lat; out.lon = sp.lon; out.size = sp.size; out.heading = sp.heading; out.sclass = sp.sclass; out.plan = sp.plan; out.seed = sp.seed;
-    out.people = sp.people;   // C-13
+    out.people = sp.people;
     out.unit = StarSystem::bodyFromLatLon(sp.lat, sp.lon);
     return true;
 }
-int roadPeopleOf(const RoadNode& a, const RoadNode& b) {   // C-13
+int roadPeopleOf(const RoadNode& a, const RoadNode& b) {
     if (a.people == b.people) return a.people;
     return settlementRank(b.sclass) > settlementRank(a.sclass) ? b.people : a.people;
 }
@@ -166,7 +166,7 @@ bool roadWay(const BodyGen& gSeason, const Culture& c, const RoadNode& a0, const
     const RoadNode& a = cellBefore(a0, b0) ? a0 : b0;
     const RoadNode& b = cellBefore(a0, b0) ? b0 : a0;
     out.a = a; out.b = b; out.id = roadIdOf(g, a.gLat, a.gLon, b.gLat, b.gLon);
-    out.people = roadPeopleOf(a, b);   // C-13
+    out.people = roadPeopleOf(a, b);
     out.halfWidth = c.roadHalf + 0.5 * (std::max(settlementRank(a.sclass), settlementRank(b.sclass)) - 1);
     Frame F(a.unit, g.R * 1000.0);
     double bx, bz; F.localAt(b.unit, bx, bz);
@@ -215,7 +215,7 @@ void roadsOfCell(const BodyGen& gSeason, int gLat, int gLon, std::vector<Road>& 
     if (!worldHadCivilisation(g)) return;
     RoadNodeCache nc; nc.reset(&g);
     std::vector<RoadPair> pairs; nc.pairsOf(gLat, gLon, pairs);
-    Culture cs[2] = {cultureOf(g, 0), peoplesOf(g) > 1 ? cultureOf(g, 1) : Culture()};   // C-13: each road as its people built
+    Culture cs[2] = {cultureOf(g, 0), peoplesOf(g) > 1 ? cultureOf(g, 1) : Culture()};   // each road as its people built
     for (const RoadPair& p : pairs) { Road r; if (roadWay(g, cs[roadPeopleOf(p.a, p.b)], p.a, p.b, r)) out.push_back(r); }
     std::sort(out.begin(), out.end(), [](const Road& x, const Road& y) { return x.id < y.id; });
 }
@@ -229,13 +229,13 @@ void roadsNear(const BodyGen& gSeason, const Vec3& unit, double radiusM, std::ve
     double cellM = ruinCellLat(g) * g.R * 1000.0;
     int cellsR = (int)std::ceil((radiusM + ROAD_MAX_M) / cellM) + 1;
     RoadNodeCache nc; nc.reset(&g);
-    Culture cs[2] = {cultureOf(g, 0), peoplesOf(g) > 1 ? cultureOf(g, 1) : Culture()};   // C-13: each road as its people built
+    Culture cs[2] = {cultureOf(g, 0), peoplesOf(g) > 1 ? cultureOf(g, 1) : Culture()};   // each road as its people built
     // the nodes whose roads can reach the disc, and their joined pairs, each once
     std::vector<RoadNode> nodes;
     for (int dl = -cellsR; dl <= cellsR; dl++) {
         int nLon = std::max(1, ruinCellsAround(g, gLat0 + dl));
         int cellsLon = std::min(nLon / 2, cellsR);   // the grid's lon cells are the same metres across as its lat cells
-        const int row = ruinCellLonIn(g, gLat0, gLon0, gLat0 + dl);   // T-01: the row's own cells at this longitude
+        const int row = ruinCellLonIn(g, gLat0, gLon0, gLat0 + dl);   // the row's own cells at this longitude
         for (int dn = -cellsLon; dn <= cellsLon; dn++) { RoadNode n; if (nc.node(gLat0 + dl, row + dn, n)) nodes.push_back(n); }
     }
     struct Pair { RoadNode a, b; };
@@ -271,7 +271,7 @@ double roadLeft(uint64_t id, double alongM, double wear) {
     return smoothstep(wear - 0.08, wear + 0.08, n);
 }
 
-bool roadLegWalk(const BodyGen& gSeason, int kind, const Vec3& a, const Vec3& b, uint64_t id, Road& out) {   // T-01
+bool roadLegWalk(const BodyGen& gSeason, int kind, const Vec3& a, const Vec3& b, uint64_t id, Road& out) {
     BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out = Road();
     out.id = id; out.kind = kind;
@@ -281,7 +281,7 @@ bool roadLegWalk(const BodyGen& gSeason, int kind, const Vec3& a, const Vec3& b,
     return walk(g, F, 0, 0, bx, bz, out, walkCostOf(kind));
 }
 
-double netHalfWidth(int kind, const Culture& c, bool trunk) {   // T-01
+double netHalfWidth(int kind, const Culture& c, bool trunk) {
     switch (kind) {
         case 0: return 1.1;                          // a path
         case 2: return 2.2;                          // rail: its ballast

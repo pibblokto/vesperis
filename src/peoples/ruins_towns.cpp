@@ -1,5 +1,5 @@
 // E-09: T-02's towns: a place's plan from the world's (its exits, its streets and squares and fields by the people and the
-// age, its districts and their buildings), and the street furniture (R-412)
+// age, its districts and their buildings), and the street furniture
 #include "ruins_layout.h"
 
 namespace {
@@ -30,7 +30,7 @@ std::vector<double> planExits(const BodyGen& g, const RuinSpec& r) {
 // a village's, a town's or a city's plan as its ages built it (see towns.h): its layers, its centre and its square, its streets, its buildings
 // along them by district (each layer in its age's way, the people's genome through it), its wall and gates, its works of the water and the
 // land, its fields. `n` the buildings its class asks for (a city's the plan's), `R` its reach. B-414: one layer, its people's last age
-// R-412: the people's street furniture (`GV_FURNITURE`; `BK_FURNITURE`, its style the `Furniture`): a town's well, fountain or figure in each
+// the people's street furniture (`GV_FURNITURE`; `BK_FURNITURE`, its style the `Furniture`): a town's well, fountain or figure in each
 // square and beside the middle of each long main street, its lamps along its main streets and round its squares; a futuristic people's
 // round its great structures. Laid last, by a stream of its own (nothing of the plan moves for it)
 void placeFurniture(Layout& L, RuinSpec& r, double R) {
@@ -246,7 +246,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         if (grouping == GR_COMPOUNDS && age <= AGE_MODERN && age != AGE_INDUSTRIAL && di == DI_HOUSES && !(big && dd < 0.6)) { kind = 1; sp.hw = sp.hd = (age == AGE_MODERN ? 9.0 : 6.5) + 2.5; return true; }
         if ((grouping == GR_ROWS || mainFront) && age == AGE_MEDIEVAL && Lk.rng.uni() < 0.85) {   // a row's houses joined along the street, gabled cell by cell where the people built in cells
             set(BK_HOUSE, 2.7 * (0.95 + 0.1 * Lk.rng.uni()), 3.6 * (0.92 + 0.16 * Lk.rng.uni()), Lk.var(2.8, 0.6) * Hk, 0.45);
-            Lk.frontage(sp);   // R-412
+            Lk.frontage(sp);
             sp.rect = true;
             if (big) sp.h *= 0.85 + 0.55 * (1 - dd);
             return true;
@@ -255,7 +255,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         if (sp.kind == BK_HOUSE || sp.kind == BK_ROW || sp.kind == BK_TENEMENT || sp.kind == BK_BLOCK || sp.kind == BK_VILLA) sp.h *= big ? 0.85 + 0.55 * (1 - dd) : 0.92 + 0.2 * (1 - dd);
         return true;
     };
-    // R-412: how far a medieval, an industrial or a modern people set its houses back from the street (`GV_SETBACK`): at its edge, or in
+    // how far a medieval, an industrial or a modern people set its houses back from the street (`GV_SETBACK`): at its edge, or in
     // front yards and gardens
     auto setback = [&](int di, int age, int kind, const Genome& G) {
         const double S = age >= AGE_MEDIEVAL && age <= AGE_MODERN ? G.at(GV_SETBACK) : 0.3;
@@ -376,7 +376,7 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                         ok = Lk.add(sp.kind, cx, cz, heading, sp.hw, sp.hd, sp.h, sp.thick, true, sp.style);
                     }
                     Lk.arcadeNext = false;
-                    if (ok) fronting(before, off);   // R-412: its door to the street before its pieces are tested against the streets
+                    if (ok) fronting(before, off);   // its door to the street before its pieces are tested against the streets
                 }
                 if (ok) {   // its own pieces off the street (a chimney, a bank, a jetty past its footprint): set back by as much once, else not built
                     const double in1 = Lk.intrusion(before, r.site);
@@ -491,6 +491,6 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
     addFeatures(Lo, r, Lo.c);
     r.size = rSaved;
     // the fields round it
-    townFields(T, townAge, st, kindHas(livingKindOf(g.type), KT_DRY), r.fields);   // P-04: the fields of its time
-    placeFurniture(Lo, r, Rt);   // R-412
+    townFields(T, townAge, st, kindHas(livingKindOf(g.type), KT_DRY), r.fields);   // the fields of its time
+    placeFurniture(Lo, r, Rt);
 }

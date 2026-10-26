@@ -2,7 +2,7 @@
 #include "game.h"
 #include "peoples/works.h"
 #include "ui.h"
-#include "peoples/buildings.h"   // A-03: a shard's place
+#include "peoples/buildings.h"   // a shard's place
 #include "core/png.h"
 #include "core/fs.h"
 #include "core/rng.h"
@@ -45,7 +45,7 @@ void Game::setRemoteStar(const Star& s) {
     ship.hasRemote = true;
     ship.targeting = false;
     double ly = length(ship.remote.pos - ship.pos) / SECTOR_KM;
-    if (ship.remote.cls == STAR_ROGUE) status(fmt("REMOTE TARGET: %s - NO STAR - %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), ly), 6);   // D-01: a drifter has no class to show
+    if (ship.remote.cls == STAR_ROGUE) status(fmt("REMOTE TARGET: %s - NO STAR - %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), ly), 6);   // a drifter has no class to show
     else status(fmt("REMOTE TARGET: %s (%s) %.2f LY - V TO FLY", upper(starNameOf(ship.remote)).c_str(), STAR_CLASSES[ship.remote.cls].code, ly), 6);
     audio.beep = BEEP_LOCK;
 }
@@ -121,8 +121,8 @@ void Game::updateStarMap(const Input& in) {
     mapPitch = clampd(mapPitch, -1.4, 1.4);
     if (in.wheel > 0 || in.wasPressed(KEY_EQUAL)) mapZoom = std::min(4.0, mapZoom * 1.25);
     if (in.wheel < 0 || in.wasPressed(KEY_MINUS)) mapZoom = std::max(0.5, mapZoom / 1.25);
-    // S-02: the class filter cycles through ALL and every class of the table (C forward, X back), whatever their number;
-    // 0 shows all. Keys 1-9 toggled S00-S08 until S-01's tenth class had no key
+    // the class filter cycles through ALL and every class of the table (C forward, X back), whatever their number;
+    // 0 shows all (keys 1-9 could not reach a tenth class)
     if (in.wasPressed(KEY_C) || in.wasPressed(KEY_X)) {
         int cur = -1;   // -1 all, else the one class shown
         for (int c = 0; c < STAR_DRAWN_COUNT; c++) if (mapClassMask == (1 << c)) cur = c;
@@ -132,13 +132,13 @@ void Game::updateStarMap(const Input& in) {
     }
     if (in.wasPressed(KEY_0)) mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_M)) {
-        if (gchart.look) { gchart.look = false; mapPage = 1; }   // G-06: the look is the chart's: the map opens on the chart again
+        if (gchart.look) { gchart.look = false; mapPage = 1; }   // the look is the chart's: the map opens on the chart again
         state = GameState::SPACE; return;
     }
     const std::vector<Star>& stars = mapStars().stars;
     if ((enterKey(in) || in.mousePressed[0]) && mapPick >= 0 && mapPick < (int)stars.size()) {
         Star full; starInSector(stars[mapPick].sx, stars[mapPick].sy, stars[mapPick].sz, full, true);
-        if (gchart.look) {   // G-06: another star of the plotted end taken, the line kept for the log; back on the chart, Enter flies
+        if (gchart.look) {   // another star of the plotted end taken, the line kept for the log; back on the chart, Enter flies
             const JumpPlot keep = jumpPlot;
             setRemoteStar(full);
             if (ship.hasRemote && ship.remote.seed == full.seed) { jumpPlot = keep; jumpPlot.seed = full.seed; status("PLOTTED - ENTER FLIES, ESC KEEPS IT FOR V", 4); }
@@ -151,7 +151,7 @@ void Game::updateStarMap(const Input& in) {
 }
 
 void Game::renderStarMap() {
-    if (mapPage == 1) { renderGalaxyChart(); return; }   // G-05
+    if (mapPage == 1) { renderGalaxyChart(); return; }
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 215);
     Mat3 cam = cameraBasis(mapYaw, mapPitch);
     double pxPerLy = 14.0 * mapZoom;
@@ -203,23 +203,23 @@ void Game::renderStarMap() {
         if (ship.hasRemote && s.seed == ship.remote.seed) drawRectRGB(canvas, sx - 5, sy - 5, sx + 5, sy + 5, HUD_CYAN);
         if (haveHome && s.sx == hx && s.sy == hy && s.sz == hz) { drawLineRGB(canvas, sx - 5, sy, sx, sy - 5, HUD_AMBER); drawLineRGB(canvas, sx, sy - 5, sx + 5, sy, HUD_AMBER); drawLineRGB(canvas, sx + 5, sy, sx, sy + 5, HUD_AMBER); drawLineRGB(canvas, sx, sy + 5, sx - 5, sy, HUD_AMBER); }
         if (guide.names.count(key) || guide.inbox.count(key)) drawText(canvas, sx + 5, sy - 3, trunc(upper(starNameOf(s)), 12).c_str(), nameIsForeign(key) ? HUD_CYAN : HUD_GREEN);
-        else if (guide.visited.count(key) && !current) {   // R-407: an unnamed star the ship has been to, by a world named there
+        else if (guide.visited.count(key) && !current) {   // an unnamed star the ship has been to, by a world named there
             std::vector<std::string> w = worldNamesAt(key);
             if (!w.empty()) drawText(canvas, sx + 5, sy - 3, ("(" + trunc(upper(w[0]), 10) + ")").c_str(), HUD_DIM);
         }
         double dd = std::sqrt((double)(sx - cx) * (sx - cx) + (double)(sy - cy) * (sy - cy));
-        const bool centreStar = gchart.look && ship.hasRemote && s.seed == ship.remote.seed;   // G-06: the look's middle is the plotted star, as the ship's is the ship's
+        const bool centreStar = gchart.look && ship.hasRemote && s.seed == ship.remote.seed;   // the look's middle is the plotted star, as the ship's is the ship's
         if (dd < pickD && !current && !centreStar) { pickD = dd; mapPick = pr.second; }
     }
     // crosshair and the picked star's card
     drawLineRGB(canvas, cx - 8, cy, cx - 3, cy, HUD_DIM); drawLineRGB(canvas, cx + 3, cy, cx + 8, cy, HUD_DIM);
     drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, HUD_DIM); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, HUD_DIM);
-    drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT THE PLOTTED END" : "THE NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);   // G-05: the page's name (49 characters with four digits; G-06's look 50)
-    int solo = -1;   // S-02: the filter shows all or one class (the legend of every code outgrew the line at ten classes)
+    drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT THE PLOTTED END" : "THE NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);   // the page's name (49 characters with four digits; G-06's look 50)
+    int solo = -1;   // the filter shows all or one class (the legend of every code outgrew the line at ten classes)
     for (int c = 0; c < STAR_DRAWN_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
     std::string filt = solo < 0 ? "CLASSES: ALL" : fmt("CLASS: %s %s", STAR_CLASSES[solo].code, STAR_CLASSES[solo].name);
     drawText(canvas, 6, 13, filt.c_str(), solo < 0 ? HUD_DIM : HUD_AMBER);
-    {   // R-407 (the user's "green marker stars as unknown"): what the marks mean
+    {   // (the user's "green marker stars as unknown"): what the marks mean
         const int hw = textWidth("HOME"), vw = textWidth("VISITED");
         const int hText = UW - 6 - hw, hx = hText - 6, vText = hx - 12 - vw, bx = vText - 10, y = 13;
         drawRectRGB(canvas, bx, y, bx + 6, y + 6, rgb(90, 150, 110)); drawText(canvas, vText, y, "VISITED", HUD_DIM);
@@ -230,14 +230,14 @@ void Game::renderStarMap() {
         const Star& s = stars[mapPick];
         Star full; starInSector(s.sx, s.sy, s.sz, full, true);
         std::string key = Guide::starKey(s.sx, s.sy, s.sz);
-        double ly = length(full.pos - centre) / SECTOR_KM;   // G-06: in the look, from the plotted star
+        double ly = length(full.pos - centre) / SECTOR_KM;   // in the look, from the plotted star
         std::string card = fmt("%s  %s %s  %.2f LY%s", upper(starNameOf(full)).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, ly, guide.visited.count(key) ? "  VISITED" : "");
         drawTextCentered(canvas, UW / 2, UH - 24, card.c_str(), nameIsForeign(key) ? HUD_CYAN : HUD_WHITE);
-        std::vector<std::string> w = worldNamesAt(key);   // R-407: the worlds named there
+        std::vector<std::string> w = worldNamesAt(key);   // the worlds named there
         if (!w.empty()) {
             std::string names; for (const std::string& n : w) names += (names.empty() ? "" : ", ") + upper(n);
             drawTextCentered(canvas, UW / 2, UH - 33, trunc("YOUR WORLDS THERE: " + names, 52).c_str(), HUD_GREEN);
         }
     }
-    if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 12, "WHEEL ZOOM  C/X/0 CLASS  ENTER TARGET  TAB GALAXY", HUD_DIM);   // S-02: within the frame's 53 characters; G-05: the mouse's turn left to be found, TAB in; G-06: the status over it
+    if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 12, "WHEEL ZOOM  C/X/0 CLASS  ENTER TARGET  TAB GALAXY", HUD_DIM);   // within the frame's 53 characters; G-05: the mouse's turn left to be found, TAB in; G-06: the status over it
 }

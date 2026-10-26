@@ -1,24 +1,10 @@
-// A-03 (2026-10-09): what each age builds. The buildings of the six ages (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section
-// 2), each a generator of A-02's forms (`peoples/forms.h`) from its building's seed: the prehistoric age's huts, longhouses, tent
-// rings, stone circles, menhirs, dolmens and palisades; the medieval age's houses, halls, keeps, temples, walls and gates (C-01's
-// kinds, roofed); the industrial age's terraced rows, tenements, villas, churches, town halls, stations, mills with their
-// chimneys, gasometers, water towers, headframes and observatories; the modern age's blocks, suburbs, towers, stadiums, masts,
-// power stations and tanks; the futuristic age's arcologies, habitat domes, spires, rings, maglev lines, wrecks and pods; the far
-// future's single structures. A kind is its age's way of building, so a people's older works can be built in their own age's
-// way wherever T-02 lays them down (`Building::age`).
-//
-// The decay is the material's (`materialDecay`): timber, thatch and hide gone in centuries (post holes, rings of stones), earth
-// kept by a desert and melted by rain, dry stone and megaliths standing tens of millennia (leaning, fallen), mortared stone and
-// brick C-08's model, iron rusting to skeletons, concrete falling over centuries to a few millennia (a tower to its stump), mass
-// concrete lasting, glass gone at once (empty frames), composites lasting millennia then crumbling, the far future's materials
-// not weathering at all. Each building reads the years since its people's end and the world's wet, and its own luck.
-//
-// Every building with a room (most of them: a hut, a house, a temple's nave, a tower's lobby, a dome's portal) says where it is
-// (`buildingRoom`): its floor, its doorway, and the spots where a record can lie (C-03's shards now, T-04's records later).
-//
-// A-04: the people's genome (peoples/genome.h) shapes every kind: its plan's form, its roof, its walls' profile and dress, its tops, its
-// towers' sections, its motif, its colours; and the genome's own works: the focal accent (`BK_FOCUS`), a windmill, an aqueduct, two
-// towers joined by a bridge, a tunnel's mouth.
+// What each age builds (A-03; docs/reference/civilisations/built-world.md): the buildings of the six ages, each a generator of A-02's forms
+// (peoples/forms.h) from its building's seed, from the prehistoric huts and stone circles to the far future's single structures. A kind is
+// its age's way of building (`Building::age`). The decay is the material's (`materialDecay`: timber gone in centuries, dry stone standing
+// tens of millennia, iron rusting to skeletons, concrete falling to its stump, glass gone at once, the far future's not weathering), read
+// with the years since the end, the world's wet and the building's own luck. A building with a room says where it is (`buildingRoom`: its
+// floor, its doorway, the spots where a record can lie). The people's genome (peoples/genome.h) shapes every kind and adds its own works
+// (the focal accent `BK_FOCUS`, a windmill, an aqueduct, towers joined by a bridge, a tunnel's mouth).
 #pragma once
 #include "ruins.h"
 
@@ -60,7 +46,7 @@ void cultureWays(Culture& c, uint64_t peopleSeed);
 
 // ---- the harness's (E-07): vesperis_test calls these; the game and the other engine files never do
 
-// A-04: a people's palette, its genome's colours through its age's materials: the structure (the ground's rock tinted toward its base
+// a people's palette, its genome's colours through its age's materials: the structure (the ground's rock tinted toward its base
 // colour, or painted in it; its brick, its concrete, its composite), the accent, the roofing or the glass in its tint, timber or (the
 // futuristic and the far future's) its light; its windows (its openings' shape, rhythm and share of the wall, by the age's bays and
 // storeys; none before the medieval age; the far future's lit lines or lamps)

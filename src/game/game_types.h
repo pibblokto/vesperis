@@ -16,21 +16,21 @@
 enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP, MENU, SYSTEM_LIST, DATA, SETTINGS, SLOTS,
                        GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS, ALMANAC, PROBE, RECORDING,
                        INSTRUMENTS,    // C-11: the instruments' case
-                       DRONES,         // C-18: the drone bay's screen
-                       AUTO };         // R-419: auto-explore's profiles
+                       DRONES,         // the drone bay's screen
+                       AUTO };         // auto-explore's profiles
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
 
 // E-06: what each state is, a row a state in GameState's order: the traits the frame, the radio, the save and the controller
 // read, the controller's context, the name the harness prints. A new state appends its row (the count and the order are
-// checked below); unit `states` holds the first 29 rows to the lists the game kept by hand until E-06.
+// checked below); unit `states` holds its first 29 rows to the lists they replaced.
 enum StateTrait : unsigned {
     ST_SIMULATES = 1 << 0,     // the clock runs under it: the time warp, an almanac's run
     ST_OVERLAY = 1 << 1,       // drawn over the scene it was opened from (`returnState`): the render switch's `default`
     ST_STOWS = 1 << 2,         // the ship's cameras are put away on it: the radar camera off, the telescope stowed
     ST_TAKES_SYNTH = 1 << 3,   // the dark radio is silent: the synth is the screen's, the probe's, the landing's or the title's
     ST_IN_PLAY = 1 << 4,       // a save places the explorer by it (on any other, by `returnState`)
-    ST_MOUSE = 1 << 5,         // the mouse is captured: it looks round, or moves a map's cursor (R-408)
+    ST_MOUSE = 1 << 5,         // the mouse is captured: it looks round, or moves a map's cursor
     ST_PHOTO = 1 << 6,         // the photo tools work (Ctrl+P, Ctrl+Shift+P, Ctrl+R): the scenes, the probe's camera, a recording
     ST_TYPING = 1 << 7,        // keys type: the global keys rest, the controller's keyboard stays up
     ST_GROUND = 1 << 8,        // on the ground, or on the capsule's way down to it or back up
@@ -151,7 +151,7 @@ struct ShipState {
     Vec3 approachDir0; double approachD0 = 0;   // R-419: the fine approach's start from its world (unit, km): the distance closed by ratios, the direction swung early
     bool targeting = false;   // remote crosshair mode
     double aimYaw0 = 0, aimPitch0 = 0;   // orientation at approach start
-    // O3 (R-302): a belt as the local target or the parking place. The ship parks beside one rock of the belt, named
+    // a belt as the local target or the parking place. The ship parks beside one rock of the belt, named
     // by its co-rotating cell and index so the same rock is there again after a load, six rock radii off on its sunlit side
     int targetBelt = -1, parkedBelt = -1;
     int64_t rockIr = 0, rockIa = 0, rockIy = 0; int rockM = 0;
@@ -161,7 +161,7 @@ struct ShipState {
 // what the harness sets that the game's code reads: Game's `harness` (TestGame, src/harness/test_game.h, holds the hooks)
 struct HarnessKnobs {
     bool probeQuiet = false;                                 // X-02: the probe's frames without the camera's shake and the link's static
-    bool aimOverride = false; double aimLat = 0, aimLon = 0;   // X-03: the aim for C, as if the telescope's reticle were there
+    bool aimOverride = false; double aimLat = 0, aimLon = 0;   // the aim for C, as if the telescope's reticle were there
 };
 
 // C-17: an instrument's parts drawn as it lies, seen from above, in a box of the canvas's logical units (the case's picture, the harness's

@@ -6,7 +6,7 @@
 
 namespace {
 
-// Q-01: the features of the same jittered grid whose points lie in a box round `pc` (`halfKm` each way): what `visitFeatures` finds near
+// the features of the same jittered grid whose points lie in a box round `pc` (`halfKm` each way): what `visitFeatures` finds near
 // any point of it, so the scanner lists the cones, the hills and the craters the landforms build (`landformFeatures`); `hit.d` is from `pc`
 template <class F>
 void featuresInBox(const Vec3& pc, double halfKm, double R, double cellKm, double density, uint64_t seed, F fn) {
@@ -61,7 +61,7 @@ double craterField(const Vec3& p, double R, double cellKm, double density, doubl
             double tf = lodFade(r * 0.15, detailM);
             if (tf > 0) {
                 double t = (x - 0.55) / 0.45, st = t * 3, k = std::floor(st), fr = st - k;
-                double tq = (k + smoothstep(0.42, 0.58, fr)) / 3;   // O6-07: the risers over a sixth of a terrace's run: scarps over 1:1 (the basin walls are the crater-field types' cliffs)
+                double tq = (k + smoothstep(0.42, 0.58, fr)) / 3;   // the risers over a sixth of a terrace's run: scarps over 1:1 (the basin walls are the crater-field types' cliffs)
                 double xq = 0.55 + 0.45 * tq;
                 bowl += (-(1 - xq * xq) - bowl) * tf * 0.8;
             }
@@ -69,7 +69,7 @@ double craterField(const Vec3& p, double R, double cellKm, double density, doubl
         if (flooded && bowl < -0.35) bowl = -0.35;                     // lava filled the old basin
         double rim = 0.35 * std::exp(-((x - 1) * (x - 1)) / (0.14 * 0.14));
         double ejecta = x > 1 ? 0.10 * std::exp(-(x - 1) / 0.35) : 0;
-        if (big && x > 1 && x < 1.8 && scaleVisible(r * 0.05, detailM)) ejecta *= 1 + 0.6 * gnoise3(p / (r * 0.08), seed + 0xE3);   // O6-05: the ejecta blanket is rough ground
+        if (big && x > 1 && x < 1.8 && scaleVisible(r * 0.05, detailM)) ejecta *= 1 + 0.6 * gnoise3(p / (r * 0.08), seed + 0xE3);   // the ejecta blanket is rough ground
         double peak = (r > 6 && f.u[2] > 0.5 && !flooded) ? 0.30 * std::exp(-(x * x) / (0.10 * 0.10)) : 0;
         double ring = (r > 60.0 && f.u[1] > 0.55) ? 0.14 * std::exp(-((x - 1.6) * (x - 1.6)) / (0.09 * 0.09)) : 0;   // multi-ring basin
         double erosion = 0.35 + 0.65 * (1 - age);
@@ -184,7 +184,7 @@ Tectonics tectonicsAt(const Vec3& unit, const BodyGen& g) {
 double duneField(const Vec3& p, const BodyGen& g, double lat, double amp, double detailM, double* lee) {
     if (lee) *lee = 0;
     if (amp <= 0) return 0;
-    double fade = lodFade(g.duneWl, detailM);   // O6-05 (KI-311): faded like every other feature (a hard cut at 150 m aliased the 64 m maps into stripes)
+    double fade = lodFade(g.duneWl, detailM);   // faded like every other feature (a hard cut at 150 m aliased the 64 m maps into stripes)
     if (fade <= 0) return 0;
     // wind: the seed angle, flipped per hemisphere and per 30-degree band (trade winds)
     int bandIdx = (int)std::floor(std::fabs(lat) / (30 * DEG));
@@ -193,10 +193,10 @@ double duneField(const Vec3& p, const BodyGen& g, double lat, double amp, double
     Vec3 dp = normalize(cross(dd, Vec3(0, 0, 1)));
     double along = dot(p, dd) / g.duneWl * TAU, across = dot(p, dp) / g.duneWl * TAU;
     double bend = fbm3(p / 3.0, g.sE + 11, 2) * 4.0;
-    // O6-05: the slip face: a dune climbs gently over three quarters of its wavelength on the windward side and drops over
+    // the slip face: a dune climbs gently over three quarters of its wavelength on the windward side and drops over
     // the last quarter (the profile of the phase, C1), for the transverse and the barchan styles
     auto slip = [](double ph) { ph -= std::floor(ph); return ph < 0.72 ? smoothstep(0.0, 0.72, ph) : 1.0 - smoothstep(0.72, 1.0, ph); };
-    auto face = [](double ph) { ph -= std::floor(ph); return smoothstep(0.72, 0.76, ph) * (1.0 - smoothstep(0.96, 1.0, ph)); };   // Q-03: the drop's span
+    auto face = [](double ph) { ph -= std::floor(ph); return smoothstep(0.72, 0.76, ph) * (1.0 - smoothstep(0.96, 1.0, ph)); };   // the drop's span
     double v;
     if (g.duneStyle == 0) { v = slip((along + bend) / TAU); if (lee) *lee = face((along + bend) / TAU); }                     // transverse
     else if (g.duneStyle == 1) {                                                                                              // barchan-like crescents
@@ -232,7 +232,7 @@ ReliefSum reliefSum(const Vec3& p, const Vec3& unit, const BodyGen& g, double a0
     Vec3 grad(0, 0, 0), gradM(0, 0, 0);   // of the sum so far, metres per km; B-404: of the material chain
     for (int i = 0; i < 12; i++) {
         double fade = lodFade(wl, detailM);
-        bool matOct = wl >= MAT_WL_KM;   // B-404: the material chain takes every octave down to 48 m, whatever the sampling scale
+        bool matOct = wl >= MAT_WL_KM;   // the material chain takes every octave down to 48 m, whatever the sampling scale
         if (fade <= 0 && !matOct) break;
         Vec3 gn;
         double n = gnoise3d(q.x / wl + i * 17.3, q.y / wl + i * 9.1, q.z / wl + i * 3.7, seed + i * 7919, gn);
@@ -283,7 +283,7 @@ CliffOut cliffBands(const Vec3& p, const BodyGen& g, double h, double slope, dou
     on *= amount;
     if (on <= 0.001) return o;
     double fade = on * smoothstep(1.5, 4.0, run / detailM);   // the relief: a band's run must span a few samples
-    bool mat = matVisible(0.1 * run / 1000.0, detailM);      // B-404: the riser (a tenth of the run) decides the rock and the scree wherever it spans half a cell: the same cells in every ring that can draw it (it used to follow `fade`, and the rock came and went with the ring)
+    bool mat = matVisible(0.1 * run / 1000.0, detailM);      // the riser (a tenth of the run) decides the rock and the scree wherever it spans half a cell: the same cells in every ring that can draw it (following `fade`, the rock would come and go with the ring)
     if (fade <= 0.001 && !mat) return o;
     double q = std::floor(h / step), f = h / step - q;
     // the band's rise: a bench (35% of it at 0.29 x the slope), the talus (20% at 1.4 x), the riser (20% at 2.75 x: over
@@ -566,4 +566,4 @@ double emberFieldAt(const BodyGen& g, const Vec3& p) {
     return f;
 }
 
-double benchFeatureField(const Vec3& p, double R, uint64_t seed) { return domeField(p, R, 2.0, 0.6, seed, 0.4, 100.0, 0.0); }   // F-01
+double benchFeatureField(const Vec3& p, double R, uint64_t seed) { return domeField(p, R, 2.0, 0.6, seed, 0.4, 100.0, 0.0); }

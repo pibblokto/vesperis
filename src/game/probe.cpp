@@ -5,15 +5,15 @@
 // pace, so a layer is lingered in), photographs (P), and the end: the last frame held under the loss-of-signal hiss until
 // the screen is left. The relay's clock is real time (galaxy/probe.h): the warp turns the sky and not the fall; Shift held
 // on the screen runs it eight times as fast (R-406). The ship holds its parking meanwhile; leaving it cuts the relay.
-// X-02 (2026-10-07): from the entry's peak the picture is the probe's own (space/probe_view.h): the decks round the aim
+// from the entry's peak the picture is the probe's own (space/probe_view.h): the decks round the aim
 // point as fields (galaxy/probe.h: the globe's bands sampled at the launch, the towers, the pouches, the fog inside), the
 // sky's in-scatter over the space renderer's frame without the giant (the stars, the sun's disc, the moons), the rings'
 // arc, the lightning as places in the decks.
-// X-03 (2026-10-07): each giant its own (galaxy/probe.h's character): one to three decks of its own clouds and colours, its
+// each giant its own (galaxy/probe.h's character): one to three decks of its own clouds and colours, its
 // storms and lightning (an ice giant's quiet), the deep's glow (a young giant's, a brown dwarf's from below everything), the
 // polar aurorae's curtains, a great storm's wall, the clear-air hole a descent may fall through, a carbon-rich giant's hail,
 // and on one rare giant something that passes the lamp once in the deep.
-// X-04 (2026-10-07): what comes back. The probe is lost; its record is kept in the guide (galaxy-side, the descent is a function of
+// what comes back. The probe is lost; its record is kept in the guide (galaxy-side, the descent is a function of
 // the probe's numbers): the launch, the explorer's turns of the camera and the game's clock along the fall, the end, the profile it
 // measured (the pressure, the temperature, the wind, the light, the lightning, the layers named by what it found) and its final
 // image (shots/probe_<n>.png). The gallery plays the recording on the screen (`GameState::RECORDING`: the descent drawn again,
@@ -84,7 +84,7 @@ void Game::launchProbe() {
         double sunAz = std::atan2(dot(s, E), dot(s, N));
         probe.headYaw = me * me + mn * mn > 0.02 * 0.02 ? std::atan2(me, mn) : sunAz;
         probe.descYaw = sunAz + 35 * DEG;   // the descent looks a little aside of the sun: the decks lit across, the sun's glow at the side when it is low
-        // X-03: what the probe was sent to see: a great storm's wall within sight, else the aurora's curtains over the clouds
+        // what the probe was sent to see: a great storm's wall within sight, else the aurora's curtains over the clouds
         double gd, ex, ez;
         if (probeStormWall(gd, ex, ez)) probe.descYaw = std::atan2(ex, ez);
         else if (probeAuroraWay(ex, ez, gd) && std::fabs(gd) < 2800 && probe.atm.ch.aurora > 0.25) probe.descYaw = std::atan2(ex, ez) + (gd < 0 ? PI : 0.0);
@@ -146,7 +146,7 @@ void Game::updateProbe(double realDt) {
         if (state == GameState::PROBE) status(fmt("THE CHUTE TORE AWAY AT %.2f ATM", atmOf(probeBarAt(probe.flight, probe.flight.chuteClose))), 4);
     }
     probe.clock = std::min(probe.clock, endC);
-    probeTrack();   // X-04: the tracks and the log's discoveries, to the end
+    probeTrack();   // the tracks and the log's discoveries, to the end
     if (probe.clock >= endC) probeEnd();
 }
 
@@ -248,19 +248,19 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
     int stage = ended ? PS_END : probeStageAt(a, probe.flight, c);
     std::string st = stage == PS_FALL ? fmt("FALLING TO %s", trunc(upper(bodyNameOf(probe.body)), 20).c_str()) : (ended ? PROBE_STAGE_NAMES[PS_END] : probeStageLabel(c));
     if (rec && ended && rec->endCause == 3) st = "THE RELAY WAS CUT";
-    if (!ended && stage >= PS_ABOVE && stage <= PS_DEEP && !photoMode) {   // X-03: the layer the picture shows (a great storm's dome lifts a deck over its pressure; a hole takes one away)
+    if (!ended && stage >= PS_ABOVE && stage <= PS_DEEP && !photoMode) {   // the layer the picture shows (a great storm's dome lifts a deck over its pressure; a hole takes one away)
         const ProbeViewStats& vs = probeViewStats();
         if (vs.inHole) st = "A CLEAR-AIR HOLE";
         else if (vs.fog >= 0 && vs.fog < a.decks) st = CLOUD_SPECIES[a.species[vs.fog]].deckName;
     }
     drawTextShadow(canvas, 18, 24, st.c_str(), ended ? HUD_RED : HUD_CYAN, HUD_SHADOW);
     const bool fast = rec ? replay.playing && replay.fast : probe.fast;
-    if (!ended && fast) drawTextShadow(canvas, 18 + textWidth(st.c_str()) + 8, 24, "FAST", HUD_AMBER, HUD_SHADOW);   // R-406
+    if (!ended && fast) drawTextShadow(canvas, 18 + textWidth(st.c_str()) + 8, 24, "FAST", HUD_AMBER, HUD_SHADOW);
     const std::string ep = epocOf(tt);
     drawTextShadow(canvas, UW - 8 - textWidth(ep.c_str()), 8, ep.c_str(), HUD_GREEN, HUD_SHADOW);
     std::string gn = trunc(upper(bodyNameOf(probe.body)), 20);
     drawTextShadow(canvas, UW - 8 - textWidth(gn.c_str()), 16, gn.c_str(), fd, HUD_SHADOW);
-    if (!probe.stormKey.empty() && c >= probeDescentStart()) {   // X-04: the storm it fell into (its name when it has one), under the stage (the warp's line is at the right)
+    if (!probe.stormKey.empty() && c >= probeDescentStart()) {   // the storm it fell into (its name when it has one), under the stage (the warp's line is at the right)
         std::string sn = nameOfKey(probe.stormKey);
         sn = sn == "UNKNOWN" ? (probe.stormKey.substr(probe.stormKey.size() - 2) == "TG" ? "IN THE GREAT STORM" : "IN A STORM") : "IN " + trunc(upper(sn), 26);
         drawTextShadow(canvas, 18, 32, sn.c_str(), HUD_GREEN, HUD_SHADOW);
@@ -274,7 +274,7 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
         int w = (int)(58 * sig);
         if (w > 0) fillRectRGB(canvas, bx + 1, by + 1, bx + w, by + 3, sig > 0.35 ? HUD_GREEN : (sig > 0.15 ? HUD_AMBER : HUD_RED));
     }
-    if (rec) {   // X-04: the depth bar: the fall and the entry over its first tenth, then the pressure's logarithm to the end, the layers found in their colours
+    if (rec) {   // the depth bar: the fall and the entry over its first tenth, then the pressure's logarithm to the end, the layers found in their colours
         const int bx = UW - 22, y0 = 46, y1 = UH - 58;
         auto yOf = [&](double u) { return y0 + (int)std::lround(clampd(u, 0, 1) * (y1 - y0)); };
         fillRectRGB(canvas, bx, y0, bx + 5, yOf(0.1), rgb(70, 70, 80));
@@ -351,7 +351,7 @@ void Game::probeSound(double c, bool watching, bool ended) {
     bool chute = probe.flight.chuteOpen >= 0 && c >= probe.flight.chuteOpen && c < probe.flight.chuteClose;
     audio.probeChute = chute && !ended ? 1.0 : 0.0;
     double air = stage >= PS_ABOVE && !ended ? smoothstep(std::log(PROBE_TOP_BAR), std::log(0.3), std::log(std::max(bar, 1e-6))) : 0.0;
-    audio.probeWind = air * (chute ? 0.55 : 1.0) * (probe.atm.ch.kind == GK_ICE ? 0.6 : 1.0);   // X-03: an ice giant's fall the quieter
+    audio.probeWind = air * (chute ? 0.55 : 1.0) * (probe.atm.ch.kind == GK_ICE ? 0.6 : 1.0);   // an ice giant's fall the quieter
     audio.probeDepth = ended ? 0.0 : clampd(std::log(std::max(bar, 1e-3) / probe.atm.base[0]) / std::log(probe.flight.crushBar / probe.atm.base[0]), 0, 1);
     audio.probeSignal = ended ? 0.0 : 1 - (c >= probeDescentStart() ? clampd(std::log(std::max(bar, 1e-3) / 0.5) / std::log(probe.flight.crushBar / 0.5), 0, 1) : 0.0);
     if (!ended) {   // a thunderclap at a flash's start, heard through the relay (faint from a flash far off)

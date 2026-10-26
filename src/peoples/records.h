@@ -1,25 +1,11 @@
-// T-04 (2026-10-09): where the records lie (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 7). A people left between 80 and 200
-// records (`recordCountOf`: by its age and by how many they were: the literate and the many left more), fixed here before H-04 writes them
-// and H-05 sorts them into its three categories by the age. C-02's fifty are the first fifty of them, their draws kept (a shard
-// found before keeps its music and its chart; its text is H-04's); the rest are drawn the same way, music and star charts at the
-// people's own shares of the fifty.
-//
-// * Each record is dated in the people's own count (`RecordEntry::year`): B-414, in the years of the age the people reached (its earlier ages'
-//   records went with their towns; a late people's histories tell those years), the later the likelier, the years taking the oldest first
-//   (`recordYear`). The last recording (C-12) is the end's.
-// * Each is made in the way of its year's age (`RecordMedium`): carved bone, carved stone, a painted wall (prehistoric); clay tablets,
-//   scrolls, codices, an engraved plate (medieval); printed pages, wax cylinders, glass plates (industrial); reels, discs, drives (modern);
-//   drives and crystals (futuristic); crystals and something that hums (the far future).
-// * Each lies where its age kept such things (`recordSitesOf`): one in a few buildings of a settlement as C-03 laid them (the people's houses,
-//   halls and temples, a longhouse and a stone chamber, a church and a town hall, offices, gate halls, the foot of a great structure), several
-//   in an archive (a rich find: a row along the back wall of the capital's and each city's archive, and of some towns'; a prehistoric chief's
-//   longhouse), a few in the works that kept records (the observatory's charts, the dead's tombs, the shrine, the stones, a station's hut, a
-//   launch site's blockhouse, the lighthouse), and the last recording where it means something: at the history's last place, in the building
-//   its age would keep it in (the temple's inner room, the town hall, the capital's mast, a spire's gate hall, the far future's structure),
-//   and in the last shelter by it. A place left early holds nothing written after it was left.
-//
-// C-03's rule stays: a copy taken is gone everywhere on the world (the guide keeps the indices). The guide's keys are `<body>/S<index>` with a
-// people's records at `people x SHARD_STRIDE + index` (C-13's second people at 50 + index before T-04: `Guide::load` moves an older guide's).
+// Where a people's records lie (T-04; docs/reference/civilisations/records-and-grammar.md): 80 to 200 of them (`recordCountOf`, by its age
+// and its numbers), the first fifty the shards' (their draws kept), the genres writing them (peoples/genres.h) and the age sorting them
+// into texts, music and star charts. Each is dated in the years of the age the people reached, the later the likelier (`recordYear`; the
+// last recording is the end's), made in its age's medium (`RecordMedium`: bone and stone, tablets and scrolls, printed pages and cylinders,
+// reels and drives, crystals) and lies where its age kept such things (`recordSitesOf`: in a settlement's buildings, a row in an archive,
+// the works that kept records, the last recording at the history's last place and in the last shelter). A place left early holds nothing
+// written after it was left; a copy taken is gone everywhere on the world (the guide's keys `<body>/S<index>`, a people's records at
+// `people x SHARD_STRIDE + index`).
 #pragma once
 #include "shards.h"
 #include "peoples.h"
@@ -108,7 +94,6 @@ struct ShardSite {
     bool outside = false;   // at the building's foot, in the open (a stela's, a standing stone's, a spike's), not in a room
     double x = 0, z = 0;    // metres east and north of the settlement's centre: where it lies (a painted wall's: where one stands before it)
     double heading = 0;     // the object's orientation (radians from north); a painted wall's: the way its face looks (into the room)
-    // T-04
     int medium = RM_STONE;  // the object (its record's)
     int archive = 0;        // 0 alone; 1 one of an archive's row
     bool last = false;      // the people's last recording
@@ -129,7 +114,7 @@ struct InstrumentSite {
 };
 // the records a settlement, or a work, holds (`r.work` >= 0: the works' rules): deterministic from its seed, its people's records and history;
 // C-11: and the instruments lying beside its music records (a settlement's only; a stream of their own: the records are where they were).
-// B-421: never in water: the sea read here (the planet function without its rivers, which a frame cannot wait for); `wet` (if given) the
+// never in water: the sea read here (the planet function without its rivers, which a frame cannot wait for); `wet` (if given) the
 // water as the view draws it at a spot of the settlement's metres (its rivers and lakes too: the view asks again once it draws them near)
 void recordSitesOf(const BodyGen& g, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments = nullptr,
                    const std::function<bool(double, double)>* wet = nullptr);

@@ -2,7 +2,7 @@
 // stripped by a Wolf-Rayet star's wind, a comet's coma and tails
 #include "space_internal.h"
 
-// O3 (R-302): the rocks of a belt around the ship, hashed in co-rotating cells (StarSystem::beltRockAt): a point when
+// the rocks of a belt around the ship, hashed in co-rotating cells (StarSystem::beltRockAt): a point when
 // under two pixels across, else a lumpy mesh (a sphere with fbm radii) tumbling slowly, lit by the star, depth-tested
 // against the globes drawn before it
 void SpaceRenderer::drawBeltRocks(Framebuffer& fb, const SpaceContext& c, int k) {

@@ -1,6 +1,6 @@
 // E-08: the surface's environment, made each frame (`computeEnvironment`: the suns and the sky's light, the tide, the clouds and
 // the fronts' weather, rain, snow, dust and the valley fog, the aurorae, the wind, the temperature, the fog's distance, the
-// planetshine; the finders of the records near the explorer it asks), the fog seas' floor, and the ground's songs (Q-03)
+// planetshine; the finders of the records near the explorer it asks), the fog seas' floor, and the ground's songs
 #include "surface_internal.h"
 
 void SurfaceView::computeEnvironment(double t) {
@@ -12,11 +12,11 @@ void SurfaceView::computeEnvironment(double t) {
     env.sun2Share = 0;
     env.glow = 1; env.primaryRel = 1;
     double sinAlt = env.sun.dirLocal.y;
-    env.skyBrightness = site.atmosphere ? smoothstep(-0.12, 0.2, sinAlt) * (1 - 0.9 * env.sun.eclipse * env.sun.eclipse) : 0.0;   // M1-08
+    env.skyBrightness = site.atmosphere ? smoothstep(-0.12, 0.2, sinAlt) * (1 - 0.9 * env.sun.eclipse * env.sun.eclipse) : 0.0;
     if (env.hasSun2) {
-        // M5-01: the light for shading blends both suns by their strength above the horizon; the sky and the
+        // the light for shading blends both suns by their strength above the horizon; the sky and the
         // day brightness take the brighter of the two, so a companion still up after the primary set keeps the day alive.
-        // B-425: each sun by its own light beside the world's own sun's (the far one's is faint: `SurfaceSite::sun2`); a sun under the
+        // each sun by its own light beside the world's own sun's (the far one's is faint: `SurfaceSite::sun2`); a sun under the
         // horizon adds none (the primary's whole light was added to a companion's still up, so a night under a far one was lit as a day)
         const bool ofK = site.sys->ofCompanion(site.body);
         const double ownLf = std::max(ofK ? env.sun2.lightFactor : env.sunDisc.lightFactor, 0.05);
@@ -40,12 +40,12 @@ void SurfaceView::computeEnvironment(double t) {
         env.skyBrightness = std::max(env.skyBrightness, day2);
         sinAlt = env.sun.dirLocal.y;
     }
-    // Q-02 (TR_GREAT_TIDES): the sea's level now (the bulges of the world's moons and sun at the explorer's place: the whole site's, the tide a
+    // TR_GREAT_TIDES: the sea's level now (the bulges of the world's moons and sun at the explorer's place: the whole site's, the tide a
     // few kilometres across being one)
     site.tideM = site.gen.tideRangeM > 0 && site.hasWater ? tideOffsetM(*site.sys, site.body, site.unitAt(player.x, player.z), t, site.gen.tideRangeM) : 0.0;
-    env.ringShadow = env.sunDisc.ringShadow;   // O0-01
+    env.ringShadow = env.sunDisc.ringShadow;
     env.skyBrightness *= 1 - 0.45 * env.ringShadow;
-    env.localTime = env.hasSun2 && site.sys->ofCompanion(site.body) ? env.sun2.dayFraction : env.sun.dayFraction;   // B-425: the time of the world's own sun
+    env.localTime = env.hasSun2 && site.sys->ofCompanion(site.body) ? env.sun2.dayFraction : env.sun.dayFraction;   // the time of the world's own sun
     site.latLonAt(player.x, player.z, env.latDeg, env.lonDeg);
     env.latDeg /= DEG; env.lonDeg /= DEG;
     env.altitude = player.y;
@@ -60,7 +60,7 @@ void SurfaceView::computeEnvironment(double t) {
     }
     if (hasOpaqueDeck(b.type)) cloud = 1;
     env.cloudPattern = cloud;
-    // W-03: the fronts. The world's fronts alive now (`frontsOf`, listed again every two minutes: a birth ramps up over
+    // the fronts. The world's fronts alive now (`frontsOf`, listed again every two minutes: a birth ramps up over
     // hours), their weather at the place (`frontWeatherAt`: the same function the globe's overlay and the forecast read),
     // and the nearest one's line in local metres for the sky, the ground's shadows and the wall of rain
     FrontWeather fw;
@@ -86,12 +86,12 @@ void SurfaceView::computeEnvironment(double t) {
     cloud = std::max(cloud, fw.cloud);
     env.cloudCover = cloud;
     double cloudP = env.cloudPattern;   // the pattern's cloud rains by its own rule; a front's band rains from its line, not from its first cloud
-    const KindDef& K = KINDS[b.type];   // P-00: the kind's weather, temperature and pressure are its row's
+    const KindDef& K = KINDS[b.type];   // the kind's weather, temperature and pressure are its row's
     env.rain = 0;
-    if (K.rain == RAIN_CLOUDS) env.rain = cloudP > K.rainThr ? clampd((cloudP - K.rainThr) / K.rainSpan, 0, 1) : 0;   // R-307: the acid rains often
+    if (K.rain == RAIN_CLOUDS) env.rain = cloudP > K.rainThr ? clampd((cloudP - K.rainThr) / K.rainSpan, 0, 1) : 0;   // the acid rains often
     if (K.rain == RAIN_DRIZZLE) { double dz = gnoise2(t / 1800.0, 2.3, site.gen.seed + 27); env.rain = clampd((dz - 0.45) / 0.3, 0, 0.5); }   // a methane drizzle now and then
-    if (K.tags & KT_FRONT_RAIN) env.rain = std::max(env.rain, fw.precip);   // W-03: the front's rain
-    // M4-06: the same clouds snow when it is cold; thin air raises dust storms; fog banks drift by
+    if (K.tags & KT_FRONT_RAIN) env.rain = std::max(env.rain, fw.precip);   // the front's rain
+    // the same clouds snow when it is cold; thin air raises dust storms; fog banks drift by
     env.snow = 0; env.dust = 0; env.fogBank = 0; env.hail = 0;
     if (K.tags & KT_WATER_WEATHER) {
         double precip = std::max(cloudP > 0.62 ? clampd((cloudP - 0.62) / 0.3, 0, 1) : 0.0, fw.precip);
@@ -100,16 +100,16 @@ void SurfaceView::computeEnvironment(double t) {
             else if (env.temperatureC < 8 && precip > 0.8) env.hail = (precip - 0.8) / 0.2;
         }
     }
-    if (K.dustThreshold > 0 && site.atmosphere) {   // D-04: no dust rises where the air fell as snow
+    if (K.dustThreshold > 0 && site.atmosphere) {   // no dust rises where the air fell as snow
         double storm = gnoise2(t / 2400.0, 5.1, site.gen.seed + 21);
         env.dust = clampd((storm - K.dustThreshold) / 0.3, 0, 1);   // the storm's wind is applied with the wind update below (B-206); R-307: rarer on a desert world
-        env.dust = std::max(env.dust, fw.precip);   // W-03: a dust front
+        env.dust = std::max(env.dust, fw.precip);   // a dust front
     }
     if ((K.tags & KT_WATER_WEATHER) && site.atmosphere) {
         double fogN = gnoise2(t / 1500.0 + player.x / 4000.0, player.z / 4000.0, site.gen.seed + 33);
         env.fogBank = clampd((fogN - 0.45) / 0.25, 0, 1) * (1 - env.rain) * clampd(1 - std::fabs(env.temperatureC - 8) / 25.0, 0, 1);
     }
-    // Q-02 (TR_FOG_SEAS): the valley fog of the morning. It gathers in the night's calm, fills the valleys to a level over their floors by
+    // TR_FOG_SEAS: the valley fog of the morning. It gathers in the night's calm, fills the valleys to a level over their floors by
     // dawn and burns off as the sun climbs (local times 0.10-0.40, its height with it); no fog in rain, dust or a wind; how deep this
     // morning's is by the world and the day
     env.fogSea = 0; env.fogSeaTop = -1e9;
@@ -123,10 +123,10 @@ void SurfaceView::computeEnvironment(double t) {
         }
     }
     env.aurora = 0; env.auroraStorm = 0;
-    env.flare = starFlare(site.sys->star, t);   // S-01: a red dwarf's flare opens the exposure (setupPalette) and is a storm of its own (auroralStorm)
-    const bool greatAurorae = site.gen.hasTrait(TR_GREAT_AURORAE);   // Q-02: R-402's field set high
+    env.flare = starFlare(site.sys->star, t);   // a red dwarf's flare opens the exposure (setupPalette) and is a storm of its own (auroralStorm)
+    const bool greatAurorae = site.gen.hasTrait(TR_GREAT_AURORAE);   // R-402's field set high
     if (site.atmosphere && !hasOpaqueDeck(b.type) && (std::fabs(env.latDeg) > 40 || greatAurorae)) {
-        // R-402: the night's potential (the star's class, the world's magnetic field, the star's storm), the latitude ramp
+        // the night's potential (the star's class, the world's magnetic field, the star's storm), the latitude ramp
         // pushed equatorward by the storm, the darkness, and the night's own slow variation. Q-02: under great aurorae the field's glow
         // lights most nights whatever the storm, and the ramp reaches the tropics
         env.auroraStorm = auroralStorm(site.sys->star, t);
@@ -136,37 +136,37 @@ void SurfaceView::computeEnvironment(double t) {
         env.aurora = pot * smoothstep(latLo, latLo + 16, std::fabs(env.latDeg)) * (1 - env.skyBrightness) * (0.6 + 0.4 * gnoise2(t / 600.0, 8.8, site.gen.seed + 44));
     }
     if (lastWindUpdate < 0 || t - lastWindUpdate > 2.0) {
-        // B-206: the wind is set from scratch here (base by type, a slow gust term, rain, the dust storm's x3.5);
-        // it used to be multiplied by the storm factor every frame between these updates and ran away to 1e13 knots
+        // the wind is set from scratch here (base by type, a slow gust term, rain, the dust storm's x3.5): multiplied by
+        // the storm factor every frame between these updates, it would run away to 1e13 knots
         lastWindUpdate = t;
         double base = site.atmosphere ? K.wind : 0;
-        const bool steady = (K.tags & KT_FIXED_SUN) && site.gen.locked;   // P-03: a locked world's surface wind blows toward the substellar point, and hardly changes
-        env.windKnots = base * (steady ? 0.85 + 0.3 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5)) : 0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // W-03: the wind rises ahead of a front
+        const bool steady = (K.tags & KT_FIXED_SUN) && site.gen.locked;   // a locked world's surface wind blows toward the substellar point, and hardly changes
+        env.windKnots = base * (steady ? 0.85 + 0.3 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5)) : 0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // the wind rises ahead of a front
         env.windDir = steady ? wrap2pi(std::atan2(env.sunDisc.dirLocal.x, env.sunDisc.dirLocal.z) + 0.2 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6)) : wrap2pi(1.7 + 2.0 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6));
-        if (fw.windWeight > 0.01) {   // W-03: the front's wind takes over by its weight: along its line ahead of it, with its motion behind
+        if (fw.windWeight > 0.01) {   // the front's wind takes over by its weight: along its line ahead of it, with its motion behind
             double fx = dot(fw.windTo, site.east0), fz = dot(fw.windTo, site.north0);
             double w = clampd(fw.windWeight, 0, 1);
             double vx = (1 - w) * std::sin(env.windDir) + w * fx, vz = (1 - w) * std::cos(env.windDir) + w * fz;
             if (vx * vx + vz * vz > 1e-6) env.windDir = wrap2pi(std::atan2(vx, vz));
         }
     }
-    // the clouds' drift (sky layers and ground shadows) integrates the wind: 0.5 m per knot-second. It used to be
-    // `wind x 0.5 x t`, which jumped by tens of kilometres whenever the wind changed (the sun flickering, B-206)
+    // the clouds' drift (sky layers and ground shadows) integrates the wind: 0.5 m per knot-second (`wind x 0.5 x t`
+    // would jump by tens of kilometres whenever the wind changes, the sun flickering: B-206)
     if (lastEnvT < 0) { windDriftX = std::sin(env.windDir) * env.windKnots * 0.5 * t; windDriftZ = std::cos(env.windDir) * env.windKnots * 0.5 * t; }
     else if (t > lastEnvT) { windDriftX += std::sin(env.windDir) * env.windKnots * 0.5 * (t - lastEnvT); windDriftZ += std::cos(env.windDir) * env.windKnots * 0.5 * (t - lastEnvT); }
     lastEnvT = t;
     // temperature
     double base = b.tempK - 273.15;
     if (livingGround(b.type)) {
-        // B-321: the biome model's mean temperature at this spot (the same number that chose the grass underfoot), with
-        // a day-night swing round it; the HUD used to read -10 C on a grassland plateau from a model of its own
+        // the biome model's mean temperature at this spot (the same number that chose the grass underfoot), with
+        // a day-night swing round it (a model of the HUD's own read -10 C on a grassland plateau)
         double winter = clampd((env.latDeg >= 0 ? -site.season : site.season), 0, 1);
         double sub = site.gen.locked ? dot(site.unitAt(player.x, player.z), site.gen.lockedDir) : 0.0;
-        base = climateTempC(site.gen, std::fabs(env.latDeg), player.y, winter, sub) - 3 + K.daySwing * sinAlt;   // P-02: the kind's swing (a steppe's wide)
-    } else if (site.atmosphere && K.reachClimate && site.gen.locked) {   // P-03: the fixed sun's height decides it, the sea freezing at the edge of its reach (the eyeball's pupil)
+        base = climateTempC(site.gen, std::fabs(env.latDeg), player.y, winter, sub) - 3 + K.daySwing * sinAlt;   // the kind's swing (a steppe's wide)
+    } else if (site.atmosphere && K.reachClimate && site.gen.locked) {   // the fixed sun's height decides it, the sea freezing at the edge of its reach (the eyeball's pupil)
         base = K.tempOffset + K.tempSwing * (sinAlt - std::cos(site.gen.seaReachDeg * DEG));
     } else if (site.atmosphere) {
-        double offset = K.tempOffset, swing = K.tempSwing;   // R-307: each air has its greenhouse and its day-night swing
+        double offset = K.tempOffset, swing = K.tempSwing;   // each air has its greenhouse and its day-night swing
         base = base * 0.75 + offset;
         base += swing * sinAlt - 0.4 * std::fabs(env.latDeg);
     } else {
@@ -175,19 +175,19 @@ void SurfaceView::computeEnvironment(double t) {
     }
     if (!livingGround(b.type)) base -= 6.5 * (player.y / 1000.0);
     if (K.tempAdd != 0) base += K.tempAdd;   // the ground's own heat (a molten world's, a volcanic moon's)
-    if (K.nightSideC > -1e8 && site.gen.locked) base = K.nightSideC + (base - K.nightSideC) * smoothstep(-0.12, 0.08, sinAlt);   // P-01: no air carries the day round to the night side
-    // D-04: in the dark the ground is as warm as the world's own heat keeps it (`Body::tempK`: a drifter's by its kind, a moon's own and a
+    if (K.nightSideC > -1e8 && site.gen.locked) base = K.nightSideC + (base - K.nightSideC) * smoothstep(-0.12, 0.08, sinAlt);   // no air carries the day round to the night side
+    // in the dark the ground is as warm as the world's own heat keeps it (`Body::tempK`: a drifter's by its kind, a moon's own and a
     // brown dwarf's glow on it), no day to swing it; an air cools with height over it
     if (site.sys->sunless()) base = b.tempK - 273.15 - (site.atmosphere ? 6.5 * player.y / 1000.0 : 0.0);
-    env.temperatureC = std::max(base - fw.cold, -270.0);   // W-03: the cold behind a front
+    env.temperatureC = std::max(base - fw.cold, -270.0);   // the cold behind a front
     env.pressureAtm = K.pressureSpan > 0 ? K.pressureLo + K.pressureSpan * hash01(site.gen.seed) : 0;
-    if (airFrozen(b)) env.pressureAtm *= 1e-6;   // D-04: the vapour over its snow, a trace
+    if (airFrozen(b)) env.pressureAtm *= 1e-6;   // the vapour over its snow, a trace
     env.pressureAtm *= std::exp(-player.y / 8000.0);
     SurfaceLook L = lookFor(site.gen, site.sys->star);
-    env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);   // W-03: a front's squall closes the view further
-    if (K.lowFogM > -1e8) env.fogDistance *= clampd((player.y - K.lowFogM) / K.lowFogSpan, 0.03, 1.0);   // P-01: walking down into the steam world's lowlands, the fog closes
-    // Q-02: inside a fog sea the fog closes as in the steam world's lowlands (by the eye: `render` once the eye is placed)
-    // O4: a comet vents harder the closer it dives to its star (the same activity as the tail seen from space);
+    env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);   // a front's squall closes the view further
+    if (K.lowFogM > -1e8) env.fogDistance *= clampd((player.y - K.lowFogM) / K.lowFogSpan, 0.03, 1.0);   // walking down into the steam world's lowlands, the fog closes
+    // inside a fog sea the fog closes as in the steam world's lowlands (by the eye: `render` once the eye is placed)
+    // a comet vents harder the closer it dives to its star (the same activity as the tail seen from space);
     // the dust of the coma hangs over the ground
     env.cometActivity = 0;
     if (b.type == PT_COMET) {
@@ -210,7 +210,7 @@ void SurfaceView::computeEnvironment(double t) {
             double dist = length(rel);
             Vec3 dirL = L * (rel / dist);
             if (dirL.y < 0.02) continue;
-            double illum = bodyShineAt(*site.sys, bi, sitePos, t, env.sun.lightFactor);   // W-04: the formula a moon's earthshine reads too
+            double illum = bodyShineAt(*site.sys, bi, sitePos, t, env.sun.lightFactor);   // the formula a moon's earthshine reads too
             bool glowing = kindHas(ob.type, KT_GLOWS);
             if (illum > env.moonLight) {
                 env.moonLight = illum; env.moonBody = bi; env.moonDir = dirL;
@@ -222,9 +222,9 @@ void SurfaceView::computeEnvironment(double t) {
     env.capsuleDist = std::sqrt(dx * dx + dz * dz);
     env.capsuleBearing = wrap2pi(std::atan2(dx, dz));
     env.nearCapsule = env.capsuleDist < 7.0;
-    findNearShard();   // C-03
-    findNearGrave();   // C-12
-    findNearInstrument();   // C-11
+    findNearShard();
+    findNearGrave();
+    findNearInstrument();
 }
 
 // Q-02 (TR_FOG_SEAS): the floor of the valleys round the explorer: a low quantile of the 512 m ring's ground over 6 km (a lake's or the sea's

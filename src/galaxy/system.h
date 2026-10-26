@@ -12,7 +12,7 @@
 constexpr int GEN_VERSION = 16;   // what each bump changed: docs/decisions/generations.md
 
 // P-00: the kinds of body are rows of KINDS (galaxy/kinds.h): the enum, what each kind is and how it is drawn, made and shown
-// X-03: an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves (P-07: a gas
+// an ice giant is a small blue giant (a Neptune: under 45,000 km, its globe blue); its kind is derived, nothing generated moves (P-07: a gas
 // giant's, not a made giant's: the azure giant is blue for another reason)
 struct Body;
 bool isIceGiant(const Body& b);
@@ -40,7 +40,7 @@ struct Body {
     int index = 0, parent = -1;   // parent -1 => planet, else index of parent planet
     int type = PT_CRATERED;
     int drawnType = -1;           // P-01 (GEN 16): the kind `pickPlanetType` drew, whose draws the system made (`kindOf` may have made it `type`); -1 the same
-    double drawnOrbitKm = -1;     // P-03: a moon's orbit as drawn where a made world pushed it out (the companion keeps clear of the drawn orbits); -1 the same
+    double drawnOrbitKm = -1;     // a moon's orbit as drawn where a made world pushed it out (the companion keeps clear of the drawn orbits); -1 the same
     uint64_t seed = 0;
     std::string name;
     double radiusKm = 3000;
@@ -58,26 +58,26 @@ struct Body {
     bool rings = false;
     double ringInner = 1.5, ringOuter = 2.5;   // in body radii
     double tempK = 280;           // equilibrium temperature (day side, sub-solar average)
-    double thenTempK = -1;        // P-04: a dead world's in its people's time (its then-world's climate: `BodyGen::make`); -1 its own
+    double thenTempK = -1;        // a dead world's in its people's time (its then-world's climate: `BodyGen::make`); -1 its own
     int moonCount = 0;
     RGB color;                    // ramp colour seen from space
     Vec3 spinAxis, ref0, ref1;    // spin frame (ref0/ref1 perpendicular to the axis)
-    // M5-03 eccentric orbits: orbitRadiusKm is the semi-major axis, orbitPhase0 the mean anomaly at t = 0
+    // eccentric orbits: orbitRadiusKm is the semi-major axis, orbitPhase0 the mean anomaly at t = 0
     double ecc = 0, argPeri = 0;
     // M5-01/02: companion stars and substellar objects shine (relative to the yellow star)
     double luminosity = 0;
     int starClass = -1;           // companion stars: their StarClass
-    bool doublePlanet = false;    // M5-09: one half of a double planet (both halves carry the flag)
-    bool locked = false;          // M5-08: one face toward its star; lockedDir is the sub-stellar direction in the body frame
+    bool doublePlanet = false;    // one half of a double planet (both halves carry the flag)
+    bool locked = false;          // one face toward its star; lockedDir is the sub-stellar direction in the body frame
     Vec3 lockedDir;
-    bool glassed = false;         // S-03: a survivor of the supernova that left its neutron star: the surface fused to glass (`BodyGen::make` puts TR_GLASSED first)
-    bool wanderer = false;        // P-05: a rogue world the star caught (the last body, `generate`'s own step): no people ever lived on it
-    bool drifter = false;         // D-01: a body of a drifter's system (the drifter on the anchor and its moons): no people lived on it (D-05's are the drifters' own)
-    bool former = false;          // D-05: a drifter at its former orbit round the star it left, and its moons (`formerSystemOf`): what its people's readers read
-    double heatK = 0;             // D-01: the world's own warmth (K), added to the star's in quadrature (`tempK`): a drifter's by its kind, its moons' and their tides'; 0 everywhere else
-    Vec3 apexDir;                 // P-06: a two-faced moon (which faces its planet): the direction it travels in its body frame (its leading face's middle, the apex); zero otherwise
-    double tideForcingM = 0;      // Q-02: the equilibrium tide its moons and its sun raise (metres, the game's scale: `tideForcingM`), set once the system is made
-    // T-02: the sector of the star the body was generated round (`StarSystem::generate` sets it): a world's planet function alone can then find
+    bool glassed = false;         // a survivor of the supernova that left its neutron star: the surface fused to glass (`BodyGen::make` puts TR_GLASSED first)
+    bool wanderer = false;        // a rogue world the star caught (the last body, `generate`'s own step): no people ever lived on it
+    bool drifter = false;         // a body of a drifter's system (the drifter on the anchor and its moons): no people lived on it (D-05's are the drifters' own)
+    bool former = false;          // a drifter at its former orbit round the star it left, and its moons (`formerSystemOf`): what its people's readers read
+    double heatK = 0;             // the world's own warmth (K), added to the star's in quadrature (`tempK`): a drifter's by its kind, its moons' and their tides'; 0 everywhere else
+    Vec3 apexDir;                 // a two-faced moon (which faces its planet): the direction it travels in its body frame (its leading face's middle, the apex); zero otherwise
+    double tideForcingM = 0;      // the equilibrium tide its moons and its sun raise (metres, the game's scale: `tideForcingM`), set once the system is made
+    // the sector of the star the body was generated round (`StarSystem::generate` sets it): a world's planet function alone can then find
     // its system again (`BodyGen::starSx..`, `historyOfWorld` in peoples/history.h: the history needs the star, the comets, the moons)
     int64_t starSx = 0, starSy = 0, starSz = 0;
     bool starKnown = false;
@@ -95,7 +95,7 @@ struct Belt {
     double period = 1;        // s, at the middle radius
     double phase0 = 0;
     std::string name;
-    // O3: the angular rate at radius r follows the sparkle band's Kepler shear (inner edge runs at TAU/period)
+    // the angular rate at radius r follows the sparkle band's Kepler shear (inner edge runs at TAU/period)
     double rateAt(double rKm) const { return TAU / period * std::pow(innerKm / std::max(rKm, 1.0), 1.5); }
 };
 // O3: one rock of a belt: cells of BELT_CELL_KM in co-rotating cylindrical space (radius, arc, height), up to
@@ -119,12 +119,12 @@ struct StarSystem {
     int companion = -1;           // M5-01: index of the companion star body, -1 for a single star
 
     void generate(const Star& s);
-    // D-01: a drifter's system (STAR_ROGUE): no sun. Its light is 0 everywhere (`lightAt`), its worlds have no season, and on the ground the
+    // a drifter's system (STAR_ROGUE): no sun. Its light is 0 everywhere (`lightAt`), its worlds have no season, and on the ground the
     // sun stands at the nadir with no light (`SurfaceSite::sun`), so every reader of the sun sees a night with no moon
     bool sunless() const { return star.cls == STAR_ROGUE; }
     // Absolute galactic position of body i at time t (seconds).
     Vec3 bodyPos(int i, double t) const;
-    // N0-01: orbital velocity in km/s (central difference over a small fraction of the period) and
+    // orbital velocity in km/s (central difference over a small fraction of the period) and
     // the mean anomaly in 0..TAU (0 = periapsis, below PI = receding from the parent)
     Vec3 bodyVel(int i, double t) const;
     double meanAnomaly(int i, double t) const;
@@ -140,15 +140,15 @@ struct StarSystem {
     double seasonOf(int i, double t) const;
     static void latLonFromBody(const Vec3& b, double& lat, double& lon);
     static Vec3 bodyFromLatLon(double lat, double lon);
-    // M5-01: "S00 YELLOW STAR", or "S00+S01 MULTIPLE" when a companion star exists
+    // "S00 YELLOW STAR", or "S00+S01 MULTIPLE" when a companion star exists
     std::string classString() const;
-    // M5-01: the companion as a Star (for the sun renderer); valid only when companion >= 0
+    // the companion as a Star (for the sun renderer); valid only when companion >= 0
     Star companionStar() const;
     // the light reaching body i: the brighter of the primary and the companion, its direction and factor
     struct Light { Vec3 dir; double factor; bool fromCompanion; };
     Light lightAt(const Vec3& posKm, double t) const;
     double outerOrbitKm() const;   // the widest planetary orbit (comets excluded)
-    // O3: the rocks of belt k live in rings of BELT_CELL_KM (radius index ir); each ring turns at its own rate, so the
+    // the rocks of belt k live in rings of BELT_CELL_KM (radius index ir); each ring turns at its own rate, so the
     // arc cell of a world angle depends on the ring (beltArcCell); beltCellOf gives a position's own ring, arc and
     // height cells; beltRockAt fills rock m of a cell (false when the cell holds fewer than m+1 rocks); forBeltRocksNear
     // visits every rock within a few cells of a position, ring by ring
@@ -167,15 +167,15 @@ struct StarSystem {
                     for (int m = 0; m < BELT_ROCKS_PER_CELL; m++) { BeltRock rk; if (beltRockAt(k, ir + dr, ic + da, iy + dy, m, t, rk)) fn(rk); }
         }
     }
-    // O0-01: the ring's radial density profile (256 samples from the inner to the outer edge), shared by the globe,
+    // the ring's radial density profile (256 samples from the inner to the outer edge), shared by the globe,
     // the sky arc and the ring shadow on the ground
     std::vector<float> ringProfileOf(int bi) const;
     // perceptual light factor of a star of luminosity L at distKm: (L (AU/d)^2)^0.25 clamped to 0.35..1.15 (B-425: `floor` 0 for the far sun of
     // a multiple, which lights only as much as it does)
     static double starLightFactor(double luminosity, double distKm, double floor = 0.35);
-    // B-425: body i circles the companion (it is one of the companion's worlds, or a moon of one): its own sun is the companion, the primary its far one
+    // body i circles the companion (it is one of the companion's worlds, or a moon of one): its own sun is the companion, the primary its far one
     bool ofCompanion(int i) const;
-    // M5-03: (E - e sin E = M) solved by Newton; returns the true anomaly, r/a in rOverA
+    // (E - e sin E = M) solved by Newton; returns the true anomaly, r/a in rOverA
     static double trueAnomaly(double meanAnomaly, double ecc, double& rOverA);
 };
 

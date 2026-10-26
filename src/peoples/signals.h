@@ -35,11 +35,11 @@ struct Signal {
     double detail = 0;      // a comet's distance from its sun in AU; a magnetosphere's field 0..1
     uint64_t seed = 0;      // the source's own (the world's, the star's, the body's)
     bool local = false;     // of the system the ship is in
-    double power = 0;       // C-15: the transmitter's power (`transmitterPower`; a pulsar's third), 0 for the loud near pulsars and the local signals; D-02 a drifter's (`drifterPower`)
-    double needGain = 1;    // C-15: the least gain that hears it (1 within SIGNAL_REACH_LY: C-07's list)
-    double airYears = 0;    // C-15: a people's: how long ago its world's first broadcast went out (the end's years plus the radio's, the earlier of two peoples')
-    int age = -1;           // C-16: a people's: the age its first people on the air reached (AGE_*, `peoples/peoples.h`): its carrier's colour
-    double turnS = 0, moonS = 0;   // D-03: a drifter's: the period of its turning and of its innermost moon's orbit (the game's seconds; 0 no moon), for its voice
+    double power = 0;       // the transmitter's power (`transmitterPower`; a pulsar's third), 0 for the loud near pulsars and the local signals; D-02 a drifter's (`drifterPower`)
+    double needGain = 1;    // the least gain that hears it (1 within SIGNAL_REACH_LY: C-07's list)
+    double airYears = 0;    // a people's: how long ago its world's first broadcast went out (the end's years plus the radio's, the earlier of two peoples')
+    int age = -1;           // a people's: the age its first people on the air reached (AGE_*, `peoples/peoples.h`): its carrier's colour
+    double turnS = 0, moonS = 0;   // a drifter's: the period of its turning and of its innermost moon's orbit (the game's seconds; 0 no moon), for its voice
 };
 
 // D-03 (2026-10-23): what a drifter's voice is by what it is (`rogueVoiceClass`): a brown dwarf (the giant's storm and a cyclotron howl
@@ -93,7 +93,7 @@ double rogueReachAtGain(double power, double gain);    // SIGNAL_ROGUE_REACH_LY 
 double rogueNeedGain(double distLy, double power);     // 1 + (d / SIGNAL_ROGUE_REACH_LY)^2 / power: over 1 for any distance
 // the scan beyond the reach, resumable so the radar can spread it over frames: the far parts of C-07's cells and the strong
 // cells within the reach of their strongest at `gain`; `out` holds the signals the gain hears there (by `needGain`), sorted when done.
-// D-02: a third layer, the drifters' cells (`drifterCell`) within the reach of the loudest at `gain`, and a fourth, the globular clusters'
+// a third layer, the drifters' cells (`drifterCell`) within the reach of the loudest at `gain`, and a fourth, the globular clusters'
 // own (`drifterGlobular`), each drifter by its own law
 struct SignalScan {
     std::vector<Signal> out;
@@ -107,7 +107,7 @@ private:
     int layer = 0; int64_t next = 0, total = 0; double layerReach = 0;
     void beginLayer();
     void consider(int64_t x, int64_t y, int64_t z, double power);
-    void considerDrifter(int64_t x, int64_t y, int64_t z);   // D-02
+    void considerDrifter(int64_t x, int64_t y, int64_t z);
 };
 // the system's own signals at time t: a comet within 1.5 AU of its sun outgassing, the magnetosphere of every gas giant and of
 // every big world with a field of the strongest (0.8 and over), and, when the system's sector is a transmitter, its people's world (a
@@ -141,7 +141,7 @@ std::string signalSourceLine(const Signal& s);   // "A DESERT WORLD OF AN ORANGE
 // programme's seed (`AudioState::radarVoice`, `radarSeed`); the speaking ones go through the voice synth in a voice derived
 // from the world's (`programmeFor`). The recording counts as heard when its words or its piece were on the air (`speaks`).
 //
-// C-16 (2026-10-09): each age on the air (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 10). C-07's programmes are the
+// each age on the air (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 10). C-07's programmes are the
 // modern age's (voices, music, numbers, a carrier's buzz); a slot's people of another age broadcasts what its age could: the late
 // industrial age the recording played into the transmitter from a phonograph through its horn (RP_PHONOGRAPH: a voice, or the
 // piece) and its text keyed by a spark gap in a code of the people's own (RP_MORSE: each letter of their words a pattern of dots
@@ -152,7 +152,7 @@ std::string signalSourceLine(const Signal& s);   // "A DESERT WORLD OF AN ORANGE
 #include "voice.h"
 #include "peoples.h"
 enum RadioProgramme { RP_VOICE = 0, RP_WHISPERS, RP_CHANT, RP_NUMBERS, RP_LOOP, RP_BEACON, RP_DATA, RP_TOLL, RP_SIREN, RP_MURMUR, RP_MUSIC,
-                      RP_MORSE, RP_PHONOGRAPH, RP_SYNTHETIC, RP_MATHS, RP_COUNT };   // C-16: the ages' four after C-07's eleven
+                      RP_MORSE, RP_PHONOGRAPH, RP_SYNTHETIC, RP_MATHS, RP_COUNT };   // the ages' four after C-07's eleven
 extern const char* const RADIO_PROGRAMME_NAMES[RP_COUNT];   // "A VOICE", "WHISPERS", ... for the harness
 // C-16: RP_MORSE's keying, a byte an element: under 0x80 the key down that many units, MORSE_OFF | n the key up n units
 constexpr uint8_t MORSE_OFF = 0x80;
@@ -170,7 +170,7 @@ struct Programme {
     bool piece = false;         // C-16: the slot's piece is on the air (RP_MUSIC, and RP_PHONOGRAPH in a music slot)
     std::vector<uint8_t> code;  // C-16 RP_MORSE: the keying (MORSE_OFF), `unit` seconds a unit
     double unit = 0.08;
-    int age = AGE_MODERN;       // C-16: the age of the slot's people (what its age could put on the air)
+    int age = AGE_MODERN;       // the age of the slot's people (what its age could put on the air)
 };
 // the programme in that slot of the world's broadcast; C-16: by the age of the slot's people (C-07's draw is the modern age's)
 int programmeOf(uint64_t worldSeed, int slot, bool music, int age = AGE_MODERN);

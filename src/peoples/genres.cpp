@@ -436,7 +436,7 @@ struct RecordModel : VgModel {
             case FD_INVENTION: { if (e.kind != HE_INVENTION) return false; std::string nm = historyInventionName(e.thing); if (nm == "a landing on the moon") nm = L.moons > 0 ? "a landing on " + vgName(L.moon) : "the first craft to another world"; out = nm; return true; }
             case FD_INV: { if (e.kind != HE_INVENTION) return false; const std::string nm = historyInventionName(e.thing); for (const InvKey& k : INV_KEYS) if (nm == k.name) { out = k.key; return true; } return false; }
             case FD_OMEN: if (e.kind != HE_OMEN) return false; out = keyOf(OMEN_KEYS, e.thing); return true;
-            case FD_SUN: if (e.kind != HE_SUN) return false; out = keyOf(SUN_KEYS, e.thing); return true;   // D-05
+            case FD_SUN: if (e.kind != HE_SUN) return false; out = keyOf(SUN_KEYS, e.thing); return true;
             case FD_HARVEST: if (e.kind != HE_HARVEST) return false; out = e.out == 0 ? "failed" : (e.out == 1 ? "poor" : "rich"); return true;
             case FD_FLOOD: if (e.kind != HE_FLOOD) return false; out = e.thing == 1 ? "sea" : "river"; return true;
             case FD_IMPACT: if (e.kind != HE_IMPACT) return false; out = e.out == 2 ? "world" : (e.out == 0 ? "town" : "near"); return true;
@@ -612,7 +612,7 @@ struct RecordModel : VgModel {
         facts[F_TEMPER] = TEMPER_KEYS[rng.irange(5)];
         facts[F_FAR] = "0";
         facts[F_Y] = num(y); facts[F_Y0].clear(); facts[F_Y1].clear(); facts[F_GAP].clear();
-        { const int own = H.eraAt(y); bool past = false; for (int k = 0; k < own && k < (int)H.eras.size(); k++) if (H.eras[k].end >= std::max(1, H.first)) past = true; setFlag(F_PAST, past); }   // B-414
+        { const int own = H.eraAt(y); bool past = false; for (int k = 0; k < own && k < (int)H.eras.size(); k++) if (H.eras[k].end >= std::max(1, H.first)) past = true; setFlag(F_PAST, past); }
         offers();
     }
 
@@ -689,7 +689,7 @@ struct RecordModel : VgModel {
             case D_EVENT: return event(run, arg(0, "any"), arg(1, "song"), std::atoi(arg(2, "15").c_str()));
             case D_DIGEST: return digest(run, arg(0, "public"), arg(1, "news"), std::atoi(arg(2, "3").c_str()));
             case D_PAST: return past(run, std::atoi(arg(0, "4").c_str()), arg(1, "history.year"));
-            case D_SUNTABLE: return suntable(run, std::atoi(arg(0, "5").c_str()), arg(1, "suntable.row"));   // D-05
+            case D_SUNTABLE: return suntable(run, std::atoi(arg(0, "5").c_str()), arg(1, "suntable.row"));
             default: return false;
         }
     }
@@ -783,7 +783,7 @@ struct RecordModel : VgModel {
         return false;
     }
 
-    // H-06: a record about one of the dead tells their death (the history page's: `toldLegend`)
+    // a record about one of the dead tells their death (the history page's: `toldLegend`)
     void toldDeathOf(int p) {
         const int dv = p >= 0 && p < (int)deathOf.size() ? deathOf[p] : -1;
         if (dv >= 0 && H.events[dv].year <= year && std::find(toldLegend.begin(), toldLegend.end(), dv) == toldLegend.end()) toldLegend.push_back(dv);
@@ -894,7 +894,7 @@ struct RecordModel : VgModel {
     }
     // `@years <n> <rule>`: a chronicle: up to n years with something in them, the last the record's own or before it, within its era, in
     // their order; each told by `<rule>` with the year's facts and ruler bound, the empty years between by `<rule>.gap`
-    // D-05: `@suntable <n> <rule>`: a drifter's people's observatory's table of the sun's disc, up to n rows from the last year of the whole sun
+    // `@suntable <n> <rule>`: a drifter's people's observatory's table of the sun's disc, up to n rows from the last year of the whole sun
     // (the year before the onset, or the record's year, if earlier) to the record's year, evenly between, each told by `<rule>` with its year (`y`) and the disc then (`sunsize`) in the
     // people's own parts of its first measure (`sunfrom`: 60, 100, 120, 32 or 24 by the people; the disc as the distance grew, the square root
     // of its light); nothing for a people that kept its sun
@@ -955,7 +955,7 @@ struct RecordModel : VgModel {
         fixedYear = 0; bound[E_RULER] = -1;
         return true;
     }
-    // B-414: `@past <n> <rule>`: a late people's history of an age before the record's (a world shows only the age its people reached, so its
+    // `@past <n> <rule>`: a late people's history of an age before the record's (a world shows only the age its people reached, so its
     // earlier ages are told by its own histories): one of its earlier eras since the reckoning began (year 1: the old time before it is the
     // chroniclers' round years, no heading counts them), the record's draw, the nearer the likelier; a run of up to n of
     // its years with something in them counting back from a year drawn in it, told in their order by `<rule>` with each year's facts and ruler
@@ -1010,7 +1010,7 @@ struct RecordModel : VgModel {
         const int dv = deathOf[x];
         if (dv >= 0) {
             const HistoryEvent& d = H.events[dv];
-            toldDeathOf(x);   // H-06
+            toldDeathOf(x);
             run.bindEntity("$e", eventEntity(dv));
             if (d.cause >= 0 && d.cause < (int)H.events.size()) {
                 run.bindEntity("$c", eventEntity(d.cause));
@@ -1186,10 +1186,10 @@ void writeRecordTexts(const StarSystem& sys0, const Body& b0, const BodyGen& g, 
         it.text = it.rec.text;
         it.kind = it.rec.root;
         it.told = M.toldHere;
-        for (int ev : M.toldLegend) if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev);   // H-06: a death an epitaph is about
-        if (s.last) for (int ev = (int)H.events.size() - 1; ev >= 0; ev--) if (H.events[ev].kind == HE_END) { if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev); break; }   // H-06: the last recording tells the end
+        for (int ev : M.toldLegend) if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev);   // a death an epitaph is about
+        if (s.last) for (int ev = (int)H.events.size() - 1; ev >= 0; ev--) if (H.events[ev].kind == HE_END) { if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev); break; }   // the last recording tells the end
         it.writer = M.writer; it.reader = M.reader; it.subject = M.subject;
-        for (int a : it.rec.used) {   // H-06: the people's ways it expressed (its drawn alternatives' guards on them, as the model holds them)
+        for (int a : it.rec.used) {   // the people's ways it expressed (its drawn alternatives' guards on them, as the model holds them)
             if (a < 0 || a >= (int)G.alts.size()) continue;
             for (const VgCond& c : G.alts[a].conds) {
                 auto take = [&](const VgCond& k) {

@@ -2,7 +2,7 @@
 // flare, and a black hole's shadow and lens (`drawBlackHole`, drawn with the sun)
 #include "space_internal.h"
 
-// F-05: true when no pixel centre of the frame lies within `halfAngle` of a direction `theta` off the view's axis. The farthest pixel
+// true when no pixel centre of the frame lies within `halfAngle` of a direction `theta` off the view's axis. The farthest pixel
 // centre lies `cornerA` off the axis, and the angle between two directions is at least the difference of their angles to a third, so
 // every pixel lies more than theta - cornerA from the direction (a margin of 1e-5 radians over the passes' own rounding)
 static bool coneMissesFrame(const Proj& pj, double theta, double halfAngle) {
@@ -20,10 +20,10 @@ static bool coneMissesFrame(const Proj& pj, double theta, double halfAngle) {
 void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirView, double angR, double t,
                             double intensity, int bank, bool atmosphere, double atmosHaze, bool depthTest, const Proj& pj, const Vec3* discUp) {
     int cls = star.cls;
-    if (cls == STAR_BLACK_HOLE) { drawBlackHole(fb, star, dirView, angR, t, intensity, bank, depthTest, pj, discUp); return; }   // S-06: no disc of light at all
+    if (cls == STAR_BLACK_HOLE) { drawBlackHole(fb, star, dirView, angR, t, intensity, bank, depthTest, pj, discUp); return; }   // no disc of light at all
     double glowMul = 1.0;
     double pulse = 1.0;
-    double flare = starFlare(star, t);   // S-01: a red dwarf's flare brightens the disc and the corona for a minute
+    double flare = starFlare(star, t);   // a red dwarf's flare brightens the disc and the corona for a minute
     if (cls == STAR_PULSAR) {
         double ph = std::fmod(t * star.pulseHz, 1.0);
         pulse = 0.15 + 0.85 * std::pow(std::max(0.0, std::cos(ph * TAU)), 12.0);
@@ -33,20 +33,20 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     if (cls == STAR_RED_GIANT) glowMul = 0.6;
     if (cls == STAR_WHITE_DWARF) glowMul = 1.1;
     if (cls == STAR_ORANGE) glowMul = 0.9;
-    if (cls == STAR_RED_DWARF) glowMul = 0.8 + 0.7 * flare;   // S-01
+    if (cls == STAR_RED_DWARF) glowMul = 0.8 + 0.7 * flare;
     if (cls == STAR_BLUE_WHITE) glowMul = 1.5;
     if (cls == STAR_ORANGE_GIANT) glowMul = 0.7;
     if (cls == STAR_CARBON) glowMul = 1.4;   // the soot's haze: wide and dim (its corona is halved below)
-    if (cls == STAR_NEUTRON) glowMul = 1.3;   // S-03: a point of white light in a soft steady halo, no rays, no beams
-    if (cls == STAR_PROTOSTAR) glowMul = 2.0;   // S-04: the accretion cloud, a wide mottled glow round a soft disc
-    if (cls == STAR_WOLF_RAYET) glowMul = 1.6;   // S-05: blinding, inside the ring of its shell (drawn in the glow's pass below)
+    if (cls == STAR_NEUTRON) glowMul = 1.3;   // a point of white light in a soft steady halo, no rays, no beams
+    if (cls == STAR_PROTOSTAR) glowMul = 2.0;   // the accretion cloud, a wide mottled glow round a soft disc
+    if (cls == STAR_WOLF_RAYET) glowMul = 1.6;   // blinding, inside the ring of its shell (drawn in the glow's pass below)
     const double S = FB_SCALE, invf = 1.0 / pj.f;
     double rA = std::max(angR, 0.6 * S * invf);   // the old floor of 0.6 px, as an angle
     double coronaA = std::max(rA * (atmosphere ? 3.2 : 2.4), 5.0 * S * invf) * glowMul;
     double outerA = std::min(coronaA * (atmosphere ? 3.0 : 1.6) * (1.0 + atmosHaze), PI - 0.01);
     int addOuter = (int)(intensity * (atmosphere ? 14 : 8) * pulse * (cls == STAR_CARBON ? 0.7 : 1.0));
     int addCorona = (int)(intensity * 30 * pulse * (cls == STAR_CARBON ? 0.5 : 1.0) * (1 + 0.5 * flare));
-    // S-05: the Wolf-Rayet star's shell of shed gas, a ring at five radii (four pixels at least) a seventh of that wide, sharp
+    // the Wolf-Rayet star's shell of shed gas, a ring at five radii (four pixels at least) a seventh of that wide, sharp
     // outside and diffuse inside, filamentary, brighter on the side it drives into (a fixed direction by the seed); the box
     // and the glow's pass reach past it, so it costs no pass of its own. Its pattern is fixed in the world when the caller
     // gives the world's up (`discUp`), else in the view
@@ -74,7 +74,7 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
         x0 = std::max(0, (int)(sx - rb)); x1 = std::min(FBW - 1, (int)(sx + rb));
         y0 = std::max(0, (int)(sy - rb)); y1 = std::min(FBH - 1, (int)(sy + rb));
         if (x0 > x1 || y0 > y1) return;
-    } else glowPass = !coneMissesFrame(pj, theta, outerA);   // F-05: the sun beside or behind the camera: the whole frame was walked for nothing
+    } else glowPass = !coneMissesFrame(pj, theta, outerA);   // the sun beside or behind the camera: the whole frame was walked for nothing
     bool disc = rA * pj.f >= 0.8;   // under 0.8 px the sun is a point
     // a tangent basis for the granulation pattern (6 units across the disc, as the old dx * ns)
     Vec3 e1 = cross(dirView, Vec3(0, 1, 0));
@@ -83,7 +83,7 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     Vec3 e2 = cross(dirView, e1);
     double cosOuter = std::cos(outerA);
     if (glowPass) parallelFor(y1 - y0 + 1, 32, [&](int rb, int re) {
-        // F-05 (KI-409): what the loop reads, copied into the band's own locals. Read through the closure from drawSun's frame between the
+        // what the loop reads, copied into the band's own locals. Read through the closure from drawSun's frame between the
         // pixels' stores, the loop ran five times slower under one alignment of the main thread's stack; the arithmetic is the same
         const double pcx = pj.cx, pcy = pj.cy, inv = invf, cosOut = cosOuter, rAng = rA, outer = outerA, corona = coronaA, tc = t;
         const double fl = flare, pu = pulse, inten = intensity, rgA = ringA, rgW = ringW, bowA = bowAng;
@@ -112,21 +112,21 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
                     double k = pl > 1e-9 ? 6.0 * q / pl : 0.0;
                     double nx = px * k, ny = py * k;
                     double v;
-                    if (kind == STAR_RED_GIANT || kind == STAR_ORANGE_GIANT || kind == STAR_CARBON) {   // S-01: the giants' mottled convection; the carbon star's disc dark under its soot
+                    if (kind == STAR_RED_GIANT || kind == STAR_ORANGE_GIANT || kind == STAR_CARBON) {   // the giants' mottled convection; the carbon star's disc dark under its soot
                         double n = gnoise2(nx * 1.5 + tc * 0.03, ny * 1.5, seed) * 0.5 +
                                    gnoise2(nx * 4 - tc * 0.05, ny * 4, seed + 3) * 0.3;
                         v = (kind == STAR_CARBON ? 42 : 50) + 14 * n;
                         v *= limb * 0.95 + 0.05;
                     } else if (kind == STAR_ORANGE || kind == STAR_YELLOW || kind == STAR_RED_DWARF) {
                         double n = gnoise2(nx * 3 + tc * 0.01, ny * 3, seed);
-                        double spotFrom = kind == STAR_RED_DWARF ? 0.36 : 0.42;   // S-01: a red dwarf is spotted all over, and its flare whitens the disc
+                        double spotFrom = kind == STAR_RED_DWARF ? 0.36 : 0.42;   // a red dwarf is spotted all over, and its flare whitens the disc
                         double spots = (kind != STAR_YELLOW && n > spotFrom) ? 18 * (n - spotFrom) / 0.3 : 0;
                         v = (58 + 4 * gnoise2(nx * 8, ny * 8 + tc * 0.02, seed + 1)) * limb - spots * 2.0 + 12 * fl;
-                    } else if (kind == STAR_BLUE_GIANT || kind == STAR_BLUE_WHITE || kind == STAR_WOLF_RAYET) {   // S-05: the Wolf-Rayet star's disc is the blue giant's
+                    } else if (kind == STAR_BLUE_GIANT || kind == STAR_BLUE_WHITE || kind == STAR_WOLF_RAYET) {   // the Wolf-Rayet star's disc is the blue giant's
                         v = 63 * (0.8 + 0.2 * mu);
                     } else if (kind == STAR_PULSAR) {
                         v = 40 + 23 * pu;
-                    } else if (kind == STAR_PROTOSTAR) {   // S-04: a soft disc, strongly limb-darkened, its light through the dust
+                    } else if (kind == STAR_PROTOSTAR) {   // a soft disc, strongly limb-darkened, its light through the dust
                         double n = gnoise2(nx * 2 + tc * 0.02, ny * 2, seed) * 0.5 + gnoise2(nx * 5, ny * 5 - tc * 0.03, seed + 3) * 0.3;
                         v = (47 + 8 * n) * (0.35 + 0.65 * mu);
                     } else {
@@ -149,7 +149,7 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
                     double t2 = a <= c0 ? 1.0 : 1.0 - (a - c0) / (corona - c0 + 1e-9);
                     if (t2 > 0) add += (int)(aCorona * INTEN_PER_SHADE * t2 * t2 + 0.5);
                 }
-                if (kind == STAR_WOLF_RAYET && a > rAng) {   // S-05: the shell's ring
+                if (kind == STAR_WOLF_RAYET && a > rAng) {   // the shell's ring
                     double ex = (a - rgA) / rgW;
                     double ring = ex > 0 ? std::exp(-4.0 * ex * ex) : std::exp(-0.5 * ex * ex);
                     if (ring > 0.01) {
@@ -161,16 +161,16 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
                     }
                 }
                 if (add <= 0) continue;
-                if (kind == STAR_PROTOSTAR && a > rAng) add = (int)(add * (0.6 + 0.4 * (0.5 + 0.5 * gnoise3(d / dl * 6.0, seed + 9))));   // S-04: the cloud's wisps
+                if (kind == STAR_PROTOSTAR && a > rAng) add = (int)(add * (0.6 + 0.4 * (0.5 + 0.5 * gnoise3(d / dl * 6.0, seed + 9))));   // the cloud's wisps
                 int bk = intenOf(p) == 0 ? bk0 : bankOf(p);
                 p = pixI(bk, intenOf(p) + add);
             }
         }
     });
-    // S-04: the protostar's dust disc, seen edge-on from the plane of its worlds: a band of glow along the orbital plane through
+    // the protostar's dust disc, seen edge-on from the plane of its worlds: a band of glow along the orbital plane through
     // the star, narrow at the star and flaring to 0.05 + 0.3 a (radians) at the angle a from it, gone 0.6 rad out, with the dark
     // lane of the disc's own shadow along its middle. Its own pass over the frame, skipping cheaply every pixel outside the strip
-    if (cls == STAR_PROTOSTAR && discUp && !coneMissesFrame(pj, theta, 0.6)) {   // F-05: not when the strip's cone misses the frame
+    if (cls == STAR_PROTOSTAR && discUp && !coneMissesFrame(pj, theta, 0.6)) {   // not when the strip's cone misses the frame
         const Vec3 n = *discUp;
         const double cosBand = std::cos(0.6);
         parallelFor(FBH, 32, [&](int rb, int re) {
@@ -203,7 +203,7 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     }
     if (!centreFront) return;
     // rays for compact stars, from the projected centre, outside the disc
-    if (cls == STAR_WHITE_DWARF || cls == STAR_PULSAR || cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) {   // S-01: the blue-white star's cross of four; S-05: the Wolf-Rayet star's too
+    if (cls == STAR_WHITE_DWARF || cls == STAR_PULSAR || cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) {   // the blue-white star's cross of four; S-05: the Wolf-Rayet star's too
         double coronaPx = std::min(pj.f * std::tan(std::min(coronaA, 1.4)), (double)FBW);
         double rPx = pj.f * std::tan(std::min(rA, 1.4));
         double len = coronaPx * ((cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) ? 1.4 : 2.2) * (cls == STAR_PULSAR ? pulse : 1.0);
@@ -321,7 +321,7 @@ void SpaceRenderer::drawBlackHole(Framebuffer& fb, const Star& star, const Vec3&
             }
         }
     }
-    if (coneMissesFrame(pj, theta, regionA)) return;   // F-05: no pixel within the lens's region: the copy, the grid and the pass write nothing
+    if (coneMissesFrame(pj, theta, regionA)) return;   // no pixel within the lens's region: the copy, the grid and the pass write nothing
     // the frame before the lens
     std::vector<Pix> before(fb.idx);
     // the bent directions on the grid (not unit: only their projection and their line are used)

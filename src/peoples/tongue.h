@@ -36,7 +36,7 @@ struct Tongue {
     // the sounds as spelt: what begins a syllable (a consonant, a cluster), its vowels, what ends one (the voice reads the three)
     std::vector<std::string> onsets, nuclei, codas;
     double codaChance = 0.5, vowelStart = 0.2;   // a syllable's chance of an ending consonant, a word's of a bare first vowel (C-06's)
-    // H-04: the people's own endings, put on the word for a root as ours put "-s", "-ed", "-ing" on it
+    // the people's own endings, put on the word for a root as ours put "-s", "-ed", "-ing" on it
     std::string endS, endPast, endIng;
     // H-04's second pass: the naming language
     std::vector<std::string> cons, vows, liquids, sibs, finals;   // spelt

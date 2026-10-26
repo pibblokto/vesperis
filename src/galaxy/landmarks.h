@@ -4,7 +4,7 @@
 // on a quartz or carbon world (CRYSTAL FIELD), a kept lake of the drainage (LAKE), the biggest ruin (RUINS). A sight has a kind,
 // a place, a size and a hash id of its cell that is the same wherever it is asked for. R-408 (2026-10-07): the sights are the
 // surface scanner's echoes, each kind read on its own (`sightsOfCell`, `sightsNear`) with every ruin of the 2 km grid listed
-// apart (`ruinsNear`); they are no longer markers: the maps show the explorer's own marks (game/guide.h's `SurfaceMark`).
+// apart (`ruinsNear`); they are not markers: the maps show the explorer's own marks (game/guide.h's `SurfaceMark`).
 // O6-06's one landmark a cell (its order of kinds) is kept for the names given to them before (`legacyLandmarkOf`)
 #pragma once
 #include "planetmap.h"
@@ -14,11 +14,11 @@
 #include <map>
 #include <utility>
 
-enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK,   // T-03: LM_WORK a people's work (peoples/works.h)
-                    // Q-01: the new landforms' sights, one each (`landformSight`): a great shield's caldera, a tessera's crest, a labyrinth's floor, a
+enum LandmarkKind { LM_PEAK = 0, LM_MESA, LM_CANYON, LM_CRATER, LM_GEYSERS, LM_CRYSTALS, LM_LAKE, LM_RUIN, LM_WORK,   // LM_WORK a people's work (peoples/works.h)
+                    // the new landforms' sights, one each (`landformSight`): a great shield's caldera, a tessera's crest, a labyrinth's floor, a
                     // cluster of hollows, a chain's crater, a field of penitentes, a colonnade, a mud volcano, an old river's ridge, a pingo, a maar
                     LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,
-                    LM_METEORITES,   // Q-02: a strewn field of iron meteorites (TR_METEORITES)
+                    LM_METEORITES,   // a strewn field of iron meteorites (TR_METEORITES)
                     LM_COUNT };
 // Q-01: the sight a landform trait gives (LM_COUNT none); Q-02: a strewn field's
 int landformSight(int trait);
@@ -43,7 +43,7 @@ struct CellSights { bool has[LM_COUNT] = {}; Landmark lm[LM_COUNT]; double hiH =
 // the lakes are read from the drainage tiles already built (a verdict without them is not kept)
 bool sightsOfCell(const BodyGen& g, int ci, int cj, CellSights& out, bool buildTiles = true);
 // O6-06's one landmark of the cell: the first kind of its order (crater, canyon rim, mesa, geysers, crystals, a lake unless a peak
-// stands 200 m over the cell, ruins unless one stands 150 m, the peak), for the names the explorer gave before R-408
+// stands 200 m over the cell, ruins unless one stands 150 m, the peak), for the names older guides gave them
 bool legacyLandmarkOf(const CellSights& s, Landmark& out);
 // R-408: the cells whose ids' low 32 bits are among `ids` (the old `<body>/L<id>` keys), one pass over the world's grid
 void cellsOfLegacyIds(const BodyGen& g, const std::set<uint32_t>& ids, std::map<uint32_t, std::pair<int, int>>& out);

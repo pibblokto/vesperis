@@ -73,7 +73,7 @@ struct Bld {
     void groupRhythm(int gb, double density, bool closing, std::vector<int>& out) {
         out.clear(); int units = gb * sub;
         if (closing && gb <= 2) { if (rng.chance(0.6)) out.push_back(units); else { out.push_back(sub); out.push_back(units - sub); } return; }
-        if (closing) units -= 2 * sub;   // H-05: a long group closes on its last two beats held, the beats before it moving (a cycle of one group still sings)
+        if (closing) units -= 2 * sub;   // a long group closes on its last two beats held, the beats before it moving (a cycle of one group still sings)
         for (int rem = units; rem > 0;) {
             int lens[4] = {1, sub, 2 * sub, 3 * sub};
             double wl[4] = {density * 0.9, 1.2, 0.7 / density, 0.3 / density};

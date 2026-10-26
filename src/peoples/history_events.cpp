@@ -88,7 +88,7 @@ void Builder::randomEvents(int y) {
         }
     }
     int drought = 0;
-    if (a <= AGE_INDUSTRIAL && rng.chance((W.desert ? 1 / 60.0 : 1 / 140.0) * (1.2 - std::min(1.0, wet))) && sunAt(y) > 0.5) {   // D-05: nor a drought
+    if (a <= AGE_INDUSTRIAL && rng.chance((W.desert ? 1 / 60.0 : 1 / 140.0) * (1.2 - std::min(1.0, wet))) && sunAt(y) > 0.5) {   // nor a drought
         drought = 1 + rng.irange(4);
         const int e = ev(HE_DROUGHT, y, -1, 0.4f); E(e).value = drought;
     }
@@ -142,7 +142,7 @@ void Builder::randomEvents(int y) {
             const int hzd = SCRIPTS[H.cause].hazard;
             const bool fields = hzd == HZ_FAMINE || hzd == HZ_COLD || hzd == HZ_DRYING || hzd == HZ_IMPACT || hzd == HZ_FIRE || H.cause == CAUSE_CLIMATE || H.cause == CAUSE_WATER_WAR || H.cause == CAUSE_POISONED;
             if (fields) { q -= 2.5 * clampd((y - H.stageYear[0]) / (double)std::max(1, H.last - H.stageYear[0]), 0, 1) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }
-            if (hzd == HZ_SUNLOST) { q -= 4.5 * (1 - sunAt(y)) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }   // D-05: the fields under a sun going
+            if (hzd == HZ_SUNLOST) { q -= 4.5 * (1 - sunAt(y)) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }   // the fields under a sun going
         }
         const int hv = clampi((int)std::lround(q), 0, 4);
         H.harvest[yi] = (uint8_t)hv;
@@ -544,7 +544,7 @@ void Builder::collapseYear(int y) {
                 const double share = onset ? rng.range(0.15, 0.6) : rng.range(0.01, 0.05);
                 E(e).value = (int64_t)(pop(y) * share); harm(-1, share, e, 12); deficit += share * 0.5; lastHazardEv = e; } break;
             case HZ_CHILDREN: break;
-            case HZ_SUNLOST: {   // D-05: the long cold from the onset; the sun seen going (smaller, the year that did not end, the sea frozen, the air
+            case HZ_SUNLOST: {   // the long cold from the onset; the sun seen going (smaller, the year that did not end, the sea frozen, the air
                 // fallen as snow, the last sunrise, the stars at noon), each once and in its order; the cold's dead every year as the light failed
                 const double light = sunAt(y), before = y > 1 ? sunAt(y - 1) : 1;
                 if (onset) { const int e = ev(HE_WINTER, y, -1, 0.6f); E(e).value = std::max(1, H.last - y + 1); lastHazardEv = e; }
@@ -580,7 +580,7 @@ void Builder::collapseYear(int y) {
         H.places[p].endEvent = e;
         if (big(p) && placePop(p, y) > 200) {
             const int x = ev(HE_EXODUS, y, p, 0.5f); E(x).value = (int64_t)(placePop(p, y) * rng.range(0.1, 0.4)); E(x).thing = CS.whither; E(x).cause = e;
-            if (CS.whither == WH_PLACE || CS.whither == WH_UNDER) E(x).place2 = H.lastPlace;   // D-05: below, at the last place's deep halls
+            if (CS.whither == WH_PLACE || CS.whither == WH_UNDER) E(x).place2 = H.lastPlace;   // below, at the last place's deep halls
         }
         const int to = nearestStanding(p, y + 1, false);
         for (int q : stepped) {
@@ -598,7 +598,7 @@ void Builder::collapseYear(int y) {
         int how = 15;
         switch (CS.hazard) {
             case HZ_FAMINE: case HZ_DRYING: how = 4; break;
-            case HZ_COLD: case HZ_SUNLOST: how = 13; break;   // D-05: the cold
+            case HZ_COLD: case HZ_SUNLOST: how = 13; break;   // the cold
             case HZ_SICKNESS: how = 1; break;
             case HZ_FLOOD: how = 5; break;
             case HZ_IMPACT: case HZ_FLARE: case HZ_FIRE: how = 12; break;

@@ -48,18 +48,18 @@ bool Guide::load(const std::string& path) {
             (key == "name" ? names : inbox)[k] = rest;
         } else if (key == "visited") { std::string k; is >> k; visited.insert(k); }
         else if (key == "landed") { std::string k; is >> k; landed.insert(k); }
-        else if (key == "mark") {   // R-408: <body> <lat> <lon> <kind> <lent> <when> <name...>
+        else if (key == "mark") {   // <body> <lat> <lon> <kind> <lent> <when> <name...>
             SurfaceMark m; int lentFlag = 0; std::string rest;
             is >> m.body >> m.lat >> m.lon >> m.kind >> lentFlag >> m.when;
             if (is.fail()) continue;
             std::getline(is, rest); if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
             m.name = rest; m.lent = lentFlag != 0;
-            m.kind = markKindFromFile(m.kind);   // T-03: the file's 8 a place, 9 a work
+            m.kind = markKindFromFile(m.kind);   // the file's 8 a place, 9 a work
             if (m.kind < 0 || m.kind > MARK_PLACE) m.kind = MARK_PLACE;
             marks.push_back(m);
         }
-        else if (key == "shownmark") is >> shownMark;   // B-412: after the marks it counts in
-        else if (key == "gmark") {   // G-06: <x> <y> <z> <lent> <when> <name...>
+        else if (key == "shownmark") is >> shownMark;   // after the marks it counts in
+        else if (key == "gmark") {   // <x> <y> <z> <lent> <when> <name...>
             GalaxyMark m; int lentFlag = 0; std::string rest;
             is >> m.x >> m.y >> m.z >> lentFlag >> m.when;
             if (is.fail()) continue;
@@ -67,20 +67,20 @@ bool Guide::load(const std::string& path) {
             m.name = rest; m.lent = lentFlag != 0;
             galaxyMarks.push_back(m);
         }
-        else if (key == "shard") { std::string k; is >> k; shards.insert(k); }   // C-03
-        else if (key == "decoded") { std::string k; int n = 0; is >> k >> n; decoded[k] = n; }   // C-06
-        else if (key == "signal") { std::string k; int n = 0; is >> k >> n; signals[k] = n; }   // C-07
-        else if (key == "heard") { std::string k; is >> k; heard.insert(k); }   // C-07
-        else if (key == "grave") { std::string k; is >> k; graves.insert(k); }   // C-12
-        else if (key == "ended") { std::string k; is >> k; ended.insert(k); }   // C-12
-        else if (key == "lent") { std::string k; is >> k; lent.insert(k); }   // C-14
-        else if (key == "instrument") { std::string k; is >> k; instruments.insert(k); }   // C-11
-        else if (key == "probe") {   // X-04
+        else if (key == "shard") { std::string k; is >> k; shards.insert(k); }
+        else if (key == "decoded") { std::string k; int n = 0; is >> k >> n; decoded[k] = n; }
+        else if (key == "signal") { std::string k; int n = 0; is >> k >> n; signals[k] = n; }
+        else if (key == "heard") { std::string k; is >> k; heard.insert(k); }
+        else if (key == "grave") { std::string k; is >> k; graves.insert(k); }
+        else if (key == "ended") { std::string k; is >> k; ended.insert(k); }
+        else if (key == "lent") { std::string k; is >> k; lent.insert(k); }
+        else if (key == "instrument") { std::string k; is >> k; instruments.insert(k); }
+        else if (key == "probe") {
             ProbeRecord r; int lentFlag = 0; std::string storm;
             is >> r.id >> lentFlag >> r.body >> r.gen >> r.saved >> r.launchT >> r.aimLat >> r.aimLon >> r.seed >> r.startX >> r.startY >> r.startZ >> r.headYaw >> r.descYaw >> r.chuteOpen >> r.chuteClose >> r.crushBar
                >> r.endClock >> r.endBar >> r.endKm >> r.endK >> r.endCause >> storm;
             if (!is.fail()) { r.lent = lentFlag != 0; r.storm = storm == "-" ? std::string() : storm; probes.push_back(r); }
-        } else if (key == "probecam" || key == "probetime" || key == "probeprofile" || key == "probelayers") {   // X-04: the record of that seed's
+        } else if (key == "probecam" || key == "probetime" || key == "probeprofile" || key == "probelayers") {   // the record of that seed's
             uint64_t seed = 0; size_t n = 0; is >> seed >> n;
             int at = !probes.empty() && probes.back().seed == seed ? (int)probes.size() - 1 : probeIndexBySeed(seed);
             if (at < 0 || is.fail() || n > 200000) continue;
@@ -99,7 +99,7 @@ bool Guide::load(const std::string& path) {
         else if (key == "history") { std::string k; is >> k; history.push_back(k); }
         else if (key == "home") is >> home;
         else if (key == "gen") is >> genVersion;
-        else if (key == "records") is >> recordsScheme;   // T-04
+        else if (key == "records") is >> recordsScheme;
         else if (key == "log") {
             LogEntry e; std::string rest; is >> e.t >> e.kind; std::getline(is, rest);
             if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
@@ -110,18 +110,18 @@ bool Guide::load(const std::string& path) {
             if (n == "furthest") furthestFromHomeLY = v; else if (n == "walk") longestWalkM = v; else if (n == "highest") highestPointM = v;
             else if (n == "walked") totalWalkedM = v; else if (n == "driven") totalDrivenM = v; else if (n == "flown") totalFlownM = v; else if (n == "screenshots") screenshots = (int)v;
             else if (n == "creatures") creaturesSeen = (int)v; else if (n == "topspeed") topSpeedKmh = v; else if (n == "longestdrive") longestDriveM = v;
-            else if (n == "probes") probesSent = (int)v;   // X-04
-            else if (n == "drones") droneTrips = (int)v;   // C-18
+            else if (n == "probes") probesSent = (int)v;
+            else if (n == "drones") droneTrips = (int)v;
             else if (n == "dronefinds") droneFinds = (int)v;
         }
     }
     if (shownMark < -1 || shownMark >= (int)marks.size()) shownMark = -1;
-    for (ProbeRecord& r : probes) r.lines = probeLines(r);   // F-02: once the whole file is read (a record's lines follow its `probe` line)
-    if (recordsScheme < 3) {   // T-04 (2): the records' contents new; B-414 (3): a people's records all of the age it reached
+    for (ProbeRecord& r : probes) r.lines = probeLines(r);   // once the whole file is read (a record's lines follow its `probe` line)
+    if (recordsScheme < 3) {   // (2): the records' contents new; B-414 (3): a people's records all of the age it reached
         migratedShards = 0;
         for (const std::string& k : shards) if (k.find("/S") != std::string::npos) migratedShards++;
     }
-    if (recordsScheme < 2) { rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox); }   // T-04: the second people's shards at the records' stride, everywhere a shard's key is kept
+    if (recordsScheme < 2) { rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox); }   // the second people's shards at the records' stride, everywhere a shard's key is kept
     return true;
 }
 
@@ -149,21 +149,21 @@ bool Guide::save(const std::string& path) const {
     for (auto& kv : inbox) f << "inbox " << kv.first << " " << kv.second << "\n";
     for (auto& k : visited) f << "visited " << k << "\n";
     for (auto& k : landed) f << "landed " << k << "\n";
-    for (const SurfaceMark& m : marks) f << "mark " << m.body << " " << m.lat << " " << m.lon << " " << markKindToFile(m.kind) << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";   // R-408 (T-03: R-408's numbers kept)
-    if (shownMark >= 0 && shownMark < (int)marks.size()) f << "shownmark " << shownMark << "\n";   // B-412
-    for (const GalaxyMark& m : galaxyMarks) f << "gmark " << m.x << " " << m.y << " " << m.z << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";   // G-06
-    for (auto& k : shards) f << "shard " << k << "\n";   // C-03
-    for (auto& kv : decoded) f << "decoded " << kv.first << " " << kv.second << "\n";   // C-06
-    for (auto& kv : signals) f << "signal " << kv.first << " " << kv.second << "\n";   // C-07
-    for (auto& k : heard) f << "heard " << k << "\n";   // C-07
-    for (auto& k : graves) f << "grave " << k << "\n";   // C-12
-    for (auto& k : ended) f << "ended " << k << "\n";   // C-12
-    for (auto& k : lent) f << "lent " << k << "\n";   // C-14
-    for (auto& k : instruments) f << "instrument " << k << "\n";   // C-11
-    for (const ProbeRecord& r : probes) {   // X-04
+    for (const SurfaceMark& m : marks) f << "mark " << m.body << " " << m.lat << " " << m.lon << " " << markKindToFile(m.kind) << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";   // (T-03: R-408's numbers kept)
+    if (shownMark >= 0 && shownMark < (int)marks.size()) f << "shownmark " << shownMark << "\n";
+    for (const GalaxyMark& m : galaxyMarks) f << "gmark " << m.x << " " << m.y << " " << m.z << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";
+    for (auto& k : shards) f << "shard " << k << "\n";
+    for (auto& kv : decoded) f << "decoded " << kv.first << " " << kv.second << "\n";
+    for (auto& kv : signals) f << "signal " << kv.first << " " << kv.second << "\n";
+    for (auto& k : heard) f << "heard " << k << "\n";
+    for (auto& k : graves) f << "grave " << k << "\n";
+    for (auto& k : ended) f << "ended " << k << "\n";
+    for (auto& k : lent) f << "lent " << k << "\n";
+    for (auto& k : instruments) f << "instrument " << k << "\n";
+    for (const ProbeRecord& r : probes) {
         f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " " << r.startX << " " << r.startY << " " << r.startZ
           << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " " << r.endBar << " " << r.endKm << " " << r.endK << " " << r.endCause << " " << (r.storm.empty() ? "-" : r.storm) << "\n";
-        if (r.lines.empty()) r.lines = probeLines(r);   // F-02: a record made by a path that did not make them
+        if (r.lines.empty()) r.lines = probeLines(r);   // a record made by a path that did not make them
         f << r.lines;
     }
     for (int c : classesSeen) f << "class " << c << "\n";
@@ -189,14 +189,14 @@ int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, in
         if (lent.insert(kv.first).second) l++;
     }
     if (lentOut) *lentOut = l;
-    int pn = 0;   // X-04: the friend's own recordings, lent (theirs lent to them do not travel on); dated by the lending for the gallery's order
+    int pn = 0;   // the friend's own recordings, lent (theirs lent to them do not travel on); dated by the lending for the gallery's order
     for (const ProbeRecord& r : other.probes) {
         if (r.lent || probeIndexBySeed(r.seed) >= 0) continue;
         ProbeRecord c = r; c.lent = true; c.saved = (long long)std::time(nullptr);
         probes.push_back(c); pn++;
     }
     if (probesOut) *probesOut = pn;
-    int mn = 0;   // R-408: the friend's own marks, lent (one where a mark already stands, within about 30 m, is the same place)
+    int mn = 0;   // the friend's own marks, lent (one where a mark already stands, within about 30 m, is the same place)
     for (const SurfaceMark& m : other.marks) {
         if (m.lent) continue;
         bool there = false;
@@ -206,7 +206,7 @@ int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, in
         marks.push_back(c); mn++;
     }
     if (marksOut) *marksOut = mn;
-    int gn = 0;   // G-06: the friend's own marks of the galaxy, lent (one within a light year of a mark already there is the same place)
+    int gn = 0;   // the friend's own marks of the galaxy, lent (one within a light year of a mark already there is the same place)
     for (const GalaxyMark& m : other.galaxyMarks) {
         if (m.lent) continue;
         bool there = false;
@@ -219,7 +219,7 @@ int Guide::importInbox(const std::string& path, int* lentOut, int* probesOut, in
     return n;
 }
 
-double Guide::deepestProbeKm() const {   // X-04
+double Guide::deepestProbeKm() const {
     double d = 0;
     for (const ProbeRecord& r : probes) if (!r.lent) d = std::max(d, r.endKm);
     return d;
@@ -230,7 +230,7 @@ int Guide::probeIndexBySeed(uint64_t seed) const {
     return -1;
 }
 
-int Guide::lentCount() const {   // C-14
+int Guide::lentCount() const {
     int n = 0;
     for (const std::string& k : lent) if (!shards.count(k)) n++;
     return n;

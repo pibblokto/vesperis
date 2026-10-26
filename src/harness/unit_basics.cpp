@@ -1,9 +1,9 @@
 // E-03: the unit's first checks and the noise (groups `noise`, `basics`)
 #include "harness/harness.h"
 
-// O6-02, B-404, N1-01: the noise's gradient, the rings' materials agree, the relief, the palette
+// the noise's gradient, the rings' materials agree, the relief, the palette
 void unitNoise(const Check& check) {
-    {   // O6-02: the analytic gradient of gnoise3d matches central differences and its value is gnoise3's
+    {   // the analytic gradient of gnoise3d matches central differences and its value is gnoise3's
         double worst = 0, worstV = 0; Rng r(0x616);
         for (int i = 0; i < 200; i++) {
             double x = r.range(-50, 50), y = r.range(-50, 50), z = r.range(-50, 50); uint64_t sd = r.next();
@@ -16,9 +16,9 @@ void unitNoise(const Check& check) {
         check("gnoise3d value equals gnoise3", worstV < 1e-12, "worst " + std::to_string(worstV));
         check("gnoise3d gradient by finite differences", worst < 1e-5, "worst " + std::to_string(worst));
     }
-    {   // B-404: the walked rings (4, 16 and 64 m) decide the same materials: a material follows no faded value, so no
+    {   // the walked rings (4, 16 and 64 m) decide the same materials: a material follows no faded value, so no
         // patch ends at a ring's edge in front of the explorer (the europan stain, the lava tongues, the cliffs' rock).
-        // The felisian and desert allowances are the drainage's lines, a cell and a half wide at every scale (KI-341)
+        // The felisian and desert allowances are the drainage's lines, a cell and a half wide at every scale
         struct Want { int type; double max4, max16; };
         static const Want wants[] = {{PT_EUROPAN, 0.05, 0.05}, {PT_VOLCANIC, 0.2, 0.2}, {PT_DESERT, 0.6, 5.0}, {PT_FELISIAN, 0.6, 6.0}};
         for (const Want& w : wants) {
@@ -31,7 +31,7 @@ void unitNoise(const Check& check) {
             check("B-404 materials agree across the rings", worst[0] <= w.max4 && worst[1] <= w.max16, buf);
         }
     }
-    {   // O6-02: the relief spectrum is deterministic and its analytic slope tracks the finite difference of its height
+    {   // the relief spectrum is deterministic and its analytic slope tracks the finite difference of its height
         Body b; b.type = PT_FELISIAN; b.seed = 0xC0FFEEULL; b.radiusKm = 5000; b.tempK = 285; b.color = RGB(0.3f, 0.5f, 0.4f);
         BodyGen g = BodyGen::make(b);
         Rng r(0x617); double sumErr = 0, sumFd = 0; bool det = true;
@@ -49,12 +49,12 @@ void unitNoise(const Check& check) {
         check("relief deterministic and bounded", det);
         check("relief slope tracks finite differences", sumErr < 0.4 * sumFd, "mean error " + std::to_string(sumErr / 24) + " of " + std::to_string(sumFd / 24));
     }
-    // N1-01: every material of every type gets a colour, the same for the same seed
+    // every material of every type gets a colour, the same for the same seed
     {
         bool ok = true; std::string why;
         for (int ty = 0; ty < PT_COUNT && ok; ty++) {
             Body b; b.type = ty; b.seed = 0xABCD1234ULL + ty; b.radiusKm = 3000; b.tempK = 280;
-            b.color = RGB(0.3f + 0.03f * (ty % 20), 0.62f, 0.5f);   // R-307: under 1 (P-00: for any number of kinds)
+            b.color = RGB(0.3f + 0.03f * (ty % 20), 0.62f, 0.5f);   // under 1 (P-00: for any number of kinds)
             BodyGen g1 = BodyGen::make(b), g2 = BodyGen::make(b);
             for (int mm = 0; mm < MAT_COUNT && ok; mm++) {
                 const RGB& c = g1.matColor[mm];
@@ -170,7 +170,7 @@ void unitBasics(const Check& check) {
         sv.init(&sys, bi, 0.5, 1.2, 0.0);
         check("no buggy on a new landing", !sv.buggy.deployed && !sv.inBuggy);
     }
-    // B-303: a new landing clears the waypoint; a re-anchor carries it to the new frame at the same place (R-414: M4-02's trail is gone)
+    // a new landing clears the waypoint; a re-anchor carries it to the new frame at the same place (R-414: M4-02's trail is gone)
     if (bi >= 0) {
         SurfaceView sv;
         sv.init(&sys, bi, 0.4, 1.1, 0.0);
@@ -185,7 +185,7 @@ void unitBasics(const Check& check) {
         sv.init(&sys, bi, 0.5, 1.2, 0.0);
         check("a new landing clears the waypoint", !sv.hasWaypoint && sv.siteEpoch > epoch);
     }
-    // B-206: on a thin-atmosphere world in a dust storm the wind stays a wind (it compounded every frame to 1e13 knots)
+    // on a thin-atmosphere world in a dust storm the wind stays a wind (it compounded every frame to 1e13 knots)
     {
         Star ts; StarSystem tsys; int tb = -1;
         for (int64_t x = 150; x < 300 && tb < 0; x++)
@@ -211,7 +211,7 @@ void unitBasics(const Check& check) {
         for (int k = 0; k < 64; k++) { double v = sys.seasonOf(bi, k * sys.bodies[bi].orbitPeriod / 64); mn = std::min(mn, v); mx = std::max(mx, v); }
         check("seasonOf bounded by the tilt", mx <= std::sin(sys.bodies[bi].axialTilt) + 1e-9 && mn >= -std::sin(sys.bodies[bi].axialTilt) - 1e-9);
     }
-    // M7-02: the map cache evicts the least recently used map once the cap is reached
+    // the map cache evicts the least recently used map once the cap is reached
     {
         SpaceRenderer sr;
         sr.mapCacheCap = 3;
@@ -221,10 +221,10 @@ void unitBasics(const Check& check) {
         }
         check("map cache honours its cap", sr.mapsHeld() <= 3 && sr.mapStats.evicted >= 3, std::to_string(sr.mapsHeld()) + " held, " + std::to_string(sr.mapStats.evicted) + " evicted");
     }
-    // O0-02 (B-305): 32 banks, and the second world's families have their own
+    // 32 banks, and the second world's families have their own
     check("32 palette banks of 2048 intensities", BANKS == 32 && INTEN_MASK == 2047 && INTEN_PER_SHADE == 32 && (BANK_MASK >> BANK_SHIFT) == 31);
     check("body B's sand has its own bank", SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_SAND) == 17 && SpaceRenderer::globeBank(2, PT_FELISIAN, MAT_SAND) == 13 && SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_SNOW) == 18 && SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_FOREST) == 16);
-    // O0-03 (B-304): a globe whose centre is behind the camera plane still draws its limb
+    // a globe whose centre is behind the camera plane still draws its limb
     if (bi >= 0) {
         SpaceRenderer sr; StarNeighborhood nb;
         double t = 3000.0;
@@ -245,13 +245,13 @@ void unitBasics(const Check& check) {
         for (Pix p : fb.idx) { int bk = bankOf(p); if ((bk == 2 || bk == 6 || bk == 11 || bk == 13 || bk == 14 || bk == 15) && intenOf(p) > 0) lit++; }
         check("a globe with its centre behind the camera still shows its limb", lit > 200, std::to_string(lit) + " pixels");
     }
-    // B-308: a companion star beside or behind the camera never floods the frame; ahead it is a disc of the right size
+    // a companion star beside or behind the camera never floods the frame; ahead it is a disc of the right size
     {
         Star cs; StarSystem csys; int ck = -1;
         for (int64_t x = 150; x < 320 && ck < 0; x++)
             for (int64_t z = 20; z < 140 && ck < 0; z++) {
                 if (!starInSector(x, 0, z, cs)) continue;
-                NebulaPatch np[16]; if (nebulaPatches(Vec3(x + 0.5, 0.5, z + 0.5), np, 16) > 0) continue;   // G-01: a sky without nebula patches, which would raise the mean shade (the test measures the companion's flood)
+                NebulaPatch np[16]; if (nebulaPatches(Vec3(x + 0.5, 0.5, z + 0.5), np, 16) > 0) continue;   // a sky without nebula patches, which would raise the mean shade (the test measures the companion's flood)
                 csys.generate(cs); if (csys.companion >= 0) ck = csys.companion;
             }
         check("a system with a companion star found", ck >= 0);
@@ -284,12 +284,12 @@ void unitBasics(const Check& check) {
             writePNG("shots/tests/unit_companion_swing.png", strip.data(), FBW * 4, FBH);
             check("the companion ahead is a disc of the expected size", frac[0] > 0.5 * expect && frac[0] < 1.6 * expect, fmt("%.1f%% of the frame, expected %.1f%%", frac[0] * 100, expect * 100));
             check("the companion 70 deg off axis leaves no disc", frac[1] == 0 && mean[1] < 8, fmt("disc %.2f%%, mean shade %.1f", frac[1] * 100, mean[1]));
-            // G-01: measured against the 70-degree frame, so the galaxy band's own brightness (now the whole disc, by direction) does not count
+            // measured against the 70-degree frame, so the galaxy band's own brightness (now the whole disc, by direction) does not count
             check("the companion beside the camera (95 deg) does not flood", frac[2] == 0 && mean[2] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[2] * 100, mean[2], mean[1]));
             check("the companion behind (150 deg) does not flood", frac[3] == 0 && mean[3] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[3] * 100, mean[3], mean[1]));
         }
     }
-    // B-425: a companion star keeps clear of the other sun's worlds. Over the home cube and a cube of the core: a far companion at its closest
+    // a companion star keeps clear of the other sun's worlds. Over the home cube and a cube of the core: a far companion at its closest
     // approach spans 3 degrees at most of the sky of the primary's farthest world and its light alone warms it to 100 K at most, its own worlds
     // keep within a third of that gap and see the primary 3 degrees wide at most; a close one shines a tenth of the primary at most (a black
     // hole's excepted: S-06 keeps it close whatever it is). Then the report: Yaiphuyiabrus, a red dwarf whose red giant's orbit came inside the
@@ -310,7 +310,7 @@ void unitBasics(const Check& check) {
                     if (b.type == PT_COMET || b.type == PT_COMPANION) continue;
                     if (sys.ofCompanion(b.index)) { own = std::max(own, b.orbitRadiusKm * (1 + b.ecc)); continue; }
                     const Body& p = b.parent < 0 ? b : sys.bodies[b.parent];
-                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : (b.drawnOrbitKm > 0 ? b.drawnOrbitKm : b.orbitRadiusKm) * (1 + b.ecc)));   // P-03: a moon's orbit as drawn (a made world's push moves no star)
+                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : (b.drawnOrbitKm > 0 ? b.drawnOrbitKm : b.orbitRadiusKm) * (1 + b.ecc)));   // a moon's orbit as drawn (a made world's push moves no star)
                     if (b.parent < 0) first = std::min(first, b.orbitRadiusKm);
                 }
                 if (first > 1e29) continue;   // a primary without worlds: nothing to keep clear of (its companion is close or far by the draw alone)
@@ -340,7 +340,7 @@ void unitBasics(const Check& check) {
         Star ys; StarSystem ysys; bool yFound = starInSector(-31900, 3, -35668, ys);
         if (yFound) ysys.generate(ys);
         bool yShape = yFound && ysys.companion == 8 && ysys.bodies[8].starClass == STAR_RED_GIANT && drawnKind(ysys.bodies[0]) == PT_VENUSIAN && drawnKind(ysys.bodies[1]) == PT_FELISIAN &&
-                      drawnKind(ysys.bodies[2]) == PT_FELISIAN && drawnKind(ysys.bodies[3]) == PT_FELISIAN && ysys.bodies[2].locked;   // P-03: as drawn (III a terminator world now)
+                      drawnKind(ysys.bodies[2]) == PT_FELISIAN && drawnKind(ysys.bodies[3]) == PT_FELISIAN && ysys.bodies[2].locked;   // as drawn (III a terminator world now)
         double yWidest = 0;
         if (yShape) for (int i = 0; i < 2000; i++) {
             double t = i * ysys.bodies[8].orbitPeriod / 2000.0;
@@ -366,7 +366,7 @@ void unitBasics(const Check& check) {
                       e.sunDisc.altitude / DEG, e.sunDisc.lightFactor, e.primaryRel, e.sun2.altitude / DEG, e.skyBrightness, e.sun.lightFactor, e.localTime));
         } else check("a companion's world keeps its own night (B-425)", false, "the world of sector 150 0 134 moved");
     }
-    {   // B-428: a system with distance from the ship. Over the stars near home (the survey's sectors): a solid world's first moon at
+    {   // a system with distance from the ship. Over the stars near home (the survey's sectors): a solid world's first moon at
         // 5-40 of its radii (beyond 10 in most systems), a twin 12-20 off, a giant's first moon at 4.5-6 still; from the game's
         // parking another world wider than 10 degrees in the sky at a fifth of the parkings (43% before: 85% at a solid world's
         // moon, 80% at a twin), and the ground keeps its discs (wider than 2 degrees at a third of the sites, a wall wider than 20
@@ -375,7 +375,7 @@ void unitBasics(const Check& check) {
         int parks = 0, parkBig = 0, solidN = 0, solidBig = 0, twinP = 0, twinBig = 0, sites = 0, disc2 = 0, disc20 = 0, bodies = 0;
         for (auto& [x, z, s, sys] : scanSystems(150, 320, 20, 140, [&] { return bodies < 2500; })) {
             for (const Body& p : sys.bodies) {   // the first moon's orbit (a twin's world: its next moon is keyed off the twin)
-                if (p.parent >= 0 || p.type == PT_COMPANION || p.type == PT_COMET || p.type != drawnKind(p)) continue;   // P-01: a made world's moons keep its drawn size's orbits
+                if (p.parent >= 0 || p.type == PT_COMPANION || p.type == PT_COMET || p.type != drawnKind(p)) continue;   // a made world's moons keep its drawn size's orbits
                 const Body* first = nullptr; bool twin = false;
                 for (const Body& m : sys.bodies) if (m.parent == p.index) { twin |= m.doublePlanet; if (!first && m.orbitPeriod > 0) first = &m; }
                 for (const Body& m : sys.bodies) if (m.parent == p.index && m.doublePlanet) { twinN++; const double x0 = m.orbitRadiusKm / p.radiusKm; if (x0 < 12 || x0 > 20) twinOut++; }
@@ -417,9 +417,9 @@ void unitBasics(const Check& check) {
                   firstFar, firstN, firstOut, giantOut, giantN, twinOut, twinN, parks, 100.0 * parkBig / std::max(1, parks), 100.0 * solidBig / std::max(1, solidN),
                   100.0 * twinBig / std::max(1, twinP), sites, 100.0 * disc2 / std::max(1, sites), 100.0 * disc20 / std::max(1, sites)));
     }
-    // B-312: a big ringed globe whose centre lies outside the frame to the left or the right still shows its limb (its
+    // a big ringed globe whose centre lies outside the frame to the left or the right still shows its limb (its
     // projection is a conic that stretches away from the centre; the old box round the projected centre cut it off);
-    // B-317: in a sky the bodies' depths are written in metres, beyond the farthest terrain (they were kilometres, so a
+    // in a sky the bodies' depths are written in metres, beyond the farthest terrain (they were kilometres, so a
     // moon 20,000 km away hid the ground beyond 20 km)
     {
         Star rs; StarSystem rsys; int rb = -1;
@@ -477,7 +477,7 @@ void unitBasics(const Check& check) {
             }
         }
     }
-    // B-313: the terrain rings meet at their edges (geomorphing): a ring's edge vertices are drawn on the coarser ring's
+    // the terrain rings meet at their edges (geomorphing): a ring's edge vertices are drawn on the coarser ring's
     // surface, where the unmorphed vertices differed by metres to hundreds of metres (the cells popped as the edge swept)
     {
         SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
@@ -494,7 +494,7 @@ void unitBasics(const Check& check) {
                 check((std::string("rings meet: ") + names[k]).c_str(), seam[k] >= 0 && seam[k] < 0.01, fmt("gap %.4f m (unmorphed %.1f m)", seam[k], raw[k]));
         }
     }
-    // B-316: the habitat cells put herds round the explorer wherever the biome has them, not only at the landing
+    // the habitat cells put herds round the explorer wherever the biome has them, not only at the landing
     {
         SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
         bool ok = setupSceneForType(PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, sv, sys, nb, t, SCENE_HERD);
@@ -518,7 +518,7 @@ void unitBasics(const Check& check) {
             check("every animal belongs to a listed herd", consistent);
         }
     }
-    // O0-04 (B-306): the landing map carries the shadow of a moon at some point of the moon's orbit
+    // the landing map carries the shadow of a moon at some point of the moon's orbit
     {
         Star ms; StarSystem msys; int mb = -1;
         for (int64_t x = 150; x < 320 && mb < 0; x++)
@@ -537,14 +537,14 @@ void unitBasics(const Check& check) {
             check("the moon's shadow crosses the landing map", mx >= 0.5, "darkest " + std::to_string(mx));
         }
     }
-    // O2 (R-301): sector names
+    // sector names
     {
         int sx, sy;
         sectorIndexOf(0, 0, sx, sy); check("sector of 0,0 is 180:090", sx == 180 && sy == 90);
         sectorIndexOf(-89.9, -179.9, sx, sy); check("sector of the south-west corner is 000:000", sx == 0 && sy == 0);
         sectorIndexOf(89.9, 179.99, sx, sy); check("sector of the north-east corner is 359:179", sx == 359 && sy == 179);
     }
-    // O0-01 (B-301): a ringed landable planet exists near the start; its ring profile is shared and bounded; the ring's
+    // a ringed landable planet exists near the start; its ring profile is shared and bounded; the ring's
     // shadow falls on its ground somewhere at low latitude
     {
         Star rs; StarSystem rsys; int rb = -1;
@@ -570,7 +570,7 @@ void unitBasics(const Check& check) {
             check("the ring shadows the ground somewhere", worst >= 0.2, "shadow " + std::to_string(worst));
         }
     }
-    // O1 (B-302): the rangefinder: 45 degrees down from eye height on the ground hits the ground a few metres off (Q-01: on ordinary ground, the
+    // the rangefinder: 45 degrees down from eye height on the ground hits the ground a few metres off (Q-01: on ordinary ground, the
     // nearest east of 0.4, 1.1 that no landform shapes: the spot is in Seapheeseeri IV's penitentes, the ray met a blade at once)
     if (bi >= 0) {
         SurfaceView sv; SpaceRenderer sr; StarNeighborhood nb;
@@ -589,7 +589,7 @@ void unitBasics(const Check& check) {
         check("rangefinder 45 deg down hits within 1..6 m", sv.lastRange > 1.0 && sv.lastRange < 6.0, "range " + std::to_string(sv.lastRange));
         check("the far ring reaches 53 km", sv.drawRadiusM() >= 53000, std::to_string(sv.drawRadiusM()));
     }
-    // O4 (R-303): comets are landable; on one the explorer is held under the escape velocity and the buggy refuses
+    // comets are landable; on one the explorer is held under the escape velocity and the buggy refuses
     {
         Star cs; StarSystem csys; int cb = -1;
         for (int64_t x = 150; x < 320 && cb < 0; x++)
@@ -612,7 +612,7 @@ void unitBasics(const Check& check) {
             check("sprinting on a comet stays under 0.3 escape velocity", spd > 0.05 && spd <= 0.3 * ve + 0.01, "speed " + std::to_string(spd));
         }
     }
-    // R-403: the drone lifts off, reaches 320 km/h, climbs to its ceiling, never goes under the ground, lands under Shift and lets the
+    // the drone lifts off, reaches 320 km/h, climbs to its ceiling, never goes under the ground, lands under Shift and lets the
     // explorer out; a second one unfolds beside the capsule and scraps the first
     {
         SpaceRenderer sr; StarNeighborhood nb; StarSystem dsys; SurfaceView sv; double t = 0;
@@ -647,7 +647,7 @@ void unitBasics(const Check& check) {
                   fmt("top %.0f km/h at 25 s, %.0f m up, under %.3f m, landed in %.0f s, %d frames", topAt25 * 3.6, altMax, under, landS, frames));
         } else check("drone: a grassland site for the flight", false);
     }
-    // B-406: the jetpack flies over deep water (it used to be pulled down into it) and lifts out of it. A shore with water over
+    // the jetpack flies over deep water (it is not pulled down into it) and lifts out of it. A shore with water over
     // 0.6 m deep within 110 m: the beach scene, else the river bank, else the lake shore; the flight goes there
     {
         struct WaterRun { bool ran = false, flewOver = false, fellIn = false, liftedOut = false; double dist = 0, deepT = 0, maxDeep = 0, swimT = 0, minAlt = 1e9, heat = 0; const char* where = "none"; };

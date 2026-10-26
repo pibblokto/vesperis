@@ -4,10 +4,10 @@
 // landmark and name it", and "some sort of echo locator or scanner ... in different modes so you can tune it for ruins or for water
 // to find lakes or for peaks", which can leave the sights already marked out. The sights stay what the terrain makes them
 // (galaxy/landmarks.h); the scanner hears them and the maps show only what the explorer marked
-// R-408: the explorer's marks (Guide::marks) and the surface scanner. `R` on the ground cycles the scanner
+// the explorer's marks (Guide::marks) and the surface scanner. `R` on the ground cycles the scanner
 // through the kinds the world can hold (off, ruins, lakes, peaks, craters, canyons, mesas, geysers, crystals), Shift+R leaves
 // the marked sights out or takes them in; `L` marks what the crosshair rests on; the sector map's cursor places, names and
-// removes marks (B-412: and shows one over the view). O6-06's landmarks are no longer markers: a sight is an echo of the scanner
+// removes marks (B-412: and shows one over the view). A sight is no marker: it is an echo of the scanner
 // until the explorer marks it
 #include "game.h"
 #include "ui.h"
@@ -24,12 +24,12 @@ static_assert(MARK_PLACE == LM_COUNT, "a mark of a place is the kind after the s
 namespace {
 // the scanner's modes in the order R cycles them, and their names (by LandmarkKind)
 const int SCAN_ORDER[LM_COUNT] = {LM_RUIN, LM_WORK, LM_LAKE, LM_PEAK, LM_CRATER, LM_CANYON, LM_MESA, LM_GEYSERS, LM_CRYSTALS,   // T-03: the works after the ruins
-                                  LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,   // Q-01
-                                  LM_METEORITES};   // Q-02
+                                  LM_CALDERA, LM_TESSERA, LM_LABYRINTH, LM_HOLLOWS, LM_CHAIN, LM_PENITENTES, LM_COLUMNS, LM_MUD, LM_RIDGE, LM_PINGO, LM_MAAR,
+                                  LM_METEORITES};
 }
 const char* const SCAN_MODE_NAMES[LM_COUNT] = {"PEAKS", "MESAS", "CANYONS", "CRATERS", "GEYSERS", "CRYSTALS", "LAKES", "RUINS", "WORKS",
                                          "CALDERAS", "TESSERAE", "LABYRINTHS", "HOLLOWS", "CHAINS", "PENITENTES", "COLONNADES", "MUD VOLCANOS", "RIDGES", "PINGOS", "MAARS",   // Q-01: the HUD's too
-                                         "METEORITES"};   // Q-02
+                                         "METEORITES"};
 namespace {
 const char* const RUIN_SIZE_NAMES[6] = {"A HAMLET", "A VILLAGE", "A TOWN", "A MONUMENT", "A CITY", "A GREAT CITY"};   // LM_RUIN's `sub`, its SettlementClass (T-01: a city, the capital)
 }
@@ -147,11 +147,11 @@ std::string Game::echoDetail(const SurfaceView::ScanEcho& e) const {
         case LM_MESA: return fmt("%.0f M HIGH", L.prominenceM);
         case LM_CANYON: return fmt("%.0f M DEEP", L.prominenceM);
         case LM_CRYSTALS: return "SPIRES";
-        case LM_CALDERA: case LM_LABYRINTH: return fmt("%.0f M DEEP", L.prominenceM);   // Q-01
+        case LM_CALDERA: case LM_LABYRINTH: return fmt("%.0f M DEEP", L.prominenceM);
         case LM_TESSERA: case LM_COLUMNS: case LM_RIDGE: case LM_MUD: case LM_PINGO: return fmt("%.0f M HIGH", L.prominenceM);
         case LM_PENITENTES: return "BLADES OF ICE";
         case LM_HOLLOWS: return "BRIGHT PITS";
-        case LM_METEORITES: return fmt("IRON STONES, %.1f KM", 2 * L.radiusM / 1000.0);   // Q-02
+        case LM_METEORITES: return fmt("IRON STONES, %.1f KM", 2 * L.radiusM / 1000.0);
         default: return fmt("%.1f KM ACROSS", 2 * L.radiusM / 1000.0);   // a lake, a crater, a geyser field (Q-01: a chain's crater, a maar)
     }
 }
@@ -285,7 +285,7 @@ void Game::removeMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     const std::string label = markLabel(mi);
     guide.marks.erase(guide.marks.begin() + mi);
-    if (guide.shownMark == mi) guide.shownMark = -1; else if (guide.shownMark > mi) guide.shownMark--;   // B-412
+    if (guide.shownMark == mi) guide.shownMark = -1; else if (guide.shownMark > mi) guide.shownMark--;
     marksVersion++; guide.save(guidePath);
     status(fmt("MARK REMOVED: %s", trunc(label, 30).c_str()), 3);
     audio.beep = BEEP_UI;

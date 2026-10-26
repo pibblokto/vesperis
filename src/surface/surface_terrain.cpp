@@ -4,7 +4,7 @@
 // read (`heightNear`, `drawnGround`, `rangeToGround`)
 #include "surface_internal.h"
 
-// F-03: the material tiles of `want` (a bit a material) not made yet, made together, a material to a worker (a tile is a function of
+// the material tiles of `want` (a bit a material) not made yet, made together, a material to a worker (a tile is a function of
 // its material and the seed, each into its own slot; ~1 ms each, five or six at a landing's first ring on a peopled world)
 void SurfaceView::buildMesoTiles(uint32_t want) {
     static_assert(MAT_COUNT <= 32, "a bit a material");
@@ -75,7 +75,7 @@ void SurfaceView::gatherReflections() {
     reflVerts.clear(); reflPolys.clear();
     struct Cell { double d2; int cx, cz; int lod; double level; };
     std::vector<Cell> cells;
-    double sea = site.seaLevel + site.tideM;   // Q-02: the tide's
+    double sea = site.seaLevel + site.tideM;   // the tide's
     for (int lod = 1; lod >= 0; lod--) {
         TerrainCache& cache = lod == 0 ? site.lod0 : site.lod1;
         double cs = cache.cellSize;
@@ -91,7 +91,7 @@ void SurfaceView::gatherReflections() {
                 double dd = std::sqrt(wx * wx + wz * wz);
                 if (dd > cs * 3 && (wx * camLocal.m[2][0] + wz * camLocal.m[2][2]) / dd < -0.25) continue;
                 double hmax = std::max(std::max(cache.at(cx, cz).h, cache.at(cx + 1, cz).h), std::max(cache.at(cx, cz + 1).h, cache.at(cx + 1, cz + 1).h));
-                // B-320: a cell on the shore of a lake or a river (its vertices carry that water's level) mirrors round
+                // a cell on the shore of a lake or a river (its vertices carry that water's level) mirrors round
                 // that level; every cell above the sea mirrors round the sea
                 double wl = std::max(std::max(site.waterOf(cache.at(cx, cz)), site.waterOf(cache.at(cx + 1, cz))), std::max(site.waterOf(cache.at(cx, cz + 1)), site.waterOf(cache.at(cx + 1, cz + 1))));
                 if (wl > sea + 0.5 && hmax > wl + 0.3) cells.push_back({d2 * cs * cs, cx, cz, lod, wl});
@@ -114,12 +114,12 @@ void SurfaceView::gatherReflections() {
             hs[i] = cache.at(c.cx + ox[i], c.cz + oz[i]).h;
             flat += vs[i]->shade * 0.25;
         }
-        // B-322: only the part of the cell that stands above the water is mirrored: each of the cell's two triangles (the
+        // only the part of the cell that stands above the water is mirrored: each of the cell's two triangles (the
         // split drawTerrainLOD draws) clipped against the water level, then folded under it. The old quad put the wet
         // corners at the level itself, a slab under the whole cell: from a low eye (swimming) the slabs of the shore cells
         // passed under the camera and, clipped at the near plane, stood in the water as tall dark bars
         static const int tris[2][3] = {{0, 1, 3}, {1, 2, 3}};
-        // B-322: the cell's dry side first (the shore cut the ground is drawn with), then the part of it above the level
+        // the cell's dry side first (the shore cut the ground is drawn with), then the part of it above the level
         const TerrainVertex* tvc[4] = {&cache.at(c.cx, c.cz), &cache.at(c.cx + 1, c.cz), &cache.at(c.cx + 1, c.cz + 1), &cache.at(c.cx, c.cz + 1)};
         double wMean = 0; int wN = 0;
         for (int i = 0; i < 4; i++) if (tvc[i]->water > -1e8f) { wMean += site.waterOf(*tvc[i]); wN++; }
@@ -141,7 +141,7 @@ void SurfaceView::gatherReflections() {
                 int a = e, b = (e + 1) % n;
                 bool ain = ph[a] >= c.level, bin = ph[b] >= c.level;
                 auto emit = [&](double x, double h, double z) {
-                    Vec3 v = toView(x, 2 * c.level - h, z);   // the curvature comes with toView (O1)
+                    Vec3 v = toView(x, 2 * c.level - h, z);   // the curvature comes with toView
                     q[m].x = v.x; q[m].y = v.y; q[m].z = v.z; q[m].shade = flat * 0.85; m++;
                 };
                 if (ain) emit(px[a], ph[a], pz[a]);
@@ -174,8 +174,8 @@ void SurfaceView::materialLook(const TerrainVertex& v, uint8_t& bank, double& al
     albedo = v.albedo;
     bank = 0;
     // N1-03: one bank per material family, the same families as the globe (P-00: a kind's accents in the grass and forest banks)
-    if (tintBankSprings >= 0 && v.material == MAT_MATS) { bank = (uint8_t)tintBankSprings; return; }   // Q-02: the hot springs' mats in their own bank
-    if (tintBankStrata >= 0 && v.gtint > 127) { bank = (uint8_t)tintBankStrata; return; }             // Q-02: a rainbow stratum's accent layer
+    if (tintBankSprings >= 0 && v.material == MAT_MATS) { bank = (uint8_t)tintBankSprings; return; }   // the hot springs' mats in their own bank
+    if (tintBankStrata >= 0 && v.gtint > 127) { bank = (uint8_t)tintBankStrata; return; }             // a rainbow stratum's accent layer
     switch (matFamilyOn(site.gen.type, v.material)) {
         case FAM_WATER: bank = 2; break;
         case FAM_FOREST: bank = 3; if (v.material == MAT_FOREST) albedo = 0.28 + 0.1 * v.veg; break;
@@ -199,12 +199,12 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     double x = cx * cs, z = cz * cs;
     double h = tv.h;
     if (tv.material == MAT_WATER && tv.water > -1e8f) h = std::min(h, (double)tv.water - 0.5);
-    // B-313 geomorphing: within MORPH_CELLS of the ring's edge the vertex slides onto the coarser ring's surface (the
+    // geomorphing: within MORPH_CELLS of the ring's edge the vertex slides onto the coarser ring's surface (the
     // height of its drawn triangle at this spot, and its Gouraud shade when the coarser vertices were computed this
     // frame), by the vertex's continuous distance from the camera, so nothing pops as the edge sweeps the ground
     double morph = 0, hC = 0, shC = 0; bool shOk = false;
-    double wy = site.waterOf(tv);   // B-320: the water level as drawn (Q-02: the tide's)
-    double shore = vertexShore(cache, cx, cz);   // B-322: the side of the water's edge, morphed with the ground below
+    double wy = site.waterOf(tv);   // the water level as drawn (Q-02: the tide's)
+    double shore = vertexShore(cache, cx, cz);   // the side of the water's edge, morphed with the ground below
     if (morphCoarse && morphBand > 0) {
         double ddx = x - camPos.x, ddz = z - camPos.z;
         double dc = std::sqrt(ddx * ddx + ddz * ddz) / cs;
@@ -215,15 +215,15 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
             int X = ch.X, Z = ch.Z; double fx = ch.fx, fz = ch.fz; bool lower = ch.lower;
             hC = ch.h;
             h += (hC - h) * morph;
-            if (wy > -1e8f) {   // B-320: the water slides with the ground
+            if (wy > -1e8f) {   // the water slides with the ground
                 double wc = coarseWaterAt(*morphCoarse, x, z);
                 if (wc > -1e8) wy += (wc - wy) * morph;
-                else {   // O6-03: the coarser ring has no water here (a stream too small for its scale): the vertex dries out toward the edge, its plane sinking under the coarse ground, so the clamp below cannot hold it under a plane the coarser ring never drew (a 27 m seam)
+                else {   // the coarser ring has no water here (a stream too small for its scale): the vertex dries out toward the edge, its plane sinking under the coarse ground, so the clamp below cannot hold it under a plane the coarser ring never drew (a 27 m seam)
                     wy += (hC - 1.0 - wy) * morph;
                     if (shore < 1e8) shore += (std::max(1.0, std::fabs(shore)) - shore) * morph;
                 }
             }
-            if (shore < 1e8) { double sc = coarseShoreAt(*morphCoarse, x, z); if (sc < 1e8) shore += (sc - shore) * morph; }   // B-322: and so does the edge
+            if (shore < 1e8) { double sc = coarseShoreAt(*morphCoarse, x, z); if (sc < 1e8) shore += (sc - shore) * morph; }   // and so does the edge
             int lc = morphCoarse->logN, mC = (1 << lc) - 1;
             const VtxCache& c00 = (*morphVc)[((Z & mC) << lc) | (X & mC)];
             const VtxCache& c10 = (*morphVc)[((Z & mC) << lc) | ((X + 1) & mC)];
@@ -257,13 +257,13 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double px = x + sd.x * up + cloudWx, pz = z + sd.z * up + cloudWz;
         double n = 0.5 + 0.5 * fbm2(px / 1800.0, pz / 1800.0, site.gen.seed + 77, 3, 2.2, 0.55);
         double thr = cloudThr;
-        if (localFront.on) thr = 1.0 - std::max(env.cloudPattern, localFront.cloud(x + sd.x * up, z + sd.z * up)) * 0.75;   // W-03: the front's deck shadows the ground under it
+        if (localFront.on) thr = 1.0 - std::max(env.cloudPattern, localFront.cloud(x + sd.x * up, z + sd.z * up)) * 0.75;   // the front's deck shadows the ground under it
         sunTerm *= 1 - 0.55 * smoothstep(thr, thr + 0.18, n);
     }
     double light = ambient + (1 - ambient) * sunTerm;
     // M10-09 secondary lights: planetshine at night, the capsule beacon pool, lava glow
     if (env.moonLight > 0.005) light += (1 - ambient) * env.moonLight * 0.6 * std::max(0.0, dot(nrm, env.moonDir)) * (1 - sunUp);
-    if (nLamps) light += (1 - ambient) * lampAt(Vec3(x, h, z), &nrm);   // D-04: the lamp, the floodlights
+    if (nLamps) light += (1 - ambient) * lampAt(Vec3(x, h, z), &nrm);   // the lamp, the floodlights
     if (buggy.deployed && buggy.lights) {
         // headlights: a 25 m cone ahead of the buggy
         double hx = std::sin(buggy.heading), hz = std::cos(buggy.heading);
@@ -271,7 +271,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double f = rx * hx + rz * hz, l = std::fabs(-rx * hz + rz * hx);
         if (f > 0 && f < 25 && l < 0.35 * f + 1.5) light += 0.55 * (1 - f / 25) * (1 - sunUp);
     }
-    if (drone.deployed && drone.lights && drone.altAboveGround < 30) {   // R-403: the drone's bar lights a pool under and ahead of it when it flies low
+    if (drone.deployed && drone.lights && drone.altAboveGround < 30) {   // the drone's bar lights a pool under and ahead of it when it flies low
         double hx = std::sin(drone.heading), hz = std::cos(drone.heading);
         double rx = x - drone.x, rz = z - drone.z;
         double f = rx * hx + rz * hz, l = std::fabs(-rx * hz + rz * hx), reach = 25 + drone.altAboveGround;
@@ -284,7 +284,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     }
     double albedo; uint8_t bk;
     materialLook(tv, bk, albedo);
-    double fog0 = 0;   // B-311: the tone tile fades with distance (the haze flattens far ground)
+    double fog0 = 0;   // the tone tile fades with distance (the haze flattens far ground)
     { double ddx = x - camPos.x, ddz = z - camPos.z; fog0 = clampd(std::sqrt(ddx * ddx + ddz * ddz) / (site.atmosphere ? env.fogDistance : 20000.0), 0, 1); }
     if (tv.water > -1e8f && tv.material != MAT_WATER && h < tv.water + (tv.material == MAT_ICE ? 0.25 : 1.5)) albedo *= 0.8;   // wet shore (B-322: a hand's breadth on ice, or every floe was dark)
     double emissive = 0;
@@ -305,21 +305,21 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         Vec3 toCam = normalize(Vec3(camPos.x - x, camPos.y - h, camPos.z - z));
         Vec3 half = normalize(toCam + sd);
         double sp = std::pow(std::max(0.0, dot(nrm, half)), 48.0) * sunUp * lf;
-        spec = sp > 0.55 ? (tv.material == MAT_GLASS ? 18 : 12) : (sp > 0.25 ? (tv.material == MAT_GLASS ? 9 : 6) : 0);   // S-03: the glass's glint is brighter
+        spec = sp > 0.55 ? (tv.material == MAT_GLASS ? 18 : 12) : (sp > 0.25 ? (tv.material == MAT_GLASS ? 9 : 6) : 0);   // the glass's glint is brighter
     }
     double shade;
     if (tv.material == MAT_LAVA) {
         // dark crust plates with bright veins between them
-        Worley3 w = worley3(Vec3(x / 11.0, z / 11.0, env.sun.dayFraction * 3.0 + lastT * 0.03), site.gen.seed);   // M4-08: the crust drifts
+        Worley3 w = worley3(Vec3(x / 11.0, z / 11.0, env.sun.dayFraction * 3.0 + lastT * 0.03), site.gen.seed);   // the crust drifts
         double vein = 1 - smoothstep(0.03, 0.14, w.f2 - w.f1);
         double n = 0.5 + 0.5 * gnoise2(x / 5.0, z / 5.0, site.gen.seed + 3);
         double glow = tv.glow / 255.0;
         shade = 8 + 12 * n + 36 * vein * glow + 6 * glow;
     } else {
-        shade = exposureStop(albedo, light, site.atmosphere);   // N1-05: the one exposure rule
-        if (tv.material == MAT_FOREST) shade *= 1 - 0.38 * (cache.cellSize <= 64 ? canopyDensityAt(x, z, tv.veg) : tv.veg * 0.55);   // N2-02: the floor is darker under the canopy (far ring: the average)
+        shade = exposureStop(albedo, light, site.atmosphere);   // the one exposure rule
+        if (tv.material == MAT_FOREST) shade *= 1 - 0.38 * (cache.cellSize <= 64 ? canopyDensityAt(x, z, tv.veg) : tv.veg * 0.55);   // the floor is darker under the canopy (far ring: the average)
         shade += 16 * emissive + spec;
-        // B-311: the broad tone tile (patches of 23-85 m, +-4 shades; a texel is two metres, or a cell for the far rings),
+        // the broad tone tile (patches of 23-85 m, +-4 shades; a texel is two metres, or a cell for the far rings),
         // sampled per vertex: the cells are smaller than its patches, so the gradient carries it across them
         if (tv.material != MAT_WATER) {
             double g3s = cs <= 64 ? 0.5 : 32.0 / cs;
@@ -327,10 +327,10 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         }
         if (shade > 62) shade = 62;
     }
-    // B-322: the drawn height keeps to the drawn side of the edge: the morph blends heights and shore distances by the same
+    // the drawn height keeps to the drawn side of the edge: the morph blends heights and shore distances by the same
     // factor, and the two cross zero at different places, so a corner could turn dry by its edge yet sink under the plane
     if (wy > -1e8 && shore < 1e8) {   // the margins close to the cut's own lip (0.03 under the level) at the ring's edge, where the coarse cut surface is exact
-        double wetLip = 0.3 * (1 - morph), dryLip = 0.02 * (1 - morph);   // O6-06: no lip at the edge: the coarse cut surface respects its water already, and a lip there opened the seam by 3 cm on a lake bed a millimetre under its level
+        double wetLip = 0.3 * (1 - morph), dryLip = 0.02 * (1 - morph);   // no lip at the edge: the coarse cut surface respects its water already, and a lip there opened the seam by 3 cm on a lake bed a millimetre under its level
         if (shore < 0) h = std::min(h, wy - wetLip); else h = std::max(h, wy + dryLip);
     }
     Vec3 vv = toView(x, h, z);
@@ -341,9 +341,9 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
         double toSun = dot(Vec3(x - camPos.x, h - camPos.y, z - camPos.z) / dist, sd);
         fogD *= (1 - 0.35 * std::max(0.0, toSun) * sunUp) * (1 + 0.25 * std::max(0.0, -toSun)) * (1 - 0.25 * cloud);
     }
-    double fog = 1 - std::exp(-(dist / fogD + rainWall(x, z, dist) + fogSeaWall(x, h, z, dist)));   // W-03: the wall of rain between the camera and this ground; Q-02: a fog sea over it
+    double fog = 1 - std::exp(-(dist / fogD + rainWall(x, z, dist) + fogSeaWall(x, h, z, dist)));   // the wall of rain between the camera and this ground; Q-02: a fog sea over it
     shade = shade + (63 - shade) * fog;
-    if (shOk) shade += (shC - shade) * morph;   // B-313: onto the coarser ring's shade at the edge
+    if (shOk) shade += (shC - shade) * morph;   // onto the coarser ring's shade at the edge
     vc.v.x = vv.x; vc.v.y = vv.y; vc.v.z = vv.z;
     vc.v.shade = shade;
     vc.v.u = x; vc.v.v = z;
@@ -353,7 +353,7 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     vc.sh = (float)shore;
     vc.front = vv.z >= NEAR_Z;
     vc.sy = vc.front ? (float)(proj.cy - proj.f * vv.y / vv.z) : 0.f;
-    if (site.hasWater && (double)vc.wy > -1e8) vc.wv = waterCorner(x, z, (double)vc.wy, (double)vc.hy);   // F-04: the stored floats, as the cells read them
+    if (site.hasWater && (double)vc.wy > -1e8) vc.wv = waterCorner(x, z, (double)vc.wy, (double)vc.hy);   // the stored floats, as the cells read them
     vc.stamp = frameStamp;
     bank = bk;
     return vc.v;
@@ -367,11 +367,11 @@ RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
     double dist = length(toV);
     Vec3 rd = normalize(Vec3(toV.x, -toV.y, toV.z));
     double glint = std::pow(std::max(0.0, dot(rd, env.sun.dirLocal)), 28.0) * 24 * waterSunUp * env.sun.lightFactor;
-    // M1-04: wave rings coming in with the wind
+    // wave rings coming in with the wind
     double wave = 2.5 * std::sin((x * waterWdx + z * waterWdz) / 2.6 - lastT * 1.4 + 0.8 * std::sin((x * waterWdz - z * waterWdx) / 7.0));
-    // B-320: the water's own colour seen from above (deep dark, shallow lighter), the sky's colour at grazing
+    // the water's own colour seen from above (deep dark, shallow lighter), the sky's colour at grazing
     // angles (a Fresnel term: nearly all of the far water mirrors the sky), the ramp darkened by the night
-    double cosT = clampd(std::fabs(toV.y) / std::max(dist, 0.1), 0.04, 1);   // B-322: the waves' slopes keep the mirror short of grazing: from an eye at the surface the water stays water, not a sheet of sky
+    double cosT = clampd(std::fabs(toV.y) / std::max(dist, 0.1), 0.04, 1);   // the waves' slopes keep the mirror short of grazing: from an eye at the surface the water stays water, not a sheet of sky
     double fres = 0.04 + 0.96 * std::pow(1 - cosT, 4.0);
     double body = 24 + (1 - depth / 8) * 8, skyR = 55;
     double base = body + (skyR - body) * fres + glint + wave * (0.5 + 0.5 * clampd(env.windKnots / 15.0, 0, 1));
@@ -385,7 +385,7 @@ RVert SurfaceView::waterCorner(double x, double z, double wl, double hy) const {
 
 // B-313: the coarser ring's drawn surface at (x, z): the cell's two triangles are split along the (cx + 1, cz) - (cx, cz + 1)
 // diagonal (drawTerrainLOD), and a water vertex sits half a metre under its water, as vertexOf draws it
-// B-322: the coarser ring's water level and shore value at a point, interpolated over the triangle of the coarse cell that
+// the coarser ring's water level and shore value at a point, interpolated over the triangle of the coarse cell that
 // holds it (the split drawTerrainLOD draws, a corner without water taking the mean of the others), exactly as the cut of that
 // cell reads them: so a finer vertex morphed onto the coarse cut surface lands on the same side of the same edge
 static void coarseTri(TerrainCache& c, double x, double z, int& X, int& Z, int ox[3], int oz[3], double& u, double& v) {
@@ -475,11 +475,11 @@ double SurfaceView::floorHeight() {
     for (int cz = pcz - farR; cz <= pcz + farR; cz += 2)
         for (int cx = pcx - farR; cx <= pcx + farR; cx += 2) {
             double ddx = cx + 0.5 - camPos.x / far.cellSize, ddz = cz + 0.5 - camPos.z / far.cellSize;
-            if (ddx * ddx + ddz * ddz > (double)farR * farR) continue;   // O6-06: the disc the ring draws (the corners lie beyond the prefetched tiles)
+            if (ddx * ddx + ddz * ddz > (double)farR * farR) continue;   // the disc the ring draws (the corners lie beyond the prefetched tiles)
             hmin = std::min(hmin, (double)far.at(cx, cz).h);
         }
     double h = hmin - 300.0;
-    if (site.hasWater) h = site.seaLevel + site.tideM;   // Q-02
+    if (site.hasWater) h = site.seaLevel + site.tideM;
     return h;
 }
 
@@ -489,7 +489,7 @@ void SurfaceView::drawFloor(Framebuffer& fb) {
     int farR = ringR[3] ? ringR[3] : ringR[2];
     double cs = far.cellSize;
     double h = floorH;
-    const int floorFam = KINDS[site.gen.type].floorFamily;   // N1-03: the dominant family (P-00: the kind's row)
+    const int floorFam = KINDS[site.gen.type].floorFamily;   // the dominant family (P-00: the kind's row)
     uint8_t bank = site.hasWater ? 2 : (floorFam == FAM_SNOW ? 8 : (floorFam == FAM_SAND ? 9 : 0));
     double shade = site.atmosphere ? 63 : 8;
     RasterParams rp; rp.bank = bank; rp.ztest = true; rp.zwrite = true;
@@ -509,7 +509,7 @@ void SurfaceView::drawFloor(Framebuffer& fb) {
 
 // B-310: fills the vertex cache (heights, shades, projections) and the material tiles of a ring, with the same cell walk
 // as drawTerrainLOD, so that the band threads only read
-// B-318: a coarser ring skips a cell only when the whole cell lies under the finer ring: its farthest corner within
+// a coarser ring skips a cell only when the whole cell lies under the finer ring: its farthest corner within
 // `coverM` metres of the camera, the finer ring's guaranteed cover (`coverOf` in render). A scalar skip radius on the
 // cell centres left the outer corners of the skipped cells bare: sawtooth holes at every ring edge, plain from the
 // capsule on the way down (`vesperis_test capsule`)
@@ -525,7 +525,7 @@ void SurfaceView::warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vca
     int pcx = (int)std::floor(camPos.x / cs), pcz = (int)std::floor(camPos.z / cs);
     curRadius = radius;
     morphCoarse = coarse; morphVc = coarseVc; morphBand = coarse ? band : 0;   // B-313: the coarser ring is warmed already (render warms coarse to fine)
-    // B-313: the vertices are warmed three cells into the skip disc too: the finer ring's morph band reads this ring's
+    // the vertices are warmed three cells into the skip disc too: the finer ring's morph band reads this ring's
     // vertex shades there (its edge lies inside this ring's skipped cells), and a stale one would leave the vertex on
     // its own shade, a tooth on the skyline
     double r2 = (double)radius * radius, warmCover = std::max(0.0, coverM - 3 * cs);
@@ -533,16 +533,16 @@ void SurfaceView::warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vca
     auto t0 = std::chrono::steady_clock::now();
     // the terrain cells first (a miss samples the planet function and writes the cache; the shadow march of vertexOf reads cells
     // anywhere within the radius), then the tiles of their materials
-    // O6-06: within the disc (plus two cells for the normals): the square's corners lay 75 km out on the far ring, beyond
+    // within the disc (plus two cells for the normals): the square's corners lay 75 km out on the far ring, beyond
     // the drainage tiles a landing prefetches, and the first frame computed those tiles (270 ms)
-    // F-03: the disc's misses listed first; over FILL_SERIAL_MAX of them they are sampled on the pool (a landing's first frame:
+    // the disc's misses listed first; over FILL_SERIAL_MAX of them they are sampled on the pool (a landing's first frame:
     // 12,000 cells, 14 ms here before), each listed cell by one worker into its own slot: the disc spans 2r + 3 cells a side, under
     // the torus's 1 << logN for every ring (the unit checks it), so distinct cells have distinct slots, and a sample is a pure
     // function of the cell and the site, whatever its thread asked before (the drainage's tiles and neighbourhood read through each
     // thread's own caches, the neighbourhood a function of its lattice cell: `buildNeigh`). The pool's join is the barrier.
     // A few misses (a walk's edge) are sampled by the walk below as before. The material tiles the disc's cells want are made here,
     // after, as before (a band thread reads a tile, it never makes one), the ones not made yet together (`buildMesoTiles`)
-    // F-04: the disc reaches every cell the vertex pass reads (on the pool since B-310, every corner since F-04, so a cell it missed
+    // the disc reaches every cell the vertex pass reads (the pool's threads share its slots, so a cell it missed
     // would be sampled by two threads into one slot): a drawn cell's centre lies within the radius, its corners read their neighbours
     // for the normals and the shore's side (`vertexShore`: up to two cells on from the cell, 2.83 from its centre), on a lava world the
     // near rings' glow two cells round a corner (4.24); the shadow's march stays within the radius. Distinct slots still: 2r + 5 cells
@@ -724,15 +724,15 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
     RasterParams rp;
     rp.grain = &grain;
     rp.grainScale = (cache.cellSize <= 16 ? 3.0 : 0.25) * FB_SCALE;   // same on-screen grain size at every scale
-    rp.edge = &grainEdge;                                              // B-311: the boundary wobble
-    if (coverM > 0) rp.zbias = 0.999;   // B-313: where a coarser ring overlaps the finer one's morphed edge (coincident surfaces) the finer wins
+    rp.edge = &grainEdge;                                              // the boundary wobble
+    if (coverM > 0) rp.zbias = 0.999;   // where a coarser ring overlaps the finer one's morphed edge (coincident surfaces) the finer wins
     if (shadingMode == 1) rp.quantize = 63.0 / 12.0;
     RasterParams rpw;
     rpw.grain = &grainFine; rpw.grainScale = 0.5 * FB_SCALE;
-    rpw.zbias = rp.zbias;   // B-322: the water of a ring is pushed back with its ground, or from a kilometre away the metre-high shore lost to the plane in every wet cell and the coast snapped to the grid (KI-321)
+    rpw.zbias = rp.zbias;   // the water of a ring is pushed back with its ground, or from a kilometre away the metre-high shore lost to the plane in every wet cell and the coast snapped to the grid
     double r2 = (double)radius * radius;
     const int mk = (1 << cache.logN) - 1;
-    for (int j = 0; j < (int)bin.count.size(); j++) {   // F-04: the ring's cells as binned, in the walk's order
+    for (int j = 0; j < (int)bin.count.size(); j++) {   // the ring's cells as binned, in the walk's order
         const TerrainCellRef* row = &bin.cells[(size_t)j * bin.cols];
         for (int s = 0; s < bin.count[j]; s++) {
             const TerrainCellRef& ref = row[s];
@@ -753,11 +753,10 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
             const TerrainVertex& t10 = cache.at(cx + 1, cz);
             const TerrainVertex& t01 = cache.at(cx, cz + 1);
             const TerrainVertex& t11 = cache.at(cx + 1, cz + 1);
-            double wCorner[4];   // B-320: the water surface per corner (00, 10, 11, 01), one continuous plane cut by the ground
+            double wCorner[4];   // the water surface per corner (00, 10, 11, 01), one continuous plane cut by the ground
             const int wN = cellWaterLevels(c00.wy, c10.wy, c11.wy, c01.wy, wCorner);
-            // B-322: the sheet is drawn where a corner lies on the water's side of its edge (`shoreValue`); it used to be drawn
-            // wherever a corner lay within half a metre of the level, which reached over the low ground beyond a river's plain
-            // as a moat of cells
+            // the sheet is drawn where a corner lies on the water's side of its edge (`shoreValue`), not wherever a corner lies
+            // within half a metre of the level, which reaches over the low ground beyond a river's plain as a moat of cells
             bool anyWet = false, anyDry = false;
             double shc[4] = {c00.sh, c10.sh, c01.sh, c11.sh};   // in the vs order: 00, 10, 01, 11 (as drawn: morphed at the ring's edge)
             if (water && wN > 0) for (int k = 0; k < 4; k++) { if (shc[k] < 0) anyWet = true; else anyDry = true; }
@@ -766,8 +765,8 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
             if (bt) { bt->drawn++; tA = TraceClock::now(); }
             RVert tri[3];
             // the bank by majority; B-311: a cell whose corners differ in family also gets the second bank and per-corner
-            // weights, and the rasteriser draws the boundary as a noisy contour through the cell (it used to be the
-            // cell's square edge, so sand, rock and grass met in staircases of plates)
+            // weights, and the rasteriser draws the boundary as a noisy contour through the cell (at the cell's
+            // square edge, sand, rock and grass would meet in staircases of plates)
             const uint8_t bks[4] = {b00, b10, b01, b11};
             const RVert* vs[4] = {&v00, &v10, &v01, &v11};
             int counts[BANKS] = {0};
@@ -802,7 +801,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                 rp.grain2 = mesoFor(matA); rp.grain2b = mesoFor(matB);
                 rp.edgeScale = 4.0 / cs;   // four texels of wobble per cell
             }
-            // B-322: a cell that straddles a water's edge is cut along it (`shoreSplitTriangle`), the cut at the water level:
+            // a cell that straddles a water's edge is cut along it (`shoreSplitTriangle`), the cut at the water level:
             // the shoreline follows the shore distance's contour instead of the two triangles' crossing of the plane
             bool cut = wet && anyDry;
             static const char* skipEnv = std::getenv("VESPERIS_SKIP");   // diagnostics (B-322's method): "cut", "wq" (the water quads), "refl", "near" turn one pass off
@@ -831,7 +830,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                             double t = pts[i].t;
                             if (pts[i].a == pts[i].b) { q[i] = va; q[i].w = w[a]; }
                             else {
-                                // O6-03: the dry piece's edge stands SHORE_LIP over the water, the wet piece's lies 3 cm under it: with one shared
+                                // the dry piece's edge stands SHORE_LIP over the water, the wet piece's lies 3 cm under it: with one shared
                                 // point under the plane, the sheet covered the dry piece out to wherever it rose through the plane, which on a
                                 // flat shore was near the next corner, and the water's edge ran along the cells' edges in stairs
                                 Vec3 vv = shoreCutView(pts[i], dry);
@@ -849,7 +848,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                 }
             }
             // skirts (KI-006): cells on the outer edge of the outermost ring hang a wall down over the floor. B-322: the inner
-            // rings hang none: since B-313 their edges lie on the coarser ring's surface, and a wall there peeked through
+            // rings hang none: their edges lie on the coarser ring's surface, and a wall there would peek through
             // the coincident ground as a thin bright line along the ring's edge (its depth bias differs from the coarser ring's)
             if (skirt) {
                 auto wall = [&](const RVert& a, const RVert& b, double ax, double az, double bx, double bz) {
@@ -871,11 +870,11 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                     const TerrainVertex* tv[4] = {&t00, &t10, &t11, &t01};
                     const VtxCache* vcw[4] = {&c00, &c10, &c11, &c01};
                     int ox[4] = {0, 1, 1, 0}, oz[4] = {0, 0, 1, 1};
-                    for (int i = 0; i < 4; i++)   // F-04: a corner with its own level was made with its vertex; one without takes the cell's mean
+                    for (int i = 0; i < 4; i++)   // a corner with its own level was made with its vertex; one without takes the cell's mean
                         w[i] = (double)vcw[i]->wy > -1e8 ? vcw[i]->wv : waterCorner((cx + ox[i]) * cs, (cz + oz[i]) * cs, wCorner[i], vcw[i]->hy);
                     if (bt) { const TraceClock::time_point tC = TraceClock::now(); bt->waterMs += traceMs(tA, tC); bt->wet++; tA = tC; }
                     rpw.bank = 2; rpw.bank2 = -1;
-                    if (tintBankW >= 0 || tintBankL >= 0) {   // Q-02: the water's trait colour over the cell's corners (a bloom's or a lagoon's first, else
+                    if (tintBankW >= 0 || tintBankL >= 0) {   // the water's trait colour over the cell's corners (a bloom's or a lagoon's first, else
                         // a pink lake's or the milky glow), its edge wobbled as two materials' are; the glow lit by its share
                         double tw[4] = {0, 0, 0, 0}, mx = 0; int tb = -1;
                         if (tintBankL >= 0) for (int i = 0; i < 4; i++) { tw[i] = tv[i]->ltint / 255.0; mx = std::max(mx, tw[i]); }
@@ -884,7 +883,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                             mx = 0;
                             for (int i = 0; i < 4; i++) {
                                 tw[i] = tv[i]->wtint / 255.0;
-                                if (tintBankW == 15) tw[i] *= waterLights ? 0.5 + 0.5 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 260.0 + lastT * 0.02, (cz + oz[i]) * cs / 260.0 - lastT * 0.013, site.gen.seed + 0x6108))   // D-04: drifting
+                                if (tintBankW == 15) tw[i] *= waterLights ? 0.5 + 0.5 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 260.0 + lastT * 0.02, (cz + oz[i]) * cs / 260.0 - lastT * 0.013, site.gen.seed + 0x6108))   // drifting
                                                                     : 0.7 + 0.3 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 700.0, (cz + oz[i]) * cs / 700.0, site.gen.seed + 0x6107));
                                 mx = std::max(mx, tw[i]);
                             }
@@ -892,7 +891,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                         }
                         if (tb >= 0) {
                             double wmin = 1, wmax = 0;
-                            const double lo = waterLights && tb == 15 ? 0.12 : 0.25, hi = waterLights && tb == 15 ? 0.42 : 0.75;   // D-04: a dark ocean's lights a fainter field, its patches whole sooner
+                            const double lo = waterLights && tb == 15 ? 0.12 : 0.25, hi = waterLights && tb == 15 ? 0.42 : 0.75;   // a dark ocean's lights a fainter field, its patches whole sooner
                             for (int i = 0; i < 4; i++) {
                                 w[i].w = 1 - smoothstep(lo, hi, tw[i]);   // a corner well inside is the colour's whatever the wobble (it flipped pixels back to the sea)
                                 wmin = std::min(wmin, w[i].w); wmax = std::max(wmax, w[i].w);
@@ -907,7 +906,7 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                     rasterPolygon(fb, w, 4, rpw, proj);
                     // foam sparkle where the shore is shallow and close (Q-02: none where the sea glows, its dark night bank would dot it)
                     double cdist = std::sqrt(d2) * cs;
-                    if (cdist < 90 && cache.cellSize <= 16 && (cs >= 16 || ((cx & 3) == 0 && (cz & 3) == 0)) && rpw.bank2 != 15 && rpw.bank != 15) {   // O6-02: one near cell in sixteen keeps the density
+                    if (cdist < 90 && cache.cellSize <= 16 && (cs >= 16 || ((cx & 3) == 0 && (cz & 3) == 0)) && rpw.bank2 != 15 && rpw.bank != 15) {   // one near cell in sixteen keeps the density
                         for (int i = 0; i < 4; i++) {
                             if (std::fabs(tv[i]->h - wCorner[i]) > 0.6) continue;
                             uint64_t hf = hash2i(cx + ox[i], cz + oz[i], site.gen.seed ^ 0xF0A);

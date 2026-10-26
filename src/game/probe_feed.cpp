@@ -14,7 +14,7 @@
 #include <algorithm>
 
 namespace {
-const double HANDOVER0 = 0.62, HANDOVER1 = 0.92;       // X-02: the entry's share over which the probe's own picture takes over from the space renderer's (the plasma at its height)
+const double HANDOVER0 = 0.62, HANDOVER1 = 0.92;       // the entry's share over which the probe's own picture takes over from the space renderer's (the plasma at its height)
 const double BANDS_KM = 4800;           // X-02: the bands' reach round the aim (the horizon from the entry's end)
 const int BANDS_N = 160;
 }
@@ -132,7 +132,7 @@ void Game::renderProbeFeed(double c, double tt) {
         double lb = std::log(std::max(probeBarAt(probe.flight, c), 1e-6));
         pitch = (-22 + 8 * smoothstep(std::log(0.02), std::log(A.hazeBar), lb) + 14 * smoothstep(std::log(A.top[0]), std::log(std::sqrt(A.top[0] * A.base[0])), lb) - 2 * smoothstep(std::log(A.base[0]), std::log(A.base[0] * 1.3), lb)
                  + (A.decks > 1 ? 1 * smoothstep(std::log(A.top[1] * 0.8), std::log(A.top[1] * 1.2), lb) : 0.0)) * DEG;
-        if (probe.holePath)   // X-03: falling into a clear-air hole the camera looks down into it, and down the shaft once in it
+        if (probe.holePath)   // falling into a clear-air hole the camera looks down into it, and down the shaft once in it
             pitch -= (30 + 26 * smoothstep(std::log(A.top[0]), std::log(std::sqrt(A.top[0] * A.base[0])), lb)) * DEG * smoothstep(std::log(A.hazeBar * 0.25), std::log(A.hazeBar), lb) *
                      (1 - smoothstep(std::log(A.top[A.decks - 1] * 0.7), std::log(A.top[A.decks - 1]), lb));
     }
@@ -180,7 +180,7 @@ void Game::renderProbeFeed(double c, double tt) {
     if (mixIn > 0) {   // the probe's own picture
         const double zp = giantAltitudeKm(a, std::max(bar, 1e-9));
         const Vec3 sunW = normalize(sys.star.pos - pos), sunL = W * sunW;
-        const double lf = sys.sunless() ? 0.0 : SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - pos));   // D-01: a drifter's giant has no sun (the floor is a sun's)
+        const double lf = sys.sunless() ? 0.0 : SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - pos));   // a drifter's giant has no sun (the floor is a sun's)
         const BodyGen& gg = spaceR.genFor(g);
         const GiantCharacter& ch = a.ch;
         const int nd = a.decks, last = nd - 1;
@@ -191,7 +191,7 @@ void Game::renderProbeFeed(double c, double tt) {
         const double lp = lpOf(bar);
         double px[GIANT_MAX_DECKS], pz[GIANT_MAX_DECKS] = {0, 0, 0};
         for (int k = 0; k < GIANT_MAX_DECKS; k++) px[k] = -probeDeckDrift(k, c);   // the probe's place over each deck (km east of the aim in its frame)
-        unsigned cut = 0;   // X-03: the decks a clear-air hole takes away over the probe
+        unsigned cut = 0;   // the decks a clear-air hole takes away over the probe
         for (int k = 0; k < last; k++) if (bar > a.top[k] && probe.decks.holeAt(k, px[k], pz[k]) >= 0.5) cut |= 1u << k;
         const double Lp = giantSunlightAt(a, std::max(bar, 1e-9), cut);
         // the camera's gain takes back most of the dark (the light on the decks is given against it); what it cannot take
@@ -200,7 +200,7 @@ void Game::renderProbeFeed(double c, double tt) {
         // (the light come through it), easing into the next deck's own over the band's last stretch; X-03: the deep's glow
         // counts with the sun's (a brown dwarf's clouds are lit from under them as much as from over them)
         const int kAbove = giantDeckAbove(a, bar), kIn = giantDeckAt(a, bar);
-        const bool airGlobe = ch.kind == GK_AZURE || ch.kind == GK_ALKALI;   // P-07: its globe is its air's (no deck seen from orbit: it exposes for the air round it)
+        const bool airGlobe = ch.kind == GK_AZURE || ch.kind == GK_ALKALI;   // its globe is its air's (no deck seen from orbit: it exposes for the air round it)
         double Lref = bar < a.top[0] && !airGlobe ? giantSunlightAt(a, a.top[0], cut) : Lp;
         if (kIn < 0 && kAbove >= 0 && kAbove < last)
             Lref = std::exp(lerpd(std::log(giantSunlightAt(a, a.base[kAbove], cut)), std::log(Lp), smoothstep(lpOf(a.top[kAbove + 1] * 0.7), lpOf(a.top[kAbove + 1]), lp)));
@@ -209,7 +209,7 @@ void Game::renderProbeFeed(double c, double tt) {
         double albAim = 0.55, stormAim = 0;
         probe.bands.at(px[0], 0, albAim, stormAim);
         const double bandGain = std::pow(0.75 / std::max(albAim, 0.2), 0.42);   // and takes back some of a dark belt's dark (the band's colour stays)
-        // P-07: a made giant's light by its class (the tints down the decks, the deep's colours, whether it changes from high in the air and toward
+        // a made giant's light by its class (the tints down the decks, the deep's colours, whether it changes from high in the air and toward
         // the blue): a water cloud's white, an azure giant's blue from high in its clear air (Rayleigh's), an alkali giant's blue and dim (its
         // sodium takes the yellow, its potassium the red), a silicate giant's orange from the glow under it, a hazy giant's pale amber
         struct MadeLight { RGB t1, t2, dz, dh, warmK; bool high; double gainExp; };   // warmK: the haze's shift (a plain giant's toward the amber)
@@ -308,7 +308,7 @@ void Game::renderProbeFeed(double c, double tt) {
                 v.auroraLow = ch.auroraLow; v.auroraHigh = ch.auroraHigh;
             }
         }
-        if (probe.sightClock > 0 && std::fabs(c - probe.sightClock) < 6) {   // X-03: it passes across the beam, once
+        if (probe.sightClock > 0 && std::fabs(c - probe.sightClock) < 6) {   // it passes across the beam, once
             const double su = (c - probe.sightClock) / 6;   // -1 .. 1
             v.sight = std::pow(std::cos(su * PI / 2), 0.7);
             const double hy = probe.descYaw;

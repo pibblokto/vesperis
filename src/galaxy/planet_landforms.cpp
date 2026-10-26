@@ -3,7 +3,7 @@
 #include "planet_internal.h"
 
 namespace {
-// Q-02: the meteorites' strewn fields: on 22% of the cells of a 70 km grid an ellipse 6-25 km long and 1.5-4 km wide along the way the body
+// the meteorites' strewn fields: on 22% of the cells of a 70 km grid an ellipse 6-25 km long and 1.5-4 km wide along the way the body
 // came in and broke up, its middle `c`, its way `dir` (downrange, where the heaviest masses went furthest) and across it `perp`
 inline PointGrid strewnGrid(const BodyGen& g) { return {70.0, 0.22, g.sE + 500}; }
 struct StrewnField { Vec3 c, dir, perp; double lenKm, widthKm; };
@@ -28,14 +28,14 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
     for (int ti = 0; ti < TRAIT_SLOTS; ti++) {
         int t = g.traits[ti];
         if (!t) { if (ti < 3) ti = 2; continue; }   // Q-01: R-304's slots end at their first empty one; the new slots' own after them
-        const double mark0 = o.mark; o.mark = -1;   // Q-01: which trait set the mark (the last to, as before)
+        const double mark0 = o.mark; o.mark = -1;   // which trait set the mark (the last to, as before)
         switch (t) {
         case TR_CANYONS: {
             // a province of dry, flat, raised ground incised by a network of canyons (worley boundaries at 20 km, 0.6-1.3 km
             // wide, 150-600 m deep) and their side canyons (5 km, a third as wide and deep); the walls step down in three terraces
             double mask = land * prov(1, 0.1, 0.4) * smoothstep(0.45, 0.25, c.moist) * smoothstep(0.4, 0.2, c.relief0) * smoothstep(30, 150, c.hS);
             double w1 = 0.3 + 0.35 * tu(2), w2 = 0.1 + 0.12 * tu(3);   // the half-widths, km
-            if (mask < 0.01 || (featFade(w1 * 2, detailM) <= 0 && !matVisible(w1, detailM))) break;   // B-404: by the canyons' own width (the 512 m ring draws them, coarsely; it was `scaleVisible(0.3)`: nothing beyond the 64 m ring)
+            if (mask < 0.01 || (featFade(w1 * 2, detailM) <= 0 && !matVisible(w1, detailM))) break;   // by the canyons' own width (the 512 m ring draws them, coarsely; it was `scaleVisible(0.3)`: nothing beyond the 64 m ring)
             double depth = (150 + 450 * tu(1)) * mask;
             double wallness = 0;
             auto cut = [&](double cellKm, uint64_t seed, double width, double dep) {
@@ -58,7 +58,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // badlands: flat-topped mesas 0.8-1.6 km across and 40-160 m high on half the cells of a 1.4 km grid, buttes and
             // hoodoos on a sixth, steep rims with a talus foot, in a dry flat province
             double mask = land * prov(2, 0.1, 0.35) * smoothstep(0.5, 0.3, c.moist) * smoothstep(0.4, 0.15, c.relief0);
-            if (mask < 0.01 || (featFade(1.1, detailM) <= 0 && !matVisible(0.11, detailM))) break;   // B-404: by the biggest cap's width and its rim
+            if (mask < 0.01 || (featFade(1.1, detailM) <= 0 && !matVisible(0.11, detailM))) break;   // by the biggest cap's width and its rim
             Worley3 w = worley3(p / 1.4, g.sE + 220);
             double u = unitFromHash(mix64(w.id1 + 7));
             double dh = 0; bool rim = false;
@@ -83,7 +83,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // tower karst: steep towers 50-210 m tall and 70-250 m across, half the cells of a 500 m grid, in warm wet
             // lowlands; sinkholes 60-160 m across between them
             double mask = land * prov(3, 0.1, 0.4) * smoothstep(0.45, 0.6, c.moist) * smoothstep(8, 16, c.T) * smoothstep(0.35, 0.15, c.relief0) * smoothstep(5, 30, c.hS) * smoothstep(900, 500, c.hS);
-            if (mask < 0.01 || (featFade(0.25, detailM) <= 0 && !matVisible(0.07, detailM))) break;   // B-404: by the biggest tower and its walls
+            if (mask < 0.01 || (featFade(0.25, detailM) <= 0 && !matVisible(0.07, detailM))) break;   // by the biggest tower and its walls
             double dh = 0; bool wall = false;
             visitFeatures(p, R, 0.5, 0.55, g.sE + 230, 0.5, [&](const FeatureHit& f) {
                 double r = 0.035 + 0.09 * f.u[3], x = f.d / r;
@@ -146,7 +146,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // lies below it, crevassed (`glacier` sets the ice); fjords come from the river layer on living worlds
             double cold = smoothstep(2, -5, c.T) * smoothstep(0.15, 0.4, c.relief0) * land;
             if (cold < 0.01) break;
-            double glac = cold * smoothstep(-8, 25, c.hS - c.hM);   // B-404: the valley's depth on the material chain, the same in every ring
+            double glac = cold * smoothstep(-8, 25, c.hS - c.hM);   // the valley's depth on the material chain, the same in every ring
             if (glac < 0.02 || !matVisible(0.5, detailM)) break;     // a tongue is half a kilometre wide: the rings to 512 m carry it, the far ring and the map read the smooth ground alone
             if (scaleVisible(0.04, detailM)) { Worley3 w = worley3(p / 0.05, g.sE + 270); o.dhFine -= 3.0 * (1 - smoothstep(0.02, 0.08, w.f2 - w.f1)) * glac; }
             o.flatten = std::max(o.flatten, glac); o.flatOffset = -6;
@@ -157,7 +157,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_INSELBERGS: {
             // lone steep mountains 150-500 m tall and 0.8-3 km across on the plains, one per 25 km cell in three
             double mask = land * smoothstep(0.35, 0.15, c.relief0);
-            if (mask < 0.01 || (featFade(3.2, detailM) <= 0 && !matVisible(1.1, detailM))) break;   // B-404: by the biggest mountain (the 512 m ring draws the big ones; `lodFade(2.0)` drew none beyond the 64 m ring)
+            if (mask < 0.01 || (featFade(3.2, detailM) <= 0 && !matVisible(1.1, detailM))) break;   // by the biggest mountain (the 512 m ring draws the big ones; `lodFade(2.0)` drew none beyond the 64 m ring)
             double dh = 0; bool rock = false;
             visitFeatures(p, R, 25.0, 0.3, g.sE + 280, 0.12, [&](const FeatureHit& f) {
                 double r = 0.4 + 1.2 * f.u[3], x = f.d / r;
@@ -177,7 +177,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             double mask = land * prov(4, 0.25, 0.5);
             if (mask < 0.01) break;
             double dh = 0; bool dark = false;
-            if (featFade(1.0, detailM) > 0 || matVisible(1.0, detailM)) {   // B-404: the cones by their width (0.6-1.5 km), the dark cinder wherever one spans half a cell
+            if (featFade(1.0, detailM) > 0 || matVisible(1.0, detailM)) {   // the cones by their width (0.6-1.5 km), the dark cinder wherever one spans half a cell
                 bool cal = false;
                 double cones = volcanoField(p, R, 2.5, 0.45, g.sE + 290, 140.0, cal);
                 dh += cones * featFade(1.0, detailM);
@@ -202,7 +202,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         }
         case TR_CHAOS: {
             // the crust broken into tilted blocks 2-6 km across, lifted or dropped by up to 80 m, cracks 90 m deep between
-            double f = featFade(4.0, detailM), fc = featFade(0.24, detailM);   // B-404: the blocks by their size, the cracks (240 m wide, 90 m deep) by theirs
+            double f = featFade(4.0, detailM), fc = featFade(0.24, detailM);   // the blocks by their size, the cracks (240 m wide, 90 m deep) by theirs
             bool mv = matVisible(0.24, detailM);
             if (f <= 0 && !mv) break;
             Worley3 w = worley3(p / 4.0, g.sE + 300);
@@ -247,9 +247,9 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // a sea of giant dunes: draa 1-2.5 km apart and 40-120 m high across the wind in the dry lowlands, sand
             double mask = land * smoothstep(0.34, 0.2, c.moist) * smoothstep(0.35, 0.15, c.relief0) * smoothstep(900, 400, c.hS);
             if (mask < 0.01) break;
-            if (mask > 0.5) { setMat(MAT_SAND, livingGround(g.type) ? 0.6 : -1.0); o.mark = mask; }   // B-404: the sand sea is kilometres across: sand in every ring and on the maps, whether or not its draa can show (the sand used to go with the draa: dust beyond the 64 m ring); an airless or dry type keeps its own albedo under it, so its globe keeps its mottling (a flat 0.6 made a dune-sea world one yellow ball)
+            if (mask > 0.5) { setMat(MAT_SAND, livingGround(g.type) ? 0.6 : -1.0); o.mark = mask; }   // the sand sea is kilometres across: sand in every ring and on the maps, whether or not its draa can show (going with the draa, it would be dust beyond the 64 m ring); an airless or dry type keeps its own albedo under it, so its globe keeps its mottling (a flat 0.6 made a dune-sea world one yellow ball)
             double wl = 1.0 + 1.5 * tu(11), amp = 40 + 80 * tu(12);
-            double f = lodFade(wl, detailM);   // the draa are a periodic pattern: the octave rule (KI-311)
+            double f = lodFade(wl, detailM);   // the draa are a periodic pattern: the octave rule
             if (f <= 0) break;
             Vec3 dd = normalize(Vec3(std::cos(g.windAngle), std::sin(g.windAngle), 0.15 * std::sin(g.windAngle * 2)));
             Vec3 dp = normalize(cross(dd, unit));
@@ -257,13 +257,13 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             double bend = fbm3(p / 8.0, g.sE + 330, 2) * 3.0;
             double v = std::pow(0.5 + 0.5 * std::sin(along + bend + 0.5 * std::sin(across * 0.7)), 1.6);
             o.dhSmooth += amp * v * mask * f;
-            o.slip = std::max(o.slip, mask * f * smoothstep(-0.1, -0.5, std::cos(along + bend + 0.5 * std::sin(across * 0.7))));   // Q-03: the draa's faces downwind
+            o.slip = std::max(o.slip, mask * f * smoothstep(-0.1, -0.5, std::cos(along + bend + 0.5 * std::sin(across * 0.7))));   // the draa's faces downwind
             break;
         }
         case TR_SALT_FLATS: {
             // white playas in the closed basins of dry country: dead flat three metres under the smooth ground, cracked into
             // polygons a dozen metres across
-            if (!matVisible(2.5, detailM)) break;   // B-404: the playas (a few kilometres across, the lows of the 5 km basin noise) unfaded wherever one spans half a cell: every ring carries them, the world map does not (the noise would alias on its texels)
+            if (!matVisible(2.5, detailM)) break;   // the playas (a few kilometres across, the lows of the 5 km basin noise) unfaded wherever one spans half a cell: every ring carries them, the world map does not (the noise would alias on its texels)
             double basin = smoothstep(-0.2, -0.45, fbm3(p / 5.0, g.sB, 3));
             double mask = land * basin * smoothstep(0.34, 0.2, c.moist) * smoothstep(0.25, 0.1, c.relief0) * smoothstep(700, 300, c.hS);
             if (mask < 0.01) break;
@@ -277,7 +277,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             double mask = land * prov(6, 0.2, 0.45);
             if (mask < 0.01) break;
             double step = 40 + 50 * tu(13);
-            double run = step / std::max(c.slope, 0.02);        // B-404: a terrace's run in metres on the material chain's slope
+            double run = step / std::max(c.slope, 0.02);        // a terrace's run in metres on the material chain's slope
             double f = featFade(run / 1000.0, detailM);          // the relief where a terrace spans a few samples (it was `lodFade(1.5)`: none beyond the 64 m ring)
             bool mv = matVisible(0.4 * run / 1000.0, detailM);   // the riser, 40% of the run, decides the basalt wherever it spans half a cell
             if (f <= 0 && !mv) break;
@@ -344,7 +344,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_GEYSERS: {
             // geyser basins: sinter mounds 12 m high and 0.3-0.9 km across with 1.6 m terraces and a pool at the vent, pale crusts
             double mask = land * smoothstep(0.3, 0.1, c.relief0);
-            if (mask < 0.01 || (featFade(1.8, detailM) <= 0 && !matVisible(1.8, detailM))) break;   // B-404: by the biggest basin
+            if (mask < 0.01 || (featFade(1.8, detailM) <= 0 && !matVisible(1.8, detailM))) break;   // by the biggest basin
             double dh = 0; bool sinter = false;
             visitFeatures(p, R, 20.0, 0.35, g.sE + 370, 0.1, [&](const FeatureHit& f) {
                 double r = 0.3 + 0.6 * f.u[3], x = f.d / r;
@@ -565,7 +565,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             o.dhSmooth += hh * mask;
             o.dhFine += dFine * mask;
             if (mask > 0.5 && cliff) o.mark = 1;
-            if (mask > 0.5 && h1 != h2 && eM < 30.0 && matVisible(0.03, detailM)) setMat(MAT_BASALT, 0.2);   // B-404: the colonnade, its pavement and its foot: a band of
+            if (mask > 0.5 && h1 != h2 && eM < 30.0 && matVisible(0.03, detailM)) setMat(MAT_BASALT, 0.2);   // the colonnade, its pavement and its foot: a band of
             break;                                                                                              // 30 m by the unfaded edge, in every ring that can hold it
         }
         case TR_MUD_VOLCANOES: {
@@ -670,7 +670,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             break;
         }
         case TR_HOT_SPRINGS: {
-            // Q-02: terraced hot springs (Pamukkale's travertine, the Grand Prismatic's rings): mounds of white sinter stepping down in rimmed
+            // terraced hot springs (Pamukkale's travertine, the Grand Prismatic's rings): mounds of white sinter stepping down in rimmed
             // terraces from the vent's blue pool at the top, the pools between the rims coloured by the mats of the life that lives in their heat
             // (bright near the vent, darker as the water cools), the runoff's mats streaking the ground round them; in clusters in a geothermal
             // province (`springGrid`, `springOf`; their steam: `hotSpringsNear`)
@@ -716,7 +716,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             break;
         }
         case TR_METEORITES: {
-            // Q-02: the strewn fields of iron meteorites (Campo del Cielo; the blue ice of Antarctica's, where the ice brings them up and the wind
+            // the strewn fields of iron meteorites (Campo del Cielo; the blue ice of Antarctica's, where the ice brings them up and the wind
             // keeps them bare): an ellipse along the way the body broke up (`strewnOf`), its stones thicker downrange where the heaviest went,
             // where a few fresh pits 6-60 m across mark the biggest's falls; on the open ground, marked in every ring (the scanner finds them), the
             // stones themselves the surface's objects (`SurfaceView::forMeteorites`, by the field's density here)
@@ -748,10 +748,10 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             break;
         }
         case TR_STRATA: {
-            // Q-02: rainbow strata (Zhangye Danxia, the Painted Hills): the sediments a wet age laid, oxidised layer by layer, bared on the hills'
+            // rainbow strata (Zhangye Danxia, the Painted Hills): the sediments a wet age laid, oxidised layer by layer, bared on the hills'
             // slopes of a province: bands 4-12 m thick, each the rock's own colour or the accent's (a red, an orange or a green by the world) at a
             // brightness of its own (the two hues and their shades the banks hold), the layers' edges wavy; where a ring cannot hold the bands,
-            // bands six times as thick (the far hills striped broadly). The material chain's height and slope, so every ring agrees (B-404)
+            // bands six times as thick (the far hills striped broadly). The material chain's height and slope, so every ring agrees
             const double mask = land * prov(46, 0.18, 0.42) * smoothstep(0.1, 0.22, c.slope) * smoothstep(0.6, 0.3, c.moist);
             if (mask < 0.5) break;
             const double thick = 4.0 + 8.0 * tu(62);
@@ -765,7 +765,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             break;
         }
         case TR_PETRIFIED: {
-            // Q-02: a petrified forest (Arizona's Chinle beds): where a forest stood when the world was wet, its trunks buried, turned to stone
+            // a petrified forest (Arizona's Chinle beds): where a forest stood when the world was wet, its trunks buried, turned to stone
             // and bared again by the wind, lying in the open dry ground of a province; their density here for the surface's stone logs
             // (`SurfaceView::forLogs`), the ground pale and banded grey and lilac where they lie thickest
             const double mask = land * prov(45, 0.2, 0.45) * smoothstep(0.5, 0.25, c.relief0) * smoothstep(0.55, 0.3, c.moist);
@@ -775,7 +775,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             break;
         }
         case TR_GYPSUM: {
-            // Q-02: a field of white gypsum dunes (White Sands: the gypsum of a dried lake's beds blown downwind): transverse crests across the wind
+            // a field of white gypsum dunes (White Sands: the gypsum of a dried lake's beds blown downwind): transverse crests across the wind
             // 100-250 m apart and 8-18 m high, gentle on the windward side and steep on the lee, their tops bending into barchans, the flats between
             // them white too; in a province of the dry low country, white in every ring and on the maps (the field is kilometres across, B-404)
             const double mask = land * prov(43, 0.18, 0.4) * smoothstep(0.46, 0.26, c.moist) * smoothstep(0.4, 0.18, c.relief0) * smoothstep(1400.0, 600.0, c.hS);
@@ -794,7 +794,7 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             break;
         }
         case TR_GLASSED: {
-            // S-03: the blast that made the neutron star melted the surface; the melt pooled on the flats and lows and froze into
+            // the blast that made the neutron star melted the surface; the melt pooled on the flats and lows and froze into
             // sheets of dark glass (the fine relief gone, ripples of a metre frozen in), the slopes and highs are scorched rock.
             // The mask reads the land, a province of about half the world and the material chain's slope and relief, all the same
             // in every ring and on the map (B-404), so a sheet is a sheet at every distance; the ripples alone fade by the ring

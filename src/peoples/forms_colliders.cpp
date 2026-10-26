@@ -54,16 +54,16 @@ void pyramidOutline(const Form& e, double y, std::vector<std::pair<double, doubl
 
 void formColliders(const Form& e, std::vector<FormDisc>& out) {
     if (formTop(e) < 0.9) return;   // A-03: what is lower than C-01's walls that block (0.9 m) is stepped over: a post's hole, a ring of stones, a stump
-    if (formWalkable(e)) return;    // B-420: stood on (the view's `formSupportAt`)
+    if (formWalkable(e)) return;    // stood on (the view's `formSupportAt`)
     const double ch = std::cos(e.heading), sh = std::sin(e.heading);
     auto toS = [&](double a, double b, double& x, double& z) { x = e.x + ch * a + sh * b; z = e.z - sh * a + ch * b; };   // local (across, along) -> the settlement's metres
     auto push = [&](double a, double b, double r, double y0, double y1) { double x, z; toS(a, b, x, z); out.push_back({x, z, r, y0, y1}); };
     switch (e.kind) {
-        case FK_BOX: {   // C-01: a standing piece as rows of discs along it
+        case FK_BOX: {   // a standing piece as rows of discs along it
             if (e.part == 4) return;
             const bool alongLong = e.hz >= e.hx;
             const double L = alongLong ? e.hz : e.hx, W = alongLong ? e.hx : e.hz;   // its long and its short half extents
-            if (std::fabs(e.tilt - PI / 2) < 0.2 && e.broken > 0) {   // B-420: lying flat and broken: step by step (its steps along its long side are layers
+            if (std::fabs(e.tilt - PI / 2) < 0.2 && e.broken > 0) {   // lying flat and broken: step by step (its steps along its long side are layers
                                                                           // of it one over another where that side stood up, strips side by side where it lay across)
                 const int steps = boxSteps(e);
                 for (int i = 0; i < steps; i++) {
@@ -81,7 +81,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 }
                 return;
             }
-            if (e.tilt > 0.3) {   // B-420: lying (a fallen stone, a tower's top where it fell): along the heading from its foot as the mesh lays it, as high as it lies
+            if (e.tilt > 0.3) {   // lying (a fallen stone, a tower's top where it fell): along the heading from its foot as the mesh lays it, as high as it lies
                 const double ct = std::cos(e.tilt), st = std::sin(e.tilt);
                 double top = e.y1;
                 if (e.broken > 0) { top = e.y0; for (int i = 0, n = boxSteps(e); i < n; i++) top = std::max(top, boxStepTop(e, i)); }
@@ -136,7 +136,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
         }
         case FK_LATHE: case FK_BLOB: case FK_PYRAMID: {   // slices up the form: discs along each slice's outline
             if (e.tilt > 1.0) {   // lying: a row along its length, from its foot along the heading as the mesh lies (A-03: it was centred on the foot);
-                                  // B-420: as long as it is after its break (a snapped shaft's top, a pyramid's top tiers), each disc where its section
+                                  // as long as it is after its break (a snapped shaft's top, a pyramid's top tiers), each disc where its section
                                   // is at the explorer's knee (a round body lying is narrower at the ground than its radius; a prism of three sides lies
                                   // on a corner, off its axis), tapering with its profile; a short fat one a row across it
                 const double cut = e.broken > 0 ? (e.kind == FK_LATHE ? 1 - 0.85 * e.broken : (e.kind == FK_PYRAMID ? 1 - 0.65 * e.broken : 1.0)) : 1.0;
@@ -176,14 +176,14 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 }
                 return;
             }
-            // B-420: where the mesh breaks off (a pyramid's top tiers at 0.65 of the break, a shaft at 0.85), and the slices: the explorer's two
+            // where the mesh breaks off (a pyramid's top tiers at 0.65 of the break, a shaft at 0.85), and the slices: the explorer's two
             // bands (to the knee and to 1.8 m over the foot), then one every eight metres or so up the rest, each with its narrowest outline (the
             // mesh never inside it), inset by the discs' radius; a small one a disc inside it
             const double H = e.y1 - e.y0;
             double yTop = e.y0 + H * (e.broken > 0 ? (e.kind == FK_PYRAMID ? 1 - 0.65 * e.broken : 1 - 0.85 * e.broken) : 1.0);
             if (e.kind == FK_LATHE && e.broken > 0) yTop -= 0.5 * std::min(0.25 * (yTop - e.y0), 0.06 * H + 0.5 * e.hx) * e.broken;   // its rim's jags, half way down
             const double lean = std::sin(e.tilt), up = std::cos(e.tilt);   // a leaning or tipped one's slices along the lean, lower by it
-            double lift = 0;   // B-420: a tipped one (past 0.3) is set down on its lowest corner, as the mesh is (`formMesh`)
+            double lift = 0;   // a tipped one (past 0.3) is set down on its lowest corner, as the mesh is (`formMesh`)
             if (e.tilt > 0.3) { const double hz = std::max(e.hx, e.hz); lift = e.y0 - std::min(e.y0 * up - hz * lean, e.y1 * up - hz * lean); }
             if (yTop - std::max(0.0, e.y0) < 0.3) return;
             std::vector<double> ys{e.y0};
@@ -248,7 +248,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
         case FK_VAULT: {   // springing from the ground: its two flanks (and its closed ends), the hall inside free; not where a stretch fell
             if (e.y0 > 1.2) return;
             const double H = std::max(0.2, e.y1 - e.y0), th = e.p[0] > 0 ? e.p[0] : std::max(0.25, 0.04 * e.hx);
-            // B-420: the flank where its shell is at the explorer's two bands (to the knee, to 1.8 m: a parabolic vault leans in fast), each
+            // the flank where its shell is at the explorer's two bands (to the knee, to 1.8 m: a parabolic vault leans in fast), each
             // disc in the shell's thickness there
             auto halfAt = [&](double y) {   // the outer face's half span at a height over the springing
                 const double t = clampd(y / H, 0, 1);
@@ -278,9 +278,9 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             for (int j = 0; j <= N; j++) {   // pier j between bay j - 1 and bay j (the ends' piers to the wall's ends)
                 double xa = j == 0 ? -e.hx : -e.hx + W * (j - 0.5) + w, xb = j == N ? e.hx : -e.hx + W * (j + 0.5) - w;
                 if (xb - xa < 1e-6) continue;
-                double top = e.y1;   // B-420: a snapped pier as tall as `archMesh` leaves it
+                double top = e.y1;   // a snapped pier as tall as `archMesh` leaves it
                 if (e.broken > 0 && N > 1 && H01(e.seed, 40 + j) < e.broken * 0.3) top = std::max(e.y0 + (e.y1 - e.y0) * (0.25 + 0.5 * H01(e.seed, 80 + j)), e.y0 + 0.5);
-                const double rr = clampd(std::min(e.hz, 0.5 * (xb - xa)), 0.1, 0.6);   // B-420: no wider than the pier (a gate's thin piers)
+                const double rr = clampd(std::min(e.hz, 0.5 * (xb - xa)), 0.1, 0.6);   // no wider than the pier (a gate's thin piers)
                 int n = std::max(1, (int)std::ceil((xb - xa) * 0.5 / rr));
                 for (int i = 0; i < n; i++) {
                     double a = n > 1 ? xa + rr + (xb - xa - 2 * rr) * i / (n - 1) : 0.5 * (xa + xb);
@@ -292,10 +292,10 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
         }
         case FK_SHELL: {
             if (e.sub == 0) for (int sd = -1; sd <= 1; sd += 2) push(sd * e.hx * 0.92, -sd * e.hz * 0.92, 0.6, 0, std::max(1.5, e.y0 + 0.5));   // the low corners (on their posts)
-            else if (e.y0 > 0.9) push(0, 0, std::max(0.3, 0.06 * e.hx), 0, e.y0);   // B-420: its mast as drawn (none under 0.2 m; under a wall's height stepped over)
+            else if (e.y0 > 0.9) push(0, 0, std::max(0.3, 0.06 * e.hx), 0, e.y0);   // its mast as drawn (none under 0.2 m; under a wall's height stepped over)
             return;
         }
-        case FK_TRUSS: {   // B-420: each leg's members from the foot up (the explorer's reach and over it), where they stand: not fallen, under the
+        case FK_TRUSS: {   // each leg's members from the foot up (the explorer's reach and over it), where they stand: not fallen, under the
                            // buckle, tipped with the mast as `trussMesh` builds it (a derrick's jib): the legs alone, the bracing between them open
             if (e.sub != 0) return;
             const int L = e.sides >= 3 ? std::min(e.sides, 4) : 4;
@@ -317,7 +317,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                     double a0, b0, u0, a1, b1, u1; pt(i, k, a0, b0, u0); pt(i, k + 1, a1, b1, u1);
                     u0 += lift; u1 += lift;
                     if (std::min(u0, u1) > e.y0 + reach) break;
-                    // R-412: a leaning leg (a squat stump's, a jib's) in short steps, each disc only as high as the leg stays inside it (a disc
+                    // a leaning leg (a squat stump's, a jib's) in short steps, each disc only as high as the leg stays inside it (a disc
                     // as tall as a 0.5 m step stood a hand off the leg at its top and its foot); an upright leg's padded by its thickness
                     const double hyp = std::hypot(a1 - a0, b1 - b0), lean = hyp / std::max(1e-6, std::fabs(u1 - u0)), pad = t * std::max(0.0, 1 - 2 * lean);
                     const int n = std::max(1, (int)std::ceil(hyp / (lean > 0.08 ? 0.18 : 0.5)));
@@ -329,7 +329,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 }
             return;
         }
-        case FK_PLATE: {   // C-17: discs along its outline (a plate as tall as a wall: the instruments' are lower, stepped over)
+        case FK_PLATE: {   // discs along its outline (a plate as tall as a wall: the instruments' are lower, stepped over)
             double a[32], b[32]; formPlateOutline(e, 32, a, b);
             const double rr = clampd(0.5 * std::min(e.hx, e.hz), 0.2, 0.6), top = e.y1 + std::max(0.0, e.p[3]);
             for (int i = 0; i < 32; i++) {
@@ -340,7 +340,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             }
             return;
         }
-        case FK_FENCE: {   // R-412: discs along it where its pales stand (a stretch of them fallen lets the explorer through, a pale gone does not)
+        case FK_FENCE: {   // discs along it where its pales stand (a stretch of them fallen lets the explorer through, a pale gone does not)
             if (e.part == 4 || e.tilt > 0.3) return;
             const int n = fencePales(e);
             const double sp = 2 * e.hz / n, rr = clampd(e.hx + 0.08, 0.12, 0.25);
@@ -356,11 +356,11 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             double gap0 = 0, gap1 = -1;
             if (e.broken > 0) { gap0 = TAU * H01(e.seed, 1); gap1 = gap0 + 1.8 * e.broken; }
             auto inGap = [&](double u) { if (gap1 < gap0) return false; double d = std::fmod(u - gap0 + 4 * TAU, TAU); return d < gap1 - gap0; };
-            if (e.tilt < 0.3) {   // B-420: lying flat, as wide as its tube is at the explorer's knee
+            if (e.tilt < 0.3) {   // lying flat, as wide as its tube is at the explorer's knee
                 const double k = std::min(r, 0.9), w = std::max(0.05, std::sqrt(std::max(0.0, r * r - (r - k) * (r - k))));
                 int n = std::max(8, (int)std::ceil(TAU * R / (1.4 * w))); for (int j = 0; j < n; j++) { double a = TAU * j / n; if (!inGap(a)) push(R * std::cos(a), R * std::sin(a), w, e.y0, e.y0 + 2 * r); }
             }
-            else {   // B-420: standing on its rim: the tube where it is across the ring's plane, its lower arc and its upper (each with the tube's
+            else {   // standing on its rim: the tube where it is across the ring's plane, its lower arc and its upper (each with the tube's
                      // height there: the hole between them free, and the lower arc's ends not walls to the ground)
                 const double cy = e.y0 + R + r, rr = std::max(r, 0.05), ends = std::max(0.0, R + r - rr);
                 const int n = std::max(2, (int)std::ceil(2 * ends / (0.7 * rr)));
@@ -387,7 +387,7 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             };
             double len = e.sub == 0 ? e.hx * (e.p[0] > 0 ? std::min(e.p[0], TAU) : TAU) : 2 * e.hz;
             const int P = clampi((int)std::ceil(len / 6.0), e.sub == 0 ? 8 : 1, 64);   // the near mesh's pieces (a broken one's gaps and ragged tops, as `sweepMesh` lays them)
-            // B-420: in bands up its height (the explorer's two, to the knee and to 1.8 m, then two metres at a time), each with its two faces where
+            // in bands up its height (the explorer's two, to the knee and to 1.8 m, then two metres at a time), each with its two faces where
             // they are at the band's top (a battered wall's face draws in as it rises: a disc at its foot stood out from it higher up, one at its
             // top let the feet into its base); a thin section a disc in its middle
             auto faceAt = [&](double y) { const double f = clampd((y - e.y0) / std::max(1e-6, H), 0, 1); return w0 - f * (w0 - w1); };   // its face's offset at a height

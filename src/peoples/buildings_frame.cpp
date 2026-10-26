@@ -65,7 +65,7 @@ WallsOut walls4x(Gen& g, const Walls& W0, double hs[4]) {
         const double nx = side == 1 ? 1 : (side == 3 ? -1 : 0), nz = side == 0 ? 1 : (side == 2 ? -1 : 0);   // the outward normal
         const double lx = W.cx + nx * W.hw, lz = W.cz + nz * W.hd;
         const double dh = along ? 0 : PI / 2, ax = along ? 1 : 0, az = along ? 0 : -1;   // the wall's own axis in the building's frame
-        const double leanS = side == W.door ? 0.0 : lean;   // T-02: the doorway's side upright (a leaning jamb's colliders closed the doorway)
+        const double leanS = side == W.door ? 0.0 : lean;   // the doorway's side upright (a leaning jamb's colliders closed the doorway)
         const double tiltOut = (side == 0 || side == 1) ? -leanS : leanS;   // a box's own +along points out on sides 0 and 1, in on 2 and 3
         const bool window = W.window && side == (W.door + 2) % 4 && h > 2.4 && Dm < 0.55;
         const bool glyphs = W.glyphs && g.lod == 0 && (side == 0 || glyphAll) && h > 1.5;
@@ -118,7 +118,7 @@ WallsOut walls4x(Gen& g, const Walls& W0, double hs[4]) {
         }
         if (g.lod <= 1 && g.carved() && standing) { Form& e = g.box(tx - nx * topIn, tz - nz * topIn, dh, Lt + 0.24, ht + 0.24, base + h - 0.05, base + h + 0.35, g.accentOn(AP_TOPS) ? 1 : W.slot, W.mat, 4); e.tilt = tiltOut; }
         if (g.gv(GV_EXPRESSION) == EX_FRAME && g.lod == 0 && (g.c.age == AGE_INDUSTRIAL || g.c.age == AGE_MODERN)) {
-            // B-415: an industrial people's frame its brick piers between the windows (its iron posts stood off its walls like a ruined
+            // an industrial people's frame its brick piers between the windows (its iron posts stood off its walls like a ruined
             // pergola), a modern people's its concrete grid: the columns between the windows and a floor's slab at every storey. Each
             // piece of the wall lays its windows from its own end, so the piers stand at its bays' edges piece by piece
             const bool modern = g.c.age == AGE_MODERN;
@@ -155,7 +155,7 @@ WallsOut walls4x(Gen& g, const Walls& W0, double hs[4]) {
                 if (fh > 2.9) band(std::min(fh, 3.1) - 0.25, std::min(fh, 3.1), 0.06, 0.0, fs, fm);
             }
         }
-        if (W.parapet > 0 && standing && g.lod <= 1) { Form& e = g.box(tx - nx * topIn, tz - nz * topIn, dh, Lt, ht, base + h - 0.02, base + h + W.parapet, W.slot, W.mat, 4); e.tilt = tiltOut; }   // B-415
+        if (W.parapet > 0 && standing && g.lod <= 1) { Form& e = g.box(tx - nx * topIn, tz - nz * topIn, dh, Lt, ht, base + h - 0.02, base + h + W.parapet, W.slot, W.mat, 4); e.tilt = tiltOut; }
         if (W.crenels && standing && g.lod == 0) {   // merlons along the top
             const int n = std::max(2, (int)(2 * Lt / 1.6));
             for (int k = 0; k < n; k++) {
@@ -236,7 +236,7 @@ double ringWalls(Gen& g, const Ring& R0) {
         if (standing && g.carved()) { Form& e = seg(h - 0.05, h + 0.35, topOff + 0.2, 4); e.hz = ht + 0.2; e.slot = g.accentOn(AP_TOPS) ? 1 : R.slot; e.pattern = 0; }
         if (standing && R.crenels && g.lod == 0 && k % 2 == 0) { Form& e = seg(h, h + 0.8, topOff, 0); e.hx *= 0.55; e.pattern = 0; e.slot = g.topSlot(R.mat); }
         if (g.gv(GV_EXPRESSION) == EX_FRAME && g.lod == 0 && !ringInDoor(R, k) && !ringInDoor(R, (k + N - 1) % N)) {   // a post at the segment's joint
-            const int fm = g.c.age <= AGE_MEDIEVAL ? MT_TIMBER : (g.c.age == AGE_INDUSTRIAL ? R.mat : (g.c.age == AGE_MODERN ? MT_CONCRETE : MT_COMPOSITE));   // B-415: a brick pier
+            const int fm = g.c.age <= AGE_MEDIEVAL ? MT_TIMBER : (g.c.age == AGE_INDUSTRIAL ? R.mat : (g.c.age == AGE_MODERN ? MT_CONCRETE : MT_COMPOSITE));   // a brick pier
             if (g.D(fm) < 0.5) { Form& e = g.lathe(0, R.cx + x0 + std::sin(a0) * 0.08, R.cz + z0 + std::cos(a0) * 0.08, ht + 0.1, base, base + std::min(h, tierY), fm == MT_TIMBER || fm == MT_IRON ? g.timberSlot() : (fm == MT_COMPOSITE ? 1 : R.slot), fm, 6); e.part = 4; }
         }
     }
@@ -257,7 +257,7 @@ double roof(Gen& g, int form, double cx, double cz, double hw, double hd, double
             if (g.lod == 0 && Dr < 0.5) for (int s = 0; s < 4; s++) { bool al = s % 2 == 0; g.box(cx + (s == 1 ? hw : (s == 3 ? -hw : 0)), cz + (s == 0 ? hd : (s == 2 ? -hd : 0)), al ? 0 : PI / 2, al ? hw : hd, 0.18, y0, y0 + 0.7, structural(mat) ? 0 : slot, mat, 4); }
             return 0;
         }
-        if (structural(mat)) {   // R-412: a modern people's slab flush, a lip, deep, or a cornice
+        if (structural(mat)) {   // a modern people's slab flush, a lip, deep, or a cornice
             const double se = g.slabEave(), th = g.c.age == AGE_MODERN && g.c.genome.of(GV_EAVES) == EV_FLARED ? 0.8 : 0.35;
             if (Dr < 0.35) g.box(cx, cz, 0, hw + se, hd + se, y0, y0 + th, slot, mat, 2);
             else if (Dr < 0.6) g.box(cx, cz - hd * 0.5, 0, hw + se, hd * 0.5 + se, y0, y0 + th, slot, mat, 2);
@@ -272,13 +272,13 @@ double roof(Gen& g, int form, double cx, double cz, double hw, double hd, double
             const bool alongZ = hd >= hw; const double span = (alongZ ? hw : hd) + eave, len = (alongZ ? hd : hw) + eave * 0.6;
             Form& e = g.add(FK_SWEEP, 1, cx, cz, alongZ ? 0 : PI / 2, 0, len, y0, y0 + span * ps, slot, mat, 2);
             e.p[1] = span; e.p[2] = 0.12; e.broken = broken; top = e.y1;
-            if (g.flared() && g.lod < 2) { Form& k = g.add(FK_SWEEP, 1, cx, cz, alongZ ? 0 : PI / 2, 0, len, y0 - 0.3, y0 + 0.3, slot, mat, 2); k.p[1] = span + 0.5; k.p[2] = std::max(0.2, span - 0.3); k.broken = broken; }   // R-412: its bellcast eaves
+            if (g.flared() && g.lod < 2) { Form& k = g.add(FK_SWEEP, 1, cx, cz, alongZ ? 0 : PI / 2, 0, len, y0 - 0.3, y0 + 0.3, slot, mat, 2); k.p[1] = span + 0.5; k.p[2] = std::max(0.2, span - 0.3); k.broken = broken; }   // its bellcast eaves
             break;
         }
         case RF_HIPPED: case RF_CONICAL: {
             const bool hip = form == RF_HIPPED;
             Form& e = g.add(FK_PYRAMID, 0, cx, cz, 0, hw + eave, hd + eave, y0, y0 + (hip ? std::min(hw, hd) : std::max(hw, hd) * 1.9) * ps, slot, mat, 2); e.p[1] = hip ? 0.28 : 0; e.broken = broken; top = e.y1;
-            if (g.flared() && g.lod < 2) { Form& k = g.add(FK_PYRAMID, 0, cx, cz, 0, hw + eave + 0.5, hd + eave + 0.5, y0 - 0.3, y0 + 0.3, slot, mat, 2); k.p[1] = 0.72; k.broken = broken; }   // R-412: its bellcast eaves
+            if (g.flared() && g.lod < 2) { Form& k = g.add(FK_PYRAMID, 0, cx, cz, 0, hw + eave + 0.5, hd + eave + 0.5, y0 - 0.3, y0 + 0.3, slot, mat, 2); k.p[1] = 0.72; k.broken = broken; }   // its bellcast eaves
             break;
         }
         case RF_VAULTED: {   // a barrel vault along the longer side, springing from the walls' top
@@ -308,7 +308,7 @@ double roof(Gen& g, int form, double cx, double cz, double hw, double hd, double
 // B-415: a pitched roof's gable ends in its walls' own material (stone, brick, adobe): each stands on its wall while the wall stands whole,
 // whatever became of the roof, under the roof's slope (a roofless row keeps its gables, a stone house its ends: the age's roofs on a ruin);
 // `W` the walls under a roof of `pitch` whose ridge runs along their longer side (across it where `across`: a row's gables to the street)
-// R-412: the gable's end as the people shaped it (a medieval or an industrial people's): plain, its crow steps climbing over the roof's
+// the gable's end as the people shaped it (a medieval or an industrial people's): plain, its crow steps climbing over the roof's
 // slope, a curved neck rising over the ridge under its cap, a pediment's cornice across its foot and its raking frame, or its top clipped
 // by a little hip of the roofing
 void gables(Gen& g, const Walls& W, const double hs[4], double pitch, bool across) {
@@ -349,7 +349,7 @@ void gables(Gen& g, const Walls& W, const double hs[4], double pitch, bool acros
 double roundRoof(Gen& g, int form, double cx, double cz, double rx, double rz, int segs, double hmin, double h, double pitch, int mat) {   // returns the crown's rise (0: none)
     if (hmin < 0.92 * h) return 0;
     const int slot = g.roofSlot(mat);
-    const double Dr = g.D(mat), y0 = g.sink + hmin - 0.1, ps = pitch * (0.8 + 0.4 * g.gf(GV_PROPORTION)) * g.pitchK(), r = std::max(rx, rz), ev = g.eave() + 0.05;   // R-412
+    const double Dr = g.D(mat), y0 = g.sink + hmin - 0.1, ps = pitch * (0.8 + 0.4 * g.gf(GV_PROPORTION)) * g.pitchK(), r = std::max(rx, rz), ev = g.eave() + 0.05;
     if (form == RF_OPEN) return 0;
     if (form == RF_FLAT) { if (Dr < 0.45) { Form& e = g.add(FK_LATHE, 0, cx, cz, 0, rx + g.slabEave(), rz + g.slabEave(), y0, y0 + 0.35, slot, mat, 2); e.sides = segs <= 8 ? segs : 0; e.broken = Dr < 0.25 ? 0 : 0.5; return 0.25; } return 0; }
     if (Dr >= 0.6) return 0;

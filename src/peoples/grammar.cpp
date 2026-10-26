@@ -111,7 +111,7 @@ struct Expander : VgRun {
     void bindEntity(const std::string& name, int entity) override { if (cur) cur->ents.push_back({name, entity}); }
     bool expand(const std::string& rule) override { int r = G.rule(rule); if (r < 0) { note("no rule " + rule); return false; } Scope s = cur ? *cur : Scope(); return expandRule(r, s, std::string()); }
     bool has(const std::string& rule) const override { return G.rule(rule) >= 0; }
-    // H-04: a model's words, the names in them as names
+    // a model's words, the names in them as names
     void marked(const std::string& s) {
         if (s.find(VG_NAME_BEGIN) == std::string::npos) { text(unmarkNames(s, nullptr)); return; }
         size_t i = 0;
@@ -135,7 +135,7 @@ struct Expander : VgRun {
     int entityHead(int ref, const std::string& name, const Scope& sc) {
         for (size_t i = sc.ents.size(); i-- > 0;) if (sc.ents[i].first == name) return sc.ents[i].second;
         for (size_t i = declared.size(); i-- > 0;) if (declared[i].first == name) return declared[i].second;
-        if (ref >= 0 && ref < (int)M.bound.size()) { if (M.bound[ref] < 0) M.bound[ref] = M.lazy(ref); return M.bound[ref]; }   // H-04: bound when first named
+        if (ref >= 0 && ref < (int)M.bound.size()) { if (M.bound[ref] < 0) M.bound[ref] = M.lazy(ref); return M.bound[ref]; }   // bound when first named
         return -1;
     }
     int entityAt(int ref, const std::string& name, const std::vector<int>& pathRef, const Scope& sc) {
@@ -285,7 +285,7 @@ struct Expander : VgRun {
     }
 
     bool expandRule(int ri, Scope& sc, const std::string& bindLocal) {
-        for (const VgInstead& I : G.insteads) if (I.fromRule == ri && I.toRule >= 0 && holds(I.cond, sc)) { ri = I.toRule; break; }   // D-05
+        for (const VgInstead& I : G.insteads) if (I.fromRule == ri && I.toRule >= 0 && holds(I.cond, sc)) { ri = I.toRule; break; }
         if (++depth > 48) { note("too deep at " + G.rules[ri].name); depth--; return false; }
         const VgRule& rule = G.rules[ri];
         if (rule.keep) {
@@ -452,7 +452,7 @@ struct Expander : VgRun {
                     Tok t; t.t = T_MENTION; t.ent = id; out.push_back(t);
                     break;
                 }
-                case VgNode::TONGUE: {   // H-04: their own word for a thing
+                case VgNode::TONGUE: {   // their own word for a thing
                     std::string wd;
                     if (M.tongue(n.s, wd) && !wd.empty()) { Tok t; t.t = T_WORD; t.s = wd; out.push_back(t); }
                     else note("no word of theirs for {~" + n.s + "}");
@@ -523,7 +523,7 @@ struct Realiser {
             bool me = e.person == 1;
             if (form == F_NAME || form == F_FULL || form == F_VOC) {
                 std::string n = form == F_VOC && !e.voc.empty() ? e.voc : e.name;
-                std::vector<std::string> marks; n = unmarkNames(n, &marks); for (const std::string& m : marks) name(m);   // H-04: a marked name
+                std::vector<std::string> marks; n = unmarkNames(n, &marks); for (const std::string& m : marks) name(m);   // a marked name
                 name(unmarkNames(e.name, nullptr));
                 return n.empty() ? (me ? "I" : "you") : n;
             }
@@ -552,7 +552,7 @@ struct Realiser {
         if (out.empty()) { out = pronoun(e.gender, form); shown[id] = 1; }
         if (form == F_REFL) shown[id] = 1;
         if (e.named && form == F_POSS && !seen && out.size() > 2 && out.compare(out.size() - 2, 2, "'s") != 0) out += "'s";
-        { std::vector<std::string> marks; out = unmarkNames(out, &marks); for (const std::string& m : marks) name(m); }   // H-04: names within a form
+        { std::vector<std::string> marks; out = unmarkNames(out, &marks); for (const std::string& m : marks) name(m); }   // names within a form
         if (!e.name.empty() && out.find(e.name) != std::string::npos) name(e.name);
         mention(id);
         return out;
@@ -673,9 +673,9 @@ bool vgRecord(const VgGrammar& G, const std::string& root, VgModel& M, VgMemory*
     Z.run(X.out);
     R.text = tidy(Z.s);
     R.words = vgWords(R.text);
-    R.formulas.clear();   // H-04: the formulas' sentences, as frames
+    R.formulas.clear();   // the formulas' sentences, as frames
     for (const std::string& raw : Z.formulaRaw) for (const std::string& sn : vgSentences(tidy(raw))) if (vgWords(sn) >= 6) R.formulas.push_back(vgFrame(sn));
-    if (!G.lexFact.empty()) {   // H-04: a word its fact does not allow (the railway before it opened)
+    if (!G.lexFact.empty()) {   // a word its fact does not allow (the railway before it opened)
         std::string w; std::set<std::string> told;
         for (size_t i = 0; i <= R.text.size(); i++) {
             char c = i < R.text.size() ? R.text[i] : ' ';

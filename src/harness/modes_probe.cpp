@@ -31,7 +31,7 @@ static void printProbeLayers(const TestGame& game, const std::vector<LayerRun>& 
 // parks at it, sends a probe to the ground under the ship and renders a frame in each stage (`shots/tests/probe_<n>_<stage>.png`,
 // timed, with the picture's layers and costs under it) and the last frame held; `chute` opens the chute in the upper haze first;
 // `night` carries the ship round to the night side first (Shift+Right, R-405); `wav` writes the relay's sound in each stage.
-// X-02: `probe stages [night]` does it for the two test giants (X-02's "each stage on two giants": Thilawiane II, pale and
+// `probe stages [night]` does it for the two test giants (X-02's "each stage on two giants": Thilawiane II, pale and
 // unringed, and Wailie VI, orange-brown and ringed), with a look up at the rings and the cirrus and a lightning channel, into
 // `probe_stages_[night_]<A|B>_<n>_<stage>.png`
 int runProbe(int argc, char** argv) {
@@ -154,7 +154,7 @@ int runProbeGiants() {
     for (const G& g : all) { counts[g.a.ch.kind]++; decks[g.a.decks]++; young += g.a.ch.young; storms += g.a.ch.greatStorm; holes += g.a.ch.holes > 0; hail += g.a.ch.hail; sight += g.a.ch.sight; }
     printf("of %zu giants: %d gas giants (%d young), %d ice giants, %d brown dwarfs; 1/2/3 decks %d/%d/%d; a great storm on %d, holes on %d, hail on %d, the sight on %d\n", all.size(), counts[0], young, counts[1], counts[2],
            decks[1], decks[2], decks[3], storms, holes, hail, sight);
-    {   // P-07: and the made giants among them, by class
+    {   // and the made giants among them, by class
         std::string made;
         for (int k = GK_WATER; k < GK_COUNT; k++) made += fmt("%s%d %s", made.empty() ? "" : ", ", counts[k], GIANT_KIND_NAMES[k]);
         printf("  made: %s\n", made.c_str());
@@ -278,7 +278,7 @@ int runProbeGiants() {
     }
     if (ha && launch(*ha, false, 0, 0)) shoot("hail_deep", runsAt(PS_DEEP, 0.15), 0);
     if (si && launch(*si, false, 0, 0)) { const double sc = game.testProbeSightClock(); shoot("sight", sc, 0); shoot("sight_after", sc > 0 ? sc + 3 : -1, 0); }
-    // P-07: a descent into each made class, the first of the scan region (or of the far strips the stream proofs read), on the day side under
+    // a descent into each made class, the first of the scan region (or of the far strips the stream proofs read), on the day side under
     // the sun (a hot giant's locked face), the hot ones on their night side too: `probe_giants_<class>_<stage>.png`
     static const char* const CLASS_TAGS[GK_COUNT] = {"", "", "", "water", "azure", "alkali", "silicate", "dwarf", "puff"};
     for (int k = GK_WATER; k < GK_COUNT; k++) {
@@ -317,7 +317,7 @@ int runProbeGiants() {
 // X-02: `probe stability [scale]`: 16 frames a thirtieth of a second apart at three places of the ammonia deck stage on the
 // ringed test giant (its tops rushing up, just inside, the clear band under it), the camera's shake and the link's static
 // off: the mean change of a pixel's light per frame and the share that jumps by over 40 (the clouds' own flicker).
-// B-409: and a brown dwarf's (Weesies I's) first deck at its base, the fog lit from under it by the deep's glow
+// and a brown dwarf's (Weesies I's) first deck at its base, the fog lit from under it by the deep's glow
 int runProbeStability() {
     TestGame game;
     game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/test_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";

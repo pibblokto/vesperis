@@ -1,5 +1,5 @@
 // E-10: the builder's setup (history_builder.h): the eras, the places and their founding (the founding schedule, which the other
-// people's meeting reads too), the collapse's script, the planned events, and the other people's meeting, treaties and wars (C-13)
+// people's meeting reads too), the collapse's script, the planned events, and the other people's meeting, treaties and wars
 #include "history_builder.h"
 #include "tongue.h"
 
@@ -448,7 +448,7 @@ void Builder::setupCollapse() {
         exp.push_back({x, i});
     }
     std::sort(exp.begin(), exp.end(), [](const std::pair<double, int>& a, const std::pair<double, int>& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
-    if (H.cause == CAUSE_SUN_LOST) {   // D-05: the omens of its way through the warning, two to four (a stream of its own)
+    if (H.cause == CAUSE_SUN_LOST) {   // the omens of its way through the warning, two to four (a stream of its own)
         Rng ro(P.seed ^ 0xD05011ULL);
         const int from = H.stageYear[STAGE_WARNING], to = std::max(from, H.stageYear[STAGE_ONSET] - 1), n = 2 + ro.irange(3);
         for (int k = 0; k < n; k++) sunOmens.push_back(from + (int)std::lround((to - from) * (k + ro.range(0.1, 0.9)) / n));
@@ -561,7 +561,7 @@ void Builder::setupPlanned() {
         for (const Planned& q : planned) if (q.kind == HE_INVENTION && q.a == railway) railYear = q.year;
         int indStart = 0, modStart = 0, futStart = 0;
         for (const HistoryEra& he : H.eras) { if (he.age == AGE_INDUSTRIAL) indStart = he.start; if (he.age == AGE_MODERN) modStart = he.start; if (he.age == AGE_FUTURISTIC) futStart = he.start; }
-        // D-05: a people that lost its sun built on while it dimmed (its ways to the last sunrise, as its inventions); its plan's railways came
+        // a people that lost its sun built on while it dimmed (its ways to the last sunrise, as its inventions); its plan's railways came
         // after the railway (where its age reached it too late to be invented, it was at the first line's year)
         const bool sunlost = P.cause == CAUSE_SUN_LOST && P.lastSunrise > 0;
         const int wayStop = sunlost ? P.lastSunrise : P.collapseYear - 1;
@@ -587,7 +587,7 @@ void Builder::setupPlanned() {
             if (y > std::min(A.ended, B.ended)) y = std::max(A.founded, B.founded);
             H.wayOpened[e] = y;
             const bool great = big(pe.a) && big(pe.b);
-            const bool untold = sunlost && pe.kind == NK_RAIL && y < railYear;   // D-05: a line between places left before the railway: its opening not told
+            const bool untold = sunlost && pe.kind == NK_RAIL && y < railYear;   // a line between places left before the railway: its opening not told
             if (!untold && ((pe.trunk && great) || pe.kind == NK_CANAL || pe.kind == NK_RAIL || pe.kind == NK_MAGLEV || (pe.kind == NK_HIGHWAY && great))) waysByYear[y].push_back((int)e);
         }
     }

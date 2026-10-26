@@ -3,7 +3,7 @@
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 
-// P-04: a kind made only where no system is (the frozen felisian: P-05's wanderers, D's drifters) staged on a world of the scan region: a
+// a kind made only where no system is (the frozen felisian: P-05's wanderers, D's drifters) staged on a world of the scan region: a
 // world of its living kind without C-01's people made that kind in its own system, its then-world its own (the climate as drawn), its
 // present a rogue's cold (40 K, under the sun it keeps); false where the world is not one to stage it on
 bool stageElsewhere(StarSystem& sys, int bi, int type) {
@@ -314,7 +314,7 @@ bool setupAgeScene(int age, double alt, double pitch0, SurfaceView& sv, StarSyst
     const int bi = W.body;
     BodyGen g = BodyGen::make(sys.bodies[bi]);
     double lat = 0, lon = 0;
-    {   // T-01: from the people's capital (its plan's first place; a land point deep on its side where the plan has none)
+    {   // from the people's capital (its plan's first place; a land point deep on its side where the plan has none)
         std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
         const PeoplePlan& pp = P->plans[std::min(W.which, std::max(0, P->peoples - 1))];
         Vec3 u = pp.places.empty() ? peopleSidePoint(g, W.which, 20 * DEG) : pp.places[0].unit;

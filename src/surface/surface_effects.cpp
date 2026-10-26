@@ -3,7 +3,7 @@
 // devils, the eruptions, rain, snow and dust)
 #include "surface_internal.h"
 
-// O4 (R-303): on an active comet the sunlit ground vents: hashed vents on a 250 m grid, each a column of dust
+// on an active comet the sunlit ground vents: hashed vents on a 250 m grid, each a column of dust
 // points rising a few metres a second for half a minute and bending away from the sun (radiation pressure)
 void SurfaceView::drawCometJets(Framebuffer& fb, double t) {
     double act = env.cometActivity;
@@ -194,7 +194,7 @@ void SurfaceView::drawGeysers(Framebuffer& fb, double t) {
             drawJet(fb, t, j, burstJetStrength(gv.id, t));
         }
     }
-    if (site.gen.hasTrait(TR_HOT_SPRINGS)) {   // Q-02: steam rising steadily off each terraced spring's vent pool
+    if (site.gen.hasTrait(TR_HOT_SPRINGS)) {   // steam rising steadily off each terraced spring's vent pool
         std::vector<GeyserVent> vents;
         hotSpringsNear(site.gen, site.unitAt(camPos.x, camPos.z), vents);
         for (const GeyserVent& gv : vents) {
@@ -208,7 +208,7 @@ void SurfaceView::drawGeysers(Framebuffer& fb, double t) {
             drawJet(fb, t, j, jetStrength(gv.id, t, true, 1, 1));
         }
     }
-    if (events & EV_SPRINGS) {   // P-03: the chemotroph's hot springs: steam rising steadily off every pool its ground made (`springVents`), one in five a geyser now and then
+    if (events & EV_SPRINGS) {   // the chemotroph's hot springs: steam rising steadily off every pool its ground made (`springVents`), one in five a geyser now and then
         std::vector<GeyserVent> vents;
         springVents(site.gen, site.unitAt(camPos.x, camPos.z), vents);
         for (const GeyserVent& gv : vents) {
@@ -460,14 +460,14 @@ void SurfaceView::drawStreetLamps(Framebuffer& fb) {
 
 void SurfaceView::drawWeather(Framebuffer& fb, double t) {
     const uint32_t events = KINDS[site.gen.type].events;   // P-00: the kind's vents and jets
-    if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) drawStreetLamps(fb);   // D-04
-    if (events & EV_COMET_JETS) drawCometJets(fb, t);   // O4
-    if (events & EV_PLUMES) drawPlumes(fb, t);   // P-05
-    if (events & EV_SPRING_JETS) drawSpringJets(fb, t);   // P-05
-    if (events & EV_CURTAINS) drawCurtains(fb, t);   // P-06
+    if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) drawStreetLamps(fb);
+    if (events & EV_COMET_JETS) drawCometJets(fb, t);
+    if (events & EV_PLUMES) drawPlumes(fb, t);
+    if (events & EV_SPRING_JETS) drawSpringJets(fb, t);
+    if (events & EV_CURTAINS) drawCurtains(fb, t);
     if ((events & (EV_CRACK_VENTS | EV_FUMAROLES | EV_STEAM_BURSTS | EV_SPRINGS)) || site.gen.hasTrait(TR_GEYSERS) || site.gen.hasTrait(TR_HOT_SPRINGS)) drawGeysers(fb, t);   // R-307; P-01; P-03; Q-02
-    if (events & EV_SPRINGS) drawSpores(fb, t);   // P-03
-    // R-307: dust devils: a column of dust points spiralling up, leaning with the wind, a skirt at the foot
+    if (events & EV_SPRINGS) drawSpores(fb, t);
+    // dust devils: a column of dust points spiralling up, leaning with the wind, a skirt at the foot
     for (const DustDevil& d : devils) {
         double dist = std::sqrt((d.x - camPos.x) * (d.x - camPos.x) + (d.z - camPos.z) * (d.z - camPos.z));
         if (dist > 1400) continue;
@@ -487,7 +487,7 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
             rasterPoint3(fb, p, 9, proj, true, dist < 250 && u < 0.6 ? 2 : 1);
         }
     }
-    // M4-08 eruptions: a column of glowing points that rises and spreads for eight seconds; R-307: the tectonic fountain
+    // eruptions: a column of glowing points that rises and spreads for eight seconds; R-307: the tectonic fountain
     // (kind 1) throws its lava two hundred metres and more for half a minute, the meteorite strike (kind 2) flashes and then
     // fountains dark ejecta for eight seconds
     for (const Eruption& e : eruptions) {
@@ -539,7 +539,7 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
             rasterPoint3(fb, p, 2, proj, true, life < 2 ? 2 : 1);
         }
     }
-    // M4-06 snow, hail and dust
+    // snow, hail and dust
     if (env.snow > 0.02 || env.hail > 0.02 || env.dust > 0.05) {
         Rng r((uint64_t)(t * 20.0));
         int n = (int)(env.snow * 220 + env.hail * 120 + env.dust * 260);

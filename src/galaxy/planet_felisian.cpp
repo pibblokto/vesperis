@@ -19,17 +19,17 @@ inline double warpedFbm(const Vec3& p, double wl, uint64_t seed, int oct, double
 // continents, the plates, the mountain regions, the relief spectrum, the mesas, the islands, the shelf and the dunes.
 // `hS` is the smooth ground, the relief's octaves of 2 km and longer over the base: the surface rivers, lakes and pools
 // are cut into, so their water lies flat where the fine relief would have made it a bumpy sheet
-double lakeBowlAt(const BodyGen& g, const Vec3& p, double detailM);   // O6-03: the lake bowls the drainage floods
+double lakeBowlAt(const BodyGen& g, const Vec3& p, double detailM);   // the lake bowls the drainage floods
 struct FelGround {
     double h = 0, hS = 0, moist = 0.5, landMask = 0, relief0 = 0, hills = 0, slope = 0;
     double cliff = 0, talus = 0;   // O6-04: on a cliff band's riser, on its talus
-    Vec3 gradT;                    // O6-04: the relief's gradient on the tangent plane (rise over run, uphill)
-    double slopeM = 0; Vec3 gradM; // B-404: the material chain's slope and gradient (the same in every ring): the materials read these
+    Vec3 gradT;                    // the relief's gradient on the tangent plane (rise over run, uphill)
+    double slopeM = 0; Vec3 gradM; // the material chain's slope and gradient (the same in every ring): the materials read these
     bool caldera = false;
-    double iceSheet = 0;   // P-02: the ice age's sheet over the land here (metres thick: the tundra's, KT_ICE_SHEETS)
-    bool sheetWall = false;   // P-03: on the sheet's terminus wall (its bare blue ice: the bedrock's slope under it said nothing of the ice's)
-    double slip = 0;   // Q-03: the dry lowlands' dunes' slip face here (`SurfaceSample::slipFace`)
-    LandOut land;   // R-305: the traits' landforms here
+    double iceSheet = 0;   // the ice age's sheet over the land here (metres thick: the tundra's, KT_ICE_SHEETS)
+    bool sheetWall = false;   // on the sheet's terminus wall (its bare blue ice: the bedrock's slope under it said nothing of the ice's)
+    double slip = 0;   // the dry lowlands' dunes' slip face here (`SurfaceSample::slipFace`)
+    LandOut land;   // the traits' landforms here
 };
 void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGround& o) {
     const double R = g.R;
@@ -53,7 +53,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     double cont = warpedFbm(p, contWl, g.sA, std::min(6, octs(contWl, detailM)), 0.22) * lodFade(contWl, detailM);
     cont += tec.uplift * 0.75;                     // M9-02: plate interiors decide most of the land
     double land = cont - g.seaLevel;               // >0 land
-    // O6-05: the coast's exposure to the prevailing wind (the continent field's gradient against the wind: positive where
+    // the coast's exposure to the prevailing wind (the continent field's gradient against the wind: positive where
     // the wind blows onto the land), evaluated in the coastal band alone
     double exposure = 0;
     if (std::fabs(land) < 0.06 && scaleVisible(0.3, detailM)) {
@@ -74,12 +74,12 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     }
     double landMask = smoothstep(-0.02, 0.25, land);
     double mtnL = rg(R * 0.14, g.sC, 2);           // mountain regions (visible from orbit)
-    double hills = fb(5.0, g.sB, 6);               // the hill pattern: beaches and wetland pools read it (O6-02: it no longer shapes the ground)
+    double hills = fb(5.0, g.sB, 6);               // the hill pattern: beaches and wetland pools read it (it does not shape the ground)
     double h = land * 3200.0;
-    // B-321: the continental base is 1500 land^0.7 (an interior at 500-900 m, a shield at 1500 m; it was 3200 land^0.8,
+    // the continental base is 1500 land^0.7 (an interior at 500-900 m, a shield at 1500 m; it was 3200 land^0.8,
     // whose plateaus at 2-3 km put half the land over the snow line); the sea keeps its depth from `land x 3200`
     if (h > 0) h = 1500.0 * std::pow(land, 0.7);
-    const double hCont = h;   // P-03: the continents' base (a snowball's sheet lies smooth over it)
+    const double hCont = h;   // the continents' base (a snowball's sheet lies smooth over it)
     double mtnMask = smoothstep(0.35, 0.75, mtnL) * landMask;
     // mountain chains along convergent boundaries, rifts and ridges along divergent ones
     double chainR = rg(45.0, g.sC + 2, 7);
@@ -89,7 +89,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     h += tec.ridge * (1 - landMask) * 900.0 * std::fabs(rg(40.0, g.sC + 4, 5));
     h += tec.arc * (1 - landMask) * 3200.0 * std::max(0.0, fb(28.0, g.sC + 5, 5));   // island arcs
     h += mtnL * mtnL * g.mountainAmp * mtnMask;
-    // O6-02: the relief spectrum in the massifs, in hill country and (faintly) on the plains
+    // the relief spectrum in the massifs, in hill country and (faintly) on the plains
     double rel = mtnMask * massif, hf = std::max(hillsF, 0.6 * mtnMask);   // massifs are mountains, the rest of the region hill country
     double relief0 = clampd(rel + 0.25 * hf, 0, 1);
     double moist = 0.5 + 0.5 * fbm3(p / (R * 0.22), g.sF, 3) + g.moistureBias;
@@ -100,7 +100,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
         double mtnUp = ridged3(pu / (R * 0.14), g.sC, 2) * lodFade(R * 0.14, detailM);
         moist -= 0.28 * smoothstep(0.4, 0.8, mtnUp) * landMask;
     }
-    if ((K.tags & KT_FIXED_SUN) && g.locked) {   // P-03: a locked world's water by its climate at the sea's level (the same in every ring): the ring round
+    if ((K.tags & KT_FIXED_SUN) && g.locked) {   // a locked world's water by its climate at the sea's level (the same in every ring): the ring round
         // 8 C wet with the night's meltwater and the rain the day's air carries over it, the day side dried from 15 C (M5-08's rule is the others')
         const double Tsl = climateTempC(g, std::fabs(lat) / DEG, 0, 0, dot(unit, g.lockedDir)), x = (Tsl - 8.0) / 12.0;
         moist += K.ringWet * std::exp(-x * x) - K.dayDry * smoothstep(15.0, 45.0, Tsl);
@@ -108,22 +108,22 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     ReliefSum rf = reliefSum(p, unit, g, reliefAmp(g, rel, hf) * (0.05 + 0.95 * landMask), g.reliefRidge * (0.4 + 0.6 * rel), g.sB + 7, detailM);
     double hS = h + rf.hCoarse;
     double hRel = h; h += rf.h;
-    {   // O6-04: cliff bands on the steep ground of the massifs and the chains
-        CliffOut co = cliffBands(p, g, h, rf.slopeM, smoothstep(0.12, 0.4, relief0) * landMask, detailM);   // B-404: on the material chain's slope
+    {   // cliff bands on the steep ground of the massifs and the chains
+        CliffOut co = cliffBands(p, g, h, rf.slopeM, smoothstep(0.12, 0.4, relief0) * landMask, detailM);   // on the material chain's slope
         h += co.dh; o.cliff = co.cliff; o.talus = co.talus;
     }
-    // R-306 / O6-04: the plains' own small relief, so flat country is not a billiard table underfoot (the shared term:
+    // the plains' own small relief, so flat country is not a billiard table underfoot (the shared term:
     // hummocks, outcrops, and gullies where it rains)
-    h += plainRelief(p, g, 1.6 * smoothstep(0.3, 0.1, relief0) * landMask, smoothstep(0.28, 0.42, moist) * (0.7 + 0.8 * moist), detailM);   // O6-07: x1.6: the floodplains of O6-03 are flat, and the flat class keeps a 1% median grade
+    h += plainRelief(p, g, 1.6 * smoothstep(0.3, 0.1, relief0) * landMask, smoothstep(0.28, 0.42, moist) * (0.7 + 0.8 * moist), detailM);   // x1.6: the floodplains of O6-03 are flat, and the flat class keeps a 1% median grade
     const double T0 = climateTempC(g, std::fabs(lat) / DEG, hS, 0, (K.tags & KT_FIXED_SUN) && g.locked ? dot(unit, g.lockedDir) : 0.0);   // the mean climate on the smooth ground (the landforms', the permafrost's; P-03: a fixed sun's by its side)
-    {   // R-305: the traits' landforms, cut into the smooth ground too (rivers and lakes follow them)
-        LandCtx lc; lc.landMask = landMask; lc.moist = moist; lc.relief0 = relief0; lc.h = h; lc.hS = hS; lc.T = T0; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // B-404: the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
+    {   // the traits' landforms, cut into the smooth ground too (rivers and lakes follow them)
+        LandCtx lc; lc.landMask = landMask; lc.moist = moist; lc.relief0 = relief0; lc.h = h; lc.hS = hS; lc.T = T0; lc.hM = hRel + rf.hM; lc.slope = rf.slopeM;   // the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
         landformsAt(g, p, unit, detailM, lc, o.land);
         h += (hS - h) * o.land.flatten;
         double dS = o.land.dhSmooth + o.land.flatOffset * o.land.flatten;
         h += dS + o.land.dhFine; hS += dS;
     }
-    if ((K.tags & KT_ICE_SHEETS) && !g.hasTrait(TR_POLYGONS)) {   // P-02: an ice age's permafrost patterned in polygons on the cold flats
+    if ((K.tags & KT_ICE_SHEETS) && !g.hasTrait(TR_POLYGONS)) {   // an ice age's permafrost patterned in polygons on the cold flats
         // (the patterned ground of R-305 everywhere it is cold, not as a trait: a honeycomb of low ridges 40-100 m across)
         double mask = smoothstep(2, -4, T0) * landMask * smoothstep(0.25, 0.1, relief0);
         double cell = 0.04 + 0.06 * unitFromHash(mix64(g.seed ^ 0x9071ULL));
@@ -133,11 +133,11 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
             h += (1.5 * ridge * ridge - 0.4 * (1 - ridge)) * mask * lodFade(cell, detailM);
         }
     }
-    if (landMask > 0.5 && hS > 10) {   // O6-03: the lake bowls, dug into the ground and the smooth ground alike; the drainage floods them
+    if (landMask > 0.5 && hS > 10) {   // the lake bowls, dug into the ground and the smooth ground alike; the drainage floods them
         double bowl = lakeBowlAt(g, p, detailM);
         h -= bowl; hS -= bowl;
     }
-    if (moist < 0.32 && relief0 < 0.4 && h > 30 && !g.hasTrait(TR_MESAS)) {   // M9-03: dry flats terrace into mesas (the badlands trait has its own)
+    if (moist < 0.32 && relief0 < 0.4 && h > 30 && !g.hasTrait(TR_MESAS)) {   // dry flats terrace into mesas (the badlands trait has its own)
         double step = 60.0, q = std::floor(h / step) * step;
         double f = (h - q) / step;
         double terr = q + step * smoothstep(0.35, 0.65, f);
@@ -148,7 +148,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     if (scaleVisible(R * 0.25, detailM) && landMask < 0.5) { double vf = volcanoField(p, R, R * 0.25, g.islandDensity, g.sD + 9, 2600.0, caldera) * (1 - landMask) * lodFade(R * 0.25, detailM); h += vf; hS += vf; }
     if (h < 0) { h = -std::pow(-h, 1.15); if (g.seaDepth != 1) h *= g.seaDepth; }   // shallow coastal shelf (P-02: a kind's seas shallower)
     if (hS < 0) { hS = -std::pow(-hS, 1.15); if (g.seaDepth != 1) hS *= g.seaDepth; }
-    // O6-05: the coast by its exposure. Windward: the land within a few metres of the sea stands up as a cliff 8-40 m
+    // the coast by its exposure. Windward: the land within a few metres of the sea stands up as a cliff 8-40 m
     // high with a wave-cut platform a metre or two under the water in front of it; leeward: a beach half as steep with
     // a foredune behind; in the flat shallows a barrier island rises along the shore 300-600 m out
     if (exposure != 0 && std::fabs(h) < 60) {
@@ -173,7 +173,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
             h += (2.5 - h) * band * smoothstep(0.0, 0.35, along) * lee * f;
         }
     }
-    // O6-05: cirques on the high ground of the cold country: hemispherical bites 600-1200 m across and 60-150 m deep
+    // cirques on the high ground of the cold country: hemispherical bites 600-1200 m across and 60-150 m deep
     // with a flat floor (the drainage fills a tarn where the floor is a bowl)
     if (relief0 > 0.3 && scaleVisible(3.0, detailM)) {
         double lf0 = std::fabs(lat) / DEG / 85.0 * g.latGradient;
@@ -184,7 +184,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
             visitFeatures(p, R, 3.0, 0.35, g.sE + 380, 0.25, [&](const FeatureHit& f) {
                 double r = 0.3 + 0.3 * f.u[3], x = f.d / r;
                 if (x >= 1) return;
-                bite += (60 + 90 * f.u[4]) * std::max(0.0, 1 - x * x) * (1 - 0.5 * smoothstep(0.7, 1.0, x)) * featFade(2 * r, detailM);   // B-404: a cirque's own fade
+                bite += (60 + 90 * f.u[4]) * std::max(0.0, 1 - x * x) * (1 - 0.5 * smoothstep(0.7, 1.0, x)) * featFade(2 * r, detailM);   // a cirque's own fade
             });
             h -= bite * high;
             hS -= bite * high * 0.7;
@@ -194,9 +194,9 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     if (moist < 0.28 && h > 5 && h < 700 && relief0 < 0.3) {
         const double share = 1 - smoothstep(0.24, 0.28, moist); double lee = 0;
         h += duneField(p, g, lat, 6.0 + 16.0 * (0.28 - moist) / 0.28, detailM, &lee) * share;
-        o.slip = share * lee;   // Q-03
+        o.slip = share * lee;
     }
-    if (K.tags & KT_ICE_SHEETS) {   // P-02: the ice age's sheets stand over the land poleward of the cap's mean edge (no season: the ground
+    if (K.tags & KT_ICE_SHEETS) {   // the ice age's sheets stand over the land poleward of the cap's mean edge (no season: the ground
         // is the world's), a dome up to 2.2 km thick at fourteen degrees in, its margin steep (a parabolic profile, the ice's), the land's fine
         // relief buried; at the coast the sheet ends in a wall of ice. P-03: a terminator world's over its night side (`iceSheetIn`); a
         // snowball's surface smooth over the continents' base, its ranges standing out of it as nunataks
@@ -220,7 +220,7 @@ void felisianGround(const BodyGen& g, const Vec3& unit, double detailM, FelGroun
     o.h = h; o.hS = hS; o.moist = moist; o.landMask = landMask; o.relief0 = relief0; o.hills = hills; o.slope = rf.slope; o.gradT = rf.gradT; o.slopeM = rf.slopeM; o.gradM = rf.gradM; o.caldera = caldera;
 }
 
-// O6-03: lakes are no longer features with a level of their own. The 7 km lake cells of B-320 dig bowls into the ground
+// O6-03: a lake has no level of its own. The 7 km lake cells of B-320 dig bowls into the ground
 // and the smooth ground (6-14 m deep, 0.4-1.3 km across, an outline that wobbles round the centre) where the country is
 // flat, wet and low, and the drainage's flood fills them to their spill: a lake's level and its shore come from the same
 // flood as the rivers' (`drainageAt`). `lakeSiteOk` asks the ground at the bowl's centre (one entry per thread; never
@@ -278,9 +278,9 @@ void applyDrainage(const BodyGen& g, const Vec3& unit, double detailM, double& h
             double depth = D.depth * D.pres;
             double v = clampd(1.0 / std::max(depth, 1e-3), 0.0, 1.0), tt = 0.5 - std::sin(std::asin(1.0 - 2.0 * v) / 3.0);
             double shoreM = D.dist - wh * (1.15 - 0.65 * tt);
-            // B-322: every point that knows its channel measures the edge in the same metres (a corner beyond the plane
-            // without an outline used to fall back on its height over a neighbour's plane, and a dip beside a steep river
-            // read as wet: a dark triangle on the bank); the bank stands over the plane out to 3.5 half-widths
+            // every point that knows its channel measures the edge in the same metres (a corner beyond the plane
+            // without an outline falling back on its height over a neighbour's plane reads a dip beside a steep river as wet:
+            // a dark triangle on the bank); the bank stands over the plane out to 3.5 half-widths
             if (shoreM > 0) { A.shoreOut = std::min(A.shoreOut, shoreM); if (D.dist < wh * 3.5) A.bankFloor = std::max(A.bankFloor, D.level + 0.05 + 0.3 * clampd(shoreM / 10.0, 0, 1)); }
             if (D.dist < wh * 3.5) {
                 double chan = smoothstep(wh * 1.15, wh * 0.5, D.dist) * D.pres;
@@ -309,7 +309,7 @@ void applyDrainage(const BodyGen& g, const Vec3& unit, double detailM, double& h
             if (hS && *hS < lv + 1.0) *hS += (target - *hS) * reach * smoothstep(lv + 1.0, lv - 0.5, *hS);
         }
     }
-    if (wet) {   // B-322: the bank stands over its plane, the channel lies under it
+    if (wet) {   // the bank stands over its plane, the channel lies under it
         if (A.level > -1e8 && A.shore < 1e8 && A.shore <= 0) h = std::min(h, A.level - 0.3);
         else if (A.bankFloor > -1e8) h = std::max(h, A.bankFloor);
     }
@@ -325,16 +325,16 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     felisianGround(g, unit, detailM, o);
     double h = o.h, hS = o.hS, moist = o.moist, landMask = o.landMask, relief0 = o.relief0, hills = o.hills;
     double sub = g.locked ? dot(unit, g.lockedDir) : 0.0;   // M5-08: the sub-stellar point's side (the glacial valleys below read the climate too)
-    // M9-09 seasons: the winter hemisphere's cap grows and its snow line drops
+    // seasons: the winter hemisphere's cap grows and its snow line drops
     double winter = clampd((lat >= 0 ? -g.season : g.season), 0, 1);   // 0..1 how deep in winter this hemisphere is
     double capEdge = g.iceCapLat + 6.0 * gnoise3(p / (R * 0.15), g.sF + 7) - 11.0 * winter + 4.0 * clampd((lat >= 0 ? g.season : -g.season), 0, 1);
-    // B-321: the snow line falls with the square of the latitude (Earth: 5000 m at the equator, 3000 at 45, 1000 at 65,
+    // the snow line falls with the square of the latitude (Earth: 5000 m at the equator, 3000 at 45, 1000 at 65,
     // nothing at 85); the old `40 m per degree` put every hill above 500 m under snow from 50 degrees on, and two
     // thirds of the felisian land came out as ice sheet
-    double lf = absLatDeg / 85.0 * g.latGradient;   // P-02: a kind's climate contrast moves its snow line's fall with latitude too
+    double lf = absLatDeg / 85.0 * g.latGradient;   // a kind's climate contrast moves its snow line's fall with latitude too
     double snowLine = g.snowLine * std::max(0.0, 1.0 - lf * lf) - 900.0 * winter;
-    // O6-04: the slope's aspect: a flank facing the equator keeps its snow line up to 8% higher, a shaded one lower
-    double steep = clampd(o.slopeM * (1 + 1.6 * o.cliff), 0, 4);   // B-404: the material chain's slope: the rock and the scree sit on the same cells in every ring
+    // the slope's aspect: a flank facing the equator keeps its snow line up to 8% higher, a shaded one lower
+    double steep = clampd(o.slopeM * (1 + 1.6 * o.cliff), 0, 4);   // the material chain's slope: the rock and the scree sit on the same cells in every ring
     {
         Vec3 pole(0, 0, 1);
         Vec3 north = pole - unit * unit.z;
@@ -345,23 +345,22 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
             snowLine *= 1.0 + 0.08 * facing;
         }
     }
-    moist -= 0.12 * smoothstep(0.25, 0.5, o.slopeM) * smoothstep(0.3, 0.6, relief0);   // O6-04: the ridges are the dry ground (the valley floors gained above); B-404: the material chain's slope
-    // B-320: inland water. A river is a ribbon cut into the smooth ground along a hashed network (worley cell boundaries
+    moist -= 0.12 * smoothstep(0.25, 0.5, o.slopeM) * smoothstep(0.3, 0.6, relief0);   // the ridges are the dry ground (the valley floors gained above); B-404: the material chain's slope
+    // inland water. A river is a ribbon cut into the smooth ground along a hashed network (worley cell boundaries
     // at 80 km): across its floodplain the fine relief melts into `hS`, the channel is carved 2.5-11.5 m into it and the
     // water lies a metre under the smooth ground, flat across the ribbon and following the valley along it; the plane
-    // extends under the banks (`s.water` is set over the whole zone) and the ground above it wins by depth. It used to
-    // be a channel a few metres deep in the bumpy ground with the water a few metres over each vertex: a scatter of
-    // squares. Lakes and wetland pools are cut into the same smooth ground with one flat level each
-    double level = -1e9, waterZone = 0, riverBank = 0, shore = 1e9, bankFloor = -1e9, shoreOut = 1e9, wetness = 0; int waterKind = 0; bool dryLake = false;   // shoreOut: the edge's distance beyond the plane's zone (B-322)
-    if (landMask > 0.2 && hS > -60) {   // O6-03: the drainage's rivers and lakes (the worley nets and the lake features of B-320 are gone)
+    // extends under the banks (`s.water` is set over the whole zone) and the ground above it wins by depth (a channel a few
+    // metres deep in the bumpy ground, the water a few metres over each vertex, would be a scatter of squares). Lakes and wetland pools are cut into the same smooth ground with one flat level each
+    double level = -1e9, waterZone = 0, riverBank = 0, shore = 1e9, bankFloor = -1e9, shoreOut = 1e9, wetness = 0; int waterKind = 0; bool dryLake = false;   // shoreOut: the edge's distance beyond the plane's zone
+    if (landMask > 0.2 && hS > -60) {   // the drainage's rivers and lakes (the worley nets and the lake features of B-320 are gone)
         DrainApply A;
-        // O6-05: where the climate is cold the valleys are glacial: U-shaped, and, reaching the sea, fjords (the valley's floor
+        // where the climate is cold the valleys are glacial: U-shaped, and, reaching the sea, fjords (the valley's floor
         // keeps going under the water)
         double uShape = smoothstep(2.0, -6.0, climateTempC(g, absLatDeg, std::max(0.0, hS), 0, sub)) * smoothstep(0.15, 0.4, relief0);
         double hBefore = h;
         applyDrainage(g, unit, detailM, h, &hS, o.slope, true, moist > 0.3, moist, A, uShape);   // a dry basin is a playa, not a lake
         if (uShape > 0.3 && hBefore < 5 && A.wetness > 0.2) { double fj = 45.0 * A.wetness * uShape * smoothstep(5.0, -10.0, hBefore); h -= fj; hS -= fj; }   // the fjord
-        if (A.wetness > 0.2 && A.lake < 0.5) {   // O6-07: the floodplain's own relief, bars and levee scars of a metre on 90 and 30 m (a dead-flat floor read a 0.007 median grade over the plains; the banks within 3.5 half-widths stay clean)
+        if (A.wetness > 0.2 && A.lake < 0.5) {   // the floodplain's own relief, bars and levee scars of a metre on 90 and 30 m (a dead-flat floor read a 0.007 median grade over the plains; the banks within 3.5 half-widths stay clean)
             double fm = smoothstep(0.2, 0.6, A.wetness) * (1 - A.lake) * (1 - A.bank) * landMask;
             auto ff = [&](double wlKm) { return smoothstep(1.5, 4.0, wlKm * 1000.0 / detailM); };   // full when the feature spans four samples
             double mr = 1.2 * gnoise3(p / 0.09 + Vec3(3.1, 1.4, 7.7), g.sB + 101) * ff(0.09) + 0.4 * gnoise3(p / 0.03 + Vec3(0.4, 6.2, 2.5), g.sB + 102) * ff(0.03);
@@ -370,7 +369,7 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
         dryLake = A.playa > 0.3;
         if (landMask > 0.35) { level = A.level; waterZone = A.zone; waterKind = A.kind; shore = A.shore; bankFloor = A.bankFloor; shoreOut = A.shoreOut; riverBank = A.bank; wetness = A.wetness; }
     }
-    if (o.land.riftFloor > 0.3 && level < -1e8 && moist > 0.3 && hS > 2) {   // R-305: the rift floor's lakes, three metres deep
+    if (o.land.riftFloor > 0.3 && level < -1e8 && moist > 0.3 && hS > 2) {   // the rift floor's lakes, three metres deep
         level = hS - 1.0; waterZone = std::max(waterZone, o.land.riftFloor); waterKind = 4;
     }
     if (landMask > 0.5 && level < -1e8 && moist > 0.7 && hS < 120 && hS > 1 && relief0 < 0.2 && hills < -0.15) {   // wetland pools
@@ -378,16 +377,16 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
         h += (hS - 0.5 - 1.5 * pool - h) * pool;
         level = hS + 0.2; waterZone = std::max(waterZone, pool); waterKind = 3;
     }
-    moist += 0.25 * riverBank + 0.15 * wetness;   // O6-03: the valley floors are the wetter ground
-    // B-322: a river's or a lake's bank stands over its plane (out to 3.5 half-widths or 1.6 radii, `bankFloor`) and the
-    // channel lies under it, so the water's edge is the outline (`shore`) and nothing else: the fine relief of the outer
-    // floodplain used to dip under the plane, and the plane showed through it in flat patches a hundred metres wide with
-    // edges snapped to the mesh, and again as a moat of cells along the plain's edge
+    moist += 0.25 * riverBank + 0.15 * wetness;   // the valley floors are the wetter ground
+    // a river's or a lake's bank stands over its plane (out to 3.5 half-widths or 1.6 radii, `bankFloor`) and the
+    // channel lies under it, so the water's edge is the outline (`shore`) and nothing else: where the fine relief of the outer
+    // floodplain dipped under the plane, the plane would show through it in flat patches a hundred metres wide with edges
+    // snapped to the mesh, and again as a moat of cells along the plain's edge
     if (level > -1e8 && shore < 1e8 && shore <= 0) h = std::min(h, level - 0.3);
     else if (bankFloor > -1e8) h = std::max(h, bankFloor);
     double reefTint = 0;
     if (h < 0 && g.hasTrait(TR_REEFS) && absLatDeg < capEdge) {
-        // Q-02: a barrier reef in the warm seas (the Great Barrier Reef's): along the shelf's edge where it falls past 18-40 m (a contour, so every
+        // a barrier reef in the warm seas (the Great Barrier Reef's): along the shelf's edge where it falls past 18-40 m (a contour, so every
         // ring and the globe agree, B-404) its crest stands awash, the fore-reef dropping seaward under it, a few passes cut through it; behind it
         // the lagoon's floor of white sand lifted to a few metres, its water turquoise (`lifeTint`); in a province of the coasts where the sea is
         // warm enough (22 C at its level)
@@ -400,30 +399,30 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     }
     s.height = h;
     s.relief = clampd(relief0 + 0.5 * o.slope, 0, 1);
-    // M9-05 biomes from temperature (latitude, altitude, the body's climate) and moisture
+    // biomes from temperature (latitude, altitude, the body's climate) and moisture
     double T = climateTempC(g, absLatDeg, h, winter, sub);
-    if (g.locked && !(K.tags & KT_FIXED_SUN)) moist -= 0.35 * std::max(0.0, sub - 0.15);   // M5-08: deserts under a permanent sun (P-03: a fixed sun's kind has its own, `felisianGround`)
+    if (g.locked && !(K.tags & KT_FIXED_SUN)) moist -= 0.35 * std::max(0.0, sub - 0.15);   // deserts under a permanent sun (P-03: a fixed sun's kind has its own, `felisianGround`)
     int biome = BIO_GRASSLAND;
     if (T < -8) biome = BIO_ICE;
     else if (T < 2) biome = BIO_TUNDRA;
-    else if (T < 10) biome = moist > 0.45 + g.grassBand ? BIO_TAIGA : BIO_TUNDRA;   // P-02: a kind's grass band wider (forest wetter, desert drier)
+    else if (T < 10) biome = moist > 0.45 + g.grassBand ? BIO_TAIGA : BIO_TUNDRA;   // a kind's grass band wider (forest wetter, desert drier)
     else if (T < 20) biome = moist > 0.55 + g.grassBand ? BIO_TEMPERATE : (moist > 0.28 - g.grassBand ? BIO_GRASSLAND : BIO_DESERT);
     else biome = moist > 0.55 + g.grassBand ? BIO_TROPICAL : (moist > 0.35 - g.grassBand ? BIO_SAVANNA : BIO_DESERT);
     if (moist > 0.72 && h < 120 && relief0 < 0.2 && biome != BIO_ICE) biome = BIO_WETLAND;
-    if (relief0 > 0.45 && h > std::max(700.0, 0.5 * snowLine)) biome = BIO_ALPINE;   // B-321: the zone between the treeline and the snow (it began at 700 m everywhere: 13% of the land was bare rock)
+    if (relief0 > 0.45 && h > std::max(700.0, 0.5 * snowLine)) biome = BIO_ALPINE;   // the zone between the treeline and the snow (it began at 700 m everywhere: 13% of the land was bare rock)
     bool inland = level > -1e8 && h < level;   // under a river, a lake or a pool
     if (h < 0) {
         s.material = MAT_WATER; s.water = 0; s.biome = BIO_OCEAN;
         s.albedo = h > -250 ? 0.36 : 0.22;
-        s.lifeTint = reefTint;   // Q-02: a lagoon's or a reef's
-        if (g.seaDepth < 1 && h > -40 && h < -1.5) s.albedo += 0.12 * smoothstep(-40, -12, h) * smoothstep(-1.5, -4, h);   // P-02: the reefs fringing a shelf sea's coasts, pale under the water
+        s.lifeTint = reefTint;   // a lagoon's or a reef's
+        if (g.seaDepth < 1 && h > -40 && h < -1.5) s.albedo += 0.12 * smoothstep(-40, -12, h) * smoothstep(-1.5, -4, h);   // the reefs fringing a shelf sea's coasts, pale under the water
         if (absLatDeg > capEdge + 4 || (g.locked && T < -10)) { s.material = MAT_ICE; s.albedo = 0.85; s.height = 0; s.biome = BIO_ICE; }
-        else if (K.daySeasDry && g.locked) {   // P-03: the seas boiled away where the day is too hot to hold them (the climate at the sea's level),
+        else if (K.daySeasDry && g.locked) {   // the seas boiled away where the day is too hot to hold them (the climate at the sea's level),
             // their floors dry: salt in the deeps, sand on the old shelves
             const double dry = smoothstep(30.0, 36.0, climateTempC(g, absLatDeg, 0, 0, sub) + 3.0 * hills);
             if (dry > 0.5) { s.material = h < -120.0 ? MAT_SALT : MAT_SAND; s.albedo = s.material == MAT_SALT ? 0.80 : 0.60; s.water = -1e9; s.biome = BIO_DESERT; }
         }
-        if (K.seaGlaciers) {   // P-03: a snowball's frozen seas: glacier ice standing 6-14 m over the water at its edge and rising poleward, its seams
+        if (K.seaGlaciers) {   // a snowball's frozen seas: glacier ice standing 6-14 m over the water at its edge and rising poleward, its seams
             // ridged, wind-scoured to blue ice in patches; before its edge a band of floes three degrees wide on the slushy sea
             const double over = absLatDeg - (capEdge + 4);
             if (over > 0) {
@@ -450,7 +449,7 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     } else if (inland) {
         s.material = T < -2 ? MAT_ICE : MAT_WATER; s.water = level; s.albedo = 0.3; s.biome = (biome == BIO_ICE || biome == BIO_TUNDRA) ? biome : BIO_WETLAND;
         if (T < -2) { s.height = level; s.albedo = 0.8; }
-    } else if (absLatDeg > capEdge || h > snowLine || biome == BIO_ICE || o.iceSheet > 1) {   // P-02: an ice sheet's ground is its ice whatever the season
+    } else if (absLatDeg > capEdge || h > snowLine || biome == BIO_ICE || o.iceSheet > 1) {   // an ice sheet's ground is its ice whatever the season
         s.material = MAT_SNOW; s.albedo = 0.92; s.biome = BIO_ICE;
         if (o.iceSheet > 1 && o.sheetWall) { s.material = MAT_ICE; s.albedo = 0.7; }   // the sheet's wall bare blue ice (P-03: its own wall, not the bedrock's slope under it)
         if (waterZone > 0) s.water = level;
@@ -474,23 +473,23 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     }
     if (s.material != MAT_WATER && s.material != MAT_ICE && waterZone > 0 && s.water < -1e8) s.water = level;   // the plane under the banks
     if (s.biome == BIO_NONE) s.biome = biome;
-    // R-305: the landforms' materials: glacier ice, and rock, basalt, sand or salt where a landform says so (never over water)
-    if (dryLake && s.material != MAT_WATER && s.material != MAT_SNOW) { s.material = MAT_SALT; s.albedo = 0.86; s.veg = 0; }   // O6-03: a dry basin's playa
+    // the landforms' materials: glacier ice, and rock, basalt, sand or salt where a landform says so (never over water)
+    if (dryLake && s.material != MAT_WATER && s.material != MAT_SNOW) { s.material = MAT_SALT; s.albedo = 0.86; s.veg = 0; }   // a dry basin's playa
     if (o.land.glacier > 0.5 && s.material != MAT_WATER) { s.material = MAT_ICE; s.albedo = 0.8; s.veg = 0; }
     else if (o.land.mat >= 0 && s.material != MAT_WATER && s.material != MAT_ICE && s.material != MAT_SNOW) { s.material = o.land.mat; if (o.land.albedo >= 0) s.albedo = o.land.albedo; s.veg *= (o.land.mat == MAT_SAND ? 0.3 : 0.0); }
-    // O6-04: bare rock where the ground is too steep to hold soil (over 1:1.6, and every riser of the cliff bands), scree on
+    // bare rock where the ground is too steep to hold soil (over 1:1.6, and every riser of the cliff bands), scree on
     // the flanks under it and on the talus: boulder fields, next to no flora
     if (s.material != MAT_WATER && s.material != MAT_ICE && s.material != MAT_SNOW && s.material != MAT_SALT && h > 12 && !inland) {
         if (steep > 0.62 || o.cliff > 0.4) { s.material = MAT_ROCK; s.albedo = 0.46 - 0.1 * o.cliff; s.veg = 0.03; }
         s.scree = clampd(std::max(o.talus, smoothstep(0.42, 0.62, steep) * 0.7), 0, 1);
         if (s.scree > 0.3) s.veg *= 1 - 0.7 * s.scree;
     }
-    if (!(K.tags & (KT_FLORA | KT_MICROBIAL)) && K.cover == DC_NONE && (s.material == MAT_FOREST || s.material == MAT_GRASS)) {   // P-03: a living ground with nothing
+    if (!(K.tags & (KT_FLORA | KT_MICROBIAL)) && K.cover == DC_NONE && (s.material == MAT_FOREST || s.material == MAT_GRASS)) {   // a living ground with nothing
         // growing on it (the snowball's): where the plants would stand, frost-shattered gravel where it is wet enough, bare rock where not
         s.material = moist > 0.4 ? MAT_SAND : MAT_ROCK; s.albedo = s.material == MAT_SAND ? 0.5 : 0.44; s.veg = 0;
     }
-    if (K.nunataks && o.iceSheet <= 1 && s.material == MAT_SNOW && steep > 0.45 && h > 0) { s.material = MAT_ROCK; s.albedo = 0.34; }   // P-03: the nunataks' flanks scoured bare
-    if (K.tags & KT_MICROBIAL) {   // P-02: life without plants (the archean). Where a felisian world grows its plants the wetter
+    if (K.nunataks && o.iceSheet <= 1 && s.material == MAT_SNOW && steep > 0.45 && h > 0) { s.material = MAT_ROCK; s.albedo = 0.34; }   // the nunataks' flanks scoured bare
+    if (K.tags & KT_MICROBIAL) {   // life without plants (the archean). Where a felisian world grows its plants the wetter
         // ground is mats (the land's colour from afar), the drier bare: regolith where it is wet enough to weather, rock where not; the flats
         // along the shore a metre or two over the sea and the bars of the rivers and lakes are mats, and along the shore a reef of
         // stromatolites in patches a few hundred metres long
@@ -506,14 +505,14 @@ void felisianSample(const BodyGen& g, const Vec3& unit, double detailM, SurfaceS
     }
     if (s.material != MAT_WATER) s.albedo += 0.08 * clampd(h / 4000.0, 0, 1);
     s.landform = 1000 * o.land.mark + std::fabs(o.land.dhSmooth) + std::fabs(o.land.dhFine) + 40 * o.land.flatten;
-    s.landformTrait = o.land.mark >= 0.5 ? o.land.markTrait : 0;   // Q-01
-    s.slipFace = std::max(o.slip, o.land.slip);   // Q-03
-    s.groundTint = o.land.tint;   // Q-02
+    s.landformTrait = o.land.mark >= 0.5 ? o.land.markTrait : 0;
+    s.slipFace = std::max(o.slip, o.land.slip);
+    s.groundTint = o.land.tint;
     if (o.land.life > 0 && s.material != MAT_WATER) s.lifeTint = o.land.life;
     if (s.water > 0.5 && waterZone > 0) s.waterKind = waterKind;
-    if (waterZone > 0 && s.water > -1e8) s.shore = shore;   // B-322 (a snowfield or a glacier over the zone keeps the plane, so it keeps the edge too)
+    if (waterZone > 0 && s.water > -1e8) s.shore = shore;   // (a snowfield or a glacier over the zone keeps the plane, so it keeps the edge too)
     else if (s.water < -1e8 && shoreOut < 1e8) s.shore = shoreOut;   // the bank beyond the plane's reach still knows how far the water is
-    if (K.cover != DC_NONE) {   // P-04: a dead world, the present's cover over the living ground it was (above was its then-world's: the land's heights are
+    if (K.cover != DC_NONE) {   // a dead world, the present's cover over the living ground it was (above was its then-world's: the land's heights are
         // the same in both times, so its people's towns stand where they stood). No liquid is left; the old forests' density stays in `veg` (their dead trees)
         const double oldForest = s.material == MAT_FOREST ? s.veg : 0.0;
         const int was = s.material;

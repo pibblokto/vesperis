@@ -751,8 +751,8 @@ void worldPlanPrefetch(const BodyGen& gSeason) {
     const BodyGen gc = g;
     th.t = std::thread([pr, done, gc]() {
         pr->set_value(buildWorldPlan(gc, false));
-        for (int p = 0; p < std::max(1, peoplesOf(gc)); p++) historyOfWorld(gc, p);   // T-02: the peoples' histories too (the towns read them)
-        worldWorksOf(gc);   // T-03: and the works (their battlefields, dams and shelters read the histories)
+        for (int p = 0; p < std::max(1, peoplesOf(gc)); p++) historyOfWorld(gc, p);   // the peoples' histories too (the towns read them)
+        worldWorksOf(gc);   // and the works (their battlefields, dams and shelters read the histories)
         done->store(true);
     });
     g_planThreads.push_back(std::move(th));
@@ -858,7 +858,7 @@ const std::vector<Vec3>& planEdgeWay(const BodyGen& gSeason, const WorldPlan& P,
     return P.ways.emplace(e.id, std::move(way)).first->second;
 }
 
-void planSpansIn(const BodyGen& gSeason, const WorldPlan& P, int gLat, int gLon, std::vector<PlanSpan>& out) {   // T-01
+void planSpansIn(const BodyGen& gSeason, const WorldPlan& P, int gLat, int gLon, std::vector<PlanSpan>& out) {
     BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time)
     out.clear();
     if (!P.works) return;

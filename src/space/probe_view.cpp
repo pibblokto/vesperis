@@ -41,7 +41,7 @@ struct Pano {
     int na = 0, ne = 0;
     double a0 = 0, da = 0, e0 = 0, de = 0;   // the first column's azimuth and the first row's elevation, on fixed grids (a turn of the camera does not resample the clouds)
     std::vector<float> sh, ds, gl;   // the shade (lit, before the haze), the distance (km; negative: nothing there), the glow from below (X-03)
-    std::vector<uint8_t> dk;         // X-03: the deck a cell shows (a deck under a hole in the panorama's own)
+    std::vector<uint8_t> dk;         // the deck a cell shows (a deck under a hole in the panorama's own)
 };
 struct DeckCache { int n = 0; double half = 0, step = 0; std::vector<float> top, base; };
 struct FogNode { float sun, lamp, flash, heat, glow, t; };
@@ -516,7 +516,7 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
                                 light *= std::min(2.5, std::exp(-1.1 * D.sh * (over - overMean)));   // against the deck's mean, so the fog keeps its brightness and gains its structure
                             }
                             light = light * dk / (dk + rho);
-                            // X-03: the deep's glow, from the deck's base up; B-409: a little over half of it back to the lens (all of it
+                            // the deep's glow, from the deck's base up; B-409: a little over half of it back to the lens (all of it
                             // was a flat orange that clipped at a brown dwarf's deck base), darkened where the cloud under the point
                             // is thick (two taps down the glow's way): its pockets dark against the glow
                             gl = 0.6 * v.glowUnder[k] * std::exp(-0.5 * std::max(0.0, y - bs) / D.sh);
@@ -545,7 +545,7 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
                         const Vec3 p = d * s1, q = p - lampAt;
                         double rho = haze + (deep ? 0.55 : 0.05);   // the motes and droplets the beam shows (the deep's thick with them)
                         if (k >= 0) { double tp, bs; cacheAt(C, p.x, p.z, tp, bs); rho += D.density(k, v.px[k] + p.x, v.zKm + p.y, v.pz[k] + p.z, tp, bs); }
-                        if (v.sight > 0.01) {   // X-03: what passes through the beam, once, on one giant in many
+                        if (v.sight > 0.01) {   // what passes through the beam, once, on one giant in many
                             const Vec3 o = p - v.sightPos;
                             const double al = dot(o, v.sightAxis), e2 = (al / 0.35) * (al / 0.35) + length2(o - v.sightAxis * al) / (0.075 * 0.075);
                             if (e2 < 1.3) rho += 70 * v.sight * smoothstep(1.3, 0.85, e2) * (0.82 + 0.18 * std::sin(al * 38 - v.time * 1.1));
@@ -576,7 +576,7 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
     const double limbF = std::sqrt(TAU * v.radiusKm / (25 * D.sh));   // a grazing ray's path through the layers against a vertical one's
     static float hzTab[721][3];   // the haze's colour toward the horizon by azimuth
     for (int k = 0; k <= 720; k++) { double a = k * TAU / 720 - PI; airAt(v, Vec3(std::sin(a), 0, std::cos(a)), 9.0, hzTab[k]); }   // (the haze between the probe and a deck is the dense air's, the horizon's colour)
-    // X-03: the aurora's curtains on the fog's grid (they are smooth but for their rays), where the sky is open over the probe
+    // the aurora's curtains on the fog's grid (they are smooth but for their rays), where the sky is open over the probe
     static std::vector<float> aur;
     const bool aurOn = v.aurora > 0.005 && L.skyOpen;
     if (aurOn) {
@@ -611,7 +611,7 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
                 double zt = (v.radiusKm + v.zKm) * std::cos(e) - v.radiusKm, tau = limbF * hazeAt(HZ, zt);
                 airAt(v, d, tau, bg); tsp = std::exp(-tau);
             }
-            if (v.glowAir > 1e-4) {   // X-03: the clear air lit from below by the deep's glow, most toward the depth
+            if (v.glowAir > 1e-4) {   // the clear air lit from below by the deep's glow, most toward the depth
                 const float gw = (float)(0.35 + 0.65 * smoothstep(0.2, -0.7, d.y));
                 bg[0] += gw * glowAirCol.r; bg[1] += gw * glowAirCol.g; bg[2] += gw * glowAirCol.b;
             }
@@ -797,7 +797,7 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
             }
         }
     }
-    // X-03: diamond hail: specks falling past the lens faster than the probe, glinting as a facet turns into the lamp's beam
+    // diamond hail: specks falling past the lens faster than the probe, glinting as a facet turns into the lamp's beam
     if (v.hail > 0.01) {
         const int n = (int)(v.hail * 240);
         for (int i = 0; i < n; i++) {

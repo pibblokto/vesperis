@@ -1,14 +1,8 @@
-// C-18 (2026-10-11): what the drone bay's three drones bring back from a people's world (the user's request: "three drones with robotic
-// hands ... that you can send from stardrifter to felisian/desert planets with civilizations. When you send them each can bring 2-8 items
-// ... cooldown is 5 minutes. They can bring both shards (all three kinds) and instruments").
-//
-// A world holds its peoples' records (T-04: 80 to 200 each, texts, music and star charts by H-05's shares) and the instruments lying beside a
-// third of their music records (C-11), each record at its home: the place of its people's plan that always holds it (`recordHomesOf`), an
-// instrument at the home of the first music record it lies beside; copies of a record lie in other places too (T-04), the instrument beside
-// each. A trip sends each drone down for two to eight of what the explorer does not hold yet: to a place by how much of its own it holds (one
-// another drone searches the least likely), three to five there (the place's own first, then the copies it keeps of its people's other
-// records), on to a second or a third place for the rest; each find drawn with the rarer kinds leaned toward (a star chart 2.2 times a text,
-// an instrument four times), and at one stop in three an instrument of the place's people looked for first (a world holds a few). The game owns the trip's clock and the guide (game/drones.cpp).
+// What the drone bay's three drones bring back from a people's world (C-18; docs/reference/civilisations/records-and-grammar.md): its
+// records and the instruments beside a third of its music records, each at its home (`recordHomesOf`), copies elsewhere. A trip sends each
+// drone down for two to eight of what the explorer does not hold yet: to a place by how much of its own it holds, three to five there, on
+// to a second or a third place for the rest, the rarer kinds leaned toward (a star chart 2.2 times a text, an instrument four times), an
+// instrument looked for first at one stop in three. The game owns the trip's clock and the guide (game/drones.cpp).
 #pragma once
 #include "galaxy/system.h"
 #include <cstdint>

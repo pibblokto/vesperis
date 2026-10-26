@@ -154,7 +154,7 @@ bool Game::droneRackPlace(int k, double& x, double& lift, double& blur) const {
 }
 
 // F-05: the rack's drones for the cabin's bands (their places, poses and models)
-// F-05: the rack's drones for the cabin's bands, once a frame: where each stands, its pose and its model (`drawDroneRack`)
+// the rack's drones for the cabin's bands, once a frame: where each stands, its pose and its model (`drawDroneRack`)
 void Game::droneRackFrame(CabinFrame& f) const {
     f.ready = droneBayReady();
     for (int k = 0; k < DRONE_COUNT; k++) {
@@ -380,7 +380,7 @@ void Game::buildDroneMap(int body) {
     bay.map.clear(); bay.mapW = bay.mapH = 0; bay.mapSeed = 0;
     if (!sys.valid || body < 0 || body >= (int)sys.bodies.size()) return;
     const Body& b = sys.bodies[body];
-    const PlanetMap* mp = spaceR.mapIfReady(b);   // F-02: never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
+    const PlanetMap* mp = spaceR.mapIfReady(b);   // never waited for (a world not mapped yet held the screen 150-200 ms); the screen asks again
     if (!mp) return;
     const PlanetMap& m = *mp;
     MatRamp ramps[MAT_COUNT]; double lf; bool atmo;
@@ -396,7 +396,7 @@ void Game::buildDroneMap(int body) {
         sum2 += gx * gx + gy * gy; cnt++;
     }
     const double k = 0.5 / (std::sqrt(sum2 / std::max(1, cnt)) + 1e-9);
-    const bool survey = sys.sunless();   // D-02: a sunless world's map the survey's, as the landing map's
+    const bool survey = sys.sunless();   // a sunless world's map the survey's, as the landing map's
     double hLo = 0, hHi = 1; if (survey) surveyRange(m.height.data(), m.height.size(), hLo, hHi);
     for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
         const double lon = (x + 0.5) / W * TAU - PI, lat = (0.5 - (y + 0.5) / H) * PI;

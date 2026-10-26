@@ -115,16 +115,16 @@ GiantCharacter giantCharacterOf(const StarSystem& sys, int bi) {
     else {
         c.heat = clampd(0.75 * youth + 0.25 * (b.radiusKm - 24000) / 48000 + 0.35 * (hu(0x4EA7) - 0.5), 0, 1);
         if (c.kind == GK_ICE) c.heat *= 0.6;
-        if (c.kind == GK_DWARF) c.heat *= 0.7;   // P-07: a small world's envelope
+        if (c.kind == GK_DWARF) c.heat *= 0.7;   // a small world's envelope
         if (c.kind == GK_PUFF) c.heat = std::max(c.heat, 0.65);   // still hot from its birth, swollen by it
     }
     c.young = (c.kind != GK_BROWN && youth >= 0.5 && c.heat >= 0.62) || c.kind == GK_PUFF;
     c.abundance = std::exp((c.kind == GK_ICE ? 0.25 : (c.kind == GK_DWARF ? 0.9 : 0.0)) + 0.3 * (hu(0xAB0D) - 0.5) * 2);   // an ice giant is richer in what condenses (P-07: a gas dwarf the more)
     c.storms = (0.35 + 0.65 * g.stormShare / 0.15) * (0.8 + 0.4 * c.heat) * (c.kind == GK_ICE ? 0.55 : 1.0);   // the plain giant's 1, a calm one's half
-    if (calm) c.storms *= 0.4;   // P-07: a clear, a dark or a hazy air builds few towers
+    if (calm) c.storms *= 0.4;   // a clear, a dark or a hazy air builds few towers
     c.glow = c.kind == GK_BROWN ? 1.4 + 1.6 * clampd((g.selfGlow - 0.55) / 0.45, 0, 1) : (c.kind == GK_ICE ? 0.003 + 0.04 * c.heat * c.heat : 0.004 + 0.3 * std::pow(c.heat, 2.5));
     c.glowCol = c.kind == GK_BROWN ? RGB(1.0f, 0.42f, 0.16f) : (c.kind == GK_ICE ? RGB(0.55f, 0.2f, 0.22f) : RGB(0.78f, 0.24f, 0.08f));
-    if (c.kind == GK_AZURE) { c.glow = 0.05 + 0.12 * c.heat; c.glowCol = RGB(0.75f, 0.22f, 0.1f); }   // P-07: the deep's heat, faint under the clear air (the hot
+    if (c.kind == GK_AZURE) { c.glow = 0.05 + 0.12 * c.heat; c.glowCol = RGB(0.75f, 0.22f, 0.1f); }   // the deep's heat, faint under the clear air (the hot
     else if (c.kind == GK_ALKALI) c.glowCol = RGB(0.82f, 0.18f, 0.06f);                              // ones' strength set by their decks below)
     else if (c.kind == GK_SILICATE) c.glowCol = RGB(1.0f, 0.52f, 0.18f);
     else if (c.kind == GK_DWARF) c.glow *= 0.5;
@@ -145,7 +145,7 @@ GiantCharacter giantCharacterOf(const StarSystem& sys, int bi) {
         if (hu(0x401E) < odds) c.holes = 0.15 + 0.2 * hu(0x401F);
     }
     c.lightning = (c.kind == GK_ICE ? 0.12 : (c.kind == GK_BROWN ? 0.8 : 0.4 + 1.2 * c.heat)) * (0.5 + hu(0x11F7));   // an ice giant's seldom
-    if (c.kind == GK_WATER) c.lightning *= 1.5;   // P-07: water's towers the most
+    if (c.kind == GK_WATER) c.lightning *= 1.5;   // water's towers the most
     else if (calm) c.lightning *= c.kind == GK_SILICATE ? 0.5 : 0.2;
     c.hail = (sys.star.cls == STAR_CARBON || hu(0xD1A3) < 0.06) && !hot;   // (P-07: a hot giant's carbon is a gas)
     c.sight = c.kind != GK_BROWN && hu(0x5167) < 1.0 / 40;
@@ -166,11 +166,11 @@ GiantAtmosphere giantAtmosphereOf(const StarSystem& sys, int bi) {
     const KindDef& K = KINDS[b.type];
     const double teq = std::max(60.0, 1.5 * b.tempK);
     a.t1K = c.kind == GK_BROWN ? teq + 90 + 120 * clampd((g.selfGlow - 0.55) / 0.45, 0, 1) : teq * (1 + (c.kind == GK_ICE ? 0.12 : 0.3) * c.heat * c.heat);
-    if (K.oneBarLo > 0)   // P-07: a hot class's across its band of the game's equilibrium temperatures, a little warmer with its heat
+    if (K.oneBarLo > 0)   // a hot class's across its band of the game's equilibrium temperatures, a little warmer with its heat
         a.t1K = (K.oneBarLo + (K.oneBarHi - K.oneBarLo) * clampd((b.tempK - K.oneBarTLo) / (K.oneBarTHi - K.oneBarTLo), 0, 1)) * (1 + 0.1 * c.heat * c.heat);
     a.gravity = std::max(1.0, b.gravity);
     a.windPeak = (c.kind == GK_ICE ? 220 + 380 * unitFromHash(mix64(b.seed ^ 0xA7E05ULL)) : 80 + 370 * unitFromHash(mix64(b.seed ^ 0xA7E05ULL)));   // an ice giant's jets the fastest
-    {   // P-07: a hot Jupiter's jet carries its day round to its night at kilometres a second (WASP-76b's); a gas dwarf's and a super-puff's are slow
+    {   // a hot Jupiter's jet carries its day round to its night at kilometres a second (WASP-76b's); a gas dwarf's and a super-puff's are slow
         const double u = unitFromHash(mix64(b.seed ^ 0xA7E05ULL));
         if (c.kind == GK_SILICATE) a.windPeak = 2000 + 3000 * u;
         else if (c.kind == GK_ALKALI) a.windPeak = 1200 + 1800 * u;
@@ -181,10 +181,10 @@ GiantAtmosphere giantAtmosphereOf(const StarSystem& sys, int bi) {
     a.driftSign = b.rotPeriod < 0 ? -1 : 1;
     const double tropoK = a.t1K * std::pow(a.tropoBar, ADIABAT);
     const bool hot = c.kind == GK_AZURE || c.kind == GK_ALKALI || c.kind == GK_SILICATE;
-    const double heatEnd = std::pow(a.heatK / a.t1K, 1 / ADIABAT), reach = hot ? 32.0 : std::min(32.0, heatEnd);   // P-07: a hot giant's decks under its end, seen from over them
+    const double heatEnd = std::pow(a.heatK / a.t1K, 1 / ADIABAT), reach = hot ? 32.0 : std::min(32.0, heatEnd);   // a hot giant's decks under its end, seen from over them
     a.reach = reach;
     static const int GAS[] = {CS_METHANE, CS_AMMONIA, CS_NH4SH, CS_WATER, CS_SALT}, ICE[] = {CS_METHANE, CS_H2S, CS_NH4SH, CS_WATER, CS_SALT}, BROWN[] = {CS_AMMONIA, CS_NH4SH, CS_WATER, CS_SALT};
-    static const int WATERS[] = {CS_WATER, CS_SALT}, ROCK[] = {CS_SILICATE, CS_IRON};   // P-07: the water-cloud giant's and the gas dwarf's; the hot giants'
+    static const int WATERS[] = {CS_WATER, CS_SALT}, ROCK[] = {CS_SILICATE, CS_IRON};   // the water-cloud giant's and the gas dwarf's; the hot giants'
     const int* list = c.kind == GK_ICE ? ICE : (c.kind == GK_BROWN ? BROWN : (c.kind == GK_WATER || c.kind == GK_DWARF ? WATERS : (c.kind == GK_ALKALI || c.kind == GK_SILICATE ? ROCK : GAS)));
     const int nl = c.kind == GK_AZURE ? 0 : (c.kind == GK_BROWN ? 4 : (list == WATERS || list == ROCK ? 2 : 5));   // (an azure giant's none: clear to the deep)
     a.decks = 0;
@@ -213,12 +213,12 @@ GiantAtmosphere giantAtmosphereOf(const StarSystem& sys, int bi) {
         a.ch.glow = 1;
         a.ch.glow = 0.5 * g.selfGlow / std::max(1e-6, giantGlowAt(a, a.top[0]));
     }
-    if (c.kind == GK_ALKALI || c.kind == GK_SILICATE) {   // P-07: a hot giant's deep glows up through its decks by its class's heat (iron's 2,000 K and over)
+    if (c.kind == GK_ALKALI || c.kind == GK_SILICATE) {   // a hot giant's deep glows up through its decks by its class's heat (iron's 2,000 K and over)
         a.ch.glow = 1;
         a.ch.glow = (c.kind == GK_SILICATE ? 0.3 + 0.2 * c.heat : 0.1 + 0.08 * c.heat) / std::max(1e-6, giantGlowAt(a, a.top[0]));
     }
     a.hazeBar = clampd(a.top[0] / (1.6 + 1.4 * unitFromHash(mix64(b.seed ^ 0x4A2EULL))), 0.02, 0.4);
-    {   // P-07: the clear air: an azure giant's clearer than a plain one's, a gas dwarf's and a super-puff's hazier, an alkali giant's dark (its sodium
+    {   // the clear air: an azure giant's clearer than a plain one's, a gas dwarf's and a super-puff's hazier, an alkali giant's dark (its sodium
         // and potassium take the light high up: TrES-2b reflects under one per cent), a silicate giant's a little
         static const double HAZE[GK_COUNT] = {1, 1, 1, 1, 0.35, 1.2, 1.3, 4.0, 3.0}, ABSORB[GK_COUNT] = {0, 0, 0, 0, 0, 2.6, 0.6, 0, 0};
         a.hazeK = HAZE[c.kind]; a.absorb = ABSORB[c.kind]; a.rayleigh = c.kind == GK_AZURE ? 0.3 : 0.0;

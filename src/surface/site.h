@@ -19,11 +19,11 @@ struct TerrainVertex {
     uint8_t glow = 0;
     uint8_t biome = 0;
     float water = -1e9f;   // local water surface height (sea, lake, river), M9-04
-    float shore = 1e9f;    // B-322: signed distance to the water's edge (metres, negative in the water), 1e9 unknown
-    uint8_t scree = 0;     // O6-04: loose rock 0..255 (boulder fields under the cliffs)
-    uint8_t road = 0;      // C-09: an old road's share of this vertex's footprint (0..255), what the wear left of it
-    uint8_t wtint = 0, ltint = 0;   // Q-02: the water's trait colours here (`SurfaceSample::waterTint`, `lifeTint`), 0..255
-    uint8_t gtint = 0;              // Q-02: the ground trait's field (`SurfaceSample::groundTint`): a strewn field's stones, a stratum's accent
+    float shore = 1e9f;    // signed distance to the water's edge (metres, negative in the water), 1e9 unknown
+    uint8_t scree = 0;     // loose rock 0..255 (boulder fields under the cliffs)
+    uint8_t road = 0;      // an old road's share of this vertex's footprint (0..255), what the wear left of it
+    uint8_t wtint = 0, ltint = 0;   // the water's trait colours here (`SurfaceSample::waterTint`, `lifeTint`), 0..255
+    uint8_t gtint = 0;              // the ground trait's field (`SurfaceSample::groundTint`): a strewn field's stones, a stratum's accent
     int32_t cx = 0x7fffffff, cz = 0x7fffffff;   // tags
 };
 
@@ -32,8 +32,8 @@ struct TerrainVertex {
 struct SiteRoad {
     uint64_t id = 0;
     float half = 3;
-    bool paved = true; float wear = 0.2f;   // C-13: the builders' (a road between two peoples' settlements is the bigger settlement's people's)
-    int kind = 1;                            // T-01: the network's kind (peoples/plan.h's NetKind: a path, a road, rail, a canal, a highway)
+    bool paved = true; float wear = 0.2f;   // the builders' (a road between two peoples' settlements is the bigger settlement's people's)
+    int kind = 1;                            // the network's kind (peoples/plan.h's NetKind: a path, a road, rail, a canal, a highway)
     std::vector<float> x, z, along;
     float x0 = 0, z0 = 0, x1 = 0, z1 = 0;
 };
@@ -64,9 +64,9 @@ struct SiteEdit {
 
 // B-322: the water's edge on the mesh. A cell whose corners lie on both sides of the edge is drawn as pieces cut along the
 // edge, the cut at the water level: the shoreline is then the contour of the shore distance across the cell (exact for a
-// straight bank), not the place where the two triangles happen to cross the plane. It used to be the latter: a river's bank
-// wall drops metres within a cell, so the crossing hugged the bank vertices and every shore was a stair of cells from the
-// air (KI-321) and a sawtooth of triangles on the walk. `shoreValue` is the corner's side of the edge as the mesh reads it;
+// straight bank), not the place where the two triangles happen to cross the plane: a river's bank wall drops metres within a
+// cell, so that crossing hugs the bank vertices and makes every shore a stair of cells from the air and a sawtooth of
+// triangles on the walk. `shoreValue` is the corner's side of the edge as the mesh reads it;
 // `shoreSplitTriangle` cuts one triangle into its wet and dry polygons (fan order from [0], the same in the drawing and in
 // `groundHeight`)
 struct TerrainCache;
@@ -93,7 +93,7 @@ struct TerrainCache {
     }
     void fill(TerrainVertex& t, int cx, int cz);
     inline int index(int cx, int cz) const { int n = 1 << logN; return ((cz & (n - 1)) << logN) | (cx & (n - 1)); }
-    void invalidate(double x0, double z0, double x1, double z1);   // T-02: the vertices in a box sampled again when next asked for
+    void invalidate(double x0, double z0, double x1, double z1);   // the vertices in a box sampled again when next asked for
 };
 
 struct SunInfo {
@@ -104,7 +104,7 @@ struct SunInfo {
     double angularRadius;
     double dayFraction; // 0..1 local time of day (0.5 = noon)
     double eclipse = 0; // fraction of the sun's disc covered by another body (M1-08)
-    double ringShadow = 0;   // O0-01: density of the world's own ring between the site and the sun (0 = clear)
+    double ringShadow = 0;   // density of the world's own ring between the site and the sun (0 = clear)
     RGB color;          // light colour (M5-01: differs for the companion sun)
 };
 
@@ -121,22 +121,22 @@ struct SurfaceSite {
     double lavaLevel = -1e9;
     double gravity = 9.8;
     TerrainCache lod0, lod1, lod2, lod3;   // 16, 64, 512 and (O1) 2048 m cells
-    TerrainCache lodN;                     // O6-02: the near ring, 4 m cells (a 256 x 256 torus, one kilometre across)
-    // O6-02: the near ring is drawn within nearR cells of (nearX, nearZ) while nearBlend is 1 (0: not drawn); B-313: its
+    TerrainCache lodN;                     // the near ring, 4 m cells (a 256 x 256 torus, one kilometre across)
+    // the near ring is drawn within nearR cells of (nearX, nearZ) while nearBlend is 1 (0: not drawn); B-313: its
     // outer nearBand cells morph onto lod0 (SurfaceView::vertexOf), and groundHeight follows the same blend so the feet,
     // the wheels, the rocks and the trees sit on the ground that is drawn. The view sets these every frame before the
     // movement update.
     double nearBlend = 0, nearX = 0, nearZ = 0; int nearR = 0, nearBand = 0;
-    // B-319: lod0's own morph onto lod1 (B-313) across its outer band, relative to the camera: `groundHeight` follows it,
+    // lod0's own morph onto lod1 (B-313) across its outer band, relative to the camera: `groundHeight` follows it,
     // so a tree, a rock or an animal 200-600 m off stands on the ground that is drawn and not a few metres above or below
-    // it (they used to sink and surface as the band swept over them, and far trees flickered in and out of the ground)
+    // it (else they sink and surface as the band sweeps over them, far trees flickering in and out of the ground)
     double camX = 0, camZ = 0; int lod0R = 0, lod0Band = 0;
     bool inNearRing(double x, double z) const { double dx = (x - nearX) / 4.0, dz = (z - nearZ) / 4.0; return nearBlend > 0 && dx * dx + dz * dz < (double)nearR * nearR; }
     double nearMorph(double x, double z) const { double dx = (x - nearX) / 4.0, dz = (z - nearZ) / 4.0; return smoothstep(nearR - nearBand, nearR - 0.5, std::sqrt(dx * dx + dz * dz)); }   // 0 at the core .. 1 at the edge
-    bool smallBody = false;      // O4: R under 300 km (comets): exact sphere geometry, no far ring, no floor
+    bool smallBody = false;      // R under 300 km (comets): exact sphere geometry, no far ring, no floor
     double escapeVelocity = 1e9; // m/s, sqrt(2 g R)
-    std::vector<float> ringProf; // O0-01: the ring's density profile when the body has rings (else empty)
-    // C-09: the old roads within the near rings (`peoples/roads.*`), in local metres, with the culture's paving and wear. The
+    std::vector<float> ringProf; // the ring's density profile when the body has rings (else empty)
+    // the old roads within the near rings (`peoples/roads.*`), in local metres, with the culture's paving and wear. The
     // view builds them after `init` (and again at a reanchor); a probe site does not, so its vertices carry no road.
     // `sampleAt` draws them into the vertices: the road's share of the footprint (`TerrainVertex::road`), the paving as the
     // material on the fine rings, the ground bare and darker, the tone alone on the coarse ones
@@ -144,7 +144,7 @@ struct SurfaceSite {
     double roadsMs = 0;
     std::unordered_set<uint64_t> roadIds, roadCells;   // the roads walked and the cells whose pairs were listed
     RoadNodeCache roadNodes;
-    Culture roadCultures[2];                           // C-13: the world's peoples' (one, or two), each road built as its people built
+    Culture roadCultures[2];                           // the world's peoples' (one, or two), each road built as its people built
     void clearRoads();
     // the roads of the cells within ROAD_BLOCK cells of a point, added to what is built (the view calls it at `init`, at a
     // reanchor and when the explorer has moved two cells from the last call, with its worker joined: the vertices read the
@@ -157,7 +157,7 @@ struct SurfaceSite {
     // 0..1: the road's bed at a point (within its half width, what the wear left; fading over a metre beyond), for the
     // flora, the rocks and the explorer's feet
     double roadCover(double x, double z) const;
-    // T-02: the towns' ground (`GroundMark`), found by 32 m cells; `addTownMarks` adds a settlement's (its streets, squares and fields at its
+    // the towns' ground (`GroundMark`), found by 32 m cells; `addTownMarks` adds a settlement's (its streets, squares and fields at its
     // centre's local metres, the years since it was left and the world's wet fading them) and makes the fine rings' vertices under it be
     // sampled again; the view adds them with its worker joined (the vertices read the list), and clears them with the roads
     std::vector<GroundMark> marks;
@@ -166,7 +166,7 @@ struct SurfaceSite {
     void addTownMarks(const RuinSpec& spec, double ox, double oz, double years, double wet, double wear);
     double markCover(double x, double z) const;   // 0..1: a street's or a square's bed at a point (the flora and the rocks keep off it)
     void applyMarks(double x, double z, double detailM, TerrainVertex& t) const;
-    // T-03: the works' ground (`SiteEdit`): a quarry's cut and a pit, ditches, craters, a plain made flat, a reservoir's water, lines, a
+    // the works' ground (`SiteEdit`): a quarry's cut and a pit, ditches, craters, a plain made flat, a reservoir's water, lines, a
     // mountain's terraces; the small ones found by 64 m cells, the great ones (over 600 m) by their bounds. `addWorkEdits` adds a work's (its
     // middle at local (ox, oz), the years since it was left and the world's wet fading them) and makes every ring's vertices under it be
     // sampled again; the view adds them with its worker joined, and clears them with the roads
@@ -178,8 +178,8 @@ struct SurfaceSite {
     void applyEdits(double x, double z, double detailM, TerrainVertex& t) const;
     double editCover(double x, double z) const;   // 0..1: a fresh cut's floor, a line's bed, a plain made flat (the flora and the rocks keep off it)
 
-    void init(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);   // t: the season (M9-09)
-    // F-02: `init` without the five terrain caches (106,496 vertices): a site that is sampled (`sampleAt`), never drawn, such as the
+    void init(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);   // t: the season
+    // `init` without the five terrain caches (106,496 vertices): a site that is sampled (`sampleAt`), never drawn, such as the
     // landing map's probe of its cursor; drawing it would index empty caches
     void initFrame(const StarSystem* s, int bodyIndex, double lat, double lon, double t = 0);
     double season = 0;
@@ -192,11 +192,11 @@ struct SurfaceSite {
     Mat3 localFrame(double t) const;
     Vec3 worldPos(double t, double x, double z, double alt) const;
     SunInfo sun(double t) const;
-    bool sun2(double t, SunInfo& out) const;   // M5-01: the companion star as a second sun; false for single stars
+    bool sun2(double t, SunInfo& out) const;   // the companion star as a second sun; false for single stars
     // ground height (metres): the near ring's cells where it is drawn (O6-02), else bilinear on lod0
     double groundHeight(double x, double z);
     double groundHeightCoarse(double x, double z);   // lod0 alone (what the near ring blends from)
-    // Q-02 (TR_GREAT_TIDES): the sea's offset from its mean level now (the view sets it each frame: `tideOffsetM`). The water as it stands now
+    // TR_GREAT_TIDES: the sea's offset from its mean level now (the view sets it each frame: `tideOffsetM`). The water as it stands now
     // adds it to the sea's vertices (`waterOf`, `waterNowAt`: the drawing, the shore's cut, the explorer, the vehicles, the rangefinder); what is
     // placed on the ground reads the mean (`waterAt`: a tree or a stone stays where it is whatever the tide)
     double tideM = 0;

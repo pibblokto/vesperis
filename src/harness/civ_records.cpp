@@ -17,7 +17,7 @@ void recordPlacesOf(const BodyGen& g, int people, std::vector<RecordPlace>& out,
         RecordPlace rp; rp.work = w.kind; workSpec(g, w, rp.spec);
         recordSitesOf(g, rp.spec, cu, rp.sites); out.push_back(std::move(rp));
     }
-    {   // B-418: and the land's round the capital (the countryside's reach)
+    {   // and the land's round the capital (the countryside's reach)
         std::vector<std::shared_ptr<const Work>> lw; landWorksOf(g, which, 1, 2000.0 * countryside + 2000, 0, lw);
         for (const std::shared_ptr<const Work>& w : lw) { RecordPlace rp; rp.work = w->kind; workSpec(g, *w, rp.spec); recordSitesOf(g, rp.spec, cu, rp.sites); out.push_back(std::move(rp)); }
     }
@@ -214,7 +214,7 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
                 if (!e.last && e.year != std::min(recordYear(pa, u), std::max(1, C->lastYear - 1))) notSame++;
             }
             if (lasts != 1) lastsBad++;
-            {   // H-05: past the fifty, music and charts by the age of each record's year: the age's share leaned by the people's fifty, within one record
+            {   // past the fifty, music and charts by the age of each record's year: the age's share leaned by the people's fifty, within one record
                 int n[AGE_COUNT] = {}, m[AGE_COUNT] = {}, c[AGE_COUNT] = {};
                 for (int i = SHARDS_PER_WORLD; i < C->count; i++) { const RecordEntry& e = C->entries[i]; n[e.age]++; if (e.category == RC_MUSIC) m[e.age]++; else if (e.category == RC_CHART) c[e.age]++; }
                 for (int k = 0; k < AGE_COUNT; k++) {
@@ -269,7 +269,7 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
               fmt("%d places (the plans', %d works, the countryside round the capitals) holding %d records: %d copies twice in a place, %d not the place's people's or medium, %d written after their place was left; archives in %d of %d capitals and %d of %d cities; %d painted walls (%d not standing); %d works hold records; %s",
                   placesN, works, sitesN, dup, foreign, late, capArch, capN, cityArch, cityN, walls, wallsBad, worksWith, notSame ? "NOT the same twice" : "the same twice"));
     }
-    {   // B-426: an archive holds its class's count (the capital's 8 to 14, a prehistoric capital's 4 to 6, a city's 5 to 8, a town's 3 to 5), the
+    {   // an archive holds its class's count (the capital's 8 to 14, a prehistoric capital's 4 to 6, a city's 5 to 8, a town's 3 to 5), the
         // place's own beyond it lie in its other buildings, and every place of the plan holds all its own (a lone stone's foot held two); the far
         // future's structures keep theirs in rings round their feet (the archive that keeps itself). Then the report: Yaiphuyiabrus IV's
         // prehistoric capital, whose archive took its own thirty-one onto its longhouse's floor
@@ -386,7 +386,7 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
                   loaded ? "loaded" : "NOT LOADED", keys ? "kept (S57 now S1007)" : "WRONG", others ? "moved with them" : "NOT MOVED", counts ? "kept" : "CHANGED",
                   (int)std::lround(100 * languageShare(heldOf(G, "152,0,92/0", 1))), (int)std::lround(100 * languageShare(heldOf(G, "151,0,25/1", 0))), once ? "unchanged" : "MOVED AGAIN", trunc(said, 52).c_str(), trunc(said2, 40).c_str()));
     }
-    {   // B-414: a guide of `records 2` (its records dated over their people's eras) loaded: its keys as they were, its shards' contents new, said
+    {   // a guide of `records 2` (its records dated over their people's eras) loaded: its keys as they were, its shards' contents new, said
         // once; saved as `records 3` and loaded again with nothing to say
         const char* path = "shots/tests/test_records_guide2.txt";
         { std::ofstream f(path); f << "vesperis-guide 1\ngen 13\nrecords 2\nshard 152,0,92/0/S1007\nshard 152,0,92/0/S3\nshard 151,0,25/1/S12\ndecoded 152,0,92/0/S1007 3\n"; }
@@ -839,7 +839,7 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
         const bool any = std::any_of(held.begin(), held.end(), [&](int i) { return C->entries[i].category == RC_MUSIC; });
         check("history: the records page shows one kind (H-06)", !any || music == steps, fmt("%d of %d steps on music", music, steps));
     }
-    {   // R-416: Shift with an arrow held runs the timeline's and the history's cursor (a tap of it one step, a second's hold a score), the run
+    {   // Shift with an arrow held runs the timeline's and the history's cursor (a tap of it one step, a second's hold a score), the run
         // stopping at the ends where the arrow alone goes round (the timeline) or stays (the history)
         auto hold = [&](int key, int frames) {   // Shift and the arrow down together for `frames` frames at 30 a second, then both let go
             gi.down[KEY_LEFT_SHIFT] = true; gi.down[key] = true; gi.pressed[key] = true;
@@ -869,7 +869,7 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
         check("history: Shift held with an arrow runs the history's events, a tap one, stopping at the ends (R-416)",
               game.testShardsPage() == 2 && ne >= 15 && h0 == 0 && h1 == 1 && h2 - h1 >= std::min(12, ne - 1 - h1) && h2 - h1 <= 30 && h3 == ne - 1 && h4 == ne - 1,
               fmt("page %d, %d events: run up to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Down alone %d", game.testShardsPage(), ne, h0, h1, h2, h2 - h1, h3, h4));
-        // R-417 (the user: "in shards decoder also add this fast shift scrolling for records tab"): Shift and Up/Down run the records
+        // (the user: "in shards decoder also add this fast shift scrolling for records tab"): Shift and Up/Down run the records
         // page's cursor through the kind shown, stopping at the ends where Down alone goes round; the music alone shown, the run keeps to it
         while (game.testShardsPage() != 0) press(KEY_TAB);
         while (game.testShardsFilter() != 0) press(KEY_LEFT);
@@ -898,7 +898,7 @@ int runDecoder(int argc, char** argv) {
     const std::string what = argc > 2 ? argv[2] : "ages";
     if (what == "wav") { const int f = decoderWavs(); printf("decoder wav: %d failure%s\n", f, f == 1 ? "" : "s"); return f ? 1 : 0; }
     if (what == "counts") { decoderCounts(); return 0; }
-    if (what == "pages") {   // H-06
+    if (what == "pages") {
         const int f = decoderPages();
         int failures = 0; historyPageChecks(modeCheck(failures));
         printf("decoder pages: %d failure%s\n", f + failures, f + failures == 1 ? "" : "s"); return f + failures ? 1 : 0;

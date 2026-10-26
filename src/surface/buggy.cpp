@@ -68,7 +68,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     double traction = tractionOf(mat, g);
     double hx = std::sin(b.heading), hz = std::cos(b.heading);
     double v = b.speed, av = std::fabs(v);
-    // N4-02 torque curve, retuned for 50 m/s (O1-05): 6 m/s^2 to 18 m/s, tapering to 3.4 at the top (the drag there is
+    // torque curve, retuned for 50 m/s (O1-05): 6 m/s^2 to 18 m/s, tapering to 3.4 at the top (the drag there is
     // 2.75 plus the rolling resistance, so the last metres per second come slowly); reverse 3; against the motion x2.5
     double accel = 0;
     if (throttle > 0) accel = av < 18 ? 6.0 : 6.0 - 2.6 * clampd((av - 18) / 32.0, 0, 1);
@@ -99,7 +99,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
         static std::vector<Collider> cols;
         collectColliders(nx, nz, cols);
         for (const Collider& c : cols) {
-            if (c.y1 < b.y + 0.3 || c.y0 > b.y + 2.2) continue;   // B-405: buried below the wheels (a wall's foot on the slope above) or overhead
+            if (c.y1 < b.y + 0.3 || c.y0 > b.y + 2.2) continue;   // buried below the wheels (a wall's foot on the slope above) or overhead
             double dx = nx - c.x, dz = nz - c.z, rr = c.r + 1.0;
             double d2 = dx * dx + dz * dz;
             if (d2 < rr * rr && d2 > 1e-9) {
@@ -125,7 +125,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
         double fx = (w & 1) ? WHEEL_X : -WHEEL_X, sx = (w & 2) ? -WHEEL_S : WHEEL_S;
         hw[w] = site.groundHeight(b.x + hx * fx + px * sx, b.z + hz * fx + pz * sx);
     }
-    // B-313: the hull rides on the suspension: its reference height is the ground averaged over 16 m along the way (five
+    // the hull rides on the suspension: its reference height is the ground averaged over 16 m along the way (five
     // samples 4 m apart), kept within the wheels' travel of the contact mean, so the 4 m relief under a fast buggy is
     // soaked up by the wheels instead of throwing the hull (and the camera) off every bump; on a straight slope the
     // average is the ground itself, so the descent rule of B-307 sees the same ground it did
@@ -133,8 +133,8 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     double smooth = 0;
     for (int k = -2; k <= 2; k++) smooth += site.groundHeight(b.x + hx * (k * 4.0), b.z + hz * (k * 4.0));
     smooth *= 0.2;
-    double chassisY = std::max(clampd(smooth, meanW - 0.3, meanW + 0.3), site.waterNowAt(b.x, b.z));   // Q-02: the tide's
-    // B-307: the ground contact's vertical speed along the way (the previous frame's contact height is kept, so it is
+    double chassisY = std::max(clampd(smooth, meanW - 0.3, meanW + 0.3), site.waterNowAt(b.x, b.z));   // the tide's
+    // the ground contact's vertical speed along the way (the previous frame's contact height is kept, so it is
     // known in the air too, and a landing is judged by the speed relative to the slope, not the absolute fall)
     double vyGround = b.groundY > -1e8 ? (chassisY - b.groundY) / std::max(dt, 1e-4) : 0.0;
     b.groundY = chassisY;
@@ -152,9 +152,9 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     } else {
         // the wheels leave the ground only when it falls away faster than gravity and the suspension can follow: the
         // vertical acceleration the ground asks for, (vyGround - vy) / dt, beyond four g and at least 40 m/s^2, at
-        // speed. A steady descent asks for none, so the buggy rolls downhill; it used to launch, horizontally, as soon
-        // as the ground dropped faster than 3 m/s (a 30% grade above 10 m/s), fall back with a thump and 15% of its
-        // speed gone, and launch again: the descent became a ladder
+        // speed. A steady descent asks for none, so the buggy rolls downhill (launching as soon as the ground drops faster
+        // than 3 m/s, a 30% grade above 10 m/s, it would fall back with a thump, 15% of its speed gone, and launch again: a
+        // ladder)
         double needed = (vyGround - b.vy) / std::max(dt, 1e-4);
         double aFollow = std::max(4.0 * g, 40.0);
         if (needed < -aFollow && std::fabs(b.speed) > 6) { b.airborne = true; b.airT = 0; b.y += b.vy * dt; }   // vy kept: a crest throws it up, a lip lets it drop
@@ -175,7 +175,7 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     b.odometer += std::fabs(b.speed) * dt;
     b.topSpeed = std::max(b.topSpeed, std::fabs(b.speed));
     b.lights = env.sun.dirLocal.y < 0.08;
-    b.gear = av < 12 ? 0 : (av < 28 ? 1 : 2);   // O1-05: 0-12, 12-28, 28-50 m/s
+    b.gear = av < 12 ? 0 : (av < 28 ? 1 : 2);   // 0-12, 12-28, 28-50 m/s
     // dust settles on the body on dry dusty ground, rain washes it
     if (mat == MAT_SAND || mat == MAT_DUST) b.dust = std::min(1.0, b.dust + av * dt * 0.0004);
     if (env.rain > 0.2) b.dust = std::max(0.0, b.dust - dt * 0.05);
@@ -257,7 +257,7 @@ void SurfaceView::cameraFeed(Framebuffer& fb, double t) {
     if ((int)vx.size() != FBW) { vx.resize(FBW); for (int x = 0; x < FBW; x++) { double u = (x + 0.5) / FBW * 2 - 1; vx[x] = (float)(u * u); } }
     if ((int)vy.size() != FBH) { vy.resize(FBH); for (int y = 0; y < FBH; y++) { double u = (y + 0.5) / FBH * 2 - 1; vy[y] = (float)(u * u); } }
     int bandY = (int)(std::fmod(t * 0.22, 1.0) * (FBH + 40 * S)) - 20 * S;   // rolls down the picture every 4.5 s
-    static std::vector<uint32_t> rowStart;   // F-05: the rows on the pool, each band from its first row's noise state (xorshiftRowStarts)
+    static std::vector<uint32_t> rowStart;   // the rows on the pool, each band from its first row's noise state (xorshiftRowStarts)
     xorshiftRowStarts((uint32_t)(t * 60) * 2654435761u + 0x9E37u, FBW, FBH, rowStart);
     parallelFor(FBH, 32, [&](int yb, int ye) {
         uint32_t rs = rowStart[yb];
@@ -321,7 +321,7 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
     RasterParams rpBody; rpBody.bank = 6; rpBody.grain = &grain; rpBody.grainScale = 3.0 * FB_SCALE;
     RasterParams rpDark; rpDark.bank = 0;   // the blacked-out sensor band, the lens, the rubber
     double headGlow = b.lights ? 0.25 : 0.0;   // the headlight bar spills onto the hood
-    const Vec3 lampP = base + upT * (0.6 * sc);   // D-04: the explorer's lamp on its hull (one point: it is a few metres long)
+    const Vec3 lampP = base + upT * (0.6 * sc);   // the explorer's lamp on its hull (one point: it is a few metres long)
     auto shadeN = [&](const Vec3& n, double tint) {
         double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
         double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp;

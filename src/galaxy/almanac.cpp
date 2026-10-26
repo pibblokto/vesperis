@@ -382,9 +382,9 @@ std::string almanacLabel(const AlmanacEvent& e, const StarSystem& sys, const std
         case AL_ECLIPSED: return N(e.body) + " ECLIPSED BY " + N(e.body2);
         case AL_CONJUNCTION: snprintf(buf, sizeof buf, " %.1f%s APART", e.value / DEG, degree); return N(e.body) + " AND " + N(e.body2) + buf;
         case AL_SUN_TRANSIT: return N(e.body) + " ACROSS THE SUN";
-        case AL_FRONT: return std::string(e.body >= 0 && e.body < (int)sys.bodies.size() && kindHas(sys.bodies[e.body].type, KT_DUST) ? "A DUST FRONT FROM THE " : "A FRONT FROM THE ") + frontCompass(e.value);   // W-03
+        case AL_FRONT: return std::string(e.body >= 0 && e.body < (int)sys.bodies.size() && kindHas(sys.bodies[e.body].type, KT_DUST) ? "A DUST FRONT FROM THE " : "A FRONT FROM THE ") + frontCompass(e.value);
         case AL_FRONT_CLEAR: return "THE FRONT CLEARS";
-        case AL_SHOWER: return N(e.body) + " METEORS PEAK";   // W-04
+        case AL_SHOWER: return N(e.body) + " METEORS PEAK";
         case AL_FREE: return "RUN FOR " + countdownString(e.value);
         default: return "?";
     }

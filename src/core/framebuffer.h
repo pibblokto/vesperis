@@ -1,14 +1,7 @@
-// Software framebuffer in the spirit of the VGA mode 13h target of the original
-// game: an indexed image smoothed by the "mush" filter and converted through a
-// palette of intensity ramps. Since M10-03 a pixel is 16 bits; since O0-02
-// (2026-09-27) the top 5 bits select one of 32 banks (a "material" ramp) and
-// the low 11 bits are its intensity (32 units per classic shade step, so the
-// classic range 0..63 is 0..2047). 16 banks were not enough for two worlds with
-// discs in one frame: they shared the forest/sand/snow/grass banks and the
-// smaller one borrowed the bigger one's colours (B-305).
-// The mush averages only intensities: colours never bleed across banks but
-// edges melt, which is the soft, smeared, low-fi look of Noctis. The resolution
-// is 320x200 times a runtime scale (M10-01); the mush box grows with the scale.
+// The software framebuffer (the original's VGA mode 13h in spirit): a 16-bit indexed image, the top 5 bits one of 32 banks (a material's
+// ramp: two worlds' discs in one frame never share one) and the low 11 bits its intensity (32 units a classic shade step: the classic 0..63
+// is 0..2047), smoothed by the mush filter (it averages intensities alone: colours never bleed across banks, edges melt) and turned to
+// colour through the palette's intensity ramps. 320x200 times a runtime scale; the mush's box grows with the scale.
 #pragma once
 #include "types.h"
 #include <cstdint>
@@ -59,7 +52,7 @@ struct Framebuffer {
     void glowDisc(double cx, double cy, double radius, double coreRadius, int maxAdd, int bankIfEmpty, bool skipOccluded = false);
     // Convert to 0xAABBGGRR (little endian R,G,B,A) with brightness gain; the 64 stops of
     // each bank are interpolated to 256 steps.
-    void toRGB(uint32_t* out, double gain, bool dither = false) const;   // dither: 2x2 ordered dither on the intensity (M6-01)
+    void toRGB(uint32_t* out, double gain, bool dither = false) const;   // dither: 2x2 ordered dither on the intensity
 };
 
 // Define the 64 stops of a bank as a piecewise-linear ramp through colour stops

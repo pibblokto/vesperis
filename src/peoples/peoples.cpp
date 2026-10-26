@@ -119,7 +119,7 @@ double logUni(Rng& r, double lo, double hi) { return std::exp(std::log(lo) + r.u
 
 // the age and its years from the people's own generator: every draw from fixed positions of the stream whatever the age, so
 // a table's change moves no other number; the end's years from C-08's own hash (the same years where the bounds are C-08's).
-// R-413: `age` the age reached where it is given (a world's second people reached its first's), the draw taken all the same
+// `age` the age reached where it is given (a world's second people reached its first's), the draw taken all the same
 PeopleAge ageOfPeople(const BodyGen& pg, int age = -1) {
     PeopleAge a;
     Rng r(pg.seed ^ 0xA01A6EULL);
@@ -201,7 +201,7 @@ SunLoss sunLossOf(const BodyGen& g, const PeopleAge& first) {
 // what the world says about the ways it could end a people (H-02 reads it for the disasters of a history)
 WorldRead readWorld(const StarSystem& sys, const Body& b, const BodyGen& g) {
     WorldRead w;
-    w.desert = kindHas(nowKind(g), KT_DRY);   // P-04: a scorched world's people died as a desert's did, of the drying and the climate
+    w.desert = kindHas(nowKind(g), KT_DRY);   // a scorched world's people died as a desert's did, of the drying and the climate
     w.redDwarf = sys.star.cls == STAR_RED_DWARF;
     for (int t : {TR_CINDER_FIELD, TR_TRAPS, TR_RIFT, TR_GEYSERS, TR_CORONAE}) if (g.hasTrait(t)) w.volc += 0.5;
     int comets = 0; for (const Body& o : sys.bodies) if (o.type == PT_COMET) comets++;
@@ -278,10 +278,10 @@ PeopleAge peopleAgeOf(const BodyGen& g, int people) {
         if (peopleGen(w, 1).seed == g.seed) return peopleAgeOf(w, 1);
     }
     PeopleAge first = ageOfPeople(peopleGen(g, 0));
-    if (g.drifter) first.endedYearsAgo = sunLossOf(g, first).ended;   // D-05: after the drifter left its star
+    if (g.drifter) first.endedYearsAgo = sunLossOf(g, first).ended;   // after the drifter left its star
     if (people <= 0) return first;
     PeopleAge a = ageOfPeople(peopleGen(g, people), first.age);
-    if (peoplesEndedTogether(g)) a.endedYearsAgo = first.endedYearsAgo;   // C-13: one catastrophe for both
+    if (peoplesEndedTogether(g)) a.endedYearsAgo = first.endedYearsAgo;   // one catastrophe for both
     return a;
 }
 
@@ -333,7 +333,7 @@ PeopleProfile peopleProfileOf(const StarSystem& sys0, const Body& b0, const Body
     bool together = n > 1 && peoplesEndedTogether(g);
     PeopleAge other; if (n > 1) other = peopleAgeOf(g, 1 - P.which);
     int lastLen = P.lastYear - P.eras.back().start + 1;
-    if (g.drifter) {   // D-05: the loss of the sun, given (the 37 never drawn for them): its length and stages the generator's (`sunLossOf`), its way by
+    if (g.drifter) {   // the loss of the sun, given (the 37 never drawn for them): its length and stages the generator's (`sunLossOf`), its way by
         // what the system it left had (a giant to throw it, a companion to dance with), the world's own draw (two peoples lost one sun)
         const PeopleAge first = n > 1 && P.which > 0 ? peopleAgeOf(g, 0) : static_cast<const PeopleAge&>(P);
         const SunLoss L = sunLossOf(g, first);
@@ -421,7 +421,7 @@ PeopleProfile peopleProfileOf(const StarSystem& sys0, const Body& b0, const Body
     return P;
 }
 
-double sunLightOf(int onsetYear, int lastSunrise, int year) {   // D-05
+double sunLightOf(int onsetYear, int lastSunrise, int year) {
     const int ls = std::max(onsetYear, lastSunrise);
     if (year < onsetYear) return 1;
     if (year > ls) return 0;

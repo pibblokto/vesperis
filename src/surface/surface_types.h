@@ -19,7 +19,7 @@ struct Player {
     bool swimming = false;
     double eyeHeight = 1.65;
     double speedMul = 1;
-    // M8 movement state
+    // movement state
     double stamina = 100;     // 0..100
     bool sprinting = false;
     double sprintRamp = 0;    // 0..1 acceleration into the sprint
@@ -47,9 +47,8 @@ struct Buggy {
     std::vector<Track> tracks;
     int trackHead = 0;
     double trackAccum = 0;
-    struct Puff { float x, y, z, age; uint8_t kind = 0; };   // N4-04: 0 dust, 1 snow, 2 mud
+    struct Puff { float x, y, z, age; uint8_t kind = 0; };   // 0 dust, 1 snow, 2 mud
     std::vector<Puff> puffs;
-    // N4
     double wheelY[4] = {0, 0, 0, 0};   // suspension travel per wheel (FL? no: 0 rear-left, 1 front-left, 2 rear-right, 3 front-right), metres
     bool brake = false;                // braking or handbrake (tail lights)
     double skid = 0;                   // 0..1 sideways slide (sound)
@@ -57,10 +56,10 @@ struct Buggy {
     double topSpeed = 0;               // m/s, this deployment
     int gear = 0;                      // 0..2 engine pitch step
     double airT = 0;                   // seconds airborne
-    double groundY = -1e9;             // B-307: the ground contact height of the previous frame (the slope's vertical speed)
+    double groundY = -1e9;             // the ground contact height of the previous frame (the slope's vertical speed)
     double thud = 0;                   // >0: a landing or collision thump for the synth (consumed by the game)
     double bumpT = 0;                  // seconds until the next small-rock bump can register
-    double jolt = 0;                   // N4-06: a decaying dip of the nose camera after a thump (smooth, never random)
+    double jolt = 0;                   // a decaying dip of the nose camera after a thump (smooth, never random)
 };
 
 // R-403 (2026-10-02): the drone. A second vehicle carried by the capsule, built like the buggy (one closed hull with the
@@ -85,11 +84,11 @@ struct Drone {
 struct SurfaceEnvironment {
     SunInfo sun;                // the light used for shading: the primary, or both suns blended (M5-01)
     SunInfo sunDisc;            // the primary star as seen (its disc, flares, eclipses)
-    SunInfo sun2;               // M5-01: the companion star, when hasSun2
+    SunInfo sun2;               // the companion star, when hasSun2
     bool hasSun2 = false;
     double sun2Share = 0;       // 0..1 share of the light coming from the companion
-    double glow = 1;            // B-425: the blended light's glow in the sky, 0..1 of its own sun's (a far sun alone up makes a faint one)
-    double primaryRel = 1;      // B-425: the primary's light beside the world's own sun, 0..1 (1 but on a world of the companion: the primary is its far sun)
+    double glow = 1;            // the blended light's glow in the sky, 0..1 of its own sun's (a far sun alone up makes a faint one)
+    double primaryRel = 1;      // the primary's light beside the world's own sun, 0..1 (1 but on a world of the companion: the primary is its far sun)
     RGB lightColor;             // colour of the blended light
     double skyBrightness = 0;   // 0..1
     double temperatureC = 0;
@@ -109,20 +108,20 @@ struct SurfaceEnvironment {
     double moonLight = 0;       // 0..0.5 relative to full sunlight
     RGB moonColor;
     int moonBody = -1;
-    // M4-06 weather
+    // weather
     double snow = 0;            // 0..1 falling snow
     double dust = 0;            // 0..1 dust storm (thin-atmosphere worlds)
     double fogBank = 0;         // 0..1 fog patch
     double hail = 0;            // 0..1
     double aurora = 0;          // 0..1 strength of the aurora tonight
-    double auroraStorm = 0;     // R-402: the star's storm tonight, 0..1
-    double flare = 0;           // S-01: a red dwarf's flare now, 0..1 (the exposure opens past its clamp by it)
-    double ringShadow = 0;      // O0-01: the world's ring between the site and the sun (0..0.85)
-    double cometActivity = 0;   // O4: on a comet, how hard the nucleus vents (0 far from the star .. 1 at periapsis)
-    // W-03: the fronts at the place: the pattern's cloud alone, the fronts' cloud, their rain (or dust) and cold here, and the
+    double auroraStorm = 0;     // the star's storm tonight, 0..1
+    double flare = 0;           // a red dwarf's flare now, 0..1 (the exposure opens past its clamp by it)
+    double ringShadow = 0;      // the world's ring between the site and the sun (0..0.85)
+    double cometActivity = 0;   // on a comet, how hard the nucleus vents (0 far from the star .. 1 at periapsis)
+    // the fronts at the place: the pattern's cloud alone, the fronts' cloud, their rain (or dust) and cold here, and the
     // nearest front's line (metres ahead of the place, positive while it has not come; 1e18 none within reach)
     double cloudPattern = 0, frontCloud = 0, frontRain = 0, frontCold = 0, frontAhead = 1e18;
-    // Q-02 (TR_FOG_SEAS): the valley fog of the morning now (0..1) and its top (metres; -1e9 none)
+    // TR_FOG_SEAS: the valley fog of the morning now (0..1) and its top (metres; -1e9 none)
     double fogSea = 0, fogSeaTop = -1e9;
 };
 
@@ -161,8 +160,8 @@ struct Flock {
     int n = 10;
     uint64_t seed = 0;
     double cruiseAlt = 60, restTimer = 90, landed = 0;   // M4-05: flocks land and rest
-    int species = -1;                                     // N3: the flyer species of the bestiary
-    bool perched = false;                                 // N3: resting in a tree
+    int species = -1;                                     // the flyer species of the bestiary
+    bool perched = false;                                 // resting in a tree
     double perchX = 0, perchZ = 0, perchY = 0, perchR = 2;
 };
 // N3 creature behaviour states
@@ -174,7 +173,6 @@ struct Critter {
     int kind = 0;             // 0 grazer, 1 crawler (M4-05; now 1 for hexapods)
     int herd = 0;
     double fleeT = 0;
-    // N3
     int species = -1;         // index into the bestiary
     int state = CS_IDLE;
     double gaitPhase = 0;     // stride cycles walked
@@ -188,11 +186,11 @@ struct Critter {
 struct TreeInst {
     double x = 0, z = 0, gy = 0;   // position and ground height (local metres)
     double h = 8, r = 3, cy = 5;   // height, canopy radius, canopy centre height above the ground
-    double lx = 0, lz = 0;         // B-315: the lean: where the canopy centre sits relative to the foot (metres)
+    double lx = 0, lz = 0;         // the lean: where the canopy centre sits relative to the foot (metres)
     int fam = 0;                   // silhouette: 0 dome, 1 cone, 2 umbrella, 3 tiered giant, 4 fibrous stalk, 5 fern tree, 6 mushroom tree, 7 weeping, 8 candelabra, 9 spire
     int bank = 3;                  // leaf bank: 3 forest, 5 second family / autumn, 10 straw variant
     bool dead = false, bare = false;   // a dead skeleton; deciduous in winter
-    bool stump = false;            // P-04: a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
+    bool stump = false;            // a stone stump of a scorched world's petrified forest (a broken trunk, no branches)
     uint64_t seed = 0;
     double dens = 0;               // the canopy density field at its cell (1 = deep forest)
 };
@@ -213,5 +211,5 @@ struct LogInst { double x = 0, z = 0, heading = 0, len = 6, radius = 0.4; uint64
 struct Ruin {
     double x, z, heading, size;
     const RuinSpec* spec = nullptr;   // the settlement's layout (the cell cache's)
-    double reach = 0;                 // B-420: how far its pieces reach from its middle (its harbour, a fallen tower's top): past its radius at times
+    double reach = 0;                 // how far its pieces reach from its middle (its harbour, a fallen tower's top): past its radius at times
 };

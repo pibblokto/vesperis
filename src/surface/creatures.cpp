@@ -199,7 +199,7 @@ static bool waterNear(SurfaceSite& s, double x, double z, double& wx, double& wz
 void SurfaceView::updateLife(double dt, double t) {
     double t0 = nowMs();
     lastT = t;
-    updateHabitat();   // B-316
+    updateHabitat();
     double sky = env.skyBrightness;
     // ---- flocks: circle, rest on the ground or in a tree, perch through the night (day flyers) or the day (dusk flyers)
     for (Flock& f : flocks) {
@@ -327,7 +327,7 @@ void SurfaceView::updateLife(double dt, double t) {
                 }
                 if (dp < 20) hoof += std::min(1.0, c.size) * (c.speed / std::max(sp.runSpeed, 0.1)) * 0.5;
             }
-            { double hx = herds[c.herd].cx - c.x, hz = herds[c.herd].cz - c.z; if (hx * hx + hz * hz > 300.0 * 300.0) c.heading = std::atan2(hx, hz); }   // B-316: a herd stays within 300 m of its spot
+            { double hx = herds[c.herd].cx - c.x, hz = herds[c.herd].cz - c.z; if (hx * hx + hz * hz > 300.0 * 300.0) c.heading = std::atan2(hx, hz); }   // a herd stays within 300 m of its spot
         }
     }
     hoofLevel = std::min(1.0, hoof);
@@ -456,7 +456,7 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         double fog = fogOf(dist);
         auto shadeOf2 = [&](const Vec3& n, double mul) {
             double light = ambient + (1 - ambient) * std::max(0.0, dot(n, sd)) * sunUp * lf;
-            if (nLamps) light += (1 - ambient) * lampAt(c0, &n);   // D-04: the explorer's lamp
+            if (nLamps) light += (1 - ambient) * lampAt(c0, &n);   // the explorer's lamp
             double s = 44 * std::pow(light, 0.7) * sp.tone * mul;
             return s + (63 - s) * fog;
         };

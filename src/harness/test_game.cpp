@@ -54,7 +54,7 @@ void TestGame::testAimAtBody(int body) {
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(clampd(fwd.y, -1, 1));
 }
 
-std::string TestGame::testRoadInfo() const {   // C-09
+std::string TestGame::testRoadInfo() const {
     std::string s = fmt("zoom roads %d (%.0f ms); site roads %zu (%.1f ms, %s, wear %.2f)", (int)zoomRoads.size(), zoomRoadsMs, surf.site.roads.size(), surf.site.roadsMs, surf.site.roadCultures[0].paved ? "paved" : "beaten", surf.site.roadCultures[0].roadWear);
     double d, along, hd; const SiteRoad* rd;
     if (!surf.site.roads.empty() && surf.site.roadAt(surf.player.x, surf.player.z, 30, d, along, hd, rd))
@@ -64,7 +64,7 @@ std::string TestGame::testRoadInfo() const {   // C-09
     return s;
 }
 
-bool TestGame::testWalkToWork(double withinM) {   // T-03
+bool TestGame::testWalkToWork(double withinM) {
     if (!surf.valid || surf.inVehicle() || !worldHadCivilisation(surf.site.gen)) return false;
     const Vec3 here = surf.site.unitAt(surf.player.x, surf.player.z);
     std::vector<std::shared_ptr<const Work>> near; worksAround(surf.site.gen, here, std::min(withinM, 60000.0), near);   // B-418: the land's within 60 km
@@ -79,7 +79,7 @@ bool TestGame::testWalkToWork(double withinM) {   // T-03
     return true;
 }
 
-bool TestGame::testWalkToRoad(double withinM) {   // C-09
+bool TestGame::testWalkToRoad(double withinM) {
     double d, along, hd; const SiteRoad* rd;
     if (surf.site.roads.empty() || !surf.site.roadAt(surf.player.x, surf.player.z, withinM, d, along, hd, rd)) return false;
     double bestD = 1e9, bx = 0, bz = 0;   // the nearest point of its centre line
@@ -113,7 +113,7 @@ void TestGame::testLandSite() {
                     if (m.materialAt(lo + i * 2 * DEG, la + j * 2 * DEG) == MAT_WATER) land = false;
             if (!land) continue;
             if (anyLat > 1e8) { anyLat = la; anyLon = lo; }
-            SurfaceSite probe; probe.initFrame(&sys, landBody, la, lo, t); probed++;   // S-01: level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
+            SurfaceSite probe; probe.initFrame(&sys, landBody, la, lo, t); probed++;   // level enough for the drive (the grassland of a locked world's first site lay on a mountainside: 18 m of drive)
             if (siteSlope(probe) < 0.1) { setDrainageEnabled(true); landLat = la; landLon = lo; return; }
         }
     }
@@ -144,9 +144,9 @@ void TestGame::testParkAt(const Star& s, int body, bool waitMap) {
     ship.yaw = std::atan2(fwd.x, fwd.z); ship.pitch = std::asin(fwd.y);
     nb.update(ship.pos);
     state = GameState::SPACE;
-    worldPlanPrefetch(spaceR.genFor(b));   // T-01
+    worldPlanPrefetch(spaceR.genFor(b));
     spaceR.setSeason(sys, t);   // F-02: the season the next frame draws (the renderer held the last system's: the map was made for it, then again)
-    if (KINDS[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // F-02: the tests' landing map drawn from their next frame, as before
+    if (KINDS[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // the tests' landing map drawn from their next frame, as before
 }
 
 void TestGame::testWaitMap() { testWaitMapOf(landBody); }
@@ -194,12 +194,12 @@ void TestGame::testTypeText(const std::string& s) {
     in.newFrame(); in.pressed[KEY_ENTER] = true; in.down[KEY_ENTER] = true; frame(in, 1.0 / 30);
 }
 
-std::string TestGame::testDroneInfo() const {   // R-403
+std::string TestGame::testDroneInfo() const {
     const Drone& d = surf.drone;
     return fmt("deployed=%d in=%d landed=%d speed=%.1f m/s alt=%.0f m vs=%+.1f heading=%.0f odometer=%.0f m rotor=%.2f chase=%d", (int)d.deployed, (int)surf.inDrone, (int)d.landed, d.speed, d.altAboveGround, d.vy, wrap2pi(d.heading) / DEG, d.odometer, d.rotor, (int)surf.chaseCam);
 }
 
-bool TestGame::testFlySetup(double altM) {   // R-403
+bool TestGame::testFlySetup(double altM) {
     if (state != GameState::SURFACE || !surf.valid) return false;
     if (surf.inBuggy) surf.toggleBuggy();
     surf.relocateCapsule(surf.player.x + 5, surf.player.z + 3);
@@ -226,7 +226,7 @@ std::string TestGame::testDebugInfo() const {
     return r;
 }
 
-std::string TestGame::testGraveInfo() const {   // C-12
+std::string TestGame::testGraveInfo() const {
     const SurfaceView::NearGrave& ng = surf.nearGrave;
     std::string last = guide.log.empty() ? std::string("-") : guide.log.back().kind + ": " + guide.log.back().text;
     return fmt("grave: %s; %zu graves in the guide; last log: %s", ng.k >= 0 ? fmt("%s (%.1f m, %s)", ng.line.c_str(), ng.dist, SETTLEMENT_CLASS_NAMES[ng.sclass]).c_str() : "none within reach", guide.graves.size(), last.c_str());
@@ -245,7 +245,7 @@ bool TestGame::testWalkToGrave() {   // C-12: a metre in front of the nearest se
     return true;
 }
 
-int TestGame::testWalkToRecord(int medium, bool archive) {   // T-04
+int TestGame::testWalkToRecord(int medium, bool archive) {
     if (!surf.valid || surf.inVehicle()) return -1;
     double bestD = 1e18; int found = -1; ShardSite site; double rx = 0, rz = 0, bx = 0, bz = 0;
     surf.forNearbyRuins(surf.player.x, surf.player.z, 3, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
@@ -547,7 +547,7 @@ uint32_t TestGame::testLandingMapTexel(int tx, int ty, bool clouds) {
     return mapBase[ty * PlanetMap::W + tx];
 }
 
-double TestGame::testFrontBandAt(double latDeg, double lonDeg) {   // W-03
+double TestGame::testFrontBandAt(double latDeg, double lonDeg) {
     if (landBody < 0 || landBody >= (int)sys.bodies.size()) return 0;
     const SpaceRenderer::FrontMap* fm = spaceR.frontsFor(sys.bodies[landBody], t);
     return fm ? frontMapAt(fm->cloud, PlanetMap::W, PlanetMap::H, lonDeg * DEG, latDeg * DEG) : 0.0;
@@ -621,7 +621,7 @@ std::string TestGame::testRadarInfo() const {
     std::string s = fmt("radar: %s, gain x%.0f, %zu far (%d cells, %.1f ms) + %zu local", r.on ? "on" : "off", radarGain(), r.far.size(), r.scanCells, r.scanMs, r.local.size());
     if (r.gainStep > 0) s += r.deepReady ? fmt(" + %d deep of %zu (%d frames, %.1f ms)", (int)std::count_if(r.deep.begin(), r.deep.end(), [&](const Signal& d) { return d.needGain <= radarGain(); }), r.deep.size(), r.deepFrames, r.deepMs) : fmt(" + deep scan at %d cells", r.deepScan.cells);
     s += fmt(", reading %.2f (the beam's sum %.2f, the floor %.2f)%s", r.reading, r.sum, r.floorNow, r.overload ? " OVERLOAD" : "");
-    s += fmt(", the sky %.2f", r.sky);   // C-16
+    s += fmt(", the sky %.2f", r.sky);
     if (r.under >= 0 && r.under < (int)r.all.size()) s += fmt(", under it %s %.0f ly (%.1f deg off, %.2f through%s)", SIGNAL_KIND_NAMES[r.all[r.under].kind], r.all[r.under].distLy, r.angle[r.under] / DEG, audio.radarSignal2, audio.radarHet > 0 ? fmt(", a whistle at %.0f Hz", audio.radarHetHz).c_str() : "");
     if (r.rise.on) s += fmt(", a false rise %.1f deg off (%.2f%s)", r.riseAngle / DEG, r.riseGain, r.rise.spent ? ", spent" : "");
     if (r.nothingT > 0) s += ", NOTHING THERE";
@@ -653,12 +653,12 @@ std::string TestGame::testShardsInfo() const {
     if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].music)
         piece = fmt("; piece: %s, %.0f s, %zu notes, beat %.1f of %.0f, %s", PIECE_FORM_NAMES[shardWorld.piece.form], shardWorld.piece.seconds, shardWorld.piece.notes.size(), pieceBeatNow(), shardWorld.piece.beats,
                     pieceEnded() ? "ended" : (piecePaused ? "paused" : (audio.piece ? "playing" : "stopped")));
-    std::string speech;   // C-05
+    std::string speech;
     if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && !shardWorld.shards[shardHeld[shardSel]].music)
         speech = fmt("; speech: %.1f of %.1f s, word %d, %s", speechT >= 0 ? speechT : 0.0, shardWorld.speech.seconds, speechT >= 0 ? speechWordAt(shardWorld.speech, speechT) : -1,
                      speechT < 0 ? "stopped" : (speechEnded() ? "ended" : (speechPaused ? "paused" : "speaking")));
-    int lentN = 0; for (int i : shardHeld) if (shardLent(i)) lentN++;   // C-14
-    std::string page = shardsLevel == 2 && shardPageStart.size() > 1 ? fmt(", page %d of %zu", shardPage + 1, shardPageStart.size()) : std::string();   // H-04
+    int lentN = 0; for (int i : shardHeld) if (shardLent(i)) lentN++;
+    std::string page = shardsLevel == 2 && shardPageStart.size() > 1 ? fmt(", page %d of %zu", shardPage + 1, shardPageStart.size()) : std::string();
     return fmt("decoder: level %d, %zu worlds, %zu held of %s (people %d of %d, %d lent), shard %d: %d of %zu words read%s, %s%s%s", shardsLevel, shardWorldKeys.size(), shardHeld.size(), shardWorld.valid ? shardWorld.key.c_str() : "-", shardWorld.which + 1, shardWorld.peoples, lentN,
                shardSel, read, shardWords.size(), page.c_str(), shardFresh ? fmt("decoding %.0f%%", 100 * clampd(speechT / std::max(shardWorld.speech.seconds, 1e-9), 0, 1)).c_str() : "idle", speech.c_str(), piece.c_str());
 }

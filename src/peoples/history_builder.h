@@ -73,12 +73,12 @@ struct Builder {
     std::vector<int> standBig, standSmall;   // the places founded (some since left: dropped when met)
 
     std::vector<int> sunOmens;           // D-05: the years the omens of the lost sun's way were seen (the warning's)
-    int sunSeen = 0;                     // D-05: the HE_SUN things seen so far (bits)
+    int sunSeen = 0;                     // the HE_SUN things seen so far (bits)
 
     Builder(const StarSystem& s, const Body& b, const BodyGen& gg, int p, History& h) : sys(s), body(b), g(gg), people(p), H(h) {}
 
-    bool airFrozenThen() const { return g.hasTrait(TR_FROZEN_AIR); }   // D-05: its air fell as snow in the dark (the world's own trait now)
-    // D-05: the light of a drifter's people's sun by year over its old light: whole to the onset, then falling as the orbit widened (ten times
+    bool airFrozenThen() const { return g.hasTrait(TR_FROZEN_AIR); }   // its air fell as snow in the dark (the world's own trait now)
+    // the light of a drifter's people's sun by year over its old light: whole to the onset, then falling as the orbit widened (ten times
     // the distance by the last sunrise, its light the inverse square of it), the stars' alone after the last sunrise
     double sunAt(int y) const {
         if (H.cause != CAUSE_SUN_LOST) return 1;

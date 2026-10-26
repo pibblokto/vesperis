@@ -15,7 +15,7 @@ bool peopleWorldOf(const Star& s, int bi, PeopleWorld& w) {
     return w.valid;
 }
 static void applyRx(AudioState& st, const RxOpts& o) {
-    st.radar = o.level; st.radarRogue = o.rogue; st.radarRogue2 = o.rogue2; st.radarSet = o.set; st.hum = o.hum;   // D-03
+    st.radar = o.level; st.radarRogue = o.rogue; st.radarRogue2 = o.rogue2; st.radarSet = o.set; st.hum = o.hum;
     st.radarGainT = o.gainT; st.radarSky = o.sky; st.radarWear = o.wear; st.radarDrive = o.drive; st.radarAge = o.age;
     st.radarKind2 = o.kind2; st.radarVoice2 = o.voice2; st.radarAge2 = o.age2; st.radarSeed2 = o.seed2; st.radarPulseHz2 = o.pulse2; st.radarSignal2 = o.sig2;
     st.radarHet = o.het; st.radarHetHz = o.hetHz; st.radarIntermod = o.intermod;
@@ -205,7 +205,7 @@ bool firstPeopleWorld(PeopleWorld& w, Signal* sigOut) {
 // C-07: `signals [sx sy sz] [reach]`: the far signals heard from a sector (home by default): each with its kind, its distance (the
 // age), its direction (galactic longitude and latitude from the observer), its star's class and sector, the world and the
 // recording on the air at the game's first hour; then the system's own signals there, if the sector holds a star
-// C-15: the gain's six steps from a sector: the peoples' signals and the pulsars heard at each, what the step adds (with the distances
+// the gain's six steps from a sector: the peoples' signals and the pulsars heard at each, what the step adds (with the distances
 // of the peoples it adds), the nearest and the farthest, and the scan's cost; `full` one line a step, else one line for the place
 static void printGainSteps(int64_t sx, int64_t sy, int64_t sz, const std::string& name, bool full) {
     Vec3 obs((sx + 0.5) * SECTOR_KM, (sy + 0.5) * SECTOR_KM, (sz + 0.5) * SECTOR_KM);
@@ -249,15 +249,15 @@ int runSignals(int argc, char** argv) {
             int idx = transmittedShard(s.seed, 3.6e6);
             Shard sh = shardOf(sys, b, g, L, idx);
             what = fmt("%s (body %d, the %s): on the air S%d, %s", b.name.c_str(), s.body, L.people.c_str(), idx, sh.music ? "a piece of music" : fmt("a voice: \"%s\"", trunc(sh.text, 60).c_str()).c_str());
-        } else if (s.kind == SIG_ROGUE) what = signalSourceLine(s);   // D-02
+        } else if (s.kind == SIG_ROGUE) what = signalSourceLine(s);
         else what = fmt("%.2f pulses a second", s.pulseHz);
-        int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < s.needGain - 1e-9) step++;   // C-15: the least step that hears it
-        double az = wrap2pi(std::atan2(d.x, d.z)) / DEG, el = std::asin(clampd(d.y, -1, 1)) / DEG;   // C-16: where the radar camera points for it (its AZ and EL)
+        int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < s.needGain - 1e-9) step++;   // the least step that hears it
+        double az = wrap2pi(std::atan2(d.x, d.z)) / DEG, el = std::asin(clampd(d.y, -1, 1)) / DEG;   // where the radar camera points for it (its AZ and EL)
         if (s.kind == SIG_PEOPLE && s.age >= 0) what = fmt("the %s age; ", AGE_NAMES[s.age]) + what;
         printf("  %-24s %6.1f ly  lon %6.1f lat %5.1f  AZ %03.0f EL %+03.0f  x%-2d power %6.3f  strength %.2f  %s %s at %lld %lld %lld: %s\n", SIGNAL_KIND_NAMES[s.kind], s.distLy, lon, lat, az, el, SIGNAL_GAINS[step], s.power, signalStrengthAtGain(s, gain), STAR_CLASSES[s.star.cls].code, STAR_CLASSES[s.star.cls].name,
                (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz, what.c_str());
     }
-    if (rest.size() < 4 && !wav) {   // C-15: the gain's steps from this sector, and from home the test worlds' too
+    if (rest.size() < 4 && !wav) {   // the gain's steps from this sector, and from home the test worlds' too
         printf("the gain's steps from sector %lld %lld %lld:\n", (long long)sx, (long long)sy, (long long)sz);
         printGainSteps(sx, sy, sz, "here", true);
         if (sx == HOME_SX && sy == HOME_SY && sz == HOME_SZ) {
@@ -279,7 +279,7 @@ int runSignals(int argc, char** argv) {
                 std::string fn = fmt("shots/tests/radar_%s_%d.wav", NAMES[kind], k + 1); writeWav16(fn, pcm, 22050);
                 printf("  %s %d: 12 s rendered, peak %.3f, rms %.3f -> %s\n", NAMES[kind], k + 1, r.peak, r.rms, fn.c_str());
             }
-        {   // C-15: a pulsar overdriven
+        {   // a pulsar overdriven
             RxOpts od; od.drive = 1.0; std::vector<int16_t> pcm; RenderStats r = renderKind(SIG_PULSAR, 0x51, RATES[1], 12.0, &pcm, od);
             writeWav16("shots/tests/radar_overdriven_pulsar.wav", pcm, 22050);
             printf("  pulsar overdriven 1.0: 12 s, peak %.3f, rms %.3f -> shots/tests/radar_overdriven_pulsar.wav\n", r.peak, r.rms);
@@ -293,7 +293,7 @@ int runSignals(int argc, char** argv) {
                 std::string what = prog.machine ? fmt("%.0f s on the air", prog.seconds) : (prog.kind == RP_MUSIC ? fmt("the piece at %.2f of its speed", prog.pieceSpeed) : fmt("\"%s\"%s", trunc(decodedText(prog.words), 40).c_str(), prog.repeats > 1 ? fmt(", %d times with %.1f s between", prog.repeats, prog.gap).c_str() : ""));
                 printf("    %-18s 12 s, peak %.3f, rms %.3f: %s -> %s\n", RADIO_PROGRAMME_NAMES[p], r.peak, r.rms, what.c_str(), fn.c_str());
             }
-            for (int p : {(int)RP_VOICE, (int)RP_BEACON, (int)RP_MUSIC})   // C-15: a near signal through a high gain, the receiver overdriven
+            for (int p : {(int)RP_VOICE, (int)RP_BEACON, (int)RP_MUSIC})   // a near signal through a high gain, the receiver overdriven
                 for (double drive : {0.5, 1.0}) {
                     RxOpts od; od.drive = drive; std::vector<int16_t> pcm; RenderStats r = renderProgramme(w, p, 12.0, &pcm, nullptr, od);
                     std::string fn = fmt("shots/tests/radar_overdriven_%s_%.0f.wav", PNAMES[p], drive * 100); writeWav16(fn, pcm, 22050);
@@ -303,7 +303,7 @@ int runSignals(int argc, char** argv) {
             for (int i = 0; i < SHARDS_PER_WORLD; i++) counts[programmeOf(w.seed, i, w.shards[i].music)]++;
             printf("  its broadcast over the fifty slots:"); for (int p = 0; p < RP_COUNT; p++) if (counts[p]) printf(" %s %d;", RADIO_PROGRAMME_NAMES[p], counts[p]); printf("\n");
         } else printf("  no people's world within reach of home: no programmes rendered\n");
-        // C-16: what the gain lets in, for the ear and for the levels (C-07's lesson: its first bed clipped at an rms of 0.25): the bed at
+        // what the gain lets in, for the ear and for the levels (C-07's lesson: its first bed clipped at an rms of 0.25): the bed at
         // three gains (toward the plane; at x32 toward a pole and the core too), a near voice at three gains and a far one worn at three,
         // two signals mixed, the top step's static long enough for its stranger events, and each age's programmes from its test world
         printf("  C-16, what the gain lets in (the bed toward the band's plane, sky 0.4, unless said):\n");

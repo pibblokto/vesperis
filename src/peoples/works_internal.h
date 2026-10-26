@@ -51,7 +51,7 @@ struct WB {
     std::unordered_map<uint64_t, CellS> cells;
     // the people being built
     int p = 0, age = 0; const PeoplePlan* pp = nullptr; std::shared_ptr<const History> H; Culture C; uint64_t pseed = 0;
-    int ageFrom = 1;   // B-414: the first year of the people's last age: what was made, fought or left before it is gone (`ageFromOf`)
+    int ageFrom = 1;   // the first year of the people's last age: what was made, fought or left before it is gone (`ageFromOf`)
     int made[WO_COUNT] = {};
 
     WB(const BodyGen& gg, const WorldPlan& PP, std::vector<Work>& o) : g(gg), P(PP), out(o), Rm(gg.R * 1000.0) {}
@@ -132,13 +132,13 @@ struct WB {
 
     void mines(); void dams(); void aqueducts(); void observatories(); void shrine(); void geoglyphs(); void fortLine(); void battlefields();
     void launchSites(); void antennas(); void colossi(); void terraforms(); void shelter(); void strange(); void lighthouses();
-    // D-05: a people that lost its sun: a shelter's site (the last's and the others'), the warmest open ground near a place, the works of the end
+    // a people that lost its sun: a shelter's site (the last's and the others'), the warmest open ground near a place, the works of the end
     bool shelterSite(const Vec3& u0, double r0, Rng& rng, Vec3& best, double& bestDown);
     int shelterStyle() const;
     bool warmGround(const Vec3& u0, double r0, double reach, Rng& rng, Vec3& best);
     void sunlostWorks();
     void mineAt(Work& w, int style, double h, double down, double pitR, Rng& rng);
-    // B-418: a cell of the land (`landWork`: what its ground offers, the kind drawn, sited by its rule inside the cell)
+    // a cell of the land (`landWork`: what its ground offers, the kind drawn, sited by its rule inside the cell)
     bool landWork(const LandCell& L);
     LandSettle landSettle(const LandCell& L);
     bool landSummit(const LandCell& L, double reach, Rng& rng, Vec3& top, double& hTop);

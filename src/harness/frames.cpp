@@ -24,8 +24,8 @@ void warmMaps(SpaceRenderer& sr, const StarSystem& sys, int only) {
 // misses by over a degree (G-04: a season without that light at this latitude, a polar day) over eleven more epochs spread
 // through the year (the parent's for a moon); `errOut` is the miss, so a finder can tell a world locked to its star (the sun
 // never moves: another longitude) from a latitude that never sees that light
-// G-04: the altitude of the light the scene is lit by: round a binary, the two suns blended by their strength above the horizon
-// as `SurfaceView::computeEnvironment` blends them (the finders used to match the primary alone: a "night" under the companion)
+// the altitude of the light the scene is lit by: round a binary, the two suns blended by their strength above the horizon
+// as `SurfaceView::computeEnvironment` blends them (matching the primary alone would find a "night" under the companion)
 double effectiveSunAlt(const SurfaceSite& site, double t) {
     SunInfo s1 = site.sun(t), s2;
     if (!site.sun2(t, s2)) return s1.altitude;

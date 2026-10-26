@@ -681,7 +681,7 @@ void wallsChecks(const std::function<void(const char*, bool, const std::string&)
         }
     }
     std::string worst; for (const auto& kv : T.byKey) if (kv.second.feet > 0 && worst.size() < 300) worst += fmt("; %s %ld", kv.first.c_str(), kv.second.feet);
-    check("walls: every collider over what is drawn (B-420)", T.discs > 200000 && T.feet * 20000 <= T.discs,   // KI-398: a few of the rare forms' approximations
+    check("walls: every collider over what is drawn (B-420)", T.discs > 200000 && T.feet * 20000 <= T.discs,   // a few of the rare forms' approximations
           fmt("%ld places and works of three age worlds, %ld pieces, %ld discs: %ld at the feet over nothing drawn (at most one in 20,000), %ld above them mostly over nothing (the jetpack's: a snapped tower's holes)%s (%.1f s)",
               T.places, T.pieces, T.discs, T.feet, T.above, worst.c_str(), nowSec() - t0));
     // the scene worlds (their peoples ended lately: most of their works stand): walks, records, a heap stood on

@@ -233,7 +233,7 @@ std::shared_ptr<const RecordCatalogue> recordsOf(const BodyGen& g, int people) {
         Rng rng(seed);
         const double u = rng.uni();
         e.last = i == C->last;
-        e.year = e.last ? C->lastYear : std::min(recordYear(pa, u), std::max(1, C->lastYear - 1));   // C-12: the last recording the latest of all
+        e.year = e.last ? C->lastYear : std::min(recordYear(pa, u), std::max(1, C->lastYear - 1));   // the last recording the latest of all
         double f = 1;
         e.age = recordAgeAt(pa, e.year, &f);
         e.category = recordIsMusic(pg, C->count, i) ? RC_MUSIC : (recordChartIndex(pg, C->count, i) >= 0 ? RC_CHART : RC_TEXT);
@@ -382,13 +382,13 @@ struct Placer {
     std::vector<Form> el;
     std::vector<FormDisc> discs;
     std::vector<std::vector<FloorSlice>> slices;   // B-421: the drawn pieces at the floor, of the building being furnished and its neighbours
-    std::vector<FormMesh> heaps;                   // B-421: and the banks, heaps and barrows among them (their surface over a spot)
+    std::vector<FormMesh> heaps;                   // and the banks, heaps and barrows among them (their surface over a spot)
     int discsOf = -2;
     std::set<int> used;   // the records here (distinct within the place)
-    const std::function<bool(double, double)>* wetFn = nullptr;   // B-421: the view's water, where it gives it
+    const std::function<bool(double, double)>* wetFn = nullptr;   // the view's water, where it gives it
     Placer(const BodyGen& g_, const RuinSpec& r_, const Culture& c, const RecordCatalogue& C_, std::vector<ShardSite>& o, Rng& rg) : g(g_), r(r_), C(C_), out(o), rng(rg) { ruinElements(r, c, 0, el); }
 
-    void collide(int bi) {   // B-415: every piece over its ground, a neighbour's too (a tower's top fallen across its room)
+    void collide(int bi) {   // every piece over its ground, a neighbour's too (a tower's top fallen across its room)
         if (discsOf == bi) return;
         discs.clear(); slices.clear(); heaps.clear();
         const Building& b = r.buildings[bi];
@@ -402,7 +402,7 @@ struct Placer {
         }
         discsOf = bi;
     }
-    // B-421: a spot in water or at its edge: the view's water where it gives it (its rivers and lakes as drawn); else the sea's, the planet
+    // a spot in water or at its edge: the view's water where it gives it (its rivers and lakes as drawn); else the sea's, the planet
     // function at the view's 16 m without the rivers (a frame cannot wait for their tiles), at the spot and half a cell round it, 0.3 m over the
     // water at least (a lighthouse's foot on its headland stood a record at the sea's edge; a city across a river stood buildings in it)
     bool wet(double x, double z) const {
@@ -419,7 +419,7 @@ struct Placer {
         return false;
     }
     // a spot the explorer can stand at: `margin` clear of every piece standing on the ground, 0.45 m from the records already here (`apart`);
-    // B-421: not inside a drawn piece at the floor (nor within 0.15 m of one), not under water
+    // not inside a drawn piece at the floor (nor within 0.15 m of one), not under water
     bool clear(double x, double z, double margin, double apart = 0.45) const {
         for (const FormDisc& q : discs) { if (q.y0 > 1.0) continue; if (std::hypot(x - q.x, z - q.z) < q.r + margin) return false; }
         for (const ShardSite& o : out) if (std::hypot(o.x - x, o.z - z) < apart) return false;
@@ -429,7 +429,7 @@ struct Placer {
                 if (formSupportAt(m, x + (k == 1 ? 0.5 : (k == 2 ? -0.5 : 0)), z + (k == 3 ? 0.5 : (k == 4 ? -0.5 : 0))) > -0.5) return false;
         return !wet(x, z);
     }
-    // B-421: a room's doorway open: a run of a metre along its line clear of every piece's collider at the knee (a tower's top fallen across its
+    // a room's doorway open: a run of a metre along its line clear of every piece's collider at the knee (a tower's top fallen across its
     // lobby's doorway shut the records laid in it; the A-03 check's rule)
     bool doorOpen(const BuildingRoom& room) const {
         if (!room.door) return true;
@@ -512,7 +512,7 @@ struct Placer {
     }
     // an archive: `k` records, the place's own first (`home`, as many as fit; a painted one is left for a wall), in rows across the middle of a
     // building's room (square to its doorway's line, half a metre apart, the rows 0.6 m apart toward its back), or in rings round a structure's foot.
-    // B-426: `rest`, the place's own its rooms could not hold, laid the same way after what lies there (from `home` alone, a painted one as a slab
+    // `rest`, the place's own its rooms could not hold, laid the same way after what lies there (from `home` alone, a painted one as a slab
     // where a slab has room), an archive's rows only where the building is the place's archive (`isArchive`)
     int archive(int bi, int k, std::vector<int>& home, const std::vector<int>& pool, bool rest = false, bool isArchive = true) {
         const Building& b = r.buildings[bi];
@@ -585,7 +585,7 @@ struct Placer {
             }
         return placed;
     }
-    // C-11: a spot for an instrument beside a record in its room: on rings round it (0.75, 1.1, 1.45 m), clear of the pieces standing, the
+    // a spot for an instrument beside a record in its room: on rings round it (0.75, 1.1, 1.45 m), clear of the pieces standing, the
     // records and the instruments here, within the room's walls and off its doorway; else the room's own spots
     bool beside(const ShardSite& s, const std::vector<InstrumentSite>& placed, Rng& irng, double& ox, double& oz) {
         const Building& b = r.buildings[s.building];
@@ -599,7 +599,7 @@ struct Placer {
                 const double lx = qx * std::cos(b.heading) - qz * std::sin(b.heading), lz = qx * std::sin(b.heading) + qz * std::cos(b.heading);
                 if (room.round ? std::hypot(lx - room.cx, lz - room.cz) > room.r - 0.55 : (std::fabs(lx - room.cx) > room.hw - 0.55 || std::fabs(lz - room.cz) > room.hd - 0.55)) return false;
             }
-            if (!clear(x, z, 0.45, 0.7)) return false;   // B-421: its body beside a record, not over it (an archive's rows were 0.45 m off)
+            if (!clear(x, z, 0.45, 0.7)) return false;   // its body beside a record, not over it (an archive's rows were 0.45 m off)
             for (const InstrumentSite& q : placed) if (std::hypot(q.x - x, q.z - z) < 0.9) return false;
             return true;
         };
@@ -638,7 +638,7 @@ struct Placer {
 // its buildings' rooms or at their feet
 void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, std::vector<ShardSite>& out, std::vector<InstrumentSite>* instruments,
                    const std::function<bool(double, double)>* wet) {
-    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // B-419: the world's, not its season's (P-04: in its people's time) (B-421: its water read at a spot)
+    BodyGen gTmp; const BodyGen& g = thenWorld(gSeason, gTmp);   // the world's, not its season's (P-04: in its people's time) (B-421: its water read at a spot)
     out.clear();
     if (instruments) instruments->clear();
     if (r.buildings.empty()) return;
@@ -661,7 +661,7 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
         int want = 0, cat = -1;
         switch (r.work) {
             case WO_SHELTER: {   // the last recording and the last ones kept with it, of the collapse's years
-                // D-05: a shelter of a place left before the end (a people that lost its sun's, `before` its years) the last of its own years alone
+                // a shelter of a place left before the end (a people that lost its sun's, `before` its years) the last of its own years alone
                 const bool last = r.before <= 0;
                 pool.clear();
                 const int from = H ? H->stageYear[STAGE_WARNING] : C.lastYear - std::max(5, C.lastYear / 30);
@@ -673,11 +673,11 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
                 want = 1 + rng.irange(3);
                 break;
             }
-            case WO_DOME: want = 1 + rng.irange(2); break;   // D-05: of the years they lived under it
+            case WO_DOME: want = 1 + rng.irange(2); break;   // of the years they lived under it
             case WO_OBSERVATORY: want = 1 + rng.irange(3); cat = RC_CHART; break;
             case WO_NECROPOLIS: want = 1 + rng.irange(3); break;
             case WO_SHRINE: want = 1 + rng.irange(2); break;
-            case WO_HENGE: case WO_ANTENNA: case WO_LAUNCH: case WO_LIGHTHOUSE: case WO_FORT: want = 1; break;   // B-418: a fort's keep, its casemate
+            case WO_HENGE: case WO_ANTENNA: case WO_LAUNCH: case WO_LIGHTHOUSE: case WO_FORT: want = 1; break;   // a fort's keep, its casemate
             default: return;
         }
         std::vector<int> cand; std::vector<double> wt;
@@ -718,7 +718,7 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
     else if (r.sclass == SC_TOWN && age != AGE_PREHISTORIC && rng.chance(0.35)) k = 3 + rng.irange(3);
     else if (r.sclass == SC_MONUMENT && r.rank >= 0 && age == AGE_FAR_FUTURE) k = 6 + rng.irange(6);   // the archive that keeps itself
     int archiveAt = -1;
-    if (k > 0) {   // B-426: its count, the place's own first (it took them all: a prehistoric capital's thirty on its longhouse's floor)
+    if (k > 0) {   // its count, the place's own first (it took them all: a prehistoric capital's thirty on its longhouse's floor)
         const int bi = P.firstOf(archiveKinds(age), std::set<int>());   // where the last recording lies too, if that is its age's archive
         if (bi >= 0 && P.archive(bi, k, home, pool) > 0) { taken.insert(bi); archiveAt = bi; }
     }
@@ -748,7 +748,7 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
     }
     if (held.empty()) for (size_t i = 0; i < r.buildings.size(); i++) held.push_back((int)i);   // a structure alone: its foot
     for (size_t j = 0; !home.empty() && j < held.size() * 3; j++) if (P.one(held[j % held.size()], home.back())) home.pop_back();
-    // B-426: the place's own its rooms' spots could not hold (a lone stone's foot holds two, a futuristic capital's pods two each): one at a time
+    // the place's own its rooms' spots could not hold (a lone stone's foot holds two, a futuristic capital's pods two each): one at a time
     // beside what lies in each building holding one (across its room, round its foot), then after the archive's rows (the far future's structure:
     // its rings, the archive that keeps itself), so the home holds all of them
     for (int i = (int)home.size() - 1; i >= 0; i--) if (P.used.count(home[i])) home.erase(home.begin() + i);
@@ -757,7 +757,7 @@ void recordSitesOf(const BodyGen& gSeason, const RuinSpec& r, const Culture& c, 
         for (size_t j = 0; j < held.size() && !home.empty(); j++) if (held[j] != archiveAt && P.archive(held[j], 1, home, std::vector<int>(), true, false) > 0) more = true;
     }
     if (archiveAt >= 0 && !home.empty()) P.archive(archiveAt, (int)home.size(), home, std::vector<int>(), true, true);
-    // C-11: the instruments beside the music records (`instrumentWithRecord`: by the record, so every copy of it has one), on a stream of their own
+    // the instruments beside the music records (`instrumentWithRecord`: by the record, so every copy of it has one), on a stream of their own
     if (instruments) {
         Rng irng(r.seed ^ 0xC11B5ULL);
         for (size_t i = 0; i < out.size(); i++) {

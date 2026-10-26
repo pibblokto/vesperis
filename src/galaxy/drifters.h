@@ -59,7 +59,7 @@ extern const int DARK_KIND_COUNT;
 // the years since: a game light year is 1.5e10 km, so a few km/s for a millennium is tens of them), how long ago (1,500-20,000 years: a
 // people that lived there ended after it, D-05) and how fast (2-8 km/s, a scattering's kick): 6-340 light years. It searches the stars
 // round the way's end, so it is asked for, not kept
-// D-05: a drifter that kept a people (`drifterHadPeople`, galaxy/system.h) left a star its people's world could have circled (`livingSun`: a yellow
+// a drifter that kept a people (`drifterHadPeople`, galaxy/system.h) left a star its people's world could have circled (`livingSun`: a yellow
 // star, an orange or a red dwarf) and a system its way of losing it needs (`drifterSunWayOf`): of the living suns nearest the way's end (the
 // sixteen nearest), the first whose system holds a giant for the wanderer's way (planet-planet scattering), a second sun for the dance's; the
 // nearest else (and where none fits)

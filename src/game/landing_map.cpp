@@ -28,11 +28,11 @@ void Game::beginLanding() {
     landLat = clampd(landLat, -85 * DEG, 85 * DEG);
     spaceR.mapIfReady(sys.bodies[landBody]);   // F-02: asked, never waited for: the screen reads the world until its thread has made the map (the keys
                                                // work meanwhile as they did after the wait: Enter lands at the cursor, R waits for the map)
-    worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // T-01 (already on its way since the approach)
-    if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // R-415: its records and their homes, for V
-    drainLat = 1e9; drainLon = 1e9;   // O6-03: the map's first update prefetches the drainage of the default site
-    landSeenLat = landLat; landSeenLon = landLon; landMovedT = -1e9;   // B-422: at once (the cursor has not moved)
-    landZoom = 0;   // O2: start from the whole world
+    worldPlanPrefetch(spaceR.genFor(sys.bodies[landBody]));   // (already on its way since the approach)
+    if (worldHadCivilisation(spaceR.genFor(sys.bodies[landBody]))) droneWorldAsk(landBody);   // its records and their homes, for V
+    drainLat = 1e9; drainLon = 1e9;   // the map's first update prefetches the drainage of the default site
+    landSeenLat = landLat; landSeenLon = landLon; landMovedT = -1e9;   // at once (the cursor has not moved)
+    landZoom = 0;   // start from the whole world
     state = GameState::LANDING_MAP;
 }
 
@@ -45,14 +45,14 @@ void Game::updateLandingMap(const Input& in, double dt) {
     if (in.wasPressed(KEY_RIGHT) || (in.isDown(KEY_RIGHT) && in.shift())) landLon += step;
     if (in.wasPressed(KEY_UP) || (in.isDown(KEY_UP) && in.shift())) landLat += step;
     if (in.wasPressed(KEY_DOWN) || (in.isDown(KEY_DOWN) && in.shift())) landLat -= step;
-    if (in.mouseDx != 0 || in.mouseDy != 0) {   // R-418: the mouse's motion moves the cursor smoothly: a controller's right stick (the mouse is not held here, so it is the stick's)
+    if (in.mouseDx != 0 || in.mouseDy != 0) {   // the mouse's motion moves the cursor smoothly: a controller's right stick (the mouse is not held here, so it is the stick's)
         const double k = (landZoom ? 0.0013 : 0.15) * settings.mouseSensitivity * DEG;   // degrees a mouse pixel: about 60 a second at the stick's full throw, half a degree zoomed in
         landLon += in.mouseDx * k / (landZoom ? std::max(0.15, std::cos(landLat)) : 1.0);   // the zoom's window is wider in longitude by the latitude
         landLat -= in.mouseDy * k;
     }
     landLat = clampd(landLat, -88 * DEG, 88 * DEG);
     landLon = wrapAngle(landLon);
-    // O6-03: the drainage tiles of the sector under the cursor are computed on their own thread while the site is chosen,
+    // the drainage tiles of the sector under the cursor are computed on their own thread while the site is chosen,
     // so the landing's first frame finds them in the cache (a tile takes 100-300 ms on a big world). B-422: once the cursor
     // rests 0.4 s: every step asked for its own tiles, and a cursor held with Shift kept every core busy (46 threads, 8 cores
     // of 10) and the Enter after it waited three seconds on the places it had passed
@@ -65,7 +65,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         if (!landingZoomAllowed()) status("THE WHOLE WORLD ALREADY FITS THE MAP", 3);
         else { landZoom = !landZoom; if (landZoom) buildLandingZoom(); audio.beep = BEEP_UI; }
     }
-    const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // F-02: R once the world's map is made
+    const PlanetMap* rMap = in.wasPressed(KEY_R) ? spaceR.mapIfReady(sys.bodies[landBody]) : nullptr;   // R once the world's map is made
     if (rMap) {
         // random lit land site
         Rng r((uint64_t)(realTime * 1000));
@@ -76,12 +76,12 @@ void Game::updateLandingMap(const Input& in, double dt) {
             double la = r.range(-70 * DEG, 70 * DEG), lo = r.range(-PI, PI);
             int mat = m.materialAt(lo, la);
             Vec3 u = StarSystem::bodyFromLatLon(la, lo);
-            if (mat != MAT_WATER && (sys.sunless() || dot(u, sunB) > 0.2)) { landLat = la; landLon = lo; break; }   // D-02: no side lit where there is no sun
+            if (mat != MAT_WATER && (sys.sunless() || dot(u, sunB) > 0.2)) { landLat = la; landLon = lo; break; }   // no side lit where there is no sun
         }
     }
     if (in.wasPressed(KEY_C)) mapClouds = !mapClouds;   // the original's cloud filter
-    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = BEEP_UI; }   // R-415: the peoples over the map, off by default
-    if (in.wasPressed(KEY_J)) {   // M5-09: jump to the point where the biggest body in this world's sky stands highest
+    if (in.wasPressed(KEY_V) && !in.ctrl()) { landPeoples = !landPeoples; audio.beep = BEEP_UI; }   // the peoples over the map, off by default
+    if (in.wasPressed(KEY_J)) {   // jump to the point where the biggest body in this world's sky stands highest
         int best = -1; double bestAng = 0;
         Vec3 bp = sys.bodyPos(landBody, t);
         for (int j = 0; j < (int)sys.bodies.size(); j++) {
@@ -98,7 +98,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         } else status("NOTHING BIG IN THIS SKY", 2);
     }
     if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon)) buildLandingZoom();
-    else if (landZoom && zoomDry) {   // O6-03: the window was drawn without the drainage; again with it once its tiles are built
+    else if (landZoom && zoomDry) {   // the window was drawn without the drainage; again with it once its tiles are built
         const Body& zb = sys.bodies[landBody];
         const Vec3 zc = StarSystem::bodyFromLatLon(zoomLat, zoomLon);
         const double zr = std::max(zoomHalfLat, zoomHalfLon * std::max(std::cos(zoomLat), 0.15)) * zb.radiusKm * 1000.0 * 1.05;
@@ -110,7 +110,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
         state = GameState::DESCENT;
         transT = 0;
         fade = 0;
-        {   // C-08 (KI-345): the capsule sets down outside a settlement's walls
+        {   // the capsule sets down outside a settlement's walls
             double la = landLat, lo = landLon;
             if (settlementClearance(BodyGen::make(sys.bodies[landBody]), la, lo)) { landLat = la; landLon = lo; status("THE CAPSULE KEEPS OUTSIDE THE RUINS", 4); }
         }
@@ -127,7 +127,7 @@ void Game::updateLandingMap(const Input& in, double dt) {
 
 // N1-06: the relief class at a site from the terrain itself: the steepest rise over 150 m and over 600 m
 double Game::siteSlope(const SurfaceSite& probe) {
-    // O6-02: the grade of the region: the mean of eight directional slopes (150 and 600 m in four directions at the
+    // the grade of the region: the mean of eight directional slopes (150 and 600 m in four directions at the
     // map's 64 m detail), scaled by 1 / 0.64 to the size of the gradient (a directional slope averages 2 / pi of it).
     // The steepest probe decided before, so one crack or crater wall made a flat site "MOUNTAINS"; the mean of the
     // region ignores features smaller than a few hundred metres, which is what the class is for.
@@ -156,7 +156,7 @@ void Game::renderLandingMap() {
     const PlanetMap& m = *mp;
     Mat3 frame = sys.bodyFrame(landBody, t);
     Vec3 sunB = frame * normalize(sys.star.pos - sys.bodyPos(landBody, t));
-    const double dayFloor = sys.sunless() ? 1.0 : 0.22;   // D-02: the survey has no night side
+    const double dayFloor = sys.sunless() ? 1.0 : 0.22;   // the survey has no night side
     const int S = FB_SCALE;
     if (mapBaseSeed != b.seed || mapBaseClouds != mapClouds || mapBase.empty()) buildLandingMapBase();
     static std::vector<Vec3> unitLUT;   // body-frame unit vector per texel
@@ -166,9 +166,9 @@ void Game::renderLandingMap() {
             for (int x = 0; x < PlanetMap::W; x++)
                 unitLUT[y * PlanetMap::W + x] = StarSystem::bodyFromLatLon((0.5 - (y + 0.5) / PlanetMap::H) * PI, ((x + 0.5) / PlanetMap::W) * TAU - PI);
     }
-    refreshMapShadows(unitLUT);   // O0-04: the moons', the parent's and the rings' shadows on the day side
+    refreshMapShadows(unitLUT);   // the moons', the parent's and the rings' shadows on the day side
     const int PW = MAP_LW * S, PH = MAP_LH * S;
-    // W-03: the fronts' bands (the same overlay the globe draws), under the cloud filter like the pattern's cloud
+    // the fronts' bands (the same overlay the globe draws), under the cloud filter like the pattern's cloud
     const SpaceRenderer::FrontMap* fmc = mapClouds && bodyHasAir(b) && !hasOpaqueDeck(b.type) ? spaceR.frontsFor(b, t) : nullptr;
     const std::vector<uint8_t>* fm = fmc ? &fmc->cloud : nullptr;
     if (fm && landZoom && !zoomUnit.empty() && (zoomFront.size() != zoomUnit.size() || std::fabs(t - zoomFrontT) > 240 || zoomFrontLat != zoomLat || zoomFrontLon != zoomLon)) {
@@ -181,7 +181,7 @@ void Game::renderLandingMap() {
         return rgb((int)r, (int)gg, (int)bl);
     };
     if (landZoom && !zoomImg.empty()) {
-        // O2: the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map. F-05: the rows on the pool, a
+        // the zoom window, one texel per logical pixel, with the day side lit as on the whole-world map. F-05: the rows on the pool, a
         // texel's colour made once for the pixels that share it (along a row, and a row whose texels the band's row above had is copied)
         parallelFor(PH, 32, [&](int pyb, int pye) {
             int lastTy = -1;
@@ -198,7 +198,7 @@ void Game::renderLandingMap() {
                         double lit = dot(zoomUnit[i], sunB);
                         double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, lit) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
                         if (zoomEmissive[i]) l = std::max(l, 0.95);
-                        uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // R-415: the cores with the peoples
+                        uint32_t c = landPeoples && zoomCivImg.size() == zoomImg.size() ? zoomCivImg[i] : zoomImg[i];   // the cores with the peoples
                         if (fm && zoomFront.size() == zoomUnit.size() && zoomFront[i]) c = withFront(c, zoomFront[i] / 255.0);
                         col = rgb((int)((c & 255) * l), (int)(((c >> 8) & 255) * l), (int)(((c >> 16) & 255) * l));
                     }
@@ -206,12 +206,12 @@ void Game::renderLandingMap() {
                 }
             }
         });
-        for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // C-09: the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
+        for (size_t ri = 0; landPeoples && ri < zoomRoads.size(); ri++) {   // the old roads as faint lines, the ground's own colour darkened under the texel's light (R-415: with the peoples)
             const auto& poly = zoomRoads[ri];
             int tx = clampi((int)poly[0].first, 0, ZW - 1), ty = clampi((int)poly[0].second, 0, ZH - 1), i = ty * ZW + tx;
             double l = dayFloor + (1 - dayFloor) * smoothstep(-0.05, 0.15, dot(zoomUnit[i], sunB)) * (zoomShadow.size() == zoomUnit.size() ? 1 - 0.9 * zoomShadow[i] / 255.0 : 1.0);
             uint32_t c = zoomImg[i];
-            // T-01: by its kind: a path fainter, a railway darker, a highway and a maglev's pylons pale, a canal's channel blue-dark
+            // by its kind: a path fainter, a railway darker, a highway and a maglev's pylons pale, a canal's channel blue-dark
             const int kind = ri < zoomRoadKinds.size() ? zoomRoadKinds[ri] : NK_ROAD;
             static const double KL[NK_COUNT] = {0.85, 0.7, 0.5, 0.6, 1.3, 1.25, 1.0};
             l *= KL[clampi(kind, 0, NK_COUNT - 1)];
@@ -259,7 +259,7 @@ void Game::renderLandingMap() {
     drawRectRGB(canvas, ox - 1, oy - 1, ox + MAP_LW, oy + MAP_LH, HUD_DIM);
     int cx, cy;
     if (landZoom && !zoomImg.empty()) {
-        // O2: the sector grid (one-degree lines) with the sectors' names, a scale bar, and the cursor within the window
+        // the sector grid (one-degree lines) with the sectors' names, a scale bar, and the cursor within the window
         const uint32_t gridC = rgb(80, 80, 50);
         int k0 = (int)std::ceil((zoomLon - zoomHalfLon) / DEG), k1 = (int)std::floor((zoomLon + zoomHalfLon) / DEG);
         for (int k = k0; k <= k1; k++) { int x = ox + (int)(((k * DEG - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW); if (x > ox && x < ox + MAP_LW - 1) drawLineRGB(canvas, x, oy, x, oy + MAP_LH - 1, gridC); }
@@ -286,8 +286,8 @@ void Game::renderLandingMap() {
         int named = 0;
         struct LabelBox { int x0, y0, x1, y1; }; std::vector<LabelBox> labels;   // no name over another's, nor over the map's own text
         const std::string bkey = worldKeyOf(landBody);
-        for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world (a glyph each, a friend's in cyan), eight names at most
-            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // R-415: the ruins and the works with the peoples (V)
+        for (const SurfaceMark& m : guide.marks) {   // the explorer's marks of this world (a glyph each, a friend's in cyan), eight names at most
+            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // the ruins and the works with the peoples (V)
             int lx = ox + (int)((wrapAngle(m.lon - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW), ly = oy + (int)((0.5 - (m.lat - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
             if (lx < ox + 1 || ly < oy + 1 || lx >= ox + MAP_LW - 1 || ly >= oy + MAP_LH - 1) continue;
             const uint32_t lc = m.lent ? HUD_CYAN : HUD_WHITE;
@@ -306,26 +306,26 @@ void Game::renderLandingMap() {
     } else {
         cx = ox + (int)((wrap2pi(landLon + PI) / TAU) * MAP_LW); cy = oy + (int)((0.5 - landLat / PI) * MAP_LH);
         const std::string bkey = worldKeyOf(landBody);
-        for (const SurfaceMark& m : guide.marks) {   // R-408: the explorer's marks of this world, a dot each (Z zooms in on them)
-            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // R-415: the ruins and the works with the peoples (V)
+        for (const SurfaceMark& m : guide.marks) {   // the explorer's marks of this world, a dot each (Z zooms in on them)
+            if (m.body != bkey || m.kind == LM_RUIN || m.kind == LM_WORK) continue;   // the ruins and the works with the peoples (V)
             int mx = ox + (int)((wrap2pi(m.lon + PI) / TAU) * MAP_LW), my = oy + (int)((0.5 - m.lat / PI) * MAP_LH);
             fillRectRGB(canvas, mx - 1, my - 1, mx + 1, my + 1, rgb(0, 0, 0)); fillRectRGB(canvas, mx, my, mx, my, m.lent ? HUD_CYAN : HUD_WHITE);
         }
     }
     cx = clampi(cx, ox, ox + MAP_LW - 1); cy = clampi(cy, oy, oy + MAP_LH - 1);
-    if (landPeoples) drawLandPeoples(ox, oy, cx, cy); else landDrawn = {};   // R-415
+    if (landPeoples) drawLandPeoples(ox, oy, cx, cy); else landDrawn = {};
     drawLineRGB(canvas, ox, cy, ox + MAP_LW - 1, cy, rgb(255, 255, 255));
     drawLineRGB(canvas, cx, oy, cx, oy + MAP_LH - 1, rgb(255, 255, 255));
     drawRectRGB(canvas, cx - 3, cy - 3, cx + 3, cy + 3, HUD_AMBER);
     // info
     if (probeBody != landBody || probeLat != landLat || probeLon != landLon) {
-        probeSite.initFrame(&sys, landBody, landLat, landLon, t);   // F-02: sampled, never drawn (the five caches cost 0.3-0.5 ms a step)
+        probeSite.initFrame(&sys, landBody, landLat, landLon, t);   // sampled, never drawn (the five caches cost 0.3-0.5 ms a step)
         probeBody = landBody; probeLat = landLat; probeLon = landLon;
     }
     const SurfaceSite& probe = probeSite;
     SunInfo si = probe.sun(t);
-    if (sys.ofCompanion(landBody)) probe.sun2(t, si);   // B-425: a world of the companion has its day by the companion
-    // O6-03: the probe reads the drainage only once the site's tiles are built (the cursor's prefetch); a probe that
+    if (sys.ofCompanion(landBody)) probe.sun2(t, si);   // a world of the companion has its day by the companion
+    // the probe reads the drainage only once the site's tiles are built (the cursor's prefetch); a probe that
     // built them froze the map for half a second at every move of the cursor
     DrainageOff probeDry(!drainageReady(probe.gen, probe.up0, 1500.0));
     TerrainVertex tvp = probe.sampleAt(0, 0, 64);
@@ -336,7 +336,7 @@ void Game::renderLandingMap() {
                          landLat >= 0 ? "N" : "S", std::fabs(landLon / DEG), CH_DEGREE, landLon >= 0 ? "E" : "W", sectorName(landLat / DEG, landLon / DEG).c_str());
     drawText(canvas, 8, ry, l1.c_str(), HUD_GREEN);
     const char* phase = si.altitude > 0.05 ? "DAY" : (si.altitude > -0.1 ? "TWILIGHT" : "NIGHT");
-    const bool noSun = sys.sunless();   // D-02: the lines of a world with no sun: its colour as a lamp will show it, no sun, its turn
+    const bool noSun = sys.sunless();   // the lines of a world with no sun: its colour as a lamp will show it, no sun, its turn
     // N1-04/06: what you will see: material, elevation, relief class, and the ground colour at noon as a swatch
     std::string l2 = fmt("%s %+.0fM  %s", MATERIAL_NAMES[mat], hgt, reliefClass(siteSlope(probe)));
     drawText(canvas, 8, ry + 8, l2.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
@@ -349,11 +349,11 @@ void Game::renderLandingMap() {
         blendRectRGB(canvas, bx, ry + 7, bx + 23, ry + 14, rgb((int)(gc.r * 255), (int)(gc.g * 255), (int)(gc.b * 255)), 255);
         drawRectRGB(canvas, bx - 1, ry + 6, bx + 24, ry + 15, HUD_DIM);
     }
-    std::string sn = tvp.biome && !sys.sunless() ? seasonName(probe.season, landLat, b.axialTilt) : "";   // D-01: no sun, no season
+    std::string sn = tvp.biome && !sys.sunless() ? seasonName(probe.season, landLat, b.axialTilt) : "";   // no sun, no season
     std::string l3 = noSun ? fmt("%s%sNO SUN - THE DARK", tvp.biome ? BIOME_NAMES[tvp.biome] : "", tvp.biome ? "  " : "")
                            : fmt("%s%s%s%sSUN %+.0f%c AZ %03.0f%c %s", tvp.biome ? BIOME_NAMES[tvp.biome] : "", (tvp.biome && !sn.empty()) ? ", " : "", sn.c_str(), tvp.biome ? "  " : "",
                                  si.altitude / DEG, CH_DEGREE, si.azimuth / DEG, CH_DEGREE, phase);
-    if (kindHas(b.type, KT_FLORA) && tvp.biome) {   // N3-04: the species most likely met here
+    if (kindHas(b.type, KT_FLORA) && tvp.biome) {   // the species most likely met here
         Bestiary B = Bestiary::make(b, spaceR.genFor(b));
         int spi = B.pickLand(hash2i((int64_t)(landLat * 100), (int64_t)(landLon * 100), b.seed), tvp.biome);
         if (spi >= 0 && tvp.biome != BIO_ICE && tvp.biome != BIO_OCEAN) l3 += fmt("  LIFE: %s", trunc(upper(B.species[spi].name), 10).c_str());
@@ -361,12 +361,12 @@ void Game::renderLandingMap() {
     drawText(canvas, 8, ry + 16, l3.c_str(), si.altitude > 0.05 ? HUD_WHITE : HUD_DIM);
     double lockRatio = std::fabs(1.0 - b.rotPeriod / b.orbitPeriod);
     std::string dayLen = (b.parent < 0 && lockRatio < 0.02) ? "TIDALLY LOCKED" : fmt("DAY %.1f H", std::fabs(b.rotPeriod) / 3600.0 * (b.parent < 0 ? 1.0 / lockRatio : 1.0));
-    std::string grav = b.gravity / 9.8 < 0.01 ? fmt("GRAV %.4f G", b.gravity / 9.8) : fmt("GRAV %.2f G", b.gravity / 9.8);   // O4: a comet's microgravity
+    std::string grav = b.gravity / 9.8 < 0.01 ? fmt("GRAV %.4f G", b.gravity / 9.8) : fmt("GRAV %.2f G", b.gravity / 9.8);   // a comet's microgravity
     std::string l4 = noSun ? fmt("TURNS IN %.1f H  %s  %s", std::fabs(b.rotPeriod) / 3600.0, grav.c_str(), KINDS[b.type].atmosphere ? (airFrozen(b) ? "AIR FROZEN" : "ATMOSPHERE") : "NO ATMOSPHERE")
                            : fmt("LOCAL %02d:%02d  %s  %s  %s", (int)(si.dayFraction * 24), (int)(std::fmod(si.dayFraction * 24, 1.0) * 60),
                                  dayLen.c_str(), grav.c_str(), KINDS[b.type].atmosphere ? (airFrozen(b) ? "AIR FROZEN" : "ATMOSPHERE") : "NO ATMOSPHERE");
     drawText(canvas, 8, ry + 24, l4.c_str(), HUD_DIM);
-    {   // M5-09 (R-001): what hangs in the sky over this sector right now
+    {   // what hangs in the sky over this sector right now
         Mat3 L = probe.localFrame(t);
         Vec3 sitePos = probe.worldPos(t, 0, 0, 0.002);
         int best = -1; double bestAng = 0, bestAlt = 0, bestPhase = 0; int points = 0;
@@ -382,7 +382,7 @@ void Game::renderLandingMap() {
             if (ang > bestAng) { bestAng = ang; best = j; bestAlt = std::asin(dl.y); bestPhase = 0.5 * (1 + dot(normalize(sys.star.pos - bp), normalize(sitePos - bp))); }
         }
         std::string l5;
-        // O0-01: the world's own rings: how high their arc stands in this site's sky
+        // the world's own rings: how high their arc stands in this site's sky
         std::string ringNote;
         if (b.rings) {
             double bestEl = -90;
@@ -402,11 +402,11 @@ void Game::renderLandingMap() {
         } else l5 = (ringNote.empty() ? std::string("SKY: ") : "SKY: " + ringNote + "; ") + (points ? fmt("%d WORLDS AS POINTS OF LIGHT", points) : std::string("NOTHING BUT STARS"));
         drawText(canvas, 8, ry + 32, l5.c_str(), (best >= 0 || !ringNote.empty()) ? HUD_CYAN : HUD_DIM);
     }
-    // R-415: V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
+    // V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
     if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER", HUD_AMBER);
-    else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);   // D-02: the survey has no clouds
+    else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);   // the survey has no clouds
     drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str()
-                                                 : (noSun ? "SURFACE CAPSULE - NO LIGHT: THE ALTIMETER'S SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);   // D-02
+                                                 : (noSun ? "SURFACE CAPSULE - NO LIGHT: THE ALTIMETER'S SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);
 }
 
 // ---- R-415 (2026-10-11): the peoples on the landing map --------------------------------------------------------------------------------

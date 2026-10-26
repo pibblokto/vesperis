@@ -14,7 +14,7 @@
 // is: the same stars, seen from the people's star; the decoder draws it (`game/shards_screen.cpp`) and holds it up to the
 // sky (`Game::drawChartOverlay`: the figures' lines between the real stars from wherever the ship is, the marked star's
 // diamond), and Enter on the chart targets the marked star, so a chain of peoples is flown link by link.
-// H-05 (2026-10-10): each chart is drawn in the way of its record's age and medium (`chartStyleOf`: ideas note, section 10): a sky
+// each chart is drawn in the way of its record's age and medium (`chartStyleOf`: ideas note, section 10): a sky
 // painted on a cave's ceiling or carved on a bone with the figures as animals and the moon's days counted beside them; a vault painted
 // blue with gold stars, an astrolabe's plate or a codex's page with the figures as creatures and heroes and the wanderers' paths; an
 // engraved atlas with the grid of their coordinates and the stars numbered, or a photograph on glass; a survey by magnitudes with the
@@ -45,7 +45,7 @@ enum ChartStyle {
     CHS_SURVEY,        // modern (glass, printed pages, a drive): a survey by magnitudes, the peoples heard by radio marked
     CHS_ROUTES,        // futuristic: a navigation chart: a map of their neighbourhood, the routes to the worlds they reached or meant to
     CHS_BEYOND,        // far future: a mark thousands of light years off and places where nothing is
-    CHS_SUNMEASURE,    // D-05: a drifter's people's measure of their sun going, its disc year by year in its age's way (suns painted smaller and smaller on a
+    CHS_SUNMEASURE,    // a drifter's people's measure of their sun going, its disc year by year in its age's way (suns painted smaller and smaller on a
                        // cave's ceiling, circles drawn on a page or engraved, a printed graph, a light curve on a screen): its mark the star that was their sun
     CHS_COUNT
 };
@@ -72,7 +72,6 @@ struct ChartStar {
     double ang = 0;         // off the chart's centre, radians
     double x = 0, y = 0;    // on the chart: azimuthal equidistant, radius 1 at CHART_FIELD, y up (CHS_ROUTES: the map's, radius 1 at CHART_MAP_LY)
     bool mark = false;
-    // H-05
     int number = 0;         // CHS_ATLAS: its number in their catalogue (1 the brightest), 0 none
     double mag = 0;         // CHS_SURVEY: its magnitude in their steps (0 the brightest)
     bool heard = false;     // CHS_SURVEY: a people they heard by radio
@@ -86,7 +85,6 @@ struct ChartFigure {
     std::vector<int> stars; // indices into StarChart::stars, the seed (the brightest) first
     std::vector<std::pair<int, int>> lines;
     int label = 0;          // the star the name hangs at
-    // H-05
     int glyph = -1;         // the animal or the creature drawn with it (CHART_GLYPH_ROWS), -1 none
     int kind = 0;           // 0 a figure of the sky, 1 a route (CHS_ROUTES), 2 a line to a place where nothing is (CHS_BEYOND)
     bool planned = false;   // a route meant and not flown
@@ -115,7 +113,7 @@ struct StarChart {
     int reached = 0, planned = 0;       // CHS_ROUTES: the routes flown and the ones only meant
     double farLy = 0; int farKind = 0;  // CHS_BEYOND: the mark's distance; 1 toward the galaxy's heart, 2 a cluster, 3 out of the disc, 4 along the disc
     int signs = 0;                      // CHS_BEYOND: the places where nothing is
-    // D-05: the sun's measure (CHS_SUNMEASURE): the way of the chart it is drawn as (its age's and medium's ordinary one: the cave's ceiling, the
+    // the sun's measure (CHS_SUNMEASURE): the way of the chart it is drawn as (its age's and medium's ordinary one: the cave's ceiling, the
     // page, the atlas's paper, the survey's screen), the disc year by year from the onset to the chart's year (its year, the disc in the people's
     // own parts) and those parts (the disc at the first measure: 60, 100, 120, 32 or 24 by the people, as their observatory's table counts)
     int baseStyle = -1;
@@ -125,11 +123,11 @@ struct StarChart {
 
 // the stars the people marked, one per chart of the world (`chartShardsOf` of them), for `loreOf`; `g` is the people's generator.
 // A-01: a people heard a transmission only if it had radio itself and the star's people had it too (`peoplesOnAir`)
-// H-05: a far future's chart marks a star thousands of light years off (`ChartMark::how` 3: toward the galaxy's heart, a cluster, out of
+// a far future's chart marks a star thousands of light years off (`ChartMark::how` 3: toward the galaxy's heart, a cluster, out of
 // the disc or along it), found once a people and kept; the rest as C-10's. D-05: a drifter's people's charts of its years without the sun (its
 // dimming and its going: the sun's measure; the dark after the last sunrise: the sky from where the drifter was by then) mark the star that was
 // their sun (`how` 4), which Enter flies to
-void chartMarksOf(const StarSystem& sys, const Body& b, const BodyGen& g, std::vector<ChartMark>& out, int count = -1);   // T-04: `count` the people's charts (`recordChartCount`), -1 C-10's
+void chartMarksOf(const StarSystem& sys, const Body& b, const BodyGen& g, std::vector<ChartMark>& out, int count = -1);   // `count` the people's charts (`recordChartCount`), -1 C-10's
 int chartFarKind(const BodyGen& g, const Star& home, int k);   // H-05: the k-th far mark's kind (1 the heart, 2 a cluster, 3 out of the disc, 4 along it), 0 none
 // the sky of a star as a chart sees it: every star of the cube round it, the brightest first
 void chartSkyOf(const Star& home, std::vector<ChartStar>& out);

@@ -42,7 +42,7 @@ double sampleCloudPattern(const BodyGen& g, double lon, double lat) {
 }
 
 // P-00: the kind's ground function, then the solid grounds' common end (the felisian layer keeps its own)
-// Q-02: the water's trait colours at a sample (B-404's rule: unfaded fields, so every ring, the map and the globe agree). A pink lake's whole water
+// the water's trait colours at a sample (B-404's rule: unfaded fields, so every ring, the map and the globe agree). A pink lake's whole water
 // and a white crust of salt on its shore; a milky sea's patches of glowing bacteria, tens of thousands of square kilometres each (Miller et
 // al. 2005); a bloom's streaks drawn out by the currents (a warped field's ridges) where the sea is rich, more on the shallows; on the seas
 // and, but where they are pink, the lakes
@@ -56,7 +56,7 @@ static void qualityWater(const BodyGen& g, const Vec3& unit, double detailM, Sur
     if (!wet) return;
     if (pink && lake) s.waterTint = 1;
     if (milky && sea) s.waterTint = smoothstep(0.22, 0.42, fbm3(p / (g.R * 0.16), g.sG + 303, 2));   // a few patches of a few hundred kilometres
-    if (lights && sea) {   // D-04: a dark ocean's life, round the vents its volcanoes' flanks hold (the islands' shallows, under 500 m) and in shoals some hundreds of
+    if (lights && sea) {   // a dark ocean's life, round the vents its volcanoes' flanks hold (the islands' shallows, under 500 m) and in shoals some hundreds of
         // kilometres across over the deep (what the globe shows), lit in patches of a hundred metres or two
         const double shoal = smoothstep(-0.05, 0.25, fbm3(p / (g.R * 0.05), g.sG + 313, 2)), region = std::max(shoal, smoothstep(-500.0, -60.0, s.height));
         if (region > 0.01) s.waterTint = matVisible(0.1, detailM) ? region * smoothstep(0.16, 0.42, fbm3(p / 0.3, g.sG + 314, 3)) : 0.2 * smoothstep(0.4, 0.9, shoal);   // a quarter of its water lit; from afar the shoals' cores' faint sheen
@@ -164,7 +164,7 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         const DrainApply& DA = c.DA;
         const LandOut& lo = c.lo;
         const double cliffV = c.cliffV;
-        s.scree = clampd(c.talusV, 0, 1);   // O6-04
+        s.scree = clampd(c.talusV, 0, 1);
         if (cliffV > 0.4 && s.material != MAT_WATER && s.material != MAT_LAVA && s.material != MAT_ICE && s.material != MAT_SALT) {   // a riser is bare rock, whatever lies on the plain around it
             if (s.material == MAT_DUST || s.material == MAT_SAND || s.material == MAT_SULPHUR) s.material = familyRep(g.type, FAM_ROCK);
             s.albedo *= 1 - 0.15 * cliffV;
@@ -176,18 +176,18 @@ SurfaceSample sampleSurface(const BodyGen& g, const Vec3& unit, double detailM) 
         }
         if (wetType && s.water < -1e8 && DA.shoreOut < 1e8) s.shore = DA.shoreOut;
         s.landform = 1000 * lo.mark + std::fabs(lo.dhSmooth) + std::fabs(lo.dhFine) + 40 * lo.flatten;
-        s.landformTrait = lo.mark >= 0.5 ? lo.markTrait : 0;   // Q-01
-        s.groundTint = lo.tint;   // Q-02
-        s.slipFace = std::max(s.slipFace, lo.slip);   // Q-03: a dune sea's
+        s.landformTrait = lo.mark >= 0.5 ? lo.markTrait : 0;
+        s.groundTint = lo.tint;
+        s.slipFace = std::max(s.slipFace, lo.slip);   // a dune sea's
         if (lo.life > 0 && s.material != MAT_WATER) s.lifeTint = lo.life;
-        // R-305: a landform's material (rock walls, basalt sheets, salt, crystal) over the kind's own, never over lava
+        // a landform's material (rock walls, basalt sheets, salt, crystal) over the kind's own, never over lava
         if (lo.mat >= 0 && s.material != MAT_LAVA && s.material != MAT_WATER) { s.material = lo.mat; if (lo.albedo >= 0) s.albedo = lo.albedo; }
-        // R-304 (TR_EXOTIC_SEAS): the ground under the liquid's level is sea
+        // TR_EXOTIC_SEAS: the ground under the liquid's level is sea
         if (g.liquidLevel > -1e8 && s.height < g.liquidLevel && s.material != MAT_LAVA) { s.material = MAT_WATER; s.water = g.liquidLevel; s.albedo = 0.22; s.glow = 0; }
     }
-    if (g.tideRangeM > 0) tidalFlat(g, unit, detailM, s);   // Q-02
+    if (g.tideRangeM > 0) tidalFlat(g, unit, detailM, s);
     qualityWater(g, unit, detailM, s);
-    if (g.dark) darkGround(c);   // D-04
+    if (g.dark) darkGround(c);
     if (s.material != MAT_LAVA) s.albedo = clampd(s.albedo, 0.03, 1.0);
     return s;
 }
@@ -215,7 +215,7 @@ void PlanetMap::generate(const BodyGen& g) {
             veg[i] = (uint8_t)clampi((int)(s.veg * 255 + 0.5), 0, 255);
             if (tints) { wtint[i] = (uint8_t)clampi((int)(s.waterTint * 255 + 0.5), 0, 255); ltint[i] = (uint8_t)clampi((int)(s.lifeTint * 255 + 0.5), 0, 255); }
             cloud[i] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon, lat) * 255 + 0.5), 0, 255);
-            // M9-10: a polar vortex pattern on gas giants
+            // a polar vortex pattern on gas giants
             if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) albedo[i] = (uint8_t)clampi((int)(albedo[i] * (1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat)))), 0, 255);
         }
     }

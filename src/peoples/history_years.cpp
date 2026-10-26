@@ -163,7 +163,7 @@ void Builder::yearLoop() {
     H.yearsFrom = std::max(1, H.last - 25000);
     H.harvest.assign(H.last - H.yearsFrom + 1, 2);
     H.population.assign(H.last - H.yearsFrom + 1, 0);
-    if (H.cause == CAUSE_SUN_LOST) { H.sunlight.resize(H.last - H.yearsFrom + 1); for (int y = H.yearsFrom; y <= H.last; y++) H.sunlight[y - H.yearsFrom] = (float)sunAt(y); }   // D-05
+    if (H.cause == CAUSE_SUN_LOST) { H.sunlight.resize(H.last - H.yearsFrom + 1); for (int y = H.yearsFrom; y <= H.last; y++) H.sunlight[y - H.yearsFrom] = (float)sunAt(y); }
     size_t plannedAt = 0;
     int termEnd = 0;
     ruleEnds = H.stageYear[STAGE_CRISIS] + (int)std::lround(rng.range(0.3, 1.0) * (H.last - H.stageYear[STAGE_CRISIS]));

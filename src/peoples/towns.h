@@ -1,16 +1,10 @@
-// T-02 (2026-10-09): towns by age (`docs/archive/ideas/IDEAS-civilisation-expansion.md`, section 6). Until T-02 a settlement was C-01's plans
-// (a cluster, a street, rings, a grid of 17 x 15 m blocks) scaled by the age, its streets the gaps between its houses. A town has a plan
-// now: streets laid as its people laid them (`GV_STREETS`: a grid, spokes and rings, rings, an organic web of lanes, one street along a
-// line, streets on the contour, a street with its branches) and as its age laid them (a medieval town's crooked and narrow, an
-// industrial quarter's straight with back lanes behind its rows, a modern city's blocks of a hundred metres, its ring road and the
-// suburbs' cul-de-sacs beyond), in layers by age (B-414: one, its people's last: a world shows only the age its people reached, so T-02's
-// old cores inside a later people's towns are gone with their age). Its buildings stand on the streets with their fronts to them
-// (`ruins.cpp`'s layout), by district: the centre and its square, the old core, the houses, the works (an industrial town's mills,
-// gasworks and station; a modern one's tanks and power), the harbour (a quay, a dock and its cranes, a container port), the towers
-// of a modern city's middle, the suburbs; the height and the density falling from the centre to an edge (a wall, suburbs thinning
-// into fields, nothing). Outside it its fields (a camp's plots, a medieval town's strips, enclosed fields, a modern people's
-// irrigation circles), and terraced fields on a slope. The streets, the squares and the fields are drawn into the ground
-// (`SurfaceSite`'s ground marks); the streets are kept clear of every building and its colliders (the unit).
+// Towns by age (T-02; docs/reference/civilisations/built-world.md): a town's streets laid as its people laid them (`GV_STREETS`: a grid,
+// spokes and rings, an organic web, a line, the contour, branches) and as its age laid them (a medieval town's crooked lanes, an industrial
+// quarter's straight streets and back lanes, a modern city's blocks, ring road and cul-de-sacs), in its people's last age alone. Its
+// buildings stand on the streets fronting them (ruins.cpp's layout), by district (the centre and its square, the old core, the houses, the
+// works, the harbour, the towers, the suburbs), the height and the density falling from the centre to an edge. Outside it its fields by
+// age, terraced on a slope. The streets, squares and fields are the ground's marks (`SurfaceSite`); the streets stay clear of every
+// building and its colliders (the unit checks it).
 #pragma once
 #include "ruins.h"
 

@@ -428,7 +428,7 @@ void Game::autoHands(Input& in, double dt) {
 // the first seconds: what plays and how to take the controls back, fading out (the only words on the screen while it plays, with the
 // tape's track as it begins)
 void Game::autoRender() {
-    tapeRender();   // R-420
+    tapeRender();
     const double a = ax.captionT < 5 ? 1.0 : clampd(1 - (ax.captionT - 5) / 1.5, 0, 1);
     if (a <= 0) return;
     const std::string s = fmt("AUTO-EXPLORE: %s - ANY %s ENDS IT", AUTO_PROFILE_NAMES[ax.profile], padInUse() ? "BUTTON" : "KEY");

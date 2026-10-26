@@ -1,7 +1,7 @@
 // E-03: the unit's civilisations and what they leave (groups `civilisations`, `ruins`, `charts`, `roads`, `graves`)
 #include "harness/harness.h"
 
-// A-03: a building's room as the explorer finds it: its middle clear of the colliders given (0.9 m), and the longest run along its
+// a building's room as the explorer finds it: its middle clear of the colliders given (0.9 m), and the longest run along its
 // doorway's wall line (metres) clear of them at the explorer's radius
 static void roomOpenness(const Building& b, const BuildingRoom& R, const std::vector<FormDisc>& discs, bool& centreClear, double& doorRun) {
     auto blockedAt = [&](double x, double z, double margin) { for (const FormDisc& q : discs) if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - x, q.z - z) < q.r + margin) return true; return false; };
@@ -16,7 +16,7 @@ static void roomOpenness(const Building& b, const BuildingRoom& R, const std::ve
 
 // C-01: the civilisations
 void unitCivilisations(const Check& check) {
-    {   // C-01: the civilisations. One felisian or desert world in eight near home had a people; a dead desert world keeps its seas as dry
+    {   // the civilisations. One felisian or desert world in eight near home had a people; a dead desert world keeps its seas as dry
         // beds the wadis run down to; its settlements are hamlets, villages and towns whose houses are rooms to walk into
         int fel = 0, felC = 0, des = 0, desC = 0, bodyFel = -1, bodyDes = -1; Star firstFel, firstDes; bool haveFel = false, haveDes = false;
         for (int64_t x = 150; x < 300; x++) for (int64_t z = 20; z < 120; z++) {
@@ -38,7 +38,7 @@ void unitCivilisations(const Check& check) {
             for (int j = 0; j < 36; j++) for (int i = 0; i < 72; i++) {
                 double lat = (-85 + 170.0 * (j + 0.5) / 36) * DEG, lon = (-180 + 360.0 * (i + 0.5) / 72) * DEG;
                 Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
-                DrainageOff off;   // A-03: the old sea is the planet function's, not the rivers' (a tile a sample would take minutes)
+                DrainageOff off;   // the old sea is the planet function's, not the rivers' (a tile a sample would take minutes)
                 SurfaceSample s = sampleSurface(g, u, 2048);
                 n++;
                 if (s.oldSea > 0.5) { sea++; hSea += s.height; if (s.material == MAT_SALT) salt++; } else { nLand++; hLand += s.height; }
@@ -49,7 +49,7 @@ void unitCivilisations(const Check& check) {
             check("dead desert world: dry seas, the bed under the land, wadis to the shore", sea * 100 >= n * 15 && sea * 100 <= n * 70 && hSea < hLand && salt > 0 && shoreFound && st.sea > 0 && st.channels > 0,
                   fmt("%s (the sea stood at %.0f m): the old sea on %d%% of %d points (salt on %d), its bed %.0f m against the land's %.0f; at the shore %d sea cells, %d channels of %d", b.name.c_str(), g.oldSeaM, sea * 100 / n, n, salt, hSea, hLand, st.sea, st.channels, st.cells));
         } else check("dead desert world: dry seas", false, "no dead desert world in the scan");
-        if (haveFel) {   // B-422: the landing map's cursor asked for its drainage tiles at every step, and the places it had passed kept every
+        if (haveFel) {   // the landing map's cursor asked for its drainage tiles at every step, and the places it had passed kept every
             // core busy: a superseded prefetch's tiles are abandoned (A's, at a tile's middle: unbuilt once B's is in); a tile a thread
             // waits for is finished all the same (C read while its prefetch is superseded by D's)
             StarSystem sys; sys.generate(firstFel);
@@ -83,8 +83,8 @@ void unitCivilisations(const Check& check) {
             BodyGen g = BodyGen::make(b);
             Culture cu = cultureOf(g);
             int cls[7] = {0, 0, 0, 0, 0, 0, 0}, cells = 0, houses = 0, roomsOk = 0, doorsOk = 0, gLat0, gLon0;
-            int shSettle = 0, shTotal = 0, shByClass[7] = {0, 0, 0, 0, 0, 0, 0}, shCountBad = 0, shBad = 0, shDup = 0, shOut = 0, shBlocked = 0, shDoor = 0, shPlaces[BK_COUNT] = {}; bool shDeterm = true;   // C-03
-            double la0 = 0.2, lo0 = 0.7; planPlacePoint(g, 0, la0, lo0);   // T-01: the people's countryside, round a town of its plan
+            int shSettle = 0, shTotal = 0, shByClass[7] = {0, 0, 0, 0, 0, 0, 0}, shCountBad = 0, shBad = 0, shDup = 0, shOut = 0, shBlocked = 0, shDoor = 0, shPlaces[BK_COUNT] = {}; bool shDeterm = true;
+            double la0 = 0.2, lo0 = 0.7; planPlacePoint(g, 0, la0, lo0);   // the people's countryside, round a town of its plan
             ruinCellOf(g, la0, lo0, gLat0, gLon0);
             std::vector<Form> el;
             for (int dl = -15; dl <= 15; dl++) for (int dn = -15; dn <= 15; dn++) {
@@ -92,12 +92,12 @@ void unitCivilisations(const Check& check) {
                 if (!ruinOfCell(g, gLat0 + dl, gLon0 + dn, sp, true)) continue;
                 cls[sp.sclass]++;
                 ruinElements(sp, cu, 0, el);
-                {   // C-03: the settlement's shards: counted by the class, distinct, inside their building, clear of its pieces and its doorway, the same twice
+                {   // the settlement's shards: counted by the class, distinct, inside their building, clear of its pieces and its doorway, the same twice
                     std::vector<ShardSite> ss, ss2; recordSitesOf(g, sp, cu, ss); recordSitesOf(g, sp, cu, ss2);
                     shSettle++; shTotal += (int)ss.size(); shByClass[sp.sclass] += (int)ss.size();
-                    static const int LO[7] = {0, 1, 2, 0, 4, 6, 0}, HI[7] = {1, 2, 4, 1, 7, 10, 0};   // T-01: a city's and the capital's too
+                    static const int LO[7] = {0, 1, 2, 0, 4, 6, 0}, HI[7] = {1, 2, 4, 1, 7, 10, 0};   // a city's and the capital's too
                     int lo = LO[sp.sclass], hi = HI[sp.sclass], alone = 0;
-                    for (const ShardSite& x : ss) if (!x.archive && !x.last) alone++;   // T-04: an archive's and the last recording on top; a place of the plan holds its own records
+                    for (const ShardSite& x : ss) if (!x.archive && !x.last) alone++;   // an archive's and the last recording on top; a place of the plan holds its own records
                     if (sp.rank < 0 && (alone < lo || alone > hi)) shCountBad++;
                     if (ss.size() != ss2.size()) shDeterm = false; else for (size_t i = 0; i < ss.size(); i++) if (ss[i].index != ss2[i].index || ss[i].x != ss2[i].x || ss[i].z != ss2[i].z) shDeterm = false;
                     for (size_t i = 0; i < ss.size(); i++) {
@@ -107,7 +107,7 @@ void unitCivilisations(const Check& check) {
                         if (s.building < 0 || s.building >= (int)sp.buildings.size()) { shBad++; continue; }
                         const Building& bd = sp.buildings[s.building];
                         double dx = s.x - bd.x, dz = s.z - bd.z, qx = dx * std::cos(bd.heading) - dz * std::sin(bd.heading), qz = dx * std::sin(bd.heading) + dz * std::cos(bd.heading);
-                        BuildingRoom R; buildingRoom(bd, R);   // A-03: in its room (a round one's circle, a rectangle round its middle) or at its foot
+                        BuildingRoom R; buildingRoom(bd, R);   // in its room (a round one's circle, a rectangle round its middle) or at its foot
                         bool in = R.outside ? std::hypot(dx, dz) < std::max(bd.hw, bd.hd) + 6 : (R.round ? std::hypot(dx, dz) < R.r - 0.3 : (std::fabs(qx - R.cx) < R.hw - 0.3 && std::fabs(qz - R.cz) < R.hd - 0.3));
                         if (!in) shOut++;
                         shPlaces[s.place]++;
@@ -115,7 +115,7 @@ void unitCivilisations(const Check& check) {
                         double ddx, ddz; if (buildingDoor(bd, ddx, ddz) && std::hypot(s.x - ddx, s.z - ddz) < 1.4) shDoor++;
                     }
                 }
-                for (size_t k = 0; k < sp.buildings.size(); k++) {   // A-03: every building's room (C-01's houses among them), against its own pieces' colliders
+                for (size_t k = 0; k < sp.buildings.size(); k++) {   // every building's room (C-01's houses among them), against its own pieces' colliders
                     const Building& bd = sp.buildings[k]; BuildingRoom R;
                     if (!buildingRoom(bd, R) || R.outside) continue;
                     houses++;
@@ -127,15 +127,15 @@ void unitCivilisations(const Check& check) {
             }
             check("settlements: hamlets, villages, towns and lone monuments", cls[0] > cls[1] && cls[1] >= cls[2] && cls[2] > 0 && cls[3] > 0, fmt("%s: %d hamlets, %d villages, %d towns, %d monuments in %d cells (B-417: the old ones' monoliths gone)", b.name.c_str(), cls[0], cls[1], cls[2], cls[3], cells));
             check("settlements: every room open, its doorway a metre clear", houses > 0 && roomsOk == houses && doorsOk == houses, fmt("%d rooms (A-03: every building's), %d with the middle clear, %d with a metre of the doorway clear at the explorer's radius", houses, roomsOk, doorsOk));
-            check("shards: a few per settlement, in a room or at a stela, clear of the pieces and the doorway, distinct, deterministic",   // C-03
+            check("shards: a few per settlement, in a room or at a stela, clear of the pieces and the doorway, distinct, deterministic",
                   shSettle > 0 && shTotal > 0 && shCountBad == 0 && shBad == 0 && shDup == 0 && shOut == 0 && shBlocked == 0 && shDoor == 0 && shDeterm && shByClass[2] > 0 && shTotal * 10 >= shSettle * 5,
                   fmt("%d shards in %d settlements (in hamlets %d, villages %d, towns %d, monuments %d; %s); %d counts out of bounds, %d out of their building, %d in a piece, %d in a doorway, %d repeats, %s",
                       shTotal, shSettle, shByClass[0], shByClass[1], shByClass[2], shByClass[3], [&] { std::string p; for (int k = 0; k < BK_COUNT; k++) if (shPlaces[k]) p += fmt("%s%d in %s", p.empty() ? "" : ", ", shPlaces[k], buildingPlaceName(k)); return p; }().c_str(), shCountBad, shOut, shBlocked, shDoor, shDup, shDeterm ? "the same twice" : "NOT deterministic"));
             {   // the view: the first town's houses, the colliders leaving the centre clear and the doorway open; the town drawn from outside its edge, timed
                 int tLat = 0, tLon = 0; bool tFound = false; RuinSpec tsp;
                 {   // from a point on low land (the fixed start of the counts above may lie in an ocean): the first of a 2048 m grid under 40 degrees of latitude
-                    DrainageOff off;   // A-03: as the view sites them, without the rivers' tiles
-                    int lLat = gLat0, lLon = gLon0; bool land = true;   // T-01: the plan's town's countryside is land
+                    DrainageOff off;   // as the view sites them, without the rivers' tiles
+                    int lLat = gLat0, lLon = gLon0; bool land = true;   // the plan's town's countryside is land
                     for (int j = 0; j < 36 && !land; j++) for (int i = 0; i < 72 && !land; i++) {
                         double la = (-85 + 170.0 * (j + 0.5) / 36) * DEG, lo = (-180 + 360.0 * (i + 0.5) / 72) * DEG;
                         if (std::fabs(la) > 40 * DEG) continue;
@@ -149,15 +149,15 @@ void unitCivilisations(const Check& check) {
                     if (!tFound) printf("    (no town passed the site test within 40 rings of %d:%d%s)\n", lLat, lLon, land ? "" : ", no low land found");
                 }
                 int clearN = 0, openN = 0, hN = 0, spanN = 0, spanBad = 0, rocksInRooms = 0; double ms = 0, tallest = 0; int pieces = 0; std::string where = tFound ? "the view found no town at the cell" : "no town within 40 rings of low land";
-                int vShards = 0, vClear = 0, vRocks = 0, vDrawn = 0; bool vReach = false, vGone = false;   // C-03
-                int gN = 0, gPieces = 0; bool gReach = false; std::string gLine;   // C-12
+                int vShards = 0, vClear = 0, vRocks = 0, vDrawn = 0; bool vReach = false, vGone = false;
+                int gN = 0, gPieces = 0; bool gReach = false; std::string gLine;
                 if (tFound) {
                     SurfaceView sv;
                     sv.init(&sys, bi, tsp.lat, tsp.lon, 0.0);
                     Ruin ru;
                     if (sv.ruinAt(tLat, tLon, ru)) {
                         std::vector<SurfaceView::Collider> cols;
-                        for (size_t k = 0; k < ru.spec->buildings.size(); k++) {   // A-03: every building's room (C-01's houses among them)
+                        for (size_t k = 0; k < ru.spec->buildings.size(); k++) {   // every building's room (C-01's houses among them)
                             const Building& bd = ru.spec->buildings[k]; BuildingRoom R;
                             if (!buildingRoom(bd, R) || R.outside) continue;
                             hN++;
@@ -165,16 +165,16 @@ void unitCivilisations(const Check& check) {
                             sv.collectColliders(hx, hz, cols);
                             bool clear = true;
                             for (const auto& c : cols) if (c.kind == 3 && c.y0 < sv.site.groundHeight(c.x, c.z) + 1.0 && std::hypot(c.x - hx, c.z - hz) < c.r + (R.round ? 0.6 : 0.9)) clear = false;
-                            for (const auto& c : cols) {   // C-08 (KI-345): no rock's collider inside the room
+                            for (const auto& c : cols) {   // no rock's collider inside the room
                                 if (c.kind != 0) continue;
                                 double dx = c.x - hx, dz = c.z - hz, lx = dx * std::cos(bd.heading) - dz * std::sin(bd.heading), lz = dx * std::sin(bd.heading) + dz * std::cos(bd.heading);
                                 if (R.round ? std::hypot(lx, lz) < R.r : (std::fabs(lx) < R.hw && std::fabs(lz) < R.hd)) rocksInRooms++;
                             }
-                            // B-405: every piece's collider spans its own height over the ground it stands on, so the jetpack clears what it has risen above
+                            // every piece's collider spans its own height over the ground it stands on, so the jetpack clears what it has risen above
                             for (const auto& c : cols) {
                                 if (c.kind != 3) continue;
                                 double gnd = sv.site.groundHeight(c.x, c.z); spanN++;
-                                if (c.y1 - c.y0 < 0.85 || c.y1 - c.y0 > 600 || c.y0 - gnd < -8) spanBad++;   // A-03: a tower's shaft spans its height over its lobby
+                                if (c.y1 - c.y0 < 0.85 || c.y1 - c.y0 > 600 || c.y0 - gnd < -8) spanBad++;   // a tower's shaft spans its height over its lobby
                                 tallest = std::max(tallest, c.y1 - gnd);
                             }
                             if (clear) clearN++;
@@ -188,7 +188,7 @@ void unitCivilisations(const Check& check) {
                             }
                             if (bestRun * 0.1 >= 1.0) openN++;
                         }
-                        {   // C-03: the town's shards in the view: no piece's collider within 0.45 m of a site (the explorer can stand at it), the first
+                        {   // the town's shards in the view: no piece's collider within 0.45 m of a site (the explorer can stand at it), the first
                             // within reach when the explorer stands a metre from it, drawn from there, and neither offered once taken
                             const SurfaceView::RuinCell* rc = sv.ruinCell(tLat, tLon);
                             vShards = (int)rc->shards.size();
@@ -214,7 +214,7 @@ void unitCivilisations(const Check& check) {
                                 sv.shardsFound.insert(s.index); sv.update(0.016, in0, 0.0, false); vGone = sv.nearShard.index != s.index; sv.shardsFound.clear();
                             }
                         }
-                        {   // C-12: the town's graves in the view: their stones among the pieces, the first within reach when the explorer stands a metre
+                        {   // the town's graves in the view: their stones among the pieces, the first within reach when the explorer stands a metre
                             // before its face, its name and years read
                             const SurfaceView::RuinCell* rc = sv.ruinCell(tLat, tLon);
                             gN = (int)rc->graves.size();
@@ -240,7 +240,7 @@ void unitCivilisations(const Check& check) {
                 }
                 check("settlements: the colliders leave the rooms and doorways open and stand as tall as their walls", tFound && hN > 0 && clearN == hN && openN == hN && spanN > 0 && spanBad == 0 && tallest > 0.9 && tallest < 3000 && rocksInRooms == 0,
                       fmt("%s: %d rooms of a town (A-03: every building's), %d clear, %d open; %d colliders, %d without a wall's span, the tallest %.1f m over its ground, %d rocks in the rooms; the town drawn in %.1f ms (%d pieces)", where.c_str(), hN, clearN, openN, spanN, spanBad, tallest, rocksInRooms, ms, pieces));
-                check("shards: the town's sites are clear in the view, within reach at a metre, drawn, and gone once taken", tFound && vShards >= 2 && vClear == vShards && vReach && vDrawn >= 1 && vGone,   // C-03
+                check("shards: the town's sites are clear in the view, within reach at a metre, drawn, and gone once taken", tFound && vShards >= 2 && vClear == vShards && vReach && vDrawn >= 1 && vGone,
                       fmt("%d shards in the town, %d clear of the pieces' colliders (%d rocks on them), the first %s within reach at 1 m, %d drawn from inside (shots/tests/unit_shard_room.png), %s", vShards, vClear, vRocks, vReach ? "is" : "is NOT", vDrawn, vGone ? "gone once taken" : "STILL offered once taken"));
                 check("graves: the town's stones among its pieces, the first within reach at a metre, its name and years read (C-12)", tFound && gN >= 6 && gPieces == gN && gReach && !gLine.empty(),
                       fmt("%d graves in the town, %d stones among the pieces, the first %s within reach at 1 m: '%s' (shots/tests/unit_grave.png)", gN, gPieces, gReach ? "is" : "is NOT", gLine.c_str()));
@@ -252,14 +252,14 @@ void unitCivilisations(const Check& check) {
 
 // C-08: ruins that read the world
 void unitRuins(const Check& check) {
-    {   // C-08: ruins that read the world. On the two test worlds (Aieliaalas II felisian, Leileashphail III desert) over 31 x 31 cells: a
+    {   // ruins that read the world. On the two test worlds (Aieliaalas II felisian, Leileashphail III desert) over 31 x 31 cells: a
         // harbour only where a shore is within reach of the edge, terraces only on a slope, a cistern and a wind wall only on the
         // desert world, cairns only in mountain relief, every terrace wall clear of the houses' rooms, the drifts on the desert's walls
         // alone, all of it the same twice; and the weathering: the decay rises with the age and the wet, the cultures near home span
         // from standing to foundations; the capsule's point inside a settlement is moved out past its edge
         struct TW { int64_t sx, sz; int bi; } tws[2] = {{151, 25, 1}, {153, 70, 2}};
         int harbours = 0, dryHarbours = 0, terraced = 0, cisterns = 0, windwalls = 0, cairnsN = 0, settlements = 0, wrong = 0, inRoom = 0, driftsDesert = 0, driftsFelisian = 0, notSame = 0, quaysWet = 0, quaysDry = 0, housesN = 0, doorsBlocked = 0;
-        std::string blockedWhat;   // A-03: which rooms' doorways
+        std::string blockedWhat;   // which rooms' doorways
         std::string wrongWhat, names;
         for (int w = 0; w < 2; w++) {
             Star s; StarSystem sys; if (!systemAt(tws[w].sx, 0, tws[w].sz, s, sys, true)) continue;
@@ -270,10 +270,10 @@ void unitRuins(const Check& check) {
             DrainageOff off;
             // a coast: two points of a 5-degree grid, one land and one water (or the old sea), the shoreline bisected between them at 2048 m,
             // the land side's cell taken
-            double la0 = 0.2, lo0 = 0.7; planPlacePoint(g, 0, la0, lo0);   // T-01: round a town of the people's plan
+            double la0 = 0.2, lo0 = 0.7; planPlacePoint(g, 0, la0, lo0);   // round a town of the people's plan
             int gLat0, gLon0; ruinCellOf(g, la0, lo0, gLat0, gLon0);
             int cLat = gLat0, cLon = gLon0; bool coast = false;
-            { double cla, clo; if (planPlacePoint(g, 0, cla, clo, true)) { ruinCellOf(g, cla, clo, cLat, cLon); coast = true; } }   // T-01: by the water where the plan put a place
+            { double cla, clo; if (planPlacePoint(g, 0, cla, clo, true)) { ruinCellOf(g, cla, clo, cLat, cLon); coast = true; } }   // by the water where the plan put a place
             auto wetAt = [&](double la, double lo) { SurfaceSample q = sampleSurface(g, StarSystem::bodyFromLatLon(la, lo), 2048); return q.material == MAT_WATER || q.oldSea > 0.5; };
             for (int j = 0; j < 36 && !coast; j++) for (int i = 0; i < 72 && !coast; i++) {
                 double la = (-85 + 170.0 * (j + 0.5) / 36) * DEG, lo = (-180 + 360.0 * (i + 0.5) / 72) * DEG;
@@ -294,7 +294,7 @@ void unitRuins(const Check& check) {
                 RuinSpec sp2; ruinOfCell(g, gl, gn, sp2, true);
                 if (featureList(sp2) != featureList(sp) || sp2.buildings.size() != sp.buildings.size()) notSame++;
                 if (sp.harbour) { harbours++; if (sp.site.shoreDry) dryHarbours++; if (sp.site.shoreDist >= 500 + sp.size) { wrong++; wrongWhat += "a harbour without a shore; "; } }
-                if (sp.terraced) { terraced++; if (sp.site.slope <= (cultureOf(g, sp.people).genome.of(GV_LAND) == LD_TERRACED ? 0.02 : 0.06)) { wrong++; wrongWhat += "terraces on the flat; "; } }   // A-04: a people of terraces terraces gentler slopes
+                if (sp.terraced) { terraced++; if (sp.site.slope <= (cultureOf(g, sp.people).genome.of(GV_LAND) == LD_TERRACED ? 0.02 : 0.06)) { wrong++; wrongWhat += "terraces on the flat; "; } }   // a people of terraces terraces gentler slopes
                 if (sp.cistern) { cisterns++; if (!sp.site.desert) { wrong++; wrongWhat += "a cistern off the desert; "; } }
                 if (sp.windwall) { windwalls++; if (!sp.site.desert) { wrong++; wrongWhat += "a wind wall off the desert; "; } }
                 if (sp.cairns) { cairnsN++; if (sp.site.relief <= 0.45) { wrong++; wrongWhat += "cairns on the plain; "; } }
@@ -349,7 +349,7 @@ void unitRuins(const Check& check) {
 
 // C-10: the star charts, by age and on the decoder
 void unitCharts(const Check& check) {
-    {   // C-10: the star charts. On the two test worlds: three to five of the fifty are charts, none of them music, one mark each in the
+    {   // the star charts. On the two test worlds: three to five of the fifty are charts, none of them music, one mark each in the
         // lore; every chart's stars lie in the cube the game draws round the world's star, the brightest first, within the field of the
         // mark; the figures share no star, each joins its stars with lines within reach, and the caption names every figure and the
         // people marked; a mark of a people has a world and a name, one heard transmits; the same twice. Across forty civilised worlds
@@ -363,7 +363,7 @@ void unitCharts(const Check& check) {
             Lore L = loreOf(sys, b, g), L2 = loreOf(sys, b, g);
             int count = chartShardsOf(g);
             if (count < 3 || count > 5) { bad++; badWhat += fmt("%d charts; ", count); }
-            const int allCharts = recordChartCount(g, L.records);   // T-04: the charts past the fifty marked too, C-10's first
+            const int allCharts = recordChartCount(g, L.records);   // the charts past the fifty marked too, C-10's first
             if ((int)L.marks.size() != allCharts) { bad++; badWhat += fmt("%zu marks for %d charts; ", L.marks.size(), allCharts); }
             if (L2.marks.size() != L.marks.size()) same = false; else for (size_t j = 0; j < L.marks.size(); j++) if (L2.marks[j].star.seed != L.marks[j].star.seed || L2.marks[j].how != L.marks[j].how) same = false;
             for (const ChartMark& m : L.marks) {
@@ -411,7 +411,7 @@ void unitCharts(const Check& check) {
             for (const Body& b : sys.bodies) {
                 BodyGen g = BodyGen::make(b); if (!g.hasTrait(TR_CIVILISATION)) continue;
                 far++; double t0 = nowSec(); Lore L = loreOf(sys, b, g); double ms = (nowSec() - t0) * 1e3; loreMs += ms; loreMax = std::max(loreMax, ms);
-                for (const ChartMark& m : L.marks) { if (m.how == 3) { how[3]++; continue; } farCharts++; how[std::min(std::max(m.how, 0), 2)]++; }   // H-05: the far future's far marks apart
+                for (const ChartMark& m : L.marks) { if (m.how == 3) { how[3]++; continue; } farCharts++; how[std::min(std::max(m.how, 0), 2)]++; }   // the far future's far marks apart
                 break;
             }
         }
@@ -422,7 +422,7 @@ void unitCharts(const Check& check) {
                   names.c_str(), charts, figuresN, figuresN ? (double)starsN / figuresN : 0.0, musicToo, bad, bad ? ": " : "", badWhat.c_str(), same ? "the same twice" : "NOT the same twice", far, farCharts, how[0], 100 * brightShare, how[1], how[2], loreMs / std::max(far, 1), loreMax));
     }
     { std::string d; bool ok = checkChartsByAge(d); check("star charts by age: each in the way of its record's age and medium, with what that way shows (H-05)", ok, d); }
-    {   // C-10: the chart on the decoder: with three shards and the first chart of Aieliaalas II in the guide, the chart opened by index
+    {   // the chart on the decoder: with three shards and the first chart of Aieliaalas II in the guide, the chart opened by index
         // reads over four seconds (Enter skips), goes into the guide and the log, Enter targets the marked star, O holds it up, and in space
         // the figures' lines are drawn on the view turned onto a figure; parked at the people's own star every star of the chart is in the
         // sky the game draws; O on the chart again puts it down
@@ -477,7 +477,7 @@ void unitCharts(const Check& check) {
 
 // C-09: the roads, on the ground and on the ship
 void unitRoads(const Check& check) {
-    {   // C-09: the roads. On the two test worlds (Leileashphail III round its default region, Aieliaalas II round its land region at 12 N
+    {   // the roads. On the two test worlds (Leileashphail III round its default region, Aieliaalas II round its land region at 12 N
         // 4.22 E) over 13 x 13 cells: every sited settlement has a road, every road joins two sited settlements from edge to edge, the
         // same road from either end (its id and its points) and the same twice, no point of it in the sea, a lake or the old sea, no
         // way much longer than the straight line, no step steeper than a half; the young desert people's roads are nearly whole and the
@@ -491,7 +491,7 @@ void unitRoads(const Check& check) {
             if (!g.hasTrait(TR_CIVILISATION)) continue;
             Culture cu = cultureOf(g);
             names += (names.empty() ? "" : ", ") + b.name;
-            double la0 = tws[w].latDeg * DEG, lo0 = tws[w].lonDeg * DEG; planPlacePoint(g, 0, la0, lo0);   // T-01: round a town of the people's plan
+            double la0 = tws[w].latDeg * DEG, lo0 = tws[w].lonDeg * DEG; planPlacePoint(g, 0, la0, lo0);   // round a town of the people's plan
             int gLat0, gLon0; ruinCellOf(g, la0, lo0, gLat0, gLon0);
             RoadNodeCache nc; nc.reset(&g);
             std::vector<RoadNode> nodes; std::vector<RoadPair> pairs;
@@ -515,7 +515,7 @@ void unitRoads(const Check& check) {
                 maxGrade = std::max(maxGrade, r.maxGrade); lenSum += r.lengthM;
                 for (double a = 0; a < r.lengthM; a += 10) { leftSum += roadLeft(r.id, a, cu.roadWear); leftN++; }
             }
-            for (const RoadNode& n : nodes) {   // T-01: a settlement with another within the roads' reach (the countryside is the plan's: a lone hamlet has none)
+            for (const RoadNode& n : nodes) {   // a settlement with another within the roads' reach (the countryside is the plan's: a lone hamlet has none)
                 if (deg.count(roadCellKey(g, n.gLat, n.gLon))) continue;
                 bool neighbour = false;
                 for (const RoadNode& m : nodes) if ((m.gLat != n.gLat || m.gLon != n.gLon) && std::abs(m.gLat - n.gLat) <= ROAD_REACH && roadDistanceM(g, m.unit, n.unit) <= ROAD_MAX_M) neighbour = true;
@@ -540,18 +540,18 @@ void unitRoads(const Check& check) {
               fmt("%s: %d sited settlements, %d roads of %.1f km together (%d points); %d settlements without a road (another in reach), %d roads not from edge to edge, %d points in water, %d ways over 1.6 x the straight line, %d steeper than a half (the steepest %.3f: no switchbacks, KI-352), %d not the same from either end, %d not the same twice; left after the wear: %.0f%% on the young desert world, %.0f%% on the old wet one; %.2f ms a road at most",
                   names.c_str(), nodesN, roadsN, lenSum / 1000, pts, lonely, badEnds, wetPts, longWays, steep, maxGrade, asym, notSame, 100 * leftYoung, 100 * leftOld, msRoad));
     }
-    {   // C-09: the roads on the ground and on the ship. The view at a point on a road of Leileashphail III: the site holds roads, the
+    {   // the roads on the ground and on the ship. The view at a point on a road of Leileashphail III: the site holds roads, the
         // vertex under the point carries the road's share, the paving as its material and no vegetation on the fine rings, the tone alone
         // on the 64 m ring, and a point forty metres across the road carries nothing; the landing map's zoom over the region draws the
         // network's lines; landed by the road, the explorer set on it is told once (the status, a ROAD log line) and the HUD names the way
         Star s; StarSystem sys; bool have = starInSector(153, 0, 70, s, true);
         bool roadsHeld = false, onBed = false, paved = false, bare = false, lod0 = false, lod1Tone = false, offRoad = false, zoomLines = false, told = false, logged = false, hudWay = false;
         int zoomN = 0, siteRoads = 0; double siteMs = 0, latDeg = 0, lonDeg = 0; std::string info, statusLine;
-        bool gWalked = false, gTold = false, gLogged = false, gKept = false; std::string gInfo;   // C-12
+        bool gWalked = false, gTold = false, gLogged = false, gKept = false; std::string gInfo;
         if (have) {
             sys.generate(s);
             const Body& b = sys.bodies[2]; BodyGen g = BodyGen::make(b);
-            double la0 = 11.46 * DEG, lo0 = 40.11 * DEG; planPlacePoint(g, 0, la0, lo0);   // T-01: round a town of the people's plan
+            double la0 = 11.46 * DEG, lo0 = 40.11 * DEG; planPlacePoint(g, 0, la0, lo0);   // round a town of the people's plan
             int gLat0, gLon0; ruinCellOf(g, la0, lo0, gLat0, gLon0);
             std::vector<Road> roads;
             for (int dl = -3; dl <= 3 && roads.empty(); dl++) for (int dn = -3; dn <= 3 && roads.empty(); dn++) { std::vector<Road> rs; roadsOfCell(g, gLat0 + dl, gLon0 + dn, rs); for (const Road& r : rs) if (r.lengthM > 1500) { roads.push_back(r); break; } }
@@ -600,7 +600,7 @@ void unitRoads(const Check& check) {
                     for (const LogEntry& e : game.guide.log) if (e.kind == "ROAD") logged = true;
                     info = game.testRoadInfo();
                     hudWay = info.find("roads met 1") != std::string::npos;
-                    if ((gWalked = game.testWalkToGrave())) {   // C-12: a metre before the nearest settlement's first stone: the status, a GRAVE log line, the guide keeps it, the second visit says nothing
+                    if ((gWalked = game.testWalkToGrave())) {   // a metre before the nearest settlement's first stone: the status, a GRAVE log line, the guide keeps it, the second visit says nothing
                         run(0.5); gInfo = game.testGraveInfo();
                         gTold = game.testStatus().find("A GRAVE:") != std::string::npos;
                         writePNG("shots/tests/unit_grave_hud.png", game.output(), FBW, FBH);   // the HUD's grave line and the status
@@ -622,7 +622,7 @@ void unitRoads(const Check& check) {
 
 // C-12: the calendar, the last recording and the graves
 void unitGraves(const Check& check) {
-    {   // C-12: the calendar, the last recording and the graves. On the two test worlds the last recording is a text shard (no piece, no
+    {   // the calendar, the last recording and the graves. On the two test worlds the last recording is a text shard (no piece, no
         // chart), the latest of the fifty (the span's end) and the only one with the end's tone, its date in the calendar like every
         // shard's (a moon within the moons, a day within the month or the year); the quick lore agrees with the full one. The graves of the
         // sited settlements over 13 x 13 cells of each world's region: no more than the class allows, every stone outside the radius and
@@ -657,7 +657,7 @@ void unitGraves(const Check& check) {
             calLines += fmt("%s%s: %s; dates like '%s'", w ? "; " : "", b.name.c_str(), calendarLine(L).c_str(), shardDate(L, sh[0]).c_str());
             lastLines += fmt("%s%s: S%d (%d ends), year %d of %d: '%s'", w ? "; " : "", b.name.c_str(), L.last, ends, L.last >= 0 ? sh[L.last].year : -1, L.spanYears + 1, L.last >= 0 ? trunc(sh[L.last].text, 50).c_str() : "-");
             Culture c = cultureOf(g);
-            double la0 = tws[w].latDeg * DEG, lo0 = tws[w].lonDeg * DEG; planPlacePoint(g, 0, la0, lo0);   // T-01: round a town of the people's plan
+            double la0 = tws[w].latDeg * DEG, lo0 = tws[w].lonDeg * DEG; planPlacePoint(g, 0, la0, lo0);   // round a town of the people's plan
             int gLat0, gLon0; ruinCellOf(g, la0, lo0, gLat0, gLon0);
             for (int dl = -6; dl <= 6; dl++) for (int dn = -6; dn <= 6; dn++) {
                 RuinSpec sp;

@@ -1,4 +1,4 @@
-// H-05 (2026-10-10): the music's player. C-04's `musicTrigger` and `musicSample` (moved here from audio.cpp) grown for the ages'
+// H-05 (2026-10-10): the music's player. `musicTrigger` and `musicSample`, for the ages'
 // instruments (peoples/music.h): every family as partials on a sine table (a sung vowel's harmonics under its formants, brass that
 // brightens as it swells, struck strings dying high first, an organ's stops, a music box's tines, an electric string overdriven, two-
 // operator electric keys and struck glass, a synthesiser's partials under a moving low-pass, pads, swarms of detuned tones, a field's
@@ -376,7 +376,7 @@ double AudioSynth::musicSample(double dt, AudioState& st) {
     const Piece& P = *mPiece; const Tradition& T = *st.tradition; const Ensemble& E = pieceEnsemble(T, P);
     if (mT == 0 && mNext == 0) { mLimEnv = 0; mLimGain = 1; }
     if (!st.piecePause) {
-        double bps = P.bpm / 60.0 * (1 + P.drift * std::sin(TAUM * 0.045 * mT)) * std::max(0.1, st.pieceSpeed);   // C-07: slowed through the receiver
+        double bps = P.bpm / 60.0 * (1 + P.drift * std::sin(TAUM * 0.045 * mT)) * std::max(0.1, st.pieceSpeed);   // slowed through the receiver
         mBeat += dt * bps; mT += dt;
         while (mNext < P.notes.size() && P.notes[mNext].t <= mBeat) { musicTrigger(P.notes[mNext], T, E, bps, dt); mNext++; }
     }

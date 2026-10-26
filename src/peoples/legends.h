@@ -1,19 +1,8 @@
-// H-06 (2026-10-10): what a people's read records told of its history (`docs/archive/ideas/ITERATION-1.3.0.md`, H-06): the decoder's history page
-// and its timeline of the eras hold this and nothing else, so a people's history is the explorer's own legends of it, assembled as its
-// records are read.
-//
-// * The events: a text record told some of the history's events (`ShardText::told`: what its genre's directives picked and wrote: a
-//   chronicle's years, a letter's news, an epitaph's death and its cause, a ballad's battle). The page holds the events the read records
-//   told, in the history's order, each with the records that told it (one event told from several sides is one line).
-// * The persons: a person is named only once a read record wrote their name; until then by what they were ("a woman", "a child", "a
-//   ruler"), so a letter's "your sister had a girl" is a child born to a woman and a man.
-// * The eras: an era is placed and named once a record written in it is read (the ship dates the records; the era is the people's name for
-//   those years). An era no read record is from is a stretch of years without a name.
-// * The age: the age the people had reached when it ended is named once `AGE_TOLD_RECORDS` of the records of that age are read, or the last
-//   recording (A-01's rule: the age is shown in what they built, never named until the records tell it).
-// * The people's ways: a text written for a people of many gods, for one that buried its dead in barrows, for the drying that ended it (its
-//   drawn alternatives' guards: `ShardText::ways`) tells that much of them: the page's portrait of the people grows with them.
-// * The end: the last recording read closes the history.
+// What a people's read records told of its history (H-06; docs/reference/civilisations/records-and-grammar.md): the decoder's history page
+// and its timeline hold this and nothing else. The events the read records told (`ShardText::told`), in the history's order, each with the
+// records that told it; a person named once a read record wrote the name, else by what they were; an era placed and named once a record of
+// it is read; the age named once AGE_TOLD_RECORDS of its records are read, or the last recording; the people's ways as the read records'
+// guards tell them (`ShardText::ways`); the last recording closes it.
 #pragma once
 #include "history.h"
 #include "shards.h"
