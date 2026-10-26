@@ -8,6 +8,17 @@
 #include <cstdio>
 #include <algorithm>
 
+// the system list: the bodies, then the belts; L targets one, Enter approaches it, Esc or Tab closes
+void Game::updateSystemList(const Input& in, double dt, double realDt) {
+    int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // the belts follow the bodies
+    if (n == 0) { state = GameState::SPACE; return; }
+    menuStep(in, listSel, n);
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_TAB)) state = GameState::SPACE;
+    auto pick = [&]() { if (listSel < nb) { ship.localTarget = listSel; ship.targetBelt = -1; } else { ship.localTarget = -1; ship.targetBelt = listSel - nb; } };
+    if (in.wasPressed(KEY_L)) { pick(); state = GameState::SPACE; status(fmt("LOCAL TARGET: %s", upper(localTargetLabel()).c_str()), 4); }
+    if (enterKey(in)) { pick(); state = GameState::SPACE; if (listSel < nb) startApproach(listSel); else startApproachBelt(listSel - nb); }
+}
+
 void Game::renderSystemList() {
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 200);
     std::string head = fmt("SYSTEM ANALYZER - %s (%s)", trunc(upper(starNameOf(sys.star)), 16).c_str(), sys.classString().c_str());
@@ -66,6 +77,17 @@ std::string Game::forecastLine() const {
         return fmt("%s FROM THE %s IN %s", what, frontCompass(f.fromBearing), countdownString(f.tArrive - t).c_str());
     }
     return "NO FRONT WITHIN 5 DAYS";
+}
+
+// the data sheet: T opens the place's almanac, Left and Right turn its pages (a giant's probes' profiles after the sheet's own),
+// any other key closes it
+void Game::updateDataSheet(const Input& in, double dt, double realDt) {
+    if (in.wasPressed(KEY_T) && dataPage == 0) { openAlmanac(); return; }   // the sheet opens the almanac of the place
+    const int pages = dataSheetPages + (int)dataProbes().size();   // a giant's sheet, then its probes' profiles (Q-01: the sheet's own pages first)
+    if (pages > 1 && (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_LEFT))) { dataPage = (dataPage + (in.wasPressed(KEY_RIGHT) ? 1 : pages - 1)) % pages; return; }
+    bool any = false;
+    for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
+    if (any) { state = returnState; dataPage = 0; }
 }
 
 void Game::renderDataSheet() {

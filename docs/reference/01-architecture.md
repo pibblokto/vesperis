@@ -55,7 +55,8 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 | `SurfaceView` | surface/surface_view.h | first-person exploration: its data, then its functions by the file that defines them (E-08) |
 | `Player`, `Buggy`, `Drone`, `SurfaceEnvironment`, `LocalFront`, `Critter`, `TreeInst`, `Ruin` | surface/surface_types.h | the types beside `SurfaceView` (E-08) |
 | `Game` | game/game.h | orchestration, HUD, menus, save/load; an index of its sections at the top |
-| `GameState` + `STATE_ROWS`, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game`; a state's row (E-06) |
+| `GameState` + its traits, `ShipState`, `Cabin`, `HarnessKnobs` | game/game_types.h | the types beside `Game` |
+| `Game::STATE_ROWS` | game/states.cpp | a state's row: its traits (E-06), its update, picture, `covers` and `away` (U-02) |
 | `RadarState`, `ProbeState`, `DroneBay`, `AutoState` ... | game/*_state.h | each subsystem's state, a `Game` member (E-05) |
 | `TestGame` | harness/test_game.h | the harness's `Game`, with the hooks the tests read and set it through (E-05) |
 | `AudioSynth`, `AudioState` | game/audio.h | procedural audio |
@@ -65,10 +66,10 @@ Rule: nothing below `platform_raylib.cpp` may include `raylib.h`. raylib defines
 ## Per-frame data flow
 
 1. Platform polls input into `Input` and calls `Game::frame(in, realDt)`, which makes its own copy: the controller's buttons become its keys (`padFrame`, R-418), and while auto-explore plays the explorer's input replaces it (`autoInput`, R-419; any key, click, mouse motion or button ends that first).
-2. `Game::frame` advances game time `t` by `realDt * timeWarp` while in a simulating state (space, surface, descent/ascent, landing map), runs the state's update, then renders:
+2. `Game::frame` advances game time `t` by `realDt * timeWarp` while in a simulating state (space, surface, descent/ascent, landing map), runs its row (`Game::STATE_ROWS`, U-02): its update, then its picture:
    * space: `SpaceRenderer::setupPalette` + `render` into `fb`, `fb.mush(2)`, `fb.toRGB(rgbBuf)`, then the HUD is drawn in RGB.
    * surface: `SurfaceView::render` (palette, sky, terrain, objects, life, capsule, weather), `mush(2)`, `toRGB`, HUD.
-   * overlays (help, menu, list, data) render the underlying scene first, then blend a dark rectangle and text.
+   * overlays (`ST_OVERLAY`: help, menu, list, data...) draw the scene they were opened from first (`renderUnder`) unless they cover the frame, then blend a dark rectangle and text.
 3. Platform uploads `rgbBuf` (320x200 RGBA) to a texture and draws it scaled with point filtering; optional scanlines.
 4. Platform pumps the audio stream from `AudioSynth::render` using `Game::audio` levels. R-420: the same pump hands auto-explore's tape (`AudioState::music`, `musicGo`, `musicGain`) to a thread of the platform's, which streams the file with raylib's music stream, and takes its place, length and end back into `Game::audio`.
 

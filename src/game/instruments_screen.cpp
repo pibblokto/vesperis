@@ -122,6 +122,9 @@ bool Game::loadInstrument(int sel) {
     return true;
 }
 
+// U-02: an instrument is played at its case only
+void Game::instrumentsAway() { if (audio.instrument || icase.discOn) stopInstrument(); }
+
 void Game::stopInstrument() {
     audio.instrument = nullptr; audio.instrumentHits.clear(); audio.instrumentUps.clear();
     if (icase.discOn && audio.piece == &icase.disc) { audio.piece = nullptr; audio.tradition = nullptr; audio.medium = -1; audio.pieceStart = false; audio.pieceBeat = -1; }
@@ -143,7 +146,7 @@ void Game::playInstrumentDegree(int degree, int key) {
     if (icase.played.size() > 28) icase.played.erase(icase.played.begin());
 }
 
-void Game::updateInstruments(const Input& in, double realDt) {
+void Game::updateInstruments(const Input& in, double dt, double realDt) {
     for (double& g : icase.glow) g = std::max(0.0, g - realDt * 1.4);
     if (icase.level == 0) {   // C-18: the worlds
         const int nw = (int)icase.worlds.size();

@@ -68,6 +68,14 @@ void Game::renderSpace() {
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // arrival flash
 }
 
+// U-02: the scene under an overlay, the one it was opened from (`returnState`): the ground, the title over space, else space;
+// no scene's HUD
+void Game::renderUnder() {
+    if (returnState == GameState::SURFACE) renderSurfaceScene();
+    else if (returnState == GameState::TITLE) renderTitle();
+    else renderSpace();
+}
+
 // G-07: the galaxy page in a flight draws no scene, so the band's keyframes are kept building here (a share a frame), or closing the
 // page would build one whole at once
 void Game::keepFlightBand() {

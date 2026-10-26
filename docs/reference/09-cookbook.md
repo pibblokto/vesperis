@@ -333,14 +333,15 @@ Keys are GLFW codes in `core/input.h`; the platform copies raylib's `IsKeyDown/I
 
 ## Add a game state
 
-Append it to `GameState` and its row to `STATE_ROWS` (`game/game_types.h`): its traits (the clock runs, an overlay drawn over
-its `returnState`, the cameras stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground),
-its controller context and its name; `STATE_COUNT` names the last state. Code asks `stateHas(state, ST_...)`; a trait new code
-needs is a column, not a list of states (E-06). Then every place a state or screen touches:
-- its file of `Game` methods, declared in game.h under a banner naming the file; the function that opens it sets `state`,
-  `returnState` and `guideReturn`;
-- the update switch, and a scene's case in the render switch (an overlay is drawn in the `default`'s if/else chain);
-- the sounds stopped at the frame's start if it plays one; pad.cpp's screen names and `padItems`; `autoScene`;
+Append it to `GameState` (`game/game_types.h`; `STATE_COUNT` names the last state) and its row to `Game::STATE_ROWS`
+(`game/states.cpp`, U-02): its name; its traits (the clock runs, an overlay drawn over its `returnState`'s scene, the cameras
+stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground, the ship moving on); its
+controller context; its `update` and its picture, which the frame runs; an overlay's `covers` if it ever covers the whole frame,
+and an `away` if its screen stops something off it (a sound). The compiler checks the order, and that the row names its update
+and its picture. Code asks `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06). Then:
+- its file of `Game` methods, the row's among them (an update takes `(const Input& in, double dt, double realDt)`), declared in
+  game.h under a banner naming the file; the function that opens it sets `state`, `returnState` and `guideReturn`;
+- pad.cpp's screen names and `padItems`; `autoScene`;
 - its way in: a cabin spot (a `CabinFacing`: `updateCabin`'s spots, its colour in `SCREENS`), a flight computer row (`PAGE1` or
   `PAGE2` appended, `counts[]` and `n` both), the Esc menu (game.cpp's `menuStep(in, menuSel, 8)` and menus.cpp's `items[]`) or
   the guide menu (`GUIDE_ITEMS`, the shifted `case` numbers, 16 rows at 9 px); a menu's labels are its `MenuLabels`

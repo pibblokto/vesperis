@@ -375,6 +375,24 @@ void Game::choosePaletteBodies(int& a, int& b) {
 }
 
 void Game::updateSpace(const Input& in, double dt, double realDt) {
+    if (in.wasPressed(KEY_ESCAPE)) {
+        if (ship.targeting) ship.targeting = false;
+        else if (radar.on) {
+            radarOff();
+            status("RADAR CAMERA OFF", 3);
+        } else if (tele.on) {
+            telescopeOff();
+            status("TELESCOPE STOWED", 3);
+        } else {
+            returnState = state;
+            menuSel = 0;
+            state = GameState::MENU;
+        }
+        return;
+    }   // Esc leaves the radar camera; W-06: and the telescope
+    if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; return; }
+    if (saveKey(in)) { saveSlot(currentSlot); return; }
+    if (loadKey(in)) { loadSlot(currentSlot); return; }
     if (in.wasPressed(KEY_Z) && !in.ctrl()) telescopeToggle();   // W-06: the telescope
     if (tele.on) updateTelescope(in, realDt);   // the mouse and the arrows steer the telescope at a rate that falls with the magnification
     else {

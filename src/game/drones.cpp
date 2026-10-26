@@ -335,7 +335,7 @@ void Game::droneFindsSeen() {
     bay.listTop = 0;
 }
 
-void Game::updateDroneBay(const Input& in, double realDt) {
+void Game::updateDroneBay(const Input& in, double dt, double realDt) {
     {   // F-02: the world's map once its thread has made it (the screen opens at once: THE MAP IS BEING DRAWN until then)
         const int b = droneBayWorld();
         if (sys.valid && b >= 0 && b < (int)sys.bodies.size() && bay.mapSeed != sys.bodies[b].seed) buildDroneMap(b);

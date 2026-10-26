@@ -357,7 +357,7 @@ void Game::speakShardPage(int page) {
     startSpeech();
 }
 
-void Game::updateShards(const Input& in, double realDt) {
+void Game::updateShards(const Input& in, double dt, double realDt) {
     if (shardsLevel < 2 && guide.shards.size() + guide.lent.size() != shardsListed) {
         // C-18: the drones brought more while the decoder was open (a record on the screen keeps the count it is read with)
         listShardWorlds();
@@ -487,6 +487,13 @@ void Game::updateShards(const Input& in, double realDt) {
         if (in.wasPressed(KEY_LEFT) || up) { stepShard(-1); openShard(shardSel); }
         else if (in.wasPressed(KEY_RIGHT) || down) { stepShard(1); openShard(shardSel); }
     }
+}
+
+// U-02: the decoder's music on its screen only, kept through a text entry naming the piece, and its voice (C-07: or through the
+// radar; C-11: the ship's player plays on)
+void Game::shardsAway() {
+    if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::TEXT_ENTRY) stopPiece();
+    if (audio.speech && audio.speech == &shardWorld.speech && !audio.radio) stopSpeech();
 }
 
 void Game::renderShards() {

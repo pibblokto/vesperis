@@ -474,8 +474,12 @@ Besides them, five in the harness and the docs. Found on the way: no palette ban
   still says seventeen; U-03 removes it.
 - **The cabin's devices:** a facing without its entries gives the controller a null pointer that "USE " is added to, and makes
   the HUD read past its `names[]`. U-03 closes both.
-- **Dead and unread:** two of the controller's screen names are shown by no page (U-04), and no code asks `ST_OVERLAY` (U-02).
+- **Dead and unread:** two of the controller's screen names are shown by no page (U-04), and no code asked `ST_OVERLAY` (U-02:
+  the frame's picture asks it now).
 - **KI-428 (U-01's survey):** a T typed at the GOES console also multiplies the time warp, and Ctrl+T there opens the almanac: the
   frame asks whether a state simulates, not whether it types. Offered, not fixed.
 - **The almanac's commands:** while a run goes, the controller offers STOP THE RUN (T), which the almanac's screen ignores (U-04).
 - **KI-429:** the settings screen's title overlaps its first row (seen once U-01 mended `settings`' picture). Offered, not fixed.
+- **U-02, the table's definition:** clang reads a static member's out-of-class `constexpr` definition as an inline variable, emitted
+  only where it is used; GCC 15 reads it as a plain one. states.cpp reads the table out of line, so it holds the one definition
+  either way. GCC 9.4, the Linux builds' compiler, is unchecked on it until Docker is asked (after KI-423).

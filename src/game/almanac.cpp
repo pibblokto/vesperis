@@ -69,7 +69,7 @@ void Game::almanacStop(bool arrived) {
     else status("RUN STOPPED - X1", 2);
 }
 
-void Game::updateAlmanac(const Input& in) {
+void Game::updateAlmanac(const Input& in, double dt, double realDt) {
     int n = (int)almanacEvents.size() + 1;   // the events and the free row
     menuStep(in, almanacSel, n);
     if (in.wasPressed(KEY_PAGE_UP)) almanacSel = std::max(0, almanacSel - ALMANAC_ROWS);
@@ -102,6 +102,8 @@ std::string Game::almanacStateLine() const {
 }
 
 void Game::renderAlmanac() {
+    // over the scene it was opened from (the landing map keeps its picture)
+    if (almanacScene == 2) renderLandingMap(); else if (almanacScene == 1 && surf.valid) renderSurfaceScene(); else renderSpace();
     const int top = 10, bottom = UH - 10, x0 = 14;
     drawPanel(canvas, x0, top, UW - x0, bottom, rgb(0, 0, 0), 240);
     const AlmanacPlace& p = almanacAt;

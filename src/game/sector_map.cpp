@@ -31,7 +31,7 @@ int Game::sectorMaxLevel() const {
 // explorer; Enter marks the place under it (the name's entry; on a mark: renames it), Delete twice removes the mark under it, M puts
 // the waypoint there (on the waypoint: clears it), Tab goes to the next mark; +/- and the wheel zoom (the arrows did), R and Shift+R
 // work the scanner as on the ground. B-412: Shift+Enter or Shift+click on a mark shows it over the view (the one shown), again hides it
-void Game::updateSectorMap(const Input& in) {
+void Game::updateSectorMap(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_EQUAL) || in.wheel > 0) sectorZoom = std::max(0, sectorZoom - 1);
     if (in.wasPressed(KEY_MINUS) || in.wheel < 0) sectorZoom = std::min(sectorMaxLevel(), sectorZoom + 1);
     const double hw = SECTOR_HALF_W[std::min(sectorZoom, sectorMaxLevel())], mpp = 2 * hw / 200, hh = hw * 0.8;

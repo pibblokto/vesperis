@@ -381,7 +381,7 @@ const char* const PAGE2[] = {"SETTINGS", "THE GUIDE", "EXPEDITION LOG", "THE SHA
 const MenuLabels SHIP_PAGE_LABELS[3] = {{PAGE0, (int)(sizeof(PAGE0) / sizeof(PAGE0[0]))}, {PAGE1, (int)(sizeof(PAGE1) / sizeof(PAGE1[0]))},
                                         {PAGE2, (int)(sizeof(PAGE2) / sizeof(PAGE2[0]))}};
 
-void Game::updateShipScreen(const Input& in) {
+void Game::updateShipScreen(const Input& in, double dt, double realDt) {
     int counts[3] = {11, 11, 5};
     if (in.wasPressed(KEY_LEFT) || in.wasPressed(KEY_TAB)) { shipScreenPage = (shipScreenPage + 2) % 3; shipScreenSel = 0; }
     if (in.wasPressed(KEY_RIGHT)) { shipScreenPage = (shipScreenPage + 1) % 3; shipScreenSel = 0; }
@@ -576,7 +576,7 @@ void Game::consoleCommand(const std::string& raw) {
     else consolePrint("UNKNOWN COMMAND - TYPE HELP");
 }
 
-void Game::updateConsole(const Input& in) {
+void Game::updateConsole(const Input& in, double dt, double realDt) {
     for (int k = KEY_A; k <= KEY_Z; k++) if (in.wasPressed(k) && consoleInput.size() < 40) consoleInput += (char)('A' + (k - KEY_A));
     for (int k = KEY_0; k <= KEY_9; k++) if (in.wasPressed(k) && consoleInput.size() < 40) consoleInput += (char)('0' + (k - KEY_0));
     if (in.wasPressed(KEY_SPACE) && consoleInput.size() < 40 && !consoleInput.empty()) consoleInput += ' ';

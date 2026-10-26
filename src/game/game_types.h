@@ -26,12 +26,12 @@ extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by L
 struct MenuLabels { const char* const* label; int count; };
 extern const MenuLabels MENU_LABELS, SETTINGS_LABELS, GUIDE_LABELS, SHIP_PAGE_LABELS[3];
 
-// E-06: what each state is, a row a state in GameState's order: the traits the frame, the radio, the save and the controller
-// read, the controller's context, the name the harness prints. A new state appends its row (the count and the order are
-// checked below); unit `states` holds its first 29 rows to the lists they replaced.
+// E-06: what each state is: its row in `Game::STATE_ROWS` (states.cpp, U-02), in GameState's order, holds the traits the frame,
+// the radio, the save and the controller read, the controller's context, the name the harness prints and the methods the frame
+// runs; `stateHas`, `statePad` and `stateName` read it. Unit `states` holds its first 29 rows to the lists they replaced.
 enum StateTrait : unsigned {
     ST_SIMULATES = 1 << 0,     // the clock runs under it: the time warp, an almanac's run
-    ST_OVERLAY = 1 << 1,       // drawn over the scene it was opened from (`returnState`): the render switch's `default`
+    ST_OVERLAY = 1 << 1,       // drawn over the scene it was opened from (`renderUnder`), unless its row's `covers` says not now
     ST_STOWS = 1 << 2,         // the ship's cameras are put away on it: the radar camera off, the telescope stowed
     ST_TAKES_SYNTH = 1 << 3,   // the dark radio is silent: the synth is the screen's, the probe's, the landing's or the title's
     ST_IN_PLAY = 1 << 4,       // a save places the explorer by it (on any other, by `returnState`)
@@ -39,54 +39,17 @@ enum StateTrait : unsigned {
     ST_PHOTO = 1 << 6,         // the photo tools work (Ctrl+P, Ctrl+Shift+P, Ctrl+R): the scenes, the probe's camera, a recording
     ST_TYPING = 1 << 7,        // keys type: the global keys rest, the controller's keyboard stays up
     ST_GROUND = 1 << 8,        // on the ground, or on the capsule's way down to it or back up
+    ST_SHIP_MOVES = 1 << 9,    // U-02: the ship moves on after its update, by the frame's clock (the star map, the cabin's screens)
 };
 // the controller's contexts (pad.cpp): what its sticks and buttons do. A state's row names its own; the ground's and the case's
 // are refined as the explorer walks, drives or flies, or plays (`padContext`)
 enum PadCtx { PCX_SCREEN, PCX_TITLE, PCX_SHIP, PCX_FOOT, PCX_BUGGY, PCX_DRONE, PCX_PROBE, PCX_RECORDING, PCX_INSTRUMENT };
-struct StateRow { GameState state; const char* name; unsigned traits; int pad; };
-inline constexpr StateRow STATE_ROWS[] = {
-    {GameState::TITLE, "TITLE",             ST_STOWS | ST_TAKES_SYNTH, PCX_TITLE},
-    {GameState::SPACE, "SPACE",             ST_SIMULATES | ST_IN_PLAY | ST_MOUSE | ST_PHOTO, PCX_SHIP},
-    {GameState::LANDING_MAP, "LANDING_MAP", ST_SIMULATES | ST_STOWS | ST_TAKES_SYNTH | ST_IN_PLAY, PCX_SCREEN},
-    {GameState::DESCENT, "DESCENT",         ST_SIMULATES | ST_STOWS | ST_TAKES_SYNTH | ST_IN_PLAY | ST_MOUSE | ST_GROUND, PCX_SCREEN},
-    {GameState::SURFACE, "SURFACE",         ST_SIMULATES | ST_STOWS | ST_IN_PLAY | ST_MOUSE | ST_PHOTO | ST_GROUND, PCX_FOOT},
-    {GameState::ASCENT, "ASCENT",           ST_SIMULATES | ST_STOWS | ST_TAKES_SYNTH | ST_IN_PLAY | ST_MOUSE | ST_GROUND, PCX_SCREEN},
-    {GameState::HELP, "HELP",               ST_OVERLAY, PCX_SCREEN},
-    {GameState::MENU, "MENU",               ST_OVERLAY, PCX_SCREEN},
-    {GameState::SYSTEM_LIST, "SYSTEM_LIST", ST_OVERLAY, PCX_SCREEN},
-    {GameState::DATA, "DATA",               ST_OVERLAY, PCX_SCREEN},
-    {GameState::SETTINGS, "SETTINGS",       ST_OVERLAY, PCX_SCREEN},
-    {GameState::SLOTS, "SLOTS",             ST_OVERLAY, PCX_SCREEN},
-    {GameState::GUIDE, "GUIDE",             ST_OVERLAY, PCX_SCREEN},
-    {GameState::TEXT_ENTRY, "TEXT_ENTRY",   ST_OVERLAY | ST_TYPING, PCX_SCREEN},
-    {GameState::STAR_MAP, "STAR_MAP",       ST_OVERLAY | ST_MOUSE, PCX_SCREEN},
-    {GameState::LOG, "LOG",                 ST_OVERLAY, PCX_SCREEN},
-    {GameState::STATS, "STATS",             ST_OVERLAY, PCX_SCREEN},
-    {GameState::GALLERY, "GALLERY",         ST_OVERLAY, PCX_SCREEN},
-    {GameState::SHIPSCREEN, "SHIPSCREEN",   ST_SIMULATES | ST_OVERLAY, PCX_SCREEN},
-    {GameState::CONSOLE, "CONSOLE",         ST_SIMULATES | ST_OVERLAY | ST_TYPING, PCX_SCREEN},
-    {GameState::SECTOR_MAP, "SECTOR_MAP",   ST_OVERLAY | ST_STOWS | ST_MOUSE, PCX_SCREEN},
-    {GameState::KEYS, "KEYS",               ST_OVERLAY, PCX_SCREEN},
-    {GameState::SHARDS, "SHARDS",           ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_TAKES_SYNTH, PCX_SCREEN},
-    {GameState::ALMANAC, "ALMANAC",         0, PCX_SCREEN},
-    {GameState::PROBE, "PROBE",             ST_SIMULATES | ST_STOWS | ST_TAKES_SYNTH | ST_IN_PLAY | ST_PHOTO, PCX_PROBE},
-    {GameState::RECORDING, "RECORDING",     ST_TAKES_SYNTH | ST_PHOTO, PCX_RECORDING},
-    {GameState::INSTRUMENTS, "INSTRUMENTS", ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_TAKES_SYNTH, PCX_INSTRUMENT},
-    {GameState::DRONES, "DRONES",           ST_SIMULATES | ST_OVERLAY | ST_STOWS | ST_TAKES_SYNTH, PCX_SCREEN},
-    {GameState::AUTO, "AUTO",               ST_OVERLAY, PCX_SCREEN},
-};
 constexpr int STATE_COUNT = (int)GameState::AUTO + 1;   // AUTO is the last state
-static_assert(sizeof(STATE_ROWS) / sizeof(STATE_ROWS[0]) == STATE_COUNT, "a row a state");
-constexpr bool stateRowsInOrder() {
-    for (int i = 0; i < STATE_COUNT; i++)
-        if ((int)STATE_ROWS[i].state != i) return false;
-    return true;
-}
-static_assert(stateRowsInOrder(), "each row in its state's place");
-// a state's trait, its controller's context and its name (a value that is no state has no trait, the screen's context, "?")
-inline bool stateHas(GameState s, unsigned trait) { const unsigned i = (unsigned)s; return i < (unsigned)STATE_COUNT && (STATE_ROWS[i].traits & trait); }
-inline int statePad(GameState s) { const unsigned i = (unsigned)s; return i < (unsigned)STATE_COUNT ? STATE_ROWS[i].pad : (int)PCX_SCREEN; }
-inline const char* stateName(GameState s) { const unsigned i = (unsigned)s; return i < (unsigned)STATE_COUNT ? STATE_ROWS[i].name : "?"; }
+// a state's trait, its controller's context and its name, read from its row (a value that is no state has no trait, the screen's
+// context, "?")
+bool stateHas(GameState s, unsigned trait);
+int statePad(GameState s);
+const char* stateName(GameState s);
 
 // F-05: what the cabin's bands share, taken once a frame (`drawCabin`): the eye, the light, the screens' flickers, the decoder's wait, and
 // the drones on the rack (where each stands, its pose and its model)

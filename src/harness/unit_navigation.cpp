@@ -866,10 +866,11 @@ void unitAuto(const Check& check) {
     }
 }
 
-// E-06: the states' table (game_types.h) holds, for its first 29 states, what the hand-kept lists it replaced held: `frame`'s
+// E-06: the states' table (states.cpp) holds, for its first 29 states, what the hand-kept lists it replaced held: `frame`'s
 // `simulating` and its stowing of the radar camera and the telescope, the render switch's overlays, the dark radio's `taken`, the
 // save's `inPlay` and its ground, `mouseCaptureWanted`, the photo tools' scenes, the typing states (the global keys, the controller's
-// keyboard), `padContext`'s contexts, and the names the harness printed (modes_game.cpp's `auto`)
+// keyboard), `padContext`'s contexts, the names the harness printed (modes_game.cpp's `auto`); U-02: the update switch's cases that
+// moved the ship after their screen's update
 void unitStates(const Check& check) {
     using S = GameState;
     auto in = [](S s, std::initializer_list<S> l) { return std::find(l.begin(), l.end(), s) != l.end(); };
@@ -894,6 +895,7 @@ void unitStates(const Check& check) {
             {ST_PHOTO, "a photo's", in(s, {S::SPACE, S::SURFACE, S::PROBE, S::RECORDING})},
             {ST_TYPING, "typing", in(s, {S::TEXT_ENTRY, S::CONSOLE})},
             {ST_GROUND, "the ground's", in(s, {S::SURFACE, S::DESCENT, S::ASCENT})},
+            {ST_SHIP_MOVES, "moving the ship", in(s, {S::STAR_MAP, S::SHIPSCREEN, S::CONSOLE, S::SHARDS, S::INSTRUMENTS, S::DRONES})},
         };
         for (const auto& t : T)
             if (stateHas(s, t.trait) != t.was && bad.empty()) bad = fmt("%s %s %s", NAMES[i], t.was ? "is no longer" : "is now", t.what);
@@ -902,5 +904,5 @@ void unitStates(const Check& check) {
         if (statePad(s) != pad && bad.empty()) bad = fmt("%s's controller context", NAMES[i]);
         if (strcmp(stateName(s), NAMES[i]) != 0 && bad.empty()) bad = fmt("%s's name", NAMES[i]);
     }
-    check("the states' table, the old lists", bad.empty(), bad.empty() ? "29 states: 9 traits, the controller's contexts, the names" : bad);
+    check("the states' table, the old lists", bad.empty(), bad.empty() ? "29 states: 10 traits, the controller's contexts, the names" : bad);
 }

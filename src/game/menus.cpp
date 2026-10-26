@@ -30,7 +30,53 @@ const char* const SETTINGS_NAMES[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT
 const MenuLabels MENU_LABELS = {MENU_ITEMS, (int)(sizeof(MENU_ITEMS) / sizeof(MENU_ITEMS[0]))};
 const MenuLabels SETTINGS_LABELS = {SETTINGS_NAMES, SETTINGS_ITEMS};
 
+// the title: Enter goes on (on the ground where the expedition was, else in space), N begins afresh over a save, C the credits,
+// H help, Esc quits; the ship moves on the real clock meanwhile
+void Game::updateTitle(const Input& in, double dt, double realDt) {
+    titleYaw += realDt * 0.04;
+    titleIdle += realDt; attractT += realDt;
+    { bool any = std::fabs(in.mouseDx) + std::fabs(in.mouseDy) > 0; for (int k = 0; k < KEY_MAX && !any; k++) any = in.pressed[k]; if (any) titleIdle = 0; }
+    if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; helpPage = 2; state = GameState::HELP; }   // credits
+    updateShipMotion(realDt);
+    if (enterKey(in)) {
+        state = (returnState == GameState::SURFACE && surf.valid) ? GameState::SURFACE : GameState::SPACE;
+        status(state == GameState::SURFACE ? "EXPEDITION RESUMED ON THE SURFACE - H FOR HELP" : "STARDRIFTER READY - H FOR HELP", 6);
+        if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC THE F KEYS NEED FN: USE H, I, P, CTRL+S, CTRL+L, CTRL+K, CTRL+F"; statusNextSecs = 7; }
+    }
+    if (in.wasPressed(KEY_N) && hasSave) { newGame(); state = GameState::SPACE; }
+    if (helpKey(in)) { returnState = GameState::TITLE; helpPage = 0; state = GameState::HELP; }
+    if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
+}
+
+// help: Space turns its pages (not the credits'), any other key closes it
+void Game::updateHelp(const Input& in, double dt, double realDt) {
+    bool any = false;
+    for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
+    if (in.wasPressed(KEY_SPACE) && helpPage != 2) helpPage = helpPage == 0 ? 1 : (helpPage == 1 ? 3 : 0);   // the ship, the surface, the controller
+    else if (any) state = returnState;
+}
+
+// the Esc menu: its rows are MENU_ITEMS
+void Game::updateMenu(const Input& in, double dt, double realDt) {
+    menuStep(in, menuSel, 8);
+    if (in.wasPressed(KEY_ESCAPE)) state = returnState;
+    if (enterKey(in)) {
+        switch (menuSel) {
+            case 0: state = returnState; break;
+            case 1: openAutoScreen(GameState::MENU); break;
+            case 2: openSlots(false); break;
+            case 3: openSlots(true); break;
+            case 4: settingsSel = 0; state = GameState::SETTINGS; break;
+            case 5: helpPage = returnState == GameState::SURFACE ? 1 : 0; state = GameState::HELP; break;
+            case 6: newGame(); break;
+            case 7: autosave(); wantsQuit = true; break;
+        }
+    }
+}
+
+// the title, over space (the system its camera tours)
 void Game::renderTitle() {
+    renderSpace();
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 90);
     // the title carries the name and the choices, nothing else
     drawTextCentered(canvas, UW / 2 + 2, 42, "VESPERIS", rgb(20, 40, 30), 4);
@@ -167,7 +213,7 @@ void Game::adjustSetting(int item, int dir) {
     audio.beep = BEEP_UI;
 }
 
-void Game::updateKeysScreen(const Input& in) {
+void Game::updateKeysScreen(const Input& in, double dt, double realDt) {
     if (!keymap) keymap = &ownKeymap;
     if (keysPage == 1) { updatePadScreen(in); return; }   // R-418: the controller's page
     if (!keysCapture && in.wasPressed(KEY_TAB)) { keysPage = 1; padUI.screenSel = 0; padUI.capture = -1; audio.beep = BEEP_UI; return; }
@@ -222,7 +268,7 @@ void Game::renderKeysScreen() {
     drawTextCentered(canvas, UW / 2, bottom - 10, "SAVED TO VESPERIS_KEYS.TXT NEXT TO THE GAME", HUD_DIM);
 }
 
-void Game::updateSettingsScreen(const Input& in) {
+void Game::updateSettingsScreen(const Input& in, double dt, double realDt) {
     const int n = SETTINGS_ITEMS + 1;
     menuStep(in, settingsSel, n);
     int dir = (in.wasPressed(KEY_RIGHT) ? 1 : 0) - (in.wasPressed(KEY_LEFT) ? 1 : 0);

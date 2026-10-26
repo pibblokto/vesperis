@@ -98,7 +98,7 @@ void Game::openSlots(bool loadMode) {
     state = GameState::SLOTS;
 }
 
-void Game::updateSlots(const Input& in) {
+void Game::updateSlots(const Input& in, double dt, double realDt) {
     int n = slotLoadMode ? 4 : 3;
     menuStep(in, slotSel, n);
     if (in.wasPressed(KEY_ESCAPE)) { state = GameState::MENU; return; }

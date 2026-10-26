@@ -325,6 +325,9 @@ Contents:
   effects by the gain (0 at x1): the gain lifts the noise, not the loudness. Keep a meter's level and an overload's drive as two
   readings. A synth peak of exactly 0.80 is the master clamp, which `RenderStats::clip` misses.
 - "On the air" is `audio.radio`: a machine programme has no speech or piece pointer.
+- A table of `Game`'s methods is a static member declared `const` in the class, defined `constexpr` in its own file (U-02): clang
+  reads that definition as an inline variable (weak, emitted only where it is used), GCC as a plain one, so the file reads it out
+  of line (`stateHas`) to hold its one definition either way.
 - A voice's identity comes from strong narrow lines and resonances, not broad noise (compare voices by LTAS distances). Measure a
   medium's surface in the bare render's quiet windows.
 - raylib's non-looping music end cuts the last block, and stalls starve its stream. Log each swap's return (the refresh it met);

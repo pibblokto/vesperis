@@ -6,8 +6,8 @@ range): game, audio, chart_draw, pad, shards_screen.
 
 ## Files
 - `game`: `newGame`, `frame` (its order: 07-game-flow-and-controls.md, "The frame"), `handleGlobalKeys`, `refuse`,
-  `resetExpedition`. `game_types.h`: `GameState`, `STATE_ROWS`, `CabinFacing`, `TextKind`, `SCREENS`, `MenuLabels` (a
-  menu's labels, by which the harness finds a row)
+  `resetExpedition`. `states`: `Game::STATE_ROWS`, a row a state. `game_types.h`: `GameState` and its traits, `CabinFacing`,
+  `TextKind`, `SCREENS`, `MenuLabels` (a menu's labels, by which the harness finds a row)
 - A subsystem's state, a `Game` member: `landing_state`, `pad_state`, `chart_state`, `shard_world`, `radar_state`,
   `player_state`, `case_state`, `drone_state`, `telescope_state`, `probe_state`, `autoexplore_state`, `tape_state`; a split
   one's shared helpers: `autoexplore_internal`, `probe_internal`, `radar_internal`, `audio_internal`
@@ -26,7 +26,8 @@ range): game, audio, chart_draw, pad, shards_screen.
 - A new state or screen: the cookbook's "Add a game state" names every place to touch.
 - Persisted enums are append-only (`GameState`, `ShipState::Mode`, `AutoProfile`, guide.h's `MARK_*` numbers); one save line
   per field, and `load` ignores unknown keys. `Game`'s data members are never reordered.
-- A state's traits are its row: ask `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states.
+- A state is its row (rules-game-screens.md): ask `stateHas(state, ST_...)`; a trait new code needs is a column, not a list
+  of states.
 - `resetExpedition` resets `radar`, `icase`, `chartHeld`, `probe`, `bay` and `tele` by assigning fresh ones: a field moved into
   one is reset with it, and a thread in one would end the game.
 - A text entry opened from a screen sets `guideReturn` to it and is drawn over it.

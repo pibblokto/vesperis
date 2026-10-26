@@ -6,9 +6,14 @@
 #include "core/rng.h"
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <chrono>
 #include <algorithm>
 
+// the capsule's way down and back up: Ctrl+S saves (its only key); VESPERIS_TRACE times its first frame
 void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
+    if (saveKey(in)) { saveSlot(currentSlot); return; }
+    auto t0 = std::chrono::steady_clock::now();
     transT += realDt;
     double dur = 7.0;
     double u = clampd(transT / dur, 0, 1);
@@ -54,6 +59,8 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
     audio.surfaceOff();   // the capsule hears nothing of the ground, going down or up (its last level went on through the climb)
     surf.update(realDt, in, t, false);
     updateShipMotion(dt);
+    if (std::getenv("VESPERIS_TRACE") && transT < 0.05)
+        fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
 }
 
 // Q-03: the sounds of the ground the surface cues into the synth's levels: the dunes' hum at their note, the ice's song, a quake's shaking and
@@ -65,6 +72,11 @@ void groundSoundsTo(SurfaceView& surf, AudioState& audio) {
 }
 
 void Game::updateSurface(const Input& in, double dt, double realDt) {
+    if (in.wasPressed(KEY_ESCAPE)) { returnState = state; menuSel = 0; state = GameState::MENU; return; }
+    if (helpKey(in)) { returnState = state; helpPage = 1; state = GameState::HELP; return; }
+    if (saveKey(in)) { saveSlot(currentSlot); return; }
+    if (loadKey(in)) { loadSlot(currentSlot); return; }
+    if (photoMode) { surf.updateFreeCam(realDt, in); updateShipMotion(dt); return; }
     surf.update(realDt, in, t, true);
     updateShipMotion(dt);
     // M3-05 statistics: distance from the capsule, height, distance walked and driven

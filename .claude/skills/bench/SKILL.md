@@ -10,7 +10,7 @@ description: Measure Vesperis's frame cost against a previous binary with bench 
 - **In pairs:** `tools/prove bench <A> <B> [pairs]`. A and B are snapshot names (`build/prove/<name>/vesperis_test`) or binaries,
   e.g. `tools/prove bench e02-base ./vesperis_test`. It copies them to `./vt_pa` and `./vt_pb`, paths of one length (the launch
   path moves rows: P-04), runs `bench check` in the orders AB, BA, AB, BA under `caffeinate -i`, keeps the runs in
-  `build/prove/bench/<A>-<B>/`, and prints the table (`tools/benchcmp.py`). Four pairs take about ten minutes.
+  `build/prove/bench/<A>-<B>/`, and prints the table (`tools/benchcmp.py`). Four pairs take about three minutes (U-02).
 - **Alone:** in the background, with nothing else running (no make, no harness, no agent building); the user away or not.
 
 ## Reading the table

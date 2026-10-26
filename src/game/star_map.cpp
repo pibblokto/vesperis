@@ -102,7 +102,7 @@ void Game::openStarMap() {
     state = GameState::STAR_MAP;
 }
 
-void Game::updateStarMap(const Input& in) {
+void Game::updateStarMap(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_TAB)) {   // G-05: the neighbourhood and the galaxy; G-06: on a plotted jump the stars round its end (the look before the leap)
         if (mapPage == 1 && ship.mode == ShipState::VIMANA) { refuse("IN FLIGHT THE MAP SHOWS THE GALAXY", 3); }
         else if (mapPage == 1 && chartPlotted()) {
@@ -150,8 +150,11 @@ void Game::updateStarMap(const Input& in) {
     }
 }
 
+// the galaxy chart covers the frame: no scene under it
+bool Game::starMapCovers() const { return mapPage == 1; }
+
 void Game::renderStarMap() {
-    if (mapPage == 1) { renderGalaxyChart(); return; }
+    if (mapPage == 1) { keepFlightBand(); renderGalaxyChart(); return; }
     blendRectRGB(canvas, 0, 0, UW - 1, UH - 1, rgb(0, 0, 0), 215);
     Mat3 cam = cameraBasis(mapYaw, mapPitch);
     double pxPerLy = 14.0 * mapZoom;

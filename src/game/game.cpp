@@ -277,10 +277,7 @@ void Game::frame(const Input& inRaw, double realDt) {
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (!stateHas(state, ST_TYPING) && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
-    // the decoder's music on its screen only (C-07: or through the radar; C-11: the ship's player plays on)
-    if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();
-    if (audio.speech && audio.speech == &shardWorld.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                 // the voice too
-    if ((audio.instrument || icase.discOn) && state != GameState::INSTRUMENTS) stopInstrument();                                                       // an instrument is played at its case
+    for (const StateRow& r : STATE_ROWS) if (r.away && r.state != state) (this->*r.away)();   // what a screen stops off it (U-02)
     if (radar.on && stateHas(state, ST_STOWS)) radarOff();   // a ship's instrument, off the ship
     if (tele.on && stateHas(state, ST_STOWS)) telescopeOff();   // stowed off the window
     if (!visitNoted && sys.valid && state != GameState::TITLE) { noteVisit(); visitNoted = true; guide.save(guidePath); }
@@ -305,195 +302,17 @@ void Game::frame(const Input& inRaw, double realDt) {
     probe.fast = state == GameState::PROBE && in.shift() && probe.endClock < 0;   // Shift held on the probe's screen, this frame's clock x8
     if (simulating) updateProbe(realDt);   // the probe falls on the relay's clock (real time) wherever the explorer is aboard
     if (simulating) updateDrones(realDt);  // the drones' trip and the bay's cooldown on real time, wherever the explorer is
-    // state logic
-    switch (state) {
-        case GameState::TITLE:
-            titleYaw += realDt * 0.04;
-            titleIdle += realDt; attractT += realDt;
-            { bool any = std::fabs(in.mouseDx) + std::fabs(in.mouseDy) > 0; for (int k = 0; k < KEY_MAX && !any; k++) any = in.pressed[k]; if (any) titleIdle = 0; }
-            if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; helpPage = 2; state = GameState::HELP; }   // credits
-            updateShipMotion(realDt);
-            if (enterKey(in)) {
-                state = (returnState == GameState::SURFACE && surf.valid) ? GameState::SURFACE : GameState::SPACE;
-                status(state == GameState::SURFACE ? "EXPEDITION RESUMED ON THE SURFACE - H FOR HELP" : "STARDRIFTER READY - H FOR HELP", 6);
-                if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC THE F KEYS NEED FN: USE H, I, P, CTRL+S, CTRL+L, CTRL+K, CTRL+F"; statusNextSecs = 7; }
-            }
-            if (in.wasPressed(KEY_N) && hasSave) { newGame(); state = GameState::SPACE; }
-            if (helpKey(in)) { returnState = GameState::TITLE; helpPage = 0; state = GameState::HELP; }
-            if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
-            break;
-        case GameState::SPACE:
-            if (in.wasPressed(KEY_ESCAPE)) {
-                if (ship.targeting) ship.targeting = false;
-                else if (radar.on) {
-                    radarOff();
-                    status("RADAR CAMERA OFF", 3);
-                } else if (tele.on) {
-                    telescopeOff();
-                    status("TELESCOPE STOWED", 3);
-                } else {
-                    returnState = state;
-                    menuSel = 0;
-                    state = GameState::MENU;
-                }
-                break;
-            }   // Esc leaves the radar camera; W-06: and the telescope
-            if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; break; }
-            if (saveKey(in)) { saveSlot(currentSlot); break; }
-            if (loadKey(in)) { loadSlot(currentSlot); break; }
-            updateSpace(in, dt, realDt);
-            break;
-        case GameState::LANDING_MAP:
-            updateLandingMap(in, dt);
-            break;
-        case GameState::DESCENT:
-        case GameState::ASCENT:
-            if (saveKey(in)) { saveSlot(currentSlot); break; }
-            {
-                auto t0 = std::chrono::steady_clock::now();
-                updateDescentAscent(in, dt, realDt);
-                if (std::getenv("VESPERIS_TRACE") && transT < 0.05)
-                    fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
-            }
-            break;
-        case GameState::SURFACE:
-            if (in.wasPressed(KEY_ESCAPE)) { returnState = state; menuSel = 0; state = GameState::MENU; break; }
-            if (helpKey(in)) { returnState = state; helpPage = 1; state = GameState::HELP; break; }
-            if (saveKey(in)) { saveSlot(currentSlot); break; }
-            if (loadKey(in)) { loadSlot(currentSlot); break; }
-            if (photoMode) { surf.updateFreeCam(realDt, in); updateShipMotion(dt); break; }
-            updateSurface(in, dt, realDt);
-            break;
-        case GameState::HELP: {
-            bool any = false;
-            for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-            if (in.wasPressed(KEY_SPACE) && helpPage != 2) helpPage = helpPage == 0 ? 1 : (helpPage == 1 ? 3 : 0);   // the ship, the surface, the controller
-            else if (any) state = returnState;
-            break;
-        }
-        case GameState::MENU:
-            menuStep(in, menuSel, 8);
-            if (in.wasPressed(KEY_ESCAPE)) state = returnState;
-            if (enterKey(in)) {
-                switch (menuSel) {
-                    case 0: state = returnState; break;
-                    case 1: openAutoScreen(GameState::MENU); break;
-                    case 2: openSlots(false); break;
-                    case 3: openSlots(true); break;
-                    case 4: settingsSel = 0; state = GameState::SETTINGS; break;
-                    case 5: helpPage = returnState == GameState::SURFACE ? 1 : 0; state = GameState::HELP; break;
-                    case 6: newGame(); break;
-                    case 7: autosave(); wantsQuit = true; break;
-                }
-            }
-            break;
-        case GameState::AUTO: updateAutoScreen(in); break;
-        case GameState::SETTINGS:
-            updateSettingsScreen(in);
-            break;
-        case GameState::KEYS:
-            updateKeysScreen(in);
-            break;
-        case GameState::SLOTS:
-            updateSlots(in);
-            break;
-        case GameState::GUIDE: updateGuideMenu(in); break;
-        case GameState::TEXT_ENTRY: updateTextEntry(in); break;
-        case GameState::STAR_MAP: updateStarMap(in); updateShipMotion(dt); break;
-        case GameState::LOG: updateLog(in); break;
-        case GameState::STATS: {   // any key closes; P-00: K opens the world types walked where they outgrow their line
-            bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-            if (any && !statsKinds && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
-            else if (any) { statsKinds = false; state = guideReturn; }
-            break;
-        }
-        case GameState::GALLERY: updateGallery(in); break;
-        case GameState::SHIPSCREEN: updateShipScreen(in); updateShipMotion(dt); break;
-        case GameState::CONSOLE: updateConsole(in); updateShipMotion(dt); break;
-        case GameState::SHARDS: updateShards(in, realDt); updateShipMotion(dt); break;
-        case GameState::INSTRUMENTS: updateInstruments(in, realDt); updateShipMotion(dt); break;
-        case GameState::DRONES: updateDroneBay(in, realDt); updateShipMotion(dt); break;
-        case GameState::SECTOR_MAP: updateSectorMap(in); break;
-        case GameState::ALMANAC: updateAlmanac(in); break;
-        case GameState::PROBE: updateProbeScreen(in, dt, realDt); break;
-        case GameState::RECORDING: updateRecording(in, realDt); break;
-        case GameState::SYSTEM_LIST: {
-            int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // the belts follow the bodies
-            if (n == 0) { state = GameState::SPACE; break; }
-            menuStep(in, listSel, n);
-            if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_TAB)) state = GameState::SPACE;
-            auto pick = [&]() { if (listSel < nb) { ship.localTarget = listSel; ship.targetBelt = -1; } else { ship.localTarget = -1; ship.targetBelt = listSel - nb; } };
-            if (in.wasPressed(KEY_L)) { pick(); state = GameState::SPACE; status(fmt("LOCAL TARGET: %s", upper(localTargetLabel()).c_str()), 4); }
-            if (enterKey(in)) { pick(); state = GameState::SPACE; if (listSel < nb) startApproach(listSel); else startApproachBelt(listSel - nb); }
-            break;
-        }
-        case GameState::DATA: {
-            if (in.wasPressed(KEY_T) && dataPage == 0) { openAlmanac(); break; }   // the sheet opens the almanac of the place
-            const int pages = dataSheetPages + (int)dataProbes().size();   // a giant's sheet, then its probes' profiles (Q-01: the sheet's own pages first)
-            if (pages > 1 && (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_LEFT))) { dataPage = (dataPage + (in.wasPressed(KEY_RIGHT) ? 1 : pages - 1)) % pages; break; }
-            bool any = false;
-            for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-            if (any) { state = returnState; dataPage = 0; }
-            break;
-        }
-    }
+    // the state's update; the ship moves on where its row says, the row taken before (a screen that closes still moves it)
+    const StateRow& current = STATE_ROWS[(int)state];
+    (this->*current.update)(in, dt, realDt);
+    if (current.traits & ST_SHIP_MOVES) updateShipMotion(dt);
     probeAudio();   // the relay's sound for this frame
     darkRadio();    // a drifter's voice on the cabin's radio or the suit's
     updatePlayer(realDt);   // the ship's player, wherever the ship is (a landing stops it)
-    // rendering
-    switch (state) {
-        case GameState::TITLE: renderSpace(); renderTitle(); break;
-        case GameState::SPACE: renderSpace(); if (!photoMode && !ax.on) renderSpaceHUD(); break;   // no HUD while auto-explore plays
-        case GameState::LANDING_MAP: if (ax.on) renderSpace(); else renderLandingMap(); break;    // its site chosen in its head, the map not shown
-        case GameState::DESCENT:
-        case GameState::ASCENT:
-            renderSurfaceScene();
-            if (!ax.on) {
-                drawVisor(HUD_DIM);
-                drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER);
-            }
-            break;
-        case GameState::SURFACE: renderSurfaceScene(); if (!photoMode && !ax.on) renderSurfaceHUD(); break;
-        case GameState::PROBE: renderProbe(); break;   // the probe's camera
-        case GameState::RECORDING: renderRecording(); break;   // a probe's recording
-        case GameState::ALMANAC:   // over the scene it was opened from (the landing map keeps its picture)
-            if (almanacScene == 2) renderLandingMap(); else if (almanacScene == 1 && surf.valid) renderSurfaceScene(); else renderSpace();
-            renderAlmanac(); break;
-        default:   // the overlays (ST_OVERLAY), over the scene they were opened from
-            if (state == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); break; }   // the galaxy chart covers the frame: no scene under it
-            // a mark's name, over the chart
-            if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }
-            if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // naming the storm over the probe's screen
-                if (guideReturn == GameState::PROBE) renderProbe(); else renderRecording();
-                renderTextEntry();
-                break;
-            }
-            if (returnState == GameState::SURFACE || (surf.valid && returnState == GameState::SURFACE)) renderSurfaceScene();
-            else if (returnState == GameState::TITLE) { renderSpace(); renderTitle(); }
-            else renderSpace();
-            if (state == GameState::HELP) renderHelp();
-            else if (state == GameState::MENU) renderMenu();
-            else if (state == GameState::SETTINGS) renderSettings();
-            else if (state == GameState::KEYS) renderKeysScreen();
-            else if (state == GameState::SLOTS) renderSlots();
-            else if (state == GameState::GUIDE) renderGuideMenu();
-            // naming a piece, over the decoder; R-408: a mark, over the map
-            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); else if (guideReturn == GameState::SECTOR_MAP) renderSectorMap(); renderTextEntry(); }
-            else if (state == GameState::STAR_MAP) renderStarMap();
-            else if (state == GameState::LOG) renderLog();
-            else if (state == GameState::STATS) renderStats();
-            else if (state == GameState::GALLERY) renderGallery();
-            else if (state == GameState::SHIPSCREEN) renderShipScreen();
-            else if (state == GameState::CONSOLE) renderConsole();
-            else if (state == GameState::SHARDS) renderShards();
-            else if (state == GameState::INSTRUMENTS) renderInstruments();
-            else if (state == GameState::DRONES) renderDroneBay();
-            else if (state == GameState::AUTO) renderAutoScreen();
-            else if (state == GameState::SECTOR_MAP) renderSectorMap();
-            else if (state == GameState::SYSTEM_LIST) renderSystemList();
-            else renderDataSheet();
-            break;
-    }
+    // the picture: the state's own, an overlay's over the scene it was opened from unless it covers the frame
+    const StateRow& shown = STATE_ROWS[(int)state];
+    if ((shown.traits & ST_OVERLAY) && !(shown.covers && (this->*shown.covers)())) renderUnder();
+    (this->*shown.render)();
     if (ax.on) autoRender();   // its caption in the first seconds, nothing else
     else renderPad();          // the command menu or the keyboard over everything
 }

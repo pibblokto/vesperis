@@ -42,7 +42,7 @@ void Game::beginTextEntry(const std::string& prompt, int kind, const std::string
     state = GameState::TEXT_ENTRY;
 }
 
-void Game::updateGuideMenu(const Input& in) {
+void Game::updateGuideMenu(const Input& in, double dt, double realDt) {
     menuStep(in, guideSel, GUIDE_N);
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_G)) { state = guideReturn; return; }
     if (!enterKey(in)) return;
@@ -104,7 +104,7 @@ void Game::renderGuideMenu() {
 // text entry
 // ---------------------------------------------------------------------------
 
-void Game::updateTextEntry(const Input& in) {
+void Game::updateTextEntry(const Input& in, double dt, double realDt) {
     for (int k = KEY_A; k <= KEY_Z; k++) if (in.wasPressed(k) && textBuffer.size() < 28) textBuffer += (char)('A' + (k - KEY_A));
     for (int k = KEY_0; k <= KEY_9; k++) if (in.wasPressed(k) && textBuffer.size() < 28) textBuffer += (char)('0' + (k - KEY_0));
     if (in.wasPressed(KEY_SPACE) && textBuffer.size() < 28 && !textBuffer.empty()) textBuffer += ' ';
@@ -174,7 +174,19 @@ void Game::updateTextEntry(const Input& in) {
     }
 }
 
+// a text entry covers the frame over the galaxy chart, the probe's screen or a recording, drawn under it
+bool Game::textEntryCovers() const {
+    return (guideReturn == GameState::STAR_MAP && mapPage == 1) || guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING;
+}
+
 void Game::renderTextEntry() {
+    // over what it names: a mark on the galaxy chart, a storm on the probe's screen or a recording, a piece on the decoder; R-408: a
+    // mark on the sector map (from the guide menu or the star map's first page, over the scene alone)
+    if (guideReturn == GameState::STAR_MAP && mapPage == 1) renderStarMap();
+    else if (guideReturn == GameState::PROBE) renderProbe();
+    else if (guideReturn == GameState::RECORDING) renderRecording();
+    else if (guideReturn == GameState::SHARDS) renderShards();
+    else if (guideReturn == GameState::SECTOR_MAP) renderSectorMap();
     const int top = padKeyboardShown() ? 18 : 70, bottom = top + 60;   // R-418: over the controller's keyboard
     drawPanel(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // as wide as its last line (it ran past the box)
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
@@ -192,7 +204,7 @@ void Game::renderTextEntry() {
 // log, statistics, gallery
 // ---------------------------------------------------------------------------
 
-void Game::updateLog(const Input& in) {
+void Game::updateLog(const Input& in, double dt, double realDt) {
     int pages = std::max(1, ((int)guide.log.size() + 6) / 7);
     if (in.wasPressed(KEY_DOWN) || in.wasPressed(KEY_PAGE_DOWN) || in.wasPressed(KEY_RIGHT)) logPage = std::min(pages - 1, logPage + 1);
     if (in.wasPressed(KEY_UP) || in.wasPressed(KEY_PAGE_UP) || in.wasPressed(KEY_LEFT)) logPage = std::max(0, logPage - 1);
@@ -241,6 +253,13 @@ bool Game::statsKindsOverflow() const {
     size_t n = 0;
     for (int c : guide.typesSeen) n += std::strlen(shortType(c)) + 1;
     return n > 48;
+}
+
+// the statistics: any key closes; P-00: K opens the world types walked where they outgrow their line
+void Game::updateStats(const Input& in, double dt, double realDt) {
+    bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
+    if (any && !statsKinds && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
+    else if (any) { statsKinds = false; state = guideReturn; }
 }
 
 void Game::renderStats() {
@@ -326,7 +345,7 @@ void Game::openGallery() {
     state = GameState::GALLERY;
 }
 
-void Game::updateGallery(const Input& in) {
+void Game::updateGallery(const Input& in, double dt, double realDt) {
     int n = (int)galleryItems.size();
     if (n > 0) {
         menuStep(in, gallerySel, n, true);

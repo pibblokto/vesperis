@@ -9,7 +9,6 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 - `core/input.h` refuses to compile beside raylib.h; platform_raylib.cpp asserts raylib's key codes and the pad's arrays to input.h's numbers [E-05]
 - game.h declares, a line each under `// ----` banners naming files; `game_types.h` and the `*_state.h` hold Game's types; its data never reorders [E-05]
 - surface_view.h holds SurfaceView's data first, never reordered, then its functions under a banner a file, the harness's last [E-08]
-- A state's traits are its row in `STATE_ROWS` (`game_types.h`), asked by `stateHas`: a trait new code needs is a column, not a list [E-06]
 - An engine header's declarations only the harness needs sit behind its `// ---- the harness's` banner, a comment group whole [E-07]
 - `make check` (`tools/check.py`): raylib only in the platform files, the layering, no C++ line over 300, each file in its note [E-02], [E-12]
 - src/galaxy reads src/peoples in `landmarks.cpp` and `planet_bodygen.cpp` alone (`make check`) [E-09]
@@ -64,7 +63,6 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 [E-02]: log/6-1.4.0.md
 [E-04]: log/6-1.4.0.md
 [E-05]: log/6-1.4.0.md
-[E-06]: log/6-1.4.0.md
 [E-07]: log/6-1.4.0.md
 [E-08]: log/6-1.4.0.md
 [E-09]: log/6-1.4.0.md

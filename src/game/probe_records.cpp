@@ -269,7 +269,7 @@ bool Game::openRecording(int rec) {
 
 // Esc and Enter go back to the gallery and set its own way back again, the ship (a recording plays only there): naming the storm
 // (N) lends `guideReturn` to the text entry (B-429)
-void Game::updateRecording(const Input& in, double realDt) {
+void Game::updateRecording(const Input& in, double dt, double realDt) {
     if (replay.rec < 0 || replay.rec >= (int)guide.probes.size()) { state = GameState::GALLERY; guideReturn = GameState::SPACE; return; }
     const ProbeRecord& r = guide.probes[replay.rec];
     if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) {

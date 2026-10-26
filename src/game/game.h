@@ -3,7 +3,7 @@
 // its definition. The sections, each under a `// ----` banner naming its files, in order:
 //   public (the platform's and the harness's): the frame; photos; the attract mode; settings and keys; the controller; auto-explore;
 //     the tape; the files, the guide, names; marks and the scanner; what the ground holds; the window and sound; saves; the state
-//     and the clock; the galaxy chart's frame; the harness's knobs
+//     and the clock; the states' table; the galaxy chart's frame; the harness's knobs
 //   protected: the world and the ship; the landing map; the screens; the controller; the slots; the guide's screens; the galaxy
 //     chart; the gallery; the cabin; the shard decoder; star charts; the radar; the decoder's records; the player; the case; the
 //     drone bay; the sector map; the guide's targets; each state's update and render; jumps; belts; the epoch; the almanac; the
@@ -184,6 +184,15 @@ public:
     static const char* shortPlan(int plan);
     static double siteSlope(const SurfaceSite& probe);
     static double parkDistanceFor(const Body& b);
+    // ---- the states' table: a row a state, in GameState's order (states.cpp, U-02)
+    struct StateRow {
+        GameState state; const char* name; unsigned traits; int pad;   // its traits (ST_*) and its controller's context (PCX_*)
+        void (Game::*update)(const Input& in, double dt, double realDt);   // its keys and logic, each frame it is current
+        void (Game::*render)();         // its picture: a scene's with its HUD; an overlay's over the scene under it (`renderUnder`)
+        bool (Game::*covers)() const;   // an overlay's: true while it covers the whole frame, no scene drawn under it
+        void (Game::*away)();           // run each frame another state is current, in the table's order: what its screen stops
+    };
+    static const StateRow STATE_ROWS[STATE_COUNT];
     // ---- the galaxy chart's frame in logical pixels: the face-on disc, the edge-on strip, the levels (galaxy_chart.cpp)
     static constexpr int CHART_LEVELS = 9, CHART_FACE_Y0 = 22, CHART_FACE_H = 128, CHART_EDGE_Y0 = 152, CHART_EDGE_H = 22;
     static constexpr double CHART_TALL_LY = 110000;   // the face's height at level 0: the whole disc
@@ -265,7 +274,7 @@ protected:
     bool keysCapture = false;
     int keysPage = 0;              // the CONTROLS screen's pages, 0 the keyboard, 1 the controller (Tab)
     GameState keysReturn = GameState::SETTINGS;   // where it goes back to (the command menu opens it from anywhere)
-    void updateKeysScreen(const Input& in);
+    void updateKeysScreen(const Input& in, double dt, double realDt);
     void renderKeysScreen();
     // ---- the controller (pad.cpp, pad_state.h)
     using PadItem = ::PadItem;
@@ -347,8 +356,8 @@ protected:
     void drawCabin();
     void drawCabinBand(const CabinFrame& f);
     void renderCabinHUD();
-    void updateShipScreen(const Input& in); void renderShipScreen();
-    void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in); void renderConsole();
+    void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen();
+    void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in, double dt, double realDt); void renderConsole();
     // ---- the shard decoder (shards_screen.cpp, history_screen.cpp, medium_draw.cpp; shard_world.h)
     ShardWorld shardWorld;
     int shardsPage = 0;                          // 0 the records, 1 the timeline, 2 the history
@@ -428,7 +437,7 @@ protected:
     std::string endedKey() const;
     std::string shardWorldTitle(int maxName) const;
     std::string worldNameOfKey(const std::string& key) const;
-    void openShards(); void openShard(int sel); void updateShards(const Input& in, double realDt); void renderShards(); void renderPiece();
+    void openShards(); void openShard(int sel); void updateShards(const Input& in, double dt, double realDt); void renderShards(); void renderPiece(); void shardsAway();
     // ---- the ship's player (player.cpp, player_state.h)
     ShipPlayer player;
     int shardsTop = 0;                                 // the decoder's first level: 0 the worlds, 1 the player
@@ -444,13 +453,13 @@ protected:
     static std::string playerItemTitle(const PlayerItem& it, const std::string* name);
     // ---- the instruments' case (instruments_screen.cpp, instrument_draw.cpp; case_state.h)
     InstrumentCase icase;
-    void openInstruments(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double realDt); void renderInstruments(); void stopInstrument();
+    void openInstruments(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double dt, double realDt); void renderInstruments(); void stopInstrument(); void instrumentsAway();
     void openCaseWorld(int w);
     void renderCaseWorlds();
     // ---- the drone bay (drones.cpp, drone_draw.cpp; drone_state.h)
     DroneBay bay;
     std::thread droneJob; std::atomic<bool> droneJobBusy{false}; DroneWorld droneJobOut; uint64_t droneJobStar = 0; int droneJobBody = -1;
-    void openDroneBay(); void updateDroneBay(const Input& in, double realDt); void renderDroneBay();
+    void openDroneBay(); void updateDroneBay(const Input& in, double dt, double realDt); void renderDroneBay();
     void droneBayLaunch();
     void updateDrones(double realDt);
     void droneWorldAsk(int body);
@@ -492,16 +501,17 @@ protected:
     std::vector<uint32_t> sectorImg; int sectorImgW = 100, sectorImgH = 80; double sectorImgX = 1e9, sectorImgZ = 1e9; int sectorImgZoom = -1, sectorImgEpoch = -1;
     static constexpr int SECTOR_LEVELS = 6;   // 2, 8, 32, 128, 512 and 2048 km wide (the widest levels only on big worlds)
     int sectorMaxLevel() const;
-    void updateSectorMap(const Input& in); void renderSectorMap();
+    void updateSectorMap(const Input& in, double dt, double realDt); void renderSectorMap();
     void applyVision();
     // ---- the guide's screens: the menu, text entry, the log, statistics, the gallery (guide_screens.cpp)
-    void openGuide(); void updateGuideMenu(const Input& in); void renderGuideMenu();
-    void beginTextEntry(const std::string& prompt, int kind, const std::string& initial); void updateTextEntry(const Input& in); void renderTextEntry();
-    void updateLog(const Input& in); void renderLog(); void renderStats();
+    void openGuide(); void updateGuideMenu(const Input& in, double dt, double realDt); void renderGuideMenu();
+    void beginTextEntry(const std::string& prompt, int kind, const std::string& initial); void updateTextEntry(const Input& in, double dt, double realDt); void renderTextEntry();
+    bool textEntryCovers() const;
+    void updateLog(const Input& in, double dt, double realDt); void renderLog(); void updateStats(const Input& in, double dt, double realDt); void renderStats();
     std::string statsKindsLine() const; bool statsKindsOverflow() const;
-    void openGallery(); void updateGallery(const Input& in); void renderGallery();
+    void openGallery(); void updateGallery(const Input& in, double dt, double realDt); void renderGallery();
     // ---- the star map and the targets (star_map.cpp); the log's events and the visits (names.cpp)
-    void openStarMap(); void updateStarMap(const Input& in); void renderStarMap();
+    void openStarMap(); void updateStarMap(const Input& in, double dt, double realDt); void renderStarMap(); bool starMapCovers() const;
     void setRemoteStar(const Star& s); void targetStarByName(const std::string& name); void targetPreviousStar(); void targetHome();
     void logEvent(const std::string& kind, const std::string& text); void noteVisit();
     // ---- the title's and help's state, the arrival, the landing map's probe site
@@ -522,6 +532,8 @@ protected:
     void renderSpace();
     void keepFlightBand();
     void renderSpaceHUD();
+    void renderSpaceScreen();
+    void renderUnder();
     void drawVisor(uint32_t col);
     void drawCommonHUD(bool warp = true);
     void arriveAtStar(const Star& s, const Vec3& fromDir);
@@ -531,8 +543,9 @@ protected:
     int pickBodyNearCrosshair();
     void startApproach(int body);
     // ---- the landing map's screen (landing_map.cpp, landing_map_build.cpp)
-    void updateLandingMap(const Input& in, double dt);
+    void updateLandingMap(const Input& in, double dt, double realDt);
     void renderLandingMap();
+    void renderLandingScreen();
     void beginLanding();
     void buildLandingMapBase();
     // ---- the capsule and the ground: their update, scene and HUD (surface_play.cpp, scene_draw.cpp, hud.cpp)
@@ -540,25 +553,32 @@ protected:
     void updateSurface(const Input& in, double dt, double realDt);
     void renderSurfaceScene();
     void renderSurfaceHUD();
+    void renderCapsuleScreen();
+    void renderSurfaceScreen();
     // ---- the system list and the data sheet, its forecast and the probes' profiles (data_sheet.cpp, probe_records.cpp)
     // W-03: the forecast at the feet: the next fronts within five days (`frontsAhead`), listed again every thirty seconds of game time
     std::vector<FrontForecast> forecast; double forecastT = -1e18, forecastReal = -1e18; int forecastBody = -1;
     void updateForecast();
     std::string forecastLine() const;
+    void updateSystemList(const Input& in, double dt, double realDt);
     void renderSystemList();
+    void updateDataSheet(const Input& in, double dt, double realDt);
     void renderDataSheet();
     int dataPage = 0;                     // the data sheet's page (0 the sheet, 1.. a giant's probes' profiles)
     std::vector<int> dataProbes() const;
     void renderProbeProfile(int rec);
     // ---- the title, help, the menu and the settings (menus.cpp); the slots (persistence.cpp)
+    void updateTitle(const Input& in, double dt, double realDt);
     void renderTitle();
+    void updateHelp(const Input& in, double dt, double realDt);
     void renderHelp();
+    void updateMenu(const Input& in, double dt, double realDt);
     void renderMenu();
-    void updateSettingsScreen(const Input& in);
+    void updateSettingsScreen(const Input& in, double dt, double realDt);
     void renderSettings();
     void adjustSetting(int item, int dir);
     void openSlots(bool loadMode);
-    void updateSlots(const Input& in);
+    void updateSlots(const Input& in, double dt, double realDt);
     void renderSlots();
     // ---- jumps along the aim and from the chart (autopilot.cpp, hud.cpp, star_map.cpp)
     std::string jumpDigits;
@@ -587,7 +607,7 @@ protected:
     GameState almanacReturn = GameState::SPACE;
     int almanacSel = 0, almanacScroll = 0, almanacFree = 6;
     bool almanacRunning = false; double almanacRunT = 0; AlmanacEvent almanacRunEvent; std::string almanacRunLabel;
-    void openAlmanac(); void buildAlmanac(); void updateAlmanac(const Input& in); void renderAlmanac();
+    void openAlmanac(); void buildAlmanac(); void updateAlmanac(const Input& in, double dt, double realDt); void renderAlmanac();
     void almanacRunTo(const AlmanacEvent& e); void almanacStop(bool arrived);
     static double almanacWarpFor(double remaining);
     std::string almanacLabelOf(const AlmanacEvent& e) const;
@@ -641,7 +661,7 @@ protected:
     template <class F> void asRecording(F f);
     bool recordingContext(int rec);
     bool openRecording(int rec);
-    void updateRecording(const Input& in, double realDt);
+    void updateRecording(const Input& in, double dt, double realDt);
     void renderRecording();
     void recordingAudio();
     void recordingPoster(int rec, std::vector<uint32_t>& out);
@@ -664,7 +684,7 @@ protected:
     void autoRun(double dt);
     void autoPush(const char* what, double maxT, std::function<bool(double)> fn, bool timed = false);
     void autoPlan();
-    void openAutoScreen(GameState back); void updateAutoScreen(const Input& in); void renderAutoScreen();
+    void openAutoScreen(GameState back); void updateAutoScreen(const Input& in, double dt, double realDt); void renderAutoScreen();
     // ---- auto-explore's plans in space and on the ground (autoexplore_space.cpp, autoexplore_ground.cpp)
     void autoPlanSpace(); void autoPlanArrival(); void autoPlanVisit(int b); void autoPlanParked(int b); void autoPlanRoof(int b); void autoPlanTelescope(int b);
     void autoPlanLanding(int b); void autoPlanProbeLaunch(); void autoPlanFlight(); void autoPlanMove(); void autoPlanRadar(); void autoPlanJump(double ly, const Vec3& dir);

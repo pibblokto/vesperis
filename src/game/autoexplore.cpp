@@ -179,7 +179,7 @@ void Game::autoPlan() {
 
 void Game::openAutoScreen(GameState back) { autoSel = clampi(settings.autoProfile, 0, AP_COUNT - 1); autoBack = back; state = GameState::AUTO; audio.beep = BEEP_UI; tapeList(); }
 
-void Game::updateAutoScreen(const Input& in) {
+void Game::updateAutoScreen(const Input& in, double dt, double realDt) {
     const int n = AP_COUNT + 1;   // the profiles and BACK
     if (menuStep(in, autoSel, n)) audio.beep = BEEP_UI;
     if (in.wasPressed(KEY_ESCAPE) || (enterKey(in) && autoSel == AP_COUNT)) { state = autoBack; audio.beep = BEEP_UI; return; }

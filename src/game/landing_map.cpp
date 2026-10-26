@@ -38,7 +38,7 @@ void Game::beginLanding() {
 
 bool Game::landingZoomAllowed() const { return landBody >= 0 && landBody < (int)sys.bodies.size() && sys.bodies[landBody].radiusKm >= 100; }
 
-void Game::updateLandingMap(const Input& in, double dt) {
+void Game::updateLandingMap(const Input& in, double dt, double realDt) {
     // O2: zoomed in, the arrows step a hundredth of a degree (about a kilometre), the whole-world view one degree
     double step = (landZoom ? (in.shift() ? 0.05 : 0.01) : (in.shift() ? 6.0 : 1.0)) * DEG;
     if (in.wasPressed(KEY_LEFT) || (in.isDown(KEY_LEFT) && in.shift())) landLon -= step;
@@ -140,6 +140,9 @@ double Game::siteSlope(const SurfaceSite& probe) {
     }
     return region / 0.64;
 }
+
+// the landing map's picture: the map, or space while auto-explore chooses its site in its head
+void Game::renderLandingScreen() { if (ax.on) renderSpace(); else renderLandingMap(); }
 
 void Game::renderLandingMap() {
     // background: keep the space view, dimmed

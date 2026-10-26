@@ -35,6 +35,21 @@ void Game::drawCommonHUD(bool warp) {
     if (timeWarp > 1 && warp) drawText(canvas, UW - 8 - textWidth(fmt("TIME X%.0f", timeWarp).c_str()), 24, fmt("TIME X%.0f", timeWarp).c_str(), HUD_CYAN);
 }
 
+// space's picture: the scene, and its HUD unless a photo is taken or auto-explore plays
+void Game::renderSpaceScreen() { renderSpace(); if (!photoMode && !ax.on) renderSpaceHUD(); }
+
+// the ground's picture, likewise
+void Game::renderSurfaceScreen() { renderSurfaceScene(); if (!photoMode && !ax.on) renderSurfaceHUD(); }
+
+// the capsule's way down and back up: the ground, the visor and its line (none while auto-explore plays)
+void Game::renderCapsuleScreen() {
+    renderSurfaceScene();
+    if (!ax.on) {
+        drawVisor(HUD_DIM);
+        drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER);
+    }
+}
+
 void Game::renderSpaceHUD() {
     if (radar.on) { renderRadarCamera(); drawCommonHUD(); return; }   // C-07: the radar camera's own frame
     if (tele.on) { renderTelescopeHUD(); drawCommonHUD(); return; }   // the telescope's own frame (the user's review: an instrument of its own, as the radar)
