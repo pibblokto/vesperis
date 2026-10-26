@@ -175,6 +175,8 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 - An elsewhere kind's sheet, scenes and unit checks stand on a staged felisian world (`stageElsewhere`) [P-04]; replaced by [P-05]
 - The chemotroph's north sweep frame flips between runs (the far ring's timing): its difference is no change [P-04], [P-06],
   [P-07], [Q-01]; replaced by [E-02]
+- `tour` opens every state as the game does, each from a fresh game, by its stop in `STOPS` (asserted: a new state needs one)
+  [U-01]; replaced by [U-06]
 
 ## Process and release
 
@@ -324,3 +326,5 @@ replaces a rule moves its line here (`docs/CLAUDE.md`).
 [Q-02]: log/6-1.4.0.md
 [E-06]: log/6-1.4.0.md
 [E-07]: log/6-1.4.0.md
+[U-01]: log/6-1.4.0.md
+[U-06]: log/6-1.4.0.md

@@ -721,6 +721,20 @@ std::string TestGame::testPadItems(int page) const {
     return s;
 }
 std::string TestGame::testPadLegend() const { return padLegend(padContext(), 52); }
+// U-06: a page's line `i` run as the controller runs it (`padRunItem`), the keys it queues handed back for the caller to press a
+// frame each, as the controller delivers them; the keyboard's line is not run (its flag would outlive a controller taken away).
+// Its label ("" past the page's end)
+std::string TestGame::testPadCommand(int page, int i, std::vector<std::pair<int, int>>& keys) {
+    keys.clear();
+    const std::vector<PadItem> items = padItems(page);
+    if (i < 0 || i >= (int)items.size()) return std::string();
+    if (items[i].special == PSP_KEYBOARD) return items[i].label + " (the controller's keyboard, not run)";
+    padUI.queue.clear();
+    padRunItem(items[i]);
+    keys.assign(padUI.queue.begin(), padUI.queue.end());
+    padUI.queue.clear();
+    return items[i].label;
+}
 
 std::string TestGame::testScanInfo() {
     std::string s = fmt("scan mode %d skip %d scanned %d (%.0f ms), %zu echoes", scanMode, scanSkipMarked ? 1 : 0, surf.scanned ? 1 : 0, surf.scanMs, surf.echoes.size());
@@ -872,8 +886,8 @@ int TestGame::testMenuSel() const {
     }
 }
 
-// U-01: what the open screen has selected, as the tour prints it after each key (a list of the states' variables until U-06
-// reads the rows). The return variables are left out: the tour shows them as where Esc goes, so folding them moves no line
+// U-01: what the open screen has selected, as the tour prints it after each key (a state with no line here prints "?": a new
+// screen tours without one). The return variables are left out: the tour shows them as where Esc goes
 std::string TestGame::testSelection() const {
     switch (state) {
         case GameState::TITLE: return wantsQuit ? "quits" : "-";
@@ -907,6 +921,7 @@ std::string TestGame::testSelection() const {
         case GameState::INSTRUMENTS: return fmt("level %d folder %d item %d", icase.level, icase.worldSel, icase.sel);
         case GameState::DRONES: return fmt("top %d", bay.listTop);
         case GameState::AUTO: return fmt("row %d", autoSel);
+        default: break;
     }
     return "?";
 }

@@ -18,7 +18,8 @@ enum class GameState { TITLE, SPACE, LANDING_MAP, DESCENT, SURFACE, ASCENT, HELP
                        GUIDE, TEXT_ENTRY, STAR_MAP, LOG, STATS, GALLERY, SHIPSCREEN, CONSOLE, SECTOR_MAP, KEYS, SHARDS, ALMANAC, PROBE, RECORDING,
                        INSTRUMENTS,    // C-11: the instruments' case
                        DRONES,         // the drone bay's screen
-                       AUTO };         // auto-explore's profiles
+                       AUTO,           // auto-explore's profiles
+                       COUNT };        // U-06: no state, their count: a new state goes before it (a state's number is saved)
 
 extern const char* const SCAN_MODE_NAMES[];   // R-408: the scanner's modes by LandmarkKind ("PEAKS", ...; game/marks.cpp)
 // U-03: the ways in. A menu is a list of rows in its order, its count read from the list (`rowsOf`), and the harness finds a
@@ -90,7 +91,7 @@ enum StateTrait : unsigned {
 // the controller's contexts (pad.cpp): what its sticks and buttons do. A state's row names its own; the ground's and the case's
 // are refined as the explorer walks, drives or flies, or plays (`padContext`)
 enum PadCtx { PCX_SCREEN, PCX_TITLE, PCX_SHIP, PCX_FOOT, PCX_BUGGY, PCX_DRONE, PCX_PROBE, PCX_RECORDING, PCX_INSTRUMENT };
-constexpr int STATE_COUNT = (int)GameState::AUTO + 1;   // AUTO is the last state
+constexpr int STATE_COUNT = (int)GameState::COUNT;   // U-06: read from the enum, so a new state changes no count
 // U-05: where a state's Esc goes, its row's `back` (`Game::closeScreen` follows it): a state's number, the scene it is drawn
 // over (`returnState`: the title, space or the ground), or the screen it was opened from (`openScreen` records it); a scene, none
 enum StateBack { BACK_NONE = -1, BACK_SCENE = -2, BACK_OPENER = -3 };

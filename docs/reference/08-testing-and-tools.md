@@ -264,9 +264,13 @@ note keeps what those do not: what each mode does and writes, by the milestone t
   what writes a save or leaves the start (NEW EXPEDITION, QUIT, a flight, a landing, a save) runs last, and Esc after all. After
   every frame what threads build is waited for at one instant (`testSettle`: every map of the system, the cache held large enough;
   the scanner). Its probe falls into the first great storm the unit's probe group finds (named from the probe and from its
-  recording), the shard decoder reads three records of Aieliaalas II, the case holds two instruments. About three minutes; the same
-  twice and by one thread (output: stdout, `shots/tests/tour/NN_state_*.png`, each state's saves, guide, settings and keys under
-  its prefix)
+  recording), the shard decoder reads three records of Aieliaalas II, the case holds two instruments. U-06: then the rows, every
+  row of the table in its order: opened by its row (`openScreen`, from the ship in its parking) or, a scene or a world set up first,
+  by its stop (`SETUPS`: the title, the ship, the ground, the sector map, the probe, a recording; the capsule's way down and up,
+  with no commands, are toured above), its picture, the controller's pages, then each line of the command menu's first page run
+  as the controller runs it (`testPadCommand`: its keys a frame each), each followed by Esc. A state with no stop, a new screen,
+  is toured there with no edit. About six minutes; the same twice and by one thread (output: stdout,
+  `shots/tests/tour/NN_state_*.png` and `rows_NN_state_*.png`, each state's saves, guide, settings and keys under its prefix)
 * `landmaps`: opens the landing map of one body per landable type through `TestGame::testParkAt` and prints the darkest shadow on the
   map now (O0-04: moons and parents cast them; 1.00 on four of the thirteen maps on 2026-09-27) (output:
   `shots/landmap_<TYPE>.png`)

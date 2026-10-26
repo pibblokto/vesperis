@@ -24,7 +24,8 @@ Contents:
   compares every function's IR before and after (E-03, `../08-testing-and-tools.md`).
 - **A screen, a menu or a key** (U-01): `tour` opens every state as the game opens it, from a fresh game each, and records its
   controller's menu, its keys, its menus' rows by label and where Esc goes; a step that touches a screen compares `tour`,
-  `screens`, `flow`, `input` and `settings` (the unit's `states` group holds the traits). A new state needs its stop in `STOPS`.
+  `screens`, `flow`, `input` and `settings` (the unit's `states` group holds the traits and each row). U-06: then every row,
+  opened by its row (`openScreen`) or its setup by name, its controller's commands run: a new screen needs no stop.
 - **A name that moves** (E-05): a type taken out of its class, a class renamed: `tools/samecode.py --rename
   Game::RadarState=RadarState` reads both sides' names demangled (Homebrew's `llvm-cxxfilt` reads every name clang makes;
   Xcode's `c++filt` misses some) with the renames applied; a file-local helper a split shares (E-06) compares under `--rename

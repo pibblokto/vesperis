@@ -4,8 +4,10 @@
 // state, what is selected and the frame's hash, with a picture at each change of state. A key that leaves the state is
 // followed by Esc a bounded number of times (a screen that will not let go is printed, not waited on), then by a fresh game
 // opened again; the keys and rows that write a save or leave the start run last. Each state writes its saves, guide,
-// settings, keys and controller files under shots/tests/tour/ with a prefix of its own (the directory emptied first). The
-// openers and the keys are lists of the tour's own until U-06 reads the states' rows (docs/ideas/PLAN-screens.md, U-01)
+// settings, keys and controller files under shots/tests/tour/ with a prefix of its own (the directory emptied first). U-06: then
+// the rows (docs/ideas/PLAN-screens.md): each state opened by its row (`openScreen` from the ship in its parking) or, a scene or a
+// world set up first, by its stop's opener (`tourSetupNamed`); its picture, the controller's pages and each of its commands, run as
+// the controller runs them. A state with no stop (a new screen) is toured there alone, with no edit here
 #include "harness/harness.h"
 #include "harness/test_worlds.h"
 #include <memory>
@@ -36,7 +38,8 @@ struct Tour {
     std::unique_ptr<TestGame> g;
     KeyMap keymap;               // the state's own key map (the keys screen binds into it)
     Input in;
-    const Stop* stop = nullptr;  // the state toured
+    GameState home = GameState::TITLE;     // the state toured
+    bool (*opener)(Tour&) = nullptr;       // how a fresh game opens it: its stop's, else its row's (U-06)
     std::string pre;             // its files' prefix: "07_menu"
     int steps = 0, pics = 0, lost = 0;   // the state's steps; pictures and steps not taken in all
     int64_t stormX = -1, stormZ = -1; int stormBody = -1;   // the storm's giant, once found
@@ -73,6 +76,7 @@ struct Tour {
     bool start();                                   // Enter at the title: the ship in its parking
     bool open();                                    // a fresh game, the state opened
     void padMenu();                                 // the command menu's pages, as lines and pictures
+    int commands();                                 // U-06: each line of the command menu's first page run, then `back`
     void step(const std::string& what, int key, int mods = 0);   // a key, and what it did; a picture when the state changed
     void back();                                    // to the state toured again: Esc a bounded number of times, else opened again
     void keys(const char* spec);                    // keys by name, each followed by `back`; a group "A,B,C" is pressed without it
@@ -133,7 +137,7 @@ bool Tour::start() {
 
 bool Tour::open() {
     fresh();
-    return stop->open(*this) && state() == stop->state;
+    return opener(*this) && state() == home;
 }
 
 // the command menu as the controller opens it (Y; over a text entry's keyboard, SELECT), each page's lines and picture, then
@@ -162,6 +166,24 @@ void Tour::padMenu() {
     say("pad away");
 }
 
+// U-06: each line of the command menu's first page, run as the controller runs it (its keys a frame each), then `back`: the
+// controller's own commands drive a screen the tour has no keys for. How many ran
+int Tour::commands() {
+    int ran = 0;
+    for (int i = 0; i < g->testPadCount(0); i++) {
+        const GameState before = state();
+        std::vector<std::pair<int, int>> keys;
+        const std::string label = g->testPadCommand(0, i, keys);
+        for (const std::pair<int, int>& k : keys) press(k.first, k.second);
+        if (keys.empty()) frame();
+        steps++; ran++;
+        say("command " + label);
+        if (state() != before) picture(fmt("%02d_%s", steps, lowerName(state()).c_str()));
+        back();
+    }
+    return ran;
+}
+
 void Tour::step(const std::string& what, int key, int mods) {
     const GameState before = state();
     press(key, mods);
@@ -171,7 +193,6 @@ void Tour::step(const std::string& what, int key, int mods) {
 }
 
 void Tour::back() {
-    const GameState home = stop->state;
     for (int i = 0; i < 4 && state() != home && !(scene(state()) && home != GameState::MENU); i++) {
         press(KEY_ESCAPE);
         say("  esc");
@@ -502,7 +523,7 @@ void keysInstruments(Tour& t) { t.keys("DOWN UP ENTER,DOWN,UP,LEFT,RIGHT,1,2,9,0
 void keysDrones(Tour& t) { t.keys("DOWN UP ENTER"); }
 void keysAuto(Tour& t) { t.keys("DOWN UP UP,ENTER"); }   // Up from the first row is BACK; a profile's Enter is the unit's `auto` group's
 
-// a stop a state, in the table's order
+// the stops, in the table's order: how the game opens each state of the first pass and its keys
 constexpr Stop STOPS[] = {
     {GameState::TITLE, "the game's start", openTitle, keysTitle},
     {GameState::SPACE, "Enter at the title", openSpace, keysSpace},
@@ -534,13 +555,26 @@ constexpr Stop STOPS[] = {
     {GameState::DRONES, "E at the drone bay", openDrones, keysDrones},
     {GameState::AUTO, "the Esc menu's AUTO-EXPLORE", openAuto, keysAuto},
 };
-static_assert(sizeof(STOPS) / sizeof(STOPS[0]) == STATE_COUNT, "a stop a state");
-constexpr bool stopsInOrder() {
-    for (int i = 0; i < STATE_COUNT; i++)
-        if ((int)STOPS[i].state != i) return false;
+constexpr int STOP_COUNT = (int)(sizeof(STOPS) / sizeof(STOPS[0]));
+constexpr bool stopsInOrder() {   // U-06: a state's stop once, in the table's order; a state with none is toured by its row
+    for (int i = 1; i < STOP_COUNT; i++)
+        if ((int)STOPS[i].state <= (int)STOPS[i - 1].state) return false;
     return true;
 }
-static_assert(stopsInOrder(), "each stop in its state's place");
+static_assert(stopsInOrder(), "the stops in the table's order, a state's once");
+const Stop* stopOf(GameState s) { for (const Stop& st : STOPS) if (st.state == s) return &st; return nullptr; }
+
+// U-06: the states the rows' pass opens as the first pass does, by name: the scenes (the title, the ship, the capsule's way down
+// and up, the ground), a map of the ground, a probe falling, a recording; every other state a fresh game opens by its row
+constexpr GameState SETUPS[] = {GameState::TITLE, GameState::SPACE, GameState::DESCENT, GameState::SURFACE, GameState::ASCENT,
+                                GameState::SECTOR_MAP, GameState::PROBE, GameState::RECORDING};
+// a state by its row: the ship in its parking, the row's way in (`openScreen`), a frame
+bool openByRow(Tour& t) {
+    if (!t.start()) return false;
+    t.g->openScreen(t.home);
+    t.frame();
+    return true;
+}
 
 // the tour's directory emptied: its files and its states' folders (a gallery's pictures, a recorder's frames)
 void emptyTourDir() {
@@ -564,7 +598,10 @@ void emptyTourDir() {
 
 }   // namespace
 
-// `tour [state ...]`: every state (or those named), its steps printed; exit 1 when a state, a row or a device was not reached
+bool tourSetupNamed(GameState s) { for (GameState x : SETUPS) if (x == s) return stopOf(s) != nullptr; return false; }
+
+// `tour [state ...]`: every state (or those named), its steps printed, then the rows; exit 1 when a state, a row or a device was
+// not reached
 int runTour(int argc, char** argv) {
     std::vector<std::string> only;
     for (int i = 2; i < argc; i++) { std::string s = argv[i]; for (char& c : s) c = (char)toupper((unsigned char)c); only.push_back(s); }
@@ -575,7 +612,7 @@ int runTour(int argc, char** argv) {
     printf("tour: %d states, each from a fresh game at its title (the home system, parked), %dx\n", STATE_COUNT, g_testScale);
     for (const Stop& s : STOPS) {
         if (!only.empty() && std::find(only.begin(), only.end(), std::string(stateName(s.state))) == only.end()) continue;
-        t.stop = &s;
+        t.home = s.state; t.opener = s.open;
         t.steps = 0;
         t.pre = fmt("%02d_%s", (int)s.state, lowerName(s.state).c_str());
         printf("== %s: %s\n", stateName(s.state), s.how);
@@ -593,7 +630,37 @@ int runTour(int argc, char** argv) {
         }
         pngFlush();
     }
-    t.g.reset();
     printf("tour: %d states toured, %d pictures, %d steps not taken (%.1f s)\n", states, t.pics, t.lost, nowSec() - t0);
+    // U-06: the rows, each state opened by its row or its setup, its controller's commands run
+    printf("tour: the rows, %d states, each by its row (`openScreen` from the ship) or its setup by name\n", STATE_COUNT);
+    const double t1 = nowSec();
+    const int pics0 = t.pics, lost0 = t.lost;
+    int reached = 0, commands = 0;
+    for (const Game::StateRow& r : Game::STATE_ROWS) {
+        const GameState s = r.state;
+        if (!only.empty() && std::find(only.begin(), only.end(), std::string(stateName(s))) == only.end()) continue;
+        const bool setup = tourSetupNamed(s);
+        if (setup && !r.padMenu) { printf("== %s: %s, toured above (no commands)\n", stateName(s), stopOf(s)->how); reached++; continue; }
+        t.home = s; t.opener = setup ? stopOf(s)->open : openByRow;
+        t.steps = 0;
+        t.pre = fmt("rows_%02d_%s", (int)s, lowerName(s).c_str());
+        printf("== %s: %s\n", stateName(s), setup ? stopOf(s)->how : "its row");
+        const bool ok = t.open();
+        t.say("opened");
+        t.picture("open");
+        if (!ok) { printf("  NOT OPENED\n"); t.lost++; continue; }
+        reached++;
+        t.padMenu();
+        commands += t.commands();
+        if (t.state() != s) t.back();
+        for (int i = 0; i < 4; i++) {   // Esc last, until a scene
+            t.step("key ESC", KEY_ESCAPE);
+            if (scene(t.state())) break;
+        }
+        pngFlush();
+    }
+    t.g.reset();
+    printf("tour: the rows: %d reached, %d commands run, %d pictures, %d steps not taken (%.1f s)\n", reached, commands, t.pics - pics0, t.lost - lost0,
+           nowSec() - t1);
     return t.lost ? 1 : 0;
 }

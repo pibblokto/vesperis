@@ -480,6 +480,7 @@ int testInput();
 
 // ---- modes_tour.cpp
 int runTour(int argc, char** argv);
+bool tourSetupNamed(GameState s);   // U-06: the tour opens the state as the game does (a scene, a world set up first), not by its row
 
 // ---- modes_bench.cpp
 void fillBenchGuide(Guide& G);

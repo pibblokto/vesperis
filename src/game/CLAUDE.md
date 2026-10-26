@@ -23,7 +23,7 @@ range): chart_draw, shards_screen.
   (`drawPanel`, `menuStep`, `wrapText`, the HUD's colours)
 
 ## Rules and traps
-- A new state or screen: the cookbook's "Add a game state" names every place to touch.
+- A new screen: the cookbook's "Add a screen" names its five places; a new state goes before `GameState::COUNT`.
 - Persisted enums are append-only (`GameState`, `ShipState::Mode`, `AutoProfile`, guide.h's `MARK_*` numbers); one save line
   per field, and `load` ignores unknown keys. `Game`'s data members are never reordered.
 - A state is its row (its `padMenu`, `enter`, `back`), a way in a row of its list, a cabin device its row in `cabinDevices`

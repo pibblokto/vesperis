@@ -440,6 +440,14 @@ The tasks:
 
 Besides them, five in the harness and the docs. Found on the way: no palette bank is free in the cabin (all 32 taken).
 
+**After** (U-06, 2026-10-27; a `Plan` agent on Opus each, alone, the same preamble):
+- **The game-screen task:** 185,208 tokens, 68 tool uses, 7.5 minutes. Six places in the code, none a count or a case number:
+  the state before `COUNT`, its row, its file, its banner in game.h, its way in (a flight computer row), and `noteVisit` for the
+  visits the screen lists; the game's note for its file. No harness edit.
+- **The cabin-device task:** 225,516 tokens, 70 tool uses, 10.9 minutes. The state and the facing, the row, the file, the
+  banner, the cabin device (its row, its picture, its line on the devices page) and the help's lines; the pressure itself, which
+  no code varies over a day (the fronts and the ground's reading); no count, no switch, nothing in pad.cpp or the harness.
+
 ## 8. Considered and set aside
 
 - **Screens as classes behind a virtual interface.**
@@ -498,3 +506,6 @@ Besides them, five in the harness and the docs. Found on the way: no palette ban
   resumes in space (KI-433). The ship's screens, the landing map and the probe keep SPACE as their way back, not the scene, for
   it; `openScreen` setting the scene from a base mends KI-432 in one line. `returnState` keeps its name: U-04's scene is a base
   in play, and the title is a base. The row's save hooks default to null (U-03's lesson), so no row writes them yet.
+- **U-06, on the way:** the controller's commands are a screen's few lines, so the tour's hand lists stay as its first pass and
+  the rows run after them. The measurements found that a load or a new expedition notes no visit (KI-434), and that the next
+  screen's banner takes game.h past 48 KB (section 8 revisits the shape at 60 KB).

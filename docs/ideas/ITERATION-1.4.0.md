@@ -79,7 +79,7 @@ twelve kinds are re-cut into the families below (`MILESTONES.md`).
 | 32 | The screens | U-03 | The ways in as rows: the Esc menu, the guide menu, the flight computer, the settings, the cabin's devices | L | done 2026-10-26 |
 | 33 | The screens | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | done 2026-10-26 |
 | 34 | The screens | U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | done 2026-10-26 |
-| 35 | The screens | U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | planned |
+| 35 | The screens | U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | done 2026-10-27 |
 
 Each row's `Status` moves to `done` (with the date) when its milestone is finished, and the matching row of `MILESTONES.md`
 gets `1.4.0, done <date>`. This table is the order.

@@ -342,6 +342,9 @@ Contents:
   printed the two to stderr where they differed (a compare then fails) and wrote every check to a file outside shots/ (`U05_LOG`),
   so the compare stayed the same while it counted them. A variable two screens share is a trap (KI-427): each screen's opener is
   its own (`openedFrom`).
+- A harness pass that reads the table covers a new screen with no edit, but it drives only what the rows hold (U-06): the
+  controller's commands are a screen's few lines (SPACE's 14 against its 40 keys in the tour's list, the menus none), so the hand
+  lists stay as the first pass and the rows run after them, the old outputs unchanged.
 - A voice's identity comes from strong narrow lines and resonances, not broad noise (compare voices by LTAS distances). Measure a
   medium's surface in the bare render's quiet windows.
 - raylib's non-looping music end cuts the last block, and stalls starve its stream. Log each swap's return (the refresh it met);

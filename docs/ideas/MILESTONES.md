@@ -291,7 +291,7 @@ Every step is proven identical to the binary before it, and nothing is blessed.
 | U-03 | The ways in as rows: the Esc menu, the guide menu, the flight computer, the settings, the cabin's devices | L | 1.4.0, done 2026-10-26 |
 | U-04 | The controller from the row: a screen's commands, name and buttons; the general page by traits | M | 1.4.0, done 2026-10-26 |
 | U-05 | A screen's life: one way in and one way back, its own save lines and its reset | L | 1.4.0, done 2026-10-26 |
-| U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | 1.4.0 |
+| U-06 | The close: the harness reads the table, the recipe, the two tasks measured again | M | 1.4.0, done 2026-10-27 |
 
 ## Suggested order for 1.2.0
 

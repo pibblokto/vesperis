@@ -37,4 +37,4 @@ settings | $V settings | shots/tests/*.txt=2 |
 input | $V input | shots/tests/*.png=15 shots/tests/*.txt=8 | twice
 unit | $V unit | shots/tests/*.png=47 shots/tests/*.txt=15 shots/*.png=2 | twice noise=tests/unit_r408_*.png noise=tests/unit_b412_*.png noise=tests/unit_t03_scan.png noise=tests/test_save_auto.txt mask=\(the\sworst\s\d+\) mask=\(\d+(?:\.\d+)?\sat\smost\) mask=\d+(?:\.\d+)?\sfresh mask=steps\s\d+\s\(window\s\d+\),\sthe\sfastest\sturn\s\d+\sdeg/s mask=\(\d+(?:\.\d+)?\ss\sto\sfind\) mask=,\s\d+(?:\.\d+)?\ss$ mask=\d+(?:\.\d+)?\ss\sin\sall mask=checks\s\d+(?:\.\d+)?\ss\) mask=slowest\slaid\sout\s[^;]* mask=\(the\sslowest\s[^)]*\)
 flow | $V flow | shots/tests/*.png=164 shots/tests/test_gallery/*.png=3 | twice
-tour | $V tour | shots/tests/tour/*.png=248 shots/tests/tour/*.txt=49 shots/tests/tour/*/*.png=3 shots/tests/tour/*/*.txt=3 | twice
+tour | $V tour | shots/tests/tour/*.png=410 shots/tests/tour/*.txt=81 shots/tests/tour/*/*.png=4 shots/tests/tour/*/*.txt=4 | twice

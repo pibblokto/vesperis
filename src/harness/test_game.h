@@ -19,6 +19,8 @@ public:
     int testPadPage() const { return padUI.page; }
     bool testPadKeyboard() const { return padKeyboardShown(); }
     std::string testPadItems(int page) const;   // the menu's page as its lines ("label|key")
+    int testPadCount(int page) const { return (int)padItems(page).size(); }
+    std::string testPadCommand(int page, int i, std::vector<std::pair<int, int>>& keys);   // U-06: a line run as the controller runs it
     std::string testPadLegend() const;          // the buttons' legend of the context
     int testKeysPage() const { return keysPage; }
     int testPadCapture() const { return padUI.capture; }
@@ -275,7 +277,13 @@ public:
     std::string testBodyTypes() const { std::string r; for (auto& b : sys.bodies) r += std::to_string(b.index) + ":" + KINDS[b.type].name + (b.parent >= 0 ? "(moon) " : " "); return r; }
     void testCabinGoto(double x, double z, double yaw, double pitch = 0) { cabin.x = x; cabin.z = z; cabin.yaw = yaw; cabin.pitch = pitch; }
     void testCabinAt(double& x, double& z, double& yaw) const { x = cabin.x; z = cabin.z; yaw = cabin.yaw; }
-    void testShipScreenRow(int page, int sel) { shipScreenPage = page; shipScreenSel = sel; }   // the flight computer's row Enter acts on
+    bool testShipScreenRow(const std::string& label) {   // the flight computer's row Enter acts on, by its label (U-06): false if none
+        const RowList<ShipPage>& pages = shipPages();
+        for (int p = 0; p < pages.count; p++)
+            for (int i = 0; i < pages.row[p].rows.count; i++)
+                if (label == pages.row[p].rows.row[i].label) { shipScreenPage = p; shipScreenSel = i; return true; }
+        return false;
+    }
     double testFlightDur() const { return ship.flightDur; }   // the Vimana flight's length (real seconds)
     double testFlightT() const { return ship.flightT; }
     bool testFlying() const { return ship.mode == ShipState::VIMANA; }

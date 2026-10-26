@@ -81,8 +81,8 @@ void unitNavigation(const Check& check) {
             press(KEY_ENTER);
             listOk = parkedAt(pi, w1);
             game.testParkAtBelt(bs, 0); run(0.3);
-            game.setState(GameState::SHIPSCREEN); game.testShipScreenRow(0, 2); press(KEY_ENTER);   // LOCAL TARGET: NEXT BODY (from none: the first)
-            game.setState(GameState::SHIPSCREEN); game.testShipScreenRow(0, 4); press(KEY_ENTER);   // FINE APPROACH TO THE LOCAL TARGET
+            game.setState(GameState::SHIPSCREEN); game.testShipScreenRow("LOCAL TARGET: NEXT BODY"); press(KEY_ENTER);   // from none: the first
+            game.setState(GameState::SHIPSCREEN); game.testShipScreenRow("FINE APPROACH TO THE LOCAL TARGET"); press(KEY_ENTER);
             computerOk = parkedAt(0, w2);
         }
         check("a planet approached from a belt keeps its parking (B-410)", pi >= 0 && inBelt && listOk && computerOk,
@@ -870,7 +870,8 @@ void unitAuto(const Check& check) {
 // `simulating` and its stowing of the radar camera and the telescope, the render switch's overlays, the dark radio's `taken`, the
 // save's `inPlay` and its ground, `mouseCaptureWanted`, the photo tools' scenes, the typing states (the global keys, the controller's
 // keyboard), `padContext`'s contexts, the names the harness printed (modes_game.cpp's `auto`); U-02: the update switch's cases that
-// moved the ship after their screen's update; U-04: the controller's general page (pad.cpp), each line where its hand lists put it
+// moved the ship after their screen's update; U-04: the controller's general page (pad.cpp), each line where its hand lists put it.
+// U-06: then every row of the table, as many as there are: its name, update and picture, a way in, its commands
 void unitStates(const Check& check) {
     using S = GameState;
     auto in = [](S s, std::initializer_list<S> l) { return std::find(l.begin(), l.end(), s) != l.end(); };
@@ -935,4 +936,31 @@ void unitStates(const Check& check) {
         }
     }
     check("the controller's general page, the old lists", wrong.empty(), wrong.empty() ? fmt("29 states, %d lines where they were", lines) : wrong);
+    // U-06: each row, read from the table (a new one with no edit here): its name (once), its update and its picture; a way in: a
+    // new game in its parking opens it by its row (`openScreen`) and it holds a frame, or the tour opens it by name (a scene, a
+    // world set up first: `tourSetupNamed`); a row with a controller's page has a line on it there
+    // its files in a folder that is not there: a frame's note of the visit saves the guide, and nothing of the explorer's is read
+    const std::string none = "shots/tests/states_rows_none/";
+    game.guidePath = none + "guide.txt"; game.savePrefix = none + "save"; game.shotsDir = none + "shots"; game.moviesDir = none + "movies";
+    std::string missing;
+    int rows = 0, byRow = 0, named = 0, paged = 0;
+    Input gi;
+    for (const Game::StateRow& r : Game::STATE_ROWS) {
+        rows++;
+        const std::string n = r.name ? r.name : fmt("row %d", rows - 1);
+        if (!r.name || !r.update || !r.render) { if (missing.empty()) missing = n + ": no name, update or picture"; continue; }
+        for (const Game::StateRow& o : Game::STATE_ROWS)
+            if (&o != &r && o.name && strcmp(o.name, r.name) == 0 && missing.empty()) missing = n + ": a name two rows have";
+        if (tourSetupNamed(r.state)) { named++; continue; }
+        if (r.back == BACK_NONE) { if (missing.empty()) missing = n + ": a scene the tour opens by no name"; continue; }
+        game.newGame(); game.setState(S::SPACE);
+        game.openScreen(r.state);
+        game.frame(gi, 1.0 / 30); gi.newFrame();
+        if (game.state != r.state) { if (missing.empty()) missing = fmt("%s: opened by its row, it closed (%s)", n.c_str(), stateName(game.state)); continue; }
+        byRow++;
+        if (r.padMenu && game.testPadCount(0) == 0 && missing.empty()) missing = n + ": its controller's page has no line";
+        if (r.padMenu) paged++;
+    }
+    check("the states' rows: a name, an update, a picture, a way in, the commands", missing.empty(),
+          missing.empty() ? fmt("%d rows: %d opened by their row and held a frame (%d with commands), %d by the tour's setups", rows, byRow, paged, named) : missing);
 }

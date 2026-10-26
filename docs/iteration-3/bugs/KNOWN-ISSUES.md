@@ -140,6 +140,7 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-431 | S4 | controls | While an almanac run goes, the controller's almanac page offers STOP THE RUN (T), and the screen ignores T: it reads no T and does not simulate, so the frame's T is not read there. | open (found 2026-10-26 in U-01's survey, kept by U-04) |
 | KI-432 | S3 | screens | The cabin's screens set no scene: after H at the title, the flight computer, the console, the drone bay and the case draw over the title; after H or Esc on the ground and the ascent, over the ground. | open (found 2026-10-26 in U-05's survey) |
 | KI-433 | S3 | saves | A game saved on the ground and opened again: H (or C) then a key at the title, and Enter resumes in space, not on the ground; the next save drops the landing. The title's H sets the scene to the title. | open (found 2026-10-26 in U-05's survey) |
+| KI-434 | S4 | guide | A load or a new expedition notes no visit: `visitNoted` is reset only by an arrival, so the system they put the ship in is not noted (`noteVisit`: its old sights' names made marks, R-408) until the next arrival. | open (found 2026-10-27 by U-06's measurement) |
 
 ## The long rows, continued
 

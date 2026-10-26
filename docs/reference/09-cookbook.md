@@ -17,7 +17,7 @@ Contents:
 - Add a material
 - Add a HUD readout
 - Add a key
-- Add a game state
+- Add a screen
 - Add a save field
 - Add a vehicle
 - Add a palette effect
@@ -331,31 +331,34 @@ Draw in `renderSpaceHUD` or `renderSurfaceHUD` with `drawTextShadow(canvas, x, y
 
 Keys are GLFW codes in `core/input.h`; the platform copies raylib's `IsKeyDown/IsKeyPressed` by number. Read `in.wasPressed(KEY_X)` for edges, `in.isDown` for holds. Document it in the help pages (`renderHelp`) and in `README.md`.
 
-## Add a game state
+## Add a screen
 
-Append it to `GameState` (`game/game_types.h`; `STATE_COUNT` names the last state) and its row to `Game::STATE_ROWS`
-(`game/states.cpp`, U-02): its name; its traits (the clock runs, an overlay drawn over its `returnState`'s scene, the cameras
-stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground, the ship moving on, a base the
-screens go back to, the warp at hand); its controller context; its `update` and its picture, which the frame runs; an overlay's
-`covers` if it ever covers the whole frame, an `away` if its screen stops something off it (a sound), its controller's page
-(`padMenu`, below), its `enter` (what it resets as it opens) and its way back (`back`: `BACK_SCENE`, `BACK_OPENER` or a screen,
-`to(S::MENU)`); a screen with lines of its own in the save, its `save`, `load` and `reset` (U-05). The compiler checks the
-order, and that the row names its update, its picture and, an overlay, a way back. Code asks `stateHas(state, ST_...)`; a trait
-new code needs is a column, not a list of states (E-06). Then:
-- its file of `Game` methods, the row's among them (an update takes `(const Input& in, double dt, double realDt)`), declared in
-  game.h under a banner naming the file; it opens by `openScreen(GameState::...)` and Esc closes it by `closeScreen()`;
-- its controller's page, the row's `padMenu` (U-04): a method in its file writing a `PadMenu` (its tab's `title`, `item` and
-  `typed` lines; a screen with buttons of its own, as the maps, `button` and `sticks`; a typing screen, its keys' line);
-  `autoScene`;
-- its way in, a row of a list (U-03; a list's count is read from it, and each row's label and act are asserted): a cabin
-  device (a `CabinFacing` before `FACE_COUNT` and its row in `Game::cabinDevices`, cabin.cpp: its spot and reach, its line
-  under the crosshair and the controller's "USE" line, its screen's bank and colour, E's act, its body against a wall; its
-  picture in `drawCabinBand`), a flight computer row (`shipPages`: its label, act, status column, and whether it stays on the
-  screen), an Esc menu row (`escMenu`, menus.cpp) or a guide menu row (`guideMenu`: the status that refuses it on the ground,
-  a label that names); an act that opens the screen calls its opener. The harness finds a row by its label;
-- in the harness: its stop in `modes_tour.cpp`'s `STOPS` (how the game opens it, its keys; the count and the order are
-  asserted, so the build fails without it), a `screens` capture if a frame needs its scales, and a TestGame hook if a check needs
-  one; `tools/prove compare <base> tour` then shows its run.
+A screen is its row (U-02 to U-06): five places in the code, none a count or a case number kept in step with another, then the
+docs. Code asks `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06).
+1. **Its state:** a value of `GameState` (`game/game_types.h`) before `COUNT`, which `STATE_COUNT` reads (a state's number is
+   saved: the new one goes last).
+2. **Its row** in `Game::STATE_ROWS` (`game/states.cpp`), in the enum's order: its name; its traits (`ST_OVERLAY`, drawn over
+   the scene it is opened from; the clock runs, the cameras stowed, the dark radio silent, a save's place, the mouse, the photo
+   tools, typing, the ground, the ship moving on, a base, the warp at hand); its controller context; its `update` and its
+   picture; an overlay's `covers` if it ever covers the whole frame; an `away` if its screen stops something off it (a sound);
+   its controller's page (`padMenu`); its `enter` (what it resets as it opens); its way back (`back`: `BACK_SCENE`,
+   `BACK_OPENER` or a screen, `to(S::MENU)`); a screen with lines of its own in the save, its `save`, `load` and `reset`. The
+   compiler checks the order, and that the row names its update, its picture and, an overlay, a way back.
+3. **Its file** of `Game` methods: the row's (an update takes `(const Input& in, double dt, double realDt)`; a `padMenu` writes
+   a `PadMenu`: its tab's `title`, `item` and `typed` lines, a map's `button` and `sticks`, a typing screen's keys' line). It
+   opens by `openScreen(GameState::...)` and Esc closes it by `closeScreen()`; `state =` is a landing's, the title's, a load's
+   or an action's own exit.
+4. **Its banner in game.h:** the file's methods, and its members after the last of `Game`'s.
+5. **Its way in,** a row of a list (U-03): a flight computer row (`shipPages`, cabin.cpp: its label, act, status column, and
+   whether it stays on the screen), an Esc menu row (`escMenu`, menus.cpp), a guide menu row (`guideMenu`: the status that
+   refuses it on the ground, a label that names) or a cabin device (a `CabinFacing` before `FACE_COUNT` and its row in
+   `Game::cabinDevices`: its spot and reach, its lines, its screen's bank and colour, E's act, its body against a wall; its
+   picture in `drawCabinBand`). Its act calls `openScreen`; the harness finds a row by its label.
+
+Then the docs: its help lines (`renderHelp`), 07's states, the file in the game's note. The harness needs nothing: the tour's
+rows open it by its row and run its controller's commands, and `unit states` checks the row (a name, an update, a picture, a way
+in, its commands). A scene, or a screen that needs a world set up first (the ground, a probe falling, a recording), gets a stop
+in `modes_tour.cpp` and its name in `SETUPS`; a `screens` capture if a frame needs its scales.
 
 ## Add a save field
 
