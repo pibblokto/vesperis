@@ -33,7 +33,8 @@ void recordPlacesOf(const BodyGen& g, int people, std::vector<RecordPlace>& out,
 
 static std::string recordSiteLine(const RecordCatalogue& C, const ShardSite& x) {
     const RecordEntry& e = C.entries[shardLocalOf(x.index)];
-    return fmt("%s%s%s S%d %s (%s, year %d) in %s", x.last ? "THE LAST " : "", x.archive ? "archive " : "", x.wallD > 0 ? "on a wall " : "", shardLocalOf(x.index), RECORD_MEDIUM_NAMES[x.medium], RECORD_CATEGORY_NAMES[e.category], e.year, buildingPlaceName(x.place));
+    return fmt("%s%s%s S%d %s (%s, year %d) in %s", x.last ? "THE LAST " : "", x.archive ? "archive " : "", x.wallD > 0 ? "on a wall " : "", shardLocalOf(x.index), RECORD_MEDIUM_NAMES[x.medium],
+            RECORD_CATEGORY_NAMES[e.category], e.year, buildingPlaceName(x.place));
 }
 
 static void printRecords(const AgeWorld& aw) {
@@ -74,8 +75,15 @@ static void printRecords(const AgeWorld& aw) {
     }
     printf("  where they lie: %d places of the plan (", nPlaces);
     bool firstClass = true;
-    for (int k = 0; k < 7; k++) if (byClass[k]) { std::string cn = SETTLEMENT_CLASS_NAMES[k]; if (byClass[k] > 1) cn = cn == "CITY" ? "CITIES" : cn + "S"; printf("%s%d %s holding %d", firstClass ? "" : ", ", byClass[k], cn.c_str(), recByClass[k]); firstClass = false; }
-    printf("), %d works holding %d, %d settlements of the countryside round the capital holding %d (%d in all); %d archives holding %d, %d painted walls\n", works, recWorks, country, recCountry, nRecords, archives, archived, walls);
+    for (int k = 0; k < 7; k++)
+        if (byClass[k]) {
+            std::string cn = SETTLEMENT_CLASS_NAMES[k];
+            if (byClass[k] > 1) cn = cn == "CITY" ? "CITIES" : cn + "S";
+            printf("%s%d %s holding %d", firstClass ? "" : ", ", byClass[k], cn.c_str(), recByClass[k]);
+            firstClass = false;
+        }
+    printf("), %d works holding %d, %d settlements of the countryside round the capital holding %d (%d in all); %d archives holding %d, %d painted walls\n", works, recWorks, country, recCountry,
+            nRecords, archives, archived, walls);
     printf("  by their places:"); for (const auto& kv : byPlace) printf(" %s %d,", kv.first.c_str(), kv.second); printf("\n");
     int none = 0, most = 0; for (int i = 0; i < C.count; i++) { if (!copies[i]) none++; most = std::max(most, copies[i]); }
     printf("  copies over these places: every record but %d has one, the most a record has %d\n", none, most);
@@ -87,8 +95,11 @@ static void printRecords(const AgeWorld& aw) {
         if (!show && !rp.countryside && rp.spec.rank >= 0 && (shown < 4 || (arch && shown < 6) || rp.spec.before > 0)) { show = true; shown++; }
         if (!show && rp.countryside && !rp.sites.empty() && shownCountry < 4) { show = true; shownCountry++; }
         if (!show || rp.sites.empty()) continue;
-        const std::string what = rp.work >= 0 ? std::string(WORK_KIND_NAMES[rp.work]) : (rp.countryside ? std::string("a countryside ") + SETTLEMENT_CLASS_NAMES[rp.spec.sclass] : fmt("%s rank %d", SETTLEMENT_CLASS_NAMES[rp.spec.sclass], rp.spec.rank));
-        printf("    %s%s (%zu buildings%s): %zu\n", what.c_str(), lastHere ? " - THE LAST PLACE" : "", rp.spec.buildings.size(), rp.spec.before > 0 ? fmt(", left %.0f years before the end", rp.spec.before).c_str() : "", rp.sites.size());
+        const std::string what = rp.work >= 0
+                ? std::string(WORK_KIND_NAMES[rp.work])
+                : (rp.countryside ? std::string("a countryside ") + SETTLEMENT_CLASS_NAMES[rp.spec.sclass] : fmt("%s rank %d", SETTLEMENT_CLASS_NAMES[rp.spec.sclass], rp.spec.rank));
+        printf("    %s%s (%zu buildings%s): %zu\n", what.c_str(), lastHere ? " - THE LAST PLACE" : "", rp.spec.buildings.size(),
+                rp.spec.before > 0 ? fmt(", left %.0f years before the end", rp.spec.before).c_str() : "", rp.sites.size());
         for (const ShardSite& x : rp.sites) printf("      %s\n", recordSiteLine(C, x).c_str());
     }
 }
@@ -119,7 +130,11 @@ static int recordsScenes(int onlyAge = -1, std::vector<std::string>* lines = nul
         std::sort(media.begin(), media.end(), [&](int a, int b) { return mc[a] > mc[b]; });
         if (media.size() > 4) media.resize(4);
         remove("shots/tests/test_records_guide.txt");
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_records_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_records_guide.txt";
         game.newGame(); game.setState(GameState::SPACE); applyTestScale(game);
         Input gi;
         auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
@@ -167,7 +182,8 @@ static int recordsScenes(int onlyAge = -1, std::vector<std::string>* lines = nul
         const int rows = std::max(1, ((int)shots.size() + cols - 1) / cols), SW = cols * FBW, SH = 16 * scale + rows * tileH;
         std::vector<uint32_t> sheet((size_t)SW * SH, rgb(16, 16, 20));
         RGBCanvas cv{sheet.data(), SW, SH, scale};
-        drawText(cv, 4, 4, fmt("THE RECORDS OF A %s PEOPLE ON %s: %d IN ALL", age == AGE_FAR_FUTURE ? "FAR FUTURE" : AGE_NAMES[age], sys.bodies[aw.body].name.c_str(), C->count).c_str(), rgb(235, 225, 170));
+        drawText(cv, 4, 4, fmt("THE RECORDS OF A %s PEOPLE ON %s: %d IN ALL", age == AGE_FAR_FUTURE ? "FAR FUTURE" : AGE_NAMES[age], sys.bodies[aw.body].name.c_str(), C->count).c_str(),
+                rgb(235, 225, 170));
         for (size_t i = 0; i < shots.size(); i++) {
             const int cx = (int)(i % cols), cy = (int)(i / cols), dx0 = cx * FBW, dy0 = 16 * scale + cy * tileH;
             for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) sheet[(size_t)(dy0 + y) * SW + dx0 + x] = shots[i].px[(size_t)y * FBW + x];
@@ -216,18 +232,26 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
             if (lasts != 1) lastsBad++;
             {   // past the fifty, music and charts by the age of each record's year: the age's share leaned by the people's fifty, within one record
                 int n[AGE_COUNT] = {}, m[AGE_COUNT] = {}, c[AGE_COUNT] = {};
-                for (int i = SHARDS_PER_WORLD; i < C->count; i++) { const RecordEntry& e = C->entries[i]; n[e.age]++; if (e.category == RC_MUSIC) m[e.age]++; else if (e.category == RC_CHART) c[e.age]++; }
+                for (int i = SHARDS_PER_WORLD; i < C->count; i++) {
+                    const RecordEntry& e = C->entries[i];
+                    n[e.age]++;
+                    if (e.category == RC_MUSIC) m[e.age]++;
+                    else if (e.category == RC_CHART) c[e.age]++;
+                }
                 for (int k = 0; k < AGE_COUNT; k++) {
                     if (std::abs(m[k] - n[k] * recordMusicShare(k) * musicShardsOf(pg) / 15.0) > 1.0 || std::abs(c[k] - n[k] * recordChartShare(k) * chartShardsOf(pg) / 4.0) > 1.0) sharesBad++;
                 }
             }
             if (C->charts != recordChartCount(pg, C->count)) sharesBad++;
         }
-        const bool ordered = counts[AGE_PREHISTORIC] < counts[AGE_INDUSTRIAL] && counts[AGE_MEDIEVAL] < counts[AGE_MODERN] && counts[AGE_INDUSTRIAL] < counts[AGE_FUTURISTIC] && counts[AGE_MODERN] < counts[AGE_FAR_FUTURE];
+        const bool ordered = counts[AGE_PREHISTORIC] < counts[AGE_INDUSTRIAL] && counts[AGE_MEDIEVAL] < counts[AGE_MODERN] && counts[AGE_INDUSTRIAL] < counts[AGE_FUTURISTIC] &&
+                counts[AGE_MODERN] < counts[AGE_FAR_FUTURE];
         check("records: 80 to 200 a people by its age and numbers, dated in its history, each in its year's medium (T-04)",
-              worlds == AGE_COUNT && outCount == 0 && outYears == 0 && lastsBad == 0 && mediumBad == 0 && fiftyBad == 0 && sharesBad == 0 && notSame == 0 && ordered,
-              fmt("%d age worlds: %d, %d, %d, %d, %d, %d records%s; %d counts out, %d years out, %d last recordings wrong, %d media not of their age, %d of C-02's fifty moved, %d shares off, %d years not the same again",
-                  worlds, counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], ordered ? " (the later ages more)" : " (NOT ORDERED BY AGE)", outCount, outYears, lastsBad, mediumBad, fiftyBad, sharesBad, notSame));
+                worlds == AGE_COUNT && outCount == 0 && outYears == 0 && lastsBad == 0 && mediumBad == 0 && fiftyBad == 0 && sharesBad == 0 && notSame == 0 && ordered,
+                fmt("%d age worlds: %d, %d, %d, %d, %d, %d records%s; %d counts out, %d years out, %d last recordings wrong, %d media not of their age, %d of C-02's fifty moved, %d shares off, %d "
+                    "years not the same again",
+                        worlds, counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], ordered ? " (the later ages more)" : " (NOT ORDERED BY AGE)", outCount, outYears, lastsBad, mediumBad,
+                        fiftyBad, sharesBad, notSame));
     }
     // the places, the works and the countryside round each capital, with their records
     std::vector<std::vector<RecordPlace>> places(AGE_COUNT);
@@ -265,9 +289,11 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
             }
         }
         check("records: no two copies in one place, none written after its place was left, an archive in every capital and city of a literate age (T-04)",
-              placesN > 0 && sitesN > 0 && dup == 0 && foreign == 0 && late == 0 && capN > 0 && capArch == capN && cityN > 0 && cityArch * 10 >= cityN * 9 && walls > 0 && wallsBad == 0 && notSame == 0 && worksWith > 0,
-              fmt("%d places (the plans', %d works, the countryside round the capitals) holding %d records: %d copies twice in a place, %d not the place's people's or medium, %d written after their place was left; archives in %d of %d capitals and %d of %d cities; %d painted walls (%d not standing); %d works hold records; %s",
-                  placesN, works, sitesN, dup, foreign, late, capArch, capN, cityArch, cityN, walls, wallsBad, worksWith, notSame ? "NOT the same twice" : "the same twice"));
+                placesN > 0 && sitesN > 0 && dup == 0 && foreign == 0 && late == 0 && capN > 0 && capArch == capN && cityN > 0 && cityArch * 10 >= cityN * 9 && walls > 0 && wallsBad == 0 &&
+                        notSame == 0 && worksWith > 0,
+                fmt("%d places (the plans', %d works, the countryside round the capitals) holding %d records: %d copies twice in a place, %d not the place's people's or medium, %d written after "
+                    "their place was left; archives in %d of %d capitals and %d of %d cities; %d painted walls (%d not standing); %d works hold records; %s",
+                        placesN, works, sitesN, dup, foreign, late, capArch, capN, cityArch, cityN, walls, wallsBad, worksWith, notSame ? "NOT the same twice" : "the same twice"));
     }
     {   // an archive holds its class's count (the capital's 8 to 14, a prehistoric capital's 4 to 6, a city's 5 to 8, a town's 3 to 5), the
         // place's own beyond it lie in its other buildings, and every place of the plan holds all its own (a lone stone's foot held two); the far
@@ -321,9 +347,12 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
             }
         }
         check("records: an archive its class's count, the place's own beyond it in its other buildings, every place holding its own (B-426)",
-              archives > 0 && over == 0 && ownN > 0 && ownLaid == ownN && rings > 0 && yOk && capAge == AGE_PREHISTORIC && capArch >= 4 && capArch <= 6 && capLaid == capOwn && (int)capBuildings.size() >= 20 && capHeap <= 8,
-              fmt("%d archives, %d over their count (the most %d, %s); %d of the places' %d own records laid at them; the far future's rings %d; Yaiphuyiabrus IV's %s capital: an archive of %d (31 before), its %d own laid %d in %zu buildings, at most %d within 6 m",
-                  archives, over, worst, worstAt.empty() ? "-" : worstAt.c_str(), ownLaid, ownN, rings, capAge >= 0 ? AGE_NAMES[capAge] : "?", capArch, capOwn, capLaid, capBuildings.size(), capHeap));
+                archives > 0 && over == 0 && ownN > 0 && ownLaid == ownN && rings > 0 && yOk && capAge == AGE_PREHISTORIC && capArch >= 4 && capArch <= 6 && capLaid == capOwn &&
+                        (int)capBuildings.size() >= 20 && capHeap <= 8,
+                fmt("%d archives, %d over their count (the most %d, %s); %d of the places' %d own records laid at them; the far future's rings %d; Yaiphuyiabrus IV's %s capital: an archive of %d (31 "
+                    "before), its %d own laid %d in %zu buildings, at most %d within 6 m",
+                        archives, over, worst, worstAt.empty() ? "-" : worstAt.c_str(), ownLaid, ownN, rings, capAge >= 0 ? AGE_NAMES[capAge] : "?", capArch, capOwn, capLaid, capBuildings.size(),
+                        capHeap));
     }
     {   // the last recording where the history ended: at its last place, in the building its age keeps last words in, and in the last shelter by it;
         // nowhere else
@@ -346,7 +375,8 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
             }
             const bool ok = atPlace == 1 && atShelter == shelters && shelters <= 1 && elsewhere == 0;
             if (ok) good++;
-            line += fmt("%s%s: %s (rank %d), %s%s", line.empty() ? "" : "; ", AGE_NAMES[a], atPlace ? where.c_str() : "NOT AT ITS PLACE", lastRank, shelters ? (atShelter ? "and the shelter" : "NOT THE SHELTER") : "no shelter", elsewhere ? fmt(", %d ELSEWHERE", elsewhere).c_str() : "");
+            line += fmt("%s%s: %s (rank %d), %s%s", line.empty() ? "" : "; ", AGE_NAMES[a], atPlace ? where.c_str() : "NOT AT ITS PLACE", lastRank,
+                    shelters ? (atShelter ? "and the shelter" : "NOT THE SHELTER") : "no shelter", elsewhere ? fmt(", %d ELSEWHERE", elsewhere).c_str() : "");
         }
         check("records: the last recording at the history's last place and in its last shelter, nowhere else (T-04)", worlds == AGE_COUNT && good == worlds, line);
     }
@@ -357,12 +387,20 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
             std::ofstream f(path);
             f << "vesperis-guide 1\ngen 12\n";
             f << "shard 151,0,25/1/S3\nshard 151,0,25/1/S12\ndecoded 151,0,25/1/S3 2\n";
-            f << "shard 152,0,92/0/S2\nshard 152,0,92/0/S57\nshard 152,0,92/0/S63\ndecoded 152,0,92/0/S57 3\nheard 152,0,92/0/S57\nname 152,0,92/0/S57 The river at night\nlent 152,0,92/0/S60\nname 151,0,25/1 Kept\n";
+            f << "shard 152,0,92/0/S2\nshard 152,0,92/0/S57\nshard 152,0,92/0/S63\ndecoded 152,0,92/0/S57 3\nheard 152,0,92/0/S57\nname 152,0,92/0/S57 The river at night\nlent 152,0,92/0/S60\nname "
+                 "151,0,25/1 Kept\n";
         }
-        auto heldOf = [](const Guide& G, const std::string& body, int people) { int n = 0; for (const std::string& k : G.shards) if (k.compare(0, body.size() + 2, body + "/S") == 0 && shardPeopleOf(atoi(k.c_str() + body.size() + 2)) == people) n++; return n; };
+        auto heldOf = [](const Guide& G, const std::string& body, int people) {
+            int n = 0;
+            for (const std::string& k : G.shards)
+                if (k.compare(0, body.size() + 2, body + "/S") == 0 && shardPeopleOf(atoi(k.c_str() + body.size() + 2)) == people) n++;
+            return n;
+        };
         Guide G; const bool loaded = G.load(path);
-        const bool keys = G.shards.count("151,0,25/1/S3") && G.shards.count("151,0,25/1/S12") && G.shards.count("152,0,92/0/S2") && G.shards.count("152,0,92/0/S1007") && G.shards.count("152,0,92/0/S1013") && G.shards.size() == 5;
-        const bool others = G.decoded.count("152,0,92/0/S1007") && G.decoded["152,0,92/0/S1007"] == 3 && G.decoded["151,0,25/1/S3"] == 2 && G.heard.count("152,0,92/0/S1007") && G.names.count("152,0,92/0/S1007") && G.lent.count("152,0,92/0/S1010") && G.names.count("151,0,25/1");
+        const bool keys = G.shards.count("151,0,25/1/S3") && G.shards.count("151,0,25/1/S12") && G.shards.count("152,0,92/0/S2") && G.shards.count("152,0,92/0/S1007") &&
+                G.shards.count("152,0,92/0/S1013") && G.shards.size() == 5;
+        const bool others = G.decoded.count("152,0,92/0/S1007") && G.decoded["152,0,92/0/S1007"] == 3 && G.decoded["151,0,25/1/S3"] == 2 && G.heard.count("152,0,92/0/S1007") &&
+                G.names.count("152,0,92/0/S1007") && G.lent.count("152,0,92/0/S1010") && G.names.count("151,0,25/1");
         const bool counts = heldOf(G, "151,0,25/1", 0) == 2 && heldOf(G, "152,0,92/0", 0) == 1 && heldOf(G, "152,0,92/0", 1) == 2 && G.migratedShards == 5;
         G.save(path);
         Guide G2; G2.load(path);
@@ -381,10 +419,11 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
         const bool told = said.find("2 SHARDS KEPT") != std::string::npos && said2.find("SHARDS KEPT") == std::string::npos;
         remove(path);
         check("records: an old guide's shards kept by their index across the change (the second people's moved), the counts and the language kept, said once (T-04)",
-              loaded && keys && others && counts && once && told,
-              fmt("%s; the keys %s, the decoded, heard, named and lent %s, the counts %s (languages %d%%, %d%%), saved and loaded again %s; the load said '%s', the next '%s'",
-                  loaded ? "loaded" : "NOT LOADED", keys ? "kept (S57 now S1007)" : "WRONG", others ? "moved with them" : "NOT MOVED", counts ? "kept" : "CHANGED",
-                  (int)std::lround(100 * languageShare(heldOf(G, "152,0,92/0", 1))), (int)std::lround(100 * languageShare(heldOf(G, "151,0,25/1", 0))), once ? "unchanged" : "MOVED AGAIN", trunc(said, 52).c_str(), trunc(said2, 40).c_str()));
+                loaded && keys && others && counts && once && told,
+                fmt("%s; the keys %s, the decoded, heard, named and lent %s, the counts %s (languages %d%%, %d%%), saved and loaded again %s; the load said '%s', the next '%s'",
+                        loaded ? "loaded" : "NOT LOADED", keys ? "kept (S57 now S1007)" : "WRONG", others ? "moved with them" : "NOT MOVED", counts ? "kept" : "CHANGED",
+                        (int)std::lround(100 * languageShare(heldOf(G, "152,0,92/0", 1))), (int)std::lround(100 * languageShare(heldOf(G, "151,0,25/1", 0))), once ? "unchanged" : "MOVED AGAIN",
+                        trunc(said, 52).c_str(), trunc(said2, 40).c_str()));
     }
     {   // a guide of `records 2` (its records dated over their people's eras) loaded: its keys as they were, its shards' contents new, said
         // once; saved as `records 3` and loaded again with nothing to say
@@ -397,14 +436,17 @@ void recordsChecks(const std::function<void(const char*, bool, const std::string
         Guide G2; G2.load(path);
         std::string written; { std::ifstream f(path); std::string l; while (std::getline(f, l)) if (l.compare(0, 8, "records ") == 0) written = l; }
         remove(path);
-        check("records: a guide of the records before one age a world keeps its keys, its contents new, said once (B-414)", loaded && keys && migrated == 3 && G2.migratedShards == 0 && G2.shards == G.shards && written == "records 3",
-              fmt("%s; the keys %s; %d said new; saved as '%s', loaded again with %d", loaded ? "loaded" : "NOT LOADED", keys ? "as they were" : "MOVED", migrated, written.c_str(), G2.migratedShards));
+        check("records: a guide of the records before one age a world keeps its keys, its contents new, said once (B-414)",
+                loaded && keys && migrated == 3 && G2.migratedShards == 0 && G2.shards == G.shards && written == "records 3",
+                fmt("%s; the keys %s; %d said new; saved as '%s', loaded again with %d", loaded ? "loaded" : "NOT LOADED", keys ? "as they were" : "MOVED", migrated, written.c_str(),
+                        G2.migratedShards));
     }
     {   // in the game: a modern people's capital, each of its media and its archive's drawn, offered and taken with E
         std::vector<std::string> lines;
         const int f = recordsScenes(AGE_MODERN, &lines);
         std::string line; for (const std::string& l : lines) line += (line.empty() ? "" : "; ") + l.substr(l.find(' ') + 1, 70);
-        check("records: each object drawn, offered and taken with E in a modern capital (T-04; `records scenes` the six ages)", f == 0 && lines.size() >= 3, fmt("%zu: %s", lines.size(), line.c_str()));
+        check("records: each object drawn, offered and taken with E in a modern capital (T-04; `records scenes` the six ages)", f == 0 && lines.size() >= 3,
+                fmt("%zu: %s", lines.size(), line.c_str()));
     }
 }
 
@@ -424,7 +466,8 @@ static void decoderCounts() {
         std::shared_ptr<const RecordCatalogue> C = recordsOf(g, W.which);
         int n[AGE_COUNT][RC_COUNT] = {}, tot[RC_COUNT] = {};
         for (const RecordEntry& e : C->entries) { n[e.age][e.category]++; tot[e.category]++; }
-        printf("  %-11s %-20s the %-12s %3d records: %3d texts, %2d music, %2d charts;", AGE_NAMES[a], b.name.c_str(), peopleNameOf(peopleGen(g, W.which)).c_str(), C->count, tot[RC_TEXT], tot[RC_MUSIC], tot[RC_CHART]);
+        printf("  %-11s %-20s the %-12s %3d records: %3d texts, %2d music, %2d charts;", AGE_NAMES[a], b.name.c_str(), peopleNameOf(peopleGen(g, W.which)).c_str(), C->count, tot[RC_TEXT],
+                tot[RC_MUSIC], tot[RC_CHART]);
         for (int k = 0; k < AGE_COUNT; k++) if (n[k][0] + n[k][1] + n[k][2]) printf("  %s %d/%d/%d", AGE_NAMES[k], n[k][RC_TEXT], n[k][RC_MUSIC], n[k][RC_CHART]);
         printf("\n");
     }
@@ -449,7 +492,8 @@ static void decoderCounts() {
     for (int a = 0; a < AGE_COUNT; a++) {
         if (!peoples[a]) continue;
         const double t = cat[a][0] + cat[a][1] + cat[a][2];
-        printf("  %-11s %3d peoples, %5.1f records each: %4.1f%% texts, %4.1f%% music, %4.1f%% charts\n", AGE_NAMES[a], peoples[a], rec[a] / peoples[a], 100 * cat[a][0] / t, 100 * cat[a][1] / t, 100 * cat[a][2] / t);
+        printf("  %-11s %3d peoples, %5.1f records each: %4.1f%% texts, %4.1f%% music, %4.1f%% charts\n", AGE_NAMES[a], peoples[a], rec[a] / peoples[a], 100 * cat[a][0] / t, 100 * cat[a][1] / t,
+                100 * cat[a][2] / t);
     }
     printf("  and by the age of each record's year (every people's records together):\n");
     for (int a = 0; a < AGE_COUNT; a++) {
@@ -474,15 +518,31 @@ static int decoderFrames() {
         std::vector<Pick> picks;
         for (int c = 0; c < 2; c++) {
             int sounds = -1, silent = -1; size_t ns = 0, nq = 0;
-            for (const auto& kv : by[c]) { if (recordMediumSounds(kv.first)) { if (kv.second.size() > ns) { ns = kv.second.size(); sounds = kv.first; } } else if (kv.second.size() > nq) { nq = kv.second.size(); silent = kv.first; } }
+            for (const auto& kv : by[c]) {
+                if (recordMediumSounds(kv.first)) {
+                    if (kv.second.size() > ns) {
+                        ns = kv.second.size();
+                        sounds = kv.first;
+                    }
+                } else if (kv.second.size() > nq) {
+                    nq = kv.second.size();
+                    silent = kv.first;
+                }
+            }
             if (sounds >= 0) picks.push_back({c, sounds, by[c][sounds][by[c][sounds].size() / 2]});
             if (silent >= 0) picks.push_back({c, silent, by[c][silent][by[c][silent].size() / 2]});
-            if (sounds < 0 || silent < 0) for (const auto& kv : by[c]) if (kv.first != sounds && kv.first != silent && (int)picks.size() < 2 * (c + 1)) picks.push_back({c, kv.first, kv.second[kv.second.size() / 2]});
+            if (sounds < 0 || silent < 0)
+                for (const auto& kv : by[c])
+                    if (kv.first != sounds && kv.first != silent && (int)picks.size() < 2 * (c + 1)) picks.push_back({c, kv.first, kv.second[kv.second.size() / 2]});
         }
         if (chartPick >= 0) picks.push_back({2, C->entries[chartPick].medium, chartPick});
         printf("== %s: %s, the %s (%d records)\n", AGE_NAMES[a], b.name.c_str(), peopleNameOf(peopleGen(g, W.which)).c_str(), C->count);
         if (picks.empty()) { printf("  no record of the age on this world\n"); continue; }
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_decoder.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_decoder.txt";
         remove("shots/tests/test_guide_decoder.txt");
         applyTestScale(game); game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -504,7 +564,8 @@ static int decoderFrames() {
             const std::string medium = game.audio.medium >= 0 ? RECORD_MEDIUM_NAMES[game.audio.medium] : "-";
             if (p.cat == 2) { printf("  %-44s S%-3d a star chart: %s\n", (name + ".png").c_str(), p.index, game.testChartInfo().c_str()); press(KEY_ESCAPE); run(0.1); continue; }
             printf("  %-44s S%-3d %s; the synth's medium %s, %s\n", (name + ".png").c_str(), p.index, recordMediumSounds(p.medium) ? "a recording" : "no sound of its own", medium.c_str(),
-                   p.cat ? (game.audio.piece ? "a piece playing" : "NO piece") : (game.audio.speech ? (game.audio.voice && game.audio.voice->read ? "read by the ship" : "its own voice") : "NOT speaking"));
+                    p.cat ? (game.audio.piece ? "a piece playing" : "NO piece")
+                          : (game.audio.speech ? (game.audio.voice && game.audio.voice->read ? "read by the ship" : "its own voice") : "NOT speaking"));
             if (!game.audio.speech && !game.audio.piece) failures++;
             press(KEY_ESCAPE); run(0.1);
         }
@@ -530,7 +591,20 @@ static int decoderWavs() {
         Piece P; pieceOf(Tr, sh[mi], P);
         printf("  the %s world (%s, the %s): text S%d (%zu words), piece S%d (%s, %.0f s)\n", AGE_NAMES[a], b.name.c_str(), L.people.c_str(), ti, w.size(), mi, PIECE_FORM_NAMES[P.form], P.seconds);
         {   // the ship's reading is flatter: the spread of the vowels' pitch, its own voice against the ship's
-            auto spread = [&](const Voice& v) { Speech S; speechOf(v, w, sh[ti].seed, S); double sum = 0, sq = 0; int n = 0; for (const Segment& g : S.segs) if (g.phone >= 0 && PHONES[g.phone].kind == PK_VOWEL) { sum += g.pitch; sq += g.pitch * g.pitch; n++; } const double mu = sum / std::max(1, n); return std::sqrt(std::max(0.0, sq / std::max(1, n) - mu * mu)); };
+            auto spread = [&](const Voice& v) {
+                Speech S;
+                speechOf(v, w, sh[ti].seed, S);
+                double sum = 0, sq = 0;
+                int n = 0;
+                for (const Segment& g : S.segs)
+                    if (g.phone >= 0 && PHONES[g.phone].kind == PK_VOWEL) {
+                        sum += g.pitch;
+                        sq += g.pitch * g.pitch;
+                        n++;
+                    }
+                const double mu = sum / std::max(1, n);
+                return std::sqrt(std::max(0.0, sq / std::max(1, n) - mu * mu));
+            };
             const double own = spread(V), read = spread(R);
             printf("    the voice's pitch spread over the vowels: its own %.3f, the ship's reading %.3f (%.0f%%)\n", own, read, 100 * read / std::max(own, 1e-9));
             if (!(read < 0.6 * own)) failures++;
@@ -561,7 +635,8 @@ static int decoderWavs() {
                     for (int j = 0; j < win; j++) { const double v = pcm[w0 + j] / 32767.0; floorSum += v * v; } floorN += win;
                 }
                 const std::string surf = m == -2 || !floorN ? std::string("  -   ") : fmt("%.4f", std::sqrt(floorSum / floorN));   // the ship's reading pauses elsewhere
-                printf("    %-20s %-5s %5.1f s  peak %.3f  rms %.3f  surface %s  %d non-finite  %d at the ceiling%s  -> %s\n", mname.c_str(), cat ? "music" : "text", secs, r.peak, r.rms, surf.c_str(), r.nan, r.clip, bad ? "  OUT" : "", fn.c_str());
+                printf("    %-20s %-5s %5.1f s  peak %.3f  rms %.3f  surface %s  %d non-finite  %d at the ceiling%s  -> %s\n", mname.c_str(), cat ? "music" : "text", secs, r.peak, r.rms, surf.c_str(),
+                        r.nan, r.clip, bad ? "  OUT" : "", fn.c_str());
             }
         }
     }
@@ -584,7 +659,11 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
         if (want[k] < 0) want[k] = i;
     }
     {   // on the decoder
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_media.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_media.txt";
         remove("shots/tests/test_guide_media.txt");
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -605,7 +684,8 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
             else good = good && game.audio.piece;
             if (good) ok++;
             detail += fmt("%s%s S%d on %s: %s, the synth's medium %s", detail.empty() ? "" : "; ", WHAT[k], want[k], RECORD_MEDIUM_NAMES[m],
-                          text ? (game.audio.voice ? (game.audio.voice->read ? "read by the ship" : "its own voice") : "NOT spoken") : (game.audio.piece ? "playing" : "NOT playing"), game.audio.medium >= 0 ? RECORD_MEDIUM_NAMES[game.audio.medium] : "none");
+                    text ? (game.audio.voice ? (game.audio.voice->read ? "read by the ship" : "its own voice") : "NOT spoken") : (game.audio.piece ? "playing" : "NOT playing"),
+                    game.audio.medium >= 0 ? RECORD_MEDIUM_NAMES[game.audio.medium] : "none");
             press(KEY_ESCAPE); run(0.1);
         }
         const bool cleared = game.audio.medium < 0;
@@ -625,7 +705,20 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
         if (ok) {
             std::vector<DecodedWord> w; decodeShard(sh[ti], lang, T, languageFull(L.records), w); w.resize(shardOpening(w));
             Piece P; pieceOf(Tr, sh[mi], P);
-            auto spread = [&](const Voice& v) { Speech S; speechOf(v, w, sh[ti].seed, S); double sum = 0, sq = 0; int n = 0; for (const Segment& sg : S.segs) if (sg.phone >= 0 && PHONES[sg.phone].kind == PK_VOWEL) { sum += sg.pitch; sq += sg.pitch * sg.pitch; n++; } const double mu = sum / std::max(1, n); return std::sqrt(std::max(0.0, sq / std::max(1, n) - mu * mu)); };
+            auto spread = [&](const Voice& v) {
+                Speech S;
+                speechOf(v, w, sh[ti].seed, S);
+                double sum = 0, sq = 0;
+                int n = 0;
+                for (const Segment& sg : S.segs)
+                    if (sg.phone >= 0 && PHONES[sg.phone].kind == PK_VOWEL) {
+                        sum += sg.pitch;
+                        sq += sg.pitch * sg.pitch;
+                        n++;
+                    }
+                const double mu = sum / std::max(1, n);
+                return std::sqrt(std::max(0.0, sq / std::max(1, n) - mu * mu));
+            };
             const double own = spread(V), read = spread(R);
             if (!(read < 0.6 * own)) ok = false;
             detail = fmt("the ship's reading %.0f%% of the voice's pitch spread", 100 * read / std::max(own, 1e-9));
@@ -636,7 +729,10 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
                     if (cat == 0) { speechOf(V, w, sh[ti].seed, S); st.speech = &S; st.voice = &V; st.speechStart = true; } else { st.piece = &P; st.tradition = &Tr; st.pieceStart = true; }
                     st.medium = m;
                     std::vector<int16_t> pcm; RenderStats r = renderReceiver(synth, st, cat == 0 ? std::min(S.seconds, 9.0) : 8.0, &pcm);
-                    if (r.nan || r.peak > 0.95 || r.rms < 0.02 || r.rms > 0.2) { ok = false; detail += fmt("; %s %s OUT (peak %.2f, rms %.3f)", m < 0 ? "bare" : RECORD_MEDIUM_NAMES[m], cat ? "music" : "text", r.peak, r.rms); }
+                    if (r.nan || r.peak > 0.95 || r.rms < 0.02 || r.rms > 0.2) {
+                        ok = false;
+                        detail += fmt("; %s %s OUT (peak %.2f, rms %.3f)", m < 0 ? "bare" : RECORD_MEDIUM_NAMES[m], cat ? "music" : "text", r.peak, r.rms);
+                    }
                     if (cat == 0 && m < 0) bare = pcm;
                     if (cat == 0 && m >= 0) {   // the surface in the bare speech's pauses
                         double e2 = 0; long n = 0; const int win = 1102;
@@ -650,7 +746,8 @@ void mediaChecks(const std::function<void(const char*, bool, const std::string&)
                 }
             }
             if (!(surf[RM_CYLINDER] > 0.006 && surf[RM_DISC] < surf[RM_CYLINDER] && surf[RM_REEL] > 0.002 && surf[RM_DRIVE] >= 0 && surf[RM_DRIVE] < 0.002 && surf[RM_HUM] > 0.005)) ok = false;
-            detail += fmt("; the surfaces: wax cylinder %.4f, disc %.4f, reel %.4f, drive %.4f, crystal %.4f, the hum %.4f", surf[RM_CYLINDER], surf[RM_DISC], surf[RM_REEL], surf[RM_DRIVE], surf[RM_CRYSTAL], surf[RM_HUM]);
+            detail += fmt("; the surfaces: wax cylinder %.4f, disc %.4f, reel %.4f, drive %.4f, crystal %.4f, the hum %.4f", surf[RM_CYLINDER], surf[RM_DISC], surf[RM_REEL], surf[RM_DRIVE],
+                    surf[RM_CRYSTAL], surf[RM_HUM]);
         }
         check("media: through the synth each medium keeps the level, its surface where it should be, the ship's reading flatter (H-05)", ok, detail);
     }
@@ -670,7 +767,11 @@ static int decoderPages() {
         const bool closes = a >= AGE_MODERN;
         printf("== %s: %s, the %s (%d records)%s\n", AGE_NAMES[a], b.name.c_str(), peopleNameOf(peopleGen(g, W.which)).c_str(), C->count, closes ? ", the last recording read" : "");
         for (int early = 0; early < (a == AGE_MODERN ? 2 : 1); early++) {
-            TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_pages.txt";
+            TestGame game;
+            game.savePrefix = "shots/tests/test_save";
+            game.settingsPath = "shots/tests/test_settings.txt";
+            game.keysPath = "shots/tests/test_keys.txt";
+            game.guidePath = "shots/tests/test_guide_pages.txt";
             remove("shots/tests/test_guide_pages.txt");
             applyTestScale(game); game.newGame(); game.setState(GameState::SPACE);
             Input gi;
@@ -691,7 +792,17 @@ static int decoderPages() {
             auto shot = [&](const char* what) { const std::string fn = base + "_" + what + ".png"; writePNG(fn.c_str(), game.output(), FBW, FBH); printf("  %s\n", fn.c_str()); };
             if (!early) {
                 shot("records");
-                if (a == AGE_MODERN) { press(KEY_RIGHT); press(KEY_RIGHT); run(0.1); shot("records_music"); printf("    the music alone: the record under the cursor S%d is %s\n", game.testShardSel(), game.testShardSel() >= 0 && C->entries[game.testShardSel()].category == RC_MUSIC ? "music" : "NOT music"); press(KEY_LEFT); press(KEY_LEFT); run(0.1); }
+                if (a == AGE_MODERN) {
+                    press(KEY_RIGHT);
+                    press(KEY_RIGHT);
+                    run(0.1);
+                    shot("records_music");
+                    printf("    the music alone: the record under the cursor S%d is %s\n", game.testShardSel(),
+                            game.testShardSel() >= 0 && C->entries[game.testShardSel()].category == RC_MUSIC ? "music" : "NOT music");
+                    press(KEY_LEFT);
+                    press(KEY_LEFT);
+                    run(0.1);
+                }
             }
             press(KEY_TAB); run(0.1);
             for (int k = 0; k < (int)held.size() / 2; k++) press(KEY_RIGHT);
@@ -705,7 +816,15 @@ static int decoderPages() {
                 run(0.1); shot("history_end");
             }
             const std::vector<std::string> lines = game.testLegendLines();
-            int subs = 0; for (const std::string& l : lines) for (const char* w : {" a man", " a woman", " a child", " a ruler", "A man", "A woman", "A child", "A ruler"}) { size_t p = 0; while ((p = l.find(w, p)) != std::string::npos) { subs++; p++; } }
+            int subs = 0;
+            for (const std::string& l : lines)
+                for (const char* w : {" a man", " a woman", " a child", " a ruler", "A man", "A woman", "A child", "A ruler"}) {
+                    size_t p = 0;
+                    while ((p = l.find(w, p)) != std::string::npos) {
+                        subs++;
+                        p++;
+                    }
+                }
             const std::string fn = base.substr(0, base.find("decoder_pages_")) + "decoder_history_" + fileWord(AGE_NAMES[a]) + (early ? "_early" : "") + ".txt";
             if (FILE* f = fopen(fn.c_str(), "w")) { fprintf(f, "%s\n\n", game.testHistoryInfo().c_str()); for (const std::string& l : lines) fprintf(f, "%s\n", l.c_str()); fclose(f); }
             printf("    %zu rows (%d persons by what they were), written to %s\n", lines.size(), subs, fn.c_str());
@@ -749,7 +868,11 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
         if (e.category == RC_TEXT && !TX->items[i].told.empty()) { if (lastAgeRead < 2) { read.push_back(i); lastAgeRead++; continue; } if (next < 0) { next = i; continue; } }
         unread.push_back(i);
     }
-    TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_history.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/test_guide_history.txt";
     remove("shots/tests/test_guide_history.txt");
     game.newGame(); game.setState(GameState::SPACE);
     Input gi;
@@ -778,7 +901,13 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
         for (int p : persons) {
             const std::string full = historyPersonName(H, p, false);
             std::string given = full.substr(0, full.find(' '));
-            { const size_t sp = full.find(' '); if (sp != std::string::npos) { const std::string w2 = full.substr(sp + 1, full.find(' ', sp + 1) - sp - 1); if (!w2.empty() && w2.find_first_not_of("IVXLC") == std::string::npos) given = full.substr(0, full.find(' ', sp + 1)); } }
+            {
+                const size_t sp = full.find(' ');
+                if (sp != std::string::npos) {
+                    const std::string w2 = full.substr(sp + 1, full.find(' ', sp + 1) - sp - 1);
+                    if (!w2.empty() && w2.find_first_not_of("IVXLC") == std::string::npos) given = full.substr(0, full.find(' ', sp + 1));
+                }
+            }
             const bool written = names.count(full) || names.count(given);
             std::string fl = "{" + full + "}"; for (char& c : fl) c = (char)std::tolower((unsigned char)c);
             std::string fl2 = full; for (char& c : fl2) c = (char)std::tolower((unsigned char)c);
@@ -799,11 +928,14 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
         std::set<std::string> waysPage; for (const auto& w : T.ways) waysPage.insert(w.first);
         std::string wayList; for (const std::string& w : waysPage) wayList += (wayList.empty() ? "" : " ") + w;
         check(fmt("history: the page holds what the read records told and nothing else, %s (H-06)", when).c_str(), extra == 0 && missing == 0 && !page.empty(),
-              fmt("%zu read of %zu held: %zu events told by them, %zu on the page (%d not told by a read record, %d of them an unread one's; %d missing); %zu events only the unread told", readNow.size(), held.size(), want.size(), page.size(), extra, leaked, missing, (size_t)std::count_if(other.begin(), other.end(), [&](int ev) { return !want.count(ev); })));
+                fmt("%zu read of %zu held: %zu events told by them, %zu on the page (%d not told by a read record, %d of them an unread one's; %d missing); %zu events only the unread told",
+                        readNow.size(), held.size(), want.size(), page.size(), extra, leaked, missing, (size_t)std::count_if(other.begin(), other.end(), [&](int ev) { return !want.count(ev); })));
         check(fmt("history: a person named only as a read record wrote them, the eras placed by the records read, the age %s, %s (H-06)", ageWanted ? "told" : "not told yet", when).c_str(),
-              badName == 0 && eraBad == 0 && T.ageTold == ageWanted && waysPage == waysWant,
-              fmt("%zu persons in the events: %d named by the records, %d by what they were, %d named WITHOUT a record%s; eras wrong %d; the age %s (%d records of its age read); the ways told %s (%s)", persons.size(), namedOk, unnamedHidden, badName, bad.c_str(), eraBad,
-                  T.ageTold ? "told" : "not told", T.ageRead[std::max(0, std::min(AGE_COUNT - 1, T.age))], waysPage == waysWant ? "as read" : "NOT as read", wayList.c_str()));
+                badName == 0 && eraBad == 0 && T.ageTold == ageWanted && waysPage == waysWant,
+                fmt("%zu persons in the events: %d named by the records, %d by what they were, %d named WITHOUT a record%s; eras wrong %d; the age %s (%d records of its age read); the ways told %s "
+                    "(%s)",
+                        persons.size(), namedOk, unnamedHidden, badName, bad.c_str(), eraBad, T.ageTold ? "told" : "not told", T.ageRead[std::max(0, std::min(AGE_COUNT - 1, T.age))],
+                        waysPage == waysWant ? "as read" : "NOT as read", wayList.c_str()));
     };
     press(KEY_TAB); press(KEY_TAB); run(0.1);
     if (game.testShardsPage() != 2) { check("history: Tab turns the decoder's pages to the history (H-06)", false, fmt("page %d", game.testShardsPage())); return; }
@@ -885,11 +1017,13 @@ void historyPageChecks(const std::function<void(const char*, bool, const std::st
         hold(KEY_DOWN, 30 * (3 + n / 100)); const int mLast = game.testShardSel();
         press(KEY_DOWN); const int mFirst = game.testShardSel();   // Down alone round to the first
         hold(KEY_DOWN, 30 * (3 + n / 100)); hold(KEY_UP, 30 * (3 + n / 100)); const int mUp = game.testShardSel();   // run to the last and back: the first
-        const bool musicOk = !anyMusic || (game.testShardsFilter() == 2 && mLast >= 0 && mFirst >= 0 && C->entries[mLast].category == RC_MUSIC && C->entries[mFirst].category == RC_MUSIC && mUp == mFirst);
+        const bool musicOk =
+                !anyMusic || (game.testShardsFilter() == 2 && mLast >= 0 && mFirst >= 0 && C->entries[mLast].category == RC_MUSIC && C->entries[mFirst].category == RC_MUSIC && mUp == mFirst);
         check("history: Shift held with Up/Down runs the records page through the kind shown, stopping at the ends; Down alone goes round (R-417)",
-              game.testShardsPage() == 0 && r0 == 0 && r1 == 1 && r2 - r1 >= std::min(12, n - 1 - r1) && r2 - r1 <= 30 && r3 == n - 1 && r4 == 0 && musicOk,
-              fmt("page %d, every kind, %d records: run up to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Down alone %d; the music alone: run to S%d, Down alone round to S%d, run down and up to S%d%s",
-                  game.testShardsPage(), n, r0, r1, r2, r2 - r1, r3, r4, mLast, mFirst, mUp, anyMusic ? "" : " (no music held)"));
+                game.testShardsPage() == 0 && r0 == 0 && r1 == 1 && r2 - r1 >= std::min(12, n - 1 - r1) && r2 - r1 <= 30 && r3 == n - 1 && r4 == 0 && musicOk,
+                fmt("page %d, every kind, %d records: run up to %d, a tap to %d, a second's run on to %d (+%d), a long one to %d, Down alone %d; the music alone: run to S%d, Down alone round to S%d, "
+                    "run down and up to S%d%s",
+                        game.testShardsPage(), n, r0, r1, r2, r2 - r1, r3, r4, mLast, mFirst, mUp, anyMusic ? "" : " (no music held)"));
     }
 }
 

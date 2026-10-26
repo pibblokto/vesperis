@@ -51,7 +51,9 @@ static void printPieceNotation(const Tradition& T, const Piece& P, int maxCycles
                 if (u1 <= 0 || u0 >= cu) continue;
                 for (int u = std::max(u0, 0); u < std::min(u1, cu); u++) {
                     char ch = '.';
-                    if (u == u0) ch = v < 0 ? (char)('0' + std::min(nt.degree, 9)) : (char)(nt.degree >= 0 && nt.degree < 10 ? '0' + nt.degree : (nt.degree >= 10 ? 'A' + std::min(nt.degree - 10, 25) : 'a' + std::min(-nt.degree - 1, 25)));
+                    if (u == u0)
+                        ch = v < 0 ? (char)('0' + std::min(nt.degree, 9))
+                                   : (char)(nt.degree >= 0 && nt.degree < 10 ? '0' + nt.degree : (nt.degree >= 10 ? 'A' + std::min(nt.degree - 10, 25) : 'a' + std::min(-nt.degree - 1, 25)));
                     if (line[u] == '-' || u == u0) line[u] = ch;
                 }
                 any = true;
@@ -68,7 +70,18 @@ static int musicDecoderFrames();
 static int runMusicAges(int argc, char** argv) {
     bool wav = false; for (int i = 3; i < argc; i++) { if (std::string(argv[i]) == "wav") wav = true; if (std::string(argv[i]) == "frames") return musicDecoderFrames(); }
     static const char* const AGE_FILE[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
-    auto slug = [](const char* name) { std::string s; for (const char* c = name; *c; c++) { if (*c == ' ') { if (!s.empty() && s.back() != '_') s += '_'; } else if (isalpha((unsigned char)*c)) s += (char)tolower((unsigned char)*c); } if (s.compare(0, 2, "a_") == 0) s = s.substr(2); else if (s.compare(0, 3, "an_") == 0) s = s.substr(3); else if (s.compare(0, 4, "the_") == 0) s = s.substr(4); return s; };
+    auto slug = [](const char* name) {
+        std::string s;
+        for (const char* c = name; *c; c++) {
+            if (*c == ' ') {
+                if (!s.empty() && s.back() != '_') s += '_';
+            } else if (isalpha((unsigned char)*c)) s += (char)tolower((unsigned char)*c);
+        }
+        if (s.compare(0, 2, "a_") == 0) s = s.substr(2);
+        else if (s.compare(0, 3, "an_") == 0) s = s.substr(3);
+        else if (s.compare(0, 4, "the_") == 0) s = s.substr(4);
+        return s;
+    };
     struct World { StarSystem sys; int body = -1, which = 0; BodyGen g; Lore L; Tradition T; bool ok = false; };
     auto load = [](int64_t sx, int64_t sz, int body, int which, World& w) {
         Star s; if (!starInSector(sx, 0, sz, s, true)) return false;
@@ -82,8 +95,9 @@ static int runMusicAges(int argc, char** argv) {
         rendered++; worstPeak = std::max(worstPeak, r.peak); rmsLo = std::min(rmsLo, r.rms); rmsHi = std::max(rmsHi, r.rms);
         const bool ok = r.nan == 0 && r.clip == 0 && r.peak < 0.9 && r.rms >= 0.06 && r.rms <= 0.16 && r.done;
         if (!ok) failures++;
-        printf("    %-24s %-22s %3.0f s %3.0f bpm %4zu notes  peak %.2f rms %.3f (loudest half second %.2f)%s%s%s  %s\n", tag.c_str(), PIECE_FORM_NAMES[P.form], P.seconds, P.bpm, P.notes.size(), r.peak, r.rms, r.loudest,
-               r.nan ? fmt(" %d NON-FINITE", r.nan).c_str() : "", r.clip ? fmt(" %d AT THE CEILING", r.clip).c_str() : "", r.done ? "" : " NOT ENDED", ok ? "" : "  <- OUT OF BOUNDS");
+        printf("    %-24s %-22s %3.0f s %3.0f bpm %4zu notes  peak %.2f rms %.3f (loudest half second %.2f)%s%s%s  %s\n", tag.c_str(), PIECE_FORM_NAMES[P.form], P.seconds, P.bpm, P.notes.size(),
+                r.peak, r.rms, r.loudest, r.nan ? fmt(" %d NON-FINITE", r.nan).c_str() : "", r.clip ? fmt(" %d AT THE CEILING", r.clip).c_str() : "", r.done ? "" : " NOT ENDED",
+                ok ? "" : "  <- OUT OF BOUNDS");
         printf("      %s; %s\n", timbresLine(T, P).c_str(), cycleLine(T, P).c_str());
         if (wav) printf("      -> %s (rendered in %.0f ms: %.1f%% of real time)\n", file.c_str(), r.ms, 100 * r.ms / 1000 / std::max(1.0, r.secs));
         return r;
@@ -94,7 +108,8 @@ static int runMusicAges(int argc, char** argv) {
         const Tradition& T = w.T;
         printf("== %s: %s, the %s (%d records)\n", AGE_NAMES[a], w.sys.bodies[w.body].name.c_str(), w.L.people.c_str(), w.L.records);
         std::string vw; for (int v : T.vowels) vw += "aeiou"[v];
-        printf("  the core: %s (%s), the tonic %.0f Hz; %s; swing %.2f; the singers' vowels %s; ornament %d\n", traditionLine(T).c_str(), T.tuning == 0 ? fmt("%d equal steps", T.division).c_str() : "just ratios", T.base, cycleLine(T, T.bpm).c_str(), T.swing, vw.c_str(), T.ornament);
+        printf("  the core: %s (%s), the tonic %.0f Hz; %s; swing %.2f; the singers' vowels %s; ornament %d\n", traditionLine(T).c_str(),
+                T.tuning == 0 ? fmt("%d equal steps", T.division).c_str() : "just ratios", T.base, cycleLine(T, T.bpm).c_str(), T.swing, vw.c_str(), T.ornament);
         printf("  the %s ensemble: %s\n", AGE_NAMES[a], ensembleLine(T.ages[a]).c_str());
         // its music records of this age, by form; then the forms they lack filled from records of other tones
         std::vector<Shard> pick; std::set<int> forms; int musicOfAge = 0;
@@ -114,7 +129,8 @@ static int runMusicAges(int argc, char** argv) {
         bool first = true;
         for (const Shard& d : pick) {
             Piece P; pieceOf(T, d, P);
-            report(T, P, fmt("S%d year %d", (int)(d.seed % 1000) >= 0 ? (int)0 : 0, d.year).substr(0, 0) + fmt("year %d (%s)", d.year, SHARD_TONE_NAMES[d.tone]), fmt("shots/tests/music_age_%s_%s.wav", AGE_FILE[a], slug(PIECE_FORM_NAMES[P.form]).c_str()));
+            report(T, P, fmt("S%d year %d", (int)(d.seed % 1000) >= 0 ? (int)0 : 0, d.year).substr(0, 0) + fmt("year %d (%s)", d.year, SHARD_TONE_NAMES[d.tone]),
+                    fmt("shots/tests/music_age_%s_%s.wav", AGE_FILE[a], slug(PIECE_FORM_NAMES[P.form]).c_str()));
             if (first) { printPieceNotation(T, P, 3); first = false; }
         }
     }
@@ -175,7 +191,11 @@ static int runMusicAges(int argc, char** argv) {
 // seconds): shots/tests/music_decoder_<age>.png, the roll in the parts' colours
 static int musicDecoderFrames() {
     static const char* const AGE_FILE[AGE_COUNT] = {"prehistoric", "medieval", "industrial", "modern", "futuristic", "farfuture"};
-    TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_music.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/test_guide_music.txt";
     remove("shots/tests/test_guide_music.txt");
     applyTestScale(game);
     game.newGame(); game.setState(GameState::SPACE);
@@ -212,7 +232,12 @@ int runMusic(int argc, char** argv) {
     int which = takePeopleArg(argc, argv);   // C-13: `second` for the world's second people
     // `age=N` and `tone=N` play the record as if it were of that age and tone (the harness's comparisons)
     int forceAge = -1, forceTone = -1; std::vector<std::string> rest;
-    for (int i = 2; i < argc; i++) { std::string x = argv[i]; if (x.compare(0, 4, "age=") == 0) forceAge = atoi(x.c_str() + 4); else if (x.compare(0, 5, "tone=") == 0) forceTone = atoi(x.c_str() + 5); else rest.push_back(x); }
+    for (int i = 2; i < argc; i++) {
+        std::string x = argv[i];
+        if (x.compare(0, 4, "age=") == 0) forceAge = atoi(x.c_str() + 4);
+        else if (x.compare(0, 5, "tone=") == 0) forceTone = atoi(x.c_str() + 5);
+        else rest.push_back(x);
+    }
     if (rest.size() < 3) { printf("music <sx> <sz> <body index> [index] [wav] [age=N] [tone=N] [second] | music ages [wav]\n"); return 1; }
     int64_t sx = atoll(rest[0].c_str()), sz = atoll(rest[1].c_str()); int bi = atoi(rest[2].c_str());
     int want = rest.size() > 3 && rest[3] != "wav" ? atoi(rest[3].c_str()) : -1;
@@ -232,11 +257,18 @@ int runMusic(int argc, char** argv) {
     printf("  %s, each beat in %d, drifting %.0f%%, swing %.2f, the singers' vowels %s\n", cycleLine(T, T.bpm).c_str(), T.sub, 100 * T.drift, T.swing, vw.c_str());
     static const char* const SECOND[4] = {"no second voice", "a second voice in parallel below", "a second voice answering a phrase later", "a second voice doubling a period below"};
     static const char* const ORN[5] = {"no ornament", "grace notes before a leap", "trills on long notes", "slides between neighbours", "mordents"};
-    printf("  its own voices (C-04's): %s; %s; %s; %s %.0f%% of the time\n", timbresLine(T, T.hasDrum).c_str(), T.drone ? "a drone" : "no drone", SECOND[T.second], ORN[T.ornament], 100 * T.ornamentChance);
+    printf("  its own voices (C-04's): %s; %s; %s; %s %.0f%% of the time\n", timbresLine(T, T.hasDrum).c_str(), T.drone ? "a drone" : "no drone", SECOND[T.second], ORN[T.ornament],
+            100 * T.ornamentChance);
     for (int a = 0; a < AGE_COUNT; a++) printf("  %-11s %s\n", AGE_NAMES[a], ensembleLine(T.ages[a]).c_str());
     // its records' pieces (H-05: every record of the people, each of its year's age), by year
     std::vector<Shard> pieces;
-    for (int i = 0; i < L.records; i++) { Shard d = shardDrawOf(g, L, i); if (!d.music) continue; if (forceAge >= 0) d.recordAge = forceAge; if (forceTone >= 0) d.tone = forceTone; pieces.push_back(d); }
+    for (int i = 0; i < L.records; i++) {
+        Shard d = shardDrawOf(g, L, i);
+        if (!d.music) continue;
+        if (forceAge >= 0) d.recordAge = forceAge;
+        if (forceTone >= 0) d.tone = forceTone;
+        pieces.push_back(d);
+    }
     std::vector<int> order(pieces.size()); for (size_t i = 0; i < order.size(); i++) order[i] = (int)i;
     std::sort(order.begin(), order.end(), [&](int a2, int c) { return pieces[a2].year < pieces[c].year; });
     int forms[PF_COUNT] = {0}; double secs = 0; int byAge[AGE_COUNT] = {0}; int first = -1;
@@ -245,7 +277,8 @@ int runMusic(int argc, char** argv) {
     for (int oi : order) {
         const Shard& d = pieces[oi]; Piece P; pieceOf(T, d, P); forms[P.form]++; secs += P.seconds; byAge[P.age]++;
         if (first < 0) first = oi;
-        printf("  %3d  year %4d  %-11s %-8s  %-22s %3.0f s  %3d bpm  %3zu notes  %s\n", indexOf[oi], d.year, AGE_NAMES[P.age], SHARD_TONE_NAMES[d.tone], PIECE_FORM_NAMES[P.form], P.seconds, (int)std::lround(P.bpm), P.notes.size(), timbresLine(T, P).c_str());
+        printf("  %3d  year %4d  %-11s %-8s  %-22s %3.0f s  %3d bpm  %3zu notes  %s\n", indexOf[oi], d.year, AGE_NAMES[P.age], SHARD_TONE_NAMES[d.tone], PIECE_FORM_NAMES[P.form], P.seconds,
+                (int)std::lround(P.bpm), P.notes.size(), timbresLine(T, P).c_str());
     }
     printf("%zu pieces of %d records, %.0f s in all; by age:", pieces.size(), L.records, secs);
     for (int a = 0; a < AGE_COUNT; a++) if (byAge[a]) printf(" %s %d;", AGE_NAMES[a], byAge[a]);
@@ -258,13 +291,15 @@ int runMusic(int argc, char** argv) {
     if (pick < 0) { printf("record %d is not a piece of music\n", want); return pieces.empty() ? 1 : 0; }
     const Shard& d = pieces[pick];
     Piece P; pieceOf(T, d, P);
-    printf("record %d, year %d, the %s age: %s, %.0f s at %.0f bpm, %d cycles, %zu notes; %s; %s\n", indexOf[pick], d.year, AGE_NAMES[P.age], PIECE_FORM_NAMES[P.form], P.seconds, P.bpm, P.cycles, P.notes.size(), timbresLine(T, P).c_str(), cycleLine(T, P).c_str());
+    printf("record %d, year %d, the %s age: %s, %.0f s at %.0f bpm, %d cycles, %zu notes; %s; %s\n", indexOf[pick], d.year, AGE_NAMES[P.age], PIECE_FORM_NAMES[P.form], P.seconds, P.bpm, P.cycles,
+            P.notes.size(), timbresLine(T, P).c_str(), cycleLine(T, P).c_str());
     printPieceNotation(T, P, 64);
     printf("  (degrees: 0-9 the tonic up, A-Z past nine, a-z below the tonic; the kit's pieces by their index)\n");
     if (wav) {
         const std::string fn = fmt("shots/tests/music_%lld_%lld_%d_S%d.wav", (long long)sx, (long long)sz, bi, indexOf[pick]);
         const MusicRender r = renderMusicWav(T, P, fn);
-        printf("rendered %.1f s: peak %.3f, rms %.3f, %d non-finite, %d at the ceiling, %s -> %s (%.0f ms)\n", r.secs, r.peak, r.rms, r.nan, r.clip, r.done ? "the piece ended" : "the piece NOT ended", fn.c_str(), r.ms);
+        printf("rendered %.1f s: peak %.3f, rms %.3f, %d non-finite, %d at the ceiling, %s -> %s (%.0f ms)\n", r.secs, r.peak, r.rms, r.nan, r.clip, r.done ? "the piece ended" : "the piece NOT ended",
+                fn.c_str(), r.ms);
     }
     return 0;
 }

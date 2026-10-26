@@ -109,9 +109,25 @@ static void materialPalette(BodyGen& g) {
         m[MAT_CRUST] = crusts[(int)(unitFromHash(mix64(g.seed ^ 0xC2057ULL)) * 3) % 3];
     }
     // the colour traits tint the ground family, the exotic seas colour their liquid
-    if (g.hasTrait(TR_RED_SOIL)) { RGB red(0.62f, 0.30f, 0.16f); m[MAT_ROCK] = lerp(m[MAT_ROCK], red, 0.5f); m[MAT_SAND] = lerp(m[MAT_SAND], red, 0.55f); m[MAT_DUST] = lerp(m[MAT_DUST], red, 0.6f); m[MAT_BASALT] = lerp(m[MAT_BASALT], red, 0.25f); }
-    if (g.hasTrait(TR_BLACK_SAND)) { RGB blk(0.13f, 0.12f, 0.13f); m[MAT_SAND] = lerp(m[MAT_SAND], blk, 0.8f); m[MAT_DUST] = lerp(m[MAT_DUST], blk, 0.7f); m[MAT_ROCK] = lerp(m[MAT_ROCK], blk, 0.35f); }
-    if (g.hasTrait(TR_CHALK)) { RGB chalk(0.9f, 0.88f, 0.8f); m[MAT_ROCK] = lerp(m[MAT_ROCK], chalk, 0.6f); m[MAT_SAND] = lerp(m[MAT_SAND], chalk, 0.5f); m[MAT_DUST] = lerp(m[MAT_DUST], chalk, 0.6f); }
+    if (g.hasTrait(TR_RED_SOIL)) {
+        RGB red(0.62f, 0.30f, 0.16f);
+        m[MAT_ROCK] = lerp(m[MAT_ROCK], red, 0.5f);
+        m[MAT_SAND] = lerp(m[MAT_SAND], red, 0.55f);
+        m[MAT_DUST] = lerp(m[MAT_DUST], red, 0.6f);
+        m[MAT_BASALT] = lerp(m[MAT_BASALT], red, 0.25f);
+    }
+    if (g.hasTrait(TR_BLACK_SAND)) {
+        RGB blk(0.13f, 0.12f, 0.13f);
+        m[MAT_SAND] = lerp(m[MAT_SAND], blk, 0.8f);
+        m[MAT_DUST] = lerp(m[MAT_DUST], blk, 0.7f);
+        m[MAT_ROCK] = lerp(m[MAT_ROCK], blk, 0.35f);
+    }
+    if (g.hasTrait(TR_CHALK)) {
+        RGB chalk(0.9f, 0.88f, 0.8f);
+        m[MAT_ROCK] = lerp(m[MAT_ROCK], chalk, 0.6f);
+        m[MAT_SAND] = lerp(m[MAT_SAND], chalk, 0.5f);
+        m[MAT_DUST] = lerp(m[MAT_DUST], chalk, 0.6f);
+    }
     if (g.hasTrait(TR_EXOTIC_SEAS)) m[MAT_WATER] = K.exoticColour;   // tar, brine, methane
     // the fungal forests' caps pale (cream, ochre, white, a lilac grey: the forest family's colour, so the globe and the maps see it; the
     // second family's is `make`'s), the hot springs' mats in the thermophiles' orange (the rings round the vents, `springOf`)
@@ -287,7 +303,9 @@ BodyGen BodyGen::make(const Body& b, double season) {
     switch (K.skyTint.mode) {
         case TINT_CONST: g.skyTint = K.skyTint.c; break;
         case TINT_THIN_AIR: { RGB c = b.color; g.skyTint = RGB(0.6f * c.b + 0.4f * c.r, 0.5f * c.g + 0.3f, 0.7f * c.r + 0.3f * c.b); break; }
-        case TINT_DRAWN: g.skyTint = RGB(K.skyTint.c.r + K.skyTint.var.r * (float)rng.uni(), K.skyTint.c.g + K.skyTint.var.g * (float)rng.uni(), K.skyTint.c.b + K.skyTint.var.b * (float)rng.uni()); break;
+        case TINT_DRAWN:
+            g.skyTint = RGB(K.skyTint.c.r + K.skyTint.var.r * (float)rng.uni(), K.skyTint.c.g + K.skyTint.var.g * (float)rng.uni(), K.skyTint.c.b + K.skyTint.var.b * (float)rng.uni());
+            break;
         default: break;
     }
     if (K.tags & KT_FLORA) g.vegColor = floraColour(rng);
@@ -364,7 +382,10 @@ BodyGen BodyGen::make(const Body& b, double season) {
                 for (int t = TR_CIVILISATION + 1; t < TR_COUNT; t++) {
                     if (TRAITS[t].kind != order[i] || (kept && TRAITS[t].moves) || !eligible(t) || !traitFits(b, g, t)) continue;
                     bool ok = true;
-                    for (int j = 0; j < TRAIT_SLOTS && ok; j++) { const int o = g.traits[j]; if (o && (o == t || TRAITS[t].excludes == o || TRAITS[o].excludes == t || (TRAITS[t].colour && TRAITS[o].colour))) ok = false; }
+                    for (int j = 0; j < TRAIT_SLOTS && ok; j++) {
+                        const int o = g.traits[j];
+                        if (o && (o == t || TRAITS[t].excludes == o || TRAITS[o].excludes == t || (TRAITS[t].colour && TRAITS[o].colour))) ok = false;
+                    }
                     if (ok) elig[n++] = t;
                 }
                 if (n > 0) g.traits[3 + nOwn + got++] = elig[(int)(nu(10 + order[i]) * n) % n];
@@ -379,11 +400,14 @@ BodyGen BodyGen::make(const Body& b, double season) {
             case TR_STORMS: g.cloudCover = std::min(1.0, g.cloudCover + 0.35); break;
             case TR_DEAD_FOREST: g.vegColor = lerp(g.vegColor, RGB(0.45f, 0.42f, 0.35f), 0.65f); break;
             case TR_GREAT_TIDES: g.tideRangeM = tideRangeOf(b.tideForcingM); break;
-            case TR_PINK_LAKES: { static const RGB P[3] = {RGB(0.92f, 0.52f, 0.70f), RGB(0.86f, 0.38f, 0.48f), RGB(0.80f, 0.30f, 0.34f)}; g.waterTintColour = P[(int)(tu(23) * 3) % 3]; break; }   // Hillier's, Retba's, Natron's
+            // Hillier's, Retba's, Natron's
+            case TR_PINK_LAKES: { static const RGB P[3] = {RGB(0.92f, 0.52f, 0.70f), RGB(0.86f, 0.38f, 0.48f), RGB(0.80f, 0.30f, 0.34f)}; g.waterTintColour = P[(int)(tu(23) * 3) % 3]; break; }
             case TR_MILKY_SEAS: g.waterTintColour = RGB(0.66f, 0.80f, 0.90f); break;
-            case TR_BLOOMS: { static const RGB B[3] = {RGB(0.58f, 0.20f, 0.13f), RGB(0.26f, 0.52f, 0.20f), RGB(0.62f, 0.38f, 0.14f)}; g.lifeTintColour = B[(int)(tu(24) * 3) % 3]; break; }   // a red tide, a green, a brown
+            // a red tide, a green, a brown
+            case TR_BLOOMS: { static const RGB B[3] = {RGB(0.58f, 0.20f, 0.13f), RGB(0.26f, 0.52f, 0.20f), RGB(0.62f, 0.38f, 0.14f)}; g.lifeTintColour = B[(int)(tu(24) * 3) % 3]; break; }
             case TR_REEFS: g.lifeTintColour = RGB(0.22f, 0.70f, 0.72f); break;   // the lagoons' turquoise
-            case TR_LIGHTS_IN_WATER: { static const RGB L[3] = {RGB(0.30f, 0.86f, 0.80f), RGB(0.36f, 0.62f, 0.95f), RGB(0.52f, 0.92f, 0.46f)}; g.waterTintColour = L[(int)(tu(25) * 3) % 3]; break; }   // a blue-green, a blue, a green
+            // a blue-green, a blue, a green
+            case TR_LIGHTS_IN_WATER: { static const RGB L[3] = {RGB(0.30f, 0.86f, 0.80f), RGB(0.36f, 0.62f, 0.95f), RGB(0.52f, 0.92f, 0.46f)}; g.waterTintColour = L[(int)(tu(25) * 3) % 3]; break; }
             default: break;
         }
     }
@@ -395,7 +419,13 @@ BodyGen BodyGen::make(const Body& b, double season) {
         static const RGB pal[5] = {RGB(0.28f, 0.6f, 0.12f), RGB(0.55f, 0.15f, 0.2f), RGB(0.3f, 0.25f, 0.65f), RGB(0.7f, 0.6f, 0.15f), RGB(0.15f, 0.55f, 0.6f)};
         RGB base = (g.vegColor.r + g.vegColor.g + g.vegColor.b > 0.05f) ? g.vegColor : RGB(0.25f, 0.5f, 0.15f);
         int nearest = 0; float bestD = 1e9f;
-        for (int k = 0; k < 5; k++) { float d = (pal[k].r - base.r) * (pal[k].r - base.r) + (pal[k].g - base.g) * (pal[k].g - base.g) + (pal[k].b - base.b) * (pal[k].b - base.b); if (d < bestD) { bestD = d; nearest = k; } }
+        for (int k = 0; k < 5; k++) {
+            float d = (pal[k].r - base.r) * (pal[k].r - base.r) + (pal[k].g - base.g) * (pal[k].g - base.g) + (pal[k].b - base.b) * (pal[k].b - base.b);
+            if (d < bestD) {
+                bestD = d;
+                nearest = k;
+            }
+        }
         RGB other = pal[(nearest + 1 + (int)(unitFromHash(mix64(b.seed ^ 0xF10CULL)) * 4)) % 5];   // a different family palette
         g.vegColor2 = lerp(base, other, 0.6f);
         if (g.hasTrait(TR_FUNGAL)) {   // the second family's caps another pale (by its own hash)
@@ -440,7 +470,8 @@ double iceSheetEdgeDeg(const BodyGen& g, const Vec3& unit) { return g.iceCapLat 
 
 double iceSheetIn(const BodyGen& g, const Vec3& unit) {
     const double absLatDeg = std::fabs(std::asin(clampd(unit.z, -1, 1))) / DEG;
-    if (KINDS[g.type].sheetByCold && g.locked) return (-4.0 - climateTempC(g, absLatDeg, 0, 0, dot(unit, g.lockedDir)) + 7.0 * gnoise3(unit * g.R / (g.R * 0.15), g.sF + 7)) / 25.0;   // its edge wandering as the tundra's
+    // its edge wandering as the tundra's
+    if (KINDS[g.type].sheetByCold && g.locked) return (-4.0 - climateTempC(g, absLatDeg, 0, 0, dot(unit, g.lockedDir)) + 7.0 * gnoise3(unit * g.R / (g.R * 0.15), g.sF + 7)) / 25.0;
     return (absLatDeg - iceSheetEdgeDeg(g, unit)) / 14.0;
 }
 
@@ -451,6 +482,8 @@ double climateTempC(const BodyGen& g, double absLatDeg, double heightM, double w
     double L = -18.0 + 46.0 * c * std::sqrt(c);
     if (g.latGradient != 1) L = 15.0 + (L - 15.0) * g.latGradient;   // a kind's contrast round Earth's mean (a hothouse's mild poles)
     double T = L - 6.5 * std::max(0.0, heightM) / 1000.0 + g.tempBias - 6.0 * winter;
-    if (g.locked) T += g.subContrast * sub - 6.0 + 0.35 * absLatDeg;   // a permanent day side and night side; the twilight belt between keeps the mild climate (P-03: the kind's contrast, 45 degrees but a terminator world's)
+    // a permanent day side and night side; the twilight belt between keeps the mild climate (P-03: the kind's contrast, 45 degrees but a
+    // terminator world's)
+    if (g.locked) T += g.subContrast * sub - 6.0 + 0.35 * absLatDeg;
     return T;
 }

@@ -147,10 +147,13 @@ std::string Game::telescopeTargetLine(bool plain) const {
     int id = tele.target;
     if (id >= 0 && sys.valid && id < (int)sys.bodies.size()) {
         const Body& b = sys.bodies[id];
-        std::string kind = b.type == PT_COMPANION ? std::string(STAR_CLASSES[b.starClass].code) + " " + STAR_CLASSES[b.starClass].name : std::string(shortType(b.type)) + (b.parent >= 0 ? " MOON" : "");
+        std::string kind =
+                b.type == PT_COMPANION ? std::string(STAR_CLASSES[b.starClass].code) + " " + STAR_CLASSES[b.starClass].name : std::string(shortType(b.type)) + (b.parent >= 0 ? " MOON" : "");
         return fmt("%s  %s  %s  %s", trunc(telescopeTargetName(id), 18).c_str(), kind.c_str(), distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
     }
-    if (id == TELE_SUN && sys.valid) return fmt("%s  %s %s  %s  %s", trunc(telescopeTargetName(id), 16).c_str(), STAR_CLASSES[sys.star.cls].code, STAR_CLASSES[sys.star.cls].name, distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
+    if (id == TELE_SUN && sys.valid)
+        return fmt("%s  %s %s  %s  %s", trunc(telescopeTargetName(id), 16).c_str(), STAR_CLASSES[sys.star.cls].code, STAR_CLASSES[sys.star.cls].name,
+                distanceString(std::max(0.0, tele.targetRangeKm)).c_str(), angleString(tele.targetWidth, plain).c_str());
     if (id == TELE_STAR) {
         Star full; starInSector(tele.targetStar.sx, tele.targetStar.sy, tele.targetStar.sz, full, true);
         return fmt("%s  %s %s  %.2f LY", trunc(telescopeTargetName(id), 16).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, tele.targetRangeKm / SECTOR_KM);
@@ -265,12 +268,17 @@ void Game::renderTelescopeHUD() {
         std::string lab = distanceString(km);
         drawTextShadow(canvas, UW - 18 - textWidth(lab.c_str()), by - 10, lab.c_str(), fc, HUD_SHADOW);
     }
-    if (tele.track != TELE_NONE) drawTextShadow(canvas, 18, UH - 34, fmt(telescopeStabilised() && tele.track == tele.frameBody ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(tele.track), 22).c_str()).c_str(), HUD_CYAN, HUD_SHADOW);
+    if (tele.track != TELE_NONE)
+        drawTextShadow(canvas, 18, UH - 34, fmt(telescopeStabilised() && tele.track == tele.frameBody ? "STABILISED ON %s" : "TRACKING %s", trunc(telescopeTargetName(tele.track), 22).c_str()).c_str(),
+                HUD_CYAN, HUD_SHADOW);
     else if (tele.target >= 0 || tele.target == TELE_SUN) drawTextShadow(canvas, 18, UH - 34, "ENTER TRACKS THE TARGET", fd, HUD_SHADOW);
     {   // X-01: parked at a giant, the reticle is where a probe goes
         double plat, plon;
-        if (!probe.active && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0 && isProbeGiant(sys.bodies[ship.parkedBody].type) && viewGround(ship.parkedBody, plat, plon))
-            drawTextShadow(canvas, 18, UH - 42, fmt("C SENDS A PROBE TO %.1f%c %s %.1f%c %s", std::fabs(plat / DEG), CH_DEGREE, plat >= 0 ? "N" : "S", std::fabs(plon / DEG), CH_DEGREE, plon >= 0 ? "E" : "W").c_str(), HUD_AMBER, HUD_SHADOW);
+        if (!probe.active && sys.valid && ship.mode == ShipState::PARKED && ship.parkedBody >= 0 && ship.parkedBelt < 0 && isProbeGiant(sys.bodies[ship.parkedBody].type) &&
+                viewGround(ship.parkedBody, plat, plon))
+            drawTextShadow(canvas, 18, UH - 42,
+                    fmt("C SENDS A PROBE TO %.1f%c %s %.1f%c %s", std::fabs(plat / DEG), CH_DEGREE, plat >= 0 ? "N" : "S", std::fabs(plon / DEG), CH_DEGREE, plon >= 0 ? "E" : "W").c_str(), HUD_AMBER,
+                    HUD_SHADOW);
     }
     drawTextShadow(canvas, 18, UH - 26, "+/- ZOOM  N NAMES  P PHOTO  Z / ESC STOWS", fd, HUD_SHADOW);
 }

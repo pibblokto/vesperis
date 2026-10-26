@@ -8,14 +8,12 @@
 #include "ruins_layout.h"
 
 const char* const SETTLEMENT_CLASS_NAMES[7] = {"HAMLET", "VILLAGE", "TOWN", "MONUMENT", "CITY", "CAPITAL", "WORKS"};
-const char* const BUILDING_KIND_NAMES[BK_COUNT] = {"HOUSE", "HALL", "TOWER", "ROTUNDA", "GATE", "PLATFORM", "COLONNADE", "STELA", "RUBBLE", "WALL", "QUAY", "MOLE", "BOLLARD", "TERRACE", "CISTERN", "WIND WALL", "CAIRN",
-    "HUT", "LONGHOUSE", "TENT RING", "STONE CIRCLE", "MENHIR", "DOLMEN", "PALISADE", "TEMPLE", "WALL TOWER",
-    "ROW", "TENEMENT", "VILLA", "CHURCH", "TOWN HALL", "STATION", "MILL", "GASOMETER", "WATER TOWER", "HEADFRAME", "OBSERVATORY",
-    "BLOCK", "SUBURB", "HIGHRISE", "STADIUM", "MAST", "POWER", "TANKS", "ARCOLOGY", "HABITAT", "SPIRE", "RING", "MAGLEV", "WRECK", "POD",
-    "SPIKE", "HALO", "PILLARS", "SHAFT", "MONOLITH", "FOCUS", "WINDMILL", "AQUEDUCT", "TWIN TOWERS", "TUNNEL", "CRANE", "CONTAINERS", "RESERVOIR",
-    "MOUND", "DAM", "DISH", "TOMB", "FORT", "BUNKER", "TEETH", "VEHICLE", "AIRCRAFT", "SHIP", "LAUNCH PAD", "HANGAR", "COLOSSUS", "TURBINE",
-    "LIGHTHOUSE", "LATTICE", "DERRICK", "BLOCKS", "SPHERE", "TETHER", "TRILITHON", "CONVEYOR", "FURNITURE",
-    "DOME", "GLASSHOUSE"};
+const char* const BUILDING_KIND_NAMES[BK_COUNT] = {"HOUSE", "HALL", "TOWER", "ROTUNDA", "GATE", "PLATFORM", "COLONNADE", "STELA", "RUBBLE", "WALL", "QUAY", "MOLE", "BOLLARD", "TERRACE", "CISTERN",
+        "WIND WALL", "CAIRN", "HUT", "LONGHOUSE", "TENT RING", "STONE CIRCLE", "MENHIR", "DOLMEN", "PALISADE", "TEMPLE", "WALL TOWER", "ROW", "TENEMENT", "VILLA", "CHURCH", "TOWN HALL", "STATION",
+        "MILL", "GASOMETER", "WATER TOWER", "HEADFRAME", "OBSERVATORY", "BLOCK", "SUBURB", "HIGHRISE", "STADIUM", "MAST", "POWER", "TANKS", "ARCOLOGY", "HABITAT", "SPIRE", "RING", "MAGLEV", "WRECK",
+        "POD", "SPIKE", "HALO", "PILLARS", "SHAFT", "MONOLITH", "FOCUS", "WINDMILL", "AQUEDUCT", "TWIN TOWERS", "TUNNEL", "CRANE", "CONTAINERS", "RESERVOIR", "MOUND", "DAM", "DISH", "TOMB", "FORT",
+        "BUNKER", "TEETH", "VEHICLE", "AIRCRAFT", "SHIP", "LAUNCH PAD", "HANGAR", "COLOSSUS", "TURBINE", "LIGHTHOUSE", "LATTICE", "DERRICK", "BLOCKS", "SPHERE", "TETHER", "TRILITHON", "CONVEYOR",
+        "FURNITURE", "DOME", "GLASSHOUSE"};
 static_assert(BK_GREENHOUSE + 1 == BK_COUNT, "a name for every building kind");
 
 double ruinCellLat(const BodyGen& g) { return 2000.0 / (g.R * 1000.0); }
@@ -231,7 +229,13 @@ void pickMonument(const Culture& c, Rng& rng, MonPick& m) {
 void settlementSize(RuinSpec& r, Rng& rng, int& n, double& R, const Culture& c, MonPick* mon) {
     const int age = c.age;
     switch (r.sclass) {   // A-04: the plan the people's streets' (C-01's draws kept in the stream)
-        case SC_HAMLET: { n = 3 + rng.irange(4); R = 22 + 12 * rng.uni(); const bool cl = rng.chance(0.6); r.plan = c.plan == SP_STREET ? SP_STREET : (c.plan == SP_GRID ? (cl ? SP_CLUSTER : SP_STREET) : SP_CLUSTER); break; }
+        case SC_HAMLET: {
+            n = 3 + rng.irange(4);
+            R = 22 + 12 * rng.uni();
+            const bool cl = rng.chance(0.6);
+            r.plan = c.plan == SP_STREET ? SP_STREET : (c.plan == SP_GRID ? (cl ? SP_CLUSTER : SP_STREET) : SP_CLUSTER);
+            break;
+        }
         case SC_VILLAGE: n = 7 + rng.irange(8); R = 45 + 25 * rng.uni(); rng.chance(0.5); r.plan = c.plan; break;
         case SC_TOWN: n = 24 + rng.irange(21); R = 60 + 30 * rng.uni(); r.plan = c.plan; break;
         case SC_CITY: case SC_CAPITAL: {   // the plan's core, its radius and its count the plan's (no age scale: the plan's radius is the drawn one)

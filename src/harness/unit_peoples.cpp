@@ -25,7 +25,8 @@ void unitCultures(const Check& check) {
         check("cultures per world: about one civilisation world in five had two peoples (C-13)", civ >= 20 && two >= 3 && two * 100 >= civ * 8 && two * 100 <= civ * 35,
               fmt("%d of %d civilisation worlds scanned (%.0f%%), the first at %lld 0 %lld body %d", two, civ, civ ? 100.0 * two / civ : 0.0, (long long)fx, (long long)fz, fbi));
         Star s; StarSystem sys; bool have = starInSector(152, 0, 92, s, true);
-        bool isTwo = false, seedsDiffer = false, namesDiffer = false, tonguesDiffer = false, own = false, determ = true, clean = true, otherNamed[2] = {false, false}, lastOne[2] = {false, false}, endsAgree = false, divideUnit = false, divideSame = false, oneOk = true;
+        bool isTwo = false, seedsDiffer = false, namesDiffer = false, tonguesDiffer = false, own = false, determ = true, clean = true, otherNamed[2] = {false, false}, lastOne[2] = {false, false},
+             endsAgree = false, divideUnit = false, divideSame = false, oneOk = true;
         int dups = 0;   // a template without a slot that varies can give a people the same text twice (the Khokurt's work song): two such at most a fifty
         int sidesOk = 0, sidesBad = 0, shardsIn = 0, shardsOut = 0, between = 0, walked = 0, builtRight = 0, settle[2] = {0, 0}; std::string otherLine, names, fr = "no frontier";
         if (have) {
@@ -39,7 +40,8 @@ void unitCultures(const Check& check) {
                 Tongue T[2] = {tongueOf(g, L[0]), tongueOf(g, L[1])}; tonguesDiffer = T[0].seed != T[1].seed;
                 Voice V[2] = {voiceOf(g, L[0], T[0]), voiceOf(g, L[1], T[1])}; Tradition Tr[2] = {traditionOf(g, L[0]), traditionOf(g, L[1])};
                 own = V[0].seed != V[1].seed && Tr[0].seed != Tr[1].seed && C[0].people == 0 && C[1].people == 1;
-                endsAgree = peoplesEndedTogether(g) ? (C[0].ageYears == C[1].ageYears && L[0].otherFate == 0 && L[1].otherFate == 0) : (C[0].ageYears != C[1].ageYears && L[0].otherFate != 0 && L[0].otherFate == -L[1].otherFate);
+                endsAgree = peoplesEndedTogether(g) ? (C[0].ageYears == C[1].ageYears && L[0].otherFate == 0 && L[1].otherFate == 0)
+                                                    : (C[0].ageYears != C[1].ageYears && L[0].otherFate != 0 && L[0].otherFate == -L[1].otherFate);
                 for (int k = 0; k < 2; k++) {
                     std::vector<Shard> sh, sh2; shardsOf(sys, b, g, L[k], SHARDS_PER_WORLD, sh); shardsOf(sys, b, g, L[k], SHARDS_PER_WORLD, sh2);
                     std::set<std::string> texts; int ends = 0, mentions = 0;
@@ -87,7 +89,12 @@ void unitCultures(const Check& check) {
         // a people names the other in its records where their histories met (H-02's contact): Eleinewai I's two prehistoric peoples
         // never did (their lands apart, neither sailed), Leanmya V-a's medieval ones did (two treaties, nine wars)
         bool metHere = false, metThere = false, namedThere[2] = {false, false}; std::string thereLine = "Leanmya V-a NOT two peoples";
-        if (have && isTwo) { std::shared_ptr<const History> H = historyOfWorld(BodyGen::make(sys.bodies[0]), 0); if (H) for (const HistoryEvent& e : H->events) if (e.kind == HE_CONTACT) metHere = true; }
+        if (have && isTwo) {
+            std::shared_ptr<const History> H = historyOfWorld(BodyGen::make(sys.bodies[0]), 0);
+            if (H)
+                for (const HistoryEvent& e : H->events)
+                    if (e.kind == HE_CONTACT) metHere = true;
+        }
         {
             Star ms; StarSystem msys;
             if (starInSector(179, 0, 57, ms, true)) {
@@ -117,10 +124,15 @@ void unitCultures(const Check& check) {
                 for (const Shard& x : sh) if (x.text.find("the other people") != std::string::npos || (x.kind >= 0 && std::string(shardKindName(x.kind)) == "the other people")) oneOk = false;
             }
         }
-        check("a world of two peoples: two lores, tongues, voices, traditions and fifties, each naming the other where they met, one last each, the ends by the coin; one-people worlds as they were (C-13)",
-              have && isTwo && seedsDiffer && namesDiffer && tonguesDiffer && own && determ && clean && dups <= 4 && otherNamed[0] == metHere && otherNamed[1] == metHere && metThere && namedThere[0] && namedThere[1] && lastOne[0] && lastOne[1] && endsAgree && oneOk,
-              fmt("Eleinewai I: %s; seeds %s, names %s, tongues %s, voices and traditions %s; the fifties %s, %s, %d texts repeated in the hundred; they %s: %s; %s; one last each %s; the ends %s; the one-people worlds %s", isTwo ? names.c_str() : "NOT two peoples", seedsDiffer ? "differ" : "NOT as drawn", namesDiffer ? "cross-named" : "NOT cross-named",
-                  tonguesDiffer ? "differ" : "the SAME", own ? "their own" : "NOT their own", determ ? "the same twice" : "NOT the same twice", clean ? "clean" : "NOT clean", dups, metHere ? "met" : "never met", otherLine.c_str(), thereLine.c_str(), lastOne[0] && lastOne[1] ? "yes" : "NO", endsAgree ? "as the coin says" : "NOT as the coin says", oneOk ? "as they were" : "CHANGED"));
+        check("a world of two peoples: two lores, tongues, voices, traditions and fifties, each naming the other where they met, one last each, the ends by the coin; one-people worlds as they were "
+              "(C-13)",
+                have && isTwo && seedsDiffer && namesDiffer && tonguesDiffer && own && determ && clean && dups <= 4 && otherNamed[0] == metHere && otherNamed[1] == metHere && metThere &&
+                        namedThere[0] && namedThere[1] && lastOne[0] && lastOne[1] && endsAgree && oneOk,
+                fmt("Eleinewai I: %s; seeds %s, names %s, tongues %s, voices and traditions %s; the fifties %s, %s, %d texts repeated in the hundred; they %s: %s; %s; one last each %s; the ends %s; "
+                    "the one-people worlds %s",
+                        isTwo ? names.c_str() : "NOT two peoples", seedsDiffer ? "differ" : "NOT as drawn", namesDiffer ? "cross-named" : "NOT cross-named", tonguesDiffer ? "differ" : "the SAME",
+                        own ? "their own" : "NOT their own", determ ? "the same twice" : "NOT the same twice", clean ? "clean" : "NOT clean", dups, metHere ? "met" : "never met", otherLine.c_str(),
+                        thereLine.c_str(), lastOne[0] && lastOne[1] ? "yes" : "NO", endsAgree ? "as the coin says" : "NOT as the coin says", oneOk ? "as they were" : "CHANGED"));
         // the two peoples' lands meet only where their plans' territories touch; where they do not (their capitals far apart, each holding
         // a share of the world's land) there is no frontier and its roads are not asked for: the rule is checked on two settlements made up
         bool meet = false, ruleOk = false;
@@ -138,22 +150,30 @@ void unitCultures(const Check& check) {
             if (!meet) fr = "the territories do not meet: no frontier";
         }
         check("a world of two peoples on the ground: the divide, each side's settlements its people's with shards of its fifty, the frontier's roads the bigger settlement's build (C-13)",
-              have && isTwo && divideUnit && divideSame && sidesOk >= 10 && sidesBad == 0 && settle[0] >= 3 && settle[1] >= 3 && shardsIn >= 5 && shardsOut == 0 && ruleOk && (!meet || (between >= 1 && walked >= 1 && builtRight == walked)),
-              fmt("the divide %s; %d and %d settlements deep on the sides, %d their people's, %d NOT; %d shard sites of their people's fifty, %d NOT; %s: %d pairs between the peoples, %d walked, %d built as the bigger settlement's people built", divideUnit && divideSame ? "a unit pole, the same twice" : "NOT right",
-                  settle[0], settle[1], sidesOk, sidesBad, shardsIn, shardsOut, (fr + (ruleOk ? "; the rule on two made up: the bigger's people" : "; the rule NOT the bigger's")).c_str(), between, walked, builtRight));
+                have && isTwo && divideUnit && divideSame && sidesOk >= 10 && sidesBad == 0 && settle[0] >= 3 && settle[1] >= 3 && shardsIn >= 5 && shardsOut == 0 && ruleOk &&
+                        (!meet || (between >= 1 && walked >= 1 && builtRight == walked)),
+                fmt("the divide %s; %d and %d settlements deep on the sides, %d their people's, %d NOT; %d shard sites of their people's fifty, %d NOT; %s: %d pairs between the peoples, %d walked, "
+                    "%d built as the bigger settlement's people built",
+                        divideUnit && divideSame ? "a unit pole, the same twice" : "NOT right", settle[0], settle[1], sidesOk, sidesBad, shardsIn, shardsOut,
+                        (fr + (ruleOk ? "; the rule on two made up: the bigger's people" : "; the rule NOT the bigger's")).c_str(), between, walked, builtRight));
     }
     {   // the decoder and the ground on a world of two peoples. With three shards of each people of Eleinewai I and the second
         // people's last recording in the guide the decoder lists the world once a people, the second's list holds its four alone, its
         // last recording read at that count ends the second's record under its own key and leaves the first's open; landed at the
         // frontier, a shard taken from a settlement is counted against the world's hundred
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
         auto run = [&](double secs) { runFrames(game, gi, secs); };
         auto press = [&](int key) { pressKey(game, gi, key); };
         Star ws; StarSystem wsys; bool haveWorld = starInSector(152, 0, 92, ws, true); int li = -1;
         if (haveWorld) { wsys.generate(ws); if (!wsys.bodies.empty()) li = lastShardOf(peopleGen(BodyGen::make(wsys.bodies[0]), 1)); }
-        for (int i = 0; i < 3; i++) { game.guide.shards.insert("152,0,92/0/S" + std::to_string(i)); game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, i))); }   // the second people's at 1000 up
+        // the second people's at 1000 up
+        for (int i = 0; i < 3; i++) { game.guide.shards.insert("152,0,92/0/S" + std::to_string(i)); game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, i))); }
         if (li >= 0) game.guide.shards.insert("152,0,92/0/S" + std::to_string(shardWorldIndex(1, li)));
         game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1);
         bool atDecoder = game.state == GameState::SHARDS && game.testShardsLevel() == 0;
@@ -187,10 +207,13 @@ void unitCultures(const Check& check) {
                 }
             }
         }
-        check("a world of two peoples on the decoder and the ground: an entry a people, the second's list its own, its last ends its own record; a shard taken counts against both peoples' records (C-13)",
-              haveWorld && atDecoder && twoEntries && secondOpen && opened && read && ended && logged && landed && peoplesSeen == 2 && walked && taken && hundred,
-              fmt("the list %s; the second entry %s; its last S%d %s, read %s, ended %s (the first's open), logged %s; landed %s with %d peoples, at a shard %s, taken %s (S%d), '%s'", twoEntries ? "has two entries" : trunc(list, 60).c_str(), secondOpen ? "is the second people's four" : trunc(second, 70).c_str(),
-                  li, opened ? "opened" : "NOT opened", read ? "yes" : "NO", ended ? "yes" : "NO", logged ? "yes" : "NO", landed ? "yes" : "NO", peoplesSeen, walked ? "yes" : "NO", taken ? "yes" : "NO", takenIndex, trunc(takeStatus, 60).c_str()));
+        check("a world of two peoples on the decoder and the ground: an entry a people, the second's list its own, its last ends its own record; a shard taken counts against both peoples' records "
+              "(C-13)",
+                haveWorld && atDecoder && twoEntries && secondOpen && opened && read && ended && logged && landed && peoplesSeen == 2 && walked && taken && hundred,
+                fmt("the list %s; the second entry %s; its last S%d %s, read %s, ended %s (the first's open), logged %s; landed %s with %d peoples, at a shard %s, taken %s (S%d), '%s'",
+                        twoEntries ? "has two entries" : trunc(list, 60).c_str(), secondOpen ? "is the second people's four" : trunc(second, 70).c_str(), li, opened ? "opened" : "NOT opened",
+                        read ? "yes" : "NO", ended ? "yes" : "NO", logged ? "yes" : "NO", landed ? "yes" : "NO", peoplesSeen, walked ? "yes" : "NO", taken ? "yes" : "NO", takenIndex,
+                        trunc(takeStatus, 60).c_str()));
         remove("shots/tests/test_guide.txt");
     }
     {   // lending. A friend's guide (four shards of Aieliaalas II taken, two of them and the first piece read, the piece and the star
@@ -201,7 +224,14 @@ void unitCultures(const Check& check) {
         // the lent and the own together, counts the lent in the language, plays the friend's piece under the friend's name, reads a lent
         // text at that count; a lent shard taken afterwards is the explorer's own and the statistics count one lent
         Star ws; StarSystem wsys; bool haveWorld = starInSector(151, 0, 25, ws, true); int mi = -1;
-        if (haveWorld) { wsys.generate(ws); if (wsys.bodies.size() > 1) { BodyGen g = BodyGen::make(wsys.bodies[1]); for (int i = 0; i < SHARDS_PER_WORLD && mi < 0; i++) if (shardIsMusic(g, i)) mi = i; } }
+        if (haveWorld) {
+            wsys.generate(ws);
+            if (wsys.bodies.size() > 1) {
+                BodyGen g = BodyGen::make(wsys.bodies[1]);
+                for (int i = 0; i < SHARDS_PER_WORLD && mi < 0; i++)
+                    if (shardIsMusic(g, i)) mi = i;
+            }
+        }
         const std::string wk = "151,0,25/1", mk = wk + "/S" + std::to_string(mi);
         Guide friendG;
         for (int i = 0; i < 4; i++) friendG.shards.insert(wk + "/S" + std::to_string(i));
@@ -211,7 +241,11 @@ void unitCultures(const Check& check) {
         friendG.names["151,0,25"] = "Friendstar";
         remove("shots/tests/test_guide.txt");
         bool wrote = friendG.save("shots/tests/test_guide_inbox.txt");
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // every map first
         game.guide.shards.insert(wk + "/S2");   // the explorer's own already: not lent
@@ -240,10 +274,12 @@ void unitCultures(const Check& check) {
         game.guide.shards.insert(wk + "/S0");   // taken afterwards
         bool ownNow = !game.guide.isLent(wk + "/S0") && game.guide.lentCount() == 1;
         check("lending: a friend's read shards travel with the inbox, listed and read in cyan, counted in the language, the explorer's own once taken (C-14)",
-              haveWorld && mi >= 0 && wrote && namesIn && lentRight && logged && lentCount == 2 && atDecoder && oneWorld && heldRight && pieceOpened && pieceRead && textOpened && textRead && ownNow,
-              fmt("'%s'; the inbox %s; lent %s (%d); logged %s; the decoder %s, %s; the piece S%d %s and %s; the text S0 %s and %s at 3; taken afterwards %s", trunc(st, 50).c_str(), namesIn ? "has the star's and the piece's names" : "LACKS the names",
-                  lentRight ? "S0 and the piece alone" : "NOT as expected", lentCount, logged ? "yes" : "NO", atDecoder ? (oneWorld ? "lists the one world" : trunc(list, 40).c_str()) : "NOT reached", heldRight ? "three held with two lent" : trunc(info, 60).c_str(),
-                  mi, pieceOpened ? "opened" : "NOT opened", pieceRead ? "read" : "NOT read", textOpened ? "opened" : "NOT opened", textRead ? "read" : "NOT read", ownNow ? "own, one lent left" : "NOT own"));
+                haveWorld && mi >= 0 && wrote && namesIn && lentRight && logged && lentCount == 2 && atDecoder && oneWorld && heldRight && pieceOpened && pieceRead && textOpened && textRead && ownNow,
+                fmt("'%s'; the inbox %s; lent %s (%d); logged %s; the decoder %s, %s; the piece S%d %s and %s; the text S0 %s and %s at 3; taken afterwards %s", trunc(st, 50).c_str(),
+                        namesIn ? "has the star's and the piece's names" : "LACKS the names", lentRight ? "S0 and the piece alone" : "NOT as expected", lentCount, logged ? "yes" : "NO",
+                        atDecoder ? (oneWorld ? "lists the one world" : trunc(list, 40).c_str()) : "NOT reached", heldRight ? "three held with two lent" : trunc(info, 60).c_str(), mi,
+                        pieceOpened ? "opened" : "NOT opened", pieceRead ? "read" : "NOT read", textOpened ? "opened" : "NOT opened", textRead ? "read" : "NOT read",
+                        ownNow ? "own, one lent left" : "NOT own"));
         remove("shots/tests/test_guide.txt"); remove("shots/tests/test_guide_inbox.txt");
     }
 }
@@ -271,41 +307,54 @@ void unitProfiles(const Check& check) {
                     PeopleProfile Q = peopleProfileOf(sys, b, g, k); PeopleAge A = peopleAgeOf(g, k); Culture C = cultureOf(g, k);
                     both[k] = P; peoplesN++;
                     std::string at = fmt("%lld %lld %lld b%d p%d", (long long)x, (long long)y, (long long)z, b.index, k);
-                    bool same = P.age == Q.age && P.lastYear == Q.lastYear && P.endedYearsAgo == Q.endedYearsAgo && P.radio == Q.radio && P.radioYear == Q.radioYear && P.cause == Q.cause && P.collapseYear == Q.collapseYear && P.collapseYears == Q.collapseYears
-                                && P.landShare == Q.landShare && P.held == Q.held && P.peak == Q.peak && P.government == Q.government && P.economy == Q.economy && P.economy2 == Q.economy2 && P.faith == Q.faith && P.rite == Q.rite && P.holy == Q.holy && P.seed == Q.seed && P.eras.size() == Q.eras.size();
+                    bool same = P.age == Q.age && P.lastYear == Q.lastYear && P.endedYearsAgo == Q.endedYearsAgo && P.radio == Q.radio && P.radioYear == Q.radioYear && P.cause == Q.cause &&
+                            P.collapseYear == Q.collapseYear && P.collapseYears == Q.collapseYears && P.landShare == Q.landShare && P.held == Q.held && P.peak == Q.peak &&
+                            P.government == Q.government && P.economy == Q.economy && P.economy2 == Q.economy2 && P.faith == Q.faith && P.rite == Q.rite && P.holy == Q.holy && P.seed == Q.seed &&
+                            P.eras.size() == Q.eras.size();
                     for (int v = 0; v < VAL_COUNT && same; v++) same = P.values[v] == Q.values[v];
                     for (int st = 0; st < STAGE_COUNT && same; st++) same = P.stage[st] == Q.stage[st];
-                    for (size_t e = 0; e < P.eras.size() && same; e++) same = P.eras[e].age == Q.eras[e].age && P.eras[e].start == Q.eras[e].start && P.eras[e].end == Q.eras[e].end && P.eras[e].government == Q.eras[e].government;
+                    for (size_t e = 0; e < P.eras.size() && same; e++)
+                        same = P.eras[e].age == Q.eras[e].age && P.eras[e].start == Q.eras[e].start && P.eras[e].end == Q.eras[e].end && P.eras[e].government == Q.eras[e].government;
                     if (!same) fail(at + " not the same twice");
-                    if (A.age != P.age || A.endedYearsAgo != P.endedYearsAgo || A.lastYear != P.lastYear || A.eras.size() != P.eras.size() || A.radio != P.radio) fail(at + " the generator's part differs");
+                    if (A.age != P.age || A.endedYearsAgo != P.endedYearsAgo || A.lastYear != P.lastYear || A.eras.size() != P.eras.size() || A.radio != P.radio)
+                        fail(at + " the generator's part differs");
                     if (C.ageYears != P.endedYearsAgo || C.age != P.age || C.weatherYears != P.endedYearsAgo / ageDurability(P.age)) fail(at + " the culture's end differs");
                     if ((int)P.eras.size() != P.age + 1) { fail(at + fmt(" %zu eras for the %s age", P.eras.size(), AGE_NAMES[P.age])); continue; }
                     for (int e = 0; e < (int)P.eras.size(); e++) {
                         const Era& E = P.eras[e];
-                        if (E.age != e || E.start > E.end || (e > 0 && E.start != P.eras[e - 1].end + 1) || E.government < 0 || E.government >= GOV_COUNT) fail(at + fmt(" era %d %s %d..%d", e, AGE_NAMES[E.age], E.start, E.end));
+                        if (E.age != e || E.start > E.end || (e > 0 && E.start != P.eras[e - 1].end + 1) || E.government < 0 || E.government >= GOV_COUNT)
+                            fail(at + fmt(" era %d %s %d..%d", e, AGE_NAMES[E.age], E.start, E.end));
                     }
                     if (P.eras.back().end != P.lastYear || (P.age == AGE_PREHISTORIC ? P.eras[0].start != 1 : (P.eras[0].end != 0 || P.eras[1].start != 1))) fail(at + " the reckoning");
                     bool radioWant = P.age > AGE_INDUSTRIAL || (P.age == AGE_INDUSTRIAL && P.radio);
                     if (P.radio != radioWant || (P.radio && (P.radioYear < P.eras[AGE_INDUSTRIAL].start || P.radioYear > P.eras[AGE_INDUSTRIAL].end))) fail(at + " radio");
-                    if (P.collapseYears < 1 || P.collapseYear < P.eras.back().start || P.collapseYear + P.collapseYears - 1 != P.lastYear) fail(at + fmt(" the collapse %d over %d", P.collapseYear, P.collapseYears));
-                    if (!(P.stage[STAGE_WARNING] == 0 && P.stage[STAGE_ONSET] > 0 && P.stage[STAGE_CRISIS] > P.stage[STAGE_ONSET] && P.stage[STAGE_END] > P.stage[STAGE_CRISIS] && P.stage[STAGE_END] < 1)) fail(at + " the stages");
+                    if (P.collapseYears < 1 || P.collapseYear < P.eras.back().start || P.collapseYear + P.collapseYears - 1 != P.lastYear)
+                        fail(at + fmt(" the collapse %d over %d", P.collapseYear, P.collapseYears));
+                    if (!(P.stage[STAGE_WARNING] == 0 && P.stage[STAGE_ONSET] > 0 && P.stage[STAGE_CRISIS] > P.stage[STAGE_ONSET] && P.stage[STAGE_END] > P.stage[STAGE_CRISIS] &&
+                                P.stage[STAGE_END] < 1))
+                        fail(at + " the stages");
                     bool stagesUp = true; for (int yr = P.collapseYear + 1; yr <= P.lastYear; yr++) if (P.stageAt(yr) < P.stageAt(yr - 1)) stagesUp = false;
-                    if (P.stageAt(P.collapseYear - 1) != -1 || P.stageAt(P.collapseYear) < STAGE_WARNING || !stagesUp || P.stageAt(P.lastYear) != STAGE_END || (P.collapseYears >= 60 && P.stageAt(P.collapseYear) != STAGE_WARNING) || P.eraAt(P.lastYear) != P.age || (P.age > 0 && P.eraAt(P.eras.back().start - 1) != P.age - 1))
+                    if (P.stageAt(P.collapseYear - 1) != -1 || P.stageAt(P.collapseYear) < STAGE_WARNING || !stagesUp || P.stageAt(P.lastYear) != STAGE_END ||
+                            (P.collapseYears >= 60 && P.stageAt(P.collapseYear) != STAGE_WARNING) || P.eraAt(P.lastYear) != P.age || (P.age > 0 && P.eraAt(P.eras.back().start - 1) != P.age - 1))
                         fail(at + fmt(" stageAt/eraAt (the collapse %d over %d: %d %d)", P.collapseYear, P.collapseYears, P.stageAt(P.collapseYear), P.stageAt(P.lastYear)));
                     bool sharedEnd = k > 0 && peoplesEndedTogether(g);
                     if (!sharedEnd && (P.endedYearsAgo < E_LO[P.age] * 0.999 || P.endedYearsAgo > E_HI[P.age] * 1.001)) fail(at + fmt(" ended %.0f years ago", P.endedYearsAgo));
                     double vs = 0; for (int v = 0; v < VAL_COUNT; v++) vs += P.values[v];
-                    if (!(P.landShare > 0 && P.landShare <= 1 && P.held > 0 && P.held <= 1 && P.peak >= 1 && std::fabs(vs - 1) < 1e-9 && P.government == P.eras.back().government && P.economy != P.economy2)) fail(at + " the extent or the rest");
+                    if (!(P.landShare > 0 && P.landShare <= 1 && P.held > 0 && P.held <= 1 && P.peak >= 1 && std::fabs(vs - 1) < 1e-9 && P.government == P.eras.back().government &&
+                                P.economy != P.economy2))
+                        fail(at + " the extent or the rest");
                     if (P.cause < 0 || P.cause >= CAUSE_COUNT) fail(at + " no cause");
                 }
                 if (np > 1 && peoplesEndedTogether(g)) {
                     together++;
-                    if (both[0].endedYearsAgo != both[1].endedYearsAgo || both[0].cause != both[1].cause || !causeWorldwide(both[0].cause) || both[0].collapseYears != both[1].collapseYears) fail(fmt("%lld %lld %lld b%d ended together apart", (long long)x, (long long)y, (long long)z, b.index));
+                    if (both[0].endedYearsAgo != both[1].endedYearsAgo || both[0].cause != both[1].cause || !causeWorldwide(both[0].cause) || both[0].collapseYears != both[1].collapseYears)
+                        fail(fmt("%lld %lld %lld b%d ended together apart", (long long)x, (long long)y, (long long)z, b.index));
                 }
             }
         }
         check("ages: a people's profile is one function, the same twice, its eras, radio, collapse and end in order (A-01)", peoplesN >= 100 && together >= 3 && bad == 0,
-              fmt("%d peoples within 12 ly (%d worlds of two that ended together), a profile %.2f ms; %d wrong%s%s", peoplesN, together, peoplesN ? 1e3 * tSum / peoplesN : 0.0, bad, bad ? ": " : "", badWhat.c_str()));
+                fmt("%d peoples within 12 ly (%d worlds of two that ended together), a profile %.2f ms; %d wrong%s%s", peoplesN, together, peoplesN ? 1e3 * tSum / peoplesN : 0.0, bad, bad ? ": " : "",
+                        badWhat.c_str()));
     }
     {   // the shares as decided over the peoples within 25 ly of home (the generator's part alone), the early ages commoner and the far
         // future rarest, about three peoples in ten with radio; the test worlds of each age where they were pinned
@@ -320,9 +369,15 @@ void unitProfiles(const Check& check) {
             }
         }
         double secs = nowSec() - t0;
-        bool shares = n >= 1000, order = ages[AGE_MEDIEVAL] > ages[AGE_INDUSTRIAL] && ages[AGE_PREHISTORIC] > ages[AGE_INDUSTRIAL] && ages[AGE_INDUSTRIAL] > ages[AGE_MODERN] && ages[AGE_MODERN] > ages[AGE_FUTURISTIC] && ages[AGE_FUTURISTIC] > ages[AGE_FAR_FUTURE] && ages[AGE_FAR_FUTURE] > 0;
+        bool shares = n >= 1000,
+             order = ages[AGE_MEDIEVAL] > ages[AGE_INDUSTRIAL] && ages[AGE_PREHISTORIC] > ages[AGE_INDUSTRIAL] && ages[AGE_INDUSTRIAL] > ages[AGE_MODERN] && ages[AGE_MODERN] > ages[AGE_FUTURISTIC] &&
+                ages[AGE_FUTURISTIC] > ages[AGE_FAR_FUTURE] && ages[AGE_FAR_FUTURE] > 0;
         std::string line;
-        for (int a = 0; a < AGE_COUNT; a++) { double sh = (double)ages[a] / std::max(1, n); if (std::fabs(sh - AGE_SHARES[a]) > 0.03) shares = false; line += fmt("%s%s %.1f%%", a ? ", " : "", AGE_NAMES[a], 100 * sh); }
+        for (int a = 0; a < AGE_COUNT; a++) {
+            double sh = (double)ages[a] / std::max(1, n);
+            if (std::fabs(sh - AGE_SHARES[a]) > 0.03) shares = false;
+            line += fmt("%s%s %.1f%%", a ? ", " : "", AGE_NAMES[a], 100 * sh);
+        }
         int pinned = 0; std::string pins;
         for (int a = 0; a < AGE_COUNT; a++) {
             const AgeWorld& w = AGE_WORLDS[a]; Star s;
@@ -333,8 +388,9 @@ void unitProfiles(const Check& check) {
             if (peoplesOf(g) > w.which && peopleAgeOf(g, w.which).age == a) pinned++; else pins += fmt(" %s: %lld %lld body %d is not;", AGE_NAMES[a], (long long)w.sx, (long long)w.sz, w.body);
         }
         double radioShare = (double)radio / std::max(1, n);
-        check("ages: the shares as decided, the far future rarest, about three in ten with radio; a test world of each age where pinned (A-01)", shares && order && radioShare > 0.22 && radioShare < 0.38 && pinned == AGE_COUNT,
-              fmt("%d peoples within 25 ly in %.2f s: %s; radio %.1f%%; %d of %d test worlds hold their age%s", n, secs, line.c_str(), 100 * radioShare, pinned, AGE_COUNT, pins.c_str()));
+        check("ages: the shares as decided, the far future rarest, about three in ten with radio; a test world of each age where pinned (A-01)",
+                shares && order && radioShare > 0.22 && radioShare < 0.38 && pinned == AGE_COUNT,
+                fmt("%d peoples within 25 ly in %.2f s: %s; radio %.1f%%; %d of %d test worlds hold their age%s", n, secs, line.c_str(), 100 * radioShare, pinned, AGE_COUNT, pins.c_str()));
     }
     {   // only the radio ages on the air. Every candidate sector within 200 ly of home whose star has a people's world: its signal is
         // there exactly when the world's people (either of two) had radio, and every people's signal heard from home is such a world's;
@@ -349,14 +405,21 @@ void unitProfiles(const Check& check) {
             Star full; starInSector(sg.star.sx, sg.star.sy, sg.star.sz, full, false); StarSystem sys; sys.generate(full);
             BodyGen g = BodyGen::make(sys.bodies[sg.body]); int mask = peoplesOnAir(g);
             if (!mask) wrongHeard++;
-            else { int k = (mask & 1) ? 0 : 1; ages += fmt("%s%.0f ly %s", ages.empty() ? "" : ", ", sg.distLy, AGE_NAMES[peopleAgeOf(g, k).age]); if (peopleAgeOf(g, k).age < AGE_INDUSTRIAL) wrongHeard++; }
+            else {
+                int k = (mask & 1) ? 0 : 1;
+                ages += fmt("%s%.0f ly %s", ages.empty() ? "" : ", ", sg.distLy, AGE_NAMES[peopleAgeOf(g, k).age]);
+                if (peopleAgeOf(g, k).age < AGE_INDUSTRIAL) wrongHeard++;
+            }
         }
         const int64_t R = 200;
         auto fd = [](int64_t a, int64_t b) { int64_t q = a / b; if ((a % b != 0) && ((a < 0) != (b < 0))) q--; return q; };
-        for (int64_t cx = fd(HOME_SX - R, SIGNAL_CELL); cx <= fd(HOME_SX + R, SIGNAL_CELL); cx++) for (int64_t cy = fd(HOME_SY - R, SIGNAL_CELL); cy <= fd(HOME_SY + R, SIGNAL_CELL); cy++) for (int64_t cz = fd(HOME_SZ - R, SIGNAL_CELL); cz <= fd(HOME_SZ + R, SIGNAL_CELL); cz++) {
-            int64_t sx[SIGNAL_MAX_CANDIDATES], sy[SIGNAL_MAX_CANDIDATES], sz[SIGNAL_MAX_CANDIDATES]; int nc = transmitterCell(cx, cy, cz, sx, sy, sz);
-            for (int k = 0; k < nc; k++) {
-                Star s; if (!starInSector(sx[k], sy[k], sz[k], s, false) || s.cls == STAR_PULSAR) continue;
+        for (int64_t cx = fd(HOME_SX - R, SIGNAL_CELL); cx <= fd(HOME_SX + R, SIGNAL_CELL); cx++)
+            for (int64_t cy = fd(HOME_SY - R, SIGNAL_CELL); cy <= fd(HOME_SY + R, SIGNAL_CELL); cy++)
+                for (int64_t cz = fd(HOME_SZ - R, SIGNAL_CELL); cz <= fd(HOME_SZ + R, SIGNAL_CELL); cz++) {
+                    int64_t sx[SIGNAL_MAX_CANDIDATES], sy[SIGNAL_MAX_CANDIDATES], sz[SIGNAL_MAX_CANDIDATES];
+                    int nc = transmitterCell(cx, cy, cz, sx, sy, sz);
+                    for (int k = 0; k < nc; k++) {
+                        Star s; if (!starInSector(sx[k], sy[k], sz[k], s, false) || s.cls == STAR_PULSAR) continue;
                 if (length(s.pos - home) > R * SECTOR_KM) continue;
                 StarSystem sys; sys.generate(s);
                 const int pw = systemPeoplesWorld(sys);   // the system's people's world (C-01's first, else a dead world's)
@@ -369,7 +432,7 @@ void unitProfiles(const Check& check) {
                     if (want) onAir++; else silent++;
                 }
             }
-        }
+                }
         // the slots of the worlds of two peoples within 25 ly: every slot's people on the air
         int twoWorlds = 0, oneOnAir = 0, bothOnAir = 0, slotsWrong = 0; bool bothSeen = true;
         for (int64_t x = HOME_SX - 25; x <= HOME_SX + 25; x++) for (int64_t y = HOME_SY - 25; y <= HOME_SY + 25; y++) for (int64_t z = HOME_SZ - 25; z <= HOME_SZ + 25; z++) {
@@ -410,9 +473,12 @@ void unitProfiles(const Check& check) {
             }
         }
         check("ages: only the radio ages on the air: a transmitter's people had radio, a candidate without is silent; two peoples' slots, the charts' heard marks (A-01)",
-              heard >= 2 && heard <= 6 && wrongHeard == 0 && wrongRule == 0 && onAir >= heard && silent >= 1 && twoWorlds >= 50 && oneOnAir >= 5 && slotsWrong == 0 && bothSeen && chartWorlds >= 6 && marksWrong == 0,
-              fmt("from home %d peoples' signals (%s), %d wrong; within 200 ly %d candidate worlds: %d on the air, %d silent, %d against the rule; %d worlds of two within 25 ly (%d with one on the air, %d with both): %d slots wrong%s; %d charted worlds, %d heard marks, %d wrong",
-                  heard, ages.c_str(), wrongHeard, candidates, onAir, silent, wrongRule, twoWorlds, oneOnAir, bothOnAir, slotsWrong, bothSeen ? "" : ", a world of two on the air with one people's slots only", chartWorlds, heardMarks, marksWrong));
+                heard >= 2 && heard <= 6 && wrongHeard == 0 && wrongRule == 0 && onAir >= heard && silent >= 1 && twoWorlds >= 50 && oneOnAir >= 5 && slotsWrong == 0 && bothSeen && chartWorlds >= 6 &&
+                        marksWrong == 0,
+                fmt("from home %d peoples' signals (%s), %d wrong; within 200 ly %d candidate worlds: %d on the air, %d silent, %d against the rule; %d worlds of two within 25 ly (%d with one on the "
+                    "air, %d with both): %d slots wrong%s; %d charted worlds, %d heard marks, %d wrong",
+                        heard, ages.c_str(), wrongHeard, candidates, onAir, silent, wrongRule, twoWorlds, oneOnAir, bothOnAir, slotsWrong,
+                        bothSeen ? "" : ", a world of two on the air with one people's slots only", chartWorlds, heardMarks, marksWrong));
     }
 }
 
@@ -425,9 +491,14 @@ void unitStory(const Check& check) {
         int okWorlds = 0, lorePct[2] = {0, 0}, minW = 999, maxW = 0, musicN[2] = {0, 0};
         int ordinaryPct[2] = {0, 0}, collapseN[2] = {0, 0}, collapseEarly = 0, fullAt[2] = {10, 10};
         bool determ = true, clean = true, lengths = true, distinct = true;
-        bool tradSame = true, tradOk = true, piecesOk = true, pieceSame = true, formsVary = true, tradDiffer = true; int pieceMin = 999, pieceMax = 0, notesMin = 99999, noteTot = 0, badOrder = 0, badTime = 0, badVel = 0, badDeg = 0, badVoice = 0, badLen = 0, ageFamilyBad = 0; Tradition trads[2];   // C-04; H-05
+        bool tradSame = true, tradOk = true, piecesOk = true, pieceSame = true, formsVary = true, tradDiffer = true;
+        int pieceMin = 999, pieceMax = 0, notesMin = 99999, noteTot = 0, badOrder = 0, badTime = 0, badVel = 0, badDeg = 0, badVoice = 0, badLen = 0, ageFamilyBad = 0;
+        Tradition trads[2];   // C-04; H-05
         double readPct[2][11] = {}; bool mono = true, namesKnown = true, tongueSame = true, tongueDistinct = true; int langWords[2] = {0, 0};
-        bool voiceSame = true, voiceOk = true, speechSame = true, speechOk = true, aligned = true, inventoryOk = true; int badSeg = 0, badWord = 0, speechN = 0; double speechMin = 999, speechMax = 0, speechTot = 0; Voice voices[2];
+        bool voiceSame = true, voiceOk = true, speechSame = true, speechOk = true, aligned = true, inventoryOk = true;
+        int badSeg = 0, badWord = 0, speechN = 0;
+        double speechMin = 999, speechMax = 0, speechTot = 0;
+        Voice voices[2];
         for (int wi = 0; wi < 2; wi++) {
             Star s; StarSystem sys; if (!systemAt(ws[wi].sx, 0, ws[wi].sz, s, sys, true)) continue;
             if (ws[wi].bi >= (int)sys.bodies.size()) continue;
@@ -500,7 +571,10 @@ void unitStory(const Check& check) {
                         forms.insert(P.form);
                         const Ensemble& E = pieceEnsemble(T, P);
                         if (a < 0 && P.age != std::max(0, sh[i].recordAge)) piecesOk = false;
-                        pieceMin = std::min(pieceMin, (int)P.seconds); pieceMax = std::max(pieceMax, (int)P.seconds); notesMin = std::min(notesMin, (int)P.notes.size()); noteTot += (int)P.notes.size();
+                        pieceMin = std::min(pieceMin, (int)P.seconds);
+                        pieceMax = std::max(pieceMax, (int)P.seconds);
+                        notesMin = std::min(notesMin, (int)P.notes.size());
+                        noteTot += (int)P.notes.size();
                         if (P.seconds < SEC_LO[P.age] || P.seconds > SEC_HI[P.age] || P.notes.size() < 12 || P.form < 0 || P.form >= PF_COUNT) { piecesOk = false; badLen++; }
                         for (size_t k = 0; k < P.notes.size(); k++) {
                             const Note& nt = P.notes[k];
@@ -515,7 +589,9 @@ void unitStory(const Check& check) {
                 }
                 if (forms.size() < 12) formsVary = false;
             }
-            {   // the decoding: the share read with one to ten shards held, never fewer per shard with more held, the names from the start, the tongue the same twice and its forty most used words distinct
+            {
+                // the decoding: the share read with one to ten shards held, never fewer per shard with more held, the names from the start,
+                // the tongue the same twice and its forty most used words distinct
                 // by roots, over every record, the whole tongue at the people's own count (ten of eighty records, more of more)
                 Tongue T = tongueOf(g, L), T2 = tongueOf(g, L);
                 Language lang; languageOf(L, sh, T, lang); langWords[wi] = (int)lang.words.size();
@@ -526,7 +602,12 @@ void unitStory(const Check& check) {
                         std::vector<DecodedWord> w; int r = decodeShard(sh[i], lang, T, held, w);
                         read += r; tot += (int)w.size();
                         if (r < prev[i]) mono = false; prev[i] = r;
-                        if (held == 1) for (const DecodedWord& d : w) { std::string lw = d.ours; for (char& c : lw) c = (char)tolower((unsigned char)c); if (lang.names.count(lw) && !(d.name && d.known)) namesKnown = false; }
+                        if (held == 1)
+                            for (const DecodedWord& d : w) {
+                                std::string lw = d.ours;
+                                for (char& c : lw) c = (char)tolower((unsigned char)c);
+                                if (lang.names.count(lw) && !(d.name && d.known)) namesKnown = false;
+                            }
                     }
                     if (held <= 10) readPct[wi][held] = tot > 0 ? 100.0 * read / tot : 0;
                     if (held == fullAt[wi]) readPct[wi][0] = tot > 0 ? 100.0 * read / tot : 0;   // at the people's full count
@@ -539,7 +620,9 @@ void unitStory(const Check& check) {
                     // without a gap or an overlap, finite and in pitch, every word with sounds spoken within its span in order, the spans the same at one shard held and at ten
                     Voice V = voiceOf(g, L, T), V2 = voiceOf(g, L, T); voices[wi] = V;
                     if (V.pitch != V2.pitch || V.rate != V2.rate || V.stress != V2.stress || V.inventory != V2.inventory) voiceSame = false;
-                    if (V.pitch < 80 || V.pitch > 320 || V.rate < 2.5 || V.rate > 5.6 || V.tract < 0.7 || V.tract > 1.4 || V.range < 0.4 || V.range > 1.7 || V.inventory.size() < 8 || voiceLine(V).size() > 52) voiceOk = false;
+                    if (V.pitch < 80 || V.pitch > 320 || V.rate < 2.5 || V.rate > 5.6 || V.tract < 0.7 || V.tract > 1.4 || V.range < 0.4 || V.range > 1.7 || V.inventory.size() < 8 ||
+                            voiceLine(V).size() > 52)
+                        voiceOk = false;
                     for (int p : V.inventory) if (p < 0 || p >= phoneCount()) inventoryOk = false;
                     bool vowel = false; for (int p : V.inventory) if (PHONES[p].kind == PK_VOWEL) vowel = true;
                     if (!vowel) inventoryOk = false;
@@ -555,7 +638,9 @@ void unitStory(const Check& check) {
                         double tEnd = 0;
                         for (size_t k = 0; k < S.segs.size(); k++) {
                             const Segment& sg = S.segs[k];
-                            if (!std::isfinite(sg.t) || !std::isfinite(sg.dur) || sg.dur <= 0 || std::fabs(sg.t - tEnd) > 1e-6 || sg.pitch < 0.4 || sg.pitch > 2.5 || sg.pitchEnd < 0.4 || sg.pitchEnd > 2.5 || sg.amp < 0 || sg.amp > 2 || sg.phone >= phoneCount()) badSeg++;
+                            if (!std::isfinite(sg.t) || !std::isfinite(sg.dur) || sg.dur <= 0 || std::fabs(sg.t - tEnd) > 1e-6 || sg.pitch < 0.4 || sg.pitch > 2.5 || sg.pitchEnd < 0.4 ||
+                                    sg.pitchEnd > 2.5 || sg.amp < 0 || sg.amp > 2 || sg.phone >= phoneCount())
+                                badSeg++;
                             if (sg.phone >= 0 && (sg.word < 0 || sg.word >= (int)w10.size() || sg.t < S.wordStart[sg.word] - 1e-6 || sg.t + sg.dur > S.wordEnd[sg.word] + 1e-6)) badWord++;
                             tEnd = sg.t + sg.dur;
                         }
@@ -570,36 +655,50 @@ void unitStory(const Check& check) {
                 }
             }
         }
-        check("records: deterministic, complete, each within its genre's length, the texts distinct (C-02, H-04)", okWorlds == 2 && determ && clean && lengths && distinct && musicN[0] >= 8 && musicN[0] <= 22 && musicN[1] >= 8 && musicN[1] <= 22,
-              fmt("%d worlds of 2 with the trait; %s; %s; %d-%d words, %s; %s; %d and %d of their first fifty are music", okWorlds, determ ? "the same twice" : "NOT the same twice", clean ? "no mark left" : "a mark left", minW, maxW,
-                  lengths ? "each within its genre's" : "one OUT of its genre's length", distinct ? "all distinct" : "repeats", musicN[0], musicN[1]));
-        check("records: the world's and the history's names recur", okWorlds == 2 && lorePct[0] >= 70 && lorePct[1] >= 70, fmt("felisian %d%%, desert %d%% of the texts name a place, a person or a thing of the world", lorePct[0], lorePct[1]));
+        check("records: deterministic, complete, each within its genre's length, the texts distinct (C-02, H-04)",
+                okWorlds == 2 && determ && clean && lengths && distinct && musicN[0] >= 8 && musicN[0] <= 22 && musicN[1] >= 8 && musicN[1] <= 22,
+                fmt("%d worlds of 2 with the trait; %s; %s; %d-%d words, %s; %s; %d and %d of their first fifty are music", okWorlds, determ ? "the same twice" : "NOT the same twice",
+                        clean ? "no mark left" : "a mark left", minW, maxW, lengths ? "each within its genre's" : "one OUT of its genre's length", distinct ? "all distinct" : "repeats", musicN[0],
+                        musicN[1]));
+        check("records: the world's and the history's names recur", okWorlds == 2 && lorePct[0] >= 70 && lorePct[1] >= 70,
+                fmt("felisian %d%%, desert %d%% of the texts name a place, a person or a thing of the world", lorePct[0], lorePct[1]));
         check("records: the register: mostly the ordinary life, the collapse's witnesses only in its years (H-04)", okWorlds == 2 && ordinaryPct[0] >= 75 && ordinaryPct[1] >= 75 && collapseEarly == 0,
-              fmt("the warnings, denials, orders, inventories, messages to whoever comes and the last: felisian %d (%d%% of the texts the ordinary genres), desert %d (%d%%); %d before the collapse's first year", collapseN[0], ordinaryPct[0], collapseN[1], ordinaryPct[1], collapseEarly));
-        check("decoding: a third of the words read with one shard, all with the people's full count, never fewer with more, the names from the start, the people's words the same wherever they recur",   // C-06; H-04: by roots, the count by the records
-              okWorlds == 2 && readPct[0][1] >= 25 && readPct[0][1] <= 50 && readPct[1][1] >= 25 && readPct[1][1] <= 50 && readPct[0][5] >= 45 && readPct[1][5] >= 45 && readPct[0][0] >= 99.9 && readPct[1][0] >= 99.9 && mono && namesKnown && tongueSame && tongueDistinct,
-              fmt("read with 1/3/5/10/all (%d, %d) shards: felisian %.0f/%.0f/%.0f/%.0f/%.0f%% of the words (%d roots in the language), desert %.0f/%.0f/%.0f/%.0f/%.0f%% (%d); %s; %s; %s; %s", fullAt[0], fullAt[1], readPct[0][1], readPct[0][3], readPct[0][5], readPct[0][10], readPct[0][0], langWords[0],
-                  readPct[1][1], readPct[1][3], readPct[1][5], readPct[1][10], readPct[1][0], langWords[1],
-                  mono ? "never fewer with more held" : "FEWER read with more held", namesKnown ? "the names from the start" : "a name NOT read at one", tongueSame ? "the tongue the same twice" : "the tongue NOT the same twice", tongueDistinct ? "its forty most used words distinct" : "two of its most used words the SAME"));
+                fmt("the warnings, denials, orders, inventories, messages to whoever comes and the last: felisian %d (%d%% of the texts the ordinary genres), desert %d (%d%%); %d before the "
+                    "collapse's first year",
+                        collapseN[0], ordinaryPct[0], collapseN[1], ordinaryPct[1], collapseEarly));
+        // C-06; H-04: by roots, the count by the records
+        check("decoding: a third of the words read with one shard, all with the people's full count, never fewer with more, the names from the start, the people's words the same wherever they recur",
+                okWorlds == 2 && readPct[0][1] >= 25 && readPct[0][1] <= 50 && readPct[1][1] >= 25 && readPct[1][1] <= 50 && readPct[0][5] >= 45 && readPct[1][5] >= 45 && readPct[0][0] >= 99.9 &&
+                        readPct[1][0] >= 99.9 && mono && namesKnown && tongueSame && tongueDistinct,
+                fmt("read with 1/3/5/10/all (%d, %d) shards: felisian %.0f/%.0f/%.0f/%.0f/%.0f%% of the words (%d roots in the language), desert %.0f/%.0f/%.0f/%.0f/%.0f%% (%d); %s; %s; %s; %s",
+                        fullAt[0], fullAt[1], readPct[0][1], readPct[0][3], readPct[0][5], readPct[0][10], readPct[0][0], langWords[0], readPct[1][1], readPct[1][3], readPct[1][5], readPct[1][10],
+                        readPct[1][0], langWords[1], mono ? "never fewer with more held" : "FEWER read with more held", namesKnown ? "the names from the start" : "a name NOT read at one",
+                        tongueSame ? "the tongue the same twice" : "the tongue NOT the same twice", tongueDistinct ? "its forty most used words distinct" : "two of its most used words the SAME"));
         if (okWorlds == 2 && trads[0].scale == trads[1].scale && trads[0].groups == trads[1].groups) tradDiffer = false;
-        check("music: a tradition a world, an ensemble an age (C-04, H-05)",
-              okWorlds == 2 && tradSame && tradOk && tradDiffer,
-              fmt("%s; %s; %d and %d notes to the scale, cycles of %d and %d beats, %zu and %zu voices of their own; ensembles of %zu/%zu/%zu/%zu/%zu/%zu voices",
-                  tradSame ? "the tradition the same twice" : "the tradition NOT the same twice", tradOk ? "scale, cycle and the ages' ensembles in bounds" : fmt("scale, cycle or ensembles OUT of bounds (%d instruments not of their age)", ageFamilyBad).c_str(),
-                  (int)trads[0].scale.size(), (int)trads[1].scale.size(), trads[0].beats, trads[1].beats, trads[0].voices.size(), trads[1].voices.size(),
-                  trads[0].ages[0].voices.size(), trads[0].ages[1].voices.size(), trads[0].ages[2].voices.size(), trads[0].ages[3].voices.size(), trads[0].ages[4].voices.size(), trads[0].ages[5].voices.size()));
-        check("music: every piece at every age in its length, its notes on its ensemble (H-05)",
-              okWorlds == 2 && piecesOk && pieceSame && formsVary && tradDiffer,
-              fmt("pieces %s, %s, %d-%d s, %d notes at least, %d in all; %s forms; the two traditions %s",
-                  pieceSame ? "the same twice" : "NOT the same twice", piecesOk ? "in order and in range" : fmt("OUT of order or range (%d out of their age's length, %d out of order, %d out of time, %d velocity, %d degree, %d voice)", badLen, badOrder, badTime, badVel, badDeg, badVoice).c_str(), pieceMin, pieceMax, notesMin, noteTot, formsVary ? "twelve or more" : "FEWER than twelve", tradDiffer ? "differ" : "are the SAME"));
+        check("music: a tradition a world, an ensemble an age (C-04, H-05)", okWorlds == 2 && tradSame && tradOk && tradDiffer,
+                fmt("%s; %s; %d and %d notes to the scale, cycles of %d and %d beats, %zu and %zu voices of their own; ensembles of %zu/%zu/%zu/%zu/%zu/%zu voices",
+                        tradSame ? "the tradition the same twice" : "the tradition NOT the same twice",
+                        tradOk ? "scale, cycle and the ages' ensembles in bounds" : fmt("scale, cycle or ensembles OUT of bounds (%d instruments not of their age)", ageFamilyBad).c_str(),
+                        (int)trads[0].scale.size(), (int)trads[1].scale.size(), trads[0].beats, trads[1].beats, trads[0].voices.size(), trads[1].voices.size(), trads[0].ages[0].voices.size(),
+                        trads[0].ages[1].voices.size(), trads[0].ages[2].voices.size(), trads[0].ages[3].voices.size(), trads[0].ages[4].voices.size(), trads[0].ages[5].voices.size()));
+        check("music: every piece at every age in its length, its notes on its ensemble (H-05)", okWorlds == 2 && piecesOk && pieceSame && formsVary && tradDiffer,
+                fmt("pieces %s, %s, %d-%d s, %d notes at least, %d in all; %s forms; the two traditions %s", pieceSame ? "the same twice" : "NOT the same twice",
+                        piecesOk ? "in order and in range"
+                                 : fmt("OUT of order or range (%d out of their age's length, %d out of order, %d out of time, %d velocity, %d degree, %d voice)", badLen, badOrder, badTime, badVel,
+                                           badDeg, badVoice)
+                                           .c_str(),
+                        pieceMin, pieceMax, notesMin, noteTot, formsVary ? "twelve or more" : "FEWER than twelve", tradDiffer ? "differ" : "are the SAME"));
         {   // the two worlds' voices differ
             bool voicesDiffer = okWorlds == 2 && (voices[0].pitch != voices[1].pitch || voices[0].rate != voices[1].rate);
             check("voice: a voice a world, every text's opening spoken in time with its words",
-                  okWorlds == 2 && voiceSame && voiceOk && inventoryOk && speechSame && speechOk && aligned && voicesDiffer,
-                  fmt("%s; %s (felisian %.0f Hz %.1f syl/s, %zu sounds, '%s'; desert %.0f Hz %.1f syl/s, %zu sounds, '%s'); %d texts spoken %s, %.0f-%.0f s (%.0f s in all), %s, %s; the two voices %s",
-                      voiceSame ? "the voice the same twice" : "the voice NOT the same twice", voiceOk && inventoryOk ? "in bounds" : "OUT of bounds", voices[0].pitch, voices[0].rate, voices[0].inventory.size(), voiceLine(voices[0]).c_str(),
-                      voices[1].pitch, voices[1].rate, voices[1].inventory.size(), voiceLine(voices[1]).c_str(), speechN, speechSame ? "the same twice" : "NOT the same twice", speechMin, speechMax, speechTot,
-                      speechOk ? "segments and words in order" : fmt("%d segments and %d words OUT of order", badSeg, badWord).c_str(), aligned ? "aligned at any share" : "NOT aligned across shares", voicesDiffer ? "differ" : "are the SAME"));
+                    okWorlds == 2 && voiceSame && voiceOk && inventoryOk && speechSame && speechOk && aligned && voicesDiffer,
+                    fmt("%s; %s (felisian %.0f Hz %.1f syl/s, %zu sounds, '%s'; desert %.0f Hz %.1f syl/s, %zu sounds, '%s'); %d texts spoken %s, %.0f-%.0f s (%.0f s in all), %s, %s; the two voices "
+                        "%s",
+                            voiceSame ? "the voice the same twice" : "the voice NOT the same twice", voiceOk && inventoryOk ? "in bounds" : "OUT of bounds", voices[0].pitch, voices[0].rate,
+                            voices[0].inventory.size(), voiceLine(voices[0]).c_str(), voices[1].pitch, voices[1].rate, voices[1].inventory.size(), voiceLine(voices[1]).c_str(), speechN,
+                            speechSame ? "the same twice" : "NOT the same twice", speechMin, speechMax, speechTot,
+                            speechOk ? "segments and words in order" : fmt("%d segments and %d words OUT of order", badSeg, badWord).c_str(),
+                            aligned ? "aligned at any share" : "NOT aligned across shares", voicesDiffer ? "differ" : "are the SAME"));
         }
         {   // a shard through the synth: finite, under the ceiling, loud enough, over when the speech is, silent once stopped
             Star s; StarSystem sys; bool rendered = false; int nan = 0, clip = 0; double rms = 0, tailRms = 0, stopRms = 0, secs = 0, peak = 0; bool done = false;
@@ -616,7 +715,17 @@ void unitStory(const Check& check) {
                     while (frames < total) {
                         synth.render(buf.data(), (int)buf.size(), sr, st);
                         bool tail = frames > sr * (S.seconds + 1.5);
-                        for (float v : buf) { if (!std::isfinite(v)) nan++; if (std::fabs(v) >= 0.999f) clip++; peak = std::max(peak, (double)std::fabs(v)); sum += (double)v * v; cnt++; if (tail) { tailSum += (double)v * v; tailCnt++; } }
+                        for (float v : buf) {
+                            if (!std::isfinite(v)) nan++;
+                            if (std::fabs(v) >= 0.999f) clip++;
+                            peak = std::max(peak, (double)std::fabs(v));
+                            sum += (double)v * v;
+                            cnt++;
+                            if (tail) {
+                                tailSum += (double)v * v;
+                                tailCnt++;
+                            }
+                        }
                         frames += (int)buf.size();
                     }
                     done = st.speechDone; rms = std::sqrt(sum / std::max(1L, cnt)); tailRms = std::sqrt(tailSum / std::max(1L, tailCnt));
@@ -628,7 +737,8 @@ void unitStory(const Check& check) {
                 }
             }
             check("voice: a shard through the synth", rendered && nan == 0 && clip < 50 && rms > 0.02 && rms < 0.35 && peak > 0.2 && done && tailRms < 0.005 && stopRms < 1e-6,
-                  fmt("%.1f s rendered: %d non-finite, %d at the ceiling, peak %.2f, rms %.3f, %s, the tail %.4f, after the stop %.6f", secs, nan, clip, peak, rms, done ? "ended on time" : "NOT ended", tailRms, stopRms));
+                    fmt("%.1f s rendered: %d non-finite, %d at the ceiling, peak %.2f, rms %.3f, %s, the tail %.4f, after the stop %.6f", secs, nan, clip, peak, rms,
+                            done ? "ended on time" : "NOT ended", tailRms, stopRms));
         }
         {   // a piece through the synth: finite, under the ceiling, loud enough, over when the piece is, silent once stopped; H-05: one of each age (Aieliaalas
             // II's first piece played at each), each in level, the dearest within a twentieth of real time
@@ -647,7 +757,17 @@ void unitStory(const Check& check) {
                     while (frames < total) {
                         synth.render(buf.data(), (int)buf.size(), sr, st);
                         bool tail = frames > sr * (P.seconds + 2.5);
-                        for (float v : buf) { if (!std::isfinite(v)) nan++; if (std::fabs(v) >= 0.999f) clip++; peak = std::max(peak, (double)std::fabs(v)); sum += (double)v * v; cnt++; if (tail) { tailSum += (double)v * v; tailCnt++; } }
+                        for (float v : buf) {
+                            if (!std::isfinite(v)) nan++;
+                            if (std::fabs(v) >= 0.999f) clip++;
+                            peak = std::max(peak, (double)std::fabs(v));
+                            sum += (double)v * v;
+                            cnt++;
+                            if (tail) {
+                                tailSum += (double)v * v;
+                                tailCnt++;
+                            }
+                        }
                         frames += (int)buf.size();
                     }
                     dearest = std::max(dearest, (nowSec() - t0) / std::max(1.0, (double)frames / sr));
@@ -665,8 +785,10 @@ void unitStory(const Check& check) {
                     rendered++;
                 }
             }
-            check("music: a piece of each age through the synth (C-04, H-05)", rendered == AGE_COUNT && nan == 0 && clip == 0 && quiet == 0 && loud == 0 && notDone == 0 && tails == 0 && stops == 0 && peak < 0.95 && dearest < 0.05,
-                  fmt("%d of %d ages rendered: rms %s; peak %.2f; %d non-finite, %d at the ceiling, %d not ended, %d with a tail, %d not silent once stopped; the dearest %.1f%% of real time", rendered, AGE_COUNT, levels.c_str(), peak, nan, clip, notDone, tails, stops, 100 * dearest));
+            check("music: a piece of each age through the synth (C-04, H-05)",
+                    rendered == AGE_COUNT && nan == 0 && clip == 0 && quiet == 0 && loud == 0 && notDone == 0 && tails == 0 && stops == 0 && peak < 0.95 && dearest < 0.05,
+                    fmt("%d of %d ages rendered: rms %s; peak %.2f; %d non-finite, %d at the ceiling, %d not ended, %d with a tail, %d not silent once stopped; the dearest %.1f%% of real time",
+                            rendered, AGE_COUNT, levels.c_str(), peak, nan, clip, notDone, tails, stops, 100 * dearest));
         }
         int worlds = 0, bad = 0;   // every people's world of the sectors near home: twelve shards each, clean and in length
         for (int64_t sx = 150; sx <= 160 && worlds < 60; sx++) for (int64_t sz = 20; sz <= 80 && worlds < 60; sz++) {
@@ -677,9 +799,15 @@ void unitStory(const Check& check) {
                 if (!g.hasTrait(TR_CIVILISATION)) continue;
                 worlds++;
                 Lore L = loreOf(sys, b, g);
-                for (int i = 0; i < 12; i++) { Shard x = shardOf(sys, b, g, L, i); if (x.music) continue; int nw = shardWords(x.text); if (x.text.find_first_of("{}[]|") != std::string::npos || nw < 6 || nw > 440) bad++; }
+                for (int i = 0; i < 12; i++) {
+                    Shard x = shardOf(sys, b, g, L, i);
+                    if (x.music) continue;
+                    int nw = shardWords(x.text);
+                    if (x.text.find_first_of("{}[]|") != std::string::npos || nw < 6 || nw > 440) bad++;
+                }
             }
         }
-        check("shards: every people's world near home reads clean", worlds >= 10 && bad == 0, fmt("%d worlds of sectors 150-160 x 20-80, %d shards of %d with a mark left or out of length", worlds, bad, worlds * 12));
+        check("shards: every people's world near home reads clean", worlds >= 10 && bad == 0,
+                fmt("%d worlds of sectors 150-160 x 20-80, %d shards of %d with a mark left or out of length", worlds, bad, worlds * 12));
     }
 }

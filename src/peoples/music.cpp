@@ -120,11 +120,49 @@ Timbre clap(Rng& rng, bool sticks) {
 }
 Timbre jingles(Rng& rng) { Timbre t; t.family = TF_JINGLE; t.name = "JINGLES"; t.tone = rng.range(380, 520); t.decay = rng.range(0.1, 0.18); t.gain = 0.2; return t; }
 Timbre bassDrum(Rng& rng, const char* name) { Timbre t; t.family = TF_BASSDRUM; t.name = name; t.tone = rng.range(48, 66); t.decay = rng.range(0.3, 0.5); t.gain = 0.6; return t; }
-Timbre snare(Rng& rng, const char* name, int kind) { Timbre t; t.family = TF_SNARE; t.name = name; t.kind = kind; t.tone = rng.range(160, 240); t.decay = rng.range(0.12, 0.2); t.bright = rng.range(0.8, 1.2); t.gain = 0.55; return t; }
+Timbre snare(Rng& rng, const char* name, int kind) {
+    Timbre t;
+    t.family = TF_SNARE;
+    t.name = name;
+    t.kind = kind;
+    t.tone = rng.range(160, 240);
+    t.decay = rng.range(0.12, 0.2);
+    t.bright = rng.range(0.8, 1.2);
+    t.gain = 0.55;
+    return t;
+}
 Timbre cymbal(Rng& rng, const char* name, double decay) { Timbre t; t.family = TF_CYMBAL; t.name = name; t.tone = rng.range(330, 520); t.decay = decay; t.gain = 0.3; return t; }
-Timbre kick(Rng& rng, const char* name) { Timbre t; t.family = TF_KICK; t.name = name; t.tone = rng.range(44, 58); t.mod = rng.range(110, 170); t.sweep = rng.range(0.02, 0.045); t.decay = rng.range(0.25, 0.45); t.gain = 0.7; return t; }
-Timbre hat(Rng& rng, const char* name, bool open) { Timbre t; t.family = TF_HAT; t.name = name; t.kind = open ? 1 : 0; t.tone = rng.range(330, 470); t.decay = open ? rng.range(0.18, 0.3) : rng.range(0.025, 0.055); t.gain = open ? 0.26 : 0.34; return t; }
-Timbre clickT(Rng& rng, int kind) { Timbre t; t.family = TF_CLICK; t.name = "CLICKS"; t.kind = kind; t.tone = rng.range(1800, 5000); t.decay = kind ? rng.range(0.008, 0.02) : rng.range(0.003, 0.009); t.gain = 0.3; return t; }
+Timbre kick(Rng& rng, const char* name) {
+    Timbre t;
+    t.family = TF_KICK;
+    t.name = name;
+    t.tone = rng.range(44, 58);
+    t.mod = rng.range(110, 170);
+    t.sweep = rng.range(0.02, 0.045);
+    t.decay = rng.range(0.25, 0.45);
+    t.gain = 0.7;
+    return t;
+}
+Timbre hat(Rng& rng, const char* name, bool open) {
+    Timbre t;
+    t.family = TF_HAT;
+    t.name = name;
+    t.kind = open ? 1 : 0;
+    t.tone = rng.range(330, 470);
+    t.decay = open ? rng.range(0.18, 0.3) : rng.range(0.025, 0.055);
+    t.gain = open ? 0.26 : 0.34;
+    return t;
+}
+Timbre clickT(Rng& rng, int kind) {
+    Timbre t;
+    t.family = TF_CLICK;
+    t.name = "CLICKS";
+    t.kind = kind;
+    t.tone = rng.range(1800, 5000);
+    t.decay = kind ? rng.range(0.008, 0.02) : rng.range(0.003, 0.009);
+    t.gain = 0.3;
+    return t;
+}
 Timbre subPulse(Rng& rng) { Timbre t; t.family = TF_SUB; t.name = "A SUB PULSE"; t.tone = rng.range(38, 52); t.decay = rng.range(0.25, 0.55); t.gain = 0.55; return t; }
 Timbre brass(Rng& rng, int type) {   // 0 a bright lead, 1 a mellow middle, 2 the bass
     Timbre t; t.family = TF_BRASS; t.name = "BRASS"; t.kind = type;
@@ -151,7 +189,17 @@ Timbre organ(Rng& rng, int kind, const char* name) {   // 0 a church organ's sto
     t.gain = 0.34;
     return t;
 }
-Timbre musicBox(Rng& rng) { Timbre t; t.family = TF_MUSICBOX; t.name = "A MUSIC BOX"; t.decay = rng.range(0.5, 1.1); t.attack = 0.001; t.mod = rng.range(5.6, 6.6); t.bright = rng.range(0.15, 0.32); t.gain = 0.42; return t; }
+Timbre musicBox(Rng& rng) {
+    Timbre t;
+    t.family = TF_MUSICBOX;
+    t.name = "A MUSIC BOX";
+    t.decay = rng.range(0.5, 1.1);
+    t.attack = 0.001;
+    t.mod = rng.range(5.6, 6.6);
+    t.bright = rng.range(0.15, 0.32);
+    t.gain = 0.42;
+    return t;
+}
 Timbre estring(Rng& rng, int type, const char* name) {   // 0 a lead, overdriven; 1 strummed chords; 2 a bass
     Timbre t; t.family = TF_ESTRING; t.name = name; t.kind = type;
     t.index = type == 2 ? 0 : (type == 0 ? rng.range(2.0, 5.0) : rng.range(1.0, 2.2));
@@ -184,15 +232,57 @@ Timbre synth(Rng& rng, int type, const char* name) {   // 0 a lead, 1 a bass, 2 
     t.gain = type == 1 ? 0.3 : (type == 3 ? 0.3 : (type == 2 ? 0.34 : 0.26));
     return t;
 }
-Timbre pad(Rng& rng, const char* name) { Timbre t; t.family = TF_PAD; t.name = name; t.copies = 3; t.detune = rng.range(6, 14); t.bright = rng.range(2.5, 5); t.attack = rng.range(0.4, 1.1); t.decay = 1; t.sustain = 1; t.release = rng.range(0.8, 1.6); t.vibRate = rng.range(0.1, 0.3); t.gain = 0.2; return t; }
-Timbre swarm(Rng& rng) { Timbre t; t.family = TF_SWARM; t.name = "A SWARM OF TONES"; t.copies = 10; t.detune = rng.range(18, 50); t.attack = rng.range(0.3, 0.9); t.decay = 1; t.sustain = 1; t.release = rng.range(0.8, 1.5); t.vibRate = rng.range(0.08, 0.35); t.bright = rng.range(0.1, 0.4); t.gain = 0.55; return t; }
+Timbre pad(Rng& rng, const char* name) {
+    Timbre t;
+    t.family = TF_PAD;
+    t.name = name;
+    t.copies = 3;
+    t.detune = rng.range(6, 14);
+    t.bright = rng.range(2.5, 5);
+    t.attack = rng.range(0.4, 1.1);
+    t.decay = 1;
+    t.sustain = 1;
+    t.release = rng.range(0.8, 1.6);
+    t.vibRate = rng.range(0.1, 0.3);
+    t.gain = 0.2;
+    return t;
+}
+Timbre swarm(Rng& rng) {
+    Timbre t;
+    t.family = TF_SWARM;
+    t.name = "A SWARM OF TONES";
+    t.copies = 10;
+    t.detune = rng.range(18, 50);
+    t.attack = rng.range(0.3, 0.9);
+    t.decay = 1;
+    t.sustain = 1;
+    t.release = rng.range(0.8, 1.5);
+    t.vibRate = rng.range(0.08, 0.35);
+    t.bright = rng.range(0.1, 0.4);
+    t.gain = 0.55;
+    return t;
+}
 Timbre synVoice(Rng& rng, const Voice& V) {
     Timbre t = singer(rng, V, 1, "A SYNTHETIC VOICE"); t.family = TF_SYNVOICE;
     t.vibDepth = 0; t.index = 0; t.breath = 0; t.tone = rng.range(4500, 9000); t.vibRate = rng.range(40, 110); t.sweep = rng.range(0.1, 0.35);
     t.attack = 0.012; t.release = 0.05; t.gain = 0.55;
     return t;
 }
-Timbre field(Rng& rng, int type, const char* name) { Timbre t; t.family = TF_FIELD; t.name = name; t.kind = type; t.tone = rng.range(0.15, 1.1); t.attack = rng.range(3, 6); t.decay = 1; t.sustain = 1; t.release = rng.range(3.5, 5.5); t.vibRate = rng.range(0.03, 0.09); t.bright = type == 1 ? rng.range(0.3, 0.6) : rng.range(0.05, 0.25); t.gain = 0.16; return t; }
+Timbre field(Rng& rng, int type, const char* name) {
+    Timbre t;
+    t.family = TF_FIELD;
+    t.name = name;
+    t.kind = type;
+    t.tone = rng.range(0.15, 1.1);
+    t.attack = rng.range(3, 6);
+    t.decay = 1;
+    t.sustain = 1;
+    t.release = rng.range(3.5, 5.5);
+    t.vibRate = rng.range(0.03, 0.09);
+    t.bright = type == 1 ? rng.range(0.3, 0.6) : rng.range(0.05, 0.25);
+    t.gain = 0.16;
+    return t;
+}
 
 // a medieval drone: a bag's reed or a wheel's bow, held
 Timbre droneOf(Rng& rng, const bool* likes) {
@@ -266,7 +356,14 @@ Ensemble makeEnsemble(const Tradition& T, int age, Rng& rng, const Voice& V, int
                     break;
                 }
                 default: {   // free reeds in a box of bellows: the tune, the chords and the bass from one instrument, two reeds a note beating (the musette's waver)
-                    Timbre r = makeTimbre(TF_REED, rng); r.name = "FREE REEDS"; r.copies = 2; r.detune = rng.range(10, 26); r.attack = rng.range(0.03, 0.07); r.sustain = 0.9; r.vibDepth = 0; r.gain = 0.24;
+                    Timbre r = makeTimbre(TF_REED, rng);
+                    r.name = "FREE REEDS";
+                    r.copies = 2;
+                    r.detune = rng.range(10, 26);
+                    r.attack = rng.range(0.03, 0.07);
+                    r.sustain = 0.9;
+                    r.vibDepth = 0;
+                    r.gain = 0.24;
                     add(r, MR_LEAD); add(r, MR_SECOND); Timbre rc = r; rc.gain *= 0.8; add(rc, MR_CHORDS); Timbre rb = r; rb.copies = 1; rb.gain *= 1.3; add(rb, MR_BASS);
                     if (rng.chance(0.6)) kit(skin(T.drum, 0, "A FRAME DRUM"), KR_LOW);
                     break;
@@ -310,10 +407,29 @@ Ensemble makeEnsemble(const Tradition& T, int age, Rng& rng, const Voice& V, int
         case AGE_FUTURISTIC: {   // a synthetic voice or a pure tone to lead; glass, a pluck or struck metal for the cells; a swarm or a choir of synthetic voices
             if (rng.chance(0.62)) add(synVoice(rng, V), MR_LEAD);
             else { Timbre p = synth(rng, 0, "A PURE TONE"); p.mod = 2; p.copies = 1; p.vibDepth = 0; p.gain = 0.3; add(p, MR_LEAD); }
-            auto cellVoice = [&]() { const double u = rng.uni(); if (u < 0.5) return ekeys(rng, true, "STRUCK GLASS"); if (u < 0.8) return synth(rng, 2, "A SYNTHESISER"); Timbre m = makeTimbre(TF_METAL, rng); m.name = "STRUCK METAL"; m.decay = rng.range(0.4, 1.0); m.release = 0.4; m.gain = 0.3; return m; };
+            auto cellVoice = [&]() {
+                const double u = rng.uni();
+                if (u < 0.5) return ekeys(rng, true, "STRUCK GLASS");
+                if (u < 0.8) return synth(rng, 2, "A SYNTHESISER");
+                Timbre m = makeTimbre(TF_METAL, rng);
+                m.name = "STRUCK METAL";
+                m.decay = rng.range(0.4, 1.0);
+                m.release = 0.4;
+                m.gain = 0.3;
+                return m;
+            };
             add(cellVoice(), MR_SECOND);
             if (rng.chance(0.7)) add(swarm(rng), MR_SWARM);
-            else { Timbre c = synVoice(rng, V); c.name = "SYNTHETIC VOICES"; c.copies = 3; c.detune = rng.range(6, 16); c.attack = rng.range(0.3, 0.8); c.release = rng.range(0.6, 1.2); c.gain = 0.42; add(c, MR_SWARM); }
+            else {
+                Timbre c = synVoice(rng, V);
+                c.name = "SYNTHETIC VOICES";
+                c.copies = 3;
+                c.detune = rng.range(6, 16);
+                c.attack = rng.range(0.3, 0.8);
+                c.release = rng.range(0.6, 1.2);
+                c.gain = 0.42;
+                add(c, MR_SWARM);
+            }
             if (rng.chance(0.65)) add(pad(rng, "A PAD"), MR_CHORDS);
             add(synth(rng, 3, "A SUB TONE"), MR_BASS);
             add(cellVoice(), MR_ALT);
@@ -324,8 +440,18 @@ Ensemble makeEnsemble(const Tradition& T, int age, Rng& rng, const Voice& V, int
         default: {   // the far future: two fields (full, hollow or of bell-like tones), under them a deep tone or a hum, over them glints or a far choir of swarming tones
             add(field(rng, rng.irange(3), "A FIELD OF TONES"), MR_LEAD);
             add(field(rng, rng.irange(3), "A FIELD OF TONES"), MR_SECOND);
-            if (rng.chance(0.7)) { Timbre d = field(rng, 0, "A DEEP TONE"); d.gain = 0.2; d.bright = 0.08; d.tone = rng.range(0.08, 0.25); add(d, MR_BASS); }
-            else { Timbre h = bullroarer(rng); h.name = "A HUM"; h.tone = rng.range(42, 70); h.vibRate = rng.range(0.03, 0.08); h.vibDepth = rng.range(0.05, 0.15); h.attack = 4; h.release = 4; h.gain = 0.28; add(h, MR_BASS); }
+            if (rng.chance(0.7)) { Timbre d = field(rng, 0, "A DEEP TONE"); d.gain = 0.2; d.bright = 0.08; d.tone = rng.range(0.08, 0.25); add(d, MR_BASS);
+            } else {
+                Timbre h = bullroarer(rng);
+                h.name = "A HUM";
+                h.tone = rng.range(42, 70);
+                h.vibRate = rng.range(0.03, 0.08);
+                h.vibDepth = rng.range(0.05, 0.15);
+                h.attack = 4;
+                h.release = 4;
+                h.gain = 0.28;
+                add(h, MR_BASS);
+            }
             if (rng.chance(0.6)) { Timbre gl = makeTimbre(TF_METAL, rng); gl.name = "GLINTS"; gl.decay = rng.range(3, 6); gl.release = 2; gl.gain = 0.09; add(gl, MR_BELL); }
             else { Timbre c = swarm(rng); c.name = "A FAR CHOIR"; c.attack = rng.range(1.5, 3.0); c.release = rng.range(2, 3.5); c.detune = rng.range(8, 20); c.gain = 0.22; add(c, MR_BELL); }
             E.tempo = 1; E.drift = 0;
@@ -472,7 +598,8 @@ Tradition traditionOf(const BodyGen& g, const Lore& L) {
             cents.push_back(0);
             for (int i = 0; i < n - 1; i++) cents.push_back(steps[i] * perCents / T.division);
         } else {
-            static const double JI[19] = {16.0 / 15, 10.0 / 9, 9.0 / 8, 8.0 / 7, 7.0 / 6, 6.0 / 5, 5.0 / 4, 9.0 / 7, 4.0 / 3, 11.0 / 8, 7.0 / 5, 3.0 / 2, 14.0 / 9, 8.0 / 5, 5.0 / 3, 7.0 / 4, 16.0 / 9, 9.0 / 5, 15.0 / 8};
+            static const double JI[19] = {
+                    16.0 / 15, 10.0 / 9, 9.0 / 8, 8.0 / 7, 7.0 / 6, 6.0 / 5, 5.0 / 4, 9.0 / 7, 4.0 / 3, 11.0 / 8, 7.0 / 5, 3.0 / 2, 14.0 / 9, 8.0 / 5, 5.0 / 3, 7.0 / 4, 16.0 / 9, 9.0 / 5, 15.0 / 8};
             std::vector<double> pool;
             for (double r : JI) if (r < T.period * 0.98) pool.push_back(r);
             if (twelfth) { const double extra[8] = {2.0, 9.0 / 4, 7.0 / 3, 5.0 / 2, 18.0 / 7, 8.0 / 3, 11.0 / 4, 25.0 / 9}; for (double r : extra) pool.push_back(r); }
@@ -536,7 +663,15 @@ Tradition traditionOf(const BodyGen& g, const Lore& L) {
         bool have[5] = {false, false, false, false, false};
         for (const std::string& v : tg.vows) {
             if (v.empty()) continue;
-            switch (std::tolower((unsigned char)v[0])) { case 'a': have[0] = true; break; case 'e': have[1] = true; break; case 'i': case 'y': have[2] = true; break; case 'o': have[3] = true; break; case 'u': have[4] = true; break; default: break; }
+            switch (std::tolower((unsigned char)v[0])) {
+                case 'a': have[0] = true; break;
+                case 'e': have[1] = true; break;
+                case 'i':
+                case 'y': have[2] = true; break;
+                case 'o': have[3] = true; break;
+                case 'u': have[4] = true; break;
+                default: break;
+            }
         }
         for (int k = 0; k < 5; k++) if (have[k]) T.vowels.push_back(k);
         if (T.vowels.empty()) T.vowels = {0, 3, 4};
@@ -572,9 +707,15 @@ std::string cycleLine(const Tradition& T, const Piece& P) {
     if (P.age != AGE_FAR_FUTURE) return cycleLine(T, P.bpm);
     int lo = 1 << 20, hi = -(1 << 20); std::vector<int> seen;
     const int n = std::max(1, (int)T.scale.size());
-    for (const Note& nt : P.notes) if (nt.voice >= 0) { lo = std::min(lo, nt.degree); hi = std::max(hi, nt.degree); if (std::find(seen.begin(), seen.end(), nt.degree) == seen.end()) seen.push_back(nt.degree); }
+    for (const Note& nt : P.notes)
+        if (nt.voice >= 0) {
+            lo = std::min(lo, nt.degree);
+            hi = std::max(hi, nt.degree);
+            if (std::find(seen.begin(), seen.end(), nt.degree) == seen.end()) seen.push_back(nt.degree);
+        }
     const int periods = hi >= lo ? (hi - lo) / n + 1 : 1;
-    char buf[96]; snprintf(buf, sizeof buf, "NO BEAT: %d TONES OVER %d %s", (int)seen.size(), periods, T.period > 2.5 ? (periods == 1 ? "TWELFTH" : "TWELFTHS") : (periods == 1 ? "OCTAVE" : "OCTAVES"));
+    char buf[96];
+    snprintf(buf, sizeof buf, "NO BEAT: %d TONES OVER %d %s", (int)seen.size(), periods, T.period > 2.5 ? (periods == 1 ? "TWELFTH" : "TWELFTHS") : (periods == 1 ? "OCTAVE" : "OCTAVES"));
     return buf;
 }
 namespace {
@@ -600,7 +741,10 @@ std::string timbresLine(const Tradition& T, bool drum) {
 std::string timbresLine(const Tradition& T, const Piece& P) {
     const Ensemble& E = pieceEnsemble(T, P);
     std::vector<int> used(E.voices.size(), 0), kitUsed(E.kit.size(), 0);
-    for (const Note& nt : P.notes) { if (nt.voice >= 0 && nt.voice < (int)used.size()) used[nt.voice]++; else if (nt.voice < 0 && nt.degree >= 0 && nt.degree < (int)kitUsed.size()) kitUsed[nt.degree]++; }
+    for (const Note& nt : P.notes) {
+        if (nt.voice >= 0 && nt.voice < (int)used.size()) used[nt.voice]++;
+        else if (nt.voice < 0 && nt.degree >= 0 && nt.degree < (int)kitUsed.size()) kitUsed[nt.degree]++;
+    }
     std::vector<std::pair<int, std::string>> parts;   // by how much each plays, the most first; a name once
     auto put = [&](int count, const std::string& name) { for (auto& p : parts) if (p.second == name) { p.first += count; return; } parts.push_back({count, name}); };
     for (size_t i = 0; i < E.voices.size(); i++) if (used[i]) put(used[i] + 100000, E.voices[i].name);
@@ -614,7 +758,10 @@ std::string ensembleLine(const Ensemble& E) {
     static const char* const KROLE[KR_COUNT] = {"low", "high", "tuned", "shake", "back", "tick", "open", "crash", "sub"};
     std::string s;
     for (size_t i = 0; i < E.voices.size(); i++) { if (i) s += ", "; s += std::string(ROLE[clampi(E.role[i], 0, MR_COUNT - 1)]) + " " + E.voices[i].name; }
-    if (!E.kit.empty()) { s += "; kit:"; for (size_t i = 0; i < E.kit.size(); i++) s += std::string(i ? ", " : " ") + KROLE[clampi(E.kitRole[i], 0, KR_COUNT - 1)] + " " + TIMBRE_FAMILY_NAMES[E.kit[i].family]; }
+    if (!E.kit.empty()) {
+        s += "; kit:";
+        for (size_t i = 0; i < E.kit.size(); i++) s += std::string(i ? ", " : " ") + KROLE[clampi(E.kitRole[i], 0, KR_COUNT - 1)] + " " + TIMBRE_FAMILY_NAMES[E.kit[i].family];
+    }
     return s;
 }
 

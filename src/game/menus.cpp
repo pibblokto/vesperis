@@ -15,11 +15,11 @@ namespace {
 const int SETTINGS_ITEMS = 19;   // plus BACK (N5-05 added KEY BINDINGS)
 // N5-05: the actions a player can rebind (logical key, label)
 struct KeyAction { int key; const char* label; };
-static const KeyAction KEY_ACTIONS[] = {
-    {KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"}, {KEY_LEFT_SHIFT, "SPRINT"},
-    {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"}, {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"},
-    {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"}, {KEY_R, "AIM / SCANNER"},
-    {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"}, {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
+static const KeyAction KEY_ACTIONS[] = {{KEY_W, "FORWARD / DRIVE"}, {KEY_S, "BACK / REVERSE"}, {KEY_A, "LEFT / STEER"}, {KEY_D, "RIGHT / STEER"}, {KEY_SPACE, "JUMP / BRAKE"},
+        {KEY_LEFT_SHIFT, "SPRINT"}, {KEY_E, "USE / VEHICLE"}, {KEY_Q, "BOARD CAPSULE"}, {KEY_B, "BUGGY / SIGNAL RADAR"}, {KEY_C, "CROUCH / CLOUDS"}, {KEY_Z, "STAND TALL / TELESCOPE"},
+        {KEY_V, "VIEW / VISION"}, {KEY_X, "CREATURES"}, {KEY_M, "WAYPOINT"}, {KEY_N, "SECTOR MAP / NEXT STAR"}, {KEY_K, "RECALL CAPSULE"}, {KEY_I, "DATA SHEET"}, {KEY_T, "WARP / ALMANAC"},
+        {KEY_R, "AIM / SCANNER"}, {KEY_L, "TARGET / MARK"}, {KEY_TAB, "LIST / READINGS"}, {KEY_O, "ORBIT / CHASE"}, {KEY_F, "FIELD AMP. / DRONE"}, {KEY_G, "GUIDE"}, {KEY_J, "LOG"}, {KEY_H, "HELP"},
+        {KEY_P, "SCREENSHOT"}, {KEY_U, "SHIP LIGHT / LAMP"}};
 const int KEY_ACTION_COUNT = (int)(sizeof(KEY_ACTIONS) / sizeof(KEY_ACTIONS[0]));
 
 }
@@ -109,7 +109,8 @@ void Game::renderHelp() {
         "C++ AND RAYLIB.", "",
         "ANY KEY: BACK"};
     const char* const* page = helpPage == 0 ? page0 : (helpPage == 1 ? page1 : (helpPage == 3 ? page3 : page2));
-    int n = helpPage == 0 ? (int)(sizeof(page0) / sizeof(page0[0])) : (helpPage == 1 ? (int)(sizeof(page1) / sizeof(page1[0])) : (helpPage == 3 ? (int)(sizeof(page3) / sizeof(page3[0])) : (int)(sizeof(page2) / sizeof(page2[0]))));
+    int n = helpPage == 0 ? (int)(sizeof(page0) / sizeof(page0[0]))
+                          : (helpPage == 1 ? (int)(sizeof(page1) / sizeof(page1[0])) : (helpPage == 3 ? (int)(sizeof(page3) / sizeof(page3[0])) : (int)(sizeof(page2) / sizeof(page2[0]))));
     for (int i = 0; i < n; i++) {
         if (!page[i][0]) continue;
         drawText(canvas, 10, 8 + i * 9, page[i], i == 0 ? HUD_AMBER : (i == n - 1 ? HUD_DIM : HUD_GREEN));
@@ -134,7 +135,8 @@ void Game::renderMenu() {
 
 void Game::adjustSetting(int item, int dir) {
     Settings& s = settings;
-    if (item == 18) { keysSel = 0; keysCapture = false; keysPage = padInUse() ? 1 : 0; keysReturn = GameState::SETTINGS; padUI.capture = -1; state = GameState::KEYS; return; }   // N5-05; R-418: the controller's page first when a controller is in use
+    // N5-05; R-418: the controller's page first when a controller is in use
+    if (item == 18) { keysSel = 0; keysCapture = false; keysPage = padInUse() ? 1 : 0; keysReturn = GameState::SETTINGS; padUI.capture = -1; state = GameState::KEYS; return; }
     switch (item) {
         case 0: s.mouseSensitivity += 0.1 * dir; break;
         case 1: s.invertY = !s.invertY; break;
@@ -231,13 +233,13 @@ void Game::renderSettings() {
     const int top = 6, bottom = UH - 6, itemY0 = top + 14, rowH = 8;   // 18 items + BACK fit 200 rows at an 8 px pitch (M6-01)
     drawPanel(canvas, 30, top, UW - 30, bottom, rgb(0, 0, 0), 215);
     drawTextCentered(canvas, UW / 2, top + 8, "SETTINGS", HUD_AMBER);
-    std::string values[SETTINGS_ITEMS] = {
-        fmt("%.1f", s.mouseSensitivity), s.invertY ? "ON" : "OFF", fmt("%.0f%c", s.fovDeg, CH_DEGREE),
-        fmt("%.0f%%", s.masterVolume * 100), s.scanlines ? "ON" : "OFF", fmt("%dX  (%dX%d)", s.windowScale, 320 * s.windowScale, 200 * s.windowScale),
-        fmt("%dX  (%dX%d)", s.renderScale, 320 * s.renderScale, 200 * s.renderScale), s.mushMode == 0 ? "CLASSIC" : (s.mushMode == 1 ? "SOFT" : (s.mushMode == 2 ? "SHARP" : "FINE")),
-        s.shadingMode == 0 ? "FLAT CELLS" : (s.shadingMode == 1 ? "STEPPED" : "SMOOTH"), s.crt ? "ON" : "OFF", s.bloom ? "ON" : "OFF", s.sprintToggle ? "TOGGLE" : "HOLD", fmt("X%.2f", s.sprintSpeed), s.cabin ? "CABIN" : "COCKPIT", s.clockMode ? "REAL TIME (UTC)" : "GAME TIME",
-        s.aspect ? "4:3 (TALL PIXELS)" : "SQUARE PIXELS", s.dither ? "ON" : "OFF", s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"), "ENTER TO OPEN"};
-    const char* const names[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER", "TERRAIN SHADING", "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
+    std::string values[SETTINGS_ITEMS] = {fmt("%.1f", s.mouseSensitivity), s.invertY ? "ON" : "OFF", fmt("%.0f%c", s.fovDeg, CH_DEGREE), fmt("%.0f%%", s.masterVolume * 100),
+            s.scanlines ? "ON" : "OFF", fmt("%dX  (%dX%d)", s.windowScale, 320 * s.windowScale, 200 * s.windowScale), fmt("%dX  (%dX%d)", s.renderScale, 320 * s.renderScale, 200 * s.renderScale),
+            s.mushMode == 0 ? "CLASSIC" : (s.mushMode == 1 ? "SOFT" : (s.mushMode == 2 ? "SHARP" : "FINE")), s.shadingMode == 0 ? "FLAT CELLS" : (s.shadingMode == 1 ? "STEPPED" : "SMOOTH"),
+            s.crt ? "ON" : "OFF", s.bloom ? "ON" : "OFF", s.sprintToggle ? "TOGGLE" : "HOLD", fmt("X%.2f", s.sprintSpeed), s.cabin ? "CABIN" : "COCKPIT", s.clockMode ? "REAL TIME (UTC)" : "GAME TIME",
+            s.aspect ? "4:3 (TALL PIXELS)" : "SQUARE PIXELS", s.dither ? "ON" : "OFF", s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"), "ENTER TO OPEN"};
+    const char* const names[SETTINGS_ITEMS] = {"MOUSE SENSITIVITY", "INVERT MOUSE Y", "FIELD OF VIEW", "MASTER VOLUME", "SCANLINES", "WINDOW SIZE", "RENDER SCALE", "MUSH FILTER", "TERRAIN SHADING",
+            "CRT SHADER", "BLOOM", "SPRINT KEY", "SPRINT SPEED", "SHIP VIEW", "CLOCK", "ASPECT", "DITHER", "HUD COLOUR", "CONTROLS"};
     for (int i = 0; i <= SETTINGS_ITEMS; i++) {
         int y = itemY0 + i * rowH;
         bool sel = i == settingsSel;

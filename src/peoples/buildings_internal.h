@@ -100,7 +100,11 @@ struct Gen {
         return out.back();
     }
     Form& box(double lx, double lz, double dh, double hx, double hz, double y0, double y1, int slot, int mat, int part = 0) { return add(FK_BOX, 0, lx, lz, dh, hx, hz, y0, y1, slot, mat, part); }
-    Form& lathe(int sub, double lx, double lz, double r, double y0, double y1, int slot, int mat, int sides = 0) { Form& e = add(FK_LATHE, sub, lx, lz, 0, r, r, y0, y1, slot, mat); e.sides = sides; return e; }
+    Form& lathe(int sub, double lx, double lz, double r, double y0, double y1, int slot, int mat, int sides = 0) {
+        Form& e = add(FK_LATHE, sub, lx, lz, 0, r, r, y0, y1, slot, mat);
+        e.sides = sides;
+        return e;
+    }
     // a post that rots: whole, a stump, then its hole (a dark ring of soil, at the nearest level only)
     void post(double lx, double lz, double h, double r, int k) {
         double d = Dk(MT_TIMBER, k);

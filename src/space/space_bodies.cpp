@@ -196,7 +196,11 @@ void SpaceRenderer::drawStrippedTail(Framebuffer& fb, const SpaceContext& c, int
         double lm[64], run = 0;
         for (int k = 0; k < 64; k++) { const uint8_t* q = &fb.pal[(bank * 64 + k) * 3]; run = std::max(run, 0.2126 * q[0] + 0.7152 * q[1] + 0.0722 * q[2]); lm[k] = run; }
         intenLum.resize(INTEN_MASK + 1);
-        for (int i = 0; i <= INTEN_MASK; i++) { const double sh = std::min(63.0, i / (double)INTEN_PER_SHADE); const int k = std::min(62, (int)sh); intenLum[i] = (float)(lm[k] + (lm[k + 1] - lm[k]) * (sh - k)); }
+        for (int i = 0; i <= INTEN_MASK; i++) {
+            const double sh = std::min(63.0, i / (double)INTEN_PER_SHADE);
+            const int k = std::min(62, (int)sh);
+            intenLum[i] = (float)(lm[k] + (lm[k + 1] - lm[k]) * (sh - k));
+        }
         lumInten.resize(1025);
         for (int j = 0, k = 0; j <= 1024; j++) {
             const double L = j * (255.0 / 1024);

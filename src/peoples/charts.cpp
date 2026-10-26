@@ -298,7 +298,14 @@ void chartMarksOf(const StarSystem& sys0, const Body& b0, const BodyGen& g, std:
     size_t hi = 0, ni = 0, si = 0;
     std::vector<ChartMark> quiet;   // the peoples near enough to be seen among their bright stars, for a chart drawn before their radio
     for (const ChartMark& m : near) quiet.push_back(m);
-    for (const ChartMark& m : heard) for (int k = 0; k < (int)sky.size() && k < CHART_NEAR_CANDIDATES; k++) if (sky[k].star.seed == m.star.seed) { ChartMark q = m; q.how = 1; quiet.push_back(q); break; }
+    for (const ChartMark& m : heard)
+        for (int k = 0; k < (int)sky.size() && k < CHART_NEAR_CANDIDATES; k++)
+            if (sky[k].star.seed == m.star.seed) {
+                ChartMark q = m;
+                q.how = 1;
+                quiet.push_back(q);
+                break;
+            }
     std::sort(quiet.begin(), quiet.end(), [](const ChartMark& a, const ChartMark& c) { return a.ly < c.ly; });
     size_t qi = 0;
     auto takePeople = [&](int turn, bool hear) {   // the heard and the near in turns, whichever is left; before their radio the near alone
@@ -311,7 +318,19 @@ void chartMarksOf(const StarSystem& sys0, const Body& b0, const BodyGen& g, std:
         }
         return false;
     };
-    auto takeBright = [&]() { for (; si < sky.size(); si++) { ChartMark m; m.star = sky[si].star; m.how = 0; m.ly = length(sky[si].star.pos - home.pos) / SECTOR_KM; if (take(m)) { si++; return true; } } return false; };
+    auto takeBright = [&]() {
+        for (; si < sky.size(); si++) {
+            ChartMark m;
+            m.star = sky[si].star;
+            m.how = 0;
+            m.ly = length(sky[si].star.pos - home.pos) / SECTOR_KM;
+            if (take(m)) {
+                si++;
+                return true;
+            }
+        }
+        return false;
+    };
     uint64_t coin = mix64(g.seed ^ 0xC4A29ULL);
     int jj = 0, farK = 0;   // the sky's charts in C-10's order; the far future's in their own
     for (int j = 0; j < count; j++) {
@@ -547,12 +566,18 @@ bool chartOf(const StarSystem& sys0, const Body& b0, const BodyGen& g0, const Lo
         };
         std::vector<int> dest;
         dest.push_back(starOf(out.mark.star)); out.markStar = dest[0]; out.stars[dest[0]].mark = true;
-        for (const ChartMark& m : L.marks) { if ((int)dest.size() >= 5) break; if (m.how == 3 || m.ly > 30) continue; int k = starOf(m.star); if (std::find(dest.begin(), dest.end(), k) == dest.end()) dest.push_back(k); }
+        for (const ChartMark& m : L.marks) {
+            if ((int)dest.size() >= 5) break;
+            if (m.how == 3 || m.ly > 30) continue;
+            int k = starOf(m.star);
+            if (std::find(dest.begin(), dest.end(), k) == dest.end()) dest.push_back(k);
+        }
         {   // the nearest stars as the first crossings
             std::vector<std::pair<double, int>> nearest;
             for (size_t k = 1; k < out.stars.size(); k++) if (out.stars[k].ly <= CHART_MAP_LY) nearest.push_back({out.stars[k].ly, (int)k});
             std::sort(nearest.begin(), nearest.end());
-            for (size_t i = 0; i < nearest.size() && (int)dest.size() < 6 && i < 4; i++) if (std::find(dest.begin(), dest.end(), nearest[i].second) == dest.end() && rs.chance(0.7)) dest.push_back(nearest[i].second);
+            for (size_t i = 0; i < nearest.size() && (int)dest.size() < 6 && i < 4; i++)
+                if (std::find(dest.begin(), dest.end(), nearest[i].second) == dest.end() && rs.chance(0.7)) dest.push_back(nearest[i].second);
         }
         std::vector<std::string> names;
         std::set<std::string> heads;
@@ -633,7 +658,10 @@ bool chartOf(const StarSystem& sys0, const Body& b0, const BodyGen& g0, const Lo
             if (out.style == CHS_ASTROLABE) {
                 const double tilt = std::fabs(b.axialTilt);
                 addCircle(out, CC_EQUATOR, 0, b.spinAxis, b.ref0, b.ref1, 0, 0, TAU, 180);
-                if (tilt > 2 * DEG && tilt < 80 * DEG) { addCircle(out, CC_TROPIC, 1, b.spinAxis, b.ref0, b.ref1, tilt, 0, TAU, 180); addCircle(out, CC_TROPIC, -1, b.spinAxis, b.ref0, b.ref1, -tilt, 0, TAU, 180); }
+                if (tilt > 2 * DEG && tilt < 80 * DEG) {
+                    addCircle(out, CC_TROPIC, 1, b.spinAxis, b.ref0, b.ref1, tilt, 0, TAU, 180);
+                    addCircle(out, CC_TROPIC, -1, b.spinAxis, b.ref0, b.ref1, -tilt, 0, TAU, 180);
+                }
             }
             addWanderers(out, sys, b);
             break;
@@ -657,13 +685,29 @@ bool chartOf(const StarSystem& sys0, const Body& b0, const BodyGen& g0, const Lo
             out.magStep = STEPS[ru.irange(4)];
             out.plate = 1 + rs.irange(800);
             double top = 0; for (const ChartStar& cs : out.stars) top = std::max(top, cs.bright);
-            for (ChartStar& cs : out.stars) { cs.mag = cs.bright > 0 && top > 0 ? std::log(top / cs.bright) / std::log(out.magStep) : 0; out.magLimit = std::max(out.magLimit, (int)std::ceil(cs.mag)); }   // the field's own stars: a far people heard is fainter than the survey went
+            for (ChartStar& cs : out.stars) {
+                cs.mag = cs.bright > 0 && top > 0 ? std::log(top / cs.bright) / std::log(out.magStep) : 0;
+                out.magLimit = std::max(out.magLimit, (int)std::ceil(cs.mag));
+            }   // the field's own stars: a far people heard is fainter than the survey went
             for (const ChartMark& m : L.marks) {
                 if (m.how != 2) continue;
                 const Vec3 d = normalize(m.star.pos - out.from);
                 double x, y; if (!chartProject(out, d, x, y)) continue;
                 int k = -1; for (size_t i = 0; i < out.stars.size(); i++) if (out.stars[i].star.seed == m.star.seed) k = (int)i;
-                if (k < 0) { ChartStar cs; cs.star = m.star; cs.dir = d; cs.ang = std::acos(clampd(dot(d, out.centre), -1, 1)); cs.x = x; cs.y = y; cs.ly = m.ly; double d2 = m.ly * m.ly; cs.bright = m.star.luminosity / std::max(d2, 1e-6); cs.mag = top > 0 ? std::log(top / std::max(cs.bright, 1e-12)) / std::log(out.magStep) : 0; out.stars.push_back(cs); k = (int)out.stars.size() - 1; }
+                if (k < 0) {
+                    ChartStar cs;
+                    cs.star = m.star;
+                    cs.dir = d;
+                    cs.ang = std::acos(clampd(dot(d, out.centre), -1, 1));
+                    cs.x = x;
+                    cs.y = y;
+                    cs.ly = m.ly;
+                    double d2 = m.ly * m.ly;
+                    cs.bright = m.star.luminosity / std::max(d2, 1e-6);
+                    cs.mag = top > 0 ? std::log(top / std::max(cs.bright, 1e-12)) / std::log(out.magStep) : 0;
+                    out.stars.push_back(cs);
+                    k = (int)out.stars.size() - 1;
+                }
                 if (!out.stars[k].heard) { out.stars[k].heard = true; out.heardN++; }
             }
             break;

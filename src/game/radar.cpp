@@ -63,7 +63,15 @@ void Game::radarOff() {
     radar.under = -1; radar.rise.on = false; radar.nothingT = 0;
     radarWordStop();
     audio.radar = 0; audio.radarSignal = 0; audio.radarKind = -1; audio.radarDrive = 0;
-    audio.radarGainT = 0; audio.radarSky = 0; audio.radarWear = 0; audio.radarGhost = 0; audio.radarAge = -1; audio.radarKind2 = -1; audio.radarSignal2 = 0; audio.radarHet = 0; audio.radarIntermod = 0;
+    audio.radarGainT = 0;
+    audio.radarSky = 0;
+    audio.radarWear = 0;
+    audio.radarGhost = 0;
+    audio.radarAge = -1;
+    audio.radarKind2 = -1;
+    audio.radarSignal2 = 0;
+    audio.radarHet = 0;
+    audio.radarIntermod = 0;
 }
 
 // D-03: a drifter's voice off the camera: the cabin's radio while the ship is at a drifter, the suit's on its ground (each frame after the
@@ -90,7 +98,12 @@ void Game::darkRadio() {
     const bool ground = state == GameState::SURFACE || (state != GameState::SPACE && surf.valid && returnState == GameState::SURFACE);
     const bool playing = player.playing >= 0 && !player.held && !player.paused;   // lower under the ship's player
     audio.radar = (ground ? RADIO_SUIT_LEVEL : RADIO_CABIN_LEVEL) * (playing ? 0.35 : 1.0); audio.radarSet = ground ? RADIO_SUIT : RADIO_CABIN;
-    audio.radarSignal = 0.9; audio.radarKind = SIG_ROGUE; audio.radarSeed = sys.star.seed; audio.radarVoice = darkRadioBeacon >= 0 ? darkRadioBeacon : -1; audio.radarRogue = darkRadioVoice; audio.radarPulseHz = 1;
+    audio.radarSignal = 0.9;
+    audio.radarKind = SIG_ROGUE;
+    audio.radarSeed = sys.star.seed;
+    audio.radarVoice = darkRadioBeacon >= 0 ? darkRadioBeacon : -1;
+    audio.radarRogue = darkRadioVoice;
+    audio.radarPulseHz = 1;
     audio.radarGainT = 0; audio.radarSky = 0; audio.radarWear = 0; audio.radarGhost = 0; audio.radarAge = -1; audio.radarDrive = 0;
     audio.radarKind2 = -1; audio.radarSignal2 = 0; audio.radarHet = 0; audio.radarIntermod = 0;
     darkRadioOn = true;
@@ -480,7 +493,8 @@ bool Game::updateRadar(const Input& in, double realDt) {
         r.awayT += realDt; r.contentT += realDt;
         if (r.awayT > 2.0 || (sig && sig->kind != SIG_PEOPLE)) radarStopContent();
     }
-    if (!(sig && (sig->kind == SIG_PEOPLE || sig->kind == SIG_ROGUE) && r.contentT >= 0)) { audio.radarSeed = sig ? sig->seed : 0; audio.radarVoice = -1; }   // the signal's own voice by its seed; a people's carrier alone until its programme is on (D-05: a drifter's voice without its beacon)
+    // the signal's own voice by its seed; a people's carrier alone until its programme is on (D-05: a drifter's voice without its beacon)
+    if (!(sig && (sig->kind == SIG_PEOPLE || sig->kind == SIG_ROGUE) && r.contentT >= 0)) { audio.radarSeed = sig ? sig->seed : 0; audio.radarVoice = -1; }
     radarWordStep(realDt);   // a heard word back out of the static, while nothing is on the air
     double want = 0;
     if (sig) {   // a far signal comes through less (0.3 + half its strength in the beam, 0.6 locked) than C-07's

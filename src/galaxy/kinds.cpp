@@ -24,11 +24,13 @@ constexpr void identity(KindDef& k, int id, const char* name, const char* shortN
 }
 constexpr void night(KindDef& k, RGB zen, RGB hor) { k.ownNight = true; k.nightZenith = zen; k.nightHorizon = hor; }
 constexpr uint32_t of(int a, int b = -1, int c = -1) { return (1u << a) | (b >= 0 ? 1u << b : 0u) | (c >= 0 ? 1u << c : 0u); }   // P-01: a set of kinds or star classes
-constexpr uint32_t LIVE_STARS = ((1u << STAR_DRAWN_COUNT) - 1) & ~(of(STAR_WHITE_DWARF, STAR_PULSAR, STAR_NEUTRON) | of(STAR_BLACK_HOLE, STAR_PROTOSTAR, STAR_WOLF_RAYET));   // the stars a giant can have lived and wandered close to
+// the stars a giant can have lived and wandered close to
+constexpr uint32_t LIVE_STARS = ((1u << STAR_DRAWN_COUNT) - 1) & ~(of(STAR_WHITE_DWARF, STAR_PULSAR, STAR_NEUTRON) | of(STAR_BLACK_HOLE, STAR_PROTOSTAR, STAR_WOLF_RAYET));
 constexpr void source(KindDef& k, uint32_t from, double tLo, double tHi, uint32_t bodies, uint32_t stars, int lock, double share, bool byStar = false, uint32_t parents = 0, uint32_t moon = 0) {
     k.sources[k.nSources++] = KindSource{from, tLo, tHi, bodies, stars, lock, share, byStar, parents, moon};
 }
-constexpr uint32_t MAIN_SEQUENCE = of(STAR_YELLOW, STAR_ORANGE, STAR_RED_DWARF) | of(STAR_BLUE_WHITE, STAR_BLUE_GIANT);   // P-02: the stars still burning their hydrogen (the giants' worlds are P-04's)
+// P-02: the stars still burning their hydrogen (the giants' worlds are P-04's)
+constexpr uint32_t MAIN_SEQUENCE = of(STAR_YELLOW, STAR_ORANGE, STAR_RED_DWARF) | of(STAR_BLUE_WHITE, STAR_BLUE_GIANT);
 constexpr uint32_t ALL_BODIES = KB_PLANET | KB_COMPANION_WORLD | KB_TWIN | KB_MOON;
 constexpr uint32_t DEAD_STARS = of(STAR_WHITE_DWARF, STAR_PULSAR, STAR_NEUTRON);   // P-03: no light to live by (a black hole's worlds keep no air: S-06)
 constexpr void fixedSky(KindDef& k, RGB zen, RGB hor) { k.sky = SKY_FIXED; k.zenith = zen; k.horizon = hor; }
@@ -126,7 +128,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         draw(k, GF_MOISTURE, 0, 0.25, DK_SYM); draw(k, GF_CLOUD_COVER, 0.25, 0.4);   // more water than land on average; B-321: mountains 2500-5500 before, on a base half as high now
         k.color2 = tintOf(TINT_CONST, RGB(0.2f, 0.45f, 0.75f)); k.skyTint = tintOf(TINT_DRAWN, RGB(0.45f, 0.6f, 0.9f), RGB(0.15f, 0.15f, 0.1f));
         k.relief.mtn = 4.0; k.relief.hill = 0.42;   // its ridge blend is the softest (0.4 + 0.6 rel), so it needs the most amplitude per grade
-        mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.52f, 0.46f, 0.38f), 0.2f); mix(k, MAT_SAND, MM_BASE_MIX, SAND_TAN, 0.15f);   // the base hue is the blend seen from afar; the ground is rock and sand, not teal
+        // the base hue is the blend seen from afar; the ground is rock and sand, not teal
+        mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.52f, 0.46f, 0.38f), 0.2f); mix(k, MAT_SAND, MM_BASE_MIX, SAND_TAN, 0.15f);
         k.famRep[FAM_SAND] = MAT_SAND; k.famRep[FAM_SNOW] = MAT_SNOW;
         k.ground = GR_FELISIAN;
         k.fog = 12000; k.clouds = true;
@@ -348,12 +351,14 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         zones(k, 0, 0, 0, 12, 14);
         rule(k, WR_NEUTRON, 0.5); rule(k, WR_BLACK_HOLE, 0.5); rule(k, WR_PROTOSTAR, 0); rule(k, WR_ORANGE_GIANT, 1.5); rule(k, WR_MOON_OF_GIANT, 2.0); rule(k, WR_WOLF_RAYET, 0.3);
         colour(k, ch(0.78f), ch(0.74f, -0.06f), ch(0.66f));
-        sentence(k, SR_COIN, "shell of ice over a hidden ocean, its cracks stained red and venting water into space", "ice moon of long double ridges and broken rafts, geysers rising from the cracks");
+        sentence(
+                k, SR_COIN, "shell of ice over a hidden ocean, its cracks stained red and venting water into space", "ice moon of long double ridges and broken rafts, geysers rising from the cracks");
         draw(k, GF_MOUNTAIN, 80, 60); draw(k, GF_HILL, 15, 15); draw(k, GF_CRATER_DENSITY, 0.03, 0.05);
         k.color2 = tintOf(TINT_CONST, RGB(0.55f, 0.32f, 0.2f));
         k.relief.ridgeOp = RO_MUL; k.relief.ridge = 0.3; k.relief.flat = 0.05; k.relief.hill = 0.3; k.relief.mtn = 0.5;   // a shell a few tens of metres in relief
         k.relief.cliffAmount = 0.5; k.relief.cliffStep = 0.6;
-        mix(k, MAT_ICE, MM_BASE_MIX, RGB(0.90f, 0.88f, 0.82f), 0.15f); mix(k, MAT_DUST, MM_CONST, RGB(0.55f, 0.32f, 0.20f)); mix(k, MAT_ROCK, MM_CONST, RGB(0.45f, 0.40f, 0.38f));   // the lineae's stain is the dust
+        // the lineae's stain is the dust
+        mix(k, MAT_ICE, MM_BASE_MIX, RGB(0.90f, 0.88f, 0.82f), 0.15f); mix(k, MAT_DUST, MM_CONST, RGB(0.55f, 0.32f, 0.20f)); mix(k, MAT_ROCK, MM_CONST, RGB(0.45f, 0.40f, 0.38f));
         k.ground = GR_EUROPAN; k.plainK = 0.3; k.gullyK = 0.3;
         crater(k, 0.1, true, 0.05, CD_ABS, 0.4, false); crater(k, 2.0, false, 0.08, CD_ABS, 0.3, false);
         k.fog = 45000; k.floorFamily = FAM_SNOW;
@@ -367,7 +372,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         zones(k, 6, 9, 3, 0, 0);
         rule(k, WR_PROTOSTAR, 1, 4); rule(k, WR_MOON_OF_GIANT, 1, 6);
         colour(k, ch(0.36f), ch(0.28f), ch(0.22f, 0.05f));
-        sentence(k, SR_COIN, "restless world of rift valleys, fissures running with lava and ground that never stops shaking", "world torn by its own crust, fountains of lava along the rifts under a sulphur sky");
+        sentence(k, SR_COIN, "restless world of rift valleys, fissures running with lava and ground that never stops shaking",
+                "world torn by its own crust, fountains of lava along the rifts under a sulphur sky");
         draw(k, GF_MOUNTAIN, 1500, 1500); draw(k, GF_HILL, 150, 150); draw(k, GF_VOLCANOES, 0.3, 0.5); draw(k, GF_CRATER_DENSITY, 0.05, 0.05); draw(k, GF_CLOUD_COVER, 0.1, 0.2);
         k.color2 = tintOf(TINT_CONST, RGB(1.0f, 0.5f, 0.1f)); k.skyTint = tintOf(TINT_CONST, RGB(0.85f, 0.7f, 0.45f));
         k.relief.ridgeOp = RO_ADD; k.relief.ridge = 0.3; k.relief.mtn = 2.6; k.relief.hill = 0.7;   // fault-block ranges
@@ -478,7 +484,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // GEN 16: the furnace worlds. No weight of their own: each is made from the worlds of the inner orbits that drew another kind
     // (`kindOf`: the sources below), every draw of the system made as the drawn kind's
     {   KindDef& k = K[PT_MAGMA_OCEAN];
-        identity(k, PT_MAGMA_OCEAN, "MAGMA OCEAN", "MAGMA SEA", "large, locked to its star: a sea of magma under the sun, black glass on the night side, no atmosphere to speak of.", 4000, 9000, true, false, 1, 0.15);
+        identity(k, PT_MAGMA_OCEAN, "MAGMA OCEAN", "MAGMA SEA", "large, locked to its star: a sea of magma under the sun, black glass on the night side, no atmosphere to speak of.", 4000, 9000, true,
+                false, 1, 0.15);
         k.family = "furnace"; k.density = 1.3;   // K2-141b, 55 Cancri e: super-Earths, denser than the rock of an Earth
         k.tags = KT_LAVA;
         k.shapes = KS_EXTENSION | KS_BASALTIC | KS_FLOOD_LAVA | KS_PLUMES;
@@ -500,7 +507,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.events = EV_FOUNTAINS; k.eventMaterial = MAT_LAVA; k.rumble = 0.45;   // fire fountains along the shore
     }
     {   KindDef& k = K[PT_CHTHONIAN];
-        identity(k, PT_CHTHONIAN, "CHTHONIAN", "CHTHONIAN", "large and heavy: the bare core of a giant that came too close to its star, a thin remnant air, a ring of what it lost.", 10000, 19000, true, true, 2, 0.12);
+        identity(k, PT_CHTHONIAN, "CHTHONIAN", "CHTHONIAN", "large and heavy: the bare core of a giant that came too close to its star, a thin remnant air, a ring of what it lost.", 10000, 19000,
+                true, true, 2, 0.12);
         k.family = "furnace"; k.density = 1.7; k.ringChance = 0.67;   // TOI-849b: forty Earth masses in three Earth radii; 2.7-5 g underfoot
         k.tags = KT_FLAT;
         k.shapes = KS_EXTENSION | KS_SCARPS | KS_FLOOD_LAVA | KS_IMPACTS | KS_PLUMES;
@@ -544,7 +552,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         rocks(k, 1.4, 0.6);   // tektites and shards of glass
     }
     {   KindDef& k = K[PT_STEAM];
-        identity(k, PT_STEAM, "STEAM", "STEAM", "medium to large, past the runaway greenhouse: its ocean a white sky of steam, seas boiling at the poles, the lowlands lost in fog.", 5000, 11000, true, true, 2, 0.75);
+        identity(k, PT_STEAM, "STEAM", "STEAM", "medium to large, past the runaway greenhouse: its ocean a white sky of steam, seas boiling at the poles, the lowlands lost in fog.", 5000, 11000, true,
+                true, 2, 0.75);
         k.family = "furnace"; k.density = 0.9;
         k.tags = KT_OPAQUE_DECK | KT_PLATES | KT_DRAINAGE | KT_WET;
         k.shapes = KS_INCISION | KS_EXTENSION | KS_SCARPS | KS_BASALTIC | KS_HYDROTHERMAL | KS_STORMS;
@@ -579,7 +588,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         source(k, of(PT_DESERT), 300, 520, KB_PLANET | KB_COMPANION_WORLD | KB_TWIN | KB_MOON, 0, 0, 0.3);   // the Messinian crisis, the Danakil, Mars' chloride basins
         colour(k, ch(0.90f), ch(0.87f, -0.05f), ch(0.82f, -0.08f));
         sentence(k, SR_ONE, "world whose ocean dried away, white salt to the horizon ringed by the bands of its last shores");
-        draw(k, GF_SEA_LEVEL, 100, 300); draw(k, GF_MOUNTAIN, 1000, 1400); draw(k, GF_HILL, 100, 150); draw(k, GF_CRATER_DENSITY, 0.04, 0.06); draw(k, GF_DUNE_AMP, 6, 10);   // the old sea's level (metres)
+        // the old sea's level (metres)
+        draw(k, GF_SEA_LEVEL, 100, 300); draw(k, GF_MOUNTAIN, 1000, 1400); draw(k, GF_HILL, 100, 150); draw(k, GF_CRATER_DENSITY, 0.04, 0.06); draw(k, GF_DUNE_AMP, 6, 10);
         draw(k, GF_CLOUD_COVER, 0.02, 0.05);
         k.color2 = tintOf(TINT_CONST, RGB(0.95f, 0.93f, 0.88f)); k.skyTint = tintOf(TINT_CONST, RGB(0.70f, 0.76f, 0.88f));
         k.relief.mtn = 1.8; k.relief.hill = 0.6;
@@ -628,22 +638,26 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // to the poles, its day's swing), the seas (their level and depth, the islands), the ice, the moisture, and two ways of their own (the
     // archean's microbes, the tundra's ice sheets); the lichen world is the thin air's ground with its crusts and mosses
     {   KindDef& k = K[PT_ARCHEAN];
-        identity(k, PT_ARCHEAN, "ARCHEAN", "ARCHEAN", "medium size, young life: microbial mats on its flats, stromatolites in its shallows, a green sea under an orange haze.", 4800, 7600, true, true, 3, 0.30);
+        identity(k, PT_ARCHEAN, "ARCHEAN", "ARCHEAN", "medium size, young life: microbial mats on its flats, stromatolites in its shallows, a green sea under an orange haze.", 4800, 7600, true, true,
+                3, 0.30);
         k.family = "living";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_TWIN | KT_MICROBIAL;   // no plants, no animals
         k.shapes = KS_INCISION | KS_LAYERED | KS_SOLUTION | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_PEDIMENTS | KS_BASALTIC | KS_FROST | KS_WIND | KS_EVAPORITES |
-                   KS_FLOOD_LAVA | KS_HYDROTHERMAL | KS_OPEN_SEA | KS_FREEZE | KS_CONTINENTS | KS_STORMS | KS_HAZE;   // no flora to be giant or dead; no soils (no oxygen to redden them, no shells for chalk)
+                   // no flora to be giant or dead; no soils (no oxygen to redden them, no shells for chalk)
+                   KS_FLOOD_LAVA | KS_HYDROTHERMAL | KS_OPEN_SEA | KS_FREEZE | KS_CONTINENTS | KS_STORMS | KS_HAZE;
         k.salt = 0xA2C4EA0E00000007ULL;
         source(k, of(PT_FELISIAN), 0, 1e9, ALL_BODIES, of(STAR_BLUE_GIANT, STAR_BLUE_WHITE), -1, 0.6, true);   // a short-lived star's worlds are young
         source(k, of(PT_FELISIAN), 0, 1e9, ALL_BODIES, of(STAR_YELLOW, STAR_ORANGE, STAR_RED_DWARF), -1, 0.07, true);   // a young star, by its hash: all its living worlds young
         colour(k, ch(0.72f, 0.06f), ch(0.52f, 0.06f), ch(0.32f, 0.05f));   // the pale orange dot (Arney et al. 2016)
-        sentence(k, SR_COIN, "young world of green seas under an orange haze, its shallows banded with mats of microbes", "world of bare grey continents and stromatolite reefs, its only life the mats along its shores");
+        sentence(k, SR_COIN, "young world of green seas under an orange haze, its shallows banded with mats of microbes",
+                "world of bare grey continents and stromatolite reefs, its only life the mats along its shores");
         k.greenhouseK = 38;   // a methane greenhouse over a faint young sun
         draw(k, GF_SEA_LEVEL, -0.05, 0.35); draw(k, GF_MOUNTAIN, 1200, 2400); draw(k, GF_HILL, 150, 250); draw(k, GF_ICE_CAP, 64, 18); draw(k, GF_SNOW_LINE, 2500, 2500);
         draw(k, GF_MOISTURE, 0, 0.2, DK_SYM); draw(k, GF_CLOUD_COVER, 0.25, 0.35); draw(k, GF_ISLANDS, 0.3, 0.25);   // small continents, island arcs
         k.color2 = tintOf(TINT_CONST, RGB(0.18f, 0.40f, 0.26f)); k.skyTint = tintOf(TINT_CONST, RGB(0.86f, 0.60f, 0.32f));
         k.relief.mtn = 3.6; k.relief.hill = 0.42;
-        mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.46f, 0.44f, 0.42f), 0.3f); mix(k, MAT_SAND, MM_BASE_MIX, RGB(0.58f, 0.54f, 0.47f), 0.3f); mix(k, MAT_DUST, MM_BASE_MIX, RGB(0.50f, 0.45f, 0.39f), 0.3f);   // bare grey and brown land, warm in the haze's light
+        // bare grey and brown land, warm in the haze's light
+        mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.46f, 0.44f, 0.42f), 0.3f); mix(k, MAT_SAND, MM_BASE_MIX, RGB(0.58f, 0.54f, 0.47f), 0.3f); mix(k, MAT_DUST, MM_BASE_MIX, RGB(0.50f, 0.45f, 0.39f), 0.3f);
         mix(k, MAT_WATER, MM_CONST, RGB(0.14f, 0.33f, 0.20f)); mix(k, MAT_STROMATOLITE, MM_CONST, RGB(0.58f, 0.54f, 0.40f));   // a sea green with iron; the domes' pale carbonate
         k.famRep[FAM_SAND] = MAT_SAND; k.famRep[FAM_SNOW] = MAT_SNOW; k.accent[0] = MAT_MATS; k.accent[1] = MAT_STROMATOLITE;   // the mats' hue is the world's (`materialPalette`)
         k.ground = GR_FELISIAN;
@@ -655,7 +669,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.rain = RAIN_CLOUDS; k.rainThr = 0.72; k.rainSpan = 0.25;
     }
     {   KindDef& k = K[PT_HOTHOUSE];
-        identity(k, PT_HOTHOUSE, "HOTHOUSE", "HOTHOUSE", "medium size, a hothouse climate: no ice at either pole, forest and swamp from coast to pole, warm shallow seas, storms.", 4800, 7600, true, true, 3, 0.33);
+        identity(k, PT_HOTHOUSE, "HOTHOUSE", "HOTHOUSE", "medium size, a hothouse climate: no ice at either pole, forest and swamp from coast to pole, warm shallow seas, storms.", 4800, 7600, true,
+                true, 3, 0.33);
         k.family = "living";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_FLORA | KT_FAUNA | KT_TWIN;
         k.shapes = KS_INCISION | KS_LAYERED | KS_SOLUTION | KS_EXTENSION | KS_SCARPS | KS_PEDIMENTS | KS_BASALTIC | KS_WIND | KS_EVAPORITES | KS_FLOOD_LAVA | KS_HYDROTHERMAL |
@@ -663,7 +678,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.salt = 0x407B0E5E00000008ULL;
         source(k, of(PT_FELISIAN), 285, 1e9, ALL_BODIES, MAIN_SEQUENCE, -1, 0.35);   // the warm edge: the Eocene's and the Cretaceous's climate
         colour(k, ch(0.26f, 0.10f), ch(0.58f, 0.06f), ch(0.48f, 0.15f));
-        sentence(k, SR_COIN, "hothouse world without ice, forest and swamp from its coasts to its poles, warm seas and daily storms", "steaming living world of swamp and rainforest under a humid haze, no ice at either pole");
+        sentence(k, SR_COIN, "hothouse world without ice, forest and swamp from its coasts to its poles, warm seas and daily storms",
+                "steaming living world of swamp and rainforest under a humid haze, no ice at either pole");
         k.greenhouseK = 33; k.latGradient = 0.45;   // the poles mild, the equator little warmer than a felisian world's
         draw(k, GF_SEA_LEVEL, -0.25, 0.5); draw(k, GF_MOUNTAIN, 1500, 2500); draw(k, GF_HILL, 150, 250); draw(k, GF_ICE_CAP, 110, 0, DK_CONST); draw(k, GF_SNOW_LINE, 5000, 2500);
         draw(k, GF_MOISTURE, 0.08, 0.22); draw(k, GF_CLOUD_COVER, 0.45, 0.35);   // no ice cap; wet
@@ -681,7 +697,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.favourTrait = TR_GIANT_FLORA; k.favourChance = 0.35;
     }
     {   KindDef& k = K[PT_SUPERHABITABLE];
-        identity(k, PT_SUPERHABITABLE, "SUPERHABITABLE", "SUPERHABIT", "large, warmer and wetter than a felisian world: shallow seas, a thousand islands, a thick air, life everywhere.", 7000, 9500, true, true, 3, 0.30);
+        identity(k, PT_SUPERHABITABLE, "SUPERHABITABLE", "SUPERHABIT", "large, warmer and wetter than a felisian world: shallow seas, a thousand islands, a thick air, life everywhere.", 7000, 9500,
+                true, true, 3, 0.30);
         k.family = "living"; k.density = 1.1;   // Heller and Armstrong 2014: two or three Earth masses round an orange dwarf
         k.tags = KT_PLATES | KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_FLORA | KT_FAUNA | KT_TWIN;
         k.shapes = KS_INCISION | KS_LAYERED | KS_SOLUTION | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_PEDIMENTS | KS_BASALTIC | KS_FROST | KS_WIND | KS_EVAPORITES |
@@ -689,13 +706,16 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.salt = 0x5E9E2AB100000009ULL;
         source(k, of(PT_FELISIAN), 230, 330, KB_PLANET | KB_COMPANION_WORLD, of(STAR_ORANGE), -1, 0.55);   // the commonest living world of an orange dwarf
         colour(k, ch(0.22f, 0.10f), ch(0.58f, 0.08f), ch(0.62f, 0.15f));
-        sentence(k, SR_COIN, "large living world of shallow turquoise seas and a thousand forested islands under a thick air", "warm wet world of archipelagos and wide shelves, reefs and forest everywhere");
+        sentence(k, SR_COIN, "large living world of shallow turquoise seas and a thousand forested islands under a thick air",
+                "warm wet world of archipelagos and wide shelves, reefs and forest everywhere");
         k.greenhouseK = 45; k.seaDepth = 0.12;   // a little warmer; seas of shelves (half of them under 300 m)
         draw(k, GF_SEA_LEVEL, 0.12, 0.14); draw(k, GF_MOUNTAIN, 1200, 1800); draw(k, GF_HILL, 120, 200); draw(k, GF_ICE_CAP, 74, 14); draw(k, GF_SNOW_LINE, 3500, 2500);
-        draw(k, GF_MOISTURE, 0.06, 0.18); draw(k, GF_CLOUD_COVER, 0.32, 0.35); draw(k, GF_ISLANDS, 0.4, 0.3); draw(k, GF_CONT_SCALE, 0.3, 0.15);   // more sea, low old mountains, the land in archipelagos
+        // more sea, low old mountains, the land in archipelagos
+        draw(k, GF_MOISTURE, 0.06, 0.18); draw(k, GF_CLOUD_COVER, 0.32, 0.35); draw(k, GF_ISLANDS, 0.4, 0.3); draw(k, GF_CONT_SCALE, 0.3, 0.15);
         k.color2 = tintOf(TINT_CONST, RGB(0.12f, 0.50f, 0.62f)); k.skyTint = tintOf(TINT_DRAWN, RGB(0.42f, 0.58f, 0.88f), RGB(0.12f, 0.12f, 0.08f));
         k.relief.mtn = 3.2; k.relief.hill = 0.40;
-        mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.52f, 0.46f, 0.38f), 0.2f); mix(k, MAT_SAND, MM_BASE_MIX, RGB(0.88f, 0.82f, 0.64f), 0.12f); mix(k, MAT_WATER, MM_CONST, RGB(0.06f, 0.36f, 0.50f));   // reef sand; turquoise
+        // reef sand; turquoise
+        mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.52f, 0.46f, 0.38f), 0.2f); mix(k, MAT_SAND, MM_BASE_MIX, RGB(0.88f, 0.82f, 0.64f), 0.12f); mix(k, MAT_WATER, MM_CONST, RGB(0.06f, 0.36f, 0.50f));
         k.famRep[FAM_SAND] = MAT_SAND; k.famRep[FAM_SNOW] = MAT_SNOW;
         k.ground = GR_FELISIAN;
         k.fog = 10000; k.skyDensity = 1.2; k.clouds = true;
@@ -714,7 +734,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.salt = 0x57E99E020000000AULL;   // pinned: the home world (Heilya II, 268 K) stays felisian
         source(k, of(PT_FELISIAN), 262, 1e9, ALL_BODIES, MAIN_SEQUENCE, -1, 0.25);   // Abe et al. 2011: a land world keeps its water nearer its star than an ocean world
         colour(k, ch(0.55f, 0.12f), ch(0.55f, 0.05f), ch(0.38f, 0.10f));
-        sentence(k, SR_COIN, "dry living world of grassland to the horizon, small inland seas and salt lakes, forest only along its rivers", "world of steppe and savanna under a wide sky, its seas small and salt, its trees along the rivers");
+        sentence(k, SR_COIN, "dry living world of grassland to the horizon, small inland seas and salt lakes, forest only along its rivers",
+                "world of steppe and savanna under a wide sky, its seas small and salt, its trees along the rivers");
         k.greenhouseK = 33;
         draw(k, GF_SEA_LEVEL, -0.65, 0.25); draw(k, GF_MOUNTAIN, 1500, 2500); draw(k, GF_HILL, 150, 250); draw(k, GF_ICE_CAP, 68, 16); draw(k, GF_SNOW_LINE, 3000, 2500);
         draw(k, GF_MOISTURE, -0.1, 0.08); draw(k, GF_CLOUD_COVER, 0.12, 0.2);   // small seas; dry
@@ -733,7 +754,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.fauna = FA_HERDS;
     }
     {   KindDef& k = K[PT_TUNDRA];
-        identity(k, PT_TUNDRA, "TUNDRA", "TUNDRA", "medium size, in an ice age: ice sheets down to the middle latitudes, taiga and tundra below them, sea ice and dry cold winds.", 4800, 7600, true, true, 3, 0.45);
+        identity(k, PT_TUNDRA, "TUNDRA", "TUNDRA", "medium size, in an ice age: ice sheets down to the middle latitudes, taiga and tundra below them, sea ice and dry cold winds.", 4800, 7600, true,
+                true, 3, 0.45);
         k.family = "living";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_FLORA | KT_FAUNA | KT_TWIN | KT_ICE_SHEETS;
         k.shapes = KS_INCISION | KS_LAYERED | KS_SOLUTION | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_PEDIMENTS | KS_BASALTIC | KS_FROST | KS_WIND | KS_EVAPORITES |
@@ -741,7 +763,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.salt = 0x70D2A0000000000BULL;
         source(k, of(PT_FELISIAN), 212, 248, ALL_BODIES, MAIN_SEQUENCE, -1, 0.4);   // the cold edge: the last glacial maximum
         colour(k, ch(0.58f, 0.10f), ch(0.66f, 0.05f), ch(0.70f, 0.08f));
-        sentence(k, SR_COIN, "world in an ice age, ice sheets down to its middle latitudes and taiga and tundra below them", "cold living world of ice sheets, sea ice and wide tundra swept by dry winds");
+        sentence(k, SR_COIN, "world in an ice age, ice sheets down to its middle latitudes and taiga and tundra below them",
+                "cold living world of ice sheets, sea ice and wide tundra swept by dry winds");
         k.greenhouseK = 22; k.latGradient = 1.1;   // colder, and the poles colder still against the equator (a glacial world's)
         draw(k, GF_SEA_LEVEL, -0.45, 0.5); draw(k, GF_MOUNTAIN, 1500, 2500); draw(k, GF_HILL, 150, 250); draw(k, GF_ICE_CAP, 44, 8); draw(k, GF_SNOW_LINE, 1500, 1500);
         draw(k, GF_MOISTURE, -0.1, 0.16); draw(k, GF_CLOUD_COVER, 0.2, 0.3);   // the seas low (their water in the ice), the sheets to 44-52 degrees, glaciers in every range
@@ -759,7 +782,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.fauna = FA_COLD;
     }
     {   KindDef& k = K[PT_LICHEN];
-        identity(k, PT_LICHEN, "LICHEN", "LICHEN", "small, cold and dry: bare rock and gravel crusted with lichen, moss in the wet hollows, nothing taller than a hand under a thin clear sky.", 2400, 4600, true, true, 2, 0.28);
+        identity(k, PT_LICHEN, "LICHEN", "LICHEN", "small, cold and dry: bare rock and gravel crusted with lichen, moss in the wet hollows, nothing taller than a hand under a thin clear sky.", 2400,
+                4600, true, true, 2, 0.28);
         k.family = "living";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_FRONTS | KT_DUST | KT_TWIN;   // the thin air's dry valleys; no plants to stand, no animals
         k.shapes = KS_INCISION | KS_LAYERED | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_PEDIMENTS | KS_BASALTIC | KS_FROST | KS_WIND | KS_EVAPORITES | KS_FLOOD_LAVA |
@@ -767,7 +791,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.salt = 0x11C4E0000000000CULL;
         source(k, of(PT_THINATMO), 205, 260, ALL_BODIES, MAIN_SEQUENCE, 0, 0.3);   // the Dry Valleys' life (Friedmann 1982), the first land life's crusts
         colour(k, ch(0.52f, 0.08f), ch(0.48f, 0.06f), ch(0.42f, 0.06f));
-        sentence(k, SR_COIN, "cold dry world of bare rock and gravel, lichen crusting its stones and moss in its wet hollows", "world of thin clear air where nothing grows taller than a hand, crusts of lichen orange and black on its rocks");
+        sentence(k, SR_COIN, "cold dry world of bare rock and gravel, lichen crusting its stones and moss in its wet hollows",
+                "world of thin clear air where nothing grows taller than a hand, crusts of lichen orange and black on its rocks");
         draw(k, GF_MOUNTAIN, 1500, 2500); draw(k, GF_HILL, 120, 200); draw(k, GF_CRATER_DENSITY, 0.1, 0.2); draw(k, GF_DUNE_AMP, 3, 8); draw(k, GF_ICE_CAP, 66, 14);
         draw(k, GF_CLOUD_COVER, 0.08, 0.2);
         k.color2 = tintOf(TINT_CONST, RGB(0.92f, 0.92f, 0.98f)); k.skyTint = tintOf(TINT_CONST, RGB(0.52f, 0.64f, 0.88f));
@@ -789,7 +814,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // sea where water would freeze, a snowball where the living world froze to its equator) and the warm rock of the dead stars and the brown
     // dwarfs (life on the ground's heat). None holds a people
     {   KindDef& k = K[PT_EYEBALL];
-        identity(k, PT_EYEBALL, "EYEBALL", "EYEBALL", "medium size, locked to a red dwarf: frozen over but for one round open sea under the fixed sun, the pupil of an eye.", 4800, 7800, true, true, 2, 0.55);
+        identity(k, PT_EYEBALL, "EYEBALL", "EYEBALL", "medium size, locked to a red dwarf: frozen over but for one round open sea under the fixed sun, the pupil of an eye.", 4800, 7800, true, true, 2,
+                0.55);
         k.family = "deep";
         k.tags = KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_FAUNA | KT_TWIN | KT_NO_SIGHTS | KT_FIXED_SUN;   // the ocean's, its swimmers in the pupil
         k.shapes = KS_STORMS | KS_HAZE;
@@ -812,7 +838,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.reachClimate = true;
     }
     {   KindDef& k = K[PT_TERMINATOR];
-        identity(k, PT_TERMINATOR, "TERMINATOR", "TERMINATOR", "medium size, locked: a desert under the fixed sun, an ice sheet over the night side, a ring of rivers and life between.", 4800, 7600, true, true, 2, 0.42);
+        identity(k, PT_TERMINATOR, "TERMINATOR", "TERMINATOR", "medium size, locked: a desert under the fixed sun, an ice sheet over the night side, a ring of rivers and life between.", 4800, 7600,
+                true, true, 2, 0.42);
         k.family = "deep";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_FLORA | KT_FAUNA | KT_TWIN | KT_ICE_SHEETS | KT_FIXED_SUN;
         k.shapes = KS_INCISION | KS_LAYERED | KS_SOLUTION | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_PEDIMENTS | KS_BASALTIC | KS_FROST | KS_WIND | KS_EVAPORITES |
@@ -859,7 +886,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.rain = RAIN_CLOUDS; k.rainThr = 0.6; k.rainSpan = 0.3;
     }
     {   KindDef& k = K[PT_AMMONIA];
-        identity(k, PT_AMMONIA, "AMMONIA", "AMMONIA", "medium size, cold: seas of ammonia water that never freeze, slabs of ice drifting on them, frost on the hills, a yellow-brown haze.", 3000, 7000, true, true, 1, 0.45);
+        identity(k, PT_AMMONIA, "AMMONIA", "AMMONIA", "medium size, cold: seas of ammonia water that never freeze, slabs of ice drifting on them, frost on the hills, a yellow-brown haze.", 3000, 7000,
+                true, true, 1, 0.45);
         k.family = "deep"; k.density = 0.6;   // ice and rock
         k.tags = KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_FLAT | KT_FROZEN;
         k.shapes = KS_INCISION | KS_BRITTLE | KS_FROST | KS_IMPACTS | KS_HYDROTHERMAL | KS_STORMS | KS_HAZE;
@@ -887,7 +915,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.rain = RAIN_DRIZZLE;   // ammonia drizzle now and then
     }
     {   KindDef& k = K[PT_SNOWBALL];
-        identity(k, PT_SNOWBALL, "SNOWBALL", "SNOWBALL", "medium size: frozen to the equator, ice sheets over the land and the seas, nunataks, a thin belt of open sea, blizzards.", 4800, 7800, true, true, 3, 0.72);
+        identity(k, PT_SNOWBALL, "SNOWBALL", "SNOWBALL", "medium size: frozen to the equator, ice sheets over the land and the seas, nunataks, a thin belt of open sea, blizzards.", 4800, 7800, true,
+                true, 3, 0.72);
         k.family = "deep";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_WET | KT_FRONTS | KT_FRONT_RAIN | KT_WATER_WEATHER | KT_SEA | KT_TWIN | KT_ICE_SHEETS;   // nothing on it lives that the eye can see
         k.shapes = KS_INCISION | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_BASALTIC | KS_FROST | KS_WIND | KS_FLOOD_LAVA | KS_HYDROTHERMAL | KS_STORMS | KS_HAZE;
@@ -914,7 +943,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.daySwing = 6;
     }
     {   KindDef& k = K[PT_CHEMOTROPH];
-        identity(k, PT_CHEMOTROPH, "CHEMOTROPH", "CHEMOTROPH", "medium size, dim and warmed from within: hot springs on dark rock, pale mats of a life fed by their heat, not by light, spores glowing at night.", 2400, 5200, true, true, 2, 0.22);
+        identity(k, PT_CHEMOTROPH, "CHEMOTROPH", "CHEMOTROPH",
+                "medium size, dim and warmed from within: hot springs on dark rock, pale mats of a life fed by their heat, not by light, spores glowing at night.", 2400, 5200, true, true, 2, 0.22);
         k.family = "deep";
         k.tags = KT_PLATES | KT_TWIN | KT_VENT_LIFE;
         k.shapes = KS_INCISION | KS_EXTENSION | KS_SCARPS | KS_BASALTIC | KS_FROST | KS_FLOOD_LAVA | KS_PLUMES | KS_HYDROTHERMAL;
@@ -929,8 +959,10 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.color2 = tintOf(TINT_CONST, RGB(0.85f, 0.82f, 0.78f)); k.skyTint = tintOf(TINT_CONST, RGB(0.36f, 0.34f, 0.38f));
         k.relief.ridgeOp = RO_ADD; k.relief.ridge = 0.3; k.relief.mtn = 2.6; k.relief.hill = 0.7;   // the tectonic's fault blocks
         mix(k, MAT_BASALT, MM_CONST, RGB(0.20f, 0.18f, 0.17f)); mix(k, MAT_DUST, MM_CONST, RGB(0.40f, 0.38f, 0.36f)); mix(k, MAT_ROCK, MM_BASE_MIX, RGB(0.34f, 0.31f, 0.28f), 0.3f);
-        mix(k, MAT_SALT, MM_CONST, RGB(0.84f, 0.80f, 0.70f)); mix(k, MAT_BRINE, MM_CONST, RGB(0.20f, 0.52f, 0.58f)); mix(k, MAT_SNOW, MM_CONST, RGB(0.86f, 0.87f, 0.90f));   // sinter; the springs' blue; frost
-        k.famRep[FAM_ROCK] = MAT_BASALT; k.famRep[FAM_WATER] = MAT_BRINE; k.famRep[FAM_SNOW] = MAT_SNOW; k.accent[0] = MAT_MATS; k.accent[1] = MAT_SALT;   // the mats' hue is the world's (`materialPalette`)
+        // sinter; the springs' blue; frost
+        mix(k, MAT_SALT, MM_CONST, RGB(0.84f, 0.80f, 0.70f)); mix(k, MAT_BRINE, MM_CONST, RGB(0.20f, 0.52f, 0.58f)); mix(k, MAT_SNOW, MM_CONST, RGB(0.86f, 0.87f, 0.90f));
+        // the mats' hue is the world's (`materialPalette`)
+        k.famRep[FAM_ROCK] = MAT_BASALT; k.famRep[FAM_WATER] = MAT_BRINE; k.famRep[FAM_SNOW] = MAT_SNOW; k.accent[0] = MAT_MATS; k.accent[1] = MAT_SALT;
         k.ground = GR_CHEMOTROPH;
         crater(k, 30.0, false, 0.08, CD_ABS, 0.5, false, true);
         fixedSky(k, RGB(0.10f, 0.10f, 0.12f), RGB(0.30f, 0.28f, 0.30f));   // thin and dark under a dim star
@@ -941,7 +973,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.events = EV_SPRINGS; k.eventMaterial = MAT_SALT;
     }
     {   KindDef& k = K[PT_FROZEN_FELISIAN];
-        identity(k, PT_FROZEN_FELISIAN, "FROZEN FELISIAN", "FROZEN", "medium size: a living world that lost its sun, its seas frozen at their level, its forests standing dead and white with frost, its air fallen as snow.", 4800, 7600, true, true, 3, 0.72);
+        identity(k, PT_FROZEN_FELISIAN, "FROZEN FELISIAN", "FROZEN",
+                "medium size: a living world that lost its sun, its seas frozen at their level, its forests standing dead and white with frost, its air fallen as snow.", 4800, 7600, true, true, 3,
+                0.72);
         k.family = "dead";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_PEOPLE | KT_TWIN;
         k.salt = 0xF20E2E0000000013ULL;
@@ -961,7 +995,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.pressureLo = 0.005; k.pressureSpan = 0.03; k.tempOffset = 0; k.tempSwing = 2; k.wind = 2;   // what air is left above the frozen
     }
     {   KindDef& k = K[PT_SCORCHED_FELISIAN];
-        identity(k, PT_SCORCHED_FELISIAN, "SCORCHED FELISIAN", "SCORCHED", "medium size: a living world baked by its swelling sun, its seas boiled off to salt, its forests turned to stone, cracked clay and dust under a thin hot sky.", 4800, 7600, true, true, 3, 0.48);
+        identity(k, PT_SCORCHED_FELISIAN, "SCORCHED FELISIAN", "SCORCHED",
+                "medium size: a living world baked by its swelling sun, its seas boiled off to salt, its forests turned to stone, cracked clay and dust under a thin hot sky.", 4800, 7600, true, true,
+                3, 0.48);
         k.family = "dead";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_FRONTS | KT_DUST | KT_PEOPLE | KT_DRY | KT_TWIN;
         k.salt = 0x5C0BC4ED00000014ULL;
@@ -988,7 +1024,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // temperature (Pluto's nitrogen under 60 K, Eris's frost under 45, Mars' dry ice at 140-200, Ceres's brine at 120-260), Triton's plumes on the
     // giants' captured moons first; and the wanderer, a rogue world a star caught, made by its own step of `generate` (no source here)
     {   KindDef& k = K[PT_NITROGEN];
-        identity(k, PT_NITROGEN, "NITROGEN", "NITROGEN", "small, far out: plains of nitrogen ice churned into cells, mountains of water ice afloat at their edges, dark red lands, a thin blue haze.", 900, 2500, true, true, 2, 0.62);
+        identity(k, PT_NITROGEN, "NITROGEN", "NITROGEN", "small, far out: plains of nitrogen ice churned into cells, mountains of water ice afloat at their edges, dark red lands, a thin blue haze.",
+                900, 2500, true, true, 2, 0.62);
         k.family = "cold"; k.density = 0.6;   // Pluto: rock under a crust of water ice
         k.tags = KT_FROZEN;
         k.shapes = KS_SCARPS | KS_BRITTLE | KS_FROST | KS_SPIRES;   // its great basin is its own (the nitrogen plain's)
@@ -1013,7 +1050,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.pressureLo = 0.00001; k.pressureSpan = 0.00002; k.tempOffset = 0; k.tempSwing = 4; k.wind = 2;   // ten millionths of a bar
     }
     {   KindDef& k = K[PT_CRYOVOLCANIC];
-        identity(k, PT_CRYOVOLCANIC, "CRYOVOLCANIC", "CRYOVOLCAN", "small, a captured moon: dimpled ground like a melon's skin, a pink frost cap, dark plumes rising kilometres into a thin sky and streaming downwind.", 1000, 2000, true, true, 0, 0.72);
+        identity(k, PT_CRYOVOLCANIC, "CRYOVOLCANIC", "CRYOVOLCAN",
+                "small, a captured moon: dimpled ground like a melon's skin, a pink frost cap, dark plumes rising kilometres into a thin sky and streaming downwind.", 1000, 2000, true, true, 0, 0.72);
         k.family = "cold"; k.density = 0.65;   // Triton: rock and ice
         k.tags = KT_FROZEN | KT_FLAT;
         k.shapes = KS_EXTENSION | KS_BRITTLE | KS_FROST | KS_SPIRES;
@@ -1023,7 +1061,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         colour(k, ch(0.88f, 0.04f), ch(0.80f, 0.04f), ch(0.78f, 0.04f));   // pink-white
         sentence(k, SR_COIN, "captured moon of dimpled ground like a melon's skin, a pink frost cap at its pole and dark plumes rising kilometres into its thin sky",
                  "cold moon of frozen nitrogen whose geysers lay dark streaks downwind across its pink frost");
-        draw(k, GF_MOUNTAIN, 250, 300); draw(k, GF_HILL, 40, 60); draw(k, GF_CRATER_DENSITY, 0.02, 0.04); draw(k, GF_ICE_CAP, 12, 26); draw(k, GF_VOLCANOES, 0.3, 0.5);   // the cap's edge (south of it), the plumes' share
+        // the cap's edge (south of it), the plumes' share
+        draw(k, GF_MOUNTAIN, 250, 300); draw(k, GF_HILL, 40, 60); draw(k, GF_CRATER_DENSITY, 0.02, 0.04); draw(k, GF_ICE_CAP, 12, 26); draw(k, GF_VOLCANOES, 0.3, 0.5);
         k.color2 = tintOf(TINT_CONST, RGB(0.22f, 0.20f, 0.20f)); k.skyTint = tintOf(TINT_CONST, RGB(0.55f, 0.55f, 0.65f));
         k.relief.ridgeOp = RO_MUL; k.relief.ridge = 0.4; k.relief.flat = 0.06; k.relief.hill = 0.3; k.relief.mtn = 0.6; k.relief.cliffAmount = 0.5; k.relief.cliffStep = 0.6;
         mix(k, MAT_ICE, MM_CONST, RGB(0.70f, 0.71f, 0.64f)); mix(k, MAT_SNOW, MM_CONST, RGB(0.95f, 0.85f, 0.84f)); mix(k, MAT_DUST, MM_CONST, RGB(0.24f, 0.22f, 0.22f));
@@ -1039,7 +1078,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.events = EV_PLUMES; k.eventMaterial = MAT_SNOW;   // the plumes rise from the cap
     }
     {   KindDef& k = K[PT_DRY_ICE];
-        identity(k, PT_DRY_ICE, "DRY ICE", "DRY ICE", "small and cold under a thin sky of carbon dioxide: caps of dry ice pitted like cheese, spider-shaped channels and dark fans laid by the jets of spring.", 2000, 4500, true, true, 2, 0.45);
+        identity(k, PT_DRY_ICE, "DRY ICE", "DRY ICE",
+                "small and cold under a thin sky of carbon dioxide: caps of dry ice pitted like cheese, spider-shaped channels and dark fans laid by the jets of spring.", 2000, 4500, true, true, 2,
+                0.45);
         k.family = "cold";
         k.tags = KT_PLATES | KT_DRAINAGE | KT_FRONTS | KT_DUST | KT_TWIN;
         k.shapes = KS_INCISION | KS_LAYERED | KS_EXTENSION | KS_SCARPS | KS_GLACIERS | KS_PEDIMENTS | KS_BASALTIC | KS_FROST | KS_WIND | KS_FLOOD_LAVA | KS_IMPACTS | KS_SPIRES;
@@ -1068,7 +1109,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.events = EV_SPRING_JETS | EV_STORM_DEVILS; k.eventMaterial = MAT_SNOW;   // the jets through the spring frost
     }
     {   KindDef& k = K[PT_WANDERER];
-        identity(k, PT_WANDERER, "WANDERER", "WANDERER", "small to medium: a rogue world a star caught on a wild orbit, an old world's ground under its air fallen as snow, domes of new ice.", 2000, 6000, true, false, 0, 0.75);
+        identity(k, PT_WANDERER, "WANDERER", "WANDERER", "small to medium: a rogue world a star caught on a wild orbit, an old world's ground under its air fallen as snow, domes of new ice.", 2000,
+                6000, true, false, 0, 0.75);
         k.family = "cold"; k.density = 0.85;
         k.tags = KT_PLATES | KT_DRAINAGE | KT_FROZEN;
         k.shapes = KS_INCISION | KS_LAYERED | KS_EXTENSION | KS_SCARPS | KS_PEDIMENTS | KS_FROST | KS_PLUMES;   // the landforms whose walls stand out of the snow (no lava sheets or sand under it)
@@ -1089,7 +1131,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.fog = 45000; k.floorFamily = FAM_SNOW; rocks(k, 0.15, 1.1); k.snowAlbedo = 0.9;   // the boulders under the snow but a few
     }
     {   KindDef& k = K[PT_BRINE_DWARF];
-        identity(k, PT_BRINE_DWARF, "BRINE DWARF", "BRINE DWRF", "small, dark rock and ice: bright salt on the floors of its young craters, one lone mountain of ice streaked with salt, no atmosphere.", 900, 2000, true, false, 1, 0.12);
+        identity(k, PT_BRINE_DWARF, "BRINE DWARF", "BRINE DWRF",
+                "small, dark rock and ice: bright salt on the floors of its young craters, one lone mountain of ice streaked with salt, no atmosphere.", 900, 2000, true, false, 1, 0.12);
         k.family = "cold"; k.density = 0.75;   // Ceres: rock and ice
         k.shapes = KS_SCARPS | KS_BRITTLE | KS_FROST | KS_EVAPORITES;   // no flooded basin: no lava ever came up here, only brine
         k.salt = 0xB21E0D0000000019ULL;
@@ -1111,7 +1154,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         rocks(k, 0.9, 1.0);
     }
     {   KindDef& k = K[PT_FROST_DWARF];
-        identity(k, PT_FROST_DWARF, "FROST DWARF", "FROST DWRF", "small, the coldest: the brightest ground there is, a fresh coat of methane frost, red streaks of tholin, sublimation pits, almost no air.", 600, 1500, true, false, 1, 0.92);
+        identity(k, PT_FROST_DWARF, "FROST DWARF", "FROST DWRF",
+                "small, the coldest: the brightest ground there is, a fresh coat of methane frost, red streaks of tholin, sublimation pits, almost no air.", 600, 1500, true, false, 1, 0.92);
         k.family = "cold"; k.density = 0.65;
         k.tags = KT_FROZEN | KT_FLAT;
         k.shapes = KS_FROST | KS_SPIRES;   // the fresh frost hides any scarp
@@ -1136,7 +1180,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // giant's large moons of ice, Iapetus's two faces on its outer moons that face it, Enceladus's tiger stripes on its inner ones, Miranda's patchwork
     // on the moons in a resonance, Hyperion's pits on the small moons that tumble; airless, their ground each its own
     {   KindDef& k = K[PT_GROOVED_ICE];
-        identity(k, PT_GROOVED_ICE, "GROOVED ICE", "GROOVED", "medium, a giant's large moon of ice: dark old ground in polygons cut by bright lanes of parallel grooves, frost at its poles, no atmosphere.", 1500, 2700, true, false, 0, 0.43);
+        identity(k, PT_GROOVED_ICE, "GROOVED ICE", "GROOVED",
+                "medium, a giant's large moon of ice: dark old ground in polygons cut by bright lanes of parallel grooves, frost at its poles, no atmosphere.", 1500, 2700, true, false, 0, 0.43);
         k.family = "moons"; k.density = 0.6;   // Ganymede: ice and rock, the largest moon
         k.tags = KT_FROZEN;
         k.shapes = KS_EXTENSION | KS_FROST;   // the lanes are a crust pulled apart (no escarpments: their walls' lines would cross the lanes' pattern)
@@ -1157,7 +1202,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.fog = 45000; k.floorFamily = FAM_SAND; rocks(k, 0.3, 1.1);
     }
     {   KindDef& k = K[PT_TWO_FACED];
-        identity(k, PT_TWO_FACED, "TWO-FACED", "TWO-FACED", "medium, an outer moon of ice facing its giant: the face it leads with black as coal, the other white as snow, a ridge along its equator, no atmosphere.", 700, 1500, true, false, 0, 0.3);
+        identity(k, PT_TWO_FACED, "TWO-FACED", "TWO-FACED",
+                "medium, an outer moon of ice facing its giant: the face it leads with black as coal, the other white as snow, a ridge along its equator, no atmosphere.", 700, 1500, true, false, 0,
+                0.3);
         k.family = "moons"; k.density = 0.5;   // Iapetus: mostly ice
         k.tags = KT_FROZEN;
         k.shapes = KS_SCARPS | KS_FROST;
@@ -1178,7 +1225,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.fog = 45000; k.floorFamily = FAM_SNOW; rocks(k, 0.35, 1.1);
     }
     {   KindDef& k = K[PT_TIGER_STRIPED];
-        identity(k, PT_TIGER_STRIPED, "TIGER-STRIPED", "TIGER", "small, an inner moon of a giant: the whitest ice, smooth snow plains, four rifts at its south pole venting curtains of ice, no atmosphere.", 600, 900, true, false, 0, 0.95);
+        identity(k, PT_TIGER_STRIPED, "TIGER-STRIPED", "TIGER",
+                "small, an inner moon of a giant: the whitest ice, smooth snow plains, four rifts at its south pole venting curtains of ice, no atmosphere.", 600, 900, true, false, 0, 0.95);
         k.family = "moons"; k.density = 0.6;   // Enceladus: rock under a shell of ice over a sea
         k.tags = KT_FROZEN | KT_FLAT;
         k.shapes = KS_EXTENSION | KS_FROST | KS_SPIRES;
@@ -1191,7 +1239,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         draw(k, GF_MOUNTAIN, 150, 200); draw(k, GF_HILL, 30, 50); draw(k, GF_CRATER_DENSITY, 0.2, 0.3); draw(k, GF_ICE_CAP, 52, 8);   // the south polar terrain's edge (degrees)
         k.color2 = tintOf(TINT_CONST, RGB(0.60f, 0.74f, 0.86f));
         k.relief.ridgeOp = RO_MUL; k.relief.ridge = 0.4; k.relief.flat = 0.06; k.relief.hill = 0.3; k.relief.mtn = 0.7; k.relief.cliffAmount = 0.4; k.relief.cliffStep = 0.6;
-        mix(k, MAT_SNOW, MM_CONST, RGB(0.97f, 0.97f, 0.98f)); mix(k, MAT_ICE, MM_CONST, RGB(0.60f, 0.74f, 0.86f)); mix(k, MAT_ROCK, MM_CONST, RGB(0.76f, 0.78f, 0.82f));   // the stripes' coarse ice blue
+        // the stripes' coarse ice blue
+        mix(k, MAT_SNOW, MM_CONST, RGB(0.97f, 0.97f, 0.98f)); mix(k, MAT_ICE, MM_CONST, RGB(0.60f, 0.74f, 0.86f)); mix(k, MAT_ROCK, MM_CONST, RGB(0.76f, 0.78f, 0.82f));
         k.famRep[FAM_SNOW] = MAT_SNOW; k.accent[0] = MAT_ICE;
         k.ground = GR_TIGER; k.plainK = 0.3; k.gullyK = 0.2;
         crater(k, 0.12, true, 0.6, CD_REL, 0.5, false); crater(k, 6.0, false, 0.8, CD_REL, 0.5, false, true); crater(k, 1.0, false, 0.8, CD_REL, 0.4, false);
@@ -1200,7 +1249,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.events = EV_CURTAINS; k.eventMaterial = MAT_ICE;   // the curtains rise from the stripes
     }
     {   KindDef& k = K[PT_PATCHWORK];
-        identity(k, PT_PATCHWORK, "PATCHWORK", "PATCHWORK", "small, a moon broken and put back together: terrains in patches, coronae ringed by parallel ridges, chasms, a cliff twenty kilometres high, no atmosphere.", 600, 1500, true, false, 0, 0.32);
+        identity(k, PT_PATCHWORK, "PATCHWORK", "PATCHWORK",
+                "small, a moon broken and put back together: terrains in patches, coronae ringed by parallel ridges, chasms, a cliff twenty kilometres high, no atmosphere.", 600, 1500, true, false, 0,
+                0.32);
         k.family = "moons"; k.density = 0.55;   // Miranda: ice and rock
         k.tags = KT_FROZEN;
         k.shapes = KS_EXTENSION | KS_SCARPS | KS_BRITTLE;
@@ -1212,7 +1263,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         draw(k, GF_MOUNTAIN, 400, 600); draw(k, GF_HILL, 60, 100); draw(k, GF_CRATER_DENSITY, 0.35, 0.3);
         k.color2 = tintOf(TINT_CONST, RGB(0.36f, 0.35f, 0.34f));
         k.relief.ridgeOp = RO_MUL; k.relief.ridge = 0.6; k.relief.mtn = 1.4; k.relief.hill = 0.45; k.relief.cliffAmount = 0.6; k.relief.cliffStep = 0.7;
-        mix(k, MAT_DUST, MM_CONST, RGB(0.38f, 0.37f, 0.36f)); mix(k, MAT_ICE, MM_CONST, RGB(0.78f, 0.78f, 0.77f)); mix(k, MAT_ROCK, MM_CONST, RGB(0.52f, 0.51f, 0.50f));   // grey ice and its dark bands
+        // grey ice and its dark bands
+        mix(k, MAT_DUST, MM_CONST, RGB(0.38f, 0.37f, 0.36f)); mix(k, MAT_ICE, MM_CONST, RGB(0.78f, 0.78f, 0.77f)); mix(k, MAT_ROCK, MM_CONST, RGB(0.52f, 0.51f, 0.50f));
         k.famRep[FAM_SAND] = MAT_DUST; k.famRep[FAM_SNOW] = MAT_ICE;
         k.ground = GR_PATCHWORK; k.plainK = 0.5; k.gullyK = 0.2;
         crater(k, 0.3, true, 0.5, CD_REL, 0.8, true); crater(k, 8.0, false, 1.0, CD_REL, 0.7, true, true); crater(k, 1.5, false, 1.0, CD_REL, 0.6, true);
@@ -1220,7 +1272,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.fog = 45000; k.floorFamily = FAM_SNOW; rocks(k, 0.45, 1.2);
     }
     {   KindDef& k = K[PT_SPONGE];
-        identity(k, PT_SPONGE, "SPONGE", "SPONGE", "small and porous, tumbling: deep sharp-rimmed pits packed together like a sponge's, dark dust in their floors, no atmosphere.", 600, 900, true, false, 0, 0.3);
+        identity(k, PT_SPONGE, "SPONGE", "SPONGE", "small and porous, tumbling: deep sharp-rimmed pits packed together like a sponge's, dark dust in their floors, no atmosphere.", 600, 900, true,
+                false, 0, 0.3);
         k.family = "moons"; k.density = 0.3;   // Hyperion: four tenths of it void
         k.tags = KT_FROZEN;
         k.shapes = KS_FROST;
@@ -1244,7 +1297,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // (one that close is) and round a sun-like star about one in a hundred (Wright et al. 2012); the gas dwarfs from the warm worlds (the
     // sub-Neptunes, Kepler's commonest planets: Fulton et al. 2017), the super-puffs from a young star's giants (Kepler-51's three)
     {   KindDef& k = K[PT_SUPER_PUFF];
-        identity(k, PT_SUPER_PUFF, "SUPER-PUFF", "SUPER-PUFF", "very large and nearly weightless: a few Earths of mass swollen to a giant's size round a young star, a vast pale haze ballooning over its core.", 40000, 100000, false, true, 12, 0.35);
+        identity(k, PT_SUPER_PUFF, "SUPER-PUFF", "SUPER-PUFF",
+                "very large and nearly weightless: a few Earths of mass swollen to a giant's size round a young star, a vast pale haze ballooning over its core.", 40000, 100000, false, true, 12,
+                0.35);
         k.family = "giants"; k.density = 0.012; k.ringChance = 0.6;   // Kepler-51 b, c, d (Masuda 2014, Libby-Roberts et al. 2020): under 0.1 g/cm3
         k.tags = KT_GIANT | KT_GAS_GIANT | KT_NO_SIGHTS;
         k.salt = 0x5AFE9F0F00000026ULL;
@@ -1260,7 +1315,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.giantClass = GC_PUFF;
     }
     {   KindDef& k = K[PT_WATER_CLOUD];
-        identity(k, PT_WATER_CLOUD, "WATER-CLOUD GIANT", "WATERCLOUD", "large, warm enough for clouds of water: a bright white globe, its bands soft, its storms towering.", 24000, 72000, false, true, 12, 0.81);
+        identity(k, PT_WATER_CLOUD, "WATER-CLOUD GIANT", "WATERCLOUD", "large, warm enough for clouds of water: a bright white globe, its bands soft, its storms towering.", 24000, 72000, false, true,
+                12, 0.81);
         k.family = "giants"; k.density = 0.25; k.ringChance = 0.6;
         k.tags = KT_GIANT | KT_GAS_GIANT | KT_NO_SIGHTS;
         k.salt = 0x4A7E2C3100000027ULL;   // pinned: B-427's Wolf-Rayet giant (Syaniapheela II) and the probe's Thilawiane III stay as drawn
@@ -1290,7 +1346,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.giantClass = GC_AZURE; k.oneBarTLo = 290; k.oneBarTHi = 360; k.oneBarLo = 600; k.oneBarHi = 1000;   // the real class's 350-800 K
     }
     {   KindDef& k = K[PT_ALKALI];
-        identity(k, PT_ALKALI, "ALKALI GIANT", "ALKALI", "large, locked close to its star: a dark globe of sodium and potassium air that reflects almost nothing, its night side glowing dull red.", 60000, 125000, false, true, 4, 0.03);
+        identity(k, PT_ALKALI, "ALKALI GIANT", "ALKALI", "large, locked close to its star: a dark globe of sodium and potassium air that reflects almost nothing, its night side glowing dull red.",
+                60000, 125000, false, true, 4, 0.03);
         k.family = "giants"; k.density = 0.08; k.ringChance = 0.05; k.untilted = true;   // the hot Jupiters: swollen (HD 209458b), their tilt taken with their spin
         k.tags = KT_GIANT | KT_GAS_GIANT | KT_NO_SIGHTS;
         k.salt = 0x7A1CA11A00000029ULL;
@@ -1306,7 +1363,8 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
         k.giantClass = GC_ALKALI; k.oneBarTLo = 360; k.oneBarTHi = 420; k.oneBarLo = 1100; k.oneBarHi = 1500;   // 900-1,400 K
     }
     {   KindDef& k = K[PT_SILICATE];
-        identity(k, PT_SILICATE, "SILICATE GIANT", "SILICATE", "large and glowing, locked close to its star: the hottest giants, under clouds of rock and iron, iron rain on its night side.", 65000, 130000, false, true, 4, 0.30);
+        identity(k, PT_SILICATE, "SILICATE GIANT", "SILICATE", "large and glowing, locked close to its star: the hottest giants, under clouds of rock and iron, iron rain on its night side.", 65000,
+                130000, false, true, 4, 0.30);
         k.family = "giants"; k.density = 0.07; k.ringChance = 0.03; k.untilted = true;
         k.tags = KT_GIANT | KT_GAS_GIANT | KT_NO_SIGHTS;
         k.salt = 0x51C1CA7E0000002AULL;
@@ -1338,7 +1396,9 @@ constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     // water: an ocean in a night that never ends. Made from a rocky drifter by the dark's table (`drifterBody`, a share by its salt), never
     // by `kindOf`: its moons and its voice are the rocky drifter's it was drawn as
     {   KindDef& k = K[PT_DARK_OCEAN];
-        identity(k, PT_DARK_OCEAN, "DARK OCEAN", "DARK OCEAN", "medium to large: no sun, kept warm by its own heat under a thick hydrogen sky, a liquid sea in endless night, islands of black basalt steaming at their vents.", 5000, 9000, true, true, 2, 0.06);
+        identity(k, PT_DARK_OCEAN, "DARK OCEAN", "DARK OCEAN",
+                "medium to large: no sun, kept warm by its own heat under a thick hydrogen sky, a liquid sea in endless night, islands of black basalt steaming at their vents.", 5000, 9000, true,
+                true, 2, 0.06);
         k.family = "dark"; k.density = 0.9;   // rock and water
         k.tags = KT_SEA | KT_TWIN;
         k.shapes = KS_BASALTIC | KS_HYDROTHERMAL | KS_JOINTING | KS_PHREATIC;   // the islands' cinder cones, geysers, columns and maars
@@ -1460,12 +1520,14 @@ constexpr bool kindsOk(const std::array<KindDef, PT_COUNT>& K) {
         // a made kind has no weight in the draw (no zone, no rule that adds), a family, a salt of its own and its sources over drawn kinds
         // (P-04: none where it is made only where no system is)
         if (!k.family || !k.salt || (k.nSources < 1) != k.elsewhere || k.nSources > MAX_KIND_SOURCES) return false;
-        if (k.thenKind >= 0 && (k.thenKind >= PT_DRAWN_COUNT || k.cover == DC_NONE || !(k.tags & KT_PEOPLE) || !(k.peopleShare > 0) || !k.peopleSalt || (k.tags & (KT_FLORA | KT_FAUNA)))) return false;   // a dead world's
+        // a dead world's
+        if (k.thenKind >= 0 && (k.thenKind >= PT_DRAWN_COUNT || k.cover == DC_NONE || !(k.tags & KT_PEOPLE) || !(k.peopleShare > 0) || !k.peopleSalt || (k.tags & (KT_FLORA | KT_FAUNA)))) return false;
         if ((k.cover != DC_NONE) != (k.thenKind >= 0)) return false;
         for (int z = 0; z < 5; z++) if (k.zones[z] != 0) return false;
         for (int r = 0; r < WR_COUNT; r++) if (k.rules[r].mul != 1 || k.rules[r].add != 0) return false;
         for (int s = 0; s < k.nSources; s++) if (!k.sources[s].from || (k.sources[s].from >> PT_DRAWN_COUNT) || !k.sources[s].bodies || !(k.sources[s].share > 0)) return false;
-        for (int s = 0; s < k.nSources; s++) if (((k.sources[s].parents || k.sources[s].moon) && k.sources[s].bodies != KB_MOON) || (k.sources[s].parents >> PT_DRAWN_COUNT)) return false;   // a planet's kinds name a moon's source; P-06: so do its facts among its planet's moons
+        // a planet's kinds name a moon's source; P-06: so do its facts among its planet's moons
+        for (int s = 0; s < k.nSources; s++) if (((k.sources[s].parents || k.sources[s].moon) && k.sources[s].bodies != KB_MOON) || (k.sources[s].parents >> PT_DRAWN_COUNT)) return false;
         for (int j = PT_DRAWN_COUNT; j < i; j++) if (K[j].salt == k.salt) return false;
     }
     return true;
@@ -1513,7 +1575,8 @@ constexpr std::array<TraitDef, TR_COUNT> buildTraits() {
     trait(T, TR_ARCHIPELAGO, "ARCHIPELAGO", ", an archipelago of islands", TC_WORLD, KS_OPEN_SEA, false, TR_PANGAEA);
     trait(T, TR_PANGAEA, "PANGAEA", ", one great continent", TC_WORLD, KS_CONTINENTS, false, TR_ARCHIPELAGO);
     trait(T, TR_LAKELAND, "LAKE COUNTRY", ", lakes everywhere", TC_WORLD, KS_CONTINENTS);
-    trait(T, TR_SNOWBALL, "SNOWBALL", ", frozen down to the middle latitudes", TC_WORLD, KS_FREEZE);   // its own process (every kind with an open sea had it; a hothouse has the sea and not the freeze)
+    // its own process (every kind with an open sea had it; a hothouse has the sea and not the freeze)
+    trait(T, TR_SNOWBALL, "SNOWBALL", ", frozen down to the middle latitudes", TC_WORLD, KS_FREEZE);
     trait(T, TR_EXOTIC_SEAS, "EXOTIC SEAS", ", seas of something that is not water", TC_WORLD, KS_COLD_SEAS);
     trait(T, TR_STORMS, "STORM WORLD", ", storms that never end", TC_WORLD, KS_STORMS);
     trait(T, TR_HAZE, "HAZE", ", under a thick haze", TC_WORLD, KS_HAZE);

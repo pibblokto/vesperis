@@ -35,7 +35,8 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // wide, 150-600 m deep) and their side canyons (5 km, a third as wide and deep); the walls step down in three terraces
             double mask = land * prov(1, 0.1, 0.4) * smoothstep(0.45, 0.25, c.moist) * smoothstep(0.4, 0.2, c.relief0) * smoothstep(30, 150, c.hS);
             double w1 = 0.3 + 0.35 * tu(2), w2 = 0.1 + 0.12 * tu(3);   // the half-widths, km
-            if (mask < 0.01 || (featFade(w1 * 2, detailM) <= 0 && !matVisible(w1, detailM))) break;   // by the canyons' own width (the 512 m ring draws them, coarsely; it was `scaleVisible(0.3)`: nothing beyond the 64 m ring)
+            // by the canyons' own width (the 512 m ring draws them, coarsely; it was `scaleVisible(0.3)`: nothing beyond the 64 m ring)
+            if (mask < 0.01 || (featFade(w1 * 2, detailM) <= 0 && !matVisible(w1, detailM))) break;
             double depth = (150 + 450 * tu(1)) * mask;
             double wallness = 0;
             auto cut = [&](double cellKm, uint64_t seed, double width, double dep) {
@@ -157,7 +158,8 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_INSELBERGS: {
             // lone steep mountains 150-500 m tall and 0.8-3 km across on the plains, one per 25 km cell in three
             double mask = land * smoothstep(0.35, 0.15, c.relief0);
-            if (mask < 0.01 || (featFade(3.2, detailM) <= 0 && !matVisible(1.1, detailM))) break;   // by the biggest mountain (the 512 m ring draws the big ones; `lodFade(2.0)` drew none beyond the 64 m ring)
+            // by the biggest mountain (the 512 m ring draws the big ones; `lodFade(2.0)` drew none beyond the 64 m ring)
+            if (mask < 0.01 || (featFade(3.2, detailM) <= 0 && !matVisible(1.1, detailM))) break;
             double dh = 0; bool rock = false;
             visitFeatures(p, R, 25.0, 0.3, g.sE + 280, 0.12, [&](const FeatureHit& f) {
                 double r = 0.4 + 1.2 * f.u[3], x = f.d / r;
@@ -247,7 +249,10 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
             // a sea of giant dunes: draa 1-2.5 km apart and 40-120 m high across the wind in the dry lowlands, sand
             double mask = land * smoothstep(0.34, 0.2, c.moist) * smoothstep(0.35, 0.15, c.relief0) * smoothstep(900, 400, c.hS);
             if (mask < 0.01) break;
-            if (mask > 0.5) { setMat(MAT_SAND, livingGround(g.type) ? 0.6 : -1.0); o.mark = mask; }   // the sand sea is kilometres across: sand in every ring and on the maps, whether or not its draa can show (going with the draa, it would be dust beyond the 64 m ring); an airless or dry type keeps its own albedo under it, so its globe keeps its mottling (a flat 0.6 made a dune-sea world one yellow ball)
+            // the sand sea is kilometres across: sand in every ring and on the maps, whether or not its draa can show (going with the draa,
+            // it would be dust beyond the 64 m ring); an airless or dry type keeps its own albedo under it, so its globe keeps its mottling
+            // (a flat 0.6 made a dune-sea world one yellow ball)
+            if (mask > 0.5) { setMat(MAT_SAND, livingGround(g.type) ? 0.6 : -1.0); o.mark = mask; }
             double wl = 1.0 + 1.5 * tu(11), amp = 40 + 80 * tu(12);
             double f = lodFade(wl, detailM);   // the draa are a periodic pattern: the octave rule
             if (f <= 0) break;
@@ -263,12 +268,15 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_SALT_FLATS: {
             // white playas in the closed basins of dry country: dead flat three metres under the smooth ground, cracked into
             // polygons a dozen metres across
-            if (!matVisible(2.5, detailM)) break;   // the playas (a few kilometres across, the lows of the 5 km basin noise) unfaded wherever one spans half a cell: every ring carries them, the world map does not (the noise would alias on its texels)
+            // the playas (a few kilometres across, the lows of the 5 km basin noise) unfaded wherever one spans half a cell: every ring
+            // carries them, the world map does not (the noise would alias on its texels)
+            if (!matVisible(2.5, detailM)) break;
             double basin = smoothstep(-0.2, -0.45, fbm3(p / 5.0, g.sB, 3));
             double mask = land * basin * smoothstep(0.34, 0.2, c.moist) * smoothstep(0.25, 0.1, c.relief0) * smoothstep(700, 300, c.hS);
             if (mask < 0.01) break;
             o.flatten = std::max(o.flatten, mask); o.flatOffset = -3;
-            if (scaleVisible(0.012, detailM)) { Worley3 w = worley3(p / 0.012, g.sE + 340); o.dhFine += 0.15 * (1 - smoothstep(0.0, 0.5, (w.f2 - w.f1) * 12)) * mask; }   // the cracks: polygons of 12 m, the 4 m ring's (B-404: gated at 5 m before, under every ring)
+            // the cracks: polygons of 12 m, the 4 m ring's (B-404: gated at 5 m before, under every ring)
+            if (scaleVisible(0.012, detailM)) { Worley3 w = worley3(p / 0.012, g.sE + 340); o.dhFine += 0.15 * (1 - smoothstep(0.0, 0.5, (w.f2 - w.f1) * 12)) * mask; }
             if (mask > 0.6) { setMat(MAT_SALT, 0.9); o.mark = mask; }
             break;
         }
@@ -325,7 +333,9 @@ void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detai
         case TR_SPIRES: {
             if (kindHas(g.type, KT_CRYSTAL)) {   // crystal spires 10-35 m tall in fields
                 double mask = prov(7, 0.2, 0.45);
-                if (mask < 0.01 || detailM > 5) break;   // the 4 m ring's, like the ice spires (B-404: `scaleVisible(0.01)` wanted a 3 m sample, so no ring ever drew them; the crystal landmarks stood on bare ground)
+                // the 4 m ring's, like the ice spires (B-404: `scaleVisible(0.01)` wanted a 3 m sample, so no ring ever drew them; the
+                // crystal landmarks stood on bare ground)
+                if (mask < 0.01 || detailM > 5) break;
                 Worley3 w = worley3(p / 0.05, g.sE + 360);
                 if (unitFromHash(mix64(w.id1 + 2)) < 0.4) {
                     double r = 0.006 + 0.006 * unitFromHash(mix64(w.id1 + 3));

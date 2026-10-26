@@ -93,8 +93,16 @@ void graveElements(const std::vector<Grave>& graves, const Culture& c, int lod, 
     if (stonesOnly) {   // T-03: a work's plots: its own tombs and walls stand as its buildings
         for (const Grave& g : graves) {
             Form e; e.kind = FK_BOX; e.part = 5; e.building = -1; e.heading = g.heading;
-            if (!g.fallen) { e.x = g.x; e.z = g.z; e.hx = 0.32; e.hz = 0.08; e.y0 = 0; e.y1 = g.height; e.glyphs = true; }
-            else { double fx = std::sin(g.heading), fz = std::cos(g.heading); e.x = g.x + fx * (g.height * 0.5 + 0.1); e.z = g.z + fz * (g.height * 0.5 + 0.1); e.hx = 0.32; e.hz = g.height * 0.5; e.y0 = 0; e.y1 = 0.16; }
+            if (!g.fallen) { e.x = g.x; e.z = g.z; e.hx = 0.32; e.hz = 0.08; e.y0 = 0; e.y1 = g.height; e.glyphs = true;
+            } else {
+                double fx = std::sin(g.heading), fz = std::cos(g.heading);
+                e.x = g.x + fx * (g.height * 0.5 + 0.1);
+                e.z = g.z + fz * (g.height * 0.5 + 0.1);
+                e.hx = 0.32;
+                e.hz = g.height * 0.5;
+                e.y0 = 0;
+                e.y1 = 0.16;
+            }
             out.push_back(e);
         }
         return;
@@ -120,7 +128,13 @@ void graveElements(const std::vector<Grave>& graves, const Culture& c, int lod, 
         if (dead == DE_TOMBS && D < 0.85) {
             const double h = 1.6 * (D < 0.4 ? 1 : 1 - 0.6 * D);
             piece(FK_BOX, g.x - bx * 1.5, g.z - bz * 1.5, g.heading, 0.75, 0.9, 0, h, 0, mat);
-            if (D < 0.4) { Form& r = piece(FK_SWEEP, g.x - bx * 1.5, g.z - bz * 1.5, g.heading + PI / 2, 0, 1.0, h, h + 0.6, 2, mat); r.sub = 1; r.p[1] = 0.95; r.p[2] = 0.1; r.slot = c.genome.accentPlace() == AP_ROOFS ? 1 : 0; }
+            if (D < 0.4) {
+                Form& r = piece(FK_SWEEP, g.x - bx * 1.5, g.z - bz * 1.5, g.heading + PI / 2, 0, 1.0, h, h + 0.6, 2, mat);
+                r.sub = 1;
+                r.p[1] = 0.95;
+                r.p[2] = 0.1;
+                r.slot = c.genome.accentPlace() == AP_ROOFS ? 1 : 0;
+            }
         }
     }
     if (dead == DE_CEMETERIES || dead == DE_TOWERS) {   // round the ground: a low wall, or the tower's high one
@@ -136,8 +150,17 @@ void graveElements(const std::vector<Grave>& graves, const Culture& c, int lod, 
     }
     for (const Grave& g : graves) {
         Form e; e.kind = FK_BOX; e.part = 5; e.building = -1; e.heading = g.heading;
-        if (!g.fallen) { e.x = g.x; e.z = g.z; e.hx = 0.32; e.hz = 0.08; e.y0 = 0; e.y1 = g.height; e.glyphs = true; }
-        else { double fx = std::sin(g.heading), fz = std::cos(g.heading); e.x = g.x + fx * (g.height * 0.5 + 0.1); e.z = g.z + fz * (g.height * 0.5 + 0.1); e.hx = 0.32; e.hz = g.height * 0.5; e.y0 = 0; e.y1 = 0.16; e.glyphs = false; }
+        if (!g.fallen) { e.x = g.x; e.z = g.z; e.hx = 0.32; e.hz = 0.08; e.y0 = 0; e.y1 = g.height; e.glyphs = true;
+        } else {
+            double fx = std::sin(g.heading), fz = std::cos(g.heading);
+            e.x = g.x + fx * (g.height * 0.5 + 0.1);
+            e.z = g.z + fz * (g.height * 0.5 + 0.1);
+            e.hx = 0.32;
+            e.hz = g.height * 0.5;
+            e.y0 = 0;
+            e.y1 = 0.16;
+            e.glyphs = false;
+        }
         out.push_back(e);
     }
 }

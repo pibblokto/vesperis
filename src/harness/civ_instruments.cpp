@@ -20,7 +20,7 @@ static int printInstruments(const AgeWorld& W, bool quiet = false) {
             const Timbre* tb = instrumentTimbre(T, I);
             const InstrumentMake* M = instrumentMake(T, I);
             line += fmt("%s%s [%d: %s of %s/%s, %s, reg %+d, %d courses]", line.empty() ? "" : "; ", instrumentName(T, I).c_str(), I.id, M ? INSTRUMENT_PLANS[M->plan].name : "?",
-                        M ? INSTRUMENT_MATERIAL_NAMES[M->mat] : "?", M ? INSTRUMENT_MATERIAL_NAMES[M->mat2] : "?", tb ? TIMBRE_FAMILY_NAMES[tb->family] : "its cylinder", I.reg, instrumentCourses(T, I));
+                    M ? INSTRUMENT_MATERIAL_NAMES[M->mat] : "?", M ? INSTRUMENT_MATERIAL_NAMES[M->mat2] : "?", tb ? TIMBRE_FAMILY_NAMES[tb->family] : "its cylinder", I.reg, instrumentCourses(T, I));
         }
         printf("    %-11s %s\n", AGE_NAMES[a], line.c_str());
     }
@@ -43,7 +43,14 @@ static int printInstruments(const AgeWorld& W, bool quiet = false) {
            places.size(), musicSites, sites, withPlaces, near, far, ids.size(), all);
     for (int a = 0; a < AGE_COUNT; a++) if (byAge[a]) printf(" %s %d", AGE_NAMES[a], byAge[a]);
     printf("\n");
-    if (!quiet) { printf("    copies:"); for (const auto& kv : perId) { const Instrument* I = instrumentById(P, kv.first); printf(" %s %d,", I ? instrumentName(T, *I).c_str() : "?", kv.second); } printf("\n"); }
+    if (!quiet) {
+        printf("    copies:");
+        for (const auto& kv : perId) {
+            const Instrument* I = instrumentById(P, kv.first);
+            printf(" %s %d,", I ? instrumentName(T, *I).c_str() : "?", kv.second);
+        }
+        printf("\n");
+    }
     return sites > 0 ? 0 : 1;
 }
 
@@ -88,7 +95,8 @@ static InstrumentRender renderInstrument(const Tradition& T, const Instrument& I
     feed(0);
     std::vector<int16_t> local; std::vector<int16_t>* buf = pcm ? pcm : &local;
     out.r = renderReceiver(synth, st, out.seconds, buf, feed);
-    if (!slow && !I.pads && !timbrePercussive(tb->family) && tb->family != TF_ROARER && tb->family != TF_METAL && tb->family != TF_SWARM) out.pitch = pcmPitch(*buf, 22050, 0.06, 0.24, out.hz0 * 0.4, out.hz0 * 2.6);   // the first note's
+    if (!slow && !I.pads && !timbrePercussive(tb->family) && tb->family != TF_ROARER && tb->family != TF_METAL && tb->family != TF_SWARM)
+        out.pitch = pcmPitch(*buf, 22050, 0.06, 0.24, out.hz0 * 0.4, out.hz0 * 2.6);   // the first note's
     return out;
 }
 static int instrumentsWavs() {
@@ -133,12 +141,20 @@ static int instrumentsScenes(int onlyAge = -1, std::vector<std::string>* lines =
         const int which = std::min(aw.which, std::max(0, P->peoples - 1));
         if (P->plans[which].places.empty()) { failures++; continue; }
         remove("shots/tests/test_instruments_guide.txt");
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_instruments_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_instruments_guide.txt";
         game.newGame(); game.setState(GameState::SPACE); applyTestScale(game);
         Input gi;
         auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
         auto press = [&](int key) { pressKey(game, gi, key); };
-        auto shot = [&](const std::string& what) { const std::string fn = fmt("shots/tests/instruments_%s_%s.png", an.c_str(), what.c_str()); writePNG(fn.c_str(), game.output(), FBW, FBH); printf("    %s\n", fn.c_str()); };
+        auto shot = [&](const std::string& what) {
+            const std::string fn = fmt("shots/tests/instruments_%s_%s.png", an.c_str(), what.c_str());
+            writePNG(fn.c_str(), game.output(), FBW, FBH);
+            printf("    %s\n", fn.c_str());
+        };
         run(0.2); game.testParkAt(st, aw.body); run(0.3);
         int id = -1, tries = 0;
         for (size_t pi = 0; pi < P->plans[which].places.size() && id < 0 && tries < 5; pi++) {
@@ -295,7 +311,12 @@ static double thumbDistance(const std::vector<uint32_t>& a, const std::vector<ui
 }
 constexpr double INSTRUMENT_ALIKE = 6.0;   // two pictures closer than this look alike (the closest pairs' sheet: `instruments distinct`)
 struct AlikePair { double d; SheetCell a, b; };
-struct DistinctResult { int peoples = 0, pairs = 0, samePlan = 0, samePlanMat = 0, classes = 0, poorClasses = 0, bonePipes = 0, pipes = 0, machines = 0, industrial = 0, alike = 0; double minD = 1e9, q05 = 0, median = 0; std::string poor; std::vector<AlikePair> closest; };
+struct DistinctResult {
+    int peoples = 0, pairs = 0, samePlan = 0, samePlanMat = 0, classes = 0, poorClasses = 0, bonePipes = 0, pipes = 0, machines = 0, industrial = 0, alike = 0;
+    double minD = 1e9, q05 = 0, median = 0;
+    std::string poor;
+    std::vector<AlikePair> closest;
+};
 static DistinctResult instrumentsDistinctOf(const std::vector<MadePeople>& M, bool print, bool pictures = true) {
     DistinctResult R; R.peoples = (int)M.size();
     std::vector<double> allD;
@@ -303,7 +324,15 @@ static DistinctResult instrumentsDistinctOf(const std::vector<MadePeople>& M, bo
         if (print) printf("  %s:\n", AGE_NAMES[a]);
         for (int c = 0; c < IC_COUNT; c++) {
             std::vector<const InstrumentMake*> v; std::vector<const MadePeople*> who;
-            for (const MadePeople& m : M) for (const Instrument& I : m.P.byAge[a]) { const InstrumentMake* mk = instrumentMake(m.T, I); if (mk && mk->cls == c) { v.push_back(mk); who.push_back(&m); break; } }
+            for (const MadePeople& m : M)
+                for (const Instrument& I : m.P.byAge[a]) {
+                    const InstrumentMake* mk = instrumentMake(m.T, I);
+                    if (mk && mk->cls == c) {
+                        v.push_back(mk);
+                        who.push_back(&m);
+                        break;
+                    }
+                }
             if (v.size() < 2) continue;
             std::vector<std::vector<uint32_t>> th(v.size()); std::vector<std::vector<InstrumentPart>> parts(v.size());
             if (pictures) for (size_t i = 0; i < v.size(); i++) { instrumentPartsOf(who[i]->T, *v[i], parts[i]); th[i] = instrumentThumb(parts[i], who[i]->pal); }
@@ -330,8 +359,10 @@ static DistinctResult instrumentsDistinctOf(const std::vector<MadePeople>& M, bo
             int avail = 0; for (int p = 0; p < IP_COUNT; p++) if (INSTRUMENT_PLANS[p].cls == c && a >= INSTRUMENT_PLANS[p].ageMin && a <= INSTRUMENT_PLANS[p].ageMax) avail++;
             R.pairs += pairs; R.samePlan += sp; R.samePlanMat += spm; R.classes++;
             if (v.size() >= 5 && avail >= 3 && (int)plans.size() < 3) { R.poorClasses++; R.poor += fmt(" %s %s (%zu plans)", AGE_NAMES[a], INSTRUMENT_CLASS_NAMES[c], plans.size()); }
-            if (print) printf("    %-26s %3zu peoples: %2zu of %d plans (the commonest %2.0f%%), %3zu names; pairs %4d: the same plan %4.1f%%, and body %4.1f%%; pictures alike %4.1f%%\n",
-                              INSTRUMENT_CLASS_NAMES[c], v.size(), plans.size(), avail, 100.0 * most / v.size(), names.size(), pairs, 100.0 * sp / std::max(1, pairs), 100.0 * spm / std::max(1, pairs), 100.0 * alike / std::max(1, pairs));
+            if (print)
+                printf("    %-26s %3zu peoples: %2zu of %d plans (the commonest %2.0f%%), %3zu names; pairs %4d: the same plan %4.1f%%, and body %4.1f%%; pictures alike %4.1f%%\n",
+                        INSTRUMENT_CLASS_NAMES[c], v.size(), plans.size(), avail, 100.0 * most / v.size(), names.size(), pairs, 100.0 * sp / std::max(1, pairs), 100.0 * spm / std::max(1, pairs),
+                        100.0 * alike / std::max(1, pairs));
             if (a == AGE_PREHISTORIC && c == IC_EDGE) for (const InstrumentMake* mk : v) { R.pipes++; if (mk->mat == IM_BONE) R.bonePipes++; }
         }
     }
@@ -347,8 +378,10 @@ static int instrumentsDistinct(int n) {
     std::map<std::string, int> names; for (const MadePeople& m : M) for (const InstrumentMake& mk : m.T.makes) names[mk.name]++;
     std::vector<std::pair<int, std::string>> top; for (auto& kv : names) top.push_back({kv.second, kv.first});
     std::sort(top.rbegin(), top.rend());
-    printf("  over every age and class: %d pairs, the same plan %.1f%%, the same plan and body %.1f%%; the pictures' distance: the closest %.1f, 5%% under %.1f, the median %.1f; alike (under %.0f) %d (%.2f%%); %d classes, %d with too few plans%s\n",
-           R.pairs, 100.0 * R.samePlan / std::max(1, R.pairs), 100.0 * R.samePlanMat / std::max(1, R.pairs), R.minD, R.q05, R.median, INSTRUMENT_ALIKE, R.alike, 100.0 * R.alike / std::max(1, R.pairs), R.classes, R.poorClasses, R.poor.c_str());
+    printf("  over every age and class: %d pairs, the same plan %.1f%%, the same plan and body %.1f%%; the pictures' distance: the closest %.1f, 5%% under %.1f, the median %.1f; alike (under %.0f) "
+           "%d (%.2f%%); %d classes, %d with too few plans%s\n",
+            R.pairs, 100.0 * R.samePlan / std::max(1, R.pairs), 100.0 * R.samePlanMat / std::max(1, R.pairs), R.minD, R.q05, R.median, INSTRUMENT_ALIKE, R.alike,
+            100.0 * R.alike / std::max(1, R.pairs), R.classes, R.poorClasses, R.poor.c_str());
     {   // the closest pairs side by side: are the most alike alike?
         std::vector<SheetCell> cells;
         for (const AlikePair& ap : R.closest) { cells.push_back(ap.a); cells.push_back(ap.b); }
@@ -362,7 +395,9 @@ static int instrumentsDistinct(int n) {
         }
         std::sort(counts.begin(), counts.end());
         double mean = 0; for (int c : counts) mean += c; mean /= std::max<size_t>(1, counts.size());
-        if (!counts.empty()) printf("  forms an instrument: the mean %.0f, the median %d, 95%% under %d, the most %d (%s)\n", mean, counts[counts.size() / 2], counts[counts.size() * 95 / 100], heaviest, heavy.c_str());
+        if (!counts.empty())
+            printf("  forms an instrument: the mean %.0f, the median %d, 95%% under %d, the most %d (%s)\n", mean, counts[counts.size() / 2], counts[counts.size() * 95 / 100], heaviest,
+                    heavy.c_str());
     }
     printf("  prehistoric pipes of bone: %d of %d; peoples with a machine for their cylinders: %d of %d; %zu names, the commonest:", R.bonePipes, R.pipes, R.machines, R.industrial, names.size());
     for (size_t i = 0; i < top.size() && i < 12; i++) printf(" %s %d,", top[i].second.c_str(), top[i].first);
@@ -390,27 +425,47 @@ void makerChecks(const std::function<void(const char*, bool, const std::string&)
             for (size_t k = 0; same && k < parts.size(); k++) same = parts[k].kind == again[k].kind && parts[k].u == again[k].u && parts[k].v == again[k].v && parts[k].mat == again[k].mat;
             if (!same) { notSame++; note(fmt("%s: %s made twice differently", m.world.c_str(), mk->name.c_str())); }
             double lu, lv, top; instrumentExtent(parts, lu, lv, top);
-            bool finite = true; for (const InstrumentPart& p : parts) if (!std::isfinite(p.u) || !std::isfinite(p.v) || !std::isfinite(p.w1) || !std::isfinite(p.len) || !std::isfinite(p.r0)) finite = false;
-            if (!finite || std::max(lu, lv) > 1.6 || std::max(lu, lv) < 0.05 || top > 0.6) { outBounds++; note(fmt("%s: %s %.2f x %.2f m, %.2f m high%s", m.world.c_str(), mk->name.c_str(), lu, lv, top, finite ? "" : ", NOT FINITE")); }
+            bool finite = true;
+            for (const InstrumentPart& p : parts)
+                if (!std::isfinite(p.u) || !std::isfinite(p.v) || !std::isfinite(p.w1) || !std::isfinite(p.len) || !std::isfinite(p.r0)) finite = false;
+            if (!finite || std::max(lu, lv) > 1.6 || std::max(lu, lv) < 0.05 || top > 0.6) {
+                outBounds++;
+                note(fmt("%s: %s %.2f x %.2f m, %.2f m high%s", m.world.c_str(), mk->name.c_str(), lu, lv, top, finite ? "" : ", NOT FINITE"));
+            }
             if (parts.size() > 400 || parts.size() < 2) { heavyParts++; note(fmt("%s: %s of %zu parts", m.world.c_str(), mk->name.c_str(), parts.size())); }
             // a course a degree where the plan lays one out (holes, keys, bars, tongues, strings): not a drum, a rattle, a horn's few valves, a fiddle's
             // two strings stopped, one gong, a field
             const bool melodic = !(mk->cls == IC_SKIN || mk->cls == IC_RATTLE || mk->cls == IC_JINGLE || mk->cls == IC_CYMBAL || mk->cls == IC_WHIRL || mk->cls == IC_HUM || mk->cls == IC_MACHINE
                                    || mk->cls == IC_FIELD || mk->cls == IC_SWARM || mk->cls == IC_MOUTH_PLUCK || mk->cls == IC_LIP || mk->cls == IC_BOW || (mk->plan == IP_GONGS && mk->variant % 2));
-            if (melodic && instrumentCoursesOf(parts) < 3) { fewCourses++; note(fmt("%s: %s (%s) with %d courses", m.world.c_str(), mk->name.c_str(), INSTRUMENT_PLANS[mk->plan].name, instrumentCoursesOf(parts))); }
-            for (const InstrumentPart& p : parts) if (!instrumentMaterialGiven(m.g, m.L, p.mat, I.age)) { ungiven++; note(fmt("%s: %s of %s in the %s age (%s)", m.world.c_str(), mk->name.c_str(), INSTRUMENT_MATERIAL_NAMES[p.mat], AGE_NAMES[I.age], INSTRUMENT_PLANS[mk->plan].name)); break; }
+            if (melodic && instrumentCoursesOf(parts) < 3) {
+                fewCourses++;
+                note(fmt("%s: %s (%s) with %d courses", m.world.c_str(), mk->name.c_str(), INSTRUMENT_PLANS[mk->plan].name, instrumentCoursesOf(parts)));
+            }
+            for (const InstrumentPart& p : parts)
+                if (!instrumentMaterialGiven(m.g, m.L, p.mat, I.age)) {
+                    ungiven++;
+                    note(fmt("%s: %s of %s in the %s age (%s)", m.world.c_str(), mk->name.c_str(), INSTRUMENT_MATERIAL_NAMES[p.mat], AGE_NAMES[I.age], INSTRUMENT_PLANS[mk->plan].name));
+                    break;
+                }
             const Timbre* tb = instrumentTimbre(m.T, I);
-            if (tb && !I.pads && tb->name != mk->name && tb->name != mk->plural) { unnamed++; note(fmt("%s: the voice '%s', the instrument '%s'", m.world.c_str(), tb->name.c_str(), mk->name.c_str())); }
+            if (tb && !I.pads && tb->name != mk->name && tb->name != mk->plural) {
+                unnamed++;
+                note(fmt("%s: the voice '%s', the instrument '%s'", m.world.c_str(), tb->name.c_str(), mk->name.c_str()));
+            }
         }
     }
-    check("instruments: made by their peoples, of what their worlds gave (C-17)", !M.empty() && makes > 0 && bad == 0 && longNames == 0 && ungiven == 0 && outBounds == 0 && heavyParts == 0 && fewCourses == 0 && notSame == 0,
-          fmt("%zu peoples near home, %d instruments: %d unmade, %d names past 17 letters, %d of what their world or age did not give, %d out of bounds, %d too many or few parts, %d melodic with under 3 courses, %d not the same made twice%s%s",
-              M.size(), makes, bad, longNames, ungiven, outBounds, heavyParts, fewCourses, notSame, first.empty() ? "" : "; first: ", first.c_str()));
+    check("instruments: made by their peoples, of what their worlds gave (C-17)",
+            !M.empty() && makes > 0 && bad == 0 && longNames == 0 && ungiven == 0 && outBounds == 0 && heavyParts == 0 && fewCourses == 0 && notSame == 0,
+            fmt("%zu peoples near home, %d instruments: %d unmade, %d names past 17 letters, %d of what their world or age did not give, %d out of bounds, %d too many or few parts, %d melodic with "
+                "under 3 courses, %d not the same made twice%s%s",
+                    M.size(), makes, bad, longNames, ungiven, outBounds, heavyParts, fewCourses, notSame, first.empty() ? "" : "; first: ", first.c_str()));
     const DistinctResult R = instrumentsDistinctOf(M, false);
     const double sp = 100.0 * R.samePlanMat / std::max(1, R.pairs), al = 100.0 * R.alike / std::max(1, R.pairs);
-    check("instruments: as many as their peoples (C-17)", R.pairs > 0 && sp < 15 && al < 1.5 && R.poorClasses == 0 && R.bonePipes * 2 < R.pipes && R.machines * 4 > R.industrial && R.machines * 10 < R.industrial * 9,
-          fmt("%d pairs of the same age's and class's instruments of %d peoples: %.1f%% the same plan and body, %.2f%% whose pictures look alike (the closest %.1f, the median %.1f); %d classes, %d with too few plans%s; prehistoric pipes of bone %d of %d; a cylinders' machine %d of %d peoples",
-              R.pairs, R.peoples, sp, al, R.minD, R.median, R.classes, R.poorClasses, R.poor.c_str(), R.bonePipes, R.pipes, R.machines, R.industrial));
+    check("instruments: as many as their peoples (C-17)",
+            R.pairs > 0 && sp < 15 && al < 1.5 && R.poorClasses == 0 && R.bonePipes * 2 < R.pipes && R.machines * 4 > R.industrial && R.machines * 10 < R.industrial * 9,
+            fmt("%d pairs of the same age's and class's instruments of %d peoples: %.1f%% the same plan and body, %.2f%% whose pictures look alike (the closest %.1f, the median %.1f); %d classes, %d "
+                "with too few plans%s; prehistoric pipes of bone %d of %d; a cylinders' machine %d of %d peoples",
+                    R.pairs, R.peoples, sp, al, R.minD, R.median, R.classes, R.poorClasses, R.poor.c_str(), R.bonePipes, R.pipes, R.machines, R.industrial));
     check("instruments: the decoder names them as the ruins do (C-17)", unnamed == 0 && makes > 0, fmt("%d of %d instruments named otherwise on the decoder", unnamed, makes));
 }
 
@@ -454,7 +509,8 @@ void instrumentChecks(const std::function<void(const char*, bool, const std::str
                 std::vector<ShardSite> bare; recordSitesOf(g, rp.spec, cu, bare);
                 recordsCompared++;
                 bool eq = bare.size() == rp.sites.size();
-                for (size_t k = 0; eq && k < bare.size(); k++) eq = bare[k].index == rp.sites[k].index && bare[k].x == rp.sites[k].x && bare[k].z == rp.sites[k].z && bare[k].heading == rp.sites[k].heading;
+                for (size_t k = 0; eq && k < bare.size(); k++)
+                    eq = bare[k].index == rp.sites[k].index && bare[k].x == rp.sites[k].x && bare[k].z == rp.sites[k].z && bare[k].heading == rp.sites[k].heading;
                 if (eq) recordsSame++;
             }
         }
@@ -467,9 +523,11 @@ void instrumentChecks(const std::function<void(const char*, bool, const std::str
         }
     }
     check("instruments: each age's, from its people's ensemble (C-11)", worlds == AGE_COUNT && ownAge == worlds && compared > 0 && same == compared && heavy == 0,
-          fmt("%d age worlds, %d with instruments of their own age; %d of %d timbres the decoder's; %d too heavy to carry; %d cylinder machines (C-17: where their people made one)", worlds, ownAge, same, compared, heavy, gramophones));
+            fmt("%d age worlds, %d with instruments of their own age; %d of %d timbres the decoder's; %d too heavy to carry; %d cylinder machines (C-17: where their people made one)", worlds, ownAge,
+                    same, compared, heavy, gramophones));
     check("instruments: beside the music records (C-11)", sites > 0 && beside == sites && recordsCompared > 0 && recordsSame == recordsCompared,
-          fmt("%d instruments over %d places (%d holding one), %d beside a music record of their age within 1.6 m; the records the same without them in %d of %d places", sites, places, placesWith, beside, recordsSame, recordsCompared));
+            fmt("%d instruments over %d places (%d holding one), %d beside a music record of their age within 1.6 m; the records the same without them in %d of %d places", sites, places, placesWith,
+                    beside, recordsSame, recordsCompared));
     check("instruments: their sound (C-11)", rendered > 0 && levelsOk == rendered && pitched > 0 && pitchOk == pitched,
           fmt("%d of each world's own age played: %d within the levels, %d of %d pitched ones at their first note's pitch within 4%%%s", rendered, levelsOk, pitchOk, pitched, bad.c_str()));
     std::vector<std::string> lines;
@@ -499,7 +557,11 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     }
     if (piece < 0 || rec < 0 || heard < 0) { check("the player: through a flight to a landing (C-11)", false, fmt("records: piece %d recording %d heard %d", piece, rec, heard)); return; }
     remove("shots/tests/test_player_guide.txt");
-    TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_player_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/test_player_guide.txt";
     applyTestScale(game); game.newGame(); game.setState(GameState::SPACE);
     Input gi;
     auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
@@ -511,7 +573,12 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_TAB); run(0.1);
     const int n = game.testPlayerItems();
     int pi = -1, ri = -1, hi = -1;
-    for (int i = 0; i < n; i++) { const std::string l = game.testPlayerItemLine(i); if (l.find(" music") != std::string::npos) pi = i; else if (l.find("off the air") != std::string::npos) hi = i; else ri = i; }
+    for (int i = 0; i < n; i++) {
+        const std::string l = game.testPlayerItemLine(i);
+        if (l.find(" music") != std::string::npos) pi = i;
+        else if (l.find("off the air") != std::string::npos) hi = i;
+        else ri = i;
+    }
     check("the player: lists the pieces, the recordings and what the radar caught (C-11)", n == 3 && pi >= 0 && ri >= 0 && hi >= 0 && game.testShardsTop() == 1,
           fmt("%d items on the page%s; %s", n, game.testShardsTop() == 1 ? "" : " (NOT the player's page)", n > 0 ? game.testPlayerItemLine(0).c_str() : "-"));
     for (int k = 0; k < pi; k++) press(KEY_DOWN);
@@ -533,7 +600,8 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     double secs = 0; { const std::string inf = game.testPlayerInfo(); const size_t of = inf.find(" of "); if (of != std::string::npos) secs = atof(inf.c_str() + of + 4); }
     game.testPlayerSkipTo(std::max(0.0, secs - 0.2)); run(2.2);
     const int next = game.testPlayerPlaying();
-    const bool movedOn = game.testPlayerFinished() == 1 && (pi + 1 < n ? next == pi + 1 && (game.testPlayerOwnsSpeech() || game.testPlayerOwnsPiece()) : next < 0);   // the next down the list, or the list's end
+    // the next down the list, or the list's end
+    const bool movedOn = game.testPlayerFinished() == 1 && (pi + 1 < n ? next == pi + 1 && (game.testPlayerOwnsSpeech() || game.testPlayerOwnsPiece()) : next < 0);
     // the recording through the flight too
     game.testPlayerPlay(ri); run(0.3);
     const double r1 = game.testPlayerT(); run(1.0); const double r2 = game.testPlayerT();
@@ -566,7 +634,8 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
         syn2.render(buf.data(), (int)buf.size(), 22050, st2); said = st2.speechT - S.seconds * 0.5;
     }
     check("the player: held by the decoder's own record, taken up where it was (C-11)", heldNow && kept && resumed && beat >= 0 && beat < 0.2 && said >= 0 && said < 0.1,
-          fmt("held %s at %.2f s (%.2f before the decoder), kept %s, resumed %s; the synth begun %.3f beats and %.3f s past where it was told", heldNow ? "yes" : "NO", heldAt, heldAt0, kept ? "yes" : "NO", resumed ? "yes" : "NO", beat, said));
+            fmt("held %s at %.2f s (%.2f before the decoder), kept %s, resumed %s; the synth begun %.3f beats and %.3f s past where it was told", heldNow ? "yes" : "NO", heldAt, heldAt0,
+                    kept ? "yes" : "NO", resumed ? "yes" : "NO", beat, said));
     // what the radar caught: off the air
     game.testPlayerPlay(hi); run(0.2);
     const bool air = game.testPlayerOwnsSpeech() && game.audio.medium == MEDIUM_AIR;
@@ -576,14 +645,19 @@ void playerChecks(const std::function<void(const char*, bool, const std::string&
     const bool before = game.testPlayerOwnsPiece();
     press(KEY_V); run(0.2);
     game.testParkAt(s, W.body); run(0.3);
-    { std::shared_ptr<const WorldPlan> WP = worldPlanOf(g); const int wh = std::min(W.which, std::max(0, WP->peoples - 1)); if (!WP->plans[wh].places.empty()) game.testLandCursor(WP->plans[wh].places[0].lat / DEG, WP->plans[wh].places[0].lon / DEG); }
+    {
+        std::shared_ptr<const WorldPlan> WP = worldPlanOf(g);
+        const int wh = std::min(W.which, std::max(0, WP->peoples - 1));
+        if (!WP->plans[wh].places.empty()) game.testLandCursor(WP->plans[wh].places[0].lat / DEG, WP->plans[wh].places[0].lon / DEG);
+    }
     run(0.1); press(KEY_ENTER); run(0.5);
     const bool landed = game.state == GameState::DESCENT || game.state == GameState::SURFACE;
     const bool stopped = landed && game.testPlayerPlaying() < 0 && !game.testPlayerOwnsPiece() && !game.testPlayerOwnsSpeech();
     check("the player: plays on through a Vimana flight, stops at a landing (C-11)", playing0 && afterClose && through && movedOn && recThrough && before && stopped,
-          fmt("the piece played %s, after the decoder %s, in the flight %s (%.1f -> %.1f s, the HUD '%s'), at its end %s (item %d of %d); the recording in the flight %s (%.1f -> %.1f s, medium %d); the landing %s (state %d)",
-              playing0 ? "yes" : "NO", afterClose ? "on" : "OFF", through ? "on" : "OFF", t1, t2, hud.c_str(), movedOn ? "the list on" : "NOT MOVED ON", next, n, recThrough ? "on" : "OFF", r1, r2, game.audio.medium,
-              stopped ? "stopped it" : "DID NOT STOP IT", (int)game.state));
+            fmt("the piece played %s, after the decoder %s, in the flight %s (%.1f -> %.1f s, the HUD '%s'), at its end %s (item %d of %d); the recording in the flight %s (%.1f -> %.1f s, medium "
+                "%d); the landing %s (state %d)",
+                    playing0 ? "yes" : "NO", afterClose ? "on" : "OFF", through ? "on" : "OFF", t1, t2, hud.c_str(), movedOn ? "the list on" : "NOT MOVED ON", next, n, recThrough ? "on" : "OFF", r1,
+                    r2, game.audio.medium, stopped ? "stopped it" : "DID NOT STOP IT", (int)game.state));
     (void)infoFlight;
     remove("shots/tests/test_player_guide.txt");
 }
@@ -596,7 +670,15 @@ int runInstruments(int argc, char** argv) {
         int age = -1; if (argc > 3) for (int a = 0; a < AGE_COUNT; a++) if (std::string(argv[3]) == AGE_NAMES[a] || (a == AGE_FAR_FUTURE && std::string(argv[3]) == "far")) age = a;
         const int f = instrumentsScenes(age); printf("instruments scenes: %d failure%s\n", f, f == 1 ? "" : "s"); return f ? 1 : 0;
     }
-    if (what == "ages") { int f = 0; for (int a = 0; a < AGE_COUNT; a++) { printf("== %s (the age test world)\n", AGE_NAMES[a]); f += printInstruments(AGE_WORLDS[a]); } printf("instruments ages: %d failure%s\n", f, f == 1 ? "" : "s"); return f ? 1 : 0; }
+    if (what == "ages") {
+        int f = 0;
+        for (int a = 0; a < AGE_COUNT; a++) {
+            printf("== %s (the age test world)\n", AGE_NAMES[a]);
+            f += printInstruments(AGE_WORLDS[a]);
+        }
+        printf("instruments ages: %d failure%s\n", f, f == 1 ? "" : "s");
+        return f ? 1 : 0;
+    }
     if (what == "sheet") {   // C-17: each age's instruments of peoples near home, a people a row
         int age = -1; if (argc > 3) for (int a = 0; a < AGE_COUNT; a++) if (std::string(argv[3]) == AGE_NAMES[a] || (a == AGE_FAR_FUTURE && std::string(argv[3]) == "far")) age = a;
         const int n = argc > 4 ? std::max(1, atoi(argv[4])) : 10, scale = argc > 5 ? std::max(1, atoi(argv[5])) : 1;
@@ -612,6 +694,7 @@ int runInstruments(int argc, char** argv) {
     }
     const int which = takePeopleArg(argc, argv);
     if (argc > 4) return printInstruments(AgeWorld{atoll(argv[2]), atoll(argv[3]), atoi(argv[4]), which});
-    printf("instruments [ages] | instruments <sx> <sz> <body> [second] | instruments wav | instruments scenes [age] | instruments check | instruments sheet [age] [peoples] [scale] | instruments plans [peoples] [scale] | instruments distinct [peoples]\n");
+    printf("instruments [ages] | instruments <sx> <sz> <body> [second] | instruments wav | instruments scenes [age] | instruments check | instruments sheet [age] [peoples] [scale] | instruments "
+           "plans [peoples] [scale] | instruments distinct [peoples]\n");
     return 1;
 }

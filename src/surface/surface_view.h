@@ -91,10 +91,31 @@ public:
     // levels, read off the coarse ring that draws it there (its own water, and under a big piece's footprint the lowest and the
     // highest: it stands on the highest, its foot down to the lowest), kept while that ring draws it
     struct FootCache { int ring = -1; float y = 0, water = -1e9f, lo = 0, hi = 0; };
-    struct RuinCell { bool has = false; bool placed = false; Ruin r; RuinSpec spec; std::vector<Form> elems[3]; std::vector<int> groups[3]; std::vector<ShardSite> shards; std::vector<Grave> graves; mutable std::vector<FootCache> foot[3]; mutable uint32_t drawn = 0; mutable bool marked = false;
-                      std::vector<Form> recordForms; std::vector<int> recordFirst;
-                      std::vector<InstrumentSite> instruments; std::vector<int> instrumentIds; std::vector<Form> instrumentForms; std::vector<int> instrumentFirst;
-                      mutable bool watered = false; };   // its records laid again with the water as drawn (`waterRecords`)   // C-11: the instruments beside its music records (each site's id, -1 none; its objects as the records')   // T-04: each record's object (`recordForms`, peoples/records.h): site k's from recordFirst[k] to recordFirst[k + 1]   // T-02: `marked` its ground in the site's marks   // T-01: `drawn` the frame that gathered it   // C-03: the settlement's shards; C-12: its graves (their stones among the pieces of lod 0)
+    // a settlement in view: its ruin and spec, its forms by level of detail and their groups, its shards and its graves (their stones
+    // among the pieces of lod 0), their feet, `drawn` the frame that gathered it, `marked` its ground in the site's marks; each record's
+    // object (`recordForms`, peoples/records.h: site k's from recordFirst[k] to recordFirst[k + 1]); the instruments beside its music
+    // records (each site's id, -1 none; their objects as the records'); `watered` its records laid again with the water as drawn
+    // (`waterRecords`)
+    struct RuinCell {
+        bool has = false;
+        bool placed = false;
+        Ruin r;
+        RuinSpec spec;
+        std::vector<Form> elems[3];
+        std::vector<int> groups[3];
+        std::vector<ShardSite> shards;
+        std::vector<Grave> graves;
+        mutable std::vector<FootCache> foot[3];
+        mutable uint32_t drawn = 0;
+        mutable bool marked = false;
+        std::vector<Form> recordForms;
+        std::vector<int> recordFirst;
+        std::vector<InstrumentSite> instruments;
+        std::vector<int> instrumentIds;
+        std::vector<Form> instrumentForms;
+        std::vector<int> instrumentFirst;
+        mutable bool watered = false;
+    };
     mutable std::unordered_map<uint64_t, RuinCell> ruinCells;
     Culture cultures[2]; int peoples = 1;           // the world's, set at init; C-13: one a people (a settlement's is `cultures[spec.people]`)
     Lore lores[2];                                  // the world's names, span and calendar (`loreQuick`, no chart marks), for the graves; empty on a world without a people; C-13: one a people
@@ -113,7 +134,8 @@ public:
     struct NearShard { int index = -1; int place = 0; int sclass = 0; int medium = RM_STONE; int work = -1; bool wall = false, archive = false, last = false; double x = 0, z = 0, dist = 0; };
     NearShard nearShard;
     // the grave within 2.2 m of the explorer this frame (the stone's name and years as the HUD reads them; the game records it in the guide the first time)
-    struct NearGrave { int k = -1; uint64_t id = 0; int sclass = 0; std::string line, hud; double x = 0, z = 0, dist = 0; };   // `line` "Thaelu, years 140 to 212 of Kethra" (the log), `hud` "Thaelu, 140-212"
+    // `line` "Thaelu, years 140 to 212 of Kethra" (the log), `hud` "Thaelu, 140-212"
+    struct NearGrave { int k = -1; uint64_t id = 0; int sclass = 0; std::string line, hud; double x = 0, z = 0, dist = 0; };
     NearGrave nearGrave;
     // the instruments (peoples/instruments.h): each people's tradition and its instruments by age (set at init from the lore), the ones the
     // explorer already has from this world (the game fills it from the guide, as the shards), the one within reach this frame (E takes it)
@@ -145,7 +167,9 @@ public:
     int lastTreesDrawn = 0, lastFloraPoints = 0, lastFloraPolys = 0, lastNearTrees = 0, lastMidTrees = 0, lastFarTrees = 0, lastTreesHidden = 0;
     int lastTreesVisited = 0, lastTreesListed = 0;   // bench: trees listed this frame, and visits summed over the band threads (the duplication of the per-tree work)
     double lastFloraMs[2] = {0, 0};   // the trees, the cells (logs, undergrowth, meadows, shores, deserts) (bench; the worst band's)
-    double lastRenderMs[6] = {0, 0, 0, 0, 0, 0};   // bench: palette and sky; the vertex warm pass; the terrain (the bin, the reflections' gather, the bands: floor, rings, reflections; F-05); footprints to objects; flora; the rest
+    // bench: palette and sky; the vertex warm pass; the terrain (the bin, the reflections' gather, the bands: floor, rings, reflections;
+    // F-05); footprints to objects; flora; the rest
+    double lastRenderMs[6] = {0, 0, 0, 0, 0, 0};
     int lastWarmMisses = 0;   // tests: the cells the last frame's warm pass sampled, its rings together
     static constexpr int FILL_SERIAL_MAX = 64;   // a ring's misses over this are sampled on the pool (warmTerrainLOD)
     // the bands of the last frame's terrain and flora passes (their rows and ms, the bench's skew); under VESPERIS_TRACE the
@@ -156,7 +180,8 @@ public:
     static constexpr int TRACE_BANDS = 64;   // the terrain's chunks (thirty-odd at 4x), the flora's bands
     BandTrace lastTerrainBands[TRACE_BANDS], lastFloraBands[TRACE_BANDS];
     int lastTerrainBandN = 0, lastFloraBandN = 0;
-    int lastTerrainCells = 0, lastTerrainAllRows = 0, lastStaleCorners = 0;   // bench, tests: the cells binned, those every band draws (a corner behind the near plane, foam), the corners the bin found unwarmed (0)
+    // bench, tests: the cells binned, those every band draws (a corner behind the near plane, foam), the corners the bin found unwarmed (0)
+    int lastTerrainCells = 0, lastTerrainAllRows = 0, lastStaleCorners = 0;
     double lastTerrainBinMs = 0;
     double lastRoadsMs = 0; int roadsBuilds = 0;    // the site's roads grown as the explorer goes (`ensureRoads` on the main thread): the last one's ms, how many
     double lastFloraListMs = 0;                     // the flora's cells and trees listed this frame (on the main thread, before the bands; a settlement's buildings tested against every tree)
@@ -212,7 +237,9 @@ private:
     double invTwoR = 0;       // 1 / (2 R): the curvature drop per metre squared (planets)
     int ringR[4] = {40, 36, 26, 26};   // cells drawn per terrain ring (lod0..lod3), capped on small bodies; 0 = ring not drawn
     int ringN = 30;                    // cells of the near ring (4 m; 120 m), 0 when not drawn
-    double nearBlend = 0;              // 1 while the near ring is drawn (B-313: at every speed: faded out above 12 m/s, the 4 m relief rising as the buggy stops would read as the hills changing shape), 0 when it is not (no ring, or the capsule high up)
+    // 1 while the near ring is drawn (B-313: at every speed: faded out above 12 m/s, the 4 m relief rising as the buggy stops would read as
+    // the hills changing shape), 0 when it is not (no ring, or the capsule high up)
+    double nearBlend = 0;
     int frameStamp = 0;
     int anchorFrame = -100;   // the frame of the last re-anchor (the trace follows the refill)
     int prefetchStage = 0, prefetchRing = 0;
@@ -288,7 +315,10 @@ private:
     struct ReflPoly { int first, n, y0, y1; };   // its vertices at reflVerts[first, first + n); the rows y0..y1 (inclusive)
     std::vector<RVert> reflVerts;
     std::vector<ReflPoly> reflPolys;
-    struct VtxCache { int stamp = -1; RVert v; uint8_t bank = 0; bool front = false; float sy = 0; float wy = -1e9f; float hy = 0; float sh = 1e9f; RVert wv; };   // hy = the height as drawn (morphed), sh = the side of the water's edge as drawn (`vertexShore`, morphed), for the shore cut and the water's depth; F-04: wv = the water sheet's corner here when the vertex has its own level (`waterCorner`)
+    // front/sy = the projected row, for the band cull; wy = the water level as drawn (morphed with the ground), -1e9 none; hy = the height
+    // as drawn (morphed), sh = the side of the water's edge as drawn (`vertexShore`, morphed), for the shore cut and the water's depth;
+    // wv = the water sheet's corner here when the vertex has its own level (`waterCorner`)
+    struct VtxCache { int stamp = -1; RVert v; uint8_t bank = 0; bool front = false; float sy = 0; float wy = -1e9f; float hy = 0; float sh = 1e9f; RVert wv; };
     std::vector<VtxCache> vc0, vc1, vc2, vc3, vcN;
     // one jet: a dense core column, a spray crown and a falling veil, `heightM` and `widthM` at full strength
     struct JetSpec { double x, z; uint64_t h; double dist; double heightM, widthM; int bank; bool lava; double shadeAdd = 0; };   // shadeAdd darkens a jet of dust
@@ -501,7 +531,8 @@ private:
     double castShadowLit(TerrainCache& cache, int cx, int cz, double h, const Vec3& sd);
     void gatherReflections();
     void drawReflectionBand(Framebuffer& fb, int bandY0, int bandY1) const;
-    double coarseShoreAt(TerrainCache& c, double x, double z);   // the coarser ring's shore value at (x, z), bilinear; 1e9 where a corner has none   // B-310: front/sy = the projected row, for the band cull; B-320: wy = the water level as drawn (morphed with the ground), -1e9 none
+    // the coarser ring's shore value at (x, z), bilinear; 1e9 where a corner has none
+    double coarseShoreAt(TerrainCache& c, double x, double z);
     double coarseWaterAt(TerrainCache& c, double x, double z);   // the coarser ring's water level at (x, z), bilinear over its wet corners; -1e9 none
     double heightNear(double x, double z, double dist, double& water);   // the cached height (and water level) at a distance from the camera, coarser far away
     double drawnGround(double x, double z, double dist, double& water, int& ring);   // the drawn ground: the near rings' within lod0's reach, a coarse ring's surface beyond (`ring` 0..3)
@@ -539,7 +570,8 @@ private:
 public:
     // ---- the sky: the galaxy's band, the aurora's oval, the sky drawn, the shower meteors, the veiling glare (surface_sky.cpp)
     double auroraOvalNow(const Body& b) const { return auroraOvalLat(b) - (site.gen.hasTrait(TR_GREAT_AURORAE) ? 22.0 : 0.0); }   // Q-02: a great aurorae's oval reaches the middle latitudes
-    static double auroraOvalLat(const Body& b) { return 59.0 + 8.0 * magneticField(b) + 6.0 * (unitFromHash(hashCombine(b.seed, 0xA17)) - 0.5); }   // the auroral oval's latitude on a world: nearer the pole on a strong field
+    // the auroral oval's latitude on a world: nearer the pole on a strong field
+    static double auroraOvalLat(const Body& b) { return 59.0 + 8.0 * magneticField(b) + 6.0 * (unitFromHash(hashCombine(b.seed, 0xA17)) - 0.5); }
     void showerMeteorsAt(double t, std::vector<ShowerMeteor>& out) const;
 private:
     void drawVeil(Framebuffer& fb);

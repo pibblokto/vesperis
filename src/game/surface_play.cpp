@@ -45,7 +45,9 @@ void Game::updateDescentAscent(const Input& in, double dt, double realDt) {
             fade = 1;
             surf.cameraOverrideAlt = -1;
             status("BACK ABOARD THE STARDRIFTER", 4);
-            logEvent("LAUNCH", fmt("LEFT %s, LONGEST WALK %.0f M, DROVE %.0f M%s", upper(bodyNameOf(surf.site.body)).c_str(), walkMax, drivenLanding, flownLanding > 0 ? fmt(", FLEW %.0f M", flownLanding).c_str() : ""));
+            logEvent("LAUNCH",
+                    fmt("LEFT %s, LONGEST WALK %.0f M, DROVE %.0f M%s", upper(bodyNameOf(surf.site.body)).c_str(), walkMax, drivenLanding,
+                            flownLanding > 0 ? fmt(", FLEW %.0f M", flownLanding).c_str() : ""));
         }
         audio.engine = 0.6 * u; audio.hum = 0.3;
     }
@@ -69,7 +71,15 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     {
         double dxs = surf.player.x - lastWalkX, dzs = surf.player.z - lastWalkZ;
         double step = std::sqrt(dxs * dxs + dzs * dzs);
-        if (step < 50) { if (surf.inBuggy) { guide.totalDrivenM += step; drivenLanding += step; } else if (surf.inDrone) { guide.totalFlownM += step; flownLanding += step; } else guide.totalWalkedM += step; }   // flown apart
+        if (step < 50) {
+            if (surf.inBuggy) {
+                guide.totalDrivenM += step;
+                drivenLanding += step;
+            } else if (surf.inDrone) {
+                guide.totalFlownM += step;
+                flownLanding += step;
+            } else guide.totalWalkedM += step;
+        }   // flown apart
         lastWalkX = surf.player.x; lastWalkZ = surf.player.z;
         if (surf.env.capsuleDist > walkMax) walkMax = surf.env.capsuleDist;
         if (walkMax > guide.longestWalkM) guide.longestWalkM = walkMax;
@@ -97,7 +107,8 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     }
     if (surf.nearGrave.k >= 0 && guide.graves.insert(graveKey(surf.nearGrave.id)).second) {   // a grave within reach is read once into the guide, like a landmark: a status and a log line
         std::string what = upper(surf.nearGrave.line);
-        const char* where = surf.nearGrave.sclass == SC_MONUMENT ? "A LONE MONUMENT" : (surf.nearGrave.sclass == SC_HAMLET ? "A HAMLET" : (surf.nearGrave.sclass == SC_VILLAGE ? "A VILLAGE" : "A TOWN"));
+        const char* where =
+                surf.nearGrave.sclass == SC_MONUMENT ? "A LONE MONUMENT" : (surf.nearGrave.sclass == SC_HAMLET ? "A HAMLET" : (surf.nearGrave.sclass == SC_VILLAGE ? "A VILLAGE" : "A TOWN"));
         status(fmt("A GRAVE: %s", what.c_str()), 5);
         logEvent("GRAVE", fmt("A GRAVE OUTSIDE %s ON %s: %s", where, upper(bodyNameOf(surf.site.body)).c_str(), what.c_str()));
         audio.beep = BEEP_UI;
@@ -115,11 +126,24 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
             double trip = surf.drone.odometer, top = surf.drone.topSpeed;
             if (surf.toggleDrone()) { status(fmt("OUT OF THE DRONE - %.2f KM FLOWN, TOP %.0f KM/H", trip / 1000.0, top * 3.6), 4); audio.beep = BEEP_UI; }
             else { refuse("LAND FIRST - HOLD SHIFT TO COME DOWN"); }
-        }
-        else if (surf.inBuggy) { guide.longestDriveM = std::max(guide.longestDriveM, surf.buggy.odometer); surf.toggleBuggy(); status(fmt("OUT OF THE BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4); audio.beep = BEEP_UI; }
-        else if (surf.buggy.deployed && surf.buggyDist() <= 3.5) { if (surf.toggleBuggy()) { status("NOSE CAMERA: W/S A/D DRIVE  SPACE BRAKE  V VIEW  E OUT", 5); audio.beep = BEEP_UI; } }
-        else if (surf.drone.deployed && surf.droneDist() <= 3.5) { if (surf.toggleDrone()) { status("NOSE CAMERA: SPACE LIFTS OFF  W/S THRUST  A/D TURN  SHIFT DOWN", 5); audio.beep = BEEP_UI; } else { refuse("THE DRONE IS STILL UNFOLDING", 3); } }
-        else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) takeInstrument();   // the nearer of the two
+        } else if (surf.inBuggy) {
+            guide.longestDriveM = std::max(guide.longestDriveM, surf.buggy.odometer);
+            surf.toggleBuggy();
+            status(fmt("OUT OF THE BUGGY - %.2f KM, TOP %.0f KM/H", surf.buggy.odometer / 1000.0, surf.buggy.topSpeed * 3.6), 4);
+            audio.beep = BEEP_UI;
+        } else if (surf.buggy.deployed && surf.buggyDist() <= 3.5) {
+            if (surf.toggleBuggy()) {
+                status("NOSE CAMERA: W/S A/D DRIVE  SPACE BRAKE  V VIEW  E OUT", 5);
+                audio.beep = BEEP_UI;
+            }
+        } else if (surf.drone.deployed && surf.droneDist() <= 3.5) {
+            if (surf.toggleDrone()) {
+                status("NOSE CAMERA: SPACE LIFTS OFF  W/S THRUST  A/D TURN  SHIFT DOWN", 5);
+                audio.beep = BEEP_UI;
+            } else {
+                refuse("THE DRONE IS STILL UNFOLDING", 3);
+            }
+        } else if (surf.nearInstrument.id >= 0 && (surf.nearShard.index < 0 || surf.nearInstrument.dist < surf.nearShard.dist)) takeInstrument();   // the nearer of the two
         else if (surf.nearShard.index >= 0) takeShard();
         else if (surf.env.nearCapsule) { state = GameState::ASCENT; transT = 0; audio.beep = BEEP_ARRIVE; autosave(); }
         else { refuse(fmt("CAPSULE IS %.0f M AWAY (%s) - FOLLOW THE BEACON, OR PRESS K TO CALL IT", surf.env.capsuleDist, compassName(surf.env.capsuleBearing)), 5); }
@@ -131,17 +155,28 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_B) && !in.ctrl() && !surf.inVehicle()) {
         // B at the capsule always unfolds a new buggy; the old one, wherever it was left, is scrapped
         bool had = surf.buggy.deployed; double oldDist = surf.buggyDist();
-        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR THE BUGGY - IT WOULD FLOAT OFF AT THE FIRST BUMP"); }   // a comet
-        else if (surf.deployBuggy()) { status(had ? fmt("NEW BUGGY UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "BUGGY UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5); audio.beep = BEEP_LOCK; }
-        else if (had) { refuse(fmt("THE BUGGY IS %.0f M AWAY - B AT THE CAPSULE UNFOLDS A NEW ONE", oldDist)); }
-        else { refuse("DEPLOY THE BUGGY WITHIN 10 M OF THE CAPSULE"); }
+        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR THE BUGGY - IT WOULD FLOAT OFF AT THE FIRST BUMP");
+        }   // a comet
+        else if (surf.deployBuggy()) {
+            status(had ? fmt("NEW BUGGY UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "BUGGY UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5);
+            audio.beep = BEEP_LOCK;
+        } else if (had) {
+            refuse(fmt("THE BUGGY IS %.0f M AWAY - B AT THE CAPSULE UNFOLDS A NEW ONE", oldDist));
+        } else {
+            refuse("DEPLOY THE BUGGY WITHIN 10 M OF THE CAPSULE");
+        }
     }
     if (in.wasPressed(KEY_F) && !in.ctrl() && !surf.inVehicle()) {   // F at the capsule unfolds a new drone; the old one, wherever it was left, is scrapped
         bool had = surf.drone.deployed; double oldDist = surf.droneDist();
-        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR THE DRONE - AT SPEED IT WOULD LEAVE THE WORLD"); }
-        else if (surf.deployDrone()) { status(had ? fmt("NEW DRONE UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "DRONE UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5); audio.beep = BEEP_LOCK; }
-        else if (had) { refuse(fmt("THE DRONE IS %.0f M AWAY - F AT THE CAPSULE UNFOLDS A NEW ONE", oldDist)); }
-        else { refuse("DEPLOY THE DRONE WITHIN 10 M OF THE CAPSULE"); }
+        if (surf.site.escapeVelocity < 30) { refuse("TOO LITTLE GRAVITY FOR THE DRONE - AT SPEED IT WOULD LEAVE THE WORLD");
+        } else if (surf.deployDrone()) {
+            status(had ? fmt("NEW DRONE UNFOLDING - THE OLD ONE (%.0f M AWAY) IS SCRAPPED", oldDist) : "DRONE UNFOLDING BESIDE THE CAPSULE - E TO GET IN", 5);
+            audio.beep = BEEP_LOCK;
+        } else if (had) {
+            refuse(fmt("THE DRONE IS %.0f M AWAY - F AT THE CAPSULE UNFOLDS A NEW ONE", oldDist));
+        } else {
+            refuse("DEPLOY THE DRONE WITHIN 10 M OF THE CAPSULE");
+        }
     }
     if (in.wasPressed(KEY_V) && surf.inVehicle()) { surf.chaseCam = !surf.chaseCam; audio.beep = BEEP_UI; }
     if (in.wasPressed(KEY_V) && !surf.inVehicle() && !in.ctrl()) {   // vision modes
@@ -150,8 +185,19 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     }
     if (in.wasPressed(KEY_TAB) && !in.ctrl()) { readings = !readings; audio.beep = BEEP_UI; }   // the readings in and out of the view
     if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); audio.beep = BEEP_UI; }   // the helmet lamp
-    if (in.wasPressed(KEY_N) && !in.ctrl()) { returnState = GameState::SURFACE; state = GameState::SECTOR_MAP; mapCurX = surf.player.x; mapCurZ = surf.player.z; mapDelMark = -1; audio.beep = BEEP_UI; return; }   // M4-02; R-408: the cursor on the explorer
-    if (in.wasPressed(KEY_X) && !in.ctrl()) { surf.highlightUntil = realTime + 4.0; status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3); }
+    if (in.wasPressed(KEY_N) && !in.ctrl()) {
+        returnState = GameState::SURFACE;
+        state = GameState::SECTOR_MAP;
+        mapCurX = surf.player.x;
+        mapCurZ = surf.player.z;
+        mapDelMark = -1;
+        audio.beep = BEEP_UI;
+        return;
+    }   // M4-02; R-408: the cursor on the explorer
+    if (in.wasPressed(KEY_X) && !in.ctrl()) {
+        surf.highlightUntil = realTime + 4.0;
+        status(fmt("%d CREATURES OF %d SPECIES, %d FLOCKS NEARBY", (int)surf.critters.size(), (int)surf.seenSpecies.size(), (int)surf.flocks.size()), 3);
+    }
     // first sightings go to the log and the statistics
     for (const std::string& sg : surf.sightings) {
         size_t p1 = sg.find('|'), p2 = sg.find('|', p1 + 1);
@@ -205,7 +251,11 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         int mat = surf.stepMaterial = surf.site.lod0.at((int)std::floor(surf.player.x / 16), (int)std::floor(surf.player.z / 16)).material;
         bool waterNear = false;
         for (int k = 0; k < 4 && !waterNear; k++) { double a = k * PI / 2; waterNear = surf.site.waterAt(surf.player.x + std::cos(a) * 30, surf.player.z + std::sin(a) * 30) > -1e8; }
-        audio.windTone = waterNear ? 0.25 : (mat == MAT_SAND || mat == MAT_DUST ? 0.6 : (std::fabs(surf.site.groundHeight(surf.player.x + 40, surf.player.z) - surf.site.groundHeight(surf.player.x - 40, surf.player.z)) > 12 ? 1.0 : 0.5));
+        audio.windTone = waterNear
+                ? 0.25
+                : (mat == MAT_SAND || mat == MAT_DUST
+                                  ? 0.6
+                                  : (std::fabs(surf.site.groundHeight(surf.player.x + 40, surf.player.z) - surf.site.groundHeight(surf.player.x - 40, surf.player.z)) > 12 ? 1.0 : 0.5));
         audio.surf = waterNear && surf.site.hasWater ? 0.6 : 0;
         audio.birds = (!surf.flocks.empty() && surf.env.skyBrightness > 0.3 && !surf.inVehicle()) ? 0.6 : 0;
         double stride = std::floor(surf.player.stridePhase);

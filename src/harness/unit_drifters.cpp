@@ -7,7 +7,23 @@ static uint64_t historyHash(const History& H) {
     uint64_t h = 0xD05A15ULL;
     auto mixIn = [&](int64_t v) { h = mix64(h ^ (uint64_t)v); };
     auto mixD = [&](double v) { int64_t b; std::memcpy(&b, &v, sizeof b); mixIn(b); };
-    for (const HistoryEvent& e : H.events) { mixIn(e.kind); mixIn(e.year); mixIn(e.season); mixIn(e.pub); mixD(e.salience); mixIn(e.place); mixIn(e.place2); mixIn(e.a); mixIn(e.b); mixIn(e.c); mixIn(e.cause); mixIn(e.thing); mixIn(e.out); mixIn(e.other); mixIn(e.value); }
+    for (const HistoryEvent& e : H.events) {
+        mixIn(e.kind);
+        mixIn(e.year);
+        mixIn(e.season);
+        mixIn(e.pub);
+        mixD(e.salience);
+        mixIn(e.place);
+        mixIn(e.place2);
+        mixIn(e.a);
+        mixIn(e.b);
+        mixIn(e.c);
+        mixIn(e.cause);
+        mixIn(e.thing);
+        mixIn(e.out);
+        mixIn(e.other);
+        mixIn(e.value);
+    }
     for (const HistoryPerson& p : H.persons) { mixIn((int64_t)p.name); mixIn(p.born); mixIn(p.died); mixIn(p.fate); mixIn(p.family); mixIn(p.role); mixIn(p.trade); mixIn(p.traits); }
     for (const HistoryPlace& p : H.places) { mixIn(p.plan); mixIn(p.sclass); mixIn((int64_t)p.name); mixIn(p.founded); mixIn(p.ended); mixIn(p.fate); mixD(p.lat); mixD(p.lon); mixD(p.peak); }
     return h;
@@ -46,7 +62,8 @@ void unitDrifters(const Check& check) {
                 if (placeInSector(x, y, z, p, false)) emptyWrong++;
             }
             check("drifters: none in a sector with a star, each its key's place, an empty sector none (D-01)", !all.empty() && globulars > 0 && withStar == 0 && misnamed == 0 && emptyWrong == 0,
-                  fmt("%zu within 1,500 ly of home and %zu in %d globulars: %d with a star, %d not named by their key; %d empty sectors, %d with a place", near.size(), all.size() - near.size(), globulars, withStar, misnamed, empties, emptyWrong));
+                    fmt("%zu within 1,500 ly of home and %zu in %d globulars: %d with a star, %d not named by their key; %d empty sectors, %d with a place", near.size(), all.size() - near.size(),
+                            globulars, withStar, misnamed, empties, emptyWrong));
         }
         {
             std::vector<Star> again; driftersNear(home.pos, 1500, again);
@@ -59,7 +76,8 @@ void unitDrifters(const Check& check) {
             for (size_t i = 0; i < near.size() && i < 40; i++) { const DrifterBody b = drifterBody(near[i]); h = hashCombine(h, near[i].seed ^ (uint64_t)b.drawnType * 0x9E3779B97F4A7C15ULL); }
             const uint64_t PINNED = 0xb00ac446b619bf6fULL;   // the field of the first forty, as D-01 made it (D-04: the kinds as drawn; a dark ocean is a rocky drifter made)
             check("drifters: the field the same asked twice and nearer, its nearest forty as D-01 made them (D-01)", same && innerOut == 0 && h == PINNED,
-                  fmt("%zu within 1,500 ly, %zu within 700 (%d out of order); the hash %016llx (pinned %016llx)", near.size(), inner.size(), innerOut, (unsigned long long)h, (unsigned long long)PINNED));
+                    fmt("%zu within 1,500 ly, %zu within 700 (%d out of order); the hash %016llx (pinned %016llx)", near.size(), inner.size(), innerOut, (unsigned long long)h,
+                            (unsigned long long)PINNED));
         }
         // the first dozen near home with a landable world among them
         std::vector<StarSystem> systems;
@@ -86,7 +104,8 @@ void unitDrifters(const Check& check) {
                     }
                 }
             check("drifters: no light, no season and the sun at the nadir on their worlds (D-01)", bodies > 0 && looked > 0 && lit == 0 && seasons == 0 && notNadir == 0 && dusty == 0,
-                  fmt("%d bodies of %zu drifters, %d places on their ground: %d lit, %d with a season, %d with a sun off the nadir, %d with a zodiacal dust", bodies, systems.size(), looked, lit, seasons, notNadir, dusty));
+                    fmt("%d bodies of %zu drifters, %d places on their ground: %d lit, %d with a season, %d with a sun off the nadir, %d with a zodiacal dust", bodies, systems.size(), looked, lit,
+                            seasons, notNadir, dusty));
         }
         {
             int bad = 0, sunEvents = 0, events = 0, places = 0;
@@ -107,15 +126,29 @@ void unitDrifters(const Check& check) {
                     for (const AlmanacEvent& e : ev) {
                         events++;
                         if (!std::isfinite(e.t) || !std::isfinite(e.value)) bad++;
-                        if (e.kind <= AL_DAWN || e.kind == AL_FULL || e.kind == AL_NEW || e.kind == AL_ECLIPSE || e.kind == AL_RING_SHADOW || e.kind == AL_RING_CLEAR || e.kind == AL_SHADOW || e.kind == AL_ECLIPSED || e.kind == AL_SUN_TRANSIT) sunEvents++;
+                        if (e.kind <= AL_DAWN || e.kind == AL_FULL || e.kind == AL_NEW || e.kind == AL_ECLIPSE || e.kind == AL_RING_SHADOW || e.kind == AL_RING_CLEAR || e.kind == AL_SHADOW ||
+                                e.kind == AL_ECLIPSED || e.kind == AL_SUN_TRANSIT)
+                            sunEvents++;
                     }
                 }
-                AlmanacPlace ship; ship.sys = &sys; ship.t = 1000; ship.window = 30 * 86400.0; ship.ground = false; ship.body = 0; ship.parkDir = normalize(Vec3(0.3, 0.2, 1)); ship.parkDist = sys.bodies[0].radiusKm * 3.5; ship.orbiting = true;
+                AlmanacPlace ship;
+                ship.sys = &sys;
+                ship.t = 1000;
+                ship.window = 30 * 86400.0;
+                ship.ground = false;
+                ship.body = 0;
+                ship.parkDir = normalize(Vec3(0.3, 0.2, 1));
+                ship.parkDist = sys.bodies[0].radiusKm * 3.5;
+                ship.orbiting = true;
                 std::vector<AlmanacEvent> ev; almanacOf(ship, ev); places++;
                 for (const AlmanacEvent& e : ev) { events++; if (!std::isfinite(e.t)) bad++; if (e.kind == AL_SHADOW || e.kind == AL_ECLIPSED || e.kind == AL_SUN_TRANSIT) sunEvents++; }
             }
             // the arrival and the parking as the game makes them, at the nearest
-            TestGame game; game.savePrefix = "shots/tests/unit_rogue_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/unit_rogue_guide.txt";
+            TestGame game;
+            game.savePrefix = "shots/tests/unit_rogue_save";
+            game.settingsPath = "shots/tests/test_settings.txt";
+            game.keysPath = "shots/tests/test_keys.txt";
+            game.guidePath = "shots/tests/unit_rogue_guide.txt";
             remove(game.guidePath.c_str());
             game.newGame(); game.setState(GameState::SPACE);
             Star d; drifterInSector(near[0].sx, near[0].sy, near[0].sz, d, true);
@@ -125,7 +158,8 @@ void unitDrifters(const Check& check) {
             game.testParkAt(d, 0, false);
             const bool parkOk = finite(game.testShipPos()) && game.testParkedBody() == 0 && length(game.testShipPos() - d.pos) > r0;
             check("drifters: nothing undefined from the anchor: positions, the almanac, the arrival, the parking (D-01)", bad == 0 && sunEvents == 0 && places > 0 && arrivalOk && parkOk,
-                  fmt("%zu systems, %d almanac places, %d events (%d of the sun's), %d undefined; the arrival %.1f radii off, the parking %s", systems.size(), places, events, sunEvents, bad, arrived, parkOk ? "beside it" : "WRONG"));
+                    fmt("%zu systems, %d almanac places, %d events (%d of the sun's), %d undefined; the arrival %.1f radii off, the parking %s", systems.size(), places, events, sunEvents, bad,
+                            arrived, parkOk ? "beside it" : "WRONG"));
             // a save at it, and the next one as the remote target, kept through a load
             Star d2; drifterInSector(near[1].sx, near[1].sy, near[1].sz, d2, true);
             game.testSetRemote(d2);
@@ -139,8 +173,9 @@ void unitDrifters(const Check& check) {
             const bool trip = saved && loaded && g2.testSystem().sunless() && g2.testSystem().star.seed == d.seed && length(g2.testShipPos() - at) < 1.0 && g2.testParkedBody() == 0 &&
                               hasRem && rem.cls == STAR_ROGUE && rem.seed == d2.seed && g2.testSystem().bodies.size() == game.testSystem().bodies.size();
             check("drifters: a save at one and the next as the target come back as they were (D-01)", trip,
-                  fmt("saved %d, loaded %d: the place %s, the ship %.3f km from where it was, parked at %d, the target %s", saved, loaded, g2.testSystem().sunless() ? "a drifter's" : "NOT A DRIFTER'S",
-                      length(g2.testShipPos() - at), g2.testParkedBody(), hasRem && rem.cls == STAR_ROGUE && rem.seed == d2.seed ? "the drifter's" : "LOST"));
+                    fmt("saved %d, loaded %d: the place %s, the ship %.3f km from where it was, parked at %d, the target %s", saved, loaded,
+                            g2.testSystem().sunless() ? "a drifter's" : "NOT A DRIFTER'S", length(g2.testShipPos() - at), g2.testParkedBody(),
+                            hasRem && rem.cls == STAR_ROGUE && rem.seed == d2.seed ? "the drifter's" : "LOST"));
         }
     }
     // heard, not seen. The drifters by their own law from home, the three C-series worlds and the six age worlds; the radar in the game
@@ -179,7 +214,14 @@ void unitDrifters(const Check& check) {
         }
         SignalScan sc; sc.begin(homeAt, SIGNAL_GAINS[SIGNAL_GAIN_STEPS - 1]); int slices = 1; while (!sc.step(97)) slices++;
         int sliced = 0, slicedOut = 0;
-        for (const Signal& x : sc.out) if (x.kind == SIG_ROGUE) { sliced++; bool in = false; for (const Signal& h : home32) if (h.star.seed == x.star.seed && h.needGain == x.needGain) in = true; if (!in) slicedOut++; }
+        for (const Signal& x : sc.out)
+            if (x.kind == SIG_ROGUE) {
+                sliced++;
+                bool in = false;
+                for (const Signal& h : home32)
+                    if (h.star.seed == x.star.seed && h.needGain == x.needGain) in = true;
+                if (!in) slicedOut++;
+            }
         std::vector<Signal> again; signalsNear(homeAt, again, SIGNAL_REACH_LY, SIGNAL_GAINS[SIGNAL_GAIN_STEPS - 1]);
         int again32 = 0; for (const Signal& x : again) if (x.kind == SIG_ROGUE) again32++;
         std::string steps; for (int k = 0; k < SIGNAL_GAIN_STEPS; k++) steps += fmt("%s x%d %d", k ? "," : "", SIGNAL_GAINS[k], homeSteps[k]);
@@ -193,7 +235,11 @@ void unitDrifters(const Check& check) {
         // locks: the status says there is no star, the log no class, the lock's key the sector's; off, the chart's first stop is it (A
         // SIGNAL at its place), Enter plots it (the remote the drifter), Enter flies, the ship comes out 40-80 radii off with it the local
         // target; the guide notes the visit and names the place
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_d02.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_d02.txt";
         remove(game.guidePath.c_str());
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -213,13 +259,16 @@ void unitDrifters(const Check& check) {
         int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < need) step++;
         for (int i = SIGNAL_GAIN_STEPS - 1; i > step; i--) press(KEY_MINUS);
         run(0.2);
-        for (int i = 0; i < game.testRadarSignals(); i++) { int64_t sx, sy, sz; if (game.testRadarKind(i) == SIG_ROGUE && game.testRadarSector(i, sx, sy, sz) && sx == wx && sy == wy && sz == wz) who = i; }
+        for (int i = 0; i < game.testRadarSignals(); i++) {
+            int64_t sx, sy, sz;
+            if (game.testRadarKind(i) == SIG_ROGUE && game.testRadarSector(i, sx, sy, sz) && sx == wx && sy == wy && sz == wz) who = i;
+        }
         if (who >= 0) game.testAimAtSignal(who);
         double lockAt = -1; for (int i = 0; i < 30 * 20 && lockAt < 0; i++) { game.frame(gi, 1.0 / 30); gi.newFrame(); if (game.testRadarLocked() >= 0) lockAt = (i + 1) / 30.0; }
         const std::string lockSt = game.testStatus(), logged = game.guide.log.empty() ? "" : game.guide.log.back().text;
         const std::string key = Guide::starKey(wx, wy, wz);
         const bool lockOk = lockAt > 0 && game.testRadarKind(game.testRadarLocked()) == SIG_ROGUE && lockSt.find("NO STAR") != std::string::npos &&
-                            logged.find("NO STAR AT ITS SOURCE") != std::string::npos && logged.find("(S") == std::string::npos && game.guide.signals.count(key) && game.guide.signals[key] == SIG_ROGUE;
+                logged.find("NO STAR AT ITS SOURCE") != std::string::npos && logged.find("(S") == std::string::npos && game.guide.signals.count(key) && game.guide.signals[key] == SIG_ROGUE;
         press(KEY_B); run(0.1);
         press(KEY_M); if (game.testMapPage() != 1) press(KEY_TAB);
         run(0.05);
@@ -241,9 +290,12 @@ void unitDrifters(const Check& check) {
         const bool entry = game.state == GameState::TEXT_ENTRY;
         game.testTypeText("THE LANTERN"); run(0.05);
         const bool named = game.guide.names.count(key) && game.guide.names[key] == "THE LANTERN" && game.testStatus() == "THE PLACE IS NOW CALLED THE LANTERN";
-        check("radar: a drifter heard, locked, plotted on the chart and flown to, its place named (D-02)", x1 == 0 && x32 >= 6 && who >= 0 && lockOk && stopOk && plotted && flying && arrived && visited && entry && named,
-              fmt("x1 %d drifters, x32 %d; the nearest %.0f ly (needs x%.1f) at x%d locked after %.1f s: '%s', logged '%s'; the chart's stop '%s' %s; plotted %d, flying %d; arrived %d (%.1f radii off, the local target %d), visited %d; named %d",
-                  x1, x32, ly, need, SIGNAL_GAINS[step], lockAt, lockSt.c_str(), trunc(logged, 70).c_str(), stopSt.c_str(), stopOk ? "at it" : "ASTRAY", plotted, flying, arrived, off, game.testLocalTarget(), visited, named));
+        check("radar: a drifter heard, locked, plotted on the chart and flown to, its place named (D-02)",
+                x1 == 0 && x32 >= 6 && who >= 0 && lockOk && stopOk && plotted && flying && arrived && visited && entry && named,
+                fmt("x1 %d drifters, x32 %d; the nearest %.0f ly (needs x%.1f) at x%d locked after %.1f s: '%s', logged '%s'; the chart's stop '%s' %s; plotted %d, flying %d; arrived %d (%.1f radii "
+                    "off, the local target %d), visited %d; named %d",
+                        x1, x32, ly, need, SIGNAL_GAINS[step], lockAt, lockSt.c_str(), trunc(logged, 70).c_str(), stopSt.c_str(), stopOk ? "at it" : "ASTRAY", plotted, flying, arrived, off,
+                        game.testLocalTarget(), visited, named));
         remove(game.guidePath.c_str());
     }
     {   // the black disc and the survey, by their numbers. Parked at the nearest giant drifter: no sun drawn (the sun's bank empty), the
@@ -253,8 +305,16 @@ void unitDrifters(const Check& check) {
         Star home; starInSector(HOME_SX, HOME_SY, HOME_SZ, home, false);
         std::vector<Star> near; driftersNear(home.pos, 1500, near);
         int gi = -1, li = -1;
-        for (size_t i = 0; i < near.size(); i++) { const DrifterBody b = drifterBody(near[i]); if (gi < 0 && b.type == PT_GASGIANT) gi = (int)i; if (li < 0 && KINDS[b.type].landable && b.radiusKm >= 1500) li = (int)i; }
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_d02.txt";
+        for (size_t i = 0; i < near.size(); i++) {
+            const DrifterBody b = drifterBody(near[i]);
+            if (gi < 0 && b.type == PT_GASGIANT) gi = (int)i;
+            if (li < 0 && KINDS[b.type].landable && b.radiusKm >= 1500) li = (int)i;
+        }
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_d02.txt";
         remove(game.guidePath.c_str());
         game.newGame(); game.settings.cabin = false; game.applySettings(); game.setState(GameState::SPACE);
         Input in;
@@ -290,8 +350,9 @@ void unitDrifters(const Check& check) {
         const bool discOk = gi >= 0 && sunPx == 0 && discPx > 2000 && discMean < 8 && brightIn * 1000 <= discPx && aurPx > 0 && lightOk;
         const bool mapOk = li >= 0 && mapMean > 40 && std::min(mapLeft, mapRight) > 0.6 * std::max(mapLeft, mapRight);
         check("drifters: a black disc where the stars stop, the survey's maps (D-02)", discOk && mapOk,
-              fmt("the giant at %.0f ly: the sun's pixels %d, the disc's %d (shade %.1f on average, %.1f at most, %d over 30), the aurorae's %d, the band's light coreward over the far side %s; the landing map's light %.0f (the halves %.0f and %.0f)",
-                  gi >= 0 ? length(near[gi].pos - home.pos) / SECTOR_KM : 0.0, sunPx, discPx, discMean, discMax, brightIn, aurPx, lightOk ? "yes" : "NO", mapMean, mapLeft, mapRight));
+                fmt("the giant at %.0f ly: the sun's pixels %d, the disc's %d (shade %.1f on average, %.1f at most, %d over 30), the aurorae's %d, the band's light coreward over the far side %s; the "
+                    "landing map's light %.0f (the halves %.0f and %.0f)",
+                        gi >= 0 ? length(near[gi].pos - home.pos) / SECTOR_KM : 0.0, sunPx, discPx, discMean, discMax, brightIn, aurPx, lightOk ? "yes" : "NO", mapMean, mapLeft, mapRight));
         remove(game.guidePath.c_str());
     }
     {   // a voice for every drifter, through the synth. Of the hundred drifters nearest home, the first of each kind of voice (a brown
@@ -326,15 +387,30 @@ void unitDrifters(const Check& check) {
         std::string detail; bool ok = all; double lo = 1, hi = 0;
         auto judge = [&](const std::string& what, const RenderStats& r) {
             lo = std::min(lo, r.rms); hi = std::max(hi, r.rms);
-            if (r.nan || r.clip > 20 || r.peak >= 1.0 || r.rms < 0.02 || r.rms > 0.13) { ok = false; detail += fmt("%s rms %.3f peak %.2f %d clipped%s; ", what.c_str(), r.rms, r.peak, r.clip, r.nan ? " NON-FINITE" : ""); }
+            if (r.nan || r.clip > 20 || r.peak >= 1.0 || r.rms < 0.02 || r.rms > 0.13) {
+                ok = false;
+                detail += fmt("%s rms %.3f peak %.2f %d clipped%s; ", what.c_str(), r.rms, r.peak, r.clip, r.nan ? " NON-FINITE" : "");
+            }
         };
         for (size_t i = 0; i < jobs.size(); i++) judge(jobs[i].name, rs[i]);
         bool beaconOk = false, same = false;
         if (all) {
             const RogueRef& g = field[first[RV_GIANT]];
             PeopleWorld w;
-            if (firstPeopleWorld(w)) { RxOpts u; u.gainT = gainShareOf(18); u.sky = 0.4; u.age = AGE_MODERN; u.kind2 = SIG_ROGUE; u.seed2 = g.sig.seed; u.rogue2 = g.voice; u.sig2 = 0.5; judge("a giant under a voice at x18", renderProgramme(w, RP_VOICE, 12.0, nullptr, nullptr, u)); }
-            else { ok = false; detail += "no people's world for the mix; "; }
+            if (firstPeopleWorld(w)) {
+                RxOpts u;
+                u.gainT = gainShareOf(18);
+                u.sky = 0.4;
+                u.age = AGE_MODERN;
+                u.kind2 = SIG_ROGUE;
+                u.seed2 = g.sig.seed;
+                u.rogue2 = g.voice;
+                u.sig2 = 0.5;
+                judge("a giant under a voice at x18", renderProgramme(w, RP_VOICE, 12.0, nullptr, nullptr, u));
+            } else {
+                ok = false;
+                detail += "no people's world for the mix; ";
+            }
             std::vector<int16_t> a, b, c; RxOpts bo; bo.voice = RP_BEACON;
             const RenderStats rb = renderRogue(g, 12, &a, bo); renderRogue(g, 12, &b); renderRogue(g, 12, &c);
             judge("a beacon under a giant", rb);
@@ -351,7 +427,11 @@ void unitDrifters(const Check& check) {
         // what it is (its class, its turning, its moon, its power as its system has them); locked and flown to, the camera off, the cabin's radio
         // carries it; the camera on, the camera's; the decoder takes the synth (nothing); on a landable drifter's ground the suit's radio, faint;
         // at a star's system nothing at all
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_d03.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_d03.txt";
         remove(game.guidePath.c_str());
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -368,7 +448,10 @@ void unitDrifters(const Check& check) {
         int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < need) step++;
         for (int i = SIGNAL_GAIN_STEPS - 1; i > step; i--) press(KEY_MINUS);
         run(0.2);
-        for (int i = 0; i < game.testRadarSignals(); i++) { int64_t sx, sy, sz; if (game.testRadarKind(i) == SIG_ROGUE && game.testRadarSector(i, sx, sy, sz) && sx == wx && sy == wy && sz == wz) who = i; }
+        for (int i = 0; i < game.testRadarSignals(); i++) {
+            int64_t sx, sy, sz;
+            if (game.testRadarKind(i) == SIG_ROGUE && game.testRadarSector(i, sx, sy, sz) && sx == wx && sy == wy && sz == wz) who = i;
+        }
         if (who >= 0) game.testAimAtSignal(who);
         run(0.5);
         Star d; drifterInSector(wx, wy, wz, d, true);
@@ -382,7 +465,8 @@ void unitDrifters(const Check& check) {
         run(0.5);
         const bool there = game.testSystem().sunless() && game.testSystem().star.seed == d.seed;
         const double cabinLvl = game.audio.radar;
-        const bool cabin = there && !game.testRadarOn() && cabinLvl == RADIO_CABIN_LEVEL && game.audio.radarSet == RADIO_CABIN && game.audio.radarKind == SIG_ROGUE && game.audio.radarSeed == d.seed && game.audio.radarRogue.cls == wv.cls;
+        const bool cabin = there && !game.testRadarOn() && cabinLvl == RADIO_CABIN_LEVEL && game.audio.radarSet == RADIO_CABIN && game.audio.radarKind == SIG_ROGUE && game.audio.radarSeed == d.seed &&
+                game.audio.radarRogue.cls == wv.cls;
         press(KEY_B); run(0.3);
         const bool camera = game.testRadarOn() && game.audio.radar == 1 && game.audio.radarSet == RADIO_CAMERA;
         press(KEY_B); run(0.1);
@@ -393,7 +477,11 @@ void unitDrifters(const Check& check) {
         // a landable drifter's ground: the suit's radio
         Star here; starInSector(HOME_SX, HOME_SY, HOME_SZ, here, false);
         std::vector<Star> near; driftersNear(here.pos, 1500, near);
-        int li = -1; for (size_t i = 0; i < near.size() && li < 0; i++) { const DrifterBody b = drifterBody(near[i]); if (KINDS[b.type].landable && !kindHas(b.type, KT_GIANT) && b.radiusKm >= 1500) li = (int)i; }
+        int li = -1;
+        for (size_t i = 0; i < near.size() && li < 0; i++) {
+            const DrifterBody b = drifterBody(near[i]);
+            if (KINDS[b.type].landable && !kindHas(b.type, KT_GIANT) && b.radiusKm >= 1500) li = (int)i;
+        }
         bool suit = false; double suitLvl = -1; int suitSet = -1;
         if (li >= 0) {
             Star l; drifterInSector(near[li].sx, near[li].sy, near[li].sz, l, true);
@@ -410,8 +498,11 @@ void unitDrifters(const Check& check) {
         game.testArriveAt(home); game.setState(GameState::SPACE); run(0.3);
         const bool quiet = !game.testSystem().sunless() && game.audio.radar == 0;
         check("radar: a drifter's voice in the game: the radar, the cabin's radio, the suit's (D-03)", onRadar && lockAt > 0 && there && cabin && camera && back && decoder && suit && quiet,
-              fmt("the nearest %.0f ly at x%d: heard as %s (turning %.0f s, its moon %.0f s, power %.2f) %s; locked after %.1f s, there %d; the cabin's radio %d (level %.2f), the camera %d, back %d, the decoder silent %d; the suit's radio %d (level %.2f, set %d); at home %s",
-                  ly, SIGNAL_GAINS[step], who >= 0 ? ROGUE_VOICE_NAMES[std::max(0, std::min((int)RV_COUNT - 1, hv.cls))] : "nothing", hv.turnS, hv.moonS, hv.power, onRadar ? "as its system has it" : "NOT AS ITS SYSTEM HAS IT", lockAt, there, cabin, cabinLvl, camera, back, decoder, suit, suitLvl, suitSet, quiet ? "nothing" : "STILL HEARD"));
+                fmt("the nearest %.0f ly at x%d: heard as %s (turning %.0f s, its moon %.0f s, power %.2f) %s; locked after %.1f s, there %d; the cabin's radio %d (level %.2f), the camera %d, back "
+                    "%d, the decoder silent %d; the suit's radio %d (level %.2f, set %d); at home %s",
+                        ly, SIGNAL_GAINS[step], who >= 0 ? ROGUE_VOICE_NAMES[std::max(0, std::min((int)RV_COUNT - 1, hv.cls))] : "nothing", hv.turnS, hv.moonS, hv.power,
+                        onRadar ? "as its system has it" : "NOT AS ITS SYSTEM HAS IT", lockAt, there, cabin, cabinLvl, camera, back, decoder, suit, suitLvl, suitSet,
+                        quiet ? "nothing" : "STILL HEARD"));
         remove(game.guidePath.c_str());
     }
     {   // the drifters' kinds by the dark's table: every drifter within 3,000 ly of home drawn as a kind of the table, made a dark ocean only from a
@@ -439,7 +530,8 @@ void unitDrifters(const Check& check) {
         }
         const double oceanShare = drawn[PT_ROCKY] ? (double)oceans / drawn[PT_ROCKY] : 0;
         check("dark: the drifters' kinds by the dark's table (D-04)", !near.empty() && bad == 0 && offShare == 0 && oceanShare > 0.2 && oceanShare < 0.6,
-              fmt("%zu drifters, %d off the table%s; drawn against the table:%s; dark oceans %d of the %d rocky (%.2f)", near.size(), bad, why.c_str(), shares.c_str(), oceans, drawn[PT_ROCKY], oceanShare));
+                fmt("%zu drifters, %d off the table%s; drawn against the table:%s; dark oceans %d of the %d rocky (%.2f)", near.size(), bad, why.c_str(), shares.c_str(), oceans, drawn[PT_ROCKY],
+                        oceanShare));
         // the drifters' own traits and the ground in the dark, over the same systems' landable bodies: FROZEN AIR exactly where the air is colder
         // than its freezing, EMBERS on every lava world and on none of ice, LIGHTS IN THE WATER on dark oceans alone, LIGHTS LEFT ON on none yet (D-05's);
         // a frozen sea's world with no liquid on its ground (400 samples), a dark ocean's sea liquid; and none of the four on a world with a sun
@@ -475,11 +567,19 @@ void unitDrifters(const Check& check) {
         for (int64_t x = 150; x < 250 && sunlitBodies < 3000; x++)
             for (int64_t z = 20; z < 100 && sunlitBodies < 3000; z++) {
                 Star st; StarSystem sys; if (!systemAt(x, 0, z, st, sys, false)) continue;
-                for (const Body& b : sys.bodies) { sunlitBodies++; const BodyGen g = BodyGen::make(b); for (int t = TR_FROZEN_AIR; t <= TR_LIGHTS_IN_WATER; t++) if (g.hasTrait(t)) sunlit++; if (g.dark || g.frozenSeas) sunlit++; }
+                for (const Body& b : sys.bodies) {
+                    sunlitBodies++;
+                    const BodyGen g = BodyGen::make(b);
+                    for (int t = TR_FROZEN_AIR; t <= TR_LIGHTS_IN_WATER; t++)
+                        if (g.hasTrait(t)) sunlit++;
+                    if (g.dark || g.frozenSeas) sunlit++;
+                }
             }
-        check("dark: the drifters' own traits, frozen seas (D-04)", wrongAir == 0 && wrongEmbers == 0 && wrongLights == 0 && leftOn == 0 && frozenWet == 0 && oceanDry == 0 && sunlit == 0 && airs > 0 && embers > 0 && frozenChecked > 0,
-              fmt("%d bodies: frozen air %d (%d off its rule), embers %d (%d wrong), lights in water off a dark ocean %d, lights left on %d; %d seas read: %d frozen with liquid, %d dark oceans dry; %d worlds with a sun: %d with the dark's own",
-                  bodies, airs, wrongAir, embers, wrongEmbers, wrongLights, leftOn, frozenChecked, frozenWet, oceanDry, sunlitBodies, sunlit));
+        check("dark: the drifters' own traits, frozen seas (D-04)",
+                wrongAir == 0 && wrongEmbers == 0 && wrongLights == 0 && leftOn == 0 && frozenWet == 0 && oceanDry == 0 && sunlit == 0 && airs > 0 && embers > 0 && frozenChecked > 0,
+                fmt("%d bodies: frozen air %d (%d off its rule), embers %d (%d wrong), lights in water off a dark ocean %d, lights left on %d; %d seas read: %d frozen with liquid, %d dark oceans "
+                    "dry; %d worlds with a sun: %d with the dark's own",
+                        bodies, airs, wrongAir, embers, wrongEmbers, wrongLights, leftOn, frozenChecked, frozenWet, oceanDry, sunlitBodies, sunlit));
     }
     {   // on a drifter's ground: the thermometer by the world's own heat, an air fallen as snow no air (no wind, a trace of pressure), a dark ocean's air
         // and sea; and the explorer's lamp, which lights the ground by night and changes nothing by day
@@ -496,13 +596,23 @@ void unitDrifters(const Check& check) {
         }
         if (setupDarkScene(3, -0.1, sv, sys, nb, t)) {
             const Body& b = sys.bodies[0];
-            oceanOk = sv.site.atmosphere && sv.site.hasWater && sv.env.pressureAtm > 50 && sv.env.temperatureC > 0 && std::fabs(sv.env.temperatureC + 6.5 * sv.player.y / 1000.0 - (b.tempK - 273.15)) < 0.5;
+            oceanOk = sv.site.atmosphere && sv.site.hasWater && sv.env.pressureAtm > 50 && sv.env.temperatureC > 0 &&
+                    std::fabs(sv.env.temperatureC + 6.5 * sv.player.y / 1000.0 - (b.tempK - 273.15)) < 0.5;
             od = fmt("a dark ocean %.0f K reads %+.0f C under %.0f atm, its sea %s", b.tempK, sv.env.temperatureC, sv.env.pressureAtm, sv.site.hasWater ? "liquid" : "NONE");
         }
         check("dark: the thermometer and the air on a drifter's ground (D-04)", rockOk && airOk && oceanOk, rd + "; " + ad + "; " + od);
         // the lamp: a dayside's frame the same lit or not (the lamps add nothing while the sun is up); a night's lower third brighter (the cratered noon's
         // site at midnight), and a drifter's (the rogue_lamp scene's)
-        auto lower = [](const Framebuffer& f) { double s2 = 0; int n = 0; for (int y = FBH * 2 / 3; y < FBH; y++) for (int x = 0; x < FBW; x++) { s2 += shadeOf(f.idx[(size_t)y * FBW + x]); n++; } return s2 / n; };
+        auto lower = [](const Framebuffer& f) {
+            double s2 = 0;
+            int n = 0;
+            for (int y = FBH * 2 / 3; y < FBH; y++)
+                for (int x = 0; x < FBW; x++) {
+                    s2 += shadeOf(f.idx[(size_t)y * FBW + x]);
+                    n++;
+                }
+            return s2 / n;
+        };
         SpaceRenderer sr; int dayDiff = -1; double nightOff = 0, nightOn = 0, darkOff = 0, darkOn = 0;
         {
             StarSystem s2; SurfaceView v2; double t2 = 0; StarNeighborhood n2;
@@ -544,7 +654,10 @@ void unitDrifters(const Check& check) {
                 peoples++;
                 if (P.cause != CAUSE_SUN_LOST || P.sunWay < 0 || P.sunWay >= SW_COUNT) { badCause++; continue; }
                 ways[P.sunWay]++;
-                if (!(P.collapseYear < P.lastSunrise && P.lastSunrise < P.lastYear)) { badLine++; if (why.size() < 200) why += fmt("%s: years %d, %d, %d; ", d.name.c_str(), P.collapseYear, P.lastSunrise, P.lastYear); }
+                if (!(P.collapseYear < P.lastSunrise && P.lastSunrise < P.lastYear)) {
+                    badLine++;
+                    if (why.size() < 200) why += fmt("%s: years %d, %d, %d; ", d.name.c_str(), P.collapseYear, P.lastSunrise, P.lastYear);
+                }
                 ended[k] = P.endedYearsAgo;
             }
             if (peoplesOf(g) > 1 && std::fabs(ended[0] - ended[1]) > 0.5) apart++;
@@ -552,9 +665,10 @@ void unitDrifters(const Check& check) {
         const double share = cand ? (double)withPeople / cand : 0;
         int nWays = 0; for (int w = 0; w < SW_COUNT; w++) if (ways[w]) nWays++;
         check("drifters' peoples: one frozen felisian or desert drifter in four, each its former star found, the loss of the sun its cause in its order, two ending together (D-05)",
-              withPeople > 0 && share > 0.12 && share < 0.4 && unfound == 0 && badCause == 0 && badLine == 0 && apart == 0 && nWays == SW_COUNT,
-              fmt("%d of %d frozen felisian or desert drifters within 3,000 ly (%.0f%%) with %d peoples; %d without a former star, %d not lost by the sun, %d out of order, %d pairs apart; the ways %d, %d, %d, %d%s",
-                  withPeople, cand, 100 * share, peoples, unfound, badCause, badLine, apart, ways[0], ways[1], ways[2], ways[3], why.empty() ? "" : (" - " + why).c_str()));
+                withPeople > 0 && share > 0.12 && share < 0.4 && unfound == 0 && badCause == 0 && badLine == 0 && apart == 0 && nWays == SW_COUNT,
+                fmt("%d of %d frozen felisian or desert drifters within 3,000 ly (%.0f%%) with %d peoples; %d without a former star, %d not lost by the sun, %d out of order, %d pairs apart; the ways "
+                    "%d, %d, %d, %d%s",
+                        withPeople, cand, 100 * share, peoples, unfound, badCause, badLine, apart, ways[0], ways[1], ways[2], ways[3], why.empty() ? "" : (" - " + why).c_str()));
     }
     {   // a drifter's people's history the same from the decoder (its system: built anew) and from the ground (the planet function alone, as the
         // site has it: the towns, the works and the records' homes read it)
@@ -598,9 +712,10 @@ void unitDrifters(const Check& check) {
             }
         }
         check("works: a people that lost its sun's works of the end, its last recording in the last shelter alone (D-05)",
-              lastShelters == 2 && shelters > lastShelters && domes >= 2 && glass >= 2 && graves == 2 && lastIn == 2 && lastElse == 0 && domeRecs > 0 && earlyRecs > 0 && late == 0,
-              fmt("%s: %d shelters (%d the last), %d domes over warm ground, %d glasshouses, %d graves of the last generations; the last recordings %d in the last shelters, %d elsewhere; %d records in the domes, %d in the other shelters (%d of years after theirs)",
-                  d.name.c_str(), shelters, lastShelters, domes, glass, graves, lastIn, lastElse, domeRecs, earlyRecs, late));
+                lastShelters == 2 && shelters > lastShelters && domes >= 2 && glass >= 2 && graves == 2 && lastIn == 2 && lastElse == 0 && domeRecs > 0 && earlyRecs > 0 && late == 0,
+                fmt("%s: %d shelters (%d the last), %d domes over warm ground, %d glasshouses, %d graves of the last generations; the last recordings %d in the last shelters, %d elsewhere; %d "
+                    "records in the domes, %d in the other shelters (%d of years after theirs)",
+                        d.name.c_str(), shelters, lastShelters, domes, glass, graves, lastIn, lastElse, domeRecs, earlyRecs, late));
     }
     {   // the beacon. Vreikheid's radio people's last broadcast (its last recording) under its voice, none on Balyaphebist (medieval); through the
         // receiver its levels C-07's; in the game the cabin's radio carries its machine under the voice, and the radar camera on the drifter speaks the
@@ -611,7 +726,11 @@ void unitDrifters(const Check& check) {
         BeaconInfo bi; RxOpts o; o.clarity = 0.85;
         const RenderStats r = renderBeacon(d1, 30, nullptr, &bi, o);
         const bool levels = bi.valid && r.nan == 0 && r.peak < 1.0 && r.clip <= 20 && r.rms >= 0.02 && r.rms <= 0.13;
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_d05.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_d05.txt";
         remove(game.guidePath.c_str());
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -632,9 +751,10 @@ void unitDrifters(const Check& check) {
         const bool heard = game.guide.heard.count(key) > 0;
         press(KEY_B); run(0.1);
         check("radar: a drifter's beacon, a radio people's last broadcast under its voice, heard (D-05)",
-              B0.people < 0 && B1.people >= 0 && levels && bi.genre == "lastbroadcast" && cabin && spoken && heard,
-              fmt("%s: %s; %s: the %s's (%s under the voice, its last recording %s, its opening %d words spoken %.0f s, rms %.3f, peak %.3f); the cabin's radio %s; the camera on it speaks it %s; locked, heard %s",
-                  d0.name.c_str(), B0.people < 0 ? "none" : "ONE", d1.name.c_str(), bi.people.c_str(), RADIO_PROGRAMME_NAMES[std::max(0, B1.machine)], bi.genre.c_str(), bi.words, bi.speechS, r.rms, r.peak,
-                  cabin ? "carries its machine" : "WITHOUT IT", spoken ? "yes" : "NO", heard ? "yes" : "NO"));
+                B0.people < 0 && B1.people >= 0 && levels && bi.genre == "lastbroadcast" && cabin && spoken && heard,
+                fmt("%s: %s; %s: the %s's (%s under the voice, its last recording %s, its opening %d words spoken %.0f s, rms %.3f, peak %.3f); the cabin's radio %s; the camera on it speaks it %s; "
+                    "locked, heard %s",
+                        d0.name.c_str(), B0.people < 0 ? "none" : "ONE", d1.name.c_str(), bi.people.c_str(), RADIO_PROGRAMME_NAMES[std::max(0, B1.machine)], bi.genre.c_str(), bi.words, bi.speechS,
+                        r.rms, r.peak, cabin ? "carries its machine" : "WITHOUT IT", spoken ? "yes" : "NO", heard ? "yes" : "NO"));
     }
 }

@@ -57,7 +57,13 @@ public:
     int testRadarProgramme() const { return radar.prog.kind; }   // the programme on the air (RP_*, -1 none)
     bool testRadarLocal(int which) const { return which >= 0 && which < (int)radar.all.size() && radar.all[which].local; }
     bool testRadarOn() const { return radar.on; }
-    bool testRadarSector(int which, int64_t& sx, int64_t& sy, int64_t& sz) const { if (which < 0 || which >= (int)radar.all.size()) return false; sx = radar.all[which].star.sx; sy = radar.all[which].star.sy; sz = radar.all[which].star.sz; return true; }
+    bool testRadarSector(int which, int64_t& sx, int64_t& sy, int64_t& sz) const {
+        if (which < 0 || which >= (int)radar.all.size()) return false;
+        sx = radar.all[which].star.sx;
+        sy = radar.all[which].star.sy;
+        sz = radar.all[which].star.sz;
+        return true;
+    }
     double testRadarDist(int which) const { return which >= 0 && which < (int)radar.all.size() ? radar.all[which].distLy : -1; }
     double testRadarNeedGain(int which) const { return which >= 0 && which < (int)radar.all.size() ? radar.all[which].needGain : -1; }
     int testRadarGainStep() const { return radar.gainStep; }
@@ -75,7 +81,14 @@ public:
     double testRadarFloor() const { return radar.floorNow; }
     std::string testRadarWordKey() const { return radar.wordKey; }
     Vec3 testRadarDir(int which) const { return which >= 0 && which < (int)radar.all.size() ? normalize(radar.all[which].pos - ship.pos) : Vec3(0, 0, 1); }
-    bool testAimAtDir(const Vec3& d) { Vec3 f = normalize(d); ship.yaw = std::atan2(f.x, f.z); ship.pitch = std::asin(std::max(-1.0, std::min(1.0, f.y))); cabin.yaw = 0; cabin.pitch = 0; return true; }
+    bool testAimAtDir(const Vec3& d) {
+        Vec3 f = normalize(d);
+        ship.yaw = std::atan2(f.x, f.z);
+        ship.pitch = std::asin(std::max(-1.0, std::min(1.0, f.y)));
+        cabin.yaw = 0;
+        cabin.pitch = 0;
+        return true;
+    }
     bool testCivilisedHere() const;    // a people's world in the system the ship is at
     bool testShardsOpenIndex(int idx);   // at the world's list, opens the shard of that index (a piece plays)
     // ---- the ship's player and the instruments taken (player.cpp, instruments_screen.cpp)
@@ -136,7 +149,8 @@ public:
     bool testRemote(int64_t& sx, int64_t& sy, int64_t& sz) const { if (!ship.hasRemote) return false; sx = ship.remote.sx; sy = ship.remote.sy; sz = ship.remote.sz; return true; }
     int testChartLines() const { return chartLinesDrawn; }
     bool testChartUp() const { return chartUp; }
-    int testChartStarsInSky() const { int n = 0; for (const ChartStar& c : chartHeld.stars) for (const Star& s : nb.stars) if (s.seed == c.star.seed) { n++; break; } return n; }   // of the held chart's stars, how many the sky here draws
+    // of the held chart's stars, how many the sky here draws
+    int testChartStarsInSky() const { int n = 0; for (const ChartStar& c : chartHeld.stars) for (const Star& s : nb.stars) if (s.seed == c.star.seed) { n++; break; } return n; }
     // ---- marks, the scanner, the ground under the feet (marks.cpp)
     int testEchoes(int kind = -1) const { int n = 0; for (const auto& e : surf.echoes) if (kind < 0 || e.lm.kind == kind) n++; return n; }
     bool testScanned() const { return surf.scanned; }
@@ -146,7 +160,14 @@ public:
     void testMapCursor(double x, double z) { mapCurX = x; mapCurZ = z; }
     int testShownMark() const { return guide.shownMark; }
     bool testMarkOnScreen(int mi, int& lx, int& ly) {       // B-412: where a mark's diamond over the view stands (logical pixels); false behind the eye
-        for (const SiteMark& m : marksHere()) if (m.index == mi) { double sx, sy; if (!surf.projectPoint(m.x, m.y + 6, m.z, sx, sy)) return false; lx = (int)(sx / FB_SCALE); ly = (int)(sy / FB_SCALE); return true; }
+        for (const SiteMark& m : marksHere())
+            if (m.index == mi) {
+                double sx, sy;
+                if (!surf.projectPoint(m.x, m.y + 6, m.z, sx, sy)) return false;
+                lx = (int)(sx / FB_SCALE);
+                ly = (int)(sy / FB_SCALE);
+                return true;
+            }
         return false;
     }
     void testMarkLocal(int mi, double& x, double& z) const { const SurfaceMark& m = guide.marks[mi]; surf.site.localAt(StarSystem::bodyFromLatLon(m.lat, m.lon), x, z); }
@@ -192,7 +213,13 @@ public:
     int testDataSheetPages() const { return dataSheetPages; }
     void testLandCursorAt(double& latDeg, double& lonDeg, int& zoom) const { latDeg = landLat / DEG; lonDeg = landLon / DEG; zoom = landZoom; }
     void testSectorMapAt(double& x, double& z, int& zoom) const { x = mapCurX; z = mapCurZ; zoom = sectorZoom; }   // the sector map's cursor (local metres) and level
-    void testStarMapAt(double& yaw, double& zoom, int& mask, int& level, int& galaxyMarks) const { yaw = mapYaw; zoom = mapZoom; mask = mapClassMask; level = gchart.level; galaxyMarks = (int)guide.galaxyMarks.size(); }
+    void testStarMapAt(double& yaw, double& zoom, int& mask, int& level, int& galaxyMarks) const {
+        yaw = mapYaw;
+        zoom = mapZoom;
+        mask = mapClassMask;
+        level = gchart.level;
+        galaxyMarks = (int)guide.galaxyMarks.size();
+    }
     void testLandSite();   // the landing map's cursor on a lit land site chosen from the body's seed (R is seeded by the clock, J follows the moon); S-01: level enough for the buggy
     void testWaitMap();    // the landing map's world mapped before the test's next frame (the game's screen reads it on its thread; `testParkAt` waits)
     void testWaitMapOf(int bi);   // any body's map made before the test's next frame (`testParkAt` waits for a landable world's only)
@@ -255,7 +282,8 @@ public:
     void testFlightSkip(double tt) { if (ship.mode == ShipState::VIMANA) ship.flightT = tt; }   // the flight's clock set (the band's keyframes catch up)
     void testStartJump(double ly, const Vec3& dir) { startJump(ly, dir); }   // R-407's jump along a direction, plotted and flown
     void testCabinTurn(double yaw, double pitch) { cabin.yaw = yaw; cabin.pitch = pitch; }   // the head turned in the cabin
-    void testCabinLook(const Vec3& dir) { const Vec3 d = cameraBasis(ship.yaw, ship.pitch) * dir; cabin.yaw = std::atan2(d.x, d.z); cabin.pitch = 0; }   // the head turned toward a direction of the galaxy, level (at the windows)
+    // the head turned toward a direction of the galaxy, level (at the windows)
+    void testCabinLook(const Vec3& dir) { const Vec3 d = cameraBasis(ship.yaw, ship.pitch) * dir; cabin.yaw = std::atan2(d.x, d.z); cabin.pitch = 0; }
     const SpaceRenderer::FlightBand& testFlightBand() const { return spaceR.fband; }
     long testParkedBandBuilds() const { return spaceR.parkedBandBuilds; }
     bool testAiming() const { return ship.targeting; }
@@ -276,7 +304,18 @@ public:
     bool testRemoteStar(Star& out) const { out = ship.remote; return ship.hasRemote; }
     void testPlaceShip(const Vec3& posKm) { ship.pos = posKm; ship.mode = ShipState::STANDBY; nb.update(ship.pos); }   // the ship set down anywhere (the harness's chart)
     // the chart's cursor and plot
-    void testChartCursor(const Vec3& p) { gchart.onShip = false; gchart.plotHere = false; gchart.curX = p.x; gchart.curY = p.y; gchart.curZ = p.z; if (gchart.level > 0) { gchart.follow = false; gchart.cx = p.x; gchart.cz = p.z; } }
+    void testChartCursor(const Vec3& p) {
+        gchart.onShip = false;
+        gchart.plotHere = false;
+        gchart.curX = p.x;
+        gchart.curY = p.y;
+        gchart.curZ = p.z;
+        if (gchart.level > 0) {
+            gchart.follow = false;
+            gchart.cx = p.x;
+            gchart.cz = p.z;
+        }
+    }
     Vec3 testChartCursorAt() const { return chartCursor(); }
     bool testChartOnShip() const { return gchart.onShip; }
     bool testChartPlotted() const { return chartPlotted(); }
@@ -333,7 +372,12 @@ public:
     void testProbeSkip(double toClock);         // the probe's clock set forward (the end found on the way, as the frame would)
     int testProbeStageAt(double clock) const { return probe.active ? probeStageAt(probe.atm, probe.flight, clock) : -1; }
     double testProbeBarAt(double clock) const { return probe.active ? probeBarAt(probe.flight, clock) : 0; }
-    void testProbeChute() { if (probe.active && probe.endClock < 0 && probe.flight.chuteOpen < 0 && probe.clock >= probeDescentStart()) { probe.flight.chuteOpen = probe.clock; probe.flight.chuteClose = probeChuteCloseAt(probe.flight, probe.clock); } }
+    void testProbeChute() {
+        if (probe.active && probe.endClock < 0 && probe.flight.chuteOpen < 0 && probe.clock >= probeDescentStart()) {
+            probe.flight.chuteOpen = probe.clock;
+            probe.flight.chuteClose = probeChuteCloseAt(probe.flight, probe.clock);
+        }
+    }
     void testProbeLook(double yaw, double pitch) { probe.camYaw = yaw; probe.camPitch = pitch; }
     double testProbeFlash(double clock) const;    // the lightning's strength in the probe's picture at a clock (0 none)
     bool testProbeBolt(double clock) const;       // whether that flash throws a channel through the clear air

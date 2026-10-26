@@ -222,7 +222,15 @@ void StarSystem::generate(const Star& s) {
         if (s.cls == STAR_RED_DWARF && n < 3) b.ecc *= 0.3;   // the tides of a red dwarf round the near orbits, so the locked face holds (M5-08 asks for e <= 0.05)
         drawnR.push_back(b.radiusKm); drawnRings.push_back(b.rings); asDrawn.push_back(b); drawnSize.push_back(sizeRand); drawnOrbit.push_back(b.orbitRadiusKm);
         {   // the kind it is made (every draw above was the drawn kind's), locked as the end of `generate` will find it
-            KindFacts f; f.drawn = b.type; f.tempK = b.tempK; f.starClass = s.cls; f.body = KB_PLANET; f.sync = lockedNear && b.rotPeriod > 0; f.locked = f.sync && b.ecc <= 0.05; f.seed = b.seed; f.starSeed = s.seed;
+            KindFacts f;
+            f.drawn = b.type;
+            f.tempK = b.tempK;
+            f.starClass = s.cls;
+            f.body = KB_PLANET;
+            f.sync = lockedNear && b.rotPeriod > 0;
+            f.locked = f.sync && b.ecc <= 0.05;
+            f.seed = b.seed;
+            f.starSeed = s.seed;
             drawnFacts.push_back(f);
             makeKind(b, f, sizeRand, 1e18, false);
         }
@@ -283,7 +291,8 @@ void StarSystem::generate(const Star& s) {
     }
     for (int n = 0; n + 1 < (int)bodies.size(); n++) {
         double r0 = bodies[n].orbitRadiusKm, r1 = bodies[n + 1].orbitRadiusKm;
-        if ((r1 / r0 > 1.65 && rng.chance(0.55)) || rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.5 : (s.cls == STAR_PROTOSTAR ? 0.9 : (s.cls == STAR_WOLF_RAYET ? 0.35 : 0.12)))) {   // the rubble of the stripped worlds; S-06: a black hole's like a neutron star's
+        if ((r1 / r0 > 1.65 && rng.chance(0.55)) || rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.5 : (s.cls == STAR_PROTOSTAR ? 0.9 : (s.cls == STAR_WOLF_RAYET ? 0.35 : 0.12)))) {
+            // the rubble of the stripped worlds; S-06: a black hole's like a neutron star's
             Belt bl;
             bl.innerKm = r0 * 1.22; bl.outerKm = r1 * 0.82;
             double mid = 0.5 * (bl.innerKm + bl.outerKm);
@@ -293,7 +302,8 @@ void StarSystem::generate(const Star& s) {
             belts.push_back(bl);
         }
     }
-    if (!rogue && (!bodies.empty() || s.cls == STAR_NEUTRON || s.cls == STAR_PROTOSTAR || s.cls == STAR_WOLF_RAYET || s.cls == STAR_BLACK_HOLE) && rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.75 : (s.cls == STAR_PROTOSTAR ? 0.95 : (s.cls == STAR_WOLF_RAYET ? 0.5 : 0.3)))) {
+    if (!rogue && (!bodies.empty() || s.cls == STAR_NEUTRON || s.cls == STAR_PROTOSTAR || s.cls == STAR_WOLF_RAYET || s.cls == STAR_BLACK_HOLE) &&
+            rng.chance(s.cls == STAR_NEUTRON || s.cls == STAR_BLACK_HOLE ? 0.75 : (s.cls == STAR_PROTOSTAR ? 0.95 : (s.cls == STAR_WOLF_RAYET ? 0.5 : 0.3)))) {
         Belt bl;
         double last = bodies.empty() ? ci.minFirstOrbitKm * 2.0 : bodies.back().orbitRadiusKm;   // a neutron star without worlds keeps its debris; S-04: a protostar's disc
         bl.innerKm = last * 1.5; bl.outerKm = last * 2.2;
@@ -377,7 +387,17 @@ void StarSystem::generate(const Star& s) {
                 m.axialTilt = rng.range(0, 6 * DEG);
                 m.axisAzimuth = rng.range(0, TAU);
                 m.color = typeColor(m.type, rng);
-                { KindFacts f; f.drawn = m.type; f.tempK = m.tempK; f.starClass = s.cls; f.body = KB_TWIN; f.seed = m.seed; f.starSeed = s.seed; f.parent = drawnKind(p); makeKind(m, f, 0.5, 0, true); }   // a twin keeps its share of its partner's size
+                {
+                    KindFacts f;
+                    f.drawn = m.type;
+                    f.tempK = m.tempK;
+                    f.starClass = s.cls;
+                    f.body = KB_TWIN;
+                    f.seed = m.seed;
+                    f.starSeed = s.seed;
+                    f.parent = drawnKind(p);
+                    makeKind(m, f, 0.5, 0, true);
+                }   // a twin keeps its share of its partner's size
                 m.name = p.name + "-" + (char)('a' + c);
                 m.doublePlanet = true;
                 bodies[n].doublePlanet = true;
@@ -397,7 +417,12 @@ void StarSystem::generate(const Star& s) {
             double dO = dkey * jit;
             // resonances: every other moon locks its period to the previous one (2:1 or 3:2)
             bool resonant = false;   // read by the strange moons' sources
-            if (c >= 1 && rng.chance(0.45)) { const double f = std::pow(rng.chance(0.5) ? 2.0 : 1.5, 2.0 / 3.0); m.orbitRadiusKm = std::max(prevMoonR * 1.2, prevMoonR * f); dO = std::max(dPrev * 1.2, dPrev * f); resonant = true; }
+            if (c >= 1 && rng.chance(0.45)) {
+                const double f = std::pow(rng.chance(0.5) ? 2.0 : 1.5, 2.0 / 3.0);
+                m.orbitRadiusKm = std::max(prevMoonR * 1.2, prevMoonR * f);
+                dO = std::max(dPrev * 1.2, dPrev * f);
+                resonant = true;
+            }
             prevMoonR = m.orbitRadiusKm; dPrev = dO;
             m.tempK = p.tempK * (0.9 + 0.1 * rng.uni());
             if (rogue) m.tempK = 20.0 + 30.0 * unitFromHash(mix64(m.seed ^ 0x4EA7ULL));   // its own warmth, not its planet's sunlight
@@ -526,9 +551,12 @@ void StarSystem::generate(const Star& s) {
     // companion stars: a second sun as a body, close in (the planets circle both) or far out with worlds of its own (D-01: no drifter)
     if (!rogue) {
         Rng kr(s.seed ^ 0xB1A2ULL);
-        static const double pMultiple[STAR_DRAWN_COUNT] = {0.18, 0.2, 0.28, 0.12, 0.24, 0.15, 0.22, 0.26, 0.14, 0.1, 0.2, 0.35, 0.4, 0.5};   // the varieties' chances; S-03: the neutron star's; S-04: young stars come in pairs; S-05: most Wolf-Rayet stars have one; S-06: half the black holes drink a companion
+        // the varieties' chances; S-03: the neutron star's; S-04: young stars come in pairs; S-05: most Wolf-Rayet stars have one; S-06:
+        // half the black holes drink a companion
+        static const double pMultiple[STAR_DRAWN_COUNT] = {0.18, 0.2, 0.28, 0.12, 0.24, 0.15, 0.22, 0.26, 0.14, 0.1, 0.2, 0.35, 0.4, 0.5};
         if (kr.chance(pMultiple[s.cls]) && (int)bodies.size() < 56) {
-            double w[STAR_DRAWN_COUNT] = {1.0, 1.6, (s.cls == STAR_BLUE_GIANT || s.cls == STAR_BLUE_WHITE || s.cls == STAR_WOLF_RAYET) ? 0.6 : 0.0, s.cls == STAR_BLACK_HOLE ? 0.0 : 0.15, 0.9, 0.05};   // a black hole's companion is close, never a giant   // the families; a variety takes its share below
+            // the families (a variety takes its share below); a black hole's companion is close, never a giant
+            double w[STAR_DRAWN_COUNT] = {1.0, 1.6, (s.cls == STAR_BLUE_GIANT || s.cls == STAR_BLUE_WHITE || s.cls == STAR_WOLF_RAYET) ? 0.6 : 0.0, s.cls == STAR_BLACK_HOLE ? 0.0 : 0.15, 0.9, 0.05};
             int cls = starVariety(kr.pick(w, STAR_DRAWN_COUNT), galaxyRegion(s.sx, s.sy, s.sz), hashCombine(s.seed, 901));
             const StarClassInfo& cc = STAR_CLASSES[cls];
             Body k;
@@ -618,7 +646,17 @@ void StarSystem::generate(const Star& s) {
                 b.ringOuter = b.ringInner + 0.5 + 1.6 * kr.uni();
                 b.color = typeColor(b.type, kr);
                 { Rng er(b.seed ^ 0x0ECCULL); b.ecc = er.range(0, 0.1); b.argPeri = er.range(0, TAU); }
-                { KindFacts f; f.drawn = b.type; f.tempK = b.tempK; f.starClass = cls; f.body = KB_COMPANION_WORLD; f.sync = b.rotPeriod == b.orbitPeriod; f.seed = b.seed; f.starSeed = s.seed; makeKind(b, f, sizeRand, 1e18, false); }   // (never locked: `locked` is the primary's planets')
+                {
+                    KindFacts f;
+                    f.drawn = b.type;
+                    f.tempK = b.tempK;
+                    f.starClass = cls;
+                    f.body = KB_COMPANION_WORLD;
+                    f.sync = b.rotPeriod == b.orbitPeriod;
+                    f.seed = b.seed;
+                    f.starSeed = s.seed;
+                    makeKind(b, f, sizeRand, 1e18, false);
+                }   // (never locked: `locked` is the primary's planets')
                 b.name = s.name + " B " + romanNumeral(n + 1);
                 bodies.push_back(b);
                 key2 = b.orbitRadiusKm * (1.4 + 0.5 * kr.uni());

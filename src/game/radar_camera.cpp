@@ -211,7 +211,8 @@ void Game::renderRadarCamera() {
             l3 = "ENTER FLIES THERE";
         } else {   // thousands of light years at the top steps (the line within its 52 characters: the name gives way first)
             Star full = s.star; if (full.name.empty()) placeInSector(s.star.sx, s.star.sy, s.star.sz, full, true);
-            std::string ly = thousands(s.distLy), tail = fmt(" (%s)  %s LY%s", STAR_CLASSES[full.cls].code, ly.c_str(), guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");   // a loop back to a system seen says so
+            // a loop back to a system seen says so
+            std::string ly = thousands(s.distLy), tail = fmt(" (%s)  %s LY%s", STAR_CLASSES[full.cls].code, ly.c_str(), guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");
             l1 = "A SIGNAL FROM " + trunc(upper(starNameOf(full)), (size_t)clampi(52 - 14 - (int)tail.size(), 6, 16)) + tail;
             std::string sector = fmt("SECTOR %lld %lld %lld", (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz);
             l2 = sector + " - THE SIGNAL IS " + ly + " YEARS OLD";
@@ -221,9 +222,14 @@ void Game::renderRadarCamera() {
     } else if (r.overload) { l1 = "OVERLOADED - TURN THE GAIN DOWN"; c1 = HUD_RED; }   // backing the gain off is part of the play
     else if (r.nothingT > 0) { l1 = "NOTHING THERE"; c1 = fc; }   // a false rise held empties
     else if (r.holdT > 0) { l1 = fmt("LOCKING %.0f%% - HOLD STEADY", 100 * clampd(r.holdT / std::max(r.lockSecs, 0.1), 0, 1)); c1 = HUD_CYAN; }
-    else if (r.gainStep > 0 && !r.deepReady) { l1 = "LISTENING DEEPER..."; c1 = HUD_CYAN; }   // the far scan, a slice a frame
-    else if ((r.best >= 0 && r.bestGain > 0.06 && (G <= 1 || r.bestAngle < 10 * DEG)) || (r.rise.on && !r.rise.spent && r.riseGain > 0.06 && r.riseAngle < 10 * DEG)) { l1 = "A RISE - CENTRE IT AND HOLD TO LOCK"; c1 = HUD_GREEN; }   // over x1 the side lobes rise everywhere: the middle lobe's (C-16: a false rise's too)
-    else l1 = "SWEEP THE SKY - A RISE ON THE METER IS A SIGNAL";
+    else if (r.gainStep > 0 && !r.deepReady) { l1 = "LISTENING DEEPER..."; c1 = HUD_CYAN;
+    }   // the far scan, a slice a frame
+    else if ((r.best >= 0 && r.bestGain > 0.06 && (G <= 1 || r.bestAngle < 10 * DEG)) || (r.rise.on && !r.rise.spent && r.riseGain > 0.06 && r.riseAngle < 10 * DEG)) {
+        l1 = "A RISE - CENTRE IT AND HOLD TO LOCK";
+        c1 = HUD_GREEN;
+    }   // over x1 the side lobes rise everywhere: the middle lobe's (C-16: a false rise's too)
+    else
+        l1 = "SWEEP THE SKY - A RISE ON THE METER IS A SIGNAL";
     drawTextCentered(canvas, cx, UH - 54, l1.c_str(), c1);
     if (!l2.empty()) drawTextCentered(canvas, cx, UH - 46, l2.c_str(), fc);
     if (!l3.empty()) drawTextCentered(canvas, cx, UH - 38, l3.c_str(), HUD_GREEN);

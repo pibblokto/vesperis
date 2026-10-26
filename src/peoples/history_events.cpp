@@ -69,7 +69,13 @@ void Builder::randomEvents(int y) {
         if (calm && rng.chance(RATE[a] * (0.6 + 1.5 * v[VAL_TRADE]) * (1 + 0.01 * std::min(bigN, 40)))) {
             int sk = -1;
             for (int k = (int)H.sicknesses.size() - 1; k >= 0 && sk < 0; k--) if (y - H.sicknesses[k].last < 220 && !H.sicknesses[k].made && rng.chance(0.35)) sk = k;
-            if (sk < 0) { HistorySickness S; S.name = mix64(H.seed ^ (0x405CULL + H.sicknesses.size() * 0x9E3779B97F4A7C15ULL)); S.first = y; H.sicknesses.push_back(S); sk = (int)H.sicknesses.size() - 1; }
+            if (sk < 0) {
+                HistorySickness S;
+                S.name = mix64(H.seed ^ (0x405CULL + H.sicknesses.size() * 0x9E3779B97F4A7C15ULL));
+                S.first = y;
+                H.sicknesses.push_back(S);
+                sk = (int)H.sicknesses.size() - 1;
+            }
             const int origin = pickPlace(y, [&](int p) { return (H.places[p].coast ? 2.0 : 1.0) * (big(p) ? 3.0 : 1.0); });
             const int n = 1 + (rng.chance(0.4) ? 1 + rng.irange(3) : 0);
             int wy = y;
@@ -140,7 +146,8 @@ void Builder::randomEvents(int y) {
         if (!warsOn.empty()) q -= 0.3;
         if (stage >= 0) {
             const int hzd = SCRIPTS[H.cause].hazard;
-            const bool fields = hzd == HZ_FAMINE || hzd == HZ_COLD || hzd == HZ_DRYING || hzd == HZ_IMPACT || hzd == HZ_FIRE || H.cause == CAUSE_CLIMATE || H.cause == CAUSE_WATER_WAR || H.cause == CAUSE_POISONED;
+            const bool fields =
+                    hzd == HZ_FAMINE || hzd == HZ_COLD || hzd == HZ_DRYING || hzd == HZ_IMPACT || hzd == HZ_FIRE || H.cause == CAUSE_CLIMATE || H.cause == CAUSE_WATER_WAR || H.cause == CAUSE_POISONED;
             if (fields) { q -= 2.5 * clampd((y - H.stageYear[0]) / (double)std::max(1, H.last - H.stageYear[0]), 0, 1) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }
             if (hzd == HZ_SUNLOST) { q -= 4.5 * (1 - sunAt(y)) + (stage >= STAGE_ONSET ? 0.6 : 0); q = std::min(q, 2.4); }   // the fields under a sun going
         }
@@ -161,7 +168,13 @@ void Builder::randomEvents(int y) {
                 harm(-1, dead / pop(y), fe, 4);
                 if (stage >= STAGE_ONSET) lastHazardEv = fe;
                 deficit += dead / pop(y);
-                if (bigN > 0 && rng.chance(0.3)) { const int rp = pickPlace(y, [&](int p) { return big(p) ? 1.0 : 0.0; }); const int u = ev(HE_UNREST, y, rp, 0.3f); E(u).thing = 0; E(u).cause = fe; E(u).value = rng.irange(40); }
+                if (bigN > 0 && rng.chance(0.3)) {
+                    const int rp = pickPlace(y, [&](int p) { return big(p) ? 1.0 : 0.0; });
+                    const int u = ev(HE_UNREST, y, rp, 0.3f);
+                    E(u).thing = 0;
+                    E(u).cause = fe;
+                    E(u).value = rng.irange(40);
+                }
             }
         } else if (fields && hv == 4 && rng.chance(0.2)) { const int he = ev(HE_HARVEST, y, -1, 0.1f); E(he).out = 4; }
     }
@@ -170,7 +183,8 @@ void Builder::randomEvents(int y) {
         static const double RATE[AGE_COUNT] = {1 / 50.0, 1 / 22.0, 1 / 9.0, 1 / 8.0, 1 / 25.0, 1 / 400.0};
         if (calm && standingN > 0 && rng.chance(RATE[a] * (0.6 + 0.01 * std::min(bigN, 60)))) {
             double w[WK_COUNT];
-            const int railway = inventionIndex("the railway"), radio = inventionIndex("radio"), rocket = inventionIndex("the rocket"), habitat = inventionIndex("the first habitat"), elevator = inventionIndex("the elevator to orbit");
+            const int railway = inventionIndex("the railway"), radio = inventionIndex("radio"), rocket = inventionIndex("the rocket"), habitat = inventionIndex("the first habitat"),
+                      elevator = inventionIndex("the elevator to orbit");
             bool anyRiver = false, anyCoast = false;
             for (int p = 0; p < (int)H.places.size(); p++) if (stands(p, y)) { anyRiver |= H.places[p].river; anyCoast |= H.places[p].coast; }
             for (int k = 0; k < WK_COUNT; k++) {
@@ -233,7 +247,8 @@ void Builder::randomEvents(int y) {
         static const double RATE[AGE_COUNT] = {1 / 80.0, 1 / 35.0, 1 / 25.0, 1 / 25.0, 1 / 50.0, 1 / 500.0};
         if (calm && standingN > 0 && rng.chance(RATE[a] * (0.6 + v[VAL_ART] + v[VAL_LEARNING]))) {
             static const unsigned DA[13] = {AP | AM | AI | AMO | AF, AM | AI, AM | AI, AM | AI, AP, AM | AI, AP | AM | AI, AP | AM, AM | AI | AMO, AI | AMO, AI | AMO | AF, AMO, AM | AI | AMO | AF};
-            const double DW[13] = {v[VAL_ART] * 2, v[VAL_LEARNING], 0.4, v[VAL_LEARNING], 0.6, v[VAL_TRADE], 0.4, v[VAL_ART], v[VAL_LEARNING], v[VAL_ART], v[VAL_LEARNING], v[VAL_ART], v[VAL_ART] * 0.5};
+            const double DW[13] = {
+                    v[VAL_ART] * 2, v[VAL_LEARNING], 0.4, v[VAL_LEARNING], 0.6, v[VAL_TRADE], 0.4, v[VAL_ART], v[VAL_LEARNING], v[VAL_ART], v[VAL_LEARNING], v[VAL_ART], v[VAL_ART] * 0.5};
             double w[13]; double tot = 0;
             for (int k = 0; k < 13; k++) { w[k] = (DA[k] & ageBit(a)) ? DW[k] + 0.05 : 0; tot += w[k]; }
             if (tot > 0) {
@@ -291,7 +306,11 @@ void Builder::everyday(int y) {
     const int railway = inventionIndex("the railway"), flight = inventionIndex("flight"), reactor = inventionIndex("the reactor"), habitat = inventionIndex("the first habitat");
     auto had = [&](int inv) { const int iy = inv >= 0 ? H.inventionYear(inv) : 0; return iy > 0 && iy <= y; };
     rail = had(railway);
-    for (; evScan < H.events.size(); evScan++) { const HistoryEvent& e = H.events[evScan]; if (e.kind == HE_CONTACT) everContact = true; if (e.kind == HE_BUILT && e.thing == WK_MINE) everMine = true; }
+    for (; evScan < H.events.size(); evScan++) {
+        const HistoryEvent& e = H.events[evScan];
+        if (e.kind == HE_CONTACT) everContact = true;
+        if (e.kind == HE_BUILT && e.thing == WK_MINE) everMine = true;
+    }
     contact = everContact; mineTown = everMine;
     const bool fields = H.profile.economy == ECO_FARMING || H.profile.economy == ECO_HERDING || H.profile.economy2 == ECO_FARMING || H.profile.economy2 == ECO_HERDING || a <= AGE_MEDIEVAL;
     const bool cold = W.cold > 0.3 || H.seasons == 4, desert = W.desert;
@@ -366,7 +385,9 @@ void Builder::everyday(int y) {
                 E(e).a = someone(30, 70, -1);
                 break;
             }
-            case HE_ACCIDENT: E(e).value = std::strcmp(key, "habitat") == 0 || std::strcmp(key, "reactor") == 0 ? 20 + dr.irange(4000) : 1 + dr.irange(std::strcmp(key, "ship") == 0 || std::strcmp(key, "train") == 0 ? 160 : 60);
+            case HE_ACCIDENT:
+                E(e).value = std::strcmp(key, "habitat") == 0 || std::strcmp(key, "reactor") == 0 ? 20 + dr.irange(4000)
+                                                                                                  : 1 + dr.irange(std::strcmp(key, "ship") == 0 || std::strcmp(key, "train") == 0 ? 160 : 60);
                 if (E(e).value > 100) E(e).salience = 0.5f;
                 break;
             case HE_PRICE: {
@@ -413,7 +434,11 @@ void Builder::family() {
             const int season = fr.irange(H.seasons);
             if (home < 0) continue;
             // an illness got over (the young and the old more), a hurt
-            if (fr.chance(age < 12 || age > 55 ? 0.03 : 0.012)) { const int e = ev(HE_ILLNESS, y, home, 0.12f, season); E(e).a = p; E(e).thing = fr.irange((int)(sizeof(PRIVATE_ILLNESS) / sizeof(PRIVATE_ILLNESS[0]))); }
+            if (fr.chance(age < 12 || age > 55 ? 0.03 : 0.012)) {
+                const int e = ev(HE_ILLNESS, y, home, 0.12f, season);
+                E(e).a = p;
+                E(e).thing = fr.irange((int)(sizeof(PRIVATE_ILLNESS) / sizeof(PRIVATE_ILLNESS[0])));
+            }
             if (age >= 4 && fr.chance(0.01)) { const int e = ev(HE_INJURY, y, home, 0.12f, season); E(e).a = p; E(e).thing = fr.irange((int)(sizeof(PRIVATE_INJURY) / sizeof(PRIVATE_INJURY[0]))); }
             // a child apprenticed once (the ages that had trades to learn)
             if (!apprenticed && age >= 11 && age <= 15 && ageAt(y) >= AGE_MEDIEVAL && fr.chance(0.25)) {
@@ -421,7 +446,11 @@ void Builder::family() {
                 const int e = ev(HE_APPRENTICE, y, home, 0.14f, season); E(e).a = p; E(e).thing = ageAt(y) * 10 + fr.irange(10);
             }
             if (age >= 22 && age <= 70) {
-                if (P.spouse >= 0 && fr.chance(0.012)) { const int e = ev(HE_HOUSE, y, home, 0.12f, season); E(e).a = p; E(e).thing = fr.irange((int)(sizeof(PRIVATE_HOUSE) / sizeof(PRIVATE_HOUSE[0]))); }
+                if (P.spouse >= 0 && fr.chance(0.012)) {
+                    const int e = ev(HE_HOUSE, y, home, 0.12f, season);
+                    E(e).a = p;
+                    E(e).thing = fr.irange((int)(sizeof(PRIVATE_HOUSE) / sizeof(PRIVATE_HOUSE[0])));
+                }
                 if (fr.chance(0.01)) {   // a quarrel with someone of another family at the same place
                     int other = -1, n = 0;
                     for (int q = 0; q < np; q++) {
@@ -435,7 +464,12 @@ void Builder::family() {
             if (age >= 18 && age <= 66 && fr.chance(0.014)) {   // a journey there and back
                 int to = -1, n = 0;
                 for (int q = 0; q < (int)H.places.size(); q++) if (q != home && stands(q, y) && fr.irange(++n) == 0) to = q;
-                if (to >= 0) { const int e = ev(HE_JOURNEY, y, home, 0.12f, season); E(e).a = p; E(e).place2 = to; E(e).thing = fr.irange((int)(sizeof(PRIVATE_JOURNEY) / sizeof(PRIVATE_JOURNEY[0]))); }
+                if (to >= 0) {
+                    const int e = ev(HE_JOURNEY, y, home, 0.12f, season);
+                    E(e).a = p;
+                    E(e).place2 = to;
+                    E(e).thing = fr.irange((int)(sizeof(PRIVATE_JOURNEY) / sizeof(PRIVATE_JOURNEY[0])));
+                }
             }
         }
         // a betrothal the year before the wedding (once a couple: told for the one the wedding names first)
@@ -494,7 +528,12 @@ void Builder::collapseYear(int y) {
                 harm(-1, rng.range(0.01, 0.06), fe, 4); lastHazardEv = fe; } break;
             case HZ_COLD: if (onset || rng.chance(0.07)) {
                 int cause = -1;
-                if (onset && H.cause == CAUSE_VOLCANIC_WINTER) { const int p = exposed(); cause = ev(HE_ERUPTION, y, p, 0.85f); E(cause).value = (int64_t)(placePop(p, y) * rng.range(0.05, 0.3)); harm(p, 0.15, cause, 12); }
+                if (onset && H.cause == CAUSE_VOLCANIC_WINTER) {
+                    const int p = exposed();
+                    cause = ev(HE_ERUPTION, y, p, 0.85f);
+                    E(cause).value = (int64_t)(placePop(p, y) * rng.range(0.05, 0.3));
+                    harm(p, 0.15, cause, 12);
+                }
                 const int e = ev(HE_WINTER, y, -1, 0.6f); E(e).value = onset ? std::max(1, H.last - y + 1) : 1 + rng.irange(4); E(e).cause = cause;
                 harm(-1, rng.range(0.005, 0.03), e, 13); lastHazardEv = e; } break;
             case HZ_FLOOD: if (onset || rng.chance(0.3)) {
@@ -502,7 +541,13 @@ void Builder::collapseYear(int y) {
                 const int e = ev(HE_FLOOD, y, p, 0.65f); E(e).value = (int64_t)(placePop(p, y) * rng.range(0.01, 0.1)); E(e).thing = p >= 0 && H.places[p].coast ? 1 : 0;
                 harm(p, 0.05, e, 5); lastHazardEv = e; } break;
             case HZ_SICKNESS: if (onset || rng.chance(0.3)) {
-                if (H.sicknesses.empty() || onset) { HistorySickness S; S.name = mix64(H.seed ^ 0x40DEADULL ^ (uint64_t)y); S.first = y; S.made = H.cause == CAUSE_ENGINEERED_PLAGUE; H.sicknesses.push_back(S); }
+                    if (H.sicknesses.empty() || onset) {
+                        HistorySickness S;
+                        S.name = mix64(H.seed ^ 0x40DEADULL ^ (uint64_t)y);
+                        S.first = y;
+                        S.made = H.cause == CAUSE_ENGINEERED_PLAGUE;
+                        H.sicknesses.push_back(S);
+                    }
                 const int sk = (int)H.sicknesses.size() - 1;
                 const double share = (H.cause == CAUSE_GREAT_SICKNESS || H.cause == CAUSE_ENGINEERED_PLAGUE ? rng.range(0.08, 0.3) : rng.range(0.02, 0.1));
                 waves.push_back({y, sk, exposed(), H.sicknesses[sk].waves + 1, share, -1}); } break;
@@ -532,7 +577,9 @@ void Builder::collapseYear(int y) {
                 harm(-1, onset ? rng.range(0.1, 0.5) : 0.03, e, 12); lastHazardEv = e; } break;
             case HZ_UNREST: if (onset || rng.chance(0.35)) {
                 const int p = pickPlace(y, [&](int q) { return big(q) ? 2.0 : 0.3; });
-                const int e = ev(HE_UNREST, y, p, 0.5f); E(e).thing = a >= AGE_INDUSTRIAL ? (rng.chance(0.5) ? 1 : 3) : 2; E(e).value = (int64_t)(placePop(std::max(0, p), y) * rng.range(0.0005, 0.005));
+                const int e = ev(HE_UNREST, y, p, 0.5f);
+                E(e).thing = a >= AGE_INDUSTRIAL ? (rng.chance(0.5) ? 1 : 3) : 2;
+                E(e).value = (int64_t)(placePop(std::max(0, p), y) * rng.range(0.0005, 0.005));
                 harm(p, 0.005, e, 7); lastHazardEv = e; } break;
             case HZ_LEAVING: if (onset || rng.chance(0.3)) {
                 const int p = exposed();

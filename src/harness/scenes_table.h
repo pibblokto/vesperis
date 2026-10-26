@@ -99,7 +99,8 @@ static const CmpScene CMP_SCENES[] = {
     {"dark_ocean", -1, 0, 0, 0.0, -0.09, SCENE_DARK_OCEAN},
     {"felisian_sunset", PT_FELISIAN, 12, 4 * DEG, 0.0, 0.05},
     {"felisian_mountains", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.02, SCENE_PINNED_MOUNTAIN},   // the pinned mountain review site of O6, facing its highest ground
-    {"front_far", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, SCENE_FRONT_FAR},        // the fronts' site (`PIN_FRONT_*`, flat land under a clear sky) facing the next front when its deck's solid wall is 18 km off
+    // the fronts' site (`PIN_FRONT_*`, flat land under a clear sky) facing the next front when its deck's solid wall is 18 km off
+    {"front_far", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, SCENE_FRONT_FAR},
     {"front_arriving", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, SCENE_FRONT_ARRIVING},   // four minutes before: the wall over the near ground, the wind up, the light down
     {"front_through", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, SCENE_FRONT_THROUGH},    // at the rain's peak, 25 km behind the line
     {"front_behind", PT_FELISIAN, 0, 40 * DEG, 0.0, 0.03, SCENE_FRONT_BEHIND},     // an hour after the rain's end, facing where it came from: the sky clearing behind it, the cold
@@ -120,10 +121,17 @@ static const CmpScene CMP_SCENES[] = {
     // facing the pole (the sun's azimuth at its lowest), and the same looking straight up
     {"thinatmo_aurora", PT_THINATMO, 58, -30 * DEG, 0.0, 0.25, SCENE_AURORA},
     {"thinatmo_aurora_zenith", PT_THINATMO, 64, -30 * DEG, 0.0, 1.5, SCENE_AURORA_ZENITH},
-    {"aurora_moon", -1, 64, -30 * DEG, 0.0, 0.25, SCENE_AURORA_CURTAIN},   // any clear-air world with a moon or the parent in the poleward sky at the curtains' height, facing it: its night side shows the curtains in front
+    // any clear-air world with a moon or the parent in the poleward sky at the curtains' height, facing it: its night side shows the
+    // curtains in front
+    {"aurora_moon", -1, 64, -30 * DEG, 0.0, 0.25, SCENE_AURORA_CURTAIN},
     {"neutron_glass", -1, 15, 25 * DEG, 0.6, -0.03, SCENE_NEUTRON_GLASS},   // standing on a glass sheet of a neutron star's glassed world, the star low and off to the side for its glints
-    {"protostar_night", -1, 20, -12 * DEG, 0.0, 0.12, SCENE_PROTOSTAR},   // any world of a protostar, the star 12 degrees under the horizon, facing it: the cloud's glow and the disc's band over the horizon
-    {"wolf_rayet_day", -1, 10, 38 * DEG, 0.5, 0.35, SCENE_WOLF_RAYET},   // any world of a Wolf-Rayet star at the type's default spot, the star 38 degrees up and 29 off the view, looking 20 up: the shell's ring round the blinding sun over a bare plain
+    // any world of a protostar, the star 12 degrees under the horizon, facing it: the cloud's glow and the disc's band over the horizon
+    {"protostar_night", -1, 20, -12 * DEG, 0.0, 0.12, SCENE_PROTOSTAR},
+    // any world of a Wolf-Rayet star at the type's default spot, the star 38 degrees up and 29 off the view, looking 20 up: the shell's
+    // ring round the blinding sun over a bare plain
+    {"wolf_rayet_day", -1, 10, 38 * DEG, 0.5, 0.35, SCENE_WOLF_RAYET},
+    // any world of a black hole at the type's default spot, the hole 30 degrees up and 23 off the view, looking 17 up: the shadow, the disc
+    // and the bent stars over a bare plain
     {"black_hole_sky", -1, 10, 30 * DEG, 0.4, 0.3, SCENE_BLACK_HOLE},
     {"civilisation_town", PT_FELISIAN, 12, 35 * DEG, 0.0, 0.02, SCENE_TOWN},   // the nearest settlement of the scan's first felisian world that had a people, from 30 m outside its edge
     {"civilisation_desert", PT_DESERT, 15, 40 * DEG, 0.0, 0.02, SCENE_TOWN},   // the same on a dead desert world
@@ -132,9 +140,12 @@ static const CmpScene CMP_SCENES[] = {
     {"civilisation_terraces", PT_FELISIAN, 12, 35 * DEG, 0.0, 0.02, SCENE_TERRACES},   // the nearest terraced settlement, from below its slope looking up across the terraces
     {"civilisation_road", PT_FELISIAN, 12, 35 * DEG, 0.0, -0.04, SCENE_ROAD},      // on the nearest settlement's longest road, 60 m out from its edge, looking along it toward the other end
     {"civilisation_road_desert", PT_DESERT, 15, 40 * DEG, 0.0, -0.04, SCENE_ROAD},   // the same on a dead desert world
-    {"civilisation_graves", PT_FELISIAN, 12, 35 * DEG, 0.0, -0.12, SCENE_GRAVES},   // before the nearest settlement's graves, two metres from the first row, looking along the rows at the stones with the ruins behind
-    {"civilisation_graves_desert", PT_DESERT, 15, 40 * DEG, 0.0, -0.12, SCENE_GRAVES},
-    {"civilisation_second_people", PT_FELISIAN, 12, 35 * DEG, 0.0, 0.02, SCENE_SECOND_PEOPLE},   // the nearest settlement of the second people of the scan's first world of two, from outside its gate (a culture of its own beside the first's)   // C-12: the same on a dead desert world
+    // before the nearest settlement's graves, two metres from the first row, looking along the rows at the stones with the ruins behind
+    {"civilisation_graves", PT_FELISIAN, 12, 35 * DEG, 0.0, -0.12, SCENE_GRAVES},
+    {"civilisation_graves_desert", PT_DESERT, 15, 40 * DEG, 0.0, -0.12, SCENE_GRAVES},   // the same on a dead desert world
+    // the nearest settlement of the second people of the scan's first world of two, from outside its gate (a culture of its own beside the
+    // first's)
+    {"civilisation_second_people", PT_FELISIAN, 12, 35 * DEG, 0.0, 0.02, SCENE_SECOND_PEOPLE},
     {"civilisation_shard", PT_FELISIAN, 12, 35 * DEG, 0.0, -0.42, SCENE_SHARD},  // on the floor of the room that holds the first shard of that settlement, 1.9 m from it, looking down at it
     // a settlement of each age on its age's test world (`AGE_WORLDS`): the greatest near a land point on the people's side, from
     // outside its edge three quarters along its main street, the light 35 degrees up
@@ -144,7 +155,8 @@ static const CmpScene CMP_SCENES[] = {
     {"civilisation_modern", -1, 0, 35 * DEG, 0.0, 0.02, SCENE_AGE_MODERN},
     {"civilisation_futuristic", -1, 0, 35 * DEG, 0.0, 0.02, SCENE_AGE_FUTURISTIC},
     {"civilisation_far_future", -1, 0, 35 * DEG, 0.0, 0.02, SCENE_AGE_FAR_FUTURE},
-    {"desert_dead_sea", PT_DESERT, 15, 35 * DEG, 0.0, -0.02, SCENE_DEAD_SEA},      // on the old shore of a dead desert world, looking out over the dry seabed   // S-06: any world of a black hole at the type's default spot, the hole 30 degrees up and 23 off the view, looking 17 up: the shadow, the disc and the bent stars over a bare plain
+    // on the old shore of a dead desert world, looking out over the dry seabed
+    {"desert_dead_sea", PT_DESERT, 15, 35 * DEG, 0.0, -0.02, SCENE_DEAD_SEA},
 };
 
 // E-03: the scene of that name, or none (the names are unique)

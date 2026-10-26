@@ -50,12 +50,17 @@ void historyChecks(const std::function<void(const char*, bool, const std::string
             HS[i] = A;
             worst = std::max(worst, std::min(A->buildMs, B->buildMs));
             times += fmt("%s%.1f", times.empty() ? "" : "/", std::min(A->buildMs, B->buildMs));
-            if (A->events.size() != B->events.size() || A->persons.size() != B->persons.size() || A->places.size() != B->places.size() || A->reigns.size() != B->reigns.size()) { same = false; continue; }
+            if (A->events.size() != B->events.size() || A->persons.size() != B->persons.size() || A->places.size() != B->places.size() || A->reigns.size() != B->reigns.size()) {
+                same = false;
+                continue;
+            }
             for (size_t e = 0; e < A->events.size(); e++) {
                 const HistoryEvent &x = A->events[e], &y = B->events[e];
-                if (x.kind != y.kind || x.year != y.year || x.season != y.season || x.place != y.place || x.a != y.a || x.b != y.b || x.cause != y.cause || x.thing != y.thing || x.value != y.value) same = false;
+                if (x.kind != y.kind || x.year != y.year || x.season != y.season || x.place != y.place || x.a != y.a || x.b != y.b || x.cause != y.cause || x.thing != y.thing || x.value != y.value)
+                    same = false;
             }
-            for (size_t p = 0; p < A->persons.size(); p++) if (A->persons[p].name != B->persons[p].name || A->persons[p].born != B->persons[p].born || A->persons[p].died != B->persons[p].died) same = false;
+            for (size_t p = 0; p < A->persons.size(); p++)
+                if (A->persons[p].name != B->persons[p].name || A->persons[p].born != B->persons[p].born || A->persons[p].died != B->persons[p].died) same = false;
         }
         check("H-02: a people's history the same twice, in milliseconds", same && worlds >= 10 && worst < 30,
               fmt("%d histories (the six ages, two worlds of two) %s; built in %s ms (the world's plan before it)", worlds, same ? "the same twice" : "NOT the same twice", times.c_str()));
@@ -72,15 +77,24 @@ void historyChecks(const std::function<void(const char*, bool, const std::string
                 const HistoryPlace& hp = H.places[p];
                 if (hp.plan >= 0) {
                     onPlan++;
-                    if (hp.plan >= (int)pp.places.size() || pp.places[hp.plan].lat != hp.lat || pp.places[hp.plan].lon != hp.lon) { notPlan++; if (bad.size() < 200) bad += fmt("; %s place %zu not its plan's", W[i].name.c_str(), p); }
-                } else if (hp.fate != HP_CLEARED || hp.ended >= H.profile.collapseYear || H.age < AGE_FUTURISTIC) { notPlan++; if (bad.size() < 200) bad += fmt("; %s place %zu off the plan and not cleared", W[i].name.c_str(), p); }
+                    if (hp.plan >= (int)pp.places.size() || pp.places[hp.plan].lat != hp.lat || pp.places[hp.plan].lon != hp.lon) {
+                        notPlan++;
+                        if (bad.size() < 200) bad += fmt("; %s place %zu not its plan's", W[i].name.c_str(), p);
+                    }
+                } else if (hp.fate != HP_CLEARED || hp.ended >= H.profile.collapseYear || H.age < AGE_FUTURISTIC) {
+                    notPlan++;
+                    if (bad.size() < 200) bad += fmt("; %s place %zu off the plan and not cleared", W[i].name.c_str(), p);
+                }
             }
             if (onPlan != (int)pp.places.size()) { notPlan++; bad += fmt("; %s holds %d of the plan's %zu places", W[i].name.c_str(), onPlan, pp.places.size()); }
             persons += (int)H.persons.size();
             for (size_t e = 0; e < H.events.size(); e++) {
                 const HistoryEvent& ev = H.events[e];
                 events++;
-                if (ev.year < H.first || ev.year > H.last) { outside++; if (bad.size() < 200) bad += fmt("; %s event %zu (%s) in year %d", W[i].name.c_str(), e, HISTORY_EVENT_NAMES[ev.kind], ev.year); }
+                if (ev.year < H.first || ev.year > H.last) {
+                    outside++;
+                    if (bad.size() < 200) bad += fmt("; %s event %zu (%s) in year %d", W[i].name.c_str(), e, HISTORY_EVENT_NAMES[ev.kind], ev.year);
+                }
                 const int slots[3] = {ev.a, ev.b, ev.c};
                 for (int k = 0; k < 3; k++) {
                     const int q = slots[k];
@@ -88,20 +102,25 @@ void historyChecks(const std::function<void(const char*, bool, const std::string
                     if (ev.kind == HE_ACCESSION && k == 1) continue;   // the predecessor, the regent: named after they may have gone
                     if (q >= (int)H.persons.size() || ev.year < H.persons[q].born || ev.year > H.persons[q].died || (ev.kind == HE_DEATH && k == 0 && H.persons[q].died != ev.year)) {
                         deadAt++;
-                        if (bad.size() < 300) bad += fmt("; %s %s in %d names %s (%d-%d)", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, historyPersonName(H, q).c_str(), q < (int)H.persons.size() ? H.persons[q].born : 0, q < (int)H.persons.size() ? H.persons[q].died : 0);
+                        if (bad.size() < 300)
+                            bad += fmt("; %s %s in %d names %s (%d-%d)", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, historyPersonName(H, q).c_str(),
+                                    q < (int)H.persons.size() ? H.persons[q].born : 0, q < (int)H.persons.size() ? H.persons[q].died : 0);
                     }
                 }
                 for (int pl : {ev.place, ev.place2}) {
                     if (pl < 0) continue;
                     if (pl >= (int)H.places.size() || !H.placeStands(pl, ev.year)) {
                         notStanding++;
-                        if (bad.size() < 400) bad += fmt("; %s %s in %d at %s (%d-%d)", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, historyPlaceName(H, pl).c_str(), pl < (int)H.places.size() ? H.places[pl].founded : 0, pl < (int)H.places.size() ? H.places[pl].ended : 0);
+                        if (bad.size() < 400)
+                            bad += fmt("; %s %s in %d at %s (%d-%d)", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, historyPlaceName(H, pl).c_str(),
+                                    pl < (int)H.places.size() ? H.places[pl].founded : 0, pl < (int)H.places.size() ? H.places[pl].ended : 0);
                     }
                 }
             }
         }
         check("H-02: every event in the history's years, its figures alive at it, its places the plan's and standing", outside == 0 && deadAt == 0 && notPlan == 0 && notStanding == 0,
-              fmt("%d events, %d persons: %d outside the years, %d naming someone not alive, %d places not the plan's, %d at a place not standing%s", events, persons, outside, deadAt, notPlan, notStanding, bad.c_str()));
+                fmt("%d events, %d persons: %d outside the years, %d naming someone not alive, %d places not the plan's, %d at a place not standing%s", events, persons, outside, deadAt, notPlan,
+                        notStanding, bad.c_str()));
     }
     {   // the collapse: its stages in order with their events and signs in them; every place ended by the end, the last at it; everyone gone by then
         int bad = 0; std::string why, sample;
@@ -124,14 +143,21 @@ void historyChecks(const std::function<void(const char*, bool, const std::string
                 if (e.kind == HE_FOUNDING && e.year >= P.collapseYear) fail(fmt("a founding in the collapse (%d)", e.year));
             }
             int lastPlaces = 0;
-            for (const HistoryPlace& p : H.places) { if (p.ended > H.last || p.ended < p.founded) fail("a place's years wrong"); if (p.fate == HP_LAST) { lastPlaces++; if (p.ended != H.last) fail("the last place ended before the end"); } }
+            for (const HistoryPlace& p : H.places) {
+                if (p.ended > H.last || p.ended < p.founded) fail("a place's years wrong");
+                if (p.fate == HP_LAST) {
+                    lastPlaces++;
+                    if (p.ended != H.last) fail("the last place ended before the end");
+                }
+            }
             if (!H.places.empty() && (lastPlaces != 1 || H.lastPlace < 0 || H.places[H.lastPlace].fate != HP_LAST)) fail(fmt("%d last places", lastPlaces));
             for (const HistoryPerson& q : H.persons) if (q.died > H.last) { fail("someone outlived the end"); break; }
             bool ended = false; for (const HistoryEvent& e : H.events) if (e.kind == HE_END && e.year == H.last && e.place == H.lastPlace && e.a == H.lastPerson) ended = true;
             if (!ended) fail("no end at the last place");
-            if (i < 6 && sample.size() < 400) sample += fmt("%s%s %s %d-%d (%s, %s, %s, %s), the last %s at %s", sample.empty() ? "" : "; ", W[i].name.c_str(), CAUSE_NAMES[H.cause], H.stageYear[0], H.last,
-                                                      withThousands(H.stageYear[0]).c_str(), withThousands(H.stageYear[1]).c_str(), withThousands(H.stageYear[2]).c_str(), withThousands(H.stageYear[3]).c_str(),
-                                                      historyPersonName(H, H.lastPerson).c_str(), historyPlaceName(H, H.lastPlace).c_str());
+            if (i < 6 && sample.size() < 400)
+                sample += fmt("%s%s %s %d-%d (%s, %s, %s, %s), the last %s at %s", sample.empty() ? "" : "; ", W[i].name.c_str(), CAUSE_NAMES[H.cause], H.stageYear[0], H.last,
+                        withThousands(H.stageYear[0]).c_str(), withThousands(H.stageYear[1]).c_str(), withThousands(H.stageYear[2]).c_str(), withThousands(H.stageYear[3]).c_str(),
+                        historyPersonName(H, H.lastPerson).c_str(), historyPlaceName(H, H.lastPlace).c_str());
         }
         check("H-02: the collapse's stages in order to the end, every place left by it, the last place at it", bad == 0, (bad ? fmt("%d wrong", bad) + why : sample));
     }
@@ -144,29 +170,51 @@ void historyChecks(const std::function<void(const char*, bool, const std::string
                 const HistoryEvent& ev = H.events[e];
                 if (ev.cause >= 0) {
                     checked++;
-                    if (ev.cause >= (int)e || H.events[ev.cause].year > ev.year) { causes++; if (why.size() < 300) why += fmt("; %s %s in %d caused by %s in %d", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, HISTORY_EVENT_NAMES[H.events[ev.cause].kind], H.events[ev.cause].year); }
+                    if (ev.cause >= (int)e || H.events[ev.cause].year > ev.year) {
+                        causes++;
+                        if (why.size() < 300)
+                            why += fmt("; %s %s in %d caused by %s in %d", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, HISTORY_EVENT_NAMES[H.events[ev.cause].kind],
+                                    H.events[ev.cause].year);
+                    }
                 }
                 if (ev.kind == HE_BATTLE || ev.kind == HE_SIEGE || ev.kind == HE_SACK || ev.kind == HE_PEACE) {
                     const HistoryWar& w = H.wars[ev.thing];
-                    if (ev.year < w.start || ev.year > w.end || (w.declared >= 0 && H.events[w.declared].year > ev.year)) { wars++; if (why.size() < 300) why += fmt("; %s %s in %d outside its war %d-%d", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, w.start, w.end); }
+                    if (ev.year < w.start || ev.year > w.end || (w.declared >= 0 && H.events[w.declared].year > ev.year)) {
+                        wars++;
+                        if (why.size() < 300) why += fmt("; %s %s in %d outside its war %d-%d", W[i].name.c_str(), HISTORY_EVENT_NAMES[ev.kind], ev.year, w.start, w.end);
+                    }
                 }
                 if (ev.kind == HE_FAMINE && ev.cause >= 0 && H.events[ev.cause].kind == HE_HARVEST && H.events[ev.cause].year != ev.year) causes++;
                 if (ev.kind == HE_MARRIAGE && (!H.alive(ev.a, ev.year) || !H.alive(ev.b, ev.year))) kin++;
             }
-            for (size_t w = 0; w < H.wars.size(); w++) if (H.wars[w].peace >= 0 && H.events[H.wars[w].peace].year != H.wars[w].end) { wars++; if (why.size() < 300) why += fmt("; %s war %zu's peace off its end", W[i].name.c_str(), w); }
+            for (size_t w = 0; w < H.wars.size(); w++)
+                if (H.wars[w].peace >= 0 && H.events[H.wars[w].peace].year != H.wars[w].end) {
+                    wars++;
+                    if (why.size() < 300) why += fmt("; %s war %zu's peace off its end", W[i].name.c_str(), w);
+                }
             for (size_t p = 0; p < H.persons.size(); p++) {
                 const HistoryPerson& q = H.persons[p];
                 if (q.died < q.born) kin++;
                 for (int par : {q.mother, q.father}) {
                     if (par < 0) continue;
                     const HistoryPerson& r = H.persons[par];
-                    if (q.born < r.born + 12 || q.born > r.died + (par == q.father ? 1 : 0)) { kin++; if (why.size() < 300) why += fmt("; %s %s born %d to %s (%d-%d)", W[i].name.c_str(), historyPersonName(H, (int)p).c_str(), q.born, historyPersonName(H, par).c_str(), r.born, r.died); }
+                    if (q.born < r.born + 12 || q.born > r.died + (par == q.father ? 1 : 0)) {
+                        kin++;
+                        if (why.size() < 300)
+                            why += fmt("; %s %s born %d to %s (%d-%d)", W[i].name.c_str(), historyPersonName(H, (int)p).c_str(), q.born, historyPersonName(H, par).c_str(), r.born, r.died);
+                    }
                 }
             }
             for (size_t k = 0; k < H.reigns.size(); k++) {
                 const HistoryReign& R = H.reigns[k];
-                if (R.end < R.start || (k > 0 && R.start < H.reigns[k - 1].end)) { reigns++; if (why.size() < 300) why += fmt("; %s reign %zu (%d-%d) after %d", W[i].name.c_str(), k, R.start, R.end, k ? H.reigns[k - 1].end : 0); }
-                if (R.ruler >= 0 && (R.start < H.persons[R.ruler].born || R.end > H.persons[R.ruler].died)) { reigns++; if (why.size() < 300) why += fmt("; %s reign %zu outlives its ruler", W[i].name.c_str(), k); }
+                if (R.end < R.start || (k > 0 && R.start < H.reigns[k - 1].end)) {
+                    reigns++;
+                    if (why.size() < 300) why += fmt("; %s reign %zu (%d-%d) after %d", W[i].name.c_str(), k, R.start, R.end, k ? H.reigns[k - 1].end : 0);
+                }
+                if (R.ruler >= 0 && (R.start < H.persons[R.ruler].born || R.end > H.persons[R.ruler].died)) {
+                    reigns++;
+                    if (why.size() < 300) why += fmt("; %s reign %zu outlives its ruler", W[i].name.c_str(), k);
+                }
             }
         }
         check("H-02: causes before their effects, battles within their wars, the kin and the reigns coherent", causes == 0 && wars == 0 && kin == 0 && reigns == 0,
@@ -220,7 +268,11 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
             for (int k = 1; k < 10; k++) if (materialDecay(m, YEARS[k], 0.5) < materialDecay(m, YEARS[k - 1], 0.5) - 1e-12) mono = false;
             if (m != MT_GLASS && m != MT_ETERNAL && !(materialDecay(m, 2000, 0.9) > materialDecay(m, 2000, 0.1) || materialDecay(m, 2000, 0.1) >= 1.0)) wetFaster = false;
         }
-        for (double y : {200.0, 2000.0, 20000.0}) for (double w : {0.1, 0.5, 0.9}) { double d = decayOf(y, w); if (d > 0.05 && d < 0.95 && std::fabs(materialDecay(MT_MASONRY, y, w) - d) > 1e-9) masonryC08 = false; }
+        for (double y : {200.0, 2000.0, 20000.0})
+            for (double w : {0.1, 0.5, 0.9}) {
+                double d = decayOf(y, w);
+                if (d > 0.05 && d < 0.95 && std::fabs(materialDecay(MT_MASONRY, y, w) - d) > 1e-9) masonryC08 = false;
+            }
         auto D = [](int m, double y, double w = 0.5) { return materialDecay(m, y, w); };
         bool timber = D(MT_TIMBER, 30) < 0.3 && D(MT_TIMBER, 1000) > 0.99 && D(MT_TIMBER, 1000, 0.1) > 0.95;
         bool earth = D(MT_EARTH, 1000, 0.1) < 0.5 && D(MT_EARTH, 1000, 0.9) > 0.8;
@@ -233,13 +285,20 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
         std::string table;
         for (int m = 0; m < MT_COUNT; m++) table += fmt("%s%s %.2f/%.2f/%.2f/%.2f", m ? "; " : "", BUILT_MATERIAL_NAMES[m], D(m, 100), D(m, 1000), D(m, 10000), D(m, 100000));
         check("the decay by material (A-03)", mono && wetFaster && masonryC08 && timber && earth && drystone && iron && concrete && glass && composite && eternal,
-              fmt("%s%s%s%s%s%s%s%s%s%s%s; at 100/1,000/10,000/100,000 years: %s", mono ? "" : "NOT monotonic; ", wetFaster ? "" : "rain NOT faster; ", masonryC08 ? "masonry is C-08's" : "masonry NOT C-08's",
-                  timber ? "" : "; timber wrong", earth ? "" : "; earth wrong", drystone ? "" : "; dry stone wrong", iron ? "" : "; iron wrong", concrete ? "" : "; concrete wrong", glass ? "" : "; glass wrong", composite ? "" : "; composite wrong", eternal ? "" : "; the far future's weathers",
-                  table.c_str()));
+                fmt("%s%s%s%s%s%s%s%s%s%s%s; at 100/1,000/10,000/100,000 years: %s", mono ? "" : "NOT monotonic; ", wetFaster ? "" : "rain NOT faster; ",
+                        masonryC08 ? "masonry is C-08's" : "masonry NOT C-08's", timber ? "" : "; timber wrong", earth ? "" : "; earth wrong", drystone ? "" : "; dry stone wrong",
+                        iron ? "" : "; iron wrong", concrete ? "" : "; concrete wrong", glass ? "" : "; glass wrong", composite ? "" : "; composite wrong",
+                        eternal ? "" : "; the far future's weathers", table.c_str()));
     }
     // every age's settlements on one world (the medieval test world's desert): six cells of each class at three hundred years
     Star st; StarSystem sys; BodyGen g; bool world = false;
-    if (starInSector(AGE_WORLDS[AGE_MEDIEVAL].sx, 0, AGE_WORLDS[AGE_MEDIEVAL].sz, st, true)) { sys.generate(st); if (AGE_WORLDS[AGE_MEDIEVAL].body < (int)sys.bodies.size()) { g = BodyGen::make(sys.bodies[AGE_WORLDS[AGE_MEDIEVAL].body]); world = true; } }
+    if (starInSector(AGE_WORLDS[AGE_MEDIEVAL].sx, 0, AGE_WORLDS[AGE_MEDIEVAL].sz, st, true)) {
+        sys.generate(st);
+        if (AGE_WORLDS[AGE_MEDIEVAL].body < (int)sys.bodies.size()) {
+            g = BodyGen::make(sys.bodies[AGE_WORLDS[AGE_MEDIEVAL].body]);
+            world = true;
+        }
+    }
     if (!world) { check("what each age builds (A-03)", false, "no test world"); return; }
     int gLat0, gLon0; ruinCellOf(g, 0.3, 1.1, gLat0, gLon0);
     {
@@ -260,14 +319,24 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
                     }
                     for (size_t i = 0; i < el.size(); i++) {
                         tallest[a] = std::max(tallest[a], formTop(el[i]));
-                        if (!formRests(el, i)) { floating++; if (floatBad.size() < 600) floatBad += fmt("a %s %s (part %d, %.1fx%.1f) of a %s %s at %.1f m on nothing; ", FORM_KIND_NAMES[el[i].kind], el[i].material >= 0 ? BUILT_MATERIAL_NAMES[el[i].material] : "sand", el[i].part, el[i].hx, el[i].hz, AGE_NAMES[a], BUILDING_KIND_NAMES[sp.buildings[el[i].building].kind], el[i].y0); }
+                        if (!formRests(el, i)) {
+                            floating++;
+                            if (floatBad.size() < 600)
+                                floatBad += fmt("a %s %s (part %d, %.1fx%.1f) of a %s %s at %.1f m on nothing; ", FORM_KIND_NAMES[el[i].kind],
+                                        el[i].material >= 0 ? BUILT_MATERIAL_NAMES[el[i].material] : "sand", el[i].part, el[i].hx, el[i].hz, AGE_NAMES[a],
+                                        BUILDING_KIND_NAMES[sp.buildings[el[i].building].kind], el[i].y0);
+                        }
                     }
                     for (size_t bi = 0; bi < sp.buildings.size(); bi++) {   // the rooms: the doorway open (a run of a metre along its wall's line clear of the pieces' colliders and the explorer's
                         const Building& b = sp.buildings[bi]; BuildingRoom R;   // radius), the spots clear of them
                         if (!buildingRoom(b, R)) continue;
                         rooms++;
                         discs.clear(); for (const Form& e : el) if (e.building == (int)bi) formColliders(e, discs);
-                        auto blockedAt = [&](double x, double z, double margin) { for (const FormDisc& q : discs) if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - x, q.z - z) < q.r + margin) return true; return false; };
+                        auto blockedAt = [&](double x, double z, double margin) {
+                            for (const FormDisc& q : discs)
+                                if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - x, q.z - z) < q.r + margin) return true;
+                            return false;
+                        };
                         if (R.door) {
                             int run = 0, best = 0;
                             for (double t = -R.doorL; t <= R.doorL; t += 0.1) { run = blockedAt(R.doorX + R.doorAx * t, R.doorZ + R.doorAz * t, 0.35) ? 0 : run + 1; best = std::max(best, run); }
@@ -275,13 +344,27 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
                                 doorsShut++;
                                 if (bad.size() < 1400) {   // what shuts it: the first form whose collider stands in the doorway's middle
                                     std::string by;
-                                    for (const Form& e : el) { if (e.building != (int)bi) continue; std::vector<FormDisc> d1; formColliders(e, d1); for (const FormDisc& q : d1) if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - R.doorX, q.z - R.doorZ) < q.r + 0.35) { by = fmt("%s part %d %.1fx%.1f", FORM_KIND_NAMES[e.kind], e.part, e.hx, e.hz); break; } if (!by.empty()) break; }
-                                    bad += fmt("a %s %s (form %d, door %d, found %d, profile %d) shut by %s; ", AGE_NAMES[a], BUILDING_KIND_NAMES[b.kind], b.form, b.door, b.found, c.genome.of(GV_PROFILE), by.c_str());
+                                    for (const Form& e : el) {
+                                        if (e.building != (int)bi) continue;
+                                        std::vector<FormDisc> d1;
+                                        formColliders(e, d1);
+                                        for (const FormDisc& q : d1)
+                                            if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - R.doorX, q.z - R.doorZ) < q.r + 0.35) {
+                                                by = fmt("%s part %d %.1fx%.1f", FORM_KIND_NAMES[e.kind], e.part, e.hx, e.hz);
+                                                break;
+                                            }
+                                        if (!by.empty()) break;
+                                    }
+                                    bad += fmt("a %s %s (form %d, door %d, found %d, profile %d) shut by %s; ", AGE_NAMES[a], BUILDING_KIND_NAMES[b.kind], b.form, b.door, b.found,
+                                            c.genome.of(GV_PROFILE), by.c_str());
                                 }
                             }
                         }
                         int clearSpots = 0;
-                        for (const auto& p : R.spots) { double x = b.x + std::cos(b.heading) * p.first + std::sin(b.heading) * p.second, z = b.z - std::sin(b.heading) * p.first + std::cos(b.heading) * p.second; if (!blockedAt(x, z, 0.42)) clearSpots++; }
+                        for (const auto& p : R.spots) {
+                            double x = b.x + std::cos(b.heading) * p.first + std::sin(b.heading) * p.second, z = b.z - std::sin(b.heading) * p.first + std::cos(b.heading) * p.second;
+                            if (!blockedAt(x, z, 0.42)) clearSpots++;
+                        }
                         if (clearSpots == 0 && !R.spots.empty()) { spotsBad++; if (bad.size() < 700) bad += fmt("a %s without a clear spot; ", BUILDING_KIND_NAMES[b.kind]); }
                     }
                 }
@@ -295,9 +378,11 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
             kindsLine += fmt("%s%s %zu kinds, tallest %.0f m", a ? "; " : "", AGE_NAMES[a], own[a].size(), tallest[a]);
         }
         check("what each age builds: its own kinds, its heights (A-03)", later == 0 && heights && kinds,
-              fmt("%d settlements, %d buildings: %s%s%s", settlements, buildingsN, kindsLine.c_str(), later ? fmt("; %d of a later age: ", later).c_str() : "", later ? bad.substr(0, 200).c_str() : ""));
+                fmt("%d settlements, %d buildings: %s%s%s", settlements, buildingsN, kindsLine.c_str(), later ? fmt("; %d of a later age: ", later).c_str() : "",
+                        later ? bad.substr(0, 200).c_str() : ""));
         check("every age's pieces rest on something, its rooms open (A-03)", floating == 0 && doorsShut == 0 && spotsBad == 0 && rooms > 0,
-              fmt("%d rooms; %d pieces on nothing, %d doorways shut, %d rooms without a clear spot%s%s%s", rooms, floating, doorsShut, spotsBad, bad.empty() && floatBad.empty() ? "" : ": ", floatBad.c_str(), bad.substr(0, 1400).c_str()));
+                fmt("%d rooms; %d pieces on nothing, %d doorways shut, %d rooms without a clear spot%s%s%s", rooms, floating, doorsShut, spotsBad, bad.empty() && floatBad.empty() ? "" : ": ",
+                        floatBad.c_str(), bad.substr(0, 1400).c_str()));
     }
     {   // the plan's examples
         // a wooden village after a thousand years: rings of post holes (no timber standing over a step, eight holes or more a hut)
@@ -339,8 +424,9 @@ void agesChecks(const std::function<void(const char*, bool, const std::string&)>
         bool sharp = !e0.empty() && e0.size() == e1.size() && s0.buildings.size() == 1 && s0.buildings[0].kind == BK_SPIKE;
         for (size_t i = 0; sharp && i < e0.size(); i++) if (e0[i].broken != 0 || e1[i].broken != 0 || e0[i].y1 != e1[i].y1 || e0[i].hx != e1[i].hx || e0[i].tilt != e1[i].tilt) sharp = false;
         check("the decay's examples: post holes, a stump, a spire still sharp (A-03)", huts > 0 && ringed == huts && standing == 0 && towers > 0 && stumps == towers && sharp,
-              fmt("a wooden village after 1,000 years: %d huts, %d in rings of post holes, %d timber pieces standing; a concrete tower after 3,000: %d towers, %d stumps (the tallest standing %.0f%% of its height); a far-future spike after 100,000: %s",
-                  huts, ringed, standing, towers, stumps, 100 * worst, sharp ? "as sharp as in its first year" : "NOT as it stood"));
+                fmt("a wooden village after 1,000 years: %d huts, %d in rings of post holes, %d timber pieces standing; a concrete tower after 3,000: %d towers, %d stumps (the tallest standing "
+                    "%.0f%% of its height); a far-future spike after 100,000: %s",
+                        huts, ringed, standing, towers, stumps, 100 * worst, sharp ? "as sharp as in its first year" : "NOT as it stood"));
     }
 }
 
@@ -367,16 +453,18 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
     for (const HistoryEvent& e : H.events) if (!e.pub) privN++;
     out(fmt("THE %s OF %s", upper(H.lore.people).c_str(), upper(b.name).c_str()));
     const bool pre = H.age == AGE_PREHISTORIC;
-    out(fmt("%s %s people of a %s world. Their count runs %s years from %s %s to their end, %s years ago%s.", H.age == AGE_INDUSTRIAL ? "An" : "A", AGE_NAMES[H.age], lowerOf(KINDS[b.type].name).c_str(),
-            withThousands(H.last).c_str(), pre ? "the first winter at" : "the founding of", H.lore.city.c_str(),
-            withThousands((int64_t)std::llround(P.endedYearsAgo)).c_str(), H.first < 1 ? fmt("; the old time before it, %s years as they remembered it", withThousands(1 - H.first).c_str()).c_str() : ""));
+    out(fmt("%s %s people of a %s world. Their count runs %s years from %s %s to their end, %s years ago%s.", H.age == AGE_INDUSTRIAL ? "An" : "A", AGE_NAMES[H.age],
+            lowerOf(KINDS[b.type].name).c_str(), withThousands(H.last).c_str(), pre ? "the first winter at" : "the founding of", H.lore.city.c_str(),
+            withThousands((int64_t)std::llround(P.endedYearsAgo)).c_str(),
+            H.first < 1 ? fmt("; the old time before it, %s years as they remembered it", withThousands(1 - H.first).c_str()).c_str() : ""));
     out(fmt("At their height %s on %.0f%% of the land: %zu places (%d %s, %d %s%s); ended by %s over %s years (the warning in %s, the onset %s, the crisis %s, the end %s).",
-            peopleCount(P.peak).c_str(), 100 * P.held, H.places.size() - lost, cities, H.age == AGE_FUTURISTIC ? "great places" : "cities", towns, pre ? "seats" : (H.age == AGE_FUTURISTIC ? "lesser places" : (H.age == AGE_FAR_FUTURE ? "works" : "towns")),
-            lost ? fmt(", and %d older cities it cleared", lost).c_str() : "", CAUSE_NAMES[H.cause], withThousands(P.collapseYears).c_str(),
-            yr(H.stageYear[0]).c_str(), yr(H.stageYear[1]).c_str(), yr(H.stageYear[2]).c_str(), yr(H.stageYear[3]).c_str()));
-    out(fmt("Told: %s events (%s in the chronicle, %s of the families), %s persons, %zu families (followed from year %s), %zu reigns, %zu wars, %zu sicknesses, %zu inventions, %zu institutions; %d places left early. Built in %.1f ms.",
-            withThousands(H.events.size()).c_str(), withThousands(H.publicEvents).c_str(), withThousands(privN).c_str(), withThousands(H.persons.size()).c_str(), H.families.size(), yr(H.famFrom).c_str(),
-            H.reigns.size(), H.wars.size(), H.sicknesses.size(), H.inventions.size(), H.institutions.size(), early, H.buildMs));
+            peopleCount(P.peak).c_str(), 100 * P.held, H.places.size() - lost, cities, H.age == AGE_FUTURISTIC ? "great places" : "cities", towns,
+            pre ? "seats" : (H.age == AGE_FUTURISTIC ? "lesser places" : (H.age == AGE_FAR_FUTURE ? "works" : "towns")), lost ? fmt(", and %d older cities it cleared", lost).c_str() : "",
+            CAUSE_NAMES[H.cause], withThousands(P.collapseYears).c_str(), yr(H.stageYear[0]).c_str(), yr(H.stageYear[1]).c_str(), yr(H.stageYear[2]).c_str(), yr(H.stageYear[3]).c_str()));
+    out(fmt("Told: %s events (%s in the chronicle, %s of the families), %s persons, %zu families (followed from year %s), %zu reigns, %zu wars, %zu sicknesses, %zu inventions, %zu institutions; %d "
+            "places left early. Built in %.1f ms.",
+            withThousands(H.events.size()).c_str(), withThousands(H.publicEvents).c_str(), withThousands(privN).c_str(), withThousands(H.persons.size()).c_str(), H.families.size(),
+            yr(H.famFrom).c_str(), H.reigns.size(), H.wars.size(), H.sicknesses.size(), H.inventions.size(), H.institutions.size(), early, H.buildMs));
     {   // the chronicle by kind
         int byKind[HE_COUNT] = {0};
         for (const HistoryEvent& e : H.events) if (e.pub) byKind[e.kind]++;
@@ -398,9 +486,13 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
         for (const HistoryInvention& I : H.inventions) if (I.year >= e.start && I.year <= e.end) inv += (inv.empty() ? "" : ", ") + historyInventionName(I.id);
         const bool oldTime = e.age == AGE_PREHISTORIC && H.age != AGE_PREHISTORIC;
         const bool lastEra = &e == &H.eras.back();
-        out(fmt("  %s (%s), %s to %s: %s; the faith of %s; %s%s.", e.name.c_str(), AGE_NAMES[e.age], oldTime ? fmt("about %s years before the first", withThousands(1 - e.start).c_str()).c_str() : fmt("year %s", yr(e.start).c_str()).c_str(),
-                oldTime ? "year 0" : fmt("year %s", yr(e.end).c_str()).c_str(), gov.c_str(), FAITH_NAMES[e.faith], ECONOMY_NAMES[e.economy], lastEra && P.economy2 != P.economy ? (std::string(" and ") + ECONOMY_NAMES[P.economy2]).c_str() : ""));
-        if (!oldTime) out(fmt("     %d reign%s, %d war%s, %d place%s founded%s", reigns, reigns == 1 ? "" : "s", wars, wars == 1 ? "" : "s", founded, founded == 1 ? "" : "s", inv.empty() ? "" : ("; made: " + inv).c_str()));
+        out(fmt("  %s (%s), %s to %s: %s; the faith of %s; %s%s.", e.name.c_str(), AGE_NAMES[e.age],
+                oldTime ? fmt("about %s years before the first", withThousands(1 - e.start).c_str()).c_str() : fmt("year %s", yr(e.start).c_str()).c_str(),
+                oldTime ? "year 0" : fmt("year %s", yr(e.end).c_str()).c_str(), gov.c_str(), FAITH_NAMES[e.faith], ECONOMY_NAMES[e.economy],
+                lastEra && P.economy2 != P.economy ? (std::string(" and ") + ECONOMY_NAMES[P.economy2]).c_str() : ""));
+        if (!oldTime)
+            out(fmt("     %d reign%s, %d war%s, %d place%s founded%s", reigns, reigns == 1 ? "" : "s", wars, wars == 1 ? "" : "s", founded, founded == 1 ? "" : "s",
+                    inv.empty() ? "" : ("; made: " + inv).c_str()));
     }
     // the rulers
     out("");
@@ -413,7 +505,8 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
             out(fmt("  the House of %s (%d reign%s, %s to %s)", historyPersonName(H, H.families[R.house].founder, false).c_str(), n, n == 1 ? "" : "s", yr(R.start).c_str(), yr(to).c_str()));
         }
         house = R.house;
-        static const char* const HOW[11] = {"founded the rule", "inherited", "chosen", "elected", "seized the rule", "appointed", "won it in a war", "came of age", "given the rule", "raised by the revolution", "elected again"};
+        static const char* const HOW[11] = {
+                "founded the rule", "inherited", "chosen", "elected", "seized the rule", "appointed", "won it in a war", "came of age", "given the rule", "raised by the revolution", "elected again"};
         static const char* const END[8] = {"died", "deposed", "stepped down", "term ended", "overthrown", "fled", "the rule ended", "gave it over"};
         std::string who = R.ruler >= 0 ? historyPersonName(H, R.ruler, false) : std::string("the mind");
         std::string t = R.ruler >= 0 ? historyRulerTitle(H, R.government, H.persons[R.ruler].female) : "";
@@ -430,8 +523,8 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
             } else if (Q.death >= 0 && H.events[Q.death].thing == 8) life += ", murdered";
             life += ")";
         }
-        out(fmt("    years %s-%s: %s%s%s; %s, %s%s", yr(R.start).c_str(), yr(R.end).c_str(), t.empty() ? "" : (t + " ").c_str(), who.c_str(), life.c_str(), HOW[clampi(R.how, 0, 10)], END[clampi(R.endHow, 0, 7)],
-                R.regent >= 0 ? (", the regent " + historyPersonName(H, R.regent, false)).c_str() : ""));
+        out(fmt("    years %s-%s: %s%s%s; %s, %s%s", yr(R.start).c_str(), yr(R.end).c_str(), t.empty() ? "" : (t + " ").c_str(), who.c_str(), life.c_str(), HOW[clampi(R.how, 0, 10)],
+                END[clampi(R.endHow, 0, 7)], R.regent >= 0 ? (", the regent " + historyPersonName(H, R.regent, false)).c_str() : ""));
     }
     // the places
     out("");
@@ -439,7 +532,10 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
     auto placeLine = [&](int i) {
         const HistoryPlace& p = H.places[i];
         static const char* const FATE[4] = {"left in the collapse", "left early", "the last place", "cleared"};
-        std::string cls = p.sclass == SC_CAPITAL ? "the capital" : (p.sclass == SC_CITY ? "a city" : (p.sclass == SC_TOWN ? (H.age == AGE_FUTURISTIC && p.plan >= 0 ? "a great place" : "a town") : (p.sclass == SC_VILLAGE ? (pre ? "a seat" : "a lesser place") : "a work")));
+        std::string cls = p.sclass == SC_CAPITAL ? "the capital"
+                                                 : (p.sclass == SC_CITY ? "a city"
+                                                                        : (p.sclass == SC_TOWN ? (H.age == AGE_FUTURISTIC && p.plan >= 0 ? "a great place" : "a town")
+                                                                                               : (p.sclass == SC_VILLAGE ? (pre ? "a seat" : "a lesser place") : "a work")));
         std::string why;
         if (p.endEvent >= 0 && p.fate != HP_LAST) why = " (" + historyEventLine(H, p.endEvent) + ")";
         return fmt("  %s, %s, of the %s age: founded %s%s%s; %s in %s%s", historyPlaceName(H, i).c_str(), cls.c_str(), AGE_NAMES[p.age], yr(p.founded).c_str(),
@@ -471,10 +567,15 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
     }
     out("");
     out("THE INVENTIONS AND THE INSTITUTIONS");
-    for (const HistoryInvention& I : H.inventions) out(fmt("  %s: %s, by %s at %s", yr(I.year).c_str(), historyInventionName(I.id).c_str(), historyPersonName(H, I.person, false).c_str(), historyPlaceName(H, I.place).c_str()));
+    for (const HistoryInvention& I : H.inventions)
+        out(fmt("  %s: %s, by %s at %s", yr(I.year).c_str(), historyInventionName(I.id).c_str(), historyPersonName(H, I.person, false).c_str(), historyPlaceName(H, I.place).c_str()));
     for (size_t k = 0; k < H.institutions.size(); k++) {
         const HistoryInstitution& I = H.institutions[k];
-        for (size_t i = 0; i < H.events.size(); i++) if (H.events[i].kind == HE_INSTITUTION && H.events[i].thing == (int)k) { out(fmt("  %s: %s", yr(I.founded).c_str(), historyEventLine(H, (int)i).c_str())); break; }
+        for (size_t i = 0; i < H.events.size(); i++)
+            if (H.events[i].kind == HE_INSTITUTION && H.events[i].thing == (int)k) {
+                out(fmt("  %s: %s", yr(I.founded).c_str(), historyEventLine(H, (int)i).c_str()));
+                break;
+            }
     }
     // the figures
     out("");
@@ -483,12 +584,18 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
     for (int i = 0; i < (int)H.persons.size(); i++) {
         const HistoryPerson& Q = H.persons[i];
         if (Q.role == HR_NONE || Q.role == HR_RULER) continue;
-        if (Q.role == HR_FOUNDER && !full) { bool great = false; for (const HistoryPlace& p : H.places) if (p.founder == i && (p.sclass == SC_CAPITAL || p.sclass == SC_CITY)) great = true; if (!great) continue; }
+        if (Q.role == HR_FOUNDER && !full) {
+            bool great = false;
+            for (const HistoryPlace& p : H.places)
+                if (p.founder == i && (p.sclass == SC_CAPITAL || p.sclass == SC_CITY)) great = true;
+            if (!great) continue;
+        }
         figs++;
         if (!full && figs > 60) continue;
         std::string deeds;
         for (int ev : H.eventsOf(i)) { const HistoryEvent& e = H.events[ev]; if (e.pub && e.kind != HE_DEATH) { deeds = historyEventLine(H, ev); break; } }
-        out(fmt("  %s, %s%s (born %s, died %s): %s", historyPersonName(H, i, false).c_str(), HISTORY_ROLE_NAMES[Q.role], Q.home >= 0 ? (" of " + historyPlaceName(H, Q.home)).c_str() : "", yr(Q.born).c_str(), yr(Q.died).c_str(), deeds.c_str()));
+        out(fmt("  %s, %s%s (born %s, died %s): %s", historyPersonName(H, i, false).c_str(), HISTORY_ROLE_NAMES[Q.role], Q.home >= 0 ? (" of " + historyPlaceName(H, Q.home)).c_str() : "",
+                yr(Q.born).c_str(), yr(Q.died).c_str(), deeds.c_str()));
     }
     if (!full && figs > 60) out(fmt("  and %d more", figs - 60));
     // the families
@@ -561,7 +668,8 @@ static void printLegends(const StarSystem& sys, const Body& b, const History& H,
         const HistoryPerson& Q = H.persons[H.lastPerson];
         std::string kin;
         if (Q.family >= 0 && !H.families[Q.family].house) kin = " of the family " + historyFamilyName(H, Q.family);
-        out(fmt("  The last: %s%s, %s, born %s at %s.", historyPersonName(H, H.lastPerson, false).c_str(), kin.c_str(), historyTradeName(Q.trade).c_str(), yr(Q.born).c_str(), historyPlaceName(H, Q.home).c_str()));
+        out(fmt("  The last: %s%s, %s, born %s at %s.", historyPersonName(H, H.lastPerson, false).c_str(), kin.c_str(), historyTradeName(Q.trade).c_str(), yr(Q.born).c_str(),
+                historyPlaceName(H, Q.home).c_str()));
     }
     (void)sys;
 }
@@ -608,7 +716,10 @@ int runHistory(int argc, char** argv) {
 // `peoples <sx> <sz> <body index> [latDeg lonDeg]`: one world's peoples in full: each one's names, culture, span, calendar and
 // last recording, the other's fate, the shards of each that speak of the other (decoded whole), then the settlements of the
 // 13 x 13 cells round the point by people and the roads between the two peoples' settlements
-static bool pointIsLand(const BodyGen& g, const Vec3& u) { SurfaceSample s = sampleSurface(g, u, 2048.0); return !(s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water) || s.oldSea > 0.5); }
+static bool pointIsLand(const BodyGen& g, const Vec3& u) {
+    SurfaceSample s = sampleSurface(g, u, 2048.0);
+    return !(s.material == MAT_WATER || (s.water > -1e8 && s.height < s.water) || s.oldSea > 0.5);
+}
 static int divideLandPoints(const BodyGen& g) {   // of 48 along the divide
     Vec3 n = peopleDivide(g); DrainageOff off;
     Vec3 e = normalize(cross(n, std::fabs(n.z) < 0.9 ? Vec3(0, 0, 1) : Vec3(1, 0, 0))), f = cross(n, e);
@@ -675,13 +786,17 @@ static std::string erasLine(const PeopleAge& P) {   // "prehistoric -8411..0 (ch
     return s;
 }
 static void printProfile(const PeopleProfile& P, const char* indent) {
-    printf("%sthe age: %s; the eras %s; their count ends at year %d%s\n", indent, AGE_NAMES[P.age], erasLine(P).c_str(), P.lastYear, P.radio ? fmt("; radio from year %d", P.radioYear).c_str() : "; no radio");
-    printf("%sthe end %.0f years ago by %s (%s%s), over %d years from year %d: %s from %d, %s from %d, %s from %d\n", indent, P.endedYearsAgo, CAUSE_NAMES[P.cause], causeSpeed(P.cause) == 0 ? "sudden" : (causeSpeed(P.cause) == 1 ? "over years" : "over generations"),
-           causeWorldwide(P.cause) ? ", it could end a world" : "", P.collapseYears, P.collapseYear, STAGE_NAMES[STAGE_ONSET], P.collapseYear + (int)std::lround(P.stage[STAGE_ONSET] * P.collapseYears),
-           STAGE_NAMES[STAGE_CRISIS], P.collapseYear + (int)std::lround(P.stage[STAGE_CRISIS] * P.collapseYears), STAGE_NAMES[STAGE_END], P.collapseYear + (int)std::lround(P.stage[STAGE_END] * P.collapseYears));
-    printf("%s%s at their height on %.0f%% of the land (the world %.0f%% land in their time); %s (the %s), %s and %s, %s (%s, at %s); valued war %.2f, piety %.2f, trade %.2f, learning %.2f, art %.2f\n", indent, peopleCount(P.peak).c_str(), 100 * P.held, 100 * P.landShare,
-           GOVERNMENT_NAMES[P.government], GOVERNMENT_RULERS[P.government][0], ECONOMY_NAMES[P.economy], ECONOMY_NAMES[P.economy2], FAITH_NAMES[P.faith], RITE_NAMES[P.rite], HOLY_NAMES[P.holy],
-           P.values[VAL_WAR], P.values[VAL_PIETY], P.values[VAL_TRADE], P.values[VAL_LEARNING], P.values[VAL_ART]);
+    printf("%sthe age: %s; the eras %s; their count ends at year %d%s\n", indent, AGE_NAMES[P.age], erasLine(P).c_str(), P.lastYear,
+            P.radio ? fmt("; radio from year %d", P.radioYear).c_str() : "; no radio");
+    printf("%sthe end %.0f years ago by %s (%s%s), over %d years from year %d: %s from %d, %s from %d, %s from %d\n", indent, P.endedYearsAgo, CAUSE_NAMES[P.cause],
+            causeSpeed(P.cause) == 0 ? "sudden" : (causeSpeed(P.cause) == 1 ? "over years" : "over generations"), causeWorldwide(P.cause) ? ", it could end a world" : "", P.collapseYears,
+            P.collapseYear, STAGE_NAMES[STAGE_ONSET], P.collapseYear + (int)std::lround(P.stage[STAGE_ONSET] * P.collapseYears), STAGE_NAMES[STAGE_CRISIS],
+            P.collapseYear + (int)std::lround(P.stage[STAGE_CRISIS] * P.collapseYears), STAGE_NAMES[STAGE_END], P.collapseYear + (int)std::lround(P.stage[STAGE_END] * P.collapseYears));
+    printf("%s%s at their height on %.0f%% of the land (the world %.0f%% land in their time); %s (the %s), %s and %s, %s (%s, at %s); valued war %.2f, piety %.2f, trade %.2f, learning %.2f, art "
+           "%.2f\n",
+            indent, peopleCount(P.peak).c_str(), 100 * P.held, 100 * P.landShare, GOVERNMENT_NAMES[P.government], GOVERNMENT_RULERS[P.government][0], ECONOMY_NAMES[P.economy],
+            ECONOMY_NAMES[P.economy2], FAITH_NAMES[P.faith], RITE_NAMES[P.rite], HOLY_NAMES[P.holy], P.values[VAL_WAR], P.values[VAL_PIETY], P.values[VAL_TRADE], P.values[VAL_LEARNING],
+            P.values[VAL_ART]);
 }
 // A-01: `peoples ages [count]`: the peoples within 25 ly of home by distance (every star of the cube round it): the first `count`
 // (100) with their age, end, cause and extent, whether they had radio and whether they are on the air (a transmitter sector); the
@@ -719,12 +834,18 @@ static int runPeoplesAges(int argc, char** argv) {
                 eLo[P.age] = std::min(eLo[P.age], P.endedYearsAgo); eHi[P.age] = std::max(eHi[P.age], P.endedYearsAgo);
                 bool heard = (air >> k) & 1; if (heard) onAir++;
                 std::string name = peopleNameOf(peopleGen(g, k));
-                if (nearest[P.age].body < 0) { nearest[P.age].n = n; nearest[P.age].body = b.index; nearest[P.age].which = k; nearest[P.age].name = fmt("%s (%s), the %s", b.name.c_str(), KINDS[b.type].name, name.c_str()); }
+                if (nearest[P.age].body < 0) {
+                    nearest[P.age].n = n;
+                    nearest[P.age].body = b.index;
+                    nearest[P.age].which = k;
+                    nearest[P.age].name = fmt("%s (%s), the %s", b.name.c_str(), KINDS[b.type].name, name.c_str());
+                }
                 if (printed < want) {
                     printed++;
-                    printf("%4d %5.1f ly %4lld %3lld %4lld b%-2d%s %-22s %-12s %-11s ended %7.0f y ago by %s over %d y; %s on %.0f%% of %.0f%% land%s\n", printed, n.d, (long long)n.x, (long long)n.y, (long long)n.z, b.index, k ? "/2" : "  ",
-                           fmt("%s (%s)", b.name.c_str(), b.type == PT_DESERT ? "desert" : (b.type == PT_SCORCHED_FELISIAN ? "scorched" : "felisian")).c_str(), name.c_str(), AGE_NAMES[P.age], P.endedYearsAgo, CAUSE_NAMES[P.cause], P.collapseYears, peopleCount(P.peak).c_str(), 100 * P.held, 100 * P.landShare,
-                           heard ? "; ON THE AIR" : (P.radio ? "; radio" : ""));
+                    printf("%4d %5.1f ly %4lld %3lld %4lld b%-2d%s %-22s %-12s %-11s ended %7.0f y ago by %s over %d y; %s on %.0f%% of %.0f%% land%s\n", printed, n.d, (long long)n.x, (long long)n.y,
+                            (long long)n.z, b.index, k ? "/2" : "  ",
+                            fmt("%s (%s)", b.name.c_str(), b.type == PT_DESERT ? "desert" : (b.type == PT_SCORCHED_FELISIAN ? "scorched" : "felisian")).c_str(), name.c_str(), AGE_NAMES[P.age],
+                            P.endedYearsAgo, CAUSE_NAMES[P.cause], P.collapseYears, peopleCount(P.peak).c_str(), 100 * P.held, 100 * P.landShare, heard ? "; ON THE AIR" : (P.radio ? "; radio" : ""));
                 }
             }
         }
@@ -734,7 +855,8 @@ static int runPeoplesAges(int argc, char** argv) {
     int radioAll = 0;
     for (int a = 0; a < AGE_COUNT; a++) {
         radioAll += radio[a];
-        printf("  %-11s %4d  %5.1f%% (decided %4.1f%%)  radio %3d  ended %.0f..%.0f years ago  held %.0f%%\n", AGE_NAMES[a], ages[a], 100.0 * ages[a] / std::max(1, peoples), 100 * AGE_SHARES[a], radio[a], eLo[a] < 1e17 ? eLo[a] : 0.0, eHi[a], ages[a] ? 100 * heldSum[a] / ages[a] : 0.0);
+        printf("  %-11s %4d  %5.1f%% (decided %4.1f%%)  radio %3d  ended %.0f..%.0f years ago  held %.0f%%\n", AGE_NAMES[a], ages[a], 100.0 * ages[a] / std::max(1, peoples), 100 * AGE_SHARES[a],
+                radio[a], eLo[a] < 1e17 ? eLo[a] : 0.0, eHi[a], ages[a] ? 100 * heldSum[a] / ages[a] : 0.0);
     }
     printf("  radio: %d of %d (%.1f%%); on the air (a transmitter sector's people's world): %d\n", radioAll, peoples, 100.0 * radioAll / std::max(1, peoples), onAir);
     printf("the causes by age:\n");
@@ -747,7 +869,8 @@ static int runPeoplesAges(int argc, char** argv) {
     for (int a = 0; a < AGE_COUNT; a++) {
         const Found& f = nearest[a];
         if (f.body < 0) { printf("  %-11s none within %d ly\n", AGE_NAMES[a], R); continue; }
-        printf("  %-11s %5.1f ly at %lld %lld %lld body %d%s: %s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.y, (long long)f.n.z, f.body, f.which ? " (the second people)" : "", f.name.c_str());
+        printf("  %-11s %5.1f ly at %lld %lld %lld body %d%s: %s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.y, (long long)f.n.z, f.body, f.which ? " (the second people)" : "",
+                f.name.c_str());
     }
     // the test worlds: the nearest of each age on the plane y 0 (every mode's `<sx> <sz> <body>` reaches them)
     Found plane[AGE_COUNT]; int left = AGE_COUNT;
@@ -780,7 +903,8 @@ static int runPeoplesAges(int argc, char** argv) {
         bool same = f.body >= 0 && w.sx == f.n.x && w.sz == f.n.z && w.body == f.body && w.which == f.which;
         if (!same) moved++;
         if (f.body < 0) { printf("  %-11s none within 80 ly\n", AGE_NAMES[a]); continue; }
-        printf("  %-11s %5.1f ly: %lld %lld body %d%s, %s%s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.z, f.body, f.which ? " second" : "", f.name.c_str(), same ? "" : fmt("  (PINNED %lld %lld body %d%s)", (long long)w.sx, (long long)w.sz, w.body, w.which ? " second" : "").c_str());
+        printf("  %-11s %5.1f ly: %lld %lld body %d%s, %s%s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.z, f.body, f.which ? " second" : "", f.name.c_str(),
+                same ? "" : fmt("  (PINNED %lld %lld body %d%s)", (long long)w.sx, (long long)w.sz, w.body, w.which ? " second" : "").c_str());
     }
     printf("%s\n", moved ? "the pinned test worlds (AGE_WORLDS) differ from these: pin them again" : "the pinned test worlds (AGE_WORLDS) hold");
     // the scorched worlds' test worlds, the nearest scorched people of each age on the plane (they are rare: within 300 ly)
@@ -789,7 +913,8 @@ static int runPeoplesAges(int argc, char** argv) {
     for (int64_t x = HOME_SX - 300; x <= HOME_SX + 300; x++) for (int64_t z = HOME_SZ - 300; z <= HOME_SZ + 300; z++) {
         double d = std::sqrt((double)((x - HOME_SX) * (x - HOME_SX) + (z - HOME_SZ) * (z - HOME_SZ)));
         Star s; if (d > 300 || !starInSector(x, 0, z, s, false)) continue;
-        if (s.cls != STAR_RED_GIANT && s.cls != STAR_ORANGE_GIANT && s.cls != STAR_CARBON && s.cls != STAR_WHITE_DWARF) continue;   // the scorched worlds' stars (a companion's too: its primary one of them is rare)
+        // the scorched worlds' stars (a companion's too: its primary one of them is rare)
+        if (s.cls != STAR_RED_GIANT && s.cls != STAR_ORANGE_GIANT && s.cls != STAR_CARBON && s.cls != STAR_WHITE_DWARF) continue;
         wide.push_back({x, 0, z, d});
     }
     std::sort(wide.begin(), wide.end(), [](const Near& a, const Near& b) { return a.d != b.d ? a.d < b.d : (a.x != b.x ? a.x < b.x : a.z < b.z); });
@@ -805,7 +930,11 @@ static int runPeoplesAges(int argc, char** argv) {
                 deadPeoples++;
                 int a = peopleAgeOf(g, k).age;
                 if (dead[a].body >= 0) continue;
-                dead[a].n = n; dead[a].body = b.index; dead[a].which = k; dead[a].name = fmt("%s (%s), the %s", b.name.c_str(), STAR_CLASSES[s.cls].code, peopleNameOf(peopleGen(g, k)).c_str()); left--;
+                dead[a].n = n;
+                dead[a].body = b.index;
+                dead[a].which = k;
+                dead[a].name = fmt("%s (%s), the %s", b.name.c_str(), STAR_CLASSES[s.cls].code, peopleNameOf(peopleGen(g, k)).c_str());
+                left--;
             }
         }
     }
@@ -816,7 +945,8 @@ static int runPeoplesAges(int argc, char** argv) {
         bool same = (f.body < 0 && w.body < 0) || (f.body >= 0 && w.sx == f.n.x && w.sz == f.n.z && w.body == f.body && w.which == f.which);
         if (!same) deadMoved++;
         if (f.body < 0) { printf("  %-11s none within 300 ly%s\n", AGE_NAMES[a], same ? "" : "  (PINNED one)"); continue; }
-        printf("  %-11s %5.1f ly: %lld %lld body %d%s, %s%s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.z, f.body, f.which ? " second" : "", f.name.c_str(), same ? "" : fmt("  (PINNED %lld %lld body %d%s)", (long long)w.sx, (long long)w.sz, w.body, w.which ? " second" : "").c_str());
+        printf("  %-11s %5.1f ly: %lld %lld body %d%s, %s%s\n", AGE_NAMES[a], f.n.d, (long long)f.n.x, (long long)f.n.z, f.body, f.which ? " second" : "", f.name.c_str(),
+                same ? "" : fmt("  (PINNED %lld %lld body %d%s)", (long long)w.sx, (long long)w.sz, w.body, w.which ? " second" : "").c_str());
     }
     printf("%s\n", deadMoved ? "the pinned scorched test worlds (SCORCHED_WORLDS) differ from these: pin them again" : "the pinned scorched test worlds (SCORCHED_WORLDS) hold");
     return 0;
@@ -846,7 +976,10 @@ static int runPeoplesFresh(int argc, char** argv) {
     for (int a = 0; a < AGE_COUNT; a++) {
         std::sort(found[a].begin(), found[a].end(), [](const F& p, const F& q) { return p.d < q.d; });
         printf("%s (ended under %.0f years ago): %zu\n", AGE_NAMES[a], LIMIT[a], found[a].size());
-        for (size_t i = 0; i < found[a].size() && i < 6; i++) { const F& f = found[a][i]; printf("  %5.1f ly  %lld 0 %lld body %d%s: %s, ended %.0f years ago, wet %.2f\n", f.d, (long long)f.x, (long long)f.z, f.body, f.which ? " (second)" : "", f.what.c_str(), f.years, f.wet); }
+        for (size_t i = 0; i < found[a].size() && i < 6; i++) {
+            const F& f = found[a][i];
+            printf("  %5.1f ly  %lld 0 %lld body %d%s: %s, ended %.0f years ago, wet %.2f\n", f.d, (long long)f.x, (long long)f.z, f.body, f.which ? " (second)" : "", f.what.c_str(), f.years, f.wet);
+        }
     }
     return 0;
 }
@@ -858,13 +991,21 @@ static int runPeoplesFresh(int argc, char** argv) {
 static int runPeoplesMap(int argc, char** argv) {
     const int64_t sx = argc > 5 ? atoll(argv[3]) : 208, sz = argc > 5 ? atoll(argv[4]) : 51; const int bi = argc > 5 ? atoi(argv[5]) : 5;
     Star st; if (!starInSector(sx, 0, sz, st, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/test_guide.txt";
     game.newGame(); game.setState(GameState::SPACE);
     game.settings.renderScale = 2; game.applySettings();
     Input in;
     auto run = [&](double secs) { runFramesAtLeastOne(game, in, secs); };
     auto press = [&](int key) { pressKey(game, in, key); };
-    auto shot = [&](const char* name) { const std::string fn = fmt("shots/tests/landpeoples_%s.png", name); writePNG(fn.c_str(), game.output(), FBW, FBH); printf("  %-6s %s\n         -> %s\n", name, game.testLandPeoplesInfo().c_str(), fn.c_str()); };
+    auto shot = [&](const char* name) {
+        const std::string fn = fmt("shots/tests/landpeoples_%s.png", name);
+        writePNG(fn.c_str(), game.output(), FBW, FBH);
+        printf("  %-6s %s\n         -> %s\n", name, game.testLandPeoplesInfo().c_str(), fn.c_str());
+    };
     game.testParkAt(st, bi); run(0.2);
     StarSystem sys; sys.generate(st);
     if (bi >= (int)sys.bodies.size()) { printf("no body %d\n", bi); return 1; }
@@ -873,9 +1014,18 @@ static int runPeoplesMap(int argc, char** argv) {
     std::shared_ptr<const WorldPlan> P = worldPlanOf(g);
     game.testDronesSettle(); run(0.1);
     const PlanPlace cap = P->plans[0].places.empty() ? PlanPlace() : P->plans[0].places[0];
-    printf("%s (%d people%s), the first people's capital at %.2f %.2f, %d records\n", sys.bodies[bi].name.c_str(), peoplesOf(g), peoplesOf(g) > 1 ? "s" : "", cap.lat / DEG, cap.lon / DEG, recordCountOf(g, 0));
+    printf("%s (%d people%s), the first people's capital at %.2f %.2f, %d records\n", sys.bodies[bi].name.c_str(), peoplesOf(g), peoplesOf(g) > 1 ? "s" : "", cap.lat / DEG, cap.lon / DEG,
+            recordCountOf(g, 0));
     const std::string bkey = Guide::bodyKey(sx, 0, sz, bi);
-    for (int k = 0; k < 2; k++) { SurfaceMark m; m.body = bkey; m.lat = cap.lat + 0.004 * (k + 1); m.lon = cap.lon + 0.003 * k; m.kind = LM_RUIN; m.name = k ? "SECOND RUIN" : "FIRST RUIN"; game.guide.marks.push_back(m); }
+    for (int k = 0; k < 2; k++) {
+        SurfaceMark m;
+        m.body = bkey;
+        m.lat = cap.lat + 0.004 * (k + 1);
+        m.lon = cap.lon + 0.003 * k;
+        m.kind = LM_RUIN;
+        m.name = k ? "SECOND RUIN" : "FIRST RUIN";
+        game.guide.marks.push_back(m);
+    }
     game.testLandCursor(cap.lat / DEG, cap.lon / DEG); run(0.1);
     shot("off");
     const std::string off = game.testLandPeoplesInfo();
@@ -926,9 +1076,11 @@ static int runPeoplesRogues(int argc, char** argv) {
         const BodyGen g = BodyGen::make(b);
         const DrifterPast past = drifterPast(d);
         const PeoplesWorld W = peoplesWorldOf(sys, b);
-        printf("%2zu  %s (%s, %.0f km), sector %lld %lld %lld, %.0f ly from home\n", i, d.name.c_str(), KINDS[b.type].name, b.radiusKm, (long long)d.sx, (long long)d.sy, (long long)d.sz, length(d.pos - home.pos) / SECTOR_KM);
+        printf("%2zu  %s (%s, %.0f km), sector %lld %lld %lld, %.0f ly from home\n", i, d.name.c_str(), KINDS[b.type].name, b.radiusKm, (long long)d.sx, (long long)d.sy, (long long)d.sz,
+                length(d.pos - home.pos) / SECTOR_KM);
         printf("    left %s (%s) %.0f years ago at %.1f km/s, %.0f ly from it now; its year there %.2f AU out, %.0f of its days%s\n", past.star.name.c_str(), STAR_CLASSES[past.star.cls].name,
-               past.years, past.speedKms, length(past.star.pos - d.pos) / SECTOR_KM, W.b->orbitRadiusKm / AU_GAME_KM, W.b->orbitPeriod / std::max(std::fabs(W.b->rotPeriod), 1.0), W.hold ? "" : " (NO FORMER SYSTEM)");
+                past.years, past.speedKms, length(past.star.pos - d.pos) / SECTOR_KM, W.b->orbitRadiusKm / AU_GAME_KM, W.b->orbitPeriod / std::max(std::fabs(W.b->rotPeriod), 1.0),
+                W.hold ? "" : " (NO FORMER SYSTEM)");
         const DrifterBeacon B = drifterBeaconOf(sys);   // the beacon: a radio people's last broadcast (its radio invented before the last sunrise)
         if (B.people >= 0) beacons++;
         for (int k = 0; k < peoplesOf(g); k++) {
@@ -963,20 +1115,34 @@ int runPeoples(int argc, char** argv) {
         int np = peoplesOf(g);
         if (np == 0) { printf("%s: no civilisation\n", b.name.c_str()); return 0; }
         Vec3 n = peopleDivide(g);
-        printf("%s, %s of %s: %s%s\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), np > 1 ? "two peoples" : "one people", np > 1 ? fmt(", %s; the divide's pole %.3f %.3f %.3f crosses land at %d of 48 points", peoplesEndedTogether(g) ? "ended together" : "ended apart", n.x, n.y, n.z, divideLandPoints(g)).c_str() : "");
+        printf("%s, %s of %s: %s%s\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), np > 1 ? "two peoples" : "one people",
+                np > 1 ? fmt(", %s; the divide's pole %.3f %.3f %.3f crosses land at %d of 48 points", peoplesEndedTogether(g) ? "ended together" : "ended apart", n.x, n.y, n.z, divideLandPoints(g))
+                                 .c_str()
+                       : "");
         Lore L[2]; Culture C[2];
         for (int k = 0; k < np; k++) {
             L[k] = loreOf(sys, b, g, k); C[k] = cultureOf(g, k);
             std::vector<Shard> sh; shardsOf(sys, b, g, L[k], SHARDS_PER_WORLD, sh);
-            printf("  people %d, the %s: names of style %d (god %s, river %s, mountain %s, sea %s, towns %s and %s, founder %s, moon %s, star %s, festival %s); %d years from the founding; %s; the last S%d\n", k + 1, L[k].people.c_str(), L[k].style,
-                   L[k].god.c_str(), L[k].river.c_str(), L[k].mountain.c_str(), L[k].sea.c_str(), L[k].city.c_str(), L[k].city2.c_str(), L[k].founder.c_str(), L[k].moon.c_str(), L[k].star.c_str(), L[k].festival.c_str(), L[k].spanYears + 1, calendarLine(L[k]).c_str(), L[k].last);
-            printf("    culture: style %d, family %d, tall %.2f, %s roofs, towns' plan %d, towers %d, decay %.2f (the end %.0f years ago, weathered as %.0f, wet %.2f), buried %.1f m; roads %s, %.1f m wide, wear %.2f\n", C[k].style, C[k].family, C[k].tall, C[k].stoneRoofs ? "stone" : "no", C[k].plan, (int)C[k].towers, C[k].decay, C[k].ageYears, C[k].weatherYears, C[k].wet, C[k].buried, C[k].paved ? "paved" : "beaten", 2 * C[k].roadHalf, C[k].roadWear);
+            printf("  people %d, the %s: names of style %d (god %s, river %s, mountain %s, sea %s, towns %s and %s, founder %s, moon %s, star %s, festival %s); %d years from the founding; %s; the "
+                   "last S%d\n",
+                    k + 1, L[k].people.c_str(), L[k].style, L[k].god.c_str(), L[k].river.c_str(), L[k].mountain.c_str(), L[k].sea.c_str(), L[k].city.c_str(), L[k].city2.c_str(), L[k].founder.c_str(),
+                    L[k].moon.c_str(), L[k].star.c_str(), L[k].festival.c_str(), L[k].spanYears + 1, calendarLine(L[k]).c_str(), L[k].last);
+            printf("    culture: style %d, family %d, tall %.2f, %s roofs, towns' plan %d, towers %d, decay %.2f (the end %.0f years ago, weathered as %.0f, wet %.2f), buried %.1f m; roads %s, %.1f "
+                   "m wide, wear %.2f\n",
+                    C[k].style, C[k].family, C[k].tall, C[k].stoneRoofs ? "stone" : "no", C[k].plan, (int)C[k].towers, C[k].decay, C[k].ageYears, C[k].weatherYears, C[k].wet, C[k].buried,
+                    C[k].paved ? "paved" : "beaten", 2 * C[k].roadHalf, C[k].roadWear);
             printProfile(peopleProfileOf(sys, b, g, k), "    ");
             Tongue T = tongueOf(g, L[k]); Voice V = voiceOf(g, L[k], T); Tradition Tr = traditionOf(g, L[k]); Language lang; languageOf(L[k], sh, T, lang);
             printf("    voice: %s; music: %s, %s; %d words in the language\n", voiceLine(V).c_str(), traditionLine(Tr).c_str(), timbresLine(Tr, Tr.hasDrum).c_str(), (int)lang.words.size());
             if (np > 1) {
-                printf("    the other: the %s, who %s; the shards that speak of them:\n", L[k].other.c_str(), L[k].otherFate < 0 ? "ended first" : (L[k].otherFate > 0 ? "went on after this people's end" : "ended with this people"));
-                int shown = 0; for (int i = 0; i < SHARDS_PER_WORLD; i++) { if (sh[i].music || sh[i].text.find(L[k].other) == std::string::npos) continue; shown++; printf("      S%d year %d %s %s: %s\n", i, sh[i].year, SHARD_TONE_NAMES[sh[i].tone], sh[i].chart ? "star chart" : shardKindName(sh[i].kind), sh[i].text.c_str()); }
+                printf("    the other: the %s, who %s; the shards that speak of them:\n", L[k].other.c_str(),
+                        L[k].otherFate < 0 ? "ended first" : (L[k].otherFate > 0 ? "went on after this people's end" : "ended with this people"));
+                int shown = 0;
+                for (int i = 0; i < SHARDS_PER_WORLD; i++) {
+                    if (sh[i].music || sh[i].text.find(L[k].other) == std::string::npos) continue;
+                    shown++;
+                    printf("      S%d year %d %s %s: %s\n", i, sh[i].year, SHARD_TONE_NAMES[sh[i].tone], sh[i].chart ? "star chart" : shardKindName(sh[i].kind), sh[i].text.c_str());
+                }
                 if (!shown) printf("      none\n");
             }
         }
@@ -992,7 +1158,9 @@ int runPeoples(int argc, char** argv) {
                 RuinSpec sp;
                 if (!ruinOfCell(g, gLat0 + dl, gLon0 + dn, sp, false) || !ruinSiteOk(g, sp)) continue;
                 byPeople[sp.people]++;
-                if (printed++ < 12) printf("  %-8s %3d %4d at %7.3f %8.3f: people %d (the %s)\n", SETTLEMENT_CLASS_NAMES[sp.sclass], gLat0 + dl, gLon0 + dn, sp.lat / DEG, sp.lon / DEG, sp.people + 1, L[sp.people].people.c_str());
+                if (printed++ < 12)
+                    printf("  %-8s %3d %4d at %7.3f %8.3f: people %d (the %s)\n", SETTLEMENT_CLASS_NAMES[sp.sclass], gLat0 + dl, gLon0 + dn, sp.lat / DEG, sp.lon / DEG, sp.people + 1,
+                            L[sp.people].people.c_str());
                 nc.pairsOf(gLat0 + dl, gLon0 + dn, pairs);
             }
             std::sort(pairs.begin(), pairs.end(), [](const RoadPair& x, const RoadPair& y) { return x.id < y.id; });
@@ -1001,9 +1169,17 @@ int runPeoples(int argc, char** argv) {
             for (const RoadPair& p : pairs) {
                 if (p.a.people == p.b.people) { within++; continue; }
                 between++;
-                Road r; if (roadWay(g, C[roadPeopleOf(p.a, p.b)], p.a, p.b, r)) { walked++; if (walked <= 6) printf("  a road between the peoples: %s of people %d %d %d -> %s of people %d %d %d, %.0f m, built as people %d built (%s, %.1f m wide)\n", SETTLEMENT_CLASS_NAMES[r.a.sclass], r.a.people + 1, r.a.gLat, r.a.gLon, SETTLEMENT_CLASS_NAMES[r.b.sclass], r.b.people + 1, r.b.gLat, r.b.gLon, r.lengthM, r.people + 1, C[r.people].paved ? "paved" : "beaten", 2 * r.halfWidth); }
+                Road r;
+                if (roadWay(g, C[roadPeopleOf(p.a, p.b)], p.a, p.b, r)) {
+                    walked++;
+                    if (walked <= 6)
+                        printf("  a road between the peoples: %s of people %d %d %d -> %s of people %d %d %d, %.0f m, built as people %d built (%s, %.1f m wide)\n", SETTLEMENT_CLASS_NAMES[r.a.sclass],
+                                r.a.people + 1, r.a.gLat, r.a.gLon, SETTLEMENT_CLASS_NAMES[r.b.sclass], r.b.people + 1, r.b.gLat, r.b.gLon, r.lengthM, r.people + 1,
+                                C[r.people].paved ? "paved" : "beaten", 2 * r.halfWidth);
+                }
             }
-            printf("13 x 13 cells round %.2f %.2f: %d settlements of the %s, %d of the %s; %d joined pairs within a people, %d between the two (%d walked)\n", lat / DEG, lon / DEG, byPeople[0], L[0].people.c_str(), byPeople[1], L[1].people.c_str(), within, between, walked);
+            printf("13 x 13 cells round %.2f %.2f: %d settlements of the %s, %d of the %s; %d joined pairs within a people, %d between the two (%d walked)\n", lat / DEG, lon / DEG, byPeople[0],
+                    L[0].people.c_str(), byPeople[1], L[1].people.c_str(), within, between, walked);
         }
         return 0;
     }
@@ -1023,10 +1199,12 @@ int runPeoples(int argc, char** argv) {
             Culture ca = cultureOf(g, 0), cb = cultureOf(g, 1);
             Vec3 n = peopleDivide(g), pa = peopleSidePoint(g, 0, 35 * DEG), pb = peopleSidePoint(g, 1, 35 * DEG);
             double la, lo, lb, lob, fla = 0, flo = 0; StarSystem::latLonFromBody(pa, la, lo); StarSystem::latLonFromBody(pb, lb, lob); bool fr = frontierPoint(g, fla, flo);
-            printf("%lld 0 %lld body %d: %s, %s of %s: the %s (style %d, the end %.0f years ago, walls %s/%s) and the %s (style %d, %.0f years ago, walls %s/%s), %s; the divide's pole %.2f %.2f %.2f crosses land at %d of 48 points; the first's side at %.1f %.1f, the second's at %.1f %.1f; %s\n",
-                   (long long)x, (long long)z, bi, fb.name.c_str(), KINDS[fb.type].name, full.name.c_str(), A.people.c_str(), A.style, ca.ageYears, ca.style ? "striated" : "smooth", ca.family ? "adobe" : "rock",
-                   B.people.c_str(), B.style, cb.ageYears, cb.style ? "striated" : "smooth", cb.family ? "adobe" : "rock", peoplesEndedTogether(g) ? "ended together" : "ended apart", n.x, n.y, n.z, divideLandPoints(g), la / DEG, lo / DEG, lb / DEG, lob / DEG,
-                   fr ? fmt("the frontier at %.1f %.1f", fla / DEG, flo / DEG).c_str() : "no frontier on land");
+            printf("%lld 0 %lld body %d: %s, %s of %s: the %s (style %d, the end %.0f years ago, walls %s/%s) and the %s (style %d, %.0f years ago, walls %s/%s), %s; the divide's pole %.2f %.2f %.2f "
+                   "crosses land at %d of 48 points; the first's side at %.1f %.1f, the second's at %.1f %.1f; %s\n",
+                    (long long)x, (long long)z, bi, fb.name.c_str(), KINDS[fb.type].name, full.name.c_str(), A.people.c_str(), A.style, ca.ageYears, ca.style ? "striated" : "smooth",
+                    ca.family ? "adobe" : "rock", B.people.c_str(), B.style, cb.ageYears, cb.style ? "striated" : "smooth", cb.family ? "adobe" : "rock",
+                    peoplesEndedTogether(g) ? "ended together" : "ended apart", n.x, n.y, n.z, divideLandPoints(g), la / DEG, lo / DEG, lb / DEG, lob / DEG,
+                    fr ? fmt("the frontier at %.1f %.1f", fla / DEG, flo / DEG).c_str() : "no frontier on land");
         }
     }
     printf("%d civilisation worlds scanned until %d of two peoples were found (%.0f%%), in %.1f s\n", civ, two, civ ? 100.0 * two / civ : 0.0, nowSec() - t0);

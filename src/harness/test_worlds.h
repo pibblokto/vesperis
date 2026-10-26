@@ -36,9 +36,15 @@ static const AgeWorld TEST_DRIFTERS[2] = {
     {1728, -575, 0, 0, 740},    // 1,812 ly: Balyaphebist (frozen felisian), the Reimempel: medieval, by the intruder
     {177, -1246, 0, 0, 950}};   // 1,604 ly: Vreikheid (desert), the Ghaiwuwutxu and the Ainyiny: modern with radio, by the wanderer; their beacons
 // the pinned felisian mountain site (the O6 review site, the `felisian_mountains` scene, `descent`); O6-03: re-pinned on the GEN 10 bodies
-static constexpr double PIN_MOUNTAIN_LAT = -48.030, PIN_MOUNTAIN_LON = 152.547;   // re-pinned on Wyariothmai I, the day side of a world locked to its red dwarf (the G-04 pin's world, Wyariothmai III, is an ocean world since the star was claimed; of the five lit mountain candidates this one has a steady slope for `descent`)
-static constexpr double PIN_PLAIN_LAT = -55.154, PIN_PLAIN_LON = -122.371;   // W-03: the pinned felisian plain (`felisian_plain` of `landforms sites`, S-01's re-pin on Wyariothmai I's day side): the fronts' scenes, frames and checks stand on it
-static constexpr double PIN_FRONT_LAT = -26.555, PIN_FRONT_LON = 166.809;   // W-03: the fronts' scenes' site on the same world: flat land by day under a clear pattern sky with a strong front coming (0/0: search and print what to pin)
+// re-pinned on Wyariothmai I, the day side of a world locked to its red dwarf (the G-04 pin's world, Wyariothmai III, is an ocean world
+// since the star was claimed; of the five lit mountain candidates this one has a steady slope for `descent`)
+static constexpr double PIN_MOUNTAIN_LAT = -48.030, PIN_MOUNTAIN_LON = 152.547;
+// W-03: the pinned felisian plain (`felisian_plain` of `landforms sites`, S-01's re-pin on Wyariothmai I's day side): the fronts' scenes,
+// frames and checks stand on it
+static constexpr double PIN_PLAIN_LAT = -55.154, PIN_PLAIN_LON = -122.371;
+// W-03: the fronts' scenes' site on the same world: flat land by day under a clear pattern sky with a strong front coming (0/0: search and
+// print what to pin)
+static constexpr double PIN_FRONT_LAT = -26.555, PIN_FRONT_LON = 166.809;
 // E-07: the systems whose worlds a made kind must leave as drawn (rules-galaxy.md, "Protected and pinned"; the unit's pins name the
 // worlds): the regress's five (the first systems of its scan), the probe's three, the scenes' first molten world's and first yellow
 // star's, home, and B-427's Wolf-Rayet giant (off the plane). `salt scan` reads every world of them against the made kinds' sources

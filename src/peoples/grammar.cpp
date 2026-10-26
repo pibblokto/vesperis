@@ -109,7 +109,15 @@ struct Expander : VgRun {
     double uni() override { return rng.uni(); }
     void paragraph() override { Tok k; k.t = T_PAR; out.push_back(k); }
     void bindEntity(const std::string& name, int entity) override { if (cur) cur->ents.push_back({name, entity}); }
-    bool expand(const std::string& rule) override { int r = G.rule(rule); if (r < 0) { note("no rule " + rule); return false; } Scope s = cur ? *cur : Scope(); return expandRule(r, s, std::string()); }
+    bool expand(const std::string& rule) override {
+        int r = G.rule(rule);
+        if (r < 0) {
+            note("no rule " + rule);
+            return false;
+        }
+        Scope s = cur ? *cur : Scope();
+        return expandRule(r, s, std::string());
+    }
     bool has(const std::string& rule) const override { return G.rule(rule) >= 0; }
     // a model's words, the names in them as names
     void marked(const std::string& s) {
@@ -459,8 +467,14 @@ struct Expander : VgRun {
                     break;
                 }
                 case VgNode::PLURAL: {
-                    if (n.ref >= 0) { size_t start = out.size(), f = capture(); expandRule(n.ref, sc, std::string()); std::string t = unmarkNames(textFrom(start), nullptr); out.resize(start); mergeFloor = f; text(vgPlural(t)); }
-                    else if (n.fieldRef >= 0 && n.fieldRef < (int)M.facts.size()) text(vgPlural(unmarkNames(M.facts[n.fieldRef], nullptr)));
+                    if (n.ref >= 0) {
+                        size_t start = out.size(), f = capture();
+                        expandRule(n.ref, sc, std::string());
+                        std::string t = unmarkNames(textFrom(start), nullptr);
+                        out.resize(start);
+                        mergeFloor = f;
+                        text(vgPlural(t));
+                    } else if (n.fieldRef >= 0 && n.fieldRef < (int)M.facts.size()) text(vgPlural(unmarkNames(M.facts[n.fieldRef], nullptr)));
                     break;
                 }
             }
@@ -574,7 +588,12 @@ struct Realiser {
                 case T_PAR: s += "\n"; if (!inscription) { sentence += 2; for (int& l : lastOf) l = -1; } break;
                 case T_ENT: s += refer(k.ent, k.form); break;
                 case T_MENTION: mention(k.ent); break;
-                case T_NUMBER: { std::string w = lastWord(); if ((w == "a" || w == "an") && (k.number == VN_PLURAL || k.number == VN_MASS)) R.diag.push_back(std::string("plural: \"a\" before a ") + (k.number == VN_PLURAL ? "plural" : "mass") + " word"); break; }
+                case T_NUMBER: {
+                    std::string w = lastWord();
+                    if ((w == "a" || w == "an") && (k.number == VN_PLURAL || k.number == VN_MASS))
+                        R.diag.push_back(std::string("plural: \"a\" before a ") + (k.number == VN_PLURAL ? "plural" : "mass") + " word");
+                    break;
+                }
                 case T_VERB: {
                     int person = k.person; bool plural = k.plural;
                     if (k.ent >= 0 && k.ent < (int)E.size()) { person = E[k.ent].person; plural = E[k.ent].gender == VG_THEY && person == 3; }
@@ -606,7 +625,8 @@ std::string tidy(const std::string& in) {
             if (s.empty()) continue;
             s += c; continue;
         }
-        if (!s.empty() && (s.back() == ',' || s.back() == ';' || s.back() == ':' || s.back() == '.' || s.back() == '?' || s.back() == '!') && (std::isalnum((unsigned char)c) || c == '\'' || c == '"')) {
+        if (!s.empty() && (s.back() == ',' || s.back() == ';' || s.back() == ':' || s.back() == '.' || s.back() == '?' || s.back() == '!') &&
+                (std::isalnum((unsigned char)c) || c == '\'' || c == '"')) {
             // a space after a comma joining two parts; a stop between digits is a decimal, a colon between them a time (H-04: "06:10")
             if (!((s.back() == '.' || s.back() == ':') && s.size() >= 2 && std::isdigit((unsigned char)s[s.size() - 2]) && std::isdigit((unsigned char)c))) s += ' ';
         }
@@ -656,7 +676,10 @@ void VgModel::set(const VgSchema& S, const std::string& fact, const std::string&
 bool vgRecord(const VgGrammar& G, const std::string& root, VgModel& M, VgMemory* mem, VgRecord& R) {
     double t0 = nowMs();
     R.text.clear(); R.root = -1; R.words = 0; R.lo = R.hi = 0; R.used.clear(); R.names.clear(); R.theirs.clear(); R.diag.clear(); R.retries = 0;
-    if (G.schema) { if (M.facts.size() < G.schema->facts.size()) M.facts.resize(G.schema->facts.size()); if (M.bound.size() < G.schema->entities.size()) M.bound.resize(G.schema->entities.size(), -1); }
+    if (G.schema) {
+        if (M.facts.size() < G.schema->facts.size()) M.facts.resize(G.schema->facts.size());
+        if (M.bound.size() < G.schema->entities.size()) M.bound.resize(G.schema->entities.size(), -1);
+    }
     if (mem && mem->uses.size() < G.alts.size()) mem->uses.resize(G.alts.size(), 0);
     if (mem && mem->wordUses.size() < G.words.size()) mem->wordUses.resize(G.words.size(), 0);
     if (mem && mem->dialect.size() < G.alts.size()) mem->dialect.resize(G.alts.size(), 0.0f);

@@ -8,7 +8,13 @@ namespace {
 template <class F> void warp(Piece& P, double total, F rate) {
     const double step = 0.05; std::vector<double> clock(1, 0.0);
     for (double b = 0; b < total + 8; b += step) clock.push_back(clock.back() + step / std::max(0.2, rate(b + step * 0.5)));
-    auto at = [&](double b) { if (b <= 0) return 0.0; const double x = b / step; const size_t i = std::min((size_t)x, clock.size() - 2); const double f = x - i; return clock[i] + (clock[i + 1] - clock[i]) * f; };
+    auto at = [&](double b) {
+        if (b <= 0) return 0.0;
+        const double x = b / step;
+        const size_t i = std::min((size_t)x, clock.size() - 2);
+        const double f = x - i;
+        return clock[i] + (clock[i + 1] - clock[i]) * f;
+    };
     for (Note& nt : P.notes) { const double s = at(nt.t), e = at(nt.t + nt.dur); nt.t = s; nt.dur = std::max(0.02, e - s); }
 }
 }   // namespace
@@ -64,7 +70,8 @@ void buildPrehistoric(Bld& b, int form) {
                 if (T.octaves) b.place(R, pos, chorus, 0.4, 0.55, -n, true, war ? 0.6 : 1.0);   // the low voices an octave under the answer
                 if (healing && roar < 0) b.add(pos, b.cpp * cyc, chorus, -n, 0.35, -1000, 4);   // the chorus's hum under its answer
                 for (int c = 0; c < b.cpp; c++) stoneDrums(b, pos + c * cyc, loud, c + 1 == b.cpp && p % 2 == 1, logPat);
-                if (work) for (int c = 0; c < b.cpp; c++) for (int gsu : b.gs) b.hit(pos + c * cyc + (double)gsu / b.sub, E.kitOf(KR_TICK) >= 0 ? E.kitOf(KR_TICK) : E.kitOf(KR_LOW), 0.9);   // the stroke
+                // the stroke
+                if (work) for (int c = 0; c < b.cpp; c++) for (int gsu : b.gs) b.hit(pos + c * cyc + (double)gsu / b.sub, E.kitOf(KR_TICK) >= 0 ? E.kitOf(KR_TICK) : E.kitOf(KR_LOW), 0.9);
                 pos += b.cpp * cyc;
             }
             b.add(pos, cyc, chorus, 0, 0.8, -1000, b.vowel());   // the chorus holds the tonic
@@ -203,7 +210,8 @@ void buildMedieval(Bld& b, int form) {
             if (s && rng.chance(0.4)) vw = b.vowel();
             b.add(pos + (double)e.unit / sub, (double)e.len / sub, ph.voice, e.deg + reg, rng.range(F.vel0, F.vel1) * b.accent(e.unit), -1000, s ? vw : -1);
         }
-        if (bellV >= 0 && (form == PF_HYMN || form == PF_PROCESSION || form == PF_LAMENT)) b.add(pos + phraseBeats - (double)T.groups.back(), (double)T.groups.back(), bellV, reg + (rng.chance(0.5) ? 0 : T.rest), 0.55);   // a bell at the phrase's end
+        if (bellV >= 0 && (form == PF_HYMN || form == PF_PROCESSION || form == PF_LAMENT))
+            b.add(pos + phraseBeats - (double)T.groups.back(), (double)T.groups.back(), bellV, reg + (rng.chance(0.5) ? 0 : T.rest), 0.55);   // a bell at the phrase's end
         pos += phraseBeats;
     }
     b.add(pos, beats, leadV, reg, F.vel1 * 0.9, -1000, sung ? b.vowel() : -1);   // the close: the tonic held a cycle
@@ -276,7 +284,8 @@ void buildIndustrial(Bld& b, int form) {
     const int strainCycles = b.bySeconds(anthem || form == PF_OVERTURE ? 8.5 : 11.0, cyc, 1, 8), phraseCycles = std::max(1, strainCycles / 2), strainPhrases = strainCycles / phraseCycles;
     const bool twoChords = cyc >= 6;
     Rng fav(mix64(T.seed ^ 0x1D05C0ULL));   // the people's own turns, which their tunes come back to
-    std::vector<int> progA = rng.chance(0.6) ? b.progression(phraseCycles * strainPhrases * (twoChords ? 2 : 1), false, fav) : b.progression(phraseCycles * strainPhrases * (twoChords ? 2 : 1), false, rng);
+    std::vector<int> progA =
+            rng.chance(0.6) ? b.progression(phraseCycles * strainPhrases * (twoChords ? 2 : 1), false, fav) : b.progression(phraseCycles * strainPhrases * (twoChords ? 2 : 1), false, rng);
     std::vector<int> progA2 = progA; progA2.back() = 0;
     std::vector<int> progB = b.progression((int)progA.size(), false, rng); progB[0] = b.roots.size() > 1 ? b.roots[1] : T.rest;
     struct Strain { const std::vector<int>* prog; int centre; bool closed; };
@@ -350,7 +359,8 @@ void buildIndustrial(Bld& b, int form) {
                 } else if (parlour || musicbox) {   // the bass on the chord's first beat, the chord broken in subdivisions
                     b.add(t0 + (double)u0 / sub, std::max(1.0, (double)(u1 - u0) / sub * 0.5), bass, c3[0] + breg, 0.55);
                     const int pat[4] = {0, 2, 1, 2};
-                    for (int u = u0 + (musicbox ? sub : 1); u < u1; u += musicbox ? sub : 1) b.add(t0 + (double)u / sub, musicbox ? 0.5 : (double)1 / sub * 1.6, chords, c3[pat[(u - u0) % 4]] + creg, musicbox ? 0.32 : 0.3);
+                    for (int u = u0 + (musicbox ? sub : 1); u < u1; u += musicbox ? sub : 1)
+                        b.add(t0 + (double)u / sub, musicbox ? 0.5 : (double)1 / sub * 1.6, chords, c3[pat[(u - u0) % 4]] + creg, musicbox ? 0.32 : 0.3);
                 } else {   // an anthem, a hymn: the chord held on each group, the bass with it
                     for (int u = u0; u < u1; u++) {
                         if (!b.isGS(u)) continue;
@@ -433,7 +443,9 @@ void groove(Bld& b, double t0, int cycles, double level, int kind, bool fillEnd,
 void buildModern(Bld& b, int form) {
     const Tradition& T = b.T; const Ensemble& E = b.E; Rng& rng = b.rng; Piece& P = b.P;
     const int n = b.n, sub = b.sub, cyc = b.beats;
-    int lead = E.voiceOf(MR_LEAD); const int second = E.voiceOf(MR_SECOND), chords = E.voiceOf(MR_CHORDS), bass = E.voiceOf(MR_BASS), padV = E.voiceOf(MR_ALT) >= 0 ? E.voiceOf(MR_ALT) : chords, singerV = E.voiceOf(MR_SINGER) >= 0 ? E.voiceOf(MR_SINGER) : (E.voices[lead].family == TF_VOICE ? lead : -1);
+    int lead = E.voiceOf(MR_LEAD);
+    const int second = E.voiceOf(MR_SECOND), chords = E.voiceOf(MR_CHORDS), bass = E.voiceOf(MR_BASS), padV = E.voiceOf(MR_ALT) >= 0 ? E.voiceOf(MR_ALT) : chords,
+              singerV = E.voiceOf(MR_SINGER) >= 0 ? E.voiceOf(MR_SINGER) : (E.voices[lead].family == TF_VOICE ? lead : -1);
     if ((form == PF_BALLAD || form == PF_PROTEST || form == PF_REQUIEM || form == PF_LAMENT || form == PF_LULLABY) && singerV >= 0 && rng.chance(0.75)) lead = singerV;
     const bool sung = E.voices[lead].family == TF_VOICE;
     const bool dance = form == PF_DANCEREC || form == PF_FESTIVAL || form == PF_DANCE, slow = form == PF_BALLAD || form == PF_REQUIEM || form == PF_LAMENT || form == PF_LULLABY || form == PF_LAST;
@@ -517,7 +529,8 @@ void buildModern(Bld& b, int form) {
             b.phrase(T.rest, T.rest, n / 2, 0.8, 0.1, sc.cycles, tmp); b.place(tmp, pos, lead, 0.55, 0.8, 0, sung);
         } else if (sc.kind == DROP || sc.kind == BUILD || sc.kind == BREAK) {
             const int rv = second >= 0 ? second : lead;
-            for (int c = 0; c < sc.cycles; c++) b.place(riff, pos + c * cyc, rv, sc.kind == BUILD ? 0.45 + 0.4 * c / sc.cycles : 0.7, sc.kind == BUILD ? 0.55 + 0.4 * c / sc.cycles : 0.9, 0, false, 0.8);
+            for (int c = 0; c < sc.cycles; c++)
+                b.place(riff, pos + c * cyc, rv, sc.kind == BUILD ? 0.45 + 0.4 * c / sc.cycles : 0.7, sc.kind == BUILD ? 0.55 + 0.4 * c / sc.cycles : 0.9, 0, false, 0.8);
             if (sc.kind == DROP && sung) for (int c = 0; c < sc.cycles; c += 2) b.place(hook, pos + c * cyc, lead, 0.6, 0.85, 0, true);
         } else if (sc.kind == INTRO && (theme || jingle)) {
             b.phrase(n, n + T.rest, n, 1.0, 0.0, 1, tmp); b.place(tmp, pos, second >= 0 ? second : lead, 0.7, 0.95, 0, false);
@@ -526,7 +539,17 @@ void buildModern(Bld& b, int form) {
         pos += sc.cycles * cyc;
     }
     // the end: the tonic chord rung out, a crash (a jingle's sting)
-    { int c3[3]; b.chord(0, c3); for (int k = 0; k < 3; k++) b.add(pos, cyc, chords, c3[k], 0.55); if (bass >= 0) b.add(pos, cyc, bass, -n, 0.75); if (!slow) { b.hit(pos, E.kitOf(KR_LOW), 0.9); b.hit(pos, E.kitOf(KR_CRASH), 0.8); } pos += cyc; }
+    {
+        int c3[3];
+        b.chord(0, c3);
+        for (int k = 0; k < 3; k++) b.add(pos, cyc, chords, c3[k], 0.55);
+        if (bass >= 0) b.add(pos, cyc, bass, -n, 0.75);
+        if (!slow) {
+            b.hit(pos, E.kitOf(KR_LOW), 0.9);
+            b.hit(pos, E.kitOf(KR_CRASH), 0.8);
+        }
+        pos += cyc;
+    }
     if (sung) b.ornament(lead, 0.3);
     if (slow) { const double total = pos; warp(P, total, [&](double x) { return x < total - 2 * cyc ? 1.0 : 1 - 0.3 * (x - (total - 2 * cyc)) / (2 * cyc); }); }
 }
@@ -553,8 +576,16 @@ void buildFuturistic(Bld& b, int form) {
         const bool signal = form == PF_SIGNAL || form == PF_WARNING || form == PF_MARCH;
         const int units = b.cu, m = signal ? 2 : 4 + rng.irange(4);
         std::vector<int> at, deg;
-        if (signal) { at = {0, units / 2}; const int iv = 1 + rng.irange(2); deg = {n + iv, n}; }
-        else { std::vector<int> slots(units); for (int i = 0; i < units; i++) slots[i] = i; for (int i = units - 1; i > 0; i--) std::swap(slots[i], slots[rng.irange(i + 1)]); at.assign(slots.begin(), slots.begin() + std::min(m, units)); std::sort(at.begin(), at.end()); for (size_t i = 0; i < at.size(); i++) deg.push_back(rng.irange(n + 2) + (i == 0 ? 0 : 0)); deg[0] = 0; }
+        if (signal) { at = {0, units / 2}; const int iv = 1 + rng.irange(2); deg = {n + iv, n};
+        } else {
+            std::vector<int> slots(units);
+            for (int i = 0; i < units; i++) slots[i] = i;
+            for (int i = units - 1; i > 0; i--) std::swap(slots[i], slots[rng.irange(i + 1)]);
+            at.assign(slots.begin(), slots.begin() + std::min(m, units));
+            std::sort(at.begin(), at.end());
+            for (size_t i = 0; i < at.size(); i++) deg.push_back(rng.irange(n + 2) + (i == 0 ? 0 : 0));
+            deg[0] = 0;
+        }
         const bool additive = !signal && rng.chance(0.4);
         double posB = 0; const double cellA = (double)units / sub, cellB = (double)(units + 1) / sub;
         const int loops = std::max(8, (int)std::lround(rng.range(signal ? 45 : 55, signal ? 65 : 85) * b.P.bpm / 60.0 / cellA));
@@ -564,7 +595,10 @@ void buildFuturistic(Bld& b, int form) {
             if (!signal && k >= 2 && alt >= 0) { for (int i = 0; i < (int)at.size(); i++) b.add(posB + (double)at[i] / sub, 0.4, alt, deg[i] + n / 2 + (k % 4 == 3 ? n : 0), 0.5); posB += cellB; }
             else posB = pos + cellA;
             if (k >= loops / 2 && k % 2 == 0 && voiceV >= 0) b.add(pos, cellA * 2, voiceV, deg[(k / 2) % deg.size()] + (signal ? 0 : -n / 2 + n / 2), 0.55, -1000, b.vowel());
-            for (int u = 0; u < units; u++) { if (u % sub == 0 && tick >= 0 && rng.chance(signal ? 1.0 : 0.5)) b.hit(pos + (double)u / sub, tick, 0.5); else if (signal && tick2 >= 0) b.hit(pos + (double)u / sub, tick2, 0.35); }
+            for (int u = 0; u < units; u++) {
+                if (u % sub == 0 && tick >= 0 && rng.chance(signal ? 1.0 : 0.5)) b.hit(pos + (double)u / sub, tick, 0.5);
+                else if (signal && tick2 >= 0) b.hit(pos + (double)u / sub, tick2, 0.35);
+            }
             if (k % 2 == 0) b.hit(pos, pulse, 0.8);
             if (k % 4 == 0 && swarmV >= 0 && !signal) { int c3[3]; b.chord(0, c3); for (int q = 0; q < 2; q++) b.add(pos, cellA * 4, swarmV, c3[q] - n / 2, 0.35, -1000, sungSwarm ? b.vowel() : -1); }
             pos += cellA;

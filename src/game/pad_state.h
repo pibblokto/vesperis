@@ -22,7 +22,8 @@ struct PadUI {
     bool keyboard = false; int kRow = 0, kCol = 0, latch = 0, kbFor = 0;   // the keyboard: its key under the cursor, the latched Shift/Ctrl/Alt; kbFor 1 the aim's digits
     bool kbShown = false;                 // the keyboard was up last frame
     std::vector<std::pair<int, int>> queue;   // keys pressed one a frame (a command typed for the console): key, modifiers
-    int screenSel = 0, capture = -1, capStep = 0; double capT = 0; bool capArmed = false; PadState capRest, capPrev;   // the controller page: the row, the role being set (and the stick's step), its clock, the axes at rest, last frame
+    // the controller page: the row, the role being set (and the stick's step), its clock, the axes at rest, last frame
+    int screenSel = 0, capture = -1, capStep = 0; double capT = 0; bool capArmed = false; PadState capRest, capPrev;
     std::string note; double noteUntil = 0;   // the controller page's last word
 };
 

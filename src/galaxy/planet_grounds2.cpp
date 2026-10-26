@@ -6,7 +6,8 @@ namespace {
 
 // the chemotroph's spring fields: the rifts' floors and scattered fields on the plains (tens of kilometres, so a pool is never cut by
 // their edge), a spring a 0.5 km cell at most; `springVents` visits the same features
-inline double springField(const GroundCtx& c, double rift) { return std::max(smoothstep(0.5, 0.8, rift), smoothstep(0.3, 0.5, fbm3(c.p / (c.R * 0.06), c.g.sG + 31, 3))); }   // unfaded: the map's and the ground's alike
+// unfaded: the map's and the ground's alike
+inline double springField(const GroundCtx& c, double rift) { return std::max(smoothstep(0.5, 0.8, rift), smoothstep(0.3, 0.5, fbm3(c.p / (c.R * 0.06), c.g.sG + 31, 3))); }
 }   // namespace
 
 // P-03: life on the ground's heat: the tectonic crust (rifts with their floors, fissures, cones, ash plains) cold under a dim star and
@@ -55,7 +56,8 @@ void groundChemotroph(GroundCtx& c) {
     // frost in fields of a hundred kilometres on the cold ground, ragged at their edges, more on the heights and toward the poles, none in a
     // basin (unfaded fields)
     const double basin = smoothstep(0.7, 0.9, field), patch = fbm3(p / 1.2, g.sG + 36, 3);
-    const double frost = fbm3(p / 120.0, g.sG + 35, 2) + (matVisible(3.0, detailM) ? 0.15 * fbm3(p / 3.0, g.sG + 37, 2) : 0.0) + 0.4 * smoothstep(400.0, 2000.0, hS) + 0.3 * smoothstep(30.0, 70.0, absLatDeg) - basin;   // the edges' raggedness where a ring draws it (the map's texels are wider)
+    const double frost = fbm3(p / 120.0, g.sG + 35, 2) + (matVisible(3.0, detailM) ? 0.15 * fbm3(p / 3.0, g.sG + 37, 2) : 0.0) + 0.4 * smoothstep(400.0, 2000.0, hS) +
+            0.3 * smoothstep(30.0, 70.0, absLatDeg) - basin;   // the edges' raggedness where a ring draws it (the map's texels are wider)
     if (pool > 0.5) { s.material = MAT_BRINE; s.albedo = 0.30; }
     else if (sinter > 0.5 || (basin > 0.5 && patch > 0.12)) { s.material = MAT_SALT; s.albedo = 0.66; }
     else if (mats > 0.5 || fissure > 0.5 || (basin > 0.5 && patch > -0.2)) { s.material = MAT_MATS; s.albedo = 0.52; }
@@ -230,7 +232,8 @@ void groundDryIce(GroundCtx& c) {
                 const double ang = std::atan2(dot(d, e2v), dot(d, e1));
                 const int arms = 6 + (int)(f.u[1] * 6);
                 const double wob = 0.5 * gnoise3(p / 0.05, g.sG + 62);
-                const double arm = std::pow(0.5 + 0.5 * std::cos(arms * ang + f.u[0] * TAU + wob), 26.0), twig = std::pow(0.5 + 0.5 * std::cos(2 * arms * ang + f.u[2] * TAU + wob), 40.0) * smoothstep(0.3, 0.6, x);
+                const double arm = std::pow(0.5 + 0.5 * std::cos(arms * ang + f.u[0] * TAU + wob), 26.0),
+                             twig = std::pow(0.5 + 0.5 * std::cos(2 * arms * ang + f.u[2] * TAU + wob), 40.0) * smoothstep(0.3, 0.6, x);
                 const double ch = std::max(arm, twig) * (1 - x) + smoothstep(0.12, 0.0, x);
                 channel = std::max(channel, ch);
             }

@@ -89,7 +89,8 @@ void Game::playerBuildList() {
         if (a.year != b.year) return a.year < b.year;
         return a.local < b.local;
     });
-    for (size_t i = 0; i < items.size() && i < player.items.size(); i++) if (playerItemKey(items[i]) == playerItemKey(player.items[i]) && player.items[i].seconds > 0 && !items[i].music) items[i].seconds = player.items[i].seconds;
+    for (size_t i = 0; i < items.size() && i < player.items.size(); i++)
+        if (playerItemKey(items[i]) == playerItemKey(player.items[i]) && player.items[i].seconds > 0 && !items[i].music) items[i].seconds = player.items[i].seconds;
     player.items = items;
     player.playing = -1;
     for (size_t i = 0; i < player.items.size() && !playingKey.empty(); i++) if (playerItemKey(player.items[i]) == playingKey) player.playing = (int)i;
@@ -108,7 +109,17 @@ std::string Game::playerItemTitle(const PlayerItem& it, const std::string* name)
 // from its start
 void Game::playerPlay(int i) {
     if (i < 0 || i >= (int)player.items.size()) return;
-    if (playerOwns()) { if (audio.piece == &player.world.piece) { audio.piece = nullptr; audio.tradition = nullptr; } if (audio.speech == &player.world.speech) { audio.speech = nullptr; audio.voice = nullptr; } audio.medium = -1; }
+    if (playerOwns()) {
+        if (audio.piece == &player.world.piece) {
+            audio.piece = nullptr;
+            audio.tradition = nullptr;
+        }
+        if (audio.speech == &player.world.speech) {
+            audio.speech = nullptr;
+            audio.voice = nullptr;
+        }
+        audio.medium = -1;
+    }
     player.playing = i; player.t = 0; player.syncT = -1; player.paused = false; player.held = false; player.waiting = true; player.secs = player.items[i].seconds;
     const PlayerItem& it = player.items[i];
     bool foreign = false; const std::string* nm = it.music ? shardNameOf(playerItemKey(it), foreign) : nullptr;
@@ -161,7 +172,10 @@ void Game::playerStart() {
         int64_t sx, sy, sz; Star st;
         if ((nx.world != it.world || nx.which != it.which) && Guide::parseStarKey(nx.world, sx, sy, sz) && placeInSector(sx, sy, sz, st, true)) {
             StarSystem wsys; wsys.generate(st); const int bi = bodyOfKeyP(nx.world);
-            if (bi >= 0 && bi < (int)wsys.bodies.size()) { const BodyGen g = BodyGen::make(wsys.bodies[bi]); shardTextsPrefetch(wsys, wsys.bodies[bi], g, loreQuick(wsys, wsys.bodies[bi], g, nx.which)); }
+            if (bi >= 0 && bi < (int)wsys.bodies.size()) {
+                const BodyGen g = BodyGen::make(wsys.bodies[bi]);
+                shardTextsPrefetch(wsys, wsys.bodies[bi], g, loreQuick(wsys, wsys.bodies[bi], g, nx.which));
+            }
         }
     }
 }
@@ -238,7 +252,8 @@ void Game::renderPlayerPage() {
         fillRectRGB(canvas, UW - 3, y0, UW - 3, y0 + h - 1, HUD_DIM); fillRectRGB(canvas, UW - 3, y0 + off, UW - 2, y0 + off + bar, HUD_GREEN);
     }
     const PlayerItem& s = player.items[std::max(0, std::min(n - 1, player.sel))];
-    std::string where = upper(worldNameOfKey(s.world)) + " - " + (s.heard ? "CAUGHT BY THE RADAR" : (s.medium >= 0 && s.medium < RM_COUNT ? RECORD_MEDIUM_HUD[s.medium] : "")) + fmt(" - YEAR %d", s.year);
+    std::string where =
+            upper(worldNameOfKey(s.world)) + " - " + (s.heard ? "CAUGHT BY THE RADAR" : (s.medium >= 0 && s.medium < RM_COUNT ? RECORD_MEDIUM_HUD[s.medium] : "")) + fmt(" - YEAR %d", s.year);
     drawText(canvas, 6, UH - 20, trunc(where, 52).c_str(), HUD_DIM);
     drawTextCentered(canvas, UW / 2, UH - 10, "ENTER PLAY  SPACE PAUSE  BACKSPACE STOP  TAB WORLDS", HUD_DIM);
 }

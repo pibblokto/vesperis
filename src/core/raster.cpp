@@ -143,7 +143,13 @@ void rasterProjected(Framebuffer& fb, const SV& a0, const SV& b0, const SV& c0, 
                             if ((P.frame > 0 || P.shutter > 0) && !(fu >= P.x0 && fu < P.x1 && fv >= P.y0 && fv < P.y1)) {   // the surround, the shutters
                                 const double fvh = P.frame * P.bay / P.storey;   // the surround as many metres up as across
                                 bool blank = false;
-                                if (P.scatter > 0) { uint32_t h = (uint32_t)((int64_t)iu * 73856093) ^ (uint32_t)((int64_t)iv * 19349663); h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15; blank = (h & 1023) < (uint32_t)(P.scatter * 1024); }
+                                if (P.scatter > 0) {
+                                    uint32_t h = (uint32_t)((int64_t)iu * 73856093) ^ (uint32_t)((int64_t)iv * 19349663);
+                                    h ^= h >> 13;
+                                    h *= 0x5bd1e995u;
+                                    h ^= h >> 15;
+                                    blank = (h & 1023) < (uint32_t)(P.scatter * 1024);
+                                }
                                 if (!blank) {
                                     if (P.shutter > 0 && fv >= P.y0 && fv < P.y1 && ((fu >= P.x0 - P.shutter && fu < P.x0) || (fu >= P.x1 && fu < P.x1 + P.shutter))) dress = P.shutterShade;
                                     else if (P.frame > 0 && fu >= P.x0 - P.frame && fu < P.x1 + P.frame && fv >= P.y0 - fvh && fv < P.y1 + fvh) dress = P.frameShade;

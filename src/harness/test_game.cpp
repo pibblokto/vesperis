@@ -55,10 +55,12 @@ void TestGame::testAimAtBody(int body) {
 }
 
 std::string TestGame::testRoadInfo() const {
-    std::string s = fmt("zoom roads %d (%.0f ms); site roads %zu (%.1f ms, %s, wear %.2f)", (int)zoomRoads.size(), zoomRoadsMs, surf.site.roads.size(), surf.site.roadsMs, surf.site.roadCultures[0].paved ? "paved" : "beaten", surf.site.roadCultures[0].roadWear);
+    std::string s = fmt("zoom roads %d (%.0f ms); site roads %zu (%.1f ms, %s, wear %.2f)", (int)zoomRoads.size(), zoomRoadsMs, surf.site.roads.size(), surf.site.roadsMs,
+            surf.site.roadCultures[0].paved ? "paved" : "beaten", surf.site.roadCultures[0].roadWear);
     double d, along, hd; const SiteRoad* rd;
     if (!surf.site.roads.empty() && surf.site.roadAt(surf.player.x, surf.player.z, 30, d, along, hd, rd))
-        s += fmt("; the nearest road %.1f m off (half %.1f), %.0f m along, heading %.0f, left %.2f, cover at the feet %.2f", d, rd->half, along, wrap2pi(hd) / DEG, roadLeft(rd->id, along, rd->wear), surf.site.roadCover(surf.player.x, surf.player.z));
+        s += fmt("; the nearest road %.1f m off (half %.1f), %.0f m along, heading %.0f, left %.2f, cover at the feet %.2f", d, rd->half, along, wrap2pi(hd) / DEG, roadLeft(rd->id, along, rd->wear),
+                surf.site.roadCover(surf.player.x, surf.player.z));
     else s += "; no road within 30 m";
     s += fmt("; roads met %zu", roadsMet.size());
     return s;
@@ -157,11 +159,27 @@ void TestGame::testWaitMapOf(int bi) {   // a wait on the map's thread, not one 
 
 std::string TestGame::testBeltDraw() const {
     int n3 = 0, x0 = 1 << 30, x1 = -1, y0 = 1 << 30, y1 = -1;
-    for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) { Pix p = fb.idx[y * FBW + x]; if (bankOf(p) == 20 && intenOf(p) > 0) { n3++; x0 = std::min(x0, x); x1 = std::max(x1, x); y0 = std::min(y0, y); y1 = std::max(y1, y); } }
+    for (int y = 0; y < FBH; y++)
+        for (int x = 0; x < FBW; x++) {
+            Pix p = fb.idx[y * FBW + x];
+            if (bankOf(p) == 20 && intenOf(p) > 0) {
+                n3++;
+                x0 = std::min(x0, x);
+                x1 = std::max(x1, x);
+                y0 = std::min(y0, y);
+                y1 = std::max(y1, y);
+            }
+        }
     int a, b; const_cast<TestGame*>(this)->choosePaletteBodies(a, b);
     BeltRock rk; std::string where = "no rock";
-    if (beltRockNow(rk)) { Vec3 v = viewBasis() * (rk.pos - ship.pos); Vec3 f = normalize(rk.pos - ship.pos); where = fmt("rock at view (%.0f, %.0f, %.0f) km, %.1f km across, ship %.0f km off; ship yaw %.2f pitch %.2f, rock yaw %.2f pitch %.2f, cabin %.2f/%.2f", v.x, v.y, v.z, 2 * rk.radiusKm, length(rk.pos - ship.pos), ship.yaw, ship.pitch, std::atan2(f.x, f.z), std::asin(clampd(f.y, -1, 1)), cabin.yaw, cabin.pitch); }
-    return fmt("rocks drawn %d (%d meshes), bank-20 pixels %d in x %d..%d y %d..%d, palette bodies %d/%d, cabin %d; %s", spaceR.lastBeltRocks, spaceR.lastBeltMeshes, n3, x0, x1, y0, y1, a, b, (int)settings.cabin, where.c_str());
+    if (beltRockNow(rk)) {
+        Vec3 v = viewBasis() * (rk.pos - ship.pos);
+        Vec3 f = normalize(rk.pos - ship.pos);
+        where = fmt("rock at view (%.0f, %.0f, %.0f) km, %.1f km across, ship %.0f km off; ship yaw %.2f pitch %.2f, rock yaw %.2f pitch %.2f, cabin %.2f/%.2f", v.x, v.y, v.z, 2 * rk.radiusKm,
+                length(rk.pos - ship.pos), ship.yaw, ship.pitch, std::atan2(f.x, f.z), std::asin(clampd(f.y, -1, 1)), cabin.yaw, cabin.pitch);
+    }
+    return fmt("rocks drawn %d (%d meshes), bank-20 pixels %d in x %d..%d y %d..%d, palette bodies %d/%d, cabin %d; %s", spaceR.lastBeltRocks, spaceR.lastBeltMeshes, n3, x0, x1, y0, y1, a, b,
+            (int)settings.cabin, where.c_str());
 }
 
 void TestGame::testParkAtBelt(const Star& s, int k) {
@@ -196,7 +214,8 @@ void TestGame::testTypeText(const std::string& s) {
 
 std::string TestGame::testDroneInfo() const {
     const Drone& d = surf.drone;
-    return fmt("deployed=%d in=%d landed=%d speed=%.1f m/s alt=%.0f m vs=%+.1f heading=%.0f odometer=%.0f m rotor=%.2f chase=%d", (int)d.deployed, (int)surf.inDrone, (int)d.landed, d.speed, d.altAboveGround, d.vy, wrap2pi(d.heading) / DEG, d.odometer, d.rotor, (int)surf.chaseCam);
+    return fmt("deployed=%d in=%d landed=%d speed=%.1f m/s alt=%.0f m vs=%+.1f heading=%.0f odometer=%.0f m rotor=%.2f chase=%d", (int)d.deployed, (int)surf.inDrone, (int)d.landed, d.speed,
+            d.altAboveGround, d.vy, wrap2pi(d.heading) / DEG, d.odometer, d.rotor, (int)surf.chaseCam);
 }
 
 bool TestGame::testFlySetup(double altM) {
@@ -214,14 +233,16 @@ bool TestGame::testFlySetup(double altM) {
 
 std::string TestGame::testBuggyInfo() const {
     const Buggy& b = surf.buggy;
-    return fmt("deployed=%d in=%d speed=%.1f m/s heading=%.0f odometer=%.0f m tracks=%zu chase=%d", (int)b.deployed, (int)surf.inBuggy, b.speed, wrap2pi(b.heading) / DEG, b.odometer, b.tracks.size(), (int)surf.chaseCam);
+    return fmt("deployed=%d in=%d speed=%.1f m/s heading=%.0f odometer=%.0f m tracks=%zu chase=%d", (int)b.deployed, (int)surf.inBuggy, b.speed, wrap2pi(b.heading) / DEG, b.odometer, b.tracks.size(),
+            (int)surf.chaseCam);
 }
 
 std::string TestGame::testDebugInfo() const {
     std::string r = fmt("mode=%d parked=%d local=%d belt=%d/%d yaw=%.2f pitch=%.2f", (int)ship.mode, ship.parkedBody, ship.localTarget, ship.targetBelt, ship.parkedBelt, ship.yaw, ship.pitch);
     if (ship.parkedBody >= 0 && ship.parkedBody < (int)sys.bodies.size()) {
         Vec3 fwd = normalize(sys.bodyPos(ship.parkedBody, t) - ship.pos);
-        r += fmt(" bodyYaw=%.2f bodyPitch=%.2f dist=%.0f R=%.0f", std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)), length(sys.bodyPos(ship.parkedBody, t) - ship.pos), sys.bodies[ship.parkedBody].radiusKm);
+        r += fmt(" bodyYaw=%.2f bodyPitch=%.2f dist=%.0f R=%.0f", std::atan2(fwd.x, fwd.z), std::asin(clampd(fwd.y, -1, 1)), length(sys.bodyPos(ship.parkedBody, t) - ship.pos),
+                sys.bodies[ship.parkedBody].radiusKm);
     }
     return r;
 }
@@ -229,7 +250,8 @@ std::string TestGame::testDebugInfo() const {
 std::string TestGame::testGraveInfo() const {
     const SurfaceView::NearGrave& ng = surf.nearGrave;
     std::string last = guide.log.empty() ? std::string("-") : guide.log.back().kind + ": " + guide.log.back().text;
-    return fmt("grave: %s; %zu graves in the guide; last log: %s", ng.k >= 0 ? fmt("%s (%.1f m, %s)", ng.line.c_str(), ng.dist, SETTLEMENT_CLASS_NAMES[ng.sclass]).c_str() : "none within reach", guide.graves.size(), last.c_str());
+    return fmt("grave: %s; %zu graves in the guide; last log: %s", ng.k >= 0 ? fmt("%s (%.1f m, %s)", ng.line.c_str(), ng.dist, SETTLEMENT_CLASS_NAMES[ng.sclass]).c_str() : "none within reach",
+            guide.graves.size(), last.c_str());
 }
 bool TestGame::testWalkToGrave() {   // C-12: a metre in front of the nearest settlement's first stone, facing it
     if (!surf.valid || surf.inVehicle()) return false;
@@ -388,7 +410,8 @@ void TestGame::testPlateCheck(int n, double& maxAlb, int& matMiss, double& maxH)
 
 std::string TestGame::testTelescopeInfo() const {
     if (!tele.on) return "stowed";
-    return fmt("x%.0f, field %.3f deg, target %d '%s', tracking %d%s, offsets %.5f/%.5f rad, yaw %.4f pitch %.4f", telescopeZoom(), telescopeFieldDeg(), tele.target, telescopeTargetLine().c_str(), tele.track, telescopeStabilised() ? " (stabilised)" : "", tele.offYaw, tele.offPitch, ship.yaw, ship.pitch);
+    return fmt("x%.0f, field %.3f deg, target %d '%s', tracking %d%s, offsets %.5f/%.5f rad, yaw %.4f pitch %.4f", telescopeZoom(), telescopeFieldDeg(), tele.target, telescopeTargetLine().c_str(),
+            tele.track, telescopeStabilised() ? " (stabilised)" : "", tele.offYaw, tele.offPitch, ship.yaw, ship.pitch);
 }
 
 long TestGame::testPlateBegun() const { return spaceR.plateBegun; }
@@ -454,17 +477,19 @@ void TestGame::testProbeSkip(double toClock) {
 }
 std::string TestGame::testProbeViewInfo() const {
     const ProbeViewStats& v = probeViewStats();
-    return fmt("floor %d (%.0f%%, shade %.0f) ceiling %d (%.0f%%, shade %.0f) fog %d (T %.2f) pano %dx%d; %.1f + %.1f + %.1f + %.1f ms; sun %.0f deg, light %.2f/%.2f/%.2f, albedo %.2f", v.floor, v.covFloor * 100, v.shadeFloor, v.ceil,
-               v.covCeil * 100, v.shadeCeil, v.fog, v.fogT, v.columns, v.rows, v.msPano, v.msFog, v.msNodes, v.msSpread, v.sunElDeg, v.direct0, v.diffuse0, v.inside0, v.alb0) +
-           (v.flash > 0 ? fmt("; flash %.2f at %.0f %.0f %.0f km, frame %.0f,%.0f", v.flash, v.flashPos.x, v.flashPos.y, v.flashPos.z, v.flashSx, v.flashSy) : std::string()) +
-           (v.inHole ? std::string("; in a hole") : std::string()) + (v.aurora > 0.0005 ? fmt("; aurora %.3f", v.aurora) : std::string());
+    return fmt("floor %d (%.0f%%, shade %.0f) ceiling %d (%.0f%%, shade %.0f) fog %d (T %.2f) pano %dx%d; %.1f + %.1f + %.1f + %.1f ms; sun %.0f deg, light %.2f/%.2f/%.2f, albedo %.2f", v.floor,
+                   v.covFloor * 100, v.shadeFloor, v.ceil, v.covCeil * 100, v.shadeCeil, v.fog, v.fogT, v.columns, v.rows, v.msPano, v.msFog, v.msNodes, v.msSpread, v.sunElDeg, v.direct0, v.diffuse0,
+                   v.inside0, v.alb0) +
+            (v.flash > 0 ? fmt("; flash %.2f at %.0f %.0f %.0f km, frame %.0f,%.0f", v.flash, v.flashPos.x, v.flashPos.y, v.flashPos.z, v.flashSx, v.flashSy) : std::string()) +
+            (v.inHole ? std::string("; in a hole") : std::string()) + (v.aurora > 0.0005 ? fmt("; aurora %.3f", v.aurora) : std::string());
 }
 std::string TestGame::testProbeInfo() const {
     if (!probe.active) return "no probe";
     double c = probe.clock, bar = probeBarAt(probe.flight, c);
-    return fmt("body %d aim %.2f/%.2f deg clock %.1f s stage %s bar %.4f alt %.1f km T %.0f K wind %.0f m/s chute %.1f..%.1f crush %.1f bar end %.1f s%s", probe.body, probe.aimLat / DEG, probe.aimLon / DEG, c,
-               probeStageLabel(c).c_str(), bar, bar > 0 ? giantAltitudeKm(probe.atm, bar) : 0.0, bar > 0 ? giantTemperatureK(probe.atm, bar) : 0.0, giantWindEast(probe.atm, probe.aimLat, bar),
-               probe.flight.chuteOpen, probe.flight.chuteClose, probe.flight.crushBar, probeEndClock(probe.atm, probe.flight), probe.endClock >= 0 ? fmt(" ENDED (%s)", probe.endCause == 1 ? "hull" : "heat").c_str() : "");
+    return fmt("body %d aim %.2f/%.2f deg clock %.1f s stage %s bar %.4f alt %.1f km T %.0f K wind %.0f m/s chute %.1f..%.1f crush %.1f bar end %.1f s%s", probe.body, probe.aimLat / DEG,
+            probe.aimLon / DEG, c, probeStageLabel(c).c_str(), bar, bar > 0 ? giantAltitudeKm(probe.atm, bar) : 0.0, bar > 0 ? giantTemperatureK(probe.atm, bar) : 0.0,
+            giantWindEast(probe.atm, probe.aimLat, bar), probe.flight.chuteOpen, probe.flight.chuteClose, probe.flight.crushBar, probeEndClock(probe.atm, probe.flight),
+            probe.endClock >= 0 ? fmt(" ENDED (%s)", probe.endCause == 1 ? "hull" : "heat").c_str() : "");
 }
 
 bool TestGame::testDronesLaunch() { const bool was = bay.out; droneBayLaunch(); return !was && bay.out; }
@@ -512,10 +537,12 @@ int TestGame::testDronesWorldItems(int kind, bool unheld) {
 
 std::string TestGame::testDronesInfo() const {
     std::string s = fmt("the bay: clock %.1f, %s%s, cooldown %.0f s; ", bay.clock, bay.out ? "out" : (droneBayReady() ? "ready" : "charging"), bay.planned ? ", planned" : "", droneCooldownLeft());
-    if (bay.worldValid) s += fmt("the world's items %d (%d places, homes %s, read in %.0f ms); ", (int)bay.world.items.size(), (int)bay.world.places.size(), bay.world.homes ? "yes" : "no", bay.world.buildMs);
+    if (bay.worldValid)
+        s += fmt("the world's items %d (%d places, homes %s, read in %.0f ms); ", (int)bay.world.items.size(), (int)bay.world.places.size(), bay.world.homes ? "yes" : "no", bay.world.buildMs);
     for (int k = 0; k < DRONE_COUNT; k++) {
         const DroneRun& R = bay.run[k];
-        s += fmt("drone %d: %s, wanted %d, %d finds, %d stops (out %.1f down %.1f up %.1f dock %.1f)%s", k + 1, droneStateLine(k).c_str(), R.wanted, (int)R.finds.size(), (int)R.stops.size(), R.out, R.down, R.up, R.dock, k + 1 < DRONE_COUNT ? "; " : "");
+        s += fmt("drone %d: %s, wanted %d, %d finds, %d stops (out %.1f down %.1f up %.1f dock %.1f)%s", k + 1, droneStateLine(k).c_str(), R.wanted, (int)R.finds.size(), (int)R.stops.size(), R.out,
+                R.down, R.up, R.dock, k + 1 < DRONE_COUNT ? "; " : "");
     }
     return s;
 }
@@ -564,7 +591,8 @@ std::string TestGame::testLandPeoplesInfo() {
     const LandKnown K = landKnownOf(landBody);
     std::string s = fmt("the peoples %s; %s", landPeoples ? "shown" : "hidden", K.ready ? "read" : "being read");
     for (int k = 0; k < K.peoples; k++) s += fmt("; people %d '%s' %d of %d held, %zu places known%s", k + 1, K.name[k].c_str(), K.held[k], K.total[k], K.ranks[k].size(), K.all(k) ? ", ALL" : "");
-    s += fmt("; drawn: %d places, %d ways, %d land pixels, %d marks, %d rings, %d capitals named", landDrawn.places, landDrawn.ways, landDrawn.land, landDrawn.marks, landDrawn.rings, landDrawn.capital);
+    s += fmt("; drawn: %d places, %d ways, %d land pixels, %d marks, %d rings, %d capitals named", landDrawn.places, landDrawn.ways, landDrawn.land, landDrawn.marks, landDrawn.rings,
+            landDrawn.capital);
     return s;
 }
 
@@ -573,14 +601,16 @@ std::string TestGame::testPlayerItemLine(int i) const {
     if (i < 0 || i >= (int)player.items.size()) return std::string();
     const PlayerItem& it = player.items[i];
     bool foreign = false; const std::string* nm = it.music ? shardNameOf(playerItemKey(it), foreign) : nullptr;
-    return fmt("%s %s%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.music ? "music" : "a recording", it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(), it.seconds > 0 ? fmt(", %.1f s", it.seconds).c_str() : "");
+    return fmt("%s %s%s, %s, year %d, %s%s", playerItemKey(it).c_str(), it.music ? "music" : "a recording", it.heard ? " off the air" : "", playerItemTitle(it, nm).c_str(), it.year, it.people.c_str(),
+            it.seconds > 0 ? fmt(", %.1f s", it.seconds).c_str() : "");
 }
 bool TestGame::testPlayerPlay(int item) { if (player.items.empty()) playerBuildList(); if (item < 0 || item >= (int)player.items.size()) return false; playerPlay(item); return true; }
 std::string TestGame::testPlayerInfo() const {
     if (player.playing < 0) return fmt("the player: nothing plays (%d items, %d played to their end)", (int)player.items.size(), player.finished);
-    return fmt("the player: item %d '%s - %s', %.1f of %.1f s%s%s%s; the synth's piece %s, speech %s, medium %d; %d played to their end", player.playing, player.title.c_str(), player.people.c_str(), player.t, player.secs,
-               player.paused ? ", paused" : "", player.held ? ", held" : "", player.waiting ? ", waiting for its world" : "",
-               audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech == &player.world.speech ? "the player's" : (audio.speech ? "another's" : "none"), audio.medium, player.finished);
+    return fmt("the player: item %d '%s - %s', %.1f of %.1f s%s%s%s; the synth's piece %s, speech %s, medium %d; %d played to their end", player.playing, player.title.c_str(), player.people.c_str(),
+            player.t, player.secs, player.paused ? ", paused" : "", player.held ? ", held" : "", player.waiting ? ", waiting for its world" : "",
+            audio.piece == &player.world.piece ? "the player's" : (audio.piece ? "another's" : "none"), audio.speech == &player.world.speech ? "the player's" : (audio.speech ? "another's" : "none"),
+            audio.medium, player.finished);
 }
 
 std::string TestGame::testAutoInfo() const {
@@ -619,17 +649,32 @@ bool TestGame::testAimAtSignal(int which) {
 std::string TestGame::testRadarInfo() const {
     const RadarState& r = radar;
     std::string s = fmt("radar: %s, gain x%.0f, %zu far (%d cells, %.1f ms) + %zu local", r.on ? "on" : "off", radarGain(), r.far.size(), r.scanCells, r.scanMs, r.local.size());
-    if (r.gainStep > 0) s += r.deepReady ? fmt(" + %d deep of %zu (%d frames, %.1f ms)", (int)std::count_if(r.deep.begin(), r.deep.end(), [&](const Signal& d) { return d.needGain <= radarGain(); }), r.deep.size(), r.deepFrames, r.deepMs) : fmt(" + deep scan at %d cells", r.deepScan.cells);
+    if (r.gainStep > 0)
+        s += r.deepReady ? fmt(" + %d deep of %zu (%d frames, %.1f ms)", (int)std::count_if(r.deep.begin(), r.deep.end(), [&](const Signal& d) { return d.needGain <= radarGain(); }), r.deep.size(),
+                                   r.deepFrames, r.deepMs)
+                         : fmt(" + deep scan at %d cells", r.deepScan.cells);
     s += fmt(", reading %.2f (the beam's sum %.2f, the floor %.2f)%s", r.reading, r.sum, r.floorNow, r.overload ? " OVERLOAD" : "");
     s += fmt(", the sky %.2f", r.sky);
-    if (r.under >= 0 && r.under < (int)r.all.size()) s += fmt(", under it %s %.0f ly (%.1f deg off, %.2f through%s)", SIGNAL_KIND_NAMES[r.all[r.under].kind], r.all[r.under].distLy, r.angle[r.under] / DEG, audio.radarSignal2, audio.radarHet > 0 ? fmt(", a whistle at %.0f Hz", audio.radarHetHz).c_str() : "");
+    if (r.under >= 0 && r.under < (int)r.all.size())
+        s += fmt(", under it %s %.0f ly (%.1f deg off, %.2f through%s)", SIGNAL_KIND_NAMES[r.all[r.under].kind], r.all[r.under].distLy, r.angle[r.under] / DEG, audio.radarSignal2,
+                audio.radarHet > 0 ? fmt(", a whistle at %.0f Hz", audio.radarHetHz).c_str() : "");
     if (r.rise.on) s += fmt(", a false rise %.1f deg off (%.2f%s)", r.riseAngle / DEG, r.riseGain, r.rise.spent ? ", spent" : "");
     if (r.nothingT > 0) s += ", NOTHING THERE";
     if (r.wordT >= 0) s += fmt(", a word back from the static: \"%s\"", r.wordSaid.c_str());
-    if (r.best >= 0 && r.best < (int)r.all.size()) s += fmt(", best %d (%s, %.1f deg off, gain %.2f, %.0f ly, strength %.2f)", r.best, SIGNAL_KIND_NAMES[r.all[r.best].kind], r.bestAngle / DEG, r.bestGain, r.all[r.best].distLy, r.all[r.best].strength);
+    if (r.best >= 0 && r.best < (int)r.all.size())
+        s += fmt(", best %d (%s, %.1f deg off, gain %.2f, %.0f ly, strength %.2f)", r.best, SIGNAL_KIND_NAMES[r.all[r.best].kind], r.bestAngle / DEG, r.bestGain, r.all[r.best].distLy,
+                r.all[r.best].strength);
     s += fmt(", hold %.1f of %.1f s, locked %d", r.holdT, r.lockSecs, r.locked);
     if (r.locked >= 0 && r.locked < (int)r.all.size()) s += fmt(" (%s)", SIGNAL_KIND_NAMES[r.all[r.locked].kind]);
-    s += fmt(", clarity %.2f, content %s", r.clarity, r.contentT < 0 ? "none" : fmt("S%d %s %.1f of %.0f s%s", r.shard, r.prog.kind >= 0 && r.prog.kind < RP_COUNT ? RADIO_PROGRAMME_NAMES[r.prog.kind] : "?", r.contentT, r.contentSecs, audio.radio ? (audio.piece ? " (a piece set)" : (audio.speech ? (r.prog.repeats > 1 ? fmt(" (a speech set, repeat %d of %d)", r.loopI + 1, r.prog.repeats).c_str() : " (a speech set)") : (r.prog.machine ? " (a machine)" : " (NO pointer)"))) : " (not radio)").c_str());
+    s += fmt(", clarity %.2f, content %s", r.clarity,
+            r.contentT < 0
+                    ? "none"
+                    : fmt("S%d %s %.1f of %.0f s%s", r.shard, r.prog.kind >= 0 && r.prog.kind < RP_COUNT ? RADIO_PROGRAMME_NAMES[r.prog.kind] : "?", r.contentT, r.contentSecs,
+                              audio.radio ? (audio.piece ? " (a piece set)"
+                                                         : (audio.speech ? (r.prog.repeats > 1 ? fmt(" (a speech set, repeat %d of %d)", r.loopI + 1, r.prog.repeats).c_str() : " (a speech set)")
+                                                                         : (r.prog.machine ? " (a machine)" : " (NO pointer)")))
+                                          : " (not radio)")
+                              .c_str());
     return s;
 }
 
@@ -651,16 +696,17 @@ std::string TestGame::testShardsInfo() const {
     int read = 0; for (const DecodedWord& w : shardWords) if (w.known) read++;
     std::string piece;
     if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].music)
-        piece = fmt("; piece: %s, %.0f s, %zu notes, beat %.1f of %.0f, %s", PIECE_FORM_NAMES[shardWorld.piece.form], shardWorld.piece.seconds, shardWorld.piece.notes.size(), pieceBeatNow(), shardWorld.piece.beats,
-                    pieceEnded() ? "ended" : (piecePaused ? "paused" : (audio.piece ? "playing" : "stopped")));
+        piece = fmt("; piece: %s, %.0f s, %zu notes, beat %.1f of %.0f, %s", PIECE_FORM_NAMES[shardWorld.piece.form], shardWorld.piece.seconds, shardWorld.piece.notes.size(), pieceBeatNow(),
+                shardWorld.piece.beats, pieceEnded() ? "ended" : (piecePaused ? "paused" : (audio.piece ? "playing" : "stopped")));
     std::string speech;
     if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && !shardWorld.shards[shardHeld[shardSel]].music)
         speech = fmt("; speech: %.1f of %.1f s, word %d, %s", speechT >= 0 ? speechT : 0.0, shardWorld.speech.seconds, speechT >= 0 ? speechWordAt(shardWorld.speech, speechT) : -1,
                      speechT < 0 ? "stopped" : (speechEnded() ? "ended" : (speechPaused ? "paused" : "speaking")));
     int lentN = 0; for (int i : shardHeld) if (shardLent(i)) lentN++;
     std::string page = shardsLevel == 2 && shardPageStart.size() > 1 ? fmt(", page %d of %zu", shardPage + 1, shardPageStart.size()) : std::string();
-    return fmt("decoder: level %d, %zu worlds, %zu held of %s (people %d of %d, %d lent), shard %d: %d of %zu words read%s, %s%s%s", shardsLevel, shardWorldKeys.size(), shardHeld.size(), shardWorld.valid ? shardWorld.key.c_str() : "-", shardWorld.which + 1, shardWorld.peoples, lentN,
-               shardSel, read, shardWords.size(), page.c_str(), shardFresh ? fmt("decoding %.0f%%", 100 * clampd(speechT / std::max(shardWorld.speech.seconds, 1e-9), 0, 1)).c_str() : "idle", speech.c_str(), piece.c_str());
+    return fmt("decoder: level %d, %zu worlds, %zu held of %s (people %d of %d, %d lent), shard %d: %d of %zu words read%s, %s%s%s", shardsLevel, shardWorldKeys.size(), shardHeld.size(),
+            shardWorld.valid ? shardWorld.key.c_str() : "-", shardWorld.which + 1, shardWorld.peoples, lentN, shardSel, read, shardWords.size(), page.c_str(),
+            shardFresh ? fmt("decoding %.0f%%", 100 * clampd(speechT / std::max(shardWorld.speech.seconds, 1e-9), 0, 1)).c_str() : "idle", speech.c_str(), piece.c_str());
 }
 
 bool TestGame::testShardsOpenIndex(int idx) {
@@ -702,22 +748,28 @@ std::string TestGame::testHistoryInfo() {
     std::string eras;
     if (shardWorld.history) {
         const History& H = *shardWorld.history;
-        for (size_t k = 0; k < H.eras.size(); k++) eras += fmt("%s%s%s", k ? ", " : "", H.eras[k].name.c_str(), k < told.eraRead.size() && told.eraRead[k] > 0 ? fmt(" (%d read)", told.eraRead[k]).c_str() : " (none read)");
+        for (size_t k = 0; k < H.eras.size(); k++)
+            eras += fmt("%s%s%s", k ? ", " : "", H.eras[k].name.c_str(), k < told.eraRead.size() && told.eraRead[k] > 0 ? fmt(" (%d read)", told.eraRead[k]).c_str() : " (none read)");
         std::set<int> ps;
         for (const ToldEvent& t : told.events) { const HistoryEvent& e = H.events[t.event]; for (int p : {e.a, e.b, e.c}) if (p >= 0) ps.insert(p); }
         persons = (int)ps.size(); for (int p : ps) if (toldPersonNamed(H, told, p)) named++;
     }
     int rows = 0; for (const LegendRow& r : legendRows) if (r.kind == 1) rows++;
-    return fmt("history: page %d, %d records read (%d texts), %d events learnt in %d lines (built in %.1f ms), %d of %d persons in them named, the age %s (%s), %s; eras: %s",
-               shardsPage, told.read, told.texts, (int)told.events.size(), rows, toldMs, named, persons, told.ageTold ? "told" : "not told", AGE_TOLD_NAMES[std::max(0, std::min(AGE_COUNT - 1, told.age))],
-               told.ended ? "ended" : "not ended", eras.c_str());
+    return fmt("history: page %d, %d records read (%d texts), %d events learnt in %d lines (built in %.1f ms), %d of %d persons in them named, the age %s (%s), %s; eras: %s", shardsPage, told.read,
+            told.texts, (int)told.events.size(), rows, toldMs, named, persons, told.ageTold ? "told" : "not told", AGE_TOLD_NAMES[std::max(0, std::min(AGE_COUNT - 1, told.age))],
+            told.ended ? "ended" : "not ended", eras.c_str());
 }
 std::vector<std::string> TestGame::testLegendLines() {
     ensureTold();
     std::vector<std::string> out;
     for (const LegendRow& r : legendRows) {
         if (r.kind == 2) { out.push_back("## " + r.text); continue; }
-        if (r.kind == 0) { std::string h = "== "; for (const DecodedWord& w : r.words) h += w.pre + (w.name ? "{" + w.ours + "}" : (w.known ? w.ours : "~" + w.theirs)) + w.post + " "; out.push_back(h + r.text); continue; }
+        if (r.kind == 0) {
+            std::string h = "== ";
+            for (const DecodedWord& w : r.words) h += w.pre + (w.name ? "{" + w.ours + "}" : (w.known ? w.ours : "~" + w.theirs)) + w.post + " ";
+            out.push_back(h + r.text);
+            continue;
+        }
         std::string s = r.kind == 3 ? (r.first ? fmt("%6s  ", r.text.c_str()) : std::string(8, ' ')) : (r.first ? fmt("%6s  ", thousands(r.year).c_str()) : std::string(8, ' '));
         for (const DecodedWord& w : r.words) s += w.pre + (w.name ? "{" + w.ours + "}" : (w.known ? w.ours : "~" + w.theirs)) + w.post + " ";
         out.push_back(s);
@@ -732,11 +784,13 @@ std::string TestGame::testChartInfo() const {
     std::string s = fmt("chart: level %d", shardsLevel);
     if (shardsLevel == 2 && shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].chart) {
         const StarChart& C = shardWorld.chart;
-        s += fmt(", on the screen S%d (chart %d of the %s, %s): %zu stars, %zu figures, the mark %s at %lld %lld %lld (how %d, %.0f ly, %s), %s", shardHeld[shardSel], C.which, shardWorld.lore.people.c_str(), CHART_STYLE_NAMES[std::max(0, std::min(CHS_COUNT - 1, C.style))], C.stars.size(), C.figures.size(),
-                 STAR_CLASSES[C.mark.star.cls].code, (long long)C.mark.star.sx, (long long)C.mark.star.sy, (long long)C.mark.star.sz, C.mark.how, C.mark.ly, C.mark.people.empty() ? "no people" : ("the " + C.mark.people).c_str(),
-                 chartT >= 0 ? fmt("reading %.0f%%", 100 * clampd(chartT / CHART_READ_S, 0, 1)).c_str() : (shardFresh ? "unread" : "read"));
+        s += fmt(", on the screen S%d (chart %d of the %s, %s): %zu stars, %zu figures, the mark %s at %lld %lld %lld (how %d, %.0f ly, %s), %s", shardHeld[shardSel], C.which,
+                shardWorld.lore.people.c_str(), CHART_STYLE_NAMES[std::max(0, std::min(CHS_COUNT - 1, C.style))], C.stars.size(), C.figures.size(), STAR_CLASSES[C.mark.star.cls].code,
+                (long long)C.mark.star.sx, (long long)C.mark.star.sy, (long long)C.mark.star.sz, C.mark.how, C.mark.ly, C.mark.people.empty() ? "no people" : ("the " + C.mark.people).c_str(),
+                chartT >= 0 ? fmt("reading %.0f%%", 100 * clampd(chartT / CHART_READ_S, 0, 1)).c_str() : (shardFresh ? "unread" : "read"));
     }
-    s += chartUp ? fmt("; held up: S%d of %s (%zu stars, %zu figures), %d lines drawn", chartHeldIndex, chartHeldKey.c_str(), chartHeld.stars.size(), chartHeld.figures.size(), chartLinesDrawn) : "; none held up";
+    s += chartUp ? fmt("; held up: S%d of %s (%zu stars, %zu figures), %d lines drawn", chartHeldIndex, chartHeldKey.c_str(), chartHeld.stars.size(), chartHeld.figures.size(), chartLinesDrawn)
+                 : "; none held up";
     return s;
 }
 
@@ -766,10 +820,10 @@ bool TestGame::testAlmanacSelect(int kind, int body) {
 std::string TestGame::testInstrumentInfo() const {
     if (!icase.valid) return fmt("the case: %d instruments, none on the screen", (int)icase.keys.size());
     const Timbre* tb = instrumentTimbre(icase.tradition, icase.inst);
-    return fmt("the case: %d instruments; on the screen %s (id %d, people %d, age %s, voice %d, %s), %d courses, register %+d, %d notes played, the synth's timbre %s%s",
-               (int)icase.keys.size(), instrumentName(icase.tradition, icase.inst).c_str(), icase.inst.id, icase.inst.people, AGE_NAMES[std::max(0, std::min(AGE_COUNT - 1, icase.inst.age))], icase.inst.voice,
-               tb ? (tb->name + ", " + TIMBRE_FAMILY_NAMES[std::max(0, std::min(TF_COUNT - 1, tb->family))]).c_str() : "its disc", (int)icase.glow.size(), icase.inst.reg + icase.regShift, icase.notes,
-               audio.instrument == tb && tb ? "set" : (audio.instrument ? "another's" : "none"), icase.discOn ? ", the disc turning" : "");
+    return fmt("the case: %d instruments; on the screen %s (id %d, people %d, age %s, voice %d, %s), %d courses, register %+d, %d notes played, the synth's timbre %s%s", (int)icase.keys.size(),
+            instrumentName(icase.tradition, icase.inst).c_str(), icase.inst.id, icase.inst.people, AGE_NAMES[std::max(0, std::min(AGE_COUNT - 1, icase.inst.age))], icase.inst.voice,
+            tb ? (tb->name + ", " + TIMBRE_FAMILY_NAMES[std::max(0, std::min(TF_COUNT - 1, tb->family))]).c_str() : "its disc", (int)icase.glow.size(), icase.inst.reg + icase.regShift, icase.notes,
+            audio.instrument == tb && tb ? "set" : (audio.instrument ? "another's" : "none"), icase.discOn ? ", the disc turning" : "");
 }
 
 std::string TestGame::testFrontInfo() const {

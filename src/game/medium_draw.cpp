@@ -7,11 +7,28 @@
 #include <cmath>
 
 namespace {
-void disc(RGBCanvas& c, int cx, int cy, int r, uint32_t col) { for (int dy = -r; dy <= r; dy++) { int w = (int)std::floor(std::sqrt((double)(r * r - dy * dy)) + 0.3); fillRectRGB(c, cx - w, cy + dy, cx + w, cy + dy, col); } }
-void ellipse(RGBCanvas& c, int cx, int cy, int rx, int ry, uint32_t col) { for (int dy = -ry; dy <= ry; dy++) { double f = 1 - (double)(dy * dy) / std::max(1, ry * ry); int w = (int)std::floor(rx * std::sqrt(std::max(0.0, f)) + 0.3); fillRectRGB(c, cx - w, cy + dy, cx + w, cy + dy, col); } }
+void disc(RGBCanvas& c, int cx, int cy, int r, uint32_t col) {
+    for (int dy = -r; dy <= r; dy++) {
+        int w = (int)std::floor(std::sqrt((double)(r * r - dy * dy)) + 0.3);
+        fillRectRGB(c, cx - w, cy + dy, cx + w, cy + dy, col);
+    }
+}
+void ellipse(RGBCanvas& c, int cx, int cy, int rx, int ry, uint32_t col) {
+    for (int dy = -ry; dy <= ry; dy++) {
+        double f = 1 - (double)(dy * dy) / std::max(1, ry * ry);
+        int w = (int)std::floor(rx * std::sqrt(std::max(0.0, f)) + 0.3);
+        fillRectRGB(c, cx - w, cy + dy, cx + w, cy + dy, col);
+    }
+}
 void ring(RGBCanvas& c, int cx, int cy, int r, uint32_t col) {
     int px = cx + r, py = cy;
-    for (int k = 1; k <= 24; k++) { double a = k * 6.283185307179586 / 24; int x = cx + (int)std::lround(r * std::cos(a)), y = cy + (int)std::lround(r * std::sin(a)); drawLineRGB(c, px, py, x, y, col); px = x; py = y; }
+    for (int k = 1; k <= 24; k++) {
+        double a = k * 6.283185307179586 / 24;
+        int x = cx + (int)std::lround(r * std::cos(a)), y = cy + (int)std::lround(r * std::sin(a));
+        drawLineRGB(c, px, py, x, y, col);
+        px = x;
+        py = y;
+    }
 }
 uint32_t mixc(uint32_t a, uint32_t b, double t) {
     auto ch = [&](int s) { return (int)std::lround(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t); };
@@ -52,25 +69,42 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
             fillRectRGB(canvas, x0 + 6, cy - 2, x0 + 33, cy + 2, bone); fillRectRGB(canvas, x0 + 6, cy + 2, x0 + 33, cy + 2, shade);
             disc(canvas, x0 + 5, cy - 2, 3, bone); disc(canvas, x0 + 5, cy + 3, 3, bone); disc(canvas, x0 + 34, cy - 2, 3, bone); disc(canvas, x0 + 34, cy + 3, 3, bone);
             if (s.music) for (int k = 0; k < 5; k++) fillRectRGB(canvas, x0 + 10 + 5 * k, cy - 1, x0 + 11 + 5 * k, cy, rgb(40, 30, 22));
-            else if (s.chart) for (int k = 0; k < 9; k++) { uint32_t h = mh(sd, k); fillRectRGB(canvas, x0 + 8 + (int)(h % 24), cy - 2 + (int)((h >> 8) % 4), x0 + 8 + (int)(h % 24), cy - 2 + (int)((h >> 8) % 4), mark); }
+            else if (s.chart)
+                for (int k = 0; k < 9; k++) {
+                    uint32_t h = mh(sd, k);
+                    fillRectRGB(canvas, x0 + 8 + (int)(h % 24), cy - 2 + (int)((h >> 8) % 4), x0 + 8 + (int)(h % 24), cy - 2 + (int)((h >> 8) % 4), mark);
+                }
             else for (int k = 0; k < 11; k++) { int x = x0 + 9 + 2 * k + (k / 4); fillRectRGB(canvas, x, cy - 2, x, cy + (mh(sd, k) % 3 == 0 ? 2 : 0), mark); }
             break;
         }
         case RM_STONE: {   // a slab with its rows of signs
             const uint32_t st = rgb(132, 128, 118), hi = rgb(172, 168, 156), cut = rgb(62, 60, 56);
             fillRectRGB(canvas, x0 + 9, y0 + 2, x0 + 30, y0 + 24, st); fillRectRGB(canvas, x0 + 9, y0 + 2, x0 + 30, y0 + 2, hi); fillRectRGB(canvas, x0 + 9, y0 + 2, x0 + 9, y0 + 24, hi);
-            for (int r = 0; r < 5; r++) for (int k = 0; k < 5; k++) { uint32_t h = mh(sd, r * 8 + k); int x = x0 + 11 + 4 * k, y = y0 + 5 + 4 * r; fillRectRGB(canvas, x, y, x + (int)(h % 2) + 1, y + (int)((h >> 3) % 2), cut); }
+            for (int r = 0; r < 5; r++)
+                for (int k = 0; k < 5; k++) {
+                    uint32_t h = mh(sd, r * 8 + k);
+                    int x = x0 + 11 + 4 * k, y = y0 + 5 + 4 * r;
+                    fillRectRGB(canvas, x, y, x + (int)(h % 2) + 1, y + (int)((h >> 3) % 2), cut);
+                }
             break;
         }
         case RM_PAINTED: {   // a patch of rock wall: ochre and soot, a creature, hands
             const uint32_t rock = rgb(104, 82, 64), rock2 = rgb(88, 70, 56), ochre = rgb(204, 112, 52), red = rgb(162, 52, 36), soot = rgb(36, 30, 28);
             fillRectRGB(canvas, x0 + 2, y0 + 3, x0 + 37, y0 + 23, rock);
-            for (int k = 0; k < 14; k++) { uint32_t h = mh(sd, k + 40); fillRectRGB(canvas, x0 + 3 + (int)(h % 33), y0 + 4 + (int)((h >> 8) % 18), x0 + 4 + (int)(h % 33), y0 + 4 + (int)((h >> 8) % 18), rock2); }
-            if (s.chart) for (int k = 0; k < 10; k++) { uint32_t h = mh(sd, k); fillRectRGB(canvas, x0 + 5 + (int)(h % 30), y0 + 5 + (int)((h >> 8) % 16), x0 + 5 + (int)(h % 30), y0 + 5 + (int)((h >> 8) % 16), k % 3 ? ochre : rgb(230, 220, 200)); }
+            for (int k = 0; k < 14; k++) {
+                uint32_t h = mh(sd, k + 40);
+                fillRectRGB(canvas, x0 + 3 + (int)(h % 33), y0 + 4 + (int)((h >> 8) % 18), x0 + 4 + (int)(h % 33), y0 + 4 + (int)((h >> 8) % 18), rock2);
+            }
+            if (s.chart)
+                for (int k = 0; k < 10; k++) {
+                    uint32_t h = mh(sd, k);
+                    fillRectRGB(canvas, x0 + 5 + (int)(h % 30), y0 + 5 + (int)((h >> 8) % 16), x0 + 5 + (int)(h % 30), y0 + 5 + (int)((h >> 8) % 16), k % 3 ? ochre : rgb(230, 220, 200));
+                }
             else {
                 fillRectRGB(canvas, x0 + 8, y0 + 11, x0 + 20, y0 + 14, red); fillRectRGB(canvas, x0 + 19, y0 + 8, x0 + 22, y0 + 11, red);   // a beast: body and head
                 for (int k = 0; k < 4; k++) fillRectRGB(canvas, x0 + 9 + 3 * k, y0 + 15, x0 + 9 + 3 * k, y0 + 18, red);
-                fillRectRGB(canvas, x0 + 27, y0 + 9, x0 + 31, y0 + 14, ochre); for (int k = 0; k < 4; k++) fillRectRGB(canvas, x0 + 27 + k + (k > 0), y0 + 6, x0 + 27 + k + (k > 0), y0 + 8, ochre);   // a hand
+                // a hand
+                fillRectRGB(canvas, x0 + 27, y0 + 9, x0 + 31, y0 + 14, ochre); for (int k = 0; k < 4; k++) fillRectRGB(canvas, x0 + 27 + k + (k > 0), y0 + 6, x0 + 27 + k + (k > 0), y0 + 8, ochre);
                 fillRectRGB(canvas, x0 + 6, y0 + 20, x0 + 32, y0 + 20, soot);
             }
             break;
@@ -79,17 +113,34 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
             const uint32_t clay = rgb(178, 122, 78), dark = rgb(122, 80, 50), wedge = rgb(92, 58, 34);
             fillRectRGB(canvas, x0 + 9, y0 + 2, x0 + 30, y0 + 24, clay); fillRectRGB(canvas, x0 + 8, y0 + 3, x0 + 31, y0 + 23, clay);
             fillRectRGB(canvas, x0 + 9, y0 + 24, x0 + 30, y0 + 24, dark); fillRectRGB(canvas, x0 + 31, y0 + 3, x0 + 31, y0 + 23, dark);
-            for (int r = 0; r < 6; r++) for (int k = 0; k < 6; k++) { if (mh(sd, r * 9 + k) % 5 == 0) continue; int x = x0 + 11 + 3 * k + (r % 2), y = y0 + 5 + 3 * r; fillRectRGB(canvas, x, y, x + 1, y, wedge); fillRectRGB(canvas, x, y + 1, x, y + 1, wedge); }
+            for (int r = 0; r < 6; r++)
+                for (int k = 0; k < 6; k++) {
+                    if (mh(sd, r * 9 + k) % 5 == 0) continue;
+                    int x = x0 + 11 + 3 * k + (r % 2), y = y0 + 5 + 3 * r;
+                    fillRectRGB(canvas, x, y, x + 1, y, wedge);
+                    fillRectRGB(canvas, x, y + 1, x, y + 1, wedge);
+                }
             break;
         }
         case RM_SCROLL: {   // parchment between its rods; the writing in lines, or a music's marks
             const uint32_t parch = rgb(214, 194, 150), ink = rgb(70, 54, 38), rod = rgb(102, 66, 36), knob = rgb(152, 110, 60);
             fillRectRGB(canvas, x0 + 6, y0 + 4, x0 + 33, y0 + 22, parch);
             fillRectRGB(canvas, x0 + 4, y0 + 2, x0 + 35, y0 + 3, rod); fillRectRGB(canvas, x0 + 4, y0 + 23, x0 + 35, y0 + 24, rod);
-            fillRectRGB(canvas, x0 + 2, y0 + 2, x0 + 3, y0 + 3, knob); fillRectRGB(canvas, x0 + 36, y0 + 2, x0 + 37, y0 + 3, knob); fillRectRGB(canvas, x0 + 2, y0 + 23, x0 + 3, y0 + 24, knob); fillRectRGB(canvas, x0 + 36, y0 + 23, x0 + 37, y0 + 24, knob);
+            fillRectRGB(canvas, x0 + 2, y0 + 2, x0 + 3, y0 + 3, knob);
+            fillRectRGB(canvas, x0 + 36, y0 + 2, x0 + 37, y0 + 3, knob);
+            fillRectRGB(canvas, x0 + 2, y0 + 23, x0 + 3, y0 + 24, knob);
+            fillRectRGB(canvas, x0 + 36, y0 + 23, x0 + 37, y0 + 24, knob);
             for (int r = 0; r < 5; r++) {
-                if (s.music) { fillRectRGB(canvas, x0 + 8, y0 + 7 + 3 * r, x0 + 31, y0 + 7 + 3 * r, rgb(176, 120, 96)); for (int k = 0; k < 5; k++) { uint32_t h = mh(sd, r * 7 + k); fillRectRGB(canvas, x0 + 9 + 5 * k, y0 + 5 + 3 * r + (int)(h % 3), x0 + 10 + 5 * k, y0 + 5 + 3 * r + (int)(h % 3), ink); } }
-                else { int w = 18 + (int)(mh(sd, r) % 6); fillRectRGB(canvas, x0 + 9, y0 + 6 + 3 * r, x0 + 9 + w, y0 + 6 + 3 * r, ink); }
+                if (s.music) {
+                    fillRectRGB(canvas, x0 + 8, y0 + 7 + 3 * r, x0 + 31, y0 + 7 + 3 * r, rgb(176, 120, 96));
+                    for (int k = 0; k < 5; k++) {
+                        uint32_t h = mh(sd, r * 7 + k);
+                        fillRectRGB(canvas, x0 + 9 + 5 * k, y0 + 5 + 3 * r + (int)(h % 3), x0 + 10 + 5 * k, y0 + 5 + 3 * r + (int)(h % 3), ink);
+                    }
+                } else {
+                    int w = 18 + (int)(mh(sd, r) % 6);
+                    fillRectRGB(canvas, x0 + 9, y0 + 6 + 3 * r, x0 + 9 + w, y0 + 6 + 3 * r, ink);
+                }
             }
             break;
         }
@@ -99,7 +150,10 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
             fillRectRGB(canvas, x0 + 4, y0 + 3, x0 + 19, y0 + 22, page); fillRectRGB(canvas, x0 + 21, y0 + 3, x0 + 35, y0 + 22, page);
             fillRectRGB(canvas, x0 + 20, y0 + 3, x0 + 20, y0 + 23, rgb(80, 36, 24));
             fillRectRGB(canvas, x0 + 6, y0 + 5, x0 + 8, y0 + 7, rgb(170, 40, 30));
-            for (int r = 0; r < 6; r++) { fillRectRGB(canvas, x0 + (r ? 6 : 10), y0 + 6 + 3 * r, x0 + 17 - (int)(mh(sd, r) % 3), y0 + 6 + 3 * r, ink); fillRectRGB(canvas, x0 + 23, y0 + 6 + 3 * r, x0 + 33 - (int)(mh(sd, r + 9) % 3), y0 + 6 + 3 * r, ink); }
+            for (int r = 0; r < 6; r++) {
+                fillRectRGB(canvas, x0 + (r ? 6 : 10), y0 + 6 + 3 * r, x0 + 17 - (int)(mh(sd, r) % 3), y0 + 6 + 3 * r, ink);
+                fillRectRGB(canvas, x0 + 23, y0 + 6 + 3 * r, x0 + 33 - (int)(mh(sd, r + 9) % 3), y0 + 6 + 3 * r, ink);
+            }
             break;
         }
         case RM_PLATE: {   // an engraved plate: a brass disc, its rings and its rule
@@ -124,14 +178,23 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
         case RM_GLASS: {   // a glass plate: pale, its edges bright, the image dark on it
             const uint32_t glass = rgb(168, 186, 196), edge = rgb(206, 220, 228), img = rgb(46, 52, 58);
             fillRectRGB(canvas, x0 + 5, y0 + 3, x0 + 34, y0 + 23, glass); drawRectRGB(canvas, x0 + 5, y0 + 3, x0 + 34, y0 + 23, edge);
-            for (int k = 0; k < 16; k++) { uint32_t h = mh(sd, k); int x = x0 + 7 + (int)(h % 26), y = y0 + 5 + (int)((h >> 8) % 17); fillRectRGB(canvas, x, y, x + ((h >> 16) % 4 == 0), y + ((h >> 16) % 4 == 0), img); }
+            for (int k = 0; k < 16; k++) {
+                uint32_t h = mh(sd, k);
+                int x = x0 + 7 + (int)(h % 26), y = y0 + 5 + (int)((h >> 8) % 17);
+                fillRectRGB(canvas, x, y, x + ((h >> 16) % 4 == 0), y + ((h >> 16) % 4 == 0), img);
+            }
             break;
         }
         case RM_PRINTED: {   // printed pages: a headline, columns of type
             const uint32_t paper = rgb(222, 218, 204), ink = rgb(42, 42, 42), grey = rgb(120, 118, 110);
             fillRectRGB(canvas, x0 + 7, y0 + 3, x0 + 32, y0 + 24, grey); fillRectRGB(canvas, x0 + 6, y0 + 2, x0 + 31, y0 + 23, paper);
             fillRectRGB(canvas, x0 + 8, y0 + 4, x0 + 29, y0 + 5, ink);
-            for (int col = 0; col < 3; col++) for (int r = 0; r < 7; r++) { if (s.music && r % 3 == 2) continue; int x = x0 + 8 + 8 * col; fillRectRGB(canvas, x, y0 + 8 + 2 * r, x + 5 - (int)(mh(sd, col * 9 + r) % 2), y0 + 8 + 2 * r, s.music ? grey : ink); }
+            for (int col = 0; col < 3; col++)
+                for (int r = 0; r < 7; r++) {
+                    if (s.music && r % 3 == 2) continue;
+                    int x = x0 + 8 + 8 * col;
+                    fillRectRGB(canvas, x, y0 + 8 + 2 * r, x + 5 - (int)(mh(sd, col * 9 + r) % 2), y0 + 8 + 2 * r, s.music ? grey : ink);
+                }
             if (s.music) for (int k = 0; k < 6; k++) fillRectRGB(canvas, x0 + 9 + 4 * k, y0 + 9 + (int)(mh(sd, k) % 4), x0 + 10 + 4 * k, y0 + 10 + (int)(mh(sd, k) % 4), ink);
             break;
         }
@@ -141,7 +204,10 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
             for (int sp = 0; sp < 2; sp++) {
                 int sx = x0 + 9 + 22 * sp;
                 disc(canvas, sx, cy - 2, 8, metal); disc(canvas, sx, cy - 2, sp ? 4 : 6, tape); disc(canvas, sx, cy - 2, 2, dark);
-                for (int k = 0; k < 3; k++) { double b = a * (sp ? 1.4 : 1.0) + k * 2.094; drawLineRGB(canvas, sx, cy - 2, sx + (int)std::lround(7 * std::cos(b)), cy - 2 + (int)std::lround(7 * std::sin(b)), dark); }
+                for (int k = 0; k < 3; k++) {
+                    double b = a * (sp ? 1.4 : 1.0) + k * 2.094;
+                    drawLineRGB(canvas, sx, cy - 2, sx + (int)std::lround(7 * std::cos(b)), cy - 2 + (int)std::lround(7 * std::sin(b)), dark);
+                }
             }
             fillRectRGB(canvas, x0 + 9, y0 + 22, x0 + 31, y0 + 22, tape);
             break;
@@ -150,7 +216,8 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
             const uint32_t black = rgb(24, 24, 28), groove = rgb(48, 48, 54), label = mixc(rgb(170, 44, 40), rgb(60, 90, 170), (mh(sd, 1) % 100) / 100.0);
             disc(canvas, cx, cy, 12, black); for (int r = 5; r <= 11; r += 2) ring(canvas, cx, cy, r, groove); disc(canvas, cx, cy, 4, label); fillRectRGB(canvas, cx, cy, cx, cy, black);
             const double a = playing ? t * 3.5 : 0.8;
-            drawLineRGB(canvas, cx + (int)std::lround(5 * std::cos(a)), cy + (int)std::lround(5 * std::sin(a)), cx + (int)std::lround(11 * std::cos(a)), cy + (int)std::lround(11 * std::sin(a)), rgb(150, 150, 160));
+            drawLineRGB(canvas, cx + (int)std::lround(5 * std::cos(a)), cy + (int)std::lround(5 * std::sin(a)), cx + (int)std::lround(11 * std::cos(a)), cy + (int)std::lround(11 * std::sin(a)),
+                    rgb(150, 150, 160));
             break;
         }
         case RM_DRIVE: {   // a drive: a dark box, its face, its light blinking while it is read
@@ -164,7 +231,11 @@ void Game::drawMediumPanel(int x0, int y0, const Shard& s, bool playing, double 
         case RM_CRYSTAL: {   // a crystal: a long prism of facets, glowing while it is read
             const double g = playing ? 0.5 + 0.5 * std::sin(t * 3.0) : 0.25;
             const uint32_t a = mixc(rgb(70, 140, 160), rgb(170, 245, 250), g), b = mixc(rgb(50, 100, 130), rgb(120, 210, 235), g), c = mixc(rgb(110, 170, 190), rgb(220, 255, 255), g);
-            for (int dy = 0; dy <= 22; dy++) { int w = dy < 4 ? dy : (dy > 18 ? 22 - dy : 4); fillRectRGB(canvas, cx - w * 2, y0 + 2 + dy, cx - 1, y0 + 2 + dy, a); fillRectRGB(canvas, cx, y0 + 2 + dy, cx + w * 2, y0 + 2 + dy, b); }
+            for (int dy = 0; dy <= 22; dy++) {
+                int w = dy < 4 ? dy : (dy > 18 ? 22 - dy : 4);
+                fillRectRGB(canvas, cx - w * 2, y0 + 2 + dy, cx - 1, y0 + 2 + dy, a);
+                fillRectRGB(canvas, cx, y0 + 2 + dy, cx + w * 2, y0 + 2 + dy, b);
+            }
             fillRectRGB(canvas, cx - 1, y0 + 4, cx - 1, y0 + 20, c);
             break;
         }

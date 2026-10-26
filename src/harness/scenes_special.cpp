@@ -120,9 +120,11 @@ static bool frontSceneSite(StarSystem& sys, int& bi, double& lat, double& lon, F
         SurfaceSite st; st.init(&sys, bi, sl.first, sl.second, t0);
         SiteMetrics m = measureSite(st, false);
         measured++;
-        if (m.cls > 1 || m.relief16k < 150 || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;   // open ground with hills in the distance (the wall must come over something)
+        // open ground with hills in the distance (the wall must come over something)
+        if (m.cls > 1 || m.relief16k < 150 || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;
         lat = sl.first; lon = sl.second; fc = f;
-        printf("  front scene site: pin lat %.3f lon %.3f (%s, %s, %.0f m of relief over 16 km; the front from the %s at t %.0f, strength %.2f, the pattern's cloud %.2f)\n", lat / DEG, lon / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material], m.relief16k, frontCompass(f.fromBearing), f.tArrive, f.strength, patternCloud(lat, lon, f.tArrive));
+        printf("  front scene site: pin lat %.3f lon %.3f (%s, %s, %.0f m of relief over 16 km; the front from the %s at t %.0f, strength %.2f, the pattern's cloud %.2f)\n", lat / DEG, lon / DEG,
+                CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material], m.relief16k, frontCompass(f.fromBearing), f.tArrive, f.strength, patternCloud(lat, lon, f.tArrive));
         return true;
     }
     printf("  front scene site: none of %zu sites (%d measured)\n", sites.size(), measured);
@@ -149,8 +151,9 @@ bool setupFrontScene(int stage, double pitch, SurfaceView& sv, StarSystem& sys, 
     sv.player.yaw = fc.fromBearing; sv.player.pitch = pitch;
     sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
     Input in; sv.update(0.016, in, t, false);
-    printf("  %s at %.3f %.3f: the front from the %s reaches it at t %.0f (strength %.2f, gain %.2f, width %.2f), its rain ends at t %.0f; the frame at t %.0f (%+.0f min from the line), facing %.0f deg\n",
-           b.name.c_str(), lat / DEG, lon / DEG, frontCompass(fc.fromBearing), fc.tArrive, fc.strength, fc.gain, f ? f->width : 0.0, fc.tClear, t, (t - fc.tArrive) / 60, sv.player.yaw / DEG);
+    printf("  %s at %.3f %.3f: the front from the %s reaches it at t %.0f (strength %.2f, gain %.2f, width %.2f), its rain ends at t %.0f; the frame at t %.0f (%+.0f min from the line), facing %.0f "
+           "deg\n",
+            b.name.c_str(), lat / DEG, lon / DEG, frontCompass(fc.fromBearing), fc.tArrive, fc.strength, fc.gain, f ? f->width : 0.0, fc.tClear, t, (t - fc.tArrive) / 60, sv.player.yaw / DEG);
     tOut = t;
     return true;
 }
@@ -209,7 +212,8 @@ bool setupNightScene(int which, SurfaceView& sv, StarSystem& sysOut, StarNeighbo
                 }
                 if (bestScore < 35 * DEG) continue;
                 faceW = s.radiant; under = 22 * DEG;
-                what = fmt("the shower of %s (strength %.2f, %.0f a minute at the peak, width %.0f min) at its peak t %.0f, the radiant %.0f deg up", sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.sigma / 60, tp, bestScore / DEG);
+                what = fmt("the shower of %s (strength %.2f, %.0f a minute at the peak, width %.0f min) at its peak t %.0f, the radiant %.0f deg up", sys.bodies[s.comet].name.c_str(), s.strength,
+                        s.strength * SHOWER_PEAK_PER_MIN, s.sigma / 60, tp, bestScore / DEG);
             } else if (which == 1) {
                 if (!atm || zodiacalDust(sys, bi) < 0.7 || sys.companion >= 0) continue;   // a second sun up would keep the sky lit
                 Vec3 sunW = normalize(sys.star.pos - sys.bodyPos(bi, t0));
@@ -223,7 +227,8 @@ bool setupNightScene(int which, SurfaceView& sv, StarSystem& sysOut, StarNeighbo
                 }
                 if (bestScore < -3 * DEG) continue;
                 faceW = sunW; under = -1;   // where it set, looking 12 degrees up
-                what = fmt("the zodiacal dust %.2f (%s, %zu belts), the sun %.1f deg down", zodiacalDust(sys, bi), STAR_CLASSES[sys.star.cls].name, sys.belts.size(), -altAt(sys, bi, bestLat, bestLon, bestT, sunW) / DEG);
+                what = fmt("the zodiacal dust %.2f (%s, %zu belts), the sun %.1f deg down", zodiacalDust(sys, bi), STAR_CLASSES[sys.star.cls].name, sys.belts.size(),
+                        -altAt(sys, bi, bestLat, bestLon, bestT, sunW) / DEG);
             } else if (which == 2) {
                 if (B.parent >= 0 || B.moonCount == 0) continue;
                 int moon = -1;
@@ -251,8 +256,9 @@ bool setupNightScene(int which, SurfaceView& sv, StarSystem& sysOut, StarNeighbo
                 if (bestScore < 12 * DEG) continue;
                 faceW = normalize(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)); under = 6 * DEG;
                 Vec3 bp = sys.bodyPos(bi, bestT);
-                what = fmt("%s %.0f deg from the sun, %.0f deg up, %.1f deg across", sys.bodies[moon].name.c_str(), std::acos(clampd(dot(normalize(sys.star.pos - bp), normalize(sys.bodyPos(moon, bestT) - bp)), -1, 1)) / DEG, bestScore / DEG,
-                           2 * std::asin(clampd(sys.bodies[moon].radiusKm / length(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)), 0, 1)) / DEG);
+                what = fmt("%s %.0f deg from the sun, %.0f deg up, %.1f deg across", sys.bodies[moon].name.c_str(),
+                        std::acos(clampd(dot(normalize(sys.star.pos - bp), normalize(sys.bodyPos(moon, bestT) - bp)), -1, 1)) / DEG, bestScore / DEG,
+                        2 * std::asin(clampd(sys.bodies[moon].radiusKm / length(sys.bodyPos(moon, bestT) - siteKm(sys, bi, bestLat, bestLon, bestT)), 0, 1)) / DEG);
             } else {
                 if (B.parent < 0 || sys.bodies[B.parent].type != PT_GASGIANT) continue;
                 double P = std::fabs(B.orbitPeriod);
@@ -354,7 +360,8 @@ bool setupAgeScene(int age, double alt, double pitch0, SurfaceView& sv, StarSyst
             TerrainVertex sv0 = sv.site.sampleAt(sx, sz, 16);
             if (sv0.water > -1e8f && sv0.h < sv0.water + 0.3) continue;   // in the water
             bool near = !settlementClear(C.sp, sx - C.ru.x, sz - C.ru.z, 5.0);   // in or against a building
-            for (double q = 2; q < 26 && !near; q += 2) { double f = q / D; near = !settlementClear(C.sp, sx - C.ru.x + (C.ru.x - sx) * f, sz - C.ru.z + (C.ru.z - sz) * f, 0.3); }   // a wall right before the eyes
+            // a wall right before the eyes
+            for (double q = 2; q < 26 && !near; q += 2) { double f = q / D; near = !settlementClear(C.sp, sx - C.ru.x + (C.ru.x - sx) * f, sz - C.ru.z + (C.ru.z - sz) * f, 0.3); }
             if (near) continue;
             const double ey = sv0.h + 1.7;
             int blocked = 0, forest = 0, wet = 0;
@@ -367,7 +374,8 @@ bool setupAgeScene(int age, double alt, double pitch0, SurfaceView& sv, StarSyst
             }
             if (blocked) continue;
             const double toSun = std::fabs(std::remainder(std::atan2(C.ru.x - sx, C.ru.z - sz) - sun.azimuth, TAU));   // the view's angle off the sun's azimuth
-            const double score = C.cls * 10.0 - forest * 2.0 - wet * 0.5 - (toSun < 1.0 ? 4.0 : 0.0) + std::min(3.0, (sv0.h - cy) * 0.2) - ci * 0.3 + (age == AGE_PREHISTORIC ? (k < 12 ? 1.5 : 0.0) : (k >= 12 && k < 24 ? 1.5 : 0.0));   // a camp's low remains from among them
+            const double score = C.cls * 10.0 - forest * 2.0 - wet * 0.5 - (toSun < 1.0 ? 4.0 : 0.0) + std::min(3.0, (sv0.h - cy) * 0.2) - ci * 0.3 +
+                    (age == AGE_PREHISTORIC ? (k < 12 ? 1.5 : 0.0) : (k >= 12 && k < 24 ? 1.5 : 0.0));   // a camp's low remains from among them
             if (score > bestScore) { bestScore = score; bestC = ci; bestYaw = std::atan2(C.ru.x - sx, C.ru.z - sz); bestStandX = sx; bestStandZ = sz; bestDist = D; hMax = hm; }
         }
     }
@@ -384,8 +392,10 @@ bool setupAgeScene(int age, double alt, double pitch0, SurfaceView& sv, StarSyst
     Input in; sv.update(0.016, in, t, false);
     std::map<std::string, int> kinds; for (const Building& b : bestSpec.buildings) kinds[BUILDING_KIND_NAMES[b.kind]]++;
     std::string ks; for (auto& k : kinds) ks += fmt("%s%d %s", ks.empty() ? "" : ", ", k.second, k.first.c_str());
-    printf("  %s of %s (sector %lld 0 %lld), the %s people: a %s of %zu buildings (%s), radius %.0f m, the tallest %.0f m, %.1f km from the side's point; ended %.0f years ago, wet %.2f; seen from %.0f m\n",
-           sys.bodies[bi].name.c_str(), st.name.c_str(), (long long)W.sx, (long long)W.sz, AGE_NAMES[cu.age], SETTLEMENT_CLASS_NAMES[bestSpec.sclass], bestSpec.buildings.size(), ks.c_str(), bestSpec.size, hMax, bestD / 1000.0, cu.ageYears, cu.wet, D);
+    printf("  %s of %s (sector %lld 0 %lld), the %s people: a %s of %zu buildings (%s), radius %.0f m, the tallest %.0f m, %.1f km from the side's point; ended %.0f years ago, wet %.2f; seen from "
+           "%.0f m\n",
+            sys.bodies[bi].name.c_str(), st.name.c_str(), (long long)W.sx, (long long)W.sz, AGE_NAMES[cu.age], SETTLEMENT_CLASS_NAMES[bestSpec.sclass], bestSpec.buildings.size(), ks.c_str(),
+            bestSpec.size, hMax, bestD / 1000.0, cu.ageYears, cu.wet, D);
     tOut = t;
     return true;
 }
@@ -474,7 +484,8 @@ bool setupDarkScene(int which, double pitch, SurfaceView& sv, StarSystem& sys, S
             sv.lamp = which != 1;
             nb.update(sv.site.worldPos(t, 0, 0, 0));
             Input in; sv.update(0.016, in, t, false);
-            printf("  the drifter %s (%s) %.0f ly from home at sector %lld %lld %lld; the site %.2f %.2f\n", d.name.c_str(), KINDS[b.type].name, length(d.pos - home.pos) / SECTOR_KM, (long long)d.sx, (long long)d.sy, (long long)d.sz, lat / DEG, lon / DEG);
+            printf("  the drifter %s (%s) %.0f ly from home at sector %lld %lld %lld; the site %.2f %.2f\n", d.name.c_str(), KINDS[b.type].name, length(d.pos - home.pos) / SECTOR_KM, (long long)d.sx,
+                    (long long)d.sy, (long long)d.sz, lat / DEG, lon / DEG);
             if (which == 3) {   // the lights in the water ahead (the samples' tint, the drawn vertices')
                 std::string row;
                 for (int dd = 10; dd <= 150; dd += 20) {

@@ -190,7 +190,8 @@ inline double dayAt(const ProbeView& v, double xr, double zr, double hOver) {
 // towers' and the rings' shadows) and the sky's light (darker in the folds), as the globe exposes it. X-03: `kl` the deck whose
 // light falls on it (the deck over a hole's floor), times `lightF`; `glow` the deep's light come up through it, brighter in
 // the troughs than through a tower's thickness
-double shadeTop(const ProbeView& v, int k, int kl, double lightF, double x, double z, double xr, double zr, double h, double low, double sr, double lod, double& glow, const double* ssGiven = nullptr) {
+double shadeTop(
+        const ProbeView& v, int k, int kl, double lightF, double x, double z, double xr, double zr, double h, double low, double sr, double lod, double& glow, const double* ssGiven = nullptr) {
     const GiantDecks& D = *v.decks;
     const double hl = std::hypot(v.sun.x, v.sun.z);
     glow = v.glowTop[k] > 1e-4 ? v.glowTop[k] * clampd(std::exp(-0.4 * (h - low) / D.sh), 0.15, 2.0) : 0.0;
@@ -287,7 +288,11 @@ void marchColumn(Pano& P, const ProbeView& v, int i, const std::vector<double>& 
             h = holedTop(v, k, xr, zr, lod, &low, &kd);
             if (kd != k) { xs = xr + v.px[kd]; zs = zr + v.pz[kd]; }
             const double hl = std::hypot(v.sun.x, v.sun.z);
-            if (hl > 1e-6) { const double eps = std::max(lod, 0.05 * D.sh); ssHole = (holedTop(v, k, xr + v.sun.x / hl * eps, zr + v.sun.z / hl * eps, lod, nullptr, nullptr) - h) / eps; haveSs = true; }
+            if (hl > 1e-6) {
+                const double eps = std::max(lod, 0.05 * D.sh);
+                ssHole = (holedTop(v, k, xr + v.sun.x / hl * eps, zr + v.sun.z / hl * eps, lod, nullptr, nullptr) - h) / eps;
+                haveSs = true;
+            }
         } else h = D.top(k, x, z, lod, &low);
         const double e = std::atan2(h - r * r / R2 - zp, r);
         const double fj = (e - P.e0) / P.de;
@@ -575,7 +580,8 @@ void renderProbeView(const ProbeView& v, const uint32_t* space, uint32_t* out) {
     const Vec3 flashDir = length(v.flashPos) > 1e-6 ? normalize(v.flashPos) : Vec3(0, -1, 0);
     const double limbF = std::sqrt(TAU * v.radiusKm / (25 * D.sh));   // a grazing ray's path through the layers against a vertical one's
     static float hzTab[721][3];   // the haze's colour toward the horizon by azimuth
-    for (int k = 0; k <= 720; k++) { double a = k * TAU / 720 - PI; airAt(v, Vec3(std::sin(a), 0, std::cos(a)), 9.0, hzTab[k]); }   // (the haze between the probe and a deck is the dense air's, the horizon's colour)
+    // (the haze between the probe and a deck is the dense air's, the horizon's colour)
+    for (int k = 0; k <= 720; k++) { double a = k * TAU / 720 - PI; airAt(v, Vec3(std::sin(a), 0, std::cos(a)), 9.0, hzTab[k]); }
     // the aurora's curtains on the fog's grid (they are smooth but for their rays), where the sky is open over the probe
     static std::vector<float> aur;
     const bool aurOn = v.aurora > 0.005 && L.skyOpen;

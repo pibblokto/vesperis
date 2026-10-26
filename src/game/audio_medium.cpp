@@ -71,7 +71,19 @@ double AudioSynth::mediumSample(double x, double dt, AudioState& st) {
     const double ah = co.mdAh;
     mdHp1 += (x - mdHp1) * ah; double y = x - mdHp1;
     mdHp2 += (y - mdHp2) * ah; y -= mdHp2;
-    if (M->lpPoles > 0) { const double al = co.mdAl; mdLp1 += (y - mdLp1) * al; y = mdLp1; if (M->lpPoles > 1) { mdLp2 += (y - mdLp2) * al; y = mdLp2; } if (M->lpPoles > 2) { mdLp3 += (y - mdLp3) * al; y = mdLp3; } }
+    if (M->lpPoles > 0) {
+        const double al = co.mdAl;
+        mdLp1 += (y - mdLp1) * al;
+        y = mdLp1;
+        if (M->lpPoles > 1) {
+            mdLp2 += (y - mdLp2) * al;
+            y = mdLp2;
+        }
+        if (M->lpPoles > 2) {
+            mdLp3 += (y - mdLp3) * al;
+            y = mdLp3;
+        }
+    }
     if (M->horn > 0) {   // Klatt's resonator, unity at the centre (its radius and pole the block's)
         const double r = co.mdHornR, B = co.mdHornB, C = -r * r;
         const double o = (1 - r) * y + B * mdHy1 + C * mdHy2; mdHy2 = mdHy1; mdHy1 = o;
@@ -85,7 +97,13 @@ double AudioSynth::mediumSample(double x, double dt, AudioState& st) {
     if (M->wow > 0) d += M->wow / (TAU_M * M->wowHz) * (1 + std::sin(TAU_M * M->wowHz * mdT));
     if (M->flut > 0) d += M->flut / (TAU_M * M->flutHz) * (1 + std::sin(TAU_M * M->flutHz * mdT + 1.3));
     const double sr = co.mdSr;
-    auto tap = [&](double back) { double pos = (double)mdI - back * sr; while (pos < 0) pos += mdBuf.size(); size_t i0 = (size_t)pos % mdBuf.size(), i1 = (i0 + 1) % mdBuf.size(); double fr = pos - std::floor(pos); return mdBuf[i0] * (1 - fr) + mdBuf[i1] * fr; };
+    auto tap = [&](double back) {
+        double pos = (double)mdI - back * sr;
+        while (pos < 0) pos += mdBuf.size();
+        size_t i0 = (size_t)pos % mdBuf.size(), i1 = (i0 + 1) % mdBuf.size();
+        double fr = pos - std::floor(pos);
+        return mdBuf[i0] * (1 - fr) + mdBuf[i1] * fr;
+    };
     double out = tap(d);
     // the wear and the media of the late ages
     if (medium == RM_REEL) {   // a dropout where the oxide wore: a dip of a tenth of a second or two now and then

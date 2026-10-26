@@ -186,7 +186,13 @@ void Game::drawCompassMark(double bearing, uint32_t col, bool filled) {
     const double off = wrapAngle(bearing - surf.player.yaw) / DEG;
     if (std::fabs(off) <= 60) {
         const int x = cx + (int)std::lround(off);
-        for (int r = 3; r >= 2; r--) { const uint32_t c = r == 3 ? HUD_SHADOW : col; drawLineRGB(canvas, x - r, y, x, y - r, c); drawLineRGB(canvas, x, y - r, x + r, y, c); drawLineRGB(canvas, x + r, y, x, y + r, c); drawLineRGB(canvas, x, y + r, x - r, y, c); }
+        for (int r = 3; r >= 2; r--) {
+            const uint32_t c = r == 3 ? HUD_SHADOW : col;
+            drawLineRGB(canvas, x - r, y, x, y - r, c);
+            drawLineRGB(canvas, x, y - r, x + r, y, c);
+            drawLineRGB(canvas, x + r, y, x, y + r, c);
+            drawLineRGB(canvas, x, y + r, x - r, y, c);
+        }
         if (filled) fillRectRGB(canvas, x - 1, y - 1, x + 1, y + 1, col);
     } else {
         char glyph[2] = {off < 0 ? CH_LEFT : CH_RIGHT, 0};
@@ -226,7 +232,10 @@ void Game::drawShownMark() {
     if (!surf.projectPoint(m->x, m->y + 6, m->z, sx, sy)) return;
     const int lx = (int)(sx / FB_SCALE), ly = (int)(sy / FB_SCALE);
     if (lx < 6 || ly < 44 || lx > UW - 6 || ly > UH - 52) return;
-    drawLineRGB(canvas, lx - 3, ly, lx, ly - 3, col); drawLineRGB(canvas, lx, ly - 3, lx + 3, ly, col); drawLineRGB(canvas, lx + 3, ly, lx, ly + 3, col); drawLineRGB(canvas, lx, ly + 3, lx - 3, ly, col);
+    drawLineRGB(canvas, lx - 3, ly, lx, ly - 3, col);
+    drawLineRGB(canvas, lx, ly - 3, lx + 3, ly, col);
+    drawLineRGB(canvas, lx + 3, ly, lx, ly + 3, col);
+    drawLineRGB(canvas, lx, ly + 3, lx - 3, ly, col);
     std::string lab = trunc(markLabel(m->index), 18) + " " + metresString(d);
     int tx = lx + 6;
     if (tx + textWidth(lab.c_str()) > UW - 4) tx = lx - 6 - textWidth(lab.c_str());
@@ -327,7 +336,8 @@ void Game::migrateLandmarkNames() {
                 out->push_back(j);
             }
         }
-        if (std::getenv("VESPERIS_TRACE")) fprintf(stderr, "  landmark names to marks: %zu asked in %.0f ms\n", out->size(), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+        if (std::getenv("VESPERIS_TRACE"))
+            fprintf(stderr, "  landmark names to marks: %zu asked in %.0f ms\n", out->size(), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
         busy->store(false, std::memory_order_release);
     });
 }

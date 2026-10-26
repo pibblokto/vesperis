@@ -122,7 +122,13 @@ void AudioSynth::voiceShape(MVoice& v, int sungVowel, double dt) {
         }
         case TF_ORGAN: {
             double sum = 0; int i = 0;
-            for (int k = 0; k < 6; k++) { if (tb.amp[k] <= 0 || f * tb.ratio[k] > 9000 || f * tb.ratio[k] < 25) continue; v.ratio[i] = (float)tb.ratio[k]; v.base[i] = (float)tb.amp[k]; sum += tb.amp[k]; i++; }
+            for (int k = 0; k < 6; k++) {
+                if (tb.amp[k] <= 0 || f * tb.ratio[k] > 9000 || f * tb.ratio[k] < 25) continue;
+                v.ratio[i] = (float)tb.ratio[k];
+                v.base[i] = (float)tb.amp[k];
+                sum += tb.amp[k];
+                i++;
+            }
             for (int k = 0; k < i; k++) v.base[k] = (float)(v.base[k] / std::max(sum, 1e-6));
             v.np = i;
             break;
@@ -301,7 +307,8 @@ double AudioSynth::musicVoice(MVoice& v, double dt) {
     // the pitch: a slide from the note before, the vibrato after a third of a second, a bone flute's breath wavering, a rough voice's jitter
     double f = v.f;
     if (v.fFrom > 0 && t < v.slideT) f = v.fFrom * std::pow(v.f / v.fFrom, t / v.slideT);
-    const bool pitchVib = v.fam == TF_PIPE || v.fam == TF_BOWED || v.fam == TF_REED || v.fam == TF_VOICE || v.fam == TF_BRASS || v.fam == TF_ESTRING || v.fam == TF_SYNTH || (v.fam == TF_PLUCKED && v.kind == 0);
+    const bool pitchVib =
+            v.fam == TF_PIPE || v.fam == TF_BOWED || v.fam == TF_REED || v.fam == TF_VOICE || v.fam == TF_BRASS || v.fam == TF_ESTRING || v.fam == TF_SYNTH || (v.fam == TF_PLUCKED && v.kind == 0);
     if (pitchVib && tb.vibDepth > 0) f *= 1 + tb.vibDepth * std::sin(TAUM * tb.vibRate * t) * std::min(1.0, t / 0.3);
     if ((v.fam == TF_PIPE || v.fam == TF_VOICE) && tb.index > 0) {
         v.wobT -= dt;
@@ -323,13 +330,33 @@ double AudioSynth::musicVoice(MVoice& v, double dt) {
             case TF_SYNTH: {
                 const double base = tb.kind == 0 ? 0.35 * tb.bright : (tb.kind == 1 ? 1.3 : (tb.kind == 2 ? 1.0 : 1.2));
                 const double fc = f * (base + (tb.bright - base) * std::exp(-t / std::max(0.02, tb.sweep)));
-                for (int k = 0; k < v.np; k++) { const double x = v.ratio[k] * f / fc; const double lp = 1 / std::sqrt(1 + x * x * x * x); const double pk = tb.index * std::exp(-(std::log(std::max(x, 1e-3))) * std::log(std::max(x, 1e-3)) * 8); v.amp[k] = (float)(v.base[k] * (lp + pk)); }
+                for (int k = 0; k < v.np; k++) {
+                    const double x = v.ratio[k] * f / fc;
+                    const double lp = 1 / std::sqrt(1 + x * x * x * x);
+                    const double pk = tb.index * std::exp(-(std::log(std::max(x, 1e-3))) * std::log(std::max(x, 1e-3)) * 8);
+                    v.amp[k] = (float)(v.base[k] * (lp + pk));
+                }
                 break;
             }
-            case TF_PAD: { const double fc = f * tb.bright * (1 + 0.25 * std::sin(TAUM * tb.vibRate * t)); for (int k = 0; k < v.np; k++) { const double x = v.ratio[k] * f / fc; v.amp[k] = (float)(v.base[k] / std::sqrt(1 + x * x * x * x)); } break; }
+            case TF_PAD: {
+                const double fc = f * tb.bright * (1 + 0.25 * std::sin(TAUM * tb.vibRate * t));
+                for (int k = 0; k < v.np; k++) {
+                    const double x = v.ratio[k] * f / fc;
+                    v.amp[k] = (float)(v.base[k] / std::sqrt(1 + x * x * x * x));
+                }
+                break;
+            }
             case TF_SWARM: for (int k = 0; k < v.np; k++) { v.lfo[k] += (float)(v.lfr[k] * 32 * dt); v.amp[k] = (float)(v.base[k] * (0.55 + 0.45 * std::sin(TAUM * v.lfo[k]))); } break;
             case TF_FIELD: for (int k = 0; k < v.np; k++) v.amp[k] = (float)(v.base[k] * (0.7 + 0.3 * std::sin(TAUM * tb.vibRate * t + k * 1.7))); break;
-            case TF_PLUCKED: if (v.kind == 1) { const double c = 2 + 2.5 * (0.5 + 0.5 * std::sin(TAUM * tb.vibRate * t)); for (int k = 0; k < v.np; k++) { const double d = (k % 6) + 1 - c; v.amp[k] = (float)(v.base[k] * (0.2 + 1.6 * std::exp(-d * d / 1.2)) * std::exp(-t * 0.3)); } } break;
+            case TF_PLUCKED:
+                if (v.kind == 1) {
+                    const double c = 2 + 2.5 * (0.5 + 0.5 * std::sin(TAUM * tb.vibRate * t));
+                    for (int k = 0; k < v.np; k++) {
+                        const double d = (k % 6) + 1 - c;
+                        v.amp[k] = (float)(v.base[k] * (0.2 + 1.6 * std::exp(-d * d / 1.2)) * std::exp(-t * 0.3));
+                    }
+                }
+                break;
             default: break;
         }
     }
@@ -344,7 +371,8 @@ double AudioSynth::musicVoice(MVoice& v, double dt) {
             break;
         case TF_KEYS: if (t < 0.012) { v.lp += (rndSym(v.rnd) - v.lp) * 0.35; out += 0.3 * v.vel * v.lp * (1 - t / 0.012); } break;   // the hammer
         case TF_MUSICBOX: if (t < 0.002) out += 0.3 * rndSym(v.rnd); break;
-        case TF_ESTRING: if (tb.index > 0) { const double d = tb.index * 0.9; out = std::tanh(d * out) / std::tanh(d) * 0.7; v.y1 += (out - v.y1) * 0.55; out = v.y1; } break;   // the overdrive, then a cabinet's roll-off (the drive's own partials past the band)
+        // the overdrive, then a cabinet's roll-off (the drive's own partials past the band)
+        case TF_ESTRING: if (tb.index > 0) { const double d = tb.index * 0.9; out = std::tanh(d * out) / std::tanh(d) * 0.7; v.y1 += (out - v.y1) * 0.55; out = v.y1; } break;
         case TF_EKEYS: {   // two operators: the modulator's index falling from the strike
             v.ph[0] += inc; v.ph[1] += inc * tb.mod;
             const double I = tb.index * (0.15 + 0.85 * std::exp(-t / std::max(0.02, tb.sweep))) * (0.6 + 0.4 * v.vel);

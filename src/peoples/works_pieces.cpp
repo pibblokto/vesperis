@@ -17,7 +17,17 @@ struct Lay {
     }
     // the work's metres of a point (across, along) in a frame of heading `h` about (cx, cz)
     void at(double h, double cx, double cz, double a, double b, double& x, double& z) const { double dx, dz; rot(h, a, b, dx, dz); x = cx + dx; z = cz + dz; }
-    void plot(double x, double z, double heading, double hw, double hd) { FieldPatch f; f.x = x; f.z = z; f.heading = heading; f.hw = hw; f.hd = hd; f.kind = FI_PLOT; f.age = w.age; r.fields.push_back(f); }
+    void plot(double x, double z, double heading, double hw, double hd) {
+        FieldPatch f;
+        f.x = x;
+        f.z = z;
+        f.heading = heading;
+        f.hw = hw;
+        f.hd = hd;
+        f.kind = FI_PLOT;
+        f.age = w.age;
+        r.fields.push_back(f);
+    }
 };
 }
 
@@ -51,10 +61,16 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                 if (w.style == 4) {
                     L.at(H, 0, 0, 0, -(e.r + 60), x, z); L.add(BK_HANGAR, x, z, H, 16, 26, 18, 1);
                     L.at(H, 0, 0, e.r + 110, 30, x, z); L.add(BK_MOUND, x, z, H, 70, 45, 11, 5);
-                    for (int k = 0; k < 3; k++) { const double a = rng.uni() * TAU, d = r0 * 0.6 * rng.uni(); L.add(BK_VEHICLE, std::sin(a) * d, std::cos(a) * d, rng.uni() * TAU, 3.4, 5.6, 5.5, 1, AGE_MODERN); }
+                    for (int k = 0; k < 3; k++) {
+                        const double a = rng.uni() * TAU, d = r0 * 0.6 * rng.uni();
+                        L.add(BK_VEHICLE, std::sin(a) * d, std::cos(a) * d, rng.uni() * TAU, 3.4, 5.6, 5.5, 1, AGE_MODERN);
+                    }
                 } else {
                     const bool iron = w.style == 6;
-                    for (int k = 0; k < (iron ? 3 : 2); k++) { const double a = rng.uni() * TAU, d = r0 * 0.5 * rng.uni(); L.add(BK_BLOCKS, std::sin(a) * d, std::cos(a) * d, rng.uni() * PI, 4.5, 3.2, 1.5); }
+                    for (int k = 0; k < (iron ? 3 : 2); k++) {
+                        const double a = rng.uni() * TAU, d = r0 * 0.5 * rng.uni();
+                        L.add(BK_BLOCKS, std::sin(a) * d, std::cos(a) * d, rng.uni() * PI, 4.5, 3.2, 1.5);
+                    }
                     L.at(H, 0, 0, 0, -(e.r + 3), x, z); L.add(BK_DERRICK, x, z, H + PI, 1, 1, iron ? 16 : 9, iron ? 1 : 0);
                     L.at(H, 0, 0, e.r + 10, -(e.r * 0.4), x, z);
                     if (iron) { L.add(BK_HALL, x, z, H + PI, 6, 10, 5.5, 0, AGE_INDUSTRIAL); L.at(H, 0, 0, -(e.r + 22), 0, x, z); L.add(BK_MOUND, x, z, 0, 15, 15, 10, 2); }
@@ -75,7 +91,10 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
             } else {
                 L.at(H, 0, 0, e.hw + 36, -e.hd - 34, x, z); L.add(BK_HANGAR, x, z, H + PI, 14, 22, 16, 1);
                 L.at(H, 0, 0, -e.hw - 60, -e.hd - 25, x, z); L.add(BK_MOUND, x, z, H, 45, 32, 10, 5);
-                for (int k = 0; k < 2; k++) { L.at(H, 0, 0, rng.sym(e.hw * 0.6), -e.hd + step * (0.3 + 0.4 * rng.uni()), x, z); L.add(BK_VEHICLE, x, z, rng.uni() * TAU, 3.4, 5.6, 5.5, 1, AGE_MODERN); }
+                for (int k = 0; k < 2; k++) {
+                    L.at(H, 0, 0, rng.sym(e.hw * 0.6), -e.hd + step * (0.3 + 0.4 * rng.uni()), x, z);
+                    L.add(BK_VEHICLE, x, z, rng.uni() * TAU, 3.4, 5.6, 5.5, 1, AGE_MODERN);
+                }
             }
             break;
         }
@@ -99,7 +118,10 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                 L.at(H, 0, 0, -e.r * 0.4, -(e.r + 50), x, z); L.add(BK_HEADFRAME, x, z, H, 13, 16, 34);
                 L.at(H, 0, 0, e.r * 0.35, -(e.r + 70), x, z); L.add(BK_HANGAR, x, z, H + PI, 18, 30, 20, 1);
                 L.at(H, 0, 0, e.r + 160, 0, x, z); L.add(BK_MOUND, x, z, H, 110, 80, 12, 5);
-                for (int k = 0; k < 3; k++) { const double a = rng.uni() * TAU, d = e.r * 0.25 * rng.uni(); L.add(BK_VEHICLE, std::sin(a) * d, std::cos(a) * d, rng.uni() * TAU, 3.4, 5.6, 5.5, 1, AGE_MODERN); }
+                for (int k = 0; k < 3; k++) {
+                    const double a = rng.uni() * TAU, d = e.r * 0.25 * rng.uni();
+                    L.add(BK_VEHICLE, std::sin(a) * d, std::cos(a) * d, rng.uni() * TAU, 3.4, 5.6, 5.5, 1, AGE_MODERN);
+                }
             }
             break;
         }
@@ -184,10 +206,21 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     L.add(BK_PLATFORM, 0, 0, H, 2.2, 2.2, 1.1);
                     break;
                 default:   // a summit or the open sky
-                    if (a == AGE_PREHISTORIC) { L.add(BK_STONE_CIRCLE, 0, 0, H, w.style == HOLY_OPEN_SKY ? 15 : 8, 8, 2.6); L.at(H, 0, 0, 0, -14, x, z); L.add(BK_CAIRN, x, z, 0, 1.6, 1.6, 2); }
-                    else if (a == AGE_MEDIEVAL) { L.add(BK_TEMPLE, 0, 0, H, 6, 9, 7); for (int k = 0; k < 3; k++) { L.at(H, 0, 0, (k - 1) * 7, 16, x, z); L.add(BK_STELA, x, z, H + PI, 1, 1, 2.4, MN_STELAE); } }
-                    else if (a == AGE_INDUSTRIAL) { L.add(BK_CHURCH, 0, 0, H, 5, 10, 8); L.at(H, 0, 0, 0, 18, x, z); L.add(BK_STELA, x, z, H, 1, 1, 6, MN_OBELISKS); }
-                    else { L.add(BK_PLATFORM, 0, 0, H, 10, 10, 1.6); L.add(BK_STELA, 0, 0, H, 1, 1, 12, MN_OBELISKS); }
+                    if (a == AGE_PREHISTORIC) { L.add(BK_STONE_CIRCLE, 0, 0, H, w.style == HOLY_OPEN_SKY ? 15 : 8, 8, 2.6); L.at(H, 0, 0, 0, -14, x, z); L.add(BK_CAIRN, x, z, 0, 1.6, 1.6, 2);
+                    } else if (a == AGE_MEDIEVAL) {
+                        L.add(BK_TEMPLE, 0, 0, H, 6, 9, 7);
+                        for (int k = 0; k < 3; k++) {
+                            L.at(H, 0, 0, (k - 1) * 7, 16, x, z);
+                            L.add(BK_STELA, x, z, H + PI, 1, 1, 2.4, MN_STELAE);
+                        }
+                    } else if (a == AGE_INDUSTRIAL) {
+                        L.add(BK_CHURCH, 0, 0, H, 5, 10, 8);
+                        L.at(H, 0, 0, 0, 18, x, z);
+                        L.add(BK_STELA, x, z, H, 1, 1, 6, MN_OBELISKS);
+                    } else {
+                        L.add(BK_PLATFORM, 0, 0, H, 10, 10, 1.6);
+                        L.add(BK_STELA, 0, 0, H, 1, 1, 12, MN_OBELISKS);
+                    }
                     break;
             }
             break;
@@ -213,7 +246,11 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
             switch (w.style) {
                 case 0: {   // barrows along the slope, a long barrow, standing stones
                     const int n = 6 + rng.irange(10);
-                    for (int k = 0; k < n; k++) { L.at(H, 0, 0, (k - (n - 1) * 0.5) * 22 + rng.sym(6), rng.sym(20), x, z); const double rr = 4 + 8 * rng.uni(); L.add(BK_MOUND, x, z, 0, rr, rr, 1.4 + rr * 0.25, 0); }
+                    for (int k = 0; k < n; k++) {
+                        L.at(H, 0, 0, (k - (n - 1) * 0.5) * 22 + rng.sym(6), rng.sym(20), x, z);
+                        const double rr = 4 + 8 * rng.uni();
+                        L.add(BK_MOUND, x, z, 0, rr, rr, 1.4 + rr * 0.25, 0);
+                    }
                     L.at(H, 0, 0, rng.sym(40), 50, x, z); L.add(BK_MOUND, x, z, H + PI / 2 + rng.sym(0.3), 6 + 3 * rng.uni(), 20 + 12 * rng.uni(), 2.5, 1);
                     for (int k = 0; k < 1 + rng.irange(3); k++) {   // standing stones; B-414: a later people's own stelae
                         L.at(H, 0, 0, rng.sym(80), -30 + rng.sym(10), x, z);
@@ -226,7 +263,10 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     const int nt = 3 + rng.irange(6);
                     for (int k = 0; k < nt; k++) { L.at(H, 0, 0, (k - (nt - 1) * 0.5) * 16, 45 + rng.sym(5), x, z); L.add(BK_TOMB, x, z, H, 2.4 + 1.4 * rng.uni(), 1, 4 + 3 * rng.uni(), 2); }
                     const int nm = 2 + rng.irange(5);
-                    for (int k = 0; k < nm; k++) { L.at(H, 0, 0, (k - (nm - 1) * 0.5) * 18, -10 + rng.sym(4), x, z); L.add(BK_TOMB, x, z, H, 2.2 + 0.8 * rng.uni(), 3 + rng.uni(), 3.4 + 1.6 * rng.uni(), rng.irange(2)); }
+                    for (int k = 0; k < nm; k++) {
+                        L.at(H, 0, 0, (k - (nm - 1) * 0.5) * 18, -10 + rng.sym(4), x, z);
+                        L.add(BK_TOMB, x, z, H, 2.2 + 0.8 * rng.uni(), 3 + rng.uni(), 3.4 + 1.6 * rng.uni(), rng.irange(2));
+                    }
                     const int np = 2 + rng.irange(3);
                     for (int k = 0; k < np; k++) { L.at(H, 0, 0, (k - (np - 1) * 0.5) * 32, -45, x, z); L.plot(x, z, H, 12, 14); }
                     break;
@@ -248,7 +288,11 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     }
                     L.at(H, 0, 0, 0, -hd, x, z); L.add(BK_GATE, x, z, H, 4, 1.2, 5);
                     const int nm = 6 + rng.irange(9);
-                    for (int k = 0; k < nm; k++) { const int side = k % 2 ? 1 : -1; L.at(H, 0, 0, side * 10, -hd + 18 + (k / 2) * (2 * hd - 36) / std::max(1, nm / 2), x, z); L.add(BK_TOMB, x, z, H + (side > 0 ? -PI / 2 : PI / 2), 2.2, 2.8, 3.6 + 1.5 * rng.uni(), rng.irange(2)); }
+                    for (int k = 0; k < nm; k++) {
+                        const int side = k % 2 ? 1 : -1;
+                        L.at(H, 0, 0, side * 10, -hd + 18 + (k / 2) * (2 * hd - 36) / std::max(1, nm / 2), x, z);
+                        L.add(BK_TOMB, x, z, H + (side > 0 ? -PI / 2 : PI / 2), 2.2, 2.8, 3.6 + 1.5 * rng.uni(), rng.irange(2));
+                    }
                     for (int k = 0; k < 2 + rng.irange(4); k++) { L.at(H, 0, 0, rng.sym(hw * 0.7), rng.sym(hd * 0.6), x, z); L.add(BK_STELA, x, z, H, 1, 1, 3 + 3 * rng.uni(), MN_OBELISKS); }
                     L.at(H, 0, 0, 0, hd - 16, x, z); L.add(BK_CHURCH, x, z, H + PI, 5, 9, 8);
                     for (int s = -1; s <= 1; s += 2) for (int q = 0; q < 2; q++) { L.at(H, 0, 0, s * (hw * 0.55), -hd * 0.45 + q * hd * 0.8, x, z); L.plot(x, z, H, hw * 0.35, hd * 0.32); }
@@ -284,13 +328,20 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     L.add(BK_MOUND, 0, 0, 0, R + 9, 3.6, 1.6, 4);
                     L.add(BK_STONE_CIRCLE, 0, 0, H, R * 0.5, R * 0.5, 3.4);
                     L.at(H, 0, 0, 0, R + 75, x, z); L.add(BK_MENHIR, x, z, H, 1, 60, 2.6, 1);
-                    for (int k = 0; k < 2 + rng.irange(3); k++) { const double a = rng.uni() * TAU, d = R + 60 + 90 * rng.uni(); const double rr = 5 + 6 * rng.uni(); L.add(BK_MOUND, std::sin(a) * d, std::cos(a) * d, 0, rr, rr, 1.6 + rr * 0.2, 0); }
+                    for (int k = 0; k < 2 + rng.irange(3); k++) {
+                        const double a = rng.uni() * TAU, d = R + 60 + 90 * rng.uni();
+                        const double rr = 5 + 6 * rng.uni();
+                        L.add(BK_MOUND, std::sin(a) * d, std::cos(a) * d, 0, rr, rr, 1.6 + rr * 0.2, 0);
+                    }
                     break;
                 }
                 case 1: {   // rows of standing stones across the land
                     const int rows = 3 + rng.irange(6);
                     const double half = 120 + 150 * rng.uni();
-                    for (int k = 0; k < rows; k++) { L.at(H, 0, 0, (k - (rows - 1) * 0.5) * 11, rng.sym(15), x, z); L.add(BK_MENHIR, x, z, H, 1, half * (0.75 + 0.25 * rng.uni()), 2.2 + rng.uni(), 0); }
+                    for (int k = 0; k < rows; k++) {
+                        L.at(H, 0, 0, (k - (rows - 1) * 0.5) * 11, rng.sym(15), x, z);
+                        L.add(BK_MENHIR, x, z, H, 1, half * (0.75 + 0.25 * rng.uni()), 2.2 + rng.uni(), 0);
+                    }
                     L.at(H, 0, 0, 0, half + 30, x, z); L.add(BK_STONE_CIRCLE, x, z, H, 14, 14, 2.4);
                     break;
                 }
@@ -301,8 +352,15 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     break;
                 }
                 default: {   // a field of dolmens and barrows
-                    for (int k = 0; k < 4 + rng.irange(7); k++) { const double a = rng.uni() * TAU, d = 30 + 170 * rng.uni(); L.add(BK_DOLMEN, std::sin(a) * d, std::cos(a) * d, rng.uni() * TAU, 2.4, 3.4, 2); }
-                    for (int k = 0; k < 3; k++) { const double a = rng.uni() * TAU, d = 40 + 160 * rng.uni(); const double rr = 6 + 5 * rng.uni(); L.add(BK_MOUND, std::sin(a) * d, std::cos(a) * d, 0, rr, rr, 2, 0); }
+                    for (int k = 0; k < 4 + rng.irange(7); k++) {
+                        const double a = rng.uni() * TAU, d = 30 + 170 * rng.uni();
+                        L.add(BK_DOLMEN, std::sin(a) * d, std::cos(a) * d, rng.uni() * TAU, 2.4, 3.4, 2);
+                    }
+                    for (int k = 0; k < 3; k++) {
+                        const double a = rng.uni() * TAU, d = 40 + 160 * rng.uni();
+                        const double rr = 6 + 5 * rng.uni();
+                        L.add(BK_MOUND, std::sin(a) * d, std::cos(a) * d, 0, rr, rr, 2, 0);
+                    }
                     break;
                 }
             }
@@ -320,7 +378,16 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                     if (k % 8 == 4) L.add(BK_WALL_TOWER, x, z, brg, 4, 4, 10);
                     else L.add(BK_WALL, x, z, brg - PI / 2, len / n * 0.5 + 0.3, 1.2, 6.5);
                 }
-                if (w.group % 2 == (uint32_t)(w.seed % 2)) { pt(0.5, -45, x, z); if (!wet(x, z)) { L.add(BK_TOWER, x, z, brg, 6, 6, 14); for (int q = 0; q < 4; q++) { const double a = q * TAU / 4 + brg; L.add(BK_WALL, x + std::sin(a) * 22, z + std::cos(a) * 22, a, 22, 0.9, 5); } } }   // a wall's length runs across its heading: a ring's stretch faces out
+                if (w.group % 2 == (uint32_t)(w.seed % 2)) {
+                    pt(0.5, -45, x, z);
+                    if (!wet(x, z)) {
+                        L.add(BK_TOWER, x, z, brg, 6, 6, 14);
+                        for (int q = 0; q < 4; q++) {
+                            const double a = q * TAU / 4 + brg;
+                            L.add(BK_WALL, x + std::sin(a) * 22, z + std::cos(a) * 22, a, 22, 0.9, 5);
+                        }
+                    }
+                }   // a wall's length runs across its heading: a ring's stretch faces out
             } else if (w.style == 1) {   // the rampart behind the ditch, a redoubt
                 pt(0.5, -2, x, z); L.add(BK_MOUND, x, z, brg, 5, len * 0.5, 3.2, 3);
                 pt(0.5, -70, x, z); if (!wet(x, z)) L.add(BK_FORT, x, z, brg, 32, 32, 3, 0);
@@ -426,7 +493,14 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                 case 0: L.add(BK_PORTAL, 0, 0, H, 3.6, 1, 3); L.at(H, 0, 0, 0, 7, x, z); L.add(BK_TENT_RING, x, z, H, 2.4, 2.4, 0.4); break;
                 case 1:
                     L.add(BK_TOWER, 0, 0, H, 6, 6, 16);
-                    for (int q = 0; q < 6; q++) { const double a = q * TAU / 6 + H; if (q == 0) { L.add(BK_GATE, std::sin(a) * 26, std::cos(a) * 26, a, 3.5, 1.4, 6); continue; } L.add(BK_WALL, std::sin(a) * 26, std::cos(a) * 26, a, 13.5, 1.0, 6); }
+                    for (int q = 0; q < 6; q++) {
+                        const double a = q * TAU / 6 + H;
+                        if (q == 0) {
+                            L.add(BK_GATE, std::sin(a) * 26, std::cos(a) * 26, a, 3.5, 1.4, 6);
+                            continue;
+                        }
+                        L.add(BK_WALL, std::sin(a) * 26, std::cos(a) * 26, a, 13.5, 1.0, 6);
+                    }
                     break;
                 case 2: L.add(BK_PORTAL, 0, 0, H, 4, 1, 5); L.at(H, 0, 0, 0, 30, x, z); if (!hill) L.add(BK_FORT, x, z, H, 14, 14, 4, 1); break;
                 case 3:
@@ -504,7 +578,8 @@ void workSpec(const BodyGen& gSeason, const Work& w, RuinSpec& r) {
                         const int n = std::max(12, (int)std::ceil(TAU * R / 16));
                         for (int q = 0; q < n; q++) {
                             const double a = (q + 0.5) * TAU / n;
-                            if (std::fabs(std::remainder(a - H, TAU)) < std::max(0.1, PI / n)) continue;   // the gate (R-412: the stretch nearest it whatever the ring's: a quarter of the forts had none)
+                            // the gate (R-412: the stretch nearest it whatever the ring's: a quarter of the forts had none)
+                            if (std::fabs(std::remainder(a - H, TAU)) < std::max(0.1, PI / n)) continue;
                             L.add(BK_MOUND, std::sin(a) * R, std::cos(a) * R, a + PI / 2, 2.6, PI * R / n + 0.6, 2.4 - 0.3 * k, 3);
                         }
                     }
@@ -556,9 +631,17 @@ std::string workLine(const Work& w) {
     std::string what;
     switch (w.kind) {
         case WO_DAM: { bool drained = false; for (const GroundEdit& e : w.edits) if (e.kind == GE_WATER && e.tone == ET_DARK) drained = true;
-            char b2[220]; snprintf(b2, sizeof b2, "%.0f m over its floor, %.0f m long; its reservoir at %.0f m, %.2f km2%s", w.height, w.length, w.level, w.width / 1e6, drained ? ", breached and drained" : ""); what = b2; break; }
-        case WO_QUARRY: case WO_MINE: { static const char* const QS[7] = {"flint pits", "a face", "a face in benches", "a face in great benches", "an open pit", "a stone pit", "a pit in benches"}; static const char* const MS[3] = {"adits", "headframes", "an open pit"};
-            what = w.kind == WO_QUARRY ? QS[clampi(w.style, 0, 6)] : MS[clampi(w.style, 0, 2)]; break; }
+            char b2[220];
+            snprintf(b2, sizeof b2, "%.0f m over its floor, %.0f m long; its reservoir at %.0f m, %.2f km2%s", w.height, w.length, w.level, w.width / 1e6, drained ? ", breached and drained" : "");
+            what = b2;
+            break;
+        }
+        case WO_QUARRY:
+        case WO_MINE: {
+            static const char* const QS[7] = {"flint pits", "a face", "a face in benches", "a face in great benches", "an open pit", "a stone pit", "a pit in benches"};
+            static const char* const MS[3] = {"adits", "headframes", "an open pit"};
+            what = w.kind == WO_QUARRY ? QS[clampi(w.style, 0, 6)] : MS[clampi(w.style, 0, 2)]; break;
+        }
         case WO_BATTLEFIELD: { char b2[160]; snprintf(b2, sizeof b2, "the war %d's battle of year %d, %.0f km between its sides", w.war, w.year, w.length / 1000.0); what = b2; break; }
         case WO_AQUEDUCT: { char b2[120]; snprintf(b2, sizeof b2, "%.1f km from its spring at %.0f m", w.length / 1000.0, w.level); what = b2; break; }
         case WO_OBSERVATORY: { char b2[80]; snprintf(b2, sizeof b2, "on a summit of %.0f m", w.height); what = b2; break; }

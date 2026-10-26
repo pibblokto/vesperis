@@ -54,7 +54,8 @@ struct FrameTrace {
             auto at = [&](double p) { return s[std::min(s.size() - 1, (size_t)(p * s.size()))]; };
             int over17 = 0, over20 = 0, over33 = 0;   // 17.5, as paced frames sit at 16.67 give or take the swap's wake
             for (float x : s) { over17 += x > 17.5f; over20 += x > 20.0f; over33 += x > 33.4f; }
-            fprintf(stderr, "%s over %zu frames: p50 %.2f, p90 %.2f, p99 %.2f, max %.2f ms; over 17.5 ms %d, over 20 ms %d, over 33.4 ms %d\n", what, s.size(), at(0.5), at(0.9), at(0.99), s.back(), over17, over20, over33);
+            fprintf(stderr, "%s over %zu frames: p50 %.2f, p90 %.2f, p99 %.2f, max %.2f ms; over 17.5 ms %d, over 20 ms %d, over 33.4 ms %d\n", what, s.size(), at(0.5), at(0.9), at(0.99), s.back(),
+                    over17, over20, over33);
         };
         pct(intervals, "frame intervals");
         pct(works, "frame work without the swap");

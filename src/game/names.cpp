@@ -75,13 +75,17 @@ std::string Game::screenshotCaption() const {
     if (surf.valid && (stateHas(state, ST_GROUND) || returnState == GameState::SURFACE))
         where = fmt("%s  %.1f%s %.1f%s  %s", upper(bodyNameOf(surf.site.body)).c_str(), std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S",
                     std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", KINDS[sys.bodies[surf.site.body].type].name);
-    else if (sys.valid) where = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 ? fmt("IN ORBIT OF %s", upper(bodyNameOf(ship.parkedBody)).c_str()) : fmt("SYSTEM %s (%s)", upper(starNameOf(sys.star)).c_str(), STAR_CLASSES[sys.star.cls].code);
+    else if (sys.valid)
+        where = ship.mode == ShipState::PARKED && ship.parkedBody >= 0 ? fmt("IN ORBIT OF %s", upper(bodyNameOf(ship.parkedBody)).c_str())
+                                                                       : fmt("SYSTEM %s (%s)", upper(starNameOf(sys.star)).c_str(), STAR_CLASSES[sys.star.cls].code);
     else where = "INTERSTELLAR SPACE";
     if (state == GameState::PROBE && probe.active) where = probeCaption() + " - " + where;   // X-01: what the probe's camera shows and where
     if (state == GameState::RECORDING && replay.rec >= 0 && replay.rec < (int)guide.probes.size()) {   // a recording's frame
         const ProbeRecord& r = guide.probes[replay.rec];
         const double c = std::min(replay.clock, r.endClock);
-        where = fmt("THE RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0), probeBarAt(ProbeFlight{r.chuteOpen, r.chuteClose, r.crushBar}, c) * 0.98692) + " - " + where;
+        where = fmt("THE RECORDING OF %s AT T+%02d:%02d, %.2f ATM", recordTitle(r).c_str(), (int)(c / 60), (int)std::fmod(c, 60.0),
+                        probeBarAt(ProbeFlight{r.chuteOpen, r.chuteClose, r.crushBar}, c) * 0.98692) +
+                " - " + where;
     }
     if (tele.on && state == GameState::SPACE) {   // a photo through the telescope names what the reticle rests on
         std::string line = telescopeTargetLine(true);
@@ -137,12 +141,20 @@ void Game::takeShard() {
     // the object and where it lay: the settlement's class, or the work it lay in
     const std::string what = RECORD_MEDIUM_HUD[clampi(ns.medium, 0, RM_COUNT - 1)];
     const std::string where = ns.sclass == SC_WORKS && ns.work >= 0 && ns.work < WO_COUNT ? std::string("AT ") + WORK_HEARD[ns.work]
-                            : std::string("IN THE RUINS OF ") + (ns.sclass == SC_MONUMENT ? "A LONE MONUMENT" : (ns.sclass == SC_HAMLET ? "A HAMLET" : (ns.sclass == SC_VILLAGE ? "A VILLAGE" : (ns.sclass == SC_CITY ? "A CITY" : (ns.sclass == SC_CAPITAL ? "A GREAT CITY" : "A TOWN")))));
+                                                                                          : std::string("IN THE RUINS OF ") +
+                    (ns.sclass == SC_MONUMENT
+                                    ? "A LONE MONUMENT"
+                                    : (ns.sclass == SC_HAMLET ? "A HAMLET"
+                                                              : (ns.sclass == SC_VILLAGE ? "A VILLAGE" : (ns.sclass == SC_CITY ? "A CITY" : (ns.sclass == SC_CAPITAL ? "A GREAT CITY" : "A TOWN")))));
     const char* verb = ns.wall ? "RECORDED" : "TAKEN";   // a painted wall stays where it was painted
     bool caught = guide.heard.count(shardKey(ns.index)) > 0;   // a recording the radar heard from afar
-    logEvent("SHARD", fmt("%s OF THE OLD PEOPLE %s %s %s %s ON %s (%d OF %d FOUND THERE)%s", what.c_str(), verb, ns.wall ? "IN" : "FROM", ns.archive ? (std::string("AN ARCHIVE IN ") + buildingPlaceName(ns.place)).c_str() : buildingPlaceName(ns.place),
-                          where.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here, total, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
-    status(caught ? fmt("%s OF THE OLD PEOPLE - THE RECORDING THE RADAR CAUGHT (%d OF %d)", what.c_str(), here, total) : fmt("%s OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", what.c_str(), here, total), 5);
+    logEvent("SHARD",
+            fmt("%s OF THE OLD PEOPLE %s %s %s %s ON %s (%d OF %d FOUND THERE)%s", what.c_str(), verb, ns.wall ? "IN" : "FROM",
+                    ns.archive ? (std::string("AN ARCHIVE IN ") + buildingPlaceName(ns.place)).c_str() : buildingPlaceName(ns.place), where.c_str(), upper(bodyNameOf(surf.site.body)).c_str(), here,
+                    total, caught ? " - THE RECORDING THE RADAR CAUGHT" : ""));
+    status(caught ? fmt("%s OF THE OLD PEOPLE - THE RECORDING THE RADAR CAUGHT (%d OF %d)", what.c_str(), here, total)
+                  : fmt("%s OF THE OLD PEOPLE - %d OF %d ON THIS WORLD", what.c_str(), here, total),
+            5);
     audio.beep = BEEP_LOCK;
 }
 

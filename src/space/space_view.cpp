@@ -171,7 +171,12 @@ const PlanetMap& SpaceRenderer::mapFor(const Body& b) {
     auto tb = std::chrono::steady_clock::now();   // F-01: the caller waits from here (a generation under way joined, or the map made here)
     joinMap(b.seed);
     PlanetMap* mm = maps[b.seed].get();
-    if (!mm->valid) { auto t0 = std::chrono::steady_clock::now(); mm->generate(genFor(b)); mm->generating = false; genMicros.fetch_add((long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count()); }
+    if (!mm->valid) {
+        auto t0 = std::chrono::steady_clock::now();
+        mm->generate(genFor(b));
+        mm->generating = false;
+        genMicros.fetch_add((long)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count());
+    }
     mapStats.blocked++; mapStats.blockedMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tb).count();
     return *mm;
 }
@@ -225,10 +230,12 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
             setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {10, gc * 0.35f}, {30, gc}, {46, lerp(gc, RGB(1, 0.55f, 0.25f), 0.6f)}, {58, RGB(1, 0.75f, 0.4f)}, {63, RGB(1, 0.9f, 0.7f)}});
         } else if (KINDS[b.type].giantClass == GC_ALKALI) {   // its night's dull red glow low in the ramp, the dark slate of its lit air over it
             const RGB red(0.40f, 0.08f, 0.04f);
-            setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {6, RGB(0.19f, 0.035f, 0.02f)}, {13, red}, {19, RGB(0.11f, 0.05f, 0.07f)}, {32, c * 0.8f}, {46, c}, {56, lerp(c, white, 0.12f)}, {63, lerp(c, white, 0.28f)}});
+            setRamp(fb.pal, bank,
+                    {{0, RGB(0, 0, 0)}, {6, RGB(0.19f, 0.035f, 0.02f)}, {13, red}, {19, RGB(0.11f, 0.05f, 0.07f)}, {32, c * 0.8f}, {46, c}, {56, lerp(c, white, 0.12f)}, {63, lerp(c, white, 0.28f)}});
         } else if (KINDS[b.type].giantClass == GC_SILICATE) {   // the glow of its night and its terminator low in the ramp (red to orange), its clouds of rock over it
             const RGB ember(0.78f, 0.24f, 0.05f), flame(0.96f, 0.52f, 0.16f);
-            setRamp(fb.pal, bank, {{0, RGB(0, 0, 0)}, {7, RGB(0.34f, 0.05f, 0.02f)}, {15, ember}, {21, flame}, {30, lerp(flame, c, 0.6f)}, {44, c}, {56, lerp(c, white, 0.18f)}, {63, lerp(c, white, 0.4f)}});
+            setRamp(fb.pal, bank,
+                    {{0, RGB(0, 0, 0)}, {7, RGB(0.34f, 0.05f, 0.02f)}, {15, ember}, {21, flame}, {30, lerp(flame, c, 0.6f)}, {44, c}, {56, lerp(c, white, 0.18f)}, {63, lerp(c, white, 0.4f)}});
         } else if (hasOpaqueDeck(b.type)) {   // the globe is its cloud (or haze) deck
             materialRamp(fb.pal, bank, g->matColor[MAT_CLOUD] * lightOf(), nullptr);
         } else { RGB sk; bool hasSky = skyLightOf(*g, lightOf(), sk); materialRamp(fb.pal, bank, c, hasSky ? &sk : nullptr); }
@@ -237,7 +244,9 @@ void SpaceRenderer::setupPalette(Framebuffer& fb, const StarSystem* sys, int bod
     bodyRamp(3, bodyB);
     {   // bank 20: the belt rocks' warm grey under the star's light
         RGB lc = lightOf();
-        setRamp(fb.pal, 20, {{0, RGB(0, 0, 0)}, {14, RGB(0.11f, 0.10f, 0.09f) * lc}, {34, RGB(0.30f, 0.27f, 0.25f) * lc}, {47, RGB(0.48f, 0.44f, 0.40f) * lc}, {56, RGB(0.66f, 0.62f, 0.58f) * lc}, {63, RGB(0.9f, 0.87f, 0.84f) * lc}});
+        setRamp(fb.pal, 20,
+                {{0, RGB(0, 0, 0)}, {14, RGB(0.11f, 0.10f, 0.09f) * lc}, {34, RGB(0.30f, 0.27f, 0.25f) * lc}, {47, RGB(0.48f, 0.44f, 0.40f) * lc}, {56, RGB(0.66f, 0.62f, 0.58f) * lc},
+                        {63, RGB(0.9f, 0.87f, 0.84f) * lc}});
     }
     auto waterRamp = [&](int bank, int bi) {
         const BodyGen* g = genOf(bi);
@@ -366,7 +375,8 @@ void SpaceRenderer::render(Framebuffer& fb, const SpaceContext& c) {
         Vec3 obs = c.shipPos / SECTOR_KM;
         const std::vector<float>* bandSrc = &bandMap;
         if (c.vimana) bandSrc = &flightBand(c);
-        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; bandGen++; parkedBandBuilds++; }   // rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
+        // rebuilt after a hop of ten sectors (the near dust's rifts move by a couple of degrees per hundred)
+        else if (!bandValid || length(obs - bandPos) > 10.0) { buildGalaxyBand(obs, bandMap, BAND_MAP_W, BAND_MAP_H); bandPos = obs; bandValid = true; bandGen++; parkedBandBuilds++; }
         Mat3 camT = c.cam.transposed();
         double invf = 1.0 / proj.f;
         const int step = 2;

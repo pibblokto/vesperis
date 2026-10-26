@@ -118,7 +118,8 @@ int runDescent(double latDeg, double lonDeg) {   // `descent [latDeg lonDeg]` tr
         in.newFrame(); in.down[KEY_W] = true;
         double err = wrapAngle(bh - sv.buggy.heading);
         if (std::fabs(err) > 3 * DEG) in.down[err > 0 ? KEY_D : KEY_A] = true;
-        if (i % 120 == 0) trace += fmt(" %ds: %.0f/%.0f m %.1f m/s %+.0f deg%s;", i / 60, along, (sv.buggy.x - bx) * hz - (sv.buggy.z - bz) * hx, sv.buggy.speed, err / DEG, sv.buggy.airborne ? " air" : "");
+        if (i % 120 == 0)
+            trace += fmt(" %ds: %.0f/%.0f m %.1f m/s %+.0f deg%s;", i / 60, along, (sv.buggy.x - bx) * hz - (sv.buggy.z - bz) * hx, sv.buggy.speed, err / DEG, sv.buggy.airborne ? " air" : "");
         sv.update(1.0 / 60, in, t + i / 60.0, true);
         frames++;
         if (sv.buggy.airborne) air++;
@@ -205,82 +206,134 @@ int runTerrainStats() {
     static const double O5_COST[] = {0.8, 1.1, 0.5, 0.8, 0.9, 1.3, 0, 0.9, 0.4, 0.2, 0.8, 0.4, 0.5, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   // 0 for the kinds after O5 (no figure to hold them to)
 static_assert(sizeof(O5_COST) / sizeof(O5_COST[0]) == PT_COUNT, "an O5 cost (or 0) for every kind");
-    printf("%-16s %-9s %3s | %5s | %-40s | %5s %6s %6s | %6s | %-13s | %s\n", "type", "class", "n", "4m", "16 m: med  p90   max  cliff  walk", "770m", "2km", "16km", "floors", "512m: med p90", "cost us (O5, x)");
-    int fails = 0, later = 0, rows = 0, rowsOk = 0;
-    for (int type = 0; type < PT_COUNT; type++) {
-        if (!KINDS[type].landable || (g_terrainType >= 0 && type != g_terrainType)) continue;
-        std::vector<StarSystem> systems; std::vector<int> bodyOf; std::vector<std::pair<double, double>> sites; std::vector<int> sysOf;
-        forTypeBodies(type, 4, false, [&](const StarSystem& sys, int bi) {
-            systems.push_back(sys); bodyOf.push_back(bi);
-            size_t n0 = sites.size();
-            landSitesOf(sys, bi, 0x06, 12, sites);
-            for (size_t k = n0; k < sites.size(); k++) sysOf.push_back((int)systems.size() - 1);
-        });
-        if (sites.empty()) { printf("%-16s no body found\n", KINDS[type].name); continue; }
-        std::vector<SiteMetrics> ms(sites.size());
-        parallelFor((int)sites.size(), 1, [&](int b, int e) {
-            for (int i = b; i < e; i++) {
-                SurfaceSite st; st.init(&systems[sysOf[i]], bodyOf[sysOf[i]], sites[i].first, sites[i].second, 1000.0); ms[i] = measureSite(st, false);
-                if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 0 && typeHasDrainage(type) && i < 6) {   // what flattens a plain (the flat class's median grade)
-                    std::vector<double> sOther, sValley, sWater, sLake; int n = 0;
-                    for (int z = -24; z < 24; z++) for (int x = -24; x < 24; x++) {
+printf("%-16s %-9s %3s | %5s | %-40s | %5s %6s %6s | %6s | %-13s | %s\n", "type", "class", "n", "4m", "16 m: med  p90   max  cliff  walk", "770m", "2km", "16km", "floors", "512m: med p90",
+        "cost us (O5, x)");
+int fails = 0, later = 0, rows = 0, rowsOk = 0;
+for (int type = 0; type < PT_COUNT; type++) {
+    if (!KINDS[type].landable || (g_terrainType >= 0 && type != g_terrainType)) continue;
+    std::vector<StarSystem> systems;
+    std::vector<int> bodyOf;
+    std::vector<std::pair<double, double>> sites;
+    std::vector<int> sysOf;
+    forTypeBodies(type, 4, false, [&](const StarSystem& sys, int bi) {
+        systems.push_back(sys);
+        bodyOf.push_back(bi);
+        size_t n0 = sites.size();
+        landSitesOf(sys, bi, 0x06, 12, sites);
+        for (size_t k = n0; k < sites.size(); k++) sysOf.push_back((int)systems.size() - 1);
+    });
+    if (sites.empty()) {
+        printf("%-16s no body found\n", KINDS[type].name);
+        continue;
+    }
+    std::vector<SiteMetrics> ms(sites.size());
+    parallelFor((int)sites.size(), 1, [&](int b, int e) {
+        for (int i = b; i < e; i++) {
+            SurfaceSite st;
+            st.init(&systems[sysOf[i]], bodyOf[sysOf[i]], sites[i].first, sites[i].second, 1000.0);
+            ms[i] = measureSite(st, false);
+            if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 0 && typeHasDrainage(type) && i < 6) {   // what flattens a plain (the flat class's median grade)
+                std::vector<double> sOther, sValley, sWater, sLake;
+                int n = 0;
+                for (int z = -24; z < 24; z++)
+                    for (int x = -24; x < 24; x++) {
                         double h00 = st.sampleAt(x * 16.0, z * 16.0, 16).h, h10 = st.sampleAt(x * 16.0 + 16, z * 16.0, 16).h, h01 = st.sampleAt(x * 16.0, z * 16.0 + 16, 16).h;
                         double sl = std::sqrt((h10 - h00) * (h10 - h00) + (h01 - h00) * (h01 - h00)) / 16.0;
                         TerrainVertex tv = st.sampleAt(x * 16.0, z * 16.0, 16);
                         DrainInfo D = drainageAt(st.gen, st.unitAt(x * 16.0, z * 16.0), 16.0, 0.5);
                         n++;
-                        if (tv.water > -1e8f && tv.h < tv.water) sWater.push_back(sl); else if (D.lake > 0.3) sLake.push_back(sl); else if (D.valley > 0.3) sValley.push_back(sl); else sOther.push_back(sl);
+                        if (tv.water > -1e8f && tv.h < tv.water) sWater.push_back(sl);
+                        else if (D.lake > 0.3) sLake.push_back(sl);
+                        else if (D.valley > 0.3) sValley.push_back(sl);
+                        else sOther.push_back(sl);
                     }
-                    auto med = [](std::vector<double> v) { if (v.empty()) return 0.0; std::sort(v.begin(), v.end()); return v[v.size() / 2]; };
-                    fprintf(stderr, "  flat site %.3f %.3f: water %zu (med %.4f) lake %zu (%.4f) valley %zu (%.4f) other %zu (%.4f) of %d; site median %.4f\n", sites[i].first / DEG, sites[i].second / DEG,
-                            sWater.size(), med(sWater), sLake.size(), med(sLake), sValley.size(), med(sValley), sOther.size(), med(sOther), n, percentile(ms[i].slopes16, 0.5));
-                }
-                if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 2 && typeHasDrainage(type)) {   // what the drainage says over a mountain window (the floors' tuning)
-                    int nearN = 0, valleyN = 0, floorN = 0, lakeN = 0; double accMax = 0;
-                    for (int z = -16; z < 16; z++) for (int x = -16; x < 16; x++) {
+                auto med = [](std::vector<double> v) {
+                    if (v.empty()) return 0.0;
+                    std::sort(v.begin(), v.end());
+                    return v[v.size() / 2];
+                };
+                fprintf(stderr, "  flat site %.3f %.3f: water %zu (med %.4f) lake %zu (%.4f) valley %zu (%.4f) other %zu (%.4f) of %d; site median %.4f\n", sites[i].first / DEG, sites[i].second / DEG,
+                        sWater.size(), med(sWater), sLake.size(), med(sLake), sValley.size(), med(sValley), sOther.size(), med(sOther), n, percentile(ms[i].slopes16, 0.5));
+            }
+            if (std::getenv("VESPERIS_TRACE") && ms[i].cls == 2 && typeHasDrainage(type)) {   // what the drainage says over a mountain window (the floors' tuning)
+                int nearN = 0, valleyN = 0, floorN = 0, lakeN = 0;
+                double accMax = 0;
+                for (int z = -16; z < 16; z++)
+                    for (int x = -16; x < 16; x++) {
                         DrainInfo D = drainageAt(st.gen, st.unitAt(x * 64.0 + 32, z * 64.0 + 32), 64.0, 0.5);
-                        if (D.near) nearN++; if (D.valley > 0.3) valleyN++; if (D.valley > 0.9) floorN++; if (D.lake > 0.5) lakeN++; accMax = std::max(accMax, D.acc);
+                        if (D.near) nearN++;
+                        if (D.valley > 0.3) valleyN++;
+                        if (D.valley > 0.9) floorN++;
+                        if (D.lake > 0.5) lakeN++;
+                        accMax = std::max(accMax, D.acc);
                     }
-                    fprintf(stderr, "  mtn site %.3f %.3f: near %d valley %d floor %d lake %d of 1024, max acc %.1f km2, floors %.0f%%\n", sites[i].first / DEG, sites[i].second / DEG, nearN, valleyN, floorN, lakeN, accMax, ms[i].floors * 100);
-                    for (int z = -16; z < 16; z += 8) {   // rows of cells: the nearest channel's distance and accumulation, the valley
-                        fprintf(stderr, "    row z=%d:", z);
-                        for (int x = -16; x < 16; x += 2) { DrainInfo D = drainageAt(st.gen, st.unitAt(x * 64.0 + 32, z * 64.0 + 32), 64.0, 0.5); fprintf(stderr, " %s%.0f/%.1f/%.2f", D.near ? "" : "-", D.dist, D.acc, D.valley); }
-                        fprintf(stderr, "\n");
+                fprintf(stderr, "  mtn site %.3f %.3f: near %d valley %d floor %d lake %d of 1024, max acc %.1f km2, floors %.0f%%\n", sites[i].first / DEG, sites[i].second / DEG, nearN, valleyN,
+                        floorN, lakeN, accMax, ms[i].floors * 100);
+                for (int z = -16; z < 16; z += 8) {   // rows of cells: the nearest channel's distance and accumulation, the valley
+                    fprintf(stderr, "    row z=%d:", z);
+                    for (int x = -16; x < 16; x += 2) {
+                        DrainInfo D = drainageAt(st.gen, st.unitAt(x * 64.0 + 32, z * 64.0 + 32), 64.0, 0.5);
+                        fprintf(stderr, " %s%.0f/%.1f/%.2f", D.near ? "" : "-", D.dist, D.acc, D.valley);
                     }
+                    fprintf(stderr, "\n");
                 }
             }
-        });
-        double cost = 1e9;
-        {   // the cost, serially, at the first site: the best of three passes over the 16 m grid
-            SurfaceSite st; st.init(&systems[sysOf[0]], bodyOf[sysOf[0]], sites[0].first, sites[0].second, 1000.0);
-            std::vector<double> h;
-            for (int pass = 0; pass < 3; pass++) { double t0 = nowSec(); gridHeights(st, 48, 16, h); cost = std::min(cost, (nowSec() - t0) * 1e6 / (49.0 * 49.0)); }
         }
-        ClassAgg agg[3];
-        for (const SiteMetrics& m : ms) {
-            ClassAgg& a = agg[m.cls];
-            a.n++; a.s16.insert(a.s16.end(), m.slopes16.begin(), m.slopes16.end()); a.s512.insert(a.s512.end(), m.slopes512.begin(), m.slopes512.end());
-            a.med4 += m.med4; a.r770 += m.relief770; a.r2k += m.relief2k; a.r16k += m.relief16k; a.floors += m.floors;
+    });
+    double cost = 1e9;
+    {   // the cost, serially, at the first site: the best of three passes over the 16 m grid
+        SurfaceSite st;
+        st.init(&systems[sysOf[0]], bodyOf[sysOf[0]], sites[0].first, sites[0].second, 1000.0);
+        std::vector<double> h;
+        for (int pass = 0; pass < 3; pass++) {
+            double t0 = nowSec();
+            gridHeights(st, 48, 16, h);
+            cost = std::min(cost, (nowSec() - t0) * 1e6 / (49.0 * 49.0));
         }
-        bool costOk = O5_COST[type] <= 0 || cost <= 2.0 * O5_COST[type];
-        if (!costOk) fails++;
-        for (int cls = 2; cls >= 0; cls--) {
-            ClassAgg& a = agg[cls];
-            if (!a.n) continue;
-            a.med4 /= a.n; a.r770 /= a.n; a.r2k /= a.n; a.r16k /= a.n; a.floors /= a.n;
-            std::string notes; int f = 0, l = 0;
-            bool judged = type != PT_OCEAN && a.n >= 2;
-            bool craterFields = type == PT_CRATERED || type == PT_THINATMO || type == PT_METAL || type == PT_ROCKY || type == PT_ICY || type == PT_CARBON || type == PT_BOMBARDED;
-            if (judged) { f = judgeClass(cls, a, systems[0].bodies[bodyOf[0]].radiusKm < 300, craterFields, notes, l); fails += f; later += l; rows++; if (!f) rowsOk++; }
-            printf("%-16s %-9s %3d | %.3f | %.3f %.3f %5.2f %4.1f%% %4.0f%% | %4.0fm %5.0fm %5.0fm | %4.0f%% | %.4f %.4f | %s\n", KINDS[type].name, CLASS_NAMES[cls], a.n, a.med4,
-                   percentile(a.s16, 0.5), percentile(a.s16, 0.9), a.s16.empty() ? 0.0 : *std::max_element(a.s16.begin(), a.s16.end()), shareOver(a.s16, 1.0) * 100, (1 - shareOver(a.s16, 1.35)) * 100,
-                   a.r770, a.r2k, a.r16k, a.floors * 100, percentile(a.s512, 0.5), percentile(a.s512, 0.9), judged ? notes.c_str() : (a.n < 2 ? "(one site: not judged)" : "(not judged)"));
-        }
-        printf("%-16s classes of %zu land sites: flat %d, hills %d, mountains %d; cost %.1f us per 16 m sample (O5 %.1f, x%.2f%s)\n", "", ms.size(), agg[0].n, agg[1].n, agg[2].n, cost, O5_COST[type],
-               O5_COST[type] > 0 ? cost / O5_COST[type] : 0.0, costOk ? "" : ", OVER 2x");
     }
-    printf("terrain: %d of %d class rows meet every target of the spectrum; %d spectrum targets failing, %d targets of later items (cliffs and broken plains: O6-04; mountain floors: O6-03) not yet met\n", rowsOk, rows, fails, later);
-    return fails;
+    ClassAgg agg[3];
+    for (const SiteMetrics& m : ms) {
+        ClassAgg& a = agg[m.cls];
+        a.n++;
+        a.s16.insert(a.s16.end(), m.slopes16.begin(), m.slopes16.end());
+        a.s512.insert(a.s512.end(), m.slopes512.begin(), m.slopes512.end());
+        a.med4 += m.med4;
+        a.r770 += m.relief770;
+        a.r2k += m.relief2k;
+        a.r16k += m.relief16k;
+        a.floors += m.floors;
+    }
+    bool costOk = O5_COST[type] <= 0 || cost <= 2.0 * O5_COST[type];
+    if (!costOk) fails++;
+    for (int cls = 2; cls >= 0; cls--) {
+        ClassAgg& a = agg[cls];
+        if (!a.n) continue;
+        a.med4 /= a.n;
+        a.r770 /= a.n;
+        a.r2k /= a.n;
+        a.r16k /= a.n;
+        a.floors /= a.n;
+        std::string notes;
+        int f = 0, l = 0;
+        bool judged = type != PT_OCEAN && a.n >= 2;
+        bool craterFields = type == PT_CRATERED || type == PT_THINATMO || type == PT_METAL || type == PT_ROCKY || type == PT_ICY || type == PT_CARBON || type == PT_BOMBARDED;
+        if (judged) {
+            f = judgeClass(cls, a, systems[0].bodies[bodyOf[0]].radiusKm < 300, craterFields, notes, l);
+            fails += f;
+            later += l;
+            rows++;
+            if (!f) rowsOk++;
+        }
+        printf("%-16s %-9s %3d | %.3f | %.3f %.3f %5.2f %4.1f%% %4.0f%% | %4.0fm %5.0fm %5.0fm | %4.0f%% | %.4f %.4f | %s\n", KINDS[type].name, CLASS_NAMES[cls], a.n, a.med4, percentile(a.s16, 0.5),
+                percentile(a.s16, 0.9), a.s16.empty() ? 0.0 : *std::max_element(a.s16.begin(), a.s16.end()), shareOver(a.s16, 1.0) * 100, (1 - shareOver(a.s16, 1.35)) * 100, a.r770, a.r2k, a.r16k,
+                a.floors * 100, percentile(a.s512, 0.5), percentile(a.s512, 0.9), judged ? notes.c_str() : (a.n < 2 ? "(one site: not judged)" : "(not judged)"));
+    }
+    printf("%-16s classes of %zu land sites: flat %d, hills %d, mountains %d; cost %.1f us per 16 m sample (O5 %.1f, x%.2f%s)\n", "", ms.size(), agg[0].n, agg[1].n, agg[2].n, cost, O5_COST[type],
+            O5_COST[type] > 0 ? cost / O5_COST[type] : 0.0, costOk ? "" : ", OVER 2x");
+}
+printf("terrain: %d of %d class rows meet every target of the spectrum; %d spectrum targets failing, %d targets of later items (cliffs and broken plains: O6-04; mountain floors: O6-03) not yet met\n",
+        rowsOk, rows, fails, later);
+return fails;
 }
 
 // A shaded relief of an N x N grid of `cell` metres round the site, 2 px per cell: the light from the north-west at 45
@@ -288,7 +341,13 @@ static_assert(sizeof(O5_COST) / sizeof(O5_COST[0]) == PT_COUNT, "an O5 cost (or 
 void hillshade(const SurfaceSite& site, int N, double cell, double zFactor, std::vector<uint32_t>& px) {
     std::vector<double> h((size_t)(N + 1) * (N + 1)), w(h.size()); std::vector<uint8_t> mat(h.size());
     for (int j = 0; j <= N; j++)
-        for (int i = 0; i <= N; i++) { TerrainVertex v = site.sampleAt((i - N / 2) * cell, (j - N / 2) * cell, cell); size_t k = (size_t)j * (N + 1) + i; h[k] = v.h; w[k] = v.water; mat[k] = v.material; }
+        for (int i = 0; i <= N; i++) {
+            TerrainVertex v = site.sampleAt((i - N / 2) * cell, (j - N / 2) * cell, cell);
+            size_t k = (size_t)j * (N + 1) + i;
+            h[k] = v.h;
+            w[k] = v.water;
+            mat[k] = v.material;
+        }
     px.assign((size_t)N * N * 4, 0);
     Vec3 L = normalize(Vec3(-1, 1.414, 1));
     for (int j = 0; j < N; j++)
@@ -330,8 +389,8 @@ static std::string metricsShort(const SiteMetrics& m) {
 }
 static std::string metricsLine(const SiteMetrics& m) {
     char buf[256];
-    snprintf(buf, sizeof buf, "%s %.2f  MED %.2f P90 %.2f CLIFF %.0f%%  770M %.0fM 2KM %.0fM 16KM %.0fM FLOORS %.0f%%", CLASS_NAMES[m.cls], m.probe, percentile(m.slopes16, 0.5), percentile(m.slopes16, 0.9),
-             shareOver(m.slopes16, 1.0) * 100, m.relief770, m.relief2k, m.relief16k, m.floors * 100);
+    snprintf(buf, sizeof buf, "%s %.2f  MED %.2f P90 %.2f CLIFF %.0f%%  770M %.0fM 2KM %.0fM 16KM %.0fM FLOORS %.0f%%", CLASS_NAMES[m.cls], m.probe, percentile(m.slopes16, 0.5),
+            percentile(m.slopes16, 0.9), shareOver(m.slopes16, 1.0) * 100, m.relief770, m.relief2k, m.relief16k, m.floors * 100);
     return buf;
 }
 
@@ -360,7 +419,8 @@ void renderLandforms(int type, int wantCls) {
             sheet.blit(px, FBW, FBH, ox, oy);
             const double cells[3] = {16, 64, 512}, zf[3] = {1, 2, 3}; const char* names[3] = {"770 M", "3 KM Z2", "24 KM Z3"};
             for (int k = 0; k < 3; k++) { hillshade(st, 48, cells[k], zf[k], px); sheet.blit(px, 96, 96, ox + 8 + k * 104, oy + 200 + 2); sheet.label(ox + 8 + k * 104, oy + 200 + 2, names[k]); }
-            std::string label = systems[si].bodies[bodyOf[si]].name + "  " + std::to_string((int)std::lround(s.first / DEG)) + "/" + std::to_string((int)std::lround(s.second / DEG)) + "  " + MATERIAL_NAMES[m.material];
+            std::string label = systems[si].bodies[bodyOf[si]].name + "  " + std::to_string((int)std::lround(s.first / DEG)) + "/" + std::to_string((int)std::lround(s.second / DEG)) + "  " +
+                    MATERIAL_NAMES[m.material];
             for (char& c : label) c = (char)toupper((unsigned char)c);
             sheet.label(ox, oy, label);
             sheet.label(ox, oy + 200 + 98, metricsShort(m), rgb(200, 230, 255));
@@ -380,8 +440,10 @@ void renderLandforms(int type, int wantCls) {
 // the wanted class on the first body of the type and prints what to pin)
 struct LandformSite { const char* name; int type; bool moon; int wantCls; double latDeg, lonDeg; };
 static const LandformSite LANDFORM_SITES[] = {
-    {"felisian_mountains", PT_FELISIAN, false, 2, PIN_MOUNTAIN_LAT, PIN_MOUNTAIN_LON},   // pinned 2026-09-27 on the generation-5 function; O6-03: re-pinned on the GEN 10 bodies (the type table of GEN 9 had moved every world)
-    {"felisian_plain", PT_FELISIAN, false, 0, PIN_PLAIN_LAT, PIN_PLAIN_LON},   // re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
+    // pinned 2026-09-27 on the generation-5 function; O6-03: re-pinned on the GEN 10 bodies (the type table of GEN 9 had moved every world)
+    {"felisian_mountains", PT_FELISIAN, false, 2, PIN_MOUNTAIN_LAT, PIN_MOUNTAIN_LON},
+    // re-pinned on Wyariothmai I's day side (a sand plain: the lit face of the locked world is dry); 7.424 / 75.762 before, in the sea now
+    {"felisian_plain", PT_FELISIAN, false, 0, PIN_PLAIN_LAT, PIN_PLAIN_LON},
     {"thinatmo_hills", PT_THINATMO, false, 1, 44.433, 135.970},
     {"cratered_moon", PT_CRATERED, true, 1, -13.184, 175.712},   // re-pinned on Wyariothmai II-a, the scan's first cratered moon since the claim (43.934 / -41.488 before)
 };
@@ -400,11 +462,13 @@ void renderLandformSites(bool search) {   // G-04: `landforms sites search` list
             bool found = false; int listed = 0;
             for (auto& s : sites) {
                 SurfaceSite st; st.init(&sys, bi, s.first, s.second, 1000.0);
-                if (sys.bodies[bi].locked && st.sun(1000.0).altitude < 10 * DEG) continue;   // a world locked to its star has a day side and a night side for good: the sheets and the stability frames want the light
+                // a world locked to its star has a day side and a night side for good: the sheets and the stability frames want the light
+                if (sys.bodies[bi].locked && st.sun(1000.0).altitude < 10 * DEG) continue;
                 SiteMetrics m = measureSite(st, false);
                 if (m.cls != L.wantCls || m.material == MAT_WATER || m.material == MAT_SNOW || m.material == MAT_ICE) continue;
                 if (!found) { lat = s.first; lon = s.second; found = true; }
-                printf("%s: %s lat %.3f lon %.3f (%s, %s)\n", L.name, found && listed == 0 ? "pin" : "or ", s.first / DEG, s.second / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material]);   // the first six candidates, for `descent lat lon`
+                // the first six candidates, for `descent lat lon`
+                printf("%s: %s lat %.3f lon %.3f (%s, %s)\n", L.name, found && listed == 0 ? "pin" : "or ", s.first / DEG, s.second / DEG, CLASS_NAMES[m.cls], MATERIAL_NAMES[m.material]);
                 if (++listed >= 6) break;
             }
             if (!found) { printf("%s: no site of class %s found\n", L.name, CLASS_NAMES[L.wantCls]); continue; }
@@ -417,11 +481,15 @@ void renderLandformSites(bool search) {   // G-04: `landforms sites search` list
         for (int k = 0; k < 3; k++) { renderSiteFrame(sys, bi, lat, lon, m.hiYaw, alts[k], pitches[k], sr, nb, px); sheet.blit(px, FBW, FBH, k * 320, 0); sheet.label(k * 320, 0, dist[k]); }
         const double cells[3] = {16, 64, 512}, zf[3] = {1, 2, 3}; const char* names[3] = {"770 M", "3 KM Z2", "24 KM Z3"};
         for (int k = 0; k < 3; k++) { hillshade(st, 48, cells[k], zf[k], px); sheet.blit(px, 96, 96, 8 + k * 104, 202); sheet.label(8 + k * 104, 202, names[k]); }
-        std::string title = std::string(L.name) + "  " + sys.bodies[bi].name + "  LAT " + std::to_string(lat / DEG).substr(0, 6) + " LON " + std::to_string(lon / DEG).substr(0, 7) + "  " + MATERIAL_NAMES[m.material];
+        std::string title = std::string(L.name) + "  " + sys.bodies[bi].name + "  LAT " + std::to_string(lat / DEG).substr(0, 6) + " LON " + std::to_string(lon / DEG).substr(0, 7) + "  " +
+                MATERIAL_NAMES[m.material];
         for (char& c : title) c = (char)toupper((unsigned char)c);
-        char l2[160]; snprintf(l2, sizeof l2, "16 M: MEDIAN %.3f  P90 %.3f  MAX %.2f  CLIFF %.1f%%  WALKABLE %.0f%%  4 M MEDIAN %.3f", percentile(m.slopes16, 0.5), percentile(m.slopes16, 0.9), *std::max_element(m.slopes16.begin(), m.slopes16.end()),
-                 shareOver(m.slopes16, 1.0) * 100, (1 - shareOver(m.slopes16, 1.35)) * 100, m.med4);
-        char l3[160]; snprintf(l3, sizeof l3, "RELIEF 770 M %.0f M   2 KM %.0f M   16 KM %.0f M   FLOORS %.0f%%   512 M: MEDIAN %.4f P90 %.4f", m.relief770, m.relief2k, m.relief16k, m.floors * 100, percentile(m.slopes512, 0.5), percentile(m.slopes512, 0.9));
+        char l2[160];
+        snprintf(l2, sizeof l2, "16 M: MEDIAN %.3f  P90 %.3f  MAX %.2f  CLIFF %.1f%%  WALKABLE %.0f%%  4 M MEDIAN %.3f", percentile(m.slopes16, 0.5), percentile(m.slopes16, 0.9),
+                *std::max_element(m.slopes16.begin(), m.slopes16.end()), shareOver(m.slopes16, 1.0) * 100, (1 - shareOver(m.slopes16, 1.35)) * 100, m.med4);
+        char l3[160];
+        snprintf(l3, sizeof l3, "RELIEF 770 M %.0f M   2 KM %.0f M   16 KM %.0f M   FLOORS %.0f%%   512 M: MEDIAN %.4f P90 %.4f", m.relief770, m.relief2k, m.relief16k, m.floors * 100,
+                percentile(m.slopes512, 0.5), percentile(m.slopes512, 0.9));
         char l4[160]; snprintf(l4, sizeof l4, "LANDING MAP CLASS %s (PROBE %.3f)   COST %.1f US PER 16 M SAMPLE   GEN %d", CLASS_NAMES[m.cls], m.probe, m.usPerSample, GEN_VERSION);
         const char* const lines[4] = {title.c_str(), l2, l3, l4};
         for (int k = 0; k < 4; k++) drawText(sheet.cv, 330, 204 + k * 11, lines[k], k ? rgb(200, 230, 255) : rgb(255, 220, 120));
@@ -447,7 +515,12 @@ int runMatlod(int argc, char** argv) {
             for (int iz = b; iz < e; iz++)
                 for (int ix = 0; ix < W; ix++) {
                     Vec3 u = st.unitAt((ix - N) * stepM, (iz - N) * stepM);
-                    for (int k = 0; k < 5; k++) { SurfaceSample s = sampleSurface(st.gen, u, SCALES[k]); size_t i = ((size_t)iz * W + ix) * 5 + k; mat[i] = (uint8_t)s.material; hgt[i] = (float)s.height; }
+                    for (int k = 0; k < 5; k++) {
+                        SurfaceSample s = sampleSurface(st.gen, u, SCALES[k]);
+                        size_t i = ((size_t)iz * W + ix) * 5 + k;
+                        mat[i] = (uint8_t)s.material;
+                        hgt[i] = (float)s.height;
+                    }
                 }
         });
         for (size_t i = 0; i < (size_t)W * W; i++) {
@@ -483,7 +556,12 @@ int runMatlod(int argc, char** argv) {
         return 0;
     }
     int only = -1;
-    if (argc > 2 && std::string(argv[2]) != "all") for (int k = 0; k < PT_COUNT; k++) { std::string nm = KINDS[k].name; for (char& ch : nm) ch = ch == ' ' ? '_' : (char)tolower(ch); if (nm == argv[2]) only = k; }
+    if (argc > 2 && std::string(argv[2]) != "all")
+        for (int k = 0; k < PT_COUNT; k++) {
+            std::string nm = KINDS[k].name;
+            for (char& ch : nm) ch = ch == ' ' ? '_' : (char)tolower(ch);
+            if (nm == argv[2]) only = k;
+        }
     int bodies = argc > 3 ? atoi(argv[3]) : 3, perBody = argc > 4 ? atoi(argv[4]) : 4;
     double halfM = (argc > 5 ? atof(argv[5]) : 3.0) * 1000.0, stepM = argc > 6 ? atof(argv[6]) : 75.0;
     Agg all;
@@ -495,7 +573,8 @@ int runMatlod(int argc, char** argv) {
             Agg b;
             for (auto& st : sites) measure(sys, bi, st.first, st.second, halfM, stepM, b);
             std::string tr = traitList(BodyGen::make(sys.bodies[bi]));
-            printf("  %-26s %s: 16/64 %.2f%%  64/512 %.2f%%  512/2k %.2f%%\n", sys.bodies[bi].name.c_str(), tr.empty() ? "-" : tr.c_str(), 100.0 * b.diff[1] / std::max(1L, b.n), 100.0 * b.diff[2] / std::max(1L, b.n), 100.0 * b.diff[3] / std::max(1L, b.n));
+            printf("  %-26s %s: 16/64 %.2f%%  64/512 %.2f%%  512/2k %.2f%%\n", sys.bodies[bi].name.c_str(), tr.empty() ? "-" : tr.c_str(), 100.0 * b.diff[1] / std::max(1L, b.n),
+                    100.0 * b.diff[2] / std::max(1L, b.n), 100.0 * b.diff[3] / std::max(1L, b.n));
             a.n += b.n; for (int k = 0; k < 4; k++) { a.diff[k] += b.diff[k]; a.h2[k] += b.h2[k]; for (auto& kv : b.pairs[k]) a.pairs[k][kv.first] += kv.second; }
         });
         report(KINDS[type].name, a);
@@ -532,7 +611,9 @@ int runLandmarks(int argc, char** argv) {
                 double dlat, dlon; StarSystem::latLonFromBody(L.unit, dlat, dlon);
                 double d = std::acos(clampd(dot(L.unit, u), -1, 1)) * g.R * 1000.0;
                 if (d < 10000.0) near[L.kind] = true;
-                if (sites <= 2) printf("  %-16s %s %-12s %+.3f %+.3f  h %.0f m, prominence %.0f m, radius %.0f m, %.1f km off\n", b.name.c_str(), LANDMARK_KIND_SYMBOLS[L.kind], LANDMARK_KIND_NAMES[L.kind], dlat / DEG, dlon / DEG, L.heightM, L.prominenceM, L.radiusM, d / 1000.0);
+                if (sites <= 2)
+                    printf("  %-16s %s %-12s %+.3f %+.3f  h %.0f m, prominence %.0f m, radius %.0f m, %.1f km off\n", b.name.c_str(), LANDMARK_KIND_SYMBOLS[L.kind], LANDMARK_KIND_NAMES[L.kind],
+                            dlat / DEG, dlon / DEG, L.heightM, L.prominenceM, L.radiusM, d / 1000.0);
             }
             bool any = false; for (int k = 0; k < LM_COUNT; k++) { if (near[k]) { within10[k]++; any = true; } }
             if (any) anyNear++;
@@ -546,7 +627,9 @@ int runLandmarks(int argc, char** argv) {
     printf("sights (%s): %d sites, %d (%.0f%%) with one within 10 km; sites with each kind within 10 km:", KINDS[type].name, sites, anyNear, sites ? 100.0 * anyNear / sites : 0.0);
     for (int k = 0; k < LM_COUNT; k++) printf(" %s %d", LANDMARK_KIND_NAMES[k], within10[k]);
     printf("; found:"); for (int k = 0; k < LM_COUNT; k++) printf(" %d", kinds[k]);
-    printf("\n  %.2f ms per grid cell (%d searched: scan %.1f ms, lakes %.1f ms each); the scanner's 40 km: %.0f ms average, %.0f ms at most (%d scans)\n", cells ? cellMs / cells : 0.0, landmarkCellsSearched(), landmarkCellsSearched() ? landmarkScanMs(0) / landmarkCellsSearched() : 0.0, landmarkCellsSearched() ? landmarkScanMs(1) / landmarkCellsSearched() : 0.0, scans ? scanMs / scans : 0.0, scanMax, scans);
+    printf("\n  %.2f ms per grid cell (%d searched: scan %.1f ms, lakes %.1f ms each); the scanner's 40 km: %.0f ms average, %.0f ms at most (%d scans)\n", cells ? cellMs / cells : 0.0,
+            landmarkCellsSearched(), landmarkCellsSearched() ? landmarkScanMs(0) / landmarkCellsSearched() : 0.0, landmarkCellsSearched() ? landmarkScanMs(1) / landmarkCellsSearched() : 0.0,
+            scans ? scanMs / scans : 0.0, scanMax, scans);
     return 0;
 }
 
@@ -571,11 +654,25 @@ int runDrain(int argc, char** argv) {
             for (int pass = 0; pass < 2; pass++) { double ta = nowSec(); gridHeights(site, 48, 16, h); c0 = std::min(c0, (nowSec() - ta) * 1e6 / (49.0 * 49.0)); }
             setDrainageEnabled(true);
             int rivers = 0, lakes = 0, wetCells = 0, salt = 0;
-            for (int j = -60; j <= 60; j += 3) for (int i = -60; i <= 60; i += 3) { TerrainVertex tv = site.sampleAt(i * 64, j * 64, 64); if (tv.water > -1e8f && tv.h < tv.water) { wetCells++; if (tv.shore < 1e8f) { SurfaceSample sx = sampleSurface(g, site.unitAt(i * 64, j * 64), 64); if (sx.waterKind == 1) rivers++; else if (sx.waterKind == 2) lakes++; } } if (tv.material == MAT_SALT) salt++; }
+            for (int j = -60; j <= 60; j += 3)
+                for (int i = -60; i <= 60; i += 3) {
+                    TerrainVertex tv = site.sampleAt(i * 64, j * 64, 64);
+                    if (tv.water > -1e8f && tv.h < tv.water) {
+                        wetCells++;
+                        if (tv.shore < 1e8f) {
+                            SurfaceSample sx = sampleSurface(g, site.unitAt(i * 64, j * 64), 64);
+                            if (sx.waterKind == 1) rivers++;
+                            else if (sx.waterKind == 2) lakes++;
+                        }
+                    }
+                    if (tv.material == MAT_SALT) salt++;
+                }
             SurfaceSample s0 = sampleSurface(g, u, 16);
-            printf("%-16s %6.2f %7.2f [%s] N0 %d: window of %d cells: %d channels (%.1f%%), %d lake cells (tile: %d lakes kept, %d breached), %d sea, largest %.0f km2, downstream lower or level %d/%d; tile %.0f ms (first touch %.0f ms); 16 m sample %.2f us (%.2f without); of 1681 cells at 64 m: %d wet (%d river, %d lake), %d salt (%s here)\n",
-                   b.name.c_str(), st.first / DEG, st.second / DEG, traitList(g).c_str(), drainageLatticeN0(b.radiusKm), ds.cells, ds.channels, ds.cells ? 100.0 * ds.channels / ds.cells : 0.0, ds.lakes, ds.lakesKept, ds.lakesBreached, ds.sea, ds.maxAcc, ds.monotone, ds.tested, ds.msBuild, tBuild, c1, c0, wetCells, rivers, lakes, salt,
-                   s0.waterKind == 1 ? "river" : (s0.waterKind == 2 ? "lake" : MATERIAL_NAMES[s0.material]));
+            printf("%-16s %6.2f %7.2f [%s] N0 %d: window of %d cells: %d channels (%.1f%%), %d lake cells (tile: %d lakes kept, %d breached), %d sea, largest %.0f km2, downstream lower or level "
+                   "%d/%d; tile %.0f ms (first touch %.0f ms); 16 m sample %.2f us (%.2f without); of 1681 cells at 64 m: %d wet (%d river, %d lake), %d salt (%s here)\n",
+                    b.name.c_str(), st.first / DEG, st.second / DEG, traitList(g).c_str(), drainageLatticeN0(b.radiusKm), ds.cells, ds.channels, ds.cells ? 100.0 * ds.channels / ds.cells : 0.0,
+                    ds.lakes, ds.lakesKept, ds.lakesBreached, ds.sea, ds.maxAcc, ds.monotone, ds.tested, ds.msBuild, tBuild, c1, c0, wetCells, rivers, lakes, salt,
+                    s0.waterKind == 1 ? "river" : (s0.waterKind == 2 ? "lake" : MATERIAL_NAMES[s0.material]));
             shown++;
         }
     });
@@ -606,10 +703,20 @@ int runWater(int argc, char** argv) {
                     SurfaceSample ss = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16);
                     n++;
                     if (ss.height > 0) land++;
-                    if (ss.waterKind) { kinds[ss.waterKind]++; if (ss.material == MAT_WATER) { wet[ss.waterKind]++; if (!have[ss.waterKind]) { have[ss.waterKind] = true; firstLat[ss.waterKind] = la; firstLon[ss.waterKind] = ln / DEG; } } }
+                    if (ss.waterKind) {
+                        kinds[ss.waterKind]++;
+                        if (ss.material == MAT_WATER) {
+                            wet[ss.waterKind]++;
+                            if (!have[ss.waterKind]) {
+                                have[ss.waterKind] = true;
+                                firstLat[ss.waterKind] = la;
+                                firstLon[ss.waterKind] = ln / DEG;
+                            }
+                        }
+                    }
                 }
-            printf("%-16s [%s] land %.0f%%: per 1000 samples rivers %.1f (wet %.1f), lakes %.1f (wet %.1f), pools %.1f (wet %.1f), rift lakes %.1f\n", b.name.c_str(), traitList(g).c_str(), 100.0 * land / n,
-                   1000.0 * kinds[1] / n, 1000.0 * wet[1] / n, 1000.0 * kinds[2] / n, 1000.0 * wet[2] / n, 1000.0 * kinds[3] / n, 1000.0 * wet[3] / n, 1000.0 * kinds[4] / n);
+            printf("%-16s [%s] land %.0f%%: per 1000 samples rivers %.1f (wet %.1f), lakes %.1f (wet %.1f), pools %.1f (wet %.1f), rift lakes %.1f\n", b.name.c_str(), traitList(g).c_str(),
+                    100.0 * land / n, 1000.0 * kinds[1] / n, 1000.0 * wet[1] / n, 1000.0 * kinds[2] / n, 1000.0 * wet[2] / n, 1000.0 * kinds[3] / n, 1000.0 * wet[3] / n, 1000.0 * kinds[4] / n);
             for (int kd = 1; kd < 5; kd++) if (have[kd]) printf("    first %s at %.2f %.2f\n", kd == 1 ? "river" : (kd == 2 ? "lake" : (kd == 3 ? "pool" : "rift lake")), firstLat[kd], firstLon[kd]);
             shown++;
         }
@@ -640,7 +747,8 @@ int runClimate(int argc, char** argv) {
                     if (T < -8) iceT++; else if (ss.height > snowLine) iceSnow++; else iceCap++;
                 }
             }
-            printf("%-14s tempK %3.0f bias %+5.1f sea %+.2f cap %2.0f snow %4.0f  land %3.0f%% inland water %.1f%% [%s]:", b.name.c_str(), b.tempK, g.tempBias, g.seaLevel, g.iceCapLat, g.snowLine, 100.0 * land / n, 100.0 * inland / n, traitList(g).c_str());
+            printf("%-14s tempK %3.0f bias %+5.1f sea %+.2f cap %2.0f snow %4.0f  land %3.0f%% inland water %.1f%% [%s]:", b.name.c_str(), b.tempK, g.tempBias, g.seaLevel, g.iceCapLat, g.snowLine,
+                    100.0 * land / n, 100.0 * inland / n, traitList(g).c_str());
             for (int k = 1; k < BIO_COUNT; k++) if (bio[k] * 100 / n >= 1) printf(" %s %d%%", BIOME_NAMES[k], bio[k] * 100 / n);
             printf("\n");
             for (int k = 0; k < BIO_COUNT; k++) totBio[k] += bio[k];

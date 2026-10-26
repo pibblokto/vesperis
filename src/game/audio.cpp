@@ -39,8 +39,17 @@ double AudioSynth::speechSample(double dt, AudioState& st) {
                 break;
             case PK_STOP:
                 if (sg->part == 0) tVoice = p.voiced ? 0.12 * sg->amp : 0;
-                else if (sg->part == 1) { double e = std::exp(-u * (p.voiced ? 6 : 3.5)); tNoise = p.noiseAmp * sg->amp * e; nzF = p.noiseF; nzBw = p.noiseBw; tBreath = p.voiced ? 0 : (0.3 + V.breath) * (1 - u); }
-                else { tNoise = 1.6 * sg->amp * std::exp(-u * 10); nzF = 2200; nzBw = 1500; }
+                else if (sg->part == 1) {
+                    double e = std::exp(-u * (p.voiced ? 6 : 3.5));
+                    tNoise = p.noiseAmp * sg->amp * e;
+                    nzF = p.noiseF;
+                    nzBw = p.noiseBw;
+                    tBreath = p.voiced ? 0 : (0.3 + V.breath) * (1 - u);
+                } else {
+                    tNoise = 1.6 * sg->amp * std::exp(-u * 10);
+                    nzF = 2200;
+                    nzBw = 1500;
+                }
                 break;
             default: break;
         }
@@ -72,8 +81,20 @@ double AudioSynth::speechSample(double dt, AudioState& st) {
         double o = A * y + B * spY1[i] + C * spY2[i];
         spY2[i] = spY1[i]; spY1[i] = o; y = o;
     }
-    if (spNasal > 0.001 || std::fabs(spY1[4]) > 1e-7) { double r = co.rNasal, B = 2 * r * std::cos(TAU_ * 280 * V.tract * dt), C = -r * r, A = 1 - B - C; double o = A * src + B * spY1[4] + C * spY2[4]; spY2[4] = spY1[4]; spY1[4] = o; y += 0.8 * spNasal * o; }
-    if (spNzAmp > 0.0005 || std::fabs(spY1[5]) > 1e-7) { double r = std::exp(-PI_ * spNzBw * dt), B = 2 * r * std::cos(TAU_ * spNzF * dt), C = -r * r; double o = (1 - r) * nz + B * spY1[5] + C * spY2[5]; spY2[5] = spY1[5]; spY1[5] = o; y += spNzAmp * o * 1.5; }
+    if (spNasal > 0.001 || std::fabs(spY1[4]) > 1e-7) {
+        double r = co.rNasal, B = 2 * r * std::cos(TAU_ * 280 * V.tract * dt), C = -r * r, A = 1 - B - C;
+        double o = A * src + B * spY1[4] + C * spY2[4];
+        spY2[4] = spY1[4];
+        spY1[4] = o;
+        y += 0.8 * spNasal * o;
+    }
+    if (spNzAmp > 0.0005 || std::fabs(spY1[5]) > 1e-7) {
+        double r = std::exp(-PI_ * spNzBw * dt), B = 2 * r * std::cos(TAU_ * spNzF * dt), C = -r * r;
+        double o = (1 - r) * nz + B * spY1[5] + C * spY2[5];
+        spY2[5] = spY1[5];
+        spY1[5] = o;
+        y += spNzAmp * o * 1.5;
+    }
     spTrillPh += dt * 26; if (spTrillPh >= 1) spTrillPh -= 1;
     spT += dt;
     if (spNext >= S.segs.size() && spT >= S.seconds) { spOn = false; st.speechDone = true; }
@@ -231,7 +252,11 @@ double AudioSynth::groundSample(double dt, AudioState& st) {
 
 void AudioSynth::coefs(double dt) {
     co.kF = 1 - std::exp(-dt / 0.02); co.kUp = 1 - std::exp(-dt / 0.006); co.kDown = 1 - std::exp(-dt / 0.012); co.kN = 1 - std::exp(-dt / 0.003);
-    co.kDuneHz = 1 - std::exp(-dt / 0.5); co.kDuneHiss = 1 - std::exp(-TAU_ * 600 * dt); co.kIceFar = 1 - std::exp(-TAU_ * 1500 * dt); co.kIceThud = 1 - std::exp(-TAU_ * 150 * dt); co.kQuake = 1 - std::exp(-TAU_ * 80 * dt);
+    co.kDuneHz = 1 - std::exp(-dt / 0.5);
+    co.kDuneHiss = 1 - std::exp(-TAU_ * 600 * dt);
+    co.kIceFar = 1 - std::exp(-TAU_ * 1500 * dt);
+    co.kIceThud = 1 - std::exp(-TAU_ * 150 * dt);
+    co.kQuake = 1 - std::exp(-TAU_ * 80 * dt);
     static const double BW[4] = {80, 100, 150, 250};
     for (int i = 0; i < 4; i++) co.rS[i] = std::exp(-PI_ * BW[i] * dt);
     co.rNasal = std::exp(-PI_ * 120 * dt);
@@ -277,7 +302,14 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         for (int key : st.instrumentUps) for (int i = 0; i < IVOICES; i++) if (iv[i].on && ivKey[i] == key && iv[i].gate > iv[i].t) iv[i].gate = iv[i].t;
         st.instrumentUps.clear();
     }
-    if (!st.speech || !st.voice || st.speech != spSpeech) { if (spOn || spSpeech) { spOn = false; spSpeech = nullptr; spVoiceAmp = spBreathAmp = spNzAmp = 0; for (int i = 0; i < 6; i++) spY1[i] = spY2[i] = 0; } }
+    if (!st.speech || !st.voice || st.speech != spSpeech) {
+        if (spOn || spSpeech) {
+            spOn = false;
+            spSpeech = nullptr;
+            spVoiceAmp = spBreathAmp = spNzAmp = 0;
+            for (int i = 0; i < 6; i++) spY1[i] = spY2[i] = 0;
+        }
+    }
     double k = 1 - std::exp(-dt * 2.0);
     for (int i = 0; i < frames; i++) {
         humLvl += (st.hum - humLvl) * k;
@@ -291,7 +323,10 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
         radarLvl += (st.radar - radarLvl) * k; radarSigLvl += (st.radarSignal - radarSigLvl) * k * 2;
         rdDriveLvl += (st.radarDrive - rdDriveLvl) * k * 2;
         rdGainLvl += (st.radarGainT - rdGainLvl) * k * 2; rdSkyLvl += (st.radarSky - rdSkyLvl) * k; rdWearLvl += (st.radarWear - rdWearLvl) * k;
-        rdGhostLvl += (st.radarGhost - rdGhostLvl) * k * 3; rdSig2Lvl += (st.radarSignal2 - rdSig2Lvl) * k * 2; rdHetLvl += (st.radarHet - rdHetLvl) * k * 2; rdImLvl += (st.radarIntermod - rdImLvl) * k * 2;
+        rdGhostLvl += (st.radarGhost - rdGhostLvl) * k * 3;
+        rdSig2Lvl += (st.radarSignal2 - rdSig2Lvl) * k * 2;
+        rdHetLvl += (st.radarHet - rdHetLvl) * k * 2;
+        rdImLvl += (st.radarIntermod - rdImLvl) * k * 2;
         rdGhostWordLvl += ((st.radarGhostWord ? 1.0 : 0.0) - rdGhostWordLvl) * k * 6;
         if (st.thud > 0 && thudT < 0) { thudT = 0; thudAmp = st.thud; }
         st.thud = 0;
@@ -333,8 +368,24 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
             double p = callPitchCur, v = 0;
             switch (callKind) {
                 case 1: { double dur = 0.18; if (callT < dur) v = 0.14 * std::sin(callT / dur * 3.14159) * std::sin(6.2831853 * callT * (1800 + 1400 * callT / dur) * p); else callT = -2; break; }
-                case 2: { double dur = 0.7; if (callT < dur) v = 0.16 * std::sin(callT / dur * 3.14159) * (std::sin(6.2831853 * callT * 110 * p * (1 + 0.04 * std::sin(callT * 40))) + 0.35 * std::sin(6.2831853 * callT * 220 * p) + 0.15 * std::sin(6.2831853 * callT * 330 * p)); else callT = -2; break; }
-                case 3: { double dur = 0.55; if (callT < dur) { double f = callT < 0.27 ? 520 : 430; double e = std::sin(std::fmod(callT, 0.27) / 0.27 * 3.14159); v = 0.12 * e * std::sin(6.2831853 * callT * f * p); } else callT = -2; break; }
+                case 2: {
+                    double dur = 0.7;
+                    if (callT < dur)
+                        v = 0.16 * std::sin(callT / dur * 3.14159) *
+                                (std::sin(6.2831853 * callT * 110 * p * (1 + 0.04 * std::sin(callT * 40))) + 0.35 * std::sin(6.2831853 * callT * 220 * p) +
+                                        0.15 * std::sin(6.2831853 * callT * 330 * p));
+                    else callT = -2;
+                    break;
+                }
+                case 3: {
+                    double dur = 0.55;
+                    if (callT < dur) {
+                        double f = callT < 0.27 ? 520 : 430;
+                        double e = std::sin(std::fmod(callT, 0.27) / 0.27 * 3.14159);
+                        v = 0.12 * e * std::sin(6.2831853 * callT * f * p);
+                    } else callT = -2;
+                    break;
+                }
                 default: { double dur = 0.34; if (callT < dur) { double ph = std::fmod(callT, 0.085); v = ph < 0.012 ? 0.2 * noise() : 0; } else callT = -2; break; }
             }
             if (callT >= 0) { s += v; callT += dt; } else callT = -1;
@@ -414,7 +465,13 @@ void AudioSynth::render(float* out, int frames, int sr, AudioState& st) {
                 double d = 0.04 + (slowed ? 0.028 * (1 + std::sin(6.2831853 * 0.35 * rdWowT)) : 0.0025 * (1 + std::sin(6.2831853 * 0.8 * rdWowT))) + 0.0015 * std::sin(6.2831853 * 7.3 * rdWowT);
                 d += wear * (0.022 * (1 + std::sin(TAU_ * 0.083 * rdWowT)) + 0.012 * (1 + std::sin(TAU_ * 0.027 * rdWowT + 2.0)));   // the pitch drifting
                 if (horn) d += 0.0012 * (1 + std::sin(TAU_ * rdCh[0].v.turnHz * rdWowT));
-                auto tap = [&](double back) { double pos = (double)rdWowI - back * sr; while (pos < 0) pos += rdWow.size(); size_t i0 = (size_t)pos % rdWow.size(), i1 = (i0 + 1) % rdWow.size(); double fr = pos - std::floor(pos); return rdWow[i0] * (1 - fr) + rdWow[i1] * fr; };
+                auto tap = [&](double back) {
+                    double pos = (double)rdWowI - back * sr;
+                    while (pos < 0) pos += rdWow.size();
+                    size_t i0 = (size_t)pos % rdWow.size(), i1 = (i0 + 1) % rdWow.size();
+                    double fr = pos - std::floor(pos);
+                    return rdWow[i0] * (1 - fr) + rdWow[i1] * fr;
+                };
                 double x = tap(d);
                 if (whispers) x = 0.75 * x + 0.5 * tap(d + 0.09);   // whispers, plural
                 rdWowI = (rdWowI + 1) % rdWow.size();

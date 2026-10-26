@@ -465,7 +465,8 @@ void SurfaceView::drawWeather(Framebuffer& fb, double t) {
     if (events & EV_PLUMES) drawPlumes(fb, t);
     if (events & EV_SPRING_JETS) drawSpringJets(fb, t);
     if (events & EV_CURTAINS) drawCurtains(fb, t);
-    if ((events & (EV_CRACK_VENTS | EV_FUMAROLES | EV_STEAM_BURSTS | EV_SPRINGS)) || site.gen.hasTrait(TR_GEYSERS) || site.gen.hasTrait(TR_HOT_SPRINGS)) drawGeysers(fb, t);   // R-307; P-01; P-03; Q-02
+    // R-307; P-01; P-03; Q-02
+    if ((events & (EV_CRACK_VENTS | EV_FUMAROLES | EV_STEAM_BURSTS | EV_SPRINGS)) || site.gen.hasTrait(TR_GEYSERS) || site.gen.hasTrait(TR_HOT_SPRINGS)) drawGeysers(fb, t);
     if (events & EV_SPRINGS) drawSpores(fb, t);
     // dust devils: a column of dust points spiralling up, leaning with the wind, a skirt at the foot
     for (const DustDevil& d : devils) {

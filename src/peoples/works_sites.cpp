@@ -56,7 +56,14 @@ bool WB::shoreNear(const Vec3& u0, double r0, double r1, Rng& rng, Vec3& shore, 
                 for (int it = 0; it < 7; it++) { const double mid = 0.5 * (lo + hi); if (wetS(at(offsetUnit(dry, std::sin(b) * mid, std::cos(b) * mid, Rm)))) hi = mid; else lo = mid; }
                 const Vec3 pt = offsetUnit(dry, std::sin(b) * lo, std::cos(b) * lo, Rm);
                 double score = -d / r1;
-                if (headland) { int wn = 0; for (int m = 0; m < 12; m++) { const double c = m * TAU / 12; if (wetS(at(offsetUnit(pt, std::sin(c) * 400, std::cos(c) * 400, Rm)))) wn++; } score += wn * 0.3; }
+                if (headland) {
+                    int wn = 0;
+                    for (int m = 0; m < 12; m++) {
+                        const double c = m * TAU / 12;
+                        if (wetS(at(offsetUnit(pt, std::sin(c) * 400, std::cos(c) * 400, Rm)))) wn++;
+                    }
+                    score += wn * 0.3;
+                }
                 if (score > bestScore) { bestScore = score; shore = pt; seaward = bearingOf(pt, wv); any = true; }
                 break;
             }
@@ -211,7 +218,18 @@ bool WB::damNear(const Vec3& u0, double R0, int a, uint64_t seed, Work& out) {
     }
     std::sort(good.begin(), good.end(), [](const Cand& x, const Cand& y) { return x.score > y.score; });
     static const bool dbg = std::getenv("WORKS_DEBUG") != nullptr;
-    if (dbg) { int big = 0; double hmin = 1e18, hmax = -1e18; for (int c = 0; c < N * N; c++) { if (acc[c] >= 25) big++; if (!wt[c]) { hmin = std::min(hmin, (double)h[c]); hmax = std::max(hmax, (double)h[c]); } } fprintf(stderr, "dam near: Ht %.0f, %d cells of acc >= 25, %zu candidates, %zu with walls; the grid's heights %.0f..%.0f\n", Ht, big, cand.size(), good.size(), hmin, hmax); }
+    if (dbg) {
+        int big = 0;
+        double hmin = 1e18, hmax = -1e18;
+        for (int c = 0; c < N * N; c++) {
+            if (acc[c] >= 25) big++;
+            if (!wt[c]) {
+                hmin = std::min(hmin, (double)h[c]);
+                hmax = std::max(hmax, (double)h[c]);
+            }
+        }
+        fprintf(stderr, "dam near: Ht %.0f, %d cells of acc >= 25, %zu candidates, %zu with walls; the grid's heights %.0f..%.0f\n", Ht, big, cand.size(), good.size(), hmin, hmax);
+    }
     for (int gi = 0; gi < (int)good.size() && gi < 3; gi++) {
         const Cand& cd = good[gi];
         const Vec3 du = F.unit(cd.ex, cd.ez);   // the floor's point under the dam
@@ -422,7 +440,16 @@ void WB::shrine() {
                 switch (holy) {
                     case HOLY_CAVE: if (sl < 0.3) continue; sc += sl + (matFamily(s.material) == FAM_ROCK ? 0.4 : 0); break;
                     case HOLY_GROVE: if (s.material != MAT_FOREST && s.veg < 0.55) continue; sc += s.veg; break;
-                    case HOLY_SPRING: { double lowest = 1e18; for (int m = 0; m < 6; m++) { const double b = m * TAU / 6; lowest = std::min(lowest, at(offsetUnit(u, std::sin(b) * 250, std::cos(b) * 250, Rm)).height); } if (lowest < h - 2) continue; sc += 0.5 - sl; break; }
+                    case HOLY_SPRING: {
+                        double lowest = 1e18;
+                        for (int m = 0; m < 6; m++) {
+                            const double b = m * TAU / 6;
+                            lowest = std::min(lowest, at(offsetUnit(u, std::sin(b) * 250, std::cos(b) * 250, Rm)).height);
+                        }
+                        if (lowest < h - 2) continue;
+                        sc += 0.5 - sl;
+                        break;
+                    }
                     default: if (sl > 0.05 || s.material == MAT_FOREST) continue; sc += 0.5 - sl * 5; break;
                 }
                 if (sc > bestS) { bestS = sc; site = u; heading = down; any = true; }
@@ -537,7 +564,8 @@ void WB::geoglyphs() {
     Rng rng(pseed ^ 0x70380ULL);
     std::vector<std::pair<float, int>> plains;
     for (int c = 0; c < P.grid.cells; c++)
-        if (pp->territory[c] && P.grid.land[c] && P.grid.relief[c] < 0.14f && P.grid.veg[c] < 0.45f && P.grid.tempC[c] > -3) plains.push_back({P.grid.relief[c] + 0.3f * (float)unitFromHash(mix64(pseed ^ (uint64_t)c)), c});
+        if (pp->territory[c] && P.grid.land[c] && P.grid.relief[c] < 0.14f && P.grid.veg[c] < 0.45f && P.grid.tempC[c] > -3)
+            plains.push_back({P.grid.relief[c] + 0.3f * (float)unitFromHash(mix64(pseed ^ (uint64_t)c)), c});
     std::sort(plains.begin(), plains.end());
     const int want = 1 + (pp->areaKm2 > 400000 ? 1 : 0) + (pp->areaKm2 > 1500000 ? 1 : 0);
     int k = 0;
@@ -551,7 +579,16 @@ void WB::geoglyphs() {
             const SurfaceSample s = at(u);
             if (wetS(s) || s.material == MAT_FOREST || matFamily(s.material) == FAM_SNOW) continue;
             double lo = s.height, hi = s.height;
-            for (int m = 0; m < 6; m++) { const double b = m * TAU / 6; const SurfaceSample q = at(offsetUnit(u, std::sin(b) * 450, std::cos(b) * 450, Rm)); if (wetS(q)) { lo = -1e18; break; } lo = std::min(lo, q.height); hi = std::max(hi, q.height); }
+            for (int m = 0; m < 6; m++) {
+                const double b = m * TAU / 6;
+                const SurfaceSample q = at(offsetUnit(u, std::sin(b) * 450, std::cos(b) * 450, Rm));
+                if (wetS(q)) {
+                    lo = -1e18;
+                    break;
+                }
+                lo = std::min(lo, q.height);
+                hi = std::max(hi, q.height);
+            }
             if (lo < -1e17) continue;
             if (hi - lo < bestRange) { bestRange = hi - lo; best = u; any = true; }
         }
@@ -692,7 +729,18 @@ void WB::battlefields() {
             int other = war.sideA >= 0 ? war.sideA : historySeat(*H, e.year);
             if (other == e.place && war.sideB >= 0) other = war.sideB;
             if (other < 0 || other == e.place) {   // a war at its own seat: they came from the nearest other place
-                double bd = 1e18; for (int q = 0; q < (int)H->places.size(); q++) if (q != e.place && H->placeStands(q, e.year)) { Vec3 uq; double rq; placeAt(q, uq, rq); const double d = arcLength(uq, ub, Rm); if (d < bd) { bd = d; other = q; } }
+                double bd = 1e18;
+                for (int q = 0; q < (int)H->places.size(); q++)
+                    if (q != e.place && H->placeStands(q, e.year)) {
+                        Vec3 uq;
+                        double rq;
+                        placeAt(q, uq, rq);
+                        const double d = arcLength(uq, ub, Rm);
+                        if (d < bd) {
+                            bd = d;
+                            other = q;
+                        }
+                    }
             }
             if (other < 0) continue;
             placeAt(other, ua, ra);
@@ -890,7 +938,14 @@ void WB::terraforms() {
         const double R = 1500 + 2000 * rng.uni();
         if (!clearOf(u, R + 200)) continue;
         double mean = s.height; int nm = 1;
-        for (int m = 0; m < 12; m++) { const double b = m * TAU / 12; const SurfaceSample q = at(offsetUnit(u, std::sin(b) * R * 0.7, std::cos(b) * R * 0.7, Rm)); if (!wetS(q)) { mean += q.height; nm++; } }
+        for (int m = 0; m < 12; m++) {
+            const double b = m * TAU / 12;
+            const SurfaceSample q = at(offsetUnit(u, std::sin(b) * R * 0.7, std::cos(b) * R * 0.7, Rm));
+            if (!wetS(q)) {
+                mean += q.height;
+                nm++;
+            }
+        }
         mean /= nm;
         Work& w = add(WO_TERRAFORM, u, R + 200, seedOf(WO_TERRAFORM, k++));
         w.age = AGE_FUTURISTIC; w.heading = rng.uni() * PI; w.level = mean; w.length = 2 * R;
@@ -1119,7 +1174,12 @@ void WB::strange() {
             if (!clearOf(best, R)) continue;
             Work& w = add(WO_STRANGE, best, R + 100, seedOf(WO_STRANGE, k++));
             w.age = AGE_FAR_FUTURE; w.style = 0;
-            double mean = at(best).height; for (int m = 0; m < 12; m++) { const double b = m * TAU / 12; mean += at(offsetUnit(best, std::sin(b) * R * 0.6, std::cos(b) * R * 0.6, Rm)).height; } mean /= 13;
+            double mean = at(best).height;
+            for (int m = 0; m < 12; m++) {
+                const double b = m * TAU / 12;
+                mean += at(offsetUnit(best, std::sin(b) * R * 0.6, std::cos(b) * R * 0.6, Rm)).height;
+            }
+            mean /= 13;
             GroundEdit f; f.kind = GE_FLAT; f.r = R; f.width = 30; f.level = mean; f.tone = ET_GLASS; f.fades = false;
             w.edits.push_back(f); w.level = mean;
         } else if (st == 1) {   // pillars to the horizon: one every 400 m along a great circle, in stretches of three kilometres

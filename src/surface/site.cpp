@@ -50,7 +50,8 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
             if (cover > 0.002) {
                 t.road = (uint8_t)clampi((int)(cover * 255 + 0.5), 1, 255);
                 const bool frost = t.material == MAT_SNOW && KINDS[gen.type].cover == DC_FROZEN;   // a frozen world's roads under its frost
-                bool dry = t.material != MAT_WATER && t.material != MAT_ICE && (t.material != MAT_SNOW || frost) && t.material != MAT_LAVA && t.material != MAT_GLASS && !(t.water > -1e8f && t.h < t.water + 0.3f);
+                bool dry = t.material != MAT_WATER && t.material != MAT_ICE && (t.material != MAT_SNOW || frost) && t.material != MAT_LAVA && t.material != MAT_GLASS &&
+                        !(t.water > -1e8f && t.h < t.water + 0.3f);
                 double maxCover = std::min(1.0, 2 * half / detailM);
                 if (dry && frost && detailM <= 24 && cover >= 0.5 * maxCover) { t.albedo *= 0.72f; t.veg = 0; }   // the frost thinner over the hard bed: a grey line
                 else if (dry && detailM <= 24 && cover >= 0.5 * maxCover) {   // on the bed (the fine rings): the paving, or the beaten earth, bare and darker
@@ -61,9 +62,13 @@ TerrainVertex SurfaceSite::sampleAt(double x, double z, double detailM) const {
                         case NK_HIGHWAY: if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.85f : 1.0f; break;   // the slabs, pale
                         case NK_PATH: if (fam == FAM_GRASS || fam == FAM_FOREST) t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.9f; break;   // a worn line
                         default:
-                            if (rd->paved) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.75f : 0.9f; }   // the paving: the rock family (on rock ground, darker stone)
-                            else if (fam == FAM_GRASS || fam == FAM_FOREST) { t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.85f; }   // the beaten track: bare earth through the green
-                            else { if (t.material == MAT_SAND) t.material = MAT_DUST; t.albedo *= 0.5f; }   // beaten sand is packed and dark (the dust tile: no ripples), beaten rock darker; a fifth less read as the sand's own patches
+                            // the paving: the rock family (on rock ground, darker stone)
+                            if (rd->paved) { if (fam != FAM_ROCK) t.material = (uint8_t)familyRep(gen.type, FAM_ROCK); t.albedo *= fam == FAM_ROCK ? 0.75f : 0.9f; }
+                            // the beaten track: bare earth through the green
+                            else if (fam == FAM_GRASS || fam == FAM_FOREST) { t.material = (uint8_t)familyRep(gen.type, FAM_SAND); t.albedo *= 0.85f; }
+                            // beaten sand is packed and dark (the dust tile: no ripples), beaten rock darker; a fifth less read as the
+                            // sand's own patches
+                            else { if (t.material == MAT_SAND) t.material = MAT_DUST; t.albedo *= 0.5f; }
                             break;
                     }
                     t.veg *= rd->kind == NK_PATH ? 0.4f : 0.1f;
@@ -145,7 +150,8 @@ void SurfaceSite::applyMarks(double x, double z, double detailM, TerrainVertex& 
     auto it = markCells.find(markKey((int64_t)std::floor(x / MARK_CELL), (int64_t)std::floor(z / MARK_CELL)));
     if (it == markCells.end()) return;
     const bool frost = t.material == MAT_SNOW && KINDS[gen.type].cover == DC_FROZEN;   // P-04: a frozen world's town under its frost
-    const bool dry = t.material != MAT_WATER && t.material != MAT_ICE && (t.material != MAT_SNOW || frost) && t.material != MAT_LAVA && t.material != MAT_GLASS && !(t.water > -1e8f && t.h < t.water + 0.3f);
+    const bool dry =
+            t.material != MAT_WATER && t.material != MAT_ICE && (t.material != MAT_SNOW || frost) && t.material != MAT_LAVA && t.material != MAT_GLASS && !(t.water > -1e8f && t.h < t.water + 0.3f);
     if (!dry) return;
     // the street or the square under the vertex (its share of the footprint), and the field it lies in
     double cover = 0, maxCover = 1; int paved = 1;
@@ -242,7 +248,17 @@ void SurfaceSite::addWorkEdits(const Work& w, double ox, double oz, double years
         double ext = 0;
         switch (g.kind) {
             case GE_CUT: ext = std::hypot(g.hw, g.hd) + 2; e.x0 = e.x - ext; e.x1 = e.x + ext; e.z0 = e.z - ext; e.z1 = e.z + ext; break;
-            case GE_PIT: case GE_BOWL: case GE_FLAT: case GE_TERRACES: ext = g.r * (g.kind == GE_BOWL ? 1.4 : 1.0) + 2; e.x0 = e.x - ext; e.x1 = e.x + ext; e.z0 = e.z - ext; e.z1 = e.z + ext; e.pts = g.pts; break;
+            case GE_PIT:
+            case GE_BOWL:
+            case GE_FLAT:
+            case GE_TERRACES:
+                ext = g.r * (g.kind == GE_BOWL ? 1.4 : 1.0) + 2;
+                e.x0 = e.x - ext;
+                e.x1 = e.x + ext;
+                e.z0 = e.z - ext;
+                e.z1 = e.z + ext;
+                e.pts = g.pts;
+                break;
             case GE_WATER:
                 e.gx0 = e.x + g.gx0; e.gz0 = e.z + g.gz0; e.cell = g.cell; e.nx = g.nx; e.nz = g.nz; e.mask = g.mask;
                 e.x0 = e.gx0; e.z0 = e.gz0; e.x1 = e.gx0 + g.nx * g.cell; e.z1 = e.gz0 + g.nz * g.cell;
@@ -416,7 +432,13 @@ double SurfaceSite::editCover(double x, double z) const {
             }
             case GE_PIT: if (e.r > 30 && std::hypot(x - e.x, z - e.z) < e.r) best = std::max(best, (double)e.fresh); break;
             case GE_FLAT: case GE_TERRACES: if (std::hypot(x - e.x, z - e.z) < e.r) best = 1; break;   // a grove's clearing, a plain made level: no tree
-            case GE_LINE: { double along = 0; const double d = polyDist(e.pts, x, z, &along); const double half = 0.5 * (e.width2 >= 0 ? e.width + (e.width2 - e.width) * along : e.width); best = std::max(best, e.left * clampd(half + 1.0 - d, 0, 1)); break; }
+            case GE_LINE: {
+                double along = 0;
+                const double d = polyDist(e.pts, x, z, &along);
+                const double half = 0.5 * (e.width2 >= 0 ? e.width + (e.width2 - e.width) * along : e.width);
+                best = std::max(best, e.left * clampd(half + 1.0 - d, 0, 1));
+                break;
+            }
             default: break;
         }
     };
@@ -448,7 +470,8 @@ void SurfaceSite::ensureRoads(double x, double z) {
     std::vector<RoadPair> todo;
     for (const RoadPair& p : pairs) if (roadIds.insert(p.id).second) todo.push_back(p);
     std::vector<Road> rs(todo.size()); std::vector<char> ok(todo.size(), 0);
-    auto walkRange = [&](int i0, int i1) { for (int i = i0; i < i1; i++) ok[i] = roadWay(gen, roadCultures[roadPeopleOf(todo[i].a, todo[i].b)], todo[i].a, todo[i].b, rs[i]) ? 1 : 0; };   // built as its people built
+    // built as its people built
+    auto walkRange = [&](int i0, int i1) { for (int i = i0; i < i1; i++) ok[i] = roadWay(gen, roadCultures[roadPeopleOf(todo[i].a, todo[i].b)], todo[i].a, todo[i].b, rs[i]) ? 1 : 0; };
     if (todo.size() > 4) parallelFor((int)todo.size(), 2, walkRange); else walkRange(0, (int)todo.size());
     for (size_t i = 0; i < todo.size(); i++) {
         if (!ok[i]) continue;
@@ -641,9 +664,12 @@ SunInfo SurfaceSite::sun(double t) const {
     si.altitude = std::asin(clampd(si.dirLocal.y, -1, 1));
     si.azimuth = wrap2pi(std::atan2(si.dirLocal.x, si.dirLocal.z));
     double dist = length(sys->star.pos - bp);
-    double flare = starFlare(sys->star, t);   // a red dwarf's flare doubles its light for a minute and whitens it: a quarter more light past the exposure clamp (its near worlds sit at the clamp already)
+    // a red dwarf's flare doubles its light for a minute and whitens it: a quarter more light past the exposure clamp (its near worlds sit
+    // at the clamp already)
+    double flare = starFlare(sys->star, t);
     // the floor is the world's own sun's; on a world of the companion the primary is the far sun and lights as much as it does
-    si.lightFactor = (sys->ofCompanion(body) ? StarSystem::starLightFactor(sys->star.luminosity, dist, 0.0) : std::max(0.62, SpaceRenderer::lightFactor(sys->star.luminosity, dist))) * (1 + 0.25 * flare);
+    si.lightFactor =
+            (sys->ofCompanion(body) ? StarSystem::starLightFactor(sys->star.luminosity, dist, 0.0) : std::max(0.62, SpaceRenderer::lightFactor(sys->star.luminosity, dist))) * (1 + 0.25 * flare);
     si.angularRadius = std::asin(clampd(sys->star.radiusKm / dist, 0, 1));
     // other bodies between the site and the star cover part of its disc
     si.eclipse = 0;

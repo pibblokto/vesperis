@@ -97,7 +97,8 @@ void Game::droneBayLaunch() {
     const std::string wk = worldKeyOf(b);
     if (droneWorldHere(sys.star.seed, b)) {   // all of it held already
         int left = 0;
-        for (const DroneItem& it : bay.world.items) if (!(it.kind == DF_INSTRUMENT ? guide.instruments.count(findKeyOf(wk, it.kind, it.index)) : guide.shards.count(findKeyOf(wk, it.kind, it.index)))) left++;
+        for (const DroneItem& it : bay.world.items)
+            if (!(it.kind == DF_INSTRUMENT ? guide.instruments.count(findKeyOf(wk, it.kind, it.index)) : guide.shards.count(findKeyOf(wk, it.kind, it.index)))) left++;
         if (left == 0) { refuse("THE SHIP HOLDS ALL THEY LEFT DOWN THERE", 5); return; }
     }
     bay.out = true; bay.planned = false; bay.recalled = false; bay.clock = 0; bay.back = 0;
@@ -213,7 +214,9 @@ void Game::droneTripEnd() {
     std::string list;
     for (size_t i = 0; i < parts.size(); i++) list += (i ? (i + 1 == parts.size() ? " AND " : ", ") : "") + parts[i];
     if (list.empty()) list = "NOTHING";
-    logEvent("DRONES", fmt("THE DRONES CAME BACK FROM %s%s WITH %s FROM %d PLACE%s SEARCHED", bay.worldName.c_str(), bay.recalled ? " AS THE SHIP LEFT" : "", list.c_str(), (int)where.size(), where.size() == 1 ? "" : "S"));
+    logEvent("DRONES",
+            fmt("THE DRONES CAME BACK FROM %s%s WITH %s FROM %d PLACE%s SEARCHED", bay.worldName.c_str(), bay.recalled ? " AS THE SHIP LEFT" : "", list.c_str(), (int)where.size(),
+                    where.size() == 1 ? "" : "S"));
     if (bay.recalled) status(fmt("THE DRONES CAME BACK AS THE SHIP LEFT: %d FINDS", total), 6);
     else status(total ? fmt("THE DRONES ARE BACK WITH %d FINDS", total) : std::string("THE DRONES ARE BACK WITH NOTHING"), 5);
     if (total) { std::string s; for (size_t i = 0; i < parts.size(); i++) s += (i ? ", " : "") + parts[i]; statusNext = s; statusNextSecs = 5; }
@@ -387,7 +390,8 @@ void Game::renderDroneBay() {
         drawRectRGB(canvas, x0 - 1, y0 - 1, x0 + w, y0 + h, rgb(40, 52, 40));
         const bool aboard = bay.clock < 0 || !bay.out || R.docked;
         const DronePose pose = dronePoseAt(k);
-        drawDroneWire(x0, y0, w, h, pose, aboard ? realTime * 0.35 + k * 2.1 : 2.5 + 0.18 * std::sin(realTime * 0.4 + k), aboard && !droneBayReady() ? rgb(150, 140, 80) : rgb(255, 240, 140));   // out: its face three-quarters on
+        // out: its face three-quarters on
+        drawDroneWire(x0, y0, w, h, pose, aboard ? realTime * 0.35 + k * 2.1 : 2.5 + 0.18 * std::sin(realTime * 0.4 + k), aboard && !droneBayReady() ? rgb(150, 140, 80) : rgb(255, 240, 140));
         drawText(canvas, x0 + 2, y0 + 2, fmt("%d", k + 1).c_str(), DRONE_COL[k]);
         std::string right;
         int found = 0; for (const DroneFindRec& f : R.finds) if (f.t <= bay.clock || f.aboard) found++;
@@ -410,9 +414,21 @@ void Game::renderDroneBay() {
             const int sy = std::min(bay.mapH - 1, (y - my * S) * bay.mapH / (mh * S));
             for (int x = mx * S; x < (mx + mw) * S; x++) canvas.px[(size_t)y * canvas.w + x] = bay.map[(size_t)sy * bay.mapW + std::min(bay.mapW - 1, (x - mx * S) * bay.mapW / (mw * S))];
         }
-        auto toMap = [&](double lat, double lon, int& x, int& y) { x = mx + (int)(wrap2pi(lon + PI) / TAU * mw); y = my + (int)((0.5 - lat / PI) * mh); x = clampi(x, mx, mx + mw - 1); y = clampi(y, my, my + mh - 1); };
+        auto toMap = [&](double lat, double lon, int& x, int& y) {
+            x = mx + (int)(wrap2pi(lon + PI) / TAU * mw);
+            y = my + (int)((0.5 - lat / PI) * mh);
+            x = clampi(x, mx, mx + mw - 1);
+            y = clampi(y, my, my + mh - 1);
+        };
         auto dotted = [&](double lat0, double lon0, double lat1, double lon1, uint32_t col) {
-            for (int i = 0; i <= 24; i++) { if (i % 2) continue; double la, lo; lerpLatLon(lat0, lon0, lat1, lon1, i / 24.0, la, lo); int x, y; toMap(la, lo, x, y); fillRectRGB(canvas, x, y, x, y, col); }
+            for (int i = 0; i <= 24; i++) {
+                if (i % 2) continue;
+                double la, lo;
+                lerpLatLon(lat0, lon0, lat1, lon1, i / 24.0, la, lo);
+                int x, y;
+                toMap(la, lo, x, y);
+                fillRectRGB(canvas, x, y, x, y, col);
+            }
         };
         double sLat = bay.subLat, sLon = bay.subLon;
         if (!bay.out && ship.mode == ShipState::PARKED && ship.parkedBody == b) StarSystem::latLonFromBody(normalize(sys.bodyFrame(b, t) * ship.parkDir), sLat, sLon);

@@ -10,7 +10,8 @@ void unitNoise(const Check& check) {
             Vec3 g; double v = gnoise3d(x, y, z, sd, g);
             worstV = std::max(worstV, std::fabs(v - gnoise3(x, y, z, sd)));
             const double e = 1e-5;
-            Vec3 fd((gnoise3(x + e, y, z, sd) - gnoise3(x - e, y, z, sd)) / (2 * e), (gnoise3(x, y + e, z, sd) - gnoise3(x, y - e, z, sd)) / (2 * e), (gnoise3(x, y, z + e, sd) - gnoise3(x, y, z - e, sd)) / (2 * e));
+            Vec3 fd((gnoise3(x + e, y, z, sd) - gnoise3(x - e, y, z, sd)) / (2 * e), (gnoise3(x, y + e, z, sd) - gnoise3(x, y - e, z, sd)) / (2 * e),
+                    (gnoise3(x, y, z + e, sd) - gnoise3(x, y, z - e, sd)) / (2 * e));
             worst = std::max(worst, length(fd - g));
         }
         check("gnoise3d value equals gnoise3", worstV < 1e-12, "worst " + std::to_string(worstV));
@@ -58,7 +59,10 @@ void unitNoise(const Check& check) {
             BodyGen g1 = BodyGen::make(b), g2 = BodyGen::make(b);
             for (int mm = 0; mm < MAT_COUNT && ok; mm++) {
                 const RGB& c = g1.matColor[mm];
-                if (!(c.r >= 0 && c.g >= 0 && c.b >= 0 && c.r + c.g + c.b > 0.05 && c.r <= 1.001 && c.g <= 1.001 && c.b <= 1.001)) { ok = false; why = std::string(KINDS[ty].name) + "/" + MATERIAL_NAMES[mm]; }
+                if (!(c.r >= 0 && c.g >= 0 && c.b >= 0 && c.r + c.g + c.b > 0.05 && c.r <= 1.001 && c.g <= 1.001 && c.b <= 1.001)) {
+                    ok = false;
+                    why = std::string(KINDS[ty].name) + "/" + MATERIAL_NAMES[mm];
+                }
                 if (std::fabs(c.r - g2.matColor[mm].r) > 1e-9 || std::fabs(c.g - g2.matColor[mm].g) > 1e-9) { ok = false; why = "not deterministic"; }
             }
         }
@@ -166,7 +170,8 @@ void unitBasics(const Check& check) {
         Input in; sv.player.yaw = sv.buggy.heading + PI; sv.player.pitch = -80 * DEG;
         sv.update(1.0 / 60, in, 0.0, true);
         double look = std::fabs(wrapAngle(sv.player.yaw - sv.buggy.heading));
-        check("nose camera pans 70 deg at most", look <= SurfaceView::CAM_PAN + 1e-9 && sv.player.pitch >= -SurfaceView::CAM_TILT_DOWN - 1e-9, "look " + std::to_string(look / DEG) + " tilt " + std::to_string(sv.player.pitch / DEG));
+        check("nose camera pans 70 deg at most", look <= SurfaceView::CAM_PAN + 1e-9 && sv.player.pitch >= -SurfaceView::CAM_TILT_DOWN - 1e-9,
+                "look " + std::to_string(look / DEG) + " tilt " + std::to_string(sv.player.pitch / DEG));
         sv.init(&sys, bi, 0.5, 1.2, 0.0);
         check("no buggy on a new landing", !sv.buggy.deployed && !sv.inBuggy);
     }
@@ -180,7 +185,8 @@ void unitBasics(const Check& check) {
         Vec3 wpU = sv.site.unitAt(sv.wpX, sv.wpZ);
         sv.player.x = 51e3; sv.update(1.0 / 30, in, 2.0, false);   // beyond 50 km: reanchor
         double wx, wz; sv.site.localAt(wpU, wx, wz);
-        check("reanchor keeps the waypoint in place", sv.hasWaypoint && std::fabs(wx - sv.wpX) < 0.05 && std::fabs(wz - sv.wpZ) < 0.05 && std::fabs(sv.wpX) > 1000, "wp " + std::to_string(sv.wpX) + "," + std::to_string(sv.wpZ));
+        check("reanchor keeps the waypoint in place", sv.hasWaypoint && std::fabs(wx - sv.wpX) < 0.05 && std::fabs(wz - sv.wpZ) < 0.05 && std::fabs(sv.wpX) > 1000,
+                "wp " + std::to_string(sv.wpX) + "," + std::to_string(sv.wpZ));
         int epoch = sv.siteEpoch;
         sv.init(&sys, bi, 0.5, 1.2, 0.0);
         check("a new landing clears the waypoint", !sv.hasWaypoint && sv.siteEpoch > epoch);
@@ -223,7 +229,9 @@ void unitBasics(const Check& check) {
     }
     // 32 banks, and the second world's families have their own
     check("32 palette banks of 2048 intensities", BANKS == 32 && INTEN_MASK == 2047 && INTEN_PER_SHADE == 32 && (BANK_MASK >> BANK_SHIFT) == 31);
-    check("body B's sand has its own bank", SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_SAND) == 17 && SpaceRenderer::globeBank(2, PT_FELISIAN, MAT_SAND) == 13 && SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_SNOW) == 18 && SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_FOREST) == 16);
+    check("body B's sand has its own bank",
+            SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_SAND) == 17 && SpaceRenderer::globeBank(2, PT_FELISIAN, MAT_SAND) == 13 && SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_SNOW) == 18 &&
+                    SpaceRenderer::globeBank(3, PT_FELISIAN, MAT_FOREST) == 16);
     // a globe whose centre is behind the camera plane still draws its limb
     if (bi >= 0) {
         SpaceRenderer sr; StarNeighborhood nb;
@@ -251,7 +259,8 @@ void unitBasics(const Check& check) {
         for (int64_t x = 150; x < 320 && ck < 0; x++)
             for (int64_t z = 20; z < 140 && ck < 0; z++) {
                 if (!starInSector(x, 0, z, cs)) continue;
-                NebulaPatch np[16]; if (nebulaPatches(Vec3(x + 0.5, 0.5, z + 0.5), np, 16) > 0) continue;   // a sky without nebula patches, which would raise the mean shade (the test measures the companion's flood)
+                // a sky without nebula patches, which would raise the mean shade (the test measures the companion's flood)
+                NebulaPatch np[16]; if (nebulaPatches(Vec3(x + 0.5, 0.5, z + 0.5), np, 16) > 0) continue;
                 csys.generate(cs); if (csys.companion >= 0) ck = csys.companion;
             }
         check("a system with a companion star found", ck >= 0);
@@ -285,8 +294,10 @@ void unitBasics(const Check& check) {
             check("the companion ahead is a disc of the expected size", frac[0] > 0.5 * expect && frac[0] < 1.6 * expect, fmt("%.1f%% of the frame, expected %.1f%%", frac[0] * 100, expect * 100));
             check("the companion 70 deg off axis leaves no disc", frac[1] == 0 && mean[1] < 8, fmt("disc %.2f%%, mean shade %.1f", frac[1] * 100, mean[1]));
             // measured against the 70-degree frame, so the galaxy band's own brightness (now the whole disc, by direction) does not count
-            check("the companion beside the camera (95 deg) does not flood", frac[2] == 0 && mean[2] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[2] * 100, mean[2], mean[1]));
-            check("the companion behind (150 deg) does not flood", frac[3] == 0 && mean[3] < mean[1] + 1.5, fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[3] * 100, mean[3], mean[1]));
+            check("the companion beside the camera (95 deg) does not flood", frac[2] == 0 && mean[2] < mean[1] + 1.5,
+                    fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[2] * 100, mean[2], mean[1]));
+            check("the companion behind (150 deg) does not flood", frac[3] == 0 && mean[3] < mean[1] + 1.5,
+                    fmt("disc %.2f%%, mean shade %.1f against %.1f at 70 deg", frac[3] * 100, mean[3], mean[1]));
         }
     }
     // a companion star keeps clear of the other sun's worlds. Over the home cube and a cube of the core: a far companion at its closest
@@ -310,7 +321,8 @@ void unitBasics(const Check& check) {
                     if (b.type == PT_COMET || b.type == PT_COMPANION) continue;
                     if (sys.ofCompanion(b.index)) { own = std::max(own, b.orbitRadiusKm * (1 + b.ecc)); continue; }
                     const Body& p = b.parent < 0 ? b : sys.bodies[b.parent];
-                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : (b.drawnOrbitKm > 0 ? b.drawnOrbitKm : b.orbitRadiusKm) * (1 + b.ecc)));   // a moon's orbit as drawn (a made world's push moves no star)
+                    // a moon's orbit as drawn (a made world's push moves no star)
+                    reach = std::max(reach, p.orbitRadiusKm * (1 + p.ecc) + (b.parent < 0 ? 0.0 : (b.drawnOrbitKm > 0 ? b.drawnOrbitKm : b.orbitRadiusKm) * (1 + b.ecc)));
                     if (b.parent < 0) first = std::min(first, b.orbitRadiusKm);
                 }
                 if (first > 1e29) continue;   // a primary without worlds: nothing to keep clear of (its companion is close or far by the draw alone)
@@ -335,8 +347,9 @@ void unitBasics(const Check& check) {
         scan(150, 320, 0, 1, 20, 140);
         scan(12293, 12308, -7, 8, -5507, -5492);   // the core cube of `galaxy`: the giants, the holes
         check("companions keep clear of the other sun's worlds (B-425)", multiples > 500 && far > 300 && closeN > 50 && wrong == 0,
-              fmt("%d multiples: %d far (widest disc %.2f deg, warmest %.0f K, own worlds out to %.2f of the gap, the primary %.2f deg from them), %d close (the brightest %.3f of its primary), %d holes' close ones; %d wrong",
-                  multiples, far, worstDisc, worstHeat, worstOwn, worstPrimary, closeN, worstLight, holes, wrong));
+                fmt("%d multiples: %d far (widest disc %.2f deg, warmest %.0f K, own worlds out to %.2f of the gap, the primary %.2f deg from them), %d close (the brightest %.3f of its primary), %d "
+                    "holes' close ones; %d wrong",
+                        multiples, far, worstDisc, worstHeat, worstOwn, worstPrimary, closeN, worstLight, holes, wrong));
         Star ys; StarSystem ysys; bool yFound = starInSector(-31900, 3, -35668, ys);
         if (yFound) ysys.generate(ys);
         bool yShape = yFound && ysys.companion == 8 && ysys.bodies[8].starClass == STAR_RED_GIANT && drawnKind(ysys.bodies[0]) == PT_VENUSIAN && drawnKind(ysys.bodies[1]) == PT_FELISIAN &&
@@ -346,24 +359,30 @@ void unitBasics(const Check& check) {
             double t = i * ysys.bodies[8].orbitPeriod / 2000.0;
             for (int w = 1; w <= 3; w++) yWidest = std::max(yWidest, 2 * std::asin(std::min(1.0, ysys.bodies[8].radiusKm / length(ysys.bodyPos(8, t) - ysys.bodyPos(w, t)))) / DEG);
         }
-        check("the reported giant: a small sun over the same worlds (B-425)", yShape && yWidest < 3.0, fmt("%s: %s, worlds I-IV %s %s %s %s; the giant (R %.3g km) %.3g km out, at its widest %.2f deg of their sky (60 and more before)", yFound ? ys.name.c_str() : "no star",
-              yFound ? ysys.classString().c_str() : "-", yShape ? "VENUSIAN" : "?", yShape ? "FELISIAN" : "?", yShape ? "FELISIAN" : "?", yShape ? "FELISIAN (locked)" : "?", yShape ? ysys.bodies[8].radiusKm : 0.0, yShape ? ysys.bodies[8].orbitRadiusKm : 0.0, yWidest));
+        check("the reported giant: a small sun over the same worlds (B-425)", yShape && yWidest < 3.0,
+                fmt("%s: %s, worlds I-IV %s %s %s %s; the giant (R %.3g km) %.3g km out, at its widest %.2f deg of their sky (60 and more before)", yFound ? ys.name.c_str() : "no star",
+                        yFound ? ysys.classString().c_str() : "-", yShape ? "VENUSIAN" : "?", yShape ? "FELISIAN" : "?", yShape ? "FELISIAN" : "?", yShape ? "FELISIAN (locked)" : "?",
+                        yShape ? ysys.bodies[8].radiusKm : 0.0, yShape ? ysys.bodies[8].orbitRadiusKm : 0.0, yWidest));
         if (yShape) {   // the report's place and time: Yaiphuyiabrus IV at three in its night with the giant high (EPOC 6011:003.601; B-426: IV, not III)
             SurfaceView sv; sv.init(&ysys, 3, 3.9 * DEG, -99.4 * DEG, 3601000);
             const SurfaceEnvironment& e = sv.env;
-            check("a night under a far companion is a night (B-425)", e.hasSun2 && e.sunDisc.altitude < -0.5 && e.sun2.altitude > 0.5 && e.skyBrightness < 0.2 && e.sun.lightFactor < 0.3 && e.glow < 0.3,
-                  fmt("the dwarf at %.0f deg, the giant at %.0f deg (%.2f deg across, light %.3f); the sky %.2f, the light %.2f, its glow %.2f (the giant 95 deg across, the sky 1.0 and the light 1.9 before)", e.sunDisc.altitude / DEG, e.sun2.altitude / DEG,
-                      2 * e.sun2.angularRadius / DEG, e.sun2.lightFactor, e.skyBrightness, e.sun.lightFactor, e.glow));
+            check("a night under a far companion is a night (B-425)",
+                    e.hasSun2 && e.sunDisc.altitude < -0.5 && e.sun2.altitude > 0.5 && e.skyBrightness < 0.2 && e.sun.lightFactor < 0.3 && e.glow < 0.3,
+                    fmt("the dwarf at %.0f deg, the giant at %.0f deg (%.2f deg across, light %.3f); the sky %.2f, the light %.2f, its glow %.2f (the giant 95 deg across, the sky 1.0 and the light "
+                        "1.9 before)",
+                            e.sunDisc.altitude / DEG, e.sun2.altitude / DEG, 2 * e.sun2.angularRadius / DEG, e.sun2.lightFactor, e.skyBrightness, e.sun.lightFactor, e.glow));
         }
         Star ps; StarSystem psys; bool pFound = starInSector(150, 0, 134, ps);
         if (pFound) psys.generate(ps);
-        if (pFound && (int)psys.bodies.size() > 25 && psys.ofCompanion(25) && KINDS[psys.bodies[25].type].atmosphere) {   // `cworld`'s find: an ocean world of a red dwarf companion with the blue giant primary 65 degrees up
+        if (pFound && (int)psys.bodies.size() > 25 && psys.ofCompanion(25) && KINDS[psys.bodies[25].type].atmosphere) {
+            // `cworld`'s find: an ocean world of a red dwarf companion with the blue giant primary 65 degrees up
             SurfaceView sv; sv.init(&psys, 25, 10 * DEG, 30 * DEG, 100000);
             const SurfaceEnvironment& e = sv.env;
             bool midnight = e.localTime < 0.1 || e.localTime > 0.9;
-            check("a companion's world keeps its own night (B-425)", e.sunDisc.altitude > 0.5 && e.sun2.altitude < -0.5 && e.skyBrightness < 0.2 && e.sun.lightFactor < 0.3 && e.primaryRel < 0.3 && midnight,
-                  fmt("%s: the far primary at %.0f deg (light %.3f, %.2f of its own sun's), its own sun at %.0f deg; the sky %.2f, the light %.2f, local time %.2f (a blue day and 0.62 before)", psys.bodies[25].name.c_str(),
-                      e.sunDisc.altitude / DEG, e.sunDisc.lightFactor, e.primaryRel, e.sun2.altitude / DEG, e.skyBrightness, e.sun.lightFactor, e.localTime));
+            check("a companion's world keeps its own night (B-425)",
+                    e.sunDisc.altitude > 0.5 && e.sun2.altitude < -0.5 && e.skyBrightness < 0.2 && e.sun.lightFactor < 0.3 && e.primaryRel < 0.3 && midnight,
+                    fmt("%s: the far primary at %.0f deg (light %.3f, %.2f of its own sun's), its own sun at %.0f deg; the sky %.2f, the light %.2f, local time %.2f (a blue day and 0.62 before)",
+                            psys.bodies[25].name.c_str(), e.sunDisc.altitude / DEG, e.sunDisc.lightFactor, e.primaryRel, e.sun2.altitude / DEG, e.skyBrightness, e.sun.lightFactor, e.localTime));
         } else check("a companion's world keeps its own night (B-425)", false, "the world of sector 150 0 134 moved");
     }
     {   // a system with distance from the ship. Over the stars near home (the survey's sectors): a solid world's first moon at
@@ -473,7 +492,8 @@ void unitBasics(const Check& check) {
                 sr.setupPalette(fb, &rsys, sb, -1, 1.0);
                 sr.drawSkyBodies(fb, c);
                 float deep2 = 0; for (float z : fb.invz) deep2 = std::max(deep2, z);
-                check("a small body close by lies beyond the far ring too", deep2 > 0 && deep2 < 1.0f / 53000.0f, fmt("nearest 1/%.0f m (it would read 1/%.0f in kilometres)", deep2 > 0 ? 1.0 / deep2 : 0.0, 3.6 * rsys.bodies[sb].radiusKm));
+                check("a small body close by lies beyond the far ring too", deep2 > 0 && deep2 < 1.0f / 53000.0f,
+                        fmt("nearest 1/%.0f m (it would read 1/%.0f in kilometres)", deep2 > 0 ? 1.0 / deep2 : 0.0, 3.6 * rsys.bodies[sb].radiusKm));
             }
         }
     }
@@ -525,7 +545,11 @@ void unitBasics(const Check& check) {
             for (int64_t z = 20; z < 140 && mb < 0; z++) {
                 if (!starInSector(x, 0, z, ms)) continue;
                 msys.generate(ms);
-                for (int i = 0; i < (int)msys.bodies.size(); i++) if (msys.bodies[i].parent < 0 && msys.bodies[i].moonCount > 0 && KINDS[msys.bodies[i].type].landable && msys.bodies[i].orbitIncl < 3 * DEG) { mb = i; break; }
+                for (int i = 0; i < (int)msys.bodies.size(); i++)
+                    if (msys.bodies[i].parent < 0 && msys.bodies[i].moonCount > 0 && KINDS[msys.bodies[i].type].landable && msys.bodies[i].orbitIncl < 3 * DEG) {
+                        mb = i;
+                        break;
+                    }
             }
         check("a landable planet with a moon found", mb >= 0);
         if (mb >= 0) {
@@ -578,7 +602,11 @@ void unitBasics(const Check& check) {
         {   // ground the new slots' landform leaves alone within ten metres (the blades thin out with their field, past its mark)
             BodyGen rg = BodyGen::make(sys.bodies[bi]);
             for (int k = 0; k < 3; k++) rg.traits[k] = 0;   // the new slots' alone
-            auto shaped = [&](double lon) { for (int k = -2; k <= 2; k++) if (sampleSurface(rg, StarSystem::bodyFromLatLon(0.4 + k * 5.0 / (rg.R * 1000.0), lon), 4.0).landform > 0.05) return true; return false; };
+            auto shaped = [&](double lon) {
+                for (int k = -2; k <= 2; k++)
+                    if (sampleSurface(rg, StarSystem::bodyFromLatLon(0.4 + k * 5.0 / (rg.R * 1000.0), lon), 4.0).landform > 0.05) return true;
+                return false;
+            };
             while (rlon < 1.6 && shaped(rlon)) rlon += 0.002;
         }
         sv.init(&sys, bi, 0.4, rlon, 0.0);
@@ -643,14 +671,20 @@ void unitBasics(const Check& check) {
             bool out = sv.toggleDrone() && !sv.inDrone;
             sv.relocateCapsule(sv.player.x + 4, sv.player.z + 2);
             double oldX = sv.drone.x; bool redeployed = sv.deployDrone() && sv.drone.x != oldX && sv.drone.odometer == 0;
-            check("drone: lifts, 320 km/h, ceiling, lands, out (R-403)", dep && got && lifted && topAt25 * 3.6 > 300 && top <= SurfaceView::DRONE_TOP_SPEED + 0.01 && ceilingSeen && altMax > 380 && braked <= 2 && landed && out && under < 0.01 && redeployed,
-                  fmt("top %.0f km/h at 25 s, %.0f m up, under %.3f m, landed in %.0f s, %d frames", topAt25 * 3.6, altMax, under, landS, frames));
+            check("drone: lifts, 320 km/h, ceiling, lands, out (R-403)",
+                    dep && got && lifted && topAt25 * 3.6 > 300 && top <= SurfaceView::DRONE_TOP_SPEED + 0.01 && ceilingSeen && altMax > 380 && braked <= 2 && landed && out && under < 0.01 &&
+                            redeployed,
+                    fmt("top %.0f km/h at 25 s, %.0f m up, under %.3f m, landed in %.0f s, %d frames", topAt25 * 3.6, altMax, under, landS, frames));
         } else check("drone: a grassland site for the flight", false);
     }
     // the jetpack flies over deep water (it is not pulled down into it) and lifts out of it. A shore with water over
     // 0.6 m deep within 110 m: the beach scene, else the river bank, else the lake shore; the flight goes there
     {
-        struct WaterRun { bool ran = false, flewOver = false, fellIn = false, liftedOut = false; double dist = 0, deepT = 0, maxDeep = 0, swimT = 0, minAlt = 1e9, heat = 0; const char* where = "none"; };
+        struct WaterRun {
+            bool ran = false, flewOver = false, fellIn = false, liftedOut = false;
+            double dist = 0, deepT = 0, maxDeep = 0, swimT = 0, minAlt = 1e9, heat = 0;
+            const char* where = "none";
+        };
         WaterRun R;
         auto tryScene = [&](int want, double lat, double alt, const char* name) {
             if (R.ran) return;
@@ -673,7 +707,13 @@ void unitBasics(const Check& check) {
                     sv.update(1.0 / 30, in2, t, true); t += 1.0 / 30; in2.newFrame();
                     double g = sv.site.groundHeight(sv.player.x, sv.player.z), wl = sv.site.waterAt(sv.player.x, sv.player.z);
                     bool deep = wl > -1e8 && g < wl - 0.4;
-                    if (deep) { overDeep = true; R.deepT += 1.0 / 30; R.maxDeep = std::max(R.maxDeep, wl - g); if (sv.player.swimming) R.swimT += 1.0 / 30; else R.minAlt = std::min(R.minAlt, sv.player.y - wl); }
+                    if (deep) {
+                        overDeep = true;
+                        R.deepT += 1.0 / 30;
+                        R.maxDeep = std::max(R.maxDeep, wl - g);
+                        if (sv.player.swimming) R.swimT += 1.0 / 30;
+                        else R.minAlt = std::min(R.minAlt, sv.player.y - wl);
+                    }
                 }
             };
             step(1, true, true, true);           // a jump, then the jet held with W: out over the water, a second past its edge
@@ -689,6 +729,8 @@ void unitBasics(const Check& check) {
         tryScene(SCENE_RIVER, 10, 40 * DEG, "river bank");
         tryScene(SCENE_LAKE, 10, 40 * DEG, "lake shore");
         check("jetpack over and out of the water (B-406)", R.ran && R.flewOver && R.fellIn && R.liftedOut,
-              R.ran ? fmt("%s: deep water %.0f m off; %.1f s over it (%.1f m deep), swam %.1f s of it, lowest %.1f m over it, heat %.0f, fell in %s, lifted out %s", R.where, R.dist, R.deepT, R.maxDeep, R.swimT, R.minAlt < 1e8 ? R.minAlt : 0.0, R.heat, R.fellIn ? "yes" : "no", R.liftedOut ? "yes" : "no") : "no shore scene with deep water within 110 m");
+                R.ran ? fmt("%s: deep water %.0f m off; %.1f s over it (%.1f m deep), swam %.1f s of it, lowest %.1f m over it, heat %.0f, fell in %s, lifted out %s", R.where, R.dist, R.deepT,
+                                R.maxDeep, R.swimT, R.minAlt < 1e8 ? R.minAlt : 0.0, R.heat, R.fellIn ? "yes" : "no", R.liftedOut ? "yes" : "no")
+                      : "no shore scene with deep water within 110 m");
     }
 }

@@ -236,7 +236,15 @@ bool WB::landHenge(const LandCell& L, Rng& rng) {
     if (w.style == 0) {   // the ditch round the circle
         const double R = 38 + 30 * r2.uni();
         GroundEdit e; e.kind = GE_DITCH; e.width = 7 + 3 * r2.uni(); e.depth = 2.2; e.bank = 0; e.tone = ET_DARK;
-        for (int m = 0; m <= 48; m++) { const double t = m * TAU / 48; if (m > 0 && m < 48 && std::fabs(std::remainder(t - w.heading, TAU)) < 0.12) { if (e.pts.size() >= 4) w.edits.push_back(e); e.pts.clear(); continue; } addPt(e, std::sin(t) * R, std::cos(t) * R); }
+        for (int m = 0; m <= 48; m++) {
+            const double t = m * TAU / 48;
+            if (m > 0 && m < 48 && std::fabs(std::remainder(t - w.heading, TAU)) < 0.12) {
+                if (e.pts.size() >= 4) w.edits.push_back(e);
+                e.pts.clear();
+                continue;
+            }
+            addPt(e, std::sin(t) * R, std::cos(t) * R);
+        }
         if (e.pts.size() >= 4) w.edits.push_back(e);
         w.width = R;
     }
@@ -308,7 +316,16 @@ bool WB::landShrine(const LandCell& L, const LandSettle& S, Rng& rng) {
             switch (holy) {
                 case HOLY_CAVE: if (sl < 0.3) continue; sc = sl + (matFamily(s.material) == FAM_ROCK ? 0.4 : 0); break;
                 case HOLY_GROVE: if (s.material != MAT_FOREST && s.veg < 0.55) continue; sc = s.veg; break;
-                case HOLY_SPRING: { double lowest = 1e18; for (int m = 0; m < 6; m++) { const double b = m * TAU / 6; lowest = std::min(lowest, at(offsetUnit(u, std::sin(b) * 250, std::cos(b) * 250, Rm)).height); } if (lowest < h - 2) continue; sc = 0.5 - sl; break; }
+                case HOLY_SPRING: {
+                    double lowest = 1e18;
+                    for (int m = 0; m < 6; m++) {
+                        const double b = m * TAU / 6;
+                        lowest = std::min(lowest, at(offsetUnit(u, std::sin(b) * 250, std::cos(b) * 250, Rm)).height);
+                    }
+                    if (lowest < h - 2) continue;
+                    sc = 0.5 - sl;
+                    break;
+                }
                 default: if (sl > 0.05 || s.material == MAT_FOREST) continue; sc = 0.5 - sl * 5; break;
             }
             if (sc > bestS && clearOf(u, 60)) { bestS = sc; site = u; heading = down; any = true; }
@@ -383,7 +400,15 @@ bool WB::landFort(const LandCell& L, const LandSettle& S, Rng& rng) {
         for (int k = 0; k < rings; k++) {
             const double R = width - (style == 0 ? k * 18 : 0) + (moat ? 9 : 6);
             GroundEdit e; e.kind = GE_DITCH; e.width = 6; e.depth = 2.4; e.bank = 0; e.tone = ET_DARK;
-            for (int m = 0; m <= 48; m++) { const double t = m * TAU / 48; if (m > 0 && m < 48 && std::fabs(std::remainder(t - w.heading, TAU)) < 0.1) { if (e.pts.size() >= 4) w.edits.push_back(e); e.pts.clear(); continue; } addPt(e, std::sin(t) * R, std::cos(t) * R); }
+            for (int m = 0; m <= 48; m++) {
+                const double t = m * TAU / 48;
+                if (m > 0 && m < 48 && std::fabs(std::remainder(t - w.heading, TAU)) < 0.1) {
+                    if (e.pts.size() >= 4) w.edits.push_back(e);
+                    e.pts.clear();
+                    continue;
+                }
+                addPt(e, std::sin(t) * R, std::cos(t) * R);
+            }
             if (e.pts.size() >= 4) w.edits.push_back(e);
         }
     }

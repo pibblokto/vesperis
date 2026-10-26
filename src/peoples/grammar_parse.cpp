@@ -45,15 +45,26 @@ struct Parser {
             size_t col = r.find(':'); if (col != std::string::npos) { n.a = r.substr(col + 1); r = r.substr(0, col); }
             if (!n.a.empty() && n.a != "ord" && n.a != "about" && n.a != "digits" && n.a != "words") { error("a number's form is ord, about, digits or words: {" + m + "}"); return false; }
             if (r.empty()) { error("a number without a key: {" + m + "}"); return false; }
-            if (r[0] == '$') { size_t d = r.find('.'); n.s = r.substr(0, d); std::string rest = d == std::string::npos ? "" : r.substr(d + 1); while (!rest.empty()) { size_t e = rest.find('.'); n.path.push_back(rest.substr(0, e)); rest = e == std::string::npos ? "" : rest.substr(e + 1); } }
-            else n.s = r;
+            if (r[0] == '$') {
+                size_t d = r.find('.');
+                n.s = r.substr(0, d);
+                std::string rest = d == std::string::npos ? "" : r.substr(d + 1);
+                while (!rest.empty()) {
+                    size_t e = rest.find('.');
+                    n.path.push_back(rest.substr(0, e));
+                    rest = e == std::string::npos ? "" : rest.substr(e + 1);
+                }
+            } else n.s = r;
             return true;
         }
         if (c == '+') {
             n.type = VgNode::DECL; std::string r = m.substr(1);
             size_t bar = r.find('|'); if (bar != std::string::npos) { n.b = r.substr(bar + 1); r = r.substr(0, bar); }
             size_t col = r.find(':'); n.s = r.substr(0, col); n.a = col == std::string::npos ? "?" : r.substr(col + 1);
-            if (n.s.size() < 2 || n.s[0] != '$' || (n.a != "he" && n.a != "she" && n.a != "they" && n.a != "it" && n.a != "?")) { error("a person brought in is {+$x:he|she|they|it|?}: {" + m + "}"); return false; }
+            if (n.s.size() < 2 || n.s[0] != '$' || (n.a != "he" && n.a != "she" && n.a != "they" && n.a != "it" && n.a != "?")) {
+                error("a person brought in is {+$x:he|she|they|it|?}: {" + m + "}");
+                return false;
+            }
             if (std::find(G.localEntities.begin(), G.localEntities.end(), n.s) == G.localEntities.end()) G.localEntities.push_back(n.s);
             return true;
         }
@@ -200,9 +211,18 @@ struct Parser {
         if (ln[0] != ' ' && ln[0] != '\t') {   // a rule
             size_t par = t.find('(');
             std::string name = trim(par == std::string::npos ? t : t.substr(0, par));
-            for (char ch : name) if (!std::isalnum((unsigned char)ch) && ch != '.' && ch != '-' && ch != '_') { error("a rule's name is letters, digits, '.', '-' and '_': " + name); cur = -1; return; }
+            for (char ch : name)
+                if (!std::isalnum((unsigned char)ch) && ch != '.' && ch != '-' && ch != '_') {
+                    error("a rule's name is letters, digits, '.', '-' and '_': " + name);
+                    cur = -1;
+                    return;
+                }
             auto it = G.ruleIndex.find(name);
-            if (it != G.ruleIndex.end()) { error("the rule " + name + " again (first at " + G.files[G.rules[it->second].file] + ":" + std::to_string(G.rules[it->second].line) + ")"); cur = -1; return; }
+            if (it != G.ruleIndex.end()) {
+                error("the rule " + name + " again (first at " + G.files[G.rules[it->second].file] + ":" + std::to_string(G.rules[it->second].line) + ")");
+                cur = -1;
+                return;
+            }
             VgRule r; r.name = name; r.file = file; r.line = line;
             if (par != std::string::npos) {
                 size_t e = t.find(')', par);
@@ -217,9 +237,15 @@ struct Parser {
                         else if (o == "steady") r.steady = true;
                         else if (o == "formula") r.formula = true;
                         else if (startsWith(o, "people=")) { r.peopleK = std::atoi(o.c_str() + 7); if (r.peopleK < 1) error("people=K, K one or more"); }
-                        else if (startsWith(o, "share=")) { r.share = std::atof(o.c_str() + 6); if (r.share <= 0 || r.share > 1) error("share=F, F above 0 and at most 1"); }
-                        else if (startsWith(o, "words=")) { size_t dd = o.find(".."); if (dd == std::string::npos) error("words=lo..hi"); else { r.wordsLo = std::atoi(o.substr(6, dd - 6).c_str()); r.wordsHi = std::atoi(o.substr(dd + 2).c_str()); } }
-                        else error("unknown rule option " + o);
+                        else if (startsWith(o, "share=")) { r.share = std::atof(o.c_str() + 6); if (r.share <= 0 || r.share > 1) error("share=F, F above 0 and at most 1");
+                        } else if (startsWith(o, "words=")) {
+                            size_t dd = o.find("..");
+                            if (dd == std::string::npos) error("words=lo..hi");
+                            else {
+                                r.wordsLo = std::atoi(o.substr(6, dd - 6).c_str());
+                                r.wordsHi = std::atoi(o.substr(dd + 2).c_str());
+                            }
+                        } else error("unknown rule option " + o);
                     }
                 }
             }
@@ -246,11 +272,22 @@ struct Parser {
                 if (o == "pl") { a.number = VN_PLURAL; continue; }
                 if (o == "sing") { a.number = VN_SING; continue; }
                 if (o == "mass") { a.number = VN_MASS; continue; }
-                if (std::isdigit((unsigned char)o[0]) || (o[0] == '.' && o.size() > 1 && std::isdigit((unsigned char)o[1]))) { a.w = std::atof(o.c_str()); if (a.w <= 0) error("a weight above zero: " + o); continue; }
+                if (std::isdigit((unsigned char)o[0]) || (o[0] == '.' && o.size() > 1 && std::isdigit((unsigned char)o[1]))) {
+                    a.w = std::atof(o.c_str());
+                    if (a.w <= 0) error("a weight above zero: " + o);
+                    continue;
+                }
                 VgCond c;
                 if (o.find('|') != std::string::npos) {   // an OR of guards
                     size_t s = 0; bool ok = true;
-                    while (s <= o.size()) { size_t b = o.find('|', s); if (b == std::string::npos) b = o.size(); VgCond x; if (!parseCond(o.substr(s, b - s), x)) ok = false; else c.alt.push_back(x); s = b + 1; }
+                    while (s <= o.size()) {
+                        size_t b = o.find('|', s);
+                        if (b == std::string::npos) b = o.size();
+                        VgCond x;
+                        if (!parseCond(o.substr(s, b - s), x)) ok = false;
+                        else c.alt.push_back(x);
+                        s = b + 1;
+                    }
                     if (!ok) { error("a guard: " + o); continue; }
                 } else if (!parseCond(o, c)) { error("an option or a guard: " + o); continue; }
                 a.conds.push_back(c);

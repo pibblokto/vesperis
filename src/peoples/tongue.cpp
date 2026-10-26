@@ -91,8 +91,10 @@ std::string capWord(std::string s) { if (!s.empty()) s[0] = (char)std::toupper((
 // a name that reads as a rude or silly word of ours is drawn again (anywhere in it for the worst, the whole name for the rest)
 bool unfortunate(const std::string& name) {
     std::string w; for (char c : name) if (std::isalpha((unsigned char)c)) w += (char)std::tolower((unsigned char)c);
-    static const char* const ANY[] = {"fuck", "fuk", "shit", "cunt", "piss", "cock", "dick", "slut", "rape", "nazi", "fag", "porn", "wank", "twat", "nigg", "kike", "spic", "turd", "puke", "poop", "jizz", "dildo", "anus", "penis", "vagin", "tits", "boob", "fart", "crap", "bitch", "whore", "pussy", nullptr};
-    static const char* const WHOLE[] = {"poo", "pooh", "pee", "wee", "bum", "butt", "ass", "arse", "tit", "sex", "gay", "snot", "cum", "god", "jesus", "allah", "satan", "hell", "damn", "fat", "pus", "puss", "dung", "pis", "nob", "knob", "dong", "ho", "hoe", "lol", nullptr};
+    static const char* const ANY[] = {"fuck", "fuk", "shit", "cunt", "piss", "cock", "dick", "slut", "rape", "nazi", "fag", "porn", "wank", "twat", "nigg", "kike", "spic", "turd", "puke", "poop",
+            "jizz", "dildo", "anus", "penis", "vagin", "tits", "boob", "fart", "crap", "bitch", "whore", "pussy", nullptr};
+    static const char* const WHOLE[] = {"poo", "pooh", "pee", "wee", "bum", "butt", "ass", "arse", "tit", "sex", "gay", "snot", "cum", "god", "jesus", "allah", "satan", "hell", "damn", "fat", "pus",
+            "puss", "dung", "pis", "nob", "knob", "dong", "ho", "hoe", "lol", nullptr};
     for (int i = 0; ANY[i]; i++) if (w.find(ANY[i]) != std::string::npos) return true;
     for (int i = 0; WHOLE[i]; i++) if (w == WHOLE[i]) return true;
     // a part of a joined name that is a god or a name of ours ("Odin-Cid"), and a stutter thrice ("Sgisgisgis")
@@ -141,7 +143,13 @@ void syllable(const Sounds& S, const std::string& shape, Rng& r, std::vector<Ph>
         switch (c) {
             case 'C':   // a cluster's head: a stop or a fricative before a liquid, a stop after a sibilant
                 pool = &S.cons;
-                if (next == 'L' && !S.clusterHeads.empty() && r.chance(S.optional)) { out.push_back({false, S.clusterHeads[r.irange((int)S.clusterHeads.size())]}); i++; if (i + 1 < shape.size() && shape[i + 1] == '?') i++; out.push_back({false, S.liquids[r.irange((int)S.liquids.size())]}); continue; }
+                if (next == 'L' && !S.clusterHeads.empty() && r.chance(S.optional)) {
+                    out.push_back({false, S.clusterHeads[r.irange((int)S.clusterHeads.size())]});
+                    i++;
+                    if (i + 1 < shape.size() && shape[i + 1] == '?') i++;
+                    out.push_back({false, S.liquids[r.irange((int)S.liquids.size())]});
+                    continue;
+                }
                 if (next == 'L') { i++; if (i + 1 < shape.size() && shape[i + 1] == '?') i++; }
                 if (prevS && !S.sibHeads.empty()) { out.push_back({false, S.sibHeads[r.irange((int)S.sibHeads.size())]}); continue; }
                 break;
@@ -185,8 +193,9 @@ bool spell(const Sounds& S, const Tongue& T, const std::vector<Ph>& ph, Rng& r, 
             if (std::strcmp(a.code, "?") == 0 || std::strcmp(b.code, "?") == 0 || a.kind == SK_GLIDE || std::strcmp(a.code, "h") == 0) return false;
             if ((a.kind == SK_AFFR || a.kind == SK_FRIC) && (b.kind == SK_AFFR) ) return false;
             if (i == 1) {   // a word's first two: a stop or a fricative before l or r, s or sh before a stop
-                const bool head = (a.kind == SK_STOP || std::strcmp(a.code, "f") == 0 || std::strcmp(a.code, "v") == 0 || std::strcmp(a.code, "th") == 0 || std::strcmp(a.code, "sh") == 0 || std::strcmp(a.code, "x") == 0)
-                                  && (std::strcmp(b.code, "l") == 0 || std::strcmp(b.code, "r") == 0);
+                const bool head = (a.kind == SK_STOP || std::strcmp(a.code, "f") == 0 || std::strcmp(a.code, "v") == 0 || std::strcmp(a.code, "th") == 0 || std::strcmp(a.code, "sh") == 0 ||
+                                          std::strcmp(a.code, "x") == 0) &&
+                        (std::strcmp(b.code, "l") == 0 || std::strcmp(b.code, "r") == 0);
                 const bool sib = (std::strcmp(a.code, "s") == 0 || std::strcmp(a.code, "sh") == 0) && b.kind == SK_STOP && std::strcmp(b.code, "?") != 0;
                 if (!head && !sib) return false;
             }
@@ -326,7 +335,10 @@ Tongue buildTongue(uint64_t peopleSeed) {
     T.onsets = T.cons; T.nuclei = T.vows; T.codas = T.finals;
     {   // C-06's two numbers, from the shapes
         double coda = 0, bare = 0;
-        for (const std::string& sh : S->shapes) { if (sh.find('F') != std::string::npos || (sh.size() > 1 && sh.back() == 'C') || sh.find("C?") == sh.size() - 2) coda += 1; if (sh[0] == 'V' || (sh.size() > 1 && sh[1] == '?')) bare += 1; }
+        for (const std::string& sh : S->shapes) {
+            if (sh.find('F') != std::string::npos || (sh.size() > 1 && sh.back() == 'C') || sh.find("C?") == sh.size() - 2) coda += 1;
+            if (sh[0] == 'V' || (sh.size() > 1 && sh[1] == '?')) bare += 1;
+        }
         T.codaChance = 0.2 + 0.6 * coda / S->shapes.size(); T.vowelStart = 0.05 + 0.3 * bare / S->shapes.size();
     }
     {   // how it sounds: the stops and the back fricatives against the liquids, the glides and the nasals
@@ -524,7 +536,12 @@ std::string tongueName(const Tongue& T, uint64_t seed, int kind, bool female) {
         if (best.empty() || n.size() < best.size()) best = n;
     }
     {   // no letter thrice
-        std::string c; for (char ch : best) { if (c.size() >= 2 && std::tolower((unsigned char)c[c.size() - 1]) == std::tolower((unsigned char)ch) && std::tolower((unsigned char)c[c.size() - 2]) == std::tolower((unsigned char)ch)) continue; c += ch; }
+        std::string c;
+        for (char ch : best) {
+            if (c.size() >= 2 && std::tolower((unsigned char)c[c.size() - 1]) == std::tolower((unsigned char)ch) && std::tolower((unsigned char)c[c.size() - 2]) == std::tolower((unsigned char)ch))
+                continue;
+            c += ch;
+        }
         best = c;
     }
     if (best.size() > maxLen) {   // cut at a syllable's end

@@ -54,7 +54,13 @@ void placeFurniture(Layout& L, RuinSpec& r, double R) {
         return;
     }
     for (const Plaza& p : r.plazas) {
-        if (fu == FU_LAMPS) { for (int k = 0; k < 4 && lamps < 60; k++) { const double a = PI / 4 + k * PI / 2; if (put(p.x + std::sin(a) * p.r * 0.85, p.z + std::cos(a) * p.r * 0.85, a)) lamps++; } continue; }
+        if (fu == FU_LAMPS) {
+            for (int k = 0; k < 4 && lamps < 60; k++) {
+                const double a = PI / 4 + k * PI / 2;
+                if (put(p.x + std::sin(a) * p.r * 0.85, p.z + std::cos(a) * p.r * 0.85, a)) lamps++;
+            }
+            continue;
+        }
         static const double OFF[5][2] = {{0, 0}, {0.5, 0}, {-0.5, 0}, {0, 0.5}, {0, -0.5}};
         for (int t = 0; t < 5 && pieces < 12; t++) if (put(p.x + OFF[t][0] * p.r, p.z + OFF[t][1] * p.r, std::atan2(-p.x, -p.z + 1e-9))) { pieces++; break; }
     }
@@ -111,7 +117,9 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
     {
         const Building cb = r.buildings.empty() ? Building() : r.buildings.back();
         const double front = (r.buildings.empty() ? 6 : cb.hd) + 5;
-        if (Lc.age < AGE_FUTURISTIC) for (int side = -1; side <= 1; side += 2) if (rng.chance(0.7)) Lc.stela(side * 4.5 * sx + fx * (front + 2), side * 4.5 * sz + fz * (front + 2), h0, 3.0 + 2.0 * rng.uni(), true);
+        if (Lc.age < AGE_FUTURISTIC)
+            for (int side = -1; side <= 1; side += 2)
+                if (rng.chance(0.7)) Lc.stela(side * 4.5 * sx + fx * (front + 2), side * 4.5 * sz + fz * (front + 2), h0, 3.0 + 2.0 * rng.uni(), true);
         if (!Lc.focusCarried()) for (int k = 0; k < 4; k++) { const double d = front + 6 + k * 7; if (Lc.focus(fx * d, fz * d, h0 + PI, village ? 0.6 : 1.0)) break; }
     }
     for (Building& b : r.buildings) { b.district = DI_CENTRE; cReach = std::max(cReach, std::hypot(b.x, b.z) + std::sqrt(b.hw * b.hw + b.hd * b.hd)); }
@@ -219,7 +227,10 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         auto set = [&](int k, double hw, double hd, double h, double t, int style = -1) { sp.kind = k; sp.hw = hw; sp.hd = hd; sp.h = h; sp.thick = t; sp.style = style; return true; };
         switch (di) {
             case DI_TOWERS:
-                if (u < 0.3 + 0.55 * G.at(GV_HEIGHT)) { const double hw = 10 + 5 * Lk.rng.uni(); return set(BK_HIGHRISE, hw, hw * (0.75 + 0.25 * Lk.rng.uni()), (70 + 260 * Lk.rng.uni()) * clampd(1.25 - dd, 0.35, 1.2) * Lk.towerK, 0.5); }
+                if (u < 0.3 + 0.55 * G.at(GV_HEIGHT)) {
+                    const double hw = 10 + 5 * Lk.rng.uni();
+                    return set(BK_HIGHRISE, hw, hw * (0.75 + 0.25 * Lk.rng.uni()), (70 + 260 * Lk.rng.uni()) * clampd(1.25 - dd, 0.35, 1.2) * Lk.towerK, 0.5);
+                }
                 return set(BK_BLOCK, Lk.var(11, 4) * F, Lk.var(6.0, 2.5) * F * Lk.hdK, (22 + 30 * Lk.rng.uni()) * clampd(1.25 - dd, 0.5, 1.2) * Hk, 0.4);
             case DI_SUBURBS: return set(BK_SUBURB, Lk.var(4.0, 1.5) * F, Lk.var(5.0, 1.5) * F * Lk.hdK, (Lk.rng.chance(0.5) ? 2.9 : 5.8) * std::min(1.4, Hk), 0.35);
             case DI_WORKS:
@@ -243,7 +254,11 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         // the houses: a tower now and then toward the edge, a walled garden, a compound, or the age's dwelling (taller toward a city's middle)
         if (age <= AGE_INDUSTRIAL && dd > 0.45 && c.towers && Lk.rng.chance(0.035 * (0.5 + 1.5 * G.at(GV_HEIGHT)))) { kind = 2; sp.hw = sp.hd = 4; return true; }
         if (pub == PU_GARDENS && age >= AGE_MEDIEVAL && age <= AGE_INDUSTRIAL && Lk.rng.chance(0.12)) { kind = 3; sp.hw = sp.hd = std::max(5.0, 0.38 * streetSpacing(age) * 0.5); return true; }
-        if (grouping == GR_COMPOUNDS && age <= AGE_MODERN && age != AGE_INDUSTRIAL && di == DI_HOUSES && !(big && dd < 0.6)) { kind = 1; sp.hw = sp.hd = (age == AGE_MODERN ? 9.0 : 6.5) + 2.5; return true; }
+        if (grouping == GR_COMPOUNDS && age <= AGE_MODERN && age != AGE_INDUSTRIAL && di == DI_HOUSES && !(big && dd < 0.6)) {
+            kind = 1;
+            sp.hw = sp.hd = (age == AGE_MODERN ? 9.0 : 6.5) + 2.5;
+            return true;
+        }
         if ((grouping == GR_ROWS || mainFront) && age == AGE_MEDIEVAL && Lk.rng.uni() < 0.85) {   // a row's houses joined along the street, gabled cell by cell where the people built in cells
             set(BK_HOUSE, 2.7 * (0.95 + 0.1 * Lk.rng.uni()), 3.6 * (0.92 + 0.16 * Lk.rng.uni()), Lk.var(2.8, 0.6) * Hk, 0.45);
             Lk.frontage(sp);
@@ -300,7 +315,13 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
         Layout& Lk = *LL[k];
         if (th.ages[k] == AGE_INDUSTRIAL && !village) {
             BSpec sp; sp.kind = BK_STATION; sp.hw = 14 + 4 * Lk.rng.uni(); sp.hd = 24 + 10 * Lk.rng.uni(); sp.h = 11 + 3 * Lk.rng.uni(); sp.thick = 0.8;
-            front(Lk, sp, [&](const Street& s) { const double rr = std::hypot((s.ax + s.bx) * 0.5, (s.az + s.bz) * 0.5); return s.rank >= SR_MAIN && s.age == AGE_INDUSTRIAL && rr > std::max(r.layers[k].r0, Rt * 0.25) && rr < Rt * 0.8; }, DI_HOUSES);
+            front(
+                    Lk, sp,
+                    [&](const Street& s) {
+                        const double rr = std::hypot((s.ax + s.bx) * 0.5, (s.az + s.bz) * 0.5);
+                        return s.rank >= SR_MAIN && s.age == AGE_INDUSTRIAL && rr > std::max(r.layers[k].r0, Rt * 0.25) && rr < Rt * 0.8;
+                    },
+                    DI_HOUSES);
         }
         if (th.ages[k] == AGE_MEDIEVAL && k == 0 && !village && Lk.rng.chance(0.7)) {
             BSpec sp; sp.kind = BK_HALL; sp.style = 1; sp.hw = 5.5 + 1.5 * Lk.rng.uni(); sp.hd = 9 + 4 * Lk.rng.uni(); sp.h = 5 + 2 * Lk.rng.uni(); sp.thick = 0.6;
@@ -362,7 +383,12 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                 else if (kind == 3) {   // a walled garden, its pool
                     const double gw = sp.hw;
                     if (Lk.fits(cx, cz, gw + 1) && Lk.circleOffStreets(cx, cz, gw * 1.42 + 0.5)) {
-                        for (int s4 = 0; s4 < 4; s4++) { const bool al = s4 % 2 == 0; const double ox = (s4 == 1 ? gw : (s4 == 3 ? -gw : 0)), oz = (s4 == 0 ? gw : (s4 == 2 ? -gw : 0)); const double hc = std::cos(heading), hs = std::sin(heading); Lk.add(BK_WALL, cx + hc * ox + hs * oz, cz - hs * ox + hc * oz, heading + (al ? 0 : PI / 2), gw * (s4 == 0 ? 0.6 : 1.0), 0.3, 0.8, 0.5, false); }
+                        for (int s4 = 0; s4 < 4; s4++) {
+                            const bool al = s4 % 2 == 0;
+                            const double ox = (s4 == 1 ? gw : (s4 == 3 ? -gw : 0)), oz = (s4 == 0 ? gw : (s4 == 2 ? -gw : 0));
+                            const double hc = std::cos(heading), hs = std::sin(heading);
+                            Lk.add(BK_WALL, cx + hc * ox + hs * oz, cz - hs * ox + hc * oz, heading + (al ? 0 : PI / 2), gw * (s4 == 0 ? 0.6 : 1.0), 0.3, 0.8, 0.5, false);
+                        }
                         Lk.add(BK_FOCUS, cx, cz, heading, gw * 0.4, gw * 0.3, 0.8, 0.5, false, FO_POOL);
                         ok = true; gardens++;
                     }
@@ -401,7 +427,9 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
                 for (size_t i = before; i < r.buildings.size(); i++) {
                     Building& b = r.buildings[i];
                     b.district = di;
-                    if (kind == 1 || (di != DI_TOWERS && di != DI_WORKS && di != DI_HARBOUR && ((age == AGE_INDUSTRIAL && b.kind == BK_ROW) || (age <= AGE_MEDIEVAL && (grouping == GR_ROWS || (mainFront && b.kind == BK_HOUSE))))))
+                    if (kind == 1 ||
+                            (di != DI_TOWERS && di != DI_WORKS && di != DI_HARBOUR &&
+                                    ((age == AGE_INDUSTRIAL && b.kind == BK_ROW) || (age <= AGE_MEDIEVAL && (grouping == GR_ROWS || (mainFront && b.kind == BK_HOUSE))))))
                         b.joined = true;   // in a row or a compound
                     if (i == before && kind == 0) hwNow = std::max(hwNow, b.hw);
                 }
@@ -478,13 +506,20 @@ void layoutTown(RuinSpec& r, const Culture& c, const BodyGen& g, int n, double R
     {
         const int land = G.of(GV_LAND);
         const double rd = st.ridgeDir;
-        if (land == LD_RIDGES) for (int k = 0; k < 4; k++) { const double d = Rt * (0.72 + 0.1 * k); if (Lo.add(BK_PLATFORM, std::sin(rd) * d, std::cos(rd) * d, rd + PI, 7 + 3 * rng.uni(), 7 + 3 * rng.uni(), 3.3, 0.5, true)) break; }
+        if (land == LD_RIDGES)
+            for (int k = 0; k < 4; k++) {
+                const double d = Rt * (0.72 + 0.1 * k);
+                if (Lo.add(BK_PLATFORM, std::sin(rd) * d, std::cos(rd) * d, rd + PI, 7 + 3 * rng.uni(), 7 + 3 * rng.uni(), 3.3, 0.5, true)) break;
+            }
         if (land == LD_VALLEYS) {
             const double len = 70 + 50 * rng.uni(), d = Rt * 1.04 + len * 0.5 + 6;
             Lo.add(BK_AQUEDUCT, std::sin(rd) * d, std::cos(rd) * d, rd, 1.4, len * 0.5, (9 + 9 * rng.uni()) * (0.8 + 0.4 * G.at(GV_AMBITION)), 1.2, true);
         }
         if (links == LK_TUNNELS)
-            for (int k = 0, made = 0; k < 12 && made < 3; k++) { const double a = rng.uni() * TAU, d = Rt * (0.3 + 0.6 * rng.uni()); if (Lo.add(BK_PORTAL, std::sin(a) * d, std::cos(a) * d, a, 2.4, 3.5, 4.8, 0.8, true)) made++; }
+            for (int k = 0, made = 0; k < 12 && made < 3; k++) {
+                const double a = rng.uni() * TAU, d = Rt * (0.3 + 0.6 * rng.uni());
+                if (Lo.add(BK_PORTAL, std::sin(a) * d, std::cos(a) * d, a, 2.4, 3.5, 4.8, 0.8, true)) made++;
+            }
     }
     // the works of the water and the land in the town's own age (C-08's by the age: the harbour, the terraces, the cistern or the reservoir)
     const double rSaved = r.size; r.size = Rt;

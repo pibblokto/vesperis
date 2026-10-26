@@ -27,7 +27,9 @@ bool checkChartsByAge(std::string& detail) {
                 if (!chartOf(sys, b, g, L, i, ch) || !chartOf(sys, b, g, L, i, ch2)) { fail(fmt("%s S%d no chart", b.name.c_str(), i)); continue; }
                 charts++; byStyle[std::max(0, std::min(CHS_COUNT - 1, ch.style))]++;
                 const std::string at = fmt("%s S%d (%s)", b.name.c_str(), i, CHART_STYLE_NAMES[ch.style]);
-                if (ch.stars.size() != ch2.stars.size() || ch.figures.size() != ch2.figures.size() || ch.curves.size() != ch2.curves.size() || ch.wanderers.size() != ch2.wanderers.size() || ch.mark.star.seed != ch2.mark.star.seed) fail(at + " not the same twice");
+                if (ch.stars.size() != ch2.stars.size() || ch.figures.size() != ch2.figures.size() || ch.curves.size() != ch2.curves.size() || ch.wanderers.size() != ch2.wanderers.size() ||
+                        ch.mark.star.seed != ch2.mark.star.seed)
+                    fail(at + " not the same twice");
                 if (ch.age != Cat->entries[i].age || ch.medium != Cat->entries[i].medium || ch.style != chartStyleOf(ch.age, ch.medium)) fail(at + " not its record's way");
                 if (ch.age == a) hasOwn = true;
                 const Shard sh = shardOf(sys, b, g, L, i);
@@ -44,7 +46,13 @@ bool checkChartsByAge(std::string& detail) {
                     }
                     case CHS_VAULT: case CHS_ASTROLABE: case CHS_PAGE: {
                         if (animals) fail(at + " a later way of the oldest people");
-                        int eq = 0, ecl = 0; for (const ChartCurve& c : ch.curves) { if (c.kind == CC_EQUATOR) eq++; if (c.kind == CC_ECLIPTIC) ecl++; for (const auto& p : c.pts) if (std::hypot(p[0], p[1]) > 1.001) fail(at + " a curve off the field"); }
+                        int eq = 0, ecl = 0;
+                        for (const ChartCurve& c : ch.curves) {
+                            if (c.kind == CC_EQUATOR) eq++;
+                            if (c.kind == CC_ECLIPTIC) ecl++;
+                            for (const auto& p : c.pts)
+                                if (std::hypot(p[0], p[1]) > 1.001) fail(at + " a curve off the field");
+                        }
                         if (ch.style != CHS_VAULT && ecl == 0) fail(at + " no ecliptic");
                         if (ch.style == CHS_ASTROLABE && eq == 0) fail(at + " no equator");
                         for (const ChartPath& w : ch.wanderers) for (const auto& p : w.pts) if (std::hypot(p[0], p[1]) > 1.001) fail(at + " a wanderer off the field");
@@ -59,20 +67,31 @@ bool checkChartsByAge(std::string& detail) {
                     }
                     case CHS_SURVEY: {
                         int heard = 0;
-                        for (const ChartStar& c : ch.stars) if (c.heard) { heard++; bool marked = false; for (const ChartMark& m : L.marks) if (m.how == 2 && m.star.seed == c.star.seed) marked = true; if (!marked) fail(at + " rings a people not heard"); }
+                        for (const ChartStar& c : ch.stars)
+                            if (c.heard) {
+                                heard++;
+                                bool marked = false;
+                                for (const ChartMark& m : L.marks)
+                                    if (m.how == 2 && m.star.seed == c.star.seed) marked = true;
+                                if (!marked) fail(at + " rings a people not heard");
+                            }
                         if (heard != ch.heardN || ch.magLimit < 1 || ch.magStep < 1.9 || ch.magStep > 4.1) fail(at + " magnitudes or heard wrong");
                         break;
                     }
                     case CHS_ROUTES: {
                         if (ch.stars.empty() || !ch.stars[0].home || ch.stars[0].star.seed != s.seed) fail(at + " home not at the middle");
                         bool toMark = false;
-                        for (const ChartFigure& f : ch.figures) { if (f.kind != 1 || f.stars.empty() || f.stars[0] != 0 || f.lines.size() + 1 != f.stars.size()) fail(at + " a route not from home"); if (!f.stars.empty() && f.stars.back() == ch.markStar) toMark = true; }
+                        for (const ChartFigure& f : ch.figures) {
+                            if (f.kind != 1 || f.stars.empty() || f.stars[0] != 0 || f.lines.size() + 1 != f.stars.size()) fail(at + " a route not from home");
+                            if (!f.stars.empty() && f.stars.back() == ch.markStar) toMark = true;
+                        }
                         if (!toMark || ch.reached + ch.planned != (int)ch.figures.size()) fail(at + " the routes do not add up");
                         break;
                     }
                     case CHS_BEYOND: {
                         if (ch.mark.how != 3 || ch.mark.ly < 300 || ch.signs < 3 || ch.farKind < 1 || ch.farKind > 4) fail(at + fmt(" far mark %.0f ly, %d signs", ch.mark.ly, ch.signs));
-                        for (const ChartFigure& f : ch.figures) if (f.kind != 2 || f.stars.size() != 2 || f.stars[0] != ch.markStar || !ch.stars[f.stars[1]].sign) fail(at + " a line not to a place of nothing");
+                        for (const ChartFigure& f : ch.figures)
+                            if (f.kind != 2 || f.stars.size() != 2 || f.stars[0] != ch.markStar || !ch.stars[f.stars[1]].sign) fail(at + " a line not to a place of nothing");
                         break;
                     }
                     default: break;
@@ -80,8 +99,9 @@ bool checkChartsByAge(std::string& detail) {
             }
             if (hasOwn) ageHas++;
         }
-        detail = fmt("%d charts of the six age worlds: ceiling %d, bone %d, vault %d, astrolabe %d, page %d, atlas %d, photograph %d, survey %d, navigation %d, far %d; %d of 6 age worlds draw their own age's; the lore %.1f ms at most; %d wrong%s%s",
-                  charts, byStyle[0], byStyle[1], byStyle[2], byStyle[3], byStyle[4], byStyle[5], byStyle[6], byStyle[7], byStyle[8], byStyle[9], ageHas, loreMax, bad, bad ? ": " : "", badWhat.c_str());
+        detail = fmt("%d charts of the six age worlds: ceiling %d, bone %d, vault %d, astrolabe %d, page %d, atlas %d, photograph %d, survey %d, navigation %d, far %d; %d of 6 age worlds draw their "
+                     "own age's; the lore %.1f ms at most; %d wrong%s%s",
+                charts, byStyle[0], byStyle[1], byStyle[2], byStyle[3], byStyle[4], byStyle[5], byStyle[6], byStyle[7], byStyle[8], byStyle[9], ageHas, loreMax, bad, bad ? ": " : "", badWhat.c_str());
         return bad == 0 && charts > 50 && ageHas == AGE_COUNT && loreMax < 60;
     }
 }
@@ -118,7 +138,11 @@ int runShards(int argc, char** argv) {
             for (int j = i; j + 1 < argc; j++) argv[j] = argv[j + 1];
             argc--; break;
         }
-        if (!disk.empty()) { std::string report; const bool ok = shardGrammarFromDisk(disk, report); printf("the grammar from %s/: %s\n%s", disk.c_str(), ok ? "read and linked" : "ERRORS", report.c_str()); }
+        if (!disk.empty()) {
+            std::string report;
+            const bool ok = shardGrammarFromDisk(disk, report);
+            printf("the grammar from %s/: %s\n%s", disk.c_str(), ok ? "read and linked" : "ERRORS", report.c_str());
+        }
         // `<k>` the k-th nearest home (within 3,000 ly: `peoples rogues` lists them), `age=<age>` the nearest of that age (within 12,000 ly; an age's
         // name with '_' for its space)
         const std::string key = argv[3];
@@ -166,19 +190,21 @@ int shardsOfWorld(const Star& s, StarSystem& sys, int bi, int which, int n, bool
     BodyGen g = BodyGen::make(b);
     if (!g.hasTrait(TR_CIVILISATION)) printf("(%s had no people: the shards below are what it would have said)\n", b.name.c_str());
     Lore L = loreOf(sys, b, g, which);
-    printf("%s, %s of %s (%s): the %s; god %s, river %s, mountain %s, sea %s, towns %s and %s, founder %s, moon %s, star %s, festival %s; names of style %d; a day of %.0f min of play, a year of %.0f of its days, %d moons, %d years from the founding\n",
-           b.name.c_str(), KINDS[b.type].name, s.name.c_str(), STAR_CLASSES[s.cls].name, L.people.c_str(), L.god.c_str(), L.river.c_str(), L.mountain.c_str(), L.sea.c_str(), L.city.c_str(), L.city2.c_str(),
-           L.founder.c_str(), L.moon.c_str(), L.star.c_str(), L.festival.c_str(), L.style, L.dayHours * 60, L.yearDays, L.moons, L.spanYears);
+    printf("%s, %s of %s (%s): the %s; god %s, river %s, mountain %s, sea %s, towns %s and %s, founder %s, moon %s, star %s, festival %s; names of style %d; a day of %.0f min of play, a year of %.0f "
+           "of its days, %d moons, %d years from the founding\n",
+            b.name.c_str(), KINDS[b.type].name, s.name.c_str(), STAR_CLASSES[s.cls].name, L.people.c_str(), L.god.c_str(), L.river.c_str(), L.mountain.c_str(), L.sea.c_str(), L.city.c_str(),
+            L.city2.c_str(), L.founder.c_str(), L.moon.c_str(), L.star.c_str(), L.festival.c_str(), L.style, L.dayHours * 60, L.yearDays, L.moons, L.spanYears);
     // C-06: the tongue and the language
     Tongue T = tongueOf(g, L);
     std::vector<Shard> fifty; shardsOf(sys, b, g, L, SHARDS_PER_WORLD, fifty);
     Language lang; languageOf(L, fifty, T, lang);
     auto join = [](const std::vector<std::string>& v) { std::string r; for (const std::string& x : v) { if (!r.empty()) r += " "; r += x; } return r; };
-    printf("tongue: onsets %s; nuclei %s; codas %s; a coda %.0f%% of the time, a bare first vowel %.0f%%\n", join(T.onsets).c_str(), join(T.nuclei).c_str(), join(T.codas).c_str(), 100 * T.codaChance, 100 * T.vowelStart);
+    printf("tongue: onsets %s; nuclei %s; codas %s; a coda %.0f%% of the time, a bare first vowel %.0f%%\n", join(T.onsets).c_str(), join(T.nuclei).c_str(), join(T.codas).c_str(), 100 * T.codaChance,
+            100 * T.vowelStart);
     { Voice V = voiceOf(g, L, T); printf("voice: %s; %.0f Hz, %.1f syllables a second (C-05: `voice %lld %lld %d`)\n", voiceLine(V).c_str(), V.pitch, V.rate, (long long)sx, (long long)sz, bi); }
-    printf("language: %d words used %d times in the fifty, %zu names; known with 1/2/3/5/7/10 shards: %d/%d/%d/%d/%d/%d words (%.0f/%.0f/%.0f/%.0f/%.0f/%.0f%% of the uses)\n", (int)lang.words.size(), lang.tokens, lang.names.size(),
-           languageKnown(lang, 1), languageKnown(lang, 2), languageKnown(lang, 3), languageKnown(lang, 5), languageKnown(lang, 7), languageKnown(lang, 10),
-           100 * languageShare(1), 100 * languageShare(2), 100 * languageShare(3), 100 * languageShare(5), 100 * languageShare(7), 100 * languageShare(10));
+    printf("language: %d words used %d times in the fifty, %zu names; known with 1/2/3/5/7/10 shards: %d/%d/%d/%d/%d/%d words (%.0f/%.0f/%.0f/%.0f/%.0f/%.0f%% of the uses)\n", (int)lang.words.size(),
+            lang.tokens, lang.names.size(), languageKnown(lang, 1), languageKnown(lang, 2), languageKnown(lang, 3), languageKnown(lang, 5), languageKnown(lang, 7), languageKnown(lang, 10),
+            100 * languageShare(1), 100 * languageShare(2), 100 * languageShare(3), 100 * languageShare(5), 100 * languageShare(7), 100 * languageShare(10));
     printf("  the most used:");
     for (int k = 0; k < (int)lang.words.size() && k < 16; k++) printf(" %s=%s(%d)", lang.words[k].c_str(), lang.theirs[k].c_str(), lang.counts[k]);
     printf("\n");
@@ -190,13 +216,21 @@ int shardsOfWorld(const Star& s, StarSystem& sys, int bi, int which, int n, bool
     for (int i : order) {
         const Shard& x = sh[i];
         tones[x.tone]++;
-        if (x.music) { Piece P; pieceOf(trad, x, P); pieces++; printf("%3d  year %3d  %-8s  %-14s [music] %s, %.0f s, %zu notes\n", i, x.year, SHARD_TONE_NAMES[x.tone], "music", PIECE_FORM_NAMES[P.form], P.seconds, P.notes.size()); continue; }
+        if (x.music) {
+            Piece P;
+            pieceOf(trad, x, P);
+            pieces++;
+            printf("%3d  year %3d  %-8s  %-14s [music] %s, %.0f s, %zu notes\n", i, x.year, SHARD_TONE_NAMES[x.tone], "music", PIECE_FORM_NAMES[P.form], P.seconds, P.notes.size());
+            continue;
+        }
         words += shardWords(x.text);
         std::vector<DecodedWord> w; read += decodeShard(x, lang, T, held, w);
-        printf("%3d  year %3d  %-8s  %-14s %s\n", i, x.year, SHARD_TONE_NAMES[x.tone], x.chart ? "star chart" : shardKindName(x.kind), decodedText(w).c_str());   // a chart by its caption (`charts` draws it)
+        // a chart by its caption (`charts` draws it)
+        printf("%3d  year %3d  %-8s  %-14s %s\n", i, x.year, SHARD_TONE_NAMES[x.tone], x.chart ? "star chart" : shardKindName(x.kind), decodedText(w).c_str());
         if (full) printf("%40s %s\n", "", x.text.c_str());
     }
-    printf("tones: ordinary %d, elegy %d, warning %d, the end %d; %d pieces of music; %.0f words a text; %d of %d words read with %d shard%s held\n", tones[0], tones[1], tones[2], tones[3], pieces, n - pieces > 0 ? (double)words / (n - pieces) : 0.0, read, words, held, held == 1 ? "" : "s");
+    printf("tones: ordinary %d, elegy %d, warning %d, the end %d; %d pieces of music; %.0f words a text; %d of %d words read with %d shard%s held\n", tones[0], tones[1], tones[2], tones[3], pieces,
+            n - pieces > 0 ? (double)words / (n - pieces) : 0.0, read, words, held, held == 1 ? "" : "s");
     return 0;
 }
 
@@ -216,8 +250,16 @@ struct ChartPick { bool ok = false; int64_t sx = 0, sz = 0; int body = 0, which 
 static void printChartWay(const StarSystem& sys, const StarChart& ch) {
     std::string w;
     if (ch.tallyKind) w += fmt(" the moon's count %d (%s);", ch.tally, ch.tallyKind == 1 ? "the days of its month" : "its moons in the year");
-    if (!ch.curves.empty()) { int k[6] = {}; for (const ChartCurve& c : ch.curves) k[std::min(5, std::max(0, c.kind))]++; w += fmt(" curves: %d equator, %d tropic, %d ecliptic, %d declination, %d hour runs;", k[0], k[1], k[2], k[3], k[4]); }
-    if (!ch.wanderers.empty()) { w += fmt(" %zu wanderers:", ch.wanderers.size()); for (const ChartPath& p : ch.wanderers) w += fmt(" %s (%zu points)", sys.bodies[p.body].name.c_str(), p.pts.size()); w += ";"; }
+    if (!ch.curves.empty()) {
+        int k[6] = {};
+        for (const ChartCurve& c : ch.curves) k[std::min(5, std::max(0, c.kind))]++;
+        w += fmt(" curves: %d equator, %d tropic, %d ecliptic, %d declination, %d hour runs;", k[0], k[1], k[2], k[3], k[4]);
+    }
+    if (!ch.wanderers.empty()) {
+        w += fmt(" %zu wanderers:", ch.wanderers.size());
+        for (const ChartPath& p : ch.wanderers) w += fmt(" %s (%zu points)", sys.bodies[p.body].name.c_str(), p.pts.size());
+        w += ";";
+    }
     int numbered = 0; for (const ChartStar& c : ch.stars) if (c.number) numbered++;
     if (numbered) w += fmt(" %d stars numbered, their circle %d degrees, their day %d hours;", numbered, ch.circle, ch.hours);
     if (ch.plate) w += fmt(" plate/field %d;", ch.plate);
@@ -225,7 +267,8 @@ static void printChartWay(const StarSystem& sys, const StarChart& ch) {
     if (ch.style == CHS_ROUTES) w += fmt(" %d routes flown, %d meant;", ch.reached, ch.planned);
     if (ch.style == CHS_BEYOND) w += fmt(" the far mark of kind %d at %.0f ly, %d places where nothing is;", ch.farKind, ch.farLy, ch.signs);
     printf("   %zu stars, %zu figures:%s\n", ch.stars.size(), ch.figures.size(), w.c_str());
-    for (const ChartFigure& f : ch.figures) printf("     %-26s %s%zu stars, glyph %d\n", f.name.c_str(), f.kind == 1 ? (f.planned ? "a route meant, " : "a route flown, ") : (f.kind == 2 ? "to nothing, " : ""), f.stars.size(), f.glyph);
+    for (const ChartFigure& f : ch.figures)
+        printf("     %-26s %s%zu stars, glyph %d\n", f.name.c_str(), f.kind == 1 ? (f.planned ? "a route meant, " : "a route flown, ") : (f.kind == 2 ? "to nothing, " : ""), f.stars.size(), f.glyph);
 }
 static int runChartsAges() {
     makeDir("shots"); makeDir("shots/tests");
@@ -238,14 +281,18 @@ static int runChartsAges() {
     std::vector<ChartPick> picks(W);
     auto better = [&](const Want& w, const StarChart& c, const ChartPick& old) {   // the more of its way shown, the better
         if (!old.ok) return true;
-        auto score = [&](const StarChart& x) { return (x.tallyKind == 1 ? (x.tally >= 12 ? 6 : 3) : (x.tallyKind ? 1 : 0)) + (int)std::min<size_t>(3, x.wanderers.size()) + std::min(2, x.heardN) + (int)std::min<size_t>(4, x.figures.size()) + (x.style == CHS_ROUTES ? x.reached + x.planned : 0) + (x.style == CHS_BEYOND ? x.signs : 0); };
+        auto score = [&](const StarChart& x) {
+            return (x.tallyKind == 1 ? (x.tally >= 12 ? 6 : 3) : (x.tallyKind ? 1 : 0)) + (int)std::min<size_t>(3, x.wanderers.size()) + std::min(2, x.heardN) +
+                    (int)std::min<size_t>(4, x.figures.size()) + (x.style == CHS_ROUTES ? x.reached + x.planned : 0) + (x.style == CHS_BEYOND ? x.signs : 0);
+        };
         (void)w; return score(c) > score(old.ch);
     };
     std::vector<std::array<int64_t, 3>> worlds;
     for (int a = 0; a < AGE_COUNT; a++) worlds.push_back({AGE_WORLDS[a].sx, AGE_WORLDS[a].sz, AGE_WORLDS[a].body});
     for (int64_t x = 150; x <= 215; x++) for (int64_t z = 20; z <= 80; z += 1) worlds.push_back({x, z, -1});
     int scanned = 0;
-    auto wantMore = [&](int k) { return !picks[k].ok || ((wants[k].style == CHS_CEILING || wants[k].style == CHS_BONE) && (picks[k].ch.tallyKind != 1 || picks[k].ch.tally < 12)); };   // the oldest with a moon's days counted
+    // the oldest with a moon's days counted
+    auto wantMore = [&](int k) { return !picks[k].ok || ((wants[k].style == CHS_CEILING || wants[k].style == CHS_BONE) && (picks[k].ch.tallyKind != 1 || picks[k].ch.tally < 12)); };
     for (const auto& wv : worlds) {
         bool all = true; for (int k = 0; k < W; k++) if (wantMore(k)) all = false;
         if ((all && scanned >= AGE_COUNT) || scanned > 400) break;
@@ -278,12 +325,17 @@ static int runChartsAges() {
         ChartPick& p = picks[k];
         if (!p.ok) { printf("%s: none found\n", wants[k].file); continue; }
         Star s; starInSector(p.sx, 0, p.sz, s, true); StarSystem sys; sys.generate(s);
-        printf("%s: %s (%lld 0 %lld body %d%s), the %s, S%d: %s on %s, year %d\n", wants[k].file, p.world.c_str(), (long long)p.sx, (long long)p.sz, p.body, p.which ? " second" : "", p.people.c_str(), p.index,
-               AGE_NAMES[p.ch.age], RECORD_MEDIUM_NAMES[p.ch.medium], shardDrawOf(BodyGen::make(sys.bodies[p.body]), loreQuick(sys, sys.bodies[p.body], BodyGen::make(sys.bodies[p.body]), p.which), p.index).year);
+        printf("%s: %s (%lld 0 %lld body %d%s), the %s, S%d: %s on %s, year %d\n", wants[k].file, p.world.c_str(), (long long)p.sx, (long long)p.sz, p.body, p.which ? " second" : "", p.people.c_str(),
+                p.index, AGE_NAMES[p.ch.age], RECORD_MEDIUM_NAMES[p.ch.medium],
+                shardDrawOf(BodyGen::make(sys.bodies[p.body]), loreQuick(sys, sys.bodies[p.body], BodyGen::make(sys.bodies[p.body]), p.which), p.index).year);
         printChartWay(sys, p.ch);
         printf("   caption: %s\n", p.caption.c_str());
         // the decoder: the people's full count held (its names read as ours), the chart opened by index, its reading skipped
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.settings.renderScale = 2; game.applySettings();
         game.testParkAt(s, p.body); game.setState(GameState::SPACE);
         Input in;
@@ -351,13 +403,17 @@ static int runChartsRogues() {
         if (!p.ok) { printf("%s: none found\n", file.c_str()); continue; }
         StarSystem sys; sys.generate(p.d);
         const BodyGen g = BodyGen::make(sys.bodies[0]);
-        printf("%s: %s (sector %lld %lld %lld%s), the %s, S%d: %s on %s (%s), year %d; marks %s (how %d) %.1f ly off\n", file.c_str(), p.d.name.c_str(), (long long)p.d.sx, (long long)p.d.sy, (long long)p.d.sz,
-               p.which ? ", second people" : "", loreQuick(sys, sys.bodies[0], g, p.which).people.c_str(), p.index, AGE_NAMES[p.ch.age], RECORD_MEDIUM_NAMES[p.ch.medium], CHART_STYLE_NAMES[p.ch.style],
-               shardDrawOf(g, loreQuick(sys, sys.bodies[0], g, p.which), p.index).year, p.ch.mark.star.name.c_str(), p.ch.mark.how, p.ch.mark.ly);
+        printf("%s: %s (sector %lld %lld %lld%s), the %s, S%d: %s on %s (%s), year %d; marks %s (how %d) %.1f ly off\n", file.c_str(), p.d.name.c_str(), (long long)p.d.sx, (long long)p.d.sy,
+                (long long)p.d.sz, p.which ? ", second people" : "", loreQuick(sys, sys.bodies[0], g, p.which).people.c_str(), p.index, AGE_NAMES[p.ch.age], RECORD_MEDIUM_NAMES[p.ch.medium],
+                CHART_STYLE_NAMES[p.ch.style], shardDrawOf(g, loreQuick(sys, sys.bodies[0], g, p.which), p.index).year, p.ch.mark.star.name.c_str(), p.ch.mark.how, p.ch.mark.ly);
         if (kind == 0) { printf("   the disc, year by year:"); for (const auto& v : p.ch.sunCurve) printf(" %d:%.1f", (int)v[0], v[1]); printf(" (in %d parts)\n", p.ch.sunUnits); }
         else { const PeoplesWorld PW = peoplesWorldOf(sys, sys.bodies[0]); printChartWay(*PW.sys, p.ch); }   // the wanderers are its former system's
         printf("   caption: %s\n", p.caption.c_str());
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.settings.renderScale = 2; game.applySettings();
         game.testParkAt(p.d, 0); game.setState(GameState::SPACE);
         Input in;
@@ -388,7 +444,8 @@ static int runChartsRogues() {
 int runCharts(int argc, char** argv) {
     if (argc > 2 && std::string(argv[2]) == "ages") return runChartsAges();
     if (argc > 2 && std::string(argv[2]) == "rogues") return runChartsRogues();
-    if (argc > 2 && std::string(argv[2]) == "check") { std::string d; bool ok = checkChartsByAge(d); printf("star charts by age: %s\n  %s\n", ok ? "ok" : "FAIL", d.c_str()); return ok ? 0 : 1; }   // H-05: the unit's check alone
+    // H-05: the unit's check alone
+    if (argc > 2 && std::string(argv[2]) == "check") { std::string d; bool ok = checkChartsByAge(d); printf("star charts by age: %s\n  %s\n", ok ? "ok" : "FAIL", d.c_str()); return ok ? 0 : 1; }
     int which = takePeopleArg(argc, argv);   // `second` for the world's second people
     if (argc < 5) { printf("charts <sx> <sz> <body index> [index]\n"); return 1; }
     int64_t sx = atoll(argv[2]), sz = atoll(argv[3]); int bi = atoi(argv[4]); int want = argc > 5 ? atoi(argv[5]) : -1;
@@ -398,21 +455,35 @@ int runCharts(int argc, char** argv) {
     if (!g.hasTrait(TR_CIVILISATION)) printf("(%s had no people: the charts below are what it would have drawn)\n", b.name.c_str());
     double t0 = nowSec(); Lore L = loreOf(sys, b, g, which); double ms = (nowSec() - t0) * 1e3;
     static const char* const HOW[4] = {"the brightest of their nights", "a people's world among their bright stars", "a people they heard", "far off (H-05)"};
-    printf("%s, %s of %s: the %s drew %d charts (%d of C-02's fifty; the lore in %.1f ms); they mark:\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), L.people.c_str(), (int)L.marks.size(), chartShardsOf(peopleGen(g, which)), ms);
-    for (size_t j = 0; j < L.marks.size(); j++) { const ChartMark& m = L.marks[j]; printf("  %zu: %s %s at %lld %lld %lld, %.1f ly: %s%s\n", j, STAR_CLASSES[m.star.cls].code, STAR_CLASSES[m.star.cls].name, (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz, m.ly, HOW[m.how], m.people.empty() ? "" : fmt(" (body %d, the %s)", m.body, m.people.c_str()).c_str()); }
+    printf("%s, %s of %s: the %s drew %d charts (%d of C-02's fifty; the lore in %.1f ms); they mark:\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), L.people.c_str(), (int)L.marks.size(),
+            chartShardsOf(peopleGen(g, which)), ms);
+    for (size_t j = 0; j < L.marks.size(); j++) {
+        const ChartMark& m = L.marks[j];
+        printf("  %zu: %s %s at %lld %lld %lld, %.1f ly: %s%s\n", j, STAR_CLASSES[m.star.cls].code, STAR_CLASSES[m.star.cls].name, (long long)m.star.sx, (long long)m.star.sy, (long long)m.star.sz,
+                m.ly, HOW[m.how], m.people.empty() ? "" : fmt(" (body %d, the %s)", m.body, m.people.c_str()).c_str());
+    }
     std::vector<Shard> fifty; shardsOf(sys, b, g, L, L.records, fifty);   // every chart of the people's records
     int byStyle[CHS_COUNT] = {};
     for (int i = 0; i < (int)fifty.size(); i++) {
         if (!fifty[i].chart) continue;
         StarChart ch; if (!chartOf(sys, b, g, L, i, ch)) { printf("S%d: no chart\n", i); continue; }
         byStyle[ch.style]++;
-        printf("S%d (chart %d, year %d, %s; %s on %s: %s): %zu stars, the mark %s at %lld %lld %lld (how %d, %.1f ly), %zu figures\n", i, ch.which, fifty[i].year, SHARD_TONE_NAMES[fifty[i].tone], AGE_NAMES[ch.age], RECORD_MEDIUM_NAMES[ch.medium],
-               CHART_STYLE_NAMES[ch.style], ch.stars.size(), STAR_CLASSES[ch.mark.star.cls].code, (long long)ch.mark.star.sx, (long long)ch.mark.star.sy, (long long)ch.mark.star.sz, ch.mark.how, ch.mark.ly, ch.figures.size());
+        printf("S%d (chart %d, year %d, %s; %s on %s: %s): %zu stars, the mark %s at %lld %lld %lld (how %d, %.1f ly), %zu figures\n", i, ch.which, fifty[i].year, SHARD_TONE_NAMES[fifty[i].tone],
+                AGE_NAMES[ch.age], RECORD_MEDIUM_NAMES[ch.medium], CHART_STYLE_NAMES[ch.style], ch.stars.size(), STAR_CLASSES[ch.mark.star.cls].code, (long long)ch.mark.star.sx,
+                (long long)ch.mark.star.sy, (long long)ch.mark.star.sz, ch.mark.how, ch.mark.ly, ch.figures.size());
         {   // what its way shows
             std::string w;
             if (ch.tallyKind) w += fmt(" the moon's count %d (%s);", ch.tally, ch.tallyKind == 1 ? "the days of its month" : "its moons in the year");
-            if (!ch.curves.empty()) { int k[6] = {}; for (const ChartCurve& c : ch.curves) k[std::min(5, std::max(0, c.kind))]++; w += fmt(" curves: %d equator, %d tropic, %d ecliptic, %d declination, %d hour runs;", k[0], k[1], k[2], k[3], k[4]); }
-            if (!ch.wanderers.empty()) { w += fmt(" %zu wanderers (", ch.wanderers.size()); for (const ChartPath& p : ch.wanderers) w += fmt(" %s %zu points", sys.bodies[p.body].name.c_str(), p.pts.size()); w += " );"; }
+            if (!ch.curves.empty()) {
+                int k[6] = {};
+                for (const ChartCurve& c : ch.curves) k[std::min(5, std::max(0, c.kind))]++;
+                w += fmt(" curves: %d equator, %d tropic, %d ecliptic, %d declination, %d hour runs;", k[0], k[1], k[2], k[3], k[4]);
+            }
+            if (!ch.wanderers.empty()) {
+                w += fmt(" %zu wanderers (", ch.wanderers.size());
+                for (const ChartPath& p : ch.wanderers) w += fmt(" %s %zu points", sys.bodies[p.body].name.c_str(), p.pts.size());
+                w += " );";
+            }
             int numbered = 0; for (const ChartStar& c : ch.stars) if (c.number) numbered++;
             if (numbered) w += fmt(" %d stars numbered; their circle %d, their day %d hours;", numbered, ch.circle, ch.hours);
             if (ch.plate) w += fmt(" plate/field %d;", ch.plate);
@@ -423,7 +494,11 @@ int runCharts(int argc, char** argv) {
         }
         for (const ChartFigure& f : ch.figures) {
             printf("  %-24s %s%zu stars (glyph %d):", f.name.c_str(), f.kind == 1 ? (f.planned ? "a route meant, " : "a route flown, ") : (f.kind == 2 ? "nothing, " : ""), f.stars.size(), f.glyph);
-            for (int k : f.stars) { const ChartStar& c = ch.stars[k]; printf(" (%+.2f %+.2f b%.2f %s %lld %lld %lld %.1fly%s)", c.x, c.y, c.bright, c.sign ? "--" : STAR_CLASSES[c.star.cls].code, (long long)c.star.sx, (long long)c.star.sy, (long long)c.star.sz, c.ly, c.home ? " home" : ""); }
+            for (int k : f.stars) {
+                const ChartStar& c = ch.stars[k];
+                printf(" (%+.2f %+.2f b%.2f %s %lld %lld %lld %.1fly%s)", c.x, c.y, c.bright, c.sign ? "--" : STAR_CLASSES[c.star.cls].code, (long long)c.star.sx, (long long)c.star.sy,
+                        (long long)c.star.sz, c.ly, c.home ? " home" : "");
+            }
             printf("\n");
         }
         printf("  caption: %s\n", fifty[i].text.c_str());
@@ -463,7 +538,8 @@ static int runRuinsAges(int argc, char** argv) {
     sv.relocateCapsule(-4000, -4000);
     const BodyGen& g = sv.site.gen;
     int gLat, gLon; sv.ruinCellAt(0, 0, gLat, gLon);
-    printf("ruins ages: a %s of each age at %zu ages since the end on %s (%s), %dx\n", SETTLEMENT_CLASS_NAMES[sclass], years.size(), sys.bodies[sv.site.body].name.c_str(), KINDS[sys.bodies[sv.site.body].type].name, scale);
+    printf("ruins ages: a %s of each age at %zu ages since the end on %s (%s), %dx\n", SETTLEMENT_CLASS_NAMES[sclass], years.size(), sys.bodies[sv.site.body].name.c_str(),
+            KINDS[sys.bodies[sv.site.body].type].name, scale);
     const int cols = (int)years.size(), W = cols * FBW, H = AGE_COUNT * (FBH + 12 * scale) + 14 * scale;
     std::vector<uint32_t> sheet((size_t)W * H, rgb(16, 16, 20)), rgbBuf((size_t)FBW * FBH);
     RGBCanvas cv{sheet.data(), W, H, scale};
@@ -504,10 +580,11 @@ static int runRuinsAges(int argc, char** argv) {
             for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) sheet[(size_t)(dy0 + y) * W + dx0 + x] = rgbBuf[(size_t)y * FBW + x];
             std::map<std::string, int> kinds; for (const Building& b : sp.buildings) kinds[BUILDING_KIND_NAMES[b.kind]]++;
             std::string ks; for (auto& k : kinds) ks += fmt("%s%d %s", ks.empty() ? "" : ", ", k.second, k.first.c_str());
-            printf("  %-11s %6.0f y: %s r %.0f m, %zu buildings (%s); %zu pieces, the tallest %.0f m; decay timber %.2f, dry stone %.2f, masonry %.2f, iron %.2f, concrete %.2f, composite %.2f; %d polygons\n",
-                   AGE_NAMES[a], years[c], SETTLEMENT_CLASS_NAMES[sp.sclass], sp.size, sp.buildings.size(), ks.c_str(), pieces[0].size(), hMax,
-                   materialDecay(MT_TIMBER, years[c], cu.wet), materialDecay(MT_DRYSTONE, years[c], cu.wet), materialDecay(MT_MASONRY, years[c], cu.wet), materialDecay(MT_IRON, years[c], cu.wet),
-                   materialDecay(MT_CONCRETE, years[c], cu.wet), materialDecay(MT_COMPOSITE, years[c], cu.wet), sv.lastFormPolys);
+            printf("  %-11s %6.0f y: %s r %.0f m, %zu buildings (%s); %zu pieces, the tallest %.0f m; decay timber %.2f, dry stone %.2f, masonry %.2f, iron %.2f, concrete %.2f, composite %.2f; %d "
+                   "polygons\n",
+                    AGE_NAMES[a], years[c], SETTLEMENT_CLASS_NAMES[sp.sclass], sp.size, sp.buildings.size(), ks.c_str(), pieces[0].size(), hMax, materialDecay(MT_TIMBER, years[c], cu.wet),
+                    materialDecay(MT_DRYSTONE, years[c], cu.wet), materialDecay(MT_MASONRY, years[c], cu.wet), materialDecay(MT_IRON, years[c], cu.wet), materialDecay(MT_CONCRETE, years[c], cu.wet),
+                    materialDecay(MT_COMPOSITE, years[c], cu.wet), sv.lastFormPolys);
         }
         drawTextShadow(cv, 4, 14 + a * (FBH / scale + 12) + FBH / scale + 1, fmt("%s", AGE_NAMES[a]).c_str(), rgb(230, 235, 240), rgb(0, 0, 0));
     }
@@ -533,35 +610,33 @@ static int runRuinsKinds(int argc, char** argv) {
     sv.flocks.clear(); sv.critters.clear(); sv.relocateCapsule(-4000, -4000);
     const BodyGen& g = sv.site.gen;
     struct K { int kind, age; double hw, hd, h; int style; const char* name; };
-    static const K KINDS[] = {
-        {BK_HUT, 0, 3, 3, 1.7, 0, "HUT, WATTLE"}, {BK_HUT, 0, 3, 3, 1.7, 1, "HUT, DRY STONE"}, {BK_LONGHOUSE, 0, 3, 9, 1.9, 0, "LONGHOUSE"}, {BK_TENT_RING, 0, 2.5, 2.5, 2.8, 0, "TENT RING"},
-        {BK_STONE_CIRCLE, 0, 12, 12, 3.6, 0, "STONE CIRCLE"}, {BK_MENHIR, 0, 1, 10, 3.2, 0, "STANDING STONES"}, {BK_DOLMEN, 0, 1.4, 2, 2, 0, "DOLMEN"}, {BK_PALISADE, 0, 12, 0.45, 2.8, 0, "PALISADE"},
-        {BK_HOUSE, 1, 3, 4, 3, 0, "HOUSE"}, {BK_HALL, 1, 5.5, 8, 6, 0, "HALL"}, {BK_TOWER, 1, 3, 3, 13, 0, "KEEP"}, {BK_ROTUNDA, 1, 4.5, 4.5, 3.5, 0, "ROTUNDA"},
-        {BK_TEMPLE, 1, 7, 16, 12, 0, "TEMPLE, BASILICA"}, {BK_TEMPLE, 1, 8, 16, 11, 1, "TEMPLE, DOMED"}, {BK_TEMPLE, 1, 9, 17, 11, 2, "TEMPLE, STEPPED"},
-        {BK_GATE, 1, 1.9, 0.6, 6.5, 0, "GATEHOUSE"}, {BK_WALL_TOWER, 1, 3, 3, 8.5, 0, "WALL TOWER"}, {BK_PLATFORM, 1, 6, 6, 3.3, 0, "PLATFORM"},
-        {BK_ROW, 2, 12, 4.7, 8, 0, "TERRACED ROW"}, {BK_TENEMENT, 2, 7, 7, 16, 0, "TENEMENT"}, {BK_VILLA, 2, 5.5, 5, 7, 0, "VILLA"}, {BK_CHURCH, 2, 7.5, 16, 13, 0, "CHURCH"},
-        {BK_TOWN_HALL, 2, 16, 10, 16, 0, "TOWN HALL"}, {BK_STATION, 2, 16, 29, 12, 0, "STATION"}, {BK_MILL, 2, 8.5, 17, 18, 0, "MILL"}, {BK_GASOMETER, 2, 16, 16, 22, 0, "GASOMETER"},
-        {BK_WATER_TOWER, 2, 5.5, 5.5, 20, 0, "WATER TOWER"}, {BK_HEADFRAME, 2, 25, 20, 25, 0, "HEADFRAME"}, {BK_OBSERVATORY, 2, 7.5, 7.5, 7, 0, "OBSERVATORY"},
-        {BK_BLOCK, 3, 13, 7, 30, 0, "BLOCK"}, {BK_SUBURB, 3, 4.5, 5.5, 4, 0, "SUBURB"}, {BK_HIGHRISE, 3, 14, 12, 250, 0, "TOWER, SLAB"}, {BK_HIGHRISE, 3, 14, 12, 250, 1, "TOWER, SETBACKS"},
-        {BK_HIGHRISE, 3, 13, 13, 250, 2, "TOWER, CYLINDER"}, {BK_STADIUM, 3, 55, 55, 25, 0, "STADIUM"}, {BK_MAST, 3, 3, 3, 200, 0, "MAST"}, {BK_POWER, 3, 85, 80, 1, 0, "POWER STATION"}, {BK_TANKS, 3, 40, 17, 27, 0, "TANKS"},
-        {BK_ARCOLOGY, 4, 120, 120, 550, 0, "ARCOLOGY, STEPPED"}, {BK_ARCOLOGY, 4, 120, 120, 650, 1, "ARCOLOGY, CONE"}, {BK_ARCOLOGY, 4, 110, 110, 500, 2, "ARCOLOGY, GROWN"},
-        {BK_HABITAT, 4, 55, 55, 33, 0, "HABITAT"}, {BK_SPIRE, 4, 20, 20, 700, 0, "SPIRE"}, {BK_RING, 4, 100, 6, 200, 0, "RING"}, {BK_MAGLEV, 4, 3, 140, 23, 0, "MAGLEV"},
-        {BK_WRECK, 4, 18, 100, 30, 0, "WRECK"}, {BK_POD, 4, 10, 10, 3.4, 0, "POD"},
-        {BK_SPIKE, 5, 80, 80, 1500, 0, "SPIKE"}, {BK_HALO, 5, 300, 6, 600, 0, "HALO"}, {BK_PILLARS, 5, 15, 400, 400, 0, "PILLARS"}, {BK_SHAFT, 5, 90, 90, 2, 0, "SHAFT"}, {BK_MONOLITH, 5, 150, 150, 300, 0, "MONOLITH"}};
+    static const K KINDS[] = {{BK_HUT, 0, 3, 3, 1.7, 0, "HUT, WATTLE"}, {BK_HUT, 0, 3, 3, 1.7, 1, "HUT, DRY STONE"}, {BK_LONGHOUSE, 0, 3, 9, 1.9, 0, "LONGHOUSE"},
+            {BK_TENT_RING, 0, 2.5, 2.5, 2.8, 0, "TENT RING"}, {BK_STONE_CIRCLE, 0, 12, 12, 3.6, 0, "STONE CIRCLE"}, {BK_MENHIR, 0, 1, 10, 3.2, 0, "STANDING STONES"},
+            {BK_DOLMEN, 0, 1.4, 2, 2, 0, "DOLMEN"}, {BK_PALISADE, 0, 12, 0.45, 2.8, 0, "PALISADE"}, {BK_HOUSE, 1, 3, 4, 3, 0, "HOUSE"}, {BK_HALL, 1, 5.5, 8, 6, 0, "HALL"},
+            {BK_TOWER, 1, 3, 3, 13, 0, "KEEP"}, {BK_ROTUNDA, 1, 4.5, 4.5, 3.5, 0, "ROTUNDA"}, {BK_TEMPLE, 1, 7, 16, 12, 0, "TEMPLE, BASILICA"}, {BK_TEMPLE, 1, 8, 16, 11, 1, "TEMPLE, DOMED"},
+            {BK_TEMPLE, 1, 9, 17, 11, 2, "TEMPLE, STEPPED"}, {BK_GATE, 1, 1.9, 0.6, 6.5, 0, "GATEHOUSE"}, {BK_WALL_TOWER, 1, 3, 3, 8.5, 0, "WALL TOWER"}, {BK_PLATFORM, 1, 6, 6, 3.3, 0, "PLATFORM"},
+            {BK_ROW, 2, 12, 4.7, 8, 0, "TERRACED ROW"}, {BK_TENEMENT, 2, 7, 7, 16, 0, "TENEMENT"}, {BK_VILLA, 2, 5.5, 5, 7, 0, "VILLA"}, {BK_CHURCH, 2, 7.5, 16, 13, 0, "CHURCH"},
+            {BK_TOWN_HALL, 2, 16, 10, 16, 0, "TOWN HALL"}, {BK_STATION, 2, 16, 29, 12, 0, "STATION"}, {BK_MILL, 2, 8.5, 17, 18, 0, "MILL"}, {BK_GASOMETER, 2, 16, 16, 22, 0, "GASOMETER"},
+            {BK_WATER_TOWER, 2, 5.5, 5.5, 20, 0, "WATER TOWER"}, {BK_HEADFRAME, 2, 25, 20, 25, 0, "HEADFRAME"}, {BK_OBSERVATORY, 2, 7.5, 7.5, 7, 0, "OBSERVATORY"},
+            {BK_BLOCK, 3, 13, 7, 30, 0, "BLOCK"}, {BK_SUBURB, 3, 4.5, 5.5, 4, 0, "SUBURB"}, {BK_HIGHRISE, 3, 14, 12, 250, 0, "TOWER, SLAB"}, {BK_HIGHRISE, 3, 14, 12, 250, 1, "TOWER, SETBACKS"},
+            {BK_HIGHRISE, 3, 13, 13, 250, 2, "TOWER, CYLINDER"}, {BK_STADIUM, 3, 55, 55, 25, 0, "STADIUM"}, {BK_MAST, 3, 3, 3, 200, 0, "MAST"}, {BK_POWER, 3, 85, 80, 1, 0, "POWER STATION"},
+            {BK_TANKS, 3, 40, 17, 27, 0, "TANKS"}, {BK_ARCOLOGY, 4, 120, 120, 550, 0, "ARCOLOGY, STEPPED"}, {BK_ARCOLOGY, 4, 120, 120, 650, 1, "ARCOLOGY, CONE"},
+            {BK_ARCOLOGY, 4, 110, 110, 500, 2, "ARCOLOGY, GROWN"}, {BK_HABITAT, 4, 55, 55, 33, 0, "HABITAT"}, {BK_SPIRE, 4, 20, 20, 700, 0, "SPIRE"}, {BK_RING, 4, 100, 6, 200, 0, "RING"},
+            {BK_MAGLEV, 4, 3, 140, 23, 0, "MAGLEV"}, {BK_WRECK, 4, 18, 100, 30, 0, "WRECK"}, {BK_POD, 4, 10, 10, 3.4, 0, "POD"}, {BK_SPIKE, 5, 80, 80, 1500, 0, "SPIKE"},
+            {BK_HALO, 5, 300, 6, 600, 0, "HALO"}, {BK_PILLARS, 5, 15, 400, 400, 0, "PILLARS"}, {BK_SHAFT, 5, 90, 90, 2, 0, "SHAFT"}, {BK_MONOLITH, 5, 150, 150, 300, 0, "MONOLITH"}};
     // the genome's works and the kinds' new forms, a page of their own (each in its age's way: `ruins_kinds_genome_<scale>x.png`)
-    static const K WORKS[] = {
-        {BK_FOCUS, 1, 3, 3, 40, FO_SPIRE, "FOCUS, SPIRE"}, {BK_FOCUS, 1, 8, 8, 13, FO_DOME, "FOCUS, DOME"}, {BK_FOCUS, 1, 4, 4, 12, FO_GATE, "FOCUS, GATE"}, {BK_FOCUS, 1, 3, 3, 25, FO_TOWER, "FOCUS, TOWER"},
-        {BK_FOCUS, 1, 2.5, 2.5, 18, FO_COLOSSUS, "FOCUS, COLOSSUS"}, {BK_FOCUS, 2, 2.5, 2.5, 40, FO_MAST, "FOCUS, MAST (INDUSTRIAL)"}, {BK_FOCUS, 1, 6, 6, 12, FO_RING, "FOCUS, RING"},
-        {BK_FOCUS, 1, 1.8, 1.8, 20, FO_OBELISK, "FOCUS, OBELISK"}, {BK_FOCUS, 1, 8, 6, 0.8, FO_POOL, "FOCUS, POOL"}, {BK_FOCUS, 1, 9, 9, 20, FO_TREE, "FOCUS, GREAT TREE"},
-        {BK_STELA, 1, 0.45, 0.25, 4, MN_STELAE, "MONUMENT, STELA"}, {BK_STELA, 1, 0.6, 0.6, 5, MN_OBELISKS, "MONUMENT, OBELISK"}, {BK_STELA, 1, 0.9, 0.9, 6, MN_COLOSSI, "MONUMENT, STATUE"},
-        {BK_STELA, 1, 2.6, 0.8, 6, MN_ARCHES, "MONUMENT, ARCH"}, {BK_STELA, 1, 0.7, 0.7, 5, MN_PILLARS, "MONUMENT, PILLAR"},
-        {BK_WINDMILL, 1, 4, 4, 14, 0, "WINDMILL"}, {BK_HALL, 1, 6, 11, 6, 1, "MARKET HALL"}, {BK_HALL, 1, 12, 12, 7, 2, "PALACE"}, {BK_TEMPLE, 1, 7, 7, 11, 3, "TEMPLE, ROUND"},
-        {BK_STADIUM, 1, 16, 16, 7, 0, "AMPHITHEATRE"}, {BK_AQUEDUCT, 1, 1.4, 40, 14, 0, "AQUEDUCT"}, {BK_TWIN, 1, 10, 3, 18, 0, "TWIN TOWERS"}, {BK_PORTAL, 1, 2.4, 3.5, 4.8, 0, "TUNNEL"},
-        {BK_TOWN_HALL, 2, 16, 11, 16, 1, "TOWN HALL, DOME"}, {BK_TOWN_HALL, 2, 16, 11, 16, 2, "TOWN HALL, SPIRE"}, {BK_STATION, 2, 14, 22, 11, 1, "MARKET HALL (INDUSTRIAL)"},
-        {BK_BLOCK, 3, 32, 20, 12, 1, "MALL"}, {BK_TEMPLE, 3, 10, 20, 18, 0, "TEMPLE (MODERN)"}, {BK_TWIN, 3, 35, 11, 160, 0, "TWIN TOWERS (MODERN)"},
-        // a people that lost its sun's domes over the warm ground and its glasshouses
-        {BK_DOME, 2, 30, 30, 2.6, 0, "DOME (INDUSTRIAL)"}, {BK_DOME, 3, 32, 32, 2.6, 1, "DOME (MODERN)"}, {BK_DOME, 5, 34, 34, 2.6, 2, "DOME (FAR FUTURE)"},
-        {BK_GREENHOUSE, 2, 4, 12, 4, 0, "GLASSHOUSE (INDUSTRIAL)"}, {BK_GREENHOUSE, 3, 4.5, 18, 4.5, 1, "GLASSHOUSE (MODERN)"}, {BK_GREENHOUSE, 4, 6, 20, 5.4, 2, "GLASSHOUSE (FUTURISTIC)"}};
+    static const K WORKS[] = {{BK_FOCUS, 1, 3, 3, 40, FO_SPIRE, "FOCUS, SPIRE"}, {BK_FOCUS, 1, 8, 8, 13, FO_DOME, "FOCUS, DOME"}, {BK_FOCUS, 1, 4, 4, 12, FO_GATE, "FOCUS, GATE"},
+            {BK_FOCUS, 1, 3, 3, 25, FO_TOWER, "FOCUS, TOWER"}, {BK_FOCUS, 1, 2.5, 2.5, 18, FO_COLOSSUS, "FOCUS, COLOSSUS"}, {BK_FOCUS, 2, 2.5, 2.5, 40, FO_MAST, "FOCUS, MAST (INDUSTRIAL)"},
+            {BK_FOCUS, 1, 6, 6, 12, FO_RING, "FOCUS, RING"}, {BK_FOCUS, 1, 1.8, 1.8, 20, FO_OBELISK, "FOCUS, OBELISK"}, {BK_FOCUS, 1, 8, 6, 0.8, FO_POOL, "FOCUS, POOL"},
+            {BK_FOCUS, 1, 9, 9, 20, FO_TREE, "FOCUS, GREAT TREE"}, {BK_STELA, 1, 0.45, 0.25, 4, MN_STELAE, "MONUMENT, STELA"}, {BK_STELA, 1, 0.6, 0.6, 5, MN_OBELISKS, "MONUMENT, OBELISK"},
+            {BK_STELA, 1, 0.9, 0.9, 6, MN_COLOSSI, "MONUMENT, STATUE"}, {BK_STELA, 1, 2.6, 0.8, 6, MN_ARCHES, "MONUMENT, ARCH"}, {BK_STELA, 1, 0.7, 0.7, 5, MN_PILLARS, "MONUMENT, PILLAR"},
+            {BK_WINDMILL, 1, 4, 4, 14, 0, "WINDMILL"}, {BK_HALL, 1, 6, 11, 6, 1, "MARKET HALL"}, {BK_HALL, 1, 12, 12, 7, 2, "PALACE"}, {BK_TEMPLE, 1, 7, 7, 11, 3, "TEMPLE, ROUND"},
+            {BK_STADIUM, 1, 16, 16, 7, 0, "AMPHITHEATRE"}, {BK_AQUEDUCT, 1, 1.4, 40, 14, 0, "AQUEDUCT"}, {BK_TWIN, 1, 10, 3, 18, 0, "TWIN TOWERS"}, {BK_PORTAL, 1, 2.4, 3.5, 4.8, 0, "TUNNEL"},
+            {BK_TOWN_HALL, 2, 16, 11, 16, 1, "TOWN HALL, DOME"}, {BK_TOWN_HALL, 2, 16, 11, 16, 2, "TOWN HALL, SPIRE"}, {BK_STATION, 2, 14, 22, 11, 1, "MARKET HALL (INDUSTRIAL)"},
+            {BK_BLOCK, 3, 32, 20, 12, 1, "MALL"}, {BK_TEMPLE, 3, 10, 20, 18, 0, "TEMPLE (MODERN)"}, {BK_TWIN, 3, 35, 11, 160, 0, "TWIN TOWERS (MODERN)"},
+            // a people that lost its sun's domes over the warm ground and its glasshouses
+            {BK_DOME, 2, 30, 30, 2.6, 0, "DOME (INDUSTRIAL)"}, {BK_DOME, 3, 32, 32, 2.6, 1, "DOME (MODERN)"}, {BK_DOME, 5, 34, 34, 2.6, 2, "DOME (FAR FUTURE)"},
+            {BK_GREENHOUSE, 2, 4, 12, 4, 0, "GLASSHOUSE (INDUSTRIAL)"}, {BK_GREENHOUSE, 3, 4.5, 18, 4.5, 1, "GLASSHOUSE (MODERN)"}, {BK_GREENHOUSE, 4, 6, 20, 5.4, 2, "GLASSHOUSE (FUTURISTIC)"}};
     const int cols = (int)years.size(), CW = FBW / 2, CH = FBH / 2;
     std::vector<uint32_t> rgbBuf((size_t)FBW * FBH);
     Framebuffer fb;
@@ -582,10 +657,22 @@ static int runRuinsKinds(int argc, char** argv) {
                 if (!works) { cu.temple = k.style; cu.towerForm = k.style; cu.hut = k.kind == BK_HUT ? k.style : cu.hut; cu.great = k.kind == BK_ARCOLOGY ? k.style : cu.great; }
                 cu.palette = culturePalette(cu, peopleGen(g, 0).seed);
                 RuinSpec sp; sp.sclass = SC_MONUMENT; sp.heading = 0; sp.seed = 0xA03ULL + r;
-                Building b; b.kind = k.kind; b.age = a; b.style = k.style; b.hw = k.hw; b.hd = k.hd; b.hWall = k.h; b.thick = k.kind == BK_TEMPLE || k.kind == BK_CHURCH ? 1.0 : 0.5; b.seed = mix64(0xA03B1DULL + r * 7919);
+                Building b;
+                b.kind = k.kind;
+                b.age = a;
+                b.style = k.style;
+                b.hw = k.hw;
+                b.hd = k.hd;
+                b.hWall = k.h;
+                b.thick = k.kind == BK_TEMPLE || k.kind == BK_CHURCH ? 1.0 : 0.5;
+                b.seed = mix64(0xA03B1DULL + r * 7919);
                 sp.buildings.push_back(b);
                 std::vector<Form> pieces[3]; for (int l = 0; l < 3; l++) ruinElements(sp, cu, l, pieces[l]);
-                double hMax = 0, reach = std::max(k.hw, k.hd); for (const Form& e : pieces[0]) { hMax = std::max(hMax, formTop(e)); reach = std::max(reach, std::hypot(e.x, e.z) + std::min(formReach(e), 30.0)); }
+                double hMax = 0, reach = std::max(k.hw, k.hd);
+                for (const Form& e : pieces[0]) {
+                    hMax = std::max(hMax, formTop(e));
+                    reach = std::max(reach, std::hypot(e.x, e.z) + std::min(formReach(e), 30.0));
+                }
                 sp.size = reach;
                 sv.testClearPlaced(); sv.cultures[0] = cu; sv.palettes[0] = cu.palette;
                 sv.testPlaceSettlement(0, 0, sp, pieces);
@@ -621,11 +708,14 @@ int runRuins(int argc, char** argv) {
     const Body& b = sys.bodies[bi];
     BodyGen g = BodyGen::make(b);
     int np = std::max(1, peoplesOf(g)); Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()}; const Culture& c = cs[0];
-    printf("%s, %s, R %.0f km: %s; culture style %d, family %d, tall %.2f, decay %.2f (the end %.0f years ago, wet %.2f), %s roofs, towns' plan %d, towers %d, buried %.1f m; the sea stood at %.0f m\n",
-           b.name.c_str(), KINDS[b.type].name, b.radiusKm, g.hasTrait(TR_CIVILISATION) ? "a people lived here" : "no civilisation", c.style, c.family, c.tall, c.decay, c.ageYears, c.wet,
-           c.stoneRoofs ? "stone" : "no", c.plan, (int)c.towers, c.buried, g.oldSeaM > -1e8 ? g.oldSeaM : 0.0);
-    if (np > 1) printf("  a second people (C-13): culture style %d, family %d, tall %.2f, decay %.2f (the end %.0f years ago, wet %.2f), %s roofs, towns' plan %d, towers %d, buried %.1f m; %s\n", cs[1].style, cs[1].family, cs[1].tall, cs[1].decay, cs[1].ageYears, cs[1].wet,
-                       cs[1].stoneRoofs ? "stone" : "no", cs[1].plan, (int)cs[1].towers, cs[1].buried, peoplesEndedTogether(g) ? "the two ended together" : "the two ended apart");
+    printf("%s, %s, R %.0f km: %s; culture style %d, family %d, tall %.2f, decay %.2f (the end %.0f years ago, wet %.2f), %s roofs, towns' plan %d, towers %d, buried %.1f m; the sea stood at %.0f "
+           "m\n",
+            b.name.c_str(), KINDS[b.type].name, b.radiusKm, g.hasTrait(TR_CIVILISATION) ? "a people lived here" : "no civilisation", c.style, c.family, c.tall, c.decay, c.ageYears, c.wet,
+            c.stoneRoofs ? "stone" : "no", c.plan, (int)c.towers, c.buried, g.oldSeaM > -1e8 ? g.oldSeaM : 0.0);
+    if (np > 1)
+        printf("  a second people (C-13): culture style %d, family %d, tall %.2f, decay %.2f (the end %.0f years ago, wet %.2f), %s roofs, towns' plan %d, towers %d, buried %.1f m; %s\n", cs[1].style,
+                cs[1].family, cs[1].tall, cs[1].decay, cs[1].ageYears, cs[1].wet, cs[1].stoneRoofs ? "stone" : "no", cs[1].plan, (int)cs[1].towers, cs[1].buried,
+                peoplesEndedTogether(g) ? "the two ended together" : "the two ended apart");
     int gLat0, gLon0; ruinCellOf(g, lat, lon, gLat0, gLon0);
     int cnt[7] = {}, ok[7] = {}, printed = 0, shardsN[7] = {};   // by the class (a city's and the capital's cells too)
     int harbours = 0, dryHarbours = 0, terraced = 0, cisterns = 0, windwalls = 0, cairns = 0;
@@ -637,7 +727,17 @@ int runRuins(int argc, char** argv) {
             cnt[sp.sclass]++;
             bool good = ruinSiteOk(g, sp);
             std::vector<ShardSite> ss; recordSitesOf(g, sp, cs[sp.people], ss); shardsN[sp.sclass] += (int)ss.size();   // C-03; C-13: its people's; T-04: its records
-            if (good) { ok[sp.sclass]++; if (sp.harbour) { harbours++; if (sp.site.shoreDry) dryHarbours++; } if (sp.terraced) terraced++; if (sp.cistern) cisterns++; if (sp.windwall) windwalls++; if (sp.cairns) cairns++; }
+            if (good) {
+                ok[sp.sclass]++;
+                if (sp.harbour) {
+                    harbours++;
+                    if (sp.site.shoreDry) dryHarbours++;
+                }
+                if (sp.terraced) terraced++;
+                if (sp.cistern) cisterns++;
+                if (sp.windwall) windwalls++;
+                if (sp.cairns) cairns++;
+            }
             if (printed < 14 || (good && printed < 20)) {
                 Vec3 u = StarSystem::bodyFromLatLon(sp.lat, sp.lon);
                 SurfaceSample s0 = sampleSurface(g, u, 64.0);
@@ -650,18 +750,26 @@ int runRuins(int argc, char** argv) {
                     hmin = std::min(hmin, q.height); hmax = std::max(hmax, q.height);
                 }
                 printf("  %-8s%s at %7.3f %8.3f: %2zu buildings, plan %d, r %3.0f m: %s (h %.0f %s, water %s, %d corners wet, %d on the old sea, spread %.0f m of %.0f)\n",
-                       SETTLEMENT_CLASS_NAMES[sp.sclass], np > 1 ? fmt(" (people %d)", sp.people + 1).c_str() : "", sp.lat / DEG, sp.lon / DEG, sp.buildings.size(), sp.plan, sp.size, good ? "ok" : "no", s0.height, MATERIAL_NAMES[s0.material],
-                       s0.water > -1e8 ? "yes" : "none", wet, sea, hmax - hmin, 0.5 * sp.size);
+                        SETTLEMENT_CLASS_NAMES[sp.sclass], np > 1 ? fmt(" (people %d)", sp.people + 1).c_str() : "", sp.lat / DEG, sp.lon / DEG, sp.buildings.size(), sp.plan, sp.size,
+                        good ? "ok" : "no", s0.height, MATERIAL_NAMES[s0.material], s0.water > -1e8 ? "yes" : "none", wet, sea, hmax - hmin, 0.5 * sp.size);
                 printf("           the terrain: slope %.3f falling to %.0f deg, the shore %s, relief %.2f, the ridge at %.0f deg, the wind from %.0f deg%s%s\n", sp.site.slope, sp.site.downhill / DEG,
-                       sp.site.shoreDist < 1e8 ? fmt("%.0f m at %.0f deg%s", sp.site.shoreDist, sp.site.shoreDir / DEG, sp.site.shoreDry ? " (dry)" : "").c_str() : "none within 500 m", sp.site.relief, sp.site.ridgeDir / DEG, sp.site.wind / DEG,
-                       featureList(sp).empty() ? "" : "; features: ", featureList(sp).c_str());
-                if (!ss.empty()) { printf("           shards:"); for (const ShardSite& s : ss) printf("  %d in %s %d (%s, %.0f %.0f)", s.index, BUILDING_KIND_NAMES[sp.buildings[s.building].kind], s.building, buildingPlaceName(s.place), s.x, s.z); printf("\n"); }
+                        sp.site.shoreDist < 1e8 ? fmt("%.0f m at %.0f deg%s", sp.site.shoreDist, sp.site.shoreDir / DEG, sp.site.shoreDry ? " (dry)" : "").c_str() : "none within 500 m",
+                        sp.site.relief, sp.site.ridgeDir / DEG, sp.site.wind / DEG, featureList(sp).empty() ? "" : "; features: ", featureList(sp).c_str());
+                if (!ss.empty()) {
+                    printf("           shards:");
+                    for (const ShardSite& s : ss)
+                        printf("  %d in %s %d (%s, %.0f %.0f)", s.index, BUILDING_KIND_NAMES[sp.buildings[s.building].kind], s.building, buildingPlaceName(s.place), s.x, s.z);
+                    printf("\n");
+                }
                 printed++;
             }
         }
-    printf("31 x 31 cells round %.2f %.2f: %d hamlets (%d sited), %d villages (%d), %d towns (%d), %d monuments (%d), %d cities and capitals (%d); shards: %d in the hamlets, %d in the villages, %d in the towns, %d at the monuments\n",
-           lat / DEG, lon / DEG, cnt[0], ok[0], cnt[1], ok[1], cnt[2], ok[2], cnt[3], ok[3], cnt[SC_CITY] + cnt[SC_CAPITAL], ok[SC_CITY] + ok[SC_CAPITAL], shardsN[0], shardsN[1], shardsN[2], shardsN[3]);
-    printf("the terrain's features among the sited (C-08): %d harbours (%d on the dry shore), %d terraced, %d cisterns, %d wind walls, %d with cairns\n", harbours, dryHarbours, terraced, cisterns, windwalls, cairns);
+    printf("31 x 31 cells round %.2f %.2f: %d hamlets (%d sited), %d villages (%d), %d towns (%d), %d monuments (%d), %d cities and capitals (%d); shards: %d in the hamlets, %d in the villages, %d "
+           "in the towns, %d at the monuments\n",
+            lat / DEG, lon / DEG, cnt[0], ok[0], cnt[1], ok[1], cnt[2], ok[2], cnt[3], ok[3], cnt[SC_CITY] + cnt[SC_CAPITAL], ok[SC_CITY] + ok[SC_CAPITAL], shardsN[0], shardsN[1], shardsN[2],
+            shardsN[3]);
+    printf("the terrain's features among the sited (C-08): %d harbours (%d on the dry shore), %d terraced, %d cisterns, %d wind walls, %d with cairns\n", harbours, dryHarbours, terraced, cisterns,
+            windwalls, cairns);
     return 0;
 }
 
@@ -682,12 +790,14 @@ int runGraves(int argc, char** argv) {
     int np = std::max(1, peoplesOf(g)); which = np > 1 ? which : 0;   // each settlement's graves are its people's
     Culture cs[2] = {cultureOf(g, 0), np > 1 ? cultureOf(g, 1) : Culture()}; Lore Ls[2] = {loreQuick(sys, b, g, 0), np > 1 ? loreQuick(sys, b, g, 1) : Lore()};
     const Culture& c = cs[which]; const Lore& L = Ls[which]; (void)c;
-    printf("%s, %s: the %s count %s; %d years from the founding of %s to the last recording, their year %.1f of their days, %d moons\n", b.name.c_str(), KINDS[b.type].name, L.people.c_str(), calendarLine(L).c_str(), L.spanYears + 1, L.city.c_str(), L.yearDays, L.moons);
+    printf("%s, %s: the %s count %s; %d years from the founding of %s to the last recording, their year %.1f of their days, %d moons\n", b.name.c_str(), KINDS[b.type].name, L.people.c_str(),
+            calendarLine(L).c_str(), L.spanYears + 1, L.city.c_str(), L.yearDays, L.moons);
     {   // the last recording, and the end's count among the fifty
         Lore full = loreOf(sys, b, g, which);
         std::vector<Shard> fifty; shardsOf(sys, b, g, full, SHARDS_PER_WORLD, fifty);
         int ends = 0, latest = -1; for (int i = 0; i < SHARDS_PER_WORLD; i++) { if (fifty[i].tone == ST_END) ends++; if (latest < 0 || fifty[i].year > fifty[latest].year) latest = i; }
-        printf("the last recording: S%d (%s), %d of the fifty with the end's tone, the latest year S%d's; its date %s:\n  %s\n", L.last, L.last >= 0 ? shardKindName(fifty[L.last].kind) : "-", ends, latest, L.last >= 0 ? shardDate(full, fifty[L.last]).c_str() : "-", L.last >= 0 ? fifty[L.last].text.c_str() : "-");
+        printf("the last recording: S%d (%s), %d of the fifty with the end's tone, the latest year S%d's; its date %s:\n  %s\n", L.last, L.last >= 0 ? shardKindName(fifty[L.last].kind) : "-", ends,
+                latest, L.last >= 0 ? shardDate(full, fifty[L.last]).c_str() : "-", L.last >= 0 ? fifty[L.last].text.c_str() : "-");
         printf("the dates of the first five: "); for (int i = 0; i < 5; i++) printf("%s%s", i ? "; " : "", shardDate(full, fifty[i]).c_str()); printf("\n");
     }
     int gLat0, gLon0; ruinCellOf(g, lat, lon, gLat0, gLon0);
@@ -698,9 +808,15 @@ int runGraves(int argc, char** argv) {
         { DrainageOff off; if (!ruinSiteOk(g, sp)) continue; }
         std::vector<Grave> gr; gravesOf(Ls[sp.people], sp, cs[sp.people], gr);
         settle++; settleBy[sp.sclass]++; stones += (int)gr.size(); byClass[sp.sclass] += (int)gr.size();
-        printf("%s %d %d (radius %.0f m, %zu buildings%s%s): %zu graves\n", SETTLEMENT_CLASS_NAMES[sp.sclass], gLat0 + dl, gLon0 + dn, sp.size, sp.buildings.size(), sp.walled ? ", walled" : "", np > 1 ? fmt(", of the %s", Ls[sp.people].people.c_str()).c_str() : "", gr.size());
-        for (const Grave& x : gr) { if (x.fallen) fallen++; printf("  %-40s %s  at %+6.1f %+6.1f (%.0f m out, facing %.0f deg)\n", graveLine(Ls[sp.people], x).c_str(), x.fallen ? "fallen  " : "standing", x.x, x.z, std::sqrt(x.x * x.x + x.z * x.z), x.heading / DEG); }
+        printf("%s %d %d (radius %.0f m, %zu buildings%s%s): %zu graves\n", SETTLEMENT_CLASS_NAMES[sp.sclass], gLat0 + dl, gLon0 + dn, sp.size, sp.buildings.size(), sp.walled ? ", walled" : "",
+                np > 1 ? fmt(", of the %s", Ls[sp.people].people.c_str()).c_str() : "", gr.size());
+        for (const Grave& x : gr) {
+            if (x.fallen) fallen++;
+            printf("  %-40s %s  at %+6.1f %+6.1f (%.0f m out, facing %.0f deg)\n", graveLine(Ls[sp.people], x).c_str(), x.fallen ? "fallen  " : "standing", x.x, x.z, std::sqrt(x.x * x.x + x.z * x.z),
+                    x.heading / DEG);
+        }
     }
-    printf("%d settlements (%d hamlets, %d villages, %d towns, %d monuments) with %d graves (%d, %d, %d, %d by class), %d fallen, in %.1f ms\n", settle, settleBy[0], settleBy[1], settleBy[2], settleBy[3], stones, byClass[0], byClass[1], byClass[2], byClass[3], fallen, 1000 * (nowSec() - t0));
+    printf("%d settlements (%d hamlets, %d villages, %d towns, %d monuments) with %d graves (%d, %d, %d, %d by class), %d fallen, in %.1f ms\n", settle, settleBy[0], settleBy[1], settleBy[2],
+            settleBy[3], stones, byClass[0], byClass[1], byClass[2], byClass[3], fallen, 1000 * (nowSec() - t0));
     return 0;
 }

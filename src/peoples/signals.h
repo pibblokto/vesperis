@@ -83,7 +83,9 @@ double transmitterPower(int64_t sx, int64_t sy, int64_t sz);   // the sector's p
 double signalReachAtGain(double power, double gain, double reachLy = SIGNAL_REACH_LY);   // reachLy sqrt(1 + (gain - 1) power)
 double signalNeedGain(double distLy, double power, double reachLy = SIGNAL_REACH_LY);    // the least gain that hears it (1 within the reach; 1e9 a power of 0 beyond)
 double signalStrengthAtGain(const Signal& s, double gain);   // the 0..1 strength at that gain: C-07's within the reach and in the system, a far one's by its margin over the floor
-double signalLevel(const Signal& s, double gain);            // what the meter reads off it at the beam's centre: C-07's strength at x1, a near or a local one a little louder with the gain (x1.4 at x32), a far one its strength (a small rise over the gain's floor)
+// what the meter reads off it at the beam's centre: C-07's strength at x1, a near or a local one a little louder with the gain (x1.4 at
+// x32), a far one its strength (a small rise over the gain's floor)
+double signalLevel(const Signal& s, double gain);
 double signalDrive(const Signal& s, double gain);            // how hard it drives the receiver: a near or a local one's strength times gain^0.4 (1 and over overloads it), a far one 0
 // D-02 (2026-10-23): the drifters' law. A drifter of power p (`drifterPower`) is heard at gain G to SIGNAL_ROGUE_REACH_LY sqrt((G - 1) p) ly:
 // nothing at x1 (x1 stays C-07's list by rule), the first from home a brown dwarf at 437 ly at x11, six at x32 (the farthest 1,200 ly);
@@ -176,7 +178,8 @@ struct Programme {
 int programmeOf(uint64_t worldSeed, int slot, bool music, int age = AGE_MODERN);
 uint64_t programmeSeed(uint64_t worldSeed, int slot);
 // the programme of a slot, ready to play: `text` is the shard decoded (empty for a music slot), `year` the shard's
-void programmeFor(uint64_t worldSeed, int slot, bool music, int year, const Voice& V, const Tongue& T, const std::vector<DecodedWord>& text, Programme& out, int force = -1, int age = AGE_MODERN);   // `force`: that programme regardless of the hash (the harness)
+// `force`: that programme regardless of the hash (the harness)
+void programmeFor(uint64_t worldSeed, int slot, bool music, int year, const Voice& V, const Tongue& T, const std::vector<DecodedWord>& text, Programme& out, int force = -1, int age = AGE_MODERN);
 double morseSeconds(const std::vector<uint8_t>& code, double unit);   // C-16: how long a keying lasts
 // RP_NUMBERS: the words of repeat `k` (a fresh digit group each time); the others repeat `words`
 void programmeRepeatWords(const Programme& p, int k, const Tongue& T, std::vector<DecodedWord>& out);

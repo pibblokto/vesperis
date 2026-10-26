@@ -64,7 +64,8 @@ FrameDiff diffFrames(const uint32_t* a, const uint32_t* b, int w, int h) {
 }
 std::string diffLine(const FrameDiff& d, int w, int h) {
     if (!d.differ) return "identical";
-    std::string s = fmt("%ld px differ (%.3f%%), largest step %d, first at %d,%d, rows %d-%d, by eighths of the height", d.differ, 100.0 * d.differ / ((double)w * h), d.step, d.firstX, d.firstY, d.rowMin, d.rowMax);
+    std::string s = fmt("%ld px differ (%.3f%%), largest step %d, first at %d,%d, rows %d-%d, by eighths of the height", d.differ, 100.0 * d.differ / ((double)w * h), d.step, d.firstX, d.firstY,
+            d.rowMin, d.rowMax);
     for (int k = 0; k < 8; k++) s += fmt("%s%ld", k ? " " : ": ", d.eighths[k]);
     return s;
 }

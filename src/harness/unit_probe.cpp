@@ -7,7 +7,15 @@ void unitProbe(const Check& check) {
         // below the tropopause, the one-bar level is at height zero, the stages follow in their order along the clock to the end, which
         // comes at the hull's pressure or the heat's, and the chute holds the pressure's growth to a quarter of its pace over its span
         int giants = 0, bad = 0; std::string why;
-        auto clockAt = [](const ProbeFlight& ff, double bar) { double lo = probeDescentStart(), hi = 1e5; for (int i = 0; i < 80; i++) { double m = 0.5 * (lo + hi); if (probeBarAt(ff, m) < bar) lo = m; else hi = m; } return 0.5 * (lo + hi); };
+        auto clockAt = [](const ProbeFlight& ff, double bar) {
+            double lo = probeDescentStart(), hi = 1e5;
+            for (int i = 0; i < 80; i++) {
+                double m = 0.5 * (lo + hi);
+                if (probeBarAt(ff, m) < bar) lo = m;
+                else hi = m;
+            }
+            return 0.5 * (lo + hi);
+        };
         for (int64_t x = 150; x < 200 && giants < 16; x++) for (int64_t z = 20; z < 80 && giants < 16; z++) {
             Star s; StarSystem sys; if (!systemAt(x, 0, z, s, sys, true)) continue;
             for (const Body& b : sys.bodies) {
@@ -37,7 +45,10 @@ void unitProbe(const Check& check) {
                 double c4 = clockAt(f, 0.4);
                 ProbeFlight fc = f; fc.chuteOpen = c4; fc.chuteClose = probeChuteCloseAt(f, c4);
                 double free12 = clockAt(f, 1.2) - c4, chute12 = clockAt(fc, 1.2) - c4;
-                if (std::fabs(chute12 / free12 - PROBE_CHUTE_SLOW) > 0.01 || std::fabs(probeBarAt(fc, fc.chuteClose) / (0.4 * PROBE_CHUTE_SPAN) - 1) > 0.01) { ok = false; w = fmt("the chute %.2f x", chute12 / free12); }
+                if (std::fabs(chute12 / free12 - PROBE_CHUTE_SLOW) > 0.01 || std::fabs(probeBarAt(fc, fc.chuteClose) / (0.4 * PROBE_CHUTE_SPAN) - 1) > 0.01) {
+                    ok = false;
+                    w = fmt("the chute %.2f x", chute12 / free12);
+                }
                 if (!ok) { bad++; if (why.empty()) why = fmt("(%s body %d: %s)", s.name.c_str(), b.index, w.c_str()); }
             }
         }
@@ -65,7 +76,8 @@ void unitProbe(const Check& check) {
             press(KEY_C); run(0.1);
             launched = game.testProbeActive() && game.state == GameState::PROBE && !game.testTelescopeOn();
             game.testProbeAimed(pl, pn);
-            double off = std::acos(clampd(dot(StarSystem::bodyFromLatLon(tl, tn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG, offShip = std::acos(clampd(dot(StarSystem::bodyFromLatLon(sl, sn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG;
+            double off = std::acos(clampd(dot(StarSystem::bodyFromLatLon(tl, tn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG,
+                   offShip = std::acos(clampd(dot(StarSystem::bodyFromLatLon(sl, sn), StarSystem::bodyFromLatLon(pl, pn)), -1, 1)) / DEG;
             aimOk = onDisc && off < 0.3 && offShip > 2;
             d1 = fmt("the probe sent %.3f deg from the reticle's ground (%.1f deg from under the ship)", off, offShip);
             {   // a second watched plainly, a second with Shift held
@@ -129,7 +141,10 @@ void unitProbe(const Check& check) {
                         double px = (unitFromHash(mix64(h ^ (q * 2 + 7))) - 0.5) * 2 * half, pz = (unitFromHash(mix64(h ^ (q * 2 + 8))) - 0.5) * 2 * half;
                         for (int k = 0; k < D.n; k++) {
                             double tk = D.top(k, px, pz, 0), bk = D.base(k, px, pz, 0), tn = k + 1 < D.n ? D.top(k + 1, px, pz, 0) : -1e9;
-                            if (!(tk > bk + 0.5 * D.sh && bk > tn + 0.3 * D.sh)) { badDecks++; if (why.empty()) why = fmt("%s body %d deck %d: %.1f %.1f, next %.1f km (sh %.2f)", s.name.c_str(), b.index, k, tk, bk, tn, D.sh); }
+                            if (!(tk > bk + 0.5 * D.sh && bk > tn + 0.3 * D.sh)) {
+                                badDecks++;
+                                if (why.empty()) why = fmt("%s body %d deck %d: %.1f %.1f, next %.1f km (sh %.2f)", s.name.c_str(), b.index, k, tk, bk, tn, D.sh);
+                            }
                         }
                     }
                 }
@@ -159,9 +174,12 @@ void unitProbe(const Check& check) {
                     if (!(a.top[k] < a.base[k] && (k == 0 || a.top[k] >= a.base[k - 1] * 1.249))) w = fmt("deck %d %.3f-%.3f bar", k, a.top[k], a.base[k]);
                     const double want = CLOUD_SPECIES[a.species[k]].condK * std::pow(c.abundance, 0.6 * 0.286), got = giantTemperatureK(a, a.base[k]);
                     const double reach = a.reach;   // the heat's end or a hot giant's 32 bar
-                    if (w.empty() && std::fabs(reach - ((c.kind == GK_AZURE || c.kind == GK_ALKALI || c.kind == GK_SILICATE) ? 32.0 : std::min(32.0, std::pow(a.heatK / a.t1K, 1 / 0.286)))) > 1e-9) w = "the decks' reach";
-                    const bool fallback = a.decks == 1 && a.species[0] == CS_SALT && std::fabs(a.base[0] - 0.8 * reach) < 1e-6 * reach;   // nothing condenses within the reach: the salts' haze over the end
-                    if (w.empty() && !fallback && std::fabs(got / want - 1) > 0.02 && a.base[k] < 31.9) w = fmt("deck %d (%s) base at %.0f K, its cloud's %.0f", k, CLOUD_SPECIES[a.species[k]].name, got, want);
+                    if (w.empty() && std::fabs(reach - ((c.kind == GK_AZURE || c.kind == GK_ALKALI || c.kind == GK_SILICATE) ? 32.0 : std::min(32.0, std::pow(a.heatK / a.t1K, 1 / 0.286)))) > 1e-9)
+                        w = "the decks' reach";
+                    // nothing condenses within the reach: the salts' haze over the end
+                    const bool fallback = a.decks == 1 && a.species[0] == CS_SALT && std::fabs(a.base[0] - 0.8 * reach) < 1e-6 * reach;
+                    if (w.empty() && !fallback && std::fabs(got / want - 1) > 0.02 && a.base[k] < 31.9)
+                        w = fmt("deck %d (%s) base at %.0f K, its cloud's %.0f", k, CLOUD_SPECIES[a.species[k]].name, got, want);
                 }
                 const bool ice = isIceGiant(b);
                 if (w.empty() && (c.kind == GK_ICE) != ice) w = "the ice giant's rule";
@@ -171,10 +189,11 @@ void unitProbe(const Check& check) {
                 if (!w.empty()) { bad++; if (why.empty()) why = fmt("(%s %s: %s)", s.name.c_str(), b.name.c_str(), w.c_str()); }
             }
         }
-        const bool kindsOk = kinds[0] > 0 && kinds[1] > 0 && kinds[2] > 0 && glowBrownMin > glowGasMax && nYoung > 0 && glowYoung / nYoung > 3 * glowOld / std::max(1, nOld) && decks[1] > 0 && decks[2] > 0 && decks[3] > 0;
+        const bool kindsOk = kinds[0] > 0 && kinds[1] > 0 && kinds[2] > 0 && glowBrownMin > glowGasMax && nYoung > 0 && glowYoung / nYoung > 3 * glowOld / std::max(1, nOld) && decks[1] > 0 &&
+                decks[2] > 0 && decks[3] > 0;
         check("probe: every giant its own decks and kind (X-03)", giants >= 250 && bad == 0 && kindsOk,
-              fmt("%d giants (%d gas, %d ice, %d brown; 1/2/3 decks %d/%d/%d), %d wrong %s; glow brown >= %.2f, gas <= %.2f, young %.3f, old %.3f", giants, kinds[0], kinds[1], kinds[2], decks[1], decks[2], decks[3], bad, why.c_str(),
-                  glowBrownMin, glowGasMax, glowYoung / std::max(1, nYoung), glowOld / std::max(1, nOld)));
+                fmt("%d giants (%d gas, %d ice, %d brown; 1/2/3 decks %d/%d/%d), %d wrong %s; glow brown >= %.2f, gas <= %.2f, young %.3f, old %.3f", giants, kinds[0], kinds[1], kinds[2], decks[1],
+                        decks[2], decks[3], bad, why.c_str(), glowBrownMin, glowGasMax, glowYoung / std::max(1, nYoung), glowOld / std::max(1, nOld)));
     }
     {   // a great storm is the globe's (GEN 12): the planet function's oval differs from the bands round it by its tone, the
         // descent's bands sampled at the storm see the same albedo as the map, its turn keeps it whole a day later (every point of
@@ -191,7 +210,11 @@ void unitProbe(const Check& check) {
                 std::string w;
                 const SurfaceSample in = sampleSurface(g, StarSystem::bodyFromLatLon(g.gsLat, g.gsLon), 1000.0);
                 double outside = 0; int no = 0;
-                for (int q = 0; q < 16; q++) { double ang = q * TAU / 16; outside += sampleSurface(g, StarSystem::bodyFromLatLon(g.gsLat + 1.6 * g.gsB * std::sin(ang), g.gsLon + 1.6 * g.gsA / std::cos(g.gsLat) * std::cos(ang)), 1000.0).albedo; no++; }
+                for (int q = 0; q < 16; q++) {
+                    double ang = q * TAU / 16;
+                    outside += sampleSurface(g, StarSystem::bodyFromLatLon(g.gsLat + 1.6 * g.gsB * std::sin(ang), g.gsLon + 1.6 * g.gsA / std::cos(g.gsLat) * std::cos(ang)), 1000.0).albedo;
+                    no++;
+                }
                 outside /= no;
                 if ((in.albedo - outside) * g.gsTone < 0.05) w = fmt("its albedo %.2f against %.2f round it (tone %+.0f)", in.albedo, outside, g.gsTone);
                 const double t = 3.6e6, t2 = t + 86400;
@@ -204,7 +227,8 @@ void unitProbe(const Check& check) {
                 if (w.empty()) {   // the descent aimed at its centre
                     GiantBands B = giantBandsOf(b, g, g.gsLat, lonC, t, 1600, 9);
                     double al, st; B.at(0, 0, al, st);
-                    if (!B.gsOn || std::fabs(al - in.albedo) > 0.08 || B.greatStormAt(0, 0) > 0.05) w = fmt("the descent's bands %.2f against the globe's %.2f (its oval %s, d %.2f)", al, in.albedo, B.gsOn ? "on" : "off", B.greatStormAt(0, 0));
+                    if (!B.gsOn || std::fabs(al - in.albedo) > 0.08 || B.greatStormAt(0, 0) > 0.05)
+                        w = fmt("the descent's bands %.2f against the globe's %.2f (its oval %s, d %.2f)", al, in.albedo, B.gsOn ? "on" : "off", B.greatStormAt(0, 0));
                     else {
                         GiantAtmosphere a = giantAtmosphereOf(sys, bi);
                         GiantDecks D; D.init(a, &B, 7);
@@ -272,7 +296,11 @@ void unitProbe(const Check& check) {
         // third probe at other places: their profiles differ; the statistics count three
         mkdir("shots/tests/test_x04", 0755);
         for (const char* f : {"shots/tests/test_x04/guide.txt", "shots/tests/test_x04/probe_1.png", "shots/tests/test_x04/export.txt", "shots/tests/test_x04/friend.txt"}) remove(f);
-        TestGame game; game.savePrefix = "shots/tests/test_x04/save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_x04/guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_x04/save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_x04/guide.txt";
         game.shotsDir = "shots/tests/test_x04"; game.harness.probeQuiet = true;
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -291,7 +319,8 @@ void unitProbe(const Check& check) {
             press(KEY_ESCAPE); run(0.1);
         }
         const ProbeRecord* r = game.guide.probes.empty() ? nullptr : &game.guide.probes.back();
-        const bool kept = r && r->id == 1 && r->endCause == 1 && r->profile.size() >= 20 && r->layers.size() >= 9 && r->cam.size() >= 12 && r->time.size() >= 4 && fileExists("shots/tests/test_x04/probe_1.png");
+        const bool kept =
+                r && r->id == 1 && r->endCause == 1 && r->profile.size() >= 20 && r->layers.size() >= 9 && r->cam.size() >= 12 && r->time.size() >= 4 && fileExists("shots/tests/test_x04/probe_1.png");
         auto near = [](double x, double y) { return std::fabs(x - y) <= 1e-7 * std::max(1.0, std::fabs(x)); };
         auto same = [&](const ProbeRecord& a, const ProbeRecord& b) {
             if (a.id != b.id || a.body != b.body || a.seed != b.seed || a.storm != b.storm || a.endCause != b.endCause || a.gen != b.gen) return false;
@@ -304,7 +333,8 @@ void unitProbe(const Check& check) {
             for (size_t i = 0; i < a.layers.size(); i++) if (!near(a.layers[i], b.layers[i])) return false;
             for (size_t i = 0; i < a.profile.size(); i++) {
                 const ProbeSample &p = a.profile[i], &q = b.profile[i];
-                if (!near(p.clock, q.clock) || !near(p.bar, q.bar) || !near(p.tempK, q.tempK) || !near(p.windE, q.windE) || !near(p.light, q.light) || p.layer != q.layer || p.flashes != q.flashes) return false;
+                if (!near(p.clock, q.clock) || !near(p.bar, q.bar) || !near(p.tempK, q.tempK) || !near(p.windE, q.windE) || !near(p.light, q.light) || p.layer != q.layer || p.flashes != q.flashes)
+                    return false;
             }
             return true;
         };
@@ -318,8 +348,10 @@ void unitProbe(const Check& check) {
         { Guide third; third.importInbox("shots/tests/test_x04/friend.txt", nullptr, &onN); }   // a lent recording is not lent on
         std::string why;
         if (r) {
-            why = fmt("probe %d: %zu samples, %zu layers, %zu camera keys, %zu clock keys, end %.0f km", r->id, r->profile.size(), r->layers.size() / 3, r->cam.size() / 3, r->time.size() / 2, r->endKm);
-            for (size_t i = 0; i + 2 < r->layers.size(); i += 3) why += (i ? ", " : "; ") + giantLayerName(game.testProbeAtm().valid ? game.testProbeAtm() : giantAtmosphereOf(game.testSystem(), 5), (int)r->layers[i], true);
+            why = fmt(
+                    "probe %d: %zu samples, %zu layers, %zu camera keys, %zu clock keys, end %.0f km", r->id, r->profile.size(), r->layers.size() / 3, r->cam.size() / 3, r->time.size() / 2, r->endKm);
+            for (size_t i = 0; i + 2 < r->layers.size(); i += 3)
+                why += (i ? ", " : "; ") + giantLayerName(game.testProbeAtm().valid ? game.testProbeAtm() : giantAtmosphereOf(game.testSystem(), 5), (int)r->layers[i], true);
         }
         check("probe: a recording and its profile kept, read back and lent (X-04)", have && kept && readBack && lentOk && onN == 0,
               why + fmt("; kept %d, read back %d, lent %d (%d recordings), lent on %d", kept, readBack, lentOk, probesN, onN));
@@ -340,8 +372,10 @@ void unitProbe(const Check& check) {
             cDeep = game.testRecordingClock();
             press(KEY_ESCAPE); run(0.05);
         }
-        check("probe: the recording plays from the gallery as it fell (X-04)", newest == 0 && playing && diff < 2.0 && frac < 0.01 && lumMean > 8 && cDeep > cLive + 20 && game.state == GameState::GALLERY,
-              fmt("the gallery's newest %d, playing %d; its frame at %.0f s against the live one: %.2f levels a pixel, %.2f%% over 30 (mean %.0f); a second of Right: %.0f s", newest, playing, cLive, diff, frac * 100, lumMean, cDeep));
+        check("probe: the recording plays from the gallery as it fell (X-04)",
+                newest == 0 && playing && diff < 2.0 && frac < 0.01 && lumMean > 8 && cDeep > cLive + 20 && game.state == GameState::GALLERY,
+                fmt("the gallery's newest %d, playing %d; its frame at %.0f s against the live one: %.2f levels a pixel, %.2f%% over 30 (mean %.0f); a second of Right: %.0f s", newest, playing, cLive,
+                        diff, frac * 100, lumMean, cDeep));
         // two more probes into the giant at other places
         press(KEY_ESCAPE); run(0.05);
         for (int k = 0; k < 2 && have; k++) {
@@ -357,8 +391,10 @@ void unitProbe(const Check& check) {
             for (size_t i = 0; i + 2 < a.layers.size(); i += 3) for (size_t j = 0; j + 2 < b.layers.size(); j += 3)
                 if (a.layers[i] == 2 && b.layers[j] == 2) dTop = std::fabs(std::log(a.layers[i + 1] / b.layers[j + 1]));   // where each met the first deck's top
         }
-        check("probe: two places of one giant, two profiles (X-04)", game.guide.probes.size() == 3 && matched >= 20 && (dw > 10 || dTop > 0.02) && game.guide.probesSent == 3 && game.guide.deepestProbeKm() > 50,
-              fmt("%zu records, %d depths matched, the wind %.0f m/s apart at most, the first deck's top %.1f%% apart; sent %d, the deepest %.0f km", game.guide.probes.size(), matched, dw, dTop * 100, game.guide.probesSent, game.guide.deepestProbeKm()));
+        check("probe: two places of one giant, two profiles (X-04)",
+                game.guide.probes.size() == 3 && matched >= 20 && (dw > 10 || dTop > 0.02) && game.guide.probesSent == 3 && game.guide.deepestProbeKm() > 50,
+                fmt("%zu records, %d depths matched, the wind %.0f m/s apart at most, the first deck's top %.1f%% apart; sent %d, the deepest %.0f km", game.guide.probes.size(), matched, dw,
+                        dTop * 100, game.guide.probesSent, game.guide.deepestProbeKm()));
     }
     {   // what a probe crosses goes to the log with its depth, once: the great storm (named on the probe's screen: the name in the
         // guide and the log), its wall from outside, the aurora's curtains, a clear-air hole, diamond hail
@@ -378,7 +414,11 @@ void unitProbe(const Check& check) {
             if (c.hail && !ha) ha = &g;
         }
         remove("shots/tests/test_x04/guide.txt");
-        TestGame game; game.savePrefix = "shots/tests/test_x04/save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_x04/guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_x04/save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_x04/guide.txt";
         game.shotsDir = "shots/tests/test_x04"; game.harness.probeQuiet = true;
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -425,10 +465,17 @@ void unitProbe(const Check& check) {
         if (ha && launch(*ha, false, 0, 0)) fall(false);
         int counts[5] = {0, 0, 0, 0, 0}; bool depths = true;
         const char* const what[5] = {"FELL INTO RED EYE, THE GREAT STORM", "SAW THE WALL OF THE GREAT STORM", "SAW THE AURORA'S CURTAINS", "FELL THROUGH A CLEAR-AIR HOLE", "MET DIAMOND HAIL"};
-        for (const LogEntry& e : game.guide.log) for (int k = 0; k < 5; k++) if (e.kind == "PROBE" && e.text.find(what[k]) != std::string::npos) { counts[k]++; if (k != 1 && k != 2 && e.text.find(" ATM, ") == std::string::npos) depths = false; }
+        for (const LogEntry& e : game.guide.log)
+            for (int k = 0; k < 5; k++)
+                if (e.kind == "PROBE" && e.text.find(what[k]) != std::string::npos) {
+                    counts[k]++;
+                    if (k != 1 && k != 2 && e.text.find(" ATM, ") == std::string::npos) depths = false;
+                }
         const std::string stormKey = game.guide.probes.empty() ? std::string() : game.guide.probes[0].storm;
         const bool nameKept = !stormKey.empty() && game.guide.names.count(stormKey) && game.guide.names[stormKey] == "RED EYE";
-        check("probe: what it crosses goes to the log with its depth (X-04)", gs && au && ho && ha && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 1 && counts[4] == 1 && depths && nameKept,
-              fmt("storm %d, wall %d, aurora %d, hole %d, hail %d (each once), depths %d; the storm '%s' named: '%s'", counts[0], counts[1], counts[2], counts[3], counts[4], depths, stormKey.c_str(), named.c_str()));
+        check("probe: what it crosses goes to the log with its depth (X-04)",
+                gs && au && ho && ha && counts[0] == 1 && counts[1] == 1 && counts[2] == 1 && counts[3] == 1 && counts[4] == 1 && depths && nameKept,
+                fmt("storm %d, wall %d, aurora %d, hole %d, hail %d (each once), depths %d; the storm '%s' named: '%s'", counts[0], counts[1], counts[2], counts[3], counts[4], depths,
+                        stormKey.c_str(), named.c_str()));
     }
 }

@@ -113,7 +113,9 @@ enum Trait {
     TR_ARCHIPELAGO, TR_PANGAEA, TR_LAKELAND, TR_SNOWBALL, TR_EXOTIC_SEAS, TR_STORMS, TR_HAZE,
     TR_GIANT_FLORA, TR_LUMINOUS_FLORA, TR_DEAD_FOREST, TR_RED_SOIL, TR_BLACK_SAND, TR_CHALK,
     TR_GLASSED,   // never drawn; the generator gives it to a neutron star's outer survivors (`Body::glassed`): the flats fused into sheets of glass
-    TR_CIVILISATION,   // never drawn by the trait draw; `BodyGen::make` gives it to one world in eight of the kinds a people may live on, by a hash of its own (`peoples/ruins.*`; a dry world's old seas and rivers, `oldSeaM`)
+    // never drawn by the trait draw; `BodyGen::make` gives it to one world in eight of the kinds a people may live on, by a hash of its own
+    // (`peoples/ruins.*`; a dry world's old seas and rivers, `oldSeaM`)
+    TR_CIVILISATION,
     // the new slots' traits (`TraitDef::kind`), drawn in the slots 3-5 alone (the first three draw R-304's, so they stay as drawn): the landforms
     TR_GREAT_SHIELD, TR_TESSERAE, TR_LABYRINTH, TR_HOLLOWS, TR_CRATER_CHAINS, TR_PENITENTES, TR_COLUMNS, TR_MUD_VOLCANOES, TR_INVERTED_RIVERS, TR_PINGOS, TR_MAARS,
     // the water, the sky, the life and the ground
@@ -318,7 +320,17 @@ enum KindBody : uint32_t { KB_PLANET = 1, KB_COMPANION_WORLD = 2, KB_TWIN = 4, K
 enum MoonFact : uint32_t { MF_INNER = 1, MF_OUTER = 2, MF_FACING = 4, MF_TURNING = 8, MF_RESONANT = 16, MF_LARGE = 32, MF_SMALL = 64 };
 // P-02: `byStar`: the hash of the star's seed, not the world's, so every world of a star that qualifies is made alike (a young star's)
 // `parents`: a moon's source, the kinds its planet drew (a bit each, 0 any: the brown dwarfs' moons)
-struct KindSource { uint32_t from = 0; double tLo = 0, tHi = 1e9; uint32_t bodies = 0; uint32_t stars = 0; int lock = 0; double share = 0; bool byStar = false; uint32_t parents = 0; uint32_t moon = 0; };
+struct KindSource {
+    uint32_t from = 0;
+    double tLo = 0, tHi = 1e9;
+    uint32_t bodies = 0;
+    uint32_t stars = 0;
+    int lock = 0;
+    double share = 0;
+    bool byStar = false;
+    uint32_t parents = 0;
+    uint32_t moon = 0;
+};
 constexpr int MAX_KIND_SOURCES = 3;
 // the sentence of `describeBody`: the first phrase, the first or the second by a coin, the first or the second by the body's parameter
 // (craters, dune seas, fractures), the felisian seas' three, the dead seas' own or the coin
@@ -450,7 +462,8 @@ extern const std::array<KindDef, PT_COUNT> KINDS;
 inline bool kindHas(int type, uint64_t tag) { return (KINDS[type].tags & tag) != 0; }
 inline bool hasOpaqueDeck(int t) { return kindHas(t, KT_OPAQUE_DECK); }   // the globe and the sky are one cloud or haze deck; no sun disc, no cast shadows
 inline bool isLavaWorld(int t) { return kindHas(t, KT_LAVA); }            // bank 2 is lava, the ground glows by it, eruptions
-inline bool livingGround(int t) { return KINDS[t].ground == GR_FELISIAN && KINDS[t].cover == DC_NONE; }   // the living world's ground: its climate, biomes, snow and seas (P-04: a dead world's lies under its cover)
+// the living world's ground: its climate, biomes, snow and seas (P-04: a dead world's lies under its cover)
+inline bool livingGround(int t) { return KINDS[t].ground == GR_FELISIAN && KINDS[t].cover == DC_NONE; }
 inline bool deadKind(int t) { return KINDS[t].thenKind >= 0; }                                   // P-04: a living world that died
 inline int livingKindOf(int t) { return KINDS[t].thenKind >= 0 ? KINDS[t].thenKind : t; }     // P-04: the kind a world was in its people's time
 // P-03: a made kind of the locked: every source of it needs its world locked to its star (the magma ocean, the eyeball, the terminator)
@@ -464,6 +477,16 @@ enum TraitClass { TC_LANDFORM = 0, TC_WORLD, TC_GIVEN };
 // `moves`: the trait moves the ground or what stands on it, so a world with a people never takes it (its towns stand where 1.3.2 put them)
 // TK_DARK, the drifters' own: never drawn into a slot by a hash, given by what a body in the dark is (`darkTraitsOf`)
 enum TraitKind { TK_FIRST = 0, TK_LANDFORM, TK_WATER, TK_SKY, TK_LIFE, TK_GROUND, TK_SOUND, TK_DARK, TK_COUNT };
-struct TraitDef { int id = -1; const char* name = ""; const char* phrase = ""; int cls = TC_GIVEN; uint64_t needs = 0; bool colour = false; int excludes = TR_NONE; int kind = TK_FIRST; bool moves = false; };
+struct TraitDef {
+    int id = -1;
+    const char* name = "";
+    const char* phrase = "";
+    int cls = TC_GIVEN;
+    uint64_t needs = 0;
+    bool colour = false;
+    int excludes = TR_NONE;
+    int kind = TK_FIRST;
+    bool moves = false;
+};
 extern const std::array<TraitDef, TR_COUNT> TRAITS;
 inline bool traitEligible(int type, int trait) { return TRAITS[trait].cls != TC_GIVEN && (KINDS[type].shapes & TRAITS[trait].needs) != 0; }

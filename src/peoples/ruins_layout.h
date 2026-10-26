@@ -187,7 +187,8 @@ struct Layout {
             case BK_HOUSE: case BK_HUT: case BK_VILLA: case BK_SUBURB: case BK_BLOCK: case BK_TOWER: case BK_ROTUNDA: case BK_POD: case BK_TEMPLE: break;
             default: return PF_RECT;
         }
-        const uint64_t h = mix64(r.seed ^ 0xA04D0ULL ^ ((uint64_t)(int64_t)std::lround(x * 8) * 0x9E3779B97F4A7C15ULL) ^ ((uint64_t)(int64_t)std::lround(z * 8) * 0xD1B54A32D192ED03ULL) ^ (uint64_t)kind);
+        const uint64_t h =
+                mix64(r.seed ^ 0xA04D0ULL ^ ((uint64_t)(int64_t)std::lround(x * 8) * 0x9E3779B97F4A7C15ULL) ^ ((uint64_t)(int64_t)std::lround(z * 8) * 0xD1B54A32D192ED03ULL) ^ (uint64_t)kind);
         if (rectNext) return PF_RECT;
         int f = G.of(GV_PLAN);
         const double var = G.at(GV_SAMENESS);
@@ -235,7 +236,8 @@ struct Layout {
         b.seed = rng.next();
         b.age = age;
         b.style = style >= 0 ? style : (kind == BK_TEMPLE ? c.temple : (kind == BK_ARCOLOGY ? c.great % 3 : 0));
-        if (kind == BK_HIGHRISE) b.style = unitFromHash(mix64(b.seed ^ 0xA03F0ULL)) < 0.6 ? c.towerForm : std::min(3, (int)(unitFromHash(mix64(b.seed ^ 0xA03F1ULL)) * 4));   // the people's form, and others
+        // the people's form, and others
+        if (kind == BK_HIGHRISE) b.style = unitFromHash(mix64(b.seed ^ 0xA03F0ULL)) < 0.6 ? c.towerForm : std::min(3, (int)(unitFromHash(mix64(b.seed ^ 0xA03F1ULL)) * 4));
         if (kind == BK_HOUSE && arcadeNext) b.style = 1;   // an arcade along its front
         if (kind == BK_HIGHRISE || (kind == BK_TWIN && age == AGE_MODERN)) b.hWall = std::min(b.hWall, 650.0);   // the tallest a modern people raised
         // what its room reads of the genome
@@ -261,7 +263,10 @@ struct Layout {
         switch (age) {
             case AGE_PREHISTORIC: {
                 if (r.sclass == SC_HAMLET && u < 0.55) { double rr = var(2.0, 0.9); return set(BK_TENT_RING, rr, rr, 2.8, 0.2); }
-                if (u < 0.8 || r.sclass == SC_HAMLET) { double rr = var(2.3, 1.1) * F; return set(BK_HUT, rr, rr * (G.of(GV_PLAN) == PF_ELLIPSE ? 1.35 : (G.of(GV_PLAN) == PF_RECT ? 1.3 : 1.0)), var(1.5, 0.5) * Hk, 0.5); }
+                if (u < 0.8 || r.sclass == SC_HAMLET) {
+                    double rr = var(2.3, 1.1) * F;
+                    return set(BK_HUT, rr, rr * (G.of(GV_PLAN) == PF_ELLIPSE ? 1.35 : (G.of(GV_PLAN) == PF_RECT ? 1.3 : 1.0)), var(1.5, 0.5) * Hk, 0.5);
+                }
                 return set(BK_LONGHOUSE, var(2.6, 0.9) * F, var(6.0, 4.0) * F * hdK, var(1.7, 0.4) * Hk, 0.8);
             }
             case AGE_INDUSTRIAL: {
@@ -274,7 +279,10 @@ struct Layout {
             case AGE_MODERN: {
                 if (u < 0.04) return set(BK_RUBBLE, 6, 6, 1.0, 0.5);
                 if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && d < 0.7) {   // a city's middle, its towers by the people's appetite for height, blocks round them
-                    if (d < 0.4 && rng.uni() < 0.25 + 0.6 * G.at(GV_HEIGHT)) { const double hw = 10 + 5 * rng.uni(); return set(BK_HIGHRISE, hw, hw * (0.75 + 0.25 * rng.uni()), (60 + 220 * rng.uni()) * (1.1 - d) * towerK, 0.5); }
+                    if (d < 0.4 && rng.uni() < 0.25 + 0.6 * G.at(GV_HEIGHT)) {
+                        const double hw = 10 + 5 * rng.uni();
+                        return set(BK_HIGHRISE, hw, hw * (0.75 + 0.25 * rng.uni()), (60 + 220 * rng.uni()) * (1.1 - d) * towerK, 0.5);
+                    }
                     return set(BK_BLOCK, var(11, 4) * F, var(6.0, 2.5) * F * hdK, (18 + 30 * rng.uni() * (1.2 - d)) * Hk, 0.4);
                 }
                 if (r.sclass == SC_HAMLET || (r.sclass == SC_VILLAGE && u < 0.55) || (townOrGreater(r.sclass) && d > 0.85 && u < 0.5))
@@ -301,7 +309,8 @@ struct Layout {
         const int gr = G.of(GV_GROUPING);
         if (age >= AGE_FUTURISTIC || gr == GR_DETACHED || (gr == GR_ROWS && age == AGE_INDUSTRIAL)) return dwelling(x, z, heading) ? 1 : 0;
         // an industrial or a modern city's middle is built up, not grouped (its tenements, its blocks and towers)
-        if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && (age == AGE_INDUSTRIAL || age == AGE_MODERN) && std::sqrt(x * x + z * z) < 0.6 * std::max(1.0, r.size)) return dwelling(x, z, heading) ? 1 : 0;
+        if ((r.sclass == SC_CITY || r.sclass == SC_CAPITAL) && (age == AGE_INDUSTRIAL || age == AGE_MODERN) && std::sqrt(x * x + z * z) < 0.6 * std::max(1.0, r.size))
+            return dwelling(x, z, heading) ? 1 : 0;
         const double fxh = std::sin(heading), fzh = std::cos(heading), sxh = std::cos(heading), szh = -std::sin(heading);
         if (gr == GR_ROWS) {   // three joined side by side (the medieval houses, the prehistoric longhouses, a modern street of terraced houses)
             double hw = age == AGE_MODERN ? 3.4 : (age == AGE_PREHISTORIC ? 2.2 : 2.7), hd = age == AGE_MODERN ? 5.0 : (age == AGE_PREHISTORIC ? 5.5 : 3.6);
@@ -344,8 +353,13 @@ struct Layout {
             const double hdg = a + PI;   // facing the court
             if (age == AGE_PREHISTORIC) { if (add(BK_HUT, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.5, false)) placed++; }
             else if (age == AGE_MODERN) { if (add(BK_SUBURB, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.35, false)) placed++; }
-            else if (age == AGE_INDUSTRIAL) { if (add(BK_VILLA, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.45, false)) placed++; }
-            else { if (add(BK_HOUSE, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.45, false)) { placed++; if (r.buildings.back().form == PF_RECT || r.buildings.back().form == PF_FREE) r.buildings.back().door = 0; } }
+            else if (age == AGE_INDUSTRIAL) { if (add(BK_VILLA, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.45, false)) placed++;
+            } else {
+                if (add(BK_HOUSE, hx, hz, hdg, hs[k].hw, hs[k].hd, hs[k].h, 0.45, false)) {
+                    placed++;
+                    if (r.buildings.back().form == PF_RECT || r.buildings.back().form == PF_FREE) r.buildings.back().door = 0;
+                }
+            }
         }
         if (placed == 0) return 0;
         for (size_t i = r.buildings.size() - placed; i < r.buildings.size(); i++) r.buildings[i].joined = true;   // round their court
@@ -371,7 +385,9 @@ struct Layout {
                 }
             case AGE_INDUSTRIAL:
                 switch (ce) {
-                    case CE_PALACE: return add(BK_TOWN_HALL, x, z, heading, (14 + 5 * rng.uni()) * A, (8.5 + 2.5 * rng.uni()) * A, (14 + 4 * rng.uni()) * Ah, 0.8, checkFit, G.of(GV_FOCUS) == FO_SPIRE || G.of(GV_FOCUS) == FO_TOWER ? 2 : 0);
+                    case CE_PALACE:
+                        return add(BK_TOWN_HALL, x, z, heading, (14 + 5 * rng.uni()) * A, (8.5 + 2.5 * rng.uni()) * A, (14 + 4 * rng.uni()) * Ah, 0.8, checkFit,
+                                G.of(GV_FOCUS) == FO_SPIRE || G.of(GV_FOCUS) == FO_TOWER ? 2 : 0);
                     case CE_ASSEMBLY: return add(BK_TOWN_HALL, x, z, heading, (14 + 5 * rng.uni()) * A, (10 + 2.5 * rng.uni()) * A, (14 + 4 * rng.uni()) * Ah, 0.8, checkFit, 1);
                     case CE_MARKET: return add(BK_STATION, x, z, heading, (12 + 4 * rng.uni()) * A, (18 + 8 * rng.uni()) * A, 10 + 3 * rng.uni(), 0.8, checkFit, 1);
                     case CE_TOMB: { double rr = (6 + 2 * rng.uni()) * A; return add(BK_TEMPLE, x, z, heading, rr, rr, (9 + 3 * rng.uni()) * Ah, 1.0, checkFit, 3); }
@@ -385,17 +401,23 @@ struct Layout {
                     case CE_MARKET: return add(BK_BLOCK, x, z, heading, (28 + 10 * rng.uni()) * A, (18 + 6 * rng.uni()) * A, (10 + 4 * rng.uni()) * Ah, 0.5, checkFit, 1);
                     case CE_TOMB: return add(BK_TEMPLE, x, z, heading, (10 + 3 * rng.uni()) * A, (16 + 4 * rng.uni()) * A, (14 + 4 * rng.uni()) * Ah, 1.1, checkFit, 2);
                     case CE_MACHINE: return add(BK_POWER, x, z, heading, (45 + 15 * rng.uni()) * A, (40 + 10 * rng.uni()) * A, 1, 0.5, checkFit);
-                    default: { double hw = 13 + 5 * rng.uni(); return add(BK_HIGHRISE, x, z, heading, hw, hw * (0.75 + 0.25 * rng.uni()), ((big ? 180 : 70) + (big ? 260 : 60) * rng.uni()) * Ah * towerK, 0.5, checkFit); }
+                    default: {
+                        double hw = 13 + 5 * rng.uni();
+                        return add(BK_HIGHRISE, x, z, heading, hw, hw * (0.75 + 0.25 * rng.uni()), ((big ? 180 : 70) + (big ? 260 : 60) * rng.uni()) * Ah * towerK, 0.5, checkFit);
+                    }
                 }
             default:
                 switch (ce) {
                     case CE_PALACE: return add(BK_HALL, x, z, heading, (10 + 3 * rng.uni()) * A, (10 + 3 * rng.uni()) * A, (6 + 2 * rng.uni()) * Ah, 0.8, checkFit, 2);
                     case CE_ASSEMBLY: { double R = ((big ? 15 : 11) + 5 * rng.uni()) * A; return add(BK_STADIUM, x, z, heading, R, R, (5.5 + 2.5 * rng.uni()) * Ah, 0.5, checkFit); }
                     case CE_MARKET: return add(BK_HALL, x, z, heading, (5.5 + 1.5 * rng.uni()) * A, (9 + 4 * rng.uni()) * A, (5 + 2 * rng.uni()) * Ah, 0.6, checkFit, 1);
-                    case CE_TOMB: return add(BK_TEMPLE, x, z, heading, ((big ? 7 : 5) + 2 * rng.uni()) * A, ((big ? 15 : 10) + 5 * rng.uni()) * A, ((big ? 11 : 8) + 3 * rng.uni()) * Ah, 1.1, checkFit, c.roof == RF_DOMED || c.roof == RF_CONICAL ? 3 : 2);
+                    case CE_TOMB:
+                        return add(BK_TEMPLE, x, z, heading, ((big ? 7 : 5) + 2 * rng.uni()) * A, ((big ? 15 : 10) + 5 * rng.uni()) * A, ((big ? 11 : 8) + 3 * rng.uni()) * Ah, 1.1, checkFit,
+                                c.roof == RF_DOMED || c.roof == RF_CONICAL ? 3 : 2);
                     case CE_MACHINE: return add(BK_WINDMILL, x, z, heading, (3.5 + 1.5 * rng.uni()) * A, (3.5 + 1.5 * rng.uni()) * A, (12 + 4 * rng.uni()) * Ah * towerK, 0.7, checkFit);
                     default:
-                        if (big || u < 0.5) return add(BK_TEMPLE, x, z, heading, ((big ? 7 : 5) + 2 * rng.uni()) * A, ((big ? 15 : 10) + 5 * rng.uni()) * A, ((big ? 11 : 8) + 3 * rng.uni()) * Ah, 1.1, checkFit);
+                        if (big || u < 0.5)
+                            return add(BK_TEMPLE, x, z, heading, ((big ? 7 : 5) + 2 * rng.uni()) * A, ((big ? 15 : 10) + 5 * rng.uni()) * A, ((big ? 11 : 8) + 3 * rng.uni()) * Ah, 1.1, checkFit);
                         if (u < 0.75) return add(BK_PLATFORM, x, z, heading, 6 + 3 * rng.uni(), 6 + 3 * rng.uni(), 3.3, 0.5, checkFit);
                         return add(BK_HALL, x, z, heading, 5 + 2 * rng.uni(), 8 + 4 * rng.uni(), 5 + 2 * rng.uni(), 0.7, checkFit);
                 }

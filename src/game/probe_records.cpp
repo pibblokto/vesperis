@@ -68,7 +68,8 @@ void Game::probeTrack() {
     if (!(probe.notes & PN_AURORA)) {   // the aurora's curtains over the clouds (as the camera turns to them)
         probe.notes |= PN_AURORA;
         double ex, ez, p0;
-        if (probeAuroraWay(ex, ez, p0) && std::fabs(p0) < 2800 && a.ch.aurora > 0.25) logEvent("PROBE", fmt("PROBE %d SAW THE AURORA'S CURTAINS OVER %s, %.0f KM OFF", probe.id, giant.c_str(), std::fabs(p0)));
+        if (probeAuroraWay(ex, ez, p0) && std::fabs(p0) < 2800 && a.ch.aurora > 0.25)
+            logEvent("PROBE", fmt("PROBE %d SAW THE AURORA'S CURTAINS OVER %s, %.0f KM OFF", probe.id, giant.c_str(), std::fabs(p0)));
     }
     if (!(probe.notes & PN_WALL)) {   // the great storm's wall in sight from outside it
         probe.notes |= PN_WALL;
@@ -87,7 +88,8 @@ void Game::probeTrack() {
             if (L >= GIANT_HOLE_LAYER) {
                 probe.notes |= PN_HOLE;
                 const double b = probeBarAt(probe.flight, cc);
-                logEvent("PROBE", fmt("PROBE %d FELL THROUGH A CLEAR-AIR HOLE IN %s'S %s, %s", probe.id, giant.c_str(), giantLayerName(a, 2 + 2 * (L - GIANT_HOLE_LAYER), true).c_str(), depth(b).c_str()));
+                logEvent("PROBE",
+                        fmt("PROBE %d FELL THROUGH A CLEAR-AIR HOLE IN %s'S %s, %s", probe.id, giant.c_str(), giantLayerName(a, 2 + 2 * (L - GIANT_HOLE_LAYER), true).c_str(), depth(b).c_str()));
                 break;
             }
             if (cc >= c) break;
@@ -184,7 +186,11 @@ void Game::probeKeep(int cause) {
     r.launchT = probe.launchT; r.aimLat = probe.aimLat; r.aimLon = probe.aimLon; r.seed = probe.seed;
     r.startX = probe.startRel.x; r.startY = probe.startRel.y; r.startZ = probe.startRel.z; r.headYaw = probe.headYaw; r.descYaw = probe.descYaw;
     r.chuteOpen = probe.flight.chuteOpen; r.chuteClose = probe.flight.chuteClose; r.crushBar = probe.flight.crushBar;
-    r.endClock = c; r.endBar = probeBarAt(probe.flight, c); r.endKm = -giantAltitudeKm(probe.atm, std::max(r.endBar, 1e-9)); r.endK = giantTemperatureK(probe.atm, std::max(r.endBar, 1e-9)); r.endCause = cause;
+    r.endClock = c;
+    r.endBar = probeBarAt(probe.flight, c);
+    r.endKm = -giantAltitudeKm(probe.atm, std::max(r.endBar, 1e-9));
+    r.endK = giantTemperatureK(probe.atm, std::max(r.endBar, 1e-9));
+    r.endCause = cause;
     r.storm = probe.stormKey;
     r.cam = probe.camTrack; r.cam.push_back(c); r.cam.push_back(probe.camYaw); r.cam.push_back(probe.camPitch);
     r.time = probe.timeTrack; r.time.push_back(c); r.time.push_back(t);
@@ -299,8 +305,13 @@ void Game::updateRecording(const Input& in, double realDt) {
     replay.lookPitch = clampd(replay.lookPitch - in.mouseDy * rate * (settings.invertY ? -1 : 1), -60 * DEG, 60 * DEG);
     if (in.wasPressed(KEY_X) && !in.ctrl()) replay.lookYaw = replay.lookPitch = 0;
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // the storm it fell into
-        if (r.storm.empty()) { refuse("THIS PROBE FELL INTO NO STORM", 3); }
-        else { textStormKey = r.storm; guideReturn = GameState::RECORDING; const std::string n = nameOfKey(r.storm); beginTextEntry("NAME THE STORM", TEXT_STORM, n == "UNKNOWN" ? std::string() : upper(n)); }
+        if (r.storm.empty()) { refuse("THIS PROBE FELL INTO NO STORM", 3);
+        } else {
+            textStormKey = r.storm;
+            guideReturn = GameState::RECORDING;
+            const std::string n = nameOfKey(r.storm);
+            beginTextEntry("NAME THE STORM", TEXT_STORM, n == "UNKNOWN" ? std::string() : upper(n));
+        }
     }
 }
 
@@ -396,8 +407,9 @@ std::string Game::recordTitle(const ProbeRecord& r) const { return fmt("PROBE %d
 
 // the date, the depth and the end
 std::string Game::recordLine(const ProbeRecord& r) const {
-    std::string end = r.endCause == 3 ? (r.endKm >= 0 ? fmt("CUT %.0f KM DOWN", r.endKm) : (r.endClock < probeDescentStart() ? std::string("CUT IN THE FALL") : fmt("CUT AT %.3f ATM", atmOf(r.endBar))))
-                                      : fmt("%.0f KM DOWN, %.1f ATM", r.endKm, atmOf(r.endBar));
+    std::string end = r.endCause == 3
+            ? (r.endKm >= 0 ? fmt("CUT %.0f KM DOWN", r.endKm) : (r.endClock < probeDescentStart() ? std::string("CUT IN THE FALL") : fmt("CUT AT %.3f ATM", atmOf(r.endBar))))
+            : fmt("%.0f KM DOWN, %.1f ATM", r.endKm, atmOf(r.endBar));
     return epocOf(r.launchT) + "  " + end;
 }
 
@@ -427,7 +439,10 @@ void Game::renderProbeProfile(int rec) {
     const std::string of = r.lent ? fmt("LENT  %d OF %d", pos + 1, (int)all.size()) : fmt("%d OF %d", pos + 1, (int)all.size());
     drawText(canvas, UW - 8 - textWidth(of.c_str()), 6, of.c_str(), r.lent ? HUD_CYAN : HUD_DIM);
     std::string where = fmt("AIMED AT %s", latLonString(r.aimLat, r.aimLon).c_str());
-    if (!r.storm.empty()) { const std::string n = nameOfKey(r.storm); where = "INTO " + (n != "UNKNOWN" ? trunc(upper(n), 20) : std::string(r.storm.substr(r.storm.size() - 2) == "TG" ? "THE GREAT STORM" : "A STORM")); }
+    if (!r.storm.empty()) {
+        const std::string n = nameOfKey(r.storm);
+        where = "INTO " + (n != "UNKNOWN" ? trunc(upper(n), 20) : std::string(r.storm.substr(r.storm.size() - 2) == "TG" ? "THE GREAT STORM" : "A STORM"));
+    }
     drawText(canvas, 8, 15, (where + "  " + epocOf(r.launchT)).c_str(), HUD_DIM);
     const std::string end = r.endCause == 3 ? std::string("THE RELAY WAS CUT: ") + recordLine(r).substr(epocOf(r.launchT).size() + 2)
                                             : fmt("%.0f KM DOWN, %.1f ATM, %+.0f C - %s", r.endKm, atmOf(r.endBar), r.endK - 273.15, r.endCause == 1 ? "THE HULL GAVE WAY" : "THE HEAT TOOK IT");
@@ -436,7 +451,13 @@ void Game::renderProbeProfile(int rec) {
     if (r.profile.size() < 2) { drawTextCentered(canvas, UW / 2, 100, "THE RELAY WAS CUT OVER THE CLOUDS", HUD_DIM); return; }
     const int y0 = 46, y1 = 176, xL = 38, xT0 = 128, xT1 = 186, xW0 = 192, xW1 = 250, xQ0 = 256, xQ1 = 312;
     double pMax = PROBE_TOP_BAR * 100, tMin = 1e9, tMax = -1e9, wMax = 20;   // the scales: every probe of the giant's
-    for (int i : all) for (const ProbeSample& q : guide.probes[i].profile) { pMax = std::max(pMax, q.bar); tMin = std::min(tMin, q.tempK); tMax = std::max(tMax, q.tempK); wMax = std::max(wMax, std::fabs(q.windE)); }
+    for (int i : all)
+        for (const ProbeSample& q : guide.probes[i].profile) {
+            pMax = std::max(pMax, q.bar);
+            tMin = std::min(tMin, q.tempK);
+            tMax = std::max(tMax, q.tempK);
+            wMax = std::max(wMax, std::fabs(q.windE));
+        }
     auto yOf = [&](double bar) { return y0 + (int)std::lround((y1 - y0) * clampd(std::log(std::max(bar, PROBE_TOP_BAR) / PROBE_TOP_BAR) / std::log(pMax / PROBE_TOP_BAR), 0, 1)); };
     auto xT = [&](double k) { return xT0 + (int)std::lround((xT1 - xT0) * clampd((k - tMin) / std::max(1.0, tMax - tMin), 0, 1)); };
     auto xW = [&](double w) { return (xW0 + xW1) / 2 + (int)std::lround((xW1 - xW0) / 2 * clampd(w / wMax, -1, 1)); };

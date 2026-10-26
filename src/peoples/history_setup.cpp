@@ -74,7 +74,15 @@ Schedule foundingSchedule(const BodyGen& g, const PlanGrid& G, const PeoplePlan&
         const int m = (int)list.size();
         std::vector<int> ys(m);
         // slow, then the land filling, then slowing (the inverse of a smoothstep), the first daughter towns a few decades on
-        auto invSmooth = [](double u) { double lo = 0, hi = 1; for (int it = 0; it < 30; it++) { const double mid = 0.5 * (lo + hi); if (mid * mid * (3 - 2 * mid) < u) lo = mid; else hi = mid; } return 0.5 * (lo + hi); };
+        auto invSmooth = [](double u) {
+            double lo = 0, hi = 1;
+            for (int it = 0; it < 30; it++) {
+                const double mid = 0.5 * (lo + hi);
+                if (mid * mid * (3 - 2 * mid) < u) lo = mid;
+                else hi = mid;
+            }
+            return 0.5 * (lo + hi);
+        };
         for (int k = 0; k < m; k++) {
             const double t = 0.04 + 0.96 * invSmooth((k + 0.5) / m) + r.sym(0.015);
             ys[k] = clampi(start + (int)std::floor(span * clampd(t, 0, 1)), start, std::max(start, stop));
@@ -251,7 +259,8 @@ void Builder::setup() {
         HistoryEra& he = H.eras[k];
         if (k == (int)H.eras.size() - 1) { he.faith = P.faith; he.economy = P.economy; continue; }
         const HistoryEra& nx = H.eras[k + 1];
-        static const double FW[AGE_COUNT][FAITH_COUNT] = {{4, 4, 3, 1, 0.2, 0, 0}, {2, 1, 1, 4, 4, 0.5, 0}, {1, 0.3, 0.3, 2, 4, 2, 0}, {1, 0.2, 0.2, 1, 3, 4, 0.2}, {1, 0.2, 0.2, 0.3, 1, 5, 2}, {0.2, 0.2, 1, 0.2, 0.2, 3, 3}};
+        static const double FW[AGE_COUNT][FAITH_COUNT] = {
+                {4, 4, 3, 1, 0.2, 0, 0}, {2, 1, 1, 4, 4, 0.5, 0}, {1, 0.3, 0.3, 2, 4, 2, 0}, {1, 0.2, 0.2, 1, 3, 4, 0.2}, {1, 0.2, 0.2, 0.3, 1, 5, 2}, {0.2, 0.2, 1, 0.2, 0.2, 3, 3}};
         static const double EW[AGE_COUNT][ECO_COUNT] = {{4, 3, 3, 0.3, 0, 0}, {0.3, 2, 6, 2, 0.2, 0}, {0, 0.3, 2, 2, 6, 0}, {0, 0, 0.5, 3, 4, 3}, {0, 0, 0.2, 1, 3, 6}, {0, 0, 0.1, 0.5, 0.5, 8}};
         he.faith = rng.chance(0.45) && FW[he.age][nx.faith] > 0 ? nx.faith : rng.pick(FW[he.age], FAITH_COUNT);
         he.economy = rng.pick(EW[he.age], ECO_COUNT);
@@ -284,7 +293,10 @@ void Builder::setup() {
         if (a == AGE_INDUSTRIAL && he.government == GOV_CORPORATE) pickIdx = 5;
         he.name = ERA_NAMES[a][clampi(pickIdx, 0, 5)];
         if (a == AGE_MEDIEVAL && he.government == GOV_MONARCHY && pickIdx == 0) he.name = "the Kingdom of " + H.lore.city;
-        if (a == AGE_PREHISTORIC && H.age == AGE_PREHISTORIC) { static const char* const OWN[4] = {"the Time of the Fires", "the Gathering", "the Years of the Bands", "the Herds' Years"}; he.name = OWN[pickIdx % 4]; }
+        if (a == AGE_PREHISTORIC && H.age == AGE_PREHISTORIC) {
+            static const char* const OWN[4] = {"the Time of the Fires", "the Gathering", "the Years of the Bands", "the Herds' Years"};
+            he.name = OWN[pickIdx % 4];
+        }
         {   // H-04's second pass: half the peoples' eras take one of the age's further names (their own way of naming them; the draws above stand)
             const uint64_t eh = mix64(P.seed ^ 0xE4A5ULL ^ (uint64_t)(k + 1) * 0x9E3779B97F4A7C15ULL);
             if (unitFromHash(eh) < 0.55) {

@@ -71,19 +71,25 @@ static int testPad() {
         PadMap m2; m2.use(d);
         const bool ok = m.bind[PR_WALK_X] == PADC_NONE && m.bind[PR_WALK_Y] == PADC_NONE && m.read(p, 0.18).walkY == 0 &&
                         padControlName(m2.bind[PR_LOOK_X]) == "A2+" && padControlName(m2.bind[PR_LOOK_Y]) == "A3+" && m2.bind[PR_LT] == PADC_NONE && !m2.read(d, 0.18).down[PR_LT];
-        report("pad: the guess reads the axes at rest", ok, "walk " + padControlName(m.bind[PR_WALK_X]) + " " + padControlName(m.bind[PR_WALK_Y]) + ", dinput look " + padControlName(m2.bind[PR_LOOK_X]) + " " + padControlName(m2.bind[PR_LOOK_Y]) + " LT " + padControlName(m2.bind[PR_LT]));
+        report("pad: the guess reads the axes at rest", ok,
+                "walk " + padControlName(m.bind[PR_WALK_X]) + " " + padControlName(m.bind[PR_WALK_Y]) + ", dinput look " + padControlName(m2.bind[PR_LOOK_X]) + " " +
+                        padControlName(m2.bind[PR_LOOK_Y]) + " LT " + padControlName(m2.bind[PR_LT]));
     }
     {   // the capture: a button, a stick's half, a hat, a trigger resting at one end; a stick's capture takes no button; the standard names first
         PadState rest = rawPad("raw-cap"), now = rest;
-        now.rawButtons[5] = true; const int c1 = padCapture(rest, rest, now, false), c5 = padCapture(rest, rest, now, true), c8 = padCapture(now, rest, now, false);   // a button held since last frame: none
+        // a button held since last frame: none
+        now.rawButtons[5] = true; const int c1 = padCapture(rest, rest, now, false), c5 = padCapture(rest, rest, now, true), c8 = padCapture(now, rest, now, false);
         now = rest; now.rawAxes[1] = -0.9f; const int c2 = padCapture(rest, rest, now, true);
         now = rest; now.rawHats[0] = 4; const int c3 = padCapture(rest, rest, now, false);
         now = rest; now.rawAxes[2] = 0.9f; const int c4 = padCapture(rest, rest, now, false);
         PadState srest = stdPad("std-cap"), snow = srest; srest.rawButtonCount = 10;
         snow.buttons[PB_X] = true; snow.rawButtonCount = 10; snow.rawButtons[2] = true; const int c6 = padCapture(srest, srest, snow, false);
         snow = srest; snow.axes[4] = 1.0f; const int c7 = padCapture(srest, srest, snow, false);
-        const bool ok = padControlName(c1) == "B5" && padControlName(c2) == "A1-" && padControlName(c3) == "H0D" && padControlName(c4) == "T2" && c5 == -1 && c8 == -1 && padControlName(c6) == "X" && padControlName(c7) == "LT+";
-        report("pad: the capture", ok, padControlName(c1) + " " + padControlName(c2) + " " + padControlName(c3) + " " + padControlName(c4) + " " + std::to_string(c5) + " " + std::to_string(c8) + " " + padControlName(c6) + " " + padControlName(c7));
+        const bool ok = padControlName(c1) == "B5" && padControlName(c2) == "A1-" && padControlName(c3) == "H0D" && padControlName(c4) == "T2" && c5 == -1 && c8 == -1 && padControlName(c6) == "X" &&
+                padControlName(c7) == "LT+";
+        report("pad: the capture", ok,
+                padControlName(c1) + " " + padControlName(c2) + " " + padControlName(c3) + " " + padControlName(c4) + " " + std::to_string(c5) + " " + std::to_string(c8) + " " + padControlName(c6) +
+                        " " + padControlName(c7));
     }
     {   // every control's name reads back as itself
         int bad = 0, named = 0;
@@ -99,11 +105,19 @@ static int testPad() {
         m2.use(b); const bool bOk = m2.bind[PR_A] == PADC_RAW_BUTTON + 0 && !m2.custom(b);
         m2.use(a); m2.reset(a); const bool reset = m2.bind[PR_A] == PADC_RAW_BUTTON + 0 && !m2.custom(a);
         std::ifstream f("shots/tests/test_pad.txt"); std::string all((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-        report("pad: a set for each controller", saved && loaded && aOk && bOk && reset && all.find("\nB ") == std::string::npos, fmt("saved %d loaded %d a %d b %d reset %d", (int)saved, (int)loaded, (int)aOk, (int)bOk, (int)reset));
+        report("pad: a set for each controller", saved && loaded && aOk && bOk && reset && all.find("\nB ") == std::string::npos,
+                fmt("saved %d loaded %d a %d b %d reset %d", (int)saved, (int)loaded, (int)aOk, (int)bOk, (int)reset));
     }
     // the game by a controller alone
-    for (const char* f : {"shots/tests/pad_save_1.txt", "shots/tests/pad_save_auto.txt", "shots/tests/pad_settings.txt", "shots/tests/pad_keys.txt", "shots/tests/pad_guide.txt", "shots/tests/pad_pad.txt"}) remove(f);
-    TestGame game; game.savePrefix = "shots/tests/pad_save"; game.settingsPath = "shots/tests/pad_settings.txt"; game.keysPath = "shots/tests/pad_keys.txt"; game.guidePath = "shots/tests/pad_guide.txt"; game.padPath = "shots/tests/pad_pad.txt";
+    for (const char* f :
+            {"shots/tests/pad_save_1.txt", "shots/tests/pad_save_auto.txt", "shots/tests/pad_settings.txt", "shots/tests/pad_keys.txt", "shots/tests/pad_guide.txt", "shots/tests/pad_pad.txt"})
+        remove(f);
+    TestGame game;
+    game.savePrefix = "shots/tests/pad_save";
+    game.settingsPath = "shots/tests/pad_settings.txt";
+    game.keysPath = "shots/tests/pad_keys.txt";
+    game.guidePath = "shots/tests/pad_guide.txt";
+    game.padPath = "shots/tests/pad_pad.txt";
     game.settings.renderScale = 2; game.applySettings();
     KeyMap km; game.keymap = &km;
     Input gi; gi.pad = stdPad("0300test");
@@ -111,7 +125,16 @@ static int testPad() {
     auto tap = [&](int b) { gi.pad.buttons[b] = true; frames(1); gi.pad.buttons[b] = false; frames(1); };
     auto taps = [&](int b, int n) { for (int i = 0; i < n; i++) tap(b); };
     auto shot = [&](const char* name) { writePNG(fmt("shots/tests/pad_%s.png", name).c_str(), game.output(), FBW, FBH); };
-    auto itemIndex = [&](int page, const std::string& label) { std::istringstream is(game.testPadItems(page)); std::string line; int i = 0; while (std::getline(is, line)) { if (line.substr(0, line.find('|')) == label) return i; i++; } return -1; };
+    auto itemIndex = [&](int page, const std::string& label) {
+        std::istringstream is(game.testPadItems(page));
+        std::string line;
+        int i = 0;
+        while (std::getline(is, line)) {
+            if (line.substr(0, line.find('|')) == label) return i;
+            i++;
+        }
+        return -1;
+    };
     auto runItem = [&](int page, const std::string& label) {   // Y, the page, down to the line, A
         const int k = itemIndex(page, label);
         if (k < 0) return false;
@@ -125,7 +148,8 @@ static int testPad() {
     tap(PB_A);
     report("pad: A begins at the title", game.state == GameState::SPACE, fmt("state %d", (int)game.state));
     frames(3);
-    report("pad: the controller announced", game.testStatus().find("CONTROLLER") != std::string::npos || game.testStatusNext().find("CONTROLLER") != std::string::npos, game.testStatus() + " / " + game.testStatusNext());
+    report("pad: the controller announced", game.testStatus().find("CONTROLLER") != std::string::npos || game.testStatusNext().find("CONTROLLER") != std::string::npos,
+            game.testStatus() + " / " + game.testStatusNext());
     {   // the left stick walks in the cabin (it walked nothing there before)
         double x0, z0, y0, x1, z1, y1; game.testCabinGoto(1.6, -1.0, 0.0); frames(1); game.testCabinAt(x0, z0, y0);   // clear of the capsule's cage
         gi.pad.axes[1] = -1.0f; frames(20); gi.pad.axes[1] = 0; frames(1); game.testCabinAt(x1, z1, y1);
@@ -165,7 +189,8 @@ static int testPad() {
         tap(PB_B);   // the keyboard closes, the aim stays
         const bool stillAiming = game.testAiming() && !game.testPadKeyboard();
         tap(PB_B);   // B leaves the aim
-        report("pad: the aim's digits by the keyboard", aiming && ran && kb && digits == "100" && stillAiming && !game.testAiming(), fmt("aim %d ran %d kb %d digits '%s' still %d", (int)aiming, (int)ran, (int)kb, digits.c_str(), (int)stillAiming));
+        report("pad: the aim's digits by the keyboard", aiming && ran && kb && digits == "100" && stillAiming && !game.testAiming(),
+                fmt("aim %d ran %d kb %d digits '%s' still %d", (int)aiming, (int)ran, (int)kb, digits.c_str(), (int)stillAiming));
     }
     {   // the guide's entry by the keyboard: NAME THIS STAR, A then B, START
         const bool ran = runItem(1, "THE GUIDE");
@@ -175,7 +200,8 @@ static int testPad() {
         tap(PB_A); tap(PB_RIGHT); tap(PB_A);
         shot("keyboard_text");
         tap(PB_START);
-        report("pad: a name typed with the keyboard", ran && guide && entry && game.testStarName() == "AB" && game.state == GameState::SPACE, fmt("ran %d guide %d entry %d name '%s' state %d", (int)ran, (int)guide, (int)entry, game.testStarName().c_str(), (int)game.state));
+        report("pad: a name typed with the keyboard", ran && guide && entry && game.testStarName() == "AB" && game.state == GameState::SPACE,
+                fmt("ran %d guide %d entry %d name '%s' state %d", (int)ran, (int)guide, (int)entry, game.testStarName().c_str(), (int)game.state));
     }
     {   // the console by the keyboard: SELECT opens the commands over it, WHERE typed and run
         game.testCabinGoto(-1.3, 0.0, -PI / 2); frames(2);
@@ -188,7 +214,8 @@ static int testPad() {
         taps(PB_DOWN, k); tap(PB_A); frames(8);
         const bool back = game.state == GameState::CONSOLE && !game.testPadMenu();
         tap(PB_B);
-        report("pad: the console's commands over the keyboard", console && menu && k >= 0 && back && game.state == GameState::SPACE, fmt("console %d menu %d item %d back %d state %d", (int)console, (int)menu, k, (int)back, (int)game.state));
+        report("pad: the console's commands over the keyboard", console && menu && k >= 0 && back && game.state == GameState::SPACE,
+                fmt("console %d menu %d item %d back %d state %d", (int)console, (int)menu, k, (int)back, (int)game.state));
     }
     {   // the controller page: A set from the next press (Y), Y then acting as A, the reset; Esc saves
         const bool ran = runItem(1, "CONTROLLER SETUP");
@@ -209,7 +236,8 @@ static int testPad() {
         const bool reset = game.padMap.bind[PR_A] == PB_A && padControlName(game.padMap.bind[PR_WALK_Y]) == "LY+";
         tap(PB_B);
         report("pad: the controller page", ran && page && capturing && bound && walkSet && resetRow == 21 && reset && game.state == GameState::SPACE,
-               fmt("ran %d page %d capturing %d bound %d walk stick %d reset row %d reset %d state %d", (int)ran, (int)page, (int)capturing, (int)bound, (int)walkSet, resetRow, (int)reset, (int)game.state));
+                fmt("ran %d page %d capturing %d bound %d walk stick %d reset row %d reset %d state %d", (int)ran, (int)page, (int)capturing, (int)bound, (int)walkSet, resetRow, (int)reset,
+                        (int)game.state));
     }
     {   // the help's controller page (Space twice from the first)
         const bool ran = runItem(1, "HELP");
@@ -247,8 +275,10 @@ static int testPad() {
         tap(PB_X);   // Space: the cursor back to the ship
         const bool home = game.testChartOnShip();
         tap(PB_B);
-        report("pad: the star map and the galaxy chart", ran && turned && cls && maskC != mask0 && maskA == mask0 && chart && moved && lvl2 == lvl0 + 1 && marked && gm2 == gm0 + 1 && gm3 == gm0 && home && game.state == GameState::SPACE,
-               fmt("ran %d turned %.2f zoom %.2f->%.2f classes %d/%d/%d chart %d moved %d level %d->%d marks %d->%d->%d home %d state %d", (int)ran, yaw1 - yaw0, zoom0, zoom1, mask0, maskC, maskA, (int)chart, (int)moved, lvl0, lvl2, gm0, gm2, gm3, (int)home, (int)game.state));
+        report("pad: the star map and the galaxy chart",
+                ran && turned && cls && maskC != mask0 && maskA == mask0 && chart && moved && lvl2 == lvl0 + 1 && marked && gm2 == gm0 + 1 && gm3 == gm0 && home && game.state == GameState::SPACE,
+                fmt("ran %d turned %.2f zoom %.2f->%.2f classes %d/%d/%d chart %d moved %d level %d->%d marks %d->%d->%d home %d state %d", (int)ran, yaw1 - yaw0, zoom0, zoom1, mask0, maskC, maskA,
+                        (int)chart, (int)moved, lvl0, lvl2, gm0, gm2, gm3, (int)home, (int)game.state));
     }
     {   // a landing, on foot, the buggy
         const Star home = game.testSystem().star;
@@ -287,8 +317,9 @@ static int testPad() {
         const int scan0 = game.testScanMode();
         gi.pad.axes[5] = 1.0f; frames(2); tap(PB_RB); gi.pad.axes[5] = -1.0f; frames(1);   // RB while RT sprints: the scanner's next kind, not Shift+R
         const bool scanned = game.testScanMode() != scan0;
-        report("pad: on foot (a jump, the sprint, the scanner, the menu's buggy)", landed && alt > 0.3 && st1 < st0 - 2 && scanned && buggy && game.testBuggyInfo().find("deployed=1") != std::string::npos,
-               fmt("landed %d jump %.2f m, stamina %.0f -> %.0f, scanner %d -> %d, buggy %d (%s)", (int)landed, alt, st0, st1, scan0, game.testScanMode(), (int)buggy, game.testBuggyInfo().c_str()));
+        report("pad: on foot (a jump, the sprint, the scanner, the menu's buggy)",
+                landed && alt > 0.3 && st1 < st0 - 2 && scanned && buggy && game.testBuggyInfo().find("deployed=1") != std::string::npos,
+                fmt("landed %d jump %.2f m, stamina %.0f -> %.0f, scanner %d -> %d, buggy %d (%s)", (int)landed, alt, st0, st1, scan0, game.testScanMode(), (int)buggy, game.testBuggyInfo().c_str()));
         {   // the sector map: LB opens it, the right stick moves the cursor (half a throw: a cursor's pace), the triggers zoom, A marks the place
             // (the keyboard's START places it unnamed), the menu removes it, X brings the cursor home, B closes
             tap(PB_LB);
@@ -314,7 +345,8 @@ static int testPad() {
             const bool homeAgain = std::fabs(x3 - game.testPlayerX()) < 0.5 && std::fabs(z3 - game.testPlayerZ()) < 0.5;
             tap(PB_B);
             report("pad: the sector map", open && cursor && zm2 == zm0 - 1 && zm3 == zm0 && entry && marks1 == marks0 + 1 && marks2 == marks0 && homeAgain && game.state == GameState::SURFACE,
-                   fmt("open %d cursor %+.0f m (level %d) zoom %d->%d->%d mark %d: %d->%d->%d home %d state %d", (int)open, x1 - x0, zm0, zm0, zm2, zm3, (int)entry, marks0, marks1, marks2, (int)homeAgain, (int)game.state));
+                    fmt("open %d cursor %+.0f m (level %d) zoom %d->%d->%d mark %d: %d->%d->%d home %d state %d", (int)open, x1 - x0, zm0, zm0, zm2, zm3, (int)entry, marks0, marks1, marks2,
+                            (int)homeAgain, (int)game.state));
         }
         game.testWalkToBuggy(); frames(2);
         tap(PB_X);
@@ -344,7 +376,11 @@ int testInput() {
         if (!good) fails++;
         // N5-05: the key bindings screen: open it from the settings, rebind FORWARD to Z, reset it, save
         {
-            TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys2.txt"; game.guidePath = "shots/tests/test_guide.txt";
+            TestGame game;
+            game.savePrefix = "shots/tests/test_save";
+            game.settingsPath = "shots/tests/test_settings.txt";
+            game.keysPath = "shots/tests/test_keys2.txt";
+            game.guidePath = "shots/tests/test_guide.txt";
             game.padPath = "shots/tests/test_pad2.txt";   // the CONTROLS screen saves the controller's file too
             KeyMap km2; game.keymap = &km2;
             Input gi;

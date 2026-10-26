@@ -6,7 +6,8 @@
 
 // Blob shadow (M10-11): a dark ellipse on the ground under an object, stretched away from the sun.
 void SurfaceView::drawBlobShadow(Framebuffer& fb, double x, double z, double radius, double height) {
-    if (!env.hasSun2 || env.sun2Share < 0.05 || env.sun2Share > 0.95) { drawBlobShadowFrom(fb, x, z, radius, height, env.sun.dirLocal, env.glow); return; }   // as strong as the light (a far sun alone casts a faint one)
+    // as strong as the light (a far sun alone casts a faint one)
+    if (!env.hasSun2 || env.sun2Share < 0.05 || env.sun2Share > 0.95) { drawBlobShadowFrom(fb, x, z, radius, height, env.sun.dirLocal, env.glow); return; }
     // double shadows: one per sun, each as strong as its share of the light
     drawBlobShadowFrom(fb, x, z, radius, height, env.sunDisc.dirLocal, 1 - env.sun2Share);
     drawBlobShadowFrom(fb, x, z, radius, height, env.sun2.dirLocal, env.sun2Share);
@@ -170,7 +171,8 @@ int SurfaceView::forRocks(int cx, int cz, const std::function<bool(double, doubl
     int nrocks = (int)(rd * 2.0 * hash01(h));
     if (livingGround(type) && hash01(mix64(h + 5)) < 0.06 && tv.material != MAT_FOREST) nrocks += 3;   // an outcrop of three
     if (tv.material == MAT_SAND || tv.material == MAT_WATER || tv.material == MAT_LAVA || tv.material == MAT_MATS || tv.material == MAT_STROMATOLITE) nrocks = 0;   // nor on the mats' sediment
-    else if ((tv.material == MAT_BRINE || tv.material == MAT_SALT) && (kindHas(type, KT_VENT_LIFE) || site.gen.hasTrait(TR_GYPSUM) || site.gen.hasTrait(TR_HOT_SPRINGS))) nrocks = 0;   // nor in a spring or on its sinter; Q-02: nor on the gypsum's dunes, a hot spring's terraces
+    // nor in a spring or on its sinter; Q-02: nor on the gypsum's dunes, a hot spring's terraces
+    else if ((tv.material == MAT_BRINE || tv.material == MAT_SALT) && (kindHas(type, KT_VENT_LIFE) || site.gen.hasTrait(TR_GYPSUM) || site.gen.hasTrait(TR_HOT_SPRINGS))) nrocks = 0;
     if (tv.material == MAT_GLASS) nrocks = (int)(nrocks * 0.3);   // a few blast-thrown boulders on the sheets
     if (nrocks <= 0) return 0;
     const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = -1;   // no rock in a room (the settlements near, found once a cell when a rock asks)
@@ -556,7 +558,9 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
     double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
     int radius = 22;
     lastRocksDrawn = 0; lastRocksCandidates = 0;
-    const bool flora = kindHas(type, KT_FLORA), microbial = kindHas(type, KT_MICROBIAL), ventLife = kindHas(type, KT_VENT_LIFE);   // P-02: the stromatolites' pass on a microbial world alone (its std::function a cell otherwise); P-03 the chimneys' on a vent-life world
+    // P-02: the stromatolites' pass on a microbial world alone (its std::function a cell otherwise); P-03 the chimneys' on a vent-life
+    // world
+    const bool flora = kindHas(type, KT_FLORA), microbial = kindHas(type, KT_MICROBIAL), ventLife = kindHas(type, KT_VENT_LIFE);
     const bool meteorites = site.gen.hasTrait(TR_METEORITES);
     RasterParams rp; rp.bank = (flora || KINDS[type].accent[1] >= 0) ? 0 : 3;   // boulders in the rock colour (bank 3 is the forest on living worlds, P-00: an accent's where a kind lends it)
     rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE;
@@ -573,39 +577,48 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
             if (cellDist > cs * 2 && (ddx * camLocal.m[2][0] + ddz * camLocal.m[2][2]) / cellDist < -0.2) continue;
             uint64_t h = hash2i(cx, cz, site.gen.seed ^ 0xB0B);
             // rocks (B-420: the colliders' enumerator)
-            lastRocksCandidates += forRocks(cx, cz, [&](double rx, double rz, double size) { const double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z)); return size / dist * proj.f >= 0.8; },
-                                            [&](const RockInst& R) {
-                const double rx = R.x, rz = R.z, size = R.size, gy = R.gy;
-                const uint64_t hr = R.h;
-                double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
-                double a0 = hash01(mix64(hr + 3)) * TAU;
-                Vec3 base(rx, gy - size * 0.15, rz);
-                Vec3 pts[3];
-                for (int k = 0; k < 3; k++) pts[k] = base + Vec3(std::cos(a0 + k * 2.094) * size, 0, std::sin(a0 + k * 2.094) * size);
-                double peakH = size * (0.7 + 0.6 * hash01(mix64(hr + 4)));
-                Vec3 peak = base + Vec3(std::cos(a0 + 1.0) * size * 0.25, peakH, std::sin(a0 + 1.0) * size * 0.25);
-                lastRocksDrawn++;
-                if (size > 0.5) drawBlobShadow(fb, rx, rz, size * 0.9, peakH);
-                rp.grainWeight = clampd(1.0 - (dist - 60.0) / 200.0, 0.2, 1.0);
-                for (int k = 0; k < 3; k++) {
-                    Vec3 p0 = pts[k], p1 = pts[(k + 1) % 3];
-                    Vec3 n = normalize(cross(p1 - p0, peak - p0));
-                    if (n.y < 0) n = -n;
-                    double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
-                    double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
-                    if (nLamps) light += (1 - amb) * lampAt((p0 + p1 + peak) * (1.0 / 3.0), &n);
-                    double shade = 50 * std::pow(light, 0.6);
-                    shade = fogShade(shade, dist);
-                    RVert tri[3];
-                    Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(peak.x, peak.y, peak.z)};
-                    Vec3 ws[3] = {p0, p1, peak};
-                    for (int q = 0; q < 3; q++) {
-                        tri[q].x = vs[q].x; tri[q].y = vs[q].y; tri[q].z = vs[q].z; tri[q].shade = shade;
-                        tri[q].u = ws[q].x + ws[q].y * 0.7; tri[q].v = ws[q].z + ws[q].y * 0.4;   // world-mapped facets
-                    }
-                    rasterTriangle(fb, tri, rp, proj);
-                }
-            });
+            lastRocksCandidates += forRocks(
+                    cx, cz,
+                    [&](double rx, double rz, double size) {
+                        const double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
+                        return size / dist * proj.f >= 0.8;
+                    },
+                    [&](const RockInst& R) {
+                        const double rx = R.x, rz = R.z, size = R.size, gy = R.gy;
+                        const uint64_t hr = R.h;
+                        double dist = std::sqrt((rx - camPos.x) * (rx - camPos.x) + (rz - camPos.z) * (rz - camPos.z));
+                        double a0 = hash01(mix64(hr + 3)) * TAU;
+                        Vec3 base(rx, gy - size * 0.15, rz);
+                        Vec3 pts[3];
+                        for (int k = 0; k < 3; k++) pts[k] = base + Vec3(std::cos(a0 + k * 2.094) * size, 0, std::sin(a0 + k * 2.094) * size);
+                        double peakH = size * (0.7 + 0.6 * hash01(mix64(hr + 4)));
+                        Vec3 peak = base + Vec3(std::cos(a0 + 1.0) * size * 0.25, peakH, std::sin(a0 + 1.0) * size * 0.25);
+                        lastRocksDrawn++;
+                        if (size > 0.5) drawBlobShadow(fb, rx, rz, size * 0.9, peakH);
+                        rp.grainWeight = clampd(1.0 - (dist - 60.0) / 200.0, 0.2, 1.0);
+                        for (int k = 0; k < 3; k++) {
+                            Vec3 p0 = pts[k], p1 = pts[(k + 1) % 3];
+                            Vec3 n = normalize(cross(p1 - p0, peak - p0));
+                            if (n.y < 0) n = -n;
+                            double amb = ambient * (0.55 + 0.45 * std::max(0.0, n.y));
+                            double light = amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf;
+                            if (nLamps) light += (1 - amb) * lampAt((p0 + p1 + peak) * (1.0 / 3.0), &n);
+                            double shade = 50 * std::pow(light, 0.6);
+                            shade = fogShade(shade, dist);
+                            RVert tri[3];
+                            Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(peak.x, peak.y, peak.z)};
+                            Vec3 ws[3] = {p0, p1, peak};
+                            for (int q = 0; q < 3; q++) {
+                                tri[q].x = vs[q].x;
+                                tri[q].y = vs[q].y;
+                                tri[q].z = vs[q].z;
+                                tri[q].shade = shade;
+                                tri[q].u = ws[q].x + ws[q].y * 0.7;
+                                tri[q].v = ws[q].z + ws[q].y * 0.4;   // world-mapped facets
+                            }
+                            rasterTriangle(fb, tri, rp, proj);
+                        }
+                    });
             // a strewn field's iron meteorites: dark lumps pitted with thumbprints, their fusion crust black-brown in the chrome's ramp,
             // a facet that faces the sun from the eye's side glinting
             if (meteorites) forMeteorites(cx, cz, [&](const RockInst& R) {
@@ -615,7 +628,10 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                 const int NA = dist < 30 ? 6 : 4;
                 if (R.size > 0.4) drawBlobShadow(fb, R.x, R.z, R.size * 0.9, hgt);
                 Vec3 ring[6];
-                for (int a = 0; a < NA; a++) { const double ang = a0 + a * TAU / NA, wob = 0.75 + 0.5 * hash01(mix64(R.h + 10 + a)); ring[a] = Vec3(R.x + std::cos(ang) * R.size * wob, R.gy - 0.05 + 0.3 * hgt * hash01(mix64(R.h + 20 + a)), R.z + std::sin(ang) * R.size * wob); }
+                for (int a = 0; a < NA; a++) {
+                    const double ang = a0 + a * TAU / NA, wob = 0.75 + 0.5 * hash01(mix64(R.h + 10 + a));
+                    ring[a] = Vec3(R.x + std::cos(ang) * R.size * wob, R.gy - 0.05 + 0.3 * hgt * hash01(mix64(R.h + 20 + a)), R.z + std::sin(ang) * R.size * wob);
+                }
                 const Vec3 top(R.x + 0.2 * R.size * std::cos(a0), R.gy + hgt, R.z + 0.2 * R.size * std::sin(a0));
                 const Vec3 toCam = normalize(Vec3(camPos.x - R.x, camPos.y - R.gy, camPos.z - R.z));
                 for (int a = 0; a < NA; a++) {
@@ -645,7 +661,8 @@ void SurfaceView::drawObjects(Framebuffer& fb, double t) {
                     double w = 0.25 + 0.3 * hash01(mix64(hc + 4));
                     Vec3 p0(rx + std::cos(a0) * w, gy, rz + std::sin(a0) * w), p1(rx - std::cos(a0) * w, gy, rz - std::sin(a0) * w);
                     Vec3 pk(rx + 0.2 * w, gy + hgt, rz);
-                    double shade = fogShade(46 + 14 * std::max(sunUp, std::min(1.0, nLamps ? lampAt(Vec3(rx, gy + 0.5 * hgt, rz)) : 0.0)) * hash01(mix64(hc + 5)), dist);   // the lamp lights its facets
+                    // the lamp lights its facets
+                    double shade = fogShade(46 + 14 * std::max(sunUp, std::min(1.0, nLamps ? lampAt(Vec3(rx, gy + 0.5 * hgt, rz)) : 0.0)) * hash01(mix64(hc + 5)), dist);
                     RVert tri[3];
                     Vec3 vs[3] = {toView(p0.x, p0.y, p0.z), toView(p1.x, p1.y, p1.z), toView(pk.x, pk.y, pk.z)};
                     for (int q = 0; q < 3; q++) { tri[q].x = vs[q].x; tri[q].y = vs[q].y; tri[q].z = vs[q].z; tri[q].shade = shade; }

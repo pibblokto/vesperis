@@ -45,7 +45,14 @@ struct Build {
         while (k > 2 && length2(q[k - 1].p - q[0].p) < 1e-12) k--;
         if (k < 3) return;
         Vec3 nn(0, 0, 0), mean(0, 0, 0);
-        for (int i = 0; i < k; i++) { const Vec3& a = q[i].p; const Vec3& b = q[(i + 1) % k].p; nn.x += (a.y - b.y) * (a.z + b.z); nn.y += (a.z - b.z) * (a.x + b.x); nn.z += (a.x - b.x) * (a.y + b.y); mean += q[i].n; }
+        for (int i = 0; i < k; i++) {
+            const Vec3& a = q[i].p;
+            const Vec3& b = q[(i + 1) % k].p;
+            nn.x += (a.y - b.y) * (a.z + b.z);
+            nn.y += (a.z - b.z) * (a.x + b.x);
+            nn.z += (a.x - b.x) * (a.y + b.y);
+            mean += q[i].n;
+        }
         const bool flip = dot(nn, mean) < 0;
         const int first = (int)m.v.size();
         for (int i = 0; i < k; i++) m.v.push_back(q[flip ? (k - i) % k : i]);
@@ -216,8 +223,13 @@ void domeMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot) {
     }
     Build B(m, e, foot);
     std::vector<PPt> prof;
-    if (e.sub == 0) { const int mm = lod == 0 ? 6 : (lod == 1 ? 4 : 2); for (int k = 0; k <= mm; k++) { double a = PI / 2 * k / mm; prof.push_back({e.hx * std::cos(a), e.y0 + (e.y1 - e.y0) * std::sin(a), k == 0}); } }
-    else domeProfile(e, lod, prof);
+    if (e.sub == 0) {
+        const int mm = lod == 0 ? 6 : (lod == 1 ? 4 : 2);
+        for (int k = 0; k <= mm; k++) {
+            double a = PI / 2 * k / mm;
+            prof.push_back({e.hx * std::cos(a), e.y0 + (e.y1 - e.y0) * std::sin(a), k == 0});
+        }
+    } else domeProfile(e, lod, prof);
     double jag = 0;
     if (e.broken > 0) {   // caved: the profile cut under the top, the rim jagged, the inside showing
         double yc = e.y0 + (e.y1 - e.y0) * (1 - 0.8 * e.broken);
@@ -290,14 +302,18 @@ void latheMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double ski
             cut.push_back({a.r + (b.r - a.r) * t, yc, true});
             break;
         }
-        prof = cut; open = e.tilt <= 0.3; jag = std::min(0.25 * (yc - e.y0), 0.06 * (e.y1 - e.y0) + 0.5 * e.hx) * e.broken; holes = e.tilt > 0.3 ? 0.0 : 0.25 * e.broken;   // a fallen shaft whole underneath and closed at its break (its hollow showed a way in that its body barred)
+        // a fallen shaft whole underneath and closed at its break (its hollow showed a way in that its body barred)
+        prof = cut; open = e.tilt <= 0.3; jag = std::min(0.25 * (yc - e.y0), 0.06 * (e.y1 - e.y0) + 0.5 * e.hx) * e.broken; holes = e.tilt > 0.3 ? 0.0 : 0.25 * e.broken;
         // the holes in the top stretch of the wall alone, over 2.2 m (a stretch from the foot left a gap down to the ground that the
         // explorer saw through and could not walk through)
         const double hy = e.y0 + 2.2;
         const size_t K = prof.size();
         if (K >= 2 && prof[K - 2].y < hy) {
-            if (prof[K - 1].y > hy + 0.3) { const PPt a = prof[K - 2], b = prof[K - 1]; const double t = (hy - a.y) / std::max(1e-9, b.y - a.y); prof.insert(prof.end() - 1, PPt{a.r + (b.r - a.r) * t, hy, false}); }
-            else holes = 0;
+            if (prof[K - 1].y > hy + 0.3) {
+                const PPt a = prof[K - 2], b = prof[K - 1];
+                const double t = (hy - a.y) / std::max(1e-9, b.y - a.y);
+                prof.insert(prof.end() - 1, PPt{a.r + (b.r - a.r) * t, hy, false});
+            } else holes = 0;
         }
     }
     revolve(B, prof, n, round, e.hz > 0 ? e.hz / std::max(1e-6, e.hx) : 1.0, open, e.tilt > 0.3 || (e.y0 > 0.01 && e.sub != 4), jag, e.seed, e.pattern > 0, holes);
@@ -430,7 +446,13 @@ void archMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double skir
     auto head = [&](double ac, int k) -> std::pair<double, double> {
         double t = (double)k / m0;
         if (e.sub == 2) return {ac + w * (1 - 2 * t), e.y0 + s};
-        if (e.sub == 1) { const double c = 0.5 * w, rho = w + c, apex = std::sqrt(rho * rho - c * c), psiTop = std::acos(c / rho); bool right = t <= 0.5; double psi = psiTop * (right ? t * 2 : (1 - t) * 2); double x = -c + rho * std::cos(psi); return {ac + (right ? x : -x), e.y0 + s + rise * (rho * std::sin(psi)) / apex}; }
+        if (e.sub == 1) {
+            const double c = 0.5 * w, rho = w + c, apex = std::sqrt(rho * rho - c * c), psiTop = std::acos(c / rho);
+            bool right = t <= 0.5;
+            double psi = psiTop * (right ? t * 2 : (1 - t) * 2);
+            double x = -c + rho * std::cos(psi);
+            return {ac + (right ? x : -x), e.y0 + s + rise * (rho * std::sin(psi)) / apex};
+        }
         double phi = PI * t; return {ac + w * std::cos(phi), e.y0 + s + rise * std::sin(phi)};
     };
     // the wall as intervals across its width: piers (from the foot) and strips over the heads (from the curve), each its top
@@ -440,7 +462,12 @@ void archMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double skir
     std::vector<bool> fallen(N, false);
     if (e.broken > 0) {
         for (int j = 0; j < N; j++) fallen[j] = N == 1 ? e.broken > 0.3 : H01(e.seed, j) < e.broken * 0.75;
-        for (int j = 0; j <= N; j++) if (N > 1 && H01(e.seed, 40 + j) < e.broken * 0.3) { pierTop[j] = e.y0 + Hh * (0.25 + 0.5 * H01(e.seed, 80 + j)); if (j > 0) fallen[j - 1] = true; if (j < N) fallen[j] = true; }
+        for (int j = 0; j <= N; j++)
+            if (N > 1 && H01(e.seed, 40 + j) < e.broken * 0.3) {
+                pierTop[j] = e.y0 + Hh * (0.25 + 0.5 * H01(e.seed, 80 + j));
+                if (j > 0) fallen[j - 1] = true;
+                if (j < N) fallen[j] = true;
+            }
     }
     for (int j = 0; j < N; j++) {
         double ac = -e.hx + W * (j + 0.5);
@@ -520,7 +547,12 @@ void shellMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot) {
         if (e.y0 > 0.3) for (int sd = -1; sd <= 1; sd += 2) {   // raised: posts under the low corners
             double a = sd * e.hx * 0.96, b = -sd * e.hz * 0.96, r = std::max(0.15, 0.03 * std::min(e.hx, e.hz));
             Vec3 ps[4] = {B.P(a - r, -0.5, b - r), B.P(a + r, -0.5, b - r), B.P(a + r, -0.5, b + r), B.P(a - r, -0.5, b + r)};
-            for (int q = 0; q < 4; q++) { Vec3 p0 = ps[q], p1 = ps[(q + 1) % 4]; Vec3 p[4] = {p0, p1, p1 + B.D(0, e.y0 + 0.5, 0), p0 + B.D(0, e.y0 + 0.5, 0)}; Vec3 mid = (p0 + p1) * 0.5 - B.P(a, -0.5, b); B.flat(p, 4, mid); }
+            for (int q = 0; q < 4; q++) {
+                Vec3 p0 = ps[q], p1 = ps[(q + 1) % 4];
+                Vec3 p[4] = {p0, p1, p1 + B.D(0, e.y0 + 0.5, 0), p0 + B.D(0, e.y0 + 0.5, 0)};
+                Vec3 mid = (p0 + p1) * 0.5 - B.P(a, -0.5, b);
+                B.flat(p, 4, mid);
+            }
         }
         return;
     }
@@ -552,7 +584,8 @@ void shellMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot) {
         double r = std::max(0.12, 0.05 * R);
         for (int q = 0; q < 4; q++) {
             double a0 = TAU * q / 4 + PI / 4, a1 = TAU * (q + 1) / 4 + PI / 4;
-            Vec3 p[4] = {U.P(r * std::cos(a0), -1.0, r * std::sin(a0)), U.P(r * std::cos(a1), -1.0, r * std::sin(a1)), U.P(r * std::cos(a1), mastH, r * std::sin(a1)), U.P(r * std::cos(a0), mastH, r * std::sin(a0))};
+            Vec3 p[4] = {U.P(r * std::cos(a0), -1.0, r * std::sin(a0)), U.P(r * std::cos(a1), -1.0, r * std::sin(a1)), U.P(r * std::cos(a1), mastH, r * std::sin(a1)),
+                    U.P(r * std::cos(a0), mastH, r * std::sin(a0))};
             B.flat(p, 4, U.D(std::cos(0.5 * (a0 + a1)), 0, std::sin(0.5 * (a0 + a1))));
         }
     }
@@ -753,7 +786,10 @@ void sweepMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double ski
             Vec3 hint = sd == 0 ? along * -1.0 : along;
             // the section in horizontal bands between its distinct heights, each its own trapezoid (B-420: a band was a rectangle of its middle's
             // width: a roof's gable end stood out over its slopes, a bank's end short of its toes)
-            std::vector<double> ys; for (auto& q : sec) ys.push_back(std::min(q.second, top)); std::sort(ys.begin(), ys.end()); ys.erase(std::unique(ys.begin(), ys.end(), [](double a, double b) { return std::fabs(a - b) < 1e-6; }), ys.end());
+            std::vector<double> ys;
+            for (auto& q : sec) ys.push_back(std::min(q.second, top));
+            std::sort(ys.begin(), ys.end());
+            ys.erase(std::unique(ys.begin(), ys.end(), [](double a, double b) { return std::fabs(a - b) < 1e-6; }), ys.end());
             auto extent = [&](double y, double& rmin, double& rmax) {   // the section's extent at a height: where its edges cross it
                 rmin = 1e9; rmax = -1e9;
                 for (int i = 0; i < S; i++) {
@@ -783,7 +819,8 @@ void blobMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double skir
     auto body = [&](double ra, double rh, double rb, double ca, double cy, double cb, int salt, double cutShare) {
         auto at = [&](int i, int j) {   // i the row (latitude), j the column
             double lat = -PI / 2 + PI * i / rows, lon = TAU * j / cols;
-            double k = 1 + lump * 0.22 * (std::sin(2 * lon + ph[salt % 6]) * std::sin(3 * lat + ph[(salt + 1) % 6]) + 0.6 * std::sin(3 * lon + ph[(salt + 2) % 6]) * std::cos(2 * lat + ph[(salt + 3) % 6]));
+            double k = 1 +
+                    lump * 0.22 * (std::sin(2 * lon + ph[salt % 6]) * std::sin(3 * lat + ph[(salt + 1) % 6]) + 0.6 * std::sin(3 * lon + ph[(salt + 2) % 6]) * std::cos(2 * lat + ph[(salt + 3) % 6]));
             double a = ca + ra * k * std::cos(lat) * std::cos(lon), y = cy + rh * k * std::sin(lat), b = cb + rb * k * std::cos(lat) * std::sin(lon);
             y = std::max(y, e.y0 - skirt);
             return Vec3(a, y, b);
@@ -805,7 +842,11 @@ void blobMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, double skir
                 if (cutShare > 0 && (double)(i + 1) / rows > 1 - cutShare * (0.7 + 0.6 * H01(e.seed, salt * 64 + j))) continue;
                 FormMesh::V c[4];
                 const int ii[4] = {i, i + 1, i + 1, i}, jj[4] = {j, j, j + 1, j + 1};
-                for (int q = 0; q < 4; q++) { const Vec3& p = P[ii[q] * (cols + 1) + jj[q]]; c[q].p = B.P(p.x, p.y, p.z); c[q].n = normalize(B.D(nrm(ii[q], jj[q]).x, nrm(ii[q], jj[q]).y, nrm(ii[q], jj[q]).z)); }
+                for (int q = 0; q < 4; q++) {
+                    const Vec3& p = P[ii[q] * (cols + 1) + jj[q]];
+                    c[q].p = B.P(p.x, p.y, p.z);
+                    c[q].n = normalize(B.D(nrm(ii[q], jj[q]).x, nrm(ii[q], jj[q]).y, nrm(ii[q], jj[q]).z));
+                }
                 B.smooth(c, 4, cutShare > 0 ? FormMesh::TWO_SIDED : 0);
             }
     };
@@ -885,7 +926,8 @@ static void fenceMesh(FormMesh& m, const Form& e, int lod, const Vec3& foot, dou
     for (int k = 0; k < n;) { if (!fenceStanding(e, k)) { k++; continue; } int j = k; while (j < n && fenceStanding(e, j)) j++; runs.push_back({k, j}); k = j; }
     if (!(lod == 0 && sp * pxPerM >= 1.5)) {
         for (const auto& r : runs)   // a broken fence's stretches ragged (lower one by one)
-            box(e.sub == 3 ? -T - 0.04 : -T, e.sub == 3 ? T + 0.04 : T, ylo, y1 - 0.5 * tip - (e.broken > 0 ? 0.3 * (y1 - e.y0) * e.broken * H01(e.seed, 950 + r.first) : 0.0), -L + r.first * sp, -L + r.second * sp, true);
+            box(e.sub == 3 ? -T - 0.04 : -T, e.sub == 3 ? T + 0.04 : T, ylo, y1 - 0.5 * tip - (e.broken > 0 ? 0.3 * (y1 - e.y0) * e.broken * H01(e.seed, 950 + r.first) : 0.0), -L + r.first * sp,
+                    -L + r.second * sp, true);
         return;
     }
     const double H = y1 - e.y0;
@@ -1007,7 +1049,12 @@ double formProfile(const Form& e, double t) {
     switch (e.kind) {
         case FK_DOME: {
             if (e.sub == 2) return std::pow(std::max(0.0, 1 - std::pow(t, 1.6)), 0.7);
-            if (e.sub == 3) { static const double OR[] = {1.0, 1.12, 1.16, 1.08, 0.86, 0.55, 0.26, 0.08, 0.0}, OY[] = {0.0, 0.12, 0.25, 0.38, 0.52, 0.66, 0.8, 0.92, 1.0}; for (int k = 0; k < 8; k++) if (t <= OY[k + 1]) return (OR[k] + (OR[k + 1] - OR[k]) * (t - OY[k]) / (OY[k + 1] - OY[k])) / 1.16; return 0; }
+            if (e.sub == 3) {
+                static const double OR[] = {1.0, 1.12, 1.16, 1.08, 0.86, 0.55, 0.26, 0.08, 0.0}, OY[] = {0.0, 0.12, 0.25, 0.38, 0.52, 0.66, 0.8, 0.92, 1.0};
+                for (int k = 0; k < 8; k++)
+                    if (t <= OY[k + 1]) return (OR[k] + (OR[k + 1] - OR[k]) * (t - OY[k]) / (OY[k + 1] - OY[k])) / 1.16;
+                return 0;
+            }
             return std::sqrt(std::max(0.0, 1 - t * t));
         }
         case FK_LATHE: {
@@ -1037,7 +1084,14 @@ double formHalfWidth(const Form& e, double sightHeading) {
     const double d = sightHeading - e.heading, c = std::fabs(std::cos(d)), s = std::fabs(std::sin(d));
     double hz = e.hz > 0 ? e.hz : e.hx;
     switch (e.kind) {
-        case FK_DOME: case FK_LATHE: case FK_BLOB: case FK_TORUS: { double hx = e.kind == FK_TORUS ? e.hx + (e.p[0] > 0 ? e.p[0] : 0.15 * e.hx) : e.hx; if (e.kind == FK_TORUS) hz = hx; return std::sqrt(hx * hx * c * c + hz * hz * s * s); }
+        case FK_DOME:
+        case FK_LATHE:
+        case FK_BLOB:
+        case FK_TORUS: {
+            double hx = e.kind == FK_TORUS ? e.hx + (e.p[0] > 0 ? e.p[0] : 0.15 * e.hx) : e.hx;
+            if (e.kind == FK_TORUS) hz = hx;
+            return std::sqrt(hx * hx * c * c + hz * hz * s * s);
+        }
         case FK_SWEEP: return e.sub == 0 ? e.hx + std::max(e.p[1], e.p[2]) : e.hx * c + e.hz * s;
         case FK_CABLE: return 0;
         default: return e.hx * c + hz * s;

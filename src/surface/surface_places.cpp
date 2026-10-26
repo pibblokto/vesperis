@@ -26,7 +26,10 @@ const SurfaceView::RuinCell* SurfaceView::ruinCell(int gLat, int gLon) const {
         r.heading = c.spec.heading; r.size = c.spec.size; r.spec = &c.spec;
         {   // C-03: and its shards; C-12: and its graves, their stones drawn with the pieces; C-13: in its people's culture and lore
             const Culture& cu = cultures[c.spec.people == 1 && peoples > 1 ? 1 : 0]; const Lore& lo = lores[c.spec.people == 1 && peoples > 1 ? 1 : 0];
-            for (int l = 0; l < 3; l++) ruinElements(c.spec, cu, l, c.elems[l]); recordSitesOf(site.gen, c.spec, cu, c.shards, &c.instruments); gravesOf(lo, c.spec, cu, c.graves); graveElements(c.graves, cu, 0, c.elems[0]);
+            for (int l = 0; l < 3; l++) ruinElements(c.spec, cu, l, c.elems[l]);
+            recordSitesOf(site.gen, c.spec, cu, c.shards, &c.instruments);
+            gravesOf(lo, c.spec, cu, c.graves);
+            graveElements(c.graves, cu, 0, c.elems[0]);
             recordObjects(c);
             instrumentObjects(c);
             groupPieces(c);   // each building's pieces, for its own level of detail
@@ -224,7 +227,15 @@ void SurfaceView::findNearGrave() {
             const Grave& g = cell.graves[k];
             double x = r.x + g.x, z = r.z + g.z, d = std::sqrt((x - player.x) * (x - player.x) + (z - player.z) * (z - player.z));
             if (d >= best) continue;
-            best = d; nearGrave.k = (int)k; nearGrave.id = g.id; nearGrave.sclass = cell.spec.sclass; nearGrave.line = graveLine(lores[cell.spec.people == 1 && peoples > 1 ? 1 : 0], g); nearGrave.hud = g.name + (g.born > 0 ? ", " + std::to_string(g.born) + "-" + std::to_string(g.died) : ", to " + std::to_string(g.died)); nearGrave.x = x; nearGrave.z = z; nearGrave.dist = d;
+            best = d;
+            nearGrave.k = (int)k;
+            nearGrave.id = g.id;
+            nearGrave.sclass = cell.spec.sclass;
+            nearGrave.line = graveLine(lores[cell.spec.people == 1 && peoples > 1 ? 1 : 0], g);
+            nearGrave.hud = g.name + (g.born > 0 ? ", " + std::to_string(g.born) + "-" + std::to_string(g.died) : ", to " + std::to_string(g.died));
+            nearGrave.x = x;
+            nearGrave.z = z;
+            nearGrave.dist = d;
         }
     });
 }

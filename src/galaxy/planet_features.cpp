@@ -136,7 +136,8 @@ LavaOut lavaFlows(const Vec3& p, double R, double cellKm, double density, uint64
             double shape = std::max(0.0, 1 - std::pow(std::fabs(y), 4.0));
             double tip = smoothstep(1 + len, 1 + len - 0.8, x);
             double widthKm = 2 * wAng * x * r;   // the tongue's width here
-            o.dh += thick * shape * tip * featFade(widthKm, detailM);                   // B-404: the relief by the tongue's own width (it faded by `lodFade` of the foot's: half there in the 64 m ring, gone at 512)
+            // B-404: the relief by the tongue's own width (it faded by `lodFade` of the foot's: half there in the 64 m ring, gone at 512)
+            o.dh += thick * shape * tip * featFade(widthKm, detailM);
             if (matVisible(widthKm, detailM)) o.flow = std::max(o.flow, shape * tip);   // the material by the unfaded tongue wherever it spans half a cell
         }
         {   // the pit chain
@@ -151,7 +152,11 @@ LavaOut lavaFlows(const Vec3& p, double R, double cellKm, double density, uint64
                 double dx = (fr - 0.5) * 2, dy = da / 0.05;
                 double rr = dx * dx + dy * dy;
                 double pitKm = 0.1 * x * r;   // a pit's width (B-404: its own fade, the material wherever it spans half a cell)
-                if (rr < 1) { double bowl = (1 - rr) * (1 - rr) * pr; o.dh -= (6.0 + 6.0 * unitFromHash(mix64(hk + 3))) * bowl * featFade(pitKm, detailM); if (matVisible(pitKm, detailM)) o.pit = std::max(o.pit, bowl); }
+                if (rr < 1) {
+                    double bowl = (1 - rr) * (1 - rr) * pr;
+                    o.dh -= (6.0 + 6.0 * unitFromHash(mix64(hk + 3))) * bowl * featFade(pitKm, detailM);
+                    if (matVisible(pitKm, detailM)) o.pit = std::max(o.pit, bowl);
+                }
             }
         }
     });
@@ -209,7 +214,9 @@ double duneField(const Vec3& p, const BodyGen& g, double lat, double amp, double
     if (lee) *lee *= fade;
     return amp * v * fade;
 }
-constexpr double MAT_WL_KM = 0.048;   // B-404: the material chain's finest octave: 48 m, the twelve samples of the 4 m ring, so the ground underfoot keeps its look and every coarser ring decides its materials by the same slope
+// B-404: the material chain's finest octave: 48 m, the twelve samples of the 4 m ring, so the ground underfoot keeps its look and every
+// coarser ring decides its materials by the same slope
+constexpr double MAT_WL_KM = 0.048;
 ReliefSum reliefSum(const Vec3& p, const Vec3& unit, const BodyGen& g, double a0, double ridge, uint64_t seed, double detailM) {
     ReliefSum r;
     if (a0 <= 0) return r;
@@ -283,7 +290,9 @@ CliffOut cliffBands(const Vec3& p, const BodyGen& g, double h, double slope, dou
     on *= amount;
     if (on <= 0.001) return o;
     double fade = on * smoothstep(1.5, 4.0, run / detailM);   // the relief: a band's run must span a few samples
-    bool mat = matVisible(0.1 * run / 1000.0, detailM);      // the riser (a tenth of the run) decides the rock and the scree wherever it spans half a cell: the same cells in every ring that can draw it (following `fade`, the rock would come and go with the ring)
+    // the riser (a tenth of the run) decides the rock and the scree wherever it spans half a cell: the same cells in every ring that can
+    // draw it (following `fade`, the rock would come and go with the ring)
+    bool mat = matVisible(0.1 * run / 1000.0, detailM);
     if (fade <= 0.001 && !mat) return o;
     double q = std::floor(h / step), f = h / step - q;
     // the band's rise: a bench (35% of it at 0.29 x the slope), the talus (20% at 1.4 x), the riser (20% at 2.75 x: over
@@ -387,7 +396,11 @@ void landformFeatures(const BodyGen& g, int trait, const Vec3& unit, double half
                 for (int k = 0; k < C.n; k++) {
                     const Vec3 at = normalize(C.c + C.dir * C.at[k]);
                     if (std::acos(clampd(dot(at, unit), -1, 1)) * g.R > halfKm * 1.5) continue;
-                    LandFeature F; F.unit = at; F.radiusKm = C.rKm[k]; F.heightM = -C.depthM[k]; F.id = mix64(hash3i((int64_t)std::llround(C.c.x * 8), (int64_t)std::llround(C.c.y * 8), (int64_t)std::llround(C.c.z * 8), G.seed) + (uint64_t)k);
+                    LandFeature F;
+                    F.unit = at;
+                    F.radiusKm = C.rKm[k];
+                    F.heightM = -C.depthM[k];
+                    F.id = mix64(hash3i((int64_t)std::llround(C.c.x * 8), (int64_t)std::llround(C.c.y * 8), (int64_t)std::llround(C.c.z * 8), G.seed) + (uint64_t)k);
                     out.push_back(F);
                 }
             });

@@ -55,25 +55,38 @@ void Flow::title() {
 }
 
 void Flow::decoder() {
-    {   // C-06: the shard decoder on the back wall: empty; with three shards of Aieliaalas II in the guide (the first reading waits, the words resolving); with ten (every shard re-read, the whole text)
+    {
+        // C-06: the shard decoder on the back wall: empty; with three shards of Aieliaalas II in the guide (the first reading waits, the
+        // words resolving); with ten (every shard re-read, the whole text)
         game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); shot("decoder"); printf("  facing %d (7 is the decoder)\n", game.testCabinFacing());   // looking down at the desk from 1.5 m
         press(KEY_E); run(0.1); shot("shards_none"); press(KEY_ESCAPE); run(0.1);
         for (int i = 0; i < 3; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
         press(KEY_E); run(0.1); shot("shards_worlds"); press(KEY_ENTER); run(0.1); shot("shards_list");
-        game.testShardsOpenIndex(2); run(1.2); shot("shards_decoding"); printf("  %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");   // by index, S1 of the three being a piece; C-05: the words resolve as the recording speaks
+        // by index, S1 of the three being a piece; C-05: the words resolve as the recording speaks
+        game.testShardsOpenIndex(2); run(1.2); shot("shards_decoding"); printf("  %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");
         press(KEY_ENTER); run(0.2); shot("shards_text"); printf("  the wait skipped: %s\n", game.testShardsInfo().c_str());
         press(KEY_RIGHT); run(0.1); press(KEY_ENTER); run(0.2); printf("  the next, the wait skipped: %s\n", game.testShardsInfo().c_str());
         press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
         for (int i = 3; i < 10; i++) game.guide.shards.insert("151,0,25/1/S" + std::to_string(i));
         press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1); shot("shards_list10");
         game.testShardsOpenIndex(0); run(0.2); press(KEY_ENTER); run(0.2); shot("shards_full"); printf("  %s\n", game.testShardsInfo().c_str());
-        press(KEY_ENTER); run(1.5); shot("shards_speaking"); printf("  spoken again: %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");   // a read shard spoken again, the word being spoken underlined
+        // a read shard spoken again, the word being spoken underlined
+        press(KEY_ENTER); run(1.5); shot("shards_speaking"); printf("  spoken again: %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.speech ? "a speech set" : "NO speech set");
         press(KEY_SPACE); run(0.3); printf("  paused: %s\n", game.testShardsInfo().c_str());
         press(KEY_ESCAPE); run(0.1); printf("  after esc: level %d, the synth: %s\n", game.testShardsLevel(), game.audio.speech ? "a speech STILL set" : "stopped");
         {   // a long record (the longest of the people's first sixty, added to the guide) on the decoder: its opening spoken, Down turns the page
             int longest = -1, most = 0;
             { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); const Body& mb = msys.bodies[1]; BodyGen mg = BodyGen::make(mb); Lore mL = loreOf(msys, mb, mg);
-                for (int i = 0; i < 60 && i < mL.records; i++) { Shard x = shardOf(msys, mb, mg, mL, i); int nw = shardWords(x.text); if (!x.music && !x.chart && nw > most) { most = nw; longest = i; } } } }
+                    for (int i = 0; i < 60 && i < mL.records; i++) {
+                        Shard x = shardOf(msys, mb, mg, mL, i);
+                        int nw = shardWords(x.text);
+                        if (!x.music && !x.chart && nw > most) {
+                            most = nw;
+                            longest = i;
+                        }
+                    }
+                }
+            }
             if (longest >= 0) {
                 game.guide.shards.insert("151,0,25/1/S" + std::to_string(longest));
                 press(KEY_ESCAPE); run(0.1); press(KEY_ENTER); run(0.1);   // the world's list again, the long record in it
@@ -87,17 +100,38 @@ void Flow::decoder() {
         }
         {   // the first piece of music among the ten plays on the screen, is named, and stops when the screen is left
             int mi = -1;
-            for (int i = 0; i < 10 && mi < 0; i++) { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); const Body& mb = msys.bodies[1]; BodyGen mg = BodyGen::make(mb); Lore mL = loreOf(msys, mb, mg); if (shardOf(msys, mb, mg, mL, i).music) mi = i; } }
+            for (int i = 0; i < 10 && mi < 0; i++) {
+                Star ms;
+                StarSystem msys;
+                if (starInSector(151, 0, 25, ms, true)) {
+                    msys.generate(ms);
+                    const Body& mb = msys.bodies[1];
+                    BodyGen mg = BodyGen::make(mb);
+                    Lore mL = loreOf(msys, mb, mg);
+                    if (shardOf(msys, mb, mg, mL, i).music) mi = i;
+                }
+            }
             if (mi >= 0 && game.testShardsOpenIndex(mi)) {
                 run(2.0); shot("shards_music"); printf("  %s; the synth: %s\n", game.testShardsInfo().c_str(), game.audio.piece ? "a piece set" : "NO piece set");
                 press(KEY_N); run(0.1); shot("shards_music_name"); game.testTypeText("THE RIVER AT NIGHT"); run(0.3); shot("shards_music_named");
-                printf("  named: '%s'; %s\n", game.guide.names.count("151,0,25/1/S" + std::to_string(mi)) ? game.guide.names["151,0,25/1/S" + std::to_string(mi)].c_str() : "-", game.testShardsInfo().c_str());
+                printf("  named: '%s'; %s\n", game.guide.names.count("151,0,25/1/S" + std::to_string(mi)) ? game.guide.names["151,0,25/1/S" + std::to_string(mi)].c_str() : "-",
+                        game.testShardsInfo().c_str());
                 press(KEY_ESCAPE); run(0.1); printf("  after esc: level %d, the synth: %s\n", game.testShardsLevel(), game.audio.piece ? "a piece STILL set" : "stopped");
             } else printf("  no piece of music among the first ten shards (index %d)\n", mi);
         }
         {   // the first star chart among the fifty, added to the guide and opened by index: the reading (the stars appear, then the
             // figures, then their names), the wait skipped, the chart held up, the view turned onto the star it marks in space, then put down
-            int ci = -1; { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); BodyGen mg = BodyGen::make(msys.bodies[1]); for (int i = 0; i < SHARDS_PER_WORLD && ci < 0; i++) if (shardIsChart(mg, i)) ci = i; } }
+            int ci = -1;
+            {
+                Star ms;
+                StarSystem msys;
+                if (starInSector(151, 0, 25, ms, true)) {
+                    msys.generate(ms);
+                    BodyGen mg = BodyGen::make(msys.bodies[1]);
+                    for (int i = 0; i < SHARDS_PER_WORLD && ci < 0; i++)
+                        if (shardIsChart(mg, i)) ci = i;
+                }
+            }
             if (ci >= 0) {
                 game.guide.shards.insert("151,0,25/1/S" + std::to_string(ci));
                 press(KEY_ESCAPE); run(0.1); press(KEY_ENTER); run(0.1);   // the world's list again, the chart in it
@@ -107,7 +141,17 @@ void Flow::decoder() {
                     press(KEY_O); run(0.1); press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
                     game.testAimAtChartMark(); run(0.3); shot("chart_overlay"); printf("  held up in space, the view on the marked star: %s\n", game.testChartInfo().c_str());
                     game.testAimAtChartMark(0); run(0.3); shot("chart_overlay_figure"); printf("  the view on its first figure: %s\n", game.testChartInfo().c_str());
-                    game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.1); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1); game.testShardsOpenIndex(ci); run(0.1); press(KEY_O); run(0.1); printf("  put down: %s\n", game.testChartInfo().c_str());
+                    game.testCabinGoto(0.0, -0.8, PI, -0.65);
+                    run(0.1);
+                    press(KEY_E);
+                    run(0.1);
+                    press(KEY_ENTER);
+                    run(0.1);
+                    game.testShardsOpenIndex(ci);
+                    run(0.1);
+                    press(KEY_O);
+                    run(0.1);
+                    printf("  put down: %s\n", game.testChartInfo().c_str());
                     press(KEY_ESCAPE); run(0.1);
                 } else printf("  the chart S%d could not be opened\n", ci);
             } else printf("  no star chart among the fifty\n");
@@ -118,7 +162,12 @@ void Flow::decoder() {
                 game.guide.shards.insert("151,0,25/1/S" + std::to_string(li));
                 press(KEY_ESCAPE); run(0.1); press(KEY_ENTER); run(0.1);   // the world's list again, the last in it
                 if (game.testShardsOpenIndex(li)) {
-                    run(0.3); press(KEY_ENTER); run(0.2); shot("shards_last"); printf("  the last recording S%d read: %s; worlds ended %zu; last log: %s\n", li, game.testShardsInfo().c_str(), game.guide.ended.size(), game.guide.log.empty() ? "-" : game.guide.log.back().text.c_str());
+                    run(0.3);
+                    press(KEY_ENTER);
+                    run(0.2);
+                    shot("shards_last");
+                    printf("  the last recording S%d read: %s; worlds ended %zu; last log: %s\n", li, game.testShardsInfo().c_str(), game.guide.ended.size(),
+                            game.guide.log.empty() ? "-" : game.guide.log.back().text.c_str());
                     press(KEY_ESCAPE); run(0.1); shot("shards_timeline");
                     // the world's pages: Tab to the timeline of its eras, Tab to its history as the shards read tell it, Tab back to the records
                     press(KEY_TAB); run(0.1); shot("shards_eras");
@@ -148,7 +197,17 @@ void Flow::decoder() {
             printf("  a fresh guide imports the inbox: '%s'; %zu names in the inbox, %zu shards lent\n", game.testStatus().c_str(), game.guide.inbox.size(), game.guide.lent.size());
             game.testCabinGoto(0.0, -0.8, PI, -0.65); run(0.2); press(KEY_E); run(0.1); press(KEY_ENTER); run(0.1);
             shot("shards_lent"); printf("  the lent world's list: %s\n", game.testShardsInfo().c_str());
-            int pi = -1; { Star ms; StarSystem msys; if (starInSector(151, 0, 25, ms, true)) { msys.generate(ms); BodyGen mg = BodyGen::make(msys.bodies[1]); for (int i = 0; i < SHARDS_PER_WORLD && pi < 0; i++) if (shardIsMusic(mg, i) && game.guide.lent.count("151,0,25/1/S" + std::to_string(i))) pi = i; } }
+            int pi = -1;
+            {
+                Star ms;
+                StarSystem msys;
+                if (starInSector(151, 0, 25, ms, true)) {
+                    msys.generate(ms);
+                    BodyGen mg = BodyGen::make(msys.bodies[1]);
+                    for (int i = 0; i < SHARDS_PER_WORLD && pi < 0; i++)
+                        if (shardIsMusic(mg, i) && game.guide.lent.count("151,0,25/1/S" + std::to_string(i))) pi = i;
+                }
+            }
             if (pi >= 0 && game.testShardsOpenIndex(pi)) { run(0.5); shot("shards_lent_piece"); printf("  the friend's piece S%d: %s\n", pi, game.testShardsInfo().c_str()); }
             else printf("  no lent piece to open\n");
             press(KEY_ESCAPE); press(KEY_ESCAPE); press(KEY_ESCAPE); run(0.1);
@@ -174,15 +233,18 @@ void Flow::decoder() {
 
 void Flow::cabin() {
     press(KEY_PAGE_UP); run(0.3); shot("roof"); press(KEY_PAGE_DOWN); run(0.1);
-    press(KEY_Y); game.testCabinGoto(1.4, -0.9, -0.35, -0.2); run(0.6); shot("cabin_glass_lit");   // B-411: the glass hull with the light on, across the room: what stands in it solid, a sheen on the glass
+    // B-411: the glass hull with the light on, across the room: what stands in it solid, a sheen on the glass
+    press(KEY_Y); game.testCabinGoto(1.4, -0.9, -0.35, -0.2); run(0.6); shot("cabin_glass_lit");
     press(KEY_U); run(1.0); shot("cabin_glass"); press(KEY_Y); press(KEY_U); run(0.1);
     game.testCabinGoto(0.0, 0.2, PI, -0.42); run(0.2); shot("cabin_back");   // the back wall's three sets in their colours (the decoder, the radar, the telescope), the head bent to the desks
     game.testCabinGoto(-1.1, -1.38, -PI / 2, -0.55); run(0.2); shot("cabin_case"); printf("  facing %d (10 is the instruments' case)\n", game.testCabinFacing());   // the case on the left wall
-    game.testCabinGoto(1.55, -0.95, PI, -0.6); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());   // the telescope's set, from where its screen is in the frame
+    // the telescope's set, from where its screen is in the frame
+    game.testCabinGoto(1.55, -0.95, PI, -0.6); run(0.2); shot("cabin_telescope"); printf("  facing %d (9 is the telescope)\n", game.testCabinFacing());
     press(KEY_E); run(0.3); shot("telescope_set"); printf("  from the set: %s\n", game.testTelescopeInfo().c_str()); press(KEY_Z); run(0.1);
     press(KEY_TAB); run(0.1); shot("list"); press(KEY_ESCAPE);
     press(KEY_I); run(0.1); shot("data"); press(KEY_SPACE);
-    in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_ship"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // the system's events from the parking
+    // the system's events from the parking
+    in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_ship"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);
 }
 
 void Flow::telescope() {
@@ -197,11 +259,13 @@ void Flow::telescope() {
             int steps = 0;   // deeper until the eyepiece's step is finer than the map's texel and the plate begins (a small far moon needs a few)
             while (game.testTelescopePlateProgress() < 0 && steps < 6) { press(KEY_EQUAL); run(0.05); steps++; }
             printf("  %d steps deeper: %s\n", steps, game.testTelescopePlate().c_str());
-            game.testTelescopeSettle(); shot("telescope_plate"); printf("  settled: %s\n  %s\n", game.testTelescopePlate().c_str(), game.testTelescopeInfo().c_str());   // the plate read out whole: the moon's ground from the function
+            // the plate read out whole: the moon's ground from the function
+            game.testTelescopeSettle(); shot("telescope_plate"); printf("  settled: %s\n  %s\n", game.testTelescopePlate().c_str(), game.testTelescopeInfo().c_str());
             for (int i = 0; i < 2; i++) { press(KEY_EQUAL); run(0.05); }
             game.testTelescopeSettle(); shot("telescope_plate_deep"); printf("  two steps deeper, settled: %s\n  %s\n", game.testTelescopePlate().c_str(), game.testTelescopeInfo().c_str());
             for (int i = 0; i < steps + 2; i++) { press(KEY_MINUS); run(0.05); }
-            press(KEY_N); run(0.1); shot("telescope_name"); game.testTypeText("THE NEAR MOON"); run(0.2); shot("telescope_named"); printf("  named: %s\n", game.testTelescopeLine(true).c_str());   // the typing ends with Enter
+            // the typing ends with Enter
+            press(KEY_N); run(0.1); shot("telescope_name"); game.testTypeText("THE NEAR MOON"); run(0.2); shot("telescope_named"); printf("  named: %s\n", game.testTelescopeLine(true).c_str());
         }
         press(KEY_P); run(0.05);
         if (game.wantsScreenshot) {   // the photo as the platform takes it: the frame and the caption beside it
@@ -212,7 +276,9 @@ void Flow::telescope() {
             printf("  photo: %s\n", game.screenshotCaption().c_str());
         }
         press(KEY_Z); run(0.1); printf("  stowed: %s\n", game.testTelescopeInfo().c_str());
-        game.testAimAtBody(game.testParkedBody()); game.testCabinGoto(0.0, -1.0, 0.0, 0.0); run(0.2);   // a second of Shift+Right carries the ship round the world, the world kept in the window (after the telescope, whose moon is lit from the parking it had)
+        // a second of Shift+Right carries the ship round the world, the world kept in the window (after the telescope, whose moon is lit
+        // from the parking it had)
+        game.testAimAtBody(game.testParkedBody()); game.testCabinGoto(0.0, -1.0, 0.0, 0.0); run(0.2);
         in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(1.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false;
         shot("orbit_turn"); printf("  Shift+Right for a second: '%s'\n", game.testStatus().c_str());
     }
@@ -223,7 +289,8 @@ void Flow::telescope() {
 void Flow::radar() {
     {   // C-07: the signal radar: on at the start, a sweep of the sky (the scope filling), the view turned onto the first people's
         // signal within reach by the hook (the recording heard through the static), the hold, the lock, Enter targets its star, off
-        game.testCabinGoto(-1.4, -1.1, PI, -0.6); run(0.2); shot("radar_set"); printf("  facing %d (8 is the radar set)\n", game.testCabinFacing());   // the set beside the decoder, looked down at from 1.6 m
+        // the set beside the decoder, looked down at from 1.6 m
+        game.testCabinGoto(-1.4, -1.1, PI, -0.6); run(0.2); shot("radar_set"); printf("  facing %d (8 is the radar set)\n", game.testCabinFacing());
         press(KEY_E); run(0.3); shot("radar_on"); printf("  %s\n", game.testRadarInfo().c_str());   // E on the set switches the receiver on
         game.testCabinGoto(0.4, -1.6, 0.0, 0.0);
         in.down[KEY_RIGHT] = true; run(2.0); in.down[KEY_RIGHT] = false; run(0.3); shot("radar_sweep");
@@ -233,7 +300,11 @@ void Flow::radar() {
         if (who >= 0 && game.testAimAtSignal(who)) {
             run(1.5); shot("radar_hold"); printf("  %s\n", game.testRadarInfo().c_str());
             run(5.5); shot("radar_lock"); printf("  %s\n", game.testRadarInfo().c_str());
-            press(KEY_ENTER); run(1.0); shot("radar_flight"); printf("  Enter: '%s'; %s; the synth: %s\n", game.testStatus().c_str(), game.testRadarInfo().c_str(), game.audio.radio ? "STILL the radar's" : "released");   // the Vimana flight to the signal's star, the camera left
+            press(KEY_ENTER);
+            run(1.0);
+            shot("radar_flight");
+            printf("  Enter: '%s'; %s; the synth: %s\n", game.testStatus().c_str(), game.testRadarInfo().c_str(),
+                    game.audio.radio ? "STILL the radar's" : "released");   // the Vimana flight to the signal's star, the camera left
             press(KEY_V); run(0.3); printf("  the flight aborted for the rest of the flow: '%s' (%s)\n", game.testStatus().c_str(), game.testDebugInfo().c_str());
             // the gain up to x32 (the far scan a slice a frame), the view onto the farthest people's signal x32 hears, the longer
             // hold, the lock with its thousands of light years, Enter flies there; V aborts at once, so the flow goes on from where
@@ -281,7 +352,13 @@ void Flow::landing() {
         // O6-03: the nearest system holds nothing but comets since GEN 9; the walk, the buggy and the water below need a world
         // with gravity: park at the first felisian world of the scan instead (the approach frames come from the comet section)
         StarSystem fs; int fb = -1;
-        if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); parkedByTest = true; printf("  only comets here: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
+        if (firstBodyOfType(PT_FELISIAN, fs, fb)) {
+            game.testParkAt(fs.star, fb);
+            lb = fb;
+            run(0.5);
+            parkedByTest = true;
+            printf("  only comets here: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb);
+        }
     }
     if (lb >= 0) {
         // approach unless the test parked the ship itself (the old check compared the star's generated name with
@@ -298,11 +375,23 @@ void Flow::landing() {
             // the landing below (the walk, the herd, the water) wants a living world: the arrival's world gave the approach
             // frames; park at the scan's first felisian world now (the pinned home's nearest star holds none)
             StarSystem fs; int fb = -1;
-            if (firstBodyOfType(PT_FELISIAN, fs, fb)) { game.testParkAt(fs.star, fb); lb = fb; run(0.5); printf("  no living world at this star: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb); }
+            if (firstBodyOfType(PT_FELISIAN, fs, fb)) {
+                game.testParkAt(fs.star, fb);
+                lb = fb;
+                run(0.5);
+                printf("  no living world at this star: parked at %s body %d for the landing\n", fs.star.name.c_str(), fb);
+            }
         }
         shot("landing_map");
         press(KEY_R); run(0.1); shot("landing_map2");
-        in.down[KEY_LEFT_CONTROL] = true; press(KEY_T); in.down[KEY_LEFT_CONTROL] = false; run(0.1); shot("almanac_site"); printf("  %s\n", game.testAlmanacInfo().c_str()); press(KEY_ESCAPE); run(0.1);   // the cursor's site
+        in.down[KEY_LEFT_CONTROL] = true;
+        press(KEY_T);
+        in.down[KEY_LEFT_CONTROL] = false;
+        run(0.1);
+        shot("almanac_site");
+        printf("  %s\n", game.testAlmanacInfo().c_str());
+        press(KEY_ESCAPE);
+        run(0.1);   // the cursor's site
         press(KEY_Z); run(0.3); shot("landing_zoom"); press(KEY_Z); run(0.1);   // the sector zoom
         press(KEY_J); run(0.1); shot("landing_sky");
         game.testLandSite(); run(0.1);   // a lit land site from the body's seed (J leaves the cursor under the moon: in the sea at Heilya II; R is seeded by the clock)
@@ -383,7 +472,8 @@ void Flow::landing() {
             bool landed = game.testDroneLanded();
             press(KEY_E); run(0.3);
             bool out = game.testDroneInfo().find("in=0") != std::string::npos;
-            printf("  drone: unfolded %s, in %s, lifted %s, top %.0f km/h, %.0f m up, landed %s after %.0f s, out %s; %s\n", unfolded ? "ok" : "FAIL", seated ? "ok" : "FAIL", lifted ? "ok" : "FAIL", top * 3.6, altMax, landed ? "ok" : "FAIL", landT / 30.0, out ? "ok" : "FAIL", game.testDroneInfo().c_str());
+            printf("  drone: unfolded %s, in %s, lifted %s, top %.0f km/h, %.0f m up, landed %s after %.0f s, out %s; %s\n", unfolded ? "ok" : "FAIL", seated ? "ok" : "FAIL", lifted ? "ok" : "FAIL",
+                    top * 3.6, altMax, landed ? "ok" : "FAIL", landT / 30.0, out ? "ok" : "FAIL", game.testDroneInfo().c_str());
             press(KEY_K); run(0.3);
         }
         press(KEY_M); run(0.2);
@@ -411,7 +501,14 @@ void Flow::landing() {
             press(KEY_N); run(0.2);
             int fm = -1; for (int i = 0; i < (int)game.guide.marks.size(); i++) if (game.guide.marks[i].name == "FLOW MARK") fm = i;
             double mx = 0, mz = 0;
-            if (fm >= 0) { game.testMarkLocal(fm, mx, mz); game.testMapCursor(mx, mz); in.down[KEY_LEFT_SHIFT] = true; press(KEY_ENTER); in.down[KEY_LEFT_SHIFT] = false; game.testMapCursor(mx + 1500, mz + 900); }   // the cursor off it: the shown mark's own box
+            if (fm >= 0) {
+                game.testMarkLocal(fm, mx, mz);
+                game.testMapCursor(mx, mz);
+                in.down[KEY_LEFT_SHIFT] = true;
+                press(KEY_ENTER);
+                in.down[KEY_LEFT_SHIFT] = false;
+                game.testMapCursor(mx + 1500, mz + 900);
+            }   // the cursor off it: the shown mark's own box
             run(0.2); shot("scan_map");
             press(KEY_ESCAPE); run(0.3); shot("mark_shown");
             printf("  the mark shown over the view %s, %.0f m off\n", fm >= 0 && game.testShownMark() == fm ? "yes" : "NO", std::hypot(mx - game.testPlayerX(), mz - game.testPlayerZ()));
@@ -448,7 +545,8 @@ void Flow::landing() {
             while (game.testAlmanacRunning() && frames++ < 30 * 300) { game.frame(in, 1.0 / 30); in.newFrame(); peak = std::max(peak, game.testTimeWarp()); }
             double off = game.gameTime() - target, warpAfter = game.testTimeWarp();
             run(0.2); shot("almanac_arrived");
-            printf("  the run: %.0f s of game time in %d frames at a peak of x%.0f, %.3f s off the event, warp x%.0f, '%s'\n", target - tStart, frames, peak, off, warpAfter, game.testStatus().c_str());
+            printf("  the run: %.0f s of game time in %d frames at a peak of x%.0f, %.3f s off the event, warp x%.0f, '%s'\n", target - tStart, frames, peak, off, warpAfter,
+                    game.testStatus().c_str());
         }
         press(KEY_V); press(KEY_V); run(0.1); shot("supervision"); press(KEY_V); press(KEY_V); press(KEY_V);
         // a note, the log, the statistics and the gallery
@@ -590,8 +688,12 @@ void Flow::probe() {
             // what came back. The gallery's newest item is its recording (its final image); Enter plays it on the screen, the
             // arrows go down it by depth; the statistics count it; the giant's data sheet draws its profile
             press(KEY_G); for (int i = 0; i < 5; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.2); shot("probe_gallery");   // the menu lost its landmark row
-            printf("  gallery (X-04): %d items, the newest %s; '%s'\n", game.testGalleryItems(), game.testGalleryRec(game.testGallerySel()) >= 0 ? "the probe's recording" : "A PHOTOGRAPH", game.guide.probes.empty() ? "no record" : game.guide.probes.back().body.c_str());
-            press(KEY_ENTER); run(2.0); shot("probe_recording"); printf("  Enter: state %d (25 the recording), clock %.1f s, '%s'\n", (int)game.state, game.testRecordingClock(), game.testStatus().c_str());
+            printf("  gallery (X-04): %d items, the newest %s; '%s'\n", game.testGalleryItems(), game.testGalleryRec(game.testGallerySel()) >= 0 ? "the probe's recording" : "A PHOTOGRAPH",
+                    game.guide.probes.empty() ? "no record" : game.guide.probes.back().body.c_str());
+            press(KEY_ENTER);
+            run(2.0);
+            shot("probe_recording");
+            printf("  Enter: state %d (25 the recording), clock %.1f s, '%s'\n", (int)game.state, game.testRecordingClock(), game.testStatus().c_str());
             in.down[KEY_RIGHT] = true; run(1.4); in.down[KEY_RIGHT] = false; run(0.1); shot("probe_recording_deep"); printf("  Right held: clock %.1f s\n", game.testRecordingClock());
             press(KEY_ESCAPE); run(0.1); press(KEY_ESCAPE); run(0.1);
             press(KEY_G); for (int i = 0; i < 6; i++) press(KEY_DOWN); press(KEY_ENTER); run(0.1); shot("probe_stats");
@@ -610,7 +712,11 @@ void Flow::roads() {
             StarSystem asys; asys.generate(as);
             double la = 12.0 * DEG, lo = 4.22 * DEG; planPlacePoint(BodyGen::make(asys.bodies[1]), 0, la, lo);
             game.testLandCursor(la / DEG, lo / DEG); run(0.2);
-            press(KEY_Z); press(KEY_V); run(0.5); shot("roads_zoom"); printf("  %s; the plan's cores %d, its roads %d; %s\n", game.testRoadInfo().c_str(), game.testZoomCores(), game.testZoomWays(NK_ROAD), game.testLandPeoplesInfo().c_str());
+            press(KEY_Z);
+            press(KEY_V);
+            run(0.5);
+            shot("roads_zoom");
+            printf("  %s; the plan's cores %d, its roads %d; %s\n", game.testRoadInfo().c_str(), game.testZoomCores(), game.testZoomWays(NK_ROAD), game.testLandPeoplesInfo().c_str());
             press(KEY_V); press(KEY_Z); run(0.1); press(KEY_ESCAPE); run(0.1);
             // the drone bay over the same world: the rack, its screen, the drones sent (out of their ports), down there searching, back
             game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.2);
@@ -621,7 +727,8 @@ void Flow::roads() {
             const size_t dp = di.find(" down "); const double down = dp != std::string::npos ? atof(di.c_str() + dp + 6) : 20;
             game.testDronesSkip(down + 4); game.testOpenDroneBay(); run(0.05); shot("drones_search");
             game.testDronesSkip(DRONE_SEARCH_S + 60); run(0.05); shot("drones_back");
-            printf("  the drones: %d finds aboard (%d texts, %d music, %d charts, %d instruments); '%s'\n", game.testDronesAboard(), game.testDronesFinds(DF_TEXT), game.testDronesFinds(DF_MUSIC), game.testDronesFinds(DF_CHART), game.testDronesFinds(DF_INSTRUMENT), game.testStatus().c_str());
+            printf("  the drones: %d finds aboard (%d texts, %d music, %d charts, %d instruments); '%s'\n", game.testDronesAboard(), game.testDronesFinds(DF_TEXT), game.testDronesFinds(DF_MUSIC),
+                    game.testDronesFinds(DF_CHART), game.testDronesFinds(DF_INSTRUMENT), game.testStatus().c_str());
             press(KEY_ESCAPE); run(0.1);
         }
     }
@@ -631,7 +738,8 @@ void Flow::reload() {
     TestGame g2; g2.savePrefix = "shots/tests/test_save"; g2.settingsPath = "shots/tests/test_settings.txt"; g2.guidePath = "shots/tests/test_guide.txt";
     g2.guide.load(g2.guidePath);
     printf("load: %d (newest -> slot %d, state %d)\n", (int)g2.loadNewest(), g2.currentSlot, (int)g2.state);
-    printf("  guide reloaded: %zu names, %d log entries, %zu shards and %zu decoded, star '%s'\n", g2.guide.names.size(), g2.testLogEntries(), g2.guide.shards.size(), g2.guide.decoded.size(), g2.testStarName().c_str());   // C-06: the decoded lines round-trip
+    printf("  guide reloaded: %zu names, %d log entries, %zu shards and %zu decoded, star '%s'\n", g2.guide.names.size(), g2.testLogEntries(), g2.guide.shards.size(), g2.guide.decoded.size(),
+            g2.testStarName().c_str());   // C-06: the decoded lines round-trip
     for (int i = 0; i < 30; i++) { g2.frame(in, 1.0 / 30); in.newFrame(); }
     writePNG("shots/tests/flow_loaded.png", g2.output(), FBW, FBH);
     printf("  the newest save is the probe's (X-01): state %d, %s\n", (int)g2.state, g2.testProbeInfo().c_str());
@@ -701,7 +809,17 @@ void testAudio() {
                             {"buggy", 0.05, 0.6, 0.5, 0.5, 0, 0, 0, 0, 0, 0, 0}};   // (engine, rpm and skid set below)
     std::vector<float> buf(2048);
     for (const Stage& sg : stages) {
-        AudioState st; st.hum = sg.hum; st.engine = sg.engine; st.wind = sg.wind; st.windTone = sg.tone; st.rain = sg.rain; st.lava = sg.lava; st.surf = sg.surf; st.birds = sg.birds; st.breath = sg.breath; st.leaves = sg.leaves;
+        AudioState st;
+        st.hum = sg.hum;
+        st.engine = sg.engine;
+        st.wind = sg.wind;
+        st.windTone = sg.tone;
+        st.rain = sg.rain;
+        st.lava = sg.lava;
+        st.surf = sg.surf;
+        st.birds = sg.birds;
+        st.breath = sg.breath;
+        st.leaves = sg.leaves;
         if (std::string(sg.name) == "buggy") { st.engineRpm = 0.7; st.skid = 0.4; st.thud = 0.8; }
         int frames = 0;
         while (frames < sr * 3) {
@@ -716,7 +834,16 @@ void testAudio() {
     FILE* f = fopen("shots/tests/audio_test.wav", "wb");
     if (f) {
         uint32_t dataBytes = (uint32_t)pcm.size() * 2, rate = sr, byteRate = sr * 2; uint16_t ch = 1, bits = 16, blockAlign = 2, fmtTag = 1; uint32_t fmtLen = 16, riffLen = 36 + dataBytes;
-        fwrite("RIFF", 1, 4, f); fwrite(&riffLen, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f); fwrite(&fmtLen, 4, 1, f); fwrite(&fmtTag, 2, 1, f); fwrite(&ch, 2, 1, f); fwrite(&rate, 4, 1, f); fwrite(&byteRate, 4, 1, f); fwrite(&blockAlign, 2, 1, f); fwrite(&bits, 2, 1, f);
+        fwrite("RIFF", 1, 4, f);
+        fwrite(&riffLen, 4, 1, f);
+        fwrite("WAVEfmt ", 1, 8, f);
+        fwrite(&fmtLen, 4, 1, f);
+        fwrite(&fmtTag, 2, 1, f);
+        fwrite(&ch, 2, 1, f);
+        fwrite(&rate, 4, 1, f);
+        fwrite(&byteRate, 4, 1, f);
+        fwrite(&blockAlign, 2, 1, f);
+        fwrite(&bits, 2, 1, f);
         fwrite("data", 1, 4, f); fwrite(&dataBytes, 4, 1, f); fwrite(pcm.data(), 2, pcm.size(), f); fclose(f);
     }
     printf("audio: %zu samples, %d non-finite, %d clipped -> shots/audio_test.wav\n", pcm.size(), nan, clip);
@@ -731,7 +858,11 @@ int runZoom(int argc, char** argv) {
     const std::string at = argv[5];   // `site` keeps the landing map's own cursor, `capital` the first people's capital's core
     double latDeg = atof(argv[5]), lonDeg = atof(argv[6]); int scale = argc > 7 ? atoi(argv[7]) : 4;
     Star s; if (!starInSector(sx, 0, sz, s, true)) { printf("no star at %lld 0 %lld\n", (long long)sx, (long long)sz); return 1; }
-    TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/test_guide.txt";
     game.newGame(); game.setState(GameState::SPACE);
     game.settings.renderScale = scale; game.applySettings();
     Input in;
@@ -789,7 +920,11 @@ int runParkings() {
             if (giant && moons >= 2 && nGm < 3) { for (const Body& m : sys.bodies) if (m.parent == b.index) { picks.push_back({x, z, m.index, "giant's moon"}); nGm++; break; } break; }
         }
     }
-    TestGame game; game.savePrefix = "shots/tests/parkings_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/parkings_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/parkings_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/parkings_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings();
     Input in;
@@ -799,11 +934,14 @@ int runParkings() {
         Star s; starInSector(pk.x, 0, pk.z, s);
         game.testParkAt(s, pk.body, false);
         run(0.2);
-        if (KINDS[game.testSystem().bodies[pk.body].type].landable) { in.pressed[KEY_ESCAPE] = true; in.down[KEY_ESCAPE] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[KEY_ESCAPE] = false; }   // the landing map closed
+        // the landing map closed
+        if (KINDS[game.testSystem().bodies[pk.body].type].landable) { in.pressed[KEY_ESCAPE] = true; in.down[KEY_ESCAPE] = true; game.frame(in, 1.0 / 30); in.newFrame(); in.down[KEY_ESCAPE] = false; }
         run(0.5);
         const StarSystem& sys = game.testSystem(); const Body& b = sys.bodies[pk.body];
         std::string ms;
-        for (const Body& m : sys.bodies) if (m.parent == (b.parent >= 0 ? b.parent : b.index) && m.type != PT_COMPANION) ms += fmt(" %.1fR/%.2f", m.orbitRadiusKm / sys.bodies[m.parent].radiusKm, m.radiusKm / sys.bodies[m.parent].radiusKm);
+        for (const Body& m : sys.bodies)
+            if (m.parent == (b.parent >= 0 ? b.parent : b.index) && m.type != PT_COMPANION)
+                ms += fmt(" %.1fR/%.2f", m.orbitRadiusKm / sys.bodies[m.parent].radiusKm, m.radiusKm / sys.bodies[m.parent].radiusKm);
         writePNG(fmt("shots/tests/parkings_%02d_a.png", k).c_str(), game.output(), FBW, FBH);
         // from the same place, the eyes on the biggest other disc in the sky (the look round a parked player gives)
         const double t = game.testGameTime(); const Vec3 P = game.testShipPos();
@@ -816,8 +954,11 @@ int runParkings() {
         const double sep = nb >= 0 ? std::acos(clampd(dot(normalize(sys.bodyPos(nb, t) - P), normalize(sys.bodyPos(pk.body, t) - P)), -1, 1)) / DEG : 0;
         game.testPlaceShip(P); game.testAimAtBody(nb); run(0.3);
         writePNG(fmt("shots/tests/parkings_%02d_b.png", k).c_str(), game.output(), FBW, FBH);
-        printf("parkings %02d: %s, %lld 0 %lld body %d (%s, R %.0f km); its family's moons (orbit / size in the planet's radii):%s\n", k, pk.what, (long long)pk.x, (long long)pk.z, pk.body, KINDS[b.type].name, b.radiusKm, ms.c_str());
-        if (nb >= 0) printf("  the biggest other disc: body %d (%s), %.0f km off, %.2f degrees wide, %.0f degrees from the world's centre -> shots/tests/parkings_%02d_a.png, _b.png\n", nb, KINDS[sys.bodies[nb].type].name, length(sys.bodyPos(nb, t) - P), 2 * nbA, sep, k);
+        printf("parkings %02d: %s, %lld 0 %lld body %d (%s, R %.0f km); its family's moons (orbit / size in the planet's radii):%s\n", k, pk.what, (long long)pk.x, (long long)pk.z, pk.body,
+                KINDS[b.type].name, b.radiusKm, ms.c_str());
+        if (nb >= 0)
+            printf("  the biggest other disc: body %d (%s), %.0f km off, %.2f degrees wide, %.0f degrees from the world's centre -> shots/tests/parkings_%02d_a.png, _b.png\n", nb,
+                    KINDS[sys.bodies[nb].type].name, length(sys.bodyPos(nb, t) - P), 2 * nbA, sep, k);
         k++;
     }
     return 0;
@@ -859,7 +1000,12 @@ int runTape(int argc, char** argv) {
     auto frame = [&]() { game.frame(in, dt); in.newFrame(); pump.step(game.audio, dt); };
     in.pressed[KEY_M] = in.down[KEY_M] = true; frame(); in.down[KEY_M] = false;
     int shot = 1;
-    auto snap = [&](const char* what) { std::string au, ti; const double a = game.tapeCaption(au, ti); printf("  tape_%02d: %s (caption %.2f: %s / %s)\n", shot, what, a, au.c_str(), ti.c_str()); writePNG(fmt("shots/tests/tape_%02d.png", shot++).c_str(), game.output(), FBW, FBH); };
+    auto snap = [&](const char* what) {
+        std::string au, ti;
+        const double a = game.tapeCaption(au, ti);
+        printf("  tape_%02d: %s (caption %.2f: %s / %s)\n", shot, what, a, au.c_str(), ti.c_str());
+        writePNG(fmt("shots/tests/tape_%02d.png", shot++).c_str(), game.output(), FBW, FBH);
+    };
     while (!pump.playing) frame();
     for (int i = 0; i < 6; i++) frame();
     snap("fading in");
@@ -886,7 +1032,11 @@ int runTail(int argc, char** argv) {
     const int body = argc > 5 ? atoi(argv[5]) : 1;
     Star s;
     if (!starInSector(sx, sy, sz, s, true)) { printf("tail: no star at %lld %lld %lld\n", sx, sy, sz); return 1; }
-    TestGame game; game.savePrefix = "shots/tests/tail_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/tail_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/tail_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/tail_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings();
     game.testParkAt(s, body, false);
@@ -894,7 +1044,8 @@ int runTail(int argc, char** argv) {
     auto run = [&](double secs) { runFramesAtLeastOne(game, in, secs); };
     run(1.0);
     const StarSystem& sys = game.testSystem();
-    printf("tail: class S%02d, body %d of %d: %s R %.0f km; %s\n", sys.star.cls, body, (int)sys.bodies.size(), KINDS[sys.bodies[body].type].name, sys.bodies[body].radiusKm, game.testBodyTypes().c_str());
+    printf("tail: class S%02d, body %d of %d: %s R %.0f km; %s\n", sys.star.cls, body, (int)sys.bodies.size(), KINDS[sys.bodies[body].type].name, sys.bodies[body].radiusKm,
+            game.testBodyTypes().c_str());
     for (int k = 0; k < 8; k++) {
         if (k > 0) { in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(45.0 / 20.0); in.down[KEY_LEFT_SHIFT] = false; in.down[KEY_RIGHT] = false; run(0.5); }
         int top = 0, bright = 0, tail = 0; double tmax = 0, tsum = 0;
@@ -906,7 +1057,8 @@ int runTail(int argc, char** argv) {
         }
         const std::string path = fmt("shots/tests/tail_%d.png", k * 45);
         writePNG(path.c_str(), game.output(), FBW, FBH);
-        printf("  %3d degrees east: pixels at the ramp's top %d, over shade 50 %d; the tail's %d pixels, shade %.1f at most, %.1f mean -> %s\n", k * 45, top, bright, tail, tmax, tail ? tsum / tail : 0.0, path.c_str());
+        printf("  %3d degrees east: pixels at the ramp's top %d, over shade 50 %d; the tail's %d pixels, shade %.1f at most, %.1f mean -> %s\n", k * 45, top, bright, tail, tmax,
+                tail ? tsum / tail : 0.0, path.c_str());
     }
     const double R = sys.bodies[body].radiusKm;
     for (double kR : {12.0, 40.0}) {   // farther: the ship set down beside the giant, the tail across the view
@@ -945,7 +1097,8 @@ int runTail(int argc, char** argv) {
             sv.player.yaw = std::atan2(l.x, l.z); sv.player.pitch = std::asin(clampd(l.y, -1, 1)) + 22 * DEG;   // the giant low in the frame, the tail rising from it
             Framebuffer fb; sv.render(fb, t, snb.stars, sr, 1.0); fb.mush(2);
             saveFB(fb, "shots/tests/tail_sky.png");
-            printf("  from moon %d (%s), lat %.1f lon %.1f, the giant %.0f degrees up -> shots/tests/tail_sky.png\n", moon, KINDS[msys.bodies[moon].type].name, la / DEG, lo / DEG, std::asin(clampd(l.y, -1, 1)) / DEG);
+            printf("  from moon %d (%s), lat %.1f lon %.1f, the giant %.0f degrees up -> shots/tests/tail_sky.png\n", moon, KINDS[msys.bodies[moon].type].name, la / DEG, lo / DEG,
+                    std::asin(clampd(l.y, -1, 1)) / DEG);
         }
     }
     {   // the cabin's front window and one thread at 1x, 135 degrees east of the parking
@@ -972,7 +1125,10 @@ int runAuto(int argc, char** argv) {
     const uint64_t seed = argc > 4 ? strtoull(argv[4], nullptr, 10) : 1;
     std::string lc = AUTO_PROFILE_NAMES[profile]; for (char& c : lc) c = (char)tolower((unsigned char)c);
     TestGame game;   // each profile its own files (two may run side by side)
-    game.savePrefix = "shots/tests/auto_save_" + lc; game.settingsPath = "shots/tests/auto_settings_" + lc + ".txt"; game.guidePath = "shots/tests/auto_guide_" + lc + ".txt"; game.keysPath = "shots/tests/test_keys.txt";
+    game.savePrefix = "shots/tests/auto_save_" + lc;
+    game.settingsPath = "shots/tests/auto_settings_" + lc + ".txt";
+    game.guidePath = "shots/tests/auto_guide_" + lc + ".txt";
+    game.keysPath = "shots/tests/test_keys.txt";
     remove(game.guidePath.c_str()); remove((game.savePrefix + "_auto.txt").c_str());
     applyTestScale(game);   // `scale=N` (the game's own setting would draw at 4x)
     if (argc > 5 && std::string(argv[5]) == "cockpit") { game.settings.cabin = false; game.applySettings(); lc += "_cockpit"; }   // the classic cockpit's view: the look is the ship's nose
@@ -1021,9 +1177,11 @@ int runAuto(int argc, char** argv) {
     }
     pngFlush();
     printf("auto: %s; %.0f s of frames in %.0f s\n", game.testAutoInfo().c_str(), frames * tick, nowSec() - t0);
-    printf("auto: the eye: %d cuts; outside them the fastest turn %.0f deg/s (at %d:%02d), %.2f%% of %ld frames over 60 deg/s; %d frames written\n", cuts, maxTurn, (int)maxTurnAt / 60, (int)maxTurnAt % 60,
-           counted ? 100.0 * fast / counted : 0.0, counted, shotN);
+    printf("auto: the eye: %d cuts; outside them the fastest turn %.0f deg/s (at %d:%02d), %.2f%% of %ld frames over 60 deg/s; %d frames written\n", cuts, maxTurn, (int)maxTurnAt / 60,
+            (int)maxTurnAt % 60, counted ? 100.0 * fast / counted : 0.0, counted, shotN);
     std::sort(turns.begin(), turns.end(), [](const Turn& a, const Turn& b) { return a.rate > b.rate; });
-    for (size_t i = 0; i < turns.size() && i < 8; i++) printf("  a turn of %.0f deg/s at %d:%02d (%s, ship mode %d): %s\n", turns[i].rate, (int)turns[i].at / 60, (int)turns[i].at % 60, stateName((GameState)std::min(turns[i].state, STATE_COUNT - 1)), turns[i].mode, turns[i].doing.c_str());
+    for (size_t i = 0; i < turns.size() && i < 8; i++)
+        printf("  a turn of %.0f deg/s at %d:%02d (%s, ship mode %d): %s\n", turns[i].rate, (int)turns[i].at / 60, (int)turns[i].at % 60,
+                stateName((GameState)std::min(turns[i].state, STATE_COUNT - 1)), turns[i].mode, turns[i].doing.c_str());
     return 0;
 }

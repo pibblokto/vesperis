@@ -135,7 +135,8 @@ void chartSkyOf(const Star& home, std::vector<ChartStar>& out);
 // (the brightest left that keeps CHART_APART from every star taken) by the nearest star left within CHART_LINK of any of its
 // stars, three to six stars, joined to the star it was nearest to; one of one star is dropped; named from the world's draw
 void skyFiguresOf(const BodyGen& g, const std::vector<ChartStar>& sky, std::vector<ChartFigure>& out);
-void chartFigureNames(uint64_t worldSeed, int n, std::vector<std::string>& out, std::vector<int>* glyphs = nullptr, bool animals = false);   // n distinct names, lowercase (H-05: animals for a people of the oldest age, else creatures and heroes, each with its glyph)
+// n distinct names, lowercase (H-05: animals for a people of the oldest age, else creatures and heroes, each with its glyph)
+void chartFigureNames(uint64_t worldSeed, int n, std::vector<std::string>& out, std::vector<int>* glyphs = nullptr, bool animals = false);
 std::string chartFigureList(const std::vector<std::string>& names);              // "the hunter, the boat and the two sisters"
 // the chart of a world's shard (false unless the shard is a chart). H-05: drawn in its record's way (`StarChart::style`): the sky's charts
 // hold what their way shows (the moon's count, their equator, tropics and ecliptic, the wanderers' paths, their grid and numbers, the

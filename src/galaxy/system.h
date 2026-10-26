@@ -20,7 +20,17 @@ bool isIceGiant(const Body& b);
 // draw of the system is made as the drawn kind's (the orbits, the moons and their number, the rings, the twins: every body keeps its index);
 // then `kindOf` may make the world another kind: the first made kind (in id order) whose row has a source the world qualifies for and whose
 // hash of the world's seed falls under that source's share. Never a world with a people (C-01's hash is read first: `peopleHash`)
-struct KindFacts { int drawn = 0; double tempK = 0; int starClass = 0; uint32_t body = KB_PLANET; bool locked = false, sync = false; uint64_t seed = 0, starSeed = 0; int parent = -1; uint32_t moon = 0; bool paired = false; };   // locked: one face to its star (M5-08's: its day its year, a round orbit); sync: its day its year; P-02: starSeed the system's star's (a source `byStar` hashes it); P-03: parent the kind a moon's planet drew (-1 none); P-06: moon what a moon is among its planet's (`MoonFact`; 0 not a moon); P-07: paired a double planet's first half (no giant)
+struct KindFacts {
+    int drawn = 0;
+    double tempK = 0;
+    int starClass = 0;
+    uint32_t body = KB_PLANET;
+    bool locked = false, sync = false;   // locked: one face to its star (its day its year, a round orbit); sync: its day its year
+    uint64_t seed = 0, starSeed = 0;     // starSeed: the system's star's (a source `byStar` hashes it)
+    int parent = -1;                     // the kind a moon's planet drew (-1 none)
+    uint32_t moon = 0;                   // what a moon is among its planet's (`MoonFact`; 0 not a moon)
+    bool paired = false;                 // a double planet's first half (no giant)
+};
 int kindOf(const KindFacts& f);
 // E-07: whether a world's facts fit a made kind's source, its hash aside: `kindOf`'s test, and the harness's (`salt scan`); `giant`: the
 // source's kind is a giant's, which a double planet's halves never take

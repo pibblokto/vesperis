@@ -985,8 +985,11 @@ void siteLines(Out& O, Tally& T, int64_t sx, int64_t sz, int body) {
     stats.i(ds.cells); stats.i(ds.channels); stats.i(ds.lakes); stats.i(ds.sea); stats.d(ds.maxAcc); stats.i(ds.monotone); stats.i(ds.tested); stats.i(ds.lakesKept);
     stats.i(ds.lakesBreached); stats.bo(typeHasDrainage(g.type)); stats.i(drainageLatticeN0(b.radiusKm));
     std::string t2;
-    if (O.full) fpPut(t2, "the flood round it: %d cells, %d channels, %d lake cells (%d lakes kept, %d breached), %d sea, the largest %.0f km2, %d of %d downstream lower or level; %d of 1089 points on a channel at 16 m\n",
-                      ds.cells, ds.channels, ds.lakes, ds.lakesKept, ds.lakesBreached, ds.sea, ds.maxAcc, ds.monotone, ds.tested, channels);
+    if (O.full)
+        fpPut(t2,
+                "the flood round it: %d cells, %d channels, %d lake cells (%d lakes kept, %d breached), %d sea, the largest %.0f km2, %d of %d downstream lower or level; %d of 1089 points on a "
+                "channel at 16 m\n",
+                ds.cells, ds.channels, ds.lakes, ds.lakesKept, ds.lakesBreached, ds.sea, ds.maxAcc, ds.monotone, ds.tested, channels);
     O.put(Line("drainage", w.key).n("kind", b.type).n("channels", channels).n("cells", ds.cells).h("at", at).h("lakes", lakes).h("ground", ground).h("stats", stats).s, t2);
     T.sites++;
 }

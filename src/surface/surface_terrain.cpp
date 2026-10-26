@@ -93,7 +93,8 @@ void SurfaceView::gatherReflections() {
                 double hmax = std::max(std::max(cache.at(cx, cz).h, cache.at(cx + 1, cz).h), std::max(cache.at(cx, cz + 1).h, cache.at(cx + 1, cz + 1).h));
                 // a cell on the shore of a lake or a river (its vertices carry that water's level) mirrors round
                 // that level; every cell above the sea mirrors round the sea
-                double wl = std::max(std::max(site.waterOf(cache.at(cx, cz)), site.waterOf(cache.at(cx + 1, cz))), std::max(site.waterOf(cache.at(cx, cz + 1)), site.waterOf(cache.at(cx + 1, cz + 1))));
+                double wl =
+                        std::max(std::max(site.waterOf(cache.at(cx, cz)), site.waterOf(cache.at(cx + 1, cz))), std::max(site.waterOf(cache.at(cx, cz + 1)), site.waterOf(cache.at(cx + 1, cz + 1))));
                 if (wl > sea + 0.5 && hmax > wl + 0.3) cells.push_back({d2 * cs * cs, cx, cz, lod, wl});
                 if (hmax < sea + 0.3) continue;
                 cells.push_back({d2 * cs * cs, cx, cz, lod, sea});
@@ -129,7 +130,16 @@ void SurfaceView::gatherReflections() {
             if (wN) {
                 double xs3[3], zs3[3], hs3[3], wl3[3], sh3[3];
                 bool anyWet = false, anyDry = false;
-                for (int e = 0; e < 3; e++) { int a = tris[k][e]; xs3[e] = xs[a]; zs3[e] = zs[a]; hs3[e] = hs[a]; wl3[e] = tvc[a]->water > -1e8f ? site.waterOf(*tvc[a]) : wMean; sh3[e] = vertexShore(cache, c.cx + ox[a], c.cz + oz[a]); if (sh3[e] < 0) anyWet = true; else anyDry = true; }
+                for (int e = 0; e < 3; e++) {
+                    int a = tris[k][e];
+                    xs3[e] = xs[a];
+                    zs3[e] = zs[a];
+                    hs3[e] = hs[a];
+                    wl3[e] = tvc[a]->water > -1e8f ? site.waterOf(*tvc[a]) : wMean;
+                    sh3[e] = vertexShore(cache, c.cx + ox[a], c.cz + oz[a]);
+                    if (sh3[e] < 0) anyWet = true;
+                    else anyDry = true;
+                }
                 if (anyWet && anyDry) {
                     ShoreSplit sp; shoreSplitTriangle(xs3, zs3, hs3, wl3, sh3, sp);
                     for (int i = 0; i < sp.nDry; i++) { px[n] = sp.dry[i].x; pz[n] = sp.dry[i].z; ph[n] = sp.dry[i].h; n++; }
@@ -218,7 +228,10 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
             if (wy > -1e8f) {   // the water slides with the ground
                 double wc = coarseWaterAt(*morphCoarse, x, z);
                 if (wc > -1e8) wy += (wc - wy) * morph;
-                else {   // the coarser ring has no water here (a stream too small for its scale): the vertex dries out toward the edge, its plane sinking under the coarse ground, so the clamp below cannot hold it under a plane the coarser ring never drew (a 27 m seam)
+                else {
+                    // the coarser ring has no water here (a stream too small for its scale): the vertex dries out toward the edge, its
+                    // plane sinking under the coarse ground, so the clamp below cannot hold it under a plane the coarser ring never drew (a
+                    // 27 m seam)
                     wy += (hC - 1.0 - wy) * morph;
                     if (shore < 1e8) shore += (std::max(1.0, std::fabs(shore)) - shore) * morph;
                 }
@@ -330,7 +343,9 @@ const RVert& SurfaceView::vertexOf(TerrainCache& cache, std::vector<VtxCache>& v
     // the drawn height keeps to the drawn side of the edge: the morph blends heights and shore distances by the same
     // factor, and the two cross zero at different places, so a corner could turn dry by its edge yet sink under the plane
     if (wy > -1e8 && shore < 1e8) {   // the margins close to the cut's own lip (0.03 under the level) at the ring's edge, where the coarse cut surface is exact
-        double wetLip = 0.3 * (1 - morph), dryLip = 0.02 * (1 - morph);   // no lip at the edge: the coarse cut surface respects its water already, and a lip there opened the seam by 3 cm on a lake bed a millimetre under its level
+        // no lip at the edge: the coarse cut surface respects its water already, and a lip there opened the seam by 3 cm on a lake bed a
+        // millimetre under its level
+        double wetLip = 0.3 * (1 - morph), dryLip = 0.02 * (1 - morph);
         if (shore < 0) h = std::min(h, wy - wetLip); else h = std::max(h, wy + dryLip);
     }
     Vec3 vv = toView(x, h, z);
@@ -455,7 +470,9 @@ void SurfaceView::testRingSeams(double seam[4], double raw[4]) {
                 double hC = coarseAt(*coarse->c, x, z).h;
                 const TerrainVertex& tv = c.at(cx, cz);
                 double own = tv.h; if (tv.material == MAT_WATER && tv.water > -1e8f) own = std::min(own, (double)tv.water - 0.5);
-                if (std::fabs(h - hC) > worst && std::getenv("VESPERIS_TRACE")) fprintf(stderr, "    seam %s: cell %d %d h %.3f coarse %.3f own %.3f water %.2f shore %.2f sh(drawn) %.2f wy %.2f\n", c.cellSize == 512 ? "lod2" : "ring", cx, cz, h, hC, own, tv.water > -1e8f ? tv.water : -999.0, tv.shore < 1e8f ? tv.shore : 9999.0, vc.sh, vc.wy);
+                if (std::fabs(h - hC) > worst && std::getenv("VESPERIS_TRACE"))
+                    fprintf(stderr, "    seam %s: cell %d %d h %.3f coarse %.3f own %.3f water %.2f shore %.2f sh(drawn) %.2f wy %.2f\n", c.cellSize == 512 ? "lod2" : "ring", cx, cz, h, hC, own,
+                            tv.water > -1e8f ? tv.water : -999.0, tv.shore < 1e8f ? tv.shore : 9999.0, vc.sh, vc.wy);
                 worst = std::max(worst, std::fabs(h - hC)); worstRaw = std::max(worstRaw, std::fabs(own - hC)); cnt++;
             }
         if (cnt) { seam[k] = worst; raw[k] = worstRaw; }
@@ -590,7 +607,11 @@ void SurfaceView::warmTerrainLOD(TerrainCache& cache, std::vector<VtxCache>& vca
                 vertexOf(cache, vcache, cx + 1, vz, bk);
             }
     });
-    if (trace && (frameStamp <= 3 || frameStamp - anchorFrame <= 2)) { auto t2 = std::chrono::steady_clock::now(); fprintf(stderr, "    warm %4d m: %d misses, fill %.1f ms, vertices %.1f ms\n", (int)cs, misses, std::chrono::duration<double, std::milli>(t1 - t0).count(), std::chrono::duration<double, std::milli>(t2 - t1).count()); }
+    if (trace && (frameStamp <= 3 || frameStamp - anchorFrame <= 2)) {
+        auto t2 = std::chrono::steady_clock::now();
+        fprintf(stderr, "    warm %4d m: %d misses, fill %.1f ms, vertices %.1f ms\n", (int)cs, misses, std::chrono::duration<double, std::milli>(t1 - t0).count(),
+                std::chrono::duration<double, std::milli>(t2 - t1).count());
+    }
 }
 
 // F-04: a terrain cell's pieces, the same for the bin (the rows they reach) and the draw. B-320: the cell's water surface per corner
@@ -883,8 +904,14 @@ void SurfaceView::drawTerrainLOD(Framebuffer& fb, const TerrainBin& bin, Terrain
                             mx = 0;
                             for (int i = 0; i < 4; i++) {
                                 tw[i] = tv[i]->wtint / 255.0;
-                                if (tintBankW == 15) tw[i] *= waterLights ? 0.5 + 0.5 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 260.0 + lastT * 0.02, (cz + oz[i]) * cs / 260.0 - lastT * 0.013, site.gen.seed + 0x6108))   // drifting
-                                                                    : 0.7 + 0.3 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 700.0, (cz + oz[i]) * cs / 700.0, site.gen.seed + 0x6107));
+                                if (tintBankW == 15)
+                                    tw[i] *= waterLights ? 0.5 +
+                                                    0.5 *
+                                                            (0.5 +
+                                                                    0.5 *
+                                                                            gnoise2((cx + ox[i]) * cs / 260.0 + lastT * 0.02, (cz + oz[i]) * cs / 260.0 - lastT * 0.013,
+                                                                                    site.gen.seed + 0x6108))   // drifting
+                                                         : 0.7 + 0.3 * (0.5 + 0.5 * gnoise2((cx + ox[i]) * cs / 700.0, (cz + oz[i]) * cs / 700.0, site.gen.seed + 0x6107));
                                 mx = std::max(mx, tw[i]);
                             }
                             if (mx > (waterLights ? 0.12 : 0.25)) tb = tintBankW;

@@ -130,8 +130,9 @@ void Game::renderProbeFeed(double c, double tt) {
     if (c >= probeDescentStart()) {
         const GiantAtmosphere& A = probe.atm;
         double lb = std::log(std::max(probeBarAt(probe.flight, c), 1e-6));
-        pitch = (-22 + 8 * smoothstep(std::log(0.02), std::log(A.hazeBar), lb) + 14 * smoothstep(std::log(A.top[0]), std::log(std::sqrt(A.top[0] * A.base[0])), lb) - 2 * smoothstep(std::log(A.base[0]), std::log(A.base[0] * 1.3), lb)
-                 + (A.decks > 1 ? 1 * smoothstep(std::log(A.top[1] * 0.8), std::log(A.top[1] * 1.2), lb) : 0.0)) * DEG;
+        pitch = (-22 + 8 * smoothstep(std::log(0.02), std::log(A.hazeBar), lb) + 14 * smoothstep(std::log(A.top[0]), std::log(std::sqrt(A.top[0] * A.base[0])), lb) -
+                        2 * smoothstep(std::log(A.base[0]), std::log(A.base[0] * 1.3), lb) + (A.decks > 1 ? 1 * smoothstep(std::log(A.top[1] * 0.8), std::log(A.top[1] * 1.2), lb) : 0.0)) *
+                DEG;
         if (probe.holePath)   // falling into a clear-air hole the camera looks down into it, and down the shaft once in it
             pitch -= (30 + 26 * smoothstep(std::log(A.top[0]), std::log(std::sqrt(A.top[0] * A.base[0])), lb)) * DEG * smoothstep(std::log(A.hazeBar * 0.25), std::log(A.hazeBar), lb) *
                      (1 - smoothstep(std::log(A.top[A.decks - 1] * 0.7), std::log(A.top[A.decks - 1]), lb));
@@ -142,7 +143,8 @@ void Game::renderProbeFeed(double c, double tt) {
         double u = clampd(c / PROBE_FALL_S, 0, 1);
         Vec3 to = W * normalize(lerp(normalize(gp - pos), normalize(aimPt - pos), smoothstep(0.0, 0.6, u)));
         double h = std::max(1.0, length(pos - gp) - g.radiusKm), dip = std::acos(g.radiusKm / (g.radiusKm + h));   // the limb's angle under the horizontal
-        double fp = clampd(std::asin(clampd(to.y, -1, 1)), -(dip + 12 * DEG), 20 * DEG);   // never steeper than a little under the limb: the whole giant at first, then its curve and its sky in the frame as it rushes up
+        // never steeper than a little under the limb: the whole giant at first, then its curve and its sky in the frame as it rushes up
+        double fp = clampd(std::asin(clampd(to.y, -1, 1)), -(dip + 12 * DEG), 20 * DEG);
         double fy = std::atan2(to.x, to.z);
         double hold = smoothstep(-20 * DEG, -60 * DEG, fp);
         double fallYaw = probe.headYaw + wrapAngle(fy - probe.headYaw) * (1 - hold);
@@ -166,7 +168,14 @@ void Game::renderProbeFeed(double c, double tt) {
     if (mixIn < 1) {   // the fall and the entry: the space renderer from the probe's place, the giant and all
         spaceR.proj = pj;
         int other = -1; double best = 0;
-        for (int i = 0; i < (int)sys.bodies.size(); i++) if (i != probe.body) { double ang = sys.bodies[i].radiusKm / std::max(1.0, length(sys.bodyPos(i, tt) - pos)); if (ang > best) { best = ang; other = i; } }
+        for (int i = 0; i < (int)sys.bodies.size(); i++)
+            if (i != probe.body) {
+                double ang = sys.bodies[i].radiusKm / std::max(1.0, length(sys.bodyPos(i, tt) - pos));
+                if (ang > best) {
+                    best = ang;
+                    other = i;
+                }
+            }
         if (best < 1.2 / pj.f) other = -1;
         spaceR.setupPalette(fb, &sys, probe.body, other, 1);
         SpaceContext sc;
@@ -222,7 +231,8 @@ void Game::renderProbeFeed(double c, double tt) {
             {RGB(1.0f, 0.86f, 0.66f), RGB(0.92f, 0.66f, 0.42f), RGB(0.40f, 0.30f, 0.22f), RGB(0.50f, 0.40f, 0.30f), RGB(1.0f, 0.8f, 0.6f), true, 0.1}};
         const MadeLight* ml = ch.kind >= GK_WATER ? &MADE[ch.kind - GK_WATER] : nullptr;
         const bool high = ice || (ml && ml->high);
-        const float colGain = (float)(clampd(std::pow(std::max(Lp + giantGlowAt(a, bar, cut), 1e-6), ice ? 0.06 : (ml ? ml->gainExp : 0.1)), 0.45, 1.0) * clampd(lf, 0.6, 1.1));   // (an ice giant's blue light carries deeper)
+        // (an ice giant's blue light carries deeper)
+        const float colGain = (float)(clampd(std::pow(std::max(Lp + giantGlowAt(a, bar, cut), 1e-6), ice ? 0.06 : (ml ? ml->gainExp : 0.1)), 0.45, 1.0) * clampd(lf, 0.6, 1.1));
         // the light come down to a pressure, reddened through the decks (an ice giant's: the methane takes the red, the light goes
         // blue-green)
         const RGB tint1 = ml ? ml->t1 : (ice ? RGB(0.66f, 0.9f, 1.0f) : RGB(1.0f, 0.76f, 0.56f)), tint2 = ml ? ml->t2 : (ice ? RGB(0.36f, 0.72f, 0.95f) : RGB(0.95f, 0.56f, 0.38f));
@@ -366,7 +376,8 @@ void Game::renderProbeFeed(double c, double tt) {
                 uint32_t& p = rgbBuf[(size_t)y * FBW + x];
                 double sceneShade = (0.3 * (p & 255) + 0.59 * ((p >> 8) & 255) + 0.11 * ((p >> 16) & 255)) / 255.0 * 63;
                 plasma.at(std::min(63.0, pv + sceneShade * (1 - 0.6 * std::min(1.0, pv / 40))), o);
-                p = 0xFF000000u | ((uint32_t)clampi((int)(o[2] * 255 + 0.5f), 0, 255) << 16) | ((uint32_t)clampi((int)(o[1] * 255 + 0.5f), 0, 255) << 8) | (uint32_t)clampi((int)(o[0] * 255 + 0.5f), 0, 255);
+                p = 0xFF000000u | ((uint32_t)clampi((int)(o[2] * 255 + 0.5f), 0, 255) << 16) | ((uint32_t)clampi((int)(o[1] * 255 + 0.5f), 0, 255) << 8) |
+                        (uint32_t)clampi((int)(o[0] * 255 + 0.5f), 0, 255);
             }
         });
     }

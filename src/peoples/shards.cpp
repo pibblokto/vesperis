@@ -133,7 +133,15 @@ Shard shardDraw(const BodyGen& g, const Lore& L, int index) {
 }
 
 // a people's texts, cached by its seed, the world's kind, the grammar's generation (the last eight)
-struct TextKey { uint64_t seed; int which; bool desert; int records; int generation; bool dark; bool operator==(const TextKey& o) const { return seed == o.seed && which == o.which && desert == o.desert && records == o.records && generation == o.generation && dark == o.dark; } };   // D-05: `dark`
+struct TextKey {
+    uint64_t seed;
+    int which;
+    bool desert;
+    int records;
+    int generation;
+    bool dark;   // the people's sun gone dark (a drifter's: `sunDarkAt`)
+    bool operator==(const TextKey& o) const { return seed == o.seed && which == o.which && desert == o.desert && records == o.records && generation == o.generation && dark == o.dark; }
+};
 std::mutex textsMu;
 std::list<std::pair<TextKey, std::shared_ptr<const ShardTexts>>> textsCache;
 // H-04: the texts built on a thread of their own (a world's records need its history, and the history its plan: a few hundred
@@ -182,8 +190,16 @@ namespace { void calendarOf(const StarSystem& sys, const Body& b, Lore& L) {
     bool days = L.yearDays >= 4;
     L.monthDays = 0; L.months = 0;
     if (nearest < 1e17) {
-        if (days) { int md = (int)std::lround(nearest / std::max(std::fabs(b.rotPeriod), 1.0)); if (md >= 3 && md * 2 <= L.yearDays) { L.monthDays = md; L.months = (int)std::floor(L.yearDays / md); } }
-        else { int mo = (int)std::floor(b.orbitPeriod / nearest); if (mo >= 2) L.months = mo; }
+        if (days) {
+            int md = (int)std::lround(nearest / std::max(std::fabs(b.rotPeriod), 1.0));
+            if (md >= 3 && md * 2 <= L.yearDays) {
+                L.monthDays = md;
+                L.months = (int)std::floor(L.yearDays / md);
+            }
+        } else {
+            int mo = (int)std::floor(b.orbitPeriod / nearest);
+            if (mo >= 2) L.months = mo;
+        }
     }
     L.calendar = days ? (L.months > 0 ? 1 : 0) : (L.months > 0 ? 2 : 3);
 } }
@@ -234,7 +250,12 @@ std::string shardDate(const Lore& L, const Shard& s) {
 std::string calendarLine(const Lore& L) {   // C-12: no unit of ours: their day is their own
     char buf[120];
     switch (L.calendar) {
-        case 1: { int over = (int)std::lround(L.yearDays) - L.months * L.monthDays; if (over > 0) snprintf(buf, sizeof buf, "year: %d moons of %d days and %d over", L.months, L.monthDays, over); else snprintf(buf, sizeof buf, "year: %d moons of %d days", L.months, L.monthDays); break; }
+        case 1: {
+            int over = (int)std::lround(L.yearDays) - L.months * L.monthDays;
+            if (over > 0) snprintf(buf, sizeof buf, "year: %d moons of %d days and %d over", L.months, L.monthDays, over);
+            else snprintf(buf, sizeof buf, "year: %d moons of %d days", L.months, L.monthDays);
+            break;
+        }
         case 0: snprintf(buf, sizeof buf, "year: %.0f days   %s", L.yearDays, L.moons > 0 ? "the moon too quick to count" : "no moon to count by"); break;
         case 2: snprintf(buf, sizeof buf, "year: %d moons   the day is the year", L.months); break;
         default: snprintf(buf, sizeof buf, "the day is the year   no moon: years alone"); break;
@@ -476,7 +497,13 @@ Shard shardOf(const StarSystem& sys, const Body& b, const BodyGen& g, const Lore
     }
     if (index >= 0 && index < L.records) {   // a text record, as its people's catalogue wrote it (past the records: none)
         std::shared_ptr<const ShardTexts> T = shardTextsOf(sys, b, g, L);
-        if (index < (int)T->items.size()) { const ShardText& t = T->items[index]; s.text = t.text; s.kind = t.kind; s.names = t.rec.names; s.names.insert(s.names.end(), t.rec.theirs.begin(), t.rec.theirs.end()); }
+        if (index < (int)T->items.size()) {
+            const ShardText& t = T->items[index];
+            s.text = t.text;
+            s.kind = t.kind;
+            s.names = t.rec.names;
+            s.names.insert(s.names.end(), t.rec.theirs.begin(), t.rec.theirs.end());
+        }
     }
     return s;
 }
@@ -588,7 +615,8 @@ void languageOf(const Lore& L, const std::vector<Shard>& records, const Tongue& 
     std::map<std::string, int> roots;
     for (const auto& kv : count) { auto r = rootOf(kv.first, all); out.forms[kv.first] = r; roots[r.first] += kv.second; }
     std::vector<std::pair<std::string, int>> v(roots.begin(), roots.end());
-    std::stable_sort(v.begin(), v.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) { return a.second != b.second ? a.second > b.second : mix64(fnv1a(a.first)) < mix64(fnv1a(b.first)); });
+    std::stable_sort(v.begin(), v.end(),
+            [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) { return a.second != b.second ? a.second > b.second : mix64(fnv1a(a.first)) < mix64(fnv1a(b.first)); });
     std::set<std::string> given;
     for (const auto& kv : v) {
         out.index[kv.first] = (int)out.words.size(); out.words.push_back(kv.first); out.counts.push_back(kv.second); out.tokens += kv.second;

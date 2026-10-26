@@ -68,8 +68,13 @@ void Game::updateSectorMap(const Input& in) {
         else { refuse("NO MARK UNDER THE CURSOR", 2); }
     }
     if (in.wasPressed(KEY_M) && !in.ctrl()) {
-        if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) { surf.hasWaypoint = false; status("WAYPOINT CLEARED", 3); }
-        else { surf.hasWaypoint = true; surf.wpX = mapCurX; surf.wpZ = mapCurZ; status(std::hypot(mapCurX - px, mapCurZ - pz) < 2 * mpp ? std::string("WAYPOINT SET HERE") : fmt("WAYPOINT SET %s AWAY", metresString(std::hypot(mapCurX - px, mapCurZ - pz)).c_str()), 3); }
+        if (surf.hasWaypoint && std::hypot(surf.wpX - mapCurX, surf.wpZ - mapCurZ) < 5 * mpp) { surf.hasWaypoint = false; status("WAYPOINT CLEARED", 3);
+        } else {
+            surf.hasWaypoint = true;
+            surf.wpX = mapCurX;
+            surf.wpZ = mapCurZ;
+            status(std::hypot(mapCurX - px, mapCurZ - pz) < 2 * mpp ? std::string("WAYPOINT SET HERE") : fmt("WAYPOINT SET %s AWAY", metresString(std::hypot(mapCurX - px, mapCurZ - pz)).c_str()), 3);
+        }
         audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_R) && !in.ctrl()) { if (in.shift()) scanToggleSkip(); else scanCycle(); }
@@ -157,12 +162,21 @@ void Game::renderSectorMap() {
             }
     }
     drawRectRGB(canvas, ox - 1, oy - 1, ox + MW, oy + MH, HUD_DIM);
-    auto mark = [&](double wx, double wz, int& sx, int& sy) { sx = ox + MW / 2 + (int)((wx - px) / mpp); sy = oy + MH / 2 - (int)((wz - pz) / mpp); return sx >= ox && sy >= oy && sx < ox + MW && sy < oy + MH; };
+    auto mark = [&](double wx, double wz, int& sx, int& sy) {
+        sx = ox + MW / 2 + (int)((wx - px) / mpp);
+        sy = oy + MH / 2 - (int)((wz - pz) / mpp);
+        return sx >= ox && sy >= oy && sx < ox + MW && sy < oy + MH;
+    };
     int sx, sy;
     if (sectorZoom >= 2) {   // the sector grid with the sectors' names on the wide levels
         // the grid's step grows with the zoom (1, 2, 5, 10, 15, 30 degrees) so its lines stay at least 24 px apart;
         // the one-degree cells carry the sectors' names when they are wide enough, the coarser lines their latitude and longitude
-        auto toPx = [&](double lat, double lon, int& gx, int& gy) { double x, z; surf.site.localAt(StarSystem::bodyFromLatLon(lat, lon), x, z); gx = ox + MW / 2 + (int)((x - px) / mpp); gy = oy + MH / 2 - (int)((z - pz) / mpp); };
+        auto toPx = [&](double lat, double lon, int& gx, int& gy) {
+            double x, z;
+            surf.site.localAt(StarSystem::bodyFromLatLon(lat, lon), x, z);
+            gx = ox + MW / 2 + (int)((x - px) / mpp);
+            gy = oy + MH / 2 - (int)((z - pz) / mpp);
+        };
         double pxPerDeg = DEG * surf.site.R / mpp;
         static const int STEPS[] = {1, 2, 5, 10, 15, 30};
         int step = 30;
@@ -175,7 +189,15 @@ void Game::renderSectorMap() {
         const uint32_t gridC = rgb(95, 95, 60);
         auto polyline = [&](int n, const std::function<void(int, int&, int&)>& pointAt) {
             int lx = 0, ly = 0; bool have = false;
-            for (int i = 0; i <= n; i++) { int gx, gy; pointAt(i, gx, gy); bool in = gx >= ox && gx < ox + MW && gy >= oy && gy < oy + MH; if (have && in) drawLineRGB(canvas, lx, ly, gx, gy, gridC); lx = gx; ly = gy; have = in; }
+            for (int i = 0; i <= n; i++) {
+                int gx, gy;
+                pointAt(i, gx, gy);
+                bool in = gx >= ox && gx < ox + MW && gy >= oy && gy < oy + MH;
+                if (have && in) drawLineRGB(canvas, lx, ly, gx, gy, gridC);
+                lx = gx;
+                ly = gy;
+                have = in;
+            }
         };
         for (int j = j0; j <= j1; j += step) polyline(24, [&](int i, int& gx, int& gy) { toPx(j * DEG, (k0 + (k1 - k0) * i / 24.0) * DEG, gx, gy); });
         for (int k = k0; k <= k1; k += step) polyline(24, [&](int i, int& gx, int& gy) { toPx((j0 + (j1 - j0) * i / 24.0) * DEG, k * DEG, gx, gy); });
@@ -211,8 +233,13 @@ void Game::renderSectorMap() {
         for (size_t i = 0; i < heard.size(); i++) {
             double hx, hz; echoHeardAt(*heard[i].second, hx, hz);
             if (!mark(hx, hz, sx, sy)) continue;
-            if (i == 0) { drawRectRGB(canvas, sx - 3, sy - 3, sx + 3, sy + 3, HUD_CYAN); fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, HUD_CYAN); }
-            else { fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0)); const Landmark& L = heard[i].second->lm; const bool big = L.kind == LM_RUIN ? (L.sub == SC_VILLAGE || L.sub == SC_TOWN || L.sub >= SC_CITY) : L.radiusM > 400; fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN); }   // a bigger echo a bigger dot (a village, a town, T-01's cities)
+            if (i == 0) { drawRectRGB(canvas, sx - 3, sy - 3, sx + 3, sy + 3, HUD_CYAN); fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, HUD_CYAN);
+            } else {
+                fillRectRGB(canvas, sx - 1, sy - 1, sx + 1, sy + 1, rgb(0, 0, 0));
+                const Landmark& L = heard[i].second->lm;
+                const bool big = L.kind == LM_RUIN ? (L.sub == SC_VILLAGE || L.sub == SC_TOWN || L.sub >= SC_CITY) : L.radiusM > 400;
+                fillRectRGB(canvas, sx, sy, sx + (big ? 1 : 0), sy + (big ? 1 : 0), HUD_CYAN);
+            }   // a bigger echo a bigger dot (a village, a town, T-01's cities)
         }
     }
     const int onMark = markNear(mapCurX, mapCurZ, 5 * mpp);
@@ -228,7 +255,12 @@ void Game::renderSectorMap() {
             const bool armed = m.index == mapDelMark && realTime < mapDelUntil;
             const uint32_t col = armed ? (((int)(realTime * 4) & 1) ? HUD_RED : HUD_WHITE) : (gm.lent ? HUD_CYAN : HUD_WHITE);
             if (gm.kind < LM_COUNT) drawText(canvas, sx - 2, sy - 3, LANDMARK_KIND_SYMBOLS[gm.kind], col);
-            else { drawLineRGB(canvas, sx - 2, sy, sx, sy - 2, col); drawLineRGB(canvas, sx, sy - 2, sx + 2, sy, col); drawLineRGB(canvas, sx + 2, sy, sx, sy + 2, col); drawLineRGB(canvas, sx, sy + 2, sx - 2, sy, col); }
+            else {
+                drawLineRGB(canvas, sx - 2, sy, sx, sy - 2, col);
+                drawLineRGB(canvas, sx, sy - 2, sx + 2, sy, col);
+                drawLineRGB(canvas, sx + 2, sy, sx, sy + 2, col);
+                drawLineRGB(canvas, sx, sy + 2, sx - 2, sy, col);
+            }
             if (m.index == onMark || m.index == guide.shownMark) drawRectRGB(canvas, sx - 4, sy - 5, sx + 4, sy + 4, m.index == onMark ? HUD_AMBER : col);
             if (i >= 12 || gm.name.empty()) continue;
             std::string nm = trunc(upper(gm.name), 14);
@@ -240,7 +272,11 @@ void Game::renderSectorMap() {
             drawText(canvas, lx, ly, nm.c_str(), col); boxes.push_back({lx, ly, lx + tw, ly + 7});
         }
     }
-    if (surf.hasWaypoint && mark(surf.wpX, surf.wpZ, sx, sy)) { drawLineRGB(canvas, sx - 3, sy, sx + 3, sy, HUD_WHITE); drawLineRGB(canvas, sx, sy - 3, sx, sy + 3, HUD_WHITE); drawText(canvas, sx + 4, sy - 3, "WAYPOINT", HUD_WHITE); }
+    if (surf.hasWaypoint && mark(surf.wpX, surf.wpZ, sx, sy)) {
+        drawLineRGB(canvas, sx - 3, sy, sx + 3, sy, HUD_WHITE);
+        drawLineRGB(canvas, sx, sy - 3, sx, sy + 3, HUD_WHITE);
+        drawText(canvas, sx + 4, sy - 3, "WAYPOINT", HUD_WHITE);
+    }
     {   // you, with your heading
         int cx = ox + MW / 2, cy = oy + MH / 2;
         double hx = std::sin(surf.player.yaw), hz = std::cos(surf.player.yaw);

@@ -106,7 +106,8 @@ void Game::renderAlmanac() {
     drawPanel(canvas, x0, top, UW - x0, bottom, rgb(0, 0, 0), 240);
     const AlmanacPlace& p = almanacAt;
     std::string place;
-    if (p.ground && p.sys) place = fmt("%s %.1f%s %.1f%s", trunc(upper(bodyNameOf(p.body)), 14).c_str(), std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W");
+    if (p.ground && p.sys)
+        place = fmt("%s %.1f%s %.1f%s", trunc(upper(bodyNameOf(p.body)), 14).c_str(), std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W");
     else if (p.sys && p.body >= 0) place = "THE STARDRIFTER AT " + trunc(upper(bodyNameOf(p.body)), 14);
     else place = "THE STARDRIFTER";
     drawText(canvas, x0 + 6, top + 5, ("THE ALMANAC - " + place).c_str(), HUD_AMBER);

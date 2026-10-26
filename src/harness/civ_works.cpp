@@ -76,7 +76,11 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
                 for (const Form& f : fs) if (!std::isfinite(f.x) || !std::isfinite(f.z) || !std::isfinite(f.y0) || !std::isfinite(f.y1) || f.y1 < f.y0 - 1e-6) { nanForms++; break; }
             };
             for (const Work& x : W->works) {
-                auto at = [&](double e, double n) { double la, lo; StarSystem::latLonFromBody(x.unit, la, lo); return sampleSurface(g, StarSystem::bodyFromLatLon(la + n / Rm, lo + e / (Rm * std::max(std::cos(la), 0.05))), 64.0); };
+                auto at = [&](double e, double n) {
+                    double la, lo;
+                    StarSystem::latLonFromBody(x.unit, la, lo);
+                    return sampleSurface(g, StarSystem::bodyFromLatLon(la + n / Rm, lo + e / (Rm * std::max(std::cos(la), 0.05))), 64.0);
+                };
                 if (x.kind == WO_DAM) {   // its wall's ends on the valley's sides, its water under its crest, its reservoir held behind it and drawn
                     dams++;
                     const double ax = std::sin(x.axis), az = std::cos(x.axis);
@@ -156,7 +160,11 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
                 for (size_t i = 0; i < lw.size(); i++) {
                     const Work& x = *lw[i];
                     landN++; every(x);
-                    auto at = [&](double e, double n) { double la, lo; StarSystem::latLonFromBody(x.unit, la, lo); return sampleSurface(g, StarSystem::bodyFromLatLon(la + n / Rm, lo + e / (Rm * std::max(std::cos(la), 0.05))), 64.0); };
+                    auto at = [&](double e, double n) {
+                        double la, lo;
+                        StarSystem::latLonFromBody(x.unit, la, lo);
+                        return sampleSurface(g, StarSystem::bodyFromLatLon(la + n / Rm, lo + e / (Rm * std::max(std::cos(la), 0.05))), 64.0);
+                    };
                     if (x.kind == WO_QUARRY && x.style != 0) {
                         quarries++;
                         const SurfaceSample sm = at(0, 0);
@@ -166,7 +174,8 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
                         else if (ce->kind == GE_CUT) {
                             if (matFamily(sm.material) != FAM_ROCK) e += fmt("a face in %s; ", MATERIAL_NAMES[sm.material]);
                             if (cus[x.people].family != 0) e += "a face cut by a people that built of earth; ";
-                            const double back = at(std::sin(x.heading) * ce->hd * 0.85, std::cos(x.heading) * ce->hd * 0.85).height; if (back < ce->level + 2) e += fmt("its face %.1f m over its floor; ", back - ce->level);
+                            const double back = at(std::sin(x.heading) * ce->hd * 0.85, std::cos(x.heading) * ce->hd * 0.85).height;
+                            if (back < ce->level + 2) e += fmt("its face %.1f m over its floor; ", back - ce->level);
                         }
                         else if (ce->kind == GE_PIT && ce->level > sm.height - 2) e += fmt("its pit's floor at %.0f, the ground %.0f; ", ce->level, sm.height);
                         if (!e.empty()) { qBad++; if (qWhy.size() < 300) qWhy += wname + "'s quarry: " + e; }
@@ -186,7 +195,11 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
                             else if (landWhy.size() < 300) landWhy += fmt("%s's %s not the same built again; ", wname.c_str(), WORK_KIND_NAMES[x.kind]);
                         }
                     }
-                    for (size_t j = 0; j < i; j++) if (std::acos(clampd(dot(lw[j]->unit, x.unit), -1, 1)) * Rm < lw[j]->radiusM + x.radiusM) { landTouch++; if (landWhy.size() < 300) landWhy += fmt("%s's %s and %s touch; ", wname.c_str(), WORK_KIND_NAMES[x.kind], WORK_KIND_NAMES[lw[j]->kind]); }
+                    for (size_t j = 0; j < i; j++)
+                        if (std::acos(clampd(dot(lw[j]->unit, x.unit), -1, 1)) * Rm < lw[j]->radiusM + x.radiusM) {
+                            landTouch++;
+                            if (landWhy.size() < 300) landWhy += fmt("%s's %s and %s touch; ", wname.c_str(), WORK_KIND_NAMES[x.kind], WORK_KIND_NAMES[lw[j]->kind]);
+                        }
                     // clear of the settlements of the 2 km cells (their radius and the margin), the cities' cores and the world's works
                     {
                         bool close = planCoreAt(*P, x.unit, x.radiusM + 149) != nullptr;
@@ -220,64 +233,119 @@ void worksChecks(const std::function<void(const char*, bool, const std::string&)
                     covPts++; pts++; covSum += (int)L.size(); if (!L.empty()) { covHeard++; ph++; }
                 }
                 int pl = 0, plh = 0;
-                for (int i = 0; i < (int)pp.places.size() && i < 12; i++) { std::vector<Landmark> L; worksHeardNear(g, pp.places[i].unit, 40000, L); covPlaces++; pl++; if (!L.empty()) { covPlacesHeard++; plh++; } }
+                for (int i = 0; i < (int)pp.places.size() && i < 12; i++) {
+                    std::vector<Landmark> L;
+                    worksHeardNear(g, pp.places[i].unit, 40000, L);
+                    covPlaces++;
+                    pl++;
+                    if (!L.empty()) {
+                        covPlacesHeard++;
+                        plh++;
+                    }
+                }
                 covWhy += fmt("%s%s %s: %d of %d points, %d of %d places", covWhy.empty() ? "" : "; ", wname.c_str(), AGE_NAMES[pp.age], ph, pts, plh, pl);
             }
             // built again, the same
             std::shared_ptr<WorldWorks> again = buildWorldWorks(g);
             bool eq = again->works.size() == W->works.size();
-            for (size_t i = 0; eq && i < again->works.size(); i++) eq = again->works[i].id == W->works[i].id && again->works[i].kind == W->works[i].kind && length(again->works[i].unit - W->works[i].unit) < 1e-12;
+            for (size_t i = 0; eq && i < again->works.size(); i++)
+                eq = again->works[i].id == W->works[i].id && again->works[i].kind == W->works[i].kind && length(again->works[i].unit - W->works[i].unit) < 1e-12;
             if (eq) same++; else sWhy += wname + " differs built again; ";
         }
-    check("works: a dam across a valley holding a reservoir (T-03)", dams >= 3 && damBad == 0 && damWet >= 1,
-          fmt("%d dams over the test worlds: %d with water drawn behind them, %d old beds (%d breached); %s", dams, damWet, damBeds, damBreached, damBad ? damWhy.c_str() : "every wall's ends on the valley's sides, its water under its crest, its reservoir held behind it"));
-    check("works: a quarry's face in the rock of a stone-built people, its pit under the ground (T-03, B-418)", quarries >= 10 && qBad == 0, fmt("%d of the land's quarries: %s", quarries, qBad ? qWhy.c_str() : "each face in the exposed rock of a people that built in stone, cut into the hill, each pit's floor under the ground"));
-    check("works: the land's, each inside its cell, none touching, clear of the settlements, the cores and the world's, the same built again (B-418)", landN >= 100 && landOut == 0 && landTouch == 0 && landClose == 0 && landSame == landAsked,
-          fmt("%d of the land's works round the test worlds' first places and at points of their land: %d over their cell's edge, %d touching, %d on a settlement, a core or a world's work; %d of %d the same built again%s%s", landN, landOut, landTouch, landClose, landSame, landAsked, landWhy.empty() ? "" : "; ", landWhy.c_str()));
-    {   // the plan, the people's extent, a cell's settlement, the world's works and the land's: the same from a generator made in winter and in
-        // summer as from one made at the year's mean (the explorer's site and the approach make theirs in the season of the moment)
-        int same = 0, asked = 0; std::string why;
-        Star st; if (starInSector(AGE_WORLDS[AGE_INDUSTRIAL].sx, 0, AGE_WORLDS[AGE_INDUSTRIAL].sz, st, true)) {
-            StarSystem sys; sys.generate(st);
-            const Body& b = sys.bodies[AGE_WORLDS[AGE_INDUSTRIAL].body];
-            const BodyGen g0 = BodyGen::make(b, 0.0);
-            std::shared_ptr<const WorldPlan> P0 = worldPlanOf(g0); std::shared_ptr<const WorldWorks> W0 = worldWorksOf(g0);
-            const PlanPlace& cap = P0->plans[0].places[0];
-            int gL, gN; landCellOf(g0, cap.lat, cap.lon, gL, gN); int rL, rN; ruinCellOf(g0, cap.lat, cap.lon, rL, rN);
-            for (double season : {-1.0, 1.0}) {
-                const BodyGen gs = BodyGen::make(b, season);
-                asked++;
-                std::shared_ptr<WorldPlan> P = buildWorldPlan(gs, true);
-                bool ok = P->plans[0].places.size() == P0->plans[0].places.size();
-                for (size_t i = 0; ok && i < P->plans[0].places.size(); i++) ok = length(P->plans[0].places[i].unit - P0->plans[0].places[i].unit) < 1e-12;
-                if (!ok) why += fmt("the plan at season %+.0f; ", season);
-                if (std::fabs(peopleExtentOf(gs).landShare - peopleExtentOf(g0).landShare) > 1e-12) { ok = false; why += fmt("the extent at %+.0f; ", season); }
-                std::shared_ptr<WorldWorks> W = buildWorldWorks(gs);
-                bool wok = W->works.size() == W0->works.size(); for (size_t i = 0; wok && i < W->works.size(); i++) wok = W->works[i].id == W0->works[i].id && length(W->works[i].unit - W0->works[i].unit) < 1e-12;
-                if (!wok) { ok = false; why += fmt("the world's works at %+.0f; ", season); }
-                for (int dl = -2; dl <= 2; dl++) for (int dn = -2; dn <= 2; dn++) {
-                    std::shared_ptr<const Work> a = buildLandWork(gs, gL + dl, gN + dn), c = buildLandWork(g0, gL + dl, gN + dn);
-                    if ((a == nullptr) != (c == nullptr) || (a && (a->id != c->id || length(a->unit - c->unit) > 1e-12))) { ok = false; why += fmt("a land's cell at %+.0f; ", season); }
-                    RuinSpec x, y; const bool hx = ruinOfCell(gs, rL + dl, rN + dn, x, true), hy = ruinOfCell(g0, rL + dl, rN + dn, y, true);
-                    if (hx != hy || (hx && (x.buildings.size() != y.buildings.size() || x.lat != y.lat || x.lon != y.lon))) { ok = false; why += fmt("a settlement's cell at %+.0f; ", season); }
+        check("works: a dam across a valley holding a reservoir (T-03)", dams >= 3 && damBad == 0 && damWet >= 1,
+                fmt("%d dams over the test worlds: %d with water drawn behind them, %d old beds (%d breached); %s", dams, damWet, damBeds, damBreached,
+                        damBad ? damWhy.c_str() : "every wall's ends on the valley's sides, its water under its crest, its reservoir held behind it"));
+        check("works: a quarry's face in the rock of a stone-built people, its pit under the ground (T-03, B-418)", quarries >= 10 && qBad == 0,
+                fmt("%d of the land's quarries: %s", quarries,
+                        qBad ? qWhy.c_str() : "each face in the exposed rock of a people that built in stone, cut into the hill, each pit's floor under the ground"));
+        check("works: the land's, each inside its cell, none touching, clear of the settlements, the cores and the world's, the same built again (B-418)",
+                landN >= 100 && landOut == 0 && landTouch == 0 && landClose == 0 && landSame == landAsked,
+                fmt("%d of the land's works round the test worlds' first places and at points of their land: %d over their cell's edge, %d touching, %d on a settlement, a core or a world's work; %d "
+                    "of %d the same built again%s%s",
+                        landN, landOut, landTouch, landClose, landSame, landAsked, landWhy.empty() ? "" : "; ", landWhy.c_str()));
+        {   // the plan, the people's extent, a cell's settlement, the world's works and the land's: the same from a generator made in winter and in
+            // summer as from one made at the year's mean (the explorer's site and the approach make theirs in the season of the moment)
+            int same = 0, asked = 0;
+            std::string why;
+            Star st;
+            if (starInSector(AGE_WORLDS[AGE_INDUSTRIAL].sx, 0, AGE_WORLDS[AGE_INDUSTRIAL].sz, st, true)) {
+                StarSystem sys;
+                sys.generate(st);
+                const Body& b = sys.bodies[AGE_WORLDS[AGE_INDUSTRIAL].body];
+                const BodyGen g0 = BodyGen::make(b, 0.0);
+                std::shared_ptr<const WorldPlan> P0 = worldPlanOf(g0);
+                std::shared_ptr<const WorldWorks> W0 = worldWorksOf(g0);
+                const PlanPlace& cap = P0->plans[0].places[0];
+                int gL, gN;
+                landCellOf(g0, cap.lat, cap.lon, gL, gN);
+                int rL, rN;
+                ruinCellOf(g0, cap.lat, cap.lon, rL, rN);
+                for (double season : {-1.0, 1.0}) {
+                    const BodyGen gs = BodyGen::make(b, season);
+                    asked++;
+                    std::shared_ptr<WorldPlan> P = buildWorldPlan(gs, true);
+                    bool ok = P->plans[0].places.size() == P0->plans[0].places.size();
+                    for (size_t i = 0; ok && i < P->plans[0].places.size(); i++) ok = length(P->plans[0].places[i].unit - P0->plans[0].places[i].unit) < 1e-12;
+                    if (!ok) why += fmt("the plan at season %+.0f; ", season);
+                    if (std::fabs(peopleExtentOf(gs).landShare - peopleExtentOf(g0).landShare) > 1e-12) {
+                        ok = false;
+                        why += fmt("the extent at %+.0f; ", season);
+                    }
+                    std::shared_ptr<WorldWorks> W = buildWorldWorks(gs);
+                    bool wok = W->works.size() == W0->works.size();
+                    for (size_t i = 0; wok && i < W->works.size(); i++) wok = W->works[i].id == W0->works[i].id && length(W->works[i].unit - W0->works[i].unit) < 1e-12;
+                    if (!wok) {
+                        ok = false;
+                        why += fmt("the world's works at %+.0f; ", season);
+                    }
+                    for (int dl = -2; dl <= 2; dl++)
+                        for (int dn = -2; dn <= 2; dn++) {
+                            std::shared_ptr<const Work> a = buildLandWork(gs, gL + dl, gN + dn), c = buildLandWork(g0, gL + dl, gN + dn);
+                            if ((a == nullptr) != (c == nullptr) || (a && (a->id != c->id || length(a->unit - c->unit) > 1e-12))) {
+                                ok = false;
+                                why += fmt("a land's cell at %+.0f; ", season);
+                            }
+                            RuinSpec x, y;
+                            const bool hx = ruinOfCell(gs, rL + dl, rN + dn, x, true), hy = ruinOfCell(g0, rL + dl, rN + dn, y, true);
+                            if (hx != hy || (hx && (x.buildings.size() != y.buildings.size() || x.lat != y.lat || x.lon != y.lon))) {
+                                ok = false;
+                                why += fmt("a settlement's cell at %+.0f; ", season);
+                            }
+                        }
+                    if (ok) same++;
                 }
-                if (ok) same++;
             }
+            check("works: the plan, a people's extent, its settlements, its works and its land's the same in every season (B-419)", asked == 2 && same == asked,
+                    fmt("Meihimeeri III from a generator made in winter and in summer: %d of %d the same as the year's mean%s%s", same, asked, why.empty() ? "" : ": ", why.substr(0, 300).c_str()));
         }
-        check("works: the plan, a people's extent, its settlements, its works and its land's the same in every season (B-419)", asked == 2 && same == asked,
-              fmt("Meihimeeri III from a generator made in winter and in summer: %d of %d the same as the year's mean%s%s", same, asked, why.empty() ? "" : ": ", why.substr(0, 300).c_str()));
-    }
-    check("works: the scanner hears one within 40 km of nine points in ten of a people's land and of its places (B-418)", covPts > 0 && covHeard * 10 >= covPts * 9 && covPlacesHeard * 20 >= covPlaces * 19,
-          fmt("%d of %d points of the prehistoric to the modern peoples' land (%.1f heard on the whole), %d of %d places: %s", covHeard, covPts, covPts ? (double)covSum / covPts : 0.0, covPlacesHeard, covPlaces, covWhy.c_str()));
-    check("works: a battlefield between the two sides of its war (T-03)", fields >= 10 && fBad == 0, fmt("%d battlefields (%d of a war with the other people): %s", fields, fJoint, fBad ? fWhy.c_str() : "each a battle of its war in its war's years, on the line between the two sides' places and between them"));
-    const BodyGen plain = [] { BodyGen gg; gg.type = PT_FELISIAN; gg.seed = 12345; return gg; }();
-    const bool none = !((sightKindsOf(plain) >> LM_WORK) & 1);
-    check("works: the scanner's WORKS mode hears them (T-03)", hMissed == 0 && heard > 20 && none, fmt("%d works of the world and the land heard from their middles as WORKS echoes of their kind, %d lesser stretches unheard as they should be; %s", heard, unheard, hMissed ? hWhy.c_str() : (none ? "no WORKS mode on a world without a people" : "a WORKS mode on a plain world")));
-    int nk = 0; std::string missing; for (int k = 0; k < WO_COUNT; k++) { if (kinds[k]) nk++; else missing += std::string(missing.empty() ? "" : ", ") + WORK_KIND_NAMES[k]; }
-    check("works: the same twice, out of the cores, every kind laid, their forms sound (T-03)", same == nWorlds && inTown == 0 && nanForms == 0 && nk >= WO_COUNT - 2,
-          fmt("%d worlds, %d works of %d pieces, built in %.0f ms (the slowest %s, %.0f ms): %d the same built again, %d in a city's core, %d with an unsound form; %d of %d kinds%s%s %s", nWorlds, total, pieces, buildMs, worstName.c_str(), worstMs,
-              same, inTown, nanForms, nk, WO_COUNT, missing.empty() ? "" : " (none of ", missing.empty() ? "" : (missing + ")").c_str(), sWhy.c_str()));
-    printf("  (the works' checks %.1f s)\n", nowSec() - t0);
+        check("works: the scanner hears one within 40 km of nine points in ten of a people's land and of its places (B-418)",
+                covPts > 0 && covHeard * 10 >= covPts * 9 && covPlacesHeard * 20 >= covPlaces * 19,
+                fmt("%d of %d points of the prehistoric to the modern peoples' land (%.1f heard on the whole), %d of %d places: %s", covHeard, covPts, covPts ? (double)covSum / covPts : 0.0,
+                        covPlacesHeard, covPlaces, covWhy.c_str()));
+        check("works: a battlefield between the two sides of its war (T-03)", fields >= 10 && fBad == 0,
+                fmt("%d battlefields (%d of a war with the other people): %s", fields, fJoint,
+                        fBad ? fWhy.c_str() : "each a battle of its war in its war's years, on the line between the two sides' places and between them"));
+        const BodyGen plain = [] {
+            BodyGen gg;
+            gg.type = PT_FELISIAN;
+            gg.seed = 12345;
+            return gg;
+        }();
+        const bool none = !((sightKindsOf(plain) >> LM_WORK) & 1);
+        check("works: the scanner's WORKS mode hears them (T-03)", hMissed == 0 && heard > 20 && none,
+                fmt("%d works of the world and the land heard from their middles as WORKS echoes of their kind, %d lesser stretches unheard as they should be; %s", heard, unheard,
+                        hMissed ? hWhy.c_str() : (none ? "no WORKS mode on a world without a people" : "a WORKS mode on a plain world")));
+        int nk = 0;
+        std::string missing;
+        for (int k = 0; k < WO_COUNT; k++) {
+            if (kinds[k]) nk++;
+            else missing += std::string(missing.empty() ? "" : ", ") + WORK_KIND_NAMES[k];
+        }
+        check("works: the same twice, out of the cores, every kind laid, their forms sound (T-03)", same == nWorlds && inTown == 0 && nanForms == 0 && nk >= WO_COUNT - 2,
+                fmt("%d worlds, %d works of %d pieces, built in %.0f ms (the slowest %s, %.0f ms): %d the same built again, %d in a city's core, %d with an unsound form; %d of %d kinds%s%s %s",
+                        nWorlds, total, pieces, buildMs, worstName.c_str(), worstMs, same, inTown, nanForms, nk, WO_COUNT, missing.empty() ? "" : " (none of ",
+                        missing.empty() ? "" : (missing + ")").c_str(), sWhy.c_str()));
+        printf("  (the works' checks %.1f s)\n", nowSec() - t0);
 }
 
 // T-03: `works <sx> <sz> <body>`, `works ages`: a world's works, each with its age, its place and the numbers its rule found; D-05: `works rogue
@@ -307,8 +375,10 @@ static void printWorksStar(const Star& st, const AgeWorld& aw) {
         if (H) {   // what its history finished that the works lay down, and its battles
             int built[WK_COUNT] = {}, battles = 0;
             for (const HistoryEvent& e : H->events) { if (e.kind == HE_BUILT && e.thing >= 0 && e.thing < WK_COUNT) built[e.thing]++; if (e.kind == HE_BATTLE) battles++; }
-            printf("    its history: dams %d, mines %d, aqueducts %d, observatories %d, lighthouses %d, launch sites %d, elevators %d, holy %d (%s), stones %d; %d battles in %zu wars; the last place %d\n",
-                   built[WK_DAM], built[WK_MINE], built[WK_AQUEDUCT], built[WK_OBSERVATORY], built[WK_LIGHTHOUSE], built[WK_LAUNCH], built[WK_ELEVATOR], built[WK_HOLY], HOLY_NAMES[H->profile.holy], built[WK_STONES], battles, H->wars.size(), H->lastPlace);
+            printf("    its history: dams %d, mines %d, aqueducts %d, observatories %d, lighthouses %d, launch sites %d, elevators %d, holy %d (%s), stones %d; %d battles in %zu wars; the last place "
+                   "%d\n",
+                    built[WK_DAM], built[WK_MINE], built[WK_AQUEDUCT], built[WK_OBSERVATORY], built[WK_LIGHTHOUSE], built[WK_LAUNCH], built[WK_ELEVATOR], built[WK_HOLY], HOLY_NAMES[H->profile.holy],
+                    built[WK_STONES], battles, H->wars.size(), H->lastPlace);
         }
     }
     for (const Work& w : W->works) {
@@ -329,7 +399,13 @@ static void printWorksStar(const Star& st, const AgeWorld& aw) {
         std::vector<int> land; for (int c = 0; c < P->grid.cells; c++) if (pp.territory[c] && P->grid.land[c]) land.push_back(c);
         Rng rng(g.seed ^ 0xB4180C0ULL ^ (uint64_t)p);
         int pts = 0, heard = 0, sum = 0;
-        for (int k = 0; k < 40 && !land.empty(); k++) { std::vector<Landmark> L; worksHeardNear(g, P->grid.unitOf(land[rng.irange((int)land.size())]), 40000, L); pts++; sum += (int)L.size(); if (!L.empty()) heard++; }
+        for (int k = 0; k < 40 && !land.empty(); k++) {
+            std::vector<Landmark> L;
+            worksHeardNear(g, P->grid.unitOf(land[rng.irange((int)land.size())]), 40000, L);
+            pts++;
+            sum += (int)L.size();
+            if (!L.empty()) heard++;
+        }
         printf("    the scanner from %d points of its land: a work within 40 km from %d (%.1f heard on the whole)\n", pts, heard, pts ? (double)sum / pts : 0.0);
         for (size_t i = 0; i < lw.size() && i < 12; i++) printf("    %s\n", workLine(*lw[i]).c_str());
     }
@@ -361,7 +437,14 @@ static void workFrame(const StarSystem& sys, int body, const BodyGen& g, const W
     double tx = 0, tz = 0, ty = -1e9, D = std::max(45.0, 1.7 * ext), H = D * 0.36, a = sun.azimuth + 1.9;
     const double hd = w.heading, fx = std::sin(hd), fz = std::cos(hd);
     switch (w.kind) {
-        case WO_QUARRY: case WO_MINE: if ((w.kind == WO_QUARRY && w.style >= 1 && w.style <= 3) || (w.kind == WO_MINE && w.style == 0)) { a = hd + PI + 0.35; D = std::max(70.0, 1.9 * ext); H = D * 0.33; } break;
+        case WO_QUARRY:
+        case WO_MINE:
+            if ((w.kind == WO_QUARRY && w.style >= 1 && w.style <= 3) || (w.kind == WO_MINE && w.style == 0)) {
+                a = hd + PI + 0.35;
+                D = std::max(70.0, 1.9 * ext);
+                H = D * 0.33;
+            }
+            break;
         case WO_DAM: a = hd + PI + 0.75; D = w.length * 0.5 + 60; H = w.height * 1.4 + 22; ty = w.crest - w.height * 0.5; break;   // three quarters from downstream
         case WO_AQUEDUCT: {
             double best = -1; for (const Building& b : sp.buildings) if (b.kind == BK_AQUEDUCT && b.hWall > best) { best = b.hWall; tx = b.x; tz = b.z; }
@@ -397,7 +480,9 @@ static void workFrame(const StarSystem& sys, int body, const BodyGen& g, const W
     fb.mush(2);
     rgbOut.assign((size_t)FBW * FBH, 0);
     fb.toRGB(rgbOut.data(), 1.0);
-    if (note) *note = fmt("%zu pieces, %d forms drawn (%d polygons), %zu edits in the ground, the view %.0f m off and %.0f m up (the eye at %.0f m, the ground under it %.0f, at the middle %.0f)", sp.buildings.size(), sv.lastRuinElems, sv.lastFormPolys, sv.site.edits.size(), D, H, sv.freePos.y, sv.site.surfaceHeight(sv.player.x, sv.player.z), sv.site.surfaceHeight(tx, tz));
+    if (note)
+        *note = fmt("%zu pieces, %d forms drawn (%d polygons), %zu edits in the ground, the view %.0f m off and %.0f m up (the eye at %.0f m, the ground under it %.0f, at the middle %.0f)",
+                sp.buildings.size(), sv.lastRuinElems, sv.lastFormPolys, sv.site.edits.size(), D, H, sv.freePos.y, sv.site.surfaceHeight(sv.player.x, sv.player.z), sv.site.surfaceHeight(tx, tz));
 }
 
 // T-03: `works map`: on each age's scene world, an inset for each kind of work its people made (the gallery's), framing it with the place its rule
@@ -413,7 +498,15 @@ static std::vector<std::shared_ptr<const Work>> galleryPicks(const BodyGen& g, c
     std::vector<std::shared_ptr<const Work>> pick;
     for (int k = 0; k < WO_COUNT; k++) {
         if (k == WO_WAY) continue;
-        if (k == WO_STRANGE) { bool seen[8] = {}; for (const auto& w : all) if (w->kind == k && w->heard && !seen[clampi(w->style, 0, 7)]) { seen[clampi(w->style, 0, 7)] = true; pick.push_back(w); } continue; }
+        if (k == WO_STRANGE) {
+            bool seen[8] = {};
+            for (const auto& w : all)
+                if (w->kind == k && w->heard && !seen[clampi(w->style, 0, 7)]) {
+                    seen[clampi(w->style, 0, 7)] = true;
+                    pick.push_back(w);
+                }
+            continue;
+        }
         for (const auto& w : all) if (w->kind == k) { pick.push_back(w); break; }
     }
     return pick;
@@ -432,7 +525,9 @@ static void worksMap(const AgeWorld& aw, const char* tag) {
     const int T = 300, cols = 4, rows = std::max(1, ((int)pick.size() + cols - 1) / cols), SW = cols * T, SH = 16 + rows * (T + 24);
     std::vector<uint32_t> img((size_t)SW * SH, rgb(16, 16, 20));
     RGBCanvas cv{img.data(), SW, SH, 1};
-    drawText(cv, 4, 4, fmt("WHERE THE RULES PUT THE WORKS OF A %s PEOPLE ON %s", pp.age == AGE_FAR_FUTURE ? "FAR FUTURE" : upper(AGE_NAMES[pp.age]).c_str(), upper(sys.bodies[aw.body].name).c_str()).c_str(), rgb(235, 225, 170));
+    drawText(cv, 4, 4,
+            fmt("WHERE THE RULES PUT THE WORKS OF A %s PEOPLE ON %s", pp.age == AGE_FAR_FUTURE ? "FAR FUTURE" : upper(AGE_NAMES[pp.age]).c_str(), upper(sys.bodies[aw.body].name).c_str()).c_str(),
+            rgb(235, 225, 170));
     const double Rm = g.R * 1000.0;
     DrainageOff off;
     for (size_t n = 0; n < pick.size(); n++) {
@@ -447,10 +542,19 @@ static void worksMap(const AgeWorld& aw, const char* tag) {
         double lat0, lon0; StarSystem::latLonFromBody(w.unit, lat0, lon0);
         const double cl = std::max(std::cos(lat0), 0.05);
         double ext = std::max(4000.0, w.radiusM * 2.5);
-        for (const Vec3& q : pts) { double la, lo; StarSystem::latLonFromBody(q, la, lo); ext = std::max(ext, 1.25 * std::max(std::fabs(std::remainder(lo - lon0, TAU)) * Rm * cl, std::fabs(la - lat0) * Rm)); }
+        for (const Vec3& q : pts) {
+            double la, lo;
+            StarSystem::latLonFromBody(q, la, lo);
+            ext = std::max(ext, 1.25 * std::max(std::fabs(std::remainder(lo - lon0, TAU)) * Rm * cl, std::fabs(la - lat0) * Rm));
+        }
         const double mpp = 2 * ext / T;
         const int ox = (int)(n % cols) * T, oy = 16 + (int)(n / cols) * (T + 24);
-        auto toPx = [&](const Vec3& u, double& x, double& y) { double la, lo; StarSystem::latLonFromBody(u, la, lo); x = ox + T / 2 + std::remainder(lo - lon0, TAU) * Rm * cl / mpp; y = oy + T / 2 - (la - lat0) * Rm / mpp; };
+        auto toPx = [&](const Vec3& u, double& x, double& y) {
+            double la, lo;
+            StarSystem::latLonFromBody(u, la, lo);
+            x = ox + T / 2 + std::remainder(lo - lon0, TAU) * Rm * cl / mpp;
+            y = oy + T / 2 - (la - lat0) * Rm / mpp;
+        };
         const int G = 101; std::vector<double> hh(G * G); std::vector<uint32_t> col(G * G);
         for (int j = 0; j < G; j++) for (int i = 0; i < G; i++) {
             const double e = (i - G / 2) * 2 * ext / (G - 1), nn = (G / 2 - j) * 2 * ext / (G - 1);
@@ -465,10 +569,20 @@ static void worksMap(const AgeWorld& aw, const char* tag) {
             const int i = std::min(G - 2, x * (G - 1) / T), j = std::min(G - 2, y * (G - 1) / T), c = j * G + i;
             const double sh = clampd(1.0 + ((hh[c + G] - hh[c]) - (hh[c + 1] - hh[c])) / relief, 0.45, 1.5);
             const uint32_t cc = col[c];
-            img[(size_t)(oy + y) * SW + ox + x] = rgb(clampi((int)((cc & 255) * 0.8 * sh), 0, 255), clampi((int)(((cc >> 8) & 255) * 0.8 * sh), 0, 255), clampi((int)(((cc >> 16) & 255) * 0.8 * sh), 0, 255));   // rgb() packs red low
+            img[(size_t)(oy + y) * SW + ox + x] = rgb(
+                    clampi((int)((cc & 255) * 0.8 * sh), 0, 255), clampi((int)(((cc >> 8) & 255) * 0.8 * sh), 0, 255), clampi((int)(((cc >> 16) & 255) * 0.8 * sh), 0, 255));   // rgb() packs red low
         }
         auto px = [&](int x, int y, uint32_t c) { if (x >= ox && y >= oy && x < ox + T && y < oy + T) img[(size_t)y * SW + x] = c; };
-        auto line = [&](const Vec3& a, const Vec3& b, uint32_t c, bool dotted) { double x0, y0, x1, y1; toPx(a, x0, y0); toPx(b, x1, y1); const int m = (int)std::max(std::fabs(x1 - x0), std::fabs(y1 - y0)) + 1; for (int k = 0; k <= m; k++) { if (dotted && (k / 3) % 2) continue; px((int)(x0 + (x1 - x0) * k / m), (int)(y0 + (y1 - y0) * k / m), c); } };
+        auto line = [&](const Vec3& a, const Vec3& b, uint32_t c, bool dotted) {
+            double x0, y0, x1, y1;
+            toPx(a, x0, y0);
+            toPx(b, x1, y1);
+            const int m = (int)std::max(std::fabs(x1 - x0), std::fabs(y1 - y0)) + 1;
+            for (int k = 0; k <= m; k++) {
+                if (dotted && (k / 3) % 2) continue;
+                px((int)(x0 + (x1 - x0) * k / m), (int)(y0 + (y1 - y0) * k / m), c);
+            }
+        };
         for (const PlanEdge& e : pp.edges) {   // the ways near
             PlanEdgeRef ref; ref.people = people; ref.index = (int)(&e - pp.edges.data()); ref.e = &e;
             const double da = std::acos(clampd(dot(pp.places[e.a].unit, w.unit), -1, 1)) * Rm, db = std::acos(clampd(dot(pp.places[e.b].unit, w.unit), -1, 1)) * Rm;
@@ -480,7 +594,9 @@ static void worksMap(const AgeWorld& aw, const char* tag) {
             double x, y; toPx(pl.unit, x, y);
             const int r = std::max(2, (int)(pl.radiusM / mpp));
             if (x < ox - r || y < oy - r || x > ox + T + r || y > oy + T + r) continue;
-            for (int dy = -r; dy <= r; dy++) for (int dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) px((int)x + dx, (int)y + dy, pl.rank == 0 ? rgb(255, 255, 255) : (pl.sclass == SC_CITY ? rgb(255, 90, 80) : rgb(255, 210, 90)));
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                    if (dx * dx + dy * dy <= r * r) px((int)x + dx, (int)y + dy, pl.rank == 0 ? rgb(255, 255, 255) : (pl.sclass == SC_CITY ? rgb(255, 90, 80) : rgb(255, 210, 90)));
         }
         if (w.kind == WO_BATTLEFIELD) line(w.sideA, w.sideB, rgb(255, 70, 70), true);
         {   // the work: its reach, its glyph
@@ -501,7 +617,8 @@ static void worksMap(const AgeWorld& aw, const char* tag) {
             default: rule = hasA ? fmt("%.1f KM FROM ITS PLACE", dA) : std::string("ON THE PEOPLE'S LAND"); break;
         }
         std::string lab = WORK_KIND_NAMES[w.kind]; for (char& ch : lab) ch = (char)std::toupper((unsigned char)ch);
-        drawText(cv, ox + 3, oy + T + 2, fmt("%s, %s (%.0f KM ACROSS)", lab.c_str(), w.age == AGE_FAR_FUTURE ? "FAR FUTURE" : upper(AGE_NAMES[w.age]).c_str(), 2 * ext / 1000).c_str(), rgb(200, 205, 190));
+        drawText(cv, ox + 3, oy + T + 2, fmt("%s, %s (%.0f KM ACROSS)", lab.c_str(), w.age == AGE_FAR_FUTURE ? "FAR FUTURE" : upper(AGE_NAMES[w.age]).c_str(), 2 * ext / 1000).c_str(),
+                rgb(200, 205, 190));
         drawText(cv, ox + 3, oy + T + 12, rule.substr(0, 48).c_str(), rgb(150, 210, 210));
     }
     const std::string fn = fmt("shots/tests/works_map_%s.png", tag);
@@ -595,7 +712,9 @@ int runWorks(int argc, char** argv) {
             writePNG(fn.c_str(), rgbBuf.data(), FBW, FBH);
             printf("%s\n  %s -> %s\n", workLine(w).c_str(), note.c_str(), fn.c_str());
             RuinSpec sp; workSpec(g, w, sp);
-            for (const Building& b : sp.buildings) printf("    %s at %.0f %.0f, %.1f x %.1f, %.1f m, style %d, age %d%s\n", BUILDING_KIND_NAMES[b.kind], b.x, b.z, b.hw, b.hd, b.hWall, b.style, b.age, b.base > -1e8 ? fmt(", from %.0f m", b.base).c_str() : "");
+            for (const Building& b : sp.buildings)
+                printf("    %s at %.0f %.0f, %.1f x %.1f, %.1f m, style %d, age %d%s\n", BUILDING_KIND_NAMES[b.kind], b.x, b.z, b.hw, b.hd, b.hWall, b.style, b.age,
+                        b.base > -1e8 ? fmt(", from %.0f m", b.base).c_str() : "");
             return 0;
         }
         printf("no %s %d\n", want.c_str(), idx);

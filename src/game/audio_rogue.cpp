@@ -147,23 +147,29 @@ std::string AudioSynth::rogueLine(uint64_t seed, const RogueVoice& r) {
     const double pulse = pulseOf(r);
     std::string body;
     char b[256];
-    if (cls == RV_BROWN_DWARF || cls == RV_GIANT) std::snprintf(b, sizeof b, "the storm: surf at %.0f Hz, S-bursts %.0f a second from %.0f Hz falling %.0f%%, a roar at %.0f Hz fluttering %.0f a second", v.rgSurfF, v.rgSRate, v.rgSF, 100 * v.rgSFall, v.rgRoarF, v.rgRoarFl);
+    if (cls == RV_BROWN_DWARF || cls == RV_GIANT)
+        std::snprintf(b, sizeof b, "the storm: surf at %.0f Hz, S-bursts %.0f a second from %.0f Hz falling %.0f%%, a roar at %.0f Hz fluttering %.0f a second", v.rgSurfF, v.rgSRate, v.rgSF,
+                100 * v.rgSFall, v.rgRoarF, v.rgRoarFl);
     else std::snprintf(b, sizeof b, "chorus from %.0f Hz rising x%.1f, whistlers from %.0f Hz, hiss at %.0f Hz", v.rgChorusF, v.rgChorusRise, v.rgWhistF, v.rgHissF);
     body = b;
     if (cls == RV_BROWN_DWARF) { std::snprintf(b, sizeof b, ", the cyclotron howl %.0f-%.0f Hz each turning", v.rgHowlLo, v.rgHowlHi); body += b; }
     else if (cls != RV_GIANT || v.rgGiantHowl) { std::snprintf(b, sizeof b, ", the kilometric howl %.0f-%.0f Hz", v.rgHowlLo, v.rgHowlHi); body += b; }
     if (cls == RV_YOUNG) body += ", the dynamo's rumble";
     if (cls == RV_METAL) { std::snprintf(b, sizeof b, ", the iron ringing at %.0f Hz", v.rgRingF); body += b; }
-    std::snprintf(b, sizeof b, "; its plasma ringing at %.0f and %.0f Hz; weighed %.1f %.1f %.1f %.1f %.1f %.1f %.1f", v.rgResF[0], v.rgResF[1], v.rgW[0], v.rgW[1], v.rgW[2], v.rgW[3], v.rgW[4], v.rgW[5], v.rgW[6]); body += b;
+    std::snprintf(b, sizeof b, "; its plasma ringing at %.0f and %.0f Hz; weighed %.1f %.1f %.1f %.1f %.1f %.1f %.1f", v.rgResF[0], v.rgResF[1], v.rgW[0], v.rgW[1], v.rgW[2], v.rgW[3], v.rgW[4],
+            v.rgW[5], v.rgW[6]);
+    body += b;
     char line[1024];
     char moon[48]; if (pulse > 0) std::snprintf(moon, sizeof moon, "its moon pulsing every %.1f s", pulse); else std::snprintf(moon, sizeof moon, "no moon");
     std::string chord; for (int i = 0; i < v.rgChordN; i++) { char c[24]; std::snprintf(c, sizeof c, "%s%.1f", i ? " " : "", v.rgChordF[i]); chord += c; }
     char pole[64];
-    if (v.rgPole2 > 0.3) std::snprintf(pole, sizeof pole, "the other pole answering x%.2f", v.rgAnswer); else std::snprintf(pole, sizeof pole, "%s", v.rgPole2 > 0 ? "the other pole faint" : "one pole");
-    std::snprintf(line, sizeof line, "%s: a breath every %.0f s (the main lobe %.0f%% of it, %s), %s; the motif %d %s whistles on %d steps to the octave (%s Hz, %.1f s, hanging %.0f s); the drones %s Hz (tilt %.1f, even %.2f); the moan at %.0f Hz through %s-%s-%s; %s",
-                  ROGUE_VOICE_NAMES[cls], breathOf(r, v.rgBreathU), 200 * v.rgLobe, pole, moon,
-                  v.rgN, TIMBRES[v.rgTimbre], v.rgEdo, notes.c_str(), v.rgMotifLen, v.rgHangS, chord.c_str(), v.rgTilt, v.rgEven,
-                  v.rgMoanF, PLASMA_NAMES[v.rgVowel[0]], PLASMA_NAMES[v.rgVowel[1]], PLASMA_NAMES[v.rgVowel[2]], body.c_str());
+    if (v.rgPole2 > 0.3) std::snprintf(pole, sizeof pole, "the other pole answering x%.2f", v.rgAnswer);
+    else std::snprintf(pole, sizeof pole, "%s", v.rgPole2 > 0 ? "the other pole faint" : "one pole");
+    std::snprintf(line, sizeof line,
+            "%s: a breath every %.0f s (the main lobe %.0f%% of it, %s), %s; the motif %d %s whistles on %d steps to the octave (%s Hz, %.1f s, hanging %.0f s); the drones %s Hz (tilt %.1f, even "
+            "%.2f); the moan at %.0f Hz through %s-%s-%s; %s",
+            ROGUE_VOICE_NAMES[cls], breathOf(r, v.rgBreathU), 200 * v.rgLobe, pole, moon, v.rgN, TIMBRES[v.rgTimbre], v.rgEdo, notes.c_str(), v.rgMotifLen, v.rgHangS, chord.c_str(), v.rgTilt,
+            v.rgEven, v.rgMoanF, PLASMA_NAMES[v.rgVowel[0]], PLASMA_NAMES[v.rgVowel[1]], PLASMA_NAMES[v.rgVowel[2]], body.c_str());
     return line;
 }
 
@@ -202,7 +208,11 @@ double AudioSynth::rogueSample(RadarChannel& c, double dt, const RogueVoice& R, 
         setBand(CO_ROAR, v.rgRoarF, 140, true); setBand(CO_HISS, v.rgHissF, 0.35 * v.rgHissF, true);
         setBand(CO_RES1, v.rgResF[0], 0.35 * v.rgResF[0], true); setBand(CO_RES2, v.rgResF[1], 0.3 * v.rgResF[1], true);
         const double low = R.cls == RV_YOUNG ? 0.75 : 1.0;   // a young world's drones a fourth lower
-        for (int i = 0; i < 2 * v.rgChordN; i++) { const double a = TAU_R * dt * (v.rgChordF[i >> 1] * low + ((i & 1) ? v.rgBeat[i >> 1] : 0.0)); c.rgDrRc[i] = std::cos(a); c.rgDrRs[i] = std::sin(a); }
+        for (int i = 0; i < 2 * v.rgChordN; i++) {
+            const double a = TAU_R * dt * (v.rgChordF[i >> 1] * low + ((i & 1) ? v.rgBeat[i >> 1] : 0.0));
+            c.rgDrRc[i] = std::cos(a);
+            c.rgDrRs[i] = std::sin(a);
+        }
     }
     const bool retune = c.rgCoN == 0;   // the moving bands' turn
     c.rgCoN = (c.rgCoN + 1) & 31;
@@ -227,7 +237,8 @@ double AudioSynth::rogueSample(RadarChannel& c, double dt, const RogueVoice& R, 
             const int i = c.rgMotRev ? v.rgN - 1 - k : k, from = c.rgMotRev ? i + 1 : i - 1;
             const double u = (c.rgMotT - acc) / v.rgNoteLen[i], key = c.rgMotRev ? v.rgAnswer : 1.0;
             double f = v.rgNoteF[i] * key;
-            if (k > 0 && v.rgGlide[i] > 0.01 && u < v.rgGlide[i]) f = v.rgNoteF[from] * key * std::pow(f / (v.rgNoteF[from] * key), smooth(u / v.rgGlide[i]));   // a whistle sliding up or down to its note
+            // a whistle sliding up or down to its note
+            if (k > 0 && v.rgGlide[i] > 0.01 && u < v.rgGlide[i]) f = v.rgNoteF[from] * key * std::pow(f / (v.rgNoteF[from] * key), smooth(u / v.rgGlide[i]));
             f *= 1 + v.rgVib * std::sin(TAU_R * v.rgVibHz * c.rgMotT);
             const double e = std::min(1.0, c.rgMotT / 0.03) * std::min(1.0, (v.rgMotifLen - c.rgMotT) / 0.12) * (0.8 + 0.2 * std::sin(PI_R * u));
             c.rgMotPh = wrap1(c.rgMotPh + dt * f);
@@ -389,7 +400,11 @@ double AudioSynth::rogueSample(RadarChannel& c, double dt, const RogueVoice& R, 
         if (c.rgWhT >= 0) {
             const double u = c.rgWhT / c.rgWhDur;
             if (u >= 1) c.rgWhT = -1;
-            else { c.rgWhPh = wrap1(c.rgWhPh + dt * (v.rgWhistF * std::exp(-u * 2.8) + 160)); body += 0.26 * v.rgW[RW_CRACKLE_WHISTLERS] * std::sin(PI_R * u) * std::sin(TAU_R * c.rgWhPh); c.rgWhT += dt; }
+            else {
+                c.rgWhPh = wrap1(c.rgWhPh + dt * (v.rgWhistF * std::exp(-u * 2.8) + 160));
+                body += 0.26 * v.rgW[RW_CRACKLE_WHISTLERS] * std::sin(PI_R * u) * std::sin(TAU_R * c.rgWhPh);
+                c.rgWhT += dt;
+            }
         }
         // hiss, breathing
         body += 0.45 * v.rgW[RW_ROAR_HISS] * band(CO_HISS, n2, c.rgHissY1, c.rgHissY2) * (0.55 + 0.45 * std::sin(TAU_R * 0.13 * c.clock));
@@ -403,7 +418,10 @@ double AudioSynth::rogueSample(RadarChannel& c, double dt, const RogueVoice& R, 
             if (c.rgRingNext <= 0 && c.rgRingT < 0) { c.rgRingT = 0; c.rgRingNext = 3 + 5 * uni(); }
             if (c.rgRingT >= 0) {
                 double x = 0;
-                for (int i = 0; i < 4; i++) { c.rgRingPh[i] = wrap1(c.rgRingPh[i] + dt * v.rgRingF * RING[i]); x += std::sin(TAU_R * c.rgRingPh[i]) * std::exp(-c.rgRingT * (0.6 + 0.5 * i)) / (1 + 0.6 * i); }
+                for (int i = 0; i < 4; i++) {
+                    c.rgRingPh[i] = wrap1(c.rgRingPh[i] + dt * v.rgRingF * RING[i]);
+                    x += std::sin(TAU_R * c.rgRingPh[i]) * std::exp(-c.rgRingT * (0.6 + 0.5 * i)) / (1 + 0.6 * i);
+                }
                 sig += 0.1 * x * std::min(1.0, c.rgRingT / 0.003);
                 c.rgRingT += dt; if (c.rgRingT > 5) c.rgRingT = -1;
             }

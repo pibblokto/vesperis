@@ -51,7 +51,11 @@ void Game::ensureTold() {
     if (toldValid) return;
     toldValid = true;
     const auto t0 = std::chrono::steady_clock::now();
-    struct Timed { std::chrono::steady_clock::time_point t0; double& ms; ~Timed() { ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); } } timed{t0, toldMs};
+    struct Timed {
+        std::chrono::steady_clock::time_point t0;
+        double& ms;
+        ~Timed() { ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); }
+    } timed{t0, toldMs};
     told = ToldHistory(); legendRows.clear(); legendFirstRow.clear(); eraX0.clear(); eraX1.clear();
     if (!shardWorld.valid || shardWorld.body < 0 || shardWorld.body >= (int)shardWorld.sys.bodies.size()) return;
     const Body& b = shardWorld.sys.bodies[shardWorld.body];

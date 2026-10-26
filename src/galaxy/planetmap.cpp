@@ -52,14 +52,16 @@ static void qualityWater(const BodyGen& g, const Vec3& unit, double detailM, Sur
     const bool wet = s.water > -1e8 && (s.material == MAT_WATER || s.height < s.water);
     const bool lake = s.waterKind == 2 || s.waterKind == 3 || s.waterKind == 4, sea = s.waterKind == 0;
     const Vec3 p = unit * g.R;
-    if (pink && !wet && lake && s.height < s.water + 0.5 + 0.4 * fbm3(p / 0.05, g.sG + 301, 2) && s.material != MAT_SNOW && s.material != MAT_ICE) { s.material = MAT_SALT; s.albedo = 0.78; }   // the crust on its shore
+    // the crust on its shore
+    if (pink && !wet && lake && s.height < s.water + 0.5 + 0.4 * fbm3(p / 0.05, g.sG + 301, 2) && s.material != MAT_SNOW && s.material != MAT_ICE) { s.material = MAT_SALT; s.albedo = 0.78; }
     if (!wet) return;
     if (pink && lake) s.waterTint = 1;
     if (milky && sea) s.waterTint = smoothstep(0.22, 0.42, fbm3(p / (g.R * 0.16), g.sG + 303, 2));   // a few patches of a few hundred kilometres
     if (lights && sea) {   // a dark ocean's life, round the vents its volcanoes' flanks hold (the islands' shallows, under 500 m) and in shoals some hundreds of
         // kilometres across over the deep (what the globe shows), lit in patches of a hundred metres or two
         const double shoal = smoothstep(-0.05, 0.25, fbm3(p / (g.R * 0.05), g.sG + 313, 2)), region = std::max(shoal, smoothstep(-500.0, -60.0, s.height));
-        if (region > 0.01) s.waterTint = matVisible(0.1, detailM) ? region * smoothstep(0.16, 0.42, fbm3(p / 0.3, g.sG + 314, 3)) : 0.2 * smoothstep(0.4, 0.9, shoal);   // a quarter of its water lit; from afar the shoals' cores' faint sheen
+        // a quarter of its water lit; from afar the shoals' cores' faint sheen
+        if (region > 0.01) s.waterTint = matVisible(0.1, detailM) ? region * smoothstep(0.16, 0.42, fbm3(p / 0.3, g.sG + 314, 3)) : 0.2 * smoothstep(0.4, 0.9, shoal);
     }
     if (blooms && (sea || (lake && !pink))) {
         // swirls a few hundred kilometres across (the warped field's bands, wide enough for the globe to show), their edges frayed into the
@@ -216,7 +218,8 @@ void PlanetMap::generate(const BodyGen& g) {
             if (tints) { wtint[i] = (uint8_t)clampi((int)(s.waterTint * 255 + 0.5), 0, 255); ltint[i] = (uint8_t)clampi((int)(s.lifeTint * 255 + 0.5), 0, 255); }
             cloud[i] = (uint8_t)clampi((int)(sampleCloudPattern(g, lon, lat) * 255 + 0.5), 0, 255);
             // a polar vortex pattern on gas giants
-            if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) albedo[i] = (uint8_t)clampi((int)(albedo[i] * (1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat)))), 0, 255);
+            if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG)
+                albedo[i] = (uint8_t)clampi((int)(albedo[i] * (1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat)))), 0, 255);
         }
     }
     seed = g.seed;

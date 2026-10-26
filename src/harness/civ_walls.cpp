@@ -25,7 +25,15 @@ void wallSlice(const FormMesh& m, double h, std::vector<WSeg>& segs, std::vector
         }
         if (ni < 2) continue;
         int bi = 0, bj = 1; double best = -1;
-        for (int i = 0; i < ni; i++) for (int j = i + 1; j < ni; j++) { const double d = (ix[i] - ix[j]) * (ix[i] - ix[j]) + (iz[i] - iz[j]) * (iz[i] - iz[j]); if (d > best) { best = d; bi = i; bj = j; } }
+        for (int i = 0; i < ni; i++)
+            for (int j = i + 1; j < ni; j++) {
+                const double d = (ix[i] - ix[j]) * (ix[i] - ix[j]) + (iz[i] - iz[j]) * (iz[i] - iz[j]);
+                if (d > best) {
+                    best = d;
+                    bi = i;
+                    bj = j;
+                }
+            }
         segs.push_back({ix[bi], iz[bi], ix[bj], iz[bj]});
     }
     // two faces at one place (a pier's side and the strip's beside it) cross the plane in one segment: once only, or the crossings' parity fails
@@ -125,9 +133,10 @@ void wallsOfPieces(const std::vector<Form>& el, const RuinSpec* sp, const std::s
             if (f) { T.feet++; k.feet++; }
             if (a) { T.above++; k.above++; }
             if ((f || a) && k.example.empty())
-                k.example = fmt("%s: piece %zu (%.1f %.1f, hx %.2f hz %.2f, y %.2f..%.2f, tilt %.2f, broken %.2f), disc r %.2f at %.1f %.1f y %.2f..%.2f, walk %d/%d (top %.2f), above %d/%d\n      FORM %d %d %.4f %.4f %.6f %.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f %d %d %.6f %.6f %u %d",
-                                where.c_str(), i, e.x, e.z, e.hx, e.hz, e.y0, e.y1, e.tilt, e.broken, q.r, q.x, q.z, q.y0, q.y1, D.walkCov, D.walkN, D.hiCov, D.upCov, D.upN,
-                                e.kind, e.sub, e.x, e.z, e.heading, e.hx, e.hz, e.y0, e.y1, e.p[0], e.p[1], e.p[2], e.p[3], e.sides, e.part, e.broken, e.tilt, e.seed, (int)e.absolute);
+                k.example = fmt("%s: piece %zu (%.1f %.1f, hx %.2f hz %.2f, y %.2f..%.2f, tilt %.2f, broken %.2f), disc r %.2f at %.1f %.1f y %.2f..%.2f, walk %d/%d (top %.2f), above %d/%d\n      "
+                                "FORM %d %d %.4f %.4f %.6f %.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f %d %d %.6f %.6f %u %d",
+                        where.c_str(), i, e.x, e.z, e.hx, e.hz, e.y0, e.y1, e.tilt, e.broken, q.r, q.x, q.z, q.y0, q.y1, D.walkCov, D.walkN, D.hiCov, D.upCov, D.upN, e.kind, e.sub, e.x, e.z,
+                        e.heading, e.hx, e.hz, e.y0, e.y1, e.p[0], e.p[1], e.p[2], e.p[3], e.sides, e.part, e.broken, e.tilt, e.seed, (int)e.absolute);
         }
     }
 }
@@ -152,7 +161,16 @@ void wallPlacesOf(const BodyGen& g, const std::string& name, int people, std::ve
     if (pp.places.empty()) return;
     std::vector<int> ranks{0};
     for (const PlanPlace& p : pp.places) if (p.sclass == SC_CITY) { ranks.push_back(p.rank); break; }
-    for (int rk : ranks) { WallPlace w; w.people = people; w.gLat = pp.places[rk].gLat; w.gLon = pp.places[rk].gLon; if (ruinOfCell(g, w.gLat, w.gLon, w.sp, true)) { w.what = fmt("%s's %s", name.c_str(), rk == 0 ? "capital" : "city"); out.push_back(w); } }
+    for (int rk : ranks) {
+        WallPlace w;
+        w.people = people;
+        w.gLat = pp.places[rk].gLat;
+        w.gLon = pp.places[rk].gLon;
+        if (ruinOfCell(g, w.gLat, w.gLon, w.sp, true)) {
+            w.what = fmt("%s's %s", name.c_str(), rk == 0 ? "capital" : "city");
+            out.push_back(w);
+        }
+    }
     int want[4] = {SC_TOWN, SC_VILLAGE, SC_HAMLET, SC_MONUMENT}; bool got[4] = {false, false, false, false}; int n = 0;
     for (int ring = 1; ring < 40 && n < std::min(4, countryside); ring++)
         for (int dl = -ring; dl <= ring && n < std::min(4, countryside); dl++)
@@ -230,7 +248,9 @@ void walkPlace(SurfaceView& sv, double px, double pz, double R, int n, double se
         for (const auto& c : cols) {   // B-420: a boulder that blocks is one drawn: off a road's or a street's bed, off a work's ground
             if (c.kind != 0) continue;
             T.rocks++;
-            if ((!sv.site.roads.empty() && sv.site.roadCover(c.x, c.z) > 0.3) || (!sv.site.marks.empty() && sv.site.markCover(c.x, c.z) > 0.3) || (!sv.site.edits.empty() && sv.site.editCover(c.x, c.z) > 0.3)) T.rocksOnBeds++;
+            if ((!sv.site.roads.empty() && sv.site.roadCover(c.x, c.z) > 0.3) || (!sv.site.marks.empty() && sv.site.markCover(c.x, c.z) > 0.3) ||
+                    (!sv.site.edits.empty() && sv.site.editCover(c.x, c.z) > 0.3))
+                T.rocksOnBeds++;
         }
         bool clear = true; for (const auto& c : cols) if (std::hypot(c.x - sx, c.z - sz) < c.r + 0.5 && c.y0 < gy + 1.8 && c.y1 > gy + 0.1) { clear = false; break; }
         if (!clear) continue;
@@ -259,9 +279,12 @@ void walkPlace(SurfaceView& sv, double px, double pz, double R, int n, double se
                 if (T.ex.size() < 12) {
                     std::string near;
                     sv.collectColliders(sv.player.x, sv.player.z, cols);
-                    for (const auto& c : cols) if (std::hypot(c.x - sv.player.x, c.z - sv.player.z) < c.r + 0.8) near += fmt(" [kind %d r %.2f at %.1f %.1f y %.2f..%.2f]", c.kind, c.r, c.x - sv.player.x, c.z - sv.player.z, c.y0 - sv.player.y, c.y1 - sv.player.y);
+                    for (const auto& c : cols)
+                        if (std::hypot(c.x - sv.player.x, c.z - sv.player.z) < c.r + 0.8)
+                            near += fmt(" [kind %d r %.2f at %.1f %.1f y %.2f..%.2f]", c.kind, c.r, c.x - sv.player.x, c.z - sv.player.z, c.y0 - sv.player.y, c.y1 - sv.player.y);
                     double lat, lon, slat, slon, clat, clon; sv.site.latLonAt(sv.player.x, sv.player.z, lat, lon); sv.site.latLonAt(sx, sz, slat, slon); sv.site.latLonAt(0, 0, clat, clon);
-                    T.ex.push_back(fmt("%s: stopped at %.5f %.5f heading %.1f, feet %.2f over the ground%s\n      (walls walk ... %.6f %.6f %.3f %.6f %.6f)", what.c_str(), lat / DEG, lon / DEG, heading / DEG, sv.player.y - sv.site.groundHeight(sv.player.x, sv.player.z), near.c_str(), slat / DEG, slon / DEG, heading / DEG, clat / DEG, clon / DEG));
+                    T.ex.push_back(fmt("%s: stopped at %.5f %.5f heading %.1f, feet %.2f over the ground%s\n      (walls walk ... %.6f %.6f %.3f %.6f %.6f)", what.c_str(), lat / DEG, lon / DEG,
+                            heading / DEG, sv.player.y - sv.site.groundHeight(sv.player.x, sv.player.z), near.c_str(), slat / DEG, slon / DEG, heading / DEG, clat / DEG, clon / DEG));
                 }
             }
             break;
@@ -271,7 +294,11 @@ void walkPlace(SurfaceView& sv, double px, double pz, double R, int n, double se
 // B-421: where a cell's records and instruments lie, as the explorer meets them: in water (not drawn), inside a piece, a boulder or a trunk,
 // under a heap, inside a drawn piece without a collider (a low heap of rubble, a drift), out of reach (a walk on a 25 cm grid from round it
 // to within E's reach, on its floor), an instrument through a wall or over a record
-struct RecTally { int records = 0, instruments = 0, water = 0, inside = 0, heap = 0, hidden = 0, unreachable = 0, through = 0, overlap = 0; std::map<std::string, int> byPlace; std::vector<std::string> ex; };
+struct RecTally {
+    int records = 0, instruments = 0, water = 0, inside = 0, heap = 0, hidden = 0, unreachable = 0, through = 0, overlap = 0;
+    std::map<std::string, int> byPlace;
+    std::vector<std::string> ex;
+};
 bool reachableOnFoot(SurfaceView& sv, double ix, double iz, double reach, double& gyItem, double half = 10.0) {
     const double cell = half > 30 ? 0.4 : 0.25;
     const int N = (int)(2 * half / cell);
@@ -281,12 +308,21 @@ bool reachableOnFoot(SurfaceView& sv, double ix, double iz, double reach, double
     for (int q = 0; q < 5; q++) {
         const double qx = q == 0 ? ix : ix + ((q & 1) ? half : -half), qz = q == 0 ? iz : iz + ((q & 2) ? half : -half);
         sv.collectColliders(qx, qz, cols);
-        for (const auto& c : cols) { bool dup = false; for (const auto& d : all) if (std::fabs(d.x - c.x) < 1e-6 && std::fabs(d.z - c.z) < 1e-6 && std::fabs(d.r - c.r) < 1e-6 && std::fabs(d.y0 - c.y0) < 1e-6) { dup = true; break; } if (!dup) all.push_back(c); }
+        for (const auto& c : cols) {
+            bool dup = false;
+            for (const auto& d : all)
+                if (std::fabs(d.x - c.x) < 1e-6 && std::fabs(d.z - c.z) < 1e-6 && std::fabs(d.r - c.r) < 1e-6 && std::fabs(d.y0 - c.y0) < 1e-6) {
+                    dup = true;
+                    break;
+                }
+            if (!dup) all.push_back(c);
+        }
     }
     sv.collectSupports(ix, iz, half + 2);
     std::vector<float> floorH((size_t)N * N);
     std::vector<char> blocked((size_t)N * N, 0);
-    for (int j = 0; j < N; j++) for (int i = 0; i < N; i++) { const double x = x0 + (i + 0.5) * cell, z = z0 + (j + 0.5) * cell; floorH[(size_t)j * N + i] = (float)sv.floorAt(x, z, 1e9); }   // a heap's whole top (it is solid)
+    // a heap's whole top (it is solid)
+    for (int j = 0; j < N; j++) for (int i = 0; i < N; i++) { const double x = x0 + (i + 0.5) * cell, z = z0 + (j + 0.5) * cell; floorH[(size_t)j * N + i] = (float)sv.floorAt(x, z, 1e9); }
     for (const auto& c : all) {
         const double rr = c.r + 0.35;
         const int i0 = std::max(0, (int)std::floor((c.x - rr - x0) / cell)), i1 = std::min(N - 1, (int)std::floor((c.x + rr - x0) / cell));
@@ -356,11 +392,23 @@ void recordsOfCell(SurfaceView& sv, const Ruin& r, const SurfaceView::RuinCell& 
         std::string bad;
         if (w > -1e8 && gy < w + 0.05) { T.water++; bad += " IN WATER"; }
         sv.collectColliders(x, z, cols);
-        for (const auto& c : cols) if (std::hypot(c.x - x, c.z - z) < c.r + 0.12 && c.y0 < gy + 0.4 && c.y1 > gy + 0.05) { T.inside++; bad += fmt(" INSIDE A %s", c.kind == 0 ? "BOULDER" : (c.kind == 1 ? "TRUNK" : (c.kind == 2 ? "LOG" : "PIECE"))); break; }
+        for (const auto& c : cols)
+            if (std::hypot(c.x - x, c.z - z) < c.r + 0.12 && c.y0 < gy + 0.4 && c.y1 > gy + 0.05) {
+                T.inside++;
+                bad += fmt(" INSIDE A %s", c.kind == 0 ? "BOULDER" : (c.kind == 1 ? "TRUNK" : (c.kind == 2 ? "LOG" : "PIECE")));
+                break;
+            }
         sv.collectSupports(x, z);
         if (sv.floorAt(x, z, 1e9) > gy + 0.25) { T.heap++; bad += " UNDER A HEAP"; }
         drawnNear(sv, x, z, 0.5, near);
-        for (const NearMesh& nm : near) { wallSlice(nm.m, gy + 0.06, segs, pts); if (sliceNear(segs, pts, x, z, -0.02)) { T.hidden++; bad += fmt(" HIDDEN IN A %s (part %d)", FORM_KIND_NAMES[nm.f->kind], nm.f->part); break; } }
+        for (const NearMesh& nm : near) {
+            wallSlice(nm.m, gy + 0.06, segs, pts);
+            if (sliceNear(segs, pts, x, z, -0.02)) {
+                T.hidden++;
+                bad += fmt(" HIDDEN IN A %s (part %d)", FORM_KIND_NAMES[nm.f->kind], nm.f->part);
+                break;
+            }
+        }
         double gi; if (!reachableOnFoot(sv, x, z, 2.0, gi, clampd(cell.spec.size + 8, 10, cell.spec.work >= 0 ? 90.0 : 30.0))) {
             T.unreachable++; { double la, lo; sv.site.latLonAt(x, z, la, lo); bad += fmt(" OUT OF REACH (at %.6f %.6f degrees: `walls reach`)", la / DEG, lo / DEG); }
             if (getenv("WALLS_DUMP"))   // what stands round it with a collider
@@ -370,7 +418,8 @@ void recordsOfCell(SurfaceView& sv, const Ruin& r, const SurfaceView::RuinCell& 
                     std::vector<FormDisc> d1; formColliders(e, d1);
                     if (d1.empty()) continue;
                     const Building* B = e.building >= 0 && e.building < (int)cell.spec.buildings.size() ? &cell.spec.buildings[e.building] : nullptr;
-                    printf("      near: %s %d part %d of a %s at %.1f %.1f (%.1f off), hx %.2f hz %.2f y %.2f..%.2f tilt %.2f, %zu discs\n", FORM_KIND_NAMES[e.kind], e.sub, e.part, B ? BUILDING_KIND_NAMES[B->kind] : "-", ex - x, ez - z, std::hypot(ex - x, ez - z), e.hx, e.hz, e.y0, e.y1, e.tilt, d1.size());
+                    printf("      near: %s %d part %d of a %s at %.1f %.1f (%.1f off), hx %.2f hz %.2f y %.2f..%.2f tilt %.2f, %zu discs\n", FORM_KIND_NAMES[e.kind], e.sub, e.part,
+                            B ? BUILDING_KIND_NAMES[B->kind] : "-", ex - x, ez - z, std::hypot(ex - x, ez - z), e.hx, e.hz, e.y0, e.y1, e.tilt, d1.size());
                 }
         }
         if (objBegin) {   // an instrument's body: clear of the pieces' colliders and of the drawn pieces at its height
@@ -388,9 +437,17 @@ void recordsOfCell(SurfaceView& sv, const Ruin& r, const SurfaceView::RuinCell& 
             for (const ShardSite& s : shards) if (std::hypot(r.x + s.x - x, r.z + s.z - z) < 0.5) { T.overlap++; bad += " OVER A RECORD"; break; }
         }
         T.byPlace[std::string(kind) + " in " + place]++;
-        if (!bad.empty() && T.ex.size() < 40) { double lat, lon; sv.site.latLonAt(x, z, lat, lon); T.ex.push_back(fmt("%s: %s in %s at %.5f %.5f:%s", what.c_str(), kind.c_str(), place, lat / DEG, lon / DEG, bad.c_str())); }
+        if (!bad.empty() && T.ex.size() < 40) {
+            double lat, lon;
+            sv.site.latLonAt(x, z, lat, lon);
+            T.ex.push_back(fmt("%s: %s in %s at %.5f %.5f:%s", what.c_str(), kind.c_str(), place, lat / DEG, lon / DEG, bad.c_str()));
+        }
     };
-    for (size_t k = 0; k < shards.size(); k++) { const ShardSite& s = shards[k]; T.records++; check(r.x + s.x, r.z + s.z, s.wallD > 0 ? "a painted wall's stand" : "a record", s.building, nullptr, nullptr); }
+    for (size_t k = 0; k < shards.size(); k++) {
+        const ShardSite& s = shards[k];
+        T.records++;
+        check(r.x + s.x, r.z + s.z, s.wallD > 0 ? "a painted wall's stand" : "a record", s.building, nullptr, nullptr);
+    }
     if (ids.size() == instruments.size() && first.size() == instruments.size() + 1)
         for (size_t k = 0; k < instruments.size(); k++) {
             if (ids[k] < 0) continue;
@@ -414,7 +471,9 @@ int runWalls(int argc, char** argv) {
         struct WW { int64_t sx, sy, sz; int body; const char* label; };
         std::vector<WW> worlds;
         for (int a = 0; a < AGE_COUNT; a++) worlds.push_back({AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, AGE_WORLDS[a].body, "age"});
-        for (int a = 0; a < AGE_COUNT; a++) if (AGE_SCENE_WORLDS[a].sx != AGE_WORLDS[a].sx || AGE_SCENE_WORLDS[a].sz != AGE_WORLDS[a].sz) worlds.push_back({AGE_SCENE_WORLDS[a].sx, 0, AGE_SCENE_WORLDS[a].sz, AGE_SCENE_WORLDS[a].body, "scene"});
+        for (int a = 0; a < AGE_COUNT; a++)
+            if (AGE_SCENE_WORLDS[a].sx != AGE_WORLDS[a].sx || AGE_SCENE_WORLDS[a].sz != AGE_WORLDS[a].sz)
+                worlds.push_back({AGE_SCENE_WORLDS[a].sx, 0, AGE_SCENE_WORLDS[a].sz, AGE_SCENE_WORLDS[a].body, "scene"});
         worlds.push_back({10549, -8, -5606, 2, "BUBAS"});
         for (const WW& w : worlds) {
             Star st; StarSystem sys; if (!systemAt(w.sx, w.sy, w.sz, st, sys, true)) continue;
@@ -472,7 +531,8 @@ int runWalls(int argc, char** argv) {
             }
         } else {
             for (int a = 0; a < AGE_COUNT; a++) worlds.push_back({AGE_SCENE_WORLDS[a].sx, 0, AGE_SCENE_WORLDS[a].sz, AGE_SCENE_WORLDS[a].body});
-            for (int a = 0; a < AGE_COUNT; a++) if (AGE_SCENE_WORLDS[a].sx != AGE_WORLDS[a].sx || AGE_SCENE_WORLDS[a].sz != AGE_WORLDS[a].sz) worlds.push_back({AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, AGE_WORLDS[a].body});
+            for (int a = 0; a < AGE_COUNT; a++)
+                if (AGE_SCENE_WORLDS[a].sx != AGE_WORLDS[a].sx || AGE_SCENE_WORLDS[a].sz != AGE_WORLDS[a].sz) worlds.push_back({AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, AGE_WORLDS[a].body});
             worlds.push_back({10549, -8, -5606, 2});
         }
         int done = 0;
@@ -502,7 +562,8 @@ int runWalls(int argc, char** argv) {
                     const int n = (wp.sp.sclass == SC_CAPITAL ? 16 : (wp.sp.sclass == SC_CITY ? 10 : (wp.work ? 4 : 6))) * walkScale;
                     walkPlace(sv, c->r.x, c->r.z, std::min(wp.sp.size, 600.0), n, 6.0, wp.sp.seed ^ 0xB420ULL, what, W);
                 }
-                printf("  %s%s: %zu places and works (%.1f s): %d walks, %d stopped, %d by nothing drawn; %d records, %d instruments\n", sys.bodies[wd.body].name.c_str(), people ? " (second)" : "", pick.size(), nowSec() - t0, W.walks, W.stuck, W.ghosts, R.records, R.instruments);
+                printf("  %s%s: %zu places and works (%.1f s): %d walks, %d stopped, %d by nothing drawn; %d records, %d instruments\n", sys.bodies[wd.body].name.c_str(), people ? " (second)" : "",
+                        pick.size(), nowSec() - t0, W.walks, W.stuck, W.ghosts, R.records, R.instruments);
                 fflush(stdout);
             }
         }
@@ -510,8 +571,9 @@ int runWalls(int argc, char** argv) {
         for (const auto& kv : W.causes) printf(" %s %d,", kv.first.c_str(), kv.second);
         printf("\n");
         for (const std::string& e : W.ex) printf("    %s\n", e.c_str());
-        printf("records %d, instruments %d: in water %d, inside a piece, a boulder or a trunk %d, under a heap %d, hidden in a drawn piece %d, out of reach %d; instruments through a wall %d, over a record %d\n",
-               R.records, R.instruments, R.water, R.inside, R.heap, R.hidden, R.unreachable, R.through, R.overlap);
+        printf("records %d, instruments %d: in water %d, inside a piece, a boulder or a trunk %d, under a heap %d, hidden in a drawn piece %d, out of reach %d; instruments through a wall %d, over a "
+               "record %d\n",
+                R.records, R.instruments, R.water, R.inside, R.heap, R.hidden, R.unreachable, R.through, R.overlap);
         for (const std::string& e : R.ex) printf("    %s\n", e.c_str());
         printf("(%.1f s)\n", nowSec() - t0);
         return 0;
@@ -540,7 +602,8 @@ int runWalls(int argc, char** argv) {
                 std::vector<WSeg> segs; std::vector<WPt> pts; const double h = std::max(0.05, 0.5 * (q.y0 + std::min(q.y1, 1.7)));
                 wallSlice(mesh, h, segs, pts);
                 double best = 1e9; for (const WSeg& sg : segs) best = std::min(best, segDist(sg, q.x, q.z));
-                printf("  disc %.2f %.2f r %.2f y %.2f..%.2f: walk %d/%d hi %.2f%s; at %.2f %zu segments, the nearest %.2f off its middle\n", q.x, q.z, q.r, q.y0, q.y1, D.walkCov, D.walkN, D.hiCov, f ? " GHOST" : "", h, segs.size(), best);
+                printf("  disc %.2f %.2f r %.2f y %.2f..%.2f: walk %d/%d hi %.2f%s; at %.2f %zu segments, the nearest %.2f off its middle\n", q.x, q.z, q.r, q.y0, q.y1, D.walkCov, D.walkN, D.hiCov,
+                        f ? " GHOST" : "", h, segs.size(), best);
             }
         }
         printf("%d ghosts at the feet\n", ghosts);
@@ -563,15 +626,23 @@ int runWalls(int argc, char** argv) {
                 int near = 0; for (const FormDisc& f : q) if (std::hypot(r.x + f.x - tx, r.z + f.z - tz) < f.r + rad) near++;
                 const Building* B = e.building >= 0 && e.building < (int)cell.spec.buildings.size() ? &cell.spec.buildings[e.building] : nullptr;
                 printf("  %s %d part %d of %s %d (door %d, style %d): at %.2f %.2f, heading %.2f, hx %.2f hz %.2f, y %.2f..%.2f, tilt %.2f, broken %.2f: %zu discs, %d within %.1f m\n",
-                       FORM_KIND_NAMES[e.kind], e.sub, e.part, B ? BUILDING_KIND_NAMES[B->kind] : "-", e.building, B ? B->door : -9, B ? B->style : -9, ex - tx, ez - tz, e.heading, e.hx, e.hz, e.y0, e.y1, e.tilt, e.broken, q.size(), near, rad);
+                        FORM_KIND_NAMES[e.kind], e.sub, e.part, B ? BUILDING_KIND_NAMES[B->kind] : "-", e.building, B ? B->door : -9, B ? B->style : -9, ex - tx, ez - tz, e.heading, e.hx, e.hz, e.y0,
+                        e.y1, e.tilt, e.broken, q.size(), near, rad);
             }
-            for (const ShardSite& s2 : cell.shards) if (std::hypot(r.x + s2.x - tx, r.z + s2.z - tz) < rad + 2) printf("  a record (building %d, %s) at %.2f %.2f\n", s2.building, buildingPlaceName(s2.place), r.x + s2.x - tx, r.z + s2.z - tz);
+            for (const ShardSite& s2 : cell.shards)
+                if (std::hypot(r.x + s2.x - tx, r.z + s2.z - tz) < rad + 2)
+                    printf("  a record (building %d, %s) at %.2f %.2f\n", s2.building, buildingPlaceName(s2.place), r.x + s2.x - tx, r.z + s2.z - tz);
         });
         std::vector<SurfaceView::Collider> cols; sv.collectColliders(tx, tz, cols);
         for (const auto& c : cols) if (c.kind != 3 && std::hypot(c.x - tx, c.z - tz) < c.r + rad) printf("  collider kind %d r %.2f at %.2f %.2f\n", c.kind, c.r, c.x - tx, c.z - tz);
         const SurfaceView::RuinCell* nr[4]; const int nn = sv.settlementsNear(std::floor(tx / 16) * 16 + 8, std::floor(tz / 16) * 16 + 8, nr);
-        printf("  %d settlements near the 16 m cell:", nn); for (int i = 0; i < nn; i++) printf(" [%s at %.0f %.0f, r %.0f]", SETTLEMENT_CLASS_NAMES[nr[i]->spec.sclass], nr[i]->r.x - tx, nr[i]->r.z - tz, nr[i]->r.size); printf("\n");
-        sv.forNearbyRuins(tx, tz, 1, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int ring) { printf("  cell %s (work %d) at %.0f %.0f, size %.0f, ring %d, %zu buildings\n", SETTLEMENT_CLASS_NAMES[cell.spec.sclass], cell.spec.work, r.x - tx, r.z - tz, r.size, ring, cell.spec.buildings.size()); });
+        printf("  %d settlements near the 16 m cell:", nn);
+        for (int i = 0; i < nn; i++) printf(" [%s at %.0f %.0f, r %.0f]", SETTLEMENT_CLASS_NAMES[nr[i]->spec.sclass], nr[i]->r.x - tx, nr[i]->r.z - tz, nr[i]->r.size);
+        printf("\n");
+        sv.forNearbyRuins(tx, tz, 1, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int ring) {
+            printf("  cell %s (work %d) at %.0f %.0f, size %.0f, ring %d, %zu buildings\n", SETTLEMENT_CLASS_NAMES[cell.spec.sclass], cell.spec.work, r.x - tx, r.z - tz, r.size, ring,
+                    cell.spec.buildings.size());
+        });
         return 0;
     }
     if (what == "place" && argc > 8) {   // `walls place <sx> <sy> <sz> <body> <latDeg> <lonDeg>`: the works round a point, their records and what lies at each
@@ -592,8 +663,8 @@ int runWalls(int argc, char** argv) {
                     if (!formWalkable(e) || std::hypot(e.x - s.x, e.z - s.z) > formReach(e) + 1) continue;
                     FormMesh m; formMesh(e, 0, Vec3(e.x, 0, e.z), 1.0, m, 1e9);
                     std::vector<WSeg> segs; std::vector<WPt> pts; wallSlice(m, 0.02, segs, pts);
-                    printf("    under %s %d of building %d at %.2f %.2f (reach %.1f): support %.2f, in its slice at 0.02 %d (%zu segments)\n", FORM_KIND_NAMES[e.kind], e.sub, e.building, e.x, e.z, formReach(e),
-                           formSupportAt(m, s.x, s.z), (int)sliceNear(segs, pts, s.x, s.z, 0.3), segs.size());
+                    printf("    under %s %d of building %d at %.2f %.2f (reach %.1f): support %.2f, in its slice at 0.02 %d (%zu segments)\n", FORM_KIND_NAMES[e.kind], e.sub, e.building, e.x, e.z,
+                            formReach(e), formSupportAt(m, s.x, s.z), (int)sliceNear(segs, pts, s.x, s.z, 0.3), segs.size());
                 }
             }
         }
@@ -610,7 +681,12 @@ int runWalls(int argc, char** argv) {
         setenv("WALLS_DUMP", "1", 1);
         sv.collectSupports(tx, tz, half + 2);
         printf("%zu supports; along +x from it:\n", sv.supports.size());
-        for (double d = 0; d <= half; d += 1.0) { const double x = tx + d, gr = sv.site.groundHeight(x, tz); bool bl = false; const double f = sv.floorAt(x, tz, gr + 1.0, &bl); printf("  %4.0f m: ground %.2f floor %.2f (top %.2f)%s\n", d, gr, f, sv.floorAt(x, tz, 1e9), bl ? " BLOCKED" : ""); }
+        for (double d = 0; d <= half; d += 1.0) {
+            const double x = tx + d, gr = sv.site.groundHeight(x, tz);
+            bool bl = false;
+            const double f = sv.floorAt(x, tz, gr + 1.0, &bl);
+            printf("  %4.0f m: ground %.2f floor %.2f (top %.2f)%s\n", d, gr, f, sv.floorAt(x, tz, 1e9), bl ? " BLOCKED" : "");
+        }
         double gi; const bool ok = reachableOnFoot(sv, tx, tz, 2.0, gi, half);
         printf("%s (shots/tests/walls_reach_0.png when not)\n", ok ? "reached" : "NOT reached");
         return 0;
@@ -635,11 +711,17 @@ int runWalls(int argc, char** argv) {
             sv.update(1.0 / 30, in, 0.0, true); in.newFrame();
             const double gy = sv.site.groundHeight(sv.player.x, sv.player.z);
             sv.collectSupports(sv.player.x, sv.player.z);
-            bool here = false, ahead = false; const double f = sv.floorAt(sv.player.x, sv.player.z, sv.player.y, &here); sv.floorAt(sv.player.x + hx * 0.5, sv.player.z + hz * 0.5, sv.player.y, &ahead);
+            bool here = false, ahead = false;
+            const double f = sv.floorAt(sv.player.x, sv.player.z, sv.player.y, &here);
+            sv.floorAt(sv.player.x + hx * 0.5, sv.player.z + hz * 0.5, sv.player.y, &ahead);
             if (k % 5 && k < 140) { /* every fifth frame */ }
-            printf("%3d at %.2f %.2f (%.2f m on): feet %.2f ground %.2f floor %.2f%s%s, onGround %d, v %.2f %.2f, %zu supports\n", k, sv.player.x - tx, sv.player.z - tz, (sv.player.x - tx) * hx + (sv.player.z - tz) * hz, sv.player.y, gy, f, here ? " INSIDE" : "", ahead ? " BLOCKED AHEAD" : "", (int)sv.player.onGround, sv.player.vx, sv.player.vz, sv.supports.size());
+            printf("%3d at %.2f %.2f (%.2f m on): feet %.2f ground %.2f floor %.2f%s%s, onGround %d, v %.2f %.2f, %zu supports\n", k, sv.player.x - tx, sv.player.z - tz,
+                    (sv.player.x - tx) * hx + (sv.player.z - tz) * hz, sv.player.y, gy, f, here ? " INSIDE" : "", ahead ? " BLOCKED AHEAD" : "", (int)sv.player.onGround, sv.player.vx, sv.player.vz,
+                    sv.supports.size());
             sv.collectColliders(sv.player.x, sv.player.z, cols);
-            for (const auto& c : cols) if (std::hypot(c.x - sv.player.x, c.z - sv.player.z) < c.r + 0.6) printf("      collider kind %d r %.2f at %.2f %.2f y %.2f..%.2f (feet-relative)\n", c.kind, c.r, c.x - sv.player.x, c.z - sv.player.z, c.y0 - sv.player.y, c.y1 - sv.player.y);
+            for (const auto& c : cols)
+                if (std::hypot(c.x - sv.player.x, c.z - sv.player.z) < c.r + 0.6)
+                    printf("      collider kind %d r %.2f at %.2f %.2f y %.2f..%.2f (feet-relative)\n", c.kind, c.r, c.x - sv.player.x, c.z - sv.player.z, c.y0 - sv.player.y, c.y1 - sv.player.y);
         }
         printf("what stops it: '%s'\n", whatStops(sv, sv.player.x, sv.player.z, hx, hz, sv.player.y).c_str());
         sv.forNearbyRuins(sv.player.x, sv.player.z, 1, [&](const Ruin& r, const SurfaceView::RuinCell& cell, int) {
@@ -649,9 +731,11 @@ int runWalls(int argc, char** argv) {
                 double gy = 0, skirt = 0; const bool drawn = e.absolute || sv.pieceFootNear(e, ex, ez, gy, skirt);
                 std::vector<FormDisc> q; formColliders(e, q);
                 printf("  form %s %d part %d in %s (%s): at %.2f %.2f (%.1f m), hx %.2f hz %.2f y %.2f..%.2f, tilt %.2f broken %.2f, walkable %d, foot %.2f (feet %.2f) skirt %.2f, %s, %zu discs\n",
-                       FORM_KIND_NAMES[e.kind], e.sub, e.part, e.building >= 0 && e.building < (int)cell.spec.buildings.size() ? BUILDING_KIND_NAMES[cell.spec.buildings[e.building].kind] : "-", SETTLEMENT_CLASS_NAMES[cell.spec.sclass],
-                       ex - sv.player.x, ez - sv.player.z, d, e.hx, e.hz, e.y0, e.y1, e.tilt, e.broken, (int)formWalkable(e), gy, sv.player.y, skirt, drawn ? "drawn" : "NOT DRAWN", q.size());
-                printf("      FORM %d %d %.4f %.4f %.6f %.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f %d %d %.6f %.6f %u %d\n", e.kind, e.sub, e.x, e.z, e.heading, e.hx, e.hz, e.y0, e.y1, e.p[0], e.p[1], e.p[2], e.p[3], e.sides, e.part, e.broken, e.tilt, e.seed, (int)e.absolute);
+                        FORM_KIND_NAMES[e.kind], e.sub, e.part, e.building >= 0 && e.building < (int)cell.spec.buildings.size() ? BUILDING_KIND_NAMES[cell.spec.buildings[e.building].kind] : "-",
+                        SETTLEMENT_CLASS_NAMES[cell.spec.sclass], ex - sv.player.x, ez - sv.player.z, d, e.hx, e.hz, e.y0, e.y1, e.tilt, e.broken, (int)formWalkable(e), gy, sv.player.y, skirt,
+                        drawn ? "drawn" : "NOT DRAWN", q.size());
+                printf("      FORM %d %d %.4f %.4f %.6f %.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f %d %d %.6f %.6f %u %d\n", e.kind, e.sub, e.x, e.z, e.heading, e.hx, e.hz, e.y0, e.y1, e.p[0], e.p[1],
+                        e.p[2], e.p[3], e.sides, e.part, e.broken, e.tilt, e.seed, (int)e.absolute);
             }
         });
         return 0;
@@ -682,8 +766,9 @@ void wallsChecks(const std::function<void(const char*, bool, const std::string&)
     }
     std::string worst; for (const auto& kv : T.byKey) if (kv.second.feet > 0 && worst.size() < 300) worst += fmt("; %s %ld", kv.first.c_str(), kv.second.feet);
     check("walls: every collider over what is drawn (B-420)", T.discs > 200000 && T.feet * 20000 <= T.discs,   // a few of the rare forms' approximations
-          fmt("%ld places and works of three age worlds, %ld pieces, %ld discs: %ld at the feet over nothing drawn (at most one in 20,000), %ld above them mostly over nothing (the jetpack's: a snapped tower's holes)%s (%.1f s)",
-              T.places, T.pieces, T.discs, T.feet, T.above, worst.c_str(), nowSec() - t0));
+            fmt("%ld places and works of three age worlds, %ld pieces, %ld discs: %ld at the feet over nothing drawn (at most one in 20,000), %ld above them mostly over nothing (the jetpack's: a "
+                "snapped tower's holes)%s (%.1f s)",
+                    T.places, T.pieces, T.discs, T.feet, T.above, worst.c_str(), nowSec() - t0));
     // the scene worlds (their peoples ended lately: most of their works stand): walks, records, a heap stood on
     WalkTally W; RecTally R; int climbed = 0, tried = 0; double bestRise = 0; std::string climbWhat;
     for (int a : {AGE_PREHISTORIC, AGE_MEDIEVAL, AGE_MODERN}) {
@@ -714,19 +799,30 @@ void wallsChecks(const std::function<void(const char*, bool, const std::string&)
                     sv.player.x = ex - hx * (reach + 3); sv.player.z = ez - hz * (reach + 3); sv.player.y = sv.site.groundHeight(sv.player.x, sv.player.z);
                     sv.player.vx = sv.player.vz = sv.player.vy = 0; sv.player.onGround = true; sv.player.yaw = hd;
                     Input in; in.down[KEY_W] = true; double rise = 0;
-                    for (int k = 0; k < (int)((2 * reach + 6) / 4.2 * 30) + 30; k++) { sv.player.yaw = hd; sv.update(1.0 / 30, in, 0.0, true); in.newFrame(); rise = std::max(rise, sv.player.y - sv.site.groundHeight(sv.player.x, sv.player.z)); }
+                    for (int k = 0; k < (int)((2 * reach + 6) / 4.2 * 30) + 30; k++) {
+                        sv.player.yaw = hd;
+                        sv.update(1.0 / 30, in, 0.0, true);
+                        in.newFrame();
+                        rise = std::max(rise, sv.player.y - sv.site.groundHeight(sv.player.x, sv.player.z));
+                    }
                     const double past = (sv.player.x - ex) * hx + (sv.player.z - ez) * hz;
                     bestRise = std::max(bestRise, rise);
-                    if (rise > 0.6 * (formTop(e) - e.y0) && past > reach) { climbed++; climbWhat = fmt("a %s of %s %.1f m high, %.0f m across: up %.1f m and over", FORM_KIND_NAMES[e.kind], what.c_str(), formTop(e), 2 * reach, rise); }
+                    if (rise > 0.6 * (formTop(e) - e.y0) && past > reach) {
+                        climbed++;
+                        climbWhat = fmt("a %s of %s %.1f m high, %.0f m across: up %.1f m and over", FORM_KIND_NAMES[e.kind], what.c_str(), formTop(e), 2 * reach, rise);
+                    }
                 }
         }
     }
     std::string causes; for (const auto& kv : W.causes) causes += fmt("%s%s %d", causes.empty() ? "" : ", ", kv.first.c_str(), kv.second);
     check("walls: walked through the places, stopped by what is drawn alone (B-420)", W.walks >= 150 && W.ghosts == 0 && W.rocks > 20 && W.rocksOnBeds == 0,
-          fmt("%d walks (%.0f m) through the scene worlds' places and works, %d stopped (%s), %d by nothing drawn%s%s; %d boulders that block round their starts, %d on a road's, a street's or a work's bed",
-              W.walks, W.metres, W.stuck, causes.c_str(), W.ghosts, W.ex.empty() ? "" : ": ", W.ex.empty() ? "" : W.ex[0].c_str(), W.rocks, W.rocksOnBeds));
+            fmt("%d walks (%.0f m) through the scene worlds' places and works, %d stopped (%s), %d by nothing drawn%s%s; %d boulders that block round their starts, %d on a road's, a street's or a "
+                "work's bed",
+                    W.walks, W.metres, W.stuck, causes.c_str(), W.ghosts, W.ex.empty() ? "" : ": ", W.ex.empty() ? "" : W.ex[0].c_str(), W.rocks, W.rocksOnBeds));
     check("walls: a heap, a bank or a barrow stood on and walked over (B-420)", climbed > 0, climbed ? climbWhat : fmt("%d tried, the best %.1f m up", tried, bestRise));
-    check("records: none in water, in or under a piece, out of reach (B-421)", R.records > 100 && R.instruments > 0 && R.water + R.inside + R.heap + R.hidden + R.unreachable + R.through + R.overlap == 0,
-          fmt("%d records and %d instruments in the scene worlds' places and works: %d in water, %d in a piece or a boulder, %d under a heap, %d hidden in a drawn piece, %d out of reach, %d instruments through a wall, %d over a record%s%s (%.1f s)",
-              R.records, R.instruments, R.water, R.inside, R.heap, R.hidden, R.unreachable, R.through, R.overlap, R.ex.empty() ? "" : ": ", R.ex.empty() ? "" : R.ex[0].c_str(), nowSec() - t0));
+    check("records: none in water, in or under a piece, out of reach (B-421)",
+            R.records > 100 && R.instruments > 0 && R.water + R.inside + R.heap + R.hidden + R.unreachable + R.through + R.overlap == 0,
+            fmt("%d records and %d instruments in the scene worlds' places and works: %d in water, %d in a piece or a boulder, %d under a heap, %d hidden in a drawn piece, %d out of reach, %d "
+                "instruments through a wall, %d over a record%s%s (%.1f s)",
+                    R.records, R.instruments, R.water, R.inside, R.heap, R.hidden, R.unreachable, R.through, R.overlap, R.ex.empty() ? "" : ": ", R.ex.empty() ? "" : R.ex[0].c_str(), nowSec() - t0));
 }

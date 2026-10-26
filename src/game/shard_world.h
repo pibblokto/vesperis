@@ -13,7 +13,9 @@
 #include <vector>
 
 struct ShardWorld { std::string key; bool valid = false; StarSystem sys; int body = -1; Lore lore; Tongue tongue; Language lang; std::vector<Shard> shards;
-                    int which = 0, peoples = 1, base = 0;   // C-13: which of the world's peoples this is, how many the world had, the guide index of this people's first shard (its records count from zero here; T-04: `lore.records` of them)
+                    // C-13: which of the world's peoples this is, how many the world had, the guide index of this people's first shard (its
+                    // records count from zero here; T-04: `lore.records` of them)
+                    int which = 0, peoples = 1, base = 0;
                     Tradition tradition; std::vector<int> pieceForm; std::vector<double> pieceSeconds; Piece piece;    // its music, the forms of its pieces, the piece on the screen
                     Voice voice; Speech speech;                                                                      // its voice and the shard on the screen spoken
                     Voice readVoice;                                                                                 // the ship reading a record with no voice of its own (`voiceRead`)

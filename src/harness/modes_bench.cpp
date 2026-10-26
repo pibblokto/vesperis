@@ -48,7 +48,15 @@ void fillBenchGuide(Guide& G) {
     for (int i = 0; i < 46; i++) G.names[key(i)] = fmt("THE EXPLORER'S NAME %d", i);
     for (int i = 0; i < 93; i++) G.visited.insert(Guide::starKey(150 + i, 0, 30 + i % 40));
     for (int i = 0; i < 65; i++) G.landed.insert(key(i));
-    for (int i = 0; i < 35; i++) { SurfaceMark m; m.body = key(i); m.lat = r.range(-1.2, 1.2); m.lon = r.range(-PI, PI); m.when = r.range(1e6, 2e7); if (i % 2) m.name = "A MARK"; G.marks.push_back(m); }
+    for (int i = 0; i < 35; i++) {
+        SurfaceMark m;
+        m.body = key(i);
+        m.lat = r.range(-1.2, 1.2);
+        m.lon = r.range(-PI, PI);
+        m.when = r.range(1e6, 2e7);
+        if (i % 2) m.name = "A MARK";
+        G.marks.push_back(m);
+    }
     for (int i = 0; i < 285; i++) G.shards.insert(key(i % 40) + "/S" + std::to_string(i));
     for (int i = 0; i < 268; i++) G.decoded[key(i % 40) + "/S" + std::to_string(i)] = i % 30;
     for (int i = 0; i < 24; i++) G.signals[key(i)] = i % 4;
@@ -64,11 +72,22 @@ void fillBenchGuide(Guide& G) {
         p.endClock = r.range(300, 700); p.endBar = r.range(5, 30); p.endKm = r.range(50, 200); p.endK = r.range(200, 600); p.endCause = 1;
         for (int i = 0; i < cams[k]; i++) p.cam.push_back(i % 3 == 0 ? i * 0.0371 : r.range(-PI, PI));   // clock, yaw, pitch where they changed
         for (int i = 0; i < times[k]; i++) p.time.push_back(i % 2 == 0 ? i * 3.7 : r.range(1e6, 2e7));
-        for (int i = 0; i < 42; i++) { ProbeSample q; q.clock = i * 15.7; q.bar = 0.1 * (i + 1) + r.range(0, 0.05); q.tempK = r.range(100, 400); q.windE = r.range(-150, 150); q.light = r.range(0, 1); q.layer = i % 4; q.flashes = i % 3; p.profile.push_back(q); }
+        for (int i = 0; i < 42; i++) {
+            ProbeSample q;
+            q.clock = i * 15.7;
+            q.bar = 0.1 * (i + 1) + r.range(0, 0.05);
+            q.tempK = r.range(100, 400);
+            q.windE = r.range(-150, 150);
+            q.light = r.range(0, 1);
+            q.layer = i % 4;
+            q.flashes = i % 3;
+            p.profile.push_back(q);
+        }
         for (int i = 0; i < layers[k]; i++) p.layers.push_back(r.range(0, 30));
         G.probes.push_back(p);
     }
-    for (int i = 0; i < 1087; i++) G.log.push_back({r.range(1e6, 2e7), i % 3 ? "SECTOR" : "SIGHT", fmt("ENTERED SECTOR %d:%d ON THE WORLD THE STARDRIFTER CIRCLES, THE %d ENTRY OF A LONG ROAD", i % 360, i % 180, i)});
+    for (int i = 0; i < 1087; i++)
+        G.log.push_back({r.range(1e6, 2e7), i % 3 ? "SECTOR" : "SIGHT", fmt("ENTERED SECTOR %d:%d ON THE WORLD THE STARDRIFTER CIRCLES, THE %d ENTRY OF A LONG ROAD", i % 360, i % 180, i)});
 }
 
 // B-310: `bench forest`: the forest scene at 4x rendered 150 times, for a profiler (`sample vesperis_test 5` on macOS)
@@ -108,7 +127,12 @@ struct Bench {
     // performance budgets. F-11: about 1.5x the dev Mac's medians after F-10 (an M4 of four performance and six efficiency cores;
     // at least the median + 0.5 ms), so a change that gives a gain back fails; `bench check <factor>` multiplies them for another machine
     // or one thread
-    void budget(const char* name, double ms, double limit) { limit *= slack; bool ok = ms <= limit; printf("budget %-14s %.1f ms (limit %g) %s\n", name, ms, limit, ok ? "ok" : "EXCEEDED"); if (!ok) fails++; }
+    void budget(const char* name, double ms, double limit) {
+        limit *= slack;
+        bool ok = ms <= limit;
+        printf("budget %-14s %.1f ms (limit %g) %s\n", name, ms, limit, ok ? "ok" : "EXCEEDED");
+        if (!ok) fails++;
+    }
 
     void space();   // the start: space at each scale, the telescope at its deepest
     void descent();   // the landing map, the drainage tiles, the descent's first frames
@@ -131,7 +155,14 @@ void Bench::space() {
     game.settingsPath = "shots/tests/test_settings.txt";
     game.guidePath = "shots/tests/bench_guide.txt";
     press(KEY_ENTER);
-    for (int s = 1; s <= 4; s++) { game.settings.renderScale = s; game.applySettings(); settle(); double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60); if (s == 2) space2x = ms; if (s == 4) space4x = ms; }
+    for (int s = 1; s <= 4; s++) {
+        game.settings.renderScale = s;
+        game.applySettings();
+        settle();
+        double ms = bench(("space " + std::to_string(s) + "x").c_str(), 60);
+        if (s == 2) space2x = ms;
+        if (s == 4) space4x = ms;
+    }
     {   // W-06: the telescope at its deepest magnification on the parked world (the globe fills the frame), 2x
         game.settings.renderScale = 2; game.applySettings();
         game.testAimAtBody(game.testParkedBody()); press(KEY_Z); for (int i = 0; i < 9; i++) press(KEY_EQUAL);
@@ -164,7 +195,10 @@ void Bench::descent() {
             worst = std::max(worst, ms);
         }
         printf("descent      first frame %.1f ms, worst of 60: %.1f ms\n", first, worst);
-        { const double* ms = game.testRenderMs(); printf("  last frame's render sections: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]); }
+        {
+            const double* ms = game.testRenderMs();
+            printf("  last frame's render sections: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", ms[0], ms[1], ms[2], ms[3], ms[4], ms[5]);
+        }
         descentFirst = first;
     }
     for (int i = 0; i < 60 * 7; i++) { game.frame(in, 1.0 / 60); in.newFrame(); }
@@ -208,7 +242,8 @@ void Bench::surface() {
     writePNG("shots/tests/bench_surface4.png", game.output(), FBW, FBH);
     // map cache counters
     const SpaceRenderer::MapStats& ms = game.testMapStats();
-    printf("maps         %d generated (%.0f ms each on the worker), %d hits, %d evicted, %zu held (cap 24)\n", ms.generated, ms.generated ? game.testGenMicros() / 1000.0 / ms.generated : 0.0, ms.hits, ms.evicted, game.testMapsHeld());
+    printf("maps         %d generated (%.0f ms each on the worker), %d hits, %d evicted, %zu held (cap 24)\n", ms.generated, ms.generated ? game.testGenMicros() / 1000.0 / ms.generated : 0.0, ms.hits,
+            ms.evicted, game.testMapsHeld());
 }
 
 void Bench::forest() {
@@ -235,7 +270,8 @@ void Bench::forest() {
             double t0 = nowSec();
             for (int i = 0; i < 30; i++) { sv4.update(1.0 / 30, in4, t4 + i * 0.033, false); sv4.render(fb4, t4 + i * 0.033, nb4.stars, sr4, 1.0); fb4.mush(2); }
             double ms = (nowSec() - t0) * 1000 / 30;
-            printf("forest 4x    %.2f ms/frame (flora sections trees %.1f, cells %.1f ms; %d trees listed, %d visits over the bands)\n", ms, sv4.lastFloraMs[0], sv4.lastFloraMs[1], sv4.lastTreesListed, sv4.lastTreesVisited);
+            printf("forest 4x    %.2f ms/frame (flora sections trees %.1f, cells %.1f ms; %d trees listed, %d visits over the bands)\n", ms, sv4.lastFloraMs[0], sv4.lastFloraMs[1],
+                    sv4.lastTreesListed, sv4.lastTreesVisited);
             budget("forest 4x", ms, 13);   // 8.37 after F-10 (F-11: 24 -> 13)
             printf("             %s\n             %s\n", sv4.bandTraceLine(false).c_str(), sv4.bandTraceLine(true).c_str());
             {   // the same forest at the game's kernel (the game's fine mush at 4x is 3x3; the row above runs setFramebufferScale's 5x5)
@@ -295,7 +331,8 @@ void Bench::city() {
                 double t0 = nowSec();
                 for (int i = 0; i < 30; i++) { svC.update(1.0 / 30, inC, tC + i * 0.033, false); svC.render(fbC, tC + i * 0.033, nbC.stars, srC, 1.0); fbC.mush(2); }
                 double ms = (nowSec() - t0) * 1000 / 30;
-                printf("city 2x      %.2f ms/frame %s (the forms %.2f ms: %d items, %d polygons, %d lines, %d silhouettes)\n", ms, view == 0 ? "from its edge" : "in its plaza", svC.lastRuinMs, svC.lastRuinElems, svC.lastFormPolys, svC.lastFormLines, svC.lastSilhouettes);
+                printf("city 2x      %.2f ms/frame %s (the forms %.2f ms: %d items, %d polygons, %d lines, %d silhouettes)\n", ms, view == 0 ? "from its edge" : "in its plaza", svC.lastRuinMs,
+                        svC.lastRuinElems, svC.lastFormPolys, svC.lastFormLines, svC.lastSilhouettes);
                 saveFB(fbC, view == 0 ? "shots/tests/bench_city.png" : "shots/tests/bench_city_plaza.png");
                 worst = std::max(worst, ms);
             }
@@ -311,7 +348,14 @@ void Bench::herd() {
         if (setupSceneForType(PT_FELISIAN, 12, 40 * DEG, 0.0, 0.0, sv3, sys3, nb3, t3, SCENE_HERD)) {
             Framebuffer fb3; Input in3;
             double upd = 0, drw = 0; int n = 0; for (const Critter& c : sv3.critters) if (c.herd == 0) n++;
-            for (int i = 0; i < 20; i++) { sv3.update(1.0 / 30, in3, t3 + i * 0.033, false); sv3.render(fb3, t3 + i * 0.033, nb3.stars, sr3, 1.0); if (i >= 5) { upd += sv3.lastLifeMs[0]; drw += sv3.lastLifeMs[1]; } }
+            for (int i = 0; i < 20; i++) {
+                sv3.update(1.0 / 30, in3, t3 + i * 0.033, false);
+                sv3.render(fb3, t3 + i * 0.033, nb3.stars, sr3, 1.0);
+                if (i >= 5) {
+                    upd += sv3.lastLifeMs[0];
+                    drw += sv3.lastLifeMs[1];
+                }
+            }
             printf("herd 1x      update %.2f ms, draw %.2f ms per frame (%d in the herd, %zu creatures at the site)\n", upd / 15, drw / 15, n, sv3.critters.size());
             budget("herd draw 1x", drw / 15, 0.6);   // 0.07 after F-10 (F-11: 1 -> 0.6, the median + 0.5)
         }
@@ -324,7 +368,17 @@ void Bench::drive() {
         if (game.testDriveSetup()) {
             Input in4; in4.down[KEY_W] = true;
             double sum = 0, worst = 0;
-            for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in4, 1.0 / 30); in4.newFrame(); in4.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
+            for (int i = 0; i < 90; i++) {
+                double t0 = nowSec();
+                game.frame(in4, 1.0 / 30);
+                in4.newFrame();
+                in4.down[KEY_W] = true;
+                double ms = (nowSec() - t0) * 1000;
+                if (i >= 30) {
+                    sum += ms;
+                    worst = std::max(worst, ms);
+                }
+            }
             printf("buggy 2x     %.2f ms/frame, worst %.1f ms (%s)\n", sum / 60, worst, game.testBuggyInfo().c_str());
             writePNG("shots/tests/bench_buggy.png", game.output(), FBW, FBH);
             budget("buggy 2x", sum / 60, 6.1);   // 4.02 after F-10 (F-11: 14 -> 6.1)
@@ -332,7 +386,17 @@ void Bench::drive() {
         if (game.testFlySetup(200)) {   // the drone 200 m up at full thrust, the camera tilted down 30 deg: the ground from the air
             Input in5; in5.down[KEY_W] = true; game.testSetPitch(-30 * DEG);
             double sum = 0, worst = 0;
-            for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in5, 1.0 / 30); in5.newFrame(); in5.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
+            for (int i = 0; i < 90; i++) {
+                double t0 = nowSec();
+                game.frame(in5, 1.0 / 30);
+                in5.newFrame();
+                in5.down[KEY_W] = true;
+                double ms = (nowSec() - t0) * 1000;
+                if (i >= 30) {
+                    sum += ms;
+                    worst = std::max(worst, ms);
+                }
+            }
             printf("drone 2x     %.2f ms/frame, worst %.1f ms (%s)\n", sum / 60, worst, game.testDroneInfo().c_str());
             writePNG("shots/tests/bench_drone.png", game.output(), FBW, FBH);
             budget("drone 2x", sum / 60, 3.3);   // 2.20 after F-10 (F-11: 16 -> 3.3)
@@ -341,7 +405,17 @@ void Bench::drive() {
         if (game.testDriveSetup()) {
             Input in4; in4.down[KEY_W] = true;
             double sum = 0, worst = 0;
-            for (int i = 0; i < 90; i++) { double t0 = nowSec(); game.frame(in4, 1.0 / 30); in4.newFrame(); in4.down[KEY_W] = true; double ms = (nowSec() - t0) * 1000; if (i >= 30) { sum += ms; worst = std::max(worst, ms); } }
+            for (int i = 0; i < 90; i++) {
+                double t0 = nowSec();
+                game.frame(in4, 1.0 / 30);
+                in4.newFrame();
+                in4.down[KEY_W] = true;
+                double ms = (nowSec() - t0) * 1000;
+                if (i >= 30) {
+                    sum += ms;
+                    worst = std::max(worst, ms);
+                }
+            }
             printf("buggy 4x     %.2f ms/frame, worst %.1f ms\n", sum / 60, worst);
             budget("buggy 4x", sum / 60, 6.1);   // 4.04 after F-10 (F-11: 24 -> 6.1)
         }
@@ -385,9 +459,17 @@ void Bench::vimana() {
                 game.testFlightSkip(0.5 * game.testFlightDur() - 1.0);
                 for (int i = 0; i < 60; i++) { game.frame(in7, 1.0 / 60); in7.newFrame(); }
                 double sum = 0, worst = 0;
-                for (int i = 0; i < 60; i++) { const double t0 = nowSec(); game.frame(in7, 1.0 / 60); in7.newFrame(); const double ms = (nowSec() - t0) * 1000; sum += ms; worst = std::max(worst, ms); }
+                for (int i = 0; i < 60; i++) {
+                    const double t0 = nowSec();
+                    game.frame(in7, 1.0 / 60);
+                    in7.newFrame();
+                    const double ms = (nowSec() - t0) * 1000;
+                    sum += ms;
+                    worst = std::max(worst, ms);
+                }
                 vimana2x = sum / 60;
-                printf("vimana 2x    %.2f ms/frame, worst %.1f ms (%zu keyframes, %d cells built the last frame)\n", vimana2x, worst, game.testFlightBand().tau.size(), game.testFlightBand().cellsFrame);
+                printf("vimana 2x    %.2f ms/frame, worst %.1f ms (%zu keyframes, %d cells built the last frame)\n", vimana2x, worst, game.testFlightBand().tau.size(),
+                        game.testFlightBand().cellsFrame);
                 writePNG("shots/tests/bench_vimana.png", game.output(), FBW, FBH);
             } else printf("vimana 2x    no flight ('%s')\n", game.testStatus().c_str());
             game.settings.renderScale = 1; game.applySettings();
@@ -468,13 +550,21 @@ void Bench::people() {
             double sum = 0; worst = 0;
             for (int i = 0; i < 60; i++) { const double t0 = nowSec(); game.frame(in8, 1.0 / 60); in8.newFrame(); const double msF = (nowSec() - t0) * 1000; sum += msF; worst = std::max(worst, msF); }
             capital2x = sum / 60;
-            printf("capital 2x   %.2f ms/frame, worst %.1f ms (%s; the forms %.2f ms: %d items, %d polygons, %d lines)\n", capital2x, worst, game.testStatus().c_str(), game.testSurface().lastRuinMs, game.testSurface().lastRuinElems, game.testSurface().lastFormPolys, game.testSurface().lastFormLines);
+            printf("capital 2x   %.2f ms/frame, worst %.1f ms (%s; the forms %.2f ms: %d items, %d polygons, %d lines)\n", capital2x, worst, game.testStatus().c_str(), game.testSurface().lastRuinMs,
+                    game.testSurface().lastRuinElems, game.testSurface().lastFormPolys, game.testSurface().lastFormLines);
             writePNG("shots/tests/bench_capital.png", game.output(), FBW, FBH);
             {   // the capital at 4x (no budget)
                 game.settings.renderScale = 4; game.applySettings();
                 for (int i = 0; i < 10; i++) { game.frame(in8, 1.0 / 60); in8.newFrame(); }
                 sum = 0; worst = 0;
-                for (int i = 0; i < 60; i++) { const double t0 = nowSec(); game.frame(in8, 1.0 / 60); in8.newFrame(); const double msF = (nowSec() - t0) * 1000; sum += msF; worst = std::max(worst, msF); }
+                for (int i = 0; i < 60; i++) {
+                    const double t0 = nowSec();
+                    game.frame(in8, 1.0 / 60);
+                    in8.newFrame();
+                    const double msF = (nowSec() - t0) * 1000;
+                    sum += msF;
+                    worst = std::max(worst, msF);
+                }
                 printf("capital 4x   %.2f ms/frame, worst %.1f ms (the forms %.2f ms; F-01)\n", sum / 60, worst, game.testSurface().lastRuinMs);
                 budget("capital 4x", sum / 60, 8.3);   // 5.48 after F-10
             }
@@ -524,7 +614,8 @@ void Bench::unbudgeted() {
             budget("landzoom Z", zMs, 22);   // 14.45 after F-10
             rowF("landzoom 4x", 120, shiftRight, 3.9);   // Shift+Right held: 0.05 degrees a frame, the window built again as the cursor leaves three quarters of it; F-11: 2.56 after F-10
             inF.down[KEY_LEFT_SHIFT] = false; inF.down[KEY_RIGHT] = false;
-            printf("             %d builds in the 120 frames, the last: samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms\n", game.testZoomBuilds() - zb0 - 1, zp[0], zp[1], zp[2], zp[3], zp[4]);
+            printf("             %d builds in the 120 frames, the last: samples %.1f, colours %.1f, roads %.1f, plan ways %.1f, places %.1f ms\n", game.testZoomBuilds() - zb0 - 1, zp[0], zp[1], zp[2],
+                    zp[3], zp[4]);
             writePNG("shots/tests/bench_landzoom.png", game.output(), FBW, FBH);
             pressF(KEY_Z); pressF(KEY_ESCAPE); for (int i = 0; i < 10; i++) stepF();   // to space, parked
             if (game.state == GameState::SPACE) {
@@ -539,8 +630,15 @@ void Bench::unbudgeted() {
                 rowF("recording 4x", 30, [&]() { stepF(); const double t0 = nowSec(); game.recordFrame(); recMs += (nowSec() - t0) * 1000; }, 0);   // the writer's pace: no budget
                 game.toggleRecording();
                 const double tq = nowSec(); pngFlush(); const double queueMs = (nowSec() - tq) * 1000;   // the writer's queue out before the rows below
-                double pngMs = 1e9; for (int i = 0; i < 5; i++) { const double t0 = nowSec(); writePNG("shots/tests/bench_photo.png", game.output(), FBW, FBH); pngMs = std::min(pngMs, (nowSec() - t0) * 1000); }
-                printf("             the recorder's PNG %.1f ms a frame on the main thread (F-02: the copy for the writer's thread; its queue out %.1f ms after); a photo's PNG at %dx%d %.1f ms (the best of five)\n", recMs / 30, queueMs, FBW, FBH, pngMs);
+                double pngMs = 1e9;
+                for (int i = 0; i < 5; i++) {
+                    const double t0 = nowSec();
+                    writePNG("shots/tests/bench_photo.png", game.output(), FBW, FBH);
+                    pngMs = std::min(pngMs, (nowSec() - t0) * 1000);
+                }
+                printf("             the recorder's PNG %.1f ms a frame on the main thread (F-02: the copy for the writer's thread; its queue out %.1f ms after); a photo's PNG at %dx%d %.1f ms (the "
+                       "best of five)\n",
+                        recMs / 30, queueMs, FBW, FBH, pngMs);
                 budget("photo PNG", pngMs, 11);   // 7.2 after F-10
                 // the telescope at its deepest on the home world (the 2x row's view at 4x)
                 game.testAimAtBody(game.testParkedBody()); pressF(KEY_Z); for (int i = 0; i < 9; i++) pressF(KEY_EQUAL);
@@ -582,7 +680,8 @@ void Bench::unbudgeted() {
                     }
                     std::vector<double> sorted = fr; std::sort(sorted.begin(), sorted.end()); base = sorted[sorted.size() / 2];
                     for (double v : fr) { sum += v; worst = std::max(worst, v); if (v > base + 1.5) over++; }
-                    printf("sprint 4x    %.2f ms/frame over 120 (a second's sprint and its stop), median %.2f, worst %.1f ms, %d frames over the median + 1.5 ms (F-01)\n", sum / 120, base, worst, over);
+                    printf("sprint 4x    %.2f ms/frame over 120 (a second's sprint and its stop), median %.2f, worst %.1f ms, %d frames over the median + 1.5 ms (F-01)\n", sum / 120, base, worst,
+                            over);
                     budget("sprint 4x", sum / 120, 5.7);   // 3.77 after F-10
                 }
             }
@@ -661,8 +760,12 @@ void Bench::budgets() {
     budget("probe 2x", probe2x, 8.9);           // the descent's camera over the deck and between the decks; 5.89 after F-10 (F-11: 16 -> 8.9)
     budget("surface 2x", surface2x, 2.8);       // 1.82 after F-10 (F-11: 16 -> 2.8)
     budget("surface 4x", surface4x, 4.5);       // 2.97 after F-10
-    budget("descent first", descentFirst, 26);   // the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in. F-03: 40 -> 22 ms (the fill, the textures and the meso tiles on the pool), the budget 80 -> 35; F-11: 16.95 after F-10, 35 -> 26
-    budget("descent people", descentPeople, 62);   // onto a people's world beside its capital, its plan built at the parking. F-03: 79 -> 45 ms, the budget 80 -> 70; F-11: 41.1 after F-10 (51.7 in one run of four), 70 -> 62
+    // the four rings' first fill reads the drainage (12000 samples, +15 ms); the frame is under the fade-in. F-03: 40 -> 22 ms (the fill,
+    // the textures and the meso tiles on the pool), the budget 80 -> 35; F-11: 16.95 after F-10, 35 -> 26
+    budget("descent first", descentFirst, 26);
+    // onto a people's world beside its capital, its plan built at the parking. F-03: 79 -> 45 ms, the budget 80 -> 70; F-11: 41.1 after
+    // F-10 (51.7 in one run of four), 70 -> 62
+    budget("descent people", descentPeople, 62);
     budget("capital 2x", capital2x, 5.4);       // the modern test world's capital from its edge; 3.58 after F-10 (F-11: 16 -> 5.4)
     budget("sprint worst", runWorst, 10);       // the sprint's worst frame shows a cache's stall; 1.7 after F-10, 6.6 in one run of eight by the machine alone (F-11: 40 -> 10)
 }
@@ -737,13 +840,15 @@ int runPool() {
             }
             for (int i = 0; i < n; i++)
                 if (hits[i].load(std::memory_order_relaxed) != 1) {
-                    if (first.empty()) first = fmt("%s over %d (min %d, chunk %d, bands %d): index %d visited %d times", kind < 2 ? "parallelFor" : "parallelBands", n, mpt, chunk, bands, i, hits[i].load());
+                    if (first.empty())
+                        first = fmt("%s over %d (min %d, chunk %d, bands %d): index %d visited %d times", kind < 2 ? "parallelFor" : "parallelBands", n, mpt, chunk, bands, i, hits[i].load());
                     bad++; break;
                 }
             dispatches++;
             if (rnd(40) == 0) std::this_thread::sleep_for(std::chrono::microseconds(rnd(400)));   // now and then a rest: the workers fall asleep
         }
-        check(bad == 0 && badLayout == 0, fmt("dealing at %d threads", t), fmt("%ld dispatches, %ld with an index not visited once, %ld bands off the layout%s%s", dispatches, bad, badLayout.load(), first.empty() ? "" : "; ", first.c_str()));
+        check(bad == 0 && badLayout == 0, fmt("dealing at %d threads", t),
+                fmt("%ld dispatches, %ld with an index not visited once, %ld bands off the layout%s%s", dispatches, bad, badLayout.load(), first.empty() ? "" : "; ", first.c_str()));
     }
     parallelThreadsOverride() = 8;
     {   // a dispatch inside a dispatch: alone, in one call over the whole range
@@ -756,7 +861,8 @@ int runPool() {
         });
         int once = 0;
         for (auto& x : h) once += x.load() == 1;
-        check(once == O * I && innerCalls == O && innerWhole == O, "a dispatch inside a dispatch", fmt("%d of %d indices once, %d inner calls (%d whole) for %d inner dispatches", once, O * I, innerCalls.load(), innerWhole.load(), O));
+        check(once == O * I && innerCalls == O && innerWhole == O, "a dispatch inside a dispatch",
+                fmt("%d of %d indices once, %d inner calls (%d whole) for %d inner dispatches", once, O * I, innerCalls.load(), innerWhole.load(), O));
     }
     {   // two threads dispatching at once: one holds the pool, the other runs alone
         const long c0 = pool::contended();
@@ -800,7 +906,15 @@ int runBenchNoise() {
         printf("%-14s %6.1f ns a call (best of three passes over %d points), results' bits %016llx\n", name, best / N * 1e9, N, (unsigned long long)hashOf());
     };
     row("gnoise3", 1, [&]() { for (int i = 0; i < N; i++) out[i] = gnoise3(pts[i].x, pts[i].y, pts[i].z, seed); });
-    row("gnoise3d", 4, [&]() { for (int i = 0; i < N; i++) { Vec3 g; out[4 * (size_t)i] = gnoise3d(pts[i].x, pts[i].y, pts[i].z, seed, g); out[4 * (size_t)i + 1] = g.x; out[4 * (size_t)i + 2] = g.y; out[4 * (size_t)i + 3] = g.z; } });
+    row("gnoise3d", 4, [&]() {
+        for (int i = 0; i < N; i++) {
+            Vec3 g;
+            out[4 * (size_t)i] = gnoise3d(pts[i].x, pts[i].y, pts[i].z, seed, g);
+            out[4 * (size_t)i + 1] = g.x;
+            out[4 * (size_t)i + 2] = g.y;
+            out[4 * (size_t)i + 3] = g.z;
+        }
+    });
     row("worley3", 7, [&]() {
         for (int i = 0; i < N; i++) {
             const Worley3 w = worley3(pts[i] * 0.1, seed);
@@ -909,7 +1023,9 @@ int runLoad(int argc, char** argv) {
             if (drive) in.down[KEY_W] = true;
             const int rb = game.testSurface().roadsBuilds;
             const double ms = frame();
-            if (what == "capital" && frames == 0 && sec == 1) printf("  the first frame on the ground: %d trees listed (%.2f ms), %d drawn; the forms %.2f ms\n", game.testSurface().lastTreesListed, game.testSurface().lastFloraListMs, game.testSurface().lastTreesDrawn, game.testSurface().lastRuinMs);
+            if (what == "capital" && frames == 0 && sec == 1)
+                printf("  the first frame on the ground: %d trees listed (%.2f ms), %d drawn; the forms %.2f ms\n", game.testSurface().lastTreesListed, game.testSurface().lastFloraListMs,
+                        game.testSurface().lastTreesDrawn, game.testSurface().lastRuinMs);
             listWorst = std::max(listWorst, game.testSurface().lastFloraListMs);
             if (game.testSurface().roadsBuilds != rb) roadsWorst = std::max(roadsWorst, game.testSurface().lastRoadsMs);
             in.down[KEY_ENTER] = false; in.down[KEY_RIGHT] = false; in.down[KEY_C] = false;
@@ -918,18 +1034,22 @@ int runLoad(int argc, char** argv) {
             if (frames % 10 == 1) { const ProcSample q = procSample(); threads += q.threads; running += q.running; samples++; }
         }
         const ProcSample p1 = procSample(); const double w1 = nowSec();
-        printf("  %3d s: %.2f cores, %.1f threads (%.1f running), %d frames: mean %.1f ms, worst %.1f ms, state %d, %.0f MB%s\n", sec, (p1.cpuS - p0.cpuS) / (w1 - (w0 + sec - 1)), samples ? (double)threads / samples : 0.0,
-               samples ? (double)running / samples : 0.0, frames, frames ? sum / frames : 0.0, worst, (int)game.state, p1.rssMB,
-               game.testSurface().roadsBuilds != roads0 ? fmt("; the roads grown %d times, the worst %.1f ms (%.0f km/h)", game.testSurface().roadsBuilds - roads0, roadsWorst, game.testBuggySpeed() * 3.6).c_str() :
-               (what == "capital" ? fmt("; the flora's listing %.2f ms at worst, %d trees listed", listWorst, game.testSurface().lastTreesListed).c_str() :
-               (drive ? fmt("; %.0f km/h, %.2f km from the start, %zu road cells", game.testBuggySpeed() * 3.6, std::hypot(game.testPlayerX(), game.testPlayerZ()) / 1000, game.testSurface().site.roadCells.size()).c_str() : "")));
+        printf("  %3d s: %.2f cores, %.1f threads (%.1f running), %d frames: mean %.1f ms, worst %.1f ms, state %d, %.0f MB%s\n", sec, (p1.cpuS - p0.cpuS) / (w1 - (w0 + sec - 1)),
+                samples ? (double)threads / samples : 0.0, samples ? (double)running / samples : 0.0, frames, frames ? sum / frames : 0.0, worst, (int)game.state, p1.rssMB,
+                game.testSurface().roadsBuilds != roads0
+                        ? fmt("; the roads grown %d times, the worst %.1f ms (%.0f km/h)", game.testSurface().roadsBuilds - roads0, roadsWorst, game.testBuggySpeed() * 3.6).c_str()
+                        : (what == "capital" ? fmt("; the flora's listing %.2f ms at worst, %d trees listed", listWorst, game.testSurface().lastTreesListed).c_str()
+                                             : (drive ? fmt("; %.0f km/h, %.2f km from the start, %zu road cells", game.testBuggySpeed() * 3.6,
+                                                                std::hypot(game.testPlayerX(), game.testPlayerZ()) / 1000, game.testSurface().site.roadCells.size())
+                                                                       .c_str()
+                                                      : "")));
         p0 = p1;
         if (nowSec() - w0 >= secs) break;
     }
     std::sort(all.begin(), all.end());
     auto at = [&](double q) { return all.empty() ? 0.0 : all[std::min(all.size() - 1, (size_t)(q * all.size()))]; };
-    printf("load %s: the first frame %.1f ms; %zu frames: p50 %.1f, p99 %.1f, max %.1f ms; maps generated %d, blocking map calls %d (%.0f ms)\n", what.c_str(), first, all.size(), at(0.5), at(0.99), all.empty() ? 0.0 : all.back(),
-           game.testMapStats().generated - mapsBefore, game.testMapStats().blocked - blockedBefore, game.testMapStats().blockedMs - blockedMsBefore);
+    printf("load %s: the first frame %.1f ms; %zu frames: p50 %.1f, p99 %.1f, max %.1f ms; maps generated %d, blocking map calls %d (%.0f ms)\n", what.c_str(), first, all.size(), at(0.5), at(0.99),
+            all.empty() ? 0.0 : all.back(), game.testMapStats().generated - mapsBefore, game.testMapStats().blocked - blockedBefore, game.testMapStats().blockedMs - blockedMsBefore);
     return 0;
 }
 
@@ -953,7 +1073,15 @@ int runSoak(int argc, char** argv) {
     const double tick = 1.0 / 60;
     double next = nowSec();
     long frames = 0;
-    auto frame = [&]() { game.frame(in, tick); in.newFrame(); frames++; next += tick; const double wait = next - nowSec(); if (wait > 0) std::this_thread::sleep_for(std::chrono::duration<double>(wait)); else next = nowSec(); };
+    auto frame = [&]() {
+        game.frame(in, tick);
+        in.newFrame();
+        frames++;
+        next += tick;
+        const double wait = next - nowSec();
+        if (wait > 0) std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+        else next = nowSec();
+    };
     auto run = [&](double s) { for (int i = 0; i < (int)(s * 60); i++) frame(); };
     auto press = [&](int key) { in.pressed[key] = true; in.down[key] = true; frame(); in.down[key] = false; };
     press(KEY_ENTER);
@@ -982,8 +1110,8 @@ int runSoak(int argc, char** argv) {
         peakMB = ru.ru_maxrss / 1024.0;      // kilobytes on Linux
 #endif
 #endif
-        printf("  %5.1f min, stop %d (%s): %.0f MB resident, peak %.0f MB, %d threads; %zu maps held, %d drainage tiles; %ld frames\n", (nowSec() - w0) / 60, stop, game.testStarName().c_str(), p.rssMB, peakMB, p.threads,
-               game.testMapsHeld(), drainageTilesHeld(), frames);
+        printf("  %5.1f min, stop %d (%s): %.0f MB resident, peak %.0f MB, %d threads; %zu maps held, %d drainage tiles; %ld frames\n", (nowSec() - w0) / 60, stop, game.testStarName().c_str(),
+                p.rssMB, peakMB, p.threads, game.testMapsHeld(), drainageTilesHeld(), frames);
         fflush(stdout);
     }
     return 0;

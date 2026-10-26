@@ -321,7 +321,12 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
         case BK_HOUSE: houseRoom(b, R, true); return true;
         case BK_HALL:
             if (b.style == 1) { R.hw = b.hw; R.hd = b.hd; R.spots = {{0, 0}, {0, -b.hd * 0.4}, {0, b.hd * 0.4}}; return true; }   // the market hall: open on every side
-            if (b.style == 2) { rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0); const double cw = b.hw - 4.0, cd = b.hd - 4.0; R.spots = {{-cw * 0.5, -cd * 0.5}, {cw * 0.5, -cd * 0.5}, {0, -cd * 0.4}}; return true; }   // the palace's court
+            if (b.style == 2) {
+                rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0);
+                const double cw = b.hw - 4.0, cd = b.hd - 4.0;
+                R.spots = {{-cw * 0.5, -cd * 0.5}, {cw * 0.5, -cd * 0.5}, {0, -cd * 0.4}};
+                return true;
+            }   // the palace's court
             rectRoom(b, R, 0, 0, b.hw, b.hd, b.door, houseDoorPos(b, (b.door == 0 || b.door == 2) ? b.hw : b.hd)); R.spots = {{0, -b.hd + 1.3}, {0, -b.hd * 0.3}, {0, 0.2}};
             return true;
         case BK_TOWER: houseRoom(b, R, true); if (!R.round) { R.spots.clear(); rectSpots(R, b.door, 0, 0, b.hw, b.hd); } return true;
@@ -338,7 +343,12 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
         case BK_LONGHOUSE: rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0); R.spots = {{0, -b.hd + 1.2}, {0, -b.hd * 0.55}, {0, b.hd * 0.55}}; return true;
         case BK_TENT_RING: R.round = true; R.r = b.hw; R.spots = {{0, 0}, {b.hw * 0.35, 0}}; return true;
         case BK_STONE_CIRCLE: R.round = true; R.outside = true; R.r = b.hw; R.spots = {{0, 1.5}, {0, -1.5}, {1.8, 0}}; return true;
-        case BK_MENHIR: R.outside = true; R.hw = 1; R.hd = 1; R.spots = b.style == 1 ? std::vector<std::pair<double, double>>{{0, 0}, {0, b.hd * 0.5}} : std::vector<std::pair<double, double>>{{0, 1.6}, {0, -1.6}, {1.6, 0}}; return true;
+        case BK_MENHIR:
+            R.outside = true;
+            R.hw = 1;
+            R.hd = 1;
+            R.spots = b.style == 1 ? std::vector<std::pair<double, double>>{{0, 0}, {0, b.hd * 0.5}} : std::vector<std::pair<double, double>>{{0, 1.6}, {0, -1.6}, {1.6, 0}};
+            return true;
         case BK_STELA:
             R.outside = true; R.hw = 1; R.hd = 1;
             if (b.style == MN_ARCHES) R.spots = {{0, 1.8}, {0, -1.8}};
@@ -348,9 +358,14 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
         case BK_DOLMEN: rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0); R.spots = {{0, -b.hd * 0.35}, {0, 0}}; return true;
         case BK_TEMPLE:   // the nave, the domed hall, the house at the stepped mass's foot, the round temple (`genTemple`)
             if (b.style == 2) { rectRoom(b, R, 0, b.hd - 3.5, 3.2, 3.0, 0, 0); rectSpots(R, 0, 0, b.hd - 3.5, 3.2, 3.0); }
-            else if (b.style == 1) { rectRoom(b, R, 0, 0, b.hw, b.hw, 0, 0); R.spots = {{0, -b.hw + 2.0}, {-b.hw * 0.5, -b.hw * 0.5}, {b.hw * 0.5, -b.hw * 0.5}}; }
-            else if (b.style == 3) { const int segs = templeRingSegs(b), ds = ringDoorSegs(b.hw, segs); roundRoom(b, R, b.hw, b.form == PF_ELLIPSE ? b.hw * 1.25 : b.hw, segs, ((segs - ds / 2) % segs + segs) % segs, ds); }
-            else { rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0); R.spots = {{0, -b.hd + 2.0}, {0, -b.hd * 0.4}, {0, 0}}; }
+            else if (b.style == 1) { rectRoom(b, R, 0, 0, b.hw, b.hw, 0, 0); R.spots = {{0, -b.hw + 2.0}, {-b.hw * 0.5, -b.hw * 0.5}, {b.hw * 0.5, -b.hw * 0.5}};
+            } else if (b.style == 3) {
+                const int segs = templeRingSegs(b), ds = ringDoorSegs(b.hw, segs);
+                roundRoom(b, R, b.hw, b.form == PF_ELLIPSE ? b.hw * 1.25 : b.hw, segs, ((segs - ds / 2) % segs + segs) % segs, ds);
+            } else {
+                rectRoom(b, R, 0, 0, b.hw, b.hd, 0, 0);
+                R.spots = {{0, -b.hd + 2.0}, {0, -b.hd * 0.4}, {0, 0}};
+            }
             return true;
         case BK_ROW: case BK_TENEMENT: case BK_SUBURB:
             if (b.kind == BK_SUBURB && (b.form == PF_CIRCLE || b.form == PF_POLYGON || b.form == PF_ELLIPSE)) { houseRoom(b, R, true); return true; }
@@ -397,7 +412,8 @@ bool buildingRoom(const Building& b, BuildingRoom& R) {
             return true;
         }
         case BK_WINDMILL: R.outside = true; R.spots = {{0, b.hw + 1.6}, {b.hw + 1.6, 0}}; return true;
-        case BK_AQUEDUCT: { R.outside = true; const double bay = 2 * b.hd / std::max(3, (int)std::lround(2 * b.hd / 7.0)); R.spots = {{0, -b.hd + bay * 0.5}, {0, -b.hd + bay * 1.5}}; return true; }   // under its arches
+        // under its arches
+        case BK_AQUEDUCT: { R.outside = true; const double bay = 2 * b.hd / std::max(3, (int)std::lround(2 * b.hd / 7.0)); R.spots = {{0, -b.hd + bay * 0.5}, {0, -b.hd + bay * 1.5}}; return true; }
         case BK_TWIN: R.outside = true; R.spots = {{0, 0}, {0, b.hd + 2.0}}; return true;   // between its towers
         case BK_PORTAL: R.outside = true; R.spots = {{0, 2.6}, {1.2, 3.4}}; return true;   // in its mouth's cutting
         case BK_DOME: {   // the floor inside its ring (the far future's: at its foot)
@@ -517,7 +533,8 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
             P.colour[3] = RGB(0.36f, 0.28f, 0.22f);
             const bool bands = c.technique == TQ_FRAME || s > 0.45;
             const int lights = group > 1 ? 2 : 1;
-            P.windows[0] = bands ? spec(4.0, 3.1, 1.0, 0.3 + 0.32 * s, 0.35, 4, 1, 0, 20) : spec(3.0, 3.1, std::min(0.85, (0.52 + 0.24 * s) * (lights > 1 ? 1.25 : 1.0)), 0.46 + 0.24 * s, 0.28, 0, lights, 0, 18);
+            P.windows[0] = bands ? spec(4.0, 3.1, 1.0, 0.3 + 0.32 * s, 0.35, 4, 1, 0, 20)
+                                 : spec(3.0, 3.1, std::min(0.85, (0.52 + 0.24 * s) * (lights > 1 ? 1.25 : 1.0)), 0.46 + 0.24 * s, 0.28, 0, lights, 0, 18);
             P.windows[1] = s > 0.3 ? spec(3.2, 3.6, 1.0, 0.52 + 0.38 * s, 0.1, 4, 1, 0, 16) : spec(2.8, 3.6, 0.6 + 0.2 * s, 0.52 + 0.2 * s, 0.2, 0, 1, 0, 16);
             static const int MSHAPE[6] = {0, 4, 3, 2, 2, 4};   // its own on its temples: a square pane, a band, a porthole, a slit
             const int ms = MSHAPE[G.of(GV_OPENING)];
@@ -541,7 +558,13 @@ FormPalette culturePalette(const Culture& c, uint64_t seed) {
             P.colour[3] = genomeLight(G);
             const int lt = G.of(GV_LIGHT);
             if (lt != LT_NONE) {
-                WindowSpec W; W.bay = lt == LT_LINES ? 12 : 9; W.storey = lt == LT_LINES ? 30 : 14; W.shape = lt == LT_LINES ? 4 : 3; W.w = lt == LT_LINES ? 1.0 : 0.22; W.h = lt == LT_LINES ? 0.07 : 0.22 * 9 / 14.0; W.sill = 0.5;
+                WindowSpec W;
+                W.bay = lt == LT_LINES ? 12 : 9;
+                W.storey = lt == LT_LINES ? 30 : 14;
+                W.shape = lt == LT_LINES ? 4 : 3;
+                W.w = lt == LT_LINES ? 1.0 : 0.22;
+                W.h = lt == LT_LINES ? 0.07 : 0.22 * 9 / 14.0;
+                W.sill = 0.5;
                 W.lit = true; W.dark = 0; W.scatter = lt == LT_LAMPS ? 0.55 : 0; P.windows[0] = W; P.nWindows = 1;
             }
             break;

@@ -174,7 +174,9 @@ void Game::updateInstruments(const Input& in, double realDt) {
         if (icase.discOn) {
             if (mine && audio.pieceBeat >= 0) icase.discT = audio.pieceBeat * 60.0 / std::max(1.0, icase.disc.bpm); else icase.discT += realDt;
             const double beat = icase.discT * icase.disc.bpm / 60.0;   // its notes light the picture as they sound
-            for (const Note& nt : icase.disc.notes) if (nt.voice >= 0 && nt.t <= beat && nt.t > beat - realDt * icase.disc.bpm / 60.0 && !icase.glow.empty()) icase.glow[(nt.degree % (int)icase.glow.size() + (int)icase.glow.size()) % (int)icase.glow.size()] = 1.0;
+            for (const Note& nt : icase.disc.notes)
+                if (nt.voice >= 0 && nt.t <= beat && nt.t > beat - realDt * icase.disc.bpm / 60.0 && !icase.glow.empty())
+                    icase.glow[(nt.degree % (int)icase.glow.size() + (int)icase.glow.size()) % (int)icase.glow.size()] = 1.0;
             if (icase.discT > icase.disc.seconds + 1.0 || (mine && audio.pieceDone && icase.discT > 0.5) || !mine) stopInstrument();
         }
         return;

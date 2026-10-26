@@ -118,7 +118,8 @@ public:
     int dataSheetPages = 1;            // the body's sheet's pages, as last drawn (RIGHT and LEFT step through them, then the probes' profiles)
     bool scanSkipMarked = true;        // a sight with one of the explorer's marks on it is left out
     std::string worldKeyOf(int bi) const { return Guide::bodyKey(sys.star.sx, sys.star.sy, sys.star.sz, bi); }
-    struct SiteMark { int index = -1; double x = 0, z = 0, y = 0; bool dry = false; };   // a mark of the surface's world in local metres, its ground's height (B-422: dry, read without the rivers until their tiles are built)
+    // a mark of the surface's world in local metres, its ground's height (B-422: dry, read without the rivers until their tiles are built)
+    struct SiteMark { int index = -1; double x = 0, z = 0, y = 0; bool dry = false; };
     std::vector<SiteMark> siteMarks; int siteMarksEpoch = -1, siteMarksBody = -1, marksVersion = 0, siteMarksVersion = -1; size_t siteMarksCount = 0; double siteMarksDryT = 0;
     const std::vector<SiteMark>& marksHere();
     int markNear(double x, double z, double radiusM);
@@ -352,7 +353,9 @@ protected:
     ShardWorld shardWorld;
     int shardsPage = 0;                          // 0 the records, 1 the timeline, 2 the history
     int shardsFilter = 0;                        // the records' page: 0 every kind, 1 the texts, 2 the music, 3 the star charts
-    struct LegendRow { int kind = 0; int item = -1; int year = 0; bool first = false; std::string text; std::vector<DecodedWord> words; };   // 0 a heading, 1 an event's line (`item` of `told.events`; `first` its first row), 2 the close, 3 a way of the people (`text` its label)
+    // 0 a heading, 1 an event's line (`item` of `told.events`; `first` its first row), 2 the close, 3 a way of the people (`text` its
+    // label)
+    struct LegendRow { int kind = 0; int item = -1; int year = 0; bool first = false; std::string text; std::vector<DecodedWord> words; };
     ToldHistory told; bool toldValid = false; double toldMs = 0;   // what the read records told (built when the world's pages are opened, again after a reading; how long it took)
     std::vector<LegendRow> legendRows; std::vector<int> legendFirstRow;   // the history page's rows; each told event's first row
     int legendSel = 0, legendTop = 0;            // the event under the cursor (of `told.events`), the first row shown

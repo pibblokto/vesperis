@@ -37,7 +37,8 @@ void Game::renderSystemList() {
         if (r < 0 || r >= rows) continue;
         const Belt& bl = sys.belts[k];
         uint32_t col = n + (int)k == listSel ? HUD_WHITE : (ship.targetBelt == (int)k ? HUD_AMBER : HUD_DIM);
-        drawText(canvas, 14, listY + r * 9, fmt("%-18.18s %-10s %s - %s", upper(beltNameOf((int)k)).c_str(), "BELT", distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str()).c_str(), col);
+        drawText(canvas, 14, listY + r * 9, fmt("%-18.18s %-10s %s - %s", upper(beltNameOf((int)k)).c_str(), "BELT", distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str()).c_str(),
+                col);
         if (n + (int)k == listSel) drawText(canvas, 6, listY + r * 9, ">", HUD_AMBER);
     }
     drawTextCentered(canvas, UW / 2, UH - 10, "UP/DOWN SELECT  ENTER APPROACH  L TARGET  ESC CLOSE", HUD_DIM);
@@ -83,7 +84,10 @@ void Game::renderDataSheet() {
         const Belt& bl = sys.belts[ship.targetBelt];
         line(upper(beltNameOf(ship.targetBelt)), HUD_AMBER);
         line("ASTEROID BELT", HUD_GREEN);
-        for (const std::string& w : wrapText("A BAND OF ROCKS AND DUST LEFT IN THE GAP BETWEEN TWO ORBITS. MOST OF ITS STONES ARE UNDER A KILOMETRE; A FEW ARE MOUNTAINS TWENTY KILOMETRES ACROSS. THE INNER ONES OUTRUN THE OUTER, SO THE FIELD SHEARS SLOWLY.", 50)) line(w, HUD_DIM);
+        for (const std::string& w : wrapText("A BAND OF ROCKS AND DUST LEFT IN THE GAP BETWEEN TWO ORBITS. MOST OF ITS STONES ARE UNDER A KILOMETRE; A FEW ARE MOUNTAINS TWENTY KILOMETRES ACROSS. THE "
+                                             "INNER ONES OUTRUN THE OUTER, SO THE FIELD SHEARS SLOWLY.",
+                     50))
+            line(w, HUD_DIM);
         y += 3;
         double w = bl.outerKm - bl.innerKm, mid = 0.5 * (bl.innerKm + bl.outerKm);
         line(fmt("INNER EDGE  %s FROM THE STAR", distanceString(bl.innerKm).c_str()), HUD_GREEN);
@@ -94,7 +98,9 @@ void Game::renderDataSheet() {
         line(fmt("ROCKS       ABOUT %s, THE SPARKLE BAND IS THE SUNLIT DUST", rocks > 1e6 ? fmt("%.1f MILLION", rocks / 1e6).c_str() : fmt("%.0f THOUSAND", rocks / 1e3).c_str()), HUD_GREEN);
         line("LANDABLE    NO - THE CAPSULE NEEDS A WORLD UNDER IT", HUD_RED);
         BeltRock rk;
-        if (beltRockNow(rk)) line(fmt("%s     A ROCK %.1f KM ACROSS, %s OFF, TUMBLING SLOWLY", ship.parkedBelt >= 0 ? "PARKED " : "TARGET ", 2 * rk.radiusKm, distanceString(length(rk.pos - ship.pos)).c_str()), HUD_CYAN);
+        if (beltRockNow(rk))
+            line(fmt("%s     A ROCK %.1f KM ACROSS, %s OFF, TUMBLING SLOWLY", ship.parkedBelt >= 0 ? "PARKED " : "TARGET ", 2 * rk.radiusKm, distanceString(length(rk.pos - ship.pos)).c_str()),
+                    HUD_CYAN);
         y += 3;
         line(fmt("STAR        %s, %s", trunc(upper(starNameOf(sys.star)), 18).c_str(), sys.classString().c_str()), HUD_CYAN);
         line(fmt("            L=%.2f  R=%.0f KM", sys.star.luminosity, sys.star.radiusKm), HUD_CYAN);
@@ -137,14 +143,18 @@ void Game::renderDataSheet() {
         else put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : ""), HUD_GREEN);
     } else {
     put(fmt("GRAVITY     %.2f G (%.1f M/S2)   EQUILIBRIUM %.0f K (%+.0f C)", b.gravity / 9.8, b.gravity, b.tempK, b.tempK - 273.15), HUD_GREEN);
-    put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "ITS SUN" : "ITS PLANET") : "THE STAR", b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""), HUD_GREEN);
+    put(fmt("ORBIT       %s FROM %s%s", distanceString(b.orbitRadiusKm).c_str(), b.parent >= 0 ? (sys.bodies[b.parent].type == PT_COMPANION ? "ITS SUN" : "ITS PLANET") : "THE STAR",
+                b.ecc > 0.05 ? fmt(", ECC %.2f", b.ecc).c_str() : ""),
+            HUD_GREEN);
     put(fmt("PERIOD      %.1f H   ROTATION %.2f H%s", std::fabs(b.orbitPeriod) / 3600, std::fabs(b.rotPeriod) / 3600, b.rotPeriod < 0 ? " (RETROGRADE)" : (b.locked ? " (LOCKED)" : "")), HUD_GREEN);
     }
     if (b.type == PT_COMET) {   // where it is now on its plunge
         put(fmt("NOW         %s FROM THE STAR", distanceString(length(sys.bodyPos(bi, t) - sys.star.pos)).c_str()), HUD_CYAN);
         put(fmt("            %s", cometMotionString(bi).c_str()), HUD_CYAN);
     }
-    put(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", KINDS[b.type].atmosphere ? (airFrozen(b) ? "FROZEN" : "YES") : "NONE", b.moonCount, b.rings ? "   RINGS" : "", KINDS[b.type].landable ? "YES" : "NO"), KINDS[b.type].landable ? HUD_GREEN : HUD_RED);
+    put(fmt("ATMOSPHERE  %s   MOONS %d%s   LANDABLE %s", KINDS[b.type].atmosphere ? (airFrozen(b) ? "FROZEN" : "YES") : "NONE", b.moonCount, b.rings ? "   RINGS" : "",
+                KINDS[b.type].landable ? "YES" : "NO"),
+            KINDS[b.type].landable ? HUD_GREEN : HUD_RED);
     {   // the magnetic field and what it means for the nights (the star's class counts too)
         int mc = magneticClass(magneticField(b));
         double quiet = auroraPotentialAt(sys, b, 0), peak = auroraPotentialAt(sys, b, 1);
@@ -159,7 +169,8 @@ void Game::renderDataSheet() {
         sinDec = clampd(sys.seasonOf(bi, t), -1, 1);   // dot(spin axis, to the star) = sin of the declination
         double dec = std::asin(sinDec);
         double cosH0 = -std::tan(lat) * std::tan(dec);
-        std::string dayLen = cosH0 <= -1 ? "POLAR DAY" : (cosH0 >= 1 ? "POLAR NIGHT" : fmt("DAY %.1f H OF %.1f", std::fabs(b.rotPeriod) / 3600.0 * std::acos(cosH0) / PI, std::fabs(b.rotPeriod) / 3600.0));
+        std::string dayLen =
+                cosH0 <= -1 ? "POLAR DAY" : (cosH0 >= 1 ? "POLAR NIGHT" : fmt("DAY %.1f H OF %.1f", std::fabs(b.rotPeriod) / 3600.0 * std::acos(cosH0) / PI, std::fabs(b.rotPeriod) / 3600.0));
         // next equinox and solstice by scanning the orbit
         double P = std::fabs(b.orbitPeriod), toEq = -1, toSol = -1, prev = sinDec, prevD = 0;
         for (int k = 1; k <= 144 && (toEq < 0 || toSol < 0); k++) {
@@ -171,7 +182,8 @@ void Game::renderDataSheet() {
         }
         auto hours = [&](double secs) { return secs < 0 ? std::string("-") : (secs > 48 * 3600 ? fmt("%.0f D", secs / 86400) : fmt("%.0f H", secs / 3600)); };
         if (sys.sunless()) put("SEASON      NONE - NO SUN, NO DAY", HUD_AMBER);
-        else if (b.axialTilt > 0.5 * DEG) put(fmt("SEASON      DECL %+.1f%c  %s  EQUINOX IN %s  SOLSTICE IN %s", dec / DEG, CH_DEGREE, dayLen.c_str(), hours(toEq).c_str(), hours(toSol).c_str()), HUD_AMBER);
+        else if (b.axialTilt > 0.5 * DEG)
+            put(fmt("SEASON      DECL %+.1f%c  %s  EQUINOX IN %s  SOLSTICE IN %s", dec / DEG, CH_DEGREE, dayLen.c_str(), hours(toEq).c_str(), hours(toSol).c_str()), HUD_AMBER);
         else line(fmt("SEASON      NONE (NO TILT)  %s", dayLen.c_str()), HUD_AMBER);
         bool forecastShown = false;
         { std::string fc = forecastLine(); if (!fc.empty()) { put(fmt("FORECAST    %s", fc.c_str()), HUD_AMBER); forecastShown = true; } }
@@ -201,7 +213,8 @@ void Game::renderDataSheet() {
                 life += (life.empty() ? "" : ", ") + upper(sp.name) + (surf.seenSpecies.count(i) ? "*" : "") + " (" + shortPlan(sp.plan) + ")";
             }
             std::vector<std::string> ws = wrapText("LIFE        " + life, 52);
-            for (size_t w = 0; w < ws.size() && w < (forecastShown ? 2u : 3u); w++) put(ws[w], HUD_AMBER);   // the forecast takes the third life line's row (the sheet was already past the frame on a world of many species)
+            // the forecast takes the third life line's row (the sheet was already past the frame on a world of many species)
+            for (size_t w = 0; w < ws.size() && w < (forecastShown ? 2u : 3u); w++) put(ws[w], HUD_AMBER);
         }
     }
     section(false);
@@ -237,9 +250,13 @@ void Game::renderDataSheet() {
             if (pg[i] == show) drawText(canvas, 10, ys[i], sheet[i].s.c_str(), sheet[i].c);
         }
         if (show > 0) drawText(canvas, 10, top, sheet[0].s.c_str(), sheet[0].c);
-        if (dataSheetPages > 1) { const std::string pn = fmt("%d/%d", show + 1, dataSheetPages); drawText(canvas, UW - 10 - textWidth(epocFullString().c_str()) - 12 - textWidth(pn.c_str()), top, pn.c_str(), HUD_DIM); }
+        if (dataSheetPages > 1) {
+            const std::string pn = fmt("%d/%d", show + 1, dataSheetPages);
+            drawText(canvas, UW - 10 - textWidth(epocFullString().c_str()) - 12 - textWidth(pn.c_str()), top, pn.c_str(), HUD_DIM);
+        }
     }
-    const char* foot = dataPage == 0 ? (dataSheetPages > 1 ? "T THE ALMANAC  RIGHT MORE  ANY OTHER KEY CLOSES" : (dataProbes().empty() ? "T THE ALMANAC  ANY OTHER KEY CLOSES" : "T THE ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES"))
+    const char* foot = dataPage == 0 ? (dataSheetPages > 1 ? "T THE ALMANAC  RIGHT MORE  ANY OTHER KEY CLOSES"
+                                                           : (dataProbes().empty() ? "T THE ALMANAC  ANY OTHER KEY CLOSES" : "T THE ALMANAC  RIGHT PROFILES  ANY OTHER KEY CLOSES"))
                                      : "RIGHT MORE  LEFT BACK  ANY OTHER KEY CLOSES";   // a giant's probes; Q-01: the sheet's pages
     drawTextCentered(canvas, UW / 2, UH - 10, foot, HUD_DIM);
 }

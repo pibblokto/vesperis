@@ -24,18 +24,29 @@ static int runRoguesHeard() {
         std::vector<Signal> x1; signalsNear(at, x1);
         int atX1 = 0; for (const Signal& x : x1) if (x.kind == SIG_ROGUE) atX1++;
         std::string steps; double farLy = 0;
-        for (int k = 0; k < SIGNAL_GAIN_STEPS; k++) { int n = 0; for (const Signal& x : d) if (x.needGain <= SIGNAL_GAINS[k]) n++; steps += fmt("%s x%d %d", k ? "," : "", SIGNAL_GAINS[k], k ? n : atX1); }
+        for (int k = 0; k < SIGNAL_GAIN_STEPS; k++) {
+            int n = 0;
+            for (const Signal& x : d)
+                if (x.needGain <= SIGNAL_GAINS[k]) n++;
+            steps += fmt("%s x%d %d", k ? "," : "", SIGNAL_GAINS[k], k ? n : atX1);
+        }
         for (const Signal& x : d) farLy = std::max(farLy, x.distLy);
-        printf("  %-22s%s; the farthest %s ly%s\n", P.name.c_str(), steps.c_str(), thousands(farLy).c_str(), d.empty() ? "" : fmt("; the first at %.0f ly, needing x%.1f", d[0].distLy, d[0].needGain).c_str());
+        printf("  %-22s%s; the farthest %s ly%s\n", P.name.c_str(), steps.c_str(), thousands(farLy).c_str(),
+                d.empty() ? "" : fmt("; the first at %.0f ly, needing x%.1f", d[0].distLy, d[0].needGain).c_str());
         if (pi == 0)
             for (const Signal& x : d) {
                 int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < x.needGain) step++;
                 const DrifterBody b = drifterBody(x.star);
-                printf("      %7.1f ly  needs x%5.1f (heard from x%d)  power %.3f  strength at x32 %.2f  %-12s %6.0f km, own heat %4.0f K  sector %lld %lld %lld\n", x.distLy, x.needGain, SIGNAL_GAINS[step], x.power,
-                       signalStrengthAtGain(x, SIGNAL_GAINS[SIGNAL_GAIN_STEPS - 1]), KINDS[b.type].name, b.radiusKm, b.heatK, (long long)x.star.sx, (long long)x.star.sy, (long long)x.star.sz);
+                printf("      %7.1f ly  needs x%5.1f (heard from x%d)  power %.3f  strength at x32 %.2f  %-12s %6.0f km, own heat %4.0f K  sector %lld %lld %lld\n", x.distLy, x.needGain,
+                        SIGNAL_GAINS[step], x.power, signalStrengthAtGain(x, SIGNAL_GAINS[SIGNAL_GAIN_STEPS - 1]), KINDS[b.type].name, b.radiusKm, b.heatK, (long long)x.star.sx, (long long)x.star.sy,
+                        (long long)x.star.sz);
             }
     }
-    TestGame game; game.savePrefix = "shots/tests/rogues_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/rogues_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/rogues_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/rogues_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings(); applyTestScale(game); game.setState(GameState::SPACE);
     for (const Body& ob : game.testSystem().bodies) if (ob.type != PT_COMPANION) game.testWaitMapOf(ob.index);   // every map first
@@ -63,13 +74,17 @@ static int runRoguesHeard() {
     int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < need) step++;
     for (int i = SIGNAL_GAIN_STEPS - 1; i > step; i--) press(KEY_MINUS);
     run(0.2);
-    for (int i = 0; i < game.testRadarSignals(); i++) { int64_t sx, sy, sz; if (game.testRadarKind(i) == SIG_ROGUE && game.testRadarSector(i, sx, sy, sz) && sx == wx && sy == wy && sz == wz) who = i; }
+    for (int i = 0; i < game.testRadarSignals(); i++) {
+        int64_t sx, sy, sz;
+        if (game.testRadarKind(i) == SIG_ROGUE && game.testRadarSector(i, sx, sy, sz) && sx == wx && sy == wy && sz == wz) who = i;
+    }
     game.testAimAtSignal(who);
     double lockAt = -1; for (int i = 0; i < 30 * 20 && lockAt < 0; i++) { game.frame(in, 1.0 / 30); in.newFrame(); if (game.testRadarLocked() >= 0) lockAt = (i + 1) / 30.0; }
     run(0.3);
     shot("rogue_radar_lock");
     std::string logLine = game.guide.log.empty() ? "" : game.guide.log.back().text;
-    printf("the radar at home: the nearest drifter heard, %.0f ly off, needs x%.1f: at x%d locked after %.1f s: '%s'; the log: '%s' -> shots/tests/rogue_radar_lock.png\n", whoLy, need, SIGNAL_GAINS[step], lockAt, game.testStatus().c_str(), logLine.c_str());
+    printf("the radar at home: the nearest drifter heard, %.0f ly off, needs x%.1f: at x%d locked after %.1f s: '%s'; the log: '%s' -> shots/tests/rogue_radar_lock.png\n", whoLy, need,
+            SIGNAL_GAINS[step], lockAt, game.testStatus().c_str(), logLine.c_str());
     if (lockAt < 0) return 1;
     press(KEY_ENTER); run(0.2);
     printf("Enter: '%s'\n", game.testStatus().c_str());
@@ -79,7 +94,8 @@ static int runRoguesHeard() {
     {
         const StarSystem& sys = game.testSystem(); const Body& b = sys.bodies[0];
         const double dist = length(game.testShipPos() - sys.star.pos);
-        printf("the arrival: %s, %s, the ship %.1f radii off, the local target %d: '%s' -> shots/tests/rogue_heard_arrival.png\n", sys.star.seed == d.seed ? "the drifter locked" : "NOT THE DRIFTER", KINDS[b.type].name, dist / b.radiusKm, game.testLocalTarget(), game.testStatus().c_str());
+        printf("the arrival: %s, %s, the ship %.1f radii off, the local target %d: '%s' -> shots/tests/rogue_heard_arrival.png\n", sys.star.seed == d.seed ? "the drifter locked" : "NOT THE DRIFTER",
+                KINDS[b.type].name, dist / b.radiusKm, game.testLocalTarget(), game.testStatus().c_str());
         shot("rogue_heard_arrival");
     }
     auto disc = [&](const Star& at, const char* far, const char* orbit) {
@@ -105,7 +121,8 @@ static int runRoguesHeard() {
             if (game.state == GameState::LANDING_MAP) press(KEY_ESCAPE);
             game.testAimAtBody(mi); run(0.4);
             shot("rogue_bd_moon");
-            printf("  its largest moon (%s, %.0f km, %.0f K) parked at, lit by the brown dwarf's glow -> shots/tests/rogue_bd_moon.png\n", KINDS[game.testSystem().bodies[mi].type].name, game.testSystem().bodies[mi].radiusKm, game.testSystem().bodies[mi].tempK);
+            printf("  its largest moon (%s, %.0f km, %.0f K) parked at, lit by the brown dwarf's glow -> shots/tests/rogue_bd_moon.png\n", KINDS[game.testSystem().bodies[mi].type].name,
+                    game.testSystem().bodies[mi].radiusKm, game.testSystem().bodies[mi].tempK);
         }
     };
     printf("the black disc:\n");
@@ -174,7 +191,13 @@ static int runRoguesVoices() {
     std::vector<Pick> whole;
     auto pickHeard = [&](int cls, int count, const char* what) {
         int got = 0;
-        if (haveFirst && rogueVoiceClass(firstHome.bodyType) == cls) { RogueRef r; Star full = firstHome.star; placeInSector(full.sx, full.sy, full.sz, full, false); r = rogueRefOf(full); whole.push_back({fmt("%s_%d", what, ++got), r, firstHome.distLy}); }
+        if (haveFirst && rogueVoiceClass(firstHome.bodyType) == cls) {
+            RogueRef r;
+            Star full = firstHome.star;
+            placeInSector(full.sx, full.sy, full.sz, full, false);
+            r = rogueRefOf(full);
+            whole.push_back({fmt("%s_%d", what, ++got), r, firstHome.distLy});
+        }
         for (const Signal& h : heard) {
             if (got >= count) break;
             if (rogueVoiceClass(h.bodyType) != cls || (haveFirst && h.seed == firstHome.seed)) continue;
@@ -207,7 +230,11 @@ static int runRoguesVoices() {
         Star full = firstHome.star; placeInSector(full.sx, full.sy, full.sz, full, false); const RogueRef first = rogueRefOf(full);
         int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < firstHome.needGain) step++;
         RxOpts o; o.gainT = gainShareOf(SIGNAL_GAINS[step]); o.sky = 0.4; o.clarity = 0.6; o.wear = clampd(std::log(firstHome.distLy / SIGNAL_REACH_LY) / std::log(30.0), 0, 1);
-        { std::vector<int16_t> pcm; RenderStats r = renderRogue(first, 40, &pcm, o); judge(fmt("far_x%d", SIGNAL_GAINS[step]), r, pcm, fmt("the first heard from home, %.0f ly, as the radar hears it locked at x%d (worn %.2f)", firstHome.distLy, SIGNAL_GAINS[step], o.wear)); }
+        {
+            std::vector<int16_t> pcm;
+            RenderStats r = renderRogue(first, 40, &pcm, o);
+            judge(fmt("far_x%d", SIGNAL_GAINS[step]), r, pcm, fmt("the first heard from home, %.0f ly, as the radar hears it locked at x%d (worn %.2f)", firstHome.distLy, SIGNAL_GAINS[step], o.wear));
+        }
         PeopleWorld w;
         const RogueRef& g = whole.size() > 2 ? whole[2].ref : first;
         if (firstPeopleWorld(w)) {
@@ -215,12 +242,31 @@ static int runRoguesVoices() {
             std::vector<int16_t> pcm; RenderStats r = renderProgramme(w, RP_VOICE, 40, &pcm, nullptr, u);
             judge("under_a_voice_x18", r, pcm, fmt("%s's voice under a people's broadcast (%s) at x18", KINDS[g.sig.bodyType].name, w.name.c_str()));
         }
-        { RxOpts c; c.set = RADIO_CABIN; c.level = RADIO_CABIN_LEVEL; c.hum = 0.6; c.clarity = 0.9; std::vector<int16_t> pcm; RenderStats r = renderRogue(first, 40, &pcm, c); judge("cabin_radio", r, pcm, "the cabin's radio at the first heard from home, the ship's hum beside it"); }
+        {
+            RxOpts c;
+            c.set = RADIO_CABIN;
+            c.level = RADIO_CABIN_LEVEL;
+            c.hum = 0.6;
+            c.clarity = 0.9;
+            std::vector<int16_t> pcm;
+            RenderStats r = renderRogue(first, 40, &pcm, c);
+            judge("cabin_radio", r, pcm, "the cabin's radio at the first heard from home, the ship's hum beside it");
+        }
         const RogueRef* land = nullptr; for (const Pick& p : whole) if (KINDS[p.ref.sig.bodyType].landable && !kindHas(p.ref.sig.bodyType, KT_GIANT)) { land = &p.ref; break; }
-        if (land) { RxOpts c; c.set = RADIO_SUIT; c.level = RADIO_SUIT_LEVEL; c.hum = 0.05; c.clarity = 0.9; std::vector<int16_t> pcm; RenderStats r = renderRogue(*land, 40, &pcm, c); judge("suit_radio", r, pcm, fmt("the suit's radio on the ground of %s", KINDS[land->sig.bodyType].name)); }
+        if (land) {
+            RxOpts c;
+            c.set = RADIO_SUIT;
+            c.level = RADIO_SUIT_LEVEL;
+            c.hum = 0.05;
+            c.clarity = 0.9;
+            std::vector<int16_t> pcm;
+            RenderStats r = renderRogue(*land, 40, &pcm, c);
+            judge("suit_radio", r, pcm, fmt("the suit's radio on the ground of %s", KINDS[land->sig.bodyType].name));
+        }
         {   // D-05's slot: a beacon under a giant's voice
             RxOpts b; b.voice = RP_BEACON; std::vector<int16_t> pcm; RenderStats r = renderRogue(g, 40, &pcm, b); writeWav16("shots/tests/rogue_beacon_slot.wav", pcm, 22050);
-            printf("  %-34s %4.0f s, rms %.3f, peak %.3f, %d clipped: a beacon under %s's voice, slowed and darkened (D-05's slot)\n", "rogue_beacon_slot.wav", 40.0, r.rms, r.peak, r.clip, KINDS[g.sig.bodyType].name);
+            printf("  %-34s %4.0f s, rms %.3f, peak %.3f, %d clipped: a beacon under %s's voice, slowed and darkened (D-05's slot)\n", "rogue_beacon_slot.wav", 40.0, r.rms, r.peak, r.clip,
+                    KINDS[g.sig.bodyType].name);
         }
     }
     // the test drifters' beacons as the radar plays them locked (a radio people's last broadcast under its drifter's voice)
@@ -241,9 +287,19 @@ static int runRoguesVoices() {
     int byClass[RV_COUNT] = {0}; for (const RogueRef& r : field) byClass[std::max(0, std::min((int)RV_COUNT - 1, r.voice.cls))]++;
     std::string classes; for (int c = 0; c < RV_COUNT; c++) classes += fmt("%s%s %d", c ? ", " : "", ROGUE_VOICE_NAMES[c], byClass[c]);
     printf("the distinctness over the %d drifters nearest home (%s), a breath each, the kinds 60 s (%.0f s):\n", d.n, classes.c_str(), nowSec() - t0);
-    if (d.traitA >= 0) printf("  their parameters: the nearest two %.3f apart (of %zu, each 0..1): %s / %s\n", d.traitNearest, [&] { std::vector<double> t; AudioSynth::rogueTraits(0, RogueVoice(), t); return t.size(); }(), AudioSynth::rogueLine(field[d.traitA].sig.seed, field[d.traitA].voice).c_str(), AudioSynth::rogueLine(field[d.traitB].sig.seed, field[d.traitB].voice).c_str());
+    if (d.traitA >= 0)
+        printf(
+                "  their parameters: the nearest two %.3f apart (of %zu, each 0..1): %s / %s\n", d.traitNearest,
+                [&] {
+                    std::vector<double> t;
+                    AudioSynth::rogueTraits(0, RogueVoice(), t);
+                    return t.size();
+                }(),
+                AudioSynth::rogueLine(field[d.traitA].sig.seed, field[d.traitA].voice).c_str(), AudioSynth::rogueLine(field[d.traitB].sig.seed, field[d.traitB].voice).c_str());
     printf("  their voice prints (twelfths of an octave, dB), %d pairs: the nearest %.2f, the median %.2f\n", d.pairs, d.nearest, d.median);
-    if (d.nearA >= 0) printf("    the nearest pair: %s / %s\n", AudioSynth::rogueLine(field[d.nearA].sig.seed, field[d.nearA].voice).c_str(), AudioSynth::rogueLine(field[d.nearB].sig.seed, field[d.nearB].voice).c_str());
+    if (d.nearA >= 0)
+        printf("    the nearest pair: %s / %s\n", AudioSynth::rogueLine(field[d.nearA].sig.seed, field[d.nearA].voice).c_str(),
+                AudioSynth::rogueLine(field[d.nearB].sig.seed, field[d.nearB].voice).c_str());
     static const char* const KN[3] = {"pulsars", "comets", "magnetospheres"};
     for (int k = 0; k < 3; k++) printf("  two %s (20 by seeds of their own, 60 s, 190 pairs): the median %.2f, the nearest %.2f\n", KN[k], d.kindMedian[k], d.kindNearest[k]);
     printf("  every pair of drifters apart by more than two signals of one kind are (the largest median, %.2f): %s\n", d.bar, d.under == 0 ? "yes" : fmt("NO, %d pairs under", d.under).c_str());
@@ -291,9 +347,14 @@ static int runRoguesDark() {
            own[TR_FROZEN_AIR], own[TR_EMBERS], own[TR_LIGHTS_LEFT_ON], own[TR_LIGHTS_IN_WATER]);
     printf("  airs %d, fallen as snow %d; seas and lakes %d, frozen at their level %d\n", aired, airFell, seas, seasFrozen);
     printf("  the drifters' own by kind (frozen air, embers, lights left on, lights in the water):");
-    for (int k = 0; k < PT_COUNT; k++) if (kinds[k] && KINDS[k].landable) printf(" %s %d/%d/%d/%d of %d;", KINDS[k].shortName, ownByKind[k][0], ownByKind[k][1], ownByKind[k][2], ownByKind[k][3], kinds[k]);
+    for (int k = 0; k < PT_COUNT; k++)
+        if (kinds[k] && KINDS[k].landable) printf(" %s %d/%d/%d/%d of %d;", KINDS[k].shortName, ownByKind[k][0], ownByKind[k][1], ownByKind[k][2], ownByKind[k][3], kinds[k]);
     printf("\n");
-    TestGame game; game.savePrefix = "shots/tests/rogues_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/rogues_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/rogues_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/rogues_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings(); applyTestScale(game);
     Input in;
@@ -307,7 +368,8 @@ static int runRoguesDark() {
         shot(name);
         int lit[32] = {}; for (const Pix p : game.fb.idx) if (shadeOf(p) >= 40) lit[bankOf(p)]++;   // the pixels over shade 40 by bank (the globe's own lights)
         std::string banks; for (int k = 0; k < 32; k++) if (lit[k]) banks += fmt(" %d:%d", k, lit[k]);
-        printf("%s: %s (%s) parked %.1f radii off -> shots/tests/%s.png (bank:pixels over shade 40:%s)\n", what, at.name.c_str(), KINDS[game.testSystem().bodies[0].type].name, length(game.testShipPos() - game.testSystem().star.pos) / game.testSystem().bodies[0].radiusKm, name, banks.c_str());
+        printf("%s: %s (%s) parked %.1f radii off -> shots/tests/%s.png (bank:pixels over shade 40:%s)\n", what, at.name.c_str(), KINDS[game.testSystem().bodies[0].type].name,
+                length(game.testShipPos() - game.testSystem().star.pos) / game.testSystem().bodies[0].radiusKm, name, banks.c_str());
     };
     run(0.2);
     if (haveEmbers) orbit(embersAt, "rogue_embers_orbit", "a young interior's ember fields");
@@ -331,8 +393,9 @@ static int runRoguesDark() {
             Framebuffer fb; Input in2; sv.update(0.016, in2, t, false); sv.render(fb, t, nb.stars, sr, 1.0); fb.mush(2);
             saveFB(fb, "shots/tests/rogue_lights_left_on.png");
             int lamps = 0; for (const GroundMark& m : sv.site.marks) if (m.kind == 0) lamps++;
-            printf("the lights left on, staged on %s (%s) at night (the sun %.0f degrees down): %d streets near; before -> shots/tests/rogue_lights_left_off.png, after -> shots/tests/rogue_lights_left_on.png\n",
-                   sys.bodies[sv.site.body].name.c_str(), KINDS[sys.bodies[sv.site.body].type].name, -sv.env.sun.altitude / DEG, lamps);
+            printf("the lights left on, staged on %s (%s) at night (the sun %.0f degrees down): %d streets near; before -> shots/tests/rogue_lights_left_off.png, after -> "
+                   "shots/tests/rogue_lights_left_on.png\n",
+                    sys.bodies[sv.site.body].name.c_str(), KINDS[sys.bodies[sv.site.body].type].name, -sv.env.sun.altitude / DEG, lamps);
         } else printf("the lights left on: no modern town to stage them on\n");
     }
     return 0;
@@ -348,7 +411,8 @@ int runRogues(int argc, char** argv) {
     auto t0 = std::chrono::steady_clock::now();
     const int looked = driftersNear(home.pos, R, near);
     const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
-    printf("the drifters within %.0f ly of home (%s, sector %lld %lld %lld): %zu (%d cells and clusters looked at, %.1f ms)\n", R, home.name.c_str(), (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ, near.size(), looked, ms);
+    printf("the drifters within %.0f ly of home (%s, sector %lld %lld %lld): %zu (%d cells and clusters looked at, %.1f ms)\n", R, home.name.c_str(), (long long)HOME_SX, (long long)HOME_SY,
+            (long long)HOME_SZ, near.size(), looked, ms);
     int landable = -1;
     for (size_t i = 0; i < near.size(); i++) {
         Star d; drifterInSector(near[i].sx, near[i].sy, near[i].sz, d, true);
@@ -380,11 +444,16 @@ int runRogues(int argc, char** argv) {
         for (const Star& d : wide) count[drifterBody(d).type]++;
         double W = 0; for (int k = 0; k < DARK_KIND_COUNT; k++) W += DARK_KINDS[k].weight;
         printf("the kinds of the %zu within %.0f ly (the dark's table's share in brackets):", wide.size(), 3 * R);
-        for (int k = 0; k < DARK_KIND_COUNT; k++) printf(" %s %d (%.0f%%)%s", KINDS[DARK_KINDS[k].type].shortName, count[DARK_KINDS[k].type], 100 * DARK_KINDS[k].weight / W, k + 1 < DARK_KIND_COUNT ? "," : "\n");
+        for (int k = 0; k < DARK_KIND_COUNT; k++)
+            printf(" %s %d (%.0f%%)%s", KINDS[DARK_KINDS[k].type].shortName, count[DARK_KINDS[k].type], 100 * DARK_KINDS[k].weight / W, k + 1 < DARK_KIND_COUNT ? "," : "\n");
     }
     if (landable < 0) { printf("no landable drifter within %.0f ly: no frames\n", R); return 0; }
     Star d; drifterInSector(near[landable].sx, near[landable].sy, near[landable].sz, d, true);
-    TestGame game; game.savePrefix = "shots/tests/rogues_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/rogues_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/rogues_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/rogues_guide.txt";
     remove(game.guidePath.c_str());
     game.newGame(); game.settings.cabin = false; game.applySettings(); applyTestScale(game);
     Input in;
@@ -399,8 +468,10 @@ int runRogues(int argc, char** argv) {
     {
         const StarSystem& sys = game.testSystem(); const Body& b = sys.bodies[0]; const Vec3 P = game.testShipPos();
         const double dist = length(P - sys.star.pos);
-        printf("the arrival at drifter %d (%s, %.0f km): the ship %.0f km off its centre (%.1f radii), the disc %.2f degrees wide, the class line '%s', the light there %.2f -> shots/tests/rogue_arrival.png\n",
-               landable + 1, KINDS[b.type].name, b.radiusKm, dist, dist / b.radiusKm, 2 * std::asin(clampd(b.radiusKm / dist, 0, 1)) / DEG, sys.classString().c_str(), sys.lightAt(P, game.testGameTime()).factor);
+        printf("the arrival at drifter %d (%s, %.0f km): the ship %.0f km off its centre (%.1f radii), the disc %.2f degrees wide, the class line '%s', the light there %.2f -> "
+               "shots/tests/rogue_arrival.png\n",
+                landable + 1, KINDS[b.type].name, b.radiusKm, dist, dist / b.radiusKm, 2 * std::asin(clampd(b.radiusKm / dist, 0, 1)) / DEG, sys.classString().c_str(),
+                sys.lightAt(P, game.testGameTime()).factor);
         writePNG("shots/tests/rogue_arrival.png", game.output(), FBW, FBH);
     }
     game.testParkAt(d, 0, false); run(0.2);

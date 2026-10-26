@@ -19,7 +19,17 @@ void testStars() {
         for (int64_t x = 150; x < 200; x++) for (int64_t y = -6; y < 6; y++) for (int64_t z = 20; z < 70; z++) reg[galaxyRegion(x, y, z)]++;
         printf("regions of those sectors:"); for (int i = 0; i < REGION_COUNT; i++) if (reg[i]) printf("  %s %d", REGION_NAMES[i], reg[i]); printf("\n");
         int belts = 0, captured = 0, sysN = 0;
-        for (int64_t x = 150; x < 190; x++) for (int64_t z = 20; z < 60; z++) { Star s; if (!starInSector(x, 0, z, s)) continue; StarSystem sys; sys.generate(s); sysN++; belts += (int)sys.belts.size(); for (auto& b : sys.bodies) if (b.orbitPeriod < 0) captured++; }
+        for (int64_t x = 150; x < 190; x++)
+            for (int64_t z = 20; z < 60; z++) {
+                Star s;
+                if (!starInSector(x, 0, z, s)) continue;
+                StarSystem sys;
+                sys.generate(s);
+                sysN++;
+                belts += (int)sys.belts.size();
+                for (auto& b : sys.bodies)
+                    if (b.orbitPeriod < 0) captured++;
+            }
         printf("belts: %d in %d systems, captured retrograde moons: %d\n", belts, sysN, captured);
     }
     for (int i = 0; i < STAR_DRAWN_COUNT; i++) printf("  %s %-14s %d\n", STAR_CLASSES[i].code, STAR_CLASSES[i].name, counts[i]);
@@ -127,7 +137,9 @@ void runGalaxy() {
     }
     std::sort(globs.begin(), globs.end(), [](const Knot& a, const Knot& b) { return a.dist < b.dist; });
     printf("globular clusters: %zu (%d within 5,000 ly of the centre, %d to 10,000, %d to 20,000, %d beyond)", globs.size(), globBins[0], globBins[1], globBins[2], globBins[3]);
-    for (size_t k = 0; k < globs.size() && k < 3; k++) printf("%s %.0f ly from home at sector %.0f %.0f %.0f, %.0f ly across, ~%.0f stars", k ? ";" : "; the nearest:", globs[k].dist, globs[k].c.x, globs[k].c.y, globs[k].c.z, 2 * globs[k].R, 9.57 * std::pow(globs[k].R / 2, 3));
+    for (size_t k = 0; k < globs.size() && k < 3; k++)
+        printf("%s %.0f ly from home at sector %.0f %.0f %.0f, %.0f ly across, ~%.0f stars", k ? ";" : "; the nearest:", globs[k].dist, globs[k].c.x, globs[k].c.y, globs[k].c.z, 2 * globs[k].R,
+                9.57 * std::pow(globs[k].R / 2, 3));
     printf("\n");
     {
         int64_t ox = (int64_t)std::floor((hx - GALAXY_CENTRE_SX) / OPEN_CLUSTER_CELL), oy = 0, oz = (int64_t)std::floor((hz - GALAXY_CENTRE_SZ) / OPEN_CLUSTER_CELL);
@@ -139,7 +151,9 @@ void runGalaxy() {
         }
         std::sort(opens.begin(), opens.end(), [](const Knot& a, const Knot& b) { return a.dist < b.dist; });
         printf("open clusters within 1,500 ly of home: %zu", opens.size());
-        for (size_t k = 0; k < opens.size() && k < 3; k++) printf("%s %.0f ly away at sector %.0f %.0f %.0f, %.0f ly across, ~%.0f stars", k ? ";" : "; the nearest:", opens[k].dist, opens[k].c.x, opens[k].c.y, opens[k].c.z, 2 * opens[k].R, 9.57 * std::pow(opens[k].R / 2, 3));
+        for (size_t k = 0; k < opens.size() && k < 3; k++)
+            printf("%s %.0f ly away at sector %.0f %.0f %.0f, %.0f ly across, ~%.0f stars", k ? ";" : "; the nearest:", opens[k].dist, opens[k].c.x, opens[k].c.y, opens[k].c.z, 2 * opens[k].R,
+                    9.57 * std::pow(opens[k].R / 2, 3));
         printf("\n");
     }
     // the class mix per region: a cube of 15 sectors round a point of each region, the stars of that region's sectors only
@@ -165,7 +179,14 @@ void runGalaxy() {
     mix("SPIRAL ARM", REGION_ARM, hx, 0, hz);
     {   // the gap beside home's arm: the thinnest angle at home's radius
         double best = 9, bAng = 0;
-        for (int ia = 0; ia < 720; ia++) { double ang = ia / 720.0 * TAU; double a = galaxyTerms(GALAXY_CENTRE_SX + gh.r * std::cos(ang), 0, GALAXY_CENTRE_SZ + gh.r * std::sin(ang)).arm; if (a < best) { best = a; bAng = ang; } }
+        for (int ia = 0; ia < 720; ia++) {
+            double ang = ia / 720.0 * TAU;
+            double a = galaxyTerms(GALAXY_CENTRE_SX + gh.r * std::cos(ang), 0, GALAXY_CENTRE_SZ + gh.r * std::sin(ang)).arm;
+            if (a < best) {
+                best = a;
+                bAng = ang;
+            }
+        }
         mix("THE DISK", REGION_DISK, GALAXY_CENTRE_SX + gh.r * std::cos(bAng), 0, GALAXY_CENTRE_SZ + gh.r * std::sin(bAng));
     }
     mix("THE HALO", REGION_HALO, hx, 1500, hz);
@@ -196,10 +217,14 @@ void runGalaxy() {
     printf("; regions:"); for (int k = 0; k < REGION_COUNT; k++) if (reg[k]) printf(" %s %d", REGION_NAMES[k], reg[k]); printf("\n");
     {   // the pinned home star, and the search's own pick (the fallback)
         Star hs; bool ok = starInSector(HOME_SX, HOME_SY, HOME_SZ, hs);
-        if (ok) printf("  the home star is pinned at sector %lld %lld %lld: %s (%s, exists while the density stays above %.3f)\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ, hs.name.c_str(), STAR_CLASSES[hs.cls].name, unitFromHash(sectorSeed(HOME_SX, HOME_SY, HOME_SZ)));
+        if (ok)
+            printf("  the home star is pinned at sector %lld %lld %lld: %s (%s, exists while the density stays above %.3f)\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ,
+                    hs.name.c_str(), STAR_CLASSES[hs.cls].name, unitFromHash(sectorSeed(HOME_SX, HOME_SY, HOME_SZ)));
         else printf("  the pinned home sector %lld %lld %lld holds NO star: the game falls back to the search\n", (long long)HOME_SX, (long long)HOME_SY, (long long)HOME_SZ);
     }
-    if (found) printf("  the search's own pick would be %s at sector %lld 0 %lld (%s, score %d, exists while the density stays above %.3f)\n", best.name.c_str(), (long long)best.sx, (long long)best.sz, STAR_CLASSES[best.cls].name, bestScore, unitFromHash(sectorSeed(best.sx, best.sy, best.sz)));
+    if (found)
+        printf("  the search's own pick would be %s at sector %lld 0 %lld (%s, score %d, exists while the density stays above %.3f)\n", best.name.c_str(), (long long)best.sx, (long long)best.sz,
+                STAR_CLASSES[best.cls].name, bestScore, unitFromHash(sectorSeed(best.sx, best.sy, best.sz)));
     else printf("  no yellow or orange star with a living world there: the search falls back to sector 180 0 40\n");
     // the neighbourhood: the cube StarNeighborhood scans, the nearest-neighbour distances, the stars within ten light years
     StarNeighborhood nb; Vec3 homeKm((hx + 0.5) * SECTOR_KM, 0.5 * SECTOR_KM, (hz + 0.5) * SECTOR_KM); nb.update(homeKm);
@@ -222,13 +247,18 @@ void runGalaxy() {
                 double dd = length(c - Vec3(hx + 0.5, 0.5, hz + 0.5)); if (dd > 300) continue;
                 nComplex++; if (dd < nearest) { nearest = dd; nearC = c; }
             }
-        printf("  star-forming complexes within 300 ly of home: %d (one per %.0f ly of the arm's plane on average); the nearest %.0f ly away at sector %lld %lld %lld, its patches in sight from %.0f ly\n",
-               nComplex, nComplex ? std::sqrt(PI * 300 * 300 / nComplex) : 0.0, nearest, (long long)std::floor(nearC.x), (long long)std::floor(nearC.y), (long long)std::floor(nearC.z), NEBULA_SEEN);
+        printf("  star-forming complexes within 300 ly of home: %d (one per %.0f ly of the arm's plane on average); the nearest %.0f ly away at sector %lld %lld %lld, its patches in sight from %.0f "
+               "ly\n",
+                nComplex, nComplex ? std::sqrt(PI * 300 * 300 / nComplex) : 0.0, nearest, (long long)std::floor(nearC.x), (long long)std::floor(nearC.y), (long long)std::floor(nearC.z), NEBULA_SEEN);
     }
     {   // the band from home: the columns of starlight and the dust in the named directions, the map's cost, its picture and the sky from the ship
         Vec3 obs(hx + 0.5, 0.5, hz + 0.5);
         double coreLon = std::atan2(GALAXY_CENTRE_SZ - obs.z, GALAXY_CENTRE_SX - obs.x);
-        struct D { const char* name; double lon, lat; } dirs[] = {{"the core, in the plane", coreLon, 0}, {"the core, 4 degrees above", coreLon, 4 * DEG}, {"the core, 12 above", coreLon, 12 * DEG}, {"along the arm", coreLon + PI / 2, 0}, {"the anticentre", coreLon + PI, 0}, {"the anticentre, 10 above", coreLon + PI, 10 * DEG}, {"30 degrees up", coreLon + PI, 30 * DEG}, {"the pole", 0, 0.5 * PI - 1e-6}};
+        struct D {
+            const char* name;
+            double lon, lat;
+        } dirs[] = {{"the core, in the plane", coreLon, 0}, {"the core, 4 degrees above", coreLon, 4 * DEG}, {"the core, 12 above", coreLon, 12 * DEG}, {"along the arm", coreLon + PI / 2, 0},
+                {"the anticentre", coreLon + PI, 0}, {"the anticentre, 10 above", coreLon + PI, 10 * DEG}, {"30 degrees up", coreLon + PI, 30 * DEG}, {"the pole", 0, 0.5 * PI - 1e-6}};
         printf("the band from home (the column of starlight in stars per square light year, the dust's optical depth, the brightness 0..1):\n");
         for (const D& dd : dirs) {
             Vec3 d(std::cos(dd.lat) * std::cos(dd.lon), std::sin(dd.lat), std::cos(dd.lat) * std::sin(dd.lon));
@@ -239,10 +269,16 @@ void runGalaxy() {
         buildGalaxyBand(obs, band, BAND_MAP_W, BAND_MAP_H);
         printf("  the %d x %d map builds in %.1f ms (%d threads)\n", BAND_MAP_W, BAND_MAP_H, (nowSec() - tb0) * 1000, parallelThreads());
         // the profile along the plane every 30 degrees from the core, and by latitude at the core and the anticentre
-        printf("  along the plane from the core:"); for (int k = 0; k < 12; k++) { double lon = coreLon + k * 30 * DEG; printf(" %d:%.2f", k * 30, sampleGalaxyBand(band, Vec3(std::cos(lon), 0, std::sin(lon)))); } printf("\n");
+        printf("  along the plane from the core:");
+        for (int k = 0; k < 12; k++) {
+            double lon = coreLon + k * 30 * DEG;
+            printf(" %d:%.2f", k * 30, sampleGalaxyBand(band, Vec3(std::cos(lon), 0, std::sin(lon))));
+        }
+        printf("\n");
         for (int a = 0; a < 2; a++) {
             double lon = coreLon + a * PI; printf("  by latitude at the %s:", a ? "anticentre" : "core");
-            for (double lat : {0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 60.0, 90.0}) printf(" %.0f:%.2f", lat, sampleGalaxyBand(band, Vec3(std::cos(lat * DEG) * std::cos(lon), std::sin(lat * DEG), std::cos(lat * DEG) * std::sin(lon))));
+            for (double lat : {0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0, 20.0, 30.0, 60.0, 90.0})
+                printf(" %.0f:%.2f", lat, sampleGalaxyBand(band, Vec3(std::cos(lat * DEG) * std::cos(lon), std::sin(lat * DEG), std::cos(lat * DEG) * std::sin(lon))));
             printf("\n");
         }
         {   // the whole sky as the game samples it, 720 x 360, the core at the centre
@@ -255,7 +291,8 @@ void runGalaxy() {
                 }
             writePNG("shots/tests/galaxy_band.png", bimg.data(), BW, BH);
         }
-        if (galaxySkyFrames(coreLon)) printf("  shots/tests/galaxy_band.png (the sky as the game samples the map, the core at the centre), galaxy_sky_core/arm/anticentre.png (from above the home star)\n");
+        if (galaxySkyFrames(coreLon))
+            printf("  shots/tests/galaxy_band.png (the sky as the game samples the map, the core at the centre), galaxy_sky_core/arm/anticentre.png (from above the home star)\n");
     }
     // the maps: column densities through the disc, log-toned
     const int W = 400, H = 400; const double half = 55000;
@@ -272,7 +309,10 @@ void runGalaxy() {
     });
     {
         int hi = (int)((hx - GALAXY_CENTRE_SX + half) / (2 * half) * W), hj = (int)((hz - GALAXY_CENTRE_SZ + half) / (2 * half) * H);
-        for (int a = 0; a < 48; a++) { int x = hi + (int)std::lround(5 * std::cos(a / 48.0 * TAU)), y = hj + (int)std::lround(5 * std::sin(a / 48.0 * TAU)); if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF00FF00u; }
+        for (int a = 0; a < 48; a++) {
+            int x = hi + (int)std::lround(5 * std::cos(a / 48.0 * TAU)), y = hj + (int)std::lround(5 * std::sin(a / 48.0 * TAU));
+            if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF00FF00u;
+        }
         for (const Knot& g : globs) {   // the globulars as orange dots
             int gi = (int)((g.c.x - GALAXY_CENTRE_SX + half) / (2 * half) * W), gj = (int)((g.c.z - GALAXY_CENTRE_SZ + half) / (2 * half) * H);
             for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { int x = gi + dx, y = gj + dy; if (x >= 0 && x < W && y >= 0 && y < H) img[(size_t)y * W + x] = 0xFF2090FFu; }
@@ -334,7 +374,11 @@ int runChart() {
         for (int j = 0; j < 128; j++) for (int i = 0; i < 320; i++, n++) acc += galaxyFaceOnColumn(GALAXY_CENTRE_SX + (i - 160) * 300.0, GALAXY_CENTRE_SZ + (j - 64) * 300.0).column;
         printf("  worst difference %.4f%%; %d columns in %.2f ms on one thread (%.0f ns each)%s\n", 100 * worst, n, (nowSec() - t0) * 1e3, (nowSec() - t0) * 1e9 / n, acc > 0 ? "" : " (none?)");
     }
-    TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/test_save";
+    game.settingsPath = "shots/tests/test_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/test_guide.txt";
     game.newGame(); game.setState(GameState::SPACE);
     Input in;
     auto run = [&](double secs) { runFramesAtLeastOne(game, in, secs); };
@@ -387,7 +431,8 @@ int runChart() {
         double t0 = nowSec(); gpress(KEY_ENTER); const double plotMs = (nowSec() - t0) * 1e3; grun(0.05); gshot("plotted");
         int64_t rx = 0, ry = 0, rz = 0; const bool remote = g.testRemote(rx, ry, rz);
         Star dest; starInSector(rx, ry, rz, dest, false);
-        printf("  Enter: plotted %d (a frame with the plot %.1f ms), the target %d at %lld %lld %lld, %.1f ly from the cursor's point, '%s'\n", g.testChartPlotted(), plotMs, remote, (long long)rx, (long long)ry, (long long)rz, length(dest.pos / SECTOR_KM - aim), g.testStatus().c_str());
+        printf("  Enter: plotted %d (a frame with the plot %.1f ms), the target %d at %lld %lld %lld, %.1f ly from the cursor's point, '%s'\n", g.testChartPlotted(), plotMs, remote, (long long)rx,
+                (long long)ry, (long long)rz, length(dest.pos / SECTOR_KM - aim), g.testStatus().c_str());
         t0 = nowSec(); gpress(KEY_TAB); const double lookMs = (nowSec() - t0) * 1e3; grun(0.1); gshot("look");
         printf("  Tab: the look %d, page %d, %zu stars round the plotted end (a frame with the look %.1f ms)\n", g.testChartLook(), g.testMapPage(), g.testLookStars().stars.size(), lookMs);
         gpress(KEY_TAB); grun(0.05);
@@ -397,14 +442,16 @@ int runChart() {
         gpress(KEY_M); grun(0.1); gshot("flight"); gpress(KEY_ESCAPE);
         grun(dur + 1.0);
         const Vec3 at = g.testShipPos() / SECTOR_KM;
-        printf("  arrived: %d at %.0f %.0f %.0f, %.1f ly from the cursor's point; the log: %s\n", g.testSystem().valid, at.x, at.y, at.z, length(at - aim), g.guide.log.empty() ? "-" : g.guide.log[g.guide.log.size() >= 2 ? g.guide.log.size() - 2 : 0].text.c_str());
+        printf("  arrived: %d at %.0f %.0f %.0f, %.1f ly from the cursor's point; the log: %s\n", g.testSystem().valid, at.x, at.y, at.z, length(at - aim),
+                g.guide.log.empty() ? "-" : g.guide.log[g.guide.log.size() >= 2 ? g.guide.log.size() - 2 : 0].text.c_str());
         gpress(KEY_M); grun(0.1); gshot("arrived");
         printf("  the chart at the arrival: page %d, the crosshair at %d %d, the cursor on the ship %d\n", g.testMapPage(), g.testChartYouX(), g.testChartYouY(), g.testChartOnShip());
         // a mark over the disc, 1,500 ly north of the ship
         g.testChartCursor(at + Vec3(0, 1500, 0)); grun(0.05);
         gpress(KEY_L); g.testTypeText("THE HIGH VOID"); grun(0.1); gshot("mark");
         printf("  L: %zu marks of the galaxy, the last '%s' at %.0f %.0f %.0f; '%s'\n", g.guide.galaxyMarks.size(), g.guide.galaxyMarks.empty() ? "-" : g.guide.galaxyMarks.back().name.c_str(),
-               g.guide.galaxyMarks.empty() ? 0.0 : g.guide.galaxyMarks.back().x, g.guide.galaxyMarks.empty() ? 0.0 : g.guide.galaxyMarks.back().y, g.guide.galaxyMarks.empty() ? 0.0 : g.guide.galaxyMarks.back().z, g.testStatus().c_str());
+                g.guide.galaxyMarks.empty() ? 0.0 : g.guide.galaxyMarks.back().x, g.guide.galaxyMarks.empty() ? 0.0 : g.guide.galaxyMarks.back().y,
+                g.guide.galaxyMarks.empty() ? 0.0 : g.guide.galaxyMarks.back().z, g.testStatus().c_str());
         g.testChartLevel(0); grun(0.05);
         for (int k = 0; k < 4; k++) { gpress(KEY_N); grun(0.05); const Vec3 c = g.testChartCursorAt(); printf("  N: '%s' (the cursor at %.0f %.0f %.0f)\n", g.testStatus().c_str(), c.x, c.y, c.z); }
         gshot("stops");
@@ -517,9 +564,11 @@ int runFlightStability() {
             }
             const bool ok = bandPix <= 6;
             if (!ok) bad++;
-            printf("stability flight %-5s %-5s %.1f s: the band mean |dL| %.3f a frame (worst %.3f at %.1f s), worst pixel %.0f, %.4f%% change over 6; %zu keyframes, %ld built, %ld at once -> %s (%s); "
+            printf("stability flight %-5s %-5s %.1f s: the band mean |dL| %.3f a frame (worst %.3f at %.1f s), worst pixel %.0f, %.4f%% change over 6; %zu keyframes, %ld built, %ld at once -> %s "
+                   "(%s); "
                    "with the star-forming regions %d passages, the longest %.2f s, the worst frame %.2f; %.1f s\n",
-                   f.tag, VIEWS[view], vimanaSeconds(f.ly), bandMean, bandWorst, bandWorstAt, bandPix, bandShare, keys, built, forced, fn.c_str(), ok ? "steady" : "FLICKERS", passages, nebLongest, nebWorst, nowSec() - t0);
+                    f.tag, VIEWS[view], vimanaSeconds(f.ly), bandMean, bandWorst, bandWorstAt, bandPix, bandShare, keys, built, forced, fn.c_str(), ok ? "steady" : "FLICKERS", passages, nebLongest,
+                    nebWorst, nowSec() - t0);
         }
     return bad;
 }
@@ -604,7 +653,8 @@ int runCrossing() {
             }
             printf("\n");
         }
-    printf("frames: shots/tests/crossing_<core|north>_<share>_<front|aside>.png (the cabin), crossing_<core|north>_<share>_bare_<ahead|back|aside>.png, crossing_<core|north>_50_chart.png, crossing_<core|north>_arrived.png\n");
+    printf("frames: shots/tests/crossing_<core|north>_<share>_<front|aside>.png (the cabin), crossing_<core|north>_<share>_bare_<ahead|back|aside>.png, crossing_<core|north>_50_chart.png, "
+           "crossing_<core|north>_arrived.png\n");
     return 0;
 }
 // G-02: `home`: the candidates of the new-game search (yellow or orange stars with a living planet in sectors 176..196 x
@@ -621,7 +671,16 @@ void runHome() {
             StarSystem ss; ss.generate(st);
             Cand c; c.s = st; c.body = -1; c.score = 0; c.rings = 0; c.moons = 0;
             for (auto& b : ss.bodies) {
-                if (b.type == PT_FELISIAN && b.parent < 0) { c.score += 50; if (c.body < 0) { c.body = b.index; c.tempK = b.tempK; c.radiusKm = b.radiusKm; c.rings = b.rings ? 1 : 0; c.moons = b.moonCount; } }
+                if (b.type == PT_FELISIAN && b.parent < 0) {
+                    c.score += 50;
+                    if (c.body < 0) {
+                        c.body = b.index;
+                        c.tempK = b.tempK;
+                        c.radiusKm = b.radiusKm;
+                        c.rings = b.rings ? 1 : 0;
+                        c.moons = b.moonCount;
+                    }
+                }
                 if (b.parent < 0) c.score += 3;
                 if (b.rings) c.score += 5;
             }
@@ -638,9 +697,9 @@ void runHome() {
             while (nowSec() - t0 < 8.0 && !game.testDrainageReady()) { game.frame(in, 1.0 / 60); in.newFrame(); }
             c.tiles = nowSec() - t0;
             cands.push_back(c);
-            printf("  %-14s %3lld 0 %3lld  %-12s score %3d  %s R %4.0f km  %3.0f K  rings %d moons %d  nebula patches %d  tiles %.1f s%s  u %.3f%s\n", st.name.c_str(), (long long)x, (long long)z, STAR_CLASSES[st.cls].name, c.score,
-                   ss.bodies[c.body].name.c_str(), c.radiusKm, c.tempK + 33, c.rings, c.moons, c.nebula, c.tiles, c.tiles >= 8.0 ? " (not ready)" : "", unitFromHash(sectorSeed(x, 0, z)),
-                   x == HOME_SX && z == HOME_SZ ? "  <- pinned" : "");
+            printf("  %-14s %3lld 0 %3lld  %-12s score %3d  %s R %4.0f km  %3.0f K  rings %d moons %d  nebula patches %d  tiles %.1f s%s  u %.3f%s\n", st.name.c_str(), (long long)x, (long long)z,
+                    STAR_CLASSES[st.cls].name, c.score, ss.bodies[c.body].name.c_str(), c.radiusKm, c.tempK + 33, c.rings, c.moons, c.nebula, c.tiles, c.tiles >= 8.0 ? " (not ready)" : "",
+                    unitFromHash(sectorSeed(x, 0, z)), x == HOME_SX && z == HOME_SZ ? "  <- pinned" : "");
         }
     // the pick: a yellow star first, two living worlds, the first of them temperate (275-320 K at the surface), its tiles under
     // a second, the fewest nebula patches (every candidate of the region has some: the arm's star-forming cells), then the score;
@@ -653,8 +712,10 @@ void runHome() {
     }
     if (best) {
         double u = unitFromHash(sectorSeed(best->s.sx, 0, best->s.sz)), dens = galaxyDensity((double)best->s.sx, 0, (double)best->s.sz);
-        printf("home: pin sector %lld 0 %lld (%s, score %d, its world %.0f K at the surface, tiles %.1f s, %d nebula patches, exists while the density stays above %.3f; it is %.3f here%s)%s\n", (long long)best->s.sx, (long long)best->s.sz, best->s.name.c_str(), best->score, best->tempK + 33, best->tiles, best->nebula, u, dens,
-               u > 0.8 * dens ? ": a thin margin, the fallback search takes over if the galaxy is retuned" : "", best->s.sx == HOME_SX && best->s.sz == HOME_SZ ? ", as pinned" : ", NOT the pinned one");
+        printf("home: pin sector %lld 0 %lld (%s, score %d, its world %.0f K at the surface, tiles %.1f s, %d nebula patches, exists while the density stays above %.3f; it is %.3f here%s)%s\n",
+                (long long)best->s.sx, (long long)best->s.sz, best->s.name.c_str(), best->score, best->tempK + 33, best->tiles, best->nebula, u, dens,
+                u > 0.8 * dens ? ": a thin margin, the fallback search takes over if the galaxy is retuned" : "",
+                best->s.sx == HOME_SX && best->s.sz == HOME_SZ ? ", as pinned" : ", NOT the pinned one");
     }
     else printf("home: no candidate passes (tiles under a second, a world of 275-320 K)\n");
 }
@@ -803,8 +864,9 @@ allSys++;
                 if (last > 0) wanderOut += b.orbitRadiusKm * (1 - b.ecc) / last;
             }
         }
-        printf("wanderers: %d in the start region's %d systems (%.1f%%), %d frozen felisian, %d with a people; %d retrograde, eccentricity %.2f on average, the nearest %.2f times the last planet's orbit\n",
-               wanderN, allSys, 100.0 * wanderN / std::max(1, allSys), wanderFrozen, wanderPeople, wanderRetro, wanderEcc / std::max(1, wanderN), wanderOut / std::max(1, wanderN));
+        printf("wanderers: %d in the start region's %d systems (%.1f%%), %d frozen felisian, %d with a people; %d retrograde, eccentricity %.2f on average, the nearest %.2f times the last planet's "
+               "orbit\n",
+                wanderN, allSys, 100.0 * wanderN / std::max(1, allSys), wanderFrozen, wanderPeople, wanderRetro, wanderEcc / std::max(1, wanderN), wanderOut / std::max(1, wanderN));
     }
     {   // the giants' moons over the start region by kind, the commonest first (their captured moons apart), and the strange moons among all moons
         int giantMoons = 0, kinds[PT_COUNT] = {0}, captured = 0, strange[PT_COUNT] = {0}, allMoons = 0;
@@ -851,17 +913,25 @@ allSys++;
     printf("temperature K: <150 %d, 150-300 %d, 300-450 %d, 450-600 %d, 600-750 %d, >750 %d\n", tempHist[0], tempHist[1], tempHist[2], tempHist[3], tempHist[4], tempHist[5]);
     printf("gravity m/s2: <5 %d, 5-10 %d, 10-15 %d, 15-20 %d, >20 %d\n", gravHist[0], gravHist[1], gravHist[2], gravHist[3], gravHist[4]);
     printf("moons per planet:"); for (int i = 0; i < 8; i++) printf(" %d:%d", i, moonHist[i]); printf("\n");
-    printf("M5: multiple systems %d (%.0f%%), substellar objects %d, comets %d, double planets %d, locked planets %d\n", multiples, 100.0 * multiples / std::max(1, systems), substellar, comets, doubles, lockedN);
+    printf("M5: multiple systems %d (%.0f%%), substellar objects %d, comets %d, double planets %d, locked planets %d\n", multiples, 100.0 * multiples / std::max(1, systems), substellar, comets,
+            doubles, lockedN);
     if (skySites) {
-        printf("sky at %d random sites (R-001 targets in brackets): disc >0.5 deg %.0f%%, >1 deg %.0f%% [45-50], >3 deg %.0f%% [35], >10 deg %.0f%% [12-15]; a planet as a point %.0f%%; two suns up %.0f%%\n",
-               skySites, 100.0 * sky05 / skySites, 100.0 * sky1 / skySites, 100.0 * sky3 / skySites, 100.0 * sky10 / skySites, 100.0 * skyPoint / skySites, 100.0 * skyTwoSuns / skySites);
-        printf("  the disc is: the parent %.0f%%, an own moon %.0f%%, a sister moon %.0f%%, another world %.0f%%\n", 100.0 * skyParent / std::max(1, sky05), 100.0 * skyMoon / std::max(1, sky05), 100.0 * skySister / std::max(1, sky05), 100.0 * skyOther / std::max(1, sky05));
+        printf("sky at %d random sites (R-001 targets in brackets): disc >0.5 deg %.0f%%, >1 deg %.0f%% [45-50], >3 deg %.0f%% [35], >10 deg %.0f%% [12-15]; a planet as a point %.0f%%; two suns up "
+               "%.0f%%\n",
+                skySites, 100.0 * sky05 / skySites, 100.0 * sky1 / skySites, 100.0 * sky3 / skySites, 100.0 * sky10 / skySites, 100.0 * skyPoint / skySites, 100.0 * skyTwoSuns / skySites);
+        printf("  the disc is: the parent %.0f%%, an own moon %.0f%%, a sister moon %.0f%%, another world %.0f%%\n", 100.0 * skyParent / std::max(1, sky05), 100.0 * skyMoon / std::max(1, sky05),
+                100.0 * skySister / std::max(1, sky05), 100.0 * skyOther / std::max(1, sky05));
     }
     {   // from the parking, another world wider than 10 deg anywhere in the sky / wider than 6 deg in the view of the world
         const char* const kinds[5] = {"solid planets", "their moons", "giants", "giants' moons", "twins"};
         int n = 0, sk = 0, vw = 0;
         printf("from the ship parked at a world (B-428), another world wider than 10 deg in the sky / wider than 6 deg in the view:");
-        for (int k = 0; k < 5; k++) { printf(" %s %.0f%% / %.0f%% of %d;", kinds[k], 100.0 * parkSky[k] / std::max(1, parkN[k]), 100.0 * parkView[k] / std::max(1, parkN[k]), parkN[k]); n += parkN[k]; sk += parkSky[k]; vw += parkView[k]; }
+        for (int k = 0; k < 5; k++) {
+            printf(" %s %.0f%% / %.0f%% of %d;", kinds[k], 100.0 * parkSky[k] / std::max(1, parkN[k]), 100.0 * parkView[k] / std::max(1, parkN[k]), parkN[k]);
+            n += parkN[k];
+            sk += parkSky[k];
+            vw += parkView[k];
+        }
         printf(" all %.0f%% / %.0f%% of %d\n", 100.0 * sk / std::max(1, n), 100.0 * vw / std::max(1, n), n);
     }
     for (int t = 0; t < PT_COUNT; t++) {

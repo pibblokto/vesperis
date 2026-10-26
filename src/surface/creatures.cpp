@@ -223,7 +223,16 @@ void SurfaceView::updateLife(double dt, double t) {
                 double bestH = 0; f.perched = false;
                 for (int cz = pcz - 2; cz <= pcz + 2; cz++)
                     for (int cx = pcx - 2; cx <= pcx + 2; cx++)
-                        forTrees(cx, cz, [&](const TreeInst& T) { if (!T.dead && T.h > bestH) { bestH = T.h; f.perched = true; f.perchX = T.x; f.perchZ = T.z; f.perchY = T.gy + T.cy + T.r * 0.4; f.perchR = T.r; } });
+                        forTrees(cx, cz, [&](const TreeInst& T) {
+                            if (!T.dead && T.h > bestH) {
+                                bestH = T.h;
+                                f.perched = true;
+                                f.perchX = T.x;
+                                f.perchZ = T.z;
+                                f.perchY = T.gy + T.cy + T.r * 0.4;
+                                f.perchR = T.r;
+                            }
+                        });
                 if (f.perched) { f.cx = f.perchX; f.cz = f.perchZ; f.radius = 0; }
             }
         }
@@ -270,7 +279,8 @@ void SurfaceView::updateLife(double dt, double t) {
             } else if (c.state == CS_FLEE) {
                 c.state = CS_IDLE; c.timer = 2 + 3 * r.uni(); c.speed = 0;
             } else {
-                bool restWanted = (sp.activity == ACT_DAY && ((localTime > 0.46 && localTime < 0.54) || sky < 0.2)) || (sp.activity == ACT_NIGHT && sky > 0.45) || (sp.activity == ACT_DUSK && (sky > 0.7 || sky < 0.05));
+                bool restWanted = (sp.activity == ACT_DAY && ((localTime > 0.46 && localTime < 0.54) || sky < 0.2)) || (sp.activity == ACT_NIGHT && sky > 0.45) ||
+                        (sp.activity == ACT_DUSK && (sky > 0.7 || sky < 0.05));
                 double wx = 0, wz = 0;
                 bool thirsty = localTime > 0.55 && localTime < 0.78 && sp.diet != 1 && waterNear(site, c.x, c.z, wx, wz);
                 double dwx = wx - c.x, dwz = wz - c.z, dw = thirsty ? std::sqrt(dwx * dwx + dwz * dwz) : 1e9;
@@ -420,7 +430,8 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
                 double fh = (0.25 + 0.45 * (surf - 0.2)) * ssz * 0.6;
                 double shade = 8 + 55 * fogOf(dist);
                 RasterParams rp; rp.bank = 3;
-                RVert p[3] = {vert(Vec3(sx - hx * 0.4 * ssz, wl + 0.02, sz - hz * 0.4 * ssz), shade), vert(Vec3(sx, wl + fh, sz), shade), vert(Vec3(sx + hx * 0.4 * ssz, wl + 0.02, sz + hz * 0.4 * ssz), shade)};
+                RVert p[3] = {vert(Vec3(sx - hx * 0.4 * ssz, wl + 0.02, sz - hz * 0.4 * ssz), shade), vert(Vec3(sx, wl + fh, sz), shade),
+                        vert(Vec3(sx + hx * 0.4 * ssz, wl + 0.02, sz + hz * 0.4 * ssz), shade)};
                 if (p[0].z < NEAR_Z || p[1].z < NEAR_Z || p[2].z < NEAR_Z) continue;
                 rasterPolygon(fb, p, 3, rp, proj);
                 // the back: a low arc behind the fin; a breach lifts it high for a moment
@@ -498,7 +509,9 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
             }
         }
         // the neck and head: pitched by the plan, lowered to the ground when grazing or drinking
-        double neckUp = sp.plan == PLAN_LONGNECK ? 55 * DEG : (sp.plan == PLAN_BIPED ? 60 * DEG : (sp.plan == PLAN_HOPPER ? 45 * DEG : (sp.plan == PLAN_GIANT ? 35 * DEG : (sp.plan == PLAN_HEXAPOD ? 0 : 22 * DEG))));
+        double neckUp = sp.plan == PLAN_LONGNECK
+                ? 55 * DEG
+                : (sp.plan == PLAN_BIPED ? 60 * DEG : (sp.plan == PLAN_HOPPER ? 45 * DEG : (sp.plan == PLAN_GIANT ? 35 * DEG : (sp.plan == PLAN_HEXAPOD ? 0 : 22 * DEG))));
         double np = neckUp - c.headPitch * (neckUp + 42 * DEG);
         Vec3 neckDir = fwd * std::cos(np) + up * std::sin(np);
         Vec3 neck0 = c0 + fwd * (bodyLen * 0.5) + up * (bodyH * 0.3);
@@ -530,10 +543,18 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
             if (mid) {   // crests: horns, ears, a crest along the neck, antlers
                 double dark = shadeOf2(up, 0.5);
                 switch (sp.crest) {
-                    case 1: for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.9) + up * (sz * 0.3) + headDir * (sz * 0.15), dark, bank, th); break;
+                    case 1:
+                        for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.9) + up * (sz * 0.3) + headDir * (sz * 0.15), dark, bank, th);
+                        break;
                     case 2: for (int e = -1; e <= 1; e += 2) seg(head0 + hup + side * (e * hw * 0.4), head0 + hup + side * (e * hw * 0.8) + up * (sz * 0.18), dark, bank, 1); break;
                     case 3: seg(neck0 + up * (bodyH * 0.35), neck1 + up * (bodyH * 0.35), dark, bank, th); break;
-                    case 4: for (int e = -1; e <= 1; e += 2) { Vec3 a0 = head0 + hup + side * (e * hw * 0.4), a1 = a0 + up * (sz * 0.35) + side * (e * sz * 0.2); seg(a0, a1, dark, bank, 1); seg(a0 + (a1 - a0) * 0.5, a0 + (a1 - a0) * 0.5 + up * (sz * 0.2) - side * (e * sz * 0.08), dark, bank, 1); } break;
+                    case 4:
+                        for (int e = -1; e <= 1; e += 2) {
+                            Vec3 a0 = head0 + hup + side * (e * hw * 0.4), a1 = a0 + up * (sz * 0.35) + side * (e * sz * 0.2);
+                            seg(a0, a1, dark, bank, 1);
+                            seg(a0 + (a1 - a0) * 0.5, a0 + (a1 - a0) * 0.5 + up * (sz * 0.2) - side * (e * sz * 0.08), dark, bank, 1);
+                        }
+                        break;
                     default: break;
                 }
             }
@@ -554,8 +575,12 @@ void SurfaceView::drawLife(Framebuffer& fb, double t) {
         for (int L = 0; L < nlegs; L++) {
             double fx, sx, off;
             if (nlegs == 6) { fx = bodyLen * (0.38 - 0.38 * (L / 2)); sx = (L & 1) ? 1 : -1; off = ((L / 2) & 1) ? ((L & 1) ? 0.5 : 0.0) : ((L & 1) ? 0.0 : 0.5); }
-            else if (nlegs == 2) { fx = -bodyLen * 0.1; sx = (L & 1) ? 1 : -1; off = sp.gait == GAIT_HOP ? 0.0 : (L & 1) * 0.5; }
-            else { fx = (L & 1) ? bodyLen * 0.38 : -bodyLen * 0.38; sx = (L & 2) ? 1 : -1; off = sp.runGait == GAIT_GALLOP && c.state == CS_FLEE ? ((L & 1) ? 0.0 + 0.1 * ((L & 2) ? 1 : 0) : 0.5 + 0.1 * ((L & 2) ? 1 : 0)) : (((L & 1) ^ ((L & 2) >> 1)) ? 0.0 : 0.5); }
+            else if (nlegs == 2) { fx = -bodyLen * 0.1; sx = (L & 1) ? 1 : -1; off = sp.gait == GAIT_HOP ? 0.0 : (L & 1) * 0.5;
+            } else {
+                fx = (L & 1) ? bodyLen * 0.38 : -bodyLen * 0.38;
+                sx = (L & 2) ? 1 : -1;
+                off = sp.runGait == GAIT_GALLOP && c.state == CS_FLEE ? ((L & 1) ? 0.0 + 0.1 * ((L & 2) ? 1 : 0) : 0.5 + 0.1 * ((L & 2) ? 1 : 0)) : (((L & 1) ^ ((L & 2) >> 1)) ? 0.0 : 0.5);
+            }
             Vec3 hip = c0 + fwd * fx + side * (sx * wid * 0.45) - up * (bodyH * 0.4);
             Vec3 knee, foot;
             if (c.lift > 0.5) {   // folded under the body

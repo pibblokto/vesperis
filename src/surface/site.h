@@ -70,7 +70,9 @@ struct SiteEdit {
 // `shoreSplitTriangle` cuts one triangle into its wet and dry polygons (fan order from [0], the same in the drawing and in
 // `groundHeight`)
 struct TerrainCache;
-double vertexShore(TerrainCache& c, int cx, int cz);   // the corner's side of the edge: its outline distance where known, else its height over its water, else over its neighbours' water; 1e9 with no water near
+// the corner's side of the edge: its outline distance where known, else its height over its water, else over its neighbours' water; 1e9
+// with no water near
+double vertexShore(TerrainCache& c, int cx, int cz);
 double cacheHeightAt(TerrainCache& c, double x, double z);   // the height of the drawn mesh at a point: the cell's two triangles, cut at the water's edge
 struct ShorePt { double x, z, h; int a, b; double t; };   // a corner (a == b, t = 0) or the point at t along the edge a -> b
 constexpr double SHORE_LIP = 0.09;   // O6-03: the dry piece's edge stands this much over the cut (the wet piece's lies 3 cm under the water), so the sheet never covers the bank
@@ -132,7 +134,8 @@ struct SurfaceSite {
     // it (else they sink and surface as the band sweeps over them, far trees flickering in and out of the ground)
     double camX = 0, camZ = 0; int lod0R = 0, lod0Band = 0;
     bool inNearRing(double x, double z) const { double dx = (x - nearX) / 4.0, dz = (z - nearZ) / 4.0; return nearBlend > 0 && dx * dx + dz * dz < (double)nearR * nearR; }
-    double nearMorph(double x, double z) const { double dx = (x - nearX) / 4.0, dz = (z - nearZ) / 4.0; return smoothstep(nearR - nearBand, nearR - 0.5, std::sqrt(dx * dx + dz * dz)); }   // 0 at the core .. 1 at the edge
+    // 0 at the core .. 1 at the edge
+    double nearMorph(double x, double z) const { double dx = (x - nearX) / 4.0, dz = (z - nearZ) / 4.0; return smoothstep(nearR - nearBand, nearR - 0.5, std::sqrt(dx * dx + dz * dz)); }
     bool smallBody = false;      // R under 300 km (comets): exact sphere geometry, no far ring, no floor
     double escapeVelocity = 1e9; // m/s, sqrt(2 g R)
     std::vector<float> ringProf; // the ring's density profile when the body has rings (else empty)

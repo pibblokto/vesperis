@@ -56,7 +56,11 @@ void unitNavigation(const Check& check) {
                 if (bsys.belts.empty()) continue;
                 for (int i = 0; i < (int)bsys.bodies.size() && pi < 0; i++) if (bsys.bodies[i].parent < 0 && bsys.bodies[i].type != PT_COMPANION) pi = i;
             }
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
         auto run = [&](double secs) { runFrames(game, gi, secs); };
@@ -82,13 +86,18 @@ void unitNavigation(const Check& check) {
             computerOk = parkedAt(0, w2);
         }
         check("a planet approached from a belt keeps its parking (B-410)", pi >= 0 && inBelt && listOk && computerOk,
-              fmt("%s %lld %lld body %d: from the list %s (%s); from the flight computer %s (%s)", bs.name.c_str(), (long long)bs.sx, (long long)bs.sz, pi, listOk ? "ok" : "PULLED BACK", w1.c_str(), computerOk ? "ok" : "PULLED BACK", w2.c_str()));
+                fmt("%s %lld %lld body %d: from the list %s (%s); from the flight computer %s (%s)", bs.name.c_str(), (long long)bs.sx, (long long)bs.sz, pi, listOk ? "ok" : "PULLED BACK", w1.c_str(),
+                        computerOk ? "ok" : "PULLED BACK", w2.c_str()));
     }
     {   // a jump of any length along the aim. From home the aim (R), 4 0 0 typed and Enter: the star nearest the line's end becomes the
         // remote target, the Vimana flies at once (its length by `vimanaSeconds`) and the ship comes out at that star; a jump north out of
         // the disc comes back along the line to the first stars; the aim's markers say the distance where the star has no name, VISITED
         // where the ship has been
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
         auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
@@ -109,14 +118,17 @@ void unitNavigation(const Check& check) {
         run(dur + 1.0);
         const bool arrived = game.testSystem().valid && game.testSystem().star.sx == rx && game.testSystem().star.sy == ry && game.testSystem().star.sz == rz;
         check("a jump of 400 ly along the aim (R-407)", typed == "400" && remote && flying && offEnd < 8 && std::fabs(dur - vimanaSeconds(flyLy)) < 0.5 && logged && arrived,
-              fmt("typed '%s', from %s to sector %lld %lld %lld, %.1f ly from the line's end, %.1f ly flown in %.1f s; logged %d, arrived %d", typed.c_str(), home.c_str(), (long long)rx, (long long)ry, (long long)rz, offEnd, flyLy, dur, logged, arrived));
+                fmt("typed '%s', from %s to sector %lld %lld %lld, %.1f ly from the line's end, %.1f ly flown in %.1f s; logged %d, arrived %d", typed.c_str(), home.c_str(), (long long)rx,
+                        (long long)ry, (long long)rz, offEnd, flyLy, dur, logged, arrived));
         Star up; double shortLy = 0;
         const bool upOk = jumpTarget(game.testShipPos(), Vec3(0, 1, 0), 3000, up, shortLy, 0);
         const bool upShort = upOk && shortLy > 100 && up.sy < 2950 && up.sy > 1000;
         Star far; double farShort = 0;
-        const bool coreOk = jumpTarget(p0, normalize(Vec3(GALAXY_CENTRE_SX * SECTOR_KM, 0, GALAXY_CENTRE_SZ * SECTOR_KM) - p0), 13000, far, farShort, 0) && galaxyRegion(far.sx, far.sy, far.sz) == REGION_CORE;
+        const bool coreOk =
+                jumpTarget(p0, normalize(Vec3(GALAXY_CENTRE_SX * SECTOR_KM, 0, GALAXY_CENTRE_SZ * SECTOR_KM) - p0), 13000, far, farShort, 0) && galaxyRegion(far.sx, far.sy, far.sz) == REGION_CORE;
         check("a jump into the void comes back to the stars", upShort && coreOk && vimanaSeconds(100) == 27.0 && std::fabs(vimanaSeconds(100000) - 86.8) < 0.1,
-              fmt("3000 ly north: a star at height %lld, %.0f ly short; 13000 ly coreward: %s; flights of 100 and 100,000 ly %.1f and %.1f s", (long long)up.sy, shortLy, REGION_NAMES[galaxyRegion(far.sx, far.sy, far.sz)], vimanaSeconds(100), vimanaSeconds(100000)));
+                fmt("3000 ly north: a star at height %lld, %.0f ly short; 13000 ly coreward: %s; flights of 100 and 100,000 ly %.1f and %.1f s", (long long)up.sy, shortLy,
+                        REGION_NAMES[galaxyRegion(far.sx, far.sy, far.sz)], vimanaSeconds(100), vimanaSeconds(100000)));
         // the aim's labels: the nearest stars of the arrival's neighbourhood, unnamed and unvisited, then the home star (visited)
         int unnamed = 0, bare = 0; std::string sample;
         for (const Star& s : game.testNeighborhood().stars) {
@@ -135,7 +147,11 @@ void unitNavigation(const Check& check) {
         // pixel of where the level's scale puts it from the view's centre (the galactic centre on the whole disc, the ship from level 1),
         // found in the frame by its four white arms; three arrivals are the stars visited, with no line between them (R-414: G-05's route
         // is gone, from the chart and from the guide's file); in a Vimana flight M opens the galaxy page and Tab keeps it there
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
         auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
@@ -158,7 +174,8 @@ void unitNavigation(const Check& check) {
             const int off = std::max(std::abs(fx - (int)std::floor(ex)), std::abs(fy - (int)std::floor(ey)));
             worst = std::max(worst, off); offs += fmt(" %d", off);
         }
-        check("the galaxy chart puts the ship where it is (G-05)", page0 == 0 && page1 == 1 && worst <= 1, fmt("pages %d then %d; the crosshair's offset from its place by level:%s", page0, page1, offs.c_str()));
+        check("the galaxy chart puts the ship where it is (G-05)", page0 == 0 && page1 == 1 && worst <= 1,
+                fmt("pages %d then %d; the crosshair's offset from its place by level:%s", page0, page1, offs.c_str()));
         // three arrivals at stars of the neighbourhood (its first three in the scan's order), each a frame on the chart (the visit noted there)
         std::vector<Star> stops;
         for (const Star& st : game.testNeighborhood().stars) {
@@ -202,7 +219,11 @@ void unitNavigation(const Check& check) {
         // chart's crosshair on it. A plot into the halo comes back to the stars as R-407's jump does (the same star as `jumpTarget`'s). L marks
         // a place 1,500 ly over the plane; the mark goes through the guide's file and an export lends it (once); N steps through the signals,
         // home, the named stars, the marks and the systems visited in that order; L on the mark renames it, Delete twice removes it
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
         auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
@@ -231,13 +252,16 @@ void unitNavigation(const Check& check) {
         Star other; if (pick >= 0 && pick < (int)ls.size()) other = ls[pick];
         press(KEY_ENTER); run(0.05);
         int64_t ox = 0, oy = 0, oz = 0; game.testRemote(ox, oy, oz);
-        const bool taken = pick >= 0 && other.valid && ox == other.sx && oy == other.sy && oz == other.sz && !(ox == rx && oy == ry && oz == rz) && game.testMapPage() == 1 && !game.testChartLook() && game.testChartPlotted();
+        const bool taken = pick >= 0 && other.valid && ox == other.sx && oy == other.sy && oz == other.sz && !(ox == rx && oy == ry && oz == rz) && game.testMapPage() == 1 && !game.testChartLook() &&
+                game.testChartPlotted();
         Star dest2; starInSector(ox, oy, oz, dest2, false);
         const Vec3 p0 = game.testShipPos();
         press(KEY_ENTER);
         const bool flying = game.testDebugInfo().find("mode=1 ") != std::string::npos && game.state == GameState::SPACE;
         const double dur = game.testFlightDur(), flyLy = length(dest2.pos - p0) / SECTOR_KM;
-        bool logged = false; for (const LogEntry& e : game.guide.log) if (e.kind == "JUMP" && e.text.find("PLOTTED ON THE CHART") != std::string::npos && e.text.find("COREWARD") != std::string::npos) logged = true;
+        bool logged = false;
+        for (const LogEntry& e : game.guide.log)
+            if (e.kind == "JUMP" && e.text.find("PLOTTED ON THE CHART") != std::string::npos && e.text.find("COREWARD") != std::string::npos) logged = true;
         run(dur + 1.0);
         const bool arrived = game.testSystem().valid && game.testSystem().star.sx == ox && game.testSystem().star.sy == oy && game.testSystem().star.sz == oz;
         const Vec3 at = game.testShipPos() / SECTOR_KM;
@@ -245,10 +269,13 @@ void unitNavigation(const Check& check) {
         press(KEY_M); run(0.05);
         const bool onShip = game.testChartOnShip() && game.testMapPage() == 1;
         const int cxOff = std::abs(game.testChartYouX() - UW / 2), cyOff = std::abs(game.testChartYouY() - (Game::CHART_FACE_Y0 + Game::CHART_FACE_H / 2));
-        check("a jump plotted on the chart and flown (G-06)", remote && plotted && offPoint < 5 && kept && reopened && look && endIn && ls.size() > 100 && taken && flying &&
-              std::fabs(dur - vimanaSeconds(flyLy)) < 0.5 && std::fabs(dur - vimanaSeconds(5000)) < 0.2 && logged && arrived && fromPoint < 15 && onShip && cxOff <= 1 && cyOff <= 1,
-              fmt("plotted %d at %lld %lld %lld, %.1f ly from the point; kept through Esc %d, reopened plotted %d; the look %d: %zu stars, the end among them %d; another taken %d (%lld %lld %lld); flying %d, %.1f s for %.0f ly (vimanaSeconds(5000) %.1f), logged %d; arrived %d, %.1f ly from the point; the chart on the ship %d, the crosshair %d %d px off",
-                  plotted, (long long)rx, (long long)ry, (long long)rz, offPoint, kept, reopened, look, ls.size(), endIn, taken, (long long)ox, (long long)oy, (long long)oz, flying, dur, flyLy, vimanaSeconds(5000), logged, arrived, fromPoint, onShip, cxOff, cyOff));
+        check("a jump plotted on the chart and flown (G-06)",
+                remote && plotted && offPoint < 5 && kept && reopened && look && endIn && ls.size() > 100 && taken && flying && std::fabs(dur - vimanaSeconds(flyLy)) < 0.5 &&
+                        std::fabs(dur - vimanaSeconds(5000)) < 0.2 && logged && arrived && fromPoint < 15 && onShip && cxOff <= 1 && cyOff <= 1,
+                fmt("plotted %d at %lld %lld %lld, %.1f ly from the point; kept through Esc %d, reopened plotted %d; the look %d: %zu stars, the end among them %d; another taken %d (%lld %lld %lld); "
+                    "flying %d, %.1f s for %.0f ly (vimanaSeconds(5000) %.1f), logged %d; arrived %d, %.1f ly from the point; the chart on the ship %d, the crosshair %d %d px off",
+                        plotted, (long long)rx, (long long)ry, (long long)rz, offPoint, kept, reopened, look, ls.size(), endIn, taken, (long long)ox, (long long)oy, (long long)oz, flying, dur, flyLy,
+                        vimanaSeconds(5000), logged, arrived, fromPoint, onShip, cxOff, cyOff));
         // into the halo: 20,000 ly over the plane, the plot comes back along the line to the stars
         game.testChartCursor(at + Vec3(0, 20000, 0)); run(0.05);
         press(KEY_ENTER); run(0.05);
@@ -269,7 +296,8 @@ void unitNavigation(const Check& check) {
         const bool placed = gm.size() == 1 && gm[0].name == "THE HIGH VOID" && !gm[0].lent && length(Vec3(gm[0].x, gm[0].y, gm[0].z) - markAt) < 1e-6 && game.state == GameState::STAR_MAP;
         game.guide.save("shots/tests/test_guide_g06.txt");
         Guide back; const bool loaded = back.load("shots/tests/test_guide_g06.txt");
-        const bool through = loaded && back.galaxyMarks.size() == 1 && back.galaxyMarks[0].name == "THE HIGH VOID" && length(Vec3(back.galaxyMarks[0].x, back.galaxyMarks[0].y, back.galaxyMarks[0].z) - markAt) < 1e-6;
+        const bool through = loaded && back.galaxyMarks.size() == 1 && back.galaxyMarks[0].name == "THE HIGH VOID" &&
+                length(Vec3(back.galaxyMarks[0].x, back.galaxyMarks[0].y, back.galaxyMarks[0].z) - markAt) < 1e-6;
         Guide friendG; int lentN = 0, probesN = 0, marksN = 0, galaxyN = 0, galaxyN2 = 0;
         const int names = friendG.importInbox("shots/tests/test_guide_g06.txt", &lentN, &probesN, &marksN, &galaxyN);
         friendG.importInbox("shots/tests/test_guide_g06.txt", nullptr, nullptr, nullptr, &galaxyN2);
@@ -346,11 +374,17 @@ void unitNavigation(const Check& check) {
         SpaceContext cc = c; cc.flightTo = hs.pos + toCore * (26000 * SECTOR_KM); cc.flightDur = vimanaSeconds(26000); cc.flightT = 0;
         sr.flightBand(cc);
         double coreMin = 1e9, coreAt = 0;
-        for (size_t k = 1; k < sr.fband.tau.size(); k++) if (sr.fband.tau[k] - sr.fband.tau[k - 1] < coreMin) { coreMin = sr.fband.tau[k] - sr.fband.tau[k - 1]; coreAt = length(sr.flightBandPos(sr.fband.tau[k - 1]) - Vec3(GALAXY_CENTRE_SX, 0, GALAXY_CENTRE_SZ)); }
-        check("the band in a Vimana flight (G-07)", firstDiff == 0 && F.forced == 0 && F.built + 1 == (long)F.tau.size() && worstStep < 0.05 && endDiff < 1e-6 && handed &&
-              maxDt <= 0.5 + 1e-9 && minDt > 0.025 && coreMin < 0.1 && coreAt < 2000,
-              fmt("the first frame the parked band (%.6f); %zu keyframes %.2f-%.2f s apart, %ld built, %ld at once, %.0f ms for the %.1f s; the worst step %.4f at %.1f s; the end %.7f off the band built there; handed to the parked band %d; through the core %zu keyframes, the closest %.3f s apart %.0f ly from the centre",
-                  firstDiff, F.tau.size(), minDt, maxDt, F.built, F.forced, flightMs, c.flightDur, worstStep, worstAt, endDiff, handed, sr.fband.tau.size(), coreMin, coreAt));
+        for (size_t k = 1; k < sr.fband.tau.size(); k++)
+            if (sr.fband.tau[k] - sr.fband.tau[k - 1] < coreMin) {
+                coreMin = sr.fband.tau[k] - sr.fband.tau[k - 1];
+                coreAt = length(sr.flightBandPos(sr.fband.tau[k - 1]) - Vec3(GALAXY_CENTRE_SX, 0, GALAXY_CENTRE_SZ));
+            }
+        check("the band in a Vimana flight (G-07)",
+                firstDiff == 0 && F.forced == 0 && F.built + 1 == (long)F.tau.size() && worstStep < 0.05 && endDiff < 1e-6 && handed && maxDt <= 0.5 + 1e-9 && minDt > 0.025 && coreMin < 0.1 &&
+                        coreAt < 2000,
+                fmt("the first frame the parked band (%.6f); %zu keyframes %.2f-%.2f s apart, %ld built, %ld at once, %.0f ms for the %.1f s; the worst step %.4f at %.1f s; the end %.7f off the band "
+                    "built there; handed to the parked band %d; through the core %zu keyframes, the closest %.3f s apart %.0f ly from the centre",
+                        firstDiff, F.tau.size(), minDt, maxDt, F.built, F.forced, flightMs, c.flightDur, worstStep, worstAt, endDiff, handed, sr.fband.tau.size(), coreMin, coreAt));
     }
 }
 
@@ -373,11 +407,15 @@ void unitSights(const Check& check) {
             if (L.kind == LM_PEAK) {
                 peaks++; bool top = true;
                 Vec3 e = normalize(cross(Vec3(0, 0, 1), L.unit)), n = cross(L.unit, e);
-                for (int k = 0; k < 8 && top; k++) { double a = k * PI / 4; if (sampleSurface(g, normalize(L.unit + (e * std::cos(a) + n * std::sin(a)) * (400.0 / (g.R * 1000.0))), 64.0).height > L.heightM + 5) top = false; }
+                for (int k = 0; k < 8 && top; k++) {
+                    double a = k * PI / 4;
+                    if (sampleSurface(g, normalize(L.unit + (e * std::cos(a) + n * std::sin(a)) * (400.0 / (g.R * 1000.0))), 64.0).height > L.heightM + 5) top = false;
+                }
                 if (top) tops++;
             }
         }
-        check("the sights by kind: lakes are water, peaks the tops (R-408)", lakes >= 3 && wet * 5 >= lakes * 4 && peaks >= 3 && tops * 4 >= peaks * 3,   // a summit of the 500 m scan on a ridge can have higher ground 400 m along it
+        // a summit of the 500 m scan on a ridge can have higher ground 400 m along it
+        check("the sights by kind: lakes are water, peaks the tops (R-408)", lakes >= 3 && wet * 5 >= lakes * 4 && peaks >= 3 && tops * 4 >= peaks * 3,
               fmt("within 40 km of 30 S 100 W: %d lakes (%d of them water), %d peaks (%d over the ground 400 m round)", lakes, wet, peaks, tops));
         // a legacy name: the O6-06 landmark of the place's cell (else of the nearest cell holding one), named as the explorer would have named it
         Landmark legacy; std::string legacyKey;
@@ -388,11 +426,18 @@ void unitSights(const Check& check) {
                     for (int dj = -d; dj <= d && legacyKey.empty(); dj++) {
                         if (std::max(std::abs(di), std::abs(dj)) != d) continue;
                         CellSights S; Landmark L;
-                        if (sightsOfCell(g, ci0 + di, cj0 + dj, S) && legacyLandmarkOf(S, L)) { legacy = L; legacyKey = Guide::bodyKey(ws.sx, ws.sy, ws.sz, 1) + "/L" + std::to_string((unsigned long long)(L.id & 0xffffffffULL)); }
+                        if (sightsOfCell(g, ci0 + di, cj0 + dj, S) && legacyLandmarkOf(S, L)) {
+                            legacy = L;
+                            legacyKey = Guide::bodyKey(ws.sx, ws.sy, ws.sz, 1) + "/L" + std::to_string((unsigned long long)(L.id & 0xffffffffULL));
+                        }
                     }
         }
         remove("shots/tests/test_r408_guide.txt");
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_r408_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_r408_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
         auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
@@ -403,9 +448,11 @@ void unitSights(const Check& check) {
         game.testParkAt(ws, 1); run(0.2);
         for (int i = 0; i < 30 * 15 && !legacyKey.empty() && game.guide.names.count(legacyKey); i++) run(1.0 / 30);   // the cells are found on a thread
         bool migrated = false; double mLat, mLon; StarSystem::latLonFromBody(legacy.unit, mLat, mLon);
-        for (const SurfaceMark& m : game.guide.marks) if (m.name == "City of tests" && m.kind == legacy.kind && std::fabs(m.lat - mLat) < 1e-9 && std::fabs(m.lon - mLon) < 1e-9 && !m.lent) migrated = true;
+        for (const SurfaceMark& m : game.guide.marks)
+            if (m.name == "City of tests" && m.kind == legacy.kind && std::fabs(m.lat - mLat) < 1e-9 && std::fabs(m.lon - mLon) < 1e-9 && !m.lent) migrated = true;
         check("a sight named before is a mark where it stands", !legacyKey.empty() && migrated && !game.guide.names.count(legacyKey),
-              fmt("%s (%s): %s; the old name %s", legacyKey.c_str(), LANDMARK_KIND_NAMES[legacy.kind], migrated ? "a mark where it stands" : "NO MARK", game.guide.names.count(legacyKey) ? "STILL THERE" : "gone"));
+                fmt("%s (%s): %s; the old name %s", legacyKey.c_str(), LANDMARK_KIND_NAMES[legacy.kind], migrated ? "a mark where it stands" : "NO MARK",
+                        game.guide.names.count(legacyKey) ? "STILL THERE" : "gone"));
         // the scanner on the ground (B-417: in the people's land, 5 km off a town of its plan: the old ones' monoliths stood anywhere)
         game.testLandSite();
         { double la = 0, lo = 0; if (haveWorld && planPlacePoint(g, 0, la, lo)) game.testLandCursor(la / DEG, (lo + 5000.0 / (g.R * 1000.0 * std::max(std::cos(la), 0.05))) / DEG); }
@@ -444,9 +491,15 @@ void unitSights(const Check& check) {
         const double rx = game.testRangeX(), rz = game.testRangeZ(), range = game.testRange();
         press(KEY_L); game.testTypeText("LOOKOUT"); run(0.1);
         bool looked = false;
-        for (const SurfaceMark& m : game.guide.marks) if (m.name == "LOOKOUT") { double la, lo; game.testLatLonAt(rx, rz, la, lo); looked = std::fabs(la - m.lat) < 1e-7 && std::fabs(lo - m.lon) < 1e-7; }
+        for (const SurfaceMark& m : game.guide.marks)
+            if (m.name == "LOOKOUT") {
+                double la, lo;
+                game.testLatLonAt(rx, rz, la, lo);
+                looked = std::fabs(la - m.lat) < 1e-7 && std::fabs(lo - m.lon) < 1e-7;
+            }
         check("the scanner hears the ruins, the marked left out (R-408)", landed && mode == LM_RUIN && ruins > 10 && heard && dist < 40000 && close && placed && next && back,
-              fmt("%d ruins heard; the nearest %.0f m off, heard %.0f m from it; marked from the map: %s, the next nearest %s, taken in again %s", ruins, dist, std::hypot(hx - ex, hz - ez), placed ? "yes" : "NO", next ? fmt("%.0f m off", std::hypot(ex2 - px, ez2 - pz)).c_str() : "THE SAME", back ? "yes" : "NO"));
+                fmt("%d ruins heard; the nearest %.0f m off, heard %.0f m from it; marked from the map: %s, the next nearest %s, taken in again %s", ruins, dist, std::hypot(hx - ex, hz - ez),
+                        placed ? "yes" : "NO", next ? fmt("%.0f m off", std::hypot(ex2 - px, ez2 - pz)).c_str() : "THE SAME", back ? "yes" : "NO"));
         check("the map's cursor renames, removes, waypoints; L marks", renamed && armed && removed && waypoint && range > 0 && looked,
               fmt("renamed %d, armed %d, removed %d, waypoint %d; L at %.0f m: %s", renamed, armed, removed, waypoint, range, looked ? "marked there" : "NOT there"));
         {   // R again: the works, heard in the same scan; a work's mark and a place's kept in the guide's file by R-408's numbers
@@ -460,15 +513,34 @@ void unitSights(const Check& check) {
             const double wd = std::hypot(wx - game.testPlayerX(), wz - game.testPlayerZ());
             const std::string winfo = game.testScanInfo();
             writePNG("shots/tests/unit_t03_scan.png", game.output(), FBW, FBH);
-            Guide gk; SurfaceMark mw; mw.body = "x"; mw.kind = LM_WORK; mw.name = "A WORK"; gk.marks.push_back(mw); SurfaceMark mp = mw; mp.kind = MARK_PLACE; mp.name = "A PLACE"; gk.marks.push_back(mp);
+            Guide gk;
+            SurfaceMark mw;
+            mw.body = "x";
+            mw.kind = LM_WORK;
+            mw.name = "A WORK";
+            gk.marks.push_back(mw);
+            SurfaceMark mp = mw;
+            mp.kind = MARK_PLACE;
+            mp.name = "A PLACE";
+            gk.marks.push_back(mp);
             gk.save("shots/tests/test_t03_marks.txt");
             std::ifstream f("shots/tests/test_t03_marks.txt"); std::string line, kinds;
-            while (std::getline(f, line)) if (line.rfind("mark ", 0) == 0) { std::istringstream is(line); std::string k, b; double la, lo; int kd; is >> k >> b >> la >> lo >> kd; kinds += std::to_string(kd) + " "; }
+            while (std::getline(f, line))
+                if (line.rfind("mark ", 0) == 0) {
+                    std::istringstream is(line);
+                    std::string k, b;
+                    double la, lo;
+                    int kd;
+                    is >> k >> b >> la >> lo >> kd;
+                    kinds += std::to_string(kd) + " ";
+                }
             Guide gb; gb.load("shots/tests/test_t03_marks.txt");
             const bool kept = gb.marks.size() == 2 && gb.marks[0].kind == LM_WORK && gb.marks[1].kind == MARK_PLACE && kinds == "9 8 ";
             for (int i = 0; i < 12 && game.testScanMode() != LM_RUIN; i++) press(KEY_R);   // round to RUINS again, as the checks after it found it
             check("the scanner's WORKS mode in the game, a work's mark kept (T-03, B-418)", wmode == LM_WORK && works0 > 0 && works > 0 && walked && wheard && wd < wr + 500 && kept,
-                  fmt("R after RUINS: mode %d (%s), %d works heard at the landing (B-418: some within 40 km), %d after walking to the nearest%s, its middle %.0f m off (its reach %.0f); %s; the marks written as kinds %s(R-408's place 8, a work 9) and read back %s", wmode, wmode == LM_WORK ? "WORKS" : "not WORKS", works0, works, walked ? "" : " (NOT WALKED)", wd, wr, winfo.c_str(), kinds.c_str(), kept ? "as they were" : "WRONG"));
+                    fmt("R after RUINS: mode %d (%s), %d works heard at the landing (B-418: some within 40 km), %d after walking to the nearest%s, its middle %.0f m off (its reach %.0f); %s; the "
+                        "marks written as kinds %s(R-408's place 8, a work 9) and read back %s",
+                            wmode, wmode == LM_WORK ? "WORKS" : "not WORKS", works0, works, walked ? "" : " (NOT WALKED)", wd, wr, winfo.c_str(), kinds.c_str(), kept ? "as they were" : "WRONG"));
         }
         {   // the user saw two of their marks' names run into each other over the view (one behind the other on a line of sight):
             // drew every mark within 25 km. Now none is drawn until the explorer shows one from the map (Shift+Enter or
@@ -510,7 +582,14 @@ void unitSights(const Check& check) {
             press(KEY_ESCAPE); run(0.2); const int shown = whiteNow();
             writePNG("shots/tests/unit_b412_shown.png", game.output(), FBW, FBH);
             press(KEY_N); run(0.1);   // Shift+click on the far one: it alone; Shift+Enter on it again hides it; on no mark nothing
-            game.testMapCursor(fx, fz); gi.down[KEY_LEFT_SHIFT] = true; gi.mousePressed[0] = true; gi.mouseDown[0] = true; game.frame(gi, 1.0 / 30); gi.newFrame(); gi.down[KEY_LEFT_SHIFT] = false; gi.mouseDown[0] = false;
+            game.testMapCursor(fx, fz);
+            gi.down[KEY_LEFT_SHIFT] = true;
+            gi.mousePressed[0] = true;
+            gi.mouseDown[0] = true;
+            game.frame(gi, 1.0 / 30);
+            gi.newFrame();
+            gi.down[KEY_LEFT_SHIFT] = false;
+            gi.mouseDown[0] = false;
             const bool clickFar = game.testShownMark() == farM && game.state == GameState::SECTOR_MAP;
             game.testMapCursor(fx, fz); shiftPress(KEY_ENTER); run(0.1);
             const bool hideFar = game.testShownMark() == -1 && game.state == GameState::SECTOR_MAP;
@@ -535,13 +614,14 @@ void unitSights(const Check& check) {
             game.testMapCursor(fx, fz); press(KEY_DELETE); press(KEY_DELETE); run(0.1);   // the far one away too: the guide's marks as they were
             press(KEY_ESCAPE); run(0.1);
             check("marks: none over the view until one is shown from the map, one at a time (B-412)",
-                  nearM >= 0 && farM >= 0 && noneAtFirst && mly >= 80 && mly <= 120 && none <= base + 4 && shown >= base + 60 && showNear && clickFar,
-                  fmt("two marks in a line ahead (the near one's diamond at %d,%d): the HUD's white %d px without the marks, %d with them and none shown, %d with the near one shown; Shift+Enter on it %s, Shift+click on the far one %s",
-                      mlx, mly, base, none, shown, showNear ? "shows it" : "DOES NOT", clickFar ? "shows it alone" : "DOES NOT"));
-            check("marks: the shown one hidden again, kept through a removal and the guide (B-412)",
-                  hideFar && onNothing && hidden <= base + 4 && keptShown && keptFile && goneWith,
-                  fmt("Shift+Enter on the shown one %s (white %d px), on no mark %s; a mark before it removed: %s, read back from the guide %s; itself removed: %s",
-                      hideFar ? "hides it" : "DOES NOT", hidden, onNothing ? "nothing" : "SOMETHING", keptShown ? "still shown" : "LOST", keptFile ? "shown" : "NOT", goneWith ? "none shown" : "STILL SET"));
+                    nearM >= 0 && farM >= 0 && noneAtFirst && mly >= 80 && mly <= 120 && none <= base + 4 && shown >= base + 60 && showNear && clickFar,
+                    fmt("two marks in a line ahead (the near one's diamond at %d,%d): the HUD's white %d px without the marks, %d with them and none shown, %d with the near one shown; Shift+Enter on "
+                        "it %s, Shift+click on the far one %s",
+                            mlx, mly, base, none, shown, showNear ? "shows it" : "DOES NOT", clickFar ? "shows it alone" : "DOES NOT"));
+            check("marks: the shown one hidden again, kept through a removal and the guide (B-412)", hideFar && onNothing && hidden <= base + 4 && keptShown && keptFile && goneWith,
+                    fmt("Shift+Enter on the shown one %s (white %d px), on no mark %s; a mark before it removed: %s, read back from the guide %s; itself removed: %s",
+                            hideFar ? "hides it" : "DOES NOT", hidden, onNothing ? "nothing" : "SOMETHING", keptShown ? "still shown" : "LOST", keptFile ? "shown" : "NOT",
+                            goneWith ? "none shown" : "STILL SET"));
         }
         {   // the user's landings froze for 5-7 s: the readings (Tab), the scanner (R) or a shown mark asked for the world's marks,
             // whose ground was read with the rivers, and every mark far off built a drainage tile of a degree on the main thread (their
@@ -568,15 +648,19 @@ void unitSights(const Check& check) {
             }
             game.guide.marks.resize(kept); game.marksVersion++;
             check("marks: the far ones read without building a drainage tile, with their rivers once built (B-422)",
-                  typeHasDrainage(sg.type) && !wk.empty() && unbuilt0 == 8 && unbuilt == 8 && dry >= 8 && count >= 8 && ms < 250 && wetLater,
-                  fmt("%s world; eight marks far across it, their tiles unbuilt %d; the marks read in %.1f ms (%d, %d without their rivers), the tiles still unbuilt %d; the first's tiles built, two seconds on: %s (ground %.2f, with the rivers %.2f, %d dry)",
-                      KINDS[sg.type].name, unbuilt0, ms, count, dry, unbuilt, wetLater ? "read with them" : "NOT", y, wet, dry2));
+                    typeHasDrainage(sg.type) && !wk.empty() && unbuilt0 == 8 && unbuilt == 8 && dry >= 8 && count >= 8 && ms < 250 && wetLater,
+                    fmt("%s world; eight marks far across it, their tiles unbuilt %d; the marks read in %.1f ms (%d, %d without their rivers), the tiles still unbuilt %d; the first's tiles built, "
+                        "two seconds on: %s (ground %.2f, with the rivers %.2f, %d dry)",
+                            KINDS[sg.type].name, unbuilt0, ms, count, dry, unbuilt, wetLater ? "read with them" : "NOT", y, wet, dry2));
         }
         // the guide: the marks saved and read back; lent to a friend, not lent on
         game.guide.save("shots/tests/test_r408_export.txt");
         Guide back2; back2.load("shots/tests/test_r408_export.txt");
         bool same = back2.marks.size() == game.guide.marks.size();
-        for (size_t i = 0; same && i < back2.marks.size(); i++) { const SurfaceMark &a = back2.marks[i], &b = game.guide.marks[i]; same = a.body == b.body && a.name == b.name && a.kind == b.kind && std::fabs(a.lat - b.lat) < 1e-9 && std::fabs(a.lon - b.lon) < 1e-9 && a.lent == b.lent; }
+        for (size_t i = 0; same && i < back2.marks.size(); i++) {
+            const SurfaceMark &a = back2.marks[i], &b = game.guide.marks[i];
+            same = a.body == b.body && a.name == b.name && a.kind == b.kind && std::fabs(a.lat - b.lat) < 1e-9 && std::fabs(a.lon - b.lon) < 1e-9 && a.lent == b.lent;
+        }
         Guide friendG; int got = 0; friendG.importInbox("shots/tests/test_r408_export.txt", nullptr, nullptr, &got);
         int again = 0; friendG.importInbox("shots/tests/test_r408_export.txt", nullptr, nullptr, &again);
         bool allLent = true; for (const SurfaceMark& m : friendG.marks) if (!m.lent) allLent = false;
@@ -594,7 +678,10 @@ void unitAuto(const Check& check) {
         // to the front window and looks at the world, the eye never turning faster than a hand's limits (the head's spring 43 degrees a second,
         // the ship's nose 26: under 60 together); a key gives the controls back and is not acted on (G opens no guide)
         TestGame game;
-        game.savePrefix = "shots/tests/unit_auto_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.guidePath = "shots/tests/unit_auto_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        game.savePrefix = "shots/tests/unit_auto_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.guidePath = "shots/tests/unit_auto_guide.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
         remove(game.guidePath.c_str());
         game.settings.autoProfile = AP_PLANETFALL; game.settings.renderScale = 1; game.applySettings();
         game.setState(GameState::SPACE);
@@ -618,7 +705,8 @@ void unitAuto(const Check& check) {
         press(KEY_G);
         const bool back = !game.autoOn() && game.state == GameState::SPACE;
         check("auto-explore: begun from the menu, eased, given back (R-419)", chooser && began && on && window && maxTurn < 60 && back,
-              fmt("chooser %d on %d, %d frames, steps %zu (window %d), the fastest turn %.0f deg/s; G: auto %d, state %d", (int)chooser, (int)began, frames, steps.size(), (int)window, maxTurn, (int)game.autoOn(), (int)game.state));
+                fmt("chooser %d on %d, %d frames, steps %zu (window %d), the fastest turn %.0f deg/s; G: auto %d, state %d", (int)chooser, (int)began, frames, steps.size(), (int)window, maxTurn,
+                        (int)game.autoOn(), (int)game.state));
     }
     {   // auto-explore's tape. M begins it: the deck puts a cassette in and plays it, the track starting as the sequence moves the tape,
         // its author and title fading in at the top left and gone after a few seconds, the game's own sounds ducked; at a track's end the next
@@ -627,7 +715,10 @@ void unitAuto(const Check& check) {
         // will not play passed over; an empty folder is said
         const std::string dir = tapeTestDir();
         TestGame game;
-        game.savePrefix = "shots/tests/unit_tape_save"; game.settingsPath = "shots/tests/unit_tape_settings.txt"; game.guidePath = "shots/tests/unit_tape_guide.txt"; game.keysPath = "shots/tests/test_keys.txt";
+        game.savePrefix = "shots/tests/unit_tape_save";
+        game.settingsPath = "shots/tests/unit_tape_settings.txt";
+        game.guidePath = "shots/tests/unit_tape_guide.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
         remove(game.guidePath.c_str());
         game.settings.renderScale = 1; game.settings.autoMusic = false; game.settings.autoTrack = 0; game.settings.autoTrackAt = -1; game.applySettings();
         game.musicDir = dir;
@@ -712,9 +803,20 @@ void unitAuto(const Check& check) {
             double peak = 0; bool finite = true;
             for (float v : a) { finite = finite && std::isfinite(v); peak = std::max(peak, (double)std::fabs(v)); }
             const double at = deckTapeAt(kind, 11), len = deckLength(kind, 11);
-            auto rms = [&](double t0, double t1) { const long i0 = std::max(0L, (long)(t0 * sr)), i1 = std::min((long)a.size(), (long)(t1 * sr)); double s = 0; for (long i = i0; i < i1; i++) s += (double)a[i] * a[i]; return i1 > i0 ? std::sqrt(s / (i1 - i0)) : 0.0; };
+            auto rms = [&](double t0, double t1) {
+                const long i0 = std::max(0L, (long)(t0 * sr)), i1 = std::min((long)a.size(), (long)(t1 * sr));
+                double s = 0;
+                for (long i = i0; i < i1; i++) s += (double)a[i] * a[i];
+                return i1 > i0 ? std::sqrt(s / (i1 - i0)) : 0.0;
+            };
             int onsets = 0; double prevE = 0;   // 5 ms frames whose energy jumps fourfold over a floor
-            for (size_t i = 0; i + 110 <= a.size(); i += 110) { double e = 0; for (size_t j = i; j < i + 110; j++) e += (double)a[j] * a[j]; e /= 110; if (e > 4 * prevE + 1e-5 && e > 2e-4) onsets++; prevE = e; }
+            for (size_t i = 0; i + 110 <= a.size(); i += 110) {
+                double e = 0;
+                for (size_t j = i; j < i + 110; j++) e += (double)a[j] * a[j];
+                e /= 110;
+                if (e > 4 * prevE + 1e-5 && e > 2e-4) onsets++;
+                prevE = e;
+            }
             const bool timeOk = at >= atLo[kind] - 1e-9 && at <= atHi[kind] + 1e-9 && a.size() == (size_t)std::ceil(len * sr) + 1;
             const double knock = kind == DECK_STOP ? rms(0, 0.08) : rms(at - 0.5, at - 0.3), after = kind == DECK_STOP ? 0 : rms(at + 0.05, at + 0.4);
             const bool soundOk = kind == DECK_STOP ? knock > 0.02 : knock > 0.02 && after > 0.004 && after < knock;
@@ -734,13 +836,15 @@ void unitAuto(const Check& check) {
         q.deck = -1; quiet.render(buf.data(), (int)buf.size(), sr, q);
         const double hushed = bufRms(buf);
         const bool mixOk = std::fabs(ducked / plain - 0.35) < 0.005 && diff < 1e-5 && hushed == 0;
-        check("auto-explore's tape: the cassette deck (R-420)", ok && mixOk, det + fmt("; the hum ducked to %.3f of itself, the deck through the synth within %.1e, hushed %.4f", ducked / plain, diff, hushed));
+        check("auto-explore's tape: the cassette deck (R-420)", ok && mixOk,
+                det + fmt("; the hum ducked to %.3f of itself, the deck through the synth within %.1e, hushed %.4f", ducked / plain, diff, hushed));
     }
     {   // where the tape is read: the explorer's `music` folder when it holds a track, else the game's own beside the executable (in a
         // macOS app's Resources from its executable, the app's from a bare binary beside it); a folder's playlist first, then the sound
         // files it does not list, by name
         const std::string own = tapeTestDir(), app = "shots/tests/unit_tape_app", res = app + "/Vesperis.app/Contents/Resources/music";
-        for (const std::string& d : {app, app + "/empty", app + "/Vesperis.app", app + "/Vesperis.app/Contents", app + "/Vesperis.app/Contents/MacOS", app + "/Vesperis.app/Contents/Resources", res}) makeDir(d);
+        for (const std::string& d : {app, app + "/empty", app + "/Vesperis.app", app + "/Vesperis.app/Contents", app + "/Vesperis.app/Contents/MacOS", app + "/Vesperis.app/Contents/Resources", res})
+            makeDir(d);
         for (const char* f : {"a.mp3", "Someone - Extra.mp3", "notes.txt"}) if (FILE* fp = fopen((res + "/" + f).c_str(), "wb")) { fputs("not sound: the harness lists it\n", fp); fclose(fp); }
         if (FILE* fp = fopen((res + "/playlist.txt").c_str(), "w")) { fputs("a.mp3 | Jarrad Wright | Forwards | -1.1\n", fp); fclose(fp); }
         TestGame game;

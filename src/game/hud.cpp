@@ -80,7 +80,8 @@ void Game::renderSpaceHUD() {
     // remote target
     if (ship.hasRemote) {
         double ly = length(ship.remote.pos - ship.pos) / SECTOR_KM;
-        std::string rt = fmt("REMOTE: %s %s %.2f LY%s", trunc(upper(starNameOf(ship.remote)), 16).c_str(), ship.remote.cls == STAR_ROGUE ? "NO STAR" : STAR_CLASSES[ship.remote.cls].code, ly, guide.visited.count(starKeyOf(ship.remote)) ? "  VISITED" : "");   // the stars already seen; D-02: a drifter no class
+        std::string rt = fmt("REMOTE: %s %s %.2f LY%s", trunc(upper(starNameOf(ship.remote)), 16).c_str(), ship.remote.cls == STAR_ROGUE ? "NO STAR" : STAR_CLASSES[ship.remote.cls].code, ly,
+                guide.visited.count(starKeyOf(ship.remote)) ? "  VISITED" : "");   // the stars already seen; D-02: a drifter no class
         drawTextShadow(canvas, UW - 8 - textWidth(rt.c_str()), UH - 40, rt.c_str(), HUD_CYAN, HUD_SHADOW);
         // marker on the remote star
         Mat3 cam = viewBasis();
@@ -198,7 +199,8 @@ void Game::renderSpaceHUD() {
             if (best && bestD < 14 * FB_SCALE && jumpDigits.empty()) {
                 Star full; starInSector(best->sx, best->sy, best->sz, full, true);
                 double ly = length(full.pos - ship.pos) / SECTOR_KM;
-                std::string txt = fmt("%s  %s %s  %.2f LY%s", trunc(upper(starNameOf(full)), 16).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, ly, guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");
+                std::string txt = fmt("%s  %s %s  %.2f LY%s", trunc(upper(starNameOf(full)), 16).c_str(), STAR_CLASSES[full.cls].code, STAR_CLASSES[full.cls].name, ly,
+                        guide.visited.count(starKeyOf(full)) ? "  VISITED" : "");
                 drawTextCentered(canvas, cx, cy + 14, txt.c_str(), HUD_CYAN);
             }
             // the six nearest stars carry a marker with their distance so a target can be found at a glance; R-407 (the user's "green
@@ -223,8 +225,10 @@ void Game::renderSpaceHUD() {
                 if (lx + textWidth(lab.c_str()) > UW - 4) lx = sx - 6 - textWidth(lab.c_str());
                 drawText(canvas, lx, sy - 3, lab.c_str(), visited && (int)k != targetCycle ? HUD_AMBER : mcol);
             }
-            if (jumpDigits.empty()) { blendRectRGB(canvas, cx - 148, UH - 55, cx + 148, UH - 44, rgb(0, 0, 0), 150); drawTextCentered(canvas, cx, UH - 53, "N NEXT STAR  ENTER LOCKS  DIGITS JUMP  R CANCELS", HUD_DIM); }
-            else {   // the jump being typed: its length, the way it runs in the galaxy and where its end lies
+            if (jumpDigits.empty()) {
+                blendRectRGB(canvas, cx - 148, UH - 55, cx + 148, UH - 44, rgb(0, 0, 0), 150);
+                drawTextCentered(canvas, cx, UH - 53, "N NEXT STAR  ENTER LOCKS  DIGITS JUMP  R CANCELS", HUD_DIM);
+            } else {   // the jump being typed: its length, the way it runs in the galaxy and where its end lies
                 const Vec3 dir = aimDirection(), end = ship.pos / SECTOR_KM + dir * std::atof(jumpDigits.c_str());
                 const int64_t ex = (int64_t)std::floor(end.x), ey = (int64_t)std::floor(end.y), ez = (int64_t)std::floor(end.z);
                 const double fromCore = std::sqrt((end.x - GALAXY_CENTRE_SX) * (end.x - GALAXY_CENTRE_SX) + (end.z - GALAXY_CENTRE_SZ) * (end.z - GALAXY_CENTRE_SZ));
@@ -417,7 +421,8 @@ void Game::drawReadings() {
         const Drone& d = surf.drone;
         pack({fmt("HDG %03.0f %s", wrap2pi(d.heading) / DEG, compassName(wrap2pi(d.heading))), fmt("TRIP %.2f KM", d.odometer / 1000.0)}, HUD_GREEN);
         pack({fmt("ALT %.0f M", d.altAboveGround), fmt("VS %+.1f", d.vy)}, d.ceiling ? HUD_AMBER : HUD_GREEN);
-        const std::string st = d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT ITS CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
+        const std::string st =
+                d.landed ? (d.rotor > 0.5 ? "LIFTING" : "LANDED") : (d.ceiling ? "AT ITS CEILING" : (d.vy > 1 ? "CLIMBING" : (d.vy < -1 ? "DESCENDING" : (std::fabs(d.speed) < 1 ? "HOVERING" : ""))));
         pack({st, d.lights ? "LIGHTS ON" : ""}, d.landed || d.ceiling ? HUD_AMBER : HUD_GREEN);
     } else if (surf.inBuggy) {   // the buggy's
         const Buggy& b = surf.buggy;
@@ -445,7 +450,16 @@ void Game::drawReadings() {
     if (!surf.inDrone) {   // the suit's life sensor: the nearest herd or flock within 1.5 km (`X` still brackets what is in view)
         double best = 1e9, bx = 0, bz = 0; bool flock = false;
         for (const SurfaceView::Herd& hd : surf.herds) { double dx = hd.cx - pl.x, dz = hd.cz - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = false; } }
-        for (const Flock& f : surf.flocks) { double a = f.phase + t * f.speed; double dx = f.cx + std::cos(a) * f.radius - pl.x, dz = f.cz + std::sin(a) * f.radius - pl.z, d = std::sqrt(dx * dx + dz * dz); if (d < best) { best = d; bx = dx; bz = dz; flock = true; } }
+        for (const Flock& f : surf.flocks) {
+            double a = f.phase + t * f.speed;
+            double dx = f.cx + std::cos(a) * f.radius - pl.x, dz = f.cz + std::sin(a) * f.radius - pl.z, d = std::sqrt(dx * dx + dz * dz);
+            if (d < best) {
+                best = d;
+                bx = dx;
+                bz = dz;
+                flock = true;
+            }
+        }
         if (best < 1500) row(best < 25 ? std::string("LIFE HERE") : fmt("LIFE %s %s%s", metresString(best).c_str(), compassName(wrap2pi(std::atan2(bx, bz))), flock ? " (FLYERS)" : ""), HUD_CYAN);
     }
     if (!surf.inDrone && !surf.site.roads.empty()) {   // the old road under the feet or the wheels and the way it runs (T-01: its kind)
@@ -455,7 +469,8 @@ void Game::drawReadings() {
             row(fmt("OLD %s %s-%s", NET_KIND_HUD[clampi(rd->kind, 0, NK_COUNT - 1)], compassName(wrap2pi(hd)), compassName(wrap2pi(hd + PI))), HUD_CYAN);
     }
     if (surf.lastRange > 0) {   // the rangefinder: how far the crosshair rests and how long it takes to get there (walking, driving, flying)
-        const double spd = surf.inDrone ? 80.0 : (surf.inBuggy ? 32.0 : (surf.site.escapeVelocity < 30 ? 0.3 * surf.site.escapeVelocity : 4.2));   // a fast cruise over open ground, not the 50 m/s top; R-403: a cruise by air
+        // a fast cruise over open ground, not the 50 m/s top; R-403: a cruise by air
+        const double spd = surf.inDrone ? 80.0 : (surf.inBuggy ? 32.0 : (surf.site.escapeVelocity < 30 ? 0.3 * surf.site.escapeVelocity : 4.2));
         const double secs = surf.lastRange / spd;
         const std::string tt = secs < 90 ? fmt("%.0f S", secs) : (secs < 5400 ? fmt("%.0f MIN", secs / 60) : fmt("%.1f H", secs / 3600));
         row(fmt("AHEAD %s %s%s", metresString(surf.lastRange).c_str(), tt.c_str(), surf.lastRangeWater ? " WATER" : ""), HUD_CYAN);

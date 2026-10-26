@@ -221,7 +221,10 @@ struct Builder {
     int figure(int y, int role, int home, int minAge, int maxAge, bool fromFamilies = true) {
         if (fromFamilies && y >= H.famFrom && rng.chance(0.2)) {   // one of the families followed, now and then
             std::vector<int> c;
-            for (int q : stepped) { const HistoryPerson& P = H.persons[q]; if (mode[q] == 2 && P.died == ALIVE && P.role == HR_NONE && y - P.born >= minAge && y - P.born <= maxAge && (home < 0 || P.home == home)) c.push_back(q); }
+            for (int q : stepped) {
+                const HistoryPerson& P = H.persons[q];
+                if (mode[q] == 2 && P.died == ALIVE && P.role == HR_NONE && y - P.born >= minAge && y - P.born <= maxAge && (home < 0 || P.home == home)) c.push_back(q);
+            }
             if (!c.empty()) { const int q = c[rng.irange((int)c.size())]; H.persons[q].role = role; return q; }
         }
         return person(y - minAge - rng.irange(std::max(1, maxAge - minAge)), rng.chance(0.5), -1, home, role, 1);
@@ -284,8 +287,14 @@ struct Builder {
         if (reign < 0 || H.reigns[reign].end != ALIVE) return;
         H.reigns[reign].end = y; H.reigns[reign].endHow = how;
         const int r = H.reigns[reign].ruler;
-        if (how != 0) { const int e = ev(HE_RULE_END, y, seat(y), how == 6 ? 0.7f : (how == 3 ? 0.15f : 0.4f)); E(e).a = r; E(e).thing = how; E(e).cause = cause; vacancyEv = e; if (how == 3) E(e).pub = false; }
-        else vacancyEv = cause;
+        if (how != 0) {
+            const int e = ev(HE_RULE_END, y, seat(y), how == 6 ? 0.7f : (how == 3 ? 0.15f : 0.4f));
+            E(e).a = r;
+            E(e).thing = how;
+            E(e).cause = cause;
+            vacancyEv = e;
+            if (how == 3) E(e).pub = false;
+        } else vacancyEv = cause;
         vacant = true;
     }
     // a monarchy's heir: the late ruler's children by the people's rule, then the siblings, then the house's nearest

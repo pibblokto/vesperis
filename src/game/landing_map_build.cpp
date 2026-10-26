@@ -180,11 +180,17 @@ void Game::buildLandingZoom() {
             }
     }
     zoomPart(1);
-    zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;   // the old roads of the window (`peoples/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
+    // the old roads of the window (`peoples/roads.*`), the same network the ground carries, as texel polylines thinned to a texel's step
+    zoomRoads.clear(); zoomRoadKinds.clear(); zoomRoadsMs = 0; zoomCores = 0;
     zoomCivImg = zoomImg; zoomPlaces.clear();   // the cores over a copy (the peoples' layer's), the land alone in `zoomImg`
     if (worldHadCivilisation(g)) {
         auto tr0 = std::chrono::steady_clock::now();
-        auto texel = [&](const Vec3& u, float& x, float& y) { double la, lo; StarSystem::latLonFromBody(u, la, lo); x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW); y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH); };
+        auto texel = [&](const Vec3& u, float& x, float& y) {
+            double la, lo;
+            StarSystem::latLonFromBody(u, la, lo);
+            x = (float)((wrapAngle(lo - zoomLon) / (2 * zoomHalfLon) + 0.5) * ZW);
+            y = (float)((0.5 - (la - zoomLat) / (2 * zoomHalfLat)) * ZH);
+        };
         auto addLine = [&](const std::vector<Vec3>& pts, int kind) {
             std::vector<std::pair<float, float>> poly; float lx = 0, ly = 0;
             for (size_t k = 0; k < pts.size(); k++) {
@@ -195,7 +201,9 @@ void Game::buildLandingZoom() {
         };
         std::vector<Road> rs; roadsNear(g, zoomCentre, zoomRadiusM, rs, true);
         for (const Road& r : rs) {
-            if (std::max(settlementRank(r.a.sclass), settlementRank(r.b.sclass)) < 2) continue;   // the roads of the villages and the towns: a lane between two hamlets is not seen from orbit, and the whole web was a honeycomb over the land
+            // the roads of the villages and the towns: a lane between two hamlets is not seen from orbit, and the whole web was a honeycomb
+            // over the land
+            if (std::max(settlementRank(r.a.sclass), settlementRank(r.b.sclass)) < 2) continue;
             addLine(r.pts, NK_ROAD);
         }
         zoomPart(2);
@@ -283,7 +291,8 @@ void Game::buildShadowMap(const std::vector<Vec3>& units, std::vector<uint8_t>& 
 // O0-04 (B-306): the shadows of moons, the parent and the rings on the landing map and its zoom, as the globe shows them
 // rebuilt for another body, every 20 s of game time and at most twice a second of real time (a moon's shadow crawls)
 void Game::refreshMapShadows(const std::vector<Vec3>& unitLUT) {
-    if (mapShadowBody == landBody && std::fabs(t - mapShadowT) < 20 && realTime - mapShadowReal < 0.5 && mapShadow.size() == unitLUT.size() && (!landZoom || zoomShadow.size() == zoomUnit.size())) return;
+    if (mapShadowBody == landBody && std::fabs(t - mapShadowT) < 20 && realTime - mapShadowReal < 0.5 && mapShadow.size() == unitLUT.size() && (!landZoom || zoomShadow.size() == zoomUnit.size()))
+        return;
     mapShadowBody = landBody; mapShadowT = t; mapShadowReal = realTime;
     buildShadowMap(unitLUT, mapShadow);
     if (landZoom && !zoomUnit.empty()) buildShadowMap(zoomUnit, zoomShadow); else zoomShadow.clear();

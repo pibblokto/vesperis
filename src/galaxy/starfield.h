@@ -20,8 +20,12 @@ enum StarClass {
     STAR_CARBON,         // S09 carbon star (S-01): a dim ruby giant in its own soot, ember light, carbon worlds
     STAR_NEUTRON,        // S10 neutron star (S-03): the pulsar's quiet sibling, a point of white light and x-ray glare; a system of survivors, the outer ones glassed
     STAR_PROTOSTAR,      // S11 protostar (S-04): a young star in its cloud, a soft orange disc in a wide glow with its dust disc seen edge-on; belts rather than worlds; the sky full of the nebula
-    STAR_WOLF_RAYET,     // S12 Wolf-Rayet star (S-05): a massive star blowing off its outer layers, blinding inside the ring of the shell it shed; a wind that strips its few worlds bare; radiation over the whole system
-    STAR_BLACK_HOLE,     // S13 black hole (S-06): no light of its own: a shadow in the sky ringed by the bent light of the stars behind it, an accretion disc, a jet on some; survivors only, a companion drawn out
+    // S12 Wolf-Rayet star (S-05): a massive star blowing off its outer layers, blinding inside the ring of the shell it shed; a wind that
+    // strips its few worlds bare; radiation over the whole system
+    STAR_WOLF_RAYET,
+    // S13 black hole (S-06): no light of its own: a shadow in the sky ringed by the bent light of the stars behind it, an accretion disc, a
+    // jet on some; survivors only, a companion drawn out
+    STAR_BLACK_HOLE,
     STAR_ROGUE,          // S14 no star (D-01): a drifter's place (`galaxy/drifters.h`), a world adrift with no sun, at its system's anchor; never drawn for a sector's star
     STAR_CLASS_COUNT
 };
@@ -110,7 +114,9 @@ int galaxyRegion(int64_t sx, int64_t sy, int64_t sz);
 // the core the sky saturates, from the halo the disc is a faint whirl round a bright centre. Sampled bilinearly by
 // direction (M1-09 / M10-14).
 constexpr int BAND_MAP_W = 128, BAND_MAP_H = 64;   // 2.8 degrees per cell: the band's cusp and the rifts of the near dust show, the far field is smooth anyway
-constexpr double GALAXY_DUST = 1.0e-3;   // the dust's extinction per light year at the disc's centre in the plane: a thousandth at home (the real disc's magnitude per kiloparsec), four to the core, one to the anticentre
+// the dust's extinction per light year at the disc's centre in the plane: a thousandth at home (the real disc's magnitude per kiloparsec),
+// four to the core, one to the anticentre
+constexpr double GALAXY_DUST = 1.0e-3;
 constexpr double BAND_EXPOSURE = 2600, BAND_GAMMA = 0.7;   // the column that reads 0.84: the bulge from home is 3,000, the anticentre 560, the pole 44
 double galaxyColumn(const Vec3& obsSectors, const Vec3& dir, double& tau);
 double bandToneOf(double column);   // the brightness 0..1 of a column

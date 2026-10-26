@@ -109,7 +109,9 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     };
     matRamp(0, L.ground);
     if (lavaGlow) {
-        setRamp(fb.pal, 2, {{0, RGB(0, 0, 0)}, {14, RGB(0.16f, 0.03f, 0.01f)}, {26, RGB(0.42f, 0.06f, 0)}, {40, RGB(0.8f, 0.14f, 0)}, {52, RGB(1, 0.5f, 0.05f)}, {60, RGB(1, 0.9f, 0.5f)}, {63, RGB(1, 1, 0.85f)}});
+        setRamp(fb.pal, 2,
+                {{0, RGB(0, 0, 0)}, {14, RGB(0.16f, 0.03f, 0.01f)}, {26, RGB(0.42f, 0.06f, 0)}, {40, RGB(0.8f, 0.14f, 0)}, {52, RGB(1, 0.5f, 0.05f)}, {60, RGB(1, 0.9f, 0.5f)},
+                        {63, RGB(1, 1, 0.85f)}});
     } else if (site.hasWater) {   // the sea's ramp for every liquid (methane, acid, brine), not the living worlds' alone
         float dayF = 0.25f + 0.75f * (float)day;   // the water goes dark with the sky (the shade does not carry the night)
         RGB w = L.secondary * (0.7f + 0.3f * lf) * dayF;
@@ -122,7 +124,9 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
     if (site.gen.hasTrait(TR_LUMINOUS_FLORA) && day < 0.5) {   // the leaves carry their own light at night
         RGB g3 = L.tertiary * 1.3f, gl = lerp(g3, RGB(0.6f, 1.0f, 0.7f), 0.35f);
         float k = (float)(1 - day * 2);
-        setRamp(fb.pal, 3, {{0, RGB(0, 0, 0)}, {14, lerp(L.tertiary * 0.25f, g3 * 0.5f, k)}, {34, lerp(L.tertiary * 0.6f, g3, k)}, {47, lerp(L.tertiary, gl, k)}, {56, lerp(L.tertiary, white, 0.5f)}, {63, white}});
+        setRamp(fb.pal, 3,
+                {{0, RGB(0, 0, 0)}, {14, lerp(L.tertiary * 0.25f, g3 * 0.5f, k)}, {34, lerp(L.tertiary * 0.6f, g3, k)}, {47, lerp(L.tertiary, gl, k)}, {56, lerp(L.tertiary, white, 0.5f)},
+                        {63, white}});
     }
     // family banks: snow/ice 8 (bank 2 stays water-only for the reflection pass), sand/dust/sulphur/quartz 9, grass 10
     matRamp(8, L.snow);
@@ -173,9 +177,13 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             else matRamp(FORM_BANKS[p][3], c * lcol);
         }
     }
-    if (site.gen.type == PT_COMET) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {18, RGB(0.10f, 0.14f, 0.30f)}, {40, RGB(0.32f, 0.48f, 0.85f)}, {63, RGB(0.7f, 0.8f, 1.0f)}});   // bank 15: the ion tail overhead
-    else if (KINDS[site.gen.type].events & EV_SPRINGS) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {20, RGB(0.06f, 0.16f, 0.13f)}, {44, RGB(0.36f, 0.88f, 0.74f)}, {63, RGB(0.80f, 1.0f, 0.94f)}});   // bank 15: the spores' own light
-    {   // (after the peoples' banks: it takes the second people's on worlds that have none): the water's trait colours, each a water's ramp in its own colour (a pink lake's, a bloom's, a lagoon's), and the milky sea's glow at
+    // bank 15: the ion tail overhead
+    if (site.gen.type == PT_COMET) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {18, RGB(0.10f, 0.14f, 0.30f)}, {40, RGB(0.32f, 0.48f, 0.85f)}, {63, RGB(0.7f, 0.8f, 1.0f)}});
+    // bank 15: the spores' own light
+    else if (KINDS[site.gen.type].events & EV_SPRINGS) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {20, RGB(0.06f, 0.16f, 0.13f)}, {44, RGB(0.36f, 0.88f, 0.74f)}, {63, RGB(0.80f, 1.0f, 0.94f)}});
+    {
+        // (after the peoples' banks: it takes the second people's on worlds that have none): the water's trait colours, each a water's ramp
+        // in its own colour (a pink lake's, a bloom's, a lagoon's), and the milky sea's glow at
         // night (its dark end the night sea's, its light the bacteria's pale blue)
         tintBankW = tintBankL = -1; tintGlow = 0;
         const float dayF = 0.25f + 0.75f * (float)day;
@@ -194,7 +202,9 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             if (tintGlow > 0.02) {
                 tintBankW = 15;
                 const RGB m = site.gen.waterTintColour, dark = L.secondary * 0.25f * dayF;
-                setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.45f, (float)tintGlow)}, {44, lerp(dark, m * 0.85f, (float)tintGlow)}, {63, lerp(dark, lerp(m, white, 0.35f), (float)tintGlow)}});
+                setRamp(fb.pal, 15,
+                        {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.45f, (float)tintGlow)}, {44, lerp(dark, m * 0.85f, (float)tintGlow)},
+                                {63, lerp(dark, lerp(m, white, 0.35f), (float)tintGlow)}});
             }
         }
         if (waterLights) {   // a dark ocean's life, its own light: faint in the black water, in patches that drift (the sheet's)
@@ -202,8 +212,14 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
             const RGB m = site.gen.waterTintColour, dark = L.secondary * 0.25f * dayF;
             setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {14, dark}, {28, lerp(dark, m * 0.3f, 0.8f)}, {44, m * 0.62f}, {63, lerp(m, white, 0.25f)}});
         }
-        if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON)) setRamp(fb.pal, 15, {{0, RGB(0, 0, 0)}, {22, RGB(0.30f, 0.20f, 0.08f)}, {44, RGB(0.86f, 0.62f, 0.30f)}, {58, RGB(1.0f, 0.86f, 0.56f)}, {63, RGB(1, 0.97f, 0.86f)}});   // the lamps' and the windows' light
-        if ((site.gen.hasTrait(TR_BLOOMS) || site.gen.hasTrait(TR_REEFS)) && !formsStaged) { tintBankL = 26; waterTint(26, site.gen.hasTrait(TR_BLOOMS) ? lerp(site.gen.matColor[MAT_WATER], site.gen.lifeTintColour, 0.75f) : site.gen.lifeTintColour); }   // a bloom the water's own colour turned
+        if (site.gen.hasTrait(TR_LIGHTS_LEFT_ON))
+            setRamp(fb.pal, 15,
+                    {{0, RGB(0, 0, 0)}, {22, RGB(0.30f, 0.20f, 0.08f)}, {44, RGB(0.86f, 0.62f, 0.30f)}, {58, RGB(1.0f, 0.86f, 0.56f)},
+                            {63, RGB(1, 0.97f, 0.86f)}});   // the lamps' and the windows' light
+        if ((site.gen.hasTrait(TR_BLOOMS) || site.gen.hasTrait(TR_REEFS)) && !formsStaged) {
+            tintBankL = 26;
+            waterTint(26, site.gen.hasTrait(TR_BLOOMS) ? lerp(site.gen.matColor[MAT_WATER], site.gen.lifeTintColour, 0.75f) : site.gen.lifeTintColour);
+        }   // a bloom the water's own colour turned
         tintBankStrata = -1;
         if (site.gen.hasTrait(TR_STRATA) && !formsStaged) {   // the rainbow strata's accent: a red, an orange or a green by the world
             static const RGB A[3] = {RGB(0.74f, 0.30f, 0.20f), RGB(0.82f, 0.52f, 0.20f), RGB(0.46f, 0.56f, 0.36f)};
@@ -251,12 +267,16 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         {
             RGB stormGrey = RGB(0.40f, 0.40f, 0.44f) * (float)rainDim;
             RGB g1 = lerp(zen, stormGrey, (float)day), g0 = g1 * 0.6f;
-            if (day < 0.5) setRamp(fb.pal, 23, {{0, g0}, {18, g1}, {36, hor}, {44, lerp(hor, RGB(0.8f, 0.82f, 0.9f), 0.25f)}, {54, lerp(hor, RGB(0.8f, 0.82f, 0.9f), (float)(0.6 + 0.3 * day))}, {63, lerp(RGB(0.8f, 0.82f, 0.9f), sunC, (float)day)}});
+            if (day < 0.5)
+                setRamp(fb.pal, 23,
+                        {{0, g0}, {18, g1}, {36, hor}, {44, lerp(hor, RGB(0.8f, 0.82f, 0.9f), 0.25f)}, {54, lerp(hor, RGB(0.8f, 0.82f, 0.9f), (float)(0.6 + 0.3 * day))},
+                                {63, lerp(RGB(0.8f, 0.82f, 0.9f), sunC, (float)day)}});
             else setRamp(fb.pal, 23, {{0, g0}, {18, g1}, {36, lerp(g1, hor, 0.8f)}, {40, hor}, {50, glow}, {56, lerp(glow, sunC, 0.6f)}, {63, sunC}});
         }
     } else {
         RGB grey(0.42f, 0.43f, 0.48f);
-        setRamp(fb.pal, 1, {{0, RGB(0, 0, 0)}, {30, RGB(0.05f, 0.05f, 0.07f)}, {44, lerp(grey, sunC, 0.3f) * 0.8f}, {50, lerp(grey, sunC, 0.5f)}, {55, sunC * 0.9f}, {60, sunC}, {63, lerp(sunC, white, 0.45f)}});
+        setRamp(fb.pal, 1,
+                {{0, RGB(0, 0, 0)}, {30, RGB(0.05f, 0.05f, 0.07f)}, {44, lerp(grey, sunC, 0.3f) * 0.8f}, {50, lerp(grey, sunC, 0.5f)}, {55, sunC * 0.9f}, {60, sunC}, {63, lerp(sunC, white, 0.45f)}});
     }
     if (lightningFlash > 0) {
         for (int i = 0; i < (int)sizeof(fb.pal); i++) fb.pal[i] = (uint8_t)std::min(255.0, fb.pal[i] + 120 * lightningFlash);
@@ -266,7 +286,9 @@ void SurfaceView::setupPalette(Framebuffer& fb) {
         RGB dc = site.gen.color * 0.85f;
         for (int i = 0; i < (int)sizeof(fb.pal); i += 3) {
             double f = 0.7 * env.dust;
-            fb.pal[i] = (uint8_t)(fb.pal[i] * (1 - f) + dc.r * 255 * f * 0.9); fb.pal[i + 1] = (uint8_t)(fb.pal[i + 1] * (1 - f) + dc.g * 255 * f * 0.9); fb.pal[i + 2] = (uint8_t)(fb.pal[i + 2] * (1 - f) + dc.b * 255 * f * 0.9);
+            fb.pal[i] = (uint8_t)(fb.pal[i] * (1 - f) + dc.r * 255 * f * 0.9);
+            fb.pal[i + 1] = (uint8_t)(fb.pal[i + 1] * (1 - f) + dc.g * 255 * f * 0.9);
+            fb.pal[i + 2] = (uint8_t)(fb.pal[i + 2] * (1 - f) + dc.b * 255 * f * 0.9);
         }
     }
     if (player.underwater || viewUnderwater) {

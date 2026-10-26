@@ -138,7 +138,14 @@ void Game::autoInput(Input& in, double realDt) {
 // ---------------------------------------------------------------------------------------------------------------------------------------
 // the mind: the plan and its steps
 
-void Game::autoPush(const char* what, double maxT, std::function<bool(double)> fn, bool timed) { AutoStep s; s.what = what; s.maxT = maxT; s.run = std::move(fn); s.timed = timed; ax.plan.push_back(std::move(s)); }
+void Game::autoPush(const char* what, double maxT, std::function<bool(double)> fn, bool timed) {
+    AutoStep s;
+    s.what = what;
+    s.maxT = maxT;
+    s.run = std::move(fn);
+    s.timed = timed;
+    ax.plan.push_back(std::move(s));
+}
 
 void Game::autoRun(double dt) {
     AutoState& A = ax;

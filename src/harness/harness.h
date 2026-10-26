@@ -164,7 +164,20 @@ enum SceneCode : int {
 // the receiver's renders (the unit and `signals wav`): a people's world (its voice, tongue, shards, language and tradition),
 // a programme of it through the synth at full clarity with a loop's and a numbers station's repeats as the game does them, a
 // natural signal by its seed, and a WAV writer
-struct PeopleWorld { bool valid = false; StarSystem sys; int body = -1; Lore lore; Tongue tongue; Voice voice; std::vector<Shard> shards; Language lang; Tradition tradition; int firstText = -1, firstMusic = -1; uint64_t seed = 0; std::string name; };
+struct PeopleWorld {
+    bool valid = false;
+    StarSystem sys;
+    int body = -1;
+    Lore lore;
+    Tongue tongue;
+    Voice voice;
+    std::vector<Shard> shards;
+    Language lang;
+    Tradition tradition;
+    int firstText = -1, firstMusic = -1;
+    uint64_t seed = 0;
+    std::string name;
+};
 
 struct RenderStats { double rms = 0, peak = 0; int nan = 0, clip = 0; };
 
@@ -186,7 +199,13 @@ struct BeaconInfo { bool valid = false; DrifterBeacon B; std::string people, gen
 // D-03: the distinctness: the drifters' voices rendered over a breath each (its turning: the main lobe, the figure and the answer, the silence;
 // 32 s at least) against `ref` signals of each natural kind by seeds of their own over `refSeconds` (the workers share them out); the
 // drifters' nearest pair (prints and parameters), and each kind's median pair, the bar
-struct Distinctness { int n = 0, pairs = 0, under = 0, nearA = -1, nearB = -1, traitA = -1, traitB = -1; double nearest = 1e9, median = 0, traitNearest = 1e9; double kindMedian[4] = {0, 0, 0, 0}, kindNearest[4] = {1e9, 1e9, 1e9, 1e9}; double bar = 0; std::vector<int> inUnder; };
+struct Distinctness {
+    int n = 0, pairs = 0, under = 0, nearA = -1, nearB = -1, traitA = -1, traitB = -1;
+    double nearest = 1e9, median = 0, traitNearest = 1e9;
+    double kindMedian[4] = {0, 0, 0, 0}, kindNearest[4] = {1e9, 1e9, 1e9, 1e9};
+    double bar = 0;
+    std::vector<int> inUnder;
+};
 
 // Q-03: the sounds of the ground through the synth as the game sets them (22,050 Hz mono, master 0.8, nothing else playing): each a setter of the
 // game's levels by the second, rendered in the synth's blocks. The singing dunes as a slide down a slip face (the hum rising over a second, held
@@ -256,7 +275,10 @@ struct Sheet {
     void blit(const std::vector<uint32_t>& src, int sw, int sh, int ox, int oy) {
         for (int y = 0; y < sh; y++) for (int x = 0; x < sw; x++) { int X = ox + x, Y = oy + y; if (X >= 0 && Y >= 0 && X < w && Y < h) px[(size_t)Y * w + X] = src[(size_t)y * sw + x]; }
     }
-    void label(int x, int y, const std::string& s, uint32_t c = rgb(255, 220, 120)) { fillRectRGB(cv, x, y, x + textWidth(s.c_str()) + 3, y + 8, rgb(0, 0, 0)); drawText(cv, x + 2, y + 1, s.c_str(), c); }
+    void label(int x, int y, const std::string& s, uint32_t c = rgb(255, 220, 120)) {
+        fillRectRGB(cv, x, y, x + textWidth(s.c_str()) + 3, y + 8, rgb(0, 0, 0));
+        drawText(cv, x + 2, y + 1, s.c_str(), c);
+    }
     void save(const std::string& fn) { writePNG(fn.c_str(), px.data(), w, h); printf("wrote %s\n", fn.c_str()); }
 };
 
@@ -352,7 +374,8 @@ void runSurvey(int wanted);
 // ---- modes_space.cpp
 void renderMaps();
 void renderSpace();
-double telescopeFrame(SpaceRenderer& sr, StarNeighborhood& nb, StarSystem& sys, double t, const Vec3& shipPos, const Vec3& aim, double zoom, int bankA, int bankB, const char* file, double* rpxOut = nullptr, bool plate = true);
+double telescopeFrame(SpaceRenderer& sr, StarNeighborhood& nb, StarSystem& sys, double t, const Vec3& shipPos, const Vec3& aim, double zoom, int bankA, int bankB, const char* file,
+        double* rpxOut = nullptr, bool plate = true);
 void renderMoonSky();
 void renderBinarySurface(SpaceRenderer& sr, StarNeighborhood& nb);
 void almanacTestPlaces(std::vector<AlmanacTestPlace>& out);

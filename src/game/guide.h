@@ -92,7 +92,9 @@ struct Guide {
     std::set<std::string> graves;                 // "<body key>/G<id>" of every grave read in the ruins (`grave` lines), like the landmarks
     std::set<std::string> ended;                  // the worlds whose last recording the decoder read (`ended` lines): their timeline closed
     std::set<std::string> instruments;            // "<body key>/I<id>" of every instrument taken from a ruin (`instrument` lines; peoples/instruments.h's ids): kept in the cabin's case
-    std::set<std::string> lent;                   // "<body key>/S<index>" of the shards a friend's inbox file lent (the ones they found and read; `lent` lines): read on the decoder in cyan, never taken, the ruins still hold them
+    // "<body key>/S<index>" of the shards a friend's inbox file lent (the ones they found and read; `lent` lines): read on the decoder in
+    // cyan, never taken, the ruins still hold them
+    std::set<std::string> lent;
     bool isLent(const std::string& key) const { return lent.count(key) && !shards.count(key); }   // a friend's, not yet the explorer's own
     int lentCount() const;                        // how many are lent and not taken since
     std::set<int> classesSeen, typesSeen;

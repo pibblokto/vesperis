@@ -31,11 +31,30 @@ Bestiary Bestiary::make(const Body& b, const BodyGen& g) {
         s.plan = r.pick(w, 6);
         if (s.plan == PLAN_GIANT) giantDone = true;
         switch (s.plan) {
-            case PLAN_QUADRUPED: s.size = 0.6 + 1.2 * r.uni(); s.gait = r.chance(0.5) ? GAIT_WALK : GAIT_TROT; s.runGait = GAIT_GALLOP; s.walkSpeed = 0.8 + 0.6 * r.uni(); s.runSpeed = 4 + 3 * r.uni(); s.herdMin = 4; s.herdMax = 9;
-                s.bodyLen = s.size * (1.4 + 0.5 * r.uni()); s.neckLen = s.size * (0.35 + 0.3 * r.uni()); s.headLen = s.size * 0.4; s.tailLen = s.size * (0.3 + 0.6 * r.uni()); s.legLen = s.size * 0.95; break;
+            case PLAN_QUADRUPED:
+                s.size = 0.6 + 1.2 * r.uni();
+                s.gait = r.chance(0.5) ? GAIT_WALK : GAIT_TROT;
+                s.runGait = GAIT_GALLOP;
+                s.walkSpeed = 0.8 + 0.6 * r.uni();
+                s.runSpeed = 4 + 3 * r.uni();
+                s.herdMin = 4;
+                s.herdMax = 9;
+                s.bodyLen = s.size * (1.4 + 0.5 * r.uni());
+                s.neckLen = s.size * (0.35 + 0.3 * r.uni());
+                s.headLen = s.size * 0.4;
+                s.tailLen = s.size * (0.3 + 0.6 * r.uni());
+                s.legLen = s.size * 0.95;
+                break;
             case PLAN_LONGNECK: s.size = 1.5 + 2.0 * r.uni(); s.gait = GAIT_WALK; s.runGait = GAIT_TROT; s.walkSpeed = 0.7 + 0.4 * r.uni(); s.runSpeed = 3 + 2 * r.uni(); s.herdMin = 2; s.herdMax = 4;
                 s.bodyLen = s.size * 1.3; s.neckLen = s.size * (0.9 + 0.6 * r.uni()); s.headLen = s.size * 0.3; s.tailLen = s.size * 0.7; s.legLen = s.size * 1.0; break;
-            case PLAN_HEXAPOD: s.size = 0.3 + 0.5 * r.uni(); s.gait = GAIT_CRAWL; s.runGait = GAIT_CRAWL; s.walkSpeed = 0.3 + 0.4 * r.uni(); s.runSpeed = 1.5 + 1.0 * r.uni(); s.herdMin = 3; s.herdMax = 8;
+            case PLAN_HEXAPOD:
+                s.size = 0.3 + 0.5 * r.uni();
+                s.gait = GAIT_CRAWL;
+                s.runGait = GAIT_CRAWL;
+                s.walkSpeed = 0.3 + 0.4 * r.uni();
+                s.runSpeed = 1.5 + 1.0 * r.uni();
+                s.herdMin = 3;
+                s.herdMax = 8;
                 s.bodyLen = s.size * 3.0; s.neckLen = s.size * 0.2; s.headLen = s.size * 0.5; s.tailLen = s.size * 1.2; s.legLen = s.size * 0.5; break;
             case PLAN_HOPPER: s.size = 0.4 + 0.8 * r.uni(); s.gait = GAIT_HOP; s.runGait = GAIT_HOP; s.walkSpeed = 1.0 + 0.5 * r.uni(); s.runSpeed = 5 + 3 * r.uni(); s.herdMin = 3; s.herdMax = 6;
                 s.bodyLen = s.size * 1.1; s.neckLen = s.size * 0.35; s.headLen = s.size * 0.35; s.tailLen = s.size * (0.8 + 0.5 * r.uni()); s.legLen = s.size * 0.9; break;

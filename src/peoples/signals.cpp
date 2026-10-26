@@ -403,8 +403,8 @@ std::string signalSourceLine(const Signal& s) {
 }
 
 // ---- the programmes of a people's broadcast (the user's second call: more sounds, in the cosmic-horror direction) ----
-const char* const RADIO_PROGRAMME_NAMES[RP_COUNT] = {"A VOICE", "WHISPERS", "A CHANT", "A NUMBERS STATION", "A LOOP", "A BEACON", "DATA BURSTS", "A BELL TOLLING", "A SIREN", "A MURMUR OF VOICES", "A PIECE, SLOWED",
-                                                    "MORSE BY SPARK", "A PHONOGRAPH", "A SYNTHETIC VOICE", "MATHEMATICS"};
+const char* const RADIO_PROGRAMME_NAMES[RP_COUNT] = {"A VOICE", "WHISPERS", "A CHANT", "A NUMBERS STATION", "A LOOP", "A BEACON", "DATA BURSTS", "A BELL TOLLING", "A SIREN", "A MURMUR OF VOICES",
+        "A PIECE, SLOWED", "MORSE BY SPARK", "A PHONOGRAPH", "A SYNTHETIC VOICE", "MATHEMATICS"};
 
 namespace {
 inline double unit(uint64_t h) { return (h >> 11) * (1.0 / 9007199254740992.0); }

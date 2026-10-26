@@ -116,7 +116,13 @@ struct Mk {
             case MO_STARS: for (int k = 0; k < M.number; k++) { const double a = TAU * k / M.number; mark(u + std::cos(a) * r * 1.5, v + std::sin(a) * r * 1.5, r * 0.22, w, 3, tm); } break;
             case MO_SPIRALS: for (int k = 0; k < 10; k++) { const double a = k * 0.9, rr = r * (1.2 + 0.07 * k); mark(u + std::cos(a) * rr, v + std::sin(a) * rr, r * 0.1, w, 0, tm); } break;
             case MO_STEPS: for (int k = 0; k < 4; k++) { const double a = PI / 4 + k * PI / 2; mark(u + std::cos(a) * r * 1.4, v + std::sin(a) * r * 1.4, r * 0.18, w, 2, tm); } break;
-            case MO_GLYPHS: case MO_FIGURES: for (int k = 0; k < 6; k++) { const double a = TAU * k / 6; mark(u + std::cos(a) * r * 1.45, v + std::sin(a) * r * 1.45, r * 0.13, w, k % 2 ? 1 : 2, tm, -1, a, r * 0.4); } break;
+            case MO_GLYPHS:
+            case MO_FIGURES:
+                for (int k = 0; k < 6; k++) {
+                    const double a = TAU * k / 6;
+                    mark(u + std::cos(a) * r * 1.45, v + std::sin(a) * r * 1.45, r * 0.13, w, k % 2 ? 1 : 2, tm, -1, a, r * 0.4);
+                }
+                break;
             default: ring(u, v, r * 1.25, r * 0.1, w, tm); break;
         }
     }
@@ -125,9 +131,28 @@ struct Mk {
         const double c = std::cos(ang), s = std::sin(ang);
         const int tm = accentMat(AP_BANDS);
         switch (M.deco) {
-            case ON_BANDED: { const int nb = clampi(M.number / 2, 2, 4); for (int i = 0; i < nb; i++) { const double t = nb == 1 ? 0.5 : (i == 0 ? 0.04 : (i == nb - 1 ? 0.96 : (double)i / (nb - 1) * 0.3)); band(u + c * len * t, v + s * len * t, ang, r * 1.04, r * 0.18, wc, tm); } break; }
-            case ON_CARVED: for (int i = 0; i < 3; i++) { const double t = 0.06 + 0.04 * i; band(u + c * len * t, v + s * len * t, ang, r * 1.0, r * 0.08, wc, IM_HOLE); band(u + c * len * (1 - t), v + s * len * (1 - t), ang, r * 1.0, r * 0.08, wc, IM_HOLE); } break;
-            case ON_ENCRUSTED: for (int i = 0; i < 2 * M.number; i++) { const double t = 0.05 + 0.9 * i / std::max(1, 2 * M.number - 1); if (t > 0.3 && t < 0.88) continue; ball(u + c * len * t, v + s * len * t, r * 0.32, r * 0.32, wc + r * 0.7, r * 0.5, trimMat()); } break;
+            case ON_BANDED: {
+                const int nb = clampi(M.number / 2, 2, 4);
+                for (int i = 0; i < nb; i++) {
+                    const double t = nb == 1 ? 0.5 : (i == 0 ? 0.04 : (i == nb - 1 ? 0.96 : (double)i / (nb - 1) * 0.3));
+                    band(u + c * len * t, v + s * len * t, ang, r * 1.04, r * 0.18, wc, tm);
+                }
+                break;
+            }
+            case ON_CARVED:
+                for (int i = 0; i < 3; i++) {
+                    const double t = 0.06 + 0.04 * i;
+                    band(u + c * len * t, v + s * len * t, ang, r * 1.0, r * 0.08, wc, IM_HOLE);
+                    band(u + c * len * (1 - t), v + s * len * (1 - t), ang, r * 1.0, r * 0.08, wc, IM_HOLE);
+                }
+                break;
+            case ON_ENCRUSTED:
+                for (int i = 0; i < 2 * M.number; i++) {
+                    const double t = 0.05 + 0.9 * i / std::max(1, 2 * M.number - 1);
+                    if (t > 0.3 && t < 0.88) continue;
+                    ball(u + c * len * t, v + s * len * t, r * 0.32, r * 0.32, wc + r * 0.7, r * 0.5, trimMat());
+                }
+                break;
             default: break;
         }
     }
@@ -154,7 +179,11 @@ struct Mk {
             }
             case ON_ENCRUSTED: {
                 const int k = 3 * M.number;
-                for (int i = 0; i < k; i++) { const double t = TAU * i / k; at(std::cos(t) * L * 0.86, std::sin(t) * H * 0.84, u, v); ball(u, v, H * 0.045, H * 0.045, surfaceAt(b, u, v) - 0.002, H * 0.05, trimMat()); }
+                for (int i = 0; i < k; i++) {
+                    const double t = TAU * i / k;
+                    at(std::cos(t) * L * 0.86, std::sin(t) * H * 0.84, u, v);
+                    ball(u, v, H * 0.045, H * 0.045, surfaceAt(b, u, v) - 0.002, H * 0.05, trimMat());
+                }
                 break;
             }
             default: break;
@@ -168,7 +197,10 @@ struct Mk {
             case TP_FINIALS: ball(u + c * sz * 0.7, v + s * sz * 0.7, sz * 0.75, sz * 0.75, w, sz * 1.2, m); break;
             case TP_CRENELS: for (int k = -1; k <= 1; k += 2) box(u + c * sz * 0.6 - s * k * sz * 0.45, v + s * sz * 0.6 + c * k * sz * 0.45, ang, sz * 1.0, sz * 0.28, w, w + sz * 0.9, m); break;
             case TP_MASTS: tube(u, v, ang, sz * 2.4, sz * 0.35, sz * 0.05, w + sz * 0.4, m); break;
-            case TP_STATUES: ball(u + c * sz * 0.9, v + s * sz * 0.9, sz * 0.7, sz * 0.85, w, sz * 1.1, m, ang); for (int k = -1; k <= 1; k += 2) ball(u + c * sz * 1.35 - s * k * sz * 0.4, v + s * sz * 1.35 + c * k * sz * 0.4, sz * 0.22, sz * 0.22, w + sz * 0.8, sz * 0.3, IM_HOLE); break;
+            case TP_STATUES:
+                ball(u + c * sz * 0.9, v + s * sz * 0.9, sz * 0.7, sz * 0.85, w, sz * 1.1, m, ang);
+                for (int k = -1; k <= 1; k += 2) ball(u + c * sz * 1.35 - s * k * sz * 0.4, v + s * sz * 1.35 + c * k * sz * 0.4, sz * 0.22, sz * 0.22, w + sz * 0.8, sz * 0.3, IM_HOLE);
+                break;
             default: box(u + c * sz * 0.35, v + s * sz * 0.35, ang, sz * 0.7, sz * 0.5, w, w + sz * 0.7, m); break;
         }
     }
@@ -192,7 +224,8 @@ struct Mk {
             const double t0 = (double)i / segs, t1 = (double)(i + 1) / segs;
             tube(u + c * len * t0, v + s * len * t0, ang, len / segs + (i + 1 < segs ? r * 0.2 : 0), r * profileAt(t0, tp, ws), r * profileAt(t1, tp, ws), wc, mat);
         }
-        if (mat == IM_CANE) for (int j = 1; j <= 3; j++) { const double t = j / 4.0; band(u + c * len * t, v + s * len * t, ang, r * profileAt(t, tp, ws) * 1.04, r * 0.12, wc, IM_CANE); }   // its nodes
+        // its nodes
+        if (mat == IM_CANE) for (int j = 1; j <= 3; j++) { const double t = j / 4.0; band(u + c * len * t, v + s * len * t, ang, r * profileAt(t, tp, ws) * 1.04, r * 0.12, wc, IM_CANE); }
     }
     // a bell: a flare of four rings of tube
     void bell(double u, double v, double ang, double len, double r0, double r1, double wc, int mat) {
@@ -223,7 +256,8 @@ struct Mk {
     void bowBeside(double u, double v, double ang, double len) {
         const double c = std::cos(ang), s = std::sin(ang), cu = -s * 0.012, cv = c * 0.012;
         const int stick = M.stick;
-        if (M.age <= AGE_MEDIEVAL && M.variant % 2) arc(u + c * len * 0.5 - s * len * 1.2, v + s * len * 0.5 + c * len * 1.2, len * 1.25, ang - PI / 2 - 0.4, ang - PI / 2 + 0.4, 0.004, 0.003, 0.004, stick, 6);
+        if (M.age <= AGE_MEDIEVAL && M.variant % 2)
+            arc(u + c * len * 0.5 - s * len * 1.2, v + s * len * 0.5 + c * len * 1.2, len * 1.25, ang - PI / 2 - 0.4, ang - PI / 2 + 0.4, 0.004, 0.003, 0.004, stick, 6);
         else tube(u, v, ang, len, 0.0045, 0.003, 0.0045, stick);
         str(u + cu, v + cv, 0.004, u + c * len * 0.97 + cu, v + s * len * 0.97 + cv, 0.004, M.age >= AGE_INDUSTRIAL ? IM_GUT : IM_FIBRE, -1, 0.0012);
         box(u + c * 0.03 + cu * 0.5, v + s * 0.03 + cv * 0.5, ang, 0.04, 0.008, 0, 0.016, M.fit);
@@ -249,7 +283,11 @@ struct Mk {
     }
     // knobs in a row
     void knobs(double u0, double v, double len, int count, double r, double w, int mat) {
-        for (int i = 0; i < count; i++) { const double u = u0 + len * (count == 1 ? 0.5 : (double)i / (count - 1)); disc(u, v, r, r, w, w + r * 0.9, mat); mark(u + r * 0.4, v, r * 0.18, w + r * 0.9, 1, IM_HOLE, -1, 0, r * 0.7); }
+        for (int i = 0; i < count; i++) {
+            const double u = u0 + len * (count == 1 ? 0.5 : (double)i / (count - 1));
+            disc(u, v, r, r, w, w + r * 0.9, mat);
+            mark(u + r * 0.4, v, r * 0.18, w + r * 0.9, 1, IM_HOLE, -1, 0, r * 0.7);
+        }
     }
     // the late ages' light: dots or lines (the people's light), lighting with their course
     void lights(double u0, double v, double len, int count, double w, bool courses) {
@@ -306,10 +344,16 @@ void pVessel(Mk& k) {
     else k.mark(L * 0.2, 0, H * 0.08, k.onTop(b, L * 0.2, 0), 0);                                                         // or a hole on top, blown across
     const int nh = clampi(k.n - 1, 3, 9);
     if (M.sym == SY_RADIAL || M.sym == SY_ROTATIONAL) {
-        for (int i = 0; i < nh; i++) { const double a = TAU * i / nh + (M.sym == SY_ROTATIONAL ? 0.3 * i : 0), u = std::cos(a) * L * 0.24, v = std::sin(a) * H * 0.26; k.mark(u, v, H * 0.045, k.onTop(b, u, v), M.hole, IM_HOLE, i, a); }
+        for (int i = 0; i < nh; i++) {
+            const double a = TAU * i / nh + (M.sym == SY_ROTATIONAL ? 0.3 * i : 0), u = std::cos(a) * L * 0.24, v = std::sin(a) * H * 0.26;
+            k.mark(u, v, H * 0.045, k.onTop(b, u, v), M.hole, IM_HOLE, i, a);
+        }
     } else {
         const std::vector<double> at = k.rhythm(nh);
-        for (int i = 0; i < nh; i++) { const double u = -L * 0.34 + L * 0.6 * at[i], v = (i % 2 ? 1 : -1) * H * (M.sym == SY_NONE ? 0.08 + 0.12 * k.rng.uni() : 0.16); k.mark(u, v, H * 0.045, k.onTop(b, u, v), M.hole, IM_HOLE, i); }
+        for (int i = 0; i < nh; i++) {
+            const double u = -L * 0.34 + L * 0.6 * at[i], v = (i % 2 ? 1 : -1) * H * (M.sym == SY_NONE ? 0.08 + 0.12 * k.rng.uni() : 0.16);
+            k.mark(u, v, H * 0.045, k.onTop(b, u, v), M.hole, IM_HOLE, i);
+        }
     }
     if (M.variant % 3 != 2) k.mark(L * 0.18, 0, H * 0.05, k.onTop(b, L * 0.18, 0), 2);   // the window
     k.bodyOrnament(b, L * 0.3);
@@ -355,7 +399,8 @@ void pTwinPipe(Mk& k) {
     for (int p = 0; p < pipes; p++) {
         const double a = (p - (pipes - 1) * 0.5) * spread, v0 = (p - (pipes - 1) * 0.5) * 2.2 * r;
         k.tube(-L / 2, v0, a, L * (p == pipes - 1 && pipes == 3 ? 1.25 : 1.0), r, r * 1.05, r, M.mat);
-        if (!(pipes == 3 && p == pipes - 1)) k.holesAlong(-L / 2 + std::cos(a) * L * 0.36, v0 + std::sin(a) * L * 0.36, a, L * 0.5, 2 * r, r * 0.4, p == 0 ? (nh + 1) / 2 : nh / 2, p == 0 ? 0 : (nh + 1) / 2);
+        if (!(pipes == 3 && p == pipes - 1))
+            k.holesAlong(-L / 2 + std::cos(a) * L * 0.36, v0 + std::sin(a) * L * 0.36, a, L * 0.5, 2 * r, r * 0.4, p == 0 ? (nh + 1) / 2 : nh / 2, p == 0 ? 0 : (nh + 1) / 2);
     }
     k.ball(-L / 2 - r, 0, r * 2.2, r * 1.6, 0, r * 2.6, M.mat2);   // the shared mouthpiece
     k.tubeOrnament(-L / 2, 0, 0, L, r * (pipes + 0.5), r);
@@ -396,7 +441,15 @@ void pBag(Mk& k) {
     const InstrumentMake& M = k.M;
     const double bl = k.rng.range(0.3, 0.4) * k.S, bw = bl * k.rng.range(0.55, 0.72), th = bw * 0.5;
     InstrumentPart& bag = k.plate(0, 0, 0, bl, bw * 0.5, 0, th * 0.6, IM_HIDE, 0.7, -0.1, 2.2, th * 0.4, 0, M.skew);
-    if (M.painted > 0.4 || M.deco >= ON_CARVED) { InstrumentPart cover = bag; cover.mat = IM_PAINT; cover.r0 *= 0.8; cover.len *= 0.85; cover.w0 = cover.w1; cover.w1 += 0.001; k.out.push_back(cover); }
+    if (M.painted > 0.4 || M.deco >= ON_CARVED) {
+        InstrumentPart cover = bag;
+        cover.mat = IM_PAINT;
+        cover.r0 *= 0.8;
+        cover.len *= 0.85;
+        cover.w0 = cover.w1;
+        cover.w1 += 0.001;
+        k.out.push_back(cover);
+    }
     // the chanter, its holes
     const double cl = k.rng.range(0.24, 0.34) * k.S, cr = 0.009;
     k.tube(bl * 0.42, -bw * 0.1, -0.12, cl, cr, cr * 1.5, th * 0.5, M.mat2);
@@ -518,8 +571,12 @@ void pHorn(Mk& k, int plan) {
             k.tube(-L / 2, 0, 0, L - bl, r, r * 1.3, wc, tm);
             k.bell(L / 2 - bl, 0, 0, bl, r * 1.3, k.rng.range(0.05, 0.09) * k.S, wc, tm);
             mouthpiece(k, -L / 2 - 0.03, 0, 0, wc);
-            if (M.variant % 4 == 2) { for (int i = 0; i < clampi(k.n - 1, 3, 7); i++) { k.mark(-L * 0.05 + 0.035 * i, 0, r * 0.45, wc + r * 1.2, 0, IM_HOLE, i); k.box(-L * 0.05 + 0.035 * i, r * 2.2, 0, 0.02, 0.005, wc + r, wc + r + 0.004, k.trimMat(), i); } }
-            else valves(k, -L * 0.25, 0, 0, wc, r);
+            if (M.variant % 4 == 2) {
+                for (int i = 0; i < clampi(k.n - 1, 3, 7); i++) {
+                    k.mark(-L * 0.05 + 0.035 * i, 0, r * 0.45, wc + r * 1.2, 0, IM_HOLE, i);
+                    k.box(-L * 0.05 + 0.035 * i, r * 2.2, 0, 0.02, 0.005, wc + r, wc + r + 0.004, k.trimMat(), i);
+                }
+            } else valves(k, -L * 0.25, 0, 0, wc, r);
             k.tubeOrnament(-L / 2, 0, 0, L - bl, r * 1.15, wc);
             if (M.deco >= ON_CARVED) for (int t = 0; t < 3; t++) k.str(-L * 0.3 + 0.08 * t, 0.01, wc + 0.01, -L * 0.3 + 0.08 * t + 0.05, 0.05 + 0.02 * t, 0.002, IM_FIBRE);   // a cord hanging
             break;
@@ -577,7 +634,11 @@ void pNecked(Mk& k, bool bowed) {
     // the sound holes: a rosette, two slits for a bowed one, scattered small ones on an encrusted people's
     if (faceMat != IM_HIDE) {
         if (bowed) for (int e = -1; e <= 1; e += 2) k.mark(-bl * 0.02, e * bw * 0.42, bw * 0.05, fw, 1, IM_HOLE, -1, 0, bl * 0.28);
-        else if (M.deco == ON_ENCRUSTED) for (int i = 0; i < M.number; i++) { const double a = TAU * i / M.number; k.mark(bl * 0.12 + std::cos(a) * bw * 0.25, std::sin(a) * bw * 0.25, bw * 0.05, fw, M.hole); }
+        else if (M.deco == ON_ENCRUSTED)
+            for (int i = 0; i < M.number; i++) {
+                const double a = TAU * i / M.number;
+                k.mark(bl * 0.12 + std::cos(a) * bw * 0.25, std::sin(a) * bw * 0.25, bw * 0.05, fw, M.hole);
+            }
         else k.soundHole(bl * 0.12, 0, bw * 0.17, fw);
     }
     k.bodyOrnament(face, bw * 0.3);
@@ -705,7 +766,11 @@ void pTubeZither(Mk& k) {
 void pRingHarp(Mk& k) {
     const InstrumentMake& M = k.M;
     const double R = k.rng.range(0.18, 0.28) * k.S, rr = 0.012 * (0.7 + 0.3 * k.S);
-    if (M.sides >= 5) for (int i = 0; i < M.sides; i++) { const double a0 = TAU * i / M.sides, a1 = TAU * (i + 1) / M.sides; k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, rr, rr, rr, M.mat); }
+    if (M.sides >= 5)
+        for (int i = 0; i < M.sides; i++) {
+            const double a0 = TAU * i / M.sides, a1 = TAU * (i + 1) / M.sides;
+            k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, rr, rr, rr, M.mat);
+        }
     else k.ring(0, 0, R, rr, 0, M.mat);
     const double off = M.variant % 2 ? R * 0.35 : 0;   // a hub off the middle: its spokes graded
     const double hub = R * 0.18;
@@ -792,7 +857,11 @@ void pJaw(Mk& k) {
             k.mark(L * 0.38, v, 0.0009, 0.004, 1, IM_HOLE, -1, PI / 2, hw * 2 + 0.003);
             k.box(-L * 0.05, v, 0, L * 0.8, hw, 0.004, 0.005, M.mat, 0);
         }
-        if (M.deco != ON_BARE) for (int i = 0; i < M.number; i++) { const double u = -L * 0.6 + L * 0.12 * (i % 3), v = (i / 3 % 2 ? 1 : -1) * W * 0.36; if (std::fabs(u) < L * 0.62) k.mark(u, v, W * 0.05, b.w1 + 0.0005, M.motif == MO_CIRCLES ? 0 : (M.motif == MO_STARS ? 6 : 3), M.painted > 0.3 ? IM_PAINT : IM_HOLE); }
+        if (M.deco != ON_BARE)
+            for (int i = 0; i < M.number; i++) {
+                const double u = -L * 0.6 + L * 0.12 * (i % 3), v = (i / 3 % 2 ? 1 : -1) * W * 0.36;
+                if (std::fabs(u) < L * 0.62) k.mark(u, v, W * 0.05, b.w1 + 0.0005, M.motif == MO_CIRCLES ? 0 : (M.motif == MO_STARS ? 6 : 3), M.painted > 0.3 ? IM_PAINT : IM_HOLE);
+            }
         if (M.variant % 2) k.ring(-L * 0.62 - 0.012, 0, 0.012, 0.0012, 0, IM_FIBRE);   // a loop of cord to hold it
         else k.str(-L * 0.62, 0, 0.003, -L * 0.62 - 0.07, 0.015 * (M.skew >= 0 ? 1 : -1), 0.001, IM_FIBRE, -1, 0.001);
     } else {   // a metal loop and its tongue
@@ -828,7 +897,10 @@ void pTubeFiddle(Mk& k) {
     k.disc(-bl - 0.002, 0, R, R, 0, 2 * R, IM_HIDE);
     k.tube(-bl * 0.5, 0, 0, nl + bl * 0.5, 0.007, 0.006, R * 1.6, M.mat2);
     k.head(nl, 0, 0, R * 1.6, 0.01, M.mat2);
-    for (int i = 0; i < 2; i++) { k.box(nl - 0.04 - 0.04 * i, (i ? 1 : -1) * 0.016, PI / 2, 0.036, 0.003, R * 1.6, R * 1.6 + 0.006, M.fit); k.str(-bl + 0.01, (i ? 1 : -1) * 0.003, 2 * R + 0.003, nl - 0.04 - 0.04 * i, 0, R * 1.6 + 0.008, M.str, i, 0.0008); }
+    for (int i = 0; i < 2; i++) {
+        k.box(nl - 0.04 - 0.04 * i, (i ? 1 : -1) * 0.016, PI / 2, 0.036, 0.003, R * 1.6, R * 1.6 + 0.006, M.fit);
+        k.str(-bl + 0.01, (i ? 1 : -1) * 0.003, 2 * R + 0.003, nl - 0.04 - 0.04 * i, 0, R * 1.6 + 0.008, M.str, i, 0.0008);
+    }
     k.bowBeside(-bl, -R * 2.2, 0.05, nl);
 }
 
@@ -839,7 +911,9 @@ void pWheel(Mk& k) {
     b.waist = std::max(b.waist, 0.15);
     k.disc(-L * 0.3, 0, W * 0.3, W * 0.3, th, th + 0.004, M.stick);   // the wheel
     k.box(-L * 0.3, 0, 0, W * 0.75, W * 0.35, th, th + 0.03, M.mat == IM_GOURD ? M.stick : M.mat);   // its cover
-    k.tube(-L * 0.5, 0, PI, 0.05, 0.005, 0.005, th * 0.6, M.fit); k.box(-L * 0.5 - 0.05, 0.02, PI / 2, 0.04, 0.006, th * 0.6, th * 0.6 + 0.01, M.fit); k.disc(-L * 0.5 - 0.05, 0.04, 0.008, 0.008, th * 0.6, th * 0.6 + 0.03, M.mat2);   // the crank
+    k.tube(-L * 0.5, 0, PI, 0.05, 0.005, 0.005, th * 0.6, M.fit);
+    k.box(-L * 0.5 - 0.05, 0.02, PI / 2, 0.04, 0.006, th * 0.6, th * 0.6 + 0.01, M.fit);
+    k.disc(-L * 0.5 - 0.05, 0.04, 0.008, 0.008, th * 0.6, th * 0.6 + 0.03, M.mat2);   // the crank
     const int keys = clampi(k.n + 3, 7, 13);
     k.box(L * 0.08, 0, 0, L * 0.5, W * 0.16, th, th + 0.035, M.stick);   // the key box
     for (int i = 0; i < keys; i++) k.box(L * 0.08 - L * 0.23 + L * 0.46 * i / (keys - 1), -W * 0.2, PI / 2, W * 0.12, 0.004, th + 0.01, th + 0.03, M.fit, i);
@@ -870,16 +944,23 @@ void pBars(Mk& k, bool glass) {
     const double L0 = k.rng.range(0.16, 0.26) * k.S, bw = k.rng.range(0.025, 0.04) * k.S, gap = bw * 1.35, th = 0.012 + 0.008 * k.S;
     const double span = gap * nb, wr = 0.03;
     for (int e = -1; e <= 1; e += 2) k.box(0, e * L0 * 0.3, 0, span + 0.04, 0.012, 0, wr, M.mat2);
-    if (M.variant % 3 == 1 && !glass) for (int i = 0; i < nb; i++) { const double u = -span * 0.5 + gap * (i + 0.5); k.tube(u, -L0 * 0.25, PI / 2, L0 * 0.9 / std::sqrt(k.ratio(i)) + 0.05, bw * 0.38, bw * 0.38, 0.012, M.mat2); }   // resonators under
+    if (M.variant % 3 == 1 && !glass)
+        for (int i = 0; i < nb; i++) {
+            const double u = -span * 0.5 + gap * (i + 0.5);
+            k.tube(u, -L0 * 0.25, PI / 2, L0 * 0.9 / std::sqrt(k.ratio(i)) + 0.05, bw * 0.38, bw * 0.38, 0.012, M.mat2);
+        }   // resonators under
     for (int i = 0; i < nb; i++) {
         const double u = -span * 0.5 + gap * (i + 0.5), len = L0 / std::sqrt(k.ratio(i));
         if (glass) k.tube(u, -len * 0.5, PI / 2, len, bw * 0.4, bw * 0.4, wr + bw * 0.4, M.mat, i);
-        else if (M.mat == IM_STONE || M.mat == IM_OBSIDIAN || M.mat == IM_ICE) { InstrumentPart& p = k.plate(u, 0, PI / 2, len, bw * 0.5, wr, wr + th, M.mat, k.rng.range(0.85, 1.15), 0, k.rng.range(2.5, 6), 0, 0, 0); (void)p; }
-        else k.box(u, 0, PI / 2, len, bw * 0.5, wr, wr + th, M.mat, i);
+        else if (M.mat == IM_STONE || M.mat == IM_OBSIDIAN || M.mat == IM_ICE) {
+            InstrumentPart& p = k.plate(u, 0, PI / 2, len, bw * 0.5, wr, wr + th, M.mat, k.rng.range(0.85, 1.15), 0, k.rng.range(2.5, 6), 0, 0, 0);
+            (void)p;
+        } else k.box(u, 0, PI / 2, len, bw * 0.5, wr, wr + th, M.mat, i);
         if (!glass) { out_course(k, i); k.mark(u, len * 0.28, 0.002, wr + th, 0, IM_HOLE); k.mark(u, -len * 0.28, 0.002, wr + th, 0, IM_HOLE); }
     }
     k.lights(-span * 0.5, -L0 * 0.45, span, nb, 0.012, true);
-    for (int b = 0; b < 2; b++) k.beater(span * 0.5 + 0.04 + 0.03 * b, -L0 * 0.3, PI / 2 + 0.1 * b, 0.25 * k.S, 0.014, M.stick, M.age >= AGE_INDUSTRIAL ? IM_FELT : (M.fit == IM_FIBRE ? IM_HIDE : M.fit));
+    for (int b = 0; b < 2; b++)
+        k.beater(span * 0.5 + 0.04 + 0.03 * b, -L0 * 0.3, PI / 2 + 0.1 * b, 0.25 * k.S, 0.014, M.stick, M.age >= AGE_INDUSTRIAL ? IM_FELT : (M.fit == IM_FIBRE ? IM_HIDE : M.fit));
 }
 void pTubes(Mk& k) {
     const InstrumentMake& M = k.M;
@@ -964,7 +1045,11 @@ void pGongs(Mk& k) {
         k.disc(0, 0, R, R, 0, 0.012, M.mat, 0, M.sides >= 5 ? M.sides : 0);
         k.ring(0, 0, R * 0.98, 0.006, 0.006, M.mat);
         k.ball(0, 0, R * 0.2, R * 0.2, 0.008, R * 0.12, M.mat, 0, 0);
-        if (M.deco >= ON_CARVED) for (int i = 0; i < M.number; i++) { const double a = TAU * i / M.number; k.mark(std::cos(a) * R * 0.6, std::sin(a) * R * 0.6, R * 0.05, 0.012, M.motif == MO_STARS ? 6 : 0, k.trimMat()); }
+        if (M.deco >= ON_CARVED)
+            for (int i = 0; i < M.number; i++) {
+                const double a = TAU * i / M.number;
+                k.mark(std::cos(a) * R * 0.6, std::sin(a) * R * 0.6, R * 0.05, 0.012, M.motif == MO_STARS ? 6 : 0, k.trimMat());
+            }
         k.boxTo(-R * 1.25, -R * 1.2, -R * 1.25, R * 1.2, 0.014, 0, 0.03, M.mat2);
         k.boxTo(R * 1.25, -R * 1.2, R * 1.25, R * 1.2, 0.014, 0, 0.03, M.mat2);
         k.boxTo(-R * 1.25, R * 1.2, R * 1.25, R * 1.2, 0.014, 0, 0.03, M.mat2);
@@ -1006,10 +1091,14 @@ void pStones(Mk& k) {
     const int ns = struckCount(k);
     const double L0 = k.rng.range(0.22, 0.36) * k.S, bw = k.rng.range(0.04, 0.06) * k.S, gap = bw * 1.25;
     const int railMat = M.age == AGE_PREHISTORIC && k.rng.chance(0.5) ? IM_FIBRE : M.mat2;
-    for (int e = -1; e <= 1; e += 2) { if (railMat == IM_FIBRE) k.str(-gap * ns * 0.55, e * L0 * 0.25, 0.006, gap * ns * 0.55, e * L0 * 0.25, 0.006, IM_FIBRE, -1, 0.002); else k.box(0, e * L0 * 0.25, 0, gap * ns + 0.04, 0.012, 0, 0.025, railMat); }
+    for (int e = -1; e <= 1; e += 2) {
+        if (railMat == IM_FIBRE) k.str(-gap * ns * 0.55, e * L0 * 0.25, 0.006, gap * ns * 0.55, e * L0 * 0.25, 0.006, IM_FIBRE, -1, 0.002);
+        else k.box(0, e * L0 * 0.25, 0, gap * ns + 0.04, 0.012, 0, 0.025, railMat);
+    }
     for (int i = 0; i < ns; i++) {
         const double u = -gap * ns * 0.5 + gap * (i + 0.5), len = L0 / std::sqrt(k.ratio(i));
-        InstrumentPart& p = k.plate(u + k.rng.sym(bw * 0.1), k.rng.sym(len * 0.06), PI / 2 + k.rng.sym(0.12), len, bw * 0.5 * k.rng.range(0.8, 1.2), 0.01, 0.01 + bw * 0.6, M.mat, k.rng.range(0.6, 1.3), k.rng.range(-0.1, 0.15), k.rng.range(1.4, 3.5), bw * 0.15, 0, k.rng.irange(5) - 2);
+        InstrumentPart& p = k.plate(u + k.rng.sym(bw * 0.1), k.rng.sym(len * 0.06), PI / 2 + k.rng.sym(0.12), len, bw * 0.5 * k.rng.range(0.8, 1.2), 0.01, 0.01 + bw * 0.6, M.mat,
+                k.rng.range(0.6, 1.3), k.rng.range(-0.1, 0.15), k.rng.range(1.4, 3.5), bw * 0.15, 0, k.rng.irange(5) - 2);
         p.course = i;
     }
     k.ball(gap * ns * 0.5 + 0.06, 0, 0.03 * k.S, 0.036 * k.S, 0, 0.04, M.mat);   // the striking stone
@@ -1019,7 +1108,11 @@ void pSpokes(Mk& k) {
     const InstrumentMake& M = k.M;
     const int nb = struckCount(k);
     const double R = k.rng.range(0.2, 0.3) * k.S, bw = 0.022 * k.S;
-    if (M.sides >= 5) for (int i = 0; i < M.sides; i++) { const double a0 = TAU * i / M.sides, a1 = TAU * (i + 1) / M.sides; k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, 0.012, 0.012, 0.012, M.mat2); }
+    if (M.sides >= 5)
+        for (int i = 0; i < M.sides; i++) {
+            const double a0 = TAU * i / M.sides, a1 = TAU * (i + 1) / M.sides;
+            k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, 0.012, 0.012, 0.012, M.mat2);
+        }
     else k.ring(0, 0, R, 0.012, 0, M.mat2);
     k.disc(0, 0, R * 0.15, R * 0.15, 0, 0.03, M.mat2, -1, M.sides);
     for (int i = 0; i < nb; i++) {
@@ -1037,9 +1130,17 @@ void pBlade(Mk& k, int plan) {
         const double R = k.rng.range(0.04, 0.07) * k.S;
         k.disc(0, 0, R, R, 0, 0.006, M.mat, 0, M.sides >= 5 ? M.sides : (M.square > 5 ? 4 : 0));
         const double reach = R + cord * 0.6;
-        for (int e = -1; e <= 1; e += 2) { k.mark(0, e * R * 0.15, R * 0.06, 0.006, 0); k.str(0, e * R * 0.15, 0.006, -reach, e * 0.012, 0.002, M.mat2, -1, 0.001); k.str(0, e * R * 0.15, 0.006, reach, e * 0.012, 0.002, M.mat2, -1, 0.001); }
+        for (int e = -1; e <= 1; e += 2) {
+            k.mark(0, e * R * 0.15, R * 0.06, 0.006, 0);
+            k.str(0, e * R * 0.15, 0.006, -reach, e * 0.012, 0.002, M.mat2, -1, 0.001);
+            k.str(0, e * R * 0.15, 0.006, reach, e * 0.012, 0.002, M.mat2, -1, 0.001);
+        }
         for (int e = -1; e <= 1; e += 2) k.tube(e > 0 ? reach : -reach - 0.05, 0, 0, 0.05, 0.006, 0.006, 0.006, M.stick);
-        if (M.deco != ON_BARE) for (int i = 0; i < M.number; i++) { const double a = TAU * i / M.number; k.mark(std::cos(a) * R * 0.6, std::sin(a) * R * 0.6, R * 0.08, 0.006, M.motif == MO_STARS ? 6 : 3, k.trimMat()); }
+        if (M.deco != ON_BARE)
+            for (int i = 0; i < M.number; i++) {
+                const double a = TAU * i / M.number;
+                k.mark(std::cos(a) * R * 0.6, std::sin(a) * R * 0.6, R * 0.08, 0.006, M.motif == MO_STARS ? 6 : 3, k.trimMat());
+            }
         return;
     }
     if (plan == IP_WHIRL_TUBE) {
@@ -1056,8 +1157,11 @@ void pBlade(Mk& k, int plan) {
     InstrumentPart& b = k.plate(0, 0, 0, L, W * 0.5, 0, 0.006, M.mat, sh[0], sh[1], M.sides >= 5 ? 2 : sh[2], 0.002, (M.variant % 5 == 4 && M.sides >= 5) ? M.sides : 0, M.skew);
     b.course = 0;
     k.mark(-L * 0.43, 0, W * 0.07, 0.006, 0);
-    if (M.variant % 4 == 2) for (int i = 0; i < 8; i++) for (int e = -1; e <= 1; e += 2) k.mark(-L * 0.35 + L * 0.7 * i / 7, e * W * 0.42, W * 0.06, 0.006, 3, IM_HOLE, -1, e > 0 ? -PI / 2 : PI / 2);   // notched edges
-    if (M.deco >= ON_CARVED || M.motif == MO_FIGURES || M.motif == MO_GLYPHS) for (int i = 0; i < M.number; i++) k.mark(-L * 0.25 + L * 0.5 * i / std::max(1, M.number - 1), 0, W * 0.07, 0.006, M.motif == MO_CIRCLES ? 0 : (M.motif == MO_STARS ? 6 : 3), M.painted > 0.3 ? IM_PAINT : IM_HOLE);
+    // notched edges
+    if (M.variant % 4 == 2) for (int i = 0; i < 8; i++) for (int e = -1; e <= 1; e += 2) k.mark(-L * 0.35 + L * 0.7 * i / 7, e * W * 0.42, W * 0.06, 0.006, 3, IM_HOLE, -1, e > 0 ? -PI / 2 : PI / 2);
+    if (M.deco >= ON_CARVED || M.motif == MO_FIGURES || M.motif == MO_GLYPHS)
+        for (int i = 0; i < M.number; i++)
+            k.mark(-L * 0.25 + L * 0.5 * i / std::max(1, M.number - 1), 0, W * 0.07, 0.006, M.motif == MO_CIRCLES ? 0 : (M.motif == MO_STARS ? 6 : 3), M.painted > 0.3 ? IM_PAINT : IM_HOLE);
     {   // the cord lying in a loose bend to its handle
         const double bend = (M.variant % 2 ? 1 : -1) * cord * 0.25;
         k.str(-L * 0.45, 0, 0.004, -L * 0.45 - cord * 0.5, bend, 0.003, M.mat2, -1, 0.0012);
@@ -1072,11 +1176,18 @@ void pHum(Mk& k, bool ring) {
     const int sides = M.sides >= 5 ? M.sides : 0, grooves = 1 + M.number % 3;
     if (ring) {   // a ring of the people's section and outline, its grooves of light, a core or none, marks round it by the motif
         const double sec = R * k.rng.range(0.14, 0.34);
-        if (sides) for (int i = 0; i < sides; i++) { const double a0 = TAU * i / sides, a1 = TAU * (i + 1) / sides; k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, sec, sec, sec, M.mat, 0); }
+        if (sides)
+            for (int i = 0; i < sides; i++) {
+                const double a0 = TAU * i / sides, a1 = TAU * (i + 1) / sides;
+                k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, sec, sec, sec, M.mat, 0);
+            }
         else k.ring(0, 0, R, sec, 0, M.mat, 0);
         for (int g = 0; g < grooves; g++) { const double rr = R + sec * (grooves == 1 ? 0 : -0.5 + 1.0 * g / (grooves - 1)) * 0.8; k.ring(0, 0, rr, R * 0.018, sec * 1.9, IM_LIGHT, 0); }
         const int marks = M.motif == MO_LINES ? 0 : M.number;
-        for (int i = 0; i < marks; i++) { const double a = TAU * i / std::max(1, marks); k.mark(std::cos(a) * (R + sec * 1.4), std::sin(a) * (R + sec * 1.4), R * 0.035, 0.002, M.motif == MO_STARS ? 6 : (M.motif == MO_STEPS ? 2 : 0), IM_LIGHT); }
+        for (int i = 0; i < marks; i++) {
+            const double a = TAU * i / std::max(1, marks);
+            k.mark(std::cos(a) * (R + sec * 1.4), std::sin(a) * (R + sec * 1.4), R * 0.035, 0.002, M.motif == MO_STARS ? 6 : (M.motif == MO_STEPS ? 2 : 0), IM_LIGHT);
+        }
         switch (M.variant % 3) {
             case 0: k.ball(0, 0, R * 0.3, R * 0.3, 0, R * 0.45, M.mat2); break;
             case 1: k.disc(0, 0, R * 0.45, R * 0.45, 0, R * 0.08, M.mat2, -1, sides); k.mark(0, 0, R * 0.12, R * 0.08, M.hole, IM_LIGHT); break;
@@ -1088,13 +1199,22 @@ void pHum(Mk& k, bool ring) {
     const double orb = R * k.rng.range(0.65, 0.9);
     switch (M.variant % 3) {
         case 0: k.ring(0, 0, orb * 1.18, R * 0.08, 0, M.mat2); break;
-        case 1: for (int i = 0; i < 3; i++) { const double a = TAU * i / 3 + 0.3; k.tubeTo(std::cos(a) * orb * 1.35, std::sin(a) * orb * 1.35, std::cos(a) * orb * 0.75, std::sin(a) * orb * 0.75, R * 0.05, R * 0.03, R * 0.1, M.mat2); } break;
+        case 1:
+            for (int i = 0; i < 3; i++) {
+                const double a = TAU * i / 3 + 0.3;
+                k.tubeTo(std::cos(a) * orb * 1.35, std::sin(a) * orb * 1.35, std::cos(a) * orb * 0.75, std::sin(a) * orb * 0.75, R * 0.05, R * 0.03, R * 0.1, M.mat2);
+            }
+            break;
         default: k.disc(0, 0, orb * 1.15, orb * 1.15, 0, R * 0.1, M.mat2, -1, sides ? sides : 6); break;
     }
     const size_t oi = k.out.size();
     k.ball(0, 0, orb, orb * (M.slender > 0.6 ? 1.25 : 1.0), R * 0.05, orb * 1.5, M.mat, 0, 0);
     const InstrumentPart o = k.out[oi];
-    if (M.motif == MO_LINES || M.motif == MO_STEPS) for (int g = 0; g < grooves + 1; g++) { const double v = -orb * 0.5 + orb * g / std::max(1, grooves); k.box(0, v, 0, orb * 1.6 * std::sqrt(std::max(0.05, 1 - (v / orb) * (v / orb))), R * 0.012, k.surfaceAt(o, 0, v), k.surfaceAt(o, 0, v) + 0.002, IM_LIGHT, 0); }
+    if (M.motif == MO_LINES || M.motif == MO_STEPS)
+        for (int g = 0; g < grooves + 1; g++) {
+            const double v = -orb * 0.5 + orb * g / std::max(1, grooves);
+            k.box(0, v, 0, orb * 1.6 * std::sqrt(std::max(0.05, 1 - (v / orb) * (v / orb))), R * 0.012, k.surfaceAt(o, 0, v), k.surfaceAt(o, 0, v) + 0.002, IM_LIGHT, 0);
+        }
     else for (int g = 0; g < grooves; g++) k.ring(0, 0, orb * (0.3 + 0.25 * g), R * 0.014, k.surfaceAt(o, orb * (0.3 + 0.25 * g), 0), IM_LIGHT, 0);
 }
 
@@ -1129,7 +1249,10 @@ void pTuneBox(Mk& k, bool disc) {
     const int teeth = clampi(k.n + 6, 10, 18);
     const double cw = W * 0.75, cz = H + 0.002;
     k.box(-L * 0.05, 0, PI / 2, cw, 0.012, cz, cz + 0.004, M.mat2);
-    for (int i = 0; i < teeth; i++) { const double v = -cw * 0.5 + cw * i / (teeth - 1); k.box(-L * 0.05 + 0.022, v, 0, 0.03 * std::pow(k.ratio(0) / k.ratio(i), 0.35), cw / teeth * 0.36, cz, cz + 0.003, M.mat2, i); }
+    for (int i = 0; i < teeth; i++) {
+        const double v = -cw * 0.5 + cw * i / (teeth - 1);
+        k.box(-L * 0.05 + 0.022, v, 0, 0.03 * std::pow(k.ratio(0) / k.ratio(i), 0.35), cw / teeth * 0.36, cz, cz + 0.003, M.mat2, i);
+    }
     k.tube(L * 0.12, -cw * 0.55, PI / 2, cw * 1.1, 0.013, 0.013, cz + 0.008, M.mat2);
     for (int i = 0; i < 36; i++) k.mark(L * 0.12 + k.rng.sym(0.01), -cw * 0.5 + cw * k.rng.uni(), 0.0012, cz + 0.021, 0, M.fit);
     k.tube(0, -W * 0.55, -PI / 2, 0.035, 0.004, 0.004, H * 0.5, M.mat2); k.box(0.012, -W * 0.55 - 0.035, 0, 0.03, 0.005, H * 0.45, H * 0.55, M.mat2);   // its key
@@ -1164,24 +1287,46 @@ void pElectricString(Mk& k, int plan) {
         for (int e = -1; e <= 1; e += 2) k.tubeTo(-bl * 0.1, 0, -bl * 0.1 + bl * 0.25, e * bw * 0.35, 0.005, 0.005, 0.012, M.mat2);   // its struts
     } else {
         body = &k.body(-bl * 0.1, 0, 0, bl, bw * 0.5, 0, th, M.mat, 0.1);
-        if (M.variant % 3 == 0) { InstrumentPart g = *body; g.mat = M.mat2; g.r0 *= 0.55; g.len *= 0.5; g.u -= bl * 0.08; g.v -= bw * 0.12; g.w0 = th; g.w1 = th + 0.002; g.dome = 0; k.out.push_back(g); }   // its guard
+        if (M.variant % 3 == 0) {
+            InstrumentPart g = *body;
+            g.mat = M.mat2;
+            g.r0 *= 0.55;
+            g.len *= 0.5;
+            g.u -= bl * 0.08;
+            g.v -= bw * 0.12;
+            g.w0 = th;
+            g.w1 = th + 0.002;
+            g.dome = 0;
+            k.out.push_back(g);
+        }   // its guard
     }
     const double n0 = bl * 0.3, n1 = n0 + nl, nw = 0.022 + 0.002 * ns;
     k.box((n0 + n1) * 0.5, 0, 0, nl, nw * 0.5, th * 0.4, th + 0.004, M.mat2 == M.mat ? M.stick : M.mat2);
     k.frets(n1, 0, (n1 + bl * 0.42) * 1.0, n0, nw * 0.5, th + 0.004);
-    for (int i = 0; i < 6; i++) { const double u = n1 - (n1 + bl * 0.42) * (1 - 1 / std::pow(2.0, (3 + 2 * i) / 12.0)); if (u > n0) k.mark(u, 0, 0.0025, th + 0.005, M.motif == MO_STARS ? 6 : (M.motif == MO_STEPS ? 2 : 0), k.trimMat()); }
+    for (int i = 0; i < 6; i++) {
+        const double u = n1 - (n1 + bl * 0.42) * (1 - 1 / std::pow(2.0, (3 + 2 * i) / 12.0));
+        if (u > n0) k.mark(u, 0, 0.0025, th + 0.005, M.motif == MO_STARS ? 6 : (M.motif == MO_STEPS ? 2 : 0), k.trimMat());
+    }
     if (M.variant % 4 == 1) k.box(n1 + 0.02, 0, 0, 0.04, nw * 0.6, th * 0.4, th, M.mat2);   // headless: its block
     else {
         const double hl = 0.13 * std::min(1.1, k.S), ha = M.variant % 4 == 2 ? 0.2 : 0;
-        InstrumentPart& hd = k.plate(n1 + hl * 0.5, std::sin(ha) * hl * 0.5, ha, hl, nw * 0.9, th * 0.4, th * 0.4 + 0.012, M.mat2 == M.mat ? M.stick : M.mat2, M.taper, 0, M.square, 0, M.sides, M.skew);
+        InstrumentPart& hd =
+                k.plate(n1 + hl * 0.5, std::sin(ha) * hl * 0.5, ha, hl, nw * 0.9, th * 0.4, th * 0.4 + 0.012, M.mat2 == M.mat ? M.stick : M.mat2, M.taper, 0, M.square, 0, M.sides, M.skew);
         (void)hd;
-        for (int i = 0; i < ns; i++) { const double t = (i + 0.5) / ns, pu = n1 + hl * t, side = (M.variant % 2 ? 1 : (i < ns / 2 ? -1 : 1)); k.disc(pu, side * nw * 1.05, 0.005, 0.005, th * 0.4, th * 0.4 + 0.02, IM_STEEL); }
+        for (int i = 0; i < ns; i++) {
+            const double t = (i + 0.5) / ns, pu = n1 + hl * t, side = (M.variant % 2 ? 1 : (i < ns / 2 ? -1 : 1));
+            k.disc(pu, side * nw * 1.05, 0.005, 0.005, th * 0.4, th * 0.4 + 0.02, IM_STEEL);
+        }
     }
     const int pickups = 1 + M.variant % 3;
-    for (int p = 0; p < pickups; p++) k.box(-bl * 0.02 + 0.045 * p, 0, PI / 2, nw * 1.8, 0.008, th, th + 0.006, p == 1 && M.age >= AGE_FUTURISTIC ? IM_LIGHT : IM_PLASTIC == M.mat ? IM_STEEL : IM_PLASTIC);
+    for (int p = 0; p < pickups; p++)
+        k.box(-bl * 0.02 + 0.045 * p, 0, PI / 2, nw * 1.8, 0.008, th, th + 0.006, p == 1 && M.age >= AGE_FUTURISTIC ? IM_LIGHT : IM_PLASTIC == M.mat ? IM_STEEL : IM_PLASTIC);
     k.box(-bl * 0.3, 0, PI / 2, nw * 1.6, 0.007, th, th + 0.008, IM_STEEL);   // the bridge
     k.knobs(-bl * 0.42, bw * 0.28, 0.07, clampi(M.number / 2, 2, 4), 0.008, th, IM_STEEL);
-    for (int i = 0; i < ns; i++) { const double v0 = (i - (ns - 1) * 0.5) * nw * 0.8 / std::max(1, ns - 1) * 1.1, v1 = (i - (ns - 1) * 0.5) * nw * 0.75 / std::max(1, ns - 1); k.str(-bl * 0.3, v0, th + 0.01, n1, v1, th + 0.006, IM_WIRE, ns - 1 - i, bass ? 0.001 : 0.0006); }
+    for (int i = 0; i < ns; i++) {
+        const double v0 = (i - (ns - 1) * 0.5) * nw * 0.8 / std::max(1, ns - 1) * 1.1, v1 = (i - (ns - 1) * 0.5) * nw * 0.75 / std::max(1, ns - 1);
+        k.str(-bl * 0.3, v0, th + 0.01, n1, v1, th + 0.006, IM_WIRE, ns - 1 - i, bass ? 0.001 : 0.0006);
+    }
     if (body) k.bodyOrnament(*body, bl * 0.4);
 }
 
@@ -1201,7 +1346,10 @@ void pKeys(Mk& k, int plan) {
     if (plan == IP_KEY_ARC) {
         const double R = k.rng.range(0.32, 0.5) * k.S, span = k.rng.range(0.9, 1.4);
         k.arc(0, -R, R * 1.12, PI / 2 - span / 2 - 0.08, PI / 2 + span / 2 + 0.08, 0.035, 0.035, 0.035, M.mat, 10, R * 1.12);
-        for (int i = 0; i < keys; i++) { const double a = PI / 2 + span / 2 - span * (i + 0.5) / keys; k.box(std::cos(a) * R, -R + std::sin(a) * R, a, R * 0.16, R * span / keys * 0.42, 0.04, 0.05, keyMat, i); }
+        for (int i = 0; i < keys; i++) {
+            const double a = PI / 2 + span / 2 - span * (i + 0.5) / keys;
+            k.box(std::cos(a) * R, -R + std::sin(a) * R, a, R * 0.16, R * span / keys * 0.42, 0.04, 0.05, keyMat, i);
+        }
         k.lights(-R * 0.4, R * 0.12 - R * 0.1, R * 0.8, 7, 0.05, false);
         return;
     }
@@ -1259,7 +1407,10 @@ void pSynth(Mk& k, int plan) {
             const double L = k.rng.range(0.6, 0.9) * k.S, D = 0.1 * k.S;
             InstrumentPart& b = k.body(0, 0, 0, L, D * 0.5, 0, 0.03, M.mat, 0); if (b.square < 3) b.square = 5;
             k.box(0, -D * 0.1, 0, L * 0.84, D * 0.18, 0.03, 0.033, M.mat2 == M.mat ? black : M.mat2);
-            for (int i = 0; i < keys; i++) { const double u = -L * 0.42 + L * 0.84 * std::log(k.ratio(i)) / std::log(k.ratio(keys)); k.mark(u, -D * 0.1, 0.0035, 0.033, M.light == LT_LINES ? 1 : 0, keyMat == IM_LIGHT ? IM_LIGHT : k.trimMat(), i, PI / 2, D * 0.2); }
+            for (int i = 0; i < keys; i++) {
+                const double u = -L * 0.42 + L * 0.84 * std::log(k.ratio(i)) / std::log(k.ratio(keys));
+                k.mark(u, -D * 0.1, 0.0035, 0.033, M.light == LT_LINES ? 1 : 0, keyMat == IM_LIGHT ? IM_LIGHT : k.trimMat(), i, PI / 2, D * 0.2);
+            }
             k.knobs(-L * 0.4, D * 0.3, L * 0.2, 3, 0.007, 0.03, IM_STEEL);
             return;
         }
@@ -1267,7 +1418,10 @@ void pSynth(Mk& k, int plan) {
             const int cols = clampi(M.number, 4, 8), rows = (keys + cols - 1) / cols;
             const double p = 0.034 * k.S, L = cols * p + 0.04, D = rows * p + 0.06;
             InstrumentPart& b = k.body(0, 0, 0, L, D * 0.5, 0, 0.03, M.mat, 0); if (b.square < 3) b.square = 5;
-            for (int i = 0; i < keys; i++) { const int c = i % cols, r = i / cols; k.box(-L * 0.5 + 0.02 + p * (c + 0.5), -D * 0.5 + 0.02 + p * (r + 0.5), 0, p * 0.82, p * 0.41, 0.03, 0.036, i % 4 == 0 ? IM_PAINT : M.mat2, i); }
+            for (int i = 0; i < keys; i++) {
+                const int c = i % cols, r = i / cols;
+                k.box(-L * 0.5 + 0.02 + p * (c + 0.5), -D * 0.5 + 0.02 + p * (r + 0.5), 0, p * 0.82, p * 0.41, 0.03, 0.036, i % 4 == 0 ? IM_PAINT : M.mat2, i);
+            }
             k.lights(-L * 0.4, D * 0.42, L * 0.8, 8, 0.03, false);
             return;
         }
@@ -1276,7 +1430,11 @@ void pSynth(Mk& k, int plan) {
             k.ring(0, 0, R * 1.1, 0.012, 0, M.mat2);
             k.ball(0, 0, R, R, 0.01, R * 0.9, M.mat);
             const int keyM = M.age >= AGE_FUTURISTIC ? IM_LIGHT : (M.painted > 0.3 ? IM_PAINT : IM_CERAMIC);
-            for (int i = 0; i < keys; i++) { const int ringN = i < keys / 2 ? 0 : 1; const double a = TAU * (i % (keys / 2)) / (keys / 2) + ringN * 0.3, rr = R * (ringN ? 0.45 : 0.75); k.mark(std::cos(a) * rr, std::sin(a) * rr, R * 0.06, 0.01 + R * 0.9 * std::sqrt(std::max(0.0, 1 - rr * rr / (R * R))), M.light == LT_LINES ? 1 : 0, keyM, i, a, R * 0.15); }
+            for (int i = 0; i < keys; i++) {
+                const int ringN = i < keys / 2 ? 0 : 1;
+                const double a = TAU * (i % (keys / 2)) / (keys / 2) + ringN * 0.3, rr = R * (ringN ? 0.45 : 0.75);
+                k.mark(std::cos(a) * rr, std::sin(a) * rr, R * 0.06, 0.01 + R * 0.9 * std::sqrt(std::max(0.0, 1 - rr * rr / (R * R))), M.light == LT_LINES ? 1 : 0, keyM, i, a, R * 0.15);
+            }
             return;
         }
         case IP_TONE_STRIPS: {
@@ -1293,7 +1451,10 @@ void pSynth(Mk& k, int plan) {
     if (b.square < 2.6 && M.sides == 0) b.square = 3.5;
     k.keyboard(-L * 0.36, -D * 0.2, L * 0.76, D * 0.42, keys, th, keyMat, darkMat);
     for (int r = 0; r < 2; r++) k.knobs(-L * 0.36, D * (0.16 + 0.12 * r), L * 0.55, clampi(M.number + r, 4, 10), 0.007, th, r ? M.mat2 : IM_STEEL);
-    for (int i = 0; i < 4; i++) { k.box(L * 0.28 + 0.02 * i, D * 0.22, PI / 2, D * 0.18, 0.003, th, th + 0.002, black); k.box(L * 0.28 + 0.02 * i, D * (0.16 + 0.04 * (i % 3)), 0, 0.012, 0.006, th + 0.002, th + 0.008, M.mat2); }   // sliders
+    for (int i = 0; i < 4; i++) {
+        k.box(L * 0.28 + 0.02 * i, D * 0.22, PI / 2, D * 0.18, 0.003, th, th + 0.002, black);
+        k.box(L * 0.28 + 0.02 * i, D * (0.16 + 0.04 * (i % 3)), 0, 0.012, 0.006, th + 0.002, th + 0.008, M.mat2);
+    }   // sliders
     for (int i = 0; i < 2; i++) k.disc(-L * 0.43, -D * 0.22 + 0.04 * i, 0.012, 0.012, th - 0.004, th + 0.006, black);   // the wheels
     k.lights(L * 0.05, D * 0.4, L * 0.35, 6, th, false);
 }
@@ -1318,7 +1479,10 @@ void pSwarm(Mk& k, int plan) {
         }
         case IP_CLOUD:
             k.ring(0, 0, R, 0.012, 0, M.mat2);
-            for (int i = 0; i < 26; i++) { const double a = k.rng.uni() * TAU, rr = R * std::sqrt(k.rng.uni()) * 0.9, sz = k.rng.range(0.006, 0.016); k.ball(std::cos(a) * rr, std::sin(a) * rr, sz, sz, k.rng.range(0.02, 0.14), sz * 1.8, i % 5 == 0 ? IM_LIGHT : M.mat, 0, i % 10); }
+            for (int i = 0; i < 26; i++) {
+                const double a = k.rng.uni() * TAU, rr = R * std::sqrt(k.rng.uni()) * 0.9, sz = k.rng.range(0.006, 0.016);
+                k.ball(std::cos(a) * rr, std::sin(a) * rr, sz, sz, k.rng.range(0.02, 0.14), sz * 1.8, i % 5 == 0 ? IM_LIGHT : M.mat, 0, i % 10);
+            }
             return;
         default: {   // rods with beads at their tips: an urchin (radial), a feather on its spine (bilateral), a pinwheel (rotational), tufts (none)
             int c = 0;
@@ -1329,16 +1493,30 @@ void pSwarm(Mk& k, int plan) {
             if (M.sym == SY_BILATERAL) {
                 const double L = R * 2.2;
                 k.box(0, 0, 0, L, 0.01, 0, 0.025, M.mat2);
-                for (int i = 0; i < 14; i++) for (int e = -1; e <= 1; e += 2) { const double u = -L * 0.45 + L * 0.9 * i / 13, len = R * (0.35 + 0.5 * std::sin(PI * (i + 0.5) / 14)); rod(u, 0, e * (PI / 2 - 0.35), len, i % 3 == 0 ? IM_LIGHT : k.trimMat()); }
+                for (int i = 0; i < 14; i++)
+                    for (int e = -1; e <= 1; e += 2) {
+                        const double u = -L * 0.45 + L * 0.9 * i / 13, len = R * (0.35 + 0.5 * std::sin(PI * (i + 0.5) / 14));
+                        rod(u, 0, e * (PI / 2 - 0.35), len, i % 3 == 0 ? IM_LIGHT : k.trimMat());
+                    }
             } else if (M.sym == SY_ROTATIONAL) {
                 k.disc(0, 0, R * 0.22, R * 0.22, 0, 0.025, M.mat2, -1, M.sides);
-                for (int arm = 0; arm < clampi(M.number, 3, 6); arm++) for (int j = 0; j < 6; j++) { const double a = TAU * arm / clampi(M.number, 3, 6) + 0.35 * j, d = R * (0.25 + 0.12 * j); rod(std::cos(a) * d, std::sin(a) * d, a + 1.2, R * 0.25, j % 2 ? IM_LIGHT : k.trimMat()); }
+                for (int arm = 0; arm < clampi(M.number, 3, 6); arm++)
+                    for (int j = 0; j < 6; j++) {
+                        const double a = TAU * arm / clampi(M.number, 3, 6) + 0.35 * j, d = R * (0.25 + 0.12 * j);
+                        rod(std::cos(a) * d, std::sin(a) * d, a + 1.2, R * 0.25, j % 2 ? IM_LIGHT : k.trimMat());
+                    }
             } else if (M.sym == SY_NONE) {
                 k.body(0, 0, 0, R * 2.2, R * 0.7, 0, 0.02, M.mat2, 0);
-                for (int t = 0; t < 5; t++) { const double tu = k.rng.sym(R * 0.8), tv = k.rng.sym(R * 0.4); for (int i = 0; i < 6; i++) rod(tu, tv, k.rng.uni() * TAU, R * k.rng.range(0.15, 0.4), i % 3 == 0 ? IM_LIGHT : k.trimMat()); }
+                for (int t = 0; t < 5; t++) {
+                    const double tu = k.rng.sym(R * 0.8), tv = k.rng.sym(R * 0.4);
+                    for (int i = 0; i < 6; i++) rod(tu, tv, k.rng.uni() * TAU, R * k.rng.range(0.15, 0.4), i % 3 == 0 ? IM_LIGHT : k.trimMat());
+                }
             } else {
                 k.disc(0, 0, R * 0.5, R * 0.5, 0, 0.025, M.mat2, -1, M.sides);
-                for (int i = 0; i < 24; i++) { const double a = TAU * i / 24 + k.rng.sym(0.12), len = R * k.rng.range(0.5, 1.0); rod(std::cos(a) * R * 0.3, std::sin(a) * R * 0.3, a + k.rng.sym(0.15), len, i % 3 == 0 ? IM_LIGHT : k.trimMat()); }
+                for (int i = 0; i < 24; i++) {
+                    const double a = TAU * i / 24 + k.rng.sym(0.12), len = R * k.rng.range(0.5, 1.0);
+                    rod(std::cos(a) * R * 0.3, std::sin(a) * R * 0.3, a + k.rng.sym(0.15), len, i % 3 == 0 ? IM_LIGHT : k.trimMat());
+                }
             }
             return;
         }
@@ -1357,14 +1535,23 @@ void pField(Mk& k, int plan) {
                 const double rr = R * (1 - (nr == 2 ? 0.3 : 0.18) * i), off = form == 1 ? R * 0.06 * i : 0;
                 const int mat = i % 2 ? IM_LIGHT : M.mat;
                 cu = off;
-                if (sides) for (int j = 0; j < sides; j++) { const double a0 = TAU * j / sides + 0.2 * i, a1 = TAU * (j + 1) / sides + 0.2 * i; k.tubeTo(off + std::cos(a0) * rr, std::sin(a0) * rr, off + std::cos(a1) * rr, std::sin(a1) * rr, R * 0.045, R * 0.045, R * 0.05 + 0.004 * i, mat, i); }
+                if (sides)
+                    for (int j = 0; j < sides; j++) {
+                        const double a0 = TAU * j / sides + 0.2 * i, a1 = TAU * (j + 1) / sides + 0.2 * i;
+                        k.tubeTo(off + std::cos(a0) * rr, std::sin(a0) * rr, off + std::cos(a1) * rr, std::sin(a1) * rr, R * 0.045, R * 0.045, R * 0.05 + 0.004 * i, mat, i);
+                    }
                 else if (form == 2) k.arc(off, 0, rr, 0.5 * i, 0.5 * i + TAU * 0.82, R * 0.05, R * 0.05, R * 0.05 + 0.004 * i, mat, 16);
                 else k.ring(off, 0, rr, R * (0.03 + 0.05 * ((M.variant / 3) % 3)), 0.004 * i, mat, i);
                 if (form == 2 || sides) { for (int q = 1; q <= (sides ? sides : 16); q++) k.out[k.out.size() - q].course = i; }
             }
             if (M.variant % 4 < 2) { k.ball(cu, 0, R * 0.12, R * 0.12, 0, R * 0.16, M.mat2, 0, nr); k.mark(cu, 0, R * 0.04, R * 0.16, M.hole, IM_LIGHT); }
             else k.disc(cu, 0, R * 0.22, R * 0.22, 0, R * 0.04, M.mat2, nr, M.sides >= 5 ? M.sides : 3 + M.number % 4);
-            if (M.motif != MO_LINES) for (int i = 0; i < M.number; i++) { const double a = TAU * i / M.number + 0.3; k.mark(std::cos(a) * R * 1.12, std::sin(a) * R * 1.12, R * 0.035, 0.002, M.motif == MO_STARS ? 6 : (M.motif == MO_STEPS ? 2 : (M.motif == MO_CIRCLES ? 0 : 3)), i % 2 ? IM_LIGHT : M.mat2); }
+            if (M.motif != MO_LINES)
+                for (int i = 0; i < M.number; i++) {
+                    const double a = TAU * i / M.number + 0.3;
+                    k.mark(std::cos(a) * R * 1.12, std::sin(a) * R * 1.12, R * 0.035, 0.002, M.motif == MO_STARS ? 6 : (M.motif == MO_STEPS ? 2 : (M.motif == MO_CIRCLES ? 0 : 3)),
+                            i % 2 ? IM_LIGHT : M.mat2);
+                }
             return;
         }
         case IP_MONOLITH: {
@@ -1380,19 +1567,31 @@ void pField(Mk& k, int plan) {
             k.ball(0, 0, heart, heart, 0, heart * 1.6, M.mat2);
             for (int i = 0; i < nr; i++) {
                 const double a = TAU * i / nr, len = R * (i % 2 && M.sym != SY_RADIAL ? k.rng.range(0.55, 0.8) : 1.0), su = std::cos(a) * heart * 0.8, sv = std::sin(a) * heart * 0.8;
-                if (form == 3 || M.sym == SY_ROTATIONAL) { k.arc(su - std::sin(a) * len * 0.6, sv + std::cos(a) * len * 0.6, len * 0.6, a - PI / 2, a - PI / 2 + 1.4, th, th * 0.3, R * 0.08, M.mat, 6); for (int q = 1; q <= 6; q++) k.out[k.out.size() - q].course = i; continue; }
+                if (form == 3 || M.sym == SY_ROTATIONAL) {
+                    k.arc(su - std::sin(a) * len * 0.6, sv + std::cos(a) * len * 0.6, len * 0.6, a - PI / 2, a - PI / 2 + 1.4, th, th * 0.3, R * 0.08, M.mat, 6);
+                    for (int q = 1; q <= 6; q++) k.out[k.out.size() - q].course = i;
+                    continue;
+                }
                 k.tube(su, sv, a, len, th, form == 1 ? th * 0.6 : th * 0.15, R * 0.08, M.mat, i);
                 const double eu = su + std::cos(a) * len, ev = sv + std::sin(a) * len;
                 if (form == 1) for (int e = -1; e <= 1; e += 2) k.tube(eu, ev, a + e * 0.5, len * 0.22, th * 0.6, th * 0.1, R * 0.08, M.mat, i);   // forked
                 if (form == 2) k.ring(eu, ev, th * 2.2, th * 0.4, R * 0.06, IM_LIGHT, i);                                                       // ringed
             }
-            if (M.number >= 6) for (int i = 0; i < nr; i++) { const double a = TAU * (i + 0.5) / nr; k.tube(std::cos(a) * heart, std::sin(a) * heart, a, R * 0.3, th * 0.6, th * 0.1, R * 0.07, IM_LIGHT, i); }
+            if (M.number >= 6)
+                for (int i = 0; i < nr; i++) {
+                    const double a = TAU * (i + 0.5) / nr;
+                    k.tube(std::cos(a) * heart, std::sin(a) * heart, a, R * 0.3, th * 0.6, th * 0.1, R * 0.07, IM_LIGHT, i);
+                }
             return;
         }
         case IP_FIELD_ORB: {   // an orb in its cradle, its moons in the people's order (a ring, a row, a spiral, scattered)
             const int moons = clampi(M.number - 2, 2, 7), cradle = M.variant % 3;
             if (cradle == 0) k.ring(0, 0, R * 0.7, R * 0.04, 0, M.mat2);
-            else if (cradle == 1) for (int i = 0; i < 3; i++) { const double a = TAU * i / 3 + 0.5; k.tubeTo(std::cos(a) * R * 0.75, std::sin(a) * R * 0.75, std::cos(a) * R * 0.4, std::sin(a) * R * 0.4, R * 0.04, R * 0.03, R * 0.08, M.mat2); }
+            else if (cradle == 1)
+                for (int i = 0; i < 3; i++) {
+                    const double a = TAU * i / 3 + 0.5;
+                    k.tubeTo(std::cos(a) * R * 0.75, std::sin(a) * R * 0.75, std::cos(a) * R * 0.4, std::sin(a) * R * 0.4, R * 0.04, R * 0.03, R * 0.08, M.mat2);
+                }
             else k.disc(0, 0, R * 0.65, R * 0.65, 0, R * 0.08, M.mat2, -1, M.sides >= 5 ? M.sides : 6);
             const size_t oi = k.out.size();
             k.ball(0, 0, R * 0.5, R * 0.5, R * 0.1, R * 0.8, M.mat, 0, 0);
@@ -1440,7 +1639,13 @@ int skinFace(Mk& k, double u, double v, double R, double w, int sides) {
         case MO_SPIRALS: for (int i = 0; i < 16; i++) { const double a = i * 0.75, rr = R * (0.1 + 0.05 * i); k.mark(u + std::cos(a) * rr, v + std::sin(a) * rr, R * 0.04, w, 0, pm); } break;
         case MO_LINES: for (int i = -2; i <= 2; i++) k.box(u + i * R * 0.25, v, PI / 2, R * 1.3 * std::sqrt(std::max(0.0, 1 - i * i * 0.0625)), R * 0.025, w, w + 0.001, pm); break;
         case MO_STEPS: for (int i = 0; i < 3; i++) k.box(u - R * 0.3 + i * R * 0.3, v - R * 0.2 + i * R * 0.2, 0, R * 0.25, R * 0.08, w, w + 0.001, pm); break;
-        default: k.mark(u, v, R * 0.3, w, 4, pm); for (int i = 0; i < 4; i++) { const double a = TAU * i / 4 + PI / 4; k.mark(u + std::cos(a) * R * 0.62, v + std::sin(a) * R * 0.62, R * 0.08, w, 1, pm, -1, a, R * 0.3); } break;
+        default:
+            k.mark(u, v, R * 0.3, w, 4, pm);
+            for (int i = 0; i < 4; i++) {
+                const double a = TAU * i / 4 + PI / 4;
+                k.mark(u + std::cos(a) * R * 0.62, v + std::sin(a) * R * 0.62, R * 0.08, w, 1, pm, -1, a, R * 0.3);
+            }
+            break;
     }
     return at;
 }
@@ -1449,9 +1654,19 @@ void lacing(Mk& k, double u0, double u1, double R, double wc) {
     const InstrumentMake& M = k.M;
     const int n = 4 + M.number;
     switch (M.variant % 3) {
-        case 0: for (int i = 0; i < n; i++) { const double v = -R * 0.9 + R * 1.8 * i / (n - 1); k.str(u0, v, wc + R * 0.9, u1, -v * 0.6, wc + R * 0.9, IM_FIBRE == M.fit ? IM_FIBRE : IM_HIDE, -1, 0.0012); } break;
+        case 0:
+            for (int i = 0; i < n; i++) {
+                const double v = -R * 0.9 + R * 1.8 * i / (n - 1);
+                k.str(u0, v, wc + R * 0.9, u1, -v * 0.6, wc + R * 0.9, IM_FIBRE == M.fit ? IM_FIBRE : IM_HIDE, -1, 0.0012);
+            }
+            break;
         case 1: for (int e = 0; e < 2; e++) for (int i = 0; i < n; i++) k.mark(e ? u1 - 0.02 : u0 + 0.02, -R * 0.85 + R * 1.7 * i / (n - 1), R * 0.05, wc + R * 0.95, 0, M.fit); break;
-        default: for (int i = 0; i < n / 2; i++) { const double v = -R * 0.8 + R * 1.6 * i / std::max(1, n / 2 - 1); k.tube(u0 + 0.01, v, 0, u1 - u0 - 0.02, 0.003, 0.003, wc + R * 0.97, M.mat2); } break;
+        default:
+            for (int i = 0; i < n / 2; i++) {
+                const double v = -R * 0.8 + R * 1.6 * i / std::max(1, n / 2 - 1);
+                k.tube(u0 + 0.01, v, 0, u1 - u0 - 0.02, 0.003, 0.003, wc + R * 0.97, M.mat2);
+            }
+            break;
     }
 }
 
@@ -1464,15 +1679,23 @@ void pDrum(Mk& k, int plan) {
             const int sides = M.sides >= 5 ? M.sides : 0;
             k.disc(0, 0, RR, RR, 0, 0.05, M.mat, -1, sides);
             skinFace(k, 0, 0, RR * 0.95, 0.052, sides);
-            if (M.variant % 2) for (int i = 0; i < 2 * M.number; i++) { const double a = TAU * i / (2 * M.number); k.disc(std::cos(a) * RR * 1.0, std::sin(a) * RR * 1.0, RR * 0.07, RR * 0.07, 0.015, 0.02, k.trimMat()); }
+            if (M.variant % 2)
+                for (int i = 0; i < 2 * M.number; i++) {
+                    const double a = TAU * i / (2 * M.number);
+                    k.disc(std::cos(a) * RR * 1.0, std::sin(a) * RR * 1.0, RR * 0.07, RR * 0.07, 0.015, 0.02, k.trimMat());
+                }
             k.beater(RR * 0.9, -RR * 1.1, 0.4, 0.25 * k.S, 0.012, M.mat, IM_HIDE);
             return;
         }
         case IP_BARREL: case IP_HOURGLASS: case IP_GOBLET: {
             const double L = R * k.rng.range(2.2, 3.2);
             if (plan == IP_BARREL) { k.tube(-L / 2, 0, 0, L / 2, R, R * 1.15, R * 1.15, M.mat); k.tube(0, 0, 0, L / 2, R * 1.15, R, R * 1.15, M.mat); }
-            else if (plan == IP_HOURGLASS) { k.tube(-L / 2, 0, 0, L / 2, R, R * 0.45, R, M.mat); k.tube(0, 0, 0, L / 2, R * 0.45, R, R, M.mat); }
-            else { k.tube(-L / 2, 0, 0, L * 0.45, R * 1.1, R * 0.4, R * 1.1, M.mat); k.tube(-L / 2 + L * 0.45, 0, 0, L * 0.4, R * 0.4, R * 0.42, R * 1.1, M.mat); k.tube(L / 2 - L * 0.15, 0, 0, L * 0.15, R * 0.42, R * 0.8, R * 1.1, M.mat); }
+            else if (plan == IP_HOURGLASS) { k.tube(-L / 2, 0, 0, L / 2, R, R * 0.45, R, M.mat); k.tube(0, 0, 0, L / 2, R * 0.45, R, R, M.mat);
+            } else {
+                k.tube(-L / 2, 0, 0, L * 0.45, R * 1.1, R * 0.4, R * 1.1, M.mat);
+                k.tube(-L / 2 + L * 0.45, 0, 0, L * 0.4, R * 0.4, R * 0.42, R * 1.1, M.mat);
+                k.tube(L / 2 - L * 0.15, 0, 0, L * 0.15, R * 0.42, R * 0.8, R * 1.1, M.mat);
+            }
             const double wc = plan == IP_BARREL ? R * 1.15 : (plan == IP_GOBLET ? R * 1.1 : R);
             k.disc(-L / 2 - 0.004, 0, R * (plan == IP_GOBLET ? 1.1 : 1.0), R * 0.12, 0, 2 * wc, M.skin, 0);   // the skin seen edge on
             if (plan != IP_GOBLET) k.disc(L / 2 + 0.004, 0, R, R * 0.12, 0, 2 * wc, M.skin, 0);
@@ -1487,8 +1710,17 @@ void pDrum(Mk& k, int plan) {
             const double RR = R * (plan == IP_KETTLE ? 1.6 : 1.1);
             k.ball(0, 0, RR * 1.12, RR * 1.12, 0, RR * 1.1, M.mat);
             skinFace(k, 0, 0, RR * 0.95, RR * 1.12, 0);
-            if (plan == IP_KETTLE) { k.ring(0, 0, RR * 0.97, 0.008, RR * 1.1, M.mat2); for (int i = 0; i < 6; i++) { const double a = TAU * i / 6; k.box(std::cos(a) * RR * 1.08, std::sin(a) * RR * 1.08, a, 0.04, 0.005, RR * 1.0, RR * 1.12, M.fit); } }
-            else for (int i = 0; i < 2 * M.number; i++) { const double a = TAU * i / (2 * M.number); k.str(std::cos(a) * RR * 0.95, std::sin(a) * RR * 0.95, RR * 1.12, std::cos(a + 0.2) * RR * 1.1, std::sin(a + 0.2) * RR * 1.1, RR * 0.5, IM_FIBRE, -1, 0.0012); }
+            if (plan == IP_KETTLE) {
+                k.ring(0, 0, RR * 0.97, 0.008, RR * 1.1, M.mat2);
+                for (int i = 0; i < 6; i++) {
+                    const double a = TAU * i / 6;
+                    k.box(std::cos(a) * RR * 1.08, std::sin(a) * RR * 1.08, a, 0.04, 0.005, RR * 1.0, RR * 1.12, M.fit);
+                }
+            } else
+                for (int i = 0; i < 2 * M.number; i++) {
+                    const double a = TAU * i / (2 * M.number);
+                    k.str(std::cos(a) * RR * 0.95, std::sin(a) * RR * 0.95, RR * 1.12, std::cos(a + 0.2) * RR * 1.1, std::sin(a + 0.2) * RR * 1.1, RR * 0.5, IM_FIBRE, -1, 0.0012);
+                }
             return;
         }
         case IP_CARAPACE: {
@@ -1524,7 +1756,12 @@ void pLog(Mk& k, int plan) {
     const int nt = clampi(k.n, 3, 9);
     if (plan == IP_SLIT_CANES) {
         const double L0 = k.rng.range(0.3, 0.5) * k.S, r = k.rng.range(0.025, 0.04) * k.S;
-        for (int i = 0; i < nt; i++) { const double v = (i - (nt - 1) * 0.5) * r * 2.3, len = L0 / std::sqrt(k.ratio(i)); k.tube(-len / 2, v, 0, len, r, r, r, IM_CANE, i); k.mark(0, v, r * 0.2, 2 * r, 1, IM_HOLE, i, 0, len * 0.6); k.band(-len / 2 + 0.01, v, 0, r * 1.03, r * 0.1, r, IM_CANE); }
+        for (int i = 0; i < nt; i++) {
+            const double v = (i - (nt - 1) * 0.5) * r * 2.3, len = L0 / std::sqrt(k.ratio(i));
+            k.tube(-len / 2, v, 0, len, r, r, r, IM_CANE, i);
+            k.mark(0, v, r * 0.2, 2 * r, 1, IM_HOLE, i, 0, len * 0.6);
+            k.band(-len / 2 + 0.01, v, 0, r * 1.03, r * 0.1, r, IM_CANE);
+        }
         k.beater(L0 * 0.6, 0, PI / 2, 0.22 * k.S, 0.015, M.stick, IM_HIDE);
         return;
     }
@@ -1572,8 +1809,16 @@ void pRattle(Mk& k, int plan) {
             const double R = k.rng.range(0.05, 0.08) * k.S;
             k.ball(0, 0, R, R * k.rng.range(0.9, 1.3), 0, R * 1.5, M.mat, 0, 0);
             k.tube(R * 0.9, 0, 0, k.rng.range(0.1, 0.16) * k.S, 0.008, 0.007, 0.008, M.mat2);
-            if (M.variant % 3 == 0) for (int i = 0; i < 18; i++) { const double a = TAU * i / 18, rr = R * (i % 2 ? 0.55 : 0.85); k.ball(std::cos(a) * rr, std::sin(a) * rr, R * 0.07, R * 0.07, R * 1.2, R * 0.12, k.trimMat()); }   // a net of beads
-            else if (M.deco != ON_BARE) for (int i = 0; i < M.number; i++) { const double a = TAU * i / M.number; k.mark(std::cos(a) * R * 0.5, std::sin(a) * R * 0.5, R * 0.1, R * 1.48, M.motif == MO_STARS ? 6 : 0, IM_PAINT); }
+            if (M.variant % 3 == 0)
+                for (int i = 0; i < 18; i++) {
+                    const double a = TAU * i / 18, rr = R * (i % 2 ? 0.55 : 0.85);
+                    k.ball(std::cos(a) * rr, std::sin(a) * rr, R * 0.07, R * 0.07, R * 1.2, R * 0.12, k.trimMat());
+                }   // a net of beads
+            else if (M.deco != ON_BARE)
+                for (int i = 0; i < M.number; i++) {
+                    const double a = TAU * i / M.number;
+                    k.mark(std::cos(a) * R * 0.5, std::sin(a) * R * 0.5, R * 0.1, R * 1.48, M.motif == MO_STARS ? 6 : 0, IM_PAINT);
+                }
             return;
         }
         case IP_STRUNG_RATTLE: {
@@ -1585,11 +1830,19 @@ void pRattle(Mk& k, int plan) {
             if (form == 0) {   // a ring to wear
                 const double R = k.rng.range(0.08, 0.14) * k.S;
                 k.ring(0, 0, R, 0.004, 0, M.age == AGE_PREHISTORIC ? IM_FIBRE : M.mat2);
-                for (int i = 0; i < nb; i++) { const double a = TAU * i / nb, ru = R + 0.02; k.str(std::cos(a) * R, std::sin(a) * R, 0.006, std::cos(a) * ru, std::sin(a) * ru, 0.004, IM_FIBRE, -1, 0.0008); pendant(std::cos(a) * (ru + 0.012), std::sin(a) * (ru + 0.012), a); }
+                for (int i = 0; i < nb; i++) {
+                    const double a = TAU * i / nb, ru = R + 0.02;
+                    k.str(std::cos(a) * R, std::sin(a) * R, 0.006, std::cos(a) * ru, std::sin(a) * ru, 0.004, IM_FIBRE, -1, 0.0008);
+                    pendant(std::cos(a) * (ru + 0.012), std::sin(a) * (ru + 0.012), a);
+                }
             } else if (form == 1) {   // a bunch at a stick's end
                 const double L = k.rng.range(0.2, 0.3) * k.S;
                 k.tube(-L, 0, 0, L, 0.009, 0.008, 0.009, M.stick);
-                for (int i = 0; i < nb; i++) { const double a = -PI * 0.45 + PI * 0.9 * i / (nb - 1), len = 0.03 + 0.03 * (i % 3); k.str(0, 0, 0.012, std::cos(a) * len, std::sin(a) * len, 0.004, IM_FIBRE, -1, 0.0008); pendant(std::cos(a) * (len + 0.012), std::sin(a) * (len + 0.012), a); }
+                for (int i = 0; i < nb; i++) {
+                    const double a = -PI * 0.45 + PI * 0.9 * i / (nb - 1), len = 0.03 + 0.03 * (i % 3);
+                    k.str(0, 0, 0.012, std::cos(a) * len, std::sin(a) * len, 0.004, IM_FIBRE, -1, 0.0008);
+                    pendant(std::cos(a) * (len + 0.012), std::sin(a) * (len + 0.012), a);
+                }
             } else {   // a string of them between two handles
                 const double L = k.rng.range(0.3, 0.45) * k.S;
                 k.str(-L / 2, 0, 0.006, L / 2, 0, 0.006, IM_FIBRE, -1, 0.0012);
@@ -1602,7 +1855,11 @@ void pRattle(Mk& k, int plan) {
             const double L = k.rng.range(0.25, 0.4) * k.S;
             k.tube(-L / 2, 0, 0, L, 0.009, 0.008, 0.009, M.mat);
             const int nd = 2 + M.number / 2;
-            for (int i = 0; i < nd; i++) { const double u = -L * 0.1 + L * 0.5 * i / nd; k.tube(u, -0.03, PI / 2, 0.06, 0.002, 0.002, 0.012, M.mat2); for (int e = -1; e <= 1; e += 2) k.disc(u, e * 0.02, 0.014, 0.014, 0.004, 0.008, M.mat2, 0); }
+            for (int i = 0; i < nd; i++) {
+                const double u = -L * 0.1 + L * 0.5 * i / nd;
+                k.tube(u, -0.03, PI / 2, 0.06, 0.002, 0.002, 0.012, M.mat2);
+                for (int e = -1; e <= 1; e += 2) k.disc(u, e * 0.02, 0.014, 0.014, 0.004, 0.008, M.mat2, 0);
+            }
             k.head(L / 2, 0, 0, 0.004, 0.012, M.mat);
             return;
         }
@@ -1649,15 +1906,25 @@ void pJingle(Mk& k, int plan) {
         }
         case IP_JINGLE_HOOP: {   // a hoop (round, or the people's polygon), its jingles (discs, little bells or shells), a skin or none, a handle or none
             const double R = k.rng.range(0.1, 0.15) * k.S;
-            if (M.sides >= 5) for (int i = 0; i < M.sides; i++) { const double a0 = TAU * i / M.sides, a1 = TAU * (i + 1) / M.sides; k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, 0.011, 0.011, 0.011, M.mat); }
+            if (M.sides >= 5)
+                for (int i = 0; i < M.sides; i++) {
+                    const double a0 = TAU * i / M.sides, a1 = TAU * (i + 1) / M.sides;
+                    k.tubeTo(std::cos(a0) * R, std::sin(a0) * R, std::cos(a1) * R, std::sin(a1) * R, 0.011, 0.011, 0.011, M.mat);
+                }
             else k.ring(0, 0, R, 0.012, 0, M.mat);
             if (M.variant % 2) skinFace(k, 0, 0, R * 0.95, 0.016, M.sides >= 5 ? M.sides : 0);
             const int pairs = clampi(M.number, 4, 9), kind = (M.variant / 2) % 3;
             for (int i = 0; i < pairs; i++) {
                 const double a = TAU * (i + 0.5) / pairs, u = std::cos(a) * R, v = std::sin(a) * R;
-                if (kind == 0) { k.disc(u, v, R * 0.12, R * 0.12, 0.018, 0.024, jm, i % 10); k.mark(u, v, R * 0.02, 0.025, 0, IM_HOLE); }
-                else if (kind == 1) { k.bell(u - std::cos(a) * R * 0.1, v - std::sin(a) * R * 0.1, a, R * 0.2, R * 0.04, R * 0.09, 0.02, jm); for (int q = 1; q <= 4; q++) k.out[k.out.size() - q].course = i % 10; }
-                else { InstrumentPart& sh = k.plate(u + std::cos(a) * R * 0.08, v + std::sin(a) * R * 0.08, a, R * 0.24, R * 0.07, 0.012, 0.022, M.trim == IM_LIGHT ? jm : (M.trim == IM_PAINT || M.trim == IM_LACQUER ? jm : M.trim), 0.6, 0, 2, 0.004); sh.course = i % 10; }
+                if (kind == 0) { k.disc(u, v, R * 0.12, R * 0.12, 0.018, 0.024, jm, i % 10); k.mark(u, v, R * 0.02, 0.025, 0, IM_HOLE);
+                } else if (kind == 1) {
+                    k.bell(u - std::cos(a) * R * 0.1, v - std::sin(a) * R * 0.1, a, R * 0.2, R * 0.04, R * 0.09, 0.02, jm);
+                    for (int q = 1; q <= 4; q++) k.out[k.out.size() - q].course = i % 10;
+                } else {
+                    InstrumentPart& sh = k.plate(u + std::cos(a) * R * 0.08, v + std::sin(a) * R * 0.08, a, R * 0.24, R * 0.07, 0.012, 0.022,
+                            M.trim == IM_LIGHT ? jm : (M.trim == IM_PAINT || M.trim == IM_LACQUER ? jm : M.trim), 0.6, 0, 2, 0.004);
+                    sh.course = i % 10;
+                }
             }
             if (M.variant % 4 >= 2) k.tube(R, 0, 0, R * 0.9, 0.009, 0.008, 0.009, M.stick);   // a handle
             return;
@@ -1666,7 +1933,11 @@ void pJingle(Mk& k, int plan) {
             const double L = k.rng.range(0.3, 0.45) * k.S;
             k.tube(-L / 2, 0, 0, L, 0.01, 0.009, 0.01, M.mat);
             const int nd = 3 + M.number / 2;
-            for (int i = 0; i < nd; i++) { const double u = -L * 0.2 + L * 0.6 * i / nd, side = i % 2 ? 1 : -1; k.tube(u, 0, side * PI / 2, 0.035, 0.002, 0.002, 0.012, jm); k.disc(u, side * 0.036, 0.013, 0.013, 0.006, 0.01, jm, i); }
+            for (int i = 0; i < nd; i++) {
+                const double u = -L * 0.2 + L * 0.6 * i / nd, side = i % 2 ? 1 : -1;
+                k.tube(u, 0, side * PI / 2, 0.035, 0.002, 0.002, 0.012, jm);
+                k.disc(u, side * 0.036, 0.013, 0.013, 0.006, 0.01, jm, i);
+            }
             k.head(L / 2, 0, 0, 0.004, 0.012, M.mat);
             return;
         }
@@ -1680,10 +1951,25 @@ void cymbalFace(Mk& k, double u, double v, double Re, double w, double boss, int
     if (M.variant % 5 == 1) k.ring(u, v, Re * 0.97, Re * 0.04, w + 0.002, M.mat, 0);   // a flange
     k.ball(u, v, Re * boss, Re * boss, w + 0.004, Re * boss * 0.4, M.mat, 0, 0);
     if (M.top == TP_MASTS) k.tube(u, v, 0, 0.001, Re * 0.05, Re * 0.05, w + Re * boss * 0.5, M.mat, 0);
-    if (M.variant % 5 == 2) for (int i = 0; i < 2 * M.number; i++) { const double a = TAU * i / (2 * M.number); k.mark(u + std::cos(a) * Re * 0.72, v + std::sin(a) * Re * 0.72, Re * 0.06, w + 0.006, M.hole, IM_HOLE, -1, a); }   // openings cut through
-    else if ((M.deco == ON_CARVED || M.variant % 5 == 3) && Re > 0.06) for (int i = 0; i < 16; i++) { const double a = i * 2.39996, rr = Re * (0.4 + 0.5 * std::sqrt((i + 0.5) / 16)); k.mark(u + std::cos(a) * rr, v + std::sin(a) * rr, Re * 0.03, w + 0.006, 0, IM_HOLE); }   // hammer marks
-    else { const int rings = M.deco == ON_BARE ? 1 : 2; for (int r = 0; r < rings; r++) k.ring(u, v, Re * (0.5 + 0.4 * (r + 1) / (rings + 1)), 0.0012, w + 0.005, M.deco == ON_ENCRUSTED ? k.trimMat() : IM_HOLE); }
-    if (M.motif == MO_STARS || M.motif == MO_FIGURES || M.motif == MO_GLYPHS) for (int i = 0; i < M.number; i++) { const double a = TAU * i / M.number; k.mark(u + std::cos(a) * Re * 0.55, v + std::sin(a) * Re * 0.55, Re * 0.05, w + 0.006, M.motif == MO_STARS ? 6 : 3, k.trimMat()); }
+    if (M.variant % 5 == 2)
+        for (int i = 0; i < 2 * M.number; i++) {
+            const double a = TAU * i / (2 * M.number);
+            k.mark(u + std::cos(a) * Re * 0.72, v + std::sin(a) * Re * 0.72, Re * 0.06, w + 0.006, M.hole, IM_HOLE, -1, a);
+        }   // openings cut through
+    else if ((M.deco == ON_CARVED || M.variant % 5 == 3) && Re > 0.06)
+        for (int i = 0; i < 16; i++) {
+            const double a = i * 2.39996, rr = Re * (0.4 + 0.5 * std::sqrt((i + 0.5) / 16));
+            k.mark(u + std::cos(a) * rr, v + std::sin(a) * rr, Re * 0.03, w + 0.006, 0, IM_HOLE);
+        }   // hammer marks
+    else {
+        const int rings = M.deco == ON_BARE ? 1 : 2;
+        for (int r = 0; r < rings; r++) k.ring(u, v, Re * (0.5 + 0.4 * (r + 1) / (rings + 1)), 0.0012, w + 0.005, M.deco == ON_ENCRUSTED ? k.trimMat() : IM_HOLE);
+    }
+    if (M.motif == MO_STARS || M.motif == MO_FIGURES || M.motif == MO_GLYPHS)
+        for (int i = 0; i < M.number; i++) {
+            const double a = TAU * i / M.number;
+            k.mark(u + std::cos(a) * Re * 0.55, v + std::sin(a) * Re * 0.55, Re * 0.05, w + 0.006, M.motif == MO_STARS ? 6 : 3, k.trimMat());
+        }
 }
 
 void pCymbalsOther(Mk& k, int plan) {
@@ -1740,7 +2026,10 @@ void pPads(Mk& k, bool ring) {
     const int cols = pads == 12 ? 4 : (M.number >= 6 ? 4 : 2), rows = pads / cols;
     const double p = 0.045 * k.S, L = cols * p + 0.12, D = rows * p + 0.06;
     InstrumentPart& b = k.body(0, 0, 0, L, D * 0.5, 0, 0.045, M.mat, 0); if (b.square < 3) b.square = 5;
-    for (int i = 0; i < pads; i++) { const int c = i % cols, r = i / cols; k.box(-L * 0.5 + 0.03 + p * (c + 0.5), -D * 0.5 + 0.03 + p * (r + 0.5), 0, p * 0.8, p * 0.4, 0.045, 0.052, i % 4 == 0 ? IM_PAINT : M.mat2, i); }
+    for (int i = 0; i < pads; i++) {
+        const int c = i % cols, r = i / cols;
+        k.box(-L * 0.5 + 0.03 + p * (c + 0.5), -D * 0.5 + 0.03 + p * (r + 0.5), 0, p * 0.8, p * 0.4, 0.045, 0.052, i % 4 == 0 ? IM_PAINT : M.mat2, i);
+    }
     k.knobs(L * 0.5 - 0.06, -D * 0.3, D * 0.6, clampi(M.number / 2, 2, 4), 0.008, 0.045, IM_STEEL);
     k.box(L * 0.5 - 0.025, 0, PI / 2, D * 0.7, 0.006, 0.045, 0.047, M.age >= AGE_FUTURISTIC ? IM_VOID : IM_LACQUER);
     k.lights(-L * 0.4, D * 0.44, L * 0.6, 8, 0.045, false);
@@ -1754,19 +2043,26 @@ void pMachine(Mk& k, int plan) {
     k.tube(-L * 0.3, -W * 0.15, 0, L * 0.6, 0.026, 0.026, H + 0.03, IM_LACQUER, 0);   // the wax
     k.box(0, W * 0.15, 0, L * 0.7, 0.006, H, H + 0.05, M.mat2);
     k.disc(L * 0.1, -W * 0.02, 0.022, 0.022, H + 0.05, H + 0.065, M.mat2, 0);
-    k.tube(L * 0.5, 0, 0, 0.05, 0.005, 0.005, H * 0.5, M.mat2); k.box(L * 0.5 + 0.05, 0.02, PI / 2, 0.05, 0.006, H * 0.5, H * 0.5 + 0.01, M.mat2); k.disc(L * 0.5 + 0.05, 0.045, 0.01, 0.01, H * 0.4, H * 0.5 + 0.04, M.stick);
+    k.tube(L * 0.5, 0, 0, 0.05, 0.005, 0.005, H * 0.5, M.mat2);
+    k.box(L * 0.5 + 0.05, 0.02, PI / 2, 0.05, 0.006, H * 0.5, H * 0.5 + 0.01, M.mat2);
+    k.disc(L * 0.5 + 0.05, 0.045, 0.01, 0.01, H * 0.4, H * 0.5 + 0.04, M.stick);
     switch (plan) {
         case IP_HORN_MACHINE: {
             const int horn = M.variant % 3;   // straight, curved, a flower of petals
             const double hl = k.rng.range(0.3, 0.45) * k.S, hr = k.rng.range(0.12, 0.2) * k.S;
-            if (horn == 1) { k.arc(L * 0.1, W * 0.5, W * 0.45, -PI / 2, 0.3, 0.012, 0.03, H + 0.06, M.mat2, 6); k.bell(L * 0.1 + std::cos(0.3) * W * 0.45, W * 0.5 + std::sin(0.3) * W * 0.45, 0.3 + PI / 2, hl * 0.7, 0.03, hr, H + 0.06, M.mat2); }
-            else k.bell(L * 0.1, W * 0.05, PI / 2 + (horn == 2 ? 0.5 : 0.25), hl, 0.012, hr, H + 0.06, M.mat2);
+            if (horn == 1) {
+                k.arc(L * 0.1, W * 0.5, W * 0.45, -PI / 2, 0.3, 0.012, 0.03, H + 0.06, M.mat2, 6);
+                k.bell(L * 0.1 + std::cos(0.3) * W * 0.45, W * 0.5 + std::sin(0.3) * W * 0.45, 0.3 + PI / 2, hl * 0.7, 0.03, hr, H + 0.06, M.mat2);
+            } else k.bell(L * 0.1, W * 0.05, PI / 2 + (horn == 2 ? 0.5 : 0.25), hl, 0.012, hr, H + 0.06, M.mat2);
             if (horn == 2) {   // a flower of petals: ribs along the bell from its throat to its rim
                 const InstrumentPart last = k.out.back();
                 const double eu = last.u + std::cos(last.ang) * last.len, ev = last.v + std::sin(last.ang) * last.len, nu = -std::sin(last.ang), nv = std::cos(last.ang);
                 const int bu = (int)k.out.size() - 4;
                 const double tu = k.out[bu].u, tv = k.out[bu].v;
-                for (int i = 0; i < 7; i++) { const double t = (i - 3) / 3.0; k.str(tu, tv, H + 0.07, eu + nu * last.r1 * t * 0.95, ev + nv * last.r1 * t * 0.95, H + 0.06 + last.r1 * (1 - t * t) * 0.9, M.mat2 == IM_BRASS ? IM_COPPER : IM_BRASS, -1, 0.0012); }
+                for (int i = 0; i < 7; i++) {
+                    const double t = (i - 3) / 3.0;
+                    k.str(tu, tv, H + 0.07, eu + nu * last.r1 * t * 0.95, ev + nv * last.r1 * t * 0.95, H + 0.06 + last.r1 * (1 - t * t) * 0.9, M.mat2 == IM_BRASS ? IM_COPPER : IM_BRASS, -1, 0.0012);
+                }
             }
             break;
         }
@@ -1777,7 +2073,11 @@ void pMachine(Mk& k, int plan) {
             break;
         }
         default: {   // listening tubes to their ear-pieces
-            for (int e = 0; e < 2 + M.variant % 3; e++) { const double a = -0.6 + 0.6 * e; k.arc(L * 0.1, W * 0.6, W * 0.6, -PI / 2 + a * 0.3, a, 0.004, 0.004, 0.006, IM_HIDE, 8, W * 0.9); k.ball(L * 0.1 + std::cos(a) * W * 0.9, W * 0.6 + std::sin(a) * W * 0.9, 0.012, 0.012, 0, 0.018, M.mat2); }
+            for (int e = 0; e < 2 + M.variant % 3; e++) {
+                const double a = -0.6 + 0.6 * e;
+                k.arc(L * 0.1, W * 0.6, W * 0.6, -PI / 2 + a * 0.3, a, 0.004, 0.004, 0.006, IM_HIDE, 8, W * 0.9);
+                k.ball(L * 0.1 + std::cos(a) * W * 0.9, W * 0.6 + std::sin(a) * W * 0.9, 0.012, 0.012, 0, 0.018, M.mat2);
+            }
             break;
         }
     }

@@ -7,31 +7,31 @@ const char* const VG_CHECK_NAMES[VC_COUNT] = {"mark left", "diagnostic", "double
 
 namespace {
 const std::map<std::string, std::pair<const char*, const char*>>& irregularVerbs() {   // past, participle
-    static const std::map<std::string, std::pair<const char*, const char*>> M = {
-        {"be", {"was", "been"}}, {"have", {"had", "had"}}, {"do", {"did", "done"}}, {"go", {"went", "gone"}}, {"come", {"came", "come"}}, {"take", {"took", "taken"}},
-        {"give", {"gave", "given"}}, {"make", {"made", "made"}}, {"say", {"said", "said"}}, {"see", {"saw", "seen"}}, {"find", {"found", "found"}}, {"bring", {"brought", "brought"}},
-        {"buy", {"bought", "bought"}}, {"sell", {"sold", "sold"}}, {"build", {"built", "built"}}, {"fall", {"fell", "fallen"}}, {"rise", {"rose", "risen"}}, {"run", {"ran", "run"}},
-        {"keep", {"kept", "kept"}}, {"leave", {"left", "left"}}, {"lose", {"lost", "lost"}}, {"send", {"sent", "sent"}}, {"set", {"set", "set"}}, {"sit", {"sat", "sat"}},
-        {"stand", {"stood", "stood"}}, {"tell", {"told", "told"}}, {"think", {"thought", "thought"}}, {"write", {"wrote", "written"}}, {"read", {"read", "read"}},
-        {"break", {"broke", "broken"}}, {"choose", {"chose", "chosen"}}, {"eat", {"ate", "eaten"}}, {"feed", {"fed", "fed"}}, {"fight", {"fought", "fought"}}, {"fly", {"flew", "flown"}},
-        {"forget", {"forgot", "forgotten"}}, {"freeze", {"froze", "frozen"}}, {"get", {"got", "got"}}, {"grow", {"grew", "grown"}}, {"hang", {"hung", "hung"}}, {"hear", {"heard", "heard"}},
-        {"hold", {"held", "held"}}, {"know", {"knew", "known"}}, {"lay", {"laid", "laid"}}, {"lead", {"led", "led"}}, {"lie", {"lay", "lain"}}, {"light", {"lit", "lit"}}, {"mean", {"meant", "meant"}},
-        {"meet", {"met", "met"}}, {"pay", {"paid", "paid"}}, {"put", {"put", "put"}}, {"ride", {"rode", "ridden"}}, {"ring", {"rang", "rung"}}, {"seek", {"sought", "sought"}}, {"shake", {"shook", "shaken"}},
-        {"shine", {"shone", "shone"}}, {"shut", {"shut", "shut"}}, {"sing", {"sang", "sung"}}, {"sink", {"sank", "sunk"}}, {"sleep", {"slept", "slept"}}, {"speak", {"spoke", "spoken"}},
-        {"spend", {"spent", "spent"}}, {"steal", {"stole", "stolen"}}, {"strike", {"struck", "struck"}}, {"swear", {"swore", "sworn"}}, {"swim", {"swam", "swum"}}, {"teach", {"taught", "taught"}},
-        {"tear", {"tore", "torn"}}, {"throw", {"threw", "thrown"}}, {"wake", {"woke", "woken"}}, {"wear", {"wore", "worn"}}, {"weep", {"wept", "wept"}}, {"win", {"won", "won"}},
-        {"bear", {"bore", "borne"}}, {"begin", {"began", "begun"}}, {"blow", {"blew", "blown"}}, {"catch", {"caught", "caught"}}, {"cut", {"cut", "cut"}}, {"dig", {"dug", "dug"}},
-        {"draw", {"drew", "drawn"}}, {"drink", {"drank", "drunk"}}, {"drive", {"drove", "driven"}}, {"feel", {"felt", "felt"}}, {"hide", {"hid", "hidden"}}, {"let", {"let", "let"}},
-        {"sweep", {"swept", "swept"}}, {"shoot", {"shot", "shot"}}, {"bend", {"bent", "bent"}}, {"lend", {"lent", "lent"}}, {"wind", {"wound", "wound"}}, {"bite", {"bit", "bitten"}},
-        {"bleed", {"bled", "bled"}}, {"breed", {"bred", "bred"}}, {"burn", {"burned", "burned"}}, {"cling", {"clung", "clung"}}, {"deal", {"dealt", "dealt"}}, {"dream", {"dreamt", "dreamt"}},
-        {"flee", {"fled", "fled"}}, {"forgive", {"forgave", "forgiven"}}, {"grind", {"ground", "ground"}}, {"hit", {"hit", "hit"}}, {"hurt", {"hurt", "hurt"}}, {"kneel", {"knelt", "knelt"}},
-        {"leap", {"leapt", "leapt"}}, {"quit", {"quit", "quit"}}, {"slay", {"slew", "slain"}}, {"slide", {"slid", "slid"}}, {"sow", {"sowed", "sown"}}, {"spin", {"spun", "spun"}},
-        {"spit", {"spat", "spat"}}, {"split", {"split", "split"}}, {"spread", {"spread", "spread"}}, {"spring", {"sprang", "sprung"}}, {"sting", {"stung", "stung"}}, {"stride", {"strode", "stridden"}},
-        {"string", {"strung", "strung"}}, {"swell", {"swelled", "swollen"}}, {"swing", {"swung", "swung"}}, {"tread", {"trod", "trodden"}}, {"understand", {"understood", "understood"}},
-        {"weave", {"wove", "woven"}}, {"wring", {"wrung", "wrung"}}, {"arise", {"arose", "arisen"}}, {"awake", {"awoke", "awoken"}}, {"bid", {"bade", "bidden"}}, {"bind", {"bound", "bound"}},
-        {"cast", {"cast", "cast"}}, {"cost", {"cost", "cost"}}, {"creep", {"crept", "crept"}}, {"forbid", {"forbade", "forbidden"}}, {"foresee", {"foresaw", "foreseen"}}, {"mistake", {"mistook", "mistaken"}},
-        {"overcome", {"overcame", "overcome"}}, {"rid", {"rid", "rid"}}, {"sew", {"sewed", "sewn"}}, {"shed", {"shed", "shed"}}, {"shrink", {"shrank", "shrunk"}}, {"stick", {"stuck", "stuck"}},
-        {"stink", {"stank", "stunk"}}, {"withdraw", {"withdrew", "withdrawn"}}};
+    static const std::map<std::string, std::pair<const char*, const char*>> M = {{"be", {"was", "been"}}, {"have", {"had", "had"}}, {"do", {"did", "done"}}, {"go", {"went", "gone"}},
+            {"come", {"came", "come"}}, {"take", {"took", "taken"}}, {"give", {"gave", "given"}}, {"make", {"made", "made"}}, {"say", {"said", "said"}}, {"see", {"saw", "seen"}},
+            {"find", {"found", "found"}}, {"bring", {"brought", "brought"}}, {"buy", {"bought", "bought"}}, {"sell", {"sold", "sold"}}, {"build", {"built", "built"}}, {"fall", {"fell", "fallen"}},
+            {"rise", {"rose", "risen"}}, {"run", {"ran", "run"}}, {"keep", {"kept", "kept"}}, {"leave", {"left", "left"}}, {"lose", {"lost", "lost"}}, {"send", {"sent", "sent"}},
+            {"set", {"set", "set"}}, {"sit", {"sat", "sat"}}, {"stand", {"stood", "stood"}}, {"tell", {"told", "told"}}, {"think", {"thought", "thought"}}, {"write", {"wrote", "written"}},
+            {"read", {"read", "read"}}, {"break", {"broke", "broken"}}, {"choose", {"chose", "chosen"}}, {"eat", {"ate", "eaten"}}, {"feed", {"fed", "fed"}}, {"fight", {"fought", "fought"}},
+            {"fly", {"flew", "flown"}}, {"forget", {"forgot", "forgotten"}}, {"freeze", {"froze", "frozen"}}, {"get", {"got", "got"}}, {"grow", {"grew", "grown"}}, {"hang", {"hung", "hung"}},
+            {"hear", {"heard", "heard"}}, {"hold", {"held", "held"}}, {"know", {"knew", "known"}}, {"lay", {"laid", "laid"}}, {"lead", {"led", "led"}}, {"lie", {"lay", "lain"}},
+            {"light", {"lit", "lit"}}, {"mean", {"meant", "meant"}}, {"meet", {"met", "met"}}, {"pay", {"paid", "paid"}}, {"put", {"put", "put"}}, {"ride", {"rode", "ridden"}},
+            {"ring", {"rang", "rung"}}, {"seek", {"sought", "sought"}}, {"shake", {"shook", "shaken"}}, {"shine", {"shone", "shone"}}, {"shut", {"shut", "shut"}}, {"sing", {"sang", "sung"}},
+            {"sink", {"sank", "sunk"}}, {"sleep", {"slept", "slept"}}, {"speak", {"spoke", "spoken"}}, {"spend", {"spent", "spent"}}, {"steal", {"stole", "stolen"}}, {"strike", {"struck", "struck"}},
+            {"swear", {"swore", "sworn"}}, {"swim", {"swam", "swum"}}, {"teach", {"taught", "taught"}}, {"tear", {"tore", "torn"}}, {"throw", {"threw", "thrown"}}, {"wake", {"woke", "woken"}},
+            {"wear", {"wore", "worn"}}, {"weep", {"wept", "wept"}}, {"win", {"won", "won"}}, {"bear", {"bore", "borne"}}, {"begin", {"began", "begun"}}, {"blow", {"blew", "blown"}},
+            {"catch", {"caught", "caught"}}, {"cut", {"cut", "cut"}}, {"dig", {"dug", "dug"}}, {"draw", {"drew", "drawn"}}, {"drink", {"drank", "drunk"}}, {"drive", {"drove", "driven"}},
+            {"feel", {"felt", "felt"}}, {"hide", {"hid", "hidden"}}, {"let", {"let", "let"}}, {"sweep", {"swept", "swept"}}, {"shoot", {"shot", "shot"}}, {"bend", {"bent", "bent"}},
+            {"lend", {"lent", "lent"}}, {"wind", {"wound", "wound"}}, {"bite", {"bit", "bitten"}}, {"bleed", {"bled", "bled"}}, {"breed", {"bred", "bred"}}, {"burn", {"burned", "burned"}},
+            {"cling", {"clung", "clung"}}, {"deal", {"dealt", "dealt"}}, {"dream", {"dreamt", "dreamt"}}, {"flee", {"fled", "fled"}}, {"forgive", {"forgave", "forgiven"}},
+            {"grind", {"ground", "ground"}}, {"hit", {"hit", "hit"}}, {"hurt", {"hurt", "hurt"}}, {"kneel", {"knelt", "knelt"}}, {"leap", {"leapt", "leapt"}}, {"quit", {"quit", "quit"}},
+            {"slay", {"slew", "slain"}}, {"slide", {"slid", "slid"}}, {"sow", {"sowed", "sown"}}, {"spin", {"spun", "spun"}}, {"spit", {"spat", "spat"}}, {"split", {"split", "split"}},
+            {"spread", {"spread", "spread"}}, {"spring", {"sprang", "sprung"}}, {"sting", {"stung", "stung"}}, {"stride", {"strode", "stridden"}}, {"string", {"strung", "strung"}},
+            {"swell", {"swelled", "swollen"}}, {"swing", {"swung", "swung"}}, {"tread", {"trod", "trodden"}}, {"understand", {"understood", "understood"}}, {"weave", {"wove", "woven"}},
+            {"wring", {"wrung", "wrung"}}, {"arise", {"arose", "arisen"}}, {"awake", {"awoke", "awoken"}}, {"bid", {"bade", "bidden"}}, {"bind", {"bound", "bound"}}, {"cast", {"cast", "cast"}},
+            {"cost", {"cost", "cost"}}, {"creep", {"crept", "crept"}}, {"forbid", {"forbade", "forbidden"}}, {"foresee", {"foresaw", "foreseen"}}, {"mistake", {"mistook", "mistaken"}},
+            {"overcome", {"overcame", "overcome"}}, {"rid", {"rid", "rid"}}, {"sew", {"sewed", "sewn"}}, {"shed", {"shed", "shed"}}, {"shrink", {"shrank", "shrunk"}}, {"stick", {"stuck", "stuck"}},
+            {"stink", {"stank", "stunk"}}, {"withdraw", {"withdrew", "withdrawn"}}};
     return M;
 }
 bool isModal(const std::string& w) { return w == "can" || w == "will" || w == "must" || w == "may" || w == "shall" || w == "should" || w == "would" || w == "could" || w == "might"; }
@@ -146,7 +146,15 @@ std::vector<std::string> vgSentences(const std::string& t) {
     std::vector<std::string> out; std::string cur;
     for (char c : t) {
         cur += c;
-        if (c == '.' || c == '?' || c == '!' || c == '\n') { size_t p = cur.find_first_not_of(" \n"); if (p != std::string::npos) { std::string x = cur.substr(p); while (!x.empty() && x.back() == '\n') x.pop_back(); if (!x.empty()) out.push_back(x); } cur.clear(); }
+        if (c == '.' || c == '?' || c == '!' || c == '\n') {
+            size_t p = cur.find_first_not_of(" \n");
+            if (p != std::string::npos) {
+                std::string x = cur.substr(p);
+                while (!x.empty() && x.back() == '\n') x.pop_back();
+                if (!x.empty()) out.push_back(x);
+            }
+            cur.clear();
+        }
     }
     size_t p = cur.find_first_not_of(" \n"); if (p != std::string::npos) out.push_back(cur.substr(p));
     return out;
@@ -195,7 +203,15 @@ VgMeasure vgMeasure(const std::vector<std::string>& texts, const std::vector<con
         longSentences(t, f, longs, &M.formulaS);
         for (const std::string& s : longs) { frames[vgFrame(s)]++; exact[s]++; }
         size_t p = 0;
-        while (p < t.size()) { size_t q = t.find_first_of(" \n", p); if (q == std::string::npos) q = t.size(); std::string l; for (size_t i = p; i < q; i++) if (std::isalpha((unsigned char)t[i])) l += (char)std::tolower((unsigned char)t[i]); if (!l.empty()) toks.push_back(l); p = q + 1; }
+        while (p < t.size()) {
+            size_t q = t.find_first_of(" \n", p);
+            if (q == std::string::npos) q = t.size();
+            std::string l;
+            for (size_t i = p; i < q; i++)
+                if (std::isalpha((unsigned char)t[i])) l += (char)std::tolower((unsigned char)t[i]);
+            if (!l.empty()) toks.push_back(l);
+            p = q + 1;
+        }
     }
     for (size_t ti = 0; ti < texts.size(); ti++) {
         const std::vector<std::string>* f = formulas && ti < formulas->size() ? (*formulas)[ti] : nullptr;
@@ -227,8 +243,13 @@ int vgCheck(const VgGrammar& G, const VgRecord& R, int age, int counts[VC_COUNT]
     int bad = 0;
     auto fail = [&](int kind, const std::string& w) { counts[kind]++; bad++; if (why) why->push_back(std::string(VG_CHECK_NAMES[kind]) + ": " + w); };
     const std::string& t = R.text;
-    for (const char* m : {"{", "}", "[", "]", "$", "@", "#", "|", "\\", "\x01", "\x02"}) if (t.find(m) != std::string::npos) fail(VC_MARK, m[0] == '\x01' ? "a name's opening mark" : (m[0] == '\x02' ? "a name's closing mark" : m));
-    for (const std::string& d : R.diag) { if (startsWith(d, "plural:")) fail(VC_PLURAL, d.substr(8)); else if (startsWith(d, "anachronism:")) fail(VC_ANACHRONISM, d.substr(13)); else fail(VC_DIAG, d); }
+    for (const char* m : {"{", "}", "[", "]", "$", "@", "#", "|", "\\", "\x01", "\x02"})
+        if (t.find(m) != std::string::npos) fail(VC_MARK, m[0] == '\x01' ? "a name's opening mark" : (m[0] == '\x02' ? "a name's closing mark" : m));
+    for (const std::string& d : R.diag) {
+        if (startsWith(d, "plural:")) fail(VC_PLURAL, d.substr(8));
+        else if (startsWith(d, "anachronism:")) fail(VC_ANACHRONISM, d.substr(13));
+        else fail(VC_DIAG, d);
+    }
     if (t.empty()) { fail(VC_DIAG, "empty"); return bad; }
     // the words, sentence by sentence (a stop, a comma or a colon breaks the adjacency of two words)
     struct W { std::string w, raw; bool afterPunct; size_t pos; bool cap; };   // raw: as written ("mother's mother" is no doubled word); cap: a capital
@@ -257,7 +278,8 @@ int vgCheck(const VgGrammar& G, const VgRecord& R, int age, int counts[VC_COUNT]
             if ((p.w == "a" && v) || (p.w == "an" && !v)) fail(VC_ARTICLE, "'" + p.w + " " + x.w + "'");
         }
         if ((p.w == "a" || p.w == "an" || p.w == "one") && G.plurals.count(x.w)) fail(VC_PLURAL, "'" + p.w + " " + x.w + "'");
-        if ((p.w == "a" || p.w == "an" || p.w == "the") && (x.w == "a" || x.w == "an" || x.w == "the") && p.raw != x.raw) fail(VC_ARTICLE, "'" + p.w + " " + x.w + "'");   // H-04's second pass: "a the rains" (a list that carries its article)
+        // H-04's second pass: "a the rains" (a list that carries its article)
+        if ((p.w == "a" || p.w == "an" || p.w == "the") && (x.w == "a" || x.w == "an" || x.w == "the") && p.raw != x.raw) fail(VC_ARTICLE, "'" + p.w + " " + x.w + "'");
         const bool regnal = p.w == "i" && k >= 2 && !p.afterPunct && words[k - 2].cap;   // "King Nilzhos I is dead" (a name before the numeral)
         // H-04's second pass: the pronoun is not the verb's subject after a preposition or in a wish ("to you is", "as if it were")
         static const std::set<std::string> NOT_SUBJECT = {"if", "as", "to", "for", "with", "of", "at", "by", "from", "about", "than", "like", "on", "into", "without"};
@@ -275,6 +297,10 @@ int vgCheck(const VgGrammar& G, const VgRecord& R, int age, int counts[VC_COUNT]
     for (const char* sp : {"  ", " ,", " .", " ;", " :", " ?", " !", ",,", "..", ",.", "\n\n", " \n", "\n "}) if (t.find(sp) != std::string::npos) fail(VC_SPACING, std::string("'") + sp + "'");
     for (size_t k = 0; k + 1 < t.size(); k++) if ((t[k] == ',' || t[k] == ';') && t[k + 1] != ' ' && t[k + 1] != '\n') fail(VC_SPACING, "no space after '" + std::string(1, t[k]) + "'");
     if (R.hi > 0 && (R.words < R.lo || R.words > R.hi)) fail(VC_LENGTH, std::to_string(R.words) + " words of " + std::to_string(R.lo) + ".." + std::to_string(R.hi));
-    if (age >= 0) for (const W& x : words) { auto it = G.lexicon.find(x.w); if (it != G.lexicon.end() && it->second > age) fail(VC_ANACHRONISM, "'" + x.w + "' (" + VG_AGES[it->second] + ") in a " + VG_AGES[std::min(age, 5)] + " record"); }
+    if (age >= 0)
+        for (const W& x : words) {
+            auto it = G.lexicon.find(x.w);
+            if (it != G.lexicon.end() && it->second > age) fail(VC_ANACHRONISM, "'" + x.w + "' (" + VG_AGES[it->second] + ") in a " + VG_AGES[std::min(age, 5)] + " record");
+        }
     return bad;
 }

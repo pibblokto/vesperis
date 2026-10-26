@@ -170,7 +170,16 @@ struct Bld {
                 nt.t += 0.12; nt.dur -= 0.12; P.notes.push_back(nt);
             } else if (orn && T.ornament == 2 && nt.dur >= 1.5) {
                 double tt = nt.t, end = nt.t + nt.dur; int k = 0;
-                while (end - tt > 1e-6) { Note tr = nt; tr.t = tt; tr.dur = end - tt < 0.5 ? end - tt : 0.25; tr.degree = nt.degree + (k % 2); tr.vel *= k == 0 ? 1.0 : 0.8; P.notes.push_back(tr); tt += tr.dur; k++; }
+                while (end - tt > 1e-6) {
+                    Note tr = nt;
+                    tr.t = tt;
+                    tr.dur = end - tt < 0.5 ? end - tt : 0.25;
+                    tr.degree = nt.degree + (k % 2);
+                    tr.vel *= k == 0 ? 1.0 : 0.8;
+                    P.notes.push_back(tr);
+                    tt += tr.dur;
+                    k++;
+                }
             } else if (orn && T.ornament == 3 && std::abs(step) == 1 && adjacent) {
                 nt.slideFrom = prevDeg; P.notes.push_back(nt);
             } else if (orn && T.ornament == 4 && nt.dur >= 1.0) {

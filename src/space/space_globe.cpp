@@ -117,8 +117,18 @@ inline double plateLerp4(const std::vector<uint8_t>& v, const size_t o[4], doubl
     double a = v[o[0]] + (v[o[1]] - v[o[0]]) * tx, b = v[o[2]] + (v[o[3]] - v[o[2]]) * tx;
     return (a + (b - a) * ty) / 255.0;
 }
-inline double plateAlbedo(const PlateHit& h) { size_t o[4]; double tx, ty; if (plateQuad(h, o, tx, ty)) return plateLerp4(h.p->albedo, o, tx, ty); return h.p->albedo[(size_t)h.jn * h.p->W + h.in] / 255.0; }
-inline double plateCloud(const PlateHit& h) { size_t o[4]; double tx, ty; if (plateQuad(h, o, tx, ty)) return plateLerp4(h.p->cloud, o, tx, ty); return h.p->cloud[(size_t)h.jn * h.p->W + h.in] / 255.0; }
+inline double plateAlbedo(const PlateHit& h) {
+    size_t o[4];
+    double tx, ty;
+    if (plateQuad(h, o, tx, ty)) return plateLerp4(h.p->albedo, o, tx, ty);
+    return h.p->albedo[(size_t)h.jn * h.p->W + h.in] / 255.0;
+}
+inline double plateCloud(const PlateHit& h) {
+    size_t o[4];
+    double tx, ty;
+    if (plateQuad(h, o, tx, ty)) return plateLerp4(h.p->cloud, o, tx, ty);
+    return h.p->cloud[(size_t)h.jn * h.p->W + h.in] / 255.0;
+}
 inline double plateVeg(const PlateHit& h) { return h.p->veg[(size_t)h.jn * h.p->W + h.in] / 255.0; }
 inline int plateMaterial(const PlateHit& h) { return h.p->material[(size_t)h.jn * h.p->W + h.in]; }
 // the slopes (rise over run) along e1 and e2 over the nearest cell's block step
@@ -138,7 +148,8 @@ inline void plateSlopes(const PlateHit& h, double& ga, double& gb) {
 // takes wrap2pi's one-turn path; unwrapped it grew with the clock, tens of turns and more in play, and each read was an fmod)
 static double cloudDriftOf(const Body& b, double t) { return wrap2pi(t * TAU / (b.rotPeriod * 3.7) + 1.0); }
 
-void SpaceRenderer::plateBegin(DetailPlate& p, int bi, uint64_t seed, int bucket, const Vec3& u0, const Vec3& e1, const Vec3& e2, double texel, double R, double cloudDrift, double halfA, double halfB) {
+void SpaceRenderer::plateBegin(
+        DetailPlate& p, int bi, uint64_t seed, int bucket, const Vec3& u0, const Vec3& e1, const Vec3& e2, double texel, double R, double cloudDrift, double halfA, double halfB) {
     plateBegun++;
     p = DetailPlate();
     p.body = bi; p.seed = seed; p.seasonBucket = bucket; p.u0 = u0; p.e1 = e1; p.e2 = e2;
@@ -178,7 +189,11 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                     static const double KD[NK_COUNT] = {0.2, 0.3, 0.5, 0.45, -0.15, -0.2, 0};   // darker (a railway's ballast), paler (a highway's slabs)
                     for (size_t k = 0; k + 1 < way.size(); k++) {
                         if (std::acos(clampd(dot(way[k], p.u0), -1, 1)) * Rm > reach + PLAN_LEG_KM * 1000) continue;
-                        DetailPlate::PlanWay w; w.a = way[k]; w.b = way[k + 1]; w.half = netHalfWidth(r.e->kind, cu, r.e->trunk) * (r.e->kind == NK_MAGLEV ? 0.5 : 1.0); w.k = KD[clampi(r.e->kind, 0, NK_COUNT - 1)];
+                        DetailPlate::PlanWay w;
+                        w.a = way[k];
+                        w.b = way[k + 1];
+                        w.half = netHalfWidth(r.e->kind, cu, r.e->trunk) * (r.e->kind == NK_MAGLEV ? 0.5 : 1.0);
+                        w.k = KD[clampi(r.e->kind, 0, NK_COUNT - 1)];
                         p.ways.push_back(w);
                     }
                 }
@@ -208,7 +223,8 @@ void SpaceRenderer::plateFill(DetailPlate& p, const BodyGen& g, int budget) {
                         SurfaceSample s = sampleSurface(g, u, p.texelM);
                         double lat, lon; StarSystem::latLonFromBody(u, lat, lon);
                         double alb = s.albedo;
-                        if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));   // the polar vortex, as the map has it
+                        // the polar vortex, as the map has it
+                        if (kindHas(g.type, KT_GAS_GIANT) && std::fabs(lat) > 76 * DEG) alb *= 1 + 0.14 * std::sin(6 * lon) * smoothstep(76 * DEG, 86 * DEG, std::fabs(lat));
                         int mat = s.material;
                         for (const DetailPlate::PlanCore& k : p.cores) {   // a core's built ground, its share of the cell, less what the years took
                             if (dot(u, k.u) < k.cosReach - 1e-9) continue;   // surely out of reach (the angle's margin is far over acos's rounding)
@@ -354,7 +370,10 @@ std::string SpaceRenderer::plateInfo() const {
                 if (!p.exact[o] || p.material[o] == 255) continue;
                 lo = std::min(lo, (double)p.height[o]); hi = std::max(hi, (double)p.height[o]);
                 int L = p.level[o];
-                if (i + L < p.W && p.exact[(size_t)j * p.W + i + L] && p.material[(size_t)j * p.W + i + L] != 255) { sl += std::fabs(p.height[(size_t)j * p.W + i + L] - p.height[o]) / (L * p.texelM); n++; }
+                if (i + L < p.W && p.exact[(size_t)j * p.W + i + L] && p.material[(size_t)j * p.W + i + L] != 255) {
+                    sl += std::fabs(p.height[(size_t)j * p.W + i + L] - p.height[o]) / (L * p.texelM);
+                    n++;
+                }
             }
         if (n) { snprintf(buf, sizeof buf, ", heights %.0f..%.0f m, mean slope %.3f", lo, hi, sl / n); s += buf; }
     }
@@ -624,7 +643,8 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 // the parent's light past the terminator (it fades in over the first tenth, where the sun's own fades out)
                 double earth = shineP > 0.002 && lit < 0 ? (1 - ambient) * 0.6 * shineP * std::max(0.0, dot(nW, shineDirW)) * smoothstep(0.0, -0.1, lit) : 0.0;
                 if (earth > 0 && !c.skyMode) shade += earth;
-                if (glows) shade = std::max(shade, bgen.selfGlow * (0.3 + 0.7 * alb) * (dark ? 0.55 + 0.45 * std::sqrt(clampd(viewCos, 0, 1)) : 1.0));   // it glows on its own, bands and all (D-02: darkening to its limb, its glow the whole of it)
+                // it glows on its own, bands and all (D-02: darkening to its limb, its glow the whole of it)
+                if (glows) shade = std::max(shade, bgen.selfGlow * (0.3 + 0.7 * alb) * (dark ? 0.55 + 0.45 * std::sqrt(clampd(viewCos, 0, 1)) : 1.0));
                 double v = 0;
                 if (!ownCloudV) {   // an opaque deck's and a giant's value is their clouds' (below), the ground's never read
                     v = exposureStop(alb, shade, atmosphere);   // the ground's exposure rule
@@ -659,7 +679,8 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                 if (lightning && lit < -0.05 && !c.skyMode) {   // lightning on the night side
                     if (unitFromHash(hash3i(x >> 2, y >> 2, (int64_t)(c.t * 4), b.seed)) < 0.0025) v = 58;
                 }
-                if (glowW > 0.2 && lit < 0.05 && !cloudy && !waterLights) v = std::max(v, (46.0 + 10.0 * glowW) * smoothstep(0.2, 0.6, glowW) * smoothstep(0.05, -0.15, lit));   // a milky sea's glow on the night side, pale
+                // a milky sea's glow on the night side, pale
+                if (glowW > 0.2 && lit < 0.05 && !cloudy && !waterLights) v = std::max(v, (46.0 + 10.0 * glowW) * smoothstep(0.2, 0.6, glowW) * smoothstep(0.05, -0.15, lit));
                 if (waterLights && glowW > 0.06) v = std::max(v, 37.0 + 35.0 * std::min(glowW, 0.2));   // the shoals' faint sheen, toward the light's own stops (from 44)
                 if (nightGlow && lit < 0.12) {   // the hot giant's night side glowing (the ramp's low end), coming up through the terminator
                     const double night = smoothstep(0.12, -0.3, lit);
@@ -741,7 +762,8 @@ void SpaceRenderer::drawGlobe(Framebuffer& fb, const SpaceContext& c, int bi, in
                                 double shadow = (tcs > 0 && closest2 < R2) ? 0.12 : 1.0;
                                 double litRing = std::fabs(dot(b.spinAxis, starDirW)) * 0.7 + 0.3;
                                 double v = 63.0 * dens * litRing * shadow * lf * 0.9;
-                                if (c.skyMode) v = 36.0 + 27.0 * std::pow(clampd(dens * 1.3, 0, 1), 0.4) * (0.5 + 0.5 * litRing) * shadow * lf;   // rings in a sky read like a moon (the sky bank is black below 30)
+                                // rings in a sky read like a moon (the sky bank is black below 30)
+                                if (c.skyMode) v = 36.0 + 27.0 * std::pow(clampd(dens * 1.3, 0, 1), 0.4) * (0.5 + 0.5 * litRing) * shadow * lf;
                                 double iz = 1.0 / (tr * d.z * depthUnit);
                                 if (iz > fb.invz[o] || (!hitSphere)) {
                                     if (iz > fb.invz[o]) {

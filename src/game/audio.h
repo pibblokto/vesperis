@@ -217,7 +217,10 @@ private:
     };
     static void rvDerive(RadarVar& v, uint64_t seed);
     static void rogueDerive(RadarVar& v, uint64_t seed);   // a drifter's part of it, on indices of its own (no other signal's moves)
-    struct Phantom { double ph = 0, jit = 0, f0 = 120, f0T = 120, f0Base = 120, amp = 0, ampT = 0, sylT = 0, sylDur = 0.2, lpN = 0; double F[3] = {500, 1500, 2500}, FT[3] = {500, 1500, 2500}, y1[3] = {0, 0, 0}, y2[3] = {0, 0, 0}; };
+    struct Phantom {
+        double ph = 0, jit = 0, f0 = 120, f0T = 120, f0Base = 120, amp = 0, ampT = 0, sylT = 0, sylDur = 0.2, lpN = 0;
+        double F[3] = {500, 1500, 2500}, FT[3] = {500, 1500, 2500}, y1[3] = {0, 0, 0}, y2[3] = {0, 0, 0};
+    };
     // a signal's own sound in a channel of its own, so that two are heard at once: the one centred (0) and the one under it in
     // the wide lobe (1). Each keeps its parameters (from its seed) and its oscillators: a pulsar's thump, a comet's song, a
     // magnetosphere's whistlers and choir, a people's carrier and machines, C-16's spark, surface and pips
@@ -244,7 +247,8 @@ private:
         // dwarf's pulse of it), the moon's arc, the iron's ring, the dynamo's rumble, the far voice's band, the beacon under it
         int rgCls = -1; double rgTurn = -1, rgMoon = -1, rgPow = -1, rgBreathS = 40, rgPulseS = 0, rgPw = 0.5;
         double rgPh = -1, rgMotT = -1, rgMotAmp = 1, rgMotPh = 0, rgMotPh2 = 0, rgMotY1 = 0, rgMotY2 = 0; bool rgMotRev = false;
-        double rgHang[12] = {}, rgHangPh[12] = {}, rgHangPh2[12] = {}, rgHangF[12] = {};   // the motif's whistles hanging on after it, the main figure's and the answer's (a metallic one's overtone; their pitch, drifting)
+        // the motif's whistles hanging on after it, the main figure's and the answer's (a metallic one's overtone; their pitch, drifting)
+        double rgHang[12] = {}, rgHangPh[12] = {}, rgHangPh2[12] = {}, rgHangF[12] = {};
         double rgHowlF = 600;   // the kilometric howl's pitch, wandering
         double rgPlY[4] = {0, 0, 0, 0}, rgDrC[8] = {1, 1, 1, 1, 1, 1, 1, 1}, rgDrS[8] = {}, rgDrRc[8] = {}, rgDrRs[8] = {};   // the drones as turning phasors (each a sample's turn)
         double rgSurfT[2] = {-1, -1}, rgSurfDur[2] = {2, 2}, rgSurfA[2] = {0, 0}, rgSurfNext = 0.3, rgSurfY1 = 0, rgSurfY2 = 0, rgSurfLp = 0;

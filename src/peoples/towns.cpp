@@ -150,7 +150,10 @@ struct Net {
                 } else line(a, b, rank, age, r0, r1, amp);
                 if (backLanes && k < n) {   // the back lane between two rows of rows
                     const double cb = c + S * 0.5;
-                    if (std::fabs(cb) < r1) { const double hb = std::sqrt(std::max(0.0, r1 * r1 - cb * cb)); seg(dir ? rot(-hb, cb) : rot(cb, -hb), dir ? rot(hb, cb) : rot(cb, hb), SR_LANE, age, r0, r1); }
+                    if (std::fabs(cb) < r1) {
+                        const double hb = std::sqrt(std::max(0.0, r1 * r1 - cb * cb));
+                        seg(dir ? rot(-hb, cb) : rot(cb, -hb), dir ? rot(hb, cb) : rot(cb, hb), SR_LANE, age, r0, r1);
+                    }
                 }
             }
     }
@@ -159,13 +162,21 @@ struct Net {
     void spokes(int age, double r0, double r1, double S, bool ringsToo) {
         const double amp = crooked(age);
         const int n = clampi(T.number, 3, 9);
-        for (int k = 0; k < n; k++) { const double a = T.h0 + (k + 0.5) * TAU / n; line({std::sin(a) * std::max(r0, T.plaza), std::cos(a) * std::max(r0, T.plaza)}, {std::sin(a) * (r1 + 2), std::cos(a) * (r1 + 2)}, SR_MAIN, age, r0, r1, amp); }
+        for (int k = 0; k < n; k++) {
+            const double a = T.h0 + (k + 0.5) * TAU / n;
+            line({std::sin(a) * std::max(r0, T.plaza), std::cos(a) * std::max(r0, T.plaza)}, {std::sin(a) * (r1 + 2), std::cos(a) * (r1 + 2)}, SR_MAIN, age, r0, r1, amp);
+        }
         if (!ringsToo) return;
         int m = n;
         for (double r = std::max(r0 + S * 0.5, T.plaza + S * 0.6); r < r1 - S * 0.25; r += S) {
             arc(r, T.h0, T.h0 + TAU, SR_STREET, age, r0, r1, amp);
             while (TAU * r / m > 2.2 * S) m *= 2;   // the lesser spokes between the main ones
-            if (m > n) for (int k = 0; k < m; k++) { if (k % (m / n) == 0) continue; const double a = T.h0 + (k + 0.5) * TAU / m; line({std::sin(a) * r, std::cos(a) * r}, {std::sin(a) * std::min(r + S, r1 + 2), std::cos(a) * std::min(r + S, r1 + 2)}, SR_STREET, age, r0, r1, amp); }
+            if (m > n)
+                for (int k = 0; k < m; k++) {
+                    if (k % (m / n) == 0) continue;
+                    const double a = T.h0 + (k + 0.5) * TAU / m;
+                    line({std::sin(a) * r, std::cos(a) * r}, {std::sin(a) * std::min(r + S, r1 + 2), std::cos(a) * std::min(r + S, r1 + 2)}, SR_STREET, age, r0, r1, amp);
+                }
         }
     }
     // rings close together, joined by short ways from ring to ring (offset as in a maze), and a few main ways through
@@ -177,11 +188,17 @@ struct Net {
             arc(r, T.h0, T.h0 + TAU, ring % 3 == 2 ? SR_MAIN : SR_STREET, age, r0, r1, amp);
             const int links = clampi((int)(TAU * r / (3.2 * S)), 3, 24);
             const double off = rng.uni() * TAU;
-            for (int k = 0; k < links; k++) { const double a = off + k * TAU / links; line({std::sin(a) * prevR, std::cos(a) * prevR}, {std::sin(a) * r, std::cos(a) * r}, SR_LANE, age, r0 - 1, r1, 0); }
+            for (int k = 0; k < links; k++) {
+                const double a = off + k * TAU / links;
+                line({std::sin(a) * prevR, std::cos(a) * prevR}, {std::sin(a) * r, std::cos(a) * r}, SR_LANE, age, r0 - 1, r1, 0);
+            }
             prevR = r;
         }
         const int links = clampi((int)(TAU * r1 / (3.2 * S)), 3, 24);
-        for (int k = 0; k < links && prevR < r1 - 4; k++) { const double a = rng.uni() * TAU; line({std::sin(a) * prevR, std::cos(a) * prevR}, {std::sin(a) * (r1 + 2), std::cos(a) * (r1 + 2)}, SR_LANE, age, r0 - 1, r1, 0); }
+        for (int k = 0; k < links && prevR < r1 - 4; k++) {
+            const double a = rng.uni() * TAU;
+            line({std::sin(a) * prevR, std::cos(a) * prevR}, {std::sin(a) * (r1 + 2), std::cos(a) * (r1 + 2)}, SR_LANE, age, r0 - 1, r1, 0);
+        }
     }
     // an organic web: lanes branching from the streets laid at angles of their own, wandering, stopping short of another street or the edge
     void organic(int age, double r0, double r1, double S) {
@@ -246,7 +263,12 @@ struct Net {
             const double half = std::sqrt(std::max(0.0, r1 * r1 - u * u)) + 2;
             const int rank = k == 0 ? SR_MAIN : (big ? SR_STREET : SR_LANE);
             line(at(u, -half), at(u, half), rank, age, r0, r1, amp);
-            if (!big) { for (int s = -1; s <= 1; s += 2) { const double ub = s * S * 0.95, hb = std::sqrt(std::max(0.0, r1 * r1 - ub * ub)); line(at(ub, -hb), at(ub, hb), SR_LANE, age, r0, r1, amp); } }
+            if (!big) {
+                for (int s = -1; s <= 1; s += 2) {
+                    const double ub = s * S * 0.95, hb = std::sqrt(std::max(0.0, r1 * r1 - ub * ub));
+                    line(at(ub, -hb), at(ub, hb), SR_LANE, age, r0, r1, amp);
+                }
+            }
         }
         // the cross ways: rare (up the slope on the contour: stairs), staggered
         const double cs = S * (contour ? 2.6 : 3.2);
@@ -394,7 +416,14 @@ void townStreets(const TownSpec& T, std::vector<Street>& streets, std::vector<Pl
                 const Street& s = streets[i];
                 if (s.rank >= SR_MAIN) { keep.push_back(s); continue; }
                 double t[4]; const int ni = clipRing(s.ax, s.az, s.bx, s.bz, 0, inner - s.half, t);
-                for (int q = 0; q < ni; q++) { Street c = s; c.ax = s.ax + (s.bx - s.ax) * t[2 * q]; c.az = s.az + (s.bz - s.az) * t[2 * q]; c.bx = s.ax + (s.bx - s.ax) * t[2 * q + 1]; c.bz = s.az + (s.bz - s.az) * t[2 * q + 1]; keep.push_back(c); }
+                for (int q = 0; q < ni; q++) {
+                    Street c = s;
+                    c.ax = s.ax + (s.bx - s.ax) * t[2 * q];
+                    c.az = s.az + (s.bz - s.az) * t[2 * q];
+                    c.bx = s.ax + (s.bx - s.ax) * t[2 * q + 1];
+                    c.bz = s.az + (s.bz - s.az) * t[2 * q + 1];
+                    keep.push_back(c);
+                }
             }
             streets.swap(keep);
             N.arc(inner - streetHalf(SR_STREET, L.age) - 0.5, 0, TAU, SR_STREET, L.age, 0, T.R + 4, 0);

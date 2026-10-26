@@ -120,7 +120,15 @@ static int grammarEngineCases(std::string& detail) {
     for (const std::string& e : G.errors) { bad++; detail += "test grammar: " + e + "; "; }
     GrammarTestModel M;
     M.facts = {"1", "industrial", "1", "2", "12", "212"};
-    auto person = [](const char* name, const char* first, int gender, bool shown, const char* later = "") { VgEntity e; e.name = name; e.first = first; e.gender = gender; e.shown = shown; e.later = later; return e; };
+    auto person = [](const char* name, const char* first, int gender, bool shown, const char* later = "") {
+        VgEntity e;
+        e.name = name;
+        e.first = first;
+        e.gender = gender;
+        e.shown = shown;
+        e.later = later;
+        return e;
+    };
     M.entities = {person("Aiwya", "", VG_SHE, false), person("", "my father", VG_HE, true), person("", "the boatmen", VG_THEY, true), person("Kerro", "", VG_HE, false),
                   person("Taro", "", VG_SHE, false), person("Ilse", "", VG_SHE, false), person("", "a stranger", VG_HE, false, "the stranger"), person("", "my mother", VG_SHE, true)};
     M.entities[3].person = 1; M.entities[4].person = 2;
@@ -191,7 +199,9 @@ static int grammarEngineCases(std::string& detail) {
         int counts[VC_COUNT] = {};
         vgCheck(G, R, 1, counts, nullptr);
         if (counts[VC_DOUBLED] != 1 || counts[VC_PLURAL] != 1 || counts[VC_AGREEMENT] != 1 || counts[VC_ANACHRONISM] != 1 || counts[VC_ARTICLE] != 0) {
-            bad++; detail += fmt("the checks on planted faults: doubled %d, plural %d, agreement %d, anachronism %d, article %d (want 1 1 1 1 0); ", counts[VC_DOUBLED], counts[VC_PLURAL], counts[VC_AGREEMENT], counts[VC_ANACHRONISM], counts[VC_ARTICLE]);
+            bad++;
+            detail += fmt("the checks on planted faults: doubled %d, plural %d, agreement %d, anachronism %d, article %d (want 1 1 1 1 0); ", counts[VC_DOUBLED], counts[VC_PLURAL],
+                    counts[VC_AGREEMENT], counts[VC_ANACHRONISM], counts[VC_ARTICLE]);
         }
     }
     detail = fmt("%d cases, the broken grammar, the planted faults: %s", n, bad ? detail.c_str() : "all as written");
@@ -270,7 +280,10 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
             R.failures.push_back(fmt("%s S%zu (%s, %s): %s\n      %s", b.name.c_str(), i, VG_AGES[std::max(0, x.age)], gname.c_str(), why[0].c_str(), x.text.c_str()));
         if (H) for (const std::string& nm : x.rec.names) {   // every name the history's (or the lore's) at the record's year
             R.namesTold++;
-            if (!recordNameKnown(*H, L, x.year, nm)) { R.namesBad++; if (R.failures.size() < 5000) R.failures.push_back(fmt("%s S%zu (%s): the name '%s' is not the history's in year %d", b.name.c_str(), i, gname.c_str(), nm.c_str(), x.year)); }
+            if (!recordNameKnown(*H, L, x.year, nm)) {
+                R.namesBad++;
+                if (R.failures.size() < 5000) R.failures.push_back(fmt("%s S%zu (%s): the name '%s' is not the history's in year %d", b.name.c_str(), i, gname.c_str(), nm.c_str(), x.year));
+            }
         }
         if (out) {
             std::string t = x.text; for (size_t k = 0; k < t.size(); k++) if (t[k] == '\n') t.replace(k, 1, "\n                                        ");
@@ -296,7 +309,8 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
             R.charts++;
             for (int a : rec.used) if (a >= 0 && a < (int)R.altUses.size()) R.altUses[a]++;
             std::vector<std::string> why;
-            if (vgCheck(*G, rec, T->items[i].age, R.counts, &why) && R.failures.size() < 5000) R.failures.push_back(fmt("%s S%zu (chart): %s\n      %s", b.name.c_str(), i, why[0].c_str(), rec.text.c_str()));
+            if (vgCheck(*G, rec, T->items[i].age, R.counts, &why) && R.failures.size() < 5000)
+                R.failures.push_back(fmt("%s S%zu (chart): %s\n      %s", b.name.c_str(), i, why[0].c_str(), rec.text.c_str()));
             if (out) fprintf(out, "%4zu  %-10s %-16s y%-5d %3dw  %s\n", i, VG_AGES[std::max(0, T->items[i].age)], "star chart", T->items[i].year, shardWords(rec.text), rec.text.c_str());
         }
     }
@@ -311,7 +325,12 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
         R.peopleFrames.push_back(fr);
         for (const ShardText& x : T->items) R.retries += x.rec.retries;
     }
-    auto measure = [&](size_t n) { std::vector<std::string> t(texts.begin(), texts.begin() + std::min(n, texts.size())); std::vector<const std::vector<std::string>*> f; for (size_t k = 0; k < t.size(); k++) f.push_back(&forms[k]); return vgMeasure(t, &f); };
+    auto measure = [&](size_t n) {
+        std::vector<std::string> t(texts.begin(), texts.begin() + std::min(n, texts.size()));
+        std::vector<const std::vector<std::string>*> f;
+        for (size_t k = 0; k < t.size(); k++) f.push_back(&forms[k]);
+        return vgMeasure(t, &f);
+    };
     if (texts.size() >= 50) { VgMeasure m = measure(50); R.rep50 += m.longS ? 100.0 * m.longRep / m.longS : 0; R.dist50 += m.longS ? 100.0 * m.distinct / m.longS : 0; R.n50++; }
     if (texts.size() >= 100) { VgMeasure m = measure(100); R.rep100 += m.longS ? 100.0 * m.longRep / m.longS : 0; R.n100++; }
     VgMeasure all = measure(texts.size()); R.repAll += all.longS ? 100.0 * all.longRep / all.longS : 0; R.d2sum += all.d2; R.d3sum += all.d3;
@@ -332,7 +351,9 @@ static bool grammarPeople(const GrammarWorld& w, GrammarRun& R, FILE* out, int p
 void grammarChecks(const std::function<void(const char*, bool, const std::string&)>& check) {
     {
         std::string detail; int bad = grammarEngineCases(detail);
-        check("grammar engine: pronouns where clear, verbs by tense and person, numbers with their nouns, plurals, a and an, attributes passed up, once, keep, guards, a directive, a path, a person brought in, I and you (H-03)", bad == 0, detail);
+        check("grammar engine: pronouns where clear, verbs by tense and person, numbers with their nouns, plurals, a and an, attributes passed up, once, keep, guards, a directive, a path, a person "
+              "brought in, I and you (H-03)",
+                bad == 0, detail);
     }
     {   // the compiled-in grammar: parsed and linked without an error, the tree's files the same text (E-09: each one read, so a
         // folder moved fails rather than comparing nothing)
@@ -348,9 +369,10 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
             if (strlen(shardGrammarSource(i)) > biggest) { biggest = strlen(shardGrammarSource(i)); biggestName = names[i]; }
         }
         int alts = (int)G->alts.size(), rules = (int)G->rules.size();
-        check("grammar: the records' genres as .vg files, compiled in, linked without an error, the tree's copy the same, each under 16 KB (H-03, H-04)", G->errors.empty() && read == nf && same == read && shardKindCount() >= 60 && biggest < 16000,
-              fmt("%d files, %d rules, %d alternatives, %d genres' alternatives; %zu errors%s; %d of %d files in the tree the same as compiled in; the largest %s, %zu bytes", nf, rules, alts, shardKindCount(), G->errors.size(),
-                  G->errors.empty() ? "" : (": " + G->errors[0]).c_str(), same, read, biggestName.c_str(), biggest));
+        check("grammar: the records' genres as .vg files, compiled in, linked without an error, the tree's copy the same, each under 16 KB (H-03, H-04)",
+                G->errors.empty() && read == nf && same == read && shardKindCount() >= 60 && biggest < 16000,
+                fmt("%d files, %d rules, %d alternatives, %d genres' alternatives; %zu errors%s; %d of %d files in the tree the same as compiled in; the largest %s, %zu bytes", nf, rules, alts,
+                        shardKindCount(), G->errors.size(), G->errors.empty() ? "" : (": " + G->errors[0]).c_str(), same, read, biggestName.c_str(), biggest));
     }
     {   // H-04's second pass: every .vg in the tree compiled in (the harness reads a new file from disk before the build lists it);
         // and every one compiled in found there, so an empty or missing folder fails; E-11: the loader's list, its folders walked
@@ -410,8 +432,10 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
         int present = 0; std::string list;
         for (int k = HE_FAIR; k <= HE_VISIT; k++) { if (kinds[k]) present++; list += fmt("%s %d, ", HISTORY_EVENT_NAMES[k], kinds[k]); }
         for (int k = HE_ILLNESS; k <= HE_BETROTHAL; k++) { if (kinds[k]) present++; list += fmt("%s %d, ", HISTORY_EVENT_NAMES[k], kinds[k]); }
-        check("history: the everyday of the quiet years and of the families, the twenty-one kinds over the test worlds' peoples, each at a place standing, its persons alive, the families' private (H-04's second pass)",
-              present == (HE_VISIT - HE_FAIR + 1) + (HE_BETROTHAL - HE_ILLNESS + 1) && bad == 0, fmt("%d everyday events of %d (%s); %d out of place%s", total, events, list.c_str(), bad, firstBad.empty() ? "" : (": " + firstBad).c_str()));
+        check("history: the everyday of the quiet years and of the families, the twenty-one kinds over the test worlds' peoples, each at a place standing, its persons alive, the families' private "
+              "(H-04's second pass)",
+                present == (HE_VISIT - HE_FAIR + 1) + (HE_BETROTHAL - HE_ILLNESS + 1) && bad == 0,
+                fmt("%d everyday events of %d (%s); %d out of place%s", total, events, list.c_str(), bad, firstBad.empty() ? "" : (": " + firstBad).c_str()));
     }
     {   // the records of the test worlds' peoples (the C series' two, the world of two peoples, the six age worlds): every check at zero, every name
         // the history's at the record's year, each age's genres told, one event from several sides, the same twice and alone, the cost
@@ -431,16 +455,20 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
             for (int i : {0, 7, 30, 60, 110}) if (i < (int)a.size()) { Shard x = shardOf(sys, b, g, L, i); if (x.text != a[i].text || x.kind != a[i].kind) alone = false; }
         }
         check("records: every check at zero over every record of the test worlds' peoples, every name the history's at its year (H-04: no anachronism, no unknown place or figure)",
-              fails == 0 && R.namesBad == 0 && R.texts >= 600 && determ && alone,
-              fmt("%d peoples, %d records, %d texts; %s; %d names written, %d not the history's; %s; %s", R.peoples, R.records, R.texts, fails ? counts.c_str() : "no mark left, no diagnostic, no doubled word, no wrong article, none before a plural, no pronoun against its verb, every sentence capitalised, the spaces clean, every length within its genre's, no anachronism",
-                  R.namesTold, R.namesBad, determ ? "the same twice" : "NOT the same twice", alone ? "a record alone the same as in its catalogue" : "a record alone DIFFERS"));
+                fails == 0 && R.namesBad == 0 && R.texts >= 600 && determ && alone,
+                fmt("%d peoples, %d records, %d texts; %s; %d names written, %d not the history's; %s; %s", R.peoples, R.records, R.texts,
+                        fails ? counts.c_str()
+                              : "no mark left, no diagnostic, no doubled word, no wrong article, none before a plural, no pronoun against its verb, every sentence capitalised, the spaces clean, "
+                                "every length within its genre's, no anachronism",
+                        R.namesTold, R.namesBad, determ ? "the same twice" : "NOT the same twice", alone ? "a record alone the same as in its catalogue" : "a record alone DIFFERS"));
         if (!R.failures.empty()) check("records: the first failure", false, R.failures[0]);
         int ages = 0; for (int a = 0; a < AGE_COUNT; a++) if (R.byAge[a] > 0) ages++;
         int genres = 0; for (const auto& kv : R.genres) if (kv.second.n > 0) genres++;
         double usMean = R.texts ? R.usSum / R.texts : 0;
         check("records: the genres of every age told, one event from several sides, the cost (H-04: a text under 100 us)", ages == AGE_COUNT && genres >= 50 && R.sidesEvents >= 10 && usMean < 100,
-              fmt("texts of %d ages, %d genres told on the %d peoples; %d events told in two genres or more; a text %.1f us on average (%.0f at most), a people's texts %.1f ms on average with its history (%.1f at most); %d words a text (%d-%d)",
-                  ages, genres, R.peoples, R.sidesEvents, usMean, R.usMax, R.peoples ? R.msSum / R.peoples : 0.0, R.msMax, R.texts ? (int)(R.words / R.texts) : 0, R.minW, R.maxW));
+                fmt("texts of %d ages, %d genres told on the %d peoples; %d events told in two genres or more; a text %.1f us on average (%.0f at most), a people's texts %.1f ms on average with its "
+                    "history (%.1f at most); %d words a text (%d-%d)",
+                        ages, genres, R.peoples, R.sidesEvents, usMean, R.usMax, R.peoples ? R.msSum / R.peoples : 0.0, R.msMax, R.texts ? (int)(R.words / R.texts) : 0, R.minW, R.maxW));
     }
     {   // the test drifters' peoples' records (the Reimempel, medieval; the Ghaiwuwutxu and the Ainyiny, modern): every check at zero, every name
         // the history's at its year, their own genres told
@@ -454,10 +482,16 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
         for (int k = 0; k < VC_COUNT; k++) { fails += R.counts[k]; if (R.counts[k]) counts += fmt("%s %d, ", VG_CHECK_NAMES[k], R.counts[k]); }
         static const char* const OWN[] = {"omens", "sunmyth", "sunmeasure", "sunletter", "daycount", "deephalls", "sunlesson", "lastbroadcast"};
         int told = 0; std::string list;
-        for (const char* gname : OWN) { auto it = R.genres.find(gname); const int n = it == R.genres.end() ? 0 : it->second.n; if (n) told++; list += fmt("%s%s %d", list.empty() ? "" : ", ", gname, n); }
+        for (const char* gname : OWN) {
+            auto it = R.genres.find(gname);
+            const int n = it == R.genres.end() ? 0 : it->second.n;
+            if (n) told++;
+            list += fmt("%s%s %d", list.empty() ? "" : ", ", gname, n);
+        }
         check("records of the lost sun: the test drifters' peoples, every check at zero, every name the history's, their own genres told (D-05)",
-              R.peoples == 3 && fails == 0 && R.namesBad == 0 && told == (int)(sizeof(OWN) / sizeof(OWN[0])),
-              fmt("%d peoples, %d records, %d texts; %s; %d names, %d not the history's; their genres: %s", R.peoples, R.records, R.texts, fails ? counts.c_str() : "every check at zero", R.namesTold, R.namesBad, list.c_str()));
+                R.peoples == 3 && fails == 0 && R.namesBad == 0 && told == (int)(sizeof(OWN) / sizeof(OWN[0])),
+                fmt("%d peoples, %d records, %d texts; %s; %d names, %d not the history's; their genres: %s", R.peoples, R.records, R.texts, fails ? counts.c_str() : "every check at zero",
+                        R.namesTold, R.namesBad, list.c_str()));
         if (!R.failures.empty()) check("records of the lost sun: the first failure", false, R.failures[0]);
     }
     {   // no other people's records moved: the age and scene worlds' peoples (their histories, record catalogues and homes, every text, their
@@ -476,14 +510,19 @@ void grammarChecks(const std::function<void(const char*, bool, const std::string
                 peoples++;
                 std::shared_ptr<const History> H = historyOf(sys, b, g, k);
                 if (H) { HistoryEvent* none = nullptr; (void)none; uint64_t hh = 0xD05A15ULL;   // D-04's event numbers (HE_SUN came before the families' kinds)
-                         for (const HistoryEvent& e : H->events) hh = mix64(hh ^ (uint64_t)(e.kind > HE_SUN ? e.kind - 1 : e.kind) ^ ((uint64_t)e.year << 20) ^ ((uint64_t)(e.place + 1) << 40) ^ ((uint64_t)(e.a + 1) << 52));
-                         h = hashCombine(h, hh); }
+                    for (const HistoryEvent& e : H->events)
+                        hh = mix64(hh ^ (uint64_t)(e.kind > HE_SUN ? e.kind - 1 : e.kind) ^ ((uint64_t)e.year << 20) ^ ((uint64_t)(e.place + 1) << 40) ^ ((uint64_t)(e.a + 1) << 52));
+                    h = hashCombine(h, hh); }
                 std::shared_ptr<const RecordCatalogue> C = recordsOf(g, k);
-                if (C) for (const RecordEntry& e : C->entries) h = hashCombine(h, mix64((uint64_t)e.year * 31 + (uint64_t)e.age * 7 + (uint64_t)e.category * 3 + (uint64_t)e.medium + (uint64_t)e.last * 1000003ULL));
+                if (C)
+                    for (const RecordEntry& e : C->entries)
+                        h = hashCombine(h, mix64((uint64_t)e.year * 31 + (uint64_t)e.age * 7 + (uint64_t)e.category * 3 + (uint64_t)e.medium + (uint64_t)e.last * 1000003ULL));
                 std::shared_ptr<const RecordHomes> RH = recordHomesOf(g, k);
                 if (RH) for (int r : RH->rank) h = hashCombine(h, (uint64_t)(r + 7));
                 const Lore L = loreOf(sys, b, g, k);
-                for (const ChartMark& m : L.marks) h = hashCombine(h, mix64((uint64_t)m.star.sx * 73856093ULL ^ (uint64_t)m.star.sy * 19349663ULL ^ (uint64_t)m.star.sz * 83492791ULL ^ (uint64_t)(m.body + 2) ^ ((uint64_t)m.how << 40)));
+                for (const ChartMark& m : L.marks)
+                    h = hashCombine(
+                            h, mix64((uint64_t)m.star.sx * 73856093ULL ^ (uint64_t)m.star.sy * 19349663ULL ^ (uint64_t)m.star.sz * 83492791ULL ^ (uint64_t)(m.body + 2) ^ ((uint64_t)m.how << 40)));
                 std::shared_ptr<const ShardTexts> T = shardTextsOf(sys, b, g, L);
                 if (T) for (const ShardText& t : T->items) { h = hashCombine(h, fnv1a(t.text)); texts++; }
             }
@@ -511,7 +550,9 @@ static void printAgeRecords() {
         const std::string path = "shots/tests/records_" + agename + ".txt";
         FILE* f = fopen(path.c_str(), "w"); if (!f) continue;
         fprintf(f, "THE RECORDS OF THE %s (%s), %s\n", L.people.c_str(), AGE_NAMES[a], b.name.c_str());
-        if (H) fprintf(f, "%d records in all, their years 1 to %d; the collapse (%s) from year %d. The first fifty texts by their index:\n\n", L.records, H->last, CAUSE_NAMES[std::max(0, std::min(CAUSE_COUNT - 1, H->cause))], H->stageYear[0]);
+        if (H)
+            fprintf(f, "%d records in all, their years 1 to %d; the collapse (%s) from year %d. The first fifty texts by their index:\n\n", L.records, H->last,
+                    CAUSE_NAMES[std::max(0, std::min(CAUSE_COUNT - 1, H->cause))], H->stageYear[0]);
         int n = 0, words = 0; std::map<std::string, int> byGenre;
         for (size_t i = 0; i < T->items.size() && n < 50; i++) {
             const ShardText& x = T->items[i];
@@ -566,7 +607,13 @@ static std::string oldStyleName(int style, uint64_t seed) {   // C-02's `personN
 double nameClassify(const std::vector<std::vector<std::string>>& names) {
     const int P = (int)names.size();
     std::vector<std::map<std::string, int>> tri(P); std::vector<int> total(P, 0);
-    auto grams = [](const std::string& n) { std::string w = "^" + n + "$"; for (char& c : w) c = (char)std::tolower((unsigned char)c); std::vector<std::string> g; for (size_t i = 0; i + 3 <= w.size(); i++) g.push_back(w.substr(i, 3)); return g; };
+    auto grams = [](const std::string& n) {
+        std::string w = "^" + n + "$";
+        for (char& c : w) c = (char)std::tolower((unsigned char)c);
+        std::vector<std::string> g;
+        for (size_t i = 0; i + 3 <= w.size(); i++) g.push_back(w.substr(i, 3));
+        return g;
+    };
     for (int p = 0; p < P; p++) for (const std::string& n : names[p]) for (const std::string& g : grams(n)) { tri[p][g]++; total[p]++; }
     int right = 0, all = 0;
     for (int p = 0; p < P; p++) for (const std::string& n : names[p]) {
@@ -586,7 +633,8 @@ int runTongues(int argc, char** argv) {
     auto join = [](const std::vector<std::string>& v) { std::string r; for (const std::string& x : v) { if (!r.empty()) r += " "; r += x; } return r; };
     const std::vector<NearPeople> near = peoplesNearHome(want);
     std::vector<std::vector<std::string>> fresh, old;
-    printf("the tongues of the %zu peoples nearest home (the people, its god, river, mountain, sea, capital, second city, founder, moon, star, festival; then persons, families, places):\n", near.size());
+    printf("the tongues of the %zu peoples nearest home (the people, its god, river, mountain, sea, capital, second city, founder, moon, star, festival; then persons, families, places):\n",
+            near.size());
     for (const NearPeople& np : near) {
         Star st; starInSector(np.x, np.y, np.z, st, true); StarSystem sys; sys.generate(st);
         const Body& b = sys.bodies[np.body]; const BodyGen g = BodyGen::make(b);
@@ -594,9 +642,11 @@ int runTongues(int argc, char** argv) {
         const Tongue& T = tongueOfSeed(L.seed);
         std::vector<std::string> mine, theirs;
         printf("\n%s (%s): the %s; %s consonants [%s], vowels [%s], shapes [%s]%s%s, joined '%s'%s\n", np.world.c_str(), AGE_NAMES[std::max(0, std::min(AGE_COUNT - 1, np.age))], L.people.c_str(),
-               T.inventory.c_str(), join(T.cons).c_str(), join(T.vows).c_str(), join(T.shapes).c_str(), T.gem > 0 ? ", doubling" : "",
-               T.femEnd.empty() ? "" : (", -" + T.femEnd + " her, -" + (T.mascEnd.empty() ? std::string("") : T.mascEnd) + " him").c_str(), T.joiner.c_str(), T.genericFirst ? ", the generic first" : "");
-        printf("  %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s\n", L.people.c_str(), L.god.c_str(), L.river.c_str(), L.mountain.c_str(), L.sea.c_str(), L.city.c_str(), L.city2.c_str(), L.founder.c_str(), L.moon.c_str(), L.star.c_str(), L.festival.c_str());
+                T.inventory.c_str(), join(T.cons).c_str(), join(T.vows).c_str(), join(T.shapes).c_str(), T.gem > 0 ? ", doubling" : "",
+                T.femEnd.empty() ? "" : (", -" + T.femEnd + " her, -" + (T.mascEnd.empty() ? std::string("") : T.mascEnd) + " him").c_str(), T.joiner.c_str(),
+                T.genericFirst ? ", the generic first" : "");
+        printf("  %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s\n", L.people.c_str(), L.god.c_str(), L.river.c_str(), L.mountain.c_str(), L.sea.c_str(), L.city.c_str(), L.city2.c_str(),
+                L.founder.c_str(), L.moon.c_str(), L.star.c_str(), L.festival.c_str());
         std::string persons, families, places;
         for (int i = 0; i < 60; i++) {
             const std::string n = tongueName(T, mix64(L.seed ^ (0x77A0ULL + i)), TN_PERSON, i & 1);
@@ -614,13 +664,24 @@ int runTongues(int argc, char** argv) {
                tongueTerm(T, "beast").c_str(), tongueTerm(T, "feast").c_str(), tongueWord(T, "river").c_str(), tongueWord(T, "remember").c_str());
         fresh.push_back(mine); old.push_back(theirs);
         {   // the decoder's words: none without a vowel
-            static const char* const W[] = {"write", "written", "the", "and", "river", "remember", "year", "king", "house", "mother", "bread", "water", "go", "come", "a", "of", "to", "in", "it", "is"};
+            static const char* const W[] = {
+                    "write", "written", "the", "and", "river", "remember", "year", "king", "house", "mother", "bread", "water", "go", "come", "a", "of", "to", "in", "it", "is"};
             int bad = 0; std::string ex;
-            for (const char* w : W) { const std::string t = tongueWord(T, w); bool v = false; for (char c : t) if (strchr("aeiouy", c)) v = true; if (!v) { bad++; ex += " " + std::string(w) + "=" + t; } }
+            for (const char* w : W) {
+                const std::string t = tongueWord(T, w);
+                bool v = false;
+                for (char c : t)
+                    if (strchr("aeiouy", c)) v = true;
+                if (!v) {
+                    bad++;
+                    ex += " " + std::string(w) + "=" + t;
+                }
+            }
             if (bad) printf("  DECODER WORDS WITHOUT A VOWEL: %d:%s\n", bad, ex.c_str());
         }
     }
-    printf("\na held-out name told its people (of %zu) from its letters: %.1f%% (C-02's names, one generator in three styles: %.1f%%; chance %.1f%%)\n", near.size(), nameClassify(fresh), nameClassify(old), 100.0 / std::max<size_t>(1, near.size()));
+    printf("\na held-out name told its people (of %zu) from its letters: %.1f%% (C-02's names, one generator in three styles: %.1f%%; chance %.1f%%)\n", near.size(), nameClassify(fresh),
+            nameClassify(old), 100.0 / std::max<size_t>(1, near.size()));
     return 0;
 }
 
@@ -818,7 +879,13 @@ void wherePrefix(const GrammarIndex& X, const std::string& query) {
     }
     std::vector<std::string> cl; for (const auto& kv : calls) cl.push_back(fmt("%s (%d)", kv.first.c_str(), kv.second));
     if (!cl.empty()) printList("the directive calls whose names the C++ builds here (genres.cpp; `grammar where` for their patterns):", cl);
-    std::vector<std::string> rl; for (int k = 0; k < (int)X.roots.size(); k++) for (int r : hit) if (rootCovers(X.roots[k], G.rules[r].name)) { rl.push_back("@root " + X.roots[k] + " " + X.rootAt[k]); break; }
+    std::vector<std::string> rl;
+    for (int k = 0; k < (int)X.roots.size(); k++)
+        for (int r : hit)
+            if (rootCovers(X.roots[k], G.rules[r].name)) {
+                rl.push_back("@root " + X.roots[k] + " " + X.rootAt[k]);
+                break;
+            }
     if (!rl.empty()) printList("its roots:", rl);
 }
 
@@ -1009,21 +1076,24 @@ int runGrammar(int argc, char** argv) {
         const int np = std::max(1, peoplesOf(BodyGen::make(ds.bodies[0])));
         for (int k = 0; k < np; k++) W.push_back({d.sx, d.sy, d.sz, 0, k});
     }
-    printf("the peoples (%zu: the test worlds, the age worlds, the nearest %d to home%s%s):\n", W.size(), near, late > 0 ? fmt(", the nearest %d of the modern age and later", late).c_str() : "", rogues ? ", the drifters' peoples" : "");
+    printf("the peoples (%zu: the test worlds, the age worlds, the nearest %d to home%s%s):\n", W.size(), near, late > 0 ? fmt(", the nearest %d of the modern age and later", late).c_str() : "",
+            rogues ? ", the drifters' peoples" : "");
     FILE* out = fopen(textsOut.c_str(), "w");
     for (const GrammarWorld& w : W) grammarPeople(w, R, out, print);
     if (out) fclose(out);
     int fails = 0; for (int k = 0; k < VC_COUNT; k++) fails += R.counts[k];
     fails += R.namesBad;
-    printf("%d peoples, %d records, %d texts and %d star charts' captions, %ld words (every text in %s) in %.1f s\n", R.peoples, R.records, R.texts, R.charts, R.words, textsOut.c_str(), nowSec() - t0);
+    printf("%d peoples, %d records, %d texts and %d star charts' captions, %ld words (every text in %s) in %.1f s\n", R.peoples, R.records, R.texts, R.charts, R.words, textsOut.c_str(),
+            nowSec() - t0);
     printf("  the texts by age:"); for (int a = 0; a < AGE_COUNT; a++) printf(" %s %d%s", AGE_NAMES[a], R.byAge[a], a + 1 < AGE_COUNT ? "," : "\n");
     printf("the checks over the %d texts and captions:", R.texts + R.charts);
     for (int k = 0; k < VC_COUNT; k++) printf("%s %s %d", k ? "," : "", VG_CHECK_NAMES[k], R.counts[k]);
     printf("; names not the history's at the record's year %d of %d\n", R.namesBad, R.namesTold);
     for (const std::string& f : R.failures) printf("  FAIL %s\n", f.c_str());
-    printf("the measures (the genres' formulas left out): sentences of six words or more on a repeated frame (names and numbers masked): %.1f%% at a people's first 50 texts (%d peoples; %.1f%% of them written once word for word), %.1f%% at 100 (%d), %.1f%% over a people's all; distinct 2/3-grams %.2f %.2f\n",
-           R.n50 ? R.rep50 / R.n50 : 0.0, R.n50, R.n50 ? R.dist50 / R.n50 : 0.0, R.n100 ? R.rep100 / R.n100 : 0.0, R.n100, R.peoples ? R.repAll / R.peoples : 0.0,
-           R.peoples ? R.d2sum / R.peoples : 0.0, R.peoples ? R.d3sum / R.peoples : 0.0);
+    printf("the measures (the genres' formulas left out): sentences of six words or more on a repeated frame (names and numbers masked): %.1f%% at a people's first 50 texts (%d peoples; %.1f%% of "
+           "them written once word for word), %.1f%% at 100 (%d), %.1f%% over a people's all; distinct 2/3-grams %.2f %.2f\n",
+            R.n50 ? R.rep50 / R.n50 : 0.0, R.n50, R.n50 ? R.dist50 / R.n50 : 0.0, R.n100 ? R.rep100 / R.n100 : 0.0, R.n100, R.peoples ? R.repAll / R.peoples : 0.0,
+            R.peoples ? R.d2sum / R.peoples : 0.0, R.peoples ? R.d3sum / R.peoples : 0.0);
     {   // H-04's second pass: how much of a people's writing another people wrote too
         std::unordered_map<std::string, std::set<int>> owners;
         for (size_t p = 0; p < R.peopleFrames.size(); p++) for (const std::string& f : R.peopleFrames[p]) owners[f].insert((int)p);
@@ -1033,8 +1103,9 @@ int runGrammar(int argc, char** argv) {
             int sh = 0; for (const std::string& f : R.peopleFrames[p]) if (owners[f].size() > 1) sh++;
             shared += 100.0 * sh / R.peopleFrames[p].size(); n++; allS += (long)R.peopleFrames[p].size(); allShared += sh;
         }
-        printf("one people against the others: %.1f%% of a people's sentences of six words or more (its first hundred texts) are on a frame another people wrote too (%ld of %ld); the engine drew %d rules again for a repeated frame\n",
-               n ? shared / n : 0.0, allShared, allS, R.retries);
+        printf("one people against the others: %.1f%% of a people's sentences of six words or more (its first hundred texts) are on a frame another people wrote too (%ld of %ld); the engine drew %d "
+               "rules again for a repeated frame\n",
+                n ? shared / n : 0.0, allShared, allS, R.retries);
         std::vector<std::pair<int, std::string>> wide;
         for (const auto& kv : owners) if (kv.second.size() >= 3) wide.push_back({(int)kv.second.size(), kv.first});
         std::sort(wide.begin(), wide.end(), [](const std::pair<int, std::string>& a, const std::pair<int, std::string>& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
@@ -1093,8 +1164,10 @@ int runGrammar(int argc, char** argv) {
             if (p.texts.size() >= 100) { VgMeasure x = m(100); r100 += x.longS ? 100.0 * x.longRep / x.longS : 0; n100++; }
             VgMeasure x = m(p.texts.size()); rAll += x.longS ? 100.0 * x.longRep / x.longS : 0; nAll++; texts += x.texts; w += x.words; g2 += x.d2; g3 += x.d3;
         }
-        printf("C-02's texts (%s): %d peoples, %d texts, %.0f words a text; repeated frames %.1f%% at 50 (%d peoples; %.1f%% written once word for word), %.1f%% at 100 (%d), %.1f%% over all; distinct 2/3-grams %.2f %.2f\n",
-               compareWith.c_str(), nAll, texts, texts ? w / texts : 0.0, n50 ? r50 / n50 : 0.0, n50, n50 ? d50 / n50 : 0.0, n100 ? r100 / n100 : 0.0, n100, nAll ? rAll / nAll : 0.0, nAll ? g2 / nAll : 0.0, nAll ? g3 / nAll : 0.0);
+        printf("C-02's texts (%s): %d peoples, %d texts, %.0f words a text; repeated frames %.1f%% at 50 (%d peoples; %.1f%% written once word for word), %.1f%% at 100 (%d), %.1f%% over all; "
+               "distinct 2/3-grams %.2f %.2f\n",
+                compareWith.c_str(), nAll, texts, texts ? w / texts : 0.0, n50 ? r50 / n50 : 0.0, n50, n50 ? d50 / n50 : 0.0, n100 ? r100 / n100 : 0.0, n100, nAll ? rAll / nAll : 0.0,
+                nAll ? g2 / nAll : 0.0, nAll ? g3 / nAll : 0.0);
     }
     printf("the cost: a text %.1f us on average (%.0f at most), a people's texts %.1f ms on average (%.1f at most), the grammar read in %.2f ms\n",
            R.texts ? R.usSum / R.texts : 0.0, R.usMax, R.peoples ? R.msSum / R.peoples : 0.0, R.msMax, G->parseMs);

@@ -81,7 +81,8 @@ void groundRocky(GroundCtx& c) {
         h -= tec.rift * 900.0 * (0.5 + 0.5 * std::fabs(c.fb(50.0, g.sA + 3, 3)));
         h += tec.ridge * 500.0 * std::fabs(c.rg(35.0, g.sA + 4, 5));
     }
-    double zone = clampd(smoothstep(0.3, 0.7, creaseL) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);   // creased ridges (the 20 km crease, the 4 km hills and the detail are gone)
+    // creased ridges (the 20 km crease, the 4 km hills and the detail are gone)
+    double zone = clampd(smoothstep(0.3, 0.7, creaseL) + 0.7 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.6 * zone);
     ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf));   // the relief spectrum, the cliffs and plains (O6-04), the traits' landforms
     if (scaleVisible(R * 0.3, detailM)) h += domeField(p, R, R * 0.3, 0.2, g.sD + 7, 0.4, 900.0, 0.6) * lodFade(R * 0.3, detailM);   // old shield volcanoes
     if (scaleVisible(0.25, detailM)) h += domeField(p, R, 0.25, g.boulderDensity, g.sD, 0.16, 14.0, 0.0);
@@ -95,7 +96,14 @@ void groundRocky(GroundCtx& c) {
 
 // P-00: thin air: canyons, shield volcanoes and their dark plains, dune seas, dry valleys, ice caps (thin-atmosphere worlds)
 void groundThinAir(GroundCtx& c) {
-    const BodyGen& g = c.g; const Vec3& unit = c.unit; const Vec3& p = c.p; SurfaceSample& s = c.s; CraterMarks& cm = c.cm; const double& rimBright = c.cm.rimBright; const Tectonics& tec = c.tec; DrainApply& DA = c.DA;
+    const BodyGen& g = c.g;
+    const Vec3& unit = c.unit;
+    const Vec3& p = c.p;
+    SurfaceSample& s = c.s;
+    CraterMarks& cm = c.cm;
+    const double& rimBright = c.cm.rimBright;
+    const Tectonics& tec = c.tec;
+    DrainApply& DA = c.DA;
     const double R = c.R, detailM = c.detailM, lat = c.lat, absLatDeg = c.absLatDeg, massif = c.massif, hillsF = c.hillsF;
     double base = c.fb(R * 0.5, g.sA, 5);
     double mtnL = c.rg(R * 0.14, g.sC, 2);
@@ -117,7 +125,8 @@ void groundThinAir(GroundCtx& c) {
     double shield = 0;
     if (scaleVisible(R * 0.35, detailM)) { shield = volcanoField(p, R, R * 0.35, 0.28, g.sD + 11, 1400.0, shieldCal) * lodFade(R * 0.35, detailM); h += shield; }
     c.craterStack(h);   // the kind's crater stack
-    if (h < 200) { const double share = smoothstep(200, -300, h); double lee = 0; h += duneField(p, g, lat, g.duneAmp, detailM, &lee) * share; s.slipFace = share * lee; }   // dune seas in the lowlands
+    // dune seas in the lowlands
+    if (h < 200) { const double share = smoothstep(200, -300, h); double lee = 0; h += duneField(p, g, lat, g.duneAmp, detailM, &lee) * share; s.slipFace = share * lee; }
     applyDrainage(g, unit, detailM, h, nullptr, rf.slope, false, false, 0.5, DA);   // the old valley networks, dry, with dust flats in the basins
     s.height = h;
     s.relief = clampd(relief0 + 0.5 * rf.slope, 0, 1);
@@ -267,7 +276,9 @@ void groundTectonic(GroundCtx& c) {
     double rift = smoothstep(11000.0, 7000.0, dRift);
     h += (hS - 800.0 - h) * rift;
     double lava = 0, fresh = 0;
-    if (rift > 0.5 && (scaleVisible(5.0, detailM) || matVisible(1.0, detailM))) {   // the fissures: trenches 30 m deep and 400 m wide on 5 km cells, lava along their axes (100 m), fresh basalt and sulphur crusts round them (1-1.3 km); B-404: each by its own width
+    if (rift > 0.5 && (scaleVisible(5.0, detailM) || matVisible(1.0, detailM))) {
+        // the fissures: trenches 30 m deep and 400 m wide on 5 km cells, lava along their axes (100 m), fresh basalt and sulphur crusts
+        // round them (1-1.3 km); B-404: each by its own width
         Worley3 fw = worley3(p / 5.0, g.sF + 6);
         double dm = (fw.f2 - fw.f1) * 2500.0;
         h -= 30.0 * smoothstep(220.0, 40.0, dm) * featFade(0.44, detailM);
@@ -301,7 +312,8 @@ void groundDesert(GroundCtx& c) {
     { double chainR = c.rg(40.0, g.sC + 2, 6); h += tec.chain * (chainR * chainR * g.chainAmp * 0.6) - tec.rift * 700.0 + tec.ridge * 300.0; }
     double zone = clampd(smoothstep(0.2, 0.7, base) + 0.6 * tec.chain, 0, 1), rel = zone * massif, hf = std::max(hillsF, 0.5 * zone);
     double relief0 = clampd(rel + 0.25 * hf, 0, 1);
-    double hRel, hS; ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf), &hRel, &hS, false);   // the skeleton without the cliff bands (the mesas terrace below); hS the smooth ground before the landforms
+    // the skeleton without the cliff bands (the mesas terrace below); hS the smooth ground before the landforms
+    double hRel, hS; ReliefSum rf = c.relief(h, rel, hf, reliefAmp(g, rel, hf), &hRel, &hS, false);
     double canyonN = c.rg(R * 0.3, g.sF, 2);
     double canyon = std::pow(clampd(canyonN, 0, 1), 8.0);
     h -= canyon * 900.0;
@@ -323,9 +335,15 @@ void groundDesert(GroundCtx& c) {
     double basin = smoothstep(0.1, 0.5, -c.fb(R * 0.1, g.sG + 2, 3)) * (1 - smoothstep(300.0, 700.0, h)) * (1 - relief0) * (1 - 0.7 * oldSea);
     double salt = 0;
     if (basin > 0.7 && h < 80) { double pan = smoothstep(0.7, 0.9, basin); h += (hS - 4.0 - h) * pan; salt = pan; }
-    if (basin > 0.2 && salt < 0.5) { const double share = smoothstep(0.2, 0.5, basin); double lee = 0; h += duneField(p, g, lat, g.duneAmp * (0.6 + 0.4 * basin), detailM, &lee) * share; s.slipFace = share * lee; }
+    if (basin > 0.2 && salt < 0.5) {
+        const double share = smoothstep(0.2, 0.5, basin);
+        double lee = 0;
+        h += duneField(p, g, lat, g.duneAmp * (0.6 + 0.4 * basin), detailM, &lee) * share;
+        s.slipFace = share * lee;
+    }
     c.craterStack(h);   // the kind's crater stack
-    applyDrainage(g, unit, detailM, h, &hS, rf.slope, false, false, g.oldSeaM > -1e8 ? 0.75 : 0.5, DA);   // wadis, and playas in the closed basins (C-01: a dead world's rivers ran wetter: a denser net)
+    // wadis, and playas in the closed basins (C-01: a dead world's rivers ran wetter: a denser net)
+    applyDrainage(g, unit, detailM, h, &hS, rf.slope, false, false, g.oldSeaM > -1e8 ? 0.75 : 0.5, DA);
     if (oldSea > 0) h += (bedH - h) * oldSea;   // the bed again: a wadi's valley reaching down over the shore lifted the bed toward its banks, and the craters and dunes are the sea's silt now
     s.height = h;
     if (salt > 0.5 || DA.playa > 0.3) { s.material = MAT_SALT; s.albedo = 0.85; }

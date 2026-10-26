@@ -142,7 +142,10 @@ void SurfaceView::updateDrone(double dt, const Input& in, double t) {
                 d.puffAccum = 0;
                 Rng rr((uint64_t)(t * 1000) ^ 0xD20E);
                 double gy = surfaceN;
-                for (int i = 0; i < 3; i++) { double a = rr.range(0, TAU), r = rr.range(1.5, 4.5) * (1 + 0.3 * (8 - d.altAboveGround)); d.puffs.push_back({(float)(d.x + std::cos(a) * r), (float)(gy + 0.2), (float)(d.z + std::sin(a) * r), 0.f, (uint8_t)kind}); }
+                for (int i = 0; i < 3; i++) {
+                    double a = rr.range(0, TAU), r = rr.range(1.5, 4.5) * (1 + 0.3 * (8 - d.altAboveGround));
+                    d.puffs.push_back({(float)(d.x + std::cos(a) * r), (float)(gy + 0.2), (float)(d.z + std::sin(a) * r), 0.f, (uint8_t)kind});
+                }
             }
         }
     }
@@ -228,7 +231,16 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
     auto poly = [&](const Vec3* pts, int n, const Vec3& nrm, double tint, RasterParams& rp) {
         double shade = shadeN(nrm, tint);
         RVert q[8];
-        for (int k = 0; k < n; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); if (v.z < NEAR_Z) return; q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].y; q[k].v = pts[k].z; }
+        for (int k = 0; k < n; k++) {
+            Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z);
+            if (v.z < NEAR_Z) return;
+            q[k].x = v.x;
+            q[k].y = v.y;
+            q[k].z = v.z;
+            q[k].shade = shade;
+            q[k].u = pts[k].x + pts[k].y;
+            q[k].v = pts[k].z;
+        }
         rasterPolygon(fb, q, n, rp, proj);
     };
     auto quad = [&](Vec3 a, Vec3 bq, Vec3 c, Vec3 dq, const Vec3& n, double tint, RasterParams& rp) { Vec3 p4[4] = {a, bq, c, dq}; poly(p4, 4, n, tint, rp); };
@@ -260,9 +272,11 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
         quad(at(NOSE_F, s * NOSE_W, NOSE_B), at(SHO_F, s * SHO_W, FLOOR), at(SHO_F, s * SHO_W, BELT), at(NOSE_F, s * NOSE_W, NOSE_T), normalize(nS * 0.8 + fwdT * 0.6), 0.9, rpBody);   // nose flank
         quad(at(SHO_F, s * SHO_W, FLOOR), at(TAIL_F, s * TAIL_W, TAIL_B), at(TAIL_F, s * TAIL_W, BELT), at(SHO_F, s * SHO_W, BELT), nS, 0.92, rpBody);                             // the belt
         Vec3 upper[5] = {at(SHO_F, s * SHO_W, BELT), at(TAIL_F, s * TAIL_W, BELT), at(TAIL_F, s * TAIL_W, TAIL_T), at(CABR_F, s * CAB_W, ROOF), at(CABF_F, s * CAB_W, ROOF)};
-        poly(upper, 5, nS, 0.95, rpBody);                                                                                                                                                 // the cabin side
+        // the cabin side
+        poly(upper, 5, nS, 0.95, rpBody);
         Vec3 off = nS * 0.012;
-        quad(at(SHO_F - 0.05, s * SHO_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.24) + off, at(SHO_F - 0.05, s * SHO_W, 1.24) + off, nS, 0.3, rpDark);   // the sensor band round the cabin
+        // the sensor band round the cabin
+        quad(at(SHO_F - 0.05, s * SHO_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.0) + off, at(CABR_F - 0.05, s * CAB_W, 1.24) + off, at(SHO_F - 0.05, s * SHO_W, 1.24) + off, nS, 0.3, rpDark);
         tube(at(NOSE_F, s * NOSE_W, NOSE_T), at(SHO_F, s * SHO_W, BELT), 0.02, 7, chrome * 0.9);   // chrome trim: the shoulder line and the roof edge
         tube(at(SHO_F, s * SHO_W, BELT), at(TAIL_F, s * TAIL_W, BELT), 0.02, 7, chrome * 0.9);
         tube(at(CABF_F, s * CAB_W, ROOF), at(CABR_F, s * CAB_W, ROOF), 0.02, 7, chrome * 0.85);
@@ -296,7 +310,10 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
         if (ok) rasterPolygon(fb, disc, 12, rpDark, proj);
         if (ok && d.rotor < 0.75) {
             double spin = d.fanSpin * ((k & 1) ? 1 : -1);
-            for (int b = 0; b < 3; b++) { double a = spin + b * TAU / 3; tube(c + upT * (0.02 * sc), c + upT * (0.02 * sc) + fwdT * (std::cos(a) * POD_R * 0.82 * sc) + sideT * (std::sin(a) * POD_R * 0.82 * sc), 0.03, 7, chrome * 0.8); }
+            for (int b = 0; b < 3; b++) {
+                double a = spin + b * TAU / 3;
+                tube(c + upT * (0.02 * sc), c + upT * (0.02 * sc) + fwdT * (std::cos(a) * POD_R * 0.82 * sc) + sideT * (std::sin(a) * POD_R * 0.82 * sc), 0.03, 7, chrome * 0.8);
+            }
         }
         point(c + upT * (0.03 * sc), 7, chrome * 0.7, dist < 10 ? 2 : 1);
         if (!d.landed || d.rotor > 0.5) point(c - upT * (0.2 * sc), 1, 42 + 20 * d.rotor, dist < 25 ? 2 : 1);
@@ -313,7 +330,16 @@ void SurfaceView::drawDrone(Framebuffer& fb, double t) {
     // ---- the lidar puck on the roof and the sensor mast at the rear with its blinking light
     {
         RVert puck[6]; bool ok = true;
-        for (int k = 0; k < 6; k++) { double a = k * TAU / 6; Vec3 pp = at(-0.35 + std::cos(a) * 0.14, std::sin(a) * 0.14, ROOF + 0.05); Vec3 v = toView(pp.x, pp.y, pp.z); puck[k].x = v.x; puck[k].y = v.y; puck[k].z = v.z; puck[k].shade = chrome; if (v.z < NEAR_Z) ok = false; }
+        for (int k = 0; k < 6; k++) {
+            double a = k * TAU / 6;
+            Vec3 pp = at(-0.35 + std::cos(a) * 0.14, std::sin(a) * 0.14, ROOF + 0.05);
+            Vec3 v = toView(pp.x, pp.y, pp.z);
+            puck[k].x = v.x;
+            puck[k].y = v.y;
+            puck[k].z = v.z;
+            puck[k].shade = chrome;
+            if (v.z < NEAR_Z) ok = false;
+        }
         RasterParams rd; rd.bank = 7;
         if (ok) rasterPolygon(fb, puck, 6, rd, proj);
         Vec3 ant0 = at(-0.9, 0.5, ROOF - 0.05), ant1 = at(-0.95, 0.54, ROOF + 0.6 * d.unfold);

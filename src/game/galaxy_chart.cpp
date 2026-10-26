@@ -323,8 +323,22 @@ Game::ChartThere Game::chartThere(const Vec3& p) const {
     }
     for (const auto& kv : guide.signals) if (near(kv.first)) { t.kind = 2; t.key = kv.first.substr(0, kv.first.find('/')); t.col = HUD_RED; t.label = "A SIGNAL"; return t; }
     if (!guide.home.empty() && near(guide.home)) { t.kind = 3; t.key = guide.home; t.col = HUD_AMBER; t.label = "HOME"; return t; }
-    for (const auto& kv : guide.names) if (kv.first.find('/') == std::string::npos && near(kv.first)) { t.kind = 4; t.key = kv.first; t.col = HUD_GREEN; t.label = trunc(upper(kv.second), 16); return t; }
-    for (const auto& kv : guide.inbox) if (kv.first.find('/') == std::string::npos && !guide.names.count(kv.first) && near(kv.first)) { t.kind = 4; t.key = kv.first; t.col = HUD_CYAN; t.label = trunc(upper(kv.second), 16); return t; }
+    for (const auto& kv : guide.names)
+        if (kv.first.find('/') == std::string::npos && near(kv.first)) {
+            t.kind = 4;
+            t.key = kv.first;
+            t.col = HUD_GREEN;
+            t.label = trunc(upper(kv.second), 16);
+            return t;
+        }
+    for (const auto& kv : guide.inbox)
+        if (kv.first.find('/') == std::string::npos && !guide.names.count(kv.first) && near(kv.first)) {
+            t.kind = 4;
+            t.key = kv.first;
+            t.col = HUD_CYAN;
+            t.label = trunc(upper(kv.second), 16);
+            return t;
+        }
     for (const std::string& k : guide.visited) if (near(k)) { t.kind = 5; t.key = k; t.col = HUD_GREEN; t.label = "VISITED"; return t; }
     return t;
 }
@@ -487,7 +501,12 @@ void Game::renderGalaxyChart() {
         for (int k = 0; k <= n; k += 2) dot(ix0 + (n ? (ix1 - ix0) * k / n : 0), iy0 + (n ? (iy1 - iy0) * k / n : 0), c);
         return true;
     };
-    auto ring = [&](int x, int y, int r, uint32_t c) { for (int k = 0; k < 16; k++) { const double a = k * TAU / 16; dot(x + (int)std::lround(r * std::cos(a)), y + (int)std::lround(r * std::sin(a)), c); } };
+    auto ring = [&](int x, int y, int r, uint32_t c) {
+        for (int k = 0; k < 16; k++) {
+            const double a = k * TAU / 16;
+            dot(x + (int)std::lround(r * std::cos(a)), y + (int)std::lround(r * std::sin(a)), c);
+        }
+    };
     auto diamond = [&](int x, int y, int r, uint32_t c) {
         for (int k = 0; k <= r; k++) { dot(x - r + k, y - k, c); dot(x + r - k, y - k, c); dot(x - r + k, y + k, c); dot(x + r - k, y + k, c); }
     };
@@ -612,10 +631,22 @@ void Game::renderGalaxyChart() {
     // the strip: the ship's height and home's, the cursor's
     {
         const double dyPx = 2 * half / EH;
-        auto stripAt = [&](double x, double y, int& px, int& py) { px = (int)std::floor(x / s - (double)I + UW / 2); py = EY0 + (int)std::floor((half - y) / dyPx); return px >= 0 && px < UW && py >= EY0 && py < EY0 + EH; };
+        auto stripAt = [&](double x, double y, int& px, int& py) {
+            px = (int)std::floor(x / s - (double)I + UW / 2);
+            py = EY0 + (int)std::floor((half - y) / dyPx);
+            return px >= 0 && px < UW && py >= EY0 && py < EY0 + EH;
+        };
         auto sdot = [&](int x, int y, uint32_t c) { if (x >= 0 && x < UW && y >= EY0 && y < EY0 + EH) fillRectRGB(canvas, x, y, x, y, c); };
         int x, y;
-        if (!guide.home.empty()) { const Vec3 h = sectorCentre(guide.home); if (stripAt(h.x, h.y, x, y)) { sdot(x - 1, y, HUD_AMBER); sdot(x + 1, y, HUD_AMBER); sdot(x, y - 1, HUD_AMBER); sdot(x, y + 1, HUD_AMBER); } }
+        if (!guide.home.empty()) {
+            const Vec3 h = sectorCentre(guide.home);
+            if (stripAt(h.x, h.y, x, y)) {
+                sdot(x - 1, y, HUD_AMBER);
+                sdot(x + 1, y, HUD_AMBER);
+                sdot(x, y - 1, HUD_AMBER);
+                sdot(x, y + 1, HUD_AMBER);
+            }
+        }
         auto sline = [&](int ax, int ay, int bx, int by, uint32_t c, bool dotted) {
             const int n = std::max(std::abs(bx - ax), std::abs(by - ay));
             for (int k = 0; k <= n; k += dotted ? 2 : 1) sdot(ax + (n ? (bx - ax) * k / n : 0), ay + (n ? (by - ay) * k / n : 0), c);
@@ -659,7 +690,9 @@ void Game::renderGalaxyChart() {
             if (t.size() > max && t.size() >= tail.size() && t.compare(t.size() - tail.size(), tail.size(), tail) == 0) t.erase(t.size() - tail.size());
             return t;
         };
-        auto heightOf = [](double y) { return std::fabs(y) < 50 ? std::string("IN THE PLANE") : thousands(std::round(std::fabs(y) / 10) * 10) + (y > 0 ? " LY NORTH OF THE PLANE" : " LY SOUTH OF THE PLANE"); };
+        auto heightOf = [](double y) {
+            return std::fabs(y) < 50 ? std::string("IN THE PLANE") : thousands(std::round(std::fabs(y) / 10) * 10) + (y > 0 ? " LY NORTH OF THE PLANE" : " LY SOUTH OF THE PLANE");
+        };
         const std::string region = REGION_NAMES[galaxyRegion((int64_t)std::floor(cur.x), (int64_t)std::floor(cur.y), (int64_t)std::floor(cur.z))];
         drawText(canvas, 6, 4, "THE GALAXY", HUD_AMBER);
         drawText(canvas, UW - 6 - textWidth(region.c_str()), 4, region.c_str(), HUD_WHITE);

@@ -54,12 +54,15 @@ void Game::renderSpace() {
         c.flightFrom = ship.flightFrom; c.flightTo = ship.flightTo; c.flightT = ship.flightT; c.flightDur = ship.flightDur;   // the band built ahead along the line
     }
     c.bankBodyA = a; c.bankBodyB = b;
-    c.starIntensity = (ship.targeting || fieldAmp || radar.on || tele.on) ? 1.5 : 1.0;   // field amplification while aiming or by choice; C-07: the radar camera sees the stars amplified; W-06: the telescope gathers light
+    // field amplification while aiming or by choice; C-07: the radar camera sees the stars amplified; W-06: the telescope gathers light
+    c.starIntensity = (ship.targeting || fieldAmp || radar.on || tele.on) ? 1.5 : 1.0;
     c.detailBody = titleCam ? -1 : telescopePlateBody();   // the eyepiece's body gets the planet function at its footprint (the plate)
     c.detailBudget = (wantsScreenshot || telePlateFinish) ? 0 : TELE_PLATE_BUDGET;   // a photo reads the plate out whole
     telePlateFinish = false;
     spaceR.render(fb, c);
-    if (settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }   // auto-explore's landing map is the cabin still   // M2; C-07: the radar camera is outside the cabin; W-06: the eye is at the eyepiece; C-18: the drones outside the windows
+    // the cabin round the view, the drones' lights outside its windows (M2): not on the landing map (auto-explore's is the cabin still), nor
+    // with the radar camera (outside the cabin) or the eye at the eyepiece
+    if (settings.cabin && !titleCam && (state != GameState::LANDING_MAP || ax.on) && !radar.on && !tele.on) { cabinPalette(); drawDroneLights(); drawCabin(); }
     if (radar.on && !titleCam) radarCameraFeed(fb);
     fb.mush(2);
     fb.toRGB(rgbBuf.data(), 1.0 + 1.3 * std::max(0.0, arrivalFlash), settings.dither);   // arrival flash

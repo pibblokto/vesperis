@@ -97,7 +97,8 @@ void Game::updateLandingMap(const Input& in, double dt) {
             status(fmt("%s AT THE ZENITH HERE (%.1f%c WIDE)", upper(bodyNameOf(best)).c_str(), 2 * bestAng / DEG, CH_DEGREE), 3);
         } else status("NOTHING BIG IN THIS SKY", 2);
     }
-    if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon)) buildLandingZoom();
+    if (landZoom && (zoomImg.empty() || zoomSeed != sys.bodies[landBody].seed || std::fabs(landLat - zoomLat) > 0.75 * zoomHalfLat || std::fabs(wrapAngle(landLon - zoomLon)) > 0.75 * zoomHalfLon))
+        buildLandingZoom();
     else if (landZoom && zoomDry) {   // the window was drawn without the drainage; again with it once its tiles are built
         const Body& zb = sys.bodies[landBody];
         const Vec3 zc = StarSystem::bodyFromLatLon(zoomLat, zoomLon);
@@ -173,7 +174,11 @@ void Game::renderLandingMap() {
     const std::vector<uint8_t>* fm = fmc ? &fmc->cloud : nullptr;
     if (fm && landZoom && !zoomUnit.empty() && (zoomFront.size() != zoomUnit.size() || std::fabs(t - zoomFrontT) > 240 || zoomFrontLat != zoomLat || zoomFrontLon != zoomLon)) {
         zoomFront.resize(zoomUnit.size()); zoomFrontT = t; zoomFrontLat = zoomLat; zoomFrontLon = zoomLon;
-        for (size_t i = 0; i < zoomUnit.size(); i++) { double la, lo; StarSystem::latLonFromBody(zoomUnit[i], la, lo); zoomFront[i] = (uint8_t)(frontMapAt(*fm, PlanetMap::W, PlanetMap::H, lo, la) * 255 + 0.5); }
+        for (size_t i = 0; i < zoomUnit.size(); i++) {
+            double la, lo;
+            StarSystem::latLonFromBody(zoomUnit[i], la, lo);
+            zoomFront[i] = (uint8_t)(frontMapAt(*fm, PlanetMap::W, PlanetMap::H, lo, la) * 255 + 0.5);
+        }
     }
     auto withFront = [&](uint32_t c, double fc) {   // the band whitens the texel as the cloud filter does
         double r = c & 255, gg = (c >> 8) & 255, bl = (c >> 16) & 255;
@@ -262,9 +267,15 @@ void Game::renderLandingMap() {
         // the sector grid (one-degree lines) with the sectors' names, a scale bar, and the cursor within the window
         const uint32_t gridC = rgb(80, 80, 50);
         int k0 = (int)std::ceil((zoomLon - zoomHalfLon) / DEG), k1 = (int)std::floor((zoomLon + zoomHalfLon) / DEG);
-        for (int k = k0; k <= k1; k++) { int x = ox + (int)(((k * DEG - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW); if (x > ox && x < ox + MAP_LW - 1) drawLineRGB(canvas, x, oy, x, oy + MAP_LH - 1, gridC); }
+        for (int k = k0; k <= k1; k++) {
+            int x = ox + (int)(((k * DEG - zoomLon) / (2 * zoomHalfLon) + 0.5) * MAP_LW);
+            if (x > ox && x < ox + MAP_LW - 1) drawLineRGB(canvas, x, oy, x, oy + MAP_LH - 1, gridC);
+        }
         int j0 = (int)std::ceil((zoomLat - zoomHalfLat) / DEG), j1 = (int)std::floor((zoomLat + zoomHalfLat) / DEG);
-        for (int j = j0; j <= j1; j++) { int y = oy + (int)((0.5 - (j * DEG - zoomLat) / (2 * zoomHalfLat)) * MAP_LH); if (y > oy && y < oy + MAP_LH - 1) drawLineRGB(canvas, ox, y, ox + MAP_LW - 1, y, gridC); }
+        for (int j = j0; j <= j1; j++) {
+            int y = oy + (int)((0.5 - (j * DEG - zoomLat) / (2 * zoomHalfLat)) * MAP_LH);
+            if (y > oy && y < oy + MAP_LH - 1) drawLineRGB(canvas, ox, y, ox + MAP_LW - 1, y, gridC);
+        }
         int cellW = (int)(DEG / (2 * zoomHalfLon) * MAP_LW), cellH = (int)(DEG / (2 * zoomHalfLat) * MAP_LH);
         if (cellW >= 44 && cellH >= 10)
             for (int k = k0 - 1; k <= k1; k++)
@@ -292,7 +303,12 @@ void Game::renderLandingMap() {
             if (lx < ox + 1 || ly < oy + 1 || lx >= ox + MAP_LW - 1 || ly >= oy + MAP_LH - 1) continue;
             const uint32_t lc = m.lent ? HUD_CYAN : HUD_WHITE;
             if (m.kind < LM_COUNT) drawText(canvas, lx - 2, ly - 3, LANDMARK_KIND_SYMBOLS[m.kind], lc);
-            else { drawLineRGB(canvas, lx - 2, ly, lx, ly - 2, lc); drawLineRGB(canvas, lx, ly - 2, lx + 2, ly, lc); drawLineRGB(canvas, lx + 2, ly, lx, ly + 2, lc); drawLineRGB(canvas, lx, ly + 2, lx - 2, ly, lc); }
+            else {
+                drawLineRGB(canvas, lx - 2, ly, lx, ly - 2, lc);
+                drawLineRGB(canvas, lx, ly - 2, lx + 2, ly, lc);
+                drawLineRGB(canvas, lx + 2, ly, lx, ly + 2, lc);
+                drawLineRGB(canvas, lx, ly + 2, lx - 2, ly, lc);
+            }
             if (!m.name.empty() && named < 8 && lx + 60 < ox + MAP_LW && ly - 3 > oy + 8 && ly + 5 < oy + MAP_LH - 8) {
                 std::string nm = trunc(upper(m.name), 14);
                 LabelBox bx{lx + 5, ly - 3, lx + 5 + textWidth(nm.c_str()), ly + 4};
@@ -397,14 +413,15 @@ void Game::renderLandingMap() {
         bool bestRinged = best >= 0 && sys.bodies[best].rings;
         if (best >= 0) {
             const char* ph = noSun ? "UNLIT" : (bestPhase > 0.85 ? "FULL" : (bestPhase > 0.6 ? "GIBBOUS" : (bestPhase > 0.4 ? "HALF LIT" : (bestPhase > 0.15 ? "CRESCENT" : "NEW"))));
-            l5 = fmt("SKY: %s%s %.0f%c UP, %.1f%c WIDE, %s%s", ringNote.empty() ? "" : (ringNote + "; ").c_str(), trunc(upper(bodyNameOf(best)), ringNote.empty() ? 14 : 10).c_str(), bestAlt / DEG, CH_DEGREE, 2 * bestAng / DEG, CH_DEGREE,
-                     bestRinged ? "RINGED" : ph, (points && ringNote.empty() && !bestRinged) ? fmt(" +%d PTS", points).c_str() : "");
+            l5 = fmt("SKY: %s%s %.0f%c UP, %.1f%c WIDE, %s%s", ringNote.empty() ? "" : (ringNote + "; ").c_str(), trunc(upper(bodyNameOf(best)), ringNote.empty() ? 14 : 10).c_str(), bestAlt / DEG,
+                    CH_DEGREE, 2 * bestAng / DEG, CH_DEGREE, bestRinged ? "RINGED" : ph, (points && ringNote.empty() && !bestRinged) ? fmt(" +%d PTS", points).c_str() : "");
         } else l5 = (ringNote.empty() ? std::string("SKY: ") : "SKY: " + ringNote + "; ") + (points ? fmt("%d WORLDS AS POINTS OF LIGHT", points) : std::string("NOTHING BUT STARS"));
         drawText(canvas, 8, ry + 32, l5.c_str(), (best >= 0 || !ringNote.empty()) ? HUD_CYAN : HUD_DIM);
     }
     // V the peoples; the lines fit the 53 characters of the screen (they ran off both edges at 61 and 66)
     if (landZoom) drawTextCentered(canvas, UW / 2, UH - 12, "ARROWS 1 KM  Z WORLD  R RANDOM  V PEOPLES  ENTER", HUD_AMBER);
-    else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);   // the survey has no clouds
+    // the survey has no clouds
+    else drawTextCentered(canvas, UW / 2, UH - 12, bodyHasAir(b) && !noSun ? "Z ZOOM  R RANDOM  C CLOUDS  J SKY  V PEOPLES  ENTER" : "Z ZOOM  R RANDOM  J SKY  V PEOPLES  ENTER LAND", HUD_AMBER);
     drawTextCentered(canvas, UW / 2, 2, landZoom ? fmt("SURFACE CAPSULE - SECTOR %s - PICK THE SITE", sectorName(landLat / DEG, landLon / DEG).c_str()).c_str()
                                                  : (noSun ? "SURFACE CAPSULE - NO LIGHT: THE ALTIMETER'S SURVEY" : "SURFACE CAPSULE - SELECT LANDING SECTOR"), HUD_CYAN);
 }
@@ -442,7 +459,8 @@ Game::LandKnown Game::landKnownOf(int body) {
         K.held[it.people]++;
         if (it.place >= 0 && it.place < (int)W.places.size()) K.ranks[it.people].insert(W.places[it.place].rank);
     }
-    for (int k = 0; k < K.peoples; k++) if (K.held[k] > 0 && k < (int)W.peopleNames.size()) K.name[k] = "THE " + upper(W.peopleNames[k]);   // named once a record of theirs is held (the decoder's rule)
+    // named once a record of theirs is held (the decoder's rule)
+    for (int k = 0; k < K.peoples; k++) if (K.held[k] > 0 && k < (int)W.peopleNames.size()) K.name[k] = "THE " + upper(W.peopleNames[k]);
     return K;
 }
 

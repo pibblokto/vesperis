@@ -293,7 +293,13 @@ int padCapture(const PadState& prev, const PadState& rest, const PadState& now, 
     }
     if (now.mapped) {   // a stick's half (the standard names first: they hold for any controller of the same layout)
         int best = -1; double bestD = 0.6;
-        for (int a = 0; a < 4; a++) { const double d = now.axes[a] - rest.axes[a]; if (std::fabs(d) > bestD && std::fabs(now.axes[a]) > 0.5) { bestD = std::fabs(d); best = PADC_STD_AXIS + 2 * a + (d > 0 ? 1 : 0); } }
+        for (int a = 0; a < 4; a++) {
+            const double d = now.axes[a] - rest.axes[a];
+            if (std::fabs(d) > bestD && std::fabs(now.axes[a]) > 0.5) {
+                bestD = std::fabs(d);
+                best = PADC_STD_AXIS + 2 * a + (d > 0 ? 1 : 0);
+            }
+        }
         if (best >= 0) return best;
     }
     if (!axes) {

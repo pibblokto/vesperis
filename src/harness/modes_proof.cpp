@@ -75,8 +75,11 @@ int runRegress(bool bless) {
     for (size_t i = 0; i < lines.size(); i++) {
         const uint64_t* bv = nullptr;
         for (auto& b : base) if (b.first == lines[i].first) bv = &b.second;
-        if (!bv) { printf("  %-10s new (no baseline)  %s\n", lines[i].first.c_str(), notes[i].c_str()); missing++; }
-        else if (*bv != lines[i].second) { printf("  %-10s CHANGED %016llx -> %016llx  %s\n", lines[i].first.c_str(), (unsigned long long)*bv, (unsigned long long)lines[i].second, notes[i].c_str()); changed++; }
+        if (!bv) { printf("  %-10s new (no baseline)  %s\n", lines[i].first.c_str(), notes[i].c_str()); missing++;
+        } else if (*bv != lines[i].second) {
+            printf("  %-10s CHANGED %016llx -> %016llx  %s\n", lines[i].first.c_str(), (unsigned long long)*bv, (unsigned long long)lines[i].second, notes[i].c_str());
+            changed++;
+        }
     }
     const bool fail = changed || missing || !differs.empty();
     printf("regress: %zu hashes, %d changed, %d without baseline, %zu drawn differently by one thread -> %s\n", lines.size(), changed, missing, differs.size(), fail ? "FAIL" : "PASS");
@@ -150,7 +153,11 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
         }
         {   // the cabin at 1x through the game: the start's parking, the light on and the hull polarised (`screens`' cabin), every
             // map of the system made; the game's picture (the RGB with the HUD) at one instant once it holds still, then by one thread
-            TestGame game; game.savePrefix = "shots/tests/regress_save"; game.settingsPath = "shots/tests/regress_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/regress_guide.txt";
+            TestGame game;
+            game.savePrefix = "shots/tests/regress_save";
+            game.settingsPath = "shots/tests/regress_settings.txt";
+            game.keysPath = "shots/tests/test_keys.txt";
+            game.guidePath = "shots/tests/regress_guide.txt";
             remove(game.guidePath.c_str()); remove(game.settingsPath.c_str());
             game.newGame(); game.setState(GameState::SPACE);
             game.settings.renderScale = 1; game.applySettings();
@@ -166,7 +173,13 @@ static void appendFrameHashes(std::vector<std::pair<std::string, uint64_t>>& lin
             for (const Body& b : gs.bodies) if (b.type != PT_COMPANION) game.testWaitMapOf(b.index);
             auto out = [&]() { return fnv(FNV0, game.output(), (size_t)FBW * FBH * sizeof(uint32_t)); };
             uint64_t h = 0; int still = 0;
-            for (int n = 0; n < 200 && still < 10; n++) { game.frame(gi, 0); const uint64_t k = out(); still = n > 0 && k == h ? still + 1 : 0; h = k; std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+            for (int n = 0; n < 200 && still < 10; n++) {
+                game.frame(gi, 0);
+                const uint64_t k = out();
+                still = n > 0 && k == h ? still + 1 : 0;
+                h = k;
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
             writePNG("shots/tests/regress_cabin_1x.png", game.output(), FBW, FBH);
             parallelThreadsOverride() = 1; game.frame(gi, 0); const uint64_t s = out(); parallelThreadsOverride() = 0;
             const int pb = game.testParkedBody();
@@ -197,7 +210,13 @@ int runPngDiff(int argc, char** argv) {
     };
     if (!isDir(argv[2])) return one(argv[2], argv[3], argc > 4 ? argv[4] : nullptr, argv[2], false);
     std::vector<std::string> names;
-    if (DIR* dd = opendir(argv[2])) { while (dirent* e = readdir(dd)) { const std::string n = e->d_name; if (n.size() > 4 && n.compare(n.size() - 4, 4, ".png") == 0) names.push_back(n); } closedir(dd); }
+    if (DIR* dd = opendir(argv[2])) {
+        while (dirent* e = readdir(dd)) {
+            const std::string n = e->d_name;
+            if (n.size() > 4 && n.compare(n.size() - 4, 4, ".png") == 0) names.push_back(n);
+        }
+        closedir(dd);
+    }
     std::sort(names.begin(), names.end());
     int same = 0, differ = 0, missing = 0;
     for (const std::string& n : names) {
@@ -313,7 +332,11 @@ int runScreens(int argc, char** argv) {
     for (int i = 2; i < argc; i++) scales.push_back(clampi(atoi(argv[i]), 1, 4));
     if (scales.empty()) scales = {1, 2, 3, 4};
     mkdir("shots/tests", 0755); mkdir("shots/tests/screens", 0755);
-    TestGame game; game.savePrefix = "shots/tests/screens_save"; game.settingsPath = "shots/tests/screens_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/screens_guide.txt";
+    TestGame game;
+    game.savePrefix = "shots/tests/screens_save";
+    game.settingsPath = "shots/tests/screens_settings.txt";
+    game.keysPath = "shots/tests/test_keys.txt";
+    game.guidePath = "shots/tests/screens_guide.txt";
     remove(game.guidePath.c_str()); remove(game.settingsPath.c_str());
     game.newGame(); game.setState(GameState::SPACE);
     const int stepScale = 2;   // the scale the steps between the pictures run at
@@ -328,7 +351,13 @@ int runScreens(int argc, char** argv) {
         for (int s : scales) {
             game.settings.renderScale = s; game.applySettings();
             uint64_t last = 0; int still = 0;
-            for (int n = 0; n < 200 && still < 10; n++) { game.frame(gi, 0); const uint64_t h = out(); still = n > 0 && h == last ? still + 1 : 0; last = h; std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+            for (int n = 0; n < 200 && still < 10; n++) {
+                game.frame(gi, 0);
+                const uint64_t h = out();
+                still = n > 0 && h == last ? still + 1 : 0;
+                last = h;
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
             if (still < 10) unsettled++;
             const size_t np = (size_t)FBW * FBH;
             double t0 = nowSec(); game.frame(gi, 0); const double msW = (nowSec() - t0) * 1000;
@@ -337,7 +366,8 @@ int runScreens(int argc, char** argv) {
             const FrameDiff d = diffFrames(w.data(), game.output(), FBW, FBH);
             writePNG(fmt("shots/tests/screens/%s_%dx.png", name, s).c_str(), w.data(), FBW, FBH);
             shots++; differ += d.differ ? 1 : 0;
-            printf("  %-18s %dx %7.2f ms, one thread %7.2f ms: %s%s%s\n", name, s, msW, msS, d.differ ? "ONE THREAD DIFFERS, " : "the same", d.differ ? diffLine(d, FBW, FBH).c_str() : "", still < 10 ? " (never held still)" : "");
+            printf("  %-18s %dx %7.2f ms, one thread %7.2f ms: %s%s%s\n", name, s, msW, msS, d.differ ? "ONE THREAD DIFFERS, " : "the same", d.differ ? diffLine(d, FBW, FBH).c_str() : "",
+                    still < 10 ? " (never held still)" : "");
         }
         game.settings.renderScale = stepScale; game.applySettings();
     };

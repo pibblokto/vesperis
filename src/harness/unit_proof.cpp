@@ -42,7 +42,11 @@ void unitPerf(const Check& check) {
             }
         }
         {
-            TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_bothways.txt";
+            TestGame game;
+            game.savePrefix = "shots/tests/test_save";
+            game.settingsPath = "shots/tests/test_settings.txt";
+            game.keysPath = "shots/tests/test_keys.txt";
+            game.guidePath = "shots/tests/test_guide_bothways.txt";
             remove(game.guidePath.c_str());
             game.newGame(); game.setState(GameState::SPACE);
             game.settings.renderScale = 4; game.applySettings();
@@ -102,7 +106,9 @@ void unitPerf(const Check& check) {
             }
         }
         setFramebufferScale(saved);
-        check("threads: the frames the regress skips (F-01, B-423)", frames >= 20 && same == frames, fmt("%d frames (the forest at 1x, 2x and 4x also with three threads; the rest at 4x) the same with %d threads and with one: %d%s%s", frames, parallelThreads(), same, bad.empty() ? "" : "; ", bad.c_str()));
+        check("threads: the frames the regress skips (F-01, B-423)", frames >= 20 && same == frames,
+                fmt("%d frames (the forest at 1x, 2x and 4x also with three threads; the rest at 4x) the same with %d threads and with one: %d%s%s", frames, parallelThreads(), same,
+                        bad.empty() ? "" : "; ", bad.c_str()));
     }
     {   // the picture is the thread count's no more: six scenes at 4x (the forest's flora and terrain, the shore's water and reflections,
         // a town's forms, the aurora's grid, the protostar's strip, the black hole's lens) drawn with one thread and with two, four, six and
@@ -115,7 +121,13 @@ void unitPerf(const Check& check) {
                 SpaceRenderer srT; StarNeighborhood nbT; StarSystem sysT; SurfaceView svT; double tT = 0;
                 if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, svT, sysT, nbT, tT, sc.wantMat)) { bad += fmt("%s%s: no body", bad.empty() ? "" : "; ", name); break; }
                 Framebuffer fbT;
-                auto draw = [&](int threads) { parallelThreadsOverride() = threads; svT.render(fbT, tT, nbT.stars, srT, 1.0); fbT.mush(2); parallelThreadsOverride() = 0; return fnv(1469598103934665603ULL, fbT.idx.data(), fbT.idx.size() * sizeof(Pix)); };
+                auto draw = [&](int threads) {
+                    parallelThreadsOverride() = threads;
+                    svT.render(fbT, tT, nbT.stars, srT, 1.0);
+                    fbT.mush(2);
+                    parallelThreadsOverride() = 0;
+                    return fnv(1469598103934665603ULL, fbT.idx.data(), fbT.idx.size() * sizeof(Pix));
+                };
                 draw(8);
                 const uint64_t one = draw(1);
                 std::string off;
@@ -127,7 +139,9 @@ void unitPerf(const Check& check) {
         }
         setFramebufferScale(saved);
         const long contended = pool::contended();   // a dispatch from a thread beside the main one's (it runs alone: none wanted)
-        check("threads: the picture whatever the count (F-06)", scenes == 6 && same == scenes && contended == 0, fmt("%d scenes at 4x the same with one thread and with two, four, six and eight: %d%s%s; %ld dispatches from another thread in this run", scenes, same, bad.empty() ? "" : "; ", bad.c_str(), contended));
+        check("threads: the picture whatever the count (F-06)", scenes == 6 && same == scenes && contended == 0,
+                fmt("%d scenes at 4x the same with one thread and with two, four, six and eight: %d%s%s; %ld dispatches from another thread in this run", scenes, same, bad.empty() ? "" : "; ",
+                        bad.c_str(), contended));
     }
     {   // the probes' lines in the guide made once: a guide saved, loaded and saved again is the same file byte for byte (the second
         // save writes the load's lines), so is a third, and a friend's import carries the lines of the file it read
@@ -164,7 +178,8 @@ void unitPerf(const Check& check) {
             std::ifstream fs(sp, std::ios::binary), fa(ap, std::ios::binary);
             const std::string S((std::istreambuf_iterator<char>(fs)), std::istreambuf_iterator<char>()), Aa((std::istreambuf_iterator<char>(fa)), std::istreambuf_iterator<char>());
             std::vector<uint32_t> back; int bw = 0, bh = 0; const bool read = readPNG(ap.c_str(), back, bw, bh);
-            const bool iend = S.size() > 12 && S.compare(S.size() - 8, 4, "IEND") == 0 && (uint8_t)S[S.size() - 4] == 0xAE && (uint8_t)S[S.size() - 3] == 0x42 && (uint8_t)S[S.size() - 2] == 0x60 && (uint8_t)S[S.size() - 1] == 0x82;
+            const bool iend = S.size() > 12 && S.compare(S.size() - 8, 4, "IEND") == 0 && (uint8_t)S[S.size() - 4] == 0xAE && (uint8_t)S[S.size() - 3] == 0x42 && (uint8_t)S[S.size() - 2] == 0x60 &&
+                    (uint8_t)S[S.size() - 1] == 0x82;
             const bool same = S == Aa && read && bw == w && bh == h && back == px && iend;
             ok = ok && same;
             det += fmt("%s%dx%d %zu bytes %s", det.empty() ? "" : ", ", w, h, S.size(), same ? "the same" : (S != Aa ? "THE THREAD'S DIFFER" : (!iend ? "IEND'S CRC WRONG" : "NOT READ BACK")));
@@ -172,7 +187,10 @@ void unitPerf(const Check& check) {
         }
         {   // six pictures queued behind each other: each file the picture asked for under its name
             std::vector<uint32_t> px(320 * 200);
-            for (int k = 0; k < 6; k++) { for (size_t i = 0; i < px.size(); i++) px[i] = 0xFF000000u | (uint32_t)((k * 40) << 8 | (i & 255)); writePNGAsync(fmt("shots/tests/f02_png_run_%d.png", k).c_str(), px.data(), 320, 200); }
+            for (int k = 0; k < 6; k++) {
+                for (size_t i = 0; i < px.size(); i++) px[i] = 0xFF000000u | (uint32_t)((k * 40) << 8 | (i & 255));
+                writePNGAsync(fmt("shots/tests/f02_png_run_%d.png", k).c_str(), px.data(), 320, 200);
+            }
             bool order = true;
             for (int k = 0; k < 6; k++) {
                 std::vector<uint32_t> back; int bw = 0, bh = 0;
@@ -210,7 +228,11 @@ void unitPerf(const Check& check) {
     }
     {   // the landing map and the drone bay open at once on a world not yet mapped (the landing map READING THE WORLD, the bay THE MAP
         // IS BEING DRAWN; a world not mapped held them 150-200 ms a map before), the map drawn once its thread has made it; Enter still lands
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide_f02.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide_f02.txt";
         remove(game.guidePath.c_str());
         game.newGame(); game.setState(GameState::SPACE);
         Input gi;
@@ -252,8 +274,9 @@ void unitPerf(const Check& check) {
             landed = game.state == GameState::DESCENT;
         }
         check("landing map and bay: no wait for the world's map (F-02)", found && opened && reading && drawn && blocked == 0 && bay && bayLater && landed,
-              fmt("the opening %.0f ms, %s, then the map %s; %d blocking map calls; the bay %s, its map %s; Enter %s", openMs, reading ? "READING THE WORLD" : "NOT READING", drawn ? "drawn" : "NOT DRAWN",
-                  blocked, bay ? "open with its map being drawn" : "NOT OPEN AS EXPECTED", bayLater ? "drawn later" : "NOT DRAWN", landed ? "lands" : "DOES NOT LAND"));
+                fmt("the opening %.0f ms, %s, then the map %s; %d blocking map calls; the bay %s, its map %s; Enter %s", openMs, reading ? "READING THE WORLD" : "NOT READING",
+                        drawn ? "drawn" : "NOT DRAWN", blocked, bay ? "open with its map being drawn" : "NOT OPEN AS EXPECTED", bayLater ? "drawn later" : "NOT DRAWN",
+                        landed ? "lands" : "DOES NOT LAND"));
         remove(game.guidePath.c_str());
     }
     {   // a fresh site's first frame (every cell of its rings a miss: the warm's fill on the pool) drawn by the workers and by one
@@ -321,7 +344,8 @@ void unitPerf(const Check& check) {
         }
         setFramebufferScale(saved);
         check("warm: a fresh site's rings filled on the pool (F-03)", sites == 4 && same == sites && fit == sites && misses > 4 * 4 * SurfaceView::FILL_SERIAL_MAX,
-              fmt("%d first frames the same with %d threads and with one, frame and caches: %d; the rings within their tori: %d; cells sampled (%s)%s%s", sites, parallelThreads(), same, fit, seen.c_str(), bad.empty() ? "" : "; ", bad.c_str()));
+                fmt("%d first frames the same with %d threads and with one, frame and caches: %d; the rings within their tori: %d; cells sampled (%s)%s%s", sites, parallelThreads(), same, fit,
+                        seen.c_str(), bad.empty() ? "" : "; ", bad.c_str()));
     }
     {   // the routing's descent sinking a pit of two cells a binade at a time (`drainageSink`) is the float loop it stands for, bit for
         // bit: powers of two and their neighbours either side, zero, the binade where the step rounds by parity, and random starts and counts
@@ -373,7 +397,8 @@ void unitPerf(const Check& check) {
             }
         setFramebufferScale(saved);
         check("terrain: the cells binned by their rows (F-04)", frames == 36 && same == frames && stale == 0 && cells > 0,
-              fmt("%d frames the same with %d threads and with one, three and five: %d; %d cells binned (%d in every band), %d corners unwarmed%s%s", frames, parallelThreads(), same, cells, every, stale, bad.empty() ? "" : "; ", bad.c_str()));
+                fmt("%d frames the same with %d threads and with one, three and five: %d; %d cells binned (%d in every band), %d corners unwarmed%s%s", frames, parallelThreads(), same, cells, every,
+                        stale, bad.empty() ? "" : "; ", bad.c_str()));
     }
     {   // the camera feeds' noise by rows: the state at every row's start from the row's jump (a 32x32 bit matrix) is the state the
         // serial walk reaches there, a row of FBW steps at a time, at every scale's width, for seeds of both feeds and the extremes
@@ -392,7 +417,8 @@ void unitPerf(const Check& check) {
                 }
             }
         }
-        check("feeds: the noise's rows from the jump (F-05)", rows > 0 && same == rows, fmt("%d rows at four widths and five seeds, %d start as the serial walk%s%s", rows, same, bad.empty() ? "" : ": ", bad.c_str()));
+        check("feeds: the noise's rows from the jump (F-05)", rows > 0 && same == rows,
+                fmt("%d rows at four widths and five seeds, %d start as the serial walk%s%s", rows, same, bad.empty() ? "" : ": ", bad.c_str()));
     }
     {   // wrap2pi's turns without fmod give fmod's bits: a sweep over three turns either way, the values next to every turn's edge
         // and the specials, against the formula it had
@@ -459,6 +485,7 @@ void unitPerf(const Check& check) {
             double t0 = nowSec(); parallelFor(8, 1, empty); rested += nowSec() - t0;
             t0 = nowSec(); for (int k = 0; k < 15; k++) parallelFor(8, 1, empty); burst += nowSec() - t0;
         }
-        printf("  pool (F-01, printed): %d threads; an empty dispatch over eight bands after a rest %.1f us, fifteen back to back %.1f us each (%.0f us the fifteen)\n", parallelThreads(), rested / R * 1e6, burst / R / 15 * 1e6, burst / R * 1e6);
+        printf("  pool (F-01, printed): %d threads; an empty dispatch over eight bands after a rest %.1f us, fifteen back to back %.1f us each (%.0f us the fifteen)\n", parallelThreads(),
+                rested / R * 1e6, burst / R / 15 * 1e6, burst / R * 1e6);
     }
 }

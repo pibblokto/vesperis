@@ -50,13 +50,34 @@ void podDress(Gen& g, double rx, double rz, double h, double hmin, int segs, int
     }
     auto spot = [&](size_t i, double out, double& x, double& z) { x = std::sin(wallAt[i].first) * (wallAt[i].second + out); z = std::cos(wallAt[i].first) * (wallAt[i].second + out); };
     switch (whole ? g.gv(GV_PROJECTIONS) : PJ_NONE) {
-        case PJ_BALCONIES: if (g.lod == 0) for (size_t i = 0; i < wallAt.size(); i++) { double x, z; spot(i, 0.4, x, z); Form& e = g.lathe(0, x, z, 1.3, h * 0.62, h * 0.62 + 0.22, 0, MT_COMPOSITE); e.part = 2; } break;
+        case PJ_BALCONIES:
+            if (g.lod == 0)
+                for (size_t i = 0; i < wallAt.size(); i++) {
+                    double x, z;
+                    spot(i, 0.4, x, z);
+                    Form& e = g.lathe(0, x, z, 1.3, h * 0.62, h * 0.62 + 0.22, 0, MT_COMPOSITE);
+                    e.part = 2;
+                }
+            break;
         case PJ_GALLERIES:
-            if (round) { Form& t = g.add(FK_TORUS, 0, 0, 0, 0, std::max(rx, rz) + 0.8, std::max(rx, rz) + 0.8, h - 0.75, h - 0.15, 2, MT_COMPOSITE); t.p[0] = 0.3; }
-            else for (size_t i = 0; i < wallAt.size(); i++) { double x, z; spot(i, 0.7, x, z); const double len = rx * std::sin(PI / segs); g.box(x, z, wallAt[i].first + PI / 2, len * 0.9, 0.7, h * 0.62 - 0.2, h * 0.62, 2, MT_COMPOSITE, 2); }
+            if (round) { Form& t = g.add(FK_TORUS, 0, 0, 0, 0, std::max(rx, rz) + 0.8, std::max(rx, rz) + 0.8, h - 0.75, h - 0.15, 2, MT_COMPOSITE); t.p[0] = 0.3;
+            } else
+                for (size_t i = 0; i < wallAt.size(); i++) {
+                    double x, z;
+                    spot(i, 0.7, x, z);
+                    const double len = rx * std::sin(PI / segs);
+                    g.box(x, z, wallAt[i].first + PI / 2, len * 0.9, 0.7, h * 0.62 - 0.2, h * 0.62, 2, MT_COMPOSITE, 2);
+                }
             break;
         case PJ_BAYS: for (size_t i = 0; i < wallAt.size() && i < 3; i++) { double x, z; spot(i, -0.6, x, z); g.add(FK_DOME, 1, x, z, 0, 2.1, 2.1, 0, 1.6, 2, MT_COMPOSITE, 2); } break;
-        case PJ_ORIELS: for (size_t i = 0; i < wallAt.size() && i < 3; i++) { double x, z; spot(i, 0.1, x, z); Form& e = g.lathe(0, x, z, 0.95, h * 0.45, h + 0.5, 0, MT_COMPOSITE); e.pattern = 2; } break;
+        case PJ_ORIELS:
+            for (size_t i = 0; i < wallAt.size() && i < 3; i++) {
+                double x, z;
+                spot(i, 0.1, x, z);
+                Form& e = g.lathe(0, x, z, 0.95, h * 0.45, h + 0.5, 0, MT_COMPOSITE);
+                e.pattern = 2;
+            }
+            break;
         default: break;
     }
     if (g.lod != 0) return;
@@ -64,7 +85,8 @@ void podDress(Gen& g, double rx, double rz, double h, double hmin, int segs, int
     auto at = [&](double across, double out, double& x, double& z) { x = dx * (r + out) + dz * across; z = dz * (r + out) - dx * across; };
     double x, z;
     switch (g.gv(GV_ENTRANCE)) {
-        case EN_PORCH: { at(0, 1.0, x, z); Form& v = g.add(FK_ARCH, 0, x, z, doorA, 1.7, 1.0, 0, 3.1, 2, MT_COMPOSITE); v.p[0] = 1; v.p[1] = 0.32; v.p[2] = 2.1; break; }   // a deep arch out from its doorway
+        // a deep arch out from its doorway
+        case EN_PORCH: { at(0, 1.0, x, z); Form& v = g.add(FK_ARCH, 0, x, z, doorA, 1.7, 1.0, 0, 3.1, 2, MT_COMPOSITE); v.p[0] = 1; v.p[1] = 0.32; v.p[2] = 2.1; break; }
         case EN_STEPS: at(0, 1.0, x, z); g.box(x, z, doorA, 1.4, 1.0, 0, 0.15, 0, MT_COMPOSITE, 4); break;
         case EN_PORTICO: for (int s = -1; s <= 1; s += 2) { at(s * 1.6, 0.8, x, z); g.lathe(1, x, z, 0.3, 0, h + 1.8, 0, MT_COMPOSITE); } break;
         case EN_CANOPY: { at(0, 0.8, x, z); Form& s = g.add(FK_SHELL, 0, x, z, doorA, 1.7, 1.3, 2.7, 3.4, 2, MT_COMPOSITE, 2); (void)s; break; }
@@ -97,13 +119,32 @@ double rectBody(Gen& g, Walls W, int rf, int roofMat, double hs[4], bool cells) 
             if (rk > 0.8 && g.D(roofMat) < 0.25 && (rl == RL_CRESTED || (rl == RL_LANTERN && k == n / 2))) {
                 const double yTop = g.sink + W.y0 + hmin - 0.05 + rk;
                 const bool cellZ = (alongZ ? half : W.hd) >= (alongZ ? W.hw : half);   // the cell's own ridge's run
-                if (rl == RL_CRESTED) { Form& e = g.add(FK_FENCE, g.c.age == AGE_INDUSTRIAL ? 1 : 0, cxk, czk, cellZ ? 0 : PI / 2, 0.03, std::max(0.4, (cellZ ? (alongZ ? half : W.hd) : (alongZ ? W.hw : half)) - 0.2), yTop - 0.08, yTop + 0.4, g.roofSlot(roofMat), roofMat, 4); e.p[0] = 0.3; e.p[1] = 0.5; e.p[3] = 0.13; }
-                else { g.lathe(0, cxk, czk, 0.45, yTop - 0.4, yTop + 0.9, wallsSlot(g, W), W.mat, 6); Form& s2 = g.lathe(1, cxk, czk, 0.58, yTop + 0.9, yTop + 0.9 + 1.2 * g.pitchK(), g.roofSlot(roofMat), roofMat, 6); s2.p[0] = 0.04; }
+                if (rl == RL_CRESTED) {
+                    Form& e = g.add(FK_FENCE, g.c.age == AGE_INDUSTRIAL ? 1 : 0, cxk, czk, cellZ ? 0 : PI / 2, 0.03, std::max(0.4, (cellZ ? (alongZ ? half : W.hd) : (alongZ ? W.hw : half)) - 0.2),
+                            yTop - 0.08, yTop + 0.4, g.roofSlot(roofMat), roofMat, 4);
+                    e.p[0] = 0.3;
+                    e.p[1] = 0.5;
+                    e.p[3] = 0.13;
+                } else {
+                    g.lathe(0, cxk, czk, 0.45, yTop - 0.4, yTop + 0.9, wallsSlot(g, W), W.mat, 6);
+                    Form& s2 = g.lathe(1, cxk, czk, 0.58, yTop + 0.9, yTop + 0.9 + 1.2 * g.pitchK(), g.roofSlot(roofMat), roofMat, 6);
+                    s2.p[0] = 0.04;
+                }
             }
         }
     }
     if (stepped) {   // the upper storey set back on the walls, its own roof
-        Walls U = W; U.hw = W.hw * 0.62; U.hd = W.hd * 0.62; U.h = W.h * 0.75; U.y0 = W.y0 + hmin; U.door = -1; U.window = false; U.glyphs = false; U.whole = false; U.k0 = W.k0 + 40; U.crenels = false;
+        Walls U = W;
+        U.hw = W.hw * 0.62;
+        U.hd = W.hd * 0.62;
+        U.h = W.h * 0.75;
+        U.y0 = W.y0 + hmin;
+        U.door = -1;
+        U.window = false;
+        U.glyphs = false;
+        U.whole = false;
+        U.k0 = W.k0 + 40;
+        U.crenels = false;
         double hu[4]; const double hmu = walls4(g, U, hu);
         const double riseU = roof(g, rf, U.cx, U.cz, U.hw, U.hd, hmu, U.h, 0.8, roofMat);
         if (rf == RF_PITCHED) gables(g, U, hu, 0.8);
@@ -154,7 +195,15 @@ void genHouse(Gen& g) {
             Walls W; W.cz = b.hd * 0.44; W.hw = b.hw; W.hd = b.hd * 0.56; W.h = b.hWall; W.thick = b.thick; W.door = 0; W.mat = mat; W.slot = wallSlot(g, mat); W.y0 = y0;
             W.doorPos = doorPos = houseDoorPos(b, b.hw); W.glyphs = true; W.pattern = 1;
             const double hmin = rectBody(g, W, rf, roofMat, hs, true);
-            Walls V = W; V.cx = (g.U(43) < 0.5 ? -1 : 1) * b.hw * 0.5; V.cz = -b.hd * 0.57; V.hw = b.hw * 0.5; V.hd = b.hd * 0.43; V.h = b.hWall * (0.8 + 0.2 * g.U(44)); V.door = -1; V.glyphs = false; V.k0 = 30;
+            Walls V = W;
+            V.cx = (g.U(43) < 0.5 ? -1 : 1) * b.hw * 0.5;
+            V.cz = -b.hd * 0.57;
+            V.hw = b.hw * 0.5;
+            V.hd = b.hd * 0.43;
+            V.h = b.hWall * (0.8 + 0.2 * g.U(44));
+            V.door = -1;
+            V.glyphs = false;
+            V.k0 = 30;
             double hv[4]; rectBody(g, V, rf, roofMat, hv, false);
             (void)hmin;
             break;
@@ -193,7 +242,11 @@ void genHouse(Gen& g) {
                 const bool round = g.gv(GV_PLAN) == PF_CIRCLE || g.gv(GV_PLAN) == PF_ELLIPSE;
                 for (int rowS = -1; rowS <= 1; rowS += 2)
                     for (double tt = -b.hd + 2.0; tt < b.hd - 1.5; tt += 3.0, k++) {
-                        if (works) { const double d = g.Dk(MT_IRON, 40 + k); if (d < 0.7) g.lathe(0, rowS * b.hw * 0.5, tt, 0.16, g.sink, g.sink + b.hWall * 0.9 * (d < 0.35 ? 1 : 1 - d), g.ironSlot(), MT_IRON, 6); continue; }
+                        if (works) {
+                            const double d = g.Dk(MT_IRON, 40 + k);
+                            if (d < 0.7) g.lathe(0, rowS * b.hw * 0.5, tt, 0.16, g.sink, g.sink + b.hWall * 0.9 * (d < 0.35 ? 1 : 1 - d), g.ironSlot(), MT_IRON, 6);
+                            continue;
+                        }
                         double f = 1 - Dm * (0.2 + 0.8 * g.U(40 + k));
                         if (f < 0.2) continue;
                         if (round) g.lathe(0, rowS * b.hw * 0.5, tt, 0.36, g.sink, g.sink + b.hWall * 0.9 * f, 0, mat, 8);
@@ -226,7 +279,8 @@ void genKeep(Gen& g) {
         R.segs = ringSegs(b.form, b.sides, std::min(R.rx, R.rz)); R.doorSegs = ringDoorSegs(std::min(R.rx, R.rz), R.segs); R.door = ringDoorFirst(b, R.segs, R.doorSegs);
         R.crenels = flatTop;
         hmin = ringWalls(g, R);
-        if (!flatTop) keepRise = roundRoof(g, rf == RF_PITCHED || rf == RF_HIPPED ? RF_CONICAL : rf, 0, 0, R.rx + R.thick * 0.5, R.rz + R.thick * 0.5, R.segs, hmin, b.hWall, 1.0, roofMaterial(g, rf, mat));
+        if (!flatTop)
+            keepRise = roundRoof(g, rf == RF_PITCHED || rf == RF_HIPPED ? RF_CONICAL : rf, 0, 0, R.rx + R.thick * 0.5, R.rz + R.thick * 0.5, R.segs, hmin, b.hWall, 1.0, roofMaterial(g, rf, mat));
     } else {
         Walls W; W.hw = b.hw; W.hd = b.hd; W.h = b.hWall; W.thick = b.thick; W.door = b.door; W.mat = mat; W.pattern = 2;
         const double doorL = (b.door == 0 || b.door == 2) ? b.hw : b.hd; W.doorPos = houseDoorPos(b, doorL); W.glyphs = true; W.crenels = flatTop;
@@ -237,7 +291,8 @@ void genKeep(Gen& g) {
     }
     if (hmin >= 0.97 * b.hWall && (tp == TP_FINIALS || tp == TP_STATUES || tp == TP_MASTS)) {
         const bool ring = b.form == PF_CIRCLE || b.form == PF_POLYGON || b.form == PF_ELLIPSE;
-        if (flatTop) { const double q = ring ? 0.7 : 0.92; topsAt(g, {{-b.hw * q, b.hd * q}, {b.hw * q, -b.hd * q}}, g.sink + hmin + 0.8, 1.0, mat); }   // on the merlons at two corners (a ring's at its diagonals)
+        // on the merlons at two corners (a ring's at its diagonals)
+        if (flatTop) { const double q = ring ? 0.7 : 0.92; topsAt(g, {{-b.hw * q, b.hd * q}, {b.hw * q, -b.hd * q}}, g.sink + hmin + 0.8, 1.0, mat); }
         else {   // on the roof's crown, the roof's own, while it stands
             const int rd = ring ? (rf == RF_PITCHED || rf == RF_HIPPED ? RF_CONICAL : rf) : (rf == RF_PITCHED ? RF_CONICAL : rf);
             if (keepRise > 0) roundTops(g, rd, g.sink + hmin, keepRise, 1.0, roofMaterial(g, rf, mat));
@@ -311,7 +366,8 @@ void genRotunda(Gen& g) {   // C-01's: a ring of wall, its doorway a segment lef
     if (hmin < b.hWall * 0.7 && !(g.lod == 2)) { drifts(g, R.rx, R.rz, Dm); return; }
     const int rm = pod ? MT_COMPOSITE : roofMaterial(g, rf, mat);
     double rise = roundRoof(g, rf, 0, 0, R.rx + b.thick * 0.5, R.rz + b.thick * 0.5, R.segs, hmin, b.hWall, 0.8, rm);
-    if (pod && rf == RF_DOMED) { for (Form& e : g.out) if (e.building == g.bi && e.kind == FK_DOME) { e.slot = 2; e.sub = 1; e.y1 = e.y0 + (e.hx) * 0.55; rise = e.y1 - (g.sink + hmin); } }   // a pod's saucer of glass
+    // a pod's saucer of glass
+    if (pod && rf == RF_DOMED) { for (Form& e : g.out) if (e.building == g.bi && e.kind == FK_DOME) { e.slot = 2; e.sub = 1; e.y1 = e.y0 + (e.hx) * 0.55; rise = e.y1 - (g.sink + hmin); } }
     if (hmin >= 0.92 * b.hWall) roundTops(g, rf, g.sink + hmin, rise, 1.0, rm);
     if (pod) podDress(g, R.rx, R.rz, b.hWall, hmin, R.segs, R.door, R.doorSegs);
     drifts(g, R.rx, R.rz, Dm);
@@ -344,7 +400,13 @@ void genGate(Gen& g) {
     }
     const double archTop = std::min(h - 1.0, b.hw * 1.1 + 3.2);
     const int sub = archSub(g);
-    if (std::min(t0, t1) > archTop && g.lod < 2) { Form& e = g.add(FK_ARCH, sub, 0, 0, 0, b.hw + 0.05, 1.0, g.sink, g.sink + archTop + 0.8, g.doorSlot(), mat); e.p[0] = 1; e.p[1] = 0.46; e.p[2] = 3.0; e.broken = Dm < 0.4 ? 0 : clampd(Dm, 0.4, 0.8); }
+    if (std::min(t0, t1) > archTop && g.lod < 2) {
+        Form& e = g.add(FK_ARCH, sub, 0, 0, 0, b.hw + 0.05, 1.0, g.sink, g.sink + archTop + 0.8, g.doorSlot(), mat);
+        e.p[0] = 1;
+        e.p[1] = 0.46;
+        e.p[2] = 3.0;
+        e.broken = Dm < 0.4 ? 0 : clampd(Dm, 0.4, 0.8);
+    }
 }
 
 void genWallTower(Gen& g) {   // a tower astride the town wall in the people's section and profile, its top the people's
@@ -368,7 +430,15 @@ void genPlatform(Gen& g) {
         if (g.lod == 2) return;
         if (g.lod == 0) g.box(0, rb + 0.6, 0, 1.0, 0.6, 0, 0.5, 0, MT_MASONRY, 2);
         bool all = true;
-        for (int k = 0; k < 8; k++) { const double a = (k + 0.5) * TAU / 8, d = g.Dk(MT_IRON, 20 + k); if (d > 0.7) { all = false; continue; } if (d > 0.35) all = false; g.lathe(0, std::sin(a) * rb * 0.85, std::cos(a) * rb * 0.85, 0.1, g.sink + 1.0, g.sink + 1.0 + 3.2 * (d < 0.35 ? 1 : 1 - d), g.ironSlot(), MT_IRON, 6); }
+        for (int k = 0; k < 8; k++) {
+            const double a = (k + 0.5) * TAU / 8, d = g.Dk(MT_IRON, 20 + k);
+            if (d > 0.7) {
+                all = false;
+                continue;
+            }
+            if (d > 0.35) all = false;
+            g.lathe(0, std::sin(a) * rb * 0.85, std::cos(a) * rb * 0.85, 0.1, g.sink + 1.0, g.sink + 1.0 + 3.2 * (d < 0.35 ? 1 : 1 - d), g.ironSlot(), MT_IRON, 6);
+        }
         if (all && Di < 0.4) { Form& r = g.lathe(1, 0, 0, rb * 1.05, g.sink + 4.2, g.sink + 4.2 + rb * 0.6, g.roofSlot(MT_IRON), MT_IRON, 8); r.p[0] = 0.04; }
         return;
     }
@@ -383,7 +453,11 @@ void genPlatform(Gen& g) {
     const int T = clampi(c.genome.number() - 1, 2, 6); const double th = 3.3 / T;
     for (int i = 0; i < T; i++) g.box(0, 0, 0, b.hw * (1 - 0.84 * i / T), b.hd * (1 - 0.84 * i / T), g.sink + th * i, g.sink + th * (i + 1), 0, mat, 2);
     if (g.lod == 0) for (int k = 0; k < 4; k++) g.box(0, b.hd + 0.35 + 0.7 * (3 - k), 0, 1.6, 0.35, 0, 0.28 * (k + 1), 0, mat, 2);
-    if (g.U(7) < 0.5 && Dm < 0.6) { Form& e = g.box(0, 0, 0, 1.3, 1.3, g.sink + 3.3, g.sink + 3.3 + 2.4 * (1 - 0.5 * Dm), 0, mat); e.glyphs = g.lod == 0; if (Dm < 0.3) topsAt(g, {{0, 0}}, g.sink + 3.3 + 2.4, 0.8, mat); }
+    if (g.U(7) < 0.5 && Dm < 0.6) {
+        Form& e = g.box(0, 0, 0, 1.3, 1.3, g.sink + 3.3, g.sink + 3.3 + 2.4 * (1 - 0.5 * Dm), 0, mat);
+        e.glyphs = g.lod == 0;
+        if (Dm < 0.3) topsAt(g, {{0, 0}}, g.sink + 3.3 + 2.4, 0.8, mat);
+    }
 }
 
 // C-01's columns in a row, some fallen (A-04: the people's number of them, round or square); an arcade where the people built arches. B-415:
@@ -559,12 +633,26 @@ void motifOn(Gen& g, double cx, double cz, double hw, double hd, double h, doubl
             if (g.lod == 0 && h > 1.5) for (int s = 0; s < 4; s++) {
                 const bool al = s % 2 == 0; const double L = al ? hw : hd, nx = s == 1 ? 1 : (s == 3 ? -1 : 0), nz = s == 0 ? 1 : (s == 2 ? -1 : 0);
                 const int n = std::max(2, (int)(2 * L / 2.2));
-                for (int k = 1; k < n; k++) { const double t = -L + 2 * L * k / n; if (s == 0 && std::fabs(t) < 1.4) continue; g.box(cx + (al ? t : nx * (hw + 0.3)), cz + (al ? nz * (hd + 0.3) : -t), al ? 0 : PI / 2, 0.16, 0.2, base, base + h, 0, mat, 4); }
+                for (int k = 1; k < n; k++) {
+                    const double t = -L + 2 * L * k / n;
+                    if (s == 0 && std::fabs(t) < 1.4) continue;
+                    g.box(cx + (al ? t : nx * (hw + 0.3)), cz + (al ? nz * (hd + 0.3) : -t), al ? 0 : PI / 2, 0.16, 0.2, base, base + h, 0, mat, 4);
+                }
             }
             break;
-        case MO_CIRCLES: if (whole) { const double r = std::min(hw, hd) * 0.18 + 0.3; for (int q = 0; q < 4; q++) g.add(FK_DOME, 0, cx + (q % 2 ? hw : -hw), cz + (q < 2 ? hd : -hd), 0, r, r, base + h, base + h + r, g.topSlot(mat), mat, 4); } break;
+        case MO_CIRCLES:
+            if (whole) {
+                const double r = std::min(hw, hd) * 0.18 + 0.3;
+                for (int q = 0; q < 4; q++) g.add(FK_DOME, 0, cx + (q % 2 ? hw : -hw), cz + (q < 2 ? hd : -hd), 0, r, r, base + h, base + h + r, g.topSlot(mat), mat, 4);
+            }
+            break;
         case MO_STEPS:
-            if (whole && g.lod == 0) for (int s = 0; s < 4; s += 2) for (int k = 0; k < 3; k++) { const double w = hw * (0.8 - 0.25 * k); g.box(cx, cz + (s == 0 ? hd : -hd), 0, w, 0.35, base + h + 0.6 * k, base + h + 0.6 * (k + 1), g.topSlot(mat), mat, 4); }
+            if (whole && g.lod == 0)
+                for (int s = 0; s < 4; s += 2)
+                    for (int k = 0; k < 3; k++) {
+                        const double w = hw * (0.8 - 0.25 * k);
+                        g.box(cx, cz + (s == 0 ? hd : -hd), 0, w, 0.35, base + h + 0.6 * k, base + h + 0.6 * (k + 1), g.topSlot(mat), mat, 4);
+                    }
             break;
         case MO_SPIRALS:   // a ramp round the walls, a side a quarter of its rise, the front's doorway's stretch left out
             if (whole && g.lod == 0) for (int k = 0; k < 8; k++) {
@@ -609,7 +697,11 @@ void genTemple(Gen& g) {
         if (modern) z.pattern = 3;
         if (g.gv(GV_PLAN) == PF_POLYGON) z.sides = clampi(c.genome.number(), 3, 8);
         z.broken = top < H * 0.97 ? clampd(1 - top / H, 0.1, 0.95) : 0;
-        if (z.broken == 0 && g.lod < 2 && !modern) { Form& s = g.box(0, cz, 0, hx * 0.3, hz * 0.3, g.sink + H, g.sink + H + big * 0.5, 0, mat); s.glyphs = g.lod == 0; topsAt(g, {{0, cz}}, g.sink + H + big * 0.5, 1.2, mat); }
+        if (z.broken == 0 && g.lod < 2 && !modern) {
+            Form& s = g.box(0, cz, 0, hx * 0.3, hz * 0.3, g.sink + H, g.sink + H + big * 0.5, 0, mat);
+            s.glyphs = g.lod == 0;
+            topsAt(g, {{0, cz}}, g.sink + H + big * 0.5, 1.2, mat);
+        }
         if (g.lod == 0) for (int k = 0; k < 6; k++) { double t = (k + 0.5) / 6; g.box(0, cz + hz + 1.2 - t * hz * 0.85, 0, 1.6, 1.2, g.sink, g.sink + H * t * 0.8 * (1 - 0.5 * Dm), 0, mat, 2); }
         Walls W; W.cz = b.hd - 3.5; W.hw = 3.2; W.hd = 3.0; W.h = 4.0; W.thick = 0.6; W.door = 0; W.mat = mat; W.glyphs = true; W.k0 = 30;
         double hs[4]; double hmin = walls4(g, W, hs);
@@ -624,12 +716,17 @@ void genTemple(Gen& g) {
         R.rz = b.form == PF_ELLIPSE ? r * 1.25 : r;
         R.doorSegs = ringDoorSegs(r, R.segs); R.door = ((R.segs - R.doorSegs / 2) % R.segs + R.segs) % R.segs;
         const double hmin = ringWalls(g, R);
-        const int rf = c.roof == RF_DOMED || c.roof == RF_VAULTED || c.roof == RF_FLAT || c.roof == RF_OPEN || c.roof == RF_STEPPED ? (c.roof == RF_STEPPED && !machine ? RF_STEPPED : RF_DOMED) : RF_CONICAL;
+        const int rf =
+                c.roof == RF_DOMED || c.roof == RF_VAULTED || c.roof == RF_FLAT || c.roof == RF_OPEN || c.roof == RF_STEPPED ? (c.roof == RF_STEPPED && !machine ? RF_STEPPED : RF_DOMED) : RF_CONICAL;
         const int rm = machine && rf == RF_DOMED ? (modern ? MT_CONCRETE : MT_IRON) : roofMaterial(g, rf, mat);
         double rise = 0;
         if (machine && rf == RF_DOMED) {   // a saucer: of iron and glass, or a concrete shell
             const double Dr = g.D(rm);
-            if (hmin >= big * 0.92 && Dr < 0.6) { Form& e = g.add(FK_DOME, 1, 0, 0, 0, R.rx + 0.5, R.rz + 0.5, g.sink + hmin - 0.1, g.sink + hmin - 0.1 + r * 0.5, g.roofSlot(rm), rm, 2); e.broken = Dr < 0.3 ? 0 : clampd(Dr, 0.3, 0.9); rise = r * 0.4; }
+            if (hmin >= big * 0.92 && Dr < 0.6) {
+                Form& e = g.add(FK_DOME, 1, 0, 0, 0, R.rx + 0.5, R.rz + 0.5, g.sink + hmin - 0.1, g.sink + hmin - 0.1 + r * 0.5, g.roofSlot(rm), rm, 2);
+                e.broken = Dr < 0.3 ? 0 : clampd(Dr, 0.3, 0.9);
+                rise = r * 0.4;
+            }
         } else rise = roundRoof(g, rf, 0, 0, R.rx + 0.5, R.rz + 0.5, R.segs, hmin, big, 0.8, rm);
         if (hmin >= big * 0.92) roundTops(g, rf, g.sink + hmin, rise, 1.4, rm);
         if (g.lod < 2 && !machine) {   // the peristyle
@@ -654,7 +751,11 @@ void genTemple(Gen& g) {
         if (hmin > big * 0.92) {
             Form& d = g.lathe(0, 0, 0, rd, g.sink + hmin, g.sink + drumTop, 0, mat, g.gv(GV_PLAN) == PF_POLYGON ? clampi(c.genome.number(), 3, 8) : 8); d.pattern = 3;
             if (Dm < 0.65) {
-                const int prof = modern ? 1 : (g.gv(GV_MOTIF) == MO_SPIRALS || g.gv(GV_MOTIF) == MO_FIGURES ? 3 : (g.gv(GV_OPENING) == OP_ARCHED || g.gv(GV_OPENING) == OP_TRIANGULAR ? 2 : (g.gv(GV_MOTIF) == MO_CIRCLES ? 0 : (b.age >= AGE_MODERN ? 1 : 0))));
+                const int prof = modern
+                        ? 1
+                        : (g.gv(GV_MOTIF) == MO_SPIRALS || g.gv(GV_MOTIF) == MO_FIGURES
+                                          ? 3
+                                          : (g.gv(GV_OPENING) == OP_ARCHED || g.gv(GV_OPENING) == OP_TRIANGULAR ? 2 : (g.gv(GV_MOTIF) == MO_CIRCLES ? 0 : (b.age >= AGE_MODERN ? 1 : 0))));
                 const double dH = rd * (prof == 3 ? 1.5 : (prof == 2 ? 1.35 : (prof == 1 ? 0.55 : 1.0)));
                 Form& e = g.add(FK_DOME, prof, 0, 0, 0, rd, rd, g.sink + drumTop, g.sink + drumTop + dH, g.roofSlot(mat), mat, 2); e.broken = Dm < 0.3 ? 0 : clampd(Dm, 0.3, 0.9);
                 if (Dm < 0.3) topsAt(g, {{0, 0}}, g.sink + drumTop + dH, 1.5, mat);
@@ -668,8 +769,17 @@ void genTemple(Gen& g) {
             else if (sym == SY_ROTATIONAL) { const double a = k * PI / 2; lx = std::cos(a) * (b.hw + 3.0) - std::sin(a) * (b.hw * 0.5); lz = std::sin(a) * (b.hw + 3.0) + std::cos(a) * (b.hw * 0.5); }
             else { lx = (k % 2 ? 1 : -1) * (b.hw + 3.0); lz = (k < 2 ? 1 : -1) * (b.hw + 3.0); }
             TowerOut T = towerShaft(g, lx, lz, modern ? 1.0 : 1.5, mh, mat, 13 + k * 3, 2);
-            if (T.whole && modern) { Form& t = g.lathe(2, lx, lz, 0.9, g.sink + T.h, g.sink + T.h + mh * 0.18, g.topSlot(mat), mat); t.p[0] = 1.4; }   // a needle
-            else if (T.whole) { if (g.c.roof == RF_DOMED) { Form& t = g.add(FK_DOME, 3, lx, lz, 0, 1.6, 1.6, g.sink + T.h, g.sink + T.h + 3.0, g.topSlot(mat), mat); (void)t; } else { Form& t = g.lathe(1, lx, lz, 1.8, g.sink + T.h, g.sink + T.h + 3.5, g.topSlot(mat), mat); t.p[0] = 0; } }
+            if (T.whole && modern) { Form& t = g.lathe(2, lx, lz, 0.9, g.sink + T.h, g.sink + T.h + mh * 0.18, g.topSlot(mat), mat); t.p[0] = 1.4;
+            }   // a needle
+            else if (T.whole) {
+                if (g.c.roof == RF_DOMED) {
+                    Form& t = g.add(FK_DOME, 3, lx, lz, 0, 1.6, 1.6, g.sink + T.h, g.sink + T.h + 3.0, g.topSlot(mat), mat);
+                    (void)t;
+                } else {
+                    Form& t = g.lathe(1, lx, lz, 1.8, g.sink + T.h, g.sink + T.h + 3.5, g.topSlot(mat), mat);
+                    t.p[0] = 0;
+                }
+            }
         }
     } else {   // the basilica: its roof, its towers with their spires (the people's focus a spire: tall)
         const int rf = modern ? (c.roof == RF_STEPPED || c.roof == RF_OPEN ? RF_FLAT : c.roof) : (c.roof == RF_FLAT ? RF_VAULTED : (c.roof == RF_OPEN ? RF_PITCHED : c.roof));

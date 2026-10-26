@@ -105,7 +105,8 @@ void Game::watchProbe() {
 }
 
 void Game::probeCut(const char* why) {
-    if (probe.active && probe.endClock < 0 && probe.body >= 0 && probe.body < (int)sys.bodies.size() && sys.star.seed == probe.starSeed) {   // (a Vimana flight has just set `sys.valid` off: the system is still the giant's)
+    if (probe.active && probe.endClock < 0 && probe.body >= 0 && probe.body < (int)sys.bodies.size() && sys.star.seed == probe.starSeed) {
+        // (a Vimana flight has just set `sys.valid` off: the system is still the giant's)
         double bar = probeBarAt(probe.flight, probe.clock);
         logEvent("PROBE", bar > 0 ? fmt("RELAY TO PROBE %d IN %s CUT AT %.2f ATM: %s", probe.id, upper(bodyNameOf(probe.body)).c_str(), atmOf(bar), why)
                                   : fmt("RELAY TO PROBE %d FALLING TO %s CUT: %s", probe.id, upper(bodyNameOf(probe.body)).c_str(), why));   // the log wraps a text on two lines of 44
@@ -293,7 +294,9 @@ void Game::renderProbeHUD(const ProbeRecord* rec, double cRec, double tt) {
         const int cause = rec ? rec->endCause : probe.endCause;
         if ((int)(realTime * 1.5) & 1) drawTextCentered(canvas, UW / 2, UH / 2 - 16, cause == 3 ? "RELAY CUT" : "SIGNAL LOST", HUD_RED);
         drawTextCentered(canvas, UW / 2, UH / 2 - 4, (eKm >= 0 ? fmt("%.0f KM DOWN  %.1f ATM  %+.0f C", eKm, atmOf(eBar), eK - 273.15) : fmt("%.0f KM UP  %.4f ATM", -eKm, atmOf(eBar))).c_str(), fc);
-        drawTextCentered(canvas, UW / 2, UH / 2 + 5, fmt(rec ? "%d MIN %02d S - %s" : "%d MIN %02d S AFTER THE LAUNCH - %s", mins, secs, cause == 1 ? "THE HULL GAVE WAY" : (cause == 2 ? "THE HEAT TOOK IT" : "THE SHIP LEFT")).c_str(), fd);   // (a recording's clear of its depth bar)
+        drawTextCentered(canvas, UW / 2, UH / 2 + 5,
+                fmt(rec ? "%d MIN %02d S - %s" : "%d MIN %02d S AFTER THE LAUNCH - %s", mins, secs, cause == 1 ? "THE HULL GAVE WAY" : (cause == 2 ? "THE HEAT TOOK IT" : "THE SHIP LEFT")).c_str(),
+                fd);   // (a recording's clear of its depth bar)
         drawTextShadow(canvas, 18, UH - 26, rec ? "SPACE PLAYS AGAIN  LEFT DEPTH  ESC GALLERY" : "ENTER / ESC: BACK TO THE CABIN   P PHOTO", fd, HUD_SHADOW);
         drawCommonHUD(!rec);
         return;

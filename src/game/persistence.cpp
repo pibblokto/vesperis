@@ -144,9 +144,10 @@ bool Game::save(const std::string& path) {
     f << "remote " << (ship.hasRemote ? 1 : 0) << " " << ship.remote.sx << " " << ship.remote.sy << " " << ship.remote.sz << "\n";
     f << "cabin " << cabin.x << " " << cabin.z << " " << cabin.yaw << " " << cabin.pitch << " " << (cabin.light ? 1 : 0) << " " << (cabin.depolarised ? 1 : 0) << " " << (cabin.onRoof ? 1 : 0) << "\n";
     if (probe.active && probe.endClock < 0 && probeHere())   // a falling probe (a last frame held is not kept)
-        f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " " << probe.startRel.y << " " << probe.startRel.z << " "
-          << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw << " " << probe.descYaw << " " << probe.camYaw << " " << probe.camPitch << " " << (probe.tornNoted ? 1 : 0) << " " << (state == GameState::PROBE ? 1 : 0)
-          << " " << probe.id << " " << probe.notes << " " << probe.stormKind << " " << (probe.stormKey.empty() ? "-" : probe.stormKey) << "\n";   // its number, what it logged, its storm
+        f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " "
+          << probe.startRel.y << " " << probe.startRel.z << " " << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw
+          << " " << probe.descYaw << " " << probe.camYaw << " " << probe.camPitch << " " << (probe.tornNoted ? 1 : 0) << " " << (state == GameState::PROBE ? 1 : 0) << " " << probe.id << " "
+          << probe.notes << " " << probe.stormKind << " " << (probe.stormKey.empty() ? "-" : probe.stormKey) << "\n";   // its number, what it logged, its storm
     if (probe.active && probe.endClock < 0 && probeHere()) {   // the tracks so far (the recording goes on after a load)
         f << "probetrack " << probe.camTrack.size(); for (double v : probe.camTrack) f << " " << v;
         f << " " << probe.timeTrack.size(); for (double v : probe.timeTrack) f << " " << v;
@@ -160,7 +161,9 @@ bool Game::save(const std::string& path) {
             const DroneRun& R = bay.run[k];
             f << "bayrun " << k << " " << R.out << " " << R.down << " " << R.up << " " << R.dock << " " << (R.docked ? 1 : 0) << " " << R.wanted << "\n";
             for (const DroneStopRec& st : R.stops) f << "baystop " << k << " " << st.place << " " << st.sclass << " " << st.lat << " " << st.lon << " " << st.arrive << " " << st.leave << "\n";
-            for (const DroneFindRec& fd : R.finds) f << "bayfind " << k << " " << fd.kind << " " << fd.index << " " << fd.people << " " << fd.medium << " " << fd.place << " " << fd.t << " " << (fd.aboard ? 1 : 0) << " " << fd.name << "\n";
+            for (const DroneFindRec& fd : R.finds)
+                f << "bayfind " << k << " " << fd.kind << " " << fd.index << " " << fd.people << " " << fd.medium << " " << fd.place << " " << fd.t << " " << (fd.aboard ? 1 : 0) << " " << fd.name
+                  << "\n";
         }
     }
     // where the explorer is: on the surface in the surface states, and in every overlay state (menus, guide screens,
@@ -174,8 +177,10 @@ bool Game::save(const std::string& path) {
         f << "player " << surf.player.x << " " << surf.player.z << " " << surf.player.yaw << " " << surf.player.pitch << "\n";
         f << "capsule " << surf.capsuleX << " " << surf.capsuleZ << "\n";
         if (state == GameState::DESCENT || state == GameState::ASCENT) f << "phase " << (int)state << " " << transT << "\n";
-        f << "buggy " << (surf.buggy.deployed ? 1 : 0) << " " << surf.buggy.x << " " << surf.buggy.z << " " << surf.buggy.heading << " " << surf.buggy.odometer << " " << (surf.inBuggy ? 1 : 0) << "\n";
-        f << "drone " << (surf.drone.deployed ? 1 : 0) << " " << surf.drone.x << " " << surf.drone.z << " " << surf.drone.heading << " " << surf.drone.odometer << " " << (surf.inDrone ? 1 : 0) << "\n";   // a drone saved in flight loads landed where it was
+        f << "buggy " << (surf.buggy.deployed ? 1 : 0) << " " << surf.buggy.x << " " << surf.buggy.z << " " << surf.buggy.heading << " " << surf.buggy.odometer << " " << (surf.inBuggy ? 1 : 0)
+          << "\n";
+        f << "drone " << (surf.drone.deployed ? 1 : 0) << " " << surf.drone.x << " " << surf.drone.z << " " << surf.drone.heading << " " << surf.drone.odometer << " " << (surf.inDrone ? 1 : 0)
+          << "\n";   // a drone saved in flight loads landed where it was
         f << "waypoint " << (surf.hasWaypoint ? 1 : 0) << " " << surf.wpX << " " << surf.wpZ << "\n";
         f << "stamina " << surf.player.stamina << "\n";
     }
@@ -226,8 +231,8 @@ bool Game::load(const std::string& path) {
         else if (key == "gen") is >> gen;
         else if (key == "cabin") { is >> cab.x >> cab.z >> cab.yaw >> cab.pitch >> cl >> cd >> cr; cab.light = cl != 0; cab.depolarised = cd != 0; cab.onRoof = cr != 0; }
         else if (key == "probe") {
-            is >> np.body >> np.starSeed >> np.aimLat >> np.aimLon >> np.clock >> np.launchT >> np.startRel.x >> np.startRel.y >> np.startRel.z >> np.flight.chuteOpen >> np.flight.chuteClose >> np.flight.crushBar
-               >> np.seed >> np.headYaw >> np.descYaw >> np.camYaw >> np.camPitch >> npTorn >> npWatch;
+            is >> np.body >> np.starSeed >> np.aimLat >> np.aimLon >> np.clock >> np.launchT >> np.startRel.x >> np.startRel.y >> np.startRel.z >> np.flight.chuteOpen >> np.flight.chuteClose >>
+                    np.flight.crushBar >> np.seed >> np.headYaw >> np.descYaw >> np.camYaw >> np.camPitch >> npTorn >> npWatch;
             npHas = !is.fail();
             std::string sk;   // (a save before it has none)
             if (npHas && is >> np.id >> np.notes >> np.stormKind >> sk) np.stormKey = sk == "-" ? std::string() : sk;
@@ -292,9 +297,27 @@ bool Game::load(const std::string& path) {
         surf.player.x = px; surf.player.z = pz; surf.player.yaw = pyaw; surf.player.pitch = ppitch;
         surf.player.y = surf.site.surfaceHeight(px, pz);
         surf.relocateCapsule(capx, capz);
-        if (bugDep) { surf.buggy = Buggy(); surf.buggy.deployed = true; surf.buggy.unfold = 1; surf.buggy.x = bugX; surf.buggy.z = bugZ; surf.buggy.heading = bugH; surf.buggy.odometer = bugOdo; surf.buggy.y = surf.site.surfaceHeight(bugX, bugZ); if (bugIn) surf.toggleBuggy(); }
+        if (bugDep) {
+            surf.buggy = Buggy();
+            surf.buggy.deployed = true;
+            surf.buggy.unfold = 1;
+            surf.buggy.x = bugX;
+            surf.buggy.z = bugZ;
+            surf.buggy.heading = bugH;
+            surf.buggy.odometer = bugOdo;
+            surf.buggy.y = surf.site.surfaceHeight(bugX, bugZ);
+            if (bugIn) surf.toggleBuggy();
+        }
         if (drDep) {   // on the ground where it was, landed; the explorer back in it if they were
-            surf.drone = Drone(); surf.drone.deployed = true; surf.drone.unfold = 1; surf.drone.x = drX; surf.drone.z = drZ; surf.drone.heading = drH; surf.drone.odometer = drOdo; surf.drone.y = surf.site.surfaceHeight(drX, drZ); surf.drone.landed = true;
+            surf.drone = Drone();
+            surf.drone.deployed = true;
+            surf.drone.unfold = 1;
+            surf.drone.x = drX;
+            surf.drone.z = drZ;
+            surf.drone.heading = drH;
+            surf.drone.odometer = drOdo;
+            surf.drone.y = surf.site.surfaceHeight(drX, drZ);
+            surf.drone.landed = true;
             if (drIn && !surf.inBuggy) { surf.player.x = drX; surf.player.z = drZ; surf.toggleDrone(); }
         }
         surf.hasWaypoint = wpHas != 0; surf.wpX = wpx; surf.wpZ = wpz;
@@ -321,7 +344,8 @@ bool Game::load(const std::string& path) {
         if (!nbayBack && !nbay.out) for (const DroneRun& R : nbay.run) nbay.back = std::max(nbay.back, std::min(R.dock, nbay.clock));   // a save before the charge ran from the return
         bay = nbay;
         if (bay.out && !bay.planned) for (DroneRun& R : bay.run) R.docked = false;
-        if (bay.out && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() && worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body]))) droneWorldAsk(bay.body);
+        if (bay.out && sys.valid && sys.star.seed == bay.starSeed && bay.body >= 0 && bay.body < (int)sys.bodies.size() && worldHadCivilisation(spaceR.genFor(sys.bodies[bay.body])))
+            droneWorldAsk(bay.body);
     }
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
     hasSave = true;

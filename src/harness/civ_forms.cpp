@@ -145,15 +145,27 @@ static int buildTestCity(uint64_t seed, RuinSpec& sp, std::vector<Form>& forms) 
                 }
             } else if (rho < 600) {   // halls, domes, mid-rise blocks
                 int pick = rng.irange(5);
-                if (pick <= 1) { double hx = 10 + 12 * rng.uni(), hz = 10 + 12 * rng.uni(), H = 15 + 30 * rng.uni(); addBuilding(cx, cz, heading, hx, hz, {makeForm(FK_BOX, 0, hx, hz, 0, H, {}, 0, 0, 1 + rng.irange(3))}); }
-                else if (pick == 2) { double R = 9 + 8 * rng.uni(), H = 8 + 8 * rng.uni(); addBuilding(cx, cz, heading, R, R, {makeForm(FK_LATHE, 0, R, R, 0, H, {}, 0, 0, 3), makeForm(FK_DOME, 1 + rng.irange(3), R, R, H, H + R * (0.6 + 0.6 * rng.uni()), {}, 0, 1)}); }
-                else if (pick == 3) { double hx = 10 + 6 * rng.uni(), hz = 20 + 10 * rng.uni(); addBuilding(cx, cz, heading, hx, hz, {makeForm(FK_VAULT, rng.irange(3), hx, hz, 0, hx * (0.9 + 0.3 * rng.uni()), {0.6, 1})}); }
-                else { double R = 7 + 5 * rng.uni(), H = 40 + 40 * rng.uni(); addBuilding(cx, cz, heading, R, R, {makeForm(FK_LATHE, 0, R, R, 0, H, {}, 6, 0, 2)}); }
+                if (pick <= 1) {
+                    double hx = 10 + 12 * rng.uni(), hz = 10 + 12 * rng.uni(), H = 15 + 30 * rng.uni();
+                    addBuilding(cx, cz, heading, hx, hz, {makeForm(FK_BOX, 0, hx, hz, 0, H, {}, 0, 0, 1 + rng.irange(3))});
+                } else if (pick == 2) {
+                    double R = 9 + 8 * rng.uni(), H = 8 + 8 * rng.uni();
+                    addBuilding(cx, cz, heading, R, R, {makeForm(FK_LATHE, 0, R, R, 0, H, {}, 0, 0, 3), makeForm(FK_DOME, 1 + rng.irange(3), R, R, H, H + R * (0.6 + 0.6 * rng.uni()), {}, 0, 1)});
+                } else if (pick == 3) {
+                    double hx = 10 + 6 * rng.uni(), hz = 20 + 10 * rng.uni();
+                    addBuilding(cx, cz, heading, hx, hz, {makeForm(FK_VAULT, rng.irange(3), hx, hz, 0, hx * (0.9 + 0.3 * rng.uni()), {0.6, 1})});
+                } else {
+                    double R = 7 + 5 * rng.uni(), H = 40 + 40 * rng.uni();
+                    addBuilding(cx, cz, heading, R, R, {makeForm(FK_LATHE, 0, R, R, 0, H, {}, 6, 0, 2)});
+                }
             } else {   // the outer blocks: low houses, works, masts
                 int pick = rng.irange(10);
                 if (pick <= 4) {
                     int n = 2 + rng.irange(3);
-                    for (int k = 0; k < n; k++) { double hx = 5 + 5 * rng.uni(), hz = 5 + 5 * rng.uni(), H = 6 + 8 * rng.uni(), ox = (k - (n - 1) * 0.5) * 22; addBuilding(cx + ox, cz, heading, hx, hz, {makeForm(FK_BOX, 0, hx, hz, 0, H, {}, 0, 0, 1)}); }
+                    for (int k = 0; k < n; k++) {
+                        double hx = 5 + 5 * rng.uni(), hz = 5 + 5 * rng.uni(), H = 6 + 8 * rng.uni(), ox = (k - (n - 1) * 0.5) * 22;
+                        addBuilding(cx + ox, cz, heading, hx, hz, {makeForm(FK_BOX, 0, hx, hz, 0, H, {}, 0, 0, 1)});
+                    }
                 } else if (pick == 5) { double R = 7 + 5 * rng.uni(); addBuilding(cx, cz, heading, R, R, {makeForm(FK_LATHE, 4, R, R, 0, R * 1.8, {0.4}, 0, 2)}); }
                 else if (pick == 6) { addBuilding(cx, cz, heading, 4, 4, {makeForm(FK_LATHE, 5, 3, 3, 0, 40 + 40 * rng.uni(), {0.6})}); }
                 else if (pick == 7) {
@@ -209,7 +221,12 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
                 double reach = (f.kind == FK_CABLE ? std::hypot(f.p[0] - f.x, f.p[1] - f.z) : formReach(f)) * 1.25 + 2, top = formTop(f) + 2;
                 auto inBounds = [&](const Vec3& p) {
                     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) { nonFinite++; return; }
-                    if (std::hypot(p.x - foot.x, p.z - foot.z) > reach || p.y - 100 > top || p.y - 100 < -3) { outside++; if (firstBad.empty()) firstBad = fmt("%s lod %d%s: a corner at %.1f m out, %.1f m up (reach %.1f, top %.1f)", S.name, lod, br ? " broken" : "", std::hypot(p.x - foot.x, p.z - foot.z), p.y - 100, reach, top); }
+                    if (std::hypot(p.x - foot.x, p.z - foot.z) > reach || p.y - 100 > top || p.y - 100 < -3) {
+                        outside++;
+                        if (firstBad.empty())
+                            firstBad = fmt("%s lod %d%s: a corner at %.1f m out, %.1f m up (reach %.1f, top %.1f)", S.name, lod, br ? " broken" : "", std::hypot(p.x - foot.x, p.z - foot.z), p.y - 100,
+                                    reach, top);
+                    }
                 };
                 for (const FormMesh::V& v : m.v) inBounds(v.p);
                 for (const FormMesh::Line& l : m.lines) { inBounds(l.a); inBounds(l.b); }
@@ -227,8 +244,9 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
         formMesh(box, 0, Vec3(0, 0, 0), 1.0, m); size_t boxPolys = m.polys.size();
         formMesh(dome, 2, Vec3(0, 0, 0), 0.0, m); size_t domePolys = m.polys.size();
         check("forms: every kind whole and broken (A-02)", kinds == FK_COUNT && empty == 0 && nonFinite == 0 && outside == 0 && unbroken == 0 && boxPolys == 5 && domePolys == 40,
-              fmt("%d of %d kinds in %zu samples, %d meshes: %d empty, %d corners not finite, %d out of their bounds, %d broken ones the same as the whole; C-01's box %zu faces, its hemisphere %zu quads%s%s",
-                  kinds, FK_COUNT, samples.size(), meshes, empty, nonFinite, outside, unbroken, boxPolys, domePolys, firstBad.empty() ? "" : "; ", firstBad.c_str()));
+                fmt("%d of %d kinds in %zu samples, %d meshes: %d empty, %d corners not finite, %d out of their bounds, %d broken ones the same as the whole; C-01's box %zu faces, its hemisphere %zu "
+                    "quads%s%s",
+                        kinds, FK_COUNT, samples.size(), meshes, empty, nonFinite, outside, unbroken, boxPolys, domePolys, firstBad.empty() ? "" : "; ", firstBad.c_str()));
         // walking into each: the explorer starts eight metres short of a sample (facing it) and walks straight at it for twenty seconds; a
         // form stops it outside every disc it stands on, while an arch's opening, the space between two masts or a lattice's legs and the
         // ground under a saddle let it through
@@ -237,7 +255,8 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
         if (setupSceneForType(PT_DESERT, 15, 40 * DEG, 1.3, 0.0, svW, sysW, nbW, tW, SCENE_ANY)) {
             svW.flocks.clear(); svW.critters.clear();
             const double yaw = svW.player.yaw, px0 = svW.player.x, pz0 = svW.player.z;
-            static const char* const THROUGH[] = {"ARCH: A GATE", "ARCH: POINTED", "ARCH: ARCADE, AN AQUEDUCT", "SHELL: SADDLE", "TRUSS: A LATTICE MAST", "CABLES BETWEEN MASTS", "VAULT: POINTED ON WALLS"};   // the last a hall open at its ends
+            static const char* const THROUGH[] = {"ARCH: A GATE", "ARCH: POINTED", "ARCH: ARCADE, AN AQUEDUCT", "SHELL: SADDLE", "TRUSS: A LATTICE MAST", "CABLES BETWEEN MASTS",
+                    "VAULT: POINTED ON WALLS"};   // the last a hall open at its ends
             for (const FormSample& S : samples)
                 for (int br = 0; br < 2; br++) {
                     bool through = false; for (const char* n : THROUGH) if (std::string(n) == S.name) through = true;
@@ -264,11 +283,15 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
                     bool walkable = true; for (const Form& f : S.forms) walkable = walkable && formWalkable(f);
                     bool ok = walkable ? (along < 0 || svW.player.y - svW.site.groundHeight(svW.player.x, svW.player.z) > 0.3) : pen < 0.06 && (through ? along > 2 : gapMin < 0.15);
                     walks++; if (ok) walkOk++; if (through && ok) passes++;
-                    if (!ok && walkBad.empty()) walkBad = fmt("%s%s: %.1f m from its middle along the way (reach %.1f), %.2f m into a disc at worst, the nearest %.2f m off", S.name, br ? " broken" : "", along, reach, pen, gapMin);
+                    if (!ok && walkBad.empty())
+                        walkBad = fmt(
+                                "%s%s: %.1f m from its middle along the way (reach %.1f), %.2f m into a disc at worst, the nearest %.2f m off", S.name, br ? " broken" : "", along, reach, pen, gapMin);
                 }
         }
         check("forms: walking into each one (A-02)", walks > 0 && walkOk == walks && passes == 14,
-              fmt("%d walks (each sample whole and broken), %d as they should (touched and never entered; through a gate, an arcade, a hall, between masts or a lattice's legs, under a saddle: %d)%s%s", walks, walkOk, passes, walkBad.empty() ? "" : "; ", walkBad.c_str()));
+                fmt("%d walks (each sample whole and broken), %d as they should (touched and never entered; through a gate, an arcade, a hall, between masts or a lattice's legs, under a saddle: "
+                    "%d)%s%s",
+                        walks, walkOk, passes, walkBad.empty() ? "" : "; ", walkBad.c_str()));
         // the peoples' banks: a people that built of its ground's own material has its structure's ramp that bank's
         {
             svW.palettes[0].own[0] = true; svW.palettes[0].tint[0] = 0;   // a people of its ground's own stone, untinted (a people's own is tinted toward its base colour)
@@ -276,7 +299,9 @@ void formsChecks(const std::function<void(const char*, bool, const std::string&)
             const int own = svW.cultures[0].family == 1 ? 9 : 0;
             bool same = svW.palettes[0].own[0] && std::memcmp(&fbP.pal[FORM_BANKS[0][0] * 64 * 3], &fbP.pal[own * 64 * 3], 64 * 3) == 0;
             bool lightSet = fbP.pal[(FORM_BANKS[0][3] * 64 + 46) * 3] > 0 || fbP.pal[(FORM_BANKS[0][3] * 64 + 46) * 3 + 1] > 0;
-            check("forms: the peoples' banks (A-02)", same && lightSet, fmt("the first people's structure in bank %d %s bank %d's ramp (its walls the %s), its light's ramp %s", FORM_BANKS[0][0], same ? "is" : "is NOT", own, own == 9 ? "sand" : "rock", lightSet ? "set" : "NOT SET"));
+            check("forms: the peoples' banks (A-02)", same && lightSet,
+                    fmt("the first people's structure in bank %d %s bank %d's ramp (its walls the %s), its light's ramp %s", FORM_BANKS[0][0], same ? "is" : "is NOT", own, own == 9 ? "sand" : "rock",
+                            lightSet ? "set" : "NOT SET"));
         }
         // the city frame at 2x drawn by the workers is the serial loop's, pixel for pixel
         {
@@ -371,7 +396,11 @@ int runForms(int argc, char** argv) {
         SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
         // the peoples' own worlds: the civilisation scenes' sites (on land, near a town), the sun at 35-40 degrees
         // (the skyline on the felisian type takes its default world, whose air is clear: the civilisation scene's world is a hazy one)
-        if (!setupSceneForType(type, type == PT_FELISIAN ? 12 : 15, (type == PT_FELISIAN ? 35 : 40) * DEG, 1.3, 0.0, sv, sys, nb, t, (type == PT_CRATERED || (type == PT_FELISIAN && what == "skyline")) ? SCENE_ANY : SCENE_TOWN)) { printf("no body\n"); return 1; }
+        if (!setupSceneForType(type, type == PT_FELISIAN ? 12 : 15, (type == PT_FELISIAN ? 35 : 40) * DEG, 1.3, 0.0, sv, sys, nb, t,
+                    (type == PT_CRATERED || (type == PT_FELISIAN && what == "skyline")) ? SCENE_ANY : SCENE_TOWN)) {
+            printf("no body\n");
+            return 1;
+        }
         sv.palettes[0] = testPalette(); sv.flocks.clear(); sv.critters.clear();
         double yaw0 = sv.player.yaw;
         const double D = what == "city" ? 1250 : km * 1000;
@@ -379,7 +408,17 @@ int runForms(int argc, char** argv) {
         if (what == "skyline") {   // the skyline from a vantage: the highest dry ground within six kilometres
             DrainageOff off;
             double bx = sv.player.x, bz = sv.player.z, bh = -1e18;
-            for (int j = -30; j <= 30; j++) for (int i = -30; i <= 30; i++) { double x = sv.player.x + i * 200, z = sv.player.z + j * 200; TerrainVertex tv = sv.site.sampleAt(x, z, 64); if (tv.water > -1e8 && tv.h < tv.water + 1) continue; if (tv.h > bh) { bh = tv.h; bx = x; bz = z; } }
+            for (int j = -30; j <= 30; j++)
+                for (int i = -30; i <= 30; i++) {
+                    double x = sv.player.x + i * 200, z = sv.player.z + j * 200;
+                    TerrainVertex tv = sv.site.sampleAt(x, z, 64);
+                    if (tv.water > -1e8 && tv.h < tv.water + 1) continue;
+                    if (tv.h > bh) {
+                        bh = tv.h;
+                        bx = x;
+                        bz = z;
+                    }
+                }
             sv.player.x = bx; sv.player.z = bz; sv.player.y = sv.site.surfaceHeight(bx, bz);
             Input in0; sv.update(1.0 / 30, in0, t, false);
         }
@@ -391,7 +430,11 @@ int runForms(int argc, char** argv) {
             for (int k = 0; k < 48; k++) {
                 double y = sv.player.yaw + k * TAU / 48, sy = std::sin(y), cy = std::cos(y), x0 = sv.player.x + sy * D, z0 = sv.player.z + cy * D;
                 bool ok = true;
-                for (int q = 0; q < 5 && ok; q++) { double a = q * PI / 2; TerrainVertex tv = sv.site.sampleAt(x0 + (q ? 1000 * std::sin(a) : 0), z0 + (q ? 1000 * std::cos(a) : 0), 64); if (tv.water > -1e8 && tv.h < tv.water + 1) ok = false; }
+                for (int q = 0; q < 5 && ok; q++) {
+                    double a = q * PI / 2;
+                    TerrainVertex tv = sv.site.sampleAt(x0 + (q ? 1000 * std::sin(a) : 0), z0 + (q ? 1000 * std::cos(a) : 0), 64);
+                    if (tv.water > -1e8 && tv.h < tv.water + 1) ok = false;
+                }
                 if (ok && what == "skyline") {
                     double top = sv.site.sampleAt(x0, z0, 64).h + 150 - D * D * inv2R;
                     for (int j = 1; j < 240 && ok; j++) {
@@ -416,9 +459,12 @@ int runForms(int argc, char** argv) {
         uint64_t h = fnv(1469598103934665603ULL, fb.idx.data(), fb.idx.size() * sizeof(Pix));
         std::string fn = what == "city" ? fmt("shots/tests/forms_city_%s_%dx.png", world.c_str(), scale) : fmt("shots/tests/forms_skyline_%s_%.0fkm_%dx.png", world.c_str(), km, scale);
         saveFB(fb, fn.c_str());
-        printf("  the view: %s (turned %d of 48), the eye %.0f m over the ground at %.0f m\n", found >= 0 ? "dry land in sight" : "NO clear direction found", found, eyeH, sv.site.surfaceHeight(sv.player.x, sv.player.z));
-        printf("%s at %dx on %s: %d buildings, %d forms (built in %.1f ms), %.1f km away; %.2f ms a frame (ruins %.2f ms: %d items, %d polygons, %d lines, %d silhouettes), fog %.0f m; frame hash %016llx (threads %d) -> %s\n",
-               what.c_str(), scale, sys.bodies[sv.site.body].name.c_str(), nbld, nf, buildMs, D / 1000, ms, sv.lastRuinMs, sv.lastRuinElems, sv.lastFormPolys, sv.lastFormLines, sv.lastSilhouettes, sv.env.fogDistance, (unsigned long long)h, parallelThreads(), fn.c_str());
+        printf("  the view: %s (turned %d of 48), the eye %.0f m over the ground at %.0f m\n", found >= 0 ? "dry land in sight" : "NO clear direction found", found, eyeH,
+                sv.site.surfaceHeight(sv.player.x, sv.player.z));
+        printf("%s at %dx on %s: %d buildings, %d forms (built in %.1f ms), %.1f km away; %.2f ms a frame (ruins %.2f ms: %d items, %d polygons, %d lines, %d silhouettes), fog %.0f m; frame hash "
+               "%016llx (threads %d) -> %s\n",
+                what.c_str(), scale, sys.bodies[sv.site.body].name.c_str(), nbld, nf, buildMs, D / 1000, ms, sv.lastRuinMs, sv.lastRuinElems, sv.lastFormPolys, sv.lastFormLines, sv.lastSilhouettes,
+                sv.env.fogDistance, (unsigned long long)h, parallelThreads(), fn.c_str());
         return 0;
     }
     if (what == "check") {   // `forms check`: the unit's A-02 checks alone
@@ -440,15 +486,37 @@ int runForms(int argc, char** argv) {
             {   // a summit within six kilometres, and the way to the city clear of the ground (as `forms skyline`)
                 DrainageOff off;
                 double bx = sv.player.x, bz = sv.player.z, bh = -1e18;
-                for (int j = -30; j <= 30; j++) for (int i = -30; i <= 30; i++) { double x = sv.player.x + i * 200, z = sv.player.z + j * 200; TerrainVertex tv = sv.site.sampleAt(x, z, 64); if (tv.water > -1e8 && tv.h < tv.water + 1) continue; if (tv.h > bh) { bh = tv.h; bx = x; bz = z; } }
+                for (int j = -30; j <= 30; j++)
+                    for (int i = -30; i <= 30; i++) {
+                        double x = sv.player.x + i * 200, z = sv.player.z + j * 200;
+                        TerrainVertex tv = sv.site.sampleAt(x, z, 64);
+                        if (tv.water > -1e8 && tv.h < tv.water + 1) continue;
+                        if (tv.h > bh) {
+                            bh = tv.h;
+                            bx = x;
+                            bz = z;
+                        }
+                    }
                 sv.player.x = bx; sv.player.z = bz;
             }
             const double ey = sv.site.surfaceHeight(sv.player.x, sv.player.z) + 60, inv2R = 1.0 / (2 * sv.site.R);
             double yaw = sv.player.yaw;
-            { DrainageOff off; for (int k = 0; k < 48; k++) { double y = sv.player.yaw + k * TAU / 48, sy = std::sin(y), cy = std::cos(y), x0 = sv.player.x + sy * D, z0 = sv.player.z + cy * D; bool ok = true;
-                double top = sv.site.sampleAt(x0, z0, 64).h + 150 - D * D * inv2R;
-                for (int j = 1; j < 240 && ok; j++) { double d = D * j / 240, gh = sv.site.sampleAt(sv.player.x + sy * d, sv.player.z + cy * d, 64).h + 20 - d * d * inv2R; if (gh > ey + (top - ey) * d / D) ok = false; }
-                if (ok) { yaw = y; break; } } }
+            {
+                DrainageOff off;
+                for (int k = 0; k < 48; k++) {
+                    double y = sv.player.yaw + k * TAU / 48, sy = std::sin(y), cy = std::cos(y), x0 = sv.player.x + sy * D, z0 = sv.player.z + cy * D;
+                    bool ok = true;
+                    double top = sv.site.sampleAt(x0, z0, 64).h + 150 - D * D * inv2R;
+                    for (int j = 1; j < 240 && ok; j++) {
+                        double d = D * j / 240, gh = sv.site.sampleAt(sv.player.x + sy * d, sv.player.z + cy * d, 64).h + 20 - d * d * inv2R;
+                        if (gh > ey + (top - ey) * d / D) ok = false;
+                    }
+                    if (ok) {
+                        yaw = y;
+                        break;
+                    }
+                }
+            }
             const double cx = sv.player.x + std::sin(yaw) * D, cz = sv.player.z + std::cos(yaw) * D;
             placeCity(sv, cx, cz, 0xC17E5EEDULL);
             const int N = 16;
@@ -468,20 +536,31 @@ int runForms(int argc, char** argv) {
             const double halfW = 1100.0 / D * sv.proj.f, hTop = 600.0 / D * sv.proj.f;
             auto boxStats = [&](double x0, double x1, double y0, double y1, double& mean, double& popPct) {
                 double sum = 0; long n = 0, pp = 0;
-                for (int y = std::max(0, (int)y0); y < std::min(FBH, (int)y1); y++) for (int x = std::max(0, (int)x0); x < std::min(FBW, (int)x1); x++) { sum += heat[(size_t)y * FBW + x] / (N - 1); pp += pops[(size_t)y * FBW + x]; n++; }
+                for (int y = std::max(0, (int)y0); y < std::min(FBH, (int)y1); y++)
+                    for (int x = std::max(0, (int)x0); x < std::min(FBW, (int)x1); x++) {
+                        sum += heat[(size_t)y * FBW + x] / (N - 1);
+                        pp += pops[(size_t)y * FBW + x];
+                        n++;
+                    }
                 mean = n ? sum / n : 0; popPct = n ? 100.0 * pp / ((double)n * (N - 1)) : 0;
             };
             double cm, cp, km, kp;
             boxStats(sxC - halfW, sxC + halfW, syC - hTop, syC + 20 * FB_SCALE, cm, cp);
             boxStats(sxC + 3 * halfW, sxC + 5 * halfW, syC - hTop, syC + 20 * FB_SCALE, km, kp);
             std::vector<uint32_t> sheet((size_t)FBW * 2 * FBH);
-            for (int y = 0; y < FBH; y++) for (int x = 0; x < FBW; x++) { sheet[(size_t)y * FBW * 2 + x] = prev[(size_t)y * FBW + x]; int v = (int)std::min(255.0, heat[(size_t)y * FBW + x] / (N - 1) * 8.0); sheet[(size_t)y * FBW * 2 + FBW + x] = 0xFF000000u | ((uint32_t)v << 16) | ((uint32_t)v << 8) | (uint32_t)v; }
+            for (int y = 0; y < FBH; y++)
+                for (int x = 0; x < FBW; x++) {
+                    sheet[(size_t)y * FBW * 2 + x] = prev[(size_t)y * FBW + x];
+                    int v = (int)std::min(255.0, heat[(size_t)y * FBW + x] / (N - 1) * 8.0);
+                    sheet[(size_t)y * FBW * 2 + FBW + x] = 0xFF000000u | ((uint32_t)v << 16) | ((uint32_t)v << 8) | (uint32_t)v;
+                }
             std::string fn = fmt("shots/tests/stability_skyline_%s.png", w == 0 ? "desert" : "airless");
             writePNG(fn.c_str(), sheet.data(), FBW * 2, FBH);
             bool ok = cp < 0.5;
             if (!ok) fails++;
-            printf("skyline %-8s %.0f km at %dx, walking 1.4 m a frame: over the city mean %.2f, %.2f%% of its pixels jump over 40 a frame (%d silhouettes, %d polygons); the empty horizon beside it %.2f, %.2f%% -> %s (%s)\n",
-                   w == 0 ? "desert" : "airless", D / 1000, scale, cm, cp, sv.lastSilhouettes, sv.lastFormPolys, km, kp, fn.c_str(), ok ? "steady" : "SHIMMERS");
+            printf("skyline %-8s %.0f km at %dx, walking 1.4 m a frame: over the city mean %.2f, %.2f%% of its pixels jump over 40 a frame (%d silhouettes, %d polygons); the empty horizon beside it "
+                   "%.2f, %.2f%% -> %s (%s)\n",
+                    w == 0 ? "desert" : "airless", D / 1000, scale, cm, cp, sv.lastSilhouettes, sv.lastFormPolys, km, kp, fn.c_str(), ok ? "steady" : "SHIMMERS");
         }
         return fails;
     }

@@ -21,7 +21,8 @@ static void applyRx(AudioState& st, const RxOpts& o) {
     st.radarHet = o.het; st.radarHetHz = o.hetHz; st.radarIntermod = o.intermod;
 }
 double gainShareOf(int g) { return (g - 1) / (double)(SIGNAL_GAINS[SIGNAL_GAIN_STEPS - 1] - 1); }
-RenderStats renderProgramme(const PeopleWorld& w, int p, double seconds, std::vector<int16_t>* pcm, Programme* progOut, const RxOpts& o) {   // C-15: the receiver overdriven; C-16: at a gain, worn, mixed
+RenderStats renderProgramme(const PeopleWorld& w, int p, double seconds, std::vector<int16_t>* pcm, Programme* progOut, const RxOpts& o) {
+    // C-15: the receiver overdriven; C-16: at a gain, worn, mixed
     AudioSynth synth; AudioState st; Programme prog; Speech speech; Piece piece; std::vector<DecodedWord> words;
     int slot = o.slot >= 0 ? o.slot : (p == RP_MUSIC || o.music ? w.firstMusic : w.firstText);
     const Shard& sh = w.shards[slot];
@@ -36,7 +37,17 @@ RenderStats renderProgramme(const PeopleWorld& w, int p, double seconds, std::ve
     RenderStats r = renderReceiver(synth, st, seconds, pcm, [&](double dt) {
         if (st.speech && st.speechDone && prog.repeats > 1 && rep < prog.repeats - 1) {
             gapT = gapT < 0 ? 0 : gapT + dt;
-            if (gapT >= prog.gap) { rep++; gapT = -1; std::vector<DecodedWord> ww; programmeRepeatWords(prog, rep, w.tongue, ww); st.speech = nullptr; speechOf(prog.voice, ww, sh.seed ^ (uint64_t)(rep * 0x9E37), speech); st.speech = &speech; st.speechStart = true; st.speechDone = false; }
+            if (gapT >= prog.gap) {
+                rep++;
+                gapT = -1;
+                std::vector<DecodedWord> ww;
+                programmeRepeatWords(prog, rep, w.tongue, ww);
+                st.speech = nullptr;
+                speechOf(prog.voice, ww, sh.seed ^ (uint64_t)(rep * 0x9E37), speech);
+                st.speech = &speech;
+                st.speechStart = true;
+                st.speechDone = false;
+            }
         }
     });
     if (progOut) *progOut = prog;
@@ -85,7 +96,15 @@ RenderStats renderBeacon(const Star& d, double seconds, std::vector<int16_t>* pc
     const RenderStats r = renderReceiver(synth, st, seconds, pcm, [&](double dt) {
         if (st.speech && st.speechDone && rep < prog.repeats - 1) {
             gapT = gapT < 0 ? 0 : gapT + dt;
-            if (gapT >= prog.gap) { rep++; gapT = -1; st.speech = nullptr; speechOf(prog.voice, prog.words, sh.seed ^ (uint64_t)(rep * 0x9E37), speech); st.speech = &speech; st.speechStart = true; st.speechDone = false; }
+            if (gapT >= prog.gap) {
+                rep++;
+                gapT = -1;
+                st.speech = nullptr;
+                speechOf(prog.voice, prog.words, sh.seed ^ (uint64_t)(rep * 0x9E37), speech);
+                st.speech = &speech;
+                st.speechStart = true;
+                st.speechDone = false;
+            }
         }
     });
     if (info) {
@@ -112,14 +131,36 @@ static std::vector<double> voicePrint(const std::vector<int16_t>& pcm) {
     for (double& x : out) x -= mean / BANDS;
     return out;
 }
-static double printDistance(const std::vector<double>& a, const std::vector<double>& b) { double s = 0; for (size_t i = 0; i < a.size(); i++) s += (a[i] - b[i]) * (a[i] - b[i]); return std::sqrt(s / a.size()); }
+static double printDistance(const std::vector<double>& a, const std::vector<double>& b) {
+    double s = 0;
+    for (size_t i = 0; i < a.size(); i++) s += (a[i] - b[i]) * (a[i] - b[i]);
+    return std::sqrt(s / a.size());
+}
 Distinctness rogueDistinctness(const std::vector<RogueRef>& D, int ref, double refSeconds, int firstKind) {
     Distinctness r; r.n = (int)D.size();
     std::vector<std::vector<double>> P(D.size()), K((SIG_MAGNETOSPHERE - firstKind + 1) * ref);
-    parallelFor((int)D.size(), 1, [&](int b, int e) { for (int i = b; i < e; i++) { std::vector<int16_t> pcm; renderRogue(D[i], std::max(32.0, AudioSynth::rogueBreathS(D[i].sig.seed, D[i].voice) + 2), &pcm); P[i] = voicePrint(pcm); } }, 1);
+    parallelFor((int)D.size(), 1,
+            [&](int b, int e) {
+                for (int i = b; i < e; i++) {
+                    std::vector<int16_t> pcm;
+                    renderRogue(D[i], std::max(32.0, AudioSynth::rogueBreathS(D[i].sig.seed, D[i].voice) + 2), &pcm);
+                    P[i] = voicePrint(pcm);
+                }
+            },
+            1);
     static const double RATES[5] = {0.6, 1.1, 1.7, 2.4, 3.2};
     const int kinds = SIG_MAGNETOSPHERE - firstKind + 1;
-    parallelFor(kinds * ref, 1, [&](int b, int e) { for (int i = b; i < e; i++) { const int kind = firstKind + i / ref, k = i % ref; std::vector<int16_t> pcm; renderKind(kind, 0x5EED0000ULL + (uint64_t)k * 0x9E37, RATES[k % 5], refSeconds, &pcm); K[i] = voicePrint(pcm); } }, 1);
+    parallelFor(
+            kinds * ref, 1,
+            [&](int b, int e) {
+                for (int i = b; i < e; i++) {
+                    const int kind = firstKind + i / ref, k = i % ref;
+                    std::vector<int16_t> pcm;
+                    renderKind(kind, 0x5EED0000ULL + (uint64_t)k * 0x9E37, RATES[k % 5], refSeconds, &pcm);
+                    K[i] = voicePrint(pcm);
+                }
+            },
+            1);
     std::vector<double> all;
     for (size_t i = 0; i < D.size(); i++) for (size_t j = i + 1; j < D.size(); j++) {
         const double d = printDistance(P[i], P[j]); all.push_back(d);
@@ -129,7 +170,12 @@ Distinctness rogueDistinctness(const std::vector<RogueRef>& D, int ref, double r
     for (int q = 0; q < kinds; q++) {   // `kindMedian` by kind from the pulsars' (0)
         const int kind = firstKind - SIG_PULSAR + q;
         std::vector<double> m;
-        for (int i = 0; i < ref; i++) for (int j = i + 1; j < ref; j++) { const double d = printDistance(K[q * ref + i], K[q * ref + j]); m.push_back(d); r.kindNearest[kind] = std::min(r.kindNearest[kind], d); }
+        for (int i = 0; i < ref; i++)
+            for (int j = i + 1; j < ref; j++) {
+                const double d = printDistance(K[q * ref + i], K[q * ref + j]);
+                m.push_back(d);
+                r.kindNearest[kind] = std::min(r.kindNearest[kind], d);
+            }
         std::sort(m.begin(), m.end()); r.kindMedian[kind] = m.empty() ? 0 : m[m.size() / 2];
         r.bar = std::max(r.bar, r.kindMedian[kind]);
     }
@@ -165,8 +211,22 @@ std::vector<GroundSound> groundSounds() {
     S.push_back({"ice_dusk", 20.0, [](AudioState& a, double) { a.ice = 1.0; a.air = 1.0; }, "on the ice at dusk, its cooling the fastest"});
     S.push_back({"ice_noon", 20.0, [](AudioState& a, double) { a.ice = 0.25; a.air = 1.0; }, "on the ice at noon, settling"});
     S.push_back({"quake_air", 12.0, [=](AudioState& a, double t) { a.quake = quakeAt(t); if (t >= 0.3 && t < 0.4) a.quakeHit = 0.9; a.air = 1.0; }, "a quake under an air"});
-    S.push_back({"quake_airless", 12.0, [=](AudioState& a, double t) { a.quake = quakeAt(t); if (t >= 0.3 && t < 0.4) a.quakeHit = 0.9; a.air = 0.0; }, "a quake on an airless world, through the boots"});
-    S.push_back({"quake_tectonic", 12.0, [=](AudioState& a, double t) { const KindDef& K = KINDS[PT_TECTONIC]; a.quake = quakeAt(t); if (t >= 0.3 && t < 0.4) a.quakeHit = 0.9; a.lava = K.rumble + K.rumbleQuake * a.quake; a.air = 0.6; }, "a tectonic world's quake, its lava's rumble with it"});
+    S.push_back({"quake_airless", 12.0,
+            [=](AudioState& a, double t) {
+                a.quake = quakeAt(t);
+                if (t >= 0.3 && t < 0.4) a.quakeHit = 0.9;
+                a.air = 0.0;
+            },
+            "a quake on an airless world, through the boots"});
+    S.push_back({"quake_tectonic", 12.0,
+            [=](AudioState& a, double t) {
+                const KindDef& K = KINDS[PT_TECTONIC];
+                a.quake = quakeAt(t);
+                if (t >= 0.3 && t < 0.4) a.quakeHit = 0.9;
+                a.lava = K.rumble + K.rumbleQuake * a.quake;
+                a.air = 0.6;
+            },
+            "a tectonic world's quake, its lava's rumble with it"});
     return S;
 }
 RenderStats renderGroundSound(const GroundSound& gs, std::vector<int16_t>* pcm, int* iceEvents, std::vector<float>* raw) {
@@ -215,8 +275,19 @@ static void printGainSteps(int64_t sx, int64_t sy, int64_t sz, const std::string
         int people = 0, pulsars = 0, added = 0, addedP = 0; double nearest = 1e18, farthest = 0, farPulsar = 0; std::string adds;
         for (const Signal& s : out) {
             bool had = false; for (const Signal& o : prev) if (o.star.seed == s.star.seed) had = true;
-            if (s.kind == SIG_PEOPLE) { people++; nearest = std::min(nearest, s.distLy); farthest = std::max(farthest, s.distLy); if (!had && st > 0) { added++; adds += (adds.empty() ? "" : ", ") + thousands(s.distLy); } }
-            else if (s.kind == SIG_PULSAR) { pulsars++; farPulsar = std::max(farPulsar, s.distLy); if (!had && st > 0) addedP++; }
+            if (s.kind == SIG_PEOPLE) {
+                people++;
+                nearest = std::min(nearest, s.distLy);
+                farthest = std::max(farthest, s.distLy);
+                if (!had && st > 0) {
+                    added++;
+                    adds += (adds.empty() ? "" : ", ") + thousands(s.distLy);
+                }
+            } else if (s.kind == SIG_PULSAR) {
+                pulsars++;
+                farPulsar = std::max(farPulsar, s.distLy);
+                if (!had && st > 0) addedP++;
+            }
         }
         if (full) printf("    x%-2d %2d peoples%s, the nearest %s ly, the farthest %s ly; %d pulsars%s, the farthest %s ly; %.1f ms\n", SIGNAL_GAINS[st], people,
                          st > 0 ? fmt(" (+%d%s%s)", added, adds.empty() ? "" : ": ", adds.c_str()).c_str() : "", people ? thousands(nearest).c_str() : "-", people ? thousands(farthest).c_str() : "-",
@@ -231,12 +302,18 @@ static void printGainSteps(int64_t sx, int64_t sy, int64_t sz, const std::string
 int runSignals(int argc, char** argv) {
     int64_t sx = HOME_SX, sy = HOME_SY, sz = HOME_SZ; double reach = SIGNAL_REACH_LY, gain = 1; bool wav = false;
     std::vector<std::string> rest;   // C-15: `x32` lists what that gain hears; `wav` renders the receiver
-    for (int i = 2; i < argc; i++) { std::string a = argv[i]; if (a == "wav") wav = true; else if (a.size() > 1 && a[0] == 'x' && isdigit((unsigned char)a[1])) gain = atof(a.c_str() + 1); else rest.push_back(a); }
+    for (int i = 2; i < argc; i++) {
+        std::string a = argv[i];
+        if (a == "wav") wav = true;
+        else if (a.size() > 1 && a[0] == 'x' && isdigit((unsigned char)a[1])) gain = atof(a.c_str() + 1);
+        else rest.push_back(a);
+    }
     if (rest.size() >= 3) { sx = atoll(rest[0].c_str()); sy = atoll(rest[1].c_str()); sz = atoll(rest[2].c_str()); }
     if (rest.size() >= 4) reach = atof(rest[3].c_str());
     Vec3 obs((sx + 0.5) * SECTOR_KM, (sy + 0.5) * SECTOR_KM, (sz + 0.5) * SECTOR_KM);
     std::vector<Signal> far; double t0 = nowSec(); int cells = signalsNear(obs, far, reach, gain); double ms = (nowSec() - t0) * 1e3;
-    printf("signals within %.0f ly of sector %lld %lld %lld%s: %zu (%d cells scanned in %.1f ms)\n", reach, (long long)sx, (long long)sy, (long long)sz, gain > 1 ? fmt(", and beyond as far as the gain x%.0f carries each", gain).c_str() : "", far.size(), cells, ms);
+    printf("signals within %.0f ly of sector %lld %lld %lld%s: %zu (%d cells scanned in %.1f ms)\n", reach, (long long)sx, (long long)sy, (long long)sz,
+            gain > 1 ? fmt(", and beyond as far as the gain x%.0f carries each", gain).c_str() : "", far.size(), cells, ms);
     for (const Signal& s : far) {
         Vec3 d = normalize(s.pos - obs);
         double lon = std::atan2(d.z, d.x) / DEG, lat = std::asin(clampd(d.y, -1, 1)) / DEG;
@@ -248,14 +325,16 @@ int runSignals(int argc, char** argv) {
             BodyGen g = BodyGen::make(b); Lore L = loreOf(sys, b, g);
             int idx = transmittedShard(s.seed, 3.6e6);
             Shard sh = shardOf(sys, b, g, L, idx);
-            what = fmt("%s (body %d, the %s): on the air S%d, %s", b.name.c_str(), s.body, L.people.c_str(), idx, sh.music ? "a piece of music" : fmt("a voice: \"%s\"", trunc(sh.text, 60).c_str()).c_str());
+            what = fmt("%s (body %d, the %s): on the air S%d, %s", b.name.c_str(), s.body, L.people.c_str(), idx,
+                    sh.music ? "a piece of music" : fmt("a voice: \"%s\"", trunc(sh.text, 60).c_str()).c_str());
         } else if (s.kind == SIG_ROGUE) what = signalSourceLine(s);
         else what = fmt("%.2f pulses a second", s.pulseHz);
         int step = 0; while (step < SIGNAL_GAIN_STEPS - 1 && SIGNAL_GAINS[step] < s.needGain - 1e-9) step++;   // the least step that hears it
         double az = wrap2pi(std::atan2(d.x, d.z)) / DEG, el = std::asin(clampd(d.y, -1, 1)) / DEG;   // where the radar camera points for it (its AZ and EL)
         if (s.kind == SIG_PEOPLE && s.age >= 0) what = fmt("the %s age; ", AGE_NAMES[s.age]) + what;
-        printf("  %-24s %6.1f ly  lon %6.1f lat %5.1f  AZ %03.0f EL %+03.0f  x%-2d power %6.3f  strength %.2f  %s %s at %lld %lld %lld: %s\n", SIGNAL_KIND_NAMES[s.kind], s.distLy, lon, lat, az, el, SIGNAL_GAINS[step], s.power, signalStrengthAtGain(s, gain), STAR_CLASSES[s.star.cls].code, STAR_CLASSES[s.star.cls].name,
-               (long long)s.star.sx, (long long)s.star.sy, (long long)s.star.sz, what.c_str());
+        printf("  %-24s %6.1f ly  lon %6.1f lat %5.1f  AZ %03.0f EL %+03.0f  x%-2d power %6.3f  strength %.2f  %s %s at %lld %lld %lld: %s\n", SIGNAL_KIND_NAMES[s.kind], s.distLy, lon, lat, az, el,
+                SIGNAL_GAINS[step], s.power, signalStrengthAtGain(s, gain), STAR_CLASSES[s.star.cls].code, STAR_CLASSES[s.star.cls].name, (long long)s.star.sx, (long long)s.star.sy,
+                (long long)s.star.sz, what.c_str());
     }
     if (rest.size() < 4 && !wav) {   // the gain's steps from this sector, and from home the test worlds' too
         printf("the gain's steps from sector %lld %lld %lld:\n", (long long)sx, (long long)sy, (long long)sz);
@@ -264,15 +343,23 @@ int runSignals(int argc, char** argv) {
             printf("  the test worlds (x1 heard, then what each step adds):\n");
             const struct { int64_t x, z; const char* name; } C[3] = {{151, 25, "Aieliaalas II"}, {153, 70, "Leileashphail III"}, {152, 92, "Eleinewai I"}};
             for (const auto& c : C) printGainSteps(c.x, 0, c.z, fmt("%s (%lld 0 %lld)", c.name, (long long)c.x, (long long)c.z), false);
-            for (int a = 0; a < AGE_COUNT; a++) printGainSteps(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, fmt("the %s (%lld 0 %lld)", AGE_NAMES[a], (long long)AGE_WORLDS[a].sx, (long long)AGE_WORLDS[a].sz), false);
+            for (int a = 0; a < AGE_COUNT; a++)
+                printGainSteps(AGE_WORLDS[a].sx, 0, AGE_WORLDS[a].sz, fmt("the %s (%lld 0 %lld)", AGE_NAMES[a], (long long)AGE_WORLDS[a].sx, (long long)AGE_WORLDS[a].sz), false);
         }
     }
     if (wav) {   // the receiver's sounds for the ear: the bed with its events, three of each natural kind, every programme of the first people's world
         makeDir("shots"); makeDir("shots/tests");
         static const char* const NAMES[SIG_KIND_COUNT] = {"people", "pulsar", "comet", "magnetosphere", "drifter"};
-        static const char* const PNAMES[RP_COUNT] = {"voice", "whispers", "chant", "numbers", "loop", "beacon", "data", "bell", "siren", "murmur", "music", "morse", "phonograph", "synthetic", "maths"};
+        static const char* const PNAMES[RP_COUNT] = {
+                "voice", "whispers", "chant", "numbers", "loop", "beacon", "data", "bell", "siren", "murmur", "music", "morse", "phonograph", "synthetic", "maths"};
         static const double RATES[3] = {0.7, 1.7, 3.2};
-        { std::vector<int16_t> pcm; RenderStats r = renderKind(-1, 0, 1, 30.0, &pcm); std::string fn = "shots/tests/radar_bed.wav"; writeWav16(fn, pcm, 22050); printf("  bed: 30 s rendered (something in the static every twelve to forty seconds), peak %.3f, rms %.3f -> %s\n", r.peak, r.rms, fn.c_str()); }
+        {
+            std::vector<int16_t> pcm;
+            RenderStats r = renderKind(-1, 0, 1, 30.0, &pcm);
+            std::string fn = "shots/tests/radar_bed.wav";
+            writeWav16(fn, pcm, 22050);
+            printf("  bed: 30 s rendered (something in the static every twelve to forty seconds), peak %.3f, rms %.3f -> %s\n", r.peak, r.rms, fn.c_str());
+        }
         for (int kind = SIG_PULSAR; kind < SIG_KIND_COUNT; kind++)
             for (int k = 0; k < 3; k++) {
                 std::vector<int16_t> pcm; RenderStats r = renderKind(kind, 0x51 + (uint64_t)k * 0x1F3, RATES[k], 12.0, &pcm);
@@ -290,7 +377,11 @@ int runSignals(int argc, char** argv) {
             for (int p = 0; p < RP_COUNT; p++) {
                 std::vector<int16_t> pcm; Programme prog; RenderStats r = renderProgramme(w, p, 12.0, &pcm, &prog);
                 std::string fn = fmt("shots/tests/radar_people_%s.wav", PNAMES[p]); writeWav16(fn, pcm, 22050);
-                std::string what = prog.machine ? fmt("%.0f s on the air", prog.seconds) : (prog.kind == RP_MUSIC ? fmt("the piece at %.2f of its speed", prog.pieceSpeed) : fmt("\"%s\"%s", trunc(decodedText(prog.words), 40).c_str(), prog.repeats > 1 ? fmt(", %d times with %.1f s between", prog.repeats, prog.gap).c_str() : ""));
+                std::string what = prog.machine
+                        ? fmt("%.0f s on the air", prog.seconds)
+                        : (prog.kind == RP_MUSIC
+                                          ? fmt("the piece at %.2f of its speed", prog.pieceSpeed)
+                                          : fmt("\"%s\"%s", trunc(decodedText(prog.words), 40).c_str(), prog.repeats > 1 ? fmt(", %d times with %.1f s between", prog.repeats, prog.gap).c_str() : ""));
                 printf("    %-18s 12 s, peak %.3f, rms %.3f: %s -> %s\n", RADIO_PROGRAMME_NAMES[p], r.peak, r.rms, what.c_str(), fn.c_str());
             }
             for (int p : {(int)RP_VOICE, (int)RP_BEACON, (int)RP_MUSIC})   // a near signal through a high gain, the receiver overdriven
@@ -324,28 +415,67 @@ int runSignals(int argc, char** argv) {
         {
             RxOpts o; o.gainT = 1; o.sky = 0.4; int ev = 0, kinds = 0;
             std::vector<int16_t> pcm; RenderStats r = renderKind(-1, 0, 1, 120.0, &pcm, o, &ev, &kinds);
-            static const char* const EVN[12] = {"a carrier", "a boom", "a moan", "knocks", "a murmur", "a breath", "a scream", "speech backwards", "counting whispered", "a breath at the microphone", "a knock answered", "a choir stopping"};
+            static const char* const EVN[12] = {"a carrier", "a boom", "a moan", "knocks", "a murmur", "a breath", "a scream", "speech backwards", "counting whispered", "a breath at the microphone",
+                    "a knock answered", "a choir stopping"};
             std::string heard; for (int k = 0; k < 12; k++) if (kinds & (1 << k)) heard += (heard.empty() ? "" : ", ") + std::string(EVN[k]);
             wavOut("static_x32", r, pcm, fmt(", 120 s, %d events: %s", ev, heard.c_str()));
         }
         if (w.valid) {
-            for (int g : {1, 11, 32}) { RxOpts o; o.gainT = gainShareOf(g); o.sky = 0.4; o.age = AGE_MODERN; std::vector<int16_t> pcm; RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o); wavOut(fmt("near_voice_x%d", g), r, pcm, ", a voice within 200 ly"); }
-            for (int g : {11, 25, 32}) { RxOpts o; o.gainT = gainShareOf(g); o.sky = 0.4; o.age = AGE_MODERN; o.wear = 0.9; o.clarity = 0.6; std::vector<int16_t> pcm; RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o); wavOut(fmt("far_voice_x%d", g), r, pcm, ", a voice from about 4,000 ly, locked"); }
+            for (int g : {1, 11, 32}) {
+                RxOpts o;
+                o.gainT = gainShareOf(g);
+                o.sky = 0.4;
+                o.age = AGE_MODERN;
+                std::vector<int16_t> pcm;
+                RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o);
+                wavOut(fmt("near_voice_x%d", g), r, pcm, ", a voice within 200 ly");
+            }
+            for (int g : {11, 25, 32}) {
+                RxOpts o;
+                o.gainT = gainShareOf(g);
+                o.sky = 0.4;
+                o.age = AGE_MODERN;
+                o.wear = 0.9;
+                o.clarity = 0.6;
+                std::vector<int16_t> pcm;
+                RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o);
+                wavOut(fmt("far_voice_x%d", g), r, pcm, ", a voice from about 4,000 ly, locked");
+            }
             { RxOpts o; o.gainT = gainShareOf(18); o.sky = 0.4; o.age = AGE_MODERN; o.kind2 = SIG_PULSAR; o.seed2 = 0x51; o.pulse2 = 1.1; o.sig2 = 0.45; o.intermod = 0;
               std::vector<int16_t> pcm; RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o); wavOut("mixed_voice_pulsar_x18", r, pcm, ", a pulsar's thump under a voice"); }
-            for (int g : {11, 32}) { RxOpts o; o.gainT = gainShareOf(g); o.sky = 0.4; o.age = AGE_MODERN; o.kind2 = SIG_PEOPLE; o.voice2 = RP_VOICE; o.age2 = AGE_MODERN; o.seed2 = 0x77; o.sig2 = 0.5; o.het = 0.3 + 0.4 * o.gainT; o.hetHz = 900; o.intermod = std::max(0.0, (o.gainT - 0.55) / 0.45);
-              std::vector<int16_t> pcm; RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o); wavOut(fmt("mixed_two_x%d", g), r, pcm, ", two broadcasts, one through the other, the whistle between their carriers"); }
+            for (int g : {11, 32}) {
+                RxOpts o;
+                o.gainT = gainShareOf(g);
+                o.sky = 0.4;
+                o.age = AGE_MODERN;
+                o.kind2 = SIG_PEOPLE;
+                o.voice2 = RP_VOICE;
+                o.age2 = AGE_MODERN;
+                o.seed2 = 0x77;
+                o.sig2 = 0.5;
+                o.het = 0.3 + 0.4 * o.gainT;
+                o.hetHz = 900;
+                o.intermod = std::max(0.0, (o.gainT - 0.55) / 0.45);
+                std::vector<int16_t> pcm;
+                RenderStats r = renderProgramme(w, RP_VOICE, 12.0, &pcm, nullptr, o);
+                wavOut(fmt("mixed_two_x%d", g), r, pcm, ", two broadcasts, one through the other, the whistle between their carriers");
+            }
         }
         {   // each age on the air, from the age test worlds (A-01), at x1
             struct AgeRender { int age; int p; bool music; const char* name; };
-            const AgeRender AR[] = {{AGE_INDUSTRIAL, RP_MORSE, false, "industrial_morse"}, {AGE_INDUSTRIAL, RP_PHONOGRAPH, false, "industrial_phonograph_voice"}, {AGE_INDUSTRIAL, RP_PHONOGRAPH, true, "industrial_phonograph_piece"},
-                                    {AGE_FUTURISTIC, RP_SYNTHETIC, false, "futuristic_synthetic"}, {AGE_FUTURISTIC, RP_DATA, false, "futuristic_data"}, {AGE_FUTURISTIC, RP_BEACON, false, "futuristic_beacon"},
-                                    {AGE_FAR_FUTURE, RP_MATHS, false, "farfuture_maths_1"}, {AGE_FAR_FUTURE, RP_MATHS, false, "farfuture_maths_2"}, {AGE_FAR_FUTURE, RP_MATHS, false, "farfuture_maths_3"}};
+            const AgeRender AR[] = {{AGE_INDUSTRIAL, RP_MORSE, false, "industrial_morse"}, {AGE_INDUSTRIAL, RP_PHONOGRAPH, false, "industrial_phonograph_voice"},
+                    {AGE_INDUSTRIAL, RP_PHONOGRAPH, true, "industrial_phonograph_piece"}, {AGE_FUTURISTIC, RP_SYNTHETIC, false, "futuristic_synthetic"},
+                    {AGE_FUTURISTIC, RP_DATA, false, "futuristic_data"}, {AGE_FUTURISTIC, RP_BEACON, false, "futuristic_beacon"}, {AGE_FAR_FUTURE, RP_MATHS, false, "farfuture_maths_1"},
+                    {AGE_FAR_FUTURE, RP_MATHS, false, "farfuture_maths_2"}, {AGE_FAR_FUTURE, RP_MATHS, false, "farfuture_maths_3"}};
             int lastAge = -1, mathsN = 0; PeopleWorld aw;
             for (const AgeRender& a : AR) {
                 if (a.age != lastAge) {
                     lastAge = a.age; const AgeWorld& W = AGE_WORLDS[a.age]; Star st;
-                    if (!starInSector(W.sx, 0, W.sz, st, true) || !peopleWorldOf(st, W.body, aw)) { printf("    the %s world: no people's world at %lld 0 %lld body %d\n", AGE_NAMES[a.age], (long long)W.sx, (long long)W.sz, W.body); aw.valid = false; continue; }
+                    if (!starInSector(W.sx, 0, W.sz, st, true) || !peopleWorldOf(st, W.body, aw)) {
+                        printf("    the %s world: no people's world at %lld 0 %lld body %d\n", AGE_NAMES[a.age], (long long)W.sx, (long long)W.sz, W.body);
+                        aw.valid = false;
+                        continue;
+                    }
                     int counts[RP_COUNT] = {0}; for (int i = 0; i < SHARDS_PER_WORLD; i++) counts[programmeOf(aw.seed, i, aw.shards[i].music, a.age)]++;
                     std::string mix; for (int p = 0; p < RP_COUNT; p++) if (counts[p]) mix += fmt("%s%s %d", mix.empty() ? "" : "; ", RADIO_PROGRAMME_NAMES[p], counts[p]);
                     printf("    the %s age (%s, the %s): its broadcast over the fifty slots: %s\n", AGE_NAMES[a.age], aw.name.c_str(), aw.lore.people.c_str(), mix.c_str());
@@ -354,7 +484,8 @@ int runSignals(int argc, char** argv) {
                 RxOpts o; o.age = a.age; o.music = a.music;
                 if (a.p == RP_MATHS) { int k = 0; for (int i = 0; i < SHARDS_PER_WORLD; i++) if (!aw.shards[i].music && k++ == mathsN * 7) { o.slot = i; break; } mathsN++; }
                 Programme prog; std::vector<int16_t> pcm; RenderStats r = renderProgramme(aw, a.p, a.p == RP_MORSE || a.p == RP_MATHS ? 30.0 : 15.0, &pcm, &prog, o);
-                std::string what = a.p == RP_MORSE ? fmt(", %zu elements at %.0f ms a unit, %.0f s keyed", prog.code.size(), prog.unit * 1000, prog.seconds) : (a.p == RP_MATHS ? fmt(", %s", AudioSynth::mathsName(prog.seed)) : "");
+                std::string what = a.p == RP_MORSE ? fmt(", %zu elements at %.0f ms a unit, %.0f s keyed", prog.code.size(), prog.unit * 1000, prog.seconds)
+                                                   : (a.p == RP_MATHS ? fmt(", %s", AudioSynth::mathsName(prog.seed)) : "");
                 wavOut(a.name, r, pcm, what);
             }
         }
@@ -363,7 +494,9 @@ int runSignals(int argc, char** argv) {
         StarSystem sys; sys.generate(here);
         std::vector<Signal> local; localSignals(sys, obs, 3.6e6, local);
         printf("the system of %s (%s) here: %zu local signals%s\n", here.name.c_str(), STAR_CLASSES[here.cls].name, local.size(), sectorTransmits(sx, sy, sz) ? " (a transmitter sector)" : "");
-        for (const Signal& s : local) printf("  %-24s %s (body %d, %s)  strength %.2f  %s\n", SIGNAL_KIND_NAMES[s.kind], sys.bodies[s.body].name.c_str(), s.body, KINDS[s.bodyType].name, s.strength, signalSourceLine(s).c_str());
+        for (const Signal& s : local)
+            printf("  %-24s %s (body %d, %s)  strength %.2f  %s\n", SIGNAL_KIND_NAMES[s.kind], sys.bodies[s.body].name.c_str(), s.body, KINDS[s.bodyType].name, s.strength,
+                    signalSourceLine(s).c_str());
     } else printf("no star in that sector\n");
     return 0;
 }
@@ -385,9 +518,10 @@ int runVoice(int argc, char** argv) {
     static const char* const STRESS[4] = {"the first syllable", "the last syllable", "the last syllable but one", "no syllable (all even)"};
     static const char* const CONTOUR[3] = {"falling through the sentence", "rising to a peak then falling", "level with a drop at the end"};
     printf("%s, %s of %s: the voice of the %s (names of style %d)\n", b.name.c_str(), KINDS[b.type].name, s.name.c_str(), L.people.c_str(), L.style);
-    printf("  %s: %.0f Hz with a range of %.2f, %.1f syllables a second, the tract %.2f; breath %.2f, roughness %.2f, nasal %.2f, tremor %.2f, a second tone %.2f at %.2f; the stress on %s, the melody %s%s%s%s\n",
-           voiceLine(V).c_str(), V.pitch, V.range, V.rate, V.tract, V.breath, V.rough, V.nasal, V.tremor, V.sub, V.subRatio, STRESS[V.stress], CONTOUR[V.contour],
-           V.tonal ? ", a tone on each syllable" : "", V.clicky ? ", clicks for the voiceless stops" : "", V.trill ? ", the r's rolled" : "");
+    printf("  %s: %.0f Hz with a range of %.2f, %.1f syllables a second, the tract %.2f; breath %.2f, roughness %.2f, nasal %.2f, tremor %.2f, a second tone %.2f at %.2f; the stress on %s, the "
+           "melody %s%s%s%s\n",
+            voiceLine(V).c_str(), V.pitch, V.range, V.rate, V.tract, V.breath, V.rough, V.nasal, V.tremor, V.sub, V.subRatio, STRESS[V.stress], CONTOUR[V.contour],
+            V.tonal ? ", a tone on each syllable" : "", V.clicky ? ", clicks for the voiceless stops" : "", V.trill ? ", the r's rolled" : "");
     printf("  sounds (%zu):", V.inventory.size());
     static const char* const KINDS[PK_COUNT] = {"vowel", "stop", "fricative", "nasal", "liquid", "glide", "pause"};
     for (int p : V.inventory) printf(" %s(%s%s)", PHONES[p].sym, PHONES[p].kind == PK_VOWEL ? "" : (PHONES[p].voiced ? "voiced " : "voiceless "), KINDS[PHONES[p].kind]);
@@ -411,7 +545,13 @@ int runVoice(int argc, char** argv) {
         int frames = 0, total = (int)(sr * (S.seconds + 1));
         while (frames < total) {
             synth.render(buf.data(), (int)buf.size(), sr, st);
-            for (float v : buf) { if (!std::isfinite(v)) nan++; if (std::fabs(v) >= 0.999f) clip++; peak = std::max(peak, std::fabs(v)); sum += (double)v * v; pcm.push_back((int16_t)(std::max(-1.f, std::min(1.f, v)) * 32000)); }
+            for (float v : buf) {
+                if (!std::isfinite(v)) nan++;
+                if (std::fabs(v) >= 0.999f) clip++;
+                peak = std::max(peak, std::fabs(v));
+                sum += (double)v * v;
+                pcm.push_back((int16_t)(std::max(-1.f, std::min(1.f, v)) * 32000));
+            }
             frames += (int)buf.size();
         }
         makeDir("shots"); makeDir("shots/tests");
@@ -419,10 +559,20 @@ int runVoice(int argc, char** argv) {
         FILE* f = fopen(fn.c_str(), "wb");
         if (f) {
             uint32_t dataBytes = (uint32_t)pcm.size() * 2, rate = sr, byteRate = sr * 2; uint16_t ch = 1, bits = 16, blockAlign = 2, fmtTag = 1; uint32_t fmtLen = 16, riffLen = 36 + dataBytes;
-            fwrite("RIFF", 1, 4, f); fwrite(&riffLen, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f); fwrite(&fmtLen, 4, 1, f); fwrite(&fmtTag, 2, 1, f); fwrite(&ch, 2, 1, f); fwrite(&rate, 4, 1, f); fwrite(&byteRate, 4, 1, f); fwrite(&blockAlign, 2, 1, f); fwrite(&bits, 2, 1, f);
+            fwrite("RIFF", 1, 4, f);
+            fwrite(&riffLen, 4, 1, f);
+            fwrite("WAVEfmt ", 1, 8, f);
+            fwrite(&fmtLen, 4, 1, f);
+            fwrite(&fmtTag, 2, 1, f);
+            fwrite(&ch, 2, 1, f);
+            fwrite(&rate, 4, 1, f);
+            fwrite(&byteRate, 4, 1, f);
+            fwrite(&blockAlign, 2, 1, f);
+            fwrite(&bits, 2, 1, f);
             fwrite("data", 1, 4, f); fwrite(&dataBytes, 4, 1, f); fwrite(pcm.data(), 2, pcm.size(), f); fclose(f);
         }
-        printf("rendered %.1f s: peak %.3f, rms %.3f, %d non-finite, %d at the ceiling, %s -> %s\n", (double)pcm.size() / sr, peak, std::sqrt(sum / std::max<size_t>(1, pcm.size())), nan, clip, st.speechDone ? "the speech ended" : "the speech NOT ended", fn.c_str());
+        printf("rendered %.1f s: peak %.3f, rms %.3f, %d non-finite, %d at the ceiling, %s -> %s\n", (double)pcm.size() / sr, peak, std::sqrt(sum / std::max<size_t>(1, pcm.size())), nan, clip,
+                st.speechDone ? "the speech ended" : "the speech NOT ended", fn.c_str());
     }
     return 0;
 }

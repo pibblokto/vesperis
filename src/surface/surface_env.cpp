@@ -141,8 +141,10 @@ void SurfaceView::computeEnvironment(double t) {
         lastWindUpdate = t;
         double base = site.atmosphere ? K.wind : 0;
         const bool steady = (K.tags & KT_FIXED_SUN) && site.gen.locked;   // a locked world's surface wind blows toward the substellar point, and hardly changes
-        env.windKnots = base * (steady ? 0.85 + 0.3 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5)) : 0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) * (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // the wind rises ahead of a front
-        env.windDir = steady ? wrap2pi(std::atan2(env.sunDisc.dirLocal.x, env.sunDisc.dirLocal.z) + 0.2 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6)) : wrap2pi(1.7 + 2.0 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6));
+        env.windKnots = base * (steady ? 0.85 + 0.3 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5)) : 0.4 + 0.8 * (0.5 + 0.5 * gnoise2(t / 400.0, 3.3, site.gen.seed + 5))) *
+                (1 + env.rain * 1.5) * (1 + 2.5 * env.dust) * (1 + 1.0 * fw.windRise);   // the wind rises ahead of a front
+        env.windDir = steady ? wrap2pi(std::atan2(env.sunDisc.dirLocal.x, env.sunDisc.dirLocal.z) + 0.2 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6))
+                             : wrap2pi(1.7 + 2.0 * gnoise2(t / 2000.0, 7.7, site.gen.seed + 6));
         if (fw.windWeight > 0.01) {   // the front's wind takes over by its weight: along its line ahead of it, with its motion behind
             double fx = dot(fw.windTo, site.east0), fz = dot(fw.windTo, site.north0);
             double w = clampd(fw.windWeight, 0, 1);
@@ -184,7 +186,8 @@ void SurfaceView::computeEnvironment(double t) {
     if (airFrozen(b)) env.pressureAtm *= 1e-6;   // the vapour over its snow, a trace
     env.pressureAtm *= std::exp(-player.y / 8000.0);
     SurfaceLook L = lookFor(site.gen, site.sys->star);
-    env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);   // a front's squall closes the view further
+    // a front's squall closes the view further
+    env.fogDistance = L.fogDistance * (1 - 0.7 * env.rain) * (1 - 0.55 * env.snow) * (1 - 0.94 * env.dust) * (1 - 0.9 * env.fogBank) * (1 - 0.5 * env.frontRain);
     if (K.lowFogM > -1e8) env.fogDistance *= clampd((player.y - K.lowFogM) / K.lowFogSpan, 0.03, 1.0);   // walking down into the steam world's lowlands, the fog closes
     // inside a fog sea the fog closes as in the steam world's lowlands (by the eye: `render` once the eye is placed)
     // a comet vents harder the closer it dives to its star (the same activity as the tail seen from space);

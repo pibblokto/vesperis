@@ -43,11 +43,29 @@ void AudioSynth::rvDerive(RadarVar& v, uint64_t seed) {
     v.thumpF = 45 + 50 * u(1); v.interpulse = u(2) < 0.5 ? 0 : 0.3 + 0.4 * u(3); v.nulling = u(4) < 0.3; v.nullOn = 6 + 12 * u(5); v.nullOff = 2 + 4 * u(6);
     v.growl = 0.4 + 1.1 * u(7); v.whineF = 1700 + 1500 * u(8); v.breath = u(9) < 0.45;
     static const double RATIOS[5] = {1.0595, 1.03, 1.5, 0.5, 1.4142};   // a semitone, a quarter-tone, a fifth, an octave under, a tritone
-    v.songF = 60 + 70 * u(11); v.ratio = RATIOS[(int)(u(12) * 4.99)]; v.glide = u(13) < 0.4; v.geyserRate = 0.5 + 1.5 * u(14); v.crackle = 0.3 + 1.7 * u(15); v.moan = u(16) < 0.4; v.moanF = 80 + 90 * u(17);
-    v.whistlerRate = 0.6 + 1.4 * u(21); v.chorusRate = 0.6 + 1.4 * u(22); v.sferics = u(23) < 0.5; v.sfRate = 1 + 4 * u(24); v.choirSet = (int)(u(25) * 3.99); v.choirRate = 0.7 + 0.8 * u(26); v.hissF = 300 + 600 * u(27); v.roar = u(28) < 0.35;
+    v.songF = 60 + 70 * u(11);
+    v.ratio = RATIOS[(int)(u(12) * 4.99)];
+    v.glide = u(13) < 0.4;
+    v.geyserRate = 0.5 + 1.5 * u(14);
+    v.crackle = 0.3 + 1.7 * u(15);
+    v.moan = u(16) < 0.4;
+    v.moanF = 80 + 90 * u(17);
+    v.whistlerRate = 0.6 + 1.4 * u(21);
+    v.chorusRate = 0.6 + 1.4 * u(22);
+    v.sferics = u(23) < 0.5;
+    v.sfRate = 1 + 4 * u(24);
+    v.choirSet = (int)(u(25) * 3.99);
+    v.choirRate = 0.7 + 0.8 * u(26);
+    v.hissF = 300 + 600 * u(27);
+    v.roar = u(28) < 0.35;
     v.beacN = 3 + (int)(u(31) * 4.99); for (int i = 0; i < 7; i++) v.beacF[i] = 500 * std::pow(2.0, 1.6 * u(40 + i));
     v.beacDur = 0.12 + 0.25 * u(32); v.beacGap = 0.08 + 0.2 * u(33); v.beacRest = 2 + 5 * u(34); v.beacSq = 0.15 + 0.35 * u(35); v.beacSag = u(36) < 0.5;
-    v.dataF1 = 550 + 350 * u(51); v.dataF2 = v.dataF1 + 120 + 300 * u(52); v.dataRate = 12 + 50 * u(53); v.dataBurst = 0.8 + 2.5 * u(54); v.dataGap = 0.6 + 3.5 * u(55); v.dataHum = u(56) < 0.5 ? 50 : 60;
+    v.dataF1 = 550 + 350 * u(51);
+    v.dataF2 = v.dataF1 + 120 + 300 * u(52);
+    v.dataRate = 12 + 50 * u(53);
+    v.dataBurst = 0.8 + 2.5 * u(54);
+    v.dataGap = 0.6 + 3.5 * u(55);
+    v.dataHum = u(56) < 0.5 ? 50 : 60;
     v.bellF = 160 + 200 * u(61); v.bellPeriod = 3 + 5 * u(62); v.bellDecay = 3 + 4 * u(63); v.bellFar = 0.1 + 0.25 * u(64);
     v.sirenTwo = u(71) < 0.45; v.sirenF = 280 + 240 * u(72); v.sirenRatio = 1.25 + 0.4 * u(73); v.sirenCycle = v.sirenTwo ? 0.4 + 0.5 * u(74) : 1.2 + 2.0 * u(74); v.sirenSwell = 9 + 11 * u(75);
     v.murRate = 3 + 1.5 * u(81); v.murF0[0] = 95 + 35 * u(82); v.murF0[1] = 130 + 50 * u(83); v.murF0[2] = 180 + 70 * u(84);
@@ -83,7 +101,13 @@ double AudioSynth::phantomSample(Phantom& p, double dt, double sylRate, double b
     float nz = noise(); p.lpN += (nz - p.lpN) * 0.25;
     double src = glottal(p.ph) * p.amp * (1 - 0.7 * breathy) + p.lpN * breathy * p.amp * 0.6;
     double y = src;
-    for (int i = 0; i < 3; i++) { double r = co.rP[i], B = 2 * r * std::cos(TAU_ * p.F[i] * dt), C = -r * r, A = 1 - B - C; double o = A * y + B * p.y1[i] + C * p.y2[i]; p.y2[i] = p.y1[i]; p.y1[i] = o; y = o; }
+    for (int i = 0; i < 3; i++) {
+        double r = co.rP[i], B = 2 * r * std::cos(TAU_ * p.F[i] * dt), C = -r * r, A = 1 - B - C;
+        double o = A * y + B * p.y1[i] + C * p.y2[i];
+        p.y2[i] = p.y1[i];
+        p.y1[i] = o;
+        y = o;
+    }
     return std::tanh(y * 0.5) * 0.65;
 }
 
@@ -124,7 +148,10 @@ void AudioSynth::machineInto(double& sig, RadarChannel& c, double dt, int voice,
             if (c.bellNext <= 0) { c.bellT = 0; c.bellNext = uni() < 0.2 ? 0.6 + 0.4 * uni() : v.bellPeriod * (0.8 + 0.4 * uni()); }
             if (c.bellT >= 0) {
                 double b = 0;
-                for (int i = 0; i < 6; i++) { c.bellPh[i] += dt * v.bellF * BELL_PARTIALS[i] * (i == 3 ? 1.003 : 1.0); b += std::sin(TAU_ * c.bellPh[i]) * std::exp(-c.bellT * (0.7 + 0.45 * i)) / (1 + 0.3 * i); }
+                for (int i = 0; i < 6; i++) {
+                    c.bellPh[i] += dt * v.bellF * BELL_PARTIALS[i] * (i == 3 ? 1.003 : 1.0);
+                    b += std::sin(TAU_ * c.bellPh[i]) * std::exp(-c.bellT * (0.7 + 0.45 * i)) / (1 + 0.3 * i);
+                }
                 b *= std::exp(-c.bellT / v.bellDecay) * (c.bellT < 0.004 ? c.bellT / 0.004 : 1.0);
                 c.bellLp += (b - c.bellLp) * v.bellFar;
                 sig += 0.55 * c.bellLp;
@@ -146,9 +173,22 @@ void AudioSynth::machineInto(double& sig, RadarChannel& c, double dt, int voice,
         }
         case RP_MURMUR: {   // a murmur of voices behind a wall, one of them raised now and then
             double m = 0;
-            for (int i = 0; i < 3; i++) { if (c.phan[i].f0Base != v.murF0[i]) { c.phan[i] = Phantom(); c.phan[i].f0Base = v.murF0[i]; c.phan[i].f0 = c.phan[i].f0T = v.murF0[i]; } m += phantomSample(c.phan[i], dt, v.murRate * (i == 0 ? 1 : (i == 1 ? 1.12 : 0.9)), 0.25, 0.3); }
+            for (int i = 0; i < 3; i++) {
+                if (c.phan[i].f0Base != v.murF0[i]) {
+                    c.phan[i] = Phantom();
+                    c.phan[i].f0Base = v.murF0[i];
+                    c.phan[i].f0 = c.phan[i].f0T = v.murF0[i];
+                }
+                m += phantomSample(c.phan[i], dt, v.murRate * (i == 0 ? 1 : (i == 1 ? 1.12 : 0.9)), 0.25, 0.3);
+            }
             c.shoutNext -= dt;
-            if (c.shoutNext <= 0 && c.shoutT < 0) { c.shoutT = 0; c.shoutNext = 6 + 9 * uni(); c.phan[3] = Phantom(); c.phan[3].f0Base = v.murF0[2] * 1.3; c.phan[3].f0 = c.phan[3].f0T = c.phan[3].f0Base; }
+            if (c.shoutNext <= 0 && c.shoutT < 0) {
+                c.shoutT = 0;
+                c.shoutNext = 6 + 9 * uni();
+                c.phan[3] = Phantom();
+                c.phan[3].f0Base = v.murF0[2] * 1.3;
+                c.phan[3].f0 = c.phan[3].f0T = c.phan[3].f0Base;
+            }
             if (c.shoutT >= 0) { double u = c.shoutT / 0.7; if (u >= 1) c.shoutT = -1; else { m += 1.6 * std::sin(PI_ * u) * phantomSample(c.phan[3], dt, 6, 0.1, 0.8); c.shoutT += dt; } }
             c.murLp += (m - c.murLp) * 0.18;
             sig += 0.9 * c.murLp;
@@ -304,7 +344,9 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
             }
             break;
         }
-        case 1: {   // a pulsar: a thump far down at its rate, a growl falling away after each, a thin whine that circles; by its seed an interpulse half a period on, spells of silence (a nulling one), a breath drawn before each thump (the slow ones)
+        case 1: {
+            // a pulsar: a thump far down at its rate, a growl falling away after each, a thin whine that circles; by its seed an interpulse
+            // half a period on, spells of silence (a nulling one), a breath drawn before each thump (the slow ones)
             double rate = std::max(0.2, pulseHz);
             double gate = 1;
             if (v.nulling) { c.nullT += dt; double cyc = v.nullOn + v.nullOff; if (std::fmod(c.nullT, cyc) >= v.nullOn) gate = 0; }
@@ -350,22 +392,58 @@ double AudioSynth::channelSample(RadarChannel& c, double dt, int kind, int voice
         case 4:     // a drifter's voice (audio_rogue.cpp)
             sig = rogueSample(c, dt, main ? st.radarRogue : rdRogue2, voice, n2, st, main);
             break;
-        case 3: {   // a magnetosphere: whistlers falling slowly from 2 kHz, bursts of chorus, a band of hiss that breathes, and a choir of three voices (by its seed quarter-tones, fifths, a cluster or octaves) that comes and goes; some crack with lightning (sferics and tweeks), some roar
+        case 3: {
+            // a magnetosphere: whistlers falling slowly from 2 kHz, bursts of chorus, a band of hiss that breathes, and a choir of three
+            // voices (by its seed quarter-tones, fifths, a cluster or octaves) that comes and goes; some crack with lightning (sferics and
+            // tweeks), some roar
             c.whNext -= dt;
             if (c.whNext <= 0 && c.whT < 0) { c.whT = 0; c.whNext = (2.0 + 4.0 * uni()) / v.whistlerRate; }
-            if (c.whT >= 0) { double u = c.whT / 1.8; if (u >= 1) c.whT = -1; else { double f = 2200 * std::exp(-u * 2.6) + 150; c.whPh += dt * f; sig += 0.45 * std::sin(PI_ * u) * std::sin(TAU_ * c.whPh); c.whT += dt; } }
+            if (c.whT >= 0) {
+                double u = c.whT / 1.8;
+                if (u >= 1) c.whT = -1;
+                else {
+                    double f = 2200 * std::exp(-u * 2.6) + 150;
+                    c.whPh += dt * f;
+                    sig += 0.45 * std::sin(PI_ * u) * std::sin(TAU_ * c.whPh);
+                    c.whT += dt;
+                }
+            }
             c.chNext -= dt;
             if (c.chNext <= 0 && c.chT < 0) { c.chT = 0; c.chN = 2 + (int)(3.99 * uni()); c.chNext = (4 + 6.0 * uni()) / v.chorusRate; }
-            if (c.chT >= 0) { const double per = 0.26; int kk = (int)(c.chT / per); if (kk >= c.chN) c.chT = -1; else { double u = c.chT / per - kk; double f = 700 * std::pow(2.5, u); c.chPh += dt * f; sig += 0.3 * std::sin(PI_ * u) * std::sin(TAU_ * c.chPh); c.chT += dt; } }
+            if (c.chT >= 0) {
+                const double per = 0.26;
+                int kk = (int)(c.chT / per);
+                if (kk >= c.chN) c.chT = -1;
+                else {
+                    double u = c.chT / per - kk;
+                    double f = 700 * std::pow(2.5, u);
+                    c.chPh += dt * f;
+                    sig += 0.3 * std::sin(PI_ * u) * std::sin(TAU_ * c.chPh);
+                    c.chT += dt;
+                }
+            }
             sig += 0.4 * resonate(n2, v.hissF, 120, dt, c.hissY1, c.hissY2) * (0.5 + 0.5 * std::sin(lfo * TAU_ * 0.4));
             if (v.sferics) {
                 if (c.sfT < 0 && uni() < dt * v.sfRate) { c.sfT = 0; c.sfPh = 0; }
-                if (c.sfT >= 0) { double f = 2200 * std::exp(-c.sfT * 4) + 1500; c.sfPh += dt * f; sig += 0.9 * n2 * std::exp(-c.sfT * 600) + 0.25 * std::exp(-c.sfT * 30) * std::sin(TAU_ * c.sfPh); c.sfT += dt; if (c.sfT > 0.25) c.sfT = -1; }
+                if (c.sfT >= 0) {
+                    double f = 2200 * std::exp(-c.sfT * 4) + 1500;
+                    c.sfPh += dt * f;
+                    sig += 0.9 * n2 * std::exp(-c.sfT * 600) + 0.25 * std::exp(-c.sfT * 30) * std::sin(TAU_ * c.sfPh);
+                    c.sfT += dt;
+                    if (c.sfT > 0.25) c.sfT = -1;
+                }
             }
             if (v.roar) {
                 c.roarNext -= dt;
                 if (c.roarNext <= 0 && c.roarT < 0) { c.roarT = 0; c.roarNext = 6 + 8 * uni(); }
-                if (c.roarT >= 0) { double u = c.roarT / 1.6; if (u >= 1) c.roarT = -1; else { sig += 0.6 * std::sin(PI_ * u) * resonate(n2, 300, 150, dt, c.roarY1, c.roarY2) * (0.6 + 0.4 * std::sin(TAU_ * 28 * c.roarT)); c.roarT += dt; } }
+                if (c.roarT >= 0) {
+                    double u = c.roarT / 1.6;
+                    if (u >= 1) c.roarT = -1;
+                    else {
+                        sig += 0.6 * std::sin(PI_ * u) * resonate(n2, 300, 150, dt, c.roarY1, c.roarY2) * (0.6 + 0.4 * std::sin(TAU_ * 28 * c.roarT));
+                        c.roarT += dt;
+                    }
+                }
             }
             c.choirNext -= dt;
             if (c.choirNext <= 0 && c.choirT < 0) { c.choirT = 0; c.choirNext = (8 + 6 * uni()) / v.choirRate; }
@@ -445,15 +523,18 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
         switch (rdEvKind) {
             case 0: rdEvDur = 2.2 + 1.5 * uni(); rdEvA = 1800 + 1600 * uni(); rdEvB = 4 + 6 * uni(); break;             // the carrier: from where to how fast it beats
             case 1: rdEvDur = 3.5; rdEvA = 36 + 14 * uni(); break;                                                        // the boom's pitch
-            case 2: rdEvDur = 2.5 + 2.0 * uni(); rdEvA = 90 + 70 * uni(); rdEvB = 0.75 + 0.2 * uni(); P[4] = Phantom(); P[4].f0 = P[4].f0T = rdEvA; P[4].amp = 0; break;   // the moan: its pitch and where it sinks to
+            // the moan: its pitch and where it sinks to
+            case 2: rdEvDur = 2.5 + 2.0 * uni(); rdEvA = 90 + 70 * uni(); rdEvB = 0.75 + 0.2 * uni(); P[4] = Phantom(); P[4].f0 = P[4].f0T = rdEvA; P[4].amp = 0; break;
             case 3: rdEvN = 3 + (int)(uni() * 2.99); rdEvA = 0.35 + 0.35 * uni(); rdEvDur = rdEvN * rdEvA + 0.8; rdEvB = 90 + 60 * uni(); break;   // knocks: how many, how spaced, the wood's note
             case 4: rdEvDur = 1.5 + 1.0 * uni(); for (int i = 0; i < 3; i++) { P[i] = Phantom(); P[i].f0Base = rdCh[0].v.murF0[i] * (0.9 + 0.2 * uni()); } break;   // a murmur
             case 5: rdEvDur = 3.2; break;                                                                                  // a breath drawn
             case 6: rdEvDur = 2.4 + 0.6 * uni(); rdEvA = 150 + 60 * uni(); P[4] = Phantom(); P[4].f0 = P[4].f0T = rdEvA; break;   // a scream, far away
-            case 7: rdEvDur = 1.6 + 1.2 * uni(); rdEvN = 4 + (int)(uni() * 3.99); rdEvA = 100 + 70 * uni(); rdEvB = uni(); P[0] = Phantom(); P[0].f0 = P[0].f0T = rdEvA; break;   // backwards: the syllables, the pitch
+            // backwards: the syllables, the pitch
+            case 7: rdEvDur = 1.6 + 1.2 * uni(); rdEvN = 4 + (int)(uni() * 3.99); rdEvA = 100 + 70 * uni(); rdEvB = uni(); P[0] = Phantom(); P[0].f0 = P[0].f0T = rdEvA; break;
             case 8: rdEvN = 4 + (int)(uni() * 5.99); rdEvA = 0.55 + 0.25 * uni(); rdEvDur = rdEvN * rdEvA + 0.5; rdEvB = uni(); P[0] = Phantom(); break;   // counting: how far, how quick
             case 9: rdEvDur = 3.4; break;                                                                                  // a breath at the microphone
-            case 10: rdEvN = 2 + (int)(uni() * 2.99); rdEvA = 0.3 + 0.3 * uni(); rdEvB = 80 + 50 * uni(); rdEvC = 1.3 + 1.4 * uni(); rdEvDur = 2 * rdEvN * rdEvA + rdEvC + 0.8; break;   // a knock, and the answer after a silence
+            // a knock, and the answer after a silence
+            case 10: rdEvN = 2 + (int)(uni() * 2.99); rdEvA = 0.3 + 0.3 * uni(); rdEvB = 80 + 50 * uni(); rdEvC = 1.3 + 1.4 * uni(); rdEvDur = 2 * rdEvN * rdEvA + rdEvC + 0.8; break;
             default: rdEvDur = 3.0 + 2.5 * uni(); rdEvA = 115 + 60 * uni(); for (int i = 0; i < 4; i++) { P[i] = Phantom(); P[i].f0 = P[i].f0T = rdEvA * CLUSTER[i]; } break;   // a choir
         }
     }
@@ -463,7 +544,12 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
         if (u >= 1) { rdEvT = -1; rdEvNext = 12 + 28 * uni(); }
         else {
             switch (rdEvKind) {
-                case 0: { double f = rdEvA * std::exp(-2.7 * u) + 180; rdEvPh += dt * f; ev += 0.09 * std::sin(PI_ * u) * std::sin(TAU_ * rdEvPh) * (0.7 + 0.3 * std::sin(TAU_ * rdEvB * rdEvT)); break; }
+                case 0: {
+                    double f = rdEvA * std::exp(-2.7 * u) + 180;
+                    rdEvPh += dt * f;
+                    ev += 0.09 * std::sin(PI_ * u) * std::sin(TAU_ * rdEvPh) * (0.7 + 0.3 * std::sin(TAU_ * rdEvB * rdEvT));
+                    break;
+                }
                 case 1: { rdEvPh += dt * rdEvA; ev += 0.5 * std::exp(-rdEvT * 1.2) * std::sin(TAU_ * rdEvPh) + 4.0 * rdBrown2 * std::exp(-rdEvT) + 0.4 * n2 * std::exp(-rdEvT * 80); break; }
                 case 2: { Phantom& p = P[4]; double env = std::pow(std::sin(PI_ * u), 0.7);
                           p.f0T = rdEvA * (1 - (1 - rdEvB) * u) * (1 + 0.02 * std::sin(TAU_ * 4.7 * rdEvT)); p.ampT = 0.8 * env;
@@ -513,8 +599,12 @@ double AudioSynth::radarSample(double dt, AudioState& st) {
                 }
                 case 10: {   // a knock answering a knock: the knocks far off, a silence, the same knocks again, deeper and near, dry
                     double t1 = rdEvN * rdEvA, t2 = t1 + rdEvC;
-                    if (rdEvT < t1) { double tk = std::fmod(rdEvT, rdEvA); double x = tk < 0.012 ? n2 : 0; ev += 1.4 * resonate(x, rdEvB, 25, dt, rdEvY1, rdEvY2) * std::exp(-tk * 18); }
-                    else if (rdEvT >= t2 && rdEvT < t2 + rdEvN * rdEvA) { double tk = std::fmod(rdEvT - t2, rdEvA); double x = tk < 0.014 ? n2 : 0; close += 1.8 * resonate(x, rdEvB * 0.78, 30, dt, rdEvY1, rdEvY2) * std::exp(-tk * 16); }
+                    if (rdEvT < t1) { double tk = std::fmod(rdEvT, rdEvA); double x = tk < 0.012 ? n2 : 0; ev += 1.4 * resonate(x, rdEvB, 25, dt, rdEvY1, rdEvY2) * std::exp(-tk * 18);
+                    } else if (rdEvT >= t2 && rdEvT < t2 + rdEvN * rdEvA) {
+                        double tk = std::fmod(rdEvT - t2, rdEvA);
+                        double x = tk < 0.014 ? n2 : 0;
+                        close += 1.8 * resonate(x, rdEvB * 0.78, 30, dt, rdEvY1, rdEvY2) * std::exp(-tk * 16);
+                    }
                     break;
                 }
                 default: {   // a choir swelling and stopping: four voices in a cluster, out of nothing to full, then cut off at once

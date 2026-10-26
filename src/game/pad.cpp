@@ -14,7 +14,8 @@
 namespace {
 enum PadSpecial { PSP_NONE, PSP_KEYBOARD, PSP_CONTROLLER, PSP_TYPE, PSP_TWICE, PSP_AUTO };   // PSP_AUTO auto-explore's profiles
 const char* const ROLE_SHORT[PR_BUTTONS] = {"A", "B", "X", "Y", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "UP", "DOWN", "LEFT", "RIGHT"};
-const char* const ROLE_SCREEN[PR_BUTTONS] = {"A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
+const char* const ROLE_SCREEN[PR_BUTTONS] = {
+        "A  BOTTOM", "B  RIGHT", "X  LEFT", "Y  TOP", "LB", "RB", "LT", "RT", "SELECT", "START", "L3", "R3", "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT"};
 constexpr double REPEAT_DELAY = 0.4, REPEAT_EVERY = 0.09;   // the arrows held in the menus and the screens
 constexpr double CAPTURE_S = 6;                             // the controller page waits this long for a press
 constexpr int PAD_ROWS = 22;                                // the controller page: sixteen buttons, two sticks, three settings, the reset
@@ -715,7 +716,11 @@ void Game::updatePadScreen(const Input& in) {
         if (!stick) {   // a control another button had changes places with this one's (two roles never share a button)
             const int old = padMap.bind[P.capture];
             std::string swapped;
-            for (int r2 = 0; r2 < PR_BUTTONS; r2++) if (r2 != P.capture && padMap.bind[r2] == c) { padMap.set(in.pad, r2, old); swapped = fmt(", %s TOOK %s", ROLE_SHORT[r2], padControlLabel(old).c_str()); }
+            for (int r2 = 0; r2 < PR_BUTTONS; r2++)
+                if (r2 != P.capture && padMap.bind[r2] == c) {
+                    padMap.set(in.pad, r2, old);
+                    swapped = fmt(", %s TOOK %s", ROLE_SHORT[r2], padControlLabel(old).c_str());
+                }
             padMap.set(in.pad, P.capture, c);
             P.note = fmt("%s IS NOW %s%s", ROLE_SHORT[P.capture], padControlLabel(c).c_str(), swapped.c_str());
         } else if (P.capStep == 0) {   // up: the half read as down is the other one

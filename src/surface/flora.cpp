@@ -103,8 +103,10 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
                 const Ruin& r = near[q]->r;
                 double dx = T.x - r.x, dz = T.z - r.z;
                 if (dx * dx + dz * dz > (r.reach + 40) * (r.reach + 40)) continue;
-                if (near[q]->spec.work < 0 && std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }   // the street's line, out through the gates and beyond (T-03: a work has none)
-                if (near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {   // its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
+                // the street's line, out through the gates and beyond (T-03: a work has none)
+                if (near[q]->spec.work < 0 && std::fabs(dx * std::cos(r.heading) - dz * std::sin(r.heading)) < 4.0) { skip = true; break; }
+                if (near[q]->spec.work < 0 && dx * dx + dz * dz < r.size * r.size) {
+                    // its yards a clearing the forest takes back over the millennia (C-01's one in three left after ten thousand years)
                     const Culture& cu = cultures[near[q]->spec.people == 1 && peoples > 1 ? 1 : 0];
                     double keep = clampd(0.05 + 0.15 * std::log10(std::max(1.0, cu.ageYears / 200.0)), 0.05, 0.33);
                     if (hash01(mix64(ht + 21)) >= keep) { skip = true; break; }   // before the buildings (one hash; it clears 67-95% of the yards' trees)
@@ -174,7 +176,8 @@ void SurfaceView::forLogs(int cx, int cz, const std::function<void(const LogInst
     L.len = 3.5 + 6 * hash01(mix64(L.seed + 3));
     L.radius = 0.25 + 0.35 * hash01(mix64(L.seed + 4)) * hash01(mix64(L.seed + 6));   // most are slim, a few are giants
     if (L.stone) { L.len *= 0.4 + 0.5 * hash01(mix64(L.seed + 7)); L.radius *= 1.7; }   // the stone trunks broken in sections, thick
-    { const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }   // no log in a room
+    // no log in a room
+    { const RuinCell* near[SETTLEMENTS_NEAR]; int nNear = settlementsNear(L.x, L.z, near); for (int q = 0; q < nNear; q++) if (inSettlementBuilding(*near[q], L.x, L.z, 1.5)) return; }
     if (!site.roads.empty() && site.roadCover(L.x, L.z) > 0.3) return;   // nor across the road
     if (!site.marks.empty() && site.markCover(L.x, L.z) > 0.3) return;   // nor on a street
     if (!site.edits.empty() && site.editCover(L.x, L.z) > 0.3) return;   // nor on a work's ground
@@ -264,7 +267,15 @@ void SurfaceView::drawFlora(Framebuffer& fb, double t) {
         lastTreesDrawn += st.treesDrawn; lastFloraPoints += st.floraPoints; lastFloraPolys += st.floraPolys; lastTreesVisited += st.treesVisited;
         lastNearTrees += st.nearTrees; lastMidTrees += st.midTrees; lastFarTrees += st.farTrees; lastTreesHidden += st.treesHidden;
         for (int k = 0; k < 2; k++) lastFloraMs[k] = std::max(lastFloraMs[k], st.ms[k]);
-        if (lastFloraBandN < TRACE_BANDS) { BandTrace& b = lastFloraBands[lastFloraBandN++]; b = BandTrace(); b.y0 = yb; b.y1 = ye; b.ms = bandMs; b.walked = st.treesVisited; b.drawn = st.treesDrawn; }
+        if (lastFloraBandN < TRACE_BANDS) {
+            BandTrace& b = lastFloraBands[lastFloraBandN++];
+            b = BandTrace();
+            b.y0 = yb;
+            b.y1 = ye;
+            b.ms = bandMs;
+            b.walked = st.treesVisited;
+            b.drawn = st.treesDrawn;
+        }
     });
     std::sort(lastFloraBands, lastFloraBands + lastFloraBandN, [](const BandTrace& a, const BandTrace& b) { return a.y0 < b.y0; });
 }
@@ -303,7 +314,12 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
     auto section = [&](int k) { double n = nowMs(); st.ms[k] += n - tSec; tSec = n; };
     bool markCov = true;   // the coverage grid is read by the trees alone: the cells after them mark nothing
     // a tree (or its hiding) counts once: in the band that holds the row of its canopy centre
-    auto inBand = [&](double x, double y, double z) { Vec3 v = toView(x, y, z); if (v.z < NEAR_Z) return bandY0 == 0; int sy = clampi((int)(proj.cy - proj.f * v.y / v.z), 0, FBH - 1); return sy >= bandY0 && sy < bandY1; };
+    auto inBand = [&](double x, double y, double z) {
+        Vec3 v = toView(x, y, z);
+        if (v.z < NEAR_Z) return bandY0 == 0;
+        int sy = clampi((int)(proj.cy - proj.f * v.y / v.z), 0, FBH - 1);
+        return sy >= bandY0 && sy < bandY1;
+    };
     auto vert = [&](double x, double y, double z, double shade) { RVert q; Vec3 v = toView(x, y, z); q.x = v.x; q.y = v.y; q.z = v.z; q.shade = shade; return q; };
     auto line = [&](double x0, double y0, double z0, double x1, double y1, double z1, double shade, int bank, int th) {
         RVert a = vert(x0, y0, z0, shade), b = vert(x1, y1, z1, shade);
@@ -334,7 +350,13 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         double fogF = 1 - std::exp(-(dist / fogD + wallHere));
         if (pxR < 0.6 * S) {   // a speck
             RVert p; p.x = cV.x; p.y = cV.y; p.z = cV.z; p.shade = leafBase * tone0 * 0.8; p.shade += (63 - p.shade) * fogF;
-            if (rasterPoint3(fb, p, bank, proj, true, 1) && markCov) { double sx, sy; if (::projectPoint(p, proj, sx, sy)) { int tx = (int)(sx / TILE), ty = (int)(sy / TILE); if (tx >= 0 && ty >= 0 && tx < TX && ty < TY) cov[ty * TX + tx] += 1; } }
+            if (rasterPoint3(fb, p, bank, proj, true, 1) && markCov) {
+                double sx, sy;
+                if (::projectPoint(p, proj, sx, sy)) {
+                    int tx = (int)(sx / TILE), ty = (int)(sy / TILE);
+                    if (tx >= 0 && ty >= 0 && tx < TX && ty < TY) cov[ty * TX + tx] += 1;
+                }
+            }
             st.floraPoints++;
             return;
         }
@@ -346,7 +368,15 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         int nOut = pxR > 14 * S ? 10 : (pxR > 5 * S ? 8 : 6);
         RVert q[12];
         double u0 = (double)((hb >> 8) & 127), v0 = (double)((hb >> 16) & 127);   // where on the tile this cluster starts
-        auto setv = [&](RVert& q, double ox, double oy, double shade, double w) { q.x = cV.x + ox; q.y = cV.y + oy; q.z = cV.z; q.shade = shade + (63 - shade) * fogF; q.u = u0 + ox * LEAF_TEX; q.v = v0 + oy * LEAF_TEX; q.w = w; };
+        auto setv = [&](RVert& q, double ox, double oy, double shade, double w) {
+            q.x = cV.x + ox;
+            q.y = cV.y + oy;
+            q.z = cV.z;
+            q.shade = shade + (63 - shade) * fogF;
+            q.u = u0 + ox * LEAF_TEX;
+            q.v = v0 + oy * LEAF_TEX;
+            q.w = w;
+        };
         setv(q[0], 0, 0, base * (0.78 + 0.27 * litC), 1.1);
         for (int k = 0; k < nOut; k++) {
             uint64_t hk = mix64(hb + 31 * (k + 1));
@@ -466,7 +496,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
         if (T.dead) trunkTop = T.h * 0.85;
         if (T.stump) {   // a stone stump, thick and broken, no branches
             if (rPx < 3.5) { line(T.x, T.gy, T.z, T.x, T.gy + T.h, T.z, trunkShade, BANK_BARK, 1); return; }
-            limb(T.x, T.gy - 0.2, T.z, T.x, T.gy + T.h, T.z, T.r * 0.14, T.r * 0.11, trunkShade, sideLit, &barkTile, clampd(1.0 - (dist - 25.0) / 60.0, 0.0, 1.0));   // the trunk's girth (its canopy's measure)
+            // the trunk's girth (its canopy's measure)
+            limb(T.x, T.gy - 0.2, T.z, T.x, T.gy + T.h, T.z, T.r * 0.14, T.r * 0.11, trunkShade, sideLit, &barkTile, clampd(1.0 - (dist - 25.0) / 60.0, 0.0, 1.0));
             return;
         }
         double tx = T.x + T.lx * (trunkTop / T.cy), tz = T.z + T.lz * (trunkTop / T.cy);   // the trunk's top follows the lean
@@ -616,7 +647,11 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         double sx1 = sx0 + wdx * sway + std::cos(a) * T.r * 0.15, sz1 = sz0 + wdz * sway + std::sin(a) * T.r * 0.15, sy1 = sy0 - hang * (0.7 + 0.3 * hash01(mix64(hb + 2)));
                         double sh = fogShade(leafBase * tone0 * 0.7, dist);
                         line(sx0, sy0, sz0, sx1, sy1, sz1, sh, leafBank, rPx > 10 ? 2 : 1);
-                        if (near && dist < 45) { double cr = cR * 0.35; cluster(mix64(hb + 3), (sx0 + sx1) * 0.5, (sy0 + sy1) * 0.5, (sz0 + sz1) * 0.5, cr, cr * 1.3, dist, leafBank, tone0 * 0.9, 0.45, ragged); cluster(mix64(hb + 4), sx1, sy1 + cr, sz1, cr * 0.8, cr, dist, leafBank, tone0 * 0.85, 0.4, ragged); }
+                        if (near && dist < 45) {
+                            double cr = cR * 0.35;
+                            cluster(mix64(hb + 3), (sx0 + sx1) * 0.5, (sy0 + sy1) * 0.5, (sz0 + sz1) * 0.5, cr, cr * 1.3, dist, leafBank, tone0 * 0.9, 0.45, ragged);
+                            cluster(mix64(hb + 4), sx1, sy1 + cr, sz1, cr * 0.8, cr, dist, leafBank, tone0 * 0.85, 0.4, ragged);
+                        }
                     }
                 }
                 break;
@@ -633,7 +668,10 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     if (T.bare) continue;
                     double cr = near ? cR * 1.15 : T.r * 0.5;
                     cluster(hb, ex, ey + cr * 0.3, ez, cr, cr * 0.85, dist, leafBank, tone0, litOf(ex - cx, ey + cr * 0.3 - (T.gy + T.cy), ez - cz), ragged);
-                    if (near) { double mx = (tx + ex) * 0.5, mz = (tz + ez) * 0.5, my = (top + ey) * 0.5; cluster(mix64(hb + 5), mx, my + cr * 0.2, mz, cr * 0.55, cr * 0.45, dist, leafBank, tone0 * 0.9, litOf(mx - cx, my - (T.gy + T.cy), mz - cz), ragged); }
+                    if (near) {
+                        double mx = (tx + ex) * 0.5, mz = (tz + ez) * 0.5, my = (top + ey) * 0.5;
+                        cluster(mix64(hb + 5), mx, my + cr * 0.2, mz, cr * 0.55, cr * 0.45, dist, leafBank, tone0 * 0.9, litOf(mx - cx, my - (T.gy + T.cy), mz - cz), ragged);
+                    }
                 }
                 break;
             }
@@ -721,7 +759,10 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         if (ok) {
                             RasterParams rp; rp.bank = barkBank;
                             rasterPolygon(fb, q, 8, rp, proj);
-                            for (int k = 0; k < 8; k++) { Vec3 pnt = E + nn * (R * 0.78 * std::cos(k * TAU / 8)) + upL * (R * 0.78 * std::sin(k * TAU / 8)); q[k] = vert(pnt.x, pnt.y, pnt.z, Lg.stone ? wood + 6 : wood); }
+                            for (int k = 0; k < 8; k++) {
+                                Vec3 pnt = E + nn * (R * 0.78 * std::cos(k * TAU / 8)) + upL * (R * 0.78 * std::sin(k * TAU / 8));
+                                q[k] = vert(pnt.x, pnt.y, pnt.z, Lg.stone ? wood + 6 : wood);
+                            }
                             RasterParams rp2; rp2.bank = woodBank; rp2.zbias = 1.0005;   // the same plane: the bias lets it win
                             if (dist < 40) { rp2.grain = &grainFine; rp2.grainScale = 6.0; }
                             for (int k = 0; k < 8; k++) { q[k].u = (q[k].x - E.x) * 4; q[k].v = (q[k].y - E.y) * 4; }
@@ -792,7 +833,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
             // ---- bushes on grass and at the forest edge, some with berries. R-306: shrubland: 0.5-4 bushes a cell on grass
             // (savanna the most, tundra cushions, desert scrub), to 320 m, the big ones two clusters; the plains read empty
             // with 0-2 bushes a cell within 200 m
-            if ((tv.material == MAT_GRASS || (tv.material == MAT_FOREST && tv.veg < 0.6) || (tv.material == MAT_SAND && tv.biome == BIO_DESERT)) && (tv.veg > 0.2 || tv.biome == BIO_DESERT) && cellDist < 320) {
+            if ((tv.material == MAT_GRASS || (tv.material == MAT_FOREST && tv.veg < 0.6) || (tv.material == MAT_SAND && tv.biome == BIO_DESERT)) && (tv.veg > 0.2 || tv.biome == BIO_DESERT) &&
+                    cellDist < 320) {
                 double per = tv.biome == BIO_SAVANNA ? 1.6 : (tv.biome == BIO_TUNDRA ? 0.7 : (tv.biome == BIO_DESERT ? 0.35 : 1.0));
                 double nb = (0.5 + tv.veg * 3.5) * per * hash01(mix64(h + 7)) * 1.6;
                 if (tv.material == MAT_FOREST) nb *= 0.6;
@@ -856,7 +898,8 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                         line(mx, gy + hh * 0.6, mz, gx + wdx * sway, gy + hh * 0.95, gz + wdz * sway, sh, 10, 1);
                     } else line(gx, gy, gz, gx + wdx * sway, gy + hh, gz + wdz * sway, sh, 10, 1);
                 }
-                if (bloom && cellDist < 50 && tv.material == MAT_GRASS && (tv.biome == BIO_GRASSLAND || tv.biome == BIO_TEMPERATE || tv.biome == BIO_SAVANNA || tv.biome == BIO_NONE) && hash01(mix64(h + 64)) < 0.5) {
+                if (bloom && cellDist < 50 && tv.material == MAT_GRASS && (tv.biome == BIO_GRASSLAND || tv.biome == BIO_TEMPERATE || tv.biome == BIO_SAVANNA || tv.biome == BIO_NONE) &&
+                        hash01(mix64(h + 64)) < 0.5) {
                     int nfl = 3 + (int)(6 * hash01(mix64(h + 65)));
                     int fbank = hash01(mix64(h + 66)) < 0.5 ? 5 : 8;
                     for (int i = 0; i < nfl; i++) {
@@ -900,7 +943,11 @@ void SurfaceView::drawFloraBand(Framebuffer& fb, double t, int bandY0, int bandY
                     if (rr / dist * proj.f < 1.2) continue;
                     RVert q[6];
                     bool ok = true;
-                    for (int k = 0; k < 6; k++) { double a = k * TAU / 6; q[k] = vert(px + std::cos(a) * rr, wl + 0.03, pz + std::sin(a) * rr, fogShade(leafBase * 0.8, dist)); if (q[k].z < NEAR_Z) ok = false; }
+                    for (int k = 0; k < 6; k++) {
+                        double a = k * TAU / 6;
+                        q[k] = vert(px + std::cos(a) * rr, wl + 0.03, pz + std::sin(a) * rr, fogShade(leafBase * 0.8, dist));
+                        if (q[k].z < NEAR_Z) ok = false;
+                    }
                     if (!ok) continue;
                     RasterParams rp; rp.bank = 3;
                     rasterPolygon(fb, q, 6, rp, proj);

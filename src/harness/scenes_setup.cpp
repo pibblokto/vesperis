@@ -18,7 +18,8 @@ bool pinnedPlainFront(StarSystem& sys, int& bi, double t0, FrontForecast& fc, do
 std::string surfaceFrontInfo(const SurfaceView& sv) {   // W-03: the fronts' numbers at the feet
     const SurfaceEnvironment& e = sv.env;
     return fmt("line %s, ahead %s, cloud %.2f (pattern %.2f), rain %.2f, snow %.2f, cold %.1f C, wind %.0f kt, temp %+.1f C, fog %.0f m, sky %.2f", sv.localFront.on ? "on" : "off",
-               e.frontAhead < 1e17 ? fmt("%.1f km", e.frontAhead / 1000).c_str() : "none", e.frontCloud, e.cloudPattern, e.frontRain, e.snow, e.frontCold, e.windKnots, e.temperatureC, e.fogDistance, e.skyBrightness);
+            e.frontAhead < 1e17 ? fmt("%.1f km", e.frontAhead / 1000).c_str() : "none", e.frontCloud, e.cloudPattern, e.frontRain, e.snow, e.frontCold, e.windKnots, e.temperatureC, e.fogDistance,
+            e.skyBrightness);
 }
 // E-03: one body of the scene finder's scan (setupSceneForType's loop), for its finders: what the call asked, the body and its
 // generator, and what a finder sets (where to stand, which way to look, the hour to start from, whether it placed the spot). The
@@ -226,8 +227,8 @@ bool SceneFind::aurora() {   // B-403, R-402: under an aurora
                     disc++; if (bankOf(fb.idx[y * FBW + x]) == 11) over++;
                 }
         }
-        printf("  %s: %s in the sky, %.1f deg across, %.0f deg up, %.0f deg from the pole, aurora over %d%% of its surroundings\n", b.name.c_str(), KINDS[sys.bodies[bestJ].type].name, 2 * bestR / DEG, std::asin(bestDl.y) / DEG,
-               std::acos(clampd(bestDl.z * (latUse >= 0 ? 1 : -1) / std::sqrt(std::max(1e-9, 1 - bestDl.y * bestDl.y)), -1, 1)) / DEG, disc ? 100 * over / disc : 0);
+        printf("  %s: %s in the sky, %.1f deg across, %.0f deg up, %.0f deg from the pole, aurora over %d%% of its surroundings\n", b.name.c_str(), KINDS[sys.bodies[bestJ].type].name, 2 * bestR / DEG,
+                std::asin(bestDl.y) / DEG, std::acos(clampd(bestDl.z * (latUse >= 0 ? 1 : -1) / std::sqrt(std::max(1e-9, 1 - bestDl.y * bestDl.y)), -1, 1)) / DEG, disc ? 100 * over / disc : 0);
         if (disc == 0 || over < disc / 12) return false;
         faceYawOut = yaw; facePitchOut = pitchB; placed = true;
     }
@@ -367,7 +368,8 @@ bool SceneFind::eyeballShore() {   // P-03: an eyeball world's shore
         const Vec3 dir = e1 * std::cos(k * TAU / 72) + e2 * std::sin(k * TAU / 72);
         auto at = [&](double thDeg) { return normalize(sub * std::cos(thDeg * DEG) + dir * std::sin(thDeg * DEG)); };
         double th = -1;
-        for (double q = std::max(0.5, g.seaReachDeg - 8); q < g.seaReachDeg + 8 && th < 0; q += 0.01) if (sampleSurface(g, at(q), 16).height > 5.0) th = q;   // the shore wanders four degrees round the reach
+        // the shore wanders four degrees round the reach
+        for (double q = std::max(0.5, g.seaReachDeg - 8); q < g.seaReachDeg + 8 && th < 0; q += 0.01) if (sampleSurface(g, at(q), 16).height > 5.0) th = q;
         if (th < 0) continue;
         double lo = th - 0.01, hi = th;
         for (int it = 0; it < 30; it++) { const double mid = 0.5 * (lo + hi); if (sampleSurface(g, at(mid), 16).height > 5.0) hi = mid; else lo = mid; }
@@ -667,13 +669,23 @@ bool SceneFind::groovedLanes() {   // P-06: a grooved moon's lanes
     for (int a = 0; a < 16; a++) {
         const double ang = a * PI / 16, cs = std::cos(ang), sn = std::sin(ang) / std::cos(latUse);
         double sum = 0, sum2 = 0;
-        for (int q = -30; q <= 30; q++) { const double hh = sampleSurface(g, StarSystem::bodyFromLatLon(latUse + cs * q * 200.0 / Rm, lon + sn * q * 200.0 / Rm), 64).height; sum += hh; sum2 += hh * hh; }
+        for (int q = -30; q <= 30; q++) {
+            const double hh = sampleSurface(g, StarSystem::bodyFromLatLon(latUse + cs * q * 200.0 / Rm, lon + sn * q * 200.0 / Rm), 64).height;
+            sum += hh;
+            sum2 += hh * hh;
+        }
         const double var = sum2 / 61 - (sum / 61) * (sum / 61);
         if (var > bestVar) { bestVar = var; across = ang; }
     }
     {   const double cs = std::cos(across), sn = std::sin(across) / std::cos(latUse);
         double low = 1e18, at = 0;
-        for (int q = -20; q <= 20; q++) { const double hh = sampleSurface(g, StarSystem::bodyFromLatLon(latUse + cs * q * 200.0 / Rm, lon + sn * q * 200.0 / Rm), 64).height; if (hh < low) { low = hh; at = q * 200.0; } }
+        for (int q = -20; q <= 20; q++) {
+            const double hh = sampleSurface(g, StarSystem::bodyFromLatLon(latUse + cs * q * 200.0 / Rm, lon + sn * q * 200.0 / Rm), 64).height;
+            if (hh < low) {
+                low = hh;
+                at = q * 200.0;
+            }
+        }
         latUse += cs * at / Rm; lon += sn * at / Rm; }
     faceYawOut = across + PI / 2;
     placed = true;
@@ -752,9 +764,19 @@ bool SceneFind::traitGround() {   // R-307, P-01, P-02: a kind's own ground (a c
     // (desert), -33 / -35 the shore of a methane or an acid sea, -34 a rayed plain (bombarded); P-01: -37 the magma sea (the
     // standing point where the fixed sun stands at the light asked), -38 a steam vent's sinter, -39 a brine pool, -55 a glass
     // flow, each faced; P-02: -59 a lichen world's moss, faced from 20-50 m
-    int mat = wantMat == SCENE_STAINED_CRACK ? MAT_DUST : (wantMat == SCENE_LAVA_FISSURE || wantMat == SCENE_MAGMA_SHORE ? MAT_LAVA : (wantMat == SCENE_DUNES ? MAT_SAND : (wantMat == SCENE_STEAM_VENT ? MAT_SALT : (wantMat == SCENE_BRINE_POOL ? MAT_BRINE : (wantMat == SCENE_GLASS_FLOW ? MAT_GLASS : (wantMat == SCENE_LICHEN ? MAT_MOSS : MAT_WATER))))));
+    int mat = wantMat == SCENE_STAINED_CRACK
+            ? MAT_DUST
+            : (wantMat == SCENE_LAVA_FISSURE || wantMat == SCENE_MAGMA_SHORE
+                              ? MAT_LAVA
+                              : (wantMat == SCENE_DUNES
+                                                ? MAT_SAND
+                                                : (wantMat == SCENE_STEAM_VENT
+                                                                  ? MAT_SALT
+                                                                  : (wantMat == SCENE_BRINE_POOL ? MAT_BRINE
+                                                                                                 : (wantMat == SCENE_GLASS_FLOW ? MAT_GLASS : (wantMat == SCENE_LICHEN ? MAT_MOSS : MAT_WATER))))));
     const int standOn = wantMat == SCENE_LICHEN ? MAT_CRUST : -1;   // the moss faced from its crusts
-    const bool faceIt = wantMat == SCENE_MAGMA_SHORE || wantMat == SCENE_STEAM_VENT || wantMat == SCENE_BRINE_POOL || wantMat == SCENE_GLASS_FLOW || wantMat == SCENE_LICHEN;   // -59 a lichen world's moss
+    // -59 a lichen world's moss
+    const bool faceIt = wantMat == SCENE_MAGMA_SHORE || wantMat == SCENE_STEAM_VENT || wantMat == SCENE_BRINE_POOL || wantMat == SCENE_GLASS_FLOW || wantMat == SCENE_LICHEN;
     bool nearOnly = wantMat == SCENE_METHANE_SHORE || wantMat == SCENE_ACID_SHORE || wantMat == SCENE_LAVA_FISSURE || faceIt;   // stand 60-150 m from it
     bool found = false;
     double faceYaw = 1e9;
@@ -785,7 +807,8 @@ bool SceneFind::traitGround() {   // R-307, P-01, P-02: a kind's own ground (a c
                     SurfaceSample s2 = sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG + dlat, ln + dlon), 16);
                     if (s2.material == mat || (s2.water > -1e8 && s2.height < s2.water + 0.3)) continue;
                     if (standOn >= 0 && s2.material != standOn) continue;
-                    if (wantMat == SCENE_MAGMA_SHORE && std::fabs(90.0 - std::acos(clampd(dot(StarSystem::bodyFromLatLon(la * DEG + dlat, ln + dlon), g.lockedDir), -1, 1)) / DEG - alt / DEG) > 2.0) continue;
+                    if (wantMat == SCENE_MAGMA_SHORE && std::fabs(90.0 - std::acos(clampd(dot(StarSystem::bodyFromLatLon(la * DEG + dlat, ln + dlon), g.lockedDir), -1, 1)) / DEG - alt / DEG) > 2.0)
+                        continue;
                     if (faceIt && wantMat != SCENE_MAGMA_SHORE) {   // clear of it for 40 m round (a pool or a flow at the feet filled the view)
                         bool clearAround = true;
                         for (int q = 0; q < 8 && clearAround; q++) {
@@ -814,7 +837,9 @@ bool SceneFind::neutronGlass() {   // S-03: a neutron star's glass
             double ln = k * TAU / 360;
             if (sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG, ln), 16).material != MAT_GLASS) continue;
             int glassy = 0;
-            for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) if (sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG + j * 100.0 / Rm, ln + i * 100.0 / (Rm * std::cos(la * DEG))), 16).material == MAT_GLASS) glassy++;
+            for (int j = -1; j <= 1; j++)
+                for (int i = -1; i <= 1; i++)
+                    if (sampleSurface(g, StarSystem::bodyFromLatLon(la * DEG + j * 100.0 / Rm, ln + i * 100.0 / (Rm * std::cos(la * DEG))), 16).material == MAT_GLASS) glassy++;
             if (glassy >= 9) { lon = ln; latUse = la * DEG; found = true; }
         }
     if (!found) return false;
@@ -939,12 +964,23 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
                 if (wantMat == SCENE_TERRACES && !ru.spec->terraced) continue;
                 std::vector<Road> rds;
                 if (wantMat == SCENE_ROAD) { roadsOfCell(sv.site.gen, gLat0 + dl, gLon0 + dn, rds); if (rds.empty()) continue; }
-                if (wantMat == SCENE_GRAVES) { std::vector<Grave> gr; gravesOf(sv.lores[ru.spec->people], *ru.spec, sv.cultures[ru.spec->people], gr); if (gr.size() < 3) continue; }   // a burial ground of three stones at least
+                // a burial ground of three stones at least
+                if (wantMat == SCENE_GRAVES) { std::vector<Grave> gr; gravesOf(sv.lores[ru.spec->people], *ru.spec, sv.cultures[ru.spec->people], gr); if (gr.size() < 3) continue; }
                 double d = std::sqrt(ru.x * ru.x + ru.z * ru.z);
                 int cls = settlementRank(ru.spec->sclass);
                 if (cls > bestClass || (cls == bestClass && d < bestD)) { best = ru; bestSpec = *ru.spec; bestClass = cls; bestD = d; found = true; bestRoads = rds; }
             }
-    if (!found) { printf("  %s: no %s within %d cells\n", b.name.c_str(), wantMat == SCENE_HARBOUR ? "harbour" : (wantMat == SCENE_TERRACES ? "terraced settlement" : (wantMat == SCENE_ROAD ? "settlement with a road" : (wantMat == SCENE_GRAVES ? "settlement with three graves" : (wantMat == SCENE_SECOND_PEOPLE ? "settlement of the second people" : "settlement")))), maxRing); return false; }
+    if (!found) {
+        printf("  %s: no %s within %d cells\n", b.name.c_str(),
+                wantMat == SCENE_HARBOUR
+                        ? "harbour"
+                        : (wantMat == SCENE_TERRACES ? "terraced settlement"
+                                                     : (wantMat == SCENE_ROAD ? "settlement with a road"
+                                                                              : (wantMat == SCENE_GRAVES ? "settlement with three graves"
+                                                                                                         : (wantMat == SCENE_SECOND_PEOPLE ? "settlement of the second people" : "settlement")))),
+                maxRing);
+        return false;
+    }
     double h0 = bestSpec.heading, ext = 0;   // the buildings' reach along the street's axis (a grid town is more compact than its radius)
     for (const Building& bd : bestSpec.buildings) {
         double along = bd.x * std::sin(h0) + bd.z * std::cos(h0), across = bd.x * std::cos(h0) - bd.z * std::sin(h0);
@@ -963,7 +999,8 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
         if (s.outside) { ax = -ax; az = -az; }
         standX = shx + ax / L * 1.9; standZ = shz + az / L * 1.9;
         yaw = std::atan2(shx - standX, shz - standZ); pitch = -0.42;
-        shardLine = fmt("  shard %d of the settlement's %zu: %s (%s %d), %.1f m from the building's centre; the explorer 1.9 m from it", s.index, sites.size(), buildingPlaceName(s.place), BUILDING_KIND_NAMES[bd.kind], s.building, L);
+        shardLine = fmt("  shard %d of the settlement's %zu: %s (%s %d), %.1f m from the building's centre; the explorer 1.9 m from it", s.index, sites.size(), buildingPlaceName(s.place),
+                BUILDING_KIND_NAMES[bd.kind], s.building, L);
     }
     if (wantMat == SCENE_HARBOUR) {   // at the quay's end away from the mole, a few metres up the beach, looking along the quay at the mole's far end
         const SiteRead& st = bestSpec.site;
@@ -977,12 +1014,15 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
             double mx = best.x + mole->x + sx * mole->hd * 0.8, mz = best.z + mole->z + sz * mole->hd * 0.8;
             yaw = std::atan2(mx - standX, mz - standZ); pitch = -0.02;
         } else { double q = st.shoreDist - 3.0; standX = best.x + sx * (q - 20); standZ = best.z + sz * (q - 20); yaw = st.shoreDir; pitch = -0.03; }
-        if (st.shoreIce) { const double q = st.shoreDist + 70.0; standX = best.x + sx * q; standZ = best.z + sz * q; yaw = st.shoreDir + PI; pitch = 0.0; }   // out on the sea's ice, facing the harbour
-        shardLine = fmt("  the harbour: the shore %.0f m from the centre at %.0f deg%s; features: %s", st.shoreDist, st.shoreDir / DEG, st.shoreDry ? " (the old sea, dry)" : (st.shoreIce ? " (the sea frozen)" : ""), featureList(bestSpec).c_str());
+        // out on the sea's ice, facing the harbour
+        if (st.shoreIce) { const double q = st.shoreDist + 70.0; standX = best.x + sx * q; standZ = best.z + sz * q; yaw = st.shoreDir + PI; pitch = 0.0; }
+        shardLine = fmt("  the harbour: the shore %.0f m from the centre at %.0f deg%s; features: %s", st.shoreDist, st.shoreDir / DEG,
+                st.shoreDry ? " (the old sea, dry)" : (st.shoreIce ? " (the sea frozen)" : ""), featureList(bestSpec).c_str());
     } else if (wantMat == SCENE_ROAD) {   // on the settlement's longest road, 60 m out from its edge, looking along it toward the other end
         const Road* rd = &bestRoads[0];
         for (const Road& r : bestRoads) if (r.lengthM > rd->lengthM) rd = &r;
-        bool fromA = roadCellKey(sv.site.gen, rd->a.gLat, rd->a.gLon) == roadCellKey(sv.site.gen, gLat0, gLon0) || roadDistanceM(sv.site.gen, rd->a.unit, sv.site.unitAt(best.x, best.z)) < roadDistanceM(sv.site.gen, rd->b.unit, sv.site.unitAt(best.x, best.z));
+        bool fromA = roadCellKey(sv.site.gen, rd->a.gLat, rd->a.gLon) == roadCellKey(sv.site.gen, gLat0, gLon0) ||
+                roadDistanceM(sv.site.gen, rd->a.unit, sv.site.unitAt(best.x, best.z)) < roadDistanceM(sv.site.gen, rd->b.unit, sv.site.unitAt(best.x, best.z));
         std::vector<Vec3> way = rd->pts; if (!fromA) std::reverse(way.begin(), way.end());
         double along = 0; size_t k = 0;
         for (; k + 1 < way.size() && along < 60; k++) along += roadDistanceM(sv.site.gen, way[k], way[k + 1]);
@@ -991,8 +1031,9 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
         double ax, az; sv.site.localAt(way[ahead], ax, az);
         yaw = std::atan2(ax - standX, az - standZ); pitch = -0.04;
         shardLine = fmt("  the road: %s %d %d -> %s %d %d, %.0f m along (%.0f straight), %d bends, steepest %.3f, %.1f m wide, %s; the culture's roads %s, wear %.2f; standing %.0f m along it%s",
-                        SETTLEMENT_CLASS_NAMES[rd->a.sclass], rd->a.gLat, rd->a.gLon, SETTLEMENT_CLASS_NAMES[rd->b.sclass], rd->b.gLat, rd->b.gLon, rd->lengthM, rd->straightM, rd->bends, rd->maxGrade, 2 * rd->halfWidth,
-                        fromA ? "from its a end" : "from its b end", sv.cultures[bestSpec.people].paved ? "paved" : "beaten", sv.cultures[bestSpec.people].roadWear, along, bestRoads.size() > 1 ? fmt(" (%zu roads at this settlement)", bestRoads.size()).c_str() : "");
+                SETTLEMENT_CLASS_NAMES[rd->a.sclass], rd->a.gLat, rd->a.gLon, SETTLEMENT_CLASS_NAMES[rd->b.sclass], rd->b.gLat, rd->b.gLon, rd->lengthM, rd->straightM, rd->bends, rd->maxGrade,
+                2 * rd->halfWidth, fromA ? "from its a end" : "from its b end", sv.cultures[bestSpec.people].paved ? "paved" : "beaten", sv.cultures[bestSpec.people].roadWear, along,
+                bestRoads.size() > 1 ? fmt(" (%zu roads at this settlement)", bestRoads.size()).c_str() : "");
         roadStand = true;
     } else if (wantMat == SCENE_GRAVES) {   // two metres before the first row of stones, at its end, looking along the row toward the ruins
         std::vector<Grave> gr; gravesOf(sv.lores[bestSpec.people], bestSpec, sv.cultures[bestSpec.people], gr);
@@ -1002,7 +1043,9 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
         double ax = best.x + (g0.x + g1.x) * 0.5, az = best.z + (g0.z + g1.z) * 0.5;
         yaw = std::atan2(ax - standX, az - standZ); pitch = -0.12;
         int fallenN = 0; for (const Grave& x : gr) if (x.fallen) fallenN++;
-        shardLine = fmt("  the graves: %zu stones (%d fallen), %.0f m out from the centre, facing %.0f deg; the first %s; the calendar: %s; the span %d years", gr.size(), fallenN, std::sqrt(g0.x * g0.x + g0.z * g0.z), g0.heading / DEG, graveLine(sv.lores[bestSpec.people], g0).c_str(), calendarLine(sv.lores[bestSpec.people]).c_str(), sv.lores[bestSpec.people].spanYears + 1);
+        shardLine = fmt("  the graves: %zu stones (%d fallen), %.0f m out from the centre, facing %.0f deg; the first %s; the calendar: %s; the span %d years", gr.size(), fallenN,
+                std::sqrt(g0.x * g0.x + g0.z * g0.z), g0.heading / DEG, graveLine(sv.lores[bestSpec.people], g0).c_str(), calendarLine(sv.lores[bestSpec.people]).c_str(),
+                sv.lores[bestSpec.people].spanYears + 1);
     } else if (wantMat == SCENE_TERRACES) {   // below the slope, looking up across the terraces
         const SiteRead& st = bestSpec.site;
         double dx = std::sin(st.downhill), dz = std::cos(st.downhill);
@@ -1014,7 +1057,11 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
     sv.init(&sys, bi, la2, lo2, t);
     si = sv.site.sun(t);
     sv.player.yaw = yaw; sv.player.pitch = pitch;
-    if (wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES) { sv.player.x = 0; sv.player.z = 0; sv.player.y = sv.site.surfaceHeight(0, 0); }   // at the stand point itself (`init` puts the explorer 6, -4 from the origin)
+    if (wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES) {
+        sv.player.x = 0;
+        sv.player.z = 0;
+        sv.player.y = sv.site.surfaceHeight(0, 0);
+    }   // at the stand point itself (`init` puts the explorer 6, -4 from the origin)
     sv.relocateCapsule(-std::sin(yaw) * 14, -std::cos(yaw) * 14);   // the capsule behind the camera, out of the picture
     if (!shardLine.empty()) printf("%s\n", shardLine.c_str());
     if (roadStand) {   // the road under the camera and twenty metres ahead, against the ground as it is (a probe site has no roads)
@@ -1023,16 +1070,20 @@ bool SceneFind::settlement(double& t, SunInfo& si) {   // C-01, C-08 to C-13: a 
             double px = std::sin(yaw) * 20 * q, pz = std::cos(yaw) * 20 * q, d, along, hd; const SiteRoad* rd;
             bool near = sv.site.roadAt(px, pz, 30, d, along, hd, rd);
             TerrainVertex v = sv.site.sampleAt(px, pz, 4), w = probe.sampleAt(px, pz, 4);
-            printf("  %s: %zu roads at the site (%.1f ms); the nearest %s; the 4 m vertex: road %d, %s albedo %.2f veg %.2f (the ground's %s albedo %.2f veg %.2f)\n", q ? "20 m ahead" : "under the camera", sv.site.roads.size(), sv.site.roadsMs,
-                   near ? fmt("%.1f m off, left %.2f", d, roadLeft(rd->id, along, rd->wear)).c_str() : "none within 30 m", v.road, MATERIAL_NAMES[v.material], v.albedo, v.veg, MATERIAL_NAMES[w.material], w.albedo, w.veg);
+            printf("  %s: %zu roads at the site (%.1f ms); the nearest %s; the 4 m vertex: road %d, %s albedo %.2f veg %.2f (the ground's %s albedo %.2f veg %.2f)\n",
+                    q ? "20 m ahead" : "under the camera", sv.site.roads.size(), sv.site.roadsMs,
+                    near ? fmt("%.1f m off, left %.2f", d, roadLeft(rd->id, along, rd->wear)).c_str() : "none within 30 m", v.road, MATERIAL_NAMES[v.material], v.albedo, v.veg,
+                    MATERIAL_NAMES[w.material], w.albedo, w.veg);
         }
     }
     int houses = 0, towers = 0; for (const Building& bd : bestSpec.buildings) { if (bd.kind == BK_HOUSE) houses++; if (bd.kind == BK_TOWER) towers++; }
-    printf("  settlement: a %s of %zu buildings (%d houses, %d towers%s), plan %d, radius %.0f m, %.1f km from the type's spot; people %d of %d, culture style %d, family %d, tall %.2f, decay %.2f (the end %.0f years ago), %s roofs, buried %.1f m; the terrain: slope %.3f, the shore %s, relief %.2f%s%s\n",
-           SETTLEMENT_CLASS_NAMES[bestSpec.sclass], bestSpec.buildings.size(), houses, towers, bestSpec.walled ? ", walled" : "", bestSpec.plan, bestSpec.size, bestD / 1000.0,
-           bestSpec.people + 1, sv.peoples, sv.cultures[bestSpec.people].style, sv.cultures[bestSpec.people].family, sv.cultures[bestSpec.people].tall, sv.cultures[bestSpec.people].decay, sv.cultures[bestSpec.people].ageYears, sv.cultures[bestSpec.people].stoneRoofs ? "stone" : "no", sv.cultures[bestSpec.people].buried,
-           bestSpec.site.slope, bestSpec.site.shoreDist < 1e8 ? fmt("%.0f m%s", bestSpec.site.shoreDist, bestSpec.site.shoreDry ? " (dry)" : "").c_str() : "none", bestSpec.site.relief,
-           featureList(bestSpec).empty() ? "" : "; features: ", featureList(bestSpec).c_str());
+    printf("  settlement: a %s of %zu buildings (%d houses, %d towers%s), plan %d, radius %.0f m, %.1f km from the type's spot; people %d of %d, culture style %d, family %d, tall %.2f, decay %.2f "
+           "(the end %.0f years ago), %s roofs, buried %.1f m; the terrain: slope %.3f, the shore %s, relief %.2f%s%s\n",
+            SETTLEMENT_CLASS_NAMES[bestSpec.sclass], bestSpec.buildings.size(), houses, towers, bestSpec.walled ? ", walled" : "", bestSpec.plan, bestSpec.size, bestD / 1000.0, bestSpec.people + 1,
+            sv.peoples, sv.cultures[bestSpec.people].style, sv.cultures[bestSpec.people].family, sv.cultures[bestSpec.people].tall, sv.cultures[bestSpec.people].decay,
+            sv.cultures[bestSpec.people].ageYears, sv.cultures[bestSpec.people].stoneRoofs ? "stone" : "no", sv.cultures[bestSpec.people].buried, bestSpec.site.slope,
+            bestSpec.site.shoreDist < 1e8 ? fmt("%.0f m%s", bestSpec.site.shoreDist, bestSpec.site.shoreDry ? " (dry)" : "").c_str() : "none", bestSpec.site.relief,
+            featureList(bestSpec).empty() ? "" : "; features: ", featureList(bestSpec).c_str());
     return true;
 }
 
@@ -1079,11 +1130,14 @@ bool SceneFind::deadSea(double& t, SunInfo& si) {   // C-01: a dead desert world
     si = sv.site.sun(t);
     sv.player.yaw = std::atan2(gx, gz); sv.player.pitch = -0.1;
     sv.relocateCapsule(-gx * 14, -gz * 14);
-    printf("  the ground at the camera %.0f m, 20 m ahead %.0f, 100 m ahead %.0f, 300 m ahead %.0f, 1 km ahead %.0f (eye %.1f m up)\n", sv.site.groundHeight(0, 0), sv.site.sampleAt(gx * 20, gz * 20, 16).h,
-           sv.site.sampleAt(gx * 100, gz * 100, 16).h, sv.site.sampleAt(gx * 300, gz * 300, 16).h, sv.site.sampleAt(gx * 1000, gz * 1000, 64).h, sv.player.y - sv.site.groundHeight(0, 0));
-    SurfaceSample here = sampleSurface(gg, sv.site.unitAt(0, 0), 16), sea = sampleSurface(gg, sv.site.unitAt(gx * 600, gz * 600), 16), deep = sampleSurface(gg, sv.site.unitAt(gx * 3000, gz * 3000), 64);
-    printf("  old shore at lat %.1f lon %.1f; the sea stood at %.0f m: here h %.0f m %s (sea %.2f), 600 m out h %.0f m %s (sea %.2f), 3 km out h %.0f m %s (sea %.2f)\n",
-           sv.site.lat0 / DEG, sv.site.lon0 / DEG, gg.oldSeaM, here.height, MATERIAL_NAMES[here.material], here.oldSea, sea.height, MATERIAL_NAMES[sea.material], sea.oldSea, deep.height, MATERIAL_NAMES[deep.material], deep.oldSea);
+    printf("  the ground at the camera %.0f m, 20 m ahead %.0f, 100 m ahead %.0f, 300 m ahead %.0f, 1 km ahead %.0f (eye %.1f m up)\n", sv.site.groundHeight(0, 0),
+            sv.site.sampleAt(gx * 20, gz * 20, 16).h, sv.site.sampleAt(gx * 100, gz * 100, 16).h, sv.site.sampleAt(gx * 300, gz * 300, 16).h, sv.site.sampleAt(gx * 1000, gz * 1000, 64).h,
+            sv.player.y - sv.site.groundHeight(0, 0));
+    SurfaceSample here = sampleSurface(gg, sv.site.unitAt(0, 0), 16), sea = sampleSurface(gg, sv.site.unitAt(gx * 600, gz * 600), 16),
+                  deep = sampleSurface(gg, sv.site.unitAt(gx * 3000, gz * 3000), 64);
+    printf("  old shore at lat %.1f lon %.1f; the sea stood at %.0f m: here h %.0f m %s (sea %.2f), 600 m out h %.0f m %s (sea %.2f), 3 km out h %.0f m %s (sea %.2f)\n", sv.site.lat0 / DEG,
+            sv.site.lon0 / DEG, gg.oldSeaM, here.height, MATERIAL_NAMES[here.material], here.oldSea, sea.height, MATERIAL_NAMES[sea.material], sea.oldSea, deep.height, MATERIAL_NAMES[deep.material],
+            deep.oldSea);
     return true;
 }
 
@@ -1101,7 +1155,8 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
             Star s;
             if (!starInSector(x, 0, z, s)) continue;
             sys.generate(s);
-            if (wantMat <= SCENE_AURORA && wantMat >= SCENE_AURORA_CURTAIN && starActivity(sys.star.cls) < 0.7) continue;   // an active star (S-02: the activity table, so every class that drives the nights counts)
+            // an active star (S-02: the activity table, so every class that drives the nights counts)
+            if (wantMat <= SCENE_AURORA && wantMat >= SCENE_AURORA_CURTAIN && starActivity(sys.star.cls) < 0.7) continue;
             if (wantMat == SCENE_NEUTRON_GLASS && sys.star.cls != STAR_NEUTRON) continue;   // a glassed world belongs to a neutron star
             if (wantMat == SCENE_PROTOSTAR && sys.star.cls != STAR_PROTOSTAR) continue;   // a world of a protostar
             if (wantMat == SCENE_WOLF_RAYET && sys.star.cls != STAR_WOLF_RAYET) continue;   // a world of a Wolf-Rayet star
@@ -1115,10 +1170,15 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 if (wantMat == SCENE_AURORA_CURTAIN) latUse = (SurfaceView::auroraOvalLat(b) - 1) * DEG;   // the main curtain a degree poleward: overhead and across the sky
                 BodyGen g = BodyGen::make(b);
                 if (wantMat == SCENE_GEYSERS && !g.hasTrait(TR_GEYSERS)) continue;
-                if ((wantMat == SCENE_SINGING_DUNES && !g.hasTrait(TR_SINGING_DUNES)) || (wantMat == SCENE_SINGING_ICE && !g.hasTrait(TR_SINGING_ICE)) || (wantMat == SCENE_QUAKES && !g.hasTrait(TR_QUAKES))) continue;
+                if ((wantMat == SCENE_SINGING_DUNES && !g.hasTrait(TR_SINGING_DUNES)) || (wantMat == SCENE_SINGING_ICE && !g.hasTrait(TR_SINGING_ICE)) ||
+                        (wantMat == SCENE_QUAKES && !g.hasTrait(TR_QUAKES)))
+                    continue;
                 if (wantMat <= SCENE_SINGING_DUNES && wantMat >= SCENE_QUAKES && KINDS[b.type].pressureLo < 0.3) continue;   // an air that carries the sound whole
                 if (wantMat == SCENE_SINGING_DUNES && (b.type == PT_HYDROCARBON || hasOpaqueDeck(b.type))) continue;   // dunes no haze hides
-                if ((wantMat == SCENE_TOWN || wantMat == SCENE_DEAD_SEA || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) && !g.hasTrait(TR_CIVILISATION)) continue;   // a world that had a people; C-09; C-12; C-13
+                if ((wantMat == SCENE_TOWN || wantMat == SCENE_DEAD_SEA || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD ||
+                            wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) &&
+                        !g.hasTrait(TR_CIVILISATION))
+                    continue;   // a world that had a people; C-09; C-12; C-13
                 if (wantMat == SCENE_SECOND_PEOPLE && peoplesOf(g) < 2) continue;   // a world of two peoples
                 // the scans below sample a whole planet at 16 m: without the drainage (a tile per sample); the river and lake
                 // finders (-21, -22) scan the flood's own cells instead (`drainageStats`) and turn it back on for the fine samples
@@ -1202,7 +1262,9 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     placed = true;
                 } else if (wantMat == SCENE_SPONGE_PITS) {
                     if (!f.spongePits()) continue;
-                } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE && wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD && wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
+                } else if (wantMat <= SCENE_STAINED_CRACK && wantMat != SCENE_NEUTRON_GLASS && wantMat != SCENE_PROTOSTAR && wantMat != SCENE_WOLF_RAYET && wantMat != SCENE_BLACK_HOLE &&
+                        wantMat != SCENE_TOWN && wantMat != SCENE_DEAD_SEA && wantMat != SCENE_SHARD && wantMat != SCENE_HARBOUR && wantMat != SCENE_TERRACES && wantMat != SCENE_ROAD &&
+                        wantMat != SCENE_GRAVES && wantMat != SCENE_SECOND_PEOPLE) {   // -43 (the glassed world) has its own branch below; S-04/S-05/S-06: -44 to -46 take the type's default spot
                     if (!f.traitGround()) continue;
                 } else if (wantMat == SCENE_NEUTRON_GLASS) {
                     if (!f.neutronGlass()) continue;
@@ -1214,8 +1276,10 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (!f.herdOrBuggy()) continue;
                 } else if (wantMat == SCENE_FOREST) {
                     if (!f.forest()) continue;
-                } else if ((wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) && g.hasTrait(TR_CIVILISATION) &&
-                           planPlacePoint(g, wantMat == SCENE_SECOND_PEOPLE ? 1 : 0, latUse, lon, wantMat == SCENE_HARBOUR)) {   // the settlements stand in the peoples' lands: from a town of the plan (a place by the water for a harbour)
+                } else if ((wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES ||
+                                   wantMat == SCENE_SECOND_PEOPLE) &&
+                        g.hasTrait(TR_CIVILISATION) && planPlacePoint(g, wantMat == SCENE_SECOND_PEOPLE ? 1 : 0, latUse, lon, wantMat == SCENE_HARBOUR)) {
+                    // the settlements stand in the peoples' lands: from a town of the plan (a place by the water for a harbour)
                     placed = true;
                 } else if (wantMat == SCENE_SECOND_PEOPLE) {   // deep on the second people's side of the divide, on land near the asked latitude; the nearest settlement of theirs from there
                     Vec3 u = peopleSidePoint(g, 1, latUse); StarSystem::latLonFromBody(u, latUse, lon); placed = true;
@@ -1259,8 +1323,10 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                 sv.player.yaw = faceYawOut < 1e8 ? faceYawOut : si.azimuth + yawOff;
                 sv.player.pitch = facePitchOut < 1e8 ? facePitchOut : pitch;
                 if (type >= PT_ARCHEAN) sv.relocateCapsule(sv.player.x - std::sin(sv.player.yaw) * 14, sv.player.z - std::cos(sv.player.yaw) * 14);   // the capsule behind the view
-                printf("  site: %s of %s (sector %lld 0 %lld), lat %.2f lon %.2f, the light at %.1f degrees (%.0f asked)\n", b.name.c_str(), s.name.c_str(), (long long)x, (long long)z, latUse / DEG, lon / DEG, effectiveSunAlt(sv.site, t) / DEG, alt / DEG);
-                if (wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES || wantMat == SCENE_SECOND_PEOPLE) {   // the nearest settlement (a town before a village before a hamlet, within the first five rings of
+                printf("  site: %s of %s (sector %lld 0 %lld), lat %.2f lon %.2f, the light at %.1f degrees (%.0f asked)\n", b.name.c_str(), s.name.c_str(), (long long)x, (long long)z, latUse / DEG,
+                        lon / DEG, effectiveSunAlt(sv.site, t) / DEG, alt / DEG);
+                if (wantMat == SCENE_TOWN || wantMat == SCENE_SHARD || wantMat == SCENE_HARBOUR || wantMat == SCENE_TERRACES || wantMat == SCENE_ROAD || wantMat == SCENE_GRAVES ||
+                        wantMat == SCENE_SECOND_PEOPLE) {   // the nearest settlement (a town before a village before a hamlet, within the first five rings of
                     if (!f.settlement(t, si)) continue;
                 }
                 if (wantMat == SCENE_DEAD_SEA) {   // the old shore of a dead desert world (its seas are the size of continents, so the whole world is scanned at
@@ -1271,20 +1337,32 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     if (!sv.deployBuggy()) continue;
                     sv.buggy.unfold = 1;
                     sv.buggy.heading = 0.4;
-                    if (wantMat == SCENE_BUGGY_SEAT) { sv.player.x = sv.buggy.x + 1.5; sv.player.z = sv.buggy.z; if (!sv.toggleBuggy()) continue; sv.buggy.steer = 12 * DEG; sv.player.pitch = -0.06; }
-                    else { sv.player.x = sv.buggy.x - 4.2; sv.player.z = sv.buggy.z - 3.0; double dx = sv.buggy.x - sv.player.x, dz = sv.buggy.z - sv.player.z; sv.player.yaw = std::atan2(dx, dz); sv.player.pitch = -0.12; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z); }
+                    if (wantMat == SCENE_BUGGY_SEAT) { sv.player.x = sv.buggy.x + 1.5; sv.player.z = sv.buggy.z; if (!sv.toggleBuggy()) continue; sv.buggy.steer = 12 * DEG; sv.player.pitch = -0.06;
+                    } else {
+                        sv.player.x = sv.buggy.x - 4.2;
+                        sv.player.z = sv.buggy.z - 3.0;
+                        double dx = sv.buggy.x - sv.player.x, dz = sv.buggy.z - sv.player.z;
+                        sv.player.yaw = std::atan2(dx, dz);
+                        sv.player.pitch = -0.12;
+                        sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
+                    }
                 }
                 if (wantMat == SCENE_CREATURES) {   // one creature of each land species 5 m ahead, side on, standing still
                     if (sv.critters.empty()) continue;
                     std::vector<Critter> keep;
                     for (int spi = 0; spi < sv.bestiary.landCount; spi++) {
                         Critter c; c.species = spi; c.herd = 0; c.seed = 1234 + spi; c.state = CS_IDLE; c.timer = 1e9;
-                        c.size = sv.bestiary.species[spi].size; c.x = sv.player.x + (spi - (sv.bestiary.landCount - 1) * 0.5) * (2.5 + c.size * 2.5); c.z = sv.player.z + 5 + c.size * 2.5; c.heading = PI / 2;
+                        c.size = sv.bestiary.species[spi].size;
+                        c.x = sv.player.x + (spi - (sv.bestiary.landCount - 1) * 0.5) * (2.5 + c.size * 2.5);
+                        c.z = sv.player.z + 5 + c.size * 2.5;
+                        c.heading = PI / 2;
                         keep.push_back(c);
                     }
                     sv.critters = keep;
                     sv.player.yaw = 0; sv.player.pitch = -0.08;
-                    for (const Critter& c : sv.critters) printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.species[c.species].name.c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z, sv.site.groundHeight(c.x, c.z));
+                    for (const Critter& c : sv.critters)
+                        printf("  %s (%s, %.1f m) at (%.1f, %.1f), ground %.1f\n", sv.bestiary.species[c.species].name.c_str(), PLAN_NAMES[sv.bestiary.species[c.species].plan], c.size, c.x, c.z,
+                                sv.site.groundHeight(c.x, c.z));
                 }
                 if (wantMat == SCENE_HERD || wantMat == SCENE_HERD_NEAR || wantMat == SCENE_HERD_FAR) {
                     // stand 18 m (M4-05), 6 m or 60 m (N3) south of the first herd, facing it
@@ -1313,13 +1391,22 @@ bool setupSceneForType(int type, double latDeg, double alt, double yawOff, doubl
                     double cov = sv.testCanopyCoverage(200);
                     if (cov < 0.6) { printf("  %s: %.0f%% of the forest ground under canopy at its densest wood: the next world\n", b.name.c_str(), cov * 100); continue; }
                 }
-                if (type >= PT_ARCHEAN && type < PT_NITROGEN && sv.site.atmosphere && alt > 10 * DEG && sv.env.skyBrightness < 0.3) {   // the light asked is a dim companion's (a binary's): the next world (P-05: the far cold's skies are dark)
+                if (type >= PT_ARCHEAN && type < PT_NITROGEN && sv.site.atmosphere && alt > 10 * DEG && sv.env.skyBrightness < 0.3) {
+                    // the light asked is a dim companion's (a binary's): the next world (P-05: the far cold's skies are dark)
                     printf("  %s: the sky at %.2f under the light asked: the next world\n", b.name.c_str(), sv.env.skyBrightness); continue;
                 }
                 if (wantMat == SCENE_SPIDERS) {   // the clock moved to the moment the nearest spider's jet ahead bursts
                     std::vector<GeyserVent> vents; springJets(sv.site.gen, sv.site.unitAt(sv.player.x, sv.player.z), vents);
                     uint64_t bestId = 0; double bd = 1e18;
-                    for (const GeyserVent& v : vents) { double vx, vz; sv.site.localAt(v.unit, vx, vz); const double d = (vx - sv.player.x) * (vx - sv.player.x) + (vz - sv.player.z) * (vz - sv.player.z); if (d < bd) { bd = d; bestId = v.id; } }
+                    for (const GeyserVent& v : vents) {
+                        double vx, vz;
+                        sv.site.localAt(v.unit, vx, vz);
+                        const double d = (vx - sv.player.x) * (vx - sv.player.x) + (vz - sv.player.z) * (vz - sv.player.z);
+                        if (d < bd) {
+                            bd = d;
+                            bestId = v.id;
+                        }
+                    }
                     if (!bestId || !sv.springJetsNow(t)) { printf("  %s: no jet in the spring's daylight: the next world\n", b.name.c_str()); continue; }
                     const double tq0 = t;
                     for (double dtq = 0; dtq < 300 && SurfaceView::springJetStrength(bestId, t) < 0.9; dtq += 0.25) t = tq0 + dtq;

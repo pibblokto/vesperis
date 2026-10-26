@@ -35,8 +35,10 @@ void renderMaps() {
                     double h = m.height[i];
                     int hv = clampi((int)(128 + h / 40.0), 0, 255);
                     uint32_t hc = rgb(hv, hv, hv);
-                    static const uint32_t matCol[] = {rgb(120, 110, 100), rgb(220, 200, 140), rgb(90, 160, 60), rgb(30, 90, 30), rgb(240, 240, 250), rgb(20, 50, 140), rgb(255, 120, 20), rgb(200, 220, 255), rgb(255, 255, 255), rgb(240, 220, 235), rgb(60, 55, 55), rgb(160, 130, 110), rgb(200, 180, 140), rgb(120, 115, 112), rgb(230, 200, 90), rgb(40, 40, 42), rgb(236, 233, 224), rgb(30, 42, 36), rgb(110, 92, 76), rgb(196, 118, 106), rgb(118, 152, 78),
-                                                      rgb(120, 58, 92), rgb(150, 140, 104), rgb(200, 118, 40), rgb(78, 104, 40)};   // mats, stromatolite, crust, moss
+                    static const uint32_t matCol[] = {rgb(120, 110, 100), rgb(220, 200, 140), rgb(90, 160, 60), rgb(30, 90, 30), rgb(240, 240, 250), rgb(20, 50, 140), rgb(255, 120, 20),
+                            rgb(200, 220, 255), rgb(255, 255, 255), rgb(240, 220, 235), rgb(60, 55, 55), rgb(160, 130, 110), rgb(200, 180, 140), rgb(120, 115, 112), rgb(230, 200, 90), rgb(40, 40, 42),
+                            rgb(236, 233, 224), rgb(30, 42, 36), rgb(110, 92, 76), rgb(196, 118, 106), rgb(118, 152, 78), rgb(120, 58, 92), rgb(150, 140, 104), rgb(200, 118, 40),
+                            rgb(78, 104, 40)};   // mats, stromatolite, crust, moss
                     static_assert(sizeof(matCol) / sizeof(matCol[0]) == MAT_COUNT, "a map colour for every material (P-00)");
                     uint32_t mc = matCol[m.material[i]];
                     img[PlanetMap::W * PlanetMap::H + i] = (xx < PlanetMap::W / 2) ? hc : mc;
@@ -100,7 +102,8 @@ void renderSpace() {
             fb.mush(2);
             saveFB(fb, "shots/tests/space_black_hole.png");
             const Body& k = sys.bodies[sys.companion];
-            printf("black hole %s with a companion (%s, %.3g km out, %d bodies, %d belts): shots/tests/space_black_hole.png\n", s.name.c_str(), STAR_CLASSES[k.starClass].name, k.orbitRadiusKm, (int)sys.bodies.size(), (int)sys.belts.size());
+            printf("black hole %s with a companion (%s, %.3g km out, %d bodies, %d belts): shots/tests/space_black_hole.png\n", s.name.c_str(), STAR_CLASSES[k.starClass].name, k.orbitRadiusKm,
+                    (int)sys.bodies.size(), (int)sys.belts.size());
         }
         if (got) break;
     }
@@ -173,8 +176,10 @@ void renderSpace() {
             sr.setupPalette(fb, &sys, -1, -1, 1.0); sr.render(fb, c); fb.mush(2);
             saveFB(fb, "shots/tests/space_belt.png");
             BeltRock later; bool same = sys.beltRockAt(0, best.ir, best.ia, best.iy, best.m, t + 3600, later);
-            printf("belt %s: %d rocks within two cells of the anchor, parked beside one %.1f km across, %d drawn (%d as meshes) -> shots/space_belt.png; an hour later the rock is %s, %.0f km along its orbit\n",
-                   bl.name.c_str(), n, 2 * best.radiusKm, sr.lastBeltRocks, sr.lastBeltMeshes, same && std::fabs(later.radiusKm - best.radiusKm) < 1e-9 ? "still there" : "GONE (FAIL)", same ? length(later.pos - best.pos) : 0.0);
+            printf("belt %s: %d rocks within two cells of the anchor, parked beside one %.1f km across, %d drawn (%d as meshes) -> shots/space_belt.png; an hour later the rock is %s, %.0f km along "
+                   "its orbit\n",
+                    bl.name.c_str(), n, 2 * best.radiusKm, sr.lastBeltRocks, sr.lastBeltMeshes, same && std::fabs(later.radiusKm - best.radiusKm) < 1e-9 ? "still there" : "GONE (FAIL)",
+                    same ? length(later.pos - best.pos) : 0.0);
             found = true;
         }
         if (!found) printf("belt: none found in the scanned sectors\n");
@@ -287,7 +292,8 @@ void renderSpace() {
                     Framebuffer fb5; SpaceContext c5 = c; c5.t = t + 5;
                     sr.setupPalette(fb5, &sys, bi, -1, 1.0); sr.render(fb5, c5); fb5.mush(2);
                     uint64_t h5 = fnv(FNV0, fb5.idx.data(), fb5.idx.size() * sizeof(Pix));
-                    printf("  tail 5 s later: frame %s; knot 0 at %.3f -> %.3f of the tail\n", h0 != h5 ? "differs" : "IDENTICAL (FAIL)", SpaceRenderer::cometKnot(0, t), SpaceRenderer::cometKnot(0, t + 5));
+                    printf("  tail 5 s later: frame %s; knot 0 at %.3f -> %.3f of the tail\n", h0 != h5 ? "differs" : "IDENTICAL (FAIL)", SpaceRenderer::cometKnot(0, t),
+                            SpaceRenderer::cometKnot(0, t + 5));
                     int obs = -1;
                     for (int j = 0; j < (int)sys.bodies.size(); j++) if (sys.bodies[j].parent < 0 && sys.bodies[j].type != PT_COMET && sys.bodies[j].type != PT_COMPANION) { obs = j; break; }
                     if (obs >= 0) {
@@ -316,7 +322,8 @@ void renderSpace() {
                     int changed = 0;
                     for (size_t k = 0; k < fbc.idx.size(); k++) if (fbc.idx[k] != fbc3.idx[k]) changed++;
                     (void)hc0; (void)hc3;
-                    printf("  parked at 12 radii (%.0f km): nucleus %.0f px across -> shots/space_comet_close.png; 3 s later %d px changed (jets %s)\n", b.radiusKm * 12, nucPx, changed, changed > 500 ? "stream" : "DO NOT MOVE (FAIL)");
+                    printf("  parked at 12 radii (%.0f km): nucleus %.0f px across -> shots/space_comet_close.png; 3 s later %d px changed (jets %s)\n", b.radiusKm * 12, nucPx, changed,
+                            changed > 500 ? "stream" : "DO NOT MOVE (FAIL)");
                 }
                 cometDone = true;
             }
@@ -329,7 +336,8 @@ void renderSpace() {
 // as the game does); the body's disc radius in pixels is returned through `rpxOut` for the body `bankA`
 // `plate`: the body `bankA` through the plate (the planet function at the eyepiece's footprint, read out whole before the frame: the
 // user's review of W-06), else the world map alone (the eyepiece before the review, for the comparison)
-double telescopeFrame(SpaceRenderer& sr, StarNeighborhood& nb, StarSystem& sys, double t, const Vec3& shipPos, const Vec3& aim, double zoom, int bankA, int bankB, const char* file, double* rpxOut, bool plate) {
+double telescopeFrame(
+        SpaceRenderer& sr, StarNeighborhood& nb, StarSystem& sys, double t, const Vec3& shipPos, const Vec3& aim, double zoom, int bankA, int bankB, const char* file, double* rpxOut, bool plate) {
     nb.update(shipPos);
     Vec3 fwd = normalize(aim - shipPos);
     Framebuffer fb; SpaceContext c;
@@ -412,7 +420,9 @@ static void renderTelescopeFrames(SpaceRenderer& sr, StarNeighborhood& nb) {
                 telescopeFrame(sr, nb, sys, t, ship, aim, 64, bi, -1, "shots/tests/telescope_world_land_map.png", &rz, false);
                 double ms1 = telescopeFrame(sr, nb, sys, t, ship, aim, 64, bi, -1, "shots/tests/telescope_world_land.png", &rz);
                 double footprint = (dist - w.radiusKm) * 1000.0 / ((FBW * 0.5) / std::tan(35 * DEG));
-                printf("telescope world land: its high ground at %.1f N %.1f E at x64 (%.0f m a pixel), %.1f ms -> shots/tests/telescope_world_land.png (telescope_world_land_map.png: the map alone)\n", glat / DEG, glon / DEG, footprint / 64, ms1);
+                printf("telescope world land: its high ground at %.1f N %.1f E at x64 (%.0f m a pixel), %.1f ms -> shots/tests/telescope_world_land.png (telescope_world_land_map.png: the map "
+                       "alone)\n",
+                        glat / DEG, glon / DEG, footprint / 64, ms1);
                 double ms2 = telescopeFrame(sr, nb, sys, t, ship, aim, 256, bi, -1, "shots/tests/telescope_world_ground.png", &rz);
                 printf("telescope world ground: the same ground at x256 (%.0f m a pixel), %.1f ms -> shots/tests/telescope_world_ground.png\n", footprint / 256, ms2);
                 double ms3 = telescopeFrame(sr, nb, sys, t, ship, aim, 1024, bi, -1, "shots/tests/telescope_world_close.png", &rz);
@@ -431,8 +441,10 @@ static void renderTelescopeFrames(SpaceRenderer& sr, StarNeighborhood& nb) {
                 double zoom = telescopeFit(angR, 0.55), r1 = 0, rz = 0;
                 telescopeFrame(sr, nb, sys, t, ship, mp, 1.0, moon, bi, "shots/tests/telescope_moon_plain.png", &r1, false);
                 double ms = telescopeFrame(sr, nb, sys, t, ship, mp, zoom, moon, bi, "shots/tests/telescope_moon.png", &rz);
-                printf("telescope moon: %s (%s, R %.0f km) of the ringed giant %s from its parking, %.0f km off, %.2f deg across: x%.0f fits it, disc %.1f px (%.1f at x1: %s), %.1f ms -> shots/tests/telescope_moon.png\n",
-                       sys.bodies[moon].name.c_str(), KINDS[sys.bodies[moon].type].name, sys.bodies[moon].radiusKm, g.name.c_str(), dist, 2 * angR / DEG, zoom, rz, r1, std::fabs(rz - zoom * r1) < 0.02 * rz ? "the magnification exact" : "NOT THE MAGNIFICATION (FAIL)", ms);
+                printf("telescope moon: %s (%s, R %.0f km) of the ringed giant %s from its parking, %.0f km off, %.2f deg across: x%.0f fits it, disc %.1f px (%.1f at x1: %s), %.1f ms -> "
+                       "shots/tests/telescope_moon.png\n",
+                        sys.bodies[moon].name.c_str(), KINDS[sys.bodies[moon].type].name, sys.bodies[moon].radiusKm, g.name.c_str(), dist, 2 * angR / DEG, zoom, rz, r1,
+                        std::fabs(rz - zoom * r1) < 0.02 * rz ? "the magnification exact" : "NOT THE MAGNIFICATION (FAIL)", ms);
                 {   // the same moon four times closer, the map alone and through the plate, and its ground at x1024 (the plate's step against the map's)
                     double z4 = std::min(1024.0, zoom * 4);
                     telescopeFrame(sr, nb, sys, t, ship, mp, z4, moon, bi, "shots/tests/telescope_moon_near_map.png", &rz, false);
@@ -448,7 +460,9 @@ static void renderTelescopeFrames(SpaceRenderer& sr, StarNeighborhood& nb) {
                     if (telescopeGroundPoint(sr, sys, moon, t, shipM, glat, glon)) aim = sys.surfacePointWorld(moon, t, glat, glon, 0);
                     telescopeFrame(sr, nb, sys, t, shipM, aim, zg, moon, bi, "shots/tests/telescope_ground_map.png", &rz, false);
                     double msg = telescopeFrame(sr, nb, sys, t, shipM, aim, zg, moon, bi, "shots/tests/telescope_ground.png", &rz);
-                    printf("telescope ground: the same moon from its own parking at x%.0f (%.0f m a pixel) on its high ground at %.1f N %.1f E, %.1f ms -> shots/tests/telescope_ground.png (telescope_ground_map.png: the map alone)\n", zg, footprint1 / zg, glat / DEG, glon / DEG, msg);
+                    printf("telescope ground: the same moon from its own parking at x%.0f (%.0f m a pixel) on its high ground at %.1f N %.1f E, %.1f ms -> shots/tests/telescope_ground.png "
+                           "(telescope_ground_map.png: the map alone)\n",
+                            zg, footprint1 / zg, glat / DEG, glon / DEG, msg);
                 }
                 int from = firstPlanet(sys, bi);
                 if (from >= 0) {   // the giant with its rings from across the system
@@ -513,8 +527,9 @@ static void renderFrontFrames(SpaceRenderer& sr, StarNeighborhood& nb) {
     const SpaceRenderer::FrontMap* fm = sr.frontsFor(b, t);
     double band = fm ? frontMapAt(fm->cloud, PlanetMap::W, PlanetMap::H, PIN_PLAIN_LON * DEG, PIN_PLAIN_LAT * DEG) : 0;
     int covered = 0; if (fm) for (uint8_t v : fm->cloud) if (v > 128) covered++;
-    printf("fronts: %s (%s, R %.0f km, %d slots): %d fronts alive at t %.0f, bands over %.1f%% of the map, %.2f over the plain an hour before the line (from the %s, strength %.2f); disc %.0f px at x1 (%.1f ms), x4 %.1f ms -> shots/tests/space_fronts.png, space_fronts_x4.png\n",
-           b.name.c_str(), KINDS[b.type].name, b.radiusKm, frontSlots(b), alive, t, fm ? 100.0 * covered / fm->cloud.size() : 0.0, band, frontCompass(fc.fromBearing), fc.strength, rpx, ms1, ms4);
+    printf("fronts: %s (%s, R %.0f km, %d slots): %d fronts alive at t %.0f, bands over %.1f%% of the map, %.2f over the plain an hour before the line (from the %s, strength %.2f); disc %.0f px at "
+           "x1 (%.1f ms), x4 %.1f ms -> shots/tests/space_fronts.png, space_fronts_x4.png\n",
+            b.name.c_str(), KINDS[b.type].name, b.radiusKm, frontSlots(b), alive, t, fm ? 100.0 * covered / fm->cloud.size() : 0.0, band, frontCompass(fc.fromBearing), fc.strength, rpx, ms1, ms4);
 }
 
 // ---- moon sky test -------------------------------------------------------------
@@ -698,7 +713,8 @@ void renderMoonSky() {
                 fb.mush(2);
                 std::string fn = k == 0 ? "shots/tests/rings_surface_day.png" : "shots/tests/rings_surface_night.png";
                 saveFB(fb, fn.c_str());
-                printf("rings from the surface of %s (%s, tilt %.0f deg, ring %.2f-%.2f R): sun alt %.1f -> %s\n", b.name.c_str(), KINDS[b.type].name, b.axialTilt / DEG, b.ringInner, b.ringOuter, sv.env.sun.altitude / DEG, fn.c_str());
+                printf("rings from the surface of %s (%s, tilt %.0f deg, ring %.2f-%.2f R): sun alt %.1f -> %s\n", b.name.c_str(), KINDS[b.type].name, b.axialTilt / DEG, b.ringInner, b.ringOuter,
+                        sv.env.sun.altitude / DEG, fn.c_str());
             }
             surfDone = true;
         }
@@ -740,8 +756,9 @@ void renderBinarySurface(SpaceRenderer& sr, StarNeighborhood& nb) {
             sv.render(fb, tB, nb.stars, sr, 1.0);
             fb.mush(2);
             saveFB(fb, "shots/tests/binary_surface.png");
-            printf("binary surface: %s (%s) of %s: primary alt %.0f az %.0f, companion %s alt %.0f az %.0f radius %.2f deg, share %.2f -> shots/binary_surface.png\n", b.name.c_str(), KINDS[b.type].name,
-                   sys.classString().c_str(), s1.altitude / DEG, s1.azimuth / DEG, STAR_CLASSES[sys.bodies[sys.companion].starClass].name, s2.altitude / DEG, s2.azimuth / DEG, s2.angularRadius / DEG, sv.env.sun2Share);
+            printf("binary surface: %s (%s) of %s: primary alt %.0f az %.0f, companion %s alt %.0f az %.0f radius %.2f deg, share %.2f -> shots/binary_surface.png\n", b.name.c_str(),
+                    KINDS[b.type].name, sys.classString().c_str(), s1.altitude / DEG, s1.azimuth / DEG, STAR_CLASSES[sys.bodies[sys.companion].starClass].name, s2.altitude / DEG, s2.azimuth / DEG,
+                    s2.angularRadius / DEG, sv.env.sun2Share);
             return;
         }
     }
@@ -763,7 +780,16 @@ void almanacTestPlaces(std::vector<AlmanacTestPlace>& out) {
     if (fp) out.push_back(plain);
 }
 AlmanacPlace almanacGroundPlace(const SurfaceSite& site, double t) {
-    AlmanacPlace p; p.sys = site.sys; p.t = t; p.ground = true; p.body = site.body; p.lat = site.lat0; p.lon = site.lon0; p.atmosphere = site.atmosphere; p.ringProf = site.ringProf; p.window = 5 * 86400.0;
+    AlmanacPlace p;
+    p.sys = site.sys;
+    p.t = t;
+    p.ground = true;
+    p.body = site.body;
+    p.lat = site.lat0;
+    p.lon = site.lon0;
+    p.atmosphere = site.atmosphere;
+    p.ringProf = site.ringProf;
+    p.window = 5 * 86400.0;
     return p;
 }
 AlmanacPlace almanacShipPlace(const StarSystem& sys, int body, double t) {   // parked as `Game::testParkAt` parks, the orbit's lap on
@@ -782,9 +808,11 @@ static void printAlmanac(const AlmanacPlace& p, const std::vector<AlmanacEvent>&
         std::string of = b.parent >= 0 ? fmt(", moon of %s%s", sys.bodies[b.parent].name.c_str(), sys.bodies[b.parent].rings ? " (ringed)" : "") : "";
         double angR, alt = almanacSunAltitude(p, p.t, &angR);
         printf("the almanac of %s (%s%s%s%s%s) at %.1f %s %.1f %s, t %.0f: the sun at %+.1f deg, %d moon%s, day %.1f h, year %.1f h\n", b.name.c_str(), KINDS[b.type].name, of.c_str(),
-               b.locked ? ", locked" : "", b.rings ? ", rings" : "", KINDS[b.type].atmosphere ? "" : ", airless", std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG), p.lon >= 0 ? "E" : "W",
-               p.t, alt / DEG, b.moonCount, b.moonCount == 1 ? "" : "s", std::fabs(b.rotPeriod) / 3600, std::fabs(b.orbitPeriod) / 3600);
-    } else printf("the almanac from the ship %s, t %.0f\n", p.body >= 0 ? fmt("parked at %s (%s, %d moons)", sys.bodies[p.body].name.c_str(), KINDS[sys.bodies[p.body].type].name, sys.bodies[p.body].moonCount).c_str() : "in deep space", p.t);
+                b.locked ? ", locked" : "", b.rings ? ", rings" : "", KINDS[b.type].atmosphere ? "" : ", airless", std::fabs(p.lat / DEG), p.lat >= 0 ? "N" : "S", std::fabs(p.lon / DEG),
+                p.lon >= 0 ? "E" : "W", p.t, alt / DEG, b.moonCount, b.moonCount == 1 ? "" : "s", std::fabs(b.rotPeriod) / 3600, std::fabs(b.orbitPeriod) / 3600);
+    } else
+        printf("the almanac from the ship %s, t %.0f\n",
+                p.body >= 0 ? fmt("parked at %s (%s, %d moons)", sys.bodies[p.body].name.c_str(), KINDS[sys.bodies[p.body].type].name, sys.bodies[p.body].moonCount).c_str() : "in deep space", p.t);
     for (const AlmanacEvent& e : ev) printf("  in %-12s %s\n", countdownString(e.t - p.t).c_str(), almanacLabel(e, sys, name, " deg").c_str());
     if (ev.empty()) printf("  nothing within the window\n");
 }
@@ -793,9 +821,10 @@ static void printAlmanac(const AlmanacPlace& p, const std::vector<AlmanacEvent>&
 static void printShower(const StarSystem& sys, const MeteorShower& s, double t) {
     double tp = showerPeakAfter(s, t);
     double ra = std::atan2(s.radiant.z, s.radiant.x) / DEG, dec = std::asin(clampd(s.radiant.y, -1, 1)) / DEG;
-    printf("  %-22s strength %.2f (%.0f a minute at the peak), orbits %.0f km apart (%.2f%% of the world's orbit), the year %.1f h, the next peak in %.1f h, width %.0f min, the radiant at %.1f / %+.1f (ecliptic), %.1f km/s\n",
-           sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.moidKm, 100 * s.moidKm / sys.bodies[s.world].orbitRadiusKm,
-           s.period / 3600, (tp - t) / 3600, s.sigma / 60, ra, dec, s.speedKms);
+    printf("  %-22s strength %.2f (%.0f a minute at the peak), orbits %.0f km apart (%.2f%% of the world's orbit), the year %.1f h, the next peak in %.1f h, width %.0f min, the radiant at %.1f / "
+           "%+.1f (ecliptic), %.1f km/s\n",
+            sys.bodies[s.comet].name.c_str(), s.strength, s.strength * SHOWER_PEAK_PER_MIN, s.moidKm, 100 * s.moidKm / sys.bodies[s.world].orbitRadiusKm, s.period / 3600, (tp - t) / 3600,
+            s.sigma / 60, ra, dec, s.speedKms);
 }
 
 int runShowers(int argc, char** argv) {
@@ -892,7 +921,13 @@ void testSeasons() {
                 double P = std::fabs(b.orbitPeriod), tBest = 0, best = -2;
                 for (int k = 0; k < 96; k++) { double t = 1000.0 + P * k / 96.0; double v = sys.seasonOf(bi, t); if (v > best) { best = v; tBest = t; } }
                 double d1 = dayLen(tBest), d2 = dayLen(tBest + P * 0.5);
-                auto show = [&](double d) { char buf[64]; if (d > 1e8) return std::string("polar day"); if (d <= 0) return std::string("polar night"); snprintf(buf, sizeof buf, "%.1f h of %.1f", d / 3600, std::fabs(b.rotPeriod) / 3600); return std::string(buf); };
+                auto show = [&](double d) {
+                    char buf[64];
+                    if (d > 1e8) return std::string("polar day");
+                    if (d <= 0) return std::string("polar night");
+                    snprintf(buf, sizeof buf, "%.1f h of %.1f", d / 3600, std::fabs(b.rotPeriod) / 3600);
+                    return std::string(buf);
+                };
                 printf("seasons: %s tilt %.1f deg, at 82 N: summer solstice %s, winter solstice %s (orbit %.1f d)\n", b.name.c_str(), b.axialTilt / DEG, show(d1).c_str(), show(d2).c_str(), P / 86400);
                 bool ok = (d1 > 1e8 || d1 > d2 + 3600);
                 printf("seasons: %s\n", ok ? "PASS (different day lengths)" : "FAIL");

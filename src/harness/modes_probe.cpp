@@ -36,12 +36,27 @@ static void printProbeLayers(const TestGame& game, const std::vector<LayerRun>& 
 // `probe_stages_[night_]<A|B>_<n>_<stage>.png`
 int runProbe(int argc, char** argv) {
     bool wav = false, chute = false, night = false, stagesMode = false; std::vector<long long> nums;
-    for (int i = 2; i < argc; i++) { std::string a = argv[i]; if (a == "wav") wav = true; else if (a == "chute") chute = true; else if (a == "night") night = true; else if (a == "stages") stagesMode = true; else nums.push_back(atoll(argv[i])); }
+    for (int i = 2; i < argc; i++) {
+        std::string a = argv[i];
+        if (a == "wav") wav = true;
+        else if (a == "chute") chute = true;
+        else if (a == "night") night = true;
+        else if (a == "stages") stagesMode = true;
+        else nums.push_back(atoll(argv[i]));
+    }
     struct Target { Star st; StarSystem sys; int bi = -1; std::string tag; };
     std::vector<Target> targets;
     if (stagesMode) {
         const long long pins[2][4] = {{150, 0, 66, 2}, {150, 0, 106, 5}};
-        for (int k = 0; k < 2; k++) { Target t; if (starInSector(pins[k][0], pins[k][1], pins[k][2], t.st, true)) { t.sys.generate(t.st); t.bi = (int)pins[k][3]; t.tag = k ? "B" : "A"; targets.push_back(t); } }
+        for (int k = 0; k < 2; k++) {
+            Target t;
+            if (starInSector(pins[k][0], pins[k][1], pins[k][2], t.st, true)) {
+                t.sys.generate(t.st);
+                t.bi = (int)pins[k][3];
+                t.tag = k ? "B" : "A";
+                targets.push_back(t);
+            }
+        }
     } else {
         Target t;
         if (nums.size() >= 4) { if (starInSector(nums[0], nums[1], nums[2], t.st, true)) { t.sys.generate(t.st); t.bi = (int)nums[3]; } }
@@ -66,10 +81,19 @@ int runProbe(int argc, char** argv) {
     const Body& b = sys.bodies[bi];
     GiantAtmosphere a = giantAtmosphereOf(sys, bi);
     { RGB mc = BodyGen::make(b).matColor[familyRep(b.type, FAM_ROCK)];
-    printf("probe: %s body %d (%lld %lld %lld), %s, R %.0f km, g %.1f m/s2, T(1 bar) %.0f K, wind %.0f m/s at the strongest band, %.1f bands%s, colour %.2f %.2f %.2f\n", sys.star.name.c_str(), bi, (long long)st.sx, (long long)st.sy, (long long)st.sz,
-           KINDS[b.type].name, b.radiusKm, a.gravity, a.t1K, a.windPeak, a.bandCount, b.rings ? ", rings" : "", mc.r, mc.g, mc.b); }
+        printf("probe: %s body %d (%lld %lld %lld), %s, R %.0f km, g %.1f m/s2, T(1 bar) %.0f K, wind %.0f m/s at the strongest band, %.1f bands%s, colour %.2f %.2f %.2f\n", sys.star.name.c_str(), bi,
+                (long long)st.sx, (long long)st.sy, (long long)st.sz, KINDS[b.type].name, b.radiusKm, a.gravity, a.t1K, a.windPeak, a.bandCount, b.rings ? ", rings" : "", mc.r, mc.g, mc.b);
+    }
     game.testParkAt(st, bi); run(0.3);
-    if (night) { in.down[KEY_LEFT_SHIFT] = true; in.down[KEY_RIGHT] = true; run(8.0); in.down[KEY_RIGHT] = false; in.down[KEY_LEFT_SHIFT] = false; run(0.1); printf("  carried round: '%s'\n", game.testStatus().c_str()); }
+    if (night) {
+        in.down[KEY_LEFT_SHIFT] = true;
+        in.down[KEY_RIGHT] = true;
+        run(8.0);
+        in.down[KEY_RIGHT] = false;
+        in.down[KEY_LEFT_SHIFT] = false;
+        run(0.1);
+        printf("  carried round: '%s'\n", game.testStatus().c_str());
+    }
     press(KEY_C); run(0.1);
     if (!game.testProbeActive()) { printf("probe: C launched nothing: '%s'\n", game.testStatus().c_str()); return 1; }
     printf("  launched: '%s'; %s\n", game.testStatus().c_str(), game.testProbeInfo().c_str());
@@ -87,7 +111,8 @@ int runProbe(int argc, char** argv) {
     // the crossfade's end and the stages' middles
     for (double c = from[PS_ABOVE]; c < to[PS_ABOVE]; c += 0.25) if (game.testProbeBarAt(c) > 0.06) { shots.push_back({c, "above"}); break; }
     if (stagesMode) shots.push_back({mid(PS_ABOVE, 0.75), "above_sky"});   // looking up: the rings' arc, the moons, the stars over the limb
-    if (stagesMode) for (double c = from[PS_HAZE]; c < to[PS_HAZE]; c += 0.25) if (game.testProbeBarAt(c) > std::min(0.34, game.testProbeAtm().top[0] * 0.8)) { shots.push_back({c, "cirrus"}); break; }   // just under the cirrus, looking up at it
+    // just under the cirrus, looking up at it
+    if (stagesMode) for (double c = from[PS_HAZE]; c < to[PS_HAZE]; c += 0.25) if (game.testProbeBarAt(c) > std::min(0.34, game.testProbeAtm().top[0] * 0.8)) { shots.push_back({c, "cirrus"}); break; }
     if (from[PS_HAZE] >= 0) { shots.push_back({mid(PS_HAZE, 0.5), "haze"}); if (stagesMode) shots.push_back({mid(PS_HAZE, 0.92), "haze_low"}); }
     bool lit = false;
     for (const LayerRun& r : runs) {
@@ -99,7 +124,12 @@ int runProbe(int argc, char** argv) {
             shots.push_back({rm, "between_" + r.tag});
             if (!lit) {   // a flash in the floor, and one with a channel
                 for (double c = rm + 0.5; c < r.to; c += 1.0 / 30) if (game.testProbeFlash(c) > 0.3) { shots.push_back({c, "lightning"}); lit = true; break; }
-                if (stagesMode) for (double c = r.from + (r.to - r.from) * 0.3; c < r.to; c += 1.0 / 30) if (game.testProbeFlash(c) > 0.3 && game.testProbeBolt(c)) { shots.push_back({c, "bolt"}); break; }
+                if (stagesMode)
+                    for (double c = r.from + (r.to - r.from) * 0.3; c < r.to; c += 1.0 / 30)
+                        if (game.testProbeFlash(c) > 0.3 && game.testProbeBolt(c)) {
+                            shots.push_back({c, "bolt"});
+                            break;
+                        }
             }
         } else if (r.stage == PS_DEEP) shots.push_back({rm, "deep"});
     }
@@ -107,7 +137,11 @@ int runProbe(int argc, char** argv) {
     int k = 0;
     for (const Shot& sh : shots) {
         if (sh.c <= game.testProbeClock()) continue;
-        if (chute && sh.c >= mid(PS_HAZE, 0.3) && game.testProbeClock() < mid(PS_HAZE, 0.3)) { game.testProbeSkip(mid(PS_HAZE, 0.3)); game.testProbeChute(); printf("  the chute opened: %s\n", game.testProbeInfo().c_str()); }
+        if (chute && sh.c >= mid(PS_HAZE, 0.3) && game.testProbeClock() < mid(PS_HAZE, 0.3)) {
+            game.testProbeSkip(mid(PS_HAZE, 0.3));
+            game.testProbeChute();
+            printf("  the chute opened: %s\n", game.testProbeInfo().c_str());
+        }
         game.testProbeSkip(sh.c - 1.0 / 30);
         bool up = sh.name == "above_sky" || sh.name == "cirrus";
         if (up) game.testProbeLook(0, sh.name == "cirrus" ? 34 * DEG : 48 * DEG);
@@ -115,7 +149,8 @@ int runProbe(int argc, char** argv) {
         game.frame(in, 1.0 / 30); in.newFrame();
         double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         if (up) game.testProbeLook(0, 0);
-        std::string fn = stagesMode ? fmt("shots/tests/probe_stages_%s%s_%02d_%s.png", night ? "night_" : "", tg.tag.c_str(), k++, sh.name.c_str()) : fmt("shots/tests/probe_%s%02d_%s.png", night ? "night_" : "", k++, sh.name.c_str());
+        std::string fn = stagesMode ? fmt("shots/tests/probe_stages_%s%s_%02d_%s.png", night ? "night_" : "", tg.tag.c_str(), k++, sh.name.c_str())
+                                    : fmt("shots/tests/probe_%s%02d_%s.png", night ? "night_" : "", k++, sh.name.c_str());
         writePNG(fn.c_str(), game.output(), FBW, FBH);
         printf("  %-12s %.1f ms  %s -> %s\n               %s\n", sh.name.c_str(), ms, game.testProbeInfo().c_str(), fn.c_str(), game.testProbeViewInfo().c_str());
         if (wav) {
@@ -128,7 +163,14 @@ int runProbe(int argc, char** argv) {
     game.testProbeSkip(game.testProbeEndClock() + 1); run(0.5);
     if (!stagesMode) writePNG(fmt("shots/tests/probe_%s%02d_lost.png", night ? "night_" : "", k).c_str(), game.output(), FBW, FBH);
     printf("  the end: %s; state %d; '%s'\n", game.testProbeInfo().c_str(), (int)game.state, game.testStatus().c_str());
-    if (wav) { std::vector<int16_t> pcm; AudioState as = game.audio; as.master = 1.0; RenderStats r = renderReceiver(synth, as, 4.0, &pcm); writeWav16("shots/tests/probe_lost.wav", pcm, 22050); printf("    the hiss: rms %.3f peak %.3f -> shots/tests/probe_lost.wav\n", r.rms, r.peak); }
+    if (wav) {
+        std::vector<int16_t> pcm;
+        AudioState as = game.audio;
+        as.master = 1.0;
+        RenderStats r = renderReceiver(synth, as, 4.0, &pcm);
+        writeWav16("shots/tests/probe_lost.wav", pcm, 22050);
+        printf("    the hiss: rms %.3f peak %.3f -> shots/tests/probe_lost.wav\n", r.rms, r.peak);
+    }
     press(KEY_ESCAPE); run(0.2);
     printf("  Esc: state %d, probe %s; '%s'\n", (int)game.state, game.testProbeActive() ? "STILL ACTIVE" : "let go", game.testStatus().c_str());
     }
@@ -149,11 +191,12 @@ int runProbeGiants() {
             for (int i = 0; i < (int)ss.bodies.size(); i++) if (isProbeGiant(ss.bodies[i].type)) all.push_back({x, z, i, giantAtmosphereOf(ss, i), ss.bodies[i].name});
         }
     printf("probe giants: the first twenty of the scan\n");
-    for (int i = 0; i < 20 && i < (int)all.size(); i++) printf("%2d %s (sector %lld 0 %lld, body %d): %s\n", i + 1, all[i].name.c_str(), (long long)all[i].sx, (long long)all[i].sz, all[i].bi, giantCharacterText(all[i].a).c_str());
+    for (int i = 0; i < 20 && i < (int)all.size(); i++)
+        printf("%2d %s (sector %lld 0 %lld, body %d): %s\n", i + 1, all[i].name.c_str(), (long long)all[i].sx, (long long)all[i].sz, all[i].bi, giantCharacterText(all[i].a).c_str());
     int counts[GK_COUNT] = {}, decks[4] = {0, 0, 0, 0}, young = 0, storms = 0, holes = 0, hail = 0, sight = 0;
     for (const G& g : all) { counts[g.a.ch.kind]++; decks[g.a.decks]++; young += g.a.ch.young; storms += g.a.ch.greatStorm; holes += g.a.ch.holes > 0; hail += g.a.ch.hail; sight += g.a.ch.sight; }
-    printf("of %zu giants: %d gas giants (%d young), %d ice giants, %d brown dwarfs; 1/2/3 decks %d/%d/%d; a great storm on %d, holes on %d, hail on %d, the sight on %d\n", all.size(), counts[0], young, counts[1], counts[2],
-           decks[1], decks[2], decks[3], storms, holes, hail, sight);
+    printf("of %zu giants: %d gas giants (%d young), %d ice giants, %d brown dwarfs; 1/2/3 decks %d/%d/%d; a great storm on %d, holes on %d, hail on %d, the sight on %d\n", all.size(), counts[0],
+            young, counts[1], counts[2], decks[1], decks[2], decks[3], storms, holes, hail, sight);
     {   // and the made giants among them, by class
         std::string made;
         for (int k = GK_WATER; k < GK_COUNT; k++) made += fmt("%s%d %s", made.empty() ? "" : ", ", counts[k], GIANT_KIND_NAMES[k]);
@@ -207,7 +250,12 @@ int runProbeGiants() {
         writePNG(fn.c_str(), game.output(), FBW, FBH);
         printf("  %-22s %.1f ms %s -> %s\n                         %s\n", tag.c_str(), ms, game.testProbeInfo().c_str(), fn.c_str(), game.testProbeViewInfo().c_str());
     };
-    auto runsAt = [&](int stage, double u) { std::vector<LayerRun> runs = probeLayerRuns(game, game.testProbeEndClock()); for (const LayerRun& r : runs) if (r.stage == stage) return r.from + (r.to - r.from) * u; return -1.0; };
+    auto runsAt = [&](int stage, double u) {
+        std::vector<LayerRun> runs = probeLayerRuns(game, game.testProbeEndClock());
+        for (const LayerRun& r : runs)
+            if (r.stage == stage) return r.from + (r.to - r.from) * u;
+        return -1.0;
+    };
     // the same stages on the three kinds
     const G* three[3] = {hot, ice, bd};
     const char* const names[3] = {"hot", "ice", "brown"};
@@ -287,7 +335,10 @@ int runProbeGiants() {
             Star s; if (got || !starInSector(x, y, z, s, true)) return;
             StarSystem ss; ss.generate(s);
             for (int i = 0; i < (int)ss.bodies.size() && !got; i++)
-                if (isProbeGiant(ss.bodies[i].type) && KINDS[ss.bodies[i].type].giantClass == k - GK_WATER + GC_WATER) { found = {x, z, i, giantAtmosphereOf(ss, i), ss.bodies[i].name, y}; got = true; }
+                if (isProbeGiant(ss.bodies[i].type) && KINDS[ss.bodies[i].type].giantClass == k - GK_WATER + GC_WATER) {
+                    found = {x, z, i, giantAtmosphereOf(ss, i), ss.bodies[i].name, y};
+                    got = true;
+                }
         };
         for (int64_t x = 150; x < 340 && !got; x++) for (int64_t z = 20; z < 160 && !got; z++) look(x, 0, z);
         for (int64_t x = -2000; x < 12000 && !got; x += 37) for (int64_t z = -5500; z < 400 && !got; z += 211) look(x, (x / 37) % 7 - 3, z);
@@ -366,7 +417,8 @@ int runProbeStability() {
         writePNG(fn.c_str(), sheet.data(), FBW * 2, FBH);
         bool ok = popShare < 0.5;
         if (!ok) bad++;
-        printf("probe stability %-8s %s: mean |dL| %.2f a frame, %.3f%% of the pixels jump over 40 -> %s (%s)\n", sp.name, game.testProbeInfo().c_str(), mean, popShare, fn.c_str(), ok ? "steady" : "FLICKERS");
+        printf("probe stability %-8s %s: mean |dL| %.2f a frame, %.3f%% of the pixels jump over 40 -> %s (%s)\n", sp.name, game.testProbeInfo().c_str(), mean, popShare, fn.c_str(),
+                ok ? "steady" : "FLICKERS");
     }
     }
     return bad ? 1 : 0;

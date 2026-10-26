@@ -368,7 +368,8 @@ void Builder::yearLoop() {
                     const JointWar& JW = joint.wars[J.war];
                     HistoryWar w; w.kind = JW.kind; w.start = y; w.end = clampi(yearOf(P, JW.to), y, H.last); w.sideA = -1; w.sideB = -2;
                     w.winner = JW.winner < 0 ? -1 : (JW.winner == people ? 0 : 1); w.name = JW.name;
-                    w.leaderA = reign >= 0 && H.reigns[reign].ruler >= 0 && H.persons[H.reigns[reign].ruler].died == ALIVE && rng.chance(0.4) ? H.reigns[reign].ruler : figure(y, HR_GENERAL, seat(y), 28, 55);
+                    w.leaderA = reign >= 0 && H.reigns[reign].ruler >= 0 && H.persons[H.reigns[reign].ruler].died == ALIVE && rng.chance(0.4) ? H.reigns[reign].ruler
+                                                                                                                                              : figure(y, HR_GENERAL, seat(y), 28, 55);
                     H.wars.push_back(w);
                     jointWar[J.war] = (int)H.wars.size() - 1;
                     const int e = ev(HE_WAR, y, mine, J.salience); E(e).thing = jointWar[J.war]; E(e).a = H.wars.back().leaderA; E(e).other = theirs; E(e).out = JW.aggressor == people ? 0 : 1;
@@ -389,7 +390,14 @@ void Builder::yearLoop() {
                     const double share = J.value / std::max(1.0, pop(y) * 0.12);
                     if (share > hzBattle) { hzBattle = share; hzBattleEv = e; }
                     if (rng.chance(side == 0 ? 0.04 : 0.12) && H.persons[L].died == ALIVE) die(L, y, 3, e, mine);
-                    if (w.kind == HW_CONQUEST && side == 1 && mine >= 0 && mine != H.lastPlace && rng.chance(0.4)) { const int sk = ev(HE_SACK, y, mine, 0.6f); E(sk).thing = wi; E(sk).cause = e; E(sk).value = (int64_t)(placePop(mine, y) * rng.range(0.05, 0.3)); lastHazardEv = sk; harm(mine, 0.1, sk, 3); }
+                    if (w.kind == HW_CONQUEST && side == 1 && mine >= 0 && mine != H.lastPlace && rng.chance(0.4)) {
+                        const int sk = ev(HE_SACK, y, mine, 0.6f);
+                        E(sk).thing = wi;
+                        E(sk).cause = e;
+                        E(sk).value = (int64_t)(placePop(mine, y) * rng.range(0.05, 0.3));
+                        lastHazardEv = sk;
+                        harm(mine, 0.1, sk, 3);
+                    }
                     break;
                 }
                 case HE_PEACE: {
@@ -455,7 +463,10 @@ void Builder::yearLoop() {
     // the end: the last place, the last person, everyone left
     const int lp = H.lastPlace >= 0 ? H.lastPlace : seat(H.last);
     int lastP = -1;
-    for (int q : stepped) if (H.persons[q].died == ALIVE && mode[q] == 2 && H.persons[q].home == lp && H.last - H.persons[q].born >= 14) { if (lastP < 0 || H.persons[q].born < H.persons[lastP].born) lastP = q; }
+    for (int q : stepped)
+        if (H.persons[q].died == ALIVE && mode[q] == 2 && H.persons[q].home == lp && H.last - H.persons[q].born >= 14) {
+            if (lastP < 0 || H.persons[q].born < H.persons[lastP].born) lastP = q;
+        }
     if (lastP < 0) for (int q : stepped) if (H.persons[q].died == ALIVE && H.last - H.persons[q].born >= 14) { lastP = q; break; }
     if (lastP < 0) lastP = person(H.last - 25 - rng.irange(40), rng.chance(0.5), -1, lp, HR_LAST, 1);
     if (H.persons[lastP].role == HR_NONE) H.persons[lastP].role = HR_LAST;

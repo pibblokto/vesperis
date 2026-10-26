@@ -22,7 +22,11 @@ int runDataSheet(int argc, char** argv) {
     int over = 0;
     for (int k = 0; k < want && k < (int)cands.size(); k++) {
         const Cand& c = cands[k];
-        TestGame game; game.savePrefix = "shots/tests/test_save"; game.settingsPath = "shots/tests/test_settings.txt"; game.keysPath = "shots/tests/test_keys.txt"; game.guidePath = "shots/tests/test_guide.txt";
+        TestGame game;
+        game.savePrefix = "shots/tests/test_save";
+        game.settingsPath = "shots/tests/test_settings.txt";
+        game.keysPath = "shots/tests/test_keys.txt";
+        game.guidePath = "shots/tests/test_guide.txt";
         game.newGame(); game.setState(GameState::SPACE);
         Input in;
         auto run = [&](double secs) { runFrames(game, in, secs); };
@@ -44,8 +48,8 @@ int runDataSheet(int argc, char** argv) {
         }
         StarSystem sys; sys.generate(c.s);
         const BodyGen g = BodyGen::make(sys.bodies[c.bi]);
-        printf("%d %s %s (%s): %d page(s) in space, %d on the ground, the lowest line's next at %d and %d%s; traits [%s], facts [%s]\n", k, c.s.name.c_str(), sys.bodies[c.bi].name.c_str(), KINDS[sys.bodies[c.bi].type].name,
-               pSpace, pGround, ySpace, yGround, (ySpace > 191 || yGround > 191) ? " OVER THE FOOTER" : "", traitList(g).c_str(), factList(sys, c.bi).c_str());
+        printf("%d %s %s (%s): %d page(s) in space, %d on the ground, the lowest line's next at %d and %d%s; traits [%s], facts [%s]\n", k, c.s.name.c_str(), sys.bodies[c.bi].name.c_str(),
+                KINDS[sys.bodies[c.bi].type].name, pSpace, pGround, ySpace, yGround, (ySpace > 191 || yGround > 191) ? " OVER THE FOOTER" : "", traitList(g).c_str(), factList(sys, c.bi).c_str());
         if (ySpace > 191 || yGround > 191) over++;
     }
     printf("datasheet: %d of %d sheets over the footer\n", over, std::min(want, (int)cands.size()));
@@ -64,7 +68,8 @@ static bool traitSheet(StarSystem& sys, int bi, int tr, const std::string& file,
     setDrainageEnabled(false);   // the scans sample the whole globe at 4-64 m; the frames below turn it back on
     double bestS = 0, bestLat = 0, bestLon = 0;
     const bool smallBlades = tr == TR_PENITENTES && b.type != PT_NITROGEN;
-    const bool fine = tr == TR_YARDANGS || tr == TR_POLYGONS || tr == TR_SPIRES || tr == TR_SALT_FLATS || tr == TR_PINGOS || tr == TR_MUD_VOLCANOES || tr == TR_HOLLOWS || tr == TR_COLUMNS;   // the ones the 16 m ring (or the 4 m ring) alone carries
+    // the ones the 16 m ring (or the 4 m ring) alone carries
+    const bool fine = tr == TR_YARDANGS || tr == TR_POLYGONS || tr == TR_SPIRES || tr == TR_SALT_FLATS || tr == TR_PINGOS || tr == TR_MUD_VOLCANOES || tr == TR_HOLLOWS || tr == TR_COLUMNS;
     const double scanD = (tr == TR_SPIRES && b.type != PT_QUARTZ && b.type != PT_CARBON) || tr == TR_POLYGONS || smallBlades ? 4 : (fine ? 16 : 64);
     for (double la = -66; la <= 66; la += 2)
         for (int k = 0; k < 360; k++) {
@@ -100,8 +105,10 @@ static bool traitSheet(StarSystem& sys, int bi, int tr, const std::string& file,
     const int N = 200; std::vector<uint32_t> hs;
     SurfaceSite site; site.init(&sys, bi, fLat, fLon, 1000.0);
     const bool huge = tr == TR_GREAT_SHIELD || (tr == TR_CRATER_CHAINS && b.radiusKm > 1500);
-    const bool big = tr == TR_RIFT || tr == TR_ESCARPMENTS || tr == TR_GREAT_BASIN || tr == TR_CORONAE || tr == TR_TESSERAE || tr == TR_LABYRINTH || tr == TR_CRATER_CHAINS || (tr == TR_PENITENTES && !smallBlades);
-    const bool mid = tr == TR_CANYONS || tr == TR_CINDER_FIELD || tr == TR_CHAOS || tr == TR_INSELBERGS || tr == TR_ERG || tr == TR_MESAS || tr == TR_MAARS || tr == TR_INVERTED_RIVERS || tr == TR_COLUMNS;
+    const bool big = tr == TR_RIFT || tr == TR_ESCARPMENTS || tr == TR_GREAT_BASIN || tr == TR_CORONAE || tr == TR_TESSERAE || tr == TR_LABYRINTH || tr == TR_CRATER_CHAINS ||
+            (tr == TR_PENITENTES && !smallBlades);
+    const bool mid =
+            tr == TR_CANYONS || tr == TR_CINDER_FIELD || tr == TR_CHAOS || tr == TR_INSELBERGS || tr == TR_ERG || tr == TR_MESAS || tr == TR_MAARS || tr == TR_INVERTED_RIVERS || tr == TR_COLUMNS;
     const double cellM = huge ? 3000.0 : (big ? 800.0 : (mid ? 120.0 : 40.0));
     hillshade(site, N, cellM, huge ? 0.1 : (big ? 0.35 : 1.0), hs);
     std::vector<uint32_t> f1, f2;
@@ -113,7 +120,9 @@ static bool traitSheet(StarSystem& sys, int bi, int tr, const std::string& file,
     sheet.blit(hs, N * 2, N * 2, 0, 0);
     sheet.blit(f1, FBW, FBH, N * 2, 0);
     sheet.blit(f2, FBW, FBH, N * 2 + FBW, 0);
-    sheet.label(4, 4, fmt("%s  %s (%s)  %.1f%s %.1f%s  strength %.0f", TRAITS[tr].name, b.name.c_str(), KINDS[b.type].name, std::fabs(fLat / DEG), fLat >= 0 ? "N" : "S", std::fabs(fLon / DEG), fLon >= 0 ? "E" : "W", fineS));
+    sheet.label(4, 4,
+            fmt("%s  %s (%s)  %.1f%s %.1f%s  strength %.0f", TRAITS[tr].name, b.name.c_str(), KINDS[b.type].name, std::fabs(fLat / DEG), fLat >= 0 ? "N" : "S", std::fabs(fLon / DEG),
+                    fLon >= 0 ? "E" : "W", fineS));
     sheet.label(4, N * 2 - 12, fmt("%.0f KM, %.0f M CELLS, NORTH UP", N * cellM / 1000, cellM));
     sheet.label(N * 2 + 4, 4, fmt("%s %.0f M WEST OF THE SPOT", inside ? "6 M UP" : "STANDING", (fLon - standLon) * b.radiusKm * 1000.0 * std::max(0.2, std::cos(fLat))));
     sheet.label(N * 2 + FBW + 4, 4, fmt("%.0f M UP, LOOKING EAST AND DOWN", upM));
@@ -133,8 +142,16 @@ static bool traitSheet(StarSystem& sys, int bi, int tr, const std::string& file,
         if (lm < LM_COUNT) {
             std::vector<Landmark> sights; sightsNear(g, StarSystem::bodyFromLatLon(fLat, fLon), 40000.0, 1u << lm, sights);
             double nearest = 1e18; const Landmark* L = nullptr;
-            for (const Landmark& m : sights) { const double d = std::acos(clampd(dot(m.unit, StarSystem::bodyFromLatLon(fLat, fLon)), -1, 1)) * b.radiusKm * 1000.0; if (d < nearest) { nearest = d; L = &m; } }
-            if (L) printf("  the scanner's %s: %zu within 40 km, the nearest %.1f km off (%.0f m across, %.0f m prominence)\n", LANDMARK_KIND_NAMES[lm], sights.size(), nearest / 1000.0, 2 * L->radiusM, L->prominenceM);
+            for (const Landmark& m : sights) {
+                const double d = std::acos(clampd(dot(m.unit, StarSystem::bodyFromLatLon(fLat, fLon)), -1, 1)) * b.radiusKm * 1000.0;
+                if (d < nearest) {
+                    nearest = d;
+                    L = &m;
+                }
+            }
+            if (L)
+                printf("  the scanner's %s: %zu within 40 km, the nearest %.1f km off (%.0f m across, %.0f m prominence)\n", LANDMARK_KIND_NAMES[lm], sights.size(), nearest / 1000.0, 2 * L->radiusM,
+                        L->prominenceM);
             else printf("  the scanner's %s: none within 40 km\n", LANDMARK_KIND_NAMES[lm]);
         }
     }
@@ -385,7 +402,9 @@ static bool qualitySheet(StarSystem& sys, int bi, int tr, const std::string& fil
         }
         case TR_MILKY_SEAS: {   // the night side from orbit over its brightest patch, its shore at night, the same by day, the night without it
             double wLat = 0, wLon = 0, yaw = 0;
-            if (!qualityWaterSpot(g, [](const SurfaceSample& s) { return s.waterKind == 0 && s.material == MAT_WATER && s.water > -1e8 && s.height < s.water - 30 ? s.waterTint : 0.0; }, wLat, wLon, 512, 48)) return false;
+            if (!qualityWaterSpot(
+                        g, [](const SurfaceSample& s) { return s.waterKind == 0 && s.material == MAT_WATER && s.water > -1e8 && s.height < s.water - 30 ? s.waterTint : 0.0; }, wLat, wLon, 512, 48))
+                return false;
             const double tn = qualityFacing(sys, bi, wLat, wLon, 1000.0, 2, false);
             qualityGlobe(sys, bi, tn, wLat, wLon, 2.6, sr, nb, F[0], "THE NIGHT SIDE FROM ORBIT");
             if (!qualityShore(g, wLat, wLon, lat, lon, yaw)) { lat = wLat; lon = wLon; }
@@ -414,7 +433,9 @@ static bool qualitySheet(StarSystem& sys, int bi, int tr, const std::string& fil
         case TR_BLOOMS: {   // the day side from orbit over its strongest streaks, 2 km over them, its shore, from orbit without them
             double wLat = 0, wLon = 0, yaw = 0;
             // a bloom within a few kilometres of a coast (the sea's floor rising toward it)
-            if (!qualityWaterSpot(g, [](const SurfaceSample& s) { return s.waterKind == 0 && s.water > -1e8 && s.height < s.water - 20 && s.height > s.water - 150 ? s.lifeTint : 0.0; }, wLat, wLon, 512, 50)) return false;
+            if (!qualityWaterSpot(
+                        g, [](const SurfaceSample& s) { return s.waterKind == 0 && s.water > -1e8 && s.height < s.water - 20 && s.height > s.water - 150 ? s.lifeTint : 0.0; }, wLat, wLon, 512, 50))
+                return false;
             const double td = qualityFacing(sys, bi, wLat, wLon, 1000.0, 2, true);
             qualityGlobe(sys, bi, td, wLat, wLon, 2.2, sr, nb, F[0], "THE DAY SIDE FROM ORBIT");
             SurfaceSite sw; sw.init(&sys, bi, wLat, wLon, 1000.0);
@@ -423,7 +444,10 @@ static bool qualitySheet(StarSystem& sys, int bi, int tr, const std::string& fil
             if (qualityShore(g, wLat, wLon, lat, lon, yaw)) {
                 SurfaceSite st; st.init(&sys, bi, lat, lon, 1000.0);
                 const double t2 = qualityTimeYear(st, 1000.0, 3, [](double a, bool, double) { return a > 35.0; });
-                if (t2 > 0) { qualityFrame(sys, bi, lat, lon, t2, yaw, 30, -0.15, sr, nb, F[2], "ITS SHORE, 30 M UP"); qualityFrame(sys, bi, lat, lon, t2, yaw, 30, -0.15, sr, nb, F[3], "WITHOUT THEM", tr); }
+                if (t2 > 0) {
+                    qualityFrame(sys, bi, lat, lon, t2, yaw, 30, -0.15, sr, nb, F[2], "ITS SHORE, 30 M UP");
+                    qualityFrame(sys, bi, lat, lon, t2, yaw, 30, -0.15, sr, nb, F[3], "WITHOUT THEM", tr);
+                }
             } else { lat = wLat; lon = wLon; }
             break;
         }
@@ -516,7 +540,13 @@ static bool qualitySheet(StarSystem& sys, int bi, int tr, const std::string& fil
             qualityFrame(sys, bi, lat, lon, t1, yaw, 30, -0.6, sr, nb, F[3], "30 M UP, WITHOUT THEM", tr);
             std::vector<Landmark> sights; sightsNear(g, StarSystem::bodyFromLatLon(lat, lon), 40000.0, 1u << LM_METEORITES, sights);
             double nearest = 1e18; const Landmark* L = nullptr;
-            for (const Landmark& m : sights) { const double d = std::acos(clampd(dot(m.unit, StarSystem::bodyFromLatLon(lat, lon)), -1, 1)) * b.radiusKm * 1000.0; if (d < nearest) { nearest = d; L = &m; } }
+            for (const Landmark& m : sights) {
+                const double d = std::acos(clampd(dot(m.unit, StarSystem::bodyFromLatLon(lat, lon)), -1, 1)) * b.radiusKm * 1000.0;
+                if (d < nearest) {
+                    nearest = d;
+                    L = &m;
+                }
+            }
             if (L) printf("  the scanner's STREWN FIELD: %zu within 40 km, the nearest %.1f km off (%.1f km across)\n", sights.size(), nearest / 1000.0, 2 * L->radiusM / 1000.0);
             else printf("  the scanner's STREWN FIELD: none within 40 km\n");
             break;
@@ -710,7 +740,15 @@ int runTides(int argc, char** argv) {
     // the sea's way: the lowest ground within 600 m
     SurfaceSite st; st.initFrame(&sys, bi, first.lat, first.lon, tLow);
     double sx = 0, sz = 0, sh = 1e9;
-    for (int k = 0; k < 16; k++) { const double a = k * TAU / 16; const TerrainVertex v = st.sampleAt(std::sin(a) * 600, std::cos(a) * 600, 16); if (v.h < sh) { sh = v.h; sx = std::sin(a); sz = std::cos(a); } }
+    for (int k = 0; k < 16; k++) {
+        const double a = k * TAU / 16;
+        const TerrainVertex v = st.sampleAt(std::sin(a) * 600, std::cos(a) * 600, 16);
+        if (v.h < sh) {
+            sh = v.h;
+            sx = std::sin(a);
+            sz = std::cos(a);
+        }
+    }
     const double yaw = std::atan2(sx, sz);
     Sheet sheet(FBW * 3, FBH * 2 + 12);
     for (int k = 0; k < 6; k++) {
@@ -740,13 +778,16 @@ void renderTraits(const char* want) {
     SpaceRenderer sr; StarNeighborhood nb;
     setFramebufferScale(1);
     for (int tr = 1; tr < TR_COUNT; tr++) {
-        const bool quality = TRAITS[tr].kind != TK_FIRST && TRAITS[tr].kind != TK_LANDFORM && TRAITS[tr].kind != TK_SOUND && TRAITS[tr].kind != TK_DARK;   // Q-02: the water, the sky, the life and the ground (Q-03: the sounds are heard: `sounds`, their scenes; D-04: the dark's own are the drifters': `rogues`, their scenes)
+        // Q-02: the water, the sky, the life and the ground (Q-03: the sounds are heard: `sounds`, their scenes; D-04: the dark's own are
+        // the drifters': `rogues`, their scenes)
+        const bool quality = TRAITS[tr].kind != TK_FIRST && TRAITS[tr].kind != TK_LANDFORM && TRAITS[tr].kind != TK_SOUND && TRAITS[tr].kind != TK_DARK;
         if (TRAITS[tr].cls != TC_LANDFORM && !quality) continue;
         std::string nm = TRAITS[tr].name;
         for (char& ch : nm) ch = ch == ' ' ? '_' : (char)tolower(ch);
         if (want && nm != want && !(std::string(want) == "new" && TRAITS[tr].kind == TK_LANDFORM) && !(std::string(want) == "q02" && quality)) continue;
         bool done = false;
-        for (int pass = TRAITS[tr].kind == TK_FIRST ? 1 : 0; pass < 2 && !done; pass++)   // a new landform's on a world turning to its sun first (a locked world's spot may lie in its night); Q-02: a quality's too
+        // a new landform's on a world turning to its sun first (a locked world's spot may lie in its night); Q-02: a quality's too
+        for (int pass = TRAITS[tr].kind == TK_FIRST ? 1 : 0; pass < 2 && !done; pass++)
             for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return !done; })) {
                 for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++) {
                     const Body& b = sys.bodies[bi];
@@ -754,7 +795,8 @@ void renderTraits(const char* want) {
                                                                    && !BodyGen::make(b).hasTrait(TR_STORMS) && !BodyGen::make(b).hasTrait(TR_HAZE)));   // single star's world that turns, its sky clear
                     // the tides on a sea of water first (a methane sea's flat is its sand's brown); the aurorae under an air that never rains (rain hides
                     // them); the milky seas on a living world's shores (an ocean world's are its floes)
-                    const bool liked = (tr != TR_GREAT_TIDES || kindHas(b.type, KT_SEA)) && (tr != TR_GREAT_AURORAE || KINDS[b.type].rain == RAIN_NONE) && (tr != TR_MILKY_SEAS || kindHas(b.type, KT_FLORA));
+                    const bool liked =
+                            (tr != TR_GREAT_TIDES || kindHas(b.type, KT_SEA)) && (tr != TR_GREAT_AURORAE || KINDS[b.type].rain == RAIN_NONE) && (tr != TR_MILKY_SEAS || kindHas(b.type, KT_FLORA));
                     if (!KINDS[b.type].landable || (pass == 0 && (!plain || !liked)) || !BodyGen::make(b).hasTrait(tr)) continue;
                     if (quality) { done = qualitySheet(sys, bi, tr, "shots/tests/trait_" + nm + ".png", sr, nb); continue; }   // the next carrier where one gives no sheet
                     traitSheet(sys, bi, tr, "shots/tests/trait_" + nm + ".png", sr, nb);
@@ -767,7 +809,8 @@ void renderTraits(const char* want) {
         bool done = false;
         for (auto& [x, z, s, sys] : scanSystems(150, 340, 20, 160, [&] { return !done; })) {
             for (int bi = 0; bi < (int)sys.bodies.size() && !done; bi++)
-                if (sys.bodies[bi].type == PT_ACIDIC && BodyGen::make(sys.bodies[bi]).hasTrait(TR_KARST)) done = traitSheet(sys, bi, TR_KARST, "shots/tests/trait_karst_towers_acidic.png", sr, nb) || true;
+                if (sys.bodies[bi].type == PT_ACIDIC && BodyGen::make(sys.bodies[bi]).hasTrait(TR_KARST))
+                    done = traitSheet(sys, bi, TR_KARST, "shots/tests/trait_karst_towers_acidic.png", sr, nb) || true;
         }
         if (!done) printf("KARST TOWERS: no acidic world carries them in the scanned sectors\n");
     }
@@ -787,7 +830,9 @@ void renderTraits(const char* want) {
         }
         printf("traits over %d landable bodies: R-304's three slots none %d, one %d, two %d, three %d; the new three none %d, one %d, two %d, three %d\n", n,
                withFirst[0], withFirst[1], withFirst[2], withFirst[3], withNew[0], withNew[1], withNew[2], withNew[3]);
-        printf("  the new slots by kind:"); for (int k = TK_LANDFORM; k < TK_COUNT; k++) printf(" %d", kindsNew[k]); printf(" (landform, water, sky, life, ground, sound, dark); a people's world %d, with a new trait %d\n", people, peopleNew);
+        printf("  the new slots by kind:");
+        for (int k = TK_LANDFORM; k < TK_COUNT; k++) printf(" %d", kindsNew[k]);
+        printf(" (landform, water, sky, life, ground, sound, dark); a people's world %d, with a new trait %d\n", people, peopleNew);
         for (int tr = 1; tr < TR_COUNT; tr++) printf("  %-18s %5d\n", TRAITS[tr].name, cnt[tr]);
     }
 }
@@ -817,7 +862,16 @@ int runKinds(int argc, char** argv) {
         StarSystem sys; int bi = -1;
         if (k == PT_COMET) {   // a comet is no pick of the generator: the first system that has one
             for (int64_t x = 150; x < 340 && bi < 0; x++)
-                for (int64_t z = 20; z < 160 && bi < 0; z++) { Star st; if (!starInSector(x, 0, z, st)) continue; sys.generate(st); for (const Body& b : sys.bodies) if (b.type == PT_COMET) { bi = b.index; break; } }
+                for (int64_t z = 20; z < 160 && bi < 0; z++) {
+                    Star st;
+                    if (!starInSector(x, 0, z, st)) continue;
+                    sys.generate(st);
+                    for (const Body& b : sys.bodies)
+                        if (b.type == PT_COMET) {
+                            bi = b.index;
+                            break;
+                        }
+                }
         } else if (!firstBodyOfType(k, sys, bi)) bi = -1;
         if (bi < 0) { printf("%-16s no body in the scan region\n", K.name); missing++; continue; }
         const Body& b = sys.bodies[bi];
@@ -943,12 +997,15 @@ int runKinds(int argc, char** argv) {
                 const int frames = (K.events & (EV_DEVILS | EV_STORM_DEVILS)) ? 540 : ((K.events & EV_FOUNTAINS) ? 90 : 45);
                 for (int f = 0; f < frames; f++) { t += 1.0 / 30; sv.update(1.0 / 30, in, t, false); }
                 double ex = 0, ez = 0; bool at = false;
-                if (!sv.eruptions.empty()) { ex = sv.eruptions.back().x; ez = sv.eruptions.back().z; at = true; what = sv.eruptions.back().kind == 1 ? "A FOUNTAIN" : (sv.eruptions.back().kind == 2 ? "A STRIKE" : "AN ERUPTION"); }
-                else if (!sv.devils.empty()) {   // walked to 150 m west of it: from farther its dust is a few points against the sand
+                if (!sv.eruptions.empty()) {
+                    ex = sv.eruptions.back().x;
+                    ez = sv.eruptions.back().z;
+                    at = true;
+                    what = sv.eruptions.back().kind == 1 ? "A FOUNTAIN" : (sv.eruptions.back().kind == 2 ? "A STRIKE" : "AN ERUPTION");
+                } else if (!sv.devils.empty()) {   // walked to 150 m west of it: from farther its dust is a few points against the sand
                     ex = sv.devils.back().x; ez = sv.devils.back().z; at = true; what = "A DUST DEVIL";
                     sv.player.x = ex - 150; sv.player.z = ez; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
-                }
-                else if (K.events & EV_STEAM_BURSTS) {   // the nearest vent on its sinter (`steamVents`), the clock moved to its burst
+                } else if (K.events & EV_STEAM_BURSTS) {   // the nearest vent on its sinter (`steamVents`), the clock moved to its burst
                     std::vector<GeyserVent> vents; steamVents(sv.site.gen, sv.site.unitAt(sv.player.x, sv.player.z), vents);
                     double best = 1e18; uint64_t id = 0;
                     for (const GeyserVent& v : vents) {
@@ -959,8 +1016,7 @@ int runKinds(int argc, char** argv) {
                     }
                     if (at) { const double t0 = t; for (double dtq = 0; dtq < 200 && SurfaceView::burstJetStrength(id, t) < 0.9; dtq += 0.25) t = t0 + dtq; }
                     what = at ? "A STEAM BURST" : "NO VENT NEAR";
-                }
-                else if (K.events & EV_SPRINGS) {   // the nearest spring on its pool (`springVents`), walked to 40 m of it
+                } else if (K.events & EV_SPRINGS) {   // the nearest spring on its pool (`springVents`), walked to 40 m of it
                     std::vector<GeyserVent> vents; springVents(sv.site.gen, sv.site.unitAt(sv.player.x, sv.player.z), vents);
                     double best = 1e18;
                     for (const GeyserVent& v : vents) {
@@ -974,8 +1030,7 @@ int runKinds(int argc, char** argv) {
                         sv.player.x = ex + (sv.player.x - ex) * 40.0 / d; sv.player.z = ez + (sv.player.z - ez) * 40.0 / d; sv.player.y = sv.site.surfaceHeight(sv.player.x, sv.player.z);
                     }
                     what = at ? "A HOT SPRING" : "NO SPRING NEAR";
-                }
-                else if (K.events & (EV_CRACK_VENTS | EV_FUMAROLES)) {   // the nearest vent the surface draws (`drawGeysers`' cells and their ground)
+                } else if (K.events & (EV_CRACK_VENTS | EV_FUMAROLES)) {   // the nearest vent the surface draws (`drawGeysers`' cells and their ground)
                     const bool cracks = K.events & EV_CRACK_VENTS;
                     const double cs = cracks ? 300 : 200; const int reach = cracks ? 8 : 5;
                     double best = 1e18;
@@ -990,16 +1045,13 @@ int runKinds(int argc, char** argv) {
                             if (d < best) { best = d; ex = vx; ez = vz; at = true; }
                         }
                     what = at ? "THE NEAREST VENT" : "NO VENT NEAR";
-                }
-                else if (plume) {   // the plume faced, the view raised to its flag
+                } else if (plume) {   // the plume faced, the view raised to its flag
                     double vx, vz; sv.site.localAt(eVent, vx, vz);
                     ex = vx; ez = vz; at = true; what = "A PLUME";
-                }
-                else if (curtain) {   // the stripe faced, the view raised to its curtain
+                } else if (curtain) {   // the stripe faced, the view raised to its curtain
                     double vx, vz; sv.site.localAt(eVent, vx, vz);
                     ex = vx; ez = vz; at = true; what = "THE CURTAINS";
-                }
-                else if (jets) {   // the spider's jet faced, the clock moved to its burst
+                } else if (jets) {   // the spider's jet faced, the clock moved to its burst
                     double vx, vz; sv.site.localAt(eVent, vx, vz);
                     std::vector<GeyserVent> vents; springJets(sv.site.gen, eVent, vents);
                     uint64_t id = 0; double bd = 1e18;

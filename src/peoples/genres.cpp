@@ -102,7 +102,8 @@ struct RecordModel : VgModel {
         for (int p = 0; p < (int)H.places.size(); p++) names.insert(historyPlaceName(H, p));
         for (const std::string* n : {&L.people, &L.god, &L.river, &L.mountain, &L.sea, &L.city, &L.city2, &L.moon, &L.star, &L.festival, &L.other, &L.founder}) if (!n->empty()) names.insert(*n);
         foundingOf.assign(H.places.size(), -1);
-        for (int i = 0; i < (int)H.events.size(); i++) if (H.events[i].kind == HE_FOUNDING && H.events[i].place >= 0 && H.events[i].place < (int)H.places.size() && foundingOf[H.events[i].place] < 0) foundingOf[H.events[i].place] = i;
+        for (int i = 0; i < (int)H.events.size(); i++)
+            if (H.events[i].kind == HE_FOUNDING && H.events[i].place >= 0 && H.events[i].place < (int)H.places.size() && foundingOf[H.events[i].place] < 0) foundingOf[H.events[i].place] = i;
         invYear.assign(INV_COUNT, 0);
         for (const HistoryInvention& I : H.inventions) {
             const std::string nm = historyInventionName(I.id);
@@ -156,7 +157,8 @@ struct RecordModel : VgModel {
         std::string out;
         const uint64_t h = mix64((uint64_t)p * 0x9E3779B97F4A7C15ULL ^ H.seed ^ 0xE91ULL);
         if (P.role == HR_RULER && (c.empty() || (h & 7) == 0)) {
-            static const char* const PLAIN[] = {"the Tall", "the Short", "the Fat", "the Red", "the Fair", "the Dark", "the Lame", "the Silent", "the Quiet", "the Stern", "the Mild", "the Lucky", "the Elder", "the Bald", "the Fox"};
+            static const char* const PLAIN[] = {"the Tall", "the Short", "the Fat", "the Red", "the Fair", "the Dark", "the Lame", "the Silent", "the Quiet", "the Stern", "the Mild", "the Lucky",
+                    "the Elder", "the Bald", "the Fox"};
             c.push_back({PLAIN[(h >> 8) % (sizeof(PLAIN) / sizeof(PLAIN[0]))], 0.8});
         }
         if (!c.empty() && (P.role == HR_RULER || (h % 3) == 0)) {
@@ -429,12 +431,36 @@ struct RecordModel : VgModel {
                 if (w < 0 || w >= (int)H.wars.size()) return false;
                 out = keyOf(WAR_KEYS, H.wars[w].kind); return true;
             }
-            case FD_SICKNESS: if (e.kind != HE_SICKNESS) { if (e.kind == HE_DEATH && e.cause >= 0 && H.events[e.cause].kind == HE_SICKNESS) { out = markWords(historySicknessName(H, H.events[e.cause].thing)); return true; } return false; } out = markWords(historySicknessName(H, e.thing)); return true;
+            case FD_SICKNESS:
+                if (e.kind != HE_SICKNESS) {
+                    if (e.kind == HE_DEATH && e.cause >= 0 && H.events[e.cause].kind == HE_SICKNESS) {
+                        out = markWords(historySicknessName(H, H.events[e.cause].thing));
+                        return true;
+                    }
+                    return false;
+                }
+                out = markWords(historySicknessName(H, e.thing));
+                return true;
             case FD_WAVE: if (e.kind != HE_SICKNESS) return false; out = num(std::max(1, e.out)); return true;
             case FD_WORK: if (e.kind != HE_BUILT) return false; out = historyWorkName(H, e.thing); return !out.empty();
             case FD_WORKKEY: if (e.kind != HE_BUILT) return false; out = keyOf(WORK_KEYS, e.thing); return true;
-            case FD_INVENTION: { if (e.kind != HE_INVENTION) return false; std::string nm = historyInventionName(e.thing); if (nm == "a landing on the moon") nm = L.moons > 0 ? "a landing on " + vgName(L.moon) : "the first craft to another world"; out = nm; return true; }
-            case FD_INV: { if (e.kind != HE_INVENTION) return false; const std::string nm = historyInventionName(e.thing); for (const InvKey& k : INV_KEYS) if (nm == k.name) { out = k.key; return true; } return false; }
+            case FD_INVENTION: {
+                if (e.kind != HE_INVENTION) return false;
+                std::string nm = historyInventionName(e.thing);
+                if (nm == "a landing on the moon") nm = L.moons > 0 ? "a landing on " + vgName(L.moon) : "the first craft to another world";
+                out = nm;
+                return true;
+            }
+            case FD_INV: {
+                if (e.kind != HE_INVENTION) return false;
+                const std::string nm = historyInventionName(e.thing);
+                for (const InvKey& k : INV_KEYS)
+                    if (nm == k.name) {
+                        out = k.key;
+                        return true;
+                    }
+                return false;
+            }
             case FD_OMEN: if (e.kind != HE_OMEN) return false; out = keyOf(OMEN_KEYS, e.thing); return true;
             case FD_SUN: if (e.kind != HE_SUN) return false; out = keyOf(SUN_KEYS, e.thing); return true;
             case FD_HARVEST: if (e.kind != HE_HARVEST) return false; out = e.out == 0 ? "failed" : (e.out == 1 ? "poor" : "rich"); return true;
@@ -446,7 +472,10 @@ struct RecordModel : VgModel {
             case FD_GOVHOW: if (e.kind != HE_GOVERNMENT) return false; out = keyOf(GOVHOW_KEYS, e.out); return true;
             case FD_ACCESSION: if (e.kind != HE_ACCESSION) return false; out = keyOf(ACCESSION_KEYS, e.thing); return true;
             case FD_RULEEND: if (e.kind != HE_RULE_END) return false; out = keyOf(RULEEND_KEYS, e.thing); return true;
-            case FD_INSTITUTION: if (e.kind != HE_INSTITUTION || e.thing < 0 || e.thing >= (int)H.institutions.size()) return false; out = INST_KEYS[std::max(0, std::min(HI_COUNT - 1, H.institutions[e.thing].kind))]; return true;
+            case FD_INSTITUTION:
+                if (e.kind != HE_INSTITUTION || e.thing < 0 || e.thing >= (int)H.institutions.size()) return false;
+                out = INST_KEYS[std::max(0, std::min(HI_COUNT - 1, H.institutions[e.thing].kind))];
+                return true;
             case FD_INSTNAME: if (e.kind != HE_INSTITUTION || e.thing < 0 || e.thing >= (int)H.institutions.size()) return false; out = institutionName(e.thing); return true;
             case FD_DISCOVERY: if (e.kind != HE_DISCOVERY) return false; out = keyOf(DISCOVERY_KEYS, e.thing); return true;
             case FD_DEED: if (e.kind != HE_DEED) return false; out = keyOf(DEED_KEYS, e.thing); return true;
@@ -517,7 +546,14 @@ struct RecordModel : VgModel {
         bool war = false; for (const HistoryWar& W : H.wars) if (W.start <= y && W.end >= y) war = true;
         setFlag(F_WAR, war);
         bool sick = false, famine = false; int from = 0;
-        for (int yy = y - 1; yy <= y; yy++) { int n = H.eventsIn(yy, from); for (int k = 0; k < n; k++) { int kind = H.events[from + k].kind; if (kind == HE_SICKNESS) sick = true; if (kind == HE_FAMINE) famine = true; } }
+        for (int yy = y - 1; yy <= y; yy++) {
+            int n = H.eventsIn(yy, from);
+            for (int k = 0; k < n; k++) {
+                int kind = H.events[from + k].kind;
+                if (kind == HE_SICKNESS) sick = true;
+                if (kind == HE_FAMINE) famine = true;
+            }
+        }
         setFlag(F_SICK, sick); setFlag(F_FAMINE, famine);
         const int st = H.profile.stageAt(y);
         facts[F_STAGE] = num(st);
@@ -585,7 +621,10 @@ struct RecordModel : VgModel {
                 if (yy >= y - 6 && (e.kind == HE_SIGN || e.kind == HE_EXODUS || e.kind == HE_ABANDONED) && H.profile.stageAt(yy) >= 0) sign = true;
             }
         }
-        for (int p = 0; p < (int)H.persons.size() && !figure; p++) { const HistoryPerson& P = H.persons[p]; if (P.role != HR_NONE && P.role != HR_RULER && P.role != HR_REGENT && alive(p, y) && y - P.born >= 18) figure = true; }
+        for (int p = 0; p < (int)H.persons.size() && !figure; p++) {
+            const HistoryPerson& P = H.persons[p];
+            if (P.role != HR_NONE && P.role != HR_RULER && P.role != HR_REGENT && alive(p, y) && y - P.born >= 18) figure = true;
+        }
         setFlag(F_EVENT, event); setFlag(F_BATTLE, battle); setFlag(F_BUILT, built); setFlag(F_INVENTED, invented); setFlag(F_SIGN, sign); setFlag(F_FIGURE, figure);
         setFlag(F_HOLYPLACE, !holyYear.empty() && holyYear.front() <= y);
         setFlag(F_RAILWAY, !wayRail.empty() && wayRail.front() <= y && facts[F_INV0 + invIndex("railway")] == "1");
@@ -676,7 +715,16 @@ struct RecordModel : VgModel {
         return 15;
     }
     bool directive(VgRun& run, int d, const std::string& args) override {
-        std::vector<std::string> a; { size_t p = 0; while (p < args.size()) { size_t q = args.find(' ', p); if (q == std::string::npos) q = args.size(); if (q > p) a.push_back(args.substr(p, q - p)); p = q + 1; } }
+        std::vector<std::string> a;
+        {
+            size_t p = 0;
+            while (p < args.size()) {
+                size_t q = args.find(' ', p);
+                if (q == std::string::npos) q = args.size();
+                if (q > p) a.push_back(args.substr(p, q - p));
+                p = q + 1;
+            }
+        }
         auto arg = [&](size_t i, const char* def) { return i < a.size() ? a[i] : std::string(def); };
         switch (d) {
             case D_CAST: return cast(run, arg(0, "letter"));
@@ -868,7 +916,8 @@ struct RecordModel : VgModel {
             if (std::find(toldHere.begin(), toldHere.end(), i) != toldHere.end()) continue;
             if (e.kind == HE_HARVEST && harvests++) continue;
             if (e.kind == HE_DEATH && deaths++ >= 1) continue;
-            if (std::find_if(ev.begin(), ev.end(), [&](const std::pair<double, int>& q) { return H.events[q.second].kind == e.kind && e.kind != HE_BATTLE; }) != ev.end()) continue;   // one of a kind a year
+            // one of a kind a year
+            if (std::find_if(ev.begin(), ev.end(), [&](const std::pair<double, int>& q) { return H.events[q.second].kind == e.kind && e.kind != HE_BATTLE; }) != ev.end()) continue;
             if (ruleFor(run, reg, i).empty()) continue;
             double s = e.salience * (0.8 + 0.4 * run.uni());
             if (toldAll.count(i)) s *= 0.7;
@@ -877,7 +926,11 @@ struct RecordModel : VgModel {
         std::sort(ev.begin(), ev.end());
         std::vector<int> chosen;
         for (const auto& p : ev) { if ((int)chosen.size() >= n) break; chosen.push_back(p.second); }
-        std::stable_sort(chosen.begin(), chosen.end(), [&](int a, int b) { const HistoryEvent& x = H.events[a]; const HistoryEvent& z = H.events[b]; return x.season != z.season ? x.season < z.season : a < b; });
+        std::stable_sort(chosen.begin(), chosen.end(), [&](int a, int b) {
+            const HistoryEvent& x = H.events[a];
+            const HistoryEvent& z = H.events[b];
+            return x.season != z.season ? x.season < z.season : a < b;
+        });
         if (chosen.empty()) { if (run.has(reg + ".quiet")) return run.expand(reg + ".quiet"); return true; }
         for (int i : chosen) tell(run, reg, i);
         return true;
@@ -1080,7 +1133,16 @@ struct RecordModel : VgModel {
     // `@event <kinds|any> <register> <years>`: the most salient public event of those kinds in the years before the record (a ballad's
     // battle, a painted flood, a hymn's sickness), in `<register>.<kind>`; `<register>.none` else
     bool event(VgRun& run, const std::string& kinds, const std::string& reg, int span) {
-        std::set<std::string> want; { size_t p = 0; while (p < kinds.size()) { size_t q = kinds.find(',', p); if (q == std::string::npos) q = kinds.size(); want.insert(kinds.substr(p, q - p)); p = q + 1; } }
+        std::set<std::string> want;
+        {
+            size_t p = 0;
+            while (p < kinds.size()) {
+                size_t q = kinds.find(',', p);
+                if (q == std::string::npos) q = kinds.size();
+                want.insert(kinds.substr(p, q - p));
+                p = q + 1;
+            }
+        }
         const bool any = want.count("any") > 0;
         const int ri = registerOf(reg);
         int best = -1; double bs = 0; int from = 0;
@@ -1187,14 +1249,21 @@ void writeRecordTexts(const StarSystem& sys0, const Body& b0, const BodyGen& g, 
         it.kind = it.rec.root;
         it.told = M.toldHere;
         for (int ev : M.toldLegend) if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev);   // a death an epitaph is about
-        if (s.last) for (int ev = (int)H.events.size() - 1; ev >= 0; ev--) if (H.events[ev].kind == HE_END) { if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev); break; }   // the last recording tells the end
+        if (s.last)
+            for (int ev = (int)H.events.size() - 1; ev >= 0; ev--)
+                if (H.events[ev].kind == HE_END) {
+                    if (std::find(it.told.begin(), it.told.end(), ev) == it.told.end()) it.told.push_back(ev);
+                    break;
+                }   // the last recording tells the end
         it.writer = M.writer; it.reader = M.reader; it.subject = M.subject;
         for (int a : it.rec.used) {   // the people's ways it expressed (its drawn alternatives' guards on them, as the model holds them)
             if (a < 0 || a >= (int)G.alts.size()) continue;
             for (const VgCond& c : G.alts[a].conds) {
                 auto take = [&](const VgCond& k) {
                     if (k.op != 0 || k.kind != 0 || k.ref < 0 || k.ref >= (int)M.facts.size() || k.val != M.facts[k.ref]) return;
-                    if (k.ref != F_FAITH && k.ref != F_RITE && k.ref != F_HOLY && k.ref != F_ECONOMY && k.ref != F_ECONOMY2 && k.ref != F_VALUE && k.ref != F_VALUE2 && k.ref != F_DEADWAY && k.ref != F_CAUSE) return;
+                    if (k.ref != F_FAITH && k.ref != F_RITE && k.ref != F_HOLY && k.ref != F_ECONOMY && k.ref != F_ECONOMY2 && k.ref != F_VALUE && k.ref != F_VALUE2 && k.ref != F_DEADWAY &&
+                            k.ref != F_CAUSE)
+                        return;
                     const std::pair<std::string, std::string> w(FACT_NAMES[k.ref], k.val);
                     if (std::find(it.ways.begin(), it.ways.end(), w) == it.ways.end()) it.ways.push_back(w);
                 };

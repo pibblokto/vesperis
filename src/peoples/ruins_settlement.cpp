@@ -47,13 +47,20 @@ void addFeatures(Layout& L, RuinSpec& r, const Culture& c) {
                 L.add(BK_HALL, cx - nx * (hd + 7.5), cz - nz * (hd + 7.5), st.shoreDir, 4.5 + 1.5 * rng.uni(), 5.5 + 1.5 * rng.uni(), 4 + 1.5 * rng.uni(), 0.6);
             } else if (age == AGE_INDUSTRIAL) {   // the dock: two piers from its ends (the basin between), its cranes, the warehouse behind
                 const double len = 30 + 30 * rng.uni();
-                for (int s2 = -1; s2 <= 1; s2 += 2) L.add(BK_MOLE, cx + ax * s2 * (hw - 2) + nx * (hd + len * 0.5), cz + az * s2 * (hw - 2) + nz * (hd + len * 0.5), st.shoreDir, 2.0, len * 0.5, 1.8, 1.0, false);
+                for (int s2 = -1; s2 <= 1; s2 += 2)
+                    L.add(BK_MOLE, cx + ax * s2 * (hw - 2) + nx * (hd + len * 0.5), cz + az * s2 * (hw - 2) + nz * (hd + len * 0.5), st.shoreDir, 2.0, len * 0.5, 1.8, 1.0, false);
                 const int cranes = 2 + rng.irange(2);
-                for (int j = 0; j < cranes; j++) { const double u = -hw + 2 * hw * (j + 0.5) / cranes; L.add(BK_CRANE, cx + ax * u - nx * hd * 0.3, cz + az * u - nz * hd * 0.3, st.shoreDir, 2.2, 2.2, 14 + 6 * rng.uni(), 0.5, false, 0); }
+                for (int j = 0; j < cranes; j++) {
+                    const double u = -hw + 2 * hw * (j + 0.5) / cranes;
+                    L.add(BK_CRANE, cx + ax * u - nx * hd * 0.3, cz + az * u - nz * hd * 0.3, st.shoreDir, 2.2, 2.2, 14 + 6 * rng.uni(), 0.5, false, 0);
+                }
                 L.add(BK_HALL, cx - nx * (hd + 12), cz - nz * (hd + 12), st.shoreDir, hw * 0.7, 8 + 3 * rng.uni(), 8 + 3 * rng.uni(), 0.7);
             } else {   // the container port: the gantries on the apron's edge, the stacks behind on the land
                 const int cranes = 3 + rng.irange(3);
-                for (int j = 0; j < cranes; j++) { const double u = -hw + 2 * hw * (j + 0.5) / cranes; L.add(BK_CRANE, cx + ax * u + nx * hd * 0.1, cz + az * u + nz * hd * 0.1, st.shoreDir, 9 + 3 * rng.uni(), 9, 30 + 12 * rng.uni(), 0.5, false, 1); }
+                for (int j = 0; j < cranes; j++) {
+                    const double u = -hw + 2 * hw * (j + 0.5) / cranes;
+                    L.add(BK_CRANE, cx + ax * u + nx * hd * 0.1, cz + az * u + nz * hd * 0.1, st.shoreDir, 9 + 3 * rng.uni(), 9, 30 + 12 * rng.uni(), 0.5, false, 1);
+                }
                 const int rows = 2 + rng.irange(2), cols = std::max(1, (int)(hw / 40));
                 for (int i = 0; i < cols; i++)
                     for (int j = 0; j < rows; j++) {
@@ -180,8 +187,10 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
     switch (r.plan) {
         case SP_LONE: {   // one monument alone, the age's
             const int st = mon.kind == BK_FOCUS || mon.kind == BK_STELA ? mon.style : -1;
-            if (mon.count == 2) { L.add(mon.kind, -2.5 - mon.hw, 0, h0, mon.hw, mon.hd, mon.hWall, 0.3, false, st); L.add(mon.kind, 2.5 + mon.hw, 0, h0, mon.hw, mon.hd, mon.hWall * (0.75 + 0.5 * rng.uni()), 0.3, false, st); }
-            else L.add(mon.kind, 0, 0, h0, mon.hw, mon.hd, mon.hWall, mon.kind == BK_TOWER ? 0.7 : 0.5, false, st);
+            if (mon.count == 2) {
+                L.add(mon.kind, -2.5 - mon.hw, 0, h0, mon.hw, mon.hd, mon.hWall, 0.3, false, st);
+                L.add(mon.kind, 2.5 + mon.hw, 0, h0, mon.hw, mon.hd, mon.hWall * (0.75 + 0.5 * rng.uni()), 0.3, false, st);
+            } else L.add(mon.kind, 0, 0, h0, mon.hw, mon.hd, mon.hWall, mon.kind == BK_TOWER ? 0.7 : 0.5, false, st);
             r.size = std::max(r.size, 12.0);
             break;
         }
@@ -238,7 +247,10 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
             // rings round a centre: the age's centre in the middle, the dwellings facing in (A-04: on spokes from it where the people's
             // streets ran out from the middle, the people's number of them)
             L.centre(0, 0, h0, (townOrGreater(r.sclass) && c.age != AGE_PREHISTORIC) || r.sclass == SC_CAPITAL, true);
-            if (townOrGreater(r.sclass) || rng.chance(0.5)) { const double cr = r.buildings.empty() ? 6 : std::max(r.buildings.back().hw, r.buildings.back().hd); focusBefore(cr, townOrGreater(r.sclass) ? 1.0 : 0.6); }
+            if (townOrGreater(r.sclass) || rng.chance(0.5)) {
+                const double cr = r.buildings.empty() ? 6 : std::max(r.buildings.back().hw, r.buildings.back().hd);
+                focusBefore(cr, townOrGreater(r.sclass) ? 1.0 : 0.6);
+            }
             int placed = 0;
             if (streets == ST_RADIAL && c.age != AGE_PREHISTORIC) {
                 const int spokes = clampi(G.number(), 3, 8);
@@ -328,7 +340,11 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
                 if (nd.first < plaza) continue;   // the plaza kept open round the centre
                 if (pub == PU_GARDENS && (++gardenK) % 5 == 0) {   // a walled garden, its pool
                     const double gw = std::min(bx, bz) * 0.38;
-                    for (int s4 = 0; s4 < 4; s4++) { const bool al = s4 % 2 == 0; const double ox = (s4 == 1 ? gw : (s4 == 3 ? -gw : 0)), oz = (s4 == 0 ? gw : (s4 == 2 ? -gw : 0)); L.add(BK_WALL, x + sx * ox + fx * oz, z + sz * ox + fz * oz, h0 + (al ? 0 : PI / 2), gw * (s4 == 0 ? 0.6 : 1.0), 0.3, 0.8, 0.5, false); }
+                    for (int s4 = 0; s4 < 4; s4++) {
+                        const bool al = s4 % 2 == 0;
+                        const double ox = (s4 == 1 ? gw : (s4 == 3 ? -gw : 0)), oz = (s4 == 0 ? gw : (s4 == 2 ? -gw : 0));
+                        L.add(BK_WALL, x + sx * ox + fx * oz, z + sz * ox + fz * oz, h0 + (al ? 0 : PI / 2), gw * (s4 == 0 ? 0.6 : 1.0), 0.3, 0.8, 0.5, false);
+                    }
                     if (c.age >= AGE_MEDIEVAL) L.add(BK_FOCUS, x, z, h0, gw * 0.4, gw * 0.3, 0.8, 0.5, false, FO_POOL);
                     continue;
                 }
@@ -344,13 +360,20 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
                 L.arcadeNext = false;
             }
             if (links == LK_COLONNADES)   // colonnades along the main street
-                for (int j = -2; j <= 2; j++) for (int side = -1; side <= 1; side += 2) { if (j == 0) continue; L.add(BK_COLONNADE, sx * side * bx * 0.5 + fx * j * bz, sz * side * bx * 0.5 + fz * j * bz, h0, 0.5, bz * 0.42, 3.5, 0.4, true); }
+                for (int j = -2; j <= 2; j++)
+                    for (int side = -1; side <= 1; side += 2) {
+                        if (j == 0) continue;
+                        L.add(BK_COLONNADE, sx * side * bx * 0.5 + fx * j * bz, sz * side * bx * 0.5 + fz * j * bz, h0, 0.5, bz * 0.42, 3.5, 0.4, true);
+                    }
             break;
         }
         case SP_GREAT: {   // a futuristic people's few great structures and the land between left wild
             if (r.sclass == SC_HAMLET) {
                 for (int k = 0; k < n; k++)
-                    for (int tries = 0; tries < 20; tries++) { double a = rng.uni() * TAU, rr = R * 0.8 * std::sqrt(rng.uni()); if (L.dwelling(std::sin(a) * rr, std::cos(a) * rr, rng.uni() * TAU)) break; }
+                    for (int tries = 0; tries < 20; tries++) {
+                        double a = rng.uni() * TAU, rr = R * 0.8 * std::sqrt(rng.uni());
+                        if (L.dwelling(std::sin(a) * rr, std::cos(a) * rr, rng.uni() * TAU)) break;
+                    }
                 break;
             }
             const bool town = townOrGreater(r.sclass);
@@ -378,7 +401,10 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
                     default: a = h0 + (k + 0.3 + 0.4 * rng.uni()) * TAU / spires; break;
                 }
                 double d = R * (0.68 + 0.2 * rng.uni()), rr = 15 + 10 * rng.uni();
-                if (links == LK_BRIDGES && k == 0) { L.add(BK_TWIN, std::sin(a) * d, std::cos(a) * d, a + PI / 2, rr * 3.4, rr, ((town ? 400 : 250) + 300 * rng.uni()) * L.towerK, 0.5, true); continue; }
+                if (links == LK_BRIDGES && k == 0) {
+                    L.add(BK_TWIN, std::sin(a) * d, std::cos(a) * d, a + PI / 2, rr * 3.4, rr, ((town ? 400 : 250) + 300 * rng.uni()) * L.towerK, 0.5, true);
+                    continue;
+                }
                 L.add(BK_SPIRE, std::sin(a) * d, std::cos(a) * d, a + PI, rr, rr, ((town ? 500 : 300) + (town ? 700 : 300) * rng.uni()) * L.towerK, 0.5);
             }
             if (town) { double a = h0 + PI + rng.sym(0.6), d = R * 0.55, rr = 50 + 50 * rng.uni(); L.add(BK_RING, std::sin(a) * d, std::cos(a) * d, a + PI / 2, rr, 6, 2 * rr, 0.5); }
@@ -387,8 +413,10 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
             const double habShare = G.of(GV_MASSING) == MS_SPRAWLING ? 0.45 : (G.of(GV_MASSING) == MS_COMPACT ? 0.12 : (town ? 0.3 : 0.15));
             for (int tries = 0; tries < 60 && placed < n; tries++) {
                 double a = rng.uni() * TAU, rr = R * (0.35 + 0.6 * std::sqrt(rng.uni())) * (G.of(GV_MASSING) == MS_COMPACT ? 0.75 : 1.0);
-                if (rng.chance(habShare)) { double hr = 30 + 25 * rng.uni(); if (L.add(BK_HABITAT, std::sin(a) * rr, std::cos(a) * rr, a + PI, hr, hr * (G.of(GV_PLAN) == PF_ELLIPSE ? 1.3 : 1.0), hr * 0.6, 0.5)) placed++; }
-                else if (L.dwelling(std::sin(a) * rr, std::cos(a) * rr, a + PI)) placed++;
+                if (rng.chance(habShare)) {
+                    double hr = 30 + 25 * rng.uni();
+                    if (L.add(BK_HABITAT, std::sin(a) * rr, std::cos(a) * rr, a + PI, hr, hr * (G.of(GV_PLAN) == PF_ELLIPSE ? 1.3 : 1.0), hr * 0.6, 0.5)) placed++;
+                } else if (L.dwelling(std::sin(a) * rr, std::cos(a) * rr, a + PI)) placed++;
             }
             break;
         }
@@ -431,13 +459,20 @@ void layoutSettlement(RuinSpec& r, const Culture& c, const BodyGen& g, const Tow
     // from the high ground; the people's tunnels' mouths
     if (r.sclass >= SC_VILLAGE && r.sclass != SC_MONUMENT && c.age <= AGE_MODERN) {
         const double rd = r.site.ridgeDir;
-        if (land == LD_RIDGES) for (int k = 0; k < 4; k++) { const double d = R * (0.72 + 0.1 * k); if (L.add(BK_PLATFORM, std::sin(rd) * d, std::cos(rd) * d, rd + PI, 7 + 3 * rng.uni(), 7 + 3 * rng.uni(), 3.3, 0.5, true)) break; }
+        if (land == LD_RIDGES)
+            for (int k = 0; k < 4; k++) {
+                const double d = R * (0.72 + 0.1 * k);
+                if (L.add(BK_PLATFORM, std::sin(rd) * d, std::cos(rd) * d, rd + PI, 7 + 3 * rng.uni(), 7 + 3 * rng.uni(), 3.3, 0.5, true)) break;
+            }
         if (land == LD_VALLEYS) {
             const double len = 70 + 50 * rng.uni(), d = R * 1.04 + len * 0.5 + 6;
             L.add(BK_AQUEDUCT, std::sin(rd) * d, std::cos(rd) * d, rd, 1.4, len * 0.5, (9 + 9 * rng.uni()) * (0.8 + 0.4 * G.at(GV_AMBITION)), 1.2, true);
         }
         if (links == LK_TUNNELS && c.age >= AGE_MEDIEVAL)
-            for (int k = 0, made = 0; k < 12 && made < 3; k++) { const double a = rng.uni() * TAU, d = R * (0.3 + 0.6 * rng.uni()); if (L.add(BK_PORTAL, std::sin(a) * d, std::cos(a) * d, a, 2.4, 3.5, 4.8, 0.8, true)) made++; }
+            for (int k = 0, made = 0; k < 12 && made < 3; k++) {
+                const double a = rng.uni() * TAU, d = R * (0.3 + 0.6 * rng.uni());
+                if (L.add(BK_PORTAL, std::sin(a) * d, std::cos(a) * d, a, 2.4, 3.5, 4.8, 0.8, true)) made++;
+            }
     }
     addFeatures(L, r, c);   // after the plan and the wall, so the earlier draws stay where C-01 left them
     if (c.age == AGE_FUTURISTIC && r.plan == SP_GREAT && r.sclass != SC_HAMLET) placeFurniture(L, r, R);

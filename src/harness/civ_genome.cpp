@@ -128,7 +128,13 @@ static int genomeReach(const BodyGen& g, const StarSystem& sys, int gLat0, int g
 }
 void genomeChecks(const std::function<void(const char*, bool, const std::string&)>& check) {
     Star st; StarSystem sys; BodyGen g; bool world = false;
-    if (starInSector(AGE_WORLDS[AGE_MEDIEVAL].sx, 0, AGE_WORLDS[AGE_MEDIEVAL].sz, st, true)) { sys.generate(st); if (AGE_WORLDS[AGE_MEDIEVAL].body < (int)sys.bodies.size()) { g = BodyGen::make(sys.bodies[AGE_WORLDS[AGE_MEDIEVAL].body]); world = true; } }
+    if (starInSector(AGE_WORLDS[AGE_MEDIEVAL].sx, 0, AGE_WORLDS[AGE_MEDIEVAL].sz, st, true)) {
+        sys.generate(st);
+        if (AGE_WORLDS[AGE_MEDIEVAL].body < (int)sys.bodies.size()) {
+            g = BodyGen::make(sys.bodies[AGE_WORLDS[AGE_MEDIEVAL].body]);
+            world = true;
+        }
+    }
     if (!world) { check("the genome (A-04)", false, "no test world"); return; }
     int gLat0, gLon0; ruinCellOf(g, 0.3, 1.1, gLat0, gLon0);
     double t0 = nowSec();
@@ -141,17 +147,26 @@ void genomeChecks(const std::function<void(const char*, bool, const std::string&
             const Genome a = genomeOf(near[i].seed), b = genomeOf(near[i].seed);
             if (!(a == b)) same = false;
             Culture c1 = cultureWithGenome(g, near[i].age, 30, near[i].seed), c2 = cultureWithGenome(g, near[i].age, 30, near[i].seed);
-            if (!(c1.genome == c2.genome) || c1.roof != c2.roof || c1.temple != c2.temple || c1.towerForm != c2.towerForm || c1.great != c2.great || c1.technique != c2.technique || c1.tall != c2.tall || c1.life != c2.life) same = false;
+            if (!(c1.genome == c2.genome) || c1.roof != c2.roof || c1.temple != c2.temple || c1.towerForm != c2.towerForm || c1.great != c2.great || c1.technique != c2.technique ||
+                    c1.tall != c2.tall || c1.life != c2.life)
+                same = false;
             if (i < 24) { serial[i] = cultureDrawing(g, sys, gLat0 + (int)i, gLon0, c1, SC_TOWN); if (serial[i] != cultureDrawing(g, sys, gLat0 + (int)i, gLon0, c2, SC_TOWN)) same = false; n++; }
         }
-        parallelFor(24, 1, [&](int i0, int i1) { for (int i = i0; i < i1 && i < (int)near.size(); i++) { Culture c = cultureWithGenome(g, near[i].age, 30, near[i].seed); threaded[i] = cultureDrawing(g, sys, gLat0 + i, gLon0, c, SC_TOWN); } });
+        parallelFor(24, 1, [&](int i0, int i1) {
+            for (int i = i0; i < i1 && i < (int)near.size(); i++) {
+                Culture c = cultureWithGenome(g, near[i].age, 30, near[i].seed);
+                threaded[i] = cultureDrawing(g, sys, gLat0 + i, gLon0, c, SC_TOWN);
+            }
+        });
         for (int i = 0; i < n; i++) if (serial[i] != threaded[i]) same = false;
-        check("the genome is deterministic (A-04)", same && near.size() >= 100, fmt("%zu peoples near home (%.1f s to find): their genomes and ways twice the same, %d towns drawn twice and on the workers the same", near.size(), tNear, n));
+        check("the genome is deterministic (A-04)", same && near.size() >= 100,
+                fmt("%zu peoples near home (%.1f s to find): their genomes and ways twice the same, %d towns drawn twice and on the workers the same", near.size(), tNear, n));
     }
     {   // every variable reaches the drawing in the ages it acts in
         std::string report; const double t1 = nowSec();
         const int missing = genomeReach(g, sys, gLat0 + 30, gLon0, report, false);
-        check("every variable reaches the drawing (A-04)", missing == 0, fmt("%d variables, each of its values in three peoples' genomes in every age it acts in, %.1f s%s%s", GV_COUNT, nowSec() - t1, missing ? ": " : "", report.c_str()));
+        check("every variable reaches the drawing (A-04)", missing == 0,
+                fmt("%d variables, each of its values in three peoples' genomes in every age it acts in, %.1f s%s%s", GV_COUNT, nowSec() - t1, missing ? ": " : "", report.c_str()));
     }
     {   // distinct: no two of the hundred alike on the strongest variables
         double best = 1e9; size_t bi = 0, bj = 0; int under = 0; std::string shared;
@@ -162,8 +177,8 @@ void genomeChecks(const std::function<void(const char*, bool, const std::string&
         }
         if (near.size() > 1) genomeDistance(genomeOf(near[bi].seed), genomeOf(near[bj].seed), &shared);
         check("no two of a hundred peoples alike (A-04)", under == 0 && near.size() >= 100,
-              fmt("%zu peoples near home, %zu pairs; the nearest pair %.2f of %.1f apart (alike under %.1f): %s and %s, sharing %s", near.size(), near.size() * (near.size() - 1) / 2, best, genomeMaxDistance(), GENOME_ALIKE,
-                  near.empty() ? "-" : near[bi].world.c_str(), near.empty() ? "-" : near[bj].world.c_str(), shared.c_str()));
+                fmt("%zu peoples near home, %zu pairs; the nearest pair %.2f of %.1f apart (alike under %.1f): %s and %s, sharing %s", near.size(), near.size() * (near.size() - 1) / 2, best,
+                        genomeMaxDistance(), GENOME_ALIKE, near.empty() ? "-" : near[bi].world.c_str(), near.empty() ? "-" : near[bj].world.c_str(), shared.c_str()));
     }
 }
 
@@ -173,7 +188,8 @@ void genomeChecks(const std::function<void(const char*, bool, const std::string&
 // printed under it. `genome ages [scale] [peoples] [years]`: the same peoples (rows) at every age (columns), one page
 // (`genome_ages_<scale>x.png`): does a people read as itself? `genome distinct [n]`: the distinctness of the n peoples nearest home
 // (100). `genome print <sx> <sz> <body> [people]`: a people's genome and its techniques by age. `genome reach`: every variable's ages
-static void genomeTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb, double t, const BodyGen& g, int gLat, int gLon, const Culture& cu, int sclass, Framebuffer& fb, std::vector<uint32_t>& rgbBuf, std::string* line = nullptr) {
+static void genomeTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb, double t, const BodyGen& g, int gLat, int gLon, const Culture& cu, int sclass, Framebuffer& fb,
+        std::vector<uint32_t>& rgbBuf, std::string* line = nullptr) {
     RuinSpec sp; settlementOf(g, gLat, gLon, cu, cu.age == AGE_FAR_FUTURE ? SC_MONUMENT : sclass, sp);
     std::vector<Form> pieces[3];
     for (int l = 0; l < 3; l++) ruinElements(sp, cu, l, pieces[l]);
@@ -183,7 +199,9 @@ static void genomeTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb,
     sv.cultures[0] = cu; sv.palettes[0] = cu.palette;
     sv.testPlaceSettlement(0, 0, sp, pieces);
     const double h0 = sp.heading + 0.6;
-    const double D = cu.age == AGE_FAR_FUTURE ? std::max(reach * 2.4, hMax * 1.7) : (cu.age == AGE_FUTURISTIC ? std::max(reach * 2.3, hMax * 0.95) : std::max(reach * 1.35 + 25, std::min(hMax, 900.0) * 0.62)), eye = 2 + D * 0.12;
+    const double D = cu.age == AGE_FAR_FUTURE ? std::max(reach * 2.4, hMax * 1.7)
+                                              : (cu.age == AGE_FUTURISTIC ? std::max(reach * 2.3, hMax * 0.95) : std::max(reach * 1.35 + 25, std::min(hMax, 900.0) * 0.62)),
+                 eye = 2 + D * 0.12;
     sv.player.x = std::sin(h0) * D; sv.player.z = std::cos(h0) * D;
     formsCamera(sv, eye, 0, sv.site.surfaceHeight(0, 0) + std::min((cu.age == AGE_FUTURISTIC ? hMax : std::min(hMax, 900.0)) * 0.3, 0.35 * D), 0, t);
     sv.render(fb, t, nb.stars, sr, 1.0); fb.mush(2); fb.toRGB(rgbBuf.data(), 1.0);
@@ -195,7 +213,8 @@ static void genomeTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb,
 }
 // B-415: a people's town from inside it: from a spot half way out (of 24 round it, the one 4 m clear of every building with the most of
 // them ahead), looking at its middle at a walker's height; `drone` 35 m up at its edge, as the drone sees it
-static void genomeStreetTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb, double t, const BodyGen& g, int gLat, int gLon, const Culture& cu, bool drone, Framebuffer& fb, std::vector<uint32_t>& rgbBuf, std::string* line = nullptr) {
+static void genomeStreetTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb, double t, const BodyGen& g, int gLat, int gLon, const Culture& cu, bool drone, Framebuffer& fb,
+        std::vector<uint32_t>& rgbBuf, std::string* line = nullptr) {
     RuinSpec sp; settlementOf(g, gLat, gLon, cu, SC_TOWN, sp);
     std::vector<Form> pieces[3];
     for (int l = 0; l < 3; l++) ruinElements(sp, cu, l, pieces[l]);
@@ -230,7 +249,8 @@ static void genomeStreetTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhoo
 // R-412: a little street of a people's dwellings in an age under the genome `G`, seen from the street (or from over it where `high`): its
 // dwellings fronting the street in their yards by the layout's own rules (their storeys, their frontage, their setback), a piece of its
 // furniture at the kerb
-static void genomeDressTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb, double t, const BodyGen& g, int age, const Genome& G, uint64_t seed, bool high, double years, Framebuffer& fb, std::vector<uint32_t>& rgbBuf) {
+static void genomeDressTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood& nb, double t, const BodyGen& g, int age, const Genome& G, uint64_t seed, bool high, double years, Framebuffer& fb,
+        std::vector<uint32_t>& rgbBuf) {
     Culture cu = cultureAs(g, 0, age, years);
     cu.genome = G; cultureWays(cu, seed);
     RuinSpec sp; sp.size = 40; sp.seed = seed ^ 0xD2E55ULL; sp.sclass = SC_VILLAGE; sp.heading = 0;
@@ -265,7 +285,8 @@ static void genomeDressTile(SurfaceView& sv, SpaceRenderer& sr, StarNeighborhood
     for (int l = 0; l < 3; l++) ruinElements(sp, cu, l, pieces[l]);
     if (getenv("DRESS_DEBUG")) {
         printf("    roof %d, tall %.2f, decay timber %.2f, the first's pieces:\n", cu.roof, cu.tall, buildingDecay(sp.buildings[0], cu, MT_TIMBER));
-        for (const Form& e : pieces[0]) if (e.building == 0) printf("      %s %d part %d slot %d y %.2f..%.2f hx %.2f hz %.2f broken %.2f\n", FORM_KIND_NAMES[e.kind], e.sub, e.part, e.slot, e.y0, e.y1, e.hx, e.hz, e.broken);
+        for (const Form& e : pieces[0])
+            if (e.building == 0) printf("      %s %d part %d slot %d y %.2f..%.2f hx %.2f hz %.2f broken %.2f\n", FORM_KIND_NAMES[e.kind], e.sub, e.part, e.slot, e.y0, e.y1, e.hx, e.hz, e.broken);
     }
     sv.testClearPlaced();
     sv.cultures[0] = cu; sv.palettes[0] = cu.palette;
@@ -302,12 +323,13 @@ int runGenome(int argc, char** argv) {
             pairs.push_back({d, i, j}); hist[clampi((int)d, 0, 15)]++;
         }
         std::sort(pairs.begin(), pairs.end(), [](const Pair& a, const Pair& b) { return a.d < b.d; });
-        printf("genome distinct: %zu peoples near home (%.1f s), %zu pairs, the strongest variables' distance 0 .. %.1f, alike under %.1f\n", P.size(), nowSec() - t0, pairs.size(), genomeMaxDistance(), GENOME_ALIKE);
+        printf("genome distinct: %zu peoples near home (%.1f s), %zu pairs, the strongest variables' distance 0 .. %.1f, alike under %.1f\n", P.size(), nowSec() - t0, pairs.size(),
+                genomeMaxDistance(), GENOME_ALIKE);
         printf("  pairs by distance:"); for (int k = 0; k < 16; k++) if (hist[k]) printf(" %d-%d: %d;", k, k + 1, hist[k]); printf("\n");
         for (size_t k = 0; k < pairs.size() && k < 8; k++) {
             std::string sh; genomeDistance(genomeOf(P[pairs[k].i].seed), genomeOf(P[pairs[k].j].seed), &sh);
-            printf("  %.2f  %s (%lld %lld %lld) and %s (%lld %lld %lld): sharing %s\n", pairs[k].d, P[pairs[k].i].world.c_str(), (long long)P[pairs[k].i].x, (long long)P[pairs[k].i].y, (long long)P[pairs[k].i].z,
-                   P[pairs[k].j].world.c_str(), (long long)P[pairs[k].j].x, (long long)P[pairs[k].j].y, (long long)P[pairs[k].j].z, sh.c_str());
+            printf("  %.2f  %s (%lld %lld %lld) and %s (%lld %lld %lld): sharing %s\n", pairs[k].d, P[pairs[k].i].world.c_str(), (long long)P[pairs[k].i].x, (long long)P[pairs[k].i].y,
+                    (long long)P[pairs[k].i].z, P[pairs[k].j].world.c_str(), (long long)P[pairs[k].j].x, (long long)P[pairs[k].j].y, (long long)P[pairs[k].j].z, sh.c_str());
         }
         int under = 0; for (const Pair& p : pairs) if (p.d < GENOME_ALIKE) under++;
         // the share of random pairs under each distance, from 20,000 genomes drawn at random (how likely a pair alike is, anywhere)
@@ -315,8 +337,10 @@ int runGenome(int argc, char** argv) {
         for (int k = 0; k < N; k++) { const double d = genomeDistance(genomeOf(rr.next()), genomeOf(rr.next())); for (int q = 0; q < 8; q++) if (d < 1.0 + q * 0.5) tail[q]++; }
         printf("  random pairs under:"); for (int q = 0; q < 8; q++) printf(" %.1f: %.5f%%;", 1.0 + q * 0.5, 100.0 * tail[q] / N); printf("\n");
         printf("  %s: %d pairs alike\n", under == 0 ? "DISTINCT" : "NOT DISTINCT", under);
-        if (!pairs.empty()) printf("  the nearest pair to look at: `vesperis_test genome pair %lld %lld %lld %d %d %lld %lld %lld %d %d`\n", (long long)P[pairs[0].i].x, (long long)P[pairs[0].i].y, (long long)P[pairs[0].i].z, P[pairs[0].i].body, P[pairs[0].i].which,
-                                   (long long)P[pairs[0].j].x, (long long)P[pairs[0].j].y, (long long)P[pairs[0].j].z, P[pairs[0].j].body, P[pairs[0].j].which);
+        if (!pairs.empty())
+            printf("  the nearest pair to look at: `vesperis_test genome pair %lld %lld %lld %d %d %lld %lld %lld %d %d`\n", (long long)P[pairs[0].i].x, (long long)P[pairs[0].i].y,
+                    (long long)P[pairs[0].i].z, P[pairs[0].i].body, P[pairs[0].i].which, (long long)P[pairs[0].j].x, (long long)P[pairs[0].j].y, (long long)P[pairs[0].j].z, P[pairs[0].j].body,
+                    P[pairs[0].j].which);
         return under == 0 ? 0 : 1;
     }
     if (what == "why" && argc > 4) {   // `genome why <VARIABLE> <age>`: the reach check's three peoples, each value's pieces in the town and the village (what the variable acts on)
@@ -339,7 +363,13 @@ int runGenome(int argc, char** argv) {
                     RuinSpec sp; settlementOf(g, gLat0 + cell * 7, gLon0 + bi * 5, cv, cell ? SC_VILLAGE : SC_TOWN, sp);
                     std::vector<Form> el; ruinElements(sp, cv, 0, el);
                     for (const Form& e : el) { total++; kinds[fmt("%s%d/%d", FORM_KIND_NAMES[e.kind], e.sub, e.part)]++; }
-                    if (k == 0 && cell == 0) { std::map<std::string, int> bk; for (const Building& b : sp.buildings) bk[BUILDING_KIND_NAMES[b.kind]]++; std::string ks; for (auto& q : bk) ks += fmt("%d %s, ", q.second, q.first.c_str()); printf("  town: %s\n", ks.c_str()); }
+                    if (k == 0 && cell == 0) {
+                        std::map<std::string, int> bk;
+                        for (const Building& b : sp.buildings) bk[BUILDING_KIND_NAMES[b.kind]]++;
+                        std::string ks;
+                        for (auto& q : bk) ks += fmt("%d %s, ", q.second, q.first.c_str());
+                        printf("  town: %s\n", ks.c_str());
+                    }
                 }
                 std::string ks; for (auto& q : kinds) ks += fmt("%s %d; ", q.first.c_str(), q.second);
                 printf("  %s: %d pieces: %s\n", genomeValue(G, v).c_str(), total, ks.substr(0, 400).c_str());
@@ -364,20 +394,38 @@ int runGenome(int argc, char** argv) {
                         if (floats.empty() && getenv("FLOATS_DEBUG")) {
                             const Form& f = el[i];
                             printf("  first: %s at %.2f %.2f y %.2f..%.2f building %d\n", FORM_KIND_NAMES[f.kind], f.x, f.z, f.y0, f.y1, f.building);
-                            for (const Form& e : el) if (e.building == f.building && &e != &f) printf("    %s %d part %d at %.2f %.2f hx %.2f hz %.2f y %.2f..%.2f top %.2f dist %.2f\n", FORM_KIND_NAMES[e.kind], e.sub, e.part, e.x, e.z, e.hx, e.hz, e.y0, e.y1, formTop(e), std::hypot(e.x - f.x, e.z - f.z));
+                            for (const Form& e : el)
+                                if (e.building == f.building && &e != &f)
+                                    printf("    %s %d part %d at %.2f %.2f hx %.2f hz %.2f y %.2f..%.2f top %.2f dist %.2f\n", FORM_KIND_NAMES[e.kind], e.sub, e.part, e.x, e.z, e.hx, e.hz, e.y0, e.y1,
+                                            formTop(e), std::hypot(e.x - f.x, e.z - f.z));
                         }
-                        floats[fmt("%s %s %d part %d (%.2fx%.2f, %.1f..%.1f) of a %s", AGE_NAMES[a], FORM_KIND_NAMES[el[i].kind], el[i].sub, el[i].part, el[i].hx, el[i].hz, el[i].y0, el[i].y1, BUILDING_KIND_NAMES[sp.buildings[el[i].building].kind])]++;
+                        floats[fmt("%s %s %d part %d (%.2fx%.2f, %.1f..%.1f) of a %s", AGE_NAMES[a], FORM_KIND_NAMES[el[i].kind], el[i].sub, el[i].part, el[i].hx, el[i].hz, el[i].y0, el[i].y1,
+                                BUILDING_KIND_NAMES[sp.buildings[el[i].building].kind])]++;
                     }
                     for (size_t bi = 0; bi < sp.buildings.size(); bi++) {
                         const Building& b = sp.buildings[bi]; BuildingRoom R;
                         if (!buildingRoom(b, R) || !R.door) continue;
                         discs.clear(); for (const Form& e : el) if (e.building == (int)bi) formColliders(e, discs);
-                        auto blockedAt = [&](double x, double z, double margin) { for (const FormDisc& q : discs) if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - x, q.z - z) < q.r + margin) return true; return false; };
+                        auto blockedAt = [&](double x, double z, double margin) {
+                            for (const FormDisc& q : discs)
+                                if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - x, q.z - z) < q.r + margin) return true;
+                            return false;
+                        };
                         int run = 0, best = 0;
                         for (double t = -R.doorL; t <= R.doorL; t += 0.1) { run = blockedAt(R.doorX + R.doorAx * t, R.doorZ + R.doorAz * t, 0.35) ? 0 : run + 1; best = std::max(best, run); }
                         if (best * 0.1 >= 1.0) continue;
                         std::string by = "nothing at its middle";
-                        for (const Form& e : el) { if (e.building != (int)bi) continue; std::vector<FormDisc> d1; formColliders(e, d1); for (const FormDisc& q : d1) if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - R.doorX, q.z - R.doorZ) < q.r + 0.35) { by = fmt("%s %d part %d %.2fx%.2f y %.1f..%.1f", FORM_KIND_NAMES[e.kind], e.sub, e.part, e.hx, e.hz, e.y0, e.y1); break; } if (by[0] != 'n') break; }
+                        for (const Form& e : el) {
+                            if (e.building != (int)bi) continue;
+                            std::vector<FormDisc> d1;
+                            formColliders(e, d1);
+                            for (const FormDisc& q : d1)
+                                if (q.y0 < 1.0 && q.y1 > 0.6 && std::hypot(q.x - R.doorX, q.z - R.doorZ) < q.r + 0.35) {
+                                    by = fmt("%s %d part %d %.2fx%.2f y %.1f..%.1f", FORM_KIND_NAMES[e.kind], e.sub, e.part, e.hx, e.hz, e.y0, e.y1);
+                                    break;
+                                }
+                            if (by[0] != 'n') break;
+                        }
                         shut[fmt("%s %s (form %d, door %d) by %s", AGE_NAMES[a], BUILDING_KIND_NAMES[b.kind], b.form, b.door, by.c_str())]++;
                     }
                 }
@@ -404,7 +452,10 @@ int runGenome(int argc, char** argv) {
     mkdir("shots/tests", 0755);
     SpaceRenderer sr; StarNeighborhood nb; StarSystem sys; SurfaceView sv; double t = 0;
     const std::string worldName = (what == "sheet" || what == "street") && argc > 6 ? argv[6] : (what == "dress" && argc > 5 ? argv[5] : "desert");
-    if (!setupSceneForType(worldName == "felisian" ? PT_FELISIAN : PT_DESERT, 15, 40 * DEG, 1.3, 0.0, sv, sys, nb, t, worldName == "felisian" ? SCENE_BIOME - BIO_GRASSLAND : SCENE_ANY)) { printf("no body\n"); return 1; }   // a felisian world's grassland (its first site was the sea)
+    if (!setupSceneForType(worldName == "felisian" ? PT_FELISIAN : PT_DESERT, 15, 40 * DEG, 1.3, 0.0, sv, sys, nb, t, worldName == "felisian" ? SCENE_BIOME - BIO_GRASSLAND : SCENE_ANY)) {
+        printf("no body\n");
+        return 1;
+    }   // a felisian world's grassland (its first site was the sea)
     sv.flocks.clear(); sv.critters.clear(); sv.relocateCapsule(-4000, -4000);
     const BodyGen& g = sv.site.gen;
     int gLat, gLon; sv.ruinCellAt(0, 0, gLat, gLon);
@@ -428,7 +479,8 @@ int runGenome(int argc, char** argv) {
             const int textH = FONT_LINE + 4, tileH = FBH + textH * scale, W = cols * FBW, H = (int)vars.size() * tileH + 16 * scale;
             std::vector<uint32_t> sheet((size_t)W * H, rgb(16, 16, 20));
             RGBCanvas cv{sheet.data(), W, H, scale};
-            drawText(cv, 4, 4, fmt("R-412: THE %s AGE'S OWN VARIABLES, EACH VALUE ON ONE PLAIN GENOME, %.0f YEARS SINCE THE END%s", AGE_NAMES[a], years, high ? ", FROM OVER THE STREET" : "").c_str(), head);
+            drawText(cv, 4, 4, fmt("R-412: THE %s AGE'S OWN VARIABLES, EACH VALUE ON ONE PLAIN GENOME, %.0f YEARS SINCE THE END%s", AGE_NAMES[a], years, high ? ", FROM OVER THE STREET" : "").c_str(),
+                    head);
             for (size_t r = 0; r < vars.size(); r++) {
                 const int v = vars[r], n = GENOME_VARS[v].n > 0 ? GENOME_VARS[v].n : 3;
                 for (int k = 0; k < n; k++) {
@@ -452,7 +504,8 @@ int runGenome(int argc, char** argv) {
         const std::string cls = argc > 5 ? argv[5] : "town";
         const int sclass = cls == "hamlet" ? SC_HAMLET : (cls == "village" ? SC_VILLAGE : SC_TOWN);
         const std::vector<NearPeople> P = peoplesNearHome(12);
-        printf("genome sheet: the %zu peoples nearest home, a %s each at %.0f years since the end on %s (%s), %dx\n", P.size(), SETTLEMENT_CLASS_NAMES[sclass], years, sys.bodies[sv.site.body].name.c_str(), KINDS[sys.bodies[sv.site.body].type].name, scale);
+        printf("genome sheet: the %zu peoples nearest home, a %s each at %.0f years since the end on %s (%s), %dx\n", P.size(), SETTLEMENT_CLASS_NAMES[sclass], years,
+                sys.bodies[sv.site.body].name.c_str(), KINDS[sys.bodies[sv.site.body].type].name, scale);
         const int cols = 4, rows = (int)(P.size() + cols - 1) / cols, textH = 15 * FONT_LINE + 4, tileH = FBH + textH * scale;
         for (int a = 0; a < AGE_COUNT; a++) {
             const int W = cols * FBW, H = rows * tileH + 16 * scale;
@@ -483,7 +536,13 @@ int runGenome(int argc, char** argv) {
         if (pairMode && argc >= 13) {   // `genome pair <sx> <sy> <sz> <body> <people>` twice
             for (int k = 0; k < 2; k++) {
                 int64_t sx = atoll(argv[3 + 5 * k]), sy = atoll(argv[4 + 5 * k]), sz = atoll(argv[5 + 5 * k]); int bi = atoi(argv[6 + 5 * k]), which = atoi(argv[7 + 5 * k]);
-                Star s; StarSystem s2; if (!systemAt(sx, sy, sz, s, s2, true)) { printf("  no star at %lld %lld %lld\n", (long long)sx, (long long)sy, (long long)sz); continue; } if (bi >= (int)s2.bodies.size()) continue;
+                Star s;
+                StarSystem s2;
+                if (!systemAt(sx, sy, sz, s, s2, true)) {
+                    printf("  no star at %lld %lld %lld\n", (long long)sx, (long long)sy, (long long)sz);
+                    continue;
+                }
+                if (bi >= (int)s2.bodies.size()) continue;
                 BodyGen gg = BodyGen::make(s2.bodies[bi]); if (which >= peoplesOf(gg)) continue;
                 P.push_back({sx, sy, sz, 0, bi, which, peopleGen(gg, which).seed, s2.bodies[bi].name, 0, 0});
             }
@@ -504,8 +563,12 @@ int runGenome(int argc, char** argv) {
             }
             const Genome G = genomeOf(P[r].seed);
             const int ty = (16 * scale + r * rowH + FBH) / scale + 2;
-            drawText(cv, 3, ty, fmt("%d. %s: %s %s, ROOF %s, PLAN %s, %s, FOCUS %s, %s %s, CENTRE %s", r + 1, P[r].world.c_str(), genomeValue(G, GV_BASE).c_str(), genomeValue(G, GV_ACCENT).c_str(), genomeValue(G, GV_ROOF).c_str(), genomeValue(G, GV_PLAN).c_str(),
-                                         genomeValue(G, GV_MASSING).c_str(), genomeValue(G, GV_FOCUS).c_str(), genomeValue(G, GV_PROFILE).c_str(), genomeValue(G, GV_OPENING).c_str(), genomeValue(G, GV_CENTRE).c_str()).c_str(), ink);
+            drawText(cv, 3, ty,
+                    fmt("%d. %s: %s %s, ROOF %s, PLAN %s, %s, FOCUS %s, %s %s, CENTRE %s", r + 1, P[r].world.c_str(), genomeValue(G, GV_BASE).c_str(), genomeValue(G, GV_ACCENT).c_str(),
+                            genomeValue(G, GV_ROOF).c_str(), genomeValue(G, GV_PLAN).c_str(), genomeValue(G, GV_MASSING).c_str(), genomeValue(G, GV_FOCUS).c_str(), genomeValue(G, GV_PROFILE).c_str(),
+                            genomeValue(G, GV_OPENING).c_str(), genomeValue(G, GV_CENTRE).c_str())
+                            .c_str(),
+                    ink);
         }
         std::string fn = fmt("shots/tests/genome_%s_%dx.png", pairMode ? "pair" : "ages", scale);
         writePNG(fn.c_str(), sheet.data(), W, H);
@@ -532,19 +595,28 @@ int runGenome(int argc, char** argv) {
                 printf("  %-24s %-11s %s\n", P[r].world.c_str(), AGE_NAMES[a], line.c_str());
             }
             const Genome G = genomeOf(P[r].seed);
-            drawText(cv, 3, (16 * scale + r * rowH + FBH) / scale + 2, fmt("%d. %s: %s %s %s, ROOF %s, PLAN %s, %s %s, GLAZING %.2f %s", r + 1, P[r].world.c_str(), genomeValue(G, GV_BASE).c_str(), genomeValue(G, GV_PAINTED).c_str(), genomeValue(G, GV_ACCENT).c_str(),
-                                                                                  genomeValue(G, GV_ROOF).c_str(), genomeValue(G, GV_PLAN).c_str(), genomeValue(G, GV_PROFILE).c_str(), genomeValue(G, GV_OPENING).c_str(), G.at(GV_SHARE), genomeValue(G, GV_RHYTHM).c_str()).c_str(), ink);
+            drawText(cv, 3, (16 * scale + r * rowH + FBH) / scale + 2,
+                    fmt("%d. %s: %s %s %s, ROOF %s, PLAN %s, %s %s, GLAZING %.2f %s", r + 1, P[r].world.c_str(), genomeValue(G, GV_BASE).c_str(), genomeValue(G, GV_PAINTED).c_str(),
+                            genomeValue(G, GV_ACCENT).c_str(), genomeValue(G, GV_ROOF).c_str(), genomeValue(G, GV_PLAN).c_str(), genomeValue(G, GV_PROFILE).c_str(), genomeValue(G, GV_OPENING).c_str(),
+                            G.at(GV_SHARE), genomeValue(G, GV_RHYTHM).c_str())
+                            .c_str(),
+                    ink);
             // its own within its age's ways
-            drawText(cv, 3, (16 * scale + r * rowH + FBH) / scale + 3 + FONT_LINE, fmt("   %s ROOFING, PITCH %.2f, EAVES %s, ROOFLINE %s, GABLES %s; %s, TRIM %s, %s, ENTRANCE %s, CORNERS %s; STOREYS %.2f, %s, SETBACK %.2f, BOUNDARY %s, FURNITURE %s, POLES %s",
-                                                                                                  genomeValue(G, GV_ROOFING).c_str(), G.at(GV_PITCH), genomeValue(G, GV_EAVES).c_str(), genomeValue(G, GV_ROOFLINE).c_str(), genomeValue(G, GV_GABLES).c_str(), genomeValue(G, GV_POLYCHROMY).c_str(),
-                                                                                                  genomeValue(G, GV_TRIM).c_str(), genomeValue(G, GV_PROJECTIONS).c_str(), genomeValue(G, GV_ENTRANCE).c_str(), genomeValue(G, GV_CORNERS).c_str(), G.at(GV_STOREYS), genomeValue(G, GV_FRONTAGE).c_str(),
-                                                                                                  G.at(GV_SETBACK), genomeValue(G, GV_BOUNDARY).c_str(), genomeValue(G, GV_FURNITURE).c_str(), genomeValue(G, GV_POLES).c_str()).c_str(), ink);
+            drawText(cv, 3, (16 * scale + r * rowH + FBH) / scale + 3 + FONT_LINE,
+                    fmt("   %s ROOFING, PITCH %.2f, EAVES %s, ROOFLINE %s, GABLES %s; %s, TRIM %s, %s, ENTRANCE %s, CORNERS %s; STOREYS %.2f, %s, SETBACK %.2f, BOUNDARY %s, FURNITURE %s, POLES %s",
+                            genomeValue(G, GV_ROOFING).c_str(), G.at(GV_PITCH), genomeValue(G, GV_EAVES).c_str(), genomeValue(G, GV_ROOFLINE).c_str(), genomeValue(G, GV_GABLES).c_str(),
+                            genomeValue(G, GV_POLYCHROMY).c_str(), genomeValue(G, GV_TRIM).c_str(), genomeValue(G, GV_PROJECTIONS).c_str(), genomeValue(G, GV_ENTRANCE).c_str(),
+                            genomeValue(G, GV_CORNERS).c_str(), G.at(GV_STOREYS), genomeValue(G, GV_FRONTAGE).c_str(), G.at(GV_SETBACK), genomeValue(G, GV_BOUNDARY).c_str(),
+                            genomeValue(G, GV_FURNITURE).c_str(), genomeValue(G, GV_POLES).c_str())
+                            .c_str(),
+                    ink);
         }
         std::string fn = fmt("shots/tests/genome_street%s_%dx.png", drone ? "_drone" : "", scale);
         writePNG(fn.c_str(), sheet.data(), W, H);
         printf("  -> %s\n", fn.c_str());
         return 0;
     }
-    printf("genome sheet [scale] [years] [town|village|hamlet] [desert|felisian] | genome ages [scale] [peoples] [years] | genome street [scale] [peoples] [years] [desert|felisian] [drone] | genome distinct [n] | genome print <sx> <sz> <body> [people] | genome pair <sx sy sz body people> x 2 | genome reach\n");
+    printf("genome sheet [scale] [years] [town|village|hamlet] [desert|felisian] | genome ages [scale] [peoples] [years] | genome street [scale] [peoples] [years] [desert|felisian] [drone] | genome "
+           "distinct [n] | genome print <sx> <sz> <body> [people] | genome pair <sx sy sz body people> x 2 | genome reach\n");
     return 1;
 }

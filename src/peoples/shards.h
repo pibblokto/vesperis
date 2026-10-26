@@ -21,7 +21,8 @@
 Lore loreOf(const StarSystem& sys, const Body& b, const BodyGen& g, int which = 0);
 std::string peopleNameOf(const BodyGen& g);   // C-10: what `loreOf` would call the world's people, without the rest (the other peoples a chart names); C-13: a people's by `peopleGen`
 struct Shard;
-Lore loreQuick(const StarSystem& sys, const Body& b, const BodyGen& g, int which = 0);   // C-12: the lore without the chart marks (the names, the span, the calendar, the last): the view's graves, the harness
+// C-12: the lore without the chart marks (the names, the span, the calendar, the last): the view's graves, the harness
+Lore loreQuick(const StarSystem& sys, const Body& b, const BodyGen& g, int which = 0);
 // C-12: a person's given name, nine letters at most (the graves'); H-04's second pass: in the people's tongue (`tongueName`), the sex drawn
 // from the seed where none is given
 std::string personName(const Lore& L, uint64_t seed);

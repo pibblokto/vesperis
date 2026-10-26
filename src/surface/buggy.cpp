@@ -183,18 +183,22 @@ void SurfaceView::updateBuggy(double dt, const Input& in, double t) {
     b.trackAccum += std::fabs(b.speed) * dt;
     if (b.trackAccum > 0.5 && !b.airborne) {
         b.trackAccum = 0;
-        Buggy::Track l{(float)(b.x - hx * WHEEL_X + px * WHEEL_S), (float)(b.z - hz * WHEEL_X + pz * WHEEL_S)}, r{(float)(b.x - hx * WHEEL_X - px * WHEEL_S), (float)(b.z - hz * WHEEL_X - pz * WHEEL_S)};
+        Buggy::Track l{(float)(b.x - hx * WHEEL_X + px * WHEEL_S), (float)(b.z - hz * WHEEL_X + pz * WHEEL_S)},
+                r{(float)(b.x - hx * WHEEL_X - px * WHEEL_S), (float)(b.z - hz * WHEEL_X - pz * WHEEL_S)};
         for (const Buggy::Track& tr : {l, r}) {
             if (b.tracks.size() < 400) b.tracks.push_back(tr); else { b.tracks[b.trackHead] = tr; b.trackHead = (b.trackHead + 1) % 400; }
         }
-        int kind = (mat == MAT_SAND || mat == MAT_DUST) ? 0 : (mat == MAT_SNOW ? 1 : ((mat == MAT_GRASS && env.rain > 0.1) || (mat == MAT_GRASS && site.waterAt(b.x, b.z) > -1e8) ? 2 : (mat == MAT_GRASS ? 0 : -1)));
+        int kind = (mat == MAT_SAND || mat == MAT_DUST)
+                ? 0
+                : (mat == MAT_SNOW ? 1 : ((mat == MAT_GRASS && env.rain > 0.1) || (mat == MAT_GRASS && site.waterAt(b.x, b.z) > -1e8) ? 2 : (mat == MAT_GRASS ? 0 : -1)));
         if (av > 3 && kind >= 0) {
             Rng rr((uint64_t)(t * 1000) ^ 0xD05);
             int n = 1 + (int)(av / 10);
             for (int w = 0; w < 4; w++) {
                 if (w & 1) continue;   // the rear wheels throw most of it
                 double sx = (w & 2) ? -WHEEL_S : WHEEL_S;
-                for (int i = 0; i < n; i++) b.puffs.push_back({(float)(b.x - hx * WHEEL_X + px * sx + rr.sym(0.3)), (float)(b.y + 0.2), (float)(b.z - hz * WHEEL_X + pz * sx + rr.sym(0.3)), 0.f, (uint8_t)kind});
+                for (int i = 0; i < n; i++)
+                    b.puffs.push_back({(float)(b.x - hx * WHEEL_X + px * sx + rr.sym(0.3)), (float)(b.y + 0.2), (float)(b.z - hz * WHEEL_X + pz * sx + rr.sym(0.3)), 0.f, (uint8_t)kind});
             }
         }
     }
@@ -333,7 +337,16 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
     auto poly = [&](const Vec3* pts, int n, const Vec3& nrm, double tint, RasterParams& rp) {
         double shade = shadeN(nrm, tint);
         RVert q[8];
-        for (int k = 0; k < n; k++) { Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z); if (v.z < NEAR_Z) return; q[k].x = v.x; q[k].y = v.y; q[k].z = v.z; q[k].shade = shade; q[k].u = pts[k].x + pts[k].y; q[k].v = pts[k].z; }
+        for (int k = 0; k < n; k++) {
+            Vec3 v = toView(pts[k].x, pts[k].y, pts[k].z);
+            if (v.z < NEAR_Z) return;
+            q[k].x = v.x;
+            q[k].y = v.y;
+            q[k].z = v.z;
+            q[k].shade = shade;
+            q[k].u = pts[k].x + pts[k].y;
+            q[k].v = pts[k].z;
+        }
         rasterPolygon(fb, q, n, rp, proj);
     };
     auto quad = [&](Vec3 a, Vec3 bq, Vec3 c, Vec3 d, const Vec3& n, double tint, RasterParams& rp) { Vec3 p4[4] = {a, bq, c, d}; poly(p4, 4, n, tint, rp); };
@@ -356,12 +369,15 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
     quad(at(TAIL_F, -TAIL_W, TAIL_B), at(TAIL_F, TAIL_W, TAIL_B), at(TAIL_F, TAIL_W, TAIL_T), at(TAIL_F, -TAIL_W, TAIL_T), -fwdT, 0.7 * dirt, rpBody);
     for (int s = -1; s <= 1; s += 2) {
         Vec3 nS = sideT * s;
-        quad(at(NOSE_F, s * NOSE_W, NOSE_B), at(SHO_F, s * SHO_W, FLOOR), at(SHO_F, s * SHO_W, BELT), at(NOSE_F, s * NOSE_W, NOSE_T), normalize(nS * 0.8 + fwdT * 0.6), 0.9 * dirt, rpBody);   // nose flank
+        // nose flank
+        quad(at(NOSE_F, s * NOSE_W, NOSE_B), at(SHO_F, s * SHO_W, FLOOR), at(SHO_F, s * SHO_W, BELT), at(NOSE_F, s * NOSE_W, NOSE_T), normalize(nS * 0.8 + fwdT * 0.6), 0.9 * dirt, rpBody);
         quad(at(SHO_F, s * SHO_W, FLOOR), at(TAIL_F, s * TAIL_W, TAIL_B), at(TAIL_F, s * TAIL_W, BELT), at(SHO_F, s * SHO_W, BELT), nS, 0.92 * dirt, rpBody);                             // the belt
         Vec3 upper[5] = {at(SHO_F, s * SHO_W, BELT), at(TAIL_F, s * TAIL_W, BELT), at(TAIL_F, s * TAIL_W, TAIL_T), at(CABR_F, s * CAB_W, ROOF), at(CABF_F, s * CAB_W, ROOF)};
-        poly(upper, 5, nS, 0.95 * dirt, rpBody);                                                                                                                                                 // the cabin side
+        // the cabin side
+        poly(upper, 5, nS, 0.95 * dirt, rpBody);
         Vec3 off = nS * 0.012;
-        quad(at(SHO_F - 0.05, s * SHO_W, 1.02) + off, at(CABR_F - 0.05, s * CAB_W, 1.02) + off, at(CABR_F - 0.05, s * CAB_W, 1.32) + off, at(SHO_F - 0.05, s * SHO_W, 1.32) + off, nS, 0.3, rpDark);   // the sensor band round the cabin
+        // the sensor band round the cabin
+        quad(at(SHO_F - 0.05, s * SHO_W, 1.02) + off, at(CABR_F - 0.05, s * CAB_W, 1.02) + off, at(CABR_F - 0.05, s * CAB_W, 1.32) + off, at(SHO_F - 0.05, s * SHO_W, 1.32) + off, nS, 0.3, rpDark);
         // chrome trim: the shoulder line from the nose to the tail and the roof edge
         tube(at(NOSE_F, s * NOSE_W, NOSE_T), at(SHO_F, s * SHO_W, BELT), 0.02, 7, chrome * 0.9);
         tube(at(SHO_F, s * SHO_W, BELT), at(TAIL_F, s * TAIL_W, BELT), 0.02, 7, chrome * 0.9);
@@ -410,12 +426,22 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
                     tube(p0, p1, 0.04, 0, 16 + 8 * env.skyBrightness);
                 }
                 RVert hubP[6]; bool okh = true;
-                for (int k = 0; k < 6; k++) { double a = k * TAU / 6 + b.wheelSpin; Vec3 pp = c + ws * (s * 0.02) + wf * (std::cos(a) * WHEEL_R * 0.45 * sc) + upT * (std::sin(a) * WHEEL_R * 0.45 * sc); Vec3 v = toView(pp.x, pp.y, pp.z); hubP[k].x = v.x; hubP[k].y = v.y; hubP[k].z = v.z; hubP[k].shade = chrome * 0.7; if (v.z < NEAR_Z) okh = false; }
+                for (int k = 0; k < 6; k++) {
+                    double a = k * TAU / 6 + b.wheelSpin;
+                    Vec3 pp = c + ws * (s * 0.02) + wf * (std::cos(a) * WHEEL_R * 0.45 * sc) + upT * (std::sin(a) * WHEEL_R * 0.45 * sc);
+                    Vec3 v = toView(pp.x, pp.y, pp.z);
+                    hubP[k].x = v.x;
+                    hubP[k].y = v.y;
+                    hubP[k].z = v.z;
+                    hubP[k].shade = chrome * 0.7;
+                    if (v.z < NEAR_Z) okh = false;
+                }
                 RasterParams rh; rh.bank = 7;
                 if (okh) rasterPolygon(fb, hubP, 6, rh, proj);
                 for (int k = 0; k < 3; k++) {
                     double a = k * TAU / 3 + b.wheelSpin;
-                    Vec3 p0 = c + ws * (s * 0.03) + wf * (std::cos(a) * WHEEL_R * 0.4 * sc) + upT * (std::sin(a) * WHEEL_R * 0.4 * sc), p1 = c + ws * (s * 0.03) - wf * (std::cos(a) * WHEEL_R * 0.4 * sc) - upT * (std::sin(a) * WHEEL_R * 0.4 * sc);
+                    Vec3 p0 = c + ws * (s * 0.03) + wf * (std::cos(a) * WHEEL_R * 0.4 * sc) + upT * (std::sin(a) * WHEEL_R * 0.4 * sc),
+                         p1 = c + ws * (s * 0.03) - wf * (std::cos(a) * WHEEL_R * 0.4 * sc) - upT * (std::sin(a) * WHEEL_R * 0.4 * sc);
                     tube(p0, p1, 0.02, 7, chrome * 0.8);
                 }
             }
@@ -438,7 +464,16 @@ void SurfaceView::drawBuggy(Framebuffer& fb, double t) {
     // ---- the lidar puck on the roof and the sensor mast at the rear with its blinking light
     {
         RVert puck[6]; bool ok = true;
-        for (int k = 0; k < 6; k++) { double a = k * TAU / 6; Vec3 pp = at(-0.5 + std::cos(a) * 0.16, std::sin(a) * 0.16, ROOF + 0.06); Vec3 v = toView(pp.x, pp.y, pp.z); puck[k].x = v.x; puck[k].y = v.y; puck[k].z = v.z; puck[k].shade = chrome; if (v.z < NEAR_Z) ok = false; }
+        for (int k = 0; k < 6; k++) {
+            double a = k * TAU / 6;
+            Vec3 pp = at(-0.5 + std::cos(a) * 0.16, std::sin(a) * 0.16, ROOF + 0.06);
+            Vec3 v = toView(pp.x, pp.y, pp.z);
+            puck[k].x = v.x;
+            puck[k].y = v.y;
+            puck[k].z = v.z;
+            puck[k].shade = chrome;
+            if (v.z < NEAR_Z) ok = false;
+        }
         RasterParams rd; rd.bank = 7;
         if (ok) rasterPolygon(fb, puck, 6, rd, proj);
         Vec3 ant0 = at(-1.15, 0.62, ROOF), ant1 = at(-1.2, 0.66, ROOF + 0.7 * b.unfold);

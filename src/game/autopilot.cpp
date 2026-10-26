@@ -32,10 +32,14 @@ void Game::arriveAtStar(const Star& s, const Vec3& fromDir) {
     const int moons = (int)sys.bodies.size() - sys.planetCount();
     if (sys.sunless()) {   // a world alone in the dark
         arrivalNote = fmt("ARRIVED AT %s - NO STAR, ONE WORLD, %d MOON%s", upper(starNameOf(full)).c_str(), moons, moons == 1 ? "" : "S");
-        logEvent("ARRIVAL", fmt("%s, NO STAR, ONE WORLD %d MOON%s, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), moons, moons == 1 ? "" : "S", (long long)full.sx, (long long)full.sy, (long long)full.sz));
+        logEvent("ARRIVAL",
+                fmt("%s, NO STAR, ONE WORLD %d MOON%s, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), moons, moons == 1 ? "" : "S", (long long)full.sx, (long long)full.sy,
+                        (long long)full.sz));
     } else {
         arrivalNote = fmt("ARRIVED AT %s - %d PLANETS, %d MOONS", upper(starNameOf(full)).c_str(), sys.planetCount(), moons);
-        logEvent("ARRIVAL", fmt("%s, %s, %d PLANETS %d MOONS, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), sys.classString().c_str(), sys.planetCount(), moons, (long long)full.sx, (long long)full.sy, (long long)full.sz));
+        logEvent("ARRIVAL",
+                fmt("%s, %s, %d PLANETS %d MOONS, SECTOR %lld %lld %lld", upper(starNameOf(full)).c_str(), sys.classString().c_str(), sys.planetCount(), moons, (long long)full.sx, (long long)full.sy,
+                        (long long)full.sz));
     }
     if (sys.sunless()) ship.localTarget = 0;   // the one world there is the local target (the HUD's brackets on the black disc)
     status(arrivalNote, 8);
@@ -291,7 +295,9 @@ void Game::updateShipMotion(double dt) {
                 ship.parkedBody = -1;
                 const Belt& bl = sys.belts[ship.parkedBelt];
                 status(fmt("IN THE BELT: %s - A ROCK %.1f KM ACROSS, NO GROUND FOR THE CAPSULE", upper(beltNameOf(ship.parkedBelt)).c_str(), 2 * rk.radiusKm), 8);
-                logEvent("BELT", fmt("%s, %s - %s FROM THE STAR, A ROCK %.1f KM ACROSS", upper(beltNameOf(ship.parkedBelt)).c_str(), distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str(), 2 * rk.radiusKm));
+                logEvent("BELT",
+                        fmt("%s, %s - %s FROM THE STAR, A ROCK %.1f KM ACROSS", upper(beltNameOf(ship.parkedBelt)).c_str(), distanceString(bl.innerKm).c_str(), distanceString(bl.outerKm).c_str(),
+                                2 * rk.radiusKm));
                 audio.beep = BEEP_ARRIVE;
                 break;
             }
@@ -426,7 +432,11 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
             audio.beep = BEEP_UI;
         }
     }
-    if (in.wasPressed(KEY_TAB) && inSystem) { listSel = ship.targetBelt >= 0 ? (int)sys.bodies.size() + ship.targetBelt : std::max(0, ship.localTarget); returnState = GameState::SPACE; state = GameState::SYSTEM_LIST; }
+    if (in.wasPressed(KEY_TAB) && inSystem) {
+        listSel = ship.targetBelt >= 0 ? (int)sys.bodies.size() + ship.targetBelt : std::max(0, ship.localTarget);
+        returnState = GameState::SPACE;
+        state = GameState::SYSTEM_LIST;
+    }
     if (enterKey(in) && !wasTargeting && !radarEnter && !tele.on && inSystem && ship.mode != ShipState::APPROACH) {   // in the telescope Enter tracks
         if (ship.targetBelt >= 0) startApproachBelt(ship.targetBelt);
         else if (ship.localTarget >= 0) startApproach(ship.localTarget);

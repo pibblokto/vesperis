@@ -62,9 +62,9 @@ void renderSurface(int onlyType) {
                 fb.mush(2);
                 std::string fn = "shots/tests/surf_" + tn + "_" + sc.tag + ".png";
                 saveFB(fb, fn.c_str());
-                printf("%-16s %-7s %s lat=%.0f sunAlt=%.1f az=%.0f time=%.2f render=%.1f ms  T=%.0fC P=%.2f g=%.1f cloud=%.2f rain=%.2f snow=%.2f sky=%.2f uw=%d rocks=%d/%d\n",
-                       KINDS[b.type].name, sc.tag, b.name.c_str(), sc.latDeg, si.altitude / DEG, si.azimuth / DEG, si.dayFraction,
-                       (t1 - t0) * 1000, sv.env.temperatureC, sv.env.pressureAtm, sv.site.gravity, sv.env.cloudCover, sv.env.rain, sv.env.snow, sv.env.skyBrightness, (int)sv.player.underwater, sv.lastRocksDrawn, sv.lastRocksCandidates);
+                printf("%-16s %-7s %s lat=%.0f sunAlt=%.1f az=%.0f time=%.2f render=%.1f ms  T=%.0fC P=%.2f g=%.1f cloud=%.2f rain=%.2f snow=%.2f sky=%.2f uw=%d rocks=%d/%d\n", KINDS[b.type].name,
+                        sc.tag, b.name.c_str(), sc.latDeg, si.altitude / DEG, si.azimuth / DEG, si.dayFraction, (t1 - t0) * 1000, sv.env.temperatureC, sv.env.pressureAtm, sv.site.gravity,
+                        sv.env.cloudCover, sv.env.rain, sv.env.snow, sv.env.skyBrightness, (int)sv.player.underwater, sv.lastRocksDrawn, sv.lastRocksCandidates);
             }
         }
     }
@@ -190,7 +190,8 @@ void runConsistency() {
             writePNG(fn.c_str(), sheet.data(), SW, SH);
             double dmg = dist(0, 1), dgs = dist(1, 2), dms = dist(0, 2);
             worst = std::max(worst, std::max(dmg, std::max(dgs, dms)));
-            if (hasOpaqueDeck(b.type) && b.type != PT_HYDROCARBON) { if (dms > THRESH) over++; }   // the globe is its cloud deck; the map (C) and the ground are the same ground (P-01: the steam world's too)
+            // the globe is its cloud deck; the map (C) and the ground are the same ground (P-01: the steam world's too)
+            if (hasOpaqueDeck(b.type) && b.type != PT_HYDROCARBON) { if (dms > THRESH) over++; }
             else if (dmg > THRESH || dgs > THRESH || dms > THRESH) over++;
             // the landing map's relief class against the slope measured on the real terrain
             const char* cls = game.testReliefClass(lat, lon);
@@ -205,17 +206,18 @@ void runConsistency() {
             double mapSlope = Game::siteSlope(sv.site);
             bool reliefOk = std::string(cls) == reliefClass(slope) || std::fabs(mapSlope - slope) <= 0.3 * std::max(mapSlope, slope);
             printf("%-14s %3.0f,%3.0f,%3.0f   %3.0f,%3.0f,%3.0f   %3.0f,%3.0f,%3.0f   %6.0f %6.0f %6.0f  %s (%s, sun %.0f deg, light %.2f (globe %.2f), %s slope %.3f%s, %s)\n", KINDS[b.type].name,
-                   avg[0][0], avg[0][1], avg[0][2], avg[1][0], avg[1][1], avg[1][2], avg[2][0], avg[2][1], avg[2][2], dmg, dgs, dms,
-                   b.name.c_str(), MATERIAL_NAMES[sv.site.sampleAt(0, 0, 64).material], sv.site.sun(t).altitude / DEG, sv.site.sun(t).lightFactor, SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - bp)),
-                   cls, slope, reliefOk ? "" : " RELIEF MISMATCH", fn.c_str());
-            printf("%-14s ground crop: mean shade %.1f, bank %d (%d%% of the crop); ramp stops 14/34/47 = %d,%d,%d / %d,%d,%d / %d,%d,%d\n", "", shadeSum / (T * T), groundBank, bankHist[groundBank] * 100 / (T * T),
-                   fbs.pal[(groundBank * 64 + 14) * 3], fbs.pal[(groundBank * 64 + 14) * 3 + 1], fbs.pal[(groundBank * 64 + 14) * 3 + 2],
-                   fbs.pal[(groundBank * 64 + 34) * 3], fbs.pal[(groundBank * 64 + 34) * 3 + 1], fbs.pal[(groundBank * 64 + 34) * 3 + 2],
-                   fbs.pal[(groundBank * 64 + 47) * 3], fbs.pal[(groundBank * 64 + 47) * 3 + 1], fbs.pal[(groundBank * 64 + 47) * 3 + 2]);
+                    avg[0][0], avg[0][1], avg[0][2], avg[1][0], avg[1][1], avg[1][2], avg[2][0], avg[2][1], avg[2][2], dmg, dgs, dms, b.name.c_str(),
+                    MATERIAL_NAMES[sv.site.sampleAt(0, 0, 64).material], sv.site.sun(t).altitude / DEG, sv.site.sun(t).lightFactor,
+                    SpaceRenderer::lightFactor(sys.star.luminosity, length(sys.star.pos - bp)), cls, slope, reliefOk ? "" : " RELIEF MISMATCH", fn.c_str());
+            printf("%-14s ground crop: mean shade %.1f, bank %d (%d%% of the crop); ramp stops 14/34/47 = %d,%d,%d / %d,%d,%d / %d,%d,%d\n", "", shadeSum / (T * T), groundBank,
+                    bankHist[groundBank] * 100 / (T * T), fbs.pal[(groundBank * 64 + 14) * 3], fbs.pal[(groundBank * 64 + 14) * 3 + 1], fbs.pal[(groundBank * 64 + 14) * 3 + 2],
+                    fbs.pal[(groundBank * 64 + 34) * 3], fbs.pal[(groundBank * 64 + 34) * 3 + 1], fbs.pal[(groundBank * 64 + 34) * 3 + 2], fbs.pal[(groundBank * 64 + 47) * 3],
+                    fbs.pal[(groundBank * 64 + 47) * 3 + 1], fbs.pal[(groundBank * 64 + 47) * 3 + 2]);
             if (!reliefOk) over += 100;
         }
     }
-    printf("consistency: %d of %d types over the threshold of %.0f (venusian: map against ground only); worst distance %.0f%s\n", over % 100, landableTypeCount(), THRESH, worst, over >= 100 ? "; RELIEF CLASS MISMATCH" : "");
+    printf("consistency: %d of %d types over the threshold of %.0f (venusian: map against ground only); worst distance %.0f%s\n", over % 100, landableTypeCount(), THRESH, worst,
+            over >= 100 ? "; RELIEF CLASS MISMATCH" : "");
 }
 
 // N4-02: a drive on open grassland through the surface renderer: 60 s at full throttle, frames from the seat, airborne and chase
@@ -273,7 +275,8 @@ int runDrive() {
                     if (al < nearest) { nearest = al; steer = ac > 0 ? -1 : 1; }
                 }
             }
-            for (double d = 10; d <= look && !steer; d += 5) if (sv.site.groundHeight(sv.buggy.x + hx * d, sv.buggy.z + hz * d) < sv.site.waterAt(sv.buggy.x + hx * d, sv.buggy.z + hz * d) - 0.3) steer = steerDir;
+            for (double d = 10; d <= look && !steer; d += 5)
+                if (sv.site.groundHeight(sv.buggy.x + hx * d, sv.buggy.z + hz * d) < sv.site.waterAt(sv.buggy.x + hx * d, sv.buggy.z + hz * d) - 0.3) steer = steerDir;
             if (std::fabs(sv.buggy.speed) < 0.5 && i > 30) stuckT += 1.0 / 30; else stuckT = 0;
             if (stuckT > 1.0 && reverseT <= 0) { reverseT = 1.5; steerDir = -steerDir; }
             if (reverseT > 0) { reverseT -= 1.0 / 30; in.down[KEY_S] = true; in.down[steerDir > 0 ? KEY_D : KEY_A] = true; }
@@ -293,7 +296,9 @@ int runDrive() {
             if (!airShot && sv.buggy.airborne) { fb.mush(2); sv.cameraFeed(fb, tt); saveFB(fb, "shots/tests/drive_air.png"); airShot = true; }
             if (i == 30 * 40) { sv.chaseCam = true; sv.render(fb, tt, nb.stars, sr, 1.0); fb.mush(2); saveFB(fb, "shots/tests/drive_chase.png"); sv.chaseCam = false; }
         }
-        if (i % 300 == 299) printf("  %2d s: %5.1f m/s, %6.0f m, gear %d, skid %.2f, %.0f m along the run, dir %+d%s\n", (i + 1) / 30, sv.buggy.speed, sv.buggy.odometer, sv.buggy.gear, sv.buggy.skid, along, dir, sv.buggy.airborne ? ", airborne" : "");
+        if (i % 300 == 299)
+            printf("  %2d s: %5.1f m/s, %6.0f m, gear %d, skid %.2f, %.0f m along the run, dir %+d%s\n", (i + 1) / 30, sv.buggy.speed, sv.buggy.odometer, sv.buggy.gear, sv.buggy.skid, along, dir,
+                    sv.buggy.airborne ? ", airborne" : "");
         if (i > 30 * 20 && std::fabs(sv.buggy.speed) < 0.5 && turnT <= 0) stalled = true;
     }
     {   // a night frame with the headlights on
@@ -302,7 +307,8 @@ int runDrive() {
         sv.render(fb, tn, nb.stars, sr, 1.0); fb.mush(2); sv.cameraFeed(fb, tn); saveFB(fb, "shots/tests/drive_night.png");
         sv.chaseCam = true; sv.render(fb, tn, nb.stars, sr, 1.0); fb.mush(2); saveFB(fb, "shots/tests/drive_night_chase.png"); sv.chaseCam = false;
     }
-    printf("drive: %.0f m in 90 s, top %.0f km/h, render %.1f ms mean / %.1f worst at 1x%s%s; frames drive_seat, drive_chase, drive_night[_chase]\n", sv.buggy.odometer, top * 3.6, sumMs / std::max(1, n), worstMs, airShot ? ", airborne once (shots/drive_air.png)" : "", stalled ? " (STALLED at some point)" : "");
+    printf("drive: %.0f m in 90 s, top %.0f km/h, render %.1f ms mean / %.1f worst at 1x%s%s; frames drive_seat, drive_chase, drive_night[_chase]\n", sv.buggy.odometer, top * 3.6,
+            sumMs / std::max(1, n), worstMs, airShot ? ", airborne once (shots/drive_air.png)" : "", stalled ? " (STALLED at some point)" : "");
     bool ok = top * 3.6 > 100 && sv.buggy.odometer > 2000;
     printf("drive: %s\n", ok ? "ok (over 2 km, over 100 km/h)" : "FAIL: under 2 km or under 100 km/h");
     return ok ? 0 : 1;
@@ -320,8 +326,9 @@ int runBestiary() {
             printf("%s (%s): %d land, %d flyers, %d swimmers\n", b.name.c_str(), KINDS[b.type].name, B.landCount, B.flyerCount, B.swimmerCount);
             for (size_t i = 0; i < B.species.size(); i++) {
                 const Species& sp = B.species[i];
-                printf("  %-12s %-20s %4.1f m  gait %d/%d  bank %2d tone %.2f pattern %d crest %d  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d\n", sp.name.c_str(), PLAN_NAMES[sp.plan], sp.size, sp.gait, sp.runGait,
-                       sp.bank, sp.tone, sp.pattern, sp.crest, sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity], TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax);
+                printf("  %-12s %-20s %4.1f m  gait %d/%d  bank %2d tone %.2f pattern %d crest %d  habitat %-16s diet %d  %-8s %-11s call %d x%.2f  herd %d-%d\n", sp.name.c_str(), PLAN_NAMES[sp.plan],
+                        sp.size, sp.gait, sp.runGait, sp.bank, sp.tone, sp.pattern, sp.crest, sp.habitat ? BIOME_NAMES[sp.habitat] : "ANY", sp.diet, ACTIVITY_NAMES[sp.activity],
+                        TEMPERAMENT_NAMES[sp.temperament], sp.call, sp.callPitch, sp.herdMin, sp.herdMax);
                 if (sp.name != B2.species[i].name || sp.size != B2.species[i].size || sp.plan != B2.species[i].plan) fails++;
             }
             if (B.species.empty()) fails++;
@@ -367,7 +374,8 @@ void runEncounters(int wanted) {
             }
         }
     }
-    printf("encounters: a herd within 200 m at %d of %d felisian land sites (%.0f%%); B-316: %.1f habitat herds (%.0f animals) within 900 m per site\n", withLife, total, total ? 100.0 * withLife / total : 0.0, total ? (double)cellHerds / total : 0.0, total ? (double)cellAnimals / total : 0.0);
+    printf("encounters: a herd within 200 m at %d of %d felisian land sites (%.0f%%); B-316: %.1f habitat herds (%.0f animals) within 900 m per site\n", withLife, total,
+            total ? 100.0 * withLife / total : 0.0, total ? (double)cellHerds / total : 0.0, total ? (double)cellAnimals / total : 0.0);
     for (int bm = 0; bm < BIO_COUNT; bm++) if (perBiome[bm]) printf("  %-16s %3d sites, %3.0f%%\n", BIOME_NAMES[bm], perBiome[bm], 100.0 * lifeBiome[bm] / perBiome[bm]);
 }
 
@@ -450,7 +458,10 @@ int runStability(const char* want, double walk) {
             }
             sv.update(1.0 / 30, in, tt, false);
             sv.render(fb, tt, nb.stars, sr, 1.0); fb.mush(2); fb.toRGB(px.data(), 1.0);
-            if (k == 0) { const Vec3& sd = sv.env.sunDisc.dirLocal; if (!sv.projectPoint(sv.player.x + sd.x * 1e5, sv.player.y + 1.65 + sd.y * 1e5, sv.player.z + sd.z * 1e5, sunSx, sunSy)) sunSx = -1; }
+            if (k == 0) {
+                const Vec3& sd = sv.env.sunDisc.dirLocal;
+                if (!sv.projectPoint(sv.player.x + sd.x * 1e5, sv.player.y + 1.65 + sd.y * 1e5, sv.player.z + sd.z * 1e5, sunSx, sunSy)) sunSx = -1;
+            }
             if (!prev.empty()) for (size_t i = 0; i < px.size(); i++) { double d = std::fabs(lum(px[i]) - lum(prev[i])); heat[i] += d; if (d > 40) pops[i]++; }
             for (size_t i = 0; i < banks.size(); i++) banks[i] = (uint8_t)(bankOf(fb.idx[i]) == 1 && fb.invz[i] == 0 ? 1 : 0);
             if (!prevBanks.empty()) for (size_t i = 0; i < banks.size(); i++) if (banks[i] != prevBanks[i]) flips++;
@@ -478,10 +489,12 @@ int runStability(const char* want, double walk) {
         writePNG(fn.c_str(), sheet.data(), FBW * 2, FBH);
         if (walk > 0)
             printf("%-18s walking %.1f m/frame: far band mean %.2f, %.2f%% of its pixels jump over 40 per frame; skyline flips %.0f px/frame; sky %.2f ground %.2f (peak %.0f) -> %s\n", sc.name, walk,
-                   farN ? farSum / farN : 0.0, farN ? 100.0 * farPops / ((double)farN * (N - 1)) : 0.0, (double)flips / (N - 1) / (FB_SCALE * FB_SCALE), skyN ? skySum / skyN : 0.0, gndN ? gndSum / gndN : 0.0, mx / (N - 1), fn.c_str());
+                    farN ? farSum / farN : 0.0, farN ? 100.0 * farPops / ((double)farN * (N - 1)) : 0.0, (double)flips / (N - 1) / (FB_SCALE * FB_SCALE), skyN ? skySum / skyN : 0.0,
+                    gndN ? gndSum / gndN : 0.0, mx / (N - 1), fn.c_str());
         else
-        printf("%-18s sun %s%.2f  sky %.2f  ground %.2f  (mean |dL| per frame, 0..255; peak %.0f) -> %s\n", sc.name,
-               sunSx >= 0 ? (sunSx >= 0 && sunSx < FBW && sunSy >= 0 && sunSy < FBH ? "in frame " : "off frame ") : "below ", sunN ? sunSum / sunN : 0.0, skyN ? skySum / skyN : 0.0, gndN ? gndSum / gndN : 0.0, mx / (N - 1), fn.c_str());
+            printf("%-18s sun %s%.2f  sky %.2f  ground %.2f  (mean |dL| per frame, 0..255; peak %.0f) -> %s\n", sc.name,
+                    sunSx >= 0 ? (sunSx >= 0 && sunSx < FBW && sunSy >= 0 && sunSy < FBH ? "in frame " : "off frame ") : "below ", sunN ? sunSum / sunN : 0.0, skyN ? skySum / skyN : 0.0,
+                    gndN ? gndSum / gndN : 0.0, mx / (N - 1), fn.c_str());
         shown++;
     }
     return shown ? 0 : 1;
@@ -698,8 +711,9 @@ void testReanchor() {
             double latA, lonA, capA, bearA, yawA = sv.player.yaw; Vec3 fwdA;
             measure(latA, lonA, capA, bearA, fwdA);
             double fwdErrM = length(fwdA - fwdB) * b.radiusKm * 1000;
-            printf("reanchor on %s: site (%.2f,%.2f) -> (%.4f,%.4f), player at (%.0f,%.0f) m; lat/lon %.4f/%.4f -> %.4f/%.4f; capsule %.0f m %.1f deg -> %.0f m %.1f deg; yaw %.3f -> %.3f; forward point moved %.1f m\n",
-                   b.name.c_str(), 62 * DEG, 0.4, sv.site.lat0, sv.site.lon0, sv.player.x, sv.player.z, latB, lonB, latA, lonA, capB, bearB, capA, bearA, yawB, yawA, fwdErrM);
+            printf("reanchor on %s: site (%.2f,%.2f) -> (%.4f,%.4f), player at (%.0f,%.0f) m; lat/lon %.4f/%.4f -> %.4f/%.4f; capsule %.0f m %.1f deg -> %.0f m %.1f deg; yaw %.3f -> %.3f; forward "
+                   "point moved %.1f m\n",
+                    b.name.c_str(), 62 * DEG, 0.4, sv.site.lat0, sv.site.lon0, sv.player.x, sv.player.z, latB, lonB, latA, lonA, capB, bearB, capA, bearA, yawB, yawA, fwdErrM);
             return;
         }
     }
@@ -725,7 +739,8 @@ int runReanchorComet(int argc, char** argv) {
                 const double t1 = nowSec(); sv.render(fb, t, nb.stars, sr, 1.0); ms[i] = (nowSec() - t1) * 1000;
                 if (i == 0) for (int j = 0; j < 3; j++) firstMs[j] = sv.lastRenderMs[j];
             }
-            printf("  re-anchor %d: the update %.1f ms, then frames %.1f, %.1f, %.1f ms (the first: palette+sky %.1f, warm %.1f, terrain %.1f)\n", k + 1, upd, ms[0], ms[1], ms[2], firstMs[0], firstMs[1], firstMs[2]);
+            printf("  re-anchor %d: the update %.1f ms, then frames %.1f, %.1f, %.1f ms (the first: palette+sky %.1f, warm %.1f, terrain %.1f)\n", k + 1, upd, ms[0], ms[1], ms[2], firstMs[0],
+                    firstMs[1], firstMs[2]);
         }
         return 0;
     }
@@ -735,7 +750,9 @@ int runReanchorComet(int argc, char** argv) {
 int runScene(int argc, char** argv) {
     std::string want = argc > 2 ? argv[2] : "felisian_shore";
     if (want == "list") { for (const CmpScene& sc : CMP_SCENES) printf("%s\n", sc.name); return 0; }   // E-02: every scene, in the table's order
-    if (argc > 3) setFramebufferScale(atoi(argv[3]));   // `scene <name> [scale] [warm]` (B-310): the frame at 1x .. 4x; R-307: warm > 0 runs that many seconds of the world first and stages the type's event in view
+    // `scene <name> [scale] [warm]` (B-310): the frame at 1x .. 4x; R-307: warm > 0 runs that many seconds of the world first and stages
+    // the type's event in view
+    if (argc > 3) setFramebufferScale(atoi(argv[3]));
     double warm = argc > 4 ? atof(argv[4]) : 0;
     SpaceRenderer sr; StarNeighborhood nb;
     if (const CmpScene* found = findScene(want)) {
@@ -753,8 +770,10 @@ int runScene(int argc, char** argv) {
                         double x = sv.player.x + fx * d - fz * s2, z = sv.player.z + fz * d + fx * s2;
                         if (sv.site.lod0.at((int)std::floor(x / 16), (int)std::floor(z / 16)).material == MAT_LAVA) { sv.eruptions.push_back({x, z, t - 6, 1}); found = true; }
                     }
-                if (found) { const SurfaceView::Eruption& e = sv.eruptions.back(); printf("  fountain staged %.0f m ahead\n", std::sqrt((e.x - sv.player.x) * (e.x - sv.player.x) + (e.z - sv.player.z) * (e.z - sv.player.z))); }
-                else printf("  fountain staged: no lava 160-420 m ahead\n");
+                if (found) {
+                    const SurfaceView::Eruption& e = sv.eruptions.back();
+                    printf("  fountain staged %.0f m ahead\n", std::sqrt((e.x - sv.player.x) * (e.x - sv.player.x) + (e.z - sv.player.z) * (e.z - sv.player.z)));
+                } else printf("  fountain staged: no lava 160-420 m ahead\n");
                 if (sc.type == PT_TECTONIC) sv.quake = 0.8;
             }
             if (sc.type == PT_STEAM) {   // the clock moved to a moment the nearest vent ahead bursts (`steamVents` on their sinter)
@@ -777,13 +796,31 @@ int runScene(int argc, char** argv) {
             if (sc.wantMat == SCENE_GEYSERS) {   // move the clock to a moment the nearest vent's jet is at full strength
                 std::vector<GeyserVent> vents; geyserVents(sv.site.gen, sv.site.unitAt(sv.player.x, sv.player.z), vents);
                 uint64_t best = 0; double bd = 1e18;
-                for (const GeyserVent& v : vents) { double vx, vz; sv.site.localAt(v.unit, vx, vz); double d = (vx - sv.player.x) * (vx - sv.player.x) + (vz - sv.player.z) * (vz - sv.player.z); if (d < bd) { bd = d; best = v.id; } }
+                for (const GeyserVent& v : vents) {
+                    double vx, vz;
+                    sv.site.localAt(v.unit, vx, vz);
+                    double d = (vx - sv.player.x) * (vx - sv.player.x) + (vz - sv.player.z) * (vz - sv.player.z);
+                    if (d < bd) {
+                        bd = d;
+                        best = v.id;
+                    }
+                }
                 double t0 = t;
                 for (double dtq = 0; dtq < 400 && SurfaceView::basinJetStrength(best, t) < 0.9; dtq += 0.5) t = t0 + dtq;
                 Input in2; sv.update(0.05, in2, t, false);
                 printf("  nearest vent %.0f m off, strength %.2f at t+%.0f s\n", std::sqrt(bd), SurfaceView::basinJetStrength(best, t), t - t0);
             }
-            if (sc.type == PT_DESERT) { SurfaceView::DustDevil d; d.x = sv.player.x + fx * 130 - fz * 20; d.z = sv.player.z + fz * 130 + fx * 20; d.height = 70; d.radius = 12; d.age = 40; d.life = 300; d.phase = 1.0; sv.devils.push_back(d); }
+            if (sc.type == PT_DESERT) {
+                SurfaceView::DustDevil d;
+                d.x = sv.player.x + fx * 130 - fz * 20;
+                d.z = sv.player.z + fz * 130 + fx * 20;
+                d.height = 70;
+                d.radius = 12;
+                d.age = 40;
+                d.life = 300;
+                d.phase = 1.0;
+                sv.devils.push_back(d);
+            }
         }
         // the sounds of the ground: the ice's and the quake's cue before the frame, the dunes' walk after it (their frame from the crest)
         SceneSound snd; const bool heard = sc.wantMat <= SCENE_SINGING_DUNES && sc.wantMat >= SCENE_QUAKES;
@@ -813,11 +850,14 @@ int runScene(int argc, char** argv) {
             writeWav16(wf, snd.pcm, 22050);
             double peak = 0, sum = 0; for (int16_t v : snd.pcm) { const double a = v / 32767.0; peak = std::max(peak, std::fabs(a)); sum += a * a; }
             const BodyGen& g = sv.site.gen;
-            if (sc.wantMat == SCENE_SINGING_DUNES) printf("  the cue: a slip face of %.0f degrees at its steepest ahead of the explorer, walked down; the hum at %.2f, its note %.0f Hz (the grains' under %.2f g)\n", slopeDeg, snd.dunes, sv.duneHz, sv.site.gravity / 9.8);
-            if (sc.wantMat == SCENE_SINGING_ICE) printf("  the cue: the ice round the explorer singing at %.2f (%d sounds in twenty seconds), the sun %.1f degrees up\n", snd.ice, snd.st.iceEvents, sv.env.sun.altitude / DEG);
+            if (sc.wantMat == SCENE_SINGING_DUNES)
+                printf("  the cue: a slip face of %.0f degrees at its steepest ahead of the explorer, walked down; the hum at %.2f, its note %.0f Hz (the grains' under %.2f g)\n", slopeDeg, snd.dunes,
+                        sv.duneHz, sv.site.gravity / 9.8);
+            if (sc.wantMat == SCENE_SINGING_ICE)
+                printf("  the cue: the ice round the explorer singing at %.2f (%d sounds in twenty seconds), the sun %.1f degrees up\n", snd.ice, snd.st.iceEvents, sv.env.sun.altitude / DEG);
             if (sc.wantMat == SCENE_QUAKES) printf("  the cue: a quake of %.2f struck as the scene began, %.2f left at the frame\n", snd.quake, atFrame);
-            printf("  heard: %s (%s), the air %.2f atm: %.0f s, peak %.3f, rms %.3f -> %s\n", sys.bodies[sv.site.body].name.c_str(), KINDS[g.type].name, sv.env.pressureAtm, snd.pcm.size() / 22050.0, peak,
-                   std::sqrt(sum / std::max<size_t>(1, snd.pcm.size())), wf.c_str());
+            printf("  heard: %s (%s), the air %.2f atm: %.0f s, peak %.3f, rms %.3f -> %s\n", sys.bodies[sv.site.body].name.c_str(), KINDS[g.type].name, sv.env.pressureAtm, snd.pcm.size() / 22050.0,
+                    peak, std::sqrt(sum / std::max<size_t>(1, snd.pcm.size())), wf.c_str());
         }
         std::string fn = std::string("shots/tests/scene_") + sc.name + ".png";
         saveFB(fb, fn.c_str());
@@ -826,8 +866,9 @@ int runScene(int argc, char** argv) {
             const Body& db = sys.bodies[sv.site.body];
             const BodyGen& dg = sv.site.gen;
             printf("  %s (%s, %.0f km, own heat %.0f K): %s; %+.0f C, %.2g atm, the lamp %s (its light 8 m ahead on the ground %.2f)\n", db.name.c_str(), KINDS[db.type].name, db.radiusKm, db.heatK,
-                   traitList(dg).c_str(), sv.env.temperatureC, sv.env.pressureAtm, sv.lamp ? "on" : "off",
-                   sv.lampAt(Vec3(sv.player.x + 8 * std::sin(sv.player.yaw), sv.site.groundHeight(sv.player.x + 8 * std::sin(sv.player.yaw), sv.player.z + 8 * std::cos(sv.player.yaw)), sv.player.z + 8 * std::cos(sv.player.yaw))));
+                    traitList(dg).c_str(), sv.env.temperatureC, sv.env.pressureAtm, sv.lamp ? "on" : "off",
+                    sv.lampAt(Vec3(sv.player.x + 8 * std::sin(sv.player.yaw), sv.site.groundHeight(sv.player.x + 8 * std::sin(sv.player.yaw), sv.player.z + 8 * std::cos(sv.player.yaw)),
+                            sv.player.z + 8 * std::cos(sv.player.yaw))));
         }
         if (sc.wantMat == SCENE_ROGUE_LAMP) {   // the same without the lamp
             sv.lamp = false;
@@ -857,13 +898,17 @@ int runScene(int argc, char** argv) {
             printf("  twenty seconds (%d streak-frames alight in the sky) -> %s\n", streaks, fn4.c_str());
         }
         if (sc.wantMat <= SCENE_METEOR_SHOWER && sc.wantMat >= SCENE_MOONLIT)   // the night's lights
-            printf("  night: the moonlight %.2f from %s at %.0f deg (sun %.1f deg), the zodiacal dust %.2f, %zu shower%s (activity %.2f)\n", sv.env.moonLight, sv.env.moonBody >= 0 ? sys.bodies[sv.env.moonBody].name.c_str() : "none",
-                   std::asin(clampd(sv.env.moonDir.y, -1, 1)) / DEG, sv.env.sun.altitude / DEG, sv.zodiDust, sv.showers.size(), sv.showers.size() == 1 ? "" : "s", sv.showers.empty() ? 0.0 : showerActivity(sv.showers[0], t));
+            printf("  night: the moonlight %.2f from %s at %.0f deg (sun %.1f deg), the zodiacal dust %.2f, %zu shower%s (activity %.2f)\n", sv.env.moonLight,
+                    sv.env.moonBody >= 0 ? sys.bodies[sv.env.moonBody].name.c_str() : "none", std::asin(clampd(sv.env.moonDir.y, -1, 1)) / DEG, sv.env.sun.altitude / DEG, sv.zodiDust,
+                    sv.showers.size(), sv.showers.size() == 1 ? "" : "s", sv.showers.empty() ? 0.0 : showerActivity(sv.showers[0], t));
         if (sc.wantMat <= SCENE_AURORA && sc.wantMat >= SCENE_AURORA_CURTAIN)   // the aurora's numbers
-            printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), field %.2f (%s), storm %.2f, R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora, STAR_CLASSES[sys.star.cls].name, sv.env.latDeg,
-                   SurfaceView::auroraOvalLat(sys.bodies[sv.site.body]), sv.lastAuroraP0, magneticField(sys.bodies[sv.site.body]), MAGNETIC_CLASS_NAMES[magneticClass(magneticField(sys.bodies[sv.site.body]))], sv.env.auroraStorm,
-                   sv.site.R / 1000.0, sv.env.skyBrightness, sv.env.cloudCover, sv.flocks.size());
-        if (sc.wantMat == SCENE_TOWN || sc.wantMat == SCENE_SHARD || sc.wantMat == SCENE_HARBOUR || sc.wantMat == SCENE_TERRACES || sc.wantMat == SCENE_ROAD || sc.wantMat == SCENE_GRAVES || sc.wantMat == SCENE_SECOND_PEOPLE || (sc.wantMat <= SCENE_AGE_PREHISTORIC && sc.wantMat >= SCENE_AGE_FAR_FUTURE))   // the ages' scenes too; C-01; C-03: the shards drawn and the one within reach; C-08; C-09; C-12: the grave within reach
+            printf("  aurora %.2f under a %s at lat %.1f (oval at %.1f, centre %.0f km poleward), field %.2f (%s), storm %.2f, R %.0f km, sky %.2f, cloud %.2f, flocks %zu\n", sv.env.aurora,
+                    STAR_CLASSES[sys.star.cls].name, sv.env.latDeg, SurfaceView::auroraOvalLat(sys.bodies[sv.site.body]), sv.lastAuroraP0, magneticField(sys.bodies[sv.site.body]),
+                    MAGNETIC_CLASS_NAMES[magneticClass(magneticField(sys.bodies[sv.site.body]))], sv.env.auroraStorm, sv.site.R / 1000.0, sv.env.skyBrightness, sv.env.cloudCover, sv.flocks.size());
+        if (sc.wantMat == SCENE_TOWN || sc.wantMat == SCENE_SHARD || sc.wantMat == SCENE_HARBOUR || sc.wantMat == SCENE_TERRACES || sc.wantMat == SCENE_ROAD || sc.wantMat == SCENE_GRAVES ||
+                sc.wantMat == SCENE_SECOND_PEOPLE ||
+                (sc.wantMat <= SCENE_AGE_PREHISTORIC &&
+                        sc.wantMat >= SCENE_AGE_FAR_FUTURE))   // the ages' scenes too; C-01; C-03: the shards drawn and the one within reach; C-08; C-09; C-12: the grave within reach
             printf("  ruins: %d pieces drawn in %.2f ms, %d shards drawn%s%s\n", sv.lastRuinElems, sv.lastRuinMs, sv.lastShardsDrawn,
                    sv.nearShard.index >= 0 ? fmt(", shard %d within reach (%s, %.1f m)", sv.nearShard.index, buildingPlaceName(sv.nearShard.place), sv.nearShard.dist).c_str() : "",
                    sv.nearGrave.k >= 0 ? fmt(", grave %d within reach (%s, %.1f m)", sv.nearGrave.k, sv.nearGrave.line.c_str(), sv.nearGrave.dist).c_str() : "");
@@ -874,18 +919,20 @@ int runScene(int argc, char** argv) {
             double cov = sv.testCanopyCoverage(200);
             printf("  biome %s, veg %.2f; trees drawn %d (near %d, mid %d, far %d), flora points %d; canopy coverage of the forest ground within 200 m: %.0f%%%s\n", BIOME_NAMES[tvp.biome], tvp.veg,
                    sv.lastTreesDrawn, sv.lastNearTrees, sv.lastMidTrees, sv.lastFarTrees, sv.lastFloraPoints, cov * 100, (sc.wantMat == SCENE_FOREST && cov < 0.6) ? " (FAIL: under 60%)" : "");
-            printf("  families %d/%d, vegColor %.2f,%.2f,%.2f, vegColor2 %.2f,%.2f,%.2f, season phase %.2f, fog %.0f m, wind %.0f kn; bank 0 stops 14/34 = %d,%d,%d / %d,%d,%d; pixel(160,120) bank %d shade %.0f\n",
-                   sv.site.gen.floraFamily, sv.site.gen.floraFamily2, sv.site.gen.vegColor.r, sv.site.gen.vegColor.g, sv.site.gen.vegColor.b, sv.site.gen.vegColor2.r, sv.site.gen.vegColor2.g, sv.site.gen.vegColor2.b,
-                   sv.seasonPhaseLocal(), sv.env.fogDistance, sv.env.windKnots, fb.pal[14 * 3], fb.pal[14 * 3 + 1], fb.pal[14 * 3 + 2], fb.pal[34 * 3], fb.pal[34 * 3 + 1], fb.pal[34 * 3 + 2],
-                   bankOf(fb.idx[(FBH * 3 / 5) * FBW + FBW / 2]), shadeOf(fb.idx[(FBH * 3 / 5) * FBW + FBW / 2]));
+            printf("  families %d/%d, vegColor %.2f,%.2f,%.2f, vegColor2 %.2f,%.2f,%.2f, season phase %.2f, fog %.0f m, wind %.0f kn; bank 0 stops 14/34 = %d,%d,%d / %d,%d,%d; pixel(160,120) bank %d "
+                   "shade %.0f\n",
+                    sv.site.gen.floraFamily, sv.site.gen.floraFamily2, sv.site.gen.vegColor.r, sv.site.gen.vegColor.g, sv.site.gen.vegColor.b, sv.site.gen.vegColor2.r, sv.site.gen.vegColor2.g,
+                    sv.site.gen.vegColor2.b, sv.seasonPhaseLocal(), sv.env.fogDistance, sv.env.windKnots, fb.pal[14 * 3], fb.pal[14 * 3 + 1], fb.pal[14 * 3 + 2], fb.pal[34 * 3], fb.pal[34 * 3 + 1],
+                    fb.pal[34 * 3 + 2], bankOf(fb.idx[(FBH * 3 / 5) * FBW + FBW / 2]), shadeOf(fb.idx[(FBH * 3 / 5) * FBW + FBW / 2]));
         }
         {   // what the lower half is drawn with (bank histogram, mean shade, the majority bank's ramp stops)
             int hist[BANKS] = {0}; double sum = 0; int n = 0;
             for (int y = FBH / 2; y < FBH; y++) for (int x = 0; x < FBW; x++) { hist[bankOf(fb.idx[y * FBW + x])]++; sum += shadeOf(fb.idx[y * FBW + x]); n++; }
             int mb = 0; for (int k = 1; k < BANKS; k++) if (hist[k] > hist[mb]) mb = k;
-            printf("  lower half: bank %d %d%%, mean shade %.1f; bank %d stops 14/34/47 = %d,%d,%d / %d,%d,%d / %d,%d,%d; sky %.2f snow %.2f dust %.2f underwater %d\n", mb, hist[mb] * 100 / n, sum / n, mb,
-                   fb.pal[(mb * 64 + 14) * 3], fb.pal[(mb * 64 + 14) * 3 + 1], fb.pal[(mb * 64 + 14) * 3 + 2], fb.pal[(mb * 64 + 34) * 3], fb.pal[(mb * 64 + 34) * 3 + 1], fb.pal[(mb * 64 + 34) * 3 + 2],
-                   fb.pal[(mb * 64 + 47) * 3], fb.pal[(mb * 64 + 47) * 3 + 1], fb.pal[(mb * 64 + 47) * 3 + 2], sv.env.skyBrightness, sv.env.snow, sv.env.dust, (int)sv.player.underwater);
+            printf("  lower half: bank %d %d%%, mean shade %.1f; bank %d stops 14/34/47 = %d,%d,%d / %d,%d,%d / %d,%d,%d; sky %.2f snow %.2f dust %.2f underwater %d\n", mb, hist[mb] * 100 / n,
+                    sum / n, mb, fb.pal[(mb * 64 + 14) * 3], fb.pal[(mb * 64 + 14) * 3 + 1], fb.pal[(mb * 64 + 14) * 3 + 2], fb.pal[(mb * 64 + 34) * 3], fb.pal[(mb * 64 + 34) * 3 + 1],
+                    fb.pal[(mb * 64 + 34) * 3 + 2], fb.pal[(mb * 64 + 47) * 3], fb.pal[(mb * 64 + 47) * 3 + 1], fb.pal[(mb * 64 + 47) * 3 + 2], sv.env.skyBrightness, sv.env.snow, sv.env.dust,
+                    (int)sv.player.underwater);
         }
     }
     return 0;
@@ -899,7 +946,8 @@ int runCapsule(int argc, char** argv) {
         const CmpScene& sc = *found;
         StarSystem sys; SurfaceView sv; double t = 0;
         if (!setupSceneForType(sc.type, sc.latDeg, sc.alt, sc.yawOff, sc.pitch, sv, sys, nb, t, sc.wantMat)) { printf("no body\n"); return 1; }
-        printf("  site: star %lld %lld %lld body %d lat %.4f lon %.4f t %.1f\n", (long long)sys.star.sx, (long long)sys.star.sy, (long long)sys.star.sz, sv.site.body, sv.site.lat0 / DEG, sv.site.lon0 / DEG, t);
+        printf("  site: star %lld %lld %lld body %d lat %.4f lon %.4f t %.1f\n", (long long)sys.star.sx, (long long)sys.star.sy, (long long)sys.star.sz, sv.site.body, sv.site.lat0 / DEG,
+                sv.site.lon0 / DEG, t);
         const double alts[8] = {1800, 1300, 900, 600, 400, 250, 120, 40};
         std::vector<uint32_t> sheet((size_t)FBW * 4 * FBH * 2, 0xFF000000u), px((size_t)FBW * FBH);
         bool bad = false;
@@ -912,7 +960,8 @@ int runCapsule(int argc, char** argv) {
             double dip = std::sqrt(2 * alts[k] / sv.site.R);   // the horizon sits below the level line by the curvature's dip at this height
             double horizon = sv.proj.cy - sv.proj.f * std::tan(-sv.cameraOverridePitch - dip) + 1;
             int holes = 0, rows = 0;
-            for (int y = std::max(0, (int)std::ceil(horizon)); y < FBH; y++) for (int x = 0; x < FBW; x++) { rows++; if (bankOf(fb.idx[y * FBW + x]) == 1 && fb.invz[y * FBW + x] == 0) holes++; }   // the beacon beam is on the sky bank too, but has a depth
+            // the beacon beam is on the sky bank too, but has a depth
+            for (int y = std::max(0, (int)std::ceil(horizon)); y < FBH; y++) for (int x = 0; x < FBW; x++) { rows++; if (bankOf(fb.idx[y * FBW + x]) == 1 && fb.invz[y * FBW + x] == 0) holes++; }
             double share = rows ? 100.0 * holes / rows : 0.0;
             if (share > 0.5) bad = true;
             printf("  %4.0f m pitch %5.1f: sky below the horizon %.2f%%%s\n", alts[k], sv.cameraOverridePitch / DEG, share, share > 0.5 ? "  <-- HOLES" : "");
@@ -946,10 +995,13 @@ int runSpot(int argc, char** argv) {
     sv.init(&sys, bi, lat, lon, t);
     nb.update(sv.site.worldPos(t, 0, 0, 0));
     const Body& b = sys.bodies[bi];
-    printf("%s (%s) at %.3f %.3f, t %.1f, sea %s %.1f, ground %.1f water %.1f\n", b.name.c_str(), KINDS[b.type].name, lat / DEG, lon / DEG, t, sv.site.hasWater ? "yes" : "no", sv.site.seaLevel, sv.site.groundHeight(0, 0), sv.site.waterAt(0, 0));
-    printf("  %zu works within %.0f km (the world's %s); the explorer at %.0f %.0f\n", sv.workNear.size(), SurfaceView::PLAN_NEAR_M / 1000, sv.worksHere ? "built" : "NOT BUILT", sv.player.x, sv.player.z);
+    printf("%s (%s) at %.3f %.3f, t %.1f, sea %s %.1f, ground %.1f water %.1f\n", b.name.c_str(), KINDS[b.type].name, lat / DEG, lon / DEG, t, sv.site.hasWater ? "yes" : "no", sv.site.seaLevel,
+            sv.site.groundHeight(0, 0), sv.site.waterAt(0, 0));
+    printf("  %zu works within %.0f km (the world's %s); the explorer at %.0f %.0f\n", sv.workNear.size(), SurfaceView::PLAN_NEAR_M / 1000, sv.worksHere ? "built" : "NOT BUILT", sv.player.x,
+            sv.player.z);
     for (const SurfaceView::WorkNear& wn : sv.workNear) if (std::hypot(wn.x - sv.player.x, wn.z - sv.player.z) - wn.radius < 4000 || getenv("SPOT_WORKS"))   // the works the view draws round the spot
-        printf("  %s%s %.0f m off at %.0f %.0f (its reach %.0f, its ground %.0f m)\n", WORK_KIND_NAMES[wn.work->kind], wn.work->land ? "" : " (the world's)", std::hypot(wn.x - sv.player.x, wn.z - sv.player.z), wn.x, wn.z, wn.radius, wn.work->ground);
+            printf("  %s%s %.0f m off at %.0f %.0f (its reach %.0f, its ground %.0f m)\n", WORK_KIND_NAMES[wn.work->kind], wn.work->land ? "" : " (the world's)",
+                    std::hypot(wn.x - sv.player.x, wn.z - sv.player.z), wn.x, wn.z, wn.radius, wn.work->ground);
     if (kind == "swim") {
         // the nearest water at least 3 m deep within 3 km, the player afloat in it
         double bx = 0, bz = 0, bd = 1e9;
@@ -981,7 +1033,8 @@ int runSpot(int argc, char** argv) {
         }
         double eyeOff = argc > 13 ? atof(argv[13]) : 1e9;   // the thirteenth argument: the eye's height over the water, forced
         if (eyeOff < 1e8) { sv.player.y = w + eyeOff - sv.player.eyeHeight; sv.player.bobY = 0; sv.player.landDip = 0; sv.player.underwater = eyeOff < -0.05; }
-        printf("swimming %d underwater %d at (%.0f, %.0f) eye %.2f water %.2f ground %.2f, %.0f m from the site\n", (int)sv.player.swimming, (int)sv.player.underwater, bx, bz, sv.player.y + sv.player.eyeHeight, w, sv.site.groundHeight(bx, bz), bd);
+        printf("swimming %d underwater %d at (%.0f, %.0f) eye %.2f water %.2f ground %.2f, %.0f m from the site\n", (int)sv.player.swimming, (int)sv.player.underwater, bx, bz,
+                sv.player.y + sv.player.eyeHeight, w, sv.site.groundHeight(bx, bz), bd);
         Framebuffer fb; sv.render(fb, t, nb.stars, sr, 1.0); fb.mush(2);
         {   // the lod0 and near-ring vertices round the swimmer: height / water / material
             int cx0 = (int)std::floor(bx / 16), cz0 = (int)std::floor(bz / 16);
@@ -995,7 +1048,8 @@ int runSpot(int argc, char** argv) {
                 for (int dx = -2; dx <= 2; dx++) { const TerrainVertex& v = sv.site.lodN.at(nx0 + dx, nz0 + dz); printf("  %7.1f/%6.1f/m%d", v.h, v.water > -1e8 ? v.water : -99.0, v.material); }
                 printf("\n");
             }
-            printf("  groundHeight %.2f coarse %.2f waterAt %.2f nearBand %d lod0R %d nearR %d nearBlend %.2f\n", sv.site.groundHeight(bx, bz), sv.site.groundHeightCoarse(bx, bz), sv.site.waterAt(bx, bz), sv.site.nearBand, sv.site.lod0R, sv.site.nearR, sv.site.nearBlend);
+            printf("  groundHeight %.2f coarse %.2f waterAt %.2f nearBand %d lod0R %d nearR %d nearBlend %.2f\n", sv.site.groundHeight(bx, bz), sv.site.groundHeightCoarse(bx, bz),
+                    sv.site.waterAt(bx, bz), sv.site.nearBand, sv.site.lod0R, sv.site.nearR, sv.site.nearBlend);
         }
         std::string fn = std::string("shots/tests/spot_swim_") + argv[10 < argc ? 10 : 9] + "_" + argv[11 < argc ? 11 : 9] + (argc > 13 ? std::string("_e") + argv[13] : std::string()) + ".png";
         saveFB(fb, fn.c_str());
@@ -1028,7 +1082,19 @@ int runSpot(int argc, char** argv) {
         for (int cz = half; cz >= -half; cz--) {
             for (int cx = -half; cx <= half; cx++) {
                 const TerrainVertex& v = sv.site.lod1.at(cx, cz);
-                char m = v.material == MAT_WATER ? 'W' : (v.material == MAT_ICE ? 'i' : (v.material == MAT_SAND ? 's' : (v.material == MAT_DUST ? 'd' : (v.material == MAT_LAVA ? 'L' : (v.material == MAT_BASALT ? 'b' : (v.material == MAT_SULPHUR ? 'y' : (v.material == MAT_SALT ? 'S' : '.')))))));
+                char m = v.material == MAT_WATER
+                        ? 'W'
+                        : (v.material == MAT_ICE
+                                          ? 'i'
+                                          : (v.material == MAT_SAND
+                                                            ? 's'
+                                                            : (v.material == MAT_DUST
+                                                                              ? 'd'
+                                                                              : (v.material == MAT_LAVA
+                                                                                                ? 'L'
+                                                                                                : (v.material == MAT_BASALT
+                                                                                                                  ? 'b'
+                                                                                                                  : (v.material == MAT_SULPHUR ? 'y' : (v.material == MAT_SALT ? 'S' : '.')))))));
                 if (alt < 0) {   // negative alt: shore distance / height over the water (metres); "  ----  " = no water here
                     if (v.water > -1e8f) printf(" %4.0f/%+5.1f", v.shore < 1e8f ? v.shore : 9999.0, v.h - v.water); else printf("   ----   ");
                 } else printf("%5d%c", (int)std::lround(v.h), m);

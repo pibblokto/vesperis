@@ -787,7 +787,12 @@ double planCountryside(const WorldPlan& P, double lat, double lon, int people) {
     if (pp.age == AGE_FAR_FUTURE) return 0;
     const Vec3 u = StarSystem::bodyFromLatLon(lat, lon);
     double dMin = 1e9;   // the nearest of the people's places (km)
-    forCellsNear(P.grid, u, 60.0, [&](int c) { for (uint32_t ref : P.placesIn[c]) { const PlanPlace& p = placeOf(P, ref); if (p.people == pp.people) dMin = std::min(dMin, arcLength(u, p.unit, P.grid.R)); } });
+    forCellsNear(P.grid, u, 60.0, [&](int c) {
+        for (uint32_t ref : P.placesIn[c]) {
+            const PlanPlace& p = placeOf(P, ref);
+            if (p.people == pp.people) dMin = std::min(dMin, arcLength(u, p.unit, P.grid.R));
+        }
+    });
     if (pp.age == AGE_FUTURISTIC) return 0.7 * std::exp(-dMin / 12.0);   // a futuristic people's pods round its great places alone
     const double base = gridBilinear(P.grid, P.countryside, lat, lon) / 255.0;
     if (base <= 0) return 0;

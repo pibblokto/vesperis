@@ -18,7 +18,8 @@
 #include <sstream>
 
 namespace {
-const char* const GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",   // the sights are marked on the sector map (N), not named here
+// the sights are marked on the sector map (N), not named here
+const char* const GUIDE_ITEMS[] = {"STAR MAP", "NAME THIS STAR", "NAME THIS WORLD", "WRITE A NOTE", "EXPEDITION LOG", "GALLERY", "STATISTICS", "THE SHARDS",
                              "TARGET A STAR BY NAME", "TARGET BY COORDINATES", "RETURN TO THE PREVIOUS STAR", "TARGET THE HOME STAR",
                              "SET HOME HERE", "EXPORT THE GUIDE", "IMPORT AN INBOX FILE", "BACK"};
 const int GUIDE_N = (int)(sizeof(GUIDE_ITEMS) / sizeof(GUIDE_ITEMS[0]));
@@ -47,7 +48,10 @@ void Game::updateGuideMenu(const Input& in) {
     bool onSurface = guideReturn == GameState::SURFACE;
     switch (guideSel) {
         case 0: if (!onSurface) openStarMap(); else status("THE STAR MAP IS READ FROM THE SHIP", 3); break;
-        case 1: if (sys.valid) beginTextEntry(sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string()); else status("NO STAR HERE", 3); break;   // D-02: a drifter's place
+        case 1:
+            if (sys.valid) beginTextEntry(sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, starNamed(sys.star) ? upper(starNameOf(sys.star)) : std::string());
+            else status("NO STAR HERE", 3);
+            break;   // D-02: a drifter's place
         case 2: {
             int bi = onSurface && surf.valid ? surf.site.body : ship.localTarget;
             if (sys.valid && bi >= 0 && bi < (int)sys.bodies.size()) { textBody = bi; beginTextEntry("NAME THIS WORLD", TEXT_WORLD, bodyNamed(bi) ? upper(bodyNameOf(bi)) : std::string()); }
@@ -64,7 +68,12 @@ void Game::updateGuideMenu(const Input& in) {
         case 10: if (!onSurface) targetPreviousStar(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
         case 11: if (!onSurface) targetHome(); else status("TARGETING IS DONE FROM THE SHIP", 3); break;
         case 12: if (sys.valid) { guide.home = starKeyOf(sys.star); guide.save(guidePath); status(fmt("HOME STAR: %s", upper(starNameOf(sys.star)).c_str()), 4); state = guideReturn; } break;
-        case 13: { std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt"; status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5); state = guideReturn; break; }
+        case 13: {
+            std::string p = guidePath.substr(0, guidePath.rfind('.')) + "_export.txt";
+            status(guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5);
+            state = guideReturn;
+            break;
+        }
         case 14: importInboxFile(); state = guideReturn; break;   // the names into the inbox, the friend's read shards lent
         default: state = guideReturn; break;
     }
@@ -78,7 +87,10 @@ void Game::renderGuideMenu() {
         int y = y0 + i * 9;
         bool sel = i == guideSel;
         std::string label = GUIDE_ITEMS[i];
-        if (i == 2 && sys.valid) { int bi = guideReturn == GameState::SURFACE && surf.valid ? surf.site.body : ship.localTarget; if (bi >= 0 && bi < (int)sys.bodies.size() && bodyNamed(bi)) label = "RENAME " + trunc(upper(bodyNameOf(bi)), 22); }
+        if (i == 2 && sys.valid) {
+            int bi = guideReturn == GameState::SURFACE && surf.valid ? surf.site.body : ship.localTarget;
+            if (bi >= 0 && bi < (int)sys.bodies.size() && bodyNamed(bi)) label = "RENAME " + trunc(upper(bodyNameOf(bi)), 22);
+        }
         if (i == 1 && sys.valid && starNamed(sys.star)) label = "RENAME " + trunc(upper(starNameOf(sys.star)), 22);
         else if (i == 1 && sys.valid && sys.sunless()) label = "NAME THIS PLACE";   // a drifter's place is the explorer's to name as a system is
         drawText(canvas, 56, y, label.c_str(), sel ? HUD_WHITE : HUD_GREEN);
@@ -247,15 +259,19 @@ void Game::renderStats() {
     line(fmt("WORLDS LANDED ON      %d", (int)guide.landed.size()), HUD_GREEN);
     line(fmt("STAR CLASSES SEEN     %d/%d", (int)guide.classesSeen.size(), STAR_DRAWN_COUNT), HUD_GREEN);
     std::string cls; for (int c : guide.classesSeen) cls += std::string(STAR_CLASSES[c].code) + " ";
-    { std::vector<std::string> rows = wrapText(cls, 48); for (size_t k = 0; k < rows.size() && k < 2; k++) sub("  " + rows[k]); }   // the codes on their own line (two past twelve classes), like the world types; ten of them overran the count's line
+    // the codes on their own line (two past twelve classes), like the world types; ten of them overran the count's line
+    { std::vector<std::string> rows = wrapText(cls, 48); for (size_t k = 0; k < rows.size() && k < 2; k++) sub("  " + rows[k]); }
     line(fmt("WORLD TYPES WALKED    %d/%d", (int)guide.typesSeen.size(), landableTypeCount()), HUD_GREEN);
     sub("  " + statsKindsLine());
     line(fmt("FURTHEST FROM HOME    %.2f LY", guide.furthestFromHomeLY), HUD_GREEN);
     line(fmt("LONGEST WALK          %.2f KM FROM THE CAPSULE", guide.longestWalkM / 1000.0), HUD_GREEN);
     line(fmt("HIGHEST POINT REACHED %.0f M", guide.highestPointM), HUD_GREEN);
-    line(fmt("FOOT, DRIVEN, FLOWN   %.1f / %.1f / %.1f KM", guide.totalWalkedM / 1000.0, guide.totalDrivenM / 1000.0, guide.totalFlownM / 1000.0), HUD_GREEN);   // one line, the shards took the other; R-403: the drone's kilometres
-    line(fmt("SHARDS TAKEN          %d FROM %d WORLD%s   DECODED %d", (int)guide.shards.size(), guide.shardWorlds(), guide.shardWorlds() == 1 ? "" : "S", (int)guide.decoded.size()), HUD_GREEN);   // C-03; C-06: read on the ship
-    sub(fmt("  GRAVES READ %d   ENDED %d   LENT %d   INSTRUMENTS %d", (int)guide.graves.size(), (int)guide.ended.size(), guide.lentCount(), (int)guide.instruments.size()));   // C-12; C-14: the inbox's shards; C-11: the case
+    // one line, the shards took the other; R-403: the drone's kilometres
+    line(fmt("FOOT, DRIVEN, FLOWN   %.1f / %.1f / %.1f KM", guide.totalWalkedM / 1000.0, guide.totalDrivenM / 1000.0, guide.totalFlownM / 1000.0), HUD_GREEN);
+    // C-03; C-06: read on the ship
+    line(fmt("SHARDS TAKEN          %d FROM %d WORLD%s   DECODED %d", (int)guide.shards.size(), guide.shardWorlds(), guide.shardWorlds() == 1 ? "" : "S", (int)guide.decoded.size()), HUD_GREEN);
+    // C-12; C-14: the inbox's shards; C-11: the case
+    sub(fmt("  GRAVES READ %d   ENDED %d   LENT %d   INSTRUMENTS %d", (int)guide.graves.size(), (int)guide.ended.size(), guide.lentCount(), (int)guide.instruments.size()));
     line(fmt("NAMES GIVEN           %d   FROM OTHERS %d", (int)guide.names.size(), (int)guide.inbox.size()), HUD_GREEN);
     line(fmt("LOG ENTRIES           %d   PHOTOGRAPHS %d", (int)guide.log.size(), guide.screenshots), HUD_GREEN);
     line(fmt("CREATURES SIGHTED     %d SPECIES   SIGNALS HEARD %d", guide.creaturesSeen, (int)guide.signals.size()), HUD_GREEN);   // N3-01; C-07: the radar's locks
@@ -263,7 +279,10 @@ void Game::renderStats() {
                          : fmt("  PROBES SENT 0   DRONE TRIPS %d, %d FINDS", guide.droneTrips, guide.droneFinds));
     line(fmt("LONGEST DRIVE         %.2f KM   TOP SPEED %.0f KM/H", guide.longestDriveM / 1000.0, guide.topSpeedKmh), HUD_GREEN);
     int64_t hx, hy, hz;
-    if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) { Star h; if (placeInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN); }
+    if (!guide.home.empty() && Guide::parseStarKey(guide.home, hx, hy, hz)) {
+        Star h;
+        if (placeInSector(hx, hy, hz, h, true)) line(fmt("HOME STAR             %s (%s)", upper(starNameOf(h)).c_str(), STAR_CLASSES[h.cls].code), HUD_CYAN);
+    }
     drawTextCentered(canvas, UW / 2, UH - 10, statsKindsOverflow() ? "K WORLD TYPES   ANY OTHER KEY CLOSES" : "ANY KEY TO CLOSE", HUD_DIM);
 }
 

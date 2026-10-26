@@ -125,7 +125,8 @@ inline CraterChain chainOf(const FeatureHit& f) {
 // Crater field (M9-06): returns height (metres); accumulates rim brightness, floor darkening,
 // bright ray systems of young craters, mare flooding of old large basins and the secondary
 // field around large craters (which raises the density of the small crater pass).
-struct CraterMarks { double rimBright = 0, floorDark = 0, rays = 0, flooded = 0, secondary = 0, young = 0; };   // young, 1 at the middle of the floor of a young crater 2 km wide or more (the brine dwarf's faculae)
+// young, 1 at the middle of the floor of a young crater 2 km wide or more (the brine dwarf's faculae)
+struct CraterMarks { double rimBright = 0, floorDark = 0, rays = 0, flooded = 0, secondary = 0, young = 0; };
 double craterField(const Vec3& p, double R, double cellKm, double density, double depthScale, uint64_t seed, CraterMarks& m, double detailM);
 double domeField(const Vec3& p, double R, double cellKm, double density, uint64_t seed, double radiusFrac, double heightM, double flatTop);
 double volcanoField(const Vec3& p, double R, double cellKm, double density, uint64_t seed, double coneHeightM, bool& inCaldera);
@@ -152,7 +153,9 @@ double duneField(const Vec3& p, const BodyGen& g, double lat, double amp, double
 // sediment); the coordinate is folded twice by low-frequency noise so ridges curve. Every octave fades with `lodFade`
 // and the weights depend only on the coarser octaves, so the map, the far ring and the ground add the same terms at
 // their own scales. Returns metres and the gradient of the sum on the tangent plane (rise over run).
-struct ReliefSum { double h = 0; double slope = 0; double hCoarse = 0; Vec3 gradT; double hM = 0, slopeM = 0; Vec3 gradM; };   // hCoarse = the octaves of 2 km and longer, with the floor; O6-04: gradT = the gradient on the tangent plane, rise over run, uphill; B-404: hM, slopeM, gradM = the material chain, the octaves of MAT_WL_KM and longer unfaded at every sampling scale
+// hCoarse = the octaves of 2 km and longer, with the floor; O6-04: gradT = the gradient on the tangent plane, rise over run, uphill; B-404:
+// hM, slopeM, gradM = the material chain, the octaves of MAT_WL_KM and longer unfaded at every sampling scale
+struct ReliefSum { double h = 0; double slope = 0; double hCoarse = 0; Vec3 gradT; double hM = 0, slopeM = 0; Vec3 gradM; };
 ReliefSum reliefSum(const Vec3& p, const Vec3& unit, const BodyGen& g, double a0, double ridge, uint64_t seed, double detailM);
 // the amplitude of the relief sum from the mountain intensity `rel` (0..1) and the hill country field `hillsF` (0..1)
 inline double reliefAmp(const BodyGen& g, double rel, double hillsF) { return g.reliefFlat + (g.reliefHill - g.reliefFlat) * hillsF * (1 - rel) + (g.reliefMtn - g.reliefFlat) * rel; }
@@ -171,8 +174,17 @@ double plainRelief(const Vec3& p, const BodyGen& g, double mask, double gullies,
 // the ground alone (spires, polygons, terraces, crevasses), `flatten` melts the ground into the smooth ground by that
 // fraction, `flatOffset` metres off it (playas, glaciers); `mat`/`albedo` override the material where set. Every term
 // fades with the sampling scale (`lodFade`, `scaleVisible`) so the map, the far rings and the ground agree
-struct LandCtx { double landMask = 1, moist = 0.15, relief0 = 0, h = 0, hS = 0, T = 15, hM = 0, slope = 0; };   // hM = the ground on the material chain's relief, slope = that chain's slope (the same in every ring)
-struct LandOut { double dhSmooth = 0, dhFine = 0, flatten = 0, flatOffset = 0; int mat = -1; double albedo = -1; double glacier = 0, riftFloor = 0; double mark = 0; int markTrait = 0; double tint = 0, life = 0, slip = 0; };   // Q-02: tint, the ground trait's field (`SurfaceSample::groundTint`); life, the life trait's on the land (a petrified forest's)   // mark: 1 where the landform is at its most distinctive (the galleries); Q-01: markTrait, the trait that set it
+// hM = the ground on the material chain's relief, slope = that chain's slope (the same in every ring)
+struct LandCtx { double landMask = 1, moist = 0.15, relief0 = 0, h = 0, hS = 0, T = 15, hM = 0, slope = 0; };
+struct LandOut {
+    double dhSmooth = 0, dhFine = 0, flatten = 0, flatOffset = 0;
+    int mat = -1;
+    double albedo = -1;
+    double glacier = 0, riftFloor = 0;
+    double mark = 0;                       // 1 where the landform is at its most distinctive (the galleries)
+    int markTrait = 0;                     // the trait that set it
+    double tint = 0, life = 0, slip = 0;   // tint: the ground trait's field (`SurfaceSample::groundTint`); life: the life trait's on the land
+};
 void landformsAt(const BodyGen& g, const Vec3& p, const Vec3& unit, double detailM, const LandCtx& c, LandOut& o);
 
 // O6-03: the drainage cut into the ground at a point (and, given `hS`, into the smooth ground). The valley melts the
@@ -199,7 +211,8 @@ inline double plumeStreakKm(double u) { return 45.0 + 65.0 * u; }   // a streak'
 // the edge of a cryovolcanic cap (degrees of latitude, south of it the cap) and the dry ice cap's (poleward of it) at a point
 inline double cryoCapEdge(const BodyGen& g, const Vec3& unit) { return g.iceCapLat + 4.0 * gnoise3(unit * 6.0, g.sF + 51); }
 inline double dryCapEdge(const BodyGen& g, const Vec3& unit) { return g.iceCapLat + 5.0 * gnoise3(unit * g.R / (g.R * 0.15), g.sF + 7); }   // `groundThinAir`'s
-inline double dryFrostDeg(const BodyGen& g, bool north) { return 12.0 * smoothstep(0.6, -0.4, north ? g.season : -g.season); }   // the seasonal frost's reach past the cap (degrees): 12 in winter, none by midsummer
+// the seasonal frost's reach past the cap (degrees): 12 in winter, none by midsummer
+inline double dryFrostDeg(const BodyGen& g, bool north) { return 12.0 * smoothstep(0.6, -0.4, north ? g.season : -g.season); }
 // P-06: the patchwork's coronae: up to three ovals 0.26-0.38 of the radius across their long axis, squared off at the corners (a superellipse
 // of exponent 2.5-4), each clear of the others; in the gnomonic plane of its middle (km along `e1` and `e2`)
 struct Corona { Vec3 c, e1, e2; double a = 0, b = 0, n = 2, sp = 8, amp = 400, band = 0; };
@@ -311,7 +324,8 @@ struct GroundCtx {
         if (hRel) *hRel = h0;
         if (doShape) shape(h, rf, rel, hf);
         {   // the traits' landforms
-            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = h0 + rf.hM; lc.slope = rf.slopeM;   // the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
+            // the ground on the material chain's relief alone (the cliffs and the plains fade by the ring)
+            LandCtx lc; lc.relief0 = clampd(rel + 0.25 * hf, 0, 1); lc.h = h; lc.hS = h - (rf.h - rf.hCoarse); lc.T = g.tempBias / 0.3 + 15; lc.hM = h0 + rf.hM; lc.slope = rf.slopeM;
             // the world's own moisture and warmth. A world it rains on reads its moisture as the living ground's field round its kind's mean
             // (`landMoist`: a dry world's stays 0.15), and every world its mean temperature as the explorer's thermometer reads it (the surface's
             // model without the day: its air's greenhouse, its latitude, its height), where they read the equilibrium alone: an acidic world's

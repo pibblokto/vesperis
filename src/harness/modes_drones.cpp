@@ -15,8 +15,8 @@ static int printDroneWorld(int64_t sx, int64_t sz, int body) {
     DroneWorld W; droneWorldOf(sys, body, W);
     int kinds[DF_COUNT] = {}, homed = 0;
     for (const DroneItem& it : W.items) { kinds[std::max(0, std::min(DF_COUNT - 1, it.kind))]++; if (it.place >= 0) homed++; }
-    printf("%s: %d people%s, %d items (%d texts, %d music, %d star charts, %d instruments), %d places their homes, %d items at a home, read in %.0f ms\n", sys.bodies[body].name.c_str(), W.peoples, W.peoples == 1 ? "" : "s",
-           (int)W.items.size(), kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], (int)W.places.size(), homed, W.buildMs);
+    printf("%s: %d people%s, %d items (%d texts, %d music, %d star charts, %d instruments), %d places their homes, %d items at a home, read in %.0f ms\n", sys.bodies[body].name.c_str(), W.peoples,
+            W.peoples == 1 ? "" : "s", (int)W.items.size(), kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], (int)W.places.size(), homed, W.buildMs);
     for (int i = 0; i < 3; i++) {
         DroneHaul H; droneHaulOf(W, std::vector<bool>(W.items.size(), false), 0xD00ULL + i, H);
         printf("  haul %d: %d finds\n", i + 1, H.total);
@@ -48,7 +48,12 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     Input gi;
     auto run = [&](double secs) { runFramesAtLeastOne(game, gi, secs); };
     auto press = [&](int key) { pressKey(game, gi, key); };
-    auto shot = [&](const std::string& what) { if (!frames) return; const std::string fn = fmt("shots/tests/drones_%s.png", what.c_str()); writePNG(fn.c_str(), game.output(), FBW, FBH); printf("    %s\n", fn.c_str()); };
+    auto shot = [&](const std::string& what) {
+        if (!frames) return;
+        const std::string fn = fmt("shots/tests/drones_%s.png", what.c_str());
+        writePNG(fn.c_str(), game.output(), FBW, FBH);
+        printf("    %s\n", fn.c_str());
+    };
     auto held = [&]() { std::set<std::string> h(game.guide.shards.begin(), game.guide.shards.end()); h.insert(game.guide.instruments.begin(), game.guide.instruments.end()); return h; };
     auto atRack = [&]() { game.setState(GameState::SPACE); game.testCabinGoto(-0.3, 1.435, -PI / 2, -0.38); run(0.1); };
     run(0.2); game.testParkAt(st, W.body); run(0.2); game.setState(GameState::SPACE); run(0.2);
@@ -59,10 +64,12 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     press(KEY_E); run(0.1);
     const bool open = game.state == GameState::DRONES;
     game.testDronesSettle(); run(0.2);
-    const int items = game.testDronesWorldItems(-1, false), texts = game.testDronesWorldItems(DF_TEXT), music = game.testDronesWorldItems(DF_MUSIC), charts = game.testDronesWorldItems(DF_CHART), instr = game.testDronesWorldItems(DF_INSTRUMENT);
+    const int items = game.testDronesWorldItems(-1, false), texts = game.testDronesWorldItems(DF_TEXT), music = game.testDronesWorldItems(DF_MUSIC), charts = game.testDronesWorldItems(DF_CHART),
+              instr = game.testDronesWorldItems(DF_INSTRUMENT);
     shot("screen_ready");
     ck("the drone bay: the rack and its screen (C-18)", facing == FACE_BAY && open && items > 0 && instr > 0 && charts > 0,
-       fmt("facing %d (11 the bay), the screen %s; %s holds %d for them: %d texts, %d music, %d star charts, %d instruments", facing, open ? "open" : "NOT OPEN", sys.bodies[W.body].name.c_str(), items, texts, music, charts, instr));
+            fmt("facing %d (11 the bay), the screen %s; %s holds %d for them: %d texts, %d music, %d star charts, %d instruments", facing, open ? "open" : "NOT OPEN", sys.bodies[W.body].name.c_str(),
+                    items, texts, music, charts, instr));
     // ---- the launch: Enter, the screen gone to the rack, the drones out of their ports one after another
     const std::set<std::string> before = held();
     press(KEY_ENTER);
@@ -123,9 +130,13 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     game.testOpenDroneBay(); run(0.05); shot("screen_seen"); press(KEY_ESCAPE); run(0.05);
     ck("the drone bay: the finds go from the rack once seen (R-414)", listed == total && afterSeen == 0 && keptInGuide && game.state == GameState::SPACE,
        fmt("%d listed on the screen; after it closed %d on the rack, the guide's %s", listed, afterSeen, keptInGuide ? "as they were" : "CHANGED"));
-    ck("the drone bay: a trip's finds aboard (C-18)", searching.rfind("IN ", 0) == 0 && !game.testDronesOut() && perOk == DRONE_COUNT && total >= 6 && total <= 24 && aboard == total && grew == total && dup == 0 && old == 0 && searchOk == DRONE_COUNT,
-       fmt("drone 1 at a stop %s; searching %s (two minutes each %d of 3); %d finds (%d texts, %d music, %d charts, %d instruments) of %d wanted, each drone 2 to 8 and what it wanted %d of 3, %d aboard, the guide %d more; %d found twice, %d held before; %s",
-           searching.c_str(), searches.c_str(), searchOk, total, kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], wantedSum, perOk, aboard, grew, dup, old, trunc(game.testStatus(), 40).c_str()));
+    ck("the drone bay: a trip's finds aboard (C-18)",
+            searching.rfind("IN ", 0) == 0 && !game.testDronesOut() && perOk == DRONE_COUNT && total >= 6 && total <= 24 && aboard == total && grew == total && dup == 0 && old == 0 &&
+                    searchOk == DRONE_COUNT,
+            fmt("drone 1 at a stop %s; searching %s (two minutes each %d of 3); %d finds (%d texts, %d music, %d charts, %d instruments) of %d wanted, each drone 2 to 8 and what it wanted %d of 3, "
+                "%d aboard, the guide %d more; %d found twice, %d held before; %s",
+                    searching.c_str(), searches.c_str(), searchOk, total, kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], wantedSum, perOk, aboard, grew, dup, old,
+                    trunc(game.testStatus(), 40).c_str()));
     // ---- the charge: refused until five minutes from the return (not from the launch), then a second trip that brings none of the first's,
     // watched on the decoder: the world's records listed open there grow as the drones dock (the user's: "when drones arrive everything
     // immediately appears on shard decoder")
@@ -159,9 +170,11 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     int again = 0, n2 = 0;
     for (int k = 0; k < DRONE_COUNT; k++) for (int i = 0; i < game.testDronesOfDrone(k); i++) { n2++; if (before2.count(game.testDronesFindKey(k, i))) again++; }
     ck("the drone bay: five minutes charging from the return (C-18)", refused && refusedAtOld && stillRefused && second && !game.testDronesOut() && n2 >= 6 && again == 0,
-       fmt("refused after the trip (%s), at %.0f s from the launch still, and at %.0f s (back at %.1f), sent at %.1f; the second brought %d, %d of them held before", trunc(why, 40).c_str(), DRONE_COOLDOWN_S + 0.1, back1 + DRONE_COOLDOWN_S - 2, back1, back1 + DRONE_COOLDOWN_S + 0.1, n2, again));
+            fmt("refused after the trip (%s), at %.0f s from the launch still, and at %.0f s (back at %.1f), sent at %.1f; the second brought %d, %d of them held before", trunc(why, 40).c_str(),
+                    DRONE_COOLDOWN_S + 0.1, back1 + DRONE_COOLDOWN_S - 2, back1, back1 + DRONE_COOLDOWN_S + 0.1, n2, again));
     ck("the decoder open as the drones dock (C-18)", decoderOpen && levelBefore == 1 && levelAfter == 1 && which >= 0 && listedAfter == heldNow && listedAfter >= listedBefore,
-       fmt("the decoder %s; people %d's records listed %d before the docks, %d after (the guide %d), at the world's records %s", decoderOpen ? "open" : "NOT OPEN", which + 1, listedBefore, listedAfter, heldNow, levelBefore == 1 && levelAfter == 1 ? "throughout" : "NOT THROUGHOUT"));
+            fmt("the decoder %s; people %d's records listed %d before the docks, %d after (the guide %d), at the world's records %s", decoderOpen ? "open" : "NOT OPEN", which + 1, listedBefore,
+                    listedAfter, heldNow, levelBefore == 1 && levelAfter == 1 ? "throughout" : "NOT THROUGHOUT"));
     // ---- a recall: the ship leaves its parking mid-trip; what was found comes aboard, the rest stays down there
     game.testDronesSkip(game.testDronesBack() + DRONE_COOLDOWN_S + 0.1);
     const std::set<std::string> before3 = held();
@@ -173,8 +186,9 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     const int wantedAll = game.testDronesFinds();
     game.testPlaceShip(game.testShipPos()); run(0.05);   // the parking left
     const int brought = (int)held().size() - (int)before3.size();
-    ck("the drone bay: called back as the ship leaves (C-18)", third && !game.testDronesOut() && brought == game.testDronesAboard() && brought > 0 && brought < wantedAll && game.testStatus().find("AS THE SHIP LEFT") != std::string::npos,
-       fmt("sent %s; %d of the %d planned aboard when the ship left at %.0f s; %s", third ? "yes" : "NO", brought, wantedAll, arrive + 40, trunc(game.testStatus(), 44).c_str()));
+    ck("the drone bay: called back as the ship leaves (C-18)",
+            third && !game.testDronesOut() && brought == game.testDronesAboard() && brought > 0 && brought < wantedAll && game.testStatus().find("AS THE SHIP LEFT") != std::string::npos,
+            fmt("sent %s; %d of the %d planned aboard when the ship left at %.0f s; %s", third ? "yes" : "NO", brought, wantedAll, arrive + 40, trunc(game.testStatus(), 44).c_str()));
     // ---- saved in a trip and loaded: it goes on and docks
     game.setState(GameState::SPACE); game.testParkAt(st, W.body); run(0.1); game.setState(GameState::SPACE);
     game.testDronesSkip(game.testDronesClock() + DRONE_COOLDOWN_S + 1);
@@ -192,7 +206,8 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
     const int brought4 = (int)held().size() - (int)before4.size();
     const std::string runs = mid.substr(std::min(mid.size(), mid.find("drone 1:"))), runs2 = mid2.substr(std::min(mid2.size(), mid2.find("drone 1:")));
     ck("the drone bay: a trip saved and loaded (C-18)", fourth && loaded && !runs.empty() && runs == runs2 && !game.testDronesOut() && brought4 == game.testDronesAboard() && brought4 >= 6,
-       fmt("sent %s, loaded %s; the drones %s; %d aboard at the end", fourth ? "yes" : "NO", loaded ? "yes" : "NO", runs == runs2 ? "as they were" : ("NOT AS THEY WERE: " + trunc(runs, 60) + " | " + trunc(runs2, 60)).c_str(), brought4));
+            fmt("sent %s, loaded %s; the drones %s; %d aboard at the end", fourth ? "yes" : "NO", loaded ? "yes" : "NO",
+                    runs == runs2 ? "as they were" : ("NOT AS THEY WERE: " + trunc(runs, 60) + " | " + trunc(runs2, 60)).c_str(), brought4));
     remove("shots/tests/test_drones_save_1.txt");
     // ---- the case: its worlds as folders (the drones' world and another's instrument), a world opened, closed; the drones' world, one of
     // two peoples, a folder each people (an instrument of each put in the case), each opening its own people's alone
@@ -240,9 +255,11 @@ static void dronesGame(bool frames, const std::function<void(const char*, bool, 
         press(KEY_ESCAPE); run(0.05);
     }
     press(KEY_ESCAPE); run(0.05);
-    ck("the instruments' case by its worlds (C-18)", caseOpen && game.testCaseWorlds() >= 2 && counted == (int)game.guide.instruments.size() && lvl == 1 && nk == game.testCaseWorldItems(wsel) && ofWorld == nk && lvlBack == 0 && stillOpen && game.state == GameState::SPACE,
-       fmt("%d folders holding %d of the %d in the case; the first opened: %d instruments, %d of its world and people; Esc back to the worlds %s, again to the cabin %s", game.testCaseWorlds(), counted, (int)game.guide.instruments.size(), nk, ofWorld,
-           lvlBack == 0 && stillOpen ? "yes" : "NO", game.state == GameState::SPACE ? "yes" : "NO"));
+    ck("the instruments' case by its worlds (C-18)",
+            caseOpen && game.testCaseWorlds() >= 2 && counted == (int)game.guide.instruments.size() && lvl == 1 && nk == game.testCaseWorldItems(wsel) && ofWorld == nk && lvlBack == 0 && stillOpen &&
+                    game.state == GameState::SPACE,
+            fmt("%d folders holding %d of the %d in the case; the first opened: %d instruments, %d of its world and people; Esc back to the worlds %s, again to the cabin %s", game.testCaseWorlds(),
+                    counted, (int)game.guide.instruments.size(), nk, ofWorld, lvlBack == 0 && stillOpen ? "yes" : "NO", game.state == GameState::SPACE ? "yes" : "NO"));
     ck("the instruments' case: a world of two peoples a folder each people (C-18)", two && twoFolders == 2 && whichSeen == 3 && twoRight == 2,
        fmt("%s: %s; %d folders%s%s", sys.bodies[W.body].name.c_str(), two ? "two peoples" : "NOT TWO PEOPLES", twoFolders, twoLines.empty() ? "" : ", ", twoLines.c_str()));
     remove(gp.c_str());
@@ -259,9 +276,10 @@ void droneChecks(const std::function<void(const char*, bool, const std::string&)
     int kinds[DF_COUNT] = {}, homed = 0, records = 0;
     for (int p = 0; p < std::max(1, peoplesOf(g)); p++) records += recordCountOf(g, p);
     for (const DroneItem& it : D.items) { kinds[std::max(0, std::min(DF_COUNT - 1, it.kind))]++; if (it.place >= 0) homed++; }
-    check("the drones: a world's items (C-18)", D.peoples == peoplesOf(g) && kinds[DF_TEXT] + kinds[DF_MUSIC] + kinds[DF_CHART] == records && kinds[DF_INSTRUMENT] > 0 && kinds[DF_CHART] > 0 && D.homes && homed == (int)D.items.size(),
-          fmt("%s: %d peoples, %d records of %d, %d texts %d music %d charts, %d instruments, %d of %d at a home among %d places, %.0f ms", sys.bodies[W.body].name.c_str(), D.peoples, kinds[0] + kinds[1] + kinds[2], records,
-              kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], homed, (int)D.items.size(), (int)D.places.size(), D.buildMs));
+    check("the drones: a world's items (C-18)",
+            D.peoples == peoplesOf(g) && kinds[DF_TEXT] + kinds[DF_MUSIC] + kinds[DF_CHART] == records && kinds[DF_INSTRUMENT] > 0 && kinds[DF_CHART] > 0 && D.homes && homed == (int)D.items.size(),
+            fmt("%s: %d peoples, %d records of %d, %d texts %d music %d charts, %d instruments, %d of %d at a home among %d places, %.0f ms", sys.bodies[W.body].name.c_str(), D.peoples,
+                    kinds[0] + kinds[1] + kinds[2], records, kinds[DF_TEXT], kinds[DF_MUSIC], kinds[DF_CHART], kinds[DF_INSTRUMENT], homed, (int)D.items.size(), (int)D.places.size(), D.buildMs));
     // two hundred hauls from nothing held: each drone two to eight and what it wanted, nothing twice, three stops at most, each find at its stop
     int bad = 0, totalMin = 99, totalMax = 0, seen[DF_COUNT] = {}, finds = 0, ownFinds = 0, ofPeople[2] = {0, 0}, bothPeoples = 0;
     for (int i = 0; i < 200; i++) {
@@ -291,12 +309,16 @@ void droneChecks(const std::function<void(const char*, bool, const std::string&)
     DroneHaul H0; droneHaulOf(D, none, 0x5EEDULL, H0);
     const double shareI = finds ? (double)seen[DF_INSTRUMENT] / finds : 0, shareC = finds ? (double)seen[DF_CHART] / finds : 0;
     const double itemI = (double)kinds[DF_INSTRUMENT] / std::max<size_t>(1, D.items.size()), itemC = (double)kinds[DF_CHART] / std::max<size_t>(1, D.items.size());
-    check("the drones: the hauls (C-18)", bad == 0 && totalMin >= 6 && totalMax <= 24 && seen[DF_TEXT] && seen[DF_MUSIC] && seen[DF_CHART] && seen[DF_INSTRUMENT] && H5.total == 5 && H0.total == 0 && shareI > itemI && shareC > itemC,
-          fmt("200 hauls: %d wrong, %d to %d finds, %d%% a place's own; found %d texts %d music %d charts %d instruments (instruments %.1f%% of the finds, %.1f%% of the items; charts %.1f%%, %.1f%%); all but five held: %d; all held: %d",
-              bad, totalMin, totalMax, finds ? 100 * ownFinds / finds : 0, seen[0], seen[1], seen[2], seen[3], 100 * shareI, 100 * itemI, 100 * shareC, 100 * itemC, H5.total, H0.total));
+    check("the drones: the hauls (C-18)",
+            bad == 0 && totalMin >= 6 && totalMax <= 24 && seen[DF_TEXT] && seen[DF_MUSIC] && seen[DF_CHART] && seen[DF_INSTRUMENT] && H5.total == 5 && H0.total == 0 && shareI > itemI &&
+                    shareC > itemC,
+            fmt("200 hauls: %d wrong, %d to %d finds, %d%% a place's own; found %d texts %d music %d charts %d instruments (instruments %.1f%% of the finds, %.1f%% of the items; charts %.1f%%, "
+                "%.1f%%); all but five held: %d; all held: %d",
+                    bad, totalMin, totalMax, finds ? 100 * ownFinds / finds : 0, seen[0], seen[1], seen[2], seen[3], 100 * shareI, 100 * itemI, 100 * shareC, 100 * itemC, H5.total, H0.total));
     // a world of two peoples (the user asked whether one trip brings both): both peoples' found, and a trip that brought of both
     check("the drones: a world of two peoples, both in a trip (C-18)", D.peoples == 2 && ofPeople[0] > 0 && ofPeople[1] > 0 && bothPeoples > 0,
-          fmt("%s: %d peoples; of the 200 hauls' %d finds %d the first people's and %d the second's; %d hauls brought of both", sys.bodies[W.body].name.c_str(), D.peoples, finds, ofPeople[0], ofPeople[1], bothPeoples));
+            fmt("%s: %d peoples; of the 200 hauls' %d finds %d the first people's and %d the second's; %d hauls brought of both", sys.bodies[W.body].name.c_str(), D.peoples, finds, ofPeople[0],
+                    ofPeople[1], bothPeoples));
     dronesGame(false, check);
 }
 

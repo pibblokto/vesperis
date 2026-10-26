@@ -201,7 +201,12 @@ void Game::renderStarMap() {
         if (guide.visited.count(key) && !current) drawRectRGB(canvas, sx - 3, sy - 3, sx + 3, sy + 3, rgb(90, 150, 110));
         if (current) { drawLineRGB(canvas, sx - 6, sy, sx + 6, sy, HUD_WHITE); drawLineRGB(canvas, sx, sy - 6, sx, sy + 6, HUD_WHITE); }
         if (ship.hasRemote && s.seed == ship.remote.seed) drawRectRGB(canvas, sx - 5, sy - 5, sx + 5, sy + 5, HUD_CYAN);
-        if (haveHome && s.sx == hx && s.sy == hy && s.sz == hz) { drawLineRGB(canvas, sx - 5, sy, sx, sy - 5, HUD_AMBER); drawLineRGB(canvas, sx, sy - 5, sx + 5, sy, HUD_AMBER); drawLineRGB(canvas, sx + 5, sy, sx, sy + 5, HUD_AMBER); drawLineRGB(canvas, sx, sy + 5, sx - 5, sy, HUD_AMBER); }
+        if (haveHome && s.sx == hx && s.sy == hy && s.sz == hz) {
+            drawLineRGB(canvas, sx - 5, sy, sx, sy - 5, HUD_AMBER);
+            drawLineRGB(canvas, sx, sy - 5, sx + 5, sy, HUD_AMBER);
+            drawLineRGB(canvas, sx + 5, sy, sx, sy + 5, HUD_AMBER);
+            drawLineRGB(canvas, sx, sy + 5, sx - 5, sy, HUD_AMBER);
+        }
         if (guide.names.count(key) || guide.inbox.count(key)) drawText(canvas, sx + 5, sy - 3, trunc(upper(starNameOf(s)), 12).c_str(), nameIsForeign(key) ? HUD_CYAN : HUD_GREEN);
         else if (guide.visited.count(key) && !current) {   // an unnamed star the ship has been to, by a world named there
             std::vector<std::string> w = worldNamesAt(key);
@@ -214,7 +219,8 @@ void Game::renderStarMap() {
     // crosshair and the picked star's card
     drawLineRGB(canvas, cx - 8, cy, cx - 3, cy, HUD_DIM); drawLineRGB(canvas, cx + 3, cy, cx + 8, cy, HUD_DIM);
     drawLineRGB(canvas, cx, cy - 8, cx, cy - 3, HUD_DIM); drawLineRGB(canvas, cx, cy + 3, cx, cy + 8, HUD_DIM);
-    drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT THE PLOTTED END" : "THE NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);   // the page's name (49 characters with four digits; G-06's look 50)
+    // the page's name (49 characters with four digits; G-06's look 50)
+    drawText(canvas, 6, 4, fmt("%s  %d STARS IN 10 LY  ZOOM %.1fX", gchart.look ? "AT THE PLOTTED END" : "THE NEIGHBOURHOOD", (int)order.size(), mapZoom).c_str(), HUD_AMBER);
     int solo = -1;   // the filter shows all or one class (the legend of every code outgrew the line at ten classes)
     for (int c = 0; c < STAR_DRAWN_COUNT; c++) if (mapClassMask == (1 << c)) solo = c;
     std::string filt = solo < 0 ? "CLASSES: ALL" : fmt("CLASS: %s %s", STAR_CLASSES[solo].code, STAR_CLASSES[solo].name);
@@ -223,7 +229,10 @@ void Game::renderStarMap() {
         const int hw = textWidth("HOME"), vw = textWidth("VISITED");
         const int hText = UW - 6 - hw, hx = hText - 6, vText = hx - 12 - vw, bx = vText - 10, y = 13;
         drawRectRGB(canvas, bx, y, bx + 6, y + 6, rgb(90, 150, 110)); drawText(canvas, vText, y, "VISITED", HUD_DIM);
-        drawLineRGB(canvas, hx - 3, y + 3, hx, y, HUD_AMBER); drawLineRGB(canvas, hx, y, hx + 3, y + 3, HUD_AMBER); drawLineRGB(canvas, hx + 3, y + 3, hx, y + 6, HUD_AMBER); drawLineRGB(canvas, hx, y + 6, hx - 3, y + 3, HUD_AMBER);
+        drawLineRGB(canvas, hx - 3, y + 3, hx, y, HUD_AMBER);
+        drawLineRGB(canvas, hx, y, hx + 3, y + 3, HUD_AMBER);
+        drawLineRGB(canvas, hx + 3, y + 3, hx, y + 6, HUD_AMBER);
+        drawLineRGB(canvas, hx, y + 6, hx - 3, y + 3, HUD_AMBER);
         drawText(canvas, hText, y, "HOME", HUD_DIM);
     }
     if (mapPick >= 0 && pickD < 40) {
@@ -239,5 +248,6 @@ void Game::renderStarMap() {
             drawTextCentered(canvas, UW / 2, UH - 33, trunc("YOUR WORLDS THERE: " + names, 52).c_str(), HUD_GREEN);
         }
     }
-    if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 12, "WHEEL ZOOM  C/X/0 CLASS  ENTER TARGET  TAB GALAXY", HUD_DIM);   // within the frame's 53 characters; G-05: the mouse's turn left to be found, TAB in; G-06: the status over it
+    // within the frame's 53 characters; G-05: the mouse's turn left to be found, TAB in; G-06: the status over it
+    if (!drawMapStatus()) drawTextCentered(canvas, UW / 2, UH - 12, "WHEEL ZOOM  C/X/0 CLASS  ENTER TARGET  TAB GALAXY", HUD_DIM);
 }

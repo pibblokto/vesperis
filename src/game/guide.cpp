@@ -77,8 +77,8 @@ bool Guide::load(const std::string& path) {
         else if (key == "instrument") { std::string k; is >> k; instruments.insert(k); }
         else if (key == "probe") {
             ProbeRecord r; int lentFlag = 0; std::string storm;
-            is >> r.id >> lentFlag >> r.body >> r.gen >> r.saved >> r.launchT >> r.aimLat >> r.aimLon >> r.seed >> r.startX >> r.startY >> r.startZ >> r.headYaw >> r.descYaw >> r.chuteOpen >> r.chuteClose >> r.crushBar
-               >> r.endClock >> r.endBar >> r.endKm >> r.endK >> r.endCause >> storm;
+            is >> r.id >> lentFlag >> r.body >> r.gen >> r.saved >> r.launchT >> r.aimLat >> r.aimLon >> r.seed >> r.startX >> r.startY >> r.startZ >> r.headYaw >> r.descYaw >> r.chuteOpen >>
+                    r.chuteClose >> r.crushBar >> r.endClock >> r.endBar >> r.endKm >> r.endK >> r.endCause >> storm;
             if (!is.fail()) { r.lent = lentFlag != 0; r.storm = storm == "-" ? std::string() : storm; probes.push_back(r); }
         } else if (key == "probecam" || key == "probetime" || key == "probeprofile" || key == "probelayers") {   // the record of that seed's
             uint64_t seed = 0; size_t n = 0; is >> seed >> n;
@@ -121,7 +121,8 @@ bool Guide::load(const std::string& path) {
         migratedShards = 0;
         for (const std::string& k : shards) if (k.find("/S") != std::string::npos) migratedShards++;
     }
-    if (recordsScheme < 2) { rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox); }   // the second people's shards at the records' stride, everywhere a shard's key is kept
+    // the second people's shards at the records' stride, everywhere a shard's key is kept
+    if (recordsScheme < 2) { rekeySet(shards); rekeySet(heard); rekeySet(lent); rekeyMap(decoded); rekeyMap(names); rekeyMap(inbox); }
     return true;
 }
 
@@ -149,7 +150,9 @@ bool Guide::save(const std::string& path) const {
     for (auto& kv : inbox) f << "inbox " << kv.first << " " << kv.second << "\n";
     for (auto& k : visited) f << "visited " << k << "\n";
     for (auto& k : landed) f << "landed " << k << "\n";
-    for (const SurfaceMark& m : marks) f << "mark " << m.body << " " << m.lat << " " << m.lon << " " << markKindToFile(m.kind) << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";   // (T-03: R-408's numbers kept)
+    for (const SurfaceMark& m : marks)
+        f << "mark " << m.body << " " << m.lat << " " << m.lon << " " << markKindToFile(m.kind) << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name
+          << "\n";   // (T-03: R-408's numbers kept)
     if (shownMark >= 0 && shownMark < (int)marks.size()) f << "shownmark " << shownMark << "\n";
     for (const GalaxyMark& m : galaxyMarks) f << "gmark " << m.x << " " << m.y << " " << m.z << " " << (m.lent ? 1 : 0) << " " << m.when << (m.name.empty() ? "" : " ") << m.name << "\n";
     for (auto& k : shards) f << "shard " << k << "\n";
@@ -161,16 +164,18 @@ bool Guide::save(const std::string& path) const {
     for (auto& k : lent) f << "lent " << k << "\n";
     for (auto& k : instruments) f << "instrument " << k << "\n";
     for (const ProbeRecord& r : probes) {
-        f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " " << r.startX << " " << r.startY << " " << r.startZ
-          << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " " << r.endBar << " " << r.endKm << " " << r.endK << " " << r.endCause << " " << (r.storm.empty() ? "-" : r.storm) << "\n";
+        f << "probe " << r.id << " " << (r.lent ? 1 : 0) << " " << r.body << " " << r.gen << " " << r.saved << " " << r.launchT << " " << r.aimLat << " " << r.aimLon << " " << r.seed << " "
+          << r.startX << " " << r.startY << " " << r.startZ << " " << r.headYaw << " " << r.descYaw << " " << r.chuteOpen << " " << r.chuteClose << " " << r.crushBar << " " << r.endClock << " "
+          << r.endBar << " " << r.endKm << " " << r.endK << " " << r.endCause << " " << (r.storm.empty() ? "-" : r.storm) << "\n";
         if (r.lines.empty()) r.lines = probeLines(r);   // a record made by a path that did not make them
         f << r.lines;
     }
     for (int c : classesSeen) f << "class " << c << "\n";
     for (int c : typesSeen) f << "type " << c << "\n";
     for (auto& k : history) f << "history " << k << "\n";
-    f << "stat furthest " << furthestFromHomeLY << "\nstat walk " << longestWalkM << "\nstat highest " << highestPointM
-      << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM << "\nstat flown " << totalFlownM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM << "\nstat probes " << probesSent << "\nstat drones " << droneTrips << "\nstat dronefinds " << droneFinds << "\n";
+    f << "stat furthest " << furthestFromHomeLY << "\nstat walk " << longestWalkM << "\nstat highest " << highestPointM << "\nstat walked " << totalWalkedM << "\nstat driven " << totalDrivenM
+      << "\nstat flown " << totalFlownM << "\nstat screenshots " << screenshots << "\nstat creatures " << creaturesSeen << "\nstat topspeed " << topSpeedKmh << "\nstat longestdrive " << longestDriveM
+      << "\nstat probes " << probesSent << "\nstat drones " << droneTrips << "\nstat dronefinds " << droneFinds << "\n";
     for (auto& e : log) f << "log " << e.t << " " << e.kind << " " << e.text << "\n";
     return true;
 }

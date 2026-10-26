@@ -121,6 +121,7 @@ void legendNameWords(const History& H, const ToldHistory& T, std::set<std::strin
     for (int p = 0; p < (int)H.places.size(); p++) addWords(historyPlaceName(H, p), out);
     for (const std::string& n : T.names) addWords(n, out);
     for (int g = 0; g < GOV_COUNT; g++) if (historyTitleNative(H, g)) { addWords(historyRulerTitle(H, g, false), out); addWords(historyRulerTitle(H, g, true), out); }
-    for (const std::string* n : {&H.lore.people, &H.lore.god, &H.lore.river, &H.lore.mountain, &H.lore.sea, &H.lore.city, &H.lore.city2, &H.lore.founder, &H.lore.moon, &H.lore.star, &H.lore.festival, &H.lore.other})
+    for (const std::string* n :
+            {&H.lore.people, &H.lore.god, &H.lore.river, &H.lore.mountain, &H.lore.sea, &H.lore.city, &H.lore.city2, &H.lore.founder, &H.lore.moon, &H.lore.star, &H.lore.festival, &H.lore.other})
         if (!n->empty()) addWords(*n, out);
 }

@@ -451,7 +451,8 @@ std::string nameOf(const InstrumentMake& M, bool plural) {
         case IP_KETTLE: return pl("KETTLE DRUM", "KETTLE DRUMS");
         case IP_CARAPACE: return m.empty() ? pl("SHELL DRUM", "SHELL DRUMS") : pl(m + " DRUM", m + " DRUMS");
         case IP_DRUM_PAIR: return pl("PAIR OF DRUMS", "PAIRED DRUMS");
-        case IP_SLIT_LOG: return M.mat == IM_WOOD || M.mat == IM_DARKWOOD ? pl("SLIT LOG", "SLIT LOGS") : pl(std::string("SLIT ") + vesselNoun(M.mat, 0), std::string("SLIT ") + vesselNoun(M.mat, 0) + "S");
+        case IP_SLIT_LOG:
+            return M.mat == IM_WOOD || M.mat == IM_DARKWOOD ? pl("SLIT LOG", "SLIT LOGS") : pl(std::string("SLIT ") + vesselNoun(M.mat, 0), std::string("SLIT ") + vesselNoun(M.mat, 0) + "S");
         case IP_TONGUE_BOX: return pl("TONGUE DRUM", "TONGUE DRUMS");
         case IP_SLIT_CANES: return std::string("SLIT CANES");
         case IP_VESSEL_RATTLE: case IP_STRUNG_RATTLE: return pl(m + " RATTLE", m + " RATTLES");
@@ -537,9 +538,18 @@ void planMaterials(InstrumentMake& M, const Organology& O, Rng& rng) {
         case IP_TONGUE_BOX: M.mat = mat(MU_BOARD); M.mat2 = mat(MU_FRAME); break;
         case IP_SLIT_CANES: M.mat = IM_CANE; M.mat2 = mat(MU_FIT); break;
         case IP_VESSEL_RATTLE: M.mat = mat(MU_VESSEL); M.mat2 = mat(MU_FRAME); break;
-        case IP_STRUNG_RATTLE: M.mat = matP(MU_TRIM, {IM_SHELL, IM_BONE, IM_CORAL, IM_BRASS, IM_COPPER}, 2); if (M.mat == IM_PAINT || M.mat == IM_LACQUER || M.mat == IM_LIGHT) M.mat = mat(MU_FIT); M.mat2 = mat(MU_FRAME); break;
+        case IP_STRUNG_RATTLE:
+            M.mat = matP(MU_TRIM, {IM_SHELL, IM_BONE, IM_CORAL, IM_BRASS, IM_COPPER}, 2);
+            if (M.mat == IM_PAINT || M.mat == IM_LACQUER || M.mat == IM_LIGHT) M.mat = mat(MU_FIT);
+            M.mat2 = mat(MU_FRAME);
+            break;
         case IP_STICK_RATTLE: case IP_RAIN_TUBE: M.mat = mat(M.plan == IP_RAIN_TUBE ? MU_TUBE : MU_FRAME); M.mat2 = mat(MU_FIT); break;
-        case IP_SISTRUM: case IP_JINGLE_HOOP: case IP_JINGLE_STICK: M.mat = mat(MU_FRAME); M.mat2 = a >= AGE_MEDIEVAL ? matP(MU_FIT, {IM_BRASS, IM_BRONZE, IM_COPPER, IM_SILVER, IM_IRON}, 8) : mat(MU_FIT); break;
+        case IP_SISTRUM:
+        case IP_JINGLE_HOOP:
+        case IP_JINGLE_STICK:
+            M.mat = mat(MU_FRAME);
+            M.mat2 = a >= AGE_MEDIEVAL ? matP(MU_FIT, {IM_BRASS, IM_BRONZE, IM_COPPER, IM_SILVER, IM_IRON}, 8) : mat(MU_FIT);
+            break;
         case IP_CYMBALS: case IP_FINGER_CYMBALS: case IP_HAND_CYMBAL: M.mat = matP(MU_STRUCK, {IM_BRASS, IM_BRONZE, IM_COPPER, IM_STEEL, IM_SILVER}, 60); M.mat2 = IM_HIDE; break;
         default: M.mat = mat(MU_CASE); M.mat2 = matP(MU_TUBE, {IM_BRASS, IM_COPPER, IM_STEEL, IM_SILVER}, 6); break;   // the machines
     }
@@ -750,11 +760,31 @@ void instrumentBounds(const std::vector<InstrumentPart>& parts, double& u0, doub
     for (const InstrumentPart& p : parts) {
         const double c = std::cos(p.ang), s = std::sin(p.ang);
         switch (p.kind) {
-            case IPK_TUBE: case IPK_STRING: { const double r = p.kind == IPK_TUBE ? std::max(p.r0, p.r1) : p.r0; grow(p.u, p.v, r); grow(p.u + c * p.len, p.v + s * p.len, r); top = std::max(top, p.kind == IPK_TUBE ? p.w0 + r : std::max(p.w0, p.w1)); break; }
-            case IPK_RING: { const double R = p.r0 + p.r1; if (p.standing) { grow(p.u, p.v, p.r1); grow(p.u - s * R, p.v + c * R, p.r1); grow(p.u + s * R, p.v - c * R, p.r1); top = std::max(top, p.w0 + R); } else { grow(p.u, p.v, R); top = std::max(top, p.w0 + 2 * p.r1); } break; }
+            case IPK_TUBE:
+            case IPK_STRING: {
+                const double r = p.kind == IPK_TUBE ? std::max(p.r0, p.r1) : p.r0;
+                grow(p.u, p.v, r);
+                grow(p.u + c * p.len, p.v + s * p.len, r);
+                top = std::max(top, p.kind == IPK_TUBE ? p.w0 + r : std::max(p.w0, p.w1));
+                break;
+            }
+            case IPK_RING: {
+                const double R = p.r0 + p.r1;
+                if (p.standing) {
+                    grow(p.u, p.v, p.r1);
+                    grow(p.u - s * R, p.v + c * R, p.r1);
+                    grow(p.u + s * R, p.v - c * R, p.r1);
+                    top = std::max(top, p.w0 + R);
+                } else {
+                    grow(p.u, p.v, R);
+                    top = std::max(top, p.w0 + 2 * p.r1);
+                }
+                break;
+            }
             default: {
                 const bool lengthwise = p.kind == IPK_PLATE || p.kind == IPK_BOX || p.kind == IPK_MARK;
-                const double hl = lengthwise ? p.len * 0.5 : p.r1, hw = p.r0 * (p.kind == IPK_PLATE ? 1 + 0.1 * std::abs(p.skew) + std::max(0.0, -p.waist) : 1.0) * (p.kind == IPK_DISC && p.open ? std::max(1.0, p.taper) : 1.0);
+                const double hl = lengthwise ? p.len * 0.5 : p.r1,
+                             hw = p.r0 * (p.kind == IPK_PLATE ? 1 + 0.1 * std::abs(p.skew) + std::max(0.0, -p.waist) : 1.0) * (p.kind == IPK_DISC && p.open ? std::max(1.0, p.taper) : 1.0);
                 const double hl2 = p.kind == IPK_DISC && p.open ? hl * std::max(1.0, p.taper) : hl;
                 for (int k = 0; k < 4; k++) { const double a = (k & 1 ? 1 : -1) * hl2, b = (k & 2 ? 1 : -1) * hw; grow(p.u + c * a - s * b, p.v + s * a + c * b, 0); }
                 top = std::max(top, p.w1 + (p.kind == IPK_PLATE ? std::max(0.0, p.dome) : 0.0));
@@ -811,7 +841,8 @@ void instrumentPartsToForms(const std::vector<InstrumentPart>& parts, uint64_t s
             case IPK_BOX: case IPK_MARK: {
                 const bool round = p.kind == IPK_MARK && (p.shape == 0 || p.shape == 3 || p.shape == 5 || p.shape == 6);
                 const double y0 = p.w0, y1 = p.kind == IPK_MARK ? p.w0 + 0.0015 : std::max(p.w0 + 1e-4, p.w1);
-                if (round) { f.kind = FK_LATHE; f.sub = 0; f.hx = f.hz = std::max(1e-4, p.r0); f.sides = p.shape == 3 ? 3 : (p.shape == 6 ? 5 : (p.r0 < 0.02 ? 6 : 0)); }   // a small round mark a hexagon (it is a few pixels)
+                // a small round mark a hexagon (it is a few pixels)
+                if (round) { f.kind = FK_LATHE; f.sub = 0; f.hx = f.hz = std::max(1e-4, p.r0); f.sides = p.shape == 3 ? 3 : (p.shape == 6 ? 5 : (p.r0 < 0.02 ? 6 : 0)); }
                 else { f.kind = FK_BOX; f.hx = std::max(1e-4, p.r0); f.hz = std::max(1e-4, p.kind == IPK_MARK ? (p.shape == 1 ? p.len * 0.5 : (p.shape == 4 ? p.r0 * 1.6 : p.r0)) : p.len * 0.5); }
                 f.x = wx(p.u, p.v); f.z = wz(p.u, p.v); f.heading = h + p.ang; f.y0 = y0; f.y1 = y1;
                 break;

@@ -76,7 +76,12 @@ void Game::autoGazeOverBody(int b) {
     AutoState& A = ax;
     const Vec3 d = sys.bodyPos(b, t) - ship.pos;
     const double ang = std::asin(clampd(sys.bodies[b].radiusKm / std::max(length(d), 1.0), 0, 1));
-    if (A.clock > A.driftNext) { const double r = A.rng.range(0.0, 0.85) * std::min(ang, 0.5), a = A.rng.range(0, TAU); A.driftYaw = r * std::cos(a); A.driftPitch = 0.8 * r * std::sin(a); A.driftNext = A.clock + A.rng.range(4.5, 8.5); }
+    if (A.clock > A.driftNext) {
+        const double r = A.rng.range(0.0, 0.85) * std::min(ang, 0.5), a = A.rng.range(0, TAU);
+        A.driftYaw = r * std::cos(a);
+        A.driftPitch = 0.8 * r * std::sin(a);
+        A.driftNext = A.clock + A.rng.range(4.5, 8.5);
+    }
     const Vec3 f = normalize(d), rt = normalize(cross(Vec3(0, 1, 0), f)), up = cross(f, rt);
     autoLookSpace(f + rt * std::tan(A.driftYaw) + up * std::tan(A.driftPitch), 0.45);
 }
@@ -246,7 +251,11 @@ void Game::autoWay(double x0, double z0, double x1, double z1, std::vector<std::
     auto clear = [&](int a, int b) {   // the straight line between two cells crosses no blocked cell
         const double ax0 = a % N + 0.5, az0 = a / N + 0.5, bx0 = b % N + 0.5, bz0 = b / N + 0.5;
         const int n = (int)std::ceil(std::hypot(bx0 - ax0, bz0 - az0) * 3) + 1;
-        for (int k = 0; k <= n; k++) { const double u = (double)k / n; const int i = (int)(ax0 + (bx0 - ax0) * u), j = (int)(az0 + (bz0 - az0) * u); if (blocked[j * N + i] || cost[j * N + i] > 1.5f) return false; }
+        for (int k = 0; k <= n; k++) {
+            const double u = (double)k / n;
+            const int i = (int)(ax0 + (bx0 - ax0) * u), j = (int)(az0 + (bz0 - az0) * u);
+            if (blocked[j * N + i] || cost[j * N + i] > 1.5f) return false;
+        }
         return true;
     };
     size_t anchor = 0;

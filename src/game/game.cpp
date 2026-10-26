@@ -41,7 +41,9 @@ void Game::loadFromDisk() {
     hasSave = loadNewest();
     if (!hasSave) newGame();
     if (guide.migratedShards > 0) {   // T-04: the shards found before the records were the peoples' own, kept by their index: said once (the guide saved)
-        logEvent("SHARD", fmt("THE OLD PEOPLES' RECORDS WERE REGENERATED: THE %d SHARDS FOUND ARE KEPT BY THEIR PLACE IN THEIR WORLDS' RECORDS, THE LANGUAGE AS LEARNT, THEIR CONTENTS NEW", guide.migratedShards));
+        logEvent("SHARD",
+                fmt("THE OLD PEOPLES' RECORDS WERE REGENERATED: THE %d SHARDS FOUND ARE KEPT BY THEIR PLACE IN THEIR WORLDS' RECORDS, THE LANGUAGE AS LEARNT, THEIR CONTENTS NEW",
+                        guide.migratedShards));
         statusNext = fmt("RECORDS REGENERATED - %d SHARDS KEPT, CONTENTS NEW", guide.migratedShards); statusNextSecs = 8;
         guide.migratedShards = 0;
         guide.save(guidePath);
@@ -202,7 +204,11 @@ void Game::handleGlobalKeys(const Input& in) {
     // brightness and volume unless Fn is held (bug B-002)
     if (in.wasPressed(KEY_F12) || (in.wasPressed(KEY_P) && !in.ctrl() && !in.alt())) wantsScreenshot = true;
     if (in.wasPressed(KEY_F11) || (in.ctrl() && in.wasPressed(KEY_F)) || (in.alt() && in.wasPressed(KEY_ENTER))) wantsFullscreenToggle = true;
-    if (in.wasPressed(KEY_F10) || (in.ctrl() && in.wasPressed(KEY_K))) { settings.scanlines = !settings.scanlines; settings.save(settingsPath); status(settings.scanlines ? "SCANLINES ON" : "SCANLINES OFF", 2); }
+    if (in.wasPressed(KEY_F10) || (in.ctrl() && in.wasPressed(KEY_K))) {
+        settings.scanlines = !settings.scanlines;
+        settings.save(settingsPath);
+        status(settings.scanlines ? "SCANLINES ON" : "SCANLINES OFF", 2);
+    }
     // photo tools
     bool scene = stateHas(state, ST_PHOTO);
     if (in.ctrl() && in.wasPressed(KEY_P) && !in.shift() && scene) togglePhotoMode();
@@ -271,7 +277,8 @@ void Game::frame(const Input& inRaw, double realDt) {
     if (!statusNext.empty() && realTime >= statusUntil) { status(statusNext, statusNextSecs); statusNext.clear(); }
     if (arrivalFlash > 0) arrivalFlash -= realDt * 1.6;
     if (!stateHas(state, ST_TYPING) && !(state == GameState::KEYS && keysCapture)) handleGlobalKeys(in);
-    if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();   // the decoder's music on its screen only (C-07: or through the radar; C-11: the ship's player plays on)
+    // the decoder's music on its screen only (C-07: or through the radar; C-11: the ship's player plays on)
+    if (audio.piece && audio.piece == &shardWorld.piece && !audio.radio && state != GameState::SHARDS && state != GameState::TEXT_ENTRY) stopPiece();
     if (audio.speech && audio.speech == &shardWorld.speech && !audio.radio && state != GameState::SHARDS) stopSpeech();                                 // the voice too
     if ((audio.instrument || icase.discOn) && state != GameState::INSTRUMENTS) stopInstrument();                                                       // an instrument is played at its case
     if (radar.on && stateHas(state, ST_STOWS)) radarOff();   // a ship's instrument, off the ship
@@ -280,7 +287,8 @@ void Game::frame(const Input& inRaw, double realDt) {
     collectMigration();   // the named sights found on the thread become marks
     bool simulating = stateHas(state, ST_SIMULATES);
     if (in.wasPressed(KEY_T) && simulating) {
-        if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }   // the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
+        // the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
+        if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }
         else if (almanacRunning) almanacStop(false);
         else if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
         else { timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); }
@@ -315,7 +323,21 @@ void Game::frame(const Input& inRaw, double realDt) {
             if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
             break;
         case GameState::SPACE:
-            if (in.wasPressed(KEY_ESCAPE)) { if (ship.targeting) ship.targeting = false; else if (radar.on) { radarOff(); status("RADAR CAMERA OFF", 3); } else if (tele.on) { telescopeOff(); status("TELESCOPE STOWED", 3); } else { returnState = state; menuSel = 0; state = GameState::MENU; } break; }   // Esc leaves the radar camera; W-06: and the telescope
+            if (in.wasPressed(KEY_ESCAPE)) {
+                if (ship.targeting) ship.targeting = false;
+                else if (radar.on) {
+                    radarOff();
+                    status("RADAR CAMERA OFF", 3);
+                } else if (tele.on) {
+                    telescopeOff();
+                    status("TELESCOPE STOWED", 3);
+                } else {
+                    returnState = state;
+                    menuSel = 0;
+                    state = GameState::MENU;
+                }
+                break;
+            }   // Esc leaves the radar camera; W-06: and the telescope
             if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; break; }
             if (saveKey(in)) { saveSlot(currentSlot); break; }
             if (loadKey(in)) { loadSlot(currentSlot); break; }
@@ -327,7 +349,12 @@ void Game::frame(const Input& inRaw, double realDt) {
         case GameState::DESCENT:
         case GameState::ASCENT:
             if (saveKey(in)) { saveSlot(currentSlot); break; }
-            { auto t0 = std::chrono::steady_clock::now(); updateDescentAscent(in, dt, realDt); if (std::getenv("VESPERIS_TRACE") && transT < 0.05) fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count()); }
+            {
+                auto t0 = std::chrono::steady_clock::now();
+                updateDescentAscent(in, dt, realDt);
+                if (std::getenv("VESPERIS_TRACE") && transT < 0.05)
+                    fprintf(stderr, "  descent update %.1f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+            }
             break;
         case GameState::SURFACE:
             if (in.wasPressed(KEY_ESCAPE)) { returnState = state; menuSel = 0; state = GameState::MENU; break; }
@@ -419,7 +446,13 @@ void Game::frame(const Input& inRaw, double realDt) {
         case GameState::SPACE: renderSpace(); if (!photoMode && !ax.on) renderSpaceHUD(); break;   // no HUD while auto-explore plays
         case GameState::LANDING_MAP: if (ax.on) renderSpace(); else renderLandingMap(); break;    // its site chosen in its head, the map not shown
         case GameState::DESCENT:
-        case GameState::ASCENT: renderSurfaceScene(); if (!ax.on) { drawVisor(HUD_DIM); drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER); } break;
+        case GameState::ASCENT:
+            renderSurfaceScene();
+            if (!ax.on) {
+                drawVisor(HUD_DIM);
+                drawTextCentered(canvas, UW / 2, UH - 10, state == GameState::DESCENT ? "SURFACE CAPSULE DESCENDING" : "RETURNING TO THE STARDRIFTER", HUD_AMBER);
+            }
+            break;
         case GameState::SURFACE: renderSurfaceScene(); if (!photoMode && !ax.on) renderSurfaceHUD(); break;
         case GameState::PROBE: renderProbe(); break;   // the probe's camera
         case GameState::RECORDING: renderRecording(); break;   // a probe's recording
@@ -428,7 +461,8 @@ void Game::frame(const Input& inRaw, double realDt) {
             renderAlmanac(); break;
         default:   // the overlays (ST_OVERLAY), over the scene they were opened from
             if (state == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); break; }   // the galaxy chart covers the frame: no scene under it
-            if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }   // a mark's name, over the chart
+            // a mark's name, over the chart
+            if (state == GameState::TEXT_ENTRY && guideReturn == GameState::STAR_MAP && mapPage == 1) { keepFlightBand(); renderStarMap(); renderTextEntry(); break; }
             if (state == GameState::TEXT_ENTRY && (guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING)) {   // naming the storm over the probe's screen
                 if (guideReturn == GameState::PROBE) renderProbe(); else renderRecording();
                 renderTextEntry();
@@ -443,7 +477,8 @@ void Game::frame(const Input& inRaw, double realDt) {
             else if (state == GameState::KEYS) renderKeysScreen();
             else if (state == GameState::SLOTS) renderSlots();
             else if (state == GameState::GUIDE) renderGuideMenu();
-            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); else if (guideReturn == GameState::SECTOR_MAP) renderSectorMap(); renderTextEntry(); }   // naming a piece, over the decoder; R-408: a mark, over the map
+            // naming a piece, over the decoder; R-408: a mark, over the map
+            else if (state == GameState::TEXT_ENTRY) { if (guideReturn == GameState::SHARDS) renderShards(); else if (guideReturn == GameState::SECTOR_MAP) renderSectorMap(); renderTextEntry(); }
             else if (state == GameState::STAR_MAP) renderStarMap();
             else if (state == GameState::LOG) renderLog();
             else if (state == GameState::STATS) renderStats();

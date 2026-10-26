@@ -126,7 +126,14 @@ void SurfaceView::gatherSettlement(const Ruin& r, const RuinCell& cell, double d
                 if (F.ring != ring) {
                     double wq; int r1; double g0 = drawnGround(ex, ez, d, wq, r1);
                     F.ring = ring; F.y = (float)g0; F.water = (float)wq; F.lo = F.hi = (float)g0;
-                    if (big && e.y0 < 0.01) footPoints(e, ex, ez, [&](double x, double z) { double w2; int r2; double h = drawnGround(x, z, d, w2, r2); F.lo = std::min(F.lo, (float)h); F.hi = std::max(F.hi, (float)h); });
+                    if (big && e.y0 < 0.01)
+                        footPoints(e, ex, ez, [&](double x, double z) {
+                            double w2;
+                            int r2;
+                            double h = drawnGround(x, z, d, w2, r2);
+                            F.lo = std::min(F.lo, (float)h);
+                            F.hi = std::max(F.hi, (float)h);
+                        });
                 }
                 gy = F.y; w = F.water; lo = F.lo; hi = F.hi;
             }
@@ -193,7 +200,8 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
             for (int w = 0; w < 5; w++) {
                 RasterParams& rp = formRps[formRpIndex(p, s, w)];
                 rp.bank = FORM_BANKS[p][s];
-                if (cu.style == 1 && s == 0 && pal.own[0]) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }   // walls cut from the striated rock
+                // walls cut from the striated rock
+                if (cu.style == 1 && s == 0 && pal.own[0]) { rp.grain2 = mesoFor(MAT_ROCK); rp.grain2Scale = 3.0; rp.grain = &grain; rp.grainScale = 3.0 * FB_SCALE; }
                 if (w > 0) rp.pattern = &formPatterns[p][w - 1];
             }
             formRps[formPlainRp(p, s)].bank = FORM_BANKS[p][s];
@@ -204,8 +212,14 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
     const double ambient = site.atmosphere ? (0.12 + 0.2 * env.skyBrightness) : 0.07;
     // C-01's light on a face: the sky's share by how much it looks up, the sun's by the cosine, toward the fog colour by the distance
     // the explorer's lamp on a face at p (`lampAt`)
-    auto lightOf = [&](const Vec3& n, const Vec3& p) { double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y)); return amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(p, &n) : 0.0); };
-    auto insideOf = [&](const Vec3& n, const Vec3& p) { double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y)); return amb * 0.85 + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf * 0.4 + (nLamps ? (1 - amb) * lampAt(p, &n) : 0.0); };
+    auto lightOf = [&](const Vec3& n, const Vec3& p) {
+        double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y));
+        return amb + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf + (nLamps ? (1 - amb) * lampAt(p, &n) : 0.0);
+    };
+    auto insideOf = [&](const Vec3& n, const Vec3& p) {
+        double amb = ambient * (0.7 + 0.3 * std::max(0.0, n.y));
+        return amb * 0.85 + (1 - amb) * std::max(0.0, dot(n, sd)) * sunUp * lf * 0.4 + (nLamps ? (1 - amb) * lampAt(p, &n) : 0.0);
+    };
     auto shadeOf = [&](double light, double fog) { double sh = 46 * std::pow(light, 0.6); sh += (63 - sh) * fog; return sh; };
     const int N = (int)formItems.size();
     const int K = clampi(N / 16 + 1, 1, 64);
@@ -246,7 +260,8 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                         double t0 = (double)k / Kp, t1 = (double)(k + 1) / Kp;
                         double w0 = hw * formProfile(e, t0), w1 = hw * formProfile(e, t1);
                         double ya = I.foot.y + (k == 0 ? yb : e.y0 + (top - e.y0) * t0), ybb = I.foot.y + e.y0 + (top - e.y0) * t1;
-                        Vec3 pts[4] = {I.foot - right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w1 + Vec3(0, ybb - I.foot.y, 0), I.foot - right * w1 + Vec3(0, ybb - I.foot.y, 0)};
+                        Vec3 pts[4] = {I.foot - right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w0 + Vec3(0, ya - I.foot.y, 0), I.foot + right * w1 + Vec3(0, ybb - I.foot.y, 0),
+                                I.foot - right * w1 + Vec3(0, ybb - I.foot.y, 0)};
                         RVert q[4];
                         for (int j = 0; j < 4; j++) { Vec3 v = toView(pts[j].x, pts[j].y, pts[j].z); q[j].x = v.x; q[j].y = v.y; q[j].z = v.z; q[j].shade = sh; }
                         int y0, y1; rowsOf(q, 4, y0, y1);
@@ -273,7 +288,14 @@ void SurfaceView::drawFormItems(Framebuffer& fb) {
                     continue;
                 }
                 formMesh(e, I.lod, I.foot, I.skirt, mesh, proj.f / FB_SCALE / std::max(1.0, I.d));
-                const int partRp = e.part == 7 ? 0 : (e.part == 8 ? 49 : (e.part == 9 ? 50 : (e.part == 10 ? 51 : (e.part == 11 ? 52 : (e.part >= FORM_PART_PALE && e.part <= FORM_PART_METAL ? 53 + e.part - FORM_PART_PALE : -1)))));   // the ground's and the world's own banks; T-04 the records
+                const int partRp = e.part == 7 ? 0
+                                               : (e.part == 8 ? 49
+                                                              : (e.part == 9 ? 50
+                                                                             : (e.part == 10 ? 51
+                                                                                             : (e.part == 11 ? 52
+                                                                                                             : (e.part >= FORM_PART_PALE && e.part <= FORM_PART_METAL
+                                                                                                                               ? 53 + e.part - FORM_PART_PALE
+                                                                                                                               : -1)))));   // the ground's and the world's own banks; T-04 the records
                 const double tone = lit ? 0.0 : e.tone * (1 - I.fog);   // a house painted lighter or darker than its neighbours
                 const int rpBase = partRp >= 0 ? partRp : formRpIndex(I.people, slot, 0), rpPat = partRp >= 0 ? partRp : formRpIndex(I.people, slot, e.pattern);
                 for (const FormMesh::Poly& P : mesh.polys) {

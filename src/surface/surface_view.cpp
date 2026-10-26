@@ -87,7 +87,12 @@ void SurfaceView::joinAhead() {
 
 void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double lon, double t) {
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;   // VESPERIS_TRACE=1: the sections' times on stderr
-    auto tick = [&](const char* what) { static std::chrono::steady_clock::time_point last = std::chrono::steady_clock::now(); auto now = std::chrono::steady_clock::now(); if (trace) fprintf(stderr, "  init %-14s %.1f ms\n", what, std::chrono::duration<double, std::milli>(now - last).count()); last = now; };
+    auto tick = [&](const char* what) {
+        static std::chrono::steady_clock::time_point last = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        if (trace) fprintf(stderr, "  init %-14s %.1f ms\n", what, std::chrono::duration<double, std::milli>(now - last).count());
+        last = now;
+    };
     tick("start");
     joinAhead();   // M7-01: a pending job refers to the old site
     site.init(sys, bodyIndex, lat, lon, t);
@@ -130,7 +135,8 @@ void SurfaceView::init(const StarSystem* sys, int bodyIndex, double lat, double 
     prefetchStage = 0; prefetchRing = 0;
     for (int m = 0; m < MAT_COUNT; m++) mesoBuilt[m] = false;
     footprints.clear(); footHead = 0; stepAccum = 0; lastStepX = 6; lastStepZ = -4;
-    ruinCells.clear(); supportMeshes.clear(); supports.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;   // C-01; C-13: the world's peoples, each with a culture and a lore (B-420: the footings' meshes with them)
+    // C-01; C-13: the world's peoples, each with a culture and a lore (B-420: the footings' meshes with them)
+    ruinCells.clear(); supportMeshes.clear(); supports.clear(); peoples = peoplesOf(site.gen) > 1 ? 2 : 1;
     for (int k = 0; k < 2; k++) {
         cultures[k] = k < peoples ? cultureOf(site.gen, k) : Culture();
         lores[k] = worldHadCivilisation(site.gen) && k < peoples ? loreQuick(*site.sys, site.sys->bodies[site.body], site.gen, k) : Lore();   // for the graves' names and years
@@ -274,7 +280,8 @@ void SurfaceView::reanchor() {
     capsuleY = site.surfaceHeight(cx, cz);
     site.localAt(wpU, wpX, wpZ);
     siteEpoch++;
-    ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();   // the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
+    // the cells' local metres moved with the frame (A-02: the harness's placed ones too; B-420: the footings' meshes)
+    ruinCells.clear(); placedCells.clear(); supportMeshes.clear(); supports.clear();
     refreshPlanNear();   // the plan's places in the new frame's metres
     ensureTownMarks();
     if (buggy.deployed) {   // the buggy moves with the frame too (B-205); a driven buggy is where the player is
@@ -309,7 +316,8 @@ void SurfaceView::reanchor() {
     static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr;
     if (trace) {
         auto ms = [](std::chrono::steady_clock::time_point a, std::chrono::steady_clock::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
-        fprintf(stderr, "  reanchor: %.1f ms (the worker's join %.1f, the site's init %.1f, roads %.1f, marks, plan and the vehicles %.1f, the tiles asked %.1f)\n", ms(ta0, ta5), ms(ta0, ta1), ms(ta1, ta2), ms(ta2, ta3), ms(ta3, ta4), ms(ta4, ta5));
+        fprintf(stderr, "  reanchor: %.1f ms (the worker's join %.1f, the site's init %.1f, roads %.1f, marks, plan and the vehicles %.1f, the tiles asked %.1f)\n", ms(ta0, ta5), ms(ta0, ta1),
+                ms(ta1, ta2), ms(ta2, ta3), ms(ta3, ta4), ms(ta4, ta5));
     }
 }
 
@@ -473,7 +481,14 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         nextDevil -= dt;
         if (nextDevil <= 0 && devils.size() < 4) {
             Rng dr((uint64_t)(t * 100) ^ 0xD3B1);
-            DustDevil d; d.x = player.x + dr.sym(500); d.z = player.z + dr.sym(500); d.height = 30 + 80 * dr.uni(); d.radius = 5 + 12 * dr.uni(); d.age = 0; d.life = 120 + 180 * dr.uni(); d.phase = dr.range(0, TAU);
+            DustDevil d;
+            d.x = player.x + dr.sym(500);
+            d.z = player.z + dr.sym(500);
+            d.height = 30 + 80 * dr.uni();
+            d.radius = 5 + 12 * dr.uni();
+            d.age = 0;
+            d.life = 120 + 180 * dr.uni();
+            d.phase = dr.range(0, TAU);
             devils.push_back(d);
             nextDevil = 20 + 30 * dr.uni();
         }
@@ -484,7 +499,12 @@ void SurfaceView::update(double dt, const Input& in, double t, bool controlsEnab
         d.x += std::sin(env.windDir) * sp * dt + std::sin(t * 0.7 + d.phase) * 0.6 * dt;
         d.z += std::cos(env.windDir) * sp * dt + std::cos(t * 0.5 + d.phase) * 0.6 * dt;
     }
-    devils.erase(std::remove_if(devils.begin(), devils.end(), [&](const DustDevil& d) { double dx = d.x - player.x, dz = d.z - player.z; return d.age > d.life || dx * dx + dz * dz > 1500.0 * 1500.0; }), devils.end());
+    devils.erase(std::remove_if(devils.begin(), devils.end(),
+                         [&](const DustDevil& d) {
+                             double dx = d.x - player.x, dz = d.z - player.z;
+                             return d.age > d.life || dx * dx + dz * dz > 1500.0 * 1500.0;
+                         }),
+            devils.end());
     updateLife(dt, t);
     computeEnvironment(t);
 }
@@ -696,8 +716,12 @@ void SurfaceView::render(Framebuffer& fb, double t, const std::vector<Star>& sta
     // what the crosshair rests on, for the HUD's range readout and M (skipped while the capsule flies)
     lastRange = cameraOverrideAlt >= 0 ? -1 : rangeToGround(drawRadiusM(), lastRangeX, lastRangeZ, lastRangeWater);
     { static const bool trace = std::getenv("VESPERIS_TRACE") != nullptr; if (trace && frameStamp <= 3) {
-        fprintf(stderr, "  render %d: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", frameStamp, lastRenderMs[0], lastRenderMs[1], lastRenderMs[2], lastRenderMs[3], lastRenderMs[4], lastRenderMs[5]);
-        for (int f = 0; f < 2; f++) { const std::string bl = bandTraceLine(f == 1); if (!bl.empty()) fprintf(stderr, "    %s\n", bl.c_str()); }
+            fprintf(stderr, "  render %d: palette+sky %.1f, warm %.1f, terrain %.1f, footprints..objects %.1f, flora %.1f, rest %.1f ms\n", frameStamp, lastRenderMs[0], lastRenderMs[1],
+                    lastRenderMs[2], lastRenderMs[3], lastRenderMs[4], lastRenderMs[5]);
+            for (int f = 0; f < 2; f++) {
+                const std::string bl = bandTraceLine(f == 1);
+                if (!bl.empty()) fprintf(stderr, "    %s\n", bl.c_str());
+            }
     } }
 }
 
@@ -712,7 +736,9 @@ std::string SurfaceView::bandTraceLine(bool flora) const {
     for (int i = 0; i < n; i++) {
         const BandTrace& b = bs[i];
         if (flora) snprintf(buf, sizeof buf, " %d-%d %.2f ms (%d visited, %d drawn)%s", b.y0, b.y1, b.ms, b.walked, b.drawn, i + 1 < n ? "," : "");
-        else if (b.walked > 0) snprintf(buf, sizeof buf, " %d-%d %.2f ms (walk %.2f, water set-up %.2f, fill %.2f; %d walked, %d drawn, %d wet)%s", b.y0, b.y1, b.ms, b.ms - b.waterMs - b.fillMs, b.waterMs, b.fillMs, b.walked, b.drawn, b.wet, i + 1 < n ? "," : "");
+        else if (b.walked > 0)
+            snprintf(buf, sizeof buf, " %d-%d %.2f ms (walk %.2f, water set-up %.2f, fill %.2f; %d walked, %d drawn, %d wet)%s", b.y0, b.y1, b.ms, b.ms - b.waterMs - b.fillMs, b.waterMs, b.fillMs,
+                    b.walked, b.drawn, b.wet, i + 1 < n ? "," : "");
         else snprintf(buf, sizeof buf, " %d-%d %.2f%s", b.y0, b.y1, b.ms, i + 1 < n ? "," : "");
         s += buf;
     }

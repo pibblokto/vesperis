@@ -203,7 +203,8 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
     }
     if (!centreFront) return;
     // rays for compact stars, from the projected centre, outside the disc
-    if (cls == STAR_WHITE_DWARF || cls == STAR_PULSAR || cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) {   // the blue-white star's cross of four; S-05: the Wolf-Rayet star's too
+    if (cls == STAR_WHITE_DWARF || cls == STAR_PULSAR || cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) {
+        // the blue-white star's cross of four; S-05: the Wolf-Rayet star's too
         double coronaPx = std::min(pj.f * std::tan(std::min(coronaA, 1.4)), (double)FBW);
         double rPx = pj.f * std::tan(std::min(rA, 1.4));
         double len = coronaPx * ((cls == STAR_BLUE_GIANT || cls == STAR_BLUE_WHITE || cls == STAR_WOLF_RAYET) ? 1.4 : 2.2) * (cls == STAR_PULSAR ? pulse : 1.0);
@@ -233,7 +234,8 @@ void SpaceRenderer::drawSun(Framebuffer& fb, const Star& star, const Vec3& dirVi
         int x = (int)sx, y = (int)sy;
         for (int dy = 0; dy < FB_SCALE; dy++)
             for (int dx = 0; dx < FB_SCALE; dx++)
-                if (x + dx >= 0 && y + dy >= 0 && x + dx < FBW && y + dy < FBH && !(depthTest && fb.invz[(y + dy) * FBW + x + dx] > 1e-12f)) fb.idx[(y + dy) * FBW + x + dx] = pix(bank, clampd(63 * intensity, 0, 63));
+                if (x + dx >= 0 && y + dy >= 0 && x + dx < FBW && y + dy < FBH && !(depthTest && fb.invz[(y + dy) * FBW + x + dx] > 1e-12f))
+                    fb.idx[(y + dy) * FBW + x + dx] = pix(bank, clampd(63 * intensity, 0, 63));
     }
 }
 

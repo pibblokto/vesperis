@@ -165,10 +165,18 @@ namespace {
 std::string workName(const History& H, int k) {
     const Genome G = genomeOf(H.seed);
     switch (k) {
-        case WK_HOLY: { static const char* const HOLY[HOLY_COUNT] = {"a temple", "a sacred grove", "a high place", "a shrine at the spring", "a cave shrine", "a house of the god", "the great tombs", "an open altar", "a hall of the faith"}; return HOLY[clampi(H.profile.holy, 0, HOLY_COUNT - 1)]; }
+        case WK_HOLY: {
+            static const char* const HOLY[HOLY_COUNT] = {
+                    "a temple", "a sacred grove", "a high place", "a shrine at the spring", "a cave shrine", "a house of the god", "the great tombs", "an open altar", "a hall of the faith"};
+            return HOLY[clampi(H.profile.holy, 0, HOLY_COUNT - 1)];
+        }
         case WK_TOMB: { static const char* const DEAD[5] = {"a barrow", "a tomb", "a cemetery", "a tower of the dead", "a tomb"}; return DEAD[clampi(G.of(GV_DEAD), 0, 4)]; }
         case WK_MONUMENT: { static const char* const MN[5] = {"a row of stelae", "an obelisk", "a colossus", "a triumphal arch", "a pillar"}; return MN[clampi(G.of(GV_MONUMENTS), 0, 4)]; }
-        case WK_FOCUS: { static const char* const FO[10] = {"a great spire", "a great dome", "a great gate", "a great tower", "a colossus", "a great mast", "a great ring", "a great obelisk", "a sacred pool", "a planted tree"}; return FO[clampi(G.of(GV_FOCUS), 0, 9)]; }
+        case WK_FOCUS: {
+            static const char* const FO[10] = {
+                    "a great spire", "a great dome", "a great gate", "a great tower", "a colossus", "a great mast", "a great ring", "a great obelisk", "a sacred pool", "a planted tree"};
+            return FO[clampi(G.of(GV_FOCUS), 0, 9)];
+        }
         default: return WORKS[clampi(k, 0, WK_COUNT - 1)].name;
     }
 }
@@ -233,16 +241,19 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
     std::string s;
     switch (e.kind) {
         case HE_COMING: {
-            static const char* const WH[8] = {"from beyond {mountain}", "over {sea}", "out of the north", "out of the south", "out of the east", "out of the west", "down {river}", "across the dry country"};
+            static const char* const WH[8] = {
+                    "from beyond {mountain}", "over {sea}", "out of the north", "out of the south", "out of the east", "out of the west", "down {river}", "across the dry country"};
             s = people(H) + " came into the land " + fillText(H, WH[clampi(e.thing, 0, 7)], -1, e.year); break;
         }
         case HE_FIRST: {
-            static const char* const FI[6] = {"the first fields were sown", "the first herds were kept", "the first boats were made", "the first pots were fired", "the first copper was worked", "the first village stood where {capital} would be"};
+            static const char* const FI[6] = {"the first fields were sown", "the first herds were kept", "the first boats were made", "the first pots were fired", "the first copper was worked",
+                    "the first village stood where {capital} would be"};
             s = fillText(H, FI[clampi(e.thing, 0, 5)], -1, e.year); break;
         }
         case HE_STONES: s = "the stones were raised where " + L(0) + " would be" + (e.a >= 0 ? ", by " + P(e.a) : ""); break;
         case HE_FOUNDING: {
-            static const char* const WHY[13] = {"", " as a fort", " as a harbour", " at a crossing of the river", " at a mine", " round a market", " round a shrine", " round a station", " as the gathering place", " as a band's winter seat", " as a great place", "", ""};
+            static const char* const WHY[13] = {"", " as a fort", " as a harbour", " at a crossing of the river", " at a mine", " round a market", " round a shrine", " round a station",
+                    " as the gathering place", " as a band's winter seat", " as a great place", "", ""};
             if (e.thing == 11) { s = "the work at " + L(e.place) + " was begun" + (e.a >= 0 ? " by " + P(e.a) : ""); break; }
             if (e.thing == 12 || (e.place == 0 && e.year == 1)) { s = P(e.a) + " founded " + L(e.place) + (e.year == 1 ? ", and the years were counted from it" : ""); break; }
             s = P(e.a) + " founded " + L(e.place) + WHY[clampi(e.thing, 0, 12)] + (e.place2 >= 0 ? ", with settlers from " + L(e.place2) : ""); break;
@@ -285,8 +296,10 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
         }
         case HE_REGENCY: s = N(e.a) + " ruled for the child " + P(e.b); break;
         case HE_GOVERNMENT: {
-            static const char* const HOW[9] = {" by a reform", " by a revolution", ": a kingdom was founded", ": the priests took the rule", ": the companies bought the rule", ": the machine was given the rule", " by a coup", ": the elders took the rule", ": the assembly was called"};
-            s = "the rule passed from " + std::string(GOVERNMENT_NAMES[clampi((int)e.value, 0, GOV_COUNT - 1)]) + " to " + GOVERNMENT_NAMES[clampi(e.thing, 0, GOV_COUNT - 1)] + HOW[clampi(e.out, 0, 8)] + (e.a >= 0 ? ", led by " + N(e.a) : "");
+            static const char* const HOW[9] = {" by a reform", " by a revolution", ": a kingdom was founded", ": the priests took the rule", ": the companies bought the rule",
+                    ": the machine was given the rule", " by a coup", ": the elders took the rule", ": the assembly was called"};
+            s = "the rule passed from " + std::string(GOVERNMENT_NAMES[clampi((int)e.value, 0, GOV_COUNT - 1)]) + " to " + GOVERNMENT_NAMES[clampi(e.thing, 0, GOV_COUNT - 1)] +
+                    HOW[clampi(e.out, 0, 8)] + (e.a >= 0 ? ", led by " + N(e.a) : "");
             break;
         }
         case HE_WAR: {
@@ -335,7 +348,10 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
             s = nm + " ended: " + res + (w.dead > 0 ? " (" + withCommas(w.dead) + " dead in it)" : "");
             break;
         }
-        case HE_SICKNESS: s = (e.out <= 1 ? historySicknessName(H, e.thing) + " came to " : historySicknessName(H, e.thing) + " came back to ") + L(e.place) + (e.out > 1 ? " (its " + ordinal(e.out) + " wave)" : "") + dead(e.value); break;
+        case HE_SICKNESS:
+            s = (e.out <= 1 ? historySicknessName(H, e.thing) + " came to " : historySicknessName(H, e.thing) + " came back to ") + L(e.place) +
+                    (e.out > 1 ? " (its " + ordinal(e.out) + " wave)" : "") + dead(e.value);
+            break;
         case HE_HARVEST: {
             const int eco = H.eras[H.eraAt(e.year)].economy;
             const char* what = eco == ECO_HERDING ? "the herds" : (eco == ECO_HUNTING ? "the hunt" : "the harvest");
@@ -350,26 +366,36 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
             s = "famine" + (e.place >= 0 ? " at " + L(e.place) + " and round it" : std::string(" in the land")) + (e.cause >= 0 && H.events[e.cause].kind == HE_HARVEST ? after : "") + dead(e.value);
             break;
         }
-        case HE_FLOOD: s = e.year < 1 ? "the great flood, remembered ever after" : ((e.thing == 1 ? "the sea came over " : (e.place == 0 ? H.lore.river + " flooded " : "the river flooded ")) + L(e.place) + dead(e.value)); break;
+        case HE_FLOOD:
+            s = e.year < 1 ? "the great flood, remembered ever after"
+                           : ((e.thing == 1 ? "the sea came over " : (e.place == 0 ? H.lore.river + " flooded " : "the river flooded ")) + L(e.place) + dead(e.value));
+            break;
         case HE_DROUGHT: s = e.year < 1 ? "the long drought, remembered ever after" : "drought for " + withCommas(e.value) + (e.value == 1 ? " year" : " years"); break;
         case HE_QUAKE: s = "an earthquake at " + L(e.place) + dead(e.value); break;
         case HE_ERUPTION: s = H.lore.mountain + " broke open near " + L(e.place) + dead(e.value); break;
-        case HE_IMPACT: s = e.out == 2 ? "a great stone fell from the sky and darkened the world" + dead(e.value) : (e.out == 0 ? "a stone fell from the sky and ruined " + L(e.place) + dead(e.value) : "a stone fell from the sky near " + L(e.place) + dead(e.value)); break;
+        case HE_IMPACT:
+            s = e.out == 2 ? "a great stone fell from the sky and darkened the world" + dead(e.value)
+                           : (e.out == 0 ? "a stone fell from the sky and ruined " + L(e.place) + dead(e.value) : "a stone fell from the sky near " + L(e.place) + dead(e.value));
+            break;
         case HE_FLARE: s = "the sun flared and burned the day side" + dead(e.value); break;
         case HE_WINTER:
             if (e.year < 1) s = "the long winter, remembered ever after";
             else if (e.value >= 25) s = "the long cold began, and lasted to the end";
-            else s = "a winter of " + withCommas(e.value) + (e.value == 1 ? " year" : " years") + (e.cause >= 0 ? (H.events[e.cause].kind == HE_ERUPTION ? ", after the eruption" : ", after the stone from the sky") : "");
+            else
+                s = "a winter of " + withCommas(e.value) + (e.value == 1 ? " year" : " years") +
+                        (e.cause >= 0 ? (H.events[e.cause].kind == HE_ERUPTION ? ", after the eruption" : ", after the stone from the sky") : "");
             break;
         case HE_BUILT:
             if (e.thing == WK_GREAT) { s = "the work at " + L(e.place) + " was finished after " + withCommas(e.value) + " years" + (e.a >= 0 ? ", in the keeping of " + P(e.a) : ""); break; }
-            s = cap1(workName(H, e.thing)) + (e.thing == WK_WALLS || (e.thing == WK_HOLY && H.profile.holy == HOLY_TOMBS) ? " were finished at " : " was finished at ") + L(e.place) + " after " + withCommas(e.value) + (e.value == 1 ? " year" : " years") + (e.a >= 0 ? ", the work of " + P(e.a) : ""); break;
+            s = cap1(workName(H, e.thing)) + (e.thing == WK_WALLS || (e.thing == WK_HOLY && H.profile.holy == HOLY_TOMBS) ? " were finished at " : " was finished at ") + L(e.place) + " after " +
+                    withCommas(e.value) + (e.value == 1 ? " year" : " years") + (e.a >= 0 ? ", the work of " + P(e.a) : "");
+            break;
         case HE_WAY: s = std::string("the ") + ofKind(e.out) + " between " + L(e.place) + " and " + L(e.place2) + " was opened"; break;
         case HE_FESTIVAL: s = L(e.place) + " kept the " + ordinal((int)e.value) + " year of its founding"; break;
         case HE_OMEN: {
-            static const char* const OM[10] = {"the comet returned", "the sun went dark at noon", "lights filled the night sky", "stars fell all night", "a new star shone for a season", "the moon turned red",
-                                               "the wanderer grew brighter in the sky, year after year", "a new star grew brighter each year", "the stars bent round a place where nothing shone",
-                                               "the second sun drew further off each year"};   // the lost sun's four
+            static const char* const OM[10] = {"the comet returned", "the sun went dark at noon", "lights filled the night sky", "stars fell all night", "a new star shone for a season",
+                    "the moon turned red", "the wanderer grew brighter in the sky, year after year", "a new star grew brighter each year", "the stars bent round a place where nothing shone",
+                    "the second sun drew further off each year"};   // the lost sun's four
             s = OM[clampi(e.thing, 0, 9)] + (e.thing != 0 && e.thing != 4 && e.thing < 6 ? std::string(" over ") + L(e.place) : std::string());
             break;
         }
@@ -379,12 +405,16 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
             s = P(e.a) + " of " + L(e.place) + " made " + nm; break;
         }
         case HE_DISCOVERY: {
-            static const char* const DI[9] = {"the far shore", "the source of {river}", "the pass over {mountain}", "that the world is round", "the far side of the world", "the poles", "the way to orbit", "the moon", "the other worlds of the sun"};
+            static const char* const DI[9] = {"the far shore", "the source of {river}", "the pass over {mountain}", "that the world is round", "the far side of the world", "the poles",
+                    "the way to orbit", "the moon", "the other worlds of the sun"};
             s = P(e.a) + " found " + fillText(H, DI[clampi(e.thing, 0, 8)], e.place, e.year) + (e.thing == 0 && e.value >= 0 ? ", where " + L((int)e.value) + " would be founded" : ""); break;
         }
         case HE_FAITH: {
             switch (e.thing) {
-                case 0: s = P(e.a) + " preached " + (e.value == FAITH_ONE_GOD ? "the faith of " + H.lore.god + ", the one god," : std::string("the faith of ") + FAITH_NAMES[clampi((int)e.value, 0, FAITH_COUNT - 1)]) + at; break;
+                case 0:
+                    s = P(e.a) + " preached " +
+                            (e.value == FAITH_ONE_GOD ? "the faith of " + H.lore.god + ", the one god," : std::string("the faith of ") + FAITH_NAMES[clampi((int)e.value, 0, FAITH_COUNT - 1)]) + at;
+                    break;
                 case 1: s = "a schism split the faith" + at; break;
                 case 2: s = P(e.a) + " reformed the rites" + at; break;
                 case 3: s = "the temples were closed"; break;
@@ -394,15 +424,15 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
         }
         case HE_INSTITUTION: {
             const HistoryInstitution& I = H.institutions[clampi(e.thing, 0, (int)H.institutions.size() - 1)];
-            static const char* const NM[HI_COUNT] = {"the Council of {place}", "the priesthood of {god}", "the guilds of {place}", "the Academy at {place}", "the Company of {place}", "the {place} Gazette",
-                                                     "the University of {place}", "the Assembly", "the Broadcast of {place}", "the Network", "the Mind", "the Army of {place}"};
+            static const char* const NM[HI_COUNT] = {"the Council of {place}", "the priesthood of {god}", "the guilds of {place}", "the Academy at {place}", "the Company of {place}",
+                    "the {place} Gazette", "the University of {place}", "the Assembly", "the Broadcast of {place}", "the Network", "the Mind", "the Army of {place}"};
             s = cap1(fillText(H, NM[clampi(I.kind, 0, HI_COUNT - 1)], e.place, e.year)) + (I.kind == HI_GUILDS ? " were founded" : " was founded") + (e.a >= 0 ? " by " + P(e.a) : "");
             break;
         }
         case HE_DEED: {
             static const char* const DE[13] = {"made a song that outlived its maker", "wrote the chronicle of {capital}", "gave the laws", "drew the map of the land", "led the great hunt",
-                                               "sailed beyond the known coasts", "healed the sick of {place}", "carved the great frieze at {place}", "taught at {place}", "wrote a book that everyone read",
-                                               "made a theory of the world", "made the pictures that move", "made the gardens of {place}"};
+                    "sailed beyond the known coasts", "healed the sick of {place}", "carved the great frieze at {place}", "taught at {place}", "wrote a book that everyone read",
+                    "made a theory of the world", "made the pictures that move", "made the gardens of {place}"};
             s = P(e.a) + " " + fillText(H, DE[clampi(e.thing, 0, 12)], e.place, e.year); break;
         }
         case HE_UNREST: {
@@ -410,7 +440,9 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
             const bool early = H.eras[H.eraAt(e.year)].age == AGE_PREHISTORIC;
             s = (early ? (e.thing == 0 ? std::string("a fight over the food") : std::string("a quarrel between the bands")) : std::string(UN[clampi(e.thing, 0, 3)])) + at + dead(e.value); break;
         }
-        case HE_MIGRATION: s = withCommas(e.value) + " moved from " + (e.place >= 0 ? L(e.place) : std::string("the countryside")) + " to " + (e.place2 >= 0 ? L(e.place2) : std::string("the cities")); break;
+        case HE_MIGRATION:
+            s = withCommas(e.value) + " moved from " + (e.place >= 0 ? L(e.place) : std::string("the countryside")) + " to " + (e.place2 >= 0 ? L(e.place2) : std::string("the cities"));
+            break;
         case HE_ABANDONED: {
             static const char* const WHY[10] = {"", ": the river changed its course", ": the wells failed", ": the mine was worked out", ": the soil was spent", ": its people went to the cities",
                                                 ": the band moved on", ": it was cleared and given back to the land", "", ": it was taken"};
@@ -438,7 +470,11 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
             break;
         }
         case HE_CONTACT: s = people(H) + " met " + other(H) + at + (e.a >= 0 ? "; " + P(e.a) + " went to them" : ""); break;
-        case HE_TREATY: { static const char* const TR[3] = {"a pact of friendship", "a treaty of trade", "a border agreed"}; s = std::string(TR[clampi(e.thing, 0, 2)]) + " with " + other(H) + at; break; }
+        case HE_TREATY: {
+            static const char* const TR[3] = {"a pact of friendship", "a treaty of trade", "a border agreed"};
+            s = std::string(TR[clampi(e.thing, 0, 2)]) + " with " + other(H) + at;
+            break;
+        }
         case HE_OTHER_END: s = "word came that " + other(H) + " were gone"; break;
         case HE_SIGN: {
             const CauseScript& CS = SCRIPTS[clampi(H.cause, 0, CAUSE_COUNT - 1)];
@@ -462,15 +498,25 @@ std::string historyEventLine(const History& H, int i, const HistoryPersonNamer* 
         }
         case HE_END: s = "the end of " + people(H) + ": " + N(e.a) + " was the last of them, at " + L(e.place); break;
         // H-04's second pass: the everyday (the legends' plain line; the records tell them in their registers)
-        case HE_FAIR: s = std::string(std::strcmp(historyEverydayKey(e.kind, e.thing), "gathering") == 0 ? "the bands gathered" : "a fair") + at + " (" + historyEverydayKey(e.kind, e.thing) + "; " + withCommas(e.value) + " came)"; break;
+        case HE_FAIR:
+            s = std::string(std::strcmp(historyEverydayKey(e.kind, e.thing), "gathering") == 0 ? "the bands gathered" : "a fair") + at + " (" + historyEverydayKey(e.kind, e.thing) + "; " +
+                    withCommas(e.value) + " came)";
+            break;
         case HE_FIRE: s = std::string("a fire") + at + " (" + historyEverydayKey(e.kind, e.thing) + "; " + withCommas(e.value) + " houses)"; break;
         case HE_STORM: s = std::string("a storm of ") + historyEverydayKey(e.kind, e.thing) + at + dead(e.value); break;
         case HE_PEST: s = std::string(historyEverydayKey(e.kind, e.thing)) + at; break;
         case HE_WONDER: s = std::string("a wonder: ") + historyEverydayKey(e.kind, e.thing) + at; break;
         case HE_GAMES: s = std::string("games of ") + historyEverydayKey(e.kind, e.thing) + at + (e.a >= 0 ? ", won by " + P(e.a) : ""); break;
         case HE_LAW: s = std::string("a law on ") + historyEverydayKey(e.kind, e.thing) + (e.a >= 0 ? " by " + P(e.a) : ""); break;
-        case HE_TRIAL: { static const char* const V[4] = {"acquitted", "condemned", "exiled", "fined"}; s = (e.a >= 0 ? P(e.a) : std::string("someone")) + " tried for " + historyEverydayKey(e.kind, e.thing) + at + ", " + V[clampi(e.out, 0, 3)]; break; }
-        case HE_EMBASSY: s = e.thing == 0 ? "envoys from " + L(e.place2) + " came to " + L(e.place) : (e.thing == 1 ? "envoys of " + other(H) + " came to " + L(e.place) : "envoys went to " + other(H)) + (e.a >= 0 ? " (" + P(e.a) + ")" : ""); break;
+        case HE_TRIAL: {
+            static const char* const V[4] = {"acquitted", "condemned", "exiled", "fined"};
+            s = (e.a >= 0 ? P(e.a) : std::string("someone")) + " tried for " + historyEverydayKey(e.kind, e.thing) + at + ", " + V[clampi(e.out, 0, 3)];
+            break;
+        }
+        case HE_EMBASSY:
+            s = e.thing == 0 ? "envoys from " + L(e.place2) + " came to " + L(e.place)
+                             : (e.thing == 1 ? "envoys of " + other(H) + " came to " + L(e.place) : "envoys went to " + other(H)) + (e.a >= 0 ? " (" + P(e.a) + ")" : "");
+            break;
         case HE_ACCIDENT: s = std::string("a disaster: ") + historyEverydayKey(e.kind, e.thing) + at + dead(e.value); break;
         case HE_PRICE: s = std::string("the price of ") + historyEverydayKey(e.kind, e.thing) + (e.out ? " rose " : " fell ") + std::to_string(e.value) + "%"; break;
         case HE_BEASTS: s = std::string("the herds: ") + historyEverydayKey(e.kind, e.thing) + at + (e.value > 0 ? dead(e.value) : ""); break;

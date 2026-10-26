@@ -100,7 +100,10 @@ void drifterPlace(int64_t sx, int64_t sy, int64_t sz, Star& out, bool withName) 
     out.seed = seed;
     if (withName) {
         const int region = galaxyRegion(sx, sy, sz);
-        out.name = generateName(seed, (region == REGION_CORE || region == REGION_HALO || region == REGION_BULGE || region == REGION_CLUSTER) ? 1 : ((region == REGION_NEBULA || region == REGION_ARM || region == REGION_OPEN) ? 2 : 0));
+        out.name = generateName(seed,
+                (region == REGION_CORE || region == REGION_HALO || region == REGION_BULGE || region == REGION_CLUSTER)
+                        ? 1
+                        : ((region == REGION_NEBULA || region == REGION_ARM || region == REGION_OPEN) ? 2 : 0));
     }
     out.valid = true;
 }
@@ -147,8 +150,10 @@ int driftersNear(const Vec3& obsKm, double reachLy, std::vector<Star>& out) {
         }
     };
     int looked = 0;
-    const int64_t c0[3] = {floorDiv((int64_t)std::floor(o.x - reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.y - reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.z - reachLy), DRIFT_CELL)};
-    const int64_t c1[3] = {floorDiv((int64_t)std::floor(o.x + reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.y + reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.z + reachLy), DRIFT_CELL)};
+    const int64_t c0[3] = {
+            floorDiv((int64_t)std::floor(o.x - reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.y - reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.z - reachLy), DRIFT_CELL)};
+    const int64_t c1[3] = {
+            floorDiv((int64_t)std::floor(o.x + reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.y + reachLy), DRIFT_CELL), floorDiv((int64_t)std::floor(o.z + reachLy), DRIFT_CELL)};
     for (int64_t cx = c0[0]; cx <= c1[0]; cx++)
         for (int64_t cy = c0[1]; cy <= c1[1]; cy++)
             for (int64_t cz = c0[2]; cz <= c1[2]; cz++) {

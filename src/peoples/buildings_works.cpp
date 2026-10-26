@@ -21,7 +21,8 @@ void genFocus(Gen& g) {
             break;
         }
         case FO_DOME: {
-            if (pre) { const double De = materialDecay(MT_EARTH, c.ageYears * 0.1, c.wet); g.add(FK_DOME, 1, 0, 0, 0, b.hw, b.hw, 0, std::max(0.6, H * (1 - 0.4 * De)), 0, MT_EARTH, 8); break; }   // a great mound
+            // a great mound
+            if (pre) { const double De = materialDecay(MT_EARTH, c.ageYears * 0.1, c.wet); g.add(FK_DOME, 1, 0, 0, 0, b.hw, b.hw, 0, std::max(0.6, H * (1 - 0.4 * De)), 0, MT_EARTH, 8); break; }
             Ring R; R.rx = b.hw; R.rz = b.hw; R.h = H * 0.4; R.thick = 1.2; R.mat = mat; R.segs = 16; R.doorSegs = ringDoorSegs(b.hw, 16); R.door = (16 - R.doorSegs / 2) % 16; R.pattern = 3;
             const double hmin = ringWalls(g, R);
             roundRoof(g, RF_DOMED, 0, 0, b.hw + 0.6, b.hw + 0.6, 16, hmin, R.h, 0.8, mat);
@@ -42,12 +43,17 @@ void genFocus(Gen& g) {
         }
         case FO_TOWER: {
             TowerOut T = towerShaft(g, 0, 0, b.hw, H, pre ? MT_DRYSTONE : mat, 10, 2);
-            if (T.whole && !pre && c.age >= AGE_MODERN && g.lod < 2) { Form& p = g.add(FK_LATHE, 4, 0, 0, 0, b.hw * 2.2, b.hw * 2.2, g.sink + H * 0.8, g.sink + H * 0.88, 0, mat); p.p[0] = 0.3; }   // a modern people's tower of the air, its pod
+            // a modern people's tower of the air, its pod
+            if (T.whole && !pre && c.age >= AGE_MODERN && g.lod < 2) { Form& p = g.add(FK_LATHE, 4, 0, 0, 0, b.hw * 2.2, b.hw * 2.2, g.sink + H * 0.8, g.sink + H * 0.88, 0, mat); p.p[0] = 0.3; }
             if (T.whole && !pre) towerTop(g, 0, 0, T.rTop, T.h, H, mat, false, 0);
             break;
         }
         case FO_COLOSSUS: {
-            if (pre) { standingStone(g, 0, 0, 0, b.hw * 0.4, b.hw * 0.3, H * 0.8, 100, true); if (g.Dk(MT_DRYSTONE, 100) < 0.3) g.add(FK_BLOB, 0, 0, 0, 0, b.hw * 0.3, b.hw * 0.3, H * 0.8, H * 0.8 + b.hw * 0.55, 0, MT_DRYSTONE); break; }
+            if (pre) {
+                standingStone(g, 0, 0, 0, b.hw * 0.4, b.hw * 0.3, H * 0.8, 100, true);
+                if (g.Dk(MT_DRYSTONE, 100) < 0.3) g.add(FK_BLOB, 0, 0, 0, 0, b.hw * 0.3, b.hw * 0.3, H * 0.8, H * 0.8 + b.hw * 0.55, 0, MT_DRYSTONE);
+                break;
+            }
             const double ph = H * 0.18;
             g.box(0, 0, 0, b.hw, b.hw, g.sink, g.sink + ph, 0, mat, 5);
             figure(g, 0, 0, g.sink + ph, H - ph, g.accentOn(AP_TOPS) ? 1 : 0, mat, Dm);
@@ -60,14 +66,27 @@ void genFocus(Gen& g) {
                 break;
             }
             const double Di = g.D(b.age >= AGE_FUTURISTIC ? MT_COMPOSITE : MT_IRON);
-            Form& m = g.add(FK_TRUSS, 0, 0, 0, 0, b.hw, b.hw, 0, H, b.age >= AGE_FUTURISTIC ? 1 : g.ironSlot(), b.age >= AGE_FUTURISTIC ? MT_COMPOSITE : MT_IRON); m.sides = 4; m.p[0] = b.age == AGE_INDUSTRIAL ? 0.12 : 0.5; m.p[2] = 0.2; m.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.95);
+            Form& m = g.add(FK_TRUSS, 0, 0, 0, 0, b.hw, b.hw, 0, H, b.age >= AGE_FUTURISTIC ? 1 : g.ironSlot(), b.age >= AGE_FUTURISTIC ? MT_COMPOSITE : MT_IRON);
+            m.sides = 4;
+            m.p[0] = b.age == AGE_INDUSTRIAL ? 0.12 : 0.5;
+            m.p[2] = 0.2;
+            m.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.95);
             if (b.age >= AGE_MODERN && Di < 0.45 && g.lod < 2)
-                for (int k = 0; k < 3; k++) { double a = k * TAU / 3, fx, fz; g.to(std::sin(a) * H * 0.5, std::cos(a) * H * 0.5, fx, fz); Form& cb = g.add(FK_CABLE, 0, 0, 0, 0, 0.06, 0.06, 0, H * 0.8, g.ironSlot(), MT_IRON); cb.p[0] = fx; cb.p[1] = fz; cb.p[2] = 0; cb.p[3] = H * 0.01; }
+                for (int k = 0; k < 3; k++) {
+                    double a = k * TAU / 3, fx, fz;
+                    g.to(std::sin(a) * H * 0.5, std::cos(a) * H * 0.5, fx, fz);
+                    Form& cb = g.add(FK_CABLE, 0, 0, 0, 0, 0.06, 0.06, 0, H * 0.8, g.ironSlot(), MT_IRON);
+                    cb.p[0] = fx;
+                    cb.p[1] = fz;
+                    cb.p[2] = 0;
+                    cb.p[3] = H * 0.01;
+                }
             break;
         }
         case FO_RING: {
             const double tube = std::max(0.6, b.hw * (pre ? 0.25 : 0.1));
-            Form& e = g.add(FK_TORUS, 0, 0, 0, 0, b.hw, b.hw, pre ? 0 : 1.0, (pre ? 0 : 1.0) + 2 * b.hw, b.age == AGE_INDUSTRIAL ? g.ironSlot() : (g.accentOn(AP_TOPS) ? 1 : 0), b.age == AGE_INDUSTRIAL ? MT_IRON : (pre ? MT_DRYSTONE : mat));
+            Form& e = g.add(FK_TORUS, 0, 0, 0, 0, b.hw, b.hw, pre ? 0 : 1.0, (pre ? 0 : 1.0) + 2 * b.hw, b.age == AGE_INDUSTRIAL ? g.ironSlot() : (g.accentOn(AP_TOPS) ? 1 : 0),
+                    b.age == AGE_INDUSTRIAL ? MT_IRON : (pre ? MT_DRYSTONE : mat));
             e.p[0] = tube; e.tilt = PI / 2; e.broken = Dm < 0.35 ? 0 : clampd(Dm, 0.35, 0.9);
             if (!pre) g.box(0, 0, 0, tube * 2.5, tube * 2.0, 0, 1.2, 0, mat, 2);
             break;
@@ -81,10 +100,23 @@ void genFocus(Gen& g) {
             break;
         }
         case FO_POOL: {   // a basin in its rim (no higher than a step), the water in it on a wet world, its floor dry on a desert
-            Ring R; R.rx = b.hw; R.rz = b.hd; R.h = 0.8; R.thick = 0.8; R.mat = pre ? MT_DRYSTONE : mat; R.segs = g.gv(GV_PLAN) == PF_POLYGON ? clampi(c.genome.number(), 3, 9) : 20; R.open = true; R.dress = false; R.whole = true;
+            Ring R;
+            R.rx = b.hw;
+            R.rz = b.hd;
+            R.h = 0.8;
+            R.thick = 0.8;
+            R.mat = pre ? MT_DRYSTONE : mat;
+            R.segs = g.gv(GV_PLAN) == PF_POLYGON ? clampi(c.genome.number(), 3, 9) : 20;
+            R.open = true;
+            R.dress = false;
+            R.whole = true;
             ringWalls(g, R);
             if (c.wet > 0.35 && !g.st.desert) { Form& w = g.add(FK_LATHE, 0, 0, 0, 0, b.hw - 0.4, b.hd - 0.4, -0.4, 0.45, 0, -1, 9); w.sides = R.segs <= 8 ? R.segs : 0; }
-            if (g.lod == 0 && b.age >= AGE_MEDIEVAL) { Form& f = g.lathe(0, 0, 0, 0.8, g.sink, g.sink + 2.4, g.accentOn(AP_TOPS) ? 1 : 0, mat, 8); (void)f; topsAt(g, {{0, 0}}, g.sink + 2.4, 0.8, mat); }
+            if (g.lod == 0 && b.age >= AGE_MEDIEVAL) {
+                Form& f = g.lathe(0, 0, 0, 0.8, g.sink, g.sink + 2.4, g.accentOn(AP_TOPS) ? 1 : 0, mat, 8);
+                (void)f;
+                topsAt(g, {{0, 0}}, g.sink + 2.4, 0.8, mat);
+            }
             break;
         }
         default: {   // a great tree: its trunk of bark, its crown of the ground's leaves while the world grows them (a dead one's trunk rotting)
@@ -101,14 +133,21 @@ void genFocus(Gen& g) {
             break;
         }
     }
-    if (b.style == FO_SPIRE || b.style == FO_TOWER || b.style == FO_OBELISK || b.style == FO_COLOSSUS) motifOn(g, 0, 0, b.hw * 0.6, b.hw * 0.6, 0, 1, mat);   // on the ground round it (statues, a star)
+    // on the ground round it (statues, a star)
+    if (b.style == FO_SPIRE || b.style == FO_TOWER || b.style == FO_OBELISK || b.style == FO_COLOSSUS) motifOn(g, 0, 0, b.hw * 0.6, b.hw * 0.6, 0, 1, mat);
 }
 
 // A-04: an aqueduct (a people of the valleys): its arcade along its heading, two tiers where it runs high, its channel on top; the
 // prehistoric age's a leat (an earth channel)
 void genAqueduct(Gen& g) {
     const Building& b = g.b; const Culture& c = g.c;
-    if (b.age == AGE_PREHISTORIC) { const double De = materialDecay(MT_EARTH, c.ageYears * 0.1, c.wet); Form& e = g.add(FK_SWEEP, 1, 0, 0, 0, 0, b.hd, 0, std::max(0.3, 0.8 * (1 - 0.6 * De)), 0, MT_EARTH, 8); e.p[1] = 1.6; e.p[2] = 0.6; return; }
+    if (b.age == AGE_PREHISTORIC) {
+        const double De = materialDecay(MT_EARTH, c.ageYears * 0.1, c.wet);
+        Form& e = g.add(FK_SWEEP, 1, 0, 0, 0, 0, b.hd, 0, std::max(0.3, 0.8 * (1 - 0.6 * De)), 0, MT_EARTH, 8);
+        e.p[1] = 1.6;
+        e.p[2] = 0.6;
+        return;
+    }
     const int mat = greatOf(b, c); const double Dm = g.D(mat), H = b.hWall;
     const int sub = archSub(g);
     const int tiers = H > 28 ? 3 : (H > 14 ? 2 : 1), n = std::max(3, (int)std::lround(2 * b.hd / 7.0));
@@ -160,7 +199,8 @@ void genPortal(Gen& g) {
 // yard); iron rusting: the jib or the boom down first, lying on the quay, then the tower bending over, then a heap
 void genCrane(Gen& g) {
     const size_t first = g.out.size();
-    struct Harbour { Gen& g; size_t first; ~Harbour() { for (size_t i = first; i < g.out.size(); i++) if (g.out[i].part == 0 || g.out[i].part == 3) g.out[i].part = 6; } } harbour{g, first};   // a harbour work: drawn from the water's level where its foot is wet
+    // a harbour work: drawn from the water's level where its foot is wet
+    struct Harbour { Gen& g; size_t first; ~Harbour() { for (size_t i = first; i < g.out.size(); i++) if (g.out[i].part == 0 || g.out[i].part == 3) g.out[i].part = 6; } } harbour{g, first};
     const Building& b = g.b;
     const double Di = g.D(MT_IRON), H = b.hWall;
     const int slot = g.accentOn(AP_TOPS) ? 1 : g.ironSlot();
@@ -174,7 +214,15 @@ void genCrane(Gen& g) {
             { Form& j = g.add(FK_TRUSS, 1, 0, jib * 0.5, 0.0, 0.55, jib * 0.5, H + 0.9, H + 2.0, slot, MT_IRON); j.p[2] = 0.07; j.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.7); }
             { Form& k = g.add(FK_TRUSS, 1, 0, -jib * 0.18, 0.0, 0.55, jib * 0.18, H + 0.9, H + 2.0, slot, MT_IRON); k.p[2] = 0.07; }
             g.box(0, -jib * 0.3, 0, 1.0, 1.0, H + 2.0, H + 3.2, 0, MT_MASS);   // the counterweight on its counter-jib
-            if (g.lod < 2 && Di < 0.3) { Form& c = g.add(FK_CABLE, 0, 0, jib * 0.96, 0, 0.04, 0.04, 0, H + 0.9, slot, MT_IRON); double fx, fz; g.to(0, jib * 0.96, fx, fz); c.p[0] = fx; c.p[1] = fz; c.p[2] = H * 0.35; c.p[3] = 0.1; }
+            if (g.lod < 2 && Di < 0.3) {
+                Form& c = g.add(FK_CABLE, 0, 0, jib * 0.96, 0, 0.04, 0.04, 0, H + 0.9, slot, MT_IRON);
+                double fx, fz;
+                g.to(0, jib * 0.96, fx, fz);
+                c.p[0] = fx;
+                c.p[1] = fz;
+                c.p[2] = H * 0.35;
+                c.p[3] = 0.1;
+            }
         } else if (g.lod == 0) g.fallen(FK_BOX, 0, 0, 0, 0.3 + 0.4 * g.U(6), 0.5, jib * 0.8, slot, MT_IRON);
         return;
     }
@@ -186,7 +234,9 @@ void genCrane(Gen& g) {
     }
     if (Di < 0.6) g.box(0, 0, 0, b.hw + 0.7, 1.0, H, H + 1.2, slot, MT_IRON);   // the cross girder over the two frames
     if (Di < 0.45) {
-        Form& bm = g.add(FK_TRUSS, 1, 0, (boomOut - boomBack) * 0.5, 0, 1.4, (boomOut + boomBack) * 0.5, H + 1.2, H + 4.2, slot, MT_IRON); bm.p[2] = 0.18; bm.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.6);
+        Form& bm = g.add(FK_TRUSS, 1, 0, (boomOut - boomBack) * 0.5, 0, 1.4, (boomOut + boomBack) * 0.5, H + 1.2, H + 4.2, slot, MT_IRON);
+        bm.p[2] = 0.18;
+        bm.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.6);
         g.box(0, 0, 0, 2.6, 3.0, H + 4.2, H + 6.8, slot, MT_IRON);   // the machinery house over the portal
     } else if (g.lod == 0) g.fallen(FK_BOX, 0, 0, legs + 2, 0.2 * g.U(6) - 0.1, 1.2, boomOut * 0.7, slot, MT_IRON);
 }
@@ -226,7 +276,11 @@ void genReservoir(Gen& g) {
             if (share < 0.06) continue;
             Form& w = g.box(along ? 0 : (k == 1 ? off : -off), along ? (k == 0 ? off : -off) : 0, along ? 0 : PI / 2, len + t, t * 0.5, 0, h * share, 0, MT_MASONRY);
             w.broken = share < 0.9 ? clampd(1 - share, 0.1, 0.9) : 0;
-            if (g.lod < 2) { Form& bk = g.box(along ? 0 : (k == 1 ? off + 2.2 : -off - 2.2), along ? (k == 0 ? off + 2.2 : -off - 2.2) : 0, along ? 0 : PI / 2, len + 3.5, 1.8, 0, std::max(0.4, h * 0.55 * (1 - 0.4 * De)), 0, MT_EARTH, 8); (void)bk; }
+            if (g.lod < 2) {
+                Form& bk = g.box(along ? 0 : (k == 1 ? off + 2.2 : -off - 2.2), along ? (k == 0 ? off + 2.2 : -off - 2.2) : 0, along ? 0 : PI / 2, len + 3.5, 1.8, 0,
+                        std::max(0.4, h * 0.55 * (1 - 0.4 * De)), 0, MT_EARTH, 8);
+                (void)bk;
+            }
         }
         if (g.lod < 2) {   // the pump house
             const double share = wallShare(Dm, g.U(20));
@@ -237,7 +291,11 @@ void genReservoir(Gen& g) {
     const double Dc = g.D(MT_CONCRETE);
     const double share = 1 - Dc * (0.2 + 0.6 * g.U(10));
     Form& t = g.lathe(0, 0, 0, b.hw, 0, std::max(0.6, b.hWall * share), 0, MT_CONCRETE); t.p[3] = 1; t.broken = Dc < 0.3 ? 0 : clampd(Dc, 0.3, 0.9);
-    if (g.lod == 0 && Dc < 0.5) for (int k = 0; k < 4; k++) { const double a = g.U(30) * TAU + k * TAU / 4; g.box(std::sin(a) * (b.hw + 1.2), std::cos(a) * (b.hw + 1.2), a, 0.6, 1.2, 0, b.hWall * share * 0.8, 0, MT_CONCRETE); }   // its buttresses
+    if (g.lod == 0 && Dc < 0.5)
+        for (int k = 0; k < 4; k++) {
+            const double a = g.U(30) * TAU + k * TAU / 4;
+            g.box(std::sin(a) * (b.hw + 1.2), std::cos(a) * (b.hw + 1.2), a, 0.6, 1.2, 0, b.hWall * share * 0.8, 0, MT_CONCRETE);
+        }   // its buttresses
 }
 
 // ---- T-03: the works' kinds (peoples/works.h) --------------------------------------------------------------------------------
@@ -307,8 +365,15 @@ void genDam(Gen& g) {
         for (int s = -1; s <= 1; s += 2) {
             const double half = L - gapHalf;
             if (half < 4) continue;
-            if (breach) { for (int q = -1; q <= 1; q += 2) { Form& p = g.box(q * (gapHalf + half * 0.5), s * (top - 0.3), 0, half * 0.5, 0.3, y1, y1 + 1.1, b.style == 3 ? 3 : 0, mat, 4); p.absolute = true; } }
-            else { Form& p = g.box(0, s * (top - 0.3), 0, L, 0.3, y1, y1 + 1.1, b.style == 3 ? 3 : 0, mat, 4); p.absolute = true; }
+            if (breach) {
+                for (int q = -1; q <= 1; q += 2) {
+                    Form& p = g.box(q * (gapHalf + half * 0.5), s * (top - 0.3), 0, half * 0.5, 0.3, y1, y1 + 1.1, b.style == 3 ? 3 : 0, mat, 4);
+                    p.absolute = true;
+                }
+            } else {
+                Form& p = g.box(0, s * (top - 0.3), 0, L, 0.3, y1, y1 + 1.1, b.style == 3 ? 3 : 0, mat, 4);
+                p.absolute = true;
+            }
         }
     }
     if (b.style == 1 || b.style == 3) {
@@ -381,7 +446,10 @@ void genFort(Gen& g) {
     }
     const double D = g.D(MT_MASS);
     const int pl = g.gv(GV_PLAN);   // R-412: the people's section
-    Form& e = g.lathe(1, 0, 0, b.hw, 0, b.hWall, 0, MT_MASS, pl == PF_POLYGON ? clampi(c.genome.number(), 5, 8) : (pl == PF_CIRCLE || pl == PF_ELLIPSE ? 0 : 6)); e.p[0] = 0.86; e.pattern = 2; e.broken = D < 0.4 ? 0 : clampd(D, 0.4, 0.7);
+    Form& e = g.lathe(1, 0, 0, b.hw, 0, b.hWall, 0, MT_MASS, pl == PF_POLYGON ? clampi(c.genome.number(), 5, 8) : (pl == PF_CIRCLE || pl == PF_ELLIPSE ? 0 : 6));
+    e.p[0] = 0.86;
+    e.pattern = 2;
+    e.broken = D < 0.4 ? 0 : clampd(D, 0.4, 0.7);
     if (D < 0.6) { Form& d = g.add(FK_DOME, 1, b.hw * 0.25, 0, 0, b.hw * 0.25, b.hw * 0.25, b.hWall, b.hWall + b.hw * 0.12, frameSlot(g, MT_IRON), MT_IRON, 2); (void)d; }
 }
 
@@ -481,7 +549,11 @@ void genShip(Gen& g) {
         for (int k = 0; k < n; k++) {
             const double t = -1 + 2.0 * (k + 0.5) / n, w = B * std::sqrt(std::max(0.05, 1 - t * t * 0.85));
             if (g.Dk(MT_TIMBER, 40 + k) > 0.7) continue;
-            for (int s = -1; s <= 1; s += 2) { Form& rb = g.box(s * w * 0.55, t * L, 0, 0.12, 0.12, 0, H * (0.6 + 0.4 * g.U(60 + k)), g.timberSlot(), MT_TIMBER); rb.tilt = s * 0.35; rb.heading += PI / 2; }
+            for (int s = -1; s <= 1; s += 2) {
+                Form& rb = g.box(s * w * 0.55, t * L, 0, 0.12, 0.12, 0, H * (0.6 + 0.4 * g.U(60 + k)), g.timberSlot(), MT_TIMBER);
+                rb.tilt = s * 0.35;
+                rb.heading += PI / 2;
+            }
         }
         return;
     }
@@ -499,8 +571,17 @@ void genShip(Gen& g) {
         hull(L * 0.05, L, true, list * 1.6, 0.18);
     } else hull(-L, L * 0.85, true, list, 0);
     if (g.lod == 2 || Di > 0.6) return;
-    if (b.style == 1) { Form& f = g.lathe(0, 0, -L * 0.1, B * 0.22, H, H + B * 1.4, sl, MT_IRON); f.tilt = 0.2; g.box(0, -L * 0.5, 0, B * 0.55, L * 0.12, H, H + 3, sl, MT_IRON); }
-    else { Form& s = g.box(0, -L * 0.8, 0, B * 0.85, L * 0.1, H, H + B * 1.1, sl, MT_IRON); s.pattern = 2; if (g.lod == 0) { Form& m = g.add(FK_TRUSS, 0, 0, L * 0.4, 0, 0.6, 0.6, H, H + B * 1.4, sl, MT_IRON); m.sides = 4; m.p[0] = 0.6; m.p[2] = 0.08; } }
+    if (b.style == 1) { Form& f = g.lathe(0, 0, -L * 0.1, B * 0.22, H, H + B * 1.4, sl, MT_IRON); f.tilt = 0.2; g.box(0, -L * 0.5, 0, B * 0.55, L * 0.12, H, H + 3, sl, MT_IRON);
+    } else {
+        Form& s = g.box(0, -L * 0.8, 0, B * 0.85, L * 0.1, H, H + B * 1.1, sl, MT_IRON);
+        s.pattern = 2;
+        if (g.lod == 0) {
+            Form& m = g.add(FK_TRUSS, 0, 0, L * 0.4, 0, 0.6, 0.6, H, H + B * 1.4, sl, MT_IRON);
+            m.sides = 4;
+            m.p[0] = 0.6;
+            m.p[2] = 0.08;
+        }
+    }
 }
 
 // a launch pad: its slab, the service tower beside it with its arm out over the pad, the lightning masts round it, its water tower; the iron
@@ -518,9 +599,18 @@ void genLaunchpad(Gen& g) {
             const double a = k * TAU / 3 + 0.4, d = b.hw * 0.9;
             const double dk = g.Dk(MT_IRON, 50 + k);
             if (dk > 0.85) continue;
-            Form& m = g.add(FK_TRUSS, 0, std::sin(a) * d, std::cos(a) * d, 0, 1.2, 1.2, 0, H * 1.15, sl, MT_IRON); m.sides = 3; m.p[0] = 0.4; m.p[2] = 0.1; m.broken = dk < 0.3 ? 0 : clampd(dk, 0.3, 0.9);
+            Form& m = g.add(FK_TRUSS, 0, std::sin(a) * d, std::cos(a) * d, 0, 1.2, 1.2, 0, H * 1.15, sl, MT_IRON);
+            m.sides = 3;
+            m.p[0] = 0.4;
+            m.p[2] = 0.1;
+            m.broken = dk < 0.3 ? 0 : clampd(dk, 0.3, 0.9);
         }
-    if (g.lod < 2) { g.lathe(0, b.hw * 0.75, -b.hw * 0.75, 1.3, 0, 26, 0, MT_MASS); Form& tk = g.lathe(4, b.hw * 0.75, -b.hw * 0.75, 5, 26, 34, sl, MT_IRON); tk.p[0] = 0.3; tk.broken = Di > 0.5 ? 0.6 : 0; }
+    if (g.lod < 2) {
+        g.lathe(0, b.hw * 0.75, -b.hw * 0.75, 1.3, 0, 26, 0, MT_MASS);
+        Form& tk = g.lathe(4, b.hw * 0.75, -b.hw * 0.75, 5, 26, 34, sl, MT_IRON);
+        tk.p[0] = 0.3;
+        tk.broken = Di > 0.5 ? 0.6 : 0;
+    }
 }
 
 // a great hall: an assembly building's tall box with its door up a whole side (`style` 0), a mill's stepped sheds (1); the cladding goes
@@ -551,9 +641,15 @@ void genHangar(Gen& g) {
         }
         if (share > 0.97 && D < 0.5) {   // R-412: its roof the people's: a barrel vault, a gable, a slab
             const int rf = g.c.roof;
-            if (rf == RF_VAULTED || rf == RF_DOMED || rf == RF_SADDLE) { Form& v = g.add(FK_VAULT, rf == RF_SADDLE ? 2 : 0, 0, 0, 0, b.hw + 0.3, b.hd + 0.3, b.hWall, b.hWall + b.hw * 0.45, g.roofSlot(mat), mat, 2); v.p[0] = 0.5; v.p[1] = 1; }
-            else if (rf == RF_PITCHED || rf == RF_HIPPED || rf == RF_CONICAL) { Form& r = g.add(FK_SWEEP, 1, 0, 0, 0, 0, b.hd + 0.5, b.hWall, b.hWall + b.hw * 0.35 * g.pitchK(), g.roofSlot(mat), mat, 2); r.p[1] = b.hw + g.eave(); r.p[2] = 0.15; }
-            else g.box(0, 0, 0, b.hw + g.slabEave() * 0.5, b.hd + g.slabEave() * 0.5, b.hWall, b.hWall + 2, g.roofSlot(mat), mat, 2);
+            if (rf == RF_VAULTED || rf == RF_DOMED || rf == RF_SADDLE) {
+                Form& v = g.add(FK_VAULT, rf == RF_SADDLE ? 2 : 0, 0, 0, 0, b.hw + 0.3, b.hd + 0.3, b.hWall, b.hWall + b.hw * 0.45, g.roofSlot(mat), mat, 2);
+                v.p[0] = 0.5;
+                v.p[1] = 1;
+            } else if (rf == RF_PITCHED || rf == RF_HIPPED || rf == RF_CONICAL) {
+                Form& r = g.add(FK_SWEEP, 1, 0, 0, 0, 0, b.hd + 0.5, b.hWall, b.hWall + b.hw * 0.35 * g.pitchK(), g.roofSlot(mat), mat, 2);
+                r.p[1] = b.hw + g.eave();
+                r.p[2] = 0.15;
+            } else g.box(0, 0, 0, b.hw + g.slabEave() * 0.5, b.hd + g.slabEave() * 0.5, b.hWall, b.hWall + 2, g.roofSlot(mat), mat, 2);
         }
     } else g.heap(0, 0, b.hw * 0.8, b.hd * 0.8, b.hWall * 0.08, 0, mat);
 }
@@ -568,7 +664,11 @@ void genColossus(Gen& g) {
     const double h = H - ph, r = h * 0.17;
     if (D < 0.6) {
         figure(g, 0, 0, g.sink + ph, h, g.accentOn(AP_TOPS) ? 1 : 0, mat, D * 0.7);
-        if (b.style == 1 && D < 0.35 && g.lod < 2) { Form& a = g.lathe(0, r * 0.8, 0, r * 0.2, g.sink + ph + h * 0.62, g.sink + ph + h * 1.12, g.accentOn(AP_TOPS) ? 1 : 0, mat); a.tilt = 0.12; a.heading += PI / 2; }
+        if (b.style == 1 && D < 0.35 && g.lod < 2) {
+            Form& a = g.lathe(0, r * 0.8, 0, r * 0.2, g.sink + ph + h * 0.62, g.sink + ph + h * 1.12, g.accentOn(AP_TOPS) ? 1 : 0, mat);
+            a.tilt = 0.12;
+            a.heading += PI / 2;
+        }
         return;
     }
     const double dir = g.U(9) * TAU;   // fallen: the body along the ground, the head beyond it
@@ -586,11 +686,17 @@ void genTurbine(Gen& g) {
     const double share = Di < 0.5 ? 1 : tallShare(Di, g.U(4));
     // R-412: a lattice tower where the people expressed its frames, its section the people's; its nacelle rounded where its roofs were domes or
     // vaults; two blades or three or four by its number
-    if (g.gv(GV_EXPRESSION) == EX_FRAME) { Form& t = g.add(FK_TRUSS, 0, 0, 0, 0, 3.2, 3.2, 0, H * share, 0, MT_IRON); t.sides = 4; t.p[0] = 0.3; t.p[2] = 0.14; t.broken = share < 0.97 ? 0.5 : 0; }
-    else { const int pl = g.gv(GV_PLAN); Form& t = g.lathe(1, 0, 0, 2.4, 0, H * share, 0, MT_IRON, pl == PF_POLYGON ? clampi(c.genome.number(), 5, 8) : 0); t.p[0] = 0.62; t.broken = share < 0.97 ? 0.3 : 0; }
+    if (g.gv(GV_EXPRESSION) == EX_FRAME) { Form& t = g.add(FK_TRUSS, 0, 0, 0, 0, 3.2, 3.2, 0, H * share, 0, MT_IRON); t.sides = 4; t.p[0] = 0.3; t.p[2] = 0.14; t.broken = share < 0.97 ? 0.5 : 0;
+    } else {
+        const int pl = g.gv(GV_PLAN);
+        Form& t = g.lathe(1, 0, 0, 2.4, 0, H * share, 0, MT_IRON, pl == PF_POLYGON ? clampi(c.genome.number(), 5, 8) : 0);
+        t.p[0] = 0.62;
+        t.broken = share < 0.97 ? 0.3 : 0;
+    }
     if (share < 0.97 || g.lod == 2) return;
     const bool round = c.roof == RF_DOMED || c.roof == RF_VAULTED || c.roof == RF_SADDLE;
-    if (round) { g.box(0, -1.2, 0, 1.6, 3.9, H - 1.4, H + 0.1, 0, MT_IRON); Form& v = g.add(FK_VAULT, 0, 0, -1.2, 0, 1.6, 3.9, H + 0.1, H + 1.7, 0, MT_IRON); v.p[0] = 1.5; v.p[1] = 1; }   // a barrel over its body
+    // a barrel over its body
+    if (round) { g.box(0, -1.2, 0, 1.6, 3.9, H - 1.4, H + 0.1, 0, MT_IRON); Form& v = g.add(FK_VAULT, 0, 0, -1.2, 0, 1.6, 3.9, H + 0.1, H + 1.7, 0, MT_IRON); v.p[0] = 1.5; v.p[1] = 1; }
     else g.box(0, -1.2, 0, 1.6, 4.5, H - 1.4, H + 1.8, 0, MT_IRON);
     g.lathe(0, 0, 3.6, 1.3, H - 0.9, H + 1.3, 0, MT_IRON);
     const int nb = clampi(c.genome.number() % 3 + 2, 2, 4);
@@ -632,8 +738,12 @@ void genLighthouse(Gen& g) {
         if (g.D(MT_IRON) < 0.6) {
             const int rf = c.roof;
             if (rf == RF_FLAT || rf == RF_OPEN || rf == RF_STEPPED) g.lathe(0, 0, 0, rt * 0.95, H + 3.2, H + 3.55, g.roofSlot(MT_IRON), MT_IRON, 8);
-            else if (rf == RF_PITCHED || rf == RF_HIPPED || rf == RF_CONICAL) { Form& k = g.lathe(1, 0, 0, rt * 0.92, H + 3.2, H + 3.2 + rt * 1.6 * g.pitchK(), g.roofSlot(MT_IRON), MT_IRON, 8); k.p[0] = 0.05; }
-            else g.add(FK_DOME, ageDome(g, rf == RF_DOMED && (g.gv(GV_MOTIF) == MO_SPIRALS || g.gv(GV_MOTIF) == MO_FIGURES) ? 3 : 2), 0, 0, 0, rt * 0.88, rt * 0.88, H + 3.2, H + 4.6, g.roofSlot(MT_IRON), MT_IRON, 2);
+            else if (rf == RF_PITCHED || rf == RF_HIPPED || rf == RF_CONICAL) {
+                Form& k = g.lathe(1, 0, 0, rt * 0.92, H + 3.2, H + 3.2 + rt * 1.6 * g.pitchK(), g.roofSlot(MT_IRON), MT_IRON, 8);
+                k.p[0] = 0.05;
+            } else
+                g.add(FK_DOME, ageDome(g, rf == RF_DOMED && (g.gv(GV_MOTIF) == MO_SPIRALS || g.gv(GV_MOTIF) == MO_FIGURES) ? 3 : 2), 0, 0, 0, rt * 0.88, rt * 0.88, H + 3.2, H + 4.6,
+                        g.roofSlot(MT_IRON), MT_IRON, 2);
         }
     }
     if (g.lod == 2) return;

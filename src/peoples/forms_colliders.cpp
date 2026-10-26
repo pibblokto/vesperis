@@ -146,7 +146,8 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 const bool round = e.kind == FK_BLOB || (e.kind == FK_LATHE && e.sides < 3);
                 const int n = e.kind == FK_PYRAMID ? (e.sides >= 3 ? std::min(e.sides, 8) : 4) : (round ? 16 : std::min(e.sides, 8));
                 const double ca0 = round ? 0.0 : PI / n, scale = round ? 1.0 : 1.0 / std::cos(PI / n), kz = e.hz > 0 ? e.hz / std::max(1e-6, e.hx) : 1.0;
-                auto corner = [&](double R, int j, double& a, double& v) { const double th = ca0 + TAU * j / n; a = R * scale * std::cos(th); v = -R * scale * std::sin(th) * kz; };   // across; up (its b turned down)
+                // across; up (its b turned down)
+                auto corner = [&](double R, int j, double& a, double& v) { const double th = ca0 + TAU * j / n; a = R * scale * std::cos(th); v = -R * scale * std::sin(th) * kz; };
                 double lowest = 1e18; { const double R0 = e.hx * formProfile(e, 0.0); for (int j = 0; j < n; j++) { double ca, cv; corner(R0, j, ca, cv); lowest = std::min(lowest, cv); } }
                 const double lift = e.y0 - lowest;   // the axis's height: the mesh set down on its lowest corner (`formMesh`)
                 auto section = [&](double sAt, double& aMid, double& half, double& lo, double& hi) {   // its chord at the knee sAt along it, and its span up
@@ -170,7 +171,12 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 }
                 for (double sAt = w0; sAt < len; ) {
                     double aMid, w, lo, hi; section(sAt, aMid, w, lo, hi); w = std::max(0.2, w);
-                    if (sAt + w > len + 0.01 && sAt > w0) { const double ww = std::max(0.2, std::min(w, 0.5 * (len - (sAt - w)))); section(len - ww, aMid, w, lo, hi); push(aMid, c0 + len - ww, std::min(w, ww), lo, hi); break; }
+                    if (sAt + w > len + 0.01 && sAt > w0) {
+                        const double ww = std::max(0.2, std::min(w, 0.5 * (len - (sAt - w))));
+                        section(len - ww, aMid, w, lo, hi);
+                        push(aMid, c0 + len - ww, std::min(w, ww), lo, hi);
+                        break;
+                    }
                     push(aMid, c0 + sAt, std::min(w, sAt), lo, hi);
                     sAt += std::max(0.2, 0.7 * w);
                 }
@@ -188,7 +194,12 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             if (yTop - std::max(0.0, e.y0) < 0.3) return;
             std::vector<double> ys{e.y0};
             for (double band : {0.9, 1.8}) { const double y = std::max(e.y0, 0.0) + band; if (y > ys.back() + 0.2 && y < yTop - 0.3) ys.push_back(y); }
-            { const double rest = yTop - ys.back(); const int k = clampi((int)std::ceil(rest / 8.0), 1, 16); const double y0 = ys.back(); for (int i = 1; i <= k; i++) ys.push_back(y0 + rest * i / k); }
+            {
+                const double rest = yTop - ys.back();
+                const int k = clampi((int)std::ceil(rest / 8.0), 1, 16);
+                const double y0 = ys.back();
+                for (int i = 1; i <= k; i++) ys.push_back(y0 + rest * i / k);
+            }
             std::vector<std::pair<double, double>> poly;
             auto slicePush = [&](double a, double b, double r, double ya, double yb) { push(a, b, r, ya * up + lift, yb * up + lift); };   // a slice's span as it leans
             auto outline = [&](double ya, double yb, double apothem, int n) {   // the polygon in `poly` (its apothem given, n sides): inset and its discs
@@ -240,7 +251,12 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 else {   // an oval: a row of discs along its long axis
                     bool longA = ra > rb; double L = longA ? ra : rb, r = longA ? rb : ra;
                     int k = std::max(1, (int)std::ceil((L - r) / (0.7 * r)));
-                    for (int i = 0; i <= k; i++) { double c = -(L - r) + 2 * (L - r) * i / std::max(1, k); double rr = r * std::sqrt(std::max(0.2, 1 - (c / L) * (c / L))); if (longA) slicePush(c, lean * 0.5 * (ya + yb), rr, ya, yb); else slicePush(0, c + lean * 0.5 * (ya + yb), rr, ya, yb); }
+                    for (int i = 0; i <= k; i++) {
+                        double c = -(L - r) + 2 * (L - r) * i / std::max(1, k);
+                        double rr = r * std::sqrt(std::max(0.2, 1 - (c / L) * (c / L)));
+                        if (longA) slicePush(c, lean * 0.5 * (ya + yb), rr, ya, yb);
+                        else slicePush(0, c + lean * 0.5 * (ya + yb), rr, ya, yb);
+                    }
                 }
             }
             return;
@@ -253,11 +269,16 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             auto halfAt = [&](double y) {   // the outer face's half span at a height over the springing
                 const double t = clampd(y / H, 0, 1);
                 if (e.sub == 2) return e.hx * std::sqrt(1 - t);
-                if (e.sub == 1) { const double c = 0.5 * e.hx, rho = e.hx + c, apex = std::sqrt(rho * rho - c * c); const double yy = t * apex; return std::max(0.0, -c + std::sqrt(std::max(0.0, rho * rho - yy * yy))); }
+                if (e.sub == 1) {
+                    const double c = 0.5 * e.hx, rho = e.hx + c, apex = std::sqrt(rho * rho - c * c);
+                    const double yy = t * apex;
+                    return std::max(0.0, -c + std::sqrt(std::max(0.0, rho * rho - yy * yy)));
+                }
                 return e.hx * std::sqrt(std::max(0.0, 1 - t * t));
             };
             double g0 = 1e9, g1 = -1e9;
-            if (e.broken > 0) { g0 = -e.hz + 2 * e.hz * (0.2 + 0.25 * H01(e.seed, 1)); g1 = std::min(e.hz * (e.broken > 0.85 ? 0.85 : 1.0), g0 + 2 * e.hz * 0.6 * e.broken); }   // as `vaultMesh` lays the gap
+            // as `vaultMesh` lays the gap
+            if (e.broken > 0) { g0 = -e.hz + 2 * e.hz * (0.2 + 0.25 * H01(e.seed, 1)); g1 = std::min(e.hz * (e.broken > 0.85 ? 0.85 : 1.0), g0 + 2 * e.hz * 0.6 * e.broken); }
             const double rd = std::min(std::max(0.3, 0.5 * th + 0.1), std::max(0.1, e.hz));   // no longer than it is (a station's iron rib)
             const double bEnd = std::max(0.0, e.hz - rd);
             int k = std::max(1, (int)std::ceil(2 * bEnd / 0.7));
@@ -266,9 +287,22 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 if (yb <= ya) break;
                 const double a = halfAt(yb) - 0.5 * th;   // the shell's middle at the band's top (the narrowest)
                 if (a < rd) break;
-                for (int i = 0; i <= k; i++) { double b = -bEnd + 2 * bEnd * i / k; if (b > g0 - rd && b < g1 + rd) continue; push(a, b, rd, e.y0 + ya, e.y0 + yb); push(-a, b, rd, e.y0 + ya, e.y0 + yb); }
+                for (int i = 0; i <= k; i++) {
+                    double b = -bEnd + 2 * bEnd * i / k;
+                    if (b > g0 - rd && b < g1 + rd) continue;
+                    push(a, b, rd, e.y0 + ya, e.y0 + yb);
+                    push(-a, b, rd, e.y0 + ya, e.y0 + yb);
+                }
             }
-            if (e.p[1] > 0) { int k2 = std::max(1, (int)std::ceil(2 * e.hx / 0.7)); for (int i = 0; i <= k2; i++) { double a = -e.hx + 2 * e.hx * i / k2; if (std::fabs(a) > halfAt(0.9)) continue; push(a, e.hz - rd, rd, e.y0, e.y1); push(a, -e.hz + rd, rd, e.y0, e.y1); } }
+            if (e.p[1] > 0) {
+                int k2 = std::max(1, (int)std::ceil(2 * e.hx / 0.7));
+                for (int i = 0; i <= k2; i++) {
+                    double a = -e.hx + 2 * e.hx * i / k2;
+                    if (std::fabs(a) > halfAt(0.9)) continue;
+                    push(a, e.hz - rd, rd, e.y0, e.y1);
+                    push(a, -e.hz + rd, rd, e.y0, e.y1);
+                }
+            }
             return;
         }
         case FK_ARCH: {   // the piers, the openings free
@@ -358,7 +392,11 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
             auto inGap = [&](double u) { if (gap1 < gap0) return false; double d = std::fmod(u - gap0 + 4 * TAU, TAU); return d < gap1 - gap0; };
             if (e.tilt < 0.3) {   // lying flat, as wide as its tube is at the explorer's knee
                 const double k = std::min(r, 0.9), w = std::max(0.05, std::sqrt(std::max(0.0, r * r - (r - k) * (r - k))));
-                int n = std::max(8, (int)std::ceil(TAU * R / (1.4 * w))); for (int j = 0; j < n; j++) { double a = TAU * j / n; if (!inGap(a)) push(R * std::cos(a), R * std::sin(a), w, e.y0, e.y0 + 2 * r); }
+                int n = std::max(8, (int)std::ceil(TAU * R / (1.4 * w)));
+                for (int j = 0; j < n; j++) {
+                    double a = TAU * j / n;
+                    if (!inGap(a)) push(R * std::cos(a), R * std::sin(a), w, e.y0, e.y0 + 2 * r);
+                }
             }
             else {   // standing on its rim: the tube where it is across the ring's plane, its lower arc and its upper (each with the tube's
                      // height there: the hole between them free, and the lower arc's ends not walls to the ground)
@@ -369,7 +407,12 @@ void formColliders(const Form& e, std::vector<FormDisc>& out) {
                 for (int i = 0; i <= n; i++) {
                     const double a = -ends + 2 * ends * i / n;
                     // each disc's span the tube's over the whole of its width (where the arc curves the tube's height moves across it)
-                    double oMin = 1e18, iMax = 0; for (int q = -1; q <= 1; q++) { const double x = clampd(a + q * rr, -(R + r), R + r); oMin = std::min(oMin, outerAt(x)); iMax = std::max(iMax, innerAt(x)); }
+                    double oMin = 1e18, iMax = 0;
+                    for (int q = -1; q <= 1; q++) {
+                        const double x = clampd(a + q * rr, -(R + r), R + r);
+                        oMin = std::min(oMin, outerAt(x));
+                        iMax = std::max(iMax, innerAt(x));
+                    }
                     if (oMin <= iMax) continue;
                     if (std::fabs(a) >= R - r && iMax <= 0) { if (!inGap(std::acos(clampd(a / R, -1, 1)))) push(a, 0, rr, cy - oMin, cy + oMin); continue; }
                     if (!inGap(std::acos(clampd(a / R, -1, 1)))) push(a, 0, rr, cy - oMin, cy - iMax);   // the lower arc
@@ -429,7 +472,13 @@ double formSupportAt(const FormMesh& m, double x, double z, double ceiling) {
     for (const FormMesh::Poly& P : m.polys) {
         const FormMesh::V* v = &m.v[P.first];
         Vec3 nn(0, 0, 0);
-        for (int k = 0; k < P.n; k++) { const Vec3& a = v[k].p; const Vec3& b = v[(k + 1) % P.n].p; nn.x += (a.y - b.y) * (a.z + b.z); nn.y += (a.z - b.z) * (a.x + b.x); nn.z += (a.x - b.x) * (a.y + b.y); }
+        for (int k = 0; k < P.n; k++) {
+            const Vec3& a = v[k].p;
+            const Vec3& b = v[(k + 1) % P.n].p;
+            nn.x += (a.y - b.y) * (a.z + b.z);
+            nn.y += (a.z - b.z) * (a.x + b.x);
+            nn.z += (a.x - b.x) * (a.y + b.y);
+        }
         const double ln = std::sqrt(nn.x * nn.x + nn.y * nn.y + nn.z * nn.z);
         if (ln < 1e-12 || std::fabs(nn.y) < 0.2 * ln) continue;   // a wall, a riser
         bool pos = false, neg = false;   // inside the polygon's footprint: the point on one side of every edge

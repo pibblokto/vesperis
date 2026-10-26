@@ -85,7 +85,11 @@ void entranceAt(Gen& g, const Walls& W, double ht, double H) {
         case EN_STEPS: {
             if (g.lod != 0) return;
             for (int k = 0; k < 3; k++) faceBox(g, f, t, (1.15 - 0.33 * k) * 0.5, 1.25 - 0.1 * k, (1.15 - 0.33 * k) * 0.5, gnd, gnd + 0.17 * (k + 1), W.slot, W.mat, 4);
-            if (c.age == AGE_INDUSTRIAL && g.D(MT_IRON) < 0.5) for (int s = -1; s <= 1; s += 2) { Form& e = faceFence(g, f, true, t + s * 1.28, 0.55, 0.55, gnd + 0.51, gnd + 1.35, 1, g.ironSlot(), MT_IRON); e.p[3] = 0.08; }
+            if (c.age == AGE_INDUSTRIAL && g.D(MT_IRON) < 0.5)
+                for (int s = -1; s <= 1; s += 2) {
+                    Form& e = faceFence(g, f, true, t + s * 1.28, 0.55, 0.55, gnd + 0.51, gnd + 1.35, 1, g.ironSlot(), MT_IRON);
+                    e.p[3] = 0.08;
+                }
             if (modern) for (int s = -1; s <= 1; s += 2) faceBox(g, f, t + s * 1.38, 0.6, 0.12, 0.6, gnd, gnd + 0.75, 0, MT_CONCRETE, 4);
             return;
         }
@@ -117,7 +121,8 @@ void entranceAt(Gen& g, const Walls& W, double ht, double H) {
                 for (int s = -1; s <= 1; s += 2) { Form& b = faceBox(g, f, t + s * 1.3, 0.35, 0.04, 0.35, gnd + 2.1, gnd + 2.6, g.ironSlot(), MT_IRON, 4); (void)b; }
                 return;
             }
-            if (Dt < 0.4) { Form& h = faceBox(g, f, t, 0.55, 1.3, 0.55, gnd + 2.45, gnd + 2.6, g.roofSlot(MT_TIMBER), MT_TIMBER, 2); h.tilt = W.door <= 1 ? 0.28 : -0.28; }   // a hood over the door, its outer edge lower (a box's +along is out on the front and the right)
+            // a hood over the door, its outer edge lower (a box's +along is out on the front and the right)
+            if (Dt < 0.4) { Form& h = faceBox(g, f, t, 0.55, 1.3, 0.55, gnd + 2.45, gnd + 2.6, g.roofSlot(MT_TIMBER), MT_TIMBER, 2); h.tilt = W.door <= 1 ? 0.28 : -0.28; }
             return;
         }
         default: return;
@@ -144,7 +149,8 @@ void cornersOf(Gen& g, const Walls& W, const double hs[4], double ht, int roofMa
             if (hc < 0.97 * H) continue;
             if (co == CO_QUOINS && szs > 0 && H > 5) g.box(Cx - sx * 0.58, Cz - 0.58, 0, 0.6, 0.6, base + 2.8, base + H - 0.4, g.ironSlot(), MT_CONCRETE, 4);   // its corners glazed (dark)
             if (co == CO_PILASTERS && szs > 0) g.box(Cx - sx * 0.12, Cz + 0.45, 0, 0.12, 0.45, base, base + H, W.slot, W.mat, 4);   // a fin
-            else if (co == CO_TURRETS && szs > 0 && H > 5) { Form& e = g.lathe(0, Cx - sx * 0.9, Cz - 0.9, 1.6, base, base + H + 0.3, wallsSlot(g, W), W.mat); e.pattern = W.pattern; }   // a rounded corner
+            // a rounded corner
+            else if (co == CO_TURRETS && szs > 0 && H > 5) { Form& e = g.lathe(0, Cx - sx * 0.9, Cz - 0.9, 1.6, base, base + H + 0.3, wallsSlot(g, W), W.mat); e.pattern = W.pattern; }
             continue;
         }
         if (co == CO_QUOINS) {
@@ -166,7 +172,10 @@ void cornersOf(Gen& g, const Walls& W, const double hs[4], double ht, int roofMa
             if (low && (sx > 0) == (W.door == 0 && W.doorPos > 0)) continue;
             const double rt = clampd(0.2 * std::min(W.hw, W.hd), 0.75, 1.35), tx = Cx + sx * rt * 0.25, tz = Cz + szs * rt * 0.25, y0 = low ? base : base + std::max(2.6, 0.45 * H);
             if (!low) { Form& k = g.lathe(1, tx, tz, 0.3, y0 - 1.1, y0, wallsSlot(g, W), W.mat); k.p[0] = rt / 0.3; }   // its corbel
-            { Form& e = g.lathe(0, tx, tz, rt, y0, base + H + (low ? 1.3 : 0.6), wallsSlot(g, W), W.mat, g.gv(GV_PLAN) == PF_POLYGON ? clampi(c.genome.number(), 5, 8) : 0); e.pattern = g.lod == 0 ? W.pattern : 0; }
+            {
+                Form& e = g.lathe(0, tx, tz, rt, y0, base + H + (low ? 1.3 : 0.6), wallsSlot(g, W), W.mat, g.gv(GV_PLAN) == PF_POLYGON ? clampi(c.genome.number(), 5, 8) : 0);
+                e.pattern = g.lod == 0 ? W.pattern : 0;
+            }
             const double Dr = g.D(roofMat);
             if (Dr < 0.4) {
                 const double y1 = base + H + (low ? 1.3 : 0.6);
@@ -260,14 +269,20 @@ void projectionsOf(Gen& g, const Walls& W, const double hs[4], double ht, int pr
                 { Form& e = faceBox(g, f, tb, 0.45, a, 0.45, base, base + top, wallsSlot(g, W), W.mat); e.pattern = W.pattern; }
                 if (g.lod == 0) {   // its roof
                     if (c.age == AGE_MODERN) faceBox(g, f, tb, 0.5, a + 0.12, 0.55, base + top, base + top + 0.25, W.slot, W.mat, 2);
-                    else if (g.D(MT_TIMBER) < 0.4) { double x, z; faceAt(f, tb, 0.35, x, z); Form& r = g.add(FK_PYRAMID, 0, x, z, f.dh, a + 0.15, 0.7, base + top, base + top + 0.55, g.roofSlot(MT_TIMBER), MT_TIMBER, 2); r.p[1] = 0.25; }
+                    else if (g.D(MT_TIMBER) < 0.4) {
+                        double x, z;
+                        faceAt(f, tb, 0.35, x, z);
+                        Form& r = g.add(FK_PYRAMID, 0, x, z, f.dh, a + 0.15, 0.7, base + top, base + top + 0.55, g.roofSlot(MT_TIMBER), MT_TIMBER, 2);
+                        r.p[1] = 0.25;
+                    }
                 }
             }
             return;
         }
         case PJ_ORIELS: {
             if (H < 3.6) return;
-            const double a = std::min(0.95, L * 0.28), y0 = base + std::max(tiered ? tierY : 2.0, std::min(storey, H * 0.45)), y1 = base + std::min(H - 0.3, y0 - base + storey * (storeys > 2 ? 2 : 1) - 0.2);
+            const double a = std::min(0.95, L * 0.28), y0 = base + std::max(tiered ? tierY : 2.0, std::min(storey, H * 0.45)),
+                         y1 = base + std::min(H - 0.3, y0 - base + storey * (storeys > 2 ? 2 : 1) - 0.2);
             if (a < 0.6 || y1 - y0 < 1.2) return;
             const int n = L > 4.2 ? 2 : 1;
             for (int j = 0; j < n; j++) {
@@ -277,7 +292,12 @@ void projectionsOf(Gen& g, const Walls& W, const double hs[4], double ht, int pr
                 faceBox(g, q, tb, 0.25, a * 0.7, 0.25, y0 - 0.7, y0, wallsSlot(g, W), W.mat, 4);   // its corbel
                 if (g.lod == 0) {
                     if (c.age == AGE_MODERN) faceBox(g, q, tb, 0.45, a + 0.08, 0.47, y1, y1 + 0.2, W.slot, W.mat, 2);
-                    else if (g.D(MT_TIMBER) < 0.4) { double x, z; faceAt(q, tb, 0.42, x, z); Form& r = g.add(FK_PYRAMID, 0, x, z, f.dh, a + 0.1, 0.52, y1, y1 + 0.9 * g.pitchK(), g.roofSlot(MT_TIMBER), MT_TIMBER, 2); r.p[1] = 0; }
+                    else if (g.D(MT_TIMBER) < 0.4) {
+                        double x, z;
+                        faceAt(q, tb, 0.42, x, z);
+                        Form& r = g.add(FK_PYRAMID, 0, x, z, f.dh, a + 0.1, 0.52, y1, y1 + 0.9 * g.pitchK(), g.roofSlot(MT_TIMBER), MT_TIMBER, 2);
+                        r.p[1] = 0;
+                    }
                 }
             }
             return;
@@ -322,7 +342,8 @@ void rooflineOf(Gen& g, const Walls& W, double hmin, int rf, double rise, int ro
             default: {
                 const double r = clampd(0.22 * std::min(hw, hd), 0.6, 1.2);
                 g.lathe(0, W.cx, W.cz, r, top, top + 0.9, W.slot, stone, 8);
-                g.add(FK_DOME, ageDome(g, g.gv(GV_MOTIF) == MO_SPIRALS || g.gv(GV_MOTIF) == MO_FIGURES ? 3 : (g.gv(GV_OPENING) == OP_TRIANGULAR ? 2 : 0)), W.cx, W.cz, 0, r + 0.1, r + 0.1, top + 0.9, top + 0.9 + r * 1.1, g.roofSlot(stone), stone, 2);
+                g.add(FK_DOME, ageDome(g, g.gv(GV_MOTIF) == MO_SPIRALS || g.gv(GV_MOTIF) == MO_FIGURES ? 3 : (g.gv(GV_OPENING) == OP_TRIANGULAR ? 2 : 0)), W.cx, W.cz, 0, r + 0.1, r + 0.1, top + 0.9,
+                        top + 0.9 + r * 1.1, g.roofSlot(stone), stone, 2);
                 return;
             }
         }
@@ -341,7 +362,10 @@ void rooflineOf(Gen& g, const Walls& W, double hmin, int rf, double rise, int ro
             }
             case RL_GABLETS: {   // a water tank on its legs
                 const double tx = W.cx - hw * 0.4, tz = W.cz - hd * 0.3, r = clampd(0.22 * std::min(hw, hd), 0.9, 1.8);
-                for (int k = 0; k < 4; k++) { const double a = PI / 4 + k * PI / 2; g.lathe(0, tx + std::sin(a) * r * 0.8, tz + std::cos(a) * r * 0.8, 0.08, top, top + 1.4, g.ironSlot(), MT_IRON, 4); }
+                for (int k = 0; k < 4; k++) {
+                    const double a = PI / 4 + k * PI / 2;
+                    g.lathe(0, tx + std::sin(a) * r * 0.8, tz + std::cos(a) * r * 0.8, 0.08, top, top + 1.4, g.ironSlot(), MT_IRON, 4);
+                }
                 Form& t = g.lathe(4, tx, tz, r, top + 1.4, top + 1.4 + 2.2 * r, 0, MT_CONCRETE); t.p[0] = 0.35;
                 return;
             }
@@ -549,7 +573,11 @@ void yardRun(Gen& g, double x0, double z0, double x1, double z1, int mat) {
             const double kerb = c.age == AGE_INDUSTRIAL ? 0.4 : 0.15;
             g.box(cx, cz, dh, 0.16, len * 0.5, 0, kerb, 0, c.age == AGE_INDUSTRIAL ? mat : MT_CONCRETE);
             const double Di = g.D(MT_IRON);
-            if (Di < 0.6) { Form& e = g.add(FK_FENCE, 1, cx, cz, dh, 0.02, len * 0.5, kerb, 0.85, g.ironSlot(), MT_IRON); e.p[3] = c.age == AGE_INDUSTRIAL ? 0.09 : 0; e.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.9); }
+            if (Di < 0.6) {
+                Form& e = g.add(FK_FENCE, 1, cx, cz, dh, 0.02, len * 0.5, kerb, 0.85, g.ironSlot(), MT_IRON);
+                e.p[3] = c.age == AGE_INDUSTRIAL ? 0.09 : 0;
+                e.broken = Di < 0.3 ? 0 : clampd(Di, 0.3, 0.9);
+            }
             return;
         }
     }
@@ -583,7 +611,11 @@ void hutPole(Gen& g, double px, double pz) {
             if (Dt > 0.6) return;
             const double h = 3.2 + 1.4 * g.U(620), r = 0.2, hh = Dt < 0.3 ? h : h * (1 - Dt);
             g.lathe(0, px, pz, r, 0, hh, g.timberSlot(), MT_TIMBER, 4);
-            for (int k = 1; k <= 2; k++) if (hh > h * k / 3 + 0.3) { Form& e = g.box(px, pz, 0, r * 1.5, r * 1.5, h * k / 3 - 0.25, h * k / 3 + 0.25, k == 2 ? 1 : g.timberSlot(), MT_TIMBER, 4); e.heading += PI / 4; }
+            for (int k = 1; k <= 2; k++)
+                if (hh > h * k / 3 + 0.3) {
+                    Form& e = g.box(px, pz, 0, r * 1.5, r * 1.5, h * k / 3 - 0.25, h * k / 3 + 0.25, k == 2 ? 1 : g.timberSlot(), MT_TIMBER, 4);
+                    e.heading += PI / 4;
+                }
             if (Dt < 0.3) g.box(px, pz, 0, 0.75, 0.12, h - 0.55, h - 0.35, 1, MT_TIMBER, 4);   // its wings
             return;
         }
@@ -622,9 +654,26 @@ void hutRing(Gen& g, double rx, double rz, double doorA) {
         const double cx = 0.5 * (x0 + x1), cz = 0.5 * (z0 + z1), len = std::hypot(x1 - x0, z1 - z0), dh = std::atan2(x1 - x0, z1 - z0);
         switch (bd) {
             case BD_WALLS: { const double D = g.D(MT_DRYSTONE); g.box(cx, cz, dh, 0.25, len * 0.5, 0, std::max(0.25, 0.75 * wallShare(D, g.U(640 + k))), 0, MT_DRYSTONE, 3); break; }
-            case BD_FENCES: { const double D = g.D(MT_TIMBER); if (D < 0.8) { Form& e = g.add(FK_FENCE, 2, cx, cz, dh, 0.05, len * 0.5, 0, 0.85, g.timberSlot(), MT_TIMBER); e.broken = D < 0.25 ? 0 : clampd(D, 0.3, 0.9); } break; }
+            case BD_FENCES: {
+                const double D = g.D(MT_TIMBER);
+                if (D < 0.8) {
+                    Form& e = g.add(FK_FENCE, 2, cx, cz, dh, 0.05, len * 0.5, 0, 0.85, g.timberSlot(), MT_TIMBER);
+                    e.broken = D < 0.25 ? 0 : clampd(D, 0.3, 0.9);
+                }
+                break;
+            }
             case BD_HEDGES: if (!g.st.desert) g.box(cx, cz, dh, 0.35, len * 0.5, 0, 0.8, 0, -1, 11); break;
-            default: { const double D = g.D(MT_TIMBER); if (D < 0.7) { Form& e = g.add(FK_FENCE, 0, cx, cz, dh, 0.06, len * 0.5, 0, 0.85, g.timberSlot(), MT_TIMBER); e.p[0] = 0.24; e.p[1] = 0.8; e.p[3] = 0.12; e.broken = D < 0.25 ? 0 : clampd(D, 0.3, 0.9); } break; }   // a ring of stakes
+            default: {
+                const double D = g.D(MT_TIMBER);
+                if (D < 0.7) {
+                    Form& e = g.add(FK_FENCE, 0, cx, cz, dh, 0.06, len * 0.5, 0, 0.85, g.timberSlot(), MT_TIMBER);
+                    e.p[0] = 0.24;
+                    e.p[1] = 0.8;
+                    e.p[3] = 0.12;
+                    e.broken = D < 0.25 ? 0 : clampd(D, 0.3, 0.9);
+                }
+                break;
+            }   // a ring of stakes
         }
     }
 }
@@ -643,12 +692,25 @@ void hutEntrance(Gen& g, double rx, double rz, double doorA, double h, bool ston
                 if (stone) g.box(x, z, heading, 0.22, 0.75, 0, std::max(0.4, h * 0.85 * wallShare(g.D(MT_DRYSTONE), g.U(650 + (s > 0)))), 0, MT_DRYSTONE);
                 else { at(s * 1.1, 1.3, x, z); g.post(x, z, h * 0.95, 0.11, 652 + (s > 0)); }
             }
-            if (Dt < 0.35) { at(0, 0.75, x, z); Form& t = g.add(FK_SWEEP, 1, x, z, heading, 0, 0.8, h * 0.9, h * 0.9 + 0.75 * g.pitchK(), g.roofSlot(MT_TIMBER), MT_TIMBER, 2); t.p[1] = 1.5; t.p[2] = 0.05; }
+            if (Dt < 0.35) {
+                at(0, 0.75, x, z);
+                Form& t = g.add(FK_SWEEP, 1, x, z, heading, 0, 0.8, h * 0.9, h * 0.9 + 0.75 * g.pitchK(), g.roofSlot(MT_TIMBER), MT_TIMBER, 2);
+                t.p[1] = 1.5;
+                t.p[2] = 0.05;
+            }
             return;
         }
         case EN_STEPS: { double x, z; at(0, 0.45, x, z); g.box(x, z, heading, 0.9, 0.42, 0, 0.16, 0, MT_DRYSTONE, 4); return; }   // a threshold slab
         case EN_PORTICO: { double x, z; for (int s = -1; s <= 1; s += 2) { at(s * 1.1, 0.6, x, z); g.post(x, z, h * 1.6, 0.15, 656 + (s > 0)); } return; }   // two tall portal posts
-        case EN_CANOPY: { if (Dt < 0.4) { double x, z; at(0, 0.5, x, z); Form& c = g.box(x, z, heading, 1.1, 0.55, h * 0.95, h * 0.95 + 0.14, g.roofSlot(MT_TIMBER), MT_TIMBER, 2); c.tilt = 0.28; } return; }
+        case EN_CANOPY: {
+            if (Dt < 0.4) {
+                double x, z;
+                at(0, 0.5, x, z);
+                Form& c = g.box(x, z, heading, 1.1, 0.55, h * 0.95, h * 0.95 + 0.14, g.roofSlot(MT_TIMBER), MT_TIMBER, 2);
+                c.tilt = 0.28;
+            }
+            return;
+        }
         default: return;
     }
 }
@@ -668,12 +730,22 @@ void genFurniture(Gen& g) {
             if (age == AGE_MEDIEVAL) {
                 { Form& e = g.lathe(0, 0, 0, 0.85, 0, 0.8 * wallShare(Ds, g.U(10)), 0, stone, 10); e.p[3] = 1; }
                 for (int s = -1; s <= 1; s += 2) g.post(s * 0.75, 0, 2.3, 0.08, 20 + (s > 0));
-                if (Dt < 0.3 && g.lod == 0) { g.box(0, 0, 0, 0.85, 0.06, 2.05, 2.17, g.timberSlot(), MT_TIMBER, 4); Form& r = g.add(FK_SWEEP, 1, 0, 0, PI / 2, 0, 0.95, 2.2, 2.85, g.roofSlot(MT_TIMBER), MT_TIMBER, 2); r.p[1] = 0.85; r.p[2] = 0.05; }
+                if (Dt < 0.3 && g.lod == 0) {
+                    g.box(0, 0, 0, 0.85, 0.06, 2.05, 2.17, g.timberSlot(), MT_TIMBER, 4);
+                    Form& r = g.add(FK_SWEEP, 1, 0, 0, PI / 2, 0, 0.95, 2.2, 2.85, g.roofSlot(MT_TIMBER), MT_TIMBER, 2);
+                    r.p[1] = 0.85;
+                    r.p[2] = 0.05;
+                }
             } else if (age == AGE_INDUSTRIAL) {
                 if (Di > 0.7) return;
                 g.lathe(0, 0, 0, 0.13, 0, 1.45, g.ironSlot(), MT_IRON, 8);
                 g.add(FK_DOME, 0, 0, 0, 0, 0.17, 0.17, 1.45, 1.62, g.ironSlot(), MT_IRON);
-                if (g.lod == 0) { g.box(0, 0.2, 0, 0.04, 0.2, 1.0, 1.08, g.ironSlot(), MT_IRON, 4); Form& h = g.box(0, -0.25, 0, 0.03, 0.3, 1.3, 1.36, g.ironSlot(), MT_IRON, 4); h.tilt = 0.35; g.box(0, 0.55, 0, 0.35, 0.25, 0, 0.35, 0, MT_MASONRY, 4); }
+                if (g.lod == 0) {
+                    g.box(0, 0.2, 0, 0.04, 0.2, 1.0, 1.08, g.ironSlot(), MT_IRON, 4);
+                    Form& h = g.box(0, -0.25, 0, 0.03, 0.3, 1.3, 1.36, g.ironSlot(), MT_IRON, 4);
+                    h.tilt = 0.35;
+                    g.box(0, 0.55, 0, 0.35, 0.25, 0, 0.35, 0, MT_MASONRY, 4);
+                }
             } else if (age == AGE_MODERN) {
                 if (Ds > 0.7) return;
                 g.box(0, 0, 0, 0.18, 0.18, 0, 0.92, 0, MT_CONCRETE, 4); g.box(0, 0.1, 0, 0.3, 0.25, 0.85, 1.0, 0, MT_CONCRETE, 4);
@@ -683,21 +755,29 @@ void genFurniture(Gen& g) {
             switch (age) {
                 case AGE_MEDIEVAL:
                     g.post(0, 0, 2.8, 0.09, 30);
-                    if (Dt < 0.35 && g.lod == 0) { g.box(0, 0.22, 0, 0.05, 0.24, 2.6, 2.68, g.timberSlot(), MT_TIMBER, 4); g.box(0, 0.34, 0, 0.13, 0.13, 2.2, 2.55, g.ironSlot(), MT_IRON, 4); }   // its bracket, its lantern under it
+                    // its bracket, its lantern under it
+                    if (Dt < 0.35 && g.lod == 0) { g.box(0, 0.22, 0, 0.05, 0.24, 2.6, 2.68, g.timberSlot(), MT_TIMBER, 4); g.box(0, 0.34, 0, 0.13, 0.13, 2.2, 2.55, g.ironSlot(), MT_IRON, 4); }
                     return;
                 case AGE_INDUSTRIAL: {
                     if (Di > 0.7) return;
                     const double h = 3.9 * (Di < 0.35 ? 1.0 : 1 - Di);
                     g.lathe(0, 0, 0, 0.17, 0, 0.6, g.ironSlot(), MT_IRON, 8);
                     g.lathe(0, 0, 0, 0.07, 0.6, h, g.ironSlot(), MT_IRON, 6);
-                    if (Di < 0.35 && g.lod == 0) { Form& l = g.lathe(1, 0, 0, 0.13, h, h + 0.48, g.ironSlot(), MT_IRON, 4); l.p[0] = 1.7; Form& t = g.lathe(1, 0, 0, 0.26, h + 0.48, h + 0.72, g.ironSlot(), MT_IRON, 4); t.p[0] = 0.1; g.box(0, 0, 0, 0.36, 0.03, h - 0.5, h - 0.44, g.ironSlot(), MT_IRON, 4); }
+                    if (Di < 0.35 && g.lod == 0) {
+                        Form& l = g.lathe(1, 0, 0, 0.13, h, h + 0.48, g.ironSlot(), MT_IRON, 4);
+                        l.p[0] = 1.7;
+                        Form& t = g.lathe(1, 0, 0, 0.26, h + 0.48, h + 0.72, g.ironSlot(), MT_IRON, 4);
+                        t.p[0] = 0.1;
+                        g.box(0, 0, 0, 0.36, 0.03, h - 0.5, h - 0.44, g.ironSlot(), MT_IRON, 4);
+                    }
                     return;
                 }
                 case AGE_MODERN: {
                     if (Di > 0.75) return;
                     const double h = 7.5 * (Di < 0.4 ? 1.0 : 1.2 - Di);
                     g.lathe(1, 0, 0, 0.12, 0, h, g.ironSlot(), MT_IRON, 8).p[0] = 0.6;
-                    if (Di < 0.4 && g.lod == 0) { g.box(0, 0.7, 0, 0.05, 0.75, h - 0.3, h, g.ironSlot(), MT_IRON, 4); g.box(0, 1.35, 0, 0.16, 0.3, h - 0.24, h - 0.04, g.ironSlot(), MT_IRON, 4); }   // its arm, its lamp under the arm's end
+                    // its arm, its lamp under the arm's end
+                    if (Di < 0.4 && g.lod == 0) { g.box(0, 0.7, 0, 0.05, 0.75, h - 0.3, h, g.ironSlot(), MT_IRON, 4); g.box(0, 1.35, 0, 0.16, 0.3, h - 0.24, h - 0.04, g.ironSlot(), MT_IRON, 4); }
                     return;
                 }
                 default: {
@@ -714,11 +794,21 @@ void genFurniture(Gen& g) {
             if (Ds > 0.55) return;
             g.lathe(0, 0, 0, 0.24, 0, 1.6, 0, stone, 8);
             { Form& w = g.lathe(1, 0, 0, 0.3, 1.6, 1.9, 0, stone, 12); w.p[0] = 2.7; }
-            if (age == AGE_INDUSTRIAL && g.lod == 0) { g.lathe(0, 0, 0, 0.14, 1.9, 2.5, g.ironSlot(), MT_IRON, 8); Form& w2 = g.lathe(1, 0, 0, 0.16, 2.5, 2.7, g.ironSlot(), MT_IRON, 8); w2.p[0] = 2.8; }
+            if (age == AGE_INDUSTRIAL && g.lod == 0) {
+                g.lathe(0, 0, 0, 0.14, 1.9, 2.5, g.ironSlot(), MT_IRON, 8);
+                Form& w2 = g.lathe(1, 0, 0, 0.16, 2.5, 2.7, g.ironSlot(), MT_IRON, 8);
+                w2.p[0] = 2.8;
+            }
             return;
         }
         default: {   // a figure on its plinth
-            if (age >= AGE_FUTURISTIC) { g.lathe(0, 0, 0, 0.6, 0, 0.6, 0, MT_COMPOSITE); Form& t = g.add(FK_TORUS, 0, 0, 0, 0, 1.4, 1.4, 1.2, 4.24, 3, MT_COMPOSITE); t.p[0] = 0.12; t.tilt = PI / 2; return; }
+            if (age >= AGE_FUTURISTIC) {
+                g.lathe(0, 0, 0, 0.6, 0, 0.6, 0, MT_COMPOSITE);
+                Form& t = g.add(FK_TORUS, 0, 0, 0, 0, 1.4, 1.4, 1.2, 4.24, 3, MT_COMPOSITE);
+                t.p[0] = 0.12;
+                t.tilt = PI / 2;
+                return;
+            }
             if (age == AGE_MODERN) {
                 g.box(0, 0, 0, 0.9, 0.6, 0, 0.5, 0, MT_CONCRETE);
                 if (Ds < 0.5) { Form& e = g.box(0, 0, 0.4, 0.22, 0.5, 0.5, 3.4, g.ironSlot(), MT_IRON); e.tilt = 0.22; }

@@ -71,7 +71,9 @@ struct VgNode {
     enum Type : uint8_t { TEXT = 0, PAR, CHOICE, RULE, FACT, LOCAL, ENT, VERB, NUM, ATTR, DIRECT, DECL, PLURAL, TONGUE };
     Type type = TEXT;
     std::string s;                // TEXT the text; RULE/FACT/PLURAL the key; LOCAL/ATTR the attribute; ENT/DECL the entity; VERB the lemma; NUM the key; DIRECT the name; TONGUE the thing's key
-    std::string a, b;             // ENT the form; VERB the subject; NUM the form and the noun; ATTR the value; DIRECT the arguments; DECL the gender and the later form; RULE the local it binds (`>.x`); LOCAL the form
+    // ENT the form; VERB the subject; NUM the form and the noun; ATTR the value; DIRECT the arguments; DECL the gender and the later form;
+    // RULE the local it binds (`>.x`); LOCAL the form
+    std::string a, b;
     std::vector<std::string> path;          // ENT, NUM: the fields after the entity (`$e.a.mother` -> a, mother)
     std::vector<std::vector<VgNode>> opts;  // CHOICE
     int ref = -1;                 // linked: the rule, the fact, the schema's entity, the directive (-1 a local entity or attribute)

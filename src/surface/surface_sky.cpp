@@ -41,7 +41,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         dogL = Vec3(ch * std::sin(az - dA), sinAlt, ch * std::cos(az - dA)); dogR = Vec3(ch * std::sin(az + dA), sinAlt, ch * std::cos(az + dA));
         dogs = halo * smoothstep(0.86, 0.6, sinAlt);
     }
-    if (iceHalos && env.moonBody >= 0 && env.moonLight > 0.004 && sinAlt < -0.05) moonHalo = clampd(std::sqrt(env.moonLight / 0.05), 0, 1) * (1 - env.rain) * (1 - 0.7 * env.cloudCover);   // a moon of a twentieth of the sun's light at its full
+    // a moon of a twentieth of the sun's light at its full
+    if (iceHalos && env.moonBody >= 0 && env.moonLight > 0.004 && sinAlt < -0.05) moonHalo = clampd(std::sqrt(env.moonLight / 0.05), 0, 1) * (1 - env.rain) * (1 - 0.7 * env.cloudCover);
     const Vec3 moonD = env.moonDir;
     const double cosMoonRingLo = std::cos(24.01 * DEG), cosMoonRingHi = std::cos(19.99 * DEG);
     // TR_NOCTILUCENT: silver-blue clouds 83 km up in a high latitude's summer twilight, lit from below the horizon after the sun has
@@ -89,7 +90,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                         veil = localFront.veil(xw, zw);
                     }
                     double n = 0.5 + 0.5 * fbm2(x / 1800.0, z / 1800.0, site.gen.seed + 77, 4, 2.2, 0.55);
-                    double dLow = smoothstep(thr, thr + 0.18, n) * smoothstep(0.012, 0.09 - 0.05 * clampd(fcl, 0, 1), el);   // a front's solid deck is drawn nearer the horizon (a dark band over it when the wall is far)
+                    // a front's solid deck is drawn nearer the horizon (a dark band over it when the wall is far)
+                    double dLow = smoothstep(thr, thr + 0.18, n) * smoothstep(0.012, 0.09 - 0.05 * clampd(fcl, 0, 1), el);
                     double cosSun = dot(d, sd);
                     // denser toward the sun means this part of the cloud is its shaded underside
                     double nSun = 0.5 + 0.5 * fbm2((x + sd.x * 260) / 1800.0, (z + sd.z * 260) / 1800.0, site.gen.seed + 77, 3, 2.2, 0.55);
@@ -108,7 +110,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                     dens = (float)dAll;
                     storm = (float)(clampd(fcl * 1.5, 0, 1) * (dAll > 1e-6 ? dLow / dAll : 0.0));   // the deck's share of the cell (the veil is the sky's)
                     idx = (float)(dAll > 1e-6 ? (idxLow * dLow + idxHigh * dHigh * (1 - dLow)) / dAll : 0);
-                    { double rr = std::max(env.rain, lp); if (rr > 0 || fcl > 0) idx *= (float)std::max(0.3, 1 - 0.35 * rr - 0.35 * fcl - 0.1 * lp); }   // a front's deck is dark underneath, darker over its rain (without a front: the rain's 0.35 as before)
+                    // a front's deck is dark underneath, darker over its rain (without a front: the rain's 0.35 as before)
+                    { double rr = std::max(env.rain, lp); if (rr > 0 || fcl > 0) idx *= (float)std::max(0.3, 1 - 0.35 * rr - 0.35 * fcl - 0.1 * lp); }
                 }
                 cloudGrid[(gy * GX + gx) * 3] = dens;
                 cloudGrid[(gy * GX + gx) * 3 + 1] = idx;
@@ -276,14 +279,20 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 v = base + g;
                 // M10-14: 22-degree halo in cold, clear air; twilight wedge opposite a low sun. F-07: the ring's and the pillar's tests
                 // first on the cosine, the height and the azimuth's tangent (their bounds a thousandth of a degree outside the ones after)
-                if (halo > 0 && cosSun > cosHaloLo && cosSun < cosHaloHi) { double ang = std::acos(clampd(cosSun, -1, 1)) / DEG; double dh = std::fabs(ang - 22.0); if (dh < 1.4) v += 5.0 * halo * (1 - dh / 1.4); }
+                if (halo > 0 && cosSun > cosHaloLo && cosSun < cosHaloHi) {
+                    double ang = std::acos(clampd(cosSun, -1, 1)) / DEG;
+                    double dh = std::fabs(ang - 22.0);
+                    if (dh < 1.4) v += 5.0 * halo * (1 - dh / 1.4);
+                }
                 if (iceHalos && halo > 0) {   // the sundogs, the parhelic circle, the 46-degree ring
                     if (dogs > 0) for (const Vec3& dg : {dogL, dogR}) {
                         const double cd = dot(d, dg);
                         if (cd > 0.9945) {   // within 6 degrees: a bright spot drawn out along the sun's height, a white tail outward
                             const double dAlt = (std::asin(clampd(el, -1, 1)) - std::asin(clampd(dg.y, -1, 1))) / DEG, dAz = std::acos(clampd(cd, -1, 1)) / DEG;
                             const double outward = dot(d, dg) > 0 && dot(d - dg, dg - sd) > 0 ? 1.0 : 0.0;
-                            v += dogs * (17.0 * std::exp(-(dAz * dAz) / 0.6 - (dAlt * dAlt) / 0.3) + 5.0 * std::exp(-(dAz * dAz) / 4.0 - (dAlt * dAlt) / 1.2) + 3.0 * outward * std::exp(-std::fabs(dAlt) / 0.4) * std::exp(-dAz / 5.0));
+                            v += dogs *
+                                    (17.0 * std::exp(-(dAz * dAz) / 0.6 - (dAlt * dAlt) / 0.3) + 5.0 * std::exp(-(dAz * dAz) / 4.0 - (dAlt * dAlt) / 1.2) +
+                                            3.0 * outward * std::exp(-std::fabs(dAlt) / 0.4) * std::exp(-dAz / 5.0));
                         }
                     }
                     const double dh = std::fabs(std::asin(clampd(el, -1, 1)) - sunAltA) / DEG;
@@ -414,7 +423,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
     // sun had a hard edge (a pale wedge with straight sides across the sun of a comet); now it lands on one bank
     // whatever lies behind it. It reaches down to the horizon of the drawn ground, not to the horizontal (where it ended in a
     // straight edge across the sky of a small body, whose sky shows under the horizontal all round), and lies behind the bodies
-    const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) * KINDS[site.gen.type].starLight : 1.0);   // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
+    // the bulge 17 shades on a dark night, the plane 6-8, the wings under 2 left to the sky
+    const double bandGain = venus ? 0 : 20.0 * (site.atmosphere ? (1.0 - day) * (1 - env.rain) * KINDS[site.gen.type].starLight : 1.0);
     NebulaPatch nebAll[18]; int nebAllN = nebN;   // the field's patches and a protostar's own cloud round the star's direction now
     for (int k = 0; k < nebN; k++) nebAll[k] = nebP[k];
     nebAllN += starNebulaPatches(site.sys->star, normalize(site.sys->star.pos - site.sys->bodyPos(site.body, t)), nebAll + nebAllN);
@@ -447,7 +457,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
         // airless: the intensity in the band's bank with the light of each intensity in the sky's (both ramps rise from black;
         // the halo the airless sky draws round a sun is no light of a hole's)
         std::vector<int> skyToBand;
-        const double cosDisc1 = site.sys->star.cls == STAR_BLACK_HOLE ? 2.0 : std::cos(env.sunDisc.angularRadius), cosDisc2 = std::cos(env.sun2.angularRadius);   // a hole has no disc (and its lens shows what lies behind it)
+        // a hole has no disc (and its lens shows what lies behind it)
+        const double cosDisc1 = site.sys->star.cls == STAR_BLACK_HOLE ? 2.0 : std::cos(env.sunDisc.angularRadius), cosDisc2 = std::cos(env.sun2.angularRadius);
         if (airless) {
             skyToBand.assign(INTEN_MASK + 1, 0);
             auto lumAt = [](const double* lum, double sh) { int k = std::min(62, (int)sh); return lum[k] + (lum[k + 1] - lum[k]) * std::min(1.0, sh - k); };
@@ -480,7 +491,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 if (clouds) {   // the clouds hide it
                     int gx = x / CELL, gy = y / CELL;
                     double fx = (x - gx * CELL) / (double)CELL, fy = (y - gy * CELL) / (double)CELL;
-                    double dens = (cloudGrid[(gy * GX + gx) * 3] * (1 - fx) + cloudGrid[(gy * GX + gx + 1) * 3] * fx) * (1 - fy) + (cloudGrid[((gy + 1) * GX + gx) * 3] * (1 - fx) + cloudGrid[((gy + 1) * GX + gx + 1) * 3] * fx) * fy;
+                    double dens = (cloudGrid[(gy * GX + gx) * 3] * (1 - fx) + cloudGrid[(gy * GX + gx + 1) * 3] * fx) * (1 - fy) +
+                            (cloudGrid[((gy + 1) * GX + gx) * 3] * (1 - fx) + cloudGrid[((gy + 1) * GX + gx + 1) * 3] * fx) * fy;
                     bs *= 1 - dens;
                 }
                 if (airless) {   // every sky pixel, the band added to the sky's own light
@@ -629,7 +641,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
             double inten = venus ? 0.55 : 1.0;
             double haze = site.atmosphere ? (0.6 + 0.4 * env.cloudCover) : 0.0;
             if (sinAltD > -0.05 || !site.atmosphere) {
-                double sunI = inten * (site.atmosphere ? clampd(0.55 + 0.45 * smoothstep(-0.05, 0.1, sinAltD), 0, 1) : 1.0) * clampd(0.5 + 0.5 * env.primaryRel, 0.5, 1.0);   // a far primary as the companion's disc is drawn
+                // a far primary as the companion's disc is drawn
+                double sunI = inten * (site.atmosphere ? clampd(0.55 + 0.45 * smoothstep(-0.05, 0.1, sinAltD), 0, 1) : 1.0) * clampd(0.5 + 0.5 * env.primaryRel, 0.5, 1.0);
                 Vec3 discUp = camLocal * (site.localFrame(t) * Vec3(0, 1, 0));   // the orbital plane's normal, for a protostar's disc
                 // on an airless sky in the band's bank, which the sky lies in (a hole's disc and a protostar's keep the sky bank's colours)
                 const int sunBank = !site.atmosphere && site.sys->star.cls != STAR_BLACK_HOLE && site.sys->star.cls != STAR_PROTOSTAR ? 22 : 1;
@@ -639,7 +652,10 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 double rpx = proj.f * std::tan(env.sunDisc.angularRadius) / v.z;
                 // the veiling glare over the finished picture (drawVeil), from the sun's place and brightness
                 sunSx = sx; sunSy = sy; sunRpx = rpx;
-                sunVeil = site.sys->star.cls == STAR_BLACK_HOLE ? 0.0 : sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7) * env.primaryRel;   // no glare from a hole; B-425: nor much from a far primary
+                sunVeil = site.sys->star.cls == STAR_BLACK_HOLE
+                        ? 0.0
+                        : sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.6 * env.cloudCover) * (1 - env.rain) * smoothstep(-0.02, 0.12, sinAltD) : 0.7) *
+                                env.primaryRel;   // no glare from a hole; B-425: nor much from a far primary
                 if (env.sunDisc.eclipse > 0.3 && !venus) {
                     double r = std::max(rpx, 1.5 * FB_SCALE), e = env.sunDisc.eclipse;
                     fb.glowDisc(sx, sy, r * 4.0, r * 1.05, (int)(34 * e * e), sunBank, true);
@@ -649,7 +665,8 @@ void SurfaceView::drawSky(Framebuffer& fb, double t, const std::vector<Star>& st
                 bool centreFree = ix >= 0 && iy >= 0 && ix < FBW && iy < FBH && fb.invz[iy * FBW + ix] <= 1e-12f;
                 // lens flare, dimmed by haze and rain, only with the sun well up and unobstructed
                 double flareI = sunI * (1 - env.sunDisc.eclipse) * (site.atmosphere ? (1 - 0.5 * env.cloudCover) * (1 - env.rain) * smoothstep(0.0, 0.15, sinAltD) : 0.8) * env.primaryRel;
-                if (!venus && centreFree && flareI > 0.05 && site.sys->star.cls != STAR_BLACK_HOLE) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, sunBank, proj);   // nor a flare
+                // nor a flare
+                if (!venus && centreFree && flareI > 0.05 && site.sys->star.cls != STAR_BLACK_HOLE) SpaceRenderer::drawLensFlare(fb, sx, sy, std::max(rpx, 2.0 * FB_SCALE), flareI, sunBank, proj);
             }
         }
     }
