@@ -385,12 +385,11 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
             status("TELESCOPE STOWED", 3);
         } else {
             returnState = state;
-            menuSel = 0;
-            state = GameState::MENU;
+            openScreen(GameState::MENU);
         }
         return;
     }   // Esc leaves the radar camera; W-06: and the telescope
-    if (helpKey(in)) { returnState = state; helpPage = 0; state = GameState::HELP; return; }
+    if (helpKey(in)) { returnState = state; openScreen(GameState::HELP); return; }
     if (saveKey(in)) { saveSlot(currentSlot); return; }
     if (loadKey(in)) { loadSlot(currentSlot); return; }
     if (in.wasPressed(KEY_Z) && !in.ctrl()) telescopeToggle();   // W-06: the telescope
@@ -453,7 +452,7 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_TAB) && inSystem) {
         listSel = ship.targetBelt >= 0 ? (int)sys.bodies.size() + ship.targetBelt : std::max(0, ship.localTarget);
         returnState = GameState::SPACE;
-        state = GameState::SYSTEM_LIST;
+        openScreen(GameState::SYSTEM_LIST);
     }
     if (enterKey(in) && !wasTargeting && !radarEnter && !tele.on && inSystem && ship.mode != ShipState::APPROACH) {   // in the telescope Enter tracks
         if (ship.targetBelt >= 0) startApproachBelt(ship.targetBelt);
@@ -463,9 +462,9 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
         int picked = pickBodyNearCrosshair();
         if (picked >= 0) { ship.localTarget = picked; ship.targetBelt = -1; status(fmt("LOCAL TARGET: %s", upper(bodyLabelOf(picked)).c_str()), 4); audio.beep = BEEP_UI; }
     }
-    if (in.wasPressed(KEY_G) && !in.ctrl()) { openGuide(); return; }
-    if (in.wasPressed(KEY_M) && !in.ctrl()) { guideReturn = GameState::SPACE; returnState = GameState::SPACE; openStarMap(); return; }   // in a flight too, on the galaxy
-    if (in.wasPressed(KEY_J) && !in.ctrl()) { guideReturn = GameState::SPACE; returnState = GameState::SPACE; logPage = 0; state = GameState::LOG; return; }
+    if (in.wasPressed(KEY_G) && !in.ctrl()) { openScreen(GameState::GUIDE); return; }
+    if (in.wasPressed(KEY_M) && !in.ctrl()) { returnState = GameState::SPACE; openScreen(GameState::STAR_MAP); return; }   // in a flight too, on the galaxy
+    if (in.wasPressed(KEY_J) && !in.ctrl()) { returnState = GameState::SPACE; openScreen(GameState::LOG); return; }
     if (in.wasPressed(KEY_F) && !in.ctrl()) { fieldAmp = !fieldAmp; status(fieldAmp ? "FIELD AMPLIFICATOR ON" : "FIELD AMPLIFICATOR OFF", 3); audio.beep = BEEP_UI; }
     if (in.wasPressed(KEY_X) && inSystem && (ship.localTarget >= 0 || ship.targetBelt >= 0)) {
         BeltRock rk;
@@ -478,7 +477,7 @@ void Game::updateSpace(const Input& in, double dt, double realDt) {
     }
     if (in.wasPressed(KEY_O) && ship.mode == ShipState::PARKED) { ship.orbiting = !ship.orbiting; status(ship.orbiting ? "SYNCHRONOUS ORBIT" : "FIXED POINT CHASE", 3); }
     if (in.wasPressed(KEY_C)) deployCapsule();
-    if (dataKey(in) && inSystem) { returnState = GameState::SPACE; state = GameState::DATA; }
+    if (dataKey(in) && inSystem) { returnState = GameState::SPACE; openScreen(GameState::DATA); }
     updateShipMotion(dt);
     const bool playing = player.playing >= 0 && !player.held && !player.paused;   // the ship's player: the hum and the drive lower under it
     audio.hum = radar.on ? 0.25 : (playing ? 0.3 : 0.6);   // the hum under the receiver's static

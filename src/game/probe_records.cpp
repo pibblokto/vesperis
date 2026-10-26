@@ -261,19 +261,19 @@ bool Game::openRecording(int rec) {
     if (!recordingContext(rec)) return false;
     replay.clock = 0; replay.playing = true; replay.fast = false; replay.lookYaw = replay.lookPitch = 0;
     replay.p.lastFlashSlot = -1;
-    state = GameState::RECORDING;
+    openScreen(GameState::RECORDING);
     status(fmt("THE RECORDING OF %s", recordTitle(guide.probes[rec]).c_str()), 4);
     audio.beep = BEEP_UI;
     return true;
 }
 
-// Esc and Enter go back to the gallery and set its own way back again, the ship (a recording plays only there): naming the storm
-// (N) lends `guideReturn` to the text entry (B-429)
+// Esc and Enter go back to the gallery (the row's way back); naming the storm (N) opens the text entry over the recording, which
+// goes back to it (its opener, U-05: B-429's trap, a way back the two screens shared, is gone)
 void Game::updateRecording(const Input& in, double dt, double realDt) {
-    if (replay.rec < 0 || replay.rec >= (int)guide.probes.size()) { state = GameState::GALLERY; guideReturn = GameState::SPACE; return; }
+    if (replay.rec < 0 || replay.rec >= (int)guide.probes.size()) { closeScreen(); return; }
     const ProbeRecord& r = guide.probes[replay.rec];
     if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) {
-        state = GameState::GALLERY; guideReturn = GameState::SPACE; galleryLoaded = -1; audio.beep = BEEP_UI;
+        closeScreen(); galleryLoaded = -1; audio.beep = BEEP_UI;
         return;
     }
     const bool atEnd = replay.clock >= r.endClock;
@@ -313,7 +313,6 @@ void Game::updateRecording(const Input& in, double dt, double realDt) {
         if (r.storm.empty()) { refuse("THIS PROBE FELL INTO NO STORM", 3);
         } else {
             textStormKey = r.storm;
-            guideReturn = GameState::RECORDING;
             const std::string n = nameOfKey(r.storm);
             beginTextEntry("NAME THE STORM", TEXT_STORM, n == "UNKNOWN" ? std::string() : upper(n));
         }

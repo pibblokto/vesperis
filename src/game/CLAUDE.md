@@ -26,11 +26,12 @@ range): chart_draw, shards_screen.
 - A new state or screen: the cookbook's "Add a game state" names every place to touch.
 - Persisted enums are append-only (`GameState`, `ShipState::Mode`, `AutoProfile`, guide.h's `MARK_*` numbers); one save line
   per field, and `load` ignores unknown keys. `Game`'s data members are never reordered.
-- A state is its row (its controller's page its `padMenu`), a way in a row of its list, a cabin device its row in
-  `cabinDevices` (rules-game-screens.md): ask `stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states.
+- A state is its row (its `padMenu`, `enter`, `back`), a way in a row of its list, a cabin device its row in `cabinDevices`
+  (rules-game-screens.md): ask `stateHas(state, ST_...)`; a trait new code needs is a column. A screen opens by
+  `openScreen(S)` and closes by `closeScreen()`; `state =` is only a landing's, the title's, a load's, an action's own exit.
 - `resetExpedition` resets `radar`, `icase`, `chartHeld`, `probe`, `bay` and `tele` by assigning fresh ones: a field moved into
   one is reset with it, and a thread in one would end the game.
-- A text entry opened from a screen sets `guideReturn` to it and is drawn over it.
+- A text entry draws over its opener (`openedFrom`) and goes back to it; the guide closes before it opens one.
 - The synth reads `AudioState`'s pointers after `frame`: their owner clears them before what they point at can move. The
   harness never runs the synth, so a screen keeps its own clock (`pieceT`) and re-syncs to the synth's.
 - A world's map is asked for (`mapIfReady`), never awaited. `drawCabinBand` runs a band a job: none reads another's.

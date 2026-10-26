@@ -91,6 +91,9 @@ enum StateTrait : unsigned {
 // are refined as the explorer walks, drives or flies, or plays (`padContext`)
 enum PadCtx { PCX_SCREEN, PCX_TITLE, PCX_SHIP, PCX_FOOT, PCX_BUGGY, PCX_DRONE, PCX_PROBE, PCX_RECORDING, PCX_INSTRUMENT };
 constexpr int STATE_COUNT = (int)GameState::AUTO + 1;   // AUTO is the last state
+// U-05: where a state's Esc goes, its row's `back` (`Game::closeScreen` follows it): a state's number, the scene it is drawn
+// over (`returnState`: the title, space or the ground), or the screen it was opened from (`openScreen` records it); a scene, none
+enum StateBack { BACK_NONE = -1, BACK_SCENE = -2, BACK_OPENER = -3 };
 // a state's trait, its controller's context and its name, read from its row (a value that is no state has no trait, the screen's
 // context, "?")
 bool stateHas(GameState s, unsigned trait);

@@ -338,6 +338,10 @@ Contents:
   probe, a recording, an instrument played: refined each frame), else the screen's own (U-04): a screen's `padMenu` sets its
   `title` only where its context is the screen's. A trait two others give (a scene: a base in play) stays their conjunction,
   so no row holds one without the other.
+- A way back read from a variable folds into a rule only after a check at every close the battery makes (U-05): a scratch build
+  printed the two to stderr where they differed (a compare then fails) and wrote every check to a file outside shots/ (`U05_LOG`),
+  so the compare stayed the same while it counted them. A variable two screens share is a trap (KI-427): each screen's opener is
+  its own (`openedFrom`).
 - A voice's identity comes from strong narrow lines and resonances, not broad noise (compare voices by LTAS distances). Measure a
   medium's surface in the bare render's quiet windows.
 - raylib's non-looping music end cuts the last block, and stalls starve its stream. Log each swap's return (the refresh it met);

@@ -216,7 +216,7 @@ void Game::padRunItem(const PadItem& it) {
     switch (it.special) {
         case PSP_KEYBOARD: padUI.keyboard = true; padUI.kbFor = state == GameState::SPACE && ship.targeting ? 1 : 0; padUI.kRow = padUI.kbFor == 1 ? 3 : 0; padUI.kCol = 0; padUI.latch = 0; return;
         case PSP_CONTROLLER: openPadScreen(); return;
-        case PSP_AUTO: returnState = state; openAutoScreen(state); return;
+        case PSP_AUTO: returnState = state; openScreen(GameState::AUTO); return;
         case PSP_TYPE: for (char c : it.text) padPress(charKey(c), 0); return;
         case PSP_TWICE: padPress(it.key, it.mods); padPress(it.key, it.mods); return;
         default: padPress(it.key, it.mods); return;
@@ -232,9 +232,8 @@ bool Game::padKeyboardShown() const {
 // the CONTROLS screen on its controller page, from anywhere
 void Game::openPadScreen() {
     if (stateHas(state, ST_BASE)) returnState = state;
-    keysReturn = state; keysPage = 1; keysCapture = false;
-    padUI.screenSel = 0; padUI.capture = -1; padUI.menu = false;
-    state = GameState::KEYS;
+    keysPage = 1; padUI.screenSel = 0; padUI.menu = false;
+    openScreen(GameState::KEYS);
 }
 
 // the menu's controller: up and down (repeating), LB and RB the pages, A runs the line, B, Y or START close it
@@ -509,7 +508,7 @@ void Game::updatePadScreen(const Input& in) {
         if (padMap.dirty && padMap.save(padPath)) padMap.dirty = false;   // only what changed: a file of the explorer's is not rewritten for nothing
         settings.save(settingsPath);
         if (keymap) keymap->save(keysPath);
-        state = keysReturn; audio.beep = BEEP_UI;
+        closeScreen(); audio.beep = BEEP_UI;
         return;
     }
     int& s = P.screenSel;

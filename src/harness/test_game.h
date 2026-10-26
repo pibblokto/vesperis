@@ -30,7 +30,7 @@ public:
     int testAutoCount(int what) const;                // 0 stars, 1 parkings, 2 landings, 3 probes, 4 records, 5 outings, 6 steps given up, 7 unsticks
     Vec3 testViewDir() const;                         // the eye's direction this frame (the galaxy's in space, the ground's on it)
     std::string testAngles() const;                   // the ship's and the head's angles, the ship's mode
-    void testOpenAuto() { returnState = state; openAutoScreen(state); }
+    void testOpenAuto() { returnState = state; openScreen(GameState::AUTO); }
     int testAutoSel() const { return autoSel; }
     // ---- auto-explore's tape (tape.cpp)
     std::string testTapeDir() const { return tape.dir; }   // the folder the tape was read from
@@ -138,8 +138,8 @@ public:
     double testDroneRackX(int k) const;          // where a drone stands in the cabin (its rack's slot, the launch moving it), its height
     double testDroneRackY(int k) const;
     std::string testDroneState(int k) const { return k >= 0 && k < DRONE_COUNT ? droneStateLine(k) : std::string(); }
-    void testOpenDroneBay() { openDroneBay(); }
-    void testOpenShards() { openShards(); }   // the decoder, which takes the synth
+    void testOpenDroneBay() { openScreen(GameState::DRONES); }
+    void testOpenShards() { openScreen(GameState::SHARDS); }   // the decoder, which takes the synth
     bool testDroneBayMapped() const { return bay.mapW > 0; }   // the screen's map of its world drawn
     void testShardsTop(int top) { shardsTop = top; }
     int testShardsLevel() const { return shardsLevel; }                        // the decoder's state for the harness
@@ -393,7 +393,7 @@ public:
     // ---- recordings, the gallery, the data sheet's profiles (probe_records.cpp, guide_screens.cpp)
     void testRecordingSeek(double clock, bool playing) { replay.clock = clock; replay.playing = playing; }
     double testRecordingClock() const { return replay.clock; }
-    void testOpenGallery() { guideReturn = GameState::SPACE; openGallery(); }
+    void testOpenGallery() { returnState = GameState::SPACE; openScreen(GameState::GALLERY); }   // as the guide opens it on the ship
     int testGalleryItems() const { return (int)galleryItems.size(); }
     int testGalleryRec(int i) const { return i >= 0 && i < (int)galleryItems.size() ? galleryItems[i].rec : -2; }
     int testGallerySel() const { return gallerySel; }

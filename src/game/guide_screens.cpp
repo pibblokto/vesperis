@@ -25,72 +25,71 @@
 const RowList<MenuRow>& Game::guideMenu() {
     static constexpr const char* SHIP_TARGETS = "TARGETING IS DONE FROM THE SHIP";
     static constexpr MenuRow ROWS[] = {
-        {"STAR MAP", [](Game& g) { g.openStarMap(); }, "THE STAR MAP IS READ FROM THE SHIP"},
+        {"STAR MAP", [](Game& g) { g.openScreen(GameState::STAR_MAP); }, "THE STAR MAP IS READ FROM THE SHIP"},
         {"NAME THIS STAR", [](Game& g) {   // D-02: a drifter's place is the explorer's to name as a system is
              if (!g.sys.valid) { g.status("NO STAR HERE", 3); return; }
-             g.beginTextEntry(g.sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, g.starNamed(g.sys.star) ? upper(g.starNameOf(g.sys.star)) : std::string());
+             g.closeScreen(); g.beginTextEntry(g.sys.sunless() ? "NAME THIS PLACE" : "NAME THIS STAR", TEXT_STAR, g.starNamed(g.sys.star) ? upper(g.starNameOf(g.sys.star)) : std::string());
          }, nullptr, [](const Game& g) -> std::string {
              if (g.sys.valid && g.starNamed(g.sys.star)) return "RENAME " + trunc(upper(g.starNameOf(g.sys.star)), 22);
              return g.sys.valid && g.sys.sunless() ? "NAME THIS PLACE" : "";
          }},
         {"NAME THIS WORLD", [](Game& g) {
-             int bi = g.guideReturn == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
+             int bi = g.returnState == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
              if (!g.sys.valid || bi < 0 || bi >= (int)g.sys.bodies.size()) { g.status("NO LOCAL TARGET TO NAME", 3); return; }
              g.textBody = bi;
-             g.beginTextEntry("NAME THIS WORLD", TEXT_WORLD, g.bodyNamed(bi) ? upper(g.bodyNameOf(bi)) : std::string());
+             g.closeScreen(); g.beginTextEntry("NAME THIS WORLD", TEXT_WORLD, g.bodyNamed(bi) ? upper(g.bodyNameOf(bi)) : std::string());
          }, nullptr, [](const Game& g) -> std::string {
              if (!g.sys.valid) return "";
-             int bi = g.guideReturn == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
+             int bi = g.returnState == GameState::SURFACE && g.surf.valid ? g.surf.site.body : g.ship.localTarget;
              return bi >= 0 && bi < (int)g.sys.bodies.size() && g.bodyNamed(bi) ? "RENAME " + trunc(upper(g.bodyNameOf(bi)), 22) : "";
          }},
-        {"WRITE A NOTE", [](Game& g) { g.beginTextEntry("NOTE FOR THE LOG", TEXT_NOTE, ""); }},
-        {"EXPEDITION LOG", [](Game& g) { g.logPage = 0; g.state = GameState::LOG; }},
-        {"GALLERY", [](Game& g) { g.openGallery(); }},
-        {"STATISTICS", [](Game& g) { g.state = GameState::STATS; }},
-        {"THE SHARDS", [](Game& g) { g.openShards(); }, "THE SHARDS ARE READ ON THE SHIP"},
-        {"TARGET A STAR BY NAME", [](Game& g) { g.beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); }, SHIP_TARGETS},
-        {"TARGET BY COORDINATES", [](Game& g) { g.beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); }, SHIP_TARGETS},
-        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { g.targetPreviousStar(); }, SHIP_TARGETS},
-        {"TARGET THE HOME STAR", [](Game& g) { g.targetHome(); }, SHIP_TARGETS},
+        {"WRITE A NOTE", [](Game& g) { g.closeScreen(); g.beginTextEntry("NOTE FOR THE LOG", TEXT_NOTE, ""); }},
+        {"EXPEDITION LOG", [](Game& g) { g.openScreen(GameState::LOG); }},
+        {"GALLERY", [](Game& g) { g.openScreen(GameState::GALLERY); }},
+        {"STATISTICS", [](Game& g) { g.openScreen(GameState::STATS); }},
+        {"THE SHARDS", [](Game& g) { g.openScreen(GameState::SHARDS); }, "THE SHARDS ARE READ ON THE SHIP"},
+        {"TARGET A STAR BY NAME", [](Game& g) { g.closeScreen(); g.beginTextEntry("STAR NAME", TEXT_FIND_STAR, ""); }, SHIP_TARGETS},
+        {"TARGET BY COORDINATES", [](Game& g) { g.closeScreen(); g.beginTextEntry("SECTOR X Y Z", TEXT_SECTOR, ""); }, SHIP_TARGETS},
+        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { if (g.targetPreviousStar()) g.closeScreen(); }, SHIP_TARGETS},
+        {"TARGET THE HOME STAR", [](Game& g) { if (g.targetHome()) g.closeScreen(); }, SHIP_TARGETS},
         {"SET HOME HERE", [](Game& g) {
              if (g.sys.valid) {
                  g.guide.home = g.starKeyOf(g.sys.star); g.guide.save(g.guidePath);
-                 g.status(fmt("HOME STAR: %s", upper(g.starNameOf(g.sys.star)).c_str()), 4); g.state = g.guideReturn;
+                 g.status(fmt("HOME STAR: %s", upper(g.starNameOf(g.sys.star)).c_str()), 4); g.closeScreen();
              }
          }},
         {"EXPORT THE GUIDE", [](Game& g) {
              std::string p = g.guidePath.substr(0, g.guidePath.rfind('.')) + "_export.txt";
              g.status(g.guide.save(p) ? fmt("GUIDE EXPORTED TO %s", upper(p).c_str()) : "EXPORT FAILED", 5);
-             g.state = g.guideReturn;
+             g.closeScreen();
          }},
-        {"IMPORT AN INBOX FILE", [](Game& g) { g.importInboxFile(); g.state = g.guideReturn; }},   // the names into the inbox, the friend's read shards lent
-        {"BACK", [](Game& g) { g.state = g.guideReturn; }},
+        {"IMPORT AN INBOX FILE", [](Game& g) { g.importInboxFile(); g.closeScreen(); }},   // the names into the inbox, the friend's read shards lent
+        {"BACK", [](Game& g) { g.closeScreen(); }},
     };
     static constexpr RowList<MenuRow> LIST = rowsOf(ROWS);
     static_assert(rowsWhole(LIST), "each row its label and its act");
     return LIST;
 }
 
-void Game::openGuide() {
+// U-05: the guide over the scene it is opened from
+void Game::guideEnter() {
     guideSel = 0;
-    guideReturn = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
     if (state == GameState::SURFACE || state == GameState::SPACE) returnState = state;
-    state = GameState::GUIDE;
 }
 
 void Game::beginTextEntry(const std::string& prompt, int kind, const std::string& initial) {
     textPrompt = prompt; textKind = kind; textBuffer = initial;
-    state = GameState::TEXT_ENTRY;
+    openScreen(GameState::TEXT_ENTRY);
 }
 
 // the guide menu: Enter does its row's act, or says why the ground refuses it
 void Game::updateGuideMenu(const Input& in, double dt, double realDt) {
     const RowList<MenuRow>& m = guideMenu();
     menuStep(in, guideSel, m.count);
-    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_G)) { state = guideReturn; return; }
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_G)) { closeScreen(); return; }
     if (!enterKey(in) || guideSel < 0 || guideSel >= m.count) return;
     const MenuRow& r = m.row[guideSel];
-    if (r.ground && guideReturn == GameState::SURFACE) status(r.ground, 3);
+    if (r.ground && returnState == GameState::SURFACE) status(r.ground, 3);
     else r.act(*this);
 }
 
@@ -122,11 +121,11 @@ void Game::updateTextEntry(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_PERIOD) && textBuffer.size() < 28) textBuffer += '.';
     if (in.wasPressed(KEY_BACKSPACE) && !textBuffer.empty()) textBuffer.pop_back();
     if (textKind == TEXT_MARK && in.wasPressed(KEY_TAB)) { textMarkKind = (textMarkKind + 1) % (MARK_PLACE + 1); audio.beep = BEEP_UI; }   // R-408: what the mark marks
-    if (in.wasPressed(KEY_ESCAPE)) { state = guideReturn; textMark = -1; textGalaxyMark = -1; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); textMark = -1; textGalaxyMark = -1; return; }
     if (!in.wasPressed(KEY_ENTER)) return;
     std::string text = textBuffer;
     while (!text.empty() && text.back() == ' ') text.pop_back();
-    state = guideReturn;
+    closeScreen();
     switch (textKind) {
         case TEXT_STAR:
             if (text.empty() || !sys.valid) return;
@@ -192,19 +191,21 @@ void Game::textEntryPad(PadMenu& m) const {
     if (textKind == TEXT_MARK) m.item("WHAT IT MARKS: THE NEXT", KEY_TAB);
 }
 
-// a text entry covers the frame over the galaxy chart, the probe's screen or a recording, drawn under it
+// a text entry covers the frame over the galaxy chart, the probe's screen or a recording (its opener), drawn under it
 bool Game::textEntryCovers() const {
-    return (guideReturn == GameState::STAR_MAP && mapPage == 1) || guideReturn == GameState::PROBE || guideReturn == GameState::RECORDING;
+    const GameState from = openedFrom[(int)GameState::TEXT_ENTRY];
+    return (from == GameState::STAR_MAP && mapPage == 1) || from == GameState::PROBE || from == GameState::RECORDING;
 }
 
 void Game::renderTextEntry() {
     // over what it names: a mark on the galaxy chart, a storm on the probe's screen or a recording, a piece on the decoder; R-408: a
     // mark on the sector map (from the guide menu or the star map's first page, over the scene alone)
-    if (guideReturn == GameState::STAR_MAP && mapPage == 1) renderStarMap();
-    else if (guideReturn == GameState::PROBE) renderProbe();
-    else if (guideReturn == GameState::RECORDING) renderRecording();
-    else if (guideReturn == GameState::SHARDS) renderShards();
-    else if (guideReturn == GameState::SECTOR_MAP) renderSectorMap();
+    const GameState from = openedFrom[(int)GameState::TEXT_ENTRY];   // U-05: its opener
+    if (from == GameState::STAR_MAP && mapPage == 1) renderStarMap();
+    else if (from == GameState::PROBE) renderProbe();
+    else if (from == GameState::RECORDING) renderRecording();
+    else if (from == GameState::SHARDS) renderShards();
+    else if (from == GameState::SECTOR_MAP) renderSectorMap();
     const int top = padKeyboardShown() ? 18 : 70, bottom = top + 60;   // R-418: over the controller's keyboard
     drawPanel(canvas, 6, top, UW - 6, bottom, rgb(0, 0, 0), 225);   // as wide as its last line (it ran past the box)
     drawTextCentered(canvas, UW / 2, top + 8, textPrompt.c_str(), HUD_AMBER);
@@ -222,11 +223,13 @@ void Game::renderTextEntry() {
 // log, statistics, gallery
 // ---------------------------------------------------------------------------
 
+void Game::logEnter() { logPage = 0; }   // U-05: the log opens on its first page
+
 void Game::updateLog(const Input& in, double dt, double realDt) {
     int pages = std::max(1, ((int)guide.log.size() + 6) / 7);
     if (in.wasPressed(KEY_DOWN) || in.wasPressed(KEY_PAGE_DOWN) || in.wasPressed(KEY_RIGHT)) logPage = std::min(pages - 1, logPage + 1);
     if (in.wasPressed(KEY_UP) || in.wasPressed(KEY_PAGE_UP) || in.wasPressed(KEY_LEFT)) logPage = std::max(0, logPage - 1);
-    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_J) || enterKey(in)) state = guideReturn;
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_J) || enterKey(in)) closeScreen();
 }
 
 void Game::renderLog() {
@@ -277,7 +280,7 @@ bool Game::statsKindsOverflow() const {
 void Game::updateStats(const Input& in, double dt, double realDt) {
     bool any = false; for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
     if (any && !statsKinds && in.pressed[KEY_K] && statsKindsOverflow()) statsKinds = true;
-    else if (any) { statsKinds = false; state = guideReturn; }
+    else if (any) { statsKinds = false; closeScreen(); }
 }
 
 void Game::renderStats() {
@@ -326,7 +329,7 @@ void Game::renderStats() {
 
 // X-04: the photographs and the probes' recordings (each by its final image: shots/probe_<n>.png, a lent one drawn), in the order
 // they were taken: a photograph by its file's time, a recording by the time it came back (a lent one: its lending)
-void Game::openGallery() {
+void Game::galleryEnter() {
     pngFlush();   // a photograph or a probe's image still with the writer is in the directory first
     galleryItems.clear();
     std::vector<GalleryItem> photos, recs;
@@ -360,7 +363,6 @@ void Game::openGallery() {
     while (i < photos.size() || j < recs.size()) galleryItems.push_back(j >= recs.size() || (i < photos.size() && photos[i].when <= recs[j].when) ? photos[i++] : recs[j++]);
     gallerySel = (int)galleryItems.size() - 1;
     galleryLoaded = -1;
-    state = GameState::GALLERY;
 }
 
 void Game::updateGallery(const Input& in, double dt, double realDt) {
@@ -369,11 +371,11 @@ void Game::updateGallery(const Input& in, double dt, double realDt) {
         menuStep(in, gallerySel, n, true);
     }
     if (n > 0 && enterKey(in) && galleryItems[gallerySel].rec >= 0) {   // X-04: a recording plays on the ship's screen
-        if (guideReturn == GameState::SURFACE) { refuse("THE RECORDINGS PLAY ON THE SHIP'S SCREEN", 3); }
+        if (returnState == GameState::SURFACE) { refuse("THE RECORDINGS PLAY ON THE SHIP'S SCREEN", 3); }
         else openRecording(galleryItems[gallerySel].rec);
         return;
     }
-    if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) state = guideReturn;
+    if (in.wasPressed(KEY_ESCAPE) || enterKey(in)) closeScreen();
 }
 
 void Game::renderGallery() {

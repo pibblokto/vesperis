@@ -314,7 +314,7 @@ std::string Game::droneStateLine(int k) const {
 // the body the screen shows: the trip's, else the one the ship is parked at (-1 none)
 int Game::droneBayWorld() const { return bay.out ? bay.body : (sys.valid && ship.mode == ShipState::PARKED && ship.parkedBelt < 0 ? ship.parkedBody : -1); }
 
-void Game::openDroneBay() {
+void Game::droneBayEnter() {
     radarOff(); if (tele.on) telescopeOff();
     const int b = droneBayWorld();
     if (sys.valid && b >= 0 && b < (int)sys.bodies.size()) {
@@ -322,7 +322,7 @@ void Game::openDroneBay() {
         if (worldHadCivilisation(spaceR.genFor(sys.bodies[b]))) droneWorldAsk(b);
     }
     bay.listTop = 0;
-    state = GameState::DRONES; audio.beep = BEEP_UI;
+    audio.beep = BEEP_UI;
 }
 
 // R-414 (2026-10-11): a trip's finds go from the rack once its screen has shown them (the user: "all the findings should be cleared after you
@@ -340,13 +340,13 @@ void Game::updateDroneBay(const Input& in, double dt, double realDt) {
         const int b = droneBayWorld();
         if (sys.valid && b >= 0 && b < (int)sys.bodies.size() && bay.mapSeed != sys.bodies[b].seed) buildDroneMap(b);
     }
-    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl())) { droneFindsSeen(); state = GameState::SPACE; audio.beep = BEEP_UI; return; }
+    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl())) { droneFindsSeen(); closeScreen(); audio.beep = BEEP_UI; return; }
     if (in.wasPressed(KEY_UP)) { bay.listTop = std::max(0, bay.listTop - 1); audio.beep = BEEP_UI; }
     if (in.wasPressed(KEY_DOWN)) { bay.listTop++; audio.beep = BEEP_UI; }
     if (enterKey(in)) {
         const bool was = bay.out;
         droneBayLaunch();
-        if (!was && bay.out) state = GameState::SPACE;   // back at the rack to see them go
+        if (!was && bay.out) closeScreen();   // back at the rack to see them go
     }
 }
 

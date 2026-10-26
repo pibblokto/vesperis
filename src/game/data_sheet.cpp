@@ -11,12 +11,12 @@
 // the system list: the bodies, then the belts; L targets one, Enter approaches it, Esc or Tab closes
 void Game::updateSystemList(const Input& in, double dt, double realDt) {
     int nb = (int)sys.bodies.size(), n = nb + (int)sys.belts.size();   // the belts follow the bodies
-    if (n == 0) { state = GameState::SPACE; return; }
+    if (n == 0) { closeScreen(); return; }
     menuStep(in, listSel, n);
-    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_TAB)) state = GameState::SPACE;
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_TAB)) closeScreen();
     auto pick = [&]() { if (listSel < nb) { ship.localTarget = listSel; ship.targetBelt = -1; } else { ship.localTarget = -1; ship.targetBelt = listSel - nb; } };
-    if (in.wasPressed(KEY_L)) { pick(); state = GameState::SPACE; status(fmt("LOCAL TARGET: %s", upper(localTargetLabel()).c_str()), 4); }
-    if (enterKey(in)) { pick(); state = GameState::SPACE; if (listSel < nb) startApproach(listSel); else startApproachBelt(listSel - nb); }
+    if (in.wasPressed(KEY_L)) { pick(); closeScreen(); status(fmt("LOCAL TARGET: %s", upper(localTargetLabel()).c_str()), 4); }
+    if (enterKey(in)) { pick(); closeScreen(); if (listSel < nb) startApproach(listSel); else startApproachBelt(listSel - nb); }
 }
 
 // U-04: the analyzer's commands (the controller's first page)
@@ -85,12 +85,12 @@ std::string Game::forecastLine() const {
 // the data sheet: T opens the place's almanac, Left and Right turn its pages (a giant's probes' profiles after the sheet's own),
 // any other key closes it
 void Game::updateDataSheet(const Input& in, double dt, double realDt) {
-    if (in.wasPressed(KEY_T) && dataPage == 0) { openAlmanac(); return; }   // the sheet opens the almanac of the place
+    if (in.wasPressed(KEY_T) && dataPage == 0) { closeScreen(); openScreen(GameState::ALMANAC); return; }   // the place's almanac, back past the sheet
     const int pages = dataSheetPages + (int)dataProbes().size();   // a giant's sheet, then its probes' profiles (Q-01: the sheet's own pages first)
     if (pages > 1 && (in.wasPressed(KEY_RIGHT) || in.wasPressed(KEY_LEFT))) { dataPage = (dataPage + (in.wasPressed(KEY_RIGHT) ? 1 : pages - 1)) % pages; return; }
     bool any = false;
     for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
-    if (any) { state = returnState; dataPage = 0; }
+    if (any) { closeScreen(); dataPage = 0; }
 }
 
 // U-04: the data sheet's commands (the controller's first page)

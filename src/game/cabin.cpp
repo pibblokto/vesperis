@@ -38,25 +38,25 @@ const RowList<CabinDevice>& Game::cabinDevices() {
         {FACE_NOTHING, 0, 0, 0, "", "", BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f),
          [](Game& g) { g.status("NOTHING TO USE HERE - WALK TO A CONSOLE, A SCREEN, THE DECODER, THE CASE OR THE CAPSULE", 3); }},
         {FACE_GOES, -2.3, 0.0, 1.6, "GOES CONSOLE - E TO USE", "THE GOES CONSOLE", 21, RGB(1.0f, 0.72f, 0.25f),   // amber
-         [](Game& g) { g.openConsole(); }, {WALL_LEFT, -1.9, -0.9, 0.9}},
+         [](Game& g) { g.openScreen(GameState::CONSOLE); }, {WALL_LEFT, -1.9, -0.9, 0.9}},
         {FACE_FLIGHT, 0.0, 2.3, 1.8, "FLIGHT COMPUTER - E TO USE", "THE FLIGHT COMPUTER", BANK_SCREEN, RGB(0.25f, 0.9f, 0.55f),   // the green phosphor
-         [](Game& g) { g.shipScreenPage = 0; g.shipScreenSel = 0; g.state = GameState::SHIPSCREEN; g.audio.beep = BEEP_UI; }, {WALL_FRONT, 1.95, -1.5, 1.5}},
+         [](Game& g) { g.openScreen(GameState::SHIPSCREEN); }, {WALL_FRONT, 1.95, -1.5, 1.5}},
         {FACE_STAR_MAP, 2.4, -1.4, 1.5, "STAR MAP SCREEN - E", "THE STAR MAP SCREEN", 22, RGB(0.4f, 0.55f, 1.0f),   // blue
-         [](Game& g) { g.guideReturn = GameState::SPACE; g.returnState = GameState::SPACE; g.openStarMap(); }},
+         [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::STAR_MAP); }},
         {FACE_LANDING, 2.4, 0.0, 1.5, "LANDING MAP SCREEN - E TO DEPLOY THE CAPSULE", "THE LANDING SCREEN", 23,
          RGB(1.0f, 0.45f, 0.8f),   // pink (an orange sat too near the radar's red)
          [](Game& g) { g.deployCapsule(); }, {},
          [](const Game& g) { return g.probe.active ? relay(g) : (atGiant(g) ? "PROBE SCREEN - E TO LAUNCH A PROBE" : nullptr); }},
         {FACE_TARGET, 2.4, 1.4, 1.5, "TARGET DATA SCREEN - E", "THE TARGET SCREEN", 24, RGB(0.3f, 0.95f, 0.9f),   // cyan
          [](Game& g) {
-             if (g.sys.valid && g.ship.localTarget >= 0) { g.returnState = GameState::SPACE; g.state = GameState::DATA; }
+             if (g.sys.valid && g.ship.localTarget >= 0) { g.returnState = GameState::SPACE; g.openScreen(GameState::DATA); }
              else g.status("NO LOCAL TARGET ON THE SCREEN", 3);
          }},
         {FACE_CAGE, 0.0, 0.0, 1.9, "SURFACE CAPSULE - E TO BOARD", "THE CAPSULE", BANK_LIGHT, RGB(1.0f, 0.92f, 0.75f),   // no screen
          [](Game& g) { g.deployCapsule(); }, {},
          [](const Game& g) { return g.probe.active ? relay(g) : (atGiant(g) ? "PROBE BAY - E TO LAUNCH A PROBE" : nullptr); }},
         {FACE_DECODER, 0.0, -2.3, 1.6, "SHARD DECODER - E TO READ THE SHARDS", "THE SHARD DECODER", 25, RGB(0.75f, 0.45f, 1.0f),   // C-06: violet
-         [](Game& g) { g.openShards(); }, {WALL_BACK, -1.9, -0.9, 0.9}},
+         [](Game& g) { g.openScreen(GameState::SHARDS); }, {WALL_BACK, -1.9, -0.9, 0.9}},
         {FACE_RADAR, -1.55, -2.3, 1.4, "SIGNAL RADAR - E TO SWEEP THE SKY", "THE SIGNAL RADAR", 26, RGB(1.0f, 0.35f, 0.3f),   // C-07: red
          [](Game& g) { g.radarToggle(); }, {WALL_BACK, -1.9, -CAB_HALF, -0.95},
          [](const Game& g) { return g.radar.on ? "SIGNAL RADAR - E SWITCHES IT OFF" : nullptr; }},
@@ -64,9 +64,9 @@ const RowList<CabinDevice>& Game::cabinDevices() {
          [](Game& g) { g.telescopeToggle(); }, {WALL_BACK, -1.9, 0.95, CAB_HALF},   // the eye to the eyepiece
          [](const Game& g) { return g.tele.on ? "TELESCOPE - E STOWS IT" : nullptr; }},
         {FACE_CASE, -2.35, -1.38, 1.4, "INSTRUMENT CASE - E TO PLAY", "THE INSTRUMENT CASE", 28, RGB(0.72f, 1.0f, 0.3f),   // C-11: lime
-         [](Game& g) { g.openInstruments(); }, {WALL_LEFT, -1.95, -1.9, -0.85}},
+         [](Game& g) { g.openScreen(GameState::INSTRUMENTS); }, {WALL_LEFT, -1.95, -1.9, -0.85}},
         {FACE_BAY, -2.05, 1.435, 2.0, "DRONE BAY - E TO SEND THE DRONES", "THE DRONE BAY", 29, RGB(1.0f, 1.0f, 0.45f),   // C-18: a pale yellow
-         [](Game& g) { g.openDroneBay(); }, {WALL_LEFT, -1.62, 0.82, 2.05},
+         [](Game& g) { g.openScreen(GameState::DRONES); }, {WALL_LEFT, -1.62, 0.82, 2.05},
          [](const Game& g) { return g.bay.out ? "DRONE BAY - E FOLLOWS THE DRONES" : (!g.droneBayReady() ? "DRONE BAY - THE DRONES ARE CHARGING" : nullptr); }},
     };
     static constexpr RowList<CabinDevice> LIST = rowsOf(ROWS);
@@ -407,7 +407,7 @@ const RowList<ShipPage>& Game::shipPages() {
              g.status(fmt("LOCAL TARGET: %s", upper(g.bodyNameOf(g.ship.localTarget)).c_str()), 4);
          }},
         {"SOLAR SYSTEM ANALYZER", [](Game& g) {
-             if (inSystem(g)) { g.listSel = std::max(0, g.ship.localTarget); g.returnState = GameState::SPACE; g.state = GameState::SYSTEM_LIST; }
+             if (inSystem(g)) { g.listSel = std::max(0, g.ship.localTarget); g.returnState = GameState::SPACE; g.openScreen(GameState::SYSTEM_LIST); }
          }},
         {"FINE APPROACH TO THE LOCAL TARGET", [](Game& g) { if (inSystem(g) && g.ship.localTarget >= 0) g.startApproach(g.ship.localTarget); }},
         {"CENTER THE SHIP ON THE LOCAL TARGET", [](Game& g) {
@@ -422,8 +422,8 @@ const RowList<ShipPage>& Game::shipPages() {
              if (g.ship.mode == ShipState::PARKED) { g.ship.orbiting = !g.ship.orbiting; g.status(g.ship.orbiting ? "SYNCHRONOUS ORBIT" : "FIXED POINT CHASE", 3); }
          }},
         {"DEPLOY THE CAPSULE OR A PROBE", [](Game& g) { g.deployCapsule(); }},   // X-01: a probe at a giant
-        {"TARGET THE HOME STAR", [](Game& g) { g.guideReturn = GameState::SPACE; g.targetHome(); g.state = GameState::SPACE; }},
-        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { g.guideReturn = GameState::SPACE; g.targetPreviousStar(); g.state = GameState::SPACE; }},
+        {"TARGET THE HOME STAR", [](Game& g) { g.targetHome(); }},
+        {"RETURN TO THE PREVIOUS STAR", [](Game& g) { g.targetPreviousStar(); }},
         {"VIMANA JUMP: LIGHT YEARS ALONG THE AIM", [](Game& g) {   // R-407: the aim along the nose (last, so the rows kept their places)
              if (g.ship.mode == ShipState::VIMANA) return;
              g.ship.targeting = true;
@@ -446,22 +446,22 @@ const RowList<ShipPage>& Game::shipPages() {
         {"SCANLINES", [](Game& g) { g.settings.scanlines = !g.settings.scanlines; g.settings.save(g.settingsPath); },
          [](const Game& g) -> std::string { return g.settings.scanlines ? "ON" : "OFF"; }, true},
         {"SIGNAL RADAR", [](Game& g) { g.radarToggle(); }, [](const Game& g) -> std::string { return g.radar.on ? "ON" : "OFF"; }},   // at the window, where the sweep is
-        {"THE ALMANAC", [](Game& g) { g.openAlmanac(); },   // from the parking: Esc returns here, a run goes to the window
+        {"THE ALMANAC", [](Game& g) { g.openScreen(GameState::ALMANAC); },   // from the parking: Esc returns here, a run goes to the window
          [](const Game& g) -> std::string { return g.almanacRunning ? "RUNNING" : ""; }, true},
         {"THE TELESCOPE", [](Game& g) { g.telescopeToggle(); },   // at the window, the eye at the eyepiece
          [](const Game& g) { return g.tele.on ? fmt("X%.0f", g.telescopeZoom()) : std::string("STOWED"); }},
-        {"THE INSTRUMENTS", [](Game& g) { g.openInstruments(); }, [](const Game& g) { return fmt("%d", (int)g.guide.instruments.size()); }},   // in the case
-        {"THE DRONE BAY", [](Game& g) { g.openDroneBay(); }, [](const Game& g) {
+        {"THE INSTRUMENTS", [](Game& g) { g.openScreen(GameState::INSTRUMENTS); }, [](const Game& g) { return fmt("%d", (int)g.guide.instruments.size()); }},   // in the case
+        {"THE DRONE BAY", [](Game& g) { g.openScreen(GameState::DRONES); }, [](const Game& g) {
              if (g.bay.out) return std::string("AWAY");
              if (!g.droneBayReady()) { const int sec = (int)std::ceil(g.droneCooldownLeft()); return fmt("%d:%02d", sec / 60, sec % 60); }
              return std::string("READY");
          }},
     };
     static constexpr ShipRow PREFERENCES[] = {   // C-06: the shards
-        {"SETTINGS", [](Game& g) { g.returnState = GameState::SPACE; g.settingsSel = 0; g.state = GameState::SETTINGS; }},
-        {"THE GUIDE", [](Game& g) { g.openGuide(); }},
-        {"EXPEDITION LOG", [](Game& g) { g.guideReturn = GameState::SPACE; g.returnState = GameState::SPACE; g.logPage = 0; g.state = GameState::LOG; }},
-        {"THE SHARDS", [](Game& g) { g.openShards(); }},
+        {"SETTINGS", [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::SETTINGS); }},
+        {"THE GUIDE", [](Game& g) { g.openScreen(GameState::GUIDE); }},
+        {"EXPEDITION LOG", [](Game& g) { g.returnState = GameState::SPACE; g.openScreen(GameState::LOG); }},
+        {"THE SHARDS", [](Game& g) { g.openScreen(GameState::SHARDS); }},
         {"SAVE THE EXPEDITION", [](Game& g) { g.saveSlot(g.currentSlot); }},
     };
     static constexpr ShipPage PAGES[] = {{"FLIGHT CONTROL", rowsOf(FLIGHT)}, {"ONBOARD DEVICES", rowsOf(DEVICES)}, {"PREFERENCES", rowsOf(PREFERENCES)}};
@@ -477,12 +477,15 @@ void Game::updateShipScreen(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_RIGHT)) { shipScreenPage = (shipScreenPage + 1) % pages.count; shipScreenSel = 0; }
     const RowList<ShipRow>& rows = pages.row[shipScreenPage].rows;
     menuStep(in, shipScreenSel, rows.count);
-    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_E)) { state = GameState::SPACE; return; }
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_E)) { closeScreen(); return; }
     if (!enterKey(in)) return;
     const bool has = shipScreenSel >= 0 && shipScreenSel < rows.count;
-    if (!has || !rows.row[shipScreenSel].stays) state = GameState::SPACE;
+    if (!has || !rows.row[shipScreenSel].stays) closeScreen();
     if (has) rows.row[shipScreenSel].act(*this);
 }
+
+// U-05: the flight computer opens on its first page's first row
+void Game::shipScreenEnter() { shipScreenPage = 0; shipScreenSel = 0; audio.beep = BEEP_UI; }
 
 // U-04: the flight computer's commands (the controller's first page)
 void Game::shipScreenPad(PadMenu& m) const {
@@ -519,10 +522,9 @@ void Game::consolePrint(const std::string& line) {
     if (consoleLines.size() > 200) consoleLines.erase(consoleLines.begin());
 }
 
-void Game::openConsole() {
+void Game::consoleEnter() {
     if (consoleLines.empty()) { consolePrint("GOES CONSOLE READY. TYPE HELP."); }
     consoleInput.clear();
-    state = GameState::CONSOLE;
     audio.beep = BEEP_UI;
 }
 
@@ -586,8 +588,8 @@ void Game::consoleCommand(const std::string& raw) {
         int shown = 0;
         for (int i = (int)guide.log.size() - 1; i >= 0 && shown < 8; i--) if (guide.log[i].kind == "NOTE") { consolePrint("  " + trunc(guide.log[i].text, 48)); shown++; }
         if (!shown) consolePrint("NO NOTES YET");
-    } else if (cmd == "HOME") { guideReturn = GameState::CONSOLE; targetHome(); state = GameState::CONSOLE; consolePrint(statusMsg); }
-    else if (cmd == "PREV") { guideReturn = GameState::CONSOLE; targetPreviousStar(); state = GameState::CONSOLE; consolePrint(statusMsg); }
+    } else if (cmd == "HOME") { targetHome(); consolePrint(statusMsg); }
+    else if (cmd == "PREV") { targetPreviousStar(); consolePrint(statusMsg); }
     else if (cmd == "JUMP") {   // R-407: along the ship's nose (the console faces the cabin's wall, not the way)
         double ly = std::atof(rest.c_str());
         if (ly < 1) { consolePrint("JUMP NEEDS LIGHT YEARS, 1 TO 100000"); return; }
@@ -604,7 +606,7 @@ void Game::updateConsole(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_MINUS) && consoleInput.size() < 40) consoleInput += '-';
     if (in.wasPressed(KEY_PERIOD) && consoleInput.size() < 40) consoleInput += '.';
     if (in.wasPressed(KEY_BACKSPACE) && !consoleInput.empty()) consoleInput.pop_back();
-    if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (in.wasPressed(KEY_ENTER)) { std::string cmd = consoleInput; consoleInput.clear(); consoleCommand(cmd); }
 }
 
@@ -639,7 +641,7 @@ void Game::deployCapsule() {
     else if (ship.parkedBelt >= 0) { refuse("NO WORLD UNDER THE SHIP - THE BELT'S ROCKS ARE TOO SMALL FOR THE CAPSULE"); }
     else if (isProbeGiant(sys.bodies[ship.parkedBody].type)) { if (probe.active) watchProbe(); else launchProbe(); }   // X-01: a giant takes a probe (a probe already sent: its screen)
     else if (!KINDS[sys.bodies[ship.parkedBody].type].landable) { refuse("SURFACE NOT CONSISTENT - LANDING IMPOSSIBLE"); }
-    else beginLanding();
+    else openScreen(GameState::LANDING_MAP);
 }
 
 void Game::toggleVimana() {

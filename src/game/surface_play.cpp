@@ -72,8 +72,8 @@ void groundSoundsTo(SurfaceView& surf, AudioState& audio) {
 }
 
 void Game::updateSurface(const Input& in, double dt, double realDt) {
-    if (in.wasPressed(KEY_ESCAPE)) { returnState = state; menuSel = 0; state = GameState::MENU; return; }
-    if (helpKey(in)) { returnState = state; helpPage = 1; state = GameState::HELP; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { returnState = state; openScreen(GameState::MENU); return; }
+    if (helpKey(in)) { returnState = state; openScreen(GameState::HELP); return; }
     if (saveKey(in)) { saveSlot(currentSlot); return; }
     if (loadKey(in)) { loadSlot(currentSlot); return; }
     if (photoMode) { surf.updateFreeCam(realDt, in); updateShipMotion(dt); return; }
@@ -130,8 +130,8 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
         if (surf.lastRange > 0) beginMark(surf.lastRangeX, surf.lastRangeZ); else beginMark(surf.player.x, surf.player.z);
         return;
     }
-    if (in.wasPressed(KEY_G) && !in.ctrl()) { openGuide(); return; }
-    if (in.wasPressed(KEY_J) && !in.ctrl()) { guideReturn = GameState::SURFACE; returnState = GameState::SURFACE; logPage = 0; state = GameState::LOG; return; }
+    if (in.wasPressed(KEY_G) && !in.ctrl()) { openScreen(GameState::GUIDE); return; }
+    if (in.wasPressed(KEY_J) && !in.ctrl()) { returnState = GameState::SURFACE; openScreen(GameState::LOG); return; }
     // E enters or leaves the buggy when it is close, otherwise boards the capsule; R-403: the drone the same, on the ground
     if (in.wasPressed(KEY_E) && !in.ctrl()) {
         if (surf.inDrone) {
@@ -199,11 +199,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_U) && !in.ctrl() && !surf.inVehicle()) { surf.lamp = !surf.lamp; status(surf.lamp ? "LAMP ON" : "LAMP OFF", 2); audio.beep = BEEP_UI; }   // the helmet lamp
     if (in.wasPressed(KEY_N) && !in.ctrl()) {
         returnState = GameState::SURFACE;
-        state = GameState::SECTOR_MAP;
-        mapCurX = surf.player.x;
-        mapCurZ = surf.player.z;
-        mapDelMark = -1;
-        audio.beep = BEEP_UI;
+        openScreen(GameState::SECTOR_MAP);
         return;
     }   // M4-02; R-408: the cursor on the explorer
     if (in.wasPressed(KEY_X) && !in.ctrl()) {
@@ -235,7 +231,7 @@ void Game::updateSurface(const Input& in, double dt, double realDt) {
                         : (farDrone ? fmt("CAPSULE RECALLED - THE DRONE IS %.0f M AWAY, F UNFOLDS A NEW ONE", surf.droneDist()) : "CAPSULE RECALLED TO YOUR POSITION"), 4);
         audio.beep = BEEP_LOCK;
     }
-    if (dataKey(in)) { returnState = GameState::SURFACE; state = GameState::DATA; }   // the sheet must return to the surface
+    if (dataKey(in)) { returnState = GameState::SURFACE; openScreen(GameState::DATA); }   // the sheet must return to the surface
     audio.hum = 0.05;
     audio.engine = surf.inBuggy ? 0.15 + 0.45 * std::fabs(surf.buggy.speed) / 50.0 : 0;
     {   // three gear steps (0-12, 12-28, 28-50 m/s since O1-05), the tyres sliding, suspension thumps, wind at speed

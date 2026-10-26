@@ -164,7 +164,7 @@ std::string Game::telescopeTargetLine(bool plain) const {
 // N: the target named through the guide, as the guide menu names a world or the star; a star of the neighbourhood gets a name
 // of its own (text entry kind 8)
 void Game::telescopeName() {
-    guideReturn = GameState::SPACE; returnState = GameState::SPACE;
+    returnState = GameState::SPACE;
     if (tele.target >= 0 && sys.valid) {
         const Body& b = sys.bodies[tele.target];
         textBody = tele.target;

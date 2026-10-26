@@ -95,12 +95,12 @@ void Game::launchProbe() {
     status(aimed ? fmt("PROBE AWAY TO %s", latLonString(lat, lon).c_str()) : "PROBE AWAY, UNDER THE SHIP (THE TELESCOPE AIMS IT)", 5);
     statusNext = "SPACE OPENS THE CHUTE ONCE: WHERE TO LINGER"; statusNextSecs = 5;
     audio.beep = BEEP_LOCK;
-    state = GameState::PROBE;
+    openScreen(GameState::PROBE);
 }
 
 void Game::watchProbe() {
     if (!probe.active) return;
-    state = GameState::PROBE;
+    openScreen(GameState::PROBE);
     audio.beep = BEEP_UI;
 }
 
@@ -114,12 +114,12 @@ void Game::probeCut(const char* why) {
     }
     if (probe.active && probe.endClock < 0) status(fmt("THE PROBE'S RELAY IS CUT: %s", why), 5);
     probe = ProbeState();
-    if (state == GameState::PROBE) state = GameState::SPACE;
+    if (state == GameState::PROBE) closeScreen();
 }
 
 void Game::probeRelease() {
     probe = ProbeState();
-    if (state == GameState::PROBE) state = GameState::SPACE;
+    if (state == GameState::PROBE) closeScreen();
 }
 
 void Game::probeEnd() {
@@ -153,10 +153,10 @@ void Game::updateProbe(double realDt) {
 
 void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
     updateShipMotion(dt);
-    if (!probe.active) { state = GameState::SPACE; return; }
+    if (!probe.active) { closeScreen(); return; }
     bool ended = probe.endClock >= 0;
     if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_E) && !in.ctrl()) || (in.wasPressed(KEY_C) && !in.ctrl()) || (ended && enterKey(in))) {
-        state = GameState::SPACE;
+        closeScreen();
         if (ended) { probeRelease(); status("BACK IN THE CABIN", 3); }
         else status("THE PROBE FALLS ON - C WATCHES IT", 5);
         audio.beep = BEEP_UI;
@@ -165,7 +165,7 @@ void Game::updateProbeScreen(const Input& in, double dt, double realDt) {
     if (saveKey(in)) { saveSlot(currentSlot); return; }
     if (in.wasPressed(KEY_N) && !in.ctrl()) {   // X-04: the storm it falls into, named
         if (probe.stormKey.empty() || probe.clock < probeDescentStart()) { refuse(probe.stormKey.empty() ? "THE PROBE FALLS INTO NO STORM" : "THE STORM IS NAMED ONCE THE PROBE IS IN ITS CLOUDS", 3); }
-        else { textStormKey = probe.stormKey; guideReturn = GameState::PROBE; const std::string n = probeStormName(); beginTextEntry("NAME THE STORM", TEXT_STORM, n.empty() ? n : upper(n)); }
+        else { textStormKey = probe.stormKey; const std::string n = probeStormName(); beginTextEntry("NAME THE STORM", TEXT_STORM, n.empty() ? n : upper(n)); }
         return;
     }
     if (ended) return;

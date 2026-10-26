@@ -31,6 +31,9 @@ int Game::sectorMaxLevel() const {
 // explorer; Enter marks the place under it (the name's entry; on a mark: renames it), Delete twice removes the mark under it, M puts
 // the waypoint there (on the waypoint: clears it), Tab goes to the next mark; +/- and the wheel zoom (the arrows did), R and Shift+R
 // work the scanner as on the ground. B-412: Shift+Enter or Shift+click on a mark shows it over the view (the one shown), again hides it
+// U-05: the map opens on the explorer (R-408), no mark picked
+void Game::sectorMapEnter() { mapCurX = surf.player.x; mapCurZ = surf.player.z; mapDelMark = -1; audio.beep = BEEP_UI; }
+
 void Game::updateSectorMap(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_EQUAL) || in.wheel > 0) sectorZoom = std::max(0, sectorZoom - 1);
     if (in.wasPressed(KEY_MINUS) || in.wheel < 0) sectorZoom = std::min(sectorMaxLevel(), sectorZoom + 1);
@@ -78,7 +81,7 @@ void Game::updateSectorMap(const Input& in, double dt, double realDt) {
         audio.beep = BEEP_UI;
     }
     if (in.wasPressed(KEY_R) && !in.ctrl()) { if (in.shift()) scanToggleSkip(); else scanCycle(); }
-    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_N)) state = GameState::SURFACE;
+    if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_N)) closeScreen();
 }
 
 // U-04: the sector map's controller: its commands, and only the buttons that do something there, in their words (the cursor: the

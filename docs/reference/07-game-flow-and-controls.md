@@ -41,7 +41,14 @@ The ways in are lists of rows, their counts read from the lists (U-03): the Esc 
 it stays on the screen), the settings (`settingRows`: a value and its change, or CONTROLS' screen) and the cabin's devices
 (`cabinDevices`).
 
-`returnState` remembers where an overlay came from and is set explicitly by every overlay entry (B-006). Only SPACE, SURFACE, DESCENT, ASCENT and LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's camera).
+A screen opens through `openScreen` (U-05): its row's `enter` (its fields; `state` still the screen it opens from), `openedFrom`
+recording its opener, then the state. Esc closes it through `closeScreen`, by its row's `back`: the scene it is drawn over
+(`returnState`: the title, space or the ground, set by the keys that open a screen from a scene; HELP, MENU, DATA, the guide and
+its log, statistics and gallery), its opener (KEYS, AUTO, the almanac, a text entry) or a screen of its own (SETTINGS and SLOTS
+to MENU, RECORDING to GALLERY, the sector map to SURFACE, the ship's screens, the landing map and the probe to SPACE). A screen
+that closes as it opens the next closes first: the guide before its text entries, the data sheet before the almanac, the flight
+computer before a row that leaves it. The cabin's screens set no scene (KI-432). Only SPACE, SURFACE, DESCENT, ASCENT and
+LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's camera).
 
 ## The frame (`Game::frame`, game.cpp)
 
@@ -787,7 +794,7 @@ takes this one's old control (two roles never share one: `A IS NOW Y, Y TOOK A`)
 other half is down) then right, each after the sticks are back at rest. Six seconds, Esc or the controller's going leave it as it was
 (`NOTHING SET`); the next frame takes what is held as held (`resync`), so the press that set a button does not act. Esc saves
 the settings and the key map, and `vesperis_pad.txt` when a binding changed (`PadMap::dirty`: an explorer's file is not rewritten for
-nothing, and none is made with nothing to keep), and goes back where the screen was opened from (`keysReturn`).
+nothing, and none is made with nothing to keep), and goes back where the screen was opened from (its opener, U-05).
 
 A new controller is announced once where the status shows (`CONTROLLER: <NAME> - Y OPENS THE COMMANDS`; read raw: `<NAME>: NOT
 RECOGNISED - SETTINGS > CONTROLS SETS ITS BUTTONS`). The title reads `A: CONTINUE      Y: NEW EXPEDITION, HELP, QUIT` while a

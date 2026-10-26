@@ -492,3 +492,9 @@ Besides them, five in the harness and the docs. Found on the way: no palette ban
   the ground or in a system), so it needed no method. The console's keyboard line moved into its row (`typing`). pad.cpp still
   tests KEYS, the screen its setup line opens (offered there, the line would make the screen its own way back), and the aim's
   SPACE (`ship.targeting` lasts off it).
+- **U-05, on the way:** the scene (`returnState`) is set by the keys that open a screen from a scene, not by the cabin's screens:
+  after H at the title, the flight computer, the console, the drone bay and the case draw over the title; after H or Esc on the
+  ground and the ascent, over the ground (KI-432). H at the title also sets it, so a game saved on the ground and opened again
+  resumes in space (KI-433). The ship's screens, the landing map and the probe keep SPACE as their way back, not the scene, for
+  it; `openScreen` setting the scene from a base mends KI-432 in one line. `returnState` keeps its name: U-04's scene is a base
+  in play, and the title is a base. The row's save hooks default to null (U-03's lesson), so no row writes them yet.

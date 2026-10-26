@@ -478,7 +478,7 @@ void unitProbe(const Check& check) {
                 fmt("storm %d, wall %d, aurora %d, hole %d, hail %d (each once), depths %d; the storm '%s' named: '%s'", counts[0], counts[1], counts[2], counts[3], counts[4], depths,
                         stormKey.c_str(), named.c_str()));
         // B-429: the storm renamed in its recording (N), then Esc to the gallery and Esc to the ship; the entry took the gallery's
-        // way back (`guideReturn`), and the two held the explorer between them (KI-427)
+        // way back (`guideReturn`, gone at U-05: each screen's opener is its own), and the two held the explorer between them (KI-427)
         int pick = -1;
         GameState seen[5] = {GameState::TITLE, GameState::TITLE, GameState::TITLE, GameState::TITLE, GameState::TITLE};
         if (!stormKey.empty()) {

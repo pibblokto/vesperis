@@ -148,7 +148,7 @@ void TestGame::testParkAt(const Star& s, int body, bool waitMap) {
     state = GameState::SPACE;
     worldPlanPrefetch(spaceR.genFor(b));
     spaceR.setSeason(sys, t);   // F-02: the season the next frame draws (the renderer held the last system's: the map was made for it, then again)
-    if (KINDS[b.type].landable) { beginLanding(); if (waitMap) testWaitMap(); }   // the tests' landing map drawn from their next frame, as before
+    if (KINDS[b.type].landable) { openScreen(GameState::LANDING_MAP); if (waitMap) testWaitMap(); }   // the tests' landing map drawn from their next frame, as before
 }
 
 void TestGame::testWaitMap() { testWaitMapOf(landBody); }

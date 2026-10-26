@@ -241,7 +241,7 @@ void Game::chartUnplot() {
 // stars), or, plotted, flown
 void Game::chartEnter() {
     if (ship.mode == ShipState::VIMANA) { refuse("CANNOT JUMP DURING VIMANA FLIGHT", 3); return; }
-    if (chartPlotted()) { state = GameState::SPACE; flyJump(); return; }
+    if (chartPlotted()) { closeScreen(); flyJump(); return; }
     const Vec3 to = chartCursor(), from = ship.pos / SECTOR_KM;
     const double ly = length(to - from);
     if (gchart.onShip || ly < 1) { refuse("MOVE THE CURSOR TO WHERE THE JUMP GOES", 3); return; }
@@ -377,7 +377,6 @@ void Game::beginGalaxyMark(int mi) {
     textGalaxyMark = mi;
     textGalaxyAt = mi >= 0 ? Vec3(guide.galaxyMarks[mi].x, guide.galaxyMarks[mi].y, guide.galaxyMarks[mi].z) : chartCursor();
     textGalaxyLine = galaxyPlace(textGalaxyAt, false);
-    guideReturn = GameState::STAR_MAP;
     beginTextEntry(mi >= 0 ? "RENAME THE PLACE" : "NAME THE PLACE", TEXT_PLACE, mi >= 0 ? upper(guide.galaxyMarks[mi].name) : std::string());
 }
 
@@ -409,7 +408,7 @@ bool Game::drawMapStatus() {
 }
 
 void Game::updateGalaxyChart(const Input& in) {
-    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_M) && !in.ctrl())) { state = GameState::SPACE; return; }
+    if (in.wasPressed(KEY_ESCAPE) || (in.wasPressed(KEY_M) && !in.ctrl())) { closeScreen(); return; }
     const int was = gchart.level;
     if (in.wheel > 0 || in.wasPressed(KEY_EQUAL)) gchart.level = std::min(CHART_LEVELS - 1, gchart.level + 1);
     if (in.wheel < 0 || in.wasPressed(KEY_MINUS)) gchart.level = std::max(0, gchart.level - 1);

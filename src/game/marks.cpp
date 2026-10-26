@@ -260,7 +260,6 @@ void Game::beginMark(double x, double z) {
         const double score = d - (e.lm.kind == scanMode ? 1e6 : 0);
         if (d < reach && score < best) { best = score; textMarkKind = e.lm.kind; }
     }
-    guideReturn = state == GameState::SECTOR_MAP ? GameState::SECTOR_MAP : GameState::SURFACE;
     returnState = GameState::SURFACE;   // the entry is drawn over the ground (and the map)
     beginTextEntry("NAME THE MARK", TEXT_MARK, "");
 }
@@ -268,7 +267,6 @@ void Game::beginMark(double x, double z) {
 void Game::beginRenameMark(int mi) {
     if (mi < 0 || mi >= (int)guide.marks.size()) return;
     textMark = mi; textMarkKind = guide.marks[mi].kind;
-    guideReturn = state == GameState::SECTOR_MAP ? GameState::SECTOR_MAP : GameState::SURFACE;
     returnState = GameState::SURFACE;
     beginTextEntry("RENAME THE MARK", TEXT_MARK, upper(guide.marks[mi].name));
 }

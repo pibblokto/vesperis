@@ -337,11 +337,13 @@ Append it to `GameState` (`game/game_types.h`; `STATE_COUNT` names the last stat
 (`game/states.cpp`, U-02): its name; its traits (the clock runs, an overlay drawn over its `returnState`'s scene, the cameras
 stowed, the dark radio silent, a save's place, the mouse, the photo tools, typing, the ground, the ship moving on, a base the
 screens go back to, the warp at hand); its controller context; its `update` and its picture, which the frame runs; an overlay's
-`covers` if it ever covers the whole frame, an `away` if its screen stops something off it (a sound), and its controller's page
-(`padMenu`, below). The compiler checks the order, and that the row names its update and its picture. Code asks
-`stateHas(state, ST_...)`; a trait new code needs is a column, not a list of states (E-06). Then:
+`covers` if it ever covers the whole frame, an `away` if its screen stops something off it (a sound), its controller's page
+(`padMenu`, below), its `enter` (what it resets as it opens) and its way back (`back`: `BACK_SCENE`, `BACK_OPENER` or a screen,
+`to(S::MENU)`); a screen with lines of its own in the save, its `save`, `load` and `reset` (U-05). The compiler checks the
+order, and that the row names its update, its picture and, an overlay, a way back. Code asks `stateHas(state, ST_...)`; a trait
+new code needs is a column, not a list of states (E-06). Then:
 - its file of `Game` methods, the row's among them (an update takes `(const Input& in, double dt, double realDt)`), declared in
-  game.h under a banner naming the file; the function that opens it sets `state`, `returnState` and `guideReturn`;
+  game.h under a banner naming the file; it opens by `openScreen(GameState::...)` and Esc closes it by `closeScreen()`;
 - its controller's page, the row's `padMenu` (U-04): a method in its file writing a `PadMenu` (its tab's `title`, `item` and
   `typed` lines; a screen with buttons of its own, as the maps, `button` and `sticks`; a typing screen, its keys' line);
   `autoScene`;
@@ -357,7 +359,9 @@ screens go back to, the warp at hand); its controller context; its `update` and 
 
 ## Add a save field
 
-Append a `key value...` line in `save()` and parse it in `load()`; unknown keys are ignored by older builds, so this is backward compatible. Bump the header only for incompatible layouts.
+Append a `key value...` line in `save()` and parse it in `load()`; unknown keys are ignored by older builds, so this is backward
+compatible. Bump the header only for incompatible layouts. A screen's own lines are its row's `save` and `load` (U-05): written
+after the save's, read for a key `load` does not know; its row's `reset` runs at the end of `resetExpedition`.
 
 ## Add a vehicle
 

@@ -73,33 +73,34 @@ void Game::targetStarByName(const std::string& name) {
     setRemoteStar(full);
 }
 
-void Game::targetPreviousStar() {
+// U-05: true when a star is set (the guide's row then closes the guide)
+bool Game::targetPreviousStar() {
     for (int i = (int)guide.history.size() - 1; i >= 0; i--) {
         int64_t sx, sy, sz;
         if (!Guide::parseStarKey(guide.history[i], sx, sy, sz)) continue;
         if (sys.valid && sx == sys.star.sx && sy == sys.star.sy && sz == sys.star.sz) continue;
-        Star s; if (placeInSector(sx, sy, sz, s, true)) { setRemoteStar(s); state = guideReturn; return; }   // D-01: a drifter visited too
+        Star s; if (placeInSector(sx, sy, sz, s, true)) { setRemoteStar(s); return true; }   // D-01: a drifter visited too
     }
     refuse("NO PREVIOUS STAR IN THE HISTORY", 3);
+    return false;
 }
 
-void Game::targetHome() {
+bool Game::targetHome() {
     int64_t sx, sy, sz;
-    if (guide.home.empty() || !Guide::parseStarKey(guide.home, sx, sy, sz)) { refuse("NO HOME STAR SET", 3); return; }
+    if (guide.home.empty() || !Guide::parseStarKey(guide.home, sx, sy, sz)) { refuse("NO HOME STAR SET", 3); return false; }
     Star s;
-    if (!placeInSector(sx, sy, sz, s, true)) { status("THE HOME SECTOR HAS NO STAR", 3); return; }
+    if (!placeInSector(sx, sy, sz, s, true)) { status("THE HOME SECTOR HAS NO STAR", 3); return false; }
     setRemoteStar(s);
-    state = guideReturn;
+    return true;
 }
 
 // ---------------------------------------------------------------------------
 // star map
 // ---------------------------------------------------------------------------
 
-void Game::openStarMap() {
+void Game::starMapEnter() {
     mapYaw = 0.6; mapPitch = 0.5; mapZoom = 1.0; mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
     if (ship.mode == ShipState::VIMANA) mapPage = 1;   // G-05: a flight shows the galaxy (the neighbourhood is read at a star)
-    state = GameState::STAR_MAP;
 }
 
 void Game::updateStarMap(const Input& in, double dt, double realDt) {
@@ -133,7 +134,7 @@ void Game::updateStarMap(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_0)) mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
     if (in.wasPressed(KEY_ESCAPE) || in.wasPressed(KEY_M)) {
         if (gchart.look) { gchart.look = false; mapPage = 1; }   // the look is the chart's: the map opens on the chart again
-        state = GameState::SPACE; return;
+        closeScreen(); return;
     }
     const std::vector<Star>& stars = mapStars().stars;
     if ((enterKey(in) || in.mousePressed[0]) && mapPick >= 0 && mapPick < (int)stars.size()) {
@@ -146,7 +147,7 @@ void Game::updateStarMap(const Input& in, double dt, double realDt) {
             return;
         }
         setRemoteStar(full);
-        state = GameState::SPACE;
+        closeScreen();
     }
 }
 

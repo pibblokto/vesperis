@@ -263,7 +263,7 @@ void Game::listShardsHeld() {
     toldValid = false;   // what the records told grows with them
 }
 
-void Game::openShards() {
+void Game::shardsEnter() {
     listShardWorlds();
     radarOff();   // C-07: the decoder takes the synth
     shardsLevel = 0; shardFresh = false; stopPiece(); stopSpeech();
@@ -274,8 +274,7 @@ void Game::openShards() {
         for (size_t i = 0; i < shardWorldKeys.size(); i++) if (shardWorldKeys[i] == here) { shardWorldSel = (int)i; break; }
     }
     if (shardsTop == 1) playerBuildList();   // the player's page, as it was left
-    guideReturn = GameState::SPACE; returnState = GameState::SPACE;
-    state = GameState::SHARDS;
+    returnState = GameState::SPACE;
     audio.beep = BEEP_UI;
 }
 
@@ -372,7 +371,7 @@ void Game::updateShards(const Input& in, double dt, double realDt) {
     if (shardsLevel == 0 && in.wasPressed(KEY_TAB)) { shardsTop = 1 - shardsTop; if (shardsTop == 1) playerBuildList(); audio.beep = BEEP_UI; return; }   // the worlds, the player
     if (shardsLevel == 0 && shardsTop == 1) {   // the ship's player
         const int n = (int)player.items.size();
-        if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; return; }   // it plays on
+        if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }   // it plays on
         if (n == 0) return;
         menuStep(in, player.sel, n);
         if (in.wasPressed(KEY_PAGE_UP)) player.sel = std::max(0, player.sel - 15);
@@ -387,7 +386,7 @@ void Game::updateShards(const Input& in, double dt, double realDt) {
         return;
     }
     if (shardsLevel == 0) {
-        if (in.wasPressed(KEY_ESCAPE) || (nw == 0 && enterKey(in))) { stopPiece(); state = GameState::SPACE; return; }
+        if (in.wasPressed(KEY_ESCAPE) || (nw == 0 && enterKey(in))) { stopPiece(); closeScreen(); return; }
         if (nw == 0) return;
         if (in.wasPressed(KEY_UP)) { shardWorldSel = (shardWorldSel + nw - 1) % nw; prefetchShardWorld(shardWorldSel); }
         if (in.wasPressed(KEY_DOWN)) { shardWorldSel = (shardWorldSel + 1) % nw; prefetchShardWorld(shardWorldSel); }
@@ -447,7 +446,6 @@ void Game::updateShards(const Input& in, double dt, double realDt) {
         if (in.wasPressed(KEY_N) && !in.ctrl()) {
             textShardKey = heldShardKey(shardHeld[shardSel]);
             auto nm = guide.names.find(textShardKey);
-            guideReturn = GameState::SHARDS;
             beginTextEntry("NAME THE PIECE", TEXT_PIECE, nm != guide.names.end() ? upper(nm->second) : std::string());
         }
     } else if (shardWorld.valid && !shardHeld.empty() && shardWorld.shards[shardHeld[shardSel]].chart) {   // a chart on the screen

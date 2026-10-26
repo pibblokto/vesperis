@@ -44,7 +44,7 @@ bool readInstrumentKey(const std::string& key, KeyRead& out) {
 }
 }
 
-void Game::openInstruments() {
+void Game::instrumentsEnter() {
     radarOff(); if (tele.on) telescopeOff();
     stopInstrument();
     // C-18: the worlds, a folder each (a world of two peoples a folder each people, named as the decoder names them): how many of each
@@ -82,7 +82,7 @@ void Game::openInstruments() {
     icase.level = 0; icase.keys.clear(); icase.names.clear(); icase.valid = false;
     icase.notes = 0;
     audio.hum = std::min(audio.hum, 0.2);   // the ship's hum low under what is played (the space view's frames raise it again)
-    state = GameState::INSTRUMENTS; audio.beep = BEEP_UI;
+    audio.beep = BEEP_UI;
 }
 
 // C-18: a world's instruments onto the case's list (a world of two peoples: the folder's people's), the first (or the one last played
@@ -150,7 +150,7 @@ void Game::updateInstruments(const Input& in, double dt, double realDt) {
     for (double& g : icase.glow) g = std::max(0.0, g - realDt * 1.4);
     if (icase.level == 0) {   // C-18: the worlds
         const int nw = (int)icase.worlds.size();
-        if (in.wasPressed(KEY_ESCAPE)) { state = GameState::SPACE; audio.beep = BEEP_UI; return; }
+        if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); audio.beep = BEEP_UI; return; }
         if (nw == 0) return;
         if (menuStep(in, icase.worldSel, nw)) audio.beep = BEEP_UI;
         if (enterKey(in)) openCaseWorld(icase.worldSel);

@@ -192,8 +192,15 @@ public:
         bool (Game::*covers)() const;   // an overlay's: true while it covers the whole frame, no scene drawn under it
         void (Game::*away)();           // run each frame another state is current, in the table's order: what its screen stops
         void (Game::*padMenu)(PadMenu& m) const;   // U-04: its controller's first page, its name, its own buttons (pad_state.h)
+        void (Game::*enter)();          // U-05: run by `openScreen`, `state` still its opener: its fields, its devices stowed
+        int back;                       // U-05: where Esc goes (`closeScreen`): a state, BACK_SCENE, BACK_OPENER or BACK_NONE
+        void (Game::*save)(std::string& lines) const = nullptr;   // U-05: its own save lines, after the save's
+        bool (Game::*load)(const std::string& line) = nullptr;     // U-05: a line `load` does not know: true when its own
+        void (Game::*reset)() = nullptr;   // U-05: at the end of `resetExpedition`
     };
     static const StateRow STATE_ROWS[STATE_COUNT];
+    void openScreen(GameState s);   // U-05: the one way in (its row's `enter`) and the one way back (its `back`)
+    void closeScreen();
     // ---- the ways in, U-03: a menu a list of rows, its count read from it (game_types.h's rows; menus.cpp, guide_screens.cpp,
     // cabin.cpp)
     static const RowList<MenuRow>& escMenu();
@@ -281,8 +288,7 @@ protected:
     int keysSel = 0;               // key bindings screen
     bool keysCapture = false;
     int keysPage = 0;              // the CONTROLS screen's pages, 0 the keyboard, 1 the controller (Tab)
-    GameState keysReturn = GameState::SETTINGS;   // where it goes back to (the command menu opens it from anywhere)
-    void updateKeysScreen(const Input& in, double dt, double realDt);
+    void updateKeysScreen(const Input& in, double dt, double realDt); void keysEnter();
     void renderKeysScreen();
     // ---- the controller (pad.cpp, pad_state.h)
     using PadItem = ::PadItem;
@@ -311,7 +317,6 @@ protected:
     int listSel = 0, listScroll = 0;
     // ---- the guide's screens (guide_screens.cpp, star_map.cpp)
     int guideSel = 0, logPage = 0, gallerySel = 0, galleryLoaded = -1, textKind = 0, textBody = -1, mapPick = -1, mapClassMask = (1 << STAR_DRAWN_COUNT) - 1;
-    GameState guideReturn = GameState::SPACE;
     bool statsKinds = false;   // P-00: the statistics' second page, the world types walked (offered when they outgrow their line)
     std::string textPrompt, textBuffer;
     double mapYaw = 0, mapPitch = 0, mapZoom = 1;
@@ -364,8 +369,8 @@ protected:
     void drawCabin();
     void drawCabinBand(const CabinFrame& f);
     void renderCabinHUD();
-    void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen(); void shipScreenPad(PadMenu& m) const; void consolePad(PadMenu& m) const;
-    void openConsole(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in, double dt, double realDt); void renderConsole();
+    void shipScreenEnter(); void updateShipScreen(const Input& in, double dt, double realDt); void renderShipScreen(); void shipScreenPad(PadMenu& m) const; void consolePad(PadMenu& m) const;
+    void consoleEnter(); void consolePrint(const std::string& line); void consoleCommand(const std::string& raw); void updateConsole(const Input& in, double dt, double realDt); void renderConsole();
     // ---- the shard decoder (shards_screen.cpp, history_screen.cpp, medium_draw.cpp; shard_world.h)
     ShardWorld shardWorld;
     int shardsPage = 0;                          // 0 the records, 1 the timeline, 2 the history
@@ -445,7 +450,7 @@ protected:
     std::string endedKey() const;
     std::string shardWorldTitle(int maxName) const;
     std::string worldNameOfKey(const std::string& key) const;
-    void openShards(); void openShard(int sel); void updateShards(const Input& in, double dt, double realDt); void renderShards(); void renderPiece(); void shardsAway();
+    void shardsEnter(); void openShard(int sel); void updateShards(const Input& in, double dt, double realDt); void renderShards(); void renderPiece(); void shardsAway();
     void shardsPad(PadMenu& m) const;
     // ---- the ship's player (player.cpp, player_state.h)
     ShipPlayer player;
@@ -462,13 +467,13 @@ protected:
     static std::string playerItemTitle(const PlayerItem& it, const std::string* name);
     // ---- the instruments' case (instruments_screen.cpp, instrument_draw.cpp; case_state.h)
     InstrumentCase icase;
-    void openInstruments(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double dt, double realDt); void renderInstruments(); void stopInstrument(); void instrumentsAway();
+    void instrumentsEnter(); bool loadInstrument(int sel); void updateInstruments(const Input& in, double dt, double realDt); void renderInstruments(); void stopInstrument(); void instrumentsAway();
     void openCaseWorld(int w); void instrumentsPad(PadMenu& m) const;
     void renderCaseWorlds();
     // ---- the drone bay (drones.cpp, drone_draw.cpp; drone_state.h)
     DroneBay bay;
     std::thread droneJob; std::atomic<bool> droneJobBusy{false}; DroneWorld droneJobOut; uint64_t droneJobStar = 0; int droneJobBody = -1;
-    void openDroneBay(); void updateDroneBay(const Input& in, double dt, double realDt); void renderDroneBay(); void droneBayPad(PadMenu& m) const;
+    void droneBayEnter(); void updateDroneBay(const Input& in, double dt, double realDt); void renderDroneBay(); void droneBayPad(PadMenu& m) const;
     void droneBayLaunch();
     void updateDrones(double realDt);
     void droneWorldAsk(int body);
@@ -510,18 +515,18 @@ protected:
     std::vector<uint32_t> sectorImg; int sectorImgW = 100, sectorImgH = 80; double sectorImgX = 1e9, sectorImgZ = 1e9; int sectorImgZoom = -1, sectorImgEpoch = -1;
     static constexpr int SECTOR_LEVELS = 6;   // 2, 8, 32, 128, 512 and 2048 km wide (the widest levels only on big worlds)
     int sectorMaxLevel() const;
-    void updateSectorMap(const Input& in, double dt, double realDt); void renderSectorMap(); void sectorMapPad(PadMenu& m) const;
+    void sectorMapEnter(); void updateSectorMap(const Input& in, double dt, double realDt); void renderSectorMap(); void sectorMapPad(PadMenu& m) const;
     void applyVision();
     // ---- the guide's screens: the menu, text entry, the log, statistics, the gallery (guide_screens.cpp)
-    void openGuide(); void updateGuideMenu(const Input& in, double dt, double realDt); void renderGuideMenu();
+    void guideEnter(); void updateGuideMenu(const Input& in, double dt, double realDt); void renderGuideMenu();
     void beginTextEntry(const std::string& prompt, int kind, const std::string& initial); void updateTextEntry(const Input& in, double dt, double realDt); void renderTextEntry();
     bool textEntryCovers() const; void textEntryPad(PadMenu& m) const;
-    void updateLog(const Input& in, double dt, double realDt); void renderLog(); void updateStats(const Input& in, double dt, double realDt); void renderStats();
+    void logEnter(); void updateLog(const Input& in, double dt, double realDt); void renderLog(); void updateStats(const Input& in, double dt, double realDt); void renderStats();
     std::string statsKindsLine() const; bool statsKindsOverflow() const;
-    void openGallery(); void updateGallery(const Input& in, double dt, double realDt); void renderGallery();
+    void galleryEnter(); void updateGallery(const Input& in, double dt, double realDt); void renderGallery();
     // ---- the star map and the targets (star_map.cpp); the log's events and the visits (names.cpp)
-    void openStarMap(); void updateStarMap(const Input& in, double dt, double realDt); void renderStarMap(); bool starMapCovers() const; void starMapPad(PadMenu& m) const;
-    void setRemoteStar(const Star& s); void targetStarByName(const std::string& name); void targetPreviousStar(); void targetHome();
+    void starMapEnter(); void updateStarMap(const Input& in, double dt, double realDt); void renderStarMap(); bool starMapCovers() const; void starMapPad(PadMenu& m) const;
+    void setRemoteStar(const Star& s); void targetStarByName(const std::string& name); bool targetPreviousStar(); bool targetHome();
     void logEvent(const std::string& kind, const std::string& text); void noteVisit();
     // ---- the title's and help's state, the arrival, the landing map's probe site
     int helpPage = 0;
@@ -555,7 +560,7 @@ protected:
     void updateLandingMap(const Input& in, double dt, double realDt);
     void renderLandingMap();
     void renderLandingScreen(); void landingMapPad(PadMenu& m) const;
-    void beginLanding();
+    void landingMapEnter();
     void buildLandingMapBase();
     // ---- the capsule and the ground: their update, scene and HUD (surface_play.cpp, scene_draw.cpp, hud.cpp)
     void updateDescentAscent(const Input& in, double dt, double realDt);
@@ -579,13 +584,13 @@ protected:
     // ---- the title, help, the menu and the settings (menus.cpp); the slots (persistence.cpp)
     void updateTitle(const Input& in, double dt, double realDt);
     void renderTitle(); void titlePad(PadMenu& m) const;
-    void updateHelp(const Input& in, double dt, double realDt);
+    void updateHelp(const Input& in, double dt, double realDt); void helpEnter();
     void renderHelp(); void helpPad(PadMenu& m) const;
-    void updateMenu(const Input& in, double dt, double realDt);
+    void updateMenu(const Input& in, double dt, double realDt); void menuEnter();
     void renderMenu();
-    void updateSettingsScreen(const Input& in, double dt, double realDt);
+    void updateSettingsScreen(const Input& in, double dt, double realDt); void settingsEnter();
     void renderSettings();
-    void openSlots(bool loadMode);
+    void openSlots(bool loadMode); void slotsEnter();
     void updateSlots(const Input& in, double dt, double realDt);
     void renderSlots();
     // ---- jumps along the aim and from the chart (autopilot.cpp, hud.cpp, star_map.cpp)
@@ -612,10 +617,9 @@ protected:
     // ---- the almanac (almanac.cpp)
     AlmanacPlace almanacAt; std::vector<AlmanacEvent> almanacEvents; double almanacBuiltT = -1e18;
     int almanacScene = 0;                  // 0 the ship, 1 the ground under the feet, 2 the landing map's cursor
-    GameState almanacReturn = GameState::SPACE;
     int almanacSel = 0, almanacScroll = 0, almanacFree = 6;
     bool almanacRunning = false; double almanacRunT = 0; AlmanacEvent almanacRunEvent; std::string almanacRunLabel;
-    void openAlmanac(); void buildAlmanac(); void updateAlmanac(const Input& in, double dt, double realDt); void renderAlmanac(); void almanacPad(PadMenu& m) const;
+    void almanacEnter(); void buildAlmanac(); void updateAlmanac(const Input& in, double dt, double realDt); void renderAlmanac(); void almanacPad(PadMenu& m) const;
     void almanacRunTo(const AlmanacEvent& e); void almanacStop(bool arrived);
     static double almanacWarpFor(double remaining);
     std::string almanacLabelOf(const AlmanacEvent& e) const;
@@ -685,14 +689,14 @@ protected:
     void handleGlobalKeys(const Input& in);
     // ---- auto-explore: its beginning and end, its mind, the chooser (autoexplore.cpp, autoexplore_state.h)
     AutoState ax;
-    int autoSel = 0; GameState autoBack = GameState::MENU;   // the chooser's row; where Esc goes back to
+    int autoSel = 0;   // the chooser's row
     bool autoTakeover(Input& in, double realDt);
     void autoInput(Input& in, double realDt);
     int autoScene() const; int autoLookFrame() const;
     void autoRun(double dt);
     void autoPush(const char* what, double maxT, std::function<bool(double)> fn, bool timed = false);
     void autoPlan();
-    void openAutoScreen(GameState back); void updateAutoScreen(const Input& in, double dt, double realDt); void renderAutoScreen();
+    void autoEnter(); void updateAutoScreen(const Input& in, double dt, double realDt); void renderAutoScreen();
     // ---- auto-explore's plans in space and on the ground (autoexplore_space.cpp, autoexplore_ground.cpp)
     void autoPlanSpace(); void autoPlanArrival(); void autoPlanVisit(int b); void autoPlanParked(int b); void autoPlanRoof(int b); void autoPlanTelescope(int b);
     void autoPlanLanding(int b); void autoPlanProbeLaunch(); void autoPlanFlight(); void autoPlanMove(); void autoPlanRadar(); void autoPlanJump(double ly, const Vec3& dir);
@@ -729,4 +733,6 @@ protected:
     void tapeDeck(int kind);
     void tapeUpdate(double realDt);
     void tapeRender();
+    // ---- where each screen was opened from (`openScreen`, U-05): its way back when its row's is its opener
+    GameState openedFrom[STATE_COUNT] = {};
 };

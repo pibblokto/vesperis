@@ -138,6 +138,8 @@ Carried over from `docs/archive/iteration-2/bugs/KNOWN-ISSUES.md` (still open th
 | KI-429 | S4 | game | The settings screen's title overlaps its first row: the rows start 6 px under it (`renderSettings`, 19 rows and BACK at an 8 px pitch). Seen once U-01 mended `settings`' picture. | open (found 2026-10-26) |
 | KI-430 | S4 | harness | The unit's `unit_lent_piece.png` (a lent piece open on the decoder) moved between u01's two snapshot runs, once in five runs since b429: a race its frame waits on nothing for. u02 to u04 hold no noise for it: a compare may flag it. | open (found 2026-10-26, U-01's close) |
 | KI-431 | S4 | controls | While an almanac run goes, the controller's almanac page offers STOP THE RUN (T), and the screen ignores T: it reads no T and does not simulate, so the frame's T is not read there. | open (found 2026-10-26 in U-01's survey, kept by U-04) |
+| KI-432 | S3 | screens | The cabin's screens set no scene: after H at the title, the flight computer, the console, the drone bay and the case draw over the title; after H or Esc on the ground and the ascent, over the ground. | open (found 2026-10-26 in U-05's survey) |
+| KI-433 | S3 | saves | A game saved on the ground and opened again: H (or C) then a key at the title, and Enter resumes in space, not on the ground; the next save drops the landing. The title's H sets the scene to the title. | open (found 2026-10-26 in U-05's survey) |
 
 ## The long rows, continued
 

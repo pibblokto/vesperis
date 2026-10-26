@@ -142,6 +142,7 @@ void Game::resetExpedition(bool freshTelescope) {
     chartUp = false; chartHeld = StarChart(); chartT = -1;
     probe = ProbeState();
     bay = DroneBay();
+    for (const StateRow& r : STATE_ROWS) if (r.reset) (this->*r.reset)();   // U-05: a screen's own, last
 }
 
 void Game::newGame() {
@@ -285,7 +286,7 @@ void Game::frame(const Input& inRaw, double realDt) {
     bool simulating = stateHas(state, ST_SIMULATES);
     if (in.wasPressed(KEY_T) && simulating) {
         // the almanac (M5-06's 25 s time-lapse went with it: the free row runs for any span)
-        if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openAlmanac(); } }
+        if (in.ctrl()) { if (state != GameState::DESCENT && state != GameState::ASCENT && state != GameState::PROBE) { if (almanacRunning) almanacStop(false); openScreen(GameState::ALMANAC); } }
         else if (almanacRunning) almanacStop(false);
         else if (settings.clockMode == 1) status("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO WARP", 3);
         else { timeWarp = timeWarp >= 10000 ? 1 : timeWarp * 10; status(fmt("TIME WARP X%.0f", timeWarp), 2); }

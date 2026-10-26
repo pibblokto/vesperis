@@ -19,7 +19,7 @@ namespace { const int MAP_LW = 256, MAP_LH = 128; }   // logical size of the map
 #include <algorithm>
 #include <ctime>
 
-void Game::beginLanding() {
+void Game::landingMapEnter() {
     landBody = ship.parkedBody;
     // default site: the sub-ship point (what you are looking at from orbit)
     Mat3 frame = sys.bodyFrame(landBody, t);
@@ -33,7 +33,6 @@ void Game::beginLanding() {
     drainLat = 1e9; drainLon = 1e9;   // the map's first update prefetches the drainage of the default site
     landSeenLat = landLat; landSeenLon = landLon; landMovedT = -1e9;   // at once (the cursor has not moved)
     landZoom = 0;   // start from the whole world
-    state = GameState::LANDING_MAP;
 }
 
 bool Game::landingZoomAllowed() const { return landBody >= 0 && landBody < (int)sys.bodies.size() && sys.bodies[landBody].radiusKm >= 100; }
@@ -106,7 +105,7 @@ void Game::updateLandingMap(const Input& in, double dt, double realDt) {
         if (drainageReady(spaceR.genFor(zb), zc, zr)) buildLandingZoom();
         else if (realTime - zoomPrefetchT > 0.5) { drainagePrefetch(spaceR.genFor(zb), zc, zr, true); zoomPrefetchT = realTime; }   // the cursor's own prefetch supersedes a worker; ask again
     }
-    if (in.wasPressed(KEY_ESCAPE)) state = GameState::SPACE;
+    if (in.wasPressed(KEY_ESCAPE)) closeScreen();
     if (enterKey(in)) {
         state = GameState::DESCENT;
         transT = 0;

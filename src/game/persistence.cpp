@@ -92,18 +92,19 @@ std::string Game::saveSummary(const std::string& path) const {
     return fmt("%-12.12s %d:%03d.%03d  %s", upper(name).c_str(), epoc, sinister, medius, where);
 }
 
-void Game::openSlots(bool loadMode) {
-    slotLoadMode = loadMode;
+void Game::openSlots(bool loadMode) { slotLoadMode = loadMode; openScreen(GameState::SLOTS); }
+
+// U-05: the slots' page opens on the slot in use, each slot's summary read again
+void Game::slotsEnter() {
     slotSel = std::max(0, currentSlot - 1);
     slotSummaries.clear();
     for (int n = 1; n <= SAVE_SLOTS; n++) slotSummaries.push_back(saveSummary(slotPath(n)));
     slotSummaries.push_back(saveSummary(slotPath(0)));
-    state = GameState::SLOTS;
 }
 
 void Game::updateSlots(const Input& in, double dt, double realDt) {
     menuStep(in, slotSel, slotRows(slotLoadMode));
-    if (in.wasPressed(KEY_ESCAPE)) { state = GameState::MENU; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (enterKey(in)) {
         int slot = slotSel == SAVE_SLOTS ? 0 : slotSel + 1;
         if (slotLoadMode) { if (loadSlot(slot)) return; }
@@ -185,6 +186,8 @@ bool Game::save(const std::string& path) {
         f << "waypoint " << (surf.hasWaypoint ? 1 : 0) << " " << surf.wpX << " " << surf.wpZ << "\n";
         f << "stamina " << surf.player.stamina << "\n";
     }
+    for (const StateRow& r : STATE_ROWS)   // U-05: a screen's own lines, after the save's
+        if (r.save) { std::string lines; (this->*r.save)(lines); f << lines; }
     hasSave = true;
     return true;
 }
@@ -266,6 +269,8 @@ bool Game::load(const std::string& path) {
             is >> n; for (size_t i = 0; i < n && i < 400000 && is; i++) { double v; is >> v; np.timeTrack.push_back(v); }
             if (np.camTrack.size() % 3) np.camTrack.clear();
             if (np.timeTrack.size() % 2) np.timeTrack.clear();
+        } else {   // U-05: a line of a screen's own (its row's `load`)
+            for (const StateRow& r : STATE_ROWS) if (r.load && (this->*r.load)(line)) break;
         }
     }
     Star s;

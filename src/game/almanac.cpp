@@ -47,12 +47,11 @@ void Game::buildAlmanac() {
     if (almanacSel > (int)almanacEvents.size()) almanacSel = (int)almanacEvents.size();
 }
 
-void Game::openAlmanac() {
-    almanacReturn = state == GameState::DATA ? returnState : state;
-    almanacScene = (state == GameState::SURFACE || (state == GameState::DATA && returnState == GameState::SURFACE)) && surf.valid ? 1 : (state == GameState::LANDING_MAP ? 2 : 0);
+// U-05: the almanac of the place it is opened from (the data sheet closes first: its way back is the almanac's)
+void Game::almanacEnter() {
+    almanacScene = state == GameState::SURFACE && surf.valid ? 1 : (state == GameState::LANDING_MAP ? 2 : 0);
     almanacSel = 0; almanacScroll = 0;
     buildAlmanac();
-    state = GameState::ALMANAC;
     audio.beep = BEEP_UI;
 }
 
@@ -78,12 +77,13 @@ void Game::updateAlmanac(const Input& in, double dt, double realDt) {
         if (in.wasPressed(KEY_LEFT)) almanacFree = std::max(0, almanacFree - 1);
         if (in.wasPressed(KEY_RIGHT)) almanacFree = std::min(FREE_COUNT - 1, almanacFree + 1);
     }
-    if (in.wasPressed(KEY_ESCAPE)) { state = almanacReturn; return; }
+    if (in.wasPressed(KEY_ESCAPE)) { closeScreen(); return; }
     if (!enterKey(in)) return;
     if (settings.clockMode == 1) { refuse("REAL-TIME CLOCK: THE SKY FOLLOWS THE WALL CLOCK, NO RUN", 3); return; }
     if (almanacSel == n - 1) { AlmanacEvent e; e.kind = AL_FREE; e.t = t + FREE_STEPS[almanacFree]; e.value = FREE_STEPS[almanacFree]; almanacRunTo(e); }
     else almanacRunTo(almanacEvents[almanacSel]);
-    state = almanacReturn == GameState::SHIPSCREEN ? GameState::SPACE : almanacReturn;   // the run is watched from the window
+    const GameState from = openedFrom[(int)GameState::ALMANAC];
+    state = from == GameState::SHIPSCREEN ? GameState::SPACE : from;   // the run is watched from the window
 }
 
 // U-04: the almanac's commands (the controller's first page)

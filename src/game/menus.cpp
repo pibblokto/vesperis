@@ -26,12 +26,12 @@ std::string onOff(bool on) { return on ? "ON" : "OFF"; }
 // U-03: the Esc menu's rows (R-419 put AUTO-EXPLORE second)
 const RowList<MenuRow>& Game::escMenu() {
     static constexpr MenuRow ROWS[] = {
-        {"RESUME", [](Game& g) { g.state = g.returnState; }},
-        {"AUTO-EXPLORE", [](Game& g) { g.openAutoScreen(GameState::MENU); }},
+        {"RESUME", [](Game& g) { g.closeScreen(); }},
+        {"AUTO-EXPLORE", [](Game& g) { g.openScreen(GameState::AUTO); }},
         {"SAVE EXPEDITION", [](Game& g) { g.openSlots(false); }},
         {"LOAD EXPEDITION", [](Game& g) { g.openSlots(true); }},
-        {"SETTINGS", [](Game& g) { g.settingsSel = 0; g.state = GameState::SETTINGS; }},
-        {"HELP", [](Game& g) { g.helpPage = g.returnState == GameState::SURFACE ? 1 : 0; g.state = GameState::HELP; }},
+        {"SETTINGS", [](Game& g) { g.openScreen(GameState::SETTINGS); }},
+        {"HELP", [](Game& g) { g.openScreen(GameState::HELP); }},
         {"NEW EXPEDITION", [](Game& g) { g.newGame(); }},
         {"QUIT TO DESKTOP", [](Game& g) { g.autosave(); g.wantsQuit = true; }},
     };
@@ -68,8 +68,7 @@ const RowList<SettingRow>& Game::settingRows() {
         {"HUD COLOUR", [](const S& s) -> std::string { return s.hudColor == 0 ? "GREEN" : (s.hudColor == 1 ? "AMBER" : "WHITE"); },
          [](Game&, S& s, int d) { s.hudColor = (s.hudColor + 3 + d) % 3; }},
         {"CONTROLS", [](const S&) -> std::string { return "ENTER TO OPEN"; }, nullptr, [](Game& g) {
-             g.keysSel = 0; g.keysCapture = false; g.keysPage = g.padInUse() ? 1 : 0; g.keysReturn = GameState::SETTINGS; g.padUI.capture = -1;
-             g.state = GameState::KEYS;
+             g.keysSel = 0; g.keysPage = g.padInUse() ? 1 : 0; g.openScreen(GameState::KEYS);
          }},
     };
     static constexpr RowList<SettingRow> LIST = rowsOf(ROWS);
@@ -83,7 +82,7 @@ void Game::updateTitle(const Input& in, double dt, double realDt) {
     titleYaw += realDt * 0.04;
     titleIdle += realDt; attractT += realDt;
     { bool any = std::fabs(in.mouseDx) + std::fabs(in.mouseDy) > 0; for (int k = 0; k < KEY_MAX && !any; k++) any = in.pressed[k]; if (any) titleIdle = 0; }
-    if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; helpPage = 2; state = GameState::HELP; }   // credits
+    if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; openScreen(GameState::HELP); helpPage = 2; }   // credits
     updateShipMotion(realDt);
     if (enterKey(in)) {
         state = (returnState == GameState::SURFACE && surf.valid) ? GameState::SURFACE : GameState::SPACE;
@@ -91,7 +90,7 @@ void Game::updateTitle(const Input& in, double dt, double realDt) {
         if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC THE F KEYS NEED FN: USE H, I, P, CTRL+S, CTRL+L, CTRL+K, CTRL+F"; statusNextSecs = 7; }
     }
     if (in.wasPressed(KEY_N) && hasSave) { newGame(); state = GameState::SPACE; }
-    if (helpKey(in)) { returnState = GameState::TITLE; helpPage = 0; state = GameState::HELP; }
+    if (helpKey(in)) { returnState = GameState::TITLE; openScreen(GameState::HELP); }
     if (in.wasPressed(KEY_ESCAPE)) wantsQuit = true;
 }
 
@@ -102,22 +101,27 @@ void Game::titlePad(PadMenu& m) const {
     m.item("HELP", KEY_H); m.item("CREDITS", KEY_C); m.item("QUIT", KEY_ESCAPE);
 }
 
+// U-05: help opens on the page of the scene it is over (the ground's, else the ship's); the credits turn to theirs
+void Game::helpEnter() { helpPage = returnState == GameState::SURFACE ? 1 : 0; }
+
 // help: Space turns its pages (not the credits'), any other key closes it
 void Game::updateHelp(const Input& in, double dt, double realDt) {
     bool any = false;
     for (int k = 0; k < KEY_MAX; k++) if (in.pressed[k]) any = true;
     if (in.wasPressed(KEY_SPACE) && helpPage != 2) helpPage = helpPage == 0 ? 1 : (helpPage == 1 ? 3 : 0);   // the ship, the surface, the controller
-    else if (any) state = returnState;
+    else if (any) closeScreen();
 }
 
 // U-04: help's commands (the controller's first page)
 void Game::helpPad(PadMenu& m) const { m.title = "HELP"; m.item("THE NEXT PAGE", KEY_SPACE); m.item("CLOSE", KEY_ESCAPE); }
 
+void Game::menuEnter() { menuSel = 0; }   // U-05: the Esc menu opens on its first row
+
 // the Esc menu: Enter does its row's act
 void Game::updateMenu(const Input& in, double dt, double realDt) {
     const RowList<MenuRow>& m = escMenu();
     menuStep(in, menuSel, m.count);
-    if (in.wasPressed(KEY_ESCAPE)) state = returnState;
+    if (in.wasPressed(KEY_ESCAPE)) closeScreen();
     if (enterKey(in) && menuSel >= 0 && menuSel < m.count) m.row[menuSel].act(*this);
 }
 
@@ -259,9 +263,12 @@ void Game::updateKeysScreen(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_ESCAPE)) {
         keymap->save(keysPath);
         if (padMap.dirty && padMap.save(padPath)) padMap.dirty = false;
-        state = keysReturn;
+        closeScreen();
     }
 }
+
+// U-05: the keys screen, from the settings' CONTROLS or the controller's command menu (its page set by the opener)
+void Game::keysEnter() { keysCapture = false; padUI.capture = -1; }
 
 void Game::renderKeysScreen() {
     if (!keymap) keymap = &ownKeymap;
@@ -287,6 +294,8 @@ void Game::renderKeysScreen() {
     drawTextCentered(canvas, UW / 2, bottom - 10, "SAVED TO VESPERIS_KEYS.TXT NEXT TO THE GAME", HUD_DIM);
 }
 
+void Game::settingsEnter() { settingsSel = 0; }   // U-05: the settings open on their first row
+
 // the settings: a row's change by Left and Right (Enter: Right), the settings applied after; a row that opens a screen opens it
 // whichever; BACK after the rows
 void Game::updateSettingsScreen(const Input& in, double dt, double realDt) {
@@ -301,7 +310,7 @@ void Game::updateSettingsScreen(const Input& in, double dt, double realDt) {
     }
     if (in.wasPressed(KEY_ESCAPE) || (enterKey(in) && settingsSel == rows.count)) {
         settings.save(settingsPath);
-        state = GameState::MENU;
+        closeScreen();
     }
 }
 
