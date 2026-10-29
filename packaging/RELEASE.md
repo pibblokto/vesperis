@@ -58,6 +58,8 @@ To move a release (as 1.3.2 was, re-released with the music): delete the old rel
   byte for byte (`build/b430/kdump.cpp`: each row's texts and bytes, pointers zeroed); the regress shows it too.
 - Narrowings show only on Windows (LLP64, a 32-bit `long`): compile the whole tree with `-Wshorten-64-to-32` and fix every one,
   not only the line that warned.
+- The Windows builds' clang (llvm-mingw's, 23) warns where Xcode's does not: 1.4.0's first ones found a `case` line's unbraced
+  `if` body before its `break` (`-Wmisleading-indentation`, flora.cpp). Compile a file with it (`-fsyntax-only`) to try a fix.
 - `make_app.sh` leaves `dist/Vesperis.app` in the checkout: remove it. `build/perf-baselines/tools/f09/check_release.sh` compares
   zip listings against 1.3.0's names only: compare later releases' listings by hand.
 - The music tracks are credited by name only: never their permission or licensing in docs, notes, commits or release text, and

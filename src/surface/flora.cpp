@@ -124,8 +124,8 @@ void SurfaceView::forTrees(int cx, int cz, const std::function<void(const TreeIn
         switch (tv.biome) {   // biome overrides (B-315: the cold and the dry choose per planet between two silhouettes)
             case BIO_TAIGA: case BIO_TUNDRA: T.fam = hash01(mix64(site.gen.seed ^ 0x7A16AULL)) < 0.7 ? 1 : 9; break;
             case BIO_SAVANNA: T.fam = hash01(mix64(site.gen.seed ^ 0x5AFAULL)) < 0.6 ? 2 : 8; break;
-            case BIO_WETLAND: if (hash01(mix64(ht + 10)) < 0.6) T.fam = hash01(mix64(site.gen.seed ^ 0x3E7ULL)) < 0.6 ? 5 : 7; break;
-            case BIO_TROPICAL: if (hash01(mix64(ht + 10)) < 0.25) T.fam = 3; break;
+            case BIO_WETLAND: if (hash01(mix64(ht + 10)) < 0.6) { T.fam = hash01(mix64(site.gen.seed ^ 0x3E7ULL)) < 0.6 ? 5 : 7; } break;
+            case BIO_TROPICAL: if (hash01(mix64(ht + 10)) < 0.25) { T.fam = 3; } break;
             default: break;
         }
         T.fam = clampi(T.fam, 0, 9);
