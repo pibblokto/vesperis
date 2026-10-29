@@ -6,7 +6,7 @@ area: the recording's screen (`game/probe_records.cpp`, `updateRecording`) and t
 
 ## Report
 
-Found while planning U-05 (`docs/ideas/PLAN-screens.md`, section 9) and offered as KI-427: naming a storm in a probe's recording
+Found while planning U-05 (`docs/archive/ideas/PLAN-screens.md`, section 9) and offered as KI-427: naming a storm in a probe's recording
 (N) leaves `guideReturn` at RECORDING. From then on Esc or Enter goes from the recording to the gallery, and from the gallery back
 to the recording. The explorer is held there until they quit. Since X-04 (1.2.0). The user: "Delete old snapshots from e02 to e12,
 fix KI-427."

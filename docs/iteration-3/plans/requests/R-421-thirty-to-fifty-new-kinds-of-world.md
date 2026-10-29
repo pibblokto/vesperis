@@ -1,10 +1,9 @@
 # R-421: thirty to fifty new kinds of world, scientific enough
 
-status: done 2026-10-23 (block P of `docs/ideas/ITERATION-1.4.0.md`: P-00 to P-07, and the dark ocean in D-04); P-00 done 2026-10-21, P-01 (the
-six furnace worlds, generation 16) done 2026-10-21, P-02 (the six living worlds) done 2026-10-21, P-03 (the locked and the deep) done
-2026-10-21, P-04 (the dead worlds and their peoples) done 2026-10-21, P-05 (the far cold) done 2026-10-22, P-06 (the strange moons) done 2026-10-22,
-P-07 (the giants) done 2026-10-22: 58 kinds of body, 50 landable (the dark ocean, D-04's, the 59th)
-milestone: 1.4.0
+status: done 2026-10-23 (block P of `docs/archive/ideas/ITERATION-1.4.0.md`: P-00 to P-07, and the dark ocean in D-04); P-00 done
+2026-10-21, P-01 (the six furnace worlds, generation 16) done 2026-10-21, P-02 (the six living worlds) done 2026-10-21, P-03 (the locked and
+the deep) done 2026-10-21, P-04 (the dead worlds and their peoples) done 2026-10-21, P-05 (the far cold) done 2026-10-22, P-06 (the strange
+moons) done 2026-10-22, P-07 (the giants) done 2026-10-22: 58 kinds of body, 50 landable (the dark ocean, D-04's, the 59th) milestone: 1.4.0
 
 ## Request
 
@@ -25,7 +24,7 @@ palette, sky, weights by zone and star class, sentence and (six of them, R-307) 
 
 ## Plan
 
-`docs/ideas/IDEAS-worlds-and-wanderers.md` section 1 holds the thirty-eight kinds (what each is, its source in the literature,
+`docs/archive/ideas/IDEAS-worlds-and-wanderers.md` section 1 holds the thirty-eight kinds (what each is, its source in the literature,
 where it forms, its ground, its sky, its event); the milestones are in the iteration file:
 
 * **P-00, the kind table:** every kind a row, the planet function's shared skeleton, accent hues for worlds without flora,

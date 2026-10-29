@@ -1,6 +1,6 @@
 # R-424: a new screen in one row and a file of its own
 
-status: done (planned 2026-10-26 as U-01 to U-06, `docs/ideas/PLAN-screens.md`; U-01 to U-05 done 2026-10-26, U-06 2026-10-27)
+status: done (planned 2026-10-26 as U-01 to U-06, `docs/archive/ideas/PLAN-screens.md`; U-01 to U-05 done 2026-10-26, U-06 2026-10-27)
 milestone: 1.4.0
 
 ## Request
@@ -14,7 +14,7 @@ The user replied: "That's sad, I will have tons of those." Offered a table of sc
 
 ## Plan
 
-`docs/ideas/PLAN-screens.md`: six milestones in 1.4.0, before its release. Nothing generated, drawn, played or saved changes.
+`docs/archive/ideas/PLAN-screens.md`: six milestones in 1.4.0, before its release. Nothing generated, drawn, played or saved changes.
 
 * **U-01, the proof reaches every screen:** a tour opens each of the 29 states, pictures it, presses its keys and lists its
   controller menu. `input` joins the battery, and the `settings` item is mended (KI-426).

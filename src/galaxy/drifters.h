@@ -1,5 +1,5 @@
 #pragma once
-// D-01 (2026-10-23): the drifters (R-423; `docs/ideas/IDEAS-worlds-and-wanderers.md` section 3, `docs/ideas/ITERATION-1.4.0.md`): worlds
+// D-01 (2026-10-23): the drifters (R-423; `docs/archive/ideas/IDEAS-worlds-and-wanderers.md` section 3, `docs/archive/ideas/ITERATION-1.4.0.md`): worlds
 // with no sun. Microlensing counts about twenty for every star (Sumi et al. 2023), most of them small and all of them dark; the game holds
 // the few that call (SIMP 0136 was found by its radio aurorae), about one for every seven million stars. They are a population of their own,
 // hashed in cells of DRIFT_CELL sectors with a salt of their own and placed only in a sector that holds no star (`starInSector` fails

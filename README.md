@@ -79,6 +79,26 @@ gas instead of a white blob, and a capital's records lie in its buildings rather
 than heaped on its archive's floor. The systems were regenerated (generation
 15): saves load, and the moons and companion stars they show may have moved.
 
+1.4.0 is the worlds and the wanderers. Thirty-eight new kinds of world, each
+from a real world or a published model, join the old ones: magma oceans,
+glass, salt and rust worlds in the inner orbits; archean, hothouse and
+superhabitable worlds; the eyeball and terminator worlds of the red dwarfs,
+hycean and ammonia worlds and snowballs; felisian worlds that froze or were
+scorched, one in eight with a dead people's ruins; nitrogen, cryovolcanic and
+dry ice worlds in the far cold; grooved, two-faced, tiger-striped and sponge
+moons; and water-cloud, azure, alkali and silicate giants, gas dwarfs and
+super-puffs, each a different fall for the probe. A world holds up to six
+traits instead of three, thirty of them new, from great tides, hot springs and
+milky seas to airglow, fog seas, petrified forests and meteorite fields, and
+three are heard rather than seen: singing dunes, singing ice and quakes.
+Between the stars drift worlds with no sun, heard only by the radar turned
+above x1, each in a voice of its own: locked, the ship jumps to a black disc in
+the dark. On their ground the explorer carries a lamp, and on one in four of
+the frozen felisian and desert ones lie the ruins of a people whose records
+tell how they lost their sun. The worlds were regenerated (generation 16):
+saves load, 1.3.2's stars and peoples where they were, and a world may now be
+of a new kind.
+
 ## Playing
 
 Download the build for your machine from the

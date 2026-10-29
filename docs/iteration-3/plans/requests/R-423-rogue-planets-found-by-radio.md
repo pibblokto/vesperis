@@ -1,6 +1,6 @@
 # R-423: rogue planets, found only by their radio, and the people who lost their sun
 
-status: done 2026-10-23 (block D of `docs/ideas/ITERATION-1.4.0.md`: D-01 to D-05, planned 2026-10-21); D-01 done 2026-10-23 (the drifters' field in the sectors without a star, a system with no sun, the way there and back through one resolver, the save); D-02 done 2026-10-23 (heard by the radar above x1 by a law of their own, the lock's `NO STAR AT THE SOURCE`, the chart's plot, the black disc lit by the band, the maps' survey look); D-03 done 2026-10-23 (a voice for every drifter from its seed and its body, on the radar, the cabin's radio and the suit's, no two alike); D-04 done 2026-10-23 (the explorer's lamp and the capsule's floodlights, the drifters' own traits: an air fallen as snow, a young interior's embers, a dead people's lights left on for D-05, a dark ocean's lights in its water; frozen seas, the thermometer by the world's own heat, the dark ocean); D-05 done 2026-10-23 (one frozen felisian or desert drifter in four kept a people, at its former orbit round the star it left; the loss of the sun its own cause by four ways and its history's end; eight genres of records of their own for every age, the ordinary ones darkened; the sun's measure, charts marking the star that was their sun, the dawn song and the last; the works of the end; a radio people's last broadcast under the drifter's voice, the beacon)
+status: done 2026-10-23 (block D of `docs/archive/ideas/ITERATION-1.4.0.md`: D-01 to D-05, planned 2026-10-21); D-01 done 2026-10-23 (the drifters' field in the sectors without a star, a system with no sun, the way there and back through one resolver, the save); D-02 done 2026-10-23 (heard by the radar above x1 by a law of their own, the lock's `NO STAR AT THE SOURCE`, the chart's plot, the black disc lit by the band, the maps' survey look); D-03 done 2026-10-23 (a voice for every drifter from its seed and its body, on the radar, the cabin's radio and the suit's, no two alike); D-04 done 2026-10-23 (the explorer's lamp and the capsule's floodlights, the drifters' own traits: an air fallen as snow, a young interior's embers, a dead people's lights left on for D-05, a dark ocean's lights in its water; frozen seas, the thermometer by the world's own heat, the dark ocean); D-05 done 2026-10-23 (one frozen felisian or desert drifter in four kept a people, at its former orbit round the star it left; the loss of the sun its own cause by four ways and its history's end; eight genres of records of their own for every age, the ordinary ones darkened; the sun's measure, charts marking the star that was their sun, the dawn song and the last; the works of the end; a radio people's last broadcast under the drifter's voice, the beacon)
 milestone: 1.4.0
 
 ## Request
@@ -19,7 +19,7 @@ hisses and roars).
 
 ## Plan
 
-`docs/ideas/IDEAS-worlds-and-wanderers.md` section 3; the milestones in the iteration file:
+`docs/archive/ideas/IDEAS-worlds-and-wanderers.md` section 3; the milestones in the iteration file:
 
 * **D-01, the dark between:** the drifters' field (only in sectors with no star, so nothing moves), a system with no sun
   (`STAR_ROGUE`, `sunless()`, the world's own heat), the light gates, the way there and back through one resolver, the save.

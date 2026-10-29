@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-// D-01: the dark's table (`docs/ideas/IDEAS-worlds-and-wanderers.md` section 3): a drifter's kind by weight, its own heat's range (K)
+// D-01: the dark's table (`docs/archive/ideas/IDEAS-worlds-and-wanderers.md` section 3): a drifter's kind by weight, its own heat's range (K)
 const DarkKind DARK_KINDS[] = {
     {PT_GASGIANT, 26, 60, 130},          // the loudest that call (SIMP 0136's aurorae): a giant's own heat, Neptune's 59 K to Jupiter's 125
     {PT_SUBSTELLAR, 14, 400, 1200},      // a brown dwarf, glowing with what is left of its making

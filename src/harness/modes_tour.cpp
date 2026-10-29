@@ -5,7 +5,7 @@
 // followed by Esc a bounded number of times (a screen that will not let go is printed, not waited on), then by a fresh game
 // opened again; the keys and rows that write a save or leave the start run last. Each state writes its saves, guide,
 // settings, keys and controller files under shots/tests/tour/ with a prefix of its own (the directory emptied first). U-06: then
-// the rows (docs/ideas/PLAN-screens.md): each state opened by its row (`openScreen` from the ship in its parking) or, a scene or a
+// the rows (docs/archive/ideas/PLAN-screens.md): each state opened by its row (`openScreen` from the ship in its parking) or, a scene or a
 // world set up first, by its stop's opener (`tourSetupNamed`); its picture, the controller's pages and each of its commands, run as
 // the controller runs them. A state with no stop (a new screen) is toured there alone, with no edit here
 #include "harness/harness.h"

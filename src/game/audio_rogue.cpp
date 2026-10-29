@@ -1,4 +1,4 @@
-// D-03 (2026-10-23): the voices of the dark (`docs/ideas/ITERATION-1.4.0.md`, `docs/ideas/IDEAS-worlds-and-wanderers.md` section 3): a
+// D-03 (2026-10-23): the voices of the dark (`docs/archive/ideas/ITERATION-1.4.0.md`, `docs/archive/ideas/IDEAS-worlds-and-wanderers.md` section 3): a
 // voice for every drifter, from its seed and its body, in the receiver's channel (`channelSample`'s SIG_ROGUE) on parameters of its own
 // (`rogueDerive`: indices no other signal reads, so no other signal's sound moved). It is grown from what receivers hear of the planets and
 // from C-16's static: Jupiter's decametric storms (the L-bursts' slow swishes like surf, the S-bursts' crackle falling in pitch), the

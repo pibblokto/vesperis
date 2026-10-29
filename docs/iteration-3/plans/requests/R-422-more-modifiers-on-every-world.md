@@ -1,9 +1,9 @@
 # R-422: more modifiers on every world, and more kinds of them
 
-status: done 2026-10-22 (block Q of `docs/ideas/ITERATION-1.4.0.md`: Q-01 to Q-03, planned 2026-10-21); Q-01 done 2026-10-22 (the six slots, the ten facts, the
-eleven landforms and their sights, the karst on the acidic worlds); Q-02 done 2026-10-22 (sixteen traits of the water, the sky, the life and the
-ground, the tides among them); Q-03 done 2026-10-22 (the sounds of the ground: singing dunes, singing ice, quakes): the block's thirty traits done
-milestone: 1.4.0
+status: done 2026-10-22 (block Q of `docs/archive/ideas/ITERATION-1.4.0.md`: Q-01 to Q-03, planned 2026-10-21); Q-01 done 2026-10-22 (the
+six slots, the ten facts, the eleven landforms and their sights, the karst on the acidic worlds); Q-02 done 2026-10-22 (sixteen traits of
+the water, the sky, the life and the ground, the tides among them); Q-03 done 2026-10-22 (the sounds of the ground: singing dunes, singing
+ice, quakes): the block's thirty traits done milestone: 1.4.0
 
 ## Request
 
@@ -16,7 +16,7 @@ civilisation; up to three a world (none for a fifth, one for two fifths, two for
 
 ## Plan
 
-`docs/ideas/IDEAS-worlds-and-wanderers.md` section 2; the milestones in the iteration file:
+`docs/archive/ideas/IDEAS-worlds-and-wanderers.md` section 2; the milestones in the iteration file:
 
 * **Q-01:** six slots a world (the three of today kept as they are, three new by kind), the nine facts read from the orbit
   and the spin (sideways spin, retrograde spin, racing day, locked face, eccentric year, strong field, no field, captured,

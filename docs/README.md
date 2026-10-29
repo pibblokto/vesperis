@@ -10,8 +10,9 @@ Where things are written, and how a bug or a request becomes work. `STATUS.md` s
   11 the original, `civilisations/`, `harness/`, `lessons.md`.
 - `iteration-3/bugs/`: the bug reports (`B-NNN`), `resolved/`, and `KNOWN-ISSUES.md`: what stays open.
 - `iteration-3/plans/requests/`: the requests (`R-NNN`).
-- `ideas/`: `MILESTONES.md` (every milestone's id), `ITERATION-1.4.0.md` (this release's plan), the plans and ideas not done yet.
-- `archive/`: finished: iterations 1 and 2, iteration 3's first plans and its work log, the plans of 1.1.0 to 1.3.2.
+- `ideas/`: `MILESTONES.md` (every milestone's id), the next release's `ITERATION-<version>.md` once it is planned, the plans and
+  ideas not done yet.
+- `archive/`: finished: iterations 1 and 2, iteration 3's first plans and its work log, the plans of 1.1.0 to 1.4.0.
 
 ## Process
 

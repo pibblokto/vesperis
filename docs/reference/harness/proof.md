@@ -115,7 +115,7 @@ faster binary's clock, and every picture after the scanner, ahead.
 
 ## E-02: the fingerprints and `tools/prove` (2026-10-23)
 
-The E series' proof (`docs/ideas/PLAN-reorganisation.md`, section 5), kept in the tree instead of made again in each milestone's
+The E series' proof (`docs/archive/ideas/PLAN-reorganisation.md`, section 5), kept in the tree instead of made again in each milestone's
 `build/<id>/`. The fingerprint modes are the harness's first own files (`src/harness/`).
 
 * `fingerprint bodies [n] [out]`: Q-03's fp5 as a mode: every body of four scan regions (150..340 x 20..160 at sy 0, and three far

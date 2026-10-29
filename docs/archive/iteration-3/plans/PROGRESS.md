@@ -1514,9 +1514,9 @@
   how they lost their sun; "investigate, propose. I will tell you when to proceed". The branch `release/v1.4.0` from `main`
   (9c4ebc2, fast-forwarded to `origin/main`). Read first (four readings of the code: the radar from the galaxy's hash to the
   speaker; the places, the travel and the light; every place a kind is wired; the peoples' pipeline), then planned:
-  `docs/ideas/ITERATION-1.4.0.md` (sixteen milestones: P-00 the kind table, P-01 to P-07 thirty-eight new kinds in seven families,
+  `docs/archive/ideas/ITERATION-1.4.0.md` (sixteen milestones: P-00 the kind table, P-01 to P-07 thirty-eight new kinds in seven families,
   Q-01 to Q-03 thirty new traits and six slots, D-01 to D-05 the drifters; generation 16 from P-01), the design and its sources in
-  `docs/ideas/IDEAS-worlds-and-wanderers.md`, requests R-421 (the kinds), R-422 (the modifiers) and R-423 (the rogue planets),
+  `docs/archive/ideas/IDEAS-worlds-and-wanderers.md`, requests R-421 (the kinds), R-422 (the modifiers) and R-423 (the rogue planets),
   `MILESTONES.md` (the P series re-cut, the Q and D series new). Found in the reading, not fixed: the karst towers never stand on an
   acidic world (Q-01 fixes it). Nothing built or committed.
 * **P-00 (2026-10-21): the kind table.** On the user's "proceed". Every kind of body is a row of `KINDS` (`galaxy/kinds.*`, built at
@@ -1719,7 +1719,7 @@
 * **The E series planned (2026-10-23): the repo for its readers.** On the user's word, 1.4.0's sixteen milestones were
   committed as 92e580a (a random author, no session link), then the repo was surveyed for what an agent must read to change it
   (five readers: the harness, the engine with the grammar, the game layer, the docs with the memory, Claude Code's documentation;
-  the deciding claims measured again). The plan is `docs/ideas/PLAN-reorganisation.md`: thirteen milestones, E-01 to E-13, in 1.4.0
+  the deciding claims measured again). The plan is `docs/archive/ideas/PLAN-reorganisation.md`: thirteen milestones, E-01 to E-13, in 1.4.0
   before its release, nothing generated, drawn, played or saved moving. Nothing built.
 
 * **E-01 (2026-10-23): what every session loads.** The first of the E series, no code. The memory went from 252 KB in 12 files to
@@ -1814,7 +1814,7 @@ The 1.3.2 patch (2026-10-17 to 19, on the branch `release/v1.3.2`): the user's i
 companion stars), B-426 (a capital's records), R-419 (auto-explore), B-427 (a Wolf-Rayet star's giants' tail), B-428 (the moons spread)
 and R-420 (auto-explore's tape), generation 15. Released as 1.3.2 on 2026-10-19.
 
-The 1.4.0 iteration is `docs/ideas/ITERATION-1.4.0.md` (planned 2026-10-21 on the branch `release/v1.4.0`, from the user's requests
+The 1.4.0 iteration is `docs/archive/ideas/ITERATION-1.4.0.md` (planned 2026-10-21 on the branch `release/v1.4.0`, from the user's requests
 R-421, R-422 and R-423), one release of sixteen milestones in this order: P-00, P-01, P-02, P-03, P-04, P-05, P-06, P-07, Q-01,
 Q-02, Q-03, D-01, D-02, D-03, D-04, D-05 (generation 16 from P-01). One milestone at a time on the user's "proceed": P-00 (the
 kind table), P-01 (the furnace worlds, generation 16), P-02 (the living worlds), P-03 (the locked and the deep) and P-04 (the dead
@@ -1822,7 +1822,7 @@ worlds and their peoples) done 2026-10-21, P-05 (the far cold), P-06 (the strang
 facts and eleven landforms), Q-02 (water, sky, life and ground: sixteen traits, the tides among them) and Q-03 (the sounds of the ground)
 done 2026-10-22, D-01 (the dark between: the drifters' field), D-02 (heard, not seen: the radar finds them), D-03 (the voices of the
 dark), D-04 (the ground in the dark) and D-05 (the people who lost their sun: their records, charts, music, works of the end and the
-beacon) done 2026-10-23: the sixteen are done, committed as 92e580a. Then the E series (`docs/ideas/PLAN-reorganisation.md`,
+beacon) done 2026-10-23: the sixteen are done, committed as 92e580a. Then the E series (`docs/archive/ideas/PLAN-reorganisation.md`,
 E-01 to E-13, planned 2026-10-23): the repo made cheaper to read and change before the release; E-01 (what every session loads)
 done 2026-10-23, E-02 (the proof kept: `tools/prove`, snapshot `e02`) and E-03 (the harness in pieces: `src/harness/`, snapshot
 `e03`) 2026-10-24; E-04 (the docs for their readers) waits for the user's "proceed".
