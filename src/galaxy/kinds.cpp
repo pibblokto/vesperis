@@ -52,6 +52,10 @@ constexpr void thenGround(KindDef& k, const KindDef& f) {
 
 constexpr std::array<KindDef, PT_COUNT> buildKinds() {
     std::array<KindDef, PT_COUNT> K{};
+    // B-430: every row's rules set in order before any kind sets its own. GCC 9.4, the Linux builds' compiler, keeps the rows' default
+    // rules as one range they all share and cuts it where a row sets a rule past its first (`rule`): the other rows lost their rules
+    // after the cut (built 0, not 1, so their draw weights changed), and reading one in place crashed it (`kindsOk`, KI-423)
+    for (KindDef& k : K) for (WeightOp& w : k.rules) w = WeightOp{};
     {   KindDef& k = K[PT_MOLTEN];
         identity(k, PT_MOLTEN, "MOLTEN", "MOLTEN", "medium size, internally hot, unstable surface, no atmosphere.", 2000, 4200, true, false, 1, 0.25);
         k.tags = KT_LAVA;
@@ -1533,7 +1537,8 @@ constexpr bool kindsOk(const std::array<KindDef, PT_COUNT>& K) {
     return true;
 }
 constexpr std::array<KindDef, PT_COUNT> BUILT_KINDS = buildKinds();
-static_assert(kindsOk(BUILT_KINDS), "the kind table: a row missing, out of order, or incomplete");
+// B-430: the check reads a table built for it: GCC 9.4 copies a constexpr variable whole at each read of it (6.6 GB for BUILT_KINDS's)
+static_assert(kindsOk(buildKinds()), "the kind table: a row missing, out of order, or incomplete");
 
 constexpr void trait(std::array<TraitDef, TR_COUNT>& T, int id, const char* name, const char* phrase, int cls, uint64_t needs, bool colour = false, int excludes = TR_NONE) {
     T[id] = TraitDef{id, name, phrase, cls, needs, colour, excludes};

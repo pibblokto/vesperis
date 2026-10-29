@@ -201,6 +201,7 @@ public:
     static const StateRow STATE_ROWS[STATE_COUNT];
     void openScreen(GameState s);   // U-05: the one way in (its row's `enter`) and the one way back (its `back`)
     void closeScreen();
+    GameState placeNow() const;     // B-432: where the game is: its state in play, a screen's scene, the title's game
     // ---- the ways in, U-03: a menu a list of rows, its count read from it (game_types.h's rows; menus.cpp, guide_screens.cpp,
     // cabin.cpp)
     static const RowList<MenuRow>& escMenu();

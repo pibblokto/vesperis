@@ -26,9 +26,10 @@ Ubuntu 20.04 in Docker, Windows x86_64/arm64 with llvm-mingw), raylib 5.5 built 
    git config carries a personal address, so never commit or tag without them. No session link in any message.
 4. **Built from that commit, before merging:** `VESPERIS_TC=build/toolchains caffeinate -i sh packaging/build-release.sh <version>
    <out dir>` (about 8 minutes; from a checkout or worktree of the commit). It prints `<build>: exit N, W warnings` for each (macOS
-   and Windows 0, Linux the 31 old GCC style warnings), runs the Linux builds last and one at a time (Docker's VM died beside them
-   once), and makes no zip unless all six built. A failure only one compiler shows (a missing `<cstdlib>` for `atoi` broke Windows
-   twice) is fixed on the branch first. An interrupted `docker run` leaves its container behind: `docker rm -f` it.
+   and Windows 0, Linux the 46 old GCC style warnings, 38 of them parallel.h's), runs the Linux builds last and one at a time
+   (Docker's VM died beside them once), and makes no zip unless all six built. A failure only one compiler shows (a missing
+   `<cstdlib>` for `atoi` broke Windows twice) is fixed on the branch first. An interrupted `docker run` leaves its container
+   behind: `docker rm -f` it.
 5. **Checked:** each zip's file list against the previous release's public zips
    (`https://github.com/pibblokto/vesperis/releases/download/v<old>/<zip>`); `otool -L` and minos 11.0 on the macOS binaries,
    `objdump -p` DLL names on the Windows ones, NEEDED and the newest GLIBC (2.29) on the Linux ones. `make_app.sh` leaves
@@ -52,6 +53,9 @@ To move a release (as 1.3.2 was, re-released with the music): delete the old rel
 - Docker Desktop starts with `open -a Docker` (about a minute). The Linux images are `ubuntu:20.04`: `debian:bullseye` can no
   longer apt-get. GCC 9's flag is `-O3` (its -O2 does not vectorise, and its LTO is slower); an emulated amd64 container runs the
   harness 5-7x slower.
+- GCC 9.4 can build a constexpr table unlike Clang without a word (B-430: 55 of the 60 kinds lost their draw rules, other
+  worlds on Linux). After a change to how a table is built, dump it in the container and compare it with the Mac's
+  byte for byte (`build/b430/kdump.cpp`: each row's texts and bytes, pointers zeroed); the regress shows it too.
 - Narrowings show only on Windows (LLP64, a 32-bit `long`): compile the whole tree with `-Wshorten-64-to-32` and fix every one,
   not only the line that warned.
 - `make_app.sh` leaves `dist/Vesperis.app` in the checkout: remove it. `build/perf-baselines/tools/f09/check_release.sh` compares

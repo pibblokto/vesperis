@@ -188,6 +188,7 @@ public:
     double testPlayerZ() const { return surf.player.z; }
     // ---- the state set, the landing map, what the ground holds, parking (landing_map.cpp, landing_map_build.cpp, game.cpp)
     void setState(GameState s) { state = s; }
+    GameState testScene() const { return returnState; }   // B-431: the scene an overlay is drawn over and closes to
     void testAimAtBody(int body);
     int testZoomRoads() const { return (int)zoomRoads.size(); }   // C-09: the roads drawn on the zoom
     const double* testZoomBuildMs() const { return zoomBuildMs; } int testZoomBuilds() const { return zoomBuilds; }   // the zoom's last build in parts, the builds so far

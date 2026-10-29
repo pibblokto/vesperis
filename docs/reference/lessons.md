@@ -235,6 +235,12 @@ Contents:
 - Check new rules against the existing data's physics; fix where "which" is decided, then pin again. Check generated magnitudes
   against Earth (a medieval people of 6 billion is wrong).
 - Keep `SALT_CELL` and `SALT_DEEP`, so the signals the user found stay; pin again only what must move.
+- GCC 9.4, the Linux zips' compiler, builds a constexpr table its own way (B-430). Rows value-initialized at once share their
+  arrays' non-zero defaults as one range, and setting an element past a row's first cuts it in place: the rows after the cut
+  lose theirs (55 kinds' draw rules, so other worlds on Linux) without a word, and a check reading a lost one crashed it. Set
+  every row's arrays first, in order. It also copies a constexpr variable whole at each read (6.6 GB for
+  `kindsOk(BUILT_KINDS)`): a `static_assert` reads a table built for it. After a change to how a table is built, compare its
+  bytes between the compilers in the container (`build/b430/kdump.cpp`).
 
 ## Generation: the peoples
 
@@ -345,6 +351,12 @@ Contents:
 - A harness pass that reads the table covers a new screen with no edit, but it drives only what the rows hold (U-06): the
   controller's commands are a screen's few lines (SPACE's 14 against its 40 keys in the tour's list, the menus none), so the hand
   lists stay as the first pass and the rows run after them, the old outputs unchanged.
+- A value every opener must set by hand goes stale where one does not (B-431): the scenes' keys set the scene before they opened a
+  screen (Esc, H, J, I, M, Tab; H and C at the title) and the cabin's devices did not, so after the climb aboard their screens
+  drew over the ground left behind and saved the explorer back onto it. Taken once where every screen opens (`openScreen`), it
+  cannot be forgotten. And one variable cannot hold two things (B-432): the scene a screen is drawn over and the place the title
+  resumes were both `returnState`, so the title's own help overwrote the place; the title keeps its game where it was opened from,
+  and one reader (`placeNow`) says where the game is.
 - A voice's identity comes from strong narrow lines and resonances, not broad noise (compare voices by LTAS distances). Measure a
   medium's surface in the bare render's quiet windows.
 - raylib's non-looping music end cuts the last block, and stalls starve its stream. Log each swap's return (the refresh it met);

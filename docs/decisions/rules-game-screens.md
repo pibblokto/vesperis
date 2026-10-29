@@ -25,7 +25,9 @@ their keys: `rules-game.md`.
 - The general page goes by traits: a base, a scene (a base in play), the ground, `ST_CLOCK`, `ST_PHOTO`; pad.cpp tests only KEYS and the aim's state [U-04]
 
 ## A screen's life
-- A screen opens through `openScreen(S)`: where it opens from (`openedFrom`), its row's `enter` (`state` still the opener), then the state [U-05]
+- A screen opens through `openScreen(S)`: a base it opens from is its scene (`returnState`), `openedFrom`, its row's `enter`, then the state [U-05], [B-431]
+- A scene's own state reads no `returnState` (the climb aboard, the title's Enter leave it): a save and a photo read it off the scenes [B-431]
+- The title is opened from the game it resumes (`openedFrom[TITLE]`); a save and a photo place the explorer by `placeNow()` [B-432]
 - Esc, and an exit that goes where Esc goes, is `closeScreen()`: the row's `back`, its scene (`returnState`), its opener or a screen [U-05]
 - A screen that closes as it opens the next closes first, so its own way back is the next one's opener; an action's exit stays its own [U-05]
 - A screen's lines in the save, its load and reset are its row's: after the save's lines, a line `load` does not know, the reset's end [U-05]
@@ -36,3 +38,5 @@ their keys: `rules-game.md`.
 [U-04]: log/6-1.4.0.md
 [U-05]: log/6-1.4.0.md
 [U-06]: log/6-1.4.0.md
+[B-431]: log/6-1.4.0.md
+[B-432]: log/6-1.4.0.md

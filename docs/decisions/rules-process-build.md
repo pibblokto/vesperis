@@ -27,6 +27,7 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 - A new engine directory goes in the Makefile's `CORE_SRC`, CMake's two globs, the release scripts' `find`s and `tools/prove`'s objects [E-09]
 - A count that can pass 2^31 is `long long` or `int64_t`, never `long` nor narrowed through one: Windows' `long` is 32 bits [B-424]
 - Windows builds compile with `-Wshorten-64-to-32` (`build-win.sh`), the tree has none; `build-release.sh` prints each build's warnings [B-424], [F-09]
+- A table a constexpr function builds sets its rows' arrays of non-zero defaults first, in order: GCC 9.4 cuts a range they share [B-430]
 
 ## Releases
 - A release is everything done since the last, nothing held back, and the user calls it [Release 1.1.0..1.3.0]
@@ -67,3 +68,4 @@ The rules in force for how work is planned, proven, recorded, committed and rele
 [E-08]: log/6-1.4.0.md
 [E-09]: log/6-1.4.0.md
 [E-12]: log/6-1.4.0.md
+[B-430]: log/6-1.4.0.md

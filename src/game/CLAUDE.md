@@ -32,6 +32,8 @@ range): chart_draw, shards_screen.
 - `resetExpedition` resets `radar`, `icase`, `chartHeld`, `probe`, `bay` and `tele` by assigning fresh ones: a field moved into
   one is reset with it, and a thread in one would end the game.
 - A text entry draws over its opener (`openedFrom`) and goes back to it; the guide closes before it opens one.
+- Where the game is (a save's place, a photo's caption) is `placeNow()`, never `state` or `returnState` alone: a screen's
+  scene is the base it opened from, the title's game the place it was opened from (B-431, B-432).
 - The synth reads `AudioState`'s pointers after `frame`: their owner clears them before what they point at can move. The
   harness never runs the synth, so a screen keeps its own clock (`pieceT`) and re-syncs to the synth's.
 - A world's map is asked for (`mapIfReady`), never awaited. `drawCabinBand` runs a band a job: none reads another's.

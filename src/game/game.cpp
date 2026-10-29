@@ -28,7 +28,7 @@ Game::Game() : rgbBuf((size_t)FBW * FBH, 0) {
     cabinGrain.generate(0x5A1D, 5, 1);
     newGame();
     applySettings();
-    state = GameState::TITLE;
+    openScreen(GameState::TITLE);   // B-432: opened from the game it resumes
 }
 
 // settings and save file (the constructor touches no files)
@@ -48,7 +48,7 @@ void Game::loadFromDisk() {
         guide.migratedShards = 0;
         guide.save(guidePath);
     }
-    state = GameState::TITLE;
+    openScreen(GameState::TITLE);   // B-432: opened from the loaded game's place, which Enter resumes
 }
 
 void Game::applySettings() {
@@ -197,6 +197,7 @@ void Game::newGame() {
     nb.update(ship.pos);
     surf.valid = false;
     state = GameState::SPACE;
+    visitNoted = false;   // B-433: the system it starts in is noted at the next frame out of the title, as an arrival's is
     status("STARDRIFTER READY - H FOR HELP", 6);
 }
 

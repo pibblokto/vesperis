@@ -69,10 +69,11 @@ std::string Game::bodyLabelOf(int i) const {
 
 bool Game::nameIsForeign(const std::string& key) const { return !guide.names.count(key) && guide.inbox.count(key); }
 
-// for the sidecar text next to a screenshot
+// for the sidecar text next to a screenshot: the ground's place when the game is on the ground (`placeNow`, as a save places the
+// explorer; B-431: a scene's own state reads no `returnState`, which the climb aboard leaves at the ground)
 std::string Game::screenshotCaption() const {
     std::string where;
-    if (surf.valid && (stateHas(state, ST_GROUND) || returnState == GameState::SURFACE))
+    if (surf.valid && stateHas(placeNow(), ST_GROUND))
         where = fmt("%s  %.1f%s %.1f%s  %s", upper(bodyNameOf(surf.site.body)).c_str(), std::fabs(surf.env.latDeg), surf.env.latDeg >= 0 ? "N" : "S",
                     std::fabs(surf.env.lonDeg), surf.env.lonDeg >= 0 ? "E" : "W", KINDS[sys.bodies[surf.site.body].type].name);
     else if (sys.valid)

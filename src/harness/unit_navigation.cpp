@@ -963,4 +963,124 @@ void unitStates(const Check& check) {
     }
     check("the states' rows: a name, an update, a picture, a way in, the commands", missing.empty(),
           missing.empty() ? fmt("%d rows: %d opened by their row and held a frame (%d with commands), %d by the tour's setups", rows, byRow, paged, named) : missing);
+    // B-431: a screen opened from a base is drawn over it and saves by it. Help at the title, Enter, and the console opened at the
+    // cabin's wall; then a landing, help on the ground, the capsule's climb back aboard: the photo's caption, the console again and a
+    // save in it, the drone bay from the flight computer. Before, the scene stayed the one left (the title, the ground): the console
+    // and the bay drew over it, the console's save put the explorer back on the ground, and the photo was captioned with the ground
+    {
+        const std::string pre = "shots/tests/test_b431_";
+        for (const char* f : {"save_3.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
+        TestGame& g = game;   // one game alive at a time: the group's, a new game at its title
+        g.savePrefix = pre + "save"; g.guidePath = pre + "guide.txt"; g.shotsDir = pre + "shots"; g.moviesDir = pre + "movies";
+        applyTestScale(g); g.newGame(); g.setState(S::TITLE);
+        Input bi;
+        auto press = [&](int key) { pressKey(g, bi, key); };
+        auto run = [&](double secs) { runFrames(g, bi, secs); };
+        int consoles = 0;   // the console opened (its scene read), or the state it left the explorer in
+        auto console = [&]() { g.testCabinGoto(-1.2, 0.0, -PI / 2, 0.0); press(KEY_E); if (g.state != S::CONSOLE) return g.state; consoles++; return g.testScene(); };
+        press(KEY_H); press(KEY_ESCAPE); press(KEY_ENTER); run(0.3);
+        const S titleConsole = console();
+        press(KEY_ESCAPE); run(0.2);
+        press(KEY_C); run(0.3); g.testLandSite(); run(0.2); press(KEY_ENTER); run(7.5);
+        const bool landed = g.state == S::SURFACE;
+        press(KEY_H); press(KEY_ESCAPE); press(KEY_K); run(0.2); press(KEY_Q); run(8.0);
+        const bool aboard = g.state == S::SPACE;
+        const std::string caption = g.screenshotCaption();
+        const S groundConsole = console();
+        g.saveSlot(3);
+        std::string surface = "none";
+        { std::ifstream f(pre + "save_3.txt"); std::string line; while (std::getline(f, line)) if (line.rfind("surface ", 0) == 0) surface = line; }
+        press(KEY_ESCAPE); run(0.2);
+        g.testCabinGoto(0.0, 1.3, 0.0, 0.0); press(KEY_E);
+        const bool bayRow = g.state == S::SHIPSCREEN && g.testShipScreenRow("THE DRONE BAY");
+        press(KEY_ENTER);
+        const bool bayOpen = g.state == S::DRONES;
+        const S bay = bayOpen ? g.testScene() : g.state;
+        press(KEY_ESCAPE);
+        check("the cabin's screens over the scene they open from: after help at the title, and after the ground (B-431)",
+              consoles == 2 && landed && aboard && titleConsole == S::SPACE && groundConsole == S::SPACE && surface == "surface 0" && bayRow && bayOpen &&
+                      bay == S::SPACE && caption.rfind("IN ORBIT OF ", 0) == 0,
+              fmt("the console (%d of 2 opened) after help at the title over %s; landed %d, aboard %d; the photo \"%s\"; the console over %s, its save \"%s\"; "
+                  "the flight computer's drone bay %s over %s",
+                  consoles, stateName(titleConsole), landed, aboard, caption.c_str(), stateName(groundConsole), surface.c_str(),
+                  !bayRow ? "not found" : bayOpen ? "opened" : "not opened", stateName(bay)));
+        for (const char* f : {"save_3.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
+    }
+    // B-432: the title keeps the game's place through its help and its credits. A landing on the home system's first world: a save a
+    // second into the capsule's way down, another on the ground. Each opened as the game starts (`loadFromDisk`, the title): help
+    // and a key, the credits and a key, a save at the title (as closing the window makes one), then Enter. Before, help and the
+    // credits made the title's scene the title: Enter went on in space and the save dropped the landing; the capsule's in space
+    {
+        const std::string pre = "shots/tests/test_b432_";
+        auto clean = [&]() {
+            for (const char* p : {"descent", "ground"}) for (const char* f : {"_1.txt", "_2.txt", "_auto.txt"}) remove((pre + p + f).c_str());
+            remove((pre + "guide.txt").c_str());
+        };
+        clean();
+        TestGame& g = game;   // one game alive at a time: the group's
+        g.guidePath = pre + "guide.txt"; g.padPath = pre + "pad.txt"; g.shotsDir = pre + "shots"; g.moviesDir = pre + "movies";
+        g.savePrefix = pre + "ground";
+        applyTestScale(g); g.newGame(); g.setState(S::SPACE);
+        Input ti;
+        auto press = [&](int key) { pressKey(g, ti, key); };
+        auto run = [&](double secs) { runFrames(g, ti, secs); };
+        auto line = [](const std::string& path, const char* key) {
+            std::ifstream f(path); std::string l;
+            while (std::getline(f, l)) if (l.rfind(key, 0) == 0) return l;
+            return std::string("none");
+        };
+        press(KEY_C); run(0.3); g.testLandSite(); run(0.2); press(KEY_ENTER); run(1.0);
+        const bool down = g.state == S::DESCENT;
+        g.savePrefix = pre + "descent"; g.saveSlot(1);
+        run(6.5);
+        const bool landed = g.state == S::SURFACE;
+        g.savePrefix = pre + "ground"; g.saveSlot(1);
+        struct Start { const char* save; S at; std::string surface, phase; S resumed; } starts[2] = {{"ground", S::SPACE, "", "", S::SPACE}, {"descent", S::SPACE, "", "", S::SPACE}};
+        for (Start& st : starts) {
+            g.savePrefix = pre + st.save;
+            g.loadFromDisk(); applyTestScale(g);
+            press(KEY_H); press(KEY_ESCAPE); press(KEY_C); press(KEY_ESCAPE);
+            st.at = g.state;
+            g.saveSlot(2);
+            st.surface = line(pre + st.save + "_2.txt", "surface "); st.phase = line(pre + st.save + "_2.txt", "phase ");
+            press(KEY_ENTER);
+            st.resumed = g.state;
+        }
+        const Start &gr = starts[0], &de = starts[1];
+        check("the title keeps the game's place through its help and credits: a save there, and Enter (B-432)",
+              down && landed && gr.at == S::TITLE && gr.surface == "surface 1" && gr.phase == "none" && gr.resumed == S::SURFACE && de.at == S::TITLE &&
+                      de.surface == "surface 1" && de.phase.rfind("phase 3 ", 0) == 0 && de.resumed == S::DESCENT,
+              fmt("the capsule's way down %d, the ground %d; the ground's save at the title after help and the credits: %s, its save \"%s\", "
+                  "Enter %s; the capsule's: %s, its save \"%s\" \"%s\", Enter %s",
+                  down, landed, stateName(gr.at), gr.surface.c_str(), stateName(gr.resumed), stateName(de.at), de.surface.c_str(),
+                  de.phase.substr(0, 7).c_str(), stateName(de.resumed)));
+        clean();
+    }
+    // B-433: a new expedition and a load note the system they put the ship in (its visit, and R-408's old names made marks), as
+    // an arrival does: the guide's visits emptied, NEW EXPEDITION from the menu and a frame; emptied again, a save of the ship
+    // loaded and a frame. Before, only an arrival noted a visit, so neither did
+    {
+        const std::string pre = "shots/tests/test_b433_";
+        for (const char* f : {"save_1.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
+        TestGame& g = game;   // one game alive at a time: the group's
+        g.savePrefix = pre + "save"; g.guidePath = pre + "guide.txt"; g.shotsDir = pre + "shots"; g.moviesDir = pre + "movies";
+        applyTestScale(g); g.newGame(); g.setState(S::SPACE);
+        Input vi;
+        runFrames(g, vi, 0.1);
+        g.saveSlot(1);
+        g.guide.visited.clear();
+        pressKey(g, vi, KEY_ESCAPE);
+        const bool row = selectRow(g, vi, "NEW EXPEDITION");
+        pressKey(g, vi, KEY_ENTER); runFrames(g, vi, 0.1);
+        const size_t afterNew = g.guide.visited.size();
+        const S newState = g.state;
+        g.guide.visited.clear();
+        const bool loaded = g.loadSlot(1);
+        runFrames(g, vi, 0.1);
+        const size_t afterLoad = g.guide.visited.size();
+        check("a new expedition and a load note the system they put the ship in (B-433)", row && newState == S::SPACE && loaded && afterNew == 1 && afterLoad == 1,
+              fmt("NEW EXPEDITION %s (%s): %zu systems noted after a frame; the ship's save %s: %zu", row ? "found" : "not found", stateName(newState), afterNew,
+                  loaded ? "loaded" : "not loaded", afterLoad));
+        for (const char* f : {"save_1.txt", "save_auto.txt", "guide.txt"}) remove((pre + f).c_str());
+    }
 }

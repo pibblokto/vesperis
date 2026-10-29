@@ -90,9 +90,11 @@ static_assert(stateRowsWhole(), "a row a state in GameState's order, each with i
 
 // U-05: the one way in: where the screen was opened from (its way back when its row's is its opener), its row's enter (its fields,
 // its devices stowed; `state` still the screen it opens from), then the state. A screen that closes as it opens the next one
-// closes first (`closeScreen`): its own way back is then the next one's opener
+// closes first (`closeScreen`): its own way back is then the next one's opener. B-431: a screen opened from a base has it as its
+// scene (`returnState`: drawn under it, a save's place), so no scene the explorer left (the title, the ground) stays under it
 void Game::openScreen(GameState s) {
     const StateRow& r = STATE_ROWS[(int)s];
+    if (stateHas(state, ST_BASE)) returnState = state;
     openedFrom[(int)s] = state;
     if (r.enter) (this->*r.enter)();
     state = s;
@@ -104,6 +106,13 @@ void Game::closeScreen() {
     if (b == BACK_SCENE) state = returnState;
     else if (b == BACK_OPENER) state = openedFrom[(int)state];
     else if (b >= 0) state = (GameState)b;
+}
+
+// B-432: where the game is, which a save writes and a photo names: the state in play, else the scene the screen is drawn over;
+// at the title, or over it, the game it resumes (where the title was opened from: a load's place, or space)
+GameState Game::placeNow() const {
+    const GameState s = stateHas(state, ST_IN_PLAY) ? state : returnState;
+    return state == GameState::TITLE || s == GameState::TITLE ? openedFrom[(int)GameState::TITLE] : s;
 }
 
 // read here, out of line, so this file holds the table's one definition whichever way a compiler reads its `constexpr`

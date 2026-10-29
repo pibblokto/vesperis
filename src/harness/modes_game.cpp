@@ -778,7 +778,7 @@ void testSettings() {
     bool same = ok && std::fabs(r.mouseSensitivity - 1.7) < 1e-9 && r.invertY && r.fovDeg == 85 && std::fabs(r.masterVolume - 0.35) < 1e-9 && !r.scanlines && r.windowScale == 3;
     printf("settings round trip: %s\n", same ? "ok" : "MISMATCH");
     TestGame game;
-    game.savePrefix = "shots/tests/test_save";
+    game.savePrefix = "shots/tests/test_settings_save";   // B-432: no save of the flow's (its newest, the probe's, resumes on its screen)
     game.settingsPath = "shots/tests/test_settings.txt";
     game.guidePath = "shots/tests/test_guide.txt";   // every harness Game keeps off the real guide.txt (2026-09-27)
     game.loadFromDisk();

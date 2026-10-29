@@ -24,7 +24,7 @@ Contents:
 ## States (`GameState`)
 
 ```
-TITLE -> SPACE (Enter, or SURFACE when a loaded save was on the surface) ; N starts a new expedition (G-02: parked at the first living world of the pinned home star, `HOME_SX/SY/SZ` in `galaxy/starfield.h`, Heilya at sector 195 0 46; the search of sectors 176..196 x 36..56 for a yellow or orange star with a living world is the fallback when a generation change takes it away)
+TITLE -> where the game was (Enter, through the title's help and credits: the ground, the capsule's way down or up, the probe's screen, else SPACE; B-432) ; N starts a new expedition (G-02: parked at the first living world of the pinned home star, `HOME_SX/SY/SZ` in `galaxy/starfield.h`, Heilya at sector 195 0 46; the search of sectors 176..196 x 36..56 for a yellow or orange star with a living world is the fallback when a generation change takes it away)
 SPACE -> LANDING_MAP (C, parked at a landable body) -> DESCENT (Enter) -> SURFACE -> ASCENT (Q/E at the capsule) -> SPACE
 SPACE/SURFACE -> HELP (H, ?, F1), MENU (Esc), DATA (I, F2); SPACE -> SYSTEM_LIST (Tab); MENU -> SETTINGS, SLOTS (save/load pickers)
 SPACE -> SHARDS (C-06: the shard decoder, from the cabin's back wall, the flight computer's preferences page or the guide menu; the menu refuses it on the surface; C-04: a piece of music plays there and `N` names it through TEXT_ENTRY, which returns to the decoder; C-05: a text shard speaks there; C-11: `Tab` at its worlds turns to the ship's player)
@@ -43,22 +43,25 @@ it stays on the screen), the settings (`settingRows`: a value and its change, or
 
 A screen opens through `openScreen` (U-05): its row's `enter` (its fields; `state` still the screen it opens from), `openedFrom`
 recording its opener, then the state. Esc closes it through `closeScreen`, by its row's `back`: the scene it is drawn over
-(`returnState`: the title, space or the ground, set by the keys that open a screen from a scene; HELP, MENU, DATA, the guide and
+(`returnState`: the title, space or the ground, the base it opened from, which `openScreen` takes; HELP, MENU, DATA, the guide and
 its log, statistics and gallery), its opener (KEYS, AUTO, the almanac, a text entry) or a screen of its own (SETTINGS and SLOTS
 to MENU, RECORDING to GALLERY, the sector map to SURFACE, the ship's screens, the landing map and the probe to SPACE). A screen
 that closes as it opens the next closes first: the guide before its text entries, the data sheet before the almanac, the flight
-computer before a row that leaves it. The cabin's screens set no scene (KI-432). Only SPACE, SURFACE, DESCENT, ASCENT and
-LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's camera).
+computer before a row that leaves it. Where the game is, `placeNow` (B-432), is the state in play, else the scene under the
+screen, and at the title or over it the place the title was opened from (the start opens it from a load's place, or a new
+game's space), which Enter resumes: a save's `surface`, site and `phase` lines and a photo's caption read it. Only SPACE,
+SURFACE, DESCENT, ASCENT and LANDING_MAP advance game time (and the ship's screens, the decoder and, since X-01, the probe's
+camera).
 
 ## The frame (`Game::frame`, game.cpp)
 
 `padFrame` → auto-explore's input → `tapeUpdate` → `handleGlobalKeys` (not while `ST_TYPING`) → each row's `away` but the
 current's (the decoder's piece and voice, the case's instrument stopped off their screens), the cameras off on `ST_STOWS` →
-`noteVisit` → the clock (`ST_SIMULATES`: time warp, the almanac) → autosave → `updateProbe`, `updateDrones` → the state's row
-(`Game::STATE_ROWS`, states.cpp, U-02): its `update`, then `updateShipMotion` on `ST_SHIP_MOVES` → `probeAudio`, `darkRadio`,
-`updatePlayer` → the row's picture (an `ST_OVERLAY` row's over `renderUnder`, `returnState`'s scene, unless its `covers`) →
-`autoRender` or `renderPad`. Then the platform pumps the synth (`platformAudioPump`), which reads the `AudioState` pointers on
-the main thread.
+`noteVisit` (once a system, out of the title: after an arrival, a load or a new expedition, B-433) → the clock (`ST_SIMULATES`:
+time warp, the almanac) → autosave → `updateProbe`, `updateDrones` → the state's row (`Game::STATE_ROWS`, states.cpp, U-02): its
+`update`, then `updateShipMotion` on `ST_SHIP_MOVES` → `probeAudio`, `darkRadio`, `updatePlayer` → the row's picture (an
+`ST_OVERLAY` row's over `renderUnder`, `returnState`'s scene, unless its `covers`) → `autoRender` or `renderPad`. Then the
+platform pumps the synth (`platformAudioPump`), which reads the `AudioState` pointers on the main thread.
 
 ## Ship (`ShipState`)
 

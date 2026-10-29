@@ -148,7 +148,7 @@ bool Game::save(const std::string& path) {
     if (probe.active && probe.endClock < 0 && probeHere())   // a falling probe (a last frame held is not kept)
         f << "probe " << probe.body << " " << probe.starSeed << " " << probe.aimLat << " " << probe.aimLon << " " << probe.clock << " " << probe.launchT << " " << probe.startRel.x << " "
           << probe.startRel.y << " " << probe.startRel.z << " " << probe.flight.chuteOpen << " " << probe.flight.chuteClose << " " << probe.flight.crushBar << " " << probe.seed << " " << probe.headYaw
-          << " " << probe.descYaw << " " << probe.camYaw << " " << probe.camPitch << " " << (probe.tornNoted ? 1 : 0) << " " << (state == GameState::PROBE ? 1 : 0) << " " << probe.id << " "
+          << " " << probe.descYaw << " " << probe.camYaw << " " << probe.camPitch << " " << (probe.tornNoted ? 1 : 0) << " " << (placeNow() == GameState::PROBE ? 1 : 0) << " " << probe.id << " "
           << probe.notes << " " << probe.stormKind << " " << (probe.stormKey.empty() ? "-" : probe.stormKey) << "\n";   // its number, what it logged, its storm
     if (probe.active && probe.endClock < 0 && probeHere()) {   // the tracks so far (the recording goes on after a load)
         f << "probetrack " << probe.camTrack.size(); for (double v : probe.camTrack) f << " " << v;
@@ -168,17 +168,17 @@ bool Game::save(const std::string& path) {
                   << "\n";
         }
     }
-    // where the explorer is: on the surface in the surface states, and in every overlay state (menus, guide screens,
-    // the title after a load, ...) when the overlay returns to the surface. The title was missing here, so closing
-    // the window on the title (or `--frames`) autosaved the expedition as "in space" and lost the landing (2026-09-27)
-    bool inPlay = stateHas(state, ST_IN_PLAY);
-    bool onSurface = surf.valid && (stateHas(state, ST_GROUND) || (!inPlay && returnState == GameState::SURFACE));
+    // where the explorer is (`placeNow`): the state in play, the scene under a screen, at the title or over it the game it resumes.
+    // The title was missing here, so closing the window on the title (or `--frames`) autosaved the expedition as "in space" and
+    // lost the landing (2026-09-27); B-432: so did the title's help and credits, and a load in the capsule's way down or up
+    const GameState at = placeNow();
+    bool onSurface = surf.valid && stateHas(at, ST_GROUND);
     f << "surface " << (onSurface ? 1 : 0) << "\n";
     if (onSurface) {
         f << "site " << surf.site.body << " " << surf.site.lat0 << " " << surf.site.lon0 << "\n";
         f << "player " << surf.player.x << " " << surf.player.z << " " << surf.player.yaw << " " << surf.player.pitch << "\n";
         f << "capsule " << surf.capsuleX << " " << surf.capsuleZ << "\n";
-        if (state == GameState::DESCENT || state == GameState::ASCENT) f << "phase " << (int)state << " " << transT << "\n";
+        if (at == GameState::DESCENT || at == GameState::ASCENT) f << "phase " << (int)at << " " << transT << "\n";
         f << "buggy " << (surf.buggy.deployed ? 1 : 0) << " " << surf.buggy.x << " " << surf.buggy.z << " " << surf.buggy.heading << " " << surf.buggy.odometer << " " << (surf.inBuggy ? 1 : 0)
           << "\n";
         f << "drone " << (surf.drone.deployed ? 1 : 0) << " " << surf.drone.x << " " << surf.drone.z << " " << surf.drone.heading << " " << surf.drone.odometer << " " << (surf.inDrone ? 1 : 0)
@@ -356,6 +356,7 @@ bool Game::load(const std::string& path) {
     returnState = state == GameState::SURFACE ? GameState::SURFACE : GameState::SPACE;
     hasSave = true;
     autosaveTimer = 0;
+    visitNoted = false;   // B-433: the system it puts the ship in is noted at the next frame out of the title, as an arrival's is
     migrateLandmarkNames();   // the sights named in this system before are marks now
     if (gen < 11) { statusNext = fmt("THE GALAXY WAS REBUILT SINCE THIS SAVE (GEN %d, NOW %d) - THIS STAR IS STILL HERE", gen, GEN_VERSION); statusNextSecs = 8; }
     else if (gen < GEN_VERSION) { statusNext = fmt("WORLDS WERE REGENERATED SINCE THIS SAVE (GEN %d, NOW %d) - STARS ARE WHERE THEY WERE", gen, GEN_VERSION); statusNextSecs = 8; }

@@ -76,8 +76,9 @@ const RowList<SettingRow>& Game::settingRows() {
     return LIST;
 }
 
-// the title: Enter goes on (on the ground where the expedition was, else in space), N begins afresh over a save, C the credits,
-// H help, Esc quits; the ship moves on the real clock meanwhile
+// the title: Enter goes on where the expedition was (B-432: the place the title was opened from, through its help and credits:
+// the ground, the capsule's way down or up, the probe's screen, else space), N begins afresh over a save, C the credits, H help,
+// Esc quits; the ship moves on the real clock meanwhile
 void Game::updateTitle(const Input& in, double dt, double realDt) {
     titleYaw += realDt * 0.04;
     titleIdle += realDt; attractT += realDt;
@@ -85,7 +86,8 @@ void Game::updateTitle(const Input& in, double dt, double realDt) {
     if (in.wasPressed(KEY_C) && !in.ctrl()) { returnState = GameState::TITLE; openScreen(GameState::HELP); helpPage = 2; }   // credits
     updateShipMotion(realDt);
     if (enterKey(in)) {
-        state = (returnState == GameState::SURFACE && surf.valid) ? GameState::SURFACE : GameState::SPACE;
+        const GameState at = openedFrom[(int)GameState::TITLE];
+        state = ((stateHas(at, ST_GROUND) && surf.valid) || (at == GameState::PROBE && probe.active)) ? at : GameState::SPACE;
         status(state == GameState::SURFACE ? "EXPEDITION RESUMED ON THE SURFACE - H FOR HELP" : "STARDRIFTER READY - H FOR HELP", 6);
         if (macHints && !macHintShown) { macHintShown = true; statusNext = "ON A MAC THE F KEYS NEED FN: USE H, I, P, CTRL+S, CTRL+L, CTRL+K, CTRL+F"; statusNextSecs = 7; }
     }

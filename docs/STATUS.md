@@ -19,21 +19,30 @@ The state of the work, in one place; each milestone's close rewrites it (`docs/C
   (b9145e5), U-01 (8aa9090), U-02 (364ee43) and U-03 to U-06, a commit each; its PR into main (#9) open and not merged until the
   user says.
 - **Done** 2026-10-27: the U series, a screen in one row (`docs/ideas/PLAN-screens.md`, R-424): U-01 to U-06, in 1.4.0.
-- **Next:** the release (`packaging/RELEASE.md`, the `release` skill) on the user's word, after KI-423. At the release,
+- **Done** 2026-10-29, on "proceed": the user's "lets fix KI-423, KI-432, KI-433 and KI-434 one by one starting with 423", a B
+  each, fixed, proven and recorded in turn; nothing committed.
+  - B-430 (KI-423): GCC 9.4, the Linux zips' compiler, lost 55 kinds' draw rules and crashed on the table's check; every row's
+    rules are set first and the check reads a table built for it (`src/galaxy/kinds.cpp`). GCC's table equals Clang's byte for
+    byte, the Mac's objects are as they were, both Linux release builds pass (Docker, approved).
+  - B-431 (KI-432): a screen opened from a base takes it as its scene (`openScreen`): the cabin's screens no longer draw over
+    the title or the ground left behind, nor save the explorer back onto it, and a photo in space names the orbit.
+  - B-432 (KI-433): the start opens the title from the game's place, which Enter resumes through its help and credits (the
+    capsule's way down or up and the probe's screen too); a save and a photo place the explorer by `placeNow()`.
+  - B-433 (KI-434): a new expedition and a load note the system they put the ship in, as an arrival does.
+  - The close: from a clean build, `compare u06` 28 of 30 the same (the unit's three checks; the flow's two frames that showed
+    the title behind the console and the flight computer); bench pairs level; `make check`; snapshot b433.
+- **Next:** the release (`packaging/RELEASE.md`, the `release` skill) on the user's word. At the release,
   `ITERATION-1.4.0.md`, `IDEAS-worlds-and-wanderers.md`, `PLAN-reorganisation.md` and `PLAN-screens.md` move to
-  `docs/archive/ideas/`.
-- **Before the release:** KI-423: GCC 9.4, the Linux builds' compiler, cannot compile kinds.cpp's table check, so the Linux
-  zips fail until it does; with it, U-02's states table, U-03's rows, U-04's `padMenu` and U-05's columns under GCC 9.4 (Docker,
-  asked first).
-- **The proof's base:** `build/prove/u06` (30 items: the battery with `input` and `tour`, the tour with its rows).
-- **Open with the user:** standing leave to commit each step; the clangd-lsp plugin; KI-423's fix; KI-424 (the grammar's
-  picture register, which no call expands); KI-425 (the radar's heard list); the three found by U-01: KI-428 (a T typed at the
-  console warps time), KI-429 (the settings' title over their first row), KI-430 (a race in the unit's lent piece frame); U-04's
-  KI-431 (the almanac's STOP THE RUN, offered and ignored); U-05's KI-432 (the cabin's screens drawn over a scene left
-  behind: the title, the ground) and KI-433 (H at the title forgets a landing); U-06's KI-434 (a load or a new expedition
-  notes no visit); game.h at 47.7 KB, the next screen past the plan's 48 KB (section 8 revisits at 60 KB); the
-  old proof kits (`build/p00` to `build/d05`, about 9 GB), deleted only on the user's word.
-- **The disk:** room enough (about 117 GB free); the U series needs about 6 GB (a snapshot and a compare's outputs about 0.8 GB
-  each).
-- **Next free ids:** bugs B-430, requests R-425, known issues KI-435. Milestone ids go by letter series in
+  `docs/archive/ideas/`. The Linux builds compile again (B-430): both release scripts' Linux builds passed on 2026-10-27.
+- **The proof's base:** `build/prove/b433` (30 items: the battery with `input` and `tour`, the tour with its rows).
+- **Open with the user:** committing the four fixes (nothing is committed unasked); standing leave to commit each step; the
+  clangd-lsp plugin; KI-424 (the grammar's picture register, which no call expands); KI-425 (the radar's heard list); the three
+  found by U-01: KI-428 (a T typed at the console warps time), KI-429 (the settings' title over their first row), KI-430 (a race
+  in the unit's lent piece frame); U-04's KI-431 (the almanac's STOP THE RUN, offered and ignored); offered by B-430: the tables'
+  dump as a harness mode for the container, and parallel.h's misleading indentation (38 of the Linux builds' 46 warnings);
+  game.h at 47.8 KB, the next screen past the plan's 48 KB (section 8 revisits at 60 KB); our Docker images
+  `vesperis-build:arm64` and `:amd64` (kept for the release, removed on the user's word); the old proof kits (`build/p00` to
+  `build/d05`, about 9 GB), deleted only on the user's word.
+- **The disk:** room enough (about 103 GB free); a snapshot and a compare's outputs about 0.8 GB each.
+- **Next free ids:** bugs B-434, requests R-425, known issues KI-435. Milestone ids go by letter series in
   `docs/ideas/MILESTONES.md`.

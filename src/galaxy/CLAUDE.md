@@ -31,6 +31,8 @@ planet_grounds, planet_grounds2, starfield.
   faded value.
 - `Rng` goes by reference (a copy forks the stream). Moved code keeps each expression's shape (clang fuses within one);
   the ~120 expressions that draw twice stay as written.
+- kinds.cpp's tables are built at compile time: a row's arrays of non-zero defaults are set first, in order, and the checks
+  read a table built for them (B-430: GCC 9.4, the Linux zips', lost 55 kinds' rules and crashed on `BUILT_KINDS`).
 - State stays in its file (its `thread_local` guards and caches). `g_reaper` is defined after drainage's tile cache, so it
   joins the prefetches before the cache goes.
 
